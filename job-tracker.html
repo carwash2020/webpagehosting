@@ -190,6 +190,10 @@
   <div class="form-section">
     <h3>Job Inputs</h3>
     <div class="form-row">
+      <div class="form-field"><label>Client Name (optional &mdash; checks your job history)</label><input type="text" id="costClientName" placeholder="Sarah Miller" oninput="checkClientHistory()"></div>
+    </div>
+    <p class="inline-note" id="clientHistoryNote"></p>
+    <div class="form-row">
       <div class="form-field"><label>Labor hours</label><input type="number" id="hours" value="1" min="0" step="0.25" oninput="calculateCost()"></div>
       <div class="form-field"><label>Hourly rate ($)</label><input type="number" id="rate" value="75" min="0" step="1" oninput="calculateCost()"></div>
     </div>
@@ -326,7 +330,7 @@
       <p>This page combines five related tools into tabs. Data lives in this browser, and also syncs to the cloud if you've set that up on the Workspace page.</p>
       <ul>
         <li><strong>Jobs</strong> &mdash; add a job with priority/status/due date, sort by date or priority, hide completed jobs, or tap "Advance Status" to cycle Not Started &rarr; In Progress &rarr; Done.</li>
-        <li><strong>Cost Lookup</strong> &mdash; type in hours and parts cost to see the standard price instantly. Check "First-time client" to see the discounted price too. Save frequent job types under "Price Reference" and tap one anytime to reload it.</li>
+        <li><strong>Cost Lookup</strong> &mdash; type in hours and parts cost to see the standard price instantly. Optionally type the client's name first — it checks your job history and auto-suggests whether they're new or returning (still overridable). Save frequent job types under "Price Reference" and tap one anytime to reload it.</li>
         <li><strong>Expenses</strong> &mdash; log expenses or mileage, now with vendor, payment method, and an optional link to a specific job. Mileage rate lives right next to the Miles field since it's only relevant for mileage entries. Export CSV anytime for a backup or for taxes.</li>
         <li><strong>Contacts</strong> &mdash; a quick address book for vendors, suppliers, or recurring clients.</li>
         <li><strong>Notes</strong> &mdash; keep as many separate, named notes as you want. Click one on the left to open it, or start a new one. Saves automatically as you type.</li>
@@ -536,6 +540,19 @@
   }
 
   // ---------- Cost Lookup ----------
+  function checkClientHistory() {
+    const name = document.getElementById('costClientName').value.trim().toLowerCase();
+    const note = document.getElementById('clientHistoryNote');
+    if (!name) { note.textContent = ''; return; }
+    const priorJobs = loadJobs().filter(j => j.client && j.client.trim().toLowerCase() === name);
+    const isNew = priorJobs.length === 0;
+    document.getElementById('firstTimeClient').checked = isNew;
+    note.textContent = isNew
+      ? 'No prior jobs found for this name — treated as a first-time client (you can still uncheck the box below).'
+      : 'Returning client — ' + priorJobs.length + ' prior job' + (priorJobs.length === 1 ? '' : 's') + ' found.';
+    calculateCost();
+  }
+
   function money(v) { return '$' + v.toFixed(2); }
 
   function calculateCost() {

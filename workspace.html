@@ -26,29 +26,43 @@
     padding-bottom: 8px; border-bottom: 1px solid var(--border);
   }
   .section-heading.is-first { margin-top: 8px; }
+  .section-note { color: var(--text-dim); font-size: 12.5px; margin: -10px 0 14px; }
 
   .metrics-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 14px; margin-bottom: 8px; }
   .metric-card {
     background: var(--bg-panel); border: 1px solid var(--border); border-radius: var(--radius);
     padding: 18px 20px;
   }
+  .metric-card.is-warning { border-color: #e05252; }
   .metric-card .metric-label { color: var(--text-dim); font-size: 12px; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 8px; }
   .metric-card .metric-value { font-family:'Oswald',sans-serif; font-weight: 700; font-size: 24px; color: var(--white); }
   .metric-card .metric-value.is-orange { color: var(--orange-light); }
+  .metric-card .metric-value.is-red { color: #e05252; }
   .metric-card .metric-sub { color: var(--text-dim); font-size: 12px; margin-top: 4px; }
+  .metric-card .metric-sub.is-up { color: #4caf50; }
+  .metric-card .metric-sub.is-down { color: #e05252; }
 
-  .period-toggle { display: flex; gap: 6px; margin-bottom: 14px; }
+  .period-toggle { display: flex; gap: 6px; margin-bottom: 14px; flex-wrap: wrap; }
   .period-btn {
     background: var(--bg-panel-2); border: 1px solid var(--border); color: var(--text-dim);
     border-radius: 6px; padding: 7px 16px; cursor: pointer; font-size: 13px; font-family: inherit;
   }
   .period-btn.is-active { color: var(--orange-light); border-color: var(--orange-light); }
 
-  .status-bar-row { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; font-size: 13px; }
-  .status-bar-label { width: 90px; flex-shrink: 0; color: var(--text-dim); }
-  .status-bar-track { flex: 1; height: 8px; background: var(--bg-panel-2); border-radius: 4px; overflow: hidden; }
+  .custom-range-row { display: none; gap: 10px; margin-bottom: 16px; flex-wrap: wrap; align-items: center; }
+  .custom-range-row.is-visible { display: flex; }
+  .custom-range-row input {
+    padding: 8px 10px; background: var(--bg-panel-2); border: 1px solid var(--border);
+    border-radius: 6px; color: var(--white); font-size: 13.5px; font-family: inherit;
+  }
+  .custom-range-row span { color: var(--text-dim); font-size: 13px; }
+
+  .status-bar-row, .vendor-bar-row { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; font-size: 13px; }
+  .status-bar-label, .vendor-bar-label { width: 110px; flex-shrink: 0; color: var(--text-dim); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .status-bar-track, .vendor-bar-track { flex: 1; height: 8px; background: var(--bg-panel-2); border-radius: 4px; overflow: hidden; }
   .status-bar-fill { height: 100%; background: var(--orange); }
-  .status-bar-count { width: 26px; text-align: right; color: var(--white); flex-shrink: 0; }
+  .vendor-bar-fill { height: 100%; background: var(--blue); }
+  .status-bar-count, .vendor-bar-count { width: 60px; text-align: right; color: var(--white); flex-shrink: 0; font-size: 12.5px; }
 
   .dash-list-item {
     display: flex; justify-content: space-between; align-items: center; gap: 12px;
@@ -58,7 +72,17 @@
   .dash-list-item-title { color: var(--white); }
   .dash-list-item-meta { color: var(--text-dim); font-size: 12.5px; }
   .dash-list-item-amount { color: var(--orange-light); font-weight: 600; flex-shrink: 0; }
+  .dash-list-item-right { display: flex; align-items: center; gap: 10px; flex-shrink: 0; }
   .empty-state-small { color: var(--text-dim); font-size: 13.5px; padding: 12px 0; }
+
+  .paid-toggle-btn {
+    border-radius: 12px; padding: 4px 12px; font-size: 11.5px; font-weight: 600;
+    text-transform: uppercase; letter-spacing: 0.5px; cursor: pointer; border: 1px solid;
+    background: none;
+  }
+  .paid-toggle-btn.is-paid { color: #4caf50; border-color: #4caf50; }
+  .paid-toggle-btn.is-unpaid { color: var(--text-dim); border-color: var(--border); }
+  .paid-toggle-btn.is-overdue { color: #e05252; border-color: #e05252; }
 
   .tool-card {
     display: flex; align-items: center; justify-content: space-between; gap: 20px;
@@ -69,6 +93,14 @@
   .tool-card-text h3 { font-family:'Oswald',sans-serif; color: var(--white); font-size: 17px; margin: 0 0 6px; }
   .tool-card-text p { color: var(--text-dim); font-size: 14px; margin: 0; }
   .tool-card-arrow { color: var(--orange-light); font-size: 22px; flex-shrink: 0; }
+
+  .backup-row { display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 10px; }
+  .backup-btn {
+    background: var(--bg-panel-2); border: 1px solid var(--border); color: var(--white);
+    border-radius: 8px; padding: 11px 18px; cursor: pointer; font-size: 14px; font-family: inherit;
+  }
+  .backup-btn:hover { border-color: var(--blue-light); }
+
   .hub-note {
     margin-top: 32px; padding-top: 20px; border-top: 1px solid var(--border);
     color: var(--text-dim); font-size: 13px; line-height: 1.6;
@@ -89,8 +121,17 @@
 <div class="section-heading is-first">Business Snapshot</div>
 
 <div class="period-toggle">
+  <button class="period-btn" data-period="week" onclick="setPeriod('week')">Last 7 Days</button>
   <button class="period-btn is-active" data-period="month" onclick="setPeriod('month')">This Month</button>
   <button class="period-btn" data-period="all" onclick="setPeriod('all')">All Time</button>
+  <button class="period-btn" data-period="custom" onclick="setPeriod('custom')">Custom Range</button>
+</div>
+
+<div class="custom-range-row" id="customRangeRow">
+  <input type="date" id="customStart" onchange="renderMetrics()">
+  <span>to</span>
+  <input type="date" id="customEnd" onchange="renderMetrics()">
+  <span style="color:var(--text-dim);">&mdash; useful for pulling numbers for a specific tax period.</span>
 </div>
 
 <div class="metrics-grid">
@@ -114,16 +155,41 @@
     <div class="metric-value" id="metricNet">$0.00</div>
     <div class="metric-sub">Before mileage cost</div>
   </div>
+  <div class="metric-card">
+    <div class="metric-label">Outstanding Balance</div>
+    <div class="metric-value" id="metricOutstanding">$0.00</div>
+    <div class="metric-sub" id="metricOutstandingCount">0 unpaid invoices</div>
+  </div>
+  <div class="metric-card" id="overdueCard">
+    <div class="metric-label">Overdue</div>
+    <div class="metric-value" id="metricOverdue">$0.00</div>
+    <div class="metric-sub" id="metricOverdueCount">0 invoices past terms</div>
+  </div>
 </div>
 
 <div class="section-heading">Job Status</div>
 <div id="statusBars"></div>
 
+<div class="section-heading">Top Vendors</div>
+<p class="section-note">Where expense money went, for the period selected above.</p>
+<div id="topVendors"></div>
+
 <div class="section-heading">Due Soon (next 7 days, not done)</div>
 <div id="upcomingJobs"></div>
 
-<div class="section-heading">Recent Invoices</div>
-<div id="recentInvoices"></div>
+<div class="section-heading">Invoices</div>
+<p class="section-note">Tap the status badge to mark an invoice Paid or Unpaid.</p>
+<div id="invoicesList"></div>
+
+<div class="section-heading">Backup &amp; Restore</div>
+<p class="section-note">Independent of cloud sync &mdash; a local safety net in case anything ever goes sideways with the Supabase project itself.</p>
+<div class="backup-row">
+  <button class="backup-btn" onclick="downloadBackup()">Download Full Backup</button>
+  <label class="backup-btn" style="display:inline-flex; align-items:center; cursor:pointer;">
+    Restore from Backup
+    <input type="file" accept="application/json" onchange="restoreBackup(event)" style="display:none;">
+  </label>
+</div>
 
 <div class="section-heading">Tools</div>
 
@@ -170,13 +236,16 @@
     <div class="help-modal-body">
       <p>This is the home base for the whole business &mdash; bookmark this one page.</p>
       <ul>
-        <li><strong>Business Snapshot</strong> &mdash; toggle between This Month and All Time. Revenue comes from invoices generated in the Invoice Generator; expenses and mileage come from the Job Tracker's Expenses tab.</li>
-        <li><strong>Job Status</strong> &mdash; a quick bar breakdown of how many jobs are Not Started, In Progress, and Done.</li>
-        <li><strong>Due Soon</strong> &mdash; any job with a due date in the next 7 days that isn't marked Done yet.</li>
-        <li><strong>Recent Invoices</strong> &mdash; your last 5 generated invoices, most recent first.</li>
+        <li><strong>Business Snapshot</strong> &mdash; Last 7 Days, This Month, All Time, or a Custom Range for pulling tax-period numbers. Revenue comes from invoices; expenses/mileage from the Job Tracker's Expenses tab. Last 7 Days also shows a comparison against the 7 days before that.</li>
+        <li><strong>Outstanding Balance / Overdue</strong> &mdash; unpaid invoice totals. Overdue means past the invoice's own terms (Due Upon Receipt / Net 15 / Net 30) with no payment marked yet.</li>
+        <li><strong>Job Status</strong> &mdash; how many jobs are Not Started, In Progress, and Done.</li>
+        <li><strong>Top Vendors</strong> &mdash; where expense money went this period, based on the Vendor field in the Expenses tab.</li>
+        <li><strong>Due Soon</strong> &mdash; jobs due in the next 7 days that aren't Done yet.</li>
+        <li><strong>Invoices</strong> &mdash; every invoice you've generated. Tap the status badge on any of them to mark it Paid or Unpaid.</li>
+        <li><strong>Backup &amp; Restore</strong> &mdash; download everything (jobs, expenses, invoices, contacts, notes, price reference) as one file, or restore from a previous one. This is separate from cloud sync &mdash; a copy that lives on your device, not dependent on Supabase being reachable.</li>
         <li><strong>Tools</strong> &mdash; every internal tool, one tap away.</li>
       </ul>
-      <p>Every tool has its own "?" button with instructions specific to that page. Data is saved directly in your browser, and quietly kept in sync across your devices in the background &mdash; nothing to set up or press. Marking a job "Done" in the Job Tracker will also offer to jump straight to a pre-filled review request for that client.</p>
+      <p>Data is saved directly in your browser, and quietly kept in sync across your devices in the background. Marking a job "Done" in the Job Tracker also offers to jump straight to a pre-filled review request for that client.</p>
     </div>
   </div>
 </div>
@@ -189,28 +258,75 @@
     return div.innerHTML;
   }
 
+  const ALL_SYNCED_KEYS = [
+    'th_tracker_jobs', 'th_tracker_contacts', 'th_tracker_notes_v2',
+    'th_expense_log', 'th_mileage_rate', 'th_price_reference', 'th_invoices',
+  ];
+
   function loadJobs() { return JSON.parse(localStorage.getItem('th_tracker_jobs') || '[]'); }
   function loadExpenses() { return JSON.parse(localStorage.getItem('th_expense_log') || '[]'); }
   function loadInvoices() { return JSON.parse(localStorage.getItem('th_invoices') || '[]'); }
+  function saveInvoices(list) { localStorage.setItem('th_invoices', JSON.stringify(list)); if (typeof scheduleSync === 'function') scheduleSync(); }
   function loadRate() { return parseFloat(localStorage.getItem('th_mileage_rate')) || 0.76; }
 
-  function isThisMonth(dateStr) {
+  const TERM_DAYS = { 'Due Upon Receipt': 0, 'Net 15': 15, 'Net 30': 30 };
+
+  function getDueDate(invoice) {
+    const base = new Date((invoice.date || '') + 'T00:00:00');
+    if (isNaN(base.getTime())) return null;
+    const days = TERM_DAYS[invoice.terms] !== undefined ? TERM_DAYS[invoice.terms] : 15;
+    return new Date(base.getTime() + days * 24 * 60 * 60 * 1000);
+  }
+
+  function isOverdue(invoice) {
+    if (invoice.paid) return false;
+    const due = getDueDate(invoice);
+    if (!due) return false;
+    return due < new Date(new Date().toDateString());
+  }
+
+  // ---------- Date range handling ----------
+  function startOfDay(d) { const c = new Date(d); c.setHours(0, 0, 0, 0); return c; }
+
+  function getCurrentRange() {
+    const now = new Date();
+    if (currentPeriod === 'all') return { start: null, end: null };
+    if (currentPeriod === 'week') {
+      const start = startOfDay(new Date(now.getTime() - 6 * 24 * 60 * 60 * 1000));
+      return { start, end: startOfDay(now) };
+    }
+    if (currentPeriod === 'month') {
+      return { start: new Date(now.getFullYear(), now.getMonth(), 1), end: new Date(now.getFullYear(), now.getMonth() + 1, 0) };
+    }
+    if (currentPeriod === 'custom') {
+      const s = document.getElementById('customStart').value;
+      const e = document.getElementById('customEnd').value;
+      return { start: s ? new Date(s + 'T00:00:00') : null, end: e ? new Date(e + 'T00:00:00') : null };
+    }
+    return { start: null, end: null };
+  }
+
+  function inRange(dateStr, range) {
     if (!dateStr) return false;
     const d = new Date(dateStr + 'T00:00:00');
-    const now = new Date();
-    return d.getFullYear() === now.getFullYear() && d.getMonth() === now.getMonth();
+    if (range.start && d < range.start) return false;
+    if (range.end && d > range.end) return false;
+    return true;
   }
 
   let currentPeriod = 'month';
   function setPeriod(period) {
     currentPeriod = period;
     document.querySelectorAll('.period-btn').forEach(b => b.classList.toggle('is-active', b.dataset.period === period));
+    document.getElementById('customRangeRow').classList.toggle('is-visible', period === 'custom');
     renderMetrics();
+    renderTopVendors();
   }
 
   function renderMetrics() {
-    const invoices = loadInvoices().filter(i => currentPeriod === 'all' || isThisMonth(i.date));
-    const expenses = loadExpenses().filter(e => currentPeriod === 'all' || isThisMonth(e.date));
+    const range = getCurrentRange();
+    const invoices = loadInvoices().filter(i => inRange(i.date, range));
+    const expenses = loadExpenses().filter(e => inRange(e.date, range));
 
     const revenue = invoices.reduce((sum, i) => sum + (i.total || 0), 0);
     const expenseTotal = expenses.filter(e => e.type === 'expense').reduce((sum, e) => sum + e.amount, 0);
@@ -226,6 +342,38 @@
     document.getElementById('metricMileage').textContent = totalMiles.toFixed(1) + ' mi';
     document.getElementById('metricMileageCost').textContent = money(mileageCost) + ' at $' + loadRate() + '/mi';
     document.getElementById('metricNet').textContent = money(net);
+
+    // Week-over-week comparison, only meaningful for the "week" period
+    const revenueSub = document.getElementById('metricInvoiceCount');
+    if (currentPeriod === 'week') {
+      const prevStart = startOfDay(new Date(range.start.getTime() - 7 * 24 * 60 * 60 * 1000));
+      const prevEnd = startOfDay(new Date(range.start.getTime() - 1 * 24 * 60 * 60 * 1000));
+      const prevRevenue = loadInvoices().filter(i => inRange(i.date, { start: prevStart, end: prevEnd })).reduce((sum, i) => sum + (i.total || 0), 0);
+      let compareText = '';
+      if (prevRevenue > 0) {
+        const pct = Math.round((revenue - prevRevenue) / prevRevenue * 100);
+        compareText = (pct >= 0 ? ' (+' : ' (') + pct + '% vs prior 7 days)';
+      } else if (revenue > 0) {
+        compareText = ' (prior 7 days had none)';
+      }
+      revenueSub.textContent = invoices.length + ' invoice' + (invoices.length === 1 ? '' : 's') + compareText;
+      revenueSub.className = 'metric-sub' + (revenue >= prevRevenue ? ' is-up' : ' is-down');
+    } else {
+      revenueSub.className = 'metric-sub';
+    }
+
+    // Outstanding + Overdue (always all-time, regardless of period toggle -- unpaid money owed doesn't reset by date filter)
+    const allInvoices = loadInvoices();
+    const unpaid = allInvoices.filter(i => !i.paid);
+    const overdue = unpaid.filter(isOverdue);
+    const outstandingTotal = unpaid.reduce((sum, i) => sum + (i.total || 0), 0);
+    const overdueTotal = overdue.reduce((sum, i) => sum + (i.total || 0), 0);
+
+    document.getElementById('metricOutstanding').textContent = money(outstandingTotal);
+    document.getElementById('metricOutstandingCount').textContent = unpaid.length + ' unpaid invoice' + (unpaid.length === 1 ? '' : 's');
+    document.getElementById('metricOverdue').textContent = money(overdueTotal);
+    document.getElementById('metricOverdueCount').textContent = overdue.length + ' invoice' + (overdue.length === 1 ? '' : 's') + ' past terms';
+    document.getElementById('overdueCard').classList.toggle('is-warning', overdue.length > 0);
   }
 
   function renderStatusBars() {
@@ -240,6 +388,27 @@
         <div class="status-bar-label">${labels[key]}</div>
         <div class="status-bar-track"><div class="status-bar-fill" style="width:${(counts[key] / max * 100)}%"></div></div>
         <div class="status-bar-count">${counts[key]}</div>
+      </div>`).join('');
+  }
+
+  function renderTopVendors() {
+    const range = getCurrentRange();
+    const expenses = loadExpenses().filter(e => e.type === 'expense' && inRange(e.date, range) && e.vendor);
+    const totals = {};
+    expenses.forEach(e => { totals[e.vendor] = (totals[e.vendor] || 0) + e.amount; });
+    const sorted = Object.entries(totals).sort((a, b) => b[1] - a[1]).slice(0, 5);
+
+    const container = document.getElementById('topVendors');
+    if (sorted.length === 0) {
+      container.innerHTML = '<div class="empty-state-small">No vendor-tagged expenses in this period yet.</div>';
+      return;
+    }
+    const max = sorted[0][1];
+    container.innerHTML = sorted.map(([vendor, total]) => `
+      <div class="vendor-bar-row">
+        <div class="vendor-bar-label" title="${escapeHtml(vendor)}">${escapeHtml(vendor)}</div>
+        <div class="vendor-bar-track"><div class="vendor-bar-fill" style="width:${(total / max * 100)}%"></div></div>
+        <div class="vendor-bar-count">${money(total)}</div>
       </div>`).join('');
   }
 
@@ -268,28 +437,92 @@
       </div>`).join('');
   }
 
-  function renderRecentInvoices() {
-    const invoices = [...loadInvoices()].sort((a, b) => b.id - a.id).slice(0, 5);
-    const container = document.getElementById('recentInvoices');
+  function togglePaid(id) {
+    const invoices = loadInvoices();
+    const inv = invoices.find(i => i.id === id);
+    if (!inv) return;
+    inv.paid = !inv.paid;
+    saveInvoices(invoices);
+    renderInvoicesList();
+    renderMetrics();
+  }
+
+  function renderInvoicesList() {
+    const invoices = [...loadInvoices()].sort((a, b) => b.id - a.id).slice(0, 20);
+    const container = document.getElementById('invoicesList');
     if (invoices.length === 0) {
       container.innerHTML = '<div class="empty-state-small">No invoices generated yet.</div>';
       return;
     }
-    container.innerHTML = invoices.map(i => `
+    container.innerHTML = invoices.map(i => {
+      const overdue = isOverdue(i);
+      const btnClass = i.paid ? 'is-paid' : (overdue ? 'is-overdue' : 'is-unpaid');
+      const btnText = i.paid ? 'Paid' : (overdue ? 'Overdue' : 'Unpaid');
+      return `
       <div class="dash-list-item">
         <div>
           <div class="dash-list-item-title">${escapeHtml(i.clientName)}</div>
-          <div class="dash-list-item-meta">#${escapeHtml(i.invoiceNumber || '\u2014')} &middot; ${escapeHtml(i.date || '')}</div>
+          <div class="dash-list-item-meta">#${escapeHtml(i.invoiceNumber || '\u2014')} &middot; ${escapeHtml(i.date || '')} &middot; ${escapeHtml(i.terms || '')}</div>
         </div>
-        <div class="dash-list-item-amount">${money(i.total)}</div>
-      </div>`).join('');
+        <div class="dash-list-item-right">
+          <div class="dash-list-item-amount">${money(i.total)}</div>
+          <button class="paid-toggle-btn ${btnClass}" onclick="togglePaid(${i.id})">${btnText}</button>
+        </div>
+      </div>`;
+    }).join('');
   }
 
   function renderDashboard() {
     renderMetrics();
     renderStatusBars();
+    renderTopVendors();
     renderUpcoming();
-    renderRecentInvoices();
+    renderInvoicesList();
+  }
+
+  // ---------- Backup & Restore (independent of cloud sync) ----------
+  function downloadBackup() {
+    const backup = {};
+    ALL_SYNCED_KEYS.forEach(k => { backup[k] = localStorage.getItem(k); });
+    const blob = new Blob([JSON.stringify(backup, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'TripleH_Backup_' + new Date().toISOString().slice(0, 10) + '.json';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  }
+
+  function restoreBackup(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = function () {
+      let data;
+      try {
+        data = JSON.parse(reader.result);
+      } catch (e) {
+        alert('That file is not valid backup JSON.');
+        event.target.value = '';
+        return;
+      }
+      const confirmed = confirm(
+        'This will REPLACE all current data (jobs, expenses, invoices, contacts, notes, price reference) ' +
+        'with what\'s in this backup file, on this device. This cannot be undone. Continue?'
+      );
+      if (!confirmed) { event.target.value = ''; return; }
+
+      ALL_SYNCED_KEYS.forEach(k => {
+        if (data[k] !== undefined && data[k] !== null) localStorage.setItem(k, data[k]);
+      });
+      if (typeof scheduleSync === 'function') scheduleSync();
+      event.target.value = '';
+      renderDashboard();
+      alert('Backup restored. If you use Cloud Sync, this will push to the cloud shortly and become the new shared version on all devices.');
+    };
+    reader.readAsText(file);
   }
 
   async function manualRefreshSync() {
