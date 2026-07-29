@@ -122,7 +122,7 @@
   </div>
 </div>
 
-<script defer>
+<script>
   let stopCount = 0;
 
   function addStop(value = '') {
@@ -256,13 +256,17 @@
   }
 
   loadSharedMileageRate();
-  if (typeof initSyncOnLoad === 'function') {
-    initSyncOnLoad().then(() => { loadSharedMileageRate(); calculateTripCost(); });
-  }
   calculateTripCost();
+  addStop();
+  addStop();
 
-  addStop();
-  addStop();
+  // sync.js loads with `defer`, which has no effect on this inline script
+  // (defer only applies to scripts with a `src`) -- it runs immediately at
+  // parse time instead. Waiting for DOMContentLoaded guarantees sync.js
+  // has actually finished loading before we call its functions.
+  document.addEventListener('DOMContentLoaded', function () {
+    initSyncOnLoad().then(() => { loadSharedMileageRate(); calculateTripCost(); });
+  });
 </script>
 </body>
 </html>

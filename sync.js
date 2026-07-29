@@ -3,7 +3,13 @@
 // ===========================================================================
 // This syncs your Workspace data (Jobs, Contacts, Notes, Expenses, Price
 // Reference, Mileage Rate) across devices using a free Supabase project
-// that belongs to Triple H Enterprises ONLY — never Tagg-N-Go's account.
+// that belongs to Triple H Enterprises ONLY.
+//
+// Sync runs automatically in the background once set up below -- there's
+// no code to type in or button to press day-to-day. Every device that
+// loads these pages uses the same built-in DEFAULT_SYNC_CODE further
+// down this file, so as long as all your devices are pointed at the same
+// Supabase project (below), they stay in sync with zero manual steps.
 //
 // SETUP (one-time, ~3 minutes):
 // 1. Go to https://supabase.com, sign up free, create a new project
@@ -51,11 +57,22 @@ const SYNC_DATA_KEYS = [
 const SYNC_CODE_KEY = 'th_sync_code';
 const SYNC_KNOWN_AT_KEY = 'th_sync_known_at';
 
+// Single-business, single-owner tool -- no need for a user-facing PIN.
+// Every device auto-uses this same fixed code so sync just works silently.
+const DEFAULT_SYNC_CODE = 'tripleh-workspace-2026';
+
 function isSyncConfigured() {
   return !SUPABASE_URL.startsWith('PASTE_') && !SUPABASE_ANON_KEY.startsWith('PASTE_');
 }
 
-function getSyncCode() { return localStorage.getItem(SYNC_CODE_KEY) || ''; }
+function getSyncCode() {
+  let code = localStorage.getItem(SYNC_CODE_KEY);
+  if (!code) {
+    code = DEFAULT_SYNC_CODE;
+    localStorage.setItem(SYNC_CODE_KEY, code);
+  }
+  return code;
+}
 function setSyncCode(code) { localStorage.setItem(SYNC_CODE_KEY, code.trim()); }
 function clearSyncCode() { localStorage.removeItem(SYNC_CODE_KEY); }
 

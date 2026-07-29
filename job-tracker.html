@@ -336,7 +336,7 @@
   </div>
 </div>
 
-<script defer>
+<script>
   const STORAGE_KEYS = { jobs: 'th_tracker_jobs', contacts: 'th_tracker_contacts', notes: 'th_tracker_notes_v2', priceRef: 'th_price_reference' };
   const EXPENSE_STORAGE_KEY = 'th_expense_log';
   const RATE_STORAGE_KEY = 'th_mileage_rate';
@@ -813,21 +813,29 @@
   }
 
   // ---------- Init ----------
-  (async function init() {
-    await initSyncOnLoad();
-    document.getElementById('entryDate').value = new Date().toISOString().slice(0, 10);
-    loadMileageRate();
-    renderJobs();
-    calculateCost();
-    populateJobRefOptions();
-    renderExpenses();
-    renderContacts();
-    renderPriceReferences();
-    initNotes();
+  // sync.js/tools-common.js load with `defer`, which only affects scripts
+  // with a `src` -- it has no effect on this inline block, which the
+  // browser runs immediately at parse time regardless. Waiting for
+  // DOMContentLoaded (which fires only after deferred scripts finish)
+  // guarantees initSyncOnLoad() and friends actually exist by the time
+  // we call them here.
+  document.addEventListener('DOMContentLoaded', function () {
+    (async function init() {
+      await initSyncOnLoad();
+      document.getElementById('entryDate').value = new Date().toISOString().slice(0, 10);
+      loadMileageRate();
+      renderJobs();
+      calculateCost();
+      populateJobRefOptions();
+      renderExpenses();
+      renderContacts();
+      renderPriceReferences();
+      initNotes();
 
-    const initialHash = (location.hash || '').replace('#', '');
-    if (TAB_HASHES[initialHash]) activateTab(initialHash);
-  })();
+      const initialHash = (location.hash || '').replace('#', '');
+      if (TAB_HASHES[initialHash]) activateTab(initialHash);
+    })();
+  });
 </script>
 </body>
 </html>

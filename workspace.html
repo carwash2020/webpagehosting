@@ -5,12 +5,11 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta name="robots" content="noindex, nofollow">
 <title>Workspace | Triple H Enterprises (Internal)</title>
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data:; connect-src 'self' https://*.supabase.co; frame-src 'none'; object-src 'none'; base-uri 'self'; frame-ancestors 'none';">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data:; connect-src 'self'; frame-src 'none'; object-src 'none'; base-uri 'self'; frame-ancestors 'none';">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Anton&family=Oswald:wght@400;500;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="/styles.css">
-<script src="/sync.js" defer></script>
 <script src="/tools-common.js" defer></script>
 <style>
   body { padding: 90px 20px 60px; max-width: 700px; margin: 0 auto; }
@@ -44,24 +43,6 @@
   <button class="help-btn" onclick="openHelpModal()" aria-label="How to use this workspace" title="How to use this workspace">?</button>
 </div>
 <p class="hub-sub">Bookmark this page &mdash; every internal tool lives here, so this is the only link worth remembering.</p>
-
-<div class="sync-section">
-  <h4>Cloud Sync (Triple H only &mdash; not connected to TNG's account)</h4>
-  <div id="syncNotConfigured">
-    <p style="color:var(--text-dim); margin:0 0 10px;">Not set up yet. Create a free Supabase project for Triple H, then paste your Project URL and anon key into <code>sync.js</code> (see the setup comment at the top of that file) and re-upload it. Until then, everything still works locally on each device, just without cross-device sync.</p>
-  </div>
-  <div id="syncConfigured" style="display:none;">
-    <div class="sync-row">
-      <input type="text" id="syncCodeInput" placeholder="Enter a sync code (make one up, e.g. TripleH2026)">
-      <button class="secondary-btn" onclick="saveSyncCodeFromInput()">Save Code</button>
-    </div>
-    <div class="sync-row">
-      <button class="secondary-btn" onclick="doPush()">Push This Device's Data to Cloud</button>
-      <button class="secondary-btn" onclick="doPull()">Pull Latest From Cloud</button>
-    </div>
-    <div class="sync-status" id="syncStatus"></div>
-  </div>
-</div>
 
 <a href="/invoice-generator.html" class="tool-card">
   <div class="tool-card-text">
@@ -120,54 +101,10 @@
         <li><strong>Invoice Generator</strong> &mdash; fill in job details, download a branded PDF invoice with your Venmo QR built in.</li>
         <li><strong>Review Request Sender</strong> &mdash; after a job, generate a ready-to-send review-request text message.</li>
       </ul>
-      <p>Every tool has its own "?" button with instructions specific to that page. Nothing typed into any of these tools is sent to a server &mdash; data either stays in this browser (Job Tracker) or only exists in a file you download (Contact Card, Invoice Generator) &mdash; unless you set up Cloud Sync above, which syncs Job Tracker data (jobs, expenses, contacts, notes, price reference) to your own private Supabase project using a code you choose. That project belongs to Triple H only, completely separate from Tagg-N-Go's systems.</p>
+      <p>Every tool has its own "?" button with instructions specific to that page. Data is saved directly in your browser, and quietly kept in sync across your devices in the background &mdash; nothing to set up or press.</p>
     </div>
   </div>
 </div>
 
-<script>
-  function refreshSyncUI() {
-    const configured = typeof isSyncConfigured === 'function' && isSyncConfigured();
-    document.getElementById('syncNotConfigured').style.display = configured ? 'none' : '';
-    document.getElementById('syncConfigured').style.display = configured ? '' : 'none';
-    if (configured) {
-      document.getElementById('syncCodeInput').value = getSyncCode();
-    }
-  }
-
-  function saveSyncCodeFromInput() {
-    const code = document.getElementById('syncCodeInput').value;
-    if (!code.trim()) { alert('Enter a code first.'); return; }
-    setSyncCode(code);
-    setStatus('Code saved on this device. Use the same code on your other device, then Pull Latest From Cloud there.', 'ok');
-  }
-
-  function setStatus(msg, kind) {
-    const el = document.getElementById('syncStatus');
-    el.textContent = msg;
-    el.className = 'sync-status' + (kind === 'ok' ? ' is-ok' : kind === 'error' ? ' is-error' : '');
-  }
-
-  async function doPush() {
-    setStatus('Pushing...', null);
-    const result = await pushSync();
-    if (result.ok) setStatus('Pushed successfully.', 'ok');
-    else setStatus('Push failed: ' + result.error + (result.error === 'no-code' ? ' (save a code first)' : ''), 'error');
-  }
-
-  async function doPull() {
-    setStatus('Pulling...', null);
-    const result = await pullSync();
-    if (result.ok) setStatus('Pulled successfully. Refresh other tabs to see the update.', 'ok');
-    else setStatus('Pull failed: ' + result.error + (result.error === 'no-data-yet' ? ' (push from a device first)' : ''), 'error');
-  }
-
-  document.addEventListener('DOMContentLoaded', refreshSyncUI);
-  // tools-common.js and sync.js load with `defer`, so by the time this
-  // non-deferred script runs, DOMContentLoaded may already have fired or
-  // be about to -- call once directly too, guarded for safety.
-  if (typeof isSyncConfigured === 'function') refreshSyncUI();
-  else window.addEventListener('load', refreshSyncUI);
-</script>
 </body>
 </html>
