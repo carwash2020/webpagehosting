@@ -136,7 +136,7 @@
 <div class="tool-title">Job Tracker</div>
 <p class="tool-sub">Jobs, pricing, expenses, contacts, and notes &mdash; the whole day-to-day workflow in one place, organized by tab.</p>
 <div class="storage-note">
-  <strong>Where this data lives:</strong> everything on this page is saved directly in this browser. If you've set up Cloud Sync on the Workspace page, it also syncs to your own private Supabase project so it follows you across devices. Use Export CSV on the Expenses tab regularly either way, as a backup copy outside the browser.<span id="syncStatusText"></span>
+  <strong>Where this data lives:</strong> everything on this page is saved directly in this browser. If you've set up Cloud Sync on the Workspace page, it also syncs to your own private Supabase project so it follows you across devices. Use Export CSV on the Expenses tab regularly either way, as a backup copy outside the browser.<span id="syncStatusText"></span> <a href="#" id="refreshSyncLink" onclick="manualRefreshSync(); return false;" style="color:var(--blue-light);">Refresh synced data now</a>
 </div>
 
 <div class="tabs">
@@ -366,6 +366,42 @@
   }
 
   window.addEventListener('th-sync-status', updateSyncStatusText);
+
+  async function manualRefreshSync() {
+    const link = document.getElementById('refreshSyncLink');
+    const originalText = link.textContent;
+    link.textContent = 'Refreshing...';
+    const result = await pullSync();
+    link.textContent = originalText;
+    updateSyncStatusText();
+
+    if (!result.ok) {
+      if (result.error === 'no-data-yet') {
+        alert('Nothing in the cloud yet for this device to pull -- push something first from wherever you last edited.');
+      } else {
+        alert('Could not refresh: ' + result.error);
+      }
+      return;
+    }
+
+    // Re-render every tab with whatever just came down from the cloud
+    document.getElementById('hideCompleted').checked = document.getElementById('hideCompleted').checked;
+    renderJobs();
+    populateJobRefOptions();
+    loadMileageRate();
+    calculateCost();
+    renderExpenses();
+    renderContacts();
+    renderPriceReferences();
+    renderNotesList();
+    if (currentNoteId !== null && loadNotes().some(n => n.id === currentNoteId)) {
+      selectNote(currentNoteId);
+    } else {
+      currentNoteId = null;
+      document.getElementById('noteEditorSection').style.display = 'none';
+      document.getElementById('noteEmptyState').style.display = '';
+    }
+  }
 
   // ---------- Tabs ----------
   const TAB_HASHES = { jobs: 'jobs', cost: 'cost', expenses: 'expenses', contacts: 'contacts', notes: 'notes' };

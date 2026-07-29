@@ -84,7 +84,7 @@
   </div>
   <button class="help-btn" onclick="openHelpModal()" aria-label="How to use this dashboard" title="How to use this dashboard">?</button>
 </div>
-<p class="hub-sub">Bookmark this page &mdash; a snapshot of the business, plus every internal tool, all in one place.</p>
+<p class="hub-sub">Bookmark this page &mdash; a snapshot of the business, plus every internal tool, all in one place. <a href="#" id="refreshSyncLink" onclick="manualRefreshSync(); return false;" style="color:var(--blue-light);">Refresh synced data now</a></p>
 
 <div class="section-heading is-first">Business Snapshot</div>
 
@@ -290,6 +290,18 @@
     renderStatusBars();
     renderUpcoming();
     renderRecentInvoices();
+  }
+
+  async function manualRefreshSync() {
+    const link = document.getElementById('refreshSyncLink');
+    const originalText = link.textContent;
+    link.textContent = 'Refreshing...';
+    const result = await pullSync();
+    link.textContent = originalText;
+    if (!result.ok && result.error !== 'no-data-yet') {
+      alert('Could not refresh: ' + result.error);
+    }
+    renderDashboard();
   }
 
   // sync.js loads with `defer`, which has no effect on this inline script
