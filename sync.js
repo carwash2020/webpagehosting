@@ -53,6 +53,9 @@ const SYNC_DATA_KEYS = [
   'th_mileage_rate',
   'th_price_reference',
   'th_invoices',
+  'th_tax_rate',
+  'th_tax_labor',
+  'th_tax_parts',
 ];
 
 const SYNC_CODE_KEY = 'th_sync_code';

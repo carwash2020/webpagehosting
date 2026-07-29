@@ -210,12 +210,30 @@
   </div>
 
   <div class="form-section">
+    <h3>Sales Tax</h3>
+    <p class="inline-note">Utah taxes repair labor on things like appliances, but labor on items permanently attached to real property is often exempt &mdash; parts are usually taxed either way. This is genuinely job-specific and not tax advice; confirm your situation with the Utah State Tax Commission or your accountant. Check whichever applies to this job.</p>
+    <div class="form-row">
+      <div class="form-field" style="max-width:220px;"><label>Sales tax rate (%)</label><input type="number" id="taxRate" value="6.75" min="0" step="0.01" onchange="saveTaxSettings(); calculateCost();" oninput="calculateCost()"></div>
+    </div>
+    <div class="checkbox-row">
+      <input type="checkbox" id="taxLabor" checked onchange="saveTaxSettings(); calculateCost();">
+      <label for="taxLabor">Tax labor</label>
+    </div>
+    <div class="checkbox-row">
+      <input type="checkbox" id="taxParts" checked onchange="saveTaxSettings(); calculateCost();">
+      <label for="taxParts">Tax parts/materials</label>
+    </div>
+  </div>
+
+  <div class="form-section">
     <h3>Results</h3>
     <div class="results-box">
       <div class="result-row"><span class="result-label">Labor</span><span id="laborResult">$0.00</span></div>
       <div class="result-row"><span class="result-label">Parts/materials</span><span id="partsResult">$0.00</span></div>
-      <div class="result-row final" id="standardFinalRow"><span class="result-label final">Standard total</span><span id="standardResult">$0.00</span></div>
-      <div class="result-row final" id="discountedFinalRow"><span class="result-label final">First-time client price</span><span id="discountedResult">$0.00</span></div>
+      <div class="result-row"><span class="result-label">Subtotal (before tax)</span><span id="subtotalResult">$0.00</span></div>
+      <div class="result-row"><span class="result-label">Sales tax</span><span id="taxResult">$0.00</span></div>
+      <div class="result-row final" id="standardFinalRow"><span class="result-label final">Standard total (with tax)</span><span id="standardResult">$0.00</span></div>
+      <div class="result-row final" id="discountedFinalRow"><span class="result-label final">First-time client price (with tax)</span><span id="discountedResult">$0.00</span></div>
     </div>
   </div>
 
@@ -330,7 +348,7 @@
       <p>This page combines five related tools into tabs. Data lives in this browser, and also syncs to the cloud if you've set that up on the Workspace page.</p>
       <ul>
         <li><strong>Jobs</strong> &mdash; add a job with priority/status/due date, sort by date or priority, hide completed jobs, or tap "Advance Status" to cycle Not Started &rarr; In Progress &rarr; Done.</li>
-        <li><strong>Cost Lookup</strong> &mdash; type in hours and parts cost to see the standard price instantly. Optionally type the client's name first — it checks your job history and auto-suggests whether they're new or returning (still overridable). Save frequent job types under "Price Reference" and tap one anytime to reload it.</li>
+        <li><strong>Cost Lookup</strong> &mdash; type in hours and parts cost to see the standard price instantly, now with sales tax included in the total. Check/uncheck "Tax labor" and "Tax parts/materials" separately since Utah's rules genuinely differ by job type (not tax advice — confirm your specific situation with the Utah State Tax Commission or your accountant). Optionally type the client's name first — it checks your job history and auto-suggests whether they're new or returning (still overridable). Save frequent job types under "Price Reference" and tap one anytime to reload it.</li>
         <li><strong>Expenses</strong> &mdash; log expenses or mileage, now with vendor, payment method, and an optional link to a specific job. Mileage rate lives right next to the Miles field since it's only relevant for mileage entries. Export CSV anytime for a backup or for taxes.</li>
         <li><strong>Contacts</strong> &mdash; a quick address book for vendors, suppliers, or recurring clients.</li>
         <li><strong>Notes</strong> &mdash; keep as many separate, named notes as you want. Click one on the left to open it, or start a new one. Saves automatically as you type.</li>
@@ -393,6 +411,7 @@
     renderJobs();
     populateJobRefOptions();
     loadMileageRate();
+    loadTaxSettings();
     calculateCost();
     renderExpenses();
     renderContacts();
@@ -555,19 +574,51 @@
 
   function money(v) { return '$' + v.toFixed(2); }
 
+  const TAX_RATE_KEY = 'th_tax_rate';
+  const TAX_LABOR_KEY = 'th_tax_labor';
+  const TAX_PARTS_KEY = 'th_tax_parts';
+
+  function saveTaxSettings() {
+    localStorage.setItem(TAX_RATE_KEY, document.getElementById('taxRate').value);
+    localStorage.setItem(TAX_LABOR_KEY, document.getElementById('taxLabor').checked ? '1' : '0');
+    localStorage.setItem(TAX_PARTS_KEY, document.getElementById('taxParts').checked ? '1' : '0');
+    if (typeof scheduleSync === 'function') scheduleSync();
+  }
+
+  function loadTaxSettings() {
+    const rate = localStorage.getItem(TAX_RATE_KEY);
+    const labor = localStorage.getItem(TAX_LABOR_KEY);
+    const parts = localStorage.getItem(TAX_PARTS_KEY);
+    if (rate !== null) document.getElementById('taxRate').value = rate;
+    if (labor !== null) document.getElementById('taxLabor').checked = labor === '1';
+    if (parts !== null) document.getElementById('taxParts').checked = parts === '1';
+  }
+
   function calculateCost() {
     const hours = parseFloat(document.getElementById('hours').value) || 0;
     const rate = parseFloat(document.getElementById('rate').value) || 0;
     const parts = parseFloat(document.getElementById('parts').value) || 0;
     const discount = parseFloat(document.getElementById('discount').value) || 0;
     const isFirstTime = document.getElementById('firstTimeClient').checked;
+    const taxRate = parseFloat(document.getElementById('taxRate').value) || 0;
+    const taxLabor = document.getElementById('taxLabor').checked;
+    const taxParts = document.getElementById('taxParts').checked;
 
     const labor = hours * rate;
-    const standardTotal = labor + parts;
+    const subtotal = labor + parts;
+    const taxableAmount = (taxLabor ? labor : 0) + (taxParts ? parts : 0);
+    const tax = taxableAmount * (taxRate / 100);
+    const standardTotal = subtotal + tax;
+    // Discount is applied to the final (tax-included) price -- a flat
+    // dollar-off-the-bill discount, not a pre-tax price adjustment. This
+    // keeps the tax math simple and matches how a flat discount usually
+    // works in practice for a small job like this.
     const discountedTotal = Math.max(0, standardTotal - discount);
 
     document.getElementById('laborResult').textContent = money(labor);
     document.getElementById('partsResult').textContent = money(parts);
+    document.getElementById('subtotalResult').textContent = money(subtotal);
+    document.getElementById('taxResult').textContent = money(tax);
     document.getElementById('standardResult').textContent = money(standardTotal);
     document.getElementById('discountedResult').textContent = money(discountedTotal);
 
@@ -907,6 +958,7 @@
     (async function init() {
       await initSyncOnLoad();
       updateSyncStatusText();
+      loadTaxSettings();
       document.getElementById('entryDate').value = new Date().toISOString().slice(0, 10);
       loadMileageRate();
       renderJobs();
