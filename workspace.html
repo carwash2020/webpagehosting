@@ -181,16 +181,6 @@
 <p class="section-note">Tap the status badge to mark an invoice Paid or Unpaid.</p>
 <div id="invoicesList"></div>
 
-<div class="section-heading">Backup &amp; Restore</div>
-<p class="section-note">Independent of cloud sync &mdash; a local safety net in case anything ever goes sideways with the Supabase project itself.</p>
-<div class="backup-row">
-  <button class="backup-btn" onclick="downloadBackup()">Download Full Backup</button>
-  <label class="backup-btn" style="display:inline-flex; align-items:center; cursor:pointer;">
-    Restore from Backup
-    <input type="file" accept="application/json" onchange="restoreBackup(event)" style="display:none;">
-  </label>
-</div>
-
 <div class="section-heading">Tools</div>
 
 <a href="/job-tracker.html" class="tool-card">
@@ -224,6 +214,16 @@
   </div>
   <span class="tool-card-arrow">&rarr;</span>
 </a>
+
+<div class="section-heading">Backup &amp; Restore</div>
+<p class="section-note">Independent of cloud sync &mdash; a local safety net in case anything ever goes sideways with the Supabase project itself.</p>
+<div class="backup-row">
+  <button class="backup-btn" onclick="downloadBackup()">Download Full Backup</button>
+  <label class="backup-btn" style="display:inline-flex; align-items:center; cursor:pointer;">
+    Restore from Backup
+    <input type="file" accept="application/json" onchange="restoreBackup(event)" style="display:none;">
+  </label>
+</div>
 
 <div class="hub-note">
   <strong>Worth knowing:</strong> this page isn't password-protected &mdash; it's just left off the site's navigation and menus, and marked so search engines won't index it. Anyone who somehow got this exact URL could open it, but there's nothing here a stranger would think to guess, and none of these tools expose real customer data or send anything on their own.
