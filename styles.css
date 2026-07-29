@@ -89,6 +89,7 @@
     margin:0 0 10px;
   }
   .eyebrow.is-blue{color:var(--blue-light);}
+  .eyebrow.is-orange{color:var(--orange-light);}
 
   .section-head{
     max-width:640px;
@@ -1029,3 +1030,104 @@
   @media (max-width:760px){
     .review-slide{padding:32px 24px;}
   }
+
+/* ==========================================================================
+   INTERNAL TOOLS SUITE — shared styles for /workspace.html and its 7 tools.
+   Not used by the public-facing pages (index.html + 5 landing pages).
+   Scoped under distinct classnames (tool-header, help-*) so nothing here
+   overlaps or overrides public-site styles above.
+   ========================================================================== */
+
+.tool-header{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:16px;
+  margin-bottom:18px;
+}
+.tool-header-brand{
+  display:flex;
+  align-items:center;
+  gap:10px;
+  text-decoration:none;
+  color:var(--blue-light);
+}
+.tool-header-brand img{
+  height:32px;
+  width:32px;
+  object-fit:contain;
+  flex-shrink:0;
+}
+.tool-header-brand span{
+  font-family:'Oswald',sans-serif;
+  font-size:14px;
+  font-weight:600;
+}
+.tool-header-brand:hover span{ color:var(--orange-light); }
+
+.help-btn{
+  flex-shrink:0;
+  width:30px;
+  height:30px;
+  border-radius:50%;
+  border:1px solid var(--border);
+  background:var(--bg-panel-2);
+  color:var(--text-dim);
+  font-family:'Oswald',sans-serif;
+  font-weight:700;
+  font-size:14px;
+  cursor:pointer;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  transition:border-color .15s ease, color .15s ease;
+}
+.help-btn:hover{ border-color:var(--orange-light); color:var(--orange-light); }
+
+.help-modal-overlay{
+  display:none;
+  position:fixed;
+  inset:0;
+  background:rgba(0,0,0,0.6);
+  z-index:200;
+  align-items:center;
+  justify-content:center;
+  padding:20px;
+}
+.help-modal-overlay.is-open{ display:flex; }
+.help-modal{
+  position:relative;
+  background:var(--bg-panel);
+  border:1px solid var(--border);
+  border-radius:var(--radius);
+  max-width:520px;
+  width:100%;
+  max-height:80vh;
+  overflow-y:auto;
+  padding:26px 28px;
+}
+.help-modal h3{
+  font-family:'Oswald',sans-serif;
+  color:var(--orange-light);
+  font-size:19px;
+  margin:0 0 14px;
+  padding-right:24px;
+}
+.help-modal-body{ color:var(--text); font-size:14.5px; line-height:1.65; }
+.help-modal-body p{ margin:0 0 12px; }
+.help-modal-body ul{ margin:0 0 12px; padding-left:20px; }
+.help-modal-body li{ margin-bottom:8px; }
+.help-modal-body strong{ color:var(--white); }
+.help-modal-close{
+  position:absolute;
+  top:16px;
+  right:16px;
+  background:none;
+  border:none;
+  color:var(--text-dim);
+  font-size:22px;
+  line-height:1;
+  cursor:pointer;
+  padding:4px 8px;
+}
+.help-modal-close:hover{ color:var(--white); }
