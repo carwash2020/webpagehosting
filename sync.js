@@ -235,6 +235,24 @@ async function markLeadHandled(id, handled) {
   }
 }
 
+async function deleteLead(id) {
+  if (!isSyncConfigured()) return { ok: false, error: 'not-configured' };
+  try {
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/th_leads?id=eq.${id}`, {
+      method: 'DELETE',
+      headers: {
+        'apikey': SUPABASE_ANON_KEY,
+        'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+        'Prefer': 'return=minimal',
+      },
+    });
+    if (!res.ok) return { ok: false, error: 'http-' + res.status };
+    return { ok: true };
+  } catch (e) {
+    return { ok: false, error: 'network' };
+  }
+}
+
 // Auto-pull once per page load, before the page's own render functions run
 // their first pass, so freshly-synced data shows up immediately. Tools call
 // `await initSyncOnLoad()` at the top of their init sequence.

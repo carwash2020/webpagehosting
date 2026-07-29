@@ -318,7 +318,7 @@
       <p>This is the home base for the whole business &mdash; bookmark this one page. Tap any section heading (except Tools) to collapse or expand it &mdash; your preference is remembered.</p>
       <ul>
         <li><strong>Business Snapshot</strong> &mdash; Last 7 Days, This Month, All Time, or a Custom Range for pulling tax-period numbers.</li>
-        <li><strong>Leads</strong> &mdash; contact-form submissions from the website, mirrored here automatically. Mark them Handled once you've followed up.</li>
+        <li><strong>Leads</strong> &mdash; contact-form submissions from the website, mirrored here automatically. Mark them Handled once you've followed up, or Delete to remove one entirely.</li>
         <li><strong>Due Soon</strong> &mdash; jobs due in the next 7 days that aren't Done yet.</li>
         <li><strong>Invoices</strong> &mdash; every invoice you've generated. Tap the status badge to mark Paid or Unpaid.</li>
         <li><strong>Analytics</strong> &mdash; Job Status breakdown and Top Vendors, collapsed by default since it's more of a deeper-dive than a daily check.</li>
@@ -601,10 +601,20 @@
             <div class="lead-card-meta">${escapeHtml(l.phone || '')}${l.email ? ' &middot; ' + escapeHtml(l.email) : ''}</div>
             <div class="lead-card-meta">${escapeHtml(l.service || '')}${l.preferred_date ? ' &middot; wants ' + escapeHtml(l.preferred_date) : ''}${l.preferred_time ? ' (' + escapeHtml(l.preferred_time) + ')' : ''}</div>
           </div>
-          <button class="lead-toggle-btn ${l.handled ? 'is-handled' : 'is-new'}" onclick="toggleLeadHandled(${l.id}, ${!l.handled})">${l.handled ? 'Handled' : 'New'}</button>
+          <div class="dash-list-item-right">
+            <button class="lead-toggle-btn ${l.handled ? 'is-handled' : 'is-new'}" onclick="toggleLeadHandled(${l.id}, ${!l.handled})">${l.handled ? 'Handled' : 'New'}</button>
+            <button class="small-btn danger" onclick="deleteLeadFromDashboard(${l.id})">Delete</button>
+          </div>
         </div>
         ${l.details ? '<div class="lead-card-details">"' + escapeHtml(l.details) + '"</div>' : ''}
       </div>`).join('');
+  }
+
+  async function deleteLeadFromDashboard(id) {
+    if (!confirm('Delete this lead? This cannot be undone.')) return;
+    const result = await deleteLead(id);
+    if (!result.ok) { alert('Could not delete: ' + result.error); return; }
+    loadAndRenderLeads();
   }
 
   async function toggleLeadHandled(id, newState) {
