@@ -1147,8 +1147,16 @@
 .note-list-item-text h4{ font-family:'Oswald',sans-serif; font-size:14px; color:var(--white); margin:0 0 3px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
 .note-list-item-text p{ font-size:12px; color:var(--text-dim); margin:0; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
 .note-list-item .small-btn{ flex-shrink:0; }
-#noteTitle{ font-family:'Oswald',sans-serif; font-size:18px; font-weight:600; margin-bottom:10px; }
-#noteBody{ min-height:340px; }
+#noteTitle{
+  display:block; width:100%; box-sizing:border-box;
+  padding:10px 12px; background:var(--bg-panel-2); border:1px solid var(--border); border-radius:6px;
+  color:var(--white); font-family:'Oswald',sans-serif; font-size:18px; font-weight:600; margin-bottom:12px;
+}
+#noteBody{
+  display:block; width:100%; box-sizing:border-box;
+  padding:14px 16px; background:var(--bg-panel-2); border:1px solid var(--border); border-radius:var(--radius);
+  color:var(--white); font-size:15px; font-family:inherit; min-height:340px; resize:vertical;
+}
 
 /* --- Checkbox rows (Cost Lookup first-time discount, etc) --- */
 .checkbox-row{ display:flex; align-items:center; gap:8px; margin-bottom:14px; color:var(--white); font-size:14px; }
