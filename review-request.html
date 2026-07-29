@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="robots" content="noindex, nofollow">
+<title>Review Request Sender | Triple H Enterprises (Internal Tool)</title>
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data:; connect-src 'self'; frame-src 'none'; object-src 'none'; base-uri 'self'; frame-ancestors 'none';">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/styles.css">
+<style>
+  body { padding: 90px 20px 60px; max-width: 640px; margin: 0 auto; }
+  .tool-title { font-family:'Oswald',sans-serif; font-weight:700; font-size:28px; color:var(--white); margin-bottom:6px; }
+  .tool-sub { color: var(--text-dim); margin-bottom: 30px; }
+  .home-link { display:inline-block; margin-bottom: 20px; color: var(--blue-light); font-size: 14px; }
+  .form-section {
+    background: var(--bg-panel); border: 1px solid var(--border); border-radius: var(--radius);
+    padding: 24px; margin-bottom: 20px;
+  }
+  .form-section h3 { font-family:'Oswald',sans-serif; color: var(--orange-light); font-size: 14px; margin: 0 0 14px; text-transform: uppercase; letter-spacing: 1px; }
+  .form-field { margin-bottom: 14px; }
+  .form-field label { display: block; font-size: 13px; color: var(--text-dim); margin-bottom: 5px; }
+  .form-field input {
+    width: 100%; padding: 10px 12px; background: var(--bg-panel-2); border: 1px solid var(--border);
+    border-radius: 6px; color: var(--white); font-size: 15px; font-family: inherit; box-sizing: border-box;
+  }
+  .message-preview {
+    background: var(--bg-panel-2); border: 1px solid var(--border); border-radius: 8px;
+    padding: 16px; font-size: 14.5px; line-height: 1.6; color: var(--white); white-space: pre-wrap;
+    margin-bottom: 14px;
+  }
+  .btn-row { display: flex; gap: 12px; flex-wrap: wrap; }
+  .action-btn {
+    flex: 1; min-width: 160px; text-align: center; padding: 13px 18px; border-radius: 8px;
+    font-family:'Oswald',sans-serif; font-weight: 600; font-size: 14.5px; cursor: pointer; border: none;
+    text-decoration: none; display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+  }
+  .btn-copy { background: var(--bg-panel-2); border: 1px solid var(--border); color: var(--white); }
+  .btn-copy:hover { border-color: var(--blue-light); }
+  .btn-send {
+    background: linear-gradient(135deg, var(--orange-light), var(--orange) 60%, var(--orange-dark));
+    color: #1a0d02;
+  }
+  .btn-send:hover { opacity: 0.92; }
+  .copy-confirm { color: var(--orange-light); font-size: 13px; margin-top: 8px; display: none; }
+  .fallback-note { color: var(--text-dim); font-size: 13px; margin-top: 16px; border-top: 1px solid var(--border); padding-top: 14px; }
+</style>
+</head>
+<body>
+
+<a href="/" class="home-link">&larr; Back to site</a>
+<div class="tool-title">Review Request Sender</div>
+<p class="tool-sub">Internal tool &mdash; fill in the job details after finishing, tap Send. Nothing here is saved or sent to any server; everything happens right in this browser tab and your own phone's messaging app.</p>
+
+<div class="form-section">
+  <h3>Job Details</h3>
+  <div class="form-field">
+    <label>Customer's first name (optional &mdash; leave blank for a generic greeting)</label>
+    <input type="text" id="custName" placeholder="Sarah">
+  </div>
+  <div class="form-field">
+    <label>What you did (optional &mdash; fills into the message)</label>
+    <input type="text" id="jobDesc" placeholder="the stove repair">
+  </div>
+  <div class="form-field">
+    <label>Customer's phone number</label>
+    <input type="tel" id="custPhone" placeholder="(435) 555-0123">
+  </div>
+</div>
+
+<div class="form-section">
+  <h3>Message Preview</h3>
+  <div class="message-preview" id="messagePreview"></div>
+  <div class="btn-row">
+    <button class="action-btn btn-copy" onclick="copyMessage()">Copy Message</button>
+    <a class="action-btn btn-send" id="sendLink" href="#">Open Text Message</a>
+  </div>
+  <div class="copy-confirm" id="copyConfirm">Copied! Paste it in if the text app doesn't fill it in automatically.</div>
+  <p class="fallback-note">Tapping "Open Text Message" opens your phone's messaging app addressed to this number. Most phones pre-fill the message text automatically &mdash; if yours doesn't, just tap Copy Message first and paste it in.</p>
+</div>
+
+<script>
+  const GOOGLE_REVIEW_LINK = 'https://g.page/r/CVJ0Qr-SsDkgEAI/review';
+
+  function buildMessage() {
+    const name = document.getElementById('custName').value.trim();
+    const job = document.getElementById('jobDesc').value.trim();
+    const greeting = name ? `Hey ${name}! ` : 'Hey! ';
+    const jobPhrase = job ? `letting me take care of ${job}` : 'letting me help out';
+    return `${greeting}Thanks again for ${jobPhrase} today! If you have 60 seconds, a Google review really helps a small business like mine \u2014 ${GOOGLE_REVIEW_LINK} Really appreciate it.`;
+  }
+
+  function digitsOnly(str) {
+    return str.replace(/\D/g, '');
+  }
+
+  function isIOS() {
+    return /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+  }
+
+  function updatePreviewAndLink() {
+    const message = buildMessage();
+    document.getElementById('messagePreview').textContent = message;
+
+    const rawPhone = document.getElementById('custPhone').value;
+    const digits = digitsOnly(rawPhone);
+    // assume US numbers if 10 digits given without country code
+    const phoneForLink = digits.length === 10 ? '1' + digits : digits;
+
+    const encodedMessage = encodeURIComponent(message);
+    // This exact separator differs by platform in practice -- iOS has
+    // historically wanted `&body=`, Android `?body=`. Neither is fully
+    // guaranteed across every OS version, which is exactly why the Copy
+    // Message button above exists as a guaranteed-working fallback.
+    const separator = isIOS() ? '&' : '?';
+    const smsLink = `sms:${phoneForLink}${separator}body=${encodedMessage}`;
+
+    document.getElementById('sendLink').href = smsLink;
+  }
+
+  document.getElementById('custName').addEventListener('input', updatePreviewAndLink);
+  document.getElementById('jobDesc').addEventListener('input', updatePreviewAndLink);
+  document.getElementById('custPhone').addEventListener('input', updatePreviewAndLink);
+  updatePreviewAndLink();
+
+  function copyMessage() {
+    const message = buildMessage();
+    navigator.clipboard.writeText(message).then(() => {
+      const confirm = document.getElementById('copyConfirm');
+      confirm.style.display = 'block';
+      setTimeout(() => { confirm.style.display = 'none'; }, 3000);
+    }).catch(() => {
+      // Fallback for browsers without clipboard API access
+      const textarea = document.createElement('textarea');
+      textarea.value = message;
+      document.body.appendChild(textarea);
+      textarea.select();
+      document.execCommand('copy');
+      document.body.removeChild(textarea);
+      const confirm = document.getElementById('copyConfirm');
+      confirm.style.display = 'block';
+      setTimeout(() => { confirm.style.display = 'none'; }, 3000);
+    });
+  }
+</script>
+</body>
+</html>
