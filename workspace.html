@@ -13,19 +13,34 @@
 <script src="/sync.js" defer></script>
 <script src="/tools-common.js" defer></script>
 <style>
-  body { padding: 90px 20px 60px; max-width: 900px; margin: 0 auto; }
+  body { padding: 44px 20px 60px; max-width: 900px; margin: 0 auto; }
   .hub-header { display: flex; align-items: center; justify-content: space-between; gap: 14px; margin-bottom: 8px; }
   .hub-header-left { display: flex; align-items: center; gap: 14px; }
   .hub-header img { height: 44px; width: 44px; object-fit: contain; }
   .hub-title { font-family:'Anton',sans-serif; font-size: 26px; color: var(--white); }
-  .hub-sub { color: var(--text-dim); margin-bottom: 30px; }
+  .hub-sub { color: var(--text-dim); margin-bottom: 20px; }
 
+  .jump-nav {
+    position: sticky; top: 0; z-index: 50; display: flex; gap: 4px; overflow-x: auto;
+    background: var(--bg); border-bottom: 1px solid var(--border); padding: 10px 0; margin-bottom: 20px;
+  }
+  .jump-nav a {
+    color: var(--text-dim); font-size: 12.5px; text-decoration: none; white-space: nowrap;
+    padding: 6px 12px; border-radius: 6px; font-family:'Oswald',sans-serif;
+  }
+  .jump-nav a:hover { color: var(--orange-light); background: var(--bg-panel-2); }
+
+  .section-block { margin-bottom: 8px; }
   .section-heading {
     font-family:'Oswald',sans-serif; color: var(--orange-light); font-size: 13.5px;
     text-transform: uppercase; letter-spacing: 1.5px; margin: 36px 0 16px;
     padding-bottom: 8px; border-bottom: 1px solid var(--border);
+    display: flex; justify-content: space-between; align-items: center; cursor: pointer; user-select: none;
   }
-  .section-heading.is-first { margin-top: 8px; }
+  .section-heading.is-static { cursor: default; }
+  .section-heading .collapse-arrow { color: var(--text-dim); font-size: 12px; transition: transform 0.15s ease; }
+  .section-heading.is-collapsed .collapse-arrow { transform: rotate(-90deg); }
+  .section-body.is-collapsed { display: none; }
   .section-note { color: var(--text-dim); font-size: 12.5px; margin: -10px 0 14px; }
 
   .metrics-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 14px; margin-bottom: 8px; }
@@ -37,7 +52,6 @@
   .metric-card .metric-label { color: var(--text-dim); font-size: 12px; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 8px; }
   .metric-card .metric-value { font-family:'Oswald',sans-serif; font-weight: 700; font-size: 24px; color: var(--white); }
   .metric-card .metric-value.is-orange { color: var(--orange-light); }
-  .metric-card .metric-value.is-red { color: #e05252; }
   .metric-card .metric-sub { color: var(--text-dim); font-size: 12px; margin-top: 4px; }
   .metric-card .metric-sub.is-up { color: #4caf50; }
   .metric-card .metric-sub.is-down { color: #e05252; }
@@ -64,6 +78,9 @@
   .vendor-bar-fill { height: 100%; background: var(--blue); }
   .status-bar-count, .vendor-bar-count { width: 60px; text-align: right; color: var(--white); flex-shrink: 0; font-size: 12.5px; }
 
+  .analytics-subheading { font-family:'Oswald',sans-serif; color: var(--text-dim); font-size: 12px; text-transform: uppercase; letter-spacing: 0.5px; margin: 20px 0 12px; }
+  .analytics-subheading.is-first { margin-top: 0; }
+
   .dash-list-item {
     display: flex; justify-content: space-between; align-items: center; gap: 12px;
     padding: 12px 0; border-bottom: 1px solid var(--border); font-size: 14px;
@@ -75,14 +92,21 @@
   .dash-list-item-right { display: flex; align-items: center; gap: 10px; flex-shrink: 0; }
   .empty-state-small { color: var(--text-dim); font-size: 13.5px; padding: 12px 0; }
 
-  .paid-toggle-btn {
+  .paid-toggle-btn, .lead-toggle-btn {
     border-radius: 12px; padding: 4px 12px; font-size: 11.5px; font-weight: 600;
     text-transform: uppercase; letter-spacing: 0.5px; cursor: pointer; border: 1px solid;
-    background: none;
+    background: none; flex-shrink: 0;
   }
-  .paid-toggle-btn.is-paid { color: #4caf50; border-color: #4caf50; }
-  .paid-toggle-btn.is-unpaid { color: var(--text-dim); border-color: var(--border); }
+  .paid-toggle-btn.is-paid, .lead-toggle-btn.is-handled { color: #4caf50; border-color: #4caf50; }
+  .paid-toggle-btn.is-unpaid, .lead-toggle-btn.is-new { color: var(--orange-light); border-color: var(--orange-light); }
   .paid-toggle-btn.is-overdue { color: #e05252; border-color: #e05252; }
+
+  .lead-card { padding: 14px 0; border-bottom: 1px solid var(--border); }
+  .lead-card:last-child { border-bottom: none; }
+  .lead-card-top { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; margin-bottom: 6px; }
+  .lead-card-name { color: var(--white); font-family:'Oswald',sans-serif; font-size: 15px; }
+  .lead-card-meta { color: var(--text-dim); font-size: 12.5px; margin: 2px 0; }
+  .lead-card-details { color: var(--text); font-size: 13.5px; margin-top: 6px; font-style: italic; }
 
   .tool-card {
     display: flex; align-items: center; justify-content: space-between; gap: 20px;
@@ -118,111 +142,168 @@
 </div>
 <p class="hub-sub">Bookmark this page &mdash; a snapshot of the business, plus every internal tool, all in one place. <a href="#" id="refreshSyncLink" onclick="manualRefreshSync(); return false;" style="color:var(--blue-light);">Refresh synced data now</a></p>
 
-<div class="section-heading is-first">Business Snapshot</div>
+<nav class="jump-nav">
+  <a href="#section-snapshot">Snapshot</a>
+  <a href="#section-leads">Leads</a>
+  <a href="#section-duesoon">Due Soon</a>
+  <a href="#section-invoices">Invoices</a>
+  <a href="#section-analytics">Analytics</a>
+  <a href="#section-tools">Tools</a>
+</nav>
 
-<div class="period-toggle">
-  <button class="period-btn" data-period="week" onclick="setPeriod('week')">Last 7 Days</button>
-  <button class="period-btn is-active" data-period="month" onclick="setPeriod('month')">This Month</button>
-  <button class="period-btn" data-period="all" onclick="setPeriod('all')">All Time</button>
-  <button class="period-btn" data-period="custom" onclick="setPeriod('custom')">Custom Range</button>
+<div class="section-block" id="section-snapshot">
+  <div class="section-heading" onclick="toggleSection('snapshot')">
+    <span>Business Snapshot</span>
+    <span class="collapse-arrow">&#9660;</span>
+  </div>
+  <div class="section-body" id="body-snapshot">
+    <div class="period-toggle">
+      <button class="period-btn" data-period="week" onclick="setPeriod('week')">Last 7 Days</button>
+      <button class="period-btn is-active" data-period="month" onclick="setPeriod('month')">This Month</button>
+      <button class="period-btn" data-period="all" onclick="setPeriod('all')">All Time</button>
+      <button class="period-btn" data-period="custom" onclick="setPeriod('custom')">Custom Range</button>
+    </div>
+
+    <div class="custom-range-row" id="customRangeRow">
+      <input type="date" id="customStart" onchange="renderMetrics()">
+      <span>to</span>
+      <input type="date" id="customEnd" onchange="renderMetrics()">
+      <span style="color:var(--text-dim);">&mdash; useful for pulling numbers for a specific tax period.</span>
+    </div>
+
+    <div class="metrics-grid">
+      <div class="metric-card">
+        <div class="metric-label">Revenue Invoiced</div>
+        <div class="metric-value is-orange" id="metricRevenue">$0.00</div>
+        <div class="metric-sub" id="metricInvoiceCount">0 invoices</div>
+      </div>
+      <div class="metric-card">
+        <div class="metric-label">Expenses</div>
+        <div class="metric-value" id="metricExpenses">$0.00</div>
+        <div class="metric-sub" id="metricExpenseCount">0 entries</div>
+      </div>
+      <div class="metric-card">
+        <div class="metric-label">Mileage</div>
+        <div class="metric-value" id="metricMileage">0 mi</div>
+        <div class="metric-sub" id="metricMileageCost">$0.00 at current rate</div>
+      </div>
+      <div class="metric-card">
+        <div class="metric-label">Net (Revenue &minus; Expenses)</div>
+        <div class="metric-value" id="metricNet">$0.00</div>
+        <div class="metric-sub">Before mileage cost</div>
+      </div>
+      <div class="metric-card">
+        <div class="metric-label">Outstanding Balance</div>
+        <div class="metric-value" id="metricOutstanding">$0.00</div>
+        <div class="metric-sub" id="metricOutstandingCount">0 unpaid invoices</div>
+      </div>
+      <div class="metric-card" id="overdueCard">
+        <div class="metric-label">Overdue</div>
+        <div class="metric-value" id="metricOverdue">$0.00</div>
+        <div class="metric-sub" id="metricOverdueCount">0 invoices past terms</div>
+      </div>
+    </div>
+  </div>
 </div>
 
-<div class="custom-range-row" id="customRangeRow">
-  <input type="date" id="customStart" onchange="renderMetrics()">
-  <span>to</span>
-  <input type="date" id="customEnd" onchange="renderMetrics()">
-  <span style="color:var(--text-dim);">&mdash; useful for pulling numbers for a specific tax period.</span>
-</div>
-
-<div class="metrics-grid">
-  <div class="metric-card">
-    <div class="metric-label">Revenue Invoiced</div>
-    <div class="metric-value is-orange" id="metricRevenue">$0.00</div>
-    <div class="metric-sub" id="metricInvoiceCount">0 invoices</div>
+<div class="section-block" id="section-leads">
+  <div class="section-heading" onclick="toggleSection('leads')">
+    <span>Leads</span>
+    <span class="collapse-arrow">&#9660;</span>
   </div>
-  <div class="metric-card">
-    <div class="metric-label">Expenses</div>
-    <div class="metric-value" id="metricExpenses">$0.00</div>
-    <div class="metric-sub" id="metricExpenseCount">0 entries</div>
-  </div>
-  <div class="metric-card">
-    <div class="metric-label">Mileage</div>
-    <div class="metric-value" id="metricMileage">0 mi</div>
-    <div class="metric-sub" id="metricMileageCost">$0.00 at current rate</div>
-  </div>
-  <div class="metric-card">
-    <div class="metric-label">Net (Revenue &minus; Expenses)</div>
-    <div class="metric-value" id="metricNet">$0.00</div>
-    <div class="metric-sub">Before mileage cost</div>
-  </div>
-  <div class="metric-card">
-    <div class="metric-label">Outstanding Balance</div>
-    <div class="metric-value" id="metricOutstanding">$0.00</div>
-    <div class="metric-sub" id="metricOutstandingCount">0 unpaid invoices</div>
-  </div>
-  <div class="metric-card" id="overdueCard">
-    <div class="metric-label">Overdue</div>
-    <div class="metric-value" id="metricOverdue">$0.00</div>
-    <div class="metric-sub" id="metricOverdueCount">0 invoices past terms</div>
+  <div class="section-body" id="body-leads">
+    <p class="section-note">Submissions from the website's contact form. Requires the <code>th_leads</code> table set up in Supabase.</p>
+    <div id="leadsList"></div>
   </div>
 </div>
 
-<div class="section-heading">Job Status</div>
-<div id="statusBars"></div>
-
-<div class="section-heading">Top Vendors</div>
-<p class="section-note">Where expense money went, for the period selected above.</p>
-<div id="topVendors"></div>
-
-<div class="section-heading">Due Soon (next 7 days, not done)</div>
-<div id="upcomingJobs"></div>
-
-<div class="section-heading">Invoices</div>
-<p class="section-note">Tap the status badge to mark an invoice Paid or Unpaid.</p>
-<div id="invoicesList"></div>
-
-<div class="section-heading">Tools</div>
-
-<a href="/job-tracker.html" class="tool-card">
-  <div class="tool-card-text">
-    <h3>Job Tracker</h3>
-    <p>Jobs, cost lookup, expenses &amp; mileage, contacts, and notes &mdash; all five in one page, organized by tab.</p>
+<div class="section-block" id="section-duesoon">
+  <div class="section-heading" onclick="toggleSection('duesoon')">
+    <span>Due Soon (next 7 days, not done)</span>
+    <span class="collapse-arrow">&#9660;</span>
   </div>
-  <span class="tool-card-arrow">&rarr;</span>
-</a>
-
-<a href="/invoice-generator.html" class="tool-card">
-  <div class="tool-card-text">
-    <h3>Invoice Generator</h3>
-    <p>Fill in job details, download a branded invoice PDF (now with your Venmo QR built in) &mdash; logs to your dashboard automatically.</p>
+  <div class="section-body" id="body-duesoon">
+    <div id="upcomingJobs"></div>
   </div>
-  <span class="tool-card-arrow">&rarr;</span>
-</a>
+</div>
 
-<a href="/review-request.html" class="tool-card">
-  <div class="tool-card-text">
-    <h3>Review Request Sender</h3>
-    <p>After a job's done, generate a ready-to-send review-request text &mdash; 6 different phrasings, shuffle for a fresh one anytime.</p>
+<div class="section-block" id="section-invoices">
+  <div class="section-heading" onclick="toggleSection('invoices')">
+    <span>Invoices</span>
+    <span class="collapse-arrow">&#9660;</span>
   </div>
-  <span class="tool-card-arrow">&rarr;</span>
-</a>
-
-<a href="/route-planner.html" class="tool-card">
-  <div class="tool-card-text">
-    <h3>Route Planner</h3>
-    <p>Type in today's addresses, get one link that opens the whole route in Google Maps, plus a to-and-from cost analyzer.</p>
+  <div class="section-body" id="body-invoices">
+    <p class="section-note">Tap the status badge to mark an invoice Paid or Unpaid.</p>
+    <div id="invoicesList"></div>
   </div>
-  <span class="tool-card-arrow">&rarr;</span>
-</a>
+</div>
 
-<div class="section-heading">Backup &amp; Restore</div>
-<p class="section-note">Independent of cloud sync &mdash; a local safety net in case anything ever goes sideways with the Supabase project itself.</p>
-<div class="backup-row">
-  <button class="backup-btn" onclick="downloadBackup()">Download Full Backup</button>
-  <label class="backup-btn" style="display:inline-flex; align-items:center; cursor:pointer;">
-    Restore from Backup
-    <input type="file" accept="application/json" onchange="restoreBackup(event)" style="display:none;">
-  </label>
+<div class="section-block" id="section-analytics">
+  <div class="section-heading" onclick="toggleSection('analytics')">
+    <span>Analytics</span>
+    <span class="collapse-arrow">&#9660;</span>
+  </div>
+  <div class="section-body" id="body-analytics">
+    <div class="analytics-subheading is-first">Job Status</div>
+    <div id="statusBars"></div>
+    <div class="analytics-subheading">Top Vendors <span style="text-transform:none; letter-spacing:0;">(for the period selected in Business Snapshot)</span></div>
+    <div id="topVendors"></div>
+  </div>
+</div>
+
+<div class="section-block" id="section-tools">
+  <div class="section-heading is-static">
+    <span>Tools</span>
+  </div>
+
+  <a href="/job-tracker.html" class="tool-card">
+    <div class="tool-card-text">
+      <h3>Job Tracker</h3>
+      <p>Jobs, cost lookup, expenses &amp; mileage, contacts, and notes &mdash; all five in one page, organized by tab.</p>
+    </div>
+    <span class="tool-card-arrow">&rarr;</span>
+  </a>
+
+  <a href="/invoice-generator.html" class="tool-card">
+    <div class="tool-card-text">
+      <h3>Invoice Generator</h3>
+      <p>Invoices and quotes/estimates in one place &mdash; convert an estimate straight into a real invoice with one tap.</p>
+    </div>
+    <span class="tool-card-arrow">&rarr;</span>
+  </a>
+
+  <a href="/review-request.html" class="tool-card">
+    <div class="tool-card-text">
+      <h3>Review Request Sender</h3>
+      <p>After a job's done, generate a ready-to-send review-request text &mdash; 6 different phrasings, shuffle for a fresh one anytime.</p>
+    </div>
+    <span class="tool-card-arrow">&rarr;</span>
+  </a>
+
+  <a href="/route-planner.html" class="tool-card">
+    <div class="tool-card-text">
+      <h3>Route Planner</h3>
+      <p>Type in today's addresses, get one link that opens the whole route in Google Maps, plus a to-and-from cost analyzer.</p>
+    </div>
+    <span class="tool-card-arrow">&rarr;</span>
+  </a>
+</div>
+
+<div class="section-block" id="section-backup">
+  <div class="section-heading" onclick="toggleSection('backup')">
+    <span>Backup &amp; Restore</span>
+    <span class="collapse-arrow">&#9660;</span>
+  </div>
+  <div class="section-body" id="body-backup">
+    <p class="section-note">Independent of cloud sync &mdash; a local safety net in case anything ever goes sideways with the Supabase project itself.</p>
+    <div class="backup-row">
+      <button class="backup-btn" onclick="downloadBackup()">Download Full Backup</button>
+      <label class="backup-btn" style="display:inline-flex; align-items:center; cursor:pointer;">
+        Restore from Backup
+        <input type="file" accept="application/json" onchange="restoreBackup(event)" style="display:none;">
+      </label>
+    </div>
+  </div>
 </div>
 
 <div class="hub-note">
@@ -234,16 +315,15 @@
     <button class="help-modal-close" onclick="closeHelpModal()" aria-label="Close">&times;</button>
     <h3>How to Use: Dashboard</h3>
     <div class="help-modal-body">
-      <p>This is the home base for the whole business &mdash; bookmark this one page.</p>
+      <p>This is the home base for the whole business &mdash; bookmark this one page. Tap any section heading (except Tools) to collapse or expand it &mdash; your preference is remembered.</p>
       <ul>
-        <li><strong>Business Snapshot</strong> &mdash; Last 7 Days, This Month, All Time, or a Custom Range for pulling tax-period numbers. Revenue comes from invoices; expenses/mileage from the Job Tracker's Expenses tab. Last 7 Days also shows a comparison against the 7 days before that.</li>
-        <li><strong>Outstanding Balance / Overdue</strong> &mdash; unpaid invoice totals. Overdue means past the invoice's own terms (Due Upon Receipt / Net 15 / Net 30) with no payment marked yet.</li>
-        <li><strong>Job Status</strong> &mdash; how many jobs are Not Started, In Progress, and Done.</li>
-        <li><strong>Top Vendors</strong> &mdash; where expense money went this period, based on the Vendor field in the Expenses tab.</li>
+        <li><strong>Business Snapshot</strong> &mdash; Last 7 Days, This Month, All Time, or a Custom Range for pulling tax-period numbers.</li>
+        <li><strong>Leads</strong> &mdash; contact-form submissions from the website, mirrored here automatically. Mark them Handled once you've followed up.</li>
         <li><strong>Due Soon</strong> &mdash; jobs due in the next 7 days that aren't Done yet.</li>
-        <li><strong>Invoices</strong> &mdash; every invoice you've generated. Tap the status badge on any of them to mark it Paid or Unpaid.</li>
-        <li><strong>Backup &amp; Restore</strong> &mdash; download everything (jobs, expenses, invoices, contacts, notes, price reference) as one file, or restore from a previous one. This is separate from cloud sync &mdash; a copy that lives on your device, not dependent on Supabase being reachable.</li>
+        <li><strong>Invoices</strong> &mdash; every invoice you've generated. Tap the status badge to mark Paid or Unpaid.</li>
+        <li><strong>Analytics</strong> &mdash; Job Status breakdown and Top Vendors, collapsed by default since it's more of a deeper-dive than a daily check.</li>
         <li><strong>Tools</strong> &mdash; every internal tool, one tap away.</li>
+        <li><strong>Backup &amp; Restore</strong> &mdash; download everything as one file, or restore from a previous one. Independent of cloud sync entirely.</li>
       </ul>
       <p>Data is saved directly in your browser, and quietly kept in sync across your devices in the background. Marking a job "Done" in the Job Tracker also offers to jump straight to a pre-filled review request for that client.</p>
     </div>
@@ -258,9 +338,37 @@
     return div.innerHTML;
   }
 
+  const COLLAPSE_STATE_KEY = 'th_dash_collapsed';
+  const DEFAULT_COLLAPSE = { snapshot: false, leads: false, duesoon: false, invoices: false, analytics: true, backup: true };
+
+  function loadCollapseState() {
+    try {
+      return Object.assign({}, DEFAULT_COLLAPSE, JSON.parse(localStorage.getItem(COLLAPSE_STATE_KEY) || '{}'));
+    } catch (e) { return Object.assign({}, DEFAULT_COLLAPSE); }
+  }
+
+  function applyCollapseState() {
+    const state = loadCollapseState();
+    Object.keys(state).forEach(key => {
+      const heading = document.querySelector('#section-' + key + ' .section-heading');
+      const body = document.getElementById('body-' + key);
+      if (!heading || !body) return;
+      heading.classList.toggle('is-collapsed', !!state[key]);
+      body.classList.toggle('is-collapsed', !!state[key]);
+    });
+  }
+
+  function toggleSection(key) {
+    const state = loadCollapseState();
+    state[key] = !state[key];
+    localStorage.setItem(COLLAPSE_STATE_KEY, JSON.stringify(state));
+    applyCollapseState();
+  }
+
   const ALL_SYNCED_KEYS = [
     'th_tracker_jobs', 'th_tracker_contacts', 'th_tracker_notes_v2',
     'th_expense_log', 'th_mileage_rate', 'th_price_reference', 'th_invoices',
+    'th_quotes', 'th_tax_rate', 'th_tax_labor', 'th_tax_parts',
   ];
 
   function loadJobs() { return JSON.parse(localStorage.getItem('th_tracker_jobs') || '[]'); }
@@ -285,7 +393,6 @@
     return due < new Date(new Date().toDateString());
   }
 
-  // ---------- Date range handling ----------
   function startOfDay(d) { const c = new Date(d); c.setHours(0, 0, 0, 0); return c; }
 
   function getCurrentRange() {
@@ -309,6 +416,7 @@
   function inRange(dateStr, range) {
     if (!dateStr) return false;
     const d = new Date(dateStr + 'T00:00:00');
+    if (isNaN(d.getTime())) return false;
     if (range.start && d < range.start) return false;
     if (range.end && d > range.end) return false;
     return true;
@@ -343,7 +451,6 @@
     document.getElementById('metricMileageCost').textContent = money(mileageCost) + ' at $' + loadRate() + '/mi';
     document.getElementById('metricNet').textContent = money(net);
 
-    // Week-over-week comparison, only meaningful for the "week" period
     const revenueSub = document.getElementById('metricInvoiceCount');
     if (currentPeriod === 'week') {
       const prevStart = startOfDay(new Date(range.start.getTime() - 7 * 24 * 60 * 60 * 1000));
@@ -362,7 +469,6 @@
       revenueSub.className = 'metric-sub';
     }
 
-    // Outstanding + Overdue (always all-time, regardless of period toggle -- unpaid money owed doesn't reset by date filter)
     const allInvoices = loadInvoices();
     const unpaid = allInvoices.filter(i => !i.paid);
     const overdue = unpaid.filter(isOverdue);
@@ -472,15 +578,49 @@
     }).join('');
   }
 
+  async function loadAndRenderLeads() {
+    const container = document.getElementById('leadsList');
+    if (typeof fetchLeads !== 'function' || !isSyncConfigured()) {
+      container.innerHTML = '<div class="empty-state-small">Cloud sync isn\'t set up yet, so leads can\'t load.</div>';
+      return;
+    }
+    const result = await fetchLeads();
+    if (!result.ok) {
+      container.innerHTML = '<div class="empty-state-small">Couldn\'t load leads (' + escapeHtml(result.error) + '). Make sure the th_leads table exists in Supabase.</div>';
+      return;
+    }
+    if (result.leads.length === 0) {
+      container.innerHTML = '<div class="empty-state-small">No leads yet.</div>';
+      return;
+    }
+    container.innerHTML = result.leads.map(l => `
+      <div class="lead-card">
+        <div class="lead-card-top">
+          <div>
+            <div class="lead-card-name">${escapeHtml(l.name || '(no name)')}</div>
+            <div class="lead-card-meta">${escapeHtml(l.phone || '')}${l.email ? ' &middot; ' + escapeHtml(l.email) : ''}</div>
+            <div class="lead-card-meta">${escapeHtml(l.service || '')}${l.preferred_date ? ' &middot; wants ' + escapeHtml(l.preferred_date) : ''}${l.preferred_time ? ' (' + escapeHtml(l.preferred_time) + ')' : ''}</div>
+          </div>
+          <button class="lead-toggle-btn ${l.handled ? 'is-handled' : 'is-new'}" onclick="toggleLeadHandled(${l.id}, ${!l.handled})">${l.handled ? 'Handled' : 'New'}</button>
+        </div>
+        ${l.details ? '<div class="lead-card-details">"' + escapeHtml(l.details) + '"</div>' : ''}
+      </div>`).join('');
+  }
+
+  async function toggleLeadHandled(id, newState) {
+    await markLeadHandled(id, newState);
+    loadAndRenderLeads();
+  }
+
   function renderDashboard() {
     renderMetrics();
     renderStatusBars();
     renderTopVendors();
     renderUpcoming();
     renderInvoicesList();
+    loadAndRenderLeads();
   }
 
-  // ---------- Backup & Restore (independent of cloud sync) ----------
   function downloadBackup() {
     const backup = {};
     ALL_SYNCED_KEYS.forEach(k => { backup[k] = localStorage.getItem(k); });
@@ -509,7 +649,7 @@
         return;
       }
       const confirmed = confirm(
-        'This will REPLACE all current data (jobs, expenses, invoices, contacts, notes, price reference) ' +
+        'This will REPLACE all current data (jobs, expenses, invoices, quotes, contacts, notes, price reference) ' +
         'with what\'s in this backup file, on this device. This cannot be undone. Continue?'
       );
       if (!confirmed) { event.target.value = ''; return; }
@@ -536,6 +676,8 @@
     }
     renderDashboard();
   }
+
+  applyCollapseState();
 
   // sync.js loads with `defer`, which has no effect on this inline script
   // (defer only applies to external scripts with a `src`) -- this inline

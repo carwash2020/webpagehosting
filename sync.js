@@ -53,6 +53,7 @@ const SYNC_DATA_KEYS = [
   'th_mileage_rate',
   'th_price_reference',
   'th_invoices',
+  'th_quotes',
   'th_tax_rate',
   'th_tax_labor',
   'th_tax_parts',
@@ -191,6 +192,47 @@ if (typeof document !== 'undefined') {
 }
 if (typeof window !== 'undefined') {
   window.addEventListener('pagehide', flushSyncNow);
+}
+
+// ---------------------------------------------------------------------------
+// LEADS INBOX — separate from the workspace_sync blob above. Leads come
+// from the public website's contact form and accumulate as real growing
+// rows (not "current device state" like everything else), so they get
+// their own table (`th_leads`) and their own simple REST helpers here.
+// ---------------------------------------------------------------------------
+
+async function fetchLeads() {
+  if (!isSyncConfigured()) return { ok: false, error: 'not-configured', leads: [] };
+  try {
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/th_leads?select=*&order=created_at.desc&limit=50`, {
+      headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': `Bearer ${SUPABASE_ANON_KEY}` },
+    });
+    if (!res.ok) return { ok: false, error: 'http-' + res.status, leads: [] };
+    const leads = await res.json();
+    return { ok: true, leads };
+  } catch (e) {
+    return { ok: false, error: 'network', leads: [] };
+  }
+}
+
+async function markLeadHandled(id, handled) {
+  if (!isSyncConfigured()) return { ok: false, error: 'not-configured' };
+  try {
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/th_leads?id=eq.${id}`, {
+      method: 'PATCH',
+      headers: {
+        'Content-Type': 'application/json',
+        'apikey': SUPABASE_ANON_KEY,
+        'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+        'Prefer': 'return=minimal',
+      },
+      body: JSON.stringify({ handled }),
+    });
+    if (!res.ok) return { ok: false, error: 'http-' + res.status };
+    return { ok: true };
+  } catch (e) {
+    return { ok: false, error: 'network' };
+  }
 }
 
 // Auto-pull once per page load, before the page's own render functions run
