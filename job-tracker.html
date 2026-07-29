@@ -1,0 +1,635 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="robots" content="noindex, nofollow">
+<title>Job Tracker | Triple H Enterprises (Internal Tool)</title>
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data:; connect-src 'self'; frame-src 'none'; object-src 'none'; base-uri 'self'; frame-ancestors 'none';">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/styles.css">
+<script src="/tools-common.js" defer></script>
+<style>
+  body { padding: 90px 20px 60px; max-width: 1000px; margin: 0 auto; }
+  .tool-title { font-family:'Oswald',sans-serif; font-weight:700; font-size:28px; color:var(--white); margin-bottom:6px; }
+  .tool-sub { color: var(--text-dim); margin-bottom: 24px; }
+  .storage-note {
+    background: var(--bg-panel-2); border: 1px solid var(--border); border-radius: 8px;
+    padding: 12px 16px; font-size: 12.5px; color: var(--text-dim); margin-bottom: 24px;
+  }
+
+  .tabs { display: flex; gap: 6px; margin-bottom: 20px; border-bottom: 1px solid var(--border); flex-wrap: wrap; }
+  .tab-btn {
+    background: none; border: none; color: var(--text-dim); font-family:'Oswald',sans-serif;
+    font-size: 14.5px; font-weight: 600; padding: 12px 18px; cursor: pointer;
+    border-bottom: 2px solid transparent;
+  }
+  .tab-btn.is-active { color: var(--orange-light); border-bottom-color: var(--orange-light); }
+  .tab-panel { display: none; }
+  .tab-panel.is-active { display: block; }
+
+  .form-section {
+    background: var(--bg-panel); border: 1px solid var(--border); border-radius: var(--radius);
+    padding: 22px; margin-bottom: 22px;
+  }
+  .form-section h3 { font-family:'Oswald',sans-serif; color: var(--orange-light); font-size: 14px; margin: 0 0 14px; text-transform: uppercase; letter-spacing: 1px; }
+  .form-row { display: flex; gap: 14px; margin-bottom: 12px; flex-wrap: wrap; }
+  .form-field { flex: 1; min-width: 160px; }
+  .form-field label { display: block; font-size: 12.5px; color: var(--text-dim); margin-bottom: 4px; }
+  .form-field input, .form-field select, .form-field textarea {
+    width: 100%; padding: 9px 11px; background: var(--bg-panel-2); border: 1px solid var(--border);
+    border-radius: 6px; color: var(--white); font-size: 14.5px; font-family: inherit; box-sizing: border-box;
+  }
+  .form-field textarea { resize: vertical; min-height: 60px; }
+  .primary-btn {
+    background: linear-gradient(135deg, var(--orange-light), var(--orange) 60%, var(--orange-dark));
+    color: #1a0d02; font-weight: 700; font-family:'Oswald',sans-serif; font-size: 14.5px;
+    border: none; border-radius: 8px; padding: 11px 22px; cursor: pointer;
+  }
+  .secondary-btn {
+    background: var(--bg-panel-2); border: 1px solid var(--border); color: var(--white);
+    border-radius: 8px; padding: 11px 18px; cursor: pointer; font-size: 14px; font-family: inherit;
+  }
+  .secondary-btn:hover { border-color: var(--blue-light); }
+
+  .controls-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; flex-wrap: wrap; gap: 10px; }
+  .sort-group { display: flex; gap: 8px; }
+  .sort-btn {
+    background: var(--bg-panel-2); border: 1px solid var(--border); color: var(--text-dim);
+    border-radius: 6px; padding: 7px 14px; cursor: pointer; font-size: 13px;
+  }
+  .sort-btn.is-active { color: var(--orange-light); border-color: var(--orange-light); }
+  .filter-checkbox { display: flex; align-items: center; gap: 6px; color: var(--text-dim); font-size: 13px; }
+
+  .job-card {
+    background: var(--bg-panel); border: 1px solid var(--border); border-left: 4px solid var(--border);
+    border-radius: var(--radius); padding: 18px 20px; margin-bottom: 12px;
+  }
+  .job-card.priority-high { border-left-color: #e05252; }
+  .job-card.priority-medium { border-left-color: var(--orange); }
+  .job-card.priority-low { border-left-color: var(--blue); }
+  .job-card.is-done { opacity: 0.55; }
+  .job-card-top { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; margin-bottom: 8px; }
+  .job-card-title { font-family:'Oswald',sans-serif; font-size: 16px; color: var(--white); margin: 0; }
+  .job-card-title.is-done-text { text-decoration: line-through; }
+  .job-badges { display: flex; gap: 6px; flex-shrink: 0; flex-wrap: wrap; justify-content: flex-end; }
+  .badge { font-size: 10.5px; padding: 3px 8px; border-radius: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; white-space: nowrap; }
+  .badge-high { background: rgba(224,82,82,0.15); color: #e05252; }
+  .badge-medium { background: rgba(224,123,30,0.15); color: var(--orange-light); }
+  .badge-low { background: rgba(58,160,255,0.15); color: var(--blue-light); }
+  .badge-status { background: var(--bg-panel-2); color: var(--text-dim); }
+  .job-card-meta { color: var(--text-dim); font-size: 13px; margin-bottom: 6px; }
+  .job-card-notes { color: var(--text-dim); font-size: 13.5px; font-style: italic; margin-bottom: 12px; }
+  .job-card-actions { display: flex; gap: 8px; }
+  .small-btn {
+    background: none; border: 1px solid var(--border); color: var(--text-dim); border-radius: 6px;
+    padding: 6px 12px; cursor: pointer; font-size: 12.5px;
+  }
+  .small-btn:hover { border-color: var(--orange-light); color: var(--orange-light); }
+  .small-btn.danger:hover { border-color: #e05252; color: #e05252; }
+
+  .contact-card {
+    background: var(--bg-panel); border: 1px solid var(--border); border-radius: var(--radius);
+    padding: 16px 20px; margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center; gap: 12px;
+  }
+  .contact-card-text h4 { font-family:'Oswald',sans-serif; font-size: 15px; color: var(--white); margin: 0 0 4px; }
+  .contact-card-text p { color: var(--text-dim); font-size: 13px; margin: 2px 0; }
+
+  .empty-state { text-align: center; color: var(--text-dim); padding: 40px 20px; font-size: 14px; }
+
+  #quickNotes {
+    width: 100%; min-height: 300px; padding: 16px; background: var(--bg-panel); border: 1px solid var(--border);
+    border-radius: var(--radius); color: var(--white); font-size: 15px; font-family: inherit; box-sizing: border-box;
+    resize: vertical;
+  }
+  .save-indicator { color: var(--orange-light); font-size: 12.5px; margin-top: 8px; opacity: 0; transition: opacity 0.3s; }
+  .save-indicator.is-visible { opacity: 1; }
+
+  /* --- Cost Lookup tab --- */
+  .results-box { margin-top: 8px; }
+  .result-row { display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid var(--border); font-size: 15px; }
+  .result-row.final { font-weight: 700; font-size: 19px; color: var(--orange-light); border-bottom: none; padding-top: 16px; }
+  .result-label { color: var(--text-dim); }
+  .result-label.final { color: var(--white); }
+
+  /* --- Expenses tab --- */
+  table { width: 100%; border-collapse: collapse; margin-top: 8px; }
+  th { text-align: left; font-size: 11.5px; color: var(--text-dim); padding: 8px; text-transform: uppercase; border-bottom: 1px solid var(--border); }
+  td { padding: 10px 8px; font-size: 14px; color: var(--white); border-bottom: 1px solid var(--border); }
+  .totals-row-money { display: flex; gap: 24px; margin-top: 16px; padding-top: 16px; border-top: 1px solid var(--border); flex-wrap: wrap; }
+  .totals-row-money div { color: var(--text-dim); font-size: 14px; }
+  .totals-row-money strong { color: var(--orange-light); font-size: 17px; }
+  .btn-row { display: flex; gap: 12px; margin-top: 16px; }
+</style>
+</head>
+<body>
+
+<div class="tool-header">
+  <a href="/workspace.html" class="tool-header-brand">
+    <img src="/images/logo-signature-orange.png" alt="Triple H Enterprises">
+    <span>&larr; Back to Workspace</span>
+  </a>
+  <button class="help-btn" onclick="openHelpModal()" aria-label="How to use this tool" title="How to use this tool">?</button>
+</div>
+<div class="tool-title">Job Tracker</div>
+<p class="tool-sub">Jobs, pricing, expenses, contacts, and notes &mdash; the whole day-to-day workflow in one place, organized by tab.</p>
+<div class="storage-note">
+  <strong>Where this data lives:</strong> everything on this page is saved directly in this browser (not sent anywhere, no account needed) &mdash; which also means it only shows up on this specific device/browser, not synced across your phone and computer. Use Export CSV on the Expenses tab regularly if you want a backup copy outside this browser. Don't clear your browser data without exporting first if that matters to you.
+</div>
+
+<div class="tabs">
+  <button class="tab-btn is-active" data-tab="jobs">Jobs</button>
+  <button class="tab-btn" data-tab="cost">Cost Lookup</button>
+  <button class="tab-btn" data-tab="expenses">Expenses</button>
+  <button class="tab-btn" data-tab="contacts">Contacts</button>
+  <button class="tab-btn" data-tab="notes">Notes</button>
+</div>
+
+<!-- JOBS TAB -->
+<div class="tab-panel is-active" id="tab-jobs">
+  <div class="form-section">
+    <h3>Add a Job</h3>
+    <div class="form-row">
+      <div class="form-field"><label>Job Title / Description</label><input type="text" id="jobTitle" placeholder="Fix leaking kitchen faucet"></div>
+      <div class="form-field"><label>Client Name</label><input type="text" id="jobClient" placeholder="Sarah Miller"></div>
+    </div>
+    <div class="form-row">
+      <div class="form-field"><label>Client Phone</label><input type="text" id="jobPhone" placeholder="(435) 555-0123"></div>
+      <div class="form-field"><label>Address</label><input type="text" id="jobAddress" placeholder="123 Main St, St. George"></div>
+    </div>
+    <div class="form-row">
+      <div class="form-field"><label>Priority</label>
+        <select id="jobPriority"><option value="high">High</option><option value="medium" selected>Medium</option><option value="low">Low</option></select>
+      </div>
+      <div class="form-field"><label>Due Date</label><input type="date" id="jobDate"></div>
+      <div class="form-field"><label>Status</label>
+        <select id="jobStatus"><option value="not-started" selected>Not Started</option><option value="in-progress">In Progress</option><option value="done">Done</option></select>
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-field"><label>Notes</label><textarea id="jobNotes" placeholder="Anything worth remembering about this job"></textarea></div>
+    </div>
+    <button class="primary-btn" onclick="addJob()">Add Job</button>
+  </div>
+
+  <div class="controls-row">
+    <div class="sort-group">
+      <button class="sort-btn is-active" data-sort="date" onclick="setSort('date')">Sort by Date</button>
+      <button class="sort-btn" data-sort="priority" onclick="setSort('priority')">Sort by Priority</button>
+    </div>
+    <label class="filter-checkbox"><input type="checkbox" id="hideCompleted" onchange="renderJobs()"> Hide completed</label>
+  </div>
+
+  <div id="jobsList"></div>
+</div>
+
+<!-- COST LOOKUP TAB -->
+<div class="tab-panel" id="tab-cost">
+  <div class="form-section">
+    <h3>Job Inputs</h3>
+    <div class="form-row">
+      <div class="form-field"><label>Labor hours</label><input type="number" id="hours" value="1" min="0" step="0.25" oninput="calculateCost()"></div>
+      <div class="form-field"><label>Hourly rate ($)</label><input type="number" id="rate" value="75" min="0" step="1" oninput="calculateCost()"></div>
+    </div>
+    <div class="form-row">
+      <div class="form-field"><label>Parts/materials cost ($)</label><input type="number" id="parts" value="0" min="0" step="0.01" oninput="calculateCost()"></div>
+      <div class="form-field"><label>First-time discount ($)</label><input type="number" id="discount" value="15" min="0" step="1" oninput="calculateCost()"></div>
+    </div>
+  </div>
+  <div class="form-section">
+    <h3>Results</h3>
+    <div class="results-box">
+      <div class="result-row"><span class="result-label">Labor</span><span id="laborResult">$0.00</span></div>
+      <div class="result-row"><span class="result-label">Parts/materials</span><span id="partsResult">$0.00</span></div>
+      <div class="result-row"><span class="result-label">Standard total</span><span id="standardResult">$0.00</span></div>
+      <div class="result-row final"><span class="result-label final">First-time client price</span><span id="discountedResult">$0.00</span></div>
+    </div>
+  </div>
+</div>
+
+<!-- EXPENSES TAB -->
+<div class="tab-panel" id="tab-expenses">
+  <div class="form-section">
+    <h3>Add Entry</h3>
+    <div class="form-row">
+      <div class="form-field"><label>Date</label><input type="date" id="entryDate"></div>
+      <div class="form-field"><label>Type</label>
+        <select id="entryType"><option value="expense">Expense</option><option value="mileage">Mileage</option></select>
+      </div>
+      <div class="form-field"><label>Description</label><input type="text" id="entryDesc" placeholder="Parts from Home Depot"></div>
+    </div>
+    <div class="form-row">
+      <div class="form-field" id="amountField"><label>Amount ($)</label><input type="number" id="entryAmount" step="0.01" min="0"></div>
+      <div class="form-field" id="milesField" style="display:none;"><label>Miles</label><input type="number" id="entryMiles" step="0.1" min="0"></div>
+    </div>
+    <button class="primary-btn" onclick="addExpense()">Add Entry</button>
+  </div>
+
+  <div class="form-section">
+    <h3>Mileage Rate</h3>
+    <p style="color:var(--text-dim); font-size: 13px; margin: -6px 0 12px;">
+      The IRS standard mileage rate changes at least yearly &mdash; and occasionally mid-year, as it did in 2026.
+      Update this if it ever changes rather than trusting an old number. Current value is the official
+      rate for the second half of 2026 (July&ndash;December).
+    </p>
+    <div class="form-row">
+      <div class="form-field" style="max-width:200px;"><label>Rate per mile ($)</label><input type="number" id="mileageRate" value="0.76" step="0.01" min="0" onchange="saveMileageRate(); renderExpenses();"></div>
+    </div>
+  </div>
+
+  <div class="form-section">
+    <h3>Log</h3>
+    <div id="entriesTable"></div>
+    <div class="totals-row-money" id="totalsRowMoney"></div>
+    <div class="btn-row">
+      <button class="secondary-btn" onclick="exportCSV()">Export CSV</button>
+      <button class="secondary-btn" onclick="clearAllExpenses()">Clear All</button>
+    </div>
+  </div>
+</div>
+
+<!-- CONTACTS TAB -->
+<div class="tab-panel" id="tab-contacts">
+  <div class="form-section">
+    <h3>Add a Contact</h3>
+    <div class="form-row">
+      <div class="form-field"><label>Name</label><input type="text" id="contactName" placeholder="Ray Bice"></div>
+      <div class="form-field"><label>Role / Company</label><input type="text" id="contactRole" placeholder="Glamour Works - Supplier"></div>
+    </div>
+    <div class="form-row">
+      <div class="form-field"><label>Phone</label><input type="text" id="contactPhone" placeholder="(435) 674-7477"></div>
+      <div class="form-field"><label>Email</label><input type="text" id="contactEmail" placeholder="ray@example.com"></div>
+    </div>
+    <div class="form-row">
+      <div class="form-field"><label>Notes</label><input type="text" id="contactNotes" placeholder="Anything worth remembering"></div>
+    </div>
+    <button class="primary-btn" onclick="addContact()">Add Contact</button>
+  </div>
+  <div id="contactsList"></div>
+</div>
+
+<!-- NOTES TAB -->
+<div class="tab-panel" id="tab-notes">
+  <div class="form-section">
+    <h3>Quick Notes</h3>
+    <p style="color:var(--text-dim); font-size: 13px; margin-top: -6px;">A general scratchpad, separate from any specific job. Saves automatically as you type.</p>
+    <textarea id="quickNotes" placeholder="Anything on your mind..."></textarea>
+    <div class="save-indicator" id="saveIndicator">Saved</div>
+  </div>
+</div>
+
+<!-- HELP MODAL -->
+<div class="help-modal-overlay" id="helpModalOverlay" onclick="if(event.target===this) closeHelpModal()">
+  <div class="help-modal">
+    <button class="help-modal-close" onclick="closeHelpModal()" aria-label="Close">&times;</button>
+    <h3>How to Use: Job Tracker</h3>
+    <div class="help-modal-body">
+      <p>This page combines five related tools into tabs. Nothing is sent anywhere &mdash; all data lives in this browser only.</p>
+      <ul>
+        <li><strong>Jobs</strong> &mdash; add a job with priority/status/due date, then sort the list by date or priority, hide completed jobs, or tap "Advance Status" to cycle Not Started &rarr; In Progress &rarr; Done.</li>
+        <li><strong>Cost Lookup</strong> &mdash; type in hours and parts cost to instantly see the standard price and the first-time-client discounted price. Updates as you type; nothing to save.</li>
+        <li><strong>Expenses</strong> &mdash; log expenses or mileage as they happen. Mileage auto-calculates using the rate below the form &mdash; keep that rate current, since the IRS changes it. Use "Export CSV" anytime for a backup copy or for taxes.</li>
+        <li><strong>Contacts</strong> &mdash; a quick address book for vendors, suppliers, or recurring clients.</li>
+        <li><strong>Notes</strong> &mdash; a general scratchpad, unrelated to any specific job. Saves automatically about half a second after you stop typing.</li>
+      </ul>
+      <p>Since everything saves to this browser's storage, it won't show up if you open this page on a different phone or computer, and clearing browser data will erase it. Export CSV on the Expenses tab is your backup.</p>
+    </div>
+  </div>
+</div>
+
+<script>
+  const STORAGE_KEYS = { jobs: 'th_tracker_jobs', contacts: 'th_tracker_contacts', notes: 'th_tracker_notes' };
+  const EXPENSE_STORAGE_KEY = 'th_expense_log';
+  const RATE_STORAGE_KEY = 'th_mileage_rate';
+
+  function escapeHtml(str) {
+    const div = document.createElement('div');
+    div.textContent = str;
+    return div.innerHTML;
+  }
+
+  // ---------- Tabs ----------
+  const TAB_HASHES = { jobs: 'jobs', cost: 'cost', expenses: 'expenses', contacts: 'contacts', notes: 'notes' };
+
+  function activateTab(tabName) {
+    if (!document.getElementById('tab-' + tabName)) return;
+    document.querySelectorAll('.tab-btn').forEach(b => b.classList.toggle('is-active', b.dataset.tab === tabName));
+    document.querySelectorAll('.tab-panel').forEach(p => p.classList.toggle('is-active', p.id === 'tab-' + tabName));
+  }
+
+  document.querySelectorAll('.tab-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      activateTab(btn.dataset.tab);
+      history.replaceState(null, '', '#' + btn.dataset.tab);
+    });
+  });
+
+  const initialHash = (location.hash || '').replace('#', '');
+  if (TAB_HASHES[initialHash]) activateTab(initialHash);
+
+  // ---------- Jobs ----------
+  function loadJobs() { return JSON.parse(localStorage.getItem(STORAGE_KEYS.jobs) || '[]'); }
+  function saveJobs(jobs) { localStorage.setItem(STORAGE_KEYS.jobs, JSON.stringify(jobs)); }
+  let currentSort = 'date';
+
+  function addJob() {
+    const title = document.getElementById('jobTitle').value.trim();
+    if (!title) { alert('Give the job a title first.'); return; }
+    const jobs = loadJobs();
+    jobs.push({
+      id: Date.now(),
+      title,
+      client: document.getElementById('jobClient').value.trim(),
+      phone: document.getElementById('jobPhone').value.trim(),
+      address: document.getElementById('jobAddress').value.trim(),
+      priority: document.getElementById('jobPriority').value,
+      date: document.getElementById('jobDate').value,
+      status: document.getElementById('jobStatus').value,
+      notes: document.getElementById('jobNotes').value.trim(),
+    });
+    saveJobs(jobs);
+    ['jobTitle','jobClient','jobPhone','jobAddress','jobNotes'].forEach(id => document.getElementById(id).value = '');
+    document.getElementById('jobDate').value = '';
+    document.getElementById('jobPriority').value = 'medium';
+    document.getElementById('jobStatus').value = 'not-started';
+    renderJobs();
+  }
+
+  function deleteJob(id) {
+    saveJobs(loadJobs().filter(j => j.id !== id));
+    renderJobs();
+  }
+
+  function cycleStatus(id) {
+    const jobs = loadJobs();
+    const job = jobs.find(j => j.id === id);
+    const order = ['not-started', 'in-progress', 'done'];
+    job.status = order[(order.indexOf(job.status) + 1) % order.length];
+    saveJobs(jobs);
+    renderJobs();
+  }
+
+  function setSort(sortType) {
+    currentSort = sortType;
+    document.querySelectorAll('.sort-btn').forEach(b => b.classList.toggle('is-active', b.dataset.sort === sortType));
+    renderJobs();
+  }
+
+  const PRIORITY_RANK = { high: 0, medium: 1, low: 2 };
+  const STATUS_LABEL = { 'not-started': 'Not Started', 'in-progress': 'In Progress', 'done': 'Done' };
+
+  function sortJobs(jobs) {
+    const copy = [...jobs];
+    if (currentSort === 'priority') {
+      copy.sort((a, b) => PRIORITY_RANK[a.priority] - PRIORITY_RANK[b.priority]);
+    } else {
+      copy.sort((a, b) => {
+        if (!a.date && !b.date) return 0;
+        if (!a.date) return 1;
+        if (!b.date) return -1;
+        return new Date(a.date) - new Date(b.date);
+      });
+    }
+    return copy;
+  }
+
+  function renderJobs() {
+    const hideCompleted = document.getElementById('hideCompleted').checked;
+    let jobs = sortJobs(loadJobs());
+    if (hideCompleted) jobs = jobs.filter(j => j.status !== 'done');
+
+    const container = document.getElementById('jobsList');
+    if (jobs.length === 0) {
+      container.innerHTML = '<div class="empty-state">No jobs yet &mdash; add one above.</div>';
+      return;
+    }
+
+    container.innerHTML = jobs.map(job => {
+      const isDone = job.status === 'done';
+      const dateDisplay = job.date ? new Date(job.date + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : 'No date set';
+      return `
+        <div class="job-card priority-${job.priority} ${isDone ? 'is-done' : ''}">
+          <div class="job-card-top">
+            <h4 class="job-card-title ${isDone ? 'is-done-text' : ''}">${escapeHtml(job.title)}</h4>
+            <div class="job-badges">
+              <span class="badge badge-${job.priority}">${job.priority}</span>
+              <span class="badge badge-status">${STATUS_LABEL[job.status]}</span>
+            </div>
+          </div>
+          <div class="job-card-meta">
+            ${dateDisplay}${job.client ? ' &middot; ' + escapeHtml(job.client) : ''}${job.phone ? ' &middot; ' + escapeHtml(job.phone) : ''}${job.address ? ' &middot; ' + escapeHtml(job.address) : ''}
+          </div>
+          ${job.notes ? `<div class="job-card-notes">${escapeHtml(job.notes)}</div>` : ''}
+          <div class="job-card-actions">
+            <button class="small-btn" onclick="cycleStatus(${job.id})">Advance Status</button>
+            <button class="small-btn danger" onclick="deleteJob(${job.id})">Delete</button>
+          </div>
+        </div>`;
+    }).join('');
+  }
+
+  // ---------- Cost Lookup ----------
+  function money(v) { return '$' + v.toFixed(2); }
+
+  function calculateCost() {
+    const hours = parseFloat(document.getElementById('hours').value) || 0;
+    const rate = parseFloat(document.getElementById('rate').value) || 0;
+    const parts = parseFloat(document.getElementById('parts').value) || 0;
+    const discount = parseFloat(document.getElementById('discount').value) || 0;
+
+    const labor = hours * rate;
+    const standardTotal = labor + parts;
+    const discountedTotal = Math.max(0, standardTotal - discount);
+
+    document.getElementById('laborResult').textContent = money(labor);
+    document.getElementById('partsResult').textContent = money(parts);
+    document.getElementById('standardResult').textContent = money(standardTotal);
+    document.getElementById('discountedResult').textContent = money(discountedTotal);
+  }
+
+  // ---------- Expenses ----------
+  function loadExpenses() { return JSON.parse(localStorage.getItem(EXPENSE_STORAGE_KEY) || '[]'); }
+  function saveExpenses(entries) { localStorage.setItem(EXPENSE_STORAGE_KEY, JSON.stringify(entries)); }
+  function getMileageRate() { return parseFloat(document.getElementById('mileageRate').value) || 0; }
+  function saveMileageRate() { localStorage.setItem(RATE_STORAGE_KEY, document.getElementById('mileageRate').value); }
+  function loadMileageRate() {
+    const saved = localStorage.getItem(RATE_STORAGE_KEY);
+    if (saved) document.getElementById('mileageRate').value = saved;
+  }
+
+  document.getElementById('entryType').addEventListener('change', () => {
+    const isMileage = document.getElementById('entryType').value === 'mileage';
+    document.getElementById('amountField').style.display = isMileage ? 'none' : '';
+    document.getElementById('milesField').style.display = isMileage ? '' : 'none';
+  });
+
+  function addExpense() {
+    const date = document.getElementById('entryDate').value;
+    const type = document.getElementById('entryType').value;
+    const desc = document.getElementById('entryDesc').value.trim();
+    if (!date || !desc) { alert('Date and description are required.'); return; }
+
+    const entry = { id: Date.now(), date, type, desc };
+    if (type === 'mileage') {
+      entry.miles = parseFloat(document.getElementById('entryMiles').value) || 0;
+      entry.amount = Math.round(entry.miles * getMileageRate() * 100) / 100;
+    } else {
+      entry.amount = parseFloat(document.getElementById('entryAmount').value) || 0;
+      entry.miles = 0;
+    }
+
+    const entries = loadExpenses();
+    entries.push(entry);
+    saveExpenses(entries);
+
+    document.getElementById('entryDesc').value = '';
+    document.getElementById('entryAmount').value = '';
+    document.getElementById('entryMiles').value = '';
+    renderExpenses();
+  }
+
+  function deleteExpense(id) {
+    saveExpenses(loadExpenses().filter(e => e.id !== id));
+    renderExpenses();
+  }
+
+  function clearAllExpenses() {
+    if (confirm('Delete every logged entry? This cannot be undone.')) {
+      saveExpenses([]);
+      renderExpenses();
+    }
+  }
+
+  function renderExpenses() {
+    const entries = [...loadExpenses()].sort((a, b) => new Date(b.date) - new Date(a.date));
+    const container = document.getElementById('entriesTable');
+
+    if (entries.length === 0) {
+      container.innerHTML = '<div class="empty-state">No entries logged yet.</div>';
+      document.getElementById('totalsRowMoney').innerHTML = '';
+      return;
+    }
+
+    let rows = entries.map(e => `
+      <tr>
+        <td>${e.date}</td>
+        <td>${e.type === 'mileage' ? 'Mileage' : 'Expense'}</td>
+        <td>${escapeHtml(e.desc)}</td>
+        <td>${e.type === 'mileage' ? e.miles + ' mi' : '\u2014'}</td>
+        <td>$${e.amount.toFixed(2)}</td>
+        <td><button class="small-btn danger" onclick="deleteExpense(${e.id})">&times;</button></td>
+      </tr>`).join('');
+
+    container.innerHTML = `
+      <table>
+        <thead><tr><th>Date</th><th>Type</th><th>Description</th><th>Miles</th><th>Amount</th><th></th></tr></thead>
+        <tbody>${rows}</tbody>
+      </table>`;
+
+    const expenseTotal = entries.filter(e => e.type === 'expense').reduce((sum, e) => sum + e.amount, 0);
+    const mileageTotal = entries.filter(e => e.type === 'mileage').reduce((sum, e) => sum + e.amount, 0);
+    const totalMiles = entries.filter(e => e.type === 'mileage').reduce((sum, e) => sum + e.miles, 0);
+
+    document.getElementById('totalsRowMoney').innerHTML = `
+      <div>Expenses: <strong>$${expenseTotal.toFixed(2)}</strong></div>
+      <div>Mileage: <strong>${totalMiles.toFixed(1)} mi</strong> (<strong>$${mileageTotal.toFixed(2)}</strong> at $${getMileageRate()}/mi)</div>
+      <div>Combined total: <strong>$${(expenseTotal + mileageTotal).toFixed(2)}</strong></div>`;
+  }
+
+  function buildCSV() {
+    const entries = [...loadExpenses()].sort((a, b) => new Date(a.date) - new Date(b.date));
+    let csv = 'Date,Type,Description,Miles,Amount\n';
+    entries.forEach(e => {
+      const desc = '"' + e.desc.replace(/"/g, '""') + '"';
+      csv += `${e.date},${e.type},${desc},${e.miles || ''},${e.amount.toFixed(2)}\n`;
+    });
+    return csv;
+  }
+
+  function exportCSV() {
+    const entries = loadExpenses();
+    if (entries.length === 0) { alert('Nothing to export yet.'); return; }
+
+    const csv = buildCSV();
+    const blob = new Blob([csv], { type: 'text/csv' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'TripleH_Expenses_' + new Date().toISOString().slice(0, 10) + '.csv';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  }
+
+  // ---------- Contacts ----------
+  function loadContacts() { return JSON.parse(localStorage.getItem(STORAGE_KEYS.contacts) || '[]'); }
+  function saveContacts(contacts) { localStorage.setItem(STORAGE_KEYS.contacts, JSON.stringify(contacts)); }
+
+  function addContact() {
+    const name = document.getElementById('contactName').value.trim();
+    if (!name) { alert('Give the contact a name first.'); return; }
+    const contacts = loadContacts();
+    contacts.push({
+      id: Date.now(),
+      name,
+      role: document.getElementById('contactRole').value.trim(),
+      phone: document.getElementById('contactPhone').value.trim(),
+      email: document.getElementById('contactEmail').value.trim(),
+      notes: document.getElementById('contactNotes').value.trim(),
+    });
+    saveContacts(contacts);
+    ['contactName','contactRole','contactPhone','contactEmail','contactNotes'].forEach(id => document.getElementById(id).value = '');
+    renderContacts();
+  }
+
+  function deleteContact(id) {
+    saveContacts(loadContacts().filter(c => c.id !== id));
+    renderContacts();
+  }
+
+  function renderContacts() {
+    const contacts = loadContacts();
+    const container = document.getElementById('contactsList');
+    if (contacts.length === 0) {
+      container.innerHTML = '<div class="empty-state">No contacts saved yet.</div>';
+      return;
+    }
+    container.innerHTML = contacts.map(c => `
+      <div class="contact-card">
+        <div class="contact-card-text">
+          <h4>${escapeHtml(c.name)}${c.role ? ' &mdash; ' + escapeHtml(c.role) : ''}</h4>
+          ${c.phone ? `<p>${escapeHtml(c.phone)}</p>` : ''}
+          ${c.email ? `<p>${escapeHtml(c.email)}</p>` : ''}
+          ${c.notes ? `<p>${escapeHtml(c.notes)}</p>` : ''}
+        </div>
+        <button class="small-btn danger" onclick="deleteContact(${c.id})">Delete</button>
+      </div>`).join('');
+  }
+
+  // ---------- Notes ----------
+  const quickNotesEl = document.getElementById('quickNotes');
+  quickNotesEl.value = localStorage.getItem(STORAGE_KEYS.notes) || '';
+  let notesSaveTimer = null;
+  quickNotesEl.addEventListener('input', () => {
+    clearTimeout(notesSaveTimer);
+    notesSaveTimer = setTimeout(() => {
+      localStorage.setItem(STORAGE_KEYS.notes, quickNotesEl.value);
+      const indicator = document.getElementById('saveIndicator');
+      indicator.classList.add('is-visible');
+      setTimeout(() => indicator.classList.remove('is-visible'), 1500);
+    }, 500);
+  });
+
+  // ---------- Init ----------
+  document.getElementById('entryDate').value = new Date().toISOString().slice(0, 10);
+  loadMileageRate();
+  renderJobs();
+  calculateCost();
+  renderExpenses();
+  renderContacts();
+</script>
+</body>
+</html>

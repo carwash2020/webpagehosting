@@ -10,6 +10,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;500;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="/styles.css">
+<script src="/tools-common.js" defer></script>
 <style>
   body { padding: 90px 20px 60px; max-width: 640px; margin: 0 auto; }
   .tool-title { font-family:'Oswald',sans-serif; font-weight:700; font-size:28px; color:var(--white); margin-bottom:6px; }
@@ -50,7 +51,13 @@
 </head>
 <body>
 
-<a href="/" class="home-link">&larr; Back to site</a>
+<div class="tool-header">
+  <a href="/workspace.html" class="tool-header-brand">
+    <img src="/images/logo-signature-orange.png" alt="Triple H Enterprises">
+    <span>&larr; Back to Workspace</span>
+  </a>
+  <button class="help-btn" onclick="openHelpModal()" aria-label="How to use this tool" title="How to use this tool">?</button>
+</div>
 <div class="tool-title">Review Request Sender</div>
 <p class="tool-sub">Internal tool &mdash; fill in the job details after finishing, tap Send. Nothing here is saved or sent to any server; everything happens right in this browser tab and your own phone's messaging app.</p>
 
@@ -74,6 +81,7 @@
   <h3>Message Preview</h3>
   <div class="message-preview" id="messagePreview"></div>
   <div class="btn-row">
+    <button class="action-btn btn-copy" onclick="shuffleMessage()">&#128256; Try Another</button>
     <button class="action-btn btn-copy" onclick="copyMessage()">Copy Message</button>
     <a class="action-btn btn-send" id="sendLink" href="#">Open Text Message</a>
   </div>
@@ -81,15 +89,78 @@
   <p class="fallback-note">Tapping "Open Text Message" opens your phone's messaging app addressed to this number. Most phones pre-fill the message text automatically &mdash; if yours doesn't, just tap Copy Message first and paste it in.</p>
 </div>
 
+<div class="help-modal-overlay" id="helpModalOverlay" onclick="if(event.target===this) closeHelpModal()">
+  <div class="help-modal">
+    <button class="help-modal-close" onclick="closeHelpModal()" aria-label="Close">&times;</button>
+    <h3>How to Use: Review Request Sender</h3>
+    <div class="help-modal-body">
+      <p>Use this right after finishing a job, while it's fresh.</p>
+      <ul>
+        <li>Customer name and job description are both optional &mdash; the message reads naturally either way.</li>
+        <li>Enter the customer's phone number, then tap <strong>Open Text Message</strong> &mdash; it opens your phone's messaging app with the message pre-filled on most phones.</li>
+        <li>If your phone doesn't pre-fill it, tap <strong>Copy Message</strong> first and paste it in.</li>
+        <li>Not feeling one of the six phrasings? Tap <strong>Try Another</strong> to shuffle to a different one.</li>
+        <li>Nothing here is saved or sent to any server &mdash; it all happens in this browser tab and your phone's own messaging app.</li>
+      </ul>
+    </div>
+  </div>
+</div>
+
 <script>
   const GOOGLE_REVIEW_LINK = 'https://g.page/r/CVJ0Qr-SsDkgEAI/review';
+
+  // Six genuinely different message structures, not just word-swaps of
+  // the same sentence -- each handles a blank name/job gracefully with
+  // its own fallback wording so it still reads naturally either way.
+  const MESSAGE_VARIANTS = [
+    (name, job) => {
+      const greeting = name ? `Hey ${name}! ` : 'Hey! ';
+      const jobPhrase = job ? `letting me take care of ${job}` : 'letting me help out';
+      return `${greeting}Thanks again for ${jobPhrase} today! If you have 60 seconds, a Google review really helps a small business like mine \u2014 ${GOOGLE_REVIEW_LINK} Really appreciate it.`;
+    },
+    (name, job) => {
+      const lead = name ? `${name}, thanks` : 'Thanks';
+      const jobPhrase = job ? `for having me out today for ${job}` : 'for having me out today';
+      return `${lead} ${jobPhrase}! If you've got a minute, I'd really appreciate a quick Google review \u2014 ${GOOGLE_REVIEW_LINK} It genuinely helps a lot.`;
+    },
+    (name, job) => {
+      const greeting = name ? `Hi ${name}! ` : 'Hi! ';
+      const jobPhrase = job ? `after ${job}` : 'after today\u2019s visit';
+      return `${greeting}Hope everything's working great ${jobPhrase}. If you don't mind, a short Google review would mean a lot to me as a small business \u2014 ${GOOGLE_REVIEW_LINK} Thanks so much!`;
+    },
+    (name, job) => {
+      const lead = name ? `${name}, really` : 'Really';
+      const jobPhrase = job ? `with ${job}` : 'today';
+      return `${lead} appreciated the chance to help out ${jobPhrase}. If you have a spare minute, a Google review goes a long way for a business like mine \u2014 ${GOOGLE_REVIEW_LINK} Thank you!`;
+    },
+    (name, job) => {
+      const greeting = name ? `Hey ${name}, ` : 'Hey, ';
+      const jobPhrase = job ? `trusting me with ${job}` : 'trusting me with the job';
+      return `${greeting}thanks again for ${jobPhrase} today! A quick Google review (60 seconds, tops) would help more than you know \u2014 ${GOOGLE_REVIEW_LINK} Appreciate you!`;
+    },
+    (name, job) => {
+      const lead = name ? `${name}, thanks` : 'Thanks';
+      const jobPhrase = job ? `to take care of ${job}` : 'to help out';
+      return `${lead} for the opportunity ${jobPhrase} today. If you get a chance, I'd be grateful for a Google review \u2014 ${GOOGLE_REVIEW_LINK} Thanks a ton!`;
+    },
+  ];
+
+  let currentVariantIndex = Math.floor(Math.random() * MESSAGE_VARIANTS.length);
 
   function buildMessage() {
     const name = document.getElementById('custName').value.trim();
     const job = document.getElementById('jobDesc').value.trim();
-    const greeting = name ? `Hey ${name}! ` : 'Hey! ';
-    const jobPhrase = job ? `letting me take care of ${job}` : 'letting me help out';
-    return `${greeting}Thanks again for ${jobPhrase} today! If you have 60 seconds, a Google review really helps a small business like mine \u2014 ${GOOGLE_REVIEW_LINK} Really appreciate it.`;
+    return MESSAGE_VARIANTS[currentVariantIndex](name, job);
+  }
+
+  function shuffleMessage() {
+    // pick a different variant than the one currently showing, so the
+    // button always visibly changes something
+    let next;
+    do { next = Math.floor(Math.random() * MESSAGE_VARIANTS.length); }
+    while (next === currentVariantIndex && MESSAGE_VARIANTS.length > 1);
+    currentVariantIndex = next;
+    updatePreviewAndLink();
   }
 
   function digitsOnly(str) {

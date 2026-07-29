@@ -10,6 +10,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;500;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="/styles.css">
+<script src="/tools-common.js" defer></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <style>
   body { padding: 90px 20px 60px; max-width: 900px; margin: 0 auto; }
@@ -59,7 +60,13 @@
 </head>
 <body>
 
-<a href="/" class="home-link">&larr; Back to site</a>
+<div class="tool-header">
+  <a href="/workspace.html" class="tool-header-brand">
+    <img src="/images/logo-signature-orange.png" alt="Triple H Enterprises">
+    <span>&larr; Back to Workspace</span>
+  </a>
+  <button class="help-btn" onclick="openHelpModal()" aria-label="How to use this tool" title="How to use this tool">?</button>
+</div>
 <div class="tool-title">Invoice Generator</div>
 <p class="tool-sub">Internal tool &mdash; fill this out per job, click Generate, a branded PDF downloads straight to your device. Nothing here is saved or sent anywhere; it all happens right in this browser tab.</p>
 
@@ -384,16 +391,28 @@
     doc.setTextColor(...ORANGE);
     doc.text('$' + total.toFixed(2), pageW - 40, y, { align: 'right' });
 
+    const paymentSectionTop = y;
     y += 40;
     doc.setFont('helvetica', 'bold'); doc.setFontSize(10); doc.setTextColor(...ORANGE_DARK);
     doc.text('PAYMENT', 40, y);
     y += 18;
     doc.setFont('helvetica', 'normal'); doc.setFontSize(9.5); doc.setTextColor(20, 20, 20);
-    const paymentLines = doc.splitTextToSize(document.getElementById('paymentText').value, 400);
+    const paymentLines = doc.splitTextToSize(document.getElementById('paymentText').value, 340);
     doc.text(paymentLines, 40, y);
     y += paymentLines.length * 13 + 6;
     doc.setFontSize(8.5); doc.setTextColor(...GRAY);
     doc.text('Please reference invoice ' + document.getElementById('invoiceNumber').value + ' with payment.', 40, y);
+
+    // Venmo QR code, to the right of the payment text
+    try {
+      const qrData = await loadImageAsDataURL('/images/venmo-qr.png');
+      const qrW = 85, qrH = 85 * (440 / 360);
+      const qrX = pageW - 40 - qrW;
+      const qrY = paymentSectionTop + 34;
+      doc.addImage(qrData, 'PNG', qrX, qrY, qrW, qrH);
+      doc.setFont('helvetica', 'bold'); doc.setFontSize(8.5); doc.setTextColor(20, 20, 20);
+      doc.text('Scan to pay via Venmo', qrX + qrW / 2, qrY + qrH + 12, { align: 'center' });
+    } catch (e) { /* QR optional if it fails to load -- payment text alone still works */ }
 
     // footer
     const footerY = doc.internal.pageSize.getHeight() - 40;
@@ -408,5 +427,20 @@
     doc.save(filename);
   }
 </script>
+
+<div class="help-modal-overlay" id="helpModalOverlay" onclick="if(event.target===this) closeHelpModal()">
+  <div class="help-modal">
+    <button class="help-modal-close" onclick="closeHelpModal()" aria-label="Close">&times;</button>
+    <h3>How to Use: Invoice Generator</h3>
+    <div class="help-modal-body">
+      <p>Fill this out per job, right after you finish.</p>
+      <ul>
+        <li>Fill in <strong>Invoice Details</strong> and <strong>Bill To</strong>, then add each line item (labor, parts, etc.) in the line-items table.</li>
+        <li>Tap <strong>Generate</strong> to download a branded PDF invoice, complete with your Venmo QR code built in for easy payment.</li>
+        <li>Nothing here is saved between visits &mdash; it all happens in this browser tab and downloads straight to your device. If you need the numbers again later, use the Job Tracker's Cost Lookup tab.</li>
+      </ul>
+    </div>
+  </div>
+</div>
 </body>
 </html>
