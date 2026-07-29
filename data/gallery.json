@@ -1,1 +1,342 @@
-
+[
+  {
+    "category": "Flooring \u2014 Before & Demo",
+    "images": [
+      {
+        "src": "images/gallery/subfloor-prep-before.jpg",
+        "alt": "Before: subfloor prep",
+        "caption": "Before: subfloor prep"
+      },
+      {
+        "src": "images/gallery/plank-underlayment-prep.jpg",
+        "alt": "Underlayment and prep before flooring",
+        "caption": "Underlayment and prep before flooring"
+      },
+      {
+        "src": "images/gallery/plank-room-paint-prep.jpg",
+        "alt": "Room paint prep before flooring",
+        "caption": "Room paint prep before flooring"
+      },
+      {
+        "src": "images/gallery/wall-paint-prep-accent.jpg",
+        "alt": "Accent wall paint prep",
+        "caption": "Accent wall paint prep"
+      }
+    ]
+  },
+  {
+    "category": "Flooring \u2014 Installation",
+    "images": [
+      {
+        "src": "images/gallery/underlayment-installation.jpg",
+        "alt": "Underlayment installation",
+        "caption": "Underlayment installation"
+      },
+      {
+        "src": "images/gallery/plank-install-in-progress.jpg",
+        "alt": "Plank flooring installation in progress",
+        "caption": "Plank flooring installation in progress"
+      },
+      {
+        "src": "images/gallery/flooring-install-progress.jpg",
+        "alt": "Flooring installation in progress",
+        "caption": "Flooring installation in progress"
+      },
+      {
+        "src": "images/gallery/flooring-baseboard-installation.jpg",
+        "alt": "Flooring and baseboard installation",
+        "caption": "Flooring and baseboard installation"
+      }
+    ]
+  },
+  {
+    "category": "Flooring \u2014 Finished",
+    "images": [
+      {
+        "src": "images/gallery/laminate-flooring-installation.jpg",
+        "alt": "Laminate flooring installation",
+        "caption": "Laminate flooring installation"
+      },
+      {
+        "src": "images/gallery/flooring-finished-detail.jpg",
+        "alt": "Finished flooring detail",
+        "caption": "Finished flooring detail"
+      },
+      {
+        "src": "images/gallery/flooring-finished-1.jpg",
+        "alt": "Finished flooring installation",
+        "caption": "Finished flooring installation"
+      },
+      {
+        "src": "images/gallery/flooring-finished-2.jpg",
+        "alt": "Finished flooring installation",
+        "caption": "Finished flooring installation"
+      },
+      {
+        "src": "images/gallery/flooring-transition-detail.jpg",
+        "alt": "Flooring transition detail",
+        "caption": "Flooring transition detail"
+      },
+      {
+        "src": "images/gallery/plank-finished-stairs-1.jpg",
+        "alt": "Finished plank flooring near the stairs",
+        "caption": "Finished plank flooring near the stairs"
+      },
+      {
+        "src": "images/gallery/plank-finished-hall-bath.jpg",
+        "alt": "Finished plank flooring, hall and bath area",
+        "caption": "Finished plank flooring, hall and bath area"
+      },
+      {
+        "src": "images/gallery/plank-finished-stairwell.jpg",
+        "alt": "Finished plank flooring by the stairwell",
+        "caption": "Finished plank flooring by the stairwell"
+      },
+      {
+        "src": "images/gallery/plank-finished-living-1.jpg",
+        "alt": "Finished plank flooring, living area",
+        "caption": "Finished plank flooring, living area"
+      },
+      {
+        "src": "images/gallery/plank-finished-living-2.jpg",
+        "alt": "Finished plank flooring, living area",
+        "caption": "Finished plank flooring, living area"
+      },
+      {
+        "src": "images/gallery/plank-finished-corner.jpg",
+        "alt": "Finished plank flooring, corner detail",
+        "caption": "Finished plank flooring, corner detail"
+      },
+      {
+        "src": "images/gallery/plank-finished-office.jpg",
+        "alt": "Finished plank flooring, office area",
+        "caption": "Finished plank flooring, office area"
+      }
+    ]
+  },
+  {
+    "category": "Kitchen Tile \u2014 Before & Demo",
+    "images": [
+      {
+        "src": "images/gallery/tile-kitchen-before-1.jpg",
+        "alt": "Original kitchen tile, before",
+        "caption": "Original kitchen tile, before"
+      },
+      {
+        "src": "images/gallery/tile-kitchen-before-2.jpg",
+        "alt": "Original kitchen tile, before",
+        "caption": "Original kitchen tile, before"
+      },
+      {
+        "src": "images/gallery/tile-kitchen-before-3.jpg",
+        "alt": "Original kitchen tile, before",
+        "caption": "Original kitchen tile, before"
+      },
+      {
+        "src": "images/gallery/tile-repair-spot.jpg",
+        "alt": "Damaged tile ready for repair",
+        "caption": "Damaged tile ready for repair"
+      },
+      {
+        "src": "images/gallery/baseboard-detail-1.jpg",
+        "alt": "Baseboard prep detail",
+        "caption": "Baseboard prep detail"
+      },
+      {
+        "src": "images/gallery/baseboard-detail-2.jpg",
+        "alt": "Baseboard prep detail",
+        "caption": "Baseboard prep detail"
+      },
+      {
+        "src": "images/gallery/subfloor-bare-concrete.jpg",
+        "alt": "Before: subfloor prep",
+        "caption": "Before: subfloor prep"
+      },
+      {
+        "src": "images/gallery/subfloor-exposed-cabinets.jpg",
+        "alt": "Subfloor exposed along the cabinets",
+        "caption": "Subfloor exposed along the cabinets"
+      },
+      {
+        "src": "images/gallery/tile-demo-corner.jpg",
+        "alt": "Tile removal, corner detail",
+        "caption": "Tile removal, corner detail"
+      },
+      {
+        "src": "images/gallery/tile-demo-large-area.jpg",
+        "alt": "Old flooring removed, subfloor exposed",
+        "caption": "Old flooring removed, subfloor exposed"
+      },
+      {
+        "src": "images/gallery/tile-spares.jpg",
+        "alt": "Matching spare tiles set aside",
+        "caption": "Matching spare tiles set aside"
+      },
+      {
+        "src": "images/gallery/tile-demo-debris-1.jpg",
+        "alt": "Tile demo, cleanup in progress",
+        "caption": "Tile demo, cleanup in progress"
+      },
+      {
+        "src": "images/gallery/tile-demo-debris-2.jpg",
+        "alt": "Tile demo, cleanup in progress",
+        "caption": "Tile demo, cleanup in progress"
+      },
+      {
+        "src": "images/gallery/tile-demo-hallway-view.jpg",
+        "alt": "Tile demo, hallway view",
+        "caption": "Tile demo, hallway view"
+      }
+    ]
+  },
+  {
+    "category": "Kitchen Tile \u2014 Installation",
+    "images": [
+      {
+        "src": "images/gallery/tile-install-spacers-1.jpg",
+        "alt": "New tile set with spacers",
+        "caption": "New tile set with spacers"
+      },
+      {
+        "src": "images/gallery/tile-install-spacers-2.jpg",
+        "alt": "New tile set with spacers",
+        "caption": "New tile set with spacers"
+      },
+      {
+        "src": "images/gallery/tile-install-progress-wide.jpg",
+        "alt": "Tile installation in progress",
+        "caption": "Tile installation in progress"
+      },
+      {
+        "src": "images/gallery/tile-mortar-application.jpg",
+        "alt": "Mortar application at the doorway",
+        "caption": "Mortar application at the doorway"
+      },
+      {
+        "src": "images/gallery/tile-install-laundry-area.jpg",
+        "alt": "Tile installation, laundry area",
+        "caption": "Tile installation, laundry area"
+      },
+      {
+        "src": "images/gallery/tile-grout-cleanup-1.jpg",
+        "alt": "Grout haze cleanup",
+        "caption": "Grout haze cleanup"
+      },
+      {
+        "src": "images/gallery/tile-grout-cleanup-2.jpg",
+        "alt": "Grout haze cleanup",
+        "caption": "Grout haze cleanup"
+      }
+    ]
+  },
+  {
+    "category": "Kitchen Tile \u2014 Finished",
+    "images": [
+      {
+        "src": "images/gallery/tile-finished-kitchen-wide.jpg",
+        "alt": "Finished tile flooring, full kitchen view",
+        "caption": "Finished tile flooring, full kitchen view"
+      },
+      {
+        "src": "images/gallery/tile-finished-kitchen-wide-2.jpg",
+        "alt": "Finished tile flooring, kitchen view",
+        "caption": "Finished tile flooring, kitchen view"
+      },
+      {
+        "src": "images/gallery/tile-finished-doorway.jpg",
+        "alt": "Finished tile flooring by the doorway",
+        "caption": "Finished tile flooring by the doorway"
+      },
+      {
+        "src": "images/gallery/tile-finished-1.jpg",
+        "alt": "Finished tile flooring",
+        "caption": "Finished tile flooring"
+      },
+      {
+        "src": "images/gallery/tile-finished-2.jpg",
+        "alt": "Finished tile flooring",
+        "caption": "Finished tile flooring"
+      },
+      {
+        "src": "images/gallery/tile-finished-3.jpg",
+        "alt": "Finished tile flooring",
+        "caption": "Finished tile flooring"
+      },
+      {
+        "src": "images/gallery/tile-finished-4.jpg",
+        "alt": "Finished tile flooring",
+        "caption": "Finished tile flooring"
+      },
+      {
+        "src": "images/gallery/tile-finished-5.jpg",
+        "alt": "Finished tile flooring",
+        "caption": "Finished tile flooring"
+      },
+      {
+        "src": "images/gallery/tile-finished-6.jpg",
+        "alt": "Finished tile flooring",
+        "caption": "Finished tile flooring"
+      },
+      {
+        "src": "images/gallery/tile-finished-7.jpg",
+        "alt": "Finished tile flooring",
+        "caption": "Finished tile flooring"
+      },
+      {
+        "src": "images/gallery/tile-finished-8.jpg",
+        "alt": "Finished tile flooring",
+        "caption": "Finished tile flooring"
+      },
+      {
+        "src": "images/gallery/tile-finished-9.jpg",
+        "alt": "Finished tile flooring",
+        "caption": "Finished tile flooring"
+      },
+      {
+        "src": "images/gallery/tile-finished-10.jpg",
+        "alt": "Finished tile flooring",
+        "caption": "Finished tile flooring"
+      },
+      {
+        "src": "images/gallery/tile-finished-11.jpg",
+        "alt": "Finished tile flooring",
+        "caption": "Finished tile flooring"
+      },
+      {
+        "src": "images/gallery/tile-finished-12.jpg",
+        "alt": "Finished tile flooring",
+        "caption": "Finished tile flooring"
+      },
+      {
+        "src": "images/gallery/tile-finished-13.jpg",
+        "alt": "Finished tile flooring",
+        "caption": "Finished tile flooring"
+      }
+    ]
+  },
+  {
+    "category": "Other Work",
+    "images": [
+      {
+        "src": "images/gallery/curtain-track-installation.jpg",
+        "alt": "Custom curtain track installation",
+        "caption": "Custom curtain track installation"
+      },
+      {
+        "src": "images/gallery/curtain-track-mounting-1.jpg",
+        "alt": "Curtain track mounting detail",
+        "caption": "Curtain track mounting detail"
+      },
+      {
+        "src": "images/gallery/curtain-track-mounting-2.jpg",
+        "alt": "Curtain track mounting detail",
+        "caption": "Curtain track mounting detail"
+      },
+      {
+        "src": "images/gallery/floating-shelf-installation.jpg",
+        "alt": "Floating shelf installation",
+        "caption": "Floating shelf installation"
+      }
+    ]
+  }
+]
