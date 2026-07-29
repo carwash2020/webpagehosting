@@ -194,6 +194,14 @@
   document.getElementById('custName').addEventListener('input', updatePreviewAndLink);
   document.getElementById('jobDesc').addEventListener('input', updatePreviewAndLink);
   document.getElementById('custPhone').addEventListener('input', updatePreviewAndLink);
+
+  // Prefill from URL params if arriving from a completed job in the Job
+  // Tracker (e.g. /review-request.html?name=Sarah&job=faucet+repair&phone=4355550123)
+  const params = new URLSearchParams(location.search);
+  if (params.get('name')) document.getElementById('custName').value = params.get('name');
+  if (params.get('job')) document.getElementById('jobDesc').value = params.get('job');
+  if (params.get('phone')) document.getElementById('custPhone').value = params.get('phone');
+
   updatePreviewAndLink();
 
   function copyMessage() {

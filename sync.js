@@ -52,6 +52,7 @@ const SYNC_DATA_KEYS = [
   'th_expense_log',
   'th_mileage_rate',
   'th_price_reference',
+  'th_invoices',
 ];
 
 const SYNC_CODE_KEY = 'th_sync_code';
@@ -66,12 +67,19 @@ function isSyncConfigured() {
 }
 
 function getSyncCode() {
-  let code = localStorage.getItem(SYNC_CODE_KEY);
-  if (!code) {
-    code = DEFAULT_SYNC_CODE;
-    localStorage.setItem(SYNC_CODE_KEY, code);
+  // Always use the fixed default -- this is deliberate, not a fallback.
+  // Earlier versions of this tool let you type in your own code via a
+  // visible UI (since removed). Any device that used that UI still has
+  // its own typed code sitting in localStorage from back then, which
+  // would silently sync it to a DIFFERENT row than every other device
+  // now using the automatic default -- two devices, two silos, no data
+  // ever crossing between them. Ignoring the old stored value and always
+  // returning DEFAULT_SYNC_CODE guarantees every device converges on the
+  // same row regardless of what it had saved previously.
+  if (localStorage.getItem(SYNC_CODE_KEY) !== DEFAULT_SYNC_CODE) {
+    localStorage.setItem(SYNC_CODE_KEY, DEFAULT_SYNC_CODE);
   }
-  return code;
+  return DEFAULT_SYNC_CODE;
 }
 function setSyncCode(code) { localStorage.setItem(SYNC_CODE_KEY, code.trim()); }
 function clearSyncCode() { localStorage.removeItem(SYNC_CODE_KEY); }
@@ -89,6 +97,12 @@ function applySyncData(obj) {
   });
 }
 
+function recordSyncStatus(type, ok, error) {
+  const status = { type, ok, error: error || null, time: new Date().toISOString() };
+  try { localStorage.setItem('th_sync_last', JSON.stringify(status)); } catch (e) { /* ignore */ }
+  try { window.dispatchEvent(new CustomEvent('th-sync-status', { detail: status })); } catch (e) { /* ignore */ }
+}
+
 async function pushSync() {
   if (!isSyncConfigured()) return { ok: false, error: 'not-configured' };
   const code = getSyncCode();
@@ -100,6 +114,7 @@ async function pushSync() {
   try {
     const res = await fetch(`${SUPABASE_URL}/rest/v1/${SYNC_TABLE}?on_conflict=code`, {
       method: 'POST',
+      keepalive: true, // lets this request finish even if the tab is closing/navigating away
       headers: {
         'Content-Type': 'application/json',
         'apikey': SUPABASE_ANON_KEY,
@@ -108,10 +123,12 @@ async function pushSync() {
       },
       body: JSON.stringify(body),
     });
-    if (!res.ok) return { ok: false, error: 'http-' + res.status };
+    if (!res.ok) { recordSyncStatus('push', false, 'http-' + res.status); return { ok: false, error: 'http-' + res.status }; }
     localStorage.setItem(SYNC_KNOWN_AT_KEY, nowIso);
+    recordSyncStatus('push', true);
     return { ok: true };
   } catch (e) {
+    recordSyncStatus('push', false, 'network');
     return { ok: false, error: 'network' };
   }
 }
@@ -128,14 +145,16 @@ async function pullSync() {
         'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
       },
     });
-    if (!res.ok) return { ok: false, error: 'http-' + res.status };
+    if (!res.ok) { recordSyncStatus('pull', false, 'http-' + res.status); return { ok: false, error: 'http-' + res.status }; }
     const rows = await res.json();
-    if (!rows.length) return { ok: false, error: 'no-data-yet' };
+    if (!rows.length) { recordSyncStatus('pull', false, 'no-data-yet'); return { ok: false, error: 'no-data-yet' }; }
 
     applySyncData(rows[0].data);
     localStorage.setItem(SYNC_KNOWN_AT_KEY, rows[0].updated_at);
+    recordSyncStatus('pull', true);
     return { ok: true };
   } catch (e) {
+    recordSyncStatus('pull', false, 'network');
     return { ok: false, error: 'network' };
   }
 }
@@ -145,7 +164,30 @@ let _syncTimer = null;
 function scheduleSync() {
   if (!isSyncConfigured() || !getSyncCode()) return;
   clearTimeout(_syncTimer);
-  _syncTimer = setTimeout(() => { pushSync(); }, 2500);
+  _syncTimer = setTimeout(() => { _syncTimer = null; pushSync(); }, 2500);
+}
+
+// Safety net: if the page is closed/backgrounded/navigated away from
+// before the 2.5s debounce above fires, the scheduled push would
+// otherwise be silently lost (a quick edit followed by immediately
+// switching devices could look like "it didn't save"). Flushing
+// immediately on visibilitychange/pagehide -- plus `keepalive: true`
+// on the fetch itself -- means the browser will still complete the
+// request even as the tab is torn down.
+function flushSyncNow() {
+  if (_syncTimer) {
+    clearTimeout(_syncTimer);
+    _syncTimer = null;
+    pushSync();
+  }
+}
+if (typeof document !== 'undefined') {
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'hidden') flushSyncNow();
+  });
+}
+if (typeof window !== 'undefined') {
+  window.addEventListener('pagehide', flushSyncNow);
 }
 
 // Auto-pull once per page load, before the page's own render functions run

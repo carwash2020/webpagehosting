@@ -136,7 +136,7 @@
 <div class="tool-title">Job Tracker</div>
 <p class="tool-sub">Jobs, pricing, expenses, contacts, and notes &mdash; the whole day-to-day workflow in one place, organized by tab.</p>
 <div class="storage-note">
-  <strong>Where this data lives:</strong> everything on this page is saved directly in this browser. If you've set up Cloud Sync on the Workspace page, it also syncs to your own private Supabase project so it follows you across devices. Use Export CSV on the Expenses tab regularly either way, as a backup copy outside the browser.
+  <strong>Where this data lives:</strong> everything on this page is saved directly in this browser. If you've set up Cloud Sync on the Workspace page, it also syncs to your own private Supabase project so it follows you across devices. Use Export CSV on the Expenses tab regularly either way, as a backup copy outside the browser.<span id="syncStatusText"></span>
 </div>
 
 <div class="tabs">
@@ -348,6 +348,25 @@
     return div.innerHTML;
   }
 
+  // ---------- Passive sync status (no buttons, just quiet confirmation) ----------
+  function formatSyncStatus(status) {
+    if (!status) return '';
+    const when = new Date(status.time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    if (status.ok) return ' Last ' + status.type + ' to cloud: ' + when + '.';
+    return ' Cloud sync issue at ' + when + ' (' + status.error + ').';
+  }
+
+  function updateSyncStatusText() {
+    const el = document.getElementById('syncStatusText');
+    if (!el) return;
+    try {
+      const status = JSON.parse(localStorage.getItem('th_sync_last') || 'null');
+      el.textContent = formatSyncStatus(status);
+    } catch (e) { /* ignore */ }
+  }
+
+  window.addEventListener('th-sync-status', updateSyncStatusText);
+
   // ---------- Tabs ----------
   const TAB_HASHES = { jobs: 'jobs', cost: 'cost', expenses: 'expenses', contacts: 'contacts', notes: 'notes' };
 
@@ -404,9 +423,21 @@
     const jobs = loadJobs();
     const job = jobs.find(j => j.id === id);
     const order = ['not-started', 'in-progress', 'done'];
+    const wasNotDone = job.status !== 'done';
     job.status = order[(order.indexOf(job.status) + 1) % order.length];
     saveJobs(jobs);
     renderJobs();
+
+    if (wasNotDone && job.status === 'done') {
+      const goSend = confirm(`"${job.title}" marked Done. Send a review request${job.client ? ' to ' + job.client : ''} now?`);
+      if (goSend) {
+        const params = new URLSearchParams();
+        if (job.client) params.set('name', job.client.split(' ')[0]);
+        if (job.title) params.set('job', job.title);
+        if (job.phone) params.set('phone', job.phone);
+        window.location.href = '/review-request.html?' + params.toString();
+      }
+    }
   }
 
   function setSort(sortType) {
@@ -822,6 +853,7 @@
   document.addEventListener('DOMContentLoaded', function () {
     (async function init() {
       await initSyncOnLoad();
+      updateSyncStatusText();
       document.getElementById('entryDate').value = new Date().toISOString().slice(0, 10);
       loadMileageRate();
       renderJobs();

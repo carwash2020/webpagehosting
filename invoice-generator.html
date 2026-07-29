@@ -5,11 +5,12 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta name="robots" content="noindex, nofollow">
 <title>Invoice Generator | Triple H Enterprises (Internal Tool)</title>
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data:; connect-src 'self'; frame-src 'none'; object-src 'none'; base-uri 'self'; frame-ancestors 'none';">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data:; connect-src 'self' https://*.supabase.co; frame-src 'none'; object-src 'none'; base-uri 'self'; frame-ancestors 'none';">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;500;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="/styles.css">
+<script src="/sync.js" defer></script>
 <script src="/tools-common.js" defer></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <style>
@@ -424,7 +425,32 @@
     doc.text('Thank you for choosing Triple H Enterprises. Work guaranteed.', pageW / 2, footerY + 26, { align: 'center' });
 
     const filename = 'TripleH_Invoice_' + (document.getElementById('clientName').value || 'Client').replace(/[^a-z0-9]/gi, '_') + '.pdf';
+    logInvoice({ subtotal, discount, total });
     doc.save(filename);
+  }
+
+  // ---------- Invoice logging (feeds the Dashboard's revenue numbers) ----------
+  const INVOICE_STORAGE_KEY = 'th_invoices';
+
+  function loadInvoiceLog() { return JSON.parse(localStorage.getItem(INVOICE_STORAGE_KEY) || '[]'); }
+  function saveInvoiceLog(list) {
+    localStorage.setItem(INVOICE_STORAGE_KEY, JSON.stringify(list));
+    if (typeof scheduleSync === 'function') scheduleSync();
+  }
+
+  function logInvoice(totals) {
+    const list = loadInvoiceLog();
+    list.push({
+      id: Date.now(),
+      invoiceNumber: document.getElementById('invoiceNumber').value,
+      clientName: document.getElementById('clientName').value || '(no name)',
+      date: document.getElementById('invoiceDate').value || new Date().toISOString().slice(0, 10),
+      terms: document.getElementById('invoiceTerms').value,
+      subtotal: totals.subtotal,
+      discount: totals.discount,
+      total: totals.total,
+    });
+    saveInvoiceLog(list);
   }
 </script>
 

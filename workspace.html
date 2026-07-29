@@ -4,20 +4,62 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta name="robots" content="noindex, nofollow">
-<title>Workspace | Triple H Enterprises (Internal)</title>
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data:; connect-src 'self'; frame-src 'none'; object-src 'none'; base-uri 'self'; frame-ancestors 'none';">
+<title>Dashboard | Triple H Enterprises (Internal)</title>
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data:; connect-src 'self' https://*.supabase.co; frame-src 'none'; object-src 'none'; base-uri 'self'; frame-ancestors 'none';">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Anton&family=Oswald:wght@400;500;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="/styles.css">
+<script src="/sync.js" defer></script>
 <script src="/tools-common.js" defer></script>
 <style>
-  body { padding: 90px 20px 60px; max-width: 700px; margin: 0 auto; }
+  body { padding: 90px 20px 60px; max-width: 900px; margin: 0 auto; }
   .hub-header { display: flex; align-items: center; justify-content: space-between; gap: 14px; margin-bottom: 8px; }
   .hub-header-left { display: flex; align-items: center; gap: 14px; }
   .hub-header img { height: 44px; width: 44px; object-fit: contain; }
   .hub-title { font-family:'Anton',sans-serif; font-size: 26px; color: var(--white); }
-  .hub-sub { color: var(--text-dim); margin-bottom: 36px; }
+  .hub-sub { color: var(--text-dim); margin-bottom: 30px; }
+
+  .section-heading {
+    font-family:'Oswald',sans-serif; color: var(--orange-light); font-size: 13.5px;
+    text-transform: uppercase; letter-spacing: 1.5px; margin: 36px 0 16px;
+    padding-bottom: 8px; border-bottom: 1px solid var(--border);
+  }
+  .section-heading.is-first { margin-top: 8px; }
+
+  .metrics-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 14px; margin-bottom: 8px; }
+  .metric-card {
+    background: var(--bg-panel); border: 1px solid var(--border); border-radius: var(--radius);
+    padding: 18px 20px;
+  }
+  .metric-card .metric-label { color: var(--text-dim); font-size: 12px; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 8px; }
+  .metric-card .metric-value { font-family:'Oswald',sans-serif; font-weight: 700; font-size: 24px; color: var(--white); }
+  .metric-card .metric-value.is-orange { color: var(--orange-light); }
+  .metric-card .metric-sub { color: var(--text-dim); font-size: 12px; margin-top: 4px; }
+
+  .period-toggle { display: flex; gap: 6px; margin-bottom: 14px; }
+  .period-btn {
+    background: var(--bg-panel-2); border: 1px solid var(--border); color: var(--text-dim);
+    border-radius: 6px; padding: 7px 16px; cursor: pointer; font-size: 13px; font-family: inherit;
+  }
+  .period-btn.is-active { color: var(--orange-light); border-color: var(--orange-light); }
+
+  .status-bar-row { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; font-size: 13px; }
+  .status-bar-label { width: 90px; flex-shrink: 0; color: var(--text-dim); }
+  .status-bar-track { flex: 1; height: 8px; background: var(--bg-panel-2); border-radius: 4px; overflow: hidden; }
+  .status-bar-fill { height: 100%; background: var(--orange); }
+  .status-bar-count { width: 26px; text-align: right; color: var(--white); flex-shrink: 0; }
+
+  .dash-list-item {
+    display: flex; justify-content: space-between; align-items: center; gap: 12px;
+    padding: 12px 0; border-bottom: 1px solid var(--border); font-size: 14px;
+  }
+  .dash-list-item:last-child { border-bottom: none; }
+  .dash-list-item-title { color: var(--white); }
+  .dash-list-item-meta { color: var(--text-dim); font-size: 12.5px; }
+  .dash-list-item-amount { color: var(--orange-light); font-weight: 600; flex-shrink: 0; }
+  .empty-state-small { color: var(--text-dim); font-size: 13.5px; padding: 12px 0; }
+
   .tool-card {
     display: flex; align-items: center; justify-content: space-between; gap: 20px;
     background: var(--bg-panel); border: 1px solid var(--border); border-left: 3px solid var(--orange);
@@ -38,16 +80,65 @@
 <div class="hub-header">
   <div class="hub-header-left">
     <img src="/images/logo-signature-orange.png" alt="Triple H Enterprises">
-    <span class="hub-title">Workspace</span>
+    <span class="hub-title">Dashboard</span>
   </div>
-  <button class="help-btn" onclick="openHelpModal()" aria-label="How to use this workspace" title="How to use this workspace">?</button>
+  <button class="help-btn" onclick="openHelpModal()" aria-label="How to use this dashboard" title="How to use this dashboard">?</button>
 </div>
-<p class="hub-sub">Bookmark this page &mdash; every internal tool lives here, so this is the only link worth remembering.</p>
+<p class="hub-sub">Bookmark this page &mdash; a snapshot of the business, plus every internal tool, all in one place.</p>
+
+<div class="section-heading is-first">Business Snapshot</div>
+
+<div class="period-toggle">
+  <button class="period-btn is-active" data-period="month" onclick="setPeriod('month')">This Month</button>
+  <button class="period-btn" data-period="all" onclick="setPeriod('all')">All Time</button>
+</div>
+
+<div class="metrics-grid">
+  <div class="metric-card">
+    <div class="metric-label">Revenue Invoiced</div>
+    <div class="metric-value is-orange" id="metricRevenue">$0.00</div>
+    <div class="metric-sub" id="metricInvoiceCount">0 invoices</div>
+  </div>
+  <div class="metric-card">
+    <div class="metric-label">Expenses</div>
+    <div class="metric-value" id="metricExpenses">$0.00</div>
+    <div class="metric-sub" id="metricExpenseCount">0 entries</div>
+  </div>
+  <div class="metric-card">
+    <div class="metric-label">Mileage</div>
+    <div class="metric-value" id="metricMileage">0 mi</div>
+    <div class="metric-sub" id="metricMileageCost">$0.00 at current rate</div>
+  </div>
+  <div class="metric-card">
+    <div class="metric-label">Net (Revenue &minus; Expenses)</div>
+    <div class="metric-value" id="metricNet">$0.00</div>
+    <div class="metric-sub">Before mileage cost</div>
+  </div>
+</div>
+
+<div class="section-heading">Job Status</div>
+<div id="statusBars"></div>
+
+<div class="section-heading">Due Soon (next 7 days, not done)</div>
+<div id="upcomingJobs"></div>
+
+<div class="section-heading">Recent Invoices</div>
+<div id="recentInvoices"></div>
+
+<div class="section-heading">Tools</div>
+
+<a href="/job-tracker.html" class="tool-card">
+  <div class="tool-card-text">
+    <h3>Job Tracker</h3>
+    <p>Jobs, cost lookup, expenses &amp; mileage, contacts, and notes &mdash; all five in one page, organized by tab.</p>
+  </div>
+  <span class="tool-card-arrow">&rarr;</span>
+</a>
 
 <a href="/invoice-generator.html" class="tool-card">
   <div class="tool-card-text">
     <h3>Invoice Generator</h3>
-    <p>Fill in job details, download a branded invoice PDF (now with your Venmo QR built in) &mdash; no need to come back to Claude for this.</p>
+    <p>Fill in job details, download a branded invoice PDF (now with your Venmo QR built in) &mdash; logs to your dashboard automatically.</p>
   </div>
   <span class="tool-card-arrow">&rarr;</span>
 </a>
@@ -60,18 +151,10 @@
   <span class="tool-card-arrow">&rarr;</span>
 </a>
 
-<a href="/job-tracker.html" class="tool-card">
-  <div class="tool-card-text">
-    <h3>Job Tracker</h3>
-    <p>Jobs, cost lookup, expenses &amp; mileage, contacts, and notes &mdash; all five in one page, organized by tab.</p>
-  </div>
-  <span class="tool-card-arrow">&rarr;</span>
-</a>
-
 <a href="/route-planner.html" class="tool-card">
   <div class="tool-card-text">
     <h3>Route Planner</h3>
-    <p>Type in today's addresses, get one link that opens the whole route in Google Maps.</p>
+    <p>Type in today's addresses, get one link that opens the whole route in Google Maps, plus a to-and-from cost analyzer.</p>
   </div>
   <span class="tool-card-arrow">&rarr;</span>
 </a>
@@ -83,19 +166,141 @@
 <div class="help-modal-overlay" id="helpModalOverlay" onclick="if(event.target===this) closeHelpModal()">
   <div class="help-modal">
     <button class="help-modal-close" onclick="closeHelpModal()" aria-label="Close">&times;</button>
-    <h3>How to Use: Workspace</h3>
+    <h3>How to Use: Dashboard</h3>
     <div class="help-modal-body">
-      <p>This is the home base for every internal tool &mdash; bookmark this one page rather than any individual tool.</p>
+      <p>This is the home base for the whole business &mdash; bookmark this one page.</p>
       <ul>
-        <li><strong>Job Tracker</strong> &mdash; jobs, cost lookup, expenses &amp; mileage, contacts, and notes, all in one tabbed page.</li>
-        <li><strong>Route Planner</strong> &mdash; queue up today's addresses, get one link that opens the whole route in Google Maps.</li>
-        <li><strong>Invoice Generator</strong> &mdash; fill in job details, download a branded PDF invoice with your Venmo QR built in.</li>
-        <li><strong>Review Request Sender</strong> &mdash; after a job, generate a ready-to-send review-request text message.</li>
+        <li><strong>Business Snapshot</strong> &mdash; toggle between This Month and All Time. Revenue comes from invoices generated in the Invoice Generator; expenses and mileage come from the Job Tracker's Expenses tab.</li>
+        <li><strong>Job Status</strong> &mdash; a quick bar breakdown of how many jobs are Not Started, In Progress, and Done.</li>
+        <li><strong>Due Soon</strong> &mdash; any job with a due date in the next 7 days that isn't marked Done yet.</li>
+        <li><strong>Recent Invoices</strong> &mdash; your last 5 generated invoices, most recent first.</li>
+        <li><strong>Tools</strong> &mdash; every internal tool, one tap away.</li>
       </ul>
-      <p>Every tool has its own "?" button with instructions specific to that page. Data is saved directly in your browser, and quietly kept in sync across your devices in the background &mdash; nothing to set up or press.</p>
+      <p>Every tool has its own "?" button with instructions specific to that page. Data is saved directly in your browser, and quietly kept in sync across your devices in the background &mdash; nothing to set up or press. Marking a job "Done" in the Job Tracker will also offer to jump straight to a pre-filled review request for that client.</p>
     </div>
   </div>
 </div>
+
+<script>
+  function money(v) { return '$' + (v || 0).toFixed(2); }
+  function escapeHtml(str) {
+    const div = document.createElement('div');
+    div.textContent = str;
+    return div.innerHTML;
+  }
+
+  function loadJobs() { return JSON.parse(localStorage.getItem('th_tracker_jobs') || '[]'); }
+  function loadExpenses() { return JSON.parse(localStorage.getItem('th_expense_log') || '[]'); }
+  function loadInvoices() { return JSON.parse(localStorage.getItem('th_invoices') || '[]'); }
+  function loadRate() { return parseFloat(localStorage.getItem('th_mileage_rate')) || 0.76; }
+
+  function isThisMonth(dateStr) {
+    if (!dateStr) return false;
+    const d = new Date(dateStr + 'T00:00:00');
+    const now = new Date();
+    return d.getFullYear() === now.getFullYear() && d.getMonth() === now.getMonth();
+  }
+
+  let currentPeriod = 'month';
+  function setPeriod(period) {
+    currentPeriod = period;
+    document.querySelectorAll('.period-btn').forEach(b => b.classList.toggle('is-active', b.dataset.period === period));
+    renderMetrics();
+  }
+
+  function renderMetrics() {
+    const invoices = loadInvoices().filter(i => currentPeriod === 'all' || isThisMonth(i.date));
+    const expenses = loadExpenses().filter(e => currentPeriod === 'all' || isThisMonth(e.date));
+
+    const revenue = invoices.reduce((sum, i) => sum + (i.total || 0), 0);
+    const expenseTotal = expenses.filter(e => e.type === 'expense').reduce((sum, e) => sum + e.amount, 0);
+    const mileageEntries = expenses.filter(e => e.type === 'mileage');
+    const totalMiles = mileageEntries.reduce((sum, e) => sum + (e.miles || 0), 0);
+    const mileageCost = mileageEntries.reduce((sum, e) => sum + e.amount, 0);
+    const net = revenue - expenseTotal;
+
+    document.getElementById('metricRevenue').textContent = money(revenue);
+    document.getElementById('metricInvoiceCount').textContent = invoices.length + ' invoice' + (invoices.length === 1 ? '' : 's');
+    document.getElementById('metricExpenses').textContent = money(expenseTotal);
+    document.getElementById('metricExpenseCount').textContent = expenses.filter(e => e.type === 'expense').length + ' entries';
+    document.getElementById('metricMileage').textContent = totalMiles.toFixed(1) + ' mi';
+    document.getElementById('metricMileageCost').textContent = money(mileageCost) + ' at $' + loadRate() + '/mi';
+    document.getElementById('metricNet').textContent = money(net);
+  }
+
+  function renderStatusBars() {
+    const jobs = loadJobs();
+    const counts = { 'not-started': 0, 'in-progress': 0, 'done': 0 };
+    jobs.forEach(j => { if (counts[j.status] !== undefined) counts[j.status]++; });
+    const max = Math.max(1, ...Object.values(counts));
+    const labels = { 'not-started': 'Not Started', 'in-progress': 'In Progress', 'done': 'Done' };
+
+    document.getElementById('statusBars').innerHTML = Object.keys(labels).map(key => `
+      <div class="status-bar-row">
+        <div class="status-bar-label">${labels[key]}</div>
+        <div class="status-bar-track"><div class="status-bar-fill" style="width:${(counts[key] / max * 100)}%"></div></div>
+        <div class="status-bar-count">${counts[key]}</div>
+      </div>`).join('');
+  }
+
+  function renderUpcoming() {
+    const jobs = loadJobs().filter(j => j.status !== 'done' && j.date);
+    const now = new Date();
+    const weekOut = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
+    const upcoming = jobs
+      .filter(j => {
+        const d = new Date(j.date + 'T00:00:00');
+        return d >= new Date(now.toDateString()) && d <= weekOut;
+      })
+      .sort((a, b) => new Date(a.date) - new Date(b.date));
+
+    const container = document.getElementById('upcomingJobs');
+    if (upcoming.length === 0) {
+      container.innerHTML = '<div class="empty-state-small">Nothing due in the next 7 days.</div>';
+      return;
+    }
+    container.innerHTML = upcoming.map(j => `
+      <div class="dash-list-item">
+        <div>
+          <div class="dash-list-item-title">${escapeHtml(j.title)}</div>
+          <div class="dash-list-item-meta">${new Date(j.date + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}${j.client ? ' &middot; ' + escapeHtml(j.client) : ''}</div>
+        </div>
+      </div>`).join('');
+  }
+
+  function renderRecentInvoices() {
+    const invoices = [...loadInvoices()].sort((a, b) => b.id - a.id).slice(0, 5);
+    const container = document.getElementById('recentInvoices');
+    if (invoices.length === 0) {
+      container.innerHTML = '<div class="empty-state-small">No invoices generated yet.</div>';
+      return;
+    }
+    container.innerHTML = invoices.map(i => `
+      <div class="dash-list-item">
+        <div>
+          <div class="dash-list-item-title">${escapeHtml(i.clientName)}</div>
+          <div class="dash-list-item-meta">#${escapeHtml(i.invoiceNumber || '\u2014')} &middot; ${escapeHtml(i.date || '')}</div>
+        </div>
+        <div class="dash-list-item-amount">${money(i.total)}</div>
+      </div>`).join('');
+  }
+
+  function renderDashboard() {
+    renderMetrics();
+    renderStatusBars();
+    renderUpcoming();
+    renderRecentInvoices();
+  }
+
+  // sync.js loads with `defer`, which has no effect on this inline script
+  // (defer only applies to external scripts with a `src`) -- this inline
+  // block runs immediately at parse time regardless. Waiting for
+  // DOMContentLoaded guarantees initSyncOnLoad() actually exists by the
+  // time we call it.
+  document.addEventListener('DOMContentLoaded', function () {
+    initSyncOnLoad().then(renderDashboard).catch(renderDashboard);
+  });
+</script>
 
 </body>
 </html>
