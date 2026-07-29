@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="robots" content="noindex, nofollow">
+<title>Route Planner | Triple H Enterprises (Internal Tool)</title>
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data:; connect-src 'self'; frame-src 'none'; object-src 'none'; base-uri 'self'; frame-ancestors 'none';">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/styles.css">
+<script src="/tools-common.js" defer></script>
+<style>
+  body { padding: 90px 20px 60px; max-width: 680px; margin: 0 auto; }
+  .tool-title { font-family:'Oswald',sans-serif; font-weight:700; font-size:28px; color:var(--white); margin-bottom:6px; }
+  .tool-sub { color: var(--text-dim); margin-bottom: 24px; }
+  .home-link { display:inline-block; margin-bottom: 20px; color: var(--blue-light); font-size: 14px; }
+  .form-section {
+    background: var(--bg-panel); border: 1px solid var(--border); border-radius: var(--radius);
+    padding: 22px; margin-bottom: 20px;
+  }
+  .stop-row { display: flex; gap: 8px; margin-bottom: 10px; align-items: center; }
+  .stop-row input {
+    flex: 1; padding: 10px 12px; background: var(--bg-panel-2); border: 1px solid var(--border);
+    border-radius: 6px; color: var(--white); font-size: 14.5px; font-family: inherit;
+  }
+  .stop-num { color: var(--text-dim); font-size: 13px; width: 22px; flex-shrink: 0; }
+  .icon-btn {
+    background: none; border: 1px solid var(--border); color: var(--text-dim); border-radius: 6px;
+    width: 32px; height: 32px; cursor: pointer; font-size: 14px; flex-shrink: 0;
+  }
+  .icon-btn:hover { border-color: var(--orange-light); color: var(--orange-light); }
+  .icon-btn.danger:hover { border-color: #e05252; color: #e05252; }
+  .add-stop-btn {
+    background: none; border: 1px dashed var(--border); color: var(--blue-light); border-radius: 6px;
+    padding: 8px 14px; cursor: pointer; font-size: 13.5px; margin-top: 4px;
+  }
+  .primary-btn {
+    background: linear-gradient(135deg, var(--orange-light), var(--orange) 60%, var(--orange-dark));
+    color: #1a0d02; font-weight: 700; font-family:'Oswald',sans-serif; font-size: 15px;
+    border: none; border-radius: 8px; padding: 13px 24px; cursor: pointer; width: 100%; margin-top: 16px;
+    text-decoration: none; display: block; text-align: center; box-sizing: border-box;
+  }
+  .primary-btn.is-disabled { opacity: 0.4; cursor: not-allowed; pointer-events: none; }
+  .stop-list-view { margin-top: 20px; }
+  .stop-view-row {
+    display: flex; justify-content: space-between; align-items: center; padding: 10px 0;
+    border-bottom: 1px solid var(--border); font-size: 14px;
+  }
+  .stop-view-row a { color: var(--blue-light); font-size: 13px; }
+  .warning-note { color: var(--orange-light); font-size: 12.5px; margin-top: 10px; display: none; }
+</style>
+</head>
+<body>
+
+<div class="tool-header">
+  <a href="/workspace.html" class="tool-header-brand">
+    <img src="/images/logo-signature-orange.png" alt="Triple H Enterprises">
+    <span>&larr; Back to Workspace</span>
+  </a>
+  <button class="help-btn" onclick="openHelpModal()" aria-label="How to use this tool" title="How to use this tool">?</button>
+</div>
+<div class="tool-title">Route Planner</div>
+<p class="tool-sub">Type in today's addresses, get one link that opens the whole route in Google Maps &mdash; starting from wherever you are when you tap it.</p>
+
+<div class="form-section">
+  <div id="stopsContainer"></div>
+  <button class="add-stop-btn" onclick="addStop()">+ Add Stop</button>
+  <p class="warning-note" id="tooManyWarning">Google Maps allows up to 10 stops per route &mdash; remove one before opening the full route.</p>
+  <a class="primary-btn" id="openRouteBtn" href="#" target="_blank" rel="noopener">Open Full Route in Google Maps</a>
+</div>
+
+<div class="stop-list-view" id="individualLinks"></div>
+
+<div class="help-modal-overlay" id="helpModalOverlay" onclick="if(event.target===this) closeHelpModal()">
+  <div class="help-modal">
+    <button class="help-modal-close" onclick="closeHelpModal()" aria-label="Close">&times;</button>
+    <h3>How to Use: Route Planner</h3>
+    <div class="help-modal-body">
+      <p>Type in today's job addresses in the order you plan to visit them.</p>
+      <ul>
+        <li>Use <strong>+ Add Stop</strong> for more addresses, or the &uarr;/&darr; arrows to reorder, &times; to remove.</li>
+        <li>Tap <strong>Open Full Route in Google Maps</strong> to open the whole route as one set of driving directions, starting from wherever you are.</li>
+        <li>Google Maps caps routes at 10 stops &mdash; if you hit that, use the individual "Open this stop" links below the form instead.</li>
+        <li>Nothing here is saved between visits &mdash; refreshing the page clears the list.</li>
+      </ul>
+    </div>
+  </div>
+</div>
+
+<script>
+  let stopCount = 0;
+
+  function addStop(value = '') {
+    stopCount++;
+    const id = stopCount;
+    const row = document.createElement('div');
+    row.className = 'stop-row';
+    row.id = 'stop-' + id;
+    row.innerHTML = `
+      <span class="stop-num">${document.querySelectorAll('.stop-row').length + 1}.</span>
+      <input type="text" class="stop-input" value="${value}" placeholder="123 Main St, St. George, UT" oninput="updateRoute()">
+      <button class="icon-btn" onclick="moveStop(${id}, -1)" title="Move up">&uarr;</button>
+      <button class="icon-btn" onclick="moveStop(${id}, 1)" title="Move down">&darr;</button>
+      <button class="icon-btn danger" onclick="removeStop(${id})" title="Remove">&times;</button>`;
+    document.getElementById('stopsContainer').appendChild(row);
+    renumberStops();
+    updateRoute();
+  }
+
+  function removeStop(id) {
+    const el = document.getElementById('stop-' + id);
+    if (el) el.remove();
+    renumberStops();
+    updateRoute();
+  }
+
+  function moveStop(id, direction) {
+    const container = document.getElementById('stopsContainer');
+    const row = document.getElementById('stop-' + id);
+    if (direction === -1 && row.previousElementSibling) {
+      container.insertBefore(row, row.previousElementSibling);
+    } else if (direction === 1 && row.nextElementSibling) {
+      container.insertBefore(row.nextElementSibling, row);
+    }
+    renumberStops();
+    updateRoute();
+  }
+
+  function renumberStops() {
+    document.querySelectorAll('.stop-row').forEach((row, i) => {
+      row.querySelector('.stop-num').textContent = (i + 1) + '.';
+    });
+  }
+
+  function getStopValues() {
+    return [...document.querySelectorAll('.stop-input')].map(i => i.value.trim()).filter(v => v !== '');
+  }
+
+  function buildRouteUrl(stops) {
+    if (stops.length === 0) return null;
+    const destination = stops[stops.length - 1];
+    const waypoints = stops.slice(0, -1);
+    let url = 'https://www.google.com/maps/dir/?api=1&destination=' + encodeURIComponent(destination) + '&travelmode=driving';
+    if (waypoints.length > 0) {
+      url += '&waypoints=' + waypoints.map(encodeURIComponent).join('|');
+    }
+    return url;
+  }
+
+  function updateRoute() {
+    const stops = getStopValues();
+    const btn = document.getElementById('openRouteBtn');
+    const warning = document.getElementById('tooManyWarning');
+
+    if (stops.length > 10) {
+      warning.style.display = 'block';
+      btn.classList.add('is-disabled');
+      btn.removeAttribute('href');
+    } else {
+      warning.style.display = 'none';
+      const url = buildRouteUrl(stops);
+      if (url) {
+        btn.classList.remove('is-disabled');
+        btn.href = url;
+      } else {
+        btn.classList.add('is-disabled');
+        btn.removeAttribute('href');
+      }
+    }
+
+    const linksContainer = document.getElementById('individualLinks');
+    if (stops.length === 0) {
+      linksContainer.innerHTML = '';
+      return;
+    }
+    linksContainer.innerHTML = stops.map((s, i) => `
+      <div class="stop-view-row">
+        <span>${i + 1}. ${escapeHtml(s)}</span>
+        <a href="https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(s)}&travelmode=driving" target="_blank" rel="noopener">Open this stop &rarr;</a>
+      </div>`).join('');
+  }
+
+  function escapeHtml(str) {
+    const div = document.createElement('div');
+    div.textContent = str;
+    return div.innerHTML;
+  }
+
+  addStop();
+  addStop();
+</script>
+</body>
+</html>
