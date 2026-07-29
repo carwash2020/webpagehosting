@@ -5,11 +5,12 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta name="robots" content="noindex, nofollow">
 <title>Route Planner | Triple H Enterprises (Internal Tool)</title>
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data:; connect-src 'self'; frame-src 'none'; object-src 'none'; base-uri 'self'; frame-ancestors 'none';">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data:; connect-src 'self' https://*.supabase.co; frame-src 'none'; object-src 'none'; base-uri 'self'; frame-ancestors 'none';">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;500;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="/styles.css">
+<script src="/sync.js" defer></script>
 <script src="/tools-common.js" defer></script>
 <style>
   body { padding: 90px 20px 60px; max-width: 680px; margin: 0 auto; }
@@ -50,6 +51,20 @@
   }
   .stop-view-row a { color: var(--blue-light); font-size: 13px; }
   .warning-note { color: var(--orange-light); font-size: 12.5px; margin-top: 10px; display: none; }
+  .form-section h3 { font-family:'Oswald',sans-serif; color: var(--orange-light); font-size: 14px; margin: 0 0 14px; text-transform: uppercase; letter-spacing: 1px; }
+  .form-row { display: flex; gap: 14px; margin-bottom: 12px; flex-wrap: wrap; }
+  .form-field { flex: 1; min-width: 150px; }
+  .form-field label { display: block; font-size: 12.5px; color: var(--text-dim); margin-bottom: 4px; }
+  .form-field input {
+    width: 100%; padding: 9px 11px; background: var(--bg-panel-2); border: 1px solid var(--border);
+    border-radius: 6px; color: var(--white); font-size: 14.5px; font-family: inherit; box-sizing: border-box;
+  }
+  .results-box { margin-top: 8px; }
+  .result-row { display: flex; justify-content: space-between; padding: 9px 0; border-bottom: 1px solid var(--border); font-size: 14.5px; }
+  .result-row.final { font-weight: 700; font-size: 18px; color: var(--orange-light); border-bottom: none; padding-top: 14px; }
+  .result-label { color: var(--text-dim); }
+  .result-label.final { color: var(--white); }
+  .policy-note { color: var(--text-dim); font-size: 12.5px; margin: -6px 0 14px; line-height: 1.5; }
 </style>
 </head>
 <body>
@@ -73,6 +88,23 @@
 
 <div class="stop-list-view" id="individualLinks"></div>
 
+<div class="form-section">
+  <h3>Cost Analyzer (To &amp; From)</h3>
+  <p class="policy-note">Your posted trip fee policy: free within 15 miles of St. George, $25 flat beyond that. This calculator gives you a fuel-cost-based figure too, so you can compare against the flat policy and decide what to actually charge.</p>
+  <div class="form-row">
+    <div class="form-field"><label>One-way distance (miles)</label><input type="number" id="tripDistance" value="0" min="0" step="0.5" oninput="calculateTripCost()"></div>
+    <div class="form-field"><label>Cost per mile ($)</label><input type="number" id="tripFuelRate" value="0.76" min="0" step="0.01" oninput="calculateTripCost(); saveMileageRate();"></div>
+    <div class="form-field"><label>Sales tax rate (%)</label><input type="number" id="tripTaxRate" value="6.75" min="0" step="0.01" oninput="calculateTripCost()"></div>
+  </div>
+  <div class="results-box">
+    <div class="result-row"><span class="result-label">Round-trip distance</span><span id="tripMilesResult">0 mi</span></div>
+    <div class="result-row"><span class="result-label">Estimated fuel cost</span><span id="tripFuelResult">$0.00</span></div>
+    <div class="result-row"><span class="result-label">Flat policy fee (for reference)</span><span id="tripPolicyResult">$0.00</span></div>
+    <div class="result-row"><span class="result-label">Sales tax on suggested charge</span><span id="tripTaxResult">$0.00</span></div>
+    <div class="result-row final"><span class="result-label final">Suggested trip charge, with tax</span><span id="tripTotalResult">$0.00</span></div>
+  </div>
+</div>
+
 <div class="help-modal-overlay" id="helpModalOverlay" onclick="if(event.target===this) closeHelpModal()">
   <div class="help-modal">
     <button class="help-modal-close" onclick="closeHelpModal()" aria-label="Close">&times;</button>
@@ -83,13 +115,14 @@
         <li>Use <strong>+ Add Stop</strong> for more addresses, or the &uarr;/&darr; arrows to reorder, &times; to remove.</li>
         <li>Tap <strong>Open Full Route in Google Maps</strong> to open the whole route as one set of driving directions, starting from wherever you are.</li>
         <li>Google Maps caps routes at 10 stops &mdash; if you hit that, use the individual "Open this stop" links below the form instead.</li>
-        <li>Nothing here is saved between visits &mdash; refreshing the page clears the list.</li>
+        <li><strong>Cost Analyzer</strong> &mdash; type in the one-way distance for today's trip and it estimates round-trip fuel cost, shows your flat $25/free-within-15-miles policy for reference, and adds sales tax on top so you can see a full suggested charge. The cost-per-mile field is shared with the Job Tracker's Expenses tab, so updating it here updates it there too.</li>
+        <li>Nothing here is saved between visits &mdash; refreshing the page clears the stop list (the Cost Analyzer's rate defaults do persist, since they're shared with Expenses).</li>
       </ul>
     </div>
   </div>
 </div>
 
-<script>
+<script defer>
   let stopCount = 0;
 
   function addStop(value = '') {
@@ -187,6 +220,46 @@
     div.textContent = str;
     return div.innerHTML;
   }
+
+  // ---------- Cost Analyzer ----------
+  const RATE_STORAGE_KEY = 'th_mileage_rate';
+
+  function saveMileageRate() {
+    localStorage.setItem(RATE_STORAGE_KEY, document.getElementById('tripFuelRate').value);
+    if (typeof scheduleSync === 'function') scheduleSync();
+  }
+
+  function loadSharedMileageRate() {
+    const saved = localStorage.getItem(RATE_STORAGE_KEY);
+    if (saved) document.getElementById('tripFuelRate').value = saved;
+  }
+
+  function money(v) { return '$' + v.toFixed(2); }
+
+  function calculateTripCost() {
+    const oneWay = parseFloat(document.getElementById('tripDistance').value) || 0;
+    const rate = parseFloat(document.getElementById('tripFuelRate').value) || 0;
+    const taxRate = parseFloat(document.getElementById('tripTaxRate').value) || 0;
+
+    const roundTrip = oneWay * 2;
+    const fuelCost = roundTrip * rate;
+    const policyFee = oneWay <= 15 ? 0 : 25;
+    const suggestedCharge = fuelCost;
+    const tax = suggestedCharge * (taxRate / 100);
+    const total = suggestedCharge + tax;
+
+    document.getElementById('tripMilesResult').textContent = roundTrip.toFixed(1) + ' mi';
+    document.getElementById('tripFuelResult').textContent = money(fuelCost);
+    document.getElementById('tripPolicyResult').textContent = money(policyFee);
+    document.getElementById('tripTaxResult').textContent = money(tax);
+    document.getElementById('tripTotalResult').textContent = money(total);
+  }
+
+  loadSharedMileageRate();
+  if (typeof initSyncOnLoad === 'function') {
+    initSyncOnLoad().then(() => { loadSharedMileageRate(); calculateTripCost(); });
+  }
+  calculateTripCost();
 
   addStop();
   addStop();

@@ -5,14 +5,15 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta name="robots" content="noindex, nofollow">
 <title>Job Tracker | Triple H Enterprises (Internal Tool)</title>
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data:; connect-src 'self'; frame-src 'none'; object-src 'none'; base-uri 'self'; frame-ancestors 'none';">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data:; connect-src 'self' https://*.supabase.co; frame-src 'none'; object-src 'none'; base-uri 'self'; frame-ancestors 'none';">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;500;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="/styles.css">
+<script src="/sync.js" defer></script>
 <script src="/tools-common.js" defer></script>
 <style>
-  body { padding: 90px 20px 60px; max-width: 1000px; margin: 0 auto; }
+  body { padding: 90px 20px 60px; max-width: 1080px; margin: 0 auto; }
   .tool-title { font-family:'Oswald',sans-serif; font-weight:700; font-size:28px; color:var(--white); margin-bottom:6px; }
   .tool-sub { color: var(--text-dim); margin-bottom: 24px; }
   .storage-note {
@@ -99,11 +100,6 @@
 
   .empty-state { text-align: center; color: var(--text-dim); padding: 40px 20px; font-size: 14px; }
 
-  #quickNotes {
-    width: 100%; min-height: 300px; padding: 16px; background: var(--bg-panel); border: 1px solid var(--border);
-    border-radius: var(--radius); color: var(--white); font-size: 15px; font-family: inherit; box-sizing: border-box;
-    resize: vertical;
-  }
   .save-indicator { color: var(--orange-light); font-size: 12.5px; margin-top: 8px; opacity: 0; transition: opacity 0.3s; }
   .save-indicator.is-visible { opacity: 1; }
 
@@ -111,17 +107,21 @@
   .results-box { margin-top: 8px; }
   .result-row { display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid var(--border); font-size: 15px; }
   .result-row.final { font-weight: 700; font-size: 19px; color: var(--orange-light); border-bottom: none; padding-top: 16px; }
+  .result-row.is-hidden { display: none; }
   .result-label { color: var(--text-dim); }
   .result-label.final { color: var(--white); }
 
   /* --- Expenses tab --- */
   table { width: 100%; border-collapse: collapse; margin-top: 8px; }
-  th { text-align: left; font-size: 11.5px; color: var(--text-dim); padding: 8px; text-transform: uppercase; border-bottom: 1px solid var(--border); }
+  th { text-align: left; font-size: 11.5px; color: var(--text-dim); padding: 8px; text-transform: uppercase; border-bottom: 1px solid var(--border); white-space: nowrap; }
   td { padding: 10px 8px; font-size: 14px; color: var(--white); border-bottom: 1px solid var(--border); }
   .totals-row-money { display: flex; gap: 24px; margin-top: 16px; padding-top: 16px; border-top: 1px solid var(--border); flex-wrap: wrap; }
   .totals-row-money div { color: var(--text-dim); font-size: 14px; }
   .totals-row-money strong { color: var(--orange-light); font-size: 17px; }
-  .btn-row { display: flex; gap: 12px; margin-top: 16px; }
+  .btn-row { display: flex; gap: 12px; margin-top: 16px; flex-wrap: wrap; }
+  .mileage-rate-inline { display: flex; align-items: center; gap: 8px; }
+  .mileage-rate-inline label { font-size: 12.5px; color: var(--text-dim); white-space: nowrap; }
+  .mileage-rate-inline input { width: 90px; padding: 9px 11px; background: var(--bg-panel-2); border: 1px solid var(--border); border-radius: 6px; color: var(--white); font-size: 14.5px; }
 </style>
 </head>
 <body>
@@ -136,7 +136,7 @@
 <div class="tool-title">Job Tracker</div>
 <p class="tool-sub">Jobs, pricing, expenses, contacts, and notes &mdash; the whole day-to-day workflow in one place, organized by tab.</p>
 <div class="storage-note">
-  <strong>Where this data lives:</strong> everything on this page is saved directly in this browser (not sent anywhere, no account needed) &mdash; which also means it only shows up on this specific device/browser, not synced across your phone and computer. Use Export CSV on the Expenses tab regularly if you want a backup copy outside this browser. Don't clear your browser data without exporting first if that matters to you.
+  <strong>Where this data lives:</strong> everything on this page is saved directly in this browser. If you've set up Cloud Sync on the Workspace page, it also syncs to your own private Supabase project so it follows you across devices. Use Export CSV on the Expenses tab regularly either way, as a backup copy outside the browser.
 </div>
 
 <div class="tabs">
@@ -195,17 +195,31 @@
     </div>
     <div class="form-row">
       <div class="form-field"><label>Parts/materials cost ($)</label><input type="number" id="parts" value="0" min="0" step="0.01" oninput="calculateCost()"></div>
-      <div class="form-field"><label>First-time discount ($)</label><input type="number" id="discount" value="15" min="0" step="1" oninput="calculateCost()"></div>
+    </div>
+    <div class="checkbox-row">
+      <input type="checkbox" id="firstTimeClient" onchange="calculateCost()">
+      <label for="firstTimeClient">First-time client &mdash; apply discount</label>
+    </div>
+    <div class="form-row" id="discountRow">
+      <div class="form-field" style="max-width:220px;"><label>First-time discount ($)</label><input type="number" id="discount" value="15" min="0" step="1" oninput="calculateCost()"></div>
     </div>
   </div>
+
   <div class="form-section">
     <h3>Results</h3>
     <div class="results-box">
       <div class="result-row"><span class="result-label">Labor</span><span id="laborResult">$0.00</span></div>
       <div class="result-row"><span class="result-label">Parts/materials</span><span id="partsResult">$0.00</span></div>
-      <div class="result-row"><span class="result-label">Standard total</span><span id="standardResult">$0.00</span></div>
-      <div class="result-row final"><span class="result-label final">First-time client price</span><span id="discountedResult">$0.00</span></div>
+      <div class="result-row final" id="standardFinalRow"><span class="result-label final">Standard total</span><span id="standardResult">$0.00</span></div>
+      <div class="result-row final" id="discountedFinalRow"><span class="result-label final">First-time client price</span><span id="discountedResult">$0.00</span></div>
     </div>
+  </div>
+
+  <div class="form-section">
+    <h3>Price Reference</h3>
+    <p style="color:var(--text-dim); font-size: 13px; margin: -6px 0 12px;">Save common job types here once, then tap one anytime to instantly load its hours/rate back into the calculator above.</p>
+    <div class="price-ref-list" id="priceRefList"></div>
+    <button class="secondary-btn" style="margin-top:14px;" onclick="savePriceReference()">+ Save Current as Reference</button>
   </div>
 </div>
 
@@ -218,30 +232,45 @@
       <div class="form-field"><label>Type</label>
         <select id="entryType"><option value="expense">Expense</option><option value="mileage">Mileage</option></select>
       </div>
-      <div class="form-field"><label>Description</label><input type="text" id="entryDesc" placeholder="Parts from Home Depot"></div>
+      <div class="form-field"><label>Vendor / Store</label><input type="text" id="entryVendor" placeholder="Home Depot"></div>
+    </div>
+    <div class="form-row">
+      <div class="form-field"><label>Job (optional)</label>
+        <select id="entryJobRef"><option value="">&mdash; None &mdash;</option></select>
+      </div>
+      <div class="form-field"><label>Payment Method</label>
+        <select id="entryPayment">
+          <option value="cash">Cash</option>
+          <option value="card">Card</option>
+          <option value="check">Check</option>
+          <option value="venmo">Venmo</option>
+          <option value="cashapp">Cash App</option>
+          <option value="other">Other</option>
+        </select>
+      </div>
+      <div class="form-field"><label>Description</label><input type="text" id="entryDesc" placeholder="Parts for the job"></div>
     </div>
     <div class="form-row">
       <div class="form-field" id="amountField"><label>Amount ($)</label><input type="number" id="entryAmount" step="0.01" min="0"></div>
-      <div class="form-field" id="milesField" style="display:none;"><label>Miles</label><input type="number" id="entryMiles" step="0.1" min="0"></div>
+      <div class="form-field" id="milesField" style="display:none;">
+        <label>Miles</label>
+        <div class="mileage-rate-inline">
+          <input type="number" id="entryMiles" step="0.1" min="0" style="flex:1;">
+          <label for="mileageRate">at $</label>
+          <input type="number" id="mileageRate" value="0.76" step="0.01" min="0" onchange="saveMileageRate(); renderExpenses();">
+          <label for="mileageRate">/mi</label>
+        </div>
+      </div>
     </div>
-    <button class="primary-btn" onclick="addExpense()">Add Entry</button>
-  </div>
-
-  <div class="form-section">
-    <h3>Mileage Rate</h3>
-    <p style="color:var(--text-dim); font-size: 13px; margin: -6px 0 12px;">
-      The IRS standard mileage rate changes at least yearly &mdash; and occasionally mid-year, as it did in 2026.
-      Update this if it ever changes rather than trusting an old number. Current value is the official
-      rate for the second half of 2026 (July&ndash;December).
-    </p>
-    <div class="form-row">
-      <div class="form-field" style="max-width:200px;"><label>Rate per mile ($)</label><input type="number" id="mileageRate" value="0.76" step="0.01" min="0" onchange="saveMileageRate(); renderExpenses();"></div>
-    </div>
+    <p class="inline-note" id="mileageRateNote" style="display:none;">The IRS standard mileage rate changes at least yearly (occasionally mid-year, as in 2026) &mdash; update the rate above if it changes rather than trusting an old number. Shown value is the official rate for the second half of 2026 (July&ndash;December). This same rate is also used by the Route Planner's cost analyzer.</p>
+    <button class="primary-btn" onclick="addExpense()" style="margin-top:10px;">Add Entry</button>
   </div>
 
   <div class="form-section">
     <h3>Log</h3>
-    <div id="entriesTable"></div>
+    <div class="table-scroll">
+      <div id="entriesTable"></div>
+    </div>
     <div class="totals-row-money" id="totalsRowMoney"></div>
     <div class="btn-row">
       <button class="secondary-btn" onclick="exportCSV()">Export CSV</button>
@@ -270,13 +299,21 @@
   <div id="contactsList"></div>
 </div>
 
-<!-- NOTES TAB -->
+<!-- NOTES TAB (multi-note) -->
 <div class="tab-panel" id="tab-notes">
-  <div class="form-section">
-    <h3>Quick Notes</h3>
-    <p style="color:var(--text-dim); font-size: 13px; margin-top: -6px;">A general scratchpad, separate from any specific job. Saves automatically as you type.</p>
-    <textarea id="quickNotes" placeholder="Anything on your mind..."></textarea>
-    <div class="save-indicator" id="saveIndicator">Saved</div>
+  <div class="notes-layout">
+    <div class="notes-sidebar">
+      <button class="primary-btn note-new-btn" onclick="createNote()">+ New Note</button>
+      <div id="notesList"></div>
+    </div>
+    <div class="notes-editor">
+      <div class="form-section" id="noteEditorSection" style="display:none;">
+        <input type="text" id="noteTitle" placeholder="Note title" oninput="scheduleNoteSave()">
+        <textarea id="noteBody" placeholder="Anything on your mind..." oninput="scheduleNoteSave()"></textarea>
+        <div class="save-indicator" id="noteSaveIndicator">Saved</div>
+      </div>
+      <div class="empty-state" id="noteEmptyState">Select a note on the left, or start a new one.</div>
+    </div>
   </div>
 </div>
 
@@ -286,23 +323,24 @@
     <button class="help-modal-close" onclick="closeHelpModal()" aria-label="Close">&times;</button>
     <h3>How to Use: Job Tracker</h3>
     <div class="help-modal-body">
-      <p>This page combines five related tools into tabs. Nothing is sent anywhere &mdash; all data lives in this browser only.</p>
+      <p>This page combines five related tools into tabs. Data lives in this browser, and also syncs to the cloud if you've set that up on the Workspace page.</p>
       <ul>
-        <li><strong>Jobs</strong> &mdash; add a job with priority/status/due date, then sort the list by date or priority, hide completed jobs, or tap "Advance Status" to cycle Not Started &rarr; In Progress &rarr; Done.</li>
-        <li><strong>Cost Lookup</strong> &mdash; type in hours and parts cost to instantly see the standard price and the first-time-client discounted price. Updates as you type; nothing to save.</li>
-        <li><strong>Expenses</strong> &mdash; log expenses or mileage as they happen. Mileage auto-calculates using the rate below the form &mdash; keep that rate current, since the IRS changes it. Use "Export CSV" anytime for a backup copy or for taxes.</li>
+        <li><strong>Jobs</strong> &mdash; add a job with priority/status/due date, sort by date or priority, hide completed jobs, or tap "Advance Status" to cycle Not Started &rarr; In Progress &rarr; Done.</li>
+        <li><strong>Cost Lookup</strong> &mdash; type in hours and parts cost to see the standard price instantly. Check "First-time client" to see the discounted price too. Save frequent job types under "Price Reference" and tap one anytime to reload it.</li>
+        <li><strong>Expenses</strong> &mdash; log expenses or mileage, now with vendor, payment method, and an optional link to a specific job. Mileage rate lives right next to the Miles field since it's only relevant for mileage entries. Export CSV anytime for a backup or for taxes.</li>
         <li><strong>Contacts</strong> &mdash; a quick address book for vendors, suppliers, or recurring clients.</li>
-        <li><strong>Notes</strong> &mdash; a general scratchpad, unrelated to any specific job. Saves automatically about half a second after you stop typing.</li>
+        <li><strong>Notes</strong> &mdash; keep as many separate, named notes as you want. Click one on the left to open it, or start a new one. Saves automatically as you type.</li>
       </ul>
-      <p>Since everything saves to this browser's storage, it won't show up if you open this page on a different phone or computer, and clearing browser data will erase it. Export CSV on the Expenses tab is your backup.</p>
+      <p>Set up Cloud Sync once on the Workspace page's "?" help, and this data follows you to any device using the same sync code.</p>
     </div>
   </div>
 </div>
 
-<script>
-  const STORAGE_KEYS = { jobs: 'th_tracker_jobs', contacts: 'th_tracker_contacts', notes: 'th_tracker_notes' };
+<script defer>
+  const STORAGE_KEYS = { jobs: 'th_tracker_jobs', contacts: 'th_tracker_contacts', notes: 'th_tracker_notes_v2', priceRef: 'th_price_reference' };
   const EXPENSE_STORAGE_KEY = 'th_expense_log';
   const RATE_STORAGE_KEY = 'th_mileage_rate';
+  const OLD_NOTES_KEY = 'th_tracker_notes'; // legacy single-note key, read once for migration only
 
   function escapeHtml(str) {
     const div = document.createElement('div');
@@ -317,6 +355,7 @@
     if (!document.getElementById('tab-' + tabName)) return;
     document.querySelectorAll('.tab-btn').forEach(b => b.classList.toggle('is-active', b.dataset.tab === tabName));
     document.querySelectorAll('.tab-panel').forEach(p => p.classList.toggle('is-active', p.id === 'tab-' + tabName));
+    if (tabName === 'expenses') populateJobRefOptions();
   }
 
   document.querySelectorAll('.tab-btn').forEach(btn => {
@@ -326,12 +365,9 @@
     });
   });
 
-  const initialHash = (location.hash || '').replace('#', '');
-  if (TAB_HASHES[initialHash]) activateTab(initialHash);
-
   // ---------- Jobs ----------
   function loadJobs() { return JSON.parse(localStorage.getItem(STORAGE_KEYS.jobs) || '[]'); }
-  function saveJobs(jobs) { localStorage.setItem(STORAGE_KEYS.jobs, JSON.stringify(jobs)); }
+  function saveJobs(jobs) { localStorage.setItem(STORAGE_KEYS.jobs, JSON.stringify(jobs)); scheduleSync(); }
   let currentSort = 'date';
 
   function addJob() {
@@ -355,11 +391,13 @@
     document.getElementById('jobPriority').value = 'medium';
     document.getElementById('jobStatus').value = 'not-started';
     renderJobs();
+    populateJobRefOptions();
   }
 
   function deleteJob(id) {
     saveJobs(loadJobs().filter(j => j.id !== id));
     renderJobs();
+    populateJobRefOptions();
   }
 
   function cycleStatus(id) {
@@ -438,6 +476,7 @@
     const rate = parseFloat(document.getElementById('rate').value) || 0;
     const parts = parseFloat(document.getElementById('parts').value) || 0;
     const discount = parseFloat(document.getElementById('discount').value) || 0;
+    const isFirstTime = document.getElementById('firstTimeClient').checked;
 
     const labor = hours * rate;
     const standardTotal = labor + parts;
@@ -447,23 +486,82 @@
     document.getElementById('partsResult').textContent = money(parts);
     document.getElementById('standardResult').textContent = money(standardTotal);
     document.getElementById('discountedResult').textContent = money(discountedTotal);
+
+    document.getElementById('discountRow').style.display = isFirstTime ? '' : 'none';
+    document.getElementById('discountedFinalRow').classList.toggle('is-hidden', !isFirstTime);
+    document.getElementById('standardFinalRow').classList.toggle('final', !isFirstTime);
+  }
+
+  // ---------- Price Reference ----------
+  function loadPriceReferences() { return JSON.parse(localStorage.getItem(STORAGE_KEYS.priceRef) || '[]'); }
+  function savePriceReferences(list) { localStorage.setItem(STORAGE_KEYS.priceRef, JSON.stringify(list)); scheduleSync(); }
+
+  function savePriceReference() {
+    const label = prompt('Name this job type (e.g. "Dishwasher install", "Drywall patch - small"):');
+    if (!label || !label.trim()) return;
+    const hours = parseFloat(document.getElementById('hours').value) || 0;
+    const rate = parseFloat(document.getElementById('rate').value) || 0;
+    const list = loadPriceReferences();
+    list.push({ id: Date.now(), label: label.trim(), hours, rate });
+    savePriceReferences(list);
+    renderPriceReferences();
+  }
+
+  function loadPriceReference(id) {
+    const ref = loadPriceReferences().find(r => r.id === id);
+    if (!ref) return;
+    document.getElementById('hours').value = ref.hours;
+    document.getElementById('rate').value = ref.rate;
+    calculateCost();
+  }
+
+  function deletePriceReference(id) {
+    savePriceReferences(loadPriceReferences().filter(r => r.id !== id));
+    renderPriceReferences();
+  }
+
+  function renderPriceReferences() {
+    const list = loadPriceReferences();
+    const container = document.getElementById('priceRefList');
+    if (list.length === 0) {
+      container.innerHTML = '<div class="inline-note">No saved job types yet &mdash; use the button below after entering hours/rate above.</div>';
+      return;
+    }
+    container.innerHTML = list.map(r => `
+      <div class="price-ref-chip" onclick="loadPriceReference(${r.id})">
+        <span>${escapeHtml(r.label)}</span>
+        <span class="chip-price">${money(r.hours * r.rate)}</span>
+        <button class="chip-remove" onclick="event.stopPropagation(); deletePriceReference(${r.id})" aria-label="Remove">&times;</button>
+      </div>`).join('');
   }
 
   // ---------- Expenses ----------
   function loadExpenses() { return JSON.parse(localStorage.getItem(EXPENSE_STORAGE_KEY) || '[]'); }
-  function saveExpenses(entries) { localStorage.setItem(EXPENSE_STORAGE_KEY, JSON.stringify(entries)); }
+  function saveExpenses(entries) { localStorage.setItem(EXPENSE_STORAGE_KEY, JSON.stringify(entries)); scheduleSync(); }
   function getMileageRate() { return parseFloat(document.getElementById('mileageRate').value) || 0; }
-  function saveMileageRate() { localStorage.setItem(RATE_STORAGE_KEY, document.getElementById('mileageRate').value); }
+  function saveMileageRate() { localStorage.setItem(RATE_STORAGE_KEY, document.getElementById('mileageRate').value); scheduleSync(); }
   function loadMileageRate() {
     const saved = localStorage.getItem(RATE_STORAGE_KEY);
     if (saved) document.getElementById('mileageRate').value = saved;
   }
 
+  const PAYMENT_LABEL = { cash: 'Cash', card: 'Card', check: 'Check', venmo: 'Venmo', cashapp: 'Cash App', other: 'Other' };
+
   document.getElementById('entryType').addEventListener('change', () => {
     const isMileage = document.getElementById('entryType').value === 'mileage';
     document.getElementById('amountField').style.display = isMileage ? 'none' : '';
     document.getElementById('milesField').style.display = isMileage ? '' : 'none';
+    document.getElementById('mileageRateNote').style.display = isMileage ? '' : 'none';
   });
+
+  function populateJobRefOptions() {
+    const select = document.getElementById('entryJobRef');
+    const current = select.value;
+    const jobs = loadJobs();
+    select.innerHTML = '<option value="">&mdash; None &mdash;</option>' +
+      jobs.map(j => `<option value="${j.id}">${escapeHtml(j.title)}</option>`).join('');
+    if (jobs.some(j => String(j.id) === current)) select.value = current;
+  }
 
   function addExpense() {
     const date = document.getElementById('entryDate').value;
@@ -471,7 +569,16 @@
     const desc = document.getElementById('entryDesc').value.trim();
     if (!date || !desc) { alert('Date and description are required.'); return; }
 
-    const entry = { id: Date.now(), date, type, desc };
+    const jobRefId = document.getElementById('entryJobRef').value;
+    const jobRefTitle = jobRefId ? (loadJobs().find(j => String(j.id) === jobRefId) || {}).title || '' : '';
+
+    const entry = {
+      id: Date.now(), date, type, desc,
+      vendor: document.getElementById('entryVendor').value.trim(),
+      payment: document.getElementById('entryPayment').value,
+      jobRefId: jobRefId || '',
+      jobRefTitle,
+    };
     if (type === 'mileage') {
       entry.miles = parseFloat(document.getElementById('entryMiles').value) || 0;
       entry.amount = Math.round(entry.miles * getMileageRate() * 100) / 100;
@@ -484,6 +591,7 @@
     entries.push(entry);
     saveExpenses(entries);
 
+    document.getElementById('entryVendor').value = '';
     document.getElementById('entryDesc').value = '';
     document.getElementById('entryAmount').value = '';
     document.getElementById('entryMiles').value = '';
@@ -516,15 +624,18 @@
       <tr>
         <td>${e.date}</td>
         <td>${e.type === 'mileage' ? 'Mileage' : 'Expense'}</td>
+        <td>${escapeHtml(e.vendor || '\u2014')}</td>
+        <td>${e.jobRefTitle ? escapeHtml(e.jobRefTitle) : '\u2014'}</td>
         <td>${escapeHtml(e.desc)}</td>
         <td>${e.type === 'mileage' ? e.miles + ' mi' : '\u2014'}</td>
+        <td>${PAYMENT_LABEL[e.payment] || '\u2014'}</td>
         <td>$${e.amount.toFixed(2)}</td>
         <td><button class="small-btn danger" onclick="deleteExpense(${e.id})">&times;</button></td>
       </tr>`).join('');
 
     container.innerHTML = `
       <table>
-        <thead><tr><th>Date</th><th>Type</th><th>Description</th><th>Miles</th><th>Amount</th><th></th></tr></thead>
+        <thead><tr><th>Date</th><th>Type</th><th>Vendor</th><th>Job</th><th>Description</th><th>Miles</th><th>Payment</th><th>Amount</th><th></th></tr></thead>
         <tbody>${rows}</tbody>
       </table>`;
 
@@ -540,10 +651,12 @@
 
   function buildCSV() {
     const entries = [...loadExpenses()].sort((a, b) => new Date(a.date) - new Date(b.date));
-    let csv = 'Date,Type,Description,Miles,Amount\n';
+    let csv = 'Date,Type,Vendor,Job,Description,Miles,Payment,Amount\n';
     entries.forEach(e => {
       const desc = '"' + e.desc.replace(/"/g, '""') + '"';
-      csv += `${e.date},${e.type},${desc},${e.miles || ''},${e.amount.toFixed(2)}\n`;
+      const vendor = '"' + (e.vendor || '').replace(/"/g, '""') + '"';
+      const job = '"' + (e.jobRefTitle || '').replace(/"/g, '""') + '"';
+      csv += `${e.date},${e.type},${vendor},${job},${desc},${e.miles || ''},${PAYMENT_LABEL[e.payment] || ''},${e.amount.toFixed(2)}\n`;
     });
     return csv;
   }
@@ -566,7 +679,7 @@
 
   // ---------- Contacts ----------
   function loadContacts() { return JSON.parse(localStorage.getItem(STORAGE_KEYS.contacts) || '[]'); }
-  function saveContacts(contacts) { localStorage.setItem(STORAGE_KEYS.contacts, JSON.stringify(contacts)); }
+  function saveContacts(contacts) { localStorage.setItem(STORAGE_KEYS.contacts, JSON.stringify(contacts)); scheduleSync(); }
 
   function addContact() {
     const name = document.getElementById('contactName').value.trim();
@@ -609,27 +722,112 @@
       </div>`).join('');
   }
 
-  // ---------- Notes ----------
-  const quickNotesEl = document.getElementById('quickNotes');
-  quickNotesEl.value = localStorage.getItem(STORAGE_KEYS.notes) || '';
-  let notesSaveTimer = null;
-  quickNotesEl.addEventListener('input', () => {
-    clearTimeout(notesSaveTimer);
-    notesSaveTimer = setTimeout(() => {
-      localStorage.setItem(STORAGE_KEYS.notes, quickNotesEl.value);
-      const indicator = document.getElementById('saveIndicator');
+  // ---------- Notes (multi-note) ----------
+  let currentNoteId = null;
+  let noteSaveTimer = null;
+
+  function loadNotes() { return JSON.parse(localStorage.getItem(STORAGE_KEYS.notes) || '[]'); }
+  function saveNotesList(list) { localStorage.setItem(STORAGE_KEYS.notes, JSON.stringify(list)); scheduleSync(); }
+
+  function migrateOldNoteIfNeeded() {
+    const hasNewNotes = localStorage.getItem(STORAGE_KEYS.notes);
+    const oldNote = localStorage.getItem(OLD_NOTES_KEY);
+    if (!hasNewNotes && oldNote && oldNote.trim()) {
+      saveNotesList([{ id: Date.now(), title: 'Notes', body: oldNote, updatedAt: Date.now() }]);
+    }
+  }
+
+  function initNotes() {
+    migrateOldNoteIfNeeded();
+    renderNotesList();
+    const notes = loadNotes();
+    if (notes.length > 0) selectNote(notes[0].id);
+  }
+
+  function renderNotesList() {
+    const notes = [...loadNotes()].sort((a, b) => b.updatedAt - a.updatedAt);
+    const container = document.getElementById('notesList');
+    if (notes.length === 0) {
+      container.innerHTML = '<div class="inline-note">No notes yet.</div>';
+      return;
+    }
+    container.innerHTML = notes.map(n => `
+      <div class="note-list-item ${n.id === currentNoteId ? 'is-active' : ''}" onclick="selectNote(${n.id})">
+        <div class="note-list-item-text">
+          <h4>${escapeHtml(n.title || 'Untitled Note')}</h4>
+          <p>${escapeHtml((n.body || '').slice(0, 60) || 'Empty note')}</p>
+        </div>
+        <button class="small-btn danger" onclick="event.stopPropagation(); deleteNote(${n.id})">&times;</button>
+      </div>`).join('');
+  }
+
+  function selectNote(id) {
+    currentNoteId = id;
+    const note = loadNotes().find(n => n.id === id);
+    if (!note) return;
+    document.getElementById('noteEditorSection').style.display = '';
+    document.getElementById('noteEmptyState').style.display = 'none';
+    document.getElementById('noteTitle').value = note.title || '';
+    document.getElementById('noteBody').value = note.body || '';
+    renderNotesList();
+  }
+
+  function createNote() {
+    const notes = loadNotes();
+    const note = { id: Date.now(), title: 'Untitled Note', body: '', updatedAt: Date.now() };
+    notes.push(note);
+    saveNotesList(notes);
+    selectNote(note.id);
+  }
+
+  function deleteNote(id) {
+    if (!confirm('Delete this note? This cannot be undone.')) return;
+    const notes = loadNotes().filter(n => n.id !== id);
+    saveNotesList(notes);
+    if (currentNoteId === id) {
+      currentNoteId = null;
+      document.getElementById('noteEditorSection').style.display = 'none';
+      document.getElementById('noteEmptyState').style.display = '';
+      if (notes.length > 0) selectNote(notes[0].id);
+    } else {
+      renderNotesList();
+    }
+  }
+
+  function scheduleNoteSave() {
+    clearTimeout(noteSaveTimer);
+    noteSaveTimer = setTimeout(() => {
+      if (currentNoteId === null) return;
+      const notes = loadNotes();
+      const note = notes.find(n => n.id === currentNoteId);
+      if (!note) return;
+      note.title = document.getElementById('noteTitle').value;
+      note.body = document.getElementById('noteBody').value;
+      note.updatedAt = Date.now();
+      saveNotesList(notes);
+      renderNotesList();
+      const indicator = document.getElementById('noteSaveIndicator');
       indicator.classList.add('is-visible');
       setTimeout(() => indicator.classList.remove('is-visible'), 1500);
     }, 500);
-  });
+  }
 
   // ---------- Init ----------
-  document.getElementById('entryDate').value = new Date().toISOString().slice(0, 10);
-  loadMileageRate();
-  renderJobs();
-  calculateCost();
-  renderExpenses();
-  renderContacts();
+  (async function init() {
+    await initSyncOnLoad();
+    document.getElementById('entryDate').value = new Date().toISOString().slice(0, 10);
+    loadMileageRate();
+    renderJobs();
+    calculateCost();
+    populateJobRefOptions();
+    renderExpenses();
+    renderContacts();
+    renderPriceReferences();
+    initNotes();
+
+    const initialHash = (location.hash || '').replace('#', '');
+    if (TAB_HASHES[initialHash]) activateTab(initialHash);
+  })();
 </script>
 </body>
 </html>
