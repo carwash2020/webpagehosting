@@ -4,12 +4,876 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta name="robots" content="noindex, nofollow">
-<title>Job Cost Lookup | Triple H Enterprises (Internal Tool)</title>
-<meta http-equiv="refresh" content="0; url=/job-tracker.html#cost">
-<link rel="canonical" href="/job-tracker.html#cost">
-<script>location.replace('/job-tracker.html#cost');</script>
+<title>Invoice Generator | Triple H Enterprises (Internal Tool)</title>
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data:; connect-src 'self' https://*.supabase.co; frame-src 'none'; object-src 'none'; base-uri 'self'; frame-ancestors 'none';">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/styles.css">
+<script src="/sync.js" defer></script>
+<script src="/tools-common.js" defer></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<style>
+  body { padding: 90px 20px 60px; max-width: 900px; margin: 0 auto; }
+  .tool-title { font-family:'Oswald',sans-serif; font-weight:700; font-size:28px; color:var(--white); margin-bottom:6px; }
+  .tool-sub { color: var(--text-dim); margin-bottom: 30px; }
+  .form-section {
+    background: var(--bg-panel); border: 1px solid var(--border); border-radius: var(--radius);
+    padding: 24px; margin-bottom: 24px;
+  }
+  .form-section h3 { font-family:'Oswald',sans-serif; color: var(--orange-light); font-size: 16px; margin: 0 0 16px; text-transform: uppercase; letter-spacing: 1px; }
+  .form-row { display: flex; gap: 16px; margin-bottom: 14px; flex-wrap: wrap; }
+  .form-field { flex: 1; min-width: 180px; }
+  .form-field label { display: block; font-size: 13px; color: var(--text-dim); margin-bottom: 5px; }
+  .form-field input, .form-field select, .form-field textarea {
+    width: 100%; padding: 9px 11px; background: var(--bg-panel-2); border: 1px solid var(--border);
+    border-radius: 6px; color: var(--white); font-size: 14.5px; font-family: inherit;
+  }
+  .form-field textarea { resize: vertical; min-height: 60px; }
+  .line-items-table { width: 100%; border-collapse: collapse; margin-bottom: 12px; }
+  .line-items-table th { text-align: left; font-size: 12px; color: var(--text-dim); padding: 6px 8px; text-transform: uppercase; }
+  .line-items-table td { padding: 4px 6px; }
+  .line-items-table input { width: 100%; padding: 7px 9px; background: var(--bg-panel-2); border: 1px solid var(--border); border-radius: 5px; color: var(--white); font-size: 14px; }
+  .remove-row-btn {
+    background: none; border: 1px solid var(--border); color: var(--text-dim); border-radius: 5px;
+    width: 30px; height: 30px; cursor: pointer; font-size: 16px; line-height: 1;
+  }
+  .remove-row-btn:hover { border-color: #d33; color: #d33; }
+  .add-row-btn, .add-contact-btn {
+    background: none; border: 1px dashed var(--border); color: var(--blue-light); border-radius: 6px;
+    padding: 8px 14px; cursor: pointer; font-size: 13.5px; margin-top: 6px;
+  }
+  .add-row-btn:hover, .add-contact-btn:hover { border-color: var(--blue-light); }
+  .totals-box { margin-top: 16px; padding-top: 16px; border-top: 1px solid var(--border); }
+  .totals-row { display: flex; justify-content: space-between; padding: 5px 0; font-size: 15px; }
+  .totals-row.total { font-weight: 700; font-size: 19px; color: var(--orange-light); border-top: 1px solid var(--border); margin-top: 8px; padding-top: 12px; }
+  .generate-btn {
+    background: linear-gradient(135deg, var(--orange-light), var(--orange) 60%, var(--orange-dark));
+    color: #1a0d02; font-weight: 700; font-family:'Oswald',sans-serif; font-size: 16px;
+    border: none; border-radius: 8px; padding: 14px 28px; cursor: pointer; width: 100%;
+    text-transform: uppercase; letter-spacing: 1px;
+  }
+  .generate-btn:hover { opacity: 0.92; }
+  .contact-block { border: 1px solid var(--border); border-radius: 8px; padding: 14px; margin-bottom: 10px; position: relative; }
+  .remove-contact-btn { position: absolute; top: 10px; right: 10px; }
+  .home-link { display:inline-block; margin-bottom: 20px; color: var(--blue-light); font-size: 14px; }
+
+  .quote-banner {
+    background: rgba(58,160,255,0.1); border: 1px solid var(--blue); border-radius: 8px;
+    padding: 12px 16px; font-size: 13px; color: var(--blue-light); margin-bottom: 20px;
+  }
+</style>
 </head>
 <body>
-<p>Job Cost Lookup now lives inside the <a href="/job-tracker.html#cost">Job Tracker</a> page, under the "Cost Lookup" tab.</p>
+
+<div class="tool-header">
+  <a href="/workspace.html" class="tool-header-brand">
+    <img src="/images/logo-signature-orange.png" alt="Triple H Enterprises">
+    <span>&larr; Back to Workspace</span>
+  </a>
+  <button class="help-btn" onclick="openHelpModal()" aria-label="How to use this tool" title="How to use this tool">?</button>
+</div>
+<div class="tool-title">Invoice Generator</div>
+<p class="tool-sub">Internal tool &mdash; fill this out per job, click Generate, a branded PDF downloads straight to your device.</p>
+
+<div class="tabs">
+  <button class="tab-btn is-active" data-tab="invoice" onclick="activateGenTab('invoice')">Invoice</button>
+  <button class="tab-btn" data-tab="quote" onclick="activateGenTab('quote')">Quote / Estimate</button>
+</div>
+
+<div class="tab-panel is-active" id="tab-invoice">
+
+<div class="form-section">
+  <h3>Invoice Details</h3>
+  <div class="form-row">
+    <div class="form-field">
+      <label>Invoice Number</label>
+      <input type="text" id="invoiceNumber" value="">
+    </div>
+    <div class="form-field">
+      <label>Date</label>
+      <input type="date" id="invoiceDate">
+    </div>
+    <div class="form-field">
+      <label>Terms</label>
+      <select id="invoiceTerms">
+        <option>Due Upon Receipt</option>
+        <option selected>Net 15</option>
+        <option>Net 30</option>
+      </select>
+    </div>
+  </div>
+</div>
+
+<div class="form-section">
+  <h3>Bill To</h3>
+  <div class="form-row">
+    <div class="form-field">
+      <label>Client / Company Name</label>
+      <input type="text" id="clientName" placeholder="Preferred Property Management">
+    </div>
+  </div>
+  <div class="form-row">
+    <div class="form-field">
+      <label>Address</label>
+      <input type="text" id="clientAddress" placeholder="237 N Bluff St #C, St. George, UT 84770">
+    </div>
+  </div>
+  <div id="contactsContainer"></div>
+  <button type="button" class="add-contact-btn" onclick="addContact()">+ Add contact</button>
+</div>
+
+<div class="form-section">
+  <h3>Job</h3>
+  <div class="form-row">
+    <div class="form-field">
+      <label>Job Description</label>
+      <input type="text" id="jobDescription" placeholder="GE Range/Stove Repair — Model JB256D M3WW">
+    </div>
+  </div>
+</div>
+
+<div class="form-section">
+  <h3>Line Items</h3>
+  <div class="table-scroll">
+  <table class="line-items-table">
+    <thead>
+      <tr><th style="width:32%">Description</th><th style="width:14%">Part #</th><th style="width:8%">Qty</th><th style="width:13%">Price</th><th style="width:13%">Amount</th><th style="width:8%">Tax?</th><th></th></tr>
+    </thead>
+    <tbody id="lineItemsBody"></tbody>
+  </table>
+  </div>
+  <button type="button" class="add-row-btn" onclick="addLineItem()">+ Add line item</button>
+
+  <div class="totals-box">
+    <p class="inline-note" style="margin:0 0 10px;">Utah taxes repair labor on things like appliances, but labor on items permanently attached to real property is often exempt &mdash; parts are usually taxed either way. Uncheck "Tax?" on any exempt row. Not tax advice &mdash; confirm your situation with the Utah State Tax Commission or your accountant.</p>
+    <div class="form-row">
+      <div class="form-field" style="max-width:180px;">
+        <label>Sales tax rate (%)</label>
+        <input type="number" id="invoiceTaxRate" value="6.75" min="0" step="0.01" oninput="recalc()" onchange="saveInvoiceTaxRate()">
+      </div>
+    </div>
+    <div class="totals-row"><span>Subtotal</span><span id="subtotalDisplay">$0.00</span></div>
+    <div class="totals-row"><span>Sales Tax</span><span id="taxDisplay">$0.00</span></div>
+    <div class="form-row" style="margin-top:10px;">
+      <div class="form-field">
+        <label>Discount label (leave blank for no discount)</label>
+        <input type="text" id="discountLabel" placeholder="First-Time Client Discount">
+      </div>
+      <div class="form-field">
+        <label>Discount amount ($)</label>
+        <input type="number" id="discountAmount" value="0" step="0.01">
+      </div>
+    </div>
+    <div class="totals-row total"><span>Total Due</span><span id="totalDisplay">$0.00</span></div>
+  </div>
+</div>
+
+<div class="form-section">
+  <h3>Payment Text (shown at the bottom of the invoice)</h3>
+  <textarea id="paymentText">We accept cash, check, Venmo, Cash App, and credit/debit cards via a secure Stripe invoice.</textarea>
+</div>
+
+<button class="generate-btn" onclick="generatePDF()">Generate PDF</button>
+
+</div>
+
+<div class="tab-panel" id="tab-quote">
+
+<div class="quote-banner">This is an estimate, not a bill. Prices may change based on parts and labor actually required once work begins.</div>
+
+<div class="form-section">
+  <h3>Estimate Details</h3>
+  <div class="form-row">
+    <div class="form-field">
+      <label>Estimate Number</label>
+      <input type="text" id="quoteNumber" value="">
+    </div>
+    <div class="form-field">
+      <label>Date</label>
+      <input type="date" id="quoteDate">
+    </div>
+  </div>
+</div>
+
+<div class="form-section">
+  <h3>For</h3>
+  <div class="form-row">
+    <div class="form-field">
+      <label>Client / Company Name</label>
+      <input type="text" id="quoteClientName" placeholder="Sarah Miller">
+    </div>
+  </div>
+  <div class="form-row">
+    <div class="form-field">
+      <label>Address</label>
+      <input type="text" id="quoteClientAddress" placeholder="123 Main St, St. George, UT">
+    </div>
+  </div>
+</div>
+
+<div class="form-section">
+  <h3>Job</h3>
+  <div class="form-row">
+    <div class="form-field">
+      <label>Job Description</label>
+      <input type="text" id="quoteJobDescription" placeholder="GE Range/Stove Repair — Model JB256D M3WW">
+    </div>
+  </div>
+</div>
+
+<div class="form-section">
+  <h3>Estimated Line Items</h3>
+  <div class="table-scroll">
+  <table class="line-items-table">
+    <thead>
+      <tr><th style="width:32%">Description</th><th style="width:14%">Part #</th><th style="width:8%">Qty</th><th style="width:13%">Price</th><th style="width:13%">Amount</th><th style="width:8%">Tax?</th><th></th></tr>
+    </thead>
+    <tbody id="quoteLineItemsBody"></tbody>
+  </table>
+  </div>
+  <button type="button" class="add-row-btn" onclick="addQuoteLineItem()">+ Add line item</button>
+
+  <div class="totals-box">
+    <p class="inline-note" style="margin:0 0 10px;">Same tax rules as the Invoice tab &mdash; uncheck "Tax?" on rows that are exempt. Not tax advice.</p>
+    <div class="form-row">
+      <div class="form-field" style="max-width:180px;">
+        <label>Sales tax rate (%)</label>
+        <input type="number" id="quoteTaxRate" value="6.75" min="0" step="0.01" oninput="recalcQuote()" onchange="saveInvoiceTaxRate()">
+      </div>
+    </div>
+    <div class="totals-row"><span>Subtotal</span><span id="quoteSubtotalDisplay">$0.00</span></div>
+    <div class="totals-row"><span>Sales Tax</span><span id="quoteTaxDisplay">$0.00</span></div>
+    <div class="form-row" style="margin-top:10px;">
+      <div class="form-field">
+        <label>Discount label (leave blank for no discount)</label>
+        <input type="text" id="quoteDiscountLabel" placeholder="First-Time Client Discount">
+      </div>
+      <div class="form-field">
+        <label>Discount amount ($)</label>
+        <input type="number" id="quoteDiscountAmount" value="0" step="0.01">
+      </div>
+    </div>
+    <div class="totals-row total"><span>Estimated Total</span><span id="quoteTotalDisplay">$0.00</span></div>
+  </div>
+</div>
+
+<button class="generate-btn" onclick="generateQuotePDF()">Download Estimate PDF</button>
+<button class="secondary-btn" style="width:100%; margin-top:12px; padding:14px; font-size:15px;" onclick="convertQuoteToInvoice()">Convert to Invoice &rarr;</button>
+
+</div>
+
+<script>
+  // ---------- tab switching ----------
+  function activateGenTab(tab) {
+    document.querySelectorAll('.tab-btn').forEach(b => b.classList.toggle('is-active', b.dataset.tab === tab));
+    document.getElementById('tab-invoice').classList.toggle('is-active', tab === 'invoice');
+    document.getElementById('tab-quote').classList.toggle('is-active', tab === 'quote');
+  }
+
+  // ---------- defaults ----------
+  document.getElementById('invoiceDate').value = new Date().toISOString().slice(0, 10);
+  document.getElementById('invoiceNumber').value = 'INV-' + new Date().getFullYear() + '-' + String(Math.floor(Math.random() * 9000) + 1000);
+  document.getElementById('quoteDate').value = new Date().toISOString().slice(0, 10);
+  document.getElementById('quoteNumber').value = 'EST-' + new Date().getFullYear() + '-' + String(Math.floor(Math.random() * 9000) + 1000);
+  loadSharedTaxRate();
+
+  let contactCount = 0;
+  function addContact(name = '', title = '', email = '', phone = '') {
+    contactCount++;
+    const id = contactCount;
+    const div = document.createElement('div');
+    div.className = 'contact-block';
+    div.id = 'contact-' + id;
+    div.innerHTML = `
+      <button type="button" class="remove-row-btn remove-contact-btn" onclick="document.getElementById('contact-${id}').remove()">&times;</button>
+      <div class="form-row">
+        <div class="form-field"><label>Name</label><input type="text" class="contact-name" value="${name}"></div>
+        <div class="form-field"><label>Title</label><input type="text" class="contact-title" value="${title}"></div>
+      </div>
+      <div class="form-row">
+        <div class="form-field"><label>Email</label><input type="text" class="contact-email" value="${email}"></div>
+        <div class="form-field"><label>Phone</label><input type="text" class="contact-phone" value="${phone}"></div>
+      </div>`;
+    document.getElementById('contactsContainer').appendChild(div);
+  }
+  addContact(); // start with one contact row
+
+  let rowCount = 0;
+  function addLineItem(desc = '', part = '', qty = 1, price = '', taxable = true) {
+    rowCount++;
+    const id = rowCount;
+    const tr = document.createElement('tr');
+    tr.id = 'row-' + id;
+    tr.innerHTML = `
+      <td><input type="text" class="li-desc" value="${desc}"></td>
+      <td><input type="text" class="li-part" value="${part}"></td>
+      <td><input type="number" class="li-qty" value="${qty}" min="0" step="1" oninput="recalc()"></td>
+      <td><input type="number" class="li-price" value="${price}" min="0" step="0.01" oninput="recalc()"></td>
+      <td class="li-amount">$0.00</td>
+      <td style="text-align:center;"><input type="checkbox" class="li-taxable" ${taxable ? 'checked' : ''} oninput="recalc()"></td>
+      <td><button type="button" class="remove-row-btn" onclick="document.getElementById('row-${id}').remove(); recalc();">&times;</button></td>`;
+    document.getElementById('lineItemsBody').appendChild(tr);
+    recalc();
+  }
+  addLineItem(); // start with one blank row
+
+  function money(v) { return '$' + v.toFixed(2).replace(/\d(?=(\d{3})+\.)/g, '$&,'); }
+
+  const TAX_RATE_KEY = 'th_tax_rate';
+  function saveInvoiceTaxRate() {
+    const rate = document.getElementById('invoiceTaxRate').value;
+    localStorage.setItem(TAX_RATE_KEY, rate);
+    document.getElementById('quoteTaxRate').value = rate;
+    if (typeof scheduleSync === 'function') scheduleSync();
+    recalc();
+    recalcQuote();
+  }
+  function loadSharedTaxRate() {
+    const saved = localStorage.getItem(TAX_RATE_KEY);
+    if (saved !== null) {
+      document.getElementById('invoiceTaxRate').value = saved;
+      document.getElementById('quoteTaxRate').value = saved;
+    }
+  }
+
+  function recalc() {
+    let subtotal = 0;
+    let taxableSubtotal = 0;
+    document.querySelectorAll('#lineItemsBody tr').forEach(row => {
+      const qty = parseFloat(row.querySelector('.li-qty').value) || 0;
+      const price = parseFloat(row.querySelector('.li-price').value) || 0;
+      const amount = qty * price;
+      row.querySelector('.li-amount').textContent = money(amount);
+      subtotal += amount;
+      if (row.querySelector('.li-taxable').checked) taxableSubtotal += amount;
+    });
+    const rate = parseFloat(document.getElementById('invoiceTaxRate').value) || 0;
+    const tax = taxableSubtotal * (rate / 100);
+    const discount = parseFloat(document.getElementById('discountAmount').value) || 0;
+    // Discount applies to the tax-inclusive total, same precedent as the
+    // Job Tracker's Cost Lookup calculator -- a flat dollar-off-the-bill
+    // discount, not a pre-tax price adjustment.
+    const total = Math.max(0, subtotal + tax - discount);
+    document.getElementById('subtotalDisplay').textContent = money(subtotal);
+    document.getElementById('taxDisplay').textContent = money(tax);
+    document.getElementById('totalDisplay').textContent = money(total);
+    return { subtotal, tax, discount, total };
+  }
+  document.getElementById('discountAmount').addEventListener('input', recalc);
+  recalc();
+
+  // ---------- Quote line items (mirrors invoice line items above) ----------
+  let quoteRowCount = 0;
+  function addQuoteLineItem(desc = '', part = '', qty = 1, price = '', taxable = true) {
+    quoteRowCount++;
+    const id = quoteRowCount;
+    const tr = document.createElement('tr');
+    tr.id = 'qrow-' + id;
+    tr.innerHTML = `
+      <td><input type="text" class="qli-desc" value="${desc}"></td>
+      <td><input type="text" class="qli-part" value="${part}"></td>
+      <td><input type="number" class="qli-qty" value="${qty}" min="0" step="1" oninput="recalcQuote()"></td>
+      <td><input type="number" class="qli-price" value="${price}" min="0" step="0.01" oninput="recalcQuote()"></td>
+      <td class="qli-amount">$0.00</td>
+      <td style="text-align:center;"><input type="checkbox" class="qli-taxable" ${taxable ? 'checked' : ''} oninput="recalcQuote()"></td>
+      <td><button type="button" class="remove-row-btn" onclick="document.getElementById('qrow-${id}').remove(); recalcQuote();">&times;</button></td>`;
+    document.getElementById('quoteLineItemsBody').appendChild(tr);
+    recalcQuote();
+  }
+  addQuoteLineItem();
+
+  function recalcQuote() {
+    let subtotal = 0;
+    let taxableSubtotal = 0;
+    document.querySelectorAll('#quoteLineItemsBody tr').forEach(row => {
+      const qty = parseFloat(row.querySelector('.qli-qty').value) || 0;
+      const price = parseFloat(row.querySelector('.qli-price').value) || 0;
+      const amount = qty * price;
+      row.querySelector('.qli-amount').textContent = money(amount);
+      subtotal += amount;
+      if (row.querySelector('.qli-taxable').checked) taxableSubtotal += amount;
+    });
+    const rate = parseFloat(document.getElementById('quoteTaxRate').value) || 0;
+    const tax = taxableSubtotal * (rate / 100);
+    const discount = parseFloat(document.getElementById('quoteDiscountAmount').value) || 0;
+    const total = Math.max(0, subtotal + tax - discount);
+    document.getElementById('quoteSubtotalDisplay').textContent = money(subtotal);
+    document.getElementById('quoteTaxDisplay').textContent = money(tax);
+    document.getElementById('quoteTotalDisplay').textContent = money(total);
+    return { subtotal, tax, discount, total };
+  }
+  document.getElementById('quoteDiscountAmount').addEventListener('input', recalcQuote);
+  recalcQuote();
+
+  function getQuoteLineItems() {
+    const items = [];
+    document.querySelectorAll('#quoteLineItemsBody tr').forEach(row => {
+      const desc = row.querySelector('.qli-desc').value;
+      const part = row.querySelector('.qli-part').value;
+      const qty = parseFloat(row.querySelector('.qli-qty').value) || 0;
+      const price = parseFloat(row.querySelector('.qli-price').value) || 0;
+      const taxable = row.querySelector('.qli-taxable').checked;
+      if (desc.trim() !== '') items.push({ desc, part, qty, price, amount: qty * price, taxable });
+    });
+    return items;
+  }
+
+  async function convertQuoteToInvoice() {
+    document.getElementById('clientName').value = document.getElementById('quoteClientName').value;
+    document.getElementById('clientAddress').value = document.getElementById('quoteClientAddress').value;
+    document.getElementById('jobDescription').value = document.getElementById('quoteJobDescription').value;
+    document.getElementById('discountLabel').value = document.getElementById('quoteDiscountLabel').value;
+    document.getElementById('discountAmount').value = document.getElementById('quoteDiscountAmount').value;
+    document.getElementById('invoiceTaxRate').value = document.getElementById('quoteTaxRate').value;
+
+    // Clear existing invoice line items, then copy over the quote's items
+    document.getElementById('lineItemsBody').innerHTML = '';
+    const items = getQuoteLineItems();
+    if (items.length === 0) {
+      addLineItem();
+    } else {
+      items.forEach(item => addLineItem(item.desc, item.part, item.qty, item.price, item.taxable));
+    }
+    recalc();
+    activateGenTab('invoice');
+    await showAlert('Copied over to the Invoice tab. Review the details, then Generate PDF when ready.');
+  }
+
+  // ---------- PDF generation ----------
+  function getLineItems() {
+    const items = [];
+    document.querySelectorAll('#lineItemsBody tr').forEach(row => {
+      const desc = row.querySelector('.li-desc').value;
+      const part = row.querySelector('.li-part').value;
+      const qty = parseFloat(row.querySelector('.li-qty').value) || 0;
+      const price = parseFloat(row.querySelector('.li-price').value) || 0;
+      const taxable = row.querySelector('.li-taxable').checked;
+      if (desc.trim() !== '') items.push({ desc, part, qty, price, amount: qty * price, taxable });
+    });
+    return items;
+  }
+
+  function getContacts() {
+    const contacts = [];
+    document.querySelectorAll('.contact-block').forEach(block => {
+      const name = block.querySelector('.contact-name').value;
+      const title = block.querySelector('.contact-title').value;
+      const email = block.querySelector('.contact-email').value;
+      const phone = block.querySelector('.contact-phone').value;
+      if (name.trim() !== '') contacts.push({ name, title, email, phone });
+    });
+    return contacts;
+  }
+
+  function loadImageAsDataURL(src, timeoutMs = 3000) {
+    return new Promise((resolve, reject) => {
+      const timer = setTimeout(() => reject(new Error('Image load timed out')), timeoutMs);
+      const img = new Image();
+      img.crossOrigin = 'anonymous';
+      img.onload = () => {
+        clearTimeout(timer);
+        const canvas = document.createElement('canvas');
+        canvas.width = img.width;
+        canvas.height = img.height;
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(img, 0, 0);
+        resolve(canvas.toDataURL('image/png'));
+      };
+      img.onerror = () => { clearTimeout(timer); reject(new Error('Image failed to load')); };
+      img.src = src;
+    });
+  }
+
+  async function generatePDF() {
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF({ unit: 'pt', format: 'letter' });
+    const pageW = doc.internal.pageSize.getWidth();
+
+    const NAVY = [26, 26, 26];
+    const ORANGE = [224, 123, 30];
+    const ORANGE_DARK = [179, 95, 19];
+    const GRAY = [90, 90, 90];
+    const LIGHTGRAY = [236, 236, 236];
+
+    // header band
+    doc.setFillColor(...NAVY);
+    doc.rect(0, 0, pageW, 100, 'F');
+
+    try {
+      const logoData = await loadImageAsDataURL('/images/logo-signature-orange.png');
+      doc.addImage(logoData, 'PNG', 40, 15, 65, 60);
+    } catch (e) { /* logo optional if it fails to load */ }
+
+    doc.setFont('helvetica', 'bold'); doc.setFontSize(20); doc.setTextColor(255, 255, 255);
+    doc.text('TRIPLE H', 118, 45);
+    doc.setTextColor(...ORANGE);
+    doc.text('ENTERPRISES', 118 + doc.getTextWidth('TRIPLE H ') + 4, 45);
+    doc.setFont('helvetica', 'normal'); doc.setFontSize(9); doc.setTextColor(207, 207, 207);
+    doc.text('Honesty.  Hustle.  Helpfulness.', 118, 62);
+
+    doc.setFont('helvetica', 'bold'); doc.setFontSize(13); doc.setTextColor(...ORANGE);
+    doc.text('INVOICE', pageW - 40, 30, { align: 'right' });
+    doc.setFont('helvetica', 'normal'); doc.setFontSize(9); doc.setTextColor(255, 255, 255);
+    doc.text('(435) 414-1667', pageW - 40, 46, { align: 'right' });
+    doc.text('steve@triplehenterprisesllc.biz', pageW - 40, 58, { align: 'right' });
+    doc.text('www.triplehenterprisesllc.biz', pageW - 40, 70, { align: 'right' });
+
+    let y = 130;
+    doc.setFont('helvetica', 'bold'); doc.setFontSize(8); doc.setTextColor(...GRAY);
+    doc.text('INVOICE #', 40, y);
+    doc.text('DATE', 40 + 150, y);
+    doc.text('TERMS', 40 + 300, y);
+    doc.setFont('helvetica', 'normal'); doc.setFontSize(10); doc.setTextColor(20, 20, 20);
+    doc.text(document.getElementById('invoiceNumber').value, 40, y + 14);
+    const invoiceDateIso = document.getElementById('invoiceDate').value;
+    const invoiceDateDisplay = invoiceDateIso
+      ? new Date(invoiceDateIso + 'T00:00:00').toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })
+      : '';
+    doc.text(invoiceDateDisplay, 40 + 150, y + 14);
+    doc.text(document.getElementById('invoiceTerms').value, 40 + 300, y + 14);
+
+    y += 40;
+    doc.setFont('helvetica', 'bold'); doc.setFontSize(9); doc.setTextColor(...ORANGE_DARK);
+    doc.text('BILL TO', 40, y);
+    y += 16;
+    doc.setFont('helvetica', 'bold'); doc.setFontSize(11); doc.setTextColor(20, 20, 20);
+    doc.text(document.getElementById('clientName').value || '(client name)', 40, y);
+    y += 14;
+    doc.setFont('helvetica', 'normal'); doc.setFontSize(9.5); doc.setTextColor(...GRAY);
+    doc.text(document.getElementById('clientAddress').value || '', 40, y);
+    y += 16;
+
+    getContacts().forEach(c => {
+      doc.setFont('helvetica', 'bold'); doc.setFontSize(9); doc.setTextColor(20, 20, 20);
+      doc.text(`${c.name}${c.title ? ' — ' + c.title : ''}`, 40, y);
+      y += 12;
+      doc.setFont('helvetica', 'normal'); doc.setFontSize(9); doc.setTextColor(...GRAY);
+      doc.text(`${c.email}   |   ${c.phone}`, 40, y);
+      y += 16;
+    });
+
+    y += 6;
+    doc.setFont('helvetica', 'bold'); doc.setFontSize(9); doc.setTextColor(...ORANGE_DARK);
+    doc.text('JOB', 40, y);
+    y += 16;
+    doc.setFont('helvetica', 'normal'); doc.setFontSize(10); doc.setTextColor(20, 20, 20);
+    doc.text(document.getElementById('jobDescription').value || '', 40, y);
+    y += 26;
+
+    // line items table
+    const items = getLineItems();
+    const tableW = pageW - 80;
+    doc.setFillColor(...NAVY);
+    doc.rect(40, y - 14, tableW, 20, 'F');
+    doc.setFont('helvetica', 'bold'); doc.setFontSize(8.5); doc.setTextColor(255, 255, 255);
+    doc.text('DESCRIPTION', 46, y);
+    doc.text('PART #', 40 + tableW * 0.5, y);
+    doc.text('QTY', 40 + tableW * 0.68, y, { align: 'center' });
+    doc.text('PRICE', 40 + tableW * 0.83, y, { align: 'right' });
+    doc.text('AMOUNT', pageW - 46, y, { align: 'right' });
+    y += 8;
+
+    let subtotal = 0;
+    let taxableSubtotal = 0;
+    let stripe = false;
+    items.forEach(item => {
+      const rowH = 22;
+      if (stripe) { doc.setFillColor(...LIGHTGRAY); doc.rect(40, y, tableW, rowH, 'F'); }
+      stripe = !stripe;
+      doc.setFont('helvetica', 'normal'); doc.setFontSize(9.5); doc.setTextColor(20, 20, 20);
+      doc.text(item.desc, 46, y + 14);
+      doc.setFontSize(8.5); doc.setTextColor(...GRAY);
+      doc.text(item.part || '\u2014', 40 + tableW * 0.5, y + 14);
+      doc.text(String(item.qty), 40 + tableW * 0.68, y + 14, { align: 'center' });
+      doc.setTextColor(20, 20, 20); doc.setFontSize(9.5);
+      doc.text('$' + item.price.toFixed(2), 40 + tableW * 0.83, y + 14, { align: 'right' });
+      doc.text('$' + item.amount.toFixed(2), pageW - 46, y + 14, { align: 'right' });
+      subtotal += item.amount;
+      if (item.taxable) taxableSubtotal += item.amount;
+      y += rowH;
+    });
+    doc.setDrawColor(200, 200, 200);
+    doc.line(40, y, pageW - 40, y);
+
+    const taxRate = parseFloat(document.getElementById('invoiceTaxRate').value) || 0;
+    const tax = taxableSubtotal * (taxRate / 100);
+    const discount = parseFloat(document.getElementById('discountAmount').value) || 0;
+    const discountLabel = document.getElementById('discountLabel').value;
+    const total = Math.max(0, subtotal + tax - discount);
+
+    y += 24;
+    doc.setFont('helvetica', 'normal'); doc.setFontSize(10); doc.setTextColor(20, 20, 20);
+    doc.text('Subtotal', pageW - 220, y);
+    doc.text('$' + subtotal.toFixed(2), pageW - 40, y, { align: 'right' });
+
+    y += 20;
+    doc.text('Sales Tax', pageW - 220, y);
+    doc.text('$' + tax.toFixed(2), pageW - 40, y, { align: 'right' });
+
+    if (discount > 0 && discountLabel.trim() !== '') {
+      y += 20;
+      doc.setFont('helvetica', 'italic'); doc.setFontSize(10); doc.setTextColor(...ORANGE_DARK);
+      doc.text(discountLabel, pageW - 220, y);
+      doc.text('-$' + discount.toFixed(2), pageW - 40, y, { align: 'right' });
+    }
+
+    y += 10;
+    doc.setDrawColor(200, 200, 200);
+    doc.line(pageW - 220, y, pageW - 40, y);
+    y += 24;
+    doc.setFont('helvetica', 'bold'); doc.setFontSize(14); doc.setTextColor(20, 20, 20);
+    doc.text('TOTAL DUE', pageW - 220, y);
+    doc.setTextColor(...ORANGE);
+    doc.text('$' + total.toFixed(2), pageW - 40, y, { align: 'right' });
+
+    const paymentSectionTop = y;
+    y += 40;
+    doc.setFont('helvetica', 'bold'); doc.setFontSize(10); doc.setTextColor(...ORANGE_DARK);
+    doc.text('PAYMENT', 40, y);
+    y += 18;
+    doc.setFont('helvetica', 'normal'); doc.setFontSize(9.5); doc.setTextColor(20, 20, 20);
+    const paymentLines = doc.splitTextToSize(document.getElementById('paymentText').value, 340);
+    doc.text(paymentLines, 40, y);
+    y += paymentLines.length * 13 + 6;
+    doc.setFontSize(8.5); doc.setTextColor(...GRAY);
+    doc.text('Please reference invoice ' + document.getElementById('invoiceNumber').value + ' with payment.', 40, y);
+
+    // Venmo QR code, to the right of the payment text
+    try {
+      const qrData = await loadImageAsDataURL('/images/venmo-qr.png');
+      const qrW = 85, qrH = 85 * (440 / 360);
+      const qrX = pageW - 40 - qrW;
+      const qrY = paymentSectionTop + 34;
+      doc.addImage(qrData, 'PNG', qrX, qrY, qrW, qrH);
+      doc.setFont('helvetica', 'bold'); doc.setFontSize(8.5); doc.setTextColor(20, 20, 20);
+      doc.text('Scan to pay via Venmo', qrX + qrW / 2, qrY + qrH + 12, { align: 'center' });
+    } catch (e) { /* QR optional if it fails to load -- payment text alone still works */ }
+
+    // footer
+    const footerY = doc.internal.pageSize.getHeight() - 40;
+    doc.setDrawColor(...ORANGE); doc.setLineWidth(1.5);
+    doc.line(40, footerY, pageW - 40, footerY);
+    doc.setFont('helvetica', 'normal'); doc.setFontSize(8); doc.setTextColor(...GRAY);
+    doc.text('Triple H Enterprises LLC   |   (435) 414-1667   |   steve@triplehenterprisesllc.biz   |   www.triplehenterprisesllc.biz', pageW / 2, footerY + 14, { align: 'center' });
+    doc.setFont('helvetica', 'italic');
+    doc.text('Thank you for choosing Triple H Enterprises. Work guaranteed.', pageW / 2, footerY + 26, { align: 'center' });
+
+    const filename = 'TripleH_Invoice_' + (document.getElementById('clientName').value || 'Client').replace(/[^a-z0-9]/gi, '_') + '.pdf';
+    logInvoice({ subtotal, tax, discount, total });
+    doc.save(filename);
+  }
+
+  // ---------- Invoice logging (feeds the Dashboard's revenue numbers) ----------
+  const INVOICE_STORAGE_KEY = 'th_invoices';
+
+  function loadInvoiceLog() { return JSON.parse(localStorage.getItem(INVOICE_STORAGE_KEY) || '[]'); }
+  function saveInvoiceLog(list) {
+    localStorage.setItem(INVOICE_STORAGE_KEY, JSON.stringify(list));
+    if (typeof scheduleSync === 'function') scheduleSync();
+  }
+
+  function logInvoice(totals) {
+    const list = loadInvoiceLog();
+    list.push({
+      id: Date.now(),
+      invoiceNumber: document.getElementById('invoiceNumber').value,
+      clientName: document.getElementById('clientName').value || '(no name)',
+      date: document.getElementById('invoiceDate').value || new Date().toISOString().slice(0, 10),
+      terms: document.getElementById('invoiceTerms').value,
+      subtotal: totals.subtotal,
+      tax: totals.tax || 0,
+      discount: totals.discount,
+      total: totals.total,
+      paid: false,
+    });
+    saveInvoiceLog(list);
+  }
+
+  // ---------- Quote logging (separate from invoices) ----------
+  const QUOTE_STORAGE_KEY = 'th_quotes';
+  function loadQuoteLog() { return JSON.parse(localStorage.getItem(QUOTE_STORAGE_KEY) || '[]'); }
+  function saveQuoteLog(list) {
+    localStorage.setItem(QUOTE_STORAGE_KEY, JSON.stringify(list));
+    if (typeof scheduleSync === 'function') scheduleSync();
+  }
+  function logQuote(totals) {
+    const list = loadQuoteLog();
+    list.push({
+      id: Date.now(),
+      quoteNumber: document.getElementById('quoteNumber').value,
+      clientName: document.getElementById('quoteClientName').value || '(no name)',
+      date: document.getElementById('quoteDate').value || new Date().toISOString().slice(0, 10),
+      subtotal: totals.subtotal,
+      tax: totals.tax || 0,
+      discount: totals.discount,
+      total: totals.total,
+    });
+    saveQuoteLog(list);
+  }
+
+  async function generateQuotePDF() {
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF({ unit: 'pt', format: 'letter' });
+    const pageW = doc.internal.pageSize.getWidth();
+
+    const NAVY = [26, 26, 26];
+    const ORANGE = [224, 123, 30];
+    const ORANGE_DARK = [179, 95, 19];
+    const GRAY = [90, 90, 90];
+    const LIGHTGRAY = [236, 236, 236];
+
+    doc.setFillColor(...NAVY);
+    doc.rect(0, 0, pageW, 100, 'F');
+
+    try {
+      const logoData = await loadImageAsDataURL('/images/logo-signature-orange.png');
+      doc.addImage(logoData, 'PNG', 40, 15, 65, 60);
+    } catch (e) { /* logo optional */ }
+
+    doc.setFont('helvetica', 'bold'); doc.setFontSize(20); doc.setTextColor(255, 255, 255);
+    doc.text('TRIPLE H', 118, 45);
+    doc.setTextColor(...ORANGE);
+    doc.text('ENTERPRISES', 118 + doc.getTextWidth('TRIPLE H ') + 4, 45);
+    doc.setFont('helvetica', 'normal'); doc.setFontSize(9); doc.setTextColor(207, 207, 207);
+    doc.text('Honesty.  Hustle.  Helpfulness.', 118, 62);
+
+    doc.setFont('helvetica', 'bold'); doc.setFontSize(13); doc.setTextColor(...ORANGE);
+    doc.text('ESTIMATE', pageW - 40, 30, { align: 'right' });
+    doc.setFont('helvetica', 'normal'); doc.setFontSize(9); doc.setTextColor(255, 255, 255);
+    doc.text('(435) 414-1667', pageW - 40, 46, { align: 'right' });
+    doc.text('steve@triplehenterprisesllc.biz', pageW - 40, 58, { align: 'right' });
+    doc.text('www.triplehenterprisesllc.biz', pageW - 40, 70, { align: 'right' });
+
+    let y = 130;
+    doc.setFont('helvetica', 'bold'); doc.setFontSize(8); doc.setTextColor(...GRAY);
+    doc.text('ESTIMATE #', 40, y);
+    doc.text('DATE', 40 + 150, y);
+    doc.setFont('helvetica', 'normal'); doc.setFontSize(10); doc.setTextColor(20, 20, 20);
+    doc.text(document.getElementById('quoteNumber').value, 40, y + 14);
+    const quoteDateIso = document.getElementById('quoteDate').value;
+    const quoteDateDisplay = quoteDateIso
+      ? new Date(quoteDateIso + 'T00:00:00').toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })
+      : '';
+    doc.text(quoteDateDisplay, 40 + 150, y + 14);
+
+    y += 40;
+    doc.setFont('helvetica', 'bold'); doc.setFontSize(9); doc.setTextColor(...ORANGE_DARK);
+    doc.text('FOR', 40, y);
+    y += 16;
+    doc.setFont('helvetica', 'bold'); doc.setFontSize(11); doc.setTextColor(20, 20, 20);
+    doc.text(document.getElementById('quoteClientName').value || '(client name)', 40, y);
+    y += 14;
+    doc.setFont('helvetica', 'normal'); doc.setFontSize(9.5); doc.setTextColor(...GRAY);
+    doc.text(document.getElementById('quoteClientAddress').value || '', 40, y);
+    y += 22;
+
+    doc.setFont('helvetica', 'bold'); doc.setFontSize(9); doc.setTextColor(...ORANGE_DARK);
+    doc.text('JOB', 40, y);
+    y += 16;
+    doc.setFont('helvetica', 'normal'); doc.setFontSize(10); doc.setTextColor(20, 20, 20);
+    doc.text(document.getElementById('quoteJobDescription').value || '', 40, y);
+    y += 26;
+
+    const items = getQuoteLineItems();
+    const tableW = pageW - 80;
+    doc.setFillColor(...NAVY);
+    doc.rect(40, y - 14, tableW, 20, 'F');
+    doc.setFont('helvetica', 'bold'); doc.setFontSize(8.5); doc.setTextColor(255, 255, 255);
+    doc.text('DESCRIPTION', 46, y);
+    doc.text('PART #', 40 + tableW * 0.5, y);
+    doc.text('QTY', 40 + tableW * 0.68, y, { align: 'center' });
+    doc.text('PRICE', 40 + tableW * 0.83, y, { align: 'right' });
+    doc.text('AMOUNT', pageW - 46, y, { align: 'right' });
+    y += 8;
+
+    let subtotal = 0;
+    let taxableSubtotal = 0;
+    let stripe = false;
+    items.forEach(item => {
+      const rowH = 22;
+      if (stripe) { doc.setFillColor(...LIGHTGRAY); doc.rect(40, y, tableW, rowH, 'F'); }
+      stripe = !stripe;
+      doc.setFont('helvetica', 'normal'); doc.setFontSize(9.5); doc.setTextColor(20, 20, 20);
+      doc.text(item.desc, 46, y + 14);
+      doc.setFontSize(8.5); doc.setTextColor(...GRAY);
+      doc.text(item.part || '\u2014', 40 + tableW * 0.5, y + 14);
+      doc.text(String(item.qty), 40 + tableW * 0.68, y + 14, { align: 'center' });
+      doc.setTextColor(20, 20, 20); doc.setFontSize(9.5);
+      doc.text('$' + item.price.toFixed(2), 40 + tableW * 0.83, y + 14, { align: 'right' });
+      doc.text('$' + item.amount.toFixed(2), pageW - 46, y + 14, { align: 'right' });
+      subtotal += item.amount;
+      if (item.taxable) taxableSubtotal += item.amount;
+      y += rowH;
+    });
+    doc.setDrawColor(200, 200, 200);
+    doc.line(40, y, pageW - 40, y);
+
+    const quoteTaxRate = parseFloat(document.getElementById('quoteTaxRate').value) || 0;
+    const tax = taxableSubtotal * (quoteTaxRate / 100);
+    const discount = parseFloat(document.getElementById('quoteDiscountAmount').value) || 0;
+    const discountLabel = document.getElementById('quoteDiscountLabel').value;
+    const total = Math.max(0, subtotal + tax - discount);
+
+    y += 24;
+    doc.setFont('helvetica', 'normal'); doc.setFontSize(10); doc.setTextColor(20, 20, 20);
+    doc.text('Subtotal', pageW - 220, y);
+    doc.text('$' + subtotal.toFixed(2), pageW - 40, y, { align: 'right' });
+
+    y += 20;
+    doc.text('Sales Tax', pageW - 220, y);
+    doc.text('$' + tax.toFixed(2), pageW - 40, y, { align: 'right' });
+
+    if (discount > 0 && discountLabel.trim() !== '') {
+      y += 20;
+      doc.setFont('helvetica', 'italic'); doc.setFontSize(10); doc.setTextColor(...ORANGE_DARK);
+      doc.text(discountLabel, pageW - 220, y);
+      doc.text('-$' + discount.toFixed(2), pageW - 40, y, { align: 'right' });
+    }
+
+    y += 10;
+    doc.setDrawColor(200, 200, 200);
+    doc.line(pageW - 220, y, pageW - 40, y);
+    y += 24;
+    doc.setFont('helvetica', 'bold'); doc.setFontSize(14); doc.setTextColor(20, 20, 20);
+    doc.text('ESTIMATED TOTAL', pageW - 220, y);
+    doc.setTextColor(...ORANGE);
+    doc.text('$' + total.toFixed(2), pageW - 40, y, { align: 'right' });
+
+    y += 40;
+    doc.setFont('helvetica', 'italic'); doc.setFontSize(9); doc.setTextColor(...GRAY);
+    const disclaimerLines = doc.splitTextToSize(
+      'This is an estimate only, not a bill. Actual final cost may vary based on parts and labor actually required once work begins.',
+      pageW - 80
+    );
+    doc.text(disclaimerLines, 40, y);
+
+    const footerY = doc.internal.pageSize.getHeight() - 40;
+    doc.setDrawColor(...ORANGE); doc.setLineWidth(1.5);
+    doc.line(40, footerY, pageW - 40, footerY);
+    doc.setFont('helvetica', 'normal'); doc.setFontSize(8); doc.setTextColor(...GRAY);
+    doc.text('Triple H Enterprises LLC   |   (435) 414-1667   |   steve@triplehenterprisesllc.biz   |   www.triplehenterprisesllc.biz', pageW / 2, footerY + 14, { align: 'center' });
+
+    const filename = 'TripleH_Estimate_' + (document.getElementById('quoteClientName').value || 'Client').replace(/[^a-z0-9]/gi, '_') + '.pdf';
+    logQuote({ subtotal, tax, discount, total });
+    doc.save(filename);
+  }
+</script>
+
+<div class="help-modal-overlay" id="helpModalOverlay" onclick="if(event.target===this) closeHelpModal()">
+  <div class="help-modal">
+    <button class="help-modal-close" onclick="closeHelpModal()" aria-label="Close">&times;</button>
+    <h3>How to Use: Invoice Generator</h3>
+    <div class="help-modal-body">
+      <p>Fill this out per job, right after you finish.</p>
+      <ul>
+        <li><strong>Invoice tab</strong> &mdash; fill in <strong>Invoice Details</strong> and <strong>Bill To</strong>, then add each line item (labor, parts, etc.) in the line-items table. Uncheck "Tax?" on any row that's exempt (see the note above the totals for why some rows might not be taxable). Tap Generate for a branded PDF with your Venmo QR built in.</li>
+        <li><strong>Quote / Estimate tab</strong> &mdash; same idea, before a job starts, including the same tax handling. Download an estimate PDF (clearly labeled as an estimate, not a bill), or tap <strong>Convert to Invoice</strong> once the work's done to copy everything straight over to the Invoice tab instead of re-typing it &mdash; including which rows were marked taxable.</li>
+        <li>The sales tax rate is shared with the Job Tracker's Cost Lookup tab &mdash; change it in either place and it updates everywhere.</li>
+        <li>Nothing here is saved between visits &mdash; it all happens in this browser tab and downloads straight to your device. If you need the numbers again later, use the Job Tracker's Cost Lookup tab.</li>
+      </ul>
+    </div>
+  </div>
+</div>
 </body>
 </html>
