@@ -5,11 +5,12 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta name="robots" content="noindex, nofollow">
 <title>Job Tracker | Triple H Enterprises (Internal Tool)</title>
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data: https://*.supabase.co; connect-src 'self' https://*.supabase.co; frame-src 'none'; object-src 'none'; base-uri 'self'; frame-ancestors 'none';">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data: https://*.supabase.co; connect-src 'self' https://*.supabase.co wss://*.supabase.co; frame-src 'none'; object-src 'none'; base-uri 'self'; frame-ancestors 'none';">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;500;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="/styles.css">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js" defer></script>
 <script src="/sync.js" defer></script>
 <script src="/tools-common.js" defer></script>
 <style>
@@ -123,6 +124,13 @@
   .mileage-rate-inline label { font-size: 12.5px; color: var(--text-dim); white-space: nowrap; }
   .mileage-rate-inline input { width: 90px; padding: 9px 11px; background: var(--bg-panel-2); border: 1px solid var(--border); border-radius: 6px; color: var(--white); font-size: 14.5px; }
 
+  /* --- Realtime status indicator --- */
+  .realtime-badge { display: inline-flex; align-items: center; gap: 5px; font-size: 11.5px; color: var(--text-dim); margin-left: 10px; }
+  .realtime-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--text-dim); flex-shrink: 0; }
+  .realtime-dot.is-live { background: #4caf50; }
+  .realtime-dot.is-connecting { background: var(--orange-light); }
+  .realtime-dot.is-error { background: #e05252; }
+
   /* --- Job photos --- */
   .photo-upload-row { display: flex; gap: 8px; align-items: center; margin-bottom: 14px; flex-wrap: wrap; }
   .photo-upload-row select {
@@ -165,6 +173,7 @@
 <p class="tool-sub">Jobs, pricing, expenses, contacts, and notes &mdash; the whole day-to-day workflow in one place, organized by tab.</p>
 <div class="storage-note">
   <strong>Where this data lives:</strong> everything on this page is saved directly in this browser. If you've set up Cloud Sync on the Workspace page, it also syncs to your own private Supabase project so it follows you across devices. Use Export CSV on the Expenses tab regularly either way, as a backup copy outside the browser.<span id="syncStatusText"></span> <a href="#" id="refreshSyncLink" onclick="manualRefreshSync(); return false;" style="color:var(--blue-light);">Refresh synced data now</a>
+  <span class="realtime-badge" id="realtimeBadge"><span class="realtime-dot" id="realtimeDot"></span><span id="realtimeText">Live sync: connecting...</span></span>
 </div>
 
 <div class="tabs">
@@ -381,7 +390,7 @@
         <li><strong>Contacts</strong> &mdash; a quick address book for vendors, suppliers, or recurring clients. Tap "History" on any contact to see their past jobs and lifetime spend (matched by exact name against Jobs and Invoices).</li>
         <li><strong>Notes</strong> &mdash; keep as many separate, named notes as you want. Click one on the left to open it, or start a new one. Saves automatically as you type.</li>
       </ul>
-      <p>Set up Cloud Sync once on the Workspace page's "?" help, and this data follows you to any device using the same sync code.</p>
+      <p>Set up Cloud Sync once on the Workspace page's "?" help, and this data follows you to any device using the same sync code. The small dot next to the sync status shows whether live updates are connected &mdash; green means changes on another device show up here automatically, no refresh needed.</p>
     </div>
   </div>
 </div>
@@ -416,6 +425,43 @@
   }
 
   window.addEventListener('th-sync-status', updateSyncStatusText);
+
+  function updateRealtimeBadge(status) {
+    const dot = document.getElementById('realtimeDot');
+    const text = document.getElementById('realtimeText');
+    if (!dot || !text) return;
+    dot.className = 'realtime-dot';
+    if (status === 'SUBSCRIBED') {
+      dot.classList.add('is-live');
+      text.textContent = 'Live sync active';
+    } else if (status === 'unavailable') {
+      dot.classList.add('is-error');
+      text.textContent = 'Live sync unavailable';
+    } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT' || status === 'CLOSED') {
+      dot.classList.add('is-error');
+      text.textContent = 'Live sync disconnected';
+    } else {
+      dot.classList.add('is-connecting');
+      text.textContent = 'Live sync: connecting...';
+    }
+  }
+
+  async function onRealtimeChange() {
+    updateSyncStatusText();
+    document.getElementById('entryDate').value = document.getElementById('entryDate').value || new Date().toISOString().slice(0, 10);
+    loadMileageRate();
+    loadTaxSettings();
+    renderJobs();
+    calculateCost();
+    populateJobRefOptions();
+    renderExpenses();
+    renderContacts();
+    renderPriceReferences();
+    renderNotesList();
+    if (currentNoteId !== null && loadNotes().some(n => n.id === currentNoteId)) {
+      selectNote(currentNoteId);
+    }
+  }
 
   async function manualRefreshSync() {
     const link = document.getElementById('refreshSyncLink');
@@ -1137,6 +1183,10 @@
 
       const initialHash = (location.hash || '').replace('#', '');
       if (TAB_HASHES[initialHash]) activateTab(initialHash);
+
+      if (typeof startRealtimeSync === 'function') {
+        startRealtimeSync(onRealtimeChange, updateRealtimeBadge);
+      }
     })();
   });
 </script>

@@ -5,11 +5,12 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta name="robots" content="noindex, nofollow">
 <title>Route Planner | Triple H Enterprises (Internal Tool)</title>
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data:; connect-src 'self' https://*.supabase.co; frame-src 'none'; object-src 'none'; base-uri 'self'; frame-ancestors 'none';">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data:; connect-src 'self' https://*.supabase.co wss://*.supabase.co; frame-src 'none'; object-src 'none'; base-uri 'self'; frame-ancestors 'none';">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;500;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="/styles.css">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js" defer></script>
 <script src="/sync.js" defer></script>
 <script src="/tools-common.js" defer></script>
 <style>
@@ -65,6 +66,11 @@
   .result-label { color: var(--text-dim); }
   .result-label.final { color: var(--white); }
   .policy-note { color: var(--text-dim); font-size: 12.5px; margin: -6px 0 14px; line-height: 1.5; }
+  .realtime-badge { display: inline-flex; align-items: center; gap: 5px; font-size: 11.5px; color: var(--text-dim); margin-left: 10px; }
+  .realtime-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--text-dim); flex-shrink: 0; }
+  .realtime-dot.is-live { background: #4caf50; }
+  .realtime-dot.is-connecting { background: var(--orange-light); }
+  .realtime-dot.is-error { background: #e05252; }
 </style>
 </head>
 <body>
@@ -89,7 +95,7 @@
 <div class="stop-list-view" id="individualLinks"></div>
 
 <div class="form-section">
-  <h3>Cost Analyzer (To &amp; From)</h3>
+  <h3>Cost Analyzer (To &amp; From) <span class="realtime-badge" id="realtimeBadge"><span class="realtime-dot" id="realtimeDot"></span><span id="realtimeText">Live sync: connecting...</span></span></h3>
   <p class="policy-note">Your posted trip fee policy: free within 15 miles of St. George, $25 flat beyond that. This calculator gives you a fuel-cost-based figure too, so you can compare against the flat policy and decide what to actually charge.</p>
   <div class="form-row">
     <div class="form-field"><label>One-way distance (miles)</label><input type="number" id="tripDistance" value="0" min="0" step="0.5" oninput="calculateTripCost()"></div>
@@ -260,12 +266,38 @@
   addStop();
   addStop();
 
+  function updateRealtimeBadge(status) {
+    const dot = document.getElementById('realtimeDot');
+    const text = document.getElementById('realtimeText');
+    if (!dot || !text) return;
+    dot.className = 'realtime-dot';
+    if (status === 'SUBSCRIBED') {
+      dot.classList.add('is-live');
+      text.textContent = 'Live sync active';
+    } else if (status === 'unavailable') {
+      dot.classList.add('is-error');
+      text.textContent = 'Live sync unavailable';
+    } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT' || status === 'CLOSED') {
+      dot.classList.add('is-error');
+      text.textContent = 'Live sync disconnected';
+    } else {
+      dot.classList.add('is-connecting');
+      text.textContent = 'Live sync: connecting...';
+    }
+  }
+
   // sync.js loads with `defer`, which has no effect on this inline script
   // (defer only applies to scripts with a `src`) -- it runs immediately at
   // parse time instead. Waiting for DOMContentLoaded guarantees sync.js
   // has actually finished loading before we call its functions.
   document.addEventListener('DOMContentLoaded', function () {
-    initSyncOnLoad().then(() => { loadSharedMileageRate(); calculateTripCost(); });
+    initSyncOnLoad().then(() => {
+      loadSharedMileageRate();
+      calculateTripCost();
+      if (typeof startRealtimeSync === 'function') {
+        startRealtimeSync(() => { loadSharedMileageRate(); calculateTripCost(); }, updateRealtimeBadge);
+      }
+    });
   });
 </script>
 </body>

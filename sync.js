@@ -385,3 +385,75 @@ async function initSyncOnLoad() {
   if (!isSyncConfigured() || !getSyncCode()) return;
   await pullSync();
 }
+
+// ---------------------------------------------------------------------------
+// REAL-TIME SYNC (optional) — requires the supabase-js CDN script to be
+// loaded BEFORE this file (see the <script> tag order in each page's
+// <head>). Everything above this point works fine without it; this only
+// adds live updates between open tabs instead of pull-on-load-only.
+// ---------------------------------------------------------------------------
+
+let _supabaseClient = null;
+let _realtimeChannel = null;
+let _leadsRealtimeChannel = null;
+
+function getSupabaseClient() {
+  if (!isSyncConfigured()) return null;
+  if (typeof window === 'undefined' || typeof window.supabase === 'undefined') return null;
+  if (!_supabaseClient) {
+    _supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+  }
+  return _supabaseClient;
+}
+
+// Subscribes to live changes on this device's sync row. When ANY device
+// (including this one) pushes a change, `onRemoteChange` fires -- pull the
+// latest and re-render, no page reload needed. `onStatusChange` reports
+// connection state ('SUBSCRIBED', 'TIMED_OUT', 'CLOSED', 'CHANNEL_ERROR')
+// so the page can show a small live/offline indicator.
+function startRealtimeSync(onRemoteChange, onStatusChange) {
+  const client = getSupabaseClient();
+  if (!client) {
+    if (onStatusChange) onStatusChange('unavailable');
+    return;
+  }
+  const code = getSyncCode();
+  _realtimeChannel = client
+    .channel('workspace-sync-' + code)
+    .on(
+      'postgres_changes',
+      { event: '*', schema: 'public', table: 'workspace_sync', filter: `code=eq.${code}` },
+      async () => {
+        await pullSync();
+        if (onRemoteChange) onRemoteChange();
+      }
+    )
+    .subscribe((status) => {
+      if (onStatusChange) onStatusChange(status);
+    });
+}
+
+// Same idea, for the Leads inbox specifically -- fires when a new lead
+// comes in from the website, or an existing one is updated/deleted.
+function startLeadsRealtime(onChange, onStatusChange) {
+  const client = getSupabaseClient();
+  if (!client) {
+    if (onStatusChange) onStatusChange('unavailable');
+    return;
+  }
+  _leadsRealtimeChannel = client
+    .channel('leads-realtime')
+    .on(
+      'postgres_changes',
+      { event: '*', schema: 'public', table: 'th_leads' },
+      () => { if (onChange) onChange(); }
+    )
+    .subscribe((status) => {
+      if (onStatusChange) onStatusChange(status);
+    });
+}
+
+function stopRealtimeSync() {
+  if (_realtimeChannel) { _realtimeChannel.unsubscribe(); _realtimeChannel = null; }
+  if (_leadsRealtimeChannel) { _leadsRealtimeChannel.unsubscribe(); _leadsRealtimeChannel = null; }
+}

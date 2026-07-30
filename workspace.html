@@ -5,11 +5,12 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta name="robots" content="noindex, nofollow">
 <title>Dashboard | Triple H Enterprises (Internal)</title>
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data: https://*.supabase.co; connect-src 'self' https://*.supabase.co; frame-src 'none'; object-src 'none'; base-uri 'self'; frame-ancestors 'none';">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data: https://*.supabase.co; connect-src 'self' https://*.supabase.co wss://*.supabase.co; frame-src 'none'; object-src 'none'; base-uri 'self'; frame-ancestors 'none';">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Anton&family=Oswald:wght@400;500;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="/styles.css">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js" defer></script>
 <script src="/sync.js" defer></script>
 <script src="/tools-common.js" defer></script>
 <style>
@@ -114,6 +115,12 @@
   .gallery-queue-caption { color: var(--white); font-size: 12.5px; margin: 8px 0 4px; }
   .gallery-queue-meta { color: var(--text-dim); font-size: 11.5px; margin-bottom: 8px; }
 
+  .realtime-badge { display: inline-flex; align-items: center; gap: 5px; font-size: 11.5px; color: var(--text-dim); margin-left: 10px; }
+  .realtime-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--text-dim); flex-shrink: 0; }
+  .realtime-dot.is-live { background: #4caf50; }
+  .realtime-dot.is-connecting { background: var(--orange-light); }
+  .realtime-dot.is-error { background: #e05252; }
+
   .tool-card {
     display: flex; align-items: center; justify-content: space-between; gap: 20px;
     background: var(--bg-panel); border: 1px solid var(--border); border-left: 3px solid var(--orange);
@@ -146,7 +153,9 @@
   </div>
   <button class="help-btn" onclick="openHelpModal()" aria-label="How to use this dashboard" title="How to use this dashboard">?</button>
 </div>
-<p class="hub-sub">Bookmark this page &mdash; a snapshot of the business, plus every internal tool, all in one place. <a href="#" id="refreshSyncLink" onclick="manualRefreshSync(); return false;" style="color:var(--blue-light);">Refresh synced data now</a></p>
+<p class="hub-sub">Bookmark this page &mdash; a snapshot of the business, plus every internal tool, all in one place. <a href="#" id="refreshSyncLink" onclick="manualRefreshSync(); return false;" style="color:var(--blue-light);">Refresh synced data now</a>
+  <span class="realtime-badge" id="realtimeBadge"><span class="realtime-dot" id="realtimeDot"></span><span id="realtimeText">Live sync: connecting...</span></span>
+</p>
 
 <nav class="jump-nav">
   <a href="#section-snapshot">Snapshot</a>
@@ -344,7 +353,7 @@
         <li><strong>Tools</strong> &mdash; every internal tool, one tap away.</li>
         <li><strong>Backup &amp; Restore</strong> &mdash; download everything as one file, or restore from a previous one. Independent of cloud sync entirely.</li>
       </ul>
-      <p>Data is saved directly in your browser, and quietly kept in sync across your devices in the background. Marking a job "Done" in the Job Tracker also offers to jump straight to a pre-filled review request for that client.</p>
+      <p>Data is saved directly in your browser, and quietly kept in sync across your devices in the background &mdash; the small dot near "Refresh synced data now" turns green when live updates are connected, meaning changes on another device (or a new lead coming in) show up here automatically. Marking a job "Done" in the Job Tracker also offers to jump straight to a pre-filled review request for that client.</p>
     </div>
   </div>
 </div>
@@ -737,6 +746,26 @@
     renderDashboard();
   }
 
+  function updateRealtimeBadge(status) {
+    const dot = document.getElementById('realtimeDot');
+    const text = document.getElementById('realtimeText');
+    if (!dot || !text) return;
+    dot.className = 'realtime-dot';
+    if (status === 'SUBSCRIBED') {
+      dot.classList.add('is-live');
+      text.textContent = 'Live sync active';
+    } else if (status === 'unavailable') {
+      dot.classList.add('is-error');
+      text.textContent = 'Live sync unavailable';
+    } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT' || status === 'CLOSED') {
+      dot.classList.add('is-error');
+      text.textContent = 'Live sync disconnected';
+    } else {
+      dot.classList.add('is-connecting');
+      text.textContent = 'Live sync: connecting...';
+    }
+  }
+
   applyCollapseState();
 
   // sync.js loads with `defer`, which has no effect on this inline script
@@ -745,7 +774,14 @@
   // DOMContentLoaded guarantees initSyncOnLoad() actually exists by the
   // time we call it.
   document.addEventListener('DOMContentLoaded', function () {
-    initSyncOnLoad().then(renderDashboard).catch(renderDashboard);
+    initSyncOnLoad().then(renderDashboard).catch(renderDashboard).then(() => {
+      if (typeof startRealtimeSync === 'function') {
+        // One status callback shared by both channels -- last status wins,
+        // which is fine here since they're on the same underlying connection.
+        startRealtimeSync(renderDashboard, updateRealtimeBadge);
+        startLeadsRealtime(loadAndRenderLeads, updateRealtimeBadge);
+      }
+    });
   });
 </script>
 
