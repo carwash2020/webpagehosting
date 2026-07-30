@@ -338,6 +338,46 @@ async function deleteJobPhoto(photoId, storagePath) {
   }
 }
 
+// Marks/unmarks a job photo as a candidate for the public website gallery.
+// This does NOT publish it anywhere -- it just queues it for review. Actual
+// publishing means downloading the image, adding it to images/gallery/ in
+// the repo, and adding an entry to the galleryItems array in index.html --
+// a deliberate, separate step by design (see Dashboard's Website Gallery
+// Queue section for the review list).
+async function toggleFeaturedPhoto(photoId, featured, caption) {
+  if (!isSyncConfigured()) return { ok: false, error: 'not-configured' };
+  try {
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/th_job_photos?id=eq.${photoId}`, {
+      method: 'PATCH',
+      headers: {
+        'Content-Type': 'application/json',
+        'apikey': SUPABASE_ANON_KEY,
+        'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+        'Prefer': 'return=minimal',
+      },
+      body: JSON.stringify({ featured, public_caption: caption }),
+    });
+    if (!res.ok) return { ok: false, error: 'http-' + res.status };
+    return { ok: true };
+  } catch (e) {
+    return { ok: false, error: 'network' };
+  }
+}
+
+async function fetchFeaturedPhotos() {
+  if (!isSyncConfigured()) return { ok: false, error: 'not-configured', photos: [] };
+  try {
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/th_job_photos?featured=eq.true&select=*&order=created_at.desc`, {
+      headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': `Bearer ${SUPABASE_ANON_KEY}` },
+    });
+    if (!res.ok) return { ok: false, error: 'http-' + res.status, photos: [] };
+    const photos = await res.json();
+    return { ok: true, photos };
+  } catch (e) {
+    return { ok: false, error: 'network', photos: [] };
+  }
+}
+
 // Auto-pull once per page load, before the page's own render functions run
 // their first pass, so freshly-synced data shows up immediately. Tools call
 // `await initSyncOnLoad()` at the top of their init sequence.

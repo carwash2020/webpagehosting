@@ -143,6 +143,13 @@
     display: flex; align-items: center; justify-content: center; padding: 0;
   }
   .photo-thumb-delete:hover { background: #e05252; }
+  .photo-thumb-star {
+    position: absolute; top: 4px; left: 4px; width: 22px; height: 22px; border-radius: 50%;
+    background: rgba(0,0,0,0.7); color: var(--text-dim); border: none; cursor: pointer; font-size: 14px;
+    display: flex; align-items: center; justify-content: center; padding: 0;
+  }
+  .photo-thumb-star.is-featured { color: var(--orange-light); background: rgba(0,0,0,0.85); }
+  .photo-thumb.has-star-featured { outline: 2px solid var(--orange-light); }
 </style>
 </head>
 <body>
@@ -368,7 +375,7 @@
     <div class="help-modal-body">
       <p>This page combines five related tools into tabs. Data lives in this browser, and also syncs to the cloud if you've set that up on the Workspace page.</p>
       <ul>
-        <li><strong>Jobs</strong> &mdash; add a job with priority/status/due date, sort by date or priority, hide completed jobs, tap "Advance Status" to cycle Not Started &rarr; In Progress &rarr; Done, or "Photos" to attach before/after pictures (uses your phone's camera directly if you're on mobile).</li>
+        <li><strong>Jobs</strong> &mdash; add a job with priority/status/due date, sort by date or priority, hide completed jobs, tap "Advance Status" to cycle Not Started &rarr; In Progress &rarr; Done, or "Photos" to attach before/after pictures (uses your phone's camera directly if you're on mobile). Tap the &#9734; star on any photo to queue it for the public website's gallery with a caption &mdash; this doesn't publish it automatically, it just adds it to a review queue on the Dashboard.</li>
         <li><strong>Cost Lookup</strong> &mdash; type in hours and parts cost to see the standard price instantly, now with sales tax included in the total. Check/uncheck "Tax labor" and "Tax parts/materials" separately since Utah's rules genuinely differ by job type (not tax advice — confirm your specific situation with the Utah State Tax Commission or your accountant). Optionally type the client's name first — it checks your job history and auto-suggests whether they're new or returning (still overridable). Save frequent job types under "Price Reference" and tap one anytime to reload it.</li>
         <li><strong>Expenses</strong> &mdash; log expenses or mileage, now with vendor, payment method, and an optional link to a specific job. Mileage rate lives right next to the Miles field since it's only relevant for mileage entries. Export CSV anytime for a backup or for taxes.</li>
         <li><strong>Contacts</strong> &mdash; a quick address book for vendors, suppliers, or recurring clients. Tap "History" on any contact to see their past jobs and lifetime spend (matched by exact name against Jobs and Invoices).</li>
@@ -629,13 +636,25 @@
     }
 
     const gridHtml = '<div class="photo-grid">' + result.photos.map(p => `
-      <div class="photo-thumb">
+      <div class="photo-thumb ${p.featured ? 'has-star-featured' : ''}">
         <img src="${getJobPhotoUrl(p.storage_path)}" alt="Job photo" loading="lazy">
         <div class="photo-thumb-label">${escapeHtml(PHOTO_TYPE_LABEL[p.photo_type] || 'Photo')}</div>
+        <button class="photo-thumb-star ${p.featured ? 'is-featured' : ''}" onclick="toggleFeatureUI(${p.id}, ${!p.featured}, ${jobId}, '${escapeHtml(jobTitle).replace(/'/g, "\\'")}')" title="${p.featured ? 'Remove from website gallery queue' : 'Queue for website gallery'}">${p.featured ? '\u2605' : '\u2606'}</button>
         <button class="photo-thumb-delete" onclick="deletePhotoUI(${p.id}, '${p.storage_path}', ${jobId}, '${escapeHtml(jobTitle).replace(/'/g, "\\'")}')" aria-label="Delete photo">&times;</button>
       </div>`).join('') + '</div>';
 
     el.innerHTML = uploadRowHtml + gridHtml;
+  }
+
+  async function toggleFeatureUI(photoId, newFeatured, jobId, jobTitle) {
+    let caption = '';
+    if (newFeatured) {
+      caption = prompt('Caption for the website gallery (e.g. "Finished tile flooring, kitchen view"):') || '';
+      if (caption === null) return;
+    }
+    const result = await toggleFeaturedPhoto(photoId, newFeatured, caption);
+    if (!result.ok) { alert('Could not update: ' + result.error); return; }
+    await renderJobPhotosGallery(jobId, jobTitle);
   }
 
   async function handlePhotoUpload(jobId, jobTitle, event) {
