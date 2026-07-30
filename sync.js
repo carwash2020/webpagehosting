@@ -253,6 +253,91 @@ async function deleteLead(id) {
   }
 }
 
+// ---------------------------------------------------------------------------
+// JOB PHOTOS — actual image files live in Supabase Storage (a bucket named
+// `job-photos`), which is a different thing from the database tables above.
+// Metadata (which job a photo belongs to, before/after tag, etc.) lives in
+// its own small table, `th_job_photos`, same pattern as leads.
+// ---------------------------------------------------------------------------
+
+const JOB_PHOTOS_BUCKET = 'job-photos';
+const MAX_PHOTO_BYTES = 8 * 1024 * 1024; // 8MB client-side cap
+
+function getJobPhotoUrl(storagePath) {
+  return `${SUPABASE_URL}/storage/v1/object/public/${JOB_PHOTOS_BUCKET}/${storagePath}`;
+}
+
+async function uploadJobPhoto(file, jobId, jobTitle, photoType) {
+  if (!isSyncConfigured()) return { ok: false, error: 'not-configured' };
+  if (file.size > MAX_PHOTO_BYTES) return { ok: false, error: 'too-large' };
+
+  const ext = (file.name.split('.').pop() || 'jpg').toLowerCase().replace(/[^a-z0-9]/g, '') || 'jpg';
+  const path = `job-${jobId}/${Date.now()}.${ext}`;
+
+  try {
+    const uploadRes = await fetch(`${SUPABASE_URL}/storage/v1/object/${JOB_PHOTOS_BUCKET}/${path}`, {
+      method: 'POST',
+      headers: {
+        'apikey': SUPABASE_ANON_KEY,
+        'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+        'Content-Type': file.type || 'image/jpeg',
+      },
+      body: file,
+    });
+    if (!uploadRes.ok) return { ok: false, error: 'upload-http-' + uploadRes.status };
+
+    const insertRes = await fetch(`${SUPABASE_URL}/rest/v1/th_job_photos`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'apikey': SUPABASE_ANON_KEY,
+        'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+        'Prefer': 'return=representation',
+      },
+      body: JSON.stringify([{ job_id: jobId, job_title: jobTitle, storage_path: path, photo_type: photoType || 'photo' }]),
+    });
+    if (!insertRes.ok) return { ok: false, error: 'metadata-http-' + insertRes.status };
+    const rows = await insertRes.json();
+    return { ok: true, photo: rows[0] };
+  } catch (e) {
+    return { ok: false, error: 'network' };
+  }
+}
+
+async function fetchJobPhotos(jobId) {
+  if (!isSyncConfigured()) return { ok: false, error: 'not-configured', photos: [] };
+  try {
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/th_job_photos?job_id=eq.${jobId}&select=*&order=created_at.desc`, {
+      headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': `Bearer ${SUPABASE_ANON_KEY}` },
+    });
+    if (!res.ok) return { ok: false, error: 'http-' + res.status, photos: [] };
+    const photos = await res.json();
+    return { ok: true, photos };
+  } catch (e) {
+    return { ok: false, error: 'network', photos: [] };
+  }
+}
+
+async function deleteJobPhoto(photoId, storagePath) {
+  if (!isSyncConfigured()) return { ok: false, error: 'not-configured' };
+  try {
+    await fetch(`${SUPABASE_URL}/storage/v1/object/${JOB_PHOTOS_BUCKET}/${storagePath}`, {
+      method: 'DELETE',
+      headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': `Bearer ${SUPABASE_ANON_KEY}` },
+    });
+    // Delete the metadata row regardless of the storage-delete result above,
+    // so a partial failure doesn't leave an orphaned row the UI still shows.
+    const delRow = await fetch(`${SUPABASE_URL}/rest/v1/th_job_photos?id=eq.${photoId}`, {
+      method: 'DELETE',
+      headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': `Bearer ${SUPABASE_ANON_KEY}`, 'Prefer': 'return=minimal' },
+    });
+    if (!delRow.ok) return { ok: false, error: 'http-' + delRow.status };
+    return { ok: true };
+  } catch (e) {
+    return { ok: false, error: 'network' };
+  }
+}
+
 // Auto-pull once per page load, before the page's own render functions run
 // their first pass, so freshly-synced data shows up immediately. Tools call
 // `await initSyncOnLoad()` at the top of their init sequence.
