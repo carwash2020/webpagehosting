@@ -1,1226 +1,510 @@
-  :root{
-    --bg:#0a0a0a;
-    --bg-panel:#141414;
-    --bg-panel-2:#1a1a1a;
-    --bg-panel-3:#1f1f1f;
-    --border:#2a2a2a;
-    --text:#e8e8e8;
-    --text-dim:#9a9a9a;
-    --white:#ffffff;
-    --steel:#d8d8d8;
-    --orange:#ff8000;
-    --orange-dark:#c96400;
-    --orange-light:#ffb347;
-    --blue:#3aa0ff;
-    --blue-dark:#1f5f9e;
-    --blue-light:#7ec4ff;
-    --radius:10px;
-    --maxw:1180px;
-  }
+// ===========================================================================
+// TRIPLE H WORKSPACE — CLOUD SYNC
+// ===========================================================================
+// This syncs your Workspace data (Jobs, Contacts, Notes, Expenses, Price
+// Reference, Mileage Rate) across devices using a free Supabase project
+// that belongs to Triple H Enterprises ONLY.
+//
+// Sync runs automatically in the background once set up below -- there's
+// no code to type in or button to press day-to-day. Every device that
+// loads these pages uses the same built-in DEFAULT_SYNC_CODE further
+// down this file, so as long as all your devices are pointed at the same
+// Supabase project (below), they stay in sync with zero manual steps.
+//
+// SETUP (one-time, ~3 minutes):
+// 1. Go to https://supabase.com, sign up free, create a new project
+//    (name it something like "triple-h-workspace").
+// 2. In the Supabase dashboard, open the SQL Editor and run:
+//
+//      create table if not exists workspace_sync (
+//        code text primary key,
+//        data jsonb not null,
+//        updated_at timestamptz not null default now()
+//      );
+//      alter table workspace_sync enable row level security;
+//      create policy "allow anon read/write by code"
+//        on workspace_sync for all to anon using (true) with check (true);
+//
+//    Note on that policy: it's intentionally permissive (anyone who knows
+//    the row's "code" can read/write it) because the sync code itself IS
+//    the access control here, same idea as a shared PIN. This is fine for
+//    operational data like jobs/expenses/notes, but don't store anything
+//    more sensitive (like full card numbers) through this path.
+//
+// 3. In Project Settings > API, copy the "Project URL" and the "anon
+//    public" key (NOT the service_role/secret key — never paste that
+//    anywhere client-side).
+// 4. Paste both below, replacing the placeholder strings.
+// 5. Re-upload this file to your GitHub repo root, replacing the old one.
+//
+// Until you do this, sync is simply inactive — every tool still works
+// fine locally, just without cross-device syncing.
+// ===========================================================================
 
-  *{box-sizing:border-box;}
+const SUPABASE_URL = 'https://csvfqdjuobylgafgolho.supabase.co';
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNzdmZxZGp1b2J5bGdhZmdvbGhvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODUzNTQ3MjcsImV4cCI6MjEwMDkzMDcyN30.6GlvK-DfXf2lppS1kciZtsl4wHOpZz_yKtwsS1lyjrs';
+const SYNC_TABLE = 'workspace_sync';
 
-  /* dark themed scrollbar, so scrolling inside modals (FAQ, Terms, Gallery) matches the site instead of a default light scrollbar */
-  html{scrollbar-color:var(--border) var(--bg); scrollbar-width:thin;}
-  ::-webkit-scrollbar{width:10px; height:10px;}
-  ::-webkit-scrollbar-track{background:var(--bg-panel);}
-  ::-webkit-scrollbar-thumb{background:var(--border); border-radius:6px;}
-  ::-webkit-scrollbar-thumb:hover{background:var(--blue-dark);}
-  html{scroll-behavior:smooth;}
-  @media (prefers-reduced-motion: reduce){
-    html{scroll-behavior:auto;}
-    *{animation-duration:0.001ms !important; animation-iteration-count:1 !important; transition-duration:0.001ms !important;}
-  }
+const SYNC_DATA_KEYS = [
+  'th_tracker_jobs',
+  'th_tracker_contacts',
+  'th_tracker_notes_v2',
+  'th_expense_log',
+  'th_mileage_rate',
+  'th_price_reference',
+  'th_invoices',
+  'th_quotes',
+  'th_tax_rate',
+  'th_tax_labor',
+  'th_tax_parts',
+];
 
-  body{
-    margin:0;
-    background:var(--bg);
-    color:var(--text);
-    font-family:'Oswald', sans-serif;
-    font-weight:400;
-    line-height:1.6;
-    -webkit-font-smoothing:antialiased;
-  }
+const SYNC_CODE_KEY = 'th_sync_code';
+const SYNC_KNOWN_AT_KEY = 'th_sync_known_at';
 
-  h1,h2,h3{
-    font-family:'Anton', sans-serif;
-    font-weight:400;
-    text-transform:uppercase;
-    letter-spacing:0.5px;
-    margin:0;
-    color:var(--white);
-  }
+// Single-business, single-owner tool -- no need for a user-facing PIN.
+// Every device auto-uses this same fixed code so sync just works silently.
+const DEFAULT_SYNC_CODE = 'tripleh-workspace-2026';
 
-  a{color:inherit; text-decoration:none;}
-  img{max-width:100%; display:block;}
-  button{font-family:inherit;}
-
-  a:focus-visible,
-  button:focus-visible,
-  input:focus-visible,
-  select:focus-visible,
-  textarea:focus-visible{
-    outline:2px solid var(--blue-light);
-    outline-offset:2px;
-  }
-
-  .skip-link{
-    position:absolute; top:-60px; left:12px;
-    background:var(--blue); color:#08131f;
-    padding:10px 18px; border-radius:6px;
-    font-weight:600; font-size:14px;
-    z-index:1000; transition:top .15s ease;
-  }
-  .skip-link:focus{top:12px;}
-
-  .wrap{
-    max-width:var(--maxw);
-    margin:0 auto;
-    padding:0 24px;
-  }
-
-  .eyebrow{
-    font-family:'Oswald', sans-serif;
-    font-weight:600;
-    letter-spacing:3px;
-    text-transform:uppercase;
-    font-size:13px;
-    color:var(--orange);
-    margin:0 0 10px;
-  }
-  .eyebrow.is-blue{color:var(--blue-light);}
-  .eyebrow.is-orange{color:var(--orange-light);}
-
-  .section-head{
-    max-width:640px;
-    margin:0 0 44px;
-  }
-  .section-head h2{
-    font-size:clamp(28px,4vw,42px);
-    line-height:1.05;
-  }
-  .section-head p{
-    color:var(--text-dim);
-    margin-top:14px;
-    font-size:16px;
-  }
-
-  section{padding:88px 0;}
-  section + section{border-top:1px solid var(--border);}
-
-  /* buttons */
-  .btn{
-    display:inline-flex;
-    align-items:center;
-    gap:10px;
-    padding:15px 26px;
-    border-radius:6px;
-    font-family:'Oswald', sans-serif;
-    font-weight:600;
-    letter-spacing:1.5px;
-    text-transform:uppercase;
-    font-size:14px;
-    border:2px solid transparent;
-    cursor:pointer;
-    transition:transform .15s ease, box-shadow .15s ease, background .15s ease;
-    white-space:nowrap;
-  }
-  .btn:hover{transform:translateY(-2px);}
-  .btn:active{transform:translateY(0);}
-
-  .btn.orange{
-    background:linear-gradient(135deg, var(--orange-light), var(--orange) 60%, var(--orange-dark));
-    color:#161005;
-    box-shadow:0 8px 24px -8px rgba(255,128,0,.55);
-  }
-  .btn.blue{
-    background:linear-gradient(135deg, var(--blue-light), var(--blue) 60%, var(--blue-dark));
-    color:#04101c;
-    box-shadow:0 8px 24px -8px rgba(58,160,255,.55);
-  }
-  .btn svg{width:16px; height:16px; flex-shrink:0;}
-
-  /* header */
-  header{
-    position:sticky;
-    top:0;
-    z-index:60;
-    background:rgba(10,10,10,.88);
-    backdrop-filter:blur(8px);
-    border-bottom:1px solid var(--border);
-  }
-  .nav{
-    display:flex;
-    align-items:center;
-    justify-content:space-between;
-    gap:24px;
-    padding:14px 24px;
-    max-width:var(--maxw);
-    margin:0 auto;
-  }
-  .brand{
-    display:flex;
-    align-items:center;
-    gap:12px;
-  }
-  .brand img{height:44px; width:44px; object-fit:contain;}
-  .brand-name{
-    font-family:'Anton', sans-serif;
-    font-size:17px;
-    letter-spacing:1px;
-    color:var(--white);
-    line-height:1.1;
-  }
-  .brand-name span{
-    display:block;
-    font-family:'Oswald', sans-serif;
-    font-size:10px;
-    font-weight:500;
-    letter-spacing:2px;
-    color:var(--orange);
-    margin-top:2px;
-  }
-
-  .nav-links{
-    display:flex;
-    align-items:center;
-    gap:28px;
-    list-style:none;
-    margin:0;
-    padding:0;
-  }
-  .nav-links a{
-    font-size:14px;
-    font-weight:500;
-    letter-spacing:1px;
-    text-transform:uppercase;
-    color:var(--text-dim);
-    transition:color .15s ease;
-  }
-  .nav-links a:hover{color:var(--white);}
-
-  .nav-actions{
-    display:flex;
-    align-items:center;
-    gap:14px;
-  }
-  .nav-phone{
-    display:flex;
-    align-items:center;
-    gap:8px;
-    font-size:14px;
-    font-weight:600;
-    color:var(--white);
-  }
-  .nav-phone svg{width:16px; height:16px; color:var(--orange);}
-
-  .nav-toggle{
-    display:none;
-    background:none;
-    border:1px solid var(--border);
-    border-radius:6px;
-    width:42px;
-    height:42px;
-    align-items:center;
-    justify-content:center;
-    color:var(--white);
-    cursor:pointer;
-  }
-  .nav-toggle svg{width:20px; height:20px;}
-
-  .mobile-menu{
-    display:none;
-    flex-direction:column;
-    gap:2px;
-    padding:8px 24px 20px;
-    border-top:1px solid var(--border);
-  }
-  .mobile-menu.is-open{display:flex;}
-
-  @media (max-width:860px){
-    .nav-links, .nav-phone-desktop{display:none;}
-    .nav-toggle{display:flex;}
-    .mobile-menu a{
-      padding:14px 4px;
-      font-size:15px;
-      font-weight:500;
-      letter-spacing:1px;
-      text-transform:uppercase;
-      color:var(--text);
-      border-bottom:1px solid var(--border);
-    }
-    .mobile-menu .btn{margin-top:14px; justify-content:center;}
-  }
-
-  /* hero */
-  .hero{
-    padding:76px 0 90px;
-    position:relative;
-    overflow:hidden;
-  }
-  .hero::before{
-    content:"";
-    position:absolute;
-    top:-20%; right:-10%;
-    width:60%; height:140%;
-    background:radial-gradient(circle, rgba(255,128,0,.10), transparent 65%);
-    pointer-events:none;
-  }
-  .hero::after{
-    content:"";
-    position:absolute;
-    bottom:-30%; left:-10%;
-    width:50%; height:120%;
-    background:radial-gradient(circle, rgba(58,160,255,.08), transparent 65%);
-    pointer-events:none;
-  }
-  .hero-grid{
-    display:grid;
-    grid-template-columns:1.15fr 0.85fr;
-    gap:56px;
-    align-items:center;
-    position:relative;
-    z-index:1;
-  }
-  .hero h1{
-    font-size:clamp(34px, 5.4vw, 60px);
-    line-height:1.04;
-    margin-top:16px;
-  }
-  .hero h1 .accent{color:var(--orange);}
-  .hero p.lede{
-    color:var(--text-dim);
-    font-size:17px;
-    max-width:520px;
-    margin:22px 0 32px;
-  }
-  .hero-ctas{
-    display:flex;
-    gap:16px;
-    flex-wrap:wrap;
-  }
-  .hero-badge{
-    display:flex;
-    justify-content:center;
-  }
-  .hero-badge img{
-    width:min(380px, 100%);
-    filter:drop-shadow(0 30px 50px rgba(0,0,0,.55));
-  }
-  @media (max-width:860px){
-    .hero-grid{grid-template-columns:1fr; text-align:center;}
-    .hero p.lede{margin-left:auto; margin-right:auto;}
-    .hero-ctas{justify-content:center;}
-    .hero-badge{order:-1; margin-bottom:8px;}
-    .hero-badge img{width:220px;}
-  }
-
-  /* trust strip */
-  .trust{padding:0 0 88px;}
-  .trust-grid{
-    display:grid;
-    grid-template-columns:repeat(3,1fr);
-    gap:1px;
-    background:var(--border);
-    border:1px solid var(--border);
-    border-radius:var(--radius);
-    overflow:hidden;
-  }
-  .trust-item{background:var(--bg-panel); padding:28px 26px;}
-  .trust-item h3{font-size:16px; letter-spacing:1px; margin-bottom:8px;}
-  .trust-item p{color:var(--text-dim); font-size:14px; margin:0;}
-  @media (max-width:720px){.trust-grid{grid-template-columns:1fr;}}
-
-  /* services */
-  .services-grid{
-    display:grid;
-    grid-template-columns:repeat(3,1fr);
-    gap:20px;
-  }
-  .service-card{
-    background:var(--bg-panel);
-    border:1px solid var(--border);
-    border-top:3px solid var(--blue);
-    border-radius:var(--radius);
-    padding:26px 24px;
-    transition:transform .18s ease, border-color .18s ease;
-    text-align:left;
-    width:100%;
-    color:var(--text);
-    cursor:pointer;
-  }
-  .service-card:hover{transform:translateY(-4px); border-color:var(--blue-light);}
-  .service-card.is-urgent{border-top-color:var(--orange);}
-  .service-card.is-urgent:hover{border-color:var(--orange-light);}
-  .service-icon{
-    width:42px; height:42px;
-    border-radius:8px;
-    display:flex; align-items:center; justify-content:center;
-    background:var(--bg-panel-3);
-    color:var(--blue-light);
-    margin-bottom:16px;
-  }
-  .service-card.is-urgent .service-icon{color:var(--orange-light);}
-  .service-icon svg{width:22px; height:22px;}
-  .service-card h3{
-    font-family:'Oswald', sans-serif;
-    font-weight:700;
-    font-size:17px;
-    text-transform:none;
-    letter-spacing:0;
-    margin-bottom:8px;
-  }
-  .service-card p{color:var(--text-dim); font-size:14.5px; margin:0;}
-  .service-card p + p{margin-top:10px;}
-  .service-card p a{color:var(--blue-light); font-weight:600; text-decoration:none;}
-  .service-card p a:hover{text-decoration:underline;}
-  .service-tag{
-    display:inline-flex;
-    align-items:center;
-    gap:6px;
-    margin-top:14px;
-    font-size:11px;
-    font-weight:600;
-    letter-spacing:1.5px;
-    text-transform:uppercase;
-    color:var(--blue-light);
-  }
-  .service-card.is-urgent .service-tag{color:var(--orange-light);}
-  .service-tag svg{width:12px; height:12px;}
-  @media (max-width:900px){.services-grid{grid-template-columns:repeat(2,1fr);}}
-  @media (max-width:600px){.services-grid{grid-template-columns:1fr;}}
-
-  /* about */
-  .about-grid{
-    display:grid;
-    grid-template-columns:0.9fr 1.1fr;
-    gap:56px;
-    align-items:start;
-  }
-  .about-copy p{color:var(--text-dim); font-size:16px; margin:0 0 18px;}
-  .values{display:flex; gap:14px; margin:28px 0 0; flex-wrap:wrap;}
-  .value-pill{
-    flex:1;
-    min-width:140px;
-    background:var(--bg-panel);
-    border:1px solid var(--border);
-    border-radius:var(--radius);
-    padding:18px 16px;
-    text-align:center;
-  }
-  .value-pill .word{font-family:'Anton', sans-serif; font-size:15px; letter-spacing:1px; color:var(--white);}
-  .value-pill:nth-child(1) .word{color:var(--orange-light);}
-  .value-pill:nth-child(2) .word{color:var(--steel);}
-  .value-pill:nth-child(3) .word{color:var(--blue-light);}
-  .value-pill p{color:var(--text-dim); font-size:12.5px; margin:8px 0 0;}
-
-  .quote-block{
-    position:relative;
-    background:linear-gradient(160deg, var(--bg-panel-2), var(--bg-panel));
-    border:1px solid var(--border);
-    border-left:4px solid var(--orange);
-    border-radius:var(--radius);
-    padding:34px 30px;
-  }
-  .quote-block p{
-    font-family:'Anton', sans-serif;
-    font-size:clamp(20px,2.6vw,28px);
-    line-height:1.25;
-    color:var(--white);
-    margin:0 0 14px;
-  }
-  .quote-block cite{
-    font-family:'Oswald', sans-serif;
-    font-size:13px;
-    font-weight:500;
-    letter-spacing:1px;
-    color:var(--text-dim);
-    font-style:normal;
-  }
-  @media (max-width:860px){.about-grid{grid-template-columns:1fr;}}
-
-  /* schedule */
-  .booking-grid{
-    display:grid;
-    grid-template-columns:1fr 1fr;
-    gap:20px;
-    max-width:940px;
-  }
-  .booking-cta{
-    background:linear-gradient(135deg, var(--bg-panel-2), var(--bg-panel));
-    border:1px solid var(--border);
-    border-left:4px solid var(--blue);
-    border-radius:var(--radius);
-    padding:28px 26px;
-    display:flex;
-    flex-direction:column;
-    justify-content:space-between;
-    gap:20px;
-  }
-  .booking-grid .booking-cta:last-child{border-left-color:var(--orange);}
-  .booking-cta-text h3{font-size:19px; margin-bottom:8px;}
-  .booking-cta-text p{color:var(--text-dim); font-size:14px; margin:0; line-height:1.55;}
-  .booking-cta .btn{align-self:flex-start;}
-  @media (max-width:760px){
-    .booking-grid{grid-template-columns:1fr;}
-  }
-  .modal-email{max-width:640px;}
-  .email-form .form-row{
-    display:grid;
-    grid-template-columns:1fr 1fr;
-    gap:18px;
-    margin-bottom:18px;
-  }
-  @media (max-width:600px){
-    .email-form .form-row{grid-template-columns:1fr;}
-  }
-  .form-card{
-    background:var(--bg-panel);
-    border:1px solid var(--border);
-    border-radius:var(--radius);
-    padding:34px;
-  }
-  .form-row{display:grid; grid-template-columns:1fr 1fr; gap:18px; margin-bottom:18px;}
-  .field{display:flex; flex-direction:column; gap:8px;}
-  .field.full{grid-column:1 / -1;}
-  label{
-    font-size:12.5px;
-    font-weight:600;
-    letter-spacing:1px;
-    text-transform:uppercase;
-    color:var(--text-dim);
-  }
-  input, select, textarea{
-    background:var(--bg-panel-3);
-    border:1px solid var(--border);
-    border-radius:6px;
-    padding:12px 14px;
-    color:var(--white);
-    font-family:'Oswald', sans-serif;
-    font-size:14.5px;
-  }
-  input::placeholder, textarea::placeholder{color:#6a6a6a;}
-  textarea{resize:vertical; min-height:96px;}
-  select{appearance:none; background-image:url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="%239a9a9a"><path d="M5 8l5 5 5-5z"/></svg>'); background-repeat:no-repeat; background-position:right 12px center; padding-right:36px;}
-
-  .form-note{font-size:12.5px; color:var(--text-dim); margin-top:14px; line-height:1.5;}
-  .form-note strong{color:var(--steel);}
-  .form-footer{display:flex; align-items:center; gap:18px; flex-wrap:wrap; margin-top:22px;}
-  .form-status{font-size:13.5px; color:var(--blue-light); display:none;}
-  .form-status.is-visible{display:inline;}
-  .form-status.is-success{color:#3ad66b;}
-  .form-status.is-error{color:var(--orange-light);}
-
-  @media (max-width:640px){
-    .form-row{grid-template-columns:1fr;}
-    .form-card{padding:24px;}
-  }
-
-  /* contact */
-  .contact-grid{display:grid; grid-template-columns:repeat(4,1fr); gap:20px;}
-  .contact-card{
-    background:var(--bg-panel);
-    border:1px solid var(--border);
-    border-radius:var(--radius);
-    padding:26px 24px;
-  }
-  .contact-card .service-icon{color:var(--orange-light); cursor:default;}
-  .contact-card h3{
-    font-family:'Oswald', sans-serif;
-    font-weight:700;
-    font-size:15px;
-    text-transform:uppercase;
-    letter-spacing:1px;
-    margin-bottom:10px;
-  }
-  .contact-card a.value, .contact-card p.value{color:var(--white); font-size:16px; font-weight:500;}
-  .contact-card a.value:hover{color:var(--orange-light);}
-  .contact-card p.sub{color:var(--text-dim); font-size:13.5px; margin-top:6px;}
-  .map-link{
-    display:inline-flex;
-    align-items:center;
-    gap:6px;
-    margin-top:12px;
-    font-size:13px;
-    font-weight:600;
-    color:var(--blue-light);
-    letter-spacing:.5px;
-  }
-  .map-link svg{width:14px; height:14px;}
-  @media (max-width:900px){.contact-grid{grid-template-columns:repeat(2,1fr);}}
-  @media (max-width:560px){.contact-grid{grid-template-columns:1fr;}}
-
-  /* footer */
-  footer{background:var(--bg-panel); border-top:1px solid var(--border); padding:48px 0 28px;}
-  .footer-grid{display:grid; grid-template-columns:1.4fr 1fr 1fr 1fr; gap:32px; margin-bottom:36px;}
-  .footer-brand{display:flex; align-items:center; gap:12px; margin-bottom:14px;}
-  .footer-brand img{height:38px; width:38px; object-fit:contain;}
-  .footer-tagline{color:var(--text-dim); font-size:13.5px; letter-spacing:1px; text-transform:uppercase;}
-  .social-links{display:flex; gap:10px; margin-top:16px;}
-  .social-links a{
-    width:34px; height:34px;
-    border-radius:8px;
-    border:1px solid var(--border);
-    background:var(--bg-panel-3);
-    color:var(--text-dim);
-    display:flex; align-items:center; justify-content:center;
-    transition:color .15s ease, border-color .15s ease;
-  }
-  .social-links a:hover{color:var(--orange-light); border-color:var(--orange-light);}
-  .social-links svg{width:17px; height:17px;}
-  .footer-col h4{
-    font-family:'Oswald', sans-serif;
-    font-weight:700;
-    font-size:13px;
-    letter-spacing:1.5px;
-    text-transform:uppercase;
-    color:var(--steel);
-    margin:0 0 14px;
-  }
-  .footer-col ul{list-style:none; margin:0; padding:0; display:flex; flex-direction:column; gap:10px;}
-  .footer-col a{color:var(--text-dim); font-size:14px;}
-  .footer-col a:hover{color:var(--white);}
-  .footer-bottom{
-    border-top:1px solid var(--border);
-    padding-top:20px;
-    display:flex;
-    justify-content:space-between;
-    flex-wrap:wrap;
-    gap:10px;
-    font-size:12.5px;
-    color:#6a6a6a;
-  }
-  @media (max-width:760px){.footer-grid{grid-template-columns:1fr; gap:28px;}}
-
-  /* service detail modal */
-  .modal-overlay{
-    position:fixed;
-    inset:0;
-    background:rgba(4,4,4,.72);
-    backdrop-filter:blur(3px);
-    display:none;
-    align-items:center;
-    justify-content:center;
-    padding:24px;
-    z-index:100;
-  }
-  .modal-overlay.is-open{display:flex;}
-  .modal{
-    background:var(--bg-panel);
-    border:1px solid var(--border);
-    border-radius:14px;
-    max-width:520px;
-    width:100%;
-    max-height:88vh;
-    overflow-y:auto;
-    padding:32px;
-    position:relative;
-    box-shadow:0 30px 60px -20px rgba(0,0,0,.6);
-  }
-  .modal-close{
-    position:absolute;
-    top:16px; right:16px;
-    width:34px; height:34px;
-    border-radius:8px;
-    border:1px solid var(--border);
-    background:var(--bg-panel-3);
-    color:var(--text-dim);
-    font-size:18px;
-    line-height:1;
-    cursor:pointer;
-    display:flex; align-items:center; justify-content:center;
-  }
-  .modal-close:hover{color:var(--white);}
-  .modal .service-icon{margin-bottom:18px;}
-  .modal h3{font-size:24px; margin-bottom:12px; padding-right:30px;}
-  .modal .modal-intro{color:var(--text-dim); font-size:15px; margin:0 0 18px;}
-  .modal ul{list-style:none; margin:0 0 26px; padding:0; display:flex; flex-direction:column; gap:10px;}
-  .modal ul li{
-    display:flex;
-    gap:10px;
-    align-items:flex-start;
-    font-size:14.5px;
-    color:var(--text);
-  }
-  .modal ul li svg{width:16px; height:16px; margin-top:2px; color:var(--blue-light); flex-shrink:0;}
-  .modal.is-urgent ul li svg{color:var(--orange-light);}
-  .modal-actions{display:flex; gap:12px; flex-wrap:wrap;}
-  .modal-gallery{max-width:900px;}
-  .modal-gallery .gallery-grid{margin-top:22px;}
-  @media (max-width:760px){.modal-gallery{max-width:94vw;}}
-
-  .terms-body{margin-top:18px;}
-  .terms-body h4{
-    font-family:'Oswald', sans-serif;
-    font-weight:700;
-    font-size:15px;
-    color:var(--steel);
-    margin:22px 0 8px;
-  }
-  .terms-body h4:first-child{margin-top:0;}
-  .terms-body p{color:var(--text-dim); font-size:14px; line-height:1.6; margin:0 0 4px;}
-  .terms-disclaimer{
-    background:var(--bg-panel-3);
-    border:1px solid var(--border);
-    border-left:3px solid var(--orange);
-    border-radius:6px;
-    padding:14px 16px;
-    font-size:13px !important;
-    margin-bottom:10px !important;
-  }
-
-  /* FAQ */
-  .faq-list{max-width:760px;}
-  .faq-item{
-    border:1px solid var(--border);
-    border-radius:var(--radius);
-    background:var(--bg-panel);
-    margin-bottom:12px;
-    overflow:hidden;
-  }
-  .faq-question{
-    width:100%;
-    display:flex;
-    align-items:center;
-    justify-content:space-between;
-    gap:16px;
-    padding:20px 22px;
-    background:none;
-    border:none;
-    color:var(--white);
-    font-family:'Oswald', sans-serif;
-    font-weight:600;
-    font-size:15.5px;
-    text-align:left;
-    cursor:pointer;
-  }
-  .faq-question svg{
-    width:18px; height:18px;
-    flex-shrink:0;
-    color:var(--blue-light);
-    transition:transform .2s ease;
-  }
-  .faq-item.is-open .faq-question svg{transform:rotate(180deg);}
-  .faq-answer{
-    max-height:0;
-    overflow:hidden;
-    transition:max-height .25s ease;
-  }
-  .faq-answer p{
-    padding:0 22px 20px;
-    margin:0;
-    color:var(--text-dim);
-    font-size:14.5px;
-    line-height:1.6;
-  }
-  .faq-answer p em{color:var(--orange-light); font-style:normal;}
-
-  /* sticky mobile call button */
-  .sticky-call{
-    display:none;
-    position:fixed;
-    bottom:0; left:0; right:0;
-    z-index:70;
-    padding:12px 16px;
-    background:rgba(10,10,10,.95);
-    backdrop-filter:blur(8px);
-    border-top:1px solid var(--border);
-  }
-  .sticky-call a{
-    display:flex;
-    align-items:center;
-    justify-content:center;
-    gap:10px;
-    width:100%;
-  }
-  @media (max-width:760px){
-    .sticky-call{display:block;}
-    body{padding-bottom:70px;}
-  }
-
-  /* gallery */
-  .gallery-grid{
-    display:grid;
-    grid-template-columns:repeat(3,1fr);
-    gap:20px;
-  }
-  .gallery-tile{
-    aspect-ratio:4/3;
-    border-radius:var(--radius);
-    border:1px dashed var(--border);
-    background:
-      repeating-linear-gradient(135deg, var(--bg-panel-2) 0 12px, var(--bg-panel) 12px 24px);
-    display:flex;
-    flex-direction:column;
-    align-items:center;
-    justify-content:center;
-    gap:10px;
-    color:var(--text-dim);
-    text-align:center;
-    padding:20px;
-  }
-  .gallery-tile svg{width:30px; height:30px; opacity:.6;}
-  .gallery-tile span{font-size:12.5px; letter-spacing:.5px;}
-  .gallery-tile.has-photo{
-    padding:0;
-    border-style:solid;
-    position:relative;
-    overflow:hidden;
-  }
-  .gallery-tile.has-photo img{
-    width:100%;
-    height:100%;
-    object-fit:cover;
-    display:block;
-  }
-  .gallery-category{
-    font-size:13px; letter-spacing:.08em; text-transform:uppercase;
-    color:var(--blue-light,#7fb3e8); margin:26px 0 10px; font-weight:600;
-  }
-  .gallery-category:first-of-type{margin-top:6px;}
-  .gallery-row{display:contents;}
-  .gallery-tile{cursor:pointer; transition:transform .18s ease, box-shadow .18s ease;}
-  .gallery-tile:hover{transform:translateY(-3px); box-shadow:0 8px 20px rgba(0,0,0,.35);}
-  .gallery-tile.has-photo img{transition:filter .18s ease;}
-  .gallery-tile.has-photo:hover img{filter:brightness(1.05);}
-  .lightbox-overlay{
-    display:none; position:fixed; inset:0; background:rgba(0,0,0,.88);
-    z-index:9999; align-items:center; justify-content:center; flex-direction:column;
-  }
-  .lightbox-overlay.is-visible{display:flex;}
-  .lightbox-img-wrap{max-width:90vw; max-height:78vh; display:flex; align-items:center; justify-content:center;}
-  .lightbox-overlay img{max-width:90vw; max-height:78vh; object-fit:contain; border-radius:6px;}
-  .lightbox-caption{color:#eee; margin-top:14px; font-size:14px; text-align:center; max-width:80vw;}
-  .lightbox-close{
-    position:absolute; top:18px; right:24px; background:none; border:none;
-    color:#fff; font-size:32px; cursor:pointer; line-height:1;
-  }
-  .lightbox-nav{
-    position:absolute; top:50%; transform:translateY(-50%); background:rgba(255,255,255,.1);
-    border:none; color:#fff; font-size:28px; cursor:pointer; padding:10px 16px; border-radius:4px;
-  }
-  .lightbox-nav:hover{background:rgba(255,255,255,.2);}
-  .lightbox-prev{left:16px;}
-  .lightbox-next{right:16px;}
-  @media (max-width:700px){
-    .lightbox-nav{font-size:22px; padding:8px 12px;}
-    .lightbox-close{top:10px; right:14px;}
-  }
-  .email-row{display:flex; align-items:center; gap:10px; flex-wrap:wrap;}
-  .copy-email-btn{
-    display:inline-flex; align-items:center; gap:6px; padding:4px 10px;
-    background:var(--bg-panel-3); border:1px solid var(--border); border-radius:6px;
-    color:var(--text-dim); font-size:12.5px; cursor:pointer; transition:border-color .15s ease, color .15s ease;
-  }
-  .copy-email-btn:hover{border-color:var(--blue-light); color:var(--blue-light);}
-  .copy-email-btn svg{width:14px; height:14px;}
-  .copy-email-btn.is-copied{border-color:var(--blue-light); color:var(--blue-light);}
-
-  /* back to top */
-  .back-to-top{
-    position:fixed;
-    bottom:24px; right:24px;
-    z-index:79;
-    width:48px; height:48px;
-    border-radius:50%;
-    background:var(--bg-panel-2);
-    border:1px solid var(--border);
-    color:var(--text-dim);
-    display:flex; align-items:center; justify-content:center;
-    cursor:pointer;
-    opacity:0; visibility:hidden; transform:translateY(10px);
-    transition:opacity .2s ease, transform .2s ease, border-color .15s ease, color .15s ease;
-  }
-  .back-to-top.is-visible{opacity:1; visibility:visible; transform:translateY(0);}
-  .back-to-top:hover{border-color:var(--blue-light); color:var(--blue-light);}
-  .back-to-top svg{width:22px; height:22px;}
-  @media (max-width:760px){
-    .back-to-top{bottom:90px; right:16px; width:44px; height:44px;}
-  }
-
-  /* text-us chat bubble */
-  @media (pointer: fine){
-    .chat-bubble-btn, .chat-panel{display:none !important;}
-  }
-  .chat-bubble-btn{
-    position:fixed;
-    bottom:24px; left:24px;
-    z-index:80;
-    width:60px; height:60px;
-    border-radius:50%;
-    background:linear-gradient(135deg, var(--blue-light), var(--blue) 60%, var(--blue-dark));
-    border:none;
-    box-shadow:0 6px 20px rgba(0,0,0,.45);
-    display:flex; align-items:center; justify-content:center;
-    cursor:pointer;
-    color:#0a0a0a;
-    transition:transform .18s ease;
-  }
-  .chat-bubble-btn:hover{transform:scale(1.06);}
-  .chat-bubble-btn svg{width:28px; height:28px;}
-  .chat-bubble-btn .chat-dot{
-    position:absolute; top:2px; right:2px;
-    width:14px; height:14px; border-radius:50%;
-    background:var(--orange);
-    border:2px solid var(--bg);
-  }
-  @media (max-width:760px){
-    .chat-bubble-btn{bottom:90px; left:16px; width:54px; height:54px;}
-  }
-
-  .chat-panel{
-    position:fixed;
-    bottom:96px; left:24px;
-    z-index:81;
-    width:300px;
-    max-width:calc(100vw - 48px);
-    background:var(--bg-panel);
-    border:1px solid var(--border);
-    border-radius:14px;
-    box-shadow:0 12px 40px rgba(0,0,0,.55);
-    display:none;
-    flex-direction:column;
-    overflow:hidden;
-  }
-  .chat-panel.is-open{display:flex;}
-  @media (max-width:760px){
-    .chat-panel{bottom:156px; left:16px;}
-  }
-  .chat-panel-header{
-    background:linear-gradient(135deg, var(--blue-dark), var(--bg-panel-2));
-    padding:14px 16px;
-    display:flex; align-items:center; justify-content:space-between;
-  }
-  .chat-panel-header-title{display:flex; align-items:center; gap:10px;}
-  .chat-panel-header-title .dot{width:9px; height:9px; border-radius:50%; background:#3ad66b; flex-shrink:0;}
-  .chat-panel-header h4{margin:0; font-size:14.5px; color:var(--text);}
-  .chat-panel-header p{margin:0; font-size:11.5px; color:var(--text-dim);}
-  .chat-panel-close{background:none; border:none; color:var(--text-dim); font-size:20px; cursor:pointer; line-height:1; padding:0 4px;}
-  .chat-panel-close:hover{color:var(--text);}
-  .chat-panel-body{padding:16px; display:flex; flex-direction:column; gap:12px;}
-  .chat-bubble-msg{
-    background:var(--bg-panel-3);
-    border-radius:12px 12px 12px 4px;
-    padding:10px 13px;
-    font-size:13.5px;
-    line-height:1.5;
-    color:var(--text);
-    max-width:92%;
-  }
-  .chat-panel-actions{display:flex; flex-direction:column; gap:8px;}
-  .chat-action-btn{
-    display:flex; align-items:center; justify-content:center; gap:8px;
-    padding:11px 14px; border-radius:8px; border:none;
-    font-size:14px; font-weight:600; cursor:pointer;
-    text-decoration:none;
-  }
-  .chat-action-btn svg{width:16px; height:16px; flex-shrink:0;}
-  .chat-action-btn.primary{background:var(--blue); color:#08131f;}
-  .chat-action-btn.primary:hover{background:var(--blue-light);}
-  .chat-action-btn.secondary{background:transparent; border:1px solid var(--border); color:var(--text-dim);}
-  .chat-action-btn.secondary:hover{border-color:var(--blue-light); color:var(--blue-light);}
-  .chat-panel-note{font-size:11px; color:var(--text-dim); text-align:center; margin:0;}
-
-  .gallery-caption{
-    position:absolute;
-    bottom:0; left:0; right:0;
-    background:linear-gradient(to top, rgba(0,0,0,.8), transparent);
-    color:var(--white);
-    font-size:12.5px;
-    font-weight:500;
-    letter-spacing:.3px;
-    padding:20px 14px 10px;
-    text-align:left;
-  }
-  .gallery-note{
-    margin-top:26px;
-    font-size:13px;
-    color:var(--text-dim);
-  }
-  @media (max-width:900px){.gallery-grid{grid-template-columns:repeat(2,1fr);}}
-  @media (max-width:600px){.gallery-grid{grid-template-columns:1fr;}}
-
-  /* reviews */
-  .reviews-carousel{
-    position:relative;
-    max-width:680px;
-    margin:0 auto;
-  }
-  .reviews-viewport{
-    overflow:hidden;
-    border-radius:var(--radius);
-  }
-  .reviews-track{
-    display:flex;
-    transition:transform .4s ease;
-  }
-  .review-slide{
-    flex:0 0 100%;
-    background:var(--bg-panel);
-    border:1px solid var(--border);
-    border-radius:var(--radius);
-    padding:36px 40px;
-    text-align:center;
-  }
-  .review-stars{
-    display:flex;
-    justify-content:center;
-    gap:4px;
-    margin-bottom:18px;
-    color:var(--orange-light);
-  }
-  .review-stars svg{width:18px; height:18px;}
-  .review-quote{
-    font-size:17px;
-    color:var(--white);
-    line-height:1.6;
-    margin:0 0 18px;
-  }
-  .review-meta{
-    font-size:13px;
-    color:var(--text-dim);
-    letter-spacing:.5px;
-  }
-  .review-meta strong{color:var(--steel); font-weight:600;}
-  .carousel-controls{
-    display:flex;
-    align-items:center;
-    justify-content:center;
-    gap:22px;
-    margin-top:24px;
-  }
-  .carousel-arrow{
-    width:44px; height:44px;
-    border-radius:50%;
-    border:1px solid var(--border);
-    background:var(--bg-panel-3);
-    color:var(--white);
-    display:flex;
-    align-items:center;
-    justify-content:center;
-    cursor:pointer;
-    flex-shrink:0;
-    transition:background .15s ease, border-color .15s ease, color .15s ease;
-  }
-  .carousel-arrow:hover{border-color:var(--blue-light); color:var(--blue-light);}
-  .carousel-arrow svg{width:18px; height:18px;}
-  .carousel-dots{
-    display:flex;
-    justify-content:center;
-    gap:8px;
-  }
-  .carousel-dot{
-    width:9px; height:9px;
-    border-radius:50%;
-    background:var(--border);
-    border:none;
-    padding:0;
-    cursor:pointer;
-    transition:background .15s ease, transform .15s ease;
-  }
-  .carousel-dot:hover{background:var(--blue-dark); transform:scale(1.2);}
-  .carousel-dot.is-active{background:var(--blue-light);}
-  .reviews-footer{
-    text-align:center;
-    margin-top:26px;
-    font-size:13.5px;
-    color:var(--text-dim);
-  }
-  .reviews-footer a{color:var(--blue-light); font-weight:600;}
-  @media (max-width:760px){
-    .review-slide{padding:32px 24px;}
-  }
-
-/* ==========================================================================
-   INTERNAL TOOLS SUITE — shared styles for /workspace.html and its 7 tools.
-   Not used by the public-facing pages (index.html + 5 landing pages).
-   Scoped under distinct classnames (tool-header, help-*) so nothing here
-   overlaps or overrides public-site styles above.
-   ========================================================================== */
-
-.tool-header{
-  display:flex;
-  align-items:center;
-  justify-content:space-between;
-  gap:16px;
-  margin-bottom:18px;
-}
-.tool-header-brand{
-  display:flex;
-  align-items:center;
-  gap:10px;
-  text-decoration:none;
-  color:var(--blue-light);
-}
-.tool-header-brand img{
-  height:32px;
-  width:32px;
-  object-fit:contain;
-  flex-shrink:0;
-}
-.tool-header-brand span{
-  font-family:'Oswald',sans-serif;
-  font-size:14px;
-  font-weight:600;
-}
-.tool-header-brand:hover span{ color:var(--orange-light); }
-
-.help-btn{
-  flex-shrink:0;
-  width:30px;
-  height:30px;
-  border-radius:50%;
-  border:1px solid var(--border);
-  background:var(--bg-panel-2);
-  color:var(--text-dim);
-  font-family:'Oswald',sans-serif;
-  font-weight:700;
-  font-size:14px;
-  cursor:pointer;
-  display:flex;
-  align-items:center;
-  justify-content:center;
-  transition:border-color .15s ease, color .15s ease;
-}
-.help-btn:hover{ border-color:var(--orange-light); color:var(--orange-light); }
-
-.help-modal-overlay{
-  display:none;
-  position:fixed;
-  inset:0;
-  background:rgba(0,0,0,0.6);
-  z-index:200;
-  align-items:center;
-  justify-content:center;
-  padding:20px;
-}
-.help-modal-overlay.is-open{ display:flex; }
-.help-modal{
-  position:relative;
-  background:var(--bg-panel);
-  border:1px solid var(--border);
-  border-radius:var(--radius);
-  max-width:520px;
-  width:100%;
-  max-height:80vh;
-  overflow-y:auto;
-  padding:26px 28px;
-}
-.help-modal h3{
-  font-family:'Oswald',sans-serif;
-  color:var(--orange-light);
-  font-size:19px;
-  margin:0 0 14px;
-  padding-right:24px;
-}
-.help-modal-body{ color:var(--text); font-size:14.5px; line-height:1.65; }
-.help-modal-body p{ margin:0 0 12px; }
-.help-modal-body ul{ margin:0 0 12px; padding-left:20px; }
-.help-modal-body li{ margin-bottom:8px; }
-.help-modal-body strong{ color:var(--white); }
-.help-modal-close{
-  position:absolute;
-  top:16px;
-  right:16px;
-  background:none;
-  border:none;
-  color:var(--text-dim);
-  font-size:22px;
-  line-height:1;
-  cursor:pointer;
-  padding:4px 8px;
-}
-.help-modal-close:hover{ color:var(--white); }
-
-/* --- Notes tab (multi-note) --- */
-.notes-layout{ display:flex; gap:20px; align-items:flex-start; flex-wrap:wrap; }
-.notes-sidebar{ flex:0 0 260px; min-width:220px; }
-.notes-editor{ flex:1; min-width:280px; }
-.note-new-btn{ width:100%; margin-bottom: 10px; }
-.note-list-item{
-  display:flex; justify-content:space-between; align-items:center; gap:8px;
-  padding:12px 14px; border-radius:8px; border:1px solid var(--border); background:var(--bg-panel);
-  margin-bottom:8px; cursor:pointer;
-}
-.note-list-item.is-active{ border-color:var(--orange-light); background:var(--bg-panel-2); }
-.note-list-item-text{ overflow:hidden; }
-.note-list-item-text h4{ font-family:'Oswald',sans-serif; font-size:14px; color:var(--white); margin:0 0 3px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-.note-list-item-text p{ font-size:12px; color:var(--text-dim); margin:0; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-.note-list-item .small-btn{ flex-shrink:0; }
-#noteTitle{
-  display:block; width:100%; box-sizing:border-box;
-  padding:10px 12px; background:var(--bg-panel-2); border:1px solid var(--border); border-radius:6px;
-  color:var(--white); font-family:'Oswald',sans-serif; font-size:18px; font-weight:600; margin-bottom:12px;
-}
-#noteBody{
-  display:block; width:100%; box-sizing:border-box;
-  padding:14px 16px; background:var(--bg-panel-2); border:1px solid var(--border); border-radius:var(--radius);
-  color:var(--white); font-size:15px; font-family:inherit; min-height:340px; resize:vertical;
+function isSyncConfigured() {
+  return !SUPABASE_URL.startsWith('PASTE_') && !SUPABASE_ANON_KEY.startsWith('PASTE_');
 }
 
-/* --- Checkbox rows (Cost Lookup first-time discount, etc) --- */
-.checkbox-row{ display:flex; align-items:center; gap:8px; margin-bottom:14px; color:var(--white); font-size:14px; }
-.checkbox-row input[type="checkbox"]{ width:16px; height:16px; accent-color:var(--orange); }
+function getSyncCode() {
+  // Always use the fixed default -- this is deliberate, not a fallback.
+  // Earlier versions of this tool let you type in your own code via a
+  // visible UI (since removed). Any device that used that UI still has
+  // its own typed code sitting in localStorage from back then, which
+  // would silently sync it to a DIFFERENT row than every other device
+  // now using the automatic default -- two devices, two silos, no data
+  // ever crossing between them. Ignoring the old stored value and always
+  // returning DEFAULT_SYNC_CODE guarantees every device converges on the
+  // same row regardless of what it had saved previously.
+  if (localStorage.getItem(SYNC_CODE_KEY) !== DEFAULT_SYNC_CODE) {
+    localStorage.setItem(SYNC_CODE_KEY, DEFAULT_SYNC_CODE);
+  }
+  return DEFAULT_SYNC_CODE;
+}
+function setSyncCode(code) { localStorage.setItem(SYNC_CODE_KEY, code.trim()); }
+function clearSyncCode() { localStorage.removeItem(SYNC_CODE_KEY); }
 
-/* --- Price reference chips (Cost Lookup) --- */
-.price-ref-list{ display:flex; flex-wrap:wrap; gap:8px; margin-top: 4px; }
-.price-ref-chip{
-  display:flex; align-items:center; gap:8px; background:var(--bg-panel-2); border:1px solid var(--border);
-  border-radius:8px; padding:8px 10px 8px 14px; cursor:pointer; font-size:13px; color:var(--white);
+function collectSyncData() {
+  const out = {};
+  SYNC_DATA_KEYS.forEach(k => { out[k] = localStorage.getItem(k); });
+  return out;
 }
-.price-ref-chip:hover{ border-color:var(--orange-light); }
-.price-ref-chip .chip-price{ color:var(--orange-light); font-weight:600; }
-.price-ref-chip .chip-remove{
-  background:none; border:none; color:var(--text-dim); cursor:pointer; font-size:14px; padding:2px 4px;
-}
-.price-ref-chip .chip-remove:hover{ color:#e05252; }
 
-/* --- Responsive table wrapper (prevents page-wide horizontal scroll) --- */
-.table-scroll{ overflow-x:auto; -webkit-overflow-scrolling:touch; }
-.table-scroll table{ min-width:640px; }
+function applySyncData(obj) {
+  if (!obj) return;
+  SYNC_DATA_KEYS.forEach(k => {
+    if (obj[k] !== undefined && obj[k] !== null) localStorage.setItem(k, obj[k]);
+  });
+}
 
-/* --- Inline helper text --- */
-.inline-note{ color:var(--text-dim); font-size:12px; margin-top:4px; }
+function recordSyncStatus(type, ok, error) {
+  const status = { type, ok, error: error || null, time: new Date().toISOString() };
+  try { localStorage.setItem('th_sync_last', JSON.stringify(status)); } catch (e) { /* ignore */ }
+  try { window.dispatchEvent(new CustomEvent('th-sync-status', { detail: status })); } catch (e) { /* ignore */ }
+}
 
-/* --- Sync section (workspace.html) --- */
-.sync-section{
-  background: var(--bg-panel); border: 1px solid var(--border); border-radius: var(--radius);
-  padding: 18px 20px; margin: 24px 0; font-size: 13.5px;
-}
-.sync-section h4{ font-family:'Oswald',sans-serif; color: var(--orange-light); font-size: 13px; margin: 0 0 10px; text-transform: uppercase; letter-spacing: 1px; }
-.sync-row{ display:flex; gap:10px; flex-wrap:wrap; align-items:center; margin-bottom:8px; }
-.sync-row input{
-  flex:1; min-width:160px; padding:9px 11px; background: var(--bg-panel-2); border: 1px solid var(--border);
-  border-radius: 6px; color: var(--white); font-size: 14px; font-family: inherit; box-sizing: border-box;
-}
-.sync-status{ font-size:12.5px; color:var(--text-dim); margin-top:6px; }
-.sync-status.is-ok{ color:var(--orange-light); }
-.sync-status.is-error{ color:#e05252; }
+async function pushSync() {
+  if (!isSyncConfigured()) return { ok: false, error: 'not-configured' };
+  const code = getSyncCode();
+  if (!code) return { ok: false, error: 'no-code' };
 
-/* --- Shared tab component (used by job-tracker.html and invoice-generator.html) --- */
-.tabs { display:flex; gap:6px; margin-bottom:20px; border-bottom:1px solid var(--border); flex-wrap:wrap; }
-.tab-btn {
-  background:none; border:none; color:var(--text-dim); font-family:'Oswald',sans-serif;
-  font-size:14.5px; font-weight:600; padding:12px 18px; cursor:pointer;
-  border-bottom:2px solid transparent;
-}
-.tab-btn.is-active { color:var(--orange-light); border-bottom-color:var(--orange-light); }
-.tab-panel { display:none; }
-.tab-panel.is-active { display:block; }
+  const nowIso = new Date().toISOString();
+  const body = [{ code, data: collectSyncData(), updated_at: nowIso }];
 
-/* --- Custom confirm/alert dialog (replaces native browser confirm()/alert()
-   with something styled to match the app instead of the browser's default
-   system dialog look) --- */
-#customDialogOverlay .help-modal { max-width: 400px; text-align: center; padding: 30px 26px; }
-.dialog-message { font-size: 15px; color: var(--white); margin: 4px 0 22px; line-height: 1.5; white-space: pre-line; }
-.dialog-buttons { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; }
-.dialog-btn {
-  border: none; border-radius: 8px; padding: 11px 22px; cursor: pointer;
-  font-family: 'Oswald', sans-serif; font-size: 14.5px; font-weight: 600;
+  try {
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/${SYNC_TABLE}?on_conflict=code`, {
+      method: 'POST',
+      keepalive: true, // lets this request finish even if the tab is closing/navigating away
+      headers: {
+        'Content-Type': 'application/json',
+        'apikey': SUPABASE_ANON_KEY,
+        'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+        'Prefer': 'resolution=merge-duplicates',
+      },
+      body: JSON.stringify(body),
+    });
+    if (!res.ok) { recordSyncStatus('push', false, 'http-' + res.status); return { ok: false, error: 'http-' + res.status }; }
+    localStorage.setItem(SYNC_KNOWN_AT_KEY, nowIso);
+    recordSyncStatus('push', true);
+    return { ok: true };
+  } catch (e) {
+    recordSyncStatus('push', false, 'network');
+    return { ok: false, error: 'network' };
+  }
 }
-.dialog-btn-primary {
-  background: linear-gradient(135deg, var(--orange-light), var(--orange) 60%, var(--orange-dark));
-  color: #1a0d02;
+
+async function pullSync() {
+  if (!isSyncConfigured()) return { ok: false, error: 'not-configured' };
+  const code = getSyncCode();
+  if (!code) return { ok: false, error: 'no-code' };
+
+  try {
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/${SYNC_TABLE}?code=eq.${encodeURIComponent(code)}&select=data,updated_at`, {
+      headers: {
+        'apikey': SUPABASE_ANON_KEY,
+        'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+      },
+    });
+    if (!res.ok) { recordSyncStatus('pull', false, 'http-' + res.status); return { ok: false, error: 'http-' + res.status }; }
+    const rows = await res.json();
+    if (!rows.length) { recordSyncStatus('pull', false, 'no-data-yet'); return { ok: false, error: 'no-data-yet' }; }
+
+    applySyncData(rows[0].data);
+    localStorage.setItem(SYNC_KNOWN_AT_KEY, rows[0].updated_at);
+    recordSyncStatus('pull', true);
+    return { ok: true };
+  } catch (e) {
+    recordSyncStatus('pull', false, 'network');
+    return { ok: false, error: 'network' };
+  }
 }
-.dialog-btn-danger { background: #e05252; color: #fff; }
-.dialog-btn-cancel { background: var(--bg-panel-2); border: 1px solid var(--border); color: var(--white); }
+
+// Debounced auto-push: call scheduleSync() from any tool's save function.
+let _syncTimer = null;
+function scheduleSync() {
+  if (!isSyncConfigured() || !getSyncCode()) return;
+  clearTimeout(_syncTimer);
+  _syncTimer = setTimeout(() => { _syncTimer = null; pushSync(); }, 2500);
+}
+
+// Safety net: if the page is closed/backgrounded/navigated away from
+// before the 2.5s debounce above fires, the scheduled push would
+// otherwise be silently lost (a quick edit followed by immediately
+// switching devices could look like "it didn't save"). Flushing
+// immediately on visibilitychange/pagehide -- plus `keepalive: true`
+// on the fetch itself -- means the browser will still complete the
+// request even as the tab is torn down.
+function flushSyncNow() {
+  if (_syncTimer) {
+    clearTimeout(_syncTimer);
+    _syncTimer = null;
+    pushSync();
+  }
+}
+if (typeof document !== 'undefined') {
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'hidden') flushSyncNow();
+  });
+}
+if (typeof window !== 'undefined') {
+  window.addEventListener('pagehide', flushSyncNow);
+}
+
+// ---------------------------------------------------------------------------
+// LEADS INBOX — separate from the workspace_sync blob above. Leads come
+// from the public website's contact form and accumulate as real growing
+// rows (not "current device state" like everything else), so they get
+// their own table (`th_leads`) and their own simple REST helpers here.
+// ---------------------------------------------------------------------------
+
+async function fetchLeads() {
+  if (!isSyncConfigured()) return { ok: false, error: 'not-configured', leads: [] };
+  try {
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/th_leads?select=*&order=created_at.desc&limit=50`, {
+      headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': `Bearer ${SUPABASE_ANON_KEY}` },
+    });
+    if (!res.ok) return { ok: false, error: 'http-' + res.status, leads: [] };
+    const leads = await res.json();
+    return { ok: true, leads };
+  } catch (e) {
+    return { ok: false, error: 'network', leads: [] };
+  }
+}
+
+async function markLeadHandled(id, handled) {
+  if (!isSyncConfigured()) return { ok: false, error: 'not-configured' };
+  try {
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/th_leads?id=eq.${id}`, {
+      method: 'PATCH',
+      headers: {
+        'Content-Type': 'application/json',
+        'apikey': SUPABASE_ANON_KEY,
+        'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+        'Prefer': 'return=minimal',
+      },
+      body: JSON.stringify({ handled }),
+    });
+    if (!res.ok) return { ok: false, error: 'http-' + res.status };
+    return { ok: true };
+  } catch (e) {
+    return { ok: false, error: 'network' };
+  }
+}
+
+async function deleteLead(id) {
+  if (!isSyncConfigured()) return { ok: false, error: 'not-configured' };
+  try {
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/th_leads?id=eq.${id}`, {
+      method: 'DELETE',
+      headers: {
+        'apikey': SUPABASE_ANON_KEY,
+        'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+        'Prefer': 'return=minimal',
+      },
+    });
+    if (!res.ok) return { ok: false, error: 'http-' + res.status };
+    return { ok: true };
+  } catch (e) {
+    return { ok: false, error: 'network' };
+  }
+}
+
+// ---------------------------------------------------------------------------
+// JOB PHOTOS — actual image files live in Supabase Storage (a bucket named
+// `job-photos`), which is a different thing from the database tables above.
+// Metadata (which job a photo belongs to, before/after tag, etc.) lives in
+// its own small table, `th_job_photos`, same pattern as leads.
+// ---------------------------------------------------------------------------
+
+const JOB_PHOTOS_BUCKET = 'job-photos';
+const MAX_PHOTO_BYTES = 8 * 1024 * 1024; // 8MB client-side cap
+
+function getJobPhotoUrl(storagePath) {
+  return `${SUPABASE_URL}/storage/v1/object/public/${JOB_PHOTOS_BUCKET}/${storagePath}`;
+}
+
+async function uploadJobPhoto(file, jobId, jobTitle, photoType) {
+  if (!isSyncConfigured()) return { ok: false, error: 'not-configured' };
+  if (file.size > MAX_PHOTO_BYTES) return { ok: false, error: 'too-large' };
+
+  const ext = (file.name.split('.').pop() || 'jpg').toLowerCase().replace(/[^a-z0-9]/g, '') || 'jpg';
+  const path = `job-${jobId}/${Date.now()}.${ext}`;
+
+  try {
+    const uploadRes = await fetch(`${SUPABASE_URL}/storage/v1/object/${JOB_PHOTOS_BUCKET}/${path}`, {
+      method: 'POST',
+      headers: {
+        'apikey': SUPABASE_ANON_KEY,
+        'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+        'Content-Type': file.type || 'image/jpeg',
+      },
+      body: file,
+    });
+    if (!uploadRes.ok) return { ok: false, error: 'upload-http-' + uploadRes.status };
+
+    const insertRes = await fetch(`${SUPABASE_URL}/rest/v1/th_job_photos`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'apikey': SUPABASE_ANON_KEY,
+        'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+        'Prefer': 'return=representation',
+      },
+      body: JSON.stringify([{ job_id: jobId, job_title: jobTitle, storage_path: path, photo_type: photoType || 'photo' }]),
+    });
+    if (!insertRes.ok) return { ok: false, error: 'metadata-http-' + insertRes.status };
+    const rows = await insertRes.json();
+    return { ok: true, photo: rows[0] };
+  } catch (e) {
+    return { ok: false, error: 'network' };
+  }
+}
+
+async function fetchJobPhotos(jobId) {
+  if (!isSyncConfigured()) return { ok: false, error: 'not-configured', photos: [] };
+  try {
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/th_job_photos?job_id=eq.${jobId}&select=*&order=created_at.desc`, {
+      headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': `Bearer ${SUPABASE_ANON_KEY}` },
+    });
+    if (!res.ok) return { ok: false, error: 'http-' + res.status, photos: [] };
+    const photos = await res.json();
+    return { ok: true, photos };
+  } catch (e) {
+    return { ok: false, error: 'network', photos: [] };
+  }
+}
+
+async function deleteJobPhoto(photoId, storagePath) {
+  if (!isSyncConfigured()) return { ok: false, error: 'not-configured' };
+  try {
+    await fetch(`${SUPABASE_URL}/storage/v1/object/${JOB_PHOTOS_BUCKET}/${storagePath}`, {
+      method: 'DELETE',
+      headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': `Bearer ${SUPABASE_ANON_KEY}` },
+    });
+    // Delete the metadata row regardless of the storage-delete result above,
+    // so a partial failure doesn't leave an orphaned row the UI still shows.
+    const delRow = await fetch(`${SUPABASE_URL}/rest/v1/th_job_photos?id=eq.${photoId}`, {
+      method: 'DELETE',
+      headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': `Bearer ${SUPABASE_ANON_KEY}`, 'Prefer': 'return=minimal' },
+    });
+    if (!delRow.ok) return { ok: false, error: 'http-' + delRow.status };
+    return { ok: true };
+  } catch (e) {
+    return { ok: false, error: 'network' };
+  }
+}
+
+// Marks/unmarks a job photo as a candidate for the public website gallery.
+// This does NOT publish it anywhere -- it just queues it for review. Actual
+// publishing means downloading the image, adding it to images/gallery/ in
+// the repo, and adding an entry to the galleryItems array in index.html --
+// a deliberate, separate step by design (see Dashboard's Website Gallery
+// Queue section for the review list).
+async function toggleFeaturedPhoto(photoId, featured, caption) {
+  if (!isSyncConfigured()) return { ok: false, error: 'not-configured' };
+  try {
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/th_job_photos?id=eq.${photoId}`, {
+      method: 'PATCH',
+      headers: {
+        'Content-Type': 'application/json',
+        'apikey': SUPABASE_ANON_KEY,
+        'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+        'Prefer': 'return=minimal',
+      },
+      body: JSON.stringify({ featured, public_caption: caption }),
+    });
+    if (!res.ok) return { ok: false, error: 'http-' + res.status };
+    return { ok: true };
+  } catch (e) {
+    return { ok: false, error: 'network' };
+  }
+}
+
+async function fetchFeaturedPhotos() {
+  if (!isSyncConfigured()) return { ok: false, error: 'not-configured', photos: [] };
+  try {
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/th_job_photos?featured=eq.true&select=*&order=created_at.desc`, {
+      headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': `Bearer ${SUPABASE_ANON_KEY}` },
+    });
+    if (!res.ok) return { ok: false, error: 'http-' + res.status, photos: [] };
+    const photos = await res.json();
+    return { ok: true, photos };
+  } catch (e) {
+    return { ok: false, error: 'network', photos: [] };
+  }
+}
+
+// Auto-pull once per page load, before the page's own render functions run
+// their first pass, so freshly-synced data shows up immediately. Tools call
+// `await initSyncOnLoad()` at the top of their init sequence.
+async function initSyncOnLoad() {
+  if (!isSyncConfigured() || !getSyncCode()) return;
+  await pullSync();
+}
+
+// ---------------------------------------------------------------------------
+// REAL-TIME SYNC (optional) — requires the supabase-js CDN script to be
+// loaded BEFORE this file (see the <script> tag order in each page's
+// <head>). Everything above this point works fine without it; this only
+// adds live updates between open tabs instead of pull-on-load-only.
+// ---------------------------------------------------------------------------
+
+let _supabaseClient = null;
+let _realtimeChannel = null;
+let _leadsRealtimeChannel = null;
+
+function getSupabaseClient() {
+  if (!isSyncConfigured()) return null;
+  if (typeof window === 'undefined' || typeof window.supabase === 'undefined') return null;
+  if (!_supabaseClient) {
+    _supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+  }
+  return _supabaseClient;
+}
+
+// Subscribes to live changes on this device's sync row. When ANY device
+// (including this one) pushes a change, `onRemoteChange` fires -- pull the
+// latest and re-render, no page reload needed. `onStatusChange` reports
+// connection state ('SUBSCRIBED', 'TIMED_OUT', 'CLOSED', 'CHANNEL_ERROR')
+// so the page can show a small live/offline indicator.
+function startRealtimeSync(onRemoteChange, onStatusChange) {
+  const client = getSupabaseClient();
+  if (!client) {
+    if (onStatusChange) onStatusChange('unavailable');
+    return;
+  }
+  const code = getSyncCode();
+  _realtimeChannel = client
+    .channel('workspace-sync-' + code)
+    .on(
+      'postgres_changes',
+      { event: '*', schema: 'public', table: 'workspace_sync', filter: `code=eq.${code}` },
+      async () => {
+        await pullSync();
+        if (onRemoteChange) onRemoteChange();
+      }
+    )
+    .subscribe((status) => {
+      if (onStatusChange) onStatusChange(status);
+    });
+}
+
+// Same idea, for the Leads inbox specifically -- fires when a new lead
+// comes in from the website, or an existing one is updated/deleted.
+function startLeadsRealtime(onChange, onStatusChange) {
+  const client = getSupabaseClient();
+  if (!client) {
+    if (onStatusChange) onStatusChange('unavailable');
+    return;
+  }
+  _leadsRealtimeChannel = client
+    .channel('leads-realtime')
+    .on(
+      'postgres_changes',
+      { event: '*', schema: 'public', table: 'th_leads' },
+      () => { if (onChange) onChange(); }
+    )
+    .subscribe((status) => {
+      if (onStatusChange) onStatusChange(status);
+    });
+}
+
+function stopRealtimeSync() {
+  if (_realtimeChannel) { _realtimeChannel.unsubscribe(); _realtimeChannel = null; }
+  if (_leadsRealtimeChannel) { _leadsRealtimeChannel.unsubscribe(); _leadsRealtimeChannel = null; }
+}
+
+// ---------------------------------------------------------------------------
+// RECEIPTS — separate Storage bucket from job photos (different lifecycle:
+// receipts attach 1:1 to an expense entry already living in the
+// workspace_sync blob, so no separate metadata table is needed here --
+// just the uploaded file itself, referenced by path from the expense
+// record).
+// ---------------------------------------------------------------------------
+
+const RECEIPTS_BUCKET = 'receipts';
+
+function getReceiptUrl(storagePath) {
+  return `${SUPABASE_URL}/storage/v1/object/public/${RECEIPTS_BUCKET}/${storagePath}`;
+}
+
+async function uploadReceipt(file, expenseId) {
+  if (!isSyncConfigured()) return { ok: false, error: 'not-configured' };
+  if (file.size > MAX_PHOTO_BYTES) return { ok: false, error: 'too-large' };
+
+  const ext = (file.name.split('.').pop() || 'jpg').toLowerCase().replace(/[^a-z0-9]/g, '') || 'jpg';
+  const path = `expense-${expenseId}/${Date.now()}.${ext}`;
+
+  try {
+    const uploadRes = await fetch(`${SUPABASE_URL}/storage/v1/object/${RECEIPTS_BUCKET}/${path}`, {
+      method: 'POST',
+      headers: {
+        'apikey': SUPABASE_ANON_KEY,
+        'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+        'Content-Type': file.type || 'image/jpeg',
+      },
+      body: file,
+    });
+    if (!uploadRes.ok) return { ok: false, error: 'upload-http-' + uploadRes.status };
+    return { ok: true, path };
+  } catch (e) {
+    return { ok: false, error: 'network' };
+  }
+}
+
+async function deleteReceipt(storagePath) {
+  if (!isSyncConfigured() || !storagePath) return { ok: true }; // nothing to delete is not an error
+  try {
+    await fetch(`${SUPABASE_URL}/storage/v1/object/${RECEIPTS_BUCKET}/${storagePath}`, {
+      method: 'DELETE',
+      headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': `Bearer ${SUPABASE_ANON_KEY}` },
+    });
+    return { ok: true };
+  } catch (e) {
+    return { ok: false, error: 'network' };
+  }
+}

@@ -4,49 +4,73 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta name="robots" content="noindex, nofollow">
-<title>Review Request Sender | Triple H Enterprises (Internal Tool)</title>
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data:; connect-src 'self'; frame-src 'none'; object-src 'none'; base-uri 'self'; frame-ancestors 'none';">
+<title>Route Planner | Triple H Enterprises (Internal Tool)</title>
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data:; connect-src 'self' https://*.supabase.co wss://*.supabase.co; frame-src 'none'; object-src 'none'; base-uri 'self'; frame-ancestors 'none';">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;500;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="/styles.css">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js" defer></script>
+<script src="/sync.js" defer></script>
 <script src="/tools-common.js" defer></script>
 <style>
-  body { padding: 90px 20px 60px; max-width: 640px; margin: 0 auto; }
+  body { padding: 90px 20px 60px; max-width: 680px; margin: 0 auto; }
   .tool-title { font-family:'Oswald',sans-serif; font-weight:700; font-size:28px; color:var(--white); margin-bottom:6px; }
-  .tool-sub { color: var(--text-dim); margin-bottom: 30px; }
+  .tool-sub { color: var(--text-dim); margin-bottom: 24px; }
   .home-link { display:inline-block; margin-bottom: 20px; color: var(--blue-light); font-size: 14px; }
   .form-section {
     background: var(--bg-panel); border: 1px solid var(--border); border-radius: var(--radius);
-    padding: 24px; margin-bottom: 20px;
+    padding: 22px; margin-bottom: 20px;
   }
-  .form-section h3 { font-family:'Oswald',sans-serif; color: var(--orange-light); font-size: 14px; margin: 0 0 14px; text-transform: uppercase; letter-spacing: 1px; }
-  .form-field { margin-bottom: 14px; }
-  .form-field label { display: block; font-size: 13px; color: var(--text-dim); margin-bottom: 5px; }
-  .form-field input {
-    width: 100%; padding: 10px 12px; background: var(--bg-panel-2); border: 1px solid var(--border);
-    border-radius: 6px; color: var(--white); font-size: 15px; font-family: inherit; box-sizing: border-box;
+  .stop-row { display: flex; gap: 8px; margin-bottom: 10px; align-items: center; }
+  .stop-row input {
+    flex: 1; padding: 10px 12px; background: var(--bg-panel-2); border: 1px solid var(--border);
+    border-radius: 6px; color: var(--white); font-size: 14.5px; font-family: inherit;
   }
-  .message-preview {
-    background: var(--bg-panel-2); border: 1px solid var(--border); border-radius: 8px;
-    padding: 16px; font-size: 14.5px; line-height: 1.6; color: var(--white); white-space: pre-wrap;
-    margin-bottom: 14px;
+  .stop-num { color: var(--text-dim); font-size: 13px; width: 22px; flex-shrink: 0; }
+  .icon-btn {
+    background: none; border: 1px solid var(--border); color: var(--text-dim); border-radius: 6px;
+    width: 32px; height: 32px; cursor: pointer; font-size: 14px; flex-shrink: 0;
   }
-  .btn-row { display: flex; gap: 12px; flex-wrap: wrap; }
-  .action-btn {
-    flex: 1; min-width: 160px; text-align: center; padding: 13px 18px; border-radius: 8px;
-    font-family:'Oswald',sans-serif; font-weight: 600; font-size: 14.5px; cursor: pointer; border: none;
-    text-decoration: none; display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+  .icon-btn:hover { border-color: var(--orange-light); color: var(--orange-light); }
+  .icon-btn.danger:hover { border-color: #e05252; color: #e05252; }
+  .add-stop-btn {
+    background: none; border: 1px dashed var(--border); color: var(--blue-light); border-radius: 6px;
+    padding: 8px 14px; cursor: pointer; font-size: 13.5px; margin-top: 4px;
   }
-  .btn-copy { background: var(--bg-panel-2); border: 1px solid var(--border); color: var(--white); }
-  .btn-copy:hover { border-color: var(--blue-light); }
-  .btn-send {
+  .primary-btn {
     background: linear-gradient(135deg, var(--orange-light), var(--orange) 60%, var(--orange-dark));
-    color: #1a0d02;
+    color: #1a0d02; font-weight: 700; font-family:'Oswald',sans-serif; font-size: 15px;
+    border: none; border-radius: 8px; padding: 13px 24px; cursor: pointer; width: 100%; margin-top: 16px;
+    text-decoration: none; display: block; text-align: center; box-sizing: border-box;
   }
-  .btn-send:hover { opacity: 0.92; }
-  .copy-confirm { color: var(--orange-light); font-size: 13px; margin-top: 8px; display: none; }
-  .fallback-note { color: var(--text-dim); font-size: 13px; margin-top: 16px; border-top: 1px solid var(--border); padding-top: 14px; }
+  .primary-btn.is-disabled { opacity: 0.4; cursor: not-allowed; pointer-events: none; }
+  .stop-list-view { margin-top: 20px; }
+  .stop-view-row {
+    display: flex; justify-content: space-between; align-items: center; padding: 10px 0;
+    border-bottom: 1px solid var(--border); font-size: 14px;
+  }
+  .stop-view-row a { color: var(--blue-light); font-size: 13px; }
+  .warning-note { color: var(--orange-light); font-size: 12.5px; margin-top: 10px; display: none; }
+  .form-section h3 { font-family:'Oswald',sans-serif; color: var(--orange-light); font-size: 14px; margin: 0 0 14px; text-transform: uppercase; letter-spacing: 1px; }
+  .form-row { display: flex; gap: 14px; margin-bottom: 12px; flex-wrap: wrap; }
+  .form-field { flex: 1; min-width: 150px; }
+  .form-field label { display: block; font-size: 12.5px; color: var(--text-dim); margin-bottom: 4px; }
+  .form-field input {
+    width: 100%; padding: 9px 11px; background: var(--bg-panel-2); border: 1px solid var(--border);
+    border-radius: 6px; color: var(--white); font-size: 14.5px; font-family: inherit; box-sizing: border-box;
+  }
+  .results-box { margin-top: 8px; }
+  .result-row { display: flex; justify-content: space-between; padding: 9px 0; border-bottom: 1px solid var(--border); font-size: 14.5px; }
+  .result-row.final { font-weight: 700; font-size: 18px; color: var(--orange-light); border-bottom: none; padding-top: 14px; }
+  .result-label { color: var(--text-dim); }
+  .result-label.final { color: var(--white); }
+  .policy-note { color: var(--text-dim); font-size: 12.5px; margin: -6px 0 14px; line-height: 1.5; }
+  .realtime-badge { display: inline-flex; align-items: center; gap: 5px; font-size: 11.5px; color: var(--text-dim); margin-left: 10px; }
+  .realtime-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--text-dim); flex-shrink: 0; }
+  .realtime-dot.is-live { background: #4caf50; }
+  .realtime-dot.is-connecting { background: var(--orange-light); }
+  .realtime-dot.is-error { background: #e05252; }
 </style>
 </head>
 <body>
@@ -58,171 +82,223 @@
   </a>
   <button class="help-btn" onclick="openHelpModal()" aria-label="How to use this tool" title="How to use this tool">?</button>
 </div>
-<div class="tool-title">Review Request Sender</div>
-<p class="tool-sub">Internal tool &mdash; fill in the job details after finishing, tap Send. Nothing here is saved or sent to any server; everything happens right in this browser tab and your own phone's messaging app.</p>
+<div class="tool-title">Route Planner</div>
+<p class="tool-sub">Type in today's addresses, get one link that opens the whole route in Google Maps &mdash; starting from wherever you are when you tap it.</p>
 
 <div class="form-section">
-  <h3>Job Details</h3>
-  <div class="form-field">
-    <label>Customer's first name (optional &mdash; leave blank for a generic greeting)</label>
-    <input type="text" id="custName" placeholder="Sarah">
-  </div>
-  <div class="form-field">
-    <label>What you did (optional &mdash; fills into the message)</label>
-    <input type="text" id="jobDesc" placeholder="the stove repair">
-  </div>
-  <div class="form-field">
-    <label>Customer's phone number</label>
-    <input type="tel" id="custPhone" placeholder="(435) 555-0123">
-  </div>
+  <div id="stopsContainer"></div>
+  <button class="add-stop-btn" onclick="addStop()">+ Add Stop</button>
+  <p class="warning-note" id="tooManyWarning">Google Maps allows up to 10 stops per route &mdash; remove one before opening the full route.</p>
+  <a class="primary-btn" id="openRouteBtn" href="#" target="_blank" rel="noopener">Open Full Route in Google Maps</a>
 </div>
 
+<div class="stop-list-view" id="individualLinks"></div>
+
 <div class="form-section">
-  <h3>Message Preview</h3>
-  <div class="message-preview" id="messagePreview"></div>
-  <div class="btn-row">
-    <button class="action-btn btn-copy" onclick="shuffleMessage()">&#128256; Try Another</button>
-    <button class="action-btn btn-copy" onclick="copyMessage()">Copy Message</button>
-    <a class="action-btn btn-send" id="sendLink" href="#">Open Text Message</a>
+  <h3>Cost Analyzer (To &amp; From) <span class="realtime-badge" id="realtimeBadge"><span class="realtime-dot" id="realtimeDot"></span><span id="realtimeText">Live sync: connecting...</span></span></h3>
+  <p class="policy-note">Your posted trip fee policy: free within 15 miles of St. George, $25 flat beyond that. This calculator gives you a fuel-cost-based figure too, so you can compare against the flat policy and decide what to actually charge.</p>
+  <div class="form-row">
+    <div class="form-field"><label>One-way distance (miles)</label><input type="number" id="tripDistance" value="0" min="0" step="0.5" oninput="calculateTripCost()"></div>
+    <div class="form-field"><label>Cost per mile ($)</label><input type="number" id="tripFuelRate" value="0.76" min="0" step="0.01" oninput="calculateTripCost(); saveMileageRate();"></div>
+    <div class="form-field"><label>Sales tax rate (%)</label><input type="number" id="tripTaxRate" value="6.75" min="0" step="0.01" oninput="calculateTripCost()"></div>
   </div>
-  <div class="copy-confirm" id="copyConfirm">Copied! Paste it in if the text app doesn't fill it in automatically.</div>
-  <p class="fallback-note">Tapping "Open Text Message" opens your phone's messaging app addressed to this number. Most phones pre-fill the message text automatically &mdash; if yours doesn't, just tap Copy Message first and paste it in.</p>
+  <div class="results-box">
+    <div class="result-row"><span class="result-label">Round-trip distance</span><span id="tripMilesResult">0 mi</span></div>
+    <div class="result-row"><span class="result-label">Estimated fuel cost</span><span id="tripFuelResult">$0.00</span></div>
+    <div class="result-row"><span class="result-label">Flat policy fee (for reference)</span><span id="tripPolicyResult">$0.00</span></div>
+    <div class="result-row"><span class="result-label">Sales tax on suggested charge</span><span id="tripTaxResult">$0.00</span></div>
+    <div class="result-row final"><span class="result-label final">Suggested trip charge, with tax</span><span id="tripTotalResult">$0.00</span></div>
+  </div>
 </div>
 
 <div class="help-modal-overlay" id="helpModalOverlay" onclick="if(event.target===this) closeHelpModal()">
   <div class="help-modal">
     <button class="help-modal-close" onclick="closeHelpModal()" aria-label="Close">&times;</button>
-    <h3>How to Use: Review Request Sender</h3>
+    <h3>How to Use: Route Planner</h3>
     <div class="help-modal-body">
-      <p>Use this right after finishing a job, while it's fresh.</p>
+      <p>Type in today's job addresses in the order you plan to visit them.</p>
       <ul>
-        <li>Customer name and job description are both optional &mdash; the message reads naturally either way.</li>
-        <li>Enter the customer's phone number, then tap <strong>Open Text Message</strong> &mdash; it opens your phone's messaging app with the message pre-filled on most phones.</li>
-        <li>If your phone doesn't pre-fill it, tap <strong>Copy Message</strong> first and paste it in.</li>
-        <li>Not feeling one of the six phrasings? Tap <strong>Try Another</strong> to shuffle to a different one.</li>
-        <li>Nothing here is saved or sent to any server &mdash; it all happens in this browser tab and your phone's own messaging app.</li>
+        <li>Use <strong>+ Add Stop</strong> for more addresses, or the &uarr;/&darr; arrows to reorder, &times; to remove.</li>
+        <li>Tap <strong>Open Full Route in Google Maps</strong> to open the whole route as one set of driving directions, starting from wherever you are.</li>
+        <li>Google Maps caps routes at 10 stops &mdash; if you hit that, use the individual "Open this stop" links below the form instead.</li>
+        <li><strong>Cost Analyzer</strong> &mdash; type in the one-way distance for today's trip and it estimates round-trip fuel cost, shows your flat $25/free-within-15-miles policy for reference, and adds sales tax on top so you can see a full suggested charge. The cost-per-mile field is shared with the Job Tracker's Expenses tab, so updating it here updates it there too.</li>
+        <li>Nothing here is saved between visits &mdash; refreshing the page clears the stop list (the Cost Analyzer's rate defaults do persist, since they're shared with Expenses).</li>
       </ul>
     </div>
   </div>
 </div>
 
 <script>
-  const GOOGLE_REVIEW_LINK = 'https://g.page/r/CVJ0Qr-SsDkgEAI/review';
+  let stopCount = 0;
 
-  // Six genuinely different message structures, not just word-swaps of
-  // the same sentence -- each handles a blank name/job gracefully with
-  // its own fallback wording so it still reads naturally either way.
-  const MESSAGE_VARIANTS = [
-    (name, job) => {
-      const greeting = name ? `Hey ${name}! ` : 'Hey! ';
-      const jobPhrase = job ? `letting me take care of ${job}` : 'letting me help out';
-      return `${greeting}Thanks again for ${jobPhrase} today! If you have 60 seconds, a Google review really helps a small business like mine \u2014 ${GOOGLE_REVIEW_LINK} Really appreciate it.`;
-    },
-    (name, job) => {
-      const lead = name ? `${name}, thanks` : 'Thanks';
-      const jobPhrase = job ? `for having me out today for ${job}` : 'for having me out today';
-      return `${lead} ${jobPhrase}! If you've got a minute, I'd really appreciate a quick Google review \u2014 ${GOOGLE_REVIEW_LINK} It genuinely helps a lot.`;
-    },
-    (name, job) => {
-      const greeting = name ? `Hi ${name}! ` : 'Hi! ';
-      const jobPhrase = job ? `after ${job}` : 'after today\u2019s visit';
-      return `${greeting}Hope everything's working great ${jobPhrase}. If you don't mind, a short Google review would mean a lot to me as a small business \u2014 ${GOOGLE_REVIEW_LINK} Thanks so much!`;
-    },
-    (name, job) => {
-      const lead = name ? `${name}, really` : 'Really';
-      const jobPhrase = job ? `with ${job}` : 'today';
-      return `${lead} appreciated the chance to help out ${jobPhrase}. If you have a spare minute, a Google review goes a long way for a business like mine \u2014 ${GOOGLE_REVIEW_LINK} Thank you!`;
-    },
-    (name, job) => {
-      const greeting = name ? `Hey ${name}, ` : 'Hey, ';
-      const jobPhrase = job ? `trusting me with ${job}` : 'trusting me with the job';
-      return `${greeting}thanks again for ${jobPhrase} today! A quick Google review (60 seconds, tops) would help more than you know \u2014 ${GOOGLE_REVIEW_LINK} Appreciate you!`;
-    },
-    (name, job) => {
-      const lead = name ? `${name}, thanks` : 'Thanks';
-      const jobPhrase = job ? `to take care of ${job}` : 'to help out';
-      return `${lead} for the opportunity ${jobPhrase} today. If you get a chance, I'd be grateful for a Google review \u2014 ${GOOGLE_REVIEW_LINK} Thanks a ton!`;
-    },
-  ];
-
-  let currentVariantIndex = Math.floor(Math.random() * MESSAGE_VARIANTS.length);
-
-  function buildMessage() {
-    const name = document.getElementById('custName').value.trim();
-    const job = document.getElementById('jobDesc').value.trim();
-    return MESSAGE_VARIANTS[currentVariantIndex](name, job);
+  function addStop(value = '') {
+    stopCount++;
+    const id = stopCount;
+    const row = document.createElement('div');
+    row.className = 'stop-row';
+    row.id = 'stop-' + id;
+    row.innerHTML = `
+      <span class="stop-num">${document.querySelectorAll('.stop-row').length + 1}.</span>
+      <input type="text" class="stop-input" value="${value}" placeholder="123 Main St, St. George, UT" oninput="updateRoute()">
+      <button class="icon-btn" onclick="moveStop(${id}, -1)" title="Move up">&uarr;</button>
+      <button class="icon-btn" onclick="moveStop(${id}, 1)" title="Move down">&darr;</button>
+      <button class="icon-btn danger" onclick="removeStop(${id})" title="Remove">&times;</button>`;
+    document.getElementById('stopsContainer').appendChild(row);
+    renumberStops();
+    updateRoute();
   }
 
-  function shuffleMessage() {
-    // pick a different variant than the one currently showing, so the
-    // button always visibly changes something
-    let next;
-    do { next = Math.floor(Math.random() * MESSAGE_VARIANTS.length); }
-    while (next === currentVariantIndex && MESSAGE_VARIANTS.length > 1);
-    currentVariantIndex = next;
-    updatePreviewAndLink();
+  function removeStop(id) {
+    const el = document.getElementById('stop-' + id);
+    if (el) el.remove();
+    renumberStops();
+    updateRoute();
   }
 
-  function digitsOnly(str) {
-    return str.replace(/\D/g, '');
+  function moveStop(id, direction) {
+    const container = document.getElementById('stopsContainer');
+    const row = document.getElementById('stop-' + id);
+    if (direction === -1 && row.previousElementSibling) {
+      container.insertBefore(row, row.previousElementSibling);
+    } else if (direction === 1 && row.nextElementSibling) {
+      container.insertBefore(row.nextElementSibling, row);
+    }
+    renumberStops();
+    updateRoute();
   }
 
-  function isIOS() {
-    return /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
-  }
-
-  function updatePreviewAndLink() {
-    const message = buildMessage();
-    document.getElementById('messagePreview').textContent = message;
-
-    const rawPhone = document.getElementById('custPhone').value;
-    const digits = digitsOnly(rawPhone);
-    // assume US numbers if 10 digits given without country code
-    const phoneForLink = digits.length === 10 ? '1' + digits : digits;
-
-    const encodedMessage = encodeURIComponent(message);
-    // This exact separator differs by platform in practice -- iOS has
-    // historically wanted `&body=`, Android `?body=`. Neither is fully
-    // guaranteed across every OS version, which is exactly why the Copy
-    // Message button above exists as a guaranteed-working fallback.
-    const separator = isIOS() ? '&' : '?';
-    const smsLink = `sms:${phoneForLink}${separator}body=${encodedMessage}`;
-
-    document.getElementById('sendLink').href = smsLink;
-  }
-
-  document.getElementById('custName').addEventListener('input', updatePreviewAndLink);
-  document.getElementById('jobDesc').addEventListener('input', updatePreviewAndLink);
-  document.getElementById('custPhone').addEventListener('input', updatePreviewAndLink);
-
-  // Prefill from URL params if arriving from a completed job in the Job
-  // Tracker (e.g. /review-request.html?name=Sarah&job=faucet+repair&phone=4355550123)
-  const params = new URLSearchParams(location.search);
-  if (params.get('name')) document.getElementById('custName').value = params.get('name');
-  if (params.get('job')) document.getElementById('jobDesc').value = params.get('job');
-  if (params.get('phone')) document.getElementById('custPhone').value = params.get('phone');
-
-  updatePreviewAndLink();
-
-  function copyMessage() {
-    const message = buildMessage();
-    navigator.clipboard.writeText(message).then(() => {
-      const confirm = document.getElementById('copyConfirm');
-      confirm.style.display = 'block';
-      setTimeout(() => { confirm.style.display = 'none'; }, 3000);
-    }).catch(() => {
-      // Fallback for browsers without clipboard API access
-      const textarea = document.createElement('textarea');
-      textarea.value = message;
-      document.body.appendChild(textarea);
-      textarea.select();
-      document.execCommand('copy');
-      document.body.removeChild(textarea);
-      const confirm = document.getElementById('copyConfirm');
-      confirm.style.display = 'block';
-      setTimeout(() => { confirm.style.display = 'none'; }, 3000);
+  function renumberStops() {
+    document.querySelectorAll('.stop-row').forEach((row, i) => {
+      row.querySelector('.stop-num').textContent = (i + 1) + '.';
     });
   }
+
+  function getStopValues() {
+    return [...document.querySelectorAll('.stop-input')].map(i => i.value.trim()).filter(v => v !== '');
+  }
+
+  function buildRouteUrl(stops) {
+    if (stops.length === 0) return null;
+    const destination = stops[stops.length - 1];
+    const waypoints = stops.slice(0, -1);
+    let url = 'https://www.google.com/maps/dir/?api=1&destination=' + encodeURIComponent(destination) + '&travelmode=driving';
+    if (waypoints.length > 0) {
+      url += '&waypoints=' + waypoints.map(encodeURIComponent).join('|');
+    }
+    return url;
+  }
+
+  function updateRoute() {
+    const stops = getStopValues();
+    const btn = document.getElementById('openRouteBtn');
+    const warning = document.getElementById('tooManyWarning');
+
+    if (stops.length > 10) {
+      warning.style.display = 'block';
+      btn.classList.add('is-disabled');
+      btn.removeAttribute('href');
+    } else {
+      warning.style.display = 'none';
+      const url = buildRouteUrl(stops);
+      if (url) {
+        btn.classList.remove('is-disabled');
+        btn.href = url;
+      } else {
+        btn.classList.add('is-disabled');
+        btn.removeAttribute('href');
+      }
+    }
+
+    const linksContainer = document.getElementById('individualLinks');
+    if (stops.length === 0) {
+      linksContainer.innerHTML = '';
+      return;
+    }
+    linksContainer.innerHTML = stops.map((s, i) => `
+      <div class="stop-view-row">
+        <span>${i + 1}. ${escapeHtml(s)}</span>
+        <a href="https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(s)}&travelmode=driving" target="_blank" rel="noopener">Open this stop &rarr;</a>
+      </div>`).join('');
+  }
+
+  function escapeHtml(str) {
+    const div = document.createElement('div');
+    div.textContent = str;
+    return div.innerHTML;
+  }
+
+  // ---------- Cost Analyzer ----------
+  const RATE_STORAGE_KEY = 'th_mileage_rate';
+
+  function saveMileageRate() {
+    localStorage.setItem(RATE_STORAGE_KEY, document.getElementById('tripFuelRate').value);
+    if (typeof scheduleSync === 'function') scheduleSync();
+  }
+
+  function loadSharedMileageRate() {
+    const saved = localStorage.getItem(RATE_STORAGE_KEY);
+    if (saved) document.getElementById('tripFuelRate').value = saved;
+  }
+
+  function money(v) { return '$' + v.toFixed(2); }
+
+  function calculateTripCost() {
+    const oneWay = parseFloat(document.getElementById('tripDistance').value) || 0;
+    const rate = parseFloat(document.getElementById('tripFuelRate').value) || 0;
+    const taxRate = parseFloat(document.getElementById('tripTaxRate').value) || 0;
+
+    const roundTrip = oneWay * 2;
+    const fuelCost = roundTrip * rate;
+    const policyFee = oneWay <= 15 ? 0 : 25;
+    const suggestedCharge = fuelCost;
+    const tax = suggestedCharge * (taxRate / 100);
+    const total = suggestedCharge + tax;
+
+    document.getElementById('tripMilesResult').textContent = roundTrip.toFixed(1) + ' mi';
+    document.getElementById('tripFuelResult').textContent = money(fuelCost);
+    document.getElementById('tripPolicyResult').textContent = money(policyFee);
+    document.getElementById('tripTaxResult').textContent = money(tax);
+    document.getElementById('tripTotalResult').textContent = money(total);
+  }
+
+  loadSharedMileageRate();
+  calculateTripCost();
+  addStop();
+  addStop();
+
+  function updateRealtimeBadge(status) {
+    const dot = document.getElementById('realtimeDot');
+    const text = document.getElementById('realtimeText');
+    if (!dot || !text) return;
+    dot.className = 'realtime-dot';
+    if (status === 'SUBSCRIBED') {
+      dot.classList.add('is-live');
+      text.textContent = 'Live sync active';
+    } else if (status === 'unavailable') {
+      dot.classList.add('is-error');
+      text.textContent = 'Live sync unavailable';
+    } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT' || status === 'CLOSED') {
+      dot.classList.add('is-error');
+      text.textContent = 'Live sync disconnected';
+    } else {
+      dot.classList.add('is-connecting');
+      text.textContent = 'Live sync: connecting...';
+    }
+  }
+
+  // sync.js loads with `defer`, which has no effect on this inline script
+  // (defer only applies to scripts with a `src`) -- it runs immediately at
+  // parse time instead. Waiting for DOMContentLoaded guarantees sync.js
+  // has actually finished loading before we call its functions.
+  document.addEventListener('DOMContentLoaded', function () {
+    initSyncOnLoad().then(() => {
+      loadSharedMileageRate();
+      calculateTripCost();
+      if (typeof startRealtimeSync === 'function') {
+        startRealtimeSync(() => { loadSharedMileageRate(); calculateTripCost(); }, updateRealtimeBadge);
+      }
+    });
+  });
 </script>
 </body>
 </html>
