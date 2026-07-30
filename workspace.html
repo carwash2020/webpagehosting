@@ -115,6 +115,31 @@
   .gallery-queue-caption { color: var(--white); font-size: 12.5px; margin: 8px 0 4px; }
   .gallery-queue-meta { color: var(--text-dim); font-size: 11.5px; margin-bottom: 8px; }
 
+  .compliance-card {
+    background: var(--bg-panel); border: 1px solid var(--border); border-left: 3px solid var(--blue);
+    border-radius: var(--radius); padding: 20px 22px; margin-bottom: 14px;
+  }
+  .compliance-card.is-expiring { border-left-color: var(--orange); }
+  .compliance-card.is-expired { border-left-color: #e05252; }
+  .compliance-card-top { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; margin-bottom: 10px; }
+  .compliance-card-title { font-family:'Oswald',sans-serif; font-size: 16px; color: var(--white); }
+  .compliance-status-badge {
+    font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;
+    padding: 4px 10px; border-radius: 12px; flex-shrink: 0; white-space: nowrap;
+  }
+  .compliance-status-badge.is-ok { color: #4caf50; background: rgba(76,175,80,0.12); }
+  .compliance-status-badge.is-expiring { color: var(--orange-light); background: rgba(255,128,0,0.12); }
+  .compliance-status-badge.is-expired { color: #e05252; background: rgba(224,82,82,0.12); }
+  .compliance-detail-row { display: flex; gap: 20px; flex-wrap: wrap; font-size: 13.5px; color: var(--text-dim); margin-bottom: 4px; }
+  .compliance-detail-row strong { color: var(--white); }
+  .compliance-edit-form { display: none; margin-top: 16px; padding-top: 16px; border-top: 1px solid var(--border); }
+  .compliance-edit-form.is-open { display: block; }
+  .license-item {
+    display: flex; justify-content: space-between; align-items: center; gap: 12px;
+    padding: 12px 0; border-bottom: 1px solid var(--border); font-size: 14px;
+  }
+  .license-item:last-child { border-bottom: none; }
+
   .realtime-badge { display: inline-flex; align-items: center; gap: 5px; font-size: 11.5px; color: var(--text-dim); margin-left: 10px; }
   .realtime-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--text-dim); flex-shrink: 0; }
   .realtime-dot.is-live { background: #4caf50; }
@@ -163,6 +188,7 @@
   <a href="#section-duesoon">Due Soon</a>
   <a href="#section-invoices">Invoices</a>
   <a href="#section-gallery">Gallery Queue</a>
+  <a href="#section-compliance">Compliance</a>
   <a href="#section-analytics">Analytics</a>
   <a href="#section-tools">Tools</a>
 </nav>
@@ -265,6 +291,40 @@
   </div>
 </div>
 
+<div class="section-block" id="section-compliance">
+  <div class="section-heading" onclick="toggleSection('compliance')">
+    <span>Business Compliance</span>
+    <span class="collapse-arrow">&#9660;</span>
+  </div>
+  <div class="section-body" id="body-compliance">
+    <p class="section-note">Insurance and business licenses, with renewal reminders so nothing lapses quietly.</p>
+
+    <div id="insuranceCard"></div>
+
+    <div class="compliance-edit-form" id="insuranceEditForm">
+      <div class="form-row" style="display:flex; gap:14px; flex-wrap:wrap; margin-bottom:12px;">
+        <div style="flex:1; min-width:160px;"><label style="display:block; font-size:12.5px; color:var(--text-dim); margin-bottom:4px;">Insurer</label><input type="text" id="insInsurer" style="width:100%; box-sizing:border-box; padding:9px 11px; background:var(--bg-panel-2); border:1px solid var(--border); border-radius:6px; color:var(--white); font-size:14px;"></div>
+        <div style="flex:1; min-width:160px;"><label style="display:block; font-size:12.5px; color:var(--text-dim); margin-bottom:4px;">Broker / Producer</label><input type="text" id="insProducer" style="width:100%; box-sizing:border-box; padding:9px 11px; background:var(--bg-panel-2); border:1px solid var(--border); border-radius:6px; color:var(--white); font-size:14px;"></div>
+      </div>
+      <div class="form-row" style="display:flex; gap:14px; flex-wrap:wrap; margin-bottom:12px;">
+        <div style="flex:1; min-width:160px;"><label style="display:block; font-size:12.5px; color:var(--text-dim); margin-bottom:4px;">Policy Number</label><input type="text" id="insPolicyNumber" style="width:100%; box-sizing:border-box; padding:9px 11px; background:var(--bg-panel-2); border:1px solid var(--border); border-radius:6px; color:var(--white); font-size:14px;"></div>
+        <div style="flex:1; min-width:120px;"><label style="display:block; font-size:12.5px; color:var(--text-dim); margin-bottom:4px;">Effective</label><input type="date" id="insEffectiveDate" style="width:100%; box-sizing:border-box; padding:9px 11px; background:var(--bg-panel-2); border:1px solid var(--border); border-radius:6px; color:var(--white); font-size:14px;"></div>
+        <div style="flex:1; min-width:120px;"><label style="display:block; font-size:12.5px; color:var(--text-dim); margin-bottom:4px;">Expires</label><input type="date" id="insExpirationDate" style="width:100%; box-sizing:border-box; padding:9px 11px; background:var(--bg-panel-2); border:1px solid var(--border); border-radius:6px; color:var(--white); font-size:14px;"></div>
+      </div>
+      <div class="form-row" style="display:flex; gap:14px; flex-wrap:wrap; margin-bottom:12px;">
+        <div style="flex:1; min-width:140px;"><label style="display:block; font-size:12.5px; color:var(--text-dim); margin-bottom:4px;">Each Occurrence</label><input type="text" id="insEachOccurrence" style="width:100%; box-sizing:border-box; padding:9px 11px; background:var(--bg-panel-2); border:1px solid var(--border); border-radius:6px; color:var(--white); font-size:14px;"></div>
+        <div style="flex:1; min-width:140px;"><label style="display:block; font-size:12.5px; color:var(--text-dim); margin-bottom:4px;">General Aggregate</label><input type="text" id="insGeneralAggregate" style="width:100%; box-sizing:border-box; padding:9px 11px; background:var(--bg-panel-2); border:1px solid var(--border); border-radius:6px; color:var(--white); font-size:14px;"></div>
+      </div>
+      <button class="backup-btn" onclick="saveInsuranceEdit()">Save</button>
+      <button class="backup-btn" onclick="closeInsuranceEdit()">Cancel</button>
+    </div>
+
+    <div class="analytics-subheading" style="margin-top:26px;">City Business Licenses</div>
+    <div id="licensesList"></div>
+    <button class="backup-btn" style="margin-top:10px;" onclick="addLicensePrompt()">+ Add License</button>
+  </div>
+</div>
+
 <div class="section-block" id="section-analytics">
   <div class="section-heading" onclick="toggleSection('analytics')">
     <span>Analytics</span>
@@ -349,6 +409,7 @@
         <li><strong>Due Soon</strong> &mdash; jobs due in the next 7 days that aren't Done yet.</li>
         <li><strong>Invoices</strong> &mdash; every invoice you've generated. Tap the status badge to mark Paid or Unpaid.</li>
         <li><strong>Website Gallery Queue</strong> &mdash; photos starred in the Job Tracker's Photos section. This is a review list only &mdash; nothing here is live on the website until it's deliberately added to the actual gallery code.</li>
+        <li><strong>Business Compliance</strong> &mdash; your insurance policy details, with a color-coded badge that warns as renewal approaches (orange within 30 days, red once expired). Tap Edit to update it after a renewal. Add city business licenses here too as they get filed.</li>
         <li><strong>Analytics</strong> &mdash; Job Status breakdown and Top Vendors, collapsed by default since it's more of a deeper-dive than a daily check.</li>
         <li><strong>Tools</strong> &mdash; every internal tool, one tap away.</li>
         <li><strong>Backup &amp; Restore</strong> &mdash; download everything as one file, or restore from a previous one. Independent of cloud sync entirely.</li>
@@ -367,7 +428,7 @@
   }
 
   const COLLAPSE_STATE_KEY = 'th_dash_collapsed';
-  const DEFAULT_COLLAPSE = { snapshot: false, leads: false, duesoon: false, invoices: false, gallery: false, analytics: true, backup: true };
+  const DEFAULT_COLLAPSE = { snapshot: false, leads: false, duesoon: false, invoices: false, gallery: false, compliance: false, analytics: true, backup: true };
 
   function loadCollapseState() {
     try {
@@ -396,7 +457,7 @@
   const ALL_SYNCED_KEYS = [
     'th_tracker_jobs', 'th_tracker_contacts', 'th_tracker_notes_v2',
     'th_expense_log', 'th_mileage_rate', 'th_price_reference', 'th_invoices',
-    'th_quotes', 'th_tax_rate', 'th_tax_labor', 'th_tax_parts',
+    'th_quotes', 'th_tax_rate', 'th_tax_labor', 'th_tax_parts', 'th_compliance',
   ];
 
   function loadJobs() { return JSON.parse(localStorage.getItem('th_tracker_jobs') || '[]'); }
@@ -651,6 +712,164 @@
     loadAndRenderLeads();
   }
 
+  // ---------- Business Compliance (insurance + licenses) ----------
+  const COMPLIANCE_KEY = 'th_compliance';
+
+  const DEFAULT_COMPLIANCE = {
+    insurance: {
+      insurer: 'Spinnaker Insurance Company',
+      producer: 'Simply Business',
+      policyNumber: 'HBW5677778XB1',
+      effectiveDate: '2026-07-30',
+      expirationDate: '2027-07-30',
+      eachOccurrence: '$1,000,000',
+      generalAggregate: '$2,000,000',
+    },
+    licenses: [],
+  };
+
+  function loadCompliance() {
+    try {
+      const saved = localStorage.getItem(COMPLIANCE_KEY);
+      if (!saved) {
+        localStorage.setItem(COMPLIANCE_KEY, JSON.stringify(DEFAULT_COMPLIANCE));
+        return JSON.parse(JSON.stringify(DEFAULT_COMPLIANCE));
+      }
+      return JSON.parse(saved);
+    } catch (e) {
+      return JSON.parse(JSON.stringify(DEFAULT_COMPLIANCE));
+    }
+  }
+
+  function saveCompliance(data) {
+    localStorage.setItem(COMPLIANCE_KEY, JSON.stringify(data));
+    if (typeof scheduleSync === 'function') scheduleSync();
+  }
+
+  function daysUntil(dateStr) {
+    if (!dateStr) return null;
+    const target = new Date(dateStr + 'T00:00:00');
+    if (isNaN(target.getTime())) return null;
+    const today = startOfDay(new Date());
+    return Math.round((target - today) / (24 * 60 * 60 * 1000));
+  }
+
+  function renderInsuranceCard() {
+    const compliance = loadCompliance();
+    const ins = compliance.insurance || {};
+    const days = daysUntil(ins.expirationDate);
+    let statusClass = 'is-ok', badgeText = 'Active';
+    if (days !== null) {
+      if (days < 0) { statusClass = 'is-expired'; badgeText = 'EXPIRED'; }
+      else if (days <= 30) { statusClass = 'is-expiring'; badgeText = 'Renews in ' + days + ' day' + (days === 1 ? '' : 's'); }
+      else { badgeText = 'Renews in ' + days + ' days'; }
+    }
+
+    document.getElementById('insuranceCard').innerHTML = `
+      <div class="compliance-card ${statusClass === 'is-ok' ? '' : statusClass}">
+        <div class="compliance-card-top">
+          <div class="compliance-card-title">General Liability &mdash; ${escapeHtml(ins.insurer || 'Not set')}</div>
+          <span class="compliance-status-badge ${statusClass}">${escapeHtml(badgeText)}</span>
+        </div>
+        <div class="compliance-detail-row">
+          <span>Policy: <strong>${escapeHtml(ins.policyNumber || '\u2014')}</strong></span>
+          <span>Via: <strong>${escapeHtml(ins.producer || '\u2014')}</strong></span>
+        </div>
+        <div class="compliance-detail-row">
+          <span>Effective: <strong>${escapeHtml(ins.effectiveDate || '\u2014')}</strong></span>
+          <span>Expires: <strong>${escapeHtml(ins.expirationDate || '\u2014')}</strong></span>
+        </div>
+        <div class="compliance-detail-row">
+          <span>Each Occurrence: <strong>${escapeHtml(ins.eachOccurrence || '\u2014')}</strong></span>
+          <span>General Aggregate: <strong>${escapeHtml(ins.generalAggregate || '\u2014')}</strong></span>
+        </div>
+        <button class="small-btn" style="margin-top:10px;" onclick="openInsuranceEdit()">Edit</button>
+      </div>`;
+  }
+
+  function openInsuranceEdit() {
+    const compliance = loadCompliance();
+    const ins = compliance.insurance || {};
+    document.getElementById('insInsurer').value = ins.insurer || '';
+    document.getElementById('insProducer').value = ins.producer || '';
+    document.getElementById('insPolicyNumber').value = ins.policyNumber || '';
+    document.getElementById('insEffectiveDate').value = ins.effectiveDate || '';
+    document.getElementById('insExpirationDate').value = ins.expirationDate || '';
+    document.getElementById('insEachOccurrence').value = ins.eachOccurrence || '';
+    document.getElementById('insGeneralAggregate').value = ins.generalAggregate || '';
+    document.getElementById('insuranceEditForm').classList.add('is-open');
+  }
+
+  function closeInsuranceEdit() {
+    document.getElementById('insuranceEditForm').classList.remove('is-open');
+  }
+
+  function saveInsuranceEdit() {
+    const compliance = loadCompliance();
+    compliance.insurance = {
+      insurer: document.getElementById('insInsurer').value.trim(),
+      producer: document.getElementById('insProducer').value.trim(),
+      policyNumber: document.getElementById('insPolicyNumber').value.trim(),
+      effectiveDate: document.getElementById('insEffectiveDate').value,
+      expirationDate: document.getElementById('insExpirationDate').value,
+      eachOccurrence: document.getElementById('insEachOccurrence').value.trim(),
+      generalAggregate: document.getElementById('insGeneralAggregate').value.trim(),
+    };
+    saveCompliance(compliance);
+    closeInsuranceEdit();
+    renderInsuranceCard();
+  }
+
+  function renderLicensesList() {
+    const compliance = loadCompliance();
+    const licenses = compliance.licenses || [];
+    const container = document.getElementById('licensesList');
+    if (licenses.length === 0) {
+      container.innerHTML = '<div class="empty-state-small">No city licenses on file yet.</div>';
+      return;
+    }
+    container.innerHTML = licenses.map((lic, idx) => {
+      const days = daysUntil(lic.expirationDate);
+      let badge = '';
+      if (days !== null) {
+        if (days < 0) badge = ' &mdash; <span style="color:#e05252;">EXPIRED</span>';
+        else if (days <= 30) badge = ' &mdash; <span style="color:var(--orange-light);">renews in ' + days + 'd</span>';
+      }
+      return `
+      <div class="license-item">
+        <div>
+          <div class="dash-list-item-title">${escapeHtml(lic.city)}</div>
+          <div class="dash-list-item-meta">${escapeHtml(lic.licenseNumber || 'No number on file')}${lic.expirationDate ? ' &middot; expires ' + escapeHtml(lic.expirationDate) : ''}${badge}</div>
+        </div>
+        <button class="small-btn danger" onclick="removeLicense(${idx})">Remove</button>
+      </div>`;
+    }).join('');
+  }
+
+  function addLicensePrompt() {
+    const city = prompt('City name:');
+    if (!city || !city.trim()) return;
+    const licenseNumber = prompt('License number (leave blank if not yet issued):') || '';
+    const expirationDate = prompt('Expiration date (YYYY-MM-DD, leave blank if unknown):') || '';
+    const compliance = loadCompliance();
+    compliance.licenses = compliance.licenses || [];
+    compliance.licenses.push({ city: city.trim(), licenseNumber: licenseNumber.trim(), expirationDate: expirationDate.trim() });
+    saveCompliance(compliance);
+    renderLicensesList();
+  }
+
+  function removeLicense(idx) {
+    const compliance = loadCompliance();
+    compliance.licenses.splice(idx, 1);
+    saveCompliance(compliance);
+    renderLicensesList();
+  }
+
+  function renderCompliance() {
+    renderInsuranceCard();
+    renderLicensesList();
+  }
+
   async function loadAndRenderGalleryQueue() {
     const container = document.getElementById('galleryQueueList');
     if (typeof fetchFeaturedPhotos !== 'function' || !isSyncConfigured()) {
@@ -689,6 +908,7 @@
     renderInvoicesList();
     loadAndRenderLeads();
     loadAndRenderGalleryQueue();
+    renderCompliance();
   }
 
   function downloadBackup() {

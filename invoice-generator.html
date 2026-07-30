@@ -1,6 +1,17 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+<!-- ============================================================
+     TEMPORARY PHONE NUMBER OVERRIDE -- added 2026-07-30
+     Google Voice number (435) 414-1667 was suspended by Google; an
+     appeal is in progress. The PDF footer/header on this page was
+     swapped to the personal cell (801) 357-9040 in the meantime.
+     TO REVERT once Google Voice is restored: replace every
+     "(801) 357-9040" back to "(435) 414-1667". Ask Claude to "revert
+     the phone number swap" and it can do this across all affected
+     files in one pass.
+     ============================================================ -->
+
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta name="robots" content="noindex, nofollow">
@@ -515,7 +526,7 @@
     doc.setFont('helvetica', 'bold'); doc.setFontSize(13); doc.setTextColor(...ORANGE);
     doc.text('INVOICE', pageW - 40, 30, { align: 'right' });
     doc.setFont('helvetica', 'normal'); doc.setFontSize(9); doc.setTextColor(255, 255, 255);
-    doc.text('(435) 414-1667', pageW - 40, 46, { align: 'right' });
+    doc.text('(801) 357-9040', pageW - 40, 46, { align: 'right' });
     doc.text('steve@triplehenterprisesllc.biz', pageW - 40, 58, { align: 'right' });
     doc.text('www.triplehenterprisesllc.biz', pageW - 40, 70, { align: 'right' });
 
@@ -655,7 +666,7 @@
     doc.setDrawColor(...ORANGE); doc.setLineWidth(1.5);
     doc.line(40, footerY, pageW - 40, footerY);
     doc.setFont('helvetica', 'normal'); doc.setFontSize(8); doc.setTextColor(...GRAY);
-    doc.text('Triple H Enterprises LLC   |   (435) 414-1667   |   steve@triplehenterprisesllc.biz   |   www.triplehenterprisesllc.biz', pageW / 2, footerY + 14, { align: 'center' });
+    doc.text('Triple H Enterprises LLC   |   (801) 357-9040   |   steve@triplehenterprisesllc.biz   |   www.triplehenterprisesllc.biz', pageW / 2, footerY + 14, { align: 'center' });
     doc.setFont('helvetica', 'italic');
     doc.text('Thank you for choosing Triple H Enterprises. Work guaranteed.', pageW / 2, footerY + 26, { align: 'center' });
 
@@ -741,7 +752,7 @@
     doc.setFont('helvetica', 'bold'); doc.setFontSize(13); doc.setTextColor(...ORANGE);
     doc.text('ESTIMATE', pageW - 40, 30, { align: 'right' });
     doc.setFont('helvetica', 'normal'); doc.setFontSize(9); doc.setTextColor(255, 255, 255);
-    doc.text('(435) 414-1667', pageW - 40, 46, { align: 'right' });
+    doc.text('(801) 357-9040', pageW - 40, 46, { align: 'right' });
     doc.text('steve@triplehenterprisesllc.biz', pageW - 40, 58, { align: 'right' });
     doc.text('www.triplehenterprisesllc.biz', pageW - 40, 70, { align: 'right' });
 
@@ -852,7 +863,7 @@
     doc.setDrawColor(...ORANGE); doc.setLineWidth(1.5);
     doc.line(40, footerY, pageW - 40, footerY);
     doc.setFont('helvetica', 'normal'); doc.setFontSize(8); doc.setTextColor(...GRAY);
-    doc.text('Triple H Enterprises LLC   |   (435) 414-1667   |   steve@triplehenterprisesllc.biz   |   www.triplehenterprisesllc.biz', pageW / 2, footerY + 14, { align: 'center' });
+    doc.text('Triple H Enterprises LLC   |   (801) 357-9040   |   steve@triplehenterprisesllc.biz   |   www.triplehenterprisesllc.biz', pageW / 2, footerY + 14, { align: 'center' });
 
     const filename = 'TripleH_Estimate_' + (document.getElementById('quoteClientName').value || 'Client').replace(/[^a-z0-9]/gi, '_') + '.pdf';
     logQuote({ subtotal, tax, discount, total });

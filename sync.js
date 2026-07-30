@@ -57,6 +57,7 @@ const SYNC_DATA_KEYS = [
   'th_tax_rate',
   'th_tax_labor',
   'th_tax_parts',
+  'th_compliance',
 ];
 
 const SYNC_CODE_KEY = 'th_sync_code';
