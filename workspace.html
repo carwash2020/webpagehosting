@@ -39,16 +39,20 @@
   }
   .jump-nav a:hover { color: var(--orange-light); background: var(--bg-panel-2); }
 
-  .section-block { margin-bottom: 8px; }
+  .section-block {
+    background: var(--bg-panel); border: 1px solid var(--border); border-radius: var(--radius);
+    padding: 0 20px 20px; margin-bottom: 18px;
+  }
   .section-heading {
     font-family:'Oswald',sans-serif; color: var(--orange-light); font-size: 13.5px;
-    text-transform: uppercase; letter-spacing: 1.5px; margin: 36px 0 16px;
-    padding-bottom: 8px; border-bottom: 1px solid var(--border);
+    text-transform: uppercase; letter-spacing: 1.5px; margin: 0;
+    padding: 18px 0 16px; border-bottom: 1px solid var(--border);
     display: flex; justify-content: space-between; align-items: center; cursor: pointer; user-select: none;
   }
   .section-heading.is-static { cursor: default; }
   .section-heading .collapse-arrow { color: var(--text-dim); font-size: 12px; transition: transform 0.15s ease; }
   .section-heading.is-collapsed .collapse-arrow { transform: rotate(-90deg); }
+  .section-body { padding-top: 18px; }
   .section-body.is-collapsed { display: none; }
 
   .metrics-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 14px; margin-bottom: 8px; }
@@ -170,13 +174,8 @@
 </p>
 <nav class="jump-nav">
   <a href="#section-snapshot">Snapshot</a>
-  <a href="#section-leads">Leads</a>
-  <a href="#section-duesoon">Due Soon</a>
-  <a href="#section-followups">Follow-Ups</a>
-  <a href="#section-invoices">Invoices</a>
-  <a href="#section-gallery">Gallery Queue</a>
-  <a href="#section-compliance">Compliance</a>
-  <a href="#section-analytics">Analytics</a>
+  <a href="#section-actionitems">Action Items</a>
+  <a href="#section-businesshealth">Business Health</a>
   <a href="#section-tools">Tools</a>
 </nav>
 
@@ -235,63 +234,39 @@
   </div>
 </div>
 
-<div class="section-block" id="section-leads">
-  <div class="section-heading" onclick="toggleSection('leads')">
-    <span>Leads</span>
+<div class="section-block" id="section-actionitems">
+  <div class="section-heading" onclick="toggleSection('actionitems')">
+    <span>Action Items <span id="actionItemsHeadingBadge"></span></span>
     <span class="collapse-arrow">&#9660;</span>
   </div>
-  <div class="section-body" id="body-leads">
+  <div class="section-body" id="body-actionitems">
+
+    <div class="analytics-subheading is-first">New Leads</div>
     <div id="leadsList"></div>
-  </div>
-</div>
 
-<div class="section-block" id="section-duesoon">
-  <div class="section-heading" onclick="toggleSection('duesoon')">
-    <span>Due Soon (next 7 days, not done)</span>
-    <span class="collapse-arrow">&#9660;</span>
-  </div>
-  <div class="section-body" id="body-duesoon">
+    <div class="analytics-subheading">Due Soon (next 7 days, not done)</div>
     <div id="upcomingJobs"></div>
-  </div>
-</div>
 
-<div class="section-block" id="section-followups">
-  <div class="section-heading" onclick="toggleSection('followups')">
-    <span>Client Follow-Ups</span>
-    <span class="collapse-arrow">&#9660;</span>
-  </div>
-  <div class="section-body" id="body-followups">
+    <div class="analytics-subheading">Client Follow-Ups</div>
     <div id="followupsList"></div>
-  </div>
-</div>
 
-<div class="section-block" id="section-invoices">
-  <div class="section-heading" onclick="toggleSection('invoices')">
-    <span>Invoices</span>
-    <span class="collapse-arrow">&#9660;</span>
-  </div>
-  <div class="section-body" id="body-invoices">
+    <div class="analytics-subheading">Invoices</div>
     <div id="invoicesList"></div>
+
   </div>
 </div>
 
-<div class="section-block" id="section-gallery">
-  <div class="section-heading" onclick="toggleSection('gallery')">
-    <span>Website Gallery Queue</span>
+<div class="section-block" id="section-businesshealth">
+  <div class="section-heading" onclick="toggleSection('businesshealth')">
+    <span>Business Health <span id="complianceHeadingBadge"></span></span>
     <span class="collapse-arrow">&#9660;</span>
   </div>
-  <div class="section-body" id="body-gallery">
+  <div class="section-body" id="body-businesshealth">
+
+    <div class="analytics-subheading is-first">Website Gallery Queue</div>
     <div id="galleryQueueList"></div>
-  </div>
-</div>
 
-<div class="section-block" id="section-compliance">
-  <div class="section-heading" onclick="toggleSection('compliance')">
-    <span>Business Compliance <span id="complianceHeadingBadge"></span></span>
-    <span class="collapse-arrow">&#9660;</span>
-  </div>
-  <div class="section-body" id="body-compliance">
-
+    <div class="analytics-subheading">Business Compliance</div>
     <div id="insuranceCard"></div>
 
     <div class="compliance-edit-form" id="insuranceEditForm">
@@ -337,19 +312,21 @@
     <div class="analytics-subheading" style="margin-top:26px;">City Business Licenses</div>
     <div id="licensesList"></div>
     <button class="secondary-btn" style="margin-top:10px;" onclick="addLicensePrompt()">+ Add License</button>
-  </div>
-</div>
 
-<div class="section-block" id="section-analytics">
-  <div class="section-heading" onclick="toggleSection('analytics')">
-    <span>Analytics</span>
-    <span class="collapse-arrow">&#9660;</span>
-  </div>
-  <div class="section-body" id="body-analytics">
-    <div class="analytics-subheading is-first">Job Status</div>
+    <div class="analytics-subheading" style="margin-top:26px;">Analytics &mdash; Job Status</div>
     <div id="statusBars"></div>
-    <div class="analytics-subheading">Top Vendors <span style="text-transform:none; letter-spacing:0;">(for the period selected in Business Snapshot)</span></div>
+    <div class="analytics-subheading">Analytics &mdash; Top Vendors <span style="text-transform:none; letter-spacing:0;">(for the period selected in Business Snapshot)</span></div>
     <div id="topVendors"></div>
+
+    <div class="analytics-subheading" style="margin-top:26px;">Backup &amp; Restore</div>
+    <div class="backup-row">
+      <button class="secondary-btn" onclick="downloadBackup()">Download Full Backup</button>
+      <label class="secondary-btn" style="display:inline-flex; align-items:center; cursor:pointer;">
+        Restore from Backup
+        <input type="file" accept="application/json" onchange="restoreBackup(event)" style="display:none;">
+      </label>
+    </div>
+
   </div>
 </div>
 
@@ -391,21 +368,6 @@
   </a>
 </div>
 
-<div class="section-block" id="section-backup">
-  <div class="section-heading" onclick="toggleSection('backup')">
-    <span>Backup &amp; Restore</span>
-    <span class="collapse-arrow">&#9660;</span>
-  </div>
-  <div class="section-body" id="body-backup">
-    <div class="backup-row">
-      <button class="secondary-btn" onclick="downloadBackup()">Download Full Backup</button>
-      <label class="secondary-btn" style="display:inline-flex; align-items:center; cursor:pointer;">
-        Restore from Backup
-        <input type="file" accept="application/json" onchange="restoreBackup(event)" style="display:none;">
-      </label>
-    </div>
-  </div>
-</div>
 
 <div class="help-modal-overlay" id="helpModalOverlay" onclick="if(event.target===this) closeHelpModal()">
   <div class="help-modal">
@@ -415,15 +377,9 @@
       <p>This is the home base for the whole business &mdash; bookmark this one page. Tap any section heading (except Tools) to collapse or expand it &mdash; your preference is remembered.</p>
       <ul>
         <li><strong>Business Snapshot</strong> &mdash; Last 7 Days, This Month, All Time, or a Custom Range for pulling tax-period numbers.</li>
-        <li><strong>Leads</strong> &mdash; contact-form submissions from the website, mirrored here automatically. Mark them Handled once you've followed up, or Delete to remove one entirely.</li>
-        <li><strong>Due Soon</strong> &mdash; jobs due in the next 7 days that aren't Done yet.</li>
-        <li><strong>Client Follow-Ups</strong> &mdash; clients whose most recent job was 6+ months ago, with a one-tap link straight to a pre-filled follow-up text.</li>
-        <li><strong>Invoices</strong> &mdash; every invoice you've generated. Tap the status badge to mark Paid or Unpaid.</li>
-        <li><strong>Website Gallery Queue</strong> &mdash; photos starred in the Job Tracker's Photos section. This is a review list only &mdash; nothing here is live on the website until it's deliberately added to the actual gallery code.</li>
-        <li><strong>Business Compliance</strong> &mdash; your insurance policy details, LLC/tax info (legal name, EIN, sales tax license, W-9 status), and city business licenses, each with Edit buttons to keep current. Insurance shows a color-coded renewal badge (orange within 30 days, red once expired).</li>
-        <li><strong>Analytics</strong> &mdash; Job Status breakdown and Top Vendors, collapsed by default since it's more of a deeper-dive than a daily check.</li>
+        <li><strong>Action Items</strong> &mdash; everything that wants a response from you, in one place: new Leads from the contact form (mark Handled or Delete), jobs Due Soon (next 7 days, not done yet), Client Follow-Ups (clients whose most recent job was 6+ months ago, with a one-tap link to a pre-filled follow-up text), and Invoices (tap the status badge to mark Paid or Unpaid). The heading shows a running count of what's waiting, even while collapsed.</li>
+        <li><strong>Business Health</strong> &mdash; everything you check occasionally rather than daily: Website Gallery Queue (photos starred in the Job Tracker, review-only &mdash; nothing here is live on the website until deliberately added to the actual gallery code), Business Compliance (insurance, LLC/tax info, city licenses &mdash; the heading flags an expiring or expired policy even while collapsed), Analytics (Job Status and Top Vendors), and Backup &amp; Restore (independent of cloud sync entirely). Collapsed by default since none of this is a daily check.</li>
         <li><strong>Tools</strong> &mdash; every internal tool, one tap away.</li>
-        <li><strong>Backup &amp; Restore</strong> &mdash; download everything as one file, or restore from a previous one. Independent of cloud sync entirely.</li>
       </ul>
       <p>Data is saved directly in your browser, and quietly kept in sync across your devices in the background &mdash; the small dot near "Refresh synced data now" turns green when live updates are connected, meaning changes on another device (or a new lead coming in) show up here automatically. Marking a job "Done" in the Job Tracker also offers to jump straight to a pre-filled review request for that client.</p>
       <p><strong>Install this as an app:</strong> iPhone/iPad &mdash; tap the Share icon in Safari, then "Add to Home Screen." Android &mdash; tap the &#8942; menu in Chrome, then "Install app." Computer &mdash; look for an install icon in the address bar. Once installed, it opens full-screen with its own icon, no browser bar.</p>
@@ -441,7 +397,7 @@
   }
 
   const COLLAPSE_STATE_KEY = 'th_dash_collapsed';
-  const DEFAULT_COLLAPSE = { snapshot: false, leads: false, duesoon: false, followups: false, invoices: false, gallery: false, compliance: true, analytics: true, backup: true };
+  const DEFAULT_COLLAPSE = { snapshot: false, actionitems: false, businesshealth: true };
 
   function loadCollapseState() {
     try {
@@ -641,6 +597,8 @@
       .sort((a, b) => b.daysSince - a.daysSince);
 
     const container = document.getElementById('followupsList');
+    actionItemCounts.followups = overdue.length;
+    updateActionItemsBadge();
     if (overdue.length === 0) {
       container.innerHTML = '<div class="empty-state-small">No clients overdue for a follow-up right now.</div>';
       return;
@@ -672,6 +630,8 @@
       .sort((a, b) => new Date(a.date) - new Date(b.date));
 
     const container = document.getElementById('upcomingJobs');
+    actionItemCounts.duesoon = upcoming.length;
+    updateActionItemsBadge();
     if (upcoming.length === 0) {
       container.innerHTML = '<div class="empty-state-small">Nothing due in the next 7 days.</div>';
       return;
@@ -698,6 +658,8 @@
   function renderInvoicesList() {
     const invoices = [...loadInvoices()].sort((a, b) => b.id - a.id).slice(0, 20);
     const container = document.getElementById('invoicesList');
+    actionItemCounts.unpaid = loadInvoices().filter(i => !i.paid).length;
+    updateActionItemsBadge();
     if (invoices.length === 0) {
       container.innerHTML = '<div class="empty-state-small">No invoices generated yet.</div>';
       return;
@@ -724,13 +686,19 @@
     const container = document.getElementById('leadsList');
     if (typeof fetchLeads !== 'function' || !isSyncConfigured()) {
       container.innerHTML = '<div class="empty-state-small">Cloud sync isn\'t set up yet, so leads can\'t load.</div>';
+      actionItemCounts.leads = 0;
+      updateActionItemsBadge();
       return;
     }
     const result = await fetchLeads();
     if (!result.ok) {
       container.innerHTML = '<div class="empty-state-small">Couldn\'t load leads (' + escapeHtml(result.error) + '). Make sure the th_leads table exists in Supabase.</div>';
+      actionItemCounts.leads = 0;
+      updateActionItemsBadge();
       return;
     }
+    actionItemCounts.leads = result.leads.filter(l => !l.handled).length;
+    updateActionItemsBadge();
     if (result.leads.length === 0) {
       container.innerHTML = '<div class="empty-state-small">No leads yet.</div>';
       return;
@@ -818,6 +786,25 @@
     if (isNaN(target.getTime())) return null;
     const today = startOfDay(new Date());
     return Math.round((target - today) / (24 * 60 * 60 * 1000));
+  }
+
+  // Shared "Action Items" badge -- each of the four contributing render
+  // functions below (leads, due-soon, follow-ups, invoices) stashes its
+  // own count here, then calls updateActionItemsBadge(). Keeps the badge
+  // logic in one place instead of scattered across four functions.
+  const actionItemCounts = { leads: 0, duesoon: 0, followups: 0, unpaid: 0 };
+
+  function updateActionItemsBadge() {
+    const badge = document.getElementById('actionItemsHeadingBadge');
+    if (!badge) return;
+    const parts = [];
+    if (actionItemCounts.leads > 0) parts.push(actionItemCounts.leads + ' new lead' + (actionItemCounts.leads === 1 ? '' : 's'));
+    if (actionItemCounts.duesoon > 0) parts.push(actionItemCounts.duesoon + ' due soon');
+    if (actionItemCounts.followups > 0) parts.push(actionItemCounts.followups + ' follow-up' + (actionItemCounts.followups === 1 ? '' : 's'));
+    if (actionItemCounts.unpaid > 0) parts.push(actionItemCounts.unpaid + ' unpaid');
+    badge.innerHTML = parts.length
+      ? `<span class="compliance-status-badge is-expiring" style="font-size:11.5px; padding:2px 8px; vertical-align:middle;">${escapeHtml(parts.join(' \u00b7 '))}</span>`
+      : '';
   }
 
   function renderInsuranceCard() {
