@@ -326,7 +326,7 @@
     <div class="form-row" id="receiptField">
       <div class="form-field">
         <label>Receipt Photo (required for expenses)</label>
-        <input type="file" id="entryReceipt" accept="image/*" capture="environment">
+        <input type="file" id="entryReceipt" accept="image/*">
         <div id="receiptPreviewName" class="inline-note"></div>
       </div>
     </div>
@@ -394,7 +394,7 @@
     <div class="help-modal-body">
       <p>This page combines five related tools into tabs. Data lives in this browser, and also syncs to the cloud if you've set that up on the Workspace page.</p>
       <ul>
-        <li><strong>Jobs</strong> &mdash; search by title or client name, add a job with priority/status/due date, sort by date or priority, hide completed jobs (remembered next time you visit), tap "Advance Status" to cycle Not Started &rarr; In Progress &rarr; Done, or "Photos" to attach before/after pictures (uses your phone's camera directly if you're on mobile). Tap the &#9734; star on any photo to queue it for the public website's gallery with a caption &mdash; this doesn't publish it automatically, it just adds it to a review queue on the Dashboard.</li>
+        <li><strong>Jobs</strong> &mdash; search by title or client name, add a job with priority/status/due date, sort by date or priority, hide completed jobs (remembered next time you visit), tap "Advance Status" to cycle Not Started &rarr; In Progress &rarr; Done, or "Photos" to attach before/after pictures (on mobile, your phone offers both the camera and your photo gallery). Tap the &#9734; star on any photo to queue it for the public website's gallery with a caption &mdash; this doesn't publish it automatically, it just adds it to a review queue on the Dashboard.</li>
         <li><strong>Cost Lookup</strong> &mdash; type in hours and parts cost to see the standard price instantly, now with sales tax included in the total. Check/uncheck "Tax labor" and "Tax parts/materials" separately since Utah's rules genuinely differ by job type (not tax advice — confirm your specific situation with the Utah State Tax Commission or your accountant). Optionally type the client's name first — it checks your job history and auto-suggests whether they're new or returning (still overridable). Save frequent job types under "Price Reference" and tap one anytime to reload it.</li>
         <li><strong>Expenses</strong> &mdash; log expenses or mileage, now with vendor, payment method, and an optional link to a specific job. A receipt photo is required for expense entries (not mileage, since there's no physical receipt for driving miles) &mdash; tap "View" on any logged entry to see its receipt. Mileage rate lives right next to the Miles field since it's only relevant for mileage entries. Export CSV anytime for a backup or for taxes &mdash; now includes a link to each receipt too.</li>
         <li><strong>Contacts</strong> &mdash; a quick address book for vendors, suppliers, or recurring clients. Tap "History" on any contact to see their past jobs and lifetime spend (matched by exact name against Jobs and Invoices).</li>
@@ -696,7 +696,7 @@
         </select>
         <label class="secondary-btn" style="display:inline-flex; align-items:center; cursor:pointer; padding:8px 14px;">
           + Add Photo
-          <input type="file" accept="image/*" capture="environment" style="display:none;" onchange="handlePhotoUpload(${jobId}, '${escapeHtml(jobTitle).replace(/'/g, "\\'")}', event)">
+          <input type="file" accept="image/*" style="display:none;" onchange="handlePhotoUpload(${jobId}, '${escapeHtml(jobTitle).replace(/'/g, "\\'")}', event)">
         </label>
       </div>`;
 
