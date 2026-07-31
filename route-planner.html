@@ -26,10 +26,6 @@
   .tool-title { font-family:'Oswald',sans-serif; font-weight:700; font-size:28px; color:var(--white); margin-bottom:6px; }
   .tool-sub { color: var(--text-dim); margin-bottom: 24px; }
   .home-link { display:inline-block; margin-bottom: 20px; color: var(--blue-light); font-size: 14px; }
-  .form-section {
-    background: var(--bg-panel); border: 1px solid var(--border); border-radius: var(--radius);
-    padding: 22px; margin-bottom: 20px;
-  }
   .stop-row { display: flex; gap: 8px; margin-bottom: 10px; align-items: center; }
   .stop-row input {
     flex: 1; padding: 10px 12px; background: var(--bg-panel-2); border: 1px solid var(--border);
@@ -53,14 +49,6 @@
   }
   .stop-view-row a { color: var(--blue-light); font-size: 13px; }
   .warning-note { color: var(--orange-light); font-size: 12.5px; margin-top: 10px; display: none; }
-  .form-section h3 { font-family:'Oswald',sans-serif; color: var(--orange-light); font-size: 14px; margin: 0 0 14px; text-transform: uppercase; letter-spacing: 1px; }
-  .form-row { display: flex; gap: 14px; margin-bottom: 12px; flex-wrap: wrap; }
-  .form-field { flex: 1; min-width: 150px; }
-  .form-field label { display: block; font-size: 12.5px; color: var(--text-dim); margin-bottom: 4px; }
-  .form-field input {
-    width: 100%; padding: 9px 11px; background: var(--bg-panel-2); border: 1px solid var(--border);
-    border-radius: 6px; color: var(--white); font-size: 14.5px; font-family: inherit; box-sizing: border-box;
-  }
   .results-box { margin-top: 8px; }
   .result-row { display: flex; justify-content: space-between; padding: 9px 0; border-bottom: 1px solid var(--border); font-size: 14.5px; }
   .result-row.final { font-weight: 700; font-size: 18px; color: var(--orange-light); border-bottom: none; padding-top: 14px; }
@@ -98,7 +86,7 @@
 <div class="form-section">
   <h3>Cost Analyzer (To &amp; From) <span class="realtime-badge" id="realtimeBadge"><span class="realtime-dot" id="realtimeDot"></span><span id="realtimeText">Live sync: connecting...</span></span></h3>
   <p class="policy-note">Your posted trip fee policy: free within 15 miles of St. George, $25 flat beyond that. This calculator gives you a fuel-cost-based figure too, so you can compare against the flat policy and decide what to actually charge.</p>
-  <div class="form-row">
+  <div class="tool-form-row">
     <div class="form-field"><label>One-way distance (miles)</label><input type="number" id="tripDistance" value="0" min="0" step="0.5" oninput="calculateTripCost()"></div>
     <div class="form-field"><label>Cost per mile ($)</label><input type="number" id="tripFuelRate" value="0.76" min="0" step="0.01" oninput="calculateTripCost(); saveMileageRate();"></div>
     <div class="form-field"><label>Sales tax rate (%)</label><input type="number" id="tripTaxRate" value="6.75" min="0" step="0.01" oninput="calculateTripCost()"></div>

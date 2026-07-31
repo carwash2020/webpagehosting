@@ -1,13 +1,13 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<link rel="manifest" href="manifest.json">
+<link rel="manifest" href="/manifest.json">
 <meta name="theme-color" content="#0a0a0a">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="Triple H">
-<link rel="apple-touch-icon" href="images/apple-touch-icon.png">
+<link rel="apple-touch-icon" href="/images/apple-touch-icon.png">
 
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -17,10 +17,10 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="styles.css">
+<link rel="stylesheet" href="/styles.css">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js" defer></script>
-<script src="sync.js" defer></script>
-<script src="tools-common.js" defer></script>
+<script src="/sync.js" defer></script>
+<script src="/tools-common.js" defer></script>
 <style>
   body { padding: 90px 20px 60px; max-width: 1080px; margin: 0 auto; }
   .tool-title { font-family:'Oswald',sans-serif; font-weight:700; font-size:28px; color:var(--white); margin-bottom:6px; }
@@ -30,19 +30,6 @@
     padding: 12px 16px; font-size: 12.5px; color: var(--text-dim); margin-bottom: 24px;
   }
 
-  .form-section {
-    background: var(--bg-panel); border: 1px solid var(--border); border-radius: var(--radius);
-    padding: 22px; margin-bottom: 22px;
-  }
-  .form-section h3 { font-family:'Oswald',sans-serif; color: var(--orange-light); font-size: 14px; margin: 0 0 14px; text-transform: uppercase; letter-spacing: 1px; }
-  .form-row { display: flex; gap: 14px; margin-bottom: 12px; flex-wrap: wrap; }
-  .form-field { flex: 1; min-width: 160px; }
-  .form-field label { display: block; font-size: 12.5px; color: var(--text-dim); margin-bottom: 4px; }
-  .form-field input, .form-field select, .form-field textarea {
-    width: 100%; padding: 9px 11px; background: var(--bg-panel-2); border: 1px solid var(--border);
-    border-radius: 6px; color: var(--white); font-size: 14.5px; font-family: inherit; box-sizing: border-box;
-  }
-  .form-field textarea { resize: vertical; min-height: 60px; }
   .controls-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; flex-wrap: wrap; gap: 10px; }
   .sort-group { display: flex; gap: 8px; }
   .sort-btn {
@@ -162,8 +149,8 @@
 <body>
 
 <div class="tool-header">
-  <a href="workspace.html" class="tool-header-brand">
-    <img src="images/logo-signature-orange.png" alt="Triple H Enterprises">
+  <a href="/workspace.html" class="tool-header-brand">
+    <img src="/images/logo-signature-orange.png" alt="Triple H Enterprises">
     <span>&larr; Back to Workspace</span>
   </a>
   <button class="help-btn" onclick="openHelpModal()" aria-label="How to use this tool" title="How to use this tool">?</button>
@@ -186,15 +173,15 @@
 <div class="tab-panel is-active" id="tab-jobs">
   <div class="form-section">
     <h3>Add a Job</h3>
-    <div class="form-row">
+    <div class="tool-form-row">
       <div class="form-field"><label>Job Title / Description</label><input type="text" id="jobTitle" placeholder="Fix leaking kitchen faucet"></div>
       <div class="form-field"><label>Client Name</label><input type="text" id="jobClient" placeholder="Sarah Miller"></div>
     </div>
-    <div class="form-row">
+    <div class="tool-form-row">
       <div class="form-field"><label>Client Phone</label><input type="text" id="jobPhone" placeholder="(435) 555-0123"></div>
       <div class="form-field"><label>Address</label><input type="text" id="jobAddress" placeholder="123 Main St, St. George"></div>
     </div>
-    <div class="form-row">
+    <div class="tool-form-row">
       <div class="form-field"><label>Priority</label>
         <select id="jobPriority"><option value="high">High</option><option value="medium" selected>Medium</option><option value="low">Low</option></select>
       </div>
@@ -203,7 +190,7 @@
         <select id="jobStatus"><option value="not-started" selected>Not Started</option><option value="in-progress">In Progress</option><option value="done">Done</option></select>
       </div>
     </div>
-    <div class="form-row">
+    <div class="tool-form-row">
       <div class="form-field"><label>Notes</label><textarea id="jobNotes" placeholder="Anything worth remembering about this job"></textarea></div>
     </div>
     <button class="primary-btn" onclick="addJob()">Add Job</button>
@@ -216,7 +203,7 @@
     <button class="secondary-btn" style="margin-top:12px;" onclick="addTemplatePrompt()">+ New Template</button>
   </div>
 
-  <div class="form-row">
+  <div class="tool-form-row">
     <div class="form-field"><input type="text" id="jobSearch" placeholder="Search jobs by title or client..." oninput="renderJobs()"></div>
   </div>
 
@@ -235,22 +222,22 @@
 <div class="tab-panel" id="tab-cost">
   <div class="form-section">
     <h3>Job Inputs</h3>
-    <div class="form-row">
+    <div class="tool-form-row">
       <div class="form-field"><label>Client Name (optional &mdash; checks your job history)</label><input type="text" id="costClientName" placeholder="Sarah Miller" oninput="checkClientHistory()"></div>
     </div>
     <p class="inline-note" id="clientHistoryNote"></p>
-    <div class="form-row">
+    <div class="tool-form-row">
       <div class="form-field"><label>Labor hours</label><input type="number" id="hours" value="1" min="0" step="0.25" oninput="calculateCost()"></div>
       <div class="form-field"><label>Hourly rate ($)</label><input type="number" id="rate" value="75" min="0" step="1" oninput="calculateCost()"></div>
     </div>
-    <div class="form-row">
+    <div class="tool-form-row">
       <div class="form-field"><label>Parts/materials cost ($)</label><input type="number" id="parts" value="0" min="0" step="0.01" oninput="calculateCost()"></div>
     </div>
     <div class="checkbox-row">
       <input type="checkbox" id="firstTimeClient" onchange="calculateCost()">
       <label for="firstTimeClient">First-time client &mdash; apply discount</label>
     </div>
-    <div class="form-row" id="discountRow">
+    <div class="tool-form-row" id="discountRow">
       <div class="form-field" style="max-width:220px;"><label>First-time discount ($)</label><input type="number" id="discount" value="15" min="0" step="1" oninput="calculateCost()"></div>
     </div>
   </div>
@@ -258,7 +245,7 @@
   <div class="form-section">
     <h3>Sales Tax</h3>
     <p class="inline-note">Utah taxes repair labor on things like appliances, but labor on items permanently attached to real property is often exempt &mdash; parts are usually taxed either way. This is genuinely job-specific and not tax advice; confirm your situation with the Utah State Tax Commission or your accountant. Check whichever applies to this job.</p>
-    <div class="form-row">
+    <div class="tool-form-row">
       <div class="form-field" style="max-width:220px;"><label>Sales tax rate (%)</label><input type="number" id="taxRate" value="6.75" min="0" step="0.01" onchange="saveTaxSettings(); calculateCost();" oninput="calculateCost()"></div>
     </div>
     <div class="checkbox-row">
@@ -304,14 +291,14 @@
 <div class="tab-panel" id="tab-expenses">
   <div class="form-section">
     <h3>Add Entry</h3>
-    <div class="form-row">
+    <div class="tool-form-row">
       <div class="form-field"><label>Date</label><input type="date" id="entryDate"></div>
       <div class="form-field"><label>Type</label>
         <select id="entryType"><option value="expense">Expense</option><option value="mileage">Mileage</option></select>
       </div>
       <div class="form-field"><label>Vendor / Store</label><input type="text" id="entryVendor" placeholder="Home Depot"></div>
     </div>
-    <div class="form-row">
+    <div class="tool-form-row">
       <div class="form-field"><label>Job (optional)</label>
         <select id="entryJobRef"><option value="">&mdash; None &mdash;</option></select>
       </div>
@@ -327,7 +314,7 @@
       </div>
       <div class="form-field"><label>Description</label><input type="text" id="entryDesc" placeholder="Parts for the job"></div>
     </div>
-    <div class="form-row">
+    <div class="tool-form-row">
       <div class="form-field" id="amountField"><label>Amount ($)</label><input type="number" id="entryAmount" step="0.01" min="0"></div>
       <div class="form-field" id="milesField" style="display:none;">
         <label>Miles</label>
@@ -339,7 +326,7 @@
         </div>
       </div>
     </div>
-    <div class="form-row" id="receiptField">
+    <div class="tool-form-row" id="receiptField">
       <div class="form-field">
         <label>Receipt Photo (required for expenses)</label>
         <input type="file" id="entryReceipt" accept="image/*">
@@ -367,15 +354,15 @@
 <div class="tab-panel" id="tab-contacts">
   <div class="form-section">
     <h3>Add a Contact</h3>
-    <div class="form-row">
+    <div class="tool-form-row">
       <div class="form-field"><label>Name</label><input type="text" id="contactName" placeholder="Ray Bice"></div>
       <div class="form-field"><label>Role / Company</label><input type="text" id="contactRole" placeholder="Glamour Works - Supplier"></div>
     </div>
-    <div class="form-row">
+    <div class="tool-form-row">
       <div class="form-field"><label>Phone</label><input type="text" id="contactPhone" placeholder="(435) 674-7477"></div>
       <div class="form-field"><label>Email</label><input type="text" id="contactEmail" placeholder="ray@example.com"></div>
     </div>
-    <div class="form-row">
+    <div class="tool-form-row">
       <div class="form-field"><label>Notes</label><input type="text" id="contactNotes" placeholder="Anything worth remembering"></div>
     </div>
     <button class="primary-btn" onclick="addContact()">Add Contact</button>

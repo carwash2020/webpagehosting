@@ -1,13 +1,13 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<link rel="manifest" href="manifest.json">
+<link rel="manifest" href="/manifest.json">
 <meta name="theme-color" content="#0a0a0a">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="Triple H">
-<link rel="apple-touch-icon" href="images/apple-touch-icon.png">
+<link rel="apple-touch-icon" href="/images/apple-touch-icon.png">
 
 <!-- ============================================================
      TEMPORARY PHONE NUMBER OVERRIDE -- added 2026-07-31
@@ -28,36 +28,15 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="styles.css">
-<script src="sync.js" defer></script>
-<script src="tools-common.js" defer></script>
+<link rel="stylesheet" href="/styles.css">
+<script src="/sync.js" defer></script>
+<script src="/tools-common.js" defer></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <style>
   body { padding: 90px 20px 60px; max-width: 900px; margin: 0 auto; }
   .tool-title { font-family:'Oswald',sans-serif; font-weight:700; font-size:28px; color:var(--white); margin-bottom:6px; }
   .tool-sub { color: var(--text-dim); margin-bottom: 24px; }
   .empty-state-small { color: var(--text-dim); font-size: 13.5px; padding: 12px 0; }
-
-  /* Known follow-up: this .form-section/.form-field block is copy-pasted
-     across invoice-generator.html, job-tracker.html, review-request.html,
-     route-planner.html, and now here -- five copies, already drifted
-     slightly between them. Worth consolidating into styles.css in a
-     dedicated pass; not done here to stay focused on this page's actual
-     job. Using invoice-generator.html's exact values below for
-     consistency with the page this tool is closest in spirit to. */
-  .form-section {
-    background: var(--bg-panel); border: 1px solid var(--border); border-radius: var(--radius);
-    padding: 24px; margin-bottom: 24px;
-  }
-  .form-section h3 { font-family:'Oswald',sans-serif; color: var(--orange-light); font-size: 16px; margin: 0 0 16px; text-transform: uppercase; letter-spacing: 1px; }
-  .form-row { display: flex; gap: 16px; margin-bottom: 14px; flex-wrap: wrap; }
-  .form-field { flex: 1; min-width: 180px; }
-  .form-field label { display: block; font-size: 13px; color: var(--text-dim); margin-bottom: 5px; }
-  .form-field input, .form-field select, .form-field textarea {
-    width: 100%; padding: 9px 11px; background: var(--bg-panel-2); border: 1px solid var(--border);
-    border-radius: 6px; color: var(--white); font-size: 14.5px; font-family: inherit; box-sizing: border-box;
-  }
-  .form-field textarea { resize: vertical; min-height: 70px; }
 
   .contract-tabs { display: flex; gap: 8px; margin-bottom: 20px; flex-wrap: wrap; background: var(--bg-panel-2); border-radius: 10px; padding: 5px; }
   .contract-tab {
@@ -89,8 +68,8 @@
 <body>
 
 <div class="tool-header">
-  <a href="workspace.html" class="tool-header-brand">
-    <img src="images/logo-signature-orange.png" alt="Triple H Enterprises">
+  <a href="/workspace.html" class="tool-header-brand">
+    <img src="/images/logo-signature-orange.png" alt="Triple H Enterprises">
     <span>&larr; Back to Workspace</span>
   </a>
   <button class="help-btn" onclick="openHelpModal()" aria-label="How to use this tool" title="How to use this tool">?</button>
@@ -110,21 +89,21 @@
 <div class="contract-panel is-active" id="panel-pwo">
   <div class="form-section">
     <h3>Client &amp; Job Information</h3>
-    <div class="form-row">
+    <div class="tool-form-row">
       <div class="form-field">
         <label>Use an existing contact (optional)</label>
         <select id="pwo_contactPicker" onchange="applyContactPicker('pwo', this.value)"><option value="">&mdash; type manually below &mdash;</option></select>
       </div>
     </div>
-    <div class="form-row">
+    <div class="tool-form-row">
       <div class="form-field"><label>Client Name</label><input type="text" id="pwo_clientName"></div>
       <div class="form-field"><label>Phone</label><input type="text" id="pwo_phone"></div>
     </div>
-    <div class="form-row">
+    <div class="tool-form-row">
       <div class="form-field"><label>Service Address</label><input type="text" id="pwo_serviceAddress"></div>
       <div class="form-field"><label>Email</label><input type="text" id="pwo_email"></div>
     </div>
-    <div class="form-row">
+    <div class="tool-form-row">
       <div class="form-field" style="max-width:220px;"><label>Date of Work Order</label><input type="date" id="pwo_workOrderDate"></div>
     </div>
   </div>
@@ -134,7 +113,7 @@
   </div>
   <div class="form-section">
     <h3>Price</h3>
-    <div class="form-row">
+    <div class="tool-form-row">
       <div class="form-field"><label>Estimated Labor</label><input type="text" id="pwo_laborPrice" placeholder="$0.00"></div>
       <div class="form-field"><label>Estimated Parts/Materials</label><input type="text" id="pwo_partsPrice" placeholder="$0.00"></div>
       <div class="form-field"><label>Total Estimated Price</label><input type="text" id="pwo_totalPrice" placeholder="$0.00"></div>
@@ -147,21 +126,21 @@
 <div class="contract-panel" id="panel-stpa">
   <div class="form-section">
     <h3>Client &amp; Project Information</h3>
-    <div class="form-row">
+    <div class="tool-form-row">
       <div class="form-field">
         <label>Use an existing contact (optional)</label>
         <select id="stpa_contactPicker" onchange="applyContactPicker('stpa', this.value)"><option value="">&mdash; type manually below &mdash;</option></select>
       </div>
     </div>
-    <div class="form-row">
+    <div class="tool-form-row">
       <div class="form-field"><label>Client Name</label><input type="text" id="stpa_clientName"></div>
       <div class="form-field"><label>Phone</label><input type="text" id="stpa_phone"></div>
     </div>
-    <div class="form-row">
+    <div class="tool-form-row">
       <div class="form-field"><label>Service Address</label><input type="text" id="stpa_serviceAddress"></div>
       <div class="form-field"><label>Email</label><input type="text" id="stpa_email"></div>
     </div>
-    <div class="form-row">
+    <div class="tool-form-row">
       <div class="form-field" style="max-width:220px;"><label>Agreement Date</label><input type="date" id="stpa_agreementDate"></div>
     </div>
   </div>
@@ -171,14 +150,14 @@
   </div>
   <div class="form-section">
     <h3>Timeline</h3>
-    <div class="form-row">
+    <div class="tool-form-row">
       <div class="form-field"><label>Estimated Start Date</label><input type="date" id="stpa_startDate"></div>
       <div class="form-field"><label>Estimated Completion Date</label><input type="date" id="stpa_completionDate"></div>
     </div>
   </div>
   <div class="form-section">
     <h3>Price &amp; Payment Schedule</h3>
-    <div class="form-row">
+    <div class="tool-form-row">
       <div class="form-field"><label>Total Project Price</label><input type="text" id="stpa_totalPrice" placeholder="$0.00"></div>
       <div class="form-field"><label>Deposit (due at signing)</label><input type="text" id="stpa_deposit" placeholder="$0.00"></div>
       <div class="form-field"><label>Balance (due upon completion)</label><input type="text" id="stpa_balance" placeholder="$0.00"></div>
@@ -191,21 +170,21 @@
 <div class="contract-panel" id="panel-ltsa">
   <div class="form-section">
     <h3>Client Information</h3>
-    <div class="form-row">
+    <div class="tool-form-row">
       <div class="form-field">
         <label>Use an existing contact (optional)</label>
         <select id="ltsa_contactPicker" onchange="applyContactPicker('ltsa', this.value)"><option value="">&mdash; type manually below &mdash;</option></select>
       </div>
     </div>
-    <div class="form-row">
+    <div class="tool-form-row">
       <div class="form-field"><label>Client Name</label><input type="text" id="ltsa_clientName"></div>
       <div class="form-field"><label>Phone</label><input type="text" id="ltsa_phone"></div>
     </div>
-    <div class="form-row">
+    <div class="tool-form-row">
       <div class="form-field"><label>Service Address</label><input type="text" id="ltsa_serviceAddress"></div>
       <div class="form-field"><label>Email</label><input type="text" id="ltsa_email"></div>
     </div>
-    <div class="form-row">
+    <div class="tool-form-row">
       <div class="form-field" style="max-width:220px;"><label>Agreement Start Date</label><input type="date" id="ltsa_startDate"></div>
       <div class="form-field" style="max-width:220px;"><label>Initial Term (e.g. 12 months)</label><input type="text" id="ltsa_term"></div>
     </div>
@@ -216,11 +195,11 @@
   </div>
   <div class="form-section">
     <h3>Service Schedule &amp; Pricing</h3>
-    <div class="form-row">
+    <div class="tool-form-row">
       <div class="form-field"><label>Frequency (e.g. monthly, quarterly)</label><input type="text" id="ltsa_frequency"></div>
       <div class="form-field"><label>Preferred Day/Window</label><input type="text" id="ltsa_preferredWindow"></div>
     </div>
-    <div class="form-row">
+    <div class="tool-form-row">
       <div class="form-field"><label>Rate per Service Visit</label><input type="text" id="ltsa_rate" placeholder="$0.00"></div>
       <div class="form-field"><label>Billing Frequency</label><input type="text" id="ltsa_billingFrequency"></div>
     </div>
@@ -315,8 +294,19 @@
           <div class="contract-log-title">${escapeHtml(entry.fields.clientName || '(no name)')}</div>
           <div class="contract-log-meta">${escapeHtml(CONTRACT_TYPE_LABELS[entry.type] || entry.type)} &middot; ${escapeHtml(entry.dateGenerated || '')}</div>
         </div>
-        <button class="secondary-btn" onclick="redownloadContract(${entry.id})">Re-download</button>
+        <div style="display:flex; gap:8px; flex-shrink:0;">
+          <button class="secondary-btn" onclick="redownloadContract(${entry.id})">Re-download</button>
+          <button class="small-btn danger" onclick="deleteContractLogEntry(${entry.id})">Delete</button>
+        </div>
       </div>`).join('');
+  }
+
+  async function deleteContractLogEntry(id) {
+    const confirmed = await showConfirm('Delete this contract from the log? This cannot be undone.', { danger: true, confirmText: 'Delete' });
+    if (!confirmed) return;
+    const log = loadContractLog().filter(e => e.id !== id);
+    saveContractLog(log);
+    renderContractLog();
   }
 
   function redownloadContract(id) {
@@ -343,11 +333,20 @@
   // and pagination, rather than writing near-identical PDF layout code
   // three separate times.
   function wrapAndDraw(doc, text, x, y, maxWidth, lineHeight, pageBottom, marginX) {
-    const lines = doc.splitTextToSize(text, maxWidth);
-    lines.forEach(line => {
-      if (y > pageBottom) { doc.addPage(); y = 60; }
-      doc.text(line, x, y);
-      y += lineHeight;
+    // Split on real newlines first -- jsPDF's splitTextToSize wraps by
+    // width but doesn't reliably respect embedded "\n" characters across
+    // versions, and textarea input (like a job description) will often
+    // have real line breaks the user typed in. Splitting ourselves first
+    // guarantees paragraph breaks survive regardless of that quirk.
+    const paragraphs = String(text).split('\n');
+    paragraphs.forEach((para, i) => {
+      const lines = doc.splitTextToSize(para, maxWidth);
+      lines.forEach(line => {
+        if (y > pageBottom) { doc.addPage(); y = 60; }
+        doc.text(line, x, y);
+        y += lineHeight;
+      });
+      if (i < paragraphs.length - 1) y += lineHeight * 0.3;
     });
     return y;
   }

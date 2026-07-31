@@ -1,13 +1,13 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<link rel="manifest" href="manifest.json">
+<link rel="manifest" href="/manifest.json">
 <meta name="theme-color" content="#0a0a0a">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="Triple H">
-<link rel="apple-touch-icon" href="images/apple-touch-icon.png">
+<link rel="apple-touch-icon" href="/images/apple-touch-icon.png">
 
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -17,10 +17,10 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Anton&family=Oswald:wght@400;500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="styles.css">
+<link rel="stylesheet" href="/styles.css">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js" defer></script>
-<script src="sync.js" defer></script>
-<script src="tools-common.js" defer></script>
+<script src="/sync.js" defer></script>
+<script src="/tools-common.js" defer></script>
 <style>
   body { padding: 44px 20px 60px; max-width: 900px; margin: 0 auto; }
   .hub-header { display: flex; align-items: center; justify-content: space-between; gap: 14px; margin-bottom: 8px; }
@@ -155,7 +155,7 @@
 
 <div class="hub-header">
   <div class="hub-header-left">
-    <img src="images/logo-signature-orange.png" alt="Triple H Enterprises">
+    <img src="/images/logo-signature-orange.png" alt="Triple H Enterprises">
     <span class="hub-title">Dashboard</span>
   </div>
   <button class="help-btn" onclick="openHelpModal()" aria-label="How to use this dashboard" title="How to use this dashboard">?</button>
@@ -268,16 +268,16 @@
     <div id="insuranceCard"></div>
 
     <div class="compliance-edit-form" id="insuranceEditForm">
-      <div class="form-row" style="display:flex; gap:14px; flex-wrap:wrap; margin-bottom:12px;">
+      <div class="tool-form-row">
         <div style="flex:1; min-width:160px;"><label style="display:block; font-size:12.5px; color:var(--text-dim); margin-bottom:4px;">Insurer</label><input type="text" id="insInsurer" style="width:100%; box-sizing:border-box; padding:9px 11px; background:var(--bg-panel-2); border:1px solid var(--border); border-radius:6px; color:var(--white); font-size:14px;"></div>
         <div style="flex:1; min-width:160px;"><label style="display:block; font-size:12.5px; color:var(--text-dim); margin-bottom:4px;">Broker / Producer</label><input type="text" id="insProducer" style="width:100%; box-sizing:border-box; padding:9px 11px; background:var(--bg-panel-2); border:1px solid var(--border); border-radius:6px; color:var(--white); font-size:14px;"></div>
       </div>
-      <div class="form-row" style="display:flex; gap:14px; flex-wrap:wrap; margin-bottom:12px;">
+      <div class="tool-form-row">
         <div style="flex:1; min-width:160px;"><label style="display:block; font-size:12.5px; color:var(--text-dim); margin-bottom:4px;">Policy Number</label><input type="text" id="insPolicyNumber" style="width:100%; box-sizing:border-box; padding:9px 11px; background:var(--bg-panel-2); border:1px solid var(--border); border-radius:6px; color:var(--white); font-size:14px;"></div>
         <div style="flex:1; min-width:120px;"><label style="display:block; font-size:12.5px; color:var(--text-dim); margin-bottom:4px;">Effective</label><input type="date" id="insEffectiveDate" style="width:100%; box-sizing:border-box; padding:9px 11px; background:var(--bg-panel-2); border:1px solid var(--border); border-radius:6px; color:var(--white); font-size:14px;"></div>
         <div style="flex:1; min-width:120px;"><label style="display:block; font-size:12.5px; color:var(--text-dim); margin-bottom:4px;">Expires</label><input type="date" id="insExpirationDate" style="width:100%; box-sizing:border-box; padding:9px 11px; background:var(--bg-panel-2); border:1px solid var(--border); border-radius:6px; color:var(--white); font-size:14px;"></div>
       </div>
-      <div class="form-row" style="display:flex; gap:14px; flex-wrap:wrap; margin-bottom:12px;">
+      <div class="tool-form-row">
         <div style="flex:1; min-width:140px;"><label style="display:block; font-size:12.5px; color:var(--text-dim); margin-bottom:4px;">Each Occurrence</label><input type="text" id="insEachOccurrence" style="width:100%; box-sizing:border-box; padding:9px 11px; background:var(--bg-panel-2); border:1px solid var(--border); border-radius:6px; color:var(--white); font-size:14px;"></div>
         <div style="flex:1; min-width:140px;"><label style="display:block; font-size:12.5px; color:var(--text-dim); margin-bottom:4px;">General Aggregate</label><input type="text" id="insGeneralAggregate" style="width:100%; box-sizing:border-box; padding:9px 11px; background:var(--bg-panel-2); border:1px solid var(--border); border-radius:6px; color:var(--white); font-size:14px;"></div>
       </div>
@@ -289,18 +289,18 @@
     <div id="businessInfoCard"></div>
 
     <div class="compliance-edit-form" id="businessEditForm">
-      <div class="form-row" style="display:flex; gap:14px; flex-wrap:wrap; margin-bottom:12px;">
+      <div class="tool-form-row">
         <div style="flex:1; min-width:160px;"><label style="display:block; font-size:12.5px; color:var(--text-dim); margin-bottom:4px;">Legal Name</label><input type="text" id="bizLegalName" style="width:100%; box-sizing:border-box; padding:9px 11px; background:var(--bg-panel-2); border:1px solid var(--border); border-radius:6px; color:var(--white); font-size:14px;"></div>
         <div style="flex:1; min-width:120px;"><label style="display:block; font-size:12.5px; color:var(--text-dim); margin-bottom:4px;">State of Formation</label><input type="text" id="bizState" style="width:100%; box-sizing:border-box; padding:9px 11px; background:var(--bg-panel-2); border:1px solid var(--border); border-radius:6px; color:var(--white); font-size:14px;"></div>
       </div>
-      <div class="form-row" style="display:flex; gap:14px; flex-wrap:wrap; margin-bottom:12px;">
+      <div class="tool-form-row">
         <div style="flex:1; min-width:220px;"><label style="display:block; font-size:12.5px; color:var(--text-dim); margin-bottom:4px;">Business Address</label><input type="text" id="bizAddress" style="width:100%; box-sizing:border-box; padding:9px 11px; background:var(--bg-panel-2); border:1px solid var(--border); border-radius:6px; color:var(--white); font-size:14px;"></div>
       </div>
-      <div class="form-row" style="display:flex; gap:14px; flex-wrap:wrap; margin-bottom:12px;">
+      <div class="tool-form-row">
         <div style="flex:1; min-width:160px;"><label style="display:block; font-size:12.5px; color:var(--text-dim); margin-bottom:4px;">Utah Sales Tax License #</label><input type="text" id="bizSalesTax" style="width:100%; box-sizing:border-box; padding:9px 11px; background:var(--bg-panel-2); border:1px solid var(--border); border-radius:6px; color:var(--white); font-size:14px;"></div>
         <div style="flex:1; min-width:160px;"><label style="display:block; font-size:12.5px; color:var(--text-dim); margin-bottom:4px;">EIN</label><input type="text" id="bizEin" placeholder="Leave blank until the IRS responds" style="width:100%; box-sizing:border-box; padding:9px 11px; background:var(--bg-panel-2); border:1px solid var(--border); border-radius:6px; color:var(--white); font-size:14px;"></div>
       </div>
-      <div class="form-row" style="display:flex; gap:14px; flex-wrap:wrap; margin-bottom:12px;">
+      <div class="tool-form-row">
         <div style="flex:1; min-width:220px;"><label style="display:block; font-size:12.5px; color:var(--text-dim); margin-bottom:4px;">W-9 Status / Notes</label><input type="text" id="bizW9Status" style="width:100%; box-sizing:border-box; padding:9px 11px; background:var(--bg-panel-2); border:1px solid var(--border); border-radius:6px; color:var(--white); font-size:14px;"></div>
       </div>
       <button class="secondary-btn" onclick="saveBusinessEdit()">Save</button>
@@ -333,7 +333,7 @@
     <span>Tools</span>
   </div>
 
-  <a href="job-tracker.html" class="tool-card">
+  <a href="/job-tracker.html" class="tool-card">
     <div class="tool-card-text">
       <h3>Job Tracker</h3>
       <p>Jobs, cost lookup, expenses &amp; mileage, contacts, and notes &mdash; all five in one page, organized by tab.</p>
@@ -341,7 +341,7 @@
     <span class="tool-card-arrow">&rarr;</span>
   </a>
 
-  <a href="invoice-generator.html" class="tool-card">
+  <a href="/invoice-generator.html" class="tool-card">
     <div class="tool-card-text">
       <h3>Invoice Generator</h3>
       <p>Invoices and quotes/estimates in one place &mdash; convert an estimate straight into a real invoice with one tap.</p>

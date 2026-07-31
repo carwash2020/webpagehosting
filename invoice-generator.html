@@ -1,13 +1,13 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<link rel="manifest" href="manifest.json">
+<link rel="manifest" href="/manifest.json">
 <meta name="theme-color" content="#0a0a0a">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="Triple H">
-<link rel="apple-touch-icon" href="images/apple-touch-icon.png">
+<link rel="apple-touch-icon" href="/images/apple-touch-icon.png">
 
 <!-- ============================================================
      TEMPORARY PHONE NUMBER OVERRIDE -- added 2026-07-30
@@ -28,27 +28,14 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="styles.css">
-<script src="sync.js" defer></script>
-<script src="tools-common.js" defer></script>
+<link rel="stylesheet" href="/styles.css">
+<script src="/sync.js" defer></script>
+<script src="/tools-common.js" defer></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <style>
   body { padding: 90px 20px 60px; max-width: 900px; margin: 0 auto; }
   .tool-title { font-family:'Oswald',sans-serif; font-weight:700; font-size:28px; color:var(--white); margin-bottom:6px; }
   .tool-sub { color: var(--text-dim); margin-bottom: 30px; }
-  .form-section {
-    background: var(--bg-panel); border: 1px solid var(--border); border-radius: var(--radius);
-    padding: 24px; margin-bottom: 24px;
-  }
-  .form-section h3 { font-family:'Oswald',sans-serif; color: var(--orange-light); font-size: 16px; margin: 0 0 16px; text-transform: uppercase; letter-spacing: 1px; }
-  .form-row { display: flex; gap: 16px; margin-bottom: 14px; flex-wrap: wrap; }
-  .form-field { flex: 1; min-width: 180px; }
-  .form-field label { display: block; font-size: 13px; color: var(--text-dim); margin-bottom: 5px; }
-  .form-field input, .form-field select, .form-field textarea {
-    width: 100%; padding: 9px 11px; background: var(--bg-panel-2); border: 1px solid var(--border);
-    border-radius: 6px; color: var(--white); font-size: 14.5px; font-family: inherit;
-  }
-  .form-field textarea { resize: vertical; min-height: 60px; }
   .line-items-table { width: 100%; border-collapse: collapse; margin-bottom: 12px; }
   .line-items-table th { text-align: left; font-size: 12px; color: var(--text-dim); padding: 6px 8px; text-transform: uppercase; }
   .line-items-table td { padding: 4px 6px; }
@@ -79,8 +66,8 @@
 <body>
 
 <div class="tool-header">
-  <a href="workspace.html" class="tool-header-brand">
-    <img src="images/logo-signature-orange.png" alt="Triple H Enterprises">
+  <a href="/workspace.html" class="tool-header-brand">
+    <img src="/images/logo-signature-orange.png" alt="Triple H Enterprises">
     <span>&larr; Back to Workspace</span>
   </a>
   <button class="help-btn" onclick="openHelpModal()" aria-label="How to use this tool" title="How to use this tool">?</button>
@@ -97,7 +84,7 @@
 
 <div class="form-section">
   <h3>Invoice Details</h3>
-  <div class="form-row">
+  <div class="tool-form-row">
     <div class="form-field">
       <label>Invoice Number</label>
       <input type="text" id="invoiceNumber" value="">
@@ -119,13 +106,13 @@
 
 <div class="form-section">
   <h3>Bill To</h3>
-  <div class="form-row">
+  <div class="tool-form-row">
     <div class="form-field">
       <label>Client / Company Name</label>
       <input type="text" id="clientName" placeholder="Preferred Property Management">
     </div>
   </div>
-  <div class="form-row">
+  <div class="tool-form-row">
     <div class="form-field">
       <label>Address</label>
       <input type="text" id="clientAddress" placeholder="237 N Bluff St #C, St. George, UT 84770">
@@ -137,7 +124,7 @@
 
 <div class="form-section">
   <h3>Job</h3>
-  <div class="form-row">
+  <div class="tool-form-row">
     <div class="form-field">
       <label>Job Description</label>
       <input type="text" id="jobDescription" placeholder="GE Range/Stove Repair — Model JB256D M3WW">
@@ -163,7 +150,7 @@
 
   <div class="totals-box">
     <p class="inline-note" style="margin:0 0 10px;">Utah taxes repair labor on things like appliances, but labor on items permanently attached to real property is often exempt &mdash; parts are usually taxed either way. Uncheck "Tax?" on any exempt row. Not tax advice &mdash; confirm your situation with the Utah State Tax Commission or your accountant.</p>
-    <div class="form-row">
+    <div class="tool-form-row">
       <div class="form-field" style="max-width:180px;">
         <label>Sales tax rate (%)</label>
         <input type="number" id="invoiceTaxRate" value="6.75" min="0" step="0.01" oninput="recalc()" onchange="saveInvoiceTaxRate()">
@@ -171,7 +158,7 @@
     </div>
     <div class="totals-row"><span>Subtotal</span><span id="subtotalDisplay">$0.00</span></div>
     <div class="totals-row"><span>Sales Tax</span><span id="taxDisplay">$0.00</span></div>
-    <div class="form-row" style="margin-top:10px;">
+    <div class="tool-form-row" style="margin-top:10px;">
       <div class="form-field">
         <label>Discount label (leave blank for no discount)</label>
         <input type="text" id="discountLabel" placeholder="First-Time Client Discount">
@@ -200,7 +187,7 @@
 
 <div class="form-section">
   <h3>Estimate Details</h3>
-  <div class="form-row">
+  <div class="tool-form-row">
     <div class="form-field">
       <label>Estimate Number</label>
       <input type="text" id="quoteNumber" value="">
@@ -214,13 +201,13 @@
 
 <div class="form-section">
   <h3>For</h3>
-  <div class="form-row">
+  <div class="tool-form-row">
     <div class="form-field">
       <label>Client / Company Name</label>
       <input type="text" id="quoteClientName" placeholder="Sarah Miller">
     </div>
   </div>
-  <div class="form-row">
+  <div class="tool-form-row">
     <div class="form-field">
       <label>Address</label>
       <input type="text" id="quoteClientAddress" placeholder="123 Main St, St. George, UT">
@@ -230,10 +217,14 @@
 
 <div class="form-section">
   <h3>Job</h3>
-  <div class="form-row">
+  <div class="tool-form-row">
     <div class="form-field">
       <label>Job Description</label>
       <input type="text" id="quoteJobDescription" placeholder="GE Range/Stove Repair — Model JB256D M3WW">
+    </div>
+    <div class="form-field">
+      <label>Link to Job (optional, carries over if converted to an invoice)</label>
+      <select id="quoteJobRef"><option value="">&mdash; None &mdash;</option></select>
     </div>
   </div>
 </div>
@@ -252,7 +243,7 @@
 
   <div class="totals-box">
     <p class="inline-note" style="margin:0 0 10px;">Same tax rules as the Invoice tab &mdash; uncheck "Tax?" on rows that are exempt. Not tax advice.</p>
-    <div class="form-row">
+    <div class="tool-form-row">
       <div class="form-field" style="max-width:180px;">
         <label>Sales tax rate (%)</label>
         <input type="number" id="quoteTaxRate" value="6.75" min="0" step="0.01" oninput="recalcQuote()" onchange="saveInvoiceTaxRate()">
@@ -260,7 +251,7 @@
     </div>
     <div class="totals-row"><span>Subtotal</span><span id="quoteSubtotalDisplay">$0.00</span></div>
     <div class="totals-row"><span>Sales Tax</span><span id="quoteTaxDisplay">$0.00</span></div>
-    <div class="form-row" style="margin-top:10px;">
+    <div class="tool-form-row" style="margin-top:10px;">
       <div class="form-field">
         <label>Discount label (leave blank for no discount)</label>
         <input type="text" id="quoteDiscountLabel" placeholder="First-Time Client Discount">
@@ -305,16 +296,18 @@
     return div.innerHTML;
   }
 
-  function populateInvoiceJobRefOptions() {
-    const select = document.getElementById('invoiceJobRef');
-    if (!select) return;
-    const current = select.value;
+  function populateJobRefOptions() {
     const jobs = loadJobs();
-    select.innerHTML = '<option value="">&mdash; None &mdash;</option>' +
-      jobs.map(j => `<option value="${j.id}">${escapeHtml(j.title)}${j.client ? ' \u2014 ' + escapeHtml(j.client) : ''}</option>`).join('');
-    if (jobs.some(j => String(j.id) === current)) select.value = current;
+    ['invoiceJobRef', 'quoteJobRef'].forEach(selectId => {
+      const select = document.getElementById(selectId);
+      if (!select) return;
+      const current = select.value;
+      select.innerHTML = '<option value="">&mdash; None &mdash;</option>' +
+        jobs.map(j => `<option value="${j.id}">${escapeHtml(j.title)}${j.client ? ' \u2014 ' + escapeHtml(j.client) : ''}</option>`).join('');
+      if (jobs.some(j => String(j.id) === current)) select.value = current;
+    });
   }
-  populateInvoiceJobRefOptions();
+  populateJobRefOptions();
 
   let contactCount = 0;
   function addContact(name = '', title = '', email = '', phone = '') {
@@ -325,11 +318,11 @@
     div.id = 'contact-' + id;
     div.innerHTML = `
       <button type="button" class="remove-row-btn remove-contact-btn" onclick="document.getElementById('contact-${id}').remove()">&times;</button>
-      <div class="form-row">
+      <div class="tool-form-row">
         <div class="form-field"><label>Name</label><input type="text" class="contact-name" value="${name}"></div>
         <div class="form-field"><label>Title</label><input type="text" class="contact-title" value="${title}"></div>
       </div>
-      <div class="form-row">
+      <div class="tool-form-row">
         <div class="form-field"><label>Email</label><input type="text" class="contact-email" value="${email}"></div>
         <div class="form-field"><label>Phone</label><input type="text" class="contact-phone" value="${phone}"></div>
       </div>`;
@@ -461,6 +454,7 @@
     document.getElementById('clientName').value = document.getElementById('quoteClientName').value;
     document.getElementById('clientAddress').value = document.getElementById('quoteClientAddress').value;
     document.getElementById('jobDescription').value = document.getElementById('quoteJobDescription').value;
+    document.getElementById('invoiceJobRef').value = document.getElementById('quoteJobRef').value;
     document.getElementById('discountLabel').value = document.getElementById('quoteDiscountLabel').value;
     document.getElementById('discountAmount').value = document.getElementById('quoteDiscountAmount').value;
     document.getElementById('invoiceTaxRate').value = document.getElementById('quoteTaxRate').value;
@@ -741,6 +735,8 @@
   }
   function logQuote(totals) {
     const list = loadQuoteLog();
+    const jobRefId = document.getElementById('quoteJobRef').value;
+    const jobRefTitle = jobRefId ? (loadJobs().find(j => String(j.id) === jobRefId) || {}).title || '' : '';
     list.push({
       id: Date.now(),
       quoteNumber: document.getElementById('quoteNumber').value,
@@ -750,6 +746,8 @@
       tax: totals.tax || 0,
       discount: totals.discount,
       total: totals.total,
+      jobRefId: jobRefId || '',
+      jobRefTitle,
     });
     saveQuoteLog(list);
   }
