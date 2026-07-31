@@ -17,7 +17,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="/styles.css">
+<link rel="stylesheet" href="/styles.css?v=202607312400">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js" defer></script>
 <script src="/sync.js" defer></script>
 <script src="/tools-common.js" defer></script>
@@ -188,6 +188,12 @@
       <div class="form-field"><label>Due Date</label><input type="date" id="jobDate"></div>
       <div class="form-field"><label>Status</label>
         <select id="jobStatus"><option value="not-started" selected>Not Started</option><option value="in-progress">In Progress</option><option value="done">Done</option></select>
+      </div>
+    </div>
+    <div class="tool-form-row">
+      <div class="checkbox-row">
+        <input type="checkbox" id="jobShowOnCalendar">
+        <label for="jobShowOnCalendar">Show this job on the Calendar tool</label>
       </div>
     </div>
     <div class="tool-form-row">
@@ -589,12 +595,14 @@
       date: document.getElementById('jobDate').value,
       status: document.getElementById('jobStatus').value,
       notes: document.getElementById('jobNotes').value.trim(),
+      showOnCalendar: document.getElementById('jobShowOnCalendar').checked,
     });
     saveJobs(jobs);
     ['jobTitle','jobClient','jobPhone','jobAddress','jobNotes'].forEach(id => document.getElementById(id).value = '');
     document.getElementById('jobDate').value = '';
     document.getElementById('jobPriority').value = 'medium';
     document.getElementById('jobStatus').value = 'not-started';
+    document.getElementById('jobShowOnCalendar').checked = false;
     renderJobs();
     populateJobRefOptions();
   }
@@ -800,11 +808,21 @@
           <div class="job-card-actions">
             <button class="small-btn" onclick="cycleStatus(${job.id})">Advance Status</button>
             <button class="small-btn" onclick="toggleJobPhotos(${job.id}, '${escapeHtml(job.title).replace(/'/g, "\\'")}')">Photos</button>
+            <button class="small-btn ${job.showOnCalendar ? 'is-active' : ''}" onclick="toggleShowOnCalendar(${job.id})">${job.showOnCalendar ? '\u2713 On Calendar' : 'Show on Calendar'}</button>
             <button class="small-btn danger" onclick="deleteJob(${job.id})">Delete</button>
           </div>
           <div id="photos-${job.id}" style="display:none; margin-top:14px; padding-top:14px; border-top:1px solid var(--border);"></div>
         </div>`;
     }).join('');
+  }
+
+  function toggleShowOnCalendar(jobId) {
+    const jobs = loadJobs();
+    const job = jobs.find(j => j.id === jobId);
+    if (!job) return;
+    job.showOnCalendar = !job.showOnCalendar;
+    saveJobs(jobs);
+    renderJobs();
   }
 
   // ---------- Job Photos ----------
