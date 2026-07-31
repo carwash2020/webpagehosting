@@ -99,3 +99,15 @@ function showConfirm(message, options) {
     overlay.classList.add('is-open');
   });
 }
+
+// PWA install support -- registers the no-op service worker (see its own
+// file for why it deliberately does no caching) so browsers that require
+// one before offering "Add to Home Screen" / "Install app" will do so.
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('/service-worker.js').catch(() => {
+      // Silently ignore -- the site works completely fine without the
+      // service worker registering; this only affects the install prompt.
+    });
+  });
+}
