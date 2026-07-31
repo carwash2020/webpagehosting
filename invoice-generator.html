@@ -1,13 +1,13 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<link rel="manifest" href="/manifest.json">
+<link rel="manifest" href="manifest.json">
 <meta name="theme-color" content="#0a0a0a">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="Triple H">
-<link rel="apple-touch-icon" href="/images/apple-touch-icon.png">
+<link rel="apple-touch-icon" href="images/apple-touch-icon.png">
 
 <!-- ============================================================
      TEMPORARY PHONE NUMBER OVERRIDE -- added 2026-07-30
@@ -28,9 +28,9 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="/styles.css">
-<script src="/sync.js" defer></script>
-<script src="/tools-common.js" defer></script>
+<link rel="stylesheet" href="styles.css">
+<script src="sync.js" defer></script>
+<script src="tools-common.js" defer></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <style>
   body { padding: 90px 20px 60px; max-width: 900px; margin: 0 auto; }
@@ -79,8 +79,8 @@
 <body>
 
 <div class="tool-header">
-  <a href="/workspace.html" class="tool-header-brand">
-    <img src="/images/logo-signature-orange.png" alt="Triple H Enterprises">
+  <a href="workspace.html" class="tool-header-brand">
+    <img src="images/logo-signature-orange.png" alt="Triple H Enterprises">
     <span>&larr; Back to Workspace</span>
   </a>
   <button class="help-btn" onclick="openHelpModal()" aria-label="How to use this tool" title="How to use this tool">?</button>
@@ -141,6 +141,10 @@
     <div class="form-field">
       <label>Job Description</label>
       <input type="text" id="jobDescription" placeholder="GE Range/Stove Repair — Model JB256D M3WW">
+    </div>
+    <div class="form-field">
+      <label>Link to Job (optional, enables Job Profitability tracking)</label>
+      <select id="invoiceJobRef"><option value="">&mdash; None &mdash;</option></select>
     </div>
   </div>
 </div>
@@ -289,6 +293,28 @@
   document.getElementById('quoteDate').value = new Date().toISOString().slice(0, 10);
   document.getElementById('quoteNumber').value = 'EST-' + new Date().getFullYear() + '-' + String(Math.floor(Math.random() * 9000) + 1000);
   loadSharedTaxRate();
+
+  function loadJobs() {
+    try { return JSON.parse(localStorage.getItem('th_tracker_jobs') || '[]'); }
+    catch (e) { return []; }
+  }
+
+  function escapeHtml(str) {
+    const div = document.createElement('div');
+    div.textContent = str;
+    return div.innerHTML;
+  }
+
+  function populateInvoiceJobRefOptions() {
+    const select = document.getElementById('invoiceJobRef');
+    if (!select) return;
+    const current = select.value;
+    const jobs = loadJobs();
+    select.innerHTML = '<option value="">&mdash; None &mdash;</option>' +
+      jobs.map(j => `<option value="${j.id}">${escapeHtml(j.title)}${j.client ? ' \u2014 ' + escapeHtml(j.client) : ''}</option>`).join('');
+    if (jobs.some(j => String(j.id) === current)) select.value = current;
+  }
+  populateInvoiceJobRefOptions();
 
   let contactCount = 0;
   function addContact(name = '', title = '', email = '', phone = '') {
@@ -687,6 +713,8 @@
 
   function logInvoice(totals) {
     const list = loadInvoiceLog();
+    const jobRefId = document.getElementById('invoiceJobRef').value;
+    const jobRefTitle = jobRefId ? (loadJobs().find(j => String(j.id) === jobRefId) || {}).title || '' : '';
     list.push({
       id: Date.now(),
       invoiceNumber: document.getElementById('invoiceNumber').value,
@@ -698,6 +726,8 @@
       discount: totals.discount,
       total: totals.total,
       paid: false,
+      jobRefId: jobRefId || '',
+      jobRefTitle,
     });
     saveInvoiceLog(list);
   }
