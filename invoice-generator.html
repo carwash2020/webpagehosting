@@ -271,6 +271,16 @@
 </div>
 
 <script>
+  // Hoisted here because loadSharedTaxRate() (called shortly below, in
+  // the defaults block) needs it, and a const declared further down in
+  // the same script is NOT accessible yet when an earlier top-level call
+  // tries to use it -- that was throwing "Cannot access 'TAX_RATE_KEY'
+  // before initialization" on every single page load, halting the rest
+  // of the script, which is why Line Items never rendered even its
+  // automatic starter row. Confirmed by actually executing this script
+  // in a simulated DOM, not just reading it.
+  const TAX_RATE_KEY = 'th_tax_rate';
+
   // ---------- tab switching ----------
   function activateGenTab(tab) {
     document.querySelectorAll('.tab-btn').forEach(b => b.classList.toggle('is-active', b.dataset.tab === tab));
@@ -351,7 +361,6 @@
 
   function money(v) { return '$' + v.toFixed(2).replace(/\d(?=(\d{3})+\.)/g, '$&,'); }
 
-  const TAX_RATE_KEY = 'th_tax_rate';
   function saveInvoiceTaxRate() {
     const rate = document.getElementById('invoiceTaxRate').value;
     localStorage.setItem(TAX_RATE_KEY, rate);
