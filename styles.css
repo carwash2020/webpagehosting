@@ -30,6 +30,9 @@
   @media (prefers-reduced-motion: reduce){
     html{scroll-behavior:auto;}
     *{animation-duration:0.001ms !important; animation-iteration-count:1 !important; transition-duration:0.001ms !important;}
+    ::view-transition-group(*), ::view-transition-old(*), ::view-transition-new(*) {
+      animation-duration: 0.001ms !important;
+    }
   }
 
   body{
@@ -1400,3 +1403,161 @@
   border-radius: 6px; color: var(--white); font-size: 14.5px; font-family: inherit; box-sizing: border-box;
 }
 .form-field textarea { resize: vertical; min-height: 70px; }
+
+/* --- Scroll-reveal: progressive enhancement only ---
+   Elements are fully visible by default. The "start hidden, fade/slide
+   in on scroll" behavior ONLY applies once JS confirms IntersectionObserver
+   support and adds .reveal-ready to <html> -- so no-JS visitors and old
+   browsers always see full content immediately, nothing is ever
+   permanently hidden behind a JS dependency. Wrapped in
+   prefers-reduced-motion: no-preference so reduced-motion visitors never
+   get the hidden starting state at all -- not just a faster animation,
+   genuinely no scroll-gating, matching what reduced-motion actually asks for. */
+@media (prefers-reduced-motion: no-preference) {
+  .reveal-ready [data-reveal] {
+    opacity: 0;
+    transform: translateY(28px);
+    transition: opacity 0.7s ease, transform 0.7s ease;
+  }
+  .reveal-ready [data-reveal].is-visible {
+    opacity: 1;
+    transform: translateY(0);
+  }
+  /* Slight stagger within a grid, so cards cascade in rather than
+     popping in as one flat block */
+  .reveal-ready [data-reveal]:nth-child(2) { transition-delay: 0.08s; }
+  .reveal-ready [data-reveal]:nth-child(3) { transition-delay: 0.16s; }
+  .reveal-ready [data-reveal]:nth-child(4) { transition-delay: 0.24s; }
+  .reveal-ready [data-reveal]:nth-child(5) { transition-delay: 0.32s; }
+  .reveal-ready [data-reveal]:nth-child(6) { transition-delay: 0.4s; }
+  .reveal-ready [data-reveal]:nth-child(7) { transition-delay: 0.48s; }
+}
+
+/* --- Cross-document View Transitions ---
+   Pure CSS opt-in, zero JavaScript. Chrome 126+ and some Safari versions
+   support this; browsers that don't just navigate the old way with zero
+   errors -- this is a true native progressive enhancement, not a
+   feature-detected fallback pattern. Support is genuinely still
+   Chromium-led as of mid-2026; Firefox and full cross-browser Safari
+   coverage isn't settled yet. Worth revisiting this comment in a future
+   session to check whether that's changed.
+   This rule has to be present on EVERY page that should participate --
+   both the page navigated FROM and the page navigated TO need it, which
+   is exactly why this lives in the shared styles.css rather than being
+   added per-page: all 6 public pages already load this file, so this
+   one addition covers every page-to-page link across the whole site at
+   once, and any future landing page automatically gets it too, with no
+   extra work. */
+@view-transition {
+  navigation: auto;
+}
+
+/* Slightly faster and punchier than the browser default cross-fade */
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation-duration: 0.28s;
+  animation-timing-function: ease-out;
+}
+
+/* --- Light mode (theme toggle) ---
+   Overrides the same CSS custom properties the dark theme already uses,
+   rather than duplicating every rule that references them. Every color
+   here was chosen and verified against WCAG AA contrast requirements
+   against the --bg value below (not just eyeballed) -- --orange-light
+   and --blue-light specifically needed real recoloring, not just a
+   lighter/darker flip, since they're used as TEXT color in 19 and 17
+   places respectively (eyebrow labels, links) and the original dark-mode
+   pastel values would fail contrast on a light background. Toggled via
+   [data-theme="light"] on <html>, set by theme.js. Defaults to the
+   visitor's OS-level preference on first visit (prefers-color-scheme),
+   then remembers their explicit choice in localStorage after that. */
+[data-theme="light"] {
+  --bg: #faf9f7;
+  --bg-panel: #ffffff;
+  --bg-panel-2: #f2f0ec;
+  --bg-panel-3: #e9e6e0;
+  --border: #ddd8d0;
+  --text: #2b2b28;
+  --text-dim: #6b6560;
+  --white: #14120f;
+  --steel: #55524c;
+  --orange: #c4570a;
+  --orange-dark: #963f06;
+  --orange-light: #a34d09;
+  --blue: #1f6fd1;
+  --blue-dark: #154a8c;
+  --blue-light: #185ea8;
+}
+
+/* Note: a few subtle ambient effects (the soft orange/blue radial glow
+   behind the hero section, and some box-shadow opacities) were tuned
+   for a dark background and weren't individually re-tuned for light
+   mode -- they'll still work, just possibly read as a bit more washed
+   out or subtle than intended. Worth a look once this is live and
+   visible for real, rather than guessing at values now. */
+
+/* --- Light-mode shadow & glow corrections ---
+   The dark theme uses colored "glows" around buttons and soft ambient
+   light behind the hero -- a visual metaphor of light emanating into
+   darkness that doesn't have a sensible light-mode equivalent (there's
+   no "darkness" for a glow to emanate into on a white background, so it
+   either disappears or reads as a faint stain). Button glows are
+   replaced with a standard neutral elevation shadow instead. Heavy
+   black box-shadows (0.5-0.6 opacity, tuned to read clearly against
+   near-black) are reduced substantially, since the same opacity on a
+   white background looks muddy and dated rather than crisp -- modern
+   light UI shadows are usually soft and in the 0.10-0.20 range.
+   Deliberately NOT touched: .gallery-caption's dark gradient and the
+   lightbox overlay's dark scrim, since both sit on top of a photograph
+   or dim the whole viewport respectively -- both are correct dark
+   regardless of site theme, not something tied to the page's own
+   light/dark mode. */
+[data-theme="light"] .btn.orange,
+[data-theme="light"] .btn.blue {
+  box-shadow: 0 4px 14px rgba(20, 18, 15, 0.16);
+}
+[data-theme="light"] .hero::before,
+[data-theme="light"] .hero::after {
+  opacity: 0.5;
+}
+[data-theme="light"] .hero-badge img {
+  filter: drop-shadow(0 16px 28px rgba(20, 18, 15, 0.14));
+}
+[data-theme="light"] .modal {
+  box-shadow: 0 20px 48px rgba(20, 18, 15, 0.18);
+}
+[data-theme="light"] .chat-panel {
+  box-shadow: 0 10px 30px rgba(20, 18, 15, 0.16);
+}
+
+/* --- Theme toggle controls (desktop button + mobile switch) --- */
+.theme-toggle {
+  background: none; border: none; border-radius: 50%;
+  width: 40px; height: 40px; display: flex; align-items: center; justify-content: center;
+  color: var(--text-dim); cursor: pointer; flex-shrink: 0; margin-right: 2px;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+.theme-toggle:hover { background: var(--bg-panel-2); color: var(--orange-light); }
+.theme-toggle svg { width: 19px; height: 19px; }
+.theme-icon-light { display: none; }
+[data-theme="light"] .theme-icon-dark { display: none; }
+[data-theme="light"] .theme-icon-light { display: block; }
+
+.mobile-theme-row {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 16px 20px; border-top: 1px solid var(--border); margin-top: 4px;
+  color: var(--text); font-weight: 600;
+}
+.theme-switch { position: relative; display: inline-block; width: 46px; height: 26px; flex-shrink: 0; }
+.theme-switch input { opacity: 0; width: 0; height: 0; position: absolute; }
+.theme-switch-track {
+  position: absolute; inset: 0; background: var(--bg-panel-2); border: 1px solid var(--border);
+  border-radius: 999px; transition: background 0.2s ease; cursor: pointer; display: block;
+}
+.theme-switch-thumb {
+  position: absolute; top: 2px; left: 2px; width: 20px; height: 20px; border-radius: 50%;
+  background: var(--text-dim); transition: transform 0.2s ease, background 0.2s ease; display: block;
+}
+.theme-switch input:checked + .theme-switch-track { background: var(--orange-dark); }
+.theme-switch input:checked + .theme-switch-track .theme-switch-thumb { transform: translateX(20px); background: var(--white); }
+.theme-switch input:focus-visible + .theme-switch-track { outline: 2px solid var(--blue-light); outline-offset: 2px; }
