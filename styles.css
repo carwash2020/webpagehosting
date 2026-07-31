@@ -198,7 +198,7 @@
     font-weight:500;
     letter-spacing:1px;
     text-transform:uppercase;
-    color:var(--text-dim);
+    color:var(--steel);
     transition:color .15s ease;
   }
   .nav-links a:hover{color:var(--white);}
@@ -409,10 +409,14 @@
     min-width:140px;
     background:var(--bg-panel);
     border:1px solid var(--border);
+    border-top:3px solid var(--border);
     border-radius:var(--radius);
     padding:18px 16px;
     text-align:center;
   }
+  .value-pill:nth-child(1){border-top-color:var(--orange-light); background:linear-gradient(180deg, rgba(255,128,0,0.06), var(--bg-panel) 60%);}
+  .value-pill:nth-child(2){border-top-color:var(--steel); background:linear-gradient(180deg, rgba(150,150,150,0.08), var(--bg-panel) 60%);}
+  .value-pill:nth-child(3){border-top-color:var(--blue-light); background:linear-gradient(180deg, rgba(58,160,255,0.07), var(--bg-panel) 60%);}
   .value-pill .word{font-family:'Anton', sans-serif; font-size:15px; letter-spacing:1px; color:var(--white);}
   .value-pill:nth-child(1) .word{color:var(--orange-light);}
   .value-pill:nth-child(2) .word{color:var(--steel);}
@@ -1473,7 +1477,7 @@
    visitor's OS-level preference on first visit (prefers-color-scheme),
    then remembers their explicit choice in localStorage after that. */
 [data-theme="light"] {
-  --bg: #faf9f7;
+  --bg: #f3f1ec;
   --bg-panel: #ffffff;
   --bg-panel-2: #f2f0ec;
   --bg-panel-3: #e9e6e0;
@@ -1484,10 +1488,10 @@
   --steel: #55524c;
   --orange: #d85f0a;
   --orange-dark: #b04808;
-  --orange-light: #b8530a;
+  --orange-light: #b54a08;
   --blue: #0d6efd;
   --blue-dark: #0a52c2;
-  --blue-light: #0a5cc0;
+  --blue-light: #0857c9;
 }
 
 /* Note: a few subtle ambient effects (the soft orange/blue radial glow
@@ -1513,9 +1517,11 @@
    or dim the whole viewport respectively -- both are correct dark
    regardless of site theme, not something tied to the page's own
    light/dark mode. */
-[data-theme="light"] .btn.orange,
+[data-theme="light"] .btn.orange {
+  box-shadow: 0 6px 18px rgba(216, 95, 10, 0.35);
+}
 [data-theme="light"] .btn.blue {
-  box-shadow: 0 4px 14px rgba(20, 18, 15, 0.16);
+  box-shadow: 0 6px 18px rgba(13, 110, 253, 0.35);
 }
 [data-theme="light"] .hero::before,
 [data-theme="light"] .hero::after {
