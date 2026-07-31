@@ -20,8 +20,12 @@
   // wrong theme on load. Checks a saved preference first; falls back to
   // the visitor's OS-level preference if they've never chosen manually.
   (function () {
+    // Defaults to light mode now unless the visitor has explicitly
+    // chosen dark before -- previously this fell back to matching the
+    // visitor's OS-level preference, which meant a system set to dark
+    // mode would show dark by default even on a first visit.
     var saved = localStorage.getItem('th-theme');
-    var theme = saved || (window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark');
+    var theme = saved || 'light';
     if (theme === 'light') document.documentElement.setAttribute('data-theme', 'light');
   })();
 </script>
@@ -140,6 +144,7 @@
       <button class="theme-toggle" id="themeToggle" aria-label="Switch to light mode" title="Switch color theme">
         <svg class="theme-icon-dark" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
         <svg class="theme-icon-light" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+        <span class="theme-toggle-label">Dark Mode</span>
       </button>
       <button class="nav-toggle" aria-label="Toggle menu" aria-expanded="false" id="navToggle">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
@@ -370,8 +375,16 @@
     if (theme === 'light') document.documentElement.setAttribute('data-theme', 'light');
     else document.documentElement.removeAttribute('data-theme');
     localStorage.setItem('th-theme', theme);
-    if (themeToggleBtn) themeToggleBtn.setAttribute('aria-label', theme === 'light' ? 'Switch to dark mode' : 'Switch to light mode');
+    if (themeToggleBtn) {
+      themeToggleBtn.setAttribute('aria-label', theme === 'light' ? 'Switch to dark mode' : 'Switch to light mode');
+      const label = themeToggleBtn.querySelector('.theme-toggle-label');
+      if (label) label.textContent = theme === 'light' ? 'Light Mode' : 'Dark Mode';
+    }
     if (themeSwitchMobile) themeSwitchMobile.checked = (theme === 'dark');
+  }
+  if (themeToggleBtn) {
+    const initialLabel = themeToggleBtn.querySelector('.theme-toggle-label');
+    if (initialLabel) initialLabel.textContent = getCurrentTheme() === 'light' ? 'Light Mode' : 'Dark Mode';
   }
   // Sync the mobile switch to whatever the flash-prevention script in
   // <head> already decided, before any click happens
