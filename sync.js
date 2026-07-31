@@ -58,6 +58,7 @@ const SYNC_DATA_KEYS = [
   'th_tax_labor',
   'th_tax_parts',
   'th_compliance',
+  'th_job_templates',
 ];
 
 const SYNC_CODE_KEY = 'th_sync_code';
@@ -162,6 +163,31 @@ async function pullSync() {
     recordSyncStatus('pull', false, 'network');
     return { ok: false, error: 'network' };
   }
+}
+
+// Shared "Refresh synced data now" link handler. Used to be copy-pasted
+// with slight drift between workspace.html and job-tracker.html -- one
+// page's link showed a friendlier "nothing in the cloud yet" message,
+// the other silently did nothing in that case. This version always shows
+// it, since that's strictly more informative either way. Each page passes
+// its own onDone callback for whatever it needs to re-render afterward;
+// this function only owns the link text, the network call, and the
+// shared error messaging.
+async function manualRefreshSync(onDone) {
+  const link = document.getElementById('refreshSyncLink');
+  const originalText = link ? link.textContent : null;
+  if (link) link.textContent = 'Refreshing...';
+  const result = await pullSync();
+  if (link) link.textContent = originalText;
+
+  if (!result.ok) {
+    if (result.error === 'no-data-yet') {
+      await showAlert("Nothing in the cloud yet for this device to pull -- push something first from wherever you last edited.");
+    } else {
+      await showAlert('Could not refresh: ' + result.error);
+    }
+  }
+  if (typeof onDone === 'function') onDone(result);
 }
 
 // Debounced auto-push: call scheduleSync() from any tool's save function.

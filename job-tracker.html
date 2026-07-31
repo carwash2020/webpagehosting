@@ -43,17 +43,6 @@
     border-radius: 6px; color: var(--white); font-size: 14.5px; font-family: inherit; box-sizing: border-box;
   }
   .form-field textarea { resize: vertical; min-height: 60px; }
-  .primary-btn {
-    background: linear-gradient(135deg, var(--orange-light), var(--orange) 60%, var(--orange-dark));
-    color: #1a0d02; font-weight: 700; font-family:'Oswald',sans-serif; font-size: 14.5px;
-    border: none; border-radius: 8px; padding: 11px 22px; cursor: pointer;
-  }
-  .secondary-btn {
-    background: var(--bg-panel-2); border: 1px solid var(--border); color: var(--white);
-    border-radius: 8px; padding: 11px 18px; cursor: pointer; font-size: 14px; font-family: inherit;
-  }
-  .secondary-btn:hover { border-color: var(--blue-light); }
-
   .controls-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; flex-wrap: wrap; gap: 10px; }
   .sort-group { display: flex; gap: 8px; }
   .sort-btn {
@@ -122,6 +111,22 @@
   .mileage-rate-inline label { font-size: 12.5px; color: var(--text-dim); white-space: nowrap; }
   .mileage-rate-inline input { width: 90px; padding: 9px 11px; background: var(--bg-panel-2); border: 1px solid var(--border); border-radius: 6px; color: var(--white); font-size: 14.5px; }
 
+  /* --- Job templates --- */
+  .template-item {
+    display: flex; justify-content: space-between; align-items: center; gap: 12px;
+    padding: 14px 0; border-bottom: 1px solid var(--border);
+  }
+  .template-item:last-child { border-bottom: none; }
+  .template-item-title { color: var(--white); font-family:'Oswald',sans-serif; font-size: 15px; }
+  .template-item-meta { color: var(--text-dim); font-size: 12.5px; margin-top: 2px; }
+  .template-due-badge {
+    font-size: 10.5px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;
+    padding: 3px 9px; border-radius: 10px; margin-left: 8px;
+  }
+  .template-due-badge.is-due { color: var(--orange-light); background: rgba(255,128,0,0.12); }
+  .template-due-badge.is-ok { color: var(--text-dim); background: var(--bg-panel-2); }
+  .template-item-actions { display: flex; gap: 8px; flex-shrink: 0; }
+
   /* --- Realtime status indicator --- */
   .realtime-badge { display: inline-flex; align-items: center; gap: 5px; font-size: 11.5px; color: var(--text-dim); margin-left: 10px; }
   .realtime-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--text-dim); flex-shrink: 0; }
@@ -168,11 +173,9 @@
   <button class="help-btn" onclick="openHelpModal()" aria-label="How to use this tool" title="How to use this tool">?</button>
 </div>
 <div class="tool-title">Job Tracker</div>
-<p class="tool-sub">Jobs, pricing, expenses, contacts, and notes &mdash; the whole day-to-day workflow in one place, organized by tab.</p>
-<div class="storage-note">
-  <strong>Where this data lives:</strong> everything on this page is saved directly in this browser. If you've set up Cloud Sync on the Workspace page, it also syncs to your own private Supabase project so it follows you across devices. Use Export CSV on the Expenses tab regularly either way, as a backup copy outside the browser.<span id="syncStatusText"></span> <a href="#" id="refreshSyncLink" onclick="manualRefreshSync(); return false;" style="color:var(--blue-light);">Refresh synced data now</a>
+<p class="tool-sub">Jobs, pricing, expenses, contacts, and notes &mdash; the whole day-to-day workflow in one place, organized by tab.<span id="syncStatusText"></span> <a href="#" id="refreshSyncLink" onclick="manualRefreshSync(refreshJobTrackerViews); return false;" style="color:var(--blue-light);">Refresh synced data now</a>
   <span class="realtime-badge" id="realtimeBadge"><span class="realtime-dot" id="realtimeDot"></span><span id="realtimeText">Live sync: connecting...</span></span>
-</div>
+</p>
 
 <div class="tabs">
   <button class="tab-btn is-active" data-tab="jobs">Jobs</button>
@@ -207,6 +210,13 @@
       <div class="form-field"><label>Notes</label><textarea id="jobNotes" placeholder="Anything worth remembering about this job"></textarea></div>
     </div>
     <button class="primary-btn" onclick="addJob()">Add Job</button>
+  </div>
+
+  <div class="form-section">
+    <h3>Recurring Job Templates</h3>
+    <p class="inline-note" style="margin-top:-4px;">Save a job that repeats on a schedule (maintenance contracts, seasonal work). When one's due, it shows up here with a one-tap "Create Job" &mdash; nothing is created automatically without you tapping it.</p>
+    <div id="templatesList"></div>
+    <button class="secondary-btn" style="margin-top:12px;" onclick="addTemplatePrompt()">+ New Template</button>
   </div>
 
   <div class="form-row">
@@ -467,29 +477,16 @@
     renderExpenses();
     renderContacts();
     renderPriceReferences();
+    renderTemplates();
     renderNotesList();
     if (currentNoteId !== null && loadNotes().some(n => n.id === currentNoteId)) {
       selectNote(currentNoteId);
     }
   }
 
-  async function manualRefreshSync() {
-    const link = document.getElementById('refreshSyncLink');
-    const originalText = link.textContent;
-    link.textContent = 'Refreshing...';
-    const result = await pullSync();
-    link.textContent = originalText;
+  function refreshJobTrackerViews(result) {
     updateSyncStatusText();
-
-    if (!result.ok) {
-      if (result.error === 'no-data-yet') {
-        await showAlert('Nothing in the cloud yet for this device to pull -- push something first from wherever you last edited.');
-      } else {
-        await showAlert('Could not refresh: ' + result.error);
-      }
-      return;
-    }
-
+    if (!result.ok) return;
     // Re-render every tab with whatever just came down from the cloud
     document.getElementById('hideCompleted').checked = document.getElementById('hideCompleted').checked;
     renderJobs();
@@ -500,6 +497,7 @@
     renderExpenses();
     renderContacts();
     renderPriceReferences();
+    renderTemplates();
     renderNotesList();
     if (currentNoteId !== null && loadNotes().some(n => n.id === currentNoteId)) {
       selectNote(currentNoteId);
@@ -583,6 +581,93 @@
         window.location.href = '/review-request.html?' + params.toString();
       }
     }
+  }
+
+  // ---------- Recurring Job Templates ----------
+  const TEMPLATES_KEY = 'th_job_templates';
+  function loadTemplates() { return JSON.parse(localStorage.getItem(TEMPLATES_KEY) || '[]'); }
+  function saveTemplates(list) { localStorage.setItem(TEMPLATES_KEY, JSON.stringify(list)); if (typeof scheduleSync === 'function') scheduleSync(); }
+
+  function templateDueInfo(template) {
+    if (!template.lastCreatedDate) return { isDue: true, label: 'Never created \u2014 due now' };
+    const last = new Date(template.lastCreatedDate + 'T00:00:00');
+    const next = new Date(last);
+    next.setMonth(next.getMonth() + (template.intervalMonths || 1));
+    const today = new Date(new Date().toDateString());
+    if (next <= today) return { isDue: true, label: 'Due now' };
+    const days = Math.round((next - today) / (24 * 60 * 60 * 1000));
+    return { isDue: false, label: 'Next due in ' + days + ' day' + (days === 1 ? '' : 's') };
+  }
+
+  function renderTemplates() {
+    const templates = loadTemplates();
+    const container = document.getElementById('templatesList');
+    if (templates.length === 0) {
+      container.innerHTML = '<div class="inline-note">No recurring templates yet.</div>';
+      return;
+    }
+    container.innerHTML = templates.map(t => {
+      const due = templateDueInfo(t);
+      return `
+      <div class="template-item">
+        <div>
+          <div class="template-item-title">${escapeHtml(t.title)}${t.client ? ' &mdash; ' + escapeHtml(t.client) : ''}
+            <span class="template-due-badge ${due.isDue ? 'is-due' : 'is-ok'}">${escapeHtml(due.label)}</span>
+          </div>
+          <div class="template-item-meta">Every ${t.intervalMonths} month${t.intervalMonths === 1 ? '' : 's'}${t.lastCreatedDate ? ' &middot; last created ' + escapeHtml(t.lastCreatedDate) : ''}</div>
+        </div>
+        <div class="template-item-actions">
+          <button class="small-btn" onclick="createJobFromTemplate(${t.id})">Create Job</button>
+          <button class="small-btn danger" onclick="deleteTemplate(${t.id})">Delete</button>
+        </div>
+      </div>`;
+    }).join('');
+  }
+
+  function addTemplatePrompt() {
+    const title = prompt('Job title for this recurring template (e.g. "Quarterly HVAC filter change"):');
+    if (!title || !title.trim()) return;
+    const client = prompt('Client name (leave blank if this applies to different clients each time):') || '';
+    const intervalStr = prompt('Repeat every how many months? (e.g. 3, 6, 12):', '6');
+    const intervalMonths = parseInt(intervalStr, 10);
+    if (!intervalMonths || intervalMonths < 1) { showAlert('Enter a valid number of months.'); return; }
+
+    const templates = loadTemplates();
+    templates.push({ id: Date.now(), title: title.trim(), client: client.trim(), intervalMonths, lastCreatedDate: '' });
+    saveTemplates(templates);
+    renderTemplates();
+  }
+
+  function createJobFromTemplate(id) {
+    const templates = loadTemplates();
+    const template = templates.find(t => t.id === id);
+    if (!template) return;
+
+    const jobs = loadJobs();
+    jobs.push({
+      id: Date.now(),
+      title: template.title,
+      client: template.client || '',
+      phone: '', address: '',
+      priority: 'medium',
+      date: new Date().toISOString().slice(0, 10),
+      status: 'not-started',
+      notes: 'Created from recurring template.',
+    });
+    saveJobs(jobs);
+
+    template.lastCreatedDate = new Date().toISOString().slice(0, 10);
+    saveTemplates(templates);
+
+    renderJobs();
+    renderTemplates();
+  }
+
+  async function deleteTemplate(id) {
+    const confirmed = await showConfirm('Delete this recurring template? This cannot be undone.', { danger: true, confirmText: 'Delete' });
+    if (!confirmed) return;
+    saveTemplates(loadTemplates().filter(t => t.id !== id));
+    renderTemplates();
   }
 
   function setSort(sortType) {
@@ -1270,6 +1355,7 @@
       renderExpenses();
       renderContacts();
       renderPriceReferences();
+      renderTemplates();
       initNotes();
 
       const initialHash = (location.hash || '').replace('#', '');

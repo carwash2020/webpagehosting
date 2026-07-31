@@ -66,13 +66,6 @@
   .totals-box { margin-top: 16px; padding-top: 16px; border-top: 1px solid var(--border); }
   .totals-row { display: flex; justify-content: space-between; padding: 5px 0; font-size: 15px; }
   .totals-row.total { font-weight: 700; font-size: 19px; color: var(--orange-light); border-top: 1px solid var(--border); margin-top: 8px; padding-top: 12px; }
-  .generate-btn {
-    background: linear-gradient(135deg, var(--orange-light), var(--orange) 60%, var(--orange-dark));
-    color: #1a0d02; font-weight: 700; font-family:'Oswald',sans-serif; font-size: 16px;
-    border: none; border-radius: 8px; padding: 14px 28px; cursor: pointer; width: 100%;
-    text-transform: uppercase; letter-spacing: 1px;
-  }
-  .generate-btn:hover { opacity: 0.92; }
   .contact-block { border: 1px solid var(--border); border-radius: 8px; padding: 14px; margin-bottom: 10px; position: relative; }
   .remove-contact-btn { position: absolute; top: 10px; right: 10px; }
   .home-link { display:inline-block; margin-bottom: 20px; color: var(--blue-light); font-size: 14px; }
@@ -193,7 +186,7 @@
   <textarea id="paymentText">We accept cash, check, Venmo, Cash App, and credit/debit cards via a secure Stripe invoice.</textarea>
 </div>
 
-<button class="generate-btn" onclick="generatePDF()">Generate PDF</button>
+<button class="primary-btn wide" onclick="generatePDF()">Generate PDF</button>
 
 </div>
 
@@ -277,7 +270,7 @@
   </div>
 </div>
 
-<button class="generate-btn" onclick="generateQuotePDF()">Download Estimate PDF</button>
+<button class="primary-btn wide" onclick="generateQuotePDF()">Download Estimate PDF</button>
 <button class="secondary-btn" style="width:100%; margin-top:12px; padding:14px; font-size:15px;" onclick="convertQuoteToInvoice()">Convert to Invoice &rarr;</button>
 
 </div>
