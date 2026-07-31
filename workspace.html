@@ -1,13 +1,13 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<link rel="manifest" href="/manifest.json">
+<link rel="manifest" href="manifest.json">
 <meta name="theme-color" content="#0a0a0a">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="Triple H">
-<link rel="apple-touch-icon" href="/images/apple-touch-icon.png">
+<link rel="apple-touch-icon" href="images/apple-touch-icon.png">
 
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -17,10 +17,10 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Anton&family=Oswald:wght@400;500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="/styles.css">
+<link rel="stylesheet" href="styles.css">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js" defer></script>
-<script src="/sync.js" defer></script>
-<script src="/tools-common.js" defer></script>
+<script src="sync.js" defer></script>
+<script src="tools-common.js" defer></script>
 <style>
   body { padding: 44px 20px 60px; max-width: 900px; margin: 0 auto; }
   .hub-header { display: flex; align-items: center; justify-content: space-between; gap: 14px; margin-bottom: 8px; }
@@ -164,7 +164,7 @@
 
 <div class="hub-header">
   <div class="hub-header-left">
-    <img src="/images/logo-signature-orange.png" alt="Triple H Enterprises">
+    <img src="images/logo-signature-orange.png" alt="Triple H Enterprises">
     <span class="hub-title">Dashboard</span>
   </div>
   <button class="help-btn" onclick="openHelpModal()" aria-label="How to use this dashboard" title="How to use this dashboard">?</button>
@@ -366,6 +366,14 @@
     </div>
     <span class="tool-card-arrow">&rarr;</span>
   </a>
+
+  <a href="/contract-generator.html" class="tool-card">
+    <div class="tool-card-text">
+      <h3>Contract Generator</h3>
+      <p>Fill in a client and job, generate a branded PDF to email or text &mdash; every contract generated is logged so you can find it again later.</p>
+    </div>
+    <span class="tool-card-arrow">&rarr;</span>
+  </a>
 </div>
 
 
@@ -426,7 +434,7 @@
   const ALL_SYNCED_KEYS = [
     'th_tracker_jobs', 'th_tracker_contacts', 'th_tracker_notes_v2',
     'th_expense_log', 'th_mileage_rate', 'th_price_reference', 'th_invoices',
-    'th_quotes', 'th_tax_rate', 'th_tax_labor', 'th_tax_parts', 'th_compliance', 'th_job_templates',
+    'th_quotes', 'th_tax_rate', 'th_tax_labor', 'th_tax_parts', 'th_compliance', 'th_job_templates', 'th_contracts',
   ];
 
   function loadJobs() { return JSON.parse(localStorage.getItem('th_tracker_jobs') || '[]'); }
