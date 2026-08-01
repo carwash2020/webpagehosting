@@ -42,6 +42,7 @@
   .job-card {
     background: var(--bg-panel); border: 1px solid var(--border); border-left: 4px solid var(--border);
     border-radius: var(--radius); padding: 18px 20px; margin-bottom: 12px;
+    box-shadow: 0 3px 12px rgba(0,0,0,0.18), 0 1px 3px rgba(0,0,0,0.12);
   }
   .job-card.priority-high { border-left-color: #e05252; }
   .job-card.priority-medium { border-left-color: var(--orange); }
@@ -60,7 +61,14 @@
   .badge-warranty.is-expired { background: var(--bg-panel-2); color: var(--text-dim); }
   .job-card-meta { color: var(--text-dim); font-size: 13px; margin-bottom: 6px; }
   .job-card-notes { color: var(--text-dim); font-size: 13.5px; font-style: italic; margin-bottom: 12px; }
-  .job-card-actions { display: flex; gap: 8px; }
+  .job-card-actions { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+  .status-select {
+    background: none; border: 1px solid var(--border); color: var(--text-dim);
+    border-radius: 6px; padding: 9px 12px; font-size: 13px; font-family: inherit;
+    cursor: pointer; min-height: 40px;
+  }
+  .status-select:hover { border-color: var(--orange-light); color: var(--orange-light); }
+  .status-select:focus-visible { outline: 2px solid var(--blue-light); outline-offset: 1px; }
 
   .contact-card {
     background: var(--bg-panel); border: 1px solid var(--border); border-radius: var(--radius);
@@ -218,7 +226,13 @@
       <button class="sort-btn is-active" data-sort="date" onclick="setSort('date')">Sort by Date</button>
       <button class="sort-btn" data-sort="priority" onclick="setSort('priority')">Sort by Priority</button>
     </div>
-    <label class="filter-checkbox"><input type="checkbox" id="hideCompleted" onchange="saveHideCompleted(); renderJobs();"> Hide completed</label>
+  </div>
+
+  <div class="sort-group" id="statusFilterGroup" style="margin-bottom: 16px;">
+    <button class="sort-btn is-active" data-status-filter="all" onclick="setStatusFilter('all')">All</button>
+    <button class="sort-btn" data-status-filter="not-started" onclick="setStatusFilter('not-started')">Not Started</button>
+    <button class="sort-btn" data-status-filter="in-progress" onclick="setStatusFilter('in-progress')">In Progress</button>
+    <button class="sort-btn" data-status-filter="done" onclick="setStatusFilter('done')">Completed</button>
   </div>
 
   <div id="jobsList"></div>
@@ -487,7 +501,6 @@
     updateSyncStatusText();
     if (!result.ok) return;
     // Re-render every tab with whatever just came down from the cloud
-    document.getElementById('hideCompleted').checked = document.getElementById('hideCompleted').checked;
     renderJobs();
     populateJobRefOptions();
     loadMileageRate();
@@ -615,12 +628,12 @@
     populateJobRefOptions();
   }
 
-  async function cycleStatus(id) {
+  async function setJobStatus(id, newStatus) {
     const jobs = loadJobs();
     const job = jobs.find(j => j.id === id);
-    const order = ['not-started', 'in-progress', 'done'];
+    if (!job || job.status === newStatus) return;
     const wasNotDone = job.status !== 'done';
-    job.status = order[(order.indexOf(job.status) + 1) % order.length];
+    job.status = newStatus;
     saveJobs(jobs);
     renderJobs();
 
@@ -725,8 +738,24 @@
 
   function setSort(sortType) {
     currentSort = sortType;
-    document.querySelectorAll('.sort-btn').forEach(b => b.classList.toggle('is-active', b.dataset.sort === sortType));
+    document.querySelectorAll('.sort-btn[data-sort]').forEach(b => b.classList.toggle('is-active', b.dataset.sort === sortType));
     renderJobs();
+  }
+
+  let currentStatusFilter = 'all';
+  const STATUS_FILTER_KEY = 'th_job_status_filter';
+  function setStatusFilter(filter) {
+    currentStatusFilter = filter;
+    localStorage.setItem(STATUS_FILTER_KEY, filter);
+    document.querySelectorAll('#statusFilterGroup .sort-btn').forEach(b => b.classList.toggle('is-active', b.dataset.statusFilter === filter));
+    renderJobs();
+  }
+  function loadStatusFilter() {
+    const saved = localStorage.getItem(STATUS_FILTER_KEY);
+    if (saved) {
+      currentStatusFilter = saved;
+      document.querySelectorAll('#statusFilterGroup .sort-btn').forEach(b => b.classList.toggle('is-active', b.dataset.statusFilter === saved));
+    }
   }
 
   const PRIORITY_RANK = { high: 0, medium: 1, low: 2 };
@@ -747,14 +776,6 @@
     return copy;
   }
 
-  const HIDE_COMPLETED_KEY = 'th_hide_completed';
-  function saveHideCompleted() {
-    localStorage.setItem(HIDE_COMPLETED_KEY, document.getElementById('hideCompleted').checked ? '1' : '0');
-  }
-  function loadHideCompleted() {
-    document.getElementById('hideCompleted').checked = localStorage.getItem(HIDE_COMPLETED_KEY) === '1';
-  }
-
   function warrantyBadgeHtml(job) {
     if (job.status !== 'done' || !job.date) return '';
     const completionDate = new Date(job.date + 'T00:00:00');
@@ -769,10 +790,9 @@
   }
 
   function renderJobs() {
-    const hideCompleted = document.getElementById('hideCompleted').checked;
     const searchTerm = document.getElementById('jobSearch').value.trim().toLowerCase();
     let jobs = sortJobs(loadJobs());
-    if (hideCompleted) jobs = jobs.filter(j => j.status !== 'done');
+    if (currentStatusFilter !== 'all') jobs = jobs.filter(j => j.status === currentStatusFilter);
     if (searchTerm) {
       jobs = jobs.filter(j =>
         (j.title || '').toLowerCase().includes(searchTerm) ||
@@ -806,7 +826,11 @@
           </div>
           ${job.notes ? `<div class="job-card-notes">${escapeHtml(job.notes)}</div>` : ''}
           <div class="job-card-actions">
-            <button class="small-btn" onclick="cycleStatus(${job.id})">Advance Status</button>
+            <select class="status-select" onchange="setJobStatus(${job.id}, this.value)">
+              <option value="not-started" ${job.status === 'not-started' ? 'selected' : ''}>Not Started</option>
+              <option value="in-progress" ${job.status === 'in-progress' ? 'selected' : ''}>In Progress</option>
+              <option value="done" ${job.status === 'done' ? 'selected' : ''}>Mark as Complete</option>
+            </select>
             <button class="small-btn" onclick="toggleJobPhotos(${job.id}, '${escapeHtml(job.title).replace(/'/g, "\\'")}')">Photos</button>
             <button class="small-btn ${job.showOnCalendar ? 'is-active' : ''}" onclick="toggleShowOnCalendar(${job.id})">${job.showOnCalendar ? '\u2713 On Calendar' : 'Show on Calendar'}</button>
             <button class="small-btn danger" onclick="deleteJob(${job.id})">Delete</button>
@@ -1423,7 +1447,7 @@
       await initSyncOnLoad();
       updateSyncStatusText();
       loadTaxSettings();
-      loadHideCompleted();
+      loadStatusFilter();
       document.getElementById('entryDate').value = new Date().toISOString().slice(0, 10);
       loadMileageRate();
       renderJobs();
