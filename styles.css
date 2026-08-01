@@ -261,7 +261,22 @@
     padding:76px 0 90px;
     position:relative;
     overflow:hidden;
+    background:
+      linear-gradient(100deg, rgba(8,8,8,0.94) 0%, rgba(8,8,8,0.82) 35%, rgba(8,8,8,0.55) 65%, rgba(8,8,8,0.35) 100%),
+      url('/images/hero-bg-canyon.jpg?v=202608010211');
+    background-size: cover;
+    background-position: center 70%;
   }
+  /* This section always sits on a dark photo now, regardless of the
+     site's light/dark toggle -- h1 and p.lede normally use var(--white)
+     and var(--text-dim), which flip to near-black/dark-gray in light
+     mode and would be illegible here. Fixed light colors instead, same
+     reasoning already applied to the gallery caption overlay and
+     lightbox scrim elsewhere in this file: content sitting on top of a
+     photo or dark backdrop stays dark/light on its own terms, not tied
+     to the page's own theme. */
+  .hero h1{ color:#ffffff; }
+  .hero p.lede{ color:#d8d5d0; }
   .hero::before{
     content:"";
     position:absolute;
