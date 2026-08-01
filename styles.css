@@ -262,8 +262,9 @@
     position:relative;
     overflow:hidden;
     background:
+      linear-gradient(to bottom, transparent 78%, var(--bg) 100%),
       linear-gradient(100deg, rgba(8,8,8,0.94) 0%, rgba(8,8,8,0.90) 45%, rgba(8,8,8,0.65) 70%, rgba(8,8,8,0.35) 100%),
-      url('/images/hero-bg-canyon.jpg?v=202608010235');
+      url('/images/hero-bg-canyon.jpg?v=202608010300');
     background-size: cover;
     background-position: center 70%;
   }
