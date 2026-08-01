@@ -330,6 +330,14 @@
   }
   @media (max-width:860px){
     .hero-grid{grid-template-columns:1fr; text-align:center;}
+    .hero{
+      background:
+        linear-gradient(to bottom, rgba(8,8,8,0) 82%, rgba(8,8,8,1) 100%),
+        linear-gradient(to bottom, rgba(8,8,8,0.72) 0%, rgba(8,8,8,0.85) 100%),
+        url('/images/hero-bg-canyon.jpg?v=202608010300');
+      background-size: cover;
+      background-position: center 70%;
+    }
     .hero p.lede{margin-left:auto; margin-right:auto;}
     .hero-ctas{justify-content:center;}
     .hero-badge{order:-1; margin-bottom:8px; padding-left:0;}
@@ -347,7 +355,7 @@
     border-radius:var(--radius);
     overflow:hidden;
   }
-  .trust-item{background:var(--bg-panel); padding:28px 26px; border-radius:var(--radius); box-shadow:0 2px 10px rgba(0,0,0,0.08), 0 1px 2px rgba(0,0,0,0.05);}
+  .trust-item{background:var(--bg-panel); padding:28px 26px; border-radius:var(--radius); box-shadow:0 3px 12px rgba(0,0,0,0.11), 0 1px 3px rgba(0,0,0,0.07);}
   .trust-item h3{font-size:16px; letter-spacing:1px; margin-bottom:8px;}
   .trust-item p{color:var(--text-dim); font-size:14px; margin:0;}
   @media (max-width:720px){.trust-grid{grid-template-columns:1fr;}}
@@ -369,7 +377,7 @@
     width:100%;
     color:var(--text);
     cursor:pointer;
-    box-shadow:0 2px 10px rgba(0,0,0,0.07), 0 1px 2px rgba(0,0,0,0.04);
+    box-shadow:0 3px 12px rgba(0,0,0,0.10), 0 1px 3px rgba(0,0,0,0.06);
   }
   .service-card:hover{transform:translateY(-4px); border-color:var(--blue-light); box-shadow:0 14px 28px rgba(0,0,0,0.14);}
   .service-card.is-urgent{border-top-color:var(--orange);}
@@ -430,7 +438,7 @@
     border-radius:var(--radius);
     padding:18px 16px;
     text-align:center;
-    box-shadow:0 2px 10px rgba(0,0,0,0.07), 0 1px 2px rgba(0,0,0,0.04);
+    box-shadow:0 3px 12px rgba(0,0,0,0.10), 0 1px 3px rgba(0,0,0,0.06);
   }
   .value-pill:nth-child(1){border-top-color:var(--orange-light); background:linear-gradient(180deg, rgba(255,128,0,0.06), var(--bg-panel) 60%);}
   .value-pill:nth-child(2){border-top-color:var(--steel); background:linear-gradient(180deg, rgba(150,150,150,0.08), var(--bg-panel) 60%);}
@@ -550,7 +558,7 @@
     border:1px solid var(--border);
     border-radius:var(--radius);
     padding:26px 24px;
-    box-shadow:0 2px 10px rgba(0,0,0,0.07), 0 1px 2px rgba(0,0,0,0.04);
+    box-shadow:0 3px 12px rgba(0,0,0,0.10), 0 1px 3px rgba(0,0,0,0.06);
   }
   .contact-card .service-icon{color:var(--orange-light); cursor:default;}
   .contact-card h3{
@@ -705,7 +713,7 @@
     background:var(--bg-panel);
     margin-bottom:12px;
     overflow:hidden;
-    box-shadow:0 2px 8px rgba(0,0,0,0.06);
+    box-shadow:0 3px 10px rgba(0,0,0,0.09);
     transition:box-shadow .18s ease;
   }
   .faq-item.is-open{box-shadow:0 8px 20px rgba(0,0,0,0.1);}
@@ -992,7 +1000,7 @@
     border-radius:var(--radius);
     padding:36px 40px;
     text-align:center;
-    box-shadow:0 4px 14px rgba(0,0,0,0.08);
+    box-shadow:0 5px 16px rgba(0,0,0,0.11);
   }
   .review-stars{
     display:flex;
@@ -1512,10 +1520,10 @@
   --steel: #55524c;
   --orange: #d85f0a;
   --orange-dark: #b04808;
-  --orange-light: #b54a08;
+  --orange-light: #a84408;
   --blue: #0d6efd;
   --blue-dark: #0a52c2;
-  --blue-light: #0857c9;
+  --blue-light: #0650bd;
 }
 
 /* Note: a few subtle ambient effects (the soft orange/blue radial glow
