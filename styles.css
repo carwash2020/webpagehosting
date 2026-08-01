@@ -264,7 +264,7 @@
     background:
       linear-gradient(to bottom, rgba(8,8,8,0) 82%, rgba(8,8,8,1) 100%),
       linear-gradient(100deg, rgba(8,8,8,0.94) 0%, rgba(8,8,8,0.90) 45%, rgba(8,8,8,0.72) 70%, rgba(8,8,8,0.45) 100%),
-      url('/images/hero-bg-canyon.jpg?v=202608011900');
+      url('/images/hero-bg-canyon.jpg?v=202608012000');
     background-size: cover;
     background-position: center 70%;
   }
@@ -336,7 +336,7 @@
       background:
         linear-gradient(to bottom, rgba(8,8,8,0) 82%, rgba(8,8,8,1) 100%),
         linear-gradient(to bottom, rgba(8,8,8,0.42) 0%, rgba(8,8,8,0.58) 40%, rgba(8,8,8,0.78) 70%, rgba(8,8,8,0.85) 100%),
-        url('/images/hero-bg-canyon.jpg?v=202608011900');
+        url('/images/hero-bg-canyon.jpg?v=202608012000');
       background-size: cover;
       background-position: center 70%;
     }
@@ -1125,6 +1125,7 @@
   transition:border-color .15s ease, color .15s ease;
 }
 .help-btn:hover{ border-color:var(--orange-light); color:var(--orange-light); }
+.help-btn.is-active{ border-color:var(--blue-light); color:var(--blue-light); background:rgba(58,160,255,0.12); }
 
 .help-modal-overlay{
   display:none;
@@ -1250,6 +1251,7 @@
   border-radius:8px; transition:color .18s ease, background .18s ease, box-shadow .18s ease;
 }
 .tab-btn:hover{ color:var(--text); }
+.tab-btn:active{ transform: translateY(1px); }
 .tab-btn.is-active {
   color:#1a0d02;
   background:linear-gradient(135deg, var(--orange-light), var(--orange) 60%, var(--orange-dark));
@@ -1373,6 +1375,7 @@
   border-radius: 8px; padding: 11px 18px; cursor: pointer; font-size: 14px; font-family: inherit;
 }
 .secondary-btn:hover { border-color: var(--blue-light); }
+.secondary-btn:active { transform: translateY(1px); filter: brightness(0.95); }
 
 /* --- Shared "tool card" link row (Dashboard's Tools section, and
    available now for any future page that needs the same pattern) --- */
@@ -1380,8 +1383,10 @@
   display: flex; align-items: center; justify-content: space-between; gap: 20px;
   background: var(--bg-panel); border: 1px solid var(--border); border-left: 3px solid var(--orange);
   border-radius: var(--radius); padding: 22px 24px; margin-bottom: 14px; text-decoration: none;
+  box-shadow: 0 3px 12px rgba(0,0,0,0.18), 0 1px 3px rgba(0,0,0,0.12);
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
 }
-.tool-card:hover { border-color: var(--orange-light); }
+.tool-card:hover { border-color: var(--orange-light); box-shadow: 0 8px 22px rgba(0,0,0,0.28); }
 .tool-card-text h3 { font-family:'Oswald',sans-serif; color: var(--white); font-size: 17px; margin: 0 0 6px; }
 .tool-card-text p { color: var(--text-dim); font-size: 14px; margin: 0; }
 .tool-card-arrow { color: var(--orange-light); font-size: 22px; flex-shrink: 0; }
@@ -1399,6 +1404,7 @@
   padding: 6px 12px; cursor: pointer; font-size: 12.5px; font-family: inherit;
 }
 .small-btn:hover { border-color: var(--orange-light); color: var(--orange-light); }
+.small-btn:active { transform: translateY(1px); filter: brightness(0.95); }
 .small-btn.is-active { border-color: var(--blue-light); color: var(--blue-light); background: rgba(58,160,255,0.1); }
 .small-btn.danger { border-color: rgba(224,82,82,0.4); color: #e0a0a0; }
 .small-btn.danger:hover { border-color: #e05252; color: #e05252; }
@@ -1432,6 +1438,7 @@
 .form-section {
   background: var(--bg-panel); border: 1px solid var(--border); border-radius: var(--radius);
   padding: 24px; margin-bottom: 22px;
+  box-shadow: 0 3px 12px rgba(0,0,0,0.18), 0 1px 3px rgba(0,0,0,0.12);
 }
 .form-section h3 { font-family:'Oswald',sans-serif; color: var(--orange-light); font-size: 15px; margin: 0 0 15px; text-transform: uppercase; letter-spacing: 1px; }
 .tool-form-row { display: flex; gap: 15px; margin-bottom: 13px; flex-wrap: wrap; }
@@ -1440,6 +1447,29 @@
 .form-field input, .form-field select, .form-field textarea {
   width: 100%; padding: 9px 11px; background: var(--bg-panel-2); border: 1px solid var(--border);
   border-radius: 6px; color: var(--white); font-size: 14.5px; font-family: inherit; box-sizing: border-box;
+  box-shadow: inset 0 1px 3px rgba(0,0,0,0.3);
+  transition: border-color .15s ease, box-shadow .15s ease;
+}
+/* :focus-visible above already gives keyboard users a blue outline: this
+   is deliberately separate -- :focus-visible's own browser heuristics
+   often don't fire for a plain tap/click, which on a touch-primary tool
+   like this one would mean NO visible feedback at all when tapping into
+   a field. This fires for every focus method, tap included, and uses
+   orange instead of blue to actually read as this app's own state
+   rather than a generic browser default. */
+/* :focus-visible above already gives keyboard users a blue outline: this
+   is deliberately separate and scoped to :not(:focus-visible), since
+   :focus-visible's own browser heuristics often don't fire for a plain
+   tap/click, which on a touch-primary tool like this one would mean NO
+   visible feedback at all when tapping into a field. This covers that
+   gap without double-applying alongside the keyboard outline, and uses
+   orange instead of blue to read as this app's own state rather than a
+   generic browser default. */
+.form-field input:focus:not(:focus-visible),
+.form-field select:focus:not(:focus-visible),
+.form-field textarea:focus:not(:focus-visible) {
+  border-color: var(--orange-light);
+  box-shadow: inset 0 1px 3px rgba(0,0,0,0.3), 0 0 0 3px rgba(255,128,0,0.25);
 }
 .form-field textarea { resize: vertical; min-height: 70px; }
 
@@ -1597,3 +1627,38 @@
 .theme-switch input:checked + .theme-switch-track { background: var(--orange-dark); }
 .theme-switch input:checked + .theme-switch-track .theme-switch-thumb { transform: translateX(20px); background: var(--white); }
 .theme-switch input:focus-visible + .theme-switch-track { outline: 2px solid var(--blue-light); outline-offset: 2px; }
+
+/* --- Internal tools: mobile touch-target improvements ---
+   These tools are used primarily on a phone, often on an actual job
+   site rather than at a desk -- reliable tapping matters more here than
+   on the marketing site. .small-btn in particular sits multiple-in-a-row
+   on every job card (Advance Status, Photos, Show on Calendar, Delete)
+   with only 8px between them at its previous ~28px height, well under
+   the 44px minimum both Apple and Google recommend for a reliable tap
+   target. Scoped to a phone-width breakpoint rather than changing
+   desktop, which already works fine as-is. */
+@media (max-width: 768px) {
+  .small-btn {
+    padding: 11px 15px;
+    font-size: 13.5px;
+    min-height: 42px;
+  }
+  .job-card-actions { gap: 10px; row-gap: 10px; }
+  .tabs {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+  }
+  .tabs::-webkit-scrollbar { display: none; }
+  .tab-btn {
+    padding: 13px 18px;
+    flex-shrink: 0;
+  }
+  .checkbox-row { padding: 4px 0; }
+  .checkbox-row input[type="checkbox"] {
+    width: 20px;
+    height: 20px;
+    flex-shrink: 0;
+  }
+}

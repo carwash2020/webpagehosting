@@ -91,6 +91,8 @@
   }
   .status-select:hover { border-color: var(--orange-light); color: var(--orange-light); }
   .status-select:focus-visible { outline: 2px solid var(--blue-light); outline-offset: 1px; }
+  .status-select:focus:not(:focus-visible) { border-color: var(--orange-light); box-shadow: 0 0 0 3px rgba(255,128,0,0.25); }
+  .status-select:active { filter: brightness(0.95); }
 
   .contact-card {
     background: var(--bg-panel); border: 1px solid var(--border); border-radius: var(--radius);
@@ -572,7 +574,7 @@
     if (!container) return;
 
     if (jobs.length === 0) {
-      container.innerHTML = '<div class="empty-state">No completed jobs yet.</div>';
+      container.innerHTML = '<div class="empty-state">Nothing marked complete yet &mdash; finished jobs will show up here.</div>';
       return;
     }
 
@@ -1280,7 +1282,7 @@
     const container = document.getElementById('entriesTable');
 
     if (entries.length === 0) {
-      container.innerHTML = '<div class="empty-state">No entries logged yet.</div>';
+      container.innerHTML = '<div class="empty-state">No expenses logged yet &mdash; add your first one above.</div>';
       document.getElementById('totalsRowMoney').innerHTML = '';
       return;
     }
@@ -1378,7 +1380,7 @@
     const contacts = loadContacts();
     const container = document.getElementById('contactsList');
     if (contacts.length === 0) {
-      container.innerHTML = '<div class="empty-state">No contacts saved yet.</div>';
+      container.innerHTML = '<div class="empty-state">No contacts saved yet &mdash; add one above to keep their info handy.</div>';
       return;
     }
     container.innerHTML = contacts.map(c => `
