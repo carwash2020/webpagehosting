@@ -44,6 +44,10 @@
       <input type="password" id="loginPassword" autocomplete="current-password" required>
     </div>
     <div class="login-error" id="loginError"></div>
+    <div class="checkbox-row" style="margin-bottom: 18px;">
+      <input type="checkbox" id="rememberMe" checked>
+      <label for="rememberMe">Remember me for 30 days</label>
+    </div>
     <button type="submit" class="primary-btn login-btn" id="loginBtn">Sign In</button>
   </form>
 </div>
@@ -59,7 +63,8 @@
 
     const email = document.getElementById('loginEmail').value.trim();
     const password = document.getElementById('loginPassword').value;
-    const result = await signIn(email, password);
+    const rememberMe = document.getElementById('rememberMe').checked;
+    const result = await signIn(email, password, rememberMe);
 
     if (!result.ok) {
       errorEl.textContent = result.error;
