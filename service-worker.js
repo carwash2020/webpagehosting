@@ -64,3 +64,31 @@ self.addEventListener('fetch', (event) => {
       .catch(() => caches.match(event.request))
   );
 });
+
+// ---------- push notifications ----------
+self.addEventListener('push', (event) => {
+  let data = { title: 'Triple H Workspace', body: 'You have a new notification.' };
+  try { if (event.data) data = event.data.json(); } catch (e) { /* fall back to the default above */ }
+
+  event.waitUntil(
+    self.registration.showNotification(data.title, {
+      body: data.body,
+      icon: '/images/icon-192.png',
+      badge: '/images/icon-192.png',
+      data: { url: data.url || '/workspace.html' },
+    })
+  );
+});
+
+self.addEventListener('notificationclick', (event) => {
+  event.notification.close();
+  const targetUrl = (event.notification.data && event.notification.data.url) || '/workspace.html';
+  event.waitUntil(
+    self.clients.matchAll({ type: 'window' }).then((clientsList) => {
+      for (const client of clientsList) {
+        if (client.url.includes(targetUrl) && 'focus' in client) return client.focus();
+      }
+      if (self.clients.openWindow) return self.clients.openWindow(targetUrl);
+    })
+  );
+});

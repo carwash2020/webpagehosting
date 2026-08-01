@@ -149,3 +149,19 @@ async function requireAuth() {
 function getAuthToken() {
   return hasValidSession() ? getStoredSession().access_token : SUPABASE_ANON_KEY;
 }
+
+// Decodes the JWT's payload to pull out the logged-in user's ID (the
+// `sub` claim) without needing a network round-trip. Doesn't verify the
+// token's signature -- that's the database's job via RLS, not this
+// function's; this is only ever used to know WHICH row to write to.
+function getCurrentUserId() {
+  if (!hasValidSession()) return null;
+  try {
+    const token = getStoredSession().access_token;
+    const payload = token.split('.')[1];
+    const decoded = JSON.parse(atob(payload.replace(/-/g, '+').replace(/_/g, '/')));
+    return decoded.sub || null;
+  } catch (e) {
+    return null;
+  }
+}
