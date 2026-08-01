@@ -262,8 +262,8 @@
     position:relative;
     overflow:hidden;
     background:
-      linear-gradient(100deg, rgba(8,8,8,0.94) 0%, rgba(8,8,8,0.82) 35%, rgba(8,8,8,0.55) 65%, rgba(8,8,8,0.35) 100%),
-      url('/images/hero-bg-canyon.jpg?v=202608010211');
+      linear-gradient(100deg, rgba(8,8,8,0.94) 0%, rgba(8,8,8,0.90) 45%, rgba(8,8,8,0.65) 70%, rgba(8,8,8,0.35) 100%),
+      url('/images/hero-bg-canyon.jpg?v=202608010235');
     background-size: cover;
     background-position: center 70%;
   }
@@ -276,7 +276,7 @@
      photo or dark backdrop stays dark/light on its own terms, not tied
      to the page's own theme. */
   .hero h1{ color:#ffffff; }
-  .hero p.lede{ color:#d8d5d0; }
+  .hero p.lede{ color:#e5e2dc; }
   .hero::before{
     content:"";
     position:absolute;
