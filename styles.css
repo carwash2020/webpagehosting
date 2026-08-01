@@ -264,7 +264,7 @@
     background:
       linear-gradient(to bottom, rgba(8,8,8,0) 82%, rgba(8,8,8,1) 100%),
       linear-gradient(100deg, rgba(8,8,8,0.94) 0%, rgba(8,8,8,0.90) 45%, rgba(8,8,8,0.72) 70%, rgba(8,8,8,0.45) 100%),
-      url('/images/hero-bg-canyon.jpg?v=202608011845');
+      url('/images/hero-bg-canyon.jpg?v=202608011900');
     background-size: cover;
     background-position: center 70%;
   }
@@ -277,6 +277,7 @@
      photo or dark backdrop stays dark/light on its own terms, not tied
      to the page's own theme. */
   .hero h1{ color:#ffffff; }
+  .hero .eyebrow{ color:#ff8000; }
 
   .hero::before{
     content:"";
@@ -335,7 +336,7 @@
       background:
         linear-gradient(to bottom, rgba(8,8,8,0) 82%, rgba(8,8,8,1) 100%),
         linear-gradient(to bottom, rgba(8,8,8,0.42) 0%, rgba(8,8,8,0.58) 40%, rgba(8,8,8,0.78) 70%, rgba(8,8,8,0.85) 100%),
-        url('/images/hero-bg-canyon.jpg?v=202608011845');
+        url('/images/hero-bg-canyon.jpg?v=202608011900');
       background-size: cover;
       background-position: center 70%;
     }
@@ -888,7 +889,7 @@
     z-index:80;
     width:60px; height:60px;
     border-radius:50%;
-    background:linear-gradient(135deg, var(--blue-light), var(--blue) 60%, var(--blue-dark));
+    background:linear-gradient(135deg, #7ec4ff, #3aa0ff 60%, #1f5f9e);
     border:none;
     box-shadow:0 6px 20px rgba(0,0,0,.45);
     display:flex; align-items:center; justify-content:center;
@@ -901,8 +902,8 @@
   .chat-bubble-btn .chat-dot{
     position:absolute; top:2px; right:2px;
     width:14px; height:14px; border-radius:50%;
-    background:var(--orange);
-    border:2px solid var(--bg);
+    background:#ff8000;
+    border:2px solid #0a0a0a;
   }
   @media (max-width:760px){
     .chat-bubble-btn{bottom:90px; left:16px; width:54px; height:54px;}
