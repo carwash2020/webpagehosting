@@ -41,8 +41,9 @@
 // fine locally, just without cross-device syncing.
 // ===========================================================================
 
-const SUPABASE_URL = 'https://csvfqdjuobylgafgolho.supabase.co';
-const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNzdmZxZGp1b2J5bGdhZmdvbGhvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODUzNTQ3MjcsImV4cCI6MjEwMDkzMDcyN30.6GlvK-DfXf2lppS1kciZtsl4wHOpZz_yKtwsS1lyjrs';
+// SUPABASE_URL and SUPABASE_ANON_KEY are declared in auth.js, which
+// loads before this file on every page that uses sync.js. Not
+// re-declared here to avoid a duplicate-const error.
 const SYNC_TABLE = 'workspace_sync';
 
 const SYNC_DATA_KEYS = [
@@ -126,7 +127,7 @@ async function pushSync() {
       headers: {
         'Content-Type': 'application/json',
         'apikey': SUPABASE_ANON_KEY,
-        'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+        'Authorization': `Bearer ${getAuthToken()}`,
         'Prefer': 'resolution=merge-duplicates',
       },
       body: JSON.stringify(body),
@@ -150,7 +151,7 @@ async function pullSync() {
     const res = await fetch(`${SUPABASE_URL}/rest/v1/${SYNC_TABLE}?code=eq.${encodeURIComponent(code)}&select=data,updated_at`, {
       headers: {
         'apikey': SUPABASE_ANON_KEY,
-        'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+        'Authorization': `Bearer ${getAuthToken()}`,
       },
     });
     if (!res.ok) { recordSyncStatus('pull', false, 'http-' + res.status); return { ok: false, error: 'http-' + res.status }; }
@@ -234,7 +235,7 @@ async function fetchLeads() {
   if (!isSyncConfigured()) return { ok: false, error: 'not-configured', leads: [] };
   try {
     const res = await fetch(`${SUPABASE_URL}/rest/v1/th_leads?select=*&order=created_at.desc&limit=50`, {
-      headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': `Bearer ${SUPABASE_ANON_KEY}` },
+      headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': `Bearer ${getAuthToken()}` },
     });
     if (!res.ok) return { ok: false, error: 'http-' + res.status, leads: [] };
     const leads = await res.json();
@@ -252,7 +253,7 @@ async function markLeadHandled(id, handled) {
       headers: {
         'Content-Type': 'application/json',
         'apikey': SUPABASE_ANON_KEY,
-        'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+        'Authorization': `Bearer ${getAuthToken()}`,
         'Prefer': 'return=minimal',
       },
       body: JSON.stringify({ handled }),
@@ -271,7 +272,7 @@ async function deleteLead(id) {
       method: 'DELETE',
       headers: {
         'apikey': SUPABASE_ANON_KEY,
-        'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+        'Authorization': `Bearer ${getAuthToken()}`,
         'Prefer': 'return=minimal',
       },
     });
@@ -308,7 +309,7 @@ async function uploadJobPhoto(file, jobId, jobTitle, photoType) {
       method: 'POST',
       headers: {
         'apikey': SUPABASE_ANON_KEY,
-        'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+        'Authorization': `Bearer ${getAuthToken()}`,
         'Content-Type': file.type || 'image/jpeg',
       },
       body: file,
@@ -320,7 +321,7 @@ async function uploadJobPhoto(file, jobId, jobTitle, photoType) {
       headers: {
         'Content-Type': 'application/json',
         'apikey': SUPABASE_ANON_KEY,
-        'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+        'Authorization': `Bearer ${getAuthToken()}`,
         'Prefer': 'return=representation',
       },
       body: JSON.stringify([{ job_id: jobId, job_title: jobTitle, storage_path: path, photo_type: photoType || 'photo' }]),
@@ -337,7 +338,7 @@ async function fetchJobPhotos(jobId) {
   if (!isSyncConfigured()) return { ok: false, error: 'not-configured', photos: [] };
   try {
     const res = await fetch(`${SUPABASE_URL}/rest/v1/th_job_photos?job_id=eq.${jobId}&select=*&order=created_at.desc`, {
-      headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': `Bearer ${SUPABASE_ANON_KEY}` },
+      headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': `Bearer ${getAuthToken()}` },
     });
     if (!res.ok) return { ok: false, error: 'http-' + res.status, photos: [] };
     const photos = await res.json();
@@ -352,13 +353,13 @@ async function deleteJobPhoto(photoId, storagePath) {
   try {
     await fetch(`${SUPABASE_URL}/storage/v1/object/${JOB_PHOTOS_BUCKET}/${storagePath}`, {
       method: 'DELETE',
-      headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': `Bearer ${SUPABASE_ANON_KEY}` },
+      headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': `Bearer ${getAuthToken()}` },
     });
     // Delete the metadata row regardless of the storage-delete result above,
     // so a partial failure doesn't leave an orphaned row the UI still shows.
     const delRow = await fetch(`${SUPABASE_URL}/rest/v1/th_job_photos?id=eq.${photoId}`, {
       method: 'DELETE',
-      headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': `Bearer ${SUPABASE_ANON_KEY}`, 'Prefer': 'return=minimal' },
+      headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': `Bearer ${getAuthToken()}`, 'Prefer': 'return=minimal' },
     });
     if (!delRow.ok) return { ok: false, error: 'http-' + delRow.status };
     return { ok: true };
@@ -381,7 +382,7 @@ async function toggleFeaturedPhoto(photoId, featured, caption) {
       headers: {
         'Content-Type': 'application/json',
         'apikey': SUPABASE_ANON_KEY,
-        'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+        'Authorization': `Bearer ${getAuthToken()}`,
         'Prefer': 'return=minimal',
       },
       body: JSON.stringify({ featured, public_caption: caption }),
@@ -397,7 +398,7 @@ async function fetchFeaturedPhotos() {
   if (!isSyncConfigured()) return { ok: false, error: 'not-configured', photos: [] };
   try {
     const res = await fetch(`${SUPABASE_URL}/rest/v1/th_job_photos?featured=eq.true&select=*&order=created_at.desc`, {
-      headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': `Bearer ${SUPABASE_ANON_KEY}` },
+      headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': `Bearer ${getAuthToken()}` },
     });
     if (!res.ok) return { ok: false, error: 'http-' + res.status, photos: [] };
     const photos = await res.json();
@@ -513,7 +514,7 @@ async function uploadReceipt(file, expenseId) {
       method: 'POST',
       headers: {
         'apikey': SUPABASE_ANON_KEY,
-        'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+        'Authorization': `Bearer ${getAuthToken()}`,
         'Content-Type': file.type || 'image/jpeg',
       },
       body: file,
@@ -530,7 +531,7 @@ async function deleteReceipt(storagePath) {
   try {
     await fetch(`${SUPABASE_URL}/storage/v1/object/${RECEIPTS_BUCKET}/${storagePath}`, {
       method: 'DELETE',
-      headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': `Bearer ${SUPABASE_ANON_KEY}` },
+      headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': `Bearer ${getAuthToken()}` },
     });
     return { ok: true };
   } catch (e) {
