@@ -133,12 +133,12 @@
   .btn:active{transform:translateY(0);}
 
   .btn.orange{
-    background:linear-gradient(135deg, var(--orange-light), var(--orange) 60%, var(--orange-dark));
+    background:linear-gradient(135deg, #ffb347, #ff8000 60%, #c96400);
     color:#161005;
     box-shadow:0 8px 20px -6px rgba(255,128,0,.5);
   }
   .btn.blue{
-    background:linear-gradient(135deg, var(--blue-light), var(--blue) 60%, var(--blue-dark));
+    background:linear-gradient(135deg, #7ec4ff, #3aa0ff 60%, #1f5f9e);
     color:#04101c;
     box-shadow:0 8px 20px -6px rgba(58,160,255,.5);
   }
@@ -264,7 +264,7 @@
     background:
       linear-gradient(to bottom, rgba(8,8,8,0) 82%, rgba(8,8,8,1) 100%),
       linear-gradient(100deg, rgba(8,8,8,0.94) 0%, rgba(8,8,8,0.90) 45%, rgba(8,8,8,0.72) 70%, rgba(8,8,8,0.45) 100%),
-      url('/images/hero-bg-canyon.jpg?v=202608011800');
+      url('/images/hero-bg-canyon.jpg?v=202608011830');
     background-size: cover;
     background-position: center 70%;
   }
@@ -335,7 +335,7 @@
       background:
         linear-gradient(to bottom, rgba(8,8,8,0) 82%, rgba(8,8,8,1) 100%),
         linear-gradient(to bottom, rgba(8,8,8,0.42) 0%, rgba(8,8,8,0.58) 40%, rgba(8,8,8,0.78) 70%, rgba(8,8,8,0.85) 100%),
-        url('/images/hero-bg-canyon.jpg?v=202608011800');
+        url('/images/hero-bg-canyon.jpg?v=202608011830');
       background-size: cover;
       background-position: center 70%;
     }
@@ -1550,12 +1550,6 @@
    or dim the whole viewport respectively -- both are correct dark
    regardless of site theme, not something tied to the page's own
    light/dark mode. */
-[data-theme="light"] .btn.orange {
-  box-shadow: 0 8px 20px -6px rgba(216, 95, 10, 0.45);
-}
-[data-theme="light"] .btn.blue {
-  box-shadow: 0 8px 20px -6px rgba(13, 110, 253, 0.45);
-}
 [data-theme="light"] .hero::before,
 [data-theme="light"] .hero::after {
   opacity: 0.85;
