@@ -698,7 +698,7 @@
 
     const filename = 'TripleH_Invoice_' + (document.getElementById('clientName').value || 'Client').replace(/[^a-z0-9]/gi, '_') + '.pdf';
     logInvoice({ subtotal, tax, discount, total });
-    doc.save(filename);
+    await sharePdfOrDownload(doc, filename, 'Invoice');
   }
 
   // ---------- Invoice logging (feeds the Dashboard's revenue numbers) ----------
@@ -901,7 +901,7 @@
 
     const filename = 'TripleH_Estimate_' + (document.getElementById('quoteClientName').value || 'Client').replace(/[^a-z0-9]/gi, '_') + '.pdf';
     logQuote({ subtotal, tax, discount, total });
-    doc.save(filename);
+    await sharePdfOrDownload(doc, filename, 'Estimate');
   }
 </script>
 

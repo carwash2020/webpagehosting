@@ -100,6 +100,39 @@ function showConfirm(message, options) {
   });
 }
 
+// ---------------------------------------------------------------------------
+// Share-or-download for generated PDFs -- tries the native share sheet
+// (text it, email it, AirDrop it) first on devices that support sharing
+// files, falls back to a normal download everywhere else (most desktop
+// browsers, or if the user cancels/it fails). The PDF still gets
+// downloaded either way if sharing isn't available, so nothing is lost
+// by trying the nicer path first.
+// ---------------------------------------------------------------------------
+
+function canShareFiles() {
+  return !!(navigator.share && navigator.canShare);
+}
+
+async function sharePdfOrDownload(doc, filename, shareTitle) {
+  if (canShareFiles()) {
+    try {
+      const blob = doc.output('blob');
+      const file = new File([blob], filename, { type: 'application/pdf' });
+      if (navigator.canShare({ files: [file] })) {
+        await navigator.share({ files: [file], title: shareTitle || filename });
+        return; // shared successfully -- no separate download needed
+      }
+    } catch (e) {
+      // AbortError means the user just cancelled the share sheet --
+      // respect that and don't fall back to forcing a download they
+      // didn't ask for. Any OTHER error (share genuinely failed) falls
+      // through to the normal download below instead.
+      if (e.name === 'AbortError') return;
+    }
+  }
+  doc.save(filename);
+}
+
 // PWA install support -- registers the service worker (see its own file
 // for the network-first caching strategy, which gives real offline
 // support without risking the stale-cache confusion this project has

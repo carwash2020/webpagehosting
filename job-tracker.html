@@ -1554,6 +1554,10 @@
 
       const initialHash = (location.hash || '').replace('#', '');
       if (TAB_HASHES[initialHash]) activateTab(initialHash);
+      if (initialHash === 'add-job') {
+        document.getElementById('jobTitle')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        document.getElementById('jobTitle')?.focus();
+      }
 
       if (typeof startRealtimeSync === 'function') {
         startRealtimeSync(onRealtimeChange, updateRealtimeBadge);

@@ -27,6 +27,7 @@
 <link rel="stylesheet" href="/styles.css">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js" defer></script>
 <script src="/sync.js" defer></script>
+<script src="/push-notifications.js" defer></script>
 <script src="/tools-common.js" defer></script>
 <style>
   body { padding: 44px 20px 60px; max-width: 900px; margin: 0 auto; }
@@ -166,6 +167,7 @@
     <span class="hub-title">Dashboard</span>
   </div>
   <button class="help-btn" onclick="openHelpModal()" aria-label="How to use this dashboard" title="How to use this dashboard">?</button>
+  <button class="help-btn" id="pushToggleBtn" onclick="handlePushToggle()" aria-label="Toggle notifications" title="Toggle notifications">&#128276;</button>
   <button class="help-btn" onclick="signOut()" aria-label="Log out" title="Log out">&#x21B0;</button>
 </div>
 <p class="hub-sub">Bookmark this page &mdash; a snapshot of the business, plus every internal tool, all in one place. <a href="#" id="refreshSyncLink" onclick="manualRefreshSync(renderDashboard); return false;" style="color:var(--blue-light);">Refresh synced data now</a>
@@ -1192,6 +1194,36 @@
   // block runs immediately at parse time regardless. Waiting for
   // DOMContentLoaded guarantees initSyncOnLoad() actually exists by the
   // time we call it.
+  async function handlePushToggle() {
+    const btn = document.getElementById('pushToggleBtn');
+    const currentlyEnabled = await isPushEnabled();
+
+    if (currentlyEnabled) {
+      const confirmed = await showConfirm('Turn off notifications on this device?');
+      if (!confirmed) return;
+      await disablePushNotifications();
+      btn.classList.remove('is-active');
+      return;
+    }
+
+    btn.disabled = true;
+    const result = await enablePushNotifications();
+    btn.disabled = false;
+    if (!result.ok) {
+      await showAlert(result.error);
+      return;
+    }
+    btn.classList.add('is-active');
+    await showAlert('Notifications are on for this device.');
+  }
+
+  async function refreshPushToggleState() {
+    const btn = document.getElementById('pushToggleBtn');
+    if (!btn || !pushNotificationsSupported()) { if (btn) btn.style.display = 'none'; return; }
+    const enabled = await isPushEnabled();
+    btn.classList.toggle('is-active', enabled);
+  }
+
   document.addEventListener('DOMContentLoaded', function () {
     initSyncOnLoad().then(renderDashboard).catch(renderDashboard).then(() => {
       if (typeof startRealtimeSync === 'function') {
@@ -1201,6 +1233,10 @@
         startLeadsRealtime(loadAndRenderLeads, updateRealtimeBadge);
       }
     });
+    refreshPushToggleState();
+    if (window.location.hash === '#today') {
+      document.getElementById('section-today')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
   });
 </script>
 

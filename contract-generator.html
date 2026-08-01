@@ -445,7 +445,8 @@
     });
 
     const safeClientName = (fields.clientName || 'client').replace(/[^a-z0-9]+/gi, '-').replace(/^-+|-+$/g, '') || 'client';
-    doc.save(`TripleH-${CONTRACT_TYPE_LABELS[type].replace(/\s+/g, '-')}-${safeClientName}.pdf`);
+    const filename = `TripleH-${CONTRACT_TYPE_LABELS[type].replace(/\s+/g, '-')}-${safeClientName}.pdf`;
+    await sharePdfOrDownload(doc, filename, CONTRACT_TYPE_LABELS[type]);
   }
 
   const CONTRACT_TEMPLATES = {
