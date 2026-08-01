@@ -1,28 +1,66 @@
-// Minimal service worker for the Triple H Workspace PWA.
+// Service worker for the Triple H Workspace PWA.
 //
-// This exists ONLY to satisfy installability requirements in some
-// browsers (a registered service worker is one of the checkboxes some
-// versions of Chrome/Android look for before offering "Add to Home
-// Screen"). It deliberately does NOT cache anything.
+// This project deliberately had NO caching before -- a styles.css update
+// once looked like the whole site was broken purely from a stale cached
+// copy, and the fix at the time was to cache nothing at all. That's
+// being reversed here now that the project is more stable, but the
+// SAME underlying risk still needs guarding against, so this uses a
+// network-first strategy rather than cache-first:
 //
-// Why no caching: this project has already been bitten once by aggressive
-// browser disk caching causing real confusion (a styles.css update that
-// looked like the whole site was broken, purely because of a stale
-// cached copy). A service worker cache is stickier and harder to clear
-// than normal browser cache -- adding one here would make that exact
-// problem worse, not better, for a tool that depends on Supabase being
-// reachable for almost everything useful anyway. So: every request just
-// passes straight through to the network, every time, no exceptions.
+//   - Online: every request still goes to the network first, exactly
+//     like before this file existed. You always get the current
+//     version. The cache is only ever updated as a side effect of a
+//     successful network fetch, never served ahead of one.
+//   - Offline (a dead zone on a job site, no signal): only THEN does
+//     this fall back to whatever was last successfully cached, so the
+//     app can still open and show existing local data instead of
+//     failing to load entirely.
+//
+// Cross-origin requests (Supabase API calls) are never touched here --
+// those always go straight to the network with no caching, since
+// serving stale business data as if it were current would be actively
+// misleading, not helpful. If Supabase is unreachable, those calls
+// should keep failing exactly as they already did; this only helps the
+// app SHELL (the pages themselves) still open.
+
+const CACHE_NAME = 'th-workspace-v1';
+const PRECACHE_URLS = [
+  '/workspace.html', '/job-tracker.html', '/invoice-generator.html', '/contract-generator.html',
+  '/calendar.html', '/route-planner.html', '/review-request.html', '/contact-card.html',
+  '/job-cost-lookup.html', '/expense-logger.html', '/login.html',
+  '/styles.css', '/sync.js', '/auth.js', '/tools-common.js', '/manifest.json',
+  '/images/logo-signature-orange.png', '/images/icon-192.png', '/images/icon-512.png', '/images/apple-touch-icon.png',
+];
 
 self.addEventListener('install', (event) => {
+  event.waitUntil(
+    caches.open(CACHE_NAME)
+      .then((cache) => cache.addAll(PRECACHE_URLS))
+      .catch(() => { /* a page not being reachable at install time shouldn't block install */ })
+  );
   self.skipWaiting();
 });
 
 self.addEventListener('activate', (event) => {
-  event.waitUntil(self.clients.claim());
+  event.waitUntil(
+    caches.keys()
+      .then((names) => Promise.all(names.filter((n) => n !== CACHE_NAME).map((n) => caches.delete(n))))
+      .then(() => self.clients.claim())
+  );
 });
 
 self.addEventListener('fetch', (event) => {
-  // Explicitly NOT intercepting -- let the browser handle every request
-  // normally, straight to the network. No caching, no offline fallback.
+  if (event.request.method !== 'GET') return;
+  const url = new URL(event.request.url);
+  if (url.origin !== self.location.origin) return; // never intercept Supabase or other cross-origin calls
+
+  event.respondWith(
+    fetch(event.request)
+      .then((networkResponse) => {
+        const responseClone = networkResponse.clone();
+        caches.open(CACHE_NAME).then((cache) => cache.put(event.request, responseClone));
+        return networkResponse;
+      })
+      .catch(() => caches.match(event.request))
+  );
 });
