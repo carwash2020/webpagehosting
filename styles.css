@@ -264,7 +264,7 @@
     background:
       linear-gradient(to bottom, rgba(8,8,8,0) 82%, rgba(8,8,8,1) 100%),
       linear-gradient(100deg, rgba(8,8,8,0.94) 0%, rgba(8,8,8,0.90) 45%, rgba(8,8,8,0.72) 70%, rgba(8,8,8,0.45) 100%),
-      url('/images/hero-bg-canyon.jpg?v=202608010300');
+      url('/images/hero-bg-canyon.jpg?v=202608011700');
     background-size: cover;
     background-position: center 70%;
   }
@@ -330,11 +330,12 @@
   }
   @media (max-width:860px){
     .hero-grid{grid-template-columns:1fr; text-align:center;}
+    .hero::before, .hero::after{display:none;}
     .hero{
       background:
         linear-gradient(to bottom, rgba(8,8,8,0) 82%, rgba(8,8,8,1) 100%),
         linear-gradient(to bottom, rgba(8,8,8,0.72) 0%, rgba(8,8,8,0.85) 100%),
-        url('/images/hero-bg-canyon.jpg?v=202608010300');
+        url('/images/hero-bg-canyon.jpg?v=202608011700');
       background-size: cover;
       background-position: center 70%;
     }
