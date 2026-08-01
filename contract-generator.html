@@ -203,6 +203,16 @@
   <button class="primary-btn wide" onclick="generateAndLog('ltsa')">Generate PDF &amp; Save</button>
 </div>
 
+<div class="form-section">
+  <h3>Client Signature <span style="color:var(--text-dim); font-weight:400; text-transform:none; letter-spacing:0;">(optional)</span></h3>
+  <p style="color:var(--text-dim); font-size: 13px; margin: -6px 0 12px;">If the client is signing in person right now, have them sign below with a finger or mouse before generating the PDF &mdash; it'll be embedded directly into the document instead of leaving a blank line. Skip this entirely and the PDF works exactly like before, ready for hand-signing later.</p>
+  <canvas id="signatureCanvas" width="600" height="180" style="width:100%; max-width:600px; height:180px; background:#ffffff; border:1px solid var(--border); border-radius:8px; touch-action:none; cursor:crosshair; display:block;"></canvas>
+  <div style="display:flex; gap:10px; margin-top:10px;">
+    <button type="button" class="secondary-btn" onclick="clearSignature()">Clear Signature</button>
+    <span id="signatureStatus" style="color:var(--text-dim); font-size:13px; align-self:center;"></span>
+  </div>
+</div>
+
 <div class="form-section" id="contractLogSection">
   <h3>Recent Contracts</h3>
   <div id="contractLogList"></div>
@@ -347,7 +357,7 @@
     return y;
   }
 
-  async function buildContractPDF(type, fields) {
+  async function buildContractPDF(type, fields, clientSignatureDataUrl) {
     const { jsPDF } = window.jspdf;
     const doc = new jsPDF({ unit: 'pt', format: 'letter' });
     const pageW = doc.internal.pageSize.getWidth();
@@ -408,8 +418,23 @@
         doc.text(block.who, marginX, y);
         y += 22;
         doc.setFont('helvetica', 'normal'); doc.setFontSize(10); doc.setTextColor(...GRAY);
-        doc.text('Signature: _________________________________     Date: ______________', marginX, y);
-        y += 20;
+        if (block.who === 'CLIENT' && clientSignatureDataUrl) {
+          // Embed the captured signature in place of the blank line.
+          // Canvas is 600x180 (10:3 ratio) -- keep that ratio here so the
+          // signature doesn't stretch or squash when placed into the PDF.
+          const imgWidth = 220;
+          const imgHeight = imgWidth * (180 / 600);
+          doc.addImage(clientSignatureDataUrl, 'PNG', marginX, y - 14, imgWidth, imgHeight);
+          doc.text('Date: ______________', marginX + imgWidth + 20, y + imgHeight - 20);
+          y += imgHeight + 6;
+          doc.setFontSize(8.5); doc.setTextColor(150, 150, 150);
+          doc.text('(Signed digitally in Triple H Enterprises\u2019 contract tool)', marginX, y);
+          doc.setFontSize(10); doc.setTextColor(...GRAY);
+          y += 16;
+        } else {
+          doc.text('Signature: _________________________________     Date: ______________', marginX, y);
+          y += 20;
+        }
         doc.text('Printed Name: _________________________________', marginX, y);
         y += 24;
       } else if (block.type === 'footnote') {
@@ -545,7 +570,8 @@
       await showAlert('Enter a client name before generating.');
       return;
     }
-    await buildContractPDF(type, fields);
+    const signatureDataUrl = getSignatureDataUrl();
+    await buildContractPDF(type, fields, signatureDataUrl);
 
     const log = loadContractLog();
     const nextId = log.length ? Math.max(...log.map(e => e.id)) + 1 : 1;
@@ -559,9 +585,71 @@
     renderContractLog();
   }
 
+  // ---------- signature pad ----------
+  // Pointer Events unify mouse and touch into one code path, same
+  // approach used elsewhere in this project. Drawing is tracked with a
+  // simple boolean rather than inspecting pixel data, since that's both
+  // simpler and cheaper than scanning the canvas to check if anything
+  // was actually drawn.
+  let signatureHasDrawing = false;
+
+  function initSignaturePad() {
+    const canvas = document.getElementById('signatureCanvas');
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    ctx.strokeStyle = '#14120f';
+    ctx.lineWidth = 2.2;
+    ctx.lineJoin = 'round';
+    ctx.lineCap = 'round';
+
+    // The canvas's actual pixel size (600x180, set via width/height
+    // attributes) is different from its displayed CSS size (scales to
+    // fit the container) -- coordinates need scaling by that ratio or
+    // strokes land in the wrong place on any screen narrower than 600px.
+    function getScaledPoint(e) {
+      const rect = canvas.getBoundingClientRect();
+      const scaleX = canvas.width / rect.width;
+      const scaleY = canvas.height / rect.height;
+      return { x: (e.clientX - rect.left) * scaleX, y: (e.clientY - rect.top) * scaleY };
+    }
+
+    let drawing = false;
+    canvas.addEventListener('pointerdown', (e) => {
+      drawing = true;
+      signatureHasDrawing = true;
+      document.getElementById('signatureStatus').textContent = 'Signature captured';
+      const p = getScaledPoint(e);
+      ctx.beginPath();
+      ctx.moveTo(p.x, p.y);
+      canvas.setPointerCapture(e.pointerId);
+    });
+    canvas.addEventListener('pointermove', (e) => {
+      if (!drawing) return;
+      const p = getScaledPoint(e);
+      ctx.lineTo(p.x, p.y);
+      ctx.stroke();
+    });
+    canvas.addEventListener('pointerup', () => { drawing = false; });
+    canvas.addEventListener('pointercancel', () => { drawing = false; });
+  }
+
+  function clearSignature() {
+    const canvas = document.getElementById('signatureCanvas');
+    const ctx = canvas.getContext('2d');
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    signatureHasDrawing = false;
+    document.getElementById('signatureStatus').textContent = '';
+  }
+
+  function getSignatureDataUrl() {
+    if (!signatureHasDrawing) return null;
+    return document.getElementById('signatureCanvas').toDataURL('image/png');
+  }
+
   document.addEventListener('DOMContentLoaded', () => {
     populateContactPickers();
     renderContractLog();
+    initSignaturePad();
   });
 </script>
 </body>

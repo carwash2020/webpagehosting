@@ -178,6 +178,16 @@
   <a href="#section-tools">Tools</a>
 </nav>
 
+<div class="section-block" id="section-today">
+  <div class="section-heading" onclick="toggleSection('today')">
+    <span>Today</span>
+    <span class="collapse-arrow">&#9660;</span>
+  </div>
+  <div class="section-body" id="body-today">
+    <div id="todayJobsList"></div>
+  </div>
+</div>
+
 <div class="section-block" id="section-snapshot">
   <div class="section-heading" onclick="toggleSection('snapshot')">
     <span>Business Snapshot</span>
@@ -419,7 +429,7 @@
   }
 
   const COLLAPSE_STATE_KEY = 'th_dash_collapsed';
-  const DEFAULT_COLLAPSE = { snapshot: false, actionitems: false, businesshealth: true };
+  const DEFAULT_COLLAPSE = { today: false, snapshot: false, actionitems: false, businesshealth: true };
 
   function loadCollapseState() {
     try {
@@ -1049,8 +1059,43 @@
     loadAndRenderGalleryQueue();
   }
 
+  function renderTodayJobs() {
+    const container = document.getElementById('todayJobsList');
+    if (!container) return;
+    let jobs = [];
+    try { jobs = JSON.parse(localStorage.getItem('th_tracker_jobs') || '[]'); } catch (e) { jobs = []; }
+
+    const today = new Date();
+    const todayKey = today.getFullYear() + '-' + String(today.getMonth() + 1).padStart(2, '0') + '-' + String(today.getDate()).padStart(2, '0');
+    const todaysJobs = jobs.filter(j => j.date === todayKey && j.status !== 'done');
+
+    if (todaysJobs.length === 0) {
+      container.innerHTML = '<div class="empty-state-small">Nothing on the schedule for today.</div>';
+      return;
+    }
+
+    const priorityOrder = { high: 0, medium: 1, low: 2 };
+    todaysJobs.sort((a, b) => (priorityOrder[a.priority] ?? 1) - (priorityOrder[b.priority] ?? 1));
+
+    container.innerHTML = todaysJobs.map(job => `
+      <div class="dash-list-item">
+        <div>
+          <div class="dash-list-item-title">
+            <span class="badge badge-${job.priority}">${job.priority}</span>
+            ${escapeHtml(job.title)}${job.client ? ' &mdash; ' + escapeHtml(job.client) : ''}
+          </div>
+          <div class="dash-list-item-meta">
+            ${job.address ? '<a href="https://maps.google.com/?q=' + encodeURIComponent(job.address) + '" target="_blank" rel="noopener">' + escapeHtml(job.address) + '</a>' : 'No address on file'}
+            ${job.phone ? ' &middot; <a href="tel:' + escapeHtml(job.phone) + '">' + escapeHtml(job.phone) + '</a>' : ''}
+          </div>
+        </div>
+        <a href="/job-tracker.html" class="secondary-btn">View in Job Tracker</a>
+      </div>`).join('');
+  }
+
   function renderDashboard() {
     document.getElementById('setAsideRate').value = loadSetAsideRate();
+    renderTodayJobs();
     renderMetrics();
     renderStatusBars();
     renderTopVendors();
