@@ -129,14 +129,52 @@
   .realtime-dot.is-live{background:var(--green);box-shadow:0 0 5px rgba(58,201,106,0.7);}
   .realtime-dot.is-connecting{background:var(--orange);}
   .realtime-dot.is-error{background:var(--red);}
+  .help-btn{
+    display:inline-flex;align-items:center;justify-content:center;width:22px;height:22px;margin-left:8px;
+    border:1px solid var(--border-soft);border-radius:50%;background:none;color:var(--text-dim);
+    font-family:'Oswald',sans-serif;font-size:13px;font-weight:600;cursor:pointer;vertical-align:middle;
+    transition:border-color .15s ease, color .15s ease;
+  }
+  .help-btn:hover{border-color:var(--orange-light);color:var(--orange-light);}
+  .help-modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.6);z-index:200;align-items:center;justify-content:center;padding:20px;}
+  .help-modal-overlay.is-open{display:flex;}
+  .help-modal{position:relative;background:var(--bg-card);border:1px solid var(--border-soft);border-radius:var(--radius);max-width:520px;width:100%;max-height:80vh;overflow-y:auto;padding:26px 28px;}
+  .help-modal h3{font-family:'Anton',sans-serif;color:var(--orange-light);font-size:19px;margin:0 0 14px;padding-right:24px;}
+  .help-modal h4{font-family:'Oswald',sans-serif;color:var(--text);font-size:13px;text-transform:uppercase;letter-spacing:0.5px;margin:18px 0 6px;}
+  .help-modal h4:first-of-type{margin-top:0;}
+  .help-modal-body{color:var(--text);font-size:14px;line-height:1.6;}
+  .help-modal-body p{margin:0 0 10px;}
+  .help-modal-body ul{margin:0 0 10px;padding-left:20px;}
+  .help-modal-body li{margin-bottom:6px;}
+  .help-modal-body strong{color:var(--orange-light);}
+  .help-modal-close{position:absolute;top:14px;right:16px;background:none;border:none;color:var(--text-dim);font-size:22px;line-height:1;cursor:pointer;padding:4px 8px;}
+  .help-modal-close:hover{color:var(--text);}
 </style>
 </head>
 <body>
 
+<div class="help-modal-overlay" id="helpModalOverlay" onclick="if(event.target===this) closeHelpModal()">
+  <div class="help-modal">
+    <button class="help-modal-close" onclick="closeHelpModal()" aria-label="Close">&times;</button>
+    <h3>How to Use: Runway Dashboard</h3>
+    <div class="help-modal-body">
+      <h4>Personal Budget</h4>
+      <p>Tap "+ Add Expense" to log a real personal expense — pick a category, name it, choose how often it hits (weekly, monthly, etc.), and give it a minimum and a comfortable amount. Everything auto-converts to a monthly figure for the totals. Nothing is pre-filled; categories only show up once you've added something to them.</p>
+      <h4>Business Dashboard</h4>
+      <p>Pick a month, tap <strong>"Pull from Job Tracker"</strong> to auto-fill Revenue, Business Expenses, and Fuel/Mileage straight from your actual logged invoices and expense entries for that month — no retyping. Every number is still editable afterward. Other Expenses, Owner Draws, and Cash in the account aren't tracked anywhere else, so those three always need to be typed in by hand, then tap "Save Month."</p>
+      <h4>Runway Summary</h4>
+      <p>Your emergency fund balance vs. 6- and 12-month targets, a trend line estimating how many months at your current growth rate until net profit covers your minimum expenses, a Safe Draw Calculator (how much cash could come out right now while keeping a buffer), and a 3-item readiness checklist — two calculated automatically, one you check yourself.</p>
+      <h4>Syncing</h4>
+      <p>Everything on this page syncs automatically through the same Supabase project the rest of your Triple H tools use — the little badge at the top shows the connection status. Backup &amp; Restore (bottom of the Runway tab) is a separate, zero-setup safety net: downloads everything as one file, independent of whether sync is working.</p>
+    </div>
+  </div>
+</div>
+
+
 <a href="/workspace.html" class="back-link">&larr; Back to Workspace</a>
 
 <header>
-  <h1>Runway Dashboard</h1>
+  <h1>Runway Dashboard <button class="help-btn" onclick="openHelpModal()" aria-label="How to use this dashboard" title="How to use this dashboard">?</button></h1>
   <p>Personal budget and business numbers now sync through the same Triple H Supabase project as the rest of your tools.
     <span class="realtime-badge" id="jtBadge"><span class="realtime-dot" id="jtDot"></span><span id="jtText">Sync: connecting...</span></span>
   </p>
@@ -208,9 +246,10 @@
       <div class="card-header"><h3>Add / Update a Month</h3></div>
       <div class="note" style="margin-top:0;margin-bottom:10px;">Revenue, business expenses, and fuel pull automatically from Job Tracker's Invoices and Expenses tab for whichever month you pick below — edit any number afterward if something's missing or you want to adjust it. Other Expenses, Draws, and Cash aren't tracked anywhere else, so those stay manual.</div>
       <div class="form-grid">
-        <div class="full"><label>Month</label><input type="month" id="biz-month"></div>
+        <div><label>Month</label><input type="month" id="biz-month"></div>
+        <div><label>&nbsp;</label><button class="action-btn" id="pullMonthBtn">Pull from Job Tracker</button></div>
       </div>
-      <button class="action-btn" id="pullMonthBtn" style="margin-bottom:14px;">Pull from Job Tracker</button>
+      <div class="note" id="pullDiagnosticNote" style="margin-top:-4px;"></div>
       <div class="form-grid">
         <div><label>Revenue <span class="col-hint" id="revSourceHint"></span></label><input type="number" id="biz-revenue" placeholder="0"></div>
         <div><label>Business Expenses <span class="col-hint" id="expSourceHint"></span></label><input type="number" id="biz-expenses" placeholder="0"></div>
@@ -332,6 +371,18 @@ window.storage = {
     } catch (e) { return null; }
   }
 };
+
+function openHelpModal(){
+  const overlay = document.getElementById('helpModalOverlay');
+  if(overlay) overlay.classList.add('is-open');
+}
+function closeHelpModal(){
+  const overlay = document.getElementById('helpModalOverlay');
+  if(overlay) overlay.classList.remove('is-open');
+}
+document.addEventListener('keydown', (e) => {
+  if(e.key === 'Escape') closeHelpModal();
+});
 
 const CATEGORIES = [
   { key:"housing", name:"Housing", suggestions:["Mortgage","HOA","Property Taxes","Homeowners Insurance"] },
@@ -610,13 +661,31 @@ function pullMonthFromJobTracker(monthVal){
   const expenseCount = expenseLog.filter(e => e.type !== 'mileage' && inMonth(e.date)).length;
   const mileageCount = expenseLog.filter(e => e.type === 'mileage' && inMonth(e.date)).length;
 
-  return { revenue, expenses, fuel, invoiceCount, expenseCount, mileageCount };
+  return {
+    revenue, expenses, fuel, invoiceCount, expenseCount, mileageCount,
+    totalInvoicesEverLogged: invoices.length,
+    totalExpensesEverLogged: expenseLog.length,
+  };
 }
 
 document.getElementById('pullMonthBtn').addEventListener('click', () => {
-  const monthVal = document.getElementById('biz-month').value;
+  const rawMonthVal = document.getElementById('biz-month').value;
   const note = document.getElementById('bizFormNote');
+  const diag = document.getElementById('pullDiagnosticNote');
+  diag.textContent = '';
+
+  // input[type=month] should always yield "YYYY-MM", but older Safari/iOS
+  // versions render it as a plain text field if unsupported, which can
+  // produce something else entirely (or an empty string that still looks
+  // "picked" visually). This guards against silently matching nothing.
+  const monthVal = (rawMonthVal || '').trim();
+  const looksValid = /^\d{4}-\d{2}$/.test(monthVal);
   if(!monthVal){ note.textContent = 'Pick a month first.'; note.style.color = 'var(--red)'; return; }
+  if(!looksValid){
+    note.textContent = `That month field returned "${monthVal}", not the expected YYYY-MM format -- your browser's month picker may not be behaving. Try a different browser, or check the console.`;
+    note.style.color = 'var(--red)';
+    return;
+  }
 
   const pulled = pullMonthFromJobTracker(monthVal);
   document.getElementById('biz-revenue').value = pulled.revenue || '';
@@ -626,6 +695,16 @@ document.getElementById('pullMonthBtn').addEventListener('click', () => {
   document.getElementById('revSourceHint').textContent = `(${pulled.invoiceCount} invoice${pulled.invoiceCount===1?'':'s'})`;
   document.getElementById('expSourceHint').textContent = `(${pulled.expenseCount} entr${pulled.expenseCount===1?'y':'ies'})`;
   document.getElementById('fuelSourceHint').textContent = `(${pulled.mileageCount} entr${pulled.mileageCount===1?'y':'ies'})`;
+
+  if(pulled.totalInvoicesEverLogged === 0 && pulled.totalExpensesEverLogged === 0){
+    diag.textContent = `Job Tracker has no invoices or expenses logged on this device at all yet -- either nothing's been logged there, or sync hasn't pulled it down. Try "Refresh synced data now" on Job Tracker itself, then reload this page.`;
+    diag.style.color = 'var(--red)';
+  } else if(pulled.invoiceCount === 0 && pulled.expenseCount === 0 && pulled.mileageCount === 0){
+    diag.textContent = `Job Tracker has ${pulled.totalInvoicesEverLogged} invoice(s) and ${pulled.totalExpensesEverLogged} expense entr(y/ies) logged overall, but none dated in ${monthVal} specifically. That's likely correct, not a bug -- double check the month you picked against what you actually logged.`;
+    diag.style.color = 'var(--text-dim)';
+  } else {
+    diag.textContent = '';
+  }
 
   note.textContent = 'Pulled from Job Tracker -- review the numbers, then Save Month. Other Expenses, Draws, and Cash still need filling in by hand.';
   note.style.color = 'var(--text-dim)';
