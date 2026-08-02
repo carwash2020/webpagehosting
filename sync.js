@@ -72,6 +72,7 @@ const SYNC_DATA_KEYS = [
   // business ever brings on an employee or bookkeeper with sync access.
   'rd_personal-expenses',
   'rd_personal-income',
+  'rd_budget-settings',
   'rd_business-months',
   'rd_emergency-fund',
   'rd_checklist',

@@ -159,10 +159,12 @@
     <button class="help-modal-close" onclick="closeHelpModal()" aria-label="Close">&times;</button>
     <h3>How to Use: Runway Dashboard</h3>
     <div class="help-modal-body">
+      <h4>Safe to Spend</h4>
+      <p>The top card on Personal Budget. Set a <strong>Comfortable Buffer %</strong> once (default 15%) — every bill's "Comfortable" amount is calculated automatically from this, on top of its real cost. Nothing to type per bill. Set a <strong>Savings Target %</strong> (default 20%) — the share of whatever's left after real bills and expenses that gets recommended as savings. What's left after that is what's actually safe to spend that month.</p>
       <h4>Personal Income</h4>
-      <p>Log day-job wages or any other non-Triple-H income at the top of the Personal Budget tab. This is the baseline the business gets measured against on the Runway tab — separate from expenses, since it's a different question ("what's coming in" vs. "what's going out").</p>
-      <h4>Personal Budget</h4>
-      <p>Tap "+ Add Expense" to log a real personal expense — pick a category, name it, and choose <strong>Fixed</strong> or <strong>Variable</strong>. Fixed is a set amount at a set frequency (rent, a subscription). Variable is for bills that actually change month to month (power, water) — instead of guessing one number, log each month's real bill from the category card as it comes in, and the dashboard uses the average of your last 3 logged months everywhere it needs a number, falling back to your starting estimate until real bills exist.</p>
+      <p>Log day-job wages or any other non-Triple-H income. This is the baseline the business gets measured against on the Runway tab, and it's what Safe to Spend is calculated against — separate from expenses, since "what's coming in" and "what's going out" are different questions.</p>
+      <h4>Personal Budget (Bills &amp; Expenses)</h4>
+      <p>Tap "+ Add Expense" — pick a category, name it, and choose <strong>Fixed</strong> or <strong>Variable</strong>. Fixed is a set amount at a set frequency (rent, a subscription). Variable is for bills that actually change month to month (power, water) — instead of guessing one number, log each month's real bill from the category card as it comes in, and the dashboard uses the average of your last 3 logged months everywhere it needs a number, falling back to your starting estimate until real bills exist. Comfortable is calculated the same way for both types — real amount plus the buffer set above.</p>
       <h4>Business Dashboard</h4>
       <p>Pick a month, tap <strong>"Pull from Job Tracker"</strong> to auto-fill Revenue, Business Expenses, and Fuel/Mileage straight from your actual logged invoices and expense entries for that month — no retyping. Every number is still editable afterward. Other Expenses, Owner Draws, and Cash in the account aren't tracked anywhere else, so those three always need to be typed in by hand, then tap "Save Month."</p>
       <h4>Runway Summary</h4>
@@ -193,7 +195,18 @@
   <div id="loading" class="loading">Loading your data…</div>
 
   <div class="panel" id="panel-personal">
-    <div class="grand-totals" id="personalTotals"></div>
+    <div class="card">
+      <div class="card-header"><h3>Safe to Spend</h3></div>
+      <div class="note" style="margin-top:0;margin-bottom:10px;">The actual output this whole tab exists for: what's coming in, what your bills and expenses actually take, what's left, and how much of that you should put away vs. what's genuinely safe to spend. Comfortable amounts below are calculated automatically from the buffer setting here — nothing to type per bill.</div>
+      <div class="form-grid">
+        <div><label>Comfortable Buffer (%)</label><input type="number" id="settingComfortBuffer" min="0" max="200" step="1"></div>
+        <div><label>Savings Target (% of what's left)</label><input type="number" id="settingSavingsPct" min="0" max="100" step="1"></div>
+      </div>
+      <div class="grand-totals" id="personalTotals"></div>
+      <div class="grand-totals" id="safeToSpendStats" style="margin-top:10px;"></div>
+      <div class="estimate-headline" id="safeToSpendHeadline">—</div>
+      <div class="note" id="safeToSpendNote"></div>
+    </div>
 
     <div class="card">
       <div class="card-header"><h3>Personal Income</h3></div>
@@ -258,16 +271,12 @@
           </select>
         </div>
         <div id="fixedFieldsRow1b"></div>
-        <div id="fixedFieldsRow2">
-          <label id="exp-min-label">Minimum amount</label>
+        <div class="full" id="fixedFieldsRow2">
+          <label id="exp-min-label">Amount</label>
           <input type="number" id="exp-min" placeholder="0">
         </div>
-        <div id="fixedFieldsRow2b">
-          <label>Comfortable amount</label>
-          <input type="number" id="exp-comfortable" placeholder="leave blank = same as minimum">
-        </div>
       </div>
-      <div class="col-hint" id="expTypeHint">Amount is per the frequency you pick above — it's converted to a monthly figure automatically for totals.</div>
+      <div class="col-hint" id="expTypeHint">Amount is per the frequency you pick above — it's converted to a monthly figure automatically. Comfortable is calculated automatically (see the buffer setting above) — nothing to type here.</div>
       <div class="form-actions">
         <button class="action-btn" id="saveExpenseBtn" style="width:auto;flex:1;">Save Expense</button>
         <button class="ghost-btn" id="cancelExpenseBtn" style="flex:0 0 auto;">Cancel</button>
@@ -447,6 +456,7 @@ const CATEGORIES = [
 const FREQ_LABEL = {weekly:"Weekly", biweekly:"Biweekly", monthly:"Monthly", quarterly:"Quarterly", annually:"Annually"};
 
 let expenses = [];
+let budgetSettings = { comfortBufferPct: 15, savingsPct: 20 };
 let income = [];
 let months = [];
 let efBalance = 0;
@@ -488,12 +498,19 @@ function variableHint(item){
   const n = Math.min(count, 3);
   return `avg of last ${n} logged month${n===1?'':'s'}`;
 }
-// The one number used everywhere downstream for a given item, regardless
-// of which column (min/comfortable) asked for it -- a variable bill just
-// IS what it is once you know it, there's no separate "comfortable" target.
-function itemMonthlyAmount(item, col){
+// The real, actual monthly amount for an item -- what it truly costs,
+// regardless of Fixed vs Variable. This is the "Minimum" number.
+function itemBaseAmount(item){
   if(item.variable) return variableCurrentAmount(item);
-  return monthlyEquiv(item[col], item.frequency);
+  return monthlyEquiv(item.min, item.frequency);
+}
+// Comfortable is never typed in -- it's always the real amount plus the
+// buffer % set at the top of the Personal Budget tab. One setting,
+// applied everywhere, instead of guessing a number per bill.
+function itemMonthlyAmount(item, col){
+  const base = itemBaseAmount(item);
+  if(col === 'comfortable') return base * (1 + (Number(budgetSettings.comfortBufferPct)||0) / 100);
+  return base;
 }
 
 async function loadAll(){
@@ -506,6 +523,17 @@ async function loadAll(){
     const inc = await window.storage.get('personal-income');
     income = inc ? JSON.parse(inc.value) : [];
   }catch(e){ income = []; }
+
+  try{
+    const bs = await window.storage.get('budget-settings');
+    const parsed = bs ? JSON.parse(bs.value) : null;
+    budgetSettings = {
+      comfortBufferPct: (parsed && Number(parsed.comfortBufferPct)) || 15,
+      savingsPct: (parsed && parsed.savingsPct !== undefined) ? Number(parsed.savingsPct) : 20,
+    };
+  }catch(e){ budgetSettings = { comfortBufferPct: 15, savingsPct: 20 }; }
+  document.getElementById('settingComfortBuffer').value = budgetSettings.comfortBufferPct;
+  document.getElementById('settingSavingsPct').value = budgetSettings.savingsPct;
 
   try{
     const mo = await window.storage.get('business-months');
@@ -529,6 +557,20 @@ async function loadAll(){
   renderMonths();
   renderRunway();
 }
+
+async function saveBudgetSettings(){ try{ await window.storage.set('budget-settings', JSON.stringify(budgetSettings)); if(typeof scheduleSync === 'function') scheduleSync(); }catch(e){ console.error(e); } }
+document.getElementById('settingComfortBuffer').addEventListener('change', async (e) => {
+  budgetSettings.comfortBufferPct = Number(e.target.value) || 0;
+  await saveBudgetSettings();
+  renderPersonal();
+  renderRunway();
+});
+document.getElementById('settingSavingsPct').addEventListener('change', async (e) => {
+  budgetSettings.savingsPct = Number(e.target.value) || 0;
+  await saveBudgetSettings();
+  renderPersonal();
+  renderRunway();
+});
 
 async function saveExpenses(){ try{ await window.storage.set('personal-expenses', JSON.stringify(expenses)); if(typeof scheduleSync === 'function') scheduleSync(); }catch(e){ console.error(e); } }
 async function saveIncome(){ try{ await window.storage.set('personal-income', JSON.stringify(income)); if(typeof scheduleSync === 'function') scheduleSync(); }catch(e){ console.error(e); } }
@@ -575,14 +617,12 @@ function openForm(prefill){
     document.getElementById('exp-type').value = prefill.variable ? 'variable' : 'fixed';
     document.getElementById('exp-frequency').value = prefill.frequency || 'monthly';
     document.getElementById('exp-min').value = prefill.min;
-    document.getElementById('exp-comfortable').value = prefill.comfortable;
   } else {
     editingId = null;
     document.getElementById('exp-name').value = '';
     document.getElementById('exp-type').value = 'fixed';
     document.getElementById('exp-frequency').value = 'monthly';
     document.getElementById('exp-min').value = '';
-    document.getElementById('exp-comfortable').value = '';
   }
   updateExpenseTypeFields();
   renderSuggestions();
@@ -593,17 +633,18 @@ function closeForm(){
   editingId = null;
 }
 
-// Fixed items need Frequency + Min + Comfortable. Variable items just need
-// a starting estimate (reusing the Min field, relabeled) -- actual amounts
-// get logged month by month from the category card instead.
+// Fixed items need Frequency + Amount. Variable items just need a
+// starting estimate (reusing the same field, relabeled) -- actual amounts
+// get logged month by month from the category card instead. Comfortable
+// is never entered here at all anymore -- it's the buffer-adjusted number
+// computed automatically from whatever Amount ends up being.
 function updateExpenseTypeFields(){
   const isVariable = document.getElementById('exp-type').value === 'variable';
   document.getElementById('fixedFieldsRow1').style.display = isVariable ? 'none' : '';
-  document.getElementById('fixedFieldsRow2b').style.display = isVariable ? 'none' : '';
-  document.getElementById('exp-min-label').textContent = isVariable ? 'Starting estimate (until you log a real bill)' : 'Minimum amount';
+  document.getElementById('exp-min-label').textContent = isVariable ? 'Starting estimate (until you log a real bill)' : 'Amount';
   document.getElementById('expTypeHint').textContent = isVariable
-    ? 'Once you save this, log each month\'s actual bill from the category card below -- this estimate is only used until real numbers exist.'
-    : 'Amount is per the frequency you pick above — it\'s converted to a monthly figure automatically for totals.';
+    ? 'Once you save this, log each month\'s actual bill from the category card below -- this estimate is only used until real numbers exist. Comfortable is calculated automatically.'
+    : 'Amount is per the frequency you pick above — it\'s converted to a monthly figure automatically. Comfortable is calculated automatically.';
 }
 document.getElementById('exp-type').addEventListener('change', updateExpenseTypeFields);
 
@@ -616,16 +657,14 @@ document.getElementById('saveExpenseBtn').addEventListener('click', async () => 
   const variable = document.getElementById('exp-type').value === 'variable';
   const frequency = variable ? 'monthly' : document.getElementById('exp-frequency').value;
   const min = Number(document.getElementById('exp-min').value) || 0;
-  const comfRaw = document.getElementById('exp-comfortable').value;
-  const comfortable = variable ? min : (comfRaw === '' ? min : Number(comfRaw) || 0);
 
   if(!name){ alert('Give this expense a name.'); return; }
 
   if(editingId){
     const idx = expenses.findIndex(e => e.id === editingId);
-    if(idx > -1) expenses[idx] = {...expenses[idx], category, name, frequency, min, comfortable, variable};
+    if(idx > -1) expenses[idx] = {...expenses[idx], category, name, frequency, min, variable};
   } else {
-    expenses.push({ id: 'exp_' + Date.now() + '_' + Math.random().toString(36).slice(2,7), category, name, frequency, min, comfortable, variable, actuals: {} });
+    expenses.push({ id: 'exp_' + Date.now() + '_' + Math.random().toString(36).slice(2,7), category, name, frequency, min, variable, actuals: {} });
   }
   await saveExpenses();
   closeForm();
@@ -670,6 +709,7 @@ function renderIncome(){
       income = income.filter(i => i.id !== btn.dataset.deleteInc);
       await saveIncome();
       renderIncome();
+      renderPersonal();
       renderRunway();
     });
   });
@@ -712,6 +752,7 @@ document.getElementById('saveIncomeBtn').addEventListener('click', async () => {
   await saveIncome();
   closeIncomeForm();
   renderIncome();
+  renderPersonal();
   renderRunway();
 });
 
@@ -744,7 +785,7 @@ function renderPersonal(){
             <div class="row-label">${item.name} <span class="col-hint">VARIABLE</span></div>
             <div class="row-freq">${variableHint(item)}</div>
           </div>
-          <div class="row-amounts"><b>${fmt(variableCurrentAmount(item))}</b>/mo</div>
+          <div class="row-amounts">${fmt(itemMonthlyAmount(item,'min'))} / <b>${fmt(itemMonthlyAmount(item,'comfortable'))}</b></div>
           <div class="row-actions">
             <input type="number" class="var-log-input" id="varlog-${item.id}" placeholder="This month's bill">
             <button class="icon-btn" data-log-var="${item.id}" title="Log this month's actual amount">Log</button>
@@ -757,7 +798,7 @@ function renderPersonal(){
             <div class="row-label">${item.name}</div>
             <div class="row-freq">${FREQ_LABEL[item.frequency]}</div>
           </div>
-          <div class="row-amounts">${fmt(monthlyEquiv(item.min,item.frequency))} / <b>${fmt(monthlyEquiv(item.comfortable,item.frequency))}</b></div>
+          <div class="row-amounts">${fmt(itemMonthlyAmount(item,'min'))} / <b>${fmt(itemMonthlyAmount(item,'comfortable'))}</b></div>
           <div class="row-actions">
             <button class="icon-btn" data-edit="${item.id}" title="Edit">Edit</button>
             <button class="icon-btn danger" data-delete="${item.id}" title="Delete">Del</button>
@@ -815,9 +856,50 @@ function renderPersonalTotals(){
   const min = grandTotal('min');
   const comf = grandTotal('comfortable');
   document.getElementById('personalTotals').innerHTML = `
-    <div class="stat-box"><div class="label">Minimum Monthly</div><div class="value">${fmt(min)}</div></div>
-    <div class="stat-box blue"><div class="label">Comfortable Monthly</div><div class="value">${fmt(comf)}</div></div>
+    <div class="stat-box"><div class="label">Minimum Monthly (Real Bills)</div><div class="value">${fmt(min)}</div></div>
+    <div class="stat-box blue"><div class="label">Comfortable Monthly (+${budgetSettings.comfortBufferPct}%)</div><div class="value">${fmt(comf)}</div></div>
   `;
+  renderSafeToSpend(min, comf);
+}
+
+// The actual waterfall: Income -> Bills & Expenses -> recommended Savings
+// -> whatever's left is genuinely safe to spend. Two scenarios shown side
+// by side -- against Minimum (bare real cost of everything logged) and
+// against Comfortable (the auto-buffered version) -- since "safe to spend"
+// looks different depending on which one you're budgeting to.
+function renderSafeToSpend(min, comf){
+  const statsEl = document.getElementById('safeToSpendStats');
+  const headlineEl = document.getElementById('safeToSpendHeadline');
+  const noteEl = document.getElementById('safeToSpendNote');
+  const totalIncome = totalMonthlyIncome();
+  const savingsPct = Number(budgetSettings.savingsPct) || 0;
+
+  if(totalIncome === 0){
+    statsEl.innerHTML = '';
+    headlineEl.textContent = 'Add personal income below to calculate this';
+    noteEl.textContent = '';
+    return;
+  }
+
+  const leftoverMin = totalIncome - min;
+  const leftoverComf = totalIncome - comf;
+  const savingsFromMin = Math.max(0, leftoverMin) * (savingsPct / 100);
+  const safeToSpendMin = leftoverMin - savingsFromMin;
+
+  statsEl.innerHTML = `
+    <div class="stat-box"><div class="label">Total Income</div><div class="value">${fmt(totalIncome)}</div></div>
+    <div class="stat-box ${leftoverMin>=0?'green':''}"><div class="label">Left After Bills &amp; Expenses</div><div class="value">${fmt(leftoverMin)}</div></div>
+    <div class="stat-box blue"><div class="label">Recommended to Put Away (${savingsPct}%)</div><div class="value">${fmt(savingsFromMin)}</div></div>
+    <div class="stat-box ${safeToSpendMin>=0?'green':''}"><div class="label">Safe to Spend This Month</div><div class="value">${fmt(safeToSpendMin)}</div></div>
+  `;
+
+  if(leftoverMin < 0){
+    headlineEl.textContent = `Short by ${fmt(Math.abs(leftoverMin))}/mo`;
+    noteEl.textContent = `Your real bills and expenses (${fmt(min)}/mo) exceed your income (${fmt(totalIncome)}/mo). There's nothing to put away or safely spend until that gap closes \u2014 either income needs to go up or something in the budget needs to come down.`;
+  } else {
+    noteEl.textContent = `Income (${fmt(totalIncome)}) minus real bills &amp; expenses (${fmt(min)}) leaves ${fmt(leftoverMin)}. Putting away ${savingsPct}% of that (${fmt(savingsFromMin)}) leaves ${fmt(safeToSpendMin)} genuinely safe to spend without touching savings. At the Comfortable level (+${budgetSettings.comfortBufferPct}% buffer, ${fmt(comf)} total), you'd have ${fmt(leftoverComf)} left before savings instead.`;
+    headlineEl.textContent = `${fmt(safeToSpendMin)}/mo safe to spend, after putting away ${fmt(savingsFromMin)}`;
+  }
 }
 
 function computeNetProfit(m){
@@ -1132,6 +1214,7 @@ document.getElementById('exportBackupBtn').addEventListener('click', () => {
     exportedAt: new Date().toISOString(),
     personalExpenses: expenses,
     personalIncome: income,
+    budgetSettings: budgetSettings,
     businessMonths: months,
     emergencyFund: { balance: efBalance },
     checklist: { turningDownJobs: manualCheck3 },
@@ -1163,11 +1246,18 @@ document.getElementById('restoreFileInput').addEventListener('change', async (e)
     }
     expenses = Array.isArray(data.personalExpenses) ? data.personalExpenses : [];
     income = Array.isArray(data.personalIncome) ? data.personalIncome : [];
+    budgetSettings = {
+      comfortBufferPct: (data.budgetSettings && Number(data.budgetSettings.comfortBufferPct)) || 15,
+      savingsPct: (data.budgetSettings && data.budgetSettings.savingsPct !== undefined) ? Number(data.budgetSettings.savingsPct) : 20,
+    };
+    document.getElementById('settingComfortBuffer').value = budgetSettings.comfortBufferPct;
+    document.getElementById('settingSavingsPct').value = budgetSettings.savingsPct;
     months = Array.isArray(data.businessMonths) ? data.businessMonths : [];
     efBalance = Number(data.emergencyFund && data.emergencyFund.balance) || 0;
     manualCheck3 = !!(data.checklist && data.checklist.turningDownJobs);
     await saveExpenses();
     await saveIncome();
+    await saveBudgetSettings();
     await saveMonths();
     await saveEF();
     await saveChecklist();
