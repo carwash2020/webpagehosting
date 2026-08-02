@@ -58,7 +58,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Anton&family=Oswald:wght@400;500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="styles.css?v=202608011900">
+<link rel="stylesheet" href="styles.css?v=202608012000">
 <script type="application/ld+json">
 {
   "@context": "https://schema.org",
@@ -94,12 +94,11 @@
     "ratingValue": "5.0",
     "reviewCount": "4"
   },
-  "openingHoursSpecification": {
-    "@type": "OpeningHoursSpecification",
-    "dayOfWeek": ["Monday","Tuesday","Wednesday","Thursday","Friday","Saturday","Sunday"],
-    "opens": "07:00",
-    "closes": "22:00"
-  },
+  "openingHoursSpecification": [
+    { "@type": "OpeningHoursSpecification", "dayOfWeek": ["Monday","Tuesday","Wednesday","Thursday","Friday"], "opens": "14:00", "closes": "22:00" },
+    { "@type": "OpeningHoursSpecification", "dayOfWeek": "Saturday", "opens": "09:00", "closes": "20:00" },
+    { "@type": "OpeningHoursSpecification", "dayOfWeek": "Sunday", "opens": "12:00", "closes": "18:30" }
+  ],
   "sameAs": [
     "https://www.facebook.com/profile.php?id=61560166174024",
     "https://www.instagram.com/triplehenterprises?igsh=eTVndzQxYXg4emhk",
@@ -682,8 +681,8 @@
         <div class="contact-card">
           <div class="service-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg></div>
           <h3>Hours</h3>
-          <p class="value">Monday to Sunday</p>
-          <p class="sub">7:00 AM to 10:00 PM MST</p>
+          <p class="value">Mon&ndash;Fri: 2:00 PM&ndash;10:00 PM</p>
+          <p class="sub">Sat: 9:00 AM&ndash;8:00 PM<br>Sun: 12:00 PM&ndash;6:30 PM</p>
         </div>
       </div>
     </div>
