@@ -1,0 +1,899 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<script src="/auth.js"></script>
+<script>
+  // Security gate -- same pattern as every other internal tool page.
+  // This one matters more than most: it holds real mortgage, debt, and
+  // family expense data, not just operational business data.
+  requireAuth();
+</script>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="robots" content="noindex, nofollow">
+<title>Runway Dashboard | Triple H Enterprises (Internal Tool)</title>
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data:; connect-src 'self' https://*.supabase.co wss://*.supabase.co; frame-src 'none'; object-src 'none'; base-uri 'self'; frame-ancestors 'none';">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Anton&family=Oswald:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js" defer></script>
+<script src="/sync.js" defer></script>
+<style>
+  :root{
+    --bg:#0a0a0a;
+    --bg-card:#141414;
+    --bg-elevated:#1c1c1c;
+    --bg-hover:#242424;
+    --border-soft: rgba(255,255,255,0.06);
+    --text:#e8e6e3;
+    --text-dim:#9a9690;
+    --text-faint:#6b6864;
+    --orange:#ff8000;
+    --orange-dark:#c96400;
+    --orange-light:#ffb347;
+    --blue:#3aa0ff;
+    --green:#3ac96a;
+    --red:#e0554d;
+    --radius:10px;
+  }
+  *{box-sizing:border-box;}
+  body{margin:0;background:var(--bg);color:var(--text);font-family:'Oswald',sans-serif;font-weight:400;-webkit-font-smoothing:antialiased;}
+  h1,h2,h3{font-family:'Anton',sans-serif;font-weight:400;letter-spacing:0.5px;margin:0;}
+  header{padding:20px 20px 0;max-width:900px;margin:0 auto;}
+  header h1{font-size:22px;color:var(--orange-light);text-transform:uppercase;}
+  header p{color:var(--text-dim);font-size:13px;margin:4px 0 16px;}
+  .tabs{display:flex;gap:6px;max-width:900px;margin:0 auto;padding:0 20px;overflow-x:auto;scrollbar-width:none;}
+  .tabs::-webkit-scrollbar{display:none;}
+  .tab-btn{background:var(--bg-card);color:var(--text-dim);border:none;padding:10px 16px;border-radius:8px 8px 0 0;font-family:'Oswald',sans-serif;font-weight:600;font-size:13px;text-transform:uppercase;letter-spacing:0.5px;cursor:pointer;white-space:nowrap;transition:background .15s, color .15s;}
+  .tab-btn.active{background:var(--bg-elevated);color:var(--orange-light);box-shadow: inset 0 2px 0 var(--orange);}
+  main{max-width:900px;margin:0 auto;padding:16px 20px 80px;}
+  .panel{display:none;}
+  .panel.active{display:block;}
+  .card{background:var(--bg-card);border-radius:var(--radius);padding:16px;margin-bottom:14px;}
+  .card-header{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:10px;gap:8px;}
+  .card-header h3{font-size:15px;color:var(--orange-light);text-transform:uppercase;}
+  .card-header .subtotal{font-size:13px;color:var(--text-dim);font-weight:600;white-space:nowrap;}
+  .cat-add-btn{background:transparent;border:1px solid var(--border-soft);color:var(--text-dim);width:26px;height:26px;border-radius:6px;cursor:pointer;font-size:15px;line-height:1;flex-shrink:0;}
+  .cat-add-btn:hover{color:var(--orange-light);border-color:var(--orange);}
+  .row{display:flex;align-items:center;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border-soft);gap:10px;}
+  .row:last-child{border-bottom:none;}
+  .row-main{flex:1;min-width:0;}
+  .row-label{font-size:14px;color:var(--text);}
+  .row-freq{font-size:10px;color:var(--text-faint);text-transform:uppercase;margin-top:1px;}
+  .row-amounts{font-size:12px;color:var(--text-dim);text-align:right;white-space:nowrap;}
+  .row-amounts b{color:var(--orange-light);font-weight:600;}
+  .row-actions{display:flex;gap:4px;flex-shrink:0;}
+  .icon-btn{background:transparent;border:none;color:var(--text-faint);cursor:pointer;font-size:13px;padding:4px 6px;border-radius:5px;}
+  .icon-btn:hover{color:var(--text);background:var(--bg-hover);}
+  .icon-btn.danger:hover{color:var(--red);}
+  input[type=number], input[type=text], input[type=month], select{
+    background:var(--bg);border:1px solid var(--border-soft);color:var(--text);border-radius:6px;padding:9px 10px;
+    font-family:'Oswald',sans-serif;font-size:13px;width:100%;box-shadow: inset 0 1px 3px rgba(0,0,0,0.5);
+    transition: box-shadow .15s, border-color .15s;
+  }
+  input:focus, select:focus{outline:none;border-color:var(--orange);box-shadow: inset 0 1px 3px rgba(0,0,0,0.5), 0 0 8px rgba(255,128,0,0.45);}
+  .grand-totals{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:16px;}
+  .stat-box{background:var(--bg-elevated);border-radius:var(--radius);padding:14px;text-align:center;}
+  .stat-box .label{font-size:11px;color:var(--text-dim);text-transform:uppercase;letter-spacing:0.5px;}
+  .stat-box .value{font-family:'Anton',sans-serif;font-size:24px;color:var(--orange-light);margin-top:4px;}
+  .stat-box.blue .value{color:var(--blue);}
+  .stat-box.green .value{color:var(--green);}
+  .stat-box.red .value{color:var(--red);}
+  button.action-btn{
+    background:var(--orange);color:#1a0d02;border:none;font-family:'Oswald',sans-serif;font-weight:700;font-size:13px;
+    text-transform:uppercase;letter-spacing:0.5px;padding:11px 18px;border-radius:8px;cursor:pointer;
+    transition: box-shadow .15s, transform .1s; box-shadow: 0 0 0 rgba(255,128,0,0); width:100%;
+  }
+  button.action-btn:hover{box-shadow: 0 0 8px rgba(255,128,0,0.5), 0 0 20px rgba(255,128,0,0.25);}
+  button.action-btn:active{transform: translateY(1px);box-shadow: inset 0 0 6px rgba(0,0,0,0.4);}
+  button.ghost-btn{background:transparent;border:1px solid var(--border-soft);color:var(--text-dim);font-family:'Oswald',sans-serif;font-size:12px;padding:9px 14px;border-radius:6px;cursor:pointer;flex:1;}
+  button.ghost-btn:hover{color:var(--text);border-color: var(--text-dim);}
+  button.danger-btn{background:transparent;border:1px solid rgba(224,85,77,0.4);color:var(--red);font-family:'Oswald',sans-serif;font-size:12px;padding:5px 10px;border-radius:6px;cursor:pointer;}
+  .form-card{display:none;}
+  .form-card.open{display:block;}
+  .form-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px;}
+  .form-grid label{font-size:11px;color:var(--text-dim);text-transform:uppercase;display:block;margin-bottom:3px;}
+  .form-grid .full{grid-column: 1 / -1;}
+  .chip-row{display:flex;flex-wrap:wrap;gap:6px;margin:2px 0 10px;}
+  .chip{background:var(--bg-elevated);border:1px solid var(--border-soft);color:var(--text-dim);font-size:11px;padding:5px 10px;border-radius:14px;cursor:pointer;}
+  .chip:hover{color:var(--orange-light);border-color:var(--orange-dark);}
+  .form-actions{display:flex;gap:8px;}
+  .empty-state{color:var(--text-dim);font-size:13px;text-align:center;padding:24px 10px;}
+  table.month-table{width:100%;border-collapse:collapse;font-size:12px;}
+  .table-scroll{overflow-x:auto;}
+  table.month-table th, table.month-table td{padding:8px 6px;text-align:right;white-space:nowrap;border-bottom:1px solid var(--border-soft);}
+  table.month-table th:first-child, table.month-table td:first-child{text-align:left;}
+  table.month-table th{color:var(--text-faint);text-transform:uppercase;font-size:10px;}
+  .net-positive{color:var(--green);}
+  .net-negative{color:var(--red);}
+  .checklist-item{display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--border-soft);}
+  .checklist-item:last-child{border-bottom:none;}
+  .status-dot{width:12px;height:12px;border-radius:50%;flex-shrink:0;}
+  .status-dot.on{background:var(--green); box-shadow:0 0 8px rgba(58,201,106,0.6);}
+  .status-dot.off{background:var(--text-faint);}
+  .checklist-text{font-size:13px; flex:1;}
+  .checklist-sub{font-size:11px; color:var(--text-dim); margin-top:2px;}
+  .manual-check{width:18px;height:18px; accent-color:var(--orange); cursor:pointer;}
+  .progress-track{background:var(--bg);border-radius:20px;height:10px;overflow:hidden;margin-top:8px;}
+  .progress-fill{height:100%;background:linear-gradient(90deg, var(--orange-dark), var(--orange));border-radius:20px;transition: width .3s;}
+  .progress-labels{display:flex;justify-content:space-between;font-size:10px;color:var(--text-faint);margin-top:4px;}
+  .note{font-size:12px;color:var(--text-dim);line-height:1.5;margin-top:8px;}
+  .estimate-headline{font-family:'Anton',sans-serif;font-size:20px;color:var(--orange-light);margin:6px 0;}
+  .loading{padding:40px; text-align:center; color:var(--text-dim);}
+  .top-actions{display:flex; gap:8px; margin-bottom:10px;}
+  .col-hint{font-size:10px;color:var(--text-faint);margin-top:-4px;margin-bottom:8px;}
+  .back-link{display:inline-flex;align-items:center;gap:6px;color:var(--text-dim);text-decoration:none;font-size:13px;margin-bottom:14px;}
+  .back-link:hover{color:var(--orange-light);}
+  .realtime-badge{display:inline-flex;align-items:center;gap:5px;font-size:11px;color:var(--text-faint);margin-left:10px;}
+  .realtime-dot{width:7px;height:7px;border-radius:50%;background:var(--text-faint);flex-shrink:0;}
+  .realtime-dot.is-live{background:var(--green);box-shadow:0 0 5px rgba(58,201,106,0.7);}
+  .realtime-dot.is-connecting{background:var(--orange);}
+  .realtime-dot.is-error{background:var(--red);}
+</style>
+</head>
+<body>
+
+<a href="/workspace.html" class="back-link">&larr; Back to Workspace</a>
+
+<header>
+  <h1>Runway Dashboard</h1>
+  <p>Personal budget and business numbers now sync through the same Triple H Supabase project as the rest of your tools.
+    <span class="realtime-badge" id="jtBadge"><span class="realtime-dot" id="jtDot"></span><span id="jtText">Sync: connecting...</span></span>
+  </p>
+</header>
+
+<div class="tabs">
+  <button class="tab-btn active" data-tab="personal">Personal Budget</button>
+  <button class="tab-btn" data-tab="business">Business Dashboard</button>
+  <button class="tab-btn" data-tab="runway">Runway Summary</button>
+</div>
+
+<main>
+  <div id="loading" class="loading">Loading your data…</div>
+
+  <div class="panel" id="panel-personal">
+    <div class="grand-totals" id="personalTotals"></div>
+
+    <div class="top-actions">
+      <button class="action-btn" id="openAddExpenseBtn">+ Add Expense</button>
+    </div>
+
+    <div class="card form-card" id="expenseFormCard">
+      <div class="card-header"><h3 id="expenseFormTitle">Add Expense</h3></div>
+      <div class="form-grid">
+        <div class="full">
+          <label>Category</label>
+          <select id="exp-category"></select>
+        </div>
+        <div class="full">
+          <label>Name</label>
+          <input type="text" id="exp-name" placeholder="e.g. Mortgage, Netflix, Fuel">
+          <div class="chip-row" id="exp-suggestions"></div>
+        </div>
+        <div>
+          <label>Frequency</label>
+          <select id="exp-frequency">
+            <option value="weekly">Weekly</option>
+            <option value="biweekly">Biweekly</option>
+            <option value="monthly" selected>Monthly</option>
+            <option value="quarterly">Quarterly</option>
+            <option value="annually">Annually</option>
+          </select>
+        </div>
+        <div></div>
+        <div>
+          <label>Minimum amount</label>
+          <input type="number" id="exp-min" placeholder="0">
+        </div>
+        <div>
+          <label>Comfortable amount</label>
+          <input type="number" id="exp-comfortable" placeholder="leave blank = same as minimum">
+        </div>
+      </div>
+      <div class="col-hint">Amount is per the frequency you pick above — it's converted to a monthly figure automatically for totals.</div>
+      <div class="form-actions">
+        <button class="action-btn" id="saveExpenseBtn" style="width:auto;flex:1;">Save Expense</button>
+        <button class="ghost-btn" id="cancelExpenseBtn" style="flex:0 0 auto;">Cancel</button>
+      </div>
+    </div>
+
+    <div id="personalCategories"></div>
+    <div class="top-actions">
+      <button class="ghost-btn" id="resetPersonalBtn">Clear all personal expenses</button>
+    </div>
+  </div>
+
+  <div class="panel" id="panel-business">
+    <div class="card">
+      <div class="card-header"><h3>Add / Update a Month</h3></div>
+      <div class="note" style="margin-top:0;margin-bottom:10px;">Revenue, business expenses, and fuel pull automatically from Job Tracker's Invoices and Expenses tab for whichever month you pick below — edit any number afterward if something's missing or you want to adjust it. Other Expenses, Draws, and Cash aren't tracked anywhere else, so those stay manual.</div>
+      <div class="form-grid">
+        <div class="full"><label>Month</label><input type="month" id="biz-month"></div>
+      </div>
+      <button class="action-btn" id="pullMonthBtn" style="margin-bottom:14px;">Pull from Job Tracker</button>
+      <div class="form-grid">
+        <div><label>Revenue <span class="col-hint" id="revSourceHint"></span></label><input type="number" id="biz-revenue" placeholder="0"></div>
+        <div><label>Business Expenses <span class="col-hint" id="expSourceHint"></span></label><input type="number" id="biz-expenses" placeholder="0"></div>
+        <div><label>Fuel / Mileage <span class="col-hint" id="fuelSourceHint"></span></label><input type="number" id="biz-fuel" placeholder="0"></div>
+        <div><label>Other Expenses</label><input type="number" id="biz-other" placeholder="0"></div>
+        <div><label>Owner Draws</label><input type="number" id="biz-draws" placeholder="0"></div>
+        <div class="full"><label>Cash in Business Account</label><input type="number" id="biz-cash" placeholder="0"></div>
+      </div>
+      <button class="action-btn" id="addMonthBtn">Save Month</button>
+      <div class="note" id="bizFormNote"></div>
+    </div>
+
+    <div class="card">
+      <div class="card-header"><h3>Monthly History</h3></div>
+      <div class="table-scroll">
+        <table class="month-table">
+          <thead><tr><th>Month</th><th>Revenue</th><th>Expenses</th><th>Net Profit</th><th>Draws</th><th>Cash</th><th></th></tr></thead>
+          <tbody id="monthTableBody"></tbody>
+        </table>
+      </div>
+      <div class="empty-state" id="noMonthsNote" style="display:none;">No months logged yet — pick a month above and tap "Pull from Job Tracker" to start.</div>
+    </div>
+  </div>
+
+  <div class="panel" id="panel-runway">
+    <div class="grand-totals" id="runwayExpenseTotals"></div>
+
+    <div class="card">
+      <div class="card-header"><h3>Emergency Fund</h3></div>
+      <div class="form-grid">
+        <div class="full"><label>Current Balance</label><input type="number" id="ef-balance" placeholder="0"></div>
+      </div>
+      <div class="progress-track"><div class="progress-fill" id="efProgress" style="width:0%;"></div></div>
+      <div class="progress-labels"><span>0</span><span id="efTargetLabel">6mo target</span><span id="ef12Label">12mo</span></div>
+      <div class="note" id="efNote"></div>
+    </div>
+
+    <div class="card">
+      <div class="card-header"><h3>Business Trend</h3></div>
+      <div id="trendStats" class="grand-totals"></div>
+      <div class="estimate-headline" id="quitEstimate">—</div>
+      <div class="note" id="quitEstimateNote"></div>
+    </div>
+
+    <div class="card">
+      <div class="card-header"><h3>Readiness Checklist</h3></div>
+      <div class="checklist-item">
+        <div class="status-dot off" id="dot1"></div>
+        <div class="checklist-text">Business consistently covers essential expenses
+          <div class="checklist-sub" id="check1Sub">Based on average net profit over the last 3 logged months vs. your minimum expenses.</div>
+        </div>
+      </div>
+      <div class="checklist-item">
+        <div class="status-dot off" id="dot2"></div>
+        <div class="checklist-text">At least 6 months of essential expenses saved
+          <div class="checklist-sub" id="check2Sub">Based on your emergency fund balance vs. minimum monthly expenses.</div>
+        </div>
+      </div>
+      <div class="checklist-item">
+        <input type="checkbox" class="manual-check" id="check3Box">
+        <div class="checklist-text">Turning down jobs because of the full-time job
+          <div class="checklist-sub">This one's a judgment call — check it yourself when it's true.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-header"><h3>Safe Draw Calculator</h3></div>
+      <div class="note" style="margin-top:0;margin-bottom:10px;">How much of the business's cash on hand could be drawn out right now while still keeping a chosen number of months of minimum expenses sitting in the account as a buffer.</div>
+      <div class="form-grid">
+        <div><label>Months of buffer to keep in the account</label><input type="number" id="drawBufferMonths" value="3" min="0" step="0.5"></div>
+      </div>
+      <div class="grand-totals" id="safeDrawOutput"></div>
+    </div>
+
+    <div class="card">
+      <div class="card-header"><h3>Backup &amp; Restore</h3></div>
+      <div class="note" style="margin-top:0;margin-bottom:10px;">Downloads everything on this page — personal expenses, business months, emergency fund, checklist — as one file. Worth doing before clearing browser data or switching devices, as a safety net independent of the automatic cloud sync above.</div>
+      <div class="top-actions">
+        <button class="action-btn" id="exportBackupBtn">Download Backup</button>
+        <button class="ghost-btn" id="restoreBackupBtn">Restore from File</button>
+      </div>
+      <input type="file" id="restoreFileInput" accept="application/json" style="display:none;">
+      <div class="note" id="backupNote"></div>
+    </div>
+
+    <div class="top-actions">
+      <button class="ghost-btn" id="resetAllBtn">Reset all data</button>
+    </div>
+  </div>
+</main>
+
+<script>
+// ---------------------------------------------------------------------------
+// window.storage shim -- the get/set calls below were written against
+// Claude's Artifacts persistent-storage API, which only exists inside
+// Claude's own rendering environment. Once this file is a real static page
+// on Triple H's hosting, opened in an ordinary browser, `window.storage`
+// doesn't exist at all -- every call would throw. This shim gives it the
+// exact same async {key, value, shared} shape, backed by real localStorage,
+// so none of the loadAll()/save*() functions below need to change.
+// Keys are prefixed "rd_" since this will likely share an origin with the
+// rest of the Triple H site, whose own tools use a "th_" prefix -- this
+// keeps the two localStorage namespaces from ever colliding.
+// Per-device only, by design: no cross-device sync, no Supabase wiring,
+// kept fully separate from the rest of the site's sync infrastructure.
+window.storage = {
+  async get(key) {
+    try {
+      const raw = localStorage.getItem('rd_' + key);
+      if (raw === null) return null;
+      return { key, value: raw, shared: false };
+    } catch (e) { return null; }
+  },
+  async set(key, value) {
+    try {
+      localStorage.setItem('rd_' + key, value);
+      return { key, value, shared: false };
+    } catch (e) { return null; }
+  }
+};
+
+const CATEGORIES = [
+  { key:"housing", name:"Housing", suggestions:["Mortgage","HOA","Property Taxes","Homeowners Insurance"] },
+  { key:"utilities", name:"Utilities", suggestions:["Power","Water","Sewer","Trash","Internet","Cell Phone"] },
+  { key:"transportation", name:"Transportation", suggestions:["Fuel","Vehicle Payment","Insurance","Maintenance","Registration"] },
+  { key:"food", name:"Food", suggestions:["Groceries","Restaurants","Snacks"] },
+  { key:"health", name:"Health", suggestions:["Health Insurance","Prescriptions","Medical Expenses"] },
+  { key:"debt", name:"Debt", suggestions:["Credit Cards","Personal Loans","Solar Loan","Other Payments"] },
+  { key:"family", name:"Family", suggestions:["Child Support","Kids' Activities","School Expenses"] },
+  { key:"business_personal", name:"Business (paid personally)", suggestions:["Insurance","Licenses","Software","Advertising","Tools","Fuel","Supplies"] },
+  { key:"savings", name:"Savings", suggestions:["Emergency Fund","Retirement","Taxes"] },
+  { key:"entertainment", name:"Entertainment", suggestions:["Streaming","Hobbies","Eating Out","Vacations"] },
+  { key:"misc", name:"Miscellaneous", suggestions:["Clothing","Gifts","Household Items","Unexpected Expenses"] },
+];
+const FREQ_LABEL = {weekly:"Weekly", biweekly:"Biweekly", monthly:"Monthly", quarterly:"Quarterly", annually:"Annually"};
+
+let expenses = [];
+let months = [];
+let efBalance = 0;
+let manualCheck3 = false;
+let editingId = null;
+
+function monthlyEquiv(amount, freq){
+  amount = Number(amount) || 0;
+  switch(freq){
+    case 'weekly': return amount * 52 / 12;
+    case 'biweekly': return amount * 26 / 12;
+    case 'quarterly': return amount / 3;
+    case 'annually': return amount / 12;
+    default: return amount;
+  }
+}
+
+async function loadAll(){
+  try{
+    const ex = await window.storage.get('personal-expenses');
+    expenses = ex ? JSON.parse(ex.value) : [];
+  }catch(e){ expenses = []; }
+
+  try{
+    const mo = await window.storage.get('business-months');
+    months = mo ? JSON.parse(mo.value) : [];
+  }catch(e){ months = []; }
+
+  try{
+    const ef = await window.storage.get('emergency-fund');
+    efBalance = ef ? JSON.parse(ef.value).balance : 0;
+  }catch(e){ efBalance = 0; }
+
+  try{
+    const ck = await window.storage.get('checklist');
+    manualCheck3 = ck ? JSON.parse(ck.value).turningDownJobs : false;
+  }catch(e){ manualCheck3 = false; }
+
+  document.getElementById('loading').style.display = 'none';
+  populateCategorySelect();
+  renderPersonal();
+  renderMonths();
+  renderRunway();
+}
+
+async function saveExpenses(){ try{ await window.storage.set('personal-expenses', JSON.stringify(expenses)); if(typeof scheduleSync === 'function') scheduleSync(); }catch(e){ console.error(e); } }
+async function saveMonths(){ try{ await window.storage.set('business-months', JSON.stringify(months)); if(typeof scheduleSync === 'function') scheduleSync(); }catch(e){ console.error(e); } }
+async function saveEF(){ try{ await window.storage.set('emergency-fund', JSON.stringify({balance: efBalance})); if(typeof scheduleSync === 'function') scheduleSync(); }catch(e){ console.error(e); } }
+async function saveChecklist(){ try{ await window.storage.set('checklist', JSON.stringify({turningDownJobs: manualCheck3})); if(typeof scheduleSync === 'function') scheduleSync(); }catch(e){ console.error(e); } }
+
+function fmt(n){ return '$' + (Math.round(n*100)/100).toLocaleString(undefined,{minimumFractionDigits:0, maximumFractionDigits:0}); }
+
+function populateCategorySelect(){
+  const sel = document.getElementById('exp-category');
+  sel.innerHTML = CATEGORIES.map(c => '<option value="'+c.key+'">'+c.name+'</option>').join('');
+  renderSuggestions();
+}
+function renderSuggestions(){
+  const catKey = document.getElementById('exp-category').value;
+  const cat = CATEGORIES.find(c => c.key === catKey);
+  const box = document.getElementById('exp-suggestions');
+  box.innerHTML = (cat ? cat.suggestions : []).map(s => '<span class="chip" data-name="'+s+'">'+s+'</span>').join('');
+  box.querySelectorAll('.chip').forEach(chip => {
+    chip.addEventListener('click', () => { document.getElementById('exp-name').value = chip.dataset.name; });
+  });
+}
+document.getElementById('exp-category').addEventListener('change', renderSuggestions);
+
+function categoryMonthlyTotal(catKey, col){
+  return expenses.filter(e => e.category === catKey)
+    .reduce((s,e) => s + monthlyEquiv(e[col], e.frequency), 0);
+}
+function grandTotal(col){
+  return expenses.reduce((s,e) => s + monthlyEquiv(e[col], e.frequency), 0);
+}
+
+function openForm(prefill){
+  document.getElementById('expenseFormCard').classList.add('open');
+  document.getElementById('expenseFormTitle').textContent = prefill ? 'Edit Expense' : 'Add Expense';
+  if(prefill){
+    editingId = prefill.id;
+    document.getElementById('exp-category').value = prefill.category;
+    document.getElementById('exp-name').value = prefill.name;
+    document.getElementById('exp-frequency').value = prefill.frequency;
+    document.getElementById('exp-min').value = prefill.min;
+    document.getElementById('exp-comfortable').value = prefill.comfortable;
+  } else {
+    editingId = null;
+    document.getElementById('exp-name').value = '';
+    document.getElementById('exp-frequency').value = 'monthly';
+    document.getElementById('exp-min').value = '';
+    document.getElementById('exp-comfortable').value = '';
+  }
+  renderSuggestions();
+  document.getElementById('expenseFormCard').scrollIntoView({behavior:'smooth', block:'center'});
+}
+function closeForm(){
+  document.getElementById('expenseFormCard').classList.remove('open');
+  editingId = null;
+}
+
+document.getElementById('openAddExpenseBtn').addEventListener('click', () => openForm(null));
+document.getElementById('cancelExpenseBtn').addEventListener('click', closeForm);
+
+document.getElementById('saveExpenseBtn').addEventListener('click', async () => {
+  const category = document.getElementById('exp-category').value;
+  const name = document.getElementById('exp-name').value.trim();
+  const frequency = document.getElementById('exp-frequency').value;
+  const min = Number(document.getElementById('exp-min').value) || 0;
+  const comfRaw = document.getElementById('exp-comfortable').value;
+  const comfortable = comfRaw === '' ? min : Number(comfRaw) || 0;
+
+  if(!name){ alert('Give this expense a name.'); return; }
+
+  if(editingId){
+    const idx = expenses.findIndex(e => e.id === editingId);
+    if(idx > -1) expenses[idx] = {...expenses[idx], category, name, frequency, min, comfortable};
+  } else {
+    expenses.push({ id: 'exp_' + Date.now() + '_' + Math.random().toString(36).slice(2,7), category, name, frequency, min, comfortable });
+  }
+  await saveExpenses();
+  closeForm();
+  renderPersonal();
+  renderRunway();
+});
+
+function renderPersonal(){
+  const container = document.getElementById('personalCategories');
+  container.innerHTML = '';
+  const usedCategories = CATEGORIES.filter(c => expenses.some(e => e.category === c.key));
+
+  if(usedCategories.length === 0){
+    container.innerHTML = '<div class="card"><div class="empty-state">No expenses added yet. Tap "+ Add Expense" above to start — pick a category, name it, and it shows up here.</div></div>';
+    renderPersonalTotals();
+    return;
+  }
+
+  usedCategories.forEach(cat => {
+    const items = expenses.filter(e => e.category === cat.key);
+    const min = categoryMonthlyTotal(cat.key, 'min');
+    const comf = categoryMonthlyTotal(cat.key, 'comfortable');
+    const card = document.createElement('div');
+    card.className = 'card';
+    card.innerHTML = `
+      <div class="card-header">
+        <h3>${cat.name}</h3>
+        <span class="subtotal">${fmt(min)} / ${fmt(comf)}</span>
+        <button class="cat-add-btn" data-cat="${cat.key}" title="Add to ${cat.name}">+</button>
+      </div>
+      ${items.map(item => `
+        <div class="row">
+          <div class="row-main">
+            <div class="row-label">${item.name}</div>
+            <div class="row-freq">${FREQ_LABEL[item.frequency]}</div>
+          </div>
+          <div class="row-amounts">${fmt(monthlyEquiv(item.min,item.frequency))} / <b>${fmt(monthlyEquiv(item.comfortable,item.frequency))}</b></div>
+          <div class="row-actions">
+            <button class="icon-btn" data-edit="${item.id}" title="Edit">Edit</button>
+            <button class="icon-btn danger" data-delete="${item.id}" title="Delete">Del</button>
+          </div>
+        </div>
+      `).join('')}
+    `;
+    container.appendChild(card);
+  });
+
+  container.querySelectorAll('[data-cat]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      openForm(null);
+      document.getElementById('exp-category').value = btn.dataset.cat;
+      renderSuggestions();
+    });
+  });
+  container.querySelectorAll('[data-edit]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const item = expenses.find(e => e.id === btn.dataset.edit);
+      if(item) openForm(item);
+    });
+  });
+  container.querySelectorAll('[data-delete]').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      if(!confirm('Delete this expense?')) return;
+      expenses = expenses.filter(e => e.id !== btn.dataset.delete);
+      await saveExpenses();
+      renderPersonal();
+      renderRunway();
+    });
+  });
+
+  renderPersonalTotals();
+}
+
+function renderPersonalTotals(){
+  const min = grandTotal('min');
+  const comf = grandTotal('comfortable');
+  document.getElementById('personalTotals').innerHTML = `
+    <div class="stat-box"><div class="label">Minimum Monthly</div><div class="value">${fmt(min)}</div></div>
+    <div class="stat-box blue"><div class="label">Comfortable Monthly</div><div class="value">${fmt(comf)}</div></div>
+  `;
+}
+
+function computeNetProfit(m){
+  const costs = (Number(m.expenses)||0)+(Number(m.fuel)||0)+(Number(m.other)||0);
+  return (Number(m.revenue)||0) - costs;
+}
+
+function renderMonths(){
+  const tbody = document.getElementById('monthTableBody');
+  tbody.innerHTML = '';
+  const sorted = [...months].sort((a,b)=> a.month.localeCompare(b.month));
+  document.getElementById('noMonthsNote').style.display = sorted.length ? 'none' : 'block';
+  sorted.forEach(m => {
+    const net = computeNetProfit(m);
+    const costs = (Number(m.expenses)||0)+(Number(m.fuel)||0)+(Number(m.other)||0);
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td>${m.month}</td><td>${fmt(m.revenue||0)}</td><td>${fmt(costs)}</td>
+      <td class="${net>=0?'net-positive':'net-negative'}">${fmt(net)}</td>
+      <td>${fmt(m.draws||0)}</td><td>${fmt(m.cash||0)}</td>
+      <td><button class="danger-btn" data-month="${m.month}">Delete</button></td>
+    `;
+    tbody.appendChild(tr);
+  });
+  tbody.querySelectorAll('.danger-btn').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      months = months.filter(m => m.month !== btn.dataset.month);
+      await saveMonths();
+      renderMonths();
+      renderRunway();
+    });
+  });
+}
+
+// ---------------------------------------------------------------------------
+// Pull straight from Job Tracker's own data. th_expense_log and th_invoices
+// already live in localStorage on this same origin -- and if sync.js has
+// pulled the latest blob (see startJobTrackerSync below), they're current
+// even if the actual logging happened on a different device. No new
+// storage of any kind needed for this part; it's reading data that's
+// already real and already there.
+// ---------------------------------------------------------------------------
+function loadJobTrackerExpenses(){
+  try { return JSON.parse(localStorage.getItem('th_expense_log') || '[]'); }
+  catch(e){ return []; }
+}
+function loadJobTrackerInvoices(){
+  try { return JSON.parse(localStorage.getItem('th_invoices') || '[]'); }
+  catch(e){ return []; }
+}
+function pullMonthFromJobTracker(monthVal){
+  const expenseLog = loadJobTrackerExpenses();
+  const invoices = loadJobTrackerInvoices();
+  const inMonth = (dateStr) => (dateStr || '').slice(0,7) === monthVal;
+
+  const revenue = invoices.filter(i => inMonth(i.date)).reduce((s,i) => s + (Number(i.total)||0), 0);
+  const expenses = expenseLog.filter(e => e.type !== 'mileage' && inMonth(e.date)).reduce((s,e) => s + (Number(e.amount)||0), 0);
+  const fuel = expenseLog.filter(e => e.type === 'mileage' && inMonth(e.date)).reduce((s,e) => s + (Number(e.amount)||0), 0);
+
+  const invoiceCount = invoices.filter(i => inMonth(i.date)).length;
+  const expenseCount = expenseLog.filter(e => e.type !== 'mileage' && inMonth(e.date)).length;
+  const mileageCount = expenseLog.filter(e => e.type === 'mileage' && inMonth(e.date)).length;
+
+  return { revenue, expenses, fuel, invoiceCount, expenseCount, mileageCount };
+}
+
+document.getElementById('pullMonthBtn').addEventListener('click', () => {
+  const monthVal = document.getElementById('biz-month').value;
+  const note = document.getElementById('bizFormNote');
+  if(!monthVal){ note.textContent = 'Pick a month first.'; note.style.color = 'var(--red)'; return; }
+
+  const pulled = pullMonthFromJobTracker(monthVal);
+  document.getElementById('biz-revenue').value = pulled.revenue || '';
+  document.getElementById('biz-expenses').value = pulled.expenses || '';
+  document.getElementById('biz-fuel').value = pulled.fuel || '';
+
+  document.getElementById('revSourceHint').textContent = `(${pulled.invoiceCount} invoice${pulled.invoiceCount===1?'':'s'})`;
+  document.getElementById('expSourceHint').textContent = `(${pulled.expenseCount} entr${pulled.expenseCount===1?'y':'ies'})`;
+  document.getElementById('fuelSourceHint').textContent = `(${pulled.mileageCount} entr${pulled.mileageCount===1?'y':'ies'})`;
+
+  note.textContent = 'Pulled from Job Tracker -- review the numbers, then Save Month. Other Expenses, Draws, and Cash still need filling in by hand.';
+  note.style.color = 'var(--text-dim)';
+});
+
+document.getElementById('addMonthBtn').addEventListener('click', async () => {
+  const monthVal = document.getElementById('biz-month').value;
+  const note = document.getElementById('bizFormNote');
+  if(!monthVal){ note.textContent = 'Pick a month first.'; note.style.color = 'var(--red)'; return; }
+  const entry = {
+    month: monthVal,
+    revenue: Number(document.getElementById('biz-revenue').value)||0,
+    expenses: Number(document.getElementById('biz-expenses').value)||0,
+    fuel: Number(document.getElementById('biz-fuel').value)||0,
+    other: Number(document.getElementById('biz-other').value)||0,
+    draws: Number(document.getElementById('biz-draws').value)||0,
+    cash: Number(document.getElementById('biz-cash').value)||0,
+  };
+  months = months.filter(m => m.month !== monthVal);
+  months.push(entry);
+  await saveMonths();
+  note.textContent = 'Saved.';
+  note.style.color = 'var(--green)';
+  renderMonths();
+  renderRunway();
+  setTimeout(()=>{note.textContent='';}, 2000);
+});
+
+document.getElementById('ef-balance').addEventListener('change', async (e) => {
+  efBalance = Number(e.target.value) || 0;
+  await saveEF();
+  renderRunway();
+});
+document.getElementById('check3Box').addEventListener('change', async (e) => {
+  manualCheck3 = e.target.checked;
+  await saveChecklist();
+  renderRunway();
+});
+
+function linearTrendSlope(points){
+  const n = points.length;
+  const sumX = points.reduce((s,p)=>s+p.x,0);
+  const sumY = points.reduce((s,p)=>s+p.y,0);
+  const sumXY = points.reduce((s,p)=>s+p.x*p.y,0);
+  const sumXX = points.reduce((s,p)=>s+p.x*p.x,0);
+  const denom = (n*sumXX - sumX*sumX);
+  if(denom === 0) return 0;
+  return (n*sumXY - sumX*sumY) / denom;
+}
+
+function renderRunway(){
+  const min = grandTotal('min');
+  const comf = grandTotal('comfortable');
+  document.getElementById('ef-balance').value = efBalance || '';
+
+  document.getElementById('runwayExpenseTotals').innerHTML = `
+    <div class="stat-box"><div class="label">Minimum Monthly</div><div class="value">${fmt(min)}</div></div>
+    <div class="stat-box blue"><div class="label">Comfortable Monthly</div><div class="value">${fmt(comf)}</div></div>
+  `;
+
+  const target6 = min * 6;
+  const target12 = min * 12;
+  const pct = target12 > 0 ? Math.min(100, (efBalance/target12)*100) : 0;
+  document.getElementById('efProgress').style.width = pct + '%';
+  document.getElementById('efTargetLabel').textContent = '6mo: ' + fmt(target6);
+  document.getElementById('ef12Label').textContent = '12mo: ' + fmt(target12);
+  document.getElementById('efNote').textContent = min > 0
+    ? `${fmt(efBalance)} saved — that's ${(efBalance/min).toFixed(1)} months of minimum expenses covered.`
+    : 'Add your minimum expenses on the Personal Budget tab to see this in months.';
+
+  const sorted = [...months].sort((a,b)=> a.month.localeCompare(b.month));
+  const nets = sorted.map((m,i) => ({x:i, y:computeNetProfit(m), month:m.month}));
+  const last3 = nets.slice(-3);
+  const avgNet3 = last3.length ? last3.reduce((s,p)=>s+p.y,0)/last3.length : null;
+
+  document.getElementById('trendStats').innerHTML = `
+    <div class="stat-box green"><div class="label">Avg Net Profit (last 3mo)</div><div class="value">${avgNet3!==null ? fmt(avgNet3) : '—'}</div></div>
+    <div class="stat-box"><div class="label">Months Logged</div><div class="value">${nets.length}</div></div>
+  `;
+
+  const estimateEl = document.getElementById('quitEstimate');
+  const estimateNote = document.getElementById('quitEstimateNote');
+  if(nets.length < 2){
+    estimateEl.textContent = 'Not enough data yet';
+    estimateNote.textContent = 'Log at least 2 months of business numbers to get a trend-based estimate.';
+  } else {
+    const slope = linearTrendSlope(nets);
+    const latest = nets[nets.length-1].y;
+    if(slope <= 0){
+      estimateEl.textContent = 'No upward trend yet';
+      estimateNote.textContent = `Net profit isn't trending upward across your logged months (last 3-month average: ${avgNet3!==null?fmt(avgNet3):'—'}). This is a straight-line projection from your own numbers — not a forecast of what will happen, just where the current trend points.`;
+    } else if(latest >= min){
+      estimateEl.textContent = 'Already there, on paper';
+      estimateNote.textContent = `Your most recent month's net profit (${fmt(latest)}) already covers your minimum monthly expenses (${fmt(min)}). Worth confirming this holds for a few more months before treating it as reliable.`;
+    } else {
+      const monthsNeeded = Math.ceil((min - latest) / slope);
+      estimateEl.textContent = `~${monthsNeeded} month${monthsNeeded===1?'':'s'} at current trend`;
+      estimateNote.textContent = `Straight-line projection based on your logged months' growth rate, until net profit reaches your minimum expenses (${fmt(min)}). Treat this as a rough signal, not a guarantee — it moves every time you log a new month.`;
+    }
+  }
+
+  const check1 = avgNet3 !== null && avgNet3 >= min && min > 0;
+  document.getElementById('dot1').className = 'status-dot ' + (check1 ? 'on' : 'off');
+  document.getElementById('check1Sub').textContent = avgNet3 !== null
+    ? `Last 3-month average net profit: ${fmt(avgNet3)} vs. minimum expenses: ${fmt(min)}`
+    : 'No business months logged yet.';
+
+  const check2 = min > 0 && efBalance >= target6;
+  document.getElementById('dot2').className = 'status-dot ' + (check2 ? 'on' : 'off');
+  document.getElementById('check2Sub').textContent = min > 0
+    ? `${fmt(efBalance)} saved vs. 6-month target of ${fmt(target6)}`
+    : 'Add minimum expenses to check this.';
+
+  document.getElementById('check3Box').checked = manualCheck3;
+
+  renderSafeDraw(min);
+}
+
+function renderSafeDraw(min){
+  const output = document.getElementById('safeDrawOutput');
+  const bufferMonths = Number(document.getElementById('drawBufferMonths').value) || 0;
+  const sorted = [...months].sort((a,b)=> a.month.localeCompare(b.month));
+  const latestMonth = sorted[sorted.length - 1];
+
+  if(!latestMonth || !min){
+    output.innerHTML = `<div class="stat-box"><div class="label">Safe to Draw</div><div class="value">—</div></div>`;
+    return;
+  }
+  const cash = Number(latestMonth.cash) || 0;
+  const bufferTarget = min * bufferMonths;
+  const safeToDraw = Math.max(0, cash - bufferTarget);
+
+  output.innerHTML = `
+    <div class="stat-box"><div class="label">Cash on Hand (${latestMonth.month})</div><div class="value">${fmt(cash)}</div></div>
+    <div class="stat-box blue"><div class="label">Buffer to Keep</div><div class="value">${fmt(bufferTarget)}</div></div>
+    <div class="stat-box green"><div class="label">Safe to Draw Now</div><div class="value">${fmt(safeToDraw)}</div></div>
+  `;
+}
+document.getElementById('drawBufferMonths').addEventListener('input', () => renderRunway());
+
+document.querySelectorAll('.tab-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
+    document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
+    btn.classList.add('active');
+    document.getElementById('panel-'+btn.dataset.tab).classList.add('active');
+  });
+});
+document.getElementById('panel-personal').classList.add('active');
+
+document.getElementById('resetPersonalBtn').addEventListener('click', async () => {
+  if(!confirm('Delete ALL personal expenses? This cannot be undone.')) return;
+  expenses = [];
+  await saveExpenses();
+  renderPersonal();
+  renderRunway();
+});
+
+// ---------------------------------------------------------------------------
+// Backup / Restore -- a plain JSON download/upload, independent of Cloud
+// Backup below. Works with zero setup, so there's always a safety net even
+// before (or instead of) wiring up Supabase.
+// ---------------------------------------------------------------------------
+document.getElementById('exportBackupBtn').addEventListener('click', () => {
+  const backup = {
+    exportedAt: new Date().toISOString(),
+    personalExpenses: expenses,
+    businessMonths: months,
+    emergencyFund: { balance: efBalance },
+    checklist: { turningDownJobs: manualCheck3 },
+  };
+  const blob = new Blob([JSON.stringify(backup, null, 2)], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'runway-dashboard-backup-' + new Date().toISOString().slice(0,10) + '.json';
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(url);
+});
+
+document.getElementById('restoreBackupBtn').addEventListener('click', () => {
+  document.getElementById('restoreFileInput').click();
+});
+document.getElementById('restoreFileInput').addEventListener('change', async (e) => {
+  const file = e.target.files[0];
+  const note = document.getElementById('backupNote');
+  if(!file) return;
+  try {
+    const text = await file.text();
+    const data = JSON.parse(text);
+    if(!confirm('Restore from this file? This replaces everything currently on this device -- personal expenses, business months, emergency fund, and checklist.')) {
+      e.target.value = '';
+      return;
+    }
+    expenses = Array.isArray(data.personalExpenses) ? data.personalExpenses : [];
+    months = Array.isArray(data.businessMonths) ? data.businessMonths : [];
+    efBalance = Number(data.emergencyFund && data.emergencyFund.balance) || 0;
+    manualCheck3 = !!(data.checklist && data.checklist.turningDownJobs);
+    await saveExpenses();
+    await saveMonths();
+    await saveEF();
+    await saveChecklist();
+    populateCategorySelect();
+    renderPersonal();
+    renderMonths();
+    renderRunway();
+    note.textContent = 'Restored from ' + file.name + '.';
+    note.style.color = 'var(--green)';
+  } catch(err) {
+    note.textContent = 'Could not read that file -- make sure it\'s a backup downloaded from this same page.';
+    note.style.color = 'var(--red)';
+  }
+  e.target.value = '';
+});
+
+// ---------------------------------------------------------------------------
+// Job Tracker data sync -- reuses the SAME Supabase project and sync.js
+// module every other Triple H tool already uses. This page never writes
+// any th_ key, only reads th_expense_log/th_invoices after a pull, so it
+// piggybacks on infrastructure that's already proven working rather than
+// needing anything new.
+// ---------------------------------------------------------------------------
+function updateJobTrackerBadge(status){
+  const dot = document.getElementById('jtDot');
+  const text = document.getElementById('jtText');
+  if(!dot || !text) return;
+  dot.className = 'realtime-dot';
+  if(status === 'SUBSCRIBED'){ dot.classList.add('is-live'); text.textContent = 'Sync: live'; }
+  else if(status === 'unavailable'){ dot.classList.add('is-error'); text.textContent = 'Sync: unavailable'; }
+  else if(status === 'CHANNEL_ERROR' || status === 'TIMED_OUT' || status === 'CLOSED'){ dot.classList.add('is-error'); text.textContent = 'Sync: disconnected'; }
+  else { dot.classList.add('is-connecting'); text.textContent = 'Sync: connecting...'; }
+}
+
+
+document.getElementById('resetAllBtn').addEventListener('click', async () => {
+  if(!confirm('Reset ALL data — personal expenses, business months, emergency fund, and checklist? This cannot be undone.')) return;
+  expenses = [];
+  months = [];
+  efBalance = 0;
+  manualCheck3 = false;
+  await saveExpenses();
+  await saveMonths();
+  await saveEF();
+  await saveChecklist();
+  renderPersonal();
+  renderMonths();
+  renderRunway();
+});
+
+loadAll();
+document.addEventListener('DOMContentLoaded', async () => {
+  if(typeof pullSync === 'function'){
+    const result = await pullSync(); // refreshes th_ AND rd_ keys from the shared blob
+    if(result && result.ok){
+      // Personal/business data may have just changed under us (e.g. logged
+      // from another device) -- reload from storage and re-render everything,
+      // not just re-read Job Tracker's data.
+      await loadAll();
+    }
+  }
+  if(typeof startRealtimeSync === 'function'){
+    startRealtimeSync(() => { loadAll(); }, updateJobTrackerBadge);
+  } else {
+    updateJobTrackerBadge('unavailable');
+  }
+});
+</script>
+</body>
+</html>

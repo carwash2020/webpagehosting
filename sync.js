@@ -62,6 +62,18 @@ const SYNC_DATA_KEYS = [
   'th_job_templates',
   'th_contracts',
   'th_setaside_rate',
+  // Runway Dashboard's own data -- personal budget, business-month
+  // rollups, emergency fund, and the readiness checklist. Deliberately
+  // riding in the SAME blob as everything above (one shared Supabase
+  // project, by explicit choice) rather than a separate project. Worth
+  // remembering: anyone with access to this Supabase project can now see
+  // real mortgage/debt/family expense data alongside operational business
+  // data -- fine for a single owner-operator, worth revisiting if this
+  // business ever brings on an employee or bookkeeper with sync access.
+  'rd_personal-expenses',
+  'rd_business-months',
+  'rd_emergency-fund',
+  'rd_checklist',
 ];
 
 const SYNC_CODE_KEY = 'th_sync_code';
