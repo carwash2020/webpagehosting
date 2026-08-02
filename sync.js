@@ -71,6 +71,7 @@ const SYNC_DATA_KEYS = [
   // data -- fine for a single owner-operator, worth revisiting if this
   // business ever brings on an employee or bookkeeper with sync access.
   'rd_personal-expenses',
+  'rd_personal-income',
   'rd_business-months',
   'rd_emergency-fund',
   'rd_checklist',

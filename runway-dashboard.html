@@ -149,6 +149,7 @@
   .help-modal-body strong{color:var(--orange-light);}
   .help-modal-close{position:absolute;top:14px;right:16px;background:none;border:none;color:var(--text-dim);font-size:22px;line-height:1;cursor:pointer;padding:4px 8px;}
   .help-modal-close:hover{color:var(--text);}
+  .var-log-input{width:90px;padding:6px 8px;background:var(--bg-elevated);border:1px solid var(--border-soft);border-radius:6px;color:var(--text);font-size:12px;font-family:inherit;}
 </style>
 </head>
 <body>
@@ -158,12 +159,14 @@
     <button class="help-modal-close" onclick="closeHelpModal()" aria-label="Close">&times;</button>
     <h3>How to Use: Runway Dashboard</h3>
     <div class="help-modal-body">
+      <h4>Personal Income</h4>
+      <p>Log day-job wages or any other non-Triple-H income at the top of the Personal Budget tab. This is the baseline the business gets measured against on the Runway tab — separate from expenses, since it's a different question ("what's coming in" vs. "what's going out").</p>
       <h4>Personal Budget</h4>
-      <p>Tap "+ Add Expense" to log a real personal expense — pick a category, name it, choose how often it hits (weekly, monthly, etc.), and give it a minimum and a comfortable amount. Everything auto-converts to a monthly figure for the totals. Nothing is pre-filled; categories only show up once you've added something to them.</p>
+      <p>Tap "+ Add Expense" to log a real personal expense — pick a category, name it, and choose <strong>Fixed</strong> or <strong>Variable</strong>. Fixed is a set amount at a set frequency (rent, a subscription). Variable is for bills that actually change month to month (power, water) — instead of guessing one number, log each month's real bill from the category card as it comes in, and the dashboard uses the average of your last 3 logged months everywhere it needs a number, falling back to your starting estimate until real bills exist.</p>
       <h4>Business Dashboard</h4>
       <p>Pick a month, tap <strong>"Pull from Job Tracker"</strong> to auto-fill Revenue, Business Expenses, and Fuel/Mileage straight from your actual logged invoices and expense entries for that month — no retyping. Every number is still editable afterward. Other Expenses, Owner Draws, and Cash in the account aren't tracked anywhere else, so those three always need to be typed in by hand, then tap "Save Month."</p>
       <h4>Runway Summary</h4>
-      <p>Your emergency fund balance vs. 6- and 12-month targets, a trend line estimating how many months at your current growth rate until net profit covers your minimum expenses, a Safe Draw Calculator (how much cash could come out right now while keeping a buffer), and a 3-item readiness checklist — two calculated automatically, one you check yourself.</p>
+      <p>Emergency fund balance vs. 6- and 12-month targets; an <strong>Income Picture</strong> showing how much of your expenses personal income covers on its own and how much the business is supplementing right now; a <strong>Business Trend</strong> estimating months until net profit alone covers minimum expenses (full replacement, not supplementation); a Safe Draw Calculator; and a 3-item readiness checklist.</p>
       <h4>Syncing</h4>
       <p>Everything on this page syncs automatically through the same Supabase project the rest of your Triple H tools use — the little badge at the top shows the connection status. Backup &amp; Restore (bottom of the Runway tab) is a separate, zero-setup safety net: downloads everything as one file, independent of whether sync is working.</p>
     </div>
@@ -192,6 +195,36 @@
   <div class="panel" id="panel-personal">
     <div class="grand-totals" id="personalTotals"></div>
 
+    <div class="card">
+      <div class="card-header"><h3>Personal Income</h3></div>
+      <div class="note" style="margin-top:0;margin-bottom:10px;">Day-job wages, a spouse's income, anything that's not from Triple H. This is the baseline the business income gets measured against on the Runway tab.</div>
+      <div id="incomeList"></div>
+      <div class="top-actions">
+        <button class="action-btn" id="openAddIncomeBtn">+ Add Income Source</button>
+      </div>
+    </div>
+
+    <div class="card form-card" id="incomeFormCard">
+      <div class="card-header"><h3 id="incomeFormTitle">Add Income</h3></div>
+      <div class="form-grid">
+        <div class="full"><label>Source</label><input type="text" id="inc-name" placeholder="e.g. Day Job, Spouse's Salary"></div>
+        <div><label>Frequency</label>
+          <select id="inc-frequency">
+            <option value="weekly">Weekly</option>
+            <option value="biweekly">Biweekly</option>
+            <option value="monthly" selected>Monthly</option>
+            <option value="quarterly">Quarterly</option>
+            <option value="annually">Annually</option>
+          </select>
+        </div>
+        <div><label>Amount (after tax)</label><input type="number" id="inc-amount" placeholder="0"></div>
+      </div>
+      <div class="form-actions">
+        <button class="action-btn" id="saveIncomeBtn" style="width:auto;flex:1;">Save Income</button>
+        <button class="ghost-btn" id="cancelIncomeBtn" style="flex:0 0 auto;">Cancel</button>
+      </div>
+    </div>
+
     <div class="top-actions">
       <button class="action-btn" id="openAddExpenseBtn">+ Add Expense</button>
     </div>
@@ -208,8 +241,14 @@
           <input type="text" id="exp-name" placeholder="e.g. Mortgage, Netflix, Fuel">
           <div class="chip-row" id="exp-suggestions"></div>
         </div>
-        <div>
-          <label>Frequency</label>
+        <div class="full">
+          <label>Type</label>
+          <select id="exp-type">
+            <option value="fixed" selected>Fixed &mdash; same amount every time</option>
+            <option value="variable">Variable &mdash; changes month to month (utilities, etc.)</option>
+          </select>
+        </div>
+        <div id="fixedFieldsRow1"><label>Frequency</label>
           <select id="exp-frequency">
             <option value="weekly">Weekly</option>
             <option value="biweekly">Biweekly</option>
@@ -218,17 +257,17 @@
             <option value="annually">Annually</option>
           </select>
         </div>
-        <div></div>
-        <div>
-          <label>Minimum amount</label>
+        <div id="fixedFieldsRow1b"></div>
+        <div id="fixedFieldsRow2">
+          <label id="exp-min-label">Minimum amount</label>
           <input type="number" id="exp-min" placeholder="0">
         </div>
-        <div>
+        <div id="fixedFieldsRow2b">
           <label>Comfortable amount</label>
           <input type="number" id="exp-comfortable" placeholder="leave blank = same as minimum">
         </div>
       </div>
-      <div class="col-hint">Amount is per the frequency you pick above — it's converted to a monthly figure automatically for totals.</div>
+      <div class="col-hint" id="expTypeHint">Amount is per the frequency you pick above — it's converted to a monthly figure automatically for totals.</div>
       <div class="form-actions">
         <button class="action-btn" id="saveExpenseBtn" style="width:auto;flex:1;">Save Expense</button>
         <button class="ghost-btn" id="cancelExpenseBtn" style="flex:0 0 auto;">Cancel</button>
@@ -285,6 +324,14 @@
       <div class="progress-track"><div class="progress-fill" id="efProgress" style="width:0%;"></div></div>
       <div class="progress-labels"><span>0</span><span id="efTargetLabel">6mo target</span><span id="ef12Label">12mo</span></div>
       <div class="note" id="efNote"></div>
+    </div>
+
+    <div class="card">
+      <div class="card-header"><h3>Income Picture</h3></div>
+      <div class="note" style="margin-top:0;margin-bottom:10px;">How much of your expenses your day-job income covers on its own, and how much the business is currently supplementing on top of that — separate from the "months until I can quit" trend below, which is about full replacement, not partial supplementation.</div>
+      <div class="grand-totals" id="incomePictureStats"></div>
+      <div class="estimate-headline" id="supplementHeadline">—</div>
+      <div class="note" id="supplementNote"></div>
     </div>
 
     <div class="card">
@@ -400,10 +447,12 @@ const CATEGORIES = [
 const FREQ_LABEL = {weekly:"Weekly", biweekly:"Biweekly", monthly:"Monthly", quarterly:"Quarterly", annually:"Annually"};
 
 let expenses = [];
+let income = [];
 let months = [];
 let efBalance = 0;
 let manualCheck3 = false;
 let editingId = null;
+let editingIncomeId = null;
 
 function monthlyEquiv(amount, freq){
   amount = Number(amount) || 0;
@@ -416,11 +465,47 @@ function monthlyEquiv(amount, freq){
   }
 }
 
+// ---------------------------------------------------------------------------
+// Variable expenses -- bills that change month to month (utilities, etc.)
+// instead of one guessed fixed number. Once you've logged at least one
+// real month, this uses the average of up to the last 3 logged months --
+// same smoothing approach already used for the business trend elsewhere in
+// this file, so there's one consistent mental model instead of two. Before
+// any real month is logged, it falls back to the "starting estimate" typed
+// into the Minimum field when the item was created.
+// ---------------------------------------------------------------------------
+function variableCurrentAmount(item){
+  const actuals = item.actuals || {};
+  const monthsLogged = Object.keys(actuals).sort().reverse().slice(0,3);
+  if(monthsLogged.length === 0) return Number(item.min) || 0;
+  const sum = monthsLogged.reduce((s,m) => s + (Number(actuals[m])||0), 0);
+  return sum / monthsLogged.length;
+}
+function variableHint(item){
+  const actuals = item.actuals || {};
+  const count = Object.keys(actuals).length;
+  if(count === 0) return 'estimate — no bills logged yet';
+  const n = Math.min(count, 3);
+  return `avg of last ${n} logged month${n===1?'':'s'}`;
+}
+// The one number used everywhere downstream for a given item, regardless
+// of which column (min/comfortable) asked for it -- a variable bill just
+// IS what it is once you know it, there's no separate "comfortable" target.
+function itemMonthlyAmount(item, col){
+  if(item.variable) return variableCurrentAmount(item);
+  return monthlyEquiv(item[col], item.frequency);
+}
+
 async function loadAll(){
   try{
     const ex = await window.storage.get('personal-expenses');
     expenses = ex ? JSON.parse(ex.value) : [];
   }catch(e){ expenses = []; }
+
+  try{
+    const inc = await window.storage.get('personal-income');
+    income = inc ? JSON.parse(inc.value) : [];
+  }catch(e){ income = []; }
 
   try{
     const mo = await window.storage.get('business-months');
@@ -440,11 +525,13 @@ async function loadAll(){
   document.getElementById('loading').style.display = 'none';
   populateCategorySelect();
   renderPersonal();
+  renderIncome();
   renderMonths();
   renderRunway();
 }
 
 async function saveExpenses(){ try{ await window.storage.set('personal-expenses', JSON.stringify(expenses)); if(typeof scheduleSync === 'function') scheduleSync(); }catch(e){ console.error(e); } }
+async function saveIncome(){ try{ await window.storage.set('personal-income', JSON.stringify(income)); if(typeof scheduleSync === 'function') scheduleSync(); }catch(e){ console.error(e); } }
 async function saveMonths(){ try{ await window.storage.set('business-months', JSON.stringify(months)); if(typeof scheduleSync === 'function') scheduleSync(); }catch(e){ console.error(e); } }
 async function saveEF(){ try{ await window.storage.set('emergency-fund', JSON.stringify({balance: efBalance})); if(typeof scheduleSync === 'function') scheduleSync(); }catch(e){ console.error(e); } }
 async function saveChecklist(){ try{ await window.storage.set('checklist', JSON.stringify({turningDownJobs: manualCheck3})); if(typeof scheduleSync === 'function') scheduleSync(); }catch(e){ console.error(e); } }
@@ -469,10 +556,13 @@ document.getElementById('exp-category').addEventListener('change', renderSuggest
 
 function categoryMonthlyTotal(catKey, col){
   return expenses.filter(e => e.category === catKey)
-    .reduce((s,e) => s + monthlyEquiv(e[col], e.frequency), 0);
+    .reduce((s,e) => s + itemMonthlyAmount(e, col), 0);
 }
 function grandTotal(col){
-  return expenses.reduce((s,e) => s + monthlyEquiv(e[col], e.frequency), 0);
+  return expenses.reduce((s,e) => s + itemMonthlyAmount(e, col), 0);
+}
+function totalMonthlyIncome(){
+  return income.reduce((s,i) => s + monthlyEquiv(i.amount, i.frequency), 0);
 }
 
 function openForm(prefill){
@@ -482,16 +572,19 @@ function openForm(prefill){
     editingId = prefill.id;
     document.getElementById('exp-category').value = prefill.category;
     document.getElementById('exp-name').value = prefill.name;
-    document.getElementById('exp-frequency').value = prefill.frequency;
+    document.getElementById('exp-type').value = prefill.variable ? 'variable' : 'fixed';
+    document.getElementById('exp-frequency').value = prefill.frequency || 'monthly';
     document.getElementById('exp-min').value = prefill.min;
     document.getElementById('exp-comfortable').value = prefill.comfortable;
   } else {
     editingId = null;
     document.getElementById('exp-name').value = '';
+    document.getElementById('exp-type').value = 'fixed';
     document.getElementById('exp-frequency').value = 'monthly';
     document.getElementById('exp-min').value = '';
     document.getElementById('exp-comfortable').value = '';
   }
+  updateExpenseTypeFields();
   renderSuggestions();
   document.getElementById('expenseFormCard').scrollIntoView({behavior:'smooth', block:'center'});
 }
@@ -500,28 +593,125 @@ function closeForm(){
   editingId = null;
 }
 
+// Fixed items need Frequency + Min + Comfortable. Variable items just need
+// a starting estimate (reusing the Min field, relabeled) -- actual amounts
+// get logged month by month from the category card instead.
+function updateExpenseTypeFields(){
+  const isVariable = document.getElementById('exp-type').value === 'variable';
+  document.getElementById('fixedFieldsRow1').style.display = isVariable ? 'none' : '';
+  document.getElementById('fixedFieldsRow2b').style.display = isVariable ? 'none' : '';
+  document.getElementById('exp-min-label').textContent = isVariable ? 'Starting estimate (until you log a real bill)' : 'Minimum amount';
+  document.getElementById('expTypeHint').textContent = isVariable
+    ? 'Once you save this, log each month\'s actual bill from the category card below -- this estimate is only used until real numbers exist.'
+    : 'Amount is per the frequency you pick above — it\'s converted to a monthly figure automatically for totals.';
+}
+document.getElementById('exp-type').addEventListener('change', updateExpenseTypeFields);
+
 document.getElementById('openAddExpenseBtn').addEventListener('click', () => openForm(null));
 document.getElementById('cancelExpenseBtn').addEventListener('click', closeForm);
 
 document.getElementById('saveExpenseBtn').addEventListener('click', async () => {
   const category = document.getElementById('exp-category').value;
   const name = document.getElementById('exp-name').value.trim();
-  const frequency = document.getElementById('exp-frequency').value;
+  const variable = document.getElementById('exp-type').value === 'variable';
+  const frequency = variable ? 'monthly' : document.getElementById('exp-frequency').value;
   const min = Number(document.getElementById('exp-min').value) || 0;
   const comfRaw = document.getElementById('exp-comfortable').value;
-  const comfortable = comfRaw === '' ? min : Number(comfRaw) || 0;
+  const comfortable = variable ? min : (comfRaw === '' ? min : Number(comfRaw) || 0);
 
   if(!name){ alert('Give this expense a name.'); return; }
 
   if(editingId){
     const idx = expenses.findIndex(e => e.id === editingId);
-    if(idx > -1) expenses[idx] = {...expenses[idx], category, name, frequency, min, comfortable};
+    if(idx > -1) expenses[idx] = {...expenses[idx], category, name, frequency, min, comfortable, variable};
   } else {
-    expenses.push({ id: 'exp_' + Date.now() + '_' + Math.random().toString(36).slice(2,7), category, name, frequency, min, comfortable });
+    expenses.push({ id: 'exp_' + Date.now() + '_' + Math.random().toString(36).slice(2,7), category, name, frequency, min, comfortable, variable, actuals: {} });
   }
   await saveExpenses();
   closeForm();
   renderPersonal();
+  renderRunway();
+});
+
+// ---------------------------------------------------------------------------
+// Personal Income -- deliberately a separate list from expenses, not just
+// another category. This is the baseline (day job, etc.) that business
+// income gets measured against on the Runway tab, so it needs to stay a
+// distinct number, not folded into "just another expense category."
+// ---------------------------------------------------------------------------
+function renderIncome(){
+  const container = document.getElementById('incomeList');
+  if(income.length === 0){
+    container.innerHTML = '<div class="empty-state">No income sources added yet.</div>';
+    return;
+  }
+  container.innerHTML = income.map(item => `
+    <div class="row">
+      <div class="row-main">
+        <div class="row-label">${item.name}</div>
+        <div class="row-freq">${FREQ_LABEL[item.frequency]}</div>
+      </div>
+      <div class="row-amounts"><b>${fmt(monthlyEquiv(item.amount, item.frequency))}</b>/mo</div>
+      <div class="row-actions">
+        <button class="icon-btn" data-edit-inc="${item.id}" title="Edit">Edit</button>
+        <button class="icon-btn danger" data-delete-inc="${item.id}" title="Delete">Del</button>
+      </div>
+    </div>
+  `).join('');
+  container.querySelectorAll('[data-edit-inc]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const item = income.find(i => i.id === btn.dataset.editInc);
+      if(item) openIncomeForm(item);
+    });
+  });
+  container.querySelectorAll('[data-delete-inc]').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      if(!confirm('Delete this income source?')) return;
+      income = income.filter(i => i.id !== btn.dataset.deleteInc);
+      await saveIncome();
+      renderIncome();
+      renderRunway();
+    });
+  });
+}
+
+function openIncomeForm(prefill){
+  document.getElementById('incomeFormCard').classList.add('open');
+  document.getElementById('incomeFormTitle').textContent = prefill ? 'Edit Income' : 'Add Income';
+  if(prefill){
+    editingIncomeId = prefill.id;
+    document.getElementById('inc-name').value = prefill.name;
+    document.getElementById('inc-frequency').value = prefill.frequency;
+    document.getElementById('inc-amount').value = prefill.amount;
+  } else {
+    editingIncomeId = null;
+    document.getElementById('inc-name').value = '';
+    document.getElementById('inc-frequency').value = 'monthly';
+    document.getElementById('inc-amount').value = '';
+  }
+  document.getElementById('incomeFormCard').scrollIntoView({behavior:'smooth', block:'center'});
+}
+function closeIncomeForm(){
+  document.getElementById('incomeFormCard').classList.remove('open');
+  editingIncomeId = null;
+}
+document.getElementById('openAddIncomeBtn').addEventListener('click', () => openIncomeForm(null));
+document.getElementById('cancelIncomeBtn').addEventListener('click', closeIncomeForm);
+document.getElementById('saveIncomeBtn').addEventListener('click', async () => {
+  const name = document.getElementById('inc-name').value.trim();
+  const frequency = document.getElementById('inc-frequency').value;
+  const amount = Number(document.getElementById('inc-amount').value) || 0;
+  if(!name){ alert('Give this income source a name.'); return; }
+
+  if(editingIncomeId){
+    const idx = income.findIndex(i => i.id === editingIncomeId);
+    if(idx > -1) income[idx] = {...income[idx], name, frequency, amount};
+  } else {
+    income.push({ id: 'inc_' + Date.now() + '_' + Math.random().toString(36).slice(2,7), name, frequency, amount });
+  }
+  await saveIncome();
+  closeIncomeForm();
+  renderIncome();
   renderRunway();
 });
 
@@ -548,7 +738,20 @@ function renderPersonal(){
         <span class="subtotal">${fmt(min)} / ${fmt(comf)}</span>
         <button class="cat-add-btn" data-cat="${cat.key}" title="Add to ${cat.name}">+</button>
       </div>
-      ${items.map(item => `
+      ${items.map(item => item.variable ? `
+        <div class="row">
+          <div class="row-main">
+            <div class="row-label">${item.name} <span class="col-hint">VARIABLE</span></div>
+            <div class="row-freq">${variableHint(item)}</div>
+          </div>
+          <div class="row-amounts"><b>${fmt(variableCurrentAmount(item))}</b>/mo</div>
+          <div class="row-actions">
+            <input type="number" class="var-log-input" id="varlog-${item.id}" placeholder="This month's bill">
+            <button class="icon-btn" data-log-var="${item.id}" title="Log this month's actual amount">Log</button>
+            <button class="icon-btn danger" data-delete="${item.id}" title="Delete">Del</button>
+          </div>
+        </div>
+      ` : `
         <div class="row">
           <div class="row-main">
             <div class="row-label">${item.name}</div>
@@ -563,6 +766,23 @@ function renderPersonal(){
       `).join('')}
     `;
     container.appendChild(card);
+  });
+
+  container.querySelectorAll('[data-log-var]').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      const id = btn.dataset.logVar;
+      const input = document.getElementById('varlog-' + id);
+      const amount = Number(input.value);
+      if(!input.value || isNaN(amount)){ input.focus(); return; }
+      const item = expenses.find(e => e.id === id);
+      if(!item) return;
+      if(!item.actuals) item.actuals = {};
+      const monthKey = new Date().toISOString().slice(0,7);
+      item.actuals[monthKey] = amount;
+      await saveExpenses();
+      renderPersonal();
+      renderRunway();
+    });
   });
 
   container.querySelectorAll('[data-cat]').forEach(btn => {
@@ -758,11 +978,13 @@ function linearTrendSlope(points){
 function renderRunway(){
   const min = grandTotal('min');
   const comf = grandTotal('comfortable');
+  const personalIncome = totalMonthlyIncome();
   document.getElementById('ef-balance').value = efBalance || '';
 
   document.getElementById('runwayExpenseTotals').innerHTML = `
     <div class="stat-box"><div class="label">Minimum Monthly</div><div class="value">${fmt(min)}</div></div>
     <div class="stat-box blue"><div class="label">Comfortable Monthly</div><div class="value">${fmt(comf)}</div></div>
+    <div class="stat-box green"><div class="label">Personal Income</div><div class="value">${fmt(personalIncome)}</div></div>
   `;
 
   const target6 = min * 6;
@@ -779,6 +1001,43 @@ function renderRunway(){
   const nets = sorted.map((m,i) => ({x:i, y:computeNetProfit(m), month:m.month}));
   const last3 = nets.slice(-3);
   const avgNet3 = last3.length ? last3.reduce((s,p)=>s+p.y,0)/last3.length : null;
+
+  // --- Income Picture: how much personal income covers on its own, and
+  // how much the business is supplementing on top of that, right now.
+  // Deliberately separate from the quit-estimate trend below -- this is
+  // about the present, not a projection.
+  const incomePictureEl = document.getElementById('incomePictureStats');
+  const headlineEl = document.getElementById('supplementHeadline');
+  const noteEl = document.getElementById('supplementNote');
+  if(min === 0){
+    incomePictureEl.innerHTML = `<div class="stat-box"><div class="label">Gap</div><div class="value">—</div></div>`;
+    headlineEl.textContent = 'Add minimum expenses first';
+    noteEl.textContent = 'Add expenses on the Personal Budget tab to see how income stacks up against them.';
+  } else {
+    const gap = Math.max(0, min - personalIncome);
+    const businessAvg = avgNet3 !== null ? avgNet3 : 0;
+    const businessCoverage = Math.min(businessAvg, gap);
+    const coveragePct = gap > 0 ? (businessCoverage / gap) * 100 : null;
+    const overallNet = personalIncome + businessAvg - min;
+
+    incomePictureEl.innerHTML = `
+      <div class="stat-box"><div class="label">Gap After Personal Income</div><div class="value">${fmt(gap)}</div></div>
+      <div class="stat-box ${overallNet>=0?'green':''}"><div class="label">Household Net (Income + Biz \u2212 Min)</div><div class="value">${fmt(overallNet)}</div></div>
+    `;
+
+    if(gap === 0){
+      headlineEl.textContent = avgNet3 !== null ? `Personal income already covers expenses \u2014 business is pure surplus` : 'Personal income already covers minimum expenses';
+      noteEl.textContent = avgNet3 !== null
+        ? `Your day-job income (${fmt(personalIncome)}/mo) already covers your minimum expenses (${fmt(min)}/mo) on its own. The business's last-3-month average net profit (${fmt(avgNet3)}/mo) is on top of that, not filling a gap \u2014 that's savings, debt payoff, or margin, not a requirement.`
+        : `Your day-job income (${fmt(personalIncome)}/mo) already covers your minimum expenses (${fmt(min)}/mo) on its own. Log a business month to see what the business adds on top.`;
+    } else if(avgNet3 === null){
+      headlineEl.textContent = `${fmt(gap)}/mo gap \u2014 no business data yet`;
+      noteEl.textContent = `Personal income (${fmt(personalIncome)}/mo) falls short of minimum expenses (${fmt(min)}/mo) by ${fmt(gap)}/mo. Log at least one business month to see how much of that the business is currently supplementing.`;
+    } else {
+      headlineEl.textContent = `Business covers ${coveragePct.toFixed(0)}% of the gap`;
+      noteEl.textContent = `Personal income (${fmt(personalIncome)}/mo) falls short of minimum expenses (${fmt(min)}/mo) by ${fmt(gap)}/mo. The business's last-3-month average net profit (${fmt(avgNet3)}/mo) currently supplements ${fmt(businessCoverage)}/mo of that gap${businessAvg > gap ? ' \u2014 and covers it with room left over' : ''}.`;
+    }
+  }
 
   document.getElementById('trendStats').innerHTML = `
     <div class="stat-box green"><div class="label">Avg Net Profit (last 3mo)</div><div class="value">${avgNet3!==null ? fmt(avgNet3) : '—'}</div></div>
@@ -872,6 +1131,7 @@ document.getElementById('exportBackupBtn').addEventListener('click', () => {
   const backup = {
     exportedAt: new Date().toISOString(),
     personalExpenses: expenses,
+    personalIncome: income,
     businessMonths: months,
     emergencyFund: { balance: efBalance },
     checklist: { turningDownJobs: manualCheck3 },
@@ -897,20 +1157,23 @@ document.getElementById('restoreFileInput').addEventListener('change', async (e)
   try {
     const text = await file.text();
     const data = JSON.parse(text);
-    if(!confirm('Restore from this file? This replaces everything currently on this device -- personal expenses, business months, emergency fund, and checklist.')) {
+    if(!confirm('Restore from this file? This replaces everything currently on this device -- personal expenses, personal income, business months, emergency fund, and checklist.')) {
       e.target.value = '';
       return;
     }
     expenses = Array.isArray(data.personalExpenses) ? data.personalExpenses : [];
+    income = Array.isArray(data.personalIncome) ? data.personalIncome : [];
     months = Array.isArray(data.businessMonths) ? data.businessMonths : [];
     efBalance = Number(data.emergencyFund && data.emergencyFund.balance) || 0;
     manualCheck3 = !!(data.checklist && data.checklist.turningDownJobs);
     await saveExpenses();
+    await saveIncome();
     await saveMonths();
     await saveEF();
     await saveChecklist();
     populateCategorySelect();
     renderPersonal();
+    renderIncome();
     renderMonths();
     renderRunway();
     note.textContent = 'Restored from ' + file.name + '.';
@@ -942,16 +1205,19 @@ function updateJobTrackerBadge(status){
 
 
 document.getElementById('resetAllBtn').addEventListener('click', async () => {
-  if(!confirm('Reset ALL data — personal expenses, business months, emergency fund, and checklist? This cannot be undone.')) return;
+  if(!confirm('Reset ALL data — personal expenses, personal income, business months, emergency fund, and checklist? This cannot be undone.')) return;
   expenses = [];
+  income = [];
   months = [];
   efBalance = 0;
   manualCheck3 = false;
   await saveExpenses();
+  await saveIncome();
   await saveMonths();
   await saveEF();
   await saveChecklist();
   renderPersonal();
+  renderIncome();
   renderMonths();
   renderRunway();
 });
