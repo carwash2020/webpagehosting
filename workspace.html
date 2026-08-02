@@ -47,6 +47,19 @@
   }
   .jump-nav a:hover { color: var(--orange-light); background: var(--bg-panel-2); }
 
+  .global-search-block { margin-bottom: 20px; }
+  .global-search-block > input {
+    width: 100%; box-sizing: border-box; padding: 13px 16px; background: var(--bg-panel-2);
+    border: 1px solid var(--border); border-radius: var(--radius); color: var(--white);
+    font-size: 15px; font-family: inherit;
+  }
+  .global-search-block > input:focus-visible { border-color: var(--orange-light); }
+  #globalSearchResults:not(:empty) {
+    background: var(--bg-panel); border: 1px solid var(--border); border-radius: var(--radius);
+    padding: 4px 16px 14px; margin-top: 8px;
+  }
+  #globalSearchResults .dash-list-item { text-decoration: none; display: flex; cursor: pointer; }
+
   .section-block {
     background: var(--bg-panel); border: 1px solid var(--border); border-radius: var(--radius);
     padding: 0 20px 20px; margin-bottom: 18px;
@@ -180,6 +193,11 @@
   <a href="#section-tools">Tools</a>
 </nav>
 
+<div class="global-search-block">
+  <input type="text" id="globalSearch" placeholder="Find a client &mdash; searches jobs, contacts, invoices, quotes, and contracts..." oninput="renderGlobalSearch()" aria-label="Search everything by client name">
+  <div id="globalSearchResults"></div>
+</div>
+
 <div class="section-block" id="section-today">
   <div class="section-heading" onclick="toggleSection('today')">
     <span>Today</span>
@@ -269,6 +287,7 @@
     <div id="followupsList"></div>
 
     <div class="analytics-subheading">Invoices</div>
+    <div class="form-field"><input type="text" id="invoiceSearch" placeholder="Search invoices by client or invoice #..." oninput="renderInvoicesList()" aria-label="Search invoices"></div>
     <div id="invoicesList"></div>
 
   </div>
@@ -470,6 +489,16 @@
     applyCollapseState();
   }
 
+  // Force a section open (vs. toggleSection's flip) -- used when a global
+  // search result needs to land somewhere that might currently be collapsed.
+  function expandSection(key) {
+    const state = loadCollapseState();
+    if (!state[key]) return;
+    state[key] = false;
+    localStorage.setItem(COLLAPSE_STATE_KEY, JSON.stringify(state));
+    applyCollapseState();
+  }
+
   const ALL_SYNCED_KEYS = [
     'th_tracker_jobs', 'th_tracker_contacts', 'th_tracker_notes_v2',
     'th_expense_log', 'th_mileage_rate', 'th_price_reference', 'th_invoices',
@@ -481,6 +510,87 @@
   function loadInvoices() { return JSON.parse(localStorage.getItem('th_invoices') || '[]'); }
   function saveInvoices(list) { localStorage.setItem('th_invoices', JSON.stringify(list)); if (typeof scheduleSync === 'function') scheduleSync(); }
   function loadRate() { return parseFloat(localStorage.getItem('th_mileage_rate')) || 0.76; }
+  function loadContactsForSearch() { try { return JSON.parse(localStorage.getItem('th_tracker_contacts') || '[]'); } catch (e) { return []; } }
+  function loadQuotesForSearch() { try { return JSON.parse(localStorage.getItem('th_quotes') || '[]'); } catch (e) { return []; } }
+  function loadContractsForSearch() { try { return JSON.parse(localStorage.getItem('th_contracts') || '[]'); } catch (e) { return []; } }
+
+  // ---------- Global search ----------
+  // One box, searches across jobs, contacts, invoices, quotes, and
+  // contracts by client/title/name, so a client's whole history can be
+  // found without checking three separate tools. Jobs and contacts jump
+  // to Job Tracker (which reads the same ?search=...#tab convention this
+  // sets); contracts jump to Contract Generator the same way. Invoices
+  // live on this page already, so that result just expands and filters
+  // the existing Invoices list in place instead of navigating away.
+  // Quotes have no dedicated list view anywhere yet, so they're shown as
+  // plain info (no click-through) until one exists.
+  function renderGlobalSearch() {
+    const container = document.getElementById('globalSearchResults');
+    const term = document.getElementById('globalSearch').value.trim().toLowerCase();
+    if (!term) { container.innerHTML = ''; return; }
+
+    const jobs = loadJobs().filter(j => (j.title || '').toLowerCase().includes(term) || (j.client || '').toLowerCase().includes(term));
+    const contacts = loadContactsForSearch().filter(c => (c.name || '').toLowerCase().includes(term));
+    const invoices = loadInvoices().filter(i => (i.clientName || '').toLowerCase().includes(term));
+    const quotes = loadQuotesForSearch().filter(q => (q.clientName || '').toLowerCase().includes(term));
+    const contracts = loadContractsForSearch().filter(e => (e.fields.clientName || '').toLowerCase().includes(term));
+
+    const groups = [];
+    if (jobs.length) groups.push({
+      label: 'Jobs', items: jobs.slice(0, 8).map(j =>
+        `<a class="dash-list-item" href="/job-tracker.html?search=${encodeURIComponent(j.client || j.title)}#jobs">
+          <div><div class="dash-list-item-title">${escapeHtml(j.title)}</div><div class="dash-list-item-meta">${escapeHtml(j.client || 'No client set')}</div></div>
+        </a>`)
+    });
+    if (contacts.length) groups.push({
+      label: 'Contacts', items: contacts.slice(0, 8).map(c =>
+        `<a class="dash-list-item" href="/job-tracker.html?search=${encodeURIComponent(c.name)}#contacts">
+          <div><div class="dash-list-item-title">${escapeHtml(c.name)}</div><div class="dash-list-item-meta">${escapeHtml(c.phone || c.email || '')}</div></div>
+        </a>`)
+    });
+    if (invoices.length) groups.push({
+      label: 'Invoices', items: invoices.slice(0, 8).map(i =>
+        `<a class="dash-list-item" href="#section-actionitems" onclick="jumpToInvoiceSearch(${i.id})">
+          <div><div class="dash-list-item-title">${escapeHtml(i.clientName)}</div><div class="dash-list-item-meta">#${escapeHtml(i.invoiceNumber || '\u2014')} &middot; ${money(i.total)}</div></div>
+        </a>`)
+    });
+    if (quotes.length) groups.push({
+      label: 'Quotes / Estimates (view in Invoice Generator)', items: quotes.slice(0, 8).map(q =>
+        `<div class="dash-list-item">
+          <div><div class="dash-list-item-title">${escapeHtml(q.clientName)}</div><div class="dash-list-item-meta">${escapeHtml(q.date || '')} &middot; ${money(q.total)}</div></div>
+        </div>`)
+    });
+    if (contracts.length) groups.push({
+      label: 'Contracts', items: contracts.slice(0, 8).map(e =>
+        `<a class="dash-list-item" href="/contract-generator.html?search=${encodeURIComponent(e.fields.clientName)}">
+          <div><div class="dash-list-item-title">${escapeHtml(e.fields.clientName)}</div><div class="dash-list-item-meta">${escapeHtml(CONTRACT_TYPE_LABELS_DASH[e.type] || e.type)}</div></div>
+        </a>`)
+    });
+
+    if (groups.length === 0) {
+      container.innerHTML = '<div class="empty-state-small">No matches for "' + escapeHtml(term) + '".</div>';
+      return;
+    }
+    container.innerHTML = groups.map(g =>
+      `<div class="analytics-subheading">${g.label}</div>${g.items.join('')}`
+    ).join('');
+  }
+
+  const CONTRACT_TYPE_LABELS_DASH = { pwo: 'Per-Job Work Order', stpa: 'Short-Term Project Agreement', ltsa: 'Long-Term Service Agreement' };
+
+  // A search result for an invoice jumps here rather than to another page,
+  // since the Invoices list already lives on this dashboard -- expand
+  // Action Items if it was collapsed, drop the name into the existing
+  // Invoices search box, and re-render so it's filtered on arrival.
+  // Takes the invoice's numeric id (not its name) so nothing client-name-
+  // shaped ever has to be interpolated into an inline HTML attribute.
+  function jumpToInvoiceSearch(invoiceId) {
+    const invoice = loadInvoices().find(i => i.id === invoiceId);
+    if (!invoice) return;
+    expandSection('actionitems');
+    const el = document.getElementById('invoiceSearch');
+    if (el) { el.value = invoice.clientName || ''; renderInvoicesList(); }
+  }
 
   function loadSetAsideRate() {
     const stored = localStorage.getItem('th_setaside_rate');
@@ -714,12 +824,22 @@
   }
 
   function renderInvoicesList() {
-    const invoices = [...loadInvoices()].sort((a, b) => b.id - a.id).slice(0, 20);
-    const container = document.getElementById('invoicesList');
     actionItemCounts.unpaid = loadInvoices().filter(i => !i.paid).length;
     updateActionItemsBadge();
+    const searchTerm = (document.getElementById('invoiceSearch')?.value || '').trim().toLowerCase();
+    let invoices = [...loadInvoices()].sort((a, b) => b.id - a.id);
+    if (searchTerm) {
+      invoices = invoices.filter(i =>
+        (i.clientName || '').toLowerCase().includes(searchTerm) ||
+        String(i.invoiceNumber || '').toLowerCase().includes(searchTerm)
+      );
+    }
+    invoices = invoices.slice(0, 20);
+    const container = document.getElementById('invoicesList');
     if (invoices.length === 0) {
-      container.innerHTML = '<div class="empty-state-small">No invoices generated yet.</div>';
+      container.innerHTML = searchTerm
+        ? '<div class="empty-state-small">No invoices match "' + escapeHtml(searchTerm) + '".</div>'
+        : '<div class="empty-state-small">No invoices generated yet.</div>';
       return;
     }
     container.innerHTML = invoices.map(i => {
@@ -784,6 +904,7 @@
     const result = await deleteLead(id);
     if (!result.ok) { await showAlert('Could not delete: ' + result.error); return; }
     loadAndRenderLeads();
+    showToast('Lead deleted.');
   }
 
   async function toggleLeadHandled(id, newState) {
@@ -1214,7 +1335,7 @@
       return;
     }
     btn.classList.add('is-active');
-    await showAlert('Notifications are on for this device.');
+    showToast('Notifications are on for this device.');
   }
 
   async function refreshPushToggleState() {

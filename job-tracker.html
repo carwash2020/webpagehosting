@@ -417,6 +417,7 @@
     </div>
     <button class="primary-btn" onclick="addContact()">Add Contact</button>
   </div>
+  <div class="form-field"><input type="text" id="contactSearch" placeholder="Search contacts by name, phone, or email..." oninput="renderContacts()" aria-label="Search contacts"></div>
   <div id="contactsList"></div>
 </div>
 
@@ -648,6 +649,7 @@
     document.getElementById('jobShowOnCalendar').checked = false;
     renderJobs();
     populateJobRefOptions();
+    showToast('Job added.');
   }
 
   async function deleteJob(id) {
@@ -656,6 +658,7 @@
     saveJobs(loadJobs().filter(j => j.id !== id));
     renderJobs();
     populateJobRefOptions();
+    showToast('Job deleted.');
   }
 
   async function setJobStatus(id, newStatus) {
@@ -1256,6 +1259,7 @@
     document.getElementById('entryReceipt').value = '';
     document.getElementById('receiptPreviewName').textContent = '';
     renderExpenses();
+    showToast(type === 'mileage' ? 'Mileage logged.' : 'Expense logged.');
   }
 
   async function deleteExpense(id) {
@@ -1268,6 +1272,7 @@
     }
     saveExpenses(entries.filter(e => e.id !== id));
     renderExpenses();
+    showToast('Entry deleted.');
   }
 
   async function clearAllExpenses() {
@@ -1299,7 +1304,7 @@
         <td>${PAYMENT_LABEL[e.payment] || '\u2014'}</td>
         <td>$${e.amount.toFixed(2)}</td>
         <td>${e.receiptPath ? `<a href="${getReceiptUrl(e.receiptPath)}" target="_blank" rel="noopener" style="color:var(--blue-light);">View</a>` : '\u2014'}</td>
-        <td><button class="small-btn danger" onclick="deleteExpense(${e.id})">&times;</button></td>
+        <td><button class="small-btn danger" onclick="deleteExpense(${e.id})" aria-label="Delete entry" title="Delete entry">&times;</button></td>
       </tr>`).join('');
 
     container.innerHTML = `
@@ -1366,6 +1371,7 @@
     saveContacts(contacts);
     ['contactName','contactRole','contactPhone','contactEmail','contactNotes'].forEach(id => document.getElementById(id).value = '');
     renderContacts();
+    showToast('Contact added.');
   }
 
   async function deleteContact(id) {
@@ -1373,15 +1379,26 @@
     if (!confirmed) return;
     saveContacts(loadContacts().filter(c => c.id !== id));
     renderContacts();
+    showToast('Contact deleted.');
   }
 
   function loadInvoicesForHistory() { return JSON.parse(localStorage.getItem('th_invoices') || '[]'); }
 
   function renderContacts() {
-    const contacts = loadContacts();
+    const searchTerm = (document.getElementById('contactSearch')?.value || '').trim().toLowerCase();
+    let contacts = loadContacts();
+    if (searchTerm) {
+      contacts = contacts.filter(c =>
+        (c.name || '').toLowerCase().includes(searchTerm) ||
+        (c.phone || '').toLowerCase().includes(searchTerm) ||
+        (c.email || '').toLowerCase().includes(searchTerm)
+      );
+    }
     const container = document.getElementById('contactsList');
     if (contacts.length === 0) {
-      container.innerHTML = '<div class="empty-state">No contacts saved yet &mdash; add one above to keep their info handy.</div>';
+      container.innerHTML = searchTerm
+        ? '<div class="empty-state">No contacts match "' + escapeHtml(searchTerm) + '".</div>'
+        : '<div class="empty-state">No contacts saved yet &mdash; add one above to keep their info handy.</div>';
       return;
     }
     container.innerHTML = contacts.map(c => `
@@ -1475,7 +1492,7 @@
           <h4>${escapeHtml(n.title || 'Untitled Note')}</h4>
           <p>${escapeHtml((n.body || '').slice(0, 60) || 'Empty note')}</p>
         </div>
-        <button class="small-btn danger" onclick="event.stopPropagation(); deleteNote(${n.id})">&times;</button>
+        <button class="small-btn danger" onclick="event.stopPropagation(); deleteNote(${n.id})" aria-label="Delete note" title="Delete note">&times;</button>
       </div>`).join('');
   }
 
@@ -1511,6 +1528,7 @@
     } else {
       renderNotesList();
     }
+    showToast('Note deleted.');
   }
 
   function scheduleNoteSave() {
@@ -1560,6 +1578,20 @@
       if (initialHash === 'add-job') {
         document.getElementById('jobTitle')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
         document.getElementById('jobTitle')?.focus();
+      }
+
+      // Landing here from the Dashboard's global search ("?search=name#jobs"
+      // or "#contacts") -- prefill whichever search box belongs to the tab
+      // that was linked to, so the match is already filtered on arrival.
+      const presetSearch = new URLSearchParams(location.search).get('search');
+      if (presetSearch) {
+        if (initialHash === 'contacts') {
+          const el = document.getElementById('contactSearch');
+          if (el) { el.value = presetSearch; renderContacts(); }
+        } else {
+          const el = document.getElementById('jobSearch');
+          if (el) { el.value = presetSearch; renderJobs(); }
+        }
       }
 
       if (typeof startRealtimeSync === 'function') {

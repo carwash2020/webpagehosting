@@ -32,6 +32,11 @@
   body { padding: 90px 20px 60px; max-width: 900px; margin: 0 auto; }
   .tool-title { font-family:'Oswald',sans-serif; font-weight:700; font-size:28px; color:var(--white); margin-bottom:6px; }
   .tool-sub { color: var(--text-dim); margin-bottom: 30px; }
+  .realtime-badge { display: inline-flex; align-items: center; gap: 5px; font-size: 11.5px; color: var(--text-dim); margin-left: 10px; }
+  .realtime-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--text-dim); flex-shrink: 0; }
+  .realtime-dot.is-live { background: #4caf50; }
+  .realtime-dot.is-connecting { background: var(--orange-light); }
+  .realtime-dot.is-error { background: #e05252; }
   .line-items-table { width: 100%; border-collapse: collapse; margin-bottom: 12px; }
   .line-items-table th { text-align: left; font-size: 12px; color: var(--text-dim); padding: 6px 8px; text-transform: uppercase; }
   .line-items-table td { padding: 4px 6px; }
@@ -69,7 +74,9 @@
   <button class="help-btn" onclick="openHelpModal()" aria-label="How to use this tool" title="How to use this tool">?</button>
 </div>
 <div class="tool-title">Invoice Generator</div>
-<p class="tool-sub">Internal tool &mdash; fill this out per job, click Generate, a branded PDF downloads straight to your device.</p>
+<p class="tool-sub">Internal tool &mdash; fill this out per job, click Generate, a branded PDF downloads straight to your device.
+  <span class="realtime-badge" id="realtimeBadge"><span class="realtime-dot" id="realtimeDot"></span><span id="realtimeText">Live sync: connecting...</span></span>
+</p>
 
 <div class="tabs">
   <button class="tab-btn is-active" data-tab="invoice" onclick="activateGenTab('invoice')">Invoice</button>
@@ -474,7 +481,7 @@
     }
     recalc();
     activateGenTab('invoice');
-    await showAlert('Copied over to the Invoice tab. Review the details, then Generate PDF when ready.');
+    showToast('Copied to the Invoice tab \u2014 review, then Generate PDF.', { duration: 3400 });
   }
 
   // ---------- PDF generation ----------
@@ -699,6 +706,7 @@
     const filename = 'TripleH_Invoice_' + (document.getElementById('clientName').value || 'Client').replace(/[^a-z0-9]/gi, '_') + '.pdf';
     logInvoice({ subtotal, tax, discount, total });
     await sharePdfOrDownload(doc, filename, 'Invoice');
+    showToast('Invoice logged and ready.');
   }
 
   // ---------- Invoice logging (feeds the Dashboard's revenue numbers) ----------
@@ -902,7 +910,40 @@
     const filename = 'TripleH_Estimate_' + (document.getElementById('quoteClientName').value || 'Client').replace(/[^a-z0-9]/gi, '_') + '.pdf';
     logQuote({ subtotal, tax, discount, total });
     await sharePdfOrDownload(doc, filename, 'Estimate');
+    showToast('Estimate logged and ready.');
   }
+
+  // ---------- Live-sync status badge ----------
+  // Same pattern as job-tracker.html/route-planner.html/workspace.html.
+  // This page has no list to re-render on a remote change, but the shared
+  // tax rate can change from another device, so that's what gets
+  // refreshed here. Wrapped in DOMContentLoaded because sync.js loads
+  // with `defer` -- it isn't guaranteed to exist yet during this inline
+  // script's own top-level execution, only by the time DOMContentLoaded fires.
+  function updateRealtimeBadge(status) {
+    const dot = document.getElementById('realtimeDot');
+    const text = document.getElementById('realtimeText');
+    if (!dot || !text) return;
+    dot.className = 'realtime-dot';
+    if (status === 'SUBSCRIBED') {
+      dot.classList.add('is-live');
+      text.textContent = 'Live sync active';
+    } else if (status === 'unavailable') {
+      dot.classList.add('is-error');
+      text.textContent = 'Live sync unavailable';
+    } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT' || status === 'CLOSED') {
+      dot.classList.add('is-error');
+      text.textContent = 'Live sync disconnected';
+    } else {
+      dot.classList.add('is-connecting');
+      text.textContent = 'Live sync: connecting...';
+    }
+  }
+  document.addEventListener('DOMContentLoaded', () => {
+    if (typeof startRealtimeSync === 'function') {
+      startRealtimeSync(() => { loadSharedTaxRate(); }, updateRealtimeBadge);
+    }
+  });
 </script>
 
 <div class="help-modal-overlay" id="helpModalOverlay" onclick="if(event.target===this) closeHelpModal()">

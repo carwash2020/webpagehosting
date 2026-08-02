@@ -101,6 +101,57 @@ function showConfirm(message, options) {
 }
 
 // ---------------------------------------------------------------------------
+// Toast -- a brief, non-blocking confirmation for routine successes (job
+// saved, invoice logged, contact deleted). Deliberately separate from
+// showAlert()/showConfirm() above: those are for things that need an
+// acknowledgment or a decision, this is for "that worked, keep going."
+// Auto-dismisses; also dismissable early with a tap. Stacks if more than
+// one fires in quick succession rather than replacing/losing the first.
+//
+//   showToast('Job added.');
+//   showToast('Could not reach the server.', { type: 'error' });
+// ---------------------------------------------------------------------------
+
+function ensureToastContainerExists() {
+  if (document.getElementById('thToastContainer')) return document.getElementById('thToastContainer');
+  const container = document.createElement('div');
+  container.id = 'thToastContainer';
+  container.className = 'th-toast-container';
+  container.setAttribute('aria-live', 'polite');
+  container.setAttribute('role', 'status');
+  document.body.appendChild(container);
+  return container;
+}
+
+function showToast(message, options) {
+  options = options || {};
+  const duration = options.duration || 2600;
+  const container = ensureToastContainerExists();
+
+  const toast = document.createElement('div');
+  toast.className = 'th-toast' + (options.type === 'error' ? ' is-error' : '');
+  toast.textContent = message;
+  toast.addEventListener('click', () => dismissToast(toast));
+  container.appendChild(toast);
+
+  // Letting the element paint in its resting state before adding
+  // .is-shown means the CSS transition actually animates in, instead of
+  // starting already-visible.
+  requestAnimationFrame(() => toast.classList.add('is-shown'));
+
+  const timer = setTimeout(() => dismissToast(toast), duration);
+  toast._thTimer = timer;
+}
+
+function dismissToast(toast) {
+  if (!toast || toast._thDismissed) return;
+  toast._thDismissed = true;
+  clearTimeout(toast._thTimer);
+  toast.classList.remove('is-shown');
+  setTimeout(() => toast.remove(), 200);
+}
+
+// ---------------------------------------------------------------------------
 // Share-or-download for generated PDFs -- tries the native share sheet
 // (text it, email it, AirDrop it) first on devices that support sharing
 // files, falls back to a normal download everywhere else (most desktop

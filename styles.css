@@ -1277,6 +1277,26 @@
 .dialog-btn-danger { background: #e05252; color: #fff; }
 .dialog-btn-cancel { background: var(--bg-panel-2); border: 1px solid var(--border); color: var(--white); }
 
+/* --- Toast notifications (tools-common.js showToast()) --- */
+.th-toast-container{
+  position:fixed; left:50%; bottom:24px; transform:translateX(-50%);
+  z-index:400; display:flex; flex-direction:column; gap:8px; align-items:center;
+  pointer-events:none; width:100%; padding:0 20px; box-sizing:border-box;
+}
+.th-toast{
+  pointer-events:auto; cursor:pointer;
+  background:var(--bg-panel-2); border:1px solid var(--border); border-left:3px solid var(--orange);
+  color:var(--white); font-size:14px; font-family:inherit; line-height:1.4;
+  padding:12px 18px; border-radius:8px; max-width:420px; width:max-content;
+  box-shadow:0 6px 20px rgba(0,0,0,0.35);
+  opacity:0; transform:translateY(8px); transition:opacity .18s ease, transform .18s ease;
+}
+.th-toast.is-shown{ opacity:1; transform:translateY(0); }
+.th-toast.is-error{ border-left-color:#e05252; }
+@media (prefers-reduced-motion: reduce){
+  .th-toast{ transition:none; }
+}
+
 /* ==========================================================================
    INTERNAL TOOLS — PROFESSIONAL POLISH PASS
    Subtle glow + smoother interaction states, scoped deliberately to classes

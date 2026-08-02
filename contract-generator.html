@@ -32,6 +32,11 @@
   body { padding: 90px 20px 60px; max-width: 900px; margin: 0 auto; }
   .tool-title { font-family:'Oswald',sans-serif; font-weight:700; font-size:28px; color:var(--white); margin-bottom:6px; }
   .tool-sub { color: var(--text-dim); margin-bottom: 24px; }
+  .realtime-badge { display: inline-flex; align-items: center; gap: 5px; font-size: 11.5px; color: var(--text-dim); margin-left: 10px; }
+  .realtime-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--text-dim); flex-shrink: 0; }
+  .realtime-dot.is-live { background: #4caf50; }
+  .realtime-dot.is-connecting { background: var(--orange-light); }
+  .realtime-dot.is-error { background: #e05252; }
   .empty-state-small { color: var(--text-dim); font-size: 13.5px; padding: 12px 0; }
 
   .contract-tabs { display: flex; gap: 8px; margin-bottom: 20px; flex-wrap: wrap; background: var(--bg-panel-2); border-radius: 10px; padding: 5px; }
@@ -71,7 +76,9 @@
   <button class="help-btn" onclick="openHelpModal()" aria-label="How to use this tool" title="How to use this tool">?</button>
 </div>
 <div class="tool-title">Contract Generator</div>
-<p class="tool-sub">Fill in a client and job, generate a branded PDF ready to email or text &mdash; the client signs by hand or however works for them. Every contract generated here is logged below so you can find and re-download it later.</p>
+<p class="tool-sub">Fill in a client and job, generate a branded PDF ready to email or text &mdash; the client signs by hand or however works for them. Every contract generated here is logged below so you can find and re-download it later.
+  <span class="realtime-badge" id="realtimeBadge"><span class="realtime-dot" id="realtimeDot"></span><span id="realtimeText">Live sync: connecting...</span></span>
+</p>
 
 <div class="disclaimer-note"><strong>Not attorney-reviewed.</strong> These are plain-language templates drafted for general small-business use. Have a licensed Utah attorney review them before relying on them with a real client.</div>
 
@@ -215,6 +222,7 @@
 
 <div class="form-section" id="contractLogSection">
   <h3>Recent Contracts</h3>
+  <div class="form-field"><input type="text" id="contractSearch" placeholder="Search by client or contract type..." oninput="renderContractLog()" aria-label="Search contracts"></div>
   <div id="contractLogList"></div>
 </div>
 
@@ -288,10 +296,19 @@
   };
 
   function renderContractLog() {
-    const log = [...loadContractLog()].sort((a, b) => b.id - a.id);
+    const searchTerm = (document.getElementById('contractSearch')?.value || '').trim().toLowerCase();
+    let log = [...loadContractLog()].sort((a, b) => b.id - a.id);
+    if (searchTerm) {
+      log = log.filter(entry =>
+        (entry.fields.clientName || '').toLowerCase().includes(searchTerm) ||
+        (CONTRACT_TYPE_LABELS[entry.type] || entry.type || '').toLowerCase().includes(searchTerm)
+      );
+    }
     const container = document.getElementById('contractLogList');
     if (log.length === 0) {
-      container.innerHTML = '<div class="empty-state-small">No contracts generated yet.</div>';
+      container.innerHTML = searchTerm
+        ? '<div class="empty-state-small">No contracts match "' + escapeHtml(searchTerm) + '".</div>'
+        : '<div class="empty-state-small">No contracts generated yet.</div>';
       return;
     }
     container.innerHTML = log.map(entry => `
@@ -313,6 +330,7 @@
     const log = loadContractLog().filter(e => e.id !== id);
     saveContractLog(log);
     renderContractLog();
+    showToast('Contract removed from log.');
   }
 
   function redownloadContract(id) {
@@ -584,6 +602,7 @@
     });
     saveContractLog(log);
     renderContractLog();
+    showToast('Contract generated and logged.');
   }
 
   // ---------- signature pad ----------
@@ -647,10 +666,35 @@
     return document.getElementById('signatureCanvas').toDataURL('image/png');
   }
 
+  function updateRealtimeBadge(status) {
+    const dot = document.getElementById('realtimeDot');
+    const text = document.getElementById('realtimeText');
+    if (!dot || !text) return;
+    dot.className = 'realtime-dot';
+    if (status === 'SUBSCRIBED') {
+      dot.classList.add('is-live');
+      text.textContent = 'Live sync active';
+    } else if (status === 'unavailable') {
+      dot.classList.add('is-error');
+      text.textContent = 'Live sync unavailable';
+    } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT' || status === 'CLOSED') {
+      dot.classList.add('is-error');
+      text.textContent = 'Live sync disconnected';
+    } else {
+      dot.classList.add('is-connecting');
+      text.textContent = 'Live sync: connecting...';
+    }
+  }
+
   document.addEventListener('DOMContentLoaded', () => {
     populateContactPickers();
+    const presetSearch = new URLSearchParams(location.search).get('search');
+    if (presetSearch) document.getElementById('contractSearch').value = presetSearch;
     renderContractLog();
     initSignaturePad();
+    if (typeof startRealtimeSync === 'function') {
+      startRealtimeSync(renderContractLog, updateRealtimeBadge);
+    }
   });
 </script>
 </body>

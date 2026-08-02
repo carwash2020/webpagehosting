@@ -136,9 +136,9 @@
     row.innerHTML = `
       <span class="stop-num">${document.querySelectorAll('.stop-row').length + 1}.</span>
       <input type="text" class="stop-input" value="${value}" placeholder="123 Main St, St. George, UT" oninput="updateRoute()">
-      <button class="icon-btn" onclick="moveStop(${id}, -1)" title="Move up">&uarr;</button>
-      <button class="icon-btn" onclick="moveStop(${id}, 1)" title="Move down">&darr;</button>
-      <button class="icon-btn danger" onclick="removeStop(${id})" title="Remove">&times;</button>`;
+      <button class="icon-btn" onclick="moveStop(${id}, -1)" title="Move up" aria-label="Move stop up">&uarr;</button>
+      <button class="icon-btn" onclick="moveStop(${id}, 1)" title="Move down" aria-label="Move stop down">&darr;</button>
+      <button class="icon-btn danger" onclick="removeStop(${id})" title="Remove" aria-label="Remove stop">&times;</button>`;
     document.getElementById('stopsContainer').appendChild(row);
     renumberStops();
     updateRoute();
