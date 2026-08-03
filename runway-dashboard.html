@@ -42,13 +42,15 @@
   header{padding:20px 20px 0;max-width:900px;margin:0 auto;}
   header h1{font-size:22px;color:var(--orange-light);text-transform:uppercase;}
   header p{color:var(--text-dim);font-size:13px;margin:4px 0 16px;}
-  .tabs{display:flex;gap:6px;max-width:900px;margin:0 auto;padding:0 20px;overflow-x:auto;scrollbar-width:none;}
+  .tabs{display:flex;gap:6px;max-width:900px;margin:0 auto;padding:8px 20px 0;overflow-x:auto;scrollbar-width:none;position:sticky;top:0;background:var(--bg);z-index:50;}
   .tabs::-webkit-scrollbar{display:none;}
   .tab-btn{background:var(--bg-card);color:var(--text-dim);border:none;padding:10px 16px;border-radius:8px 8px 0 0;font-family:'Oswald',sans-serif;font-weight:600;font-size:13px;text-transform:uppercase;letter-spacing:0.5px;cursor:pointer;white-space:nowrap;transition:background .15s, color .15s;}
   .tab-btn.active{background:var(--bg-elevated);color:var(--orange-light);box-shadow: inset 0 2px 0 var(--orange);}
   main{max-width:900px;margin:0 auto;padding:16px 20px 80px;}
   .panel{display:none;}
-  .panel.active{display:block;}
+  .panel.active{display:block; animation:panelFadeIn .18s ease;}
+  @keyframes panelFadeIn{from{opacity:0; transform:translateY(4px);} to{opacity:1; transform:translateY(0);}}
+  @media (prefers-reduced-motion: reduce){ .panel.active{animation:none;} }
   .card{background:var(--bg-card);border-radius:var(--radius);padding:16px;margin-bottom:14px;}
   .card-header{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:10px;gap:8px;}
   .card-header h3{font-size:15px;color:var(--orange-light);text-transform:uppercase;}
@@ -76,12 +78,21 @@
   .stat-box{background:var(--bg-elevated);border-radius:var(--radius);padding:14px;text-align:center;}
   .stat-box .label{font-size:11px;color:var(--text-dim);text-transform:uppercase;letter-spacing:0.5px;}
   .stat-box .value{font-family:'Anton',sans-serif;font-size:24px;color:var(--orange-light);margin-top:4px;}
-  .stat-box.blue .value{color:var(--blue); text-shadow:0 0 12px rgba(58,160,255,0.35);}
-  .stat-box.green .value{color:var(--green); text-shadow:0 0 12px rgba(58,201,106,0.4);}
-  .stat-box.red .value{color:var(--red); text-shadow:0 0 12px rgba(224,85,77,0.35);}
-  .card-hero{border:1px solid rgba(255,128,0,0.35); box-shadow:0 0 0 1px rgba(255,128,0,0.08), 0 8px 24px rgba(255,128,0,0.06);}
-  .card-hero .estimate-headline{font-size:24px; text-shadow:0 0 16px rgba(255,179,71,0.4);}
-  .card-hero .stat-box.green{background:linear-gradient(160deg, rgba(58,201,106,0.14), var(--bg-elevated));}
+  .stat-box.blue .value{color:var(--blue); text-shadow:0 0 6px rgba(58,160,255,0.18);}
+  .stat-box.green .value{color:var(--green); text-shadow:0 0 6px rgba(58,201,106,0.2);}
+  .stat-box.red .value{color:var(--red); text-shadow:0 0 6px rgba(224,85,77,0.18);}
+  .card-hero{
+    position:relative;
+    background:linear-gradient(160deg, var(--bg-elevated), var(--bg-card));
+    border:1px solid rgba(255,128,0,0.3);
+    box-shadow:
+      0 1px 0 rgba(255,255,255,0.04) inset,
+      0 14px 28px rgba(0,0,0,0.5),
+      0 4px 10px rgba(0,0,0,0.35);
+  }
+  .card-hero .estimate-headline{font-size:23px; text-shadow:0 0 8px rgba(255,179,71,0.22);}
+  .card-hero .stat-box{background:var(--bg-card);}
+  .card-hero .stat-box.green{background:linear-gradient(160deg, rgba(58,201,106,0.10), var(--bg-card));}
   button.action-btn{
     background:var(--orange);color:#1a0d02;border:none;font-family:'Oswald',sans-serif;font-weight:700;font-size:13px;
     text-transform:uppercase;letter-spacing:0.5px;padding:11px 18px;border-radius:8px;cursor:pointer;
@@ -471,8 +482,8 @@ const CARD_INFO = {
   safeToSpend: {
     title: 'Safe to Spend',
     body: `<p>This shows what's actually safe to spend each month.</p>
-      <p>We take your income, subtract your real bills, set aside a percentage for savings, and whatever's left is safe to spend without touching that savings.</p>
-      <p>Change the Savings Target to save more or less \u2014 everything updates right away.</p>`,
+      <p>We take your income, subtract your real bills, set aside a percentage for savings, set aside an estimate for taxes (based on your latest logged business month), and whatever's left is safe to spend.</p>
+      <p>Change the Savings Target here, or the Tax Set-Aside Rate on the Business Dashboard, to adjust either \u2014 everything updates right away.</p>`,
   },
   personalIncome: {
     title: 'Personal Income',
@@ -660,6 +671,7 @@ document.getElementById('taxSetAsideRate').addEventListener('change', async (e) 
   budgetSettings.taxSetAsideRate = Number(e.target.value) || 0;
   await saveBudgetSettings();
   renderMonths();
+  renderPersonalTotals();
 });
 
 async function saveExpenses(){ try{ await window.storage.set('personal-expenses', JSON.stringify(expenses)); if(typeof scheduleSync === 'function') scheduleSync(); }catch(e){ console.error(e); } }
@@ -950,6 +962,7 @@ function renderSafeToSpend(total){
   const noteEl = document.getElementById('safeToSpendNote');
   const totalIncome = totalMonthlyIncome();
   const savingsPct = Number(budgetSettings.savingsPct) || 0;
+  const tax = latestTaxSetAside();
 
   if(totalIncome === 0){
     statsEl.innerHTML = '';
@@ -960,21 +973,25 @@ function renderSafeToSpend(total){
 
   const leftover = totalIncome - total;
   const savings = Math.max(0, leftover) * (savingsPct / 100);
-  const safeToSpend = leftover - savings;
+  const safeToSpend = leftover - savings - tax.amount;
 
   statsEl.innerHTML = `
     <div class="stat-box"><div class="label">Money Coming In</div><div class="value">${fmt(totalIncome)}</div></div>
     <div class="stat-box"><div class="label">Bills &amp; Expenses</div><div class="value">${fmt(total)}</div></div>
     <div class="stat-box blue"><div class="label">Put Away for Savings</div><div class="value">${fmt(savings)}</div></div>
-    <div class="stat-box ${safeToSpend>=0?'green':''}"><div class="label">Safe to Spend</div><div class="value">${fmt(safeToSpend)}</div></div>
+    <div class="stat-box blue"><div class="label">Put Away for Taxes${tax.month ? ' (' + tax.month + ')' : ''}</div><div class="value">${fmt(tax.amount)}</div></div>
+    <div class="stat-box ${safeToSpend>=0?'green':''}" style="grid-column:1/-1;"><div class="label">Safe to Spend</div><div class="value">${fmt(safeToSpend)}</div></div>
   `;
 
   if(leftover < 0){
     headlineEl.textContent = `You're short ${fmt(Math.abs(leftover))} this month`;
     noteEl.textContent = `Your bills add up to more than what's coming in. Nothing is safe to spend or save until that's fixed \u2014 either bring in more, or cut something.`;
+  } else if(!tax.month){
+    headlineEl.textContent = `${fmt(safeToSpend)} is safe to spend this month`;
+    noteEl.textContent = `After your bills are paid, you have ${fmt(leftover)} left. We're setting aside ${fmt(savings)} of that for savings, which leaves ${fmt(safeToSpend)} you can spend guilt-free. Log a business month to include a tax set-aside here too.`;
   } else {
     headlineEl.textContent = `${fmt(safeToSpend)} is safe to spend this month`;
-    noteEl.textContent = `After your bills are paid, you have ${fmt(leftover)} left. We're setting aside ${fmt(savings)} of that for savings, which leaves ${fmt(safeToSpend)} you can spend guilt-free.`;
+    noteEl.textContent = `After your bills are paid, you have ${fmt(leftover)} left. We're setting aside ${fmt(savings)} for savings and ${fmt(tax.amount)} for taxes, which leaves ${fmt(safeToSpend)} you can spend guilt-free.`;
   }
 }
 
@@ -1007,6 +1024,7 @@ function renderMonths(){
       renderMonths();
       renderRunway();
       renderNetWorth();
+      renderPersonalTotals();
     });
   });
 
@@ -1056,6 +1074,16 @@ function renderMoM(sorted){
 // tends to come up short. Shows both the latest month and a running
 // year-to-date total, since quarterly estimated taxes are a real deadline.
 // ---------------------------------------------------------------------------
+// Shared with the Safe to Spend card on the front page -- one computation,
+// used in two places, so they can never drift out of sync with each other.
+function latestTaxSetAside(){
+  const sorted = [...months].sort((a,b)=> a.month.localeCompare(b.month));
+  if(sorted.length === 0) return { amount: 0, month: null };
+  const rate = (Number(budgetSettings.taxSetAsideRate) || 0) / 100;
+  const latest = sorted[sorted.length - 1];
+  return { amount: (Number(latest.revenue)||0) * rate, month: latest.month };
+}
+
 function renderTaxSetAside(sorted){
   const statsEl = document.getElementById('taxSetAsideStats');
   const noteEl = document.getElementById('taxSetAsideNote');
@@ -1192,6 +1220,7 @@ document.getElementById('addMonthBtn').addEventListener('click', async () => {
   renderMonths();
   renderRunway();
   renderNetWorth();
+  renderPersonalTotals();
   setTimeout(()=>{note.textContent='';}, 2000);
 });
 
