@@ -75,7 +75,6 @@ const SYNC_DATA_KEYS = [
   'rd_budget-settings',
   'rd_business-months',
   'rd_emergency-fund',
-  'rd_checklist',
 ];
 
 const SYNC_CODE_KEY = 'th_sync_code';

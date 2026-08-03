@@ -106,14 +106,6 @@
   table.month-table th{color:var(--text-faint);text-transform:uppercase;font-size:10px;}
   .net-positive{color:var(--green);}
   .net-negative{color:var(--red);}
-  .checklist-item{display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--border-soft);}
-  .checklist-item:last-child{border-bottom:none;}
-  .status-dot{width:12px;height:12px;border-radius:50%;flex-shrink:0;}
-  .status-dot.on{background:var(--green); box-shadow:0 0 8px rgba(58,201,106,0.6);}
-  .status-dot.off{background:var(--text-faint);}
-  .checklist-text{font-size:13px; flex:1;}
-  .checklist-sub{font-size:11px; color:var(--text-dim); margin-top:2px;}
-  .manual-check{width:18px;height:18px; accent-color:var(--orange); cursor:pointer;}
   .progress-track{background:var(--bg);border-radius:20px;height:10px;overflow:hidden;margin-top:8px;}
   .progress-fill{height:100%;background:linear-gradient(90deg, var(--orange-dark), var(--orange));border-radius:20px;transition: width .3s;}
   .progress-labels{display:flex;justify-content:space-between;font-size:10px;color:var(--text-faint);margin-top:4px;}
@@ -150,6 +142,19 @@
   .help-modal-close{position:absolute;top:14px;right:16px;background:none;border:none;color:var(--text-dim);font-size:22px;line-height:1;cursor:pointer;padding:4px 8px;}
   .help-modal-close:hover{color:var(--text);}
   .var-log-input{width:90px;padding:6px 8px;background:var(--bg-elevated);border:1px solid var(--border-soft);border-radius:6px;color:var(--text);font-size:12px;font-family:inherit;}
+  .print-only{display:none;}
+  @media print{
+    body *{display:none !important;}
+    .print-only, .print-only *{display:revert !important;}
+    .print-only{display:block !important; background:#fff; color:#000; padding:20px; font-family:Arial,sans-serif;}
+    .print-only h1{font-size:20px;margin:0 0 4px;}
+    .print-only .print-date{color:#555;font-size:12px;margin-bottom:18px;}
+    .print-only h2{font-size:14px;text-transform:uppercase;letter-spacing:0.5px;border-bottom:1px solid #ccc;padding-bottom:4px;margin:22px 0 10px;}
+    .print-only table{width:100%;border-collapse:collapse;font-size:13px;}
+    .print-only td{padding:5px 4px;border-bottom:1px solid #eee;}
+    .print-only td:last-child{text-align:right;font-weight:bold;}
+    .print-only .print-note{font-size:12px;color:#444;margin-top:6px;}
+  }
 </style>
 </head>
 <body>
@@ -201,7 +206,6 @@
       <div class="form-grid">
         <div><label>Savings Target (% of what's left)</label><input type="number" id="settingSavingsPct" min="0" max="100" step="1"></div>
       </div>
-      <div class="grand-totals" id="personalTotals"></div>
       <div class="grand-totals" id="safeToSpendStats" style="margin-top:10px;"></div>
       <div class="estimate-headline" id="safeToSpendHeadline">—</div>
       <div class="note" id="safeToSpendNote"></div>
@@ -350,25 +354,9 @@
     </div>
 
     <div class="card">
-      <div class="card-header"><h3>Readiness Checklist</h3></div>
-      <div class="checklist-item">
-        <div class="status-dot off" id="dot1"></div>
-        <div class="checklist-text">Business consistently covers essential expenses
-          <div class="checklist-sub" id="check1Sub">Based on average net profit over the last 3 logged months vs. your minimum expenses.</div>
-        </div>
-      </div>
-      <div class="checklist-item">
-        <div class="status-dot off" id="dot2"></div>
-        <div class="checklist-text">At least 6 months of essential expenses saved
-          <div class="checklist-sub" id="check2Sub">Based on your emergency fund balance vs. minimum monthly expenses.</div>
-        </div>
-      </div>
-      <div class="checklist-item">
-        <input type="checkbox" class="manual-check" id="check3Box">
-        <div class="checklist-text">Turning down jobs because of the full-time job
-          <div class="checklist-sub">This one's a judgment call — check it yourself when it's true.</div>
-        </div>
-      </div>
+      <div class="card-header"><h3>Net Profit Trend <button class="help-btn" onclick="openCardInfo('trendChart')" aria-label="What is this?" title="What is this?">?</button></h3></div>
+      <canvas id="trendChart" height="140" style="width:100%;display:block;"></canvas>
+      <div class="note" id="trendChartNote"></div>
     </div>
 
     <div class="card">
@@ -380,20 +368,27 @@
     </div>
 
     <div class="card">
-      <div class="card-header"><h3>Backup &amp; Restore <button class="help-btn" onclick="openCardInfo('backupRestore')" aria-label="What is this?" title="What is this?">?</button></h3></div>
+      <div class="card-header"><h3>PDF Report <button class="help-btn" onclick="openCardInfo('pdfReport')" aria-label="What is this?" title="What is this?">?</button></h3></div>
+      <button class="action-btn" id="downloadPdfBtn">Download PDF Report</button>
+      <div class="note" id="pdfReportNote"></div>
+    </div>
+
+    <div class="card">
+      <div class="card-header"><h3>Data Management <button class="help-btn" onclick="openCardInfo('backupRestore')" aria-label="What is this?" title="What is this?">?</button></h3></div>
       <div class="top-actions">
-        <button class="action-btn" id="exportBackupBtn">Download Backup</button>
+        <button class="ghost-btn" id="exportBackupBtn">Download Backup File</button>
         <button class="ghost-btn" id="restoreBackupBtn">Restore from File</button>
       </div>
       <input type="file" id="restoreFileInput" accept="application/json" style="display:none;">
       <div class="note" id="backupNote"></div>
-    </div>
-
-    <div class="top-actions">
-      <button class="ghost-btn" id="resetAllBtn">Reset all data</button>
+      <div class="top-actions" style="margin-top:10px;">
+        <button class="ghost-btn" id="resetAllBtn">Reset all data</button>
+      </div>
     </div>
   </div>
 </main>
+
+<div class="print-only" id="printReport"></div>
 
 <script>
 // ---------------------------------------------------------------------------
@@ -483,9 +478,19 @@ const CARD_INFO = {
       <p>Set how many months of bills you want to keep sitting in the business as a buffer, and this tells you what's left over that's safe to take out.</p>`,
   },
   backupRestore: {
-    title: 'Backup & Restore',
-    body: `<p>Downloads everything on this page as one file \u2014 a safety net separate from the automatic cloud sync.</p>
-      <p>Worth doing before clearing your browser data or switching devices.</p>`,
+    title: 'Data Management',
+    body: `<p>Download Backup File saves everything on this page as one file \u2014 a safety net separate from the automatic cloud sync.</p>
+      <p>Worth doing before clearing your browser data or switching devices. Reset all data below wipes everything on this device and starts over.</p>`,
+  },
+  pdfReport: {
+    title: 'PDF Report',
+    body: `<p>Puts together a clean one-page summary of your income, bills, savings, emergency fund, and business numbers \u2014 the same numbers shown on this page, laid out for printing or saving as a PDF.</p>
+      <p>Tap the button, then use your browser's print dialog to choose "Save as PDF" instead of printing.</p>`,
+  },
+  trendChart: {
+    title: 'Net Profit Trend',
+    body: `<p>A simple bar chart of your business's net profit for each month you've logged, so you can see at a glance whether it's climbing, flat, or dropping.</p>
+      <p>The orange line marks your monthly bills \u2014 bars that reach it or go above it are months the business alone covered your expenses.</p>`,
   },
 };
 function openCardInfo(key){
@@ -514,7 +519,6 @@ let budgetSettings = { savingsPct: 20 };
 let income = [];
 let months = [];
 let efBalance = 0;
-let manualCheck3 = false;
 let editingId = null;
 let editingIncomeId = null;
 
@@ -592,11 +596,6 @@ async function loadAll(){
     efBalance = ef ? JSON.parse(ef.value).balance : 0;
   }catch(e){ efBalance = 0; }
 
-  try{
-    const ck = await window.storage.get('checklist');
-    manualCheck3 = ck ? JSON.parse(ck.value).turningDownJobs : false;
-  }catch(e){ manualCheck3 = false; }
-
   document.getElementById('loading').style.display = 'none';
   populateCategorySelect();
   renderPersonal();
@@ -617,7 +616,6 @@ async function saveExpenses(){ try{ await window.storage.set('personal-expenses'
 async function saveIncome(){ try{ await window.storage.set('personal-income', JSON.stringify(income)); if(typeof scheduleSync === 'function') scheduleSync(); }catch(e){ console.error(e); } }
 async function saveMonths(){ try{ await window.storage.set('business-months', JSON.stringify(months)); if(typeof scheduleSync === 'function') scheduleSync(); }catch(e){ console.error(e); } }
 async function saveEF(){ try{ await window.storage.set('emergency-fund', JSON.stringify({balance: efBalance})); if(typeof scheduleSync === 'function') scheduleSync(); }catch(e){ console.error(e); } }
-async function saveChecklist(){ try{ await window.storage.set('checklist', JSON.stringify({turningDownJobs: manualCheck3})); if(typeof scheduleSync === 'function') scheduleSync(); }catch(e){ console.error(e); } }
 
 function fmt(n){ return '$' + (Math.round(n*100)/100).toLocaleString(undefined,{minimumFractionDigits:0, maximumFractionDigits:0}); }
 
@@ -891,11 +889,7 @@ function renderPersonal(){
 }
 
 function renderPersonalTotals(){
-  const total = grandTotal();
-  document.getElementById('personalTotals').innerHTML = `
-    <div class="stat-box"><div class="label">Bills &amp; Expenses (Monthly)</div><div class="value">${fmt(total)}</div></div>
-  `;
-  renderSafeToSpend(total);
+  renderSafeToSpend(grandTotal());
 }
 
 // The actual waterfall: Income -> Bills & Expenses -> recommended Savings
@@ -1085,11 +1079,6 @@ document.getElementById('ef-balance').addEventListener('change', async (e) => {
   await saveEF();
   renderRunway();
 });
-document.getElementById('check3Box').addEventListener('change', async (e) => {
-  manualCheck3 = e.target.checked;
-  await saveChecklist();
-  renderRunway();
-});
 
 function linearTrendSlope(points){
   const n = points.length;
@@ -1190,21 +1179,68 @@ function renderRunway(){
     }
   }
 
-  const check1 = avgNet3 !== null && avgNet3 >= min && min > 0;
-  document.getElementById('dot1').className = 'status-dot ' + (check1 ? 'on' : 'off');
-  document.getElementById('check1Sub').textContent = avgNet3 !== null
-    ? `Business has been averaging ${fmt(avgNet3)}/mo vs. bills of ${fmt(min)}/mo`
-    : 'No business months logged yet.';
-
-  const check2 = min > 0 && efBalance >= target6;
-  document.getElementById('dot2').className = 'status-dot ' + (check2 ? 'on' : 'off');
-  document.getElementById('check2Sub').textContent = min > 0
-    ? `${fmt(efBalance)} saved vs. a 6-month goal of ${fmt(target6)}`
-    : 'Add your bills on Personal Budget to check this.';
-
-  document.getElementById('check3Box').checked = manualCheck3;
+  drawTrendChart(nets, min);
 
   renderSafeDraw(min);
+}
+
+function drawTrendChart(nets, min){
+  const canvas = document.getElementById('trendChart');
+  const note = document.getElementById('trendChartNote');
+  const ctx = canvas.getContext('2d');
+  const dpr = window.devicePixelRatio || 1;
+  const w = canvas.clientWidth || canvas.parentElement.clientWidth;
+  const h = 140;
+  canvas.width = w * dpr;
+  canvas.height = h * dpr;
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  ctx.clearRect(0, 0, w, h);
+
+  if(nets.length === 0){
+    note.textContent = 'Log a business month to start seeing this.';
+    return;
+  }
+  note.textContent = nets.length < 2
+    ? 'One month logged so far \u2014 the chart fills in as you log more.'
+    : `Showing all ${nets.length} logged month${nets.length===1?'':'s'}.`;
+
+  const padding = { top: 10, bottom: 20, left: 4, right: 4 };
+  const plotW = w - padding.left - padding.right;
+  const plotH = h - padding.top - padding.bottom;
+  const values = nets.map(n => n.y);
+  const maxVal = Math.max(...values, min, 1);
+  const minVal = Math.min(...values, 0);
+  const range = maxVal - minVal || 1;
+  const barW = plotW / nets.length;
+  const zeroY = padding.top + plotH * (1 - (0 - minVal) / range);
+
+  // Bills line
+  if(min > 0){
+    const billY = padding.top + plotH * (1 - (min - minVal) / range);
+    ctx.strokeStyle = '#ff8000';
+    ctx.setLineDash([4,3]);
+    ctx.beginPath();
+    ctx.moveTo(padding.left, billY);
+    ctx.lineTo(w - padding.right, billY);
+    ctx.stroke();
+    ctx.setLineDash([]);
+  }
+
+  nets.forEach((n, i) => {
+    const barH = Math.abs(n.y - 0) / range * plotH;
+    const x = padding.left + i * barW + barW * 0.15;
+    const bw = barW * 0.7;
+    const y = n.y >= 0 ? zeroY - barH : zeroY;
+    ctx.fillStyle = n.y >= 0 ? '#3ac96a' : '#e0554d';
+    ctx.fillRect(x, y, bw, barH || 1);
+  });
+
+  // Baseline (zero line)
+  ctx.strokeStyle = 'rgba(255,255,255,0.15)';
+  ctx.beginPath();
+  ctx.moveTo(padding.left, zeroY);
+  ctx.lineTo(w - padding.right, zeroY);
+  ctx.stroke();
 }
 
 function renderSafeDraw(min){
@@ -1235,6 +1271,11 @@ document.querySelectorAll('.tab-btn').forEach(btn => {
     document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
     btn.classList.add('active');
     document.getElementById('panel-'+btn.dataset.tab).classList.add('active');
+    // The trend chart's canvas reads 0 width while its tab is hidden
+    // (display:none elements always report clientWidth 0), so if data
+    // changed while on a different tab, the chart needs a fresh draw
+    // now that it's actually visible and has real layout dimensions.
+    if(btn.dataset.tab === 'runway') renderRunway();
   });
 });
 document.getElementById('panel-personal').classList.add('active');
@@ -1252,6 +1293,52 @@ document.getElementById('resetPersonalBtn').addEventListener('click', async () =
 // Backup below. Works with zero setup, so there's always a safety net even
 // before (or instead of) wiring up Supabase.
 // ---------------------------------------------------------------------------
+// ---------------------------------------------------------------------------
+// PDF Report -- no PDF library involved. Builds a plain, print-friendly
+// summary and hands off to the browser's own print dialog, where "Save as
+// PDF" is a built-in destination on every major browser. Pulls values
+// straight from what's already rendered on screen (the stat boxes),
+// rather than recomputing everything a second time -- guarantees the
+// report always matches what the person is actually looking at.
+// ---------------------------------------------------------------------------
+function textOf(id){ const el = document.getElementById(id); return el ? el.textContent.trim() : ''; }
+function statBoxesOf(containerId){
+  const container = document.getElementById(containerId);
+  if(!container) return [];
+  return Array.from(container.querySelectorAll('.stat-box')).map(box => ({
+    label: box.querySelector('.label')?.textContent.trim() || '',
+    value: box.querySelector('.value')?.textContent.trim() || '',
+  }));
+}
+function reportSection(title, rows){
+  if(!rows.length) return '';
+  return `<h2>${title}</h2><table>${rows.map(r => `<tr><td>${r.label}</td><td>${r.value}</td></tr>`).join('')}</table>`;
+}
+
+document.getElementById('downloadPdfBtn').addEventListener('click', () => {
+  const today = new Date().toLocaleDateString(undefined, { year: 'numeric', month: 'long', day: 'numeric' });
+  const safeToSpendNote = textOf('safeToSpendNote');
+  const efNote = textOf('efNote');
+  const supplementNote = textOf('supplementNote');
+  const quitNote = textOf('quitEstimateNote');
+
+  const html = `
+    <h1>Runway Dashboard \u2014 Summary</h1>
+    <div class="print-date">${today}</div>
+    ${reportSection('Safe to Spend', statBoxesOf('safeToSpendStats'))}
+    <div class="print-note">${safeToSpendNote}</div>
+    ${reportSection('Emergency Fund', [{label:'Current Balance', value: document.getElementById('ef-balance').value ? '$' + Number(document.getElementById('ef-balance').value).toLocaleString() : '$0'}])}
+    <div class="print-note">${efNote}</div>
+    ${reportSection('Income Picture', statBoxesOf('incomePictureStats'))}
+    <div class="print-note">${supplementNote}</div>
+    ${reportSection('Business Trend', statBoxesOf('trendStats'))}
+    <div class="print-note">${textOf('quitEstimate')} \u2014 ${quitNote}</div>
+    ${reportSection('Safe Draw Calculator', statBoxesOf('safeDrawOutput'))}
+  `;
+  document.getElementById('printReport').innerHTML = html;
+  window.print();
+});
+
 document.getElementById('exportBackupBtn').addEventListener('click', () => {
   const backup = {
     exportedAt: new Date().toISOString(),
@@ -1260,7 +1347,6 @@ document.getElementById('exportBackupBtn').addEventListener('click', () => {
     budgetSettings: budgetSettings,
     businessMonths: months,
     emergencyFund: { balance: efBalance },
-    checklist: { turningDownJobs: manualCheck3 },
   };
   const blob = new Blob([JSON.stringify(backup, null, 2)], { type: 'application/json' });
   const url = URL.createObjectURL(blob);
@@ -1283,7 +1369,7 @@ document.getElementById('restoreFileInput').addEventListener('change', async (e)
   try {
     const text = await file.text();
     const data = JSON.parse(text);
-    if(!confirm('Restore from this file? This replaces everything currently on this device -- personal expenses, personal income, business months, emergency fund, and checklist.')) {
+    if(!confirm('Restore from this file? This replaces everything currently on this device -- personal expenses, personal income, business months, and emergency fund.')) {
       e.target.value = '';
       return;
     }
@@ -1295,13 +1381,11 @@ document.getElementById('restoreFileInput').addEventListener('change', async (e)
     document.getElementById('settingSavingsPct').value = budgetSettings.savingsPct;
     months = Array.isArray(data.businessMonths) ? data.businessMonths : [];
     efBalance = Number(data.emergencyFund && data.emergencyFund.balance) || 0;
-    manualCheck3 = !!(data.checklist && data.checklist.turningDownJobs);
     await saveExpenses();
     await saveIncome();
     await saveBudgetSettings();
     await saveMonths();
     await saveEF();
-    await saveChecklist();
     populateCategorySelect();
     renderPersonal();
     renderIncome();
@@ -1336,17 +1420,15 @@ function updateJobTrackerBadge(status){
 
 
 document.getElementById('resetAllBtn').addEventListener('click', async () => {
-  if(!confirm('Reset ALL data — personal expenses, personal income, business months, emergency fund, and checklist? This cannot be undone.')) return;
+  if(!confirm('Reset ALL data — personal expenses, personal income, business months, and emergency fund? This cannot be undone.')) return;
   expenses = [];
   income = [];
   months = [];
   efBalance = 0;
-  manualCheck3 = false;
   await saveExpenses();
   await saveIncome();
   await saveMonths();
   await saveEF();
-  await saveChecklist();
   renderPersonal();
   renderIncome();
   renderMonths();
