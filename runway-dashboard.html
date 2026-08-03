@@ -51,6 +51,10 @@
   .panel.active{display:block; animation:panelFadeIn .18s ease;}
   @keyframes panelFadeIn{from{opacity:0; transform:translateY(4px);} to{opacity:1; transform:translateY(0);}}
   @media (prefers-reduced-motion: reduce){ .panel.active{animation:none;} }
+  .toast-container{position:fixed;left:50%;bottom:20px;transform:translateX(-50%);z-index:300;display:flex;flex-direction:column;gap:8px;align-items:center;pointer-events:none;width:100%;padding:0 20px;box-sizing:border-box;}
+  .toast{pointer-events:auto;background:var(--bg-elevated);border:1px solid var(--border-soft);border-left:3px solid var(--orange);color:var(--text);font-size:13.5px;padding:10px 16px;border-radius:8px;box-shadow:0 6px 16px rgba(0,0,0,0.4);opacity:0;transform:translateY(8px);transition:opacity .18s ease, transform .18s ease;}
+  .toast.is-shown{opacity:1;transform:translateY(0);}
+  @media (prefers-reduced-motion: reduce){ .toast{transition:none;} }
   .card{background:var(--bg-card);border-radius:var(--radius);padding:16px;margin-bottom:14px;}
   .cat-card{border-radius:0 var(--radius) var(--radius) 0;}
   .cat-dot{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:7px;vertical-align:middle;}
@@ -130,7 +134,15 @@
   .progress-labels{display:flex;justify-content:space-between;font-size:10px;color:var(--text-faint);margin-top:4px;}
   .note{font-size:12px;color:var(--text-dim);line-height:1.5;margin-top:8px;}
   .estimate-headline{font-family:'Anton',sans-serif;font-size:20px;color:var(--orange-light);margin:6px 0;}
-  .loading{padding:40px; text-align:center; color:var(--text-dim);}
+  .loading{padding:0;}
+  .skeleton-card{background:var(--bg-card);border-radius:var(--radius);padding:16px;margin-bottom:14px;}
+  .skeleton-line{height:14px;border-radius:6px;margin-bottom:10px;background:linear-gradient(90deg, var(--bg-elevated) 25%, var(--bg-hover) 50%, var(--bg-elevated) 75%);background-size:200% 100%;animation:shimmer 1.4s ease-in-out infinite;}
+  .skeleton-line.w-40{width:40%;}
+  .skeleton-line.w-60{width:60%;}
+  .skeleton-line.w-100{width:100%;}
+  .skeleton-line.h-tall{height:48px;}
+  @keyframes shimmer{0%{background-position:200% 0;} 100%{background-position:-200% 0;}}
+  @media (prefers-reduced-motion: reduce){ .skeleton-line{animation:none; opacity:0.6;} }
   .top-actions{display:flex; gap:8px; margin-bottom:10px;}
   .col-hint{font-size:10px;color:var(--text-faint);margin-top:-4px;margin-bottom:8px;}
   .back-link{display:inline-flex;align-items:center;gap:6px;color:var(--text-dim);text-decoration:none;font-size:13px;margin-bottom:14px;}
@@ -218,7 +230,18 @@
 </div>
 
 <main>
-  <div id="loading" class="loading">Loading your data…</div>
+  <div id="loading" class="loading">
+    <div class="skeleton-card">
+      <div class="skeleton-line w-40"></div>
+      <div class="skeleton-line h-tall w-100"></div>
+      <div class="skeleton-line h-tall w-100"></div>
+    </div>
+    <div class="skeleton-card">
+      <div class="skeleton-line w-60"></div>
+      <div class="skeleton-line w-100"></div>
+      <div class="skeleton-line w-100"></div>
+    </div>
+  </div>
 
   <div class="panel" id="panel-personal">
     <div class="card card-hero">
@@ -246,7 +269,8 @@
         <div><label>Frequency</label>
           <select id="inc-frequency">
             <option value="weekly">Weekly</option>
-            <option value="biweekly">Biweekly</option>
+            <option value="biweekly">Biweekly (every 2 weeks, 26/yr)</option>
+            <option value="semimonthly">Semi-monthly (twice a month, 24/yr)</option>
             <option value="monthly" selected>Monthly</option>
             <option value="quarterly">Quarterly</option>
             <option value="annually">Annually</option>
@@ -286,7 +310,8 @@
         <div id="fixedFieldsRow1"><label>Frequency</label>
           <select id="exp-frequency">
             <option value="weekly">Weekly</option>
-            <option value="biweekly">Biweekly</option>
+            <option value="biweekly">Biweekly (every 2 weeks, 26/yr)</option>
+            <option value="semimonthly">Semi-monthly (twice a month, 24/yr)</option>
             <option value="monthly" selected>Monthly</option>
             <option value="quarterly">Quarterly</option>
             <option value="annually">Annually</option>
@@ -341,10 +366,17 @@
     </div>
 
     <div class="card">
+      <div class="card-header"><h3>Year over Year <button class="help-btn" onclick="openCardInfo('yoyComparison')" aria-label="What is this?" title="What is this?">?</button></h3></div>
+      <div class="grand-totals" id="yoyStats"></div>
+      <div class="note" id="yoyNote"></div>
+    </div>
+
+    <div class="card">
       <div class="card-header"><h3>Tax Set-Aside <button class="help-btn" onclick="openCardInfo('taxSetAside')" aria-label="What is this?" title="What is this?">?</button></h3></div>
       <div class="form-grid">
         <div class="full"><label>Set-Aside Rate (%)</label><input type="number" id="taxSetAsideRate" min="0" max="60" step="1" inputmode="decimal"></div>
       </div>
+      <div class="note" id="taxDueDateNote" style="border-top:1px solid var(--border-soft); padding-top:10px; margin-bottom:12px;"></div>
       <div class="grand-totals" id="taxSetAsideStats"></div>
       <div class="note" id="taxSetAsideNote"></div>
     </div>
@@ -485,6 +517,29 @@ function closeHelpModal(){
   const overlay = document.getElementById('helpModalOverlay');
   if(overlay) overlay.classList.remove('is-open');
 }
+
+// A brief non-blocking confirmation for settings that previously saved
+// silently -- changing the Savings % or Tax Set-Aside Rate updates numbers
+// all over the page, but nothing actually confirmed the setting itself
+// was saved.
+function showToast(message){
+  let container = document.getElementById('toastContainer');
+  if(!container){
+    container = document.createElement('div');
+    container.id = 'toastContainer';
+    container.className = 'toast-container';
+    document.body.appendChild(container);
+  }
+  const toast = document.createElement('div');
+  toast.className = 'toast';
+  toast.textContent = message;
+  container.appendChild(toast);
+  requestAnimationFrame(() => toast.classList.add('is-shown'));
+  setTimeout(() => {
+    toast.classList.remove('is-shown');
+    setTimeout(() => toast.remove(), 200);
+  }, 2200);
+}
 document.addEventListener('keydown', (e) => {
   if(e.key === 'Escape') closeHelpModal();
 });
@@ -550,7 +605,12 @@ const CARD_INFO = {
   taxSetAside: {
     title: 'Tax Set-Aside',
     body: `<p>A rough estimate of what to set aside for taxes, based on a percentage of your <strong>revenue</strong> \u2014 not profit, since taxes are owed on what came in.</p>
-      <p>Shows both your latest month and a running total for the year, since estimated taxes are typically due quarterly. This is a planning estimate, not tax advice \u2014 talk to an accountant for your actual number.</p>`,
+      <p>Shows the next IRS quarterly estimated-tax due date and how many days away it is, plus your latest month and a running total for the year. This is a planning estimate, not tax advice \u2014 talk to an accountant for your actual number.</p>`,
+  },
+  yoyComparison: {
+    title: 'Year over Year',
+    body: `<p>Compares your latest logged month to the <strong>same month last year</strong> \u2014 July vs. last July, not just whatever month you happened to log before this one.</p>
+      <p>This matters for seasonal work: a slow June right after a busy May doesn't tell you much, but June vs. last June does. Fills in once you've logged a full year.</p>`,
   },
   netWorth: {
     title: 'Total Net Worth',
@@ -577,7 +637,7 @@ const CATEGORIES = [
   { key:"entertainment", name:"Entertainment", color:"#818cf8", suggestions:["Streaming","Hobbies","Eating Out","Vacations"] },
   { key:"misc", name:"Miscellaneous", color:"#94a3b8", suggestions:["Clothing","Gifts","Household Items","Unexpected Expenses"] },
 ];
-const FREQ_LABEL = {weekly:"Weekly", biweekly:"Biweekly", monthly:"Monthly", quarterly:"Quarterly", annually:"Annually"};
+const FREQ_LABEL = {weekly:"Weekly", biweekly:"Biweekly (every 2 weeks)", semimonthly:"Semi-monthly (twice a month)", monthly:"Monthly", quarterly:"Quarterly", annually:"Annually"};
 
 let expenses = [];
 let budgetSettings = { savingsPct: 20, taxSetAsideRate: 25 };
@@ -592,6 +652,7 @@ function monthlyEquiv(amount, freq){
   switch(freq){
     case 'weekly': return amount * 52 / 12;
     case 'biweekly': return amount * 26 / 12;
+    case 'semimonthly': return amount * 2;
     case 'quarterly': return amount / 3;
     case 'annually': return amount / 12;
     default: return amount;
@@ -678,12 +739,14 @@ document.getElementById('settingSavingsPct').addEventListener('change', async (e
   await saveBudgetSettings();
   renderPersonal();
   renderRunway();
+  showToast('Savings target saved.');
 });
 document.getElementById('taxSetAsideRate').addEventListener('change', async (e) => {
   budgetSettings.taxSetAsideRate = Number(e.target.value) || 0;
   await saveBudgetSettings();
   renderMonths();
   renderPersonalTotals();
+  showToast('Tax set-aside rate saved.');
 });
 
 async function saveExpenses(){ try{ await window.storage.set('personal-expenses', JSON.stringify(expenses)); if(typeof scheduleSync === 'function') scheduleSync(); }catch(e){ console.error(e); } }
@@ -1092,6 +1155,7 @@ function renderMonths(){
   });
 
   renderMoM(sorted);
+  renderYoY(sorted);
   renderTaxSetAside(sorted);
 }
 
@@ -1131,6 +1195,51 @@ function renderMoM(sorted){
 }
 
 // ---------------------------------------------------------------------------
+// Year over Year -- compares the latest logged month to the SAME calendar
+// month a year earlier (July vs. last July), not just whatever the
+// previous entry happens to be. Seasonal work (busier summer, slower
+// winter, common for handyman work) makes month-to-month comparisons
+// misleading on their own -- June looking worse than May doesn't mean
+// much if May is always the peak.
+// ---------------------------------------------------------------------------
+function renderYoY(sorted){
+  const statsEl = document.getElementById('yoyStats');
+  const noteEl = document.getElementById('yoyNote');
+  if(sorted.length === 0){
+    statsEl.innerHTML = `<div class="stat-box"><div class="label">Revenue</div><div class="value">—</div></div>`;
+    noteEl.textContent = 'Log a business month to see this.';
+    return;
+  }
+  const curr = sorted[sorted.length - 1];
+  const [currYear, currMonthNum] = curr.month.split('-');
+  const lastYearKey = (Number(currYear) - 1) + '-' + currMonthNum;
+  const prior = sorted.find(m => m.month === lastYearKey);
+
+  if(!prior){
+    statsEl.innerHTML = `<div class="stat-box"><div class="label">Revenue: ${curr.month}</div><div class="value">${fmt(curr.revenue||0)}</div></div>`;
+    noteEl.textContent = `No ${lastYearKey} logged yet to compare against -- this fills in once you've got a full year of history.`;
+    return;
+  }
+
+  const currNet = computeNetProfit(curr);
+  const priorNet = computeNetProfit(prior);
+  const deltaRev = (Number(curr.revenue)||0) - (Number(prior.revenue)||0);
+  const deltaNet = currNet - priorNet;
+  const arrow = (n) => n > 0 ? '\u25b2' : (n < 0 ? '\u25bc' : '\u2014');
+  const cls = (n) => n > 0 ? 'green' : (n < 0 ? '' : '');
+
+  statsEl.innerHTML = `
+    <div class="stat-box"><div class="label">Revenue: ${curr.month}</div><div class="value">${fmt(curr.revenue||0)}</div></div>
+    <div class="stat-box ${cls(deltaRev)}"><div class="label">vs. ${lastYearKey}</div><div class="value">${arrow(deltaRev)} ${fmt(Math.abs(deltaRev))}</div></div>
+    <div class="stat-box"><div class="label">Net Profit: ${curr.month}</div><div class="value">${fmt(currNet)}</div></div>
+    <div class="stat-box ${cls(deltaNet)}"><div class="label">vs. ${lastYearKey}</div><div class="value">${arrow(deltaNet)} ${fmt(Math.abs(deltaNet))}</div></div>
+  `;
+  noteEl.textContent = deltaNet >= 0
+    ? `Net profit is up ${fmt(Math.abs(deltaNet))} compared to the same month last year.`
+    : `Net profit is down ${fmt(Math.abs(deltaNet))} compared to the same month last year.`;
+}
+
+// ---------------------------------------------------------------------------
 // Tax Set-Aside -- a percentage of revenue, not profit. Self-employment
 // tax and income tax are both based on what came in, and expenses still
 // need to be covered regardless -- setting aside a share of profit alone
@@ -1147,10 +1256,47 @@ function latestTaxSetAside(){
   return { amount: (Number(latest.revenue)||0) * rate, month: latest.month };
 }
 
+// ---------------------------------------------------------------------------
+// Quarterly estimated tax periods -- these are NOT evenly-spaced calendar
+// quarters. The IRS's own periods are Jan1-Mar31 (due Apr15), Apr1-May31
+// (due Jun15 -- only 2 months), Jun1-Aug31 (due Sep15), Sep1-Dec31 (due
+// Jan15 of the next year). Getting this wrong by using plain 3-month
+// quarters would be quietly incorrect, not just imprecise.
+// ---------------------------------------------------------------------------
+function estimatedTaxPeriods(year){
+  return [
+    { label: 'Q1', start: new Date(year,0,1),  end: new Date(year,2,31),  due: new Date(year,3,15) },
+    { label: 'Q2', start: new Date(year,3,1),  end: new Date(year,4,31),  due: new Date(year,5,15) },
+    { label: 'Q3', start: new Date(year,5,1),  end: new Date(year,7,31),  due: new Date(year,8,15) },
+    { label: 'Q4', start: new Date(year,8,1),  end: new Date(year,11,31), due: new Date(year+1,0,15) },
+  ];
+}
+function currentQuarterlyTaxInfo(){
+  const now = new Date();
+  const candidateYears = [now.getFullYear() - 1, now.getFullYear()];
+  const allPeriods = candidateYears.flatMap(y => estimatedTaxPeriods(y));
+  const current = allPeriods.find(p => now >= p.start && now <= p.due) || allPeriods[allPeriods.length - 1];
+  const daysUntilDue = Math.ceil((current.due - now) / (1000*60*60*24));
+  return { ...current, daysUntilDue };
+}
+function periodRevenue(sorted, start, end){
+  return sorted.filter(m => {
+    const d = new Date(Number(m.month.slice(0,4)), Number(m.month.slice(5,7)) - 1, 15);
+    return d >= start && d <= end;
+  }).reduce((s,m) => s + (Number(m.revenue)||0), 0);
+}
+const DATE_FMT = (d) => d.toLocaleDateString(undefined, { month: 'long', day: 'numeric', year: 'numeric' });
+
 function renderTaxSetAside(sorted){
   const statsEl = document.getElementById('taxSetAsideStats');
   const noteEl = document.getElementById('taxSetAsideNote');
+  const dueEl = document.getElementById('taxDueDateNote');
   const rate = (Number(budgetSettings.taxSetAsideRate) || 0) / 100;
+
+  const q = currentQuarterlyTaxInfo();
+  const periodRev = periodRevenue(sorted, q.start, q.end);
+  const periodSetAside = periodRev * rate;
+  dueEl.innerHTML = `<strong>${q.label} payment due ${DATE_FMT(q.due)}</strong> (${q.daysUntilDue} day${q.daysUntilDue===1?'':'s'} away) \u2014 based on ${fmt(periodRev)} in revenue logged for this period, that's roughly ${fmt(periodSetAside)} to have set aside for it. This is a planning estimate, not what the IRS will actually calculate.`;
 
   if(sorted.length === 0){
     statsEl.innerHTML = `<div class="stat-box"><div class="label">Set Aside</div><div class="value">—</div></div>`;
@@ -1503,20 +1649,62 @@ function renderSafeDraw(min){
 }
 document.getElementById('drawBufferMonths').addEventListener('input', () => renderRunway());
 
+const TAB_ORDER = ['personal', 'business', 'networth', 'runway'];
+function switchToTab(tabKey){
+  const btn = document.querySelector(`.tab-btn[data-tab="${tabKey}"]`);
+  if(!btn) return;
+  document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
+  document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
+  btn.classList.add('active');
+  btn.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
+  document.getElementById('panel-'+tabKey).classList.add('active');
+  // The trend chart's canvas reads 0 width while its tab is hidden
+  // (display:none elements always report clientWidth 0), so if data
+  // changed while on a different tab, the chart needs a fresh draw
+  // now that it's actually visible and has real layout dimensions.
+  if(tabKey === 'runway') renderRunway();
+}
 document.querySelectorAll('.tab-btn').forEach(btn => {
-  btn.addEventListener('click', () => {
-    document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
-    document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
-    btn.classList.add('active');
-    document.getElementById('panel-'+btn.dataset.tab).classList.add('active');
-    // The trend chart's canvas reads 0 width while its tab is hidden
-    // (display:none elements always report clientWidth 0), so if data
-    // changed while on a different tab, the chart needs a fresh draw
-    // now that it's actually visible and has real layout dimensions.
-    if(btn.dataset.tab === 'runway') renderRunway();
-  });
+  btn.addEventListener('click', () => switchToTab(btn.dataset.tab));
 });
 document.getElementById('panel-personal').classList.add('active');
+
+// ---------------------------------------------------------------------------
+// Swipe between tabs -- this is meant to be run from a phone, and tapping
+// a tab button every time feels less native than just swiping the content
+// area the way the rest of the phone's apps work. A horizontal swipe past
+// a distance/speed threshold moves one tab left or right; anything more
+// vertical than horizontal is left alone so normal scrolling still works.
+// ---------------------------------------------------------------------------
+(function setupSwipeNavigation(){
+  const mainEl = document.querySelector('main');
+  let touchStartX = 0, touchStartY = 0, touchStartTime = 0;
+  mainEl.addEventListener('touchstart', (e) => {
+    if(e.touches.length !== 1) return;
+    touchStartX = e.touches[0].clientX;
+    touchStartY = e.touches[0].clientY;
+    touchStartTime = Date.now();
+  }, { passive: true });
+  mainEl.addEventListener('touchend', (e) => {
+    if(!e.changedTouches.length) return;
+    const dx = e.changedTouches[0].clientX - touchStartX;
+    const dy = e.changedTouches[0].clientY - touchStartY;
+    const elapsed = Date.now() - touchStartTime;
+    const isMostlyHorizontal = Math.abs(dx) > Math.abs(dy) * 1.5;
+    const isFarEnough = Math.abs(dx) > 60;
+    const isFastEnough = elapsed < 600;
+    if(!isMostlyHorizontal || !isFarEnough || !isFastEnough) return;
+
+    const activeBtn = document.querySelector('.tab-btn.active');
+    const currentIndex = TAB_ORDER.indexOf(activeBtn ? activeBtn.dataset.tab : 'personal');
+    if(currentIndex === -1) return;
+    if(dx < 0 && currentIndex < TAB_ORDER.length - 1){
+      switchToTab(TAB_ORDER[currentIndex + 1]); // swiped left -> next tab
+    } else if(dx > 0 && currentIndex > 0){
+      switchToTab(TAB_ORDER[currentIndex - 1]); // swiped right -> previous tab
+    }
+  }, { passive: true });
+})();
 
 document.getElementById('resetPersonalBtn').addEventListener('click', async () => {
   if(!confirm('Delete ALL personal expenses? This cannot be undone.')) return;
