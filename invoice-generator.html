@@ -530,7 +530,11 @@
     });
   }
 
+  let invoiceGenerationInProgress = false;
   async function generatePDF() {
+    if (invoiceGenerationInProgress) return; // a fast double-tap shouldn't create two logged invoices
+    invoiceGenerationInProgress = true;
+    try {
     const { jsPDF } = window.jspdf;
     const doc = new jsPDF({ unit: 'pt', format: 'letter' });
     const pageW = doc.internal.pageSize.getWidth();
@@ -709,6 +713,9 @@
     await sharePdfOrDownload(doc, filename, 'Invoice');
     showToast('Invoice logged and ready.');
     resetInvoiceForm();
+    } finally {
+      invoiceGenerationInProgress = false;
+    }
   }
 
   // Clears the whole Invoice tab back to the same blank state it's in on
@@ -816,7 +823,11 @@
     saveQuoteLog(list);
   }
 
+  let quoteGenerationInProgress = false;
   async function generateQuotePDF() {
+    if (quoteGenerationInProgress) return;
+    quoteGenerationInProgress = true;
+    try {
     const { jsPDF } = window.jspdf;
     const doc = new jsPDF({ unit: 'pt', format: 'letter' });
     const pageW = doc.internal.pageSize.getWidth();
@@ -963,6 +974,9 @@
     await sharePdfOrDownload(doc, filename, 'Estimate');
     showToast('Estimate logged and ready.');
     resetQuoteForm();
+    } finally {
+      quoteGenerationInProgress = false;
+    }
   }
 
   function resetQuoteForm(){

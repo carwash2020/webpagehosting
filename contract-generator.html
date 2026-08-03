@@ -582,7 +582,11 @@
     return fields;
   }
 
+  let contractGenerationInProgress = false;
   async function generateAndLog(type) {
+    if (contractGenerationInProgress) return;
+    contractGenerationInProgress = true;
+    try {
     const fields = collectFields(type);
     if (!fields.clientName) {
       await showAlert('Enter a client name before generating.');
@@ -603,6 +607,9 @@
     renderContractLog();
     showToast('Contract generated and logged.');
     resetContractForm(type);
+    } finally {
+      contractGenerationInProgress = false;
+    }
   }
 
   // Generic across all three contract types, reusing the same FIELD_IDS
