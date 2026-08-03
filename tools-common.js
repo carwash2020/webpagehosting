@@ -1,9 +1,36 @@
 // Shared behavior for the internal Workspace tool suite.
 // Loaded by workspace.html and every tool page via <script src="/tools-common.js" defer>.
 
-function openHelpModal() {
+// Captured once, immediately -- before any button on the page could
+// possibly have been clicked yet, since this script is deferred and only
+// runs after the whole page has parsed. This means per-section "?"
+// bubbles (openInfoModal) can safely reuse the exact same modal element
+// as the page's main "How to Use" button, without ever permanently
+// overwriting that page's real help content with whatever a bubble
+// showed most recently.
+let _fullHelpTitle = '';
+let _fullHelpBody = '';
+(function captureFullHelpContent() {
   const overlay = document.getElementById('helpModalOverlay');
-  if (overlay) overlay.classList.add('is-open');
+  if (!overlay) return;
+  const h3 = overlay.querySelector('h3');
+  const body = overlay.querySelector('.help-modal-body');
+  _fullHelpTitle = h3 ? h3.innerHTML : '';
+  _fullHelpBody = body ? body.innerHTML : '';
+})();
+
+function openInfoModal(title, bodyHtml) {
+  const overlay = document.getElementById('helpModalOverlay');
+  if (!overlay) return;
+  const h3 = overlay.querySelector('h3');
+  const body = overlay.querySelector('.help-modal-body');
+  if (h3) h3.innerHTML = title;
+  if (body) body.innerHTML = bodyHtml;
+  overlay.classList.add('is-open');
+}
+
+function openHelpModal() {
+  openInfoModal(_fullHelpTitle, _fullHelpBody);
 }
 
 function closeHelpModal() {

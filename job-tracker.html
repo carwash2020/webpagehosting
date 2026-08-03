@@ -247,11 +247,10 @@
 
   <div class="form-section is-collapsed" id="templatesFormSection">
     <div class="form-section-header" onclick="toggleFormSection('templatesFormSection')">
-      <h3>Recurring Job Templates <span id="templatesDueBadge"></span></h3>
+      <h3>Recurring Job Templates <span id="templatesDueBadge"></span> <button class="help-btn" onclick="event.stopPropagation(); openCardInfo('templates')" aria-label="What is this?" title="What is this?">?</button></h3>
       <span class="collapse-chevron">&#9660;</span>
     </div>
     <div class="form-section-body">
-    <p class="inline-note" style="margin-top:-4px;">Save a job that repeats on a schedule (maintenance contracts, seasonal work). When one's due, it shows up here with a one-tap "Create Job" &mdash; nothing is created automatically without you tapping it.</p>
     <div id="templatesList"></div>
     <button class="secondary-btn" style="margin-top:12px;" onclick="addTemplatePrompt()">+ New Template</button>
     </div>
@@ -303,8 +302,7 @@
   </div>
 
   <div class="form-section">
-    <h3>Sales Tax</h3>
-    <p class="inline-note">Utah taxes repair labor on things like appliances, but labor on items permanently attached to real property is often exempt &mdash; parts are usually taxed either way. This is genuinely job-specific and not tax advice; confirm your situation with the Utah State Tax Commission or your accountant. Check whichever applies to this job.</p>
+    <h3>Sales Tax <button class="help-btn" onclick="openCardInfo('salesTax')" aria-label="What is this?" title="What is this?">?</button></h3>
     <div class="tool-form-row">
       <div class="form-field" style="max-width:220px;"><label>Sales tax rate (%)</label><input type="number" id="taxRate" value="6.75" min="0" step="0.01" onchange="saveTaxSettings(); calculateCost();" oninput="calculateCost()"></div>
     </div>
@@ -351,11 +349,10 @@
 <div class="tab-panel" id="tab-income">
   <div class="form-section is-collapsed" id="incomeFormSection">
     <div class="form-section-header" onclick="toggleFormSection('incomeFormSection')">
-      <h3>Add Entry</h3>
+      <h3>Add Entry <button class="help-btn" onclick="event.stopPropagation(); openCardInfo('incomeEntry')" aria-label="What is this?" title="What is this?">?</button></h3>
       <span class="collapse-chevron">&#9660;</span>
     </div>
     <div class="form-section-body">
-    <p class="inline-note">For income that doesn't go through a formal invoice &mdash; cash jobs, tips, anything paid outside Invoice Generator. Every invoice you generate is logged here automatically, so you don't need to re-enter those.</p>
     <div class="tool-form-row">
       <div class="form-field"><label>Date</label><input type="date" id="incomeDate"></div>
       <div class="form-field"><label>Client / Source</label><input type="text" id="incomeSource" placeholder="Jane Smith, or 'Cash job'"></div>
@@ -430,7 +427,7 @@
     <div class="tool-form-row">
       <div class="form-field" id="amountField"><label>Amount ($)</label><input type="number" id="entryAmount" step="0.01" min="0"></div>
       <div class="form-field" id="milesField" style="display:none;">
-        <label>Miles</label>
+        <label>Miles <button class="help-btn" onclick="openCardInfo('mileageRate')" aria-label="What is this?" title="What is this?" style="width:18px;height:18px;font-size:11px;">?</button></label>
         <div class="mileage-rate-inline">
           <input type="number" id="entryMiles" step="0.1" min="0" style="flex:1;">
           <label for="mileageRate">at $</label>
@@ -446,7 +443,6 @@
         <div id="receiptPreviewName" class="inline-note"></div>
       </div>
     </div>
-    <p class="inline-note" id="mileageRateNote" style="display:none;">The IRS standard mileage rate changes at least yearly (occasionally mid-year, as in 2026) &mdash; update the rate above if it changes rather than trusting an old number. Shown value is the official rate for the second half of 2026 (July&ndash;December). This same rate is also used by the Route Planner's cost analyzer.</p>
     <div class="edit-mode-note" id="expenseEditNote" style="display:none;"></div>
     <button class="primary-btn" id="addEntryBtn" onclick="addExpense()" style="margin-top:10px;">Add Entry</button>
     <button class="secondary-btn" id="cancelExpenseEditBtn" style="display:none;" onclick="cancelExpenseEdit()">Cancel</button>
@@ -538,6 +534,33 @@
   const INCOME_STORAGE_KEY = 'th_income_log';
   const RATE_STORAGE_KEY = 'th_mileage_rate';
   const OLD_NOTES_KEY = 'th_tracker_notes'; // legacy single-note key, read once for migration only
+
+  const CARD_INFO = {
+    templates: {
+      title: 'Recurring Job Templates',
+      body: `<p>Save a job that repeats on a schedule (maintenance contracts, seasonal work).</p>
+        <p>When one's due, it shows up here with a one-tap "Create Job" &mdash; nothing is created automatically without you tapping it.</p>`,
+    },
+    salesTax: {
+      title: 'Sales Tax',
+      body: `<p>Utah taxes repair labor on things like appliances, but labor on items permanently attached to real property is often exempt &mdash; parts are usually taxed either way.</p>
+        <p>This is genuinely job-specific and not tax advice; confirm your situation with the Utah State Tax Commission or your accountant. Check whichever applies to this job.</p>`,
+    },
+    incomeEntry: {
+      title: 'Add Entry',
+      body: `<p>For income that doesn't go through a formal invoice &mdash; cash jobs, tips, anything paid outside Invoice Generator.</p>
+        <p>Every invoice you generate is logged here automatically, so you don't need to re-enter those.</p>`,
+    },
+    mileageRate: {
+      title: 'Mileage Rate',
+      body: `<p>The IRS standard mileage rate changes at least yearly (occasionally mid-year, as in 2026) &mdash; update the rate above if it changes rather than trusting an old number.</p>
+        <p>Shown value is the official rate for the second half of 2026 (July&ndash;December). This same rate is also used by the Route Planner's cost analyzer.</p>`,
+    },
+  };
+  function openCardInfo(key) {
+    const info = CARD_INFO[key];
+    if (info) openInfoModal(info.title, info.body);
+  }
 
   function escapeHtml(str) {
     const div = document.createElement('div');
@@ -1460,7 +1483,6 @@
     const isMileage = document.getElementById('entryType').value === 'mileage';
     document.getElementById('amountField').style.display = isMileage ? 'none' : '';
     document.getElementById('milesField').style.display = isMileage ? '' : 'none';
-    document.getElementById('mileageRateNote').style.display = isMileage ? '' : 'none';
     document.getElementById('receiptField').style.display = isMileage ? 'none' : '';
   });
 
@@ -1479,7 +1501,14 @@
   }
 
   let editingExpenseId = null;
+  let expenseSaveInProgress = false;
   async function addExpense() {
+    if (expenseSaveInProgress) return;
+    expenseSaveInProgress = true;
+    const addBtn = document.getElementById('addEntryBtn');
+    const originalBtnText = addBtn.textContent;
+    addBtn.disabled = true;
+    try {
     const date = document.getElementById('entryDate').value;
     const type = document.getElementById('entryType').value;
     const desc = document.getElementById('entryDesc').value.trim();
@@ -1522,13 +1551,9 @@
     }
 
     if (receiptFile) {
-      const addBtn = document.getElementById('addEntryBtn');
-      const originalText = addBtn.textContent;
       addBtn.textContent = 'Uploading receipt...';
-      addBtn.disabled = true;
       const result = await uploadReceipt(receiptFile, entry.id);
-      addBtn.textContent = originalText;
-      addBtn.disabled = false;
+      addBtn.textContent = originalBtnText;
       if (!result.ok) {
         const msg = result.error === 'too-large'
           ? 'That receipt photo is over 8MB \u2014 try a smaller photo or lower camera resolution.'
@@ -1563,6 +1588,11 @@
     cancelExpenseEdit();
     renderExpenses();
     showToast(wasEditing ? 'Entry updated.' : (type === 'mileage' ? 'Mileage logged.' : 'Expense logged.'));
+    } finally {
+      expenseSaveInProgress = false;
+      addBtn.disabled = false;
+      addBtn.textContent = originalBtnText;
+    }
   }
 
   function editExpense(id) {
