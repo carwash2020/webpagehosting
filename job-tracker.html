@@ -176,6 +176,10 @@
   }
   .photo-thumb-star.is-featured { color: var(--orange-light); background: rgba(0,0,0,0.85); }
   .photo-thumb.has-star-featured { outline: 2px solid var(--orange-light); }
+  .edit-mode-note {
+    background: rgba(255,128,0,0.1); border: 1px solid rgba(255,128,0,0.35); border-radius: 8px;
+    padding: 9px 12px; font-size: 13px; color: var(--orange-light); margin-bottom: 10px;
+  }
 </style>
 </head>
 <body>
@@ -238,7 +242,9 @@
         <textarea id="jobNotes" placeholder="Anything worth remembering about this job"></textarea>
       </div>
     </div>
-    <button class="primary-btn" onclick="addJob()">Add Job</button>
+    <div class="edit-mode-note" id="jobEditNote" style="display:none;"></div>
+    <button class="primary-btn" id="addJobBtn" onclick="addJob()">Add Job</button>
+    <button class="secondary-btn" id="cancelJobEditBtn" style="display:none;" onclick="cancelJobEdit()">Cancel</button>
   </div>
 
   <div class="form-section">
@@ -364,7 +370,9 @@
       <div class="form-field"><label>Description</label><input type="text" id="incomeDesc" placeholder="Deck repair, final payment"></div>
       <div class="form-field"><label>Amount ($)</label><input type="number" id="incomeAmount" step="0.01" min="0"></div>
     </div>
+    <div class="edit-mode-note" id="incomeEditNote" style="display:none;"></div>
     <button class="primary-btn" id="addIncomeEntryBtn" onclick="addIncomeEntry()" style="margin-top:10px;">Add Entry</button>
+    <button class="secondary-btn" id="cancelIncomeEditBtn" style="display:none;" onclick="cancelIncomeEntryEdit()">Cancel</button>
   </div>
 
   <div class="form-section">
@@ -427,7 +435,9 @@
       </div>
     </div>
     <p class="inline-note" id="mileageRateNote" style="display:none;">The IRS standard mileage rate changes at least yearly (occasionally mid-year, as in 2026) &mdash; update the rate above if it changes rather than trusting an old number. Shown value is the official rate for the second half of 2026 (July&ndash;December). This same rate is also used by the Route Planner's cost analyzer.</p>
+    <div class="edit-mode-note" id="expenseEditNote" style="display:none;"></div>
     <button class="primary-btn" id="addEntryBtn" onclick="addExpense()" style="margin-top:10px;">Add Entry</button>
+    <button class="secondary-btn" id="cancelExpenseEditBtn" style="display:none;" onclick="cancelExpenseEdit()">Cancel</button>
   </div>
 
   <div class="form-section">
@@ -458,7 +468,9 @@
     <div class="tool-form-row">
       <div class="form-field"><label>Notes</label><input type="text" id="contactNotes" placeholder="Anything worth remembering"></div>
     </div>
-    <button class="primary-btn" onclick="addContact()">Add Contact</button>
+    <div class="edit-mode-note" id="contactEditNote" style="display:none;"></div>
+    <button class="primary-btn" id="addContactBtn" onclick="addContact()">Add Contact</button>
+    <button class="secondary-btn" id="cancelContactEditBtn" style="display:none;" onclick="cancelContactEdit()">Cancel</button>
   </div>
   <div class="form-field"><input type="text" id="contactSearch" placeholder="Search contacts by name, phone, or email..." oninput="renderContacts()" aria-label="Search contacts"></div>
   <div id="contactsList"></div>
@@ -682,8 +694,7 @@
     const title = document.getElementById('jobTitle').value.trim();
     if (!title) { await showAlert('Give the job a title first.'); return; }
     const jobs = loadJobs();
-    jobs.push({
-      id: Date.now(),
+    const fields = {
       title,
       client: document.getElementById('jobClient').value.trim(),
       phone: document.getElementById('jobPhone').value.trim(),
@@ -693,22 +704,60 @@
       status: document.getElementById('jobStatus').value,
       notes: document.getElementById('jobNotes').value.trim(),
       showOnCalendar: document.getElementById('jobShowOnCalendar').checked,
-    });
+    };
+    const wasEditing = !!editingJobId;
+    if (wasEditing) {
+      const idx = jobs.findIndex(j => j.id === editingJobId);
+      if (idx > -1) jobs[idx] = { ...jobs[idx], ...fields };
+    } else {
+      jobs.push({ id: Date.now(), ...fields });
+    }
     saveJobs(jobs);
     ['jobTitle','jobClient','jobPhone','jobAddress','jobNotes'].forEach(id => document.getElementById(id).value = '');
     document.getElementById('jobDate').value = '';
     document.getElementById('jobPriority').value = 'medium';
     document.getElementById('jobStatus').value = 'not-started';
     document.getElementById('jobShowOnCalendar').checked = false;
+    cancelJobEdit();
     renderJobs();
     populateJobRefOptions();
     populateIncomeJobRefOptions();
-    showToast('Job added.');
+    showToast(wasEditing ? 'Job updated.' : 'Job added.');
+  }
+
+  function editJob(id) {
+    const job = loadJobs().find(j => j.id === id);
+    if (!job) return;
+    editingJobId = id;
+    document.getElementById('jobTitle').value = job.title || '';
+    document.getElementById('jobClient').value = job.client || '';
+    document.getElementById('jobPhone').value = job.phone || '';
+    document.getElementById('jobAddress').value = job.address || '';
+    document.getElementById('jobPriority').value = job.priority || 'medium';
+    document.getElementById('jobDate').value = job.date || '';
+    document.getElementById('jobStatus').value = job.status || 'not-started';
+    document.getElementById('jobNotes').value = job.notes || '';
+    document.getElementById('jobShowOnCalendar').checked = !!job.showOnCalendar;
+
+    document.getElementById('addJobBtn').textContent = 'Update Job';
+    document.getElementById('cancelJobEditBtn').style.display = '';
+    const note = document.getElementById('jobEditNote');
+    note.textContent = 'Editing "' + job.title + '" \u2014 saving will update this job instead of creating a new one.';
+    note.style.display = '';
+    document.getElementById('jobTitle').scrollIntoView({ behavior: 'smooth', block: 'center' });
+  }
+
+  function cancelJobEdit() {
+    editingJobId = null;
+    document.getElementById('addJobBtn').textContent = 'Add Job';
+    document.getElementById('cancelJobEditBtn').style.display = 'none';
+    document.getElementById('jobEditNote').style.display = 'none';
   }
 
   async function deleteJob(id) {
     const confirmed = await showConfirm('Delete this job? This cannot be undone.', { danger: true, confirmText: 'Delete' });
     if (!confirmed) return;
+    if (editingJobId === id) cancelJobEdit();
     saveJobs(loadJobs().filter(j => j.id !== id));
     renderJobs();
     populateJobRefOptions();
@@ -832,6 +881,7 @@
   }
 
   let currentStatusFilter = 'all';
+  let editingJobId = null;
   const STATUS_FILTER_KEY = 'th_job_status_filter';
   function setStatusFilter(filter) {
     currentStatusFilter = filter;
@@ -922,6 +972,7 @@
             </select>
             <button class="small-btn" onclick="toggleJobPhotos(${job.id}, '${escapeHtml(job.title).replace(/'/g, "\\'")}')">Photos</button>
             <button class="small-btn ${job.showOnCalendar ? 'is-active' : ''}" onclick="toggleShowOnCalendar(${job.id})">${job.showOnCalendar ? '\u2713 On Calendar' : 'Show on Calendar'}</button>
+            <button class="small-btn" onclick="editJob(${job.id})">Edit</button>
             <button class="small-btn danger" onclick="deleteJob(${job.id})">Delete</button>
           </div>
           <div id="photos-${job.id}" style="display:none; margin-top:14px; padding-top:14px; border-top:1px solid var(--border);"></div>
@@ -1229,6 +1280,7 @@
     if (jobs.some(j => String(j.id) === current)) select.value = current;
   }
 
+  let editingIncomeEntryId = null;
   async function addIncomeEntry() {
     const date = document.getElementById('incomeDate').value;
     const desc = document.getElementById('incomeDesc').value.trim();
@@ -1240,22 +1292,54 @@
     const jobRefTitle = jobRefId ? (loadJobs().find(j => String(j.id) === jobRefId) || {}).title || '' : '';
 
     const entries = loadIncomeEntries();
-    entries.push({
-      id: Date.now(),
+    const fields = {
       date, desc, amount,
       source: document.getElementById('incomeSource').value.trim(),
       payment: document.getElementById('incomePayment').value,
       jobRefId: jobRefId || '',
       jobRefTitle,
-      origin: 'manual',
-    });
+    };
+    const wasEditing = !!editingIncomeEntryId;
+    if (wasEditing) {
+      const idx = entries.findIndex(e => e.id === editingIncomeEntryId);
+      if (idx > -1) entries[idx] = { ...entries[idx], ...fields };
+    } else {
+      entries.push({ id: Date.now(), ...fields, origin: 'manual' });
+    }
     saveIncomeEntries(entries);
 
     document.getElementById('incomeSource').value = '';
     document.getElementById('incomeDesc').value = '';
     document.getElementById('incomeAmount').value = '';
+    cancelIncomeEntryEdit();
     renderIncomeEntries();
-    showToast('Income logged.');
+    showToast(wasEditing ? 'Income entry updated.' : 'Income logged.');
+  }
+
+  function editIncomeEntry(id) {
+    const entry = loadIncomeEntries().find(e => e.id === id);
+    if (!entry || entry.origin === 'invoice') return; // invoice-derived entries stay tied to their real document, not editable here
+    editingIncomeEntryId = id;
+    document.getElementById('incomeDate').value = entry.date || '';
+    document.getElementById('incomeSource').value = entry.source || '';
+    document.getElementById('incomeJobRef').value = entry.jobRefId || '';
+    document.getElementById('incomePayment').value = entry.payment || 'cash';
+    document.getElementById('incomeDesc').value = entry.desc || '';
+    document.getElementById('incomeAmount').value = entry.amount || '';
+
+    document.getElementById('addIncomeEntryBtn').textContent = 'Update Entry';
+    document.getElementById('cancelIncomeEditBtn').style.display = '';
+    const note = document.getElementById('incomeEditNote');
+    note.textContent = 'Editing this income entry \u2014 saving will update it instead of creating a new one.';
+    note.style.display = '';
+    document.getElementById('incomeDate').scrollIntoView({ behavior: 'smooth', block: 'center' });
+  }
+
+  function cancelIncomeEntryEdit() {
+    editingIncomeEntryId = null;
+    document.getElementById('addIncomeEntryBtn').textContent = 'Add Entry';
+    document.getElementById('cancelIncomeEditBtn').style.display = 'none';
+    document.getElementById('incomeEditNote').style.display = 'none';
   }
 
   async function deleteIncomeEntry(id) {
@@ -1265,6 +1349,7 @@
       : 'Delete this income entry? This cannot be undone.';
     const confirmed = await showConfirm(msg, { danger: true, confirmText: 'Delete' });
     if (!confirmed) return;
+    if (editingIncomeEntryId === id) cancelIncomeEntryEdit();
     saveIncomeEntries(loadIncomeEntries().filter(e => e.id !== id));
     renderIncomeEntries();
     showToast('Entry deleted.');
@@ -1333,7 +1418,10 @@
         <td>${PAYMENT_LABEL[e.payment] || '\u2014'}</td>
         <td>${e.origin === 'invoice' ? '<span class="inline-note" style="margin:0;">Invoice</span>' : 'Manual'}</td>
         <td>$${e.amount.toFixed(2)}</td>
-        <td><button class="small-btn danger" onclick="deleteIncomeEntry(${e.id})" aria-label="Delete entry" title="Delete entry">&times;</button></td>
+        <td>
+          ${e.origin !== 'invoice' ? `<button class="small-btn" onclick="editIncomeEntry(${e.id})" aria-label="Edit entry" title="Edit entry">Edit</button>` : ''}
+          <button class="small-btn danger" onclick="deleteIncomeEntry(${e.id})" aria-label="Delete entry" title="Delete entry">&times;</button>
+        </td>
       </tr>`).join('');
 
     container.innerHTML = `
@@ -1412,14 +1500,22 @@
     if (jobs.some(j => String(j.id) === current)) select.value = current;
   }
 
+  let editingExpenseId = null;
   async function addExpense() {
     const date = document.getElementById('entryDate').value;
     const type = document.getElementById('entryType').value;
     const desc = document.getElementById('entryDesc').value.trim();
     if (!date || !desc) { await showAlert('Date and description are required.'); return; }
 
+    const wasEditing = !!editingExpenseId;
+    const existingEntry = wasEditing ? loadExpenses().find(e => e.id === editingExpenseId) : null;
+    const existingReceiptPath = existingEntry ? existingEntry.receiptPath : '';
+
     const receiptFile = document.getElementById('entryReceipt').files[0];
-    if (type === 'expense' && !receiptFile) {
+    // A receipt is required for a new expense entry -- but if this is an
+    // edit and one was already attached, it's fine to leave it as-is
+    // without forcing a re-upload just to fix a typo elsewhere in the form.
+    if (type === 'expense' && !receiptFile && !existingReceiptPath) {
       await showAlert('A receipt photo is required to log an expense. Take or choose a photo of the receipt first.');
       return;
     }
@@ -1432,12 +1528,12 @@
     const jobRefTitle = jobRefId ? (loadJobs().find(j => String(j.id) === jobRefId) || {}).title || '' : '';
 
     const entry = {
-      id: Date.now(), date, type, desc,
+      id: wasEditing ? editingExpenseId : Date.now(), date, type, desc,
       vendor: document.getElementById('entryVendor').value.trim(),
       payment: document.getElementById('entryPayment').value,
       jobRefId: jobRefId || '',
       jobRefTitle,
-      receiptPath: '',
+      receiptPath: existingReceiptPath || '',
     };
     if (type === 'mileage') {
       entry.miles = parseFloat(document.getElementById('entryMiles').value) || 0;
@@ -1462,11 +1558,22 @@
         await showAlert(msg);
         return;
       }
+      // A new receipt replacing an old one during an edit -- clean up the
+      // old file rather than leaving it sitting in storage unreferenced.
+      if (existingReceiptPath && existingReceiptPath !== result.path && typeof deleteReceipt === 'function') {
+        await deleteReceipt(existingReceiptPath);
+      }
       entry.receiptPath = result.path;
     }
 
     const entries = loadExpenses();
-    entries.push(entry);
+    if (wasEditing) {
+      const idx = entries.findIndex(e => e.id === editingExpenseId);
+      if (idx > -1) entries[idx] = entry;
+      else entries.push(entry);
+    } else {
+      entries.push(entry);
+    }
     saveExpenses(entries);
 
     document.getElementById('entryVendor').value = '';
@@ -1475,13 +1582,52 @@
     document.getElementById('entryMiles').value = '';
     document.getElementById('entryReceipt').value = '';
     document.getElementById('receiptPreviewName').textContent = '';
+    cancelExpenseEdit();
     renderExpenses();
-    showToast(type === 'mileage' ? 'Mileage logged.' : 'Expense logged.');
+    showToast(wasEditing ? 'Entry updated.' : (type === 'mileage' ? 'Mileage logged.' : 'Expense logged.'));
+  }
+
+  function editExpense(id) {
+    const entry = loadExpenses().find(e => e.id === id);
+    if (!entry) return;
+    editingExpenseId = id;
+    document.getElementById('entryDate').value = entry.date || '';
+    document.getElementById('entryType').value = entry.type || 'expense';
+    document.getElementById('entryType').dispatchEvent(new Event('change'));
+    document.getElementById('entryDesc').value = entry.desc || '';
+    document.getElementById('entryVendor').value = entry.vendor || '';
+    document.getElementById('entryPayment').value = entry.payment || 'cash';
+    document.getElementById('entryJobRef').value = entry.jobRefId || '';
+    if (entry.type === 'mileage') {
+      document.getElementById('entryMiles').value = entry.miles || '';
+    } else {
+      document.getElementById('entryAmount').value = entry.amount || '';
+    }
+    // Browsers won't let a file input be pre-filled with an existing file,
+    // so the receipt field just stays empty -- addExpense() knows to keep
+    // the existing receiptPath untouched unless a new file is chosen here.
+
+    document.getElementById('addEntryBtn').textContent = 'Update Entry';
+    document.getElementById('cancelExpenseEditBtn').style.display = '';
+    const note = document.getElementById('expenseEditNote');
+    note.textContent = entry.receiptPath
+      ? 'Editing this entry \u2014 its existing receipt photo stays attached unless you choose a new one below.'
+      : 'Editing this entry.';
+    note.style.display = '';
+    document.getElementById('entryDate').scrollIntoView({ behavior: 'smooth', block: 'center' });
+  }
+
+  function cancelExpenseEdit() {
+    editingExpenseId = null;
+    document.getElementById('addEntryBtn').textContent = 'Add Entry';
+    document.getElementById('cancelExpenseEditBtn').style.display = 'none';
+    document.getElementById('expenseEditNote').style.display = 'none';
   }
 
   async function deleteExpense(id) {
     const confirmed = await showConfirm('Delete this expense entry? This cannot be undone.', { danger: true, confirmText: 'Delete' });
     if (!confirmed) return;
+    if (editingExpenseId === id) cancelExpenseEdit();
     const entries = loadExpenses();
     const entry = entries.find(e => e.id === id);
     if (entry && entry.receiptPath && typeof deleteReceipt === 'function') {
@@ -1521,7 +1667,10 @@
         <td>${PAYMENT_LABEL[e.payment] || '\u2014'}</td>
         <td>$${e.amount.toFixed(2)}</td>
         <td>${e.receiptPath ? `<a href="${getReceiptUrl(e.receiptPath)}" target="_blank" rel="noopener" style="color:var(--blue-light);">View</a>` : '\u2014'}</td>
-        <td><button class="small-btn danger" onclick="deleteExpense(${e.id})" aria-label="Delete entry" title="Delete entry">&times;</button></td>
+        <td>
+          <button class="small-btn" onclick="editExpense(${e.id})" aria-label="Edit entry" title="Edit entry">Edit</button>
+          <button class="small-btn danger" onclick="deleteExpense(${e.id})" aria-label="Delete entry" title="Delete entry">&times;</button>
+        </td>
       </tr>`).join('');
 
     container.innerHTML = `
@@ -1573,27 +1722,61 @@
   function loadContacts() { return JSON.parse(localStorage.getItem(STORAGE_KEYS.contacts) || '[]'); }
   function saveContacts(contacts) { localStorage.setItem(STORAGE_KEYS.contacts, JSON.stringify(contacts)); scheduleSync(); }
 
+  let editingContactId = null;
   async function addContact() {
     const name = document.getElementById('contactName').value.trim();
     if (!name) { await showAlert('Give the contact a name first.'); return; }
     const contacts = loadContacts();
-    contacts.push({
-      id: Date.now(),
+    const fields = {
       name,
       role: document.getElementById('contactRole').value.trim(),
       phone: document.getElementById('contactPhone').value.trim(),
       email: document.getElementById('contactEmail').value.trim(),
       notes: document.getElementById('contactNotes').value.trim(),
-    });
+    };
+    const wasEditing = !!editingContactId;
+    if (wasEditing) {
+      const idx = contacts.findIndex(c => c.id === editingContactId);
+      if (idx > -1) contacts[idx] = { ...contacts[idx], ...fields };
+    } else {
+      contacts.push({ id: Date.now(), ...fields });
+    }
     saveContacts(contacts);
     ['contactName','contactRole','contactPhone','contactEmail','contactNotes'].forEach(id => document.getElementById(id).value = '');
+    cancelContactEdit();
     renderContacts();
-    showToast('Contact added.');
+    showToast(wasEditing ? 'Contact updated.' : 'Contact added.');
+  }
+
+  function editContact(id) {
+    const contact = loadContacts().find(c => c.id === id);
+    if (!contact) return;
+    editingContactId = id;
+    document.getElementById('contactName').value = contact.name || '';
+    document.getElementById('contactRole').value = contact.role || '';
+    document.getElementById('contactPhone').value = contact.phone || '';
+    document.getElementById('contactEmail').value = contact.email || '';
+    document.getElementById('contactNotes').value = contact.notes || '';
+
+    document.getElementById('addContactBtn').textContent = 'Update Contact';
+    document.getElementById('cancelContactEditBtn').style.display = '';
+    const note = document.getElementById('contactEditNote');
+    note.textContent = 'Editing "' + contact.name + '" \u2014 saving will update this contact instead of creating a new one.';
+    note.style.display = '';
+    document.getElementById('contactName').scrollIntoView({ behavior: 'smooth', block: 'center' });
+  }
+
+  function cancelContactEdit() {
+    editingContactId = null;
+    document.getElementById('addContactBtn').textContent = 'Add Contact';
+    document.getElementById('cancelContactEditBtn').style.display = 'none';
+    document.getElementById('contactEditNote').style.display = 'none';
   }
 
   async function deleteContact(id) {
     const confirmed = await showConfirm('Delete this contact? This cannot be undone.', { danger: true, confirmText: 'Delete' });
     if (!confirmed) return;
+    if (editingContactId === id) cancelContactEdit();
     saveContacts(loadContacts().filter(c => c.id !== id));
     renderContacts();
     showToast('Contact deleted.');
@@ -1629,6 +1812,7 @@
           </div>
           <div style="display:flex; gap:8px; flex-shrink:0;">
             <button class="small-btn" onclick="toggleClientHistory(${c.id})">History</button>
+            <button class="small-btn" onclick="editContact(${c.id})">Edit</button>
             <button class="small-btn danger" onclick="deleteContact(${c.id})">Delete</button>
           </div>
         </div>
