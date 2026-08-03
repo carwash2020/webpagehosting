@@ -1137,7 +1137,11 @@
   justify-content:center;
   padding:20px;
 }
-.help-modal-overlay.is-open{ display:flex; }
+.help-modal-overlay.is-open{ display:flex; animation: helpOverlayFadeIn .15s ease; }
+@keyframes helpOverlayFadeIn{ from{ background:rgba(0,0,0,0); } to{ background:rgba(0,0,0,0.6); } }
+.help-modal-overlay.is-open .help-modal{ animation: helpModalPopIn .18s ease; }
+@keyframes helpModalPopIn{ from{ opacity:0; transform:scale(0.95) translateY(8px); } to{ opacity:1; transform:scale(1) translateY(0); } }
+@media (prefers-reduced-motion: reduce){ .help-modal-overlay.is-open, .help-modal-overlay.is-open .help-modal{ animation:none; } }
 .help-modal{
   position:relative;
   background:var(--bg-panel);
@@ -1258,7 +1262,9 @@
   box-shadow:0 0 18px rgba(255,128,0,0.4), 0 2px 6px rgba(0,0,0,0.35);
 }
 .tab-panel { display:none; }
-.tab-panel.is-active { display:block; }
+.tab-panel.is-active { display:block; animation: tabPanelFadeIn .18s ease; }
+@keyframes tabPanelFadeIn{ from{ opacity:0; transform:translateY(4px); } to{ opacity:1; transform:translateY(0); } }
+@media (prefers-reduced-motion: reduce){ .tab-panel.is-active{ animation:none; } }
 
 /* --- Custom confirm/alert dialog (replaces native browser confirm()/alert()
    with something styled to match the app instead of the browser's default
@@ -1348,6 +1354,10 @@
 .metric-card:hover {
   border-color: var(--border);
   box-shadow: 0 0 14px rgba(255,255,255,0.04);
+}
+.job-card:hover {
+  box-shadow: 0 0 14px rgba(255,255,255,0.05);
+  transform: translateY(-1px);
 }
 
 /* --- Live-sync indicator: a gentle pulse so "active" reads as alive,

@@ -73,8 +73,9 @@
   .section-heading.is-static { cursor: default; }
   .section-heading .collapse-arrow { color: var(--text-dim); font-size: 12px; transition: transform 0.15s ease; }
   .section-heading.is-collapsed .collapse-arrow { transform: rotate(-90deg); }
-  .section-body { padding-top: 18px; }
-  .section-body.is-collapsed { display: none; }
+  .section-body { padding-top: 18px; max-height: 4000px; opacity: 1; overflow: hidden; transition: max-height .3s ease, opacity .2s ease, padding-top .3s ease; }
+  .section-body.is-collapsed { max-height: 0; opacity: 0; padding-top: 0; overflow: hidden; }
+  @media (prefers-reduced-motion: reduce){ .section-body{ transition:none; } }
 
   .metrics-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 14px; margin-bottom: 8px; }
   .metric-card {
