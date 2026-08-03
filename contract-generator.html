@@ -604,6 +604,20 @@
     saveContractLog(log);
     renderContractLog();
     showToast('Contract generated and logged.');
+    resetContractForm(type);
+  }
+
+  // Generic across all three contract types, reusing the same FIELD_IDS
+  // lookup collectFields() already relies on -- one reset function
+  // instead of three near-duplicates that could quietly drift apart.
+  function resetContractForm(type) {
+    FIELD_IDS[type].forEach(key => {
+      const el = document.getElementById(type + '_' + key);
+      if (el) el.value = '';
+    });
+    const picker = document.getElementById(type + '_contactPicker');
+    if (picker) picker.value = '';
+    clearSignature();
   }
 
   // ---------- signature pad ----------

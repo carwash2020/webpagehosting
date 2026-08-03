@@ -708,6 +708,28 @@
     logInvoice({ subtotal, tax, discount, total });
     await sharePdfOrDownload(doc, filename, 'Invoice');
     showToast('Invoice logged and ready.');
+    resetInvoiceForm();
+  }
+
+  // Clears the whole Invoice tab back to the same blank state it's in on
+  // a fresh page load -- a new random invoice number, today's date, one
+  // empty contact row, one empty line item row -- rather than leaving the
+  // just-generated invoice's details sitting in the form.
+  function resetInvoiceForm(){
+    document.getElementById('clientName').value = '';
+    document.getElementById('clientAddress').value = '';
+    document.getElementById('jobDescription').value = '';
+    document.getElementById('invoiceJobRef').value = '';
+    document.getElementById('discountLabel').value = '';
+    document.getElementById('discountAmount').value = '0';
+    document.getElementById('contactsContainer').innerHTML = '';
+    addContact();
+    document.getElementById('lineItemsBody').innerHTML = '';
+    addLineItem();
+    document.getElementById('invoiceDate').value = new Date().toISOString().slice(0, 10);
+    document.getElementById('invoiceNumber').value = 'INV-' + new Date().getFullYear() + '-' + String(Math.floor(Math.random() * 9000) + 1000);
+    document.getElementById('invoiceTerms').value = 'Net 15';
+    recalc();
   }
 
   // ---------- Invoice logging (feeds the Dashboard's revenue numbers) ----------
@@ -940,6 +962,20 @@
     logQuote({ subtotal, tax, discount, total });
     await sharePdfOrDownload(doc, filename, 'Estimate');
     showToast('Estimate logged and ready.');
+    resetQuoteForm();
+  }
+
+  function resetQuoteForm(){
+    document.getElementById('quoteClientName').value = '';
+    document.getElementById('quoteJobDescription').value = '';
+    document.getElementById('quoteJobRef').value = '';
+    document.getElementById('quoteDiscountLabel').value = '';
+    document.getElementById('quoteDiscountAmount').value = '0';
+    document.getElementById('quoteLineItemsBody').innerHTML = '';
+    addQuoteLineItem();
+    document.getElementById('quoteDate').value = new Date().toISOString().slice(0, 10);
+    document.getElementById('quoteNumber').value = 'EST-' + new Date().getFullYear() + '-' + String(Math.floor(Math.random() * 9000) + 1000);
+    recalcQuote();
   }
 
   // ---------- Live-sync status badge ----------
