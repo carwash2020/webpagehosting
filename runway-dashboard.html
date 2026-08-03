@@ -157,20 +157,21 @@
 <div class="help-modal-overlay" id="helpModalOverlay" onclick="if(event.target===this) closeHelpModal()">
   <div class="help-modal">
     <button class="help-modal-close" onclick="closeHelpModal()" aria-label="Close">&times;</button>
-    <h3>How to Use: Runway Dashboard</h3>
-    <div class="help-modal-body">
+    <h3 id="helpModalTitle">How to Use: Runway Dashboard</h3>
+    <div class="help-modal-body" id="helpModalBody">
+      <p>Tap the <strong>?</strong> next to any section title for a short explanation of just that part. This button gives you the full picture instead.</p>
       <h4>Safe to Spend</h4>
-      <p>The top card on Personal Budget. Set a <strong>Comfortable Buffer %</strong> once (default 15%) — every bill's "Comfortable" amount is calculated automatically from this, on top of its real cost. Nothing to type per bill. Set a <strong>Savings Target %</strong> (default 20%) — the share of whatever's left after real bills and expenses that gets recommended as savings. What's left after that is what's actually safe to spend that month.</p>
+      <p>What's coming in, what your bills take, what we recommend you set aside, and what's actually safe to spend the rest of the month.</p>
       <h4>Personal Income</h4>
-      <p>Log day-job wages or any other non-Triple-H income. This is the baseline the business gets measured against on the Runway tab, and it's what Safe to Spend is calculated against — separate from expenses, since "what's coming in" and "what's going out" are different questions.</p>
-      <h4>Personal Budget (Bills &amp; Expenses)</h4>
-      <p>Tap "+ Add Expense" — pick a category, name it, and choose <strong>Fixed</strong> or <strong>Variable</strong>. Fixed is a set amount at a set frequency (rent, a subscription). Variable is for bills that actually change month to month (power, water) — instead of guessing one number, log each month's real bill from the category card as it comes in, and the dashboard uses the average of your last 3 logged months everywhere it needs a number, falling back to your starting estimate until real bills exist. Comfortable is calculated the same way for both types — real amount plus the buffer set above.</p>
+      <p>Day-job wages or anything else that's not from Triple H. This is what Safe to Spend and the Runway tab measure everything else against.</p>
+      <h4>Bills &amp; Expenses</h4>
+      <p>Add each bill. If it's the same amount every time, mark it Fixed. If it changes (like a power bill), mark it Variable and log the real amount each month.</p>
       <h4>Business Dashboard</h4>
-      <p>Pick a month, tap <strong>"Pull from Job Tracker"</strong> to auto-fill Revenue, Business Expenses, and Fuel/Mileage straight from your actual logged invoices and expense entries for that month — no retyping. Every number is still editable afterward. Other Expenses, Owner Draws, and Cash in the account aren't tracked anywhere else, so those three always need to be typed in by hand, then tap "Save Month."</p>
+      <p>Pick a month and tap "Pull from Job Tracker" to fill in Revenue, Expenses, and Fuel automatically from what you've already logged there.</p>
       <h4>Runway Summary</h4>
-      <p>Emergency fund balance vs. 6- and 12-month targets; an <strong>Income Picture</strong> showing how much of your expenses personal income covers on its own and how much the business is supplementing right now; a <strong>Business Trend</strong> estimating months until net profit alone covers minimum expenses (full replacement, not supplementation); a Safe Draw Calculator; and a 3-item readiness checklist.</p>
+      <p>Your emergency fund progress, how much the business is currently supplementing your income, a rough estimate of when the business alone could cover your bills, and a Safe Draw Calculator.</p>
       <h4>Syncing</h4>
-      <p>Everything on this page syncs automatically through the same Supabase project the rest of your Triple H tools use — the little badge at the top shows the connection status. Backup &amp; Restore (bottom of the Runway tab) is a separate, zero-setup safety net: downloads everything as one file, independent of whether sync is working.</p>
+      <p>Everything here syncs automatically with your other Triple H tools. Backup &amp; Restore at the bottom is a separate, no-setup safety net.</p>
     </div>
   </div>
 </div>
@@ -196,10 +197,8 @@
 
   <div class="panel" id="panel-personal">
     <div class="card">
-      <div class="card-header"><h3>Safe to Spend</h3></div>
-      <div class="note" style="margin-top:0;margin-bottom:10px;">The actual output this whole tab exists for: what's coming in, what your bills and expenses actually take, what's left, and how much of that you should put away vs. what's genuinely safe to spend. Comfortable amounts below are calculated automatically from the buffer setting here — nothing to type per bill.</div>
+      <div class="card-header"><h3>Safe to Spend <button class="help-btn" onclick="openCardInfo('safeToSpend')" aria-label="What is this?" title="What is this?">?</button></h3></div>
       <div class="form-grid">
-        <div><label>Comfortable Buffer (%)</label><input type="number" id="settingComfortBuffer" min="0" max="200" step="1"></div>
         <div><label>Savings Target (% of what's left)</label><input type="number" id="settingSavingsPct" min="0" max="100" step="1"></div>
       </div>
       <div class="grand-totals" id="personalTotals"></div>
@@ -209,8 +208,7 @@
     </div>
 
     <div class="card">
-      <div class="card-header"><h3>Personal Income</h3></div>
-      <div class="note" style="margin-top:0;margin-bottom:10px;">Day-job wages, a spouse's income, anything that's not from Triple H. This is the baseline the business income gets measured against on the Runway tab.</div>
+      <div class="card-header"><h3>Personal Income <button class="help-btn" onclick="openCardInfo('personalIncome')" aria-label="What is this?" title="What is this?">?</button></h3></div>
       <div id="incomeList"></div>
       <div class="top-actions">
         <button class="action-btn" id="openAddIncomeBtn">+ Add Income Source</button>
@@ -276,7 +274,7 @@
           <input type="number" id="exp-min" placeholder="0">
         </div>
       </div>
-      <div class="col-hint" id="expTypeHint">Amount is per the frequency you pick above — it's converted to a monthly figure automatically. Comfortable is calculated automatically (see the buffer setting above) — nothing to type here.</div>
+      <div class="col-hint" id="expTypeHint">Amount is per the frequency you pick above — it's converted to a monthly figure automatically.</div>
       <div class="form-actions">
         <button class="action-btn" id="saveExpenseBtn" style="width:auto;flex:1;">Save Expense</button>
         <button class="ghost-btn" id="cancelExpenseBtn" style="flex:0 0 auto;">Cancel</button>
@@ -291,11 +289,13 @@
 
   <div class="panel" id="panel-business">
     <div class="card">
-      <div class="card-header"><h3>Add / Update a Month</h3></div>
-      <div class="note" style="margin-top:0;margin-bottom:10px;">Revenue, business expenses, and fuel pull automatically from Job Tracker's Invoices and Expenses tab for whichever month you pick below — edit any number afterward if something's missing or you want to adjust it. Other Expenses, Draws, and Cash aren't tracked anywhere else, so those stay manual.</div>
+      <div class="card-header"><h3>Add / Update a Month <button class="help-btn" onclick="openCardInfo('businessMonth')" aria-label="What is this?" title="What is this?">?</button></h3></div>
       <div class="form-grid">
-        <div><label>Month</label><input type="month" id="biz-month"></div>
-        <div><label>&nbsp;</label><button class="action-btn" id="pullMonthBtn">Pull from Job Tracker</button></div>
+        <div><label>Month</label><select id="biz-month-select"></select></div>
+        <div><label>Year</label><select id="biz-year-select"></select></div>
+      </div>
+      <div class="form-grid">
+        <div class="full"><button class="action-btn" id="pullMonthBtn">Pull from Job Tracker</button></div>
       </div>
       <div class="note" id="pullDiagnosticNote" style="margin-top:-4px;"></div>
       <div class="form-grid">
@@ -326,7 +326,7 @@
     <div class="grand-totals" id="runwayExpenseTotals"></div>
 
     <div class="card">
-      <div class="card-header"><h3>Emergency Fund</h3></div>
+      <div class="card-header"><h3>Emergency Fund <button class="help-btn" onclick="openCardInfo('emergencyFund')" aria-label="What is this?" title="What is this?">?</button></h3></div>
       <div class="form-grid">
         <div class="full"><label>Current Balance</label><input type="number" id="ef-balance" placeholder="0"></div>
       </div>
@@ -336,15 +336,14 @@
     </div>
 
     <div class="card">
-      <div class="card-header"><h3>Income Picture</h3></div>
-      <div class="note" style="margin-top:0;margin-bottom:10px;">How much of your expenses your day-job income covers on its own, and how much the business is currently supplementing on top of that — separate from the "months until I can quit" trend below, which is about full replacement, not partial supplementation.</div>
+      <div class="card-header"><h3>Income Picture <button class="help-btn" onclick="openCardInfo('incomePicture')" aria-label="What is this?" title="What is this?">?</button></h3></div>
       <div class="grand-totals" id="incomePictureStats"></div>
       <div class="estimate-headline" id="supplementHeadline">—</div>
       <div class="note" id="supplementNote"></div>
     </div>
 
     <div class="card">
-      <div class="card-header"><h3>Business Trend</h3></div>
+      <div class="card-header"><h3>Business Trend <button class="help-btn" onclick="openCardInfo('businessTrend')" aria-label="What is this?" title="What is this?">?</button></h3></div>
       <div id="trendStats" class="grand-totals"></div>
       <div class="estimate-headline" id="quitEstimate">—</div>
       <div class="note" id="quitEstimateNote"></div>
@@ -373,8 +372,7 @@
     </div>
 
     <div class="card">
-      <div class="card-header"><h3>Safe Draw Calculator</h3></div>
-      <div class="note" style="margin-top:0;margin-bottom:10px;">How much of the business's cash on hand could be drawn out right now while still keeping a chosen number of months of minimum expenses sitting in the account as a buffer.</div>
+      <div class="card-header"><h3>Safe Draw Calculator <button class="help-btn" onclick="openCardInfo('safeDraw')" aria-label="What is this?" title="What is this?">?</button></h3></div>
       <div class="form-grid">
         <div><label>Months of buffer to keep in the account</label><input type="number" id="drawBufferMonths" value="3" min="0" step="0.5"></div>
       </div>
@@ -382,8 +380,7 @@
     </div>
 
     <div class="card">
-      <div class="card-header"><h3>Backup &amp; Restore</h3></div>
-      <div class="note" style="margin-top:0;margin-bottom:10px;">Downloads everything on this page — personal expenses, business months, emergency fund, checklist — as one file. Worth doing before clearing browser data or switching devices, as a safety net independent of the automatic cloud sync above.</div>
+      <div class="card-header"><h3>Backup &amp; Restore <button class="help-btn" onclick="openCardInfo('backupRestore')" aria-label="What is this?" title="What is this?">?</button></h3></div>
       <div class="top-actions">
         <button class="action-btn" id="exportBackupBtn">Download Backup</button>
         <button class="ghost-btn" id="restoreBackupBtn">Restore from File</button>
@@ -428,9 +425,16 @@ window.storage = {
   }
 };
 
+const FULL_HELP_TITLE = 'How to Use: Runway Dashboard';
+let FULL_HELP_BODY = ''; // captured on first load from the modal's own initial markup
+
+function openInfoModal(title, bodyHtml){
+  document.getElementById('helpModalTitle').textContent = title;
+  document.getElementById('helpModalBody').innerHTML = bodyHtml;
+  document.getElementById('helpModalOverlay').classList.add('is-open');
+}
 function openHelpModal(){
-  const overlay = document.getElementById('helpModalOverlay');
-  if(overlay) overlay.classList.add('is-open');
+  openInfoModal(FULL_HELP_TITLE, FULL_HELP_BODY);
 }
 function closeHelpModal(){
   const overlay = document.getElementById('helpModalOverlay');
@@ -439,6 +443,56 @@ function closeHelpModal(){
 document.addEventListener('keydown', (e) => {
   if(e.key === 'Escape') closeHelpModal();
 });
+FULL_HELP_BODY = document.getElementById('helpModalBody').innerHTML;
+
+const CARD_INFO = {
+  safeToSpend: {
+    title: 'Safe to Spend',
+    body: `<p>This shows what's actually safe to spend each month.</p>
+      <p>We take your income, subtract your real bills, set aside a percentage for savings, and whatever's left is safe to spend without touching that savings.</p>
+      <p>Change the Savings Target to save more or less \u2014 everything updates right away.</p>`,
+  },
+  personalIncome: {
+    title: 'Personal Income',
+    body: `<p>Day-job wages, a spouse's income, anything that's not from Triple H.</p>
+      <p>This is what your bills get compared against everywhere else on this page.</p>`,
+  },
+  businessMonth: {
+    title: 'Add / Update a Month',
+    body: `<p>Pick a month, tap "Pull from Job Tracker," and Revenue, Business Expenses, and Fuel fill in automatically from what you've already logged there.</p>
+      <p>Everything's still editable after it fills in. Other Expenses, Owner Draws, and Cash aren't tracked anywhere else, so those three always need to be typed in by hand.</p>`,
+  },
+  emergencyFund: {
+    title: 'Emergency Fund',
+    body: `<p>Tracks your savings against two goals: 6 months of bills, and 12 months of bills.</p>
+      <p>The bar fills in as you get closer to the 12-month goal.</p>`,
+  },
+  incomePicture: {
+    title: 'Income Picture',
+    body: `<p>Shows whether your day-job income alone covers your bills.</p>
+      <p>If it doesn't, this shows how much of the gap the business is currently making up \u2014 based on what it's actually earned lately, not a guess.</p>`,
+  },
+  businessTrend: {
+    title: 'Business Trend',
+    body: `<p>Looks at your last few logged business months and estimates how many more months, at that pace, until the business's profit alone could cover your bills \u2014 no day job needed.</p>
+      <p>This is a rough guide based on your own numbers, not a promise. It changes every time you log a new month.</p>`,
+  },
+  safeDraw: {
+    title: 'Safe Draw Calculator',
+    body: `<p>Shows how much cash you could pull out of the business right now while still leaving a cushion in the account.</p>
+      <p>Set how many months of bills you want to keep sitting in the business as a buffer, and this tells you what's left over that's safe to take out.</p>`,
+  },
+  backupRestore: {
+    title: 'Backup & Restore',
+    body: `<p>Downloads everything on this page as one file \u2014 a safety net separate from the automatic cloud sync.</p>
+      <p>Worth doing before clearing your browser data or switching devices.</p>`,
+  },
+};
+function openCardInfo(key){
+  const info = CARD_INFO[key];
+  if(info) openInfoModal(info.title, info.body);
+}
+
 
 const CATEGORIES = [
   { key:"housing", name:"Housing", suggestions:["Mortgage","HOA","Property Taxes","Homeowners Insurance"] },
@@ -456,7 +510,7 @@ const CATEGORIES = [
 const FREQ_LABEL = {weekly:"Weekly", biweekly:"Biweekly", monthly:"Monthly", quarterly:"Quarterly", annually:"Annually"};
 
 let expenses = [];
-let budgetSettings = { comfortBufferPct: 15, savingsPct: 20 };
+let budgetSettings = { savingsPct: 20 };
 let income = [];
 let months = [];
 let efBalance = 0;
@@ -500,17 +554,11 @@ function variableHint(item){
 }
 // The real, actual monthly amount for an item -- what it truly costs,
 // regardless of Fixed vs Variable. This is the "Minimum" number.
-function itemBaseAmount(item){
+// The real monthly amount for an item -- what it truly costs, whether
+// Fixed or Variable. One number, no buffered "comfortable" variant.
+function itemMonthlyAmount(item){
   if(item.variable) return variableCurrentAmount(item);
   return monthlyEquiv(item.min, item.frequency);
-}
-// Comfortable is never typed in -- it's always the real amount plus the
-// buffer % set at the top of the Personal Budget tab. One setting,
-// applied everywhere, instead of guessing a number per bill.
-function itemMonthlyAmount(item, col){
-  const base = itemBaseAmount(item);
-  if(col === 'comfortable') return base * (1 + (Number(budgetSettings.comfortBufferPct)||0) / 100);
-  return base;
 }
 
 async function loadAll(){
@@ -528,12 +576,11 @@ async function loadAll(){
     const bs = await window.storage.get('budget-settings');
     const parsed = bs ? JSON.parse(bs.value) : null;
     budgetSettings = {
-      comfortBufferPct: (parsed && Number(parsed.comfortBufferPct)) || 15,
       savingsPct: (parsed && parsed.savingsPct !== undefined) ? Number(parsed.savingsPct) : 20,
     };
-  }catch(e){ budgetSettings = { comfortBufferPct: 15, savingsPct: 20 }; }
-  document.getElementById('settingComfortBuffer').value = budgetSettings.comfortBufferPct;
+  }catch(e){ budgetSettings = { savingsPct: 20 }; }
   document.getElementById('settingSavingsPct').value = budgetSettings.savingsPct;
+  populateMonthYearSelects();
 
   try{
     const mo = await window.storage.get('business-months');
@@ -559,12 +606,6 @@ async function loadAll(){
 }
 
 async function saveBudgetSettings(){ try{ await window.storage.set('budget-settings', JSON.stringify(budgetSettings)); if(typeof scheduleSync === 'function') scheduleSync(); }catch(e){ console.error(e); } }
-document.getElementById('settingComfortBuffer').addEventListener('change', async (e) => {
-  budgetSettings.comfortBufferPct = Number(e.target.value) || 0;
-  await saveBudgetSettings();
-  renderPersonal();
-  renderRunway();
-});
 document.getElementById('settingSavingsPct').addEventListener('change', async (e) => {
   budgetSettings.savingsPct = Number(e.target.value) || 0;
   await saveBudgetSettings();
@@ -596,12 +637,12 @@ function renderSuggestions(){
 }
 document.getElementById('exp-category').addEventListener('change', renderSuggestions);
 
-function categoryMonthlyTotal(catKey, col){
+function categoryMonthlyTotal(catKey){
   return expenses.filter(e => e.category === catKey)
-    .reduce((s,e) => s + itemMonthlyAmount(e, col), 0);
+    .reduce((s,e) => s + itemMonthlyAmount(e), 0);
 }
-function grandTotal(col){
-  return expenses.reduce((s,e) => s + itemMonthlyAmount(e, col), 0);
+function grandTotal(){
+  return expenses.reduce((s,e) => s + itemMonthlyAmount(e), 0);
 }
 function totalMonthlyIncome(){
   return income.reduce((s,i) => s + monthlyEquiv(i.amount, i.frequency), 0);
@@ -635,16 +676,14 @@ function closeForm(){
 
 // Fixed items need Frequency + Amount. Variable items just need a
 // starting estimate (reusing the same field, relabeled) -- actual amounts
-// get logged month by month from the category card instead. Comfortable
-// is never entered here at all anymore -- it's the buffer-adjusted number
-// computed automatically from whatever Amount ends up being.
+// get logged month by month from the category card instead.
 function updateExpenseTypeFields(){
   const isVariable = document.getElementById('exp-type').value === 'variable';
   document.getElementById('fixedFieldsRow1').style.display = isVariable ? 'none' : '';
   document.getElementById('exp-min-label').textContent = isVariable ? 'Starting estimate (until you log a real bill)' : 'Amount';
   document.getElementById('expTypeHint').textContent = isVariable
-    ? 'Once you save this, log each month\'s actual bill from the category card below -- this estimate is only used until real numbers exist. Comfortable is calculated automatically.'
-    : 'Amount is per the frequency you pick above — it\'s converted to a monthly figure automatically. Comfortable is calculated automatically.';
+    ? 'Once you save this, log each month\'s actual bill from the category card below \u2014 this estimate is only used until real numbers exist.'
+    : 'Amount is per the frequency you pick above \u2014 it\'s converted to a monthly figure automatically.';
 }
 document.getElementById('exp-type').addEventListener('change', updateExpenseTypeFields);
 
@@ -769,14 +808,13 @@ function renderPersonal(){
 
   usedCategories.forEach(cat => {
     const items = expenses.filter(e => e.category === cat.key);
-    const min = categoryMonthlyTotal(cat.key, 'min');
-    const comf = categoryMonthlyTotal(cat.key, 'comfortable');
+    const total = categoryMonthlyTotal(cat.key);
     const card = document.createElement('div');
     card.className = 'card';
     card.innerHTML = `
       <div class="card-header">
         <h3>${cat.name}</h3>
-        <span class="subtotal">${fmt(min)} / ${fmt(comf)}</span>
+        <span class="subtotal">${fmt(total)}/mo</span>
         <button class="cat-add-btn" data-cat="${cat.key}" title="Add to ${cat.name}">+</button>
       </div>
       ${items.map(item => item.variable ? `
@@ -785,7 +823,7 @@ function renderPersonal(){
             <div class="row-label">${item.name} <span class="col-hint">VARIABLE</span></div>
             <div class="row-freq">${variableHint(item)}</div>
           </div>
-          <div class="row-amounts">${fmt(itemMonthlyAmount(item,'min'))} / <b>${fmt(itemMonthlyAmount(item,'comfortable'))}</b></div>
+          <div class="row-amounts"><b>${fmt(itemMonthlyAmount(item))}</b>/mo</div>
           <div class="row-actions">
             <input type="number" class="var-log-input" id="varlog-${item.id}" placeholder="This month's bill">
             <button class="icon-btn" data-log-var="${item.id}" title="Log this month's actual amount">Log</button>
@@ -798,7 +836,7 @@ function renderPersonal(){
             <div class="row-label">${item.name}</div>
             <div class="row-freq">${FREQ_LABEL[item.frequency]}</div>
           </div>
-          <div class="row-amounts">${fmt(itemMonthlyAmount(item,'min'))} / <b>${fmt(itemMonthlyAmount(item,'comfortable'))}</b></div>
+          <div class="row-amounts"><b>${fmt(itemMonthlyAmount(item))}</b>/mo</div>
           <div class="row-actions">
             <button class="icon-btn" data-edit="${item.id}" title="Edit">Edit</button>
             <button class="icon-btn danger" data-delete="${item.id}" title="Delete">Del</button>
@@ -853,21 +891,16 @@ function renderPersonal(){
 }
 
 function renderPersonalTotals(){
-  const min = grandTotal('min');
-  const comf = grandTotal('comfortable');
+  const total = grandTotal();
   document.getElementById('personalTotals').innerHTML = `
-    <div class="stat-box"><div class="label">Minimum Monthly (Real Bills)</div><div class="value">${fmt(min)}</div></div>
-    <div class="stat-box blue"><div class="label">Comfortable Monthly (+${budgetSettings.comfortBufferPct}%)</div><div class="value">${fmt(comf)}</div></div>
+    <div class="stat-box"><div class="label">Bills &amp; Expenses (Monthly)</div><div class="value">${fmt(total)}</div></div>
   `;
-  renderSafeToSpend(min, comf);
+  renderSafeToSpend(total);
 }
 
 // The actual waterfall: Income -> Bills & Expenses -> recommended Savings
-// -> whatever's left is genuinely safe to spend. Two scenarios shown side
-// by side -- against Minimum (bare real cost of everything logged) and
-// against Comfortable (the auto-buffered version) -- since "safe to spend"
-// looks different depending on which one you're budgeting to.
-function renderSafeToSpend(min, comf){
+// -> whatever's left is genuinely safe to spend.
+function renderSafeToSpend(total){
   const statsEl = document.getElementById('safeToSpendStats');
   const headlineEl = document.getElementById('safeToSpendHeadline');
   const noteEl = document.getElementById('safeToSpendNote');
@@ -876,29 +909,28 @@ function renderSafeToSpend(min, comf){
 
   if(totalIncome === 0){
     statsEl.innerHTML = '';
-    headlineEl.textContent = 'Add personal income below to calculate this';
+    headlineEl.textContent = 'Add your income below to see this';
     noteEl.textContent = '';
     return;
   }
 
-  const leftoverMin = totalIncome - min;
-  const leftoverComf = totalIncome - comf;
-  const savingsFromMin = Math.max(0, leftoverMin) * (savingsPct / 100);
-  const safeToSpendMin = leftoverMin - savingsFromMin;
+  const leftover = totalIncome - total;
+  const savings = Math.max(0, leftover) * (savingsPct / 100);
+  const safeToSpend = leftover - savings;
 
   statsEl.innerHTML = `
-    <div class="stat-box"><div class="label">Total Income</div><div class="value">${fmt(totalIncome)}</div></div>
-    <div class="stat-box ${leftoverMin>=0?'green':''}"><div class="label">Left After Bills &amp; Expenses</div><div class="value">${fmt(leftoverMin)}</div></div>
-    <div class="stat-box blue"><div class="label">Recommended to Put Away (${savingsPct}%)</div><div class="value">${fmt(savingsFromMin)}</div></div>
-    <div class="stat-box ${safeToSpendMin>=0?'green':''}"><div class="label">Safe to Spend This Month</div><div class="value">${fmt(safeToSpendMin)}</div></div>
+    <div class="stat-box"><div class="label">Money Coming In</div><div class="value">${fmt(totalIncome)}</div></div>
+    <div class="stat-box"><div class="label">Bills &amp; Expenses</div><div class="value">${fmt(total)}</div></div>
+    <div class="stat-box blue"><div class="label">Put Away for Savings</div><div class="value">${fmt(savings)}</div></div>
+    <div class="stat-box ${safeToSpend>=0?'green':''}"><div class="label">Safe to Spend</div><div class="value">${fmt(safeToSpend)}</div></div>
   `;
 
-  if(leftoverMin < 0){
-    headlineEl.textContent = `Short by ${fmt(Math.abs(leftoverMin))}/mo`;
-    noteEl.textContent = `Your real bills and expenses (${fmt(min)}/mo) exceed your income (${fmt(totalIncome)}/mo). There's nothing to put away or safely spend until that gap closes \u2014 either income needs to go up or something in the budget needs to come down.`;
+  if(leftover < 0){
+    headlineEl.textContent = `You're short ${fmt(Math.abs(leftover))} this month`;
+    noteEl.textContent = `Your bills add up to more than what's coming in. Nothing is safe to spend or save until that's fixed \u2014 either bring in more, or cut something.`;
   } else {
-    noteEl.textContent = `Income (${fmt(totalIncome)}) minus real bills &amp; expenses (${fmt(min)}) leaves ${fmt(leftoverMin)}. Putting away ${savingsPct}% of that (${fmt(savingsFromMin)}) leaves ${fmt(safeToSpendMin)} genuinely safe to spend without touching savings. At the Comfortable level (+${budgetSettings.comfortBufferPct}% buffer, ${fmt(comf)} total), you'd have ${fmt(leftoverComf)} left before savings instead.`;
-    headlineEl.textContent = `${fmt(safeToSpendMin)}/mo safe to spend, after putting away ${fmt(savingsFromMin)}`;
+    headlineEl.textContent = `${fmt(safeToSpend)} is safe to spend this month`;
+    noteEl.textContent = `After your bills are paid, you have ${fmt(leftover)} left. We're setting aside ${fmt(savings)} of that for savings, which leaves ${fmt(safeToSpend)} you can spend guilt-free.`;
   }
 }
 
@@ -970,24 +1002,37 @@ function pullMonthFromJobTracker(monthVal){
   };
 }
 
+// Native <input type="month"> is unreliable on iOS Safari -- it can show
+// a value visually (e.g. "August 2026") without the underlying .value
+// ever actually being set, which silently breaks anything reading it.
+// Two plain <select> elements have no such quirk on any browser.
+const MONTH_NAMES = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+function populateMonthYearSelects(){
+  const monthSel = document.getElementById('biz-month-select');
+  const yearSel = document.getElementById('biz-year-select');
+  monthSel.innerHTML = MONTH_NAMES.map((m,i) => `<option value="${String(i+1).padStart(2,'0')}">${m}</option>`).join('');
+  const now = new Date();
+  const currentYear = now.getFullYear();
+  const years = [];
+  for(let y = currentYear - 2; y <= currentYear + 1; y++) years.push(y);
+  yearSel.innerHTML = years.map(y => `<option value="${y}">${y}</option>`).join('');
+  monthSel.value = String(now.getMonth() + 1).padStart(2,'0');
+  yearSel.value = String(currentYear);
+}
+function getBizMonthValue(){
+  const m = document.getElementById('biz-month-select').value;
+  const y = document.getElementById('biz-year-select').value;
+  if(!m || !y) return '';
+  return `${y}-${m}`;
+}
+
 document.getElementById('pullMonthBtn').addEventListener('click', () => {
-  const rawMonthVal = document.getElementById('biz-month').value;
+  const monthVal = getBizMonthValue();
   const note = document.getElementById('bizFormNote');
   const diag = document.getElementById('pullDiagnosticNote');
   diag.textContent = '';
 
-  // input[type=month] should always yield "YYYY-MM", but older Safari/iOS
-  // versions render it as a plain text field if unsupported, which can
-  // produce something else entirely (or an empty string that still looks
-  // "picked" visually). This guards against silently matching nothing.
-  const monthVal = (rawMonthVal || '').trim();
-  const looksValid = /^\d{4}-\d{2}$/.test(monthVal);
   if(!monthVal){ note.textContent = 'Pick a month first.'; note.style.color = 'var(--red)'; return; }
-  if(!looksValid){
-    note.textContent = `That month field returned "${monthVal}", not the expected YYYY-MM format -- your browser's month picker may not be behaving. Try a different browser, or check the console.`;
-    note.style.color = 'var(--red)';
-    return;
-  }
 
   const pulled = pullMonthFromJobTracker(monthVal);
   document.getElementById('biz-revenue').value = pulled.revenue || '';
@@ -999,21 +1044,21 @@ document.getElementById('pullMonthBtn').addEventListener('click', () => {
   document.getElementById('fuelSourceHint').textContent = `(${pulled.mileageCount} entr${pulled.mileageCount===1?'y':'ies'})`;
 
   if(pulled.totalInvoicesEverLogged === 0 && pulled.totalExpensesEverLogged === 0){
-    diag.textContent = `Job Tracker has no invoices or expenses logged on this device at all yet -- either nothing's been logged there, or sync hasn't pulled it down. Try "Refresh synced data now" on Job Tracker itself, then reload this page.`;
+    diag.textContent = `Job Tracker doesn't have any invoices or expenses logged on this device yet. If you know you've logged some, try "Refresh synced data now" on Job Tracker, then reload this page.`;
     diag.style.color = 'var(--red)';
   } else if(pulled.invoiceCount === 0 && pulled.expenseCount === 0 && pulled.mileageCount === 0){
-    diag.textContent = `Job Tracker has ${pulled.totalInvoicesEverLogged} invoice(s) and ${pulled.totalExpensesEverLogged} expense entr(y/ies) logged overall, but none dated in ${monthVal} specifically. That's likely correct, not a bug -- double check the month you picked against what you actually logged.`;
+    diag.textContent = `Nothing logged in Job Tracker for this specific month \u2014 that's likely correct, not a bug. Double check you picked the right month.`;
     diag.style.color = 'var(--text-dim)';
   } else {
     diag.textContent = '';
   }
 
-  note.textContent = 'Pulled from Job Tracker -- review the numbers, then Save Month. Other Expenses, Draws, and Cash still need filling in by hand.';
+  note.textContent = 'Pulled from Job Tracker \u2014 review the numbers, then Save Month. Other Expenses, Draws, and Cash still need filling in by hand.';
   note.style.color = 'var(--text-dim)';
 });
 
 document.getElementById('addMonthBtn').addEventListener('click', async () => {
-  const monthVal = document.getElementById('biz-month').value;
+  const monthVal = getBizMonthValue();
   const note = document.getElementById('bizFormNote');
   if(!monthVal){ note.textContent = 'Pick a month first.'; note.style.color = 'var(--red)'; return; }
   const entry = {
@@ -1058,14 +1103,12 @@ function linearTrendSlope(points){
 }
 
 function renderRunway(){
-  const min = grandTotal('min');
-  const comf = grandTotal('comfortable');
+  const min = grandTotal();
   const personalIncome = totalMonthlyIncome();
   document.getElementById('ef-balance').value = efBalance || '';
 
   document.getElementById('runwayExpenseTotals').innerHTML = `
-    <div class="stat-box"><div class="label">Minimum Monthly</div><div class="value">${fmt(min)}</div></div>
-    <div class="stat-box blue"><div class="label">Comfortable Monthly</div><div class="value">${fmt(comf)}</div></div>
+    <div class="stat-box"><div class="label">Monthly Bills &amp; Expenses</div><div class="value">${fmt(min)}</div></div>
     <div class="stat-box green"><div class="label">Personal Income</div><div class="value">${fmt(personalIncome)}</div></div>
   `;
 
@@ -1076,8 +1119,8 @@ function renderRunway(){
   document.getElementById('efTargetLabel').textContent = '6mo: ' + fmt(target6);
   document.getElementById('ef12Label').textContent = '12mo: ' + fmt(target12);
   document.getElementById('efNote').textContent = min > 0
-    ? `${fmt(efBalance)} saved — that's ${(efBalance/min).toFixed(1)} months of minimum expenses covered.`
-    : 'Add your minimum expenses on the Personal Budget tab to see this in months.';
+    ? `You have ${fmt(efBalance)} saved, which covers ${(efBalance/min).toFixed(1)} months of bills.`
+    : 'Add your bills on the Personal Budget tab to see this in months.';
 
   const sorted = [...months].sort((a,b)=> a.month.localeCompare(b.month));
   const nets = sorted.map((m,i) => ({x:i, y:computeNetProfit(m), month:m.month}));
@@ -1093,8 +1136,8 @@ function renderRunway(){
   const noteEl = document.getElementById('supplementNote');
   if(min === 0){
     incomePictureEl.innerHTML = `<div class="stat-box"><div class="label">Gap</div><div class="value">—</div></div>`;
-    headlineEl.textContent = 'Add minimum expenses first';
-    noteEl.textContent = 'Add expenses on the Personal Budget tab to see how income stacks up against them.';
+    headlineEl.textContent = 'Add your bills first';
+    noteEl.textContent = 'Add expenses on the Personal Budget tab to see how your income stacks up against them.';
   } else {
     const gap = Math.max(0, min - personalIncome);
     const businessAvg = avgNet3 !== null ? avgNet3 : 0;
@@ -1103,21 +1146,21 @@ function renderRunway(){
     const overallNet = personalIncome + businessAvg - min;
 
     incomePictureEl.innerHTML = `
-      <div class="stat-box"><div class="label">Gap After Personal Income</div><div class="value">${fmt(gap)}</div></div>
-      <div class="stat-box ${overallNet>=0?'green':''}"><div class="label">Household Net (Income + Biz \u2212 Min)</div><div class="value">${fmt(overallNet)}</div></div>
+      <div class="stat-box"><div class="label">Shortfall Not Covered by Income</div><div class="value">${fmt(gap)}</div></div>
+      <div class="stat-box ${overallNet>=0?'green':''}"><div class="label">Total Left Over Each Month</div><div class="value">${fmt(overallNet)}</div></div>
     `;
 
     if(gap === 0){
-      headlineEl.textContent = avgNet3 !== null ? `Personal income already covers expenses \u2014 business is pure surplus` : 'Personal income already covers minimum expenses';
+      headlineEl.textContent = 'Your income already covers your bills';
       noteEl.textContent = avgNet3 !== null
-        ? `Your day-job income (${fmt(personalIncome)}/mo) already covers your minimum expenses (${fmt(min)}/mo) on its own. The business's last-3-month average net profit (${fmt(avgNet3)}/mo) is on top of that, not filling a gap \u2014 that's savings, debt payoff, or margin, not a requirement.`
-        : `Your day-job income (${fmt(personalIncome)}/mo) already covers your minimum expenses (${fmt(min)}/mo) on its own. Log a business month to see what the business adds on top.`;
+        ? `Your income covers your bills on its own. Whatever the business makes on top of that (about ${fmt(avgNet3)} a month lately) is extra \u2014 savings, paying down debt, or just breathing room.`
+        : `Your income covers your bills on its own. Log a business month to see what the business adds on top.`;
     } else if(avgNet3 === null){
-      headlineEl.textContent = `${fmt(gap)}/mo gap \u2014 no business data yet`;
-      noteEl.textContent = `Personal income (${fmt(personalIncome)}/mo) falls short of minimum expenses (${fmt(min)}/mo) by ${fmt(gap)}/mo. Log at least one business month to see how much of that the business is currently supplementing.`;
+      headlineEl.textContent = `You're short ${fmt(gap)} a month`;
+      noteEl.textContent = `Your income doesn't quite cover your bills \u2014 you're short about ${fmt(gap)} a month. Log at least one business month to see how much the business is making up for that.`;
     } else {
-      headlineEl.textContent = `Business covers ${coveragePct.toFixed(0)}% of the gap`;
-      noteEl.textContent = `Personal income (${fmt(personalIncome)}/mo) falls short of minimum expenses (${fmt(min)}/mo) by ${fmt(gap)}/mo. The business's last-3-month average net profit (${fmt(avgNet3)}/mo) currently supplements ${fmt(businessCoverage)}/mo of that gap${businessAvg > gap ? ' \u2014 and covers it with room left over' : ''}.`;
+      headlineEl.textContent = `The business covers ${coveragePct.toFixed(0)}% of what your income doesn't`;
+      noteEl.textContent = `Your income falls short of your bills by about ${fmt(gap)} a month. The business has been making up ${fmt(businessCoverage)} of that${businessAvg > gap ? ', and then some' : ''}.`;
     }
   }
 
@@ -1130,34 +1173,34 @@ function renderRunway(){
   const estimateNote = document.getElementById('quitEstimateNote');
   if(nets.length < 2){
     estimateEl.textContent = 'Not enough data yet';
-    estimateNote.textContent = 'Log at least 2 months of business numbers to get a trend-based estimate.';
+    estimateNote.textContent = 'Log at least 2 months of business numbers to get an estimate.';
   } else {
     const slope = linearTrendSlope(nets);
     const latest = nets[nets.length-1].y;
     if(slope <= 0){
       estimateEl.textContent = 'No upward trend yet';
-      estimateNote.textContent = `Net profit isn't trending upward across your logged months (last 3-month average: ${avgNet3!==null?fmt(avgNet3):'—'}). This is a straight-line projection from your own numbers — not a forecast of what will happen, just where the current trend points.`;
+      estimateNote.textContent = `Your business profit isn't trending up lately (averaging ${avgNet3!==null?fmt(avgNet3):'—'} over the last few months). This is based on your own numbers, not a prediction \u2014 it'll change as you log more months.`;
     } else if(latest >= min){
       estimateEl.textContent = 'Already there, on paper';
-      estimateNote.textContent = `Your most recent month's net profit (${fmt(latest)}) already covers your minimum monthly expenses (${fmt(min)}). Worth confirming this holds for a few more months before treating it as reliable.`;
+      estimateNote.textContent = `Last month's profit (${fmt(latest)}) already covers your bills (${fmt(min)}). Worth watching a few more months before counting on it.`;
     } else {
       const monthsNeeded = Math.ceil((min - latest) / slope);
-      estimateEl.textContent = `~${monthsNeeded} month${monthsNeeded===1?'':'s'} at current trend`;
-      estimateNote.textContent = `Straight-line projection based on your logged months' growth rate, until net profit reaches your minimum expenses (${fmt(min)}). Treat this as a rough signal, not a guarantee — it moves every time you log a new month.`;
+      estimateEl.textContent = `~${monthsNeeded} month${monthsNeeded===1?'':'s'} at this rate`;
+      estimateNote.textContent = `Based on how your profit has been growing, it'd take about ${monthsNeeded} more month${monthsNeeded===1?'':'s'} to fully cover your bills (${fmt(min)}). This is a rough guide, not a guarantee \u2014 it moves every time you log a new month.`;
     }
   }
 
   const check1 = avgNet3 !== null && avgNet3 >= min && min > 0;
   document.getElementById('dot1').className = 'status-dot ' + (check1 ? 'on' : 'off');
   document.getElementById('check1Sub').textContent = avgNet3 !== null
-    ? `Last 3-month average net profit: ${fmt(avgNet3)} vs. minimum expenses: ${fmt(min)}`
+    ? `Business has been averaging ${fmt(avgNet3)}/mo vs. bills of ${fmt(min)}/mo`
     : 'No business months logged yet.';
 
   const check2 = min > 0 && efBalance >= target6;
   document.getElementById('dot2').className = 'status-dot ' + (check2 ? 'on' : 'off');
   document.getElementById('check2Sub').textContent = min > 0
-    ? `${fmt(efBalance)} saved vs. 6-month target of ${fmt(target6)}`
-    : 'Add minimum expenses to check this.';
+    ? `${fmt(efBalance)} saved vs. a 6-month goal of ${fmt(target6)}`
+    : 'Add your bills on Personal Budget to check this.';
 
   document.getElementById('check3Box').checked = manualCheck3;
 
@@ -1247,10 +1290,8 @@ document.getElementById('restoreFileInput').addEventListener('change', async (e)
     expenses = Array.isArray(data.personalExpenses) ? data.personalExpenses : [];
     income = Array.isArray(data.personalIncome) ? data.personalIncome : [];
     budgetSettings = {
-      comfortBufferPct: (data.budgetSettings && Number(data.budgetSettings.comfortBufferPct)) || 15,
       savingsPct: (data.budgetSettings && data.budgetSettings.savingsPct !== undefined) ? Number(data.budgetSettings.savingsPct) : 20,
     };
-    document.getElementById('settingComfortBuffer').value = budgetSettings.comfortBufferPct;
     document.getElementById('settingSavingsPct').value = budgetSettings.savingsPct;
     months = Array.isArray(data.businessMonths) ? data.businessMonths : [];
     efBalance = Number(data.emergencyFund && data.emergencyFund.balance) || 0;
