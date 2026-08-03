@@ -319,6 +319,7 @@
       <div class="tool-form-row">
         <div style="flex:1; min-width:140px;"><label style="display:block; font-size:12.5px; color:var(--text-dim); margin-bottom:4px;">Each Occurrence</label><input type="text" id="insEachOccurrence" style="width:100%; box-sizing:border-box; padding:9px 11px; background:var(--bg-panel-2); border:1px solid var(--border); border-radius:6px; color:var(--white); font-size:14px;"></div>
         <div style="flex:1; min-width:140px;"><label style="display:block; font-size:12.5px; color:var(--text-dim); margin-bottom:4px;">General Aggregate</label><input type="text" id="insGeneralAggregate" style="width:100%; box-sizing:border-box; padding:9px 11px; background:var(--bg-panel-2); border:1px solid var(--border); border-radius:6px; color:var(--white); font-size:14px;"></div>
+        <div style="flex:1; min-width:140px;"><label style="display:block; font-size:12.5px; color:var(--text-dim); margin-bottom:4px;">Payment due day of month</label><input type="number" id="insPaymentDueDay" min="1" max="28" style="width:100%; box-sizing:border-box; padding:9px 11px; background:var(--bg-panel-2); border:1px solid var(--border); border-radius:6px; color:var(--white); font-size:14px;"></div>
       </div>
       <button class="secondary-btn" onclick="saveInsuranceEdit()">Save</button>
       <button class="secondary-btn" onclick="closeInsuranceEdit()">Cancel</button>
@@ -540,6 +541,8 @@
     const jobs = loadJobs().filter(j => (j.title || '').toLowerCase().includes(term) || (j.client || '').toLowerCase().includes(term));
     const contacts = loadContactsForSearch().filter(c => (c.name || '').toLowerCase().includes(term));
     const invoices = loadInvoices().filter(i => (i.clientName || '').toLowerCase().includes(term));
+    const manualIncome = loadManualIncomeForWorkspace().filter(e =>
+      (e.source || '').toLowerCase().includes(term) || (e.desc || '').toLowerCase().includes(term));
     const quotes = loadQuotesForSearch().filter(q => (q.clientName || '').toLowerCase().includes(term));
     const contracts = loadContractsForSearch().filter(e => (e.fields.clientName || '').toLowerCase().includes(term));
 
@@ -560,6 +563,12 @@
       label: 'Invoices (view in Income)', items: invoices.slice(0, 8).map(i =>
         `<a class="dash-list-item" href="#section-actionitems" onclick="jumpToInvoiceSearch(${i.id})">
           <div><div class="dash-list-item-title">${escapeHtml(i.clientName)}</div><div class="dash-list-item-meta">#${escapeHtml(i.invoiceNumber || '\u2014')} &middot; ${money(i.total)}</div></div>
+        </a>`)
+    });
+    if (manualIncome.length) groups.push({
+      label: 'Income Entries (view in Income)', items: manualIncome.slice(0, 8).map(e =>
+        `<a class="dash-list-item" href="#section-actionitems" onclick="jumpToIncomeEntrySearch(${e.id})">
+          <div><div class="dash-list-item-title">${escapeHtml(e.source || '(no client)')}</div><div class="dash-list-item-meta">${escapeHtml(e.desc || '')} &middot; ${money(e.amount)}</div></div>
         </a>`)
     });
     if (quotes.length) groups.push({
@@ -598,6 +607,14 @@
     expandSection('actionitems');
     const el = document.getElementById('invoiceSearch');
     if (el) { el.value = invoice.clientName || ''; renderInvoicesList(); }
+  }
+
+  function jumpToIncomeEntrySearch(entryId) {
+    const entry = loadManualIncomeForWorkspace().find(e => e.id === entryId);
+    if (!entry) return;
+    expandSection('actionitems');
+    const el = document.getElementById('invoiceSearch');
+    if (el) { el.value = entry.source || entry.desc || ''; renderInvoicesList(); }
   }
 
   function loadSetAsideRate() {
@@ -967,6 +984,7 @@
       expirationDate: '2027-07-30',
       eachOccurrence: '$1,000,000',
       generalAggregate: '$2,000,000',
+      paymentDueDay: 28,
     },
     business: {
       legalName: 'Triple H Enterprises LLC',
@@ -991,6 +1009,7 @@
       const parsed = JSON.parse(saved);
       if (!parsed.business) parsed.business = JSON.parse(JSON.stringify(DEFAULT_COMPLIANCE.business));
       if (!parsed.licenses) parsed.licenses = [];
+      if (parsed.insurance && !parsed.insurance.paymentDueDay) parsed.insurance.paymentDueDay = 28;
       return parsed;
     } catch (e) {
       return JSON.parse(JSON.stringify(DEFAULT_COMPLIANCE));
@@ -1008,6 +1027,69 @@
     if (isNaN(target.getTime())) return null;
     const today = startOfDay(new Date());
     return Math.round((target - today) / (24 * 60 * 60 * 1000));
+  }
+
+  // Insurance here is billed monthly (due the 28th), separate from the
+  // policy's own annual term (effectiveDate/expirationDate). Those are two
+  // different things -- when the 12-month policy itself needs renewing vs.
+  // when the next bill is due -- and showing only the annual date made it
+  // look like a once-a-year payment, which it isn't.
+  function nextInsurancePaymentDue(dueDay) {
+    dueDay = Number(dueDay) || 28;
+    const today = startOfDay(new Date());
+    let due = new Date(today.getFullYear(), today.getMonth(), dueDay);
+    if (due < today) due = new Date(today.getFullYear(), today.getMonth() + 1, dueDay);
+    const days = Math.round((due - today) / (24 * 60 * 60 * 1000));
+    return { due, days };
+  }
+
+  function renderInsuranceCard() {
+    const compliance = loadCompliance();
+    const ins = compliance.insurance || {};
+    const payment = nextInsurancePaymentDue(ins.paymentDueDay);
+    const policyDays = daysUntil(ins.expirationDate);
+
+    let statusClass = 'is-ok', badgeText = 'Payment due in ' + payment.days + ' day' + (payment.days === 1 ? '' : 's');
+    if (payment.days <= 5) statusClass = 'is-expiring';
+    if (policyDays !== null && policyDays < 0) { statusClass = 'is-expired'; badgeText = 'POLICY EXPIRED'; }
+    else if (policyDays !== null && policyDays <= 30) { statusClass = 'is-expiring'; badgeText = 'Policy renews in ' + policyDays + ' days \u2014 ' + badgeText.toLowerCase(); }
+
+    const headingBadge = document.getElementById('complianceHeadingBadge');
+    if (headingBadge) {
+      headingBadge.innerHTML = statusClass === 'is-ok' ? '' :
+        `<span class="compliance-status-badge ${statusClass}" style="font-size:11.5px; padding:2px 8px; vertical-align:middle;">${escapeHtml(badgeText)}</span>`;
+    }
+
+    document.getElementById('insuranceCard').innerHTML = `
+      <div class="compliance-card ${statusClass === 'is-ok' ? '' : statusClass}">
+        <div class="compliance-card-top">
+          <div class="compliance-card-title">General Liability &mdash; ${escapeHtml(ins.insurer || 'Not set')}</div>
+          <span class="compliance-status-badge ${statusClass}">${escapeHtml(badgeText)}</span>
+        </div>
+        <div class="compliance-detail-row">
+          <span>Policy: <strong>${escapeHtml(ins.policyNumber || '\u2014')}</strong></span>
+          <span>Via: <strong>${escapeHtml(ins.producer || '\u2014')}</strong></span>
+        </div>
+        <div class="compliance-detail-row">
+          <span>Billed monthly, due the <strong>${escapeHtml(String(ins.paymentDueDay || 28))}${ordinalSuffix(ins.paymentDueDay || 28)}</strong></span>
+          <span>Next payment: <strong>${payment.due.toLocaleDateString(undefined, {month:'short', day:'numeric'})}</strong></span>
+        </div>
+        <div class="compliance-detail-row">
+          <span>Policy term: <strong>${escapeHtml(ins.effectiveDate || '\u2014')}</strong> to <strong>${escapeHtml(ins.expirationDate || '\u2014')}</strong></span>
+        </div>
+        <div class="compliance-detail-row">
+          <span>Each Occurrence: <strong>${escapeHtml(ins.eachOccurrence || '\u2014')}</strong></span>
+          <span>General Aggregate: <strong>${escapeHtml(ins.generalAggregate || '\u2014')}</strong></span>
+        </div>
+        <button class="small-btn" style="margin-top:10px;" onclick="openInsuranceEdit()">Edit</button>
+      </div>`;
+  }
+  function ordinalSuffix(n) {
+    n = Number(n);
+    if (n % 10 === 1 && n !== 11) return 'st';
+    if (n % 10 === 2 && n !== 12) return 'nd';
+    if (n % 10 === 3 && n !== 13) return 'rd';
+    return 'th';
   }
 
   // Shared "Action Items" badge -- each of the four contributing render
@@ -1029,45 +1111,6 @@
       : '';
   }
 
-  function renderInsuranceCard() {
-    const compliance = loadCompliance();
-    const ins = compliance.insurance || {};
-    const days = daysUntil(ins.expirationDate);
-    let statusClass = 'is-ok', badgeText = 'Active';
-    if (days !== null) {
-      if (days < 0) { statusClass = 'is-expired'; badgeText = 'EXPIRED'; }
-      else if (days <= 30) { statusClass = 'is-expiring'; badgeText = 'Renews in ' + days + ' day' + (days === 1 ? '' : 's'); }
-      else { badgeText = 'Renews in ' + days + ' days'; }
-    }
-
-    const headingBadge = document.getElementById('complianceHeadingBadge');
-    if (headingBadge) {
-      headingBadge.innerHTML = statusClass === 'is-ok' ? '' :
-        `<span class="compliance-status-badge ${statusClass}" style="font-size:11.5px; padding:2px 8px; vertical-align:middle;">${escapeHtml(badgeText)}</span>`;
-    }
-
-    document.getElementById('insuranceCard').innerHTML = `
-      <div class="compliance-card ${statusClass === 'is-ok' ? '' : statusClass}">
-        <div class="compliance-card-top">
-          <div class="compliance-card-title">General Liability &mdash; ${escapeHtml(ins.insurer || 'Not set')}</div>
-          <span class="compliance-status-badge ${statusClass}">${escapeHtml(badgeText)}</span>
-        </div>
-        <div class="compliance-detail-row">
-          <span>Policy: <strong>${escapeHtml(ins.policyNumber || '\u2014')}</strong></span>
-          <span>Via: <strong>${escapeHtml(ins.producer || '\u2014')}</strong></span>
-        </div>
-        <div class="compliance-detail-row">
-          <span>Effective: <strong>${escapeHtml(ins.effectiveDate || '\u2014')}</strong></span>
-          <span>Expires: <strong>${escapeHtml(ins.expirationDate || '\u2014')}</strong></span>
-        </div>
-        <div class="compliance-detail-row">
-          <span>Each Occurrence: <strong>${escapeHtml(ins.eachOccurrence || '\u2014')}</strong></span>
-          <span>General Aggregate: <strong>${escapeHtml(ins.generalAggregate || '\u2014')}</strong></span>
-        </div>
-        <button class="small-btn" style="margin-top:10px;" onclick="openInsuranceEdit()">Edit</button>
-      </div>`;
-  }
-
   function openInsuranceEdit() {
     const compliance = loadCompliance();
     const ins = compliance.insurance || {};
@@ -1078,6 +1121,7 @@
     document.getElementById('insExpirationDate').value = ins.expirationDate || '';
     document.getElementById('insEachOccurrence').value = ins.eachOccurrence || '';
     document.getElementById('insGeneralAggregate').value = ins.generalAggregate || '';
+    document.getElementById('insPaymentDueDay').value = ins.paymentDueDay || 28;
     document.getElementById('insuranceEditForm').classList.add('is-open');
   }
 
@@ -1095,6 +1139,7 @@
       expirationDate: document.getElementById('insExpirationDate').value,
       eachOccurrence: document.getElementById('insEachOccurrence').value.trim(),
       generalAggregate: document.getElementById('insGeneralAggregate').value.trim(),
+      paymentDueDay: Number(document.getElementById('insPaymentDueDay').value) || 28,
     };
     saveCompliance(compliance);
     closeInsuranceEdit();

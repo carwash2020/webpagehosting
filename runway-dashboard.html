@@ -429,6 +429,13 @@
       <div class="note" id="supplementNote"></div>
     </div>
 
+    <div class="card card-hero">
+      <div class="card-header"><h3>Break-Even Point <button class="help-btn" onclick="openCardInfo('breakEven')" aria-label="What is this?" title="What is this?">?</button></h3></div>
+      <div class="grand-totals" id="breakEvenStats"></div>
+      <div class="estimate-headline" id="breakEvenHeadline">—</div>
+      <div class="note" id="breakEvenNote"></div>
+    </div>
+
     <div class="card">
       <div class="card-header"><h3>Business Trend <button class="help-btn" onclick="openCardInfo('businessTrend')" aria-label="What is this?" title="What is this?">?</button></h3></div>
       <div id="trendStats" class="grand-totals"></div>
@@ -572,6 +579,11 @@ const CARD_INFO = {
     title: 'Income Picture',
     body: `<p>Shows whether your day-job income alone covers your bills.</p>
       <p>If it doesn't, this shows how much of the gap the business is currently making up \u2014 based on what it's actually earned lately, not a guess.</p>`,
+  },
+  breakEven: {
+    title: 'Break-Even Point',
+    body: `<p>The one combined number: how much revenue the business actually needs this month.</p>
+      <p>That's the business's own costs (expenses and fuel), plus whatever's left over after your personal income covers your personal bills. Compares that against what the business actually brought in, so you can see at a glance whether the month was above or below what it needed to be.</p>`,
   },
   businessTrend: {
     title: 'Business Trend',
@@ -1564,6 +1576,8 @@ function renderRunway(){
     }
   }
 
+  renderBreakEven(min, personalIncome, sorted);
+
   document.getElementById('trendStats').innerHTML = `
     <div class="stat-box green"><div class="label">Avg Net Profit (last 3mo)</div><div class="value">${avgNet3!==null ? fmt(avgNet3) : '—'}</div></div>
     <div class="stat-box"><div class="label">Months Logged</div><div class="value">${nets.length}</div></div>
@@ -1652,6 +1666,48 @@ function drawTrendChart(nets, min){
   ctx.moveTo(padding.left, zeroY);
   ctx.lineTo(w - padding.right, zeroY);
   ctx.stroke();
+}
+
+// ---------------------------------------------------------------------------
+// Break-Even Point -- the one number that actually combines both halves
+// of this app: how much revenue the business needs this month to cover
+// its OWN costs, plus whatever gap is left after personal income against
+// personal bills. Everything else on this page shows personal and
+// business as two separate pictures being compared -- this is the actual
+// combined target, which is the reason this tool exists in the first place.
+function renderBreakEven(min, personalIncome, sorted){
+  const statsEl = document.getElementById('breakEvenStats');
+  const headlineEl = document.getElementById('breakEvenHeadline');
+  const noteEl = document.getElementById('breakEvenNote');
+  const latestMonth = sorted[sorted.length - 1];
+
+  if(!latestMonth){
+    statsEl.innerHTML = `<div class="stat-box"><div class="label">Break-Even Revenue</div><div class="value">—</div></div>`;
+    headlineEl.textContent = 'Log a business month to see this';
+    noteEl.textContent = 'Needs at least one month of business expenses logged to know what the business itself costs to run.';
+    return;
+  }
+
+  const businessCosts = (Number(latestMonth.expenses)||0) + (Number(latestMonth.fuel)||0);
+  const personalGap = Math.max(0, min - personalIncome);
+  const breakEvenRevenue = businessCosts + personalGap;
+  const actualRevenue = Number(latestMonth.revenue) || 0;
+  const surplus = actualRevenue - breakEvenRevenue;
+
+  statsEl.innerHTML = `
+    <div class="stat-box"><div class="label">Business's Own Costs</div><div class="value">${fmt(businessCosts)}</div></div>
+    <div class="stat-box"><div class="label">Gap Left by Personal Income</div><div class="value">${fmt(personalGap)}</div></div>
+    <div class="stat-box blue" style="grid-column:1/-1;"><div class="label">Revenue Needed to Break Even</div><div class="value">${fmt(breakEvenRevenue)}</div></div>
+    <div class="stat-box ${surplus>=0?'green':''}" style="grid-column:1/-1;"><div class="label">${latestMonth.month} Actual Revenue</div><div class="value">${fmt(actualRevenue)}</div></div>
+  `;
+
+  if(surplus >= 0){
+    headlineEl.textContent = `${latestMonth.month} was ${fmt(surplus)} above break-even`;
+    noteEl.textContent = `Between the business's own costs (${fmt(businessCosts)}) and covering what personal income didn't (${fmt(personalGap)}), the business needed ${fmt(breakEvenRevenue)} to break even this month \u2014 it brought in ${fmt(actualRevenue)}, so everything's covered with ${fmt(surplus)} to spare.`;
+  } else {
+    headlineEl.textContent = `${latestMonth.month} was ${fmt(Math.abs(surplus))} short of break-even`;
+    noteEl.textContent = `Between the business's own costs (${fmt(businessCosts)}) and covering what personal income didn't (${fmt(personalGap)}), the business needed ${fmt(breakEvenRevenue)} to break even this month \u2014 it only brought in ${fmt(actualRevenue)}, ${fmt(Math.abs(surplus))} short.`;
+  }
 }
 
 function renderSafeDraw(min){
