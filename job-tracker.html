@@ -1283,25 +1283,39 @@
   // compared to what Runway Dashboard reconciles on its own, the same old
   // invoices get merged in here too, read-only, so the two screens always
   // agree on the total.
-  function loadOrphanedInvoicesAsIncome() {
+  // One-time (but safely repeatable) backfill: any invoice that existed
+  // before the Income tab did gets a real, permanent entry written into
+  // th_income_log, instead of being recalculated on every render forever.
+  // Runs on every load, but is idempotent -- once an invoice is mirrored,
+  // this finds nothing left to backfill and does nothing. Safe to call
+  // as often as needed, including from other pages that sync this data.
+  function backfillLegacyInvoicesIntoIncomeLog() {
     const invoices = JSON.parse(localStorage.getItem('th_invoices') || '[]');
     const incomeLog = loadIncomeEntries();
     const mirroredIds = new Set(incomeLog.filter(e => e.origin === 'invoice').map(e => e.invoiceId));
-    return invoices.filter(i => !mirroredIds.has(i.id)).map(i => ({
-      id: 'legacy-inv-' + i.id,
-      date: i.date,
-      desc: 'Invoice #' + (i.invoiceNumber || ''),
-      amount: i.total || 0,
-      source: i.clientName || '',
-      payment: '',
-      jobRefId: i.jobRefId || '',
-      jobRefTitle: i.jobRefTitle || '',
-      origin: 'invoice-legacy',
-    }));
+    const unmirrored = invoices.filter(i => !mirroredIds.has(i.id));
+    if (unmirrored.length === 0) return;
+
+    unmirrored.forEach((i, idx) => {
+      incomeLog.push({
+        id: Date.now() + idx, // +idx keeps ids unique even when backfilling several in the same tick
+        date: i.date,
+        desc: 'Invoice #' + (i.invoiceNumber || ''),
+        amount: i.total || 0,
+        source: i.clientName || '',
+        payment: '',
+        jobRefId: i.jobRefId || '',
+        jobRefTitle: i.jobRefTitle || '',
+        origin: 'invoice',
+        invoiceId: i.id,
+      });
+    });
+    saveIncomeEntries(incomeLog);
   }
 
   function renderIncomeEntries() {
-    const entries = [...loadIncomeEntries(), ...loadOrphanedInvoicesAsIncome()].sort((a, b) => new Date(b.date) - new Date(a.date));
+    backfillLegacyInvoicesIntoIncomeLog();
+    const entries = [...loadIncomeEntries()].sort((a, b) => new Date(b.date) - new Date(a.date));
     const container = document.getElementById('incomeTable');
 
     if (entries.length === 0) {
@@ -1317,9 +1331,9 @@
         <td>${e.jobRefTitle ? escapeHtml(e.jobRefTitle) : '\u2014'}</td>
         <td>${escapeHtml(e.desc)}</td>
         <td>${PAYMENT_LABEL[e.payment] || '\u2014'}</td>
-        <td>${e.origin === 'invoice' ? '<span class="inline-note" style="margin:0;">Invoice</span>' : e.origin === 'invoice-legacy' ? '<span class="inline-note" style="margin:0;">Invoice (older)</span>' : 'Manual'}</td>
+        <td>${e.origin === 'invoice' ? '<span class="inline-note" style="margin:0;">Invoice</span>' : 'Manual'}</td>
         <td>$${e.amount.toFixed(2)}</td>
-        <td>${e.origin === 'invoice-legacy' ? '' : `<button class="small-btn danger" onclick="deleteIncomeEntry(${e.id})" aria-label="Delete entry" title="Delete entry">&times;</button>`}</td>
+        <td><button class="small-btn danger" onclick="deleteIncomeEntry(${e.id})" aria-label="Delete entry" title="Delete entry">&times;</button></td>
       </tr>`).join('');
 
     container.innerHTML = `
@@ -1328,8 +1342,8 @@
         <tbody>${rows}</tbody>
       </table>`;
 
-    const manualTotal = entries.filter(e => e.origin !== 'invoice' && e.origin !== 'invoice-legacy').reduce((sum, e) => sum + e.amount, 0);
-    const invoiceTotal = entries.filter(e => e.origin === 'invoice' || e.origin === 'invoice-legacy').reduce((sum, e) => sum + e.amount, 0);
+    const manualTotal = entries.filter(e => e.origin !== 'invoice').reduce((sum, e) => sum + e.amount, 0);
+    const invoiceTotal = entries.filter(e => e.origin === 'invoice').reduce((sum, e) => sum + e.amount, 0);
 
     document.getElementById('incomeTotalsRow').innerHTML = `
       <div>Manual entries: <strong>$${manualTotal.toFixed(2)}</strong></div>
@@ -1338,7 +1352,7 @@
   }
 
   function buildIncomeCSV() {
-    const entries = [...loadIncomeEntries(), ...loadOrphanedInvoicesAsIncome()].sort((a, b) => new Date(a.date) - new Date(b.date));
+    const entries = [...loadIncomeEntries()].sort((a, b) => new Date(a.date) - new Date(b.date));
     let csv = 'Date,Source,Job,Description,Payment,Origin,Amount\n';
     entries.forEach(e => {
       const desc = '"' + e.desc.replace(/"/g, '""') + '"';
@@ -1350,7 +1364,7 @@
   }
 
   async function exportIncomeCSV() {
-    const entries = [...loadIncomeEntries(), ...loadOrphanedInvoicesAsIncome()];
+    const entries = loadIncomeEntries();
     if (entries.length === 0) { await showAlert('Nothing to export yet.'); return; }
     const csv = buildIncomeCSV();
     const blob = new Blob([csv], { type: 'text/csv' });

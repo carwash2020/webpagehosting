@@ -286,8 +286,8 @@
     <div class="analytics-subheading">Client Follow-Ups</div>
     <div id="followupsList"></div>
 
-    <div class="analytics-subheading">Invoices</div>
-    <div class="form-field"><input type="text" id="invoiceSearch" placeholder="Search invoices by client or invoice #..." oninput="renderInvoicesList()" aria-label="Search invoices"></div>
+    <div class="analytics-subheading">Income</div>
+    <div class="form-field"><input type="text" id="invoiceSearch" placeholder="Search income by client, invoice #, or description..." oninput="renderInvoicesList()" aria-label="Search income"></div>
     <div id="invoicesList"></div>
 
   </div>
@@ -509,7 +509,7 @@
 
   const ALL_SYNCED_KEYS = [
     'th_tracker_jobs', 'th_tracker_contacts', 'th_tracker_notes_v2',
-    'th_expense_log', 'th_mileage_rate', 'th_price_reference', 'th_invoices',
+    'th_expense_log', 'th_income_log', 'th_mileage_rate', 'th_price_reference', 'th_invoices',
     'th_quotes', 'th_tax_rate', 'th_tax_labor', 'th_tax_parts', 'th_compliance', 'th_job_templates', 'th_contracts', 'th_setaside_rate',
   ];
 
@@ -557,7 +557,7 @@
         </a>`)
     });
     if (invoices.length) groups.push({
-      label: 'Invoices', items: invoices.slice(0, 8).map(i =>
+      label: 'Invoices (view in Income)', items: invoices.slice(0, 8).map(i =>
         `<a class="dash-list-item" href="#section-actionitems" onclick="jumpToInvoiceSearch(${i.id})">
           <div><div class="dash-list-item-title">${escapeHtml(i.clientName)}</div><div class="dash-list-item-meta">#${escapeHtml(i.invoiceNumber || '\u2014')} &middot; ${money(i.total)}</div></div>
         </a>`)
@@ -831,26 +831,61 @@
     renderMetrics();
   }
 
+  function loadManualIncomeForWorkspace() {
+    try { return JSON.parse(localStorage.getItem('th_income_log') || '[]').filter(e => e.origin !== 'invoice'); }
+    catch (e) { return []; }
+  }
+
   function renderInvoicesList() {
     actionItemCounts.unpaid = loadInvoices().filter(i => !i.paid).length;
     updateActionItemsBadge();
     const searchTerm = (document.getElementById('invoiceSearch')?.value || '').trim().toLowerCase();
-    let invoices = [...loadInvoices()].sort((a, b) => b.id - a.id);
+
+    // Income here now means invoices AND manual entries (cash jobs, etc.)
+    // logged in Job Tracker's Income tab -- merged into one list so this
+    // dashboard reflects the same total Job Tracker and Runway Dashboard
+    // already agree on, instead of only showing formally invoiced amounts.
+    let invoiceItems = loadInvoices().map(i => ({
+      kind: 'invoice', id: i.id, sortKey: i.id,
+      title: i.clientName, meta: `#${i.invoiceNumber || '\u2014'} \u00b7 ${i.date || ''} \u00b7 ${i.terms || ''}`,
+      amount: i.total, raw: i,
+    }));
+    let incomeItems = loadManualIncomeForWorkspace().map(e => ({
+      kind: 'income', id: e.id, sortKey: e.id,
+      title: e.source || '(no client)', meta: `${e.desc || ''} \u00b7 ${e.date || ''} \u00b7 Manual`,
+      amount: e.amount, raw: e,
+    }));
+    let items = [...invoiceItems, ...incomeItems].sort((a, b) => b.sortKey - a.sortKey);
+
     if (searchTerm) {
-      invoices = invoices.filter(i =>
-        (i.clientName || '').toLowerCase().includes(searchTerm) ||
-        String(i.invoiceNumber || '').toLowerCase().includes(searchTerm)
+      items = items.filter(it =>
+        (it.title || '').toLowerCase().includes(searchTerm) ||
+        (it.meta || '').toLowerCase().includes(searchTerm)
       );
     }
-    invoices = invoices.slice(0, 20);
+    items = items.slice(0, 20);
     const container = document.getElementById('invoicesList');
-    if (invoices.length === 0) {
+    if (items.length === 0) {
       container.innerHTML = searchTerm
-        ? '<div class="empty-state-small">No invoices match "' + escapeHtml(searchTerm) + '".</div>'
-        : '<div class="empty-state-small">No invoices generated yet.</div>';
+        ? '<div class="empty-state-small">No income matches "' + escapeHtml(searchTerm) + '".</div>'
+        : '<div class="empty-state-small">No income logged yet.</div>';
       return;
     }
-    container.innerHTML = invoices.map(i => {
+    container.innerHTML = items.map(it => {
+      if (it.kind === 'income') {
+        return `
+        <div class="dash-list-item">
+          <div>
+            <div class="dash-list-item-title">${escapeHtml(it.title)}</div>
+            <div class="dash-list-item-meta">${escapeHtml(it.meta)}</div>
+          </div>
+          <div class="dash-list-item-right">
+            <div class="dash-list-item-amount">${money(it.amount)}</div>
+            <span class="paid-toggle-btn is-paid" style="cursor:default;">Received</span>
+          </div>
+        </div>`;
+      }
+      const i = it.raw;
       const overdue = isOverdue(i);
       const btnClass = i.paid ? 'is-paid' : (overdue ? 'is-overdue' : 'is-unpaid');
       const btnText = i.paid ? 'Paid' : (overdue ? 'Overdue' : 'Unpaid');
