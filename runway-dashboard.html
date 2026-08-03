@@ -48,9 +48,10 @@
   .tab-btn.active{background:var(--bg-elevated);color:var(--orange-light);box-shadow: inset 0 2px 0 var(--orange);}
   main{max-width:900px;margin:0 auto;padding:16px 20px 80px;}
   .panel{display:none;}
-  .panel.active{display:block; animation:panelFadeIn .18s ease;}
+  .panel.active{display:block; animation:panelFadeIn .22s ease;}
+  .panel.fade-out{display:block; opacity:0; transition:opacity .2s ease;}
   @keyframes panelFadeIn{from{opacity:0; transform:translateY(4px);} to{opacity:1; transform:translateY(0);}}
-  @media (prefers-reduced-motion: reduce){ .panel.active{animation:none;} }
+  @media (prefers-reduced-motion: reduce){ .panel.fade-out{transition:none;} .panel.active{animation:none;} }
   .toast-container{position:fixed;left:50%;bottom:20px;transform:translateX(-50%);z-index:300;display:flex;flex-direction:column;gap:8px;align-items:center;pointer-events:none;width:100%;padding:0 20px;box-sizing:border-box;}
   .toast{pointer-events:auto;background:var(--bg-elevated);border:1px solid var(--border-soft);border-left:3px solid var(--orange);color:var(--text);font-size:13.5px;padding:10px 16px;border-radius:8px;box-shadow:0 6px 16px rgba(0,0,0,0.4);opacity:0;transform:translateY(8px);transition:opacity .18s ease, transform .18s ease;}
   .toast.is-shown{opacity:1;transform:translateY(0);}
@@ -873,6 +874,7 @@ document.getElementById('saveExpenseBtn').addEventListener('click', async () => 
 
   if(!name){ alert('Give this expense a name.'); return; }
 
+  const wasEditing = !!editingId;
   if(editingId){
     const idx = expenses.findIndex(e => e.id === editingId);
     if(idx > -1) expenses[idx] = {...expenses[idx], category, name, frequency, min, variable};
@@ -880,9 +882,12 @@ document.getElementById('saveExpenseBtn').addEventListener('click', async () => 
     expenses.push({ id: 'exp_' + Date.now() + '_' + Math.random().toString(36).slice(2,7), category, name, frequency, min, variable, actuals: {} });
   }
   await saveExpenses();
+  document.getElementById('exp-name').value = '';
+  document.getElementById('exp-min').value = '';
   closeForm();
   renderPersonal();
   renderRunway();
+  showToast(wasEditing ? 'Expense updated successfully!' : 'Expense added successfully!');
 });
 
 // ---------------------------------------------------------------------------
@@ -960,6 +965,7 @@ document.getElementById('saveIncomeBtn').addEventListener('click', async () => {
   const amount = Number(document.getElementById('inc-amount').value) || 0;
   if(!name){ alert('Give this income source a name.'); return; }
 
+  const wasEditing = !!editingIncomeId;
   if(editingIncomeId){
     const idx = income.findIndex(i => i.id === editingIncomeId);
     if(idx > -1) income[idx] = {...income[idx], name, frequency, amount};
@@ -967,10 +973,13 @@ document.getElementById('saveIncomeBtn').addEventListener('click', async () => {
     income.push({ id: 'inc_' + Date.now() + '_' + Math.random().toString(36).slice(2,7), name, frequency, amount });
   }
   await saveIncome();
+  document.getElementById('inc-name').value = '';
+  document.getElementById('inc-amount').value = '';
   closeIncomeForm();
   renderIncome();
   renderPersonal();
   renderRunway();
+  showToast(wasEditing ? 'Income updated successfully!' : 'Income added successfully!');
 });
 
 function renderPersonal(){
@@ -1430,6 +1439,7 @@ document.getElementById('addMonthBtn').addEventListener('click', async () => {
   const monthVal = getBizMonthValue();
   const note = document.getElementById('bizFormNote');
   if(!monthVal){ note.textContent = 'Pick a month first.'; note.style.color = 'var(--red)'; return; }
+  const isUpdatingExisting = months.some(m => m.month === monthVal);
   const entry = {
     month: monthVal,
     revenue: Number(document.getElementById('biz-revenue').value)||0,
@@ -1442,13 +1452,15 @@ document.getElementById('addMonthBtn').addEventListener('click', async () => {
   months = months.filter(m => m.month !== monthVal);
   months.push(entry);
   await saveMonths();
-  note.textContent = 'Saved.';
-  note.style.color = 'var(--green)';
+  ['biz-revenue','biz-expenses','biz-fuel','biz-other','biz-draws','biz-cash'].forEach(id => document.getElementById(id).value = '');
+  ['revSourceHint','expSourceHint','fuelSourceHint'].forEach(id => document.getElementById(id).textContent = '');
+  document.getElementById('pullDiagnosticNote').textContent = '';
+  note.textContent = '';
   renderMonths();
   renderRunway();
   renderNetWorth();
   renderPersonalTotals();
-  setTimeout(()=>{note.textContent='';}, 2000);
+  showToast(isUpdatingExisting ? 'Month updated successfully!' : 'Month added successfully!');
 });
 
 document.getElementById('ef-balance').addEventListener('change', async (e) => {
@@ -1668,19 +1680,45 @@ function renderSafeDraw(min){
 document.getElementById('drawBufferMonths').addEventListener('input', () => renderRunway());
 
 const TAB_ORDER = ['personal', 'business', 'networth', 'runway'];
+let tabSwitchInProgress = false;
 function switchToTab(tabKey){
+  if(tabSwitchInProgress) return; // ignore a second swipe/tap mid-transition rather than glitch
   const btn = document.querySelector(`.tab-btn[data-tab="${tabKey}"]`);
   if(!btn) return;
-  document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
-  document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
-  btn.classList.add('active');
-  btn.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
-  document.getElementById('panel-'+tabKey).classList.add('active');
-  // The trend chart's canvas reads 0 width while its tab is hidden
-  // (display:none elements always report clientWidth 0), so if data
-  // changed while on a different tab, the chart needs a fresh draw
-  // now that it's actually visible and has real layout dimensions.
-  if(tabKey === 'runway') renderRunway();
+  const nextPanel = document.getElementById('panel-'+tabKey);
+  const currentPanel = document.querySelector('.panel.active');
+  if(currentPanel === nextPanel) return;
+
+  const reduceMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  function showNextPanel(){
+    document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
+    btn.classList.add('active');
+    btn.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
+    if(currentPanel){ currentPanel.classList.remove('active', 'fade-out'); currentPanel.style.opacity = ''; }
+    nextPanel.classList.add('active');
+    // The trend chart's canvas reads 0 width while its tab is hidden
+    // (display:none elements always report clientWidth 0), so if data
+    // changed while on a different tab, the chart needs a fresh draw
+    // now that it's actually visible and has real layout dimensions.
+    if(tabKey === 'runway') renderRunway();
+    tabSwitchInProgress = false;
+  }
+
+  if(!currentPanel || reduceMotion){
+    showNextPanel();
+    return;
+  }
+
+  // The old panel actually dissolves before the new one appears, instead
+  // of just vanishing -- sequential fade-out then fade-in, rather than a
+  // true simultaneous crossfade, since this layout doesn't have the two
+  // panels absolutely positioned on top of each other. Overlapping them
+  // without that would show both panels' content stacked for a moment,
+  // which would look broken rather than smooth.
+  tabSwitchInProgress = true;
+  currentPanel.classList.add('fade-out');
+  setTimeout(showNextPanel, 200);
 }
 document.querySelectorAll('.tab-btn').forEach(btn => {
   btn.addEventListener('click', () => switchToTab(btn.dataset.tab));
