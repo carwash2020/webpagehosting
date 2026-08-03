@@ -76,9 +76,12 @@
   .stat-box{background:var(--bg-elevated);border-radius:var(--radius);padding:14px;text-align:center;}
   .stat-box .label{font-size:11px;color:var(--text-dim);text-transform:uppercase;letter-spacing:0.5px;}
   .stat-box .value{font-family:'Anton',sans-serif;font-size:24px;color:var(--orange-light);margin-top:4px;}
-  .stat-box.blue .value{color:var(--blue);}
-  .stat-box.green .value{color:var(--green);}
-  .stat-box.red .value{color:var(--red);}
+  .stat-box.blue .value{color:var(--blue); text-shadow:0 0 12px rgba(58,160,255,0.35);}
+  .stat-box.green .value{color:var(--green); text-shadow:0 0 12px rgba(58,201,106,0.4);}
+  .stat-box.red .value{color:var(--red); text-shadow:0 0 12px rgba(224,85,77,0.35);}
+  .card-hero{border:1px solid rgba(255,128,0,0.35); box-shadow:0 0 0 1px rgba(255,128,0,0.08), 0 8px 24px rgba(255,128,0,0.06);}
+  .card-hero .estimate-headline{font-size:24px; text-shadow:0 0 16px rgba(255,179,71,0.4);}
+  .card-hero .stat-box.green{background:linear-gradient(160deg, rgba(58,201,106,0.14), var(--bg-elevated));}
   button.action-btn{
     background:var(--orange);color:#1a0d02;border:none;font-family:'Oswald',sans-serif;font-weight:700;font-size:13px;
     text-transform:uppercase;letter-spacing:0.5px;padding:11px 18px;border-radius:8px;cursor:pointer;
@@ -194,6 +197,7 @@
 <div class="tabs">
   <button class="tab-btn active" data-tab="personal">Personal Budget</button>
   <button class="tab-btn" data-tab="business">Business Dashboard</button>
+  <button class="tab-btn" data-tab="networth">Net Worth</button>
   <button class="tab-btn" data-tab="runway">Runway Summary</button>
 </div>
 
@@ -201,10 +205,10 @@
   <div id="loading" class="loading">Loading your data…</div>
 
   <div class="panel" id="panel-personal">
-    <div class="card">
+    <div class="card card-hero">
       <div class="card-header"><h3>Safe to Spend <button class="help-btn" onclick="openCardInfo('safeToSpend')" aria-label="What is this?" title="What is this?">?</button></h3></div>
       <div class="form-grid">
-        <div><label>Savings Target (% of what's left)</label><input type="number" id="settingSavingsPct" min="0" max="100" step="1"></div>
+        <div><label>Savings Target (% of what's left)</label><input type="number" inputmode="decimal" id="settingSavingsPct" min="0" max="100" step="1"></div>
       </div>
       <div class="grand-totals" id="safeToSpendStats" style="margin-top:10px;"></div>
       <div class="estimate-headline" id="safeToSpendHeadline">—</div>
@@ -232,7 +236,7 @@
             <option value="annually">Annually</option>
           </select>
         </div>
-        <div><label>Amount (after tax)</label><input type="number" id="inc-amount" placeholder="0"></div>
+        <div><label>Amount (after tax)</label><input type="number" inputmode="decimal" id="inc-amount" placeholder="0"></div>
       </div>
       <div class="form-actions">
         <button class="action-btn" id="saveIncomeBtn" style="width:auto;flex:1;">Save Income</button>
@@ -275,7 +279,7 @@
         <div id="fixedFieldsRow1b"></div>
         <div class="full" id="fixedFieldsRow2">
           <label id="exp-min-label">Amount</label>
-          <input type="number" id="exp-min" placeholder="0">
+          <input type="number" inputmode="decimal" id="exp-min" placeholder="0">
         </div>
       </div>
       <div class="col-hint" id="expTypeHint">Amount is per the frequency you pick above — it's converted to a monthly figure automatically.</div>
@@ -303,15 +307,30 @@
       </div>
       <div class="note" id="pullDiagnosticNote" style="margin-top:-4px;"></div>
       <div class="form-grid">
-        <div><label>Revenue <span class="col-hint" id="revSourceHint"></span></label><input type="number" id="biz-revenue" placeholder="0"></div>
-        <div><label>Business Expenses <span class="col-hint" id="expSourceHint"></span></label><input type="number" id="biz-expenses" placeholder="0"></div>
-        <div><label>Fuel / Mileage <span class="col-hint" id="fuelSourceHint"></span></label><input type="number" id="biz-fuel" placeholder="0"></div>
-        <div><label>Other Expenses</label><input type="number" id="biz-other" placeholder="0"></div>
-        <div><label>Owner Draws</label><input type="number" id="biz-draws" placeholder="0"></div>
-        <div class="full"><label>Cash in Business Account</label><input type="number" id="biz-cash" placeholder="0"></div>
+        <div><label>Revenue <span class="col-hint" id="revSourceHint"></span></label><input type="number" inputmode="decimal" id="biz-revenue" placeholder="0"></div>
+        <div><label>Business Expenses <span class="col-hint" id="expSourceHint"></span></label><input type="number" inputmode="decimal" id="biz-expenses" placeholder="0"></div>
+        <div><label>Fuel / Mileage <span class="col-hint" id="fuelSourceHint"></span></label><input type="number" inputmode="decimal" id="biz-fuel" placeholder="0"></div>
+        <div><label>Other Expenses</label><input type="number" inputmode="decimal" id="biz-other" placeholder="0"></div>
+        <div><label>Owner Draws</label><input type="number" inputmode="decimal" id="biz-draws" placeholder="0"></div>
+        <div class="full"><label>Cash in Business Account</label><input type="number" inputmode="decimal" id="biz-cash" placeholder="0"></div>
       </div>
       <button class="action-btn" id="addMonthBtn">Save Month</button>
       <div class="note" id="bizFormNote"></div>
+    </div>
+
+    <div class="card">
+      <div class="card-header"><h3>Month over Month <button class="help-btn" onclick="openCardInfo('momComparison')" aria-label="What is this?" title="What is this?">?</button></h3></div>
+      <div class="grand-totals" id="momStats"></div>
+      <div class="note" id="momNote"></div>
+    </div>
+
+    <div class="card">
+      <div class="card-header"><h3>Tax Set-Aside <button class="help-btn" onclick="openCardInfo('taxSetAside')" aria-label="What is this?" title="What is this?">?</button></h3></div>
+      <div class="form-grid">
+        <div class="full"><label>Set-Aside Rate (%)</label><input type="number" id="taxSetAsideRate" min="0" max="60" step="1" inputmode="decimal"></div>
+      </div>
+      <div class="grand-totals" id="taxSetAsideStats"></div>
+      <div class="note" id="taxSetAsideNote"></div>
     </div>
 
     <div class="card">
@@ -326,18 +345,26 @@
     </div>
   </div>
 
-  <div class="panel" id="panel-runway">
-    <div class="grand-totals" id="runwayExpenseTotals"></div>
+  <div class="panel" id="panel-networth">
+    <div class="card">
+      <div class="card-header"><h3>Total Net Worth <button class="help-btn" onclick="openCardInfo('netWorth')" aria-label="What is this?" title="What is this?">?</button></h3></div>
+      <div class="grand-totals" id="netWorthStats"></div>
+      <div class="note" id="netWorthNote"></div>
+    </div>
 
     <div class="card">
       <div class="card-header"><h3>Emergency Fund <button class="help-btn" onclick="openCardInfo('emergencyFund')" aria-label="What is this?" title="What is this?">?</button></h3></div>
       <div class="form-grid">
-        <div class="full"><label>Current Balance</label><input type="number" id="ef-balance" placeholder="0"></div>
+        <div class="full"><label>Current Balance</label><input type="number" id="ef-balance" placeholder="0" inputmode="decimal"></div>
       </div>
       <div class="progress-track"><div class="progress-fill" id="efProgress" style="width:0%;"></div></div>
       <div class="progress-labels"><span>0</span><span id="efTargetLabel">6mo target</span><span id="ef12Label">12mo</span></div>
       <div class="note" id="efNote"></div>
     </div>
+  </div>
+
+  <div class="panel" id="panel-runway">
+    <div class="grand-totals" id="runwayExpenseTotals"></div>
 
     <div class="card">
       <div class="card-header"><h3>Income Picture <button class="help-btn" onclick="openCardInfo('incomePicture')" aria-label="What is this?" title="What is this?">?</button></h3></div>
@@ -362,7 +389,7 @@
     <div class="card">
       <div class="card-header"><h3>Safe Draw Calculator <button class="help-btn" onclick="openCardInfo('safeDraw')" aria-label="What is this?" title="What is this?">?</button></h3></div>
       <div class="form-grid">
-        <div><label>Months of buffer to keep in the account</label><input type="number" id="drawBufferMonths" value="3" min="0" step="0.5"></div>
+        <div><label>Months of buffer to keep in the account</label><input type="number" inputmode="decimal" id="drawBufferMonths" value="3" min="0" step="0.5"></div>
       </div>
       <div class="grand-totals" id="safeDrawOutput"></div>
     </div>
@@ -492,6 +519,21 @@ const CARD_INFO = {
     body: `<p>A simple bar chart of your business's net profit for each month you've logged, so you can see at a glance whether it's climbing, flat, or dropping.</p>
       <p>The orange line marks your monthly bills \u2014 bars that reach it or go above it are months the business alone covered your expenses.</p>`,
   },
+  momComparison: {
+    title: 'Month over Month',
+    body: `<p>Compares your two most recently logged months so you can see the trend without doing the math yourself.</p>
+      <p>Green with an up arrow means it grew since last time; otherwise it fell or stayed flat.</p>`,
+  },
+  taxSetAside: {
+    title: 'Tax Set-Aside',
+    body: `<p>A rough estimate of what to set aside for taxes, based on a percentage of your <strong>revenue</strong> \u2014 not profit, since taxes are owed on what came in.</p>
+      <p>Shows both your latest month and a running total for the year, since estimated taxes are typically due quarterly. This is a planning estimate, not tax advice \u2014 talk to an accountant for your actual number.</p>`,
+  },
+  netWorth: {
+    title: 'Total Net Worth',
+    body: `<p>Adds your personal savings and the business's cash on hand together, so you can see your overall position in one number.</p>
+      <p>This is cash on hand, not a complete net worth figure \u2014 it doesn't subtract any debts you owe.</p>`,
+  },
 };
 function openCardInfo(key){
   const info = CARD_INFO[key];
@@ -515,7 +557,7 @@ const CATEGORIES = [
 const FREQ_LABEL = {weekly:"Weekly", biweekly:"Biweekly", monthly:"Monthly", quarterly:"Quarterly", annually:"Annually"};
 
 let expenses = [];
-let budgetSettings = { savingsPct: 20 };
+let budgetSettings = { savingsPct: 20, taxSetAsideRate: 25 };
 let income = [];
 let months = [];
 let efBalance = 0;
@@ -581,9 +623,11 @@ async function loadAll(){
     const parsed = bs ? JSON.parse(bs.value) : null;
     budgetSettings = {
       savingsPct: (parsed && parsed.savingsPct !== undefined) ? Number(parsed.savingsPct) : 20,
+      taxSetAsideRate: (parsed && parsed.taxSetAsideRate !== undefined) ? Number(parsed.taxSetAsideRate) : 25,
     };
-  }catch(e){ budgetSettings = { savingsPct: 20 }; }
+  }catch(e){ budgetSettings = { savingsPct: 20, taxSetAsideRate: 25 }; }
   document.getElementById('settingSavingsPct').value = budgetSettings.savingsPct;
+  document.getElementById('taxSetAsideRate').value = budgetSettings.taxSetAsideRate;
   populateMonthYearSelects();
 
   try{
@@ -601,6 +645,7 @@ async function loadAll(){
   renderPersonal();
   renderIncome();
   renderMonths();
+  renderNetWorth();
   renderRunway();
 }
 
@@ -610,6 +655,11 @@ document.getElementById('settingSavingsPct').addEventListener('change', async (e
   await saveBudgetSettings();
   renderPersonal();
   renderRunway();
+});
+document.getElementById('taxSetAsideRate').addEventListener('change', async (e) => {
+  budgetSettings.taxSetAsideRate = Number(e.target.value) || 0;
+  await saveBudgetSettings();
+  renderMonths();
 });
 
 async function saveExpenses(){ try{ await window.storage.set('personal-expenses', JSON.stringify(expenses)); if(typeof scheduleSync === 'function') scheduleSync(); }catch(e){ console.error(e); } }
@@ -823,7 +873,7 @@ function renderPersonal(){
           </div>
           <div class="row-amounts"><b>${fmt(itemMonthlyAmount(item))}</b>/mo</div>
           <div class="row-actions">
-            <input type="number" class="var-log-input" id="varlog-${item.id}" placeholder="This month's bill">
+            <input type="number" inputmode="decimal" class="var-log-input" id="varlog-${item.id}" placeholder="This month's bill">
             <button class="icon-btn" data-log-var="${item.id}" title="Log this month's actual amount">Log</button>
             <button class="icon-btn danger" data-delete="${item.id}" title="Delete">Del</button>
           </div>
@@ -956,8 +1006,78 @@ function renderMonths(){
       await saveMonths();
       renderMonths();
       renderRunway();
+      renderNetWorth();
     });
   });
+
+  renderMoM(sorted);
+  renderTaxSetAside(sorted);
+}
+
+// ---------------------------------------------------------------------------
+// Month over Month -- compares the two most recently logged months so
+// trends are visible without doing mental math. Compares by which months
+// are actually logged, not calendar-adjacent months -- if May was never
+// logged, June compares against April.
+// ---------------------------------------------------------------------------
+function renderMoM(sorted){
+  const statsEl = document.getElementById('momStats');
+  const noteEl = document.getElementById('momNote');
+  if(sorted.length < 2){
+    statsEl.innerHTML = `<div class="stat-box"><div class="label">Revenue</div><div class="value">—</div></div>`;
+    noteEl.textContent = 'Log at least 2 months to see how they compare.';
+    return;
+  }
+  const curr = sorted[sorted.length - 1];
+  const prev = sorted[sorted.length - 2];
+  const currNet = computeNetProfit(curr);
+  const prevNet = computeNetProfit(prev);
+  const deltaRev = (Number(curr.revenue)||0) - (Number(prev.revenue)||0);
+  const deltaNet = currNet - prevNet;
+
+  const arrow = (n) => n > 0 ? '\u25b2' : (n < 0 ? '\u25bc' : '\u2014');
+  const cls = (n) => n > 0 ? 'green' : (n < 0 ? '' : '');
+
+  statsEl.innerHTML = `
+    <div class="stat-box"><div class="label">Revenue: ${curr.month}</div><div class="value">${fmt(curr.revenue||0)}</div></div>
+    <div class="stat-box ${cls(deltaRev)}"><div class="label">vs. ${prev.month}</div><div class="value">${arrow(deltaRev)} ${fmt(Math.abs(deltaRev))}</div></div>
+    <div class="stat-box"><div class="label">Net Profit: ${curr.month}</div><div class="value">${fmt(currNet)}</div></div>
+    <div class="stat-box ${cls(deltaNet)}"><div class="label">vs. ${prev.month}</div><div class="value">${arrow(deltaNet)} ${fmt(Math.abs(deltaNet))}</div></div>
+  `;
+  noteEl.textContent = deltaNet >= 0
+    ? `Net profit is up ${fmt(Math.abs(deltaNet))} compared to ${prev.month}.`
+    : `Net profit is down ${fmt(Math.abs(deltaNet))} compared to ${prev.month}.`;
+}
+
+// ---------------------------------------------------------------------------
+// Tax Set-Aside -- a percentage of revenue, not profit. Self-employment
+// tax and income tax are both based on what came in, and expenses still
+// need to be covered regardless -- setting aside a share of profit alone
+// tends to come up short. Shows both the latest month and a running
+// year-to-date total, since quarterly estimated taxes are a real deadline.
+// ---------------------------------------------------------------------------
+function renderTaxSetAside(sorted){
+  const statsEl = document.getElementById('taxSetAsideStats');
+  const noteEl = document.getElementById('taxSetAsideNote');
+  const rate = (Number(budgetSettings.taxSetAsideRate) || 0) / 100;
+
+  if(sorted.length === 0){
+    statsEl.innerHTML = `<div class="stat-box"><div class="label">Set Aside</div><div class="value">—</div></div>`;
+    noteEl.textContent = 'Log a business month to see this.';
+    return;
+  }
+  const latest = sorted[sorted.length - 1];
+  const latestSetAside = (Number(latest.revenue)||0) * rate;
+
+  const currentYear = latest.month.slice(0,4);
+  const ytdRevenue = sorted.filter(m => m.month.slice(0,4) === currentYear).reduce((s,m) => s + (Number(m.revenue)||0), 0);
+  const ytdSetAside = ytdRevenue * rate;
+
+  statsEl.innerHTML = `
+    <div class="stat-box"><div class="label">Set Aside for ${latest.month}</div><div class="value">${fmt(latestSetAside)}</div></div>
+    <div class="stat-box blue"><div class="label">${currentYear} Year-to-Date</div><div class="value">${fmt(ytdSetAside)}</div></div>
+  `;
+  noteEl.textContent = `Based on ${budgetSettings.taxSetAsideRate}% of revenue, not profit -- taxes are owed on what came in, and this doesn't replace real advice from an accountant.`;
 }
 
 // ---------------------------------------------------------------------------
@@ -1071,6 +1191,7 @@ document.getElementById('addMonthBtn').addEventListener('click', async () => {
   note.style.color = 'var(--green)';
   renderMonths();
   renderRunway();
+  renderNetWorth();
   setTimeout(()=>{note.textContent='';}, 2000);
 });
 
@@ -1078,7 +1199,26 @@ document.getElementById('ef-balance').addEventListener('change', async (e) => {
   efBalance = Number(e.target.value) || 0;
   await saveEF();
   renderRunway();
+  renderNetWorth();
 });
+
+function renderNetWorth(){
+  const statsEl = document.getElementById('netWorthStats');
+  const noteEl = document.getElementById('netWorthNote');
+  const sorted = [...months].sort((a,b)=> a.month.localeCompare(b.month));
+  const latestMonth = sorted[sorted.length - 1];
+  const businessCash = latestMonth ? (Number(latestMonth.cash) || 0) : 0;
+  const total = efBalance + businessCash;
+
+  statsEl.innerHTML = `
+    <div class="stat-box"><div class="label">Personal Savings</div><div class="value">${fmt(efBalance)}</div></div>
+    <div class="stat-box blue"><div class="label">Business Cash${latestMonth ? ' (' + latestMonth.month + ')' : ''}</div><div class="value">${fmt(businessCash)}</div></div>
+    <div class="stat-box green" style="grid-column:1/-1;"><div class="label">Combined Total</div><div class="value">${fmt(total)}</div></div>
+  `;
+  noteEl.textContent = latestMonth
+    ? `This adds your personal savings and the business's cash on hand together. It doesn't subtract any debts you owe -- it's cash on hand, not a full net worth figure.`
+    : `Log a business month to include business cash here.`;
+}
 
 function linearTrendSlope(points){
   const n = points.length;
