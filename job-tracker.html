@@ -263,11 +263,16 @@
     </div>
   </div>
 
-  <div class="form-section">
-    <h3>Recurring Job Templates</h3>
+  <div class="form-section is-collapsed" id="templatesFormSection">
+    <div class="form-section-header" onclick="toggleFormSection('templatesFormSection')">
+      <h3>Recurring Job Templates <span id="templatesDueBadge"></span></h3>
+      <span class="collapse-chevron">&#9660;</span>
+    </div>
+    <div class="form-section-body">
     <p class="inline-note" style="margin-top:-4px;">Save a job that repeats on a schedule (maintenance contracts, seasonal work). When one's due, it shows up here with a one-tap "Create Job" &mdash; nothing is created automatically without you tapping it.</p>
     <div id="templatesList"></div>
     <button class="secondary-btn" style="margin-top:12px;" onclick="addTemplatePrompt()">+ New Template</button>
+    </div>
   </div>
 
   <div class="tool-form-row">
@@ -518,6 +523,10 @@
     <div class="notes-editor">
       <div class="form-section" id="noteEditorSection" style="display:none;">
         <input type="text" id="noteTitle" placeholder="Note title" oninput="scheduleNoteSave()">
+        <div style="display:flex; align-items:center; justify-content:space-between; gap:8px; margin-top:10px;">
+          <span class="inline-note" style="margin:0;">Note</span>
+          <button type="button" class="voice-btn" id="noteBodyVoiceBtn" onclick="toggleVoiceInput('noteBody', this)" title="Speak your note instead of typing" aria-label="Speak your note instead of typing">&#127908;</button>
+        </div>
         <textarea id="noteBody" placeholder="Anything on your mind..." oninput="scheduleNoteSave()"></textarea>
         <div class="save-indicator" id="noteSaveIndicator">Saved</div>
       </div>
@@ -538,7 +547,7 @@
         <li><strong>Cost Lookup</strong> &mdash; type in hours and parts cost to see the standard price instantly, now with sales tax included in the total. Check/uncheck "Tax labor" and "Tax parts/materials" separately since Utah's rules genuinely differ by job type (not tax advice — confirm your specific situation with the Utah State Tax Commission or your accountant). Optionally type the client's name first — it checks your job history and auto-suggests whether they're new or returning (still overridable). Save frequent job types under "Price Reference" and tap one anytime to reload it.</li>
         <li><strong>Expenses</strong> &mdash; log expenses or mileage, now with vendor, payment method, and an optional link to a specific job. A receipt photo is required for expense entries (not mileage, since there's no physical receipt for driving miles) &mdash; tap "View" on any logged entry to see its receipt. Mileage rate lives right next to the Miles field since it's only relevant for mileage entries. Export CSV anytime for a backup or for taxes &mdash; now includes a link to each receipt too.</li>
         <li><strong>Contacts</strong> &mdash; a quick address book for vendors, suppliers, or recurring clients. Tap "History" on any contact to see their past jobs and lifetime spend (matched by exact name against Jobs and Invoices).</li>
-        <li><strong>Notes</strong> &mdash; keep as many separate, named notes as you want. Search by title or content, click one on the left to open it, or start a new one. Saves automatically as you type.</li>
+        <li><strong>Notes</strong> &mdash; keep as many separate, named notes as you want. Search by title or content, click one on the left to open it, or start a new one. Saves automatically as you type, including anything dictated with the microphone button.</li>
       </ul>
       <p>Set up Cloud Sync once on the Workspace page's "?" help, and this data follows you to any device using the same sync code. The small dot next to the sync status shows whether live updates are connected &mdash; green means changes on another device show up here automatically, no refresh needed.</p>
     </div>
@@ -839,6 +848,17 @@
   function renderTemplates() {
     const templates = loadTemplates();
     const container = document.getElementById('templatesList');
+    const dueCount = templates.filter(t => templateDueInfo(t).isDue).length;
+    const badge = document.getElementById('templatesDueBadge');
+    if (badge) {
+      badge.textContent = dueCount > 0 ? `${dueCount} due` : '';
+      badge.className = dueCount > 0 ? 'template-due-badge is-due' : '';
+    }
+    // A due template shouldn't stay hidden just because this section
+    // defaults to collapsed -- if something actually needs attention,
+    // open it automatically rather than making it easy to miss.
+    if (dueCount > 0) toggleFormSection('templatesFormSection', true);
+
     if (templates.length === 0) {
       container.innerHTML = '<div class="inline-note">No recurring templates yet.</div>';
       return;
@@ -1068,6 +1088,12 @@
       let transcript = '';
       for (let i = 0; i < event.results.length; i++) transcript += event.results[i][0].transcript;
       textarea.value = startingValue + (needsSeparator ? ' ' : '') + transcript;
+      // Setting .value directly from JS does NOT fire a real 'input' event
+      // the way typing does -- dispatching one here is what makes the
+      // Notes tab's autosave (oninput="scheduleNoteSave()") actually run.
+      // Without this, dictated text would sit in the textarea but never
+      // actually get saved.
+      textarea.dispatchEvent(new Event('input', { bubbles: true }));
     };
     recognition.onerror = (event) => {
       if (event.error === 'not-allowed' || event.error === 'service-not-allowed') {
@@ -1852,14 +1878,14 @@
     }
     container.innerHTML = contacts.map(c => `
       <div class="contact-card" style="flex-direction:column; align-items:stretch;">
-        <div style="display:flex; justify-content:space-between; align-items:center; gap:12px;">
+        <div style="display:flex; justify-content:space-between; align-items:center; gap:12px; flex-wrap:wrap;">
           <div class="contact-card-text">
             <h4>${escapeHtml(c.name)}${c.role ? ' &mdash; ' + escapeHtml(c.role) : ''}</h4>
             ${c.phone ? `<p>${escapeHtml(c.phone)}</p>` : ''}
             ${c.email ? `<p>${escapeHtml(c.email)}</p>` : ''}
             ${c.notes ? `<p>${escapeHtml(c.notes)}</p>` : ''}
           </div>
-          <div style="display:flex; gap:8px; flex-shrink:0;">
+          <div style="display:flex; gap:8px; flex-wrap:wrap;">
             <button class="small-btn" onclick="toggleClientHistory(${c.id})">History</button>
             <button class="small-btn" onclick="editContact(${c.id})">Edit</button>
             <button class="small-btn danger" onclick="deleteContact(${c.id})">Delete</button>
