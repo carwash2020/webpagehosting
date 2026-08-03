@@ -69,21 +69,6 @@
   .job-card-meta { color: var(--text-dim); font-size: 13px; margin-bottom: 6px; }
   .job-card-notes { color: var(--text-dim); font-size: 13.5px; font-style: italic; margin-bottom: 12px; }
   .job-card-actions { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
-  .voice-btn{
-    flex-shrink:0; width:26px; height:26px; border-radius:50%;
-    border:1px solid var(--border); background:var(--bg-panel-2); color:var(--text-dim);
-    font-size:13px; cursor:pointer; display:flex; align-items:center; justify-content:center;
-    transition:border-color .15s ease, color .15s ease, background .15s ease;
-  }
-  .voice-btn:hover{ border-color:var(--orange-light); color:var(--orange-light); }
-  .voice-btn.is-recording{
-    border-color:#e05252; background:rgba(224,82,82,0.15); color:#e05252;
-    animation: voicePulse 1.3s ease-in-out infinite;
-  }
-  @keyframes voicePulse {
-    0%, 100% { box-shadow: 0 0 0 0 rgba(224,82,82,0.4); }
-    50% { box-shadow: 0 0 0 6px rgba(224,82,82,0.15); }
-  }
   .status-select {
     background: none; border: 1px solid var(--border); color: var(--text-dim);
     border-radius: 6px; padding: 9px 12px; font-size: 13px; font-family: inherit;
@@ -250,10 +235,7 @@
     </div>
     <div class="tool-form-row">
       <div class="form-field">
-        <label style="display:flex; align-items:center; justify-content:space-between; gap:8px;">
-          <span>Notes</span>
-          <button type="button" class="voice-btn" id="jobNotesVoiceBtn" onclick="toggleVoiceInput('jobNotes', this)" title="Speak your notes instead of typing" aria-label="Speak your notes instead of typing">&#127908;</button>
-        </label>
+        <label>Notes</label>
         <textarea id="jobNotes" placeholder="Anything worth remembering about this job"></textarea>
       </div>
     </div>
@@ -523,10 +505,6 @@
     <div class="notes-editor">
       <div class="form-section" id="noteEditorSection" style="display:none;">
         <input type="text" id="noteTitle" placeholder="Note title" oninput="scheduleNoteSave()">
-        <div style="display:flex; align-items:center; justify-content:space-between; gap:8px; margin-top:10px;">
-          <span class="inline-note" style="margin:0;">Note</span>
-          <button type="button" class="voice-btn" id="noteBodyVoiceBtn" onclick="toggleVoiceInput('noteBody', this)" title="Speak your note instead of typing" aria-label="Speak your note instead of typing">&#127908;</button>
-        </div>
         <textarea id="noteBody" placeholder="Anything on your mind..." oninput="scheduleNoteSave()"></textarea>
         <div class="save-indicator" id="noteSaveIndicator">Saved</div>
       </div>
@@ -547,7 +525,7 @@
         <li><strong>Cost Lookup</strong> &mdash; type in hours and parts cost to see the standard price instantly, now with sales tax included in the total. Check/uncheck "Tax labor" and "Tax parts/materials" separately since Utah's rules genuinely differ by job type (not tax advice — confirm your specific situation with the Utah State Tax Commission or your accountant). Optionally type the client's name first — it checks your job history and auto-suggests whether they're new or returning (still overridable). Save frequent job types under "Price Reference" and tap one anytime to reload it.</li>
         <li><strong>Expenses</strong> &mdash; log expenses or mileage, now with vendor, payment method, and an optional link to a specific job. A receipt photo is required for expense entries (not mileage, since there's no physical receipt for driving miles) &mdash; tap "View" on any logged entry to see its receipt. Mileage rate lives right next to the Miles field since it's only relevant for mileage entries. Export CSV anytime for a backup or for taxes &mdash; now includes a link to each receipt too.</li>
         <li><strong>Contacts</strong> &mdash; a quick address book for vendors, suppliers, or recurring clients. Tap "History" on any contact to see their past jobs and lifetime spend (matched by exact name against Jobs and Invoices).</li>
-        <li><strong>Notes</strong> &mdash; keep as many separate, named notes as you want. Search by title or content, click one on the left to open it, or start a new one. Saves automatically as you type, including anything dictated with the microphone button.</li>
+        <li><strong>Notes</strong> &mdash; keep as many separate, named notes as you want. Search by title or content, click one on the left to open it, or start a new one. Saves automatically as you type.</li>
       </ul>
       <p>Set up Cloud Sync once on the Workspace page's "?" help, and this data follows you to any device using the same sync code. The small dot next to the sync status shows whether live updates are connected &mdash; green means changes on another device show up here automatically, no refresh needed.</p>
     </div>
@@ -1041,77 +1019,6 @@
           <div id="photos-${job.id}" style="display:none; margin-top:14px; padding-top:14px; border-top:1px solid var(--border);"></div>
         </div>`;
     }).join('');
-  }
-
-  // ---------- voice-to-text ----------
-  // Uses the browser's built-in Speech Recognition API directly -- no
-  // library, no server round-trip. Not supported in Firefox at all, so
-  // the button quietly does nothing useful there rather than erroring;
-  // worth knowing if this ever needs a fallback.
-  let activeRecognition = null;
-  let activeRecognitionBtn = null;
-
-  function getSpeechRecognitionAPI() {
-    return window.SpeechRecognition || window.webkitSpeechRecognition || null;
-  }
-
-  async function toggleVoiceInput(textareaId, btn) {
-    const SpeechRecognitionAPI = getSpeechRecognitionAPI();
-    if (!SpeechRecognitionAPI) {
-      await showAlert('Voice input isn\'t supported in this browser -- try Chrome or Safari instead.');
-      return;
-    }
-
-    // Tapping the button that's already recording stops it early.
-    if (activeRecognition && activeRecognitionBtn === btn) {
-      activeRecognition.stop();
-      return;
-    }
-    // A different field was mid-recording -- stop that one first so two
-    // recognitions never run at once.
-    if (activeRecognition) activeRecognition.stop();
-
-    const textarea = document.getElementById(textareaId);
-    const startingValue = textarea.value;
-    const needsSeparator = startingValue && !/[\s\n]$/.test(startingValue);
-
-    const recognition = new SpeechRecognitionAPI();
-    recognition.continuous = true;
-    recognition.interimResults = false;
-    recognition.lang = 'en-US';
-
-    btn.classList.add('is-recording');
-    activeRecognition = recognition;
-    activeRecognitionBtn = btn;
-
-    recognition.onresult = (event) => {
-      let transcript = '';
-      for (let i = 0; i < event.results.length; i++) transcript += event.results[i][0].transcript;
-      textarea.value = startingValue + (needsSeparator ? ' ' : '') + transcript;
-      // Setting .value directly from JS does NOT fire a real 'input' event
-      // the way typing does -- dispatching one here is what makes the
-      // Notes tab's autosave (oninput="scheduleNoteSave()") actually run.
-      // Without this, dictated text would sit in the textarea but never
-      // actually get saved.
-      textarea.dispatchEvent(new Event('input', { bubbles: true }));
-    };
-    recognition.onerror = (event) => {
-      if (event.error === 'not-allowed' || event.error === 'service-not-allowed') {
-        showAlert('Microphone access was blocked -- check your browser\'s site permissions.');
-      }
-    };
-    recognition.onend = () => {
-      btn.classList.remove('is-recording');
-      if (activeRecognitionBtn === btn) { activeRecognition = null; activeRecognitionBtn = null; }
-    };
-
-    try {
-      recognition.start();
-    } catch (e) {
-      btn.classList.remove('is-recording');
-      activeRecognition = null;
-      activeRecognitionBtn = null;
-    }
   }
 
   function toggleShowOnCalendar(jobId) {
