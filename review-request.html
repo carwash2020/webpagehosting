@@ -101,7 +101,7 @@
     <a class="action-btn btn-send" id="sendLink" href="#">Open Text Message</a>
   </div>
   <div class="copy-confirm" id="copyConfirm">Copied! Paste it in if the text app doesn't fill it in automatically.</div>
-  <p class="fallback-note">Tapping "Open Text Message" opens your phone's messaging app addressed to this number. Most phones pre-fill the message text automatically &mdash; if yours doesn't, just tap Copy Message first and paste it in.</p>
+  <div style="display:flex; align-items:center; gap:6px; margin-top:4px;"><button class="help-btn" onclick="openCardInfo('sendButton')" aria-label="What does Open Text Message do?" title="What does Open Text Message do?">?</button><span class="fallback-note" style="margin:0;">What "Open Text Message" does</span></div>
 </div>
 
 <div class="help-modal-overlay" id="helpModalOverlay" onclick="if(event.target===this) closeHelpModal()">
@@ -161,6 +161,18 @@
   ];
 
   let currentVariantIndex = Math.floor(Math.random() * MESSAGE_VARIANTS.length);
+
+  const CARD_INFO = {
+    sendButton: {
+      title: 'Open Text Message',
+      body: `<p>Tapping "Open Text Message" opens your phone's messaging app addressed to this number.</p>
+        <p>Most phones pre-fill the message text automatically &mdash; if yours doesn't, just tap Copy Message first and paste it in.</p>`,
+    },
+  };
+  function openCardInfo(key) {
+    const info = CARD_INFO[key];
+    if (info) openInfoModal(info.title, info.body);
+  }
 
   function buildMessage() {
     const name = document.getElementById('custName').value.trim();

@@ -210,8 +210,7 @@
 </div>
 
 <div class="form-section">
-  <h3>Client Signature <span style="color:var(--text-dim); font-weight:400; text-transform:none; letter-spacing:0;">(optional)</span></h3>
-  <p style="color:var(--text-dim); font-size: 13px; margin: -6px 0 12px;">If the client is signing in person right now, have them sign below with a finger or mouse before generating the PDF &mdash; it'll be embedded directly into the document instead of leaving a blank line. Skip this entirely and the PDF works exactly like before, ready for hand-signing later.</p>
+  <h3>Client Signature <span style="color:var(--text-dim); font-weight:400; text-transform:none; letter-spacing:0;">(optional)</span> <button class="help-btn" onclick="openCardInfo('signature')" aria-label="What is this?" title="What is this?">?</button></h3>
   <canvas id="signatureCanvas" width="600" height="180" style="width:100%; max-width:600px; height:180px; background:#ffffff; border:1px solid var(--border); border-radius:8px; touch-action:none; cursor:crosshair; display:block;"></canvas>
   <div style="display:flex; gap:10px; margin-top:10px;">
     <button type="button" class="secondary-btn" onclick="clearSignature()">Clear Signature</button>
@@ -240,6 +239,18 @@
 </div>
 
 <script>
+  const CARD_INFO = {
+    signature: {
+      title: 'Client Signature',
+      body: `<p>If the client is signing in person right now, have them sign with a finger or mouse before generating the PDF &mdash; it'll be embedded directly into the document instead of leaving a blank line.</p>
+        <p>Skip this entirely and the PDF works exactly like before, ready for hand-signing later.</p>`,
+    },
+  };
+  function openCardInfo(key) {
+    const info = CARD_INFO[key];
+    if (info) openInfoModal(info.title, info.body);
+  }
+
   function escapeHtml(str) {
     const div = document.createElement('div');
     div.textContent = str;

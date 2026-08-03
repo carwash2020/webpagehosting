@@ -153,7 +153,7 @@
   <button type="button" class="add-row-btn" onclick="addLineItem()">+ Add line item</button>
 
   <div class="totals-box">
-    <p class="inline-note" style="margin:0 0 10px;">Utah taxes repair labor on things like appliances, but labor on items permanently attached to real property is often exempt &mdash; parts are usually taxed either way. Uncheck "Tax?" on any exempt row. Not tax advice &mdash; confirm your situation with the Utah State Tax Commission or your accountant.</p>
+    <div style="margin:0 0 10px; display:flex; align-items:center; gap:6px;"><button class="help-btn" onclick="openCardInfo('salesTax')" aria-label="About sales tax on this invoice" title="About sales tax on this invoice">?</button><span class="inline-note" style="margin:0;">Sales tax on repair labor</span></div>
     <div class="tool-form-row">
       <div class="form-field" style="max-width:180px;">
         <label>Sales tax rate (%)</label>
@@ -246,7 +246,7 @@
   <button type="button" class="add-row-btn" onclick="addQuoteLineItem()">+ Add line item</button>
 
   <div class="totals-box">
-    <p class="inline-note" style="margin:0 0 10px;">Same tax rules as the Invoice tab &mdash; uncheck "Tax?" on rows that are exempt. Not tax advice.</p>
+    <div style="margin:0 0 10px; display:flex; align-items:center; gap:6px;"><button class="help-btn" onclick="openCardInfo('salesTax')" aria-label="About sales tax on this estimate" title="About sales tax on this estimate">?</button><span class="inline-note" style="margin:0;">Sales tax on repair labor</span></div>
     <div class="tool-form-row">
       <div class="form-field" style="max-width:180px;">
         <label>Sales tax rate (%)</label>
@@ -302,6 +302,18 @@
   function loadJobs() {
     try { return JSON.parse(localStorage.getItem('th_tracker_jobs') || '[]'); }
     catch (e) { return []; }
+  }
+
+  const CARD_INFO = {
+    salesTax: {
+      title: 'Sales Tax',
+      body: `<p>Utah taxes repair labor on things like appliances, but labor on items permanently attached to real property is often exempt &mdash; parts are usually taxed either way. Uncheck "Tax?" on any exempt row.</p>
+        <p>Not tax advice &mdash; confirm your situation with the Utah State Tax Commission or your accountant.</p>`,
+    },
+  };
+  function openCardInfo(key) {
+    const info = CARD_INFO[key];
+    if (info) openInfoModal(info.title, info.body);
   }
 
   function escapeHtml(str) {
