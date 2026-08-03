@@ -170,6 +170,16 @@
   .realtime-dot.is-error { background: #e05252; }
 
   .backup-row { display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 10px; }
+
+  /* Tools grid -- naturally one column on a phone (minmax(260px,1fr) can't
+     fit two side by side under ~520px), becomes two columns on anything
+     wider, with no manual breakpoint needed. Cards are also more compact
+     than the original single-column stack, since 7+ of them stacked at
+     full padding was the single biggest source of page length. */
+  .tools-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 12px; }
+  .tools-grid .tool-card { margin-bottom: 0; padding: 16px 18px; }
+  .tools-grid .tool-card-text h3 { font-size: 15.5px; margin-bottom: 3px; }
+  .tools-grid .tool-card-text p { font-size: 12.5px; line-height: 1.4; }
 </style>
 </head>
 <body>
@@ -373,6 +383,7 @@
     <span>Tools</span>
   </div>
 
+  <div class="tools-grid">
   <a href="/job-tracker.html" class="tool-card">
     <div class="tool-card-text">
       <h3>Job Tracker</h3>
@@ -428,6 +439,7 @@
     </div>
     <span class="tool-card-arrow">&rarr;</span>
   </a>
+  </div>
 </div>
 
 
@@ -472,7 +484,7 @@
   }
 
   const COLLAPSE_STATE_KEY = 'th_dash_collapsed';
-  const DEFAULT_COLLAPSE = { today: false, snapshot: false, actionitems: false, businesshealth: true };
+  const DEFAULT_COLLAPSE = { today: false, snapshot: true, actionitems: false, businesshealth: true };
 
   function loadCollapseState() {
     try {

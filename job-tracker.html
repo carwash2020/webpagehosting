@@ -180,6 +180,17 @@
     background: rgba(255,128,0,0.1); border: 1px solid rgba(255,128,0,0.35); border-radius: 8px;
     padding: 9px 12px; font-size: 13px; color: var(--orange-light); margin-bottom: 10px;
   }
+  .form-section-header {
+    display: flex; justify-content: space-between; align-items: center;
+    cursor: pointer; user-select: none;
+  }
+  .form-section-header h3 { margin: 0; }
+  .form-section-header .collapse-chevron {
+    color: var(--text-dim); font-size: 13px; transition: transform 0.2s ease; flex-shrink: 0; margin-left: 10px;
+  }
+  .form-section.is-collapsed .collapse-chevron { transform: rotate(-90deg); }
+  .form-section.is-collapsed .form-section-body { display: none; }
+  .form-section-body { margin-top: 14px; }
 </style>
 </head>
 <body>
@@ -208,8 +219,12 @@
 
 <!-- JOBS TAB -->
 <div class="tab-panel is-active" id="tab-jobs">
-  <div class="form-section">
-    <h3>Add a Job</h3>
+  <div class="form-section is-collapsed" id="jobFormSection">
+    <div class="form-section-header" onclick="toggleFormSection('jobFormSection')">
+      <h3>Add a Job</h3>
+      <span class="collapse-chevron">&#9660;</span>
+    </div>
+    <div class="form-section-body">
     <div class="tool-form-row">
       <div class="form-field"><label>Job Title / Description</label><input type="text" id="jobTitle" placeholder="Fix leaking kitchen faucet"></div>
       <div class="form-field"><label>Client Name</label><input type="text" id="jobClient" placeholder="Sarah Miller"></div>
@@ -245,6 +260,7 @@
     <div class="edit-mode-note" id="jobEditNote" style="display:none;"></div>
     <button class="primary-btn" id="addJobBtn" onclick="addJob()">Add Job</button>
     <button class="secondary-btn" id="cancelJobEditBtn" style="display:none;" onclick="cancelJobEdit()">Cancel</button>
+    </div>
   </div>
 
   <div class="form-section">
@@ -346,9 +362,13 @@
 
 <!-- INCOME TAB -->
 <div class="tab-panel" id="tab-income">
-  <div class="form-section">
-    <h3>Add Entry</h3>
-    <p class="inline-note">For income that doesn't go through a formal invoice \u2014 cash jobs, tips, anything paid outside Invoice Generator. Every invoice you generate is logged here automatically, so you don't need to re-enter those.</p>
+  <div class="form-section is-collapsed" id="incomeFormSection">
+    <div class="form-section-header" onclick="toggleFormSection('incomeFormSection')">
+      <h3>Add Entry</h3>
+      <span class="collapse-chevron">&#9660;</span>
+    </div>
+    <div class="form-section-body">
+    <p class="inline-note">For income that doesn't go through a formal invoice &mdash; cash jobs, tips, anything paid outside Invoice Generator. Every invoice you generate is logged here automatically, so you don't need to re-enter those.</p>
     <div class="tool-form-row">
       <div class="form-field"><label>Date</label><input type="date" id="incomeDate"></div>
       <div class="form-field"><label>Client / Source</label><input type="text" id="incomeSource" placeholder="Jane Smith, or 'Cash job'"></div>
@@ -373,6 +393,7 @@
     <div class="edit-mode-note" id="incomeEditNote" style="display:none;"></div>
     <button class="primary-btn" id="addIncomeEntryBtn" onclick="addIncomeEntry()" style="margin-top:10px;">Add Entry</button>
     <button class="secondary-btn" id="cancelIncomeEditBtn" style="display:none;" onclick="cancelIncomeEntryEdit()">Cancel</button>
+    </div>
   </div>
 
   <div class="form-section">
@@ -390,8 +411,12 @@
 
 <!-- EXPENSES TAB -->
 <div class="tab-panel" id="tab-expenses">
-  <div class="form-section">
-    <h3>Add Entry</h3>
+  <div class="form-section is-collapsed" id="expenseFormSection">
+    <div class="form-section-header" onclick="toggleFormSection('expenseFormSection')">
+      <h3>Add Entry</h3>
+      <span class="collapse-chevron">&#9660;</span>
+    </div>
+    <div class="form-section-body">
     <div class="tool-form-row">
       <div class="form-field"><label>Date</label><input type="date" id="entryDate"></div>
       <div class="form-field"><label>Type</label>
@@ -438,6 +463,7 @@
     <div class="edit-mode-note" id="expenseEditNote" style="display:none;"></div>
     <button class="primary-btn" id="addEntryBtn" onclick="addExpense()" style="margin-top:10px;">Add Entry</button>
     <button class="secondary-btn" id="cancelExpenseEditBtn" style="display:none;" onclick="cancelExpenseEdit()">Cancel</button>
+    </div>
   </div>
 
   <div class="form-section">
@@ -455,8 +481,12 @@
 
 <!-- CONTACTS TAB -->
 <div class="tab-panel" id="tab-contacts">
-  <div class="form-section">
-    <h3>Add a Contact</h3>
+  <div class="form-section is-collapsed" id="contactFormSection">
+    <div class="form-section-header" onclick="toggleFormSection('contactFormSection')">
+      <h3>Add a Contact</h3>
+      <span class="collapse-chevron">&#9660;</span>
+    </div>
+    <div class="form-section-body">
     <div class="tool-form-row">
       <div class="form-field"><label>Name</label><input type="text" id="contactName" placeholder="Ray Bice"></div>
       <div class="form-field"><label>Role / Company</label><input type="text" id="contactRole" placeholder="Glamour Works - Supplier"></div>
@@ -471,6 +501,7 @@
     <div class="edit-mode-note" id="contactEditNote" style="display:none;"></div>
     <button class="primary-btn" id="addContactBtn" onclick="addContact()">Add Contact</button>
     <button class="secondary-btn" id="cancelContactEditBtn" style="display:none;" onclick="cancelContactEdit()">Cancel</button>
+    </div>
   </div>
   <div class="form-field"><input type="text" id="contactSearch" placeholder="Search contacts by name, phone, or email..." oninput="renderContacts()" aria-label="Search contacts"></div>
   <div id="contactsList"></div>
@@ -729,6 +760,7 @@
     const job = loadJobs().find(j => j.id === id);
     if (!job) return;
     editingJobId = id;
+    toggleFormSection('jobFormSection', true);
     document.getElementById('jobTitle').value = job.title || '';
     document.getElementById('jobClient').value = job.client || '';
     document.getElementById('jobPhone').value = job.phone || '';
@@ -752,6 +784,7 @@
     document.getElementById('addJobBtn').textContent = 'Add Job';
     document.getElementById('cancelJobEditBtn').style.display = 'none';
     document.getElementById('jobEditNote').style.display = 'none';
+    document.getElementById('jobFormSection').classList.add('is-collapsed');
   }
 
   async function deleteJob(id) {
@@ -882,6 +915,16 @@
 
   let currentStatusFilter = 'all';
   let editingJobId = null;
+
+  // Generic collapse/expand for the "Add X" form sections -- these start
+  // collapsed on every tab now that there are several of them, so the
+  // page opens showing the actual data instead of an empty form first.
+  function toggleFormSection(id, forceOpen) {
+    const el = document.getElementById(id);
+    if (!el) return;
+    if (forceOpen) el.classList.remove('is-collapsed');
+    else el.classList.toggle('is-collapsed');
+  }
   const STATUS_FILTER_KEY = 'th_job_status_filter';
   function setStatusFilter(filter) {
     currentStatusFilter = filter;
@@ -1320,6 +1363,7 @@
     const entry = loadIncomeEntries().find(e => e.id === id);
     if (!entry || entry.origin === 'invoice') return; // invoice-derived entries stay tied to their real document, not editable here
     editingIncomeEntryId = id;
+    toggleFormSection('incomeFormSection', true);
     document.getElementById('incomeDate').value = entry.date || '';
     document.getElementById('incomeSource').value = entry.source || '';
     document.getElementById('incomeJobRef').value = entry.jobRefId || '';
@@ -1340,6 +1384,7 @@
     document.getElementById('addIncomeEntryBtn').textContent = 'Add Entry';
     document.getElementById('cancelIncomeEditBtn').style.display = 'none';
     document.getElementById('incomeEditNote').style.display = 'none';
+    document.getElementById('incomeFormSection').classList.add('is-collapsed');
   }
 
   async function deleteIncomeEntry(id) {
@@ -1591,6 +1636,7 @@
     const entry = loadExpenses().find(e => e.id === id);
     if (!entry) return;
     editingExpenseId = id;
+    toggleFormSection('expenseFormSection', true);
     document.getElementById('entryDate').value = entry.date || '';
     document.getElementById('entryType').value = entry.type || 'expense';
     document.getElementById('entryType').dispatchEvent(new Event('change'));
@@ -1622,6 +1668,7 @@
     document.getElementById('addEntryBtn').textContent = 'Add Entry';
     document.getElementById('cancelExpenseEditBtn').style.display = 'none';
     document.getElementById('expenseEditNote').style.display = 'none';
+    document.getElementById('expenseFormSection').classList.add('is-collapsed');
   }
 
   async function deleteExpense(id) {
@@ -1752,6 +1799,7 @@
     const contact = loadContacts().find(c => c.id === id);
     if (!contact) return;
     editingContactId = id;
+    toggleFormSection('contactFormSection', true);
     document.getElementById('contactName').value = contact.name || '';
     document.getElementById('contactRole').value = contact.role || '';
     document.getElementById('contactPhone').value = contact.phone || '';
@@ -1771,6 +1819,7 @@
     document.getElementById('addContactBtn').textContent = 'Add Contact';
     document.getElementById('cancelContactEditBtn').style.display = 'none';
     document.getElementById('contactEditNote').style.display = 'none';
+    document.getElementById('contactFormSection').classList.add('is-collapsed');
   }
 
   async function deleteContact(id) {
