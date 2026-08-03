@@ -51,6 +51,7 @@ const SYNC_DATA_KEYS = [
   'th_tracker_contacts',
   'th_tracker_notes_v2',
   'th_expense_log',
+  'th_income_log',
   'th_mileage_rate',
   'th_price_reference',
   'th_invoices',

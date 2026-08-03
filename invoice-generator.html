@@ -719,11 +719,37 @@
     if (typeof scheduleSync === 'function') scheduleSync();
   }
 
+  // Every generated invoice gets mirrored into Job Tracker's Income log
+  // automatically, so income shows up in one place without re-entering it.
+  // th_invoices stays exactly as it was (the actual invoice documents,
+  // used for re-download/paid-status/client details) -- this is a
+  // parallel, lighter-weight record purely for the income total.
+  const INCOME_LOG_KEY = 'th_income_log';
+  function logInvoiceToIncomeLog(invoiceEntry) {
+    try {
+      const list = JSON.parse(localStorage.getItem(INCOME_LOG_KEY) || '[]');
+      list.push({
+        id: Date.now() + 1, // +1 avoids colliding with the invoice's own id, created in the same tick
+        date: invoiceEntry.date,
+        desc: 'Invoice #' + (invoiceEntry.invoiceNumber || '') ,
+        amount: invoiceEntry.total,
+        source: invoiceEntry.clientName,
+        payment: '',
+        jobRefId: invoiceEntry.jobRefId || '',
+        jobRefTitle: invoiceEntry.jobRefTitle || '',
+        origin: 'invoice',
+        invoiceId: invoiceEntry.id,
+      });
+      localStorage.setItem(INCOME_LOG_KEY, JSON.stringify(list));
+      if (typeof scheduleSync === 'function') scheduleSync();
+    } catch (e) { console.error('Could not log invoice to income log:', e); }
+  }
+
   function logInvoice(totals) {
     const list = loadInvoiceLog();
     const jobRefId = document.getElementById('invoiceJobRef').value;
     const jobRefTitle = jobRefId ? (loadJobs().find(j => String(j.id) === jobRefId) || {}).title || '' : '';
-    list.push({
+    const newEntry = {
       id: Date.now(),
       invoiceNumber: document.getElementById('invoiceNumber').value,
       clientName: document.getElementById('clientName').value || '(no name)',
@@ -736,8 +762,10 @@
       paid: false,
       jobRefId: jobRefId || '',
       jobRefTitle,
-    });
+    };
+    list.push(newEntry);
     saveInvoiceLog(list);
+    logInvoiceToIncomeLog(newEntry);
   }
 
   // ---------- Quote logging (separate from invoices) ----------

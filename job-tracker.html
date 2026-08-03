@@ -196,6 +196,7 @@
   <button class="tab-btn is-active" data-tab="jobs">Jobs</button>
   <button class="tab-btn" data-tab="cost">Cost Lookup</button>
   <button class="tab-btn" data-tab="profitability">Profitability</button>
+  <button class="tab-btn" data-tab="income">Income</button>
   <button class="tab-btn" data-tab="expenses">Expenses</button>
   <button class="tab-btn" data-tab="contacts">Contacts</button>
   <button class="tab-btn" data-tab="notes">Notes</button>
@@ -337,6 +338,48 @@
   </div>
 </div>
 
+<!-- INCOME TAB -->
+<div class="tab-panel" id="tab-income">
+  <div class="form-section">
+    <h3>Add Entry</h3>
+    <p class="inline-note">For income that doesn't go through a formal invoice \u2014 cash jobs, tips, anything paid outside Invoice Generator. Every invoice you generate is logged here automatically, so you don't need to re-enter those.</p>
+    <div class="tool-form-row">
+      <div class="form-field"><label>Date</label><input type="date" id="incomeDate"></div>
+      <div class="form-field"><label>Client / Source</label><input type="text" id="incomeSource" placeholder="Jane Smith, or 'Cash job'"></div>
+      <div class="form-field"><label>Job (optional)</label>
+        <select id="incomeJobRef"><option value="">&mdash; None &mdash;</option></select>
+      </div>
+    </div>
+    <div class="tool-form-row">
+      <div class="form-field"><label>Payment Method</label>
+        <select id="incomePayment">
+          <option value="cash">Cash</option>
+          <option value="card">Card</option>
+          <option value="check">Check</option>
+          <option value="venmo">Venmo</option>
+          <option value="cashapp">Cash App</option>
+          <option value="other">Other</option>
+        </select>
+      </div>
+      <div class="form-field"><label>Description</label><input type="text" id="incomeDesc" placeholder="Deck repair, final payment"></div>
+      <div class="form-field"><label>Amount ($)</label><input type="number" id="incomeAmount" step="0.01" min="0"></div>
+    </div>
+    <button class="primary-btn" id="addIncomeEntryBtn" onclick="addIncomeEntry()" style="margin-top:10px;">Add Entry</button>
+  </div>
+
+  <div class="form-section">
+    <h3>Log</h3>
+    <div class="table-scroll">
+      <div id="incomeTable"></div>
+    </div>
+    <div class="totals-row-money" id="incomeTotalsRow"></div>
+    <div class="btn-row">
+      <button class="secondary-btn" onclick="exportIncomeCSV()">Export CSV</button>
+      <button class="secondary-btn" onclick="clearAllIncome()">Clear All</button>
+    </div>
+  </div>
+</div>
+
 <!-- EXPENSES TAB -->
 <div class="tab-panel" id="tab-expenses">
   <div class="form-section">
@@ -462,6 +505,7 @@
 <script>
   const STORAGE_KEYS = { jobs: 'th_tracker_jobs', contacts: 'th_tracker_contacts', notes: 'th_tracker_notes_v2', priceRef: 'th_price_reference' };
   const EXPENSE_STORAGE_KEY = 'th_expense_log';
+  const INCOME_STORAGE_KEY = 'th_income_log';
   const RATE_STORAGE_KEY = 'th_mileage_rate';
   const OLD_NOTES_KEY = 'th_tracker_notes'; // legacy single-note key, read once for migration only
 
@@ -513,12 +557,15 @@
   async function onRealtimeChange() {
     updateSyncStatusText();
     document.getElementById('entryDate').value = document.getElementById('entryDate').value || new Date().toISOString().slice(0, 10);
+    document.getElementById('incomeDate').value = document.getElementById('incomeDate').value || new Date().toISOString().slice(0, 10);
     loadMileageRate();
     loadTaxSettings();
     renderJobs();
     calculateCost();
     populateJobRefOptions();
+    populateIncomeJobRefOptions();
     renderExpenses();
+    renderIncomeEntries();
     renderContacts();
     renderPriceReferences();
     renderTemplates();
@@ -534,10 +581,12 @@
     // Re-render every tab with whatever just came down from the cloud
     renderJobs();
     populateJobRefOptions();
+    populateIncomeJobRefOptions();
     loadMileageRate();
     loadTaxSettings();
     calculateCost();
     renderExpenses();
+    renderIncomeEntries();
     renderContacts();
     renderPriceReferences();
     renderTemplates();
@@ -552,13 +601,14 @@
   }
 
   // ---------- Tabs ----------
-  const TAB_HASHES = { jobs: 'jobs', cost: 'cost', expenses: 'expenses', contacts: 'contacts', notes: 'notes' };
+  const TAB_HASHES = { jobs: 'jobs', cost: 'cost', income: 'income', expenses: 'expenses', contacts: 'contacts', notes: 'notes' };
 
   function activateTab(tabName) {
     if (!document.getElementById('tab-' + tabName)) return;
     document.querySelectorAll('.tab-btn').forEach(b => b.classList.toggle('is-active', b.dataset.tab === tabName));
     document.querySelectorAll('.tab-panel').forEach(p => p.classList.toggle('is-active', p.id === 'tab-' + tabName));
     if (tabName === 'expenses') populateJobRefOptions();
+    if (tabName === 'income') populateIncomeJobRefOptions();
     if (tabName === 'profitability') renderJobProfitability();
   }
 
@@ -571,6 +621,7 @@
     const jobs = loadJobs().filter(j => j.status === 'done');
     const invoices = loadInvoicesForProfitability();
     const expenses = loadExpenses();
+    const manualIncome = loadIncomeEntries().filter(e => e.origin !== 'invoice'); // invoices are already counted directly below -- this avoids double-counting the ones mirrored into the income log
     const container = document.getElementById('profitabilityList');
     if (!container) return;
 
@@ -581,8 +632,10 @@
 
     const rows = [...jobs].sort((a, b) => new Date(b.date || 0) - new Date(a.date || 0)).map(job => {
       const linkedInvoices = invoices.filter(inv => String(inv.jobRefId) === String(job.id));
-      const revenue = linkedInvoices.reduce((sum, inv) => sum + (inv.total || 0), 0);
-      const hasInvoice = linkedInvoices.length > 0;
+      const linkedManualIncome = manualIncome.filter(e => String(e.jobRefId) === String(job.id));
+      const revenue = linkedInvoices.reduce((sum, inv) => sum + (inv.total || 0), 0)
+                    + linkedManualIncome.reduce((sum, e) => sum + (e.amount || 0), 0);
+      const hasInvoice = linkedInvoices.length > 0 || linkedManualIncome.length > 0;
 
       const linkedExpenses = expenses.filter(e => String(e.jobRefId) === String(job.id));
       const cost = linkedExpenses.reduce((sum, e) => sum + (e.amount || 0), 0);
@@ -602,7 +655,7 @@
           <div class="dash-list-item-title">${escapeHtml(job.title)}${job.client ? ' &mdash; ' + escapeHtml(job.client) : ''}</div>
           <div class="dash-list-item-meta">
             ${job.date ? escapeHtml(job.date) + ' &middot; ' : ''}
-            Revenue: ${hasInvoice ? money(revenue) : '\u2014 (no invoice linked)'} &middot;
+            Revenue: ${hasInvoice ? money(revenue) : '\u2014 (no invoice or income linked)'} &middot;
             Cost: ${hasCost ? money(cost) : '\u2014 (no expenses linked)'}
           </div>
         </div>
@@ -649,6 +702,7 @@
     document.getElementById('jobShowOnCalendar').checked = false;
     renderJobs();
     populateJobRefOptions();
+    populateIncomeJobRefOptions();
     showToast('Job added.');
   }
 
@@ -658,6 +712,7 @@
     saveJobs(loadJobs().filter(j => j.id !== id));
     renderJobs();
     populateJobRefOptions();
+    populateIncomeJobRefOptions();
     showToast('Job deleted.');
   }
 
@@ -1161,6 +1216,154 @@
       </div>`).join('');
   }
 
+  // ---------- Income ----------
+  function loadIncomeEntries() { return JSON.parse(localStorage.getItem(INCOME_STORAGE_KEY) || '[]'); }
+  function saveIncomeEntries(entries) { localStorage.setItem(INCOME_STORAGE_KEY, JSON.stringify(entries)); scheduleSync(); }
+
+  function populateIncomeJobRefOptions() {
+    const select = document.getElementById('incomeJobRef');
+    const current = select.value;
+    const jobs = loadJobs();
+    select.innerHTML = '<option value="">&mdash; None &mdash;</option>' +
+      jobs.map(j => `<option value="${j.id}">${escapeHtml(j.title)}</option>`).join('');
+    if (jobs.some(j => String(j.id) === current)) select.value = current;
+  }
+
+  async function addIncomeEntry() {
+    const date = document.getElementById('incomeDate').value;
+    const desc = document.getElementById('incomeDesc').value.trim();
+    const amount = parseFloat(document.getElementById('incomeAmount').value) || 0;
+    if (!date || !desc) { await showAlert('Date and description are required.'); return; }
+    if (!amount) { await showAlert('Give this entry an amount.'); return; }
+
+    const jobRefId = document.getElementById('incomeJobRef').value;
+    const jobRefTitle = jobRefId ? (loadJobs().find(j => String(j.id) === jobRefId) || {}).title || '' : '';
+
+    const entries = loadIncomeEntries();
+    entries.push({
+      id: Date.now(),
+      date, desc, amount,
+      source: document.getElementById('incomeSource').value.trim(),
+      payment: document.getElementById('incomePayment').value,
+      jobRefId: jobRefId || '',
+      jobRefTitle,
+      origin: 'manual',
+    });
+    saveIncomeEntries(entries);
+
+    document.getElementById('incomeSource').value = '';
+    document.getElementById('incomeDesc').value = '';
+    document.getElementById('incomeAmount').value = '';
+    renderIncomeEntries();
+    showToast('Income logged.');
+  }
+
+  async function deleteIncomeEntry(id) {
+    const entry = loadIncomeEntries().find(e => e.id === id);
+    const msg = entry && entry.origin === 'invoice'
+      ? 'This entry came from a generated invoice. Deleting it only removes it from this log \u2014 the invoice itself is untouched. Continue?'
+      : 'Delete this income entry? This cannot be undone.';
+    const confirmed = await showConfirm(msg, { danger: true, confirmText: 'Delete' });
+    if (!confirmed) return;
+    saveIncomeEntries(loadIncomeEntries().filter(e => e.id !== id));
+    renderIncomeEntries();
+    showToast('Entry deleted.');
+  }
+
+  async function clearAllIncome() {
+    const confirmed = await showConfirm('Delete every logged income entry, including ones from invoices? This cannot be undone and does not touch the invoices themselves.', { danger: true, confirmText: 'Delete All' });
+    if (confirmed) {
+      saveIncomeEntries([]);
+      renderIncomeEntries();
+    }
+  }
+
+  // Invoices generated before this feature existed were never mirrored
+  // into th_income_log. Rather than let this view under-report income
+  // compared to what Runway Dashboard reconciles on its own, the same old
+  // invoices get merged in here too, read-only, so the two screens always
+  // agree on the total.
+  function loadOrphanedInvoicesAsIncome() {
+    const invoices = JSON.parse(localStorage.getItem('th_invoices') || '[]');
+    const incomeLog = loadIncomeEntries();
+    const mirroredIds = new Set(incomeLog.filter(e => e.origin === 'invoice').map(e => e.invoiceId));
+    return invoices.filter(i => !mirroredIds.has(i.id)).map(i => ({
+      id: 'legacy-inv-' + i.id,
+      date: i.date,
+      desc: 'Invoice #' + (i.invoiceNumber || ''),
+      amount: i.total || 0,
+      source: i.clientName || '',
+      payment: '',
+      jobRefId: i.jobRefId || '',
+      jobRefTitle: i.jobRefTitle || '',
+      origin: 'invoice-legacy',
+    }));
+  }
+
+  function renderIncomeEntries() {
+    const entries = [...loadIncomeEntries(), ...loadOrphanedInvoicesAsIncome()].sort((a, b) => new Date(b.date) - new Date(a.date));
+    const container = document.getElementById('incomeTable');
+
+    if (entries.length === 0) {
+      container.innerHTML = '<div class="empty-state">No income logged yet &mdash; add a manual entry above, or generate an invoice and it\'ll show up here automatically.</div>';
+      document.getElementById('incomeTotalsRow').innerHTML = '';
+      return;
+    }
+
+    let rows = entries.map(e => `
+      <tr>
+        <td>${e.date}</td>
+        <td>${escapeHtml(e.source || '\u2014')}</td>
+        <td>${e.jobRefTitle ? escapeHtml(e.jobRefTitle) : '\u2014'}</td>
+        <td>${escapeHtml(e.desc)}</td>
+        <td>${PAYMENT_LABEL[e.payment] || '\u2014'}</td>
+        <td>${e.origin === 'invoice' ? '<span class="inline-note" style="margin:0;">Invoice</span>' : e.origin === 'invoice-legacy' ? '<span class="inline-note" style="margin:0;">Invoice (older)</span>' : 'Manual'}</td>
+        <td>$${e.amount.toFixed(2)}</td>
+        <td>${e.origin === 'invoice-legacy' ? '' : `<button class="small-btn danger" onclick="deleteIncomeEntry(${e.id})" aria-label="Delete entry" title="Delete entry">&times;</button>`}</td>
+      </tr>`).join('');
+
+    container.innerHTML = `
+      <table>
+        <thead><tr><th>Date</th><th>Source</th><th>Job</th><th>Description</th><th>Payment</th><th>Origin</th><th>Amount</th><th></th></tr></thead>
+        <tbody>${rows}</tbody>
+      </table>`;
+
+    const manualTotal = entries.filter(e => e.origin !== 'invoice' && e.origin !== 'invoice-legacy').reduce((sum, e) => sum + e.amount, 0);
+    const invoiceTotal = entries.filter(e => e.origin === 'invoice' || e.origin === 'invoice-legacy').reduce((sum, e) => sum + e.amount, 0);
+
+    document.getElementById('incomeTotalsRow').innerHTML = `
+      <div>Manual entries: <strong>$${manualTotal.toFixed(2)}</strong></div>
+      <div>From invoices: <strong>$${invoiceTotal.toFixed(2)}</strong></div>
+      <div>Combined total: <strong>$${(manualTotal + invoiceTotal).toFixed(2)}</strong></div>`;
+  }
+
+  function buildIncomeCSV() {
+    const entries = [...loadIncomeEntries(), ...loadOrphanedInvoicesAsIncome()].sort((a, b) => new Date(a.date) - new Date(b.date));
+    let csv = 'Date,Source,Job,Description,Payment,Origin,Amount\n';
+    entries.forEach(e => {
+      const desc = '"' + e.desc.replace(/"/g, '""') + '"';
+      const source = '"' + (e.source || '').replace(/"/g, '""') + '"';
+      const job = '"' + (e.jobRefTitle || '').replace(/"/g, '""') + '"';
+      csv += `${e.date},${source},${job},${desc},${PAYMENT_LABEL[e.payment] || ''},${e.origin || 'manual'},${e.amount.toFixed(2)}\n`;
+    });
+    return csv;
+  }
+
+  async function exportIncomeCSV() {
+    const entries = [...loadIncomeEntries(), ...loadOrphanedInvoicesAsIncome()];
+    if (entries.length === 0) { await showAlert('Nothing to export yet.'); return; }
+    const csv = buildIncomeCSV();
+    const blob = new Blob([csv], { type: 'text/csv' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'TripleH_Income_' + new Date().toISOString().slice(0, 10) + '.csv';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  }
+
   // ---------- Expenses ----------
   function loadExpenses() { return JSON.parse(localStorage.getItem(EXPENSE_STORAGE_KEY) || '[]'); }
   function saveExpenses(entries) { localStorage.setItem(EXPENSE_STORAGE_KEY, JSON.stringify(entries)); scheduleSync(); }
@@ -1431,9 +1634,13 @@
 
     const jobs = loadJobs().filter(j => j.client && j.client.trim().toLowerCase() === name);
     const invoices = loadInvoicesForHistory().filter(i => i.clientName && i.clientName.trim().toLowerCase() === name);
-    const lifetimeSpend = invoices.reduce((sum, i) => sum + (i.total || 0), 0);
+    const manualIncomeForClient = loadIncomeEntries().filter(e => e.origin !== 'invoice' && e.source && e.source.trim().toLowerCase() === name);
+    const invoiceSpend = invoices.reduce((sum, i) => sum + (i.total || 0), 0);
+    const manualSpend = manualIncomeForClient.reduce((sum, e) => sum + (e.amount || 0), 0);
+    const lifetimeSpend = invoiceSpend + manualSpend;
+    const totalEntries = invoices.length + manualIncomeForClient.length;
 
-    let html = `<p style="color:var(--orange-light); font-size:13px; font-weight:600; margin:0 0 10px;">Lifetime spend: ${money(lifetimeSpend)} across ${invoices.length} invoice${invoices.length === 1 ? '' : 's'}</p>`;
+    let html = `<p style="color:var(--orange-light); font-size:13px; font-weight:600; margin:0 0 10px;">Lifetime spend: ${money(lifetimeSpend)} across ${totalEntries} entr${totalEntries === 1 ? 'y' : 'ies'}</p>`;
 
     if (jobs.length === 0) {
       html += '<p class="inline-note">No jobs on file for this exact name yet &mdash; this only matches jobs where the Client Name field matches exactly.</p>';
@@ -1563,11 +1770,14 @@
       loadTaxSettings();
       loadStatusFilter();
       document.getElementById('entryDate').value = new Date().toISOString().slice(0, 10);
+      document.getElementById('incomeDate').value = new Date().toISOString().slice(0, 10);
       loadMileageRate();
       renderJobs();
       calculateCost();
       populateJobRefOptions();
+      populateIncomeJobRefOptions();
       renderExpenses();
+      renderIncomeEntries();
       renderContacts();
       renderPriceReferences();
       renderTemplates();

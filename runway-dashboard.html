@@ -559,7 +559,7 @@ const CARD_INFO = {
   },
   businessMonth: {
     title: 'Add / Update a Month',
-    body: `<p>Pick a month, tap "Pull from Job Tracker," and Revenue, Business Expenses, and Fuel fill in automatically from what you've already logged there.</p>
+    body: `<p>Pick a month, tap "Pull from Job Tracker," and Revenue, Business Expenses, and Fuel fill in automatically from what you've already logged there \u2014 Revenue now includes both invoices and any manual income entries logged in Job Tracker's Income tab.</p>
       <p>Everything's still editable after it fills in. Other Expenses, Owner Draws, and Cash aren't tracked anywhere else, so those three always need to be typed in by hand.</p>`,
   },
   emergencyFund: {
@@ -1333,22 +1333,40 @@ function loadJobTrackerInvoices(){
   try { return JSON.parse(localStorage.getItem('th_invoices') || '[]'); }
   catch(e){ return []; }
 }
+function loadJobTrackerIncome(){
+  try { return JSON.parse(localStorage.getItem('th_income_log') || '[]'); }
+  catch(e){ return []; }
+}
 function pullMonthFromJobTracker(monthVal){
   const expenseLog = loadJobTrackerExpenses();
   const invoices = loadJobTrackerInvoices();
+  const incomeLog = loadJobTrackerIncome();
   const inMonth = (dateStr) => (dateStr || '').slice(0,7) === monthVal;
 
-  const revenue = invoices.filter(i => inMonth(i.date)).reduce((s,i) => s + (Number(i.total)||0), 0);
+  // Revenue now comes from the Income log (manual entries + invoices
+  // created after this feature existed, auto-mirrored there). Invoices
+  // created BEFORE this feature existed were never mirrored, so they'd
+  // otherwise vanish from past months entirely -- this counts those
+  // "orphaned" old invoices exactly once, without double-counting any
+  // invoice that already has a mirrored income-log entry.
+  const mirroredInvoiceIds = new Set(incomeLog.filter(e => e.origin === 'invoice').map(e => e.invoiceId));
+  const orphanedInvoices = invoices.filter(i => !mirroredInvoiceIds.has(i.id));
+
+  const incomeInMonth = incomeLog.filter(e => inMonth(e.date));
+  const orphanedInMonth = orphanedInvoices.filter(i => inMonth(i.date));
+
+  const revenue = incomeInMonth.reduce((s,e) => s + (Number(e.amount)||0), 0)
+                + orphanedInMonth.reduce((s,i) => s + (Number(i.total)||0), 0);
   const expenses = expenseLog.filter(e => e.type !== 'mileage' && inMonth(e.date)).reduce((s,e) => s + (Number(e.amount)||0), 0);
   const fuel = expenseLog.filter(e => e.type === 'mileage' && inMonth(e.date)).reduce((s,e) => s + (Number(e.amount)||0), 0);
 
-  const invoiceCount = invoices.filter(i => inMonth(i.date)).length;
+  const invoiceCount = incomeInMonth.length + orphanedInMonth.length;
   const expenseCount = expenseLog.filter(e => e.type !== 'mileage' && inMonth(e.date)).length;
   const mileageCount = expenseLog.filter(e => e.type === 'mileage' && inMonth(e.date)).length;
 
   return {
     revenue, expenses, fuel, invoiceCount, expenseCount, mileageCount,
-    totalInvoicesEverLogged: invoices.length,
+    totalInvoicesEverLogged: incomeLog.length + orphanedInvoices.length,
     totalExpensesEverLogged: expenseLog.length,
   };
 }
@@ -1390,12 +1408,12 @@ document.getElementById('pullMonthBtn').addEventListener('click', () => {
   document.getElementById('biz-expenses').value = pulled.expenses || '';
   document.getElementById('biz-fuel').value = pulled.fuel || '';
 
-  document.getElementById('revSourceHint').textContent = `(${pulled.invoiceCount} invoice${pulled.invoiceCount===1?'':'s'})`;
+  document.getElementById('revSourceHint').textContent = `(${pulled.invoiceCount} income entr${pulled.invoiceCount===1?'y':'ies'})`;
   document.getElementById('expSourceHint').textContent = `(${pulled.expenseCount} entr${pulled.expenseCount===1?'y':'ies'})`;
   document.getElementById('fuelSourceHint').textContent = `(${pulled.mileageCount} entr${pulled.mileageCount===1?'y':'ies'})`;
 
   if(pulled.totalInvoicesEverLogged === 0 && pulled.totalExpensesEverLogged === 0){
-    diag.textContent = `Job Tracker doesn't have any invoices or expenses logged on this device yet. If you know you've logged some, try "Refresh synced data now" on Job Tracker, then reload this page.`;
+    diag.textContent = `Job Tracker doesn't have any income or expenses logged on this device yet. If you know you've logged some, try "Refresh synced data now" on Job Tracker, then reload this page.`;
     diag.style.color = 'var(--red)';
   } else if(pulled.invoiceCount === 0 && pulled.expenseCount === 0 && pulled.mileageCount === 0){
     diag.textContent = `Nothing logged in Job Tracker for this specific month \u2014 that's likely correct, not a bug. Double check you picked the right month.`;
