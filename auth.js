@@ -130,6 +130,26 @@ function signOut() {
 // anything sensitive. Redirects to login if there's no valid session,
 // attempting a silent refresh first if the access token has expired but
 // a refresh token is still on hand.
+// Call this before any authenticated write (upload, push, delete) that
+// might happen well after page load -- requireAuth() only ever checks
+// once, right when the page opens, with nothing keeping the session
+// fresh while the tab stays open afterward. Access tokens are typically
+// only good for about an hour; leaving a tab open longer than that and
+// then trying to upload something is a completely normal use pattern,
+// not an edge case, and previously meant the request silently fell back
+// to the anon key -- which then gets correctly rejected by any bucket
+// policy requiring a real authenticated user, surfacing as a confusing
+// upload-http-400 with no indication the real cause was an expired
+// session rather than anything about the file itself.
+async function ensureFreshToken() {
+  if (hasValidSession()) return true;
+  const s = getStoredSession();
+  if (s && s.refresh_token) {
+    return await refreshSession();
+  }
+  return false;
+}
+
 async function requireAuth() {
   if (hasValidSession()) return true;
   const s = getStoredSession();
