@@ -1740,6 +1740,7 @@
   function saveContacts(contacts) { localStorage.setItem(STORAGE_KEYS.contacts, JSON.stringify(contacts)); scheduleSync(); }
 
   let editingContactId = null;
+  let justAddedContactId = null;
   async function addContact() {
     const name = document.getElementById('contactName').value.trim();
     if (!name) { await showAlert('Give the contact a name first.'); return; }
@@ -1752,15 +1753,18 @@
       notes: document.getElementById('contactNotes').value.trim(),
     };
     const wasEditing = !!editingContactId;
+    let newId = null;
     if (wasEditing) {
       const idx = contacts.findIndex(c => c.id === editingContactId);
       if (idx > -1) contacts[idx] = { ...contacts[idx], ...fields };
     } else {
-      contacts.push({ id: Date.now(), ...fields });
+      newId = Date.now();
+      contacts.push({ id: newId, ...fields });
     }
     saveContacts(contacts);
     ['contactName','contactRole','contactPhone','contactEmail','contactNotes'].forEach(id => document.getElementById(id).value = '');
     cancelContactEdit();
+    justAddedContactId = newId;
     renderContacts();
     showToast(wasEditing ? 'Contact updated.' : 'Contact added.');
   }
@@ -1796,9 +1800,12 @@
     const confirmed = await showConfirm('Delete this contact? This cannot be undone.', { danger: true, confirmText: 'Delete' });
     if (!confirmed) return;
     if (editingContactId === id) cancelContactEdit();
-    saveContacts(loadContacts().filter(c => c.id !== id));
-    renderContacts();
-    showToast('Contact deleted.');
+    const row = document.querySelector('[data-contact-id="' + id + '"]');
+    animateRowExit(row, () => {
+      saveContacts(loadContacts().filter(c => c.id !== id));
+      renderContacts();
+      showToast('Contact deleted.');
+    });
   }
 
   function loadInvoicesForHistory() { return JSON.parse(localStorage.getItem('th_invoices') || '[]'); }
@@ -1821,7 +1828,7 @@
       return;
     }
     container.innerHTML = contacts.map(c => `
-      <div class="contact-card" style="flex-direction:column; align-items:stretch;">
+      <div class="contact-card ${c.id === justAddedContactId ? 'list-row-enter' : ''}" data-contact-id="${c.id}" style="flex-direction:column; align-items:stretch;">
         <div style="display:flex; justify-content:space-between; align-items:center; gap:12px; flex-wrap:wrap;">
           <div class="contact-card-text">
             <h4>${escapeHtml(c.name)}${c.role ? ' &mdash; ' + escapeHtml(c.role) : ''}</h4>
@@ -1837,6 +1844,7 @@
         </div>
         <div id="history-${c.id}" style="display:none; margin-top:14px; padding-top:14px; border-top:1px solid var(--border);"></div>
       </div>`).join('');
+    justAddedContactId = null;
   }
 
   function toggleClientHistory(contactId) {

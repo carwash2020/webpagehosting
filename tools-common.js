@@ -59,6 +59,38 @@ document.addEventListener('focusout', (e) => {
 // Generic collapse/expand for "Add X"-style form sections -- used across
 // multiple tool pages so a form starts collapsed and the page opens
 // showing actual data first, rather than an empty form.
+// Fades and collapses ONE specific row before its underlying data
+// actually gets deleted and the list re-renders -- called from a real
+// delete-button click, never from a render/filter pass, so this can
+// never fire on every keystroke the way animating the whole list would.
+// Measures the row's own real height first rather than guessing a fixed
+// value, since these rows vary in height (wrapped text, extra fields).
+function animateRowExit(rowElement, onComplete) {
+  if (!rowElement) { onComplete(); return; }
+  const reduceMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  if (reduceMotion) { onComplete(); return; }
+  const height = rowElement.scrollHeight;
+  rowElement.style.maxHeight = height + 'px';
+  rowElement.style.overflow = 'hidden';
+  rowElement.style.transition = 'opacity .22s ease, max-height .22s ease, margin .22s ease, padding .22s ease, border-width .22s ease';
+  // Two rAFs, not one -- the browser needs to actually paint the
+  // starting max-height (the row's real current height) as a distinct
+  // frame before the target value changes, or the transition has
+  // nothing to animate from and just snaps straight to the end state.
+  requestAnimationFrame(() => {
+    requestAnimationFrame(() => {
+      rowElement.style.opacity = '0';
+      rowElement.style.maxHeight = '0px';
+      rowElement.style.marginTop = '0';
+      rowElement.style.marginBottom = '0';
+      rowElement.style.paddingTop = '0';
+      rowElement.style.paddingBottom = '0';
+      rowElement.style.borderWidth = '0';
+    });
+  });
+  setTimeout(onComplete, 230);
+}
+
 function toggleFormSection(id, forceOpen) {
   const el = document.getElementById(id);
   if (!el) return;

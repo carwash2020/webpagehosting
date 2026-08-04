@@ -175,6 +175,13 @@
 
   .backup-row { display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 10px; }
 
+  .skeleton-line{height:14px;border-radius:6px;margin-bottom:10px;background:linear-gradient(90deg, var(--bg-panel-2) 25%, var(--bg-panel) 50%, var(--bg-panel-2) 75%);background-size:200% 100%;animation:shimmer 1.4s ease-in-out infinite;}
+  .skeleton-line.w-40{width:40%;}
+  .skeleton-line.w-60{width:60%;}
+  .skeleton-line.w-100{width:100%;}
+  @keyframes shimmer{0%{background-position:200% 0;} 100%{background-position:-200% 0;}}
+  @media (prefers-reduced-motion: reduce){ .skeleton-line{animation:none; opacity:0.6;} }
+
   /* Tools grid -- naturally one column on a phone (minmax(260px,1fr) can't
      fit two side by side under ~520px), becomes two columns on anything
      wider, with no manual breakpoint needed. Cards are also more compact
@@ -422,6 +429,7 @@
             <div class="form-field"><label>File</label><input type="file" id="secureDocFile" accept=".pdf,.png,.jpg,.jpeg"></div>
           </div>
           <button class="primary-btn" id="secureDocUploadBtn" onclick="uploadSecureDocumentUI()">Upload</button>
+          <div class="upload-progress-bar" id="secureDocUploadProgress" style="display:none;"></div>
         </div>
       </div>
     </div>
@@ -1341,6 +1349,8 @@
     contracts: 'Signed Contracts', 'vendor-agreements': 'Vendor Agreements', other: 'Other',
   };
 
+  let justUploadedDocPath = null;
+
   async function renderSecureDocsList() {
     const container = document.getElementById('secureDocsList');
     if (!container) return;
@@ -1348,7 +1358,10 @@
       container.innerHTML = '<div class="empty-state-small">Secure document storage isn\'t available on this page yet.</div>';
       return;
     }
-    container.innerHTML = '<div class="empty-state-small">Loading...</div>';
+    container.innerHTML = `
+      <div class="skeleton-line w-60"></div>
+      <div class="skeleton-line w-40"></div>
+    `;
     const result = await listSecureDocuments();
     if (!result.ok) {
       container.innerHTML = result.error === 'not-configured'
@@ -1361,7 +1374,7 @@
       return;
     }
     container.innerHTML = result.documents.map(d => `
-      <div class="dash-list-item">
+      <div class="dash-list-item ${d.path === justUploadedDocPath ? 'list-row-enter' : ''}" data-doc-path="${escapeHtml(d.path)}">
         <div>
           <div class="dash-list-item-title">${escapeHtml(d.label)}</div>
           <div class="dash-list-item-meta">${escapeHtml(SECURE_DOC_CATEGORY_LABEL[d.category] || d.category)}${d.uploadedAt ? ' &middot; ' + escapeHtml(new Date(d.uploadedAt).toLocaleDateString()) : ''}</div>
@@ -1371,6 +1384,7 @@
           <button class="small-btn danger" onclick="deleteSecureDocumentUI('${d.path.replace(/'/g, "\\'")}')">Delete</button>
         </div>
       </div>`).join('');
+    justUploadedDocPath = null;
   }
 
   async function uploadSecureDocumentUI() {
@@ -1384,9 +1398,12 @@
     const originalText = btn.textContent;
     btn.disabled = true;
     btn.textContent = 'Uploading...';
+    const progressBar = document.getElementById('secureDocUploadProgress');
+    if (progressBar) progressBar.style.display = 'block';
     const result = await uploadSecureDocument(file, category, label);
     btn.disabled = false;
     btn.textContent = originalText;
+    if (progressBar) progressBar.style.display = 'none';
 
     if (!result.ok) {
       await showAlert('Upload failed: ' + result.error + (result.detail ? ' \u2014 ' + result.detail : ''));
@@ -1395,6 +1412,7 @@
     document.getElementById('secureDocLabel').value = '';
     document.getElementById('secureDocFile').value = '';
     document.getElementById('secureDocsUploadCard').classList.add('is-collapsed');
+    justUploadedDocPath = result.path;
     await renderSecureDocsList();
     showToast('Document uploaded.');
   }
@@ -1408,10 +1426,13 @@
   async function deleteSecureDocumentUI(path) {
     const confirmed = await showConfirm('Delete this document? This cannot be undone.', { danger: true, confirmText: 'Delete' });
     if (!confirmed) return;
-    const result = await deleteSecureDocument(path);
-    if (!result.ok) { await showAlert('Could not delete: ' + result.error); return; }
-    await renderSecureDocsList();
-    showToast('Document deleted.');
+    const row = document.querySelector('[data-doc-path="' + path.replace(/"/g, '\\"') + '"]');
+    animateRowExit(row, async () => {
+      const result = await deleteSecureDocument(path);
+      if (!result.ok) { await showAlert('Could not delete: ' + result.error); return; }
+      await renderSecureDocsList();
+      showToast('Document deleted.');
+    });
   }
 
   function addLicensePrompt() {
