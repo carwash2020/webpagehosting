@@ -52,6 +52,7 @@
     transition: border-color 0.15s ease;
   }
   .cal-day:hover { border-color: var(--orange-light); }
+  .cal-day:active { transform: scale(0.95); border-color: var(--orange-light); transition: transform 0.08s ease; }
   .cal-day.is-empty { background: none; border: none; cursor: default; }
   .cal-day.is-today { border-color: var(--blue-light); border-width: 2px; }
   .cal-day.is-selected { background: rgba(58,160,255,0.12); border-color: var(--blue-light); }
@@ -60,6 +61,10 @@
   .cal-day-dots { display: flex; gap: 3px; flex-wrap: wrap; margin-top: auto; }
   .cal-day-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--orange-light); flex-shrink: 0; }
   .cal-day-dot.is-done { background: var(--text-dim); }
+  .cal-day-dot.is-high { background: #e05252; }
+  .cal-day-dot.is-medium { background: var(--orange); }
+  .cal-day-dot.is-low { background: var(--blue); }
+  .cal-day-more { font-size: 9px; color: var(--text-dim); flex-shrink: 0; line-height: 6px; }
 
   .cal-day-detail { margin-top: 24px; }
   .cal-job-item {
@@ -169,11 +174,17 @@
       const dayJobs = jobsByDate[key] || [];
       const isToday = key === todayKey;
       const isSelected = key === selectedDateStr;
-      const dots = dayJobs.slice(0, 4).map(j => `<span class="cal-day-dot ${j.status === 'done' ? 'is-done' : ''}"></span>`).join('');
+      const shownJobs = dayJobs.slice(0, 4);
+      const dots = shownJobs.map(j => {
+        const cls = j.status === 'done' ? 'is-done' : 'is-' + (j.priority || 'medium');
+        return `<span class="cal-day-dot ${cls}"></span>`;
+      }).join('');
+      const extraCount = dayJobs.length - shownJobs.length;
+      const moreLabel = extraCount > 0 ? `<span class="cal-day-more">+${extraCount}</span>` : '';
       cells += `
         <div class="cal-day ${isToday ? 'is-today' : ''} ${isSelected ? 'is-selected' : ''}" onclick="selectDay('${key}')">
           <span class="cal-day-num">${d}</span>
-          <div class="cal-day-dots">${dots}</div>
+          <div class="cal-day-dots">${dots}${moreLabel}</div>
         </div>`;
     }
     document.getElementById('calGrid').innerHTML = cells;
@@ -297,8 +308,40 @@
     URL.revokeObjectURL(url);
   }
 
+  // Swiping on the calendar grid itself changes months (the natural
+  // gesture for a calendar), while swiping anywhere else on the page
+  // keeps the standard "swipe right to exit to Workspace" behavior used
+  // throughout the rest of the app. Scoped by where the touch actually
+  // started, not a mode toggle, so both gestures coexist without either
+  // one needing to guess at the other's intent.
+  (function setupCalendarSwipe() {
+    let touchStartX = 0, touchStartY = 0, touchStartTime = 0, startedOnGrid = false;
+    document.body.addEventListener('touchstart', (e) => {
+      if (e.touches.length !== 1) return;
+      touchStartX = e.touches[0].clientX;
+      touchStartY = e.touches[0].clientY;
+      touchStartTime = Date.now();
+      startedOnGrid = !!(e.target.closest && e.target.closest('#calGrid'));
+    }, { passive: true });
+    document.body.addEventListener('touchend', (e) => {
+      if (!e.changedTouches.length) return;
+      const dx = e.changedTouches[0].clientX - touchStartX;
+      const dy = e.changedTouches[0].clientY - touchStartY;
+      const elapsed = Date.now() - touchStartTime;
+      const isMostlyHorizontal = Math.abs(dx) > Math.abs(dy) * 1.5;
+      const isFarEnough = Math.abs(dx) > 60;
+      const isFastEnough = elapsed < 600;
+      if (!isMostlyHorizontal || !isFarEnough || !isFastEnough) return;
+
+      if (startedOnGrid) {
+        changeMonth(dx < 0 ? 1 : -1); // swipe left -> next month, swipe right -> previous month
+      } else if (dx > 0) {
+        window.location.href = '/workspace.html';
+      }
+    }, { passive: true });
+  })();
+
   document.addEventListener('DOMContentLoaded', () => {
-    if (typeof setupSwipeBackToWorkspace === 'function') setupSwipeBackToWorkspace();
     viewYear = today.getFullYear();
     viewMonth = today.getMonth();
     selectedDateStr = dateKey(viewYear, viewMonth, today.getDate());
