@@ -11,6 +11,9 @@
     --orange:#ff8000;
     --orange-dark:#c96400;
     --orange-light:#ffb347;
+    --orange-tint-soft: rgba(255,128,0,0.08);
+    --orange-tint-border: rgba(255,128,0,0.3);
+    --orange-tint-glow: rgba(255,128,0,0.12);
     --blue:#3aa0ff;
     --blue-dark:#1f5f9e;
     --blue-light:#7ec4ff;
@@ -1636,6 +1639,9 @@
   --orange: #d85f0a;
   --orange-dark: #b04808;
   --orange-light: #a84408;
+  --orange-tint-soft: rgba(216,95,10,0.08);
+  --orange-tint-border: rgba(216,95,10,0.3);
+  --orange-tint-glow: rgba(216,95,10,0.12);
   --blue: #0d6efd;
   --blue-dark: #0a52c2;
   --blue-light: #0650bd;
