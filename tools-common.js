@@ -115,11 +115,15 @@ function animateRowExit(rowElement, onComplete) {
 // binary "did this count or not" check with no feedback in between.
 //
 // Skips touches that start inside a <table> (a wide table on a narrow
-// phone may need its own horizontal scroll) or while a modal is open.
-// The modal case matters mechanically, not just visually: applying a
-// transform to body creates a new containing block, which breaks
-// position:fixed for every descendant -- an open modal would start
-// moving with the page instead of staying fixed to the viewport.
+// phone may need its own horizontal scroll), inside a <canvas> (signing
+// a contract means dragging a finger across one, which can easily read
+// as a horizontal swipe to this same detector -- without this exclusion,
+// an in-progress signature gets silently aborted mid-stroke by a
+// navigation neither the code nor the person intended), or while a modal
+// is open. The modal case matters mechanically, not just visually:
+// applying a transform to body creates a new containing block, which
+// breaks position:fixed for every descendant -- an open modal would
+// start moving with the page instead of staying fixed to the viewport.
 function setupSwipeBackToWorkspace() {
   let touchStartX = 0, touchStartY = 0, touchStartTime = 0;
   let dragging = false, committed = false;
@@ -136,7 +140,7 @@ function setupSwipeBackToWorkspace() {
     touchStartX = e.touches[0].clientX;
     touchStartY = e.touches[0].clientY;
     touchStartTime = Date.now();
-    dragging = !(e.target.closest && e.target.closest('table')) && !anyModalOpen();
+    dragging = !(e.target.closest && (e.target.closest('table') || e.target.closest('canvas'))) && !anyModalOpen();
     committed = false;
   }, { passive: true });
 
