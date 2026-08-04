@@ -1491,6 +1491,18 @@
   box-shadow: 0 3px 12px rgba(0,0,0,0.18), 0 1px 3px rgba(0,0,0,0.12);
 }
 .form-section h3 { font-family:'Oswald',sans-serif; color: var(--orange-light); font-size: 15px; margin: 0 0 15px; text-transform: uppercase; letter-spacing: 1px; }
+.form-section-header {
+  display: flex; justify-content: space-between; align-items: center;
+  cursor: pointer; user-select: none;
+}
+.form-section-header h3 { margin: 0; }
+.form-section-header .collapse-chevron {
+  color: var(--text-dim); font-size: 13px; transition: transform 0.2s ease; flex-shrink: 0; margin-left: 10px;
+}
+.form-section.is-collapsed .collapse-chevron { transform: rotate(-90deg); }
+.form-section-body { margin-top: 14px; max-height: 4000px; opacity: 1; overflow: hidden; transition: max-height .3s ease, opacity .2s ease, margin-top .3s ease; }
+.form-section.is-collapsed .form-section-body { max-height: 0; opacity: 0; margin-top: 0; overflow: hidden; }
+@media (prefers-reduced-motion: reduce){ .form-section-body{ transition:none; } }
 .tool-form-row { display: flex; gap: 15px; margin-bottom: 13px; flex-wrap: wrap; }
 .form-field { flex: 1; min-width: 170px; }
 .form-field label { display: block; font-size: 13px; color: var(--text-dim); margin-bottom: 5px; }

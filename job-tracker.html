@@ -168,18 +168,6 @@
     background: rgba(255,128,0,0.1); border: 1px solid rgba(255,128,0,0.35); border-radius: 8px;
     padding: 9px 12px; font-size: 13px; color: var(--orange-light); margin-bottom: 10px;
   }
-  .form-section-header {
-    display: flex; justify-content: space-between; align-items: center;
-    cursor: pointer; user-select: none;
-  }
-  .form-section-header h3 { margin: 0; }
-  .form-section-header .collapse-chevron {
-    color: var(--text-dim); font-size: 13px; transition: transform 0.2s ease; flex-shrink: 0; margin-left: 10px;
-  }
-  .form-section.is-collapsed .collapse-chevron { transform: rotate(-90deg); }
-  .form-section-body { margin-top: 14px; max-height: 4000px; opacity: 1; overflow: hidden; transition: max-height .3s ease, opacity .2s ease, margin-top .3s ease; }
-  .form-section.is-collapsed .form-section-body { max-height: 0; opacity: 0; margin-top: 0; overflow: hidden; }
-  @media (prefers-reduced-motion: reduce){ .form-section-body{ transition:none; } }
   #noteSearchWrap { width: 100%; }
   #noteSearchWrap.is-expanded { display: flex; }
   #noteSearchWrap.is-expanded .icon-search-input { width: 100%; }

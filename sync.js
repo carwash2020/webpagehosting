@@ -589,6 +589,120 @@ function stopRealtimeSync() {
 
 const RECEIPTS_BUCKET = 'receipts';
 
+// ---------------------------------------------------------------------------
+// SECURE DOCUMENTS -- unlike receipts/job-photos, this bucket is PRIVATE,
+// by deliberate choice (insurance policies, LLC certificates, signed
+// contracts). No separate metadata table like th_job_photos has; category
+// and a human label are encoded directly in the storage path instead, so
+// there's one less table+policy pair to set up and keep in sync. Since the
+// bucket is private, viewing a file means generating a short-lived signed
+// URL, not a permanent public one -- a public URL would defeat the entire
+// point of using a private bucket in the first place.
+const SECURE_DOCS_BUCKET = 'secure-documents';
+
+async function uploadSecureDocument(file, category, label) {
+  if (!isSyncConfigured()) return { ok: false, error: 'not-configured' };
+  if (typeof ensureFreshToken === 'function') await ensureFreshToken();
+
+  const safeCategory = (category || 'uncategorized').toLowerCase().replace(/[^a-z0-9-]/g, '-');
+  const ext = (file.name.split('.').pop() || 'pdf').toLowerCase().replace(/[^a-z0-9]/g, '') || 'pdf';
+  const safeLabel = (label || file.name.replace(/\.[^.]+$/, '')).trim().replace(/[^a-zA-Z0-9 _-]/g, '').replace(/\s+/g, '-').slice(0, 60) || 'document';
+  const path = `${safeCategory}/${Date.now()}_${safeLabel}.${ext}`;
+
+  try {
+    const res = await fetch(`${SUPABASE_URL}/storage/v1/object/${SECURE_DOCS_BUCKET}/${path}`, {
+      method: 'POST',
+      headers: {
+        'apikey': SUPABASE_ANON_KEY,
+        'Authorization': `Bearer ${getAuthToken()}`,
+        'Content-Type': file.type || 'application/octet-stream',
+      },
+      body: file,
+    });
+    if (!res.ok) {
+      let detail = '';
+      try { const body = await res.json(); detail = body.message || body.error || ''; } catch (e) { /* not JSON */ }
+      return { ok: false, error: 'upload-http-' + res.status, detail };
+    }
+    return { ok: true, path };
+  } catch (e) {
+    return { ok: false, error: 'network' };
+  }
+}
+
+async function listSecureDocuments() {
+  if (!isSyncConfigured()) return { ok: false, error: 'not-configured', documents: [] };
+  if (typeof ensureFreshToken === 'function') await ensureFreshToken();
+  try {
+    // Storage's list endpoint is per-folder, not recursive -- list the
+    // bucket root first to find category folders, then list inside each.
+    const rootRes = await fetch(`${SUPABASE_URL}/storage/v1/object/list/${SECURE_DOCS_BUCKET}`, {
+      method: 'POST',
+      headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': `Bearer ${getAuthToken()}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ prefix: '', limit: 200 }),
+    });
+    if (!rootRes.ok) return { ok: false, error: 'http-' + rootRes.status, documents: [] };
+    const rootEntries = await rootRes.json();
+    const categories = rootEntries.filter(e => e.id === null).map(e => e.name); // folders have a null id in Supabase Storage's listing
+
+    const documents = [];
+    for (const category of categories) {
+      const res = await fetch(`${SUPABASE_URL}/storage/v1/object/list/${SECURE_DOCS_BUCKET}`, {
+        method: 'POST',
+        headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': `Bearer ${getAuthToken()}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ prefix: category + '/', limit: 200 }),
+      });
+      if (!res.ok) continue;
+      const entries = await res.json();
+      entries.filter(e => e.id !== null).forEach(e => {
+        const match = e.name.match(/^(\d+)_(.+)$/);
+        documents.push({
+          path: `${category}/${e.name}`,
+          category,
+          label: match ? match[2].replace(/-/g, ' ') : e.name,
+          uploadedAt: match ? Number(match[1]) : null,
+        });
+      });
+    }
+    documents.sort((a, b) => (b.uploadedAt || 0) - (a.uploadedAt || 0));
+    return { ok: true, documents };
+  } catch (e) {
+    return { ok: false, error: 'network', documents: [] };
+  }
+}
+
+async function getSecureDocumentSignedUrl(path) {
+  if (!isSyncConfigured()) return { ok: false, error: 'not-configured' };
+  if (typeof ensureFreshToken === 'function') await ensureFreshToken();
+  try {
+    const res = await fetch(`${SUPABASE_URL}/storage/v1/object/sign/${SECURE_DOCS_BUCKET}/${path}`, {
+      method: 'POST',
+      headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': `Bearer ${getAuthToken()}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ expiresIn: 300 }), // 5 minutes -- long enough to open/download, short enough not to matter if the link is ever shared accidentally
+    });
+    if (!res.ok) return { ok: false, error: 'http-' + res.status };
+    const data = await res.json();
+    return { ok: true, url: `${SUPABASE_URL}/storage/v1${data.signedURL}` };
+  } catch (e) {
+    return { ok: false, error: 'network' };
+  }
+}
+
+async function deleteSecureDocument(path) {
+  if (!isSyncConfigured()) return { ok: false, error: 'not-configured' };
+  if (typeof ensureFreshToken === 'function') await ensureFreshToken();
+  try {
+    const res = await fetch(`${SUPABASE_URL}/storage/v1/object/${SECURE_DOCS_BUCKET}/${path}`, {
+      method: 'DELETE',
+      headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': `Bearer ${getAuthToken()}` },
+    });
+    if (!res.ok) return { ok: false, error: 'http-' + res.status };
+    return { ok: true };
+  } catch (e) {
+    return { ok: false, error: 'network' };
+  }
+}
+
 function getReceiptUrl(storagePath) {
   return `${SUPABASE_URL}/storage/v1/object/public/${RECEIPTS_BUCKET}/${storagePath}`;
 }

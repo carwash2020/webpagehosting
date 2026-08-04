@@ -371,6 +371,33 @@
     <div id="licensesList"></div>
     <button class="secondary-btn" style="margin-top:10px;" onclick="addLicensePrompt()">+ Add License</button>
 
+    <div class="analytics-subheading" style="margin-top:26px;">Secure Documents <button class="help-btn" onclick="openCardInfo('secureDocuments')" aria-label="What is this?" title="What is this?">?</button></div>
+    <div id="secureDocsList"></div>
+    <div class="icon-search" id="secureDocsUploadWrap" style="width:100%; margin-top:10px;">
+      <button class="icon-search-toggle" onclick="toggleFormSection('secureDocsUploadCard')" aria-label="Upload a document" title="Upload a document">+</button>
+    </div>
+    <div class="form-section is-collapsed" id="secureDocsUploadCard" style="margin-top:10px;">
+      <div class="form-section-body">
+        <div class="tool-form-row">
+          <div class="form-field"><label>Category</label>
+            <select id="secureDocCategory">
+              <option value="insurance">Insurance</option>
+              <option value="licenses">Licenses &amp; Permits</option>
+              <option value="tax">Tax Documents</option>
+              <option value="contracts">Signed Contracts</option>
+              <option value="vendor-agreements">Vendor Agreements</option>
+              <option value="other">Other</option>
+            </select>
+          </div>
+          <div class="form-field"><label>Label</label><input type="text" id="secureDocLabel" placeholder="e.g. General Liability Policy 2026"></div>
+        </div>
+        <div class="tool-form-row">
+          <div class="form-field"><label>File</label><input type="file" id="secureDocFile" accept=".pdf,.png,.jpg,.jpeg"></div>
+        </div>
+        <button class="primary-btn" id="secureDocUploadBtn" onclick="uploadSecureDocumentUI()">Upload</button>
+      </div>
+    </div>
+
     <div class="analytics-subheading" style="margin-top:26px;">Analytics &mdash; Job Status</div>
     <div id="statusBars"></div>
     <div class="analytics-subheading">Analytics &mdash; Top Vendors <span style="text-transform:none; letter-spacing:0;">(for the period selected in Business Snapshot)</span></div>
@@ -487,6 +514,18 @@
 
 <script>
   function money(v) { return '$' + (v || 0).toFixed(2); }
+  const CARD_INFO = {
+    secureDocuments: {
+      title: 'Secure Documents',
+      body: `<p>A private, password-protected place for the actual files behind your compliance dates -- insurance policy PDFs, your LLC certificate, signed contracts.</p>
+        <p>This bucket is set to private, unlike the photo and receipt storage elsewhere in these tools, so a download link only works for a few minutes and only for someone actually logged in -- not a permanent public link.</p>`,
+    },
+  };
+  function openCardInfo(key) {
+    const info = CARD_INFO[key];
+    if (info) openInfoModal(info.title, info.body);
+  }
+
   function escapeHtml(str) {
     const div = document.createElement('div');
     div.textContent = str;
@@ -1232,6 +1271,84 @@
     }).join('');
   }
 
+  const SECURE_DOC_CATEGORY_LABEL = {
+    insurance: 'Insurance', licenses: 'Licenses & Permits', tax: 'Tax Documents',
+    contracts: 'Signed Contracts', 'vendor-agreements': 'Vendor Agreements', other: 'Other',
+  };
+
+  async function renderSecureDocsList() {
+    const container = document.getElementById('secureDocsList');
+    if (!container) return;
+    if (typeof listSecureDocuments !== 'function') {
+      container.innerHTML = '<div class="empty-state-small">Secure document storage isn\'t available on this page yet.</div>';
+      return;
+    }
+    container.innerHTML = '<div class="empty-state-small">Loading...</div>';
+    const result = await listSecureDocuments();
+    if (!result.ok) {
+      container.innerHTML = result.error === 'not-configured'
+        ? '<div class="empty-state-small">Set up Cloud Sync to use secure document storage.</div>'
+        : `<div class="empty-state-small">Couldn't load documents (${escapeHtml(result.error)}). Make sure the secure-documents bucket exists in Supabase with its access policies set up.</div>`;
+      return;
+    }
+    if (result.documents.length === 0) {
+      container.innerHTML = '<div class="empty-state-small">No documents uploaded yet.</div>';
+      return;
+    }
+    container.innerHTML = result.documents.map(d => `
+      <div class="dash-list-item">
+        <div>
+          <div class="dash-list-item-title">${escapeHtml(d.label)}</div>
+          <div class="dash-list-item-meta">${escapeHtml(SECURE_DOC_CATEGORY_LABEL[d.category] || d.category)}${d.uploadedAt ? ' &middot; ' + escapeHtml(new Date(d.uploadedAt).toLocaleDateString()) : ''}</div>
+        </div>
+        <div class="dash-list-item-right">
+          <button class="small-btn" onclick="viewSecureDocumentUI('${d.path.replace(/'/g, "\\'")}')">View</button>
+          <button class="small-btn danger" onclick="deleteSecureDocumentUI('${d.path.replace(/'/g, "\\'")}')">Delete</button>
+        </div>
+      </div>`).join('');
+  }
+
+  async function uploadSecureDocumentUI() {
+    const category = document.getElementById('secureDocCategory').value;
+    const label = document.getElementById('secureDocLabel').value.trim();
+    const file = document.getElementById('secureDocFile').files[0];
+    if (!file) { await showAlert('Choose a file first.'); return; }
+    if (!label) { await showAlert('Give this document a label so you can find it later.'); return; }
+
+    const btn = document.getElementById('secureDocUploadBtn');
+    const originalText = btn.textContent;
+    btn.disabled = true;
+    btn.textContent = 'Uploading...';
+    const result = await uploadSecureDocument(file, category, label);
+    btn.disabled = false;
+    btn.textContent = originalText;
+
+    if (!result.ok) {
+      await showAlert('Upload failed: ' + result.error + (result.detail ? ' \u2014 ' + result.detail : ''));
+      return;
+    }
+    document.getElementById('secureDocLabel').value = '';
+    document.getElementById('secureDocFile').value = '';
+    document.getElementById('secureDocsUploadCard').classList.add('is-collapsed');
+    await renderSecureDocsList();
+    showToast('Document uploaded.');
+  }
+
+  async function viewSecureDocumentUI(path) {
+    const result = await getSecureDocumentSignedUrl(path);
+    if (!result.ok) { await showAlert('Could not open that document: ' + result.error); return; }
+    window.open(result.url, '_blank', 'noopener');
+  }
+
+  async function deleteSecureDocumentUI(path) {
+    const confirmed = await showConfirm('Delete this document? This cannot be undone.', { danger: true, confirmText: 'Delete' });
+    if (!confirmed) return;
+    const result = await deleteSecureDocument(path);
+    if (!result.ok) { await showAlert('Could not delete: ' + result.error); return; }
+    await renderSecureDocsList();
+    showToast('Document deleted.');
+  }
+
   function addLicensePrompt() {
     const city = prompt('City name:');
     if (!city || !city.trim()) return;
@@ -1311,6 +1428,7 @@
     renderInsuranceCard();
     renderBusinessInfoCard();
     renderLicensesList();
+    renderSecureDocsList();
   }
 
   async function loadAndRenderGalleryQueue() {
