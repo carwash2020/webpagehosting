@@ -320,97 +320,114 @@
   </div>
   <div class="section-body" id="body-businesshealth">
 
-    <div class="analytics-subheading is-first">Website Gallery Queue</div>
-    <div id="galleryQueueList"></div>
-
-    <div class="analytics-subheading">Business Compliance</div>
-    <div id="insuranceCard"></div>
-
-    <div class="compliance-edit-form" id="insuranceEditForm">
-      <div class="tool-form-row">
-        <div style="flex:1; min-width:160px;"><label style="display:block; font-size:12.5px; color:var(--text-dim); margin-bottom:4px;">Insurer</label><input type="text" id="insInsurer" style="width:100%; box-sizing:border-box; padding:9px 11px; background:var(--bg-panel-2); border:1px solid var(--border); border-radius:6px; color:var(--white); font-size:14px;"></div>
-        <div style="flex:1; min-width:160px;"><label style="display:block; font-size:12.5px; color:var(--text-dim); margin-bottom:4px;">Broker / Producer</label><input type="text" id="insProducer" style="width:100%; box-sizing:border-box; padding:9px 11px; background:var(--bg-panel-2); border:1px solid var(--border); border-radius:6px; color:var(--white); font-size:14px;"></div>
-      </div>
-      <div class="tool-form-row">
-        <div style="flex:1; min-width:160px;"><label style="display:block; font-size:12.5px; color:var(--text-dim); margin-bottom:4px;">Policy Number</label><input type="text" id="insPolicyNumber" style="width:100%; box-sizing:border-box; padding:9px 11px; background:var(--bg-panel-2); border:1px solid var(--border); border-radius:6px; color:var(--white); font-size:14px;"></div>
-        <div style="flex:1; min-width:120px;"><label style="display:block; font-size:12.5px; color:var(--text-dim); margin-bottom:4px;">Effective</label><input type="date" id="insEffectiveDate" style="width:100%; box-sizing:border-box; padding:9px 11px; background:var(--bg-panel-2); border:1px solid var(--border); border-radius:6px; color:var(--white); font-size:14px;"></div>
-        <div style="flex:1; min-width:120px;"><label style="display:block; font-size:12.5px; color:var(--text-dim); margin-bottom:4px;">Expires</label><input type="date" id="insExpirationDate" style="width:100%; box-sizing:border-box; padding:9px 11px; background:var(--bg-panel-2); border:1px solid var(--border); border-radius:6px; color:var(--white); font-size:14px;"></div>
-      </div>
-      <div class="tool-form-row">
-        <div style="flex:1; min-width:140px;"><label style="display:block; font-size:12.5px; color:var(--text-dim); margin-bottom:4px;">Each Occurrence</label><input type="text" id="insEachOccurrence" style="width:100%; box-sizing:border-box; padding:9px 11px; background:var(--bg-panel-2); border:1px solid var(--border); border-radius:6px; color:var(--white); font-size:14px;"></div>
-        <div style="flex:1; min-width:140px;"><label style="display:block; font-size:12.5px; color:var(--text-dim); margin-bottom:4px;">General Aggregate</label><input type="text" id="insGeneralAggregate" style="width:100%; box-sizing:border-box; padding:9px 11px; background:var(--bg-panel-2); border:1px solid var(--border); border-radius:6px; color:var(--white); font-size:14px;"></div>
-        <div style="flex:1; min-width:140px;"><label style="display:block; font-size:12.5px; color:var(--text-dim); margin-bottom:4px;">Payment due day of month</label><input type="number" id="insPaymentDueDay" min="1" max="28" style="width:100%; box-sizing:border-box; padding:9px 11px; background:var(--bg-panel-2); border:1px solid var(--border); border-radius:6px; color:var(--white); font-size:14px;"></div>
-      </div>
-      <button class="secondary-btn" onclick="saveInsuranceEdit()">Save</button>
-      <button class="secondary-btn" onclick="closeInsuranceEdit()">Cancel</button>
+    <div class="tabs" id="businessHealthTabs" style="margin-bottom:18px;">
+      <button class="tab-btn is-active" data-bh-tab="gallery" onclick="activateBusinessHealthTab('gallery')">Gallery Queue</button>
+      <button class="tab-btn" data-bh-tab="compliance" onclick="activateBusinessHealthTab('compliance')">Compliance</button>
+      <button class="tab-btn" data-bh-tab="documents" onclick="activateBusinessHealthTab('documents')">Documents</button>
+      <button class="tab-btn" data-bh-tab="analytics" onclick="activateBusinessHealthTab('analytics')">Analytics</button>
+      <button class="tab-btn" data-bh-tab="backup" onclick="activateBusinessHealthTab('backup')">Backup</button>
     </div>
 
-    <div class="analytics-subheading" style="margin-top:26px;">LLC &amp; Tax Info</div>
-    <div id="businessInfoCard"></div>
-
-    <div class="compliance-edit-form" id="businessEditForm">
-      <div class="tool-form-row">
-        <div style="flex:1; min-width:160px;"><label style="display:block; font-size:12.5px; color:var(--text-dim); margin-bottom:4px;">Legal Name</label><input type="text" id="bizLegalName" style="width:100%; box-sizing:border-box; padding:9px 11px; background:var(--bg-panel-2); border:1px solid var(--border); border-radius:6px; color:var(--white); font-size:14px;"></div>
-        <div style="flex:1; min-width:120px;"><label style="display:block; font-size:12.5px; color:var(--text-dim); margin-bottom:4px;">State of Formation</label><input type="text" id="bizState" style="width:100%; box-sizing:border-box; padding:9px 11px; background:var(--bg-panel-2); border:1px solid var(--border); border-radius:6px; color:var(--white); font-size:14px;"></div>
-      </div>
-      <div class="tool-form-row">
-        <div style="flex:1; min-width:220px;"><label style="display:block; font-size:12.5px; color:var(--text-dim); margin-bottom:4px;">Business Address</label><input type="text" id="bizAddress" style="width:100%; box-sizing:border-box; padding:9px 11px; background:var(--bg-panel-2); border:1px solid var(--border); border-radius:6px; color:var(--white); font-size:14px;"></div>
-      </div>
-      <div class="tool-form-row">
-        <div style="flex:1; min-width:160px;"><label style="display:block; font-size:12.5px; color:var(--text-dim); margin-bottom:4px;">Utah Sales Tax License #</label><input type="text" id="bizSalesTax" style="width:100%; box-sizing:border-box; padding:9px 11px; background:var(--bg-panel-2); border:1px solid var(--border); border-radius:6px; color:var(--white); font-size:14px;"></div>
-        <div style="flex:1; min-width:160px;"><label style="display:block; font-size:12.5px; color:var(--text-dim); margin-bottom:4px;">EIN</label><input type="text" id="bizEin" placeholder="Leave blank until the IRS responds" style="width:100%; box-sizing:border-box; padding:9px 11px; background:var(--bg-panel-2); border:1px solid var(--border); border-radius:6px; color:var(--white); font-size:14px;"></div>
-      </div>
-      <div class="tool-form-row">
-        <div style="flex:1; min-width:220px;"><label style="display:block; font-size:12.5px; color:var(--text-dim); margin-bottom:4px;">W-9 Status / Notes</label><input type="text" id="bizW9Status" style="width:100%; box-sizing:border-box; padding:9px 11px; background:var(--bg-panel-2); border:1px solid var(--border); border-radius:6px; color:var(--white); font-size:14px;"></div>
-      </div>
-      <button class="secondary-btn" onclick="saveBusinessEdit()">Save</button>
-      <button class="secondary-btn" onclick="closeBusinessEdit()">Cancel</button>
+    <div class="tab-panel is-active" id="bh-panel-gallery">
+      <div id="galleryQueueList"></div>
     </div>
 
-    <div class="analytics-subheading" style="margin-top:26px;">City Business Licenses</div>
-    <div id="licensesList"></div>
-    <button class="secondary-btn" style="margin-top:10px;" onclick="addLicensePrompt()">+ Add License</button>
+    <div class="tab-panel" id="bh-panel-compliance">
+      <div class="analytics-subheading is-first">Business Compliance</div>
+      <div id="insuranceCard"></div>
 
-    <div class="analytics-subheading" style="margin-top:26px;">Secure Documents <button class="help-btn" onclick="openCardInfo('secureDocuments')" aria-label="What is this?" title="What is this?">?</button></div>
-    <div id="secureDocsList"></div>
-    <div class="icon-search" id="secureDocsUploadWrap" style="width:100%; margin-top:10px;">
-      <button class="icon-search-toggle" onclick="toggleFormSection('secureDocsUploadCard')" aria-label="Upload a document" title="Upload a document">+</button>
-    </div>
-    <div class="form-section is-collapsed" id="secureDocsUploadCard" style="margin-top:10px;">
-      <div class="form-section-body">
+      <div class="compliance-edit-form" id="insuranceEditForm">
         <div class="tool-form-row">
-          <div class="form-field"><label>Category</label>
-            <select id="secureDocCategory">
-              <option value="insurance">Insurance</option>
-              <option value="business-formation">Business Formation</option>
-              <option value="licenses">Licenses &amp; Permits</option>
-              <option value="tax">Tax Documents</option>
-              <option value="contracts">Signed Contracts</option>
-              <option value="vendor-agreements">Vendor Agreements</option>
-              <option value="other">Other</option>
-            </select>
+          <div style="flex:1; min-width:160px;"><label style="display:block; font-size:12.5px; color:var(--text-dim); margin-bottom:4px;">Insurer</label><input type="text" id="insInsurer" style="width:100%; box-sizing:border-box; padding:9px 11px; background:var(--bg-panel-2); border:1px solid var(--border); border-radius:6px; color:var(--white); font-size:14px;"></div>
+          <div style="flex:1; min-width:160px;"><label style="display:block; font-size:12.5px; color:var(--text-dim); margin-bottom:4px;">Broker / Producer</label><input type="text" id="insProducer" style="width:100%; box-sizing:border-box; padding:9px 11px; background:var(--bg-panel-2); border:1px solid var(--border); border-radius:6px; color:var(--white); font-size:14px;"></div>
+        </div>
+        <div class="tool-form-row">
+          <div style="flex:1; min-width:160px;"><label style="display:block; font-size:12.5px; color:var(--text-dim); margin-bottom:4px;">Policy Number</label><input type="text" id="insPolicyNumber" style="width:100%; box-sizing:border-box; padding:9px 11px; background:var(--bg-panel-2); border:1px solid var(--border); border-radius:6px; color:var(--white); font-size:14px;"></div>
+          <div style="flex:1; min-width:120px;"><label style="display:block; font-size:12.5px; color:var(--text-dim); margin-bottom:4px;">Effective</label><input type="date" id="insEffectiveDate" style="width:100%; box-sizing:border-box; padding:9px 11px; background:var(--bg-panel-2); border:1px solid var(--border); border-radius:6px; color:var(--white); font-size:14px;"></div>
+          <div style="flex:1; min-width:120px;"><label style="display:block; font-size:12.5px; color:var(--text-dim); margin-bottom:4px;">Expires</label><input type="date" id="insExpirationDate" style="width:100%; box-sizing:border-box; padding:9px 11px; background:var(--bg-panel-2); border:1px solid var(--border); border-radius:6px; color:var(--white); font-size:14px;"></div>
+        </div>
+        <div class="tool-form-row">
+          <div style="flex:1; min-width:140px;"><label style="display:block; font-size:12.5px; color:var(--text-dim); margin-bottom:4px;">Each Occurrence</label><input type="text" id="insEachOccurrence" style="width:100%; box-sizing:border-box; padding:9px 11px; background:var(--bg-panel-2); border:1px solid var(--border); border-radius:6px; color:var(--white); font-size:14px;"></div>
+          <div style="flex:1; min-width:140px;"><label style="display:block; font-size:12.5px; color:var(--text-dim); margin-bottom:4px;">General Aggregate</label><input type="text" id="insGeneralAggregate" style="width:100%; box-sizing:border-box; padding:9px 11px; background:var(--bg-panel-2); border:1px solid var(--border); border-radius:6px; color:var(--white); font-size:14px;"></div>
+          <div style="flex:1; min-width:140px;"><label style="display:block; font-size:12.5px; color:var(--text-dim); margin-bottom:4px;">Payment due day of month</label><input type="number" id="insPaymentDueDay" min="1" max="28" style="width:100%; box-sizing:border-box; padding:9px 11px; background:var(--bg-panel-2); border:1px solid var(--border); border-radius:6px; color:var(--white); font-size:14px;"></div>
+        </div>
+        <button class="secondary-btn" onclick="saveInsuranceEdit()">Save</button>
+        <button class="secondary-btn" onclick="closeInsuranceEdit()">Cancel</button>
+      </div>
+
+      <div class="analytics-subheading" style="margin-top:26px;">LLC &amp; Tax Info</div>
+      <div id="businessInfoCard"></div>
+
+      <div class="compliance-edit-form" id="businessEditForm">
+        <div class="tool-form-row">
+          <div style="flex:1; min-width:160px;"><label style="display:block; font-size:12.5px; color:var(--text-dim); margin-bottom:4px;">Legal Name</label><input type="text" id="bizLegalName" style="width:100%; box-sizing:border-box; padding:9px 11px; background:var(--bg-panel-2); border:1px solid var(--border); border-radius:6px; color:var(--white); font-size:14px;"></div>
+          <div style="flex:1; min-width:120px;"><label style="display:block; font-size:12.5px; color:var(--text-dim); margin-bottom:4px;">State of Formation</label><input type="text" id="bizState" style="width:100%; box-sizing:border-box; padding:9px 11px; background:var(--bg-panel-2); border:1px solid var(--border); border-radius:6px; color:var(--white); font-size:14px;"></div>
+        </div>
+        <div class="tool-form-row">
+          <div style="flex:1; min-width:220px;"><label style="display:block; font-size:12.5px; color:var(--text-dim); margin-bottom:4px;">Business Address</label><input type="text" id="bizAddress" style="width:100%; box-sizing:border-box; padding:9px 11px; background:var(--bg-panel-2); border:1px solid var(--border); border-radius:6px; color:var(--white); font-size:14px;"></div>
+        </div>
+        <div class="tool-form-row">
+          <div style="flex:1; min-width:160px;"><label style="display:block; font-size:12.5px; color:var(--text-dim); margin-bottom:4px;">Utah Sales Tax License #</label><input type="text" id="bizSalesTax" style="width:100%; box-sizing:border-box; padding:9px 11px; background:var(--bg-panel-2); border:1px solid var(--border); border-radius:6px; color:var(--white); font-size:14px;"></div>
+          <div style="flex:1; min-width:160px;"><label style="display:block; font-size:12.5px; color:var(--text-dim); margin-bottom:4px;">EIN</label><input type="text" id="bizEin" placeholder="Leave blank until the IRS responds" style="width:100%; box-sizing:border-box; padding:9px 11px; background:var(--bg-panel-2); border:1px solid var(--border); border-radius:6px; color:var(--white); font-size:14px;"></div>
+        </div>
+        <div class="tool-form-row">
+          <div style="flex:1; min-width:220px;"><label style="display:block; font-size:12.5px; color:var(--text-dim); margin-bottom:4px;">W-9 Status / Notes</label><input type="text" id="bizW9Status" style="width:100%; box-sizing:border-box; padding:9px 11px; background:var(--bg-panel-2); border:1px solid var(--border); border-radius:6px; color:var(--white); font-size:14px;"></div>
+        </div>
+        <button class="secondary-btn" onclick="saveBusinessEdit()">Save</button>
+        <button class="secondary-btn" onclick="closeBusinessEdit()">Cancel</button>
+      </div>
+
+      <div class="analytics-subheading" style="margin-top:26px;">City Business Licenses</div>
+      <div id="licensesList"></div>
+      <button class="secondary-btn" style="margin-top:10px;" onclick="addLicensePrompt()">+ Add License</button>
+    </div>
+
+    <div class="tab-panel" id="bh-panel-documents">
+      <div class="analytics-subheading is-first">Secure Documents <button class="help-btn" onclick="openCardInfo('secureDocuments')" aria-label="What is this?" title="What is this?">?</button></div>
+      <div id="secureDocsList"></div>
+      <div class="icon-search" id="secureDocsUploadWrap" style="width:100%; margin-top:10px;">
+        <button class="icon-search-toggle" onclick="toggleFormSection('secureDocsUploadCard')" aria-label="Upload a document" title="Upload a document">+</button>
+      </div>
+      <div class="form-section is-collapsed" id="secureDocsUploadCard" style="margin-top:10px;">
+        <div class="form-section-body">
+          <div class="tool-form-row">
+            <div class="form-field"><label>Category</label>
+              <select id="secureDocCategory">
+                <option value="insurance">Insurance</option>
+                <option value="business-formation">Business Formation</option>
+                <option value="licenses">Licenses &amp; Permits</option>
+                <option value="tax">Tax Documents</option>
+                <option value="contracts">Signed Contracts</option>
+                <option value="vendor-agreements">Vendor Agreements</option>
+                <option value="other">Other</option>
+              </select>
+            </div>
+            <div class="form-field"><label>Label</label><input type="text" id="secureDocLabel" placeholder="e.g. General Liability Policy 2026"></div>
           </div>
-          <div class="form-field"><label>Label</label><input type="text" id="secureDocLabel" placeholder="e.g. General Liability Policy 2026"></div>
+          <div class="tool-form-row">
+            <div class="form-field"><label>File</label><input type="file" id="secureDocFile" accept=".pdf,.png,.jpg,.jpeg"></div>
+          </div>
+          <button class="primary-btn" id="secureDocUploadBtn" onclick="uploadSecureDocumentUI()">Upload</button>
         </div>
-        <div class="tool-form-row">
-          <div class="form-field"><label>File</label><input type="file" id="secureDocFile" accept=".pdf,.png,.jpg,.jpeg"></div>
-        </div>
-        <button class="primary-btn" id="secureDocUploadBtn" onclick="uploadSecureDocumentUI()">Upload</button>
       </div>
     </div>
 
-    <div class="analytics-subheading" style="margin-top:26px;">Analytics &mdash; Job Status</div>
-    <div id="statusBars"></div>
-    <div class="analytics-subheading">Analytics &mdash; Top Vendors <span style="text-transform:none; letter-spacing:0;">(for the period selected in Business Snapshot)</span></div>
-    <div id="topVendors"></div>
+    <div class="tab-panel" id="bh-panel-analytics">
+      <div class="analytics-subheading is-first">Job Status</div>
+      <div id="statusBars"></div>
+      <div class="analytics-subheading">Top Vendors <span style="text-transform:none; letter-spacing:0;">(for the period selected in Business Snapshot)</span></div>
+      <div id="topVendors"></div>
+    </div>
 
-    <div class="analytics-subheading" style="margin-top:26px;">Backup &amp; Restore</div>
-    <div class="backup-row">
-      <button class="secondary-btn" onclick="downloadBackup()">Download Full Backup</button>
-      <label class="secondary-btn" style="display:inline-flex; align-items:center; cursor:pointer;">
-        Restore from Backup
-        <input type="file" accept="application/json" onchange="restoreBackup(event)" style="display:none;">
-      </label>
+    <div class="tab-panel" id="bh-panel-backup">
+      <div class="analytics-subheading is-first">Backup &amp; Restore</div>
+      <div class="backup-row">
+        <button class="secondary-btn" onclick="downloadBackup()">Download Full Backup</button>
+        <label class="secondary-btn" style="display:inline-flex; align-items:center; cursor:pointer;">
+          Restore from Backup
+          <input type="file" accept="application/json" onchange="restoreBackup(event)" style="display:none;">
+        </label>
+      </div>
     </div>
 
   </div>
@@ -551,6 +568,11 @@
       heading.classList.toggle('is-collapsed', !!state[key]);
       body.classList.toggle('is-collapsed', !!state[key]);
     });
+  }
+
+  function activateBusinessHealthTab(tabKey) {
+    document.querySelectorAll('#businessHealthTabs .tab-btn').forEach(b => b.classList.toggle('is-active', b.dataset.bhTab === tabKey));
+    document.querySelectorAll('#body-businesshealth .tab-panel').forEach(p => p.classList.toggle('is-active', p.id === 'bh-panel-' + tabKey));
   }
 
   function toggleSection(key) {

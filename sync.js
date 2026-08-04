@@ -603,6 +603,36 @@ const RECEIPTS_BUCKET = 'receipts';
 // point of using a private bucket in the first place.
 const SECURE_DOCS_BUCKET = 'secure-documents';
 
+// A real, reversible encoding for the label, not the space<->hyphen
+// substitution this replaced -- that was lossy for any label that
+// already contained a hyphen itself (like "W-9" or "2026-2027"), since
+// decoding back turns EVERY hyphen into a space with no way to tell
+// which ones were originally spaces. Base64url is fully reversible and
+// still safe to drop directly into a storage path with no extra
+// URL-encoding step, since it only ever produces letters, digits, - and _.
+function labelToSlug(label) {
+  const b64 = btoa(unescape(encodeURIComponent(label)));
+  return b64.replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+}
+function slugToLabel(slug) {
+  try {
+    let b64 = slug.replace(/-/g, '+').replace(/_/g, '/');
+    while (b64.length % 4) b64 += '=';
+    const decoded = decodeURIComponent(escape(atob(b64)));
+    // A real decoded label should be plain readable text. If this
+    // doesn't look like that, the slug probably wasn't actually
+    // base64 in the first place -- most likely a document uploaded
+    // before this fix, which used the older, lossy hyphen scheme.
+    if (decoded && /^[\x20-\x7E]*$/.test(decoded)) return decoded;
+  } catch (e) { /* not valid base64 -- fall through to the legacy handling below */ }
+  // Legacy fallback for documents uploaded before this fix: the old
+  // scheme turned spaces into hyphens on save, so reverse that as a
+  // best-effort display -- imperfect for old labels that had a real
+  // hyphen in them, but there's nothing better to do for a file that's
+  // already sitting in storage under that old name.
+  return slug.replace(/-/g, ' ');
+}
+
 async function uploadSecureDocument(file, category, label) {
   if (!isSyncConfigured()) return { ok: false, error: 'not-configured' };
   if (typeof ensureFreshToken === 'function') {
@@ -612,8 +642,9 @@ async function uploadSecureDocument(file, category, label) {
 
   const safeCategory = (category || 'uncategorized').toLowerCase().replace(/[^a-z0-9-]/g, '-');
   const ext = (file.name.split('.').pop() || 'pdf').toLowerCase().replace(/[^a-z0-9]/g, '') || 'pdf';
-  const safeLabel = (label || file.name.replace(/\.[^.]+$/, '')).trim().replace(/[^a-zA-Z0-9 _-]/g, '').replace(/\s+/g, '-').slice(0, 60) || 'document';
-  const path = `${safeCategory}/${Date.now()}_${safeLabel}.${ext}`;
+  const rawLabel = (label || file.name.replace(/\.[^.]+$/, '')).trim().slice(0, 80) || 'document';
+  const labelSlug = labelToSlug(rawLabel);
+  const path = `${safeCategory}/${Date.now()}_${labelSlug}.${ext}`;
 
   try {
     const res = await fetch(`${SUPABASE_URL}/storage/v1/object/${SECURE_DOCS_BUCKET}/${path}`, {
@@ -661,11 +692,11 @@ async function listSecureDocuments() {
       if (!res.ok) continue;
       const entries = await res.json();
       entries.filter(e => e.id !== null).forEach(e => {
-        const match = e.name.match(/^(\d+)_(.+)$/);
+        const match = e.name.match(/^(\d+)_(.+)\.[a-zA-Z0-9]+$/);
         documents.push({
           path: `${category}/${e.name}`,
           category,
-          label: match ? match[2].replace(/-/g, ' ') : e.name,
+          label: match ? slugToLabel(match[2]) : e.name,
           uploadedAt: match ? Number(match[1]) : null,
         });
       });
