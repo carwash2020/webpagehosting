@@ -658,8 +658,25 @@
     return new Date(base.getTime() + days * 24 * 60 * 60 * 1000);
   }
 
+  // Backward-compatible with every invoice that predates partial-payment
+  // tracking: those only ever had a `paid` boolean, no `paidAmount` field
+  // at all. Falling back to "paid ? total : 0" means an old fully-paid
+  // invoice is still correctly treated as fully paid, and an old unpaid
+  // one as $0 paid, with zero migration step needed.
+  function getPaidAmount(invoice) {
+    if (invoice.paidAmount !== undefined && invoice.paidAmount !== null) return Number(invoice.paidAmount) || 0;
+    return invoice.paid ? (Number(invoice.total) || 0) : 0;
+  }
+  function invoicePaymentStatus(invoice) {
+    const total = Number(invoice.total) || 0;
+    const paidAmount = getPaidAmount(invoice);
+    if (total > 0 && paidAmount >= total) return 'paid';
+    if (paidAmount > 0) return 'partial';
+    return 'unpaid';
+  }
+
   function isOverdue(invoice) {
-    if (invoice.paid) return false;
+    if (invoicePaymentStatus(invoice) === 'paid') return false;
     const due = getDueDate(invoice);
     if (!due) return false;
     return due < new Date(new Date().toDateString());
@@ -743,10 +760,10 @@
     }
 
     const allInvoices = loadInvoices();
-    const unpaid = allInvoices.filter(i => !i.paid);
+    const unpaid = allInvoices.filter(i => invoicePaymentStatus(i) !== 'paid');
     const overdue = unpaid.filter(isOverdue);
-    const outstandingTotal = unpaid.reduce((sum, i) => sum + (i.total || 0), 0);
-    const overdueTotal = overdue.reduce((sum, i) => sum + (i.total || 0), 0);
+    const outstandingTotal = unpaid.reduce((sum, i) => sum + Math.max(0, (Number(i.total) || 0) - getPaidAmount(i)), 0);
+    const overdueTotal = overdue.reduce((sum, i) => sum + Math.max(0, (Number(i.total) || 0) - getPaidAmount(i)), 0);
 
     document.getElementById('metricOutstanding').textContent = money(outstandingTotal);
     document.getElementById('metricOutstandingCount').textContent = unpaid.length + ' unpaid invoice' + (unpaid.length === 1 ? '' : 's');
@@ -860,11 +877,28 @@
       </div>`).join('');
   }
 
-  function togglePaid(id) {
+  async function togglePaid(id) {
     const invoices = loadInvoices();
     const inv = invoices.find(i => i.id === id);
     if (!inv) return;
-    inv.paid = !inv.paid;
+    const total = Number(inv.total) || 0;
+    const status = invoicePaymentStatus(inv);
+
+    if (status === 'paid') {
+      // Already fully paid -- treat another tap as "undo that by mistake"
+      // rather than asking for an amount again.
+      const confirmed = await showConfirm('Mark this invoice as unpaid again?', { confirmText: 'Mark Unpaid' });
+      if (!confirmed) return;
+      inv.paidAmount = 0;
+    } else {
+      const promptDefault = status === 'partial' ? String(getPaidAmount(inv)) : total.toFixed(2);
+      const input = prompt(`How much has actually been paid on this $${total.toFixed(2)} invoice?`, promptDefault);
+      if (input === null) return; // cancelled
+      const amount = parseFloat(input);
+      if (isNaN(amount) || amount < 0) { await showAlert('Enter a valid amount ($0 or more).'); return; }
+      inv.paidAmount = amount;
+    }
+    inv.paid = invoicePaymentStatus(inv) === 'paid'; // keep the legacy boolean in sync for anything else that still reads it directly
     saveInvoices(invoices);
     renderInvoicesList();
     renderMetrics();
@@ -876,7 +910,7 @@
   }
 
   function renderInvoicesList() {
-    actionItemCounts.unpaid = loadInvoices().filter(i => !i.paid).length;
+    actionItemCounts.unpaid = loadInvoices().filter(i => invoicePaymentStatus(i) !== 'paid').length;
     updateActionItemsBadge();
     const searchTerm = (document.getElementById('invoiceSearch')?.value || '').trim().toLowerCase();
 
@@ -926,8 +960,12 @@
       }
       const i = it.raw;
       const overdue = isOverdue(i);
-      const btnClass = i.paid ? 'is-paid' : (overdue ? 'is-overdue' : 'is-unpaid');
-      const btnText = i.paid ? 'Paid' : (overdue ? 'Overdue' : 'Unpaid');
+      const status = invoicePaymentStatus(i);
+      const remaining = Math.max(0, (Number(i.total) || 0) - getPaidAmount(i));
+      let btnClass, btnText;
+      if (status === 'paid') { btnClass = 'is-paid'; btnText = 'Paid'; }
+      else if (status === 'partial') { btnClass = overdue ? 'is-overdue' : 'is-unpaid'; btnText = `Partial \u2014 ${money(remaining)} left`; }
+      else { btnClass = overdue ? 'is-overdue' : 'is-unpaid'; btnText = overdue ? 'Overdue' : 'Unpaid'; }
       return `
       <div class="dash-list-item">
         <div>
