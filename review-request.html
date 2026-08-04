@@ -43,10 +43,12 @@
     width: 100%; padding: 10px 12px; background: var(--bg-panel-2); border: 1px solid var(--border);
     border-radius: 6px; color: var(--white); font-size: 15px; font-family: inherit; box-sizing: border-box;
   }
+  .message-preview-wrap { display: flex; justify-content: flex-end; margin-bottom: 14px; }
   .message-preview {
-    background: var(--bg-panel-2); border: 1px solid var(--border); border-radius: 8px;
-    padding: 16px; font-size: 14.5px; line-height: 1.6; color: var(--white); white-space: pre-wrap;
-    margin-bottom: 14px;
+    background: linear-gradient(135deg, var(--orange-light), var(--orange) 70%);
+    border-radius: 18px 18px 4px 18px;
+    padding: 12px 16px; font-size: 14.5px; line-height: 1.5; color: #1a0d02; white-space: pre-wrap;
+    max-width: 88%; box-shadow: 0 2px 8px rgba(0,0,0,0.25);
   }
   .btn-row { display: flex; gap: 12px; flex-wrap: wrap; }
   .action-btn {
@@ -63,6 +65,9 @@
   .btn-send:hover { opacity: 0.92; }
   .copy-confirm { color: var(--orange-light); font-size: 13px; margin-top: 8px; display: none; }
   .fallback-note { color: var(--text-dim); font-size: 13px; margin-top: 16px; border-top: 1px solid var(--border); padding-top: 14px; }
+  @keyframes autofillFlash { 0% { background: rgba(255,128,0,0.28); } 100% { background: var(--bg-panel-2); } }
+  .is-autofilled { animation: autofillFlash 1.1s ease; }
+  @media (prefers-reduced-motion: reduce) { .is-autofilled { animation: none; } }
 </style>
 </head>
 <body>
@@ -84,23 +89,24 @@
 
 <div class="tab-panel is-active" id="panel-send">
 
-<div class="form-section" id="recentJobsSection" style="display:none;">
-  <h3>Recently Completed Jobs</h3>
-  <p style="color:var(--text-dim); font-size:13px; margin:-4px 0 12px;">Pick one to auto-fill the details below instead of typing them in by hand.</p>
-  <div class="form-field">
-    <select id="recentJobSelect" style="width:100%; box-sizing:border-box; padding:10px 12px; background:var(--bg-panel-2); border:1px solid var(--border); border-radius:6px; color:var(--white); font-size:15px; font-family:inherit;">
-      <option value="">Choose a job&hellip;</option>
-    </select>
-  </div>
-  <button class="action-btn btn-copy" onclick="applyRecentJobSelection()" style="width:100%;">Use This Job</button>
-</div>
-
 <div class="form-section" id="pendingRemindersSection" style="display:none;">
   <h3>Due Today <span style="color:var(--text-dim); font-weight:400; text-transform:none; letter-spacing:0;">&mdash; delayed review requests ready to send</span></h3>
   <div id="pendingRemindersList"></div>
 </div>
 
 <div class="form-section">
+  <div id="recentJobsSection" style="display:none;">
+    <h3>Recently Completed Jobs</h3>
+    <p style="color:var(--text-dim); font-size:13px; margin:-4px 0 12px;">Pick one to auto-fill the details below instead of typing them in by hand.</p>
+    <div class="form-field">
+      <select id="recentJobSelect" style="width:100%; box-sizing:border-box; padding:10px 12px; background:var(--bg-panel-2); border:1px solid var(--border); border-radius:6px; color:var(--white); font-size:15px; font-family:inherit;">
+        <option value="">Choose a job&hellip;</option>
+      </select>
+    </div>
+    <button class="action-btn btn-copy" onclick="applyRecentJobSelection()" style="width:100%; margin-bottom:20px;">Use This Job</button>
+    <div style="border-top:1px solid var(--border); margin-bottom:20px;"></div>
+  </div>
+
   <h3>Job Details</h3>
   <div class="form-field">
     <label>Customer's first name (optional &mdash; leave blank for a generic greeting)</label>
@@ -118,7 +124,7 @@
 
 <div class="form-section">
   <h3>Message Preview</h3>
-  <div class="message-preview" id="messagePreview"></div>
+  <div class="message-preview-wrap"><div class="message-preview" id="messagePreview"></div></div>
   <div id="duplicateWarning" style="display:none; color: var(--orange-light); font-size: 13px; margin-bottom: 12px; padding: 10px 12px; background: rgba(255,128,0,0.08); border: 1px solid rgba(255,128,0,0.3); border-radius: 6px;"></div>
   <div class="btn-row">
     <button class="action-btn btn-copy" onclick="shuffleMessage()">&#128256; Try Another</button>
@@ -315,6 +321,37 @@
     return str.replace(/\D/g, '');
   }
 
+  // Formats to (XXX) XXX-XXXX as a static string -- used when a phone
+  // number is set programmatically (auto-fill from a job, a reminder,
+  // URL params), where there's no live cursor to worry about.
+  function formatPhoneStatic(raw) {
+    const digits = digitsOnly(raw || '').slice(0, 10);
+    if (digits.length > 6) return `(${digits.slice(0,3)}) ${digits.slice(3,6)}-${digits.slice(6)}`;
+    if (digits.length > 3) return `(${digits.slice(0,3)}) ${digits.slice(3)}`;
+    if (digits.length > 0) return `(${digits}`;
+    return '';
+  }
+
+  // Formats live, while the user is actively typing -- reformatting the
+  // whole value on every keystroke would normally throw the cursor to
+  // the end of the field, which is disorienting if you're editing
+  // partway through a number rather than typing left to right. This
+  // tracks how many actual digits sat before the cursor beforehand, then
+  // places the cursor after that same digit count in the reformatted
+  // string, so it stays where you'd expect relative to the digits
+  // you're actually editing.
+  function formatPhoneInputLive(input) {
+    const cursorPos = input.selectionStart;
+    const digitsBeforeCursor = digitsOnly(input.value.slice(0, cursorPos)).length;
+    input.value = formatPhoneStatic(input.value);
+    let pos = 0, digitsSeen = 0;
+    while (pos < input.value.length && digitsSeen < digitsBeforeCursor) {
+      if (/\d/.test(input.value[pos])) digitsSeen++;
+      pos++;
+    }
+    input.setSelectionRange(pos, pos);
+  }
+
   // ---------- Recent completed jobs (reads Job Tracker's own data --
   // same-device localStorage, no API call needed) ----------
   function loadRecentDoneJobs() {
@@ -334,6 +371,16 @@
     select.innerHTML = '<option value="">Choose a job&hellip;</option>' + jobs.map((j, idx) => `
       <option value="${idx}">${escapeHtml(j.title || 'Untitled job')}${j.client ? ' \u2014 ' + escapeHtml(j.client) : ''}</option>`).join('');
   }
+  function flashAutofilledFields(ids) {
+    ids.forEach(id => {
+      const el = document.getElementById(id);
+      el.classList.remove('is-autofilled');
+      // eslint-disable-next-line no-unused-expressions
+      void el.offsetWidth; // forces a reflow so the animation replays even if it's already mid-flash from a moment ago
+      el.classList.add('is-autofilled');
+    });
+  }
+
   function applyRecentJobSelection() {
     const idx = document.getElementById('recentJobSelect').value;
     if (idx === '') return;
@@ -341,9 +388,10 @@
     if (!job) return;
     if (job.client) document.getElementById('custName').value = job.client.split(' ')[0];
     if (job.title) document.getElementById('jobDesc').value = job.title;
-    if (job.phone) document.getElementById('custPhone').value = job.phone;
+    if (job.phone) document.getElementById('custPhone').value = formatPhoneStatic(job.phone);
     updatePreviewAndLink();
-    document.getElementById('custName').scrollIntoView({ behavior: 'smooth', block: 'center' });
+    flashAutofilledFields(['custName', 'jobDesc', 'custPhone']);
+    document.getElementById('messagePreview').scrollIntoView({ behavior: 'smooth', block: 'center' });
   }
 
   // ---------- Sent-request log (local only, never leaves this device --
@@ -432,7 +480,13 @@
     savePending(pending);
   }
 
-  function dismissReminder(id) {
+  async function dismissReminder(id) {
+    const item = loadPending().find(p => p.id === id);
+    const label = item ? (item.name || item.phone || 'this reminder') : 'this reminder';
+    const confirmed = typeof showConfirm === 'function'
+      ? await showConfirm(`Dismiss the reminder for ${label}? This can't be undone.`, { danger: true, confirmText: 'Dismiss' })
+      : confirm(`Dismiss the reminder for ${label}?`);
+    if (!confirmed) return;
     savePending(loadPending().filter(p => p.id !== id));
     renderPendingReminders();
   }
@@ -442,9 +496,10 @@
     if (!item) return;
     if (item.name) document.getElementById('custName').value = item.name;
     if (item.job) document.getElementById('jobDesc').value = item.job;
-    if (item.phone) document.getElementById('custPhone').value = item.phone;
+    if (item.phone) document.getElementById('custPhone').value = formatPhoneStatic(item.phone);
     updatePreviewAndLink();
-    document.getElementById('custName').scrollIntoView({ behavior: 'smooth', block: 'center' });
+    flashAutofilledFields(['custName', 'jobDesc', 'custPhone']);
+    document.getElementById('messagePreview').scrollIntoView({ behavior: 'smooth', block: 'center' });
   }
 
   function renderPendingReminders() {
@@ -503,14 +558,17 @@
 
   document.getElementById('custName').addEventListener('input', updatePreviewAndLink);
   document.getElementById('jobDesc').addEventListener('input', updatePreviewAndLink);
-  document.getElementById('custPhone').addEventListener('input', updatePreviewAndLink);
+  document.getElementById('custPhone').addEventListener('input', (e) => {
+    formatPhoneInputLive(e.target);
+    updatePreviewAndLink();
+  });
 
   // Prefill from URL params if arriving from a completed job in the Job
   // Tracker (e.g. /review-request.html?name=Sarah&job=faucet+repair&phone=4355550123)
   const params = new URLSearchParams(location.search);
   if (params.get('name')) document.getElementById('custName').value = params.get('name');
   if (params.get('job')) document.getElementById('jobDesc').value = params.get('job');
-  if (params.get('phone')) document.getElementById('custPhone').value = params.get('phone');
+  if (params.get('phone')) document.getElementById('custPhone').value = formatPhoneStatic(params.get('phone'));
 
   updatePreviewAndLink();
   renderRecentJobs();
