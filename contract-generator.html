@@ -59,12 +59,16 @@
   }
 
   .contract-log-item {
-    display: flex; justify-content: space-between; align-items: center; gap: 12px;
+    display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap;
     padding: 12px 0; border-bottom: 1px solid var(--border);
   }
   .contract-log-item:last-child { border-bottom: none; }
   .contract-log-title { font-family:'Oswald',sans-serif; color: var(--white); font-size: 14.5px; }
   .contract-log-meta { color: var(--text-dim); font-size: 12.5px; margin-top: 2px; }
+  .badge-pending-signature {
+    display: inline-block; background: rgba(255,128,0,0.12); border: 1px solid rgba(255,128,0,0.4);
+    color: var(--orange-light); font-size: 11px; padding: 2px 8px; border-radius: 20px; margin-left: 6px; vertical-align: middle;
+  }
 </style>
 </head>
 <body>
@@ -209,18 +213,34 @@
   <button class="primary-btn wide" onclick="generateAndLog('ltsa')">Generate PDF &amp; Save</button>
 </div>
 
-<div class="form-section">
-  <h3>Client Signature <span style="color:var(--text-dim); font-weight:400; text-transform:none; letter-spacing:0;">(optional)</span> <button class="help-btn" onclick="openCardInfo('signature')" aria-label="What is this?" title="What is this?">?</button></h3>
-  <canvas id="signatureCanvas" width="600" height="180" style="width:100%; max-width:600px; height:180px; background:#ffffff; border:1px solid var(--border); border-radius:8px; touch-action:none; cursor:crosshair; display:block;"></canvas>
-  <div style="display:flex; gap:10px; margin-top:10px;">
-    <button type="button" class="secondary-btn" onclick="clearSignature()">Clear Signature</button>
-    <span id="signatureStatus" style="color:var(--text-dim); font-size:13px; align-self:center;"></span>
+<div class="form-section is-collapsed" id="signatureFormSection">
+  <div class="form-section-header" onclick="toggleFormSection('signatureFormSection')">
+    <h3>Signatures <span style="color:var(--text-dim); font-weight:400; text-transform:none; letter-spacing:0;">(optional)</span> <button class="help-btn" onclick="event.stopPropagation(); openCardInfo('signature')" aria-label="What is this?" title="What is this?">?</button></h3>
+    <span class="collapse-chevron">&#9660;</span>
+  </div>
+  <div class="form-section-body">
+    <p class="inline-note" style="margin-top:-4px;">Client Signature</p>
+    <canvas id="signatureCanvas" width="600" height="180" style="width:100%; max-width:600px; height:180px; background:#ffffff; border:1px solid var(--border); border-radius:8px; touch-action:none; cursor:crosshair; display:block;"></canvas>
+    <div style="display:flex; gap:10px; margin-top:10px; margin-bottom:20px;">
+      <button type="button" class="secondary-btn" onclick="clearSignature('signatureCanvas', 'signatureStatus')">Clear Signature</button>
+      <span id="signatureStatus" style="color:var(--text-dim); font-size:13px; align-self:center;"></span>
+    </div>
+
+    <p class="inline-note">Triple H Enterprises Signature</p>
+    <canvas id="businessSignatureCanvas" width="600" height="180" style="width:100%; max-width:600px; height:180px; background:#ffffff; border:1px solid var(--border); border-radius:8px; touch-action:none; cursor:crosshair; display:block;"></canvas>
+    <div style="display:flex; gap:10px; margin-top:10px;">
+      <button type="button" class="secondary-btn" onclick="clearSignature('businessSignatureCanvas', 'businessSignatureStatus')">Clear Signature</button>
+      <span id="businessSignatureStatus" style="color:var(--text-dim); font-size:13px; align-self:center;"></span>
+    </div>
   </div>
 </div>
 
 <div class="form-section" id="contractLogSection">
   <h3>Recent Contracts</h3>
-  <div class="form-field"><input type="text" id="contractSearch" placeholder="Search by client or contract type..." oninput="renderContractLog()" aria-label="Search contracts"></div>
+  <div class="icon-search" id="contractSearchWrap">
+    <button class="icon-search-toggle" onclick="toggleIconSearch('contractSearchWrap')" aria-label="Search contracts" title="Search contracts">&#128269;</button>
+    <input type="text" id="contractSearch" class="icon-search-input" placeholder="Search by client or contract type..." oninput="renderContractLog()" aria-label="Search contracts">
+  </div>
   <div id="contractLogList"></div>
 </div>
 
@@ -241,15 +261,18 @@
 <script>
   const CARD_INFO = {
     signature: {
-      title: 'Client Signature',
-      body: `<p>If the client is signing in person right now, have them sign with a finger or mouse before generating the PDF &mdash; it'll be embedded directly into the document instead of leaving a blank line.</p>
-        <p>Skip this entirely and the PDF works exactly like before, ready for hand-signing later.</p>`,
+      title: 'Signatures',
+      body: `<p>If the client is signing in person right now, have them sign the first pad before generating the PDF &mdash; it'll be embedded directly into the document instead of leaving a blank line.</p>
+        <p>The second pad is for your own signature, so a fully-executed copy can be produced in one pass instead of printing and re-signing separately.</p>
+        <p>Skip either or both and the PDF works exactly like before, ready for hand-signing later.</p>`,
     },
   };
   function openCardInfo(key) {
     const info = CARD_INFO[key];
     if (info) openInfoModal(info.title, info.body);
   }
+
+  function startOfDay(d) { const c = new Date(d); c.setHours(0, 0, 0, 0); return c; }
 
   function escapeHtml(str) {
     const div = document.createElement('div');
@@ -321,17 +344,26 @@
         : '<div class="empty-state-small">No contracts generated yet.</div>';
       return;
     }
-    container.innerHTML = log.map(entry => `
+    container.innerHTML = log.map(entry => {
+      let pendingBadge = '';
+      if (entry.dateGeneratedISO && !entry.signedByClient) {
+        const days = Math.round((startOfDay(new Date()) - startOfDay(new Date(entry.dateGeneratedISO + 'T00:00:00'))) / (24 * 60 * 60 * 1000));
+        if (days >= 14) {
+          pendingBadge = `<span class="badge-pending-signature" title="Generated ${days} days ago with no client signature on file">Pending signature &mdash; ${days}d</span>`;
+        }
+      }
+      return `
       <div class="contract-log-item">
         <div>
-          <div class="contract-log-title">${escapeHtml(entry.fields.clientName || '(no name)')}</div>
+          <div class="contract-log-title">${escapeHtml(entry.fields.clientName || '(no name)')} ${pendingBadge}</div>
           <div class="contract-log-meta">${escapeHtml(CONTRACT_TYPE_LABELS[entry.type] || entry.type)} &middot; ${escapeHtml(entry.dateGenerated || '')}</div>
         </div>
-        <div style="display:flex; gap:8px; flex-shrink:0;">
+        <div style="display:flex; gap:8px; flex-shrink:0; flex-wrap:wrap;">
           <button class="secondary-btn" onclick="redownloadContract(${entry.id})">Re-download</button>
           <button class="small-btn danger" onclick="deleteContractLogEntry(${entry.id})">Delete</button>
         </div>
-      </div>`).join('');
+      </div>`;
+    }).join('');
   }
 
   async function deleteContractLogEntry(id) {
@@ -385,7 +417,7 @@
     return y;
   }
 
-  async function buildContractPDF(type, fields, clientSignatureDataUrl) {
+  async function buildContractPDF(type, fields, clientSignatureDataUrl, businessSignatureDataUrl) {
     const { jsPDF } = window.jspdf;
     const doc = new jsPDF({ unit: 'pt', format: 'letter' });
     const pageW = doc.internal.pageSize.getWidth();
@@ -453,6 +485,16 @@
           const imgWidth = 220;
           const imgHeight = imgWidth * (180 / 600);
           doc.addImage(clientSignatureDataUrl, 'PNG', marginX, y - 14, imgWidth, imgHeight);
+          doc.text('Date: ______________', marginX + imgWidth + 20, y + imgHeight - 20);
+          y += imgHeight + 6;
+          doc.setFontSize(8.5); doc.setTextColor(150, 150, 150);
+          doc.text('(Signed digitally in Triple H Enterprises\u2019 contract tool)', marginX, y);
+          doc.setFontSize(10); doc.setTextColor(...GRAY);
+          y += 16;
+        } else if (block.who === 'TRIPLE H ENTERPRISES LLC' && businessSignatureDataUrl) {
+          const imgWidth = 220;
+          const imgHeight = imgWidth * (180 / 600);
+          doc.addImage(businessSignatureDataUrl, 'PNG', marginX, y - 14, imgWidth, imgHeight);
           doc.text('Date: ______________', marginX + imgWidth + 20, y + imgHeight - 20);
           y += imgHeight + 6;
           doc.setFontSize(8.5); doc.setTextColor(150, 150, 150);
@@ -603,16 +645,21 @@
       await showAlert('Enter a client name before generating.');
       return;
     }
-    const signatureDataUrl = getSignatureDataUrl();
-    await buildContractPDF(type, fields, signatureDataUrl);
+    const clientSignatureDataUrl = getSignatureDataUrl('signatureCanvas');
+    const businessSignatureDataUrl = getSignatureDataUrl('businessSignatureCanvas');
+    await buildContractPDF(type, fields, clientSignatureDataUrl, businessSignatureDataUrl);
 
     const log = loadContractLog();
     const nextId = log.length ? Math.max(...log.map(e => e.id)) + 1 : 1;
+    const now = new Date();
     log.push({
       id: nextId,
       type,
       fields,
-      dateGenerated: new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' }),
+      dateGenerated: now.toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' }),
+      dateGeneratedISO: now.toISOString().slice(0, 10),
+      signedByClient: !!clientSignatureDataUrl,
+      signedByBusiness: !!businessSignatureDataUrl,
     });
     saveContractLog(log);
     renderContractLog();
@@ -633,30 +680,31 @@
     });
     const picker = document.getElementById(type + '_contactPicker');
     if (picker) picker.value = '';
-    clearSignature();
+    clearSignature('signatureCanvas', 'signatureStatus');
+    clearSignature('businessSignatureCanvas', 'businessSignatureStatus');
+    document.getElementById('signatureFormSection').classList.add('is-collapsed');
   }
 
-  // ---------- signature pad ----------
+  // ---------- signature pad(s) ----------
   // Pointer Events unify mouse and touch into one code path, same
   // approach used elsewhere in this project. Drawing is tracked with a
   // simple boolean rather than inspecting pixel data, since that's both
   // simpler and cheaper than scanning the canvas to check if anything
-  // was actually drawn.
-  let signatureHasDrawing = false;
+  // was actually drawn. Keyed by canvas ID since there are now two pads
+  // (client + business), each independent.
 
-  function initSignaturePad() {
-    const canvas = document.getElementById('signatureCanvas');
+  const signaturePads = {};
+
+  function initSignaturePad(canvasId, statusId) {
+    const canvas = document.getElementById(canvasId);
     if (!canvas) return;
+    signaturePads[canvasId] = { hasDrawing: false };
     const ctx = canvas.getContext('2d');
     ctx.strokeStyle = '#14120f';
     ctx.lineWidth = 2.2;
     ctx.lineJoin = 'round';
     ctx.lineCap = 'round';
 
-    // The canvas's actual pixel size (600x180, set via width/height
-    // attributes) is different from its displayed CSS size (scales to
-    // fit the container) -- coordinates need scaling by that ratio or
-    // strokes land in the wrong place on any screen narrower than 600px.
     function getScaledPoint(e) {
       const rect = canvas.getBoundingClientRect();
       const scaleX = canvas.width / rect.width;
@@ -667,8 +715,9 @@
     let drawing = false;
     canvas.addEventListener('pointerdown', (e) => {
       drawing = true;
-      signatureHasDrawing = true;
-      document.getElementById('signatureStatus').textContent = 'Signature captured';
+      signaturePads[canvasId].hasDrawing = true;
+      const statusEl = document.getElementById(statusId);
+      if (statusEl) statusEl.textContent = 'Signature captured';
       const p = getScaledPoint(e);
       ctx.beginPath();
       ctx.moveTo(p.x, p.y);
@@ -684,17 +733,19 @@
     canvas.addEventListener('pointercancel', () => { drawing = false; });
   }
 
-  function clearSignature() {
-    const canvas = document.getElementById('signatureCanvas');
+  function clearSignature(canvasId, statusId) {
+    const canvas = document.getElementById(canvasId);
+    if (!canvas) return;
     const ctx = canvas.getContext('2d');
     ctx.clearRect(0, 0, canvas.width, canvas.height);
-    signatureHasDrawing = false;
-    document.getElementById('signatureStatus').textContent = '';
+    if (signaturePads[canvasId]) signaturePads[canvasId].hasDrawing = false;
+    const statusEl = document.getElementById(statusId);
+    if (statusEl) statusEl.textContent = '';
   }
 
-  function getSignatureDataUrl() {
-    if (!signatureHasDrawing) return null;
-    return document.getElementById('signatureCanvas').toDataURL('image/png');
+  function getSignatureDataUrl(canvasId) {
+    if (!signaturePads[canvasId] || !signaturePads[canvasId].hasDrawing) return null;
+    return document.getElementById(canvasId).toDataURL('image/png');
   }
 
   function updateRealtimeBadge(status) {
@@ -722,7 +773,8 @@
     const presetSearch = new URLSearchParams(location.search).get('search');
     if (presetSearch) document.getElementById('contractSearch').value = presetSearch;
     renderContractLog();
-    initSignaturePad();
+    initSignaturePad('signatureCanvas', 'signatureStatus');
+    initSignaturePad('businessSignatureCanvas', 'businessSignatureStatus');
     if (typeof startRealtimeSync === 'function') {
       startRealtimeSync(renderContractLog, updateRealtimeBadge);
     }

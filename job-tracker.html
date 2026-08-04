@@ -180,6 +180,9 @@
   .form-section-body { margin-top: 14px; max-height: 4000px; opacity: 1; overflow: hidden; transition: max-height .3s ease, opacity .2s ease, margin-top .3s ease; }
   .form-section.is-collapsed .form-section-body { max-height: 0; opacity: 0; margin-top: 0; overflow: hidden; }
   @media (prefers-reduced-motion: reduce){ .form-section-body{ transition:none; } }
+  #noteSearchWrap { width: 100%; }
+  #noteSearchWrap.is-expanded { display: flex; }
+  #noteSearchWrap.is-expanded .icon-search-input { width: 100%; }
 </style>
 </head>
 <body>
@@ -261,7 +264,10 @@
   </div>
 
   <div class="tool-form-row">
-    <div class="form-field"><input type="text" id="jobSearch" placeholder="Search jobs by title or client..." oninput="renderJobs()"></div>
+    <div class="icon-search" id="jobSearchWrap">
+      <button class="icon-search-toggle" onclick="toggleIconSearch('jobSearchWrap')" aria-label="Search jobs" title="Search jobs">&#128269;</button>
+      <input type="text" id="jobSearch" class="icon-search-input" placeholder="Search jobs by title or client..." oninput="renderJobs()">
+    </div>
   </div>
 
   <div class="controls-row">
@@ -272,7 +278,8 @@
   </div>
 
   <div class="sort-group" id="statusFilterGroup" style="margin-bottom: 16px;">
-    <button class="sort-btn is-active" data-status-filter="all" onclick="setStatusFilter('all')">All</button>
+    <button class="sort-btn is-active" data-status-filter="not-done" onclick="setStatusFilter('not-done')">Active</button>
+    <button class="sort-btn" data-status-filter="all" onclick="setStatusFilter('all')">All</button>
     <button class="sort-btn" data-status-filter="not-started" onclick="setStatusFilter('not-started')">Not Started</button>
     <button class="sort-btn" data-status-filter="in-progress" onclick="setStatusFilter('in-progress')">In Progress</button>
     <button class="sort-btn" data-status-filter="done" onclick="setStatusFilter('done')">Completed</button>
@@ -490,7 +497,10 @@
     <button class="secondary-btn" id="cancelContactEditBtn" style="display:none;" onclick="cancelContactEdit()">Cancel</button>
     </div>
   </div>
-  <div class="form-field"><input type="text" id="contactSearch" placeholder="Search contacts by name, phone, or email..." oninput="renderContacts()" aria-label="Search contacts"></div>
+  <div class="icon-search" id="contactSearchWrap">
+    <button class="icon-search-toggle" onclick="toggleIconSearch('contactSearchWrap')" aria-label="Search contacts" title="Search contacts">&#128269;</button>
+    <input type="text" id="contactSearch" class="icon-search-input" placeholder="Search contacts by name, phone, or email..." oninput="renderContacts()" aria-label="Search contacts">
+  </div>
   <div id="contactsList"></div>
 </div>
 
@@ -499,7 +509,10 @@
   <div class="notes-layout">
     <div class="notes-sidebar">
       <button class="primary-btn note-new-btn" onclick="createNote()">+ New Note</button>
-      <input type="text" id="noteSearch" placeholder="Search notes..." oninput="renderNotesList()" style="width:100%; box-sizing:border-box; padding:9px 11px; margin-bottom:10px; background:var(--bg-panel-2); border:1px solid var(--border); border-radius:6px; color:var(--white); font-size:13.5px; font-family:inherit;">
+      <div class="icon-search" id="noteSearchWrap" style="margin-bottom:10px;">
+        <button class="icon-search-toggle" onclick="toggleIconSearch('noteSearchWrap')" aria-label="Search notes" title="Search notes">&#128269;</button>
+        <input type="text" id="noteSearch" class="icon-search-input" placeholder="Search notes..." oninput="renderNotesList()">
+      </div>
       <div id="notesList"></div>
     </div>
     <div class="notes-editor">
@@ -938,18 +951,9 @@
     renderJobs();
   }
 
-  let currentStatusFilter = 'all';
+  let currentStatusFilter = 'not-done';
   let editingJobId = null;
 
-  // Generic collapse/expand for the "Add X" form sections -- these start
-  // collapsed on every tab now that there are several of them, so the
-  // page opens showing the actual data instead of an empty form first.
-  function toggleFormSection(id, forceOpen) {
-    const el = document.getElementById(id);
-    if (!el) return;
-    if (forceOpen) el.classList.remove('is-collapsed');
-    else el.classList.toggle('is-collapsed');
-  }
   const STATUS_FILTER_KEY = 'th_job_status_filter';
   function setStatusFilter(filter) {
     currentStatusFilter = filter;
@@ -999,7 +1003,8 @@
   function renderJobs() {
     const searchTerm = document.getElementById('jobSearch').value.trim().toLowerCase();
     let jobs = sortJobs(loadJobs());
-    if (currentStatusFilter !== 'all') jobs = jobs.filter(j => j.status === currentStatusFilter);
+    if (currentStatusFilter === 'not-done') jobs = jobs.filter(j => j.status !== 'done');
+    else if (currentStatusFilter !== 'all') jobs = jobs.filter(j => j.status === currentStatusFilter);
     if (searchTerm) {
       jobs = jobs.filter(j =>
         (j.title || '').toLowerCase().includes(searchTerm) ||

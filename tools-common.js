@@ -29,6 +29,43 @@ function openInfoModal(title, bodyHtml) {
   overlay.classList.add('is-open');
 }
 
+// Generic collapsed-icon search: a magnifying-glass button that expands
+// into the real search input when tapped, and collapses back to just the
+// icon if it loses focus while still empty -- keeps a page's toolbar
+// compact until a search is actually wanted, everywhere this pattern is
+// used across the app.
+function toggleIconSearch(wrapId, forceOpen) {
+  const wrap = document.getElementById(wrapId);
+  if (!wrap) return;
+  const input = wrap.querySelector('input');
+  const shouldOpen = forceOpen !== undefined ? forceOpen : !wrap.classList.contains('is-expanded');
+  if (shouldOpen) {
+    wrap.classList.add('is-expanded');
+    if (input) setTimeout(() => input.focus(), 50);
+  } else {
+    wrap.classList.remove('is-expanded');
+  }
+}
+document.addEventListener('focusout', (e) => {
+  const wrap = e.target.closest && e.target.closest('.icon-search');
+  if (!wrap) return;
+  setTimeout(() => {
+    if (wrap.contains(document.activeElement)) return;
+    const input = wrap.querySelector('input');
+    if (input && !input.value.trim()) wrap.classList.remove('is-expanded');
+  }, 120);
+});
+
+// Generic collapse/expand for "Add X"-style form sections -- used across
+// multiple tool pages so a form starts collapsed and the page opens
+// showing actual data first, rather than an empty form.
+function toggleFormSection(id, forceOpen) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  if (forceOpen) el.classList.remove('is-collapsed');
+  else el.classList.toggle('is-collapsed');
+}
+
 function openHelpModal() {
   openInfoModal(_fullHelpTitle, _fullHelpBody);
 }

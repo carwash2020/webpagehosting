@@ -48,6 +48,9 @@
   .jump-nav a:hover { color: var(--orange-light); background: var(--bg-panel-2); }
 
   .global-search-block { margin-bottom: 20px; }
+  #globalSearchWrap { width: 100%; }
+  #globalSearchWrap.is-expanded { display: flex; }
+  #globalSearchWrap.is-expanded .icon-search-input { width: 100%; }
   .global-search-block > input {
     width: 100%; box-sizing: border-box; padding: 13px 16px; background: var(--bg-panel-2);
     border: 1px solid var(--border); border-radius: var(--radius); color: var(--white);
@@ -205,7 +208,10 @@
 </nav>
 
 <div class="global-search-block">
-  <input type="text" id="globalSearch" placeholder="Find a client &mdash; searches jobs, contacts, invoices, quotes, and contracts..." oninput="renderGlobalSearch()" aria-label="Search everything by client name">
+  <div class="icon-search" id="globalSearchWrap">
+    <button class="icon-search-toggle" onclick="toggleIconSearch('globalSearchWrap')" aria-label="Find a client" title="Find a client">&#128269;</button>
+    <input type="text" id="globalSearch" class="icon-search-input" placeholder="Find a client &mdash; searches jobs, contacts, invoices, quotes, and contracts..." oninput="renderGlobalSearch()" aria-label="Search everything by client name">
+  </div>
   <div id="globalSearchResults"></div>
 </div>
 
@@ -298,7 +304,10 @@
     <div id="followupsList"></div>
 
     <div class="analytics-subheading">Income</div>
-    <div class="form-field"><input type="text" id="invoiceSearch" placeholder="Search income by client, invoice #, or description..." oninput="renderInvoicesList()" aria-label="Search income"></div>
+    <div class="icon-search" id="invoiceSearchWrap">
+      <button class="icon-search-toggle" onclick="toggleIconSearch('invoiceSearchWrap')" aria-label="Search income" title="Search income">&#128269;</button>
+      <input type="text" id="invoiceSearch" class="icon-search-input" placeholder="Search income by client, invoice #, or description..." oninput="renderInvoicesList()" aria-label="Search income">
+    </div>
     <div id="invoicesList"></div>
 
   </div>
