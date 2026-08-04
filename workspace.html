@@ -1318,6 +1318,7 @@
     renderInsuranceCard();
   }
 
+  let justAddedLicenseIdx = null;
   function renderLicensesList() {
     const compliance = loadCompliance();
     const licenses = compliance.licenses || [];
@@ -1334,7 +1335,7 @@
         else if (days <= 30) badge = ' &mdash; <span style="color:var(--orange-light);">renews in ' + days + 'd</span>';
       }
       return `
-      <div class="license-item">
+      <div class="license-item ${idx === justAddedLicenseIdx ? 'list-row-enter' : ''}" data-license-idx="${idx}">
         <div>
           <div class="dash-list-item-title">${escapeHtml(lic.city)}</div>
           <div class="dash-list-item-meta">${escapeHtml(lic.licenseNumber || 'No number on file')}${lic.expirationDate ? ' &middot; expires ' + escapeHtml(lic.expirationDate) : ''}${badge}</div>
@@ -1342,6 +1343,7 @@
         <button class="small-btn danger" onclick="removeLicense(${idx})">Remove</button>
       </div>`;
     }).join('');
+    justAddedLicenseIdx = null;
   }
 
   const SECURE_DOC_CATEGORY_LABEL = {
@@ -1444,14 +1446,18 @@
     compliance.licenses = compliance.licenses || [];
     compliance.licenses.push({ city: city.trim(), licenseNumber: licenseNumber.trim(), expirationDate: expirationDate.trim() });
     saveCompliance(compliance);
+    justAddedLicenseIdx = compliance.licenses.length - 1;
     renderLicensesList();
   }
 
   function removeLicense(idx) {
-    const compliance = loadCompliance();
-    compliance.licenses.splice(idx, 1);
-    saveCompliance(compliance);
-    renderLicensesList();
+    const row = document.querySelector('[data-license-idx="' + idx + '"]');
+    animateRowExit(row, () => {
+      const compliance = loadCompliance();
+      compliance.licenses.splice(idx, 1);
+      saveCompliance(compliance);
+      renderLicensesList();
+    });
   }
 
   function renderBusinessInfoCard() {

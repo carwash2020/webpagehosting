@@ -143,6 +143,9 @@
   .skeleton-line.w-100{width:100%;}
   .skeleton-line.h-tall{height:48px;}
   @keyframes shimmer{0%{background-position:200% 0;} 100%{background-position:-200% 0;}}
+  @keyframes rowEnterFade{ from{ opacity:0; transform:translateY(-6px); } to{ opacity:1; transform:translateY(0); } }
+  .list-row-enter{ animation: rowEnterFade .3s ease; }
+  @media (prefers-reduced-motion: reduce){ .list-row-enter{ animation:none; } }
   @media (prefers-reduced-motion: reduce){ .skeleton-line{animation:none; opacity:0.6;} }
   .top-actions{display:flex; gap:8px; margin-bottom:10px;}
   .col-hint{font-size:10px;color:var(--text-faint);margin-top:-4px;margin-bottom:8px;}
@@ -689,6 +692,33 @@ const CATEGORIES = [
 ];
 const FREQ_LABEL = {weekly:"Weekly", biweekly:"Biweekly (every 2 weeks)", semimonthly:"Semi-monthly (twice a month)", monthly:"Monthly", quarterly:"Quarterly", annually:"Annually"};
 
+// Local copy, not imported -- this file is a standalone artifact with
+// its own self-contained helpers throughout (escapeHtml, fmt, etc.)
+// rather than loading the other tool pages' shared tools-common.js,
+// so this matches that same pattern instead of creating a cross-file
+// dependency that wouldn't actually resolve here.
+function animateRowExit(rowElement, onComplete) {
+  if (!rowElement) { onComplete(); return; }
+  const reduceMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  if (reduceMotion) { onComplete(); return; }
+  const height = rowElement.scrollHeight;
+  rowElement.style.maxHeight = height + 'px';
+  rowElement.style.overflow = 'hidden';
+  rowElement.style.transition = 'opacity .22s ease, max-height .22s ease, margin .22s ease, padding .22s ease, border-width .22s ease';
+  requestAnimationFrame(() => {
+    requestAnimationFrame(() => {
+      rowElement.style.opacity = '0';
+      rowElement.style.maxHeight = '0px';
+      rowElement.style.marginTop = '0';
+      rowElement.style.marginBottom = '0';
+      rowElement.style.paddingTop = '0';
+      rowElement.style.paddingBottom = '0';
+      rowElement.style.borderWidth = '0';
+    });
+  });
+  setTimeout(onComplete, 230);
+}
+
 let expenses = [];
 let budgetSettings = { savingsPct: 20, taxSetAsideRate: 25 };
 let income = [];
@@ -696,6 +726,7 @@ let months = [];
 let efBalance = 0;
 let editingId = null;
 let editingIncomeId = null;
+let justAddedIncomeId = null;
 let debts = [];
 let editingDebtId = null;
 
@@ -1050,7 +1081,7 @@ function renderIncome(){
     return;
   }
   container.innerHTML = income.map(item => `
-    <div class="row">
+    <div class="row ${item.id === justAddedIncomeId ? 'list-row-enter' : ''}" data-income-row-id="${item.id}">
       <div class="row-main">
         <div class="row-label">${item.name}</div>
         <div class="row-freq">${FREQ_LABEL[item.frequency]}</div>
@@ -1062,6 +1093,7 @@ function renderIncome(){
       </div>
     </div>
   `).join('');
+  justAddedIncomeId = null;
   container.querySelectorAll('[data-edit-inc]').forEach(btn => {
     btn.addEventListener('click', () => {
       const item = income.find(i => i.id === btn.dataset.editInc);
@@ -1071,11 +1103,14 @@ function renderIncome(){
   container.querySelectorAll('[data-delete-inc]').forEach(btn => {
     btn.addEventListener('click', async () => {
       if(!confirm('Delete this income source?')) return;
-      income = income.filter(i => i.id !== btn.dataset.deleteInc);
-      await saveIncome();
-      renderIncome();
-      renderPersonal();
-      renderRunway();
+      const row = document.querySelector('[data-income-row-id="' + btn.dataset.deleteInc + '"]');
+      animateRowExit(row, async () => {
+        income = income.filter(i => i.id !== btn.dataset.deleteInc);
+        await saveIncome();
+        renderIncome();
+        renderPersonal();
+        renderRunway();
+      });
     });
   });
 }
@@ -1109,16 +1144,19 @@ document.getElementById('saveIncomeBtn').addEventListener('click', async () => {
   if(!name){ alert('Give this income source a name.'); return; }
 
   const wasEditing = !!editingIncomeId;
+  let newId = null;
   if(editingIncomeId){
     const idx = income.findIndex(i => i.id === editingIncomeId);
     if(idx > -1) income[idx] = {...income[idx], name, frequency, amount};
   } else {
-    income.push({ id: 'inc_' + Date.now() + '_' + Math.random().toString(36).slice(2,7), name, frequency, amount });
+    newId = 'inc_' + Date.now() + '_' + Math.random().toString(36).slice(2,7);
+    income.push({ id: newId, name, frequency, amount });
   }
   await saveIncome();
   document.getElementById('inc-name').value = '';
   document.getElementById('inc-amount').value = '';
   closeIncomeForm();
+  justAddedIncomeId = newId;
   renderIncome();
   renderPersonal();
   renderRunway();
