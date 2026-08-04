@@ -414,6 +414,27 @@
       <div class="progress-labels"><span>0</span><span id="efTargetLabel">6mo target</span><span id="ef12Label">12mo</span></div>
       <div class="note" id="efNote"></div>
     </div>
+
+    <div class="card">
+      <div class="card-header"><h3>Debts <button class="help-btn" onclick="openCardInfo('debts')" aria-label="What is this?" title="What is this?">?</button></h3></div>
+      <div id="debtsList"></div>
+      <div class="top-actions">
+        <button class="action-btn" id="openAddDebtBtn">+ Add Debt</button>
+      </div>
+    </div>
+
+    <div class="card form-card" id="debtFormCard">
+      <div class="card-header"><h3 id="debtFormTitle">Add Debt</h3></div>
+      <div class="form-grid">
+        <div class="full"><label>Name</label><input type="text" id="debt-name" placeholder="e.g. Truck loan, Credit card"></div>
+        <div><label>Current Balance</label><input type="number" inputmode="decimal" id="debt-balance" placeholder="0"></div>
+        <div><label>Minimum Payment (optional)</label><input type="number" inputmode="decimal" id="debt-minpayment" placeholder="0"></div>
+      </div>
+      <div class="form-actions">
+        <button class="action-btn" id="saveDebtBtn" style="width:auto;flex:1;">Save Debt</button>
+        <button class="ghost-btn" id="cancelDebtBtn" style="flex:0 0 auto;">Cancel</button>
+      </div>
+    </div>
   </div>
 
   <div class="panel" id="panel-runway">
@@ -434,6 +455,12 @@
       <div class="grand-totals" id="breakEvenStats"></div>
       <div class="estimate-headline" id="breakEvenHeadline">—</div>
       <div class="note" id="breakEvenNote"></div>
+    </div>
+
+    <div class="card">
+      <div class="card-header"><h3>Accounts Receivable <button class="help-btn" onclick="openCardInfo('accountsReceivable')" aria-label="What is this?" title="What is this?">?</button></h3></div>
+      <div class="grand-totals" id="arStats"></div>
+      <div class="note" id="arNote"></div>
     </div>
 
     <div class="card">
@@ -575,6 +602,11 @@ const CARD_INFO = {
     body: `<p>Tracks your savings against two goals: 6 months of bills, and 12 months of bills.</p>
       <p>The bar fills in as you get closer to the 12-month goal.</p>`,
   },
+  debts: {
+    title: 'Debts',
+    body: `<p>Loans, credit cards, anything you owe -- separate from your day-to-day bills, since these aren't monthly expenses so much as balances working down over time.</p>
+      <p>Subtracted from your cash on hand to get a true net worth figure, instead of just showing what's sitting in accounts.</p>`,
+  },
   incomePicture: {
     title: 'Income Picture',
     body: `<p>Shows whether your day-job income alone covers your bills.</p>
@@ -584,6 +616,11 @@ const CARD_INFO = {
     title: 'Break-Even Point',
     body: `<p>The one combined number: how much revenue the business actually needs this month.</p>
       <p>That's the business's own costs (expenses and fuel), plus whatever's left over after your personal income covers your personal bills. Compares that against what the business actually brought in, so you can see at a glance whether the month was above or below what it needed to be.</p>`,
+  },
+  accountsReceivable: {
+    title: 'Accounts Receivable',
+    body: `<p>Money you've invoiced but haven't actually collected yet -- read straight from Job Tracker's invoice log and Workspace's paid/unpaid tracking.</p>
+      <p>Deliberately kept separate from Break-Even and Safe-to-Spend, since those are about cash you actually have on hand right now. This is a reminder that revenue on paper isn't the same as money in the bank until it's actually paid.</p>`,
   },
   businessTrend: {
     title: 'Business Trend',
@@ -659,6 +696,8 @@ let months = [];
 let efBalance = 0;
 let editingId = null;
 let editingIncomeId = null;
+let debts = [];
+let editingDebtId = null;
 
 function monthlyEquiv(amount, freq){
   amount = Number(amount) || 0;
@@ -737,11 +776,17 @@ async function loadAll(){
     efBalance = ef ? JSON.parse(ef.value).balance : 0;
   }catch(e){ efBalance = 0; }
 
+  try{
+    const db = await window.storage.get('debts');
+    debts = db ? JSON.parse(db.value) : [];
+  }catch(e){ debts = []; }
+
   document.getElementById('loading').style.display = 'none';
   populateCategorySelect();
   renderPersonal();
   renderIncome();
   renderMonths();
+  renderDebts();
   renderNetWorth();
   renderRunway();
 }
@@ -766,6 +811,92 @@ async function saveExpenses(){ try{ await window.storage.set('personal-expenses'
 async function saveIncome(){ try{ await window.storage.set('personal-income', JSON.stringify(income)); if(typeof scheduleSync === 'function') scheduleSync(); }catch(e){ console.error(e); } }
 async function saveMonths(){ try{ await window.storage.set('business-months', JSON.stringify(months)); if(typeof scheduleSync === 'function') scheduleSync(); }catch(e){ console.error(e); } }
 async function saveEF(){ try{ await window.storage.set('emergency-fund', JSON.stringify({balance: efBalance})); if(typeof scheduleSync === 'function') scheduleSync(); }catch(e){ console.error(e); } }
+async function saveDebts(){ try{ await window.storage.set('debts', JSON.stringify(debts)); if(typeof scheduleSync === 'function') scheduleSync(); }catch(e){ console.error(e); } }
+
+function renderDebts(){
+  const container = document.getElementById('debtsList');
+  if(debts.length === 0){
+    container.innerHTML = `<div class="empty-state">
+      <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2" y="6" width="20" height="14" rx="2"/><path d="M2 10h20"/><circle cx="17" cy="14.5" r="1.4" fill="currentColor" stroke="none"/></svg>
+      <div class="empty-title">No debts logged</div>
+      <div class="empty-sub">Loans, credit cards, anything you owe -- add one above if you want it factored into your true net worth.</div>
+    </div>`;
+    return;
+  }
+  container.innerHTML = debts.map(d => `
+    <div class="row">
+      <div class="row-main">
+        <div class="row-label">${d.name}</div>
+        ${d.minPayment ? `<div class="row-freq">Min payment ${fmt(Number(d.minPayment)||0)}/mo</div>` : ''}
+      </div>
+      <div class="row-amounts"><b>${fmt(Number(d.balance)||0)}</b></div>
+      <div class="row-actions">
+        <button class="icon-btn" data-edit-debt="${d.id}" title="Edit">Edit</button>
+        <button class="icon-btn danger" data-delete-debt="${d.id}" title="Delete">Del</button>
+      </div>
+    </div>
+  `).join('');
+  container.querySelectorAll('[data-edit-debt]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const item = debts.find(d => d.id === btn.dataset.editDebt);
+      if(item) openDebtForm(item);
+    });
+  });
+  container.querySelectorAll('[data-delete-debt]').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      if(!confirm('Delete this debt?')) return;
+      debts = debts.filter(d => d.id !== btn.dataset.deleteDebt);
+      await saveDebts();
+      renderDebts();
+      renderNetWorth();
+    });
+  });
+}
+
+function openDebtForm(prefill){
+  document.getElementById('debtFormCard').classList.add('open');
+  document.getElementById('debtFormTitle').textContent = prefill ? 'Edit Debt' : 'Add Debt';
+  if(prefill){
+    editingDebtId = prefill.id;
+    document.getElementById('debt-name').value = prefill.name;
+    document.getElementById('debt-balance').value = prefill.balance;
+    document.getElementById('debt-minpayment').value = prefill.minPayment || '';
+  } else {
+    editingDebtId = null;
+    document.getElementById('debt-name').value = '';
+    document.getElementById('debt-balance').value = '';
+    document.getElementById('debt-minpayment').value = '';
+  }
+  document.getElementById('debtFormCard').scrollIntoView({behavior:'smooth', block:'center'});
+}
+function closeDebtForm(){
+  document.getElementById('debtFormCard').classList.remove('open');
+  editingDebtId = null;
+}
+document.getElementById('openAddDebtBtn').addEventListener('click', () => openDebtForm(null));
+document.getElementById('cancelDebtBtn').addEventListener('click', closeDebtForm);
+document.getElementById('saveDebtBtn').addEventListener('click', async () => {
+  const name = document.getElementById('debt-name').value.trim();
+  const balance = Number(document.getElementById('debt-balance').value) || 0;
+  const minPayment = Number(document.getElementById('debt-minpayment').value) || 0;
+  if(!name){ alert('Give this debt a name.'); return; }
+
+  const wasEditing = !!editingDebtId;
+  if(editingDebtId){
+    const idx = debts.findIndex(d => d.id === editingDebtId);
+    if(idx > -1) debts[idx] = {...debts[idx], name, balance, minPayment};
+  } else {
+    debts.push({ id: 'debt_' + Date.now() + '_' + Math.random().toString(36).slice(2,7), name, balance, minPayment });
+  }
+  await saveDebts();
+  document.getElementById('debt-name').value = '';
+  document.getElementById('debt-balance').value = '';
+  document.getElementById('debt-minpayment').value = '';
+  closeDebtForm();
+  renderDebts();
+  renderNetWorth();
+  showToast(wasEditing ? 'Debt updated successfully!' : 'Debt added successfully!');
+});
 
 function fmt(n){ return '$' + (Math.round(n*100)/100).toLocaleString(undefined,{minimumFractionDigits:0, maximumFractionDigits:0}); }
 
@@ -1358,6 +1489,21 @@ function loadJobTrackerIncome(){
   try { return JSON.parse(localStorage.getItem('th_income_log') || '[]'); }
   catch(e){ return []; }
 }
+
+// Same backward-compatible logic as workspace.html's invoicePaymentStatus:
+// older invoices only ever had a `paid` true/false boolean, no partial
+// amount at all, so an invoice with no paidAmount field falls back to
+// "paid ? total : 0" rather than needing any migration step.
+function invoiceRemainingBalance(invoice){
+  const total = Number(invoice.total) || 0;
+  const paidAmount = (invoice.paidAmount !== undefined && invoice.paidAmount !== null)
+    ? (Number(invoice.paidAmount) || 0)
+    : (invoice.paid ? total : 0);
+  return Math.max(0, total - paidAmount);
+}
+function totalAccountsReceivable(){
+  return loadJobTrackerInvoices().reduce((sum, inv) => sum + invoiceRemainingBalance(inv), 0);
+}
 function pullMonthFromJobTracker(monthVal){
   const expenseLog = loadJobTrackerExpenses();
   const invoices = loadJobTrackerInvoices();
@@ -1488,19 +1634,26 @@ function renderNetWorth(){
   const sorted = [...months].sort((a,b)=> a.month.localeCompare(b.month));
   const latestMonth = sorted[sorted.length - 1];
   const businessCash = latestMonth ? (Number(latestMonth.cash) || 0) : 0;
-  const total = efBalance + businessCash;
+  const cashTotal = efBalance + businessCash;
+  const totalDebt = debts.reduce((sum, d) => sum + (Number(d.balance) || 0), 0);
+  const trueNetWorth = cashTotal - totalDebt;
 
   const prevTotal = readPrevStatValue('netWorthTotalValue');
 
   statsEl.innerHTML = `
     <div class="stat-box"><div class="label">Personal Savings</div><div class="value">${fmt(efBalance)}</div></div>
     <div class="stat-box blue"><div class="label">Business Cash${latestMonth ? ' (' + latestMonth.month + ')' : ''}</div><div class="value">${fmt(businessCash)}</div></div>
-    <div class="stat-box green" style="grid-column:1/-1;"><div class="label">Combined Total</div><div class="value" id="netWorthTotalValue">${fmt(total)}</div></div>
+    ${totalDebt > 0 ? `<div class="stat-box red"><div class="label">Total Debt</div><div class="value">-${fmt(totalDebt)}</div></div>` : ''}
+    <div class="stat-box green" style="grid-column:1/-1;"><div class="label">${totalDebt > 0 ? 'True Net Worth (cash minus debt)' : 'Combined Total'}</div><div class="value" id="netWorthTotalValue">${fmt(trueNetWorth)}</div></div>
   `;
-  animateStatValue('netWorthTotalValue', total, prevTotal);
-  noteEl.textContent = latestMonth
-    ? `This adds your personal savings and the business's cash on hand together. It doesn't subtract any debts you owe -- it's cash on hand, not a full net worth figure.`
-    : `Log a business month to include business cash here.`;
+  animateStatValue('netWorthTotalValue', trueNetWorth, prevTotal);
+  if (!latestMonth) {
+    noteEl.textContent = `Log a business month to include business cash here.`;
+  } else if (totalDebt > 0) {
+    noteEl.textContent = `This adds your personal savings and business cash together, then subtracts ${fmt(totalDebt)} in logged debts -- a real net worth figure, not just cash on hand.`;
+  } else {
+    noteEl.textContent = `This adds your personal savings and the business's cash on hand together. Add a debt below to have it subtracted here for a true net worth figure.`;
+  }
 }
 
 function linearTrendSlope(points){
@@ -1577,6 +1730,7 @@ function renderRunway(){
   }
 
   renderBreakEven(min, personalIncome, sorted);
+  renderAR();
 
   document.getElementById('trendStats').innerHTML = `
     <div class="stat-box green"><div class="label">Avg Net Profit (last 3mo)</div><div class="value">${avgNet3!==null ? fmt(avgNet3) : '—'}</div></div>
@@ -1707,6 +1861,41 @@ function renderBreakEven(min, personalIncome, sorted){
   } else {
     headlineEl.textContent = `${latestMonth.month} was ${fmt(Math.abs(surplus))} short of break-even`;
     noteEl.textContent = `Between the business's own costs (${fmt(businessCosts)}) and covering what personal income didn't (${fmt(personalGap)}), the business needed ${fmt(breakEvenRevenue)} to break even this month \u2014 it only brought in ${fmt(actualRevenue)}, ${fmt(Math.abs(surplus))} short.`;
+  }
+}
+
+// Deliberately separate from Break-Even and Safe-to-Spend -- this is
+// money invoiced but not yet actually collected, read straight from Job
+// Tracker's own invoice data (same-device localStorage, same pattern as
+// the other loadJobTracker* readers above). Shown as its own card rather
+// than folded into the cash-flow math, since conflating "revenue on
+// paper" with "cash in hand" would make those other numbers less honest,
+// not more useful.
+function renderAR(){
+  const statsEl = document.getElementById('arStats');
+  const noteEl = document.getElementById('arNote');
+  if(!statsEl) return;
+
+  const invoices = loadJobTrackerInvoices();
+  const outstanding = invoices.filter(inv => invoiceRemainingBalance(inv) > 0);
+  const totalAR = outstanding.reduce((sum, inv) => sum + invoiceRemainingBalance(inv), 0);
+  const overdueCount = outstanding.filter(inv => {
+    if(!inv.date) return false;
+    const termDays = { 'Due on Receipt': 0, 'Net 15': 15, 'Net 30': 30, 'Net 45': 45, 'Net 60': 60 };
+    const days = termDays[inv.terms] !== undefined ? termDays[inv.terms] : 15;
+    const due = new Date(new Date(inv.date + 'T00:00:00').getTime() + days*24*60*60*1000);
+    return due < new Date(new Date().toDateString());
+  }).length;
+
+  statsEl.innerHTML = `
+    <div class="stat-box"><div class="label">Outstanding Invoices</div><div class="value">${fmt(totalAR)}</div></div>
+    <div class="stat-box"><div class="label">Open Invoice Count</div><div class="value">${outstanding.length}</div></div>
+  `;
+
+  if(outstanding.length === 0){
+    noteEl.textContent = `Nothing outstanding right now, based on Job Tracker's invoice log -- every logged invoice is either fully paid or there aren't any yet.`;
+  } else {
+    noteEl.textContent = `${fmt(totalAR)} across ${outstanding.length} invoice${outstanding.length===1?'':'s'} hasn't actually been collected yet${overdueCount>0 ? `, and ${overdueCount} of those ${overdueCount===1?'is':'are'} already overdue` : ''}. Break-Even and Safe-to-Spend above are both based on cash you actually have -- this is a reminder that this much revenue is still just on paper.`;
   }
 }
 
@@ -1885,6 +2074,7 @@ document.getElementById('exportBackupBtn').addEventListener('click', () => {
     budgetSettings: budgetSettings,
     businessMonths: months,
     emergencyFund: { balance: efBalance },
+    debts: debts,
   };
   const blob = new Blob([JSON.stringify(backup, null, 2)], { type: 'application/json' });
   const url = URL.createObjectURL(blob);
@@ -1907,7 +2097,7 @@ document.getElementById('restoreFileInput').addEventListener('change', async (e)
   try {
     const text = await file.text();
     const data = JSON.parse(text);
-    if(!confirm('Restore from this file? This replaces everything currently on this device -- personal expenses, personal income, business months, and emergency fund.')) {
+    if(!confirm('Restore from this file? This replaces everything currently on this device -- personal expenses, personal income, business months, emergency fund, and debts.')) {
       e.target.value = '';
       return;
     }
@@ -1915,19 +2105,25 @@ document.getElementById('restoreFileInput').addEventListener('change', async (e)
     income = Array.isArray(data.personalIncome) ? data.personalIncome : [];
     budgetSettings = {
       savingsPct: (data.budgetSettings && data.budgetSettings.savingsPct !== undefined) ? Number(data.budgetSettings.savingsPct) : 20,
+      taxSetAsideRate: (data.budgetSettings && data.budgetSettings.taxSetAsideRate !== undefined) ? Number(data.budgetSettings.taxSetAsideRate) : 25,
     };
     document.getElementById('settingSavingsPct').value = budgetSettings.savingsPct;
+    document.getElementById('taxSetAsideRate').value = budgetSettings.taxSetAsideRate;
     months = Array.isArray(data.businessMonths) ? data.businessMonths : [];
     efBalance = Number(data.emergencyFund && data.emergencyFund.balance) || 0;
+    debts = Array.isArray(data.debts) ? data.debts : [];
     await saveExpenses();
     await saveIncome();
     await saveBudgetSettings();
     await saveMonths();
     await saveEF();
+    await saveDebts();
     populateCategorySelect();
     renderPersonal();
     renderIncome();
     renderMonths();
+    renderDebts();
+    renderNetWorth();
     renderRunway();
     note.textContent = 'Restored from ' + file.name + '.';
     note.style.color = 'var(--green)';

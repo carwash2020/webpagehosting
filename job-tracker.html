@@ -797,6 +797,25 @@
     const confirmed = await showConfirm('Delete this job? This cannot be undone.', { danger: true, confirmText: 'Delete' });
     if (!confirmed) return;
     if (editingJobId === id) cancelJobEdit();
+
+    // Photos live only in Supabase (th_job_photos + the job-photos bucket),
+    // keyed by job ID -- once the job itself is gone, there's no longer
+    // any way to find or clean these up later, so this has to happen
+    // before the job record disappears, not after.
+    if (typeof fetchJobPhotos === 'function' && typeof deleteJobPhoto === 'function') {
+      const photoResult = await fetchJobPhotos(id);
+      if (photoResult.ok && photoResult.photos.length > 0) {
+        let failedCount = 0;
+        for (const photo of photoResult.photos) {
+          const delResult = await deleteJobPhoto(photo.id, photo.storage_path);
+          if (!delResult.ok) failedCount++;
+        }
+        if (failedCount > 0) {
+          await showAlert(`Deleted the job, but ${failedCount} photo${failedCount === 1 ? '' : 's'} couldn't be removed from cloud storage (likely a network issue) and may still be sitting there unused. Worth checking Supabase storage directly if that matters, since there's no longer a job here to retry the cleanup from.`);
+        }
+      }
+    }
+
     saveJobs(loadJobs().filter(j => j.id !== id));
     renderJobs();
     populateJobRefOptions();
