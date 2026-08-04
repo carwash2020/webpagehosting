@@ -76,6 +76,7 @@ const SYNC_DATA_KEYS = [
   'rd_budget-settings',
   'rd_business-months',
   'rd_emergency-fund',
+  'rd_debts',
 ];
 
 const SYNC_CODE_KEY = 'th_sync_code';
@@ -113,10 +114,74 @@ function collectSyncData() {
   return out;
 }
 
+// Maps each array-shaped sync key to its unique-record field. Used to
+// merge by individual record on pull instead of blindly replacing the
+// whole array -- the root cause of "my new entry vanished": two devices
+// each editing their own in-memory snapshot, and whichever one pushes
+// last silently wins with no idea what the other one just added.
+const MERGE_KEY_FIELD = {
+  th_tracker_jobs: 'id',
+  th_tracker_contacts: 'id',
+  th_tracker_notes_v2: 'id',
+  th_expense_log: 'id',
+  th_income_log: 'id',
+  th_invoices: 'id',
+  th_quotes: 'id',
+  th_job_templates: 'id',
+  th_contracts: 'id',
+  th_price_reference: 'id',
+  'rd_personal-expenses': 'id',
+  'rd_personal-income': 'id',
+  'rd_business-months': 'month',
+  'rd_debts': 'id',
+};
+
+// Takes the union of both sides by their unique field, rather than
+// letting one side's snapshot silently drop what the other added. If
+// the SAME record exists on both sides (an actual edit to that one
+// record, not just an add elsewhere), the incoming remote copy wins --
+// still "last write wins," just scoped to the one record that actually
+// changed instead of the entire array.
+//
+// The real tradeoff, worth knowing: a deletion made on one device can
+// resurface if another device's stale in-memory copy (from before it
+// pulled that deletion) gets pushed later, since a union merge can't
+// distinguish "never existed here" from "existed and was deleted here."
+// Chose this over building full tombstone tracking because the reported
+// problem was specifically entries silently vanishing on add, not
+// deletions failing to stick -- solving the actual complaint without
+// taking on a much larger rework for a failure mode that hasn't
+// actually been reported.
+function mergeRecordArrays(localArr, remoteArr, keyField) {
+  const merged = new Map();
+  (localArr || []).forEach(item => { if (item && item[keyField] !== undefined) merged.set(item[keyField], item); });
+  (remoteArr || []).forEach(item => { if (item && item[keyField] !== undefined) merged.set(item[keyField], item); });
+  return Array.from(merged.values());
+}
+
 function applySyncData(obj) {
   if (!obj) return;
   SYNC_DATA_KEYS.forEach(k => {
-    if (obj[k] !== undefined && obj[k] !== null) localStorage.setItem(k, obj[k]);
+    if (obj[k] === undefined || obj[k] === null) return;
+    const keyField = MERGE_KEY_FIELD[k];
+    if (!keyField) {
+      // Settings/scalar/object keys (tax rate, compliance info, etc.)
+      // have no per-record merge concept -- stays a plain overwrite,
+      // same as before this fix.
+      localStorage.setItem(k, obj[k]);
+      return;
+    }
+    try {
+      const remoteArr = JSON.parse(obj[k]);
+      const localArr = JSON.parse(localStorage.getItem(k) || '[]');
+      if (!Array.isArray(remoteArr) || !Array.isArray(localArr)) {
+        localStorage.setItem(k, obj[k]);
+        return;
+      }
+      localStorage.setItem(k, JSON.stringify(mergeRecordArrays(localArr, remoteArr, keyField)));
+    } catch (e) {
+      localStorage.setItem(k, obj[k]); // malformed JSON on either side -- fall back to the old behavior rather than throw
+    }
   });
 }
 
@@ -468,7 +533,18 @@ function startRealtimeSync(onRemoteChange, onStatusChange) {
     .on(
       'postgres_changes',
       { event: '*', schema: 'public', table: 'workspace_sync', filter: `code=eq.${code}` },
-      async () => {
+      async (payload) => {
+        // A realtime event fires for EVERY change to this row, including
+        // ones this same device just made -- pushing, then immediately
+        // re-pulling and re-applying data it already has is pure
+        // unnecessary churn, and one clear source of the race window
+        // that could make a just-saved entry flicker or appear to
+        // vanish. If the incoming row's updated_at matches what this
+        // device already recorded as the last known state, skip the
+        // pull entirely rather than redo work that changes nothing.
+        const incomingUpdatedAt = payload && payload.new && payload.new.updated_at;
+        const knownUpdatedAt = localStorage.getItem(SYNC_KNOWN_AT_KEY);
+        if (incomingUpdatedAt && knownUpdatedAt && incomingUpdatedAt === knownUpdatedAt) return;
         await pullSync();
         if (onRemoteChange) onRemoteChange();
       }
