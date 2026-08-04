@@ -379,7 +379,10 @@ function getJobPhotoUrl(storagePath) {
 async function uploadJobPhoto(file, jobId, jobTitle, photoType) {
   if (!isSyncConfigured()) return { ok: false, error: 'not-configured' };
   if (file.size > MAX_PHOTO_BYTES) return { ok: false, error: 'too-large' };
-  if (typeof ensureFreshToken === 'function') await ensureFreshToken();
+  if (typeof ensureFreshToken === 'function') {
+    const fresh = await ensureFreshToken();
+    if (!fresh) return { ok: false, error: 'session-expired', detail: 'Your login session has expired and could not be refreshed automatically. Log out and back in, then try again.' };
+  }
 
   const ext = (file.name.split('.').pop() || 'jpg').toLowerCase().replace(/[^a-z0-9]/g, '') || 'jpg';
   const path = `job-${jobId}/${Date.now()}.${ext}`;
@@ -602,7 +605,10 @@ const SECURE_DOCS_BUCKET = 'secure-documents';
 
 async function uploadSecureDocument(file, category, label) {
   if (!isSyncConfigured()) return { ok: false, error: 'not-configured' };
-  if (typeof ensureFreshToken === 'function') await ensureFreshToken();
+  if (typeof ensureFreshToken === 'function') {
+    const fresh = await ensureFreshToken();
+    if (!fresh) return { ok: false, error: 'session-expired', detail: 'Your login session has expired and could not be refreshed automatically. Log out and back in, then try again.' };
+  }
 
   const safeCategory = (category || 'uncategorized').toLowerCase().replace(/[^a-z0-9-]/g, '-');
   const ext = (file.name.split('.').pop() || 'pdf').toLowerCase().replace(/[^a-z0-9]/g, '') || 'pdf';
@@ -710,7 +716,10 @@ function getReceiptUrl(storagePath) {
 async function uploadReceipt(file, expenseId) {
   if (!isSyncConfigured()) return { ok: false, error: 'not-configured' };
   if (file.size > MAX_PHOTO_BYTES) return { ok: false, error: 'too-large' };
-  if (typeof ensureFreshToken === 'function') await ensureFreshToken();
+  if (typeof ensureFreshToken === 'function') {
+    const fresh = await ensureFreshToken();
+    if (!fresh) return { ok: false, error: 'session-expired', detail: 'Your login session has expired and could not be refreshed automatically. Log out and back in, then try again.' };
+  }
 
   const ext = (file.name.split('.').pop() || 'jpg').toLowerCase().replace(/[^a-z0-9]/g, '') || 'jpg';
   const path = `expense-${expenseId}/${Date.now()}.${ext}`;
