@@ -113,7 +113,8 @@
   <div class="tool-form-row">
     <div class="form-field">
       <label>Client / Company Name</label>
-      <input type="text" id="clientName" placeholder="Preferred Property Management">
+      <input type="text" id="clientName" list="knownContactsList" placeholder="Preferred Property Management" onchange="autofillFromContact('clientName', 'contact-1')">
+      <datalist id="knownContactsList"></datalist>
     </div>
   </div>
   <div class="tool-form-row">
@@ -208,7 +209,7 @@
   <div class="tool-form-row">
     <div class="form-field">
       <label>Client / Company Name</label>
-      <input type="text" id="quoteClientName" placeholder="Sarah Miller">
+      <input type="text" id="quoteClientName" list="knownContactsList" placeholder="Sarah Miller">
     </div>
   </div>
   <div class="tool-form-row">
@@ -1011,6 +1012,41 @@
   // refreshed here. Wrapped in DOMContentLoaded because sync.js loads
   // with `defer` -- it isn't guaranteed to exist yet during this inline
   // script's own top-level execution, only by the time DOMContentLoaded fires.
+  // ---------- Client autofill from Job Tracker's Contacts ----------
+  // Both tools share the same browser storage, so this just reads
+  // whatever th_tracker_contacts already has -- no live connection or
+  // API call needed. Contacts don't store an address, so clientAddress
+  // is deliberately left alone here rather than inventing data that
+  // doesn't exist; only the Bill-To contact row (phone/email) gets
+  // filled in, since that maps directly to what a Contact actually has.
+  function loadContactsForAutofill() {
+    try { return JSON.parse(localStorage.getItem('th_tracker_contacts') || '[]'); }
+    catch (e) { return []; }
+  }
+  function populateKnownContactsList() {
+    const list = document.getElementById('knownContactsList');
+    if (!list) return;
+    list.innerHTML = loadContactsForAutofill().map(c => `<option value="${escapeHtml(c.name)}">`).join('');
+  }
+  function autofillFromContact(nameFieldId, firstContactRowId) {
+    const typedName = document.getElementById(nameFieldId).value.trim();
+    if (!typedName) return;
+    const match = loadContactsForAutofill().find(c => (c.name || '').toLowerCase() === typedName.toLowerCase());
+    if (!match) return;
+    const row = document.getElementById(firstContactRowId);
+    if (!row) return;
+    const nameEl = row.querySelector('.contact-name');
+    const titleEl = row.querySelector('.contact-title');
+    const emailEl = row.querySelector('.contact-email');
+    const phoneEl = row.querySelector('.contact-phone');
+    // Only fill in fields that are still blank -- never overwrite
+    // something already typed, in case this fires after manual edits.
+    if (nameEl && !nameEl.value.trim()) nameEl.value = match.name || '';
+    if (titleEl && !titleEl.value.trim()) titleEl.value = match.role || '';
+    if (emailEl && !emailEl.value.trim()) emailEl.value = match.email || '';
+    if (phoneEl && !phoneEl.value.trim()) phoneEl.value = match.phone || '';
+  }
+
   function updateRealtimeBadge(status) {
     const dot = document.getElementById('realtimeDot');
     const text = document.getElementById('realtimeText');
@@ -1031,8 +1067,9 @@
     }
   }
   document.addEventListener('DOMContentLoaded', () => {
+    populateKnownContactsList();
     if (typeof startRealtimeSync === 'function') {
-      startRealtimeSync(() => { loadSharedTaxRate(); }, updateRealtimeBadge);
+      startRealtimeSync(() => { loadSharedTaxRate(); populateKnownContactsList(); }, updateRealtimeBadge);
     }
   });
 </script>
