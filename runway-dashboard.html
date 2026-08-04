@@ -725,6 +725,8 @@ let income = [];
 let months = [];
 let efBalance = 0;
 let editingId = null;
+let justAddedExpenseId = null;
+let justAddedMonthKey = null;
 let editingIncomeId = null;
 let justAddedIncomeId = null;
 let debts = [];
@@ -844,6 +846,7 @@ async function saveMonths(){ try{ await window.storage.set('business-months', JS
 async function saveEF(){ try{ await window.storage.set('emergency-fund', JSON.stringify({balance: efBalance})); if(typeof scheduleSync === 'function') scheduleSync(); }catch(e){ console.error(e); } }
 async function saveDebts(){ try{ await window.storage.set('debts', JSON.stringify(debts)); if(typeof scheduleSync === 'function') scheduleSync(); }catch(e){ console.error(e); } }
 
+let justAddedDebtId = null;
 function renderDebts(){
   const container = document.getElementById('debtsList');
   if(debts.length === 0){
@@ -855,7 +858,7 @@ function renderDebts(){
     return;
   }
   container.innerHTML = debts.map(d => `
-    <div class="row">
+    <div class="row ${d.id === justAddedDebtId ? 'list-row-enter' : ''}" data-debt-row-id="${d.id}">
       <div class="row-main">
         <div class="row-label">${d.name}</div>
         ${d.minPayment ? `<div class="row-freq">Min payment ${fmt(Number(d.minPayment)||0)}/mo</div>` : ''}
@@ -867,6 +870,7 @@ function renderDebts(){
       </div>
     </div>
   `).join('');
+  justAddedDebtId = null;
   container.querySelectorAll('[data-edit-debt]').forEach(btn => {
     btn.addEventListener('click', () => {
       const item = debts.find(d => d.id === btn.dataset.editDebt);
@@ -876,10 +880,13 @@ function renderDebts(){
   container.querySelectorAll('[data-delete-debt]').forEach(btn => {
     btn.addEventListener('click', async () => {
       if(!confirm('Delete this debt?')) return;
-      debts = debts.filter(d => d.id !== btn.dataset.deleteDebt);
-      await saveDebts();
-      renderDebts();
-      renderNetWorth();
+      const row = document.querySelector('[data-debt-row-id="' + btn.dataset.deleteDebt + '"]');
+      animateRowExit(row, async () => {
+        debts = debts.filter(d => d.id !== btn.dataset.deleteDebt);
+        await saveDebts();
+        renderDebts();
+        renderNetWorth();
+      });
     });
   });
 }
@@ -913,17 +920,20 @@ document.getElementById('saveDebtBtn').addEventListener('click', async () => {
   if(!name){ alert('Give this debt a name.'); return; }
 
   const wasEditing = !!editingDebtId;
+  let newId = null;
   if(editingDebtId){
     const idx = debts.findIndex(d => d.id === editingDebtId);
     if(idx > -1) debts[idx] = {...debts[idx], name, balance, minPayment};
   } else {
-    debts.push({ id: 'debt_' + Date.now() + '_' + Math.random().toString(36).slice(2,7), name, balance, minPayment });
+    newId = 'debt_' + Date.now() + '_' + Math.random().toString(36).slice(2,7);
+    debts.push({ id: newId, name, balance, minPayment });
   }
   await saveDebts();
   document.getElementById('debt-name').value = '';
   document.getElementById('debt-balance').value = '';
   document.getElementById('debt-minpayment').value = '';
   closeDebtForm();
+  justAddedDebtId = newId;
   renderDebts();
   renderNetWorth();
   showToast(wasEditing ? 'Debt updated successfully!' : 'Debt added successfully!');
@@ -1049,16 +1059,19 @@ document.getElementById('saveExpenseBtn').addEventListener('click', async () => 
   if(!name){ alert('Give this expense a name.'); return; }
 
   const wasEditing = !!editingId;
+  let newId = null;
   if(editingId){
     const idx = expenses.findIndex(e => e.id === editingId);
     if(idx > -1) expenses[idx] = {...expenses[idx], category, name, frequency, min, variable};
   } else {
-    expenses.push({ id: 'exp_' + Date.now() + '_' + Math.random().toString(36).slice(2,7), category, name, frequency, min, variable, actuals: {} });
+    newId = 'exp_' + Date.now() + '_' + Math.random().toString(36).slice(2,7);
+    expenses.push({ id: newId, category, name, frequency, min, variable, actuals: {} });
   }
   await saveExpenses();
   document.getElementById('exp-name').value = '';
   document.getElementById('exp-min').value = '';
   closeForm();
+  justAddedExpenseId = newId;
   renderPersonal();
   renderRunway();
   showToast(wasEditing ? 'Expense updated successfully!' : 'Expense added successfully!');
@@ -1191,7 +1204,7 @@ function renderPersonal(){
         <button class="cat-add-btn" data-cat="${cat.key}" title="Add to ${cat.name}">+</button>
       </div>
       ${items.map(item => item.variable ? `
-        <div class="row">
+        <div class="row ${item.id === justAddedExpenseId ? 'list-row-enter' : ''}" data-expense-row-id="${item.id}">
           <div class="row-main">
             <div class="row-label">${item.name} <span class="col-hint">VARIABLE</span></div>
             <div class="row-freq">${variableHint(item)}</div>
@@ -1204,7 +1217,7 @@ function renderPersonal(){
           </div>
         </div>
       ` : `
-        <div class="row">
+        <div class="row ${item.id === justAddedExpenseId ? 'list-row-enter' : ''}" data-expense-row-id="${item.id}">
           <div class="row-main">
             <div class="row-label">${item.name}</div>
             <div class="row-freq">${FREQ_LABEL[item.frequency]}</div>
@@ -1219,6 +1232,7 @@ function renderPersonal(){
     `;
     container.appendChild(card);
   });
+  justAddedExpenseId = null;
 
   container.querySelectorAll('[data-log-var]').forEach(btn => {
     btn.addEventListener('click', async () => {
@@ -1253,10 +1267,13 @@ function renderPersonal(){
   container.querySelectorAll('[data-delete]').forEach(btn => {
     btn.addEventListener('click', async () => {
       if(!confirm('Delete this expense?')) return;
-      expenses = expenses.filter(e => e.id !== btn.dataset.delete);
-      await saveExpenses();
-      renderPersonal();
-      renderRunway();
+      const row = document.querySelector('[data-expense-row-id="' + btn.dataset.delete + '"]');
+      animateRowExit(row, async () => {
+        expenses = expenses.filter(e => e.id !== btn.dataset.delete);
+        await saveExpenses();
+        renderPersonal();
+        renderRunway();
+      });
     });
   });
 
@@ -1325,6 +1342,8 @@ function renderMonths(){
     const net = computeNetProfit(m);
     const costs = (Number(m.expenses)||0)+(Number(m.fuel)||0)+(Number(m.other)||0);
     const tr = document.createElement('tr');
+    tr.dataset.monthRow = m.month;
+    if (m.month === justAddedMonthKey) tr.classList.add('list-row-enter');
     tr.innerHTML = `
       <td>${m.month}</td><td>${fmt(m.revenue||0)}</td><td>${fmt(costs)}</td>
       <td class="${net>=0?'net-positive':'net-negative'}">${fmt(net)}</td>
@@ -1333,14 +1352,18 @@ function renderMonths(){
     `;
     tbody.appendChild(tr);
   });
+  justAddedMonthKey = null;
   tbody.querySelectorAll('.danger-btn').forEach(btn => {
     btn.addEventListener('click', async () => {
-      months = months.filter(m => m.month !== btn.dataset.month);
-      await saveMonths();
-      renderMonths();
-      renderRunway();
-      renderNetWorth();
-      renderPersonalTotals();
+      const row = document.querySelector('[data-month-row="' + btn.dataset.month + '"]');
+      animateRowExit(row, async () => {
+        months = months.filter(m => m.month !== btn.dataset.month);
+        await saveMonths();
+        renderMonths();
+        renderRunway();
+        renderNetWorth();
+        renderPersonalTotals();
+      });
     });
   });
 
@@ -1652,6 +1675,7 @@ document.getElementById('addMonthBtn').addEventListener('click', async () => {
   ['revSourceHint','expSourceHint','fuelSourceHint'].forEach(id => document.getElementById(id).textContent = '');
   document.getElementById('pullDiagnosticNote').textContent = '';
   note.textContent = '';
+  justAddedMonthKey = isUpdatingExisting ? null : monthVal;
   renderMonths();
   renderRunway();
   renderNetWorth();

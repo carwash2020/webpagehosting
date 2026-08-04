@@ -353,7 +353,7 @@
         }
       }
       return `
-      <div class="contract-log-item">
+      <div class="contract-log-item ${entry.id === justAddedContractId ? 'list-row-enter' : ''}" data-contract-id="${entry.id}">
         <div>
           <div class="contract-log-title">${escapeHtml(entry.fields.clientName || '(no name)')} ${pendingBadge}</div>
           <div class="contract-log-meta">${escapeHtml(CONTRACT_TYPE_LABELS[entry.type] || entry.type)} &middot; ${escapeHtml(entry.dateGenerated || '')}</div>
@@ -364,15 +364,19 @@
         </div>
       </div>`;
     }).join('');
+    justAddedContractId = null;
   }
 
   async function deleteContractLogEntry(id) {
     const confirmed = await showConfirm('Delete this contract from the log? This cannot be undone.', { danger: true, confirmText: 'Delete' });
     if (!confirmed) return;
-    const log = loadContractLog().filter(e => e.id !== id);
-    saveContractLog(log);
-    renderContractLog();
-    showToast('Contract removed from log.');
+    const row = document.querySelector('[data-contract-id="' + id + '"]');
+    animateRowExit(row, () => {
+      const log = loadContractLog().filter(e => e.id !== id);
+      saveContractLog(log);
+      renderContractLog();
+      showToast('Contract removed from log.');
+    });
   }
 
   function redownloadContract(id) {
@@ -636,6 +640,7 @@
   }
 
   let contractGenerationInProgress = false;
+  let justAddedContractId = null;
   async function generateAndLog(type) {
     if (contractGenerationInProgress) return;
     contractGenerationInProgress = true;
@@ -662,6 +667,7 @@
       signedByBusiness: !!businessSignatureDataUrl,
     });
     saveContractLog(log);
+    justAddedContractId = nextId;
     renderContractLog();
     showToast('Contract generated and logged.');
     resetContractForm(type);
