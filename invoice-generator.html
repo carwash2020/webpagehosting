@@ -91,7 +91,8 @@
   <div class="tool-form-row">
     <div class="form-field">
       <label>Invoice Number</label>
-      <input type="text" id="invoiceNumber" value="">
+      <input type="text" id="invoiceNumber" value="" oninput="checkDuplicateInvoiceNumber()">
+      <div id="duplicateInvoiceWarning" style="display:none; color: var(--orange-light); font-size: 13px; margin-top: 6px; padding: 8px 10px; background: rgba(255,128,0,0.08); border: 1px solid rgba(255,128,0,0.3); border-radius: 6px;"></div>
     </div>
     <div class="form-field">
       <label>Date</label>
@@ -150,6 +151,15 @@
     </thead>
     <tbody id="lineItemsBody"></tbody>
   </table>
+  </div>
+  <div class="tool-form-row" id="invoicePriceRefRow" style="display:none; margin-top:12px;">
+    <div class="form-field">
+      <label>Add From Saved Job Types <button class="help-btn" onclick="openCardInfo('priceRefPicker')" aria-label="What is this?" title="What is this?">?</button></label>
+      <select id="invoicePriceRefSelect" style="width:100%; box-sizing:border-box; padding:10px 12px; background:var(--bg-panel-2); border:1px solid var(--border); border-radius:6px; color:var(--white); font-size:15px; font-family:inherit;">
+        <option value="">Choose a saved job type&hellip;</option>
+      </select>
+    </div>
+    <button type="button" class="add-row-btn" style="align-self:flex-end;" onclick="addLineItemFromPriceRef('invoicePriceRefSelect', 'addLineItem')">Add This Line Item</button>
   </div>
   <button type="button" class="add-row-btn" onclick="addLineItem('', '', 1, '', true, true)">+ Add line item</button>
 
@@ -243,6 +253,15 @@
     </thead>
     <tbody id="quoteLineItemsBody"></tbody>
   </table>
+  </div>
+  <div class="tool-form-row" id="quotePriceRefRow" style="display:none; margin-top:12px;">
+    <div class="form-field">
+      <label>Add From Saved Job Types <button class="help-btn" onclick="openCardInfo('priceRefPicker')" aria-label="What is this?" title="What is this?">?</button></label>
+      <select id="quotePriceRefSelect" style="width:100%; box-sizing:border-box; padding:10px 12px; background:var(--bg-panel-2); border:1px solid var(--border); border-radius:6px; color:var(--white); font-size:15px; font-family:inherit;">
+        <option value="">Choose a saved job type&hellip;</option>
+      </select>
+    </div>
+    <button type="button" class="add-row-btn" style="align-self:flex-end;" onclick="addLineItemFromPriceRef('quotePriceRefSelect', 'addQuoteLineItem')">Add This Line Item</button>
   </div>
   <button type="button" class="add-row-btn" onclick="addQuoteLineItem('', '', 1, '', true, true)">+ Add line item</button>
 
@@ -344,10 +363,44 @@
       body: `<p>Utah taxes repair labor on things like appliances, but labor on items permanently attached to real property is often exempt &mdash; parts are usually taxed either way. Uncheck "Tax?" on any exempt row.</p>
         <p>Not tax advice &mdash; confirm your situation with the Utah State Tax Commission or your accountant.</p>`,
     },
+    priceRefPicker: {
+      title: 'Add From Saved Job Types',
+      body: `<p>Pulls from the price references saved in Job Tracker's Cost Lookup tab &mdash; the same label, hours, and rate you've already saved get added as a line item, so you're not retyping something you've billed for before.</p>
+        <p>Only shows up if you actually have any saved job types &mdash; add some in Job Tracker first if this section isn't visible.</p>`,
+    },
   };
   function openCardInfo(key) {
     const info = CARD_INFO[key];
     if (info) openInfoModal(info.title, info.body);
+  }
+
+  // ---------- Price reference picker -- reads Job Tracker's saved job
+  // types (same-device localStorage, no API call needed) and lets a line
+  // item get added from one directly, instead of retyping a description,
+  // hours, and rate you've already saved once before. ----------
+  function loadPriceReferencesForPicker() {
+    try { return JSON.parse(localStorage.getItem('th_price_reference') || '[]'); }
+    catch (e) { return []; }
+  }
+  function populatePriceRefPickers() {
+    const refs = loadPriceReferencesForPicker();
+    ['invoicePriceRefSelect', 'quotePriceRefSelect'].forEach((selectId, i) => {
+      const rowId = i === 0 ? 'invoicePriceRefRow' : 'quotePriceRefRow';
+      const row = document.getElementById(rowId);
+      if (refs.length === 0) { row.style.display = 'none'; return; }
+      row.style.display = 'flex';
+      const select = document.getElementById(selectId);
+      select.innerHTML = '<option value="">Choose a saved job type&hellip;</option>' + refs.map((r, idx) => `
+        <option value="${idx}">${escapeHtml(r.label)} (${r.hours}hr @ $${r.rate}/hr)</option>`).join('');
+    });
+  }
+  function addLineItemFromPriceRef(selectId, addFnName) {
+    const idx = document.getElementById(selectId).value;
+    if (idx === '') return;
+    const ref = loadPriceReferencesForPicker()[Number(idx)];
+    if (!ref) return;
+    window[addFnName](ref.label, '', ref.hours || 1, ref.rate || '', true, true);
+    document.getElementById(selectId).value = '';
   }
 
   function escapeHtml(str) {
@@ -803,6 +856,19 @@
   // ---------- Invoice logging (feeds the Dashboard's revenue numbers) ----------
   const INVOICE_STORAGE_KEY = 'th_invoices';
 
+  function checkDuplicateInvoiceNumber() {
+    const num = document.getElementById('invoiceNumber').value.trim();
+    const warningEl = document.getElementById('duplicateInvoiceWarning');
+    if (!num) { warningEl.style.display = 'none'; return; }
+    const match = loadInvoiceLog().find(inv => (inv.invoiceNumber || '').trim().toLowerCase() === num.toLowerCase());
+    if (match) {
+      warningEl.textContent = `Heads up \u2014 invoice #${num} already exists in the log${match.clientName ? ' (for ' + match.clientName + ')' : ''}. Generating with this number won't overwrite that one, but you'll have two invoices sharing the same number.`;
+      warningEl.style.display = 'block';
+    } else {
+      warningEl.style.display = 'none';
+    }
+  }
+
   function loadInvoiceLog() { return JSON.parse(localStorage.getItem(INVOICE_STORAGE_KEY) || '[]'); }
   function saveInvoiceLog(list) {
     localStorage.setItem(INVOICE_STORAGE_KEY, JSON.stringify(list));
@@ -1116,8 +1182,9 @@
   }
   document.addEventListener('DOMContentLoaded', () => {
     populateKnownContactsList();
+    populatePriceRefPickers();
     if (typeof startRealtimeSync === 'function') {
-      startRealtimeSync(() => { loadSharedTaxRate(); populateKnownContactsList(); }, updateRealtimeBadge);
+      startRealtimeSync(() => { loadSharedTaxRate(); populateKnownContactsList(); populatePriceRefPickers(); }, updateRealtimeBadge);
     }
   });
 </script>
