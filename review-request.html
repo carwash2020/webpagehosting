@@ -85,8 +85,14 @@
 <div class="tab-panel is-active" id="panel-send">
 
 <div class="form-section" id="recentJobsSection" style="display:none;">
-  <h3>Or Pick a Recently Completed Job</h3>
-  <div id="recentJobsList"></div>
+  <h3>Recently Completed Jobs</h3>
+  <p style="color:var(--text-dim); font-size:13px; margin:-4px 0 12px;">Pick one to auto-fill the details below instead of typing them in by hand.</p>
+  <div class="form-field">
+    <select id="recentJobSelect" style="width:100%; box-sizing:border-box; padding:10px 12px; background:var(--bg-panel-2); border:1px solid var(--border); border-radius:6px; color:var(--white); font-size:15px; font-family:inherit;">
+      <option value="">Choose a job&hellip;</option>
+    </select>
+  </div>
+  <button class="action-btn btn-copy" onclick="applyRecentJobSelection()" style="width:100%;">Use This Job</button>
 </div>
 
 <div class="form-section" id="pendingRemindersSection" style="display:none;">
@@ -324,13 +330,14 @@
     const section = document.getElementById('recentJobsSection');
     if (jobs.length === 0) { section.style.display = 'none'; return; }
     section.style.display = '';
-    document.getElementById('recentJobsList').innerHTML = jobs.map((j, idx) => `
-      <button class="secondary-btn" style="display:block; width:100%; text-align:left; margin-bottom:8px;" onclick="pickRecentJob(${idx})">
-        <b>${escapeHtml(j.title || 'Untitled job')}</b>${j.client ? ' &mdash; ' + escapeHtml(j.client) : ''}
-      </button>`).join('');
+    const select = document.getElementById('recentJobSelect');
+    select.innerHTML = '<option value="">Choose a job&hellip;</option>' + jobs.map((j, idx) => `
+      <option value="${idx}">${escapeHtml(j.title || 'Untitled job')}${j.client ? ' \u2014 ' + escapeHtml(j.client) : ''}</option>`).join('');
   }
-  function pickRecentJob(idx) {
-    const job = loadRecentDoneJobs()[idx];
+  function applyRecentJobSelection() {
+    const idx = document.getElementById('recentJobSelect').value;
+    if (idx === '') return;
+    const job = loadRecentDoneJobs()[Number(idx)];
     if (!job) return;
     if (job.client) document.getElementById('custName').value = job.client.split(' ')[0];
     if (job.title) document.getElementById('jobDesc').value = job.title;
