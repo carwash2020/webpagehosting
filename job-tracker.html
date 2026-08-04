@@ -279,10 +279,10 @@
 
   <div class="sort-group" id="statusFilterGroup" style="margin-bottom: 16px;">
     <button class="sort-btn is-active" data-status-filter="not-done" onclick="setStatusFilter('not-done')">Active</button>
-    <button class="sort-btn" data-status-filter="all" onclick="setStatusFilter('all')">All</button>
     <button class="sort-btn" data-status-filter="not-started" onclick="setStatusFilter('not-started')">Not Started</button>
     <button class="sort-btn" data-status-filter="in-progress" onclick="setStatusFilter('in-progress')">In Progress</button>
     <button class="sort-btn" data-status-filter="done" onclick="setStatusFilter('done')">Completed</button>
+    <button class="sort-btn" data-status-filter="all" onclick="setStatusFilter('all')">All</button>
   </div>
 
   <div id="jobsList"></div>
@@ -973,19 +973,10 @@
   let currentStatusFilter = 'not-done';
   let editingJobId = null;
 
-  const STATUS_FILTER_KEY = 'th_job_status_filter';
   function setStatusFilter(filter) {
     currentStatusFilter = filter;
-    localStorage.setItem(STATUS_FILTER_KEY, filter);
     document.querySelectorAll('#statusFilterGroup .sort-btn').forEach(b => b.classList.toggle('is-active', b.dataset.statusFilter === filter));
     renderJobs();
-  }
-  function loadStatusFilter() {
-    const saved = localStorage.getItem(STATUS_FILTER_KEY);
-    if (saved) {
-      currentStatusFilter = saved;
-      document.querySelectorAll('#statusFilterGroup .sort-btn').forEach(b => b.classList.toggle('is-active', b.dataset.statusFilter === saved));
-    }
   }
 
   const PRIORITY_RANK = { high: 0, medium: 1, low: 2 };
@@ -2006,7 +1997,6 @@
       await initSyncOnLoad();
       updateSyncStatusText();
       loadTaxSettings();
-      loadStatusFilter();
       document.getElementById('entryDate').value = new Date().toISOString().slice(0, 10);
       document.getElementById('incomeDate').value = new Date().toISOString().slice(0, 10);
       loadMileageRate();
