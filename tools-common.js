@@ -69,6 +69,21 @@ function animateRowExit(rowElement, onComplete) {
   if (!rowElement) { onComplete(); return; }
   const reduceMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   if (reduceMotion) { onComplete(); return; }
+  const isTableRow = rowElement.tagName === 'TR';
+  // A <tr>'s rendered height is governed by the table layout algorithm,
+  // not the normal box model -- max-height doesn't actually shrink a
+  // table row's real height the way it does for a div, even though the
+  // computed style itself transitions fine. Verified this directly
+  // rather than assuming: for a <tr>, fall back to an opacity-only fade
+  // instead of a collapse that would look subtly broken (correctly
+  // fading, but leaving an empty gap where the row's height should be
+  // shrinking) rather than actually smooth.
+  if (isTableRow) {
+    rowElement.style.transition = 'opacity .22s ease';
+    requestAnimationFrame(() => { requestAnimationFrame(() => { rowElement.style.opacity = '0'; }); });
+    setTimeout(onComplete, 230);
+    return;
+  }
   const height = rowElement.scrollHeight;
   rowElement.style.maxHeight = height + 'px';
   rowElement.style.overflow = 'hidden';

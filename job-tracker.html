@@ -731,11 +731,13 @@
       showOnCalendar: document.getElementById('jobShowOnCalendar').checked,
     };
     const wasEditing = !!editingJobId;
+    let newId = null;
     if (wasEditing) {
       const idx = jobs.findIndex(j => j.id === editingJobId);
       if (idx > -1) jobs[idx] = { ...jobs[idx], ...fields };
     } else {
-      jobs.push({ id: Date.now(), ...fields });
+      newId = Date.now();
+      jobs.push({ id: newId, ...fields });
     }
     saveJobs(jobs);
     ['jobTitle','jobClient','jobPhone','jobAddress','jobNotes'].forEach(id => document.getElementById(id).value = '');
@@ -744,6 +746,7 @@
     document.getElementById('jobStatus').value = 'not-started';
     document.getElementById('jobShowOnCalendar').checked = false;
     cancelJobEdit();
+    justAddedJobId = newId;
     renderJobs();
     populateJobRefOptions();
     populateIncomeJobRefOptions();
@@ -786,24 +789,32 @@
     if (!confirmed) return;
     if (editingJobId === id) cancelJobEdit();
 
+    const row = document.querySelector('[data-job-id="' + id + '"]');
+    const animationDone = new Promise(resolve => animateRowExit(row, resolve));
+
     // Photos live only in Supabase (th_job_photos + the job-photos bucket),
     // keyed by job ID -- once the job itself is gone, there's no longer
     // any way to find or clean these up later, so this has to happen
-    // before the job record disappears, not after.
-    if (typeof fetchJobPhotos === 'function' && typeof deleteJobPhoto === 'function') {
-      const photoResult = await fetchJobPhotos(id);
-      if (photoResult.ok && photoResult.photos.length > 0) {
-        let failedCount = 0;
-        for (const photo of photoResult.photos) {
-          const delResult = await deleteJobPhoto(photo.id, photo.storage_path);
-          if (!delResult.ok) failedCount++;
-        }
-        if (failedCount > 0) {
-          await showAlert(`Deleted the job, but ${failedCount} photo${failedCount === 1 ? '' : 's'} couldn't be removed from cloud storage (likely a network issue) and may still be sitting there unused. Worth checking Supabase storage directly if that matters, since there's no longer a job here to retry the cleanup from.`);
+    // before the job record disappears, not after. Runs alongside the
+    // exit animation rather than after it, so the row starts fading
+    // immediately instead of sitting frozen while a network call runs.
+    const cleanupDone = (async () => {
+      if (typeof fetchJobPhotos === 'function' && typeof deleteJobPhoto === 'function') {
+        const photoResult = await fetchJobPhotos(id);
+        if (photoResult.ok && photoResult.photos.length > 0) {
+          let failedCount = 0;
+          for (const photo of photoResult.photos) {
+            const delResult = await deleteJobPhoto(photo.id, photo.storage_path);
+            if (!delResult.ok) failedCount++;
+          }
+          if (failedCount > 0) {
+            await showAlert(`Deleted the job, but ${failedCount} photo${failedCount === 1 ? '' : 's'} couldn't be removed from cloud storage (likely a network issue) and may still be sitting there unused. Worth checking Supabase storage directly if that matters, since there's no longer a job here to retry the cleanup from.`);
+          }
         }
       }
-    }
+    })();
 
+    await Promise.all([animationDone, cleanupDone]);
     saveJobs(loadJobs().filter(j => j.id !== id));
     renderJobs();
     populateJobRefOptions();
@@ -960,6 +971,7 @@
 
   let currentStatusFilter = 'not-done';
   let editingJobId = null;
+  let justAddedJobId = null;
 
   function setStatusFilter(filter) {
     currentStatusFilter = filter;
@@ -1022,7 +1034,7 @@
       const isDone = job.status === 'done';
       const dateDisplay = job.date ? new Date(job.date + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : 'No date set';
       return `
-        <div class="job-card priority-${job.priority} ${isDone ? 'is-done' : ''}">
+        <div class="job-card priority-${job.priority} ${isDone ? 'is-done' : ''} ${job.id === justAddedJobId ? 'list-row-enter' : ''}" data-job-id="${job.id}">
           <div class="job-card-top">
             <h4 class="job-card-title ${isDone ? 'is-done-text' : ''}">${escapeHtml(job.title)}</h4>
             <div class="job-badges">
@@ -1049,6 +1061,7 @@
           <div id="photos-${job.id}" style="display:none; margin-top:14px; padding-top:14px; border-top:1px solid var(--border);"></div>
         </div>`;
     }).join('');
+    justAddedJobId = null;
   }
 
   function toggleShowOnCalendar(jobId) {
@@ -1287,6 +1300,7 @@
   }
 
   let editingIncomeEntryId = null;
+  let justAddedIncomeEntryId = null;
   async function addIncomeEntry() {
     const date = document.getElementById('incomeDate').value;
     const desc = document.getElementById('incomeDesc').value.trim();
@@ -1306,11 +1320,13 @@
       jobRefTitle,
     };
     const wasEditing = !!editingIncomeEntryId;
+    let newId = null;
     if (wasEditing) {
       const idx = entries.findIndex(e => e.id === editingIncomeEntryId);
       if (idx > -1) entries[idx] = { ...entries[idx], ...fields };
     } else {
-      entries.push({ id: Date.now(), ...fields, origin: 'manual' });
+      newId = Date.now();
+      entries.push({ id: newId, ...fields, origin: 'manual' });
     }
     saveIncomeEntries(entries);
 
@@ -1318,6 +1334,7 @@
     document.getElementById('incomeDesc').value = '';
     document.getElementById('incomeAmount').value = '';
     cancelIncomeEntryEdit();
+    justAddedIncomeEntryId = newId;
     renderIncomeEntries();
     showToast(wasEditing ? 'Income entry updated.' : 'Income logged.');
   }
@@ -1358,9 +1375,12 @@
     const confirmed = await showConfirm(msg, { danger: true, confirmText: 'Delete' });
     if (!confirmed) return;
     if (editingIncomeEntryId === id) cancelIncomeEntryEdit();
-    saveIncomeEntries(loadIncomeEntries().filter(e => e.id !== id));
-    renderIncomeEntries();
-    showToast('Entry deleted.');
+    const row = document.querySelector('[data-income-id="' + id + '"]');
+    animateRowExit(row, () => {
+      saveIncomeEntries(loadIncomeEntries().filter(e => e.id !== id));
+      renderIncomeEntries();
+      showToast('Entry deleted.');
+    });
   }
 
   async function clearAllIncome() {
@@ -1418,7 +1438,7 @@
     }
 
     let rows = entries.map(e => `
-      <tr>
+      <tr class="${e.id === justAddedIncomeEntryId ? 'list-row-enter' : ''}" data-income-id="${e.id}">
         <td>${e.date}</td>
         <td>${escapeHtml(e.source || '\u2014')}</td>
         <td>${e.jobRefTitle ? escapeHtml(e.jobRefTitle) : '\u2014'}</td>
@@ -1431,6 +1451,7 @@
           <button class="small-btn danger" onclick="deleteIncomeEntry(${e.id})" aria-label="Delete entry" title="Delete entry">&times;</button>
         </td>
       </tr>`).join('');
+    justAddedIncomeEntryId = null;
 
     container.innerHTML = `
       <table>
@@ -1508,6 +1529,7 @@
   }
 
   let editingExpenseId = null;
+  let justAddedExpenseId = null;
   let expenseSaveInProgress = false;
   async function addExpense() {
     if (expenseSaveInProgress) return;
@@ -1593,6 +1615,7 @@
     document.getElementById('entryReceipt').value = '';
     document.getElementById('receiptPreviewName').textContent = '';
     cancelExpenseEdit();
+    justAddedExpenseId = wasEditing ? null : entry.id;
     renderExpenses();
     showToast(wasEditing ? 'Entry updated.' : (type === 'mileage' ? 'Mileage logged.' : 'Expense logged.'));
     } finally {
@@ -1645,14 +1668,17 @@
     const confirmed = await showConfirm('Delete this expense entry? This cannot be undone.', { danger: true, confirmText: 'Delete' });
     if (!confirmed) return;
     if (editingExpenseId === id) cancelExpenseEdit();
-    const entries = loadExpenses();
-    const entry = entries.find(e => e.id === id);
-    if (entry && entry.receiptPath && typeof deleteReceipt === 'function') {
-      await deleteReceipt(entry.receiptPath); // best-effort cleanup of the actual file too
-    }
-    saveExpenses(entries.filter(e => e.id !== id));
-    renderExpenses();
-    showToast('Entry deleted.');
+    const row = document.querySelector('[data-expense-id="' + id + '"]');
+    animateRowExit(row, async () => {
+      const entries = loadExpenses();
+      const entry = entries.find(e => e.id === id);
+      if (entry && entry.receiptPath && typeof deleteReceipt === 'function') {
+        await deleteReceipt(entry.receiptPath); // best-effort cleanup of the actual file too
+      }
+      saveExpenses(entries.filter(e => e.id !== id));
+      renderExpenses();
+      showToast('Entry deleted.');
+    });
   }
 
   async function clearAllExpenses() {
@@ -1674,7 +1700,7 @@
     }
 
     let rows = entries.map(e => `
-      <tr>
+      <tr class="${e.id === justAddedExpenseId ? 'list-row-enter' : ''}" data-expense-id="${e.id}">
         <td>${e.date}</td>
         <td>${e.type === 'mileage' ? 'Mileage' : 'Expense'}</td>
         <td>${escapeHtml(e.vendor || '\u2014')}</td>
@@ -1689,6 +1715,7 @@
           <button class="small-btn danger" onclick="deleteExpense(${e.id})" aria-label="Delete entry" title="Delete entry">&times;</button>
         </td>
       </tr>`).join('');
+    justAddedExpenseId = null;
 
     container.innerHTML = `
       <table>
