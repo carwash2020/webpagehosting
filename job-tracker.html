@@ -116,7 +116,7 @@
 
   /* --- Job templates --- */
   .template-item {
-    display: flex; justify-content: space-between; align-items: center; gap: 12px;
+    display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap;
     padding: 14px 0; border-bottom: 1px solid var(--border);
   }
   .template-item:last-child { border-bottom: none; }
@@ -128,7 +128,7 @@
   }
   .template-due-badge.is-due { color: var(--orange-light); background: rgba(255,128,0,0.12); }
   .template-due-badge.is-ok { color: var(--text-dim); background: var(--bg-panel-2); }
-  .template-item-actions { display: flex; gap: 8px; flex-shrink: 0; }
+  .template-item-actions { display: flex; gap: 8px; flex-shrink: 0; flex-wrap: wrap; }
 
   /* --- Realtime status indicator --- */
   .realtime-badge { display: inline-flex; align-items: center; gap: 5px; font-size: 11.5px; color: var(--text-dim); margin-left: 10px; }
@@ -195,7 +195,7 @@
   <button class="help-btn" onclick="openHelpModal()" aria-label="How to use this tool" title="How to use this tool">?</button>
 </div>
 <div class="tool-title">Job Tracker</div>
-<p class="tool-sub">Jobs, pricing, expenses, contacts, and notes &mdash; the whole day-to-day workflow in one place, organized by tab.<span id="syncStatusText"></span> <a href="#" id="refreshSyncLink" onclick="manualRefreshSync(refreshJobTrackerViews); return false;" style="color:var(--blue-light);">Refresh synced data now</a>
+<p class="tool-sub">Jobs, pricing, expenses, contacts, and notes &mdash; the whole day-to-day workflow in one place, organized by tab.<span id="syncStatusText"></span> Force a full refresh from the <a href="/workspace.html" style="color:var(--blue-light);">Workspace</a> page.
   <span class="realtime-badge" id="realtimeBadge"><span class="realtime-dot" id="realtimeDot"></span><span id="realtimeText">Live sync: connecting...</span></span>
 </p>
 
@@ -642,28 +642,7 @@
     renderNotesList();
     if (currentNoteId !== null && loadNotes().some(n => n.id === currentNoteId)) {
       selectNote(currentNoteId);
-    }
-  }
-
-  function refreshJobTrackerViews(result) {
-    updateSyncStatusText();
-    if (!result.ok) return;
-    // Re-render every tab with whatever just came down from the cloud
-    renderJobs();
-    populateJobRefOptions();
-    populateIncomeJobRefOptions();
-    loadMileageRate();
-    loadTaxSettings();
-    calculateCost();
-    renderExpenses();
-    renderIncomeEntries();
-    renderContacts();
-    renderPriceReferences();
-    renderTemplates();
-    renderNotesList();
-    if (currentNoteId !== null && loadNotes().some(n => n.id === currentNoteId)) {
-      selectNote(currentNoteId);
-    } else {
+    } else if (currentNoteId !== null) {
       currentNoteId = null;
       document.getElementById('noteEditorSection').style.display = 'none';
       document.getElementById('noteEmptyState').style.display = '';
@@ -893,6 +872,7 @@
         </div>
         <div class="template-item-actions">
           <button class="small-btn" onclick="createJobFromTemplate(${t.id})">Create Job</button>
+          <button class="small-btn" onclick="editTemplatePrompt(${t.id})">Edit</button>
           <button class="small-btn danger" onclick="deleteTemplate(${t.id})">Delete</button>
         </div>
       </div>`;
@@ -911,6 +891,26 @@
     templates.push({ id: Date.now(), title: title.trim(), client: client.trim(), intervalMonths, lastCreatedDate: '' });
     saveTemplates(templates);
     renderTemplates();
+  }
+
+  function editTemplatePrompt(id) {
+    const templates = loadTemplates();
+    const template = templates.find(t => t.id === id);
+    if (!template) return;
+
+    const title = prompt('Job title for this recurring template:', template.title);
+    if (!title || !title.trim()) return;
+    const client = prompt('Client name (leave blank if this applies to different clients each time):', template.client || '') || '';
+    const intervalStr = prompt('Repeat every how many months? (e.g. 3, 6, 12):', String(template.intervalMonths));
+    const intervalMonths = parseInt(intervalStr, 10);
+    if (!intervalMonths || intervalMonths < 1) { showAlert('Enter a valid number of months.'); return; }
+
+    template.title = title.trim();
+    template.client = client.trim();
+    template.intervalMonths = intervalMonths;
+    saveTemplates(templates);
+    renderTemplates();
+    showToast('Template updated.');
   }
 
   function createJobFromTemplate(id) {
