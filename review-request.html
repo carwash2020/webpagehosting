@@ -84,7 +84,8 @@
 
 <div class="tabs" id="reviewTabs" style="margin-bottom:18px;">
   <button class="tab-btn is-active" data-tab="send" onclick="activateReviewTab('send')">Send Request</button>
-  <button class="tab-btn" data-tab="qr" onclick="activateReviewTab('qr')">QR Code</button>
+  <button class="tab-btn" data-tab="google" onclick="activateReviewTab('google')">Google QR</button>
+  <button class="tab-btn" data-tab="yelp" onclick="activateReviewTab('yelp')">Yelp QR</button>
 </div>
 
 <div class="tab-panel is-active" id="panel-send">
@@ -150,16 +151,29 @@
 
 </div>
 
-<div class="tab-panel" id="panel-qr" style="text-align:center;">
+<div class="tab-panel" id="panel-google" style="text-align:center;">
   <img src="/images/logo-signature-orange.png" alt="Triple H Enterprises" style="width:96px; height:auto; margin:0 auto 14px; display:block;">
   <div style="font-family:'Oswald',sans-serif; font-weight:700; font-size:22px; color:var(--white); margin-bottom:4px;">Triple H Enterprises</div>
   <div style="color:var(--text-dim); font-size:14px; margin-bottom:30px;">Handyman &amp; Appliance Repair</div>
 
-  <div style="background:#ffffff; border-radius:20px; padding:28px; box-shadow:0 8px 30px rgba(0,0,0,0.35); margin-bottom:24px;" id="qrCard">
+  <div style="background:#ffffff; border-radius:20px; padding:28px; box-shadow:0 8px 30px rgba(0,0,0,0.35); margin-bottom:24px;" id="googleQrCard">
     <div style="color:var(--text-dim); padding:60px 0;">Loading QR code&hellip;</div>
   </div>
 
-  <div style="font-family:'Oswald',sans-serif; font-weight:600; font-size:18px; color:var(--white); margin-bottom:8px;">Scan to leave us a review</div>
+  <div style="font-family:'Oswald',sans-serif; font-weight:600; font-size:18px; color:var(--white); margin-bottom:8px;">Scan to leave us a Google review</div>
+  <div style="color:var(--text-dim); font-size:14px;">Takes about a minute &mdash; it means a lot to a small business like ours.</div>
+</div>
+
+<div class="tab-panel" id="panel-yelp" style="text-align:center;">
+  <img src="/images/logo-signature-orange.png" alt="Triple H Enterprises" style="width:96px; height:auto; margin:0 auto 14px; display:block;">
+  <div style="font-family:'Oswald',sans-serif; font-weight:700; font-size:22px; color:var(--white); margin-bottom:4px;">Triple H Enterprises</div>
+  <div style="color:var(--text-dim); font-size:14px; margin-bottom:30px;">Handyman &amp; Appliance Repair</div>
+
+  <div style="background:#ffffff; border-radius:20px; padding:28px; box-shadow:0 8px 30px rgba(0,0,0,0.35); margin-bottom:24px;" id="yelpQrCard">
+    <div style="color:var(--text-dim); padding:60px 0;">Loading QR code&hellip;</div>
+  </div>
+
+  <div style="font-family:'Oswald',sans-serif; font-weight:600; font-size:18px; color:var(--white); margin-bottom:8px;">Scan to leave us a Yelp review</div>
   <div style="color:var(--text-dim); font-size:14px;">Takes about a minute &mdash; it means a lot to a small business like ours.</div>
 </div>
 
@@ -183,6 +197,7 @@
 
 <script>
   const GOOGLE_REVIEW_LINK = 'https://g.page/r/CVJ0Qr-SsDkgEAI/review';
+  const YELP_REVIEW_LINK = 'https://www.yelp.com/writeareview/biz/dDXSbCwxuD7YHu9M1xMXoA?return_url=%2Fbiz%2FdDXSbCwxuD7YHu9M1xMXoA&review_origin=biz-details-war-button';
 
   // Six genuinely different message structures, not just word-swaps of
   // the same sentence -- each handles a blank name/job gracefully with
@@ -270,17 +285,17 @@
       ${rects}
     </svg>`;
   }
-  function renderQR() {
-    const card = document.getElementById('qrCard');
+  function renderQR(cardId, link) {
+    const card = document.getElementById(cardId);
     if (typeof qrcode !== 'function') { card.innerHTML = '<div style="color:var(--text-dim); padding:60px 0;">Couldn\u2019t load the QR code library. Try reloading the page.</div>'; return; }
     const qr = qrcode(0, 'H');
-    qr.addData(GOOGLE_REVIEW_LINK);
+    qr.addData(link);
     qr.make();
     card.innerHTML = qrToSvg(qr, 8, 16);
   }
 
   // ---------- Tabs + swipe between them ----------
-  const REVIEW_TAB_ORDER = ['send', 'qr'];
+  const REVIEW_TAB_ORDER = ['send', 'google', 'yelp'];
   function activateReviewTab(tabKey) {
     document.querySelectorAll('#reviewTabs .tab-btn').forEach(b => b.classList.toggle('is-active', b.dataset.tab === tabKey));
     document.querySelectorAll('.tab-panel').forEach(p => p.classList.toggle('is-active', p.id === 'panel-' + tabKey));
@@ -598,7 +613,8 @@
   }
 
   document.addEventListener('DOMContentLoaded', () => {
-    renderQR();
+    renderQR('googleQrCard', GOOGLE_REVIEW_LINK);
+    renderQR('yelpQrCard', YELP_REVIEW_LINK);
   });
 </script>
 </body>
