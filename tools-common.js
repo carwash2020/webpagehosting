@@ -108,32 +108,85 @@ function animateRowExit(rowElement, onComplete) {
 
 // Swipe right anywhere on the page navigates back to Workspace, mirroring
 // the native "swipe back" gesture already familiar from the rest of the
-// phone. Reuses the exact same distance/speed thresholds already proven
-// on Runway Dashboard's own tab-swipe gesture, for a consistent feel
-// everywhere this is used. Skips touches that start inside a <table> --
-// a wide table on a narrow phone may need its own horizontal scroll, and
-// that shouldn't get hijacked into navigating away mid-scroll instead.
+// phone. Content follows the finger in real time rather than only
+// reacting after the gesture ends, and either completes the slide-away
+// or springs back smoothly depending on whether the swipe actually
+// cleared the threshold -- the same feel as a native back-swipe, not a
+// binary "did this count or not" check with no feedback in between.
+//
+// Skips touches that start inside a <table> (a wide table on a narrow
+// phone may need its own horizontal scroll) or while a modal is open.
+// The modal case matters mechanically, not just visually: applying a
+// transform to body creates a new containing block, which breaks
+// position:fixed for every descendant -- an open modal would start
+// moving with the page instead of staying fixed to the viewport.
 function setupSwipeBackToWorkspace() {
-  let touchStartX = 0, touchStartY = 0, touchStartTime = 0, touchStartedInTable = false;
+  let touchStartX = 0, touchStartY = 0, touchStartTime = 0;
+  let dragging = false, committed = false;
+  const DRAG_ELEMENT = document.body;
+  const THRESHOLD = 60;
+  const MAX_DRAG = 140; // caps how far content visually follows the finger, even on a much longer drag
+
+  function anyModalOpen() {
+    return !!document.querySelector('.help-modal-overlay.is-open');
+  }
+
   document.body.addEventListener('touchstart', (e) => {
     if (e.touches.length !== 1) return;
     touchStartX = e.touches[0].clientX;
     touchStartY = e.touches[0].clientY;
     touchStartTime = Date.now();
-    touchStartedInTable = !!(e.target.closest && e.target.closest('table'));
+    dragging = !(e.target.closest && e.target.closest('table')) && !anyModalOpen();
+    committed = false;
   }, { passive: true });
+
+  document.body.addEventListener('touchmove', (e) => {
+    if (!dragging || !e.touches.length) return;
+    const dx = e.touches[0].clientX - touchStartX;
+    const dy = e.touches[0].clientY - touchStartY;
+    if (Math.abs(dx) < Math.abs(dy) * 1.5 || dx < 0) return; // not a rightward, mostly-horizontal drag -- leave scrolling alone
+    const clamped = Math.min(dx, MAX_DRAG);
+    DRAG_ELEMENT.style.transition = 'none';
+    DRAG_ELEMENT.style.transform = `translateX(${clamped}px)`;
+    DRAG_ELEMENT.style.opacity = String(1 - (clamped / MAX_DRAG) * 0.35);
+  }, { passive: true });
+
   document.body.addEventListener('touchend', (e) => {
-    if (!e.changedTouches.length || touchStartedInTable) return;
+    if (!dragging || !e.changedTouches.length) return;
+    dragging = false;
     const dx = e.changedTouches[0].clientX - touchStartX;
     const dy = e.changedTouches[0].clientY - touchStartY;
     const elapsed = Date.now() - touchStartTime;
     const isMostlyHorizontal = Math.abs(dx) > Math.abs(dy) * 1.5;
-    const isFarEnough = dx > 60; // rightward only, matching the "swipe back" convention
+    const isFarEnough = dx > THRESHOLD;
     const isFastEnough = elapsed < 600;
+
+    DRAG_ELEMENT.style.transition = 'transform .22s ease, opacity .22s ease';
     if (isMostlyHorizontal && isFarEnough && isFastEnough) {
-      window.location.href = '/workspace.html';
+      committed = true;
+      DRAG_ELEMENT.style.transform = 'translateX(100%)';
+      DRAG_ELEMENT.style.opacity = '0';
+      setTimeout(() => { window.location.href = '/workspace.html'; }, 220);
+    } else {
+      DRAG_ELEMENT.style.transform = 'translateX(0)';
+      DRAG_ELEMENT.style.opacity = '1';
+      setTimeout(() => {
+        if (!committed) { DRAG_ELEMENT.style.transition = ''; DRAG_ELEMENT.style.transform = ''; DRAG_ELEMENT.style.opacity = ''; }
+      }, 230);
     }
   }, { passive: true });
+
+  // A gesture can be interrupted (an incoming call, switching apps
+  // mid-swipe) without ever firing touchend -- without this, content
+  // could get stuck permanently dragged partway off-screen.
+  document.body.addEventListener('touchcancel', () => {
+    if (!dragging) return;
+    dragging = false;
+    DRAG_ELEMENT.style.transition = 'transform .22s ease, opacity .22s ease';
+    DRAG_ELEMENT.style.transform = 'translateX(0)';
+    DRAG_ELEMENT.style.opacity = '1';
+    setTimeout(() => { DRAG_ELEMENT.style.transition = ''; DRAG_ELEMENT.style.transform = ''; DRAG_ELEMENT.style.opacity = ''; }, 230);
+  });
 }
 
 function toggleFormSection(id, forceOpen) {
