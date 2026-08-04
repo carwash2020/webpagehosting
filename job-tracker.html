@@ -860,6 +860,7 @@
     return { isDue: false, label: 'Next due in ' + days + ' day' + (days === 1 ? '' : 's') };
   }
 
+  let justAddedTemplateId = null;
   function renderTemplates() {
     const templates = loadTemplates();
     const container = document.getElementById('templatesList');
@@ -881,7 +882,7 @@
     container.innerHTML = templates.map(t => {
       const due = templateDueInfo(t);
       return `
-      <div class="template-item">
+      <div class="template-item ${t.id === justAddedTemplateId ? 'list-row-enter' : ''}" data-template-id="${t.id}">
         <div>
           <div class="template-item-title">${escapeHtml(t.title)}${t.client ? ' &mdash; ' + escapeHtml(t.client) : ''}
             <span class="template-due-badge ${due.isDue ? 'is-due' : 'is-ok'}">${escapeHtml(due.label)}</span>
@@ -895,6 +896,7 @@
         </div>
       </div>`;
     }).join('');
+    justAddedTemplateId = null;
   }
 
   function addTemplatePrompt() {
@@ -906,8 +908,10 @@
     if (!intervalMonths || intervalMonths < 1) { showAlert('Enter a valid number of months.'); return; }
 
     const templates = loadTemplates();
-    templates.push({ id: Date.now(), title: title.trim(), client: client.trim(), intervalMonths, lastCreatedDate: '' });
+    const newId = Date.now();
+    templates.push({ id: newId, title: title.trim(), client: client.trim(), intervalMonths, lastCreatedDate: '' });
     saveTemplates(templates);
+    justAddedTemplateId = newId;
     renderTemplates();
   }
 
@@ -959,8 +963,11 @@
   async function deleteTemplate(id) {
     const confirmed = await showConfirm('Delete this recurring template? This cannot be undone.', { danger: true, confirmText: 'Delete' });
     if (!confirmed) return;
-    saveTemplates(loadTemplates().filter(t => t.id !== id));
-    renderTemplates();
+    const row = document.querySelector('[data-template-id="' + id + '"]');
+    animateRowExit(row, () => {
+      saveTemplates(loadTemplates().filter(t => t.id !== id));
+      renderTemplates();
+    });
   }
 
   function setSort(sortType) {
@@ -1928,6 +1935,7 @@
     if (notes.length > 0) selectNote(notes[0].id);
   }
 
+  let justAddedNoteId = null;
   function renderNotesList() {
     let notes = [...loadNotes()].sort((a, b) => b.updatedAt - a.updatedAt);
     const searchEl = document.getElementById('noteSearch');
@@ -1946,13 +1954,14 @@
       return;
     }
     container.innerHTML = notes.map(n => `
-      <div class="note-list-item ${n.id === currentNoteId ? 'is-active' : ''}" onclick="selectNote(${n.id})">
+      <div class="note-list-item ${n.id === currentNoteId ? 'is-active' : ''} ${n.id === justAddedNoteId ? 'list-row-enter' : ''}" data-note-id="${n.id}" onclick="selectNote(${n.id})">
         <div class="note-list-item-text">
           <h4>${escapeHtml(n.title || 'Untitled Note')}</h4>
           <p>${escapeHtml((n.body || '').slice(0, 60) || 'Empty note')}</p>
         </div>
         <button class="small-btn danger" onclick="event.stopPropagation(); deleteNote(${n.id})" aria-label="Delete note" title="Delete note">&times;</button>
       </div>`).join('');
+    justAddedNoteId = null;
   }
 
   function selectNote(id) {
@@ -1971,23 +1980,27 @@
     const note = { id: Date.now(), title: 'Untitled Note', body: '', updatedAt: Date.now() };
     notes.push(note);
     saveNotesList(notes);
+    justAddedNoteId = note.id;
     selectNote(note.id);
   }
 
   async function deleteNote(id) {
     const confirmed = await showConfirm('Delete this note? This cannot be undone.', { danger: true, confirmText: 'Delete' });
     if (!confirmed) return;
-    const notes = loadNotes().filter(n => n.id !== id);
-    saveNotesList(notes);
-    if (currentNoteId === id) {
-      currentNoteId = null;
-      document.getElementById('noteEditorSection').style.display = 'none';
-      document.getElementById('noteEmptyState').style.display = '';
-      if (notes.length > 0) selectNote(notes[0].id);
-    } else {
-      renderNotesList();
-    }
-    showToast('Note deleted.');
+    const row = document.querySelector('[data-note-id="' + id + '"]');
+    animateRowExit(row, () => {
+      const notes = loadNotes().filter(n => n.id !== id);
+      saveNotesList(notes);
+      if (currentNoteId === id) {
+        currentNoteId = null;
+        document.getElementById('noteEditorSection').style.display = 'none';
+        document.getElementById('noteEmptyState').style.display = '';
+        if (notes.length > 0) selectNote(notes[0].id);
+      } else {
+        renderNotesList();
+      }
+      showToast('Note deleted.');
+    });
   }
 
   function scheduleNoteSave() {
@@ -2016,6 +2029,7 @@
   // guarantees initSyncOnLoad() and friends actually exist by the time
   // we call them here.
   document.addEventListener('DOMContentLoaded', function () {
+    if (typeof setupSwipeBackToWorkspace === 'function') setupSwipeBackToWorkspace();
     (async function init() {
       await initSyncOnLoad();
       updateSyncStatusText();

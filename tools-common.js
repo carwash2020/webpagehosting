@@ -106,6 +106,36 @@ function animateRowExit(rowElement, onComplete) {
   setTimeout(onComplete, 230);
 }
 
+// Swipe right anywhere on the page navigates back to Workspace, mirroring
+// the native "swipe back" gesture already familiar from the rest of the
+// phone. Reuses the exact same distance/speed thresholds already proven
+// on Runway Dashboard's own tab-swipe gesture, for a consistent feel
+// everywhere this is used. Skips touches that start inside a <table> --
+// a wide table on a narrow phone may need its own horizontal scroll, and
+// that shouldn't get hijacked into navigating away mid-scroll instead.
+function setupSwipeBackToWorkspace() {
+  let touchStartX = 0, touchStartY = 0, touchStartTime = 0, touchStartedInTable = false;
+  document.body.addEventListener('touchstart', (e) => {
+    if (e.touches.length !== 1) return;
+    touchStartX = e.touches[0].clientX;
+    touchStartY = e.touches[0].clientY;
+    touchStartTime = Date.now();
+    touchStartedInTable = !!(e.target.closest && e.target.closest('table'));
+  }, { passive: true });
+  document.body.addEventListener('touchend', (e) => {
+    if (!e.changedTouches.length || touchStartedInTable) return;
+    const dx = e.changedTouches[0].clientX - touchStartX;
+    const dy = e.changedTouches[0].clientY - touchStartY;
+    const elapsed = Date.now() - touchStartTime;
+    const isMostlyHorizontal = Math.abs(dx) > Math.abs(dy) * 1.5;
+    const isFarEnough = dx > 60; // rightward only, matching the "swipe back" convention
+    const isFastEnough = elapsed < 600;
+    if (isMostlyHorizontal && isFarEnough && isFastEnough) {
+      window.location.href = '/workspace.html';
+    }
+  }, { passive: true });
+}
+
 function toggleFormSection(id, forceOpen) {
   const el = document.getElementById(id);
   if (!el) return;

@@ -83,7 +83,10 @@
 
 <div class="form-section">
   <div id="stopsContainer"></div>
-  <button class="add-stop-btn" onclick="addStop()">+ Add Stop</button>
+  <div style="display:flex; gap:10px; flex-wrap:wrap;">
+    <button class="add-stop-btn" onclick="addStop()">+ Add Stop</button>
+    <button class="secondary-btn" onclick="pullTodaysJobs()">Pull Today's Jobs</button>
+  </div>
   <p class="warning-note" id="tooManyWarning">Google Maps allows up to 10 stops per route &mdash; remove one before opening the full route.</p>
   <a class="primary-btn block" id="openRouteBtn" href="#" target="_blank" rel="noopener">Open Full Route in Google Maps</a>
 </div>
@@ -125,6 +128,36 @@
 
 <script>
   let stopCount = 0;
+
+  // Pulls today's active (not-done) jobs straight from Job Tracker's
+  // stored data -- both tools share the same browser/device storage, so
+  // no live connection or API call is needed, just reading the same key
+  // Job Tracker itself writes to. Jobs with no address on file are
+  // skipped, since there's nothing to route to, but called out by name
+  // so it's clear they were skipped rather than silently missing.
+  async function pullTodaysJobs() {
+    let jobs = [];
+    try { jobs = JSON.parse(localStorage.getItem('th_tracker_jobs') || '[]'); } catch (e) { jobs = []; }
+    const today = new Date().toISOString().slice(0, 10);
+    const todaysJobs = jobs.filter(j => j.date === today && j.status !== 'done');
+    const withAddress = todaysJobs.filter(j => (j.address || '').trim());
+    const withoutAddress = todaysJobs.filter(j => !(j.address || '').trim());
+
+    if (todaysJobs.length === 0) {
+      await showAlert('No active jobs due today in Job Tracker.');
+      return;
+    }
+    if (withAddress.length === 0) {
+      await showAlert('Today\u2019s jobs in Job Tracker don\u2019t have an address on file yet, so there\u2019s nothing to pull in.');
+      return;
+    }
+    withAddress.forEach(j => addStop(j.address));
+    let msg = `Pulled ${withAddress.length} stop${withAddress.length === 1 ? '' : 's'} from today's jobs.`;
+    if (withoutAddress.length > 0) {
+      msg += ` Skipped ${withoutAddress.length} job${withoutAddress.length === 1 ? '' : 's'} with no address on file: ${withoutAddress.map(j => j.title).join(', ')}.`;
+    }
+    showToast(msg);
+  }
 
   function addStop(value = '') {
     stopCount++;
@@ -298,6 +331,7 @@
   // parse time instead. Waiting for DOMContentLoaded guarantees sync.js
   // has actually finished loading before we call its functions.
   document.addEventListener('DOMContentLoaded', function () {
+    if (typeof setupSwipeBackToWorkspace === 'function') setupSwipeBackToWorkspace();
     initSyncOnLoad().then(() => {
       loadSharedMileageRate();
       calculateTripCost();

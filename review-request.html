@@ -250,6 +250,10 @@
       setTimeout(() => { confirm.style.display = 'none'; }, 3000);
     });
   }
+
+  document.addEventListener('DOMContentLoaded', () => {
+    if (typeof setupSwipeBackToWorkspace === 'function') setupSwipeBackToWorkspace();
+  });
 </script>
 </body>
 </html>

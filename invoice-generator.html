@@ -1067,6 +1067,7 @@
     }
   }
   document.addEventListener('DOMContentLoaded', () => {
+    if (typeof setupSwipeBackToWorkspace === 'function') setupSwipeBackToWorkspace();
     populateKnownContactsList();
     if (typeof startRealtimeSync === 'function') {
       startRealtimeSync(() => { loadSharedTaxRate(); populateKnownContactsList(); }, updateRealtimeBadge);

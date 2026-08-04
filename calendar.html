@@ -272,6 +272,7 @@
   }
 
   document.addEventListener('DOMContentLoaded', () => {
+    if (typeof setupSwipeBackToWorkspace === 'function') setupSwipeBackToWorkspace();
     viewYear = today.getFullYear();
     viewMonth = today.getMonth();
     selectedDateStr = dateKey(viewYear, viewMonth, today.getDate());
