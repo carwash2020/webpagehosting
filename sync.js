@@ -533,7 +533,14 @@ async function uploadReceipt(file, expenseId) {
       },
       body: file,
     });
-    if (!uploadRes.ok) return { ok: false, error: 'upload-http-' + uploadRes.status };
+    if (!uploadRes.ok) {
+      let detail = '';
+      try {
+        const body = await uploadRes.json();
+        detail = body.message || body.error || '';
+      } catch (e) { /* response wasn't JSON, fall through with no detail */ }
+      return { ok: false, error: 'upload-http-' + uploadRes.status, detail };
+    }
     return { ok: true, path };
   } catch (e) {
     return { ok: false, error: 'network' };

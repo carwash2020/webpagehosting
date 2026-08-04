@@ -1561,7 +1561,7 @@
       if (!result.ok) {
         const msg = result.error === 'too-large'
           ? 'That receipt photo is over 8MB \u2014 try a smaller photo or lower camera resolution.'
-          : 'Receipt upload failed: ' + result.error + '. The expense was NOT saved \u2014 try again.';
+          : 'Receipt upload failed: ' + result.error + (result.detail ? ' \u2014 ' + result.detail : '') + '. The expense was NOT saved \u2014 try again.';
         await showAlert(msg);
         return;
       }
