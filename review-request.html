@@ -26,6 +26,7 @@
 <link href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;500;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="/styles.css">
 <script src="/tools-common.js" defer></script>
+<script src="/qrcode-lib.js" defer></script>
 <style>
   body { padding: 90px 20px 60px; max-width: 640px; margin: 0 auto; }
   .tool-title { font-family:'Oswald',sans-serif; font-weight:700; font-size:28px; color:var(--white); margin-bottom:6px; }
@@ -74,7 +75,24 @@
   <button class="help-btn" onclick="openHelpModal()" aria-label="How to use this tool" title="How to use this tool">?</button>
 </div>
 <div class="tool-title">Review Request Sender</div>
-<p class="tool-sub">Internal tool &mdash; fill in the job details after finishing, tap Send. Nothing here is saved or sent to any server; everything happens right in this browser tab and your own phone's messaging app.</p>
+<p class="tool-sub">Internal tool &mdash; fill in the job details after finishing, tap Send. Nothing here is ever sent to a server &mdash; the message itself is built right in this browser tab, and opens your phone's own messaging app to actually send it. A short local log of who's been sent a request is kept on this device, purely to warn you before an accidental double-send.</p>
+
+<div class="tabs" id="reviewTabs" style="margin-bottom:18px;">
+  <button class="tab-btn is-active" data-tab="send" onclick="activateReviewTab('send')">Send Request</button>
+  <button class="tab-btn" data-tab="qr" onclick="activateReviewTab('qr')">QR Code</button>
+</div>
+
+<div class="tab-panel is-active" id="panel-send">
+
+<div class="form-section" id="recentJobsSection" style="display:none;">
+  <h3>Or Pick a Recently Completed Job</h3>
+  <div id="recentJobsList"></div>
+</div>
+
+<div class="form-section" id="pendingRemindersSection" style="display:none;">
+  <h3>Due Today <span style="color:var(--text-dim); font-weight:400; text-transform:none; letter-spacing:0;">&mdash; delayed review requests ready to send</span></h3>
+  <div id="pendingRemindersList"></div>
+</div>
 
 <div class="form-section">
   <h3>Job Details</h3>
@@ -95,13 +113,42 @@
 <div class="form-section">
   <h3>Message Preview</h3>
   <div class="message-preview" id="messagePreview"></div>
+  <div id="duplicateWarning" style="display:none; color: var(--orange-light); font-size: 13px; margin-bottom: 12px; padding: 10px 12px; background: rgba(255,128,0,0.08); border: 1px solid rgba(255,128,0,0.3); border-radius: 6px;"></div>
   <div class="btn-row">
     <button class="action-btn btn-copy" onclick="shuffleMessage()">&#128256; Try Another</button>
     <button class="action-btn btn-copy" onclick="copyMessage()">Copy Message</button>
-    <a class="action-btn btn-send" id="sendLink" href="#">Open Text Message</a>
+    <a class="action-btn btn-send" id="sendLink" href="#" onclick="logSentRequest('sms')">Open Text Message</a>
   </div>
   <div class="copy-confirm" id="copyConfirm">Copied! Paste it in if the text app doesn't fill it in automatically.</div>
   <div style="display:flex; align-items:center; gap:6px; margin-top:4px;"><button class="help-btn" onclick="openCardInfo('sendButton')" aria-label="What does Open Text Message do?" title="What does Open Text Message do?">?</button><span class="fallback-note" style="margin:0;">What "Open Text Message" does</span></div>
+
+  <div style="border-top: 1px solid var(--border); margin-top: 18px; padding-top: 16px;">
+    <div style="font-size: 13px; color: var(--text-dim); margin-bottom: 10px;">Some customers respond better to a request sent a day or two later, once they've had a chance to actually enjoy the finished work &mdash; rather than right this second.</div>
+    <div class="btn-row">
+      <button class="action-btn btn-copy" onclick="scheduleReminder(1)">Remind Me Tomorrow</button>
+      <button class="action-btn btn-copy" onclick="scheduleReminder(2)">Remind Me in 2 Days</button>
+    </div>
+  </div>
+</div>
+
+<div class="form-section" id="sentLogSection" style="display:none;">
+  <h3>Recently Sent</h3>
+  <div id="sentLogList"></div>
+</div>
+
+</div>
+
+<div class="tab-panel" id="panel-qr" style="text-align:center;">
+  <img src="/images/logo-signature-orange.png" alt="Triple H Enterprises" style="width:96px; height:auto; margin:0 auto 14px; display:block;">
+  <div style="font-family:'Oswald',sans-serif; font-weight:700; font-size:22px; color:var(--white); margin-bottom:4px;">Triple H Enterprises</div>
+  <div style="color:var(--text-dim); font-size:14px; margin-bottom:30px;">Handyman &amp; Appliance Repair</div>
+
+  <div style="background:#ffffff; border-radius:20px; padding:28px; box-shadow:0 8px 30px rgba(0,0,0,0.35); margin-bottom:24px;" id="qrCard">
+    <div style="color:var(--text-dim); padding:60px 0;">Loading QR code&hellip;</div>
+  </div>
+
+  <div style="font-family:'Oswald',sans-serif; font-weight:600; font-size:18px; color:var(--white); margin-bottom:8px;">Scan to leave us a review</div>
+  <div style="color:var(--text-dim); font-size:14px;">Takes about a minute &mdash; it means a lot to a small business like ours.</div>
 </div>
 
 <div class="help-modal-overlay" id="helpModalOverlay" onclick="if(event.target===this) closeHelpModal()">
@@ -115,7 +162,8 @@
         <li>Enter the customer's phone number, then tap <strong>Open Text Message</strong> &mdash; it opens your phone's messaging app with the message pre-filled on most phones.</li>
         <li>If your phone doesn't pre-fill it, tap <strong>Copy Message</strong> first and paste it in.</li>
         <li>Not feeling one of the six phrasings? Tap <strong>Try Another</strong> to shuffle to a different one.</li>
-        <li>Nothing here is saved or sent to any server &mdash; it all happens in this browser tab and your phone's own messaging app.</li>
+        <li><strong>Remind Me Tomorrow / in 2 Days</strong> clears the form and holds onto these details locally, surfacing them at the top of this page once that date arrives &mdash; useful if you'd rather not ask for a review the second you walk out the door. This only shows up if you happen to open this page again on or after that date; it does not send an actual phone notification on its own.</li>
+        <li>A short local log of who's been sent a request lives on this device, purely to warn you if you're about to send to the same number again within 30 days &mdash; it never leaves this browser or gets sent anywhere.</li>
       </ul>
     </div>
   </div>
@@ -190,8 +238,235 @@
     updatePreviewAndLink();
   }
 
+  // ---------- QR code (same approach as the standalone review-qr.html --
+  // inline SVG so it stays crisp at any size, 'H' error correction for
+  // real tolerance of screen glare/smudges/an off angle at an actual job
+  // site) ----------
+  function qrToSvg(qr, moduleSize, margin) {
+    const count = qr.getModuleCount();
+    const size = count * moduleSize + margin * 2;
+    let rects = '';
+    for (let row = 0; row < count; row++) {
+      for (let col = 0; col < count; col++) {
+        if (qr.isDark(row, col)) {
+          rects += `<rect x="${margin + col * moduleSize}" y="${margin + row * moduleSize}" width="${moduleSize}" height="${moduleSize}" fill="#0a0a0a"/>`;
+        }
+      }
+    }
+    return `<svg viewBox="0 0 ${size} ${size}" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="QR code linking to our Google review page" style="width:100%; height:auto; display:block;">
+      <rect width="${size}" height="${size}" fill="#ffffff"/>
+      ${rects}
+    </svg>`;
+  }
+  function renderQR() {
+    const card = document.getElementById('qrCard');
+    if (typeof qrcode !== 'function') { card.innerHTML = '<div style="color:var(--text-dim); padding:60px 0;">Couldn\u2019t load the QR code library. Try reloading the page.</div>'; return; }
+    const qr = qrcode(0, 'H');
+    qr.addData(GOOGLE_REVIEW_LINK);
+    qr.make();
+    card.innerHTML = qrToSvg(qr, 8, 16);
+  }
+
+  // ---------- Tabs + swipe between them ----------
+  const REVIEW_TAB_ORDER = ['send', 'qr'];
+  function activateReviewTab(tabKey) {
+    document.querySelectorAll('#reviewTabs .tab-btn').forEach(b => b.classList.toggle('is-active', b.dataset.tab === tabKey));
+    document.querySelectorAll('.tab-panel').forEach(p => p.classList.toggle('is-active', p.id === 'panel-' + tabKey));
+  }
+  (function setupReviewSwipe() {
+    let touchStartX = 0, touchStartY = 0, touchStartTime = 0, startedInTable = false;
+    document.body.addEventListener('touchstart', (e) => {
+      if (e.touches.length !== 1) return;
+      touchStartX = e.touches[0].clientX;
+      touchStartY = e.touches[0].clientY;
+      touchStartTime = Date.now();
+      startedInTable = !!(e.target.closest && e.target.closest('table'));
+    }, { passive: true });
+    document.body.addEventListener('touchend', (e) => {
+      if (!e.changedTouches.length || startedInTable) return;
+      const dx = e.changedTouches[0].clientX - touchStartX;
+      const dy = e.changedTouches[0].clientY - touchStartY;
+      const elapsed = Date.now() - touchStartTime;
+      const isMostlyHorizontal = Math.abs(dx) > Math.abs(dy) * 1.5;
+      const isFarEnough = Math.abs(dx) > 60;
+      const isFastEnough = elapsed < 600;
+      if (!isMostlyHorizontal || !isFarEnough || !isFastEnough) return;
+
+      const activeBtn = document.querySelector('#reviewTabs .tab-btn.is-active');
+      const currentIndex = REVIEW_TAB_ORDER.indexOf(activeBtn ? activeBtn.dataset.tab : 'send');
+      if (currentIndex === -1) return;
+      if (dx < 0 && currentIndex < REVIEW_TAB_ORDER.length - 1) {
+        activateReviewTab(REVIEW_TAB_ORDER[currentIndex + 1]); // swiped left -> next tab
+      } else if (dx > 0 && currentIndex > 0) {
+        activateReviewTab(REVIEW_TAB_ORDER[currentIndex - 1]); // swiped right -> previous tab
+      } else if (dx > 0 && currentIndex === 0) {
+        window.location.href = '/workspace.html'; // swiped right on the first tab -- exit to Workspace, same convention as every other tool page
+      }
+    }, { passive: true });
+  })();
+
   function digitsOnly(str) {
     return str.replace(/\D/g, '');
+  }
+
+  // ---------- Recent completed jobs (reads Job Tracker's own data --
+  // same-device localStorage, no API call needed) ----------
+  function loadRecentDoneJobs() {
+    let jobs = [];
+    try { jobs = JSON.parse(localStorage.getItem('th_tracker_jobs') || '[]'); } catch (e) { jobs = []; }
+    return jobs
+      .filter(j => j.status === 'done')
+      .sort((a, b) => new Date(b.statusChangedAt || b.date || 0) - new Date(a.statusChangedAt || a.date || 0))
+      .slice(0, 8);
+  }
+  function renderRecentJobs() {
+    const jobs = loadRecentDoneJobs();
+    const section = document.getElementById('recentJobsSection');
+    if (jobs.length === 0) { section.style.display = 'none'; return; }
+    section.style.display = '';
+    document.getElementById('recentJobsList').innerHTML = jobs.map((j, idx) => `
+      <button class="secondary-btn" style="display:block; width:100%; text-align:left; margin-bottom:8px;" onclick="pickRecentJob(${idx})">
+        <b>${escapeHtml(j.title || 'Untitled job')}</b>${j.client ? ' &mdash; ' + escapeHtml(j.client) : ''}
+      </button>`).join('');
+  }
+  function pickRecentJob(idx) {
+    const job = loadRecentDoneJobs()[idx];
+    if (!job) return;
+    if (job.client) document.getElementById('custName').value = job.client.split(' ')[0];
+    if (job.title) document.getElementById('jobDesc').value = job.title;
+    if (job.phone) document.getElementById('custPhone').value = job.phone;
+    updatePreviewAndLink();
+    document.getElementById('custName').scrollIntoView({ behavior: 'smooth', block: 'center' });
+  }
+
+  // ---------- Sent-request log (local only, never leaves this device --
+  // purely to warn against an accidental double-send, not analytics) ----------
+  const SENT_LOG_KEY = 'th_review_requests_log';
+  function loadSentLog() {
+    try { return JSON.parse(localStorage.getItem(SENT_LOG_KEY) || '[]'); } catch (e) { return []; }
+  }
+  function saveSentLog(log) { localStorage.setItem(SENT_LOG_KEY, JSON.stringify(log)); }
+
+  function logSentRequest(method) {
+    const name = document.getElementById('custName').value.trim();
+    const phone = document.getElementById('custPhone').value.trim();
+    const job = document.getElementById('jobDesc').value.trim();
+    if (!phone) return; // nothing meaningful to log without a number to key off of
+    const log = loadSentLog();
+    log.unshift({ id: Date.now(), name, phone, job, method, sentAt: new Date().toISOString() });
+    saveSentLog(log.slice(0, 50)); // cap it -- this is a recent-history convenience, not a permanent record
+    clearMatchingReminder(phone);
+    renderSentLog();
+    checkDuplicateWarning();
+  }
+
+  function renderSentLog() {
+    const log = loadSentLog();
+    const section = document.getElementById('sentLogSection');
+    if (log.length === 0) { section.style.display = 'none'; return; }
+    section.style.display = '';
+    document.getElementById('sentLogList').innerHTML = log.slice(0, 10).map(entry => `
+      <div class="dash-list-item">
+        <div>
+          <div class="dash-list-item-title">${escapeHtml(entry.name || '(no name)')}${entry.job ? ' &mdash; ' + escapeHtml(entry.job) : ''}</div>
+          <div class="dash-list-item-meta">${escapeHtml(entry.phone)} &middot; ${new Date(entry.sentAt).toLocaleDateString()} &middot; ${entry.method === 'sms' ? 'Sent via text' : 'Copied'}</div>
+        </div>
+      </div>`).join('');
+  }
+
+  function checkDuplicateWarning() {
+    const phone = digitsOnly(document.getElementById('custPhone').value);
+    const warningEl = document.getElementById('duplicateWarning');
+    if (!phone) { warningEl.style.display = 'none'; return; }
+    const log = loadSentLog();
+    const THIRTY_DAYS = 30 * 24 * 60 * 60 * 1000;
+    const match = log.find(entry => digitsOnly(entry.phone) === phone && (Date.now() - new Date(entry.sentAt).getTime()) < THIRTY_DAYS);
+    if (match) {
+      const daysAgo = Math.round((Date.now() - new Date(match.sentAt).getTime()) / (24 * 60 * 60 * 1000));
+      warningEl.textContent = `Heads up \u2014 a review request already went to this number ${daysAgo === 0 ? 'earlier today' : daysAgo + ' day' + (daysAgo === 1 ? '' : 's') + ' ago'}.`;
+      warningEl.style.display = 'block';
+    } else {
+      warningEl.style.display = 'none';
+    }
+  }
+
+  // ---------- Delayed reminders -- local only. This surfaces prominently
+  // the next time this page happens to be opened on or after the target
+  // date; it is NOT a phone push notification. Actually notifying
+  // without the page open would mean wiring this into the existing
+  // Supabase-based push notification system as a new category, which is
+  // a real, separate piece of backend work this can't do on its own. ----------
+  const PENDING_KEY = 'th_review_requests_pending';
+  function loadPending() {
+    try { return JSON.parse(localStorage.getItem(PENDING_KEY) || '[]'); } catch (e) { return []; }
+  }
+  function savePending(list) { localStorage.setItem(PENDING_KEY, JSON.stringify(list)); }
+
+  function scheduleReminder(daysFromNow) {
+    const name = document.getElementById('custName').value.trim();
+    const phone = document.getElementById('custPhone').value.trim();
+    const job = document.getElementById('jobDesc').value.trim();
+    if (!phone) { alert('Add the customer\u2019s phone number first, so this reminder actually has someone to send to.'); return; }
+    const remindAt = new Date();
+    remindAt.setDate(remindAt.getDate() + daysFromNow);
+    const pending = loadPending();
+    pending.push({ id: Date.now(), name, phone, job, remindAt: remindAt.toISOString().slice(0, 10) });
+    savePending(pending);
+    document.getElementById('custName').value = '';
+    document.getElementById('jobDesc').value = '';
+    document.getElementById('custPhone').value = '';
+    updatePreviewAndLink();
+    renderPendingReminders();
+    showReminderToast(`Reminder set for ${remindAt.toLocaleDateString()}. It'll show up here, at the top, next time you open this page on or after that date \u2014 this won't send a phone notification on its own.`);
+  }
+
+  function clearMatchingReminder(phone) {
+    const pending = loadPending().filter(p => digitsOnly(p.phone) !== digitsOnly(phone));
+    savePending(pending);
+  }
+
+  function dismissReminder(id) {
+    savePending(loadPending().filter(p => p.id !== id));
+    renderPendingReminders();
+  }
+
+  function useReminder(id) {
+    const item = loadPending().find(p => p.id === id);
+    if (!item) return;
+    if (item.name) document.getElementById('custName').value = item.name;
+    if (item.job) document.getElementById('jobDesc').value = item.job;
+    if (item.phone) document.getElementById('custPhone').value = item.phone;
+    updatePreviewAndLink();
+    document.getElementById('custName').scrollIntoView({ behavior: 'smooth', block: 'center' });
+  }
+
+  function renderPendingReminders() {
+    const today = new Date().toISOString().slice(0, 10);
+    const due = loadPending().filter(p => p.remindAt <= today);
+    const section = document.getElementById('pendingRemindersSection');
+    if (due.length === 0) { section.style.display = 'none'; return; }
+    section.style.display = '';
+    document.getElementById('pendingRemindersList').innerHTML = due.map(p => `
+      <div class="dash-list-item">
+        <div>
+          <div class="dash-list-item-title">${escapeHtml(p.name || '(no name)')}${p.job ? ' &mdash; ' + escapeHtml(p.job) : ''}</div>
+          <div class="dash-list-item-meta">${escapeHtml(p.phone || '')}</div>
+        </div>
+        <div class="dash-list-item-right">
+          <button class="small-btn" onclick="useReminder(${p.id})">Use</button>
+          <button class="small-btn danger" onclick="dismissReminder(${p.id})">Dismiss</button>
+        </div>
+      </div>`).join('');
+  }
+
+  function showReminderToast(msg) {
+    if (typeof showToast === 'function') { showToast(msg, { duration: 5000 }); return; }
+    alert(msg);
+  }
+
+  function escapeHtml(str) {
+    if (str === null || str === undefined) return '';
+    return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
   }
 
   function isIOS() {
@@ -216,6 +491,7 @@
     const smsLink = `sms:${phoneForLink}${separator}body=${encodedMessage}`;
 
     document.getElementById('sendLink').href = smsLink;
+    checkDuplicateWarning();
   }
 
   document.getElementById('custName').addEventListener('input', updatePreviewAndLink);
@@ -230,10 +506,14 @@
   if (params.get('phone')) document.getElementById('custPhone').value = params.get('phone');
 
   updatePreviewAndLink();
+  renderRecentJobs();
+  renderPendingReminders();
+  renderSentLog();
 
   function copyMessage() {
     const message = buildMessage();
     navigator.clipboard.writeText(message).then(() => {
+      logSentRequest('copy');
       const confirm = document.getElementById('copyConfirm');
       confirm.style.display = 'block';
       setTimeout(() => { confirm.style.display = 'none'; }, 3000);
@@ -245,6 +525,7 @@
       textarea.select();
       document.execCommand('copy');
       document.body.removeChild(textarea);
+      logSentRequest('copy');
       const confirm = document.getElementById('copyConfirm');
       confirm.style.display = 'block';
       setTimeout(() => { confirm.style.display = 'none'; }, 3000);
@@ -252,7 +533,7 @@
   }
 
   document.addEventListener('DOMContentLoaded', () => {
-    if (typeof setupSwipeBackToWorkspace === 'function') setupSwipeBackToWorkspace();
+    renderQR();
   });
 </script>
 </body>
