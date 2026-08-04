@@ -69,6 +69,15 @@
   .cal-job-item:last-child { border-bottom: none; }
   .cal-job-title { color: var(--white); font-weight: 600; font-size: 14.5px; }
   .cal-job-meta { color: var(--text-dim); font-size: 13px; margin-top: 3px; }
+  @keyframes calSlideInFromRight { from { opacity: 0; transform: translateX(24px); } to { opacity: 1; transform: translateX(0); } }
+  @keyframes calSlideInFromLeft { from { opacity: 0; transform: translateX(-24px); } to { opacity: 1; transform: translateX(0); } }
+  #calGrid.cal-slide-next { animation: calSlideInFromRight .22s ease; }
+  #calGrid.cal-slide-prev { animation: calSlideInFromLeft .22s ease; }
+  @keyframes calDetailFadeIn { from { opacity: 0; } to { opacity: 1; } }
+  #calDayJobs.cal-detail-fade, #calDetailHeading.cal-detail-fade { animation: calDetailFadeIn .18s ease; }
+  @media (prefers-reduced-motion: reduce) {
+    #calGrid.cal-slide-next, #calGrid.cal-slide-prev, #calDayJobs.cal-detail-fade, #calDetailHeading.cal-detail-fade { animation: none; }
+  }
 </style>
 </head>
 <body>
@@ -170,18 +179,29 @@
     document.getElementById('calGrid').innerHTML = cells;
   }
 
+  function playCalGridTransition(direction) {
+    const grid = document.getElementById('calGrid');
+    grid.classList.remove('cal-slide-next', 'cal-slide-prev');
+    void grid.offsetWidth; // forces a reflow so the animation replays even on repeated clicks in the same direction
+    grid.classList.add(direction > 0 ? 'cal-slide-next' : 'cal-slide-prev');
+  }
+
   function changeMonth(delta) {
     viewMonth += delta;
     if (viewMonth < 0) { viewMonth = 11; viewYear--; }
     if (viewMonth > 11) { viewMonth = 0; viewYear++; }
     renderCalendar();
+    playCalGridTransition(delta);
   }
 
   function goToToday() {
+    const beforeKey = viewYear * 12 + viewMonth;
     viewYear = today.getFullYear();
     viewMonth = today.getMonth();
     selectedDateStr = dateKey(viewYear, viewMonth, today.getDate());
+    const afterKey = viewYear * 12 + viewMonth;
     renderCalendar();
+    if (afterKey !== beforeKey) playCalGridTransition(afterKey > beforeKey ? 1 : -1);
     renderDayDetail();
   }
 
@@ -189,6 +209,12 @@
     selectedDateStr = key;
     renderCalendar();
     renderDayDetail();
+    ['calDetailHeading', 'calDayJobs'].forEach(id => {
+      const el = document.getElementById(id);
+      el.classList.remove('cal-detail-fade');
+      void el.offsetWidth;
+      el.classList.add('cal-detail-fade');
+    });
   }
 
   function renderDayDetail() {
