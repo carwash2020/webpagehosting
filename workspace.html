@@ -180,10 +180,24 @@
      wider, with no manual breakpoint needed. Cards are also more compact
      than the original single-column stack, since 7+ of them stacked at
      full padding was the single biggest source of page length. */
-  .tools-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 12px; }
-  .tools-grid .tool-card { margin-bottom: 0; padding: 16px 18px; }
-  .tools-grid .tool-card-text h3 { font-size: 15.5px; margin-bottom: 3px; }
-  .tools-grid .tool-card-text p { font-size: 12.5px; line-height: 1.4; }
+  .tools-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(84px, 1fr)); gap: 10px; }
+  .tool-tile { position: relative; }
+  .tool-tile-link {
+    display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px;
+    background: var(--bg-panel); border: 1px solid var(--border); border-radius: var(--radius);
+    padding: 16px 6px 12px; text-decoration: none; height: 100%; box-sizing: border-box;
+    transition: border-color .18s ease, box-shadow .18s ease, transform .15s ease;
+  }
+  .tool-tile-link:hover { box-shadow: 0 0 20px rgba(255,128,0,0.12); transform: translateY(-2px); border-color: var(--orange-light); }
+  .tool-tile-icon { font-size: 26px; line-height: 1; }
+  .tool-tile-label { font-family:'Oswald',sans-serif; color: var(--white); font-size: 12.5px; text-align: center; }
+  .tool-tile-info {
+    position: absolute; top: 4px; right: 4px; width: 20px; height: 20px; border-radius: 50%;
+    border: 1px solid var(--border); background: var(--bg-panel-2); color: var(--text-dim);
+    font-size: 11px; cursor: pointer; display: flex; align-items: center; justify-content: center; padding: 0;
+    transition: border-color .15s ease, color .15s ease;
+  }
+  .tool-tile-info:hover { border-color: var(--orange-light); color: var(--orange-light); }
 </style>
 </head>
 <body>
@@ -439,61 +453,61 @@
   </div>
 
   <div class="tools-grid">
-  <a href="/job-tracker.html" class="tool-card">
-    <div class="tool-card-text">
-      <h3>Job Tracker</h3>
-      <p>Jobs, cost lookup, expenses &amp; mileage, contacts, and notes &mdash; all five in one page, organized by tab.</p>
-    </div>
-    <span class="tool-card-arrow">&rarr;</span>
-  </a>
+  <div class="tool-tile">
+    <a href="/job-tracker.html" class="tool-tile-link">
+      <span class="tool-tile-icon">&#128736;&#65039;</span>
+      <span class="tool-tile-label">Jobs</span>
+    </a>
+    <button class="tool-tile-info" onclick="event.stopPropagation(); openCardInfo('tool-jobtracker')" aria-label="What is Job Tracker?" title="What is this?">?</button>
+  </div>
 
-  <a href="/invoice-generator.html" class="tool-card">
-    <div class="tool-card-text">
-      <h3>Invoice Generator</h3>
-      <p>Invoices and quotes/estimates in one place &mdash; convert an estimate straight into a real invoice with one tap.</p>
-    </div>
-    <span class="tool-card-arrow">&rarr;</span>
-  </a>
+  <div class="tool-tile">
+    <a href="/invoice-generator.html" class="tool-tile-link">
+      <span class="tool-tile-icon">&#129534;</span>
+      <span class="tool-tile-label">Invoices</span>
+    </a>
+    <button class="tool-tile-info" onclick="event.stopPropagation(); openCardInfo('tool-invoices')" aria-label="What is Invoice Generator?" title="What is this?">?</button>
+  </div>
 
-  <a href="/review-request.html" class="tool-card">
-    <div class="tool-card-text">
-      <h3>Review Request Sender</h3>
-      <p>After a job's done, generate a ready-to-send review-request text &mdash; 6 different phrasings, shuffle for a fresh one anytime.</p>
-    </div>
-    <span class="tool-card-arrow">&rarr;</span>
-  </a>
+  <div class="tool-tile">
+    <a href="/review-request.html" class="tool-tile-link">
+      <span class="tool-tile-icon">&#11088;</span>
+      <span class="tool-tile-label">Reviews</span>
+    </a>
+    <button class="tool-tile-info" onclick="event.stopPropagation(); openCardInfo('tool-reviews')" aria-label="What is Review Request Sender?" title="What is this?">?</button>
+  </div>
 
-  <a href="/route-planner.html" class="tool-card">
-    <div class="tool-card-text">
-      <h3>Route Planner</h3>
-      <p>Type in today's addresses, get one link that opens the whole route in Google Maps, plus a to-and-from cost analyzer.</p>
-    </div>
-    <span class="tool-card-arrow">&rarr;</span>
-  </a>
+  <div class="tool-tile">
+    <a href="/route-planner.html" class="tool-tile-link">
+      <span class="tool-tile-icon">&#128506;&#65039;</span>
+      <span class="tool-tile-label">Routes</span>
+    </a>
+    <button class="tool-tile-info" onclick="event.stopPropagation(); openCardInfo('tool-routes')" aria-label="What is Route Planner?" title="What is this?">?</button>
+  </div>
 
-  <a href="/contract-generator.html" class="tool-card">
-    <div class="tool-card-text">
-      <h3>Contract Generator</h3>
-      <p>Fill in a client and job, generate a branded PDF to email or text &mdash; every contract generated is logged so you can find it again later.</p>
-    </div>
-    <span class="tool-card-arrow">&rarr;</span>
-  </a>
+  <div class="tool-tile">
+    <a href="/contract-generator.html" class="tool-tile-link">
+      <span class="tool-tile-icon">&#128220;</span>
+      <span class="tool-tile-label">Contracts</span>
+    </a>
+    <button class="tool-tile-info" onclick="event.stopPropagation(); openCardInfo('tool-contracts')" aria-label="What is Contract Generator?" title="What is this?">?</button>
+  </div>
 
-  <a href="/calendar.html" class="tool-card">
-    <div class="tool-card-text">
-      <h3>Calendar</h3>
-      <p>See jobs flagged "Show on Calendar" in Job Tracker on a month view, and export any of them to your phone's own calendar app.</p>
-    </div>
-    <span class="tool-card-arrow">&rarr;</span>
-  </a>
+  <div class="tool-tile">
+    <a href="/calendar.html" class="tool-tile-link">
+      <span class="tool-tile-icon">&#128197;</span>
+      <span class="tool-tile-label">Calendar</span>
+    </a>
+    <button class="tool-tile-info" onclick="event.stopPropagation(); openCardInfo('tool-calendar')" aria-label="What is Calendar?" title="What is this?">?</button>
+  </div>
 
-  <a href="/runway-dashboard.html" class="tool-card">
-    <div class="tool-card-text">
-      <h3>Runway Dashboard</h3>
-      <p>Personal budget and business runway tracking &mdash; pulls revenue and expenses straight from Job Tracker, no double entry.</p>
-    </div>
-    <span class="tool-card-arrow">&rarr;</span>
-  </a>
+  <div class="tool-tile">
+    <a href="/runway-dashboard.html" class="tool-tile-link">
+      <span class="tool-tile-icon">&#128176;</span>
+      <span class="tool-tile-label">Runway</span>
+    </a>
+    <button class="tool-tile-info" onclick="event.stopPropagation(); openCardInfo('tool-runway')" aria-label="What is Runway Dashboard?" title="What is this?">?</button>
+  </div>
   </div>
 </div>
 
@@ -537,6 +551,34 @@
       title: 'Secure Documents',
       body: `<p>A private, password-protected place for the actual files behind your compliance dates -- insurance policy PDFs, your LLC certificate, signed contracts.</p>
         <p>This bucket is set to private, unlike the photo and receipt storage elsewhere in these tools, so a download link only works for a few minutes and only for someone actually logged in -- not a permanent public link.</p>`,
+    },
+    'tool-jobtracker': {
+      title: 'Job Tracker',
+      body: `<p>Jobs, cost lookup, expenses &amp; mileage, contacts, and notes &mdash; all five in one page, organized by tab.</p>`,
+    },
+    'tool-invoices': {
+      title: 'Invoice Generator',
+      body: `<p>Invoices and quotes/estimates in one place &mdash; convert an estimate straight into a real invoice with one tap.</p>`,
+    },
+    'tool-reviews': {
+      title: 'Review Request Sender',
+      body: `<p>After a job's done, generate a ready-to-send review-request text &mdash; 6 different phrasings, shuffle for a fresh one anytime.</p>`,
+    },
+    'tool-routes': {
+      title: 'Route Planner',
+      body: `<p>Type in today's addresses, get one link that opens the whole route in Google Maps, plus a to-and-from cost analyzer.</p>`,
+    },
+    'tool-contracts': {
+      title: 'Contract Generator',
+      body: `<p>Fill in a client and job, generate a branded PDF to email or text &mdash; every contract generated is logged so you can find it again later.</p>`,
+    },
+    'tool-calendar': {
+      title: 'Calendar',
+      body: `<p>See jobs flagged "Show on Calendar" in Job Tracker on a month view, and export any of them to your phone's own calendar app.</p>`,
+    },
+    'tool-runway': {
+      title: 'Runway Dashboard',
+      body: `<p>Personal budget and business runway tracking &mdash; pulls revenue and expenses straight from Job Tracker, no double entry.</p>`,
     },
   };
   function openCardInfo(key) {
