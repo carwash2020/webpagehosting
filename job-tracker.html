@@ -2028,8 +2028,45 @@
   // DOMContentLoaded (which fires only after deferred scripts finish)
   // guarantees initSyncOnLoad() and friends actually exist by the time
   // we call them here.
+  const JT_TAB_ORDER = ['jobs', 'cost', 'profitability', 'income', 'expenses', 'contacts', 'notes'];
+  (function setupJobTrackerSwipe() {
+    let touchStartX = 0, touchStartY = 0, touchStartTime = 0, startedInExcluded = false;
+    document.body.addEventListener('touchstart', (e) => {
+      if (e.touches.length !== 1) return;
+      touchStartX = e.touches[0].clientX;
+      touchStartY = e.touches[0].clientY;
+      touchStartTime = Date.now();
+      startedInExcluded = !!(e.target.closest && (e.target.closest('table') || e.target.closest('canvas')));
+    }, { passive: true });
+    document.body.addEventListener('touchend', (e) => {
+      if (!e.changedTouches.length || startedInExcluded) return;
+      const dx = e.changedTouches[0].clientX - touchStartX;
+      const dy = e.changedTouches[0].clientY - touchStartY;
+      const elapsed = Date.now() - touchStartTime;
+      const isMostlyHorizontal = Math.abs(dx) > Math.abs(dy) * 1.5;
+      const isFarEnough = Math.abs(dx) > 60;
+      const isFastEnough = elapsed < 600;
+      if (!isMostlyHorizontal || !isFarEnough || !isFastEnough) return;
+
+      const activeBtn = document.querySelector('.tab-btn.is-active');
+      const currentIndex = JT_TAB_ORDER.indexOf(activeBtn ? activeBtn.dataset.tab : 'jobs');
+      if (currentIndex === -1) return;
+      if (dx < 0 && currentIndex < JT_TAB_ORDER.length - 1) {
+        activateTab(JT_TAB_ORDER[currentIndex + 1]);
+        history.replaceState(null, '', '#' + JT_TAB_ORDER[currentIndex + 1]);
+      } else if (dx > 0 && currentIndex > 0) {
+        activateTab(JT_TAB_ORDER[currentIndex - 1]);
+        history.replaceState(null, '', '#' + JT_TAB_ORDER[currentIndex - 1]);
+      }
+      // Swiping right on the first tab intentionally does nothing now,
+      // rather than exiting to Workspace -- removed while a reported
+      // "swipe just takes me home" issue gets fully diagnosed, so any
+      // misfire in the tab-switching logic is a harmless no-op instead
+      // of an unexpected navigation away from the page.
+    }, { passive: true });
+  })();
+
   document.addEventListener('DOMContentLoaded', function () {
-    if (typeof setupSwipeBackToWorkspace === 'function') setupSwipeBackToWorkspace();
     (async function init() {
       await initSyncOnLoad();
       updateSyncStatusText();
