@@ -84,7 +84,7 @@
 <div class="form-section">
   <div id="stopsContainer"></div>
   <div style="display:flex; gap:10px; flex-wrap:wrap;">
-    <button class="add-stop-btn" onclick="addStop()">+ Add Stop</button>
+    <button class="add-stop-btn" onclick="addStop('', true)">+ Add Stop</button>
     <button class="secondary-btn" onclick="pullTodaysJobs()">Pull Today's Jobs</button>
   </div>
   <p class="warning-note" id="tooManyWarning">Google Maps allows up to 10 stops per route &mdash; remove one before opening the full route.</p>
@@ -151,7 +151,7 @@
       await showAlert('Today\u2019s jobs in Job Tracker don\u2019t have an address on file yet, so there\u2019s nothing to pull in.');
       return;
     }
-    withAddress.forEach(j => addStop(j.address));
+    withAddress.forEach(j => addStop(j.address, true));
     let msg = `Pulled ${withAddress.length} stop${withAddress.length === 1 ? '' : 's'} from today's jobs.`;
     if (withoutAddress.length > 0) {
       msg += ` Skipped ${withoutAddress.length} job${withoutAddress.length === 1 ? '' : 's'} with no address on file: ${withoutAddress.map(j => j.title).join(', ')}.`;
@@ -159,12 +159,13 @@
     showToast(msg);
   }
 
-  function addStop(value = '') {
+  function addStop(value = '', isUserAdd = false) {
     stopCount++;
     const id = stopCount;
     const row = document.createElement('div');
     row.className = 'stop-row';
     row.id = 'stop-' + id;
+    if (isUserAdd) row.classList.add('list-row-enter');
     row.innerHTML = `
       <span class="stop-num">${document.querySelectorAll('.stop-row').length + 1}.</span>
       <input type="text" class="stop-input" value="${value}" placeholder="123 Main St, St. George, UT" oninput="updateRoute()">
@@ -178,9 +179,12 @@
 
   function removeStop(id) {
     const el = document.getElementById('stop-' + id);
-    if (el) el.remove();
-    renumberStops();
-    updateRoute();
+    if (!el) return;
+    animateRowExit(el, () => {
+      el.remove();
+      renumberStops();
+      updateRoute();
+    });
   }
 
   function moveStop(id, direction) {
@@ -331,7 +335,6 @@
   // parse time instead. Waiting for DOMContentLoaded guarantees sync.js
   // has actually finished loading before we call its functions.
   document.addEventListener('DOMContentLoaded', function () {
-    if (typeof setupSwipeBackToWorkspace === 'function') setupSwipeBackToWorkspace();
     initSyncOnLoad().then(() => {
       loadSharedMileageRate();
       calculateTripCost();

@@ -2065,9 +2065,9 @@ document.getElementById('panel-personal').classList.add('active');
       switchToTab(TAB_ORDER[currentIndex + 1]); // swiped left -> next tab
     } else if(dx > 0 && currentIndex > 0){
       switchToTab(TAB_ORDER[currentIndex - 1]); // swiped right -> previous tab
-    } else if(dx > 0 && currentIndex === 0){
-      window.location.href = '/workspace.html'; // swiped right on the first tab -- nowhere left to go but back to Workspace
     }
+    // Swiping right on the first tab intentionally does nothing now --
+    // removed the exit-to-Workspace behavior across every tabbed page.
   }, { passive: true });
 })();
 

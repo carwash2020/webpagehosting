@@ -339,9 +339,12 @@
         activateGenTab(GEN_TAB_ORDER[currentIndex + 1]);
       } else if (dx > 0 && currentIndex > 0) {
         activateGenTab(GEN_TAB_ORDER[currentIndex - 1]);
-      } else if (dx > 0 && currentIndex === 0) {
-        window.location.href = '/workspace.html';
       }
+      // Swiping right on the first tab intentionally does nothing --
+      // removed the exit-to-Workspace behavior across every tabbed page
+      // in the app, since landing back on the first tab and swiping
+      // again turned out to be an easy, unintended way to get kicked out
+      // of the page rather than a deliberate exit gesture.
     }, { passive: true });
   })();
 

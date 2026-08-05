@@ -326,9 +326,9 @@
         activateReviewTab(REVIEW_TAB_ORDER[currentIndex + 1]); // swiped left -> next tab
       } else if (dx > 0 && currentIndex > 0) {
         activateReviewTab(REVIEW_TAB_ORDER[currentIndex - 1]); // swiped right -> previous tab
-      } else if (dx > 0 && currentIndex === 0) {
-        window.location.href = '/workspace.html'; // swiped right on the first tab -- exit to Workspace, same convention as every other tool page
       }
+      // Swiping right on the first tab intentionally does nothing --
+      // removed the exit-to-Workspace behavior across every tabbed page.
     }, { passive: true });
   })();
 

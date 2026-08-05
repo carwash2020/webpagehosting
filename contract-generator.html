@@ -775,7 +775,6 @@
   }
 
   document.addEventListener('DOMContentLoaded', () => {
-    if (typeof setupSwipeBackToWorkspace === 'function') setupSwipeBackToWorkspace();
     populateContactPickers();
     const presetSearch = new URLSearchParams(location.search).get('search');
     if (presetSearch) document.getElementById('contractSearch').value = presetSearch;

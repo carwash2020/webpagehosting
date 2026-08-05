@@ -333,10 +333,11 @@
       const isFastEnough = elapsed < 600;
       if (!isMostlyHorizontal || !isFarEnough || !isFastEnough) return;
 
+      // Swiping outside the grid intentionally does nothing now --
+      // removed the exit-to-Workspace behavior across every tabbed/
+      // swipeable page in the app.
       if (startedOnGrid) {
         changeMonth(dx < 0 ? 1 : -1); // swipe left -> next month, swipe right -> previous month
-      } else if (dx > 0) {
-        window.location.href = '/workspace.html';
       }
     }, { passive: true });
   })();
