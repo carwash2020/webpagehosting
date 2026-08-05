@@ -422,6 +422,7 @@
         </select>
       </div>
       <div class="form-field"><label>Description</label><input type="text" id="entryDesc" placeholder="Parts for the job"></div>
+      <div class="form-field" id="partNumberField"><label>Part Number (if applicable)</label><input type="text" id="entryPartNumber" placeholder="e.g. WPW10321304"></div>
     </div>
     <div class="tool-form-row">
       <div class="form-field" id="amountField"><label>Amount ($)</label><input type="number" id="entryAmount" step="0.01" min="0"></div>
@@ -1519,6 +1520,7 @@
     document.getElementById('amountField').style.display = isMileage ? 'none' : '';
     document.getElementById('milesField').style.display = isMileage ? '' : 'none';
     document.getElementById('receiptField').style.display = isMileage ? 'none' : '';
+    document.getElementById('partNumberField').style.display = isMileage ? 'none' : '';
   });
 
   document.getElementById('entryReceipt').addEventListener('change', (e) => {
@@ -1577,6 +1579,7 @@
       jobRefId: jobRefId || '',
       jobRefTitle,
       receiptPath: existingReceiptPath || '',
+      partNumber: type === 'mileage' ? '' : document.getElementById('entryPartNumber').value.trim(),
     };
     if (type === 'mileage') {
       entry.miles = parseFloat(document.getElementById('entryMiles').value) || 0;
@@ -1619,6 +1622,7 @@
     document.getElementById('entryDesc').value = '';
     document.getElementById('entryAmount').value = '';
     document.getElementById('entryMiles').value = '';
+    document.getElementById('entryPartNumber').value = '';
     document.getElementById('entryReceipt').value = '';
     document.getElementById('receiptPreviewName').textContent = '';
     cancelExpenseEdit();
@@ -1641,6 +1645,7 @@
     document.getElementById('entryType').value = entry.type || 'expense';
     document.getElementById('entryType').dispatchEvent(new Event('change'));
     document.getElementById('entryDesc').value = entry.desc || '';
+    document.getElementById('entryPartNumber').value = entry.partNumber || '';
     document.getElementById('entryVendor').value = entry.vendor || '';
     document.getElementById('entryPayment').value = entry.payment || 'cash';
     document.getElementById('entryJobRef').value = entry.jobRefId || '';
@@ -1712,7 +1717,7 @@
         <td>${e.type === 'mileage' ? 'Mileage' : 'Expense'}</td>
         <td>${escapeHtml(e.vendor || '\u2014')}</td>
         <td>${e.jobRefTitle ? escapeHtml(e.jobRefTitle) : '\u2014'}</td>
-        <td>${escapeHtml(e.desc)}</td>
+        <td>${escapeHtml(e.desc)}${e.partNumber ? `<div style="color:var(--text-dim); font-size:11.5px; margin-top:2px;">Part #: ${escapeHtml(e.partNumber)}</div>` : ''}</td>
         <td>${e.type === 'mileage' ? e.miles + ' mi' : '\u2014'}</td>
         <td>${PAYMENT_LABEL[e.payment] || '\u2014'}</td>
         <td>$${e.amount.toFixed(2)}</td>
