@@ -126,7 +126,7 @@ function animateRowExit(rowElement, onComplete) {
 // start moving with the page instead of staying fixed to the viewport.
 function setupSwipeBackToWorkspace() {
   let touchStartX = 0, touchStartY = 0, touchStartTime = 0;
-  let dragging = false, committed = false;
+  let dragging = false, committed = false, visuallyDragged = false;
   const DRAG_ELEMENT = document.body;
   const THRESHOLD = 60;
   const MAX_DRAG = 140; // caps how far content visually follows the finger, even on a much longer drag
@@ -142,6 +142,7 @@ function setupSwipeBackToWorkspace() {
     touchStartTime = Date.now();
     dragging = !(e.target.closest && (e.target.closest('table') || e.target.closest('canvas'))) && !anyModalOpen();
     committed = false;
+    visuallyDragged = false;
   }, { passive: true });
 
   document.body.addEventListener('touchmove', (e) => {
@@ -164,25 +165,25 @@ function setupSwipeBackToWorkspace() {
     const dy = e.touches[0].clientY - touchStartY;
     if (Math.abs(dx) < Math.abs(dy) * 1.5 || dx < 0) return; // not a rightward, mostly-horizontal drag -- leave scrolling alone
     const clamped = Math.min(dx, MAX_DRAG);
+    visuallyDragged = true;
     DRAG_ELEMENT.style.transition = 'none';
     DRAG_ELEMENT.style.transform = `translateX(${clamped}px)`;
     DRAG_ELEMENT.style.opacity = String(1 - (clamped / MAX_DRAG) * 0.35);
   }, { passive: true });
 
   document.body.addEventListener('touchend', (e) => {
-    if (!dragging || !e.changedTouches.length) return;
+    if (!dragging || !visuallyDragged || !e.changedTouches.length) return;
+    dragging = false;
     // Also check where the gesture ended, not just where it started or
     // passed through -- belt-and-suspenders with the touchmove check
     // above, since touchend's target can occasionally differ from the
     // last touchmove's target right at the boundary of an element.
     if (e.target.closest && (e.target.closest('canvas') || e.target.closest('table'))) {
-      dragging = false;
       DRAG_ELEMENT.style.transition = '';
       DRAG_ELEMENT.style.transform = '';
       DRAG_ELEMENT.style.opacity = '';
       return;
     }
-    dragging = false;
     const dx = e.changedTouches[0].clientX - touchStartX;
     const dy = e.changedTouches[0].clientY - touchStartY;
     const elapsed = Date.now() - touchStartTime;
@@ -209,7 +210,7 @@ function setupSwipeBackToWorkspace() {
   // mid-swipe) without ever firing touchend -- without this, content
   // could get stuck permanently dragged partway off-screen.
   document.body.addEventListener('touchcancel', () => {
-    if (!dragging) return;
+    if (!dragging || !visuallyDragged) return;
     dragging = false;
     DRAG_ELEMENT.style.transition = 'transform .22s ease, opacity .22s ease';
     DRAG_ELEMENT.style.transform = 'translateX(0)';
