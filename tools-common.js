@@ -146,6 +146,20 @@ function setupSwipeBackToWorkspace() {
 
   document.body.addEventListener('touchmove', (e) => {
     if (!dragging || !e.touches.length) return;
+    // A real signature is usually several separate strokes, lifted and
+    // re-touched between letters -- checking only where a stroke started
+    // isn't enough, since finger imprecision means any single stroke
+    // could start a pixel outside the canvas's exact bounds and still be
+    // part of the same signature. Checking continuously here means the
+    // moment a drag crosses onto a canvas or table at all, swipe
+    // detection cancels immediately, not just when it started there.
+    if (e.target.closest && (e.target.closest('canvas') || e.target.closest('table'))) {
+      dragging = false;
+      DRAG_ELEMENT.style.transition = '';
+      DRAG_ELEMENT.style.transform = '';
+      DRAG_ELEMENT.style.opacity = '';
+      return;
+    }
     const dx = e.touches[0].clientX - touchStartX;
     const dy = e.touches[0].clientY - touchStartY;
     if (Math.abs(dx) < Math.abs(dy) * 1.5 || dx < 0) return; // not a rightward, mostly-horizontal drag -- leave scrolling alone
@@ -157,6 +171,17 @@ function setupSwipeBackToWorkspace() {
 
   document.body.addEventListener('touchend', (e) => {
     if (!dragging || !e.changedTouches.length) return;
+    // Also check where the gesture ended, not just where it started or
+    // passed through -- belt-and-suspenders with the touchmove check
+    // above, since touchend's target can occasionally differ from the
+    // last touchmove's target right at the boundary of an element.
+    if (e.target.closest && (e.target.closest('canvas') || e.target.closest('table'))) {
+      dragging = false;
+      DRAG_ELEMENT.style.transition = '';
+      DRAG_ELEMENT.style.transform = '';
+      DRAG_ELEMENT.style.opacity = '';
+      return;
+    }
     dragging = false;
     const dx = e.changedTouches[0].clientX - touchStartX;
     const dy = e.changedTouches[0].clientY - touchStartY;
