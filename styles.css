@@ -1287,7 +1287,7 @@
    height before collapsing it, rather than guessing a fixed value that
    wouldn't fit every row's actual content. */
 @keyframes rowEnterFade{ from{ opacity:0; transform:translateY(-6px); } to{ opacity:1; transform:translateY(0); } }
-.list-row-enter{ animation: rowEnterFade .3s ease; }
+.list-row-enter{ animation: rowEnterFade .22s ease; }
 @media (prefers-reduced-motion: reduce){ .list-row-enter{ animation:none; } }
 
 .icon-search { display: inline-flex; align-items: center; }

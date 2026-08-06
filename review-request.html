@@ -58,11 +58,13 @@
   }
   .btn-copy { background: var(--bg-panel-2); border: 1px solid var(--border); color: var(--white); }
   .btn-copy:hover { border-color: var(--blue-light); }
+  .btn-copy:active { transform: translateY(1px); filter: brightness(0.95); }
   .btn-send {
     background: linear-gradient(135deg, var(--orange-light), var(--orange) 60%, var(--orange-dark));
     color: #1a0d02;
   }
   .btn-send:hover { opacity: 0.92; }
+  .btn-send:active { transform: translateY(1px); filter: brightness(0.95); }
   .copy-confirm { color: var(--orange-light); font-size: 13px; margin-top: 8px; display: none; }
   .fallback-note { color: var(--text-dim); font-size: 13px; margin-top: 16px; border-top: 1px solid var(--border); padding-top: 14px; }
   @keyframes autofillFlash { 0% { background: var(--orange-tint-border); } 100% { background: var(--bg-panel-2); } }
@@ -502,8 +504,11 @@
       ? await showConfirm(`Dismiss the reminder for ${label}? This can't be undone.`, { danger: true, confirmText: 'Dismiss' })
       : confirm(`Dismiss the reminder for ${label}?`);
     if (!confirmed) return;
-    savePending(loadPending().filter(p => p.id !== id));
-    renderPendingReminders();
+    const row = document.querySelector('[data-reminder-id="' + id + '"]');
+    animateRowExit(row, () => {
+      savePending(loadPending().filter(p => p.id !== id));
+      renderPendingReminders();
+    });
   }
 
   function useReminder(id) {
@@ -524,7 +529,7 @@
     if (due.length === 0) { section.style.display = 'none'; return; }
     section.style.display = '';
     document.getElementById('pendingRemindersList').innerHTML = due.map(p => `
-      <div class="dash-list-item">
+      <div class="dash-list-item" data-reminder-id="${p.id}">
         <div>
           <div class="dash-list-item-title">${escapeHtml(p.name || '(no name)')}${p.job ? ' &mdash; ' + escapeHtml(p.job) : ''}</div>
           <div class="dash-list-item-meta">${escapeHtml(p.phone || '')}</div>

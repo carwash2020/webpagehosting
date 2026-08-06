@@ -38,14 +38,18 @@
   .hub-sub { color: var(--text-dim); margin-bottom: 20px; }
 
   .jump-nav {
-    position: sticky; top: 0; z-index: 50; display: flex; gap: 4px; overflow-x: auto;
+    position: sticky; top: 0; z-index: 50; display: flex; gap: 6px; overflow-x: auto;
     background: var(--bg); border-bottom: 1px solid var(--border); padding: 10px 0; margin-bottom: 20px;
   }
   .jump-nav a {
+    display: flex; align-items: center; gap: 6px;
     color: var(--text-dim); font-size: 12.5px; text-decoration: none; white-space: nowrap;
     padding: 6px 12px; border-radius: 6px; font-family:'Oswald',sans-serif;
+    transition: color .15s ease, background .15s ease;
   }
   .jump-nav a:hover { color: var(--orange-light); background: var(--bg-panel-2); }
+  .jump-nav a:active { transform: translateY(1px); }
+  .jump-nav a .jump-nav-icon { font-size: 15px; line-height: 1; }
 
   .global-search-block { margin-bottom: 20px; }
   #globalSearchWrap { width: 100%; }
@@ -218,14 +222,15 @@
   <button class="help-btn" id="pushToggleBtn" onclick="handlePushToggle()" aria-label="Toggle notifications" title="Toggle notifications">&#128276;</button>
   <button class="help-btn" onclick="signOut()" aria-label="Log out" title="Log out">&#x21B0;</button>
 </div>
-<p class="hub-sub">Bookmark this page &mdash; a snapshot of the business, plus every internal tool, all in one place. <a href="#" id="refreshSyncLink" onclick="manualRefreshSync(renderDashboard); return false;" style="color:var(--blue-light);">Refresh synced data now</a>
+<p class="hub-sub">Bookmark this page &mdash; a snapshot of the business, plus every internal tool, all in one place.
   <span class="realtime-badge" id="realtimeBadge"><span class="realtime-dot" id="realtimeDot"></span><span id="realtimeText">Live sync: connecting...</span></span>
+  <button class="help-btn" id="refreshSyncLink" onclick="manualRefreshSync(renderDashboard)" aria-label="Refresh synced data now" title="Refresh synced data now" style="width:26px; height:26px; font-size:13px; vertical-align:middle; margin-left:2px;">&#8635;</button>
 </p>
 <nav class="jump-nav">
-  <a href="#section-snapshot">Snapshot</a>
-  <a href="#section-actionitems">Action Items</a>
-  <a href="#section-businesshealth">Business Health</a>
-  <a href="#section-tools">Tools</a>
+  <a href="#section-snapshot"><span class="jump-nav-icon">&#128202;</span>Snapshot</a>
+  <a href="#section-actionitems"><span class="jump-nav-icon">&#9989;</span>Action Items</a>
+  <a href="#section-businesshealth"><span class="jump-nav-icon">&#128737;&#65039;</span>Business Health</a>
+  <a href="#section-tools"><span class="jump-nav-icon">&#128736;&#65039;</span>Tools</a>
 </nav>
 
 <div class="global-search-block">
@@ -545,7 +550,7 @@
         <li>End of week: skim <strong>Action Items</strong> for anything waiting, and <strong>Business Health</strong> for anything expiring soon.</li>
       </ol>
 
-      <p>Data is saved directly in your browser, and quietly kept in sync across your devices in the background &mdash; the small dot near "Refresh synced data now" turns green when live updates are connected, meaning changes on another device (or a new lead coming in) show up here automatically.</p>
+      <p>Data is saved directly in your browser, and quietly kept in sync across your devices in the background &mdash; the small dot next to the sync status turns green when live updates are connected, meaning changes on another device (or a new lead coming in) show up here automatically. The small circular arrow button next to it forces an immediate refresh if you don't want to wait.</p>
       <p><strong>Install this as an app:</strong> iPhone/iPad &mdash; tap the Share icon in Safari, then "Add to Home Screen." Android &mdash; tap the &#8942; menu in Chrome, then "Install app." Computer &mdash; look for an install icon in the address bar. Once installed, it opens full-screen with its own icon, no browser bar.</p>
       <p><strong>Worth knowing:</strong> this whole suite is behind a real login now &mdash; anyone hitting these pages without signing in gets redirected to a sign-in screen first. There's exactly one account, meant to keep the data private, not to support separate logins for separate people.</p>
     </div>
@@ -1114,7 +1119,7 @@
       return;
     }
     container.innerHTML = result.leads.map(l => `
-      <div class="lead-card">
+      <div class="lead-card" data-lead-id="${l.id}">
         <div class="lead-card-top">
           <div>
             <div class="lead-card-name">${escapeHtml(l.name || '(no name)')}</div>
@@ -1133,10 +1138,13 @@
   async function deleteLeadFromDashboard(id) {
     const confirmed = await showConfirm('Delete this lead? This cannot be undone.', { danger: true, confirmText: 'Delete' });
     if (!confirmed) return;
-    const result = await deleteLead(id);
-    if (!result.ok) { await showAlert('Could not delete: ' + result.error); return; }
-    loadAndRenderLeads();
-    showToast('Lead deleted.');
+    const row = document.querySelector('[data-lead-id="' + id + '"]');
+    animateRowExit(row, async () => {
+      const result = await deleteLead(id);
+      if (!result.ok) { await showAlert('Could not delete: ' + result.error); return; }
+      loadAndRenderLeads();
+      showToast('Lead deleted.');
+    });
   }
 
   async function toggleLeadHandled(id, newState) {
