@@ -1,0 +1,354 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<script src="/tools/auth.js"></script>
+<script>
+  // Security gate -- redirect to login before this page's own content
+  // is meaningfully usable. See auth.js for why this exists (a single
+  // shared account keeping randoms out, not a multi-user system).
+  requireAuth();
+</script>
+<link rel="manifest" href="/tools/manifest.json">
+<meta name="theme-color" content="#0a0a0a">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Triple H">
+<link rel="apple-touch-icon" href="/images/apple-touch-icon.png">
+
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="robots" content="noindex, nofollow">
+<title>Calendar | Triple H Enterprises (Internal Tool)</title>
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data:; connect-src 'self' https://*.supabase.co wss://*.supabase.co; frame-src 'none'; object-src 'none'; base-uri 'self'; frame-ancestors 'none';">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/styles.css">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js" defer></script>
+<script src="/tools/sync.js" defer></script>
+<script src="/tools/tools-common.js" defer></script>
+<style>
+  body { padding: 90px 20px 60px; max-width: 780px; margin: 0 auto; }
+  .tool-title { font-family:'Oswald',sans-serif; font-weight:700; font-size:28px; color:var(--white); margin-bottom:6px; }
+  .tool-sub { color: var(--text-dim); margin-bottom: 24px; }
+  .empty-state-small { color: var(--text-dim); font-size: 13.5px; padding: 12px 0; }
+
+  .cal-nav { display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; }
+  .cal-nav-btn {
+    background: var(--bg-panel-2); border: 1px solid var(--border); border-radius: 8px;
+    width: 38px; height: 38px; display: flex; align-items: center; justify-content: center;
+    color: var(--text); cursor: pointer; font-size: 18px;
+  }
+  .cal-nav-btn:hover { border-color: var(--orange-light); color: var(--orange-light); }
+  .cal-month-label { font-family:'Oswald',sans-serif; font-weight:700; font-size: 20px; color: var(--white); }
+  .cal-today-btn { font-size: 13px; color: var(--blue-light); cursor: pointer; }
+
+  .cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 6px; }
+  .cal-dow { text-align: center; font-size: 11.5px; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.5px; padding-bottom: 6px; }
+  .cal-day {
+    aspect-ratio: 1; background: var(--bg-panel); border: 1px solid var(--border); border-radius: 8px;
+    padding: 6px; cursor: pointer; display: flex; flex-direction: column; position: relative;
+    transition: border-color 0.15s ease;
+  }
+  .cal-day:hover { border-color: var(--orange-light); }
+  .cal-day:active { transform: scale(0.95); border-color: var(--orange-light); transition: transform 0.08s ease; }
+  .cal-day.is-empty { background: none; border: none; cursor: default; }
+  .cal-day.is-today { border-color: var(--blue-light); border-width: 2px; }
+  .cal-day.is-selected { background: rgba(58,160,255,0.12); border-color: var(--blue-light); }
+  .cal-day-num { font-size: 12.5px; color: var(--text-dim); }
+  .cal-day.is-today .cal-day-num { color: var(--blue-light); font-weight: 700; }
+  .cal-day-dots { display: flex; gap: 3px; flex-wrap: wrap; margin-top: auto; }
+  .cal-day-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--orange-light); flex-shrink: 0; }
+  .cal-day-dot.is-done { background: var(--text-dim); }
+  .cal-day-dot.is-high { background: #e05252; }
+  .cal-day-dot.is-medium { background: var(--orange); }
+  .cal-day-dot.is-low { background: var(--blue); }
+  .cal-day-more { font-size: 9px; color: var(--text-dim); flex-shrink: 0; line-height: 6px; }
+
+  .cal-day-detail { margin-top: 24px; }
+  .cal-job-item {
+    display: flex; justify-content: space-between; align-items: flex-start; gap: 12px;
+    padding: 14px 0; border-bottom: 1px solid var(--border);
+  }
+  .cal-job-item:last-child { border-bottom: none; }
+  .cal-job-title { color: var(--white); font-weight: 600; font-size: 14.5px; }
+  .cal-job-meta { color: var(--text-dim); font-size: 13px; margin-top: 3px; }
+  @keyframes calSlideInFromRight { from { opacity: 0; transform: translateX(24px); } to { opacity: 1; transform: translateX(0); } }
+  @keyframes calSlideInFromLeft { from { opacity: 0; transform: translateX(-24px); } to { opacity: 1; transform: translateX(0); } }
+  #calGrid.cal-slide-next { animation: calSlideInFromRight .22s ease; }
+  #calGrid.cal-slide-prev { animation: calSlideInFromLeft .22s ease; }
+  @keyframes calDetailFadeIn { from { opacity: 0; } to { opacity: 1; } }
+  #calDayJobs.cal-detail-fade, #calDetailHeading.cal-detail-fade { animation: calDetailFadeIn .18s ease; }
+  @media (prefers-reduced-motion: reduce) {
+    #calGrid.cal-slide-next, #calGrid.cal-slide-prev, #calDayJobs.cal-detail-fade, #calDetailHeading.cal-detail-fade { animation: none; }
+  }
+</style>
+</head>
+<body>
+
+<div class="tool-header">
+  <a href="/tools/workspace.html" class="tool-header-brand">
+    <img src="/images/logo-signature-orange.png" alt="Triple H Enterprises">
+    <span>&larr; Back to Workspace</span>
+  </a>
+  <button class="help-btn" onclick="openHelpModal()" aria-label="How to use this tool" title="How to use this tool">?</button>
+</div>
+<div class="tool-title">Calendar</div>
+<p class="tool-sub">Shows any job flagged "Show on Calendar" in Job Tracker. Tap a day to see what's due, then tap "Add to Phone" on a job to drop it into your phone's own calendar app.</p>
+
+<div class="form-section">
+  <div class="cal-nav">
+    <button class="cal-nav-btn" onclick="changeMonth(-1)" aria-label="Previous month">&larr;</button>
+    <div style="text-align:center;">
+      <div class="cal-month-label" id="calMonthLabel"></div>
+      <div class="cal-today-btn" onclick="goToToday()">Jump to today</div>
+    </div>
+    <button class="cal-nav-btn" onclick="changeMonth(1)" aria-label="Next month">&rarr;</button>
+  </div>
+
+  <div class="cal-grid" id="calDowRow">
+    <div class="cal-dow">Sun</div><div class="cal-dow">Mon</div><div class="cal-dow">Tue</div>
+    <div class="cal-dow">Wed</div><div class="cal-dow">Thu</div><div class="cal-dow">Fri</div><div class="cal-dow">Sat</div>
+  </div>
+  <div class="cal-grid" id="calGrid" style="margin-top:6px;"></div>
+</div>
+
+<div class="form-section cal-day-detail">
+  <h3 id="calDetailHeading">Select a day</h3>
+  <div id="calDayJobs"><div class="empty-state-small">Tap a day above with a dot to see what's scheduled.</div></div>
+</div>
+
+<div class="help-modal-overlay" id="helpModalOverlay" onclick="if(event.target===this) closeHelpModal()">
+  <div class="help-modal">
+    <button class="help-modal-close" onclick="closeHelpModal()" aria-label="Close">&times;</button>
+    <h3>How to Use: Calendar</h3>
+    <div class="help-modal-body">
+      <p>This calendar only shows jobs you've specifically flagged. On the Jobs tab in Job Tracker, either check "Show this job on the Calendar tool" when creating a job, or tap "Show on Calendar" on an existing job's card to add it after the fact &mdash; not every job needs to clutter your personal calendar, so nothing shows up here automatically.</p>
+      <p>An orange dot on a day means there's a job due then. Tap the day to see details below the calendar.</p>
+      <p><strong>"Add to Phone"</strong> downloads a small file (a `.ics` file &mdash; the universal calendar format every phone understands) for that specific job. Tap the downloaded file and your phone will offer to add it to whichever calendar app you use (Apple Calendar, Google Calendar, Outlook, etc.). This is a one-time export, not a live sync &mdash; if you change the job's date afterward, you'll need to re-export it to update your phone's copy too.</p>
+    </div>
+  </div>
+</div>
+
+<script>
+  function escapeHtml(str) {
+    const div = document.createElement('div');
+    div.textContent = str;
+    return div.innerHTML;
+  }
+
+  function loadJobsForCalendar() {
+    try {
+      const jobs = JSON.parse(localStorage.getItem('th_tracker_jobs') || '[]');
+      return jobs.filter(j => j.showOnCalendar && j.date);
+    } catch (e) { return []; }
+  }
+
+  let viewYear, viewMonth, selectedDateStr = null;
+  const today = new Date();
+
+  function pad2(n) { return String(n).padStart(2, '0'); }
+  function dateKey(y, m, d) { return `${y}-${pad2(m + 1)}-${pad2(d)}`; }
+
+  function renderCalendar() {
+    const label = new Date(viewYear, viewMonth, 1).toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+    document.getElementById('calMonthLabel').textContent = label;
+
+    const jobs = loadJobsForCalendar();
+    const jobsByDate = {};
+    jobs.forEach(j => {
+      if (!jobsByDate[j.date]) jobsByDate[j.date] = [];
+      jobsByDate[j.date].push(j);
+    });
+
+    const firstOfMonth = new Date(viewYear, viewMonth, 1);
+    const startWeekday = firstOfMonth.getDay();
+    const daysInMonth = new Date(viewYear, viewMonth + 1, 0).getDate();
+    const todayKey = dateKey(today.getFullYear(), today.getMonth(), today.getDate());
+
+    let cells = '';
+    for (let i = 0; i < startWeekday; i++) cells += '<div class="cal-day is-empty"></div>';
+    for (let d = 1; d <= daysInMonth; d++) {
+      const key = dateKey(viewYear, viewMonth, d);
+      const dayJobs = jobsByDate[key] || [];
+      const isToday = key === todayKey;
+      const isSelected = key === selectedDateStr;
+      const shownJobs = dayJobs.slice(0, 4);
+      const dots = shownJobs.map(j => {
+        const cls = j.status === 'done' ? 'is-done' : 'is-' + (j.priority || 'medium');
+        return `<span class="cal-day-dot ${cls}"></span>`;
+      }).join('');
+      const extraCount = dayJobs.length - shownJobs.length;
+      const moreLabel = extraCount > 0 ? `<span class="cal-day-more">+${extraCount}</span>` : '';
+      cells += `
+        <div class="cal-day ${isToday ? 'is-today' : ''} ${isSelected ? 'is-selected' : ''}" onclick="selectDay('${key}')">
+          <span class="cal-day-num">${d}</span>
+          <div class="cal-day-dots">${dots}${moreLabel}</div>
+        </div>`;
+    }
+    document.getElementById('calGrid').innerHTML = cells;
+  }
+
+  function playCalGridTransition(direction) {
+    const grid = document.getElementById('calGrid');
+    grid.classList.remove('cal-slide-next', 'cal-slide-prev');
+    void grid.offsetWidth; // forces a reflow so the animation replays even on repeated clicks in the same direction
+    grid.classList.add(direction > 0 ? 'cal-slide-next' : 'cal-slide-prev');
+  }
+
+  function changeMonth(delta) {
+    viewMonth += delta;
+    if (viewMonth < 0) { viewMonth = 11; viewYear--; }
+    if (viewMonth > 11) { viewMonth = 0; viewYear++; }
+    renderCalendar();
+    playCalGridTransition(delta);
+  }
+
+  function goToToday() {
+    const beforeKey = viewYear * 12 + viewMonth;
+    viewYear = today.getFullYear();
+    viewMonth = today.getMonth();
+    selectedDateStr = dateKey(viewYear, viewMonth, today.getDate());
+    const afterKey = viewYear * 12 + viewMonth;
+    renderCalendar();
+    if (afterKey !== beforeKey) playCalGridTransition(afterKey > beforeKey ? 1 : -1);
+    renderDayDetail();
+  }
+
+  function selectDay(key) {
+    selectedDateStr = key;
+    renderCalendar();
+    renderDayDetail();
+    ['calDetailHeading', 'calDayJobs'].forEach(id => {
+      const el = document.getElementById(id);
+      el.classList.remove('cal-detail-fade');
+      void el.offsetWidth;
+      el.classList.add('cal-detail-fade');
+    });
+  }
+
+  function renderDayDetail() {
+    const heading = document.getElementById('calDetailHeading');
+    const container = document.getElementById('calDayJobs');
+    if (!selectedDateStr) {
+      heading.textContent = 'Select a day';
+      container.innerHTML = '<div class="empty-state-small">Tap a day above with a dot to see what\'s scheduled.</div>';
+      return;
+    }
+    const niceDate = new Date(selectedDateStr + 'T00:00:00').toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' });
+    heading.textContent = niceDate;
+
+    const jobs = loadJobsForCalendar().filter(j => j.date === selectedDateStr);
+    if (jobs.length === 0) {
+      container.innerHTML = '<div class="empty-state-small">Nothing scheduled on this day.</div>';
+      return;
+    }
+    container.innerHTML = jobs.map(j => `
+      <div class="cal-job-item">
+        <div>
+          <div class="cal-job-title">${escapeHtml(j.title)}</div>
+          <div class="cal-job-meta">${j.client ? escapeHtml(j.client) : ''}${j.address ? ' &middot; ' + escapeHtml(j.address) : ''}</div>
+        </div>
+        <button class="secondary-btn" onclick="downloadJobIcs(${j.id})">Add to Phone</button>
+      </div>`).join('');
+  }
+
+  // ---------- .ics generation ----------
+  // Per RFC 5545: an all-day event needs DTSTART;VALUE=DATE and a DTEND
+  // one day later (the end date is exclusive). Text fields need commas,
+  // semicolons, and backslashes escaped, and long lines technically need
+  // folding at 75 octets -- skipped here since job titles/notes are short
+  // enough in practice not to hit that limit, but worth knowing if a
+  // future job ever has a very long description pasted into notes.
+  function icsEscape(str) {
+    return String(str || '').replace(/\\/g, '\\\\').replace(/,/g, '\\,').replace(/;/g, '\\;').replace(/\n/g, '\\n');
+  }
+  function icsDateNoDash(dateStr) { return dateStr.replace(/-/g, ''); }
+  function icsDatePlusOneDay(dateStr) {
+    const d = new Date(dateStr + 'T00:00:00');
+    d.setDate(d.getDate() + 1);
+    return `${d.getFullYear()}${pad2(d.getMonth() + 1)}${pad2(d.getDate())}`;
+  }
+
+  function downloadJobIcs(jobId) {
+    const jobs = loadJobsForCalendar();
+    const job = jobs.find(j => j.id === jobId);
+    if (!job) return;
+
+    const descParts = [];
+    if (job.client) descParts.push('Client: ' + job.client);
+    if (job.phone) descParts.push('Phone: ' + job.phone);
+    if (job.notes) descParts.push(job.notes);
+
+    const ics = [
+      'BEGIN:VCALENDAR',
+      'VERSION:2.0',
+      'PRODID:-//Triple H Enterprises//Job Calendar//EN',
+      'BEGIN:VEVENT',
+      'UID:th-job-' + job.id + '@triplehenterprisesllc.biz',
+      'DTSTAMP:' + new Date().toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z',
+      'DTSTART;VALUE=DATE:' + icsDateNoDash(job.date),
+      'DTEND;VALUE=DATE:' + icsDatePlusOneDay(job.date),
+      'SUMMARY:' + icsEscape(job.title),
+      job.address ? 'LOCATION:' + icsEscape(job.address) : '',
+      descParts.length ? 'DESCRIPTION:' + icsEscape(descParts.join('\n')) : '',
+      'END:VEVENT',
+      'END:VCALENDAR',
+    ].filter(Boolean).join('\r\n');
+
+    const blob = new Blob([ics], { type: 'text/calendar' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'TripleH-' + job.title.replace(/[^a-z0-9]+/gi, '-') + '.ics';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  }
+
+  // Swiping on the calendar grid itself changes months (the natural
+  // gesture for a calendar), while swiping anywhere else on the page
+  // keeps the standard "swipe right to exit to Workspace" behavior used
+  // throughout the rest of the app. Scoped by where the touch actually
+  // started, not a mode toggle, so both gestures coexist without either
+  // one needing to guess at the other's intent.
+  (function setupCalendarSwipe() {
+    let touchStartX = 0, touchStartY = 0, touchStartTime = 0, startedOnGrid = false;
+    document.body.addEventListener('touchstart', (e) => {
+      if (e.touches.length !== 1) return;
+      touchStartX = e.touches[0].clientX;
+      touchStartY = e.touches[0].clientY;
+      touchStartTime = Date.now();
+      startedOnGrid = !!(e.target.closest && e.target.closest('#calGrid'));
+    }, { passive: true });
+    document.body.addEventListener('touchend', (e) => {
+      if (!e.changedTouches.length) return;
+      const dx = e.changedTouches[0].clientX - touchStartX;
+      const dy = e.changedTouches[0].clientY - touchStartY;
+      const elapsed = Date.now() - touchStartTime;
+      const isMostlyHorizontal = Math.abs(dx) > Math.abs(dy) * 1.5;
+      const isFarEnough = Math.abs(dx) > 60;
+      const isFastEnough = elapsed < 600;
+      if (!isMostlyHorizontal || !isFarEnough || !isFastEnough) return;
+
+      // Swiping outside the grid intentionally does nothing now --
+      // removed the exit-to-Workspace behavior across every tabbed/
+      // swipeable page in the app.
+      if (startedOnGrid) {
+        changeMonth(dx < 0 ? 1 : -1); // swipe left -> next month, swipe right -> previous month
+      }
+    }, { passive: true });
+  })();
+
+  document.addEventListener('DOMContentLoaded', () => {
+    viewYear = today.getFullYear();
+    viewMonth = today.getMonth();
+    selectedDateStr = dateKey(viewYear, viewMonth, today.getDate());
+    renderCalendar();
+    renderDayDetail();
+  });
+</script>
+</body>
+</html>

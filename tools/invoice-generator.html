@@ -1,0 +1,1211 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<script src="/tools/auth.js"></script>
+<script>
+  // Security gate -- redirect to login before this page's own content
+  // is meaningfully usable. See auth.js for why this exists (a single
+  // shared account keeping randoms out, not a multi-user system).
+  requireAuth();
+</script>
+<link rel="manifest" href="/tools/manifest.json">
+<meta name="theme-color" content="#0a0a0a">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Triple H">
+<link rel="apple-touch-icon" href="/images/apple-touch-icon.png">
+
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="robots" content="noindex, nofollow">
+<title>Invoice Generator | Triple H Enterprises (Internal Tool)</title>
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data:; connect-src 'self' https://*.supabase.co wss://*.supabase.co; frame-src 'none'; object-src 'none'; base-uri 'self'; frame-ancestors 'none';">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/styles.css">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js" defer></script>
+<script src="/tools/sync.js" defer></script>
+<script src="/tools/tools-common.js" defer></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<style>
+  body { padding: 90px 20px 60px; max-width: 900px; margin: 0 auto; }
+  .tool-title { font-family:'Oswald',sans-serif; font-weight:700; font-size:28px; color:var(--white); margin-bottom:6px; }
+  .tool-sub { color: var(--text-dim); margin-bottom: 30px; }
+  .realtime-badge { display: inline-flex; align-items: center; gap: 5px; font-size: 11.5px; color: var(--text-dim); margin-left: 10px; }
+  .realtime-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--text-dim); flex-shrink: 0; }
+  .realtime-dot.is-live { background: #4caf50; }
+  .realtime-dot.is-connecting { background: var(--orange-light); }
+  .realtime-dot.is-error { background: #e05252; }
+  .line-items-table { width: 100%; border-collapse: collapse; margin-bottom: 12px; }
+  .line-items-table th { text-align: left; font-size: 12px; color: var(--text-dim); padding: 6px 8px; text-transform: uppercase; }
+  .line-items-table td { padding: 4px 6px; }
+  .line-items-table input { width: 100%; padding: 7px 9px; background: var(--bg-panel-2); border: 1px solid var(--border); border-radius: 5px; color: var(--white); font-size: 14px; }
+  .remove-row-btn {
+    background: none; border: 1px solid var(--border); color: var(--text-dim); border-radius: 5px;
+    width: 30px; height: 30px; cursor: pointer; font-size: 16px; line-height: 1;
+  }
+  .remove-row-btn:hover { border-color: #d33; color: #d33; }
+  .add-row-btn, .add-contact-btn {
+    background: none; border: 1px dashed var(--border); color: var(--blue-light); border-radius: 6px;
+    padding: 8px 14px; cursor: pointer; font-size: 13.5px; margin-top: 6px;
+  }
+  .add-row-btn:hover, .add-contact-btn:hover { border-color: var(--blue-light); }
+  .totals-box { margin-top: 16px; padding-top: 16px; border-top: 1px solid var(--border); }
+  .totals-row { display: flex; justify-content: space-between; padding: 5px 0; font-size: 15px; }
+  .totals-row.total { font-weight: 700; font-size: 19px; color: var(--orange-light); border-top: 1px solid var(--border); margin-top: 8px; padding-top: 12px; }
+  .contact-block { border: 1px solid var(--border); border-radius: 8px; padding: 14px; margin-bottom: 10px; position: relative; }
+  .remove-contact-btn { position: absolute; top: 10px; right: 10px; }
+  .home-link { display:inline-block; margin-bottom: 20px; color: var(--blue-light); font-size: 14px; }
+
+  .quote-banner {
+    background: rgba(58,160,255,0.1); border: 1px solid var(--blue); border-radius: 8px;
+    padding: 12px 16px; font-size: 13px; color: var(--blue-light); margin-bottom: 20px;
+  }
+</style>
+</head>
+<body>
+
+<div class="tool-header">
+  <a href="/tools/workspace.html" class="tool-header-brand">
+    <img src="/images/logo-signature-orange.png" alt="Triple H Enterprises">
+    <span>&larr; Back to Workspace</span>
+  </a>
+  <button class="help-btn" onclick="openHelpModal()" aria-label="How to use this tool" title="How to use this tool">?</button>
+</div>
+<div class="tool-title">Invoice Generator</div>
+<p class="tool-sub">Internal tool &mdash; fill this out per job, click Generate, a branded PDF downloads straight to your device.
+  <span class="realtime-badge" id="realtimeBadge"><span class="realtime-dot" id="realtimeDot"></span><span id="realtimeText">Live sync: connecting...</span></span>
+</p>
+
+<div class="tabs">
+  <button class="tab-btn is-active" data-tab="invoice" onclick="activateGenTab('invoice')">Invoice</button>
+  <button class="tab-btn" data-tab="quote" onclick="activateGenTab('quote')">Quote / Estimate</button>
+</div>
+
+<div class="tab-panel is-active" id="tab-invoice">
+
+<div class="form-section">
+  <h3>Invoice Details</h3>
+  <div class="tool-form-row">
+    <div class="form-field">
+      <label>Invoice Number</label>
+      <input type="text" id="invoiceNumber" value="" oninput="checkDuplicateInvoiceNumber()">
+      <div id="duplicateInvoiceWarning" style="display:none; color: var(--orange-light); font-size: 13px; margin-top: 6px; padding: 8px 10px; background: var(--orange-tint-soft); border: 1px solid var(--orange-tint-border); border-radius: 6px;"></div>
+    </div>
+    <div class="form-field">
+      <label>Date</label>
+      <input type="date" id="invoiceDate">
+    </div>
+    <div class="form-field">
+      <label>Terms</label>
+      <select id="invoiceTerms">
+        <option>Due Upon Receipt</option>
+        <option selected>Net 15</option>
+        <option>Net 30</option>
+      </select>
+    </div>
+  </div>
+</div>
+
+<div class="form-section">
+  <h3>Bill To</h3>
+  <div class="tool-form-row">
+    <div class="form-field">
+      <label>Client / Company Name</label>
+      <input type="text" id="clientName" list="knownContactsList" placeholder="Preferred Property Management" onchange="autofillFromContact('clientName', 'contact-1')">
+      <datalist id="knownContactsList"></datalist>
+    </div>
+  </div>
+  <div class="tool-form-row">
+    <div class="form-field">
+      <label>Address</label>
+      <input type="text" id="clientAddress" placeholder="237 N Bluff St #C, St. George, UT 84770">
+    </div>
+  </div>
+  <div id="contactsContainer"></div>
+  <button type="button" class="add-contact-btn" onclick="addContact('', '', '', '', true)">+ Add contact</button>
+</div>
+
+<div class="form-section">
+  <h3>Job</h3>
+  <div class="tool-form-row">
+    <div class="form-field">
+      <label>Job Description</label>
+      <input type="text" id="jobDescription" placeholder="GE Range/Stove Repair — Model JB256D M3WW">
+    </div>
+    <div class="form-field">
+      <label>Link to Job (optional, enables Job Profitability tracking)</label>
+      <select id="invoiceJobRef"><option value="">&mdash; None &mdash;</option></select>
+    </div>
+  </div>
+</div>
+
+<div class="form-section">
+  <h3>Line Items</h3>
+  <div class="table-scroll">
+  <table class="line-items-table">
+    <thead>
+      <tr><th style="width:32%">Description</th><th style="width:14%">Part #</th><th style="width:8%">Qty</th><th style="width:13%">Price</th><th style="width:13%">Amount</th><th style="width:8%">Tax?</th><th></th></tr>
+    </thead>
+    <tbody id="lineItemsBody"></tbody>
+  </table>
+  </div>
+  <div class="tool-form-row" id="invoicePriceRefRow" style="display:none; margin-top:12px;">
+    <div class="form-field">
+      <label>Add From Saved Job Types <button class="help-btn" onclick="openCardInfo('priceRefPicker')" aria-label="What is this?" title="What is this?">?</button></label>
+      <select id="invoicePriceRefSelect" style="width:100%; box-sizing:border-box; padding:10px 12px; background:var(--bg-panel-2); border:1px solid var(--border); border-radius:6px; color:var(--white); font-size:15px; font-family:inherit;">
+        <option value="">Choose a saved job type&hellip;</option>
+      </select>
+    </div>
+    <button type="button" class="add-row-btn" style="align-self:flex-end;" onclick="addLineItemFromPriceRef('invoicePriceRefSelect', 'addLineItem')">Add This Line Item</button>
+  </div>
+  <button type="button" class="add-row-btn" onclick="addLineItem('', '', 1, '', true, true)">+ Add line item</button>
+
+  <div class="totals-box">
+    <div style="margin:0 0 10px; display:flex; align-items:center; gap:6px;"><button class="help-btn" onclick="openCardInfo('salesTax')" aria-label="About sales tax on this invoice" title="About sales tax on this invoice">?</button><span class="inline-note" style="margin:0;">Sales tax on repair labor</span></div>
+    <div class="tool-form-row">
+      <div class="form-field" style="max-width:180px;">
+        <label>Sales tax rate (%)</label>
+        <input type="number" id="invoiceTaxRate" value="6.75" min="0" step="0.01" oninput="recalc()" onchange="saveInvoiceTaxRate()">
+      </div>
+    </div>
+    <div class="totals-row"><span>Subtotal</span><span id="subtotalDisplay">$0.00</span></div>
+    <div class="totals-row"><span>Sales Tax</span><span id="taxDisplay">$0.00</span></div>
+    <div class="tool-form-row" style="margin-top:10px;">
+      <div class="form-field">
+        <label>Discount label (leave blank for no discount)</label>
+        <input type="text" id="discountLabel" placeholder="First-Time Client Discount">
+      </div>
+      <div class="form-field">
+        <label>Discount amount ($)</label>
+        <input type="number" id="discountAmount" value="0" step="0.01">
+      </div>
+    </div>
+    <div class="totals-row total"><span>Total Due</span><span id="totalDisplay">$0.00</span></div>
+  </div>
+</div>
+
+<div class="form-section">
+  <h3>Payment Text (shown at the bottom of the invoice)</h3>
+  <textarea id="paymentText">We accept cash, check, Venmo, Cash App, and credit/debit cards via a secure Stripe invoice.</textarea>
+</div>
+
+<button class="primary-btn wide" onclick="generatePDF()">Generate PDF</button>
+
+</div>
+
+<div class="tab-panel" id="tab-quote">
+
+<div class="quote-banner">This is an estimate, not a bill. Prices may change based on parts and labor actually required once work begins.</div>
+
+<div class="form-section">
+  <h3>Estimate Details</h3>
+  <div class="tool-form-row">
+    <div class="form-field">
+      <label>Estimate Number</label>
+      <input type="text" id="quoteNumber" value="">
+    </div>
+    <div class="form-field">
+      <label>Date</label>
+      <input type="date" id="quoteDate">
+    </div>
+  </div>
+</div>
+
+<div class="form-section">
+  <h3>For</h3>
+  <div class="tool-form-row">
+    <div class="form-field">
+      <label>Client / Company Name</label>
+      <input type="text" id="quoteClientName" list="knownContactsList" placeholder="Sarah Miller">
+    </div>
+  </div>
+  <div class="tool-form-row">
+    <div class="form-field">
+      <label>Address</label>
+      <input type="text" id="quoteClientAddress" placeholder="123 Main St, St. George, UT">
+    </div>
+  </div>
+</div>
+
+<div class="form-section">
+  <h3>Job</h3>
+  <div class="tool-form-row">
+    <div class="form-field">
+      <label>Job Description</label>
+      <input type="text" id="quoteJobDescription" placeholder="GE Range/Stove Repair — Model JB256D M3WW">
+    </div>
+    <div class="form-field">
+      <label>Link to Job (optional, carries over if converted to an invoice)</label>
+      <select id="quoteJobRef"><option value="">&mdash; None &mdash;</option></select>
+    </div>
+  </div>
+</div>
+
+<div class="form-section">
+  <h3>Estimated Line Items</h3>
+  <div class="table-scroll">
+  <table class="line-items-table">
+    <thead>
+      <tr><th style="width:32%">Description</th><th style="width:14%">Part #</th><th style="width:8%">Qty</th><th style="width:13%">Price</th><th style="width:13%">Amount</th><th style="width:8%">Tax?</th><th></th></tr>
+    </thead>
+    <tbody id="quoteLineItemsBody"></tbody>
+  </table>
+  </div>
+  <div class="tool-form-row" id="quotePriceRefRow" style="display:none; margin-top:12px;">
+    <div class="form-field">
+      <label>Add From Saved Job Types <button class="help-btn" onclick="openCardInfo('priceRefPicker')" aria-label="What is this?" title="What is this?">?</button></label>
+      <select id="quotePriceRefSelect" style="width:100%; box-sizing:border-box; padding:10px 12px; background:var(--bg-panel-2); border:1px solid var(--border); border-radius:6px; color:var(--white); font-size:15px; font-family:inherit;">
+        <option value="">Choose a saved job type&hellip;</option>
+      </select>
+    </div>
+    <button type="button" class="add-row-btn" style="align-self:flex-end;" onclick="addLineItemFromPriceRef('quotePriceRefSelect', 'addQuoteLineItem')">Add This Line Item</button>
+  </div>
+  <button type="button" class="add-row-btn" onclick="addQuoteLineItem('', '', 1, '', true, true)">+ Add line item</button>
+
+  <div class="totals-box">
+    <div style="margin:0 0 10px; display:flex; align-items:center; gap:6px;"><button class="help-btn" onclick="openCardInfo('salesTax')" aria-label="About sales tax on this estimate" title="About sales tax on this estimate">?</button><span class="inline-note" style="margin:0;">Sales tax on repair labor</span></div>
+    <div class="tool-form-row">
+      <div class="form-field" style="max-width:180px;">
+        <label>Sales tax rate (%)</label>
+        <input type="number" id="quoteTaxRate" value="6.75" min="0" step="0.01" oninput="recalcQuote()" onchange="saveInvoiceTaxRate()">
+      </div>
+    </div>
+    <div class="totals-row"><span>Subtotal</span><span id="quoteSubtotalDisplay">$0.00</span></div>
+    <div class="totals-row"><span>Sales Tax</span><span id="quoteTaxDisplay">$0.00</span></div>
+    <div class="tool-form-row" style="margin-top:10px;">
+      <div class="form-field">
+        <label>Discount label (leave blank for no discount)</label>
+        <input type="text" id="quoteDiscountLabel" placeholder="First-Time Client Discount">
+      </div>
+      <div class="form-field">
+        <label>Discount amount ($)</label>
+        <input type="number" id="quoteDiscountAmount" value="0" step="0.01">
+      </div>
+    </div>
+    <div class="totals-row total"><span>Estimated Total</span><span id="quoteTotalDisplay">$0.00</span></div>
+  </div>
+</div>
+
+<button class="primary-btn wide" onclick="generateQuotePDF()">Download Estimate PDF</button>
+<button class="secondary-btn" style="width:100%; margin-top:12px; padding:14px; font-size:15px;" onclick="convertQuoteToInvoice()">Convert to Invoice &rarr;</button>
+
+</div>
+
+<script>
+  // Hoisted here because loadSharedTaxRate() (called shortly below, in
+  // the defaults block) needs it, and a const declared further down in
+  // the same script is NOT accessible yet when an earlier top-level call
+  // tries to use it -- that was throwing "Cannot access 'TAX_RATE_KEY'
+  // before initialization" on every single page load, halting the rest
+  // of the script, which is why Line Items never rendered even its
+  // automatic starter row. Confirmed by actually executing this script
+  // in a simulated DOM, not just reading it.
+  const TAX_RATE_KEY = 'th_tax_rate';
+
+  // ---------- tab switching ----------
+  function activateGenTab(tab) {
+    document.querySelectorAll('.tab-btn').forEach(b => b.classList.toggle('is-active', b.dataset.tab === tab));
+    document.getElementById('tab-invoice').classList.toggle('is-active', tab === 'invoice');
+    document.getElementById('tab-quote').classList.toggle('is-active', tab === 'quote');
+  }
+
+  const GEN_TAB_ORDER = ['invoice', 'quote'];
+  (function setupGenSwipe() {
+    let touchStartX = 0, touchStartY = 0, touchStartTime = 0, startedInTable = false;
+    document.body.addEventListener('touchstart', (e) => {
+      if (e.touches.length !== 1) return;
+      touchStartX = e.touches[0].clientX;
+      touchStartY = e.touches[0].clientY;
+      touchStartTime = Date.now();
+      startedInTable = !!(e.target.closest && e.target.closest('table'));
+    }, { passive: true });
+    document.body.addEventListener('touchend', (e) => {
+      if (!e.changedTouches.length || startedInTable) return;
+      const dx = e.changedTouches[0].clientX - touchStartX;
+      const dy = e.changedTouches[0].clientY - touchStartY;
+      const elapsed = Date.now() - touchStartTime;
+      const isMostlyHorizontal = Math.abs(dx) > Math.abs(dy) * 1.5;
+      const isFarEnough = Math.abs(dx) > 60;
+      const isFastEnough = elapsed < 600;
+      if (!isMostlyHorizontal || !isFarEnough || !isFastEnough) return;
+
+      const activeBtn = document.querySelector('.tab-btn.is-active');
+      const currentIndex = GEN_TAB_ORDER.indexOf(activeBtn ? activeBtn.dataset.tab : 'invoice');
+      if (currentIndex === -1) return;
+      if (dx < 0 && currentIndex < GEN_TAB_ORDER.length - 1) {
+        activateGenTab(GEN_TAB_ORDER[currentIndex + 1]);
+      } else if (dx > 0 && currentIndex > 0) {
+        activateGenTab(GEN_TAB_ORDER[currentIndex - 1]);
+      }
+      // Swiping right on the first tab intentionally does nothing --
+      // removed the exit-to-Workspace behavior across every tabbed page
+      // in the app, since landing back on the first tab and swiping
+      // again turned out to be an easy, unintended way to get kicked out
+      // of the page rather than a deliberate exit gesture.
+    }, { passive: true });
+  })();
+
+  // ---------- defaults ----------
+  document.getElementById('invoiceDate').value = new Date().toISOString().slice(0, 10);
+  document.getElementById('invoiceNumber').value = 'INV-' + new Date().getFullYear() + '-' + String(Math.floor(Math.random() * 9000) + 1000);
+  document.getElementById('quoteDate').value = new Date().toISOString().slice(0, 10);
+  document.getElementById('quoteNumber').value = 'EST-' + new Date().getFullYear() + '-' + String(Math.floor(Math.random() * 9000) + 1000);
+  loadSharedTaxRate();
+
+  function loadJobs() {
+    try { return JSON.parse(localStorage.getItem('th_tracker_jobs') || '[]'); }
+    catch (e) { return []; }
+  }
+
+  const CARD_INFO = {
+    salesTax: {
+      title: 'Sales Tax',
+      body: `<p>Utah taxes repair labor on things like appliances, but labor on items permanently attached to real property is often exempt &mdash; parts are usually taxed either way. Uncheck "Tax?" on any exempt row.</p>
+        <p>Not tax advice &mdash; confirm your situation with the Utah State Tax Commission or your accountant.</p>`,
+    },
+    priceRefPicker: {
+      title: 'Add From Saved Job Types',
+      body: `<p>Pulls from the price references saved in Job Tracker's Cost Lookup tab &mdash; the same label, hours, and rate you've already saved get added as a line item, so you're not retyping something you've billed for before.</p>
+        <p>Only shows up if you actually have any saved job types &mdash; add some in Job Tracker first if this section isn't visible.</p>`,
+    },
+  };
+  function openCardInfo(key) {
+    const info = CARD_INFO[key];
+    if (info) openInfoModal(info.title, info.body);
+  }
+
+  // ---------- Price reference picker -- reads Job Tracker's saved job
+  // types (same-device localStorage, no API call needed) and lets a line
+  // item get added from one directly, instead of retyping a description,
+  // hours, and rate you've already saved once before. ----------
+  function loadPriceReferencesForPicker() {
+    try { return JSON.parse(localStorage.getItem('th_price_reference') || '[]'); }
+    catch (e) { return []; }
+  }
+  function populatePriceRefPickers() {
+    const refs = loadPriceReferencesForPicker();
+    ['invoicePriceRefSelect', 'quotePriceRefSelect'].forEach((selectId, i) => {
+      const rowId = i === 0 ? 'invoicePriceRefRow' : 'quotePriceRefRow';
+      const row = document.getElementById(rowId);
+      if (refs.length === 0) { row.style.display = 'none'; return; }
+      row.style.display = 'flex';
+      const select = document.getElementById(selectId);
+      select.innerHTML = '<option value="">Choose a saved job type&hellip;</option>' + refs.map((r, idx) => `
+        <option value="${idx}">${escapeHtml(r.label)} (${r.hours}hr @ $${r.rate}/hr)</option>`).join('');
+    });
+  }
+  function addLineItemFromPriceRef(selectId, addFnName) {
+    const idx = document.getElementById(selectId).value;
+    if (idx === '') return;
+    const ref = loadPriceReferencesForPicker()[Number(idx)];
+    if (!ref) return;
+    window[addFnName](ref.label, '', ref.hours || 1, ref.rate || '', true, true);
+    document.getElementById(selectId).value = '';
+  }
+
+  function escapeHtml(str) {
+    const div = document.createElement('div');
+    div.textContent = str;
+    return div.innerHTML;
+  }
+
+  function populateJobRefOptions() {
+    const jobs = loadJobs();
+    ['invoiceJobRef', 'quoteJobRef'].forEach(selectId => {
+      const select = document.getElementById(selectId);
+      if (!select) return;
+      const current = select.value;
+      select.innerHTML = '<option value="">&mdash; None &mdash;</option>' +
+        jobs.map(j => `<option value="${j.id}">${escapeHtml(j.title)}${j.client ? ' \u2014 ' + escapeHtml(j.client) : ''}</option>`).join('');
+      if (jobs.some(j => String(j.id) === current)) select.value = current;
+    });
+  }
+  populateJobRefOptions();
+
+  let contactCount = 0;
+  function addContact(name = '', title = '', email = '', phone = '', isUserAdd = false) {
+    contactCount++;
+    const id = contactCount;
+    const div = document.createElement('div');
+    div.className = 'contact-block';
+    div.id = 'contact-' + id;
+    if (isUserAdd) div.classList.add('list-row-enter');
+    div.innerHTML = `
+      <button type="button" class="remove-row-btn remove-contact-btn" onclick="removeContact(${id})">&times;</button>
+      <div class="tool-form-row">
+        <div class="form-field"><label>Name</label><input type="text" class="contact-name" value="${name}"></div>
+        <div class="form-field"><label>Title</label><input type="text" class="contact-title" value="${title}"></div>
+      </div>
+      <div class="tool-form-row">
+        <div class="form-field"><label>Email</label><input type="text" class="contact-email" value="${email}"></div>
+        <div class="form-field"><label>Phone</label><input type="text" class="contact-phone" value="${phone}"></div>
+      </div>`;
+    document.getElementById('contactsContainer').appendChild(div);
+  }
+  function removeContact(id) {
+    const el = document.getElementById('contact-' + id);
+    animateRowExit(el, () => el.remove());
+  }
+  addContact(); // start with one contact row
+
+  let rowCount = 0;
+  function addLineItem(desc = '', part = '', qty = 1, price = '', taxable = true, isUserAdd = false) {
+    rowCount++;
+    const id = rowCount;
+    const tr = document.createElement('tr');
+    tr.id = 'row-' + id;
+    if (isUserAdd) tr.classList.add('list-row-enter');
+    tr.innerHTML = `
+      <td><input type="text" class="li-desc" value="${desc}"></td>
+      <td><input type="text" class="li-part" value="${part}"></td>
+      <td><input type="number" class="li-qty" value="${qty}" min="0" step="1" oninput="recalc()"></td>
+      <td><input type="number" class="li-price" value="${price}" min="0" step="0.01" oninput="recalc()"></td>
+      <td class="li-amount">$0.00</td>
+      <td style="text-align:center;"><input type="checkbox" class="li-taxable" ${taxable ? 'checked' : ''} oninput="recalc()"></td>
+      <td><button type="button" class="remove-row-btn" onclick="removeLineItem(${id})">&times;</button></td>`;
+    document.getElementById('lineItemsBody').appendChild(tr);
+    recalc();
+  }
+  function removeLineItem(id) {
+    const row = document.getElementById('row-' + id);
+    animateRowExit(row, () => { row.remove(); recalc(); });
+  }
+  addLineItem(); // start with one blank row
+
+  function money(v) { return '$' + v.toFixed(2).replace(/\d(?=(\d{3})+\.)/g, '$&,'); }
+
+  function saveInvoiceTaxRate() {
+    const rate = document.getElementById('invoiceTaxRate').value;
+    localStorage.setItem(TAX_RATE_KEY, rate);
+    document.getElementById('quoteTaxRate').value = rate;
+    if (typeof scheduleSync === 'function') scheduleSync();
+    recalc();
+    recalcQuote();
+  }
+  function loadSharedTaxRate() {
+    const saved = localStorage.getItem(TAX_RATE_KEY);
+    if (saved !== null) {
+      document.getElementById('invoiceTaxRate').value = saved;
+      document.getElementById('quoteTaxRate').value = saved;
+    }
+  }
+
+  function recalc() {
+    let subtotal = 0;
+    let taxableSubtotal = 0;
+    document.querySelectorAll('#lineItemsBody tr').forEach(row => {
+      const qty = parseFloat(row.querySelector('.li-qty').value) || 0;
+      const price = parseFloat(row.querySelector('.li-price').value) || 0;
+      const amount = qty * price;
+      row.querySelector('.li-amount').textContent = money(amount);
+      subtotal += amount;
+      if (row.querySelector('.li-taxable').checked) taxableSubtotal += amount;
+    });
+    const rate = parseFloat(document.getElementById('invoiceTaxRate').value) || 0;
+    const tax = taxableSubtotal * (rate / 100);
+    const discount = parseFloat(document.getElementById('discountAmount').value) || 0;
+    // Discount applies to the tax-inclusive total, same precedent as the
+    // Job Tracker's Cost Lookup calculator -- a flat dollar-off-the-bill
+    // discount, not a pre-tax price adjustment.
+    const total = Math.max(0, subtotal + tax - discount);
+    document.getElementById('subtotalDisplay').textContent = money(subtotal);
+    document.getElementById('taxDisplay').textContent = money(tax);
+    document.getElementById('totalDisplay').textContent = money(total);
+    return { subtotal, tax, discount, total };
+  }
+  document.getElementById('discountAmount').addEventListener('input', recalc);
+  recalc();
+
+  // ---------- Quote line items (mirrors invoice line items above) ----------
+  let quoteRowCount = 0;
+  function addQuoteLineItem(desc = '', part = '', qty = 1, price = '', taxable = true, isUserAdd = false) {
+    quoteRowCount++;
+    const id = quoteRowCount;
+    const tr = document.createElement('tr');
+    tr.id = 'qrow-' + id;
+    if (isUserAdd) tr.classList.add('list-row-enter');
+    tr.innerHTML = `
+      <td><input type="text" class="qli-desc" value="${desc}"></td>
+      <td><input type="text" class="qli-part" value="${part}"></td>
+      <td><input type="number" class="qli-qty" value="${qty}" min="0" step="1" oninput="recalcQuote()"></td>
+      <td><input type="number" class="qli-price" value="${price}" min="0" step="0.01" oninput="recalcQuote()"></td>
+      <td class="qli-amount">$0.00</td>
+      <td style="text-align:center;"><input type="checkbox" class="qli-taxable" ${taxable ? 'checked' : ''} oninput="recalcQuote()"></td>
+      <td><button type="button" class="remove-row-btn" onclick="removeQuoteLineItem(${id})">&times;</button></td>`;
+    document.getElementById('quoteLineItemsBody').appendChild(tr);
+    recalcQuote();
+  }
+  function removeQuoteLineItem(id) {
+    const row = document.getElementById('qrow-' + id);
+    animateRowExit(row, () => { row.remove(); recalcQuote(); });
+  }
+  addQuoteLineItem();
+
+  function recalcQuote() {
+    let subtotal = 0;
+    let taxableSubtotal = 0;
+    document.querySelectorAll('#quoteLineItemsBody tr').forEach(row => {
+      const qty = parseFloat(row.querySelector('.qli-qty').value) || 0;
+      const price = parseFloat(row.querySelector('.qli-price').value) || 0;
+      const amount = qty * price;
+      row.querySelector('.qli-amount').textContent = money(amount);
+      subtotal += amount;
+      if (row.querySelector('.qli-taxable').checked) taxableSubtotal += amount;
+    });
+    const rate = parseFloat(document.getElementById('quoteTaxRate').value) || 0;
+    const tax = taxableSubtotal * (rate / 100);
+    const discount = parseFloat(document.getElementById('quoteDiscountAmount').value) || 0;
+    const total = Math.max(0, subtotal + tax - discount);
+    document.getElementById('quoteSubtotalDisplay').textContent = money(subtotal);
+    document.getElementById('quoteTaxDisplay').textContent = money(tax);
+    document.getElementById('quoteTotalDisplay').textContent = money(total);
+    return { subtotal, tax, discount, total };
+  }
+  document.getElementById('quoteDiscountAmount').addEventListener('input', recalcQuote);
+  recalcQuote();
+
+  function getQuoteLineItems() {
+    const items = [];
+    document.querySelectorAll('#quoteLineItemsBody tr').forEach(row => {
+      const desc = row.querySelector('.qli-desc').value;
+      const part = row.querySelector('.qli-part').value;
+      const qty = parseFloat(row.querySelector('.qli-qty').value) || 0;
+      const price = parseFloat(row.querySelector('.qli-price').value) || 0;
+      const taxable = row.querySelector('.qli-taxable').checked;
+      if (desc.trim() !== '') items.push({ desc, part, qty, price, amount: qty * price, taxable });
+    });
+    return items;
+  }
+
+  async function convertQuoteToInvoice() {
+    document.getElementById('clientName').value = document.getElementById('quoteClientName').value;
+    document.getElementById('clientAddress').value = document.getElementById('quoteClientAddress').value;
+    document.getElementById('jobDescription').value = document.getElementById('quoteJobDescription').value;
+    document.getElementById('invoiceJobRef').value = document.getElementById('quoteJobRef').value;
+    document.getElementById('discountLabel').value = document.getElementById('quoteDiscountLabel').value;
+    document.getElementById('discountAmount').value = document.getElementById('quoteDiscountAmount').value;
+    document.getElementById('invoiceTaxRate').value = document.getElementById('quoteTaxRate').value;
+
+    // Clear existing invoice line items, then copy over the quote's items
+    document.getElementById('lineItemsBody').innerHTML = '';
+    const items = getQuoteLineItems();
+    if (items.length === 0) {
+      addLineItem();
+    } else {
+      items.forEach(item => addLineItem(item.desc, item.part, item.qty, item.price, item.taxable));
+    }
+    recalc();
+    activateGenTab('invoice');
+    showToast('Copied to the Invoice tab \u2014 review, then Generate PDF.', { duration: 3400 });
+  }
+
+  // ---------- PDF generation ----------
+  function getLineItems() {
+    const items = [];
+    document.querySelectorAll('#lineItemsBody tr').forEach(row => {
+      const desc = row.querySelector('.li-desc').value;
+      const part = row.querySelector('.li-part').value;
+      const qty = parseFloat(row.querySelector('.li-qty').value) || 0;
+      const price = parseFloat(row.querySelector('.li-price').value) || 0;
+      const taxable = row.querySelector('.li-taxable').checked;
+      if (desc.trim() !== '') items.push({ desc, part, qty, price, amount: qty * price, taxable });
+    });
+    return items;
+  }
+
+  function getContacts() {
+    const contacts = [];
+    document.querySelectorAll('.contact-block').forEach(block => {
+      const name = block.querySelector('.contact-name').value;
+      const title = block.querySelector('.contact-title').value;
+      const email = block.querySelector('.contact-email').value;
+      const phone = block.querySelector('.contact-phone').value;
+      if (name.trim() !== '') contacts.push({ name, title, email, phone });
+    });
+    return contacts;
+  }
+
+  function loadImageAsDataURL(src, timeoutMs = 3000) {
+    return new Promise((resolve, reject) => {
+      const timer = setTimeout(() => reject(new Error('Image load timed out')), timeoutMs);
+      const img = new Image();
+      img.crossOrigin = 'anonymous';
+      img.onload = () => {
+        clearTimeout(timer);
+        const canvas = document.createElement('canvas');
+        canvas.width = img.width;
+        canvas.height = img.height;
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(img, 0, 0);
+        resolve(canvas.toDataURL('image/png'));
+      };
+      img.onerror = () => { clearTimeout(timer); reject(new Error('Image failed to load')); };
+      img.src = src;
+    });
+  }
+
+  let invoiceGenerationInProgress = false;
+  async function generatePDF() {
+    if (invoiceGenerationInProgress) return; // a fast double-tap shouldn't create two logged invoices
+    invoiceGenerationInProgress = true;
+    try {
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF({ unit: 'pt', format: 'letter' });
+    const pageW = doc.internal.pageSize.getWidth();
+
+    const NAVY = [26, 26, 26];
+    const ORANGE = [224, 123, 30];
+    const ORANGE_DARK = [179, 95, 19];
+    const GRAY = [90, 90, 90];
+    const LIGHTGRAY = [236, 236, 236];
+
+    // header band
+    doc.setFillColor(...NAVY);
+    doc.rect(0, 0, pageW, 100, 'F');
+
+    try {
+      const logoData = await loadImageAsDataURL('/images/logo-signature-orange.png');
+      doc.addImage(logoData, 'PNG', 40, 15, 65, 60);
+    } catch (e) { /* logo optional if it fails to load */ }
+
+    doc.setFont('helvetica', 'bold'); doc.setFontSize(20); doc.setTextColor(255, 255, 255);
+    doc.text('TRIPLE H', 118, 45);
+    doc.setTextColor(...ORANGE);
+    doc.text('ENTERPRISES', 118 + doc.getTextWidth('TRIPLE H ') + 4, 45);
+    doc.setFont('helvetica', 'normal'); doc.setFontSize(9); doc.setTextColor(207, 207, 207);
+    doc.text('Honesty.  Hustle.  Helpfulness.', 118, 62);
+
+    doc.setFont('helvetica', 'bold'); doc.setFontSize(13); doc.setTextColor(...ORANGE);
+    doc.text('INVOICE', pageW - 40, 30, { align: 'right' });
+    doc.setFont('helvetica', 'normal'); doc.setFontSize(9); doc.setTextColor(255, 255, 255);
+    doc.text('(435) 414-1667', pageW - 40, 46, { align: 'right' });
+    doc.text('steve@triplehenterprisesllc.biz', pageW - 40, 58, { align: 'right' });
+    doc.text('www.triplehenterprisesllc.biz', pageW - 40, 70, { align: 'right' });
+
+    let y = 130;
+    doc.setFont('helvetica', 'bold'); doc.setFontSize(8); doc.setTextColor(...GRAY);
+    doc.text('INVOICE #', 40, y);
+    doc.text('DATE', 40 + 150, y);
+    doc.text('TERMS', 40 + 300, y);
+    doc.setFont('helvetica', 'normal'); doc.setFontSize(10); doc.setTextColor(20, 20, 20);
+    doc.text(document.getElementById('invoiceNumber').value, 40, y + 14);
+    const invoiceDateIso = document.getElementById('invoiceDate').value;
+    const invoiceDateDisplay = invoiceDateIso
+      ? new Date(invoiceDateIso + 'T00:00:00').toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })
+      : '';
+    doc.text(invoiceDateDisplay, 40 + 150, y + 14);
+    doc.text(document.getElementById('invoiceTerms').value, 40 + 300, y + 14);
+
+    y += 40;
+    doc.setFont('helvetica', 'bold'); doc.setFontSize(9); doc.setTextColor(...ORANGE_DARK);
+    doc.text('BILL TO', 40, y);
+    y += 16;
+    doc.setFont('helvetica', 'bold'); doc.setFontSize(11); doc.setTextColor(20, 20, 20);
+    doc.text(document.getElementById('clientName').value || '(client name)', 40, y);
+    y += 14;
+    doc.setFont('helvetica', 'normal'); doc.setFontSize(9.5); doc.setTextColor(...GRAY);
+    doc.text(document.getElementById('clientAddress').value || '', 40, y);
+    y += 16;
+
+    getContacts().forEach(c => {
+      doc.setFont('helvetica', 'bold'); doc.setFontSize(9); doc.setTextColor(20, 20, 20);
+      doc.text(`${c.name}${c.title ? ' — ' + c.title : ''}`, 40, y);
+      y += 12;
+      doc.setFont('helvetica', 'normal'); doc.setFontSize(9); doc.setTextColor(...GRAY);
+      doc.text(`${c.email}   |   ${c.phone}`, 40, y);
+      y += 16;
+    });
+
+    y += 6;
+    doc.setFont('helvetica', 'bold'); doc.setFontSize(9); doc.setTextColor(...ORANGE_DARK);
+    doc.text('JOB', 40, y);
+    y += 16;
+    doc.setFont('helvetica', 'normal'); doc.setFontSize(10); doc.setTextColor(20, 20, 20);
+    doc.text(document.getElementById('jobDescription').value || '', 40, y);
+    y += 26;
+
+    // line items table
+    const items = getLineItems();
+    const tableW = pageW - 80;
+    doc.setFillColor(...NAVY);
+    doc.rect(40, y - 14, tableW, 20, 'F');
+    doc.setFont('helvetica', 'bold'); doc.setFontSize(8.5); doc.setTextColor(255, 255, 255);
+    doc.text('DESCRIPTION', 46, y);
+    doc.text('PART #', 40 + tableW * 0.5, y);
+    doc.text('QTY', 40 + tableW * 0.68, y, { align: 'center' });
+    doc.text('PRICE', 40 + tableW * 0.83, y, { align: 'right' });
+    doc.text('AMOUNT', pageW - 46, y, { align: 'right' });
+    y += 8;
+
+    let subtotal = 0;
+    let taxableSubtotal = 0;
+    let stripe = false;
+    items.forEach(item => {
+      const rowH = 22;
+      if (stripe) { doc.setFillColor(...LIGHTGRAY); doc.rect(40, y, tableW, rowH, 'F'); }
+      stripe = !stripe;
+      doc.setFont('helvetica', 'normal'); doc.setFontSize(9.5); doc.setTextColor(20, 20, 20);
+      doc.text(item.desc, 46, y + 14);
+      doc.setFontSize(8.5); doc.setTextColor(...GRAY);
+      doc.text(item.part || '\u2014', 40 + tableW * 0.5, y + 14);
+      doc.text(String(item.qty), 40 + tableW * 0.68, y + 14, { align: 'center' });
+      doc.setTextColor(20, 20, 20); doc.setFontSize(9.5);
+      doc.text('$' + item.price.toFixed(2), 40 + tableW * 0.83, y + 14, { align: 'right' });
+      doc.text('$' + item.amount.toFixed(2), pageW - 46, y + 14, { align: 'right' });
+      subtotal += item.amount;
+      if (item.taxable) taxableSubtotal += item.amount;
+      y += rowH;
+    });
+    doc.setDrawColor(200, 200, 200);
+    doc.line(40, y, pageW - 40, y);
+
+    const taxRate = parseFloat(document.getElementById('invoiceTaxRate').value) || 0;
+    const tax = taxableSubtotal * (taxRate / 100);
+    const discount = parseFloat(document.getElementById('discountAmount').value) || 0;
+    const discountLabel = document.getElementById('discountLabel').value;
+    const total = Math.max(0, subtotal + tax - discount);
+
+    y += 24;
+    doc.setFont('helvetica', 'normal'); doc.setFontSize(10); doc.setTextColor(20, 20, 20);
+    doc.text('Subtotal', pageW - 220, y);
+    doc.text('$' + subtotal.toFixed(2), pageW - 40, y, { align: 'right' });
+
+    y += 20;
+    doc.text('Sales Tax', pageW - 220, y);
+    doc.text('$' + tax.toFixed(2), pageW - 40, y, { align: 'right' });
+
+    if (discount > 0 && discountLabel.trim() !== '') {
+      y += 20;
+      doc.setFont('helvetica', 'italic'); doc.setFontSize(10); doc.setTextColor(...ORANGE_DARK);
+      doc.text(discountLabel, pageW - 220, y);
+      doc.text('-$' + discount.toFixed(2), pageW - 40, y, { align: 'right' });
+    }
+
+    y += 10;
+    doc.setDrawColor(200, 200, 200);
+    doc.line(pageW - 220, y, pageW - 40, y);
+    y += 24;
+    doc.setFont('helvetica', 'bold'); doc.setFontSize(14); doc.setTextColor(20, 20, 20);
+    doc.text('TOTAL DUE', pageW - 220, y);
+    doc.setTextColor(...ORANGE);
+    doc.text('$' + total.toFixed(2), pageW - 40, y, { align: 'right' });
+
+    const paymentSectionTop = y;
+    y += 40;
+    doc.setFont('helvetica', 'bold'); doc.setFontSize(10); doc.setTextColor(...ORANGE_DARK);
+    doc.text('PAYMENT', 40, y);
+    y += 18;
+    doc.setFont('helvetica', 'normal'); doc.setFontSize(9.5); doc.setTextColor(20, 20, 20);
+    const paymentLines = doc.splitTextToSize(document.getElementById('paymentText').value, 340);
+    doc.text(paymentLines, 40, y);
+    y += paymentLines.length * 13 + 6;
+    doc.setFontSize(8.5); doc.setTextColor(...GRAY);
+    doc.text('Please reference invoice ' + document.getElementById('invoiceNumber').value + ' with payment.', 40, y);
+
+    // Venmo QR code, to the right of the payment text
+    try {
+      const qrData = await loadImageAsDataURL('/images/venmo-qr.png');
+      const qrW = 85, qrH = 85 * (440 / 360);
+      const qrX = pageW - 40 - qrW;
+      const qrY = paymentSectionTop + 34;
+      doc.addImage(qrData, 'PNG', qrX, qrY, qrW, qrH);
+      doc.setFont('helvetica', 'bold'); doc.setFontSize(8.5); doc.setTextColor(20, 20, 20);
+      doc.text('Scan to pay via Venmo', qrX + qrW / 2, qrY + qrH + 12, { align: 'center' });
+    } catch (e) { /* QR optional if it fails to load -- payment text alone still works */ }
+
+    // footer
+    const footerY = doc.internal.pageSize.getHeight() - 40;
+    doc.setDrawColor(...ORANGE); doc.setLineWidth(1.5);
+    doc.line(40, footerY, pageW - 40, footerY);
+    doc.setFont('helvetica', 'normal'); doc.setFontSize(8); doc.setTextColor(...GRAY);
+    doc.text('Triple H Enterprises LLC   |   (435) 414-1667   |   steve@triplehenterprisesllc.biz   |   www.triplehenterprisesllc.biz', pageW / 2, footerY + 14, { align: 'center' });
+    doc.setFont('helvetica', 'italic');
+    doc.text('Thank you for choosing Triple H Enterprises. Work guaranteed.', pageW / 2, footerY + 26, { align: 'center' });
+
+    const filename = 'TripleH_Invoice_' + (document.getElementById('clientName').value || 'Client').replace(/[^a-z0-9]/gi, '_') + '.pdf';
+    logInvoice({ subtotal, tax, discount, total });
+    await sharePdfOrDownload(doc, filename, 'Invoice');
+    showToast('Invoice logged and ready.');
+    resetInvoiceForm();
+    } finally {
+      invoiceGenerationInProgress = false;
+    }
+  }
+
+  // Clears the whole Invoice tab back to the same blank state it's in on
+  // a fresh page load -- a new random invoice number, today's date, one
+  // empty contact row, one empty line item row -- rather than leaving the
+  // just-generated invoice's details sitting in the form.
+  function resetInvoiceForm(){
+    document.getElementById('clientName').value = '';
+    document.getElementById('clientAddress').value = '';
+    document.getElementById('jobDescription').value = '';
+    document.getElementById('invoiceJobRef').value = '';
+    document.getElementById('discountLabel').value = '';
+    document.getElementById('discountAmount').value = '0';
+    document.getElementById('contactsContainer').innerHTML = '';
+    addContact();
+    document.getElementById('lineItemsBody').innerHTML = '';
+    addLineItem();
+    document.getElementById('invoiceDate').value = new Date().toISOString().slice(0, 10);
+    document.getElementById('invoiceNumber').value = 'INV-' + new Date().getFullYear() + '-' + String(Math.floor(Math.random() * 9000) + 1000);
+    document.getElementById('invoiceTerms').value = 'Net 15';
+    recalc();
+  }
+
+  // ---------- Invoice logging (feeds the Dashboard's revenue numbers) ----------
+  const INVOICE_STORAGE_KEY = 'th_invoices';
+
+  function checkDuplicateInvoiceNumber() {
+    const num = document.getElementById('invoiceNumber').value.trim();
+    const warningEl = document.getElementById('duplicateInvoiceWarning');
+    if (!num) { warningEl.style.display = 'none'; return; }
+    const match = loadInvoiceLog().find(inv => (inv.invoiceNumber || '').trim().toLowerCase() === num.toLowerCase());
+    if (match) {
+      warningEl.textContent = `Heads up \u2014 invoice #${num} already exists in the log${match.clientName ? ' (for ' + match.clientName + ')' : ''}. Generating with this number won't overwrite that one, but you'll have two invoices sharing the same number.`;
+      warningEl.style.display = 'block';
+    } else {
+      warningEl.style.display = 'none';
+    }
+  }
+
+  function loadInvoiceLog() { return JSON.parse(localStorage.getItem(INVOICE_STORAGE_KEY) || '[]'); }
+  function saveInvoiceLog(list) {
+    localStorage.setItem(INVOICE_STORAGE_KEY, JSON.stringify(list));
+    if (typeof scheduleSync === 'function') scheduleSync();
+  }
+
+  // Every generated invoice gets mirrored into Job Tracker's Income log
+  // automatically, so income shows up in one place without re-entering it.
+  // th_invoices stays exactly as it was (the actual invoice documents,
+  // used for re-download/paid-status/client details) -- this is a
+  // parallel, lighter-weight record purely for the income total.
+  const INCOME_LOG_KEY = 'th_income_log';
+  function logInvoiceToIncomeLog(invoiceEntry) {
+    try {
+      const list = JSON.parse(localStorage.getItem(INCOME_LOG_KEY) || '[]');
+      list.push({
+        id: Date.now() + 1, // +1 avoids colliding with the invoice's own id, created in the same tick
+        date: invoiceEntry.date,
+        desc: 'Invoice #' + (invoiceEntry.invoiceNumber || '') ,
+        amount: invoiceEntry.total,
+        source: invoiceEntry.clientName,
+        payment: '',
+        jobRefId: invoiceEntry.jobRefId || '',
+        jobRefTitle: invoiceEntry.jobRefTitle || '',
+        origin: 'invoice',
+        invoiceId: invoiceEntry.id,
+      });
+      localStorage.setItem(INCOME_LOG_KEY, JSON.stringify(list));
+      if (typeof scheduleSync === 'function') scheduleSync();
+    } catch (e) { console.error('Could not log invoice to income log:', e); }
+  }
+
+  function logInvoice(totals) {
+    const list = loadInvoiceLog();
+    const jobRefId = document.getElementById('invoiceJobRef').value;
+    const jobRefTitle = jobRefId ? (loadJobs().find(j => String(j.id) === jobRefId) || {}).title || '' : '';
+    const newEntry = {
+      id: Date.now(),
+      invoiceNumber: document.getElementById('invoiceNumber').value,
+      clientName: document.getElementById('clientName').value || '(no name)',
+      date: document.getElementById('invoiceDate').value || new Date().toISOString().slice(0, 10),
+      terms: document.getElementById('invoiceTerms').value,
+      subtotal: totals.subtotal,
+      tax: totals.tax || 0,
+      discount: totals.discount,
+      total: totals.total,
+      paid: false,
+      jobRefId: jobRefId || '',
+      jobRefTitle,
+    };
+    list.push(newEntry);
+    saveInvoiceLog(list);
+    logInvoiceToIncomeLog(newEntry);
+  }
+
+  // ---------- Quote logging (separate from invoices) ----------
+  const QUOTE_STORAGE_KEY = 'th_quotes';
+  function loadQuoteLog() { return JSON.parse(localStorage.getItem(QUOTE_STORAGE_KEY) || '[]'); }
+  function saveQuoteLog(list) {
+    localStorage.setItem(QUOTE_STORAGE_KEY, JSON.stringify(list));
+    if (typeof scheduleSync === 'function') scheduleSync();
+  }
+  function logQuote(totals) {
+    const list = loadQuoteLog();
+    const jobRefId = document.getElementById('quoteJobRef').value;
+    const jobRefTitle = jobRefId ? (loadJobs().find(j => String(j.id) === jobRefId) || {}).title || '' : '';
+    list.push({
+      id: Date.now(),
+      quoteNumber: document.getElementById('quoteNumber').value,
+      clientName: document.getElementById('quoteClientName').value || '(no name)',
+      date: document.getElementById('quoteDate').value || new Date().toISOString().slice(0, 10),
+      subtotal: totals.subtotal,
+      tax: totals.tax || 0,
+      discount: totals.discount,
+      total: totals.total,
+      jobRefId: jobRefId || '',
+      jobRefTitle,
+    });
+    saveQuoteLog(list);
+  }
+
+  let quoteGenerationInProgress = false;
+  async function generateQuotePDF() {
+    if (quoteGenerationInProgress) return;
+    quoteGenerationInProgress = true;
+    try {
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF({ unit: 'pt', format: 'letter' });
+    const pageW = doc.internal.pageSize.getWidth();
+
+    const NAVY = [26, 26, 26];
+    const ORANGE = [224, 123, 30];
+    const ORANGE_DARK = [179, 95, 19];
+    const GRAY = [90, 90, 90];
+    const LIGHTGRAY = [236, 236, 236];
+
+    doc.setFillColor(...NAVY);
+    doc.rect(0, 0, pageW, 100, 'F');
+
+    try {
+      const logoData = await loadImageAsDataURL('/images/logo-signature-orange.png');
+      doc.addImage(logoData, 'PNG', 40, 15, 65, 60);
+    } catch (e) { /* logo optional */ }
+
+    doc.setFont('helvetica', 'bold'); doc.setFontSize(20); doc.setTextColor(255, 255, 255);
+    doc.text('TRIPLE H', 118, 45);
+    doc.setTextColor(...ORANGE);
+    doc.text('ENTERPRISES', 118 + doc.getTextWidth('TRIPLE H ') + 4, 45);
+    doc.setFont('helvetica', 'normal'); doc.setFontSize(9); doc.setTextColor(207, 207, 207);
+    doc.text('Honesty.  Hustle.  Helpfulness.', 118, 62);
+
+    doc.setFont('helvetica', 'bold'); doc.setFontSize(13); doc.setTextColor(...ORANGE);
+    doc.text('ESTIMATE', pageW - 40, 30, { align: 'right' });
+    doc.setFont('helvetica', 'normal'); doc.setFontSize(9); doc.setTextColor(255, 255, 255);
+    doc.text('(435) 414-1667', pageW - 40, 46, { align: 'right' });
+    doc.text('steve@triplehenterprisesllc.biz', pageW - 40, 58, { align: 'right' });
+    doc.text('www.triplehenterprisesllc.biz', pageW - 40, 70, { align: 'right' });
+
+    let y = 130;
+    doc.setFont('helvetica', 'bold'); doc.setFontSize(8); doc.setTextColor(...GRAY);
+    doc.text('ESTIMATE #', 40, y);
+    doc.text('DATE', 40 + 150, y);
+    doc.setFont('helvetica', 'normal'); doc.setFontSize(10); doc.setTextColor(20, 20, 20);
+    doc.text(document.getElementById('quoteNumber').value, 40, y + 14);
+    const quoteDateIso = document.getElementById('quoteDate').value;
+    const quoteDateDisplay = quoteDateIso
+      ? new Date(quoteDateIso + 'T00:00:00').toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })
+      : '';
+    doc.text(quoteDateDisplay, 40 + 150, y + 14);
+
+    y += 40;
+    doc.setFont('helvetica', 'bold'); doc.setFontSize(9); doc.setTextColor(...ORANGE_DARK);
+    doc.text('FOR', 40, y);
+    y += 16;
+    doc.setFont('helvetica', 'bold'); doc.setFontSize(11); doc.setTextColor(20, 20, 20);
+    doc.text(document.getElementById('quoteClientName').value || '(client name)', 40, y);
+    y += 14;
+    doc.setFont('helvetica', 'normal'); doc.setFontSize(9.5); doc.setTextColor(...GRAY);
+    doc.text(document.getElementById('quoteClientAddress').value || '', 40, y);
+    y += 22;
+
+    doc.setFont('helvetica', 'bold'); doc.setFontSize(9); doc.setTextColor(...ORANGE_DARK);
+    doc.text('JOB', 40, y);
+    y += 16;
+    doc.setFont('helvetica', 'normal'); doc.setFontSize(10); doc.setTextColor(20, 20, 20);
+    doc.text(document.getElementById('quoteJobDescription').value || '', 40, y);
+    y += 26;
+
+    const items = getQuoteLineItems();
+    const tableW = pageW - 80;
+    doc.setFillColor(...NAVY);
+    doc.rect(40, y - 14, tableW, 20, 'F');
+    doc.setFont('helvetica', 'bold'); doc.setFontSize(8.5); doc.setTextColor(255, 255, 255);
+    doc.text('DESCRIPTION', 46, y);
+    doc.text('PART #', 40 + tableW * 0.5, y);
+    doc.text('QTY', 40 + tableW * 0.68, y, { align: 'center' });
+    doc.text('PRICE', 40 + tableW * 0.83, y, { align: 'right' });
+    doc.text('AMOUNT', pageW - 46, y, { align: 'right' });
+    y += 8;
+
+    let subtotal = 0;
+    let taxableSubtotal = 0;
+    let stripe = false;
+    items.forEach(item => {
+      const rowH = 22;
+      if (stripe) { doc.setFillColor(...LIGHTGRAY); doc.rect(40, y, tableW, rowH, 'F'); }
+      stripe = !stripe;
+      doc.setFont('helvetica', 'normal'); doc.setFontSize(9.5); doc.setTextColor(20, 20, 20);
+      doc.text(item.desc, 46, y + 14);
+      doc.setFontSize(8.5); doc.setTextColor(...GRAY);
+      doc.text(item.part || '\u2014', 40 + tableW * 0.5, y + 14);
+      doc.text(String(item.qty), 40 + tableW * 0.68, y + 14, { align: 'center' });
+      doc.setTextColor(20, 20, 20); doc.setFontSize(9.5);
+      doc.text('$' + item.price.toFixed(2), 40 + tableW * 0.83, y + 14, { align: 'right' });
+      doc.text('$' + item.amount.toFixed(2), pageW - 46, y + 14, { align: 'right' });
+      subtotal += item.amount;
+      if (item.taxable) taxableSubtotal += item.amount;
+      y += rowH;
+    });
+    doc.setDrawColor(200, 200, 200);
+    doc.line(40, y, pageW - 40, y);
+
+    const quoteTaxRate = parseFloat(document.getElementById('quoteTaxRate').value) || 0;
+    const tax = taxableSubtotal * (quoteTaxRate / 100);
+    const discount = parseFloat(document.getElementById('quoteDiscountAmount').value) || 0;
+    const discountLabel = document.getElementById('quoteDiscountLabel').value;
+    const total = Math.max(0, subtotal + tax - discount);
+
+    y += 24;
+    doc.setFont('helvetica', 'normal'); doc.setFontSize(10); doc.setTextColor(20, 20, 20);
+    doc.text('Subtotal', pageW - 220, y);
+    doc.text('$' + subtotal.toFixed(2), pageW - 40, y, { align: 'right' });
+
+    y += 20;
+    doc.text('Sales Tax', pageW - 220, y);
+    doc.text('$' + tax.toFixed(2), pageW - 40, y, { align: 'right' });
+
+    if (discount > 0 && discountLabel.trim() !== '') {
+      y += 20;
+      doc.setFont('helvetica', 'italic'); doc.setFontSize(10); doc.setTextColor(...ORANGE_DARK);
+      doc.text(discountLabel, pageW - 220, y);
+      doc.text('-$' + discount.toFixed(2), pageW - 40, y, { align: 'right' });
+    }
+
+    y += 10;
+    doc.setDrawColor(200, 200, 200);
+    doc.line(pageW - 220, y, pageW - 40, y);
+    y += 24;
+    doc.setFont('helvetica', 'bold'); doc.setFontSize(14); doc.setTextColor(20, 20, 20);
+    doc.text('ESTIMATED TOTAL', pageW - 220, y);
+    doc.setTextColor(...ORANGE);
+    doc.text('$' + total.toFixed(2), pageW - 40, y, { align: 'right' });
+
+    y += 40;
+    doc.setFont('helvetica', 'italic'); doc.setFontSize(9); doc.setTextColor(...GRAY);
+    const disclaimerLines = doc.splitTextToSize(
+      'This is an estimate only, not a bill. Actual final cost may vary based on parts and labor actually required once work begins.',
+      pageW - 80
+    );
+    doc.text(disclaimerLines, 40, y);
+
+    const footerY = doc.internal.pageSize.getHeight() - 40;
+    doc.setDrawColor(...ORANGE); doc.setLineWidth(1.5);
+    doc.line(40, footerY, pageW - 40, footerY);
+    doc.setFont('helvetica', 'normal'); doc.setFontSize(8); doc.setTextColor(...GRAY);
+    doc.text('Triple H Enterprises LLC   |   (435) 414-1667   |   steve@triplehenterprisesllc.biz   |   www.triplehenterprisesllc.biz', pageW / 2, footerY + 14, { align: 'center' });
+
+    const filename = 'TripleH_Estimate_' + (document.getElementById('quoteClientName').value || 'Client').replace(/[^a-z0-9]/gi, '_') + '.pdf';
+    logQuote({ subtotal, tax, discount, total });
+    await sharePdfOrDownload(doc, filename, 'Estimate');
+    showToast('Estimate logged and ready.');
+    resetQuoteForm();
+    } finally {
+      quoteGenerationInProgress = false;
+    }
+  }
+
+  function resetQuoteForm(){
+    document.getElementById('quoteClientName').value = '';
+    document.getElementById('quoteJobDescription').value = '';
+    document.getElementById('quoteJobRef').value = '';
+    document.getElementById('quoteDiscountLabel').value = '';
+    document.getElementById('quoteDiscountAmount').value = '0';
+    document.getElementById('quoteLineItemsBody').innerHTML = '';
+    addQuoteLineItem();
+    document.getElementById('quoteDate').value = new Date().toISOString().slice(0, 10);
+    document.getElementById('quoteNumber').value = 'EST-' + new Date().getFullYear() + '-' + String(Math.floor(Math.random() * 9000) + 1000);
+    recalcQuote();
+  }
+
+  // ---------- Live-sync status badge ----------
+  // Same pattern as job-tracker.html/route-planner.html/workspace.html.
+  // This page has no list to re-render on a remote change, but the shared
+  // tax rate can change from another device, so that's what gets
+  // refreshed here. Wrapped in DOMContentLoaded because sync.js loads
+  // with `defer` -- it isn't guaranteed to exist yet during this inline
+  // script's own top-level execution, only by the time DOMContentLoaded fires.
+  // ---------- Client autofill from Job Tracker's Contacts ----------
+  // Both tools share the same browser storage, so this just reads
+  // whatever th_tracker_contacts already has -- no live connection or
+  // API call needed. Contacts don't store an address, so clientAddress
+  // is deliberately left alone here rather than inventing data that
+  // doesn't exist; only the Bill-To contact row (phone/email) gets
+  // filled in, since that maps directly to what a Contact actually has.
+  function loadContactsForAutofill() {
+    try { return JSON.parse(localStorage.getItem('th_tracker_contacts') || '[]'); }
+    catch (e) { return []; }
+  }
+  function populateKnownContactsList() {
+    const list = document.getElementById('knownContactsList');
+    if (!list) return;
+    list.innerHTML = loadContactsForAutofill().map(c => `<option value="${escapeHtml(c.name)}">`).join('');
+  }
+  function autofillFromContact(nameFieldId, firstContactRowId) {
+    const typedName = document.getElementById(nameFieldId).value.trim();
+    if (!typedName) return;
+    const match = loadContactsForAutofill().find(c => (c.name || '').toLowerCase() === typedName.toLowerCase());
+    if (!match) return;
+    const row = document.getElementById(firstContactRowId);
+    if (!row) return;
+    const nameEl = row.querySelector('.contact-name');
+    const titleEl = row.querySelector('.contact-title');
+    const emailEl = row.querySelector('.contact-email');
+    const phoneEl = row.querySelector('.contact-phone');
+    // Only fill in fields that are still blank -- never overwrite
+    // something already typed, in case this fires after manual edits.
+    if (nameEl && !nameEl.value.trim()) nameEl.value = match.name || '';
+    if (titleEl && !titleEl.value.trim()) titleEl.value = match.role || '';
+    if (emailEl && !emailEl.value.trim()) emailEl.value = match.email || '';
+    if (phoneEl && !phoneEl.value.trim()) phoneEl.value = match.phone || '';
+  }
+
+  function updateRealtimeBadge(status) {
+    const dot = document.getElementById('realtimeDot');
+    const text = document.getElementById('realtimeText');
+    if (!dot || !text) return;
+    dot.className = 'realtime-dot';
+    if (status === 'SUBSCRIBED') {
+      dot.classList.add('is-live');
+      text.textContent = 'Live sync active';
+    } else if (status === 'unavailable') {
+      dot.classList.add('is-error');
+      text.textContent = 'Live sync unavailable';
+    } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT' || status === 'CLOSED') {
+      dot.classList.add('is-error');
+      text.textContent = 'Live sync disconnected';
+    } else {
+      dot.classList.add('is-connecting');
+      text.textContent = 'Live sync: connecting...';
+    }
+  }
+  document.addEventListener('DOMContentLoaded', () => {
+    populateKnownContactsList();
+    populatePriceRefPickers();
+    if (typeof startRealtimeSync === 'function') {
+      startRealtimeSync(() => { loadSharedTaxRate(); populateKnownContactsList(); populatePriceRefPickers(); }, updateRealtimeBadge);
+    }
+  });
+</script>
+
+<div class="help-modal-overlay" id="helpModalOverlay" onclick="if(event.target===this) closeHelpModal()">
+  <div class="help-modal">
+    <button class="help-modal-close" onclick="closeHelpModal()" aria-label="Close">&times;</button>
+    <h3>How to Use: Invoice Generator</h3>
+    <div class="help-modal-body">
+      <p>Fill this out per job, right after you finish.</p>
+      <ul>
+        <li><strong>Invoice tab</strong> &mdash; fill in <strong>Invoice Details</strong> and <strong>Bill To</strong>, then add each line item (labor, parts, etc.) in the line-items table. Uncheck "Tax?" on any row that's exempt (see the note above the totals for why some rows might not be taxable). Tap Generate for a branded PDF with your Venmo QR built in.</li>
+        <li><strong>Quote / Estimate tab</strong> &mdash; same idea, before a job starts, including the same tax handling. Download an estimate PDF (clearly labeled as an estimate, not a bill), or tap <strong>Convert to Invoice</strong> once the work's done to copy everything straight over to the Invoice tab instead of re-typing it &mdash; including which rows were marked taxable.</li>
+        <li>The sales tax rate is shared with the Job Tracker's Cost Lookup tab &mdash; change it in either place and it updates everywhere.</li>
+        <li>Everything generated here is saved automatically &mdash; invoices and estimates are logged on this device (and synced, if Cloud Sync is set up), and every invoice also flows into Job Tracker's Income tab. Nothing needs re-entering elsewhere.</li>
+      </ul>
+    </div>
+  </div>
+</div>
+</body>
+</html>
