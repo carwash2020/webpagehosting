@@ -1129,6 +1129,9 @@
 }
 .help-btn:hover{ border-color:var(--orange-light); color:var(--orange-light); }
 .help-btn.is-active{ border-color:var(--blue-light); color:var(--blue-light); background:rgba(58,160,255,0.12); }
+.help-btn.is-syncing { animation: helpBtnSpin 0.8s linear infinite; }
+@keyframes helpBtnSpin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) { .help-btn.is-syncing { animation: none; opacity: 0.5; } }
 
 .help-modal-overlay{
   display:none;

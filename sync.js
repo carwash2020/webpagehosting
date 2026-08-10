@@ -265,10 +265,9 @@ async function pullSync() {
 // shared error messaging.
 async function manualRefreshSync(onDone) {
   const link = document.getElementById('refreshSyncLink');
-  const originalText = link ? link.textContent : null;
-  if (link) link.textContent = 'Refreshing...';
+  if (link) link.classList.add('is-syncing');
   const result = await pullSync();
-  if (link) link.textContent = originalText;
+  if (link) link.classList.remove('is-syncing');
 
   if (!result.ok) {
     if (result.error === 'no-data-yet') {
@@ -282,10 +281,37 @@ async function manualRefreshSync(onDone) {
 
 // Debounced auto-push: call scheduleSync() from any tool's save function.
 let _syncTimer = null;
+
+// The background auto-sync above is deliberately silent on success --
+// nobody needs a toast every time they save a field. But it was ALSO
+// silent on FAILURE, which is the real problem: a sync can fail for
+// reasons that have nothing to do with the session-expiry bug just
+// fixed (a bad network moment, a temporary outage), and someone could
+// keep working for hours with no idea their changes never left the
+// device. This warns, but throttled -- a bad connection would otherwise
+// re-fail on every single edit and spam a toast after each one.
+let _lastSyncFailureWarningAt = 0;
+const SYNC_FAILURE_WARNING_COOLDOWN_MS = 5 * 60 * 1000; // once every 5 minutes at most
+function warnIfSyncFailed(result) {
+  if (!result || result.ok) return;
+  if (result.error === 'not-configured' || result.error === 'no-code') return; // sync isn't set up at all -- not a failure, nothing to warn about
+  const now = Date.now();
+  if (now - _lastSyncFailureWarningAt < SYNC_FAILURE_WARNING_COOLDOWN_MS) return;
+  _lastSyncFailureWarningAt = now;
+  if (typeof showToast !== 'function') return;
+  const message = result.error === 'session-expired'
+    ? "Couldn't back up to the cloud \u2014 your login session expired. Log out and back in to fix this."
+    : "Couldn't back up to the cloud just now. Your changes are still saved on this device, and it'll retry automatically.";
+  showToast(message, { type: 'error', duration: 6000 });
+}
+
 function scheduleSync() {
   if (!isSyncConfigured() || !getSyncCode()) return;
   clearTimeout(_syncTimer);
-  _syncTimer = setTimeout(() => { _syncTimer = null; pushSync(); }, 2500);
+  _syncTimer = setTimeout(() => {
+    _syncTimer = null;
+    pushSync().then(warnIfSyncFailed);
+  }, 2500);
 }
 
 // Safety net: if the page is closed/backgrounded/navigated away from
@@ -299,7 +325,7 @@ function flushSyncNow() {
   if (_syncTimer) {
     clearTimeout(_syncTimer);
     _syncTimer = null;
-    pushSync();
+    pushSync().then(warnIfSyncFailed);
   }
 }
 if (typeof document !== 'undefined') {
