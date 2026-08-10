@@ -1,0 +1,2255 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<script src="/tools/auth.js"></script>
+<script>
+  // Security gate -- same pattern as every other internal tool page.
+  // This one matters more than most: it holds real mortgage, debt, and
+  // family expense data, not just operational business data.
+  requireAuth();
+</script>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="robots" content="noindex, nofollow">
+<title>Runway Dashboard | Triple H Enterprises (Internal Tool)</title>
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data:; connect-src 'self' https://*.supabase.co wss://*.supabase.co; frame-src 'none'; object-src 'none'; base-uri 'self'; frame-ancestors 'none';">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Anton&family=Oswald:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js" defer></script>
+<script src="/tools/sync.js" defer></script>
+<style>
+  :root{
+    --bg:#0a0a0a;
+    --bg-card:#141414;
+    --bg-elevated:#1c1c1c;
+    --bg-hover:#242424;
+    --border-soft: rgba(255,255,255,0.06);
+    --text:#e8e6e3;
+    --text-dim:#9a9690;
+    --text-faint:#6b6864;
+    --orange:#ff8000;
+    --orange-dark:#c96400;
+    --orange-light:#ffb347;
+    --blue:#3aa0ff;
+    --green:#3ac96a;
+    --red:#e0554d;
+    --radius:10px;
+  }
+  *{box-sizing:border-box;}
+  body{margin:0;background:var(--bg);color:var(--text);font-family:'Oswald',sans-serif;font-weight:400;-webkit-font-smoothing:antialiased;}
+  h1,h2,h3{font-family:'Anton',sans-serif;font-weight:400;letter-spacing:0.5px;margin:0;}
+  header{padding:20px 20px 0;max-width:900px;margin:0 auto;}
+  header h1{font-size:22px;color:var(--orange-light);text-transform:uppercase;}
+  header p{color:var(--text-dim);font-size:13px;margin:4px 0 16px;}
+  .tabs{display:flex;gap:6px;max-width:900px;margin:0 auto;padding:8px 20px 0;overflow-x:auto;scrollbar-width:none;position:sticky;top:0;background:var(--bg);z-index:50;}
+  .tabs::-webkit-scrollbar{display:none;}
+  .tab-btn{background:var(--bg-card);color:var(--text-dim);border:none;padding:10px 16px;border-radius:8px 8px 0 0;font-family:'Oswald',sans-serif;font-weight:600;font-size:13px;text-transform:uppercase;letter-spacing:0.5px;cursor:pointer;white-space:nowrap;transition:background .15s, color .15s;}
+  .tab-btn.active{background:var(--bg-elevated);color:var(--orange-light);box-shadow: inset 0 2px 0 var(--orange);}
+  main{max-width:900px;margin:0 auto;padding:16px 20px 80px;}
+  .panel{display:none;}
+  .panel.active{display:block; animation:panelFadeIn .22s ease;}
+  .panel.fade-out{display:block; opacity:0; transition:opacity .2s ease;}
+  @keyframes panelFadeIn{from{opacity:0; transform:translateY(4px);} to{opacity:1; transform:translateY(0);}}
+  @media (prefers-reduced-motion: reduce){ .panel.fade-out{transition:none;} .panel.active{animation:none;} }
+  .toast-container{position:fixed;left:50%;bottom:20px;transform:translateX(-50%);z-index:300;display:flex;flex-direction:column;gap:8px;align-items:center;pointer-events:none;width:100%;padding:0 20px;box-sizing:border-box;}
+  .toast{pointer-events:auto;background:var(--bg-elevated);border:1px solid var(--border-soft);border-left:3px solid var(--orange);color:var(--text);font-size:13.5px;padding:10px 16px;border-radius:8px;box-shadow:0 6px 16px rgba(0,0,0,0.4);opacity:0;transform:translateY(8px);transition:opacity .18s ease, transform .18s ease;}
+  .toast.is-shown{opacity:1;transform:translateY(0);}
+  @media (prefers-reduced-motion: reduce){ .toast{transition:none;} }
+  .card{background:var(--bg-card);border-radius:var(--radius);padding:16px;margin-bottom:14px;}
+  .cat-card{border-radius:0 var(--radius) var(--radius) 0;}
+  .cat-dot{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:7px;vertical-align:middle;}
+  .card-header{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:10px;gap:8px;}
+  .card-header h3{font-size:15px;color:var(--orange-light);text-transform:uppercase;}
+  .card-header .subtotal{font-size:13px;color:var(--text-dim);font-weight:600;white-space:nowrap;}
+  .cat-add-btn{background:transparent;border:1px solid var(--border-soft);color:var(--text-dim);width:26px;height:26px;border-radius:6px;cursor:pointer;font-size:15px;line-height:1;flex-shrink:0;}
+  .cat-add-btn:hover{color:var(--orange-light);border-color:var(--orange);}
+  .row{display:flex;align-items:center;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border-soft);gap:10px;flex-wrap:wrap;}
+  .row:last-child{border-bottom:none;}
+  .row-main{flex:1;min-width:0;}
+  .row-label{font-size:14px;color:var(--text);}
+  .row-freq{font-size:10px;color:var(--text-faint);text-transform:uppercase;margin-top:1px;}
+  .row-amounts{font-size:12px;color:var(--text-dim);text-align:right;white-space:nowrap;}
+  .row-amounts b{color:var(--orange-light);font-weight:600;}
+  .row-actions{display:flex;gap:4px;flex-shrink:0;flex-wrap:wrap;margin-top:4px;}
+  .icon-btn{background:transparent;border:none;color:var(--text-faint);cursor:pointer;font-size:13px;padding:4px 6px;border-radius:5px;}
+  .icon-btn:hover{color:var(--text);background:var(--bg-hover);}
+  .icon-btn.danger:hover{color:var(--red);}
+  input[type=number], input[type=text], input[type=month], select{
+    background:var(--bg);border:1px solid var(--border-soft);color:var(--text);border-radius:6px;padding:9px 10px;
+    font-family:'Oswald',sans-serif;font-size:13px;width:100%;box-shadow: inset 0 1px 3px rgba(0,0,0,0.5);
+    transition: box-shadow .15s, border-color .15s;
+  }
+  input:focus, select:focus{outline:none;border-color:var(--orange);box-shadow: inset 0 1px 3px rgba(0,0,0,0.5), 0 0 8px rgba(255,128,0,0.45);}
+  .grand-totals{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:16px;}
+  .stat-box{background:var(--bg-elevated);border-radius:var(--radius);padding:14px;text-align:center;}
+  .stat-box .label{font-size:11px;color:var(--text-dim);text-transform:uppercase;letter-spacing:0.5px;}
+  .stat-box .value{font-family:'Anton',sans-serif;font-size:24px;color:var(--orange-light);margin-top:4px;}
+  .stat-box.blue .value{color:var(--blue); text-shadow:0 0 6px rgba(58,160,255,0.18);}
+  .stat-box.green .value{color:var(--green); text-shadow:0 0 6px rgba(58,201,106,0.2);}
+  .stat-box.red .value{color:var(--red); text-shadow:0 0 6px rgba(224,85,77,0.18);}
+  .card-hero{
+    position:relative;
+    background:linear-gradient(160deg, var(--bg-elevated), var(--bg-card));
+    border:1px solid rgba(255,128,0,0.3);
+    box-shadow:
+      0 1px 0 rgba(255,255,255,0.04) inset,
+      0 14px 28px rgba(0,0,0,0.5),
+      0 4px 10px rgba(0,0,0,0.35);
+  }
+  .card-hero .estimate-headline{font-size:23px; text-shadow:0 0 8px rgba(255,179,71,0.22);}
+  .card-hero .stat-box{background:var(--bg-card);}
+  .card-hero .stat-box.green{background:linear-gradient(160deg, rgba(58,201,106,0.10), var(--bg-card));}
+  button.action-btn{
+    background:var(--orange);color:#1a0d02;border:none;font-family:'Oswald',sans-serif;font-weight:700;font-size:13px;
+    text-transform:uppercase;letter-spacing:0.5px;padding:11px 18px;border-radius:8px;cursor:pointer;
+    transition: box-shadow .15s, transform .1s; box-shadow: 0 0 0 rgba(255,128,0,0); width:100%;
+  }
+  button.action-btn:hover{box-shadow: 0 0 8px rgba(255,128,0,0.5), 0 0 20px rgba(255,128,0,0.25);}
+  button.action-btn:active{transform: translateY(1px);box-shadow: inset 0 0 6px rgba(0,0,0,0.4);}
+  button.ghost-btn{background:transparent;border:1px solid var(--border-soft);color:var(--text-dim);font-family:'Oswald',sans-serif;font-size:12px;padding:9px 14px;border-radius:6px;cursor:pointer;flex:1;}
+  button.ghost-btn:hover{color:var(--text);border-color: var(--text-dim);}
+  button.danger-btn{background:transparent;border:1px solid rgba(224,85,77,0.4);color:var(--red);font-family:'Oswald',sans-serif;font-size:12px;padding:5px 10px;border-radius:6px;cursor:pointer;}
+  .form-card{display:none;}
+  .form-card.open{display:block;}
+  .form-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px;}
+  .form-grid label{font-size:11px;color:var(--text-dim);text-transform:uppercase;display:block;margin-bottom:3px;}
+  .form-grid .full{grid-column: 1 / -1;}
+  .chip-row{display:flex;flex-wrap:wrap;gap:6px;margin:2px 0 10px;}
+  .chip{background:var(--bg-elevated);border:1px solid var(--border-soft);color:var(--text-dim);font-size:11px;padding:5px 10px;border-radius:14px;cursor:pointer;}
+  .chip:hover{color:var(--orange-light);border-color:var(--orange-dark);}
+  .form-actions{display:flex;gap:8px;}
+  .empty-state{color:var(--text-dim);font-size:13px;text-align:center;padding:28px 16px;}
+  .empty-state svg{display:block;margin:0 auto 10px;opacity:0.5;}
+  .empty-state .empty-title{color:var(--text);font-size:14px;font-weight:600;margin-bottom:4px;}
+  .empty-state .empty-sub{font-size:12.5px;color:var(--text-dim);}
+  table.month-table{width:100%;border-collapse:collapse;font-size:12px;}
+  .table-scroll{overflow-x:auto;}
+  table.month-table th, table.month-table td{padding:8px 6px;text-align:right;white-space:nowrap;border-bottom:1px solid var(--border-soft);}
+  table.month-table th:first-child, table.month-table td:first-child{text-align:left;}
+  table.month-table th{color:var(--text-faint);text-transform:uppercase;font-size:10px;}
+  .net-positive{color:var(--green);}
+  .net-negative{color:var(--red);}
+  .progress-track{background:var(--bg);border-radius:20px;height:10px;overflow:hidden;margin-top:8px;}
+  .progress-fill{height:100%;background:linear-gradient(90deg, var(--orange-dark), var(--orange));border-radius:20px;transition: width .3s;}
+  .progress-labels{display:flex;justify-content:space-between;font-size:10px;color:var(--text-faint);margin-top:4px;}
+  .note{font-size:12px;color:var(--text-dim);line-height:1.5;margin-top:8px;}
+  .estimate-headline{font-family:'Anton',sans-serif;font-size:20px;color:var(--orange-light);margin:6px 0;}
+  .loading{padding:0;}
+  .skeleton-card{background:var(--bg-card);border-radius:var(--radius);padding:16px;margin-bottom:14px;}
+  .skeleton-line{height:14px;border-radius:6px;margin-bottom:10px;background:linear-gradient(90deg, var(--bg-elevated) 25%, var(--bg-hover) 50%, var(--bg-elevated) 75%);background-size:200% 100%;animation:shimmer 1.4s ease-in-out infinite;}
+  .skeleton-line.w-40{width:40%;}
+  .skeleton-line.w-60{width:60%;}
+  .skeleton-line.w-100{width:100%;}
+  .skeleton-line.h-tall{height:48px;}
+  @keyframes shimmer{0%{background-position:200% 0;} 100%{background-position:-200% 0;}}
+  @keyframes rowEnterFade{ from{ opacity:0; transform:translateY(-6px); } to{ opacity:1; transform:translateY(0); } }
+  .list-row-enter{ animation: rowEnterFade .22s ease; }
+  @media (prefers-reduced-motion: reduce){ .list-row-enter{ animation:none; } }
+  @media (prefers-reduced-motion: reduce){ .skeleton-line{animation:none; opacity:0.6;} }
+  .top-actions{display:flex; gap:8px; margin-bottom:10px;}
+  .col-hint{font-size:10px;color:var(--text-faint);margin-top:-4px;margin-bottom:8px;}
+  .back-link{display:inline-flex;align-items:center;gap:6px;color:var(--text-dim);text-decoration:none;font-size:13px;margin-bottom:14px;}
+  .back-link:hover{color:var(--orange-light);}
+  .realtime-badge{display:inline-flex;align-items:center;gap:5px;font-size:11px;color:var(--text-faint);margin-left:10px;}
+  .realtime-dot{width:7px;height:7px;border-radius:50%;background:var(--text-faint);flex-shrink:0;}
+  .realtime-dot.is-live{background:var(--green);box-shadow:0 0 5px rgba(58,201,106,0.7);}
+  .realtime-dot.is-connecting{background:var(--orange);}
+  .realtime-dot.is-error{background:var(--red);}
+  .help-btn{
+    display:inline-flex;align-items:center;justify-content:center;width:22px;height:22px;margin-left:8px;
+    border:1px solid var(--border-soft);border-radius:50%;background:none;color:var(--text-dim);
+    font-family:'Oswald',sans-serif;font-size:13px;font-weight:600;cursor:pointer;vertical-align:middle;
+    transition:border-color .15s ease, color .15s ease;
+  }
+  .help-btn:hover{border-color:var(--orange-light);color:var(--orange-light);}
+  .help-modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.6);z-index:200;align-items:center;justify-content:center;padding:20px;}
+  .help-modal-overlay.is-open{display:flex;}
+  .help-modal{position:relative;background:var(--bg-card);border:1px solid var(--border-soft);border-radius:var(--radius);max-width:520px;width:100%;max-height:80vh;overflow-y:auto;padding:26px 28px;}
+  .help-modal h3{font-family:'Anton',sans-serif;color:var(--orange-light);font-size:19px;margin:0 0 14px;padding-right:24px;}
+  .help-modal h4{font-family:'Oswald',sans-serif;color:var(--text);font-size:13px;text-transform:uppercase;letter-spacing:0.5px;margin:18px 0 6px;}
+  .help-modal h4:first-of-type{margin-top:0;}
+  .help-modal-body{color:var(--text);font-size:14px;line-height:1.6;}
+  .help-modal-body p{margin:0 0 10px;}
+  .help-modal-body ul{margin:0 0 10px;padding-left:20px;}
+  .help-modal-body li{margin-bottom:6px;}
+  .help-modal-body strong{color:var(--orange-light);}
+  .help-modal-close{position:absolute;top:14px;right:16px;background:none;border:none;color:var(--text-dim);font-size:22px;line-height:1;cursor:pointer;padding:4px 8px;}
+  .help-modal-close:hover{color:var(--text);}
+  .var-log-input{width:90px;padding:6px 8px;background:var(--bg-elevated);border:1px solid var(--border-soft);border-radius:6px;color:var(--text);font-size:12px;font-family:inherit;}
+  .print-only{display:none;}
+  @media print{
+    body *{display:none !important;}
+    .print-only, .print-only *{display:revert !important;}
+    .print-only{display:block !important; background:#fff; color:#000; padding:20px; font-family:Arial,sans-serif;}
+    .print-only h1{font-size:20px;margin:0 0 4px;}
+    .print-only .print-date{color:#555;font-size:12px;margin-bottom:18px;}
+    .print-only h2{font-size:14px;text-transform:uppercase;letter-spacing:0.5px;border-bottom:1px solid #ccc;padding-bottom:4px;margin:22px 0 10px;}
+    .print-only table{width:100%;border-collapse:collapse;font-size:13px;}
+    .print-only td{padding:5px 4px;border-bottom:1px solid #eee;}
+    .print-only td:last-child{text-align:right;font-weight:bold;}
+    .print-only .print-note{font-size:12px;color:#444;margin-top:6px;}
+  }
+</style>
+</head>
+<body>
+
+<div class="help-modal-overlay" id="helpModalOverlay" onclick="if(event.target===this) closeHelpModal()">
+  <div class="help-modal">
+    <button class="help-modal-close" onclick="closeHelpModal()" aria-label="Close">&times;</button>
+    <h3 id="helpModalTitle">How to Use: Runway Dashboard</h3>
+    <div class="help-modal-body" id="helpModalBody">
+      <p>Tap the <strong>?</strong> next to any section title for a short explanation of just that part. This button gives you the full picture instead.</p>
+      <h4>Safe to Spend</h4>
+      <p>What's coming in, what your bills take, what we recommend you set aside, and what's actually safe to spend the rest of the month.</p>
+      <h4>Personal Income</h4>
+      <p>Day-job wages or anything else that's not from Triple H. This is what Safe to Spend and the Runway tab measure everything else against.</p>
+      <h4>Bills &amp; Expenses</h4>
+      <p>Add each bill. If it's the same amount every time, mark it Fixed. If it changes (like a power bill), mark it Variable and log the real amount each month.</p>
+      <h4>Business Dashboard</h4>
+      <p>Pick a month and tap "Pull from Job Tracker" to fill in Revenue, Expenses, and Fuel automatically from what you've already logged there.</p>
+      <h4>Runway Summary</h4>
+      <p>Your emergency fund progress, how much the business is currently supplementing your income, a rough estimate of when the business alone could cover your bills, and a Safe Draw Calculator.</p>
+      <h4>Syncing</h4>
+      <p>Everything here syncs automatically with your other Triple H tools. Backup &amp; Restore at the bottom is a separate, no-setup safety net.</p>
+    </div>
+  </div>
+</div>
+
+
+<a href="/tools/workspace.html" class="back-link">&larr; Back to Workspace</a>
+
+<header>
+  <h1>Runway Dashboard <button class="help-btn" onclick="openHelpModal()" aria-label="How to use this dashboard" title="How to use this dashboard">?</button></h1>
+  <p>Personal budget and business numbers now sync through the same Triple H Supabase project as the rest of your tools.
+    <span class="realtime-badge" id="jtBadge"><span class="realtime-dot" id="jtDot"></span><span id="jtText">Sync: connecting...</span></span>
+  </p>
+</header>
+
+<div class="tabs">
+  <button class="tab-btn active" data-tab="personal">Personal Budget</button>
+  <button class="tab-btn" data-tab="business">Business Dashboard</button>
+  <button class="tab-btn" data-tab="networth">Net Worth</button>
+  <button class="tab-btn" data-tab="runway">Runway Summary</button>
+</div>
+
+<main>
+  <div id="loading" class="loading">
+    <div class="skeleton-card">
+      <div class="skeleton-line w-40"></div>
+      <div class="skeleton-line h-tall w-100"></div>
+      <div class="skeleton-line h-tall w-100"></div>
+    </div>
+    <div class="skeleton-card">
+      <div class="skeleton-line w-60"></div>
+      <div class="skeleton-line w-100"></div>
+      <div class="skeleton-line w-100"></div>
+    </div>
+  </div>
+
+  <div class="panel" id="panel-personal">
+    <div class="card card-hero">
+      <div class="card-header"><h3>Safe to Spend <button class="help-btn" onclick="openCardInfo('safeToSpend')" aria-label="What is this?" title="What is this?">?</button></h3></div>
+      <div class="form-grid">
+        <div><label>Savings Target (% of what's left)</label><input type="number" inputmode="decimal" id="settingSavingsPct" min="0" max="100" step="1"></div>
+      </div>
+      <div class="grand-totals" id="safeToSpendStats" style="margin-top:10px;"></div>
+      <div class="estimate-headline" id="safeToSpendHeadline">—</div>
+      <div class="note" id="safeToSpendNote"></div>
+    </div>
+
+    <div class="card">
+      <div class="card-header"><h3>Personal Income <button class="help-btn" onclick="openCardInfo('personalIncome')" aria-label="What is this?" title="What is this?">?</button></h3></div>
+      <div id="incomeList"></div>
+      <div class="top-actions">
+        <button class="action-btn" id="openAddIncomeBtn">+ Add Income Source</button>
+      </div>
+    </div>
+
+    <div class="card form-card" id="incomeFormCard">
+      <div class="card-header"><h3 id="incomeFormTitle">Add Income</h3></div>
+      <div class="form-grid">
+        <div class="full"><label>Source</label><input type="text" id="inc-name" placeholder="e.g. Day Job, Spouse's Salary"></div>
+        <div><label>Frequency</label>
+          <select id="inc-frequency">
+            <option value="weekly">Weekly</option>
+            <option value="biweekly">Biweekly (every 2 weeks, 26/yr)</option>
+            <option value="semimonthly">Semi-monthly (twice a month, 24/yr)</option>
+            <option value="monthly" selected>Monthly</option>
+            <option value="quarterly">Quarterly</option>
+            <option value="annually">Annually</option>
+          </select>
+        </div>
+        <div><label>Amount (after tax)</label><input type="number" inputmode="decimal" id="inc-amount" placeholder="0"></div>
+      </div>
+      <div class="form-actions">
+        <button class="action-btn" id="saveIncomeBtn" style="width:auto;flex:1;">Save Income</button>
+        <button class="ghost-btn" id="cancelIncomeBtn" style="flex:0 0 auto;">Cancel</button>
+      </div>
+    </div>
+
+    <div class="top-actions">
+      <button class="action-btn" id="openAddExpenseBtn">+ Add Expense</button>
+    </div>
+
+    <div class="card form-card" id="expenseFormCard">
+      <div class="card-header"><h3 id="expenseFormTitle">Add Expense</h3></div>
+      <div class="form-grid">
+        <div class="full">
+          <label>Category</label>
+          <select id="exp-category"></select>
+        </div>
+        <div class="full">
+          <label>Name</label>
+          <input type="text" id="exp-name" placeholder="e.g. Mortgage, Netflix, Fuel">
+          <div class="chip-row" id="exp-suggestions"></div>
+        </div>
+        <div class="full">
+          <label>Type</label>
+          <select id="exp-type">
+            <option value="fixed" selected>Fixed &mdash; same amount every time</option>
+            <option value="variable">Variable &mdash; changes month to month (utilities, etc.)</option>
+          </select>
+        </div>
+        <div id="fixedFieldsRow1"><label>Frequency</label>
+          <select id="exp-frequency">
+            <option value="weekly">Weekly</option>
+            <option value="biweekly">Biweekly (every 2 weeks, 26/yr)</option>
+            <option value="semimonthly">Semi-monthly (twice a month, 24/yr)</option>
+            <option value="monthly" selected>Monthly</option>
+            <option value="quarterly">Quarterly</option>
+            <option value="annually">Annually</option>
+          </select>
+        </div>
+        <div id="fixedFieldsRow1b"></div>
+        <div class="full" id="fixedFieldsRow2">
+          <label id="exp-min-label">Amount</label>
+          <input type="number" inputmode="decimal" id="exp-min" placeholder="0">
+        </div>
+      </div>
+      <div class="col-hint" id="expTypeHint">Amount is per the frequency you pick above — it's converted to a monthly figure automatically.</div>
+      <div class="form-actions">
+        <button class="action-btn" id="saveExpenseBtn" style="width:auto;flex:1;">Save Expense</button>
+        <button class="ghost-btn" id="cancelExpenseBtn" style="flex:0 0 auto;">Cancel</button>
+      </div>
+    </div>
+
+    <div id="personalCategories"></div>
+    <div class="top-actions">
+      <button class="ghost-btn" id="resetPersonalBtn">Clear all personal expenses</button>
+    </div>
+  </div>
+
+  <div class="panel" id="panel-business">
+    <div class="card card-hero">
+      <div class="card-header"><h3>Add / Update a Month <button class="help-btn" onclick="openCardInfo('businessMonth')" aria-label="What is this?" title="What is this?">?</button></h3></div>
+      <div class="form-grid">
+        <div><label>Month</label><select id="biz-month-select"></select></div>
+        <div><label>Year</label><select id="biz-year-select"></select></div>
+      </div>
+      <div class="form-grid">
+        <div class="full"><button class="action-btn" id="pullMonthBtn">Pull from Job Tracker</button></div>
+      </div>
+      <div class="note" id="pullDiagnosticNote" style="margin-top:-4px;"></div>
+      <div class="form-grid">
+        <div><label>Revenue <span class="col-hint" id="revSourceHint"></span></label><input type="number" inputmode="decimal" id="biz-revenue" placeholder="0"></div>
+        <div><label>Business Expenses <span class="col-hint" id="expSourceHint"></span></label><input type="number" inputmode="decimal" id="biz-expenses" placeholder="0"></div>
+        <div><label>Fuel / Mileage <span class="col-hint" id="fuelSourceHint"></span></label><input type="number" inputmode="decimal" id="biz-fuel" placeholder="0"></div>
+        <div><label>Other Expenses</label><input type="number" inputmode="decimal" id="biz-other" placeholder="0"></div>
+        <div><label>Owner Draws</label><input type="number" inputmode="decimal" id="biz-draws" placeholder="0"></div>
+        <div class="full"><label>Cash in Business Account</label><input type="number" inputmode="decimal" id="biz-cash" placeholder="0"></div>
+      </div>
+      <button class="action-btn" id="addMonthBtn">Save Month</button>
+      <div class="note" id="bizFormNote"></div>
+    </div>
+
+    <div class="card">
+      <div class="card-header"><h3>Month over Month <button class="help-btn" onclick="openCardInfo('momComparison')" aria-label="What is this?" title="What is this?">?</button></h3></div>
+      <div class="grand-totals" id="momStats"></div>
+      <div class="note" id="momNote"></div>
+    </div>
+
+    <div class="card">
+      <div class="card-header"><h3>Year over Year <button class="help-btn" onclick="openCardInfo('yoyComparison')" aria-label="What is this?" title="What is this?">?</button></h3></div>
+      <div class="grand-totals" id="yoyStats"></div>
+      <div class="note" id="yoyNote"></div>
+    </div>
+
+    <div class="card">
+      <div class="card-header"><h3>Tax Set-Aside <button class="help-btn" onclick="openCardInfo('taxSetAside')" aria-label="What is this?" title="What is this?">?</button></h3></div>
+      <div class="form-grid">
+        <div class="full"><label>Set-Aside Rate (%)</label><input type="number" id="taxSetAsideRate" min="0" max="60" step="1" inputmode="decimal"></div>
+      </div>
+      <div class="note" id="taxDueDateNote" style="border-top:1px solid var(--border-soft); padding-top:10px; margin-bottom:12px;"></div>
+      <div class="grand-totals" id="taxSetAsideStats"></div>
+      <div class="note" id="taxSetAsideNote"></div>
+    </div>
+
+    <div class="card">
+      <div class="card-header"><h3>Monthly History</h3></div>
+      <div class="table-scroll">
+        <table class="month-table">
+          <thead><tr><th>Month</th><th>Revenue</th><th>Expenses</th><th>Net Profit</th><th>Draws</th><th>Cash</th><th></th></tr></thead>
+          <tbody id="monthTableBody"></tbody>
+        </table>
+      </div>
+      <div class="empty-state" id="noMonthsNote" style="display:none;">
+        <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M3 9h18M8 2v4M16 2v4"/><circle cx="8" cy="14" r="1.2" fill="currentColor" stroke="none"/></svg>
+        <div class="empty-title">No months logged yet</div>
+        <div class="empty-sub">Pick a month above and tap "Pull from Job Tracker" to bring in your first one.</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="panel" id="panel-networth">
+    <div class="card card-hero">
+      <div class="card-header"><h3>Total Net Worth <button class="help-btn" onclick="openCardInfo('netWorth')" aria-label="What is this?" title="What is this?">?</button></h3></div>
+      <div class="grand-totals" id="netWorthStats"></div>
+      <div class="note" id="netWorthNote"></div>
+    </div>
+
+    <div class="card">
+      <div class="card-header"><h3>Emergency Fund <button class="help-btn" onclick="openCardInfo('emergencyFund')" aria-label="What is this?" title="What is this?">?</button></h3></div>
+      <div class="form-grid">
+        <div class="full"><label>Current Balance</label><input type="number" id="ef-balance" placeholder="0" inputmode="decimal"></div>
+      </div>
+      <div class="progress-track"><div class="progress-fill" id="efProgress" style="width:0%;"></div></div>
+      <div class="progress-labels"><span>0</span><span id="efTargetLabel">6mo target</span><span id="ef12Label">12mo</span></div>
+      <div class="note" id="efNote"></div>
+    </div>
+
+    <div class="card">
+      <div class="card-header"><h3>Debts <button class="help-btn" onclick="openCardInfo('debts')" aria-label="What is this?" title="What is this?">?</button></h3></div>
+      <div id="debtsList"></div>
+      <div class="top-actions">
+        <button class="action-btn" id="openAddDebtBtn">+ Add Debt</button>
+      </div>
+    </div>
+
+    <div class="card form-card" id="debtFormCard">
+      <div class="card-header"><h3 id="debtFormTitle">Add Debt</h3></div>
+      <div class="form-grid">
+        <div class="full"><label>Name</label><input type="text" id="debt-name" placeholder="e.g. Truck loan, Credit card"></div>
+        <div><label>Current Balance</label><input type="number" inputmode="decimal" id="debt-balance" placeholder="0"></div>
+        <div><label>Minimum Payment (optional)</label><input type="number" inputmode="decimal" id="debt-minpayment" placeholder="0"></div>
+      </div>
+      <div class="form-actions">
+        <button class="action-btn" id="saveDebtBtn" style="width:auto;flex:1;">Save Debt</button>
+        <button class="ghost-btn" id="cancelDebtBtn" style="flex:0 0 auto;">Cancel</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="panel" id="panel-runway">
+    <div class="card card-hero">
+      <div class="card-header"><h3>Overview</h3></div>
+      <div class="grand-totals" id="runwayExpenseTotals"></div>
+    </div>
+
+    <div class="card">
+      <div class="card-header"><h3>Income Picture <button class="help-btn" onclick="openCardInfo('incomePicture')" aria-label="What is this?" title="What is this?">?</button></h3></div>
+      <div class="grand-totals" id="incomePictureStats"></div>
+      <div class="estimate-headline" id="supplementHeadline">—</div>
+      <div class="note" id="supplementNote"></div>
+    </div>
+
+    <div class="card card-hero">
+      <div class="card-header"><h3>Break-Even Point <button class="help-btn" onclick="openCardInfo('breakEven')" aria-label="What is this?" title="What is this?">?</button></h3></div>
+      <div class="grand-totals" id="breakEvenStats"></div>
+      <div class="estimate-headline" id="breakEvenHeadline">—</div>
+      <div class="note" id="breakEvenNote"></div>
+    </div>
+
+    <div class="card">
+      <div class="card-header"><h3>Accounts Receivable <button class="help-btn" onclick="openCardInfo('accountsReceivable')" aria-label="What is this?" title="What is this?">?</button></h3></div>
+      <div class="grand-totals" id="arStats"></div>
+      <div class="note" id="arNote"></div>
+    </div>
+
+    <div class="card">
+      <div class="card-header"><h3>Business Trend <button class="help-btn" onclick="openCardInfo('businessTrend')" aria-label="What is this?" title="What is this?">?</button></h3></div>
+      <div id="trendStats" class="grand-totals"></div>
+      <div class="estimate-headline" id="quitEstimate">—</div>
+      <div class="note" id="quitEstimateNote"></div>
+    </div>
+
+    <div class="card">
+      <div class="card-header"><h3>Net Profit Trend <button class="help-btn" onclick="openCardInfo('trendChart')" aria-label="What is this?" title="What is this?">?</button></h3></div>
+      <canvas id="trendChart" height="140" style="width:100%;display:block;"></canvas>
+      <div class="note" id="trendChartNote"></div>
+    </div>
+
+    <div class="card">
+      <div class="card-header"><h3>Safe Draw Calculator <button class="help-btn" onclick="openCardInfo('safeDraw')" aria-label="What is this?" title="What is this?">?</button></h3></div>
+      <div class="form-grid">
+        <div><label>Months of buffer to keep in the account</label><input type="number" inputmode="decimal" id="drawBufferMonths" value="3" min="0" step="0.5"></div>
+      </div>
+      <div class="grand-totals" id="safeDrawOutput"></div>
+    </div>
+
+    <div class="card">
+      <div class="card-header"><h3>PDF Report <button class="help-btn" onclick="openCardInfo('pdfReport')" aria-label="What is this?" title="What is this?">?</button></h3></div>
+      <button class="action-btn" id="downloadPdfBtn">Download PDF Report</button>
+      <div class="note" id="pdfReportNote"></div>
+    </div>
+
+    <div class="card">
+      <div class="card-header"><h3>Data Management <button class="help-btn" onclick="openCardInfo('backupRestore')" aria-label="What is this?" title="What is this?">?</button></h3></div>
+      <div class="top-actions">
+        <button class="ghost-btn" id="exportBackupBtn">Download Backup File</button>
+        <button class="ghost-btn" id="restoreBackupBtn">Restore from File</button>
+      </div>
+      <input type="file" id="restoreFileInput" accept="application/json" style="display:none;">
+      <div class="note" id="backupNote"></div>
+      <div class="top-actions" style="margin-top:10px;">
+        <button class="ghost-btn" id="resetAllBtn">Reset all data</button>
+      </div>
+    </div>
+  </div>
+</main>
+
+<div class="print-only" id="printReport"></div>
+
+<script>
+// ---------------------------------------------------------------------------
+// window.storage shim -- the get/set calls below were written against
+// Claude's Artifacts persistent-storage API, which only exists inside
+// Claude's own rendering environment. Once this file is a real static page
+// on Triple H's hosting, opened in an ordinary browser, `window.storage`
+// doesn't exist at all -- every call would throw. This shim gives it the
+// exact same async {key, value, shared} shape, backed by real localStorage,
+// so none of the loadAll()/save*() functions below need to change.
+// Keys are prefixed "rd_" since this will likely share an origin with the
+// rest of the Triple H site, whose own tools use a "th_" prefix -- this
+// keeps the two localStorage namespaces from ever colliding.
+// Per-device only, by design: no cross-device sync, no Supabase wiring,
+// kept fully separate from the rest of the site's sync infrastructure.
+window.storage = {
+  async get(key) {
+    try {
+      const raw = localStorage.getItem('rd_' + key);
+      if (raw === null) return null;
+      return { key, value: raw, shared: false };
+    } catch (e) { return null; }
+  },
+  async set(key, value) {
+    try {
+      localStorage.setItem('rd_' + key, value);
+      return { key, value, shared: false };
+    } catch (e) { return null; }
+  }
+};
+
+const FULL_HELP_TITLE = 'How to Use: Runway Dashboard';
+let FULL_HELP_BODY = ''; // captured on first load from the modal's own initial markup
+
+function openInfoModal(title, bodyHtml){
+  document.getElementById('helpModalTitle').textContent = title;
+  document.getElementById('helpModalBody').innerHTML = bodyHtml;
+  document.getElementById('helpModalOverlay').classList.add('is-open');
+}
+function openHelpModal(){
+  openInfoModal(FULL_HELP_TITLE, FULL_HELP_BODY);
+}
+function closeHelpModal(){
+  const overlay = document.getElementById('helpModalOverlay');
+  if(overlay) overlay.classList.remove('is-open');
+}
+
+// A brief non-blocking confirmation for settings that previously saved
+// silently -- changing the Savings % or Tax Set-Aside Rate updates numbers
+// all over the page, but nothing actually confirmed the setting itself
+// was saved.
+function showToast(message){
+  let container = document.getElementById('toastContainer');
+  if(!container){
+    container = document.createElement('div');
+    container.id = 'toastContainer';
+    container.className = 'toast-container';
+    document.body.appendChild(container);
+  }
+  const toast = document.createElement('div');
+  toast.className = 'toast';
+  toast.textContent = message;
+  container.appendChild(toast);
+  requestAnimationFrame(() => toast.classList.add('is-shown'));
+  setTimeout(() => {
+    toast.classList.remove('is-shown');
+    setTimeout(() => toast.remove(), 200);
+  }, 2200);
+}
+document.addEventListener('keydown', (e) => {
+  if(e.key === 'Escape') closeHelpModal();
+});
+FULL_HELP_BODY = document.getElementById('helpModalBody').innerHTML;
+
+const CARD_INFO = {
+  safeToSpend: {
+    title: 'Safe to Spend',
+    body: `<p>This shows what's actually safe to spend each month.</p>
+      <p>We take your income, subtract your real bills, set aside a percentage for savings, set aside an estimate for taxes (based on your latest logged business month), and whatever's left is safe to spend.</p>
+      <p>Change the Savings Target here, or the Tax Set-Aside Rate on the Business Dashboard, to adjust either \u2014 everything updates right away.</p>`,
+  },
+  personalIncome: {
+    title: 'Personal Income',
+    body: `<p>Day-job wages, a spouse's income, anything that's not from Triple H.</p>
+      <p>This is what your bills get compared against everywhere else on this page.</p>`,
+  },
+  businessMonth: {
+    title: 'Add / Update a Month',
+    body: `<p>Pick a month, tap "Pull from Job Tracker," and Revenue, Business Expenses, and Fuel fill in automatically from what you've already logged there \u2014 Revenue now includes both invoices and any manual income entries logged in Job Tracker's Income tab.</p>
+      <p>Everything's still editable after it fills in. Other Expenses, Owner Draws, and Cash aren't tracked anywhere else, so those three always need to be typed in by hand.</p>`,
+  },
+  emergencyFund: {
+    title: 'Emergency Fund',
+    body: `<p>Tracks your savings against two goals: 6 months of bills, and 12 months of bills.</p>
+      <p>The bar fills in as you get closer to the 12-month goal.</p>`,
+  },
+  debts: {
+    title: 'Debts',
+    body: `<p>Loans, credit cards, anything you owe -- separate from your day-to-day bills, since these aren't monthly expenses so much as balances working down over time.</p>
+      <p>Subtracted from your cash on hand to get a true net worth figure, instead of just showing what's sitting in accounts.</p>`,
+  },
+  incomePicture: {
+    title: 'Income Picture',
+    body: `<p>Shows whether your day-job income alone covers your bills.</p>
+      <p>If it doesn't, this shows how much of the gap the business is currently making up \u2014 based on what it's actually earned lately, not a guess.</p>`,
+  },
+  breakEven: {
+    title: 'Break-Even Point',
+    body: `<p>The one combined number: how much revenue the business actually needs this month.</p>
+      <p>That's the business's own costs (expenses and fuel), plus whatever's left over after your personal income covers your personal bills. Compares that against what the business actually brought in, so you can see at a glance whether the month was above or below what it needed to be.</p>`,
+  },
+  accountsReceivable: {
+    title: 'Accounts Receivable',
+    body: `<p>Money you've invoiced but haven't actually collected yet -- read straight from Job Tracker's invoice log and Workspace's paid/unpaid tracking.</p>
+      <p>Deliberately kept separate from Break-Even and Safe-to-Spend, since those are about cash you actually have on hand right now. This is a reminder that revenue on paper isn't the same as money in the bank until it's actually paid.</p>`,
+  },
+  businessTrend: {
+    title: 'Business Trend',
+    body: `<p>Looks at your last few logged business months and estimates how many more months, at that pace, until the business's profit alone could cover your bills \u2014 no day job needed.</p>
+      <p>This is a rough guide based on your own numbers, not a promise. It changes every time you log a new month.</p>`,
+  },
+  safeDraw: {
+    title: 'Safe Draw Calculator',
+    body: `<p>Shows how much cash you could pull out of the business right now while still leaving a cushion in the account.</p>
+      <p>Set how many months of bills you want to keep sitting in the business as a buffer, and this tells you what's left over that's safe to take out.</p>`,
+  },
+  backupRestore: {
+    title: 'Data Management',
+    body: `<p>Download Backup File saves everything on this page as one file \u2014 a safety net separate from the automatic cloud sync.</p>
+      <p>Worth doing before clearing your browser data or switching devices. Reset all data below wipes everything on this device and starts over.</p>`,
+  },
+  pdfReport: {
+    title: 'PDF Report',
+    body: `<p>Puts together a clean one-page summary of your income, bills, savings, emergency fund, and business numbers \u2014 the same numbers shown on this page, laid out for printing or saving as a PDF.</p>
+      <p>Tap the button, then use your browser's print dialog to choose "Save as PDF" instead of printing.</p>`,
+  },
+  trendChart: {
+    title: 'Net Profit Trend',
+    body: `<p>A simple bar chart of your business's net profit for each month you've logged, so you can see at a glance whether it's climbing, flat, or dropping.</p>
+      <p>The orange line marks your monthly bills \u2014 bars that reach it or go above it are months the business alone covered your expenses.</p>`,
+  },
+  momComparison: {
+    title: 'Month over Month',
+    body: `<p>Compares your two most recently logged months so you can see the trend without doing the math yourself.</p>
+      <p>Green with an up arrow means it grew since last time; otherwise it fell or stayed flat.</p>`,
+  },
+  taxSetAside: {
+    title: 'Tax Set-Aside',
+    body: `<p>A rough estimate of what to set aside for taxes, based on a percentage of your <strong>revenue</strong> \u2014 not profit, since taxes are owed on what came in.</p>
+      <p>Shows the next IRS quarterly estimated-tax due date and how many days away it is, plus your latest month and a running total for the year. This is a planning estimate, not tax advice \u2014 talk to an accountant for your actual number.</p>`,
+  },
+  yoyComparison: {
+    title: 'Year over Year',
+    body: `<p>Compares your latest logged month to the <strong>same month last year</strong> \u2014 July vs. last July, not just whatever month you happened to log before this one.</p>
+      <p>This matters for seasonal work: a slow June right after a busy May doesn't tell you much, but June vs. last June does. Fills in once you've logged a full year.</p>`,
+  },
+  netWorth: {
+    title: 'Total Net Worth',
+    body: `<p>Adds your personal savings and the business's cash on hand together, so you can see your overall position in one number.</p>
+      <p>This is cash on hand, not a complete net worth figure \u2014 it doesn't subtract any debts you owe.</p>`,
+  },
+};
+function openCardInfo(key){
+  const info = CARD_INFO[key];
+  if(info) openInfoModal(info.title, info.body);
+}
+
+
+const CATEGORIES = [
+  { key:"housing", name:"Housing", color:"#e0554d", suggestions:["Mortgage","HOA","Property Taxes","Homeowners Insurance"] },
+  { key:"utilities", name:"Utilities", color:"#3aa0ff", suggestions:["Power","Water","Sewer","Trash","Internet","Cell Phone"] },
+  { key:"transportation", name:"Transportation", color:"#2dd4bf", suggestions:["Fuel","Vehicle Payment","Insurance","Maintenance","Registration"] },
+  { key:"food", name:"Food", color:"#f59e0b", suggestions:["Groceries","Restaurants","Snacks"] },
+  { key:"health", name:"Health", color:"#a78bfa", suggestions:["Health Insurance","Prescriptions","Medical Expenses"] },
+  { key:"debt", name:"Debt", color:"#ef4444", suggestions:["Credit Cards","Personal Loans","Solar Loan","Other Payments"] },
+  { key:"family", name:"Family", color:"#f472b6", suggestions:["Child Support","Kids' Activities","School Expenses"] },
+  { key:"business_personal", name:"Business (paid personally)", color:"#d97706", suggestions:["Insurance","Licenses","Software","Advertising","Tools","Fuel","Supplies"] },
+  { key:"savings", name:"Savings", color:"#34d399", suggestions:["Emergency Fund","Retirement","Taxes"] },
+  { key:"entertainment", name:"Entertainment", color:"#818cf8", suggestions:["Streaming","Hobbies","Eating Out","Vacations"] },
+  { key:"misc", name:"Miscellaneous", color:"#94a3b8", suggestions:["Clothing","Gifts","Household Items","Unexpected Expenses"] },
+];
+const FREQ_LABEL = {weekly:"Weekly", biweekly:"Biweekly (every 2 weeks)", semimonthly:"Semi-monthly (twice a month)", monthly:"Monthly", quarterly:"Quarterly", annually:"Annually"};
+
+// Local copy, not imported -- this file is a standalone artifact with
+// its own self-contained helpers throughout (escapeHtml, fmt, etc.)
+// rather than loading the other tool pages' shared tools-common.js,
+// so this matches that same pattern instead of creating a cross-file
+// dependency that wouldn't actually resolve here.
+function animateRowExit(rowElement, onComplete) {
+  if (!rowElement) { onComplete(); return; }
+  const reduceMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  if (reduceMotion) { onComplete(); return; }
+  const height = rowElement.scrollHeight;
+  rowElement.style.maxHeight = height + 'px';
+  rowElement.style.overflow = 'hidden';
+  rowElement.style.transition = 'opacity .22s ease, max-height .22s ease, margin .22s ease, padding .22s ease, border-width .22s ease';
+  requestAnimationFrame(() => {
+    requestAnimationFrame(() => {
+      rowElement.style.opacity = '0';
+      rowElement.style.maxHeight = '0px';
+      rowElement.style.marginTop = '0';
+      rowElement.style.marginBottom = '0';
+      rowElement.style.paddingTop = '0';
+      rowElement.style.paddingBottom = '0';
+      rowElement.style.borderWidth = '0';
+    });
+  });
+  setTimeout(onComplete, 230);
+}
+
+let expenses = [];
+let budgetSettings = { savingsPct: 20, taxSetAsideRate: 25 };
+let income = [];
+let months = [];
+let efBalance = 0;
+let editingId = null;
+let justAddedExpenseId = null;
+let justAddedMonthKey = null;
+let editingIncomeId = null;
+let justAddedIncomeId = null;
+let debts = [];
+let editingDebtId = null;
+
+function monthlyEquiv(amount, freq){
+  amount = Number(amount) || 0;
+  switch(freq){
+    case 'weekly': return amount * 52 / 12;
+    case 'biweekly': return amount * 26 / 12;
+    case 'semimonthly': return amount * 2;
+    case 'quarterly': return amount / 3;
+    case 'annually': return amount / 12;
+    default: return amount;
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Variable expenses -- bills that change month to month (utilities, etc.)
+// instead of one guessed fixed number. Once you've logged at least one
+// real month, this uses the average of up to the last 3 logged months --
+// same smoothing approach already used for the business trend elsewhere in
+// this file, so there's one consistent mental model instead of two. Before
+// any real month is logged, it falls back to the "starting estimate" typed
+// into the Minimum field when the item was created.
+// ---------------------------------------------------------------------------
+function variableCurrentAmount(item){
+  const actuals = item.actuals || {};
+  const monthsLogged = Object.keys(actuals).sort().reverse().slice(0,3);
+  if(monthsLogged.length === 0) return Number(item.min) || 0;
+  const sum = monthsLogged.reduce((s,m) => s + (Number(actuals[m])||0), 0);
+  return sum / monthsLogged.length;
+}
+function variableHint(item){
+  const actuals = item.actuals || {};
+  const count = Object.keys(actuals).length;
+  if(count === 0) return 'estimate — no bills logged yet';
+  const n = Math.min(count, 3);
+  return `avg of last ${n} logged month${n===1?'':'s'}`;
+}
+// The real, actual monthly amount for an item -- what it truly costs,
+// regardless of Fixed vs Variable. This is the "Minimum" number.
+// The real monthly amount for an item -- what it truly costs, whether
+// Fixed or Variable. One number, no buffered "comfortable" variant.
+function itemMonthlyAmount(item){
+  if(item.variable) return variableCurrentAmount(item);
+  return monthlyEquiv(item.min, item.frequency);
+}
+
+async function loadAll(){
+  try{
+    const ex = await window.storage.get('personal-expenses');
+    expenses = ex ? JSON.parse(ex.value) : [];
+  }catch(e){ expenses = []; }
+
+  try{
+    const inc = await window.storage.get('personal-income');
+    income = inc ? JSON.parse(inc.value) : [];
+  }catch(e){ income = []; }
+
+  try{
+    const bs = await window.storage.get('budget-settings');
+    const parsed = bs ? JSON.parse(bs.value) : null;
+    budgetSettings = {
+      savingsPct: (parsed && parsed.savingsPct !== undefined) ? Number(parsed.savingsPct) : 20,
+      taxSetAsideRate: (parsed && parsed.taxSetAsideRate !== undefined) ? Number(parsed.taxSetAsideRate) : 25,
+    };
+  }catch(e){ budgetSettings = { savingsPct: 20, taxSetAsideRate: 25 }; }
+  document.getElementById('settingSavingsPct').value = budgetSettings.savingsPct;
+  document.getElementById('taxSetAsideRate').value = budgetSettings.taxSetAsideRate;
+  populateMonthYearSelects();
+
+  try{
+    const mo = await window.storage.get('business-months');
+    months = mo ? JSON.parse(mo.value) : [];
+  }catch(e){ months = []; }
+
+  try{
+    const ef = await window.storage.get('emergency-fund');
+    efBalance = ef ? JSON.parse(ef.value).balance : 0;
+  }catch(e){ efBalance = 0; }
+
+  try{
+    const db = await window.storage.get('debts');
+    debts = db ? JSON.parse(db.value) : [];
+  }catch(e){ debts = []; }
+
+  document.getElementById('loading').style.display = 'none';
+  populateCategorySelect();
+  renderPersonal();
+  renderIncome();
+  renderMonths();
+  renderDebts();
+  renderNetWorth();
+  renderRunway();
+}
+
+async function saveBudgetSettings(){ try{ await window.storage.set('budget-settings', JSON.stringify(budgetSettings)); if(typeof scheduleSync === 'function') scheduleSync(); }catch(e){ console.error(e); } }
+document.getElementById('settingSavingsPct').addEventListener('change', async (e) => {
+  budgetSettings.savingsPct = Number(e.target.value) || 0;
+  await saveBudgetSettings();
+  renderPersonal();
+  renderRunway();
+  showToast('Savings target saved.');
+});
+document.getElementById('taxSetAsideRate').addEventListener('change', async (e) => {
+  budgetSettings.taxSetAsideRate = Number(e.target.value) || 0;
+  await saveBudgetSettings();
+  renderMonths();
+  renderPersonalTotals();
+  showToast('Tax set-aside rate saved.');
+});
+
+async function saveExpenses(){ try{ await window.storage.set('personal-expenses', JSON.stringify(expenses)); if(typeof scheduleSync === 'function') scheduleSync(); }catch(e){ console.error(e); } }
+async function saveIncome(){ try{ await window.storage.set('personal-income', JSON.stringify(income)); if(typeof scheduleSync === 'function') scheduleSync(); }catch(e){ console.error(e); } }
+async function saveMonths(){ try{ await window.storage.set('business-months', JSON.stringify(months)); if(typeof scheduleSync === 'function') scheduleSync(); }catch(e){ console.error(e); } }
+async function saveEF(){ try{ await window.storage.set('emergency-fund', JSON.stringify({balance: efBalance})); if(typeof scheduleSync === 'function') scheduleSync(); }catch(e){ console.error(e); } }
+async function saveDebts(){ try{ await window.storage.set('debts', JSON.stringify(debts)); if(typeof scheduleSync === 'function') scheduleSync(); }catch(e){ console.error(e); } }
+
+let justAddedDebtId = null;
+function renderDebts(){
+  const container = document.getElementById('debtsList');
+  if(debts.length === 0){
+    container.innerHTML = `<div class="empty-state">
+      <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2" y="6" width="20" height="14" rx="2"/><path d="M2 10h20"/><circle cx="17" cy="14.5" r="1.4" fill="currentColor" stroke="none"/></svg>
+      <div class="empty-title">No debts logged</div>
+      <div class="empty-sub">Loans, credit cards, anything you owe -- add one above if you want it factored into your true net worth.</div>
+    </div>`;
+    return;
+  }
+  container.innerHTML = debts.map(d => `
+    <div class="row ${d.id === justAddedDebtId ? 'list-row-enter' : ''}" data-debt-row-id="${d.id}">
+      <div class="row-main">
+        <div class="row-label">${d.name}</div>
+        ${d.minPayment ? `<div class="row-freq">Min payment ${fmt(Number(d.minPayment)||0)}/mo</div>` : ''}
+      </div>
+      <div class="row-amounts"><b>${fmt(Number(d.balance)||0)}</b></div>
+      <div class="row-actions">
+        <button class="icon-btn" data-edit-debt="${d.id}" title="Edit">Edit</button>
+        <button class="icon-btn danger" data-delete-debt="${d.id}" title="Delete">Del</button>
+      </div>
+    </div>
+  `).join('');
+  justAddedDebtId = null;
+  container.querySelectorAll('[data-edit-debt]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const item = debts.find(d => d.id === btn.dataset.editDebt);
+      if(item) openDebtForm(item);
+    });
+  });
+  container.querySelectorAll('[data-delete-debt]').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      if(!confirm('Delete this debt?')) return;
+      const row = document.querySelector('[data-debt-row-id="' + btn.dataset.deleteDebt + '"]');
+      animateRowExit(row, async () => {
+        debts = debts.filter(d => d.id !== btn.dataset.deleteDebt);
+        await saveDebts();
+        renderDebts();
+        renderNetWorth();
+      });
+    });
+  });
+}
+
+function openDebtForm(prefill){
+  document.getElementById('debtFormCard').classList.add('open');
+  document.getElementById('debtFormTitle').textContent = prefill ? 'Edit Debt' : 'Add Debt';
+  if(prefill){
+    editingDebtId = prefill.id;
+    document.getElementById('debt-name').value = prefill.name;
+    document.getElementById('debt-balance').value = prefill.balance;
+    document.getElementById('debt-minpayment').value = prefill.minPayment || '';
+  } else {
+    editingDebtId = null;
+    document.getElementById('debt-name').value = '';
+    document.getElementById('debt-balance').value = '';
+    document.getElementById('debt-minpayment').value = '';
+  }
+  document.getElementById('debtFormCard').scrollIntoView({behavior:'smooth', block:'center'});
+}
+function closeDebtForm(){
+  document.getElementById('debtFormCard').classList.remove('open');
+  editingDebtId = null;
+}
+document.getElementById('openAddDebtBtn').addEventListener('click', () => openDebtForm(null));
+document.getElementById('cancelDebtBtn').addEventListener('click', closeDebtForm);
+document.getElementById('saveDebtBtn').addEventListener('click', async () => {
+  const name = document.getElementById('debt-name').value.trim();
+  const balance = Number(document.getElementById('debt-balance').value) || 0;
+  const minPayment = Number(document.getElementById('debt-minpayment').value) || 0;
+  if(!name){ alert('Give this debt a name.'); return; }
+
+  const wasEditing = !!editingDebtId;
+  let newId = null;
+  if(editingDebtId){
+    const idx = debts.findIndex(d => d.id === editingDebtId);
+    if(idx > -1) debts[idx] = {...debts[idx], name, balance, minPayment};
+  } else {
+    newId = 'debt_' + Date.now() + '_' + Math.random().toString(36).slice(2,7);
+    debts.push({ id: newId, name, balance, minPayment });
+  }
+  await saveDebts();
+  document.getElementById('debt-name').value = '';
+  document.getElementById('debt-balance').value = '';
+  document.getElementById('debt-minpayment').value = '';
+  closeDebtForm();
+  justAddedDebtId = newId;
+  renderDebts();
+  renderNetWorth();
+  showToast(wasEditing ? 'Debt updated successfully!' : 'Debt added successfully!');
+});
+
+function fmt(n){ return '$' + (Math.round(n*100)/100).toLocaleString(undefined,{minimumFractionDigits:0, maximumFractionDigits:0}); }
+
+// Animates a dollar-formatted number counting up or down to its new value,
+// instead of just snapping. Used sparingly -- only on the handful of
+// headline numbers a person actually watches change (Safe to Spend, Net
+// Worth, Safe to Draw), not on every stat box, since that'd be more
+// distracting than delightful.
+//
+// The stat boxes these live in get fully torn down and rebuilt via
+// innerHTML on every render, so the DOM element itself has no memory of
+// its previous value -- prevNum has to be read from the old element
+// *before* it gets replaced, then passed in here explicitly.
+function animateStatValue(id, targetNum, prevNum){
+  const el = document.getElementById(id);
+  if(!el) return;
+  const reduceMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  if(reduceMotion || prevNum === null || prevNum === undefined || Math.round(prevNum) === Math.round(targetNum)){
+    el.textContent = fmt(targetNum);
+    return;
+  }
+  el.textContent = fmt(prevNum);
+  const duration = 450;
+  const start = performance.now();
+  function step(now){
+    const progress = Math.min(1, (now - start) / duration);
+    const eased = 1 - Math.pow(1 - progress, 3);
+    el.textContent = fmt(prevNum + (targetNum - prevNum) * eased);
+    if(progress < 1) requestAnimationFrame(step);
+    else el.textContent = fmt(targetNum);
+  }
+  requestAnimationFrame(step);
+}
+// Reads the current numeric value out of a stat box's value element,
+// before it's about to be replaced -- returns null if it didn't exist
+// yet (first render), which animateStatValue treats as "don't animate."
+function readPrevStatValue(id){
+  const el = document.getElementById(id);
+  if(!el) return null;
+  return parseFloat((el.textContent || '').replace(/[^0-9.-]/g, '')) || 0;
+}
+
+function populateCategorySelect(){
+  const sel = document.getElementById('exp-category');
+  sel.innerHTML = CATEGORIES.map(c => '<option value="'+c.key+'">'+c.name+'</option>').join('');
+  renderSuggestions();
+}
+function renderSuggestions(){
+  const catKey = document.getElementById('exp-category').value;
+  const cat = CATEGORIES.find(c => c.key === catKey);
+  const box = document.getElementById('exp-suggestions');
+  box.innerHTML = (cat ? cat.suggestions : []).map(s => '<span class="chip" data-name="'+s+'">'+s+'</span>').join('');
+  box.querySelectorAll('.chip').forEach(chip => {
+    chip.addEventListener('click', () => { document.getElementById('exp-name').value = chip.dataset.name; });
+  });
+}
+document.getElementById('exp-category').addEventListener('change', renderSuggestions);
+
+function categoryMonthlyTotal(catKey){
+  return expenses.filter(e => e.category === catKey)
+    .reduce((s,e) => s + itemMonthlyAmount(e), 0);
+}
+function grandTotal(){
+  return expenses.reduce((s,e) => s + itemMonthlyAmount(e), 0);
+}
+function totalMonthlyIncome(){
+  return income.reduce((s,i) => s + monthlyEquiv(i.amount, i.frequency), 0);
+}
+
+function openForm(prefill){
+  document.getElementById('expenseFormCard').classList.add('open');
+  document.getElementById('expenseFormTitle').textContent = prefill ? 'Edit Expense' : 'Add Expense';
+  if(prefill){
+    editingId = prefill.id;
+    document.getElementById('exp-category').value = prefill.category;
+    document.getElementById('exp-name').value = prefill.name;
+    document.getElementById('exp-type').value = prefill.variable ? 'variable' : 'fixed';
+    document.getElementById('exp-frequency').value = prefill.frequency || 'monthly';
+    document.getElementById('exp-min').value = prefill.min;
+  } else {
+    editingId = null;
+    document.getElementById('exp-name').value = '';
+    document.getElementById('exp-type').value = 'fixed';
+    document.getElementById('exp-frequency').value = 'monthly';
+    document.getElementById('exp-min').value = '';
+  }
+  updateExpenseTypeFields();
+  renderSuggestions();
+  document.getElementById('expenseFormCard').scrollIntoView({behavior:'smooth', block:'center'});
+}
+function closeForm(){
+  document.getElementById('expenseFormCard').classList.remove('open');
+  editingId = null;
+}
+
+// Fixed items need Frequency + Amount. Variable items just need a
+// starting estimate (reusing the same field, relabeled) -- actual amounts
+// get logged month by month from the category card instead.
+function updateExpenseTypeFields(){
+  const isVariable = document.getElementById('exp-type').value === 'variable';
+  document.getElementById('fixedFieldsRow1').style.display = isVariable ? 'none' : '';
+  document.getElementById('exp-min-label').textContent = isVariable ? 'Starting estimate (until you log a real bill)' : 'Amount';
+  document.getElementById('expTypeHint').textContent = isVariable
+    ? 'Once you save this, log each month\'s actual bill from the category card below \u2014 this estimate is only used until real numbers exist.'
+    : 'Amount is per the frequency you pick above \u2014 it\'s converted to a monthly figure automatically.';
+}
+document.getElementById('exp-type').addEventListener('change', updateExpenseTypeFields);
+
+document.getElementById('openAddExpenseBtn').addEventListener('click', () => openForm(null));
+document.getElementById('cancelExpenseBtn').addEventListener('click', closeForm);
+
+document.getElementById('saveExpenseBtn').addEventListener('click', async () => {
+  const category = document.getElementById('exp-category').value;
+  const name = document.getElementById('exp-name').value.trim();
+  const variable = document.getElementById('exp-type').value === 'variable';
+  const frequency = variable ? 'monthly' : document.getElementById('exp-frequency').value;
+  const min = Number(document.getElementById('exp-min').value) || 0;
+
+  if(!name){ alert('Give this expense a name.'); return; }
+
+  const wasEditing = !!editingId;
+  let newId = null;
+  if(editingId){
+    const idx = expenses.findIndex(e => e.id === editingId);
+    if(idx > -1) expenses[idx] = {...expenses[idx], category, name, frequency, min, variable};
+  } else {
+    newId = 'exp_' + Date.now() + '_' + Math.random().toString(36).slice(2,7);
+    expenses.push({ id: newId, category, name, frequency, min, variable, actuals: {} });
+  }
+  await saveExpenses();
+  document.getElementById('exp-name').value = '';
+  document.getElementById('exp-min').value = '';
+  closeForm();
+  justAddedExpenseId = newId;
+  renderPersonal();
+  renderRunway();
+  showToast(wasEditing ? 'Expense updated successfully!' : 'Expense added successfully!');
+});
+
+// ---------------------------------------------------------------------------
+// Personal Income -- deliberately a separate list from expenses, not just
+// another category. This is the baseline (day job, etc.) that business
+// income gets measured against on the Runway tab, so it needs to stay a
+// distinct number, not folded into "just another expense category."
+// ---------------------------------------------------------------------------
+function renderIncome(){
+  const container = document.getElementById('incomeList');
+  if(income.length === 0){
+    container.innerHTML = `<div class="empty-state">
+      <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2" y="6" width="20" height="14" rx="2"/><path d="M2 10h20"/><circle cx="17" cy="14.5" r="1.4" fill="currentColor" stroke="none"/></svg>
+      <div class="empty-title">No income sources yet</div>
+      <div class="empty-sub">Add your day job or any other income above to get started.</div>
+    </div>`;
+    return;
+  }
+  container.innerHTML = income.map(item => `
+    <div class="row ${item.id === justAddedIncomeId ? 'list-row-enter' : ''}" data-income-row-id="${item.id}">
+      <div class="row-main">
+        <div class="row-label">${item.name}</div>
+        <div class="row-freq">${FREQ_LABEL[item.frequency]}</div>
+      </div>
+      <div class="row-amounts"><b>${fmt(monthlyEquiv(item.amount, item.frequency))}</b>/mo</div>
+      <div class="row-actions">
+        <button class="icon-btn" data-edit-inc="${item.id}" title="Edit">Edit</button>
+        <button class="icon-btn danger" data-delete-inc="${item.id}" title="Delete">Del</button>
+      </div>
+    </div>
+  `).join('');
+  justAddedIncomeId = null;
+  container.querySelectorAll('[data-edit-inc]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const item = income.find(i => i.id === btn.dataset.editInc);
+      if(item) openIncomeForm(item);
+    });
+  });
+  container.querySelectorAll('[data-delete-inc]').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      if(!confirm('Delete this income source?')) return;
+      const row = document.querySelector('[data-income-row-id="' + btn.dataset.deleteInc + '"]');
+      animateRowExit(row, async () => {
+        income = income.filter(i => i.id !== btn.dataset.deleteInc);
+        await saveIncome();
+        renderIncome();
+        renderPersonal();
+        renderRunway();
+      });
+    });
+  });
+}
+
+function openIncomeForm(prefill){
+  document.getElementById('incomeFormCard').classList.add('open');
+  document.getElementById('incomeFormTitle').textContent = prefill ? 'Edit Income' : 'Add Income';
+  if(prefill){
+    editingIncomeId = prefill.id;
+    document.getElementById('inc-name').value = prefill.name;
+    document.getElementById('inc-frequency').value = prefill.frequency;
+    document.getElementById('inc-amount').value = prefill.amount;
+  } else {
+    editingIncomeId = null;
+    document.getElementById('inc-name').value = '';
+    document.getElementById('inc-frequency').value = 'monthly';
+    document.getElementById('inc-amount').value = '';
+  }
+  document.getElementById('incomeFormCard').scrollIntoView({behavior:'smooth', block:'center'});
+}
+function closeIncomeForm(){
+  document.getElementById('incomeFormCard').classList.remove('open');
+  editingIncomeId = null;
+}
+document.getElementById('openAddIncomeBtn').addEventListener('click', () => openIncomeForm(null));
+document.getElementById('cancelIncomeBtn').addEventListener('click', closeIncomeForm);
+document.getElementById('saveIncomeBtn').addEventListener('click', async () => {
+  const name = document.getElementById('inc-name').value.trim();
+  const frequency = document.getElementById('inc-frequency').value;
+  const amount = Number(document.getElementById('inc-amount').value) || 0;
+  if(!name){ alert('Give this income source a name.'); return; }
+
+  const wasEditing = !!editingIncomeId;
+  let newId = null;
+  if(editingIncomeId){
+    const idx = income.findIndex(i => i.id === editingIncomeId);
+    if(idx > -1) income[idx] = {...income[idx], name, frequency, amount};
+  } else {
+    newId = 'inc_' + Date.now() + '_' + Math.random().toString(36).slice(2,7);
+    income.push({ id: newId, name, frequency, amount });
+  }
+  await saveIncome();
+  document.getElementById('inc-name').value = '';
+  document.getElementById('inc-amount').value = '';
+  closeIncomeForm();
+  justAddedIncomeId = newId;
+  renderIncome();
+  renderPersonal();
+  renderRunway();
+  showToast(wasEditing ? 'Income updated successfully!' : 'Income added successfully!');
+});
+
+function renderPersonal(){
+  const container = document.getElementById('personalCategories');
+  container.innerHTML = '';
+  const usedCategories = CATEGORIES.filter(c => expenses.some(e => e.category === c.key));
+
+  if(usedCategories.length === 0){
+    container.innerHTML = `<div class="card"><div class="empty-state">
+      <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M6 2h12v20l-2-1.5-2 1.5-2-1.5-2 1.5-2-1.5-2 1.5z"/><path d="M9 8h6M9 12h6M9 16h4"/></svg>
+      <div class="empty-title">Nothing here yet</div>
+      <div class="empty-sub">Tap "+ Add Expense" above \u2014 pick a category, name it, and it shows up right here.</div>
+    </div></div>`;
+    renderPersonalTotals();
+    return;
+  }
+
+  usedCategories.forEach(cat => {
+    const items = expenses.filter(e => e.category === cat.key);
+    const total = categoryMonthlyTotal(cat.key);
+    const card = document.createElement('div');
+    card.className = 'card cat-card';
+    card.style.borderLeft = `4px solid ${cat.color}`;
+    card.innerHTML = `
+      <div class="card-header">
+        <h3><span class="cat-dot" style="background:${cat.color};"></span>${cat.name}</h3>
+        <span class="subtotal">${fmt(total)}/mo</span>
+        <button class="cat-add-btn" data-cat="${cat.key}" title="Add to ${cat.name}">+</button>
+      </div>
+      ${items.map(item => item.variable ? `
+        <div class="row ${item.id === justAddedExpenseId ? 'list-row-enter' : ''}" data-expense-row-id="${item.id}">
+          <div class="row-main">
+            <div class="row-label">${item.name} <span class="col-hint">VARIABLE</span></div>
+            <div class="row-freq">${variableHint(item)}</div>
+          </div>
+          <div class="row-amounts"><b>${fmt(itemMonthlyAmount(item))}</b>/mo</div>
+          <div class="row-actions">
+            <input type="number" inputmode="decimal" class="var-log-input" id="varlog-${item.id}" placeholder="This month's bill">
+            <button class="icon-btn" data-log-var="${item.id}" title="Log this month's actual amount">Log</button>
+            <button class="icon-btn danger" data-delete="${item.id}" title="Delete">Del</button>
+          </div>
+        </div>
+      ` : `
+        <div class="row ${item.id === justAddedExpenseId ? 'list-row-enter' : ''}" data-expense-row-id="${item.id}">
+          <div class="row-main">
+            <div class="row-label">${item.name}</div>
+            <div class="row-freq">${FREQ_LABEL[item.frequency]}</div>
+          </div>
+          <div class="row-amounts"><b>${fmt(itemMonthlyAmount(item))}</b>/mo</div>
+          <div class="row-actions">
+            <button class="icon-btn" data-edit="${item.id}" title="Edit">Edit</button>
+            <button class="icon-btn danger" data-delete="${item.id}" title="Delete">Del</button>
+          </div>
+        </div>
+      `).join('')}
+    `;
+    container.appendChild(card);
+  });
+  justAddedExpenseId = null;
+
+  container.querySelectorAll('[data-log-var]').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      const id = btn.dataset.logVar;
+      const input = document.getElementById('varlog-' + id);
+      const amount = Number(input.value);
+      if(!input.value || isNaN(amount)){ input.focus(); return; }
+      const item = expenses.find(e => e.id === id);
+      if(!item) return;
+      if(!item.actuals) item.actuals = {};
+      const monthKey = new Date().toISOString().slice(0,7);
+      item.actuals[monthKey] = amount;
+      await saveExpenses();
+      renderPersonal();
+      renderRunway();
+    });
+  });
+
+  container.querySelectorAll('[data-cat]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      openForm(null);
+      document.getElementById('exp-category').value = btn.dataset.cat;
+      renderSuggestions();
+    });
+  });
+  container.querySelectorAll('[data-edit]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const item = expenses.find(e => e.id === btn.dataset.edit);
+      if(item) openForm(item);
+    });
+  });
+  container.querySelectorAll('[data-delete]').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      if(!confirm('Delete this expense?')) return;
+      const row = document.querySelector('[data-expense-row-id="' + btn.dataset.delete + '"]');
+      animateRowExit(row, async () => {
+        expenses = expenses.filter(e => e.id !== btn.dataset.delete);
+        await saveExpenses();
+        renderPersonal();
+        renderRunway();
+      });
+    });
+  });
+
+  renderPersonalTotals();
+}
+
+function renderPersonalTotals(){
+  renderSafeToSpend(grandTotal());
+}
+
+// The actual waterfall: Income -> Bills & Expenses -> recommended Savings
+// -> whatever's left is genuinely safe to spend.
+function renderSafeToSpend(total){
+  const statsEl = document.getElementById('safeToSpendStats');
+  const headlineEl = document.getElementById('safeToSpendHeadline');
+  const noteEl = document.getElementById('safeToSpendNote');
+  const totalIncome = totalMonthlyIncome();
+  const savingsPct = Number(budgetSettings.savingsPct) || 0;
+  const tax = latestTaxSetAside();
+
+  if(totalIncome === 0){
+    statsEl.innerHTML = '';
+    headlineEl.textContent = 'Add your income below to see this';
+    noteEl.textContent = '';
+    return;
+  }
+
+  const leftover = totalIncome - total;
+  const savings = Math.max(0, leftover) * (savingsPct / 100);
+  const safeToSpend = leftover - savings - tax.amount;
+
+  const prevSafeToSpend = readPrevStatValue('safeToSpendValue');
+
+  statsEl.innerHTML = `
+    <div class="stat-box"><div class="label">Money Coming In</div><div class="value">${fmt(totalIncome)}</div></div>
+    <div class="stat-box"><div class="label">Bills &amp; Expenses</div><div class="value">${fmt(total)}</div></div>
+    <div class="stat-box blue"><div class="label">Put Away for Savings</div><div class="value">${fmt(savings)}</div></div>
+    <div class="stat-box blue"><div class="label">Put Away for Taxes${tax.month ? ' (' + tax.month + ')' : ''}</div><div class="value">${fmt(tax.amount)}</div></div>
+    <div class="stat-box ${safeToSpend>=0?'green':''}" style="grid-column:1/-1;"><div class="label">Safe to Spend</div><div class="value" id="safeToSpendValue">${fmt(safeToSpend)}</div></div>
+  `;
+  animateStatValue('safeToSpendValue', safeToSpend, prevSafeToSpend);
+
+  if(leftover < 0){
+    headlineEl.textContent = `You're short ${fmt(Math.abs(leftover))} this month`;
+    noteEl.textContent = `Your bills add up to more than what's coming in. Nothing is safe to spend or save until that's fixed \u2014 either bring in more, or cut something.`;
+  } else if(!tax.month){
+    headlineEl.textContent = `${fmt(safeToSpend)} is safe to spend this month`;
+    noteEl.textContent = `After your bills are paid, you have ${fmt(leftover)} left. We're setting aside ${fmt(savings)} of that for savings, which leaves ${fmt(safeToSpend)} you can spend guilt-free. Log a business month to include a tax set-aside here too.`;
+  } else {
+    headlineEl.textContent = `${fmt(safeToSpend)} is safe to spend this month`;
+    noteEl.textContent = `After your bills are paid, you have ${fmt(leftover)} left. We're setting aside ${fmt(savings)} for savings and ${fmt(tax.amount)} for taxes, which leaves ${fmt(safeToSpend)} you can spend guilt-free.`;
+  }
+}
+
+function computeNetProfit(m){
+  const costs = (Number(m.expenses)||0)+(Number(m.fuel)||0)+(Number(m.other)||0);
+  return (Number(m.revenue)||0) - costs;
+}
+
+function renderMonths(){
+  const tbody = document.getElementById('monthTableBody');
+  tbody.innerHTML = '';
+  const sorted = [...months].sort((a,b)=> a.month.localeCompare(b.month));
+  document.getElementById('noMonthsNote').style.display = sorted.length ? 'none' : 'block';
+  sorted.forEach(m => {
+    const net = computeNetProfit(m);
+    const costs = (Number(m.expenses)||0)+(Number(m.fuel)||0)+(Number(m.other)||0);
+    const tr = document.createElement('tr');
+    tr.dataset.monthRow = m.month;
+    if (m.month === justAddedMonthKey) tr.classList.add('list-row-enter');
+    tr.innerHTML = `
+      <td>${m.month}</td><td>${fmt(m.revenue||0)}</td><td>${fmt(costs)}</td>
+      <td class="${net>=0?'net-positive':'net-negative'}">${fmt(net)}</td>
+      <td>${fmt(m.draws||0)}</td><td>${fmt(m.cash||0)}</td>
+      <td><button class="danger-btn" data-month="${m.month}">Delete</button></td>
+    `;
+    tbody.appendChild(tr);
+  });
+  justAddedMonthKey = null;
+  tbody.querySelectorAll('.danger-btn').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      const row = document.querySelector('[data-month-row="' + btn.dataset.month + '"]');
+      animateRowExit(row, async () => {
+        months = months.filter(m => m.month !== btn.dataset.month);
+        await saveMonths();
+        renderMonths();
+        renderRunway();
+        renderNetWorth();
+        renderPersonalTotals();
+      });
+    });
+  });
+
+  renderMoM(sorted);
+  renderYoY(sorted);
+  renderTaxSetAside(sorted);
+}
+
+// ---------------------------------------------------------------------------
+// Month over Month -- compares the two most recently logged months so
+// trends are visible without doing mental math. Compares by which months
+// are actually logged, not calendar-adjacent months -- if May was never
+// logged, June compares against April.
+// ---------------------------------------------------------------------------
+function renderMoM(sorted){
+  const statsEl = document.getElementById('momStats');
+  const noteEl = document.getElementById('momNote');
+  if(sorted.length < 2){
+    statsEl.innerHTML = `<div class="stat-box"><div class="label">Revenue</div><div class="value">—</div></div>`;
+    noteEl.textContent = 'Log at least 2 months to see how they compare.';
+    return;
+  }
+  const curr = sorted[sorted.length - 1];
+  const prev = sorted[sorted.length - 2];
+  const currNet = computeNetProfit(curr);
+  const prevNet = computeNetProfit(prev);
+  const deltaRev = (Number(curr.revenue)||0) - (Number(prev.revenue)||0);
+  const deltaNet = currNet - prevNet;
+
+  const arrow = (n) => n > 0 ? '\u25b2' : (n < 0 ? '\u25bc' : '\u2014');
+  const cls = (n) => n > 0 ? 'green' : (n < 0 ? '' : '');
+
+  statsEl.innerHTML = `
+    <div class="stat-box"><div class="label">Revenue: ${curr.month}</div><div class="value">${fmt(curr.revenue||0)}</div></div>
+    <div class="stat-box ${cls(deltaRev)}"><div class="label">vs. ${prev.month}</div><div class="value">${arrow(deltaRev)} ${fmt(Math.abs(deltaRev))}</div></div>
+    <div class="stat-box"><div class="label">Net Profit: ${curr.month}</div><div class="value">${fmt(currNet)}</div></div>
+    <div class="stat-box ${cls(deltaNet)}"><div class="label">vs. ${prev.month}</div><div class="value">${arrow(deltaNet)} ${fmt(Math.abs(deltaNet))}</div></div>
+  `;
+  noteEl.textContent = deltaNet >= 0
+    ? `Net profit is up ${fmt(Math.abs(deltaNet))} compared to ${prev.month}.`
+    : `Net profit is down ${fmt(Math.abs(deltaNet))} compared to ${prev.month}.`;
+}
+
+// ---------------------------------------------------------------------------
+// Year over Year -- compares the latest logged month to the SAME calendar
+// month a year earlier (July vs. last July), not just whatever the
+// previous entry happens to be. Seasonal work (busier summer, slower
+// winter, common for handyman work) makes month-to-month comparisons
+// misleading on their own -- June looking worse than May doesn't mean
+// much if May is always the peak.
+// ---------------------------------------------------------------------------
+function renderYoY(sorted){
+  const statsEl = document.getElementById('yoyStats');
+  const noteEl = document.getElementById('yoyNote');
+  if(sorted.length === 0){
+    statsEl.innerHTML = `<div class="stat-box"><div class="label">Revenue</div><div class="value">—</div></div>`;
+    noteEl.textContent = 'Log a business month to see this.';
+    return;
+  }
+  const curr = sorted[sorted.length - 1];
+  const [currYear, currMonthNum] = curr.month.split('-');
+  const lastYearKey = (Number(currYear) - 1) + '-' + currMonthNum;
+  const prior = sorted.find(m => m.month === lastYearKey);
+
+  if(!prior){
+    statsEl.innerHTML = `<div class="stat-box"><div class="label">Revenue: ${curr.month}</div><div class="value">${fmt(curr.revenue||0)}</div></div>`;
+    noteEl.textContent = `No ${lastYearKey} logged yet to compare against -- this fills in once you've got a full year of history.`;
+    return;
+  }
+
+  const currNet = computeNetProfit(curr);
+  const priorNet = computeNetProfit(prior);
+  const deltaRev = (Number(curr.revenue)||0) - (Number(prior.revenue)||0);
+  const deltaNet = currNet - priorNet;
+  const arrow = (n) => n > 0 ? '\u25b2' : (n < 0 ? '\u25bc' : '\u2014');
+  const cls = (n) => n > 0 ? 'green' : (n < 0 ? '' : '');
+
+  statsEl.innerHTML = `
+    <div class="stat-box"><div class="label">Revenue: ${curr.month}</div><div class="value">${fmt(curr.revenue||0)}</div></div>
+    <div class="stat-box ${cls(deltaRev)}"><div class="label">vs. ${lastYearKey}</div><div class="value">${arrow(deltaRev)} ${fmt(Math.abs(deltaRev))}</div></div>
+    <div class="stat-box"><div class="label">Net Profit: ${curr.month}</div><div class="value">${fmt(currNet)}</div></div>
+    <div class="stat-box ${cls(deltaNet)}"><div class="label">vs. ${lastYearKey}</div><div class="value">${arrow(deltaNet)} ${fmt(Math.abs(deltaNet))}</div></div>
+  `;
+  noteEl.textContent = deltaNet >= 0
+    ? `Net profit is up ${fmt(Math.abs(deltaNet))} compared to the same month last year.`
+    : `Net profit is down ${fmt(Math.abs(deltaNet))} compared to the same month last year.`;
+}
+
+// ---------------------------------------------------------------------------
+// Tax Set-Aside -- a percentage of revenue, not profit. Self-employment
+// tax and income tax are both based on what came in, and expenses still
+// need to be covered regardless -- setting aside a share of profit alone
+// tends to come up short. Shows both the latest month and a running
+// year-to-date total, since quarterly estimated taxes are a real deadline.
+// ---------------------------------------------------------------------------
+// Shared with the Safe to Spend card on the front page -- one computation,
+// used in two places, so they can never drift out of sync with each other.
+function latestTaxSetAside(){
+  const sorted = [...months].sort((a,b)=> a.month.localeCompare(b.month));
+  if(sorted.length === 0) return { amount: 0, month: null };
+  const rate = (Number(budgetSettings.taxSetAsideRate) || 0) / 100;
+  const latest = sorted[sorted.length - 1];
+  return { amount: (Number(latest.revenue)||0) * rate, month: latest.month };
+}
+
+// ---------------------------------------------------------------------------
+// Quarterly estimated tax periods -- these are NOT evenly-spaced calendar
+// quarters. The IRS's own periods are Jan1-Mar31 (due Apr15), Apr1-May31
+// (due Jun15 -- only 2 months), Jun1-Aug31 (due Sep15), Sep1-Dec31 (due
+// Jan15 of the next year). Getting this wrong by using plain 3-month
+// quarters would be quietly incorrect, not just imprecise.
+// ---------------------------------------------------------------------------
+function estimatedTaxPeriods(year){
+  return [
+    { label: 'Q1', start: new Date(year,0,1),  end: new Date(year,2,31),  due: new Date(year,3,15) },
+    { label: 'Q2', start: new Date(year,3,1),  end: new Date(year,4,31),  due: new Date(year,5,15) },
+    { label: 'Q3', start: new Date(year,5,1),  end: new Date(year,7,31),  due: new Date(year,8,15) },
+    { label: 'Q4', start: new Date(year,8,1),  end: new Date(year,11,31), due: new Date(year+1,0,15) },
+  ];
+}
+function currentQuarterlyTaxInfo(){
+  const now = new Date();
+  const candidateYears = [now.getFullYear() - 1, now.getFullYear()];
+  const allPeriods = candidateYears.flatMap(y => estimatedTaxPeriods(y));
+  const current = allPeriods.find(p => now >= p.start && now <= p.due) || allPeriods[allPeriods.length - 1];
+  const daysUntilDue = Math.ceil((current.due - now) / (1000*60*60*24));
+  return { ...current, daysUntilDue };
+}
+function periodRevenue(sorted, start, end){
+  return sorted.filter(m => {
+    const d = new Date(Number(m.month.slice(0,4)), Number(m.month.slice(5,7)) - 1, 15);
+    return d >= start && d <= end;
+  }).reduce((s,m) => s + (Number(m.revenue)||0), 0);
+}
+const DATE_FMT = (d) => d.toLocaleDateString(undefined, { month: 'long', day: 'numeric', year: 'numeric' });
+
+function renderTaxSetAside(sorted){
+  const statsEl = document.getElementById('taxSetAsideStats');
+  const noteEl = document.getElementById('taxSetAsideNote');
+  const dueEl = document.getElementById('taxDueDateNote');
+  const rate = (Number(budgetSettings.taxSetAsideRate) || 0) / 100;
+
+  const q = currentQuarterlyTaxInfo();
+  const periodRev = periodRevenue(sorted, q.start, q.end);
+  const periodSetAside = periodRev * rate;
+  dueEl.innerHTML = `<strong>${q.label} payment due ${DATE_FMT(q.due)}</strong> (${q.daysUntilDue} day${q.daysUntilDue===1?'':'s'} away) \u2014 based on ${fmt(periodRev)} in revenue logged for this period, that's roughly ${fmt(periodSetAside)} to have set aside for it. This is a planning estimate, not what the IRS will actually calculate.`;
+
+  if(sorted.length === 0){
+    statsEl.innerHTML = `<div class="stat-box"><div class="label">Set Aside</div><div class="value">—</div></div>`;
+    noteEl.textContent = 'Log a business month to see this.';
+    return;
+  }
+  const latest = sorted[sorted.length - 1];
+  const latestSetAside = (Number(latest.revenue)||0) * rate;
+
+  const currentYear = latest.month.slice(0,4);
+  const ytdRevenue = sorted.filter(m => m.month.slice(0,4) === currentYear).reduce((s,m) => s + (Number(m.revenue)||0), 0);
+  const ytdSetAside = ytdRevenue * rate;
+
+  statsEl.innerHTML = `
+    <div class="stat-box"><div class="label">Set Aside for ${latest.month}</div><div class="value">${fmt(latestSetAside)}</div></div>
+    <div class="stat-box blue"><div class="label">${currentYear} Year-to-Date</div><div class="value">${fmt(ytdSetAside)}</div></div>
+  `;
+  noteEl.textContent = `Based on ${budgetSettings.taxSetAsideRate}% of revenue, not profit -- taxes are owed on what came in, and this doesn't replace real advice from an accountant.`;
+}
+
+// ---------------------------------------------------------------------------
+// Pull straight from Job Tracker's own data. th_expense_log and th_invoices
+// already live in localStorage on this same origin -- and if sync.js has
+// pulled the latest blob (see startJobTrackerSync below), they're current
+// even if the actual logging happened on a different device. No new
+// storage of any kind needed for this part; it's reading data that's
+// already real and already there.
+// ---------------------------------------------------------------------------
+function loadJobTrackerExpenses(){
+  try { return JSON.parse(localStorage.getItem('th_expense_log') || '[]'); }
+  catch(e){ return []; }
+}
+function loadJobTrackerInvoices(){
+  try { return JSON.parse(localStorage.getItem('th_invoices') || '[]'); }
+  catch(e){ return []; }
+}
+function loadJobTrackerIncome(){
+  try { return JSON.parse(localStorage.getItem('th_income_log') || '[]'); }
+  catch(e){ return []; }
+}
+
+// Same backward-compatible logic as workspace.html's invoicePaymentStatus:
+// older invoices only ever had a `paid` true/false boolean, no partial
+// amount at all, so an invoice with no paidAmount field falls back to
+// "paid ? total : 0" rather than needing any migration step.
+function invoiceRemainingBalance(invoice){
+  const total = Number(invoice.total) || 0;
+  const paidAmount = (invoice.paidAmount !== undefined && invoice.paidAmount !== null)
+    ? (Number(invoice.paidAmount) || 0)
+    : (invoice.paid ? total : 0);
+  return Math.max(0, total - paidAmount);
+}
+function totalAccountsReceivable(){
+  return loadJobTrackerInvoices().reduce((sum, inv) => sum + invoiceRemainingBalance(inv), 0);
+}
+function pullMonthFromJobTracker(monthVal){
+  const expenseLog = loadJobTrackerExpenses();
+  const invoices = loadJobTrackerInvoices();
+  const incomeLog = loadJobTrackerIncome();
+  const inMonth = (dateStr) => (dateStr || '').slice(0,7) === monthVal;
+
+  // Revenue now comes from the Income log (manual entries + invoices
+  // created after this feature existed, auto-mirrored there). Invoices
+  // created BEFORE this feature existed were never mirrored, so they'd
+  // otherwise vanish from past months entirely -- this counts those
+  // "orphaned" old invoices exactly once, without double-counting any
+  // invoice that already has a mirrored income-log entry.
+  const mirroredInvoiceIds = new Set(incomeLog.filter(e => e.origin === 'invoice').map(e => e.invoiceId));
+  const orphanedInvoices = invoices.filter(i => !mirroredInvoiceIds.has(i.id));
+
+  const incomeInMonth = incomeLog.filter(e => inMonth(e.date));
+  const orphanedInMonth = orphanedInvoices.filter(i => inMonth(i.date));
+
+  const revenue = incomeInMonth.reduce((s,e) => s + (Number(e.amount)||0), 0)
+                + orphanedInMonth.reduce((s,i) => s + (Number(i.total)||0), 0);
+  const expenses = expenseLog.filter(e => e.type !== 'mileage' && inMonth(e.date)).reduce((s,e) => s + (Number(e.amount)||0), 0);
+  const fuel = expenseLog.filter(e => e.type === 'mileage' && inMonth(e.date)).reduce((s,e) => s + (Number(e.amount)||0), 0);
+
+  const invoiceCount = incomeInMonth.length + orphanedInMonth.length;
+  const expenseCount = expenseLog.filter(e => e.type !== 'mileage' && inMonth(e.date)).length;
+  const mileageCount = expenseLog.filter(e => e.type === 'mileage' && inMonth(e.date)).length;
+
+  return {
+    revenue, expenses, fuel, invoiceCount, expenseCount, mileageCount,
+    totalInvoicesEverLogged: incomeLog.length + orphanedInvoices.length,
+    totalExpensesEverLogged: expenseLog.length,
+  };
+}
+
+// Native <input type="month"> is unreliable on iOS Safari -- it can show
+// a value visually (e.g. "August 2026") without the underlying .value
+// ever actually being set, which silently breaks anything reading it.
+// Two plain <select> elements have no such quirk on any browser.
+const MONTH_NAMES = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+function populateMonthYearSelects(){
+  const monthSel = document.getElementById('biz-month-select');
+  const yearSel = document.getElementById('biz-year-select');
+  monthSel.innerHTML = MONTH_NAMES.map((m,i) => `<option value="${String(i+1).padStart(2,'0')}">${m}</option>`).join('');
+  const now = new Date();
+  const currentYear = now.getFullYear();
+  const years = [];
+  for(let y = currentYear - 2; y <= currentYear + 1; y++) years.push(y);
+  yearSel.innerHTML = years.map(y => `<option value="${y}">${y}</option>`).join('');
+  monthSel.value = String(now.getMonth() + 1).padStart(2,'0');
+  yearSel.value = String(currentYear);
+}
+function getBizMonthValue(){
+  const m = document.getElementById('biz-month-select').value;
+  const y = document.getElementById('biz-year-select').value;
+  if(!m || !y) return '';
+  return `${y}-${m}`;
+}
+
+document.getElementById('pullMonthBtn').addEventListener('click', () => {
+  const monthVal = getBizMonthValue();
+  const note = document.getElementById('bizFormNote');
+  const diag = document.getElementById('pullDiagnosticNote');
+  diag.textContent = '';
+
+  if(!monthVal){ note.textContent = 'Pick a month first.'; note.style.color = 'var(--red)'; return; }
+
+  const pulled = pullMonthFromJobTracker(monthVal);
+  document.getElementById('biz-revenue').value = pulled.revenue || '';
+  document.getElementById('biz-expenses').value = pulled.expenses || '';
+  document.getElementById('biz-fuel').value = pulled.fuel || '';
+
+  document.getElementById('revSourceHint').textContent = `(${pulled.invoiceCount} income entr${pulled.invoiceCount===1?'y':'ies'})`;
+  document.getElementById('expSourceHint').textContent = `(${pulled.expenseCount} entr${pulled.expenseCount===1?'y':'ies'})`;
+  document.getElementById('fuelSourceHint').textContent = `(${pulled.mileageCount} entr${pulled.mileageCount===1?'y':'ies'})`;
+
+  if(pulled.totalInvoicesEverLogged === 0 && pulled.totalExpensesEverLogged === 0){
+    diag.textContent = `Job Tracker doesn't have any income or expenses logged on this device yet. If you know you've logged some, try "Refresh synced data now" on the Workspace page, then reload this page.`;
+    diag.style.color = 'var(--red)';
+  } else if(pulled.invoiceCount === 0 && pulled.expenseCount === 0 && pulled.mileageCount === 0){
+    diag.textContent = `Nothing logged in Job Tracker for this specific month \u2014 that's likely correct, not a bug. Double check you picked the right month.`;
+    diag.style.color = 'var(--text-dim)';
+  } else {
+    diag.textContent = '';
+  }
+
+  note.textContent = 'Pulled from Job Tracker \u2014 review the numbers, then Save Month. Other Expenses, Draws, and Cash still need filling in by hand.';
+  note.style.color = 'var(--text-dim)';
+});
+
+document.getElementById('addMonthBtn').addEventListener('click', async () => {
+  const monthVal = getBizMonthValue();
+  const note = document.getElementById('bizFormNote');
+  if(!monthVal){ note.textContent = 'Pick a month first.'; note.style.color = 'var(--red)'; return; }
+  const isUpdatingExisting = months.some(m => m.month === monthVal);
+  const entry = {
+    month: monthVal,
+    revenue: Number(document.getElementById('biz-revenue').value)||0,
+    expenses: Number(document.getElementById('biz-expenses').value)||0,
+    fuel: Number(document.getElementById('biz-fuel').value)||0,
+    other: Number(document.getElementById('biz-other').value)||0,
+    draws: Number(document.getElementById('biz-draws').value)||0,
+    cash: Number(document.getElementById('biz-cash').value)||0,
+  };
+  months = months.filter(m => m.month !== monthVal);
+  months.push(entry);
+  await saveMonths();
+  ['biz-revenue','biz-expenses','biz-fuel','biz-other','biz-draws','biz-cash'].forEach(id => document.getElementById(id).value = '');
+  ['revSourceHint','expSourceHint','fuelSourceHint'].forEach(id => document.getElementById(id).textContent = '');
+  document.getElementById('pullDiagnosticNote').textContent = '';
+  note.textContent = '';
+  justAddedMonthKey = isUpdatingExisting ? null : monthVal;
+  renderMonths();
+  renderRunway();
+  renderNetWorth();
+  renderPersonalTotals();
+  showToast(isUpdatingExisting ? 'Month updated successfully!' : 'Month added successfully!');
+});
+
+document.getElementById('ef-balance').addEventListener('change', async (e) => {
+  efBalance = Number(e.target.value) || 0;
+  await saveEF();
+  renderRunway();
+  renderNetWorth();
+});
+
+function renderNetWorth(){
+  const statsEl = document.getElementById('netWorthStats');
+  const noteEl = document.getElementById('netWorthNote');
+  const sorted = [...months].sort((a,b)=> a.month.localeCompare(b.month));
+  const latestMonth = sorted[sorted.length - 1];
+  const businessCash = latestMonth ? (Number(latestMonth.cash) || 0) : 0;
+  const cashTotal = efBalance + businessCash;
+  const totalDebt = debts.reduce((sum, d) => sum + (Number(d.balance) || 0), 0);
+  const trueNetWorth = cashTotal - totalDebt;
+
+  const prevTotal = readPrevStatValue('netWorthTotalValue');
+
+  statsEl.innerHTML = `
+    <div class="stat-box"><div class="label">Personal Savings</div><div class="value">${fmt(efBalance)}</div></div>
+    <div class="stat-box blue"><div class="label">Business Cash${latestMonth ? ' (' + latestMonth.month + ')' : ''}</div><div class="value">${fmt(businessCash)}</div></div>
+    ${totalDebt > 0 ? `<div class="stat-box red"><div class="label">Total Debt</div><div class="value">-${fmt(totalDebt)}</div></div>` : ''}
+    <div class="stat-box green" style="grid-column:1/-1;"><div class="label">${totalDebt > 0 ? 'True Net Worth (cash minus debt)' : 'Combined Total'}</div><div class="value" id="netWorthTotalValue">${fmt(trueNetWorth)}</div></div>
+  `;
+  animateStatValue('netWorthTotalValue', trueNetWorth, prevTotal);
+  if (!latestMonth) {
+    noteEl.textContent = `Log a business month to include business cash here.`;
+  } else if (totalDebt > 0) {
+    noteEl.textContent = `This adds your personal savings and business cash together, then subtracts ${fmt(totalDebt)} in logged debts -- a real net worth figure, not just cash on hand.`;
+  } else {
+    noteEl.textContent = `This adds your personal savings and the business's cash on hand together. Add a debt below to have it subtracted here for a true net worth figure.`;
+  }
+}
+
+function linearTrendSlope(points){
+  const n = points.length;
+  const sumX = points.reduce((s,p)=>s+p.x,0);
+  const sumY = points.reduce((s,p)=>s+p.y,0);
+  const sumXY = points.reduce((s,p)=>s+p.x*p.y,0);
+  const sumXX = points.reduce((s,p)=>s+p.x*p.x,0);
+  const denom = (n*sumXX - sumX*sumX);
+  if(denom === 0) return 0;
+  return (n*sumXY - sumX*sumY) / denom;
+}
+
+function renderRunway(){
+  const min = grandTotal();
+  const personalIncome = totalMonthlyIncome();
+  document.getElementById('ef-balance').value = efBalance || '';
+
+  document.getElementById('runwayExpenseTotals').innerHTML = `
+    <div class="stat-box"><div class="label">Monthly Bills &amp; Expenses</div><div class="value">${fmt(min)}</div></div>
+    <div class="stat-box green"><div class="label">Personal Income</div><div class="value">${fmt(personalIncome)}</div></div>
+  `;
+
+  const target6 = min * 6;
+  const target12 = min * 12;
+  const pct = target12 > 0 ? Math.min(100, (efBalance/target12)*100) : 0;
+  document.getElementById('efProgress').style.width = pct + '%';
+  document.getElementById('efTargetLabel').textContent = '6mo: ' + fmt(target6);
+  document.getElementById('ef12Label').textContent = '12mo: ' + fmt(target12);
+  document.getElementById('efNote').textContent = min > 0
+    ? `You have ${fmt(efBalance)} saved, which covers ${(efBalance/min).toFixed(1)} months of bills.`
+    : 'Add your bills on the Personal Budget tab to see this in months.';
+
+  const sorted = [...months].sort((a,b)=> a.month.localeCompare(b.month));
+  const nets = sorted.map((m,i) => ({x:i, y:computeNetProfit(m), month:m.month}));
+  const last3 = nets.slice(-3);
+  const avgNet3 = last3.length ? last3.reduce((s,p)=>s+p.y,0)/last3.length : null;
+
+  // --- Income Picture: how much personal income covers on its own, and
+  // how much the business is supplementing on top of that, right now.
+  // Deliberately separate from the quit-estimate trend below -- this is
+  // about the present, not a projection.
+  const incomePictureEl = document.getElementById('incomePictureStats');
+  const headlineEl = document.getElementById('supplementHeadline');
+  const noteEl = document.getElementById('supplementNote');
+  if(min === 0){
+    incomePictureEl.innerHTML = `<div class="stat-box"><div class="label">Gap</div><div class="value">—</div></div>`;
+    headlineEl.textContent = 'Add your bills first';
+    noteEl.textContent = 'Add expenses on the Personal Budget tab to see how your income stacks up against them.';
+  } else {
+    const gap = Math.max(0, min - personalIncome);
+    const businessAvg = avgNet3 !== null ? avgNet3 : 0;
+    const businessCoverage = Math.min(businessAvg, gap);
+    const coveragePct = gap > 0 ? (businessCoverage / gap) * 100 : null;
+    const overallNet = personalIncome + businessAvg - min;
+
+    incomePictureEl.innerHTML = `
+      <div class="stat-box"><div class="label">Shortfall Not Covered by Income</div><div class="value">${fmt(gap)}</div></div>
+      <div class="stat-box ${overallNet>=0?'green':''}"><div class="label">Total Left Over Each Month</div><div class="value">${fmt(overallNet)}</div></div>
+    `;
+
+    if(gap === 0){
+      headlineEl.textContent = 'Your income already covers your bills';
+      noteEl.textContent = avgNet3 !== null
+        ? `Your income covers your bills on its own. Whatever the business makes on top of that (about ${fmt(avgNet3)} a month lately) is extra \u2014 savings, paying down debt, or just breathing room.`
+        : `Your income covers your bills on its own. Log a business month to see what the business adds on top.`;
+    } else if(avgNet3 === null){
+      headlineEl.textContent = `You're short ${fmt(gap)} a month`;
+      noteEl.textContent = `Your income doesn't quite cover your bills \u2014 you're short about ${fmt(gap)} a month. Log at least one business month to see how much the business is making up for that.`;
+    } else {
+      headlineEl.textContent = `The business covers ${coveragePct.toFixed(0)}% of what your income doesn't`;
+      noteEl.textContent = `Your income falls short of your bills by about ${fmt(gap)} a month. The business has been making up ${fmt(businessCoverage)} of that${businessAvg > gap ? ', and then some' : ''}.`;
+    }
+  }
+
+  renderBreakEven(min, personalIncome, sorted);
+  renderAR();
+
+  document.getElementById('trendStats').innerHTML = `
+    <div class="stat-box green"><div class="label">Avg Net Profit (last 3mo)</div><div class="value">${avgNet3!==null ? fmt(avgNet3) : '—'}</div></div>
+    <div class="stat-box"><div class="label">Months Logged</div><div class="value">${nets.length}</div></div>
+  `;
+
+  const estimateEl = document.getElementById('quitEstimate');
+  const estimateNote = document.getElementById('quitEstimateNote');
+  if(nets.length < 2){
+    estimateEl.textContent = 'Not enough data yet';
+    estimateNote.textContent = 'Log at least 2 months of business numbers to get an estimate.';
+  } else {
+    const slope = linearTrendSlope(nets);
+    const latest = nets[nets.length-1].y;
+    if(slope <= 0){
+      estimateEl.textContent = 'No upward trend yet';
+      estimateNote.textContent = `Your business profit isn't trending up lately (averaging ${avgNet3!==null?fmt(avgNet3):'—'} over the last few months). This is based on your own numbers, not a prediction \u2014 it'll change as you log more months.`;
+    } else if(latest >= min){
+      estimateEl.textContent = 'Already there, on paper';
+      estimateNote.textContent = `Last month's profit (${fmt(latest)}) already covers your bills (${fmt(min)}). Worth watching a few more months before counting on it.`;
+    } else {
+      const monthsNeeded = Math.ceil((min - latest) / slope);
+      estimateEl.textContent = `~${monthsNeeded} month${monthsNeeded===1?'':'s'} at this rate`;
+      estimateNote.textContent = `Based on how your profit has been growing, it'd take about ${monthsNeeded} more month${monthsNeeded===1?'':'s'} to fully cover your bills (${fmt(min)}). This is a rough guide, not a guarantee \u2014 it moves every time you log a new month.`;
+    }
+  }
+
+  drawTrendChart(nets, min);
+
+  renderSafeDraw(min);
+}
+
+function drawTrendChart(nets, min){
+  const canvas = document.getElementById('trendChart');
+  const note = document.getElementById('trendChartNote');
+  const ctx = canvas.getContext('2d');
+  const dpr = window.devicePixelRatio || 1;
+  const w = canvas.clientWidth || canvas.parentElement.clientWidth;
+  const h = 140;
+  canvas.width = w * dpr;
+  canvas.height = h * dpr;
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  ctx.clearRect(0, 0, w, h);
+
+  if(nets.length === 0){
+    note.textContent = 'Log a business month to start seeing this.';
+    return;
+  }
+  note.textContent = nets.length < 2
+    ? 'One month logged so far \u2014 the chart fills in as you log more.'
+    : `Showing all ${nets.length} logged month${nets.length===1?'':'s'}.`;
+
+  const padding = { top: 10, bottom: 20, left: 4, right: 4 };
+  const plotW = w - padding.left - padding.right;
+  const plotH = h - padding.top - padding.bottom;
+  const values = nets.map(n => n.y);
+  const maxVal = Math.max(...values, min, 1);
+  const minVal = Math.min(...values, 0);
+  const range = maxVal - minVal || 1;
+  const barW = plotW / nets.length;
+  const zeroY = padding.top + plotH * (1 - (0 - minVal) / range);
+
+  // Bills line
+  if(min > 0){
+    const billY = padding.top + plotH * (1 - (min - minVal) / range);
+    ctx.strokeStyle = '#ff8000';
+    ctx.setLineDash([4,3]);
+    ctx.beginPath();
+    ctx.moveTo(padding.left, billY);
+    ctx.lineTo(w - padding.right, billY);
+    ctx.stroke();
+    ctx.setLineDash([]);
+  }
+
+  nets.forEach((n, i) => {
+    const barH = Math.abs(n.y - 0) / range * plotH;
+    const x = padding.left + i * barW + barW * 0.15;
+    const bw = barW * 0.7;
+    const y = n.y >= 0 ? zeroY - barH : zeroY;
+    ctx.fillStyle = n.y >= 0 ? '#3ac96a' : '#e0554d';
+    ctx.fillRect(x, y, bw, barH || 1);
+  });
+
+  // Baseline (zero line)
+  ctx.strokeStyle = 'rgba(255,255,255,0.15)';
+  ctx.beginPath();
+  ctx.moveTo(padding.left, zeroY);
+  ctx.lineTo(w - padding.right, zeroY);
+  ctx.stroke();
+}
+
+// ---------------------------------------------------------------------------
+// Break-Even Point -- the one number that actually combines both halves
+// of this app: how much revenue the business needs this month to cover
+// its OWN costs, plus whatever gap is left after personal income against
+// personal bills. Everything else on this page shows personal and
+// business as two separate pictures being compared -- this is the actual
+// combined target, which is the reason this tool exists in the first place.
+function renderBreakEven(min, personalIncome, sorted){
+  const statsEl = document.getElementById('breakEvenStats');
+  const headlineEl = document.getElementById('breakEvenHeadline');
+  const noteEl = document.getElementById('breakEvenNote');
+  const latestMonth = sorted[sorted.length - 1];
+
+  if(!latestMonth){
+    statsEl.innerHTML = `<div class="stat-box"><div class="label">Break-Even Revenue</div><div class="value">—</div></div>`;
+    headlineEl.textContent = 'Log a business month to see this';
+    noteEl.textContent = 'Needs at least one month of business expenses logged to know what the business itself costs to run.';
+    return;
+  }
+
+  const businessCosts = (Number(latestMonth.expenses)||0) + (Number(latestMonth.fuel)||0);
+  const personalGap = Math.max(0, min - personalIncome);
+  const breakEvenRevenue = businessCosts + personalGap;
+  const actualRevenue = Number(latestMonth.revenue) || 0;
+  const surplus = actualRevenue - breakEvenRevenue;
+
+  statsEl.innerHTML = `
+    <div class="stat-box"><div class="label">Business's Own Costs</div><div class="value">${fmt(businessCosts)}</div></div>
+    <div class="stat-box"><div class="label">Gap Left by Personal Income</div><div class="value">${fmt(personalGap)}</div></div>
+    <div class="stat-box blue" style="grid-column:1/-1;"><div class="label">Revenue Needed to Break Even</div><div class="value">${fmt(breakEvenRevenue)}</div></div>
+    <div class="stat-box ${surplus>=0?'green':''}" style="grid-column:1/-1;"><div class="label">${latestMonth.month} Actual Revenue</div><div class="value">${fmt(actualRevenue)}</div></div>
+  `;
+
+  if(surplus >= 0){
+    headlineEl.textContent = `${latestMonth.month} was ${fmt(surplus)} above break-even`;
+    noteEl.textContent = `Between the business's own costs (${fmt(businessCosts)}) and covering what personal income didn't (${fmt(personalGap)}), the business needed ${fmt(breakEvenRevenue)} to break even this month \u2014 it brought in ${fmt(actualRevenue)}, so everything's covered with ${fmt(surplus)} to spare.`;
+  } else {
+    headlineEl.textContent = `${latestMonth.month} was ${fmt(Math.abs(surplus))} short of break-even`;
+    noteEl.textContent = `Between the business's own costs (${fmt(businessCosts)}) and covering what personal income didn't (${fmt(personalGap)}), the business needed ${fmt(breakEvenRevenue)} to break even this month \u2014 it only brought in ${fmt(actualRevenue)}, ${fmt(Math.abs(surplus))} short.`;
+  }
+}
+
+// Deliberately separate from Break-Even and Safe-to-Spend -- this is
+// money invoiced but not yet actually collected, read straight from Job
+// Tracker's own invoice data (same-device localStorage, same pattern as
+// the other loadJobTracker* readers above). Shown as its own card rather
+// than folded into the cash-flow math, since conflating "revenue on
+// paper" with "cash in hand" would make those other numbers less honest,
+// not more useful.
+function renderAR(){
+  const statsEl = document.getElementById('arStats');
+  const noteEl = document.getElementById('arNote');
+  if(!statsEl) return;
+
+  const invoices = loadJobTrackerInvoices();
+  const outstanding = invoices.filter(inv => invoiceRemainingBalance(inv) > 0);
+  const totalAR = outstanding.reduce((sum, inv) => sum + invoiceRemainingBalance(inv), 0);
+  const overdueCount = outstanding.filter(inv => {
+    if(!inv.date) return false;
+    const termDays = { 'Due on Receipt': 0, 'Net 15': 15, 'Net 30': 30, 'Net 45': 45, 'Net 60': 60 };
+    const days = termDays[inv.terms] !== undefined ? termDays[inv.terms] : 15;
+    const due = new Date(new Date(inv.date + 'T00:00:00').getTime() + days*24*60*60*1000);
+    return due < new Date(new Date().toDateString());
+  }).length;
+
+  statsEl.innerHTML = `
+    <div class="stat-box"><div class="label">Outstanding Invoices</div><div class="value">${fmt(totalAR)}</div></div>
+    <div class="stat-box"><div class="label">Open Invoice Count</div><div class="value">${outstanding.length}</div></div>
+  `;
+
+  if(outstanding.length === 0){
+    noteEl.textContent = `Nothing outstanding right now, based on Job Tracker's invoice log -- every logged invoice is either fully paid or there aren't any yet.`;
+  } else {
+    noteEl.textContent = `${fmt(totalAR)} across ${outstanding.length} invoice${outstanding.length===1?'':'s'} hasn't actually been collected yet${overdueCount>0 ? `, and ${overdueCount} of those ${overdueCount===1?'is':'are'} already overdue` : ''}. Break-Even and Safe-to-Spend above are both based on cash you actually have -- this is a reminder that this much revenue is still just on paper.`;
+  }
+}
+
+function renderSafeDraw(min){
+  const output = document.getElementById('safeDrawOutput');
+  const bufferMonths = Number(document.getElementById('drawBufferMonths').value) || 0;
+  const sorted = [...months].sort((a,b)=> a.month.localeCompare(b.month));
+  const latestMonth = sorted[sorted.length - 1];
+
+  if(!latestMonth || !min){
+    output.innerHTML = `<div class="stat-box"><div class="label">Safe to Draw</div><div class="value">—</div></div>`;
+    return;
+  }
+  const cash = Number(latestMonth.cash) || 0;
+  const bufferTarget = min * bufferMonths;
+  const safeToDraw = Math.max(0, cash - bufferTarget);
+
+  const prevSafeToDraw = readPrevStatValue('safeToDrawValue');
+
+  output.innerHTML = `
+    <div class="stat-box"><div class="label">Cash on Hand (${latestMonth.month})</div><div class="value">${fmt(cash)}</div></div>
+    <div class="stat-box blue"><div class="label">Buffer to Keep</div><div class="value">${fmt(bufferTarget)}</div></div>
+    <div class="stat-box green"><div class="label">Safe to Draw Now</div><div class="value" id="safeToDrawValue">${fmt(safeToDraw)}</div></div>
+  `;
+  animateStatValue('safeToDrawValue', safeToDraw, prevSafeToDraw);
+}
+document.getElementById('drawBufferMonths').addEventListener('input', () => renderRunway());
+
+const TAB_ORDER = ['personal', 'business', 'networth', 'runway'];
+let tabSwitchInProgress = false;
+function switchToTab(tabKey){
+  if(tabSwitchInProgress) return; // ignore a second swipe/tap mid-transition rather than glitch
+  const btn = document.querySelector(`.tab-btn[data-tab="${tabKey}"]`);
+  if(!btn) return;
+  const nextPanel = document.getElementById('panel-'+tabKey);
+  const currentPanel = document.querySelector('.panel.active');
+  if(currentPanel === nextPanel) return;
+
+  const reduceMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  function showNextPanel(){
+    document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
+    btn.classList.add('active');
+    btn.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
+    if(currentPanel){ currentPanel.classList.remove('active', 'fade-out'); currentPanel.style.opacity = ''; }
+    nextPanel.classList.add('active');
+    // The trend chart's canvas reads 0 width while its tab is hidden
+    // (display:none elements always report clientWidth 0), so if data
+    // changed while on a different tab, the chart needs a fresh draw
+    // now that it's actually visible and has real layout dimensions.
+    if(tabKey === 'runway') renderRunway();
+    tabSwitchInProgress = false;
+  }
+
+  if(!currentPanel || reduceMotion){
+    showNextPanel();
+    return;
+  }
+
+  // The old panel actually dissolves before the new one appears, instead
+  // of just vanishing -- sequential fade-out then fade-in, rather than a
+  // true simultaneous crossfade, since this layout doesn't have the two
+  // panels absolutely positioned on top of each other. Overlapping them
+  // without that would show both panels' content stacked for a moment,
+  // which would look broken rather than smooth.
+  tabSwitchInProgress = true;
+  currentPanel.classList.add('fade-out');
+  setTimeout(showNextPanel, 200);
+}
+document.querySelectorAll('.tab-btn').forEach(btn => {
+  btn.addEventListener('click', () => switchToTab(btn.dataset.tab));
+});
+document.getElementById('panel-personal').classList.add('active');
+
+// ---------------------------------------------------------------------------
+// Swipe between tabs -- this is meant to be run from a phone, and tapping
+// a tab button every time feels less native than just swiping the content
+// area the way the rest of the phone's apps work. A horizontal swipe past
+// a distance/speed threshold moves one tab left or right; anything more
+// vertical than horizontal is left alone so normal scrolling still works.
+// ---------------------------------------------------------------------------
+(function setupSwipeNavigation(){
+  const mainEl = document.querySelector('main');
+  let touchStartX = 0, touchStartY = 0, touchStartTime = 0;
+  mainEl.addEventListener('touchstart', (e) => {
+    if(e.touches.length !== 1) return;
+    touchStartX = e.touches[0].clientX;
+    touchStartY = e.touches[0].clientY;
+    touchStartTime = Date.now();
+  }, { passive: true });
+  mainEl.addEventListener('touchend', (e) => {
+    if(!e.changedTouches.length) return;
+    const dx = e.changedTouches[0].clientX - touchStartX;
+    const dy = e.changedTouches[0].clientY - touchStartY;
+    const elapsed = Date.now() - touchStartTime;
+    const isMostlyHorizontal = Math.abs(dx) > Math.abs(dy) * 1.5;
+    const isFarEnough = Math.abs(dx) > 60;
+    const isFastEnough = elapsed < 600;
+    if(!isMostlyHorizontal || !isFarEnough || !isFastEnough) return;
+
+    const activeBtn = document.querySelector('.tab-btn.active');
+    const currentIndex = TAB_ORDER.indexOf(activeBtn ? activeBtn.dataset.tab : 'personal');
+    if(currentIndex === -1) return;
+    if(dx < 0 && currentIndex < TAB_ORDER.length - 1){
+      switchToTab(TAB_ORDER[currentIndex + 1]); // swiped left -> next tab
+    } else if(dx > 0 && currentIndex > 0){
+      switchToTab(TAB_ORDER[currentIndex - 1]); // swiped right -> previous tab
+    }
+    // Swiping right on the first tab intentionally does nothing now --
+    // removed the exit-to-Workspace behavior across every tabbed page.
+  }, { passive: true });
+})();
+
+document.getElementById('resetPersonalBtn').addEventListener('click', async () => {
+  if(!confirm('Delete ALL personal expenses? This cannot be undone.')) return;
+  expenses = [];
+  await saveExpenses();
+  renderPersonal();
+  renderRunway();
+});
+
+// ---------------------------------------------------------------------------
+// Backup / Restore -- a plain JSON download/upload, independent of Cloud
+// Backup below. Works with zero setup, so there's always a safety net even
+// before (or instead of) wiring up Supabase.
+// ---------------------------------------------------------------------------
+// ---------------------------------------------------------------------------
+// PDF Report -- no PDF library involved. Builds a plain, print-friendly
+// summary and hands off to the browser's own print dialog, where "Save as
+// PDF" is a built-in destination on every major browser. Pulls values
+// straight from what's already rendered on screen (the stat boxes),
+// rather than recomputing everything a second time -- guarantees the
+// report always matches what the person is actually looking at.
+// ---------------------------------------------------------------------------
+function textOf(id){ const el = document.getElementById(id); return el ? el.textContent.trim() : ''; }
+function statBoxesOf(containerId){
+  const container = document.getElementById(containerId);
+  if(!container) return [];
+  return Array.from(container.querySelectorAll('.stat-box')).map(box => ({
+    label: box.querySelector('.label')?.textContent.trim() || '',
+    value: box.querySelector('.value')?.textContent.trim() || '',
+  }));
+}
+function reportSection(title, rows){
+  if(!rows.length) return '';
+  return `<h2>${title}</h2><table>${rows.map(r => `<tr><td>${r.label}</td><td>${r.value}</td></tr>`).join('')}</table>`;
+}
+
+document.getElementById('downloadPdfBtn').addEventListener('click', () => {
+  const today = new Date().toLocaleDateString(undefined, { year: 'numeric', month: 'long', day: 'numeric' });
+  const safeToSpendNote = textOf('safeToSpendNote');
+  const efNote = textOf('efNote');
+  const supplementNote = textOf('supplementNote');
+  const quitNote = textOf('quitEstimateNote');
+
+  const html = `
+    <h1>Runway Dashboard \u2014 Summary</h1>
+    <div class="print-date">${today}</div>
+    ${reportSection('Safe to Spend', statBoxesOf('safeToSpendStats'))}
+    <div class="print-note">${safeToSpendNote}</div>
+    ${reportSection('Emergency Fund', [{label:'Current Balance', value: document.getElementById('ef-balance').value ? '$' + Number(document.getElementById('ef-balance').value).toLocaleString() : '$0'}])}
+    <div class="print-note">${efNote}</div>
+    ${reportSection('Income Picture', statBoxesOf('incomePictureStats'))}
+    <div class="print-note">${supplementNote}</div>
+    ${reportSection('Business Trend', statBoxesOf('trendStats'))}
+    <div class="print-note">${textOf('quitEstimate')} \u2014 ${quitNote}</div>
+    ${reportSection('Safe Draw Calculator', statBoxesOf('safeDrawOutput'))}
+  `;
+  document.getElementById('printReport').innerHTML = html;
+  window.print();
+});
+
+document.getElementById('exportBackupBtn').addEventListener('click', () => {
+  const backup = {
+    exportedAt: new Date().toISOString(),
+    personalExpenses: expenses,
+    personalIncome: income,
+    budgetSettings: budgetSettings,
+    businessMonths: months,
+    emergencyFund: { balance: efBalance },
+    debts: debts,
+  };
+  const blob = new Blob([JSON.stringify(backup, null, 2)], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'runway-dashboard-backup-' + new Date().toISOString().slice(0,10) + '.json';
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(url);
+});
+
+document.getElementById('restoreBackupBtn').addEventListener('click', () => {
+  document.getElementById('restoreFileInput').click();
+});
+document.getElementById('restoreFileInput').addEventListener('change', async (e) => {
+  const file = e.target.files[0];
+  const note = document.getElementById('backupNote');
+  if(!file) return;
+  try {
+    const text = await file.text();
+    const data = JSON.parse(text);
+    if(!confirm('Restore from this file? This replaces everything currently on this device -- personal expenses, personal income, business months, emergency fund, and debts.')) {
+      e.target.value = '';
+      return;
+    }
+    expenses = Array.isArray(data.personalExpenses) ? data.personalExpenses : [];
+    income = Array.isArray(data.personalIncome) ? data.personalIncome : [];
+    budgetSettings = {
+      savingsPct: (data.budgetSettings && data.budgetSettings.savingsPct !== undefined) ? Number(data.budgetSettings.savingsPct) : 20,
+      taxSetAsideRate: (data.budgetSettings && data.budgetSettings.taxSetAsideRate !== undefined) ? Number(data.budgetSettings.taxSetAsideRate) : 25,
+    };
+    document.getElementById('settingSavingsPct').value = budgetSettings.savingsPct;
+    document.getElementById('taxSetAsideRate').value = budgetSettings.taxSetAsideRate;
+    months = Array.isArray(data.businessMonths) ? data.businessMonths : [];
+    efBalance = Number(data.emergencyFund && data.emergencyFund.balance) || 0;
+    debts = Array.isArray(data.debts) ? data.debts : [];
+    await saveExpenses();
+    await saveIncome();
+    await saveBudgetSettings();
+    await saveMonths();
+    await saveEF();
+    await saveDebts();
+    populateCategorySelect();
+    renderPersonal();
+    renderIncome();
+    renderMonths();
+    renderDebts();
+    renderNetWorth();
+    renderRunway();
+    note.textContent = 'Restored from ' + file.name + '.';
+    note.style.color = 'var(--green)';
+  } catch(err) {
+    note.textContent = 'Could not read that file -- make sure it\'s a backup downloaded from this same page.';
+    note.style.color = 'var(--red)';
+  }
+  e.target.value = '';
+});
+
+// ---------------------------------------------------------------------------
+// Job Tracker data sync -- reuses the SAME Supabase project and sync.js
+// module every other Triple H tool already uses. This page never writes
+// any th_ key, only reads th_expense_log/th_invoices after a pull, so it
+// piggybacks on infrastructure that's already proven working rather than
+// needing anything new.
+// ---------------------------------------------------------------------------
+function updateJobTrackerBadge(status){
+  const dot = document.getElementById('jtDot');
+  const text = document.getElementById('jtText');
+  if(!dot || !text) return;
+  dot.className = 'realtime-dot';
+  if(status === 'SUBSCRIBED'){ dot.classList.add('is-live'); text.textContent = 'Sync: live'; }
+  else if(status === 'unavailable'){ dot.classList.add('is-error'); text.textContent = 'Sync: unavailable'; }
+  else if(status === 'CHANNEL_ERROR' || status === 'TIMED_OUT' || status === 'CLOSED'){ dot.classList.add('is-error'); text.textContent = 'Sync: disconnected'; }
+  else { dot.classList.add('is-connecting'); text.textContent = 'Sync: connecting...'; }
+}
+
+
+document.getElementById('resetAllBtn').addEventListener('click', async () => {
+  if(!confirm('Reset ALL data — personal expenses, personal income, business months, and emergency fund? This cannot be undone.')) return;
+  expenses = [];
+  income = [];
+  months = [];
+  efBalance = 0;
+  await saveExpenses();
+  await saveIncome();
+  await saveMonths();
+  await saveEF();
+  renderPersonal();
+  renderIncome();
+  renderMonths();
+  renderRunway();
+});
+
+loadAll();
+document.addEventListener('DOMContentLoaded', async () => {
+  if(typeof pullSync === 'function'){
+    const result = await pullSync(); // refreshes th_ AND rd_ keys from the shared blob
+    if(result && result.ok){
+      // Personal/business data may have just changed under us (e.g. logged
+      // from another device) -- reload from storage and re-render everything,
+      // not just re-read Job Tracker's data.
+      await loadAll();
+    }
+  }
+  if(typeof startRealtimeSync === 'function'){
+    startRealtimeSync(() => { loadAll(); }, updateJobTrackerBadge);
+  } else {
+    updateJobTrackerBadge('unavailable');
+  }
+});
+</script>
+</body>
+</html>

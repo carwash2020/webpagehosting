@@ -1,0 +1,1731 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<script src="/tools/auth.js"></script>
+<script>
+  // Security gate -- redirect to login before this page's own content
+  // is meaningfully usable. See auth.js for why this exists (a single
+  // shared account keeping randoms out, not a multi-user system).
+  requireAuth();
+</script>
+<link rel="manifest" href="/tools/manifest.json">
+<meta name="theme-color" content="#0a0a0a">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Triple H">
+<link rel="apple-touch-icon" href="/images/apple-touch-icon.png">
+
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="robots" content="noindex, nofollow">
+<title>Dashboard | Triple H Enterprises (Internal)</title>
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data: https://*.supabase.co; connect-src 'self' https://*.supabase.co wss://*.supabase.co; frame-src 'none'; object-src 'none'; base-uri 'self'; frame-ancestors 'none';">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Anton&family=Oswald:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/styles.css">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js" defer></script>
+<script src="/tools/sync.js" defer></script>
+<script src="/tools/push-notifications.js" defer></script>
+<script src="/tools/tools-common.js" defer></script>
+<style>
+  body { padding: 44px 20px 60px; max-width: 900px; margin: 0 auto; }
+  .hub-header { display: flex; align-items: center; justify-content: space-between; gap: 14px; margin-bottom: 8px; }
+  .hub-header-left { display: flex; align-items: center; gap: 14px; }
+  .hub-header img { height: 44px; width: 44px; object-fit: contain; }
+  .hub-title { font-family:'Anton',sans-serif; font-size: 26px; color: var(--white); }
+  .hub-sub { color: var(--text-dim); margin-bottom: 20px; }
+
+  .jump-nav {
+    position: sticky; top: 0; z-index: 50; display: flex; gap: 6px; overflow-x: auto;
+    background: var(--bg); border-bottom: 1px solid var(--border); padding: 10px 0; margin-bottom: 20px;
+  }
+  .jump-nav a {
+    display: flex; align-items: center; gap: 6px;
+    color: var(--text-dim); font-size: 12.5px; text-decoration: none; white-space: nowrap;
+    padding: 6px 12px; border-radius: 6px; font-family:'Oswald',sans-serif;
+    transition: color .15s ease, background .15s ease;
+  }
+  .jump-nav a:hover { color: var(--orange-light); background: var(--bg-panel-2); }
+  .jump-nav a:active { transform: translateY(1px); }
+  .jump-nav a .jump-nav-icon { font-size: 15px; line-height: 1; }
+
+  .global-search-block { margin-bottom: 20px; }
+  #globalSearchWrap { width: 100%; }
+  #globalSearchWrap.is-expanded { display: flex; }
+  #globalSearchWrap.is-expanded .icon-search-input { width: 100%; }
+  .global-search-block > input {
+    width: 100%; box-sizing: border-box; padding: 13px 16px; background: var(--bg-panel-2);
+    border: 1px solid var(--border); border-radius: var(--radius); color: var(--white);
+    font-size: 15px; font-family: inherit;
+  }
+  .global-search-block > input:focus-visible { border-color: var(--orange-light); }
+  #globalSearchResults:not(:empty) {
+    background: var(--bg-panel); border: 1px solid var(--border); border-radius: var(--radius);
+    padding: 4px 16px 14px; margin-top: 8px;
+  }
+  #globalSearchResults .dash-list-item { text-decoration: none; display: flex; cursor: pointer; }
+
+  .section-block {
+    background: var(--bg-panel); border: 1px solid var(--border); border-radius: var(--radius);
+    padding: 0 20px 20px; margin-bottom: 18px;
+  }
+  .section-heading {
+    font-family:'Oswald',sans-serif; color: var(--orange-light); font-size: 13.5px;
+    text-transform: uppercase; letter-spacing: 1.5px; margin: 0;
+    padding: 18px 0 16px; border-bottom: 1px solid var(--border);
+    display: flex; justify-content: space-between; align-items: center; cursor: pointer; user-select: none;
+  }
+  .section-heading.is-static { cursor: default; }
+  .section-heading .collapse-arrow { color: var(--text-dim); font-size: 12px; transition: transform 0.15s ease; }
+  .section-heading.is-collapsed .collapse-arrow { transform: rotate(-90deg); }
+  .section-body { padding-top: 18px; max-height: 4000px; opacity: 1; overflow: hidden; transition: max-height .3s ease, opacity .2s ease, padding-top .3s ease; }
+  .section-body.is-collapsed { max-height: 0; opacity: 0; padding-top: 0; overflow: hidden; }
+  @media (prefers-reduced-motion: reduce){ .section-body{ transition:none; } }
+
+  .metrics-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 14px; margin-bottom: 8px; }
+  .metric-card {
+    background: var(--bg-panel); border: 1px solid var(--border); border-radius: var(--radius);
+    padding: 18px 20px;
+  }
+  .metric-card.is-warning { border-color: #e05252; }
+  .metric-card .metric-label { color: var(--text-dim); font-size: 12px; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 8px; }
+  .metric-card .metric-value { font-family:'Oswald',sans-serif; font-weight: 700; font-size: 24px; color: var(--white); }
+  .metric-card .metric-value.is-orange { color: var(--orange-light); }
+  .metric-card .metric-sub { color: var(--text-dim); font-size: 12px; margin-top: 4px; }
+  .metric-card .metric-sub.is-up { color: #4caf50; }
+  .metric-card .metric-sub.is-down { color: #e05252; }
+
+  .period-toggle { display: flex; gap: 6px; margin-bottom: 14px; flex-wrap: wrap; }
+  .period-btn {
+    background: var(--bg-panel-2); border: 1px solid var(--border); color: var(--text-dim);
+    border-radius: 6px; padding: 7px 16px; cursor: pointer; font-size: 13px; font-family: inherit;
+  }
+  .period-btn.is-active { color: var(--orange-light); border-color: var(--orange-light); }
+
+  .custom-range-row { display: none; gap: 10px; margin-bottom: 16px; flex-wrap: wrap; align-items: center; }
+  .custom-range-row.is-visible { display: flex; }
+  .custom-range-row input {
+    padding: 8px 10px; background: var(--bg-panel-2); border: 1px solid var(--border);
+    border-radius: 6px; color: var(--white); font-size: 13.5px; font-family: inherit;
+  }
+  .custom-range-row span { color: var(--text-dim); font-size: 13px; }
+
+  .status-bar-row, .vendor-bar-row { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; font-size: 13px; }
+  .status-bar-label, .vendor-bar-label { width: 110px; flex-shrink: 0; color: var(--text-dim); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .status-bar-track, .vendor-bar-track { flex: 1; height: 8px; background: var(--bg-panel-2); border-radius: 4px; overflow: hidden; }
+  .status-bar-fill { height: 100%; background: var(--orange); }
+  .vendor-bar-fill { height: 100%; background: var(--blue); }
+  .status-bar-count, .vendor-bar-count { width: 60px; text-align: right; color: var(--white); flex-shrink: 0; font-size: 12.5px; }
+
+  .analytics-subheading { font-family:'Oswald',sans-serif; color: var(--text-dim); font-size: 12px; text-transform: uppercase; letter-spacing: 0.5px; margin: 20px 0 12px; }
+  .analytics-subheading.is-first { margin-top: 0; }
+
+  .empty-state-small { color: var(--text-dim); font-size: 13.5px; padding: 12px 0; }
+
+  .paid-toggle-btn, .lead-toggle-btn {
+    border-radius: 12px; padding: 4px 12px; font-size: 11.5px; font-weight: 600;
+    text-transform: uppercase; letter-spacing: 0.5px; cursor: pointer; border: 1px solid;
+    background: none; flex-shrink: 0;
+  }
+  .paid-toggle-btn.is-paid, .lead-toggle-btn.is-handled { color: #4caf50; border-color: #4caf50; }
+  .paid-toggle-btn.is-unpaid, .lead-toggle-btn.is-new { color: var(--orange-light); border-color: var(--orange-light); }
+  .paid-toggle-btn.is-overdue { color: #e05252; border-color: #e05252; }
+
+  .lead-card { padding: 14px 0; border-bottom: 1px solid var(--border); }
+  .lead-card:last-child { border-bottom: none; }
+  .lead-card-top { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; margin-bottom: 6px; }
+  .lead-card-name { color: var(--white); font-family:'Oswald',sans-serif; font-size: 15px; }
+  .lead-card-meta { color: var(--text-dim); font-size: 12.5px; margin: 2px 0; }
+  .lead-card-details { color: var(--text); font-size: 13.5px; margin-top: 6px; font-style: italic; }
+
+  .gallery-queue-grid { display: flex; flex-wrap: wrap; gap: 14px; }
+  .gallery-queue-item { width: 160px; }
+  .gallery-queue-item img { width: 100%; height: 140px; object-fit: cover; border-radius: 8px; border: 1px solid var(--border); display: block; }
+  .gallery-queue-caption { color: var(--white); font-size: 12.5px; margin: 8px 0 4px; }
+  .gallery-queue-meta { color: var(--text-dim); font-size: 11.5px; margin-bottom: 8px; }
+
+  .compliance-card {
+    background: var(--bg-panel); border: 1px solid var(--border); border-left: 3px solid var(--blue);
+    border-radius: var(--radius); padding: 20px 22px; margin-bottom: 14px;
+  }
+  .compliance-card.is-expiring { border-left-color: var(--orange); }
+  .compliance-card.is-expired { border-left-color: #e05252; }
+  .compliance-card-top { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; margin-bottom: 10px; }
+  .compliance-card-title { font-family:'Oswald',sans-serif; font-size: 16px; color: var(--white); }
+  .compliance-status-badge {
+    font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;
+    padding: 4px 10px; border-radius: 12px; flex-shrink: 0; white-space: nowrap;
+  }
+  .compliance-status-badge.is-ok { color: #4caf50; background: rgba(76,175,80,0.12); }
+  .compliance-status-badge.is-expiring { color: var(--orange-light); background: var(--orange-tint-glow); }
+  .compliance-status-badge.is-expired { color: #e05252; background: rgba(224,82,82,0.12); }
+  .compliance-detail-row { display: flex; gap: 20px; flex-wrap: wrap; font-size: 13.5px; color: var(--text-dim); margin-bottom: 4px; }
+  .compliance-detail-row strong { color: var(--white); }
+  .compliance-edit-form { display: none; margin-top: 16px; padding-top: 16px; border-top: 1px solid var(--border); }
+  .compliance-edit-form.is-open { display: block; }
+  .license-item {
+    display: flex; justify-content: space-between; align-items: center; gap: 12px;
+    padding: 12px 0; border-bottom: 1px solid var(--border); font-size: 14px;
+  }
+  .license-item:last-child { border-bottom: none; }
+
+  .realtime-badge { display: inline-flex; align-items: center; gap: 5px; font-size: 11.5px; color: var(--text-dim); margin-left: 10px; }
+  .realtime-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--text-dim); flex-shrink: 0; }
+  .realtime-dot.is-live { background: #4caf50; }
+  .realtime-dot.is-connecting { background: var(--orange-light); }
+  .realtime-dot.is-error { background: #e05252; }
+
+  .backup-row { display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 10px; }
+
+  .skeleton-line{height:14px;border-radius:6px;margin-bottom:10px;background:linear-gradient(90deg, var(--bg-panel-2) 25%, var(--bg-panel) 50%, var(--bg-panel-2) 75%);background-size:200% 100%;animation:shimmer 1.4s ease-in-out infinite;}
+  .skeleton-line.w-40{width:40%;}
+  .skeleton-line.w-60{width:60%;}
+  .skeleton-line.w-100{width:100%;}
+  @keyframes shimmer{0%{background-position:200% 0;} 100%{background-position:-200% 0;}}
+  @media (prefers-reduced-motion: reduce){ .skeleton-line{animation:none; opacity:0.6;} }
+
+  /* Tools grid -- naturally one column on a phone (minmax(260px,1fr) can't
+     fit two side by side under ~520px), becomes two columns on anything
+     wider, with no manual breakpoint needed. Cards are also more compact
+     than the original single-column stack, since 7+ of them stacked at
+     full padding was the single biggest source of page length. */
+  .tools-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(84px, 1fr)); gap: 10px; }
+  .tool-tile { position: relative; }
+  .tool-tile-link {
+    display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px;
+    background: var(--bg-panel); border: 1px solid var(--border); border-radius: var(--radius);
+    padding: 16px 6px 12px; text-decoration: none; height: 100%; box-sizing: border-box;
+    transition: border-color .18s ease, box-shadow .18s ease, transform .15s ease;
+  }
+  .tool-tile-link:hover { box-shadow: 0 0 20px var(--orange-tint-glow); transform: translateY(-2px); border-color: var(--orange-light); }
+  .tool-tile-icon { font-size: 26px; line-height: 1; }
+  .tool-tile-label { font-family:'Oswald',sans-serif; color: var(--white); font-size: 12.5px; text-align: center; }
+  .tool-tile-info {
+    position: absolute; top: 4px; right: 4px; width: 20px; height: 20px; border-radius: 50%;
+    border: 1px solid var(--border); background: var(--bg-panel-2); color: var(--text-dim);
+    font-size: 11px; cursor: pointer; display: flex; align-items: center; justify-content: center; padding: 0;
+    transition: border-color .15s ease, color .15s ease;
+  }
+  .tool-tile-info:hover { border-color: var(--orange-light); color: var(--orange-light); }
+</style>
+</head>
+<body>
+
+<div class="hub-header">
+  <div class="hub-header-left">
+    <img src="/images/logo-signature-orange.png" alt="Triple H Enterprises">
+    <span class="hub-title">Dashboard</span>
+  </div>
+  <button class="help-btn" onclick="openHelpModal()" aria-label="How to use this dashboard" title="How to use this dashboard">?</button>
+  <button class="help-btn" id="pushToggleBtn" onclick="handlePushToggle()" aria-label="Toggle notifications" title="Toggle notifications">&#128276;</button>
+  <button class="help-btn" onclick="signOut()" aria-label="Log out" title="Log out">&#x21B0;</button>
+</div>
+<p class="hub-sub">Bookmark this page &mdash; a snapshot of the business, plus every internal tool, all in one place.
+  <span class="realtime-badge" id="realtimeBadge"><span class="realtime-dot" id="realtimeDot"></span><span id="realtimeText">Live sync: connecting...</span></span>
+  <button class="help-btn" id="refreshSyncLink" onclick="manualRefreshSync(renderDashboard)" aria-label="Refresh synced data now" title="Refresh synced data now" style="width:26px; height:26px; font-size:13px; vertical-align:middle; margin-left:2px;">&#8635;</button>
+</p>
+<nav class="jump-nav">
+  <a href="#section-snapshot"><span class="jump-nav-icon">&#128202;</span>Snapshot</a>
+  <a href="#section-actionitems"><span class="jump-nav-icon">&#9989;</span>Action Items</a>
+  <a href="#section-businesshealth"><span class="jump-nav-icon">&#128737;&#65039;</span>Business Health</a>
+  <a href="#section-tools"><span class="jump-nav-icon">&#128736;&#65039;</span>Tools</a>
+</nav>
+
+<div class="global-search-block">
+  <div class="icon-search" id="globalSearchWrap">
+    <button class="icon-search-toggle" onclick="toggleIconSearch('globalSearchWrap')" aria-label="Find a client" title="Find a client">&#128269;</button>
+    <input type="text" id="globalSearch" class="icon-search-input" placeholder="Find a client &mdash; searches jobs, contacts, invoices, quotes, and contracts..." oninput="renderGlobalSearch()" aria-label="Search everything by client name">
+  </div>
+  <div id="globalSearchResults"></div>
+</div>
+
+<div class="section-block" id="section-today">
+  <div class="section-heading" onclick="toggleSection('today')">
+    <span>Today</span>
+    <span class="collapse-arrow">&#9660;</span>
+  </div>
+  <div class="section-body" id="body-today">
+    <div id="todayJobsList"></div>
+  </div>
+</div>
+
+<div class="section-block" id="section-snapshot">
+  <div class="section-heading" onclick="toggleSection('snapshot')">
+    <span>Business Snapshot</span>
+    <span class="collapse-arrow">&#9660;</span>
+  </div>
+  <div class="section-body" id="body-snapshot">
+    <div class="period-toggle">
+      <button class="period-btn" data-period="week" onclick="setPeriod('week')">Last 7 Days</button>
+      <button class="period-btn is-active" data-period="month" onclick="setPeriod('month')">This Month</button>
+      <button class="period-btn" data-period="all" onclick="setPeriod('all')">All Time</button>
+      <button class="period-btn" data-period="custom" onclick="setPeriod('custom')">Custom Range</button>
+    </div>
+
+    <div class="custom-range-row" id="customRangeRow">
+      <input type="date" id="customStart" onchange="renderMetrics()">
+      <span>to</span>
+      <input type="date" id="customEnd" onchange="renderMetrics()">
+      <span style="color:var(--text-dim);">&mdash; useful for pulling numbers for a specific tax period.</span>
+    </div>
+
+    <div class="metrics-grid">
+      <div class="metric-card">
+        <div class="metric-label">Revenue Invoiced</div>
+        <div class="metric-value is-orange" id="metricRevenue">$0.00</div>
+        <div class="metric-sub" id="metricInvoiceCount">0 invoices</div>
+      </div>
+      <div class="metric-card">
+        <div class="metric-label">Expenses</div>
+        <div class="metric-value" id="metricExpenses">$0.00</div>
+        <div class="metric-sub" id="metricExpenseCount">0 entries</div>
+      </div>
+      <div class="metric-card">
+        <div class="metric-label">Mileage</div>
+        <div class="metric-value" id="metricMileage">0 mi</div>
+        <div class="metric-sub" id="metricMileageCost">$0.00 at current rate</div>
+      </div>
+      <div class="metric-card">
+        <div class="metric-label">Net (Revenue &minus; Expenses)</div>
+        <div class="metric-value" id="metricNet">$0.00</div>
+        <div class="metric-sub">Before mileage cost</div>
+      </div>
+      <div class="metric-card">
+        <div class="metric-label">Est. Tax Set-Aside</div>
+        <div class="metric-value" id="metricSetAside">$0.00</div>
+        <div class="metric-sub">
+          <input type="number" id="setAsideRate" value="25" min="0" max="100" step="1" onchange="saveSetAsideRate(); renderMetrics();" style="width:38px; background:var(--bg-panel-2); border:1px solid var(--border); border-radius:4px; color:var(--white); font-size:12px; padding:2px 4px;">% of Net &mdash; not tax advice, just a rough set-aside based on a rate you set
+        </div>
+      </div>
+      <div class="metric-card">
+        <div class="metric-label">Outstanding Balance</div>
+        <div class="metric-value" id="metricOutstanding">$0.00</div>
+        <div class="metric-sub" id="metricOutstandingCount">0 unpaid invoices</div>
+      </div>
+      <div class="metric-card" id="overdueCard">
+        <div class="metric-label">Overdue</div>
+        <div class="metric-value" id="metricOverdue">$0.00</div>
+        <div class="metric-sub" id="metricOverdueCount">0 invoices past terms</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="section-block" id="section-actionitems">
+  <div class="section-heading" onclick="toggleSection('actionitems')">
+    <span>Action Items <span id="actionItemsHeadingBadge"></span></span>
+    <span class="collapse-arrow">&#9660;</span>
+  </div>
+  <div class="section-body" id="body-actionitems">
+
+    <div class="analytics-subheading is-first">New Leads</div>
+    <div id="leadsList"></div>
+
+    <div class="analytics-subheading">Due Soon (next 7 days, not done)</div>
+    <div id="upcomingJobs"></div>
+
+    <div class="analytics-subheading">Client Follow-Ups</div>
+    <div id="followupsList"></div>
+
+    <div class="analytics-subheading">Income</div>
+    <div class="icon-search" id="invoiceSearchWrap">
+      <button class="icon-search-toggle" onclick="toggleIconSearch('invoiceSearchWrap')" aria-label="Search income" title="Search income">&#128269;</button>
+      <input type="text" id="invoiceSearch" class="icon-search-input" placeholder="Search income by client, invoice #, or description..." oninput="renderInvoicesList()" aria-label="Search income">
+    </div>
+    <div id="invoicesList"></div>
+
+  </div>
+</div>
+
+<div class="section-block" id="section-businesshealth">
+  <div class="section-heading" onclick="toggleSection('businesshealth')">
+    <span>Business Health <span id="complianceHeadingBadge"></span></span>
+    <span class="collapse-arrow">&#9660;</span>
+  </div>
+  <div class="section-body" id="body-businesshealth">
+
+    <div class="tabs" id="businessHealthTabs" style="margin-bottom:18px;">
+      <button class="tab-btn is-active" data-bh-tab="gallery" onclick="activateBusinessHealthTab('gallery')">Gallery Queue</button>
+      <button class="tab-btn" data-bh-tab="compliance" onclick="activateBusinessHealthTab('compliance')">Compliance</button>
+      <button class="tab-btn" data-bh-tab="documents" onclick="activateBusinessHealthTab('documents')">Documents</button>
+      <button class="tab-btn" data-bh-tab="analytics" onclick="activateBusinessHealthTab('analytics')">Analytics</button>
+      <button class="tab-btn" data-bh-tab="backup" onclick="activateBusinessHealthTab('backup')">Backup</button>
+    </div>
+
+    <div class="tab-panel is-active" id="bh-panel-gallery">
+      <div id="galleryQueueList"></div>
+    </div>
+
+    <div class="tab-panel" id="bh-panel-compliance">
+      <div class="analytics-subheading is-first">Business Compliance</div>
+      <div id="insuranceCard"></div>
+
+      <div class="compliance-edit-form" id="insuranceEditForm">
+        <div class="tool-form-row">
+          <div style="flex:1; min-width:160px;"><label style="display:block; font-size:12.5px; color:var(--text-dim); margin-bottom:4px;">Insurer</label><input type="text" id="insInsurer" style="width:100%; box-sizing:border-box; padding:9px 11px; background:var(--bg-panel-2); border:1px solid var(--border); border-radius:6px; color:var(--white); font-size:14px;"></div>
+          <div style="flex:1; min-width:160px;"><label style="display:block; font-size:12.5px; color:var(--text-dim); margin-bottom:4px;">Broker / Producer</label><input type="text" id="insProducer" style="width:100%; box-sizing:border-box; padding:9px 11px; background:var(--bg-panel-2); border:1px solid var(--border); border-radius:6px; color:var(--white); font-size:14px;"></div>
+        </div>
+        <div class="tool-form-row">
+          <div style="flex:1; min-width:160px;"><label style="display:block; font-size:12.5px; color:var(--text-dim); margin-bottom:4px;">Policy Number</label><input type="text" id="insPolicyNumber" style="width:100%; box-sizing:border-box; padding:9px 11px; background:var(--bg-panel-2); border:1px solid var(--border); border-radius:6px; color:var(--white); font-size:14px;"></div>
+          <div style="flex:1; min-width:120px;"><label style="display:block; font-size:12.5px; color:var(--text-dim); margin-bottom:4px;">Effective</label><input type="date" id="insEffectiveDate" style="width:100%; box-sizing:border-box; padding:9px 11px; background:var(--bg-panel-2); border:1px solid var(--border); border-radius:6px; color:var(--white); font-size:14px;"></div>
+          <div style="flex:1; min-width:120px;"><label style="display:block; font-size:12.5px; color:var(--text-dim); margin-bottom:4px;">Expires</label><input type="date" id="insExpirationDate" style="width:100%; box-sizing:border-box; padding:9px 11px; background:var(--bg-panel-2); border:1px solid var(--border); border-radius:6px; color:var(--white); font-size:14px;"></div>
+        </div>
+        <div class="tool-form-row">
+          <div style="flex:1; min-width:140px;"><label style="display:block; font-size:12.5px; color:var(--text-dim); margin-bottom:4px;">Each Occurrence</label><input type="text" id="insEachOccurrence" style="width:100%; box-sizing:border-box; padding:9px 11px; background:var(--bg-panel-2); border:1px solid var(--border); border-radius:6px; color:var(--white); font-size:14px;"></div>
+          <div style="flex:1; min-width:140px;"><label style="display:block; font-size:12.5px; color:var(--text-dim); margin-bottom:4px;">General Aggregate</label><input type="text" id="insGeneralAggregate" style="width:100%; box-sizing:border-box; padding:9px 11px; background:var(--bg-panel-2); border:1px solid var(--border); border-radius:6px; color:var(--white); font-size:14px;"></div>
+          <div style="flex:1; min-width:140px;"><label style="display:block; font-size:12.5px; color:var(--text-dim); margin-bottom:4px;">Payment due day of month</label><input type="number" id="insPaymentDueDay" min="1" max="28" style="width:100%; box-sizing:border-box; padding:9px 11px; background:var(--bg-panel-2); border:1px solid var(--border); border-radius:6px; color:var(--white); font-size:14px;"></div>
+        </div>
+        <button class="secondary-btn" onclick="saveInsuranceEdit()">Save</button>
+        <button class="secondary-btn" onclick="closeInsuranceEdit()">Cancel</button>
+      </div>
+
+      <div class="analytics-subheading" style="margin-top:26px;">LLC &amp; Tax Info</div>
+      <div id="businessInfoCard"></div>
+
+      <div class="compliance-edit-form" id="businessEditForm">
+        <div class="tool-form-row">
+          <div style="flex:1; min-width:160px;"><label style="display:block; font-size:12.5px; color:var(--text-dim); margin-bottom:4px;">Legal Name</label><input type="text" id="bizLegalName" style="width:100%; box-sizing:border-box; padding:9px 11px; background:var(--bg-panel-2); border:1px solid var(--border); border-radius:6px; color:var(--white); font-size:14px;"></div>
+          <div style="flex:1; min-width:120px;"><label style="display:block; font-size:12.5px; color:var(--text-dim); margin-bottom:4px;">State of Formation</label><input type="text" id="bizState" style="width:100%; box-sizing:border-box; padding:9px 11px; background:var(--bg-panel-2); border:1px solid var(--border); border-radius:6px; color:var(--white); font-size:14px;"></div>
+        </div>
+        <div class="tool-form-row">
+          <div style="flex:1; min-width:220px;"><label style="display:block; font-size:12.5px; color:var(--text-dim); margin-bottom:4px;">Business Address</label><input type="text" id="bizAddress" style="width:100%; box-sizing:border-box; padding:9px 11px; background:var(--bg-panel-2); border:1px solid var(--border); border-radius:6px; color:var(--white); font-size:14px;"></div>
+        </div>
+        <div class="tool-form-row">
+          <div style="flex:1; min-width:160px;"><label style="display:block; font-size:12.5px; color:var(--text-dim); margin-bottom:4px;">Utah Sales Tax License #</label><input type="text" id="bizSalesTax" style="width:100%; box-sizing:border-box; padding:9px 11px; background:var(--bg-panel-2); border:1px solid var(--border); border-radius:6px; color:var(--white); font-size:14px;"></div>
+          <div style="flex:1; min-width:160px;"><label style="display:block; font-size:12.5px; color:var(--text-dim); margin-bottom:4px;">EIN</label><input type="text" id="bizEin" placeholder="Leave blank until the IRS responds" style="width:100%; box-sizing:border-box; padding:9px 11px; background:var(--bg-panel-2); border:1px solid var(--border); border-radius:6px; color:var(--white); font-size:14px;"></div>
+        </div>
+        <div class="tool-form-row">
+          <div style="flex:1; min-width:220px;"><label style="display:block; font-size:12.5px; color:var(--text-dim); margin-bottom:4px;">W-9 Status / Notes</label><input type="text" id="bizW9Status" style="width:100%; box-sizing:border-box; padding:9px 11px; background:var(--bg-panel-2); border:1px solid var(--border); border-radius:6px; color:var(--white); font-size:14px;"></div>
+        </div>
+        <button class="secondary-btn" onclick="saveBusinessEdit()">Save</button>
+        <button class="secondary-btn" onclick="closeBusinessEdit()">Cancel</button>
+      </div>
+
+      <div class="analytics-subheading" style="margin-top:26px;">City Business Licenses</div>
+      <div id="licensesList"></div>
+      <button class="secondary-btn" style="margin-top:10px;" onclick="addLicensePrompt()">+ Add License</button>
+    </div>
+
+    <div class="tab-panel" id="bh-panel-documents">
+      <div class="analytics-subheading is-first">Secure Documents <button class="help-btn" onclick="openCardInfo('secureDocuments')" aria-label="What is this?" title="What is this?">?</button></div>
+      <div id="secureDocsList"></div>
+      <div class="icon-search" id="secureDocsUploadWrap" style="width:100%; margin-top:10px;">
+        <button class="icon-search-toggle" onclick="toggleFormSection('secureDocsUploadCard')" aria-label="Upload a document" title="Upload a document">+</button>
+      </div>
+      <div class="form-section is-collapsed" id="secureDocsUploadCard" style="margin-top:10px;">
+        <div class="form-section-body">
+          <div class="tool-form-row">
+            <div class="form-field"><label>Category</label>
+              <select id="secureDocCategory">
+                <option value="insurance">Insurance</option>
+                <option value="business-formation">Business Formation</option>
+                <option value="licenses">Licenses &amp; Permits</option>
+                <option value="tax">Tax Documents</option>
+                <option value="contracts">Signed Contracts</option>
+                <option value="vendor-agreements">Vendor Agreements</option>
+                <option value="other">Other</option>
+              </select>
+            </div>
+            <div class="form-field"><label>Label</label><input type="text" id="secureDocLabel" placeholder="e.g. General Liability Policy 2026"></div>
+          </div>
+          <div class="tool-form-row">
+            <div class="form-field"><label>File</label><input type="file" id="secureDocFile" accept=".pdf,.png,.jpg,.jpeg"></div>
+          </div>
+          <button class="primary-btn" id="secureDocUploadBtn" onclick="uploadSecureDocumentUI()">Upload</button>
+          <div class="upload-progress-bar" id="secureDocUploadProgress" style="display:none;"></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="tab-panel" id="bh-panel-analytics">
+      <div class="analytics-subheading is-first">Job Status</div>
+      <div id="statusBars"></div>
+      <div class="analytics-subheading">Top Vendors <span style="text-transform:none; letter-spacing:0;">(for the period selected in Business Snapshot)</span></div>
+      <div id="topVendors"></div>
+    </div>
+
+    <div class="tab-panel" id="bh-panel-backup">
+      <div class="analytics-subheading is-first">Backup &amp; Restore</div>
+      <div class="backup-row">
+        <button class="secondary-btn" onclick="downloadBackup()">Download Full Backup</button>
+        <label class="secondary-btn" style="display:inline-flex; align-items:center; cursor:pointer;">
+          Restore from Backup
+          <input type="file" accept="application/json" onchange="restoreBackup(event)" style="display:none;">
+        </label>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<div class="section-block" id="section-tools">
+  <div class="section-heading is-static">
+    <span>Tools</span>
+  </div>
+
+  <div class="tools-grid">
+  <div class="tool-tile">
+    <a href="/tools/job-tracker.html" class="tool-tile-link">
+      <span class="tool-tile-icon">&#128736;&#65039;</span>
+      <span class="tool-tile-label">Jobs</span>
+    </a>
+    <button class="tool-tile-info" onclick="event.stopPropagation(); openCardInfo('tool-jobtracker')" aria-label="What is Job Tracker?" title="What is this?">?</button>
+  </div>
+
+  <div class="tool-tile">
+    <a href="/tools/invoice-generator.html" class="tool-tile-link">
+      <span class="tool-tile-icon">&#129534;</span>
+      <span class="tool-tile-label">Invoices</span>
+    </a>
+    <button class="tool-tile-info" onclick="event.stopPropagation(); openCardInfo('tool-invoices')" aria-label="What is Invoice Generator?" title="What is this?">?</button>
+  </div>
+
+  <div class="tool-tile">
+    <a href="/tools/review-request.html" class="tool-tile-link">
+      <span class="tool-tile-icon">&#11088;</span>
+      <span class="tool-tile-label">Reviews</span>
+    </a>
+    <button class="tool-tile-info" onclick="event.stopPropagation(); openCardInfo('tool-reviews')" aria-label="What is Review Request Sender?" title="What is this?">?</button>
+  </div>
+
+  <div class="tool-tile">
+    <a href="/tools/route-planner.html" class="tool-tile-link">
+      <span class="tool-tile-icon">&#128506;&#65039;</span>
+      <span class="tool-tile-label">Routes</span>
+    </a>
+    <button class="tool-tile-info" onclick="event.stopPropagation(); openCardInfo('tool-routes')" aria-label="What is Route Planner?" title="What is this?">?</button>
+  </div>
+
+  <div class="tool-tile">
+    <a href="/tools/contract-generator.html" class="tool-tile-link">
+      <span class="tool-tile-icon">&#128220;</span>
+      <span class="tool-tile-label">Contracts</span>
+    </a>
+    <button class="tool-tile-info" onclick="event.stopPropagation(); openCardInfo('tool-contracts')" aria-label="What is Contract Generator?" title="What is this?">?</button>
+  </div>
+
+  <div class="tool-tile">
+    <a href="/tools/calendar.html" class="tool-tile-link">
+      <span class="tool-tile-icon">&#128197;</span>
+      <span class="tool-tile-label">Calendar</span>
+    </a>
+    <button class="tool-tile-info" onclick="event.stopPropagation(); openCardInfo('tool-calendar')" aria-label="What is Calendar?" title="What is this?">?</button>
+  </div>
+
+  <div class="tool-tile">
+    <a href="/tools/runway-dashboard.html" class="tool-tile-link">
+      <span class="tool-tile-icon">&#128176;</span>
+      <span class="tool-tile-label">Runway</span>
+    </a>
+    <button class="tool-tile-info" onclick="event.stopPropagation(); openCardInfo('tool-runway')" aria-label="What is Runway Dashboard?" title="What is this?">?</button>
+  </div>
+  </div>
+</div>
+
+
+<div class="help-modal-overlay" id="helpModalOverlay" onclick="if(event.target===this) closeHelpModal()">
+  <div class="help-modal">
+    <button class="help-modal-close" onclick="closeHelpModal()" aria-label="Close">&times;</button>
+    <h3>How to Use: Dashboard</h3>
+    <div class="help-modal-body">
+      <p>This is the home base for the whole business &mdash; bookmark this one page. Tap any section heading (except Tools) to collapse or expand it &mdash; your preference is remembered.</p>
+      <ul>
+        <li><strong>Today</strong> &mdash; just what's scheduled for today and not yet marked done, sorted by priority, with a tap-to-call phone number and a tap-to-open-Maps address for each. The fastest way to see what's actually in front of you without wading through the full Job Tracker.</li>
+        <li><strong>Business Snapshot</strong> &mdash; Last 7 Days, This Month, All Time, or a Custom Range for pulling tax-period numbers.</li>
+        <li><strong>Action Items</strong> &mdash; everything that wants a response from you, in one place: new Leads from the contact form (mark Handled or Delete), jobs Due Soon (next 7 days, not done yet), Client Follow-Ups (clients whose most recent job was 6+ months ago, with a one-tap link to a pre-filled follow-up text), and Invoices (tap the status badge to mark Paid or Unpaid). The heading shows a running count of what's waiting, even while collapsed.</li>
+        <li><strong>Business Health</strong> &mdash; everything you check occasionally rather than daily: Website Gallery Queue (photos starred in the Job Tracker, review-only &mdash; nothing here is live on the website until deliberately added to the actual gallery code), Business Compliance (insurance, LLC/tax info, city licenses &mdash; the heading flags an expiring or expired policy even while collapsed), Analytics (Job Status and Top Vendors), and Backup &amp; Restore (independent of cloud sync entirely). Collapsed by default since none of this is a daily check.</li>
+        <li><strong>Tools</strong> &mdash; every internal tool, one tap away: Job Tracker, Invoice Generator, Contract Generator, Route Planner, Calendar, and a few smaller ones.</li>
+      </ul>
+
+      <p><strong>A typical day, start to finish:</strong></p>
+      <ol style="padding-left: 20px; margin: 8px 0 16px;">
+        <li>Check <strong>Today</strong> on the Dashboard for what's already on the schedule.</li>
+        <li>New job comes in? Add it in <strong>Job Tracker</strong> &mdash; check "Show on Calendar" if you want it on your phone's own calendar app too, and use the microphone icon next to Notes to dictate instead of typing.</li>
+        <li>On site, update the job's status directly from the dropdown on its card (Not Started / In Progress / Mark as Complete), and attach photos with the Photos button.</li>
+        <li>Marking a job Complete offers to jump straight to a pre-filled review request for that client.</li>
+        <li>Need to invoice? Open <strong>Invoice Generator</strong> and use "Link to Job" so it counts toward that job's profitability in Job Tracker's Profitability tab.</li>
+        <li>Need a signed agreement? <strong>Contract Generator</strong> can capture a client's signature right on the screen if they're there in person, embedded directly into the PDF &mdash; or skip that and just print/text it for them to sign on their own.</li>
+        <li>End of week: skim <strong>Action Items</strong> for anything waiting, and <strong>Business Health</strong> for anything expiring soon.</li>
+      </ol>
+
+      <p>Data is saved directly in your browser, and quietly kept in sync across your devices in the background &mdash; the small dot next to the sync status turns green when live updates are connected, meaning changes on another device (or a new lead coming in) show up here automatically. The small circular arrow button next to it forces an immediate refresh if you don't want to wait.</p>
+      <p><strong>Install this as an app:</strong> iPhone/iPad &mdash; tap the Share icon in Safari, then "Add to Home Screen." Android &mdash; tap the &#8942; menu in Chrome, then "Install app." Computer &mdash; look for an install icon in the address bar. Once installed, it opens full-screen with its own icon, no browser bar.</p>
+      <p><strong>Worth knowing:</strong> this whole suite is behind a real login now &mdash; anyone hitting these pages without signing in gets redirected to a sign-in screen first. There's exactly one account, meant to keep the data private, not to support separate logins for separate people.</p>
+    </div>
+  </div>
+</div>
+
+<script>
+  function money(v) { return '$' + (v || 0).toFixed(2); }
+  const CARD_INFO = {
+    secureDocuments: {
+      title: 'Secure Documents',
+      body: `<p>A private, password-protected place for the actual files behind your compliance dates -- insurance policy PDFs, your LLC certificate, signed contracts.</p>
+        <p>This bucket is set to private, unlike the photo and receipt storage elsewhere in these tools, so a download link only works for a few minutes and only for someone actually logged in -- not a permanent public link.</p>`,
+    },
+    'tool-jobtracker': {
+      title: 'Job Tracker',
+      body: `<p>Jobs, cost lookup, expenses &amp; mileage, contacts, and notes &mdash; all five in one page, organized by tab.</p>`,
+    },
+    'tool-invoices': {
+      title: 'Invoice Generator',
+      body: `<p>Invoices and quotes/estimates in one place &mdash; convert an estimate straight into a real invoice with one tap.</p>`,
+    },
+    'tool-reviews': {
+      title: 'Review Request Sender',
+      body: `<p>After a job's done, generate a ready-to-send review-request text &mdash; 6 different phrasings, shuffle for a fresh one anytime.</p>`,
+    },
+    'tool-routes': {
+      title: 'Route Planner',
+      body: `<p>Type in today's addresses, get one link that opens the whole route in Google Maps, plus a to-and-from cost analyzer.</p>`,
+    },
+    'tool-contracts': {
+      title: 'Contract Generator',
+      body: `<p>Fill in a client and job, generate a branded PDF to email or text &mdash; every contract generated is logged so you can find it again later.</p>`,
+    },
+    'tool-calendar': {
+      title: 'Calendar',
+      body: `<p>See jobs flagged "Show on Calendar" in Job Tracker on a month view, and export any of them to your phone's own calendar app.</p>`,
+    },
+    'tool-runway': {
+      title: 'Runway Dashboard',
+      body: `<p>Personal budget and business runway tracking &mdash; pulls revenue and expenses straight from Job Tracker, no double entry.</p>`,
+    },
+  };
+  function openCardInfo(key) {
+    const info = CARD_INFO[key];
+    if (info) openInfoModal(info.title, info.body);
+  }
+
+  function escapeHtml(str) {
+    const div = document.createElement('div');
+    div.textContent = str;
+    return div.innerHTML;
+  }
+
+  const COLLAPSE_STATE_KEY = 'th_dash_collapsed';
+  const DEFAULT_COLLAPSE = { today: false, snapshot: true, actionitems: false, businesshealth: true };
+
+  function loadCollapseState() {
+    try {
+      return Object.assign({}, DEFAULT_COLLAPSE, JSON.parse(localStorage.getItem(COLLAPSE_STATE_KEY) || '{}'));
+    } catch (e) { return Object.assign({}, DEFAULT_COLLAPSE); }
+  }
+
+  function applyCollapseState() {
+    const state = loadCollapseState();
+    Object.keys(state).forEach(key => {
+      const heading = document.querySelector('#section-' + key + ' .section-heading');
+      const body = document.getElementById('body-' + key);
+      if (!heading || !body) return;
+      heading.classList.toggle('is-collapsed', !!state[key]);
+      body.classList.toggle('is-collapsed', !!state[key]);
+    });
+  }
+
+  function activateBusinessHealthTab(tabKey) {
+    document.querySelectorAll('#businessHealthTabs .tab-btn').forEach(b => b.classList.toggle('is-active', b.dataset.bhTab === tabKey));
+    document.querySelectorAll('#body-businesshealth .tab-panel').forEach(p => p.classList.toggle('is-active', p.id === 'bh-panel-' + tabKey));
+  }
+
+  function toggleSection(key) {
+    const state = loadCollapseState();
+    state[key] = !state[key];
+    localStorage.setItem(COLLAPSE_STATE_KEY, JSON.stringify(state));
+    applyCollapseState();
+  }
+
+  // Force a section open (vs. toggleSection's flip) -- used when a global
+  // search result needs to land somewhere that might currently be collapsed.
+  function expandSection(key) {
+    const state = loadCollapseState();
+    if (!state[key]) return;
+    state[key] = false;
+    localStorage.setItem(COLLAPSE_STATE_KEY, JSON.stringify(state));
+    applyCollapseState();
+  }
+
+  const ALL_SYNCED_KEYS = [
+    'th_tracker_jobs', 'th_tracker_contacts', 'th_tracker_notes_v2',
+    'th_expense_log', 'th_income_log', 'th_mileage_rate', 'th_price_reference', 'th_invoices',
+    'th_quotes', 'th_tax_rate', 'th_tax_labor', 'th_tax_parts', 'th_compliance', 'th_job_templates', 'th_contracts', 'th_setaside_rate',
+  ];
+
+  function loadJobs() { return JSON.parse(localStorage.getItem('th_tracker_jobs') || '[]'); }
+  function loadExpenses() { return JSON.parse(localStorage.getItem('th_expense_log') || '[]'); }
+  function loadInvoices() { return JSON.parse(localStorage.getItem('th_invoices') || '[]'); }
+  function saveInvoices(list) { localStorage.setItem('th_invoices', JSON.stringify(list)); if (typeof scheduleSync === 'function') scheduleSync(); }
+  function loadRate() { return parseFloat(localStorage.getItem('th_mileage_rate')) || 0.76; }
+  function loadContactsForSearch() { try { return JSON.parse(localStorage.getItem('th_tracker_contacts') || '[]'); } catch (e) { return []; } }
+  function loadQuotesForSearch() { try { return JSON.parse(localStorage.getItem('th_quotes') || '[]'); } catch (e) { return []; } }
+  function loadContractsForSearch() { try { return JSON.parse(localStorage.getItem('th_contracts') || '[]'); } catch (e) { return []; } }
+
+  // ---------- Global search ----------
+  // One box, searches across jobs, contacts, invoices, quotes, and
+  // contracts by client/title/name, so a client's whole history can be
+  // found without checking three separate tools. Jobs and contacts jump
+  // to Job Tracker (which reads the same ?search=...#tab convention this
+  // sets); contracts jump to Contract Generator the same way. Invoices
+  // live on this page already, so that result just expands and filters
+  // the existing Invoices list in place instead of navigating away.
+  // Quotes have no dedicated list view anywhere yet, so they're shown as
+  // plain info (no click-through) until one exists.
+  function renderGlobalSearch() {
+    const container = document.getElementById('globalSearchResults');
+    const term = document.getElementById('globalSearch').value.trim().toLowerCase();
+    if (!term) { container.innerHTML = ''; return; }
+
+    const jobs = loadJobs().filter(j => (j.title || '').toLowerCase().includes(term) || (j.client || '').toLowerCase().includes(term));
+    const contacts = loadContactsForSearch().filter(c => (c.name || '').toLowerCase().includes(term));
+    const invoices = loadInvoices().filter(i => (i.clientName || '').toLowerCase().includes(term));
+    const manualIncome = loadManualIncomeForWorkspace().filter(e =>
+      (e.source || '').toLowerCase().includes(term) || (e.desc || '').toLowerCase().includes(term));
+    const quotes = loadQuotesForSearch().filter(q => (q.clientName || '').toLowerCase().includes(term));
+    const contracts = loadContractsForSearch().filter(e => (e.fields.clientName || '').toLowerCase().includes(term));
+
+    const groups = [];
+    if (jobs.length) groups.push({
+      label: 'Jobs', items: jobs.slice(0, 8).map(j =>
+        `<a class="dash-list-item" href="/tools/job-tracker.html?search=${encodeURIComponent(j.client || j.title)}#jobs">
+          <div><div class="dash-list-item-title">${escapeHtml(j.title)}</div><div class="dash-list-item-meta">${escapeHtml(j.client || 'No client set')}</div></div>
+        </a>`)
+    });
+    if (contacts.length) groups.push({
+      label: 'Contacts', items: contacts.slice(0, 8).map(c =>
+        `<a class="dash-list-item" href="/tools/job-tracker.html?search=${encodeURIComponent(c.name)}#contacts">
+          <div><div class="dash-list-item-title">${escapeHtml(c.name)}</div><div class="dash-list-item-meta">${escapeHtml(c.phone || c.email || '')}</div></div>
+        </a>`)
+    });
+    if (invoices.length) groups.push({
+      label: 'Invoices (view in Income)', items: invoices.slice(0, 8).map(i =>
+        `<a class="dash-list-item" href="#section-actionitems" onclick="jumpToInvoiceSearch(${i.id})">
+          <div><div class="dash-list-item-title">${escapeHtml(i.clientName)}</div><div class="dash-list-item-meta">#${escapeHtml(i.invoiceNumber || '\u2014')} &middot; ${money(i.total)}</div></div>
+        </a>`)
+    });
+    if (manualIncome.length) groups.push({
+      label: 'Income Entries (view in Income)', items: manualIncome.slice(0, 8).map(e =>
+        `<a class="dash-list-item" href="#section-actionitems" onclick="jumpToIncomeEntrySearch(${e.id})">
+          <div><div class="dash-list-item-title">${escapeHtml(e.source || '(no client)')}</div><div class="dash-list-item-meta">${escapeHtml(e.desc || '')} &middot; ${money(e.amount)}</div></div>
+        </a>`)
+    });
+    if (quotes.length) groups.push({
+      label: 'Quotes / Estimates (view in Invoice Generator)', items: quotes.slice(0, 8).map(q =>
+        `<div class="dash-list-item">
+          <div><div class="dash-list-item-title">${escapeHtml(q.clientName)}</div><div class="dash-list-item-meta">${escapeHtml(q.date || '')} &middot; ${money(q.total)}</div></div>
+        </div>`)
+    });
+    if (contracts.length) groups.push({
+      label: 'Contracts', items: contracts.slice(0, 8).map(e =>
+        `<a class="dash-list-item" href="/tools/contract-generator.html?search=${encodeURIComponent(e.fields.clientName)}">
+          <div><div class="dash-list-item-title">${escapeHtml(e.fields.clientName)}</div><div class="dash-list-item-meta">${escapeHtml(CONTRACT_TYPE_LABELS_DASH[e.type] || e.type)}</div></div>
+        </a>`)
+    });
+
+    if (groups.length === 0) {
+      container.innerHTML = '<div class="empty-state-small">No matches for "' + escapeHtml(term) + '".</div>';
+      return;
+    }
+    container.innerHTML = groups.map(g =>
+      `<div class="analytics-subheading">${g.label}</div>${g.items.join('')}`
+    ).join('');
+  }
+
+  const CONTRACT_TYPE_LABELS_DASH = { pwo: 'Per-Job Work Order', stpa: 'Short-Term Project Agreement', ltsa: 'Long-Term Service Agreement' };
+
+  // A search result for an invoice jumps here rather than to another page,
+  // since the Invoices list already lives on this dashboard -- expand
+  // Action Items if it was collapsed, drop the name into the existing
+  // Invoices search box, and re-render so it's filtered on arrival.
+  // Takes the invoice's numeric id (not its name) so nothing client-name-
+  // shaped ever has to be interpolated into an inline HTML attribute.
+  function jumpToInvoiceSearch(invoiceId) {
+    const invoice = loadInvoices().find(i => i.id === invoiceId);
+    if (!invoice) return;
+    expandSection('actionitems');
+    const el = document.getElementById('invoiceSearch');
+    if (el) { el.value = invoice.clientName || ''; renderInvoicesList(); }
+  }
+
+  function jumpToIncomeEntrySearch(entryId) {
+    const entry = loadManualIncomeForWorkspace().find(e => e.id === entryId);
+    if (!entry) return;
+    expandSection('actionitems');
+    const el = document.getElementById('invoiceSearch');
+    if (el) { el.value = entry.source || entry.desc || ''; renderInvoicesList(); }
+  }
+
+  function loadSetAsideRate() {
+    const stored = localStorage.getItem('th_setaside_rate');
+    return stored !== null ? parseFloat(stored) : 25;
+  }
+  function saveSetAsideRate() {
+    const val = parseFloat(document.getElementById('setAsideRate').value) || 0;
+    localStorage.setItem('th_setaside_rate', val);
+    if (typeof scheduleSync === 'function') scheduleSync();
+  }
+
+  const TERM_DAYS = { 'Due Upon Receipt': 0, 'Net 15': 15, 'Net 30': 30 };
+
+  function getDueDate(invoice) {
+    const base = new Date((invoice.date || '') + 'T00:00:00');
+    if (isNaN(base.getTime())) return null;
+    const days = TERM_DAYS[invoice.terms] !== undefined ? TERM_DAYS[invoice.terms] : 15;
+    return new Date(base.getTime() + days * 24 * 60 * 60 * 1000);
+  }
+
+  // Backward-compatible with every invoice that predates partial-payment
+  // tracking: those only ever had a `paid` boolean, no `paidAmount` field
+  // at all. Falling back to "paid ? total : 0" means an old fully-paid
+  // invoice is still correctly treated as fully paid, and an old unpaid
+  // one as $0 paid, with zero migration step needed.
+  function getPaidAmount(invoice) {
+    if (invoice.paidAmount !== undefined && invoice.paidAmount !== null) return Number(invoice.paidAmount) || 0;
+    return invoice.paid ? (Number(invoice.total) || 0) : 0;
+  }
+  function invoicePaymentStatus(invoice) {
+    const total = Number(invoice.total) || 0;
+    const paidAmount = getPaidAmount(invoice);
+    if (total > 0 && paidAmount >= total) return 'paid';
+    if (paidAmount > 0) return 'partial';
+    return 'unpaid';
+  }
+
+  function isOverdue(invoice) {
+    if (invoicePaymentStatus(invoice) === 'paid') return false;
+    const due = getDueDate(invoice);
+    if (!due) return false;
+    return due < new Date(new Date().toDateString());
+  }
+
+  function startOfDay(d) { const c = new Date(d); c.setHours(0, 0, 0, 0); return c; }
+
+  function getCurrentRange() {
+    const now = new Date();
+    if (currentPeriod === 'all') return { start: null, end: null };
+    if (currentPeriod === 'week') {
+      const start = startOfDay(new Date(now.getTime() - 6 * 24 * 60 * 60 * 1000));
+      return { start, end: startOfDay(now) };
+    }
+    if (currentPeriod === 'month') {
+      return { start: new Date(now.getFullYear(), now.getMonth(), 1), end: new Date(now.getFullYear(), now.getMonth() + 1, 0) };
+    }
+    if (currentPeriod === 'custom') {
+      const s = document.getElementById('customStart').value;
+      const e = document.getElementById('customEnd').value;
+      return { start: s ? new Date(s + 'T00:00:00') : null, end: e ? new Date(e + 'T00:00:00') : null };
+    }
+    return { start: null, end: null };
+  }
+
+  function inRange(dateStr, range) {
+    if (!dateStr) return false;
+    const d = new Date(dateStr + 'T00:00:00');
+    if (isNaN(d.getTime())) return false;
+    if (range.start && d < range.start) return false;
+    if (range.end && d > range.end) return false;
+    return true;
+  }
+
+  let currentPeriod = 'month';
+  function setPeriod(period) {
+    currentPeriod = period;
+    document.querySelectorAll('.period-btn').forEach(b => b.classList.toggle('is-active', b.dataset.period === period));
+    document.getElementById('customRangeRow').classList.toggle('is-visible', period === 'custom');
+    renderMetrics();
+    renderTopVendors();
+  }
+
+  function renderMetrics() {
+    const range = getCurrentRange();
+    const invoices = loadInvoices().filter(i => inRange(i.date, range));
+    const expenses = loadExpenses().filter(e => inRange(e.date, range));
+
+    const revenue = invoices.reduce((sum, i) => sum + (i.total || 0), 0);
+    const expenseTotal = expenses.filter(e => e.type === 'expense').reduce((sum, e) => sum + e.amount, 0);
+    const mileageEntries = expenses.filter(e => e.type === 'mileage');
+    const totalMiles = mileageEntries.reduce((sum, e) => sum + (e.miles || 0), 0);
+    const mileageCost = mileageEntries.reduce((sum, e) => sum + e.amount, 0);
+    const net = revenue - expenseTotal;
+
+    document.getElementById('metricRevenue').textContent = money(revenue);
+    document.getElementById('metricInvoiceCount').textContent = invoices.length + ' invoice' + (invoices.length === 1 ? '' : 's');
+    document.getElementById('metricExpenses').textContent = money(expenseTotal);
+    document.getElementById('metricExpenseCount').textContent = expenses.filter(e => e.type === 'expense').length + ' entries';
+    document.getElementById('metricMileage').textContent = totalMiles.toFixed(1) + ' mi';
+    document.getElementById('metricMileageCost').textContent = money(mileageCost) + ' at $' + loadRate() + '/mi';
+    document.getElementById('metricNet').textContent = money(net);
+    document.getElementById('metricSetAside').textContent = money(Math.max(0, net) * (loadSetAsideRate() / 100));
+
+    const revenueSub = document.getElementById('metricInvoiceCount');
+    if (currentPeriod === 'week') {
+      const prevStart = startOfDay(new Date(range.start.getTime() - 7 * 24 * 60 * 60 * 1000));
+      const prevEnd = startOfDay(new Date(range.start.getTime() - 1 * 24 * 60 * 60 * 1000));
+      const prevRevenue = loadInvoices().filter(i => inRange(i.date, { start: prevStart, end: prevEnd })).reduce((sum, i) => sum + (i.total || 0), 0);
+      let compareText = '';
+      if (prevRevenue > 0) {
+        const pct = Math.round((revenue - prevRevenue) / prevRevenue * 100);
+        compareText = (pct >= 0 ? ' (+' : ' (') + pct + '% vs prior 7 days)';
+      } else if (revenue > 0) {
+        compareText = ' (prior 7 days had none)';
+      }
+      revenueSub.textContent = invoices.length + ' invoice' + (invoices.length === 1 ? '' : 's') + compareText;
+      revenueSub.className = 'metric-sub' + (revenue >= prevRevenue ? ' is-up' : ' is-down');
+    } else {
+      revenueSub.className = 'metric-sub';
+    }
+
+    const allInvoices = loadInvoices();
+    const unpaid = allInvoices.filter(i => invoicePaymentStatus(i) !== 'paid');
+    const overdue = unpaid.filter(isOverdue);
+    const outstandingTotal = unpaid.reduce((sum, i) => sum + Math.max(0, (Number(i.total) || 0) - getPaidAmount(i)), 0);
+    const overdueTotal = overdue.reduce((sum, i) => sum + Math.max(0, (Number(i.total) || 0) - getPaidAmount(i)), 0);
+
+    document.getElementById('metricOutstanding').textContent = money(outstandingTotal);
+    document.getElementById('metricOutstandingCount').textContent = unpaid.length + ' unpaid invoice' + (unpaid.length === 1 ? '' : 's');
+    document.getElementById('metricOverdue').textContent = money(overdueTotal);
+    document.getElementById('metricOverdueCount').textContent = overdue.length + ' invoice' + (overdue.length === 1 ? '' : 's') + ' past terms';
+    document.getElementById('overdueCard').classList.toggle('is-warning', overdue.length > 0);
+  }
+
+  function renderStatusBars() {
+    const jobs = loadJobs();
+    const counts = { 'not-started': 0, 'in-progress': 0, 'done': 0 };
+    jobs.forEach(j => { if (counts[j.status] !== undefined) counts[j.status]++; });
+    const max = Math.max(1, ...Object.values(counts));
+    const labels = { 'not-started': 'Not Started', 'in-progress': 'In Progress', 'done': 'Done' };
+
+    document.getElementById('statusBars').innerHTML = Object.keys(labels).map(key => `
+      <div class="status-bar-row">
+        <div class="status-bar-label">${labels[key]}</div>
+        <div class="status-bar-track"><div class="status-bar-fill" style="width:${(counts[key] / max * 100)}%"></div></div>
+        <div class="status-bar-count">${counts[key]}</div>
+      </div>`).join('');
+  }
+
+  function renderTopVendors() {
+    const range = getCurrentRange();
+    const expenses = loadExpenses().filter(e => e.type === 'expense' && inRange(e.date, range) && e.vendor);
+    const totals = {};
+    expenses.forEach(e => { totals[e.vendor] = (totals[e.vendor] || 0) + e.amount; });
+    const sorted = Object.entries(totals).sort((a, b) => b[1] - a[1]).slice(0, 5);
+
+    const container = document.getElementById('topVendors');
+    if (sorted.length === 0) {
+      container.innerHTML = '<div class="empty-state-small">No vendor-tagged expenses in this period yet.</div>';
+      return;
+    }
+    const max = sorted[0][1];
+    container.innerHTML = sorted.map(([vendor, total]) => `
+      <div class="vendor-bar-row">
+        <div class="vendor-bar-label" title="${escapeHtml(vendor)}">${escapeHtml(vendor)}</div>
+        <div class="vendor-bar-track"><div class="vendor-bar-fill" style="width:${(total / max * 100)}%"></div></div>
+        <div class="vendor-bar-count">${money(total)}</div>
+      </div>`).join('');
+  }
+
+  const FOLLOWUP_THRESHOLD_DAYS = 182; // ~6 months
+
+  function renderFollowups() {
+    const jobs = loadJobs().filter(j => j.client && j.client.trim() && j.date);
+    const lastJobByClient = {};
+    jobs.forEach(j => {
+      const key = j.client.trim();
+      const d = new Date(j.date + 'T00:00:00');
+      if (isNaN(d.getTime())) return;
+      if (!lastJobByClient[key] || d > lastJobByClient[key].date) {
+        lastJobByClient[key] = { date: d, dateStr: j.date, phone: j.phone || '' };
+      }
+    });
+
+    const today = new Date(new Date().toDateString());
+    const overdue = Object.entries(lastJobByClient)
+      .map(([client, info]) => ({ client, ...info, daysSince: Math.round((today - info.date) / (24 * 60 * 60 * 1000)) }))
+      .filter(entry => entry.daysSince >= FOLLOWUP_THRESHOLD_DAYS)
+      .sort((a, b) => b.daysSince - a.daysSince);
+
+    const container = document.getElementById('followupsList');
+    actionItemCounts.followups = overdue.length;
+    updateActionItemsBadge();
+    if (overdue.length === 0) {
+      container.innerHTML = '<div class="empty-state-small">No clients overdue for a follow-up right now.</div>';
+      return;
+    }
+    container.innerHTML = overdue.map(entry => {
+      const params = new URLSearchParams();
+      params.set('name', entry.client.split(' ')[0]);
+      if (entry.phone) params.set('phone', entry.phone);
+      return `
+      <div class="dash-list-item">
+        <div>
+          <div class="dash-list-item-title">${escapeHtml(entry.client)}</div>
+          <div class="dash-list-item-meta">Last job: ${escapeHtml(entry.dateStr)} &middot; ${Math.round(entry.daysSince / 30)} months ago</div>
+        </div>
+        <a href="/tools/review-request.html?${params.toString()}" class="small-btn" style="text-decoration:none;">Follow Up</a>
+      </div>`;
+    }).join('');
+  }
+
+  function renderUpcoming() {
+    const jobs = loadJobs().filter(j => j.status !== 'done' && j.date);
+    const now = new Date();
+    const weekOut = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
+    const upcoming = jobs
+      .filter(j => {
+        const d = new Date(j.date + 'T00:00:00');
+        return d >= new Date(now.toDateString()) && d <= weekOut;
+      })
+      .sort((a, b) => new Date(a.date) - new Date(b.date));
+
+    const container = document.getElementById('upcomingJobs');
+    actionItemCounts.duesoon = upcoming.length;
+    updateActionItemsBadge();
+    if (upcoming.length === 0) {
+      container.innerHTML = '<div class="empty-state-small">Nothing due in the next 7 days.</div>';
+      return;
+    }
+    container.innerHTML = upcoming.map(j => `
+      <div class="dash-list-item">
+        <div>
+          <div class="dash-list-item-title">${escapeHtml(j.title)}</div>
+          <div class="dash-list-item-meta">${new Date(j.date + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}${j.client ? ' &middot; ' + escapeHtml(j.client) : ''}</div>
+        </div>
+      </div>`).join('');
+  }
+
+  async function togglePaid(id) {
+    const invoices = loadInvoices();
+    const inv = invoices.find(i => i.id === id);
+    if (!inv) return;
+    const total = Number(inv.total) || 0;
+    const status = invoicePaymentStatus(inv);
+
+    if (status === 'paid') {
+      // Already fully paid -- treat another tap as "undo that by mistake"
+      // rather than asking for an amount again.
+      const confirmed = await showConfirm('Mark this invoice as unpaid again?', { confirmText: 'Mark Unpaid' });
+      if (!confirmed) return;
+      inv.paidAmount = 0;
+    } else {
+      const promptDefault = status === 'partial' ? String(getPaidAmount(inv)) : total.toFixed(2);
+      const input = prompt(`How much has actually been paid on this $${total.toFixed(2)} invoice?`, promptDefault);
+      if (input === null) return; // cancelled
+      const amount = parseFloat(input);
+      if (isNaN(amount) || amount < 0) { await showAlert('Enter a valid amount ($0 or more).'); return; }
+      inv.paidAmount = amount;
+    }
+    inv.paid = invoicePaymentStatus(inv) === 'paid'; // keep the legacy boolean in sync for anything else that still reads it directly
+    saveInvoices(invoices);
+    renderInvoicesList();
+    renderMetrics();
+  }
+
+  function loadManualIncomeForWorkspace() {
+    try { return JSON.parse(localStorage.getItem('th_income_log') || '[]').filter(e => e.origin !== 'invoice'); }
+    catch (e) { return []; }
+  }
+
+  function renderInvoicesList() {
+    actionItemCounts.unpaid = loadInvoices().filter(i => invoicePaymentStatus(i) !== 'paid').length;
+    updateActionItemsBadge();
+    const searchTerm = (document.getElementById('invoiceSearch')?.value || '').trim().toLowerCase();
+
+    // Income here now means invoices AND manual entries (cash jobs, etc.)
+    // logged in Job Tracker's Income tab -- merged into one list so this
+    // dashboard reflects the same total Job Tracker and Runway Dashboard
+    // already agree on, instead of only showing formally invoiced amounts.
+    let invoiceItems = loadInvoices().map(i => ({
+      kind: 'invoice', id: i.id, sortKey: i.id,
+      title: i.clientName, meta: `#${i.invoiceNumber || '\u2014'} \u00b7 ${i.date || ''} \u00b7 ${i.terms || ''}`,
+      amount: i.total, raw: i,
+    }));
+    let incomeItems = loadManualIncomeForWorkspace().map(e => ({
+      kind: 'income', id: e.id, sortKey: e.id,
+      title: e.source || '(no client)', meta: `${e.desc || ''} \u00b7 ${e.date || ''} \u00b7 Manual`,
+      amount: e.amount, raw: e,
+    }));
+    let items = [...invoiceItems, ...incomeItems].sort((a, b) => b.sortKey - a.sortKey);
+
+    if (searchTerm) {
+      items = items.filter(it =>
+        (it.title || '').toLowerCase().includes(searchTerm) ||
+        (it.meta || '').toLowerCase().includes(searchTerm)
+      );
+    }
+    items = items.slice(0, 20);
+    const container = document.getElementById('invoicesList');
+    if (items.length === 0) {
+      container.innerHTML = searchTerm
+        ? '<div class="empty-state-small">No income matches "' + escapeHtml(searchTerm) + '".</div>'
+        : '<div class="empty-state-small">No income logged yet.</div>';
+      return;
+    }
+    container.innerHTML = items.map(it => {
+      if (it.kind === 'income') {
+        return `
+        <div class="dash-list-item">
+          <div>
+            <div class="dash-list-item-title">${escapeHtml(it.title)}</div>
+            <div class="dash-list-item-meta">${escapeHtml(it.meta)}</div>
+          </div>
+          <div class="dash-list-item-right">
+            <div class="dash-list-item-amount">${money(it.amount)}</div>
+            <span class="paid-toggle-btn is-paid" style="cursor:default;">Received</span>
+          </div>
+        </div>`;
+      }
+      const i = it.raw;
+      const overdue = isOverdue(i);
+      const status = invoicePaymentStatus(i);
+      const remaining = Math.max(0, (Number(i.total) || 0) - getPaidAmount(i));
+      let btnClass, btnText;
+      if (status === 'paid') { btnClass = 'is-paid'; btnText = 'Paid'; }
+      else if (status === 'partial') { btnClass = overdue ? 'is-overdue' : 'is-unpaid'; btnText = `Partial \u2014 ${money(remaining)} left`; }
+      else { btnClass = overdue ? 'is-overdue' : 'is-unpaid'; btnText = overdue ? 'Overdue' : 'Unpaid'; }
+      return `
+      <div class="dash-list-item">
+        <div>
+          <div class="dash-list-item-title">${escapeHtml(i.clientName)}</div>
+          <div class="dash-list-item-meta">#${escapeHtml(i.invoiceNumber || '\u2014')} &middot; ${escapeHtml(i.date || '')} &middot; ${escapeHtml(i.terms || '')}</div>
+        </div>
+        <div class="dash-list-item-right">
+          <div class="dash-list-item-amount">${money(i.total)}</div>
+          <button class="paid-toggle-btn ${btnClass}" onclick="togglePaid(${i.id})">${btnText}</button>
+        </div>
+      </div>`;
+    }).join('');
+  }
+
+  async function loadAndRenderLeads() {
+    const container = document.getElementById('leadsList');
+    if (typeof fetchLeads !== 'function' || !isSyncConfigured()) {
+      container.innerHTML = '<div class="empty-state-small">Cloud sync isn\'t set up yet, so leads can\'t load.</div>';
+      actionItemCounts.leads = 0;
+      updateActionItemsBadge();
+      return;
+    }
+    const result = await fetchLeads();
+    if (!result.ok) {
+      container.innerHTML = '<div class="empty-state-small">Couldn\'t load leads (' + escapeHtml(result.error) + '). Make sure the th_leads table exists in Supabase.</div>';
+      actionItemCounts.leads = 0;
+      updateActionItemsBadge();
+      return;
+    }
+    actionItemCounts.leads = result.leads.filter(l => !l.handled).length;
+    updateActionItemsBadge();
+    if (result.leads.length === 0) {
+      container.innerHTML = '<div class="empty-state-small">No leads yet.</div>';
+      return;
+    }
+    container.innerHTML = result.leads.map(l => `
+      <div class="lead-card" data-lead-id="${l.id}">
+        <div class="lead-card-top">
+          <div>
+            <div class="lead-card-name">${escapeHtml(l.name || '(no name)')}</div>
+            <div class="lead-card-meta">${escapeHtml(l.phone || '')}${l.email ? ' &middot; ' + escapeHtml(l.email) : ''}</div>
+            <div class="lead-card-meta">${escapeHtml(l.service || '')}${l.preferred_date ? ' &middot; wants ' + escapeHtml(l.preferred_date) : ''}${l.preferred_time ? ' (' + escapeHtml(l.preferred_time) + ')' : ''}</div>
+          </div>
+          <div class="dash-list-item-right">
+            <button class="lead-toggle-btn ${l.handled ? 'is-handled' : 'is-new'}" onclick="toggleLeadHandled(${l.id}, ${!l.handled})">${l.handled ? 'Handled' : 'New'}</button>
+            <button class="small-btn danger" onclick="deleteLeadFromDashboard(${l.id})">Delete</button>
+          </div>
+        </div>
+        ${l.details ? '<div class="lead-card-details">"' + escapeHtml(l.details) + '"</div>' : ''}
+      </div>`).join('');
+  }
+
+  async function deleteLeadFromDashboard(id) {
+    const confirmed = await showConfirm('Delete this lead? This cannot be undone.', { danger: true, confirmText: 'Delete' });
+    if (!confirmed) return;
+    const row = document.querySelector('[data-lead-id="' + id + '"]');
+    animateRowExit(row, async () => {
+      const result = await deleteLead(id);
+      if (!result.ok) { await showAlert('Could not delete: ' + result.error); return; }
+      loadAndRenderLeads();
+      showToast('Lead deleted.');
+    });
+  }
+
+  async function toggleLeadHandled(id, newState) {
+    await markLeadHandled(id, newState);
+    loadAndRenderLeads();
+  }
+
+  // ---------- Business Compliance (insurance + licenses) ----------
+  const COMPLIANCE_KEY = 'th_compliance';
+
+  const DEFAULT_COMPLIANCE = {
+    insurance: {
+      insurer: 'Spinnaker Insurance Company',
+      producer: 'Simply Business',
+      policyNumber: 'HBW5677778XB1',
+      effectiveDate: '2026-07-30',
+      expirationDate: '2027-07-30',
+      eachOccurrence: '$1,000,000',
+      generalAggregate: '$2,000,000',
+      paymentDueDay: 28,
+    },
+    business: {
+      legalName: 'Triple H Enterprises LLC',
+      stateOfFormation: 'Utah',
+      businessAddress: '124 N 2750 E, St. George, UT 84790',
+      salesTaxLicense: '2-135-717-696',
+      ein: '',
+      w9Status: 'Needs EIN \u2014 name/address filled, TIN pending IRS response',
+    },
+    licenses: [],
+  };
+
+  function loadCompliance() {
+    try {
+      const saved = localStorage.getItem(COMPLIANCE_KEY);
+      if (!saved) {
+        localStorage.setItem(COMPLIANCE_KEY, JSON.stringify(DEFAULT_COMPLIANCE));
+        return JSON.parse(JSON.stringify(DEFAULT_COMPLIANCE));
+      }
+      // Defensively merge -- if this was saved before "business" existed,
+      // fill it in from the default rather than leaving it undefined.
+      const parsed = JSON.parse(saved);
+      if (!parsed.business) parsed.business = JSON.parse(JSON.stringify(DEFAULT_COMPLIANCE.business));
+      if (!parsed.licenses) parsed.licenses = [];
+      if (parsed.insurance && !parsed.insurance.paymentDueDay) parsed.insurance.paymentDueDay = 28;
+      return parsed;
+    } catch (e) {
+      return JSON.parse(JSON.stringify(DEFAULT_COMPLIANCE));
+    }
+  }
+
+  function saveCompliance(data) {
+    localStorage.setItem(COMPLIANCE_KEY, JSON.stringify(data));
+    if (typeof scheduleSync === 'function') scheduleSync();
+  }
+
+  function daysUntil(dateStr) {
+    if (!dateStr) return null;
+    const target = new Date(dateStr + 'T00:00:00');
+    if (isNaN(target.getTime())) return null;
+    const today = startOfDay(new Date());
+    return Math.round((target - today) / (24 * 60 * 60 * 1000));
+  }
+
+  // Insurance here is billed monthly (due the 28th), separate from the
+  // policy's own annual term (effectiveDate/expirationDate). Those are two
+  // different things -- when the 12-month policy itself needs renewing vs.
+  // when the next bill is due -- and showing only the annual date made it
+  // look like a once-a-year payment, which it isn't.
+  function nextInsurancePaymentDue(dueDay) {
+    dueDay = Number(dueDay) || 28;
+    const today = startOfDay(new Date());
+    let due = new Date(today.getFullYear(), today.getMonth(), dueDay);
+    if (due < today) due = new Date(today.getFullYear(), today.getMonth() + 1, dueDay);
+    const days = Math.round((due - today) / (24 * 60 * 60 * 1000));
+    return { due, days };
+  }
+
+  function renderInsuranceCard() {
+    const compliance = loadCompliance();
+    const ins = compliance.insurance || {};
+    const payment = nextInsurancePaymentDue(ins.paymentDueDay);
+    const policyDays = daysUntil(ins.expirationDate);
+
+    let statusClass = 'is-ok', badgeText = 'Payment due in ' + payment.days + ' day' + (payment.days === 1 ? '' : 's');
+    if (payment.days <= 5) statusClass = 'is-expiring';
+    if (policyDays !== null && policyDays < 0) { statusClass = 'is-expired'; badgeText = 'POLICY EXPIRED'; }
+    else if (policyDays !== null && policyDays <= 30) { statusClass = 'is-expiring'; badgeText = 'Policy renews in ' + policyDays + ' days \u2014 ' + badgeText.toLowerCase(); }
+
+    const headingBadge = document.getElementById('complianceHeadingBadge');
+    if (headingBadge) {
+      headingBadge.innerHTML = statusClass === 'is-ok' ? '' :
+        `<span class="compliance-status-badge ${statusClass}" style="font-size:11.5px; padding:2px 8px; vertical-align:middle;">${escapeHtml(badgeText)}</span>`;
+    }
+
+    document.getElementById('insuranceCard').innerHTML = `
+      <div class="compliance-card ${statusClass === 'is-ok' ? '' : statusClass}">
+        <div class="compliance-card-top">
+          <div class="compliance-card-title">General Liability &mdash; ${escapeHtml(ins.insurer || 'Not set')}</div>
+          <span class="compliance-status-badge ${statusClass}">${escapeHtml(badgeText)}</span>
+        </div>
+        <div class="compliance-detail-row">
+          <span>Policy: <strong>${escapeHtml(ins.policyNumber || '\u2014')}</strong></span>
+          <span>Via: <strong>${escapeHtml(ins.producer || '\u2014')}</strong></span>
+        </div>
+        <div class="compliance-detail-row">
+          <span>Billed monthly, due the <strong>${escapeHtml(String(ins.paymentDueDay || 28))}${ordinalSuffix(ins.paymentDueDay || 28)}</strong></span>
+          <span>Next payment: <strong>${payment.due.toLocaleDateString(undefined, {month:'short', day:'numeric'})}</strong></span>
+        </div>
+        <div class="compliance-detail-row">
+          <span>Policy term: <strong>${escapeHtml(ins.effectiveDate || '\u2014')}</strong> to <strong>${escapeHtml(ins.expirationDate || '\u2014')}</strong></span>
+        </div>
+        <div class="compliance-detail-row">
+          <span>Each Occurrence: <strong>${escapeHtml(ins.eachOccurrence || '\u2014')}</strong></span>
+          <span>General Aggregate: <strong>${escapeHtml(ins.generalAggregate || '\u2014')}</strong></span>
+        </div>
+        <button class="small-btn" style="margin-top:10px;" onclick="openInsuranceEdit()">Edit</button>
+      </div>`;
+  }
+  function ordinalSuffix(n) {
+    n = Number(n);
+    if (n % 10 === 1 && n !== 11) return 'st';
+    if (n % 10 === 2 && n !== 12) return 'nd';
+    if (n % 10 === 3 && n !== 13) return 'rd';
+    return 'th';
+  }
+
+  // Shared "Action Items" badge -- each of the four contributing render
+  // functions below (leads, due-soon, follow-ups, invoices) stashes its
+  // own count here, then calls updateActionItemsBadge(). Keeps the badge
+  // logic in one place instead of scattered across four functions.
+  const actionItemCounts = { leads: 0, duesoon: 0, followups: 0, unpaid: 0 };
+
+  function updateActionItemsBadge() {
+    const badge = document.getElementById('actionItemsHeadingBadge');
+    if (!badge) return;
+    const parts = [];
+    if (actionItemCounts.leads > 0) parts.push(actionItemCounts.leads + ' new lead' + (actionItemCounts.leads === 1 ? '' : 's'));
+    if (actionItemCounts.duesoon > 0) parts.push(actionItemCounts.duesoon + ' due soon');
+    if (actionItemCounts.followups > 0) parts.push(actionItemCounts.followups + ' follow-up' + (actionItemCounts.followups === 1 ? '' : 's'));
+    if (actionItemCounts.unpaid > 0) parts.push(actionItemCounts.unpaid + ' unpaid');
+    badge.innerHTML = parts.length
+      ? `<span class="compliance-status-badge is-expiring" style="font-size:11.5px; padding:2px 8px; vertical-align:middle;">${escapeHtml(parts.join(' \u00b7 '))}</span>`
+      : '';
+  }
+
+  function openInsuranceEdit() {
+    const compliance = loadCompliance();
+    const ins = compliance.insurance || {};
+    document.getElementById('insInsurer').value = ins.insurer || '';
+    document.getElementById('insProducer').value = ins.producer || '';
+    document.getElementById('insPolicyNumber').value = ins.policyNumber || '';
+    document.getElementById('insEffectiveDate').value = ins.effectiveDate || '';
+    document.getElementById('insExpirationDate').value = ins.expirationDate || '';
+    document.getElementById('insEachOccurrence').value = ins.eachOccurrence || '';
+    document.getElementById('insGeneralAggregate').value = ins.generalAggregate || '';
+    document.getElementById('insPaymentDueDay').value = ins.paymentDueDay || 28;
+    document.getElementById('insuranceEditForm').classList.add('is-open');
+  }
+
+  function closeInsuranceEdit() {
+    document.getElementById('insuranceEditForm').classList.remove('is-open');
+  }
+
+  function saveInsuranceEdit() {
+    const compliance = loadCompliance();
+    compliance.insurance = {
+      insurer: document.getElementById('insInsurer').value.trim(),
+      producer: document.getElementById('insProducer').value.trim(),
+      policyNumber: document.getElementById('insPolicyNumber').value.trim(),
+      effectiveDate: document.getElementById('insEffectiveDate').value,
+      expirationDate: document.getElementById('insExpirationDate').value,
+      eachOccurrence: document.getElementById('insEachOccurrence').value.trim(),
+      generalAggregate: document.getElementById('insGeneralAggregate').value.trim(),
+      paymentDueDay: Number(document.getElementById('insPaymentDueDay').value) || 28,
+    };
+    saveCompliance(compliance);
+    closeInsuranceEdit();
+    renderInsuranceCard();
+  }
+
+  let justAddedLicenseIdx = null;
+  function renderLicensesList() {
+    const compliance = loadCompliance();
+    const licenses = compliance.licenses || [];
+    const container = document.getElementById('licensesList');
+    if (licenses.length === 0) {
+      container.innerHTML = '<div class="empty-state-small">No city licenses on file yet.</div>';
+      return;
+    }
+    container.innerHTML = licenses.map((lic, idx) => {
+      const days = daysUntil(lic.expirationDate);
+      let badge = '';
+      if (days !== null) {
+        if (days < 0) badge = ' &mdash; <span style="color:#e05252;">EXPIRED</span>';
+        else if (days <= 30) badge = ' &mdash; <span style="color:var(--orange-light);">renews in ' + days + 'd</span>';
+      }
+      return `
+      <div class="license-item ${idx === justAddedLicenseIdx ? 'list-row-enter' : ''}" data-license-idx="${idx}">
+        <div>
+          <div class="dash-list-item-title">${escapeHtml(lic.city)}</div>
+          <div class="dash-list-item-meta">${escapeHtml(lic.licenseNumber || 'No number on file')}${lic.expirationDate ? ' &middot; expires ' + escapeHtml(lic.expirationDate) : ''}${badge}</div>
+        </div>
+        <button class="small-btn danger" onclick="removeLicense(${idx})">Remove</button>
+      </div>`;
+    }).join('');
+    justAddedLicenseIdx = null;
+  }
+
+  const SECURE_DOC_CATEGORY_LABEL = {
+    insurance: 'Insurance', 'business-formation': 'Business Formation', licenses: 'Licenses & Permits', tax: 'Tax Documents',
+    contracts: 'Signed Contracts', 'vendor-agreements': 'Vendor Agreements', other: 'Other',
+  };
+
+  let justUploadedDocPath = null;
+
+  async function renderSecureDocsList() {
+    const container = document.getElementById('secureDocsList');
+    if (!container) return;
+    if (typeof listSecureDocuments !== 'function') {
+      container.innerHTML = '<div class="empty-state-small">Secure document storage isn\'t available on this page yet.</div>';
+      return;
+    }
+    container.innerHTML = `
+      <div class="skeleton-line w-60"></div>
+      <div class="skeleton-line w-40"></div>
+    `;
+    const result = await listSecureDocuments();
+    if (!result.ok) {
+      container.innerHTML = result.error === 'not-configured'
+        ? '<div class="empty-state-small">Set up Cloud Sync to use secure document storage.</div>'
+        : `<div class="empty-state-small">Couldn't load documents (${escapeHtml(result.error)}). Make sure the secure-documents bucket exists in Supabase with its access policies set up.</div>`;
+      return;
+    }
+    if (result.documents.length === 0) {
+      container.innerHTML = '<div class="empty-state-small">No documents uploaded yet.</div>';
+      return;
+    }
+    container.innerHTML = result.documents.map(d => `
+      <div class="dash-list-item ${d.path === justUploadedDocPath ? 'list-row-enter' : ''}" data-doc-path="${escapeHtml(d.path)}">
+        <div>
+          <div class="dash-list-item-title">${escapeHtml(d.label)}</div>
+          <div class="dash-list-item-meta">${escapeHtml(SECURE_DOC_CATEGORY_LABEL[d.category] || d.category)}${d.uploadedAt ? ' &middot; ' + escapeHtml(new Date(d.uploadedAt).toLocaleDateString()) : ''}</div>
+        </div>
+        <div class="dash-list-item-right">
+          <button class="small-btn" onclick="viewSecureDocumentUI('${d.path.replace(/'/g, "\\'")}')">View</button>
+          <button class="small-btn danger" onclick="deleteSecureDocumentUI('${d.path.replace(/'/g, "\\'")}')">Delete</button>
+        </div>
+      </div>`).join('');
+    justUploadedDocPath = null;
+  }
+
+  async function uploadSecureDocumentUI() {
+    const category = document.getElementById('secureDocCategory').value;
+    const label = document.getElementById('secureDocLabel').value.trim();
+    const file = document.getElementById('secureDocFile').files[0];
+    if (!file) { await showAlert('Choose a file first.'); return; }
+    if (!label) { await showAlert('Give this document a label so you can find it later.'); return; }
+
+    const btn = document.getElementById('secureDocUploadBtn');
+    const originalText = btn.textContent;
+    btn.disabled = true;
+    btn.textContent = 'Uploading...';
+    const progressBar = document.getElementById('secureDocUploadProgress');
+    if (progressBar) progressBar.style.display = 'block';
+    const result = await uploadSecureDocument(file, category, label);
+    btn.disabled = false;
+    btn.textContent = originalText;
+    if (progressBar) progressBar.style.display = 'none';
+
+    if (!result.ok) {
+      await showAlert('Upload failed: ' + result.error + (result.detail ? ' \u2014 ' + result.detail : ''));
+      return;
+    }
+    document.getElementById('secureDocLabel').value = '';
+    document.getElementById('secureDocFile').value = '';
+    document.getElementById('secureDocsUploadCard').classList.add('is-collapsed');
+    justUploadedDocPath = result.path;
+    await renderSecureDocsList();
+    showToast('Document uploaded.');
+  }
+
+  async function viewSecureDocumentUI(path) {
+    const result = await getSecureDocumentSignedUrl(path);
+    if (!result.ok) { await showAlert('Could not open that document: ' + result.error); return; }
+    window.open(result.url, '_blank', 'noopener');
+  }
+
+  async function deleteSecureDocumentUI(path) {
+    const confirmed = await showConfirm('Delete this document? This cannot be undone.', { danger: true, confirmText: 'Delete' });
+    if (!confirmed) return;
+    const row = document.querySelector('[data-doc-path="' + path.replace(/"/g, '\\"') + '"]');
+    animateRowExit(row, async () => {
+      const result = await deleteSecureDocument(path);
+      if (!result.ok) { await showAlert('Could not delete: ' + result.error); return; }
+      await renderSecureDocsList();
+      showToast('Document deleted.');
+    });
+  }
+
+  function addLicensePrompt() {
+    const city = prompt('City name:');
+    if (!city || !city.trim()) return;
+    const licenseNumber = prompt('License number (leave blank if not yet issued):') || '';
+    const expirationDate = prompt('Expiration date (YYYY-MM-DD, leave blank if unknown):') || '';
+    const compliance = loadCompliance();
+    compliance.licenses = compliance.licenses || [];
+    compliance.licenses.push({ city: city.trim(), licenseNumber: licenseNumber.trim(), expirationDate: expirationDate.trim() });
+    saveCompliance(compliance);
+    justAddedLicenseIdx = compliance.licenses.length - 1;
+    renderLicensesList();
+  }
+
+  function removeLicense(idx) {
+    const row = document.querySelector('[data-license-idx="' + idx + '"]');
+    animateRowExit(row, () => {
+      const compliance = loadCompliance();
+      compliance.licenses.splice(idx, 1);
+      saveCompliance(compliance);
+      renderLicensesList();
+    });
+  }
+
+  function renderBusinessInfoCard() {
+    const compliance = loadCompliance();
+    const biz = compliance.business || {};
+    document.getElementById('businessInfoCard').innerHTML = `
+      <div class="compliance-card">
+        <div class="compliance-card-top">
+          <div class="compliance-card-title">${escapeHtml(biz.legalName || 'Not set')}</div>
+        </div>
+        <div class="compliance-detail-row">
+          <span>State: <strong>${escapeHtml(biz.stateOfFormation || '\u2014')}</strong></span>
+        </div>
+        <div class="compliance-detail-row">
+          <span>Address: <strong>${escapeHtml(biz.businessAddress || '\u2014')}</strong></span>
+        </div>
+        <div class="compliance-detail-row">
+          <span>UT Sales Tax License: <strong>${escapeHtml(biz.salesTaxLicense || '\u2014')}</strong></span>
+          <span>EIN: <strong>${escapeHtml(biz.ein || 'Pending')}</strong></span>
+        </div>
+        <div class="compliance-detail-row">
+          <span>W-9: <strong>${escapeHtml(biz.w9Status || '\u2014')}</strong></span>
+        </div>
+        <button class="small-btn" style="margin-top:10px;" onclick="openBusinessEdit()">Edit</button>
+      </div>`;
+  }
+
+  function openBusinessEdit() {
+    const compliance = loadCompliance();
+    const biz = compliance.business || {};
+    document.getElementById('bizLegalName').value = biz.legalName || '';
+    document.getElementById('bizState').value = biz.stateOfFormation || '';
+    document.getElementById('bizAddress').value = biz.businessAddress || '';
+    document.getElementById('bizSalesTax').value = biz.salesTaxLicense || '';
+    document.getElementById('bizEin').value = biz.ein || '';
+    document.getElementById('bizW9Status').value = biz.w9Status || '';
+    document.getElementById('businessEditForm').classList.add('is-open');
+  }
+
+  function closeBusinessEdit() {
+    document.getElementById('businessEditForm').classList.remove('is-open');
+  }
+
+  function saveBusinessEdit() {
+    const compliance = loadCompliance();
+    compliance.business = {
+      legalName: document.getElementById('bizLegalName').value.trim(),
+      stateOfFormation: document.getElementById('bizState').value.trim(),
+      businessAddress: document.getElementById('bizAddress').value.trim(),
+      salesTaxLicense: document.getElementById('bizSalesTax').value.trim(),
+      ein: document.getElementById('bizEin').value.trim(),
+      w9Status: document.getElementById('bizW9Status').value.trim(),
+    };
+    saveCompliance(compliance);
+    closeBusinessEdit();
+    renderBusinessInfoCard();
+  }
+
+  function renderCompliance() {
+    renderInsuranceCard();
+    renderBusinessInfoCard();
+    renderLicensesList();
+    renderSecureDocsList();
+  }
+
+  async function loadAndRenderGalleryQueue() {
+    const container = document.getElementById('galleryQueueList');
+    if (typeof fetchFeaturedPhotos !== 'function' || !isSyncConfigured()) {
+      container.innerHTML = '<div class="empty-state-small">Cloud sync isn\'t set up yet.</div>';
+      return;
+    }
+    const result = await fetchFeaturedPhotos();
+    if (!result.ok) {
+      container.innerHTML = '<div class="empty-state-small">Couldn\'t load the queue (' + escapeHtml(result.error) + ').</div>';
+      return;
+    }
+    if (result.photos.length === 0) {
+      container.innerHTML = '<div class="empty-state-small">Nothing queued yet &mdash; star a photo in the Job Tracker\'s Photos section to add it here.</div>';
+      return;
+    }
+    container.innerHTML = '<div class="gallery-queue-grid">' + result.photos.map(p => `
+      <div class="gallery-queue-item">
+        <img src="${getJobPhotoUrl(p.storage_path)}" alt="${escapeHtml(p.public_caption || '')}" loading="lazy">
+        <div class="gallery-queue-caption">${escapeHtml(p.public_caption || '(no caption)')}</div>
+        <div class="gallery-queue-meta">${escapeHtml(p.job_title || '')}</div>
+        <button class="small-btn danger" onclick="unqueueGalleryPhoto(${p.id})">Remove from Queue</button>
+      </div>`).join('') + '</div>';
+  }
+
+  async function unqueueGalleryPhoto(photoId) {
+    const result = await toggleFeaturedPhoto(photoId, false, '');
+    if (!result.ok) { await showAlert('Could not update: ' + result.error); return; }
+    loadAndRenderGalleryQueue();
+  }
+
+  function renderTodayJobs() {
+    const container = document.getElementById('todayJobsList');
+    if (!container) return;
+    let jobs = [];
+    try { jobs = JSON.parse(localStorage.getItem('th_tracker_jobs') || '[]'); } catch (e) { jobs = []; }
+
+    const today = new Date();
+    const todayKey = today.getFullYear() + '-' + String(today.getMonth() + 1).padStart(2, '0') + '-' + String(today.getDate()).padStart(2, '0');
+    const todaysJobs = jobs.filter(j => j.date === todayKey && j.status !== 'done');
+
+    if (todaysJobs.length === 0) {
+      container.innerHTML = '<div class="empty-state-small">Nothing on the schedule for today.</div>';
+      return;
+    }
+
+    const priorityOrder = { high: 0, medium: 1, low: 2 };
+    todaysJobs.sort((a, b) => (priorityOrder[a.priority] ?? 1) - (priorityOrder[b.priority] ?? 1));
+
+    container.innerHTML = todaysJobs.map(job => `
+      <div class="dash-list-item">
+        <div>
+          <div class="dash-list-item-title">
+            <span class="badge badge-${job.priority}">${job.priority}</span>
+            ${escapeHtml(job.title)}${job.client ? ' &mdash; ' + escapeHtml(job.client) : ''}
+          </div>
+          <div class="dash-list-item-meta">
+            ${job.address ? '<a href="https://maps.google.com/?q=' + encodeURIComponent(job.address) + '" target="_blank" rel="noopener">' + escapeHtml(job.address) + '</a>' : 'No address on file'}
+            ${job.phone ? ' &middot; <a href="tel:' + escapeHtml(job.phone) + '">' + escapeHtml(job.phone) + '</a>' : ''}
+          </div>
+        </div>
+        <a href="/tools/job-tracker.html" class="secondary-btn">View in Job Tracker</a>
+      </div>`).join('');
+  }
+
+  function renderDashboard() {
+    document.getElementById('setAsideRate').value = loadSetAsideRate();
+    renderTodayJobs();
+    renderMetrics();
+    renderStatusBars();
+    renderTopVendors();
+    renderUpcoming();
+    renderFollowups();
+    renderInvoicesList();
+    loadAndRenderLeads();
+    loadAndRenderGalleryQueue();
+    renderCompliance();
+  }
+
+  function downloadBackup() {
+    const backup = {};
+    ALL_SYNCED_KEYS.forEach(k => { backup[k] = localStorage.getItem(k); });
+    const blob = new Blob([JSON.stringify(backup, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'TripleH_Backup_' + new Date().toISOString().slice(0, 10) + '.json';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  }
+
+  function restoreBackup(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = async function () {
+      let data;
+      try {
+        data = JSON.parse(reader.result);
+      } catch (e) {
+        await showAlert('That file is not valid backup JSON.');
+        event.target.value = '';
+        return;
+      }
+      const confirmed = await showConfirm(
+        'This will REPLACE all current data (jobs, expenses, invoices, quotes, contacts, notes, price reference) ' +
+        'with what\'s in this backup file, on this device. This cannot be undone. Continue?',
+        { danger: true, confirmText: 'Restore' }
+      );
+      if (!confirmed) { event.target.value = ''; return; }
+
+      ALL_SYNCED_KEYS.forEach(k => {
+        if (data[k] !== undefined && data[k] !== null) localStorage.setItem(k, data[k]);
+      });
+      if (typeof scheduleSync === 'function') scheduleSync();
+      event.target.value = '';
+      renderDashboard();
+      await showAlert('Backup restored. If you use Cloud Sync, this will push to the cloud shortly and become the new shared version on all devices.');
+    };
+    reader.readAsText(file);
+  }
+
+  function updateRealtimeBadge(status) {
+    const dot = document.getElementById('realtimeDot');
+    const text = document.getElementById('realtimeText');
+    if (!dot || !text) return;
+    dot.className = 'realtime-dot';
+    if (status === 'SUBSCRIBED') {
+      dot.classList.add('is-live');
+      text.textContent = 'Live sync active';
+    } else if (status === 'unavailable') {
+      dot.classList.add('is-error');
+      text.textContent = 'Live sync unavailable';
+    } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT' || status === 'CLOSED') {
+      dot.classList.add('is-error');
+      text.textContent = 'Live sync disconnected';
+    } else {
+      dot.classList.add('is-connecting');
+      text.textContent = 'Live sync: connecting...';
+    }
+  }
+
+  applyCollapseState();
+
+  // sync.js loads with `defer`, which has no effect on this inline script
+  // (defer only applies to external scripts with a `src`) -- this inline
+  // block runs immediately at parse time regardless. Waiting for
+  // DOMContentLoaded guarantees initSyncOnLoad() actually exists by the
+  // time we call it.
+  async function handlePushToggle() {
+    const btn = document.getElementById('pushToggleBtn');
+    const currentlyEnabled = await isPushEnabled();
+
+    if (currentlyEnabled) {
+      const confirmed = await showConfirm('Turn off notifications on this device?');
+      if (!confirmed) return;
+      await disablePushNotifications();
+      btn.classList.remove('is-active');
+      return;
+    }
+
+    btn.disabled = true;
+    const result = await enablePushNotifications();
+    btn.disabled = false;
+    if (!result.ok) {
+      await showAlert(result.error);
+      return;
+    }
+    btn.classList.add('is-active');
+    showToast('Notifications are on for this device.');
+  }
+
+  async function refreshPushToggleState() {
+    const btn = document.getElementById('pushToggleBtn');
+    if (!btn || !pushNotificationsSupported()) { if (btn) btn.style.display = 'none'; return; }
+    const enabled = await isPushEnabled();
+    btn.classList.toggle('is-active', enabled);
+  }
+
+  document.addEventListener('DOMContentLoaded', function () {
+    initSyncOnLoad().then(renderDashboard).catch(renderDashboard).then(() => {
+      if (typeof startRealtimeSync === 'function') {
+        // One status callback shared by both channels -- last status wins,
+        // which is fine here since they're on the same underlying connection.
+        startRealtimeSync(renderDashboard, updateRealtimeBadge);
+        startLeadsRealtime(loadAndRenderLeads, updateRealtimeBadge);
+      }
+    });
+    refreshPushToggleState();
+    if (window.location.hash === '#today') {
+      document.getElementById('section-today')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+  });
+</script>
+
+</body>
+</html>
