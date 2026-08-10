@@ -90,11 +90,9 @@
 <div id="prListView">
   <div class="pr-confidence-note">Pre-loaded with major brands and their official manual/parts links. A few of these links go to a brand's general parts catalog rather than one exact model, since exact links depend on the specific model number &mdash; worth double-checking a link the first time you use it for a real job.</div>
 
-  <div class="icon-search" id="prSearchWrap">
-    <button class="icon-search-btn" aria-label="Search" onclick="document.getElementById('prSearchWrap').classList.toggle('is-expanded'); document.getElementById('prSearchInput').focus();">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-    </button>
-    <input type="text" class="icon-search-input" id="prSearchInput" placeholder="Search type, brand, or model..." oninput="renderUnits()">
+  <div class="form-field full" style="margin-bottom:16px;">
+    <label>Search</label>
+    <input type="text" id="prSearchInput" placeholder="Search type, brand, or model..." oninput="renderUnits()">
   </div>
 
   <div class="pr-type-chips" id="prTypeChips"></div>
@@ -329,22 +327,57 @@
       { id: 9007, type: 'Refrigerator', brand: 'GE', model: '', manualLink: 'https://www.geappliances.com/ge/service-and-support/', partsLink: 'https://www.partselect.com/GE-Refrigerator-Parts.htm', issues: [] },
       { id: 9008, type: 'Washer', brand: 'LG', model: '', manualLink: 'https://www.lg.com/us/support/manuals', partsLink: 'https://www.partselect.com/LG-Washer-Parts.htm', issues: [] },
       { id: 9009, type: 'Dryer', brand: 'LG', model: '', manualLink: 'https://www.lg.com/us/support/manuals', partsLink: 'https://www.partselect.com/LG-Dryer-Parts.htm', issues: [] },
-      { id: 9010, type: 'Refrigerator', brand: 'LG', model: '', manualLink: 'https://www.lg.com/us/support/manuals', partsLink: 'https://www.partselect.com/', issues: [] },
+      { id: 9010, type: 'Refrigerator', brand: 'LG', model: '', manualLink: 'https://www.lg.com/us/support/manuals', partsLink: 'https://www.partselect.com/LG-Refrigerator-Parts.htm', issues: [] },
       { id: 9011, type: 'Washer', brand: 'Samsung', model: '', manualLink: 'https://www.samsung.com/us/support/owners/product/', partsLink: 'https://www.partselect.com/Samsung-Washer-Parts.htm', issues: [] },
       { id: 9012, type: 'Dryer', brand: 'Samsung', model: '', manualLink: 'https://www.samsung.com/us/support/owners/product/', partsLink: 'https://www.partselect.com/Samsung-Dryer-Parts.htm', issues: [] },
-      { id: 9013, type: 'Refrigerator', brand: 'Samsung', model: '', manualLink: 'https://www.samsung.com/us/support/owners/product/', partsLink: 'https://www.partselect.com/', issues: [] },
+      { id: 9013, type: 'Refrigerator', brand: 'Samsung', model: '', manualLink: 'https://www.samsung.com/us/support/owners/product/', partsLink: 'https://www.partselect.com/Samsung-Refrigerator-Parts.htm', issues: [] },
       { id: 9014, type: 'Washer', brand: 'Frigidaire', model: '', manualLink: 'https://www.frigidaire.com/customer-support/', partsLink: 'https://www.partselect.com/Frigidaire-Washer-Parts.htm', issues: [] },
       { id: 9015, type: 'Refrigerator', brand: 'Frigidaire', model: '', manualLink: 'https://www.frigidaire.com/customer-support/', partsLink: 'https://www.partselect.com/Frigidaire-Refrigerator-Parts.htm', issues: [] },
       { id: 9016, type: 'Dishwasher', brand: 'Frigidaire', model: '', manualLink: 'https://www.frigidaire.com/customer-support/', partsLink: 'https://www.partselect.com/Frigidaire-Dishwasher-Parts.htm', issues: [] },
       { id: 9017, type: 'Dishwasher', brand: 'KitchenAid', model: '', manualLink: 'https://www.kitchenaid.com/customer-care.html', partsLink: 'https://www.partselect.com/KitchenAid-Dishwasher-Parts.htm', issues: [] },
-      { id: 9018, type: 'Refrigerator', brand: 'KitchenAid', model: '', manualLink: 'https://www.kitchenaid.com/customer-care.html', partsLink: 'https://www.partselect.com/', issues: [] },
+      { id: 9018, type: 'Refrigerator', brand: 'KitchenAid', model: '', manualLink: 'https://www.kitchenaid.com/customer-care.html', partsLink: 'https://www.partselect.com/KitchenAid-Refrigerator-Parts.htm', issues: [] },
       { id: 9019, type: 'Washer', brand: 'Bosch', model: '', manualLink: 'https://www.bosch-home.com/us/service-and-support', partsLink: 'https://www.partselect.com/Bosch-Washer-Parts.htm', issues: [] },
-      { id: 9020, type: 'Dishwasher', brand: 'Bosch', model: '', manualLink: 'https://www.bosch-home.com/us/service-and-support', partsLink: 'https://www.partselect.com/', issues: [] },
-      { id: 9021, type: 'Dishwasher', brand: 'Whirlpool', model: '', manualLink: 'https://www.whirlpool.com/services/manuals-and-literature.html', partsLink: 'https://www.partselect.com/', issues: [] },
+      { id: 9020, type: 'Dishwasher', brand: 'Bosch', model: '', manualLink: 'https://www.bosch-home.com/us/service-and-support', partsLink: 'https://www.partselect.com/Bosch-Dishwasher-Parts.htm', issues: [] },
+      { id: 9021, type: 'Dishwasher', brand: 'Whirlpool', model: '', manualLink: 'https://www.whirlpool.com/services/manuals-and-literature.html', partsLink: 'https://www.partselect.com/Whirlpool-Dishwasher-Parts.htm', issues: [] },
       { id: 9022, type: 'Range', brand: 'GE', model: '', manualLink: 'https://www.geappliances.com/ge/service-and-support/', partsLink: 'https://www.partselect.com/GE-Range-Parts.htm', issues: [] },
       { id: 9023, type: 'Range', brand: 'Whirlpool', model: '', manualLink: 'https://www.whirlpool.com/services/manuals-and-literature.html', partsLink: 'https://www.partselect.com/Whirlpool-Range-Parts.htm', issues: [] },
       { id: 9024, type: 'Dishwasher', brand: 'GE', model: '', manualLink: 'https://www.geappliances.com/ge/service-and-support/', partsLink: 'https://www.partselect.com/GE-Dishwasher-Parts.htm', issues: [] },
       { id: 9025, type: 'Refrigerator', brand: 'Whirlpool', model: '', manualLink: 'https://www.whirlpool.com/services/manuals-and-literature.html', partsLink: 'https://www.partselect.com/Whirlpool-Refrigerator-Parts.htm', issues: [] },
+      { id: 9026, type: 'Microwave', brand: 'Whirlpool', model: '', manualLink: 'https://www.whirlpool.com/services/manuals-and-literature.html', partsLink: 'https://www.partselect.com/Whirlpool-Microwave-Parts.htm', issues: [] },
+      { id: 9027, type: 'Range', brand: 'Maytag', model: '', manualLink: 'https://www.maytag.com/services/owner-center.html', partsLink: 'https://www.partselect.com/Maytag-Range-Parts.htm', issues: [] },
+      { id: 9028, type: 'Refrigerator', brand: 'Maytag', model: '', manualLink: 'https://www.maytag.com/services/owner-center.html', partsLink: 'https://www.partselect.com/Maytag-Refrigerator-Parts.htm', issues: [] },
+      { id: 9029, type: 'Dishwasher', brand: 'Maytag', model: '', manualLink: 'https://www.maytag.com/services/owner-center.html', partsLink: 'https://www.partselect.com/Maytag-Dishwasher-Parts.htm', issues: [] },
+      { id: 9030, type: 'Microwave', brand: 'GE', model: '', manualLink: 'https://www.geappliances.com/ge/service-and-support/', partsLink: 'https://www.partselect.com/GE-Microwave-Parts.htm', issues: [] },
+      { id: 9031, type: 'Oven', brand: 'GE', model: '', manualLink: 'https://www.geappliances.com/ge/service-and-support/', partsLink: 'https://www.partselect.com/GE-Oven-Parts.htm', issues: [] },
+      { id: 9032, type: 'Cooktop', brand: 'GE', model: '', manualLink: 'https://www.geappliances.com/ge/service-and-support/', partsLink: 'https://www.partselect.com/GE-Cooktop-Parts.htm', issues: [] },
+      { id: 9033, type: 'Dishwasher', brand: 'LG', model: '', manualLink: 'https://www.lg.com/us/support/manuals', partsLink: 'https://www.partselect.com/LG-Dishwasher-Parts.htm', issues: [] },
+      { id: 9034, type: 'Range', brand: 'Samsung', model: '', manualLink: 'https://www.samsung.com/us/support/owners/product/', partsLink: 'https://www.partselect.com/Samsung-Range-Parts.htm', issues: [] },
+      { id: 9035, type: 'Dishwasher', brand: 'Samsung', model: '', manualLink: 'https://www.samsung.com/us/support/owners/product/', partsLink: 'https://www.partselect.com/Samsung-Dishwasher-Parts.htm', issues: [] },
+      { id: 9036, type: 'Dryer', brand: 'Frigidaire', model: '', manualLink: 'https://www.frigidaire.com/customer-support/', partsLink: 'https://www.partselect.com/Frigidaire-Dryer-Parts.htm', issues: [] },
+      { id: 9037, type: 'Dishwasher', brand: 'KitchenAid', model: '', manualLink: 'https://www.kitchenaid.com/customer-care.html', partsLink: 'https://www.partselect.com/KitchenAid-Dishwasher-Parts.htm', issues: [] },
+      { id: 9038, type: 'Dryer', brand: 'Bosch', model: '', manualLink: 'https://www.bosch-home.com/us/service-and-support', partsLink: 'https://www.partselect.com/Bosch-Dryer-Parts.htm', issues: [] },
+      { id: 9039, type: 'Refrigerator', brand: 'Bosch', model: '', manualLink: 'https://www.bosch-home.com/us/service-and-support', partsLink: 'https://www.partselect.com/Bosch-Refrigerator-Parts.htm', issues: [] },
+      { id: 9040, type: 'Washer', brand: 'Kenmore', model: '', manualLink: 'https://www.searspartsdirect.com/', partsLink: 'https://www.partselect.com/Kenmore-Washer-Parts.htm', issues: [] },
+      { id: 9041, type: 'Dryer', brand: 'Kenmore', model: '', manualLink: 'https://www.searspartsdirect.com/', partsLink: 'https://www.partselect.com/Kenmore-Dryer-Parts.htm', issues: [] },
+      { id: 9042, type: 'Refrigerator', brand: 'Kenmore', model: '', manualLink: 'https://www.searspartsdirect.com/', partsLink: 'https://www.partselect.com/Kenmore-Refrigerator-Parts.htm', issues: [] },
+      { id: 9043, type: 'Dishwasher', brand: 'Kenmore', model: '', manualLink: 'https://www.searspartsdirect.com/', partsLink: 'https://www.partselect.com/Kenmore-Dishwasher-Parts.htm', issues: [] },
+      { id: 9044, type: 'Washer', brand: 'Amana', model: '', manualLink: 'https://www.amana.com/support', partsLink: 'https://www.partselect.com/Amana-Washer-Parts.htm', issues: [] },
+      { id: 9045, type: 'Dryer', brand: 'Amana', model: '', manualLink: 'https://www.amana.com/support', partsLink: 'https://www.partselect.com/Amana-Dryer-Parts.htm', issues: [] },
+      { id: 9046, type: 'Refrigerator', brand: 'Amana', model: '', manualLink: 'https://www.amana.com/support', partsLink: 'https://www.partselect.com/Amana-Refrigerator-Parts.htm', issues: [] },
+      { id: 9047, type: 'Washer', brand: 'Hotpoint', model: '', manualLink: 'https://www.hotpoint.com/support.html', partsLink: 'https://www.partselect.com/Hotpoint-Washer-Parts.htm', issues: [] },
+      { id: 9048, type: 'Dryer', brand: 'Hotpoint', model: '', manualLink: 'https://www.hotpoint.com/support.html', partsLink: 'https://www.partselect.com/Hotpoint-Dryer-Parts.htm', issues: [] },
+      { id: 9049, type: 'Refrigerator', brand: 'Hotpoint', model: '', manualLink: 'https://www.hotpoint.com/support.html', partsLink: 'https://www.partselect.com/Hotpoint-Refrigerator-Parts.htm', issues: [] },
+      { id: 9050, type: 'Washer', brand: 'Electrolux', model: '', manualLink: 'https://www.electroluxappliances.com/Support/', partsLink: 'https://www.partselect.com/Electrolux-Washer-Parts.htm', issues: [] },
+      { id: 9051, type: 'Dryer', brand: 'Electrolux', model: '', manualLink: 'https://www.electroluxappliances.com/Support/', partsLink: 'https://www.partselect.com/Electrolux-Dryer-Parts.htm', issues: [] },
+      { id: 9052, type: 'Dishwasher', brand: 'Electrolux', model: '', manualLink: 'https://www.electroluxappliances.com/Support/', partsLink: 'https://www.partselect.com/Electrolux-Dishwasher-Parts.htm', issues: [] },
+      { id: 9053, type: 'Washer', brand: 'Speed Queen', model: '', manualLink: 'https://www.speedqueen.com/en-us/support', partsLink: 'https://www.partselect.com/Speed-Queen-Washer-Parts.htm', issues: [] },
+      { id: 9054, type: 'Dryer', brand: 'Speed Queen', model: '', manualLink: 'https://www.speedqueen.com/en-us/support', partsLink: 'https://www.partselect.com/Speed-Queen-Dryer-Parts.htm', issues: [] },
+      { id: 9055, type: 'Microwave', brand: 'Samsung', model: '', manualLink: 'https://www.samsung.com/us/support/owners/product/', partsLink: 'https://www.partselect.com/Samsung-Microwave-Parts.htm', issues: [] },
+      { id: 9056, type: 'Microwave', brand: 'LG', model: '', manualLink: 'https://www.lg.com/us/support/manuals', partsLink: 'https://www.partselect.com/LG-Microwave-Parts.htm', issues: [] },
+      { id: 9057, type: 'Range', brand: 'Frigidaire', model: '', manualLink: 'https://www.frigidaire.com/customer-support/', partsLink: 'https://www.partselect.com/Frigidaire-Range-Parts.htm', issues: [] },
+      { id: 9058, type: 'Freezer', brand: 'GE', model: '', manualLink: 'https://www.geappliances.com/ge/service-and-support/', partsLink: 'https://www.partselect.com/GE-Freezer-Parts.htm', issues: [] },
+      { id: 9059, type: 'Freezer', brand: 'Whirlpool', model: '', manualLink: 'https://www.whirlpool.com/services/manuals-and-literature.html', partsLink: 'https://www.partselect.com/Whirlpool-Freezer-Parts.htm', issues: [] },
+      { id: 9060, type: 'Freezer', brand: 'Frigidaire', model: '', manualLink: 'https://www.frigidaire.com/customer-support/', partsLink: 'https://www.partselect.com/Frigidaire-Freezer-Parts.htm', issues: [] },
     ]);
   }
 
