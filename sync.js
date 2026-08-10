@@ -195,6 +195,10 @@ async function pushSync() {
   if (!isSyncConfigured()) return { ok: false, error: 'not-configured' };
   const code = getSyncCode();
   if (!code) return { ok: false, error: 'no-code' };
+  if (typeof ensureFreshToken === 'function') {
+    const fresh = await ensureFreshToken();
+    if (!fresh) { recordSyncStatus('push', false, 'session-expired'); return { ok: false, error: 'session-expired' }; }
+  }
 
   const nowIso = new Date().toISOString();
   const body = [{ code, data: collectSyncData(), updated_at: nowIso }];
@@ -225,6 +229,10 @@ async function pullSync() {
   if (!isSyncConfigured()) return { ok: false, error: 'not-configured' };
   const code = getSyncCode();
   if (!code) return { ok: false, error: 'no-code' };
+  if (typeof ensureFreshToken === 'function') {
+    const fresh = await ensureFreshToken();
+    if (!fresh) { recordSyncStatus('pull', false, 'session-expired'); return { ok: false, error: 'session-expired' }; }
+  }
 
   try {
     const res = await fetch(`${SUPABASE_URL}/rest/v1/${SYNC_TABLE}?code=eq.${encodeURIComponent(code)}&select=data,updated_at`, {
