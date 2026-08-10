@@ -1,0 +1,326 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Parts &amp; Reference · Triple H Enterprises</title>
+<link rel="manifest" href="/tools/manifest.json">
+<link rel="stylesheet" href="/styles.css?v=202608102100">
+<script src="/tools/auth.js" defer></script>
+<script src="/tools/tools-common.js" defer></script>
+<script src="/tools/sync.js" defer></script>
+<style>
+  .pr-filter-chips { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 16px; }
+  .pr-chip {
+    padding: 7px 14px; border-radius: 999px; border: 1px solid var(--border);
+    background: var(--bg-panel-2); color: var(--text-dim); font-size: 13.5px;
+    cursor: pointer; transition: border-color .15s ease, color .15s ease, background .15s ease;
+  }
+  .pr-chip:hover { border-color: var(--orange-light); color: var(--orange-light); }
+  .pr-chip:active { transform: translateY(1px); }
+  .pr-chip.is-active { background: var(--orange); color: #1a0d02; border-color: var(--orange); font-weight: 600; }
+
+  .pr-entry {
+    background: var(--bg-panel-2); border: 1px solid var(--border); border-radius: var(--radius);
+    padding: 16px; margin-bottom: 12px;
+  }
+  .pr-entry-top { display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; margin-bottom: 8px; }
+  .pr-entry-appliance { font-family:'Oswald',sans-serif; font-size: 13px; letter-spacing: .04em; text-transform: uppercase; color: var(--orange-light); }
+  .pr-entry-symptom { font-size: 16px; font-weight: 600; color: var(--white); margin-top: 2px; }
+  .pr-entry-price { font-family:'Oswald',sans-serif; font-size: 20px; color: var(--white); white-space: nowrap; }
+  .pr-entry-price-label { font-size: 11px; color: var(--text-dim); text-transform: uppercase; letter-spacing: .04em; }
+  .pr-entry-part { font-size: 14.5px; color: var(--text); margin-bottom: 4px; }
+  .pr-entry-partnum { color: var(--text-dim); font-size: 13px; }
+  .pr-entry-note { font-size: 13.5px; color: var(--text-dim); margin-top: 6px; }
+  .pr-entry-actions { display: flex; gap: 10px; margin-top: 10px; align-items: center; }
+  .pr-entry-link {
+    display: inline-flex; align-items: center; gap: 5px; font-size: 13.5px; color: var(--blue-light);
+    text-decoration: none; padding: 6px 10px; border: 1px solid var(--border); border-radius: 6px;
+  }
+  .pr-entry-link:hover { border-color: var(--blue-light); }
+  .pr-entry-link svg { width: 13px; height: 13px; }
+
+  .pr-empty { text-align: center; color: var(--text-dim); padding: 40px 20px; font-size: 14px; }
+  .pr-count { color: var(--text-dim); font-size: 13px; margin-bottom: 14px; }
+
+  #prAddForm { display: none; }
+  #prAddForm.is-open { display: block; }
+</style>
+</head>
+<body>
+
+<div class="tool-header">
+  <a href="/tools/workspace.html" class="tool-header-brand">
+    <img src="/images/logo-signature-orange.png" alt="Triple H Enterprises">
+    <span>&larr; Back to Workspace</span>
+  </a>
+  <button class="help-btn" onclick="openHelpModal()" aria-label="How to use this tool" title="How to use this tool">?</button>
+</div>
+<div class="tool-title">Parts &amp; Reference</div>
+<p class="tool-sub">A quick lookup for common appliance issues &mdash; what part it usually is, the part number, and roughly what it costs. Not a substitute for actually diagnosing the job in person.<span id="syncStatusText"></span></p>
+
+<div class="icon-search" id="prSearchWrap">
+  <button class="icon-search-btn" aria-label="Search" onclick="document.getElementById('prSearchWrap').classList.toggle('is-expanded'); document.getElementById('prSearchInput').focus();">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+  </button>
+  <input type="text" class="icon-search-input" id="prSearchInput" placeholder="Search symptom or part name..." oninput="renderEntries()">
+</div>
+
+<div class="pr-filter-chips" id="prApplianceChips"></div>
+
+<div class="form-section">
+  <div style="display:flex; justify-content:space-between; align-items:center;">
+    <h3 style="margin:0;">Reference Entries</h3>
+    <button class="secondary-btn" onclick="togglePrAddForm()">+ Add Entry</button>
+  </div>
+
+  <div id="prAddForm" style="margin-top:14px; padding-top:14px; border-top:1px solid var(--border);">
+    <div class="tool-form-row">
+      <div class="form-field">
+        <label>Appliance Type</label>
+        <input type="text" id="prNewAppliance" placeholder="e.g. Washer, Dryer, Dishwasher">
+      </div>
+      <div class="form-field">
+        <label>Brand (optional)</label>
+        <input type="text" id="prNewBrand" placeholder="e.g. Whirlpool">
+      </div>
+    </div>
+    <div class="tool-form-row">
+      <div class="form-field full">
+        <label>Symptom / Issue</label>
+        <input type="text" id="prNewSymptom" placeholder="e.g. Won't spin">
+      </div>
+    </div>
+    <div class="tool-form-row">
+      <div class="form-field">
+        <label>Likely Part</label>
+        <input type="text" id="prNewPartName" placeholder="e.g. Drive belt">
+      </div>
+      <div class="form-field">
+        <label>Part Number</label>
+        <input type="text" id="prNewPartNumber" placeholder="e.g. WPW10006384">
+      </div>
+    </div>
+    <div class="tool-form-row">
+      <div class="form-field">
+        <label>Rough Cost Low ($)</label>
+        <input type="number" id="prNewPriceLow" min="0" step="0.01">
+      </div>
+      <div class="form-field">
+        <label>Rough Cost High ($)</label>
+        <input type="number" id="prNewPriceHigh" min="0" step="0.01">
+      </div>
+    </div>
+    <div class="tool-form-row">
+      <div class="form-field full">
+        <label>Reference Link (optional)</label>
+        <input type="text" id="prNewLink" placeholder="https://www.partselect.com/...">
+      </div>
+    </div>
+    <div class="tool-form-row">
+      <div class="form-field full">
+        <label>Note (optional)</label>
+        <input type="text" id="prNewNote" placeholder="Anything worth remembering about this one">
+      </div>
+    </div>
+    <div class="form-footer">
+      <button class="btn blue" onclick="savePrEntry()">Save Entry</button>
+      <button class="secondary-btn" onclick="togglePrAddForm()">Cancel</button>
+    </div>
+  </div>
+
+  <p class="pr-count" id="prCount" style="margin-top:16px;"></p>
+  <div id="prEntriesList"></div>
+</div>
+
+<div class="modal-overlay help-modal-overlay" id="helpModalOverlay">
+  <div class="help-modal">
+    <button class="modal-close" onclick="closeHelpModal()" aria-label="Close">&times;</button>
+    <h3>Parts &amp; Reference</h3>
+    <p>A running list of common appliance issues you've actually seen, paired with the part that was usually the fix and roughly what it cost. The goal is speed &mdash; "customer says the washer won't spin" should get you to "probably the drive belt, roughly $20&ndash;30" in a few seconds, without digging through old invoices or your memory.</p>
+    <p>This isn't a substitute for actually diagnosing the job in person &mdash; it's a fast starting point based on what's been true before, not a guarantee of what's wrong this time.</p>
+    <p>The reference link, if you add one, points to wherever you actually found the part &mdash; a manufacturer's page, PartSelect, RepairClinic, or similar. It opens in a new tab; nothing is copied or stored from that page itself, just the link to it.</p>
+    <p>Use the search box to filter by symptom or part name, or tap an appliance chip to narrow the list down first.</p>
+  </div>
+</div>
+
+<script>
+  const PR_STORAGE_KEY = 'th_parts_reference';
+  let prActiveAppliance = 'all';
+  let justAddedPrId = null;
+
+  function escapeHtml(str) {
+    const div = document.createElement('div');
+    div.textContent = str;
+    return div.innerHTML;
+  }
+
+  function loadPrEntries() {
+    try { return JSON.parse(localStorage.getItem(PR_STORAGE_KEY) || '[]'); }
+    catch (e) { return []; }
+  }
+  function savePrEntries(list) {
+    localStorage.setItem(PR_STORAGE_KEY, JSON.stringify(list));
+    if (typeof scheduleSync === 'function') scheduleSync();
+  }
+
+  function togglePrAddForm() {
+    document.getElementById('prAddForm').classList.toggle('is-open');
+  }
+
+  function savePrEntry() {
+    const appliance = document.getElementById('prNewAppliance').value.trim();
+    const symptom = document.getElementById('prNewSymptom').value.trim();
+    const partName = document.getElementById('prNewPartName').value.trim();
+    if (!appliance || !symptom || !partName) {
+      showToast('Appliance, symptom, and part name are required.', { type: 'error' });
+      return;
+    }
+    const entry = {
+      id: Date.now(),
+      appliance,
+      brand: document.getElementById('prNewBrand').value.trim(),
+      symptom,
+      partName,
+      partNumber: document.getElementById('prNewPartNumber').value.trim(),
+      priceLow: parseFloat(document.getElementById('prNewPriceLow').value) || null,
+      priceHigh: parseFloat(document.getElementById('prNewPriceHigh').value) || null,
+      link: document.getElementById('prNewLink').value.trim(),
+      note: document.getElementById('prNewNote').value.trim(),
+    };
+    const list = loadPrEntries();
+    list.push(entry);
+    savePrEntries(list);
+
+    ['prNewAppliance','prNewBrand','prNewSymptom','prNewPartName','prNewPartNumber','prNewPriceLow','prNewPriceHigh','prNewLink','prNewNote'].forEach(id => {
+      document.getElementById(id).value = '';
+    });
+    togglePrAddForm();
+    justAddedPrId = entry.id;
+    renderChips();
+    renderEntries();
+    showToast('Entry saved.');
+  }
+
+  function deletePrEntry(id) {
+    showConfirm('Delete this reference entry? This cannot be undone.', { danger: true, confirmText: 'Delete' }).then(confirmed => {
+      if (!confirmed) return;
+      const row = document.querySelector('[data-pr-id="' + id + '"]');
+      animateRowExit(row, () => {
+        savePrEntries(loadPrEntries().filter(e => e.id !== id));
+        renderChips();
+        renderEntries();
+      });
+    });
+  }
+
+  function renderChips() {
+    const entries = loadPrEntries();
+    const appliances = [...new Set(entries.map(e => e.appliance))].sort();
+    const wrap = document.getElementById('prApplianceChips');
+    if (!appliances.length) { wrap.innerHTML = ''; return; }
+    const chips = ['all', ...appliances];
+    wrap.innerHTML = chips.map(a => `
+      <button class="pr-chip ${prActiveAppliance === a ? 'is-active' : ''}" onclick="setPrAppliance('${escapeHtml(a).replace(/'/g, "\\'")}')">${a === 'all' ? 'All' : escapeHtml(a)}</button>
+    `).join('');
+  }
+
+  function setPrAppliance(a) {
+    prActiveAppliance = a;
+    renderChips();
+    renderEntries();
+  }
+
+  function formatPriceRange(low, high) {
+    if (low == null && high == null) return 'Cost varies';
+    if (low != null && high != null) return `$${low.toFixed(0)}&ndash;${high.toFixed(0)}`;
+    const only = low != null ? low : high;
+    return `~$${only.toFixed(0)}`;
+  }
+
+  function renderEntries() {
+    const search = document.getElementById('prSearchInput').value.trim().toLowerCase();
+    let entries = loadPrEntries();
+
+    if (prActiveAppliance !== 'all') entries = entries.filter(e => e.appliance === prActiveAppliance);
+    if (search) {
+      entries = entries.filter(e =>
+        e.symptom.toLowerCase().includes(search) ||
+        e.partName.toLowerCase().includes(search) ||
+        (e.partNumber || '').toLowerCase().includes(search) ||
+        (e.brand || '').toLowerCase().includes(search)
+      );
+    }
+
+    document.getElementById('prCount').textContent = entries.length
+      ? `${entries.length} entr${entries.length === 1 ? 'y' : 'ies'}`
+      : '';
+
+    const list = document.getElementById('prEntriesList');
+    if (!entries.length) {
+      list.innerHTML = `<div class="pr-empty">${loadPrEntries().length ? 'Nothing matches that search.' : 'No reference entries yet &mdash; add the first one above.'}</div>`;
+      return;
+    }
+
+    list.innerHTML = entries.slice().reverse().map(e => `
+      <div class="pr-entry ${e.id === justAddedPrId ? 'list-row-enter' : ''}" data-pr-id="${e.id}">
+        <div class="pr-entry-top">
+          <div>
+            <div class="pr-entry-appliance">${escapeHtml(e.appliance)}${e.brand ? ' &middot; ' + escapeHtml(e.brand) : ''}</div>
+            <div class="pr-entry-symptom">${escapeHtml(e.symptom)}</div>
+          </div>
+          <div style="text-align:right;">
+            <div class="pr-entry-price-label">Rough Cost</div>
+            <div class="pr-entry-price">${formatPriceRange(e.priceLow, e.priceHigh)}</div>
+          </div>
+        </div>
+        <div class="pr-entry-part">Likely part: <strong>${escapeHtml(e.partName)}</strong>${e.partNumber ? ` <span class="pr-entry-partnum">(#${escapeHtml(e.partNumber)})</span>` : ''}</div>
+        ${e.note ? `<div class="pr-entry-note">${escapeHtml(e.note)}</div>` : ''}
+        <div class="pr-entry-actions">
+          ${e.link ? `<a class="pr-entry-link" href="${escapeHtml(e.link)}" target="_blank" rel="noopener">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><path d="M15 3h6v6"/><path d="M10 14L21 3"/></svg>
+            View source
+          </a>` : ''}
+          <button class="small-btn danger" onclick="deletePrEntry(${e.id})">Delete</button>
+        </div>
+      </div>
+    `).join('');
+    justAddedPrId = null;
+  }
+
+  function seedPrExamplesIfEmpty() {
+    if (loadPrEntries().length) return;
+    savePrEntries([
+      {
+        id: 1,
+        appliance: 'Washer', brand: 'Whirlpool',
+        symptom: "Won't spin (agitates fine, drum just doesn't spin)",
+        partName: 'Drive belt', partNumber: 'WPW10006384',
+        priceLow: 20, priceHigh: 28,
+        link: 'https://www.partselect.com/Whirlpool-Washer-Belts.htm',
+        note: 'By far the most common cause on Whirlpool/Maytag/Kenmore top-loaders. Check for a broken or slipped belt visually before ordering.',
+      },
+      {
+        id: 2,
+        appliance: 'Washer', brand: 'Whirlpool',
+        symptom: "Agitates but won't spin, black debris inside cabinet",
+        partName: 'Motor coupling', partNumber: 'WP285753A',
+        priceLow: 15, priceHigh: 25,
+        link: 'https://www.repairclinic.com/RepairHelp/How-To-Fix-A-Washing-Machine/38-5--/Whirlpool-Washer-Won-T-Spin',
+        note: 'Classic direct-drive top-loader failure -- the plastic center block breaks, usually from an overloaded machine protecting the motor/transmission.',
+      },
+    ]);
+  }
+
+  document.addEventListener('DOMContentLoaded', () => {
+    seedPrExamplesIfEmpty();
+    renderChips();
+    renderEntries();
+    if (typeof initSyncOnLoad === 'function') {
+      initSyncOnLoad().then(() => { renderChips(); renderEntries(); });
+    }
+  });
+</script>
+
+</body>
+</html>
