@@ -25,10 +25,10 @@
 
 const CACHE_NAME = 'th-workspace-v1';
 const PRECACHE_URLS = [
-  '/workspace.html', '/job-tracker.html', '/invoice-generator.html', '/contract-generator.html',
-  '/calendar.html', '/route-planner.html', '/review-request.html', '/contact-card.html',
-  '/job-cost-lookup.html', '/expense-logger.html', '/login.html',
-  '/styles.css', '/sync.js', '/auth.js', '/tools-common.js', '/manifest.json',
+  '/tools/workspace.html', '/tools/job-tracker.html', '/tools/invoice-generator.html', '/tools/contract-generator.html',
+  '/tools/calendar.html', '/tools/route-planner.html', '/tools/review-request.html', '/tools/contact-card.html',
+  '/tools/job-cost-lookup.html', '/tools/expense-logger.html', '/tools/login.html',
+  '/styles.css', '/tools/sync.js', '/tools/auth.js', '/tools/tools-common.js', '/tools/manifest.json',
   '/images/logo-signature-orange.png', '/images/icon-192.png', '/images/icon-512.png', '/images/apple-touch-icon.png',
 ];
 
