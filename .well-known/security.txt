@@ -1,4 +1,4 @@
-Contact: mailto:Triplehenterprises88@gmail.com
+Contact: mailto:steve@triplehenterprisesllc.biz
+Expires: 2027-08-10T00:00:00.000Z
 Preferred-Languages: en
-Canonical: https://triplehenterprisesllc.biz/.well-known/security.txt
-Expires: 2027-07-25T00:00:00.000Z
+Canonical: https://www.triplehenterprisesllc.biz/.well-known/security.txt
