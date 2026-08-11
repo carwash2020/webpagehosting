@@ -1511,6 +1511,7 @@
   function toggleEditUnit(unitId) {
     activePrEditUnitId = activePrEditUnitId === unitId ? null : unitId;
     activePrIssueTargetId = null;
+    if (activePrEditUnitId === unitId) { expandedPrTypeIds.add(unitId); }
     renderBrandDetail();
   }
 
@@ -1604,7 +1605,12 @@
       return '<div class="pr-type-section">' +
         '<div class="pr-type-section-header" onclick="toggleTypeSection(' + u.id + ')">' +
         '<span class="pr-type-section-name">' + sectionLabel + '</span>' +
-        '<span class="pr-type-section-meta">' + u.issues.length + ' logged &nbsp;' + (isExpanded ? '&#9650;' : '&#9660;') + '</span>' +
+        '<span class="pr-type-section-meta" style="display:flex; align-items:center; gap:10px;">' +
+        u.issues.length + ' logged' +
+        '<button class="icon-btn" title="Edit" onclick="event.stopPropagation(); toggleEditUnit(' + u.id + ');" style="background:none; border:none; cursor:pointer; padding:2px 4px; font-size:14px; line-height:1;">&#9998;</button>' +
+        '<button class="icon-btn" title="Delete" onclick="event.stopPropagation(); deletePrUnitType(' + u.id + ');" style="background:none; border:none; cursor:pointer; padding:2px 4px; font-size:14px; line-height:1; color:#d33;">&#128465;</button>' +
+        '<span>' + (isExpanded ? '&#9650;' : '&#9660;') + '</span>' +
+        '</span>' +
         '</div>' +
         (isExpanded ? (
           '<div class="pr-type-section-body">' +
