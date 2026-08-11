@@ -708,6 +708,77 @@
     localStorage.setItem(UPGRADE_KEY, '1');
   }
 
+
+  // ---------------------------------------------------------------------
+  // Seed upgrade v5 (added 2026-08-11) -- first batch of specific-model
+  // breakdown. Previously each brand+type was one generic entry; this
+  // adds real, specific model numbers (pulled directly from PartSelect's
+  // own "Popular Models" listings for that brand+type) as separate sibling
+  // units alongside the generic one, so the generic entry stays available
+  // for "don't know the exact model" cases while specific models get their
+  // own card. Batch 1: Whirlpool Washer and Refrigerator (8 models). More
+  // brand+type combos to follow in later batches -- this is a large,
+  // ongoing project, not a one-shot fill of all 319 combos.
+  function upgradePrSeedV5IfNeeded() {
+    const UPGRADE_KEY = 'th_parts_reference_seed_v5_applied';
+    if (localStorage.getItem(UPGRADE_KEY)) return;
+    const list = loadPrUnits();
+    const existingKeys = new Set(list.map(u => u.type + '|' + u.brand + '|' + (u.model || '')));
+
+    const additions = [
+      { id: 9500, type: 'Washer', brand: 'Whirlpool', model: 'GHW9150PW0 — Duet Front-Load Washer', manualLink: 'https://www.partselect.com/Models/GHW9150PW0/', partsLink: 'https://www.partselect.com/Models/GHW9150PW0/', issues: [] },
+      { id: 9501, type: 'Washer', brand: 'Whirlpool', model: 'WTW5000DW1 — Cabrio Top-Load Washer', manualLink: 'https://www.partselect.com/Models/WTW5000DW1/', partsLink: 'https://www.partselect.com/Models/WTW5000DW1/', issues: [] },
+      { id: 9502, type: 'Washer', brand: 'Whirlpool', model: 'WFW72HEDW0 — Front-Load Washer (HE)', manualLink: 'https://www.partselect.com/Models/WFW72HEDW0/', partsLink: 'https://www.partselect.com/Models/WFW72HEDW0/', issues: [] },
+      { id: 9503, type: 'Washer', brand: 'Whirlpool', model: 'MVWC565FW1 — Top-Load Washer (agitator)', manualLink: 'https://www.partselect.com/Models/MVWC565FW1/', partsLink: 'https://www.partselect.com/Models/MVWC565FW1/', issues: [] },
+      { id: 9504, type: 'Refrigerator', brand: 'Whirlpool', model: 'WRS325FDAM04 — Side-by-Side Refrigerator', manualLink: 'https://www.partselect.com/Models/WRS325FDAM04/', partsLink: 'https://www.partselect.com/Models/WRS325FDAM04/', issues: [] },
+      { id: 9505, type: 'Refrigerator', brand: 'Whirlpool', model: 'WRF535SMBM00 — French Door Refrigerator', manualLink: 'https://www.partselect.com/Models/WRF535SMBM00/', partsLink: 'https://www.partselect.com/Models/WRF535SMBM00/', issues: [] },
+      { id: 9506, type: 'Refrigerator', brand: 'Whirlpool', model: 'WRT518SZFM00 — Top-Freezer Refrigerator', manualLink: 'https://www.partselect.com/Models/WRT518SZFM00/', partsLink: 'https://www.partselect.com/Models/WRT518SZFM00/', issues: [] },
+      { id: 9507, type: 'Refrigerator', brand: 'Whirlpool', model: 'WRB322DMBM00 — Bottom-Freezer Refrigerator', manualLink: 'https://www.partselect.com/Models/WRB322DMBM00/', partsLink: 'https://www.partselect.com/Models/WRB322DMBM00/', issues: [] },
+    ];
+
+    additions.forEach(u => {
+      const key = u.type + '|' + u.brand + '|' + (u.model || '');
+      if (!existingKeys.has(key)) {
+        list.push(u);
+        existingKeys.add(key);
+      }
+    });
+
+    savePrUnits(list);
+    localStorage.setItem(UPGRADE_KEY, '1');
+  }
+
+
+  // ---------------------------------------------------------------------
+  // Seed upgrade v6 (added 2026-08-11) -- model breakdown batch 2:
+  // Whirlpool Dryer (4 models) and Whirlpool Dishwasher (1 model so far).
+  // Same additive pattern as v5.
+  function upgradePrSeedV6IfNeeded() {
+    const UPGRADE_KEY = 'th_parts_reference_seed_v6_applied';
+    if (localStorage.getItem(UPGRADE_KEY)) return;
+    const list = loadPrUnits();
+    const existingKeys = new Set(list.map(u => u.type + '|' + u.brand + '|' + (u.model || '')));
+
+    const additions = [
+      { id: 9508, type: 'Dryer', brand: 'Whirlpool', model: 'WED4815EW1 — Electric Dryer', manualLink: 'https://www.partselect.com/Models/WED4815EW1/', partsLink: 'https://www.partselect.com/Models/WED4815EW1/', issues: [] },
+      { id: 9509, type: 'Dryer', brand: 'Whirlpool', model: 'GEW9250PW1 — Gas Dryer (Residential)', manualLink: 'https://www.partselect.com/Models/GEW9250PW1/', partsLink: 'https://www.partselect.com/Models/GEW9250PW1/', issues: [] },
+      { id: 9510, type: 'Dryer', brand: 'Whirlpool', model: 'WED9200SQ0 — Duet HE Electric Dryer', manualLink: 'https://www.partselect.com/Models/WED9200SQ0/', partsLink: 'https://www.partselect.com/Models/WED9200SQ0/', issues: [] },
+      { id: 9511, type: 'Dryer', brand: 'Whirlpool', model: 'WED7300XW0 — 27" Electric Dryer', manualLink: 'https://www.partselect.com/Models/WED7300XW0/', partsLink: 'https://www.partselect.com/Models/WED7300XW0/', issues: [] },
+      { id: 9512, type: 'Dishwasher', brand: 'Whirlpool', model: 'WDF590SAJM0 — Front-Control Dishwasher', manualLink: 'https://www.partselect.com/Models/WDF590SAJM0/', partsLink: 'https://www.partselect.com/Models/WDF590SAJM0/', issues: [] },
+    ];
+
+    additions.forEach(u => {
+      const key = u.type + '|' + u.brand + '|' + (u.model || '');
+      if (!existingKeys.has(key)) {
+        list.push(u);
+        existingKeys.add(key);
+      }
+    });
+
+    savePrUnits(list);
+    localStorage.setItem(UPGRADE_KEY, '1');
+  }
+
   function togglePrAddUnitForm() { document.getElementById('prAddUnitForm').classList.toggle('is-open'); }
   function togglePrAddIssueForm() { document.getElementById('prAddIssueForm').classList.toggle('is-open'); }
 
@@ -955,6 +1026,8 @@
     upgradePrSeedV2IfNeeded();
     upgradePrSeedV3IfNeeded();
     upgradePrSeedV4IfNeeded();
+    upgradePrSeedV5IfNeeded();
+    upgradePrSeedV6IfNeeded();
     renderTypeChips();
     renderUnits();
     if (typeof initSyncOnLoad === 'function') {
