@@ -1485,7 +1485,116 @@
     localStorage.setItem(UPGRADE_KEY, '1');
   }
 
+
+  // ---------------------------------------------------------------------
+  // Seed upgrade v24 (added 2026-08-11) -- model breakdown batch 20:
+  // Inglis Dryer (3) + Washer (3) -- Whirlpool-family Canadian badge
+  // brand, verified same OEM network as Whirlpool/Norge/etc. Tappan
+  // Range (3) + Freezer (3) -- Frigidaire-family badge brand. KitchenAid
+  // Washer (2). 5 previously-empty combos total. Note: White Mountain
+  // is an ice cream maker brand (Sunbeam/Newell), not a major appliance
+  // brand -- confirmed via Wikipedia -- so "White Mountain Refrigerator/
+  // Washer/etc." combos are almost certainly phantom entries with no
+  // real models to find; flagging for potential pruning rather than
+  // continuing to search for them. Hardwick, LG/Samsung/Frigidaire/
+  // Kenmore Dishwasher were checked this round without a clean models
+  // list surfacing. Same additive pattern as v5-v23.
+  function upgradePrSeedV24IfNeeded() {
+    const UPGRADE_KEY = 'th_parts_reference_seed_v24_applied';
+    if (localStorage.getItem(UPGRADE_KEY)) return;
+    const list = loadPrUnits();
+    const existingKeys = new Set(list.map(u => u.type + '|' + u.brand + '|' + (u.model || '')));
+
+    const additions = [
+      { id: 9707, type: 'Dryer', brand: 'Inglis', model: 'IED4100SQ0 — Electric Dryer', manualLink: 'https://www.partselect.com/Models/IED4100SQ0/', partsLink: 'https://www.partselect.com/Models/IED4100SQ0/', issues: [] },
+      { id: 9708, type: 'Dryer', brand: 'Inglis', model: 'IED4300SQ0 — Electric Dryer', manualLink: 'https://www.partselect.com/Models/IED4300SQ0/', partsLink: 'https://www.partselect.com/Models/IED4300SQ0/', issues: [] },
+      { id: 9709, type: 'Dryer', brand: 'Inglis', model: 'IGD4300SQ0 — Gas Dryer', manualLink: 'https://www.partselect.com/Models/IGD4300SQ0/', partsLink: 'https://www.partselect.com/Models/IGD4300SQ0/', issues: [] },
+      { id: 9710, type: 'Washer', brand: 'Inglis', model: 'ITW4100SQ0 — Top-Load Washer', manualLink: 'https://www.partselect.com/Models/ITW4100SQ0/', partsLink: 'https://www.partselect.com/Models/ITW4100SQ0/', issues: [] },
+      { id: 9711, type: 'Washer', brand: 'Inglis', model: 'ITW4200SQ0 — Top-Load Washer', manualLink: 'https://www.partselect.com/Models/ITW4200SQ0/', partsLink: 'https://www.partselect.com/Models/ITW4200SQ0/', issues: [] },
+      { id: 9712, type: 'Washer', brand: 'Inglis', model: 'ITW4300SQ0 — Top-Load Washer', manualLink: 'https://www.partselect.com/Models/ITW4300SQ0/', partsLink: 'https://www.partselect.com/Models/ITW4300SQ0/', issues: [] },
+      { id: 9713, type: 'Range', brand: 'Tappan', model: 'TEB754CCB1 — Electric Range', manualLink: 'https://www.partselect.com/Models/TEB754CCB1/', partsLink: 'https://www.partselect.com/Models/TEB754CCB1/', issues: [] },
+      { id: 9714, type: 'Range', brand: 'Tappan', model: 'TEF351EWJ — Electric Range', manualLink: 'https://www.partselect.com/Models/TEF351EWJ/', partsLink: 'https://www.partselect.com/Models/TEF351EWJ/', issues: [] },
+      { id: 9715, type: 'Range', brand: 'Tappan', model: 'TPF303BWE — Range', manualLink: 'https://www.partselect.com/Models/TPF303BWE/', partsLink: 'https://www.partselect.com/Models/TPF303BWE/', issues: [] },
+      { id: 9716, type: 'Freezer', brand: 'Tappan', model: 'TFU21M7AW2 — Upright Freezer', manualLink: 'https://www.partselect.com/Models/TFU21M7AW2/', partsLink: 'https://www.partselect.com/Models/TFU21M7AW2/', issues: [] },
+      { id: 9717, type: 'Freezer', brand: 'Tappan', model: 'TFU17M6AW0 — Upright Freezer', manualLink: 'https://www.partselect.com/Models/TFU17M6AW0/', partsLink: 'https://www.partselect.com/Models/TFU17M6AW0/', issues: [] },
+      { id: 9718, type: 'Freezer', brand: 'Tappan', model: 'TFC09M4AW0 — Chest Freezer', manualLink: 'https://www.partselect.com/Models/TFC09M4AW0/', partsLink: 'https://www.partselect.com/Models/TFC09M4AW0/', issues: [] },
+      { id: 9719, type: 'Washer', brand: 'KitchenAid', model: 'KAWS850GQ1 — Washer', manualLink: 'https://www.partselect.com/Models/KAWS850GQ1/', partsLink: 'https://www.partselect.com/Models/KAWS850GQ1/', issues: [] },
+      { id: 9720, type: 'Washer', brand: 'KitchenAid', model: 'KHWS02RMT1 — Washer', manualLink: 'https://www.partselect.com/Models/KHWS02RMT1/', partsLink: 'https://www.partselect.com/Models/KHWS02RMT1/', issues: [] },
+    ];
+
+    additions.forEach(u => {
+      const key = u.type + '|' + u.brand + '|' + (u.model || '');
+      if (!existingKeys.has(key)) {
+        list.push(u);
+        existingKeys.add(key);
+      }
+    });
+
+    savePrUnits(list);
+    localStorage.setItem(UPGRADE_KEY, '1');
+  }
+
+
+  // ---------------------------------------------------------------------
+  // Seed upgrade v25 (added 2026-08-11) -- model breakdown batch 21:
+  // Filling niche appliance types on already-major brands (higher hit
+  // rate than obscure legacy badge brands): Whirlpool Water Softener (2)
+  // + Water Heater (2), Kenmore Water Softener (3), Frigidaire Trash
+  // Compactor (2) + Garbage Disposal (3). 5 previously-empty combos
+  // total. Same additive pattern as v5-v24.
+  function upgradePrSeedV25IfNeeded() {
+    const UPGRADE_KEY = 'th_parts_reference_seed_v25_applied';
+    if (localStorage.getItem(UPGRADE_KEY)) return;
+    const list = loadPrUnits();
+    const existingKeys = new Set(list.map(u => u.type + '|' + u.brand + '|' + (u.model || '')));
+
+    const additions = [
+      { id: 9721, type: 'Water Softener', brand: 'Whirlpool', model: 'WHES30 — Water Softener', manualLink: 'https://www.partselect.com/Models/WHES30/', partsLink: 'https://www.partselect.com/Models/WHES30/', issues: [] },
+      { id: 9722, type: 'Water Softener', brand: 'Whirlpool', model: 'WHES40 — Water Softener', manualLink: 'https://www.partselect.com/Models/WHES40/', partsLink: 'https://www.partselect.com/Models/WHES40/', issues: [] },
+      { id: 9723, type: 'Water Heater', brand: 'Whirlpool', model: 'NU40T62-403 — Water Heater', manualLink: 'https://www.partselect.com/Models/NU40T62-403/', partsLink: 'https://www.partselect.com/Models/NU40T62-403/', issues: [] },
+      { id: 9724, type: 'Water Heater', brand: 'Whirlpool', model: 'NU50T62-403 — Water Heater', manualLink: 'https://www.partselect.com/Models/NU50T62-403/', partsLink: 'https://www.partselect.com/Models/NU50T62-403/', issues: [] },
+      { id: 9725, type: 'Water Softener', brand: 'Kenmore', model: '625384200 — Water Softener', manualLink: 'https://www.partselect.com/Models/625384200/', partsLink: 'https://www.partselect.com/Models/625384200/', issues: [] },
+      { id: 9726, type: 'Water Softener', brand: 'Kenmore', model: '625383500 — Water Softener', manualLink: 'https://www.partselect.com/Models/625383500/', partsLink: 'https://www.partselect.com/Models/625383500/', issues: [] },
+      { id: 9727, type: 'Water Softener', brand: 'Kenmore', model: '625383001 — Water Softener', manualLink: 'https://www.partselect.com/Models/625383001/', partsLink: 'https://www.partselect.com/Models/625383001/', issues: [] },
+      { id: 9728, type: 'Trash Compactor', brand: 'Frigidaire', model: 'TCU3D4 — Trash Compactor', manualLink: 'https://www.partselect.com/Models/TCU3D4/', partsLink: 'https://www.partselect.com/Models/TCU3D4/', issues: [] },
+      { id: 9729, type: 'Trash Compactor', brand: 'Frigidaire', model: 'TC3D2 — Trash Compactor', manualLink: 'https://www.partselect.com/Models/TC3D2/', partsLink: 'https://www.partselect.com/Models/TC3D2/', issues: [] },
+      { id: 9730, type: 'Garbage Disposal', brand: 'Frigidaire', model: 'FD3000D — Garbage Disposer', manualLink: 'https://www.partselect.com/Models/FD3000D/', partsLink: 'https://www.partselect.com/Models/FD3000D/', issues: [] },
+      { id: 9731, type: 'Garbage Disposal', brand: 'Frigidaire', model: 'FD5000D — Garbage Disposer', manualLink: 'https://www.partselect.com/Models/FD5000D/', partsLink: 'https://www.partselect.com/Models/FD5000D/', issues: [] },
+      { id: 9732, type: 'Garbage Disposal', brand: 'Frigidaire', model: 'FD5500D — Garbage Disposer', manualLink: 'https://www.partselect.com/Models/FD5500D/', partsLink: 'https://www.partselect.com/Models/FD5500D/', issues: [] },
+    ];
+
+    additions.forEach(u => {
+      const key = u.type + '|' + u.brand + '|' + (u.model || '');
+      if (!existingKeys.has(key)) {
+        list.push(u);
+        existingKeys.add(key);
+      }
+    });
+
+    savePrUnits(list);
+    localStorage.setItem(UPGRADE_KEY, '1');
+  }
+
   function togglePrAddUnitForm() { document.getElementById('prAddUnitForm').classList.toggle('is-open'); }
+
+  // ---------------------------------------------------------------------
+  // Prune v1 (added 2026-08-11) -- removes phantom brand+type combos that
+  // don't correspond to real major-appliance products. White Mountain on
+  // PartSelect is the small kitchen-appliance (ice cream maker) brand --
+  // confirmed via Sears PartsDirect listing "White Mountain F69206 ice
+  // cream maker parts" -- not a maker of freezers or refrigerators. These
+  // two generic entries were phantom placeholders with no real models to
+  // ever find, so they're removed rather than left to be chased forever.
+  function prunePrPhantomBrandsV1IfNeeded() {
+    const PRUNE_KEY = 'th_parts_reference_prune_v1_applied';
+    if (localStorage.getItem(PRUNE_KEY)) return;
+    const list = loadPrUnits();
+    const filtered = list.filter(u => u.brand !== 'White Mountain');
+    if (filtered.length !== list.length) {
+      savePrUnits(filtered);
+    }
+    localStorage.setItem(PRUNE_KEY, '1');
+  }
   function togglePrAddIssueForm() { document.getElementById('prAddIssueForm').classList.toggle('is-open'); }
 
   function savePrUnit() {
@@ -1896,6 +2005,9 @@
     upgradePrSeedV21IfNeeded();
     upgradePrSeedV22IfNeeded();
     upgradePrSeedV23IfNeeded();
+    upgradePrSeedV24IfNeeded();
+    prunePrPhantomBrandsV1IfNeeded();
+    upgradePrSeedV25IfNeeded();
     renderTypeChips();
     renderUnits();
     if (typeof initSyncOnLoad === 'function') {
