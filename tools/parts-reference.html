@@ -1575,6 +1575,46 @@
     localStorage.setItem(UPGRADE_KEY, '1');
   }
 
+
+  // ---------------------------------------------------------------------
+  // Seed upgrade v26 (added 2026-08-11) -- model breakdown batch 22:
+  // More niche-type-on-major-brand fills: Maytag Range Hood (1),
+  // Whirlpool Air Purifier (2, verified on PartSelect's own /Models/
+  // pages), KitchenAid Range Hood (2), Bosch Range Hood (2). 4 previously
+  // -empty combos total (Whirlpool Air Purifier already had a model from
+  // v2, so these 2 add to it rather than being a new combo). Phantom-
+  // brand audit this round: Kelvinator/Norge/Gibson/Magic Chef's current
+  // type lists (Dryer/Range/Refrigerator/Washer, all historically real
+  // full-line badge-brand categories) did not surface additional phantom
+  // combos worth pruning. Same additive pattern as v5-v25.
+  function upgradePrSeedV26IfNeeded() {
+    const UPGRADE_KEY = 'th_parts_reference_seed_v26_applied';
+    if (localStorage.getItem(UPGRADE_KEY)) return;
+    const list = loadPrUnits();
+    const existingKeys = new Set(list.map(u => u.type + '|' + u.brand + '|' + (u.model || '')));
+
+    const additions = [
+      { id: 9733, type: 'Range Hood', brand: 'Maytag', model: 'UXT3030AAQ — Range Hood', manualLink: 'https://www.partselect.com/Models/UXT3030AAQ/', partsLink: 'https://www.partselect.com/Models/UXT3030AAQ/', issues: [] },
+      { id: 9734, type: 'Air Purifier', brand: 'Whirlpool', model: 'AP51030S0 — Whispure Air Purifier', manualLink: 'https://www.partselect.com/Models/AP51030S0/', partsLink: 'https://www.partselect.com/Models/AP51030S0/', issues: [] },
+      { id: 9735, type: 'Air Purifier', brand: 'Whirlpool', model: 'AP45030R0 — Whispure Air Purifier', manualLink: 'https://www.partselect.com/Models/AP45030R0/', partsLink: 'https://www.partselect.com/Models/AP45030R0/', issues: [] },
+      { id: 9736, type: 'Range Hood', brand: 'KitchenAid', model: 'KIRD861HSS1 — Range Hood', manualLink: 'https://www.partselect.com/Models/KIRD861HSS1/', partsLink: 'https://www.partselect.com/Models/KIRD861HSS1/', issues: [] },
+      { id: 9737, type: 'Range Hood', brand: 'KitchenAid', model: 'KVWB600DSS1 — Range Hood', manualLink: 'https://www.partselect.com/Models/KVWB600DSS1/', partsLink: 'https://www.partselect.com/Models/KVWB600DSS1/', issues: [] },
+      { id: 9738, type: 'Range Hood', brand: 'Bosch', model: 'HCP30651UC — Range Hood', manualLink: 'https://www.partselect.com/Models/HCP30651UC/', partsLink: 'https://www.partselect.com/Models/HCP30651UC/', issues: [] },
+      { id: 9739, type: 'Range Hood', brand: 'Bosch', model: 'DHD3614UC-03 — Range Hood', manualLink: 'https://www.partselect.com/Models/DHD3614UC-03/', partsLink: 'https://www.partselect.com/Models/DHD3614UC-03/', issues: [] },
+    ];
+
+    additions.forEach(u => {
+      const key = u.type + '|' + u.brand + '|' + (u.model || '');
+      if (!existingKeys.has(key)) {
+        list.push(u);
+        existingKeys.add(key);
+      }
+    });
+
+    savePrUnits(list);
+    localStorage.setItem(UPGRADE_KEY, '1');
+  }
+
   function togglePrAddUnitForm() { document.getElementById('prAddUnitForm').classList.toggle('is-open'); }
 
   // ---------------------------------------------------------------------
@@ -2008,6 +2048,7 @@
     upgradePrSeedV24IfNeeded();
     prunePrPhantomBrandsV1IfNeeded();
     upgradePrSeedV25IfNeeded();
+    upgradePrSeedV26IfNeeded();
     renderTypeChips();
     renderUnits();
     if (typeof initSyncOnLoad === 'function') {
