@@ -194,11 +194,13 @@
       <div class="tool-form-row">
         <div class="form-field">
           <label>Appliance Type</label>
-          <input type="text" id="prNewType" placeholder="e.g. Washer, Dryer, Dishwasher">
+          <input type="text" id="prNewType" list="prTypeDatalist" placeholder="e.g. Washer, Dryer, Dishwasher" autocomplete="off">
+          <datalist id="prTypeDatalist"></datalist>
         </div>
         <div class="form-field">
           <label>Brand</label>
-          <input type="text" id="prNewBrand" placeholder="e.g. GE">
+          <input type="text" id="prNewBrand" list="prBrandDatalist" placeholder="e.g. GE" autocomplete="off">
+          <datalist id="prBrandDatalist"></datalist>
         </div>
       </div>
       <div class="tool-form-row">
@@ -1879,7 +1881,24 @@
     localStorage.setItem(UPGRADE_KEY, '1');
   }
 
-  function togglePrAddUnitForm() { document.getElementById('prAddUnitForm').classList.toggle('is-open'); }
+  // Suggests existing type/brand values via <datalist> so a near-miss
+  // typo (e.g. "Whirpool") doesn't silently create a duplicate brand
+  // card. Still allows typing something genuinely new -- this only
+  // guides, it never blocks.
+  function populatePrDatalists() {
+    const units = loadPrUnits();
+    const types = [...new Set(units.map(u => u.type))].sort();
+    const brands = [...new Set(units.map(u => u.brand))].sort();
+    const typeList = document.getElementById('prTypeDatalist');
+    const brandList = document.getElementById('prBrandDatalist');
+    if (typeList) typeList.innerHTML = types.map(t => '<option value="' + escapeHtml(t) + '"></option>').join('');
+    if (brandList) brandList.innerHTML = brands.map(b => '<option value="' + escapeHtml(b) + '"></option>').join('');
+  }
+
+  function togglePrAddUnitForm() {
+    document.getElementById('prAddUnitForm').classList.toggle('is-open');
+    populatePrDatalists();
+  }
 
   // ---------------------------------------------------------------------
   // Prune v1 (added 2026-08-11) -- removes phantom brand+type combos that
@@ -1981,9 +2000,14 @@
   function togglePrAddIssueForm() { document.getElementById('prAddIssueForm').classList.toggle('is-open'); }
 
   function savePrUnit() {
-    const type = document.getElementById('prNewType').value.trim();
-    const brand = document.getElementById('prNewBrand').value.trim();
+    let type = document.getElementById('prNewType').value.trim();
+    let brand = document.getElementById('prNewBrand').value.trim();
     if (!type || !brand) { showToast('Appliance type and brand are required.', { type: 'error' }); return; }
+    const existingUnits = loadPrUnits();
+    const existingType = existingUnits.map(u => u.type).find(t => t.toLowerCase() === type.toLowerCase());
+    const existingBrand = existingUnits.map(u => u.brand).find(b => b.toLowerCase() === brand.toLowerCase());
+    if (existingType && existingType !== type) type = existingType;
+    if (existingBrand && existingBrand !== brand) brand = existingBrand;
     const unit = {
       id: Date.now(), type, brand, model: document.getElementById('prNewModel').value.trim(),
       manualLink: document.getElementById('prNewManualLink').value.trim(),
@@ -2557,8 +2581,9 @@
     backfillPrIssueMetadataV1IfNeeded();
     renderTypeChips();
     renderUnits();
+    populatePrDatalists();
     if (typeof initSyncOnLoad === 'function') {
-      initSyncOnLoad().then(() => { renderTypeChips(); renderUnits(); });
+      initSyncOnLoad().then(() => { renderTypeChips(); renderUnits(); populatePrDatalists(); });
     }
   });
 </script>
