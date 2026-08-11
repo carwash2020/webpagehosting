@@ -2,7 +2,7 @@
   "name": "Triple H Workspace",
   "short_name": "Triple H",
   "description": "Internal tools for Triple H Enterprises \u2014 jobs, invoices, routes, and the business dashboard.",
-  "start_url": "/workspace.html",
+  "start_url": "/tools/workspace.html",
   "scope": "/",
   "display": "standalone",
   "orientation": "portrait-primary",
@@ -17,21 +17,21 @@
       "name": "Today",
       "short_name": "Today",
       "description": "See what's scheduled today",
-      "url": "/workspace.html#today",
+      "url": "/tools/workspace.html#today",
       "icons": [{ "src": "/images/icon-192.png", "sizes": "192x192" }]
     },
     {
       "name": "Add New Job",
       "short_name": "New Job",
       "description": "Jump straight to adding a job",
-      "url": "/job-tracker.html#add-job",
+      "url": "/tools/job-tracker.html#add-job",
       "icons": [{ "src": "/images/icon-192.png", "sizes": "192x192" }]
     },
     {
       "name": "Calendar",
       "short_name": "Calendar",
       "description": "Open the Calendar tool",
-      "url": "/calendar.html",
+      "url": "/tools/calendar.html",
       "icons": [{ "src": "/images/icon-192.png", "sizes": "192x192" }]
     }
   ]
