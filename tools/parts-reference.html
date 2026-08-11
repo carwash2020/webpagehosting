@@ -1858,6 +1858,38 @@
     }
     localStorage.setItem(PRUNE_KEY, '1');
   }
+
+  // ---------------------------------------------------------------------
+  // Prune v3 (added 2026-08-11) -- eliminates the remaining "General
+  // reference (no specific model)" entries entirely. These 7 entries
+  // survived prune v2 because they carried real verified troubleshooting
+  // issues (thermal fuse, evaporator fan, ice maker, etc.), and simply
+  // deleting them would have thrown that content away. Instead: for each
+  // one, its issues are merged onto an existing specific-model entry for
+  // the same brand+type (so the content survives, just attached to a
+  // real model instead of a generic placeholder), then the now-redundant
+  // generic entry is removed. If no specific-model peer exists for that
+  // brand+type (this happens once, for LG Ice Maker -- LG doesn't sell a
+  // standalone ice-maker appliance line), the generic entry is removed
+  // outright per the same "empty is better than fake" principle as v2.
+  function prunePrMergeGenericIssuesV3IfNeeded() {
+    const PRUNE_KEY = 'th_parts_reference_prune_v3_applied';
+    if (localStorage.getItem(PRUNE_KEY)) return;
+    let list = loadPrUnits();
+    const blanks = list.filter(u => !u.model);
+    let nextIssueId = Date.now();
+    blanks.forEach(blank => {
+      const peer = list.find(p => p.brand === blank.brand && p.type === blank.type && p.model);
+      if (peer && blank.issues && blank.issues.length) {
+        blank.issues.forEach(iss => {
+          peer.issues.push(Object.assign({}, iss, { id: nextIssueId++ }));
+        });
+      }
+    });
+    list = list.filter(u => u.model);
+    savePrUnits(list);
+    localStorage.setItem(PRUNE_KEY, '1');
+  }
   function togglePrAddIssueForm() { document.getElementById('prAddIssueForm').classList.toggle('is-open'); }
 
   function savePrUnit() {
@@ -2278,6 +2310,7 @@
     upgradePrSeedV30IfNeeded();
     upgradePrSeedV31IfNeeded();
     prunePrBlankReferencesV2IfNeeded();
+    prunePrMergeGenericIssuesV3IfNeeded();
     renderTypeChips();
     renderUnits();
     if (typeof initSyncOnLoad === 'function') {
