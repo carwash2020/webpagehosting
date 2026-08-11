@@ -181,6 +181,11 @@
   <div class="tool-title" id="prBrandDetailTitle" style="font-size:22px;"></div>
   <p class="tool-sub" id="prBrandDetailSubtitle" style="margin-bottom:16px;"></p>
 
+  <div style="margin-bottom:14px;">
+    <button class="secondary-btn" onclick="toggleAddModelInType()">+ Add Model</button>
+  </div>
+  <div id="prAddModelFormContainer"></div>
+
   <div id="prTypeSectionsList"></div>
 </div>
 
@@ -200,6 +205,8 @@
   const PR_LEGACY_KEY = 'th_parts_reference';
   let activePrBrand = null;
   let activePrDetailType = null;
+  let activePrAddModelOpen = false;
+  let activePrEditUnitId = null;
   let expandedPrTypeIds = new Set();
   let activePrIssueTargetId = null;
   let activePrType = 'all';
@@ -1083,6 +1090,282 @@
     localStorage.setItem(UPGRADE_KEY, '1');
   }
 
+
+  // ---------------------------------------------------------------------
+  // Seed upgrade v15 (added 2026-08-11) -- model breakdown batch 11:
+  // KitchenAid Refrigerator (3) and Dishwasher (+1), Bosch Refrigerator,
+  // Microwave, and Dryer (1 each). Speed-up note: from here on, models
+  // were sourced from each brand's OVERALL "{Brand}-Parts.htm" page
+  // rather than per-type pages -- PartSelect's brand-level "Popular
+  // Models" list is genuinely mixed across appliance types, so one fetch
+  // routinely yields models for 2-4 different types at once. Same
+  // additive pattern as v5-v14.
+  function upgradePrSeedV15IfNeeded() {
+    const UPGRADE_KEY = 'th_parts_reference_seed_v15_applied';
+    if (localStorage.getItem(UPGRADE_KEY)) return;
+    const list = loadPrUnits();
+    const existingKeys = new Set(list.map(u => u.type + '|' + u.brand + '|' + (u.model || '')));
+
+    const additions = [
+      { id: 9585, type: 'Refrigerator', brand: 'KitchenAid', model: 'KSCS25INSS00 — Side-by-Side Refrigerator', manualLink: 'https://www.partselect.com/Models/KSCS25INSS00/', partsLink: 'https://www.partselect.com/Models/KSCS25INSS00/', issues: [] },
+      { id: 9586, type: 'Refrigerator', brand: 'KitchenAid', model: 'KRMF706ESS01 — French Door Refrigerator', manualLink: 'https://www.partselect.com/Models/KRMF706ESS01/', partsLink: 'https://www.partselect.com/Models/KRMF706ESS01/', issues: [] },
+      { id: 9587, type: 'Refrigerator', brand: 'KitchenAid', model: 'KRFC300ESS01 — French Door Refrigerator', manualLink: 'https://www.partselect.com/Models/KRFC300ESS01/', partsLink: 'https://www.partselect.com/Models/KRFC300ESS01/', issues: [] },
+      { id: 9588, type: 'Dishwasher', brand: 'KitchenAid', model: 'KDTE104DSS0 — Dishwasher', manualLink: 'https://www.partselect.com/Models/KDTE104DSS0/', partsLink: 'https://www.partselect.com/Models/KDTE104DSS0/', issues: [] },
+      { id: 9589, type: 'Refrigerator', brand: 'Bosch', model: 'B26FT70SNS — Refrigerator', manualLink: 'https://www.partselect.com/Models/B26FT70SNS/', partsLink: 'https://www.partselect.com/Models/B26FT70SNS/', issues: [] },
+      { id: 9590, type: 'Microwave', brand: 'Bosch', model: 'HMC80251UC — Microwave', manualLink: 'https://www.partselect.com/Models/HMC80251UC/', partsLink: 'https://www.partselect.com/Models/HMC80251UC/', issues: [] },
+      { id: 9591, type: 'Dryer', brand: 'Bosch', model: 'WTG86400UC — Dryer', manualLink: 'https://www.partselect.com/Models/WTG86400UC/', partsLink: 'https://www.partselect.com/Models/WTG86400UC/', issues: [] },
+    ];
+
+    additions.forEach(u => {
+      const key = u.type + '|' + u.brand + '|' + (u.model || '');
+      if (!existingKeys.has(key)) {
+        list.push(u);
+        existingKeys.add(key);
+      }
+    });
+
+    savePrUnits(list);
+    localStorage.setItem(UPGRADE_KEY, '1');
+  }
+
+
+  // ---------------------------------------------------------------------
+  // Seed upgrade v16 (added 2026-08-11) -- model breakdown batch 12:
+  // Amana Dryer/Washer/Refrigerator/Dishwasher, Hotpoint Dryer/Washer,
+  // Electrolux Washer/Dryer/Dishwasher -- 9 previously-empty combos, 24
+  // models, sourced from just 3 brand-overall-page fetches (Amana-Parts,
+  // Hotpoint-Parts, Electrolux-Parts) rather than 9 separate type-page
+  // fetches. Same additive pattern as v5-v15.
+  function upgradePrSeedV16IfNeeded() {
+    const UPGRADE_KEY = 'th_parts_reference_seed_v16_applied';
+    if (localStorage.getItem(UPGRADE_KEY)) return;
+    const list = loadPrUnits();
+    const existingKeys = new Set(list.map(u => u.type + '|' + u.brand + '|' + (u.model || '')));
+
+    const additions = [
+      { id: 9592, type: 'Dryer', brand: 'Amana', model: 'NED4655EW1 — Electric Dryer', manualLink: 'https://www.partselect.com/Models/NED4655EW1/', partsLink: 'https://www.partselect.com/Models/NED4655EW1/', issues: [] },
+      { id: 9593, type: 'Dryer', brand: 'Amana', model: 'NED7200TW10 — Electric Dryer', manualLink: 'https://www.partselect.com/Models/NED7200TW10/', partsLink: 'https://www.partselect.com/Models/NED7200TW10/', issues: [] },
+      { id: 9594, type: 'Dryer', brand: 'Amana', model: 'NED4600YQ1 — 29" Electric Dryer', manualLink: 'https://www.partselect.com/Models/NED4600YQ1/', partsLink: 'https://www.partselect.com/Models/NED4600YQ1/', issues: [] },
+      { id: 9595, type: 'Washer', brand: 'Amana', model: 'NTW4519JW2 — Top-Load Washer', manualLink: 'https://www.partselect.com/Models/NTW4519JW2/', partsLink: 'https://www.partselect.com/Models/NTW4519JW2/', issues: [] },
+      { id: 9596, type: 'Washer', brand: 'Amana', model: 'NTW4605EW0 — Top-Load Washer', manualLink: 'https://www.partselect.com/Models/NTW4605EW0/', partsLink: 'https://www.partselect.com/Models/NTW4605EW0/', issues: [] },
+      { id: 9597, type: 'Washer', brand: 'Amana', model: 'NFW7200TW10 — Front-Load Washer', manualLink: 'https://www.partselect.com/Models/NFW7200TW10/', partsLink: 'https://www.partselect.com/Models/NFW7200TW10/', issues: [] },
+      { id: 9598, type: 'Refrigerator', brand: 'Amana', model: 'ASD2575BRS01 — Side-by-Side Refrigerator', manualLink: 'https://www.partselect.com/Models/ASD2575BRS01/', partsLink: 'https://www.partselect.com/Models/ASD2575BRS01/', issues: [] },
+      { id: 9599, type: 'Refrigerator', brand: 'Amana', model: 'AFD2535DES — Bottom-Freezer Refrigerator', manualLink: 'https://www.partselect.com/Models/AFD2535DES/', partsLink: 'https://www.partselect.com/Models/AFD2535DES/', issues: [] },
+      { id: 9600, type: 'Refrigerator', brand: 'Amana', model: 'AFI2538AES — Bottom-Freezer Refrigerator', manualLink: 'https://www.partselect.com/Models/AFI2538AES/', partsLink: 'https://www.partselect.com/Models/AFI2538AES/', issues: [] },
+      { id: 9601, type: 'Dishwasher', brand: 'Amana', model: 'ADB1500AWW — Dishwasher', manualLink: 'https://www.partselect.com/Models/ADB1500AWW/', partsLink: 'https://www.partselect.com/Models/ADB1500AWW/', issues: [] },
+      { id: 9602, type: 'Dryer', brand: 'Hotpoint', model: 'HTDX100EM8WW — Electric Dryer', manualLink: 'https://www.partselect.com/Models/HTDX100EM8WW/', partsLink: 'https://www.partselect.com/Models/HTDX100EM8WW/', issues: [] },
+      { id: 9603, type: 'Dryer', brand: 'Hotpoint', model: 'HTX24EASK0WS — Electric Dryer', manualLink: 'https://www.partselect.com/Models/HTX24EASK0WS/', partsLink: 'https://www.partselect.com/Models/HTX24EASK0WS/', issues: [] },
+      { id: 9604, type: 'Dryer', brand: 'Hotpoint', model: 'HTDX100ED6WW — Electric Dryer', manualLink: 'https://www.partselect.com/Models/HTDX100ED6WW/', partsLink: 'https://www.partselect.com/Models/HTDX100ED6WW/', issues: [] },
+      { id: 9605, type: 'Washer', brand: 'Hotpoint', model: 'HSWP1000M4WW — Washer', manualLink: 'https://www.partselect.com/Models/HSWP1000M4WW/', partsLink: 'https://www.partselect.com/Models/HSWP1000M4WW/', issues: [] },
+      { id: 9606, type: 'Washer', brand: 'Hotpoint', model: 'HTWP1400F1WW — Washer', manualLink: 'https://www.partselect.com/Models/HTWP1400F1WW/', partsLink: 'https://www.partselect.com/Models/HTWP1400F1WW/', issues: [] },
+      { id: 9607, type: 'Washer', brand: 'Electrolux', model: 'EFLS617STT0 — Front-Load Washing Machine', manualLink: 'https://www.partselect.com/Models/EFLS617STT0/', partsLink: 'https://www.partselect.com/Models/EFLS617STT0/', issues: [] },
+      { id: 9608, type: 'Washer', brand: 'Electrolux', model: 'EIFLW55HIW0 — Front-Load Washing Machine', manualLink: 'https://www.partselect.com/Models/EIFLW55HIW0/', partsLink: 'https://www.partselect.com/Models/EIFLW55HIW0/', issues: [] },
+      { id: 9609, type: 'Washer', brand: 'Electrolux', model: 'EIFLS55IIW0 — Front-Load Washing Machine', manualLink: 'https://www.partselect.com/Models/EIFLS55IIW0/', partsLink: 'https://www.partselect.com/Models/EIFLS55IIW0/', issues: [] },
+      { id: 9610, type: 'Dryer', brand: 'Electrolux', model: 'EIED55HIW0 — Electric Dryer', manualLink: 'https://www.partselect.com/Models/EIED55HIW0/', partsLink: 'https://www.partselect.com/Models/EIED55HIW0/', issues: [] },
+      { id: 9611, type: 'Dryer', brand: 'Electrolux', model: 'EFME617STT0 — Front-Load Electric Vented Dryer', manualLink: 'https://www.partselect.com/Models/EFME617STT0/', partsLink: 'https://www.partselect.com/Models/EFME617STT0/', issues: [] },
+      { id: 9612, type: 'Dryer', brand: 'Electrolux', model: 'EIMED60LT3 — Front-Load Electric Vented Dryer', manualLink: 'https://www.partselect.com/Models/EIMED60LT3/', partsLink: 'https://www.partselect.com/Models/EIMED60LT3/', issues: [] },
+      { id: 9613, type: 'Dishwasher', brand: 'Electrolux', model: 'EWDW6505GS0 — Dishwasher', manualLink: 'https://www.partselect.com/Models/EWDW6505GS0/', partsLink: 'https://www.partselect.com/Models/EWDW6505GS0/', issues: [] },
+      { id: 9614, type: 'Dishwasher', brand: 'Electrolux', model: 'EIDW6105GS1 — Dishwasher', manualLink: 'https://www.partselect.com/Models/EIDW6105GS1/', partsLink: 'https://www.partselect.com/Models/EIDW6105GS1/', issues: [] },
+      { id: 9615, type: 'Dishwasher', brand: 'Electrolux', model: 'EIDW5705PS0A — Built-In Full-Size Dishwasher', manualLink: 'https://www.partselect.com/Models/EIDW5705PS0A/', partsLink: 'https://www.partselect.com/Models/EIDW5705PS0A/', issues: [] },
+    ];
+
+    additions.forEach(u => {
+      const key = u.type + '|' + u.brand + '|' + (u.model || '');
+      if (!existingKeys.has(key)) {
+        list.push(u);
+        existingKeys.add(key);
+      }
+    });
+
+    savePrUnits(list);
+    localStorage.setItem(UPGRADE_KEY, '1');
+  }
+
+
+  // ---------------------------------------------------------------------
+  // Seed upgrade v17 (added 2026-08-11) -- model breakdown batch 13:
+  // Speed Queen Dryer (3) and Washer (3) -- Speed Queen only makes these
+  // two appliance types per PartSelect's own type listing, so this
+  // brand is now fully covered. New brand added to the reference (was
+  // not in the original 41-brand seed list; added implicitly via data).
+  // Same additive pattern as v5-v16.
+  function upgradePrSeedV17IfNeeded() {
+    const UPGRADE_KEY = 'th_parts_reference_seed_v17_applied';
+    if (localStorage.getItem(UPGRADE_KEY)) return;
+    const list = loadPrUnits();
+    const existingKeys = new Set(list.map(u => u.type + '|' + u.brand + '|' + (u.model || '')));
+
+    const additions = [
+      { id: 9616, type: 'Dryer', brand: 'Speed Queen', model: 'ALG866SAW — Dryer', manualLink: 'https://www.partselect.com/Models/ALG866SAW/', partsLink: 'https://www.partselect.com/Models/ALG866SAW/', issues: [] },
+      { id: 9617, type: 'Dryer', brand: 'Speed Queen', model: 'ADG3LRGS111TW01 — Dryer', manualLink: 'https://www.partselect.com/Models/ADG3LRGS111TW01/', partsLink: 'https://www.partselect.com/Models/ADG3LRGS111TW01/', issues: [] },
+      { id: 9618, type: 'Dryer', brand: 'Speed Queen', model: 'SDG909WF — Dryer', manualLink: 'https://www.partselect.com/Models/SDG909WF/', partsLink: 'https://www.partselect.com/Models/SDG909WF/', issues: [] },
+      { id: 9619, type: 'Washer', brand: 'Speed Queen', model: 'AWN311SP111TW01 — Washing Machine', manualLink: 'https://www.partselect.com/Models/AWN311SP111TW01/', partsLink: 'https://www.partselect.com/Models/AWN311SP111TW01/', issues: [] },
+      { id: 9620, type: 'Washer', brand: 'Speed Queen', model: 'AEM497W — Residential Automatic Washer', manualLink: 'https://www.partselect.com/Models/AEM497W/', partsLink: 'https://www.partselect.com/Models/AEM497W/', issues: [] },
+      { id: 9621, type: 'Washer', brand: 'Speed Queen', model: 'LW3503W2 — Washing Machine', manualLink: 'https://www.partselect.com/Models/LW3503W2/', partsLink: 'https://www.partselect.com/Models/LW3503W2/', issues: [] },
+    ];
+
+    additions.forEach(u => {
+      const key = u.type + '|' + u.brand + '|' + (u.model || '');
+      if (!existingKeys.has(key)) {
+        list.push(u);
+        existingKeys.add(key);
+      }
+    });
+
+    savePrUnits(list);
+    localStorage.setItem(UPGRADE_KEY, '1');
+  }
+
+
+  // ---------------------------------------------------------------------
+  // Seed upgrade v18 (added 2026-08-11) -- model breakdown batch 14:
+  // Haier Refrigerator (3), Microwave (2), Washer (1) -- 3 previously-
+  // empty combos, sourced from the Haier-Appliance-Parts.htm overall
+  // page. Same additive pattern as v5-v17.
+  function upgradePrSeedV18IfNeeded() {
+    const UPGRADE_KEY = 'th_parts_reference_seed_v18_applied';
+    if (localStorage.getItem(UPGRADE_KEY)) return;
+    const list = loadPrUnits();
+    const existingKeys = new Set(list.map(u => u.type + '|' + u.brand + '|' + (u.model || '')));
+
+    const additions = [
+      { id: 9622, type: 'Refrigerator', brand: 'Haier', model: 'HT21TS85SP — Refrigerator', manualLink: 'https://www.partselect.com/Models/HT21TS85SP/', partsLink: 'https://www.partselect.com/Models/HT21TS85SP/', issues: [] },
+      { id: 9623, type: 'Refrigerator', brand: 'Haier', model: 'HA10TG21BSW — Top-Mount Refrigerator', manualLink: 'https://www.partselect.com/Models/HA10TG21BSW/', partsLink: 'https://www.partselect.com/Models/HA10TG21BSW/', issues: [] },
+      { id: 9624, type: 'Refrigerator', brand: 'Haier', model: 'HRT18R1APW — Refrigerator', manualLink: 'https://www.partselect.com/Models/HRT18R1APW/', partsLink: 'https://www.partselect.com/Models/HRT18R1APW/', issues: [] },
+      { id: 9625, type: 'Microwave', brand: 'Haier', model: 'HMV1630DBWW — Microwave', manualLink: 'https://www.partselect.com/Models/HMV1630DBWW/', partsLink: 'https://www.partselect.com/Models/HMV1630DBWW/', issues: [] },
+      { id: 9626, type: 'Microwave', brand: 'Haier', model: 'HMV1630SBSS — Microwave', manualLink: 'https://www.partselect.com/Models/HMV1630SBSS/', partsLink: 'https://www.partselect.com/Models/HMV1630SBSS/', issues: [] },
+      { id: 9627, type: 'Washer', brand: 'Haier', model: 'HLP23E — Washer', manualLink: 'https://www.partselect.com/Models/HLP23E/', partsLink: 'https://www.partselect.com/Models/HLP23E/', issues: [] },
+    ];
+
+    additions.forEach(u => {
+      const key = u.type + '|' + u.brand + '|' + (u.model || '');
+      if (!existingKeys.has(key)) {
+        list.push(u);
+        existingKeys.add(key);
+      }
+    });
+
+    savePrUnits(list);
+    localStorage.setItem(UPGRADE_KEY, '1');
+  }
+
+
+  // ---------------------------------------------------------------------
+  // Seed upgrade v19 (added 2026-08-11) -- model breakdown batch 15:
+  // Midea Dryer + Refrigerator (2 combos, 4 models); Jenn-Air Range,
+  // Refrigerator, Dishwasher, Dryer (4 combos, 10 models). 6 previously-
+  // empty combos total, sourced from 2 brand-overall-page fetches.
+  // Same additive pattern as v5-v18.
+  function upgradePrSeedV19IfNeeded() {
+    const UPGRADE_KEY = 'th_parts_reference_seed_v19_applied';
+    if (localStorage.getItem(UPGRADE_KEY)) return;
+    const list = loadPrUnits();
+    const existingKeys = new Set(list.map(u => u.type + '|' + u.brand + '|' + (u.model || '')));
+
+    const additions = [
+      { id: 9628, type: 'Dryer', brand: 'Midea', model: 'MLE45N3BWW — 7.5 Cu. Ft. Electric Dryer', manualLink: 'https://www.partselect.com/Models/MLE45N3BWW/', partsLink: 'https://www.partselect.com/Models/MLE45N3BWW/', issues: [] },
+      { id: 9629, type: 'Dryer', brand: 'Midea', model: 'MLE52S7AGS — 8.0 Cu. Ft. Electric Dryer', manualLink: 'https://www.partselect.com/Models/MLE52S7AGS/', partsLink: 'https://www.partselect.com/Models/MLE52S7AGS/', issues: [] },
+      { id: 9630, type: 'Refrigerator', brand: 'Midea', model: 'MRU21F5BWW — 21cf Refrigerator', manualLink: 'https://www.partselect.com/Models/MRU21F5BWW/', partsLink: 'https://www.partselect.com/Models/MRU21F5BWW/', issues: [] },
+      { id: 9631, type: 'Refrigerator', brand: 'Midea', model: 'MRS26D5AST — 26.3 Cu. Ft. Side-by-Side Refrigerator', manualLink: 'https://www.partselect.com/Models/MRS26D5AST/', partsLink: 'https://www.partselect.com/Models/MRS26D5AST/', issues: [] },
+      { id: 9632, type: 'Range', brand: 'Jenn-Air', model: 'JGA8100ADB — Gas Range', manualLink: 'https://www.partselect.com/Models/JGA8100ADB/', partsLink: 'https://www.partselect.com/Models/JGA8100ADB/', issues: [] },
+      { id: 9633, type: 'Range', brand: 'Jenn-Air', model: 'JGS8860BDP — Gas Range', manualLink: 'https://www.partselect.com/Models/JGS8860BDP/', partsLink: 'https://www.partselect.com/Models/JGS8860BDP/', issues: [] },
+      { id: 9634, type: 'Range', brand: 'Jenn-Air', model: 'CG206B — Gas Range', manualLink: 'https://www.partselect.com/Models/CG206B/', partsLink: 'https://www.partselect.com/Models/CG206B/', issues: [] },
+      { id: 9635, type: 'Refrigerator', brand: 'Jenn-Air', model: 'JFC2089HES — Bottom-Freezer Refrigerator', manualLink: 'https://www.partselect.com/Models/JFC2089HES/', partsLink: 'https://www.partselect.com/Models/JFC2089HES/', issues: [] },
+      { id: 9636, type: 'Refrigerator', brand: 'Jenn-Air', model: 'JCD2389GES — Side-by-Side Refrigerator', manualLink: 'https://www.partselect.com/Models/JCD2389GES/', partsLink: 'https://www.partselect.com/Models/JCD2389GES/', issues: [] },
+      { id: 9637, type: 'Refrigerator', brand: 'Jenn-Air', model: 'JFC2089HEP — Bottom-Freezer Refrigerator', manualLink: 'https://www.partselect.com/Models/JFC2089HEP/', partsLink: 'https://www.partselect.com/Models/JFC2089HEP/', issues: [] },
+      { id: 9638, type: 'Dishwasher', brand: 'Jenn-Air', model: 'JDB1100AWS — Dishwasher', manualLink: 'https://www.partselect.com/Models/JDB1100AWS/', partsLink: 'https://www.partselect.com/Models/JDB1100AWS/', issues: [] },
+      { id: 9639, type: 'Dishwasher', brand: 'Jenn-Air', model: 'JDB6510AWP — Dishwasher', manualLink: 'https://www.partselect.com/Models/JDB6510AWP/', partsLink: 'https://www.partselect.com/Models/JDB6510AWP/', issues: [] },
+      { id: 9640, type: 'Dryer', brand: 'Jenn-Air', model: 'JED8430ADB — Electric Dryer', manualLink: 'https://www.partselect.com/Models/JED8430ADB/', partsLink: 'https://www.partselect.com/Models/JED8430ADB/', issues: [] },
+      { id: 9641, type: 'Dryer', brand: 'Jenn-Air', model: 'JED8430BDB — Electric Dryer', manualLink: 'https://www.partselect.com/Models/JED8430BDB/', partsLink: 'https://www.partselect.com/Models/JED8430BDB/', issues: [] },
+    ];
+
+    additions.forEach(u => {
+      const key = u.type + '|' + u.brand + '|' + (u.model || '');
+      if (!existingKeys.has(key)) {
+        list.push(u);
+        existingKeys.add(key);
+      }
+    });
+
+    savePrUnits(list);
+    localStorage.setItem(UPGRADE_KEY, '1');
+  }
+
+
+  // ---------------------------------------------------------------------
+  // Seed upgrade v20 (added 2026-08-11) -- model breakdown batch 16:
+  // Dacor Range (3) + Refrigerator (3) -- 2 previously-empty combos, from
+  // Dacor-Parts.htm overall page. Sharp Microwave (3) -- new combo,
+  // models sourced directly from individual PartSelect model pages
+  // (R-308CW, R-1874-T, R1214) since Sharp's brand-overall page mostly
+  // surfaced parts rather than a models list. Same additive pattern as
+  // v5-v19.
+  function upgradePrSeedV20IfNeeded() {
+    const UPGRADE_KEY = 'th_parts_reference_seed_v20_applied';
+    if (localStorage.getItem(UPGRADE_KEY)) return;
+    const list = loadPrUnits();
+    const existingKeys = new Set(list.map(u => u.type + '|' + u.brand + '|' + (u.model || '')));
+
+    const additions = [
+      { id: 9642, type: 'Range', brand: 'Dacor', model: 'SGM464EM — Range/Stove/Oven', manualLink: 'https://www.partselect.com/Models/SGM464EM/', partsLink: 'https://www.partselect.com/Models/SGM464EM/', issues: [] },
+      { id: 9643, type: 'Range', brand: 'Dacor', model: 'SGM464GG — Range/Stove/Oven', manualLink: 'https://www.partselect.com/Models/SGM464GG/', partsLink: 'https://www.partselect.com/Models/SGM464GG/', issues: [] },
+      { id: 9644, type: 'Range', brand: 'Dacor', model: 'SGM304 — Range/Cooktop', manualLink: 'https://www.partselect.com/Models/SGM304/', partsLink: 'https://www.partselect.com/Models/SGM304/', issues: [] },
+      { id: 9645, type: 'Refrigerator', brand: 'Dacor', model: 'EF36BNDFSS — Refrigeration Unit', manualLink: 'https://www.partselect.com/Models/EF36BNDFSS/', partsLink: 'https://www.partselect.com/Models/EF36BNDFSS/', issues: [] },
+      { id: 9646, type: 'Refrigerator', brand: 'Dacor', model: 'EF48BDCBSS — Refrigeration Unit', manualLink: 'https://www.partselect.com/Models/EF48BDCBSS/', partsLink: 'https://www.partselect.com/Models/EF48BDCBSS/', issues: [] },
+      { id: 9647, type: 'Refrigerator', brand: 'Dacor', model: 'EF42BDCBSS — Refrigeration Unit', manualLink: 'https://www.partselect.com/Models/EF42BDCBSS/', partsLink: 'https://www.partselect.com/Models/EF42BDCBSS/', issues: [] },
+      { id: 9648, type: 'Microwave', brand: 'Sharp', model: 'R-308CW — Microwave', manualLink: 'https://www.partselect.com/Models/R-308CW/', partsLink: 'https://www.partselect.com/Models/R-308CW/', issues: [] },
+      { id: 9649, type: 'Microwave', brand: 'Sharp', model: 'R-1874-T — Microwave', manualLink: 'https://www.partselect.com/Models/R-1874-T/', partsLink: 'https://www.partselect.com/Models/R-1874-T/', issues: [] },
+      { id: 9650, type: 'Microwave', brand: 'Sharp', model: 'R1214 — Microwave', manualLink: 'https://www.partselect.com/Models/R1214/', partsLink: 'https://www.partselect.com/Models/R1214/', issues: [] },
+    ];
+
+    additions.forEach(u => {
+      const key = u.type + '|' + u.brand + '|' + (u.model || '');
+      if (!existingKeys.has(key)) {
+        list.push(u);
+        existingKeys.add(key);
+      }
+    });
+
+    savePrUnits(list);
+    localStorage.setItem(UPGRADE_KEY, '1');
+  }
+
+
+  // ---------------------------------------------------------------------
+  // Seed upgrade v21 (added 2026-08-11) -- model breakdown batch 17:
+  // Beko Washer (3), Oven (3), Refrigerator (3) -- 3 previously-empty
+  // combos, sourced from Beko-Parts.htm overall page. Same additive
+  // pattern as v5-v20.
+  function upgradePrSeedV21IfNeeded() {
+    const UPGRADE_KEY = 'th_parts_reference_seed_v21_applied';
+    if (localStorage.getItem(UPGRADE_KEY)) return;
+    const list = loadPrUnits();
+    const existingKeys = new Set(list.map(u => u.type + '|' + u.brand + '|' + (u.model || '')));
+
+    const additions = [
+      { id: 9651, type: 'Washer', brand: 'Beko', model: '7159441200 — 24 Inch Front Load Washer WMY10148C2', manualLink: 'https://www.partselect.com/Models/7159441200/', partsLink: 'https://www.partselect.com/Models/7159441200/', issues: [] },
+      { id: 9652, type: 'Washer', brand: 'Beko', model: '7176641500 — WTE7712BS0W Front-Load Washing Machine', manualLink: 'https://www.partselect.com/Models/7176641500/', partsLink: 'https://www.partselect.com/Models/7176641500/', issues: [] },
+      { id: 9653, type: 'Washer', brand: 'Beko', model: '7104582100 — WBF 6005 C Front-Loader Washing Machine', manualLink: 'https://www.partselect.com/Models/7104582100/', partsLink: 'https://www.partselect.com/Models/7104582100/', issues: [] },
+      { id: 9654, type: 'Oven', brand: 'Beko', model: '7735687907 — 30 Inch Built-In Wall Oven WOS30100SS', manualLink: 'https://www.partselect.com/Models/7735687907/', partsLink: 'https://www.partselect.com/Models/7735687907/', issues: [] },
+      { id: 9655, type: 'Oven', brand: 'Beko', model: '7732186202 — 24 Inch Built-In Wall Oven WOS24102SS', manualLink: 'https://www.partselect.com/Models/7732186202/', partsLink: 'https://www.partselect.com/Models/7732186202/', issues: [] },
+      { id: 9656, type: 'Oven', brand: 'Beko', model: '7735687912 — 30-Inch Single Electric Wall Oven WOS30200CF', manualLink: 'https://www.partselect.com/Models/7735687912/', partsLink: 'https://www.partselect.com/Models/7735687912/', issues: [] },
+      { id: 9657, type: 'Refrigerator', brand: 'Beko', model: '7293747596 — 36 Inch French Three-Door Refrigerator BFFD3624XSS', manualLink: 'https://www.partselect.com/Models/7293747596/', partsLink: 'https://www.partselect.com/Models/7293747596/', issues: [] },
+      { id: 9658, type: 'Refrigerator', brand: 'Beko', model: 'BFFD3626SS — 36-Inch French Four-Door Refrigerator', manualLink: 'https://www.partselect.com/Models/BFFD3626SS/', partsLink: 'https://www.partselect.com/Models/BFFD3626SS/', issues: [] },
+      { id: 9659, type: 'Refrigerator', brand: 'Beko', model: 'BRFB1045WH — 24 Inch Freestanding Bottom Mount Refrigerator', manualLink: 'https://www.partselect.com/Models/BRFB1045WH/', partsLink: 'https://www.partselect.com/Models/BRFB1045WH/', issues: [] },
+    ];
+
+    additions.forEach(u => {
+      const key = u.type + '|' + u.brand + '|' + (u.model || '');
+      if (!existingKeys.has(key)) {
+        list.push(u);
+        existingKeys.add(key);
+      }
+    });
+
+    savePrUnits(list);
+    localStorage.setItem(UPGRADE_KEY, '1');
+  }
+
   function togglePrAddUnitForm() { document.getElementById('prAddUnitForm').classList.toggle('is-open'); }
   function togglePrAddIssueForm() { document.getElementById('prAddIssueForm').classList.toggle('is-open'); }
 
@@ -1163,18 +1446,88 @@
   function openTypeDetail(type) {
     activePrDetailType = type;
     activePrIssueTargetId = null;
+    activePrEditUnitId = null;
+    activePrAddModelOpen = false;
     expandedPrTypeIds = new Set();
     document.getElementById('prTypeView').classList.remove('is-open');
     document.getElementById('prUnitDetail').classList.add('is-open');
     document.getElementById('prTypeDetailBackLabel').textContent = activePrBrand;
+    renderAddModelForm();
     renderBrandDetail();
   }
 
   function closeTypeDetail() {
     activePrDetailType = null;
+    activePrEditUnitId = null;
+    activePrAddModelOpen = false;
     document.getElementById('prUnitDetail').classList.remove('is-open');
     document.getElementById('prTypeView').classList.add('is-open');
     renderBrandTypeList();
+  }
+
+  // Add a specific model without leaving the current brand+type screen --
+  // pre-fills brand/type from context instead of making the user retype
+  // them in the generic top-level "+ Add Appliance" form.
+  function toggleAddModelInType() {
+    activePrAddModelOpen = !activePrAddModelOpen;
+    renderAddModelForm();
+  }
+
+  function renderAddModelForm() {
+    const container = document.getElementById('prAddModelFormContainer');
+    if (!container) return;
+    if (!activePrAddModelOpen) { container.innerHTML = ''; return; }
+    container.innerHTML =
+      '<div class="pr-type-section" style="padding:16px; margin-bottom:12px;">' +
+      '<div class="tool-form-row"><div class="form-field full"><label>Model Number / Name</label>' +
+      '<input type="text" id="prNewModelInType" placeholder="e.g. WRS325FDAM04 &mdash; Side-by-Side Refrigerator"></div></div>' +
+      '<div class="tool-form-row"><div class="form-field"><label>Manual Link (optional)</label><input type="text" id="prNewManualLinkInType" placeholder="https://..."></div>' +
+      '<div class="form-field"><label>Parts Catalog Link (optional)</label><input type="text" id="prNewPartsLinkInType" placeholder="https://..."></div></div>' +
+      '<div class="form-footer"><button class="btn blue" onclick="saveNewModelInType()">Save Model</button>' +
+      '<button class="secondary-btn" onclick="toggleAddModelInType()">Cancel</button></div>' +
+      '</div>';
+  }
+
+  function saveNewModelInType() {
+    const model = document.getElementById('prNewModelInType').value.trim();
+    if (!model) { showToast('Model number / name is required.', { type: 'error' }); return; }
+    const unit = {
+      id: Date.now(), type: activePrDetailType, brand: activePrBrand, model,
+      manualLink: document.getElementById('prNewManualLinkInType').value.trim(),
+      partsLink: document.getElementById('prNewPartsLinkInType').value.trim(),
+      issues: [],
+    };
+    const list = loadPrUnits();
+    list.push(unit);
+    savePrUnits(list);
+    activePrAddModelOpen = false;
+    renderAddModelForm();
+    renderBrandDetail();
+    showToast('Model added.');
+  }
+
+  // Edit an existing entry's model name / links in place, rather than
+  // requiring a delete-and-recreate to fix a typo or a stale link.
+  function toggleEditUnit(unitId) {
+    activePrEditUnitId = activePrEditUnitId === unitId ? null : unitId;
+    activePrIssueTargetId = null;
+    renderBrandDetail();
+  }
+
+  function saveUnitEdit(unitId) {
+    const model = document.getElementById('prEditModel').value.trim();
+    const manualLink = document.getElementById('prEditManualLink').value.trim();
+    const partsLink = document.getElementById('prEditPartsLink').value.trim();
+    const list = loadPrUnits();
+    const unit = list.find(u => u.id === unitId);
+    if (!unit) return;
+    unit.model = model;
+    unit.manualLink = manualLink;
+    unit.partsLink = partsLink;
+    savePrUnits(list);
+    activePrEditUnitId = null;
+    renderBrandDetail();
+    showToast('Changes saved.');
   }
 
   function linkBox(label, url) {
@@ -1238,6 +1591,14 @@
         '<div class="form-footer"><button class="btn blue" onclick="savePrIssue(' + u.id + ')">Save Issue</button><button class="secondary-btn" onclick="activePrIssueTargetId=null; renderBrandDetail();">Cancel</button></div>'
       ) : '';
 
+      var editFormHtml = activePrEditUnitId === u.id ? (
+        '<div class="tool-form-row"><div class="form-field full"><label>Model Number / Name (blank = general reference)</label>' +
+        '<input type="text" id="prEditModel" value="' + escapeHtml(u.model) + '"></div></div>' +
+        '<div class="tool-form-row"><div class="form-field"><label>Manual Link</label><input type="text" id="prEditManualLink" value="' + escapeHtml(u.manualLink) + '"></div>' +
+        '<div class="form-field"><label>Parts Catalog Link</label><input type="text" id="prEditPartsLink" value="' + escapeHtml(u.partsLink) + '"></div></div>' +
+        '<div class="form-footer"><button class="btn blue" onclick="saveUnitEdit(' + u.id + ')">Save Changes</button><button class="secondary-btn" onclick="activePrEditUnitId=null; renderBrandDetail();">Cancel</button></div>'
+      ) : '';
+
       var sectionLabel = u.model ? escapeHtml(u.model) : 'General reference (no specific model)';
 
       return '<div class="pr-type-section">' +
@@ -1248,12 +1609,14 @@
         (isExpanded ? (
           '<div class="pr-type-section-body">' +
           '<div class="pr-linkrow">' + linkBox('Manual / Support', u.manualLink) + linkBox('Parts Catalog', u.partsLink) + '</div>' +
-          '<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">' +
+          '<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px; flex-wrap:wrap; gap:8px;">' +
           '<h3 style="margin:0; font-size:15px;">Logged Issues</h3>' +
-          '<div style="display:flex; gap:8px;">' +
-          '<button class="secondary-btn" onclick="activePrIssueTargetId=' + u.id + '; renderBrandDetail();">+ Add Issue</button>' +
+          '<div style="display:flex; gap:8px; flex-wrap:wrap;">' +
+          '<button class="secondary-btn" onclick="activePrIssueTargetId=' + u.id + '; activePrEditUnitId=null; renderBrandDetail();">+ Add Issue</button>' +
+          '<button class="secondary-btn" onclick="toggleEditUnit(' + u.id + ')">Edit</button>' +
           '<button class="small-btn danger" onclick="deletePrUnitType(' + u.id + ')">Delete</button>' +
           '</div></div>' +
+          (editFormHtml ? '<div style="margin-bottom:14px;">' + editFormHtml + '</div>' : '') +
           addFormHtml +
           '<div style="margin-top:12px;">' + issuesHtml + '</div>' +
           '</div>'
@@ -1399,6 +1762,13 @@
     upgradePrSeedV12IfNeeded();
     upgradePrSeedV13IfNeeded();
     upgradePrSeedV14IfNeeded();
+    upgradePrSeedV15IfNeeded();
+    upgradePrSeedV16IfNeeded();
+    upgradePrSeedV17IfNeeded();
+    upgradePrSeedV18IfNeeded();
+    upgradePrSeedV19IfNeeded();
+    upgradePrSeedV20IfNeeded();
+    upgradePrSeedV21IfNeeded();
     renderTypeChips();
     renderUnits();
     if (typeof initSyncOnLoad === 'function') {
