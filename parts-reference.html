@@ -1,0 +1,1537 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Parts &amp; Reference · Triple H Enterprises</title>
+<link rel="manifest" href="/tools/manifest.json">
+<link rel="stylesheet" href="/styles.css?v=202608102200">
+<script src="/tools/auth.js" defer></script>
+<script src="/tools/tools-common.js" defer></script>
+<script src="/tools/sync.js" defer></script>
+<style>
+  .pr-search-filter-row { display: flex; gap: 8px; margin-bottom: 16px; }
+  .pr-search-filter-row .pr-search-field { flex: 1 1 auto; min-width: 0; }
+  .pr-search-filter-row .pr-filter-field { flex: 0 0 auto; width: 128px; }
+  .pr-filter-select {
+    width: 100%; padding: 11px 10px; background: var(--bg-panel-2); border: 1px solid var(--border);
+    border-radius: 8px; color: var(--white); font-size: 13.5px; font-family: inherit;
+    appearance: none; -webkit-appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%23a0a0a0' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+    background-repeat: no-repeat; background-position: right 10px center; padding-right: 28px;
+  }
+  .pr-filter-select:focus { outline: none; border-color: var(--orange-light); }
+
+  .pr-unit-card {
+    background: var(--bg-panel-2); border: 1px solid var(--border); border-radius: var(--radius);
+    padding: 16px; margin-bottom: 12px; cursor: pointer; transition: border-color .15s ease;
+  }
+  .pr-unit-card:hover { border-color: var(--orange-light); }
+  .pr-unit-card:active { transform: translateY(1px); }
+  .pr-unit-type { font-family:'Oswald',sans-serif; font-size: 12.5px; letter-spacing: .04em; text-transform: uppercase; color: var(--orange-light); }
+  .pr-unit-name { font-size: 17px; font-weight: 600; color: var(--white); margin-top: 2px; }
+  .pr-unit-count { font-size: 13px; color: var(--text-dim); margin-top: 4px; }
+  .pr-unit-badge {
+    display: inline-block; font-size: 10.5px; text-transform: uppercase; letter-spacing: .03em;
+    color: var(--text-dim); border: 1px solid var(--border); border-radius: 4px; padding: 2px 6px; margin-top: 6px;
+  }
+  .pr-type-section {
+    background: var(--bg-panel-2); border: 1px solid var(--border); border-radius: var(--radius);
+    margin-bottom: 10px; overflow: hidden;
+  }
+  .pr-type-section-header {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 14px 16px; cursor: pointer;
+  }
+  .pr-type-section-header:active { background: var(--bg-panel-3); }
+  .pr-type-section-name { font-size: 15px; font-weight: 600; color: var(--white); }
+  .pr-type-section-meta { font-size: 12.5px; color: var(--text-dim); white-space: nowrap; }
+  .pr-type-section-body { padding: 0 16px 16px; border-top: 1px solid var(--border); padding-top: 14px; }
+
+  .pr-empty { text-align: center; color: var(--text-dim); padding: 40px 20px; font-size: 14px; }
+  .pr-count { color: var(--text-dim); font-size: 13px; margin-bottom: 14px; }
+  #prAddUnitForm, #prAddIssueForm { display: none; }
+  #prAddUnitForm.is-open, #prAddIssueForm.is-open { display: block; }
+  #prUnitDetail, #prTypeView { display: none; }
+  #prUnitDetail.is-open, #prTypeView.is-open { display: block; }
+  #prListView.is-hidden { display: none; }
+  .pr-back-link {
+    display: inline-flex; align-items: center; gap: 5px; color: var(--text-dim); font-size: 13.5px;
+    text-decoration: none; margin-bottom: 14px; cursor: pointer;
+  }
+  .pr-back-link:hover { color: var(--orange-light); }
+  .pr-linkrow { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 18px; }
+  .pr-link-box {
+    background: var(--orange-tint-soft); border: 1px solid var(--orange-tint-border); border-radius: var(--radius);
+    padding: 12px 14px; flex: 1; min-width: 220px; display: flex; justify-content: space-between; align-items: center; gap: 10px;
+  }
+  .pr-link-box-label { font-size: 13px; color: var(--text); }
+  .pr-issue {
+    background: var(--bg-panel-2); border: 1px solid var(--border); border-radius: var(--radius);
+    padding: 16px; margin-bottom: 12px;
+  }
+  .pr-issue-top { display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; margin-bottom: 8px; }
+  .pr-issue-symptom { font-size: 15.5px; font-weight: 600; color: var(--white); }
+  .pr-issue-price { font-family:'Oswald',sans-serif; font-size: 19px; color: var(--white); white-space: nowrap; }
+  .pr-issue-price-label { font-size: 11px; color: var(--text-dim); text-transform: uppercase; letter-spacing: .04em; }
+  .pr-issue-part { font-size: 14.5px; color: var(--text); margin-bottom: 4px; }
+  .pr-issue-partnum { color: var(--text-dim); font-size: 13px; }
+  .pr-issue-note { font-size: 13.5px; color: var(--text-dim); margin-top: 6px; }
+  .pr-issue-actions { display: flex; gap: 10px; margin-top: 10px; align-items: center; }
+  .pr-issue-link {
+    display: inline-flex; align-items: center; gap: 5px; font-size: 13.5px; color: var(--blue-light);
+    text-decoration: none; padding: 6px 10px; border: 1px solid var(--border); border-radius: 6px;
+  }
+  .pr-issue-link:hover { border-color: var(--blue-light); }
+  .pr-issue-link svg { width: 13px; height: 13px; }
+  .pr-confidence-note {
+    font-size: 12.5px; color: var(--text-dim); background: var(--bg-panel-2); border: 1px solid var(--border);
+    border-radius: var(--radius); padding: 10px 12px; margin-bottom: 16px;
+  }
+</style>
+</head>
+<body>
+
+<div class="tool-header">
+  <a href="/tools/workspace.html" class="tool-header-brand">
+    <img src="/images/logo-signature-orange.png" alt="Triple H Enterprises">
+    <span>&larr; Back to Workspace</span>
+  </a>
+  <button class="help-btn" onclick="openHelpModal()" aria-label="How to use this tool" title="How to use this tool">?</button>
+</div>
+<div class="tool-title">Parts &amp; Reference</div>
+<p class="tool-sub">Look up an appliance by type or brand and see everything for it in one place &mdash; manual link, parts catalog, and any specific issues you've logged.<span id="syncStatusText"></span></p>
+
+<div id="prListView">
+  <div class="pr-confidence-note">Pre-loaded with major brands and their official manual/parts links. A few of these links go to a brand's general parts catalog rather than one exact model, since exact links depend on the specific model number &mdash; worth double-checking a link the first time you use it for a real job.</div>
+
+  <div class="pr-search-filter-row">
+    <div class="form-field pr-search-field" style="margin-bottom:0;">
+      <label>Search</label>
+      <input type="text" id="prSearchInput" placeholder="Search type, brand, or model..." oninput="renderUnits()">
+    </div>
+    <div class="form-field pr-filter-field" style="margin-bottom:0;">
+      <label>Filter</label>
+      <select class="pr-filter-select" id="prTypeFilterSelect" onchange="setPrType(this.value)"></select>
+    </div>
+  </div>
+
+  <div class="form-section">
+    <div style="display:flex; justify-content:space-between; align-items:center;">
+      <h3 style="margin:0;">Appliances</h3>
+      <button class="secondary-btn" onclick="togglePrAddUnitForm()">+ Add Appliance</button>
+    </div>
+
+    <div id="prAddUnitForm" style="margin-top:14px; padding-top:14px; border-top:1px solid var(--border);">
+      <div class="tool-form-row">
+        <div class="form-field">
+          <label>Appliance Type</label>
+          <input type="text" id="prNewType" placeholder="e.g. Washer, Dryer, Dishwasher">
+        </div>
+        <div class="form-field">
+          <label>Brand</label>
+          <input type="text" id="prNewBrand" placeholder="e.g. GE">
+        </div>
+      </div>
+      <div class="tool-form-row">
+        <div class="form-field full">
+          <label>Model / Series (optional)</label>
+          <input type="text" id="prNewModel" placeholder="e.g. GFW650 Series">
+        </div>
+      </div>
+      <div class="tool-form-row">
+        <div class="form-field">
+          <label>Manual Link (optional)</label>
+          <input type="text" id="prNewManualLink" placeholder="https://...">
+        </div>
+        <div class="form-field">
+          <label>Parts Catalog Link (optional)</label>
+          <input type="text" id="prNewPartsLink" placeholder="https://...">
+        </div>
+      </div>
+      <div class="form-footer">
+        <button class="btn blue" onclick="savePrUnit()">Save Appliance</button>
+        <button class="secondary-btn" onclick="togglePrAddUnitForm()">Cancel</button>
+      </div>
+    </div>
+
+    <p class="pr-count" id="prCount" style="margin-top:16px;"></p>
+    <div id="prUnitsList"></div>
+  </div>
+</div>
+
+<div id="prTypeView">
+  <a class="pr-back-link" onclick="closeBrandDetail()">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5"/><path d="m12 19-7-7 7-7"/></svg>
+    All Brands
+  </a>
+
+  <div class="tool-title" id="prBrandTypeTitle" style="font-size:22px;"></div>
+  <p class="tool-sub" id="prBrandTypeSubtitle" style="margin-bottom:16px;"></p>
+
+  <div id="prBrandTypeList"></div>
+</div>
+
+<div id="prUnitDetail">
+  <a class="pr-back-link" onclick="closeTypeDetail()">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5"/><path d="m12 19-7-7 7-7"/></svg>
+    <span id="prTypeDetailBackLabel">Back</span>
+  </a>
+
+  <div class="tool-title" id="prBrandDetailTitle" style="font-size:22px;"></div>
+  <p class="tool-sub" id="prBrandDetailSubtitle" style="margin-bottom:16px;"></p>
+
+  <div style="margin-bottom:14px;">
+    <button class="secondary-btn" onclick="toggleAddModelInType()">+ Add Model</button>
+  </div>
+  <div id="prAddModelFormContainer"></div>
+
+  <div id="prTypeSectionsList"></div>
+</div>
+
+<div class="modal-overlay help-modal-overlay" id="helpModalOverlay">
+  <div class="help-modal">
+    <button class="modal-close" onclick="closeHelpModal()" aria-label="Close">&times;</button>
+    <h3>Parts &amp; Reference</h3>
+    <p>Look up an appliance by type or brand, and see everything for it in one place &mdash; a link to its manual, a link to its parts catalog, and any specific issues you've personally logged for it.</p>
+    <p>Tap a type chip to narrow the list, or search directly. Tap any appliance card to open it, see both links at the top, and add issues as you actually run into them on real jobs.</p>
+    <p>Every link here points to a manufacturer's own site or a real parts retailer &mdash; nothing from those pages is copied or stored here, just the link to it. A few links go to a brand's general parts catalog rather than one exact model, since that depends on the specific model number.</p>
+    <p>This isn't a substitute for actually diagnosing the job in person.</p>
+  </div>
+</div>
+
+<script>
+  const PR_STORAGE_KEY = 'th_parts_reference_units';
+  const PR_LEGACY_KEY = 'th_parts_reference';
+  let activePrBrand = null;
+  let activePrDetailType = null;
+  let activePrAddModelOpen = false;
+  let activePrEditUnitId = null;
+  let expandedPrTypeIds = new Set();
+  let activePrIssueTargetId = null;
+  let activePrType = 'all';
+  let justAddedPrUnitId = null;
+  let justAddedPrIssueId = null;
+
+  function escapeHtml(str) {
+    const div = document.createElement('div');
+    div.textContent = str;
+    return div.innerHTML;
+  }
+
+  function loadPrUnits() {
+    try { return JSON.parse(localStorage.getItem(PR_STORAGE_KEY) || '[]'); }
+    catch (e) { return []; }
+  }
+  function savePrUnits(list) {
+    localStorage.setItem(PR_STORAGE_KEY, JSON.stringify(list));
+    if (typeof scheduleSync === 'function') scheduleSync();
+  }
+
+  function migrateLegacyPrDataIfNeeded() {
+    const existing = loadPrUnits();
+    if (existing.some(u => u.id >= 9000)) return; // already seeded/migrated once
+    let legacy = [];
+    try { legacy = JSON.parse(localStorage.getItem(PR_LEGACY_KEY) || '[]'); } catch (e) { legacy = []; }
+    if (!legacy.length) return;
+
+    legacy.forEach(old => {
+      let unit = existing.find(u => u.type === old.appliance && u.brand === (old.brand || '') && !u.model);
+      if (!unit) {
+        unit = { id: Date.now() + Math.floor(Math.random() * 1000), type: old.appliance, brand: old.brand || '', model: '', manualLink: '', partsLink: '', issues: [] };
+        existing.push(unit);
+      }
+      unit.issues.push({
+        id: old.id, symptom: old.symptom, partName: old.partName, partNumber: old.partNumber || '',
+        priceLow: old.priceLow, priceHigh: old.priceHigh, link: old.link || '', note: old.note || '',
+      });
+    });
+    savePrUnits(existing);
+  }
+
+  // Pre-loaded brand reference set. IDs 9000+ mark these as seeded data
+  // so migration/re-seeding never runs again once this has loaded once.
+  // partsLink points to each brand's general parts catalog by
+  // type -- exact model-specific catalogs vary too much to pre-load
+  // without knowing the real model number in hand.
+  function seedPrExampleIfEmpty() {
+    if (loadPrUnits().length) return;
+    savePrUnits([
+      {
+        id: 9001, type: 'Washer', brand: 'Whirlpool', model: '',
+        manualLink: 'https://www.whirlpool.com/services/manuals-and-literature.html',
+        partsLink: 'https://www.partselect.com/Whirlpool-Washer-Parts.htm',
+        issues: [{
+          id: 1, symptom: "Won't spin (agitates fine, drum just doesn't spin)",
+          partName: 'Drive belt', partNumber: 'WPW10006384', priceLow: 20, priceHigh: 28,
+          link: 'https://www.partselect.com/Whirlpool-Washer-Belts.htm',
+          note: 'By far the most common cause on Whirlpool/Maytag/Kenmore top-loaders. Check for a broken or slipped belt visually before ordering.',
+        }, {
+          id: 2, symptom: "Agitates but won't spin, black debris inside cabinet",
+          partName: 'Motor coupling', partNumber: 'WP285753A', priceLow: 15, priceHigh: 25,
+          link: 'https://www.repairclinic.com/RepairHelp/How-To-Fix-A-Washing-Machine/38-5--/Whirlpool-Washer-Won-T-Spin',
+          note: 'Classic direct-drive top-loader failure -- the plastic center block breaks, usually from an overloaded machine protecting the motor/transmission.',
+        }],
+      },
+      {
+        id: 9002, type: 'Dryer', brand: 'Whirlpool', model: '',
+        manualLink: 'https://www.whirlpool.com/services/manuals-and-literature.html',
+        partsLink: 'https://www.partselect.com/Whirlpool-Dryer-Parts.htm',
+        issues: [],
+      },
+      {
+        id: 9003, type: 'Washer', brand: 'Maytag', model: '',
+        manualLink: 'https://www.maytag.com/services/owner-center.html',
+        partsLink: 'https://www.partselect.com/Maytag-Washer-Parts.htm',
+        issues: [],
+      },
+      {
+        id: 9004, type: 'Dryer', brand: 'Maytag', model: '',
+        manualLink: 'https://www.maytag.com/services/owner-center.html',
+        partsLink: 'https://www.partselect.com/Maytag-Dryer-Parts.htm',
+        issues: [],
+      },
+      {
+        id: 9005, type: 'Washer', brand: 'GE', model: 'GFW650 Series (Smart Front Load Steam Washer)',
+        manualLink: 'https://www.geappliances.com/ge/service-and-support/washers-dryers.htm',
+        partsLink: 'https://www.repairclinic.com/Shop-For-Parts/a11b3c52/Ge-Washing-Machine-Manuals-Care-Guides-Literature-Parts',
+        issues: [{
+          id: 3, symptom: "Won't drain, or drains very slowly (UE / E31 code)",
+          partName: 'Drain pump', partNumber: 'WH11X29539', priceLow: 40, priceHigh: 90,
+          link: 'https://www.repairclinic.com/Shop-For-Parts/a11b3c52/Ge-Washing-Machine-Manuals-Care-Guides-Literature-Parts',
+          note: "Same drain pump also fits the GFW510/GFW550/GFW850/PFW870/PFW950 lines. Check the pump filter for a clog first -- that alone fixes a lot of these before it's actually the pump itself.",
+        }],
+      },
+      {
+        id: 9006, type: 'Dryer', brand: 'GE', model: '',
+        manualLink: 'https://www.geappliances.com/ge/service-and-support/washers-dryers.htm',
+        partsLink: 'https://www.partselect.com/GE-Dryer-Parts.htm',
+        issues: [],
+      },
+      { id: 9007, type: 'Refrigerator', brand: 'GE', model: '', manualLink: 'https://www.geappliances.com/ge/service-and-support/', partsLink: 'https://www.partselect.com/GE-Refrigerator-Parts.htm', issues: [] },
+      { id: 9008, type: 'Washer', brand: 'LG', model: '', manualLink: 'https://www.lg.com/us/support/manuals', partsLink: 'https://www.partselect.com/LG-Washer-Parts.htm', issues: [] },
+      { id: 9009, type: 'Dryer', brand: 'LG', model: '', manualLink: 'https://www.lg.com/us/support/manuals', partsLink: 'https://www.partselect.com/LG-Dryer-Parts.htm', issues: [] },
+      { id: 9010, type: 'Refrigerator', brand: 'LG', model: '', manualLink: 'https://www.lg.com/us/support/manuals', partsLink: 'https://www.partselect.com/LG-Refrigerator-Parts.htm', issues: [] },
+      { id: 9011, type: 'Washer', brand: 'Samsung', model: '', manualLink: 'https://www.samsung.com/us/support/owners/product/', partsLink: 'https://www.partselect.com/Samsung-Washer-Parts.htm', issues: [] },
+      { id: 9012, type: 'Dryer', brand: 'Samsung', model: '', manualLink: 'https://www.samsung.com/us/support/owners/product/', partsLink: 'https://www.partselect.com/Samsung-Dryer-Parts.htm', issues: [] },
+      { id: 9013, type: 'Refrigerator', brand: 'Samsung', model: '', manualLink: 'https://www.samsung.com/us/support/owners/product/', partsLink: 'https://www.partselect.com/Samsung-Refrigerator-Parts.htm', issues: [] },
+      { id: 9014, type: 'Washer', brand: 'Frigidaire', model: '', manualLink: 'https://www.frigidaire.com/customer-support/', partsLink: 'https://www.partselect.com/Frigidaire-Washer-Parts.htm', issues: [] },
+      { id: 9015, type: 'Refrigerator', brand: 'Frigidaire', model: '', manualLink: 'https://www.frigidaire.com/customer-support/', partsLink: 'https://www.partselect.com/Frigidaire-Refrigerator-Parts.htm', issues: [] },
+      { id: 9016, type: 'Dishwasher', brand: 'Frigidaire', model: '', manualLink: 'https://www.frigidaire.com/customer-support/', partsLink: 'https://www.partselect.com/Frigidaire-Dishwasher-Parts.htm', issues: [] },
+      { id: 9017, type: 'Dishwasher', brand: 'KitchenAid', model: '', manualLink: 'https://www.kitchenaid.com/customer-care.html', partsLink: 'https://www.partselect.com/KitchenAid-Dishwasher-Parts.htm', issues: [] },
+      { id: 9018, type: 'Refrigerator', brand: 'KitchenAid', model: '', manualLink: 'https://www.kitchenaid.com/customer-care.html', partsLink: 'https://www.partselect.com/KitchenAid-Refrigerator-Parts.htm', issues: [] },
+      { id: 9019, type: 'Washer', brand: 'Bosch', model: '', manualLink: 'https://www.bosch-home.com/us/service-and-support', partsLink: 'https://www.partselect.com/Bosch-Washer-Parts.htm', issues: [] },
+      { id: 9020, type: 'Dishwasher', brand: 'Bosch', model: '', manualLink: 'https://www.bosch-home.com/us/service-and-support', partsLink: 'https://www.partselect.com/Bosch-Dishwasher-Parts.htm', issues: [] },
+      { id: 9021, type: 'Dishwasher', brand: 'Whirlpool', model: '', manualLink: 'https://www.whirlpool.com/services/manuals-and-literature.html', partsLink: 'https://www.partselect.com/Whirlpool-Dishwasher-Parts.htm', issues: [] },
+      { id: 9022, type: 'Range', brand: 'GE', model: '', manualLink: 'https://www.geappliances.com/ge/service-and-support/', partsLink: 'https://www.partselect.com/GE-Range-Parts.htm', issues: [] },
+      { id: 9023, type: 'Range', brand: 'Whirlpool', model: '', manualLink: 'https://www.whirlpool.com/services/manuals-and-literature.html', partsLink: 'https://www.partselect.com/Whirlpool-Range-Parts.htm', issues: [] },
+      { id: 9024, type: 'Dishwasher', brand: 'GE', model: '', manualLink: 'https://www.geappliances.com/ge/service-and-support/', partsLink: 'https://www.partselect.com/GE-Dishwasher-Parts.htm', issues: [] },
+      { id: 9025, type: 'Refrigerator', brand: 'Whirlpool', model: '', manualLink: 'https://www.whirlpool.com/services/manuals-and-literature.html', partsLink: 'https://www.partselect.com/Whirlpool-Refrigerator-Parts.htm', issues: [] },
+      { id: 9026, type: 'Microwave', brand: 'Whirlpool', model: '', manualLink: 'https://www.whirlpool.com/services/manuals-and-literature.html', partsLink: 'https://www.partselect.com/Whirlpool-Microwave-Parts.htm', issues: [] },
+      { id: 9027, type: 'Range', brand: 'Maytag', model: '', manualLink: 'https://www.maytag.com/services/owner-center.html', partsLink: 'https://www.partselect.com/Maytag-Range-Parts.htm', issues: [] },
+      { id: 9028, type: 'Refrigerator', brand: 'Maytag', model: '', manualLink: 'https://www.maytag.com/services/owner-center.html', partsLink: 'https://www.partselect.com/Maytag-Refrigerator-Parts.htm', issues: [] },
+      { id: 9029, type: 'Dishwasher', brand: 'Maytag', model: '', manualLink: 'https://www.maytag.com/services/owner-center.html', partsLink: 'https://www.partselect.com/Maytag-Dishwasher-Parts.htm', issues: [] },
+      { id: 9030, type: 'Microwave', brand: 'GE', model: '', manualLink: 'https://www.geappliances.com/ge/service-and-support/', partsLink: 'https://www.partselect.com/GE-Microwave-Parts.htm', issues: [] },
+      { id: 9031, type: 'Oven', brand: 'GE', model: '', manualLink: 'https://www.geappliances.com/ge/service-and-support/', partsLink: 'https://www.partselect.com/GE-Oven-Parts.htm', issues: [] },
+      { id: 9032, type: 'Cooktop', brand: 'GE', model: '', manualLink: 'https://www.geappliances.com/ge/service-and-support/', partsLink: 'https://www.partselect.com/GE-Cooktop-Parts.htm', issues: [] },
+      { id: 9033, type: 'Dishwasher', brand: 'LG', model: '', manualLink: 'https://www.lg.com/us/support/manuals', partsLink: 'https://www.partselect.com/LG-Dishwasher-Parts.htm', issues: [] },
+      { id: 9034, type: 'Range', brand: 'Samsung', model: '', manualLink: 'https://www.samsung.com/us/support/owners/product/', partsLink: 'https://www.partselect.com/Samsung-Range-Parts.htm', issues: [] },
+      { id: 9035, type: 'Dishwasher', brand: 'Samsung', model: '', manualLink: 'https://www.samsung.com/us/support/owners/product/', partsLink: 'https://www.partselect.com/Samsung-Dishwasher-Parts.htm', issues: [] },
+      { id: 9036, type: 'Dryer', brand: 'Frigidaire', model: '', manualLink: 'https://www.frigidaire.com/customer-support/', partsLink: 'https://www.partselect.com/Frigidaire-Dryer-Parts.htm', issues: [] },
+      { id: 9037, type: 'Dishwasher', brand: 'KitchenAid', model: '', manualLink: 'https://www.kitchenaid.com/customer-care.html', partsLink: 'https://www.partselect.com/KitchenAid-Dishwasher-Parts.htm', issues: [] },
+      { id: 9038, type: 'Dryer', brand: 'Bosch', model: '', manualLink: 'https://www.bosch-home.com/us/service-and-support', partsLink: 'https://www.partselect.com/Bosch-Dryer-Parts.htm', issues: [] },
+      { id: 9039, type: 'Refrigerator', brand: 'Bosch', model: '', manualLink: 'https://www.bosch-home.com/us/service-and-support', partsLink: 'https://www.partselect.com/Bosch-Refrigerator-Parts.htm', issues: [] },
+      { id: 9040, type: 'Washer', brand: 'Kenmore', model: '', manualLink: 'https://www.searspartsdirect.com/', partsLink: 'https://www.partselect.com/Kenmore-Washer-Parts.htm', issues: [] },
+      { id: 9041, type: 'Dryer', brand: 'Kenmore', model: '', manualLink: 'https://www.searspartsdirect.com/', partsLink: 'https://www.partselect.com/Kenmore-Dryer-Parts.htm', issues: [] },
+      { id: 9042, type: 'Refrigerator', brand: 'Kenmore', model: '', manualLink: 'https://www.searspartsdirect.com/', partsLink: 'https://www.partselect.com/Kenmore-Refrigerator-Parts.htm', issues: [] },
+      { id: 9043, type: 'Dishwasher', brand: 'Kenmore', model: '', manualLink: 'https://www.searspartsdirect.com/', partsLink: 'https://www.partselect.com/Kenmore-Dishwasher-Parts.htm', issues: [] },
+      { id: 9044, type: 'Washer', brand: 'Amana', model: '', manualLink: 'https://www.amana.com/support', partsLink: 'https://www.partselect.com/Amana-Washer-Parts.htm', issues: [] },
+      { id: 9045, type: 'Dryer', brand: 'Amana', model: '', manualLink: 'https://www.amana.com/support', partsLink: 'https://www.partselect.com/Amana-Dryer-Parts.htm', issues: [] },
+      { id: 9046, type: 'Refrigerator', brand: 'Amana', model: '', manualLink: 'https://www.amana.com/support', partsLink: 'https://www.partselect.com/Amana-Refrigerator-Parts.htm', issues: [] },
+      { id: 9047, type: 'Washer', brand: 'Hotpoint', model: '', manualLink: 'https://www.hotpoint.com/support.html', partsLink: 'https://www.partselect.com/Hotpoint-Washer-Parts.htm', issues: [] },
+      { id: 9048, type: 'Dryer', brand: 'Hotpoint', model: '', manualLink: 'https://www.hotpoint.com/support.html', partsLink: 'https://www.partselect.com/Hotpoint-Dryer-Parts.htm', issues: [] },
+      { id: 9049, type: 'Refrigerator', brand: 'Hotpoint', model: '', manualLink: 'https://www.hotpoint.com/support.html', partsLink: 'https://www.partselect.com/Hotpoint-Refrigerator-Parts.htm', issues: [] },
+      { id: 9050, type: 'Washer', brand: 'Electrolux', model: '', manualLink: 'https://www.electroluxappliances.com/Support/', partsLink: 'https://www.partselect.com/Electrolux-Washer-Parts.htm', issues: [] },
+      { id: 9051, type: 'Dryer', brand: 'Electrolux', model: '', manualLink: 'https://www.electroluxappliances.com/Support/', partsLink: 'https://www.partselect.com/Electrolux-Dryer-Parts.htm', issues: [] },
+      { id: 9052, type: 'Dishwasher', brand: 'Electrolux', model: '', manualLink: 'https://www.electroluxappliances.com/Support/', partsLink: 'https://www.partselect.com/Electrolux-Dishwasher-Parts.htm', issues: [] },
+      { id: 9053, type: 'Washer', brand: 'Speed Queen', model: '', manualLink: 'https://www.speedqueen.com/en-us/support', partsLink: 'https://www.partselect.com/Speed-Queen-Washer-Parts.htm', issues: [] },
+      { id: 9054, type: 'Dryer', brand: 'Speed Queen', model: '', manualLink: 'https://www.speedqueen.com/en-us/support', partsLink: 'https://www.partselect.com/Speed-Queen-Dryer-Parts.htm', issues: [] },
+      { id: 9055, type: 'Microwave', brand: 'Samsung', model: '', manualLink: 'https://www.samsung.com/us/support/owners/product/', partsLink: 'https://www.partselect.com/Samsung-Microwave-Parts.htm', issues: [] },
+      { id: 9056, type: 'Microwave', brand: 'LG', model: '', manualLink: 'https://www.lg.com/us/support/manuals', partsLink: 'https://www.partselect.com/LG-Microwave-Parts.htm', issues: [] },
+      { id: 9057, type: 'Range', brand: 'Frigidaire', model: '', manualLink: 'https://www.frigidaire.com/customer-support/', partsLink: 'https://www.partselect.com/Frigidaire-Range-Parts.htm', issues: [] },
+      { id: 9058, type: 'Freezer', brand: 'GE', model: '', manualLink: 'https://www.geappliances.com/ge/service-and-support/', partsLink: 'https://www.partselect.com/GE-Freezer-Parts.htm', issues: [] },
+      { id: 9059, type: 'Freezer', brand: 'Whirlpool', model: '', manualLink: 'https://www.whirlpool.com/services/manuals-and-literature.html', partsLink: 'https://www.partselect.com/Whirlpool-Freezer-Parts.htm', issues: [] },
+      { id: 9060, type: 'Freezer', brand: 'Frigidaire', model: '', manualLink: 'https://www.frigidaire.com/customer-support/', partsLink: 'https://www.partselect.com/Frigidaire-Freezer-Parts.htm', issues: [] },
+    ]);
+  }
+
+
+  // ---------------------------------------------------------------------
+  // Seed upgrade v2 (added 2026-08-11) -- expands the brand/appliance-type
+  // matrix from the original 60 entries to a much larger reference set,
+  // and adds two more real, researched troubleshooting entries (verified
+  // part numbers and current PartSelect prices, not estimates). Runs once
+  // per device via a flag, same pattern as migrateLegacyPrDataIfNeeded()
+  // above -- never touches or duplicates anything the user already added
+  // themselves, and never re-adds a brand/type/model combo that's already
+  // present (whether from the original seed or added by hand).
+  function upgradePrSeedV2IfNeeded() {
+    const UPGRADE_KEY = 'th_parts_reference_seed_v2_applied';
+    if (localStorage.getItem(UPGRADE_KEY)) return;
+    const list = loadPrUnits();
+    const existingKeys = new Set(list.map(u => u.type + '|' + u.brand + '|' + (u.model || '')));
+
+    const additions = [
+      { id: 9061, type: 'Microwave', brand: 'Maytag', model: '', manualLink: 'https://www.maytag.com/services/owner-center.html', partsLink: 'https://www.partselect.com/Maytag-Microwave-Parts.htm', issues: [] },
+      { id: 9062, type: 'Freezer', brand: 'Maytag', model: '', manualLink: 'https://www.maytag.com/services/owner-center.html', partsLink: 'https://www.partselect.com/Maytag-Freezer-Parts.htm', issues: [] },
+      { id: 9063, type: 'Range', brand: 'LG', model: '', manualLink: 'https://www.lg.com/us/support/manuals', partsLink: 'https://www.partselect.com/LG-Range-Parts.htm', issues: [] },
+      { id: 9064, type: 'Freezer', brand: 'LG', model: '', manualLink: 'https://www.lg.com/us/support/manuals', partsLink: 'https://www.partselect.com/LG-Freezer-Parts.htm', issues: [] },
+      { id: 9065, type: 'Freezer', brand: 'Samsung', model: '', manualLink: 'https://www.samsung.com/us/support/owners/product/', partsLink: 'https://www.partselect.com/Samsung-Freezer-Parts.htm', issues: [] },
+      { id: 9066, type: 'Microwave', brand: 'Frigidaire', model: '', manualLink: 'https://www.frigidaire.com/customer-support/', partsLink: 'https://www.partselect.com/Frigidaire-Microwave-Parts.htm', issues: [] },
+      { id: 9067, type: 'Range', brand: 'Kenmore', model: '', manualLink: 'https://www.searspartsdirect.com/', partsLink: 'https://www.partselect.com/Kenmore-Range-Parts.htm', issues: [] },
+      { id: 9068, type: 'Microwave', brand: 'Kenmore', model: '', manualLink: 'https://www.searspartsdirect.com/', partsLink: 'https://www.partselect.com/Kenmore-Microwave-Parts.htm', issues: [] },
+      { id: 9069, type: 'Freezer', brand: 'Kenmore', model: '', manualLink: 'https://www.searspartsdirect.com/', partsLink: 'https://www.partselect.com/Kenmore-Freezer-Parts.htm', issues: [] },
+      { id: 9070, type: 'Dishwasher', brand: 'Amana', model: '', manualLink: 'https://www.amana.com/support', partsLink: 'https://www.partselect.com/Amana-Dishwasher-Parts.htm', issues: [] },
+      { id: 9071, type: 'Range', brand: 'Amana', model: '', manualLink: 'https://www.amana.com/support', partsLink: 'https://www.partselect.com/Amana-Range-Parts.htm', issues: [] },
+      { id: 9072, type: 'Microwave', brand: 'Amana', model: '', manualLink: 'https://www.amana.com/support', partsLink: 'https://www.partselect.com/Amana-Microwave-Parts.htm', issues: [] },
+      { id: 9073, type: 'Freezer', brand: 'Amana', model: '', manualLink: 'https://www.amana.com/support', partsLink: 'https://www.partselect.com/Amana-Freezer-Parts.htm', issues: [] },
+      { id: 9074, type: 'Dishwasher', brand: 'Hotpoint', model: '', manualLink: 'https://www.hotpoint.com/support.html', partsLink: 'https://www.partselect.com/Hotpoint-Dishwasher-Parts.htm', issues: [] },
+      { id: 9075, type: 'Range', brand: 'Hotpoint', model: '', manualLink: 'https://www.hotpoint.com/support.html', partsLink: 'https://www.partselect.com/Hotpoint-Range-Parts.htm', issues: [] },
+      { id: 9076, type: 'Microwave', brand: 'Hotpoint', model: '', manualLink: 'https://www.hotpoint.com/support.html', partsLink: 'https://www.partselect.com/Hotpoint-Microwave-Parts.htm', issues: [] },
+      { id: 9077, type: 'Freezer', brand: 'Hotpoint', model: '', manualLink: 'https://www.hotpoint.com/support.html', partsLink: 'https://www.partselect.com/Hotpoint-Freezer-Parts.htm', issues: [] },
+      { id: 9078, type: 'Refrigerator', brand: 'Electrolux', model: '', manualLink: 'https://www.electroluxappliances.com/Support/', partsLink: 'https://www.partselect.com/Electrolux-Refrigerator-Parts.htm', issues: [] },
+      { id: 9079, type: 'Range', brand: 'Electrolux', model: '', manualLink: 'https://www.electroluxappliances.com/Support/', partsLink: 'https://www.partselect.com/Electrolux-Range-Parts.htm', issues: [] },
+      { id: 9080, type: 'Microwave', brand: 'Electrolux', model: '', manualLink: 'https://www.electroluxappliances.com/Support/', partsLink: 'https://www.partselect.com/Electrolux-Microwave-Parts.htm', issues: [] },
+      { id: 9081, type: 'Freezer', brand: 'Electrolux', model: '', manualLink: 'https://www.electroluxappliances.com/Support/', partsLink: 'https://www.partselect.com/Electrolux-Freezer-Parts.htm', issues: [] },
+      { id: 9082, type: 'Range', brand: 'KitchenAid', model: '', manualLink: 'https://www.kitchenaid.com/customer-care.html', partsLink: 'https://www.partselect.com/KitchenAid-Range-Parts.htm', issues: [] },
+      { id: 9083, type: 'Microwave', brand: 'KitchenAid', model: '', manualLink: 'https://www.kitchenaid.com/customer-care.html', partsLink: 'https://www.partselect.com/KitchenAid-Microwave-Parts.htm', issues: [] },
+      { id: 9084, type: 'Cooktop', brand: 'KitchenAid', model: '', manualLink: 'https://www.kitchenaid.com/customer-care.html', partsLink: 'https://www.partselect.com/KitchenAid-Cooktop-Parts.htm', issues: [] },
+      { id: 9085, type: 'Freezer', brand: 'KitchenAid', model: '', manualLink: 'https://www.kitchenaid.com/customer-care.html', partsLink: 'https://www.partselect.com/KitchenAid-Freezer-Parts.htm', issues: [] },
+      { id: 9086, type: 'Washer', brand: 'KitchenAid', model: '', manualLink: 'https://www.kitchenaid.com/customer-care.html', partsLink: 'https://www.partselect.com/KitchenAid-Washer-Parts.htm', issues: [] },
+      { id: 9087, type: 'Dryer', brand: 'KitchenAid', model: '', manualLink: 'https://www.kitchenaid.com/customer-care.html', partsLink: 'https://www.partselect.com/KitchenAid-Dryer-Parts.htm', issues: [] },
+      { id: 9088, type: 'Microwave', brand: 'Bosch', model: '', manualLink: 'https://www.bosch-home.com/us/service-and-support', partsLink: 'https://www.partselect.com/Bosch-Microwave-Parts.htm', issues: [] },
+      { id: 9089, type: 'Range', brand: 'Bosch', model: '', manualLink: 'https://www.bosch-home.com/us/service-and-support', partsLink: 'https://www.partselect.com/Bosch-Range-Parts.htm', issues: [] },
+      { id: 9090, type: 'Cooktop', brand: 'Bosch', model: '', manualLink: 'https://www.bosch-home.com/us/service-and-support', partsLink: 'https://www.partselect.com/Bosch-Cooktop-Parts.htm', issues: [] },
+      { id: 9091, type: 'Washer', brand: 'Haier', model: '', manualLink: 'https://www.partselect.com/Haier-Washer-Manuals-and-Literature.htm', partsLink: 'https://www.partselect.com/Haier-Washer-Parts.htm', issues: [] },
+      { id: 9092, type: 'Dryer', brand: 'Haier', model: '', manualLink: 'https://www.partselect.com/Haier-Dryer-Manuals-and-Literature.htm', partsLink: 'https://www.partselect.com/Haier-Dryer-Parts.htm', issues: [] },
+      { id: 9093, type: 'Refrigerator', brand: 'Haier', model: '', manualLink: 'https://www.partselect.com/Haier-Refrigerator-Manuals-and-Literature.htm', partsLink: 'https://www.partselect.com/Haier-Refrigerator-Parts.htm', issues: [] },
+      { id: 9094, type: 'Dishwasher', brand: 'Haier', model: '', manualLink: 'https://www.partselect.com/Haier-Dishwasher-Manuals-and-Literature.htm', partsLink: 'https://www.partselect.com/Haier-Dishwasher-Parts.htm', issues: [] },
+      { id: 9095, type: 'Range', brand: 'Haier', model: '', manualLink: 'https://www.partselect.com/Haier-Range-Manuals-and-Literature.htm', partsLink: 'https://www.partselect.com/Haier-Range-Parts.htm', issues: [] },
+      { id: 9096, type: 'Microwave', brand: 'Haier', model: '', manualLink: 'https://www.partselect.com/Haier-Microwave-Manuals-and-Literature.htm', partsLink: 'https://www.partselect.com/Haier-Microwave-Parts.htm', issues: [] },
+      { id: 9097, type: 'Freezer', brand: 'Haier', model: '', manualLink: 'https://www.partselect.com/Haier-Freezer-Manuals-and-Literature.htm', partsLink: 'https://www.partselect.com/Haier-Freezer-Parts.htm', issues: [] },
+      { id: 9098, type: 'Washer', brand: 'Midea', model: '', manualLink: 'https://www.partselect.com/Midea-Washer-Manuals-and-Literature.htm', partsLink: 'https://www.partselect.com/Midea-Washer-Parts.htm', issues: [] },
+      { id: 9099, type: 'Dryer', brand: 'Midea', model: '', manualLink: 'https://www.partselect.com/Midea-Dryer-Manuals-and-Literature.htm', partsLink: 'https://www.partselect.com/Midea-Dryer-Parts.htm', issues: [] },
+      { id: 9100, type: 'Refrigerator', brand: 'Midea', model: '', manualLink: 'https://www.partselect.com/Midea-Refrigerator-Manuals-and-Literature.htm', partsLink: 'https://www.partselect.com/Midea-Refrigerator-Parts.htm', issues: [] },
+      { id: 9101, type: 'Dishwasher', brand: 'Midea', model: '', manualLink: 'https://www.partselect.com/Midea-Dishwasher-Manuals-and-Literature.htm', partsLink: 'https://www.partselect.com/Midea-Dishwasher-Parts.htm', issues: [] },
+      { id: 9102, type: 'Range', brand: 'Midea', model: '', manualLink: 'https://www.partselect.com/Midea-Range-Manuals-and-Literature.htm', partsLink: 'https://www.partselect.com/Midea-Range-Parts.htm', issues: [] },
+      { id: 9103, type: 'Microwave', brand: 'Midea', model: '', manualLink: 'https://www.partselect.com/Midea-Microwave-Manuals-and-Literature.htm', partsLink: 'https://www.partselect.com/Midea-Microwave-Parts.htm', issues: [] },
+      { id: 9104, type: 'Freezer', brand: 'Midea', model: '', manualLink: 'https://www.partselect.com/Midea-Freezer-Manuals-and-Literature.htm', partsLink: 'https://www.partselect.com/Midea-Freezer-Parts.htm', issues: [] },
+      { id: 9105, type: 'Washer', brand: 'Admiral', model: '', manualLink: 'https://www.partselect.com/Admiral-Washer-Manuals-and-Literature.htm', partsLink: 'https://www.partselect.com/Admiral-Washer-Parts.htm', issues: [] },
+      { id: 9106, type: 'Dryer', brand: 'Admiral', model: '', manualLink: 'https://www.partselect.com/Admiral-Dryer-Manuals-and-Literature.htm', partsLink: 'https://www.partselect.com/Admiral-Dryer-Parts.htm', issues: [] },
+      { id: 9107, type: 'Refrigerator', brand: 'Admiral', model: '', manualLink: 'https://www.partselect.com/Admiral-Refrigerator-Manuals-and-Literature.htm', partsLink: 'https://www.partselect.com/Admiral-Refrigerator-Parts.htm', issues: [] },
+      { id: 9108, type: 'Range', brand: 'Admiral', model: '', manualLink: 'https://www.partselect.com/Admiral-Range-Manuals-and-Literature.htm', partsLink: 'https://www.partselect.com/Admiral-Range-Parts.htm', issues: [] },
+      { id: 9109, type: 'Washer', brand: 'Crosley', model: '', manualLink: 'https://www.partselect.com/Crosley-Washer-Manuals-and-Literature.htm', partsLink: 'https://www.partselect.com/Crosley-Washer-Parts.htm', issues: [] },
+      { id: 9110, type: 'Dryer', brand: 'Crosley', model: '', manualLink: 'https://www.partselect.com/Crosley-Dryer-Manuals-and-Literature.htm', partsLink: 'https://www.partselect.com/Crosley-Dryer-Parts.htm', issues: [] },
+      { id: 9111, type: 'Refrigerator', brand: 'Crosley', model: '', manualLink: 'https://www.partselect.com/Crosley-Refrigerator-Manuals-and-Literature.htm', partsLink: 'https://www.partselect.com/Crosley-Refrigerator-Parts.htm', issues: [] },
+      { id: 9112, type: 'Range', brand: 'Crosley', model: '', manualLink: 'https://www.partselect.com/Crosley-Range-Manuals-and-Literature.htm', partsLink: 'https://www.partselect.com/Crosley-Range-Parts.htm', issues: [] },
+      { id: 9113, type: 'Washer', brand: 'Gibson', model: '', manualLink: 'https://www.partselect.com/Gibson-Washer-Manuals-and-Literature.htm', partsLink: 'https://www.partselect.com/Gibson-Washer-Parts.htm', issues: [] },
+      { id: 9114, type: 'Dryer', brand: 'Gibson', model: '', manualLink: 'https://www.partselect.com/Gibson-Dryer-Manuals-and-Literature.htm', partsLink: 'https://www.partselect.com/Gibson-Dryer-Parts.htm', issues: [] },
+      { id: 9115, type: 'Refrigerator', brand: 'Gibson', model: '', manualLink: 'https://www.partselect.com/Gibson-Refrigerator-Manuals-and-Literature.htm', partsLink: 'https://www.partselect.com/Gibson-Refrigerator-Parts.htm', issues: [] },
+      { id: 9116, type: 'Range', brand: 'Gibson', model: '', manualLink: 'https://www.partselect.com/Gibson-Range-Manuals-and-Literature.htm', partsLink: 'https://www.partselect.com/Gibson-Range-Parts.htm', issues: [] },
+      { id: 9117, type: 'Range', brand: 'Hardwick', model: '', manualLink: 'https://www.partselect.com/Hardwick-Range-Manuals-and-Literature.htm', partsLink: 'https://www.partselect.com/Hardwick-Range-Parts.htm', issues: [] },
+      { id: 9118, type: 'Washer', brand: 'Inglis', model: '', manualLink: 'https://www.partselect.com/Inglis-Washer-Manuals-and-Literature.htm', partsLink: 'https://www.partselect.com/Inglis-Washer-Parts.htm', issues: [] },
+      { id: 9119, type: 'Dryer', brand: 'Inglis', model: '', manualLink: 'https://www.partselect.com/Inglis-Dryer-Manuals-and-Literature.htm', partsLink: 'https://www.partselect.com/Inglis-Dryer-Parts.htm', issues: [] },
+      { id: 9120, type: 'Refrigerator', brand: 'Inglis', model: '', manualLink: 'https://www.partselect.com/Inglis-Refrigerator-Manuals-and-Literature.htm', partsLink: 'https://www.partselect.com/Inglis-Refrigerator-Parts.htm', issues: [] },
+      { id: 9121, type: 'Range', brand: 'Inglis', model: '', manualLink: 'https://www.partselect.com/Inglis-Range-Manuals-and-Literature.htm', partsLink: 'https://www.partselect.com/Inglis-Range-Parts.htm', issues: [] },
+      { id: 9122, type: 'Refrigerator', brand: 'Kelvinator', model: '', manualLink: 'https://www.partselect.com/Kelvinator-Refrigerator-Manuals-and-Literature.htm', partsLink: 'https://www.partselect.com/Kelvinator-Refrigerator-Parts.htm', issues: [] },
+      { id: 9123, type: 'Range', brand: 'Kelvinator', model: '', manualLink: 'https://www.partselect.com/Kelvinator-Range-Manuals-and-Literature.htm', partsLink: 'https://www.partselect.com/Kelvinator-Range-Parts.htm', issues: [] },
+      { id: 9124, type: 'Washer', brand: 'Kelvinator', model: '', manualLink: 'https://www.partselect.com/Kelvinator-Washer-Manuals-and-Literature.htm', partsLink: 'https://www.partselect.com/Kelvinator-Washer-Parts.htm', issues: [] },
+      { id: 9125, type: 'Dryer', brand: 'Kelvinator', model: '', manualLink: 'https://www.partselect.com/Kelvinator-Dryer-Manuals-and-Literature.htm', partsLink: 'https://www.partselect.com/Kelvinator-Dryer-Parts.htm', issues: [] },
+      { id: 9126, type: 'Range', brand: 'Magic Chef', model: '', manualLink: 'https://www.partselect.com/Magic-Chef-Range-Manuals-and-Literature.htm', partsLink: 'https://www.partselect.com/Magic-Chef-Range-Parts.htm', issues: [] },
+      { id: 9127, type: 'Refrigerator', brand: 'Magic Chef', model: '', manualLink: 'https://www.partselect.com/Magic-Chef-Refrigerator-Manuals-and-Literature.htm', partsLink: 'https://www.partselect.com/Magic-Chef-Refrigerator-Parts.htm', issues: [] },
+      { id: 9128, type: 'Dishwasher', brand: 'Magic Chef', model: '', manualLink: 'https://www.partselect.com/Magic-Chef-Dishwasher-Manuals-and-Literature.htm', partsLink: 'https://www.partselect.com/Magic-Chef-Dishwasher-Parts.htm', issues: [] },
+      { id: 9129, type: 'Dryer', brand: 'Magic Chef', model: '', manualLink: 'https://www.partselect.com/Magic-Chef-Dryer-Manuals-and-Literature.htm', partsLink: 'https://www.partselect.com/Magic-Chef-Dryer-Parts.htm', issues: [] },
+      { id: 9130, type: 'Washer', brand: 'Norge', model: '', manualLink: 'https://www.partselect.com/Norge-Washer-Manuals-and-Literature.htm', partsLink: 'https://www.partselect.com/Norge-Washer-Parts.htm', issues: [] },
+      { id: 9131, type: 'Dryer', brand: 'Norge', model: '', manualLink: 'https://www.partselect.com/Norge-Dryer-Manuals-and-Literature.htm', partsLink: 'https://www.partselect.com/Norge-Dryer-Parts.htm', issues: [] },
+      { id: 9132, type: 'Refrigerator', brand: 'Norge', model: '', manualLink: 'https://www.partselect.com/Norge-Refrigerator-Manuals-and-Literature.htm', partsLink: 'https://www.partselect.com/Norge-Refrigerator-Parts.htm', issues: [] },
+      { id: 9133, type: 'Range', brand: 'Norge', model: '', manualLink: 'https://www.partselect.com/Norge-Range-Manuals-and-Literature.htm', partsLink: 'https://www.partselect.com/Norge-Range-Parts.htm', issues: [] },
+      { id: 9134, type: 'Washer', brand: 'Roper', model: '', manualLink: 'https://www.partselect.com/Roper-Washer-Manuals-and-Literature.htm', partsLink: 'https://www.partselect.com/Roper-Washer-Parts.htm', issues: [] },
+      { id: 9135, type: 'Dryer', brand: 'Roper', model: '', manualLink: 'https://www.partselect.com/Roper-Dryer-Manuals-and-Literature.htm', partsLink: 'https://www.partselect.com/Roper-Dryer-Parts.htm', issues: [] },
+      { id: 9136, type: 'Refrigerator', brand: 'Roper', model: '', manualLink: 'https://www.partselect.com/Roper-Refrigerator-Manuals-and-Literature.htm', partsLink: 'https://www.partselect.com/Roper-Refrigerator-Parts.htm', issues: [] },
+      { id: 9137, type: 'Range', brand: 'Roper', model: '', manualLink: 'https://www.partselect.com/Roper-Range-Manuals-and-Literature.htm', partsLink: 'https://www.partselect.com/Roper-Range-Parts.htm', issues: [] },
+      { id: 9138, type: 'Range', brand: 'Tappan', model: '', manualLink: 'https://www.partselect.com/Tappan-Range-Manuals-and-Literature.htm', partsLink: 'https://www.partselect.com/Tappan-Range-Parts.htm', issues: [] },
+      { id: 9139, type: 'Oven', brand: 'Tappan', model: '', manualLink: 'https://www.partselect.com/Tappan-Oven-Manuals-and-Literature.htm', partsLink: 'https://www.partselect.com/Tappan-Oven-Parts.htm', issues: [] },
+      { id: 9140, type: 'Refrigerator', brand: 'Tappan', model: '', manualLink: 'https://www.partselect.com/Tappan-Refrigerator-Manuals-and-Literature.htm', partsLink: 'https://www.partselect.com/Tappan-Refrigerator-Parts.htm', issues: [] },
+      { id: 9141, type: 'Freezer', brand: 'White Mountain', model: '', manualLink: 'https://www.partselect.com/White-Mountain-Freezer-Manuals-and-Literature.htm', partsLink: 'https://www.partselect.com/White-Mountain-Freezer-Parts.htm', issues: [] },
+      { id: 9142, type: 'Refrigerator', brand: 'White Mountain', model: '', manualLink: 'https://www.partselect.com/White-Mountain-Refrigerator-Manuals-and-Literature.htm', partsLink: 'https://www.partselect.com/White-Mountain-Refrigerator-Parts.htm', issues: [] },
+      { id: 9143, type: 'Washer', brand: 'White-Westinghouse', model: '', manualLink: 'https://www.partselect.com/White-Westinghouse-Washer-Manuals-and-Literature.htm', partsLink: 'https://www.partselect.com/White-Westinghouse-Washer-Parts.htm', issues: [] },
+      { id: 9144, type: 'Dryer', brand: 'White-Westinghouse', model: '', manualLink: 'https://www.partselect.com/White-Westinghouse-Dryer-Manuals-and-Literature.htm', partsLink: 'https://www.partselect.com/White-Westinghouse-Dryer-Parts.htm', issues: [] },
+      { id: 9145, type: 'Refrigerator', brand: 'White-Westinghouse', model: '', manualLink: 'https://www.partselect.com/White-Westinghouse-Refrigerator-Manuals-and-Literature.htm', partsLink: 'https://www.partselect.com/White-Westinghouse-Refrigerator-Parts.htm', issues: [] },
+      { id: 9146, type: 'Range', brand: 'White-Westinghouse', model: '', manualLink: 'https://www.partselect.com/White-Westinghouse-Range-Manuals-and-Literature.htm', partsLink: 'https://www.partselect.com/White-Westinghouse-Range-Parts.htm', issues: [] },
+      { id: 9147, type: 'Dishwasher', brand: 'White-Westinghouse', model: '', manualLink: 'https://www.partselect.com/White-Westinghouse-Dishwasher-Manuals-and-Literature.htm', partsLink: 'https://www.partselect.com/White-Westinghouse-Dishwasher-Parts.htm', issues: [] },
+      { id: 9148, type: 'Washer', brand: 'Estate', model: '', manualLink: 'https://www.partselect.com/Estate-Washer-Manuals-and-Literature.htm', partsLink: 'https://www.partselect.com/Estate-Washer-Parts.htm', issues: [] },
+      { id: 9149, type: 'Dryer', brand: 'Estate', model: '', manualLink: 'https://www.partselect.com/Estate-Dryer-Manuals-and-Literature.htm', partsLink: 'https://www.partselect.com/Estate-Dryer-Parts.htm', issues: [] },
+      { id: 9150, type: 'Refrigerator', brand: 'Estate', model: '', manualLink: 'https://www.partselect.com/Estate-Refrigerator-Manuals-and-Literature.htm', partsLink: 'https://www.partselect.com/Estate-Refrigerator-Parts.htm', issues: [] },
+      { id: 9151, type: 'Range', brand: 'Estate', model: '', manualLink: 'https://www.partselect.com/Estate-Range-Manuals-and-Literature.htm', partsLink: 'https://www.partselect.com/Estate-Range-Parts.htm', issues: [] },
+      { id: 9152, type: 'Range', brand: 'Jenn-Air', model: '', manualLink: 'https://www.partselect.com/Jenn-Air-Range-Manuals-and-Literature.htm', partsLink: 'https://www.partselect.com/Jenn-Air-Range-Parts.htm', issues: [] },
+      { id: 9153, type: 'Oven', brand: 'Jenn-Air', model: '', manualLink: 'https://www.partselect.com/Jenn-Air-Oven-Manuals-and-Literature.htm', partsLink: 'https://www.partselect.com/Jenn-Air-Oven-Parts.htm', issues: [] },
+      { id: 9154, type: 'Cooktop', brand: 'Jenn-Air', model: '', manualLink: 'https://www.partselect.com/Jenn-Air-Cooktop-Manuals-and-Literature.htm', partsLink: 'https://www.partselect.com/Jenn-Air-Cooktop-Parts.htm', issues: [] },
+      { id: 9155, type: 'Refrigerator', brand: 'Jenn-Air', model: '', manualLink: 'https://www.partselect.com/Jenn-Air-Refrigerator-Manuals-and-Literature.htm', partsLink: 'https://www.partselect.com/Jenn-Air-Refrigerator-Parts.htm', issues: [] },
+      { id: 9156, type: 'Dishwasher', brand: 'Jenn-Air', model: '', manualLink: 'https://www.partselect.com/Jenn-Air-Dishwasher-Manuals-and-Literature.htm', partsLink: 'https://www.partselect.com/Jenn-Air-Dishwasher-Parts.htm', issues: [] },
+      { id: 9157, type: 'Microwave', brand: 'Jenn-Air', model: '', manualLink: 'https://www.partselect.com/Jenn-Air-Microwave-Manuals-and-Literature.htm', partsLink: 'https://www.partselect.com/Jenn-Air-Microwave-Parts.htm', issues: [] },
+      { id: 9158, type: 'Range Hood', brand: 'Jenn-Air', model: '', manualLink: 'https://www.partselect.com/Jenn-Air-Vent-Hood-Manuals-and-Literature.htm', partsLink: 'https://www.partselect.com/Jenn-Air-Vent-Hood-Parts.htm', issues: [] },
+      { id: 9159, type: 'Range', brand: 'Dacor', model: '', manualLink: 'https://www.partselect.com/Dacor-Range-Manuals-and-Literature.htm', partsLink: 'https://www.partselect.com/Dacor-Range-Parts.htm', issues: [] },
+      { id: 9160, type: 'Oven', brand: 'Dacor', model: '', manualLink: 'https://www.partselect.com/Dacor-Oven-Manuals-and-Literature.htm', partsLink: 'https://www.partselect.com/Dacor-Oven-Parts.htm', issues: [] },
+      { id: 9161, type: 'Cooktop', brand: 'Dacor', model: '', manualLink: 'https://www.partselect.com/Dacor-Cooktop-Manuals-and-Literature.htm', partsLink: 'https://www.partselect.com/Dacor-Cooktop-Parts.htm', issues: [] },
+      { id: 9162, type: 'Refrigerator', brand: 'Dacor', model: '', manualLink: 'https://www.partselect.com/Dacor-Refrigerator-Manuals-and-Literature.htm', partsLink: 'https://www.partselect.com/Dacor-Refrigerator-Parts.htm', issues: [] },
+      { id: 9163, type: 'Dishwasher', brand: 'Dacor', model: '', manualLink: 'https://www.partselect.com/Dacor-Dishwasher-Manuals-and-Literature.htm', partsLink: 'https://www.partselect.com/Dacor-Dishwasher-Parts.htm', issues: [] },
+      { id: 9164, type: 'Range', brand: 'Smeg', model: '', manualLink: 'https://www.partselect.com/Smeg-Range-Manuals-and-Literature.htm', partsLink: 'https://www.partselect.com/Smeg-Range-Parts.htm', issues: [] },
+      { id: 9165, type: 'Oven', brand: 'Smeg', model: '', manualLink: 'https://www.partselect.com/Smeg-Oven-Manuals-and-Literature.htm', partsLink: 'https://www.partselect.com/Smeg-Oven-Parts.htm', issues: [] },
+      { id: 9166, type: 'Cooktop', brand: 'Smeg', model: '', manualLink: 'https://www.partselect.com/Smeg-Cooktop-Manuals-and-Literature.htm', partsLink: 'https://www.partselect.com/Smeg-Cooktop-Parts.htm', issues: [] },
+      { id: 9167, type: 'Refrigerator', brand: 'Smeg', model: '', manualLink: 'https://www.partselect.com/Smeg-Refrigerator-Manuals-and-Literature.htm', partsLink: 'https://www.partselect.com/Smeg-Refrigerator-Parts.htm', issues: [] },
+      { id: 9168, type: 'Dishwasher', brand: 'Smeg', model: '', manualLink: 'https://www.partselect.com/Smeg-Dishwasher-Manuals-and-Literature.htm', partsLink: 'https://www.partselect.com/Smeg-Dishwasher-Parts.htm', issues: [] },
+      { id: 9169, type: 'Microwave', brand: 'Smeg', model: '', manualLink: 'https://www.partselect.com/Smeg-Microwave-Manuals-and-Literature.htm', partsLink: 'https://www.partselect.com/Smeg-Microwave-Parts.htm', issues: [] },
+      { id: 9170, type: 'Microwave', brand: 'Sharp', model: '', manualLink: 'https://www.partselect.com/Sharp-Microwave-Manuals-and-Literature.htm', partsLink: 'https://www.partselect.com/Sharp-Microwave-Parts.htm', issues: [] },
+      { id: 9171, type: 'Washer', brand: 'Beko', model: '', manualLink: 'https://www.partselect.com/Beko-Washer-Manuals-and-Literature.htm', partsLink: 'https://www.partselect.com/Beko-Washer-Parts.htm', issues: [] },
+      { id: 9172, type: 'Dryer', brand: 'Beko', model: '', manualLink: 'https://www.partselect.com/Beko-Dryer-Manuals-and-Literature.htm', partsLink: 'https://www.partselect.com/Beko-Dryer-Parts.htm', issues: [] },
+      { id: 9173, type: 'Refrigerator', brand: 'Beko', model: '', manualLink: 'https://www.partselect.com/Beko-Refrigerator-Manuals-and-Literature.htm', partsLink: 'https://www.partselect.com/Beko-Refrigerator-Parts.htm', issues: [] },
+      { id: 9174, type: 'Dishwasher', brand: 'Beko', model: '', manualLink: 'https://www.partselect.com/Beko-Dishwasher-Manuals-and-Literature.htm', partsLink: 'https://www.partselect.com/Beko-Dishwasher-Parts.htm', issues: [] },
+      { id: 9175, type: 'Washer', brand: 'Blomberg', model: '', manualLink: 'https://www.partselect.com/Blomberg-Washer-Manuals-and-Literature.htm', partsLink: 'https://www.partselect.com/Blomberg-Washer-Parts.htm', issues: [] },
+      { id: 9176, type: 'Dryer', brand: 'Blomberg', model: '', manualLink: 'https://www.partselect.com/Blomberg-Dryer-Manuals-and-Literature.htm', partsLink: 'https://www.partselect.com/Blomberg-Dryer-Parts.htm', issues: [] },
+      { id: 9177, type: 'Refrigerator', brand: 'Blomberg', model: '', manualLink: 'https://www.partselect.com/Blomberg-Refrigerator-Manuals-and-Literature.htm', partsLink: 'https://www.partselect.com/Blomberg-Refrigerator-Parts.htm', issues: [] },
+      { id: 9178, type: 'Dishwasher', brand: 'Blomberg', model: '', manualLink: 'https://www.partselect.com/Blomberg-Dishwasher-Manuals-and-Literature.htm', partsLink: 'https://www.partselect.com/Blomberg-Dishwasher-Parts.htm', issues: [] },
+      { id: 9179, type: 'Ice Maker', brand: 'GE', model: '', manualLink: 'https://www.geappliances.com/ge/service-and-support/', partsLink: 'https://www.partselect.com/GE-Ice-Maker-Parts.htm', issues: [] },
+      { id: 9180, type: 'Ice Maker', brand: 'Whirlpool', model: '', manualLink: 'https://www.whirlpool.com/services/manuals-and-literature.html', partsLink: 'https://www.partselect.com/Whirlpool-Ice-Maker-Parts.htm', issues: [] },
+      { id: 9181, type: 'Ice Maker', brand: 'Samsung', model: '', manualLink: 'https://www.samsung.com/us/support/owners/product/', partsLink: 'https://www.partselect.com/Samsung-Ice-Maker-Parts.htm', issues: [] },
+      { id: 9182, type: 'Ice Maker', brand: 'Frigidaire', model: '', manualLink: 'https://www.frigidaire.com/customer-support/', partsLink: 'https://www.partselect.com/Frigidaire-Ice-Maker-Parts.htm', issues: [] },
+      { id: 9183, type: 'Ice Maker', brand: 'KitchenAid', model: '', manualLink: 'https://www.kitchenaid.com/customer-care.html', partsLink: 'https://www.partselect.com/KitchenAid-Ice-Maker-Parts.htm', issues: [] },
+      { id: 9184, type: 'Range Hood', brand: 'GE', model: '', manualLink: 'https://www.geappliances.com/ge/service-and-support/', partsLink: 'https://www.partselect.com/GE-Vent-Hood-Parts.htm', issues: [] },
+      { id: 9185, type: 'Range Hood', brand: 'Whirlpool', model: '', manualLink: 'https://www.whirlpool.com/services/manuals-and-literature.html', partsLink: 'https://www.partselect.com/Whirlpool-Vent-Hood-Parts.htm', issues: [] },
+      { id: 9186, type: 'Range Hood', brand: 'KitchenAid', model: '', manualLink: 'https://www.kitchenaid.com/customer-care.html', partsLink: 'https://www.partselect.com/KitchenAid-Vent-Hood-Parts.htm', issues: [] },
+      { id: 9187, type: 'Range Hood', brand: 'Samsung', model: '', manualLink: 'https://www.samsung.com/us/support/owners/product/', partsLink: 'https://www.partselect.com/Samsung-Vent-Hood-Parts.htm', issues: [] },
+      { id: 9188, type: 'Range Hood', brand: 'Bosch', model: '', manualLink: 'https://www.bosch-home.com/us/service-and-support', partsLink: 'https://www.partselect.com/Bosch-Vent-Hood-Parts.htm', issues: [] },
+      { id: 9189, type: 'Trash Compactor', brand: 'Whirlpool', model: '', manualLink: 'https://www.whirlpool.com/services/manuals-and-literature.html', partsLink: 'https://www.partselect.com/Whirlpool-Trash-Compactor-Parts.htm', issues: [] },
+      { id: 9190, type: 'Trash Compactor', brand: 'GE', model: '', manualLink: 'https://www.geappliances.com/ge/service-and-support/', partsLink: 'https://www.partselect.com/GE-Trash-Compactor-Parts.htm', issues: [] },
+      { id: 9191, type: 'Trash Compactor', brand: 'KitchenAid', model: '', manualLink: 'https://www.kitchenaid.com/customer-care.html', partsLink: 'https://www.partselect.com/KitchenAid-Trash-Compactor-Parts.htm', issues: [] },
+      { id: 9192, type: 'Garbage Disposal', brand: 'KitchenAid', model: '', manualLink: 'https://www.kitchenaid.com/customer-care.html', partsLink: 'https://www.partselect.com/KitchenAid-Garbage-Disposer-Parts.htm', issues: [] },
+      { id: 9193, type: 'Garbage Disposal', brand: 'Whirlpool', model: '', manualLink: 'https://www.whirlpool.com/services/manuals-and-literature.html', partsLink: 'https://www.partselect.com/Whirlpool-Garbage-Disposer-Parts.htm', issues: [] },
+      { id: 9194, type: 'Garbage Disposal', brand: 'GE', model: '', manualLink: 'https://www.geappliances.com/ge/service-and-support/', partsLink: 'https://www.partselect.com/GE-Garbage-Disposer-Parts.htm', issues: [] },
+      { id: 9195, type: 'Water Heater', brand: 'Whirlpool', model: '', manualLink: 'https://www.whirlpool.com/services/manuals-and-literature.html', partsLink: 'https://www.partselect.com/Whirlpool-Water-Heater-Parts.htm', issues: [] },
+      { id: 9196, type: 'Water Heater', brand: 'GE', model: '', manualLink: 'https://www.geappliances.com/ge/service-and-support/', partsLink: 'https://www.partselect.com/GE-Water-Heater-Parts.htm', issues: [] },
+      { id: 9197, type: 'Water Heater', brand: 'Rheem', model: '', manualLink: 'https://www.partselect.com/Rheem-Water-Heater-Manuals-and-Literature.htm', partsLink: 'https://www.partselect.com/Rheem-Water-Heater-Parts.htm', issues: [] },
+      { id: 9198, type: 'Water Heater', brand: 'Ruud', model: '', manualLink: 'https://www.partselect.com/Ruud-Water-Heater-Manuals-and-Literature.htm', partsLink: 'https://www.partselect.com/Ruud-Water-Heater-Parts.htm', issues: [] },
+      { id: 9199, type: 'Dehumidifier', brand: 'Whirlpool', model: '', manualLink: 'https://www.whirlpool.com/services/manuals-and-literature.html', partsLink: 'https://www.partselect.com/Whirlpool-Dehumidifier-Parts.htm', issues: [] },
+      { id: 9200, type: 'Dehumidifier', brand: 'GE', model: '', manualLink: 'https://www.geappliances.com/ge/service-and-support/', partsLink: 'https://www.partselect.com/GE-Dehumidifier-Parts.htm', issues: [] },
+      { id: 9201, type: 'Dehumidifier', brand: 'Frigidaire', model: '', manualLink: 'https://www.frigidaire.com/customer-support/', partsLink: 'https://www.partselect.com/Frigidaire-Dehumidifier-Parts.htm', issues: [] },
+      { id: 9202, type: 'Dehumidifier', brand: 'Haier', model: '', manualLink: 'https://www.partselect.com/Haier-Dehumidifier-Manuals-and-Literature.htm', partsLink: 'https://www.partselect.com/Haier-Dehumidifier-Parts.htm', issues: [] },
+      { id: 9203, type: 'Wine Cooler', brand: 'Whirlpool', model: '', manualLink: 'https://www.whirlpool.com/services/manuals-and-literature.html', partsLink: 'https://www.partselect.com/Whirlpool-Wine-and-Beverage-Cooler-Parts.htm', issues: [] },
+      { id: 9204, type: 'Wine Cooler', brand: 'GE', model: '', manualLink: 'https://www.geappliances.com/ge/service-and-support/', partsLink: 'https://www.partselect.com/GE-Wine-and-Beverage-Cooler-Parts.htm', issues: [] },
+      { id: 9205, type: 'Wine Cooler', brand: 'Frigidaire', model: '', manualLink: 'https://www.frigidaire.com/customer-support/', partsLink: 'https://www.partselect.com/Frigidaire-Wine-and-Beverage-Cooler-Parts.htm', issues: [] },
+      { id: 9206, type: 'Air Conditioner', brand: 'Whirlpool', model: '', manualLink: 'https://www.whirlpool.com/services/manuals-and-literature.html', partsLink: 'https://www.partselect.com/Whirlpool-Air-Conditioner-Parts.htm', issues: [] },
+      { id: 9207, type: 'Air Conditioner', brand: 'GE', model: '', manualLink: 'https://www.geappliances.com/ge/service-and-support/', partsLink: 'https://www.partselect.com/GE-Air-Conditioner-Parts.htm', issues: [] },
+      { id: 9208, type: 'Air Conditioner', brand: 'Frigidaire', model: '', manualLink: 'https://www.frigidaire.com/customer-support/', partsLink: 'https://www.partselect.com/Frigidaire-Air-Conditioner-Parts.htm', issues: [] },
+      { id: 9209, type: 'Air Conditioner', brand: 'LG', model: '', manualLink: 'https://www.lg.com/us/support/manuals', partsLink: 'https://www.partselect.com/LG-Air-Conditioner-Parts.htm', issues: [] },
+      { id: 9210, type: 'Air Conditioner', brand: 'Haier', model: '', manualLink: 'https://www.partselect.com/Haier-Air-Conditioner-Manuals-and-Literature.htm', partsLink: 'https://www.partselect.com/Haier-Air-Conditioner-Parts.htm', issues: [] },
+      { id: 9211, type: 'Air Conditioner', brand: 'Midea', model: '', manualLink: 'https://www.partselect.com/Midea-Air-Conditioner-Manuals-and-Literature.htm', partsLink: 'https://www.partselect.com/Midea-Air-Conditioner-Parts.htm', issues: [] },
+      { id: 9212, type: 'Washer/Dryer Combo', brand: 'LG', model: '', manualLink: 'https://www.lg.com/us/support/manuals', partsLink: 'https://www.partselect.com/LG-Washer-Dryer-Combo-Parts.htm', issues: [] },
+      { id: 9213, type: 'Washer/Dryer Combo', brand: 'GE', model: '', manualLink: 'https://www.geappliances.com/ge/service-and-support/', partsLink: 'https://www.partselect.com/GE-Washer-Dryer-Combo-Parts.htm', issues: [] },
+      { id: 9214, type: 'Washer/Dryer Combo', brand: 'Samsung', model: '', manualLink: 'https://www.samsung.com/us/support/owners/product/', partsLink: 'https://www.partselect.com/Samsung-Washer-Dryer-Combo-Parts.htm', issues: [] },
+      { id: 9215, type: 'Washer/Dryer Combo', brand: 'Bosch', model: '', manualLink: 'https://www.bosch-home.com/us/service-and-support', partsLink: 'https://www.partselect.com/Bosch-Washer-Dryer-Combo-Parts.htm', issues: [] },
+      { id: 9216, type: 'Ice Maker', brand: 'LG', model: '', manualLink: 'https://www.lg.com/us/support/manuals', partsLink: 'https://www.partselect.com/LG-Ice-Maker-Parts.htm', issues: [{ id: 101, symptom: 'Not making ice, or ice maker won\'t dispense (French-door/side-by-side models)', partName: 'Ice maker assembly (6-wire connector)', partNumber: 'AEQ73110205', priceLow: 175, priceHigh: 195, link: 'https://www.partselect.com/LG-Refrigerator-Ice-Makers.htm', note: 'Check the connector wire count before ordering -- LG used both 6-wire and 3-wire ice maker assemblies across model years, and they are not interchangeable. This is the 6-wire version.' }] },
+      { id: 9217, type: 'Refrigerator', brand: 'Sub-Zero', model: '', manualLink: 'https://www.subzero-wolf.com/assistance', partsLink: 'https://www.subzeroparts.com/', issues: [] },
+      { id: 9218, type: 'Freezer', brand: 'Sub-Zero', model: '', manualLink: 'https://www.subzero-wolf.com/assistance', partsLink: 'https://www.subzeroparts.com/', issues: [] },
+      { id: 9219, type: 'Wine Cooler', brand: 'Sub-Zero', model: '', manualLink: 'https://www.subzero-wolf.com/assistance', partsLink: 'https://www.subzeroparts.com/', issues: [] },
+      { id: 9220, type: 'Ice Maker', brand: 'Sub-Zero', model: '', manualLink: 'https://www.subzero-wolf.com/assistance', partsLink: 'https://www.subzeroparts.com/', issues: [] },
+      { id: 9221, type: 'Range', brand: 'Wolf', model: '', manualLink: 'https://www.subzero-wolf.com/assistance', partsLink: 'https://www.subzeroparts.com/', issues: [] },
+      { id: 9222, type: 'Oven', brand: 'Wolf', model: '', manualLink: 'https://www.subzero-wolf.com/assistance', partsLink: 'https://www.subzeroparts.com/', issues: [] },
+      { id: 9223, type: 'Cooktop', brand: 'Wolf', model: '', manualLink: 'https://www.subzero-wolf.com/assistance', partsLink: 'https://www.subzeroparts.com/', issues: [] },
+      { id: 9224, type: 'Range Hood', brand: 'Wolf', model: '', manualLink: 'https://www.subzero-wolf.com/assistance', partsLink: 'https://www.subzeroparts.com/', issues: [] },
+      { id: 9225, type: 'Microwave', brand: 'Wolf', model: '', manualLink: 'https://www.subzero-wolf.com/assistance', partsLink: 'https://www.subzeroparts.com/', issues: [] },
+      { id: 9226, type: 'Washer', brand: 'Miele', model: '', manualLink: 'https://www.miele.com/en/com/miele-service-2069.htm', partsLink: 'https://www.mieleusa.com/e/kitchen-appliance-spare-parts-1300015-c', issues: [] },
+      { id: 9227, type: 'Dryer', brand: 'Miele', model: '', manualLink: 'https://www.miele.com/en/com/miele-service-2069.htm', partsLink: 'https://www.mieleusa.com/e/kitchen-appliance-spare-parts-1300015-c', issues: [] },
+      { id: 9228, type: 'Dishwasher', brand: 'Miele', model: '', manualLink: 'https://www.miele.com/en/com/miele-service-2069.htm', partsLink: 'https://www.mieleusa.com/e/kitchen-appliance-spare-parts-1300015-c', issues: [] },
+      { id: 9229, type: 'Oven', brand: 'Miele', model: '', manualLink: 'https://www.miele.com/en/com/miele-service-2069.htm', partsLink: 'https://www.mieleusa.com/e/kitchen-appliance-spare-parts-1300015-c', issues: [] },
+      { id: 9230, type: 'Cooktop', brand: 'Miele', model: '', manualLink: 'https://www.miele.com/en/com/miele-service-2069.htm', partsLink: 'https://www.mieleusa.com/e/kitchen-appliance-spare-parts-1300015-c', issues: [] },
+      { id: 9231, type: 'Refrigerator', brand: 'Miele', model: '', manualLink: 'https://www.miele.com/en/com/miele-service-2069.htm', partsLink: 'https://www.mieleusa.com/e/kitchen-appliance-spare-parts-1300015-c', issues: [] },
+      { id: 9232, type: 'Range', brand: 'Thermador', model: '', manualLink: 'https://www.thermador.com/us/support/owner-manuals', partsLink: 'https://www.thermador.com/us/support/service-and-repairs', issues: [] },
+      { id: 9233, type: 'Oven', brand: 'Thermador', model: '', manualLink: 'https://www.thermador.com/us/support/owner-manuals', partsLink: 'https://www.thermador.com/us/support/service-and-repairs', issues: [] },
+      { id: 9234, type: 'Cooktop', brand: 'Thermador', model: '', manualLink: 'https://www.thermador.com/us/support/owner-manuals', partsLink: 'https://www.thermador.com/us/support/service-and-repairs', issues: [] },
+      { id: 9235, type: 'Refrigerator', brand: 'Thermador', model: '', manualLink: 'https://www.thermador.com/us/support/owner-manuals', partsLink: 'https://www.thermador.com/us/support/service-and-repairs', issues: [] },
+      { id: 9236, type: 'Dishwasher', brand: 'Thermador', model: '', manualLink: 'https://www.thermador.com/us/support/owner-manuals', partsLink: 'https://www.thermador.com/us/support/service-and-repairs', issues: [] },
+      { id: 9237, type: 'Range Hood', brand: 'Thermador', model: '', manualLink: 'https://www.thermador.com/us/support/owner-manuals', partsLink: 'https://www.thermador.com/us/support/service-and-repairs', issues: [] },
+      { id: 9238, type: 'Refrigerator', brand: 'Fisher & Paykel', model: '', manualLink: 'https://www.fisherpaykel.com/us/help-and-support/find-a-manual/', partsLink: 'https://www.fisherpaykel.com/us/resources/', issues: [] },
+      { id: 9239, type: 'Dishwasher', brand: 'Fisher & Paykel', model: '', manualLink: 'https://www.fisherpaykel.com/us/help-and-support/find-a-manual/', partsLink: 'https://www.fisherpaykel.com/us/resources/', issues: [] },
+      { id: 9240, type: 'Range', brand: 'Fisher & Paykel', model: '', manualLink: 'https://www.fisherpaykel.com/us/help-and-support/find-a-manual/', partsLink: 'https://www.fisherpaykel.com/us/resources/', issues: [] },
+      { id: 9241, type: 'Washer', brand: 'Fisher & Paykel', model: '', manualLink: 'https://www.fisherpaykel.com/us/help-and-support/find-a-manual/', partsLink: 'https://www.fisherpaykel.com/us/resources/', issues: [] },
+      { id: 9242, type: 'Dryer', brand: 'Fisher & Paykel', model: '', manualLink: 'https://www.fisherpaykel.com/us/help-and-support/find-a-manual/', partsLink: 'https://www.fisherpaykel.com/us/resources/', issues: [] },
+    ];
+
+    additions.forEach(u => {
+      const key = u.type + '|' + u.brand + '|' + (u.model || '');
+      if (!existingKeys.has(key)) {
+        list.push(u);
+        existingKeys.add(key);
+      }
+    });
+
+    // Inject two real, verified troubleshooting entries into existing
+    // (already-deployed) seeded units, only if not already present.
+    const fuseIssue = {
+      id: 102,
+      symptom: 'Not heating (drum spins fine, no heat, clothes come out damp)',
+      partName: 'Thermal fuse', partNumber: 'WP3392519', priceLow: 15, priceHigh: 20,
+      link: 'https://www.partselect.com/Whirlpool-Dryer-Fuses.htm',
+      note: 'By far the most common no-heat cause on Whirlpool-built dryers (also sold as Maytag, Kenmore, KitchenAid, Roper). One-time-use fuse mounted on the blower housing -- test for continuity with a multimeter, it cannot be reset once blown. Always check for a restricted exhaust vent too, since that is usually what blows it in the first place.',
+    };
+    ['Whirlpool', 'Maytag', 'Kenmore'].forEach(brand => {
+      const unit = list.find(u => u.type === 'Dryer' && u.brand === brand && !u.model);
+      if (unit && !unit.issues.some(i => i.partNumber === 'WP3392519')) {
+        unit.issues.push(Object.assign({}, fuseIssue, { id: Date.now() + Math.floor(Math.random() * 1000) }));
+      }
+    });
+
+    savePrUnits(list);
+    localStorage.setItem(UPGRADE_KEY, '1');
+  }
+
+
+  // ---------------------------------------------------------------------
+  // Seed upgrade v3 (added 2026-08-11) -- rounds out the appliance-type
+  // side of the matrix: five brand-new categories (Water Softener,
+  // Microwave/Oven Combo, Humidifier, Air Purifier, Water Filter System,
+  // all confirmed live PartSelect categories) plus filling in realistic
+  // type gaps for the major full-line brands (e.g. Whirlpool was missing
+  // Oven/Cooktop as standalone entries, Kenmore was capped at 7 types
+  // while GE had 18). Same safe, run-once, additive-only pattern as v2 --
+  // never touches anything already present, whether seeded or user-added.
+  function upgradePrSeedV3IfNeeded() {
+    const UPGRADE_KEY = 'th_parts_reference_seed_v3_applied';
+    if (localStorage.getItem(UPGRADE_KEY)) return;
+    const list = loadPrUnits();
+    const existingKeys = new Set(list.map(u => u.type + '|' + u.brand + '|' + (u.model || '')));
+
+    const additions = [
+      { id: 9300, type: 'Water Softener', brand: 'GE', model: '', manualLink: 'https://www.geappliances.com/ge/service-and-support/', partsLink: 'https://www.partselect.com/GE-Water-Softener-Parts.htm', issues: [] },
+      { id: 9301, type: 'Microwave Combo', brand: 'GE', model: '', manualLink: 'https://www.geappliances.com/ge/service-and-support/', partsLink: 'https://www.partselect.com/GE-Microwave-Oven-Combo-Parts.htm', issues: [] },
+      { id: 9302, type: 'Humidifier', brand: 'GE', model: '', manualLink: 'https://www.geappliances.com/ge/service-and-support/', partsLink: 'https://www.partselect.com/GE-Humidifier-Parts.htm', issues: [] },
+      { id: 9303, type: 'Air Purifier', brand: 'GE', model: '', manualLink: 'https://www.geappliances.com/ge/service-and-support/', partsLink: 'https://www.partselect.com/GE-Air-Purifier-Parts.htm', issues: [] },
+      { id: 9304, type: 'Water Filter System', brand: 'GE', model: '', manualLink: 'https://www.geappliances.com/ge/service-and-support/', partsLink: 'https://www.partselect.com/GE-Water-Filter-System-Parts.htm', issues: [] },
+      { id: 9305, type: 'Oven', brand: 'Whirlpool', model: '', manualLink: 'https://www.whirlpool.com/services/manuals-and-literature.html', partsLink: 'https://www.partselect.com/Whirlpool-Oven-Parts.htm', issues: [] },
+      { id: 9306, type: 'Cooktop', brand: 'Whirlpool', model: '', manualLink: 'https://www.whirlpool.com/services/manuals-and-literature.html', partsLink: 'https://www.partselect.com/Whirlpool-Cooktop-Parts.htm', issues: [] },
+      { id: 9307, type: 'Washer/Dryer Combo', brand: 'Whirlpool', model: '', manualLink: 'https://www.whirlpool.com/services/manuals-and-literature.html', partsLink: 'https://www.partselect.com/Whirlpool-Washer-Dryer-Combo-Parts.htm', issues: [] },
+      { id: 9308, type: 'Water Softener', brand: 'Whirlpool', model: '', manualLink: 'https://www.whirlpool.com/services/manuals-and-literature.html', partsLink: 'https://www.partselect.com/Whirlpool-Water-Softener-Parts.htm', issues: [] },
+      { id: 9309, type: 'Microwave Combo', brand: 'Whirlpool', model: '', manualLink: 'https://www.whirlpool.com/services/manuals-and-literature.html', partsLink: 'https://www.partselect.com/Whirlpool-Microwave-Oven-Combo-Parts.htm', issues: [] },
+      { id: 9310, type: 'Humidifier', brand: 'Whirlpool', model: '', manualLink: 'https://www.whirlpool.com/services/manuals-and-literature.html', partsLink: 'https://www.partselect.com/Whirlpool-Humidifier-Parts.htm', issues: [] },
+      { id: 9311, type: 'Air Purifier', brand: 'Whirlpool', model: '', manualLink: 'https://www.whirlpool.com/services/manuals-and-literature.html', partsLink: 'https://www.partselect.com/Whirlpool-Air-Purifier-Parts.htm', issues: [] },
+      { id: 9312, type: 'Water Filter System', brand: 'Whirlpool', model: '', manualLink: 'https://www.whirlpool.com/services/manuals-and-literature.html', partsLink: 'https://www.partselect.com/Whirlpool-Water-Filter-System-Parts.htm', issues: [] },
+      { id: 9313, type: 'Oven', brand: 'Samsung', model: '', manualLink: 'https://www.samsung.com/us/support/owners/product/', partsLink: 'https://www.partselect.com/Samsung-Oven-Parts.htm', issues: [] },
+      { id: 9314, type: 'Cooktop', brand: 'Samsung', model: '', manualLink: 'https://www.samsung.com/us/support/owners/product/', partsLink: 'https://www.partselect.com/Samsung-Cooktop-Parts.htm', issues: [] },
+      { id: 9315, type: 'Dehumidifier', brand: 'Samsung', model: '', manualLink: 'https://www.samsung.com/us/support/owners/product/', partsLink: 'https://www.partselect.com/Samsung-Dehumidifier-Parts.htm', issues: [] },
+      { id: 9316, type: 'Wine Cooler', brand: 'Samsung', model: '', manualLink: 'https://www.samsung.com/us/support/owners/product/', partsLink: 'https://www.partselect.com/Samsung-Wine-and-Beverage-Cooler-Parts.htm', issues: [] },
+      { id: 9317, type: 'Air Conditioner', brand: 'Samsung', model: '', manualLink: 'https://www.samsung.com/us/support/owners/product/', partsLink: 'https://www.partselect.com/Samsung-Air-Conditioner-Parts.htm', issues: [] },
+      { id: 9318, type: 'Microwave Combo', brand: 'Samsung', model: '', manualLink: 'https://www.samsung.com/us/support/owners/product/', partsLink: 'https://www.partselect.com/Samsung-Microwave-Oven-Combo-Parts.htm', issues: [] },
+      { id: 9319, type: 'Water Filter System', brand: 'Samsung', model: '', manualLink: 'https://www.samsung.com/us/support/owners/product/', partsLink: 'https://www.partselect.com/Samsung-Water-Filter-System-Parts.htm', issues: [] },
+      { id: 9320, type: 'Oven', brand: 'LG', model: '', manualLink: 'https://www.lg.com/us/support/manuals', partsLink: 'https://www.partselect.com/LG-Oven-Parts.htm', issues: [] },
+      { id: 9321, type: 'Cooktop', brand: 'LG', model: '', manualLink: 'https://www.lg.com/us/support/manuals', partsLink: 'https://www.partselect.com/LG-Cooktop-Parts.htm', issues: [] },
+      { id: 9322, type: 'Dehumidifier', brand: 'LG', model: '', manualLink: 'https://www.lg.com/us/support/manuals', partsLink: 'https://www.partselect.com/LG-Dehumidifier-Parts.htm', issues: [] },
+      { id: 9323, type: 'Wine Cooler', brand: 'LG', model: '', manualLink: 'https://www.lg.com/us/support/manuals', partsLink: 'https://www.partselect.com/LG-Wine-and-Beverage-Cooler-Parts.htm', issues: [] },
+      { id: 9324, type: 'Range Hood', brand: 'LG', model: '', manualLink: 'https://www.lg.com/us/support/manuals', partsLink: 'https://www.partselect.com/LG-Vent-Hood-Parts.htm', issues: [] },
+      { id: 9325, type: 'Microwave Combo', brand: 'LG', model: '', manualLink: 'https://www.lg.com/us/support/manuals', partsLink: 'https://www.partselect.com/LG-Microwave-Oven-Combo-Parts.htm', issues: [] },
+      { id: 9326, type: 'Water Filter System', brand: 'LG', model: '', manualLink: 'https://www.lg.com/us/support/manuals', partsLink: 'https://www.partselect.com/LG-Water-Filter-System-Parts.htm', issues: [] },
+      { id: 9327, type: 'Oven', brand: 'Frigidaire', model: '', manualLink: 'https://www.frigidaire.com/customer-support/', partsLink: 'https://www.partselect.com/Frigidaire-Oven-Parts.htm', issues: [] },
+      { id: 9328, type: 'Cooktop', brand: 'Frigidaire', model: '', manualLink: 'https://www.frigidaire.com/customer-support/', partsLink: 'https://www.partselect.com/Frigidaire-Cooktop-Parts.htm', issues: [] },
+      { id: 9329, type: 'Trash Compactor', brand: 'Frigidaire', model: '', manualLink: 'https://www.frigidaire.com/customer-support/', partsLink: 'https://www.partselect.com/Frigidaire-Trash-Compactor-Parts.htm', issues: [] },
+      { id: 9330, type: 'Washer/Dryer Combo', brand: 'Frigidaire', model: '', manualLink: 'https://www.frigidaire.com/customer-support/', partsLink: 'https://www.partselect.com/Frigidaire-Washer-Dryer-Combo-Parts.htm', issues: [] },
+      { id: 9331, type: 'Microwave Combo', brand: 'Frigidaire', model: '', manualLink: 'https://www.frigidaire.com/customer-support/', partsLink: 'https://www.partselect.com/Frigidaire-Microwave-Oven-Combo-Parts.htm', issues: [] },
+      { id: 9332, type: 'Water Filter System', brand: 'Frigidaire', model: '', manualLink: 'https://www.frigidaire.com/customer-support/', partsLink: 'https://www.partselect.com/Frigidaire-Water-Filter-System-Parts.htm', issues: [] },
+      { id: 9333, type: 'Microwave Combo', brand: 'KitchenAid', model: '', manualLink: 'https://www.kitchenaid.com/customer-care.html', partsLink: 'https://www.partselect.com/KitchenAid-Microwave-Oven-Combo-Parts.htm', issues: [] },
+      { id: 9334, type: 'Water Filter System', brand: 'KitchenAid', model: '', manualLink: 'https://www.kitchenaid.com/customer-care.html', partsLink: 'https://www.partselect.com/KitchenAid-Water-Filter-System-Parts.htm', issues: [] },
+      { id: 9335, type: 'Freezer', brand: 'Bosch', model: '', manualLink: 'https://www.bosch-home.com/us/service-and-support', partsLink: 'https://www.partselect.com/Bosch-Freezer-Parts.htm', issues: [] },
+      { id: 9336, type: 'Wine Cooler', brand: 'Bosch', model: '', manualLink: 'https://www.bosch-home.com/us/service-and-support', partsLink: 'https://www.partselect.com/Bosch-Wine-and-Beverage-Cooler-Parts.htm', issues: [] },
+      { id: 9337, type: 'Water Filter System', brand: 'Bosch', model: '', manualLink: 'https://www.bosch-home.com/us/service-and-support', partsLink: 'https://www.partselect.com/Bosch-Water-Filter-System-Parts.htm', issues: [] },
+      { id: 9338, type: 'Ice Maker', brand: 'Kenmore', model: '', manualLink: 'https://www.searspartsdirect.com/', partsLink: 'https://www.partselect.com/Kenmore-Ice-Maker-Parts.htm', issues: [] },
+      { id: 9339, type: 'Range Hood', brand: 'Kenmore', model: '', manualLink: 'https://www.searspartsdirect.com/', partsLink: 'https://www.partselect.com/Kenmore-Vent-Hood-Parts.htm', issues: [] },
+      { id: 9340, type: 'Trash Compactor', brand: 'Kenmore', model: '', manualLink: 'https://www.searspartsdirect.com/', partsLink: 'https://www.partselect.com/Kenmore-Trash-Compactor-Parts.htm', issues: [] },
+      { id: 9341, type: 'Garbage Disposal', brand: 'Kenmore', model: '', manualLink: 'https://www.searspartsdirect.com/', partsLink: 'https://www.partselect.com/Kenmore-Garbage-Disposer-Parts.htm', issues: [] },
+      { id: 9342, type: 'Water Heater', brand: 'Kenmore', model: '', manualLink: 'https://www.searspartsdirect.com/', partsLink: 'https://www.partselect.com/Kenmore-Water-Heater-Parts.htm', issues: [] },
+      { id: 9343, type: 'Dehumidifier', brand: 'Kenmore', model: '', manualLink: 'https://www.searspartsdirect.com/', partsLink: 'https://www.partselect.com/Kenmore-Dehumidifier-Parts.htm', issues: [] },
+      { id: 9344, type: 'Wine Cooler', brand: 'Kenmore', model: '', manualLink: 'https://www.searspartsdirect.com/', partsLink: 'https://www.partselect.com/Kenmore-Wine-and-Beverage-Cooler-Parts.htm', issues: [] },
+      { id: 9345, type: 'Air Conditioner', brand: 'Kenmore', model: '', manualLink: 'https://www.searspartsdirect.com/', partsLink: 'https://www.partselect.com/Kenmore-Air-Conditioner-Parts.htm', issues: [] },
+      { id: 9346, type: 'Water Softener', brand: 'Kenmore', model: '', manualLink: 'https://www.searspartsdirect.com/', partsLink: 'https://www.partselect.com/Kenmore-Water-Softener-Parts.htm', issues: [] },
+      { id: 9347, type: 'Microwave Combo', brand: 'Kenmore', model: '', manualLink: 'https://www.searspartsdirect.com/', partsLink: 'https://www.partselect.com/Kenmore-Microwave-Oven-Combo-Parts.htm', issues: [] },
+      { id: 9348, type: 'Water Filter System', brand: 'Kenmore', model: '', manualLink: 'https://www.searspartsdirect.com/', partsLink: 'https://www.partselect.com/Kenmore-Water-Filter-System-Parts.htm', issues: [] },
+      { id: 9349, type: 'Ice Maker', brand: 'Maytag', model: '', manualLink: 'https://www.maytag.com/services/owner-center.html', partsLink: 'https://www.partselect.com/Maytag-Ice-Maker-Parts.htm', issues: [] },
+      { id: 9350, type: 'Range Hood', brand: 'Maytag', model: '', manualLink: 'https://www.maytag.com/services/owner-center.html', partsLink: 'https://www.partselect.com/Maytag-Vent-Hood-Parts.htm', issues: [] },
+      { id: 9351, type: 'Dehumidifier', brand: 'Maytag', model: '', manualLink: 'https://www.maytag.com/services/owner-center.html', partsLink: 'https://www.partselect.com/Maytag-Dehumidifier-Parts.htm', issues: [] },
+      { id: 9352, type: 'Air Conditioner', brand: 'Maytag', model: '', manualLink: 'https://www.maytag.com/services/owner-center.html', partsLink: 'https://www.partselect.com/Maytag-Air-Conditioner-Parts.htm', issues: [] },
+      { id: 9353, type: 'Microwave Combo', brand: 'Maytag', model: '', manualLink: 'https://www.maytag.com/services/owner-center.html', partsLink: 'https://www.partselect.com/Maytag-Microwave-Oven-Combo-Parts.htm', issues: [] },
+      { id: 9354, type: 'Water Filter System', brand: 'Maytag', model: '', manualLink: 'https://www.maytag.com/services/owner-center.html', partsLink: 'https://www.partselect.com/Maytag-Water-Filter-System-Parts.htm', issues: [] },
+      { id: 9355, type: 'Ice Maker', brand: 'Amana', model: '', manualLink: 'https://www.amana.com/support', partsLink: 'https://www.partselect.com/Amana-Ice-Maker-Parts.htm', issues: [] },
+      { id: 9356, type: 'Range Hood', brand: 'Amana', model: '', manualLink: 'https://www.amana.com/support', partsLink: 'https://www.partselect.com/Amana-Vent-Hood-Parts.htm', issues: [] },
+      { id: 9357, type: 'Dehumidifier', brand: 'Amana', model: '', manualLink: 'https://www.amana.com/support', partsLink: 'https://www.partselect.com/Amana-Dehumidifier-Parts.htm', issues: [] },
+      { id: 9358, type: 'Air Conditioner', brand: 'Amana', model: '', manualLink: 'https://www.amana.com/support', partsLink: 'https://www.partselect.com/Amana-Air-Conditioner-Parts.htm', issues: [] },
+      { id: 9359, type: 'Microwave Combo', brand: 'Amana', model: '', manualLink: 'https://www.amana.com/support', partsLink: 'https://www.partselect.com/Amana-Microwave-Oven-Combo-Parts.htm', issues: [] },
+      { id: 9360, type: 'Water Filter System', brand: 'Amana', model: '', manualLink: 'https://www.amana.com/support', partsLink: 'https://www.partselect.com/Amana-Water-Filter-System-Parts.htm', issues: [] },
+      { id: 9361, type: 'Ice Maker', brand: 'Hotpoint', model: '', manualLink: 'https://www.hotpoint.com/support.html', partsLink: 'https://www.partselect.com/Hotpoint-Ice-Maker-Parts.htm', issues: [] },
+      { id: 9362, type: 'Dehumidifier', brand: 'Hotpoint', model: '', manualLink: 'https://www.hotpoint.com/support.html', partsLink: 'https://www.partselect.com/Hotpoint-Dehumidifier-Parts.htm', issues: [] },
+      { id: 9363, type: 'Air Conditioner', brand: 'Hotpoint', model: '', manualLink: 'https://www.hotpoint.com/support.html', partsLink: 'https://www.partselect.com/Hotpoint-Air-Conditioner-Parts.htm', issues: [] },
+      { id: 9364, type: 'Microwave Combo', brand: 'Hotpoint', model: '', manualLink: 'https://www.hotpoint.com/support.html', partsLink: 'https://www.partselect.com/Hotpoint-Microwave-Oven-Combo-Parts.htm', issues: [] },
+      { id: 9365, type: 'Ice Maker', brand: 'Electrolux', model: '', manualLink: 'https://www.electroluxappliances.com/Support/', partsLink: 'https://www.partselect.com/Electrolux-Ice-Maker-Parts.htm', issues: [] },
+      { id: 9366, type: 'Wine Cooler', brand: 'Electrolux', model: '', manualLink: 'https://www.electroluxappliances.com/Support/', partsLink: 'https://www.partselect.com/Electrolux-Wine-and-Beverage-Cooler-Parts.htm', issues: [] },
+      { id: 9367, type: 'Dehumidifier', brand: 'Electrolux', model: '', manualLink: 'https://www.electroluxappliances.com/Support/', partsLink: 'https://www.partselect.com/Electrolux-Dehumidifier-Parts.htm', issues: [] },
+      { id: 9368, type: 'Air Conditioner', brand: 'Electrolux', model: '', manualLink: 'https://www.electroluxappliances.com/Support/', partsLink: 'https://www.partselect.com/Electrolux-Air-Conditioner-Parts.htm', issues: [] },
+      { id: 9369, type: 'Microwave Combo', brand: 'Electrolux', model: '', manualLink: 'https://www.electroluxappliances.com/Support/', partsLink: 'https://www.partselect.com/Electrolux-Microwave-Oven-Combo-Parts.htm', issues: [] },
+      { id: 9370, type: 'Water Filter System', brand: 'Electrolux', model: '', manualLink: 'https://www.electroluxappliances.com/Support/', partsLink: 'https://www.partselect.com/Electrolux-Water-Filter-System-Parts.htm', issues: [] },
+      { id: 9371, type: 'Ice Maker', brand: 'Haier', model: '', manualLink: 'https://www.partselect.com/Haier-Ice-Maker-Manuals-and-Literature.htm', partsLink: 'https://www.partselect.com/Haier-Ice-Maker-Parts.htm', issues: [] },
+      { id: 9372, type: 'Wine Cooler', brand: 'Haier', model: '', manualLink: 'https://www.partselect.com/Haier-Wine-and-Beverage-Cooler-Manuals-and-Literature.htm', partsLink: 'https://www.partselect.com/Haier-Wine-and-Beverage-Cooler-Parts.htm', issues: [] },
+      { id: 9373, type: 'Water Filter System', brand: 'Haier', model: '', manualLink: 'https://www.partselect.com/Haier-Water-Filter-System-Manuals-and-Literature.htm', partsLink: 'https://www.partselect.com/Haier-Water-Filter-System-Parts.htm', issues: [] },
+      { id: 9374, type: 'Wine Cooler', brand: 'Midea', model: '', manualLink: 'https://www.partselect.com/Midea-Wine-and-Beverage-Cooler-Manuals-and-Literature.htm', partsLink: 'https://www.partselect.com/Midea-Wine-and-Beverage-Cooler-Parts.htm', issues: [] },
+      { id: 9375, type: 'Dehumidifier', brand: 'Midea', model: '', manualLink: 'https://www.partselect.com/Midea-Dehumidifier-Manuals-and-Literature.htm', partsLink: 'https://www.partselect.com/Midea-Dehumidifier-Parts.htm', issues: [] },
+      { id: 9376, type: 'Microwave Combo', brand: 'Midea', model: '', manualLink: 'https://www.partselect.com/Midea-Microwave-Oven-Combo-Manuals-and-Literature.htm', partsLink: 'https://www.partselect.com/Midea-Microwave-Oven-Combo-Parts.htm', issues: [] },
+    ];
+
+    additions.forEach(u => {
+      const key = u.type + '|' + u.brand + '|' + (u.model || '');
+      if (!existingKeys.has(key)) {
+        list.push(u);
+        existingKeys.add(key);
+      }
+    });
+
+    savePrUnits(list);
+    localStorage.setItem(UPGRADE_KEY, '1');
+  }
+
+
+  // ---------------------------------------------------------------------
+  // Seed upgrade v4 (added 2026-08-11) -- adds real, individually verified
+  // troubleshooting entries (current PartSelect part numbers and prices)
+  // to existing units, batch 1: Whirlpool Refrigerator and Dishwasher.
+  // Same additive, run-once, idempotent pattern -- checks partNumber
+  // before adding so it never duplicates against a re-run or against an
+  // issue the user already logged themselves.
+  function upgradePrSeedV4IfNeeded() {
+    const UPGRADE_KEY = 'th_parts_reference_seed_v4_applied';
+    if (localStorage.getItem(UPGRADE_KEY)) return;
+    const list = loadPrUnits();
+
+    const targets = [
+      { brand: 'Whirlpool', type: 'Refrigerator', issues: [{ id: 201, symptom: 'Fridge and freezer both running too warm, or freezer frosting up', partName: 'Evaporator fan motor', partNumber: 'WP2315539', priceLow: 50, priceHigh: 60, link: 'https://www.partselect.com/Whirlpool-Refrigerator-Motors.htm', note: 'Circulates air over the evaporator coils in the back of the freezer. If it\'s dead or noisy, cold air stops reaching the fridge side even though the freezer stays cold.' }, { id: 202, symptom: 'Not cooling properly, or unusually loud humming from underneath/behind', partName: 'Condenser fan motor kit', partNumber: '833697', priceLow: 60, priceHigh: 70, link: 'https://www.partselect.com/Whirlpool-Refrigerator-Motors.htm', note: 'Draws air through the condenser coils to cool the refrigerant before it reaches the evaporator. A failed or obstructed fan means the compressor runs constantly without actually cooling.' }, { id: 203, symptom: 'Ice maker not making ice, or reduced/no water flow to the dispenser', partName: 'Water filter (EveryDrop single-turn)', partNumber: 'EDR4RXD1', priceLow: 75, priceHigh: 90, link: 'https://www.partselect.com/Whirlpool-Refrigerator-Filters.htm', note: 'A clogged filter is the single most common cause of weak ice production or dispenser flow -- worth ruling out before assuming the ice maker assembly itself has failed. Manufacturer recommends replacing every 6 months.' }, { id: 204, symptom: 'Water pooling under the crisper drawers, or drawer will not slide freely', partName: 'Crisper drawer with handle', partNumber: 'WP2188664', priceLow: 55, priceHigh: 65, link: 'https://www.partselect.com/Whirlpool-Refrigerator-Parts.htm', note: 'Cracked or warped crisper drawers are a common source of minor leaks and food spoiling faster than expected. Before replacing, also check the defrost drain isn\'t clogged, since that\'s the other common leak source.' }] },
+      { brand: 'Whirlpool', type: 'Dishwasher', issues: [{ id: 205, symptom: 'Water leaking from under the front door during the wash cycle', partName: 'Wash arm retainer nut', partNumber: 'WP9742945', priceLow: 15, priceHigh: 20, link: 'https://www.partselect.com/Whirlpool-Dishwasher-Hardware.htm', note: 'The lower spray arm assembly wobbles as it wears, which throws water forward onto the door seal over time. Cheap, easy fix, but often mistaken for a bad door gasket since that\'s where the water actually shows up.' }] },
+    ];
+
+    targets.forEach(t => {
+      const unit = list.find(u => u.type === t.type && u.brand === t.brand && !u.model);
+      if (!unit) return;
+      t.issues.forEach(iss => {
+        if (!unit.issues.some(existing => existing.partNumber === iss.partNumber)) {
+          unit.issues.push(iss);
+        }
+      });
+    });
+
+    savePrUnits(list);
+    localStorage.setItem(UPGRADE_KEY, '1');
+  }
+
+
+  // ---------------------------------------------------------------------
+  // Seed upgrade v5 (added 2026-08-11) -- first batch of specific-model
+  // breakdown. Previously each brand+type was one generic entry; this
+  // adds real, specific model numbers (pulled directly from PartSelect's
+  // own "Popular Models" listings for that brand+type) as separate sibling
+  // units alongside the generic one, so the generic entry stays available
+  // for "don't know the exact model" cases while specific models get their
+  // own card. Batch 1: Whirlpool Washer and Refrigerator (8 models). More
+  // brand+type combos to follow in later batches -- this is a large,
+  // ongoing project, not a one-shot fill of all 319 combos.
+  function upgradePrSeedV5IfNeeded() {
+    const UPGRADE_KEY = 'th_parts_reference_seed_v5_applied';
+    if (localStorage.getItem(UPGRADE_KEY)) return;
+    const list = loadPrUnits();
+    const existingKeys = new Set(list.map(u => u.type + '|' + u.brand + '|' + (u.model || '')));
+
+    const additions = [
+      { id: 9500, type: 'Washer', brand: 'Whirlpool', model: 'GHW9150PW0 — Duet Front-Load Washer', manualLink: 'https://www.partselect.com/Models/GHW9150PW0/', partsLink: 'https://www.partselect.com/Models/GHW9150PW0/', issues: [] },
+      { id: 9501, type: 'Washer', brand: 'Whirlpool', model: 'WTW5000DW1 — Cabrio Top-Load Washer', manualLink: 'https://www.partselect.com/Models/WTW5000DW1/', partsLink: 'https://www.partselect.com/Models/WTW5000DW1/', issues: [] },
+      { id: 9502, type: 'Washer', brand: 'Whirlpool', model: 'WFW72HEDW0 — Front-Load Washer (HE)', manualLink: 'https://www.partselect.com/Models/WFW72HEDW0/', partsLink: 'https://www.partselect.com/Models/WFW72HEDW0/', issues: [] },
+      { id: 9503, type: 'Washer', brand: 'Whirlpool', model: 'MVWC565FW1 — Top-Load Washer (agitator)', manualLink: 'https://www.partselect.com/Models/MVWC565FW1/', partsLink: 'https://www.partselect.com/Models/MVWC565FW1/', issues: [] },
+      { id: 9504, type: 'Refrigerator', brand: 'Whirlpool', model: 'WRS325FDAM04 — Side-by-Side Refrigerator', manualLink: 'https://www.partselect.com/Models/WRS325FDAM04/', partsLink: 'https://www.partselect.com/Models/WRS325FDAM04/', issues: [] },
+      { id: 9505, type: 'Refrigerator', brand: 'Whirlpool', model: 'WRF535SMBM00 — French Door Refrigerator', manualLink: 'https://www.partselect.com/Models/WRF535SMBM00/', partsLink: 'https://www.partselect.com/Models/WRF535SMBM00/', issues: [] },
+      { id: 9506, type: 'Refrigerator', brand: 'Whirlpool', model: 'WRT518SZFM00 — Top-Freezer Refrigerator', manualLink: 'https://www.partselect.com/Models/WRT518SZFM00/', partsLink: 'https://www.partselect.com/Models/WRT518SZFM00/', issues: [] },
+      { id: 9507, type: 'Refrigerator', brand: 'Whirlpool', model: 'WRB322DMBM00 — Bottom-Freezer Refrigerator', manualLink: 'https://www.partselect.com/Models/WRB322DMBM00/', partsLink: 'https://www.partselect.com/Models/WRB322DMBM00/', issues: [] },
+    ];
+
+    additions.forEach(u => {
+      const key = u.type + '|' + u.brand + '|' + (u.model || '');
+      if (!existingKeys.has(key)) {
+        list.push(u);
+        existingKeys.add(key);
+      }
+    });
+
+    savePrUnits(list);
+    localStorage.setItem(UPGRADE_KEY, '1');
+  }
+
+
+  // ---------------------------------------------------------------------
+  // Seed upgrade v6 (added 2026-08-11) -- model breakdown batch 2:
+  // Whirlpool Dryer (4 models) and Whirlpool Dishwasher (1 model so far).
+  // Same additive pattern as v5.
+  function upgradePrSeedV6IfNeeded() {
+    const UPGRADE_KEY = 'th_parts_reference_seed_v6_applied';
+    if (localStorage.getItem(UPGRADE_KEY)) return;
+    const list = loadPrUnits();
+    const existingKeys = new Set(list.map(u => u.type + '|' + u.brand + '|' + (u.model || '')));
+
+    const additions = [
+      { id: 9508, type: 'Dryer', brand: 'Whirlpool', model: 'WED4815EW1 — Electric Dryer', manualLink: 'https://www.partselect.com/Models/WED4815EW1/', partsLink: 'https://www.partselect.com/Models/WED4815EW1/', issues: [] },
+      { id: 9509, type: 'Dryer', brand: 'Whirlpool', model: 'GEW9250PW1 — Gas Dryer (Residential)', manualLink: 'https://www.partselect.com/Models/GEW9250PW1/', partsLink: 'https://www.partselect.com/Models/GEW9250PW1/', issues: [] },
+      { id: 9510, type: 'Dryer', brand: 'Whirlpool', model: 'WED9200SQ0 — Duet HE Electric Dryer', manualLink: 'https://www.partselect.com/Models/WED9200SQ0/', partsLink: 'https://www.partselect.com/Models/WED9200SQ0/', issues: [] },
+      { id: 9511, type: 'Dryer', brand: 'Whirlpool', model: 'WED7300XW0 — 27" Electric Dryer', manualLink: 'https://www.partselect.com/Models/WED7300XW0/', partsLink: 'https://www.partselect.com/Models/WED7300XW0/', issues: [] },
+      { id: 9512, type: 'Dishwasher', brand: 'Whirlpool', model: 'WDF590SAJM0 — Front-Control Dishwasher', manualLink: 'https://www.partselect.com/Models/WDF590SAJM0/', partsLink: 'https://www.partselect.com/Models/WDF590SAJM0/', issues: [] },
+    ];
+
+    additions.forEach(u => {
+      const key = u.type + '|' + u.brand + '|' + (u.model || '');
+      if (!existingKeys.has(key)) {
+        list.push(u);
+        existingKeys.add(key);
+      }
+    });
+
+    savePrUnits(list);
+    localStorage.setItem(UPGRADE_KEY, '1');
+  }
+
+
+  // ---------------------------------------------------------------------
+  // Seed upgrade v7 (added 2026-08-11) -- model breakdown batch 3: real
+  // models across GE (Washer, Dryer, Refrigerator, Microwave, Range,
+  // Washer/Dryer Combo), LG (Refrigerator, Dryer, Washer, Washer/Dryer
+  // Combo), Samsung (Washer, Refrigerator, Range), Frigidaire
+  // (Refrigerator, Washer/Dryer Combo), Maytag (Washer), and Kenmore
+  // (Washer/Dryer Combo) -- all pulled from PartSelect's own "Popular
+  // Models" listings. Same additive pattern as v5/v6.
+  function upgradePrSeedV7IfNeeded() {
+    const UPGRADE_KEY = 'th_parts_reference_seed_v7_applied';
+    if (localStorage.getItem(UPGRADE_KEY)) return;
+    const list = loadPrUnits();
+    const existingKeys = new Set(list.map(u => u.type + '|' + u.brand + '|' + (u.model || '')));
+
+    const additions = [
+      { id: 9513, type: 'Washer', brand: 'GE', model: 'GTWN4250D1WS — Top-Load Washer', manualLink: 'https://www.partselect.com/Models/GTWN4250D1WS/', partsLink: 'https://www.partselect.com/Models/GTWN4250D1WS/', issues: [] },
+      { id: 9514, type: 'Washer', brand: 'GE', model: 'GFWN1000L1WW — Front-Load Washer', manualLink: 'https://www.partselect.com/Models/GFWN1000L1WW/', partsLink: 'https://www.partselect.com/Models/GFWN1000L1WW/', issues: [] },
+      { id: 9515, type: 'Dryer', brand: 'GE', model: 'GTD42EASJ2WW — Dryer', manualLink: 'https://www.partselect.com/Models/GTD42EASJ2WW/', partsLink: 'https://www.partselect.com/Models/GTD42EASJ2WW/', issues: [] },
+      { id: 9516, type: 'Dryer', brand: 'GE', model: 'GTD33EASK0WW — Electric Dryer', manualLink: 'https://www.partselect.com/Models/GTD33EASK0WW/', partsLink: 'https://www.partselect.com/Models/GTD33EASK0WW/', issues: [] },
+      { id: 9517, type: 'Refrigerator', brand: 'GE', model: 'GFSS2HCYCSS — Side-by-Side Refrigerator', manualLink: 'https://www.partselect.com/Models/GFSS2HCYCSS/', partsLink: 'https://www.partselect.com/Models/GFSS2HCYCSS/', issues: [] },
+      { id: 9518, type: 'Refrigerator', brand: 'GE', model: 'GSH25JSTASS — Side-by-Side Refrigerator', manualLink: 'https://www.partselect.com/Models/GSH25JSTASS/', partsLink: 'https://www.partselect.com/Models/GSH25JSTASS/', issues: [] },
+      { id: 9519, type: 'Refrigerator', brand: 'GE', model: 'GTS18FBSARWW — Top-Freezer Refrigerator', manualLink: 'https://www.partselect.com/Models/GTS18FBSARWW/', partsLink: 'https://www.partselect.com/Models/GTS18FBSARWW/', issues: [] },
+      { id: 9520, type: 'Microwave', brand: 'GE', model: 'JVM1790SK01 — Countertop Microwave', manualLink: 'https://www.partselect.com/Models/JVM1790SK01/', partsLink: 'https://www.partselect.com/Models/JVM1790SK01/', issues: [] },
+      { id: 9521, type: 'Microwave', brand: 'GE', model: 'PVM1870SM3SS — Profile Microwave', manualLink: 'https://www.partselect.com/Models/PVM1870SM3SS/', partsLink: 'https://www.partselect.com/Models/PVM1870SM3SS/', issues: [] },
+      { id: 9522, type: 'Range', brand: 'GE', model: 'CGS980SEM1SS — Gas Slide-In Range (Cafe)', manualLink: 'https://www.partselect.com/Models/CGS980SEM1SS/', partsLink: 'https://www.partselect.com/Models/CGS980SEM1SS/', issues: [] },
+      { id: 9523, type: 'Washer/Dryer Combo', brand: 'GE', model: 'GUD27ESSM1WW — Unitized Washer/Dryer', manualLink: 'https://www.partselect.com/Models/GUD27ESSM1WW/', partsLink: 'https://www.partselect.com/Models/GUD27ESSM1WW/', issues: [] },      { id: 9524, type: 'Refrigerator', brand: 'LG', model: 'LFX28968ST — 27 Cu. Ft. French Door Refrigerator', manualLink: 'https://www.partselect.com/Models/LFX28968ST/', partsLink: 'https://www.partselect.com/Models/LFX28968ST/', issues: [] },
+      { id: 9525, type: 'Dryer', brand: 'LG', model: 'DLEX3370W — 7.4 Cu. Ft. Ultra Large Capacity Steam Dryer', manualLink: 'https://www.partselect.com/Models/DLEX3370W/', partsLink: 'https://www.partselect.com/Models/DLEX3370W/', issues: [] },
+      { id: 9526, type: 'Dryer', brand: 'LG', model: 'DLE1101W — 7.3 Cu. Ft. Electric Dryer', manualLink: 'https://www.partselect.com/Models/DLE1101W/', partsLink: 'https://www.partselect.com/Models/DLE1101W/', issues: [] },
+      { id: 9527, type: 'Washer', brand: 'LG', model: 'WM2301HR — 3.6 Cu. Ft. Front-Load Washer', manualLink: 'https://www.partselect.com/Models/WM2301HR/', partsLink: 'https://www.partselect.com/Models/WM2301HR/', issues: [] },
+      { id: 9528, type: 'Washer/Dryer Combo', brand: 'LG', model: 'WM3997HWA — 4.3 Cu. Ft. All-In-One Washer/Dryer', manualLink: 'https://www.partselect.com/Models/WM3997HWA/', partsLink: 'https://www.partselect.com/Models/WM3997HWA/', issues: [] },      { id: 9529, type: 'Washer', brand: 'Samsung', model: 'WF42H5000AW — 4.2 Cu. Ft. Front Load Washer', manualLink: 'https://www.partselect.com/Models/WF42H5000AW/', partsLink: 'https://www.partselect.com/Models/WF42H5000AW/', issues: [] },
+      { id: 9530, type: 'Washer', brand: 'Samsung', model: 'WA50R5200AW — 5.0 Cu. Ft. Top Load Washer', manualLink: 'https://www.partselect.com/Models/WA50R5200AW/', partsLink: 'https://www.partselect.com/Models/WA50R5200AW/', issues: [] },
+      { id: 9531, type: 'Refrigerator', brand: 'Samsung', model: 'RF4287HARS — 28 Cu. Ft. French Door Refrigerator', manualLink: 'https://www.partselect.com/Models/RF4287HARS/', partsLink: 'https://www.partselect.com/Models/RF4287HARS/', issues: [] },
+      { id: 9532, type: 'Refrigerator', brand: 'Samsung', model: 'RF18HFENBSR — 18 Cu. Ft. Counter-Depth French Door Refrigerator', manualLink: 'https://www.partselect.com/Models/RF18HFENBSR/', partsLink: 'https://www.partselect.com/Models/RF18HFENBSR/', issues: [] },
+      { id: 9533, type: 'Range', brand: 'Samsung', model: 'NX58H5600SS — 5.8 Cu. Ft. Gas Range', manualLink: 'https://www.partselect.com/Models/NX58H5600SS/', partsLink: 'https://www.partselect.com/Models/NX58H5600SS/', issues: [] },
+      { id: 9534, type: 'Refrigerator', brand: 'Frigidaire', model: 'LFSS2612TF0 — Freestanding Side-by-Side Refrigerator', manualLink: 'https://www.partselect.com/Models/LFSS2612TF0/', partsLink: 'https://www.partselect.com/Models/LFSS2612TF0/', issues: [] },
+      { id: 9535, type: 'Refrigerator', brand: 'Frigidaire', model: 'FGHS2631PF4A — Freestanding Side-by-Side Refrigerator', manualLink: 'https://www.partselect.com/Models/FGHS2631PF4A/', partsLink: 'https://www.partselect.com/Models/FGHS2631PF4A/', issues: [] },
+      { id: 9536, type: 'Refrigerator', brand: 'Frigidaire', model: 'FFSS2615TS0 — Side-by-Side Refrigerator', manualLink: 'https://www.partselect.com/Models/FFSS2615TS0/', partsLink: 'https://www.partselect.com/Models/FFSS2615TS0/', issues: [] },
+      { id: 9537, type: 'Washer/Dryer Combo', brand: 'Frigidaire', model: 'FLCE7522AW1 — Electric Washer/Dryer Combo', manualLink: 'https://www.partselect.com/Models/FLCE7522AW1/', partsLink: 'https://www.partselect.com/Models/FLCE7522AW1/', issues: [] },
+      { id: 9538, type: 'Washer/Dryer Combo', brand: 'Frigidaire', model: 'FFLG3911QW1 — Gas Washer/Dryer Combo', manualLink: 'https://www.partselect.com/Models/FFLG3911QW1/', partsLink: 'https://www.partselect.com/Models/FFLG3911QW1/', issues: [] },
+      { id: 9539, type: 'Washer', brand: 'Maytag', model: 'LAT9416AAE — Top-Load Washer', manualLink: 'https://www.partselect.com/Models/LAT9416AAE/', partsLink: 'https://www.partselect.com/Models/LAT9416AAE/', issues: [] },
+      { id: 9540, type: 'Washer', brand: 'Maytag', model: 'MAH3000AWW — Neptune Front-Load Washer', manualLink: 'https://www.partselect.com/Models/MAH3000AWW/', partsLink: 'https://www.partselect.com/Models/MAH3000AWW/', issues: [] },
+      { id: 9541, type: 'Washer', brand: 'Maytag', model: 'MAH4000AWW — Neptune Front-Load Washer', manualLink: 'https://www.partselect.com/Models/MAH4000AWW/', partsLink: 'https://www.partselect.com/Models/MAH4000AWW/', issues: [] },
+      { id: 9542, type: 'Washer/Dryer Combo', brand: 'Kenmore', model: '41794862301 — Laundry Center Washer/Dryer Combo', manualLink: 'https://www.partselect.com/Models/41794862301/', partsLink: 'https://www.partselect.com/Models/41794862301/', issues: [] },
+    ];
+
+    additions.forEach(u => {
+      const key = u.type + '|' + u.brand + '|' + (u.model || '');
+      if (!existingKeys.has(key)) {
+        list.push(u);
+        existingKeys.add(key);
+      }
+    });
+
+    savePrUnits(list);
+    localStorage.setItem(UPGRADE_KEY, '1');
+  }
+
+
+  // ---------------------------------------------------------------------
+  // Seed upgrade v8 (added 2026-08-11) -- model breakdown batch 4:
+  // KitchenAid Dishwasher (4 models) and one more real Whirlpool
+  // Dishwasher model. Same additive pattern as v5-v7.
+  function upgradePrSeedV8IfNeeded() {
+    const UPGRADE_KEY = 'th_parts_reference_seed_v8_applied';
+    if (localStorage.getItem(UPGRADE_KEY)) return;
+    const list = loadPrUnits();
+    const existingKeys = new Set(list.map(u => u.type + '|' + u.brand + '|' + (u.model || '')));
+
+    const additions = [
+      { id: 9543, type: 'Dishwasher', brand: 'KitchenAid', model: 'KDTM354DSS4 — Dishwasher', manualLink: 'https://www.partselect.com/Models/KDTM354DSS4/', partsLink: 'https://www.partselect.com/Models/KDTM354DSS4/', issues: [] },
+      { id: 9544, type: 'Dishwasher', brand: 'KitchenAid', model: 'KDTE254ESS2 — Dishwasher', manualLink: 'https://www.partselect.com/Models/KDTE254ESS2/', partsLink: 'https://www.partselect.com/Models/KDTE254ESS2/', issues: [] },
+      { id: 9545, type: 'Dishwasher', brand: 'KitchenAid', model: 'KUDS35FXSS5 — Dishwasher', manualLink: 'https://www.partselect.com/Models/KUDS35FXSS5/', partsLink: 'https://www.partselect.com/Models/KUDS35FXSS5/', issues: [] },
+      { id: 9546, type: 'Dishwasher', brand: 'KitchenAid', model: 'KDFE104DSS0 — Dishwasher', manualLink: 'https://www.partselect.com/Models/KDFE104DSS0/', partsLink: 'https://www.partselect.com/Models/KDFE104DSS0/', issues: [] },
+      { id: 9547, type: 'Dishwasher', brand: 'Whirlpool', model: 'WDT780SAEM1 — Dishwasher', manualLink: 'https://www.partselect.com/Models/WDT780SAEM1/', partsLink: 'https://www.partselect.com/Models/WDT780SAEM1/', issues: [] },
+    ];
+
+    additions.forEach(u => {
+      const key = u.type + '|' + u.brand + '|' + (u.model || '');
+      if (!existingKeys.has(key)) {
+        list.push(u);
+        existingKeys.add(key);
+      }
+    });
+
+    savePrUnits(list);
+    localStorage.setItem(UPGRADE_KEY, '1');
+  }
+
+
+  // ---------------------------------------------------------------------
+  // Seed upgrade v9 (added 2026-08-11) -- model breakdown batch 5:
+  // Bosch Dishwasher (4 real models across the 300 and 800 series, which
+  // is worth knowing since Bosch parts genuinely differ by series).
+  // Same additive pattern as v5-v8.
+  function upgradePrSeedV9IfNeeded() {
+    const UPGRADE_KEY = 'th_parts_reference_seed_v9_applied';
+    if (localStorage.getItem(UPGRADE_KEY)) return;
+    const list = loadPrUnits();
+    const existingKeys = new Set(list.map(u => u.type + '|' + u.brand + '|' + (u.model || '')));
+
+    const additions = [
+      { id: 9548, type: 'Dishwasher', brand: 'Bosch', model: 'SHPM78Z55N — 800 Series Dishwasher', manualLink: 'https://www.partselect.com/Models/SHPM78Z55N/', partsLink: 'https://www.partselect.com/Models/SHPM78Z55N/', issues: [] },
+      { id: 9549, type: 'Dishwasher', brand: 'Bosch', model: 'SHEM78W52N — 800 Series Dishwasher', manualLink: 'https://www.partselect.com/Models/SHEM78W52N/', partsLink: 'https://www.partselect.com/Models/SHEM78W52N/', issues: [] },
+      { id: 9550, type: 'Dishwasher', brand: 'Bosch', model: 'SHEM63W55N — 300 Series Dishwasher', manualLink: 'https://www.partselect.com/Models/SHEM63W55N/', partsLink: 'https://www.partselect.com/Models/SHEM63W55N/', issues: [] },
+      { id: 9551, type: 'Dishwasher', brand: 'Bosch', model: 'SHE3AR56UC — 300 Series Dishwasher', manualLink: 'https://www.partselect.com/Models/SHE3AR56UC/', partsLink: 'https://www.partselect.com/Models/SHE3AR56UC/', issues: [] },
+    ];
+
+    additions.forEach(u => {
+      const key = u.type + '|' + u.brand + '|' + (u.model || '');
+      if (!existingKeys.has(key)) {
+        list.push(u);
+        existingKeys.add(key);
+      }
+    });
+
+    savePrUnits(list);
+    localStorage.setItem(UPGRADE_KEY, '1');
+  }
+
+
+  // ---------------------------------------------------------------------
+  // Seed upgrade v10 (added 2026-08-11) -- model breakdown batch 6:
+  // Amana Refrigerator (4 models) and Hotpoint Refrigerator (4 models).
+  // Same additive pattern as v5-v9.
+  function upgradePrSeedV10IfNeeded() {
+    const UPGRADE_KEY = 'th_parts_reference_seed_v10_applied';
+    if (localStorage.getItem(UPGRADE_KEY)) return;
+    const list = loadPrUnits();
+    const existingKeys = new Set(list.map(u => u.type + '|' + u.brand + '|' + (u.model || '')));
+
+    const additions = [
+      { id: 9552, type: 'Refrigerator', brand: 'Amana', model: 'ABB2224BRW — Bottom-Freezer Refrigerator', manualLink: 'https://www.partselect.com/Models/ABB2224BRW/', partsLink: 'https://www.partselect.com/Models/ABB2224BRW/', issues: [] },
+      { id: 9553, type: 'Refrigerator', brand: 'Amana', model: 'ART308FFDB — Top-Freezer Refrigerator', manualLink: 'https://www.partselect.com/Models/ART308FFDB/', partsLink: 'https://www.partselect.com/Models/ART308FFDB/', issues: [] },
+      { id: 9554, type: 'Refrigerator', brand: 'Amana', model: 'AFI2539ERB00 — French Door Refrigerator', manualLink: 'https://www.partselect.com/Models/AFI2539ERB00/', partsLink: 'https://www.partselect.com/Models/AFI2539ERB00/', issues: [] },
+      { id: 9555, type: 'Refrigerator', brand: 'Amana', model: 'ASD2522WRD04 — Side-by-Side Refrigerator', manualLink: 'https://www.partselect.com/Models/ASD2522WRD04/', partsLink: 'https://www.partselect.com/Models/ASD2522WRD04/', issues: [] },
+      { id: 9556, type: 'Refrigerator', brand: 'Hotpoint', model: 'HTS18GBSARWW — Top-Freezer Refrigerator (S Series)', manualLink: 'https://www.partselect.com/Models/HTS18GBSARWW/', partsLink: 'https://www.partselect.com/Models/HTS18GBSARWW/', issues: [] },
+      { id: 9557, type: 'Refrigerator', brand: 'Hotpoint', model: 'HSM25GFTASA — Side-by-Side Refrigerator (T Series)', manualLink: 'https://www.partselect.com/Models/HSM25GFTASA/', partsLink: 'https://www.partselect.com/Models/HSM25GFTASA/', issues: [] },
+      { id: 9558, type: 'Refrigerator', brand: 'Hotpoint', model: 'HSS25GFPJWW — Side-by-Side Refrigerator (P Series)', manualLink: 'https://www.partselect.com/Models/HSS25GFPJWW/', partsLink: 'https://www.partselect.com/Models/HSS25GFPJWW/', issues: [] },
+      { id: 9559, type: 'Refrigerator', brand: 'Hotpoint', model: 'HSH25GFBBBB — Side-by-Side Refrigerator', manualLink: 'https://www.partselect.com/Models/HSH25GFBBBB/', partsLink: 'https://www.partselect.com/Models/HSH25GFBBBB/', issues: [] },
+    ];
+
+    additions.forEach(u => {
+      const key = u.type + '|' + u.brand + '|' + (u.model || '');
+      if (!existingKeys.has(key)) {
+        list.push(u);
+        existingKeys.add(key);
+      }
+    });
+
+    savePrUnits(list);
+    localStorage.setItem(UPGRADE_KEY, '1');
+  }
+
+
+  // ---------------------------------------------------------------------
+  // Seed upgrade v11 (added 2026-08-11) -- model breakdown batch 7:
+  // Electrolux Refrigerator (4 models, mostly side-by-side which is
+  // Electrolux's dominant configuration). Same additive pattern as v5-v10.
+  function upgradePrSeedV11IfNeeded() {
+    const UPGRADE_KEY = 'th_parts_reference_seed_v11_applied';
+    if (localStorage.getItem(UPGRADE_KEY)) return;
+    const list = loadPrUnits();
+    const existingKeys = new Set(list.map(u => u.type + '|' + u.brand + '|' + (u.model || '')));
+
+    const additions = [
+      { id: 9560, type: 'Refrigerator', brand: 'Electrolux', model: 'EW23CS65GS1 — Side-by-Side Refrigerator (Counter-Depth)', manualLink: 'https://www.partselect.com/Models/EW23CS65GS1/', partsLink: 'https://www.partselect.com/Models/EW23CS65GS1/', issues: [] },
+      { id: 9561, type: 'Refrigerator', brand: 'Electrolux', model: 'EI32AR65JS1 — Side-by-Side Refrigerator', manualLink: 'https://www.partselect.com/Models/EI32AR65JS1/', partsLink: 'https://www.partselect.com/Models/EI32AR65JS1/', issues: [] },
+      { id: 9562, type: 'Refrigerator', brand: 'Electrolux', model: 'EI32AR80QSC — Built-In Upright Refrigerator', manualLink: 'https://www.partselect.com/Models/EI32AR80QSC/', partsLink: 'https://www.partselect.com/Models/EI32AR80QSC/', issues: [] },
+      { id: 9563, type: 'Refrigerator', brand: 'Electrolux', model: 'E23CS78ESS0 — Side-by-Side Refrigerator', manualLink: 'https://www.partselect.com/Models/E23CS78ESS0/', partsLink: 'https://www.partselect.com/Models/E23CS78ESS0/', issues: [] },
+    ];
+
+    additions.forEach(u => {
+      const key = u.type + '|' + u.brand + '|' + (u.model || '');
+      if (!existingKeys.has(key)) {
+        list.push(u);
+        existingKeys.add(key);
+      }
+    });
+
+    savePrUnits(list);
+    localStorage.setItem(UPGRADE_KEY, '1');
+  }
+
+
+  // ---------------------------------------------------------------------
+  // Seed upgrade v12 (added 2026-08-11) -- model breakdown batch 8:
+  // GE Dishwasher (4 models), Maytag Refrigerator (2), Maytag Dryer (3),
+  // Maytag Dishwasher (1). Same additive pattern as v5-v11.
+  function upgradePrSeedV12IfNeeded() {
+    const UPGRADE_KEY = 'th_parts_reference_seed_v12_applied';
+    if (localStorage.getItem(UPGRADE_KEY)) return;
+    const list = loadPrUnits();
+    const existingKeys = new Set(list.map(u => u.type + '|' + u.brand + '|' + (u.model || '')));
+
+    const additions = [
+      { id: 9564, type: 'Dishwasher', brand: 'GE', model: 'GSD2100R00WW — Dishwasher', manualLink: 'https://www.partselect.com/Models/GSD2100R00WW/', partsLink: 'https://www.partselect.com/Models/GSD2100R00WW/', issues: [] },
+      { id: 9565, type: 'Dishwasher', brand: 'GE', model: 'GSD2300N00BB — Dishwasher', manualLink: 'https://www.partselect.com/Models/GSD2300N00BB/', partsLink: 'https://www.partselect.com/Models/GSD2300N00BB/', issues: [] },
+      { id: 9566, type: 'Dishwasher', brand: 'GE', model: 'GSD3300D00CC — Dishwasher', manualLink: 'https://www.partselect.com/Models/GSD3300D00CC/', partsLink: 'https://www.partselect.com/Models/GSD3300D00CC/', issues: [] },
+      { id: 9567, type: 'Dishwasher', brand: 'GE', model: 'ADW1100N35WW — Dishwasher', manualLink: 'https://www.partselect.com/Models/ADW1100N35WW/', partsLink: 'https://www.partselect.com/Models/ADW1100N35WW/', issues: [] },
+      { id: 9568, type: 'Refrigerator', brand: 'Maytag', model: 'MFI2568AES — Bottom-Freezer Refrigerator', manualLink: 'https://www.partselect.com/Models/MFI2568AES/', partsLink: 'https://www.partselect.com/Models/MFI2568AES/', issues: [] },
+      { id: 9569, type: 'Refrigerator', brand: 'Maytag', model: 'MFI2269VEM10 — Bottom-Mount Refrigerator', manualLink: 'https://www.partselect.com/Models/MFI2269VEM10/', partsLink: 'https://www.partselect.com/Models/MFI2269VEM10/', issues: [] },
+      { id: 9570, type: 'Dryer', brand: 'Maytag', model: 'MEDX655DW1 — Electric Dryer', manualLink: 'https://www.partselect.com/Models/MEDX655DW1/', partsLink: 'https://www.partselect.com/Models/MEDX655DW1/', issues: [] },
+      { id: 9571, type: 'Dryer', brand: 'Maytag', model: 'MEDC215EW1 — Electric Dryer', manualLink: 'https://www.partselect.com/Models/MEDC215EW1/', partsLink: 'https://www.partselect.com/Models/MEDC215EW1/', issues: [] },
+      { id: 9572, type: 'Dryer', brand: 'Maytag', model: 'MEDC465HW0 — Electric Dryer', manualLink: 'https://www.partselect.com/Models/MEDC465HW0/', partsLink: 'https://www.partselect.com/Models/MEDC465HW0/', issues: [] },
+      { id: 9573, type: 'Dishwasher', brand: 'Maytag', model: 'MDB8959SFZ4 — Dishwasher', manualLink: 'https://www.partselect.com/Models/MDB8959SFZ4/', partsLink: 'https://www.partselect.com/Models/MDB8959SFZ4/', issues: [] },
+    ];
+
+    additions.forEach(u => {
+      const key = u.type + '|' + u.brand + '|' + (u.model || '');
+      if (!existingKeys.has(key)) {
+        list.push(u);
+        existingKeys.add(key);
+      }
+    });
+
+    savePrUnits(list);
+    localStorage.setItem(UPGRADE_KEY, '1');
+  }
+
+
+  // ---------------------------------------------------------------------
+  // Seed upgrade v13 (added 2026-08-11) -- model breakdown batch 9:
+  // Kenmore Refrigerator (1 model -- worth noting Kenmore refrigerator
+  // model prefixes indicate the actual manufacturer: 110=Whirlpool,
+  // 253=Frigidaire, 795=LG) and Frigidaire Washer (4 front-load models).
+  // Same additive pattern as v5-v12.
+  function upgradePrSeedV13IfNeeded() {
+    const UPGRADE_KEY = 'th_parts_reference_seed_v13_applied';
+    if (localStorage.getItem(UPGRADE_KEY)) return;
+    const list = loadPrUnits();
+    const existingKeys = new Set(list.map(u => u.type + '|' + u.brand + '|' + (u.model || '')));
+
+    const additions = [
+      { id: 9574, type: 'Refrigerator', brand: 'Kenmore', model: '25351694103 — Refrigerator', manualLink: 'https://www.partselect.com/Models/25351694103/', partsLink: 'https://www.partselect.com/Models/25351694103/', issues: [] },
+      { id: 9575, type: 'Washer', brand: 'Frigidaire', model: 'FAFW3801LW3 — Front-Load Washer', manualLink: 'https://www.partselect.com/Models/FAFW3801LW3/', partsLink: 'https://www.partselect.com/Models/FAFW3801LW3/', issues: [] },
+      { id: 9576, type: 'Washer', brand: 'Frigidaire', model: 'FFFW5000QW0 — Front-Load Washer', manualLink: 'https://www.partselect.com/Models/FFFW5000QW0/', partsLink: 'https://www.partselect.com/Models/FFFW5000QW0/', issues: [] },
+      { id: 9577, type: 'Washer', brand: 'Frigidaire', model: 'FAFW3511KW0 — Front-Load Washer', manualLink: 'https://www.partselect.com/Models/FAFW3511KW0/', partsLink: 'https://www.partselect.com/Models/FAFW3511KW0/', issues: [] },
+      { id: 9578, type: 'Washer', brand: 'Frigidaire', model: 'EFLS627UTT0 — Front-Load Washer (38in)', manualLink: 'https://www.partselect.com/Models/EFLS627UTT0/', partsLink: 'https://www.partselect.com/Models/EFLS627UTT0/', issues: [] },
+    ];
+
+    additions.forEach(u => {
+      const key = u.type + '|' + u.brand + '|' + (u.model || '');
+      if (!existingKeys.has(key)) {
+        list.push(u);
+        existingKeys.add(key);
+      }
+    });
+
+    savePrUnits(list);
+    localStorage.setItem(UPGRADE_KEY, '1');
+  }
+
+
+  // ---------------------------------------------------------------------
+  // Seed upgrade v14 (added 2026-08-11) -- model breakdown batch 10:
+  // Frigidaire Dryer (4 models) and Samsung Dryer (2 models -- one
+  // electric, one gas). Same additive pattern as v5-v13.
+  function upgradePrSeedV14IfNeeded() {
+    const UPGRADE_KEY = 'th_parts_reference_seed_v14_applied';
+    if (localStorage.getItem(UPGRADE_KEY)) return;
+    const list = loadPrUnits();
+    const existingKeys = new Set(list.map(u => u.type + '|' + u.brand + '|' + (u.model || '')));
+
+    const additions = [
+      { id: 9579, type: 'Dryer', brand: 'Frigidaire', model: 'GLER341AS2 — 27" Electric Dryer', manualLink: 'https://www.partselect.com/Models/GLER341AS2/', partsLink: 'https://www.partselect.com/Models/GLER341AS2/', issues: [] },
+      { id: 9580, type: 'Dryer', brand: 'Frigidaire', model: 'FEQ332ES0 — Electric Dryer', manualLink: 'https://www.partselect.com/Models/FEQ332ES0/', partsLink: 'https://www.partselect.com/Models/FEQ332ES0/', issues: [] },
+      { id: 9581, type: 'Dryer', brand: 'Frigidaire', model: 'GLEQ2152ES0 — Front-Load Electric Vented Dryer', manualLink: 'https://www.partselect.com/Models/GLEQ2152ES0/', partsLink: 'https://www.partselect.com/Models/GLEQ2152ES0/', issues: [] },
+      { id: 9582, type: 'Dryer', brand: 'Frigidaire', model: 'FSE748GFS1 — Electric Dryer', manualLink: 'https://www.partselect.com/Models/FSE748GFS1/', partsLink: 'https://www.partselect.com/Models/FSE748GFS1/', issues: [] },
+      { id: 9583, type: 'Dryer', brand: 'Samsung', model: 'DV42H5200GP — Electric Dryer', manualLink: 'https://www.partselect.com/Models/DV42H5200GP/', partsLink: 'https://www.partselect.com/Models/DV42H5200GP/', issues: [] },
+      { id: 9584, type: 'Dryer', brand: 'Samsung', model: 'DVG52A5500W — Gas Dryer', manualLink: 'https://www.partselect.com/Models/DVG52A5500W/', partsLink: 'https://www.partselect.com/Models/DVG52A5500W/', issues: [] },
+    ];
+
+    additions.forEach(u => {
+      const key = u.type + '|' + u.brand + '|' + (u.model || '');
+      if (!existingKeys.has(key)) {
+        list.push(u);
+        existingKeys.add(key);
+      }
+    });
+
+    savePrUnits(list);
+    localStorage.setItem(UPGRADE_KEY, '1');
+  }
+
+
+  // ---------------------------------------------------------------------
+  // Seed upgrade v15 (added 2026-08-11) -- model breakdown batch 11:
+  // KitchenAid Refrigerator (3) and Dishwasher (+1), Bosch Refrigerator,
+  // Microwave, and Dryer (1 each). Speed-up note: from here on, models
+  // were sourced from each brand's OVERALL "{Brand}-Parts.htm" page
+  // rather than per-type pages -- PartSelect's brand-level "Popular
+  // Models" list is genuinely mixed across appliance types, so one fetch
+  // routinely yields models for 2-4 different types at once. Same
+  // additive pattern as v5-v14.
+  function upgradePrSeedV15IfNeeded() {
+    const UPGRADE_KEY = 'th_parts_reference_seed_v15_applied';
+    if (localStorage.getItem(UPGRADE_KEY)) return;
+    const list = loadPrUnits();
+    const existingKeys = new Set(list.map(u => u.type + '|' + u.brand + '|' + (u.model || '')));
+
+    const additions = [
+      { id: 9585, type: 'Refrigerator', brand: 'KitchenAid', model: 'KSCS25INSS00 — Side-by-Side Refrigerator', manualLink: 'https://www.partselect.com/Models/KSCS25INSS00/', partsLink: 'https://www.partselect.com/Models/KSCS25INSS00/', issues: [] },
+      { id: 9586, type: 'Refrigerator', brand: 'KitchenAid', model: 'KRMF706ESS01 — French Door Refrigerator', manualLink: 'https://www.partselect.com/Models/KRMF706ESS01/', partsLink: 'https://www.partselect.com/Models/KRMF706ESS01/', issues: [] },
+      { id: 9587, type: 'Refrigerator', brand: 'KitchenAid', model: 'KRFC300ESS01 — French Door Refrigerator', manualLink: 'https://www.partselect.com/Models/KRFC300ESS01/', partsLink: 'https://www.partselect.com/Models/KRFC300ESS01/', issues: [] },
+      { id: 9588, type: 'Dishwasher', brand: 'KitchenAid', model: 'KDTE104DSS0 — Dishwasher', manualLink: 'https://www.partselect.com/Models/KDTE104DSS0/', partsLink: 'https://www.partselect.com/Models/KDTE104DSS0/', issues: [] },
+      { id: 9589, type: 'Refrigerator', brand: 'Bosch', model: 'B26FT70SNS — Refrigerator', manualLink: 'https://www.partselect.com/Models/B26FT70SNS/', partsLink: 'https://www.partselect.com/Models/B26FT70SNS/', issues: [] },
+      { id: 9590, type: 'Microwave', brand: 'Bosch', model: 'HMC80251UC — Microwave', manualLink: 'https://www.partselect.com/Models/HMC80251UC/', partsLink: 'https://www.partselect.com/Models/HMC80251UC/', issues: [] },
+      { id: 9591, type: 'Dryer', brand: 'Bosch', model: 'WTG86400UC — Dryer', manualLink: 'https://www.partselect.com/Models/WTG86400UC/', partsLink: 'https://www.partselect.com/Models/WTG86400UC/', issues: [] },
+    ];
+
+    additions.forEach(u => {
+      const key = u.type + '|' + u.brand + '|' + (u.model || '');
+      if (!existingKeys.has(key)) {
+        list.push(u);
+        existingKeys.add(key);
+      }
+    });
+
+    savePrUnits(list);
+    localStorage.setItem(UPGRADE_KEY, '1');
+  }
+
+  function togglePrAddUnitForm() { document.getElementById('prAddUnitForm').classList.toggle('is-open'); }
+  function togglePrAddIssueForm() { document.getElementById('prAddIssueForm').classList.toggle('is-open'); }
+
+  function savePrUnit() {
+    const type = document.getElementById('prNewType').value.trim();
+    const brand = document.getElementById('prNewBrand').value.trim();
+    if (!type || !brand) { showToast('Appliance type and brand are required.', { type: 'error' }); return; }
+    const unit = {
+      id: Date.now(), type, brand, model: document.getElementById('prNewModel').value.trim(),
+      manualLink: document.getElementById('prNewManualLink').value.trim(),
+      partsLink: document.getElementById('prNewPartsLink').value.trim(),
+      issues: [],
+    };
+    const list = loadPrUnits();
+    list.push(unit);
+    savePrUnits(list);
+    ['prNewType','prNewBrand','prNewModel','prNewManualLink','prNewPartsLink'].forEach(id => { document.getElementById(id).value = ''; });
+    togglePrAddUnitForm();
+    justAddedPrUnitId = unit.id;
+    renderTypeChips();
+    renderUnits();
+    showToast('Appliance added.');
+  }
+
+  function openBrandDetail(brand) {
+    activePrBrand = brand;
+    activePrDetailType = null;
+    document.getElementById('prListView').classList.add('is-hidden');
+    document.getElementById('prTypeView').classList.add('is-open');
+    renderBrandTypeList();
+  }
+
+  function closeBrandDetail() {
+    activePrBrand = null;
+    document.getElementById('prTypeView').classList.remove('is-open');
+    document.getElementById('prListView').classList.remove('is-hidden');
+    renderTypeChips();
+    renderUnits();
+  }
+
+  // Step 2 of 3: pick which appliance type within the selected brand
+  // (e.g. Refrigerator, Washer, Dryer) -- shows one card per type with a
+  // count of how many entries (generic + specific models) exist under it.
+  function renderBrandTypeList() {
+    const units = loadPrUnits().filter(u => u.brand === activePrBrand);
+    if (!units.length) { closeBrandDetail(); return; }
+
+    document.getElementById('prBrandTypeTitle').textContent = activePrBrand;
+    document.getElementById('prBrandTypeSubtitle').textContent = 'Pick an appliance type to see everything logged for it.';
+
+    const byType = {};
+    units.forEach(u => {
+      if (!byType[u.type]) byType[u.type] = [];
+      byType[u.type].push(u);
+    });
+    const types = Object.keys(byType).sort();
+
+    document.getElementById('prBrandTypeList').innerHTML = types.map(function(type) {
+      const typeUnits = byType[type];
+      const totalIssues = typeUnits.reduce((sum, u) => sum + u.issues.length, 0);
+      const modelCount = typeUnits.filter(u => u.model).length;
+      const entryLabel = typeUnits.length + ' entr' + (typeUnits.length === 1 ? 'y' : 'ies') +
+        (modelCount ? ' &middot; ' + modelCount + ' specific model' + (modelCount === 1 ? '' : 's') : '');
+      const badge = totalIssues ? '<span class="pr-unit-badge">' + totalIssues + ' logged issue' + (totalIssues === 1 ? '' : 's') + '</span>' : '';
+      return '<div class="pr-unit-card" data-pr-detail-type="' + escapeHtml(type) + '">' +
+        '<div class="pr-unit-type">' + entryLabel + '</div>' +
+        '<div class="pr-unit-name">' + escapeHtml(type) + '</div>' +
+        badge + '</div>';
+    }).join('');
+
+    document.querySelectorAll('#prBrandTypeList [data-pr-detail-type]').forEach(function(card) {
+      card.addEventListener('click', function() { openTypeDetail(card.dataset.prDetailType); });
+    });
+  }
+
+  // Step 3 of 3: the actual list of entries (the generic reference plus
+  // any specific models logged) for the chosen brand + type.
+  function openTypeDetail(type) {
+    activePrDetailType = type;
+    activePrIssueTargetId = null;
+    activePrEditUnitId = null;
+    activePrAddModelOpen = false;
+    expandedPrTypeIds = new Set();
+    document.getElementById('prTypeView').classList.remove('is-open');
+    document.getElementById('prUnitDetail').classList.add('is-open');
+    document.getElementById('prTypeDetailBackLabel').textContent = activePrBrand;
+    renderAddModelForm();
+    renderBrandDetail();
+  }
+
+  function closeTypeDetail() {
+    activePrDetailType = null;
+    activePrEditUnitId = null;
+    activePrAddModelOpen = false;
+    document.getElementById('prUnitDetail').classList.remove('is-open');
+    document.getElementById('prTypeView').classList.add('is-open');
+    renderBrandTypeList();
+  }
+
+  // Add a specific model without leaving the current brand+type screen --
+  // pre-fills brand/type from context instead of making the user retype
+  // them in the generic top-level "+ Add Appliance" form.
+  function toggleAddModelInType() {
+    activePrAddModelOpen = !activePrAddModelOpen;
+    renderAddModelForm();
+  }
+
+  function renderAddModelForm() {
+    const container = document.getElementById('prAddModelFormContainer');
+    if (!container) return;
+    if (!activePrAddModelOpen) { container.innerHTML = ''; return; }
+    container.innerHTML =
+      '<div class="pr-type-section" style="padding:16px; margin-bottom:12px;">' +
+      '<div class="tool-form-row"><div class="form-field full"><label>Model Number / Name</label>' +
+      '<input type="text" id="prNewModelInType" placeholder="e.g. WRS325FDAM04 &mdash; Side-by-Side Refrigerator"></div></div>' +
+      '<div class="tool-form-row"><div class="form-field"><label>Manual Link (optional)</label><input type="text" id="prNewManualLinkInType" placeholder="https://..."></div>' +
+      '<div class="form-field"><label>Parts Catalog Link (optional)</label><input type="text" id="prNewPartsLinkInType" placeholder="https://..."></div></div>' +
+      '<div class="form-footer"><button class="btn blue" onclick="saveNewModelInType()">Save Model</button>' +
+      '<button class="secondary-btn" onclick="toggleAddModelInType()">Cancel</button></div>' +
+      '</div>';
+  }
+
+  function saveNewModelInType() {
+    const model = document.getElementById('prNewModelInType').value.trim();
+    if (!model) { showToast('Model number / name is required.', { type: 'error' }); return; }
+    const unit = {
+      id: Date.now(), type: activePrDetailType, brand: activePrBrand, model,
+      manualLink: document.getElementById('prNewManualLinkInType').value.trim(),
+      partsLink: document.getElementById('prNewPartsLinkInType').value.trim(),
+      issues: [],
+    };
+    const list = loadPrUnits();
+    list.push(unit);
+    savePrUnits(list);
+    activePrAddModelOpen = false;
+    renderAddModelForm();
+    renderBrandDetail();
+    showToast('Model added.');
+  }
+
+  // Edit an existing entry's model name / links in place, rather than
+  // requiring a delete-and-recreate to fix a typo or a stale link.
+  function toggleEditUnit(unitId) {
+    activePrEditUnitId = activePrEditUnitId === unitId ? null : unitId;
+    activePrIssueTargetId = null;
+    renderBrandDetail();
+  }
+
+  function saveUnitEdit(unitId) {
+    const model = document.getElementById('prEditModel').value.trim();
+    const manualLink = document.getElementById('prEditManualLink').value.trim();
+    const partsLink = document.getElementById('prEditPartsLink').value.trim();
+    const list = loadPrUnits();
+    const unit = list.find(u => u.id === unitId);
+    if (!unit) return;
+    unit.model = model;
+    unit.manualLink = manualLink;
+    unit.partsLink = partsLink;
+    savePrUnits(list);
+    activePrEditUnitId = null;
+    renderBrandDetail();
+    showToast('Changes saved.');
+  }
+
+  function linkBox(label, url) {
+    if (!url) return '';
+    return '<div class="pr-link-box"><span class="pr-link-box-label">' + label + '</span>' +
+      '<a class="pr-issue-link" href="' + escapeHtml(url) + '" target="_blank" rel="noopener">' +
+      '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><path d="M15 3h6v6"/><path d="M10 14L21 3"/></svg>' +
+      'Open</a></div>';
+  }
+
+  function toggleTypeSection(unitId) {
+    if (expandedPrTypeIds.has(unitId)) expandedPrTypeIds.delete(unitId);
+    else expandedPrTypeIds.add(unitId);
+    renderBrandDetail();
+  }
+
+  function issueRowHtml(iss, unitId) {
+    var linkHtml = iss.link ? (
+      '<a class="pr-issue-link" href="' + escapeHtml(iss.link) + '" target="_blank" rel="noopener">' +
+      '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><path d="M15 3h6v6"/><path d="M10 14L21 3"/></svg>' +
+      'View source</a>'
+    ) : '';
+    var noteHtml = iss.note ? ('<div class="pr-issue-note">' + escapeHtml(iss.note) + '</div>') : '';
+    var partNumHtml = iss.partNumber ? (' <span class="pr-issue-partnum">(#' + escapeHtml(iss.partNumber) + ')</span>') : '';
+    var enterClass = iss.id === justAddedPrIssueId ? 'list-row-enter' : '';
+    return '<div class="pr-issue ' + enterClass + '" data-pr-issue-id="' + iss.id + '">' +
+      '<div class="pr-issue-top"><div class="pr-issue-symptom">' + escapeHtml(iss.symptom) + '</div>' +
+      '<div style="text-align:right;"><div class="pr-issue-price-label">Rough Cost</div>' +
+      '<div class="pr-issue-price">' + formatPriceRange(iss.priceLow, iss.priceHigh) + '</div></div></div>' +
+      '<div class="pr-issue-part">Likely part: <strong>' + escapeHtml(iss.partName) + '</strong>' + partNumHtml + '</div>' +
+      noteHtml +
+      '<div class="pr-issue-actions">' + linkHtml + '<button class="small-btn danger" onclick="deletePrIssue(' + unitId + ', ' + iss.id + ')">Delete</button></div></div>';
+  }
+
+  function renderBrandDetail() {
+    const units = loadPrUnits().filter(u => u.brand === activePrBrand && u.type === activePrDetailType);
+    if (!units.length) { closeTypeDetail(); return; }
+
+    document.getElementById('prBrandDetailTitle').textContent = activePrDetailType + ' \u2014 ' + activePrBrand;
+    const modelCount = units.filter(u => u.model).length;
+    document.getElementById('prBrandDetailSubtitle').textContent = units.length + ' entr' + (units.length === 1 ? 'y' : 'ies') +
+      (modelCount ? ' (' + modelCount + ' specific model' + (modelCount === 1 ? '' : 's') + ')' : '') + ' on file';
+
+    document.getElementById('prTypeSectionsList').innerHTML = units.slice().sort((a, b) => {
+      if (!a.model && b.model) return -1;
+      if (a.model && !b.model) return 1;
+      return (a.model || '').localeCompare(b.model || '');
+    }).map(function(u) {
+      var isExpanded = expandedPrTypeIds.has(u.id);
+      var issuesHtml = u.issues.length
+        ? u.issues.slice().reverse().map(function(iss) { return issueRowHtml(iss, u.id); }).join('')
+        : '<div class="pr-empty">No specific issues logged yet &mdash; add one as you run into it.</div>';
+      var addFormHtml = activePrIssueTargetId === u.id ? (
+        '<div class="tool-form-row"><div class="form-field full"><label>Symptom / Issue</label><input type="text" id="prNewSymptom" placeholder="e.g. Won&#39;t drain, UE error code"></div></div>' +
+        '<div class="tool-form-row"><div class="form-field"><label>Likely Part</label><input type="text" id="prNewPartName" placeholder="e.g. Drain pump"></div>' +
+        '<div class="form-field"><label>Part Number</label><input type="text" id="prNewPartNumber" placeholder="e.g. WH11X29539"></div></div>' +
+        '<div class="tool-form-row"><div class="form-field"><label>Rough Cost Low ($)</label><input type="number" id="prNewPriceLow" min="0" step="0.01"></div>' +
+        '<div class="form-field"><label>Rough Cost High ($)</label><input type="number" id="prNewPriceHigh" min="0" step="0.01"></div></div>' +
+        '<div class="tool-form-row"><div class="form-field full"><label>Reference Link (optional)</label><input type="text" id="prNewLink" placeholder="https://www.partselect.com/..."></div></div>' +
+        '<div class="tool-form-row"><div class="form-field full"><label>Note (optional)</label><input type="text" id="prNewNote" placeholder="Anything worth remembering"></div></div>' +
+        '<div class="form-footer"><button class="btn blue" onclick="savePrIssue(' + u.id + ')">Save Issue</button><button class="secondary-btn" onclick="activePrIssueTargetId=null; renderBrandDetail();">Cancel</button></div>'
+      ) : '';
+
+      var editFormHtml = activePrEditUnitId === u.id ? (
+        '<div class="tool-form-row"><div class="form-field full"><label>Model Number / Name (blank = general reference)</label>' +
+        '<input type="text" id="prEditModel" value="' + escapeHtml(u.model) + '"></div></div>' +
+        '<div class="tool-form-row"><div class="form-field"><label>Manual Link</label><input type="text" id="prEditManualLink" value="' + escapeHtml(u.manualLink) + '"></div>' +
+        '<div class="form-field"><label>Parts Catalog Link</label><input type="text" id="prEditPartsLink" value="' + escapeHtml(u.partsLink) + '"></div></div>' +
+        '<div class="form-footer"><button class="btn blue" onclick="saveUnitEdit(' + u.id + ')">Save Changes</button><button class="secondary-btn" onclick="activePrEditUnitId=null; renderBrandDetail();">Cancel</button></div>'
+      ) : '';
+
+      var sectionLabel = u.model ? escapeHtml(u.model) : 'General reference (no specific model)';
+
+      return '<div class="pr-type-section">' +
+        '<div class="pr-type-section-header" onclick="toggleTypeSection(' + u.id + ')">' +
+        '<span class="pr-type-section-name">' + sectionLabel + '</span>' +
+        '<span class="pr-type-section-meta">' + u.issues.length + ' logged &nbsp;' + (isExpanded ? '&#9650;' : '&#9660;') + '</span>' +
+        '</div>' +
+        (isExpanded ? (
+          '<div class="pr-type-section-body">' +
+          '<div class="pr-linkrow">' + linkBox('Manual / Support', u.manualLink) + linkBox('Parts Catalog', u.partsLink) + '</div>' +
+          '<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px; flex-wrap:wrap; gap:8px;">' +
+          '<h3 style="margin:0; font-size:15px;">Logged Issues</h3>' +
+          '<div style="display:flex; gap:8px; flex-wrap:wrap;">' +
+          '<button class="secondary-btn" onclick="activePrIssueTargetId=' + u.id + '; activePrEditUnitId=null; renderBrandDetail();">+ Add Issue</button>' +
+          '<button class="secondary-btn" onclick="toggleEditUnit(' + u.id + ')">Edit</button>' +
+          '<button class="small-btn danger" onclick="deletePrUnitType(' + u.id + ')">Delete</button>' +
+          '</div></div>' +
+          (editFormHtml ? '<div style="margin-bottom:14px;">' + editFormHtml + '</div>' : '') +
+          addFormHtml +
+          '<div style="margin-top:12px;">' + issuesHtml + '</div>' +
+          '</div>'
+        ) : '') +
+        '</div>';
+    }).join('');
+  }
+
+  function deletePrUnitType(unitId) {
+    showConfirm('Delete this appliance type and every issue logged under it? This cannot be undone.', { danger: true, confirmText: 'Delete' }).then(confirmed => {
+      if (!confirmed) return;
+      savePrUnits(loadPrUnits().filter(u => u.id !== unitId));
+      renderBrandDetail();
+    });
+  }
+
+  function savePrIssue(unitId) {
+    const symptom = document.getElementById('prNewSymptom').value.trim();
+    const partName = document.getElementById('prNewPartName').value.trim();
+    if (!symptom || !partName) { showToast('Symptom and part name are required.', { type: 'error' }); return; }
+    const issue = {
+      id: Date.now(), symptom, partName,
+      partNumber: document.getElementById('prNewPartNumber').value.trim(),
+      priceLow: parseFloat(document.getElementById('prNewPriceLow').value) || null,
+      priceHigh: parseFloat(document.getElementById('prNewPriceHigh').value) || null,
+      link: document.getElementById('prNewLink').value.trim(),
+      note: document.getElementById('prNewNote').value.trim(),
+    };
+    const list = loadPrUnits();
+    const unit = list.find(u => u.id === unitId);
+    if (!unit) return;
+    unit.issues.push(issue);
+    savePrUnits(list);
+    ['prNewSymptom','prNewPartName','prNewPartNumber','prNewPriceLow','prNewPriceHigh','prNewLink','prNewNote'].forEach(id => {
+      document.getElementById(id).value = '';
+    });
+    activePrIssueTargetId = null;
+    justAddedPrIssueId = issue.id;
+    renderBrandDetail();
+    showToast('Issue saved.');
+  }
+
+  function deletePrIssue(unitId, issueId) {
+    showConfirm('Delete this issue? This cannot be undone.', { danger: true, confirmText: 'Delete' }).then(confirmed => {
+      if (!confirmed) return;
+      const row = document.querySelector('[data-pr-issue-id="' + issueId + '"]');
+      animateRowExit(row, () => {
+        const list = loadPrUnits();
+        const unit = list.find(u => u.id === unitId);
+        if (unit) unit.issues = unit.issues.filter(i => i.id !== issueId);
+        savePrUnits(list);
+        renderBrandDetail();
+      });
+    });
+  }
+
+  function formatPriceRange(low, high) {
+    if (low == null && high == null) return 'Varies';
+    if (low != null && high != null) return '$' + low.toFixed(0) + '&ndash;' + high.toFixed(0);
+    const only = low != null ? low : high;
+    return '~$' + only.toFixed(0);
+  }
+
+  function renderTypeChips() {
+    const units = loadPrUnits();
+    const types = [...new Set(units.map(u => u.type))].sort();
+    const select = document.getElementById('prTypeFilterSelect');
+    if (!types.length) { select.innerHTML = ''; return; }
+    const options = ['all', ...types];
+    select.innerHTML = options.map(function(t) {
+      var selectedAttr = activePrType === t ? ' selected' : '';
+      var label = t === 'all' ? 'All types' : escapeHtml(t);
+      return '<option value="' + escapeHtml(t) + '"' + selectedAttr + '>' + label + '</option>';
+    }).join('');
+  }
+
+  function setPrType(t) {
+    activePrType = t;
+    renderTypeChips();
+    renderUnits();
+  }
+
+  function renderUnits() {
+    const search = document.getElementById('prSearchInput').value.trim().toLowerCase();
+    let units = loadPrUnits();
+
+    if (activePrType !== 'all') units = units.filter(u => u.type === activePrType);
+    if (search) {
+      units = units.filter(u =>
+        u.type.toLowerCase().includes(search) ||
+        (u.brand || '').toLowerCase().includes(search) ||
+        (u.model || '').toLowerCase().includes(search)
+      );
+    }
+
+    const byBrand = {};
+    units.forEach(u => {
+      const key = u.brand || '(no brand)';
+      if (!byBrand[key]) byBrand[key] = [];
+      byBrand[key].push(u);
+    });
+    const brands = Object.keys(byBrand).sort();
+
+    document.getElementById('prCount').textContent = brands.length
+      ? brands.length + ' brand' + (brands.length === 1 ? '' : 's')
+      : '';
+
+    const list = document.getElementById('prUnitsList');
+    if (!brands.length) {
+      list.innerHTML = '<div class="pr-empty">' + (loadPrUnits().length ? 'Nothing matches that search.' : 'No appliances added yet.') + '</div>';
+      return;
+    }
+
+    list.innerHTML = brands.map(function(brand) {
+      const brandUnits = byBrand[brand];
+      const totalIssues = brandUnits.reduce((sum, u) => sum + u.issues.length, 0);
+      const typeNames = brandUnits.map(u => u.type).sort().join(', ');
+      const badge = totalIssues ? '<span class="pr-unit-badge">' + totalIssues + ' logged issue' + (totalIssues === 1 ? '' : 's') + '</span>' : '';
+      return '<div class="pr-unit-card" data-pr-brand="' + escapeHtml(brand) + '">' +
+        '<div class="pr-unit-type">' + brandUnits.length + ' appliance type' + (brandUnits.length === 1 ? '' : 's') + '</div>' +
+        '<div class="pr-unit-name">' + escapeHtml(brand) + '</div>' +
+        '<div class="pr-unit-count">' + escapeHtml(typeNames) + '</div>' +
+        badge + '</div>';
+    }).join('');
+    list.querySelectorAll('.pr-unit-card').forEach(function(card) {
+      card.addEventListener('click', function() { openBrandDetail(card.dataset.prBrand); });
+    });
+  }
+
+  document.addEventListener('DOMContentLoaded', () => {
+    seedPrExampleIfEmpty();
+    migrateLegacyPrDataIfNeeded();
+    upgradePrSeedV2IfNeeded();
+    upgradePrSeedV3IfNeeded();
+    upgradePrSeedV4IfNeeded();
+    upgradePrSeedV5IfNeeded();
+    upgradePrSeedV6IfNeeded();
+    upgradePrSeedV7IfNeeded();
+    upgradePrSeedV8IfNeeded();
+    upgradePrSeedV9IfNeeded();
+    upgradePrSeedV10IfNeeded();
+    upgradePrSeedV11IfNeeded();
+    upgradePrSeedV12IfNeeded();
+    upgradePrSeedV13IfNeeded();
+    upgradePrSeedV14IfNeeded();
+    upgradePrSeedV15IfNeeded();
+    renderTypeChips();
+    renderUnits();
+    if (typeof initSyncOnLoad === 'function') {
+      initSyncOnLoad().then(() => { renderTypeChips(); renderUnits(); });
+    }
+  });
+</script>
+
+</body>
+</html>
