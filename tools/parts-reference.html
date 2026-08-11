@@ -779,6 +779,64 @@
     localStorage.setItem(UPGRADE_KEY, '1');
   }
 
+
+  // ---------------------------------------------------------------------
+  // Seed upgrade v7 (added 2026-08-11) -- model breakdown batch 3: real
+  // models across GE (Washer, Dryer, Refrigerator, Microwave, Range,
+  // Washer/Dryer Combo), LG (Refrigerator, Dryer, Washer, Washer/Dryer
+  // Combo), Samsung (Washer, Refrigerator, Range), Frigidaire
+  // (Refrigerator, Washer/Dryer Combo), Maytag (Washer), and Kenmore
+  // (Washer/Dryer Combo) -- all pulled from PartSelect's own "Popular
+  // Models" listings. Same additive pattern as v5/v6.
+  function upgradePrSeedV7IfNeeded() {
+    const UPGRADE_KEY = 'th_parts_reference_seed_v7_applied';
+    if (localStorage.getItem(UPGRADE_KEY)) return;
+    const list = loadPrUnits();
+    const existingKeys = new Set(list.map(u => u.type + '|' + u.brand + '|' + (u.model || '')));
+
+    const additions = [
+      { id: 9513, type: 'Washer', brand: 'GE', model: 'GTWN4250D1WS — Top-Load Washer', manualLink: 'https://www.partselect.com/Models/GTWN4250D1WS/', partsLink: 'https://www.partselect.com/Models/GTWN4250D1WS/', issues: [] },
+      { id: 9514, type: 'Washer', brand: 'GE', model: 'GFWN1000L1WW — Front-Load Washer', manualLink: 'https://www.partselect.com/Models/GFWN1000L1WW/', partsLink: 'https://www.partselect.com/Models/GFWN1000L1WW/', issues: [] },
+      { id: 9515, type: 'Dryer', brand: 'GE', model: 'GTD42EASJ2WW — Dryer', manualLink: 'https://www.partselect.com/Models/GTD42EASJ2WW/', partsLink: 'https://www.partselect.com/Models/GTD42EASJ2WW/', issues: [] },
+      { id: 9516, type: 'Dryer', brand: 'GE', model: 'GTD33EASK0WW — Electric Dryer', manualLink: 'https://www.partselect.com/Models/GTD33EASK0WW/', partsLink: 'https://www.partselect.com/Models/GTD33EASK0WW/', issues: [] },
+      { id: 9517, type: 'Refrigerator', brand: 'GE', model: 'GFSS2HCYCSS — Side-by-Side Refrigerator', manualLink: 'https://www.partselect.com/Models/GFSS2HCYCSS/', partsLink: 'https://www.partselect.com/Models/GFSS2HCYCSS/', issues: [] },
+      { id: 9518, type: 'Refrigerator', brand: 'GE', model: 'GSH25JSTASS — Side-by-Side Refrigerator', manualLink: 'https://www.partselect.com/Models/GSH25JSTASS/', partsLink: 'https://www.partselect.com/Models/GSH25JSTASS/', issues: [] },
+      { id: 9519, type: 'Refrigerator', brand: 'GE', model: 'GTS18FBSARWW — Top-Freezer Refrigerator', manualLink: 'https://www.partselect.com/Models/GTS18FBSARWW/', partsLink: 'https://www.partselect.com/Models/GTS18FBSARWW/', issues: [] },
+      { id: 9520, type: 'Microwave', brand: 'GE', model: 'JVM1790SK01 — Countertop Microwave', manualLink: 'https://www.partselect.com/Models/JVM1790SK01/', partsLink: 'https://www.partselect.com/Models/JVM1790SK01/', issues: [] },
+      { id: 9521, type: 'Microwave', brand: 'GE', model: 'PVM1870SM3SS — Profile Microwave', manualLink: 'https://www.partselect.com/Models/PVM1870SM3SS/', partsLink: 'https://www.partselect.com/Models/PVM1870SM3SS/', issues: [] },
+      { id: 9522, type: 'Range', brand: 'GE', model: 'CGS980SEM1SS — Gas Slide-In Range (Cafe)', manualLink: 'https://www.partselect.com/Models/CGS980SEM1SS/', partsLink: 'https://www.partselect.com/Models/CGS980SEM1SS/', issues: [] },
+      { id: 9523, type: 'Washer/Dryer Combo', brand: 'GE', model: 'GUD27ESSM1WW — Unitized Washer/Dryer', manualLink: 'https://www.partselect.com/Models/GUD27ESSM1WW/', partsLink: 'https://www.partselect.com/Models/GUD27ESSM1WW/', issues: [] },      { id: 9524, type: 'Refrigerator', brand: 'LG', model: 'LFX28968ST — 27 Cu. Ft. French Door Refrigerator', manualLink: 'https://www.partselect.com/Models/LFX28968ST/', partsLink: 'https://www.partselect.com/Models/LFX28968ST/', issues: [] },
+      { id: 9525, type: 'Dryer', brand: 'LG', model: 'DLEX3370W — 7.4 Cu. Ft. Ultra Large Capacity Steam Dryer', manualLink: 'https://www.partselect.com/Models/DLEX3370W/', partsLink: 'https://www.partselect.com/Models/DLEX3370W/', issues: [] },
+      { id: 9526, type: 'Dryer', brand: 'LG', model: 'DLE1101W — 7.3 Cu. Ft. Electric Dryer', manualLink: 'https://www.partselect.com/Models/DLE1101W/', partsLink: 'https://www.partselect.com/Models/DLE1101W/', issues: [] },
+      { id: 9527, type: 'Washer', brand: 'LG', model: 'WM2301HR — 3.6 Cu. Ft. Front-Load Washer', manualLink: 'https://www.partselect.com/Models/WM2301HR/', partsLink: 'https://www.partselect.com/Models/WM2301HR/', issues: [] },
+      { id: 9528, type: 'Washer/Dryer Combo', brand: 'LG', model: 'WM3997HWA — 4.3 Cu. Ft. All-In-One Washer/Dryer', manualLink: 'https://www.partselect.com/Models/WM3997HWA/', partsLink: 'https://www.partselect.com/Models/WM3997HWA/', issues: [] },      { id: 9529, type: 'Washer', brand: 'Samsung', model: 'WF42H5000AW — 4.2 Cu. Ft. Front Load Washer', manualLink: 'https://www.partselect.com/Models/WF42H5000AW/', partsLink: 'https://www.partselect.com/Models/WF42H5000AW/', issues: [] },
+      { id: 9530, type: 'Washer', brand: 'Samsung', model: 'WA50R5200AW — 5.0 Cu. Ft. Top Load Washer', manualLink: 'https://www.partselect.com/Models/WA50R5200AW/', partsLink: 'https://www.partselect.com/Models/WA50R5200AW/', issues: [] },
+      { id: 9531, type: 'Refrigerator', brand: 'Samsung', model: 'RF4287HARS — 28 Cu. Ft. French Door Refrigerator', manualLink: 'https://www.partselect.com/Models/RF4287HARS/', partsLink: 'https://www.partselect.com/Models/RF4287HARS/', issues: [] },
+      { id: 9532, type: 'Refrigerator', brand: 'Samsung', model: 'RF18HFENBSR — 18 Cu. Ft. Counter-Depth French Door Refrigerator', manualLink: 'https://www.partselect.com/Models/RF18HFENBSR/', partsLink: 'https://www.partselect.com/Models/RF18HFENBSR/', issues: [] },
+      { id: 9533, type: 'Range', brand: 'Samsung', model: 'NX58H5600SS — 5.8 Cu. Ft. Gas Range', manualLink: 'https://www.partselect.com/Models/NX58H5600SS/', partsLink: 'https://www.partselect.com/Models/NX58H5600SS/', issues: [] },
+      { id: 9534, type: 'Refrigerator', brand: 'Frigidaire', model: 'LFSS2612TF0 — Freestanding Side-by-Side Refrigerator', manualLink: 'https://www.partselect.com/Models/LFSS2612TF0/', partsLink: 'https://www.partselect.com/Models/LFSS2612TF0/', issues: [] },
+      { id: 9535, type: 'Refrigerator', brand: 'Frigidaire', model: 'FGHS2631PF4A — Freestanding Side-by-Side Refrigerator', manualLink: 'https://www.partselect.com/Models/FGHS2631PF4A/', partsLink: 'https://www.partselect.com/Models/FGHS2631PF4A/', issues: [] },
+      { id: 9536, type: 'Refrigerator', brand: 'Frigidaire', model: 'FFSS2615TS0 — Side-by-Side Refrigerator', manualLink: 'https://www.partselect.com/Models/FFSS2615TS0/', partsLink: 'https://www.partselect.com/Models/FFSS2615TS0/', issues: [] },
+      { id: 9537, type: 'Washer/Dryer Combo', brand: 'Frigidaire', model: 'FLCE7522AW1 — Electric Washer/Dryer Combo', manualLink: 'https://www.partselect.com/Models/FLCE7522AW1/', partsLink: 'https://www.partselect.com/Models/FLCE7522AW1/', issues: [] },
+      { id: 9538, type: 'Washer/Dryer Combo', brand: 'Frigidaire', model: 'FFLG3911QW1 — Gas Washer/Dryer Combo', manualLink: 'https://www.partselect.com/Models/FFLG3911QW1/', partsLink: 'https://www.partselect.com/Models/FFLG3911QW1/', issues: [] },
+      { id: 9539, type: 'Washer', brand: 'Maytag', model: 'LAT9416AAE — Top-Load Washer', manualLink: 'https://www.partselect.com/Models/LAT9416AAE/', partsLink: 'https://www.partselect.com/Models/LAT9416AAE/', issues: [] },
+      { id: 9540, type: 'Washer', brand: 'Maytag', model: 'MAH3000AWW — Neptune Front-Load Washer', manualLink: 'https://www.partselect.com/Models/MAH3000AWW/', partsLink: 'https://www.partselect.com/Models/MAH3000AWW/', issues: [] },
+      { id: 9541, type: 'Washer', brand: 'Maytag', model: 'MAH4000AWW — Neptune Front-Load Washer', manualLink: 'https://www.partselect.com/Models/MAH4000AWW/', partsLink: 'https://www.partselect.com/Models/MAH4000AWW/', issues: [] },
+      { id: 9542, type: 'Washer/Dryer Combo', brand: 'Kenmore', model: '41794862301 — Laundry Center Washer/Dryer Combo', manualLink: 'https://www.partselect.com/Models/41794862301/', partsLink: 'https://www.partselect.com/Models/41794862301/', issues: [] },
+    ];
+
+    additions.forEach(u => {
+      const key = u.type + '|' + u.brand + '|' + (u.model || '');
+      if (!existingKeys.has(key)) {
+        list.push(u);
+        existingKeys.add(key);
+      }
+    });
+
+    savePrUnits(list);
+    localStorage.setItem(UPGRADE_KEY, '1');
+  }
+
   function togglePrAddUnitForm() { document.getElementById('prAddUnitForm').classList.toggle('is-open'); }
   function togglePrAddIssueForm() { document.getElementById('prAddIssueForm').classList.toggle('is-open'); }
 
@@ -1028,6 +1086,7 @@
     upgradePrSeedV4IfNeeded();
     upgradePrSeedV5IfNeeded();
     upgradePrSeedV6IfNeeded();
+    upgradePrSeedV7IfNeeded();
     renderTypeChips();
     renderUnits();
     if (typeof initSyncOnLoad === 'function') {
