@@ -568,6 +568,146 @@
     localStorage.setItem(UPGRADE_KEY, '1');
   }
 
+
+  // ---------------------------------------------------------------------
+  // Seed upgrade v3 (added 2026-08-11) -- rounds out the appliance-type
+  // side of the matrix: five brand-new categories (Water Softener,
+  // Microwave/Oven Combo, Humidifier, Air Purifier, Water Filter System,
+  // all confirmed live PartSelect categories) plus filling in realistic
+  // type gaps for the major full-line brands (e.g. Whirlpool was missing
+  // Oven/Cooktop as standalone entries, Kenmore was capped at 7 types
+  // while GE had 18). Same safe, run-once, additive-only pattern as v2 --
+  // never touches anything already present, whether seeded or user-added.
+  function upgradePrSeedV3IfNeeded() {
+    const UPGRADE_KEY = 'th_parts_reference_seed_v3_applied';
+    if (localStorage.getItem(UPGRADE_KEY)) return;
+    const list = loadPrUnits();
+    const existingKeys = new Set(list.map(u => u.type + '|' + u.brand + '|' + (u.model || '')));
+
+    const additions = [
+      { id: 9300, type: 'Water Softener', brand: 'GE', model: '', manualLink: 'https://www.geappliances.com/ge/service-and-support/', partsLink: 'https://www.partselect.com/GE-Water-Softener-Parts.htm', issues: [] },
+      { id: 9301, type: 'Microwave Combo', brand: 'GE', model: '', manualLink: 'https://www.geappliances.com/ge/service-and-support/', partsLink: 'https://www.partselect.com/GE-Microwave-Oven-Combo-Parts.htm', issues: [] },
+      { id: 9302, type: 'Humidifier', brand: 'GE', model: '', manualLink: 'https://www.geappliances.com/ge/service-and-support/', partsLink: 'https://www.partselect.com/GE-Humidifier-Parts.htm', issues: [] },
+      { id: 9303, type: 'Air Purifier', brand: 'GE', model: '', manualLink: 'https://www.geappliances.com/ge/service-and-support/', partsLink: 'https://www.partselect.com/GE-Air-Purifier-Parts.htm', issues: [] },
+      { id: 9304, type: 'Water Filter System', brand: 'GE', model: '', manualLink: 'https://www.geappliances.com/ge/service-and-support/', partsLink: 'https://www.partselect.com/GE-Water-Filter-System-Parts.htm', issues: [] },
+      { id: 9305, type: 'Oven', brand: 'Whirlpool', model: '', manualLink: 'https://www.whirlpool.com/services/manuals-and-literature.html', partsLink: 'https://www.partselect.com/Whirlpool-Oven-Parts.htm', issues: [] },
+      { id: 9306, type: 'Cooktop', brand: 'Whirlpool', model: '', manualLink: 'https://www.whirlpool.com/services/manuals-and-literature.html', partsLink: 'https://www.partselect.com/Whirlpool-Cooktop-Parts.htm', issues: [] },
+      { id: 9307, type: 'Washer/Dryer Combo', brand: 'Whirlpool', model: '', manualLink: 'https://www.whirlpool.com/services/manuals-and-literature.html', partsLink: 'https://www.partselect.com/Whirlpool-Washer-Dryer-Combo-Parts.htm', issues: [] },
+      { id: 9308, type: 'Water Softener', brand: 'Whirlpool', model: '', manualLink: 'https://www.whirlpool.com/services/manuals-and-literature.html', partsLink: 'https://www.partselect.com/Whirlpool-Water-Softener-Parts.htm', issues: [] },
+      { id: 9309, type: 'Microwave Combo', brand: 'Whirlpool', model: '', manualLink: 'https://www.whirlpool.com/services/manuals-and-literature.html', partsLink: 'https://www.partselect.com/Whirlpool-Microwave-Oven-Combo-Parts.htm', issues: [] },
+      { id: 9310, type: 'Humidifier', brand: 'Whirlpool', model: '', manualLink: 'https://www.whirlpool.com/services/manuals-and-literature.html', partsLink: 'https://www.partselect.com/Whirlpool-Humidifier-Parts.htm', issues: [] },
+      { id: 9311, type: 'Air Purifier', brand: 'Whirlpool', model: '', manualLink: 'https://www.whirlpool.com/services/manuals-and-literature.html', partsLink: 'https://www.partselect.com/Whirlpool-Air-Purifier-Parts.htm', issues: [] },
+      { id: 9312, type: 'Water Filter System', brand: 'Whirlpool', model: '', manualLink: 'https://www.whirlpool.com/services/manuals-and-literature.html', partsLink: 'https://www.partselect.com/Whirlpool-Water-Filter-System-Parts.htm', issues: [] },
+      { id: 9313, type: 'Oven', brand: 'Samsung', model: '', manualLink: 'https://www.samsung.com/us/support/owners/product/', partsLink: 'https://www.partselect.com/Samsung-Oven-Parts.htm', issues: [] },
+      { id: 9314, type: 'Cooktop', brand: 'Samsung', model: '', manualLink: 'https://www.samsung.com/us/support/owners/product/', partsLink: 'https://www.partselect.com/Samsung-Cooktop-Parts.htm', issues: [] },
+      { id: 9315, type: 'Dehumidifier', brand: 'Samsung', model: '', manualLink: 'https://www.samsung.com/us/support/owners/product/', partsLink: 'https://www.partselect.com/Samsung-Dehumidifier-Parts.htm', issues: [] },
+      { id: 9316, type: 'Wine Cooler', brand: 'Samsung', model: '', manualLink: 'https://www.samsung.com/us/support/owners/product/', partsLink: 'https://www.partselect.com/Samsung-Wine-and-Beverage-Cooler-Parts.htm', issues: [] },
+      { id: 9317, type: 'Air Conditioner', brand: 'Samsung', model: '', manualLink: 'https://www.samsung.com/us/support/owners/product/', partsLink: 'https://www.partselect.com/Samsung-Air-Conditioner-Parts.htm', issues: [] },
+      { id: 9318, type: 'Microwave Combo', brand: 'Samsung', model: '', manualLink: 'https://www.samsung.com/us/support/owners/product/', partsLink: 'https://www.partselect.com/Samsung-Microwave-Oven-Combo-Parts.htm', issues: [] },
+      { id: 9319, type: 'Water Filter System', brand: 'Samsung', model: '', manualLink: 'https://www.samsung.com/us/support/owners/product/', partsLink: 'https://www.partselect.com/Samsung-Water-Filter-System-Parts.htm', issues: [] },
+      { id: 9320, type: 'Oven', brand: 'LG', model: '', manualLink: 'https://www.lg.com/us/support/manuals', partsLink: 'https://www.partselect.com/LG-Oven-Parts.htm', issues: [] },
+      { id: 9321, type: 'Cooktop', brand: 'LG', model: '', manualLink: 'https://www.lg.com/us/support/manuals', partsLink: 'https://www.partselect.com/LG-Cooktop-Parts.htm', issues: [] },
+      { id: 9322, type: 'Dehumidifier', brand: 'LG', model: '', manualLink: 'https://www.lg.com/us/support/manuals', partsLink: 'https://www.partselect.com/LG-Dehumidifier-Parts.htm', issues: [] },
+      { id: 9323, type: 'Wine Cooler', brand: 'LG', model: '', manualLink: 'https://www.lg.com/us/support/manuals', partsLink: 'https://www.partselect.com/LG-Wine-and-Beverage-Cooler-Parts.htm', issues: [] },
+      { id: 9324, type: 'Range Hood', brand: 'LG', model: '', manualLink: 'https://www.lg.com/us/support/manuals', partsLink: 'https://www.partselect.com/LG-Vent-Hood-Parts.htm', issues: [] },
+      { id: 9325, type: 'Microwave Combo', brand: 'LG', model: '', manualLink: 'https://www.lg.com/us/support/manuals', partsLink: 'https://www.partselect.com/LG-Microwave-Oven-Combo-Parts.htm', issues: [] },
+      { id: 9326, type: 'Water Filter System', brand: 'LG', model: '', manualLink: 'https://www.lg.com/us/support/manuals', partsLink: 'https://www.partselect.com/LG-Water-Filter-System-Parts.htm', issues: [] },
+      { id: 9327, type: 'Oven', brand: 'Frigidaire', model: '', manualLink: 'https://www.frigidaire.com/customer-support/', partsLink: 'https://www.partselect.com/Frigidaire-Oven-Parts.htm', issues: [] },
+      { id: 9328, type: 'Cooktop', brand: 'Frigidaire', model: '', manualLink: 'https://www.frigidaire.com/customer-support/', partsLink: 'https://www.partselect.com/Frigidaire-Cooktop-Parts.htm', issues: [] },
+      { id: 9329, type: 'Trash Compactor', brand: 'Frigidaire', model: '', manualLink: 'https://www.frigidaire.com/customer-support/', partsLink: 'https://www.partselect.com/Frigidaire-Trash-Compactor-Parts.htm', issues: [] },
+      { id: 9330, type: 'Washer/Dryer Combo', brand: 'Frigidaire', model: '', manualLink: 'https://www.frigidaire.com/customer-support/', partsLink: 'https://www.partselect.com/Frigidaire-Washer-Dryer-Combo-Parts.htm', issues: [] },
+      { id: 9331, type: 'Microwave Combo', brand: 'Frigidaire', model: '', manualLink: 'https://www.frigidaire.com/customer-support/', partsLink: 'https://www.partselect.com/Frigidaire-Microwave-Oven-Combo-Parts.htm', issues: [] },
+      { id: 9332, type: 'Water Filter System', brand: 'Frigidaire', model: '', manualLink: 'https://www.frigidaire.com/customer-support/', partsLink: 'https://www.partselect.com/Frigidaire-Water-Filter-System-Parts.htm', issues: [] },
+      { id: 9333, type: 'Microwave Combo', brand: 'KitchenAid', model: '', manualLink: 'https://www.kitchenaid.com/customer-care.html', partsLink: 'https://www.partselect.com/KitchenAid-Microwave-Oven-Combo-Parts.htm', issues: [] },
+      { id: 9334, type: 'Water Filter System', brand: 'KitchenAid', model: '', manualLink: 'https://www.kitchenaid.com/customer-care.html', partsLink: 'https://www.partselect.com/KitchenAid-Water-Filter-System-Parts.htm', issues: [] },
+      { id: 9335, type: 'Freezer', brand: 'Bosch', model: '', manualLink: 'https://www.bosch-home.com/us/service-and-support', partsLink: 'https://www.partselect.com/Bosch-Freezer-Parts.htm', issues: [] },
+      { id: 9336, type: 'Wine Cooler', brand: 'Bosch', model: '', manualLink: 'https://www.bosch-home.com/us/service-and-support', partsLink: 'https://www.partselect.com/Bosch-Wine-and-Beverage-Cooler-Parts.htm', issues: [] },
+      { id: 9337, type: 'Water Filter System', brand: 'Bosch', model: '', manualLink: 'https://www.bosch-home.com/us/service-and-support', partsLink: 'https://www.partselect.com/Bosch-Water-Filter-System-Parts.htm', issues: [] },
+      { id: 9338, type: 'Ice Maker', brand: 'Kenmore', model: '', manualLink: 'https://www.searspartsdirect.com/', partsLink: 'https://www.partselect.com/Kenmore-Ice-Maker-Parts.htm', issues: [] },
+      { id: 9339, type: 'Range Hood', brand: 'Kenmore', model: '', manualLink: 'https://www.searspartsdirect.com/', partsLink: 'https://www.partselect.com/Kenmore-Vent-Hood-Parts.htm', issues: [] },
+      { id: 9340, type: 'Trash Compactor', brand: 'Kenmore', model: '', manualLink: 'https://www.searspartsdirect.com/', partsLink: 'https://www.partselect.com/Kenmore-Trash-Compactor-Parts.htm', issues: [] },
+      { id: 9341, type: 'Garbage Disposal', brand: 'Kenmore', model: '', manualLink: 'https://www.searspartsdirect.com/', partsLink: 'https://www.partselect.com/Kenmore-Garbage-Disposer-Parts.htm', issues: [] },
+      { id: 9342, type: 'Water Heater', brand: 'Kenmore', model: '', manualLink: 'https://www.searspartsdirect.com/', partsLink: 'https://www.partselect.com/Kenmore-Water-Heater-Parts.htm', issues: [] },
+      { id: 9343, type: 'Dehumidifier', brand: 'Kenmore', model: '', manualLink: 'https://www.searspartsdirect.com/', partsLink: 'https://www.partselect.com/Kenmore-Dehumidifier-Parts.htm', issues: [] },
+      { id: 9344, type: 'Wine Cooler', brand: 'Kenmore', model: '', manualLink: 'https://www.searspartsdirect.com/', partsLink: 'https://www.partselect.com/Kenmore-Wine-and-Beverage-Cooler-Parts.htm', issues: [] },
+      { id: 9345, type: 'Air Conditioner', brand: 'Kenmore', model: '', manualLink: 'https://www.searspartsdirect.com/', partsLink: 'https://www.partselect.com/Kenmore-Air-Conditioner-Parts.htm', issues: [] },
+      { id: 9346, type: 'Water Softener', brand: 'Kenmore', model: '', manualLink: 'https://www.searspartsdirect.com/', partsLink: 'https://www.partselect.com/Kenmore-Water-Softener-Parts.htm', issues: [] },
+      { id: 9347, type: 'Microwave Combo', brand: 'Kenmore', model: '', manualLink: 'https://www.searspartsdirect.com/', partsLink: 'https://www.partselect.com/Kenmore-Microwave-Oven-Combo-Parts.htm', issues: [] },
+      { id: 9348, type: 'Water Filter System', brand: 'Kenmore', model: '', manualLink: 'https://www.searspartsdirect.com/', partsLink: 'https://www.partselect.com/Kenmore-Water-Filter-System-Parts.htm', issues: [] },
+      { id: 9349, type: 'Ice Maker', brand: 'Maytag', model: '', manualLink: 'https://www.maytag.com/services/owner-center.html', partsLink: 'https://www.partselect.com/Maytag-Ice-Maker-Parts.htm', issues: [] },
+      { id: 9350, type: 'Range Hood', brand: 'Maytag', model: '', manualLink: 'https://www.maytag.com/services/owner-center.html', partsLink: 'https://www.partselect.com/Maytag-Vent-Hood-Parts.htm', issues: [] },
+      { id: 9351, type: 'Dehumidifier', brand: 'Maytag', model: '', manualLink: 'https://www.maytag.com/services/owner-center.html', partsLink: 'https://www.partselect.com/Maytag-Dehumidifier-Parts.htm', issues: [] },
+      { id: 9352, type: 'Air Conditioner', brand: 'Maytag', model: '', manualLink: 'https://www.maytag.com/services/owner-center.html', partsLink: 'https://www.partselect.com/Maytag-Air-Conditioner-Parts.htm', issues: [] },
+      { id: 9353, type: 'Microwave Combo', brand: 'Maytag', model: '', manualLink: 'https://www.maytag.com/services/owner-center.html', partsLink: 'https://www.partselect.com/Maytag-Microwave-Oven-Combo-Parts.htm', issues: [] },
+      { id: 9354, type: 'Water Filter System', brand: 'Maytag', model: '', manualLink: 'https://www.maytag.com/services/owner-center.html', partsLink: 'https://www.partselect.com/Maytag-Water-Filter-System-Parts.htm', issues: [] },
+      { id: 9355, type: 'Ice Maker', brand: 'Amana', model: '', manualLink: 'https://www.amana.com/support', partsLink: 'https://www.partselect.com/Amana-Ice-Maker-Parts.htm', issues: [] },
+      { id: 9356, type: 'Range Hood', brand: 'Amana', model: '', manualLink: 'https://www.amana.com/support', partsLink: 'https://www.partselect.com/Amana-Vent-Hood-Parts.htm', issues: [] },
+      { id: 9357, type: 'Dehumidifier', brand: 'Amana', model: '', manualLink: 'https://www.amana.com/support', partsLink: 'https://www.partselect.com/Amana-Dehumidifier-Parts.htm', issues: [] },
+      { id: 9358, type: 'Air Conditioner', brand: 'Amana', model: '', manualLink: 'https://www.amana.com/support', partsLink: 'https://www.partselect.com/Amana-Air-Conditioner-Parts.htm', issues: [] },
+      { id: 9359, type: 'Microwave Combo', brand: 'Amana', model: '', manualLink: 'https://www.amana.com/support', partsLink: 'https://www.partselect.com/Amana-Microwave-Oven-Combo-Parts.htm', issues: [] },
+      { id: 9360, type: 'Water Filter System', brand: 'Amana', model: '', manualLink: 'https://www.amana.com/support', partsLink: 'https://www.partselect.com/Amana-Water-Filter-System-Parts.htm', issues: [] },
+      { id: 9361, type: 'Ice Maker', brand: 'Hotpoint', model: '', manualLink: 'https://www.hotpoint.com/support.html', partsLink: 'https://www.partselect.com/Hotpoint-Ice-Maker-Parts.htm', issues: [] },
+      { id: 9362, type: 'Dehumidifier', brand: 'Hotpoint', model: '', manualLink: 'https://www.hotpoint.com/support.html', partsLink: 'https://www.partselect.com/Hotpoint-Dehumidifier-Parts.htm', issues: [] },
+      { id: 9363, type: 'Air Conditioner', brand: 'Hotpoint', model: '', manualLink: 'https://www.hotpoint.com/support.html', partsLink: 'https://www.partselect.com/Hotpoint-Air-Conditioner-Parts.htm', issues: [] },
+      { id: 9364, type: 'Microwave Combo', brand: 'Hotpoint', model: '', manualLink: 'https://www.hotpoint.com/support.html', partsLink: 'https://www.partselect.com/Hotpoint-Microwave-Oven-Combo-Parts.htm', issues: [] },
+      { id: 9365, type: 'Ice Maker', brand: 'Electrolux', model: '', manualLink: 'https://www.electroluxappliances.com/Support/', partsLink: 'https://www.partselect.com/Electrolux-Ice-Maker-Parts.htm', issues: [] },
+      { id: 9366, type: 'Wine Cooler', brand: 'Electrolux', model: '', manualLink: 'https://www.electroluxappliances.com/Support/', partsLink: 'https://www.partselect.com/Electrolux-Wine-and-Beverage-Cooler-Parts.htm', issues: [] },
+      { id: 9367, type: 'Dehumidifier', brand: 'Electrolux', model: '', manualLink: 'https://www.electroluxappliances.com/Support/', partsLink: 'https://www.partselect.com/Electrolux-Dehumidifier-Parts.htm', issues: [] },
+      { id: 9368, type: 'Air Conditioner', brand: 'Electrolux', model: '', manualLink: 'https://www.electroluxappliances.com/Support/', partsLink: 'https://www.partselect.com/Electrolux-Air-Conditioner-Parts.htm', issues: [] },
+      { id: 9369, type: 'Microwave Combo', brand: 'Electrolux', model: '', manualLink: 'https://www.electroluxappliances.com/Support/', partsLink: 'https://www.partselect.com/Electrolux-Microwave-Oven-Combo-Parts.htm', issues: [] },
+      { id: 9370, type: 'Water Filter System', brand: 'Electrolux', model: '', manualLink: 'https://www.electroluxappliances.com/Support/', partsLink: 'https://www.partselect.com/Electrolux-Water-Filter-System-Parts.htm', issues: [] },
+      { id: 9371, type: 'Ice Maker', brand: 'Haier', model: '', manualLink: 'https://www.partselect.com/Haier-Ice-Maker-Manuals-and-Literature.htm', partsLink: 'https://www.partselect.com/Haier-Ice-Maker-Parts.htm', issues: [] },
+      { id: 9372, type: 'Wine Cooler', brand: 'Haier', model: '', manualLink: 'https://www.partselect.com/Haier-Wine-and-Beverage-Cooler-Manuals-and-Literature.htm', partsLink: 'https://www.partselect.com/Haier-Wine-and-Beverage-Cooler-Parts.htm', issues: [] },
+      { id: 9373, type: 'Water Filter System', brand: 'Haier', model: '', manualLink: 'https://www.partselect.com/Haier-Water-Filter-System-Manuals-and-Literature.htm', partsLink: 'https://www.partselect.com/Haier-Water-Filter-System-Parts.htm', issues: [] },
+      { id: 9374, type: 'Wine Cooler', brand: 'Midea', model: '', manualLink: 'https://www.partselect.com/Midea-Wine-and-Beverage-Cooler-Manuals-and-Literature.htm', partsLink: 'https://www.partselect.com/Midea-Wine-and-Beverage-Cooler-Parts.htm', issues: [] },
+      { id: 9375, type: 'Dehumidifier', brand: 'Midea', model: '', manualLink: 'https://www.partselect.com/Midea-Dehumidifier-Manuals-and-Literature.htm', partsLink: 'https://www.partselect.com/Midea-Dehumidifier-Parts.htm', issues: [] },
+      { id: 9376, type: 'Microwave Combo', brand: 'Midea', model: '', manualLink: 'https://www.partselect.com/Midea-Microwave-Oven-Combo-Manuals-and-Literature.htm', partsLink: 'https://www.partselect.com/Midea-Microwave-Oven-Combo-Parts.htm', issues: [] },
+    ];
+
+    additions.forEach(u => {
+      const key = u.type + '|' + u.brand + '|' + (u.model || '');
+      if (!existingKeys.has(key)) {
+        list.push(u);
+        existingKeys.add(key);
+      }
+    });
+
+    savePrUnits(list);
+    localStorage.setItem(UPGRADE_KEY, '1');
+  }
+
+
+  // ---------------------------------------------------------------------
+  // Seed upgrade v4 (added 2026-08-11) -- adds real, individually verified
+  // troubleshooting entries (current PartSelect part numbers and prices)
+  // to existing units, batch 1: Whirlpool Refrigerator and Dishwasher.
+  // Same additive, run-once, idempotent pattern -- checks partNumber
+  // before adding so it never duplicates against a re-run or against an
+  // issue the user already logged themselves.
+  function upgradePrSeedV4IfNeeded() {
+    const UPGRADE_KEY = 'th_parts_reference_seed_v4_applied';
+    if (localStorage.getItem(UPGRADE_KEY)) return;
+    const list = loadPrUnits();
+
+    const targets = [
+      { brand: 'Whirlpool', type: 'Refrigerator', issues: [{ id: 201, symptom: 'Fridge and freezer both running too warm, or freezer frosting up', partName: 'Evaporator fan motor', partNumber: 'WP2315539', priceLow: 50, priceHigh: 60, link: 'https://www.partselect.com/Whirlpool-Refrigerator-Motors.htm', note: 'Circulates air over the evaporator coils in the back of the freezer. If it\'s dead or noisy, cold air stops reaching the fridge side even though the freezer stays cold.' }, { id: 202, symptom: 'Not cooling properly, or unusually loud humming from underneath/behind', partName: 'Condenser fan motor kit', partNumber: '833697', priceLow: 60, priceHigh: 70, link: 'https://www.partselect.com/Whirlpool-Refrigerator-Motors.htm', note: 'Draws air through the condenser coils to cool the refrigerant before it reaches the evaporator. A failed or obstructed fan means the compressor runs constantly without actually cooling.' }, { id: 203, symptom: 'Ice maker not making ice, or reduced/no water flow to the dispenser', partName: 'Water filter (EveryDrop single-turn)', partNumber: 'EDR4RXD1', priceLow: 75, priceHigh: 90, link: 'https://www.partselect.com/Whirlpool-Refrigerator-Filters.htm', note: 'A clogged filter is the single most common cause of weak ice production or dispenser flow -- worth ruling out before assuming the ice maker assembly itself has failed. Manufacturer recommends replacing every 6 months.' }, { id: 204, symptom: 'Water pooling under the crisper drawers, or drawer will not slide freely', partName: 'Crisper drawer with handle', partNumber: 'WP2188664', priceLow: 55, priceHigh: 65, link: 'https://www.partselect.com/Whirlpool-Refrigerator-Parts.htm', note: 'Cracked or warped crisper drawers are a common source of minor leaks and food spoiling faster than expected. Before replacing, also check the defrost drain isn\'t clogged, since that\'s the other common leak source.' }] },
+      { brand: 'Whirlpool', type: 'Dishwasher', issues: [{ id: 205, symptom: 'Water leaking from under the front door during the wash cycle', partName: 'Wash arm retainer nut', partNumber: 'WP9742945', priceLow: 15, priceHigh: 20, link: 'https://www.partselect.com/Whirlpool-Dishwasher-Hardware.htm', note: 'The lower spray arm assembly wobbles as it wears, which throws water forward onto the door seal over time. Cheap, easy fix, but often mistaken for a bad door gasket since that\'s where the water actually shows up.' }] },
+    ];
+
+    targets.forEach(t => {
+      const unit = list.find(u => u.type === t.type && u.brand === t.brand && !u.model);
+      if (!unit) return;
+      t.issues.forEach(iss => {
+        if (!unit.issues.some(existing => existing.partNumber === iss.partNumber)) {
+          unit.issues.push(iss);
+        }
+      });
+    });
+
+    savePrUnits(list);
+    localStorage.setItem(UPGRADE_KEY, '1');
+  }
+
   function togglePrAddUnitForm() { document.getElementById('prAddUnitForm').classList.toggle('is-open'); }
   function togglePrAddIssueForm() { document.getElementById('prAddIssueForm').classList.toggle('is-open'); }
 
@@ -813,6 +953,8 @@
     seedPrExampleIfEmpty();
     migrateLegacyPrDataIfNeeded();
     upgradePrSeedV2IfNeeded();
+    upgradePrSeedV3IfNeeded();
+    upgradePrSeedV4IfNeeded();
     renderTypeChips();
     renderUnits();
     if (typeof initSyncOnLoad === 'function') {
