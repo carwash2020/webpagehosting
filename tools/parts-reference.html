@@ -50,8 +50,8 @@
   .pr-count { color: var(--text-dim); font-size: 13px; margin-bottom: 14px; }
   #prAddUnitForm, #prAddIssueForm { display: none; }
   #prAddUnitForm.is-open, #prAddIssueForm.is-open { display: block; }
-  #prUnitDetail { display: none; }
-  #prUnitDetail.is-open { display: block; }
+  #prUnitDetail, #prTypeView { display: none; }
+  #prUnitDetail.is-open, #prTypeView.is-open { display: block; }
   #prListView.is-hidden { display: none; }
   .pr-back-link {
     display: inline-flex; align-items: center; gap: 5px; color: var(--text-dim); font-size: 13.5px;
@@ -154,10 +154,22 @@
   </div>
 </div>
 
-<div id="prUnitDetail">
-  <a class="pr-back-link" onclick="closePrUnitDetail()">
+<div id="prTypeView">
+  <a class="pr-back-link" onclick="closeBrandDetail()">
     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5"/><path d="m12 19-7-7 7-7"/></svg>
     All Brands
+  </a>
+
+  <div class="tool-title" id="prBrandTypeTitle" style="font-size:22px;"></div>
+  <p class="tool-sub" id="prBrandTypeSubtitle" style="margin-bottom:16px;"></p>
+
+  <div id="prBrandTypeList"></div>
+</div>
+
+<div id="prUnitDetail">
+  <a class="pr-back-link" onclick="closeTypeDetail()">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5"/><path d="m12 19-7-7 7-7"/></svg>
+    <span id="prTypeDetailBackLabel">Back</span>
   </a>
 
   <div class="tool-title" id="prBrandDetailTitle" style="font-size:22px;"></div>
@@ -181,6 +193,7 @@
   const PR_STORAGE_KEY = 'th_parts_reference_units';
   const PR_LEGACY_KEY = 'th_parts_reference';
   let activePrBrand = null;
+  let activePrDetailType = null;
   let expandedPrTypeIds = new Set();
   let activePrIssueTargetId = null;
   let activePrType = 'all';
@@ -863,18 +876,72 @@
 
   function openBrandDetail(brand) {
     activePrBrand = brand;
-    expandedPrTypeIds = new Set();
+    activePrDetailType = null;
     document.getElementById('prListView').classList.add('is-hidden');
-    document.getElementById('prUnitDetail').classList.add('is-open');
-    renderBrandDetail();
+    document.getElementById('prTypeView').classList.add('is-open');
+    renderBrandTypeList();
   }
 
-  function closePrUnitDetail() {
+  function closeBrandDetail() {
     activePrBrand = null;
-    document.getElementById('prUnitDetail').classList.remove('is-open');
+    document.getElementById('prTypeView').classList.remove('is-open');
     document.getElementById('prListView').classList.remove('is-hidden');
     renderTypeChips();
     renderUnits();
+  }
+
+  // Step 2 of 3: pick which appliance type within the selected brand
+  // (e.g. Refrigerator, Washer, Dryer) -- shows one card per type with a
+  // count of how many entries (generic + specific models) exist under it.
+  function renderBrandTypeList() {
+    const units = loadPrUnits().filter(u => u.brand === activePrBrand);
+    if (!units.length) { closeBrandDetail(); return; }
+
+    document.getElementById('prBrandTypeTitle').textContent = activePrBrand;
+    document.getElementById('prBrandTypeSubtitle').textContent = 'Pick an appliance type to see everything logged for it.';
+
+    const byType = {};
+    units.forEach(u => {
+      if (!byType[u.type]) byType[u.type] = [];
+      byType[u.type].push(u);
+    });
+    const types = Object.keys(byType).sort();
+
+    document.getElementById('prBrandTypeList').innerHTML = types.map(function(type) {
+      const typeUnits = byType[type];
+      const totalIssues = typeUnits.reduce((sum, u) => sum + u.issues.length, 0);
+      const modelCount = typeUnits.filter(u => u.model).length;
+      const entryLabel = typeUnits.length + ' entr' + (typeUnits.length === 1 ? 'y' : 'ies') +
+        (modelCount ? ' &middot; ' + modelCount + ' specific model' + (modelCount === 1 ? '' : 's') : '');
+      const badge = totalIssues ? '<span class="pr-unit-badge">' + totalIssues + ' logged issue' + (totalIssues === 1 ? '' : 's') + '</span>' : '';
+      return '<div class="pr-unit-card" data-pr-detail-type="' + escapeHtml(type) + '">' +
+        '<div class="pr-unit-type">' + entryLabel + '</div>' +
+        '<div class="pr-unit-name">' + escapeHtml(type) + '</div>' +
+        badge + '</div>';
+    }).join('');
+
+    document.querySelectorAll('#prBrandTypeList [data-pr-detail-type]').forEach(function(card) {
+      card.addEventListener('click', function() { openTypeDetail(card.dataset.prDetailType); });
+    });
+  }
+
+  // Step 3 of 3: the actual list of entries (the generic reference plus
+  // any specific models logged) for the chosen brand + type.
+  function openTypeDetail(type) {
+    activePrDetailType = type;
+    activePrIssueTargetId = null;
+    expandedPrTypeIds = new Set();
+    document.getElementById('prTypeView').classList.remove('is-open');
+    document.getElementById('prUnitDetail').classList.add('is-open');
+    document.getElementById('prTypeDetailBackLabel').textContent = activePrBrand;
+    renderBrandDetail();
+  }
+
+  function closeTypeDetail() {
+    activePrDetailType = null;
+    document.getElementById('prUnitDetail').classList.remove('is-open');
+    document.getElementById('prTypeView').classList.add('is-open');
+    renderBrandTypeList();
   }
 
   function linkBox(label, url) {
@@ -891,7 +958,7 @@
     renderBrandDetail();
   }
 
-  function issueRowHtml(iss) {
+  function issueRowHtml(iss, unitId) {
     var linkHtml = iss.link ? (
       '<a class="pr-issue-link" href="' + escapeHtml(iss.link) + '" target="_blank" rel="noopener">' +
       '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><path d="M15 3h6v6"/><path d="M10 14L21 3"/></svg>' +
@@ -906,20 +973,26 @@
       '<div class="pr-issue-price">' + formatPriceRange(iss.priceLow, iss.priceHigh) + '</div></div></div>' +
       '<div class="pr-issue-part">Likely part: <strong>' + escapeHtml(iss.partName) + '</strong>' + partNumHtml + '</div>' +
       noteHtml +
-      '<div class="pr-issue-actions">' + linkHtml + '<button class="small-btn danger" onclick="deletePrIssue(' + iss.id + ')">Delete</button></div></div>';
+      '<div class="pr-issue-actions">' + linkHtml + '<button class="small-btn danger" onclick="deletePrIssue(' + unitId + ', ' + iss.id + ')">Delete</button></div></div>';
   }
 
   function renderBrandDetail() {
-    const units = loadPrUnits().filter(u => u.brand === activePrBrand);
-    if (!units.length) { closePrUnitDetail(); return; }
+    const units = loadPrUnits().filter(u => u.brand === activePrBrand && u.type === activePrDetailType);
+    if (!units.length) { closeTypeDetail(); return; }
 
-    document.getElementById('prBrandDetailTitle').textContent = activePrBrand;
-    document.getElementById('prBrandDetailSubtitle').textContent = units.length + ' appliance type' + (units.length === 1 ? '' : 's') + ' on file';
+    document.getElementById('prBrandDetailTitle').textContent = activePrDetailType + ' \u2014 ' + activePrBrand;
+    const modelCount = units.filter(u => u.model).length;
+    document.getElementById('prBrandDetailSubtitle').textContent = units.length + ' entr' + (units.length === 1 ? 'y' : 'ies') +
+      (modelCount ? ' (' + modelCount + ' specific model' + (modelCount === 1 ? '' : 's') + ')' : '') + ' on file';
 
-    document.getElementById('prTypeSectionsList').innerHTML = units.slice().sort((a,b) => a.type.localeCompare(b.type)).map(function(u) {
+    document.getElementById('prTypeSectionsList').innerHTML = units.slice().sort((a, b) => {
+      if (!a.model && b.model) return -1;
+      if (a.model && !b.model) return 1;
+      return (a.model || '').localeCompare(b.model || '');
+    }).map(function(u) {
       var isExpanded = expandedPrTypeIds.has(u.id);
       var issuesHtml = u.issues.length
-        ? u.issues.slice().reverse().map(issueRowHtml).join('')
+        ? u.issues.slice().reverse().map(function(iss) { return issueRowHtml(iss, u.id); }).join('')
         : '<div class="pr-empty">No specific issues logged yet &mdash; add one as you run into it.</div>';
       var addFormHtml = activePrIssueTargetId === u.id ? (
         '<div class="tool-form-row"><div class="form-field full"><label>Symptom / Issue</label><input type="text" id="prNewSymptom" placeholder="e.g. Won&#39;t drain, UE error code"></div></div>' +
@@ -932,9 +1005,11 @@
         '<div class="form-footer"><button class="btn blue" onclick="savePrIssue(' + u.id + ')">Save Issue</button><button class="secondary-btn" onclick="activePrIssueTargetId=null; renderBrandDetail();">Cancel</button></div>'
       ) : '';
 
+      var sectionLabel = u.model ? escapeHtml(u.model) : 'General reference (no specific model)';
+
       return '<div class="pr-type-section">' +
         '<div class="pr-type-section-header" onclick="toggleTypeSection(' + u.id + ')">' +
-        '<span class="pr-type-section-name">' + escapeHtml(u.type) + (u.model ? ' &middot; ' + escapeHtml(u.model) : '') + '</span>' +
+        '<span class="pr-type-section-name">' + sectionLabel + '</span>' +
         '<span class="pr-type-section-meta">' + u.issues.length + ' logged &nbsp;' + (isExpanded ? '&#9650;' : '&#9660;') + '</span>' +
         '</div>' +
         (isExpanded ? (
@@ -975,29 +1050,29 @@
       note: document.getElementById('prNewNote').value.trim(),
     };
     const list = loadPrUnits();
-    const unit = list.find(u => u.id === activePrUnitId);
+    const unit = list.find(u => u.id === unitId);
     if (!unit) return;
     unit.issues.push(issue);
     savePrUnits(list);
     ['prNewSymptom','prNewPartName','prNewPartNumber','prNewPriceLow','prNewPriceHigh','prNewLink','prNewNote'].forEach(id => {
       document.getElementById(id).value = '';
     });
-    togglePrAddIssueForm();
+    activePrIssueTargetId = null;
     justAddedPrIssueId = issue.id;
-    renderUnitDetail();
+    renderBrandDetail();
     showToast('Issue saved.');
   }
 
-  function deletePrIssue(issueId) {
+  function deletePrIssue(unitId, issueId) {
     showConfirm('Delete this issue? This cannot be undone.', { danger: true, confirmText: 'Delete' }).then(confirmed => {
       if (!confirmed) return;
       const row = document.querySelector('[data-pr-issue-id="' + issueId + '"]');
       animateRowExit(row, () => {
         const list = loadPrUnits();
-        const unit = list.find(u => u.id === activePrUnitId);
+        const unit = list.find(u => u.id === unitId);
         if (unit) unit.issues = unit.issues.filter(i => i.id !== issueId);
         savePrUnits(list);
-        renderUnitDetail();
+        renderBrandDetail();
       });
     });
   }
