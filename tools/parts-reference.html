@@ -856,6 +856,233 @@
     localStorage.setItem(UPGRADE_KEY, '1');
   }
 
+
+  // ---------------------------------------------------------------------
+  // Seed upgrade v8 (added 2026-08-11) -- model breakdown batch 4:
+  // KitchenAid Dishwasher (4 models) and one more real Whirlpool
+  // Dishwasher model. Same additive pattern as v5-v7.
+  function upgradePrSeedV8IfNeeded() {
+    const UPGRADE_KEY = 'th_parts_reference_seed_v8_applied';
+    if (localStorage.getItem(UPGRADE_KEY)) return;
+    const list = loadPrUnits();
+    const existingKeys = new Set(list.map(u => u.type + '|' + u.brand + '|' + (u.model || '')));
+
+    const additions = [
+      { id: 9543, type: 'Dishwasher', brand: 'KitchenAid', model: 'KDTM354DSS4 — Dishwasher', manualLink: 'https://www.partselect.com/Models/KDTM354DSS4/', partsLink: 'https://www.partselect.com/Models/KDTM354DSS4/', issues: [] },
+      { id: 9544, type: 'Dishwasher', brand: 'KitchenAid', model: 'KDTE254ESS2 — Dishwasher', manualLink: 'https://www.partselect.com/Models/KDTE254ESS2/', partsLink: 'https://www.partselect.com/Models/KDTE254ESS2/', issues: [] },
+      { id: 9545, type: 'Dishwasher', brand: 'KitchenAid', model: 'KUDS35FXSS5 — Dishwasher', manualLink: 'https://www.partselect.com/Models/KUDS35FXSS5/', partsLink: 'https://www.partselect.com/Models/KUDS35FXSS5/', issues: [] },
+      { id: 9546, type: 'Dishwasher', brand: 'KitchenAid', model: 'KDFE104DSS0 — Dishwasher', manualLink: 'https://www.partselect.com/Models/KDFE104DSS0/', partsLink: 'https://www.partselect.com/Models/KDFE104DSS0/', issues: [] },
+      { id: 9547, type: 'Dishwasher', brand: 'Whirlpool', model: 'WDT780SAEM1 — Dishwasher', manualLink: 'https://www.partselect.com/Models/WDT780SAEM1/', partsLink: 'https://www.partselect.com/Models/WDT780SAEM1/', issues: [] },
+    ];
+
+    additions.forEach(u => {
+      const key = u.type + '|' + u.brand + '|' + (u.model || '');
+      if (!existingKeys.has(key)) {
+        list.push(u);
+        existingKeys.add(key);
+      }
+    });
+
+    savePrUnits(list);
+    localStorage.setItem(UPGRADE_KEY, '1');
+  }
+
+
+  // ---------------------------------------------------------------------
+  // Seed upgrade v9 (added 2026-08-11) -- model breakdown batch 5:
+  // Bosch Dishwasher (4 real models across the 300 and 800 series, which
+  // is worth knowing since Bosch parts genuinely differ by series).
+  // Same additive pattern as v5-v8.
+  function upgradePrSeedV9IfNeeded() {
+    const UPGRADE_KEY = 'th_parts_reference_seed_v9_applied';
+    if (localStorage.getItem(UPGRADE_KEY)) return;
+    const list = loadPrUnits();
+    const existingKeys = new Set(list.map(u => u.type + '|' + u.brand + '|' + (u.model || '')));
+
+    const additions = [
+      { id: 9548, type: 'Dishwasher', brand: 'Bosch', model: 'SHPM78Z55N — 800 Series Dishwasher', manualLink: 'https://www.partselect.com/Models/SHPM78Z55N/', partsLink: 'https://www.partselect.com/Models/SHPM78Z55N/', issues: [] },
+      { id: 9549, type: 'Dishwasher', brand: 'Bosch', model: 'SHEM78W52N — 800 Series Dishwasher', manualLink: 'https://www.partselect.com/Models/SHEM78W52N/', partsLink: 'https://www.partselect.com/Models/SHEM78W52N/', issues: [] },
+      { id: 9550, type: 'Dishwasher', brand: 'Bosch', model: 'SHEM63W55N — 300 Series Dishwasher', manualLink: 'https://www.partselect.com/Models/SHEM63W55N/', partsLink: 'https://www.partselect.com/Models/SHEM63W55N/', issues: [] },
+      { id: 9551, type: 'Dishwasher', brand: 'Bosch', model: 'SHE3AR56UC — 300 Series Dishwasher', manualLink: 'https://www.partselect.com/Models/SHE3AR56UC/', partsLink: 'https://www.partselect.com/Models/SHE3AR56UC/', issues: [] },
+    ];
+
+    additions.forEach(u => {
+      const key = u.type + '|' + u.brand + '|' + (u.model || '');
+      if (!existingKeys.has(key)) {
+        list.push(u);
+        existingKeys.add(key);
+      }
+    });
+
+    savePrUnits(list);
+    localStorage.setItem(UPGRADE_KEY, '1');
+  }
+
+
+  // ---------------------------------------------------------------------
+  // Seed upgrade v10 (added 2026-08-11) -- model breakdown batch 6:
+  // Amana Refrigerator (4 models) and Hotpoint Refrigerator (4 models).
+  // Same additive pattern as v5-v9.
+  function upgradePrSeedV10IfNeeded() {
+    const UPGRADE_KEY = 'th_parts_reference_seed_v10_applied';
+    if (localStorage.getItem(UPGRADE_KEY)) return;
+    const list = loadPrUnits();
+    const existingKeys = new Set(list.map(u => u.type + '|' + u.brand + '|' + (u.model || '')));
+
+    const additions = [
+      { id: 9552, type: 'Refrigerator', brand: 'Amana', model: 'ABB2224BRW — Bottom-Freezer Refrigerator', manualLink: 'https://www.partselect.com/Models/ABB2224BRW/', partsLink: 'https://www.partselect.com/Models/ABB2224BRW/', issues: [] },
+      { id: 9553, type: 'Refrigerator', brand: 'Amana', model: 'ART308FFDB — Top-Freezer Refrigerator', manualLink: 'https://www.partselect.com/Models/ART308FFDB/', partsLink: 'https://www.partselect.com/Models/ART308FFDB/', issues: [] },
+      { id: 9554, type: 'Refrigerator', brand: 'Amana', model: 'AFI2539ERB00 — French Door Refrigerator', manualLink: 'https://www.partselect.com/Models/AFI2539ERB00/', partsLink: 'https://www.partselect.com/Models/AFI2539ERB00/', issues: [] },
+      { id: 9555, type: 'Refrigerator', brand: 'Amana', model: 'ASD2522WRD04 — Side-by-Side Refrigerator', manualLink: 'https://www.partselect.com/Models/ASD2522WRD04/', partsLink: 'https://www.partselect.com/Models/ASD2522WRD04/', issues: [] },
+      { id: 9556, type: 'Refrigerator', brand: 'Hotpoint', model: 'HTS18GBSARWW — Top-Freezer Refrigerator (S Series)', manualLink: 'https://www.partselect.com/Models/HTS18GBSARWW/', partsLink: 'https://www.partselect.com/Models/HTS18GBSARWW/', issues: [] },
+      { id: 9557, type: 'Refrigerator', brand: 'Hotpoint', model: 'HSM25GFTASA — Side-by-Side Refrigerator (T Series)', manualLink: 'https://www.partselect.com/Models/HSM25GFTASA/', partsLink: 'https://www.partselect.com/Models/HSM25GFTASA/', issues: [] },
+      { id: 9558, type: 'Refrigerator', brand: 'Hotpoint', model: 'HSS25GFPJWW — Side-by-Side Refrigerator (P Series)', manualLink: 'https://www.partselect.com/Models/HSS25GFPJWW/', partsLink: 'https://www.partselect.com/Models/HSS25GFPJWW/', issues: [] },
+      { id: 9559, type: 'Refrigerator', brand: 'Hotpoint', model: 'HSH25GFBBBB — Side-by-Side Refrigerator', manualLink: 'https://www.partselect.com/Models/HSH25GFBBBB/', partsLink: 'https://www.partselect.com/Models/HSH25GFBBBB/', issues: [] },
+    ];
+
+    additions.forEach(u => {
+      const key = u.type + '|' + u.brand + '|' + (u.model || '');
+      if (!existingKeys.has(key)) {
+        list.push(u);
+        existingKeys.add(key);
+      }
+    });
+
+    savePrUnits(list);
+    localStorage.setItem(UPGRADE_KEY, '1');
+  }
+
+
+  // ---------------------------------------------------------------------
+  // Seed upgrade v11 (added 2026-08-11) -- model breakdown batch 7:
+  // Electrolux Refrigerator (4 models, mostly side-by-side which is
+  // Electrolux's dominant configuration). Same additive pattern as v5-v10.
+  function upgradePrSeedV11IfNeeded() {
+    const UPGRADE_KEY = 'th_parts_reference_seed_v11_applied';
+    if (localStorage.getItem(UPGRADE_KEY)) return;
+    const list = loadPrUnits();
+    const existingKeys = new Set(list.map(u => u.type + '|' + u.brand + '|' + (u.model || '')));
+
+    const additions = [
+      { id: 9560, type: 'Refrigerator', brand: 'Electrolux', model: 'EW23CS65GS1 — Side-by-Side Refrigerator (Counter-Depth)', manualLink: 'https://www.partselect.com/Models/EW23CS65GS1/', partsLink: 'https://www.partselect.com/Models/EW23CS65GS1/', issues: [] },
+      { id: 9561, type: 'Refrigerator', brand: 'Electrolux', model: 'EI32AR65JS1 — Side-by-Side Refrigerator', manualLink: 'https://www.partselect.com/Models/EI32AR65JS1/', partsLink: 'https://www.partselect.com/Models/EI32AR65JS1/', issues: [] },
+      { id: 9562, type: 'Refrigerator', brand: 'Electrolux', model: 'EI32AR80QSC — Built-In Upright Refrigerator', manualLink: 'https://www.partselect.com/Models/EI32AR80QSC/', partsLink: 'https://www.partselect.com/Models/EI32AR80QSC/', issues: [] },
+      { id: 9563, type: 'Refrigerator', brand: 'Electrolux', model: 'E23CS78ESS0 — Side-by-Side Refrigerator', manualLink: 'https://www.partselect.com/Models/E23CS78ESS0/', partsLink: 'https://www.partselect.com/Models/E23CS78ESS0/', issues: [] },
+    ];
+
+    additions.forEach(u => {
+      const key = u.type + '|' + u.brand + '|' + (u.model || '');
+      if (!existingKeys.has(key)) {
+        list.push(u);
+        existingKeys.add(key);
+      }
+    });
+
+    savePrUnits(list);
+    localStorage.setItem(UPGRADE_KEY, '1');
+  }
+
+
+  // ---------------------------------------------------------------------
+  // Seed upgrade v12 (added 2026-08-11) -- model breakdown batch 8:
+  // GE Dishwasher (4 models), Maytag Refrigerator (2), Maytag Dryer (3),
+  // Maytag Dishwasher (1). Same additive pattern as v5-v11.
+  function upgradePrSeedV12IfNeeded() {
+    const UPGRADE_KEY = 'th_parts_reference_seed_v12_applied';
+    if (localStorage.getItem(UPGRADE_KEY)) return;
+    const list = loadPrUnits();
+    const existingKeys = new Set(list.map(u => u.type + '|' + u.brand + '|' + (u.model || '')));
+
+    const additions = [
+      { id: 9564, type: 'Dishwasher', brand: 'GE', model: 'GSD2100R00WW — Dishwasher', manualLink: 'https://www.partselect.com/Models/GSD2100R00WW/', partsLink: 'https://www.partselect.com/Models/GSD2100R00WW/', issues: [] },
+      { id: 9565, type: 'Dishwasher', brand: 'GE', model: 'GSD2300N00BB — Dishwasher', manualLink: 'https://www.partselect.com/Models/GSD2300N00BB/', partsLink: 'https://www.partselect.com/Models/GSD2300N00BB/', issues: [] },
+      { id: 9566, type: 'Dishwasher', brand: 'GE', model: 'GSD3300D00CC — Dishwasher', manualLink: 'https://www.partselect.com/Models/GSD3300D00CC/', partsLink: 'https://www.partselect.com/Models/GSD3300D00CC/', issues: [] },
+      { id: 9567, type: 'Dishwasher', brand: 'GE', model: 'ADW1100N35WW — Dishwasher', manualLink: 'https://www.partselect.com/Models/ADW1100N35WW/', partsLink: 'https://www.partselect.com/Models/ADW1100N35WW/', issues: [] },
+      { id: 9568, type: 'Refrigerator', brand: 'Maytag', model: 'MFI2568AES — Bottom-Freezer Refrigerator', manualLink: 'https://www.partselect.com/Models/MFI2568AES/', partsLink: 'https://www.partselect.com/Models/MFI2568AES/', issues: [] },
+      { id: 9569, type: 'Refrigerator', brand: 'Maytag', model: 'MFI2269VEM10 — Bottom-Mount Refrigerator', manualLink: 'https://www.partselect.com/Models/MFI2269VEM10/', partsLink: 'https://www.partselect.com/Models/MFI2269VEM10/', issues: [] },
+      { id: 9570, type: 'Dryer', brand: 'Maytag', model: 'MEDX655DW1 — Electric Dryer', manualLink: 'https://www.partselect.com/Models/MEDX655DW1/', partsLink: 'https://www.partselect.com/Models/MEDX655DW1/', issues: [] },
+      { id: 9571, type: 'Dryer', brand: 'Maytag', model: 'MEDC215EW1 — Electric Dryer', manualLink: 'https://www.partselect.com/Models/MEDC215EW1/', partsLink: 'https://www.partselect.com/Models/MEDC215EW1/', issues: [] },
+      { id: 9572, type: 'Dryer', brand: 'Maytag', model: 'MEDC465HW0 — Electric Dryer', manualLink: 'https://www.partselect.com/Models/MEDC465HW0/', partsLink: 'https://www.partselect.com/Models/MEDC465HW0/', issues: [] },
+      { id: 9573, type: 'Dishwasher', brand: 'Maytag', model: 'MDB8959SFZ4 — Dishwasher', manualLink: 'https://www.partselect.com/Models/MDB8959SFZ4/', partsLink: 'https://www.partselect.com/Models/MDB8959SFZ4/', issues: [] },
+    ];
+
+    additions.forEach(u => {
+      const key = u.type + '|' + u.brand + '|' + (u.model || '');
+      if (!existingKeys.has(key)) {
+        list.push(u);
+        existingKeys.add(key);
+      }
+    });
+
+    savePrUnits(list);
+    localStorage.setItem(UPGRADE_KEY, '1');
+  }
+
+
+  // ---------------------------------------------------------------------
+  // Seed upgrade v13 (added 2026-08-11) -- model breakdown batch 9:
+  // Kenmore Refrigerator (1 model -- worth noting Kenmore refrigerator
+  // model prefixes indicate the actual manufacturer: 110=Whirlpool,
+  // 253=Frigidaire, 795=LG) and Frigidaire Washer (4 front-load models).
+  // Same additive pattern as v5-v12.
+  function upgradePrSeedV13IfNeeded() {
+    const UPGRADE_KEY = 'th_parts_reference_seed_v13_applied';
+    if (localStorage.getItem(UPGRADE_KEY)) return;
+    const list = loadPrUnits();
+    const existingKeys = new Set(list.map(u => u.type + '|' + u.brand + '|' + (u.model || '')));
+
+    const additions = [
+      { id: 9574, type: 'Refrigerator', brand: 'Kenmore', model: '25351694103 — Refrigerator', manualLink: 'https://www.partselect.com/Models/25351694103/', partsLink: 'https://www.partselect.com/Models/25351694103/', issues: [] },
+      { id: 9575, type: 'Washer', brand: 'Frigidaire', model: 'FAFW3801LW3 — Front-Load Washer', manualLink: 'https://www.partselect.com/Models/FAFW3801LW3/', partsLink: 'https://www.partselect.com/Models/FAFW3801LW3/', issues: [] },
+      { id: 9576, type: 'Washer', brand: 'Frigidaire', model: 'FFFW5000QW0 — Front-Load Washer', manualLink: 'https://www.partselect.com/Models/FFFW5000QW0/', partsLink: 'https://www.partselect.com/Models/FFFW5000QW0/', issues: [] },
+      { id: 9577, type: 'Washer', brand: 'Frigidaire', model: 'FAFW3511KW0 — Front-Load Washer', manualLink: 'https://www.partselect.com/Models/FAFW3511KW0/', partsLink: 'https://www.partselect.com/Models/FAFW3511KW0/', issues: [] },
+      { id: 9578, type: 'Washer', brand: 'Frigidaire', model: 'EFLS627UTT0 — Front-Load Washer (38in)', manualLink: 'https://www.partselect.com/Models/EFLS627UTT0/', partsLink: 'https://www.partselect.com/Models/EFLS627UTT0/', issues: [] },
+    ];
+
+    additions.forEach(u => {
+      const key = u.type + '|' + u.brand + '|' + (u.model || '');
+      if (!existingKeys.has(key)) {
+        list.push(u);
+        existingKeys.add(key);
+      }
+    });
+
+    savePrUnits(list);
+    localStorage.setItem(UPGRADE_KEY, '1');
+  }
+
+
+  // ---------------------------------------------------------------------
+  // Seed upgrade v14 (added 2026-08-11) -- model breakdown batch 10:
+  // Frigidaire Dryer (4 models) and Samsung Dryer (2 models -- one
+  // electric, one gas). Same additive pattern as v5-v13.
+  function upgradePrSeedV14IfNeeded() {
+    const UPGRADE_KEY = 'th_parts_reference_seed_v14_applied';
+    if (localStorage.getItem(UPGRADE_KEY)) return;
+    const list = loadPrUnits();
+    const existingKeys = new Set(list.map(u => u.type + '|' + u.brand + '|' + (u.model || '')));
+
+    const additions = [
+      { id: 9579, type: 'Dryer', brand: 'Frigidaire', model: 'GLER341AS2 — 27" Electric Dryer', manualLink: 'https://www.partselect.com/Models/GLER341AS2/', partsLink: 'https://www.partselect.com/Models/GLER341AS2/', issues: [] },
+      { id: 9580, type: 'Dryer', brand: 'Frigidaire', model: 'FEQ332ES0 — Electric Dryer', manualLink: 'https://www.partselect.com/Models/FEQ332ES0/', partsLink: 'https://www.partselect.com/Models/FEQ332ES0/', issues: [] },
+      { id: 9581, type: 'Dryer', brand: 'Frigidaire', model: 'GLEQ2152ES0 — Front-Load Electric Vented Dryer', manualLink: 'https://www.partselect.com/Models/GLEQ2152ES0/', partsLink: 'https://www.partselect.com/Models/GLEQ2152ES0/', issues: [] },
+      { id: 9582, type: 'Dryer', brand: 'Frigidaire', model: 'FSE748GFS1 — Electric Dryer', manualLink: 'https://www.partselect.com/Models/FSE748GFS1/', partsLink: 'https://www.partselect.com/Models/FSE748GFS1/', issues: [] },
+      { id: 9583, type: 'Dryer', brand: 'Samsung', model: 'DV42H5200GP — Electric Dryer', manualLink: 'https://www.partselect.com/Models/DV42H5200GP/', partsLink: 'https://www.partselect.com/Models/DV42H5200GP/', issues: [] },
+      { id: 9584, type: 'Dryer', brand: 'Samsung', model: 'DVG52A5500W — Gas Dryer', manualLink: 'https://www.partselect.com/Models/DVG52A5500W/', partsLink: 'https://www.partselect.com/Models/DVG52A5500W/', issues: [] },
+    ];
+
+    additions.forEach(u => {
+      const key = u.type + '|' + u.brand + '|' + (u.model || '');
+      if (!existingKeys.has(key)) {
+        list.push(u);
+        existingKeys.add(key);
+      }
+    });
+
+    savePrUnits(list);
+    localStorage.setItem(UPGRADE_KEY, '1');
+  }
+
   function togglePrAddUnitForm() { document.getElementById('prAddUnitForm').classList.toggle('is-open'); }
   function togglePrAddIssueForm() { document.getElementById('prAddIssueForm').classList.toggle('is-open'); }
 
@@ -1165,6 +1392,13 @@
     upgradePrSeedV5IfNeeded();
     upgradePrSeedV6IfNeeded();
     upgradePrSeedV7IfNeeded();
+    upgradePrSeedV8IfNeeded();
+    upgradePrSeedV9IfNeeded();
+    upgradePrSeedV10IfNeeded();
+    upgradePrSeedV11IfNeeded();
+    upgradePrSeedV12IfNeeded();
+    upgradePrSeedV13IfNeeded();
+    upgradePrSeedV14IfNeeded();
     renderTypeChips();
     renderUnits();
     if (typeof initSyncOnLoad === 'function') {
