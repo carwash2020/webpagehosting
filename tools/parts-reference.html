@@ -339,6 +339,235 @@
     ]);
   }
 
+
+  // ---------------------------------------------------------------------
+  // Seed upgrade v2 (added 2026-08-11) -- expands the brand/appliance-type
+  // matrix from the original 60 entries to a much larger reference set,
+  // and adds two more real, researched troubleshooting entries (verified
+  // part numbers and current PartSelect prices, not estimates). Runs once
+  // per device via a flag, same pattern as migrateLegacyPrDataIfNeeded()
+  // above -- never touches or duplicates anything the user already added
+  // themselves, and never re-adds a brand/type/model combo that's already
+  // present (whether from the original seed or added by hand).
+  function upgradePrSeedV2IfNeeded() {
+    const UPGRADE_KEY = 'th_parts_reference_seed_v2_applied';
+    if (localStorage.getItem(UPGRADE_KEY)) return;
+    const list = loadPrUnits();
+    const existingKeys = new Set(list.map(u => u.type + '|' + u.brand + '|' + (u.model || '')));
+
+    const additions = [
+      { id: 9061, type: 'Microwave', brand: 'Maytag', model: '', manualLink: 'https://www.maytag.com/services/owner-center.html', partsLink: 'https://www.partselect.com/Maytag-Microwave-Parts.htm', issues: [] },
+      { id: 9062, type: 'Freezer', brand: 'Maytag', model: '', manualLink: 'https://www.maytag.com/services/owner-center.html', partsLink: 'https://www.partselect.com/Maytag-Freezer-Parts.htm', issues: [] },
+      { id: 9063, type: 'Range', brand: 'LG', model: '', manualLink: 'https://www.lg.com/us/support/manuals', partsLink: 'https://www.partselect.com/LG-Range-Parts.htm', issues: [] },
+      { id: 9064, type: 'Freezer', brand: 'LG', model: '', manualLink: 'https://www.lg.com/us/support/manuals', partsLink: 'https://www.partselect.com/LG-Freezer-Parts.htm', issues: [] },
+      { id: 9065, type: 'Freezer', brand: 'Samsung', model: '', manualLink: 'https://www.samsung.com/us/support/owners/product/', partsLink: 'https://www.partselect.com/Samsung-Freezer-Parts.htm', issues: [] },
+      { id: 9066, type: 'Microwave', brand: 'Frigidaire', model: '', manualLink: 'https://www.frigidaire.com/customer-support/', partsLink: 'https://www.partselect.com/Frigidaire-Microwave-Parts.htm', issues: [] },
+      { id: 9067, type: 'Range', brand: 'Kenmore', model: '', manualLink: 'https://www.searspartsdirect.com/', partsLink: 'https://www.partselect.com/Kenmore-Range-Parts.htm', issues: [] },
+      { id: 9068, type: 'Microwave', brand: 'Kenmore', model: '', manualLink: 'https://www.searspartsdirect.com/', partsLink: 'https://www.partselect.com/Kenmore-Microwave-Parts.htm', issues: [] },
+      { id: 9069, type: 'Freezer', brand: 'Kenmore', model: '', manualLink: 'https://www.searspartsdirect.com/', partsLink: 'https://www.partselect.com/Kenmore-Freezer-Parts.htm', issues: [] },
+      { id: 9070, type: 'Dishwasher', brand: 'Amana', model: '', manualLink: 'https://www.amana.com/support', partsLink: 'https://www.partselect.com/Amana-Dishwasher-Parts.htm', issues: [] },
+      { id: 9071, type: 'Range', brand: 'Amana', model: '', manualLink: 'https://www.amana.com/support', partsLink: 'https://www.partselect.com/Amana-Range-Parts.htm', issues: [] },
+      { id: 9072, type: 'Microwave', brand: 'Amana', model: '', manualLink: 'https://www.amana.com/support', partsLink: 'https://www.partselect.com/Amana-Microwave-Parts.htm', issues: [] },
+      { id: 9073, type: 'Freezer', brand: 'Amana', model: '', manualLink: 'https://www.amana.com/support', partsLink: 'https://www.partselect.com/Amana-Freezer-Parts.htm', issues: [] },
+      { id: 9074, type: 'Dishwasher', brand: 'Hotpoint', model: '', manualLink: 'https://www.hotpoint.com/support.html', partsLink: 'https://www.partselect.com/Hotpoint-Dishwasher-Parts.htm', issues: [] },
+      { id: 9075, type: 'Range', brand: 'Hotpoint', model: '', manualLink: 'https://www.hotpoint.com/support.html', partsLink: 'https://www.partselect.com/Hotpoint-Range-Parts.htm', issues: [] },
+      { id: 9076, type: 'Microwave', brand: 'Hotpoint', model: '', manualLink: 'https://www.hotpoint.com/support.html', partsLink: 'https://www.partselect.com/Hotpoint-Microwave-Parts.htm', issues: [] },
+      { id: 9077, type: 'Freezer', brand: 'Hotpoint', model: '', manualLink: 'https://www.hotpoint.com/support.html', partsLink: 'https://www.partselect.com/Hotpoint-Freezer-Parts.htm', issues: [] },
+      { id: 9078, type: 'Refrigerator', brand: 'Electrolux', model: '', manualLink: 'https://www.electroluxappliances.com/Support/', partsLink: 'https://www.partselect.com/Electrolux-Refrigerator-Parts.htm', issues: [] },
+      { id: 9079, type: 'Range', brand: 'Electrolux', model: '', manualLink: 'https://www.electroluxappliances.com/Support/', partsLink: 'https://www.partselect.com/Electrolux-Range-Parts.htm', issues: [] },
+      { id: 9080, type: 'Microwave', brand: 'Electrolux', model: '', manualLink: 'https://www.electroluxappliances.com/Support/', partsLink: 'https://www.partselect.com/Electrolux-Microwave-Parts.htm', issues: [] },
+      { id: 9081, type: 'Freezer', brand: 'Electrolux', model: '', manualLink: 'https://www.electroluxappliances.com/Support/', partsLink: 'https://www.partselect.com/Electrolux-Freezer-Parts.htm', issues: [] },
+      { id: 9082, type: 'Range', brand: 'KitchenAid', model: '', manualLink: 'https://www.kitchenaid.com/customer-care.html', partsLink: 'https://www.partselect.com/KitchenAid-Range-Parts.htm', issues: [] },
+      { id: 9083, type: 'Microwave', brand: 'KitchenAid', model: '', manualLink: 'https://www.kitchenaid.com/customer-care.html', partsLink: 'https://www.partselect.com/KitchenAid-Microwave-Parts.htm', issues: [] },
+      { id: 9084, type: 'Cooktop', brand: 'KitchenAid', model: '', manualLink: 'https://www.kitchenaid.com/customer-care.html', partsLink: 'https://www.partselect.com/KitchenAid-Cooktop-Parts.htm', issues: [] },
+      { id: 9085, type: 'Freezer', brand: 'KitchenAid', model: '', manualLink: 'https://www.kitchenaid.com/customer-care.html', partsLink: 'https://www.partselect.com/KitchenAid-Freezer-Parts.htm', issues: [] },
+      { id: 9086, type: 'Washer', brand: 'KitchenAid', model: '', manualLink: 'https://www.kitchenaid.com/customer-care.html', partsLink: 'https://www.partselect.com/KitchenAid-Washer-Parts.htm', issues: [] },
+      { id: 9087, type: 'Dryer', brand: 'KitchenAid', model: '', manualLink: 'https://www.kitchenaid.com/customer-care.html', partsLink: 'https://www.partselect.com/KitchenAid-Dryer-Parts.htm', issues: [] },
+      { id: 9088, type: 'Microwave', brand: 'Bosch', model: '', manualLink: 'https://www.bosch-home.com/us/service-and-support', partsLink: 'https://www.partselect.com/Bosch-Microwave-Parts.htm', issues: [] },
+      { id: 9089, type: 'Range', brand: 'Bosch', model: '', manualLink: 'https://www.bosch-home.com/us/service-and-support', partsLink: 'https://www.partselect.com/Bosch-Range-Parts.htm', issues: [] },
+      { id: 9090, type: 'Cooktop', brand: 'Bosch', model: '', manualLink: 'https://www.bosch-home.com/us/service-and-support', partsLink: 'https://www.partselect.com/Bosch-Cooktop-Parts.htm', issues: [] },
+      { id: 9091, type: 'Washer', brand: 'Haier', model: '', manualLink: 'https://www.partselect.com/Haier-Washer-Manuals-and-Literature.htm', partsLink: 'https://www.partselect.com/Haier-Washer-Parts.htm', issues: [] },
+      { id: 9092, type: 'Dryer', brand: 'Haier', model: '', manualLink: 'https://www.partselect.com/Haier-Dryer-Manuals-and-Literature.htm', partsLink: 'https://www.partselect.com/Haier-Dryer-Parts.htm', issues: [] },
+      { id: 9093, type: 'Refrigerator', brand: 'Haier', model: '', manualLink: 'https://www.partselect.com/Haier-Refrigerator-Manuals-and-Literature.htm', partsLink: 'https://www.partselect.com/Haier-Refrigerator-Parts.htm', issues: [] },
+      { id: 9094, type: 'Dishwasher', brand: 'Haier', model: '', manualLink: 'https://www.partselect.com/Haier-Dishwasher-Manuals-and-Literature.htm', partsLink: 'https://www.partselect.com/Haier-Dishwasher-Parts.htm', issues: [] },
+      { id: 9095, type: 'Range', brand: 'Haier', model: '', manualLink: 'https://www.partselect.com/Haier-Range-Manuals-and-Literature.htm', partsLink: 'https://www.partselect.com/Haier-Range-Parts.htm', issues: [] },
+      { id: 9096, type: 'Microwave', brand: 'Haier', model: '', manualLink: 'https://www.partselect.com/Haier-Microwave-Manuals-and-Literature.htm', partsLink: 'https://www.partselect.com/Haier-Microwave-Parts.htm', issues: [] },
+      { id: 9097, type: 'Freezer', brand: 'Haier', model: '', manualLink: 'https://www.partselect.com/Haier-Freezer-Manuals-and-Literature.htm', partsLink: 'https://www.partselect.com/Haier-Freezer-Parts.htm', issues: [] },
+      { id: 9098, type: 'Washer', brand: 'Midea', model: '', manualLink: 'https://www.partselect.com/Midea-Washer-Manuals-and-Literature.htm', partsLink: 'https://www.partselect.com/Midea-Washer-Parts.htm', issues: [] },
+      { id: 9099, type: 'Dryer', brand: 'Midea', model: '', manualLink: 'https://www.partselect.com/Midea-Dryer-Manuals-and-Literature.htm', partsLink: 'https://www.partselect.com/Midea-Dryer-Parts.htm', issues: [] },
+      { id: 9100, type: 'Refrigerator', brand: 'Midea', model: '', manualLink: 'https://www.partselect.com/Midea-Refrigerator-Manuals-and-Literature.htm', partsLink: 'https://www.partselect.com/Midea-Refrigerator-Parts.htm', issues: [] },
+      { id: 9101, type: 'Dishwasher', brand: 'Midea', model: '', manualLink: 'https://www.partselect.com/Midea-Dishwasher-Manuals-and-Literature.htm', partsLink: 'https://www.partselect.com/Midea-Dishwasher-Parts.htm', issues: [] },
+      { id: 9102, type: 'Range', brand: 'Midea', model: '', manualLink: 'https://www.partselect.com/Midea-Range-Manuals-and-Literature.htm', partsLink: 'https://www.partselect.com/Midea-Range-Parts.htm', issues: [] },
+      { id: 9103, type: 'Microwave', brand: 'Midea', model: '', manualLink: 'https://www.partselect.com/Midea-Microwave-Manuals-and-Literature.htm', partsLink: 'https://www.partselect.com/Midea-Microwave-Parts.htm', issues: [] },
+      { id: 9104, type: 'Freezer', brand: 'Midea', model: '', manualLink: 'https://www.partselect.com/Midea-Freezer-Manuals-and-Literature.htm', partsLink: 'https://www.partselect.com/Midea-Freezer-Parts.htm', issues: [] },
+      { id: 9105, type: 'Washer', brand: 'Admiral', model: '', manualLink: 'https://www.partselect.com/Admiral-Washer-Manuals-and-Literature.htm', partsLink: 'https://www.partselect.com/Admiral-Washer-Parts.htm', issues: [] },
+      { id: 9106, type: 'Dryer', brand: 'Admiral', model: '', manualLink: 'https://www.partselect.com/Admiral-Dryer-Manuals-and-Literature.htm', partsLink: 'https://www.partselect.com/Admiral-Dryer-Parts.htm', issues: [] },
+      { id: 9107, type: 'Refrigerator', brand: 'Admiral', model: '', manualLink: 'https://www.partselect.com/Admiral-Refrigerator-Manuals-and-Literature.htm', partsLink: 'https://www.partselect.com/Admiral-Refrigerator-Parts.htm', issues: [] },
+      { id: 9108, type: 'Range', brand: 'Admiral', model: '', manualLink: 'https://www.partselect.com/Admiral-Range-Manuals-and-Literature.htm', partsLink: 'https://www.partselect.com/Admiral-Range-Parts.htm', issues: [] },
+      { id: 9109, type: 'Washer', brand: 'Crosley', model: '', manualLink: 'https://www.partselect.com/Crosley-Washer-Manuals-and-Literature.htm', partsLink: 'https://www.partselect.com/Crosley-Washer-Parts.htm', issues: [] },
+      { id: 9110, type: 'Dryer', brand: 'Crosley', model: '', manualLink: 'https://www.partselect.com/Crosley-Dryer-Manuals-and-Literature.htm', partsLink: 'https://www.partselect.com/Crosley-Dryer-Parts.htm', issues: [] },
+      { id: 9111, type: 'Refrigerator', brand: 'Crosley', model: '', manualLink: 'https://www.partselect.com/Crosley-Refrigerator-Manuals-and-Literature.htm', partsLink: 'https://www.partselect.com/Crosley-Refrigerator-Parts.htm', issues: [] },
+      { id: 9112, type: 'Range', brand: 'Crosley', model: '', manualLink: 'https://www.partselect.com/Crosley-Range-Manuals-and-Literature.htm', partsLink: 'https://www.partselect.com/Crosley-Range-Parts.htm', issues: [] },
+      { id: 9113, type: 'Washer', brand: 'Gibson', model: '', manualLink: 'https://www.partselect.com/Gibson-Washer-Manuals-and-Literature.htm', partsLink: 'https://www.partselect.com/Gibson-Washer-Parts.htm', issues: [] },
+      { id: 9114, type: 'Dryer', brand: 'Gibson', model: '', manualLink: 'https://www.partselect.com/Gibson-Dryer-Manuals-and-Literature.htm', partsLink: 'https://www.partselect.com/Gibson-Dryer-Parts.htm', issues: [] },
+      { id: 9115, type: 'Refrigerator', brand: 'Gibson', model: '', manualLink: 'https://www.partselect.com/Gibson-Refrigerator-Manuals-and-Literature.htm', partsLink: 'https://www.partselect.com/Gibson-Refrigerator-Parts.htm', issues: [] },
+      { id: 9116, type: 'Range', brand: 'Gibson', model: '', manualLink: 'https://www.partselect.com/Gibson-Range-Manuals-and-Literature.htm', partsLink: 'https://www.partselect.com/Gibson-Range-Parts.htm', issues: [] },
+      { id: 9117, type: 'Range', brand: 'Hardwick', model: '', manualLink: 'https://www.partselect.com/Hardwick-Range-Manuals-and-Literature.htm', partsLink: 'https://www.partselect.com/Hardwick-Range-Parts.htm', issues: [] },
+      { id: 9118, type: 'Washer', brand: 'Inglis', model: '', manualLink: 'https://www.partselect.com/Inglis-Washer-Manuals-and-Literature.htm', partsLink: 'https://www.partselect.com/Inglis-Washer-Parts.htm', issues: [] },
+      { id: 9119, type: 'Dryer', brand: 'Inglis', model: '', manualLink: 'https://www.partselect.com/Inglis-Dryer-Manuals-and-Literature.htm', partsLink: 'https://www.partselect.com/Inglis-Dryer-Parts.htm', issues: [] },
+      { id: 9120, type: 'Refrigerator', brand: 'Inglis', model: '', manualLink: 'https://www.partselect.com/Inglis-Refrigerator-Manuals-and-Literature.htm', partsLink: 'https://www.partselect.com/Inglis-Refrigerator-Parts.htm', issues: [] },
+      { id: 9121, type: 'Range', brand: 'Inglis', model: '', manualLink: 'https://www.partselect.com/Inglis-Range-Manuals-and-Literature.htm', partsLink: 'https://www.partselect.com/Inglis-Range-Parts.htm', issues: [] },
+      { id: 9122, type: 'Refrigerator', brand: 'Kelvinator', model: '', manualLink: 'https://www.partselect.com/Kelvinator-Refrigerator-Manuals-and-Literature.htm', partsLink: 'https://www.partselect.com/Kelvinator-Refrigerator-Parts.htm', issues: [] },
+      { id: 9123, type: 'Range', brand: 'Kelvinator', model: '', manualLink: 'https://www.partselect.com/Kelvinator-Range-Manuals-and-Literature.htm', partsLink: 'https://www.partselect.com/Kelvinator-Range-Parts.htm', issues: [] },
+      { id: 9124, type: 'Washer', brand: 'Kelvinator', model: '', manualLink: 'https://www.partselect.com/Kelvinator-Washer-Manuals-and-Literature.htm', partsLink: 'https://www.partselect.com/Kelvinator-Washer-Parts.htm', issues: [] },
+      { id: 9125, type: 'Dryer', brand: 'Kelvinator', model: '', manualLink: 'https://www.partselect.com/Kelvinator-Dryer-Manuals-and-Literature.htm', partsLink: 'https://www.partselect.com/Kelvinator-Dryer-Parts.htm', issues: [] },
+      { id: 9126, type: 'Range', brand: 'Magic Chef', model: '', manualLink: 'https://www.partselect.com/Magic-Chef-Range-Manuals-and-Literature.htm', partsLink: 'https://www.partselect.com/Magic-Chef-Range-Parts.htm', issues: [] },
+      { id: 9127, type: 'Refrigerator', brand: 'Magic Chef', model: '', manualLink: 'https://www.partselect.com/Magic-Chef-Refrigerator-Manuals-and-Literature.htm', partsLink: 'https://www.partselect.com/Magic-Chef-Refrigerator-Parts.htm', issues: [] },
+      { id: 9128, type: 'Dishwasher', brand: 'Magic Chef', model: '', manualLink: 'https://www.partselect.com/Magic-Chef-Dishwasher-Manuals-and-Literature.htm', partsLink: 'https://www.partselect.com/Magic-Chef-Dishwasher-Parts.htm', issues: [] },
+      { id: 9129, type: 'Dryer', brand: 'Magic Chef', model: '', manualLink: 'https://www.partselect.com/Magic-Chef-Dryer-Manuals-and-Literature.htm', partsLink: 'https://www.partselect.com/Magic-Chef-Dryer-Parts.htm', issues: [] },
+      { id: 9130, type: 'Washer', brand: 'Norge', model: '', manualLink: 'https://www.partselect.com/Norge-Washer-Manuals-and-Literature.htm', partsLink: 'https://www.partselect.com/Norge-Washer-Parts.htm', issues: [] },
+      { id: 9131, type: 'Dryer', brand: 'Norge', model: '', manualLink: 'https://www.partselect.com/Norge-Dryer-Manuals-and-Literature.htm', partsLink: 'https://www.partselect.com/Norge-Dryer-Parts.htm', issues: [] },
+      { id: 9132, type: 'Refrigerator', brand: 'Norge', model: '', manualLink: 'https://www.partselect.com/Norge-Refrigerator-Manuals-and-Literature.htm', partsLink: 'https://www.partselect.com/Norge-Refrigerator-Parts.htm', issues: [] },
+      { id: 9133, type: 'Range', brand: 'Norge', model: '', manualLink: 'https://www.partselect.com/Norge-Range-Manuals-and-Literature.htm', partsLink: 'https://www.partselect.com/Norge-Range-Parts.htm', issues: [] },
+      { id: 9134, type: 'Washer', brand: 'Roper', model: '', manualLink: 'https://www.partselect.com/Roper-Washer-Manuals-and-Literature.htm', partsLink: 'https://www.partselect.com/Roper-Washer-Parts.htm', issues: [] },
+      { id: 9135, type: 'Dryer', brand: 'Roper', model: '', manualLink: 'https://www.partselect.com/Roper-Dryer-Manuals-and-Literature.htm', partsLink: 'https://www.partselect.com/Roper-Dryer-Parts.htm', issues: [] },
+      { id: 9136, type: 'Refrigerator', brand: 'Roper', model: '', manualLink: 'https://www.partselect.com/Roper-Refrigerator-Manuals-and-Literature.htm', partsLink: 'https://www.partselect.com/Roper-Refrigerator-Parts.htm', issues: [] },
+      { id: 9137, type: 'Range', brand: 'Roper', model: '', manualLink: 'https://www.partselect.com/Roper-Range-Manuals-and-Literature.htm', partsLink: 'https://www.partselect.com/Roper-Range-Parts.htm', issues: [] },
+      { id: 9138, type: 'Range', brand: 'Tappan', model: '', manualLink: 'https://www.partselect.com/Tappan-Range-Manuals-and-Literature.htm', partsLink: 'https://www.partselect.com/Tappan-Range-Parts.htm', issues: [] },
+      { id: 9139, type: 'Oven', brand: 'Tappan', model: '', manualLink: 'https://www.partselect.com/Tappan-Oven-Manuals-and-Literature.htm', partsLink: 'https://www.partselect.com/Tappan-Oven-Parts.htm', issues: [] },
+      { id: 9140, type: 'Refrigerator', brand: 'Tappan', model: '', manualLink: 'https://www.partselect.com/Tappan-Refrigerator-Manuals-and-Literature.htm', partsLink: 'https://www.partselect.com/Tappan-Refrigerator-Parts.htm', issues: [] },
+      { id: 9141, type: 'Freezer', brand: 'White Mountain', model: '', manualLink: 'https://www.partselect.com/White-Mountain-Freezer-Manuals-and-Literature.htm', partsLink: 'https://www.partselect.com/White-Mountain-Freezer-Parts.htm', issues: [] },
+      { id: 9142, type: 'Refrigerator', brand: 'White Mountain', model: '', manualLink: 'https://www.partselect.com/White-Mountain-Refrigerator-Manuals-and-Literature.htm', partsLink: 'https://www.partselect.com/White-Mountain-Refrigerator-Parts.htm', issues: [] },
+      { id: 9143, type: 'Washer', brand: 'White-Westinghouse', model: '', manualLink: 'https://www.partselect.com/White-Westinghouse-Washer-Manuals-and-Literature.htm', partsLink: 'https://www.partselect.com/White-Westinghouse-Washer-Parts.htm', issues: [] },
+      { id: 9144, type: 'Dryer', brand: 'White-Westinghouse', model: '', manualLink: 'https://www.partselect.com/White-Westinghouse-Dryer-Manuals-and-Literature.htm', partsLink: 'https://www.partselect.com/White-Westinghouse-Dryer-Parts.htm', issues: [] },
+      { id: 9145, type: 'Refrigerator', brand: 'White-Westinghouse', model: '', manualLink: 'https://www.partselect.com/White-Westinghouse-Refrigerator-Manuals-and-Literature.htm', partsLink: 'https://www.partselect.com/White-Westinghouse-Refrigerator-Parts.htm', issues: [] },
+      { id: 9146, type: 'Range', brand: 'White-Westinghouse', model: '', manualLink: 'https://www.partselect.com/White-Westinghouse-Range-Manuals-and-Literature.htm', partsLink: 'https://www.partselect.com/White-Westinghouse-Range-Parts.htm', issues: [] },
+      { id: 9147, type: 'Dishwasher', brand: 'White-Westinghouse', model: '', manualLink: 'https://www.partselect.com/White-Westinghouse-Dishwasher-Manuals-and-Literature.htm', partsLink: 'https://www.partselect.com/White-Westinghouse-Dishwasher-Parts.htm', issues: [] },
+      { id: 9148, type: 'Washer', brand: 'Estate', model: '', manualLink: 'https://www.partselect.com/Estate-Washer-Manuals-and-Literature.htm', partsLink: 'https://www.partselect.com/Estate-Washer-Parts.htm', issues: [] },
+      { id: 9149, type: 'Dryer', brand: 'Estate', model: '', manualLink: 'https://www.partselect.com/Estate-Dryer-Manuals-and-Literature.htm', partsLink: 'https://www.partselect.com/Estate-Dryer-Parts.htm', issues: [] },
+      { id: 9150, type: 'Refrigerator', brand: 'Estate', model: '', manualLink: 'https://www.partselect.com/Estate-Refrigerator-Manuals-and-Literature.htm', partsLink: 'https://www.partselect.com/Estate-Refrigerator-Parts.htm', issues: [] },
+      { id: 9151, type: 'Range', brand: 'Estate', model: '', manualLink: 'https://www.partselect.com/Estate-Range-Manuals-and-Literature.htm', partsLink: 'https://www.partselect.com/Estate-Range-Parts.htm', issues: [] },
+      { id: 9152, type: 'Range', brand: 'Jenn-Air', model: '', manualLink: 'https://www.partselect.com/Jenn-Air-Range-Manuals-and-Literature.htm', partsLink: 'https://www.partselect.com/Jenn-Air-Range-Parts.htm', issues: [] },
+      { id: 9153, type: 'Oven', brand: 'Jenn-Air', model: '', manualLink: 'https://www.partselect.com/Jenn-Air-Oven-Manuals-and-Literature.htm', partsLink: 'https://www.partselect.com/Jenn-Air-Oven-Parts.htm', issues: [] },
+      { id: 9154, type: 'Cooktop', brand: 'Jenn-Air', model: '', manualLink: 'https://www.partselect.com/Jenn-Air-Cooktop-Manuals-and-Literature.htm', partsLink: 'https://www.partselect.com/Jenn-Air-Cooktop-Parts.htm', issues: [] },
+      { id: 9155, type: 'Refrigerator', brand: 'Jenn-Air', model: '', manualLink: 'https://www.partselect.com/Jenn-Air-Refrigerator-Manuals-and-Literature.htm', partsLink: 'https://www.partselect.com/Jenn-Air-Refrigerator-Parts.htm', issues: [] },
+      { id: 9156, type: 'Dishwasher', brand: 'Jenn-Air', model: '', manualLink: 'https://www.partselect.com/Jenn-Air-Dishwasher-Manuals-and-Literature.htm', partsLink: 'https://www.partselect.com/Jenn-Air-Dishwasher-Parts.htm', issues: [] },
+      { id: 9157, type: 'Microwave', brand: 'Jenn-Air', model: '', manualLink: 'https://www.partselect.com/Jenn-Air-Microwave-Manuals-and-Literature.htm', partsLink: 'https://www.partselect.com/Jenn-Air-Microwave-Parts.htm', issues: [] },
+      { id: 9158, type: 'Range Hood', brand: 'Jenn-Air', model: '', manualLink: 'https://www.partselect.com/Jenn-Air-Vent-Hood-Manuals-and-Literature.htm', partsLink: 'https://www.partselect.com/Jenn-Air-Vent-Hood-Parts.htm', issues: [] },
+      { id: 9159, type: 'Range', brand: 'Dacor', model: '', manualLink: 'https://www.partselect.com/Dacor-Range-Manuals-and-Literature.htm', partsLink: 'https://www.partselect.com/Dacor-Range-Parts.htm', issues: [] },
+      { id: 9160, type: 'Oven', brand: 'Dacor', model: '', manualLink: 'https://www.partselect.com/Dacor-Oven-Manuals-and-Literature.htm', partsLink: 'https://www.partselect.com/Dacor-Oven-Parts.htm', issues: [] },
+      { id: 9161, type: 'Cooktop', brand: 'Dacor', model: '', manualLink: 'https://www.partselect.com/Dacor-Cooktop-Manuals-and-Literature.htm', partsLink: 'https://www.partselect.com/Dacor-Cooktop-Parts.htm', issues: [] },
+      { id: 9162, type: 'Refrigerator', brand: 'Dacor', model: '', manualLink: 'https://www.partselect.com/Dacor-Refrigerator-Manuals-and-Literature.htm', partsLink: 'https://www.partselect.com/Dacor-Refrigerator-Parts.htm', issues: [] },
+      { id: 9163, type: 'Dishwasher', brand: 'Dacor', model: '', manualLink: 'https://www.partselect.com/Dacor-Dishwasher-Manuals-and-Literature.htm', partsLink: 'https://www.partselect.com/Dacor-Dishwasher-Parts.htm', issues: [] },
+      { id: 9164, type: 'Range', brand: 'Smeg', model: '', manualLink: 'https://www.partselect.com/Smeg-Range-Manuals-and-Literature.htm', partsLink: 'https://www.partselect.com/Smeg-Range-Parts.htm', issues: [] },
+      { id: 9165, type: 'Oven', brand: 'Smeg', model: '', manualLink: 'https://www.partselect.com/Smeg-Oven-Manuals-and-Literature.htm', partsLink: 'https://www.partselect.com/Smeg-Oven-Parts.htm', issues: [] },
+      { id: 9166, type: 'Cooktop', brand: 'Smeg', model: '', manualLink: 'https://www.partselect.com/Smeg-Cooktop-Manuals-and-Literature.htm', partsLink: 'https://www.partselect.com/Smeg-Cooktop-Parts.htm', issues: [] },
+      { id: 9167, type: 'Refrigerator', brand: 'Smeg', model: '', manualLink: 'https://www.partselect.com/Smeg-Refrigerator-Manuals-and-Literature.htm', partsLink: 'https://www.partselect.com/Smeg-Refrigerator-Parts.htm', issues: [] },
+      { id: 9168, type: 'Dishwasher', brand: 'Smeg', model: '', manualLink: 'https://www.partselect.com/Smeg-Dishwasher-Manuals-and-Literature.htm', partsLink: 'https://www.partselect.com/Smeg-Dishwasher-Parts.htm', issues: [] },
+      { id: 9169, type: 'Microwave', brand: 'Smeg', model: '', manualLink: 'https://www.partselect.com/Smeg-Microwave-Manuals-and-Literature.htm', partsLink: 'https://www.partselect.com/Smeg-Microwave-Parts.htm', issues: [] },
+      { id: 9170, type: 'Microwave', brand: 'Sharp', model: '', manualLink: 'https://www.partselect.com/Sharp-Microwave-Manuals-and-Literature.htm', partsLink: 'https://www.partselect.com/Sharp-Microwave-Parts.htm', issues: [] },
+      { id: 9171, type: 'Washer', brand: 'Beko', model: '', manualLink: 'https://www.partselect.com/Beko-Washer-Manuals-and-Literature.htm', partsLink: 'https://www.partselect.com/Beko-Washer-Parts.htm', issues: [] },
+      { id: 9172, type: 'Dryer', brand: 'Beko', model: '', manualLink: 'https://www.partselect.com/Beko-Dryer-Manuals-and-Literature.htm', partsLink: 'https://www.partselect.com/Beko-Dryer-Parts.htm', issues: [] },
+      { id: 9173, type: 'Refrigerator', brand: 'Beko', model: '', manualLink: 'https://www.partselect.com/Beko-Refrigerator-Manuals-and-Literature.htm', partsLink: 'https://www.partselect.com/Beko-Refrigerator-Parts.htm', issues: [] },
+      { id: 9174, type: 'Dishwasher', brand: 'Beko', model: '', manualLink: 'https://www.partselect.com/Beko-Dishwasher-Manuals-and-Literature.htm', partsLink: 'https://www.partselect.com/Beko-Dishwasher-Parts.htm', issues: [] },
+      { id: 9175, type: 'Washer', brand: 'Blomberg', model: '', manualLink: 'https://www.partselect.com/Blomberg-Washer-Manuals-and-Literature.htm', partsLink: 'https://www.partselect.com/Blomberg-Washer-Parts.htm', issues: [] },
+      { id: 9176, type: 'Dryer', brand: 'Blomberg', model: '', manualLink: 'https://www.partselect.com/Blomberg-Dryer-Manuals-and-Literature.htm', partsLink: 'https://www.partselect.com/Blomberg-Dryer-Parts.htm', issues: [] },
+      { id: 9177, type: 'Refrigerator', brand: 'Blomberg', model: '', manualLink: 'https://www.partselect.com/Blomberg-Refrigerator-Manuals-and-Literature.htm', partsLink: 'https://www.partselect.com/Blomberg-Refrigerator-Parts.htm', issues: [] },
+      { id: 9178, type: 'Dishwasher', brand: 'Blomberg', model: '', manualLink: 'https://www.partselect.com/Blomberg-Dishwasher-Manuals-and-Literature.htm', partsLink: 'https://www.partselect.com/Blomberg-Dishwasher-Parts.htm', issues: [] },
+      { id: 9179, type: 'Ice Maker', brand: 'GE', model: '', manualLink: 'https://www.geappliances.com/ge/service-and-support/', partsLink: 'https://www.partselect.com/GE-Ice-Maker-Parts.htm', issues: [] },
+      { id: 9180, type: 'Ice Maker', brand: 'Whirlpool', model: '', manualLink: 'https://www.whirlpool.com/services/manuals-and-literature.html', partsLink: 'https://www.partselect.com/Whirlpool-Ice-Maker-Parts.htm', issues: [] },
+      { id: 9181, type: 'Ice Maker', brand: 'Samsung', model: '', manualLink: 'https://www.samsung.com/us/support/owners/product/', partsLink: 'https://www.partselect.com/Samsung-Ice-Maker-Parts.htm', issues: [] },
+      { id: 9182, type: 'Ice Maker', brand: 'Frigidaire', model: '', manualLink: 'https://www.frigidaire.com/customer-support/', partsLink: 'https://www.partselect.com/Frigidaire-Ice-Maker-Parts.htm', issues: [] },
+      { id: 9183, type: 'Ice Maker', brand: 'KitchenAid', model: '', manualLink: 'https://www.kitchenaid.com/customer-care.html', partsLink: 'https://www.partselect.com/KitchenAid-Ice-Maker-Parts.htm', issues: [] },
+      { id: 9184, type: 'Range Hood', brand: 'GE', model: '', manualLink: 'https://www.geappliances.com/ge/service-and-support/', partsLink: 'https://www.partselect.com/GE-Vent-Hood-Parts.htm', issues: [] },
+      { id: 9185, type: 'Range Hood', brand: 'Whirlpool', model: '', manualLink: 'https://www.whirlpool.com/services/manuals-and-literature.html', partsLink: 'https://www.partselect.com/Whirlpool-Vent-Hood-Parts.htm', issues: [] },
+      { id: 9186, type: 'Range Hood', brand: 'KitchenAid', model: '', manualLink: 'https://www.kitchenaid.com/customer-care.html', partsLink: 'https://www.partselect.com/KitchenAid-Vent-Hood-Parts.htm', issues: [] },
+      { id: 9187, type: 'Range Hood', brand: 'Samsung', model: '', manualLink: 'https://www.samsung.com/us/support/owners/product/', partsLink: 'https://www.partselect.com/Samsung-Vent-Hood-Parts.htm', issues: [] },
+      { id: 9188, type: 'Range Hood', brand: 'Bosch', model: '', manualLink: 'https://www.bosch-home.com/us/service-and-support', partsLink: 'https://www.partselect.com/Bosch-Vent-Hood-Parts.htm', issues: [] },
+      { id: 9189, type: 'Trash Compactor', brand: 'Whirlpool', model: '', manualLink: 'https://www.whirlpool.com/services/manuals-and-literature.html', partsLink: 'https://www.partselect.com/Whirlpool-Trash-Compactor-Parts.htm', issues: [] },
+      { id: 9190, type: 'Trash Compactor', brand: 'GE', model: '', manualLink: 'https://www.geappliances.com/ge/service-and-support/', partsLink: 'https://www.partselect.com/GE-Trash-Compactor-Parts.htm', issues: [] },
+      { id: 9191, type: 'Trash Compactor', brand: 'KitchenAid', model: '', manualLink: 'https://www.kitchenaid.com/customer-care.html', partsLink: 'https://www.partselect.com/KitchenAid-Trash-Compactor-Parts.htm', issues: [] },
+      { id: 9192, type: 'Garbage Disposal', brand: 'KitchenAid', model: '', manualLink: 'https://www.kitchenaid.com/customer-care.html', partsLink: 'https://www.partselect.com/KitchenAid-Garbage-Disposer-Parts.htm', issues: [] },
+      { id: 9193, type: 'Garbage Disposal', brand: 'Whirlpool', model: '', manualLink: 'https://www.whirlpool.com/services/manuals-and-literature.html', partsLink: 'https://www.partselect.com/Whirlpool-Garbage-Disposer-Parts.htm', issues: [] },
+      { id: 9194, type: 'Garbage Disposal', brand: 'GE', model: '', manualLink: 'https://www.geappliances.com/ge/service-and-support/', partsLink: 'https://www.partselect.com/GE-Garbage-Disposer-Parts.htm', issues: [] },
+      { id: 9195, type: 'Water Heater', brand: 'Whirlpool', model: '', manualLink: 'https://www.whirlpool.com/services/manuals-and-literature.html', partsLink: 'https://www.partselect.com/Whirlpool-Water-Heater-Parts.htm', issues: [] },
+      { id: 9196, type: 'Water Heater', brand: 'GE', model: '', manualLink: 'https://www.geappliances.com/ge/service-and-support/', partsLink: 'https://www.partselect.com/GE-Water-Heater-Parts.htm', issues: [] },
+      { id: 9197, type: 'Water Heater', brand: 'Rheem', model: '', manualLink: 'https://www.partselect.com/Rheem-Water-Heater-Manuals-and-Literature.htm', partsLink: 'https://www.partselect.com/Rheem-Water-Heater-Parts.htm', issues: [] },
+      { id: 9198, type: 'Water Heater', brand: 'Ruud', model: '', manualLink: 'https://www.partselect.com/Ruud-Water-Heater-Manuals-and-Literature.htm', partsLink: 'https://www.partselect.com/Ruud-Water-Heater-Parts.htm', issues: [] },
+      { id: 9199, type: 'Dehumidifier', brand: 'Whirlpool', model: '', manualLink: 'https://www.whirlpool.com/services/manuals-and-literature.html', partsLink: 'https://www.partselect.com/Whirlpool-Dehumidifier-Parts.htm', issues: [] },
+      { id: 9200, type: 'Dehumidifier', brand: 'GE', model: '', manualLink: 'https://www.geappliances.com/ge/service-and-support/', partsLink: 'https://www.partselect.com/GE-Dehumidifier-Parts.htm', issues: [] },
+      { id: 9201, type: 'Dehumidifier', brand: 'Frigidaire', model: '', manualLink: 'https://www.frigidaire.com/customer-support/', partsLink: 'https://www.partselect.com/Frigidaire-Dehumidifier-Parts.htm', issues: [] },
+      { id: 9202, type: 'Dehumidifier', brand: 'Haier', model: '', manualLink: 'https://www.partselect.com/Haier-Dehumidifier-Manuals-and-Literature.htm', partsLink: 'https://www.partselect.com/Haier-Dehumidifier-Parts.htm', issues: [] },
+      { id: 9203, type: 'Wine Cooler', brand: 'Whirlpool', model: '', manualLink: 'https://www.whirlpool.com/services/manuals-and-literature.html', partsLink: 'https://www.partselect.com/Whirlpool-Wine-and-Beverage-Cooler-Parts.htm', issues: [] },
+      { id: 9204, type: 'Wine Cooler', brand: 'GE', model: '', manualLink: 'https://www.geappliances.com/ge/service-and-support/', partsLink: 'https://www.partselect.com/GE-Wine-and-Beverage-Cooler-Parts.htm', issues: [] },
+      { id: 9205, type: 'Wine Cooler', brand: 'Frigidaire', model: '', manualLink: 'https://www.frigidaire.com/customer-support/', partsLink: 'https://www.partselect.com/Frigidaire-Wine-and-Beverage-Cooler-Parts.htm', issues: [] },
+      { id: 9206, type: 'Air Conditioner', brand: 'Whirlpool', model: '', manualLink: 'https://www.whirlpool.com/services/manuals-and-literature.html', partsLink: 'https://www.partselect.com/Whirlpool-Air-Conditioner-Parts.htm', issues: [] },
+      { id: 9207, type: 'Air Conditioner', brand: 'GE', model: '', manualLink: 'https://www.geappliances.com/ge/service-and-support/', partsLink: 'https://www.partselect.com/GE-Air-Conditioner-Parts.htm', issues: [] },
+      { id: 9208, type: 'Air Conditioner', brand: 'Frigidaire', model: '', manualLink: 'https://www.frigidaire.com/customer-support/', partsLink: 'https://www.partselect.com/Frigidaire-Air-Conditioner-Parts.htm', issues: [] },
+      { id: 9209, type: 'Air Conditioner', brand: 'LG', model: '', manualLink: 'https://www.lg.com/us/support/manuals', partsLink: 'https://www.partselect.com/LG-Air-Conditioner-Parts.htm', issues: [] },
+      { id: 9210, type: 'Air Conditioner', brand: 'Haier', model: '', manualLink: 'https://www.partselect.com/Haier-Air-Conditioner-Manuals-and-Literature.htm', partsLink: 'https://www.partselect.com/Haier-Air-Conditioner-Parts.htm', issues: [] },
+      { id: 9211, type: 'Air Conditioner', brand: 'Midea', model: '', manualLink: 'https://www.partselect.com/Midea-Air-Conditioner-Manuals-and-Literature.htm', partsLink: 'https://www.partselect.com/Midea-Air-Conditioner-Parts.htm', issues: [] },
+      { id: 9212, type: 'Washer/Dryer Combo', brand: 'LG', model: '', manualLink: 'https://www.lg.com/us/support/manuals', partsLink: 'https://www.partselect.com/LG-Washer-Dryer-Combo-Parts.htm', issues: [] },
+      { id: 9213, type: 'Washer/Dryer Combo', brand: 'GE', model: '', manualLink: 'https://www.geappliances.com/ge/service-and-support/', partsLink: 'https://www.partselect.com/GE-Washer-Dryer-Combo-Parts.htm', issues: [] },
+      { id: 9214, type: 'Washer/Dryer Combo', brand: 'Samsung', model: '', manualLink: 'https://www.samsung.com/us/support/owners/product/', partsLink: 'https://www.partselect.com/Samsung-Washer-Dryer-Combo-Parts.htm', issues: [] },
+      { id: 9215, type: 'Washer/Dryer Combo', brand: 'Bosch', model: '', manualLink: 'https://www.bosch-home.com/us/service-and-support', partsLink: 'https://www.partselect.com/Bosch-Washer-Dryer-Combo-Parts.htm', issues: [] },
+      { id: 9216, type: 'Ice Maker', brand: 'LG', model: '', manualLink: 'https://www.lg.com/us/support/manuals', partsLink: 'https://www.partselect.com/LG-Ice-Maker-Parts.htm', issues: [{ id: 101, symptom: 'Not making ice, or ice maker won\'t dispense (French-door/side-by-side models)', partName: 'Ice maker assembly (6-wire connector)', partNumber: 'AEQ73110205', priceLow: 175, priceHigh: 195, link: 'https://www.partselect.com/LG-Refrigerator-Ice-Makers.htm', note: 'Check the connector wire count before ordering -- LG used both 6-wire and 3-wire ice maker assemblies across model years, and they are not interchangeable. This is the 6-wire version.' }] },
+      { id: 9217, type: 'Refrigerator', brand: 'Sub-Zero', model: '', manualLink: 'https://www.subzero-wolf.com/assistance', partsLink: 'https://www.subzeroparts.com/', issues: [] },
+      { id: 9218, type: 'Freezer', brand: 'Sub-Zero', model: '', manualLink: 'https://www.subzero-wolf.com/assistance', partsLink: 'https://www.subzeroparts.com/', issues: [] },
+      { id: 9219, type: 'Wine Cooler', brand: 'Sub-Zero', model: '', manualLink: 'https://www.subzero-wolf.com/assistance', partsLink: 'https://www.subzeroparts.com/', issues: [] },
+      { id: 9220, type: 'Ice Maker', brand: 'Sub-Zero', model: '', manualLink: 'https://www.subzero-wolf.com/assistance', partsLink: 'https://www.subzeroparts.com/', issues: [] },
+      { id: 9221, type: 'Range', brand: 'Wolf', model: '', manualLink: 'https://www.subzero-wolf.com/assistance', partsLink: 'https://www.subzeroparts.com/', issues: [] },
+      { id: 9222, type: 'Oven', brand: 'Wolf', model: '', manualLink: 'https://www.subzero-wolf.com/assistance', partsLink: 'https://www.subzeroparts.com/', issues: [] },
+      { id: 9223, type: 'Cooktop', brand: 'Wolf', model: '', manualLink: 'https://www.subzero-wolf.com/assistance', partsLink: 'https://www.subzeroparts.com/', issues: [] },
+      { id: 9224, type: 'Range Hood', brand: 'Wolf', model: '', manualLink: 'https://www.subzero-wolf.com/assistance', partsLink: 'https://www.subzeroparts.com/', issues: [] },
+      { id: 9225, type: 'Microwave', brand: 'Wolf', model: '', manualLink: 'https://www.subzero-wolf.com/assistance', partsLink: 'https://www.subzeroparts.com/', issues: [] },
+      { id: 9226, type: 'Washer', brand: 'Miele', model: '', manualLink: 'https://www.miele.com/en/com/miele-service-2069.htm', partsLink: 'https://www.mieleusa.com/e/kitchen-appliance-spare-parts-1300015-c', issues: [] },
+      { id: 9227, type: 'Dryer', brand: 'Miele', model: '', manualLink: 'https://www.miele.com/en/com/miele-service-2069.htm', partsLink: 'https://www.mieleusa.com/e/kitchen-appliance-spare-parts-1300015-c', issues: [] },
+      { id: 9228, type: 'Dishwasher', brand: 'Miele', model: '', manualLink: 'https://www.miele.com/en/com/miele-service-2069.htm', partsLink: 'https://www.mieleusa.com/e/kitchen-appliance-spare-parts-1300015-c', issues: [] },
+      { id: 9229, type: 'Oven', brand: 'Miele', model: '', manualLink: 'https://www.miele.com/en/com/miele-service-2069.htm', partsLink: 'https://www.mieleusa.com/e/kitchen-appliance-spare-parts-1300015-c', issues: [] },
+      { id: 9230, type: 'Cooktop', brand: 'Miele', model: '', manualLink: 'https://www.miele.com/en/com/miele-service-2069.htm', partsLink: 'https://www.mieleusa.com/e/kitchen-appliance-spare-parts-1300015-c', issues: [] },
+      { id: 9231, type: 'Refrigerator', brand: 'Miele', model: '', manualLink: 'https://www.miele.com/en/com/miele-service-2069.htm', partsLink: 'https://www.mieleusa.com/e/kitchen-appliance-spare-parts-1300015-c', issues: [] },
+      { id: 9232, type: 'Range', brand: 'Thermador', model: '', manualLink: 'https://www.thermador.com/us/support/owner-manuals', partsLink: 'https://www.thermador.com/us/support/service-and-repairs', issues: [] },
+      { id: 9233, type: 'Oven', brand: 'Thermador', model: '', manualLink: 'https://www.thermador.com/us/support/owner-manuals', partsLink: 'https://www.thermador.com/us/support/service-and-repairs', issues: [] },
+      { id: 9234, type: 'Cooktop', brand: 'Thermador', model: '', manualLink: 'https://www.thermador.com/us/support/owner-manuals', partsLink: 'https://www.thermador.com/us/support/service-and-repairs', issues: [] },
+      { id: 9235, type: 'Refrigerator', brand: 'Thermador', model: '', manualLink: 'https://www.thermador.com/us/support/owner-manuals', partsLink: 'https://www.thermador.com/us/support/service-and-repairs', issues: [] },
+      { id: 9236, type: 'Dishwasher', brand: 'Thermador', model: '', manualLink: 'https://www.thermador.com/us/support/owner-manuals', partsLink: 'https://www.thermador.com/us/support/service-and-repairs', issues: [] },
+      { id: 9237, type: 'Range Hood', brand: 'Thermador', model: '', manualLink: 'https://www.thermador.com/us/support/owner-manuals', partsLink: 'https://www.thermador.com/us/support/service-and-repairs', issues: [] },
+      { id: 9238, type: 'Refrigerator', brand: 'Fisher & Paykel', model: '', manualLink: 'https://www.fisherpaykel.com/us/help-and-support/find-a-manual/', partsLink: 'https://www.fisherpaykel.com/us/resources/', issues: [] },
+      { id: 9239, type: 'Dishwasher', brand: 'Fisher & Paykel', model: '', manualLink: 'https://www.fisherpaykel.com/us/help-and-support/find-a-manual/', partsLink: 'https://www.fisherpaykel.com/us/resources/', issues: [] },
+      { id: 9240, type: 'Range', brand: 'Fisher & Paykel', model: '', manualLink: 'https://www.fisherpaykel.com/us/help-and-support/find-a-manual/', partsLink: 'https://www.fisherpaykel.com/us/resources/', issues: [] },
+      { id: 9241, type: 'Washer', brand: 'Fisher & Paykel', model: '', manualLink: 'https://www.fisherpaykel.com/us/help-and-support/find-a-manual/', partsLink: 'https://www.fisherpaykel.com/us/resources/', issues: [] },
+      { id: 9242, type: 'Dryer', brand: 'Fisher & Paykel', model: '', manualLink: 'https://www.fisherpaykel.com/us/help-and-support/find-a-manual/', partsLink: 'https://www.fisherpaykel.com/us/resources/', issues: [] },
+    ];
+
+    additions.forEach(u => {
+      const key = u.type + '|' + u.brand + '|' + (u.model || '');
+      if (!existingKeys.has(key)) {
+        list.push(u);
+        existingKeys.add(key);
+      }
+    });
+
+    // Inject two real, verified troubleshooting entries into existing
+    // (already-deployed) seeded units, only if not already present.
+    const fuseIssue = {
+      id: 102,
+      symptom: 'Not heating (drum spins fine, no heat, clothes come out damp)',
+      partName: 'Thermal fuse', partNumber: 'WP3392519', priceLow: 15, priceHigh: 20,
+      link: 'https://www.partselect.com/Whirlpool-Dryer-Fuses.htm',
+      note: 'By far the most common no-heat cause on Whirlpool-built dryers (also sold as Maytag, Kenmore, KitchenAid, Roper). One-time-use fuse mounted on the blower housing -- test for continuity with a multimeter, it cannot be reset once blown. Always check for a restricted exhaust vent too, since that is usually what blows it in the first place.',
+    };
+    ['Whirlpool', 'Maytag', 'Kenmore'].forEach(brand => {
+      const unit = list.find(u => u.type === 'Dryer' && u.brand === brand && !u.model);
+      if (unit && !unit.issues.some(i => i.partNumber === 'WP3392519')) {
+        unit.issues.push(Object.assign({}, fuseIssue, { id: Date.now() + Math.floor(Math.random() * 1000) }));
+      }
+    });
+
+    savePrUnits(list);
+    localStorage.setItem(UPGRADE_KEY, '1');
+  }
+
   function togglePrAddUnitForm() { document.getElementById('prAddUnitForm').classList.toggle('is-open'); }
   function togglePrAddIssueForm() { document.getElementById('prAddIssueForm').classList.toggle('is-open'); }
 
@@ -583,6 +812,7 @@
   document.addEventListener('DOMContentLoaded', () => {
     seedPrExampleIfEmpty();
     migrateLegacyPrDataIfNeeded();
+    upgradePrSeedV2IfNeeded();
     renderTypeChips();
     renderUnits();
     if (typeof initSyncOnLoad === 'function') {
