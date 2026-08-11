@@ -1,14 +1,14 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<script src="/auth.js"></script>
+<script src="/tools/auth.js"></script>
 <script>
   // Security gate -- redirect to login before this page's own content
   // is meaningfully usable. See auth.js for why this exists (a single
   // shared account keeping randoms out, not a multi-user system).
   requireAuth();
 </script>
-<link rel="manifest" href="/manifest.json">
+<link rel="manifest" href="/tools/manifest.json">
 <meta name="theme-color" content="#0a0a0a">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -26,9 +26,9 @@
 <link href="https://fonts.googleapis.com/css2?family=Anton&family=Oswald:wght@400;500;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="/styles.css">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js" defer></script>
-<script src="/sync.js" defer></script>
-<script src="/push-notifications.js" defer></script>
-<script src="/tools-common.js" defer></script>
+<script src="/tools/sync.js" defer></script>
+<script src="/tools/push-notifications.js" defer></script>
+<script src="/tools/tools-common.js" defer></script>
 <style>
   body { padding: 44px 20px 60px; max-width: 900px; margin: 0 auto; }
   .hub-header { display: flex; align-items: center; justify-content: space-between; gap: 14px; margin-bottom: 8px; }
@@ -467,7 +467,7 @@
 
   <div class="tools-grid">
   <div class="tool-tile">
-    <a href="/job-tracker.html" class="tool-tile-link">
+    <a href="/tools/job-tracker.html" class="tool-tile-link">
       <span class="tool-tile-icon">&#128736;&#65039;</span>
       <span class="tool-tile-label">Jobs</span>
     </a>
@@ -475,7 +475,7 @@
   </div>
 
   <div class="tool-tile">
-    <a href="/invoice-generator.html" class="tool-tile-link">
+    <a href="/tools/invoice-generator.html" class="tool-tile-link">
       <span class="tool-tile-icon">&#129534;</span>
       <span class="tool-tile-label">Invoices</span>
     </a>
@@ -483,7 +483,7 @@
   </div>
 
   <div class="tool-tile">
-    <a href="/review-request.html" class="tool-tile-link">
+    <a href="/tools/review-request.html" class="tool-tile-link">
       <span class="tool-tile-icon">&#11088;</span>
       <span class="tool-tile-label">Reviews</span>
     </a>
@@ -491,7 +491,7 @@
   </div>
 
   <div class="tool-tile">
-    <a href="/route-planner.html" class="tool-tile-link">
+    <a href="/tools/route-planner.html" class="tool-tile-link">
       <span class="tool-tile-icon">&#128506;&#65039;</span>
       <span class="tool-tile-label">Routes</span>
     </a>
@@ -499,7 +499,7 @@
   </div>
 
   <div class="tool-tile">
-    <a href="/contract-generator.html" class="tool-tile-link">
+    <a href="/tools/contract-generator.html" class="tool-tile-link">
       <span class="tool-tile-icon">&#128220;</span>
       <span class="tool-tile-label">Contracts</span>
     </a>
@@ -507,7 +507,7 @@
   </div>
 
   <div class="tool-tile">
-    <a href="/calendar.html" class="tool-tile-link">
+    <a href="/tools/calendar.html" class="tool-tile-link">
       <span class="tool-tile-icon">&#128197;</span>
       <span class="tool-tile-label">Calendar</span>
     </a>
@@ -698,13 +698,13 @@
     const groups = [];
     if (jobs.length) groups.push({
       label: 'Jobs', items: jobs.slice(0, 8).map(j =>
-        `<a class="dash-list-item" href="/job-tracker.html?search=${encodeURIComponent(j.client || j.title)}#jobs">
+        `<a class="dash-list-item" href="/tools/job-tracker.html?search=${encodeURIComponent(j.client || j.title)}#jobs">
           <div><div class="dash-list-item-title">${escapeHtml(j.title)}</div><div class="dash-list-item-meta">${escapeHtml(j.client || 'No client set')}</div></div>
         </a>`)
     });
     if (contacts.length) groups.push({
       label: 'Contacts', items: contacts.slice(0, 8).map(c =>
-        `<a class="dash-list-item" href="/job-tracker.html?search=${encodeURIComponent(c.name)}#contacts">
+        `<a class="dash-list-item" href="/tools/job-tracker.html?search=${encodeURIComponent(c.name)}#contacts">
           <div><div class="dash-list-item-title">${escapeHtml(c.name)}</div><div class="dash-list-item-meta">${escapeHtml(c.phone || c.email || '')}</div></div>
         </a>`)
     });
@@ -728,7 +728,7 @@
     });
     if (contracts.length) groups.push({
       label: 'Contracts', items: contracts.slice(0, 8).map(e =>
-        `<a class="dash-list-item" href="/contract-generator.html?search=${encodeURIComponent(e.fields.clientName)}">
+        `<a class="dash-list-item" href="/tools/contract-generator.html?search=${encodeURIComponent(e.fields.clientName)}">
           <div><div class="dash-list-item-title">${escapeHtml(e.fields.clientName)}</div><div class="dash-list-item-meta">${escapeHtml(CONTRACT_TYPE_LABELS_DASH[e.type] || e.type)}</div></div>
         </a>`)
     });
@@ -972,7 +972,7 @@
           <div class="dash-list-item-title">${escapeHtml(entry.client)}</div>
           <div class="dash-list-item-meta">Last job: ${escapeHtml(entry.dateStr)} &middot; ${Math.round(entry.daysSince / 30)} months ago</div>
         </div>
-        <a href="/review-request.html?${params.toString()}" class="small-btn" style="text-decoration:none;">Follow Up</a>
+        <a href="/tools/review-request.html?${params.toString()}" class="small-btn" style="text-decoration:none;">Follow Up</a>
       </div>`;
     }).join('');
   }
@@ -1601,7 +1601,7 @@
             ${job.phone ? ' &middot; <a href="tel:' + escapeHtml(job.phone) + '">' + escapeHtml(job.phone) + '</a>' : ''}
           </div>
         </div>
-        <a href="/job-tracker.html" class="secondary-btn">View in Job Tracker</a>
+        <a href="/tools/job-tracker.html" class="secondary-btn">View in Job Tracker</a>
       </div>`).join('');
   }
 
