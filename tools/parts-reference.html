@@ -73,6 +73,7 @@
   .pr-row-icon-btn:hover { background: var(--bg-panel-3); color: var(--orange-light); }
   .pr-row-icon-btn:active { transform: scale(.9); }
   .pr-row-icon-btn.danger:hover { background: rgba(211,51,51,.12); color: #e05555; }
+  .pr-row-icon-btn.active { color: var(--orange-light); }
 
   .pr-empty { text-align: center; color: var(--text-dim); padding: 40px 20px; font-size: 14px; }
   .pr-count { color: var(--text-dim); font-size: 13px; margin-bottom: 14px; }
@@ -117,6 +118,42 @@
     font-size: 12.5px; color: var(--text-dim); background: var(--bg-panel-2); border: 1px solid var(--border);
     border-radius: var(--radius); padding: 10px 12px; margin-bottom: 16px;
   }
+
+  /* Quick-access strip: pinned + recently viewed models */
+  .pr-quick-label { font-size: 12px; color: var(--text-dim); text-transform: uppercase; letter-spacing: .04em; margin-bottom: 8px; }
+  .pr-quick-strip { display: flex; gap: 8px; overflow-x: auto; padding-bottom: 4px; margin-bottom: 18px; scrollbar-width: thin; }
+  .pr-quick-chip {
+    flex: 0 0 auto; display: flex; flex-direction: column; gap: 2px; text-align: left;
+    background: var(--bg-panel-2); border: 1px solid var(--border); border-radius: 10px;
+    padding: 8px 12px; cursor: pointer; font-family: inherit; min-width: 120px; max-width: 180px;
+    transition: border-color .18s ease, transform .15s ease;
+  }
+  .pr-quick-chip:hover { border-color: var(--orange-light); transform: translateY(-1px); }
+  .pr-quick-pin { color: var(--orange-light); font-size: 11px; margin-right: 3px; }
+  .pr-quick-brand { font-size: 11px; color: var(--text-dim); text-transform: uppercase; letter-spacing: .03em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .pr-quick-model { font-size: 13px; color: var(--white); font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+  /* Search-result mode (flat list, matches brand/type/model or issue text) */
+  .pr-search-snippet { font-size: 12.5px; color: var(--orange-light); margin-top: 4px; }
+
+  /* Verified vs logged-by-you badges, confirmed-date staleness */
+  .pr-issue-meta-row { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-top: 3px; }
+  .pr-verified-badge {
+    display: inline-flex; align-items: center; gap: 3px; font-size: 10.5px; text-transform: uppercase;
+    letter-spacing: .03em; padding: 2px 6px; border-radius: 4px; white-space: nowrap;
+  }
+  .pr-verified-badge.verified { color: #6fcf97; background: rgba(111,207,151,.12); border: 1px solid rgba(111,207,151,.3); }
+  .pr-verified-badge.logged { color: var(--text-dim); background: var(--bg-panel-3); border: 1px solid var(--border); }
+  .pr-confirmed-date { font-size: 11.5px; color: var(--text-dim); }
+  .pr-confirmed-date.pr-confirmed-aging { opacity: .75; }
+  .pr-confirmed-date.pr-confirmed-stale { opacity: .55; }
+  .pr-confirmed-date.pr-confirmed-stale::after { content: ' \u00b7 worth double-checking'; }
+
+  @keyframes prIssueFlash {
+    0% { box-shadow: 0 0 0 2px var(--orange-light); }
+    100% { box-shadow: 0 0 0 2px transparent; }
+  }
+  .pr-issue-flash { animation: prIssueFlash 1.4s ease; }
 </style>
 </head>
 <body>
@@ -133,6 +170,8 @@
 
 <div id="prListView">
   <div class="pr-confidence-note">Pre-loaded with major brands and their official manual/parts links. A few of these links go to a brand's general parts catalog rather than one exact model, since exact links depend on the specific model number &mdash; worth double-checking a link the first time you use it for a real job.</div>
+
+  <div id="prQuickAccessStrip"></div>
 
   <div class="pr-search-filter-row">
     <div class="form-field pr-search-field" style="margin-bottom:0;">
@@ -232,6 +271,7 @@
 <script>
   const PR_STORAGE_KEY = 'th_parts_reference_units';
   const PR_LEGACY_KEY = 'th_parts_reference';
+  const PR_RECENT_KEY = 'th_parts_reference_recent';
   let activePrBrand = null;
   let activePrDetailType = null;
   let activePrAddModelOpen = false;
@@ -255,6 +295,29 @@
   function savePrUnits(list) {
     localStorage.setItem(PR_STORAGE_KEY, JSON.stringify(list));
     if (typeof scheduleSync === 'function') scheduleSync();
+  }
+
+  // Recently-viewed tracking for the quick-access strip. Stored as a
+  // capped, deduped, most-recent-first array of unit ids -- separate
+  // localStorage key since it's device-local browsing history, not data
+  // worth syncing across devices the way appliances/issues are.
+  function loadPrRecent() {
+    try { return JSON.parse(localStorage.getItem(PR_RECENT_KEY) || '[]'); } catch (e) { return []; }
+  }
+  function recordPrRecentView(unitId) {
+    let recent = loadPrRecent().filter(id => id !== unitId);
+    recent.unshift(unitId);
+    recent = recent.slice(0, 6);
+    localStorage.setItem(PR_RECENT_KEY, JSON.stringify(recent));
+  }
+
+  function togglePinUnit(unitId) {
+    const list = loadPrUnits();
+    const unit = list.find(u => u.id === unitId);
+    if (!unit) return;
+    unit.pinned = !unit.pinned;
+    savePrUnits(list);
+    renderBrandDetail();
   }
 
   function migrateLegacyPrDataIfNeeded() {
@@ -1890,6 +1953,31 @@
     savePrUnits(list);
     localStorage.setItem(PRUNE_KEY, '1');
   }
+
+  // ---------------------------------------------------------------------
+  // Backfill v1 (added 2026-08-11) -- adds `verified` and `confirmedAt`
+  // metadata to every pre-existing issue. Everything already in the data
+  // at this point came from verified PartSelect/manufacturer research
+  // across the whole build-out session, so it's backfilled as verified
+  // with today's date as the confirmation date. Any issue added from now
+  // on via the "+ Add Issue" form gets verified:false and today's date
+  // automatically (see savePrIssue) since it's a firsthand field report,
+  // not sourced/verified against a catalog.
+  function backfillPrIssueMetadataV1IfNeeded() {
+    const KEY = 'th_parts_reference_backfill_v1_applied';
+    if (localStorage.getItem(KEY)) return;
+    const list = loadPrUnits();
+    const today = new Date().toISOString().slice(0, 10);
+    let changed = false;
+    list.forEach(u => {
+      u.issues.forEach(iss => {
+        if (iss.verified === undefined) { iss.verified = true; changed = true; }
+        if (!iss.confirmedAt) { iss.confirmedAt = today; changed = true; }
+      });
+    });
+    if (changed) savePrUnits(list);
+    localStorage.setItem(KEY, '1');
+  }
   function togglePrAddIssueForm() { document.getElementById('prAddIssueForm').classList.toggle('is-open'); }
 
   function savePrUnit() {
@@ -1988,6 +2076,33 @@
     renderBrandTypeList();
   }
 
+  // Jump straight from Level 1 (search results or the quick-access strip)
+  // to a specific unit's entry in Level 3, skipping the brand->type
+  // click-through. Used by search results and pinned/recent chips.
+  function openUnitDirectly(unitId) {
+    const unit = loadPrUnits().find(u => u.id === unitId);
+    if (!unit) { showToast('That entry no longer exists.', { type: 'error' }); return; }
+    activePrBrand = unit.brand;
+    activePrDetailType = unit.type;
+    activePrIssueTargetId = null;
+    activePrEditUnitId = null;
+    activePrAddModelOpen = false;
+    expandedPrTypeIds = new Set([unit.id]);
+    recordPrRecentView(unit.id);
+    document.getElementById('prListView').classList.add('is-hidden');
+    document.getElementById('prTypeView').classList.remove('is-open');
+    document.getElementById('prUnitDetail').classList.add('is-open');
+    document.getElementById('prTypeDetailBackLabel').textContent = activePrBrand;
+    renderAddModelForm();
+    renderBrandDetail();
+    setTimeout(() => {
+      const section = document.querySelector('#prTypeSectionsList [data-pr-unit-id="' + unit.id + '"]');
+      if (section && typeof section.scrollIntoView === 'function') {
+        section.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }
+    }, 30);
+  }
+
   // Add a specific model without leaving the current brand+type screen --
   // pre-fills brand/type from context instead of making the user retype
   // them in the generic top-level "+ Add Appliance" form.
@@ -2063,8 +2178,12 @@
   }
 
   function toggleTypeSection(unitId) {
-    if (expandedPrTypeIds.has(unitId)) expandedPrTypeIds.delete(unitId);
-    else expandedPrTypeIds.add(unitId);
+    if (expandedPrTypeIds.has(unitId)) {
+      expandedPrTypeIds.delete(unitId);
+    } else {
+      expandedPrTypeIds.add(unitId);
+      recordPrRecentView(unitId);
+    }
     renderBrandDetail();
   }
 
@@ -2074,16 +2193,28 @@
       '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><path d="M15 3h6v6"/><path d="M10 14L21 3"/></svg>' +
       'View source</a>'
     ) : '';
+    var copyHtml = '<button class="pr-issue-link" onclick="copyPrIssueText(' + unitId + ', ' + iss.id + ')">' +
+      '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>' +
+      'Copy</button>';
     var noteHtml = iss.note ? ('<div class="pr-issue-note">' + escapeHtml(iss.note) + '</div>') : '';
     var partNumHtml = iss.partNumber ? (' <span class="pr-issue-partnum">(#' + escapeHtml(iss.partNumber) + ')</span>') : '';
     var enterClass = iss.id === justAddedPrIssueId ? 'list-row-enter' : '';
+    var verifiedBadge = iss.verified
+      ? '<span class="pr-verified-badge verified">&#10003; Verified</span>'
+      : '<span class="pr-verified-badge logged">Logged by you</span>';
+    var confirmedHtml = iss.confirmedAt
+      ? '<span class="pr-confirmed-date ' + prConfirmedAgeClass(iss.confirmedAt) + '">Confirmed ' + formatPrConfirmedDate(iss.confirmedAt) + '</span>'
+      : '';
     return '<div class="pr-issue ' + enterClass + '" data-pr-issue-id="' + iss.id + '">' +
-      '<div class="pr-issue-top"><div class="pr-issue-symptom">' + escapeHtml(iss.symptom) + '</div>' +
+      '<div class="pr-issue-top"><div>' +
+      '<div class="pr-issue-symptom">' + escapeHtml(iss.symptom) + '</div>' +
+      '<div class="pr-issue-meta-row">' + verifiedBadge + confirmedHtml + '</div>' +
+      '</div>' +
       '<div style="text-align:right;"><div class="pr-issue-price-label">Rough Cost</div>' +
       '<div class="pr-issue-price">' + formatPriceRange(iss.priceLow, iss.priceHigh) + '</div></div></div>' +
       '<div class="pr-issue-part">Likely part: <strong>' + escapeHtml(iss.partName) + '</strong>' + partNumHtml + '</div>' +
       noteHtml +
-      '<div class="pr-issue-actions">' + linkHtml + '<button class="small-btn danger" onclick="deletePrIssue(' + unitId + ', ' + iss.id + ')">Delete</button></div></div>';
+      '<div class="pr-issue-actions">' + linkHtml + copyHtml + '<button class="small-btn danger" onclick="deletePrIssue(' + unitId + ', ' + iss.id + ')">Delete</button></div></div>';
   }
 
   function renderBrandDetail() {
@@ -2125,11 +2256,12 @@
 
       var sectionLabel = u.model ? escapeHtml(u.model) : 'General reference (no specific model)';
 
-      return '<div class="pr-type-section">' +
+      return '<div class="pr-type-section" data-pr-unit-id="' + u.id + '">' +
         '<div class="pr-type-section-header" onclick="toggleTypeSection(' + u.id + ')">' +
         '<span class="pr-type-section-name">' + sectionLabel + '</span>' +
         '<span class="pr-type-section-meta" style="display:flex; align-items:center; gap:6px;">' +
         u.issues.length + ' logged' +
+        '<button class="pr-row-icon-btn' + (u.pinned ? ' active' : '') + '" title="' + (u.pinned ? 'Unpin' : 'Pin for quick access') + '" onclick="event.stopPropagation(); togglePinUnit(' + u.id + ');">' + (u.pinned ? '&#9733;' : '&#9734;') + '</button>' +
         '<button class="pr-row-icon-btn" title="Edit" onclick="event.stopPropagation(); toggleEditUnit(' + u.id + ');">&#9998;</button>' +
         '<button class="pr-row-icon-btn danger" title="Delete" onclick="event.stopPropagation(); deletePrUnitType(' + u.id + ');">&#128465;</button>' +
         '<svg class="pr-chevron' + (isExpanded ? ' is-open' : '') + '" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>' +
@@ -2173,6 +2305,8 @@
       priceHigh: parseFloat(document.getElementById('prNewPriceHigh').value) || null,
       link: document.getElementById('prNewLink').value.trim(),
       note: document.getElementById('prNewNote').value.trim(),
+      verified: false,
+      confirmedAt: new Date().toISOString().slice(0, 10),
     };
     const list = loadPrUnits();
     const unit = list.find(u => u.id === unitId);
@@ -2202,6 +2336,40 @@
     });
   }
 
+  function prConfirmedAgeClass(dateStr) {
+    if (!dateStr) return '';
+    const days = (Date.now() - new Date(dateStr).getTime()) / 86400000;
+    if (days > 545) return 'pr-confirmed-stale';
+    if (days > 180) return 'pr-confirmed-aging';
+    return '';
+  }
+
+  function formatPrConfirmedDate(dateStr) {
+    if (!dateStr) return '';
+    const d = new Date(dateStr + 'T00:00:00');
+    return d.toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
+  }
+
+  function copyPrIssueText(unitId, issueId) {
+    const unit = loadPrUnits().find(u => u.id === unitId);
+    const iss = unit && unit.issues.find(i => i.id === issueId);
+    if (!iss) return;
+    const lines = [
+      'Symptom: ' + iss.symptom,
+      'Likely part: ' + iss.partName + (iss.partNumber ? ' (#' + iss.partNumber + ')' : ''),
+      'Rough cost: ' + formatPriceRange(iss.priceLow, iss.priceHigh).replace('&ndash;', '-'),
+    ];
+    if (iss.note) lines.push('Note: ' + iss.note);
+    const text = lines.join('\n');
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(text)
+        .then(() => showToast('Copied to clipboard.'))
+        .catch(() => showToast('Could not copy.', { type: 'error' }));
+    } else {
+      showToast('Clipboard not available in this browser.', { type: 'error' });
+    }
+  }
+
   function formatPriceRange(low, high) {
     if (low == null && high == null) return 'Varies';
     if (low != null && high != null) return '$' + low.toFixed(0) + '&ndash;' + high.toFixed(0);
@@ -2228,50 +2396,125 @@
     renderUnits();
   }
 
+  function renderPrQuickAccessStrip() {
+    const container = document.getElementById('prQuickAccessStrip');
+    if (!container) return;
+    const searchVal = document.getElementById('prSearchInput').value.trim();
+    if (searchVal) { container.innerHTML = ''; return; }
+
+    const units = loadPrUnits();
+    const pinned = units.filter(u => u.pinned);
+    const recentIds = loadPrRecent();
+    const recentUnits = recentIds.map(id => units.find(u => u.id === id)).filter(Boolean).filter(u => !u.pinned);
+    const combined = pinned.concat(recentUnits).slice(0, 8);
+
+    if (!combined.length) { container.innerHTML = ''; return; }
+
+    container.innerHTML =
+      '<div class="pr-quick-label">' + (pinned.length ? 'Pinned &amp; recently viewed' : 'Recently viewed') + '</div>' +
+      '<div class="pr-quick-strip">' + combined.map(function(u) {
+        var modelLabel = u.model ? u.model.split(' \u2014 ')[0] : u.type;
+        return '<button class="pr-quick-chip" data-pr-quick-id="' + u.id + '">' +
+          '<span class="pr-quick-brand">' + (u.pinned ? '<span class="pr-quick-pin">&#9733;</span>' : '') + escapeHtml(u.brand) + '</span>' +
+          '<span class="pr-quick-model">' + escapeHtml(modelLabel) + '</span>' +
+          '</button>';
+      }).join('') + '</div>';
+
+    container.querySelectorAll('.pr-quick-chip').forEach(function(chip) {
+      chip.addEventListener('click', function() { openUnitDirectly(parseInt(chip.dataset.prQuickId, 10)); });
+    });
+  }
+
   function renderUnits() {
-    const search = document.getElementById('prSearchInput').value.trim().toLowerCase();
+    renderPrQuickAccessStrip();
+
+    const searchRaw = document.getElementById('prSearchInput').value.trim();
+    const search = searchRaw.toLowerCase();
     let units = loadPrUnits();
 
     if (activePrType !== 'all') units = units.filter(u => u.type === activePrType);
-    if (search) {
-      units = units.filter(u =>
-        u.type.toLowerCase().includes(search) ||
-        (u.brand || '').toLowerCase().includes(search) ||
-        (u.model || '').toLowerCase().includes(search)
-      );
-    }
-
-    const byBrand = {};
-    units.forEach(u => {
-      const key = u.brand || '(no brand)';
-      if (!byBrand[key]) byBrand[key] = [];
-      byBrand[key].push(u);
-    });
-    const brands = Object.keys(byBrand).sort();
-
-    document.getElementById('prCount').textContent = brands.length
-      ? brands.length + ' brand' + (brands.length === 1 ? '' : 's')
-      : '';
 
     const list = document.getElementById('prUnitsList');
-    if (!brands.length) {
-      list.innerHTML = '<div class="pr-empty">' + (loadPrUnits().length ? 'Nothing matches that search.' : 'No appliances added yet.') + '</div>';
+
+    if (!search) {
+      // Default browse mode: group by brand, unchanged from before.
+      const byBrand = {};
+      units.forEach(u => {
+        const key = u.brand || '(no brand)';
+        if (!byBrand[key]) byBrand[key] = [];
+        byBrand[key].push(u);
+      });
+      const brands = Object.keys(byBrand).sort();
+
+      document.getElementById('prCount').textContent = brands.length
+        ? brands.length + ' brand' + (brands.length === 1 ? '' : 's')
+        : '';
+
+      if (!brands.length) {
+        list.innerHTML = '<div class="pr-empty">' + (loadPrUnits().length ? 'Nothing matches that search.' : 'No appliances added yet.') + '</div>';
+        return;
+      }
+
+      list.innerHTML = brands.map(function(brand) {
+        const brandUnits = byBrand[brand];
+        const totalIssues = brandUnits.reduce((sum, u) => sum + u.issues.length, 0);
+        const typeNames = brandUnits.map(u => u.type).sort().join(', ');
+        const badge = totalIssues ? '<span class="pr-unit-badge">' + totalIssues + ' logged issue' + (totalIssues === 1 ? '' : 's') + '</span>' : '';
+        return '<div class="pr-unit-card" data-pr-brand="' + escapeHtml(brand) + '">' +
+          '<div class="pr-unit-type">' + brandUnits.length + ' appliance type' + (brandUnits.length === 1 ? '' : 's') + '</div>' +
+          '<div class="pr-unit-name">' + escapeHtml(brand) + '</div>' +
+          '<div class="pr-unit-count">' + escapeHtml(typeNames) + '</div>' +
+          badge + '</div>';
+      }).join('');
+      list.querySelectorAll('.pr-unit-card').forEach(function(card) {
+        card.addEventListener('click', function() { openBrandDetail(card.dataset.prBrand); });
+      });
       return;
     }
 
-    list.innerHTML = brands.map(function(brand) {
-      const brandUnits = byBrand[brand];
-      const totalIssues = brandUnits.reduce((sum, u) => sum + u.issues.length, 0);
-      const typeNames = brandUnits.map(u => u.type).sort().join(', ');
-      const badge = totalIssues ? '<span class="pr-unit-badge">' + totalIssues + ' logged issue' + (totalIssues === 1 ? '' : 's') + '</span>' : '';
-      return '<div class="pr-unit-card" data-pr-brand="' + escapeHtml(brand) + '">' +
-        '<div class="pr-unit-type">' + brandUnits.length + ' appliance type' + (brandUnits.length === 1 ? '' : 's') + '</div>' +
-        '<div class="pr-unit-name">' + escapeHtml(brand) + '</div>' +
-        '<div class="pr-unit-count">' + escapeHtml(typeNames) + '</div>' +
-        badge + '</div>';
+    // Search mode: flat list of matching units -- matches brand, type, or
+    // model text same as before, but now ALSO matches issue symptom, part
+    // name, or part number, so "won't spin" or a part number finds its
+    // way straight to the right entry instead of only matching by brand.
+    const results = [];
+    units.forEach(u => {
+      const unitTextMatch = u.type.toLowerCase().includes(search) ||
+        (u.brand || '').toLowerCase().includes(search) ||
+        (u.model || '').toLowerCase().includes(search);
+      let matchedIssue = null;
+      if (!unitTextMatch) {
+        matchedIssue = u.issues.find(function(iss) {
+          return (iss.symptom || '').toLowerCase().includes(search) ||
+            (iss.partName || '').toLowerCase().includes(search) ||
+            (iss.partNumber || '').toLowerCase().includes(search);
+        });
+      }
+      if (unitTextMatch || matchedIssue) results.push({ unit: u, matchedIssue: matchedIssue });
+    });
+
+    document.getElementById('prCount').textContent = results.length
+      ? results.length + ' result' + (results.length === 1 ? '' : 's')
+      : '';
+
+    if (!results.length) {
+      list.innerHTML = '<div class="pr-empty">Nothing matches that search.</div>';
+      return;
+    }
+
+    list.innerHTML = results.map(function(r) {
+      const u = r.unit;
+      const modelLabel = u.model ? u.model : (u.type + ' \u2014 general reference');
+      const snippet = r.matchedIssue
+        ? '<div class="pr-search-snippet">Matched issue: &ldquo;' + escapeHtml(r.matchedIssue.symptom) + '&rdquo;</div>'
+        : '';
+      return '<div class="pr-unit-card" data-pr-unit-id="' + u.id + '">' +
+        '<div class="pr-unit-type">' + escapeHtml(u.brand) + ' &middot; ' + escapeHtml(u.type) + '</div>' +
+        '<div class="pr-unit-name">' + escapeHtml(modelLabel) + '</div>' +
+        snippet +
+        '</div>';
     }).join('');
     list.querySelectorAll('.pr-unit-card').forEach(function(card) {
-      card.addEventListener('click', function() { openBrandDetail(card.dataset.prBrand); });
+      card.addEventListener('click', function() { openUnitDirectly(parseInt(card.dataset.prUnitId, 10)); });
     });
   }
 
@@ -2311,6 +2554,7 @@
     upgradePrSeedV31IfNeeded();
     prunePrBlankReferencesV2IfNeeded();
     prunePrMergeGenericIssuesV3IfNeeded();
+    backfillPrIssueMetadataV1IfNeeded();
     renderTypeChips();
     renderUnits();
     if (typeof initSyncOnLoad === 'function') {
