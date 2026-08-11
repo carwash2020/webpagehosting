@@ -1,5 +1,5 @@
 // Shared behavior for the internal Workspace tool suite.
-// Loaded by workspace.html and every tool page via <script src="/tools/tools-common.js" defer>.
+// Loaded by workspace.html and every tool page via <script src="/tools-common.js" defer>.
 
 // Captured once, immediately -- before any button on the page could
 // possibly have been clicked yet, since this script is deferred and only
@@ -196,7 +196,7 @@ function setupSwipeBackToWorkspace() {
       committed = true;
       DRAG_ELEMENT.style.transform = 'translateX(100%)';
       DRAG_ELEMENT.style.opacity = '0';
-      setTimeout(() => { window.location.href = '/tools/workspace.html'; }, 220);
+      setTimeout(() => { window.location.href = '/workspace.html'; }, 220);
     } else {
       DRAG_ELEMENT.style.transform = 'translateX(0)';
       DRAG_ELEMENT.style.opacity = '1';
