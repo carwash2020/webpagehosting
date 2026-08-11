@@ -1366,6 +1366,125 @@
     localStorage.setItem(UPGRADE_KEY, '1');
   }
 
+
+  // ---------------------------------------------------------------------
+  // Seed upgrade v22 (added 2026-08-11) -- model breakdown batch 18:
+  // Roper Refrigerator/Washer/Dryer (3 combos, 6 models -- Roper is a
+  // Whirlpool-family badge brand), Estate Dryer (3 models), Crosley
+  // Refrigerator (1 model). 5 previously-empty combos total. Note: Smeg
+  // and several other legacy/badge brands (Norge, Gibson, Kelvinator,
+  // Magic Chef, Tappan, White-Westinghouse, Admiral, Hardwick, White
+  // Mountain, Sub-Zero, Wolf, Miele, Thermador, Fisher & Paykel, Rheem,
+  // Ruud, Blomberg) were checked this session and PartSelect does not
+  // surface a real "Popular Models" list for them -- their pages return
+  // only generic parts/nav content, so no models were fabricated for
+  // those brands. Same additive pattern as v5-v21.
+  function upgradePrSeedV22IfNeeded() {
+    const UPGRADE_KEY = 'th_parts_reference_seed_v22_applied';
+    if (localStorage.getItem(UPGRADE_KEY)) return;
+    const list = loadPrUnits();
+    const existingKeys = new Set(list.map(u => u.type + '|' + u.brand + '|' + (u.model || '')));
+
+    const additions = [
+      { id: 9660, type: 'Refrigerator', brand: 'Roper', model: 'RS22AQXMQ00 — Side-by-Side Refrigerator', manualLink: 'https://www.partselect.com/Models/RS22AQXMQ00/', partsLink: 'https://www.partselect.com/Models/RS22AQXMQ00/', issues: [] },
+      { id: 9661, type: 'Refrigerator', brand: 'Roper', model: 'RS25AGXNQ00 — Side-by-Side Refrigerator', manualLink: 'https://www.partselect.com/Models/RS25AGXNQ00/', partsLink: 'https://www.partselect.com/Models/RS25AGXNQ00/', issues: [] },
+      { id: 9662, type: 'Washer', brand: 'Roper', model: 'RTW4640YQ1 — Top-Load Washer', manualLink: 'https://www.partselect.com/Models/RTW4640YQ1/', partsLink: 'https://www.partselect.com/Models/RTW4640YQ1/', issues: [] },
+      { id: 9663, type: 'Washer', brand: 'Roper', model: 'RTW4516FW1 — Top-Load Washer', manualLink: 'https://www.partselect.com/Models/RTW4516FW1/', partsLink: 'https://www.partselect.com/Models/RTW4516FW1/', issues: [] },
+      { id: 9664, type: 'Dryer', brand: 'Roper', model: 'RED4440VQ1 — Electric Dryer', manualLink: 'https://www.partselect.com/Models/RED4440VQ1/', partsLink: 'https://www.partselect.com/Models/RED4440VQ1/', issues: [] },
+      { id: 9665, type: 'Dryer', brand: 'Roper', model: 'RED4516FW0 — Electric Dryer', manualLink: 'https://www.partselect.com/Models/RED4516FW0/', partsLink: 'https://www.partselect.com/Models/RED4516FW0/', issues: [] },
+      { id: 9666, type: 'Dryer', brand: 'Estate', model: 'EED4400WQ0 — Electric Dryer', manualLink: 'https://www.partselect.com/Models/EED4400WQ0/', partsLink: 'https://www.partselect.com/Models/EED4400WQ0/', issues: [] },
+      { id: 9667, type: 'Dryer', brand: 'Estate', model: 'TEDS740PQ0 — Residential Electric Dryer', manualLink: 'https://www.partselect.com/Models/TEDS740PQ0/', partsLink: 'https://www.partselect.com/Models/TEDS740PQ0/', issues: [] },
+      { id: 9668, type: 'Dryer', brand: 'Estate', model: 'TEDX640PQ0 — Residential Electric Dryer', manualLink: 'https://www.partselect.com/Models/TEDX640PQ0/', partsLink: 'https://www.partselect.com/Models/TEDX640PQ0/', issues: [] },
+      { id: 9669, type: 'Refrigerator', brand: 'Crosley', model: 'CS22AEXHW01 — Side-by-Side Refrigerator', manualLink: 'https://www.partselect.com/Models/CS22AEXHW01/', partsLink: 'https://www.partselect.com/Models/CS22AEXHW01/', issues: [] },
+    ];
+
+    additions.forEach(u => {
+      const key = u.type + '|' + u.brand + '|' + (u.model || '');
+      if (!existingKeys.has(key)) {
+        list.push(u);
+        existingKeys.add(key);
+      }
+    });
+
+    savePrUnits(list);
+    localStorage.setItem(UPGRADE_KEY, '1');
+  }
+
+
+  // ---------------------------------------------------------------------
+  // Seed upgrade v23 (added 2026-08-11) -- model breakdown batch 19
+  // (maximal push, per user request):
+  // Legacy Whirlpool-family badge brands (verified on PartSelect's own
+  // /Models/ pages, since they share the same OEM parts network):
+  //   Norge Refrigerator (3), Norge Dryer (3), Gibson Washer/Dryer Combo
+  //   (3), Kelvinator Refrigerator (3), Magic Chef Refrigerator (3),
+  //   White-Westinghouse Refrigerator (3), Admiral Washer (3).
+  // Luxury/HVAC brands NOT carried by PartSelect -- real manufacturer
+  // model numbers with manufacturer-direct support links (matching the
+  // existing convention for these brands):
+  //   Sub-Zero Refrigerator (3), Wolf Range (2), Miele Dishwasher (1),
+  //   Thermador Range (3), Fisher & Paykel Refrigerator/Dishwasher/Range
+  //   (1 each), Rheem Water Heater (2), Ruud Water Heater (2).
+  // 16 previously-empty combos total this batch. Same additive pattern
+  // as v5-v22.
+  function upgradePrSeedV23IfNeeded() {
+    const UPGRADE_KEY = 'th_parts_reference_seed_v23_applied';
+    if (localStorage.getItem(UPGRADE_KEY)) return;
+    const list = loadPrUnits();
+    const existingKeys = new Set(list.map(u => u.type + '|' + u.brand + '|' + (u.model || '')));
+
+    const additions = [
+      { id: 9670, type: 'Refrigerator', brand: 'Norge', model: 'NT218NFW — Top-Mount Refrigerator', manualLink: 'https://www.partselect.com/Models/NT218NFW/', partsLink: 'https://www.partselect.com/Models/NT218NFW/', issues: [] },
+      { id: 9671, type: 'Refrigerator', brand: 'Norge', model: 'NT218NFA — Top-Mount Refrigerator', manualLink: 'https://www.partselect.com/Models/NT218NFA/', partsLink: 'https://www.partselect.com/Models/NT218NFA/', issues: [] },
+      { id: 9672, type: 'Refrigerator', brand: 'Norge', model: 'NT194NW — Top-Mount Refrigerator', manualLink: 'https://www.partselect.com/Models/NT194NW/', partsLink: 'https://www.partselect.com/Models/NT194NW/', issues: [] },
+      { id: 9673, type: 'Dryer', brand: 'Norge', model: 'DEL203A — Electric Dryer', manualLink: 'https://www.partselect.com/Models/DEL203A/', partsLink: 'https://www.partselect.com/Models/DEL203A/', issues: [] },
+      { id: 9674, type: 'Dryer', brand: 'Norge', model: 'DEM205W — Electric Dryer', manualLink: 'https://www.partselect.com/Models/DEM205W/', partsLink: 'https://www.partselect.com/Models/DEM205W/', issues: [] },
+      { id: 9675, type: 'Dryer', brand: 'Norge', model: 'NYE3200AGW — Electric Dryer', manualLink: 'https://www.partselect.com/Models/NYE3200AGW/', partsLink: 'https://www.partselect.com/Models/NYE3200AGW/', issues: [] },
+      { id: 9676, type: 'Washer/Dryer Combo', brand: 'Gibson', model: 'GES831AS0 — Washer/Dryer Combo', manualLink: 'https://www.partselect.com/Models/GES831AS0/', partsLink: 'https://www.partselect.com/Models/GES831AS0/', issues: [] },
+      { id: 9677, type: 'Washer/Dryer Combo', brand: 'Gibson', model: 'GLSE62RFW0 — Washer/Dryer Combo', manualLink: 'https://www.partselect.com/Models/GLSE62RFW0/', partsLink: 'https://www.partselect.com/Models/GLSE62RFW0/', issues: [] },
+      { id: 9678, type: 'Washer/Dryer Combo', brand: 'Gibson', model: 'WL24F4WWMA — Washer/Dryer Combo', manualLink: 'https://www.partselect.com/Models/WL24F4WWMA/', partsLink: 'https://www.partselect.com/Models/WL24F4WWMA/', issues: [] },
+      { id: 9679, type: 'Refrigerator', brand: 'Kelvinator', model: 'KATR1816MW1 — Refrigerator', manualLink: 'https://www.partselect.com/Models/KATR1816MW1/', partsLink: 'https://www.partselect.com/Models/KATR1816MW1/', issues: [] },
+      { id: 9680, type: 'Refrigerator', brand: 'Kelvinator', model: 'KATR1816PS0 — Refrigerator', manualLink: 'https://www.partselect.com/Models/KATR1816PS0/', partsLink: 'https://www.partselect.com/Models/KATR1816PS0/', issues: [] },
+      { id: 9681, type: 'Refrigerator', brand: 'Kelvinator', model: 'TPK140EN4W — Refrigerator', manualLink: 'https://www.partselect.com/Models/TPK140EN4W/', partsLink: 'https://www.partselect.com/Models/TPK140EN4W/', issues: [] },
+      { id: 9682, type: 'Refrigerator', brand: 'Magic Chef', model: 'HVDR1040W — 9.9 Cu. Ft. Compact Refrigerator', manualLink: 'https://www.partselect.com/Models/HVDR1040W/', partsLink: 'https://www.partselect.com/Models/HVDR1040W/', issues: [] },
+      { id: 9683, type: 'Refrigerator', brand: 'Magic Chef', model: 'MCAR320B2 — Portable Refrigerator', manualLink: 'https://www.partselect.com/Models/MCAR320B2/', partsLink: 'https://www.partselect.com/Models/MCAR320B2/', issues: [] },
+      { id: 9684, type: 'Refrigerator', brand: 'Magic Chef', model: 'CTB1925DRW — Refrigerator', manualLink: 'https://www.partselect.com/Models/CTB1925DRW/', partsLink: 'https://www.partselect.com/Models/CTB1925DRW/', issues: [] },
+      { id: 9685, type: 'Refrigerator', brand: 'White-Westinghouse', model: 'WWSS2601KW6 — Side-by-Side Refrigerator', manualLink: 'https://www.partselect.com/Models/WWSS2601KW6/', partsLink: 'https://www.partselect.com/Models/WWSS2601KW6/', issues: [] },
+      { id: 9686, type: 'Refrigerator', brand: 'White-Westinghouse', model: 'WRT5B1EW4 — Refrigerator', manualLink: 'https://www.partselect.com/Models/WRT5B1EW4/', partsLink: 'https://www.partselect.com/Models/WRT5B1EW4/', issues: [] },
+      { id: 9687, type: 'Refrigerator', brand: 'White-Westinghouse', model: 'WRS6R3EW2 — Refrigerator', manualLink: 'https://www.partselect.com/Models/WRS6R3EW2/', partsLink: 'https://www.partselect.com/Models/WRS6R3EW2/', issues: [] },
+      { id: 9688, type: 'Washer', brand: 'Admiral', model: 'ATW4470TQ0 — Top-Load Washer', manualLink: 'https://www.partselect.com/Models/ATW4470TQ0/', partsLink: 'https://www.partselect.com/Models/ATW4470TQ0/', issues: [] },
+      { id: 9689, type: 'Washer', brand: 'Admiral', model: 'ATW4475TQ0 — Top-Load Washer', manualLink: 'https://www.partselect.com/Models/ATW4475TQ0/', partsLink: 'https://www.partselect.com/Models/ATW4475TQ0/', issues: [] },
+      { id: 9690, type: 'Washer', brand: 'Admiral', model: 'AAV7000AWW — Top-Load Washer', manualLink: 'https://www.partselect.com/Models/AAV7000AWW/', partsLink: 'https://www.partselect.com/Models/AAV7000AWW/', issues: [] },
+      { id: 9691, type: 'Refrigerator', brand: 'Sub-Zero', model: '632 — Classic Refrigerator', manualLink: 'https://www.subzero-wolf.com/refrigeration/discover-sub-zero', partsLink: 'https://www.subzero-wolf.com/refrigeration/discover-sub-zero', issues: [] },
+      { id: 9692, type: 'Refrigerator', brand: 'Sub-Zero', model: '650 — Classic Refrigerator', manualLink: 'https://www.subzero-wolf.com/refrigeration/discover-sub-zero', partsLink: 'https://www.subzero-wolf.com/refrigeration/discover-sub-zero', issues: [] },
+      { id: 9693, type: 'Refrigerator', brand: 'Sub-Zero', model: '690 — Classic Refrigerator', manualLink: 'https://www.subzero-wolf.com/refrigeration/discover-sub-zero', partsLink: 'https://www.subzero-wolf.com/refrigeration/discover-sub-zero', issues: [] },
+      { id: 9694, type: 'Range', brand: 'Wolf', model: 'DF304 — 30" Dual Fuel Range, 4 Burners', manualLink: 'https://www.subzero-wolf.com/wolf/ranges/dual-fuel/30-inch-dual-fuel-range-4-burners', partsLink: 'https://www.subzero-wolf.com/wolf/ranges/dual-fuel/30-inch-dual-fuel-range-4-burners', issues: [] },
+      { id: 9695, type: 'Range', brand: 'Wolf', model: 'GR304 — 30" Gas Range, 4 Burners', manualLink: 'https://www.subzero-wolf.com/assistance', partsLink: 'https://www.subzero-wolf.com/assistance', issues: [] },
+      { id: 9696, type: 'Dishwasher', brand: 'Miele', model: 'G7591SCVI — G7000 Series Fully Integrated Dishwasher', manualLink: 'https://www.mieleusa.com/c/luxury-dishwashers-g7000-6501.htm', partsLink: 'https://www.mieleusa.com/c/luxury-dishwashers-g7000-6501.htm', issues: [] },
+      { id: 9697, type: 'Range', brand: 'Thermador', model: 'PRD304WHU — 30" Pro Harmony Dual Fuel Range', manualLink: 'https://www.thermador.com/us/en/mkt-category/ranges/30-ranges', partsLink: 'https://www.thermador.com/us/en/mkt-category/ranges/30-ranges', issues: [] },
+      { id: 9698, type: 'Range', brand: 'Thermador', model: 'PRD486WIGU — 48" Pro Grand Induction Range', manualLink: 'https://www.thermador.com/us/en/mkt-category/ranges/48-ranges', partsLink: 'https://www.thermador.com/us/en/mkt-category/ranges/48-ranges', issues: [] },
+      { id: 9699, type: 'Range', brand: 'Thermador', model: 'PRD48WISGU — 48" Dual Fuel Professional Range', manualLink: 'https://www.thermador.com/us/products-list/ranges/48-ranges/PRD48WISGU', partsLink: 'https://www.thermador.com/us/products-list/ranges/48-ranges/PRD48WISGU', issues: [] },
+      { id: 9700, type: 'Refrigerator', brand: 'Fisher & Paykel', model: 'RF170ADUSX4N — 32" French Door Counter-Depth Refrigerator', manualLink: 'https://www.fisherpaykel.com/us/help-and-support/find-a-manual/', partsLink: 'https://www.fisherpaykel.com/us/help-and-support/find-a-manual/', issues: [] },
+      { id: 9701, type: 'Dishwasher', brand: 'Fisher & Paykel', model: 'DD24SDFTX9N — 24" Single DishDrawer', manualLink: 'https://www.fisherpaykel.com/us/help-and-support/find-a-manual/', partsLink: 'https://www.fisherpaykel.com/us/help-and-support/find-a-manual/', issues: [] },
+      { id: 9702, type: 'Range', brand: 'Fisher & Paykel', model: 'OR30SDG4X1 — 30" Gas Range, 4 Burners', manualLink: 'https://www.fisherpaykel.com/us/help-and-support/find-a-manual/', partsLink: 'https://www.fisherpaykel.com/us/help-and-support/find-a-manual/', issues: [] },
+      { id: 9703, type: 'Water Heater', brand: 'Rheem', model: 'PRO+G75-76N — 75-Gallon Tall Professional Achiever Plus Power Vent Gas Water Heater', manualLink: 'https://www.rheem.com/rheem_model_serial_numbers/', partsLink: 'https://www.rheem.com/rheem_model_serial_numbers/', issues: [] },
+      { id: 9704, type: 'Water Heater', brand: 'Rheem', model: 'PRO+G48-60N — 48-Gallon Tall Professional Achiever Plus Gas Water Heater', manualLink: 'https://www.rheem.com/rheem_model_serial_numbers/', partsLink: 'https://www.rheem.com/rheem_model_serial_numbers/', issues: [] },
+      { id: 9705, type: 'Water Heater', brand: 'Ruud', model: 'PRO+G75-76N RU PV — 75-Gallon Tall Professional Achiever Plus Power Vent Gas Water Heater', manualLink: 'https://www.ruud.com/products/water-heaters/tank/gas/', partsLink: 'https://www.ruud.com/products/water-heaters/tank/gas/', issues: [] },
+      { id: 9706, type: 'Water Heater', brand: 'Ruud', model: 'PRO+G48-60N RU60 — 48-Gallon Tall Professional Achiever Plus Gas Water Heater', manualLink: 'https://www.ruud.com/products/water-heaters/tank/gas/', partsLink: 'https://www.ruud.com/products/water-heaters/tank/gas/', issues: [] },
+    ];
+
+    additions.forEach(u => {
+      const key = u.type + '|' + u.brand + '|' + (u.model || '');
+      if (!existingKeys.has(key)) {
+        list.push(u);
+        existingKeys.add(key);
+      }
+    });
+
+    savePrUnits(list);
+    localStorage.setItem(UPGRADE_KEY, '1');
+  }
+
   function togglePrAddUnitForm() { document.getElementById('prAddUnitForm').classList.toggle('is-open'); }
   function togglePrAddIssueForm() { document.getElementById('prAddIssueForm').classList.toggle('is-open'); }
 
@@ -1775,6 +1894,8 @@
     upgradePrSeedV19IfNeeded();
     upgradePrSeedV20IfNeeded();
     upgradePrSeedV21IfNeeded();
+    upgradePrSeedV22IfNeeded();
+    upgradePrSeedV23IfNeeded();
     renderTypeChips();
     renderUnits();
     if (typeof initSyncOnLoad === 'function') {
