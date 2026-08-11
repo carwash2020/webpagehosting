@@ -10,15 +10,17 @@
 <script src="/tools/tools-common.js" defer></script>
 <script src="/tools/sync.js" defer></script>
 <style>
-  .pr-type-chips { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 16px; }
-  .pr-chip {
-    padding: 7px 14px; border-radius: 999px; border: 1px solid var(--border);
-    background: var(--bg-panel-2); color: var(--text-dim); font-size: 13.5px;
-    cursor: pointer; transition: border-color .15s ease, color .15s ease, background .15s ease;
+  .pr-search-filter-row { display: flex; gap: 8px; margin-bottom: 16px; }
+  .pr-search-filter-row .pr-search-field { flex: 1 1 auto; min-width: 0; }
+  .pr-search-filter-row .pr-filter-field { flex: 0 0 auto; width: 128px; }
+  .pr-filter-select {
+    width: 100%; padding: 11px 10px; background: var(--bg-panel-2); border: 1px solid var(--border);
+    border-radius: 8px; color: var(--white); font-size: 13.5px; font-family: inherit;
+    appearance: none; -webkit-appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%23a0a0a0' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+    background-repeat: no-repeat; background-position: right 10px center; padding-right: 28px;
   }
-  .pr-chip:hover { border-color: var(--orange-light); color: var(--orange-light); }
-  .pr-chip:active { transform: translateY(1px); }
-  .pr-chip.is-active { background: var(--orange); color: #1a0d02; border-color: var(--orange); font-weight: 600; }
+  .pr-filter-select:focus { outline: none; border-color: var(--orange-light); }
 
   .pr-unit-card {
     background: var(--bg-panel-2); border: 1px solid var(--border); border-radius: var(--radius);
@@ -103,12 +105,16 @@
 <div id="prListView">
   <div class="pr-confidence-note">Pre-loaded with major brands and their official manual/parts links. A few of these links go to a brand's general parts catalog rather than one exact model, since exact links depend on the specific model number &mdash; worth double-checking a link the first time you use it for a real job.</div>
 
-  <div class="form-field full" style="margin-bottom:16px;">
-    <label>Search</label>
-    <input type="text" id="prSearchInput" placeholder="Search type, brand, or model..." oninput="renderUnits()">
+  <div class="pr-search-filter-row">
+    <div class="form-field pr-search-field" style="margin-bottom:0;">
+      <label>Search</label>
+      <input type="text" id="prSearchInput" placeholder="Search type, brand, or model..." oninput="renderUnits()">
+    </div>
+    <div class="form-field pr-filter-field" style="margin-bottom:0;">
+      <label>Filter</label>
+      <select class="pr-filter-select" id="prTypeFilterSelect" onchange="setPrType(this.value)"></select>
+    </div>
   </div>
-
-  <div class="pr-type-chips" id="prTypeChips"></div>
 
   <div class="form-section">
     <div style="display:flex; justify-content:space-between; align-items:center;">
@@ -1087,17 +1093,14 @@
   function renderTypeChips() {
     const units = loadPrUnits();
     const types = [...new Set(units.map(u => u.type))].sort();
-    const wrap = document.getElementById('prTypeChips');
-    if (!types.length) { wrap.innerHTML = ''; return; }
-    const chips = ['all', ...types];
-    wrap.innerHTML = chips.map(function(t) {
-      var activeClass = activePrType === t ? 'is-active' : '';
-      var label = t === 'all' ? 'All' : escapeHtml(t);
-      return '<button class="pr-chip ' + activeClass + '" data-pr-type="' + escapeHtml(t) + '">' + label + '</button>';
+    const select = document.getElementById('prTypeFilterSelect');
+    if (!types.length) { select.innerHTML = ''; return; }
+    const options = ['all', ...types];
+    select.innerHTML = options.map(function(t) {
+      var selectedAttr = activePrType === t ? ' selected' : '';
+      var label = t === 'all' ? 'All types' : escapeHtml(t);
+      return '<option value="' + escapeHtml(t) + '"' + selectedAttr + '>' + label + '</option>';
     }).join('');
-    wrap.querySelectorAll('.pr-chip').forEach(function(btn) {
-      btn.addEventListener('click', function() { setPrType(btn.dataset.prType); });
-    });
   }
 
   function setPrType(t) {
