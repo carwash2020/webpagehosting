@@ -24,29 +24,55 @@
 
   .pr-unit-card {
     background: var(--bg-panel-2); border: 1px solid var(--border); border-radius: var(--radius);
-    padding: 16px; margin-bottom: 12px; cursor: pointer; transition: border-color .15s ease;
+    padding: 16px; margin-bottom: 12px; cursor: pointer;
+    transition: border-color .18s ease, transform .18s ease, box-shadow .18s ease;
   }
-  .pr-unit-card:hover { border-color: var(--orange-light); }
-  .pr-unit-card:active { transform: translateY(1px); }
+  .pr-unit-card:hover { border-color: var(--orange-light); transform: translateY(-1px); box-shadow: 0 4px 14px rgba(0,0,0,.18); }
+  .pr-unit-card:active { transform: translateY(1px); box-shadow: none; }
   .pr-unit-type { font-family:'Oswald',sans-serif; font-size: 12.5px; letter-spacing: .04em; text-transform: uppercase; color: var(--orange-light); }
   .pr-unit-name { font-size: 17px; font-weight: 600; color: var(--white); margin-top: 2px; }
   .pr-unit-count { font-size: 13px; color: var(--text-dim); margin-top: 4px; }
   .pr-unit-badge {
     display: inline-block; font-size: 10.5px; text-transform: uppercase; letter-spacing: .03em;
     color: var(--text-dim); border: 1px solid var(--border); border-radius: 4px; padding: 2px 6px; margin-top: 6px;
+    transition: border-color .18s ease, color .18s ease;
   }
+  .pr-unit-card:hover .pr-unit-badge { border-color: var(--orange-tint-border); color: var(--orange-light); }
   .pr-type-section {
     background: var(--bg-panel-2); border: 1px solid var(--border); border-radius: var(--radius);
-    margin-bottom: 10px; overflow: hidden;
+    margin-bottom: 10px; overflow: hidden; transition: border-color .18s ease;
   }
+  .pr-type-section:hover { border-color: var(--orange-tint-border); }
   .pr-type-section-header {
     display: flex; justify-content: space-between; align-items: center;
-    padding: 14px 16px; cursor: pointer;
+    padding: 14px 16px; cursor: pointer; transition: background .15s ease;
   }
+  .pr-type-section-header:hover { background: var(--bg-panel-3); }
   .pr-type-section-header:active { background: var(--bg-panel-3); }
   .pr-type-section-name { font-size: 15px; font-weight: 600; color: var(--white); }
   .pr-type-section-meta { font-size: 12.5px; color: var(--text-dim); white-space: nowrap; }
-  .pr-type-section-body { padding: 0 16px 16px; border-top: 1px solid var(--border); padding-top: 14px; }
+  .pr-type-section-body {
+    padding: 0 16px 16px; border-top: 1px solid var(--border); padding-top: 14px;
+    animation: prSectionExpand .2s ease;
+  }
+  @keyframes prSectionExpand {
+    from { opacity: 0; transform: translateY(-4px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  .pr-chevron {
+    display: inline-flex; transition: transform .2s ease; transform: rotate(0deg);
+  }
+  .pr-chevron.is-open { transform: rotate(180deg); }
+  .pr-row-icon-btn {
+    background: none; border: none; cursor: pointer; padding: 4px; line-height: 1;
+    border-radius: 6px; display: inline-flex; align-items: center; justify-content: center;
+    width: 24px; height: 24px; font-size: 13.5px;
+    transition: background .15s ease, transform .1s ease, color .15s ease;
+    color: var(--text-dim);
+  }
+  .pr-row-icon-btn:hover { background: var(--bg-panel-3); color: var(--orange-light); }
+  .pr-row-icon-btn:active { transform: scale(.9); }
+  .pr-row-icon-btn.danger:hover { background: rgba(211,51,51,.12); color: #e05555; }
 
   .pr-empty { text-align: center; color: var(--text-dim); padding: 40px 20px; font-size: 14px; }
   .pr-count { color: var(--text-dim); font-size: 13px; margin-bottom: 14px; }
@@ -64,12 +90,15 @@
   .pr-link-box {
     background: var(--orange-tint-soft); border: 1px solid var(--orange-tint-border); border-radius: var(--radius);
     padding: 12px 14px; flex: 1; min-width: 220px; display: flex; justify-content: space-between; align-items: center; gap: 10px;
+    transition: background .18s ease, transform .15s ease;
   }
+  .pr-link-box:hover { border-color: var(--orange-light); transform: translateY(-1px); }
   .pr-link-box-label { font-size: 13px; color: var(--text); }
   .pr-issue {
     background: var(--bg-panel-2); border: 1px solid var(--border); border-radius: var(--radius);
-    padding: 16px; margin-bottom: 12px;
+    padding: 16px; margin-bottom: 12px; transition: border-color .18s ease;
   }
+  .pr-issue:hover { border-color: var(--orange-tint-border); }
   .pr-issue-top { display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; margin-bottom: 8px; }
   .pr-issue-symptom { font-size: 15.5px; font-weight: 600; color: var(--white); }
   .pr-issue-price { font-family:'Oswald',sans-serif; font-size: 19px; color: var(--white); white-space: nowrap; }
@@ -1615,6 +1644,178 @@
     localStorage.setItem(UPGRADE_KEY, '1');
   }
 
+
+  // ---------------------------------------------------------------------
+  // Seed upgrade v27 (added 2026-08-11) -- model breakdown batch 23:
+  // GE Range Hood (3 models) and Samsung Range Hood (1 model) --
+  // previously-empty combos. GE Water Heater and LG Range Hood searched
+  // this round without a clean models list surfacing (GE Water Heater
+  // pages returned only generic parts content; LG Range Hood didn't
+  // resolve on PartSelect at all this round). Same additive pattern
+  // as v5-v26.
+  function upgradePrSeedV27IfNeeded() {
+    const UPGRADE_KEY = 'th_parts_reference_seed_v27_applied';
+    if (localStorage.getItem(UPGRADE_KEY)) return;
+    const list = loadPrUnits();
+    const existingKeys = new Set(list.map(u => u.type + '|' + u.brand + '|' + (u.model || '')));
+
+    const additions = [
+      { id: 9740, type: 'Range Hood', brand: 'GE', model: 'JV348L2SS — Range Hood', manualLink: 'https://www.partselect.com/Models/JV348L2SS/', partsLink: 'https://www.partselect.com/Models/JV348L2SS/', issues: [] },
+      { id: 9741, type: 'Range Hood', brand: 'GE', model: 'JV347H2WW — Range Hood', manualLink: 'https://www.partselect.com/Models/JV347H2WW/', partsLink: 'https://www.partselect.com/Models/JV347H2WW/', issues: [] },
+      { id: 9742, type: 'Range Hood', brand: 'GE', model: 'JV367H1WW — Range Hood', manualLink: 'https://www.partselect.com/Models/JV367H1WW/', partsLink: 'https://www.partselect.com/Models/JV367H1WW/', issues: [] },
+      { id: 9743, type: 'Range Hood', brand: 'Samsung', model: 'NK30K7000WG — Range Hood', manualLink: 'https://www.partselect.com/Models/NK30K7000WG/', partsLink: 'https://www.partselect.com/Models/NK30K7000WG/', issues: [] },
+    ];
+
+    additions.forEach(u => {
+      const key = u.type + '|' + u.brand + '|' + (u.model || '');
+      if (!existingKeys.has(key)) {
+        list.push(u);
+        existingKeys.add(key);
+      }
+    });
+
+    savePrUnits(list);
+    localStorage.setItem(UPGRADE_KEY, '1');
+  }
+
+
+  // ---------------------------------------------------------------------
+  // Seed upgrade v28 (added 2026-08-11) -- model breakdown batch 24:
+  // Cracked the previously-stubborn Dishwasher category for 3 major
+  // brands via individual model-page searches (rather than relying on
+  // the brand-type overview snippet, which for Dishwasher kept truncating
+  // before showing a models list): Samsung Dishwasher (4 models),
+  // LG Dishwasher (4 models), Frigidaire Dishwasher (3 models). 3
+  // previously-empty combos total. Same additive pattern as v5-v27.
+  function upgradePrSeedV28IfNeeded() {
+    const UPGRADE_KEY = 'th_parts_reference_seed_v28_applied';
+    if (localStorage.getItem(UPGRADE_KEY)) return;
+    const list = loadPrUnits();
+    const existingKeys = new Set(list.map(u => u.type + '|' + u.brand + '|' + (u.model || '')));
+
+    const additions = [
+      { id: 9744, type: 'Dishwasher', brand: 'Samsung', model: 'DW80K5050US — 24 In Top Control StormWash Dishwasher', manualLink: 'https://www.partselect.com/Models/DW80K5050US/', partsLink: 'https://www.partselect.com/Models/DW80K5050US/', issues: [] },
+      { id: 9745, type: 'Dishwasher', brand: 'Samsung', model: 'DW80K7050UG — 24-Inch Top Control Built-In Dishwasher', manualLink: 'https://www.partselect.com/Models/DW80K7050UG/', partsLink: 'https://www.partselect.com/Models/DW80K7050UG/', issues: [] },
+      { id: 9746, type: 'Dishwasher', brand: 'Samsung', model: 'DW80CG4051SRAA — Dishwasher', manualLink: 'https://www.partselect.com/Models/DW80CG4051SRAA/', partsLink: 'https://www.partselect.com/Models/DW80CG4051SRAA/', issues: [] },
+      { id: 9747, type: 'Dishwasher', brand: 'Samsung', model: 'DW80R2031US — Dishwasher', manualLink: 'https://www.partselect.com/Models/DW80R2031US/', partsLink: 'https://www.partselect.com/Models/DW80R2031US/', issues: [] },
+      { id: 9748, type: 'Dishwasher', brand: 'LG', model: 'LDF7561ST — Dishwasher', manualLink: 'https://www.partselect.com/Models/LDF7561ST/', partsLink: 'https://www.partselect.com/Models/LDF7561ST/', issues: [] },
+      { id: 9749, type: 'Dishwasher', brand: 'LG', model: 'LDF7551ST — Dishwasher', manualLink: 'https://www.partselect.com/Models/LDF7551ST/', partsLink: 'https://www.partselect.com/Models/LDF7551ST/', issues: [] },
+      { id: 9750, type: 'Dishwasher', brand: 'LG', model: 'LDFN4542S — Front Control Dishwasher', manualLink: 'https://www.partselect.com/Models/LDFN4542S/', partsLink: 'https://www.partselect.com/Models/LDFN4542S/', issues: [] },
+      { id: 9751, type: 'Dishwasher', brand: 'LG', model: 'LDF6810ST — Dishwasher', manualLink: 'https://www.partselect.com/Models/LDF6810ST/', partsLink: 'https://www.partselect.com/Models/LDF6810ST/', issues: [] },
+      { id: 9752, type: 'Dishwasher', brand: 'Frigidaire', model: 'FGHD2433KF1 — Built-In Dishwasher', manualLink: 'https://www.partselect.com/Models/FGHD2433KF1/', partsLink: 'https://www.partselect.com/Models/FGHD2433KF1/', issues: [] },
+      { id: 9753, type: 'Dishwasher', brand: 'Frigidaire', model: 'FGID2466QF4A — BI Fullsize Dishwasher', manualLink: 'https://www.partselect.com/Models/FGID2466QF4A/', partsLink: 'https://www.partselect.com/Models/FGID2466QF4A/', issues: [] },
+      { id: 9754, type: 'Dishwasher', brand: 'Frigidaire', model: 'FFCD2413US4A — BI Fullsize Dishwasher', manualLink: 'https://www.partselect.com/Models/FFCD2413US4A/', partsLink: 'https://www.partselect.com/Models/FFCD2413US4A/', issues: [] },
+    ];
+
+    additions.forEach(u => {
+      const key = u.type + '|' + u.brand + '|' + (u.model || '');
+      if (!existingKeys.has(key)) {
+        list.push(u);
+        existingKeys.add(key);
+      }
+    });
+
+    savePrUnits(list);
+    localStorage.setItem(UPGRADE_KEY, '1');
+  }
+
+
+  // ---------------------------------------------------------------------
+  // Seed upgrade v29 (added 2026-08-11) -- model breakdown batch 25:
+  // Kenmore Dishwasher (4 models) -- the last of the "stubborn dishwasher"
+  // brands (Samsung, LG, Frigidaire, Kenmore) now all have real models.
+  // Same additive pattern as v5-v28.
+  function upgradePrSeedV29IfNeeded() {
+    const UPGRADE_KEY = 'th_parts_reference_seed_v29_applied';
+    if (localStorage.getItem(UPGRADE_KEY)) return;
+    const list = loadPrUnits();
+    const existingKeys = new Set(list.map(u => u.type + '|' + u.brand + '|' + (u.model || '')));
+
+    const additions = [
+      { id: 9755, type: 'Dishwasher', brand: 'Kenmore', model: '66513293K114 — Undercounter Dishwasher', manualLink: 'https://www.partselect.com/Models/66513293K114/', partsLink: 'https://www.partselect.com/Models/66513293K114/', issues: [] },
+      { id: 9756, type: 'Dishwasher', brand: 'Kenmore', model: '66513543N412 — Dishwasher', manualLink: 'https://www.partselect.com/Models/66513543N412/', partsLink: 'https://www.partselect.com/Models/66513543N412/', issues: [] },
+      { id: 9757, type: 'Dishwasher', brand: 'Kenmore', model: '66513262K114 — Dishwasher', manualLink: 'https://www.partselect.com/Models/66513262K114/', partsLink: 'https://www.partselect.com/Models/66513262K114/', issues: [] },
+      { id: 9758, type: 'Dishwasher', brand: 'Kenmore', model: '66513963K012 — Dishwasher', manualLink: 'https://www.partselect.com/Models/66513963K012/', partsLink: 'https://www.partselect.com/Models/66513963K012/', issues: [] },
+    ];
+
+    additions.forEach(u => {
+      const key = u.type + '|' + u.brand + '|' + (u.model || '');
+      if (!existingKeys.has(key)) {
+        list.push(u);
+        existingKeys.add(key);
+      }
+    });
+
+    savePrUnits(list);
+    localStorage.setItem(UPGRADE_KEY, '1');
+  }
+
+
+  // ---------------------------------------------------------------------
+  // Seed upgrade v30 (added 2026-08-11) -- model breakdown batch 26
+  // (final batch of this session): Whirlpool Dishwasher (4 models).
+  // This closes out the last combo among the post-prune 106 that lacked
+  // a real model. LG Ice Maker was also checked this round but LG does
+  // not sell a standalone ice-maker appliance line on PartSelect -- its
+  // ice maker parts are refrigerator components, not their own product
+  // category -- so no model was added there rather than fabricating one.
+  // Same additive pattern as v5-v29.
+  function upgradePrSeedV30IfNeeded() {
+    const UPGRADE_KEY = 'th_parts_reference_seed_v30_applied';
+    if (localStorage.getItem(UPGRADE_KEY)) return;
+    const list = loadPrUnits();
+    const existingKeys = new Set(list.map(u => u.type + '|' + u.brand + '|' + (u.model || '')));
+
+    const additions = [
+      { id: 9759, type: 'Dishwasher', brand: 'Whirlpool', model: 'WDT730HAMZ1 — Dishwasher', manualLink: 'https://www.partselect.com/Models/WDT730HAMZ1/', partsLink: 'https://www.partselect.com/Models/WDT730HAMZ1/', issues: [] },
+      { id: 9760, type: 'Dishwasher', brand: 'Whirlpool', model: 'WDT730PAHW0 — Dishwasher', manualLink: 'https://www.partselect.com/Models/WDT730PAHW0/', partsLink: 'https://www.partselect.com/Models/WDT730PAHW0/', issues: [] },
+      { id: 9761, type: 'Dishwasher', brand: 'Whirlpool', model: 'WDT910SAYM1 — Dishwasher', manualLink: 'https://www.partselect.com/Models/WDT910SAYM1/', partsLink: 'https://www.partselect.com/Models/WDT910SAYM1/', issues: [] },
+      { id: 9762, type: 'Dishwasher', brand: 'Whirlpool', model: 'WDT750SAHZ0 — Dishwasher', manualLink: 'https://www.partselect.com/Models/WDT750SAHZ0/', partsLink: 'https://www.partselect.com/Models/WDT750SAHZ0/', issues: [] },
+    ];
+
+    additions.forEach(u => {
+      const key = u.type + '|' + u.brand + '|' + (u.model || '');
+      if (!existingKeys.has(key)) {
+        list.push(u);
+        existingKeys.add(key);
+      }
+    });
+
+    savePrUnits(list);
+    localStorage.setItem(UPGRADE_KEY, '1');
+  }
+
+
+  // ---------------------------------------------------------------------
+  // Seed upgrade v31 (added 2026-08-11) -- final batch: Kenmore Dryer (3
+  // models). This was the last remaining combo (besides LG Ice Maker,
+  // which has no standalone-appliance models to find) among the
+  // post-prune set that lacked a real model. Same additive pattern as
+  // v5-v30.
+  function upgradePrSeedV31IfNeeded() {
+    const UPGRADE_KEY = 'th_parts_reference_seed_v31_applied';
+    if (localStorage.getItem(UPGRADE_KEY)) return;
+    const list = loadPrUnits();
+    const existingKeys = new Set(list.map(u => u.type + '|' + u.brand + '|' + (u.model || '')));
+
+    const additions = [
+      { id: 9763, type: 'Dryer', brand: 'Kenmore', model: '110C61292011 — Dryer', manualLink: 'https://www.partselect.com/Models/110C61292011/', partsLink: 'https://www.partselect.com/Models/110C61292011/', issues: [] },
+      { id: 9764, type: 'Dryer', brand: 'Kenmore', model: '110C65132411 — Dryer', manualLink: 'https://www.partselect.com/Models/110C65132411/', partsLink: 'https://www.partselect.com/Models/110C65132411/', issues: [] },
+      { id: 9765, type: 'Dryer', brand: 'Kenmore', model: '110C66012011 — Dryer', manualLink: 'https://www.partselect.com/Models/110C66012011/', partsLink: 'https://www.partselect.com/Models/110C66012011/', issues: [] },
+    ];
+
+    additions.forEach(u => {
+      const key = u.type + '|' + u.brand + '|' + (u.model || '');
+      if (!existingKeys.has(key)) {
+        list.push(u);
+        existingKeys.add(key);
+      }
+    });
+
+    savePrUnits(list);
+    localStorage.setItem(UPGRADE_KEY, '1');
+  }
+
   function togglePrAddUnitForm() { document.getElementById('prAddUnitForm').classList.toggle('is-open'); }
 
   // ---------------------------------------------------------------------
@@ -1630,6 +1831,28 @@
     if (localStorage.getItem(PRUNE_KEY)) return;
     const list = loadPrUnits();
     const filtered = list.filter(u => u.brand !== 'White Mountain');
+    if (filtered.length !== list.length) {
+      savePrUnits(filtered);
+    }
+    localStorage.setItem(PRUNE_KEY, '1');
+  }
+
+  // ---------------------------------------------------------------------
+  // Prune v2 (added 2026-08-11) -- removes blank/generic "reference"
+  // entries (no specific model number) per explicit request: an empty
+  // combo is preferable to a fake-looking generic placeholder. SAFETY
+  // EXCEPTION: entries with real logged troubleshooting issues attached
+  // (e.g. the verified thermal fuse, evaporator fan, ice maker issues
+  // built up in earlier sessions) are preserved even though they have no
+  // model number -- those are real content, not placeholders, and
+  // deleting them would destroy verified repair data rather than clean
+  // up fake data. Only truly empty generic entries (no model AND zero
+  // logged issues) are removed.
+  function prunePrBlankReferencesV2IfNeeded() {
+    const PRUNE_KEY = 'th_parts_reference_prune_v2_applied';
+    if (localStorage.getItem(PRUNE_KEY)) return;
+    const list = loadPrUnits();
+    const filtered = list.filter(u => u.model || (u.issues && u.issues.length > 0));
     if (filtered.length !== list.length) {
       savePrUnits(filtered);
     }
@@ -1873,11 +2096,11 @@
       return '<div class="pr-type-section">' +
         '<div class="pr-type-section-header" onclick="toggleTypeSection(' + u.id + ')">' +
         '<span class="pr-type-section-name">' + sectionLabel + '</span>' +
-        '<span class="pr-type-section-meta" style="display:flex; align-items:center; gap:10px;">' +
+        '<span class="pr-type-section-meta" style="display:flex; align-items:center; gap:6px;">' +
         u.issues.length + ' logged' +
-        '<button class="icon-btn" title="Edit" onclick="event.stopPropagation(); toggleEditUnit(' + u.id + ');" style="background:none; border:none; cursor:pointer; padding:2px 4px; font-size:14px; line-height:1;">&#9998;</button>' +
-        '<button class="icon-btn" title="Delete" onclick="event.stopPropagation(); deletePrUnitType(' + u.id + ');" style="background:none; border:none; cursor:pointer; padding:2px 4px; font-size:14px; line-height:1; color:#d33;">&#128465;</button>' +
-        '<span>' + (isExpanded ? '&#9650;' : '&#9660;') + '</span>' +
+        '<button class="pr-row-icon-btn" title="Edit" onclick="event.stopPropagation(); toggleEditUnit(' + u.id + ');">&#9998;</button>' +
+        '<button class="pr-row-icon-btn danger" title="Delete" onclick="event.stopPropagation(); deletePrUnitType(' + u.id + ');">&#128465;</button>' +
+        '<svg class="pr-chevron' + (isExpanded ? ' is-open' : '') + '" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>' +
         '</span>' +
         '</div>' +
         (isExpanded ? (
@@ -2049,6 +2272,12 @@
     prunePrPhantomBrandsV1IfNeeded();
     upgradePrSeedV25IfNeeded();
     upgradePrSeedV26IfNeeded();
+    upgradePrSeedV27IfNeeded();
+    upgradePrSeedV28IfNeeded();
+    upgradePrSeedV29IfNeeded();
+    upgradePrSeedV30IfNeeded();
+    upgradePrSeedV31IfNeeded();
+    prunePrBlankReferencesV2IfNeeded();
     renderTypeChips();
     renderUnits();
     if (typeof initSyncOnLoad === 'function') {
