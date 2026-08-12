@@ -83,7 +83,7 @@
   .pr-row-icon-btn {
     background: none; border: none; cursor: pointer; padding: 4px; line-height: 1;
     border-radius: 6px; display: inline-flex; align-items: center; justify-content: center;
-    width: 24px; height: 24px; font-size: 13.5px;
+    width: 24px; height: 24px; font-size: 13.5px; text-decoration: none;
     transition: background .15s ease, transform .1s ease, color .15s ease;
     color: var(--text-dim);
   }
@@ -295,6 +295,7 @@
   let activePrDetailType = null;
   let activePrAddModelOpen = false;
   let activePrEditUnitId = null;
+  let activePrEditIssueId = null;
   let expandedPrTypeIds = new Set();
   let activePrIssueTargetId = null;
   let activePrType = 'all';
@@ -2025,21 +2026,40 @@
     const existingBrand = existingUnits.map(u => u.brand).find(b => b.toLowerCase() === brand.toLowerCase());
     if (existingType && existingType !== type) type = existingType;
     if (existingBrand && existingBrand !== brand) brand = existingBrand;
-    const unit = {
-      id: Date.now(), type, brand, model: document.getElementById('prNewModel').value.trim(),
-      manualLink: document.getElementById('prNewManualLink').value.trim(),
-      partsLink: document.getElementById('prNewPartsLink').value.trim(),
-      issues: [],
+    const model = document.getElementById('prNewModel').value.trim();
+
+    const finishSavePrUnit = () => {
+      const unit = {
+        id: Date.now(), type, brand, model,
+        manualLink: document.getElementById('prNewManualLink').value.trim(),
+        partsLink: document.getElementById('prNewPartsLink').value.trim(),
+        issues: [],
+      };
+      const list = loadPrUnits();
+      list.push(unit);
+      savePrUnits(list);
+      ['prNewType','prNewBrand','prNewModel','prNewManualLink','prNewPartsLink'].forEach(id => { document.getElementById(id).value = ''; });
+      togglePrAddUnitForm();
+      justAddedPrUnitId = unit.id;
+      renderTypeChips();
+      renderUnits();
+      showToast('Appliance added.');
     };
-    const list = loadPrUnits();
-    list.push(unit);
-    savePrUnits(list);
-    ['prNewType','prNewBrand','prNewModel','prNewManualLink','prNewPartsLink'].forEach(id => { document.getElementById(id).value = ''; });
-    togglePrAddUnitForm();
-    justAddedPrUnitId = unit.id;
-    renderTypeChips();
-    renderUnits();
-    showToast('Appliance added.');
+
+    // Catch a near-duplicate before it silently clutters the list --
+    // still lets it through if that's genuinely what's wanted.
+    const duplicate = existingUnits.find(u =>
+      u.type.toLowerCase() === type.toLowerCase() &&
+      u.brand.toLowerCase() === brand.toLowerCase() &&
+      (u.model || '').toLowerCase() === model.toLowerCase()
+    );
+    if (duplicate) {
+      showConfirm('A ' + brand + ' ' + type + ' entry matching "' + (model || 'general reference') + '" already exists. Add it anyway?', { confirmText: 'Add Anyway' }).then(confirmed => {
+        if (confirmed) finishSavePrUnit();
+      });
+    } else {
+      finishSavePrUnit();
+    }
   }
 
   function openBrandDetail(brand) {
@@ -2099,6 +2119,7 @@
     activePrDetailType = type;
     activePrIssueTargetId = null;
     activePrEditUnitId = null;
+    activePrEditIssueId = null;
     activePrAddModelOpen = false;
     expandedPrTypeIds = new Set();
     document.getElementById('prTypeView').classList.remove('is-open');
@@ -2111,6 +2132,7 @@
   function closeTypeDetail() {
     activePrDetailType = null;
     activePrEditUnitId = null;
+    activePrEditIssueId = null;
     activePrAddModelOpen = false;
     document.getElementById('prUnitDetail').classList.remove('is-open');
     document.getElementById('prTypeView').classList.add('is-open');
@@ -2127,6 +2149,7 @@
     activePrDetailType = unit.type;
     activePrIssueTargetId = null;
     activePrEditUnitId = null;
+    activePrEditIssueId = null;
     activePrAddModelOpen = false;
     expandedPrTypeIds = new Set([unit.id]);
     recordPrRecentView(unit.id);
@@ -2170,19 +2193,34 @@
   function saveNewModelInType() {
     const model = document.getElementById('prNewModelInType').value.trim();
     if (!model) { showToast('Model number / name is required.', { type: 'error' }); return; }
-    const unit = {
-      id: Date.now(), type: activePrDetailType, brand: activePrBrand, model,
-      manualLink: document.getElementById('prNewManualLinkInType').value.trim(),
-      partsLink: document.getElementById('prNewPartsLinkInType').value.trim(),
-      issues: [],
+    const manualLink = document.getElementById('prNewManualLinkInType').value.trim();
+    const partsLink = document.getElementById('prNewPartsLinkInType').value.trim();
+
+    const finishSaveNewModel = () => {
+      const unit = {
+        id: Date.now(), type: activePrDetailType, brand: activePrBrand, model,
+        manualLink, partsLink, issues: [],
+      };
+      const list = loadPrUnits();
+      list.push(unit);
+      savePrUnits(list);
+      activePrAddModelOpen = false;
+      renderAddModelForm();
+      renderBrandDetail();
+      showToast('Model added.');
     };
-    const list = loadPrUnits();
-    list.push(unit);
-    savePrUnits(list);
-    activePrAddModelOpen = false;
-    renderAddModelForm();
-    renderBrandDetail();
-    showToast('Model added.');
+
+    const duplicate = loadPrUnits().find(u =>
+      u.type === activePrDetailType && u.brand === activePrBrand &&
+      (u.model || '').toLowerCase() === model.toLowerCase()
+    );
+    if (duplicate) {
+      showConfirm('This model already exists for ' + activePrBrand + ' ' + activePrDetailType + '. Add it anyway?', { confirmText: 'Add Anyway' }).then(confirmed => {
+        if (confirmed) finishSaveNewModel();
+      });
+    } else {
+      finishSaveNewModel();
+    }
   }
 
   // Edit an existing entry's model name / links in place, rather than
@@ -2190,6 +2228,7 @@
   function toggleEditUnit(unitId) {
     activePrEditUnitId = activePrEditUnitId === unitId ? null : unitId;
     activePrIssueTargetId = null;
+    activePrEditIssueId = null;
     if (activePrEditUnitId === unitId) { expandedPrTypeIds.add(unitId); }
     renderBrandDetail();
   }
@@ -2229,14 +2268,24 @@
   }
 
   function issueRowHtml(iss, unitId) {
+    if (activePrEditIssueId === iss.id) {
+      return '<div class="pr-issue" data-pr-issue-id="' + iss.id + '">' +
+        '<div class="tool-form-row"><div class="form-field full"><label>Symptom / Issue</label><input type="text" id="prEditIssueSymptom" value="' + escapeHtml(iss.symptom) + '"></div></div>' +
+        '<div class="tool-form-row"><div class="form-field"><label>Likely Part</label><input type="text" id="prEditIssuePartName" value="' + escapeHtml(iss.partName) + '"></div>' +
+        '<div class="form-field"><label>Part Number</label><input type="text" id="prEditIssuePartNumber" value="' + escapeHtml(iss.partNumber || '') + '"></div></div>' +
+        '<div class="tool-form-row"><div class="form-field"><label>Rough Cost Low ($)</label><input type="number" id="prEditIssuePriceLow" min="0" step="0.01" value="' + (iss.priceLow != null ? iss.priceLow : '') + '"></div>' +
+        '<div class="form-field"><label>Rough Cost High ($)</label><input type="number" id="prEditIssuePriceHigh" min="0" step="0.01" value="' + (iss.priceHigh != null ? iss.priceHigh : '') + '"></div></div>' +
+        '<div class="tool-form-row"><div class="form-field full"><label>Reference Link (optional)</label><input type="text" id="prEditIssueLink" value="' + escapeHtml(iss.link || '') + '"></div></div>' +
+        '<div class="tool-form-row"><div class="form-field full"><label>Note (optional)</label><input type="text" id="prEditIssueNote" value="' + escapeHtml(iss.note || '') + '"></div></div>' +
+        '<div class="form-footer"><button class="btn blue" onclick="saveIssueEdit(' + unitId + ', ' + iss.id + ')">Save Changes</button><button class="secondary-btn" onclick="activePrEditIssueId=null; renderBrandDetail();">Cancel</button></div>' +
+        '</div>';
+    }
     var linkHtml = iss.link ? (
-      '<a class="pr-issue-link" href="' + escapeHtml(iss.link) + '" target="_blank" rel="noopener">' +
-      '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><path d="M15 3h6v6"/><path d="M10 14L21 3"/></svg>' +
-      'View source</a>'
+      '<a class="pr-row-icon-btn" title="View source" href="' + escapeHtml(iss.link) + '" target="_blank" rel="noopener">&#128279;</a>'
     ) : '';
-    var copyHtml = '<button class="pr-issue-link" onclick="copyPrIssueText(' + unitId + ', ' + iss.id + ')">' +
-      '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>' +
-      'Copy</button>';
+    var copyHtml = '<button class="pr-row-icon-btn" title="Copy" onclick="copyPrIssueText(' + unitId + ', ' + iss.id + ')">&#128203;</button>';
+    var editIssueHtml = '<button class="pr-row-icon-btn" title="Edit" onclick="toggleEditIssue(' + unitId + ', ' + iss.id + ')">&#9998;</button>';
+    var deleteIssueHtml = '<button class="pr-row-icon-btn danger" title="Delete" onclick="deletePrIssue(' + unitId + ', ' + iss.id + ')">&#128465;</button>';
     var noteHtml = iss.note ? ('<div class="pr-issue-note">' + escapeHtml(iss.note) + '</div>') : '';
     var partNumHtml = iss.partNumber ? (' <span class="pr-issue-partnum">(#' + escapeHtml(iss.partNumber) + ')</span>') : '';
     var enterClass = iss.id === justAddedPrIssueId ? 'list-row-enter' : '';
@@ -2255,7 +2304,39 @@
       '<div class="pr-issue-price">' + formatPriceRange(iss.priceLow, iss.priceHigh) + '</div></div></div>' +
       '<div class="pr-issue-part">Likely part: <strong>' + escapeHtml(iss.partName) + '</strong>' + partNumHtml + '</div>' +
       noteHtml +
-      '<div class="pr-issue-actions">' + linkHtml + copyHtml + '<button class="small-btn danger" onclick="deletePrIssue(' + unitId + ', ' + iss.id + ')">Delete</button></div></div>';
+      '<div class="pr-issue-actions">' + linkHtml + copyHtml + editIssueHtml + deleteIssueHtml + '</div></div>';
+  }
+
+  function toggleEditIssue(unitId, issueId) {
+    activePrEditIssueId = activePrEditIssueId === issueId ? null : issueId;
+    activePrIssueTargetId = null;
+    activePrEditUnitId = null;
+    renderBrandDetail();
+  }
+
+  function saveIssueEdit(unitId, issueId) {
+    const symptom = document.getElementById('prEditIssueSymptom').value.trim();
+    if (!symptom) { showToast('Symptom is required.', { type: 'error' }); return; }
+    const list = loadPrUnits();
+    const unit = list.find(u => u.id === unitId);
+    const iss = unit && unit.issues.find(i => i.id === issueId);
+    if (!iss) return;
+    iss.symptom = symptom;
+    iss.partName = document.getElementById('prEditIssuePartName').value.trim();
+    iss.partNumber = document.getElementById('prEditIssuePartNumber').value.trim();
+    iss.priceLow = parseFloat(document.getElementById('prEditIssuePriceLow').value) || null;
+    iss.priceHigh = parseFloat(document.getElementById('prEditIssuePriceHigh').value) || null;
+    iss.link = document.getElementById('prEditIssueLink').value.trim();
+    iss.note = document.getElementById('prEditIssueNote').value.trim();
+    // Editing counts as re-confirming the info, so refresh the confirmed
+    // date -- but leave the verified/logged-by-you badge exactly as it
+    // was, since a text edit doesn't turn a firsthand field report into
+    // something sourced from a catalog.
+    iss.confirmedAt = new Date().toISOString().slice(0, 10);
+    savePrUnits(list);
+    activePrEditIssueId = null;
+    renderBrandDetail();
+    showToast('Issue updated.');
   }
 
   function renderBrandDetail() {
@@ -2314,9 +2395,8 @@
           '<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px; flex-wrap:wrap; gap:8px;">' +
           '<h3 style="margin:0; font-size:15px;">Logged Issues</h3>' +
           '<div style="display:flex; gap:8px; flex-wrap:wrap;">' +
-          '<button class="secondary-btn" onclick="activePrIssueTargetId=' + u.id + '; activePrEditUnitId=null; renderBrandDetail();">+ Add Issue</button>' +
-          '<button class="secondary-btn" onclick="toggleEditUnit(' + u.id + ')">Edit</button>' +
-          '<button class="small-btn danger" onclick="deletePrUnitType(' + u.id + ')">Delete</button>' +
+          '<button class="secondary-btn" onclick="activePrIssueTargetId=' + u.id + '; activePrEditUnitId=null; activePrEditIssueId=null; renderBrandDetail();">+ Add Issue</button>' +
+          (u.issues.length ? '<button class="secondary-btn" onclick="copyAllPrIssuesText(' + u.id + ')">Copy All</button>' : '') +
           '</div></div>' +
           (editFormHtml ? '<div style="margin-bottom:14px;">' + editFormHtml + '</div>' : '') +
           addFormHtml +
@@ -2391,24 +2471,40 @@
     return d.toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
   }
 
-  function copyPrIssueText(unitId, issueId) {
-    const unit = loadPrUnits().find(u => u.id === unitId);
-    const iss = unit && unit.issues.find(i => i.id === issueId);
-    if (!iss) return;
+  function buildPrIssueTextLines(iss) {
     const lines = [
       'Symptom: ' + iss.symptom,
       'Likely part: ' + iss.partName + (iss.partNumber ? ' (#' + iss.partNumber + ')' : ''),
       'Rough cost: ' + formatPriceRange(iss.priceLow, iss.priceHigh).replace('&ndash;', '-'),
     ];
     if (iss.note) lines.push('Note: ' + iss.note);
-    const text = lines.join('\n');
+    return lines;
+  }
+
+  function copyTextToClipboard(text, successMessage) {
     if (navigator.clipboard && navigator.clipboard.writeText) {
       navigator.clipboard.writeText(text)
-        .then(() => showToast('Copied to clipboard.'))
+        .then(() => showToast(successMessage))
         .catch(() => showToast('Could not copy.', { type: 'error' }));
     } else {
       showToast('Clipboard not available in this browser.', { type: 'error' });
     }
+  }
+
+  function copyPrIssueText(unitId, issueId) {
+    const unit = loadPrUnits().find(u => u.id === unitId);
+    const iss = unit && unit.issues.find(i => i.id === issueId);
+    if (!iss) return;
+    copyTextToClipboard(buildPrIssueTextLines(iss).join('\n'), 'Copied to clipboard.');
+  }
+
+  function copyAllPrIssuesText(unitId) {
+    const unit = loadPrUnits().find(u => u.id === unitId);
+    if (!unit || !unit.issues.length) return;
+    const header = unit.brand + ' ' + unit.type + (unit.model ? ' -- ' + unit.model : '');
+    const blocks = unit.issues.map((iss, i) => (unit.issues.length > 1 ? (i + 1) + '. ' : '') + buildPrIssueTextLines(iss).join('\n'));
+    const text = header + '\n\n' + blocks.join('\n\n');
+    copyTextToClipboard(text, unit.issues.length + ' issue' + (unit.issues.length === 1 ? '' : 's') + ' copied to clipboard.');
   }
 
   function formatPriceRange(low, high) {
