@@ -199,6 +199,32 @@
     <div id="contentHistoryList" class="dev-scrollable-list"></div>
   </div>
 
+  <div class="dev-panel dev-panel-wide">
+    <div class="dev-panel-heading">
+      <h2>FAQ editor</h2>
+      <button class="dev-info-bubble" onclick="openFieldInfo('faq')" aria-label="Where does this appear?" title="Where does this appear?">&#128247;</button>
+    </div>
+    <p class="tool-sub" style="margin-bottom:12px;">If an answer mentions the phone number as plain text, it won't update automatically if the phone field above ever changes -- edit that answer directly if the number changes.</p>
+    <div id="faqEditorList"></div>
+    <div style="display:flex; gap:10px; margin-top:12px; flex-wrap:wrap;">
+      <button class="secondary-btn" onclick="addFaqItem()">+ Add question</button>
+      <button class="btn blue" id="saveFaqBtn" onclick="saveFaqList()">Save all</button>
+    </div>
+  </div>
+
+  <div class="dev-panel dev-panel-wide">
+    <div class="dev-panel-heading">
+      <h2>Terms &amp; Conditions editor</h2>
+      <button class="dev-info-bubble" onclick="openFieldInfo('terms')" aria-label="Where does this appear?" title="Where does this appear?">&#128247;</button>
+    </div>
+    <p class="tool-sub" style="margin-bottom:12px;">The last section mentions the phone number and email as plain text -- won't update automatically if those fields ever change. Edit it directly if either one changes.</p>
+    <div id="termsEditorList"></div>
+    <div style="display:flex; gap:10px; margin-top:12px; flex-wrap:wrap;">
+      <button class="secondary-btn" onclick="addTermsItem()">+ Add section</button>
+      <button class="btn blue" id="saveTermsBtn" onclick="saveTermsList()">Save all</button>
+    </div>
+  </div>
+
   <div class="dev-panel">
     <div class="dev-panel-heading">
       <h2>Quick links</h2>
@@ -232,6 +258,8 @@
           <li><strong>Latest deploy</strong> &mdash; the most recent GitHub Actions run, pulled live.</li>
           <li><strong>Site content</strong> &mdash; edit the phone, email, hours, and up to 2 announcement banners on the public site directly, no code push needed. Changing phone/email updates every place it appears at once.</li>
           <li><strong>Content edit history</strong> &mdash; every past change to those fields, who made it, and when -- a real audit trail from a database trigger.</li>
+          <li><strong>FAQ editor</strong> &mdash; add, edit, reorder, or remove questions on the site's FAQ section directly.</li>
+          <li><strong>Terms &amp; Conditions editor</strong> &mdash; add, edit, reorder, or remove sections of the Terms document directly.</li>
           <li><strong>Quick links</strong> &mdash; the repo, its Actions history, the Supabase dashboard, and the live site.</li>
         </ul>
       </div>
@@ -477,13 +505,69 @@
   // fetch-and-apply script near the end of index.html for the read
   // side of this; this panel is the write side.
   const SITE_CONTENT_FIELDS = [
-    { key: 'phone', label: 'Phone number', placeholder: 'e.g. (435) 414-1667 -- blank uses the default already in the code. Updates every phone number and tel: link across the site at once.' },
-    { key: 'email', label: 'Email address', placeholder: 'e.g. steve@triplehenterprisesllc.biz -- blank uses the default. Updates every email display and mailto: link across the site at once.' },
-    { key: 'hoursLine1', label: 'Hours -- line 1', placeholder: 'e.g. Monday to Sunday' },
-    { key: 'hoursLine2', label: 'Hours -- line 2', placeholder: 'e.g. 7:00 AM to 10:00 PM MST' },
-    { key: 'banner1', label: 'Banner 1 (orange bar, top of site)', placeholder: 'Blank hides it. e.g. Currently booking 2+ weeks out' },
-    { key: 'banner2', label: 'Banner 2 (blue bar, top of site)', placeholder: 'Blank hides it.' },
+    { key: 'phone', label: 'Phone number', placeholder: 'e.g. (435) 414-1667 -- blank uses the default already in the code.', info: 'phone' },
+    { key: 'email', label: 'Email address', placeholder: 'e.g. steve@triplehenterprisesllc.biz -- blank uses the default.', info: 'email' },
+    { key: 'hoursMonday', label: 'Hours -- Monday', placeholder: 'e.g. 7:00 AM \u2013 10:00 PM, or "Closed"', info: 'hours' },
+    { key: 'hoursTuesday', label: 'Hours -- Tuesday', placeholder: 'e.g. 7:00 AM \u2013 10:00 PM, or "Closed"', info: 'hours' },
+    { key: 'hoursWednesday', label: 'Hours -- Wednesday', placeholder: 'e.g. 7:00 AM \u2013 10:00 PM, or "Closed"', info: 'hours' },
+    { key: 'hoursThursday', label: 'Hours -- Thursday', placeholder: 'e.g. 7:00 AM \u2013 10:00 PM, or "Closed"', info: 'hours' },
+    { key: 'hoursFriday', label: 'Hours -- Friday', placeholder: 'e.g. 7:00 AM \u2013 10:00 PM, or "Closed"', info: 'hours' },
+    { key: 'hoursSaturday', label: 'Hours -- Saturday', placeholder: 'e.g. 7:00 AM \u2013 10:00 PM, or "Closed"', info: 'hours' },
+    { key: 'hoursSunday', label: 'Hours -- Sunday', placeholder: 'e.g. 7:00 AM \u2013 10:00 PM, or "Closed"', info: 'hours' },
+    { key: 'banner1', label: 'Banner 1 (orange bar, top of site)', placeholder: 'Blank hides it. e.g. Currently booking 2+ weeks out', info: 'banner1' },
+    { key: 'banner2', label: 'Banner 2 (blue bar, top of site)', placeholder: 'Blank hides it.', info: 'banner2' },
   ];
+
+  // Per-field "where does this actually appear?" popups -- a real
+  // screenshot of the relevant part of the live site, plus a specific
+  // description, rather than just a label and hoping it's obvious.
+  // Keyed by a short id (not by the site_content key directly) since
+  // several fields sharing the same appearance (all 7 hours fields
+  // show in the same one card) can point at the same entry.
+  const FIELD_INFO = {
+    phone: {
+      title: 'Phone number',
+      description: 'Appears in the header, the hero "Call" button, the mobile menu, the sticky call button on scroll, the Contact section\'s "Call or Text" card, the footer, all 3 FAQ answers that mention it, and the Terms &amp; Conditions modal -- all of them update together.',
+      image: 'help-contact-cards.png',
+    },
+    email: {
+      title: 'Email address',
+      description: 'Appears in the Contact section\'s "Email" card, the footer, and the Terms &amp; Conditions modal.',
+      image: 'help-contact-cards.png',
+    },
+    hours: {
+      title: 'Hours',
+      description: 'Shown in the Contact section\'s "Hours" card, one line per day. Each day is independent -- set Saturday to "Closed" without affecting any other day.',
+      image: 'help-contact-cards.png',
+    },
+    banner1: {
+      title: 'Banner 1',
+      description: 'Shows as an orange bar across the very top of the site, above the header -- the first thing a visitor sees. Completely hidden when this field is blank.',
+      image: null,
+    },
+    banner2: {
+      title: 'Banner 2',
+      description: 'Shows as a blue bar directly below Banner 1 (or at the top if Banner 1 is blank). Completely hidden when this field is blank.',
+      image: null,
+    },
+    faq: {
+      title: 'FAQ',
+      description: 'The full "Frequently Asked Questions" section, opened from the FAQ link in the site\'s navigation. Reorder, edit, add, or remove questions freely -- each one shown as an expandable accordion item on the live site.',
+      image: 'help-faq-modal.png',
+    },
+    terms: {
+      title: 'Terms & Conditions',
+      description: 'The full Terms and Conditions document, opened from the "Terms & Conditions" link in the footer and Contact section. Each section has its own heading and body text, reorderable the same way as the FAQ.',
+      image: 'help-terms-modal.png',
+    },
+  };
+
+  function openFieldInfo(key) {
+    const info = FIELD_INFO[key];
+    if (!info) return;
+    const img = info.image ? '<img src="/images/dev-help/' + info.image + '" alt="" style="max-width:100%; border-radius:8px; margin-top:10px; border:1px solid var(--border);">' : '';
+    if (typeof openInfoModal === 'function') openInfoModal(info.title, '<p>' + info.description + '</p>' + img);
+  }
 
   async function renderSiteContentForm() {
     const el = document.getElementById('siteContentForm');
@@ -498,7 +582,9 @@
       (Array.isArray(rows) ? rows : []).forEach(r => { current[r.key] = r.value || ''; });
 
       el.innerHTML = SITE_CONTENT_FIELDS.map(f =>
-        '<div class="tool-form-row"><div class="form-field full"><label>' + escapeHtml(f.label) + '</label>' +
+        '<div class="tool-form-row"><div class="form-field full"><label style="display:flex; align-items:center; gap:6px;">' + escapeHtml(f.label) +
+        (f.info ? '<button class="dev-info-bubble" onclick="openFieldInfo(\'' + f.info + '\')" title="Where does this appear?" aria-label="Where does this appear?">&#128247;</button>' : '') +
+        '</label>' +
         '<input type="text" id="siteContent_' + f.key + '" placeholder="' + escapeHtml(f.placeholder) + '" value="' + escapeHtml(current[f.key] || '') + '"></div></div>'
       ).join('') +
       '<div class="form-footer"><button class="btn blue" id="saveSiteContentBtn" onclick="saveSiteContent()">Save all</button></div>' +
@@ -568,6 +654,229 @@
       ).join('');
     } catch (e) {
       el.innerHTML = '<p class="tool-sub">Could not load history: ' + escapeHtml(e.message || String(e)) + '</p>';
+    }
+  }
+
+  // --- FAQ editor ---
+  // Works on an in-memory copy (faqItems) rather than saving on every
+  // keystroke or every reorder -- lets someone reorder, delete, and
+  // edit several things freely, then commit it all with one "Save all".
+  // On save: deletes every existing row and inserts the current list
+  // fresh, rather than trying to diff individual changes -- simpler and
+  // safe enough for how infrequently this actually gets edited.
+  let faqItems = [];
+
+  async function renderFaqEditor() {
+    const el = document.getElementById('faqEditorList');
+    el.innerHTML = '<p class="tool-sub">Loading...</p>';
+    try {
+      if (typeof ensureFreshToken === 'function') await ensureFreshToken();
+      const res = await fetchWithTimeout(SUPABASE_URL + '/rest/v1/site_faq?select=question,answer&order=sort_order.asc', 6000, {
+        headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': 'Bearer ' + getAuthToken() },
+      });
+      if (!res.ok) {
+        el.innerHTML = '<p class="tool-sub" style="color:#e05555;">Could not load current FAQ -- the table might not exist yet. Run the FAQ setup SQL in Supabase first.</p>';
+        faqItems = [];
+        return;
+      }
+      faqItems = await res.json();
+      if (!Array.isArray(faqItems)) faqItems = [];
+      renderFaqEditorRows();
+    } catch (e) {
+      el.innerHTML = '<p class="tool-sub">Could not reach Supabase: ' + escapeHtml(e.message || String(e)) + '</p>';
+    }
+  }
+
+  function renderFaqEditorRows() {
+    const el = document.getElementById('faqEditorList');
+    if (!faqItems.length) { el.innerHTML = '<p class="tool-sub">No FAQ items yet -- add one below.</p>'; return; }
+    el.innerHTML = faqItems.map((item, i) => `
+      <div class="dev-panel" style="margin-bottom:10px; background:var(--bg-panel-3);">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+          <strong style="font-size:13px; color:var(--text-dim);">#${i + 1}</strong>
+          <div>
+            <button class="dev-info-bubble" title="Move up" onclick="moveFaqItem(${i}, -1)" ${i === 0 ? 'disabled' : ''}>&#9650;</button>
+            <button class="dev-info-bubble" title="Move down" onclick="moveFaqItem(${i}, 1)" ${i === faqItems.length - 1 ? 'disabled' : ''}>&#9660;</button>
+            <button class="dev-info-bubble dev-danger-btn" title="Delete" onclick="deleteFaqItem(${i})">&#128465;</button>
+          </div>
+        </div>
+        <div class="tool-form-row"><div class="form-field full">
+          <label>Question</label>
+          <input type="text" value="${escapeHtml(item.question || '')}" oninput="updateFaqField(${i}, 'question', this.value)">
+        </div></div>
+        <div class="tool-form-row"><div class="form-field full">
+          <label>Answer</label>
+          <textarea rows="3" style="width:100%; resize:vertical;" oninput="updateFaqField(${i}, 'answer', this.value)">${escapeHtml(item.answer || '')}</textarea>
+        </div></div>
+      </div>
+    `).join('');
+  }
+
+  function updateFaqField(index, field, value) {
+    if (faqItems[index]) faqItems[index][field] = value;
+  }
+
+  function moveFaqItem(index, direction) {
+    const target = index + direction;
+    if (target < 0 || target >= faqItems.length) return;
+    [faqItems[index], faqItems[target]] = [faqItems[target], faqItems[index]];
+    renderFaqEditorRows();
+  }
+
+  function deleteFaqItem(index) {
+    faqItems.splice(index, 1);
+    renderFaqEditorRows();
+  }
+
+  function addFaqItem() {
+    faqItems.push({ question: '', answer: '' });
+    renderFaqEditorRows();
+  }
+
+  async function saveFaqList() {
+    const btn = document.getElementById('saveFaqBtn');
+    btn.disabled = true;
+    btn.textContent = 'Saving...';
+    try {
+      if (typeof ensureFreshToken === 'function') await ensureFreshToken();
+      const cleaned = faqItems
+        .map(item => ({ question: (item.question || '').trim(), answer: (item.answer || '').trim() }))
+        .filter(item => item.question && item.answer);
+
+      const delRes = await fetchWithTimeout(SUPABASE_URL + '/rest/v1/site_faq?id=gte.0', 8000, {
+        method: 'DELETE',
+        headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': 'Bearer ' + getAuthToken() },
+      });
+      if (!delRes.ok) throw new Error('Could not clear the old list (HTTP ' + delRes.status + ')');
+
+      if (cleaned.length) {
+        const insertRes = await fetchWithTimeout(SUPABASE_URL + '/rest/v1/site_faq', 8000, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'apikey': SUPABASE_ANON_KEY,
+            'Authorization': 'Bearer ' + getAuthToken(),
+          },
+          body: JSON.stringify(cleaned.map((item, i) => Object.assign({ sort_order: i }, item))),
+        });
+        if (!insertRes.ok) throw new Error('Could not save the new list (HTTP ' + insertRes.status + ')');
+      }
+      showToast('FAQ saved. Live on the site within a few seconds.');
+      await renderFaqEditor();
+    } catch (e) {
+      showToast(e.message || String(e), { type: 'error' });
+    } finally {
+      btn.disabled = false;
+      btn.textContent = 'Save all';
+    }
+  }
+
+  // --- Terms & Conditions editor ---
+  // Same in-memory-then-batch-save pattern as the FAQ editor above.
+  let termsItems = [];
+
+  async function renderTermsEditor() {
+    const el = document.getElementById('termsEditorList');
+    el.innerHTML = '<p class="tool-sub">Loading...</p>';
+    try {
+      if (typeof ensureFreshToken === 'function') await ensureFreshToken();
+      const res = await fetchWithTimeout(SUPABASE_URL + '/rest/v1/site_terms?select=heading,body&order=sort_order.asc', 6000, {
+        headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': 'Bearer ' + getAuthToken() },
+      });
+      if (!res.ok) {
+        el.innerHTML = '<p class="tool-sub" style="color:#e05555;">Could not load current Terms -- the table might not exist yet. Run the Terms setup SQL in Supabase first.</p>';
+        termsItems = [];
+        return;
+      }
+      termsItems = await res.json();
+      if (!Array.isArray(termsItems)) termsItems = [];
+      renderTermsEditorRows();
+    } catch (e) {
+      el.innerHTML = '<p class="tool-sub">Could not reach Supabase: ' + escapeHtml(e.message || String(e)) + '</p>';
+    }
+  }
+
+  function renderTermsEditorRows() {
+    const el = document.getElementById('termsEditorList');
+    if (!termsItems.length) { el.innerHTML = '<p class="tool-sub">No sections yet -- add one below.</p>'; return; }
+    el.innerHTML = termsItems.map((item, i) => `
+      <div class="dev-panel" style="margin-bottom:10px; background:var(--bg-panel-3);">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+          <strong style="font-size:13px; color:var(--text-dim);">#${i + 1}</strong>
+          <div>
+            <button class="dev-info-bubble" title="Move up" onclick="moveTermsItem(${i}, -1)" ${i === 0 ? 'disabled' : ''}>&#9650;</button>
+            <button class="dev-info-bubble" title="Move down" onclick="moveTermsItem(${i}, 1)" ${i === termsItems.length - 1 ? 'disabled' : ''}>&#9660;</button>
+            <button class="dev-info-bubble dev-danger-btn" title="Delete" onclick="deleteTermsItem(${i})">&#128465;</button>
+          </div>
+        </div>
+        <div class="tool-form-row"><div class="form-field full">
+          <label>Section heading</label>
+          <input type="text" value="${escapeHtml(item.heading || '')}" oninput="updateTermsField(${i}, 'heading', this.value)">
+        </div></div>
+        <div class="tool-form-row"><div class="form-field full">
+          <label>Section text</label>
+          <textarea rows="4" style="width:100%; resize:vertical;" oninput="updateTermsField(${i}, 'body', this.value)">${escapeHtml(item.body || '')}</textarea>
+        </div></div>
+      </div>
+    `).join('');
+  }
+
+  function updateTermsField(index, field, value) {
+    if (termsItems[index]) termsItems[index][field] = value;
+  }
+
+  function moveTermsItem(index, direction) {
+    const target = index + direction;
+    if (target < 0 || target >= termsItems.length) return;
+    [termsItems[index], termsItems[target]] = [termsItems[target], termsItems[index]];
+    renderTermsEditorRows();
+  }
+
+  function deleteTermsItem(index) {
+    termsItems.splice(index, 1);
+    renderTermsEditorRows();
+  }
+
+  function addTermsItem() {
+    termsItems.push({ heading: '', body: '' });
+    renderTermsEditorRows();
+  }
+
+  async function saveTermsList() {
+    const btn = document.getElementById('saveTermsBtn');
+    btn.disabled = true;
+    btn.textContent = 'Saving...';
+    try {
+      if (typeof ensureFreshToken === 'function') await ensureFreshToken();
+      const cleaned = termsItems
+        .map(item => ({ heading: (item.heading || '').trim(), body: (item.body || '').trim() }))
+        .filter(item => item.heading && item.body);
+
+      const delRes = await fetchWithTimeout(SUPABASE_URL + '/rest/v1/site_terms?id=gte.0', 8000, {
+        method: 'DELETE',
+        headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': 'Bearer ' + getAuthToken() },
+      });
+      if (!delRes.ok) throw new Error('Could not clear the old list (HTTP ' + delRes.status + ')');
+
+      if (cleaned.length) {
+        const insertRes = await fetchWithTimeout(SUPABASE_URL + '/rest/v1/site_terms', 8000, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'apikey': SUPABASE_ANON_KEY,
+            'Authorization': 'Bearer ' + getAuthToken(),
+          },
+          body: JSON.stringify(cleaned.map((item, i) => Object.assign({ sort_order: i }, item))),
+        });
+        if (!insertRes.ok) throw new Error('Could not save the new list (HTTP ' + insertRes.status + ')');
+      }
+      showToast('Terms saved. Live on the site within a few seconds.');
+      await renderTermsEditor();
+    } catch (e) {
+      showToast(e.message || String(e), { type: 'error' });
+    } finally {
+      btn.disabled = false;
+      btn.textContent = 'Save all';
     }
   }
 
@@ -816,6 +1125,8 @@
       renderDeployStatus();
       renderSiteContentForm();
       renderContentHistory();
+      renderFaqEditor();
+      renderTermsEditor();
     };
     // isDevAccount() depends on a real session already being loaded --
     // give initSyncOnLoad (which handles token refresh) a chance first,
