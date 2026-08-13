@@ -209,15 +209,29 @@
     transition: border-color .15s ease, color .15s ease;
   }
   .tool-tile-info:hover { border-color: var(--orange-light); color: var(--orange-light); }
+
+  .welcome-overlay {
+    position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: 9999;
+    background: var(--bg); display: flex; flex-direction: column; align-items: center; justify-content: center;
+    gap: 16px; opacity: 1; transition: opacity .5s ease;
+  }
+  .welcome-overlay.is-fading { opacity: 0; }
+  .welcome-overlay img { width: 72px; height: 72px; object-fit: contain; }
+  .welcome-overlay-text { font-family: 'Oswald', sans-serif; font-size: 22px; color: var(--white); letter-spacing: .02em; }
 </style>
 </head>
 <body>
+
+<div id="welcomeOverlay" class="welcome-overlay" style="display:none;">
+  <img src="/images/logo-signature-orange.png" alt="">
+  <div id="welcomeOverlayText" class="welcome-overlay-text"></div>
+</div>
+
 
 <div class="hub-header">
   <div class="hub-header-left">
     <img src="/images/logo-signature-orange.png" alt="Triple H Enterprises">
     <span class="hub-title">Dashboard</span>
-    <span id="welcomeGreeting" style="font-size:13px; color:var(--text-dim); margin-left:12px;"></span>
   </div>
   <button class="help-btn" onclick="openHelpModal()" aria-label="How to use this dashboard" title="How to use this dashboard">?</button>
   <button class="help-btn" id="pushToggleBtn" onclick="handlePushToggle()" aria-label="Toggle notifications" title="Toggle notifications">&#128276;</button>
@@ -1618,11 +1632,22 @@
   }
 
   function renderWelcomeGreeting() {
-    const el = document.getElementById('welcomeGreeting');
-    if (!el) return;
-    if (typeof getCurrentUserFirstName !== 'function') return;
-    const name = getCurrentUserFirstName();
-    el.textContent = name ? ('Welcome back, ' + name) : '';
+    if (typeof getCurrentUserFirstName === 'function') {
+      const name = getCurrentUserFirstName();
+      if (name) {
+        const overlay = document.getElementById('welcomeOverlay');
+        document.getElementById('welcomeOverlayText').textContent = 'Welcome back, ' + name;
+        overlay.style.display = 'flex';
+        // Shows immediately, holds briefly, then fades -- the CSS
+        // transition handles the actual fade; this just removes the
+        // overlay from layout afterward so it can't block clicks once
+        // it's invisible.
+        setTimeout(() => {
+          overlay.classList.add('is-fading');
+          setTimeout(() => { overlay.style.display = 'none'; }, 550);
+        }, 1200);
+      }
+    }
 
     const devTile = document.getElementById('devToolsTile');
     if (devTile && typeof isDevAccount === 'function' && isDevAccount()) {
