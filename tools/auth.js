@@ -129,7 +129,7 @@ async function refreshSession() {
 
 function signOut() {
   clearStoredSession();
-  window.location.href = '/login.html';
+  window.location.href = '/tools/login.html';
 }
 
 // Call this at the top of every protected page, before rendering
@@ -164,7 +164,7 @@ async function requireAuth() {
     if (refreshed) return true;
   }
   const returnTo = encodeURIComponent(window.location.pathname);
-  window.location.href = '/login.html?return=' + returnTo;
+  window.location.href = '/tools/login.html?return=' + returnTo;
   return false;
 }
 
