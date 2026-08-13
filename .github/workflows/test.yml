@@ -1,0 +1,27 @@
+name: Tests and consistency check
+
+# Runs on every push and pull request. This is dev-time verification only
+# -- it has no effect on the actual GitHub Pages deployment, which still
+# has no build step and deploys straight from the branch as always.
+on:
+  push:
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Install test dependencies
+        run: npm install
+
+      - name: Run automated tests
+        run: npm test
+
+      - name: Check tool page consistency (auth gate, CSP, PWA block, cache-bust version)
+        run: npm run check-consistency
