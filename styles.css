@@ -1754,3 +1754,15 @@
     flex-shrink: 0;
   }
 }
+
+/* Editable public-site announcement banners -- content comes from
+   Supabase (see /tools/dev-tools.html to edit), hidden by default and
+   only shown by index.html's own script if a message is actually set.
+   Falls back to simply not showing at all if that fetch ever fails,
+   never breaks the page underneath it. */
+.site-banner {
+  background: var(--orange); color: #1a1200; text-align: center;
+  font-weight: 600; font-size: 14px; padding: 10px 16px;
+  position: relative; z-index: 500;
+}
+.site-banner:nth-of-type(2) { background: var(--blue); color: #071b2e; }
