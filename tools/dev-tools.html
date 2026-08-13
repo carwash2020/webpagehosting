@@ -39,9 +39,8 @@
     background: var(--bg-panel-2); border: 1px solid var(--border); border-radius: var(--radius);
     padding: 20px;
   }
-  .dev-panel-heading { display: flex; align-items: center; gap: 8px; margin-bottom: 4px; }
+  .dev-panel-heading { display: flex; align-items: center; gap: 8px; margin-bottom: 14px; }
   .dev-panel h2 { margin: 0; font-size: 17px; }
-  .dev-panel .dev-panel-sub { font-size: 13px; color: var(--text-dim); margin: 0 0 16px; }
   .dev-info-bubble {
     display: inline-flex; align-items: center; justify-content: center; flex: 0 0 auto;
     width: 20px; height: 20px; border-radius: 50%; padding: 0;
@@ -49,6 +48,7 @@
     font-size: 11px; cursor: pointer; transition: border-color .15s ease, color .15s ease;
   }
   .dev-info-bubble:hover { border-color: var(--orange-light); color: var(--orange-light); }
+  .dev-info-bubble.dev-danger-btn:hover { border-color: #e05555; color: #e05555; }
   .dev-check-row {
     display: flex; justify-content: space-between; align-items: center; gap: 12px;
     padding: 10px 0; border-bottom: 1px solid var(--border); font-size: 14px;
@@ -68,6 +68,15 @@
     text-decoration: none; font-size: 13.5px; transition: border-color .15s ease;
   }
   .dev-links a:hover { border-color: var(--orange-light); }
+  .dev-issue-row {
+    display: flex; align-items: flex-start; gap: 10px; padding: 10px 0;
+    border-bottom: 1px solid var(--border); font-size: 14px;
+  }
+  .dev-issue-row:last-child { border-bottom: none; }
+  .dev-issue-row input[type="checkbox"] { margin-top: 3px; flex: 0 0 auto; width: 16px; height: 16px; }
+  .dev-issue-row.is-done .dev-issue-title { text-decoration: line-through; color: var(--text-dim); }
+  .dev-issue-title { font-weight: 600; }
+  .dev-issue-detail { font-size: 12.5px; color: var(--text-dim); margin-top: 2px; }
   .dev-blocked { max-width: 480px; margin: 80px auto; text-align: center; }
 </style>
 </head>
@@ -97,7 +106,6 @@
       <h2>Live consistency check</h2>
       <button class="dev-info-bubble" onclick="openDevInfo('consistency')" aria-label="What does this do?" title="What does this do?">?</button>
     </div>
-    <p class="dev-panel-sub">Fetches every tool page live and runs the same checks as the CI script &mdash; a way to check right now without waiting on a push.</p>
     <button class="secondary-btn" onclick="runLiveConsistencyCheck()" id="runCheckBtn">Run check</button>
     <div id="consistencyResults" style="margin-top:16px;"></div>
   </div>
@@ -107,7 +115,6 @@
       <h2>Session &amp; sync</h2>
       <button class="dev-info-bubble" onclick="openDevInfo('session')" aria-label="What does this do?" title="What does this do?">?</button>
     </div>
-    <p class="dev-panel-sub">Who's logged in on this device and when it last talked to Supabase.</p>
     <div id="sessionInfo"></div>
     <div style="display:flex; gap:10px; margin-top:12px; flex-wrap:wrap;">
       <button class="secondary-btn" onclick="devPushNow()">Push now</button>
@@ -120,7 +127,6 @@
       <h2>Local data snapshot</h2>
       <button class="dev-info-bubble" onclick="openDevInfo('localdata')" aria-label="What does this do?" title="What does this do?">?</button>
     </div>
-    <p class="dev-panel-sub">Every th_/rd_ key in localStorage right now, and its size. This device only.</p>
     <div id="localDataSnapshot"></div>
   </div>
 
@@ -129,7 +135,6 @@
       <h2>Appliance Wiki health</h2>
       <button class="dev-info-bubble" onclick="openDevInfo('wikihealth')" aria-label="What does this do?" title="What does this do?">?</button>
     </div>
-    <p class="dev-panel-sub">Quick stats read from this device's local copy of the Wiki's data.</p>
     <div id="wikiHealth"></div>
   </div>
 
@@ -138,7 +143,6 @@
       <h2>Manifest.json check</h2>
       <button class="dev-info-bubble" onclick="openDevInfo('manifest')" aria-label="What does this do?" title="What does this do?">?</button>
     </div>
-    <p class="dev-panel-sub">Confirms all 4 URLs in the PWA manifest have the /tools/ prefix -- a missing prefix here caused a real "Add to Home Screen" bug once already.</p>
     <button class="secondary-btn" onclick="runManifestCheck()" id="runManifestBtn">Check manifest</button>
     <div id="manifestResults" style="margin-top:12px;"></div>
   </div>
@@ -148,8 +152,23 @@
       <h2>Device info</h2>
       <button class="dev-info-bubble" onclick="openDevInfo('device')" aria-label="What does this do?" title="What does this do?">?</button>
     </div>
-    <p class="dev-panel-sub">This device/browser right now -- useful when something behaves differently on phone vs. computer.</p>
     <div id="deviceInfo"></div>
+  </div>
+
+  <div class="dev-panel dev-panel-wide">
+    <div class="dev-panel-heading">
+      <h2>Known issues</h2>
+      <button class="dev-info-bubble" onclick="openDevInfo('knownissues')" aria-label="What does this do?" title="What does this do?">?</button>
+    </div>
+    <div id="knownIssuesList"></div>
+  </div>
+
+  <div class="dev-panel">
+    <div class="dev-panel-heading">
+      <h2>Latest deploy</h2>
+      <button class="dev-info-bubble" onclick="openDevInfo('deploy')" aria-label="What does this do?" title="What does this do?">?</button>
+    </div>
+    <div id="deployStatus"></div>
   </div>
 
   <div class="dev-panel">
@@ -180,6 +199,8 @@
           <li><strong>Local data snapshot</strong> &mdash; every th_/rd_ key in this browser, its size, and an expandable raw view of its actual contents. This device only.</li>
           <li><strong>Appliance Wiki health</strong> &mdash; quick counts: brands, models, issues, and the verified/logged-by-you split.</li>
           <li><strong>Device info</strong> &mdash; browser, screen size, and online status &mdash; useful when something behaves differently on phone vs. computer.</li>
+          <li><strong>Known issues</strong> &mdash; still-open items from the last security audit, checkable so they don't get lost.</li>
+          <li><strong>Latest deploy</strong> &mdash; the most recent GitHub Actions run, pulled live.</li>
           <li><strong>Quick links</strong> &mdash; the repo, its Actions history, the Supabase dashboard, and the live site.</li>
         </ul>
       </div>
@@ -212,6 +233,14 @@
     device: {
       title: 'Device info',
       body: `<p>What this specific device and browser currently report: screen size, viewport size, online status, and the full browser identification string. Useful for figuring out why something looks or behaves differently on a phone versus a computer.</p>`,
+    },
+    knownissues: {
+      title: 'Known issues',
+      body: `<p>Real, still-open items from the most recent Supabase Security/Performance Advisor pass -- otherwise these only exist in chat history and the project skill, easy to lose track of. Check one off once it's actually resolved. This list is stored on this device only, not synced.</p>`,
+    },
+    deploy: {
+      title: 'Latest deploy',
+      body: `<p>Pulls the most recent GitHub Actions run for this repo directly from GitHub's public API -- no login needed since the repo is public. Shows whether it passed or failed and how long ago, without needing to leave this page to check the Actions tab.</p>`,
     },
     links: {
       title: 'Quick links',
@@ -251,18 +280,31 @@
     }
   }
 
-  async function runLiveConsistencyCheck() {
-    const btn = document.getElementById('runCheckBtn');
-    const results = document.getElementById('consistencyResults');
+  // Shared by every "click a button, run an async check, show the
+  // result" panel here -- handles disabling the button, resetting it
+  // no matter what happens, and rendering an error if the check itself
+  // throws. Wrapped in try/finally specifically so a button can never
+  // get stuck on its "checking" label forever again -- that exact
+  // failure mode (a silent error partway through leaving the button
+  // dead) is what shipped in the first version of this page.
+  async function runWithButtonState(btnId, resultsId, checkingLabel, idleLabel, workFn) {
+    const btn = document.getElementById(btnId);
+    const results = document.getElementById(resultsId);
     btn.disabled = true;
-    btn.textContent = 'Checking...';
+    btn.textContent = checkingLabel;
     results.innerHTML = '';
-
-    // Wrapped in try/finally so the button can NEVER get stuck on
-    // "Checking..." forever, no matter what throws inside -- that
-    // exact failure mode (a silent error partway through leaving the
-    // button dead) is what shipped here the first time.
     try {
+      results.innerHTML = await workFn();
+    } catch (e) {
+      results.innerHTML = '<p class="tool-sub">Something went wrong: ' + escapeHtml(e.message || String(e)) + '</p>';
+    } finally {
+      btn.disabled = false;
+      btn.textContent = idleLabel;
+    }
+  }
+
+  async function runLiveConsistencyCheck() {
+    return runWithButtonState('runCheckBtn', 'consistencyResults', 'Checking...', 'Run check', async () => {
       const versions = {};
       const rows = [];
 
@@ -313,17 +355,12 @@
         rows.push({ page: '(cross-file check)', ok: false, detail: 'styles.css version mismatch: ' + JSON.stringify(grouped) });
       }
 
-      results.innerHTML = rows.map(r =>
+      return rows.map(r =>
         '<div class="dev-check-row"><div><div>' + escapeHtml(r.page) + '</div>' +
         (r.detail ? '<div class="dev-check-detail">' + escapeHtml(r.detail) + '</div>' : '') + '</div>' +
         '<span class="dev-check-status ' + (r.ok ? 'pass' : 'fail') + '">' + (r.ok ? 'PASS' : 'FAIL') + '</span></div>'
       ).join('');
-    } catch (e) {
-      results.innerHTML = '<p class="tool-sub">Something went wrong running the check: ' + escapeHtml(e.message || String(e)) + '</p>';
-    } finally {
-      btn.disabled = false;
-      btn.textContent = 'Run check';
-    }
+    });
   }
 
   function renderSessionInfo() {
@@ -366,10 +403,25 @@
     el.innerHTML = keys.map(k => {
       const size = (localStorage.getItem(k) || '').length;
       return '<div class="dev-kv-row" style="cursor:pointer; flex-wrap:wrap;" data-key="' + escapeHtml(k) + '" onclick="toggleRawDataView(this)">' +
-        '<span class="k">' + escapeHtml(k) + '</span><span class="v">' + (size / 1024).toFixed(1) + ' KB</span>' +
+        '<span class="k">' + escapeHtml(k) + '</span>' +
+        '<span style="display:flex; align-items:center; gap:8px;">' +
+        '<span class="v">' + (size / 1024).toFixed(1) + ' KB</span>' +
+        '<button class="dev-info-bubble dev-danger-btn" title="Delete this key" onclick="event.stopPropagation(); deleteLocalDataKey(\'' + escapeHtml(k) + '\')">&#128465;</button>' +
+        '</span>' +
         '<pre class="dev-raw-view" style="display:none; width:100%; margin:8px 0 0; font-size:11.5px; white-space:pre-wrap; word-break:break-all; max-height:240px; overflow:auto;"></pre>' +
         '</div>';
     }).join('');
+  }
+
+  function deleteLocalDataKey(key) {
+    if (typeof showConfirm === 'function') {
+      showConfirm('Delete "' + key + '" from this device? This cannot be undone, and if this data hasn\'t synced elsewhere, it\'s gone for good.', { danger: true, confirmText: 'Delete' }).then(confirmed => {
+        if (confirmed) { localStorage.removeItem(key); renderLocalDataSnapshot(); showToast('Deleted.'); }
+      });
+    } else if (window.confirm('Delete "' + key + '" from this device?')) {
+      localStorage.removeItem(key);
+      renderLocalDataSnapshot();
+    }
   }
 
   function toggleRawDataView(rowEl) {
@@ -388,27 +440,18 @@
   }
 
   async function runManifestCheck() {
-    const btn = document.getElementById('runManifestBtn');
-    const results = document.getElementById('manifestResults');
-    btn.disabled = true;
-    btn.textContent = 'Checking...';
-    try {
+    return runWithButtonState('runManifestBtn', 'manifestResults', 'Checking...', 'Check manifest', async () => {
       const res = await fetchWithTimeout('/tools/manifest.json', 6000);
       const manifest = await res.json();
       const urlsToCheck = [manifest.start_url, ...(manifest.shortcuts || []).map(s => s.url)];
       const problems = urlsToCheck.filter(u => u && !u.startsWith('/tools/'));
-      results.innerHTML = problems.length
+      return problems.length
         ? '<div class="dev-check-row"><div><div>manifest.json</div><div class="dev-check-detail">' +
           problems.map(escapeHtml).join(', ') + ' missing the /tools/ prefix</div></div>' +
           '<span class="dev-check-status fail">FAIL</span></div>'
         : '<div class="dev-check-row"><div>All ' + urlsToCheck.length + ' manifest URLs have the /tools/ prefix</div>' +
           '<span class="dev-check-status pass">PASS</span></div>';
-    } catch (e) {
-      results.innerHTML = '<p class="tool-sub">Could not check manifest.json: ' + escapeHtml(e.message || String(e)) + '</p>';
-    } finally {
-      btn.disabled = false;
-      btn.textContent = 'Check manifest';
-    }
+    });
   }
 
   function renderDeviceInfo() {
@@ -418,6 +461,69 @@
       kvRow('Viewport', window.innerWidth + '\u00d7' + window.innerHeight) +
       kvRow('Online', navigator.onLine ? 'yes' : 'no') +
       kvRow('Browser', navigator.userAgent);
+  }
+
+  // Real, still-open items from the 2026-08-13 Supabase Advisor audit --
+  // otherwise these only exist in chat history and the project skill,
+  // easy to lose track of. Checked state is per-device (localStorage),
+  // not synced -- this is a personal reminder list, not shared data.
+  const KNOWN_ISSUES = [
+    {
+      id: 'th-leads-select-policy',
+      title: 'th_leads SELECT policy never verified',
+      detail: 'Flagged by Supabase Advisor as "RLS Policy Always True." The actual USING expression was never obtained -- if it really does evaluate to always-true, every lead (name, phone, message) is readable by anyone with the site\u2019s public anon key. Database \u2192 Policies \u2192 "Only logged-in can view or manage leads" \u2192 Edit policy.',
+    },
+    {
+      id: 'auth-rls-init-plan',
+      title: 'Auth RLS Initialization Plan wrapping',
+      detail: 'workspace_sync, th_job_photos, push_subscriptions, notification_log, th_leads all have policies calling auth.uid()/auth.role() unwrapped. Performance-only, not urgent -- wrap each in (select ...) whenever convenient.',
+    },
+  ];
+  const KNOWN_ISSUES_KEY = 'th_dev_known_issues_done';
+
+  function loadKnownIssuesDone() {
+    try { return JSON.parse(localStorage.getItem(KNOWN_ISSUES_KEY) || '{}'); } catch (e) { return {}; }
+  }
+
+  function renderKnownIssues() {
+    const el = document.getElementById('knownIssuesList');
+    const done = loadKnownIssuesDone();
+    el.innerHTML = KNOWN_ISSUES.map(issue => {
+      const isDone = !!done[issue.id];
+      return '<div class="dev-issue-row' + (isDone ? ' is-done' : '') + '">' +
+        '<input type="checkbox" ' + (isDone ? 'checked' : '') + ' onchange="toggleKnownIssue(\'' + issue.id + '\')">' +
+        '<div><div class="dev-issue-title">' + escapeHtml(issue.title) + '</div>' +
+        '<div class="dev-issue-detail">' + escapeHtml(issue.detail) + '</div></div></div>';
+    }).join('');
+  }
+
+  function toggleKnownIssue(id) {
+    const done = loadKnownIssuesDone();
+    done[id] = !done[id];
+    localStorage.setItem(KNOWN_ISSUES_KEY, JSON.stringify(done));
+    renderKnownIssues();
+  }
+
+  // Pulls the most recent workflow run from GitHub's public API --
+  // no auth needed since this is a public repo. Shows pass/fail and
+  // how long ago, without needing to leave this page to check.
+  async function renderDeployStatus() {
+    const el = document.getElementById('deployStatus');
+    el.innerHTML = '<p class="tool-sub">Loading...</p>';
+    try {
+      const res = await fetchWithTimeout('https://api.github.com/repos/carwash2020/webpagehosting/actions/runs?per_page=1', 6000);
+      const data = await res.json();
+      const run = data.workflow_runs && data.workflow_runs[0];
+      if (!run) { el.innerHTML = '<p class="tool-sub">No runs found.</p>'; return; }
+      const ok = run.conclusion === 'success';
+      const when = new Date(run.updated_at).toLocaleString();
+      el.innerHTML =
+        '<div class="dev-check-row"><div><div>' + escapeHtml(run.name || run.display_title || 'workflow') + '</div>' +
+        '<div class="dev-check-detail">' + when + '</div></div>' +
+        '<span class="dev-check-status ' + (ok ? 'pass' : 'fail') + '">' + (run.conclusion ? run.conclusion.toUpperCase() : (run.status || '').toUpperCase()) + '</span></div>';
+    } catch (e) {
+      el.innerHTML = '<p class="tool-sub">Could not reach GitHub right now.</p>';
+    }
   }
 
   function renderWikiHealth() {
@@ -445,6 +551,8 @@
       renderLocalDataSnapshot();
       renderWikiHealth();
       renderDeviceInfo();
+      renderKnownIssues();
+      renderDeployStatus();
     };
     // isDevAccount() depends on a real session already being loaded --
     // give initSyncOnLoad (which handles token refresh) a chance first,
