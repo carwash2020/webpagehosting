@@ -1582,9 +1582,10 @@
       container.innerHTML = '<div class="empty-state-small">Nothing queued yet &mdash; star a photo in the Job Tracker\'s Photos section to add it here.</div>';
       return;
     }
+    const signedUrls = await getSignedJobPhotoUrls(result.photos.map(p => p.storage_path));
     container.innerHTML = '<div class="gallery-queue-grid">' + result.photos.map(p => `
       <div class="gallery-queue-item">
-        <img src="${getJobPhotoUrl(p.storage_path)}" alt="${escapeHtml(p.public_caption || '')}" loading="lazy">
+        <img src="${signedUrls[p.storage_path] || ''}" alt="${escapeHtml(p.public_caption || '')}" loading="lazy">
         <div class="gallery-queue-caption">${escapeHtml(p.public_caption || '(no caption)')}</div>
         <div class="gallery-queue-meta">${escapeHtml(p.job_title || '')}</div>
         <button class="small-btn danger" onclick="unqueueGalleryPhoto(${p.id})">Remove from Queue</button>
