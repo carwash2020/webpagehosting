@@ -24,7 +24,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="/styles.css?v=202608112330">
+<link rel="stylesheet" href="/styles.css">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js" defer></script>
 <script src="/tools/sync.js" defer></script>
 <script src="/tools/tools-common.js" defer></script>
@@ -1128,9 +1128,10 @@
       return;
     }
 
+    const signedUrls = await getSignedJobPhotoUrls(result.photos.map(p => p.storage_path));
     const gridHtml = '<div class="photo-grid">' + result.photos.map(p => `
       <div class="photo-thumb ${p.featured ? 'has-star-featured' : ''}">
-        <img src="${getJobPhotoUrl(p.storage_path)}" alt="Job photo" loading="lazy">
+        <img src="${signedUrls[p.storage_path] || ''}" alt="Job photo" loading="lazy">
         <div class="photo-thumb-label">${escapeHtml(PHOTO_TYPE_LABEL[p.photo_type] || 'Photo')}</div>
         <button class="photo-thumb-star ${p.featured ? 'is-featured' : ''}" onclick="toggleFeatureUI(${p.id}, ${!p.featured}, ${jobId}, '${escapeHtml(jobTitle).replace(/'/g, "\\'")}')" title="${p.featured ? 'Remove from website gallery queue' : 'Queue for website gallery'}">${p.featured ? '\u2605' : '\u2606'}</button>
         <button class="photo-thumb-delete" onclick="deletePhotoUI(${p.id}, '${p.storage_path}', ${jobId}, '${escapeHtml(jobTitle).replace(/'/g, "\\'")}')" aria-label="Delete photo">&times;</button>
@@ -1721,7 +1722,7 @@
         <td>${e.type === 'mileage' ? e.miles + ' mi' : '\u2014'}</td>
         <td>${PAYMENT_LABEL[e.payment] || '\u2014'}</td>
         <td>$${e.amount.toFixed(2)}</td>
-        <td>${e.receiptPath ? `<a href="${getReceiptUrl(e.receiptPath)}" target="_blank" rel="noopener" style="color:var(--blue-light);">View</a>` : '\u2014'}</td>
+        <td>${e.receiptPath ? `<a href="#" onclick="openSignedReceipt(event, '${escapeHtml(e.receiptPath).replace(/'/g, "\\'")}')" style="color:var(--blue-light);">View</a>` : '\u2014'}</td>
         <td>
           <button class="small-btn" onclick="editExpense(${e.id})" aria-label="Edit entry" title="Edit entry">Edit</button>
           <button class="small-btn danger" onclick="deleteExpense(${e.id})" aria-label="Delete entry" title="Delete entry">&times;</button>
@@ -1747,15 +1748,29 @@
 
   function buildCSV() {
     const entries = [...loadExpenses()].sort((a, b) => new Date(a.date) - new Date(b.date));
-    let csv = 'Date,Type,Vendor,Job,Description,Miles,Payment,Amount,Receipt URL\n';
+    // Note: this column holds the raw storage path, not a clickable URL.
+    // A signed URL expires in an hour, so baking one into an exported
+    // file meant to be opened again later (for taxes, bookkeeping, etc.)
+    // would just be a dead link by the time anyone opens it. Open the
+    // Job Tracker and use the "View" button for the real, live signed
+    // link instead.
+    let csv = 'Date,Type,Vendor,Job,Description,Miles,Payment,Amount,Receipt Path\n';
     entries.forEach(e => {
       const desc = '"' + e.desc.replace(/"/g, '""') + '"';
       const vendor = '"' + (e.vendor || '').replace(/"/g, '""') + '"';
       const job = '"' + (e.jobRefTitle || '').replace(/"/g, '""') + '"';
-      const receiptUrl = e.receiptPath ? getReceiptUrl(e.receiptPath) : '';
-      csv += `${e.date},${e.type},${vendor},${job},${desc},${e.miles || ''},${PAYMENT_LABEL[e.payment] || ''},${e.amount.toFixed(2)},${receiptUrl}\n`;
+      const receiptPath = e.receiptPath || '';
+      csv += `${e.date},${e.type},${vendor},${job},${desc},${e.miles || ''},${PAYMENT_LABEL[e.payment] || ''},${e.amount.toFixed(2)},${receiptPath}\n`;
     });
     return csv;
+  }
+
+  async function openSignedReceipt(event, path) {
+    event.preventDefault();
+    if (typeof getSignedReceiptUrl !== 'function') { showToast('Receipt viewing isn\'t available right now.', { type: 'error' }); return; }
+    const url = await getSignedReceiptUrl(path);
+    if (url) window.open(url, '_blank', 'noopener');
+    else showToast('Could not load that receipt.', { type: 'error' });
   }
 
   async function exportCSV() {

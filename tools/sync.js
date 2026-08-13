@@ -443,8 +443,61 @@ async function deleteLead(id) {
 const JOB_PHOTOS_BUCKET = 'job-photos';
 const MAX_PHOTO_BYTES = 8 * 1024 * 1024; // 8MB client-side cap
 
+// Only works if the job-photos bucket is set to "Public" -- kept as-is
+// (unused by the app now) rather than deleted, in case anything else
+// still references it. See getSignedJobPhotoUrl below for the version
+// that works with the bucket kept private.
 function getJobPhotoUrl(storagePath) {
   return `${SUPABASE_URL}/storage/v1/object/public/${JOB_PHOTOS_BUCKET}/${storagePath}`;
+}
+
+// Generates a time-limited URL that works even when a bucket is private
+// -- the actual fix for job photos and receipts needing to stay private
+// while the app can still display them. Uses the single-file sign
+// endpoint (one request per file) rather than the batch endpoint, since
+// the single-file endpoint's request/response shape is clearly
+// documented in Supabase's own API reference and the batch endpoint's
+// isn't -- trades a little efficiency for certainty about the actual
+// contract, which matters more here than shaving off a few requests.
+//
+// Per Supabase's docs, the response's signedURL comes back as a path
+// relative to /storage/v1 (e.g. "/object/sign/bucket/path?token=..."),
+// not a full URL -- has to be prefixed with SUPABASE_URL + /storage/v1
+// to actually be usable.
+async function getSignedStorageUrl(bucket, path, expiresInSeconds) {
+  if (!path) return '';
+  if (typeof ensureFreshToken === 'function') { await ensureFreshToken(); }
+  try {
+    const res = await fetch(`${SUPABASE_URL}/storage/v1/object/sign/${bucket}/${path}`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'apikey': SUPABASE_ANON_KEY,
+        'Authorization': `Bearer ${getAuthToken()}`,
+      },
+      body: JSON.stringify({ expiresIn: expiresInSeconds || 3600 }),
+    });
+    if (!res.ok) return '';
+    const data = await res.json();
+    return data.signedURL ? `${SUPABASE_URL}/storage/v1${data.signedURL}` : '';
+  } catch (e) {
+    return '';
+  }
+}
+
+async function getSignedJobPhotoUrl(storagePath) {
+  return getSignedStorageUrl(JOB_PHOTOS_BUCKET, storagePath, 3600);
+}
+
+// Signs a whole batch of job photos in parallel and returns a lookup
+// map keyed by storage path -- for rendering a gallery grid, where every
+// thumbnail needs its own signed URL before the grid can be built.
+async function getSignedJobPhotoUrls(storagePaths) {
+  const unique = [...new Set((storagePaths || []).filter(Boolean))];
+  const signed = await Promise.all(unique.map(p => getSignedJobPhotoUrl(p)));
+  const map = {};
+  unique.forEach((p, i) => { map[p] = signed[i]; });
+  return map;
 }
 
 async function uploadJobPhoto(file, jobId, jobTitle, photoType) {
@@ -813,6 +866,12 @@ async function deleteSecureDocument(path) {
 
 function getReceiptUrl(storagePath) {
   return `${SUPABASE_URL}/storage/v1/object/public/${RECEIPTS_BUCKET}/${storagePath}`;
+}
+
+// Same reasoning as getSignedJobPhotoUrl above -- lets the receipts
+// bucket stay private while still being viewable in the app.
+async function getSignedReceiptUrl(storagePath) {
+  return getSignedStorageUrl(RECEIPTS_BUCKET, storagePath, 3600);
 }
 
 async function uploadReceipt(file, expenseId) {
