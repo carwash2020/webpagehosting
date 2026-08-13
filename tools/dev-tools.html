@@ -216,7 +216,7 @@
     },
     session: {
       title: 'Session & sync',
-      body: `<p>Shows which account is actually logged in on this device, and the result of the last push or pull attempt to Supabase.</p><p>"Push now" and "Pull now" trigger a sync immediately instead of waiting for the normal automatic/debounced sync to happen on its own -- useful when you want to be sure the latest data is saved or fetched right this second.</p>`,
+      body: `<p>Shows which account is actually logged in on this device, and the result of the last push or pull attempt to Supabase.</p><p>"Push now" and "Pull now" trigger a sync immediately instead of waiting for the normal automatic/debounced sync to happen on its own -- useful when you want to be sure the latest data is saved or fetched right this second.</p><p>The "History" link expands the last 20 attempts (most recent first) -- useful for spotting a pattern, like "this started failing consistently around a specific time" rather than only ever seeing the single latest result.</p>`,
     },
     localdata: {
       title: 'Local data snapshot',
@@ -368,9 +368,28 @@
     const email = (typeof getCurrentUserEmail === 'function') ? getCurrentUserEmail() : null;
     let lastSync = null;
     try { lastSync = JSON.parse(localStorage.getItem('th_sync_last') || 'null'); } catch (e) {}
+    const historyCount = (typeof loadSyncHistory === 'function') ? loadSyncHistory().length : 0;
     el.innerHTML =
       kvRow('Logged in as', email || '(no valid session)') +
-      kvRow('Last sync attempt', lastSync ? (lastSync.type + ' -- ' + (lastSync.ok ? 'ok' : 'failed: ' + lastSync.error) + ' -- ' + new Date(lastSync.time).toLocaleString()) : 'none recorded yet');
+      kvRow('Last sync attempt', lastSync ? (lastSync.type + ' -- ' + (lastSync.ok ? 'ok' : 'failed: ' + lastSync.error) + ' -- ' + new Date(lastSync.time).toLocaleString()) : 'none recorded yet') +
+      (historyCount ? '<div style="margin-top:8px;"><a href="#" onclick="event.preventDefault(); toggleSyncHistory();" style="color:var(--orange-light); font-size:13px;">History (' + historyCount + ') <span id="syncHistoryArrow">&#9662;</span></a></div>' +
+        '<div id="syncHistoryList" style="display:none; max-height:220px; overflow-y:auto; margin-top:8px; border-top:1px solid var(--border); padding-top:6px;"></div>'
+      : '');
+  }
+
+  function toggleSyncHistory() {
+    const list = document.getElementById('syncHistoryList');
+    const arrow = document.getElementById('syncHistoryArrow');
+    const opening = list.style.display === 'none';
+    list.style.display = opening ? 'block' : 'none';
+    arrow.innerHTML = opening ? '&#9652;' : '&#9662;';
+    if (opening && typeof loadSyncHistory === 'function') {
+      list.innerHTML = loadSyncHistory().map(h =>
+        '<div class="dev-check-row" style="padding:6px 0;"><div><div>' + escapeHtml(h.type) + ' &mdash; ' + new Date(h.time).toLocaleString() + '</div>' +
+        (h.error ? '<div class="dev-check-detail">' + escapeHtml(h.error) + '</div>' : '') + '</div>' +
+        '<span class="dev-check-status ' + (h.ok ? 'pass' : 'fail') + '">' + (h.ok ? 'OK' : 'FAILED') + '</span></div>'
+      ).join('');
+    }
   }
 
   function kvRow(k, v) {
