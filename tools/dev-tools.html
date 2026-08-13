@@ -265,6 +265,21 @@
       </div>
     </div>
   </div>
+
+  <div class="help-modal-overlay" id="devPasswordOverlay">
+    <div class="help-modal" style="max-width:380px;">
+      <button class="help-modal-close" onclick="devPasswordCancel()" aria-label="Close">&times;</button>
+      <h3>Confirm dev password</h3>
+      <div class="help-modal-body">
+        <p style="margin-bottom:14px;">This is a soft confirmation to catch an accidental save, not real protection against someone technically determined -- anyone who's already logged into Connor's account and views this page's source could bypass it. It exists to stop a stray tap or someone else picking up an unlocked phone.</p>
+        <input type="password" id="devPasswordInput" placeholder="Dev password" style="width:100%; margin-bottom:12px;" onkeydown="if(event.key==='Enter') devPasswordSubmit();">
+        <div class="form-footer">
+          <button class="btn blue" onclick="devPasswordSubmit()">Confirm</button>
+          <button class="secondary-btn" onclick="devPasswordCancel()">Cancel</button>
+        </div>
+      </div>
+    </div>
+  </div>
 </div>
 
 <script>
@@ -321,6 +336,55 @@
   function openDevInfo(key) {
     const info = DEV_INFO[key];
     if (info && typeof openInfoModal === 'function') openInfoModal(info.title, info.body);
+  }
+
+  // Soft confirmation gate before publishing anything to the live site
+  // (Site Content, FAQ, or Terms saves) -- see the modal's own text for
+  // the honest limit of what this actually protects against. Hashed
+  // rather than stored in plain text so it's not trivially visible at
+  // a glance, though that's a small speed bump, not real security --
+  // anyone who views this page's source and is determined enough can
+  // still bypass it.
+  const DEV_PASSWORD_HASH = '70abb329febcd9d03819bedb5c5c9d67d6d3ca2a31711ee7dff634b7982e893c';
+  let _devPasswordResolve = null;
+
+  async function sha256Hex(text) {
+    const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(text));
+    return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2, '0')).join('');
+  }
+
+  function showDevPasswordPrompt() {
+    return new Promise(resolve => {
+      _devPasswordResolve = resolve;
+      const overlay = document.getElementById('devPasswordOverlay');
+      const input = document.getElementById('devPasswordInput');
+      input.value = '';
+      overlay.classList.add('is-open');
+      setTimeout(() => input.focus(), 50);
+    });
+  }
+
+  function devPasswordSubmit() {
+    const value = document.getElementById('devPasswordInput').value;
+    document.getElementById('devPasswordOverlay').classList.remove('is-open');
+    if (_devPasswordResolve) { _devPasswordResolve(value); _devPasswordResolve = null; }
+  }
+
+  function devPasswordCancel() {
+    document.getElementById('devPasswordOverlay').classList.remove('is-open');
+    if (_devPasswordResolve) { _devPasswordResolve(null); _devPasswordResolve = null; }
+  }
+
+  async function confirmDevPassword() {
+    const entered = await showDevPasswordPrompt();
+    if (entered === null) return false; // cancelled
+    if (!entered) { showToast('Dev password required.', { type: 'error' }); return false; }
+    const hash = await sha256Hex(entered);
+    if (hash !== DEV_PASSWORD_HASH) {
+      showToast('Incorrect dev password.', { type: 'error' });
+      return false;
+    }
+    return true;
   }
 
   function escapeHtml(str) {
@@ -597,6 +661,7 @@
   }
 
   async function saveSiteContent() {
+    if (!(await confirmDevPassword())) return;
     const btn = document.getElementById('saveSiteContentBtn');
     btn.disabled = true;
     btn.textContent = 'Saving...';
@@ -778,6 +843,7 @@
   }
 
   async function saveFaqList() {
+    if (!(await confirmDevPassword())) return;
     const btn = document.getElementById('saveFaqBtn');
     btn.disabled = true;
     btn.textContent = 'Saving...';
@@ -887,6 +953,7 @@
   }
 
   async function saveTermsList() {
+    if (!(await confirmDevPassword())) return;
     const btn = document.getElementById('saveTermsBtn');
     btn.disabled = true;
     btn.textContent = 'Saving...';
