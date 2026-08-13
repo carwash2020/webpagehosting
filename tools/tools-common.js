@@ -425,17 +425,19 @@ if ('serviceWorker' in navigator) {
 // Lightweight client-side error capture -- the cheap alternative to a
 // paid error-tracking service for a project this size. Runs on every
 // tool page (this file is shared by all of them), capped at the last
-// 20 so it can't grow unbounded on a device that's been running a
-// long time.
+// 20 (per device before merging, and again after merging two devices'
+// logs together -- see mergeClientErrorLog in sync.js) so it can't
+// grow unbounded on a device that's been running a long time.
 //
-// Deliberately device-local, NOT added to sync.js's synced data --
-// after today's lesson about the synced payload's hard size limit,
-// adding another growing, noisy data key to that same bundle felt like
-// asking for the same class of problem again. That means this helps
-// whoever's actually holding the device something broke on, right
-// then -- it does not let one person remotely see what broke on the
-// other person's phone. A real, known limit of this version, not an
-// oversight.
+// Synced across devices (see sync.js) -- each entry gets its own
+// unique id specifically so two devices' logs merge together safely
+// instead of one overwriting the other. This was deliberately left
+// device-local in an earlier version, right after the exact lesson
+// about the synced payload's old 64 KiB size cap -- but that cap came
+// from a `keepalive: true` flag on the push request that's since been
+// removed entirely, so it no longer applies. Syncing this is what
+// actually makes it useful for a two-person team: one person can now
+// see what broke on the other's device, not just their own.
 const CLIENT_ERROR_LOG_KEY = 'th_client_errors';
 const CLIENT_ERROR_LOG_MAX = 20;
 
@@ -444,6 +446,11 @@ function logClientError(message, source, lineno, colno, stack) {
     let log = [];
     try { log = JSON.parse(localStorage.getItem(CLIENT_ERROR_LOG_KEY) || '[]'); } catch (e) { log = []; }
     log.unshift({
+      // Random-suffixed id, not just Date.now() -- needed so two
+      // different devices logging an error can merge correctly on
+      // sync (see sync.js) without ever colliding, even in the
+      // unlikely case both log something in the same millisecond.
+      id: Date.now() + '-' + Math.random().toString(36).slice(2, 8),
       message: String(message == null ? 'Unknown error' : message).slice(0, 500),
       source: source || '',
       line: lineno || null,
@@ -454,6 +461,11 @@ function logClientError(message, source, lineno, colno, stack) {
     });
     if (log.length > CLIENT_ERROR_LOG_MAX) log.length = CLIENT_ERROR_LOG_MAX;
     localStorage.setItem(CLIENT_ERROR_LOG_KEY, JSON.stringify(log));
+    // sync.js loads after this file but before any real error could
+    // actually fire, so scheduleSync will exist by the time this
+    // callback runs for real -- same defensive guard used everywhere
+    // else in this codebase that writes synced data.
+    if (typeof scheduleSync === 'function') scheduleSync();
   } catch (e) {
     // If even logging the error fails, give up silently rather than
     // risk looping back into another error.
