@@ -62,6 +62,13 @@ const SYNC_DATA_KEYS = [
   'th_compliance',
   'th_job_templates',
   'th_contracts',
+  // Appliance Wiki's model/issue reference data. Added so it actually
+  // participates in cross-device sync -- it was loading sync.js and
+  // calling scheduleSync() after every save, which looked like it was
+  // syncing, but this key was never on the list scheduleSync() actually
+  // pushes, so every entry only ever lived on whichever single device
+  // it was typed into.
+  'th_parts_reference_units',
   'th_setaside_rate',
   // Runway Dashboard's own data -- personal budget, business-month
   // rollups, emergency fund, and the readiness checklist. Deliberately
@@ -130,6 +137,7 @@ const MERGE_KEY_FIELD = {
   th_job_templates: 'id',
   th_contracts: 'id',
   th_price_reference: 'id',
+  th_parts_reference_units: 'id',
   'rd_personal-expenses': 'id',
   'rd_personal-income': 'id',
   'rd_business-months': 'month',
@@ -159,6 +167,32 @@ function mergeRecordArrays(localArr, remoteArr, keyField) {
   return Array.from(merged.values());
 }
 
+// Appliance Wiki units nest an `issues` array inside each unit -- a
+// plain unit-level merge (like every other record type above) would
+// treat two people adding DIFFERENT new issues to the SAME existing
+// model as a conflict on that one unit, and just keep whichever side
+// synced last, silently dropping the other person's newly-logged issue.
+// That's the exact failure mode the merge system above exists to
+// prevent, just one level deeper -- so this merges twice: once across
+// units by unit id, and again across each matching unit's issues by
+// issue id, unioning both instead of one side winning outright.
+function mergePartsReferenceUnits(localArr, remoteArr) {
+  const byId = new Map();
+  (localArr || []).forEach(u => { if (u && u.id !== undefined) byId.set(u.id, u); });
+  (remoteArr || []).forEach(remoteUnit => {
+    if (!remoteUnit || remoteUnit.id === undefined) return;
+    const localUnit = byId.get(remoteUnit.id);
+    if (!localUnit) { byId.set(remoteUnit.id, remoteUnit); return; }
+    // Same unit exists on both sides -- take the remote unit's own
+    // fields (model name, links, pinned) as the base, same "remote wins
+    // for that record" rule as everywhere else, but union the issues
+    // sub-array by issue id instead of overwriting it wholesale.
+    const mergedIssues = mergeRecordArrays(localUnit.issues, remoteUnit.issues, 'id');
+    byId.set(remoteUnit.id, Object.assign({}, remoteUnit, { issues: mergedIssues }));
+  });
+  return Array.from(byId.values());
+}
+
 function applySyncData(obj) {
   if (!obj) return;
   SYNC_DATA_KEYS.forEach(k => {
@@ -178,7 +212,10 @@ function applySyncData(obj) {
         localStorage.setItem(k, obj[k]);
         return;
       }
-      localStorage.setItem(k, JSON.stringify(mergeRecordArrays(localArr, remoteArr, keyField)));
+      const mergedArr = k === 'th_parts_reference_units'
+        ? mergePartsReferenceUnits(localArr, remoteArr)
+        : mergeRecordArrays(localArr, remoteArr, keyField);
+      localStorage.setItem(k, JSON.stringify(mergedArr));
     } catch (e) {
       localStorage.setItem(k, obj[k]); // malformed JSON on either side -- fall back to the old behavior rather than throw
     }
