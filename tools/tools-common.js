@@ -421,3 +421,53 @@ if ('serviceWorker' in navigator) {
     });
   });
 }
+
+// Lightweight client-side error capture -- the cheap alternative to a
+// paid error-tracking service for a project this size. Runs on every
+// tool page (this file is shared by all of them), capped at the last
+// 20 so it can't grow unbounded on a device that's been running a
+// long time.
+//
+// Deliberately device-local, NOT added to sync.js's synced data --
+// after today's lesson about the synced payload's hard size limit,
+// adding another growing, noisy data key to that same bundle felt like
+// asking for the same class of problem again. That means this helps
+// whoever's actually holding the device something broke on, right
+// then -- it does not let one person remotely see what broke on the
+// other person's phone. A real, known limit of this version, not an
+// oversight.
+const CLIENT_ERROR_LOG_KEY = 'th_client_errors';
+const CLIENT_ERROR_LOG_MAX = 20;
+
+function logClientError(message, source, lineno, colno, stack) {
+  try {
+    let log = [];
+    try { log = JSON.parse(localStorage.getItem(CLIENT_ERROR_LOG_KEY) || '[]'); } catch (e) { log = []; }
+    log.unshift({
+      message: String(message == null ? 'Unknown error' : message).slice(0, 500),
+      source: source || '',
+      line: lineno || null,
+      col: colno || null,
+      stack: stack ? String(stack).slice(0, 1000) : '',
+      page: (typeof window !== 'undefined' && window.location) ? window.location.pathname : '',
+      time: new Date().toISOString(),
+    });
+    if (log.length > CLIENT_ERROR_LOG_MAX) log.length = CLIENT_ERROR_LOG_MAX;
+    localStorage.setItem(CLIENT_ERROR_LOG_KEY, JSON.stringify(log));
+  } catch (e) {
+    // If even logging the error fails, give up silently rather than
+    // risk looping back into another error.
+  }
+}
+
+window.addEventListener('error', (event) => {
+  logClientError(event.message, event.filename, event.lineno, event.colno, event.error && event.error.stack);
+});
+window.addEventListener('unhandledrejection', (event) => {
+  const reason = event.reason;
+  logClientError(
+    reason && reason.message ? reason.message : String(reason),
+    '', null, null,
+    reason && reason.stack
+  );
+});

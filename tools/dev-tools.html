@@ -146,6 +146,24 @@
     <div id="deviceInfo"></div>
   </div>
 
+  <div class="dev-panel">
+    <div class="dev-panel-heading">
+      <h2>Service worker &amp; cache</h2>
+      <button class="dev-info-bubble" onclick="openDevInfo('serviceworker')" aria-label="What does this do?" title="What does this do?">?</button>
+    </div>
+    <div id="swInfo"></div>
+    <button class="secondary-btn" style="margin-top:12px;" onclick="clearServiceWorkerAndCaches()">Clear cache &amp; unregister</button>
+  </div>
+
+  <div class="dev-panel">
+    <div class="dev-panel-heading">
+      <h2>Client errors</h2>
+      <button class="dev-info-bubble" onclick="openDevInfo('clienterrors')" aria-label="What does this do?" title="What does this do?">?</button>
+    </div>
+    <div id="clientErrorLog"></div>
+    <button class="secondary-btn" style="margin-top:12px;" onclick="clearClientErrorLog()">Clear log</button>
+  </div>
+
   <div class="dev-panel dev-panel-wide">
     <div class="dev-panel-heading">
       <h2>Known issues</h2>
@@ -187,6 +205,8 @@
           <li><strong>Live consistency check</strong> &mdash; fetches every tool page right now and checks each one for the login gate, a CSP, the PWA manifest link, a matching styles.css version, and that manifest.json's own URLs all have the /tools/ prefix. The same checks run automatically in GitHub Actions on every push; this just lets you run them on demand.</li>
           <li><strong>Session &amp; sync</strong> &mdash; who's logged in on this device, the last sync result, and manual Push/Pull buttons to force a sync right now.</li>
           <li><strong>Local data snapshot</strong> &mdash; every th_/rd_ key in this browser, its size, and an expandable raw view of its actual contents. This device only.</li>
+          <li><strong>Service worker &amp; cache</strong> &mdash; registration status, what's cached, and a one-click clear if something seems stale.</li>
+          <li><strong>Client errors</strong> &mdash; the last 20 JavaScript errors captured on this device, across every tool page.</li>
           <li><strong>Appliance Wiki health</strong> &mdash; quick counts: brands, models, issues, and the verified/logged-by-you split.</li>
           <li><strong>Device info</strong> &mdash; browser, screen size, and online status &mdash; useful when something behaves differently on phone vs. computer.</li>
           <li><strong>Known issues</strong> &mdash; still-open items from the last security audit, checkable so they don't get lost.</li>
@@ -219,6 +239,14 @@
     device: {
       title: 'Device info',
       body: `<p>What this specific device and browser currently report: screen size, viewport size, online status, and the full browser identification string. Useful for figuring out why something looks or behaves differently on a phone versus a computer.</p>`,
+    },
+    serviceworker: {
+      title: 'Service worker & cache',
+      body: `<p>Shows whether a service worker is actually registered on this device, its current state, what's in Cache Storage, and roughly how much space it's using.</p><p>"Clear cache & unregister" wipes all of it and reloads a clean slate -- the same thing Chrome's own DevTools "Clear Storage" button does. Useful when something looks stale or behaves differently after a real update, since a leftover cached file is a common cause of that.</p>`,
+    },
+    clienterrors: {
+      title: 'Client errors',
+      body: `<p>The last 20 JavaScript errors that happened on ANY tool page on this device, captured automatically in the background (no action needed to log them). Shows the error message, which page it happened on, and when.</p><p>This is device-local, not synced -- it helps whoever's holding the device something broke on, right then. It does not let you see what broke on someone else's phone remotely.</p>`,
     },
     knownissues: {
       title: 'Known issues',
@@ -461,6 +489,75 @@
     }
   }
 
+  async function renderServiceWorkerInfo() {
+    const el = document.getElementById('swInfo');
+    if (!('serviceWorker' in navigator)) {
+      el.innerHTML = '<p class="tool-sub">Service workers not supported in this browser.</p>';
+      return;
+    }
+    const registrations = await navigator.serviceWorker.getRegistrations();
+    let cacheNames = [];
+    try { cacheNames = await caches.keys(); } catch (e) {}
+
+    let html = '';
+    if (!registrations.length) {
+      html += kvRow('Service worker', 'not registered');
+    } else {
+      registrations.forEach(reg => {
+        const sw = reg.active || reg.waiting || reg.installing;
+        html += kvRow('Service worker', sw ? (sw.state + ' -- ' + sw.scriptURL.replace(location.origin, '')) : 'registered, no active worker yet');
+      });
+    }
+    html += kvRow('Cache storage', cacheNames.length ? cacheNames.join(', ') : 'none');
+
+    if (navigator.storage && navigator.storage.estimate) {
+      try {
+        const estimate = await navigator.storage.estimate();
+        html += kvRow('Storage used', ((estimate.usage || 0) / 1024 / 1024).toFixed(2) + ' MB');
+      } catch (e) {}
+    }
+    el.innerHTML = html;
+  }
+
+  async function clearServiceWorkerAndCaches() {
+    const doClear = async () => {
+      try {
+        const registrations = await navigator.serviceWorker.getRegistrations();
+        await Promise.all(registrations.map(r => r.unregister()));
+        const cacheNames = await caches.keys();
+        await Promise.all(cacheNames.map(n => caches.delete(n)));
+        showToast('Cleared. Reload the page for a fresh service worker to register.');
+        renderServiceWorkerInfo();
+      } catch (e) {
+        showToast('Could not clear: ' + (e.message || String(e)), { type: 'error' });
+      }
+    };
+    if (typeof showConfirm === 'function') {
+      const confirmed = await showConfirm('Unregister the service worker and clear all cached files on this device? You\'ll need to reload afterward, and it may take a moment to re-cache everything.', { danger: true, confirmText: 'Clear' });
+      if (confirmed) await doClear();
+    } else if (window.confirm('Unregister the service worker and clear all caches?')) {
+      await doClear();
+    }
+  }
+
+  function renderClientErrorLog() {
+    const el = document.getElementById('clientErrorLog');
+    let log = [];
+    try { log = JSON.parse(localStorage.getItem('th_client_errors') || '[]'); } catch (e) {}
+    if (!log.length) { el.innerHTML = '<p class="tool-sub">No client-side errors captured on this device.</p>'; return; }
+    el.innerHTML = log.map(e =>
+      '<div class="dev-check-row" style="align-items:flex-start;"><div><div>' + escapeHtml(e.message) + '</div>' +
+      '<div class="dev-check-detail">' + escapeHtml(e.page || '') + (e.line ? ':' + e.line : '') + ' -- ' + new Date(e.time).toLocaleString() + '</div></div>' +
+      '<span class="dev-check-status fail">ERROR</span></div>'
+    ).join('');
+  }
+
+  function clearClientErrorLog() {
+    localStorage.removeItem('th_client_errors');
+    renderClientErrorLog();
+    showToast('Cleared.');
+  }
+
   function renderDeviceInfo() {
     const el = document.getElementById('deviceInfo');
     el.innerHTML =
@@ -558,6 +655,8 @@
       renderLocalDataSnapshot();
       renderWikiHealth();
       renderDeviceInfo();
+      renderServiceWorkerInfo();
+      renderClientErrorLog();
       renderKnownIssues();
       renderDeployStatus();
     };
