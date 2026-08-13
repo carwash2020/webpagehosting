@@ -230,7 +230,7 @@
     },
     localdata: {
       title: 'Local data snapshot',
-      body: `<p>Every piece of Triple H data stored in this browser's localStorage right now, and how much space each one is using.</p><p>This reflects THIS device only -- it's not the synced total across all devices, just what's actually sitting here.</p>`,
+      body: `<p>Every piece of Triple H data stored in this browser's localStorage right now, and how much space each one is using.</p><p>This reflects THIS device only, deliberately -- not synced. A few of these (the login session, migration "have I run yet" flags) would actually break things if synced across devices, so this stays local on purpose.</p><p>The internal migration/seed flags are collapsed behind their own toggle since there can be 30+ of them and they add no diagnostic value on their own -- just real data stays visible up top.</p>`,
     },
     wikihealth: {
       title: 'Appliance Wiki health',
@@ -450,17 +450,42 @@
     }
     keys.sort();
     if (!keys.length) { el.innerHTML = '<p class="tool-sub">Nothing stored on this device yet.</p>'; return; }
-    el.innerHTML = keys.map(k => {
-      const size = (localStorage.getItem(k) || '').length;
-      return '<div class="dev-kv-row" style="cursor:pointer; flex-wrap:wrap;" data-key="' + escapeHtml(k) + '" onclick="toggleRawDataView(this)">' +
-        '<span class="k">' + escapeHtml(k) + '</span>' +
-        '<span style="display:flex; align-items:center; gap:8px;">' +
-        '<span class="v">' + (size / 1024).toFixed(1) + ' KB</span>' +
-        '<button class="dev-info-bubble dev-danger-btn" title="Delete this key" onclick="event.stopPropagation(); deleteLocalDataKey(\'' + escapeHtml(k) + '\')">&#128465;</button>' +
-        '</span>' +
-        '<pre class="dev-raw-view" style="display:none; width:100%; margin:8px 0 0; font-size:11.5px; white-space:pre-wrap; word-break:break-all; max-height:240px; overflow:auto;"></pre>' +
-        '</div>';
-    }).join('');
+
+    // Migration/seed "have I run this yet" markers (Appliance Wiki alone
+    // has spawned ~30 of these by now) add no diagnostic value on their
+    // own -- just a one-byte "1" -- and were the actual reason this
+    // panel felt huge. Split them out behind their own collapsed toggle
+    // instead of hiding real data behind one for the whole panel.
+    const flagKeys = keys.filter(k => /_applied$/.test(k));
+    const dataKeys = keys.filter(k => !/_applied$/.test(k));
+
+    el.innerHTML =
+      dataKeys.map(renderLocalDataRow).join('') +
+      (flagKeys.length
+        ? '<div style="margin-top:8px;"><a href="#" onclick="event.preventDefault(); toggleInternalFlags();" style="color:var(--orange-light); font-size:13px;">Internal flags (' + flagKeys.length + ') <span id="internalFlagsArrow">&#9662;</span></a></div>' +
+          '<div id="internalFlagsList" style="display:none; margin-top:8px; border-top:1px solid var(--border); padding-top:6px;">' +
+          flagKeys.map(renderLocalDataRow).join('') + '</div>'
+        : '');
+  }
+
+  function renderLocalDataRow(k) {
+    const size = (localStorage.getItem(k) || '').length;
+    return '<div class="dev-kv-row" style="cursor:pointer; flex-wrap:wrap;" data-key="' + escapeHtml(k) + '" onclick="toggleRawDataView(this)">' +
+      '<span class="k">' + escapeHtml(k) + '</span>' +
+      '<span style="display:flex; align-items:center; gap:8px;">' +
+      '<span class="v">' + (size / 1024).toFixed(1) + ' KB</span>' +
+      '<button class="dev-info-bubble dev-danger-btn" title="Delete this key" onclick="event.stopPropagation(); deleteLocalDataKey(\'' + escapeHtml(k) + '\')">&#128465;</button>' +
+      '</span>' +
+      '<pre class="dev-raw-view" style="display:none; width:100%; margin:8px 0 0; font-size:11.5px; white-space:pre-wrap; word-break:break-all; max-height:240px; overflow:auto;"></pre>' +
+      '</div>';
+  }
+
+  function toggleInternalFlags() {
+    const list = document.getElementById('internalFlagsList');
+    const arrow = document.getElementById('internalFlagsArrow');
+    const opening = list.style.display === 'none';
+    list.style.display = opening ? 'block' : 'none';
+    arrow.innerHTML = opening ? '&#9652;' : '&#9662;';
   }
 
   function deleteLocalDataKey(key) {
