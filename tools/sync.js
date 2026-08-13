@@ -69,6 +69,10 @@ const SYNC_DATA_KEYS = [
   // pushes, so every entry only ever lived on whichever single device
   // it was typed into.
   'th_parts_reference_units',
+  // Client-side error log from tools-common.js. Small and naturally
+  // self-capping (see mergeClientErrorLog below), so this doesn't risk
+  // repeating the payload-size lesson from adding the Wiki data above.
+  'th_client_errors',
   'th_setaside_rate',
   // Runway Dashboard's own data -- personal budget, business-month
   // rollups, emergency fund, and the readiness checklist. Deliberately
@@ -138,6 +142,7 @@ const MERGE_KEY_FIELD = {
   th_contracts: 'id',
   th_price_reference: 'id',
   th_parts_reference_units: 'id',
+  th_client_errors: 'id',
   'rd_personal-expenses': 'id',
   'rd_personal-income': 'id',
   'rd_business-months': 'month',
@@ -193,6 +198,23 @@ function mergePartsReferenceUnits(localArr, remoteArr) {
   return Array.from(byId.values());
 }
 
+// Each device caps its OWN error log at 20 entries (see tools-common.js)
+// before it ever reaches here -- but merging two already-capped-at-20
+// lists together can produce up to 40, so this re-caps the COMBINED
+// result too, keeping only the 20 most recent overall rather than
+// letting the list grow every time two devices sync. 20 is duplicated
+// here rather than shared with tools-common.js's CLIENT_ERROR_LOG_MAX
+// constant -- top-level const/let in one <script> tag isn't visible to
+// a different <script> tag, only var/function declarations are, so
+// there's no way to reference it directly. Keep both in sync by hand
+// if this number ever changes.
+const CLIENT_ERROR_LOG_MAX_AFTER_MERGE = 20;
+function mergeClientErrorLog(localArr, remoteArr) {
+  const merged = mergeRecordArrays(localArr, remoteArr, 'id');
+  merged.sort((a, b) => new Date(b.time) - new Date(a.time));
+  return merged.slice(0, CLIENT_ERROR_LOG_MAX_AFTER_MERGE);
+}
+
 function applySyncData(obj) {
   if (!obj) return;
   SYNC_DATA_KEYS.forEach(k => {
@@ -214,6 +236,8 @@ function applySyncData(obj) {
       }
       const mergedArr = k === 'th_parts_reference_units'
         ? mergePartsReferenceUnits(localArr, remoteArr)
+        : k === 'th_client_errors'
+        ? mergeClientErrorLog(localArr, remoteArr)
         : mergeRecordArrays(localArr, remoteArr, keyField);
       localStorage.setItem(k, JSON.stringify(mergedArr));
     } catch (e) {
