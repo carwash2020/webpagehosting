@@ -574,6 +574,19 @@
     return div.innerHTML;
   }
 
+  // Same subtle color-coded dot used in Dev Tools and Appliance Wiki --
+  // blue for Connor, pink for Steve. Only for a real, known account
+  // email; anything else gets no dot rather than a wrong guess.
+  const PERSON_DOT_COLORS = {
+    'connor@triplehenterprisesllc.biz': '#7ec4ff',
+    'steve@triplehenterprisesllc.biz': '#f0a8c8',
+  };
+  function personDot(email) {
+    const color = PERSON_DOT_COLORS[(email || '').toLowerCase()];
+    if (!color) return '';
+    return '<span style="display:inline-block; width:7px; height:7px; border-radius:50%; background:' + color + '; margin-right:5px; vertical-align:middle;" title="Last edited by ' + escapeHtml(email) + '"></span>';
+  }
+
   // ---------- Passive sync status (no buttons, just quiet confirmation) ----------
   function formatSyncStatus(status) {
     if (!status) return '';
@@ -733,12 +746,18 @@
     };
     const wasEditing = !!editingJobId;
     let newId = null;
+    // Real per-person attribution -- only stamped when a real account
+    // is actually logged in (not the old manually-typed fallback names
+    // Appliance Wiki used before real accounts existed). createdBy is
+    // set once and never overwritten; lastEditedBy updates every save,
+    // including the initial creation.
+    const currentUser = (typeof getCurrentUserEmail === 'function') ? getCurrentUserEmail() : null;
     if (wasEditing) {
       const idx = jobs.findIndex(j => j.id === editingJobId);
-      if (idx > -1) jobs[idx] = { ...jobs[idx], ...fields };
+      if (idx > -1) jobs[idx] = { ...jobs[idx], ...fields, lastEditedBy: currentUser || jobs[idx].lastEditedBy };
     } else {
       newId = Date.now();
-      jobs.push({ id: newId, ...fields });
+      jobs.push({ id: newId, ...fields, createdBy: currentUser, lastEditedBy: currentUser });
     }
     saveJobs(jobs);
     ['jobTitle','jobClient','jobPhone','jobAddress','jobNotes'].forEach(id => document.getElementById(id).value = '');
@@ -1044,7 +1063,7 @@
       return `
         <div class="job-card priority-${job.priority} ${isDone ? 'is-done' : ''} ${job.id === justAddedJobId ? 'list-row-enter' : ''}" data-job-id="${job.id}">
           <div class="job-card-top">
-            <h4 class="job-card-title ${isDone ? 'is-done-text' : ''}">${escapeHtml(job.title)}</h4>
+            <h4 class="job-card-title ${isDone ? 'is-done-text' : ''}">${personDot(job.lastEditedBy)}${escapeHtml(job.title)}</h4>
             <div class="job-badges">
               <span class="badge badge-${job.priority}">${job.priority}</span>
               <span class="badge badge-status">${STATUS_LABEL[job.status]}</span>
