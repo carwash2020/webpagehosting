@@ -94,8 +94,8 @@
 
   .pr-empty { text-align: center; color: var(--text-dim); padding: 40px 20px; font-size: 14px; }
   .pr-count { color: var(--text-dim); font-size: 13px; margin-bottom: 14px; }
-  #prAddUnitForm, #prAddIssueForm { display: none; }
-  #prAddUnitForm.is-open, #prAddIssueForm.is-open { display: block; }
+  #prAddUnitForm { display: none; }
+  #prAddUnitForm.is-open { display: block; }
   #prUnitDetail, #prTypeView { display: none; }
   #prUnitDetail.is-open, #prTypeView.is-open { display: block; }
   #prListView.is-hidden { display: none; }
@@ -2015,7 +2015,6 @@
     if (changed) savePrUnits(list);
     localStorage.setItem(KEY, '1');
   }
-  function togglePrAddIssueForm() { document.getElementById('prAddIssueForm').classList.toggle('is-open'); }
 
   function savePrUnit() {
     let type = document.getElementById('prNewType').value.trim();
@@ -2041,7 +2040,7 @@
       ['prNewType','prNewBrand','prNewModel','prNewManualLink','prNewPartsLink'].forEach(id => { document.getElementById(id).value = ''; });
       togglePrAddUnitForm();
       justAddedPrUnitId = unit.id;
-      renderTypeChips();
+      renderTypeFilterOptions();
       renderUnits();
       showToast('Appliance added.');
     };
@@ -2074,7 +2073,7 @@
     activePrBrand = null;
     document.getElementById('prTypeView').classList.remove('is-open');
     document.getElementById('prListView').classList.remove('is-hidden');
-    renderTypeChips();
+    renderTypeFilterOptions();
     renderUnits();
   }
 
@@ -2514,7 +2513,7 @@
     return '~$' + only.toFixed(0);
   }
 
-  function renderTypeChips() {
+  function renderTypeFilterOptions() {
     const units = loadPrUnits();
     const types = [...new Set(units.map(u => u.type))].sort();
     const select = document.getElementById('prTypeFilterSelect');
@@ -2529,7 +2528,7 @@
 
   function setPrType(t) {
     activePrType = t;
-    renderTypeChips();
+    renderTypeFilterOptions();
     renderUnits();
   }
 
@@ -2692,11 +2691,11 @@
     prunePrBlankReferencesV2IfNeeded();
     prunePrMergeGenericIssuesV3IfNeeded();
     backfillPrIssueMetadataV1IfNeeded();
-    renderTypeChips();
+    renderTypeFilterOptions();
     renderUnits();
     populatePrDatalists();
     if (typeof initSyncOnLoad === 'function') {
-      initSyncOnLoad().then(() => { renderTypeChips(); renderUnits(); populatePrDatalists(); });
+      initSyncOnLoad().then(() => { renderTypeFilterOptions(); renderUnits(); populatePrDatalists(); });
     }
   });
 </script>
