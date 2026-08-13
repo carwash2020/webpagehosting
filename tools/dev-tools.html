@@ -1,0 +1,274 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<script src="/tools/auth.js"></script>
+<script>
+  // Security gate -- redirect to login before this page's own content
+  // is meaningfully usable. See auth.js for why this exists (a single
+  // shared account keeping randoms out, not a multi-user system).
+  requireAuth();
+</script>
+<link rel="manifest" href="/tools/manifest.json">
+<meta name="theme-color" content="#0a0a0a">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Triple H">
+<link rel="apple-touch-icon" href="/images/apple-touch-icon.png">
+
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="robots" content="noindex, nofollow">
+<title>Dev Tools · Triple H Enterprises</title>
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data:; connect-src 'self' https://*.supabase.co wss://*.supabase.co; frame-src 'none'; object-src 'none'; base-uri 'self'; frame-ancestors 'none';">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="/styles.css?v=202608112330">
+<script src="/tools/tools-common.js" defer></script>
+<script src="/tools/sync.js" defer></script>
+<style>
+  .dev-panel {
+    background: var(--bg-panel-2); border: 1px solid var(--border); border-radius: var(--radius);
+    padding: 20px; margin-bottom: 20px;
+  }
+  .dev-panel h2 { margin: 0 0 4px; font-size: 17px; }
+  .dev-panel .dev-panel-sub { font-size: 13px; color: var(--text-dim); margin: 0 0 16px; }
+  .dev-check-row {
+    display: flex; justify-content: space-between; align-items: center; gap: 12px;
+    padding: 10px 0; border-bottom: 1px solid var(--border); font-size: 14px;
+  }
+  .dev-check-row:last-child { border-bottom: none; }
+  .dev-check-status { font-size: 13px; font-weight: 600; white-space: nowrap; }
+  .dev-check-status.pass { color: #6fcf97; }
+  .dev-check-status.fail { color: #e05555; }
+  .dev-check-detail { font-size: 12.5px; color: var(--text-dim); margin-top: 2px; }
+  .dev-kv-row { display: flex; justify-content: space-between; gap: 12px; padding: 6px 0; font-size: 14px; }
+  .dev-kv-row .k { color: var(--text-dim); }
+  .dev-kv-row .v { font-family: monospace; font-size: 13px; text-align: right; word-break: break-all; }
+  .dev-links { display: flex; flex-wrap: wrap; gap: 10px; }
+  .dev-links a {
+    display: inline-flex; align-items: center; gap: 6px; padding: 8px 14px; border-radius: 8px;
+    background: var(--bg-panel-3); border: 1px solid var(--border); color: var(--text);
+    text-decoration: none; font-size: 13.5px; transition: border-color .15s ease;
+  }
+  .dev-links a:hover { border-color: var(--orange-light); }
+  .dev-blocked { max-width: 480px; margin: 80px auto; text-align: center; }
+</style>
+</head>
+<body>
+
+<div id="devBlockedView" class="dev-blocked" style="display:none;">
+  <div class="tool-title" style="font-size:22px;">Not available here</div>
+  <p class="tool-sub">Dev Tools is only shown on the account actively developing this site. Nothing's wrong with your account &mdash; this page just isn't meant for day-to-day use.</p>
+  <a href="/tools/workspace.html" class="btn blue" style="display:inline-block; margin-top:12px; text-decoration:none;">Back to Dashboard</a>
+</div>
+
+<div id="devMainView" style="display:none;">
+  <div class="hub-header">
+    <div class="hub-header-left">
+      <img src="/images/logo-signature-orange.png" alt="Triple H Enterprises">
+      <span class="hub-title">Dev Tools</span>
+    </div>
+    <a href="/tools/workspace.html" class="help-btn" aria-label="Back to Dashboard" title="Back to Dashboard" style="text-decoration:none; display:inline-flex; align-items:center; justify-content:center;">&#8617;</a>
+  </div>
+  <p class="hub-sub">Site diagnostics and maintenance utilities. Only visible on this account &mdash; see auth.js if that ever needs to change.</p>
+
+  <div class="dev-panel">
+    <h2>Live consistency check</h2>
+    <p class="dev-panel-sub">Fetches every tool page live and runs the same checks as the CI script (scripts/check-consistency.js) &mdash; a way to check right now without waiting on a push.</p>
+    <button class="secondary-btn" onclick="runLiveConsistencyCheck()" id="runCheckBtn">Run check</button>
+    <div id="consistencyResults" style="margin-top:16px;"></div>
+  </div>
+
+  <div class="dev-panel">
+    <h2>Session &amp; sync</h2>
+    <p class="dev-panel-sub">What this device currently knows about who's logged in and when it last talked to Supabase.</p>
+    <div id="sessionInfo"></div>
+    <div style="display:flex; gap:10px; margin-top:12px; flex-wrap:wrap;">
+      <button class="secondary-btn" onclick="devPushNow()">Push now</button>
+      <button class="secondary-btn" onclick="devPullNow()">Pull now</button>
+    </div>
+  </div>
+
+  <div class="dev-panel">
+    <h2>Local data snapshot</h2>
+    <p class="dev-panel-sub">Every th_/rd_ key in this browser's localStorage right now, and its size. Reflects THIS device only, not the synced total.</p>
+    <div id="localDataSnapshot"></div>
+  </div>
+
+  <div class="dev-panel">
+    <h2>Appliance Wiki health</h2>
+    <p class="dev-panel-sub">Quick stats on the Wiki's data, read directly from this device's local copy.</p>
+    <div id="wikiHealth"></div>
+  </div>
+
+  <div class="dev-panel">
+    <h2>Quick links</h2>
+    <div class="dev-links">
+      <a href="https://github.com/carwash2020/webpagehosting" target="_blank" rel="noopener">&#128193; Repo</a>
+      <a href="https://github.com/carwash2020/webpagehosting/actions" target="_blank" rel="noopener">&#9889; Actions</a>
+      <a href="https://supabase.com/dashboard/project/csvfqdjuobylgafgolho" target="_blank" rel="noopener">&#128202; Supabase</a>
+      <a href="https://www.triplehenterprisesllc.biz/" target="_blank" rel="noopener">&#127760; Live site</a>
+    </div>
+  </div>
+</div>
+
+<script>
+  const TOOL_PAGES_TO_CHECK = [
+    'workspace.html', 'calendar.html', 'contract-generator.html', 'invoice-generator.html',
+    'job-tracker.html', 'login.html', 'review-request.html', 'route-planner.html',
+    'parts-reference.html', 'runway-dashboard.html', 'dev-tools.html',
+  ];
+  // Pages that are deliberately different -- kept in sync with
+  // scripts/check-consistency.js's EXEMPT list. login.html has no auth
+  // gate to check (it IS the gate), and runway-dashboard.html doesn't
+  // load /styles.css at all.
+  const NO_AUTH_CHECK = ['login.html'];
+  const NO_STYLES_VERSION_CHECK = ['runway-dashboard.html'];
+
+  async function runLiveConsistencyCheck() {
+    const btn = document.getElementById('runCheckBtn');
+    const results = document.getElementById('consistencyResults');
+    btn.disabled = true;
+    btn.textContent = 'Checking...';
+    results.innerHTML = '';
+
+    const versions = {};
+    const rows = [];
+
+    for (const page of TOOL_PAGES_TO_CHECK) {
+      let html = '';
+      let fetchOk = true;
+      try {
+        const res = await fetch('/tools/' + page, { cache: 'no-store' });
+        html = await res.text();
+      } catch (e) {
+        fetchOk = false;
+      }
+
+      if (!fetchOk) {
+        rows.push({ page, ok: false, detail: 'Could not fetch this page' });
+        continue;
+      }
+
+      const problems = [];
+      if (!NO_AUTH_CHECK.includes(page) && !/requireAuth\s*\(\s*\)/.test(html)) {
+        problems.push('missing requireAuth()');
+      }
+      if (!/<meta[^>]+Content-Security-Policy/i.test(html)) {
+        problems.push('missing CSP');
+      }
+      if (!/<link[^>]+rel="manifest"/.test(html)) {
+        problems.push('missing manifest link');
+      }
+      if (!/apple-mobile-web-app-capable/.test(html)) {
+        problems.push('missing PWA meta');
+      }
+      const versionMatch = html.match(/styles\.css\?v=(\d+)/);
+      if (versionMatch) {
+        versions[page] = versionMatch[1];
+      } else if (!NO_STYLES_VERSION_CHECK.includes(page) && /href="\/styles\.css"/.test(html)) {
+        problems.push('styles.css has no ?v= cache-bust param');
+      }
+
+      rows.push({ page, ok: problems.length === 0, detail: problems.join(', ') });
+    }
+
+    const distinctVersions = new Set(Object.values(versions));
+    if (distinctVersions.size > 1) {
+      const grouped = {};
+      Object.entries(versions).forEach(([file, v]) => { (grouped[v] = grouped[v] || []).push(file); });
+      rows.push({ page: '(cross-file check)', ok: false, detail: 'styles.css version mismatch: ' + JSON.stringify(grouped) });
+    }
+
+    results.innerHTML = rows.map(r =>
+      '<div class="dev-check-row"><div><div>' + escapeHtml(r.page) + '</div>' +
+      (r.detail ? '<div class="dev-check-detail">' + escapeHtml(r.detail) + '</div>' : '') + '</div>' +
+      '<span class="dev-check-status ' + (r.ok ? 'pass' : 'fail') + '">' + (r.ok ? 'PASS' : 'FAIL') + '</span></div>'
+    ).join('');
+
+    btn.disabled = false;
+    btn.textContent = 'Run check';
+  }
+
+  function renderSessionInfo() {
+    const el = document.getElementById('sessionInfo');
+    const email = (typeof getCurrentUserEmail === 'function') ? getCurrentUserEmail() : null;
+    let lastSync = null;
+    try { lastSync = JSON.parse(localStorage.getItem('th_sync_last') || 'null'); } catch (e) {}
+    el.innerHTML =
+      kvRow('Logged in as', email || '(no valid session)') +
+      kvRow('Last sync attempt', lastSync ? (lastSync.type + ' -- ' + (lastSync.ok ? 'ok' : 'failed: ' + lastSync.error) + ' -- ' + new Date(lastSync.time).toLocaleString()) : 'none recorded yet');
+  }
+
+  function kvRow(k, v) {
+    return '<div class="dev-kv-row"><span class="k">' + escapeHtml(k) + '</span><span class="v">' + escapeHtml(String(v)) + '</span></div>';
+  }
+
+  async function devPushNow() {
+    if (typeof pushSync !== 'function') { showToast('sync.js not loaded yet -- try again in a second.', { type: 'error' }); return; }
+    const result = await pushSync();
+    showToast(result.ok ? 'Pushed.' : 'Push failed: ' + result.error, { type: result.ok ? undefined : 'error' });
+    renderSessionInfo();
+  }
+
+  async function devPullNow() {
+    if (typeof pullSync !== 'function') { showToast('sync.js not loaded yet -- try again in a second.', { type: 'error' }); return; }
+    const result = await pullSync();
+    showToast(result.ok ? 'Pulled.' : 'Pull failed: ' + result.error, { type: result.ok ? undefined : 'error' });
+    renderSessionInfo();
+  }
+
+  function renderLocalDataSnapshot() {
+    const el = document.getElementById('localDataSnapshot');
+    const keys = [];
+    for (let i = 0; i < localStorage.length; i++) {
+      const k = localStorage.key(i);
+      if (k && (k.startsWith('th_') || k.startsWith('rd_'))) keys.push(k);
+    }
+    keys.sort();
+    if (!keys.length) { el.innerHTML = '<p class="tool-sub">Nothing stored on this device yet.</p>'; return; }
+    el.innerHTML = keys.map(k => {
+      const size = (localStorage.getItem(k) || '').length;
+      return kvRow(k, (size / 1024).toFixed(1) + ' KB');
+    }).join('');
+  }
+
+  function renderWikiHealth() {
+    const el = document.getElementById('wikiHealth');
+    let units = [];
+    try { units = JSON.parse(localStorage.getItem('th_parts_reference_units') || '[]'); } catch (e) {}
+    if (!units.length) { el.innerHTML = '<p class="tool-sub">No Appliance Wiki data on this device.</p>'; return; }
+    const allIssues = units.flatMap(u => u.issues || []);
+    const verifiedCount = allIssues.filter(i => i.verified).length;
+    const brands = new Set(units.map(u => u.brand)).size;
+    el.innerHTML =
+      kvRow('Brands', brands) +
+      kvRow('Models / entries', units.length) +
+      kvRow('Total issues logged', allIssues.length) +
+      kvRow('Verified vs. logged-by-you', verifiedCount + ' / ' + (allIssues.length - verifiedCount));
+  }
+
+  document.addEventListener('DOMContentLoaded', function () {
+    const proceed = () => {
+      const allowed = typeof isDevAccount === 'function' && isDevAccount();
+      document.getElementById(allowed ? 'devMainView' : 'devBlockedView').style.display = allowed ? 'block' : 'block';
+      document.getElementById(allowed ? 'devBlockedView' : 'devMainView').style.display = 'none';
+      if (!allowed) return;
+      renderSessionInfo();
+      renderLocalDataSnapshot();
+      renderWikiHealth();
+    };
+    // isDevAccount() depends on a real session already being loaded --
+    // give initSyncOnLoad (which handles token refresh) a chance first,
+    // same pattern as every other page that checks session state on load.
+    if (typeof initSyncOnLoad === 'function') {
+      initSyncOnLoad().then(proceed).catch(proceed);
+    } else {
+      setTimeout(proceed, 300);
+    }
+  });
+</script>
+
+</body>
+</html>
