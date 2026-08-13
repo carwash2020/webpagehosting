@@ -85,6 +85,7 @@
       <img src="/images/logo-signature-orange.png" alt="Triple H Enterprises">
       <span class="hub-title">Dev Tools</span>
     </div>
+    <button class="help-btn" onclick="openHelpModal()" aria-label="How to use Dev Tools" title="How to use Dev Tools">?</button>
     <a href="/tools/workspace.html" class="help-btn" aria-label="Back to Dashboard" title="Back to Dashboard" style="text-decoration:none; display:inline-flex; align-items:center; justify-content:center;">&#8617;</a>
   </div>
   <p class="hub-sub">Site diagnostics and maintenance utilities. Only visible on this account &mdash; see auth.js if that ever needs to change.</p>
@@ -134,6 +135,25 @@
 
   <div class="dev-panel">
     <div class="dev-panel-heading">
+      <h2>Manifest.json check</h2>
+      <button class="dev-info-bubble" onclick="openDevInfo('manifest')" aria-label="What does this do?" title="What does this do?">?</button>
+    </div>
+    <p class="dev-panel-sub">Confirms all 4 URLs in the PWA manifest have the /tools/ prefix -- a missing prefix here caused a real "Add to Home Screen" bug once already.</p>
+    <button class="secondary-btn" onclick="runManifestCheck()" id="runManifestBtn">Check manifest</button>
+    <div id="manifestResults" style="margin-top:12px;"></div>
+  </div>
+
+  <div class="dev-panel">
+    <div class="dev-panel-heading">
+      <h2>Device info</h2>
+      <button class="dev-info-bubble" onclick="openDevInfo('device')" aria-label="What does this do?" title="What does this do?">?</button>
+    </div>
+    <p class="dev-panel-sub">This device/browser right now -- useful when something behaves differently on phone vs. computer.</p>
+    <div id="deviceInfo"></div>
+  </div>
+
+  <div class="dev-panel">
+    <div class="dev-panel-heading">
       <h2>Quick links</h2>
       <button class="dev-info-bubble" onclick="openDevInfo('links')" aria-label="What does this do?" title="What does this do?">?</button>
     </div>
@@ -145,6 +165,25 @@
     </div>
   </div>
 
+  </div>
+
+  <div class="help-modal-overlay" id="helpModalOverlay" onclick="if(event.target===this) closeHelpModal()">
+    <div class="help-modal">
+      <button class="help-modal-close" onclick="closeHelpModal()" aria-label="Close">&times;</button>
+      <h3>How to Use: Dev Tools</h3>
+      <div class="help-modal-body">
+        <p>Site diagnostics and maintenance utilities, visible only on the account actively developing this site.</p>
+        <ul>
+          <li><strong>Live consistency check</strong> &mdash; fetches every tool page right now and checks each one for the login gate, a CSP, the PWA manifest link, and a matching styles.css version. The same checks run automatically in GitHub Actions on every push; this just lets you run them on demand.</li>
+          <li><strong>Manifest.json check</strong> &mdash; specifically verifies the 4 URLs inside manifest.json all have the /tools/ prefix, since a missing prefix there is a real bug that happened once already.</li>
+          <li><strong>Session &amp; sync</strong> &mdash; who's logged in on this device, the last sync result, and manual Push/Pull buttons to force a sync right now.</li>
+          <li><strong>Local data snapshot</strong> &mdash; every th_/rd_ key in this browser, its size, and an expandable raw view of its actual contents. This device only.</li>
+          <li><strong>Appliance Wiki health</strong> &mdash; quick counts: brands, models, issues, and the verified/logged-by-you split.</li>
+          <li><strong>Device info</strong> &mdash; browser, screen size, and online status &mdash; useful when something behaves differently on phone vs. computer.</li>
+          <li><strong>Quick links</strong> &mdash; the repo, its Actions history, the Supabase dashboard, and the live site.</li>
+        </ul>
+      </div>
+    </div>
   </div>
 </div>
 
@@ -166,6 +205,14 @@
       title: 'Appliance Wiki health',
       body: `<p>A quick read on how much is in the Appliance Wiki: how many brands and specific models, how many issues logged in total, and how many of those are Verified (sourced from a real catalog) versus Logged by you (a firsthand field report).</p>`,
     },
+    manifest: {
+      title: 'Manifest.json check',
+      body: `<p>Fetches manifest.json live and checks the start_url plus every shortcut URL for the /tools/ prefix. This exact bug happened once already -- the manifest pointed at /workspace.html instead of /tools/workspace.html, which would 404 the instant someone tried to launch a home-screen icon.</p>`,
+    },
+    device: {
+      title: 'Device info',
+      body: `<p>What this specific device and browser currently report: screen size, viewport size, online status, and the full browser identification string. Useful for figuring out why something looks or behaves differently on a phone versus a computer.</p>`,
+    },
     links: {
       title: 'Quick links',
       body: `<p>Direct shortcuts to the four places you'd otherwise have to remember URLs for or dig up bookmarks for: the GitHub repo itself, its Actions run history, the Supabase project dashboard, and the actual live public site.</p>`,
@@ -174,6 +221,12 @@
   function openDevInfo(key) {
     const info = DEV_INFO[key];
     if (info && typeof openInfoModal === 'function') openInfoModal(info.title, info.body);
+  }
+
+  function escapeHtml(str) {
+    const div = document.createElement('div');
+    div.textContent = str;
+    return div.innerHTML;
   }
 
   const TOOL_PAGES_TO_CHECK = [
@@ -188,6 +241,16 @@
   const NO_AUTH_CHECK = ['login.html'];
   const NO_STYLES_VERSION_CHECK = ['runway-dashboard.html'];
 
+  async function fetchWithTimeout(url, ms) {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), ms);
+    try {
+      return await fetch(url, { cache: 'no-store', signal: controller.signal });
+    } finally {
+      clearTimeout(timer);
+    }
+  }
+
   async function runLiveConsistencyCheck() {
     const btn = document.getElementById('runCheckBtn');
     const results = document.getElementById('consistencyResults');
@@ -195,62 +258,72 @@
     btn.textContent = 'Checking...';
     results.innerHTML = '';
 
-    const versions = {};
-    const rows = [];
+    // Wrapped in try/finally so the button can NEVER get stuck on
+    // "Checking..." forever, no matter what throws inside -- that
+    // exact failure mode (a silent error partway through leaving the
+    // button dead) is what shipped here the first time.
+    try {
+      const versions = {};
+      const rows = [];
 
-    for (const page of TOOL_PAGES_TO_CHECK) {
-      let html = '';
-      let fetchOk = true;
-      try {
-        const res = await fetch('/tools/' + page, { cache: 'no-store' });
-        html = await res.text();
-      } catch (e) {
-        fetchOk = false;
+      for (const page of TOOL_PAGES_TO_CHECK) {
+        let html = '';
+        let fetchOk = true;
+        try {
+          // 6s cap per page -- one slow or hanging page should never
+          // block the other ten from being checked.
+          const res = await fetchWithTimeout('/tools/' + page, 6000);
+          html = await res.text();
+        } catch (e) {
+          fetchOk = false;
+        }
+
+        if (!fetchOk) {
+          rows.push({ page, ok: false, detail: 'Could not fetch this page (timed out or network error)' });
+          continue;
+        }
+
+        const problems = [];
+        if (!NO_AUTH_CHECK.includes(page) && !/requireAuth\s*\(\s*\)/.test(html)) {
+          problems.push('missing requireAuth()');
+        }
+        if (!/<meta[^>]+Content-Security-Policy/i.test(html)) {
+          problems.push('missing CSP');
+        }
+        if (!/<link[^>]+rel="manifest"/.test(html)) {
+          problems.push('missing manifest link');
+        }
+        if (!/apple-mobile-web-app-capable/.test(html)) {
+          problems.push('missing PWA meta');
+        }
+        const versionMatch = html.match(/styles\.css\?v=(\d+)/);
+        if (versionMatch) {
+          versions[page] = versionMatch[1];
+        } else if (!NO_STYLES_VERSION_CHECK.includes(page) && /href="\/styles\.css"/.test(html)) {
+          problems.push('styles.css has no ?v= cache-bust param');
+        }
+
+        rows.push({ page, ok: problems.length === 0, detail: problems.join(', ') });
       }
 
-      if (!fetchOk) {
-        rows.push({ page, ok: false, detail: 'Could not fetch this page' });
-        continue;
+      const distinctVersions = new Set(Object.values(versions));
+      if (distinctVersions.size > 1) {
+        const grouped = {};
+        Object.entries(versions).forEach(([file, v]) => { (grouped[v] = grouped[v] || []).push(file); });
+        rows.push({ page: '(cross-file check)', ok: false, detail: 'styles.css version mismatch: ' + JSON.stringify(grouped) });
       }
 
-      const problems = [];
-      if (!NO_AUTH_CHECK.includes(page) && !/requireAuth\s*\(\s*\)/.test(html)) {
-        problems.push('missing requireAuth()');
-      }
-      if (!/<meta[^>]+Content-Security-Policy/i.test(html)) {
-        problems.push('missing CSP');
-      }
-      if (!/<link[^>]+rel="manifest"/.test(html)) {
-        problems.push('missing manifest link');
-      }
-      if (!/apple-mobile-web-app-capable/.test(html)) {
-        problems.push('missing PWA meta');
-      }
-      const versionMatch = html.match(/styles\.css\?v=(\d+)/);
-      if (versionMatch) {
-        versions[page] = versionMatch[1];
-      } else if (!NO_STYLES_VERSION_CHECK.includes(page) && /href="\/styles\.css"/.test(html)) {
-        problems.push('styles.css has no ?v= cache-bust param');
-      }
-
-      rows.push({ page, ok: problems.length === 0, detail: problems.join(', ') });
+      results.innerHTML = rows.map(r =>
+        '<div class="dev-check-row"><div><div>' + escapeHtml(r.page) + '</div>' +
+        (r.detail ? '<div class="dev-check-detail">' + escapeHtml(r.detail) + '</div>' : '') + '</div>' +
+        '<span class="dev-check-status ' + (r.ok ? 'pass' : 'fail') + '">' + (r.ok ? 'PASS' : 'FAIL') + '</span></div>'
+      ).join('');
+    } catch (e) {
+      results.innerHTML = '<p class="tool-sub">Something went wrong running the check: ' + escapeHtml(e.message || String(e)) + '</p>';
+    } finally {
+      btn.disabled = false;
+      btn.textContent = 'Run check';
     }
-
-    const distinctVersions = new Set(Object.values(versions));
-    if (distinctVersions.size > 1) {
-      const grouped = {};
-      Object.entries(versions).forEach(([file, v]) => { (grouped[v] = grouped[v] || []).push(file); });
-      rows.push({ page: '(cross-file check)', ok: false, detail: 'styles.css version mismatch: ' + JSON.stringify(grouped) });
-    }
-
-    results.innerHTML = rows.map(r =>
-      '<div class="dev-check-row"><div><div>' + escapeHtml(r.page) + '</div>' +
-      (r.detail ? '<div class="dev-check-detail">' + escapeHtml(r.detail) + '</div>' : '') + '</div>' +
-      '<span class="dev-check-status ' + (r.ok ? 'pass' : 'fail') + '">' + (r.ok ? 'PASS' : 'FAIL') + '</span></div>'
-    ).join('');
-
-    btn.disabled = false;
-    btn.textContent = 'Run check';
   }
 
   function renderSessionInfo() {
@@ -292,8 +365,59 @@
     if (!keys.length) { el.innerHTML = '<p class="tool-sub">Nothing stored on this device yet.</p>'; return; }
     el.innerHTML = keys.map(k => {
       const size = (localStorage.getItem(k) || '').length;
-      return kvRow(k, (size / 1024).toFixed(1) + ' KB');
+      return '<div class="dev-kv-row" style="cursor:pointer; flex-wrap:wrap;" data-key="' + escapeHtml(k) + '" onclick="toggleRawDataView(this)">' +
+        '<span class="k">' + escapeHtml(k) + '</span><span class="v">' + (size / 1024).toFixed(1) + ' KB</span>' +
+        '<pre class="dev-raw-view" style="display:none; width:100%; margin:8px 0 0; font-size:11.5px; white-space:pre-wrap; word-break:break-all; max-height:240px; overflow:auto;"></pre>' +
+        '</div>';
     }).join('');
+  }
+
+  function toggleRawDataView(rowEl) {
+    const pre = rowEl.querySelector('.dev-raw-view');
+    const key = rowEl.dataset.key;
+    if (!pre || !key) return;
+    if (pre.style.display === 'none') {
+      const raw = localStorage.getItem(key) || '';
+      let pretty = raw;
+      try { pretty = JSON.stringify(JSON.parse(raw), null, 2); } catch (e) { /* not JSON -- show as-is */ }
+      pre.textContent = pretty;
+      pre.style.display = 'block';
+    } else {
+      pre.style.display = 'none';
+    }
+  }
+
+  async function runManifestCheck() {
+    const btn = document.getElementById('runManifestBtn');
+    const results = document.getElementById('manifestResults');
+    btn.disabled = true;
+    btn.textContent = 'Checking...';
+    try {
+      const res = await fetchWithTimeout('/tools/manifest.json', 6000);
+      const manifest = await res.json();
+      const urlsToCheck = [manifest.start_url, ...(manifest.shortcuts || []).map(s => s.url)];
+      const problems = urlsToCheck.filter(u => u && !u.startsWith('/tools/'));
+      results.innerHTML = problems.length
+        ? '<div class="dev-check-row"><div><div>manifest.json</div><div class="dev-check-detail">' +
+          problems.map(escapeHtml).join(', ') + ' missing the /tools/ prefix</div></div>' +
+          '<span class="dev-check-status fail">FAIL</span></div>'
+        : '<div class="dev-check-row"><div>All ' + urlsToCheck.length + ' manifest URLs have the /tools/ prefix</div>' +
+          '<span class="dev-check-status pass">PASS</span></div>';
+    } catch (e) {
+      results.innerHTML = '<p class="tool-sub">Could not check manifest.json: ' + escapeHtml(e.message || String(e)) + '</p>';
+    } finally {
+      btn.disabled = false;
+      btn.textContent = 'Check manifest';
+    }
+  }
+
+  function renderDeviceInfo() {
+    const el = document.getElementById('deviceInfo');
+    el.innerHTML =
+      kvRow('Screen', window.screen.width + '\u00d7' + window.screen.height) +
+      kvRow('Viewport', window.innerWidth + '\u00d7' + window.innerHeight) +
+      kvRow('Online', navigator.onLine ? 'yes' : 'no') +
+      kvRow('Browser', navigator.userAgent);
   }
 
   function renderWikiHealth() {
@@ -320,6 +444,7 @@
       renderSessionInfo();
       renderLocalDataSnapshot();
       renderWikiHealth();
+      renderDeviceInfo();
     };
     // isDevAccount() depends on a real session already being loaded --
     // give initSyncOnLoad (which handles token refresh) a chance first,
