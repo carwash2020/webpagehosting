@@ -222,10 +222,24 @@ function applySyncData(obj) {
   });
 }
 
+const SYNC_HISTORY_KEY = 'th_sync_history';
+const SYNC_HISTORY_MAX = 20; // capped so this can't grow unbounded on a device that's been running a long time
+
 function recordSyncStatus(type, ok, error) {
   const status = { type, ok, error: error || null, time: new Date().toISOString() };
   try { localStorage.setItem('th_sync_last', JSON.stringify(status)); } catch (e) { /* ignore */ }
+  try {
+    let history = [];
+    try { history = JSON.parse(localStorage.getItem(SYNC_HISTORY_KEY) || '[]'); } catch (e) { history = []; }
+    history.unshift(status); // most recent first
+    if (history.length > SYNC_HISTORY_MAX) history.length = SYNC_HISTORY_MAX;
+    localStorage.setItem(SYNC_HISTORY_KEY, JSON.stringify(history));
+  } catch (e) { /* ignore */ }
   try { window.dispatchEvent(new CustomEvent('th-sync-status', { detail: status })); } catch (e) { /* ignore */ }
+}
+
+function loadSyncHistory() {
+  try { return JSON.parse(localStorage.getItem(SYNC_HISTORY_KEY) || '[]'); } catch (e) { return []; }
 }
 
 async function pushSync() {
