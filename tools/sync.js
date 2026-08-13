@@ -243,7 +243,18 @@ async function pushSync() {
   try {
     const res = await fetch(`${SUPABASE_URL}/rest/v1/${SYNC_TABLE}?on_conflict=code`, {
       method: 'POST',
-      keepalive: true, // lets this request finish even if the tab is closing/navigating away
+      // NOT keepalive: true anymore -- that flag caps the total request
+      // body at a hard 64 KiB (part of the Fetch spec itself, not a
+      // Supabase or CSP thing), and the combined synced payload now
+      // regularly exceeds that once Appliance Wiki's data was added to
+      // it. Every push was silently failing with a generic "Failed to
+      // fetch" and zero console detail -- keepalive wasn't protecting
+      // anything at that point anyway, since the oversized request
+      // failed outright regardless of whether the tab was closing or
+      // not. The real tradeoff being accepted by removing it: a push
+      // that's in flight at the exact instant the tab closes may now
+      // get cancelled instead of completing in the background. That's
+      // a rare edge case; failing every single push was not.
       headers: {
         'Content-Type': 'application/json',
         'apikey': SUPABASE_ANON_KEY,
@@ -362,9 +373,15 @@ function scheduleSync() {
 // before the 2.5s debounce above fires, the scheduled push would
 // otherwise be silently lost (a quick edit followed by immediately
 // switching devices could look like "it didn't save"). Flushing
-// immediately on visibilitychange/pagehide -- plus `keepalive: true`
-// on the fetch itself -- means the browser will still complete the
-// request even as the tab is torn down.
+// immediately on visibilitychange/pagehide covers most of that gap on
+// its own. This USED to also rely on `keepalive: true` on the fetch
+// itself to let the request survive the tab actually closing -- that
+// was removed from pushSync() once the combined synced payload grew
+// past keepalive's hard 64 KiB body-size cap and started failing
+// every push outright, tab-closing or not. So the real remaining gap:
+// a push that's genuinely in flight at the exact instant the tab
+// closes can still get cancelled now. Rare, and a better tradeoff than
+// the alternative (every push failing, all the time), but a real gap.
 function flushSyncNow() {
   if (_syncTimer) {
     clearTimeout(_syncTimer);
