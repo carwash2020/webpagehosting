@@ -191,6 +191,14 @@
     <div id="siteContentForm"></div>
   </div>
 
+  <div class="dev-panel dev-panel-wide">
+    <div class="dev-panel-heading">
+      <h2>Content edit history</h2>
+      <button class="dev-info-bubble" onclick="openDevInfo('contenthistory')" aria-label="What does this do?" title="What does this do?">?</button>
+    </div>
+    <div id="contentHistoryList" class="dev-scrollable-list"></div>
+  </div>
+
   <div class="dev-panel">
     <div class="dev-panel-heading">
       <h2>Quick links</h2>
@@ -222,7 +230,8 @@
           <li><strong>Device info</strong> &mdash; browser, screen size, and online status &mdash; useful when something behaves differently on phone vs. computer.</li>
           <li><strong>Known issues</strong> &mdash; still-open items from the last security audit, checkable so they don't get lost.</li>
           <li><strong>Latest deploy</strong> &mdash; the most recent GitHub Actions run, pulled live.</li>
-          <li><strong>Site content</strong> &mdash; edit the phone display, hours, and up to 2 announcement banners on the public site directly, no code push needed.</li>
+          <li><strong>Site content</strong> &mdash; edit the phone, email, hours, and up to 2 announcement banners on the public site directly, no code push needed. Changing phone/email updates every place it appears at once.</li>
+          <li><strong>Content edit history</strong> &mdash; every past change to those fields, who made it, and when -- a real audit trail from a database trigger.</li>
           <li><strong>Quick links</strong> &mdash; the repo, its Actions history, the Supabase dashboard, and the live site.</li>
         </ul>
       </div>
@@ -270,7 +279,11 @@
     },
     sitecontent: {
       title: 'Site content',
-      body: `<p>Edits a small set of fields on the public site directly -- the header phone display, both hours lines, and up to 2 announcement banners -- without touching any code or pushing through GitHub.</p><p>Leave a field blank to fall back to whatever's already hardcoded in the page (for phone/hours) or to hide it entirely (for the banners). Changes typically go live within a few seconds, since the public site checks for these on every page load.</p><p>Needs a one-time SQL setup run in Supabase before this will work -- see the setup notes if the form below shows an error.</p>`,
+      body: `<p>Edits a small set of fields on the public site directly -- the phone number, email, both hours lines, and up to 2 announcement banners -- without touching any code or pushing through GitHub.</p><p>Phone and email are the big ones: changing either updates EVERY place it appears across the whole homepage at once -- the header, the hero button, the mobile menu, the contact cards, the footer, all 3 FAQ answers that mention it, and the Terms modal -- not just one spot.</p><p>Leave a field blank to fall back to whatever's already hardcoded in the page (for phone/email/hours) or to hide it entirely (for the banners). Changes typically go live within a few seconds. Needs a one-time SQL setup run in Supabase before this will work -- see the setup notes if the form below shows an error.</p>`,
+    },
+    contenthistory: {
+      title: 'Content edit history',
+      body: `<p>Every change ever made to the site content fields above -- what it was, what it became, who changed it, and when. The last 50 edits.</p><p>This is written by a database trigger, not by this page's own save button -- so it's a real audit trail that would catch a change made any other way too, not just through this specific form.</p>`,
     },
     links: {
       title: 'Quick links',
@@ -464,7 +477,8 @@
   // fetch-and-apply script near the end of index.html for the read
   // side of this; this panel is the write side.
   const SITE_CONTENT_FIELDS = [
-    { key: 'phone', label: 'Phone number (header display)', placeholder: 'e.g. (435) 414-1667 -- blank uses the default already in the code' },
+    { key: 'phone', label: 'Phone number', placeholder: 'e.g. (435) 414-1667 -- blank uses the default already in the code. Updates every phone number and tel: link across the site at once.' },
+    { key: 'email', label: 'Email address', placeholder: 'e.g. steve@triplehenterprisesllc.biz -- blank uses the default. Updates every email display and mailto: link across the site at once.' },
     { key: 'hoursLine1', label: 'Hours -- line 1', placeholder: 'e.g. Monday to Sunday' },
     { key: 'hoursLine2', label: 'Hours -- line 2', placeholder: 'e.g. 7:00 AM to 10:00 PM MST' },
     { key: 'banner1', label: 'Banner 1 (orange bar, top of site)', placeholder: 'Blank hides it. e.g. Currently booking 2+ weeks out' },
@@ -518,11 +532,42 @@
       });
       if (!res.ok) throw new Error('Save failed (HTTP ' + res.status + ') -- check that the setup SQL has been run and RLS policies allow this account to write.');
       showToast('Saved. Live on the site within a few seconds.');
+      renderContentHistory();
     } catch (e) {
       showToast(e.message || String(e), { type: 'error' });
     } finally {
       btn.disabled = false;
       btn.textContent = 'Save all';
+    }
+  }
+
+  async function renderContentHistory() {
+    const el = document.getElementById('contentHistoryList');
+    el.innerHTML = '<p class="tool-sub">Loading...</p>';
+    try {
+      if (typeof ensureFreshToken === 'function') await ensureFreshToken();
+      const res = await fetchWithTimeout(
+        SUPABASE_URL + '/rest/v1/site_content_history?select=key,old_value,new_value,changed_by,changed_at&order=changed_at.desc&limit=50',
+        6000,
+        { headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': 'Bearer ' + getAuthToken() } }
+      );
+      if (!res.ok) {
+        el.innerHTML = '<p class="tool-sub">No history yet, or the setup SQL hasn\'t been run. Nothing to show until at least one field has actually been changed.</p>';
+        return;
+      }
+      const rows = await res.json();
+      if (!Array.isArray(rows) || !rows.length) {
+        el.innerHTML = '<p class="tool-sub">No edits recorded yet.</p>';
+        return;
+      }
+      el.innerHTML = rows.map(r =>
+        '<div class="dev-check-row" style="align-items:flex-start;"><div>' +
+        '<div><strong>' + escapeHtml(r.key) + '</strong> &mdash; ' + escapeHtml(r.changed_by || 'unknown') + ' &mdash; ' + new Date(r.changed_at).toLocaleString() + '</div>' +
+        '<div class="dev-check-detail">' + escapeHtml(r.old_value || '(blank)') + ' &rarr; ' + escapeHtml(r.new_value || '(blank)') + '</div>' +
+        '</div></div>'
+      ).join('');
+    } catch (e) {
+      el.innerHTML = '<p class="tool-sub">Could not load history: ' + escapeHtml(e.message || String(e)) + '</p>';
     }
   }
 
@@ -770,6 +815,7 @@
       renderKnownIssues();
       renderDeployStatus();
       renderSiteContentForm();
+      renderContentHistory();
     };
     // isDevAccount() depends on a real session already being loaded --
     // give initSyncOnLoad (which handles token refresh) a chance first,
