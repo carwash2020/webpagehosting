@@ -257,8 +257,14 @@ async function pushSync() {
     recordSyncStatus('push', true);
     return { ok: true };
   } catch (e) {
-    recordSyncStatus('push', false, 'network');
-    return { ok: false, error: 'network' };
+    // Was previously a hardcoded 'network' string for every possible
+    // failure -- a genuine outage, a CORS block, a CSP violation, a DNS
+    // failure, all looked identical and impossible to diagnose remotely.
+    // Capturing the real message means the next failure is actually
+    // readable instead of just "network."
+    const detail = 'network: ' + (e && e.message ? e.message : String(e));
+    recordSyncStatus('push', false, detail);
+    return { ok: false, error: detail };
   }
 }
 
@@ -287,8 +293,9 @@ async function pullSync() {
     recordSyncStatus('pull', true);
     return { ok: true };
   } catch (e) {
-    recordSyncStatus('pull', false, 'network');
-    return { ok: false, error: 'network' };
+    const detail = 'network: ' + (e && e.message ? e.message : String(e));
+    recordSyncStatus('pull', false, detail);
+    return { ok: false, error: detail };
   }
 }
 
