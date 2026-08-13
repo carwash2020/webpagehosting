@@ -310,6 +310,21 @@
     return div.innerHTML;
   }
 
+  // Same subtle color-coded dot as Dev Tools' Content History panel --
+  // blue for Connor, pink for Steve. Only shows for a real, known
+  // account email; a manually-typed legacy name (from before real
+  // per-person logins existed) or anything unrecognized just gets no
+  // dot, rather than a wrong guess.
+  const PERSON_DOT_COLORS = {
+    'connor@triplehenterprisesllc.biz': '#7ec4ff',
+    'steve@triplehenterprisesllc.biz': '#f0a8c8',
+  };
+  function personDot(email) {
+    const color = PERSON_DOT_COLORS[(email || '').toLowerCase()];
+    if (!color) return '';
+    return '<span style="display:inline-block; width:7px; height:7px; border-radius:50%; background:' + color + '; margin-right:5px; vertical-align:middle;" title="' + escapeHtml(email) + '"></span>';
+  }
+
   function loadPrUnits() {
     try { return JSON.parse(localStorage.getItem(PR_STORAGE_KEY) || '[]'); }
     catch (e) { return []; }
@@ -2350,7 +2365,7 @@
     var enterClass = iss.id === justAddedPrIssueId ? 'list-row-enter' : '';
     var verifiedBadge = iss.verified
       ? '<span class="pr-verified-badge verified">&#10003; Verified</span>'
-      : '<span class="pr-verified-badge logged">Logged by ' + (iss.loggedBy ? escapeHtml(iss.loggedBy) : 'you') + '</span>';
+      : '<span class="pr-verified-badge logged">' + personDot(iss.loggedBy) + 'Logged by ' + (iss.loggedBy ? escapeHtml(iss.loggedBy) : 'you') + '</span>';
     var confirmedHtml = iss.confirmedAt
       ? '<span class="pr-confirmed-date ' + prConfirmedAgeClass(iss.confirmedAt) + '">Confirmed ' + formatPrConfirmedDate(iss.confirmedAt) + '</span>'
       : '';

@@ -311,7 +311,7 @@
     },
     contenthistory: {
       title: 'Content edit history',
-      body: `<p>Every change ever made to the site content fields above -- what it was, what it became, who changed it, and when. The last 50 edits.</p><p>This is written by a database trigger, not by this page's own save button -- so it's a real audit trail that would catch a change made any other way too, not just through this specific form.</p>`,
+      body: `<p>Every change ever made to Site Content, the FAQ, or Terms &amp; Conditions -- what it was, what it became, who changed it, and when. The last 50 edits across all three, merged together.</p><p>This is written by a database trigger, not by this page's own save button -- so it's a real audit trail that would catch a change made any other way too, not just through this specific form.</p><p>The small colored dot shows who made it -- blue for Connor, pink for Steve.</p>`,
     },
     links: {
       title: 'Quick links',
@@ -627,31 +627,75 @@
     }
   }
 
+  // Small, deliberately subtle color-coded dot showing who made a
+  // change -- blue for Connor, pink for Steve. Only shows up for a
+  // real, known account email; anything else (an old manually-typed
+  // device-local name, or unknown) just gets no dot at all rather than
+  // a wrong guess.
+  const PERSON_DOT_COLORS = {
+    'connor@triplehenterprisesllc.biz': '#7ec4ff',
+    'steve@triplehenterprisesllc.biz': '#f0a8c8',
+  };
+  function personDot(email) {
+    const color = PERSON_DOT_COLORS[(email || '').toLowerCase()];
+    if (!color) return '';
+    return '<span style="display:inline-block; width:7px; height:7px; border-radius:50%; background:' + color + '; margin-right:6px; vertical-align:middle;" title="' + escapeHtml(email) + '"></span>';
+  }
+
   async function renderContentHistory() {
     const el = document.getElementById('contentHistoryList');
     el.innerHTML = '<p class="tool-sub">Loading...</p>';
     try {
       if (typeof ensureFreshToken === 'function') await ensureFreshToken();
-      const res = await fetchWithTimeout(
-        SUPABASE_URL + '/rest/v1/site_content_history?select=key,old_value,new_value,changed_by,changed_at&order=changed_at.desc&limit=50',
-        6000,
-        { headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': 'Bearer ' + getAuthToken() } }
-      );
-      if (!res.ok) {
-        el.innerHTML = '<p class="tool-sub">No history yet, or the setup SQL hasn\'t been run. Nothing to show until at least one field has actually been changed.</p>';
+      const headers = { 'apikey': SUPABASE_ANON_KEY, 'Authorization': 'Bearer ' + getAuthToken() };
+
+      // All 3 audit tables, fetched in parallel and merged -- this used
+      // to only show site_content's history, silently missing FAQ and
+      // Terms edits despite both having the exact same trigger-based
+      // audit trail built for them.
+      const [contentRes, faqRes, termsRes] = await Promise.all([
+        fetchWithTimeout(SUPABASE_URL + '/rest/v1/site_content_history?select=key,old_value,new_value,changed_by,changed_at&order=changed_at.desc&limit=50', 6000, { headers }),
+        fetchWithTimeout(SUPABASE_URL + '/rest/v1/site_faq_history?select=action,question,old_answer,new_answer,changed_by,changed_at&order=changed_at.desc&limit=50', 6000, { headers }),
+        fetchWithTimeout(SUPABASE_URL + '/rest/v1/site_terms_history?select=action,heading,old_body,new_body,changed_by,changed_at&order=changed_at.desc&limit=50', 6000, { headers }),
+      ]);
+
+      const rows = [];
+      if (contentRes.ok) {
+        (await contentRes.json()).forEach(r => rows.push({
+          source: 'Site content', label: r.key, old_value: r.old_value, new_value: r.new_value,
+          changed_by: r.changed_by, changed_at: r.changed_at, action: 'updated',
+        }));
+      }
+      if (faqRes.ok) {
+        (await faqRes.json()).forEach(r => rows.push({
+          source: 'FAQ', label: r.question, old_value: r.old_answer, new_value: r.new_answer,
+          changed_by: r.changed_by, changed_at: r.changed_at, action: r.action,
+        }));
+      }
+      if (termsRes.ok) {
+        (await termsRes.json()).forEach(r => rows.push({
+          source: 'Terms', label: r.heading, old_value: r.old_body, new_value: r.new_body,
+          changed_by: r.changed_by, changed_at: r.changed_at, action: r.action,
+        }));
+      }
+
+      if (!rows.length) {
+        el.innerHTML = '<p class="tool-sub">No edits recorded yet, or the setup SQL hasn\'t been run for any of the 3 content tables.</p>';
         return;
       }
-      const rows = await res.json();
-      if (!Array.isArray(rows) || !rows.length) {
-        el.innerHTML = '<p class="tool-sub">No edits recorded yet.</p>';
-        return;
-      }
-      el.innerHTML = rows.map(r =>
-        '<div class="dev-check-row" style="align-items:flex-start;"><div>' +
-        '<div><strong>' + escapeHtml(r.key) + '</strong> &mdash; ' + escapeHtml(r.changed_by || 'unknown') + ' &mdash; ' + new Date(r.changed_at).toLocaleString() + '</div>' +
-        '<div class="dev-check-detail">' + escapeHtml(r.old_value || '(blank)') + ' &rarr; ' + escapeHtml(r.new_value || '(blank)') + '</div>' +
-        '</div></div>'
-      ).join('');
+
+      rows.sort((a, b) => new Date(b.changed_at) - new Date(a.changed_at));
+      el.innerHTML = rows.slice(0, 50).map(r => {
+        const detail = r.action === 'delete'
+          ? 'Deleted: ' + escapeHtml(r.old_value || '')
+          : r.action === 'insert'
+          ? 'Added: ' + escapeHtml(r.new_value || '')
+          : escapeHtml(r.old_value || '(blank)') + ' &rarr; ' + escapeHtml(r.new_value || '(blank)');
+        return '<div class="dev-check-row" style="align-items:flex-start;"><div>' +
+          '<div>' + personDot(r.changed_by) + '<strong>' + escapeHtml(r.source) + ': ' + escapeHtml(r.label) + '</strong> &mdash; ' + escapeHtml(r.changed_by || 'unknown') + ' &mdash; ' + new Date(r.changed_at).toLocaleString() + '</div>' +
+          '<div class="dev-check-detail">' + detail + '</div>' +
+          '</div></div>';
+      }).join('');
     } catch (e) {
       el.innerHTML = '<p class="tool-sub">Could not load history: ' + escapeHtml(e.message || String(e)) + '</p>';
     }
