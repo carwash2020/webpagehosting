@@ -27,12 +27,28 @@
 <script src="/tools/tools-common.js" defer></script>
 <script src="/tools/sync.js" defer></script>
 <style>
+  body { padding: 44px 20px 60px; max-width: 1080px; margin: 0 auto; }
+
+  .dev-panels-grid {
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+    gap: 20px; align-items: start;
+  }
+  .dev-panel-wide { grid-column: 1 / -1; }
+
   .dev-panel {
     background: var(--bg-panel-2); border: 1px solid var(--border); border-radius: var(--radius);
-    padding: 20px; margin-bottom: 20px;
+    padding: 20px;
   }
-  .dev-panel h2 { margin: 0 0 4px; font-size: 17px; }
+  .dev-panel-heading { display: flex; align-items: center; gap: 8px; margin-bottom: 4px; }
+  .dev-panel h2 { margin: 0; font-size: 17px; }
   .dev-panel .dev-panel-sub { font-size: 13px; color: var(--text-dim); margin: 0 0 16px; }
+  .dev-info-bubble {
+    display: inline-flex; align-items: center; justify-content: center; flex: 0 0 auto;
+    width: 20px; height: 20px; border-radius: 50%; padding: 0;
+    border: 1px solid var(--border); background: var(--bg-panel-3); color: var(--text-dim);
+    font-size: 11px; cursor: pointer; transition: border-color .15s ease, color .15s ease;
+  }
+  .dev-info-bubble:hover { border-color: var(--orange-light); color: var(--orange-light); }
   .dev-check-row {
     display: flex; justify-content: space-between; align-items: center; gap: 12px;
     padding: 10px 0; border-bottom: 1px solid var(--border); font-size: 14px;
@@ -73,16 +89,24 @@
   </div>
   <p class="hub-sub">Site diagnostics and maintenance utilities. Only visible on this account &mdash; see auth.js if that ever needs to change.</p>
 
-  <div class="dev-panel">
-    <h2>Live consistency check</h2>
-    <p class="dev-panel-sub">Fetches every tool page live and runs the same checks as the CI script (scripts/check-consistency.js) &mdash; a way to check right now without waiting on a push.</p>
+  <div class="dev-panels-grid">
+
+  <div class="dev-panel dev-panel-wide">
+    <div class="dev-panel-heading">
+      <h2>Live consistency check</h2>
+      <button class="dev-info-bubble" onclick="openDevInfo('consistency')" aria-label="What does this do?" title="What does this do?">?</button>
+    </div>
+    <p class="dev-panel-sub">Fetches every tool page live and runs the same checks as the CI script &mdash; a way to check right now without waiting on a push.</p>
     <button class="secondary-btn" onclick="runLiveConsistencyCheck()" id="runCheckBtn">Run check</button>
     <div id="consistencyResults" style="margin-top:16px;"></div>
   </div>
 
   <div class="dev-panel">
-    <h2>Session &amp; sync</h2>
-    <p class="dev-panel-sub">What this device currently knows about who's logged in and when it last talked to Supabase.</p>
+    <div class="dev-panel-heading">
+      <h2>Session &amp; sync</h2>
+      <button class="dev-info-bubble" onclick="openDevInfo('session')" aria-label="What does this do?" title="What does this do?">?</button>
+    </div>
+    <p class="dev-panel-sub">Who's logged in on this device and when it last talked to Supabase.</p>
     <div id="sessionInfo"></div>
     <div style="display:flex; gap:10px; margin-top:12px; flex-wrap:wrap;">
       <button class="secondary-btn" onclick="devPushNow()">Push now</button>
@@ -91,19 +115,28 @@
   </div>
 
   <div class="dev-panel">
-    <h2>Local data snapshot</h2>
-    <p class="dev-panel-sub">Every th_/rd_ key in this browser's localStorage right now, and its size. Reflects THIS device only, not the synced total.</p>
+    <div class="dev-panel-heading">
+      <h2>Local data snapshot</h2>
+      <button class="dev-info-bubble" onclick="openDevInfo('localdata')" aria-label="What does this do?" title="What does this do?">?</button>
+    </div>
+    <p class="dev-panel-sub">Every th_/rd_ key in localStorage right now, and its size. This device only.</p>
     <div id="localDataSnapshot"></div>
   </div>
 
   <div class="dev-panel">
-    <h2>Appliance Wiki health</h2>
-    <p class="dev-panel-sub">Quick stats on the Wiki's data, read directly from this device's local copy.</p>
+    <div class="dev-panel-heading">
+      <h2>Appliance Wiki health</h2>
+      <button class="dev-info-bubble" onclick="openDevInfo('wikihealth')" aria-label="What does this do?" title="What does this do?">?</button>
+    </div>
+    <p class="dev-panel-sub">Quick stats read from this device's local copy of the Wiki's data.</p>
     <div id="wikiHealth"></div>
   </div>
 
   <div class="dev-panel">
-    <h2>Quick links</h2>
+    <div class="dev-panel-heading">
+      <h2>Quick links</h2>
+      <button class="dev-info-bubble" onclick="openDevInfo('links')" aria-label="What does this do?" title="What does this do?">?</button>
+    </div>
     <div class="dev-links">
       <a href="https://github.com/carwash2020/webpagehosting" target="_blank" rel="noopener">&#128193; Repo</a>
       <a href="https://github.com/carwash2020/webpagehosting/actions" target="_blank" rel="noopener">&#9889; Actions</a>
@@ -111,9 +144,38 @@
       <a href="https://www.triplehenterprisesllc.biz/" target="_blank" rel="noopener">&#127760; Live site</a>
     </div>
   </div>
+
+  </div>
 </div>
 
 <script>
+  const DEV_INFO = {
+    consistency: {
+      title: 'Live consistency check',
+      body: `<p>Checks every tool page for the boilerplate they're all supposed to carry: the login gate, a Content-Security-Policy, the PWA manifest link, and a styles.css version that matches everyone else's.</p><p>This is the exact same logic that runs automatically in GitHub Actions on every push -- this just lets you run it on demand, from right here, without waiting on a push or checking the Actions tab.</p>`,
+    },
+    session: {
+      title: 'Session & sync',
+      body: `<p>Shows which account is actually logged in on this device, and the result of the last push or pull attempt to Supabase.</p><p>"Push now" and "Pull now" trigger a sync immediately instead of waiting for the normal automatic/debounced sync to happen on its own -- useful when you want to be sure the latest data is saved or fetched right this second.</p>`,
+    },
+    localdata: {
+      title: 'Local data snapshot',
+      body: `<p>Every piece of Triple H data stored in this browser's localStorage right now, and how much space each one is using.</p><p>This reflects THIS device only -- it's not the synced total across all devices, just what's actually sitting here.</p>`,
+    },
+    wikihealth: {
+      title: 'Appliance Wiki health',
+      body: `<p>A quick read on how much is in the Appliance Wiki: how many brands and specific models, how many issues logged in total, and how many of those are Verified (sourced from a real catalog) versus Logged by you (a firsthand field report).</p>`,
+    },
+    links: {
+      title: 'Quick links',
+      body: `<p>Direct shortcuts to the four places you'd otherwise have to remember URLs for or dig up bookmarks for: the GitHub repo itself, its Actions run history, the Supabase project dashboard, and the actual live public site.</p>`,
+    },
+  };
+  function openDevInfo(key) {
+    const info = DEV_INFO[key];
+    if (info && typeof openInfoModal === 'function') openInfoModal(info.title, info.body);
+  }
+
   const TOOL_PAGES_TO_CHECK = [
     'workspace.html', 'calendar.html', 'contract-generator.html', 'invoice-generator.html',
     'job-tracker.html', 'login.html', 'review-request.html', 'route-planner.html',
