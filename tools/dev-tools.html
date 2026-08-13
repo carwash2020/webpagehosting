@@ -140,15 +140,6 @@
 
   <div class="dev-panel">
     <div class="dev-panel-heading">
-      <h2>Manifest.json check</h2>
-      <button class="dev-info-bubble" onclick="openDevInfo('manifest')" aria-label="What does this do?" title="What does this do?">?</button>
-    </div>
-    <button class="secondary-btn" onclick="runManifestCheck()" id="runManifestBtn">Check manifest</button>
-    <div id="manifestResults" style="margin-top:12px;"></div>
-  </div>
-
-  <div class="dev-panel">
-    <div class="dev-panel-heading">
       <h2>Device info</h2>
       <button class="dev-info-bubble" onclick="openDevInfo('device')" aria-label="What does this do?" title="What does this do?">?</button>
     </div>
@@ -193,8 +184,7 @@
       <div class="help-modal-body">
         <p>Site diagnostics and maintenance utilities, visible only on the account actively developing this site.</p>
         <ul>
-          <li><strong>Live consistency check</strong> &mdash; fetches every tool page right now and checks each one for the login gate, a CSP, the PWA manifest link, and a matching styles.css version. The same checks run automatically in GitHub Actions on every push; this just lets you run them on demand.</li>
-          <li><strong>Manifest.json check</strong> &mdash; specifically verifies the 4 URLs inside manifest.json all have the /tools/ prefix, since a missing prefix there is a real bug that happened once already.</li>
+          <li><strong>Live consistency check</strong> &mdash; fetches every tool page right now and checks each one for the login gate, a CSP, the PWA manifest link, a matching styles.css version, and that manifest.json's own URLs all have the /tools/ prefix. The same checks run automatically in GitHub Actions on every push; this just lets you run them on demand.</li>
           <li><strong>Session &amp; sync</strong> &mdash; who's logged in on this device, the last sync result, and manual Push/Pull buttons to force a sync right now.</li>
           <li><strong>Local data snapshot</strong> &mdash; every th_/rd_ key in this browser, its size, and an expandable raw view of its actual contents. This device only.</li>
           <li><strong>Appliance Wiki health</strong> &mdash; quick counts: brands, models, issues, and the verified/logged-by-you split.</li>
@@ -212,7 +202,7 @@
   const DEV_INFO = {
     consistency: {
       title: 'Live consistency check',
-      body: `<p>Checks every tool page for the boilerplate they're all supposed to carry: the login gate, a Content-Security-Policy, the PWA manifest link, and a styles.css version that matches everyone else's.</p><p>This is the exact same logic that runs automatically in GitHub Actions on every push -- this just lets you run it on demand, from right here, without waiting on a push or checking the Actions tab.</p>`,
+      body: `<p>Checks every tool page for the boilerplate they're all supposed to carry: the login gate, a Content-Security-Policy, the PWA manifest link, and a styles.css version that matches everyone else's -- plus a check that manifest.json's own URLs all have the /tools/ prefix, since a missing prefix there caused a real "Add to Home Screen" bug once already.</p><p>This is the exact same logic that runs automatically in GitHub Actions on every push -- this just lets you run it on demand, from right here, without waiting on a push or checking the Actions tab.</p>`,
     },
     session: {
       title: 'Session & sync',
@@ -225,10 +215,6 @@
     wikihealth: {
       title: 'Appliance Wiki health',
       body: `<p>A quick read on how much is in the Appliance Wiki: how many brands and specific models, how many issues logged in total, and how many of those are Verified (sourced from a real catalog) versus Logged by you (a firsthand field report).</p>`,
-    },
-    manifest: {
-      title: 'Manifest.json check',
-      body: `<p>Fetches manifest.json live and checks the start_url plus every shortcut URL for the /tools/ prefix. This exact bug happened once already -- the manifest pointed at /workspace.html instead of /tools/workspace.html, which would 404 the instant someone tried to launch a home-screen icon.</p>`,
     },
     device: {
       title: 'Device info',
@@ -355,6 +341,23 @@
         rows.push({ page: '(cross-file check)', ok: false, detail: 'styles.css version mismatch: ' + JSON.stringify(grouped) });
       }
 
+      // Folded in here rather than its own separate panel/button --
+      // it's really just one more "is the site configured right" check,
+      // same spirit as everything above.
+      try {
+        const manifestRes = await fetchWithTimeout('/tools/manifest.json', 6000);
+        const manifest = await manifestRes.json();
+        const urlsToCheck = [manifest.start_url, ...(manifest.shortcuts || []).map(s => s.url)];
+        const badUrls = urlsToCheck.filter(u => u && !u.startsWith('/tools/'));
+        rows.push({
+          page: 'manifest.json',
+          ok: badUrls.length === 0,
+          detail: badUrls.length ? badUrls.join(', ') + ' missing the /tools/ prefix' : '',
+        });
+      } catch (e) {
+        rows.push({ page: 'manifest.json', ok: false, detail: 'Could not fetch manifest.json' });
+      }
+
       return rows.map(r =>
         '<div class="dev-check-row"><div><div>' + escapeHtml(r.page) + '</div>' +
         (r.detail ? '<div class="dev-check-detail">' + escapeHtml(r.detail) + '</div>' : '') + '</div>' +
@@ -456,21 +459,6 @@
     } else {
       pre.style.display = 'none';
     }
-  }
-
-  async function runManifestCheck() {
-    return runWithButtonState('runManifestBtn', 'manifestResults', 'Checking...', 'Check manifest', async () => {
-      const res = await fetchWithTimeout('/tools/manifest.json', 6000);
-      const manifest = await res.json();
-      const urlsToCheck = [manifest.start_url, ...(manifest.shortcuts || []).map(s => s.url)];
-      const problems = urlsToCheck.filter(u => u && !u.startsWith('/tools/'));
-      return problems.length
-        ? '<div class="dev-check-row"><div><div>manifest.json</div><div class="dev-check-detail">' +
-          problems.map(escapeHtml).join(', ') + ' missing the /tools/ prefix</div></div>' +
-          '<span class="dev-check-status fail">FAIL</span></div>'
-        : '<div class="dev-check-row"><div>All ' + urlsToCheck.length + ' manifest URLs have the /tools/ prefix</div>' +
-          '<span class="dev-check-status pass">PASS</span></div>';
-    });
   }
 
   function renderDeviceInfo() {
