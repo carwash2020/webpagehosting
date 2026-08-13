@@ -187,6 +187,29 @@ function getCurrentUserEmail() {
   return (s && s.email) || null;
 }
 
+// Just the two of you right now, so a plain lookup table beats trying to
+// derive a name generically from an email address. Falls back to the
+// email itself if an unrecognized account ever logs in, rather than
+// showing nothing.
+const KNOWN_USER_NAMES = {
+  'connor@triplehenterprisesllc.biz': 'Connor',
+  'steve@triplehenterprisesllc.biz': 'Steve',
+};
+function getCurrentUserFirstName() {
+  const email = getCurrentUserEmail();
+  if (!email) return null;
+  return KNOWN_USER_NAMES[email.toLowerCase()] || email;
+}
+
+// True only for Connor's account -- used to gate the dev-tools page/tile,
+// which isn't a real permissions boundary (Steve's account could still
+// read the page's source or hit the URL directly, same as anyone with
+// dev tools open in any browser could on any site) but keeps it out of
+// Steve's way day to day, which is the actual point of it.
+function isDevAccount() {
+  return getCurrentUserEmail() === 'connor@triplehenterprisesllc.biz';
+}
+
 // Decodes the JWT's payload to pull out the logged-in user's ID (the
 // `sub` claim) without needing a network round-trip. Doesn't verify the
 // token's signature -- that's the database's job via RLS, not this
