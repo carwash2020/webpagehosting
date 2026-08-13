@@ -188,6 +188,7 @@
 <div id="prListView">
   <div class="pr-confidence-note">Pre-loaded with major brands and their official manual/parts links. A few of these links go to a brand's general parts catalog rather than one exact model, since exact links depend on the specific model number &mdash; worth double-checking a link the first time you use it for a real job.</div>
 
+  <div id="prDisplayNameRow" style="margin-bottom:14px;"></div>
   <div id="prQuickAccessStrip"></div>
 
   <div class="pr-search-filter-row">
@@ -296,6 +297,7 @@
   let activePrAddModelOpen = false;
   let activePrEditUnitId = null;
   let activePrEditIssueId = null;
+  let activePrDisplayNameEditing = false;
   let expandedPrTypeIds = new Set();
   let activePrIssueTargetId = null;
   let activePrType = 'all';
@@ -321,6 +323,64 @@
   // capped, deduped, most-recent-first array of unit ids -- separate
   // localStorage key since it's device-local browsing history, not data
   // worth syncing across devices the way appliances/issues are.
+  // Lightweight per-person attribution -- deliberately NOT a login or an
+  // account. There's still one shared password gate for the whole app;
+  // this just lets whoever's on this device say who they are, so issues
+  // they log/edit going forward show a name instead of a generic
+  // "logged by you." Stored per-device, not synced -- if someone hasn't
+  // set a name, everything falls back to the old generic behavior, so
+  // this is purely additive and never blocks using the tool.
+  const PR_DISPLAY_NAME_KEY = 'th_pr_display_name';
+  function getPrDisplayName() {
+    return (localStorage.getItem(PR_DISPLAY_NAME_KEY) || '').trim();
+  }
+
+  // Prefers the real logged-in identity once each person has their own
+  // account (see auth.js's getCurrentUserEmail()) -- falls back to the
+  // manually-typed name below during the transition to real per-person
+  // accounts, or if auth.js isn't available for any reason.
+  function getPrAttributionName() {
+    if (typeof getCurrentUserEmail === 'function') {
+      const email = getCurrentUserEmail();
+      if (email) return email;
+    }
+    return getPrDisplayName();
+  }
+
+  function renderPrDisplayNameRow() {
+    const container = document.getElementById('prDisplayNameRow');
+    if (!container) return;
+    const realEmail = (typeof getCurrentUserEmail === 'function') ? getCurrentUserEmail() : null;
+    if (realEmail) {
+      // A real account is logged in -- nothing to configure, no manual
+      // name needed or shown.
+      container.innerHTML = '<span style="font-size:13px; color:var(--text-dim);">Logging as <strong style="color:var(--text);">' + escapeHtml(realEmail) + '</strong></span>';
+      return;
+    }
+    const name = getPrDisplayName();
+    if (activePrDisplayNameEditing) {
+      container.innerHTML =
+        '<div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">' +
+        '<input type="text" id="prDisplayNameInput" placeholder="Your name" value="' + escapeHtml(name) + '" style="max-width:200px;">' +
+        '<button class="btn blue" onclick="savePrDisplayName()">Save</button>' +
+        '<button class="secondary-btn" onclick="activePrDisplayNameEditing=false; renderPrDisplayNameRow();">Cancel</button>' +
+        '</div>';
+      const input = document.getElementById('prDisplayNameInput');
+      if (input) input.focus();
+      return;
+    }
+    container.innerHTML = name
+      ? '<span style="font-size:13px; color:var(--text-dim);">Logging as <strong style="color:var(--text);">' + escapeHtml(name) + '</strong> &middot; <a href="#" onclick="event.preventDefault(); activePrDisplayNameEditing=true; renderPrDisplayNameRow();" style="color:var(--orange-light);">change</a></span>'
+      : '<span style="font-size:13px; color:var(--text-dim);"><a href="#" onclick="event.preventDefault(); activePrDisplayNameEditing=true; renderPrDisplayNameRow();" style="color:var(--orange-light);">Set your name</a> so issues you log show who added them</span>';
+  }
+
+  function savePrDisplayName() {
+    const value = document.getElementById('prDisplayNameInput').value.trim();
+    localStorage.setItem(PR_DISPLAY_NAME_KEY, value);
+    activePrDisplayNameEditing = false;
+    renderPrDisplayNameRow();
+  }
+
   function loadPrRecent() {
     try { return JSON.parse(localStorage.getItem(PR_RECENT_KEY) || '[]'); } catch (e) { return []; }
   }
@@ -2290,7 +2350,7 @@
     var enterClass = iss.id === justAddedPrIssueId ? 'list-row-enter' : '';
     var verifiedBadge = iss.verified
       ? '<span class="pr-verified-badge verified">&#10003; Verified</span>'
-      : '<span class="pr-verified-badge logged">Logged by you</span>';
+      : '<span class="pr-verified-badge logged">Logged by ' + (iss.loggedBy ? escapeHtml(iss.loggedBy) : 'you') + '</span>';
     var confirmedHtml = iss.confirmedAt
       ? '<span class="pr-confirmed-date ' + prConfirmedAgeClass(iss.confirmedAt) + '">Confirmed ' + formatPrConfirmedDate(iss.confirmedAt) + '</span>'
       : '';
@@ -2332,6 +2392,10 @@
     // was, since a text edit doesn't turn a firsthand field report into
     // something sourced from a catalog.
     iss.confirmedAt = new Date().toISOString().slice(0, 10);
+    // Only overwrite who's credited if this device actually has a name
+    // set -- an edit from a device with no name configured shouldn't
+    // erase whoever originally logged it.
+    if (getPrAttributionName()) { iss.loggedBy = getPrAttributionName(); }
     savePrUnits(list);
     activePrEditIssueId = null;
     renderBrandDetail();
@@ -2427,6 +2491,7 @@
       note: document.getElementById('prNewNote').value.trim(),
       verified: false,
       confirmedAt: new Date().toISOString().slice(0, 10),
+      loggedBy: getPrAttributionName() || null,
     };
     const list = loadPrUnits();
     const unit = list.find(u => u.id === unitId);
@@ -2694,6 +2759,7 @@
     renderTypeFilterOptions();
     renderUnits();
     populatePrDatalists();
+    renderPrDisplayNameRow();
     if (typeof initSyncOnLoad === 'function') {
       initSyncOnLoad().then(() => { renderTypeFilterOptions(); renderUnits(); populatePrDatalists(); });
     }

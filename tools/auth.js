@@ -92,6 +92,7 @@ async function signIn(email, password, rememberMe) {
       access_token: data.access_token,
       refresh_token: data.refresh_token,
       expires_at: data.expires_at, // unix seconds, comes directly from Supabase
+      email: data.user && data.user.email, // captured for per-person attribution elsewhere (e.g. Appliance Wiki) -- Supabase already sends this back, previously just wasn't being kept
     }, !!rememberMe);
     return { ok: true };
   } catch (e) {
@@ -114,6 +115,11 @@ async function refreshSession() {
       access_token: data.access_token,
       refresh_token: data.refresh_token,
       expires_at: data.expires_at,
+      // A silent refresh also gets a user object back -- but fall back
+      // to whatever email was already stored, just in case Supabase ever
+      // omits it on this grant type, rather than let a real logged-in
+      // person suddenly show up unattributed after a routine refresh.
+      email: (data.user && data.user.email) || s.email,
     });
     return true;
   } catch (e) {
@@ -123,7 +129,7 @@ async function refreshSession() {
 
 function signOut() {
   clearStoredSession();
-  window.location.href = '/tools/login.html';
+  window.location.href = '/login.html';
 }
 
 // Call this at the top of every protected page, before rendering
@@ -158,7 +164,7 @@ async function requireAuth() {
     if (refreshed) return true;
   }
   const returnTo = encodeURIComponent(window.location.pathname);
-  window.location.href = '/tools/login.html?return=' + returnTo;
+  window.location.href = '/login.html?return=' + returnTo;
   return false;
 }
 
@@ -168,6 +174,17 @@ async function requireAuth() {
 // keyed on auth.uid() only resolve correctly with a real user token.
 function getAuthToken() {
   return hasValidSession() ? getStoredSession().access_token : SUPABASE_ANON_KEY;
+}
+
+// Whoever is actually logged in on this device right now, or null if
+// there's no valid session (or an old session predating this field --
+// signing out and back in picks it up). For attributing things a real
+// person did -- e.g. Appliance Wiki crediting who logged an issue --
+// without needing a separate honor-system "type your name" field once
+// each person has their own real account instead of a shared one.
+function getCurrentUserEmail() {
+  const s = hasValidSession() ? getStoredSession() : null;
+  return (s && s.email) || null;
 }
 
 // Decodes the JWT's payload to pull out the logged-in user's ID (the
