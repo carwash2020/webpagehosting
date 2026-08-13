@@ -687,8 +687,15 @@
         <div class="contact-card">
           <div class="service-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg></div>
           <h3>Hours</h3>
-          <p class="value" id="hoursLine1">Monday to Sunday</p>
-          <p class="sub" id="hoursLine2">7:00 AM to 10:00 PM MST</p>
+          <div class="hours-grid">
+            <div class="hours-row"><span class="hours-day">Mon</span><span class="hours-value js-hours-monday">7:00 AM &ndash; 10:00 PM</span></div>
+            <div class="hours-row"><span class="hours-day">Tue</span><span class="hours-value js-hours-tuesday">7:00 AM &ndash; 10:00 PM</span></div>
+            <div class="hours-row"><span class="hours-day">Wed</span><span class="hours-value js-hours-wednesday">7:00 AM &ndash; 10:00 PM</span></div>
+            <div class="hours-row"><span class="hours-day">Thu</span><span class="hours-value js-hours-thursday">7:00 AM &ndash; 10:00 PM</span></div>
+            <div class="hours-row"><span class="hours-day">Fri</span><span class="hours-value js-hours-friday">7:00 AM &ndash; 10:00 PM</span></div>
+            <div class="hours-row"><span class="hours-day">Sat</span><span class="hours-value js-hours-saturday">7:00 AM &ndash; 10:00 PM</span></div>
+            <div class="hours-row"><span class="hours-day">Sun</span><span class="hours-value js-hours-sunday">7:00 AM &ndash; 10:00 PM</span></div>
+          </div>
         </div>
       </div>
     </div>
@@ -879,7 +886,7 @@
   <div class="modal modal-gallery" id="termsModal" role="dialog" aria-modal="true" aria-labelledby="termsTitle">
     <button class="modal-close" id="termsClose" aria-label="Close">&times;</button>
     <h3 id="termsTitle">Terms and Conditions</h3>
-      <div class="terms-body">
+      <div class="terms-body" id="termsBody">
         <h4>Business Information</h4>
         <p>Triple H Enterprises LLC is a domestic limited liability company registered with the Utah Department of Commerce, Division of Corporations and Commercial Code (Entity Number 14711750-0160).</p>
 
@@ -1368,19 +1375,28 @@
     }
   };
 
-  // FAQ accordion (works both times the FAQ list renders, since it's the same markup in the modal)
-  document.querySelectorAll('.faq-item').forEach((item, i) => {
-    const btn = item.querySelector('.faq-question');
-    const answer = item.querySelector('.faq-answer');
-    answer.id = answer.id || `faqAnswer${i}`;
-    btn.setAttribute('aria-expanded', 'false');
-    btn.setAttribute('aria-controls', answer.id);
-    btn.addEventListener('click', () => {
-      const isOpen = item.classList.toggle('is-open');
-      answer.style.maxHeight = isOpen ? answer.scrollHeight + 'px' : '0px';
-      btn.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
+  // FAQ accordion -- pulled into a named function (rather than an
+  // inline loop that only ever runs once at page load) specifically so
+  // it can be re-run after the FAQ list content is dynamically
+  // replaced by the site_faq fetch further down. Binding click
+  // handlers to brand-new elements a second time is required -- the
+  // original static elements' listeners don't transfer to whatever
+  // replaces them.
+  function bindFaqAccordion() {
+    document.querySelectorAll('.faq-item').forEach((item, i) => {
+      const btn = item.querySelector('.faq-question');
+      const answer = item.querySelector('.faq-answer');
+      answer.id = answer.id || `faqAnswer${i}`;
+      btn.setAttribute('aria-expanded', 'false');
+      btn.setAttribute('aria-controls', answer.id);
+      btn.addEventListener('click', () => {
+        const isOpen = item.classList.toggle('is-open');
+        answer.style.maxHeight = isOpen ? answer.scrollHeight + 'px' : '0px';
+        btn.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
+      });
     });
-  });
+  }
+  bindFaqAccordion();
 
   // generic modal-overlay opener/closer, used for Gallery, FAQ, and Terms
   function setupSimpleModal(overlayId, closeId, triggerIds){
@@ -1966,18 +1982,92 @@
           });
           window.__siteOverrideEmail = map.email;
         }
-        if (map.hoursLine1) {
-          const el = document.getElementById('hoursLine1');
-          if (el) el.textContent = map.hoursLine1;
-        }
-        if (map.hoursLine2) {
-          const el = document.getElementById('hoursLine2');
-          if (el) el.textContent = map.hoursLine2;
-        }
+        const DAYS = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
+        DAYS.forEach(day => {
+          const key = 'hours' + day.charAt(0).toUpperCase() + day.slice(1);
+          if (map[key]) {
+            const el = document.querySelector('.js-hours-' + day);
+            if (el) el.textContent = map[key];
+          }
+        });
         ['banner1', 'banner2'].forEach(key => {
           const el = document.getElementById('site' + key.charAt(0).toUpperCase() + key.slice(1));
           if (el && map[key]) { el.textContent = map[key]; el.style.display = 'block'; }
         });
+      })
+      .catch(() => { /* static fallback content already shown is correct */ });
+  })();
+</script>
+
+<script>
+  // FAQ content -- separate, independent fetch from the site content
+  // block above, so a failure in one never blocks the other. Same
+  // fail-silent philosophy: if this table is empty, unreachable, or the
+  // fetch times out, the 12 static FAQ items already in the HTML stay
+  // exactly as they are.
+  (function () {
+    const FAQ_SUPABASE_URL = 'https://csvfqdjuobylgafgolho.supabase.co';
+    const FAQ_SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNzdmZxZGp1b2J5bGdhZmdvbGhvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODUzNTQ3MjcsImV4cCI6MjEwMDkzMDcyN30.6GlvK-DfXf2lppS1kciZtsl4wHOpZz_yKtwsS1lyjrs';
+
+    function escapeFaqHtml(str) {
+      const div = document.createElement('div');
+      div.textContent = str;
+      return div.innerHTML;
+    }
+
+    fetch(FAQ_SUPABASE_URL + '/rest/v1/site_faq?select=question,answer&order=sort_order.asc', {
+      headers: { 'apikey': FAQ_SUPABASE_ANON_KEY },
+    })
+      .then(res => res.ok ? res.json() : [])
+      .then(rows => {
+        if (!Array.isArray(rows) || rows.length === 0) return; // keep the static fallback
+        const faqList = document.getElementById('faqList');
+        if (!faqList) return;
+        faqList.innerHTML = rows.map(r => `
+        <div class="faq-item">
+          <button type="button" class="faq-question">
+            ${escapeFaqHtml(r.question)}
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>
+          </button>
+          <div class="faq-answer"><p>${escapeFaqHtml(r.answer)}</p></div>
+        </div>`).join('');
+        // Re-bind the accordion's click handlers -- the ones attached
+        // at page load belonged to the static elements just replaced.
+        if (typeof bindFaqAccordion === 'function') bindFaqAccordion();
+      })
+      .catch(() => { /* static fallback content already shown is correct */ });
+  })();
+</script>
+
+<script>
+  // Terms & Conditions content -- same independent, fail-silent pattern
+  // as the FAQ block above. Note: the "Contact" section at the end
+  // mentions the phone number and email as plain text -- once this
+  // content comes from Supabase, that section is fully editable free
+  // text like everything else here, so it won't automatically update
+  // if the phone/email fields ever change. Same known tradeoff as the
+  // FAQ answers that mention it.
+  (function () {
+    const TERMS_SUPABASE_URL = 'https://csvfqdjuobylgafgolho.supabase.co';
+    const TERMS_SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNzdmZxZGp1b2J5bGdhZmdvbGhvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODUzNTQ3MjcsImV4cCI6MjEwMDkzMDcyN30.6GlvK-DfXf2lppS1kciZtsl4wHOpZz_yKtwsS1lyjrs';
+
+    function escapeTermsHtml(str) {
+      const div = document.createElement('div');
+      div.textContent = str;
+      return div.innerHTML;
+    }
+
+    fetch(TERMS_SUPABASE_URL + '/rest/v1/site_terms?select=heading,body&order=sort_order.asc', {
+      headers: { 'apikey': TERMS_SUPABASE_ANON_KEY },
+    })
+      .then(res => res.ok ? res.json() : [])
+      .then(rows => {
+        if (!Array.isArray(rows) || rows.length === 0) return; // keep the static fallback
+        const termsBody = document.getElementById('termsBody');
+        if (!termsBody) return;
+        termsBody.innerHTML = rows.map(r => `
+        <h4>${escapeTermsHtml(r.heading)}</h4>
+        <p>${escapeTermsHtml(r.body)}</p>`).join('\n');
       })
       .catch(() => { /* static fallback content already shown is correct */ });
   })();
