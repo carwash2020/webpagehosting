@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<script src="/tools/auth.js"></script>
+<script src="/tools/auth.js?v=202608142300"></script>
 <script>
   // Security gate -- redirect to login before this page's own content
   // is meaningfully usable. See auth.js for why this exists (a single
@@ -24,8 +24,8 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="/styles.css?v=202608112330">
-<script src="/tools/tools-common.js" defer></script>
-<script src="/tools/sync.js" defer></script>
+<script src="/tools/tools-common.js?v=202608142300" defer></script>
+<script src="/tools/sync.js?v=202608142300" defer></script>
 <style>
   body { padding: 44px 20px 60px; max-width: 1080px; margin: 0 auto; }
 
@@ -84,6 +84,7 @@
 </style>
 </head>
 <body>
+<a href="#devMainView" class="skip-link">Skip to main content</a>
 
 <div id="devBlockedView" class="dev-blocked" style="display:none;">
   <div class="tool-title" style="font-size:22px;">Not available here</div>
@@ -94,7 +95,7 @@
 <div id="devMainView" style="display:none;">
   <div class="hub-header">
     <div class="hub-header-left">
-      <img src="/images/logo-signature-orange.png" alt="Triple H Enterprises">
+      <img src="/images/logo-signature-orange.webp" alt="Triple H Enterprises">
       <span class="hub-title">Dev Tools</span>
     </div>
     <button class="help-btn" onclick="openHelpModal()" aria-label="How to use Dev Tools" title="How to use Dev Tools">?</button>

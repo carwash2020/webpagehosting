@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<script src="/tools/auth.js"></script>
+<script src="/tools/auth.js?v=202608142300"></script>
 <script>
   // Security gate -- redirect to login before this page's own content
   // is meaningfully usable. See auth.js for why this exists (a single
@@ -25,9 +25,9 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;500;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="/styles.css?v=202608112330">
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js" defer></script>
-<script src="/tools/sync.js" defer></script>
-<script src="/tools/tools-common.js" defer></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.112.3/dist/umd/supabase.js" integrity="sha384-qafw21c/iciq0VXsi9FzkfoQv5I/V0iqE4lSNcKXPnW9/UTJLnv5CcN4FHxVLnKg" crossorigin="anonymous" defer></script>
+<script src="/tools/sync.js?v=202608142300" defer></script>
+<script src="/tools/tools-common.js?v=202608142300" defer></script>
 <style>
   body { padding: 90px 20px 60px; max-width: 680px; margin: 0 auto; }
   .tool-title { font-family:'Oswald',sans-serif; font-weight:700; font-size:28px; color:var(--white); margin-bottom:6px; }
@@ -70,15 +70,16 @@
 </style>
 </head>
 <body>
+<a href="#mainContent" class="skip-link">Skip to main content</a>
 
 <div class="tool-header">
   <a href="/tools/workspace.html" class="tool-header-brand">
-    <img src="/images/logo-signature-orange.png" alt="Triple H Enterprises">
+    <img src="/images/logo-signature-orange.webp" alt="Triple H Enterprises">
     <span>&larr; Back to Workspace</span>
   </a>
   <button class="help-btn" onclick="openHelpModal()" aria-label="How to use this tool" title="How to use this tool">?</button>
 </div>
-<div class="tool-title">Route Planner</div>
+<div class="tool-title" id="mainContent">Route Planner</div>
 <p class="tool-sub">Type in today's addresses, get one link that opens the whole route in Google Maps &mdash; starting from wherever you are when you tap it.</p>
 
 <div class="form-section">
