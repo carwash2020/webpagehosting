@@ -511,13 +511,15 @@ async function deleteLead(id) {
 const JOB_PHOTOS_BUCKET = 'job-photos';
 const MAX_PHOTO_BYTES = 8 * 1024 * 1024; // 8MB client-side cap
 
-// Only works if the job-photos bucket is set to "Public" -- kept as-is
-// (unused by the app now) rather than deleted, in case anything else
-// still references it. See getSignedJobPhotoUrl below for the version
-// that works with the bucket kept private.
-function getJobPhotoUrl(storagePath) {
-  return `${SUPABASE_URL}/storage/v1/object/public/${JOB_PHOTOS_BUCKET}/${storagePath}`;
-}
+// getJobPhotoUrl() (the old public-URL version, for when the bucket was
+// still set to "Public") was removed 2026-08-14. It had zero call sites
+// left in this file and the matching "anon can read job-photos"/"anon
+// can read receipts" RLS policies on storage.objects were still live in
+// the database, silently letting anyone with the public anon key read
+// customer job photos and financial receipts directly, regardless of
+// this function being unused client-side. Both the dead function and
+// the stale policies are gone now. getSignedStorageUrl() below is the
+// only path left, and it only works for the 'authenticated' role.
 
 // Generates a time-limited URL that works even when a bucket is private
 // -- the actual fix for job photos and receipts needing to stay private
