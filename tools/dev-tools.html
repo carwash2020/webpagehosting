@@ -1346,7 +1346,11 @@
     btn.disabled = true;
     btn.textContent = 'Sending...';
     resultEl.innerHTML = '<p class="tool-sub">Inserting a test lead the same way the real contact form does...</p>';
-    let testLeadId = null;
+    // A unique token embedded in the test lead's own text -- lets the
+    // cleanup step find exactly this run's row via an authenticated
+    // SELECT afterward, rather than relying on the insert response
+    // itself (see the comment below for why that doesn't work here).
+    const testToken = 'devtest-' + Date.now() + '-' + Math.random().toString(36).slice(2, 8);
     try {
       const insertRes = await fetchWithTimeout(SUPABASE_URL + '/rest/v1/th_leads', 8000, {
         method: 'POST',
@@ -1354,7 +1358,13 @@
           'Content-Type': 'application/json',
           'apikey': PUSH_TEST_SUPABASE_ANON_KEY,
           'Authorization': 'Bearer ' + PUSH_TEST_SUPABASE_ANON_KEY,
-          'Prefer': 'return=representation',
+          // Deliberately NOT 'Prefer: return=representation' -- th_leads'
+          // SELECT policy is authenticated-only, and an anonymous
+          // insert can't read its own new row back to satisfy that,
+          // which surfaces as the exact same RLS error as a genuinely
+          // blocked insert, even though the insert itself was actually
+          // allowed. The real public contact form never asks for the
+          // row back either, which is exactly why it never hit this.
         },
         body: JSON.stringify([{
           name: 'TEST \u2014 Dev Tools push check',
@@ -1363,32 +1373,37 @@
           service: 'Dev Tools Test',
           preferred_date: '',
           preferred_time: '',
-          details: 'Automated test from Dev Tools to check the push notification pipeline. Safe to ignore -- this gets deleted automatically in a few seconds.',
+          details: 'Automated test from Dev Tools to check the push notification pipeline. Safe to ignore -- this gets deleted automatically in a few seconds. [' + testToken + ']',
         }]),
       });
       if (!insertRes.ok) throw new Error('Could not insert the test lead (HTTP ' + insertRes.status + ')');
-      const inserted = await insertRes.json();
-      testLeadId = inserted && inserted[0] && inserted[0].id;
 
       resultEl.innerHTML = '<p class="tool-sub">Test lead sent -- a push notification should arrive within a few seconds if the pipeline is working. This can\'t directly confirm it was received, only that the insert (and whatever it triggers server-side) actually ran. Cleaning up in a moment...</p>';
 
       // Give the trigger + edge function + push delivery a few seconds
-      // before cleaning up -- deleting instantly could plausibly race
-      // ahead of the trigger reading the row, though in practice
-      // Postgres triggers fire synchronously within the same insert.
+      // before cleaning up.
       await new Promise(r => setTimeout(r, 4000));
 
+      if (typeof ensureFreshToken === 'function') await ensureFreshToken();
+      const authHeaders = { 'apikey': SUPABASE_ANON_KEY, 'Authorization': 'Bearer ' + getAuthToken() };
+      // Find it by its unique token via an authenticated read -- the
+      // anon insert response never gave us the id, for the reason above.
+      const findRes = await fetchWithTimeout(
+        SUPABASE_URL + '/rest/v1/th_leads?details=ilike.*' + encodeURIComponent(testToken) + '*&select=id',
+        8000, { headers: authHeaders }
+      );
+      const found = findRes.ok ? await findRes.json() : [];
+      const testLeadId = found && found[0] && found[0].id;
+
       if (testLeadId) {
-        if (typeof ensureFreshToken === 'function') await ensureFreshToken();
         const delRes = await fetchWithTimeout(SUPABASE_URL + '/rest/v1/th_leads?id=eq.' + testLeadId, 8000, {
-          method: 'DELETE',
-          headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': 'Bearer ' + getAuthToken() },
+          method: 'DELETE', headers: authHeaders,
         });
         resultEl.innerHTML = delRes.ok
           ? '<p class="tool-sub">Test lead cleaned up. If no push arrived, check the Send-Push edge function logs in Supabase directly.</p>'
           : '<p class="tool-sub" style="color:#e05555;">Test lead sent, but cleanup failed (HTTP ' + delRes.status + ') -- delete "TEST \u2014 Dev Tools push check" from the Leads inbox manually.</p>';
       } else {
-        resultEl.innerHTML = '<p class="tool-sub" style="color:#e05555;">Test lead sent, but couldn\'t confirm its id to clean it up automatically -- look for "TEST \u2014 Dev Tools push check" in the Leads inbox and delete it manually.</p>';
+        resultEl.innerHTML = '<p class="tool-sub" style="color:#e05555;">Test lead sent, but couldn\'t find it afterward to clean it up automatically -- look for "TEST \u2014 Dev Tools push check" in the Leads inbox and delete it manually.</p>';
       }
     } catch (e) {
       resultEl.innerHTML = '<p class="tool-sub" style="color:#e05555;">' + escapeHtml(e.message || String(e)) + '</p>';
