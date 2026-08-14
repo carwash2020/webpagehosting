@@ -199,6 +199,29 @@
 
   <div class="dev-panel dev-panel-wide">
     <div class="dev-panel-heading">
+      <h2>Uptime status</h2>
+      <button class="dev-info-bubble" onclick="openDevInfo('uptimestatus')" aria-label="What does this do?" title="What does this do?">?</button>
+    </div>
+    <iframe src="https://hetrixtools.com/r/26257798f90aaef78a9fff44cad7886d/" style="width:100%; height:340px; border:1px solid var(--border); border-radius:8px; background:#fff;" title="Uptime status"></iframe>
+    <p class="tool-sub" style="margin-top:8px;">If the embedded view above ever shows blank (some mobile browsers block third-party iframes more aggressively than desktop) -- <a href="https://hetrixtools.com/r/26257798f90aaef78a9fff44cad7886d/" target="_blank" rel="noopener" style="color:var(--orange-light);">open it directly in a new tab instead</a>.</p>
+  </div>
+
+  <div class="dev-panel">
+    <div class="dev-panel-heading">
+      <h2>Quick links</h2>
+      <button class="dev-info-bubble" onclick="openDevInfo('links')" aria-label="What does this do?" title="What does this do?">?</button>
+    </div>
+    <div class="dev-links">
+      <a href="https://github.com/carwash2020/webpagehosting" target="_blank" rel="noopener">&#128193; Repo</a>
+      <a href="https://github.com/carwash2020/webpagehosting/actions" target="_blank" rel="noopener">&#9889; Actions</a>
+      <a href="https://supabase.com/dashboard/project/csvfqdjuobylgafgolho" target="_blank" rel="noopener">&#128202; Supabase</a>
+      <a href="https://hetrixtools.com/dashboard/uptime-monitors/" target="_blank" rel="noopener">&#128225; Uptime</a>
+      <a href="https://www.triplehenterprisesllc.biz/" target="_blank" rel="noopener">&#127760; Live site</a>
+    </div>
+  </div>
+
+  <div class="dev-panel dev-panel-wide">
+    <div class="dev-panel-heading">
       <h2>Site content</h2>
       <button class="dev-info-bubble" onclick="openDevInfo('sitecontent')" aria-label="What does this do?" title="What does this do?">?</button>
     </div>
@@ -237,28 +260,6 @@
     <div style="display:flex; gap:10px; margin-top:12px; flex-wrap:wrap;">
       <button class="secondary-btn" onclick="addTermsItem()">+ Add section</button>
       <button class="btn blue" id="saveTermsBtn" onclick="saveTermsList()">Save all</button>
-    </div>
-  </div>
-
-  <div class="dev-panel dev-panel-wide">
-    <div class="dev-panel-heading">
-      <h2>Uptime status</h2>
-      <button class="dev-info-bubble" onclick="openDevInfo('uptimestatus')" aria-label="What does this do?" title="What does this do?">?</button>
-    </div>
-    <iframe src="https://hetrixtools.com/r/26257798f90aaef78a9fff44cad7886d/" style="width:100%; height:340px; border:1px solid var(--border); border-radius:8px; background:#fff;" loading="lazy" title="Uptime status"></iframe>
-  </div>
-
-  <div class="dev-panel">
-    <div class="dev-panel-heading">
-      <h2>Quick links</h2>
-      <button class="dev-info-bubble" onclick="openDevInfo('links')" aria-label="What does this do?" title="What does this do?">?</button>
-    </div>
-    <div class="dev-links">
-      <a href="https://github.com/carwash2020/webpagehosting" target="_blank" rel="noopener">&#128193; Repo</a>
-      <a href="https://github.com/carwash2020/webpagehosting/actions" target="_blank" rel="noopener">&#9889; Actions</a>
-      <a href="https://supabase.com/dashboard/project/csvfqdjuobylgafgolho" target="_blank" rel="noopener">&#128202; Supabase</a>
-      <a href="https://hetrixtools.com/dashboard/uptime-monitors/" target="_blank" rel="noopener">&#128225; Uptime</a>
-      <a href="https://www.triplehenterprisesllc.biz/" target="_blank" rel="noopener">&#127760; Live site</a>
     </div>
   </div>
 
