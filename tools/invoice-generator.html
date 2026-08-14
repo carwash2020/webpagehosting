@@ -301,6 +301,11 @@
     <input type="text" id="invoiceLogSearch" placeholder="Search by client or invoice #..." style="width:100%; box-sizing:border-box; margin-bottom:14px;" oninput="renderInvoiceLog()">
     <div id="invoiceLogList"></div>
   </div>
+  <div class="form-section">
+    <h3>Recent Quotes</h3>
+    <input type="text" id="quoteLogSearch" placeholder="Search by client or quote #..." style="width:100%; box-sizing:border-box; margin-bottom:14px;" oninput="renderQuoteLog()">
+    <div id="quoteLogList"></div>
+  </div>
 </div>
 
 <script>
@@ -374,6 +379,7 @@
     document.getElementById('tab-quote').classList.toggle('is-active', tab === 'quote');
     document.getElementById('tab-recent').classList.toggle('is-active', tab === 'recent');
     if (tab === 'recent' && typeof renderInvoiceLog === 'function') renderInvoiceLog();
+    if (tab === 'recent' && typeof renderQuoteLog === 'function') renderQuoteLog();
   }
 
   const GEN_TAB_ORDER = ['invoice', 'quote', 'recent'];
@@ -962,6 +968,8 @@
         jobRefTitle: invoiceEntry.jobRefTitle || '',
         origin: 'invoice',
         invoiceId: invoiceEntry.id,
+        createdBy: invoiceEntry.generatedBy,
+        lastEditedBy: invoiceEntry.generatedBy,
       });
       localStorage.setItem(INCOME_LOG_KEY, JSON.stringify(list));
       if (typeof scheduleSync === 'function') scheduleSync();
@@ -1015,8 +1023,36 @@
       total: totals.total,
       jobRefId: jobRefId || '',
       jobRefTitle,
+      generatedBy: (typeof getCurrentUserEmail === 'function') ? getCurrentUserEmail() : null,
     });
     saveQuoteLog(list);
+    if (typeof renderQuoteLog === 'function') renderQuoteLog();
+  }
+
+  function renderQuoteLog() {
+    const searchTerm = (document.getElementById('quoteLogSearch')?.value || '').trim().toLowerCase();
+    let log = [...loadQuoteLog()].sort((a, b) => b.id - a.id);
+    if (searchTerm) {
+      log = log.filter(q =>
+        (q.clientName || '').toLowerCase().includes(searchTerm) ||
+        (q.quoteNumber || '').toLowerCase().includes(searchTerm)
+      );
+    }
+    const container = document.getElementById('quoteLogList');
+    if (!container) return;
+    if (log.length === 0) {
+      container.innerHTML = searchTerm
+        ? '<div class="empty-state-small">No quotes match "' + escapeHtml(searchTerm) + '".</div>'
+        : '<div class="empty-state-small">No quotes generated yet.</div>';
+      return;
+    }
+    container.innerHTML = log.map(q => `
+      <div class="contract-log-item" data-quote-id="${q.id}">
+        <div>
+          <div class="contract-log-title">${personDot(q.generatedBy)}${escapeHtml(q.clientName || '(no name)')}</div>
+          <div class="contract-log-meta">#${escapeHtml(q.quoteNumber || '')} &middot; ${escapeHtml(q.date || '')} &middot; ${money(q.total)}${q.jobRefTitle ? ' &middot; ' + escapeHtml(q.jobRefTitle) : ''}</div>
+        </div>
+      </div>`).join('');
   }
 
   let quoteGenerationInProgress = false;
