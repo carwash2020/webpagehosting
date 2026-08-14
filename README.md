@@ -74,7 +74,10 @@ Two things on this specific repo have caused real, hours-long confusion before. 
 
 ## Backend
 
-The internal tools sync through a **separate Supabase project belonging to Triple H only** — never shared with any other business. See `DISASTER-RECOVERY-AND-RESTORE-GUIDE.md` at the repo root for the complete setup (every table, every bucket, every SQL statement).
+The internal tools sync through a **separate Supabase project belonging to Triple H only** — never shared with any other business. See `DISASTER_RECOVERY.md` at the repo root for incident runbooks, and `sql/` + `edge-functions/` for schema history and the deployed Edge Function's source.
+
+- `sql/` — every schema/migration/fix file actually run against Supabase, kept as a record of what was done and why. Not meant to be blindly re-run; read each file's own comments first, since some are idempotent and some (the duplicate-cleanup fixes) are meant to run exactly once.
+- `edge-functions/send-push-index.ts` — snapshot of the deployed `send-push` Edge Function's source, for reference/disaster-recovery. Restoring it for real requires the Supabase CLI plus re-adding the `VAPID_PUBLIC_KEY`/`VAPID_PRIVATE_KEY` secrets in Supabase's own dashboard — those keys are deliberately never stored in this repo.
 
 ## ⚠️ Do not delete
 
@@ -84,12 +87,10 @@ The internal tools sync through a **separate Supabase project belonging to Tripl
 
 ## Known open items
 
-`DISASTER-RECOVERY-AND-RESTORE-GUIDE.md`, referenced above, does not
-actually exist in this repo despite this README pointing to it as if it
-were at the root. A full backup zip (including a DR guide) was generated
-and delivered directly to Connor in an earlier session, but it was never
-committed here. If that guide still matters, it needs to be added to
-this repo for real rather than just referenced.
+`DISASTER_RECOVERY.md`, `sql/`, and `edge-functions/` are now committed
+at the repo root as of 2026-08-14 -- they previously existed only as a
+backup zip delivered directly to Connor, referenced here as if they were
+already in the repo, but never actually were. That gap is closed.
 
 ## Deploying changes
 
