@@ -102,6 +102,11 @@
   </div>
   <p class="hub-sub">Site diagnostics and maintenance utilities. Only visible on this account &mdash; see auth.js if that ever needs to change.</p>
 
+  <div style="margin-bottom:20px;">
+    <button class="secondary-btn" id="fullHealthCheckBtn" onclick="runFullHealthCheck()">Run full health check</button>
+    <div id="fullHealthCheckResults" style="margin-top:12px;"></div>
+  </div>
+
   <div class="dev-panels-grid">
 
   <div class="dev-panel dev-panel-wide">
@@ -196,6 +201,7 @@
       <h2>Content edit history</h2>
       <button class="dev-info-bubble" onclick="openDevInfo('contenthistory')" aria-label="What does this do?" title="What does this do?">?</button>
     </div>
+    <button class="secondary-btn" style="margin-bottom:12px;" onclick="exportContentBackup()">Download backup (JSON)</button>
     <div id="contentHistoryList" class="dev-scrollable-list"></div>
   </div>
 
@@ -271,7 +277,7 @@
       <button class="help-modal-close" onclick="devPasswordCancel()" aria-label="Close">&times;</button>
       <h3>Confirm dev password</h3>
       <div class="help-modal-body">
-        <p style="margin-bottom:14px;">This is a soft confirmation to catch an accidental save, not real protection against someone technically determined -- anyone who's already logged into Connor's account and views this page's source could bypass it. It exists to stop a stray tap or someone else picking up an unlocked phone.</p>
+        <p style="margin-bottom:14px;">This is a soft confirmation to catch an accidental save, not real protection against someone technically determined -- anyone who's already logged into Connor's account and views this page's source could bypass it. It exists to stop a stray tap or someone else picking up an unlocked phone. Only asked once per browser session -- closing the tab resets it.</p>
         <input type="password" id="devPasswordInput" placeholder="Dev password" style="width:100%; margin-bottom:12px;" onkeydown="if(event.key==='Enter') devPasswordSubmit();">
         <div class="form-footer">
           <button class="btn blue" onclick="devPasswordSubmit()">Confirm</button>
@@ -314,7 +320,7 @@
     },
     knownissues: {
       title: 'Known issues',
-      body: `<p>Real, still-open items from the most recent Supabase Security/Performance Advisor pass -- otherwise these only exist in chat history and the project skill, easy to lose track of. Check one off once it's actually resolved. This list is stored on this device only, not synced.</p>`,
+      body: `<p>Real, still-open items -- add a new one right from here with "+ Add issue", check one off once it's actually resolved, or delete it once it's no longer worth tracking. Synced across devices, so anything either account logs shows up for both.</p>`,
     },
     deploy: {
       title: 'Latest deploy',
@@ -326,7 +332,7 @@
     },
     contenthistory: {
       title: 'Content edit history',
-      body: `<p>Every change ever made to Site Content, the FAQ, or Terms &amp; Conditions -- what it was, what it became, who changed it, and when. The last 50 edits across all three, merged together.</p><p>This is written by a database trigger, not by this page's own save button -- so it's a real audit trail that would catch a change made any other way too, not just through this specific form.</p><p>The small colored dot shows who made it -- blue for Connor, pink for Steve.</p>`,
+      body: `<p>Every change ever made to Site Content, the FAQ, or Terms &amp; Conditions -- what it was, what it became, who changed it, and when. The last 50 edits across all three, merged together.</p><p>This is written by a database trigger, not by this page's own save button -- so it's a real audit trail that would catch a change made any other way too, not just through this specific form.</p><p>The small colored dot shows who made it -- blue for Connor, pink for Steve.</p><p>"Download backup" saves everything currently in all 3 content tables as one JSON file -- a safety net to grab before a big editing session, not an automatic backup.</p>`,
     },
     links: {
       title: 'Quick links',
@@ -376,6 +382,11 @@
   }
 
   async function confirmDevPassword() {
+    // Remembered for the rest of this browser session (sessionStorage,
+    // not localStorage -- clears automatically the moment the tab
+    // closes) so editing several things back-to-back doesn't mean
+    // re-typing the password every single time.
+    if (sessionStorage.getItem('th_dev_password_confirmed') === '1') return true;
     const entered = await showDevPasswordPrompt();
     if (entered === null) return false; // cancelled
     if (!entered) { showToast('Dev password required.', { type: 'error' }); return false; }
@@ -384,6 +395,7 @@
       showToast('Incorrect dev password.', { type: 'error' });
       return false;
     }
+    sessionStorage.setItem('th_dev_password_confirmed', '1');
     return true;
   }
 
@@ -523,10 +535,75 @@
     const historyCount = (typeof loadSyncHistory === 'function') ? loadSyncHistory().length : 0;
     el.innerHTML =
       kvRow('Logged in as', email || '(no valid session)') +
+      '<div class="dev-kv-row"><span class="k">Supabase right now</span><span class="v" id="supabaseLiveStatus">Checking...</span></div>' +
       kvRow('Last sync attempt', lastSync ? (lastSync.type + ' -- ' + (lastSync.ok ? 'ok' : 'failed: ' + lastSync.error) + ' -- ' + new Date(lastSync.time).toLocaleString()) : 'none recorded yet') +
       (historyCount ? '<div style="margin-top:8px;"><a href="#" onclick="event.preventDefault(); toggleSyncHistory();" style="color:var(--orange-light); font-size:13px;">History (' + historyCount + ') <span id="syncHistoryArrow">&#9662;</span></a></div>' +
         '<div id="syncHistoryList" style="display:none; max-height:220px; overflow-y:auto; margin-top:8px; border-top:1px solid var(--border); padding-top:6px;"></div>'
       : '');
+    checkSupabaseReachability();
+  }
+
+  // A real, right-now check -- distinct from "Last sync attempt" above,
+  // which could be hours old. A small, real round-trip against actual
+  // data (not just a bare domain ping) so this catches an RLS/config
+  // problem too, not only "is the domain up".
+  // Runs the 4 most meaningful checks together and reports one summary,
+  // rather than needing to visit every panel individually to sanity-
+  // check the whole site at once. Each check still renders into its own
+  // panel exactly as it always did -- this reads the result back out of
+  // each panel's own DOM afterward rather than duplicating any check
+  // logic, so there's only ever one place each actual check lives.
+  async function runFullHealthCheck() {
+    const btn = document.getElementById('fullHealthCheckBtn');
+    const results = document.getElementById('fullHealthCheckResults');
+    btn.disabled = true;
+    btn.textContent = 'Checking...';
+    results.innerHTML = '<p class="tool-sub">Running consistency check, service worker status, Supabase reachability, and latest deploy...</p>';
+    try {
+      await Promise.all([
+        (typeof runLiveConsistencyCheck === 'function') ? runLiveConsistencyCheck() : Promise.resolve(),
+        (typeof renderServiceWorkerInfo === 'function') ? renderServiceWorkerInfo() : Promise.resolve(),
+        (typeof checkSupabaseReachability === 'function') ? checkSupabaseReachability() : Promise.resolve(),
+        (typeof renderDeployStatus === 'function') ? renderDeployStatus() : Promise.resolve(),
+      ]);
+
+      const issues = [];
+      const consistencyFails = document.querySelectorAll('#consistencyResults .dev-check-status.fail').length;
+      if (consistencyFails > 0) issues.push(consistencyFails + ' tool page check' + (consistencyFails === 1 ? '' : 's') + ' failed (see Live Consistency Check)');
+
+      const supabaseStatus = document.getElementById('supabaseLiveStatus');
+      if (supabaseStatus && supabaseStatus.textContent.includes('Unreachable')) issues.push('Supabase is unreachable right now');
+      else if (supabaseStatus && supabaseStatus.textContent.includes('HTTP')) issues.push('Supabase responded with an error (see Session & Sync)');
+
+      const deployStatusEl = document.querySelector('#deployStatus .dev-check-status');
+      if (deployStatusEl && deployStatusEl.classList.contains('fail')) issues.push('Latest deploy did not pass (see Latest Deploy)');
+
+      results.innerHTML = issues.length
+        ? '<div class="dev-check-row"><div>' + issues.map(i => escapeHtml(i)).join('<br>') + '</div><span class="dev-check-status fail">' + issues.length + ' ISSUE' + (issues.length === 1 ? '' : 'S') + '</span></div>'
+        : '<div class="dev-check-row"><div>Consistency check, service worker, Supabase, and latest deploy all look good.</div><span class="dev-check-status pass">ALL CLEAR</span></div>';
+    } catch (e) {
+      results.innerHTML = '<p class="tool-sub">Something went wrong running the full check: ' + escapeHtml(e.message || String(e)) + '</p>';
+    } finally {
+      btn.disabled = false;
+      btn.textContent = 'Run full health check';
+    }
+  }
+
+  async function checkSupabaseReachability() {
+    const el = document.getElementById('supabaseLiveStatus');
+    if (!el) return;
+    const start = Date.now();
+    try {
+      const res = await fetchWithTimeout(SUPABASE_URL + '/rest/v1/site_content?select=key&limit=1', 5000, {
+        headers: { 'apikey': SUPABASE_ANON_KEY },
+      });
+      const ms = Date.now() - start;
+      el.textContent = res.ok ? ('Connected (' + ms + 'ms)') : ('Reachable, but HTTP ' + res.status);
+      el.style.color = res.ok ? 'var(--blue-light)' : '#e05555';
+    } catch (e) {
+      el.textContent = 'Unreachable right now';
+      el.style.color = '#e05555';
+    }
   }
 
   function toggleSyncHistory() {
@@ -705,6 +782,40 @@
     const color = PERSON_DOT_COLORS[(email || '').toLowerCase()];
     if (!color) return '';
     return '<span style="display:inline-block; width:7px; height:7px; border-radius:50%; background:' + color + '; margin-right:6px; vertical-align:middle;" title="' + escapeHtml(email) + '"></span>';
+  }
+
+  // Downloads everything from the 3 content tables as one JSON file --
+  // a safety net to grab before a big editing session, not an
+  // automatic backup system. Read-only (no dev password needed, this
+  // never writes anything).
+  async function exportContentBackup() {
+    try {
+      if (typeof ensureFreshToken === 'function') await ensureFreshToken();
+      const headers = { 'apikey': SUPABASE_ANON_KEY, 'Authorization': 'Bearer ' + getAuthToken() };
+      const [contentRes, faqRes, termsRes] = await Promise.all([
+        fetchWithTimeout(SUPABASE_URL + '/rest/v1/site_content?select=key,value', 8000, { headers }),
+        fetchWithTimeout(SUPABASE_URL + '/rest/v1/site_faq?select=question,answer,sort_order&order=sort_order.asc', 8000, { headers }),
+        fetchWithTimeout(SUPABASE_URL + '/rest/v1/site_terms?select=heading,body,sort_order&order=sort_order.asc', 8000, { headers }),
+      ]);
+      const backup = {
+        exportedAt: new Date().toISOString(),
+        site_content: contentRes.ok ? await contentRes.json() : [],
+        site_faq: faqRes.ok ? await faqRes.json() : [],
+        site_terms: termsRes.ok ? await termsRes.json() : [],
+      };
+      const blob = new Blob([JSON.stringify(backup, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'site-content-backup-' + new Date().toISOString().slice(0, 10) + '.json';
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      showToast('Backup downloaded.');
+    } catch (e) {
+      showToast('Backup failed: ' + (e.message || String(e)), { type: 'error' });
+    }
   }
 
   async function renderContentHistory() {
@@ -1146,41 +1257,92 @@
   // otherwise these only exist in chat history and the project skill,
   // easy to lose track of. Checked state is per-device (localStorage),
   // not synced -- this is a personal reminder list, not shared data.
-  const KNOWN_ISSUES = [
+  // Real, still-open items from Supabase Advisor audits, PLUS anything
+  // either account has logged since. Migrated from a hardcoded array
+  // to a real synced list (th_known_issues, via sync.js) so both
+  // accounts can add a new one from right here and see each other's --
+  // the original version only Connor could extend, by editing this file.
+  const KNOWN_ISSUES_SEED = [
     {
       id: 'th-leads-select-policy',
       title: 'th_leads SELECT policy never verified',
       detail: 'Flagged by Supabase Advisor as "RLS Policy Always True." The actual USING expression was never obtained -- if it really does evaluate to always-true, every lead (name, phone, message) is readable by anyone with the site\u2019s public anon key. Database \u2192 Policies \u2192 "Only logged-in can view or manage leads" \u2192 Edit policy.',
+      done: false,
     },
     {
       id: 'auth-rls-init-plan',
       title: 'Auth RLS Initialization Plan wrapping',
       detail: 'workspace_sync, th_job_photos, push_subscriptions, notification_log, th_leads all have policies calling auth.uid()/auth.role() unwrapped. Performance-only, not urgent -- wrap each in (select ...) whenever convenient.',
+      done: false,
     },
   ];
-  const KNOWN_ISSUES_KEY = 'th_dev_known_issues_done';
+  const KNOWN_ISSUES_KEY = 'th_known_issues';
 
-  function loadKnownIssuesDone() {
-    try { return JSON.parse(localStorage.getItem(KNOWN_ISSUES_KEY) || '{}'); } catch (e) { return {}; }
+  function loadKnownIssues() {
+    let list;
+    try { list = JSON.parse(localStorage.getItem(KNOWN_ISSUES_KEY) || 'null'); } catch (e) { list = null; }
+    if (!Array.isArray(list)) {
+      // First time this device has ever loaded this -- seed it with
+      // the 2 originally-known items so they're not lost, and so
+      // there's something real to look at rather than an empty list.
+      list = KNOWN_ISSUES_SEED.map(i => Object.assign({}, i));
+      localStorage.setItem(KNOWN_ISSUES_KEY, JSON.stringify(list));
+    }
+    return list;
+  }
+
+  function saveKnownIssues(list) {
+    localStorage.setItem(KNOWN_ISSUES_KEY, JSON.stringify(list));
+    if (typeof scheduleSync === 'function') scheduleSync();
   }
 
   function renderKnownIssues() {
     const el = document.getElementById('knownIssuesList');
-    const done = loadKnownIssuesDone();
-    el.innerHTML = KNOWN_ISSUES.map(issue => {
-      const isDone = !!done[issue.id];
+    const issues = loadKnownIssues();
+    el.innerHTML = (issues.length ? issues.map(issue => {
+      const isDone = !!issue.done;
       return '<div class="dev-issue-row' + (isDone ? ' is-done' : '') + '">' +
         '<input type="checkbox" ' + (isDone ? 'checked' : '') + ' onchange="toggleKnownIssue(\'' + issue.id + '\')">' +
-        '<div><div class="dev-issue-title">' + escapeHtml(issue.title) + '</div>' +
-        '<div class="dev-issue-detail">' + escapeHtml(issue.detail) + '</div></div></div>';
-    }).join('');
+        '<div style="flex:1;"><div class="dev-issue-title">' + personDot(issue.createdBy) + escapeHtml(issue.title) + '</div>' +
+        '<div class="dev-issue-detail">' + escapeHtml(issue.detail || '') + '</div></div>' +
+        '<button class="dev-info-bubble dev-danger-btn" title="Delete" onclick="deleteKnownIssue(\'' + issue.id + '\')">&#128465;</button>' +
+        '</div>';
+    }).join('') : '<p class="tool-sub">No known issues logged.</p>') +
+    '<div style="margin-top:12px; display:flex; gap:8px; flex-wrap:wrap;">' +
+      '<input type="text" id="newIssueTitle" placeholder="Issue title" style="flex:1; min-width:160px;">' +
+      '<button class="secondary-btn" onclick="addKnownIssue()">+ Add issue</button>' +
+    '</div>';
   }
 
   function toggleKnownIssue(id) {
-    const done = loadKnownIssuesDone();
-    done[id] = !done[id];
-    localStorage.setItem(KNOWN_ISSUES_KEY, JSON.stringify(done));
+    const issues = loadKnownIssues();
+    const issue = issues.find(i => i.id === id);
+    if (issue) issue.done = !issue.done;
+    saveKnownIssues(issues);
     renderKnownIssues();
+  }
+
+  function deleteKnownIssue(id) {
+    const issues = loadKnownIssues().filter(i => i.id !== id);
+    saveKnownIssues(issues);
+    renderKnownIssues();
+  }
+
+  function addKnownIssue() {
+    const input = document.getElementById('newIssueTitle');
+    const title = (input.value || '').trim();
+    if (!title) { showToast('Give the issue a title first.', { type: 'error' }); return; }
+    const issues = loadKnownIssues();
+    issues.push({
+      id: 'issue-' + Date.now() + '-' + Math.random().toString(36).slice(2, 6),
+      title,
+      detail: '',
+      done: false,
+      createdBy: (typeof getCurrentUserEmail === 'function') ? getCurrentUserEmail() : null,
+    });
+    saveKnownIssues(issues);
+    renderKnownIssues();
+    showToast('Issue added.');
   }
 
   // Pulls the most recent workflow run from GitHub's public API --

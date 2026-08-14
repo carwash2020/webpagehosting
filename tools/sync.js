@@ -73,6 +73,11 @@ const SYNC_DATA_KEYS = [
   // self-capping (see mergeClientErrorLog below), so this doesn't risk
   // repeating the payload-size lesson from adding the Wiki data above.
   'th_client_errors',
+  // Known Issues checklist -- migrated from a hardcoded array to a
+  // real synced list so both accounts can add/check off items and see
+  // each other's, rather than only Connor being able to log a new one
+  // (by editing this file).
+  'th_known_issues',
   'th_setaside_rate',
   // Runway Dashboard's own data -- personal budget, business-month
   // rollups, emergency fund, and the readiness checklist. Deliberately
@@ -143,6 +148,7 @@ const MERGE_KEY_FIELD = {
   th_price_reference: 'id',
   th_parts_reference_units: 'id',
   th_client_errors: 'id',
+  th_known_issues: 'id',
   'rd_personal-expenses': 'id',
   'rd_personal-income': 'id',
   'rd_business-months': 'month',
