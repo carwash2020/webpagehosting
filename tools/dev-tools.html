@@ -20,7 +20,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta name="robots" content="noindex, nofollow">
 <title>Dev Tools · Triple H Enterprises</title>
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data:; connect-src 'self' https://*.supabase.co wss://*.supabase.co https://api.github.com; frame-src 'none'; object-src 'none'; base-uri 'self'; frame-ancestors 'none';">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data:; connect-src 'self' https://*.supabase.co wss://*.supabase.co https://api.github.com; frame-src https://hetrixtools.com; object-src 'none'; base-uri 'self'; frame-ancestors 'none';">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="/styles.css?v=202608112330">
@@ -240,6 +240,14 @@
     </div>
   </div>
 
+  <div class="dev-panel dev-panel-wide">
+    <div class="dev-panel-heading">
+      <h2>Uptime status</h2>
+      <button class="dev-info-bubble" onclick="openDevInfo('uptimestatus')" aria-label="What does this do?" title="What does this do?">?</button>
+    </div>
+    <iframe src="https://hetrixtools.com/r/26257798f90aaef78a9fff44cad7886d/" style="width:100%; height:340px; border:1px solid var(--border); border-radius:8px; background:#fff;" loading="lazy" title="Uptime status"></iframe>
+  </div>
+
   <div class="dev-panel">
     <div class="dev-panel-heading">
       <h2>Quick links</h2>
@@ -277,6 +285,7 @@
           <li><strong>Content edit history</strong> &mdash; every past change to those fields, who made it, and when -- a real audit trail from a database trigger.</li>
           <li><strong>FAQ editor</strong> &mdash; add, edit, reorder, or remove questions on the site's FAQ section directly.</li>
           <li><strong>Terms &amp; Conditions editor</strong> &mdash; add, edit, reorder, or remove sections of the Terms document directly.</li>
+          <li><strong>Uptime status</strong> &mdash; the live HetrixTools status page, embedded right here.</li>
           <li><strong>Quick links</strong> &mdash; the repo, its Actions history, the Supabase dashboard, the uptime monitors, and the live site.</li>
         </ul>
       </div>
@@ -348,6 +357,10 @@
     contenthistory: {
       title: 'Content edit history',
       body: `<p>Every change ever made to Site Content, the FAQ, or Terms &amp; Conditions -- what it was, what it became, who changed it, and when. The last 50 edits across all three, merged together.</p><p>This is written by a database trigger, not by this page's own save button -- so it's a real audit trail that would catch a change made any other way too, not just through this specific form.</p><p>The small colored dot shows who made it -- blue for Connor, pink for Steve.</p><p>"Restore this value" puts an old value back -- for a deleted FAQ/Terms item, it re-adds it as a new entry at the end of the list rather than in its original spot, since the original no longer exists to restore into directly.</p><p>"Download backup" saves everything currently in all 3 content tables as one JSON file -- a safety net to grab before a big editing session, not an automatic backup.</p>`,
+    },
+    uptimestatus: {
+      title: 'Uptime status',
+      body: `<p>Live, embedded status from HetrixTools -- the same "Supabase Keep Alive" and "Triple H Main Ping" monitors set up alongside this session, shown right here instead of needing to open a separate dashboard tab.</p><p>This is a genuinely public page (no login needed to view it), embedded via iframe.</p>`,
     },
     links: {
       title: 'Quick links',
