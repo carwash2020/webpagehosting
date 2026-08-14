@@ -172,6 +172,15 @@
     <button class="secondary-btn" style="margin-top:12px;" onclick="clearClientErrorLog()">Clear log</button>
   </div>
 
+  <div class="dev-panel">
+    <div class="dev-panel-heading">
+      <h2>Push notification test</h2>
+      <button class="dev-info-bubble" onclick="openDevInfo('pushtest')" aria-label="What does this do?" title="What does this do?">?</button>
+    </div>
+    <div id="pushTestResult"></div>
+    <button class="secondary-btn" style="margin-top:12px;" id="pushTestBtn" onclick="runPushNotificationTest()">Send test lead</button>
+  </div>
+
   <div class="dev-panel dev-panel-wide">
     <div class="dev-panel-heading">
       <h2>Known issues</h2>
@@ -257,7 +266,8 @@
           <li><strong>Session &amp; sync</strong> &mdash; who's logged in on this device, the last sync result, and manual Push/Pull buttons to force a sync right now.</li>
           <li><strong>Local data snapshot</strong> &mdash; every th_/rd_ key in this browser, its size, and an expandable raw view of its actual contents. This device only.</li>
           <li><strong>Service worker &amp; cache</strong> &mdash; registration status, what's cached, and a one-click clear if something seems stale.</li>
-          <li><strong>Client errors</strong> &mdash; the last 20 JavaScript errors captured on this device, across every tool page.</li>
+          <li><strong>Client errors</strong> &mdash; the last 20 JavaScript errors across every tool page, synced across both devices.</li>
+          <li><strong>Push notification test</strong> &mdash; sends a test lead through the real notification pipeline, cleaned up automatically after.</li>
           <li><strong>Appliance Wiki health</strong> &mdash; quick counts: brands, models, issues, and the verified/logged-by-you split.</li>
           <li><strong>Device info</strong> &mdash; browser, screen size, and online status &mdash; useful when something behaves differently on phone vs. computer.</li>
           <li><strong>Known issues</strong> &mdash; still-open items from the last security audit, checkable so they don't get lost.</li>
@@ -316,7 +326,11 @@
     },
     clienterrors: {
       title: 'Client errors',
-      body: `<p>The last 20 JavaScript errors that happened on ANY tool page on this device, captured automatically in the background (no action needed to log them). Shows the error message, which page it happened on, and when.</p><p>This is device-local, not synced -- it helps whoever's holding the device something broke on, right then. It does not let you see what broke on someone else's phone remotely.</p>`,
+      body: `<p>The last 20 JavaScript errors that happened on ANY tool page, on either device, captured automatically in the background (no action needed to log them). Shows the error message, which page it happened on, who was on it, and when.</p><p>Synced across devices -- an error on Steve's phone shows up here on Connor's device too, once the next sync happens.</p>`,
+    },
+    pushtest: {
+      title: 'Push notification test',
+      body: `<p>Inserts a test lead using the exact same path the real contact form uses (not a direct call to the Send-Push function itself, which needs a service_role key that must never sit in this page's JavaScript). That insert should trigger the same server-side notification pipeline a real lead does.</p><p>This can't directly confirm a push was actually received on any device -- only that the insert (and whatever fires from it server-side) ran without an error. The test lead gets deleted automatically a few seconds later either way.</p>`,
     },
     knownissues: {
       title: 'Known issues',
@@ -332,7 +346,7 @@
     },
     contenthistory: {
       title: 'Content edit history',
-      body: `<p>Every change ever made to Site Content, the FAQ, or Terms &amp; Conditions -- what it was, what it became, who changed it, and when. The last 50 edits across all three, merged together.</p><p>This is written by a database trigger, not by this page's own save button -- so it's a real audit trail that would catch a change made any other way too, not just through this specific form.</p><p>The small colored dot shows who made it -- blue for Connor, pink for Steve.</p><p>"Download backup" saves everything currently in all 3 content tables as one JSON file -- a safety net to grab before a big editing session, not an automatic backup.</p>`,
+      body: `<p>Every change ever made to Site Content, the FAQ, or Terms &amp; Conditions -- what it was, what it became, who changed it, and when. The last 50 edits across all three, merged together.</p><p>This is written by a database trigger, not by this page's own save button -- so it's a real audit trail that would catch a change made any other way too, not just through this specific form.</p><p>The small colored dot shows who made it -- blue for Connor, pink for Steve.</p><p>"Restore this value" puts an old value back -- for a deleted FAQ/Terms item, it re-adds it as a new entry at the end of the list rather than in its original spot, since the original no longer exists to restore into directly.</p><p>"Download backup" saves everything currently in all 3 content tables as one JSON file -- a safety net to grab before a big editing session, not an automatic backup.</p>`,
     },
     links: {
       title: 'Quick links',
@@ -831,26 +845,26 @@
       // audit trail built for them.
       const [contentRes, faqRes, termsRes] = await Promise.all([
         fetchWithTimeout(SUPABASE_URL + '/rest/v1/site_content_history?select=key,old_value,new_value,changed_by,changed_at&order=changed_at.desc&limit=50', 6000, { headers }),
-        fetchWithTimeout(SUPABASE_URL + '/rest/v1/site_faq_history?select=action,question,old_answer,new_answer,changed_by,changed_at&order=changed_at.desc&limit=50', 6000, { headers }),
-        fetchWithTimeout(SUPABASE_URL + '/rest/v1/site_terms_history?select=action,heading,old_body,new_body,changed_by,changed_at&order=changed_at.desc&limit=50', 6000, { headers }),
+        fetchWithTimeout(SUPABASE_URL + '/rest/v1/site_faq_history?select=action,faq_id,question,old_answer,new_answer,changed_by,changed_at&order=changed_at.desc&limit=50', 6000, { headers }),
+        fetchWithTimeout(SUPABASE_URL + '/rest/v1/site_terms_history?select=action,term_id,heading,old_body,new_body,changed_by,changed_at&order=changed_at.desc&limit=50', 6000, { headers }),
       ]);
 
       const rows = [];
       if (contentRes.ok) {
         (await contentRes.json()).forEach(r => rows.push({
-          source: 'Site content', label: r.key, old_value: r.old_value, new_value: r.new_value,
+          table: 'content', source: 'Site content', label: r.key, old_value: r.old_value, new_value: r.new_value,
           changed_by: r.changed_by, changed_at: r.changed_at, action: 'updated',
         }));
       }
       if (faqRes.ok) {
         (await faqRes.json()).forEach(r => rows.push({
-          source: 'FAQ', label: r.question, old_value: r.old_answer, new_value: r.new_answer,
+          table: 'faq', rowId: r.faq_id, source: 'FAQ', label: r.question, old_value: r.old_answer, new_value: r.new_answer,
           changed_by: r.changed_by, changed_at: r.changed_at, action: r.action,
         }));
       }
       if (termsRes.ok) {
         (await termsRes.json()).forEach(r => rows.push({
-          source: 'Terms', label: r.heading, old_value: r.old_body, new_value: r.new_body,
+          table: 'terms', rowId: r.term_id, source: 'Terms', label: r.heading, old_value: r.old_body, new_value: r.new_body,
           changed_by: r.changed_by, changed_at: r.changed_at, action: r.action,
         }));
       }
@@ -861,19 +875,90 @@
       }
 
       rows.sort((a, b) => new Date(b.changed_at) - new Date(a.changed_at));
-      el.innerHTML = rows.slice(0, 50).map(r => {
+      window._contentHistoryRows = rows.slice(0, 50); // stashed so restoreHistoryEntry can look up by index without re-fetching
+      el.innerHTML = window._contentHistoryRows.map((r, i) => {
         const detail = r.action === 'delete'
           ? 'Deleted: ' + escapeHtml(r.old_value || '')
           : r.action === 'insert'
           ? 'Added: ' + escapeHtml(r.new_value || '')
           : escapeHtml(r.old_value || '(blank)') + ' &rarr; ' + escapeHtml(r.new_value || '(blank)');
+        // No restore offered for a plain "insert" -- there's no old
+        // value to go back to; undoing an insert is a delete, which
+        // is already what each editor's own delete button is for.
+        const canRestore = r.action !== 'insert' && r.old_value != null;
         return '<div class="dev-check-row" style="align-items:flex-start;"><div>' +
           '<div>' + personDot(r.changed_by) + '<strong>' + escapeHtml(r.source) + ': ' + escapeHtml(r.label) + '</strong> &mdash; ' + escapeHtml(r.changed_by || 'unknown') + ' &mdash; ' + new Date(r.changed_at).toLocaleString() + '</div>' +
           '<div class="dev-check-detail">' + detail + '</div>' +
+          (canRestore ? '<button class="small-btn" style="margin-top:6px;" onclick="restoreHistoryEntry(' + i + ')">Restore this value</button>' : '') +
           '</div></div>';
       }).join('');
     } catch (e) {
       el.innerHTML = '<p class="tool-sub">Could not load history: ' + escapeHtml(e.message || String(e)) + '</p>';
+    }
+  }
+
+  // Restores a past value from Content Edit History. Site Content is
+  // simple (upsert by key). FAQ/Terms: an 'update' restores in place
+  // via the row's own id (stored in the history entry specifically for
+  // this); a 'delete' re-inserts as a new row at the end of the list
+  // (its original position isn't preserved -- reorder afterward via
+  // that editor if it matters), since the original row no longer
+  // exists to update.
+  async function restoreHistoryEntry(index) {
+    const entry = (window._contentHistoryRows || [])[index];
+    if (!entry) return;
+    if (!(await confirmDevPassword())) return;
+    try {
+      if (typeof ensureFreshToken === 'function') await ensureFreshToken();
+      const headers = {
+        'Content-Type': 'application/json',
+        'apikey': SUPABASE_ANON_KEY,
+        'Authorization': 'Bearer ' + getAuthToken(),
+      };
+
+      if (entry.table === 'content') {
+        const res = await fetchWithTimeout(SUPABASE_URL + '/rest/v1/site_content?on_conflict=key', 8000, {
+          method: 'POST',
+          headers: Object.assign({ 'Prefer': 'resolution=merge-duplicates' }, headers),
+          body: JSON.stringify([{ key: entry.label, value: entry.old_value }]),
+        });
+        if (!res.ok) throw new Error('Restore failed (HTTP ' + res.status + ')');
+      } else if (entry.table === 'faq' || entry.table === 'terms') {
+        const tableName = entry.table === 'faq' ? 'site_faq' : 'site_terms';
+        const bodyField = entry.table === 'faq' ? 'answer' : 'body';
+        const labelField = entry.table === 'faq' ? 'question' : 'heading';
+
+        if (entry.action === 'delete') {
+          // Row no longer exists -- re-insert fresh at the end of the list.
+          const listRes = await fetchWithTimeout(SUPABASE_URL + '/rest/v1/' + tableName + '?select=sort_order&order=sort_order.desc&limit=1', 6000, { headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': headers.Authorization } });
+          const listData = listRes.ok ? await listRes.json() : [];
+          const nextSort = (listData[0] && typeof listData[0].sort_order === 'number') ? listData[0].sort_order + 1 : 0;
+          const insertBody = {};
+          insertBody[labelField] = entry.label;
+          insertBody[bodyField] = entry.old_value;
+          insertBody.sort_order = nextSort;
+          const res = await fetchWithTimeout(SUPABASE_URL + '/rest/v1/' + tableName, 8000, {
+            method: 'POST', headers, body: JSON.stringify([insertBody]),
+          });
+          if (!res.ok) throw new Error('Restore (re-insert) failed (HTTP ' + res.status + ')');
+        } else {
+          // 'update' -- the row still exists, restore it in place by id.
+          if (!entry.rowId) throw new Error('Missing row id -- cannot restore safely.');
+          const updateBody = {};
+          updateBody[bodyField] = entry.old_value;
+          const res = await fetchWithTimeout(SUPABASE_URL + '/rest/v1/' + tableName + '?id=eq.' + entry.rowId, 8000, {
+            method: 'PATCH', headers, body: JSON.stringify(updateBody),
+          });
+          if (!res.ok) throw new Error('Restore failed (HTTP ' + res.status + ')');
+        }
+      }
+      showToast('Restored. Live on the site within a few seconds.');
+      renderContentHistory();
+      if (entry.table === 'content' && typeof renderSiteContentForm === 'function') renderSiteContentForm();
+      if (entry.table === 'faq' && typeof renderFaqEditor === 'function') renderFaqEditor();
+      if (entry.table === 'terms' && typeof renderTermsEditor === 'function') renderTermsEditor();
+    } catch (e) {
+      showToast(e.message || String(e), { type: 'error' });
     }
   }
 
@@ -1242,6 +1327,75 @@
     localStorage.removeItem('th_client_errors');
     renderClientErrorLog();
     showToast('Cleared.');
+  }
+
+  // Tests the REAL end-to-end push pipeline (a lead insert triggering
+  // notify_new_lead, which calls the Send-Push edge function server-
+  // side) rather than calling Send-Push directly -- that function
+  // needs a service_role key to invoke, and that credential must never
+  // go into client-side JS (this project already learned that lesson
+  // the hard way once, after one leaked into a saved SQL query).
+  // Inserting via the anon key, exactly like the real public contact
+  // form does, is the only safe way to trigger this from a browser.
+  const PUSH_TEST_SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNzdmZxZGp1b2J5bGdhZmdvbGhvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODUzNTQ3MjcsImV4cCI6MjEwMDkzMDcyN30.6GlvK-DfXf2lppS1kciZtsl4wHOpZz_yKtwsS1lyjrs';
+
+  async function runPushNotificationTest() {
+    if (!(await confirmDevPassword())) return;
+    const btn = document.getElementById('pushTestBtn');
+    const resultEl = document.getElementById('pushTestResult');
+    btn.disabled = true;
+    btn.textContent = 'Sending...';
+    resultEl.innerHTML = '<p class="tool-sub">Inserting a test lead the same way the real contact form does...</p>';
+    let testLeadId = null;
+    try {
+      const insertRes = await fetchWithTimeout(SUPABASE_URL + '/rest/v1/th_leads', 8000, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'apikey': PUSH_TEST_SUPABASE_ANON_KEY,
+          'Authorization': 'Bearer ' + PUSH_TEST_SUPABASE_ANON_KEY,
+          'Prefer': 'return=representation',
+        },
+        body: JSON.stringify([{
+          name: 'TEST \u2014 Dev Tools push check',
+          phone: '0000000000',
+          email: '',
+          service: 'Dev Tools Test',
+          preferred_date: '',
+          preferred_time: '',
+          details: 'Automated test from Dev Tools to check the push notification pipeline. Safe to ignore -- this gets deleted automatically in a few seconds.',
+        }]),
+      });
+      if (!insertRes.ok) throw new Error('Could not insert the test lead (HTTP ' + insertRes.status + ')');
+      const inserted = await insertRes.json();
+      testLeadId = inserted && inserted[0] && inserted[0].id;
+
+      resultEl.innerHTML = '<p class="tool-sub">Test lead sent -- a push notification should arrive within a few seconds if the pipeline is working. This can\'t directly confirm it was received, only that the insert (and whatever it triggers server-side) actually ran. Cleaning up in a moment...</p>';
+
+      // Give the trigger + edge function + push delivery a few seconds
+      // before cleaning up -- deleting instantly could plausibly race
+      // ahead of the trigger reading the row, though in practice
+      // Postgres triggers fire synchronously within the same insert.
+      await new Promise(r => setTimeout(r, 4000));
+
+      if (testLeadId) {
+        if (typeof ensureFreshToken === 'function') await ensureFreshToken();
+        const delRes = await fetchWithTimeout(SUPABASE_URL + '/rest/v1/th_leads?id=eq.' + testLeadId, 8000, {
+          method: 'DELETE',
+          headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': 'Bearer ' + getAuthToken() },
+        });
+        resultEl.innerHTML = delRes.ok
+          ? '<p class="tool-sub">Test lead cleaned up. If no push arrived, check the Send-Push edge function logs in Supabase directly.</p>'
+          : '<p class="tool-sub" style="color:#e05555;">Test lead sent, but cleanup failed (HTTP ' + delRes.status + ') -- delete "TEST \u2014 Dev Tools push check" from the Leads inbox manually.</p>';
+      } else {
+        resultEl.innerHTML = '<p class="tool-sub" style="color:#e05555;">Test lead sent, but couldn\'t confirm its id to clean it up automatically -- look for "TEST \u2014 Dev Tools push check" in the Leads inbox and delete it manually.</p>';
+      }
+    } catch (e) {
+      resultEl.innerHTML = '<p class="tool-sub" style="color:#e05555;">' + escapeHtml(e.message || String(e)) + '</p>';
+    } finally {
+      btn.disabled = false;
+      btn.textContent = 'Send test lead';
+    }
   }
 
   function renderDeviceInfo() {
