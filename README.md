@@ -82,9 +82,14 @@ The internal tools sync through a **separate Supabase project belonging to Tripl
 - **`favicon.ico`** — must stay at repo root.
 - **`.nojekyll`** — must stay at repo root, with exactly that filename (dot included). See the warning at the top of this document.
 
-## Known open item
+## Known open items
 
-`index.html`'s homepage logo is still embedded as an inline base64 string in a `<script>` block, rather than referencing a plain external file the way the 5 landing pages and all the internal tools pages do. A real standalone file exists at `images/logo-signature.png` / `images/logo-signature-orange.png`, but the homepage doesn't reference it yet. This has been a known item across several rounds of work and is still genuinely unfixed — low priority, but worth doing in one pass eventually rather than leaving the homepage on a different pattern than every other page in this repo.
+`DISASTER-RECOVERY-AND-RESTORE-GUIDE.md`, referenced above, does not
+actually exist in this repo despite this README pointing to it as if it
+were at the root. A full backup zip (including a DR guide) was generated
+and delivered directly to Connor in an earlier session, but it was never
+committed here. If that guide still matters, it needs to be added to
+this repo for real rather than just referenced.
 
 ## Deploying changes
 
