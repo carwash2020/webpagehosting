@@ -1349,12 +1349,13 @@
     };
     const wasEditing = !!editingIncomeEntryId;
     let newId = null;
+    const currentUser = (typeof getCurrentUserEmail === 'function') ? getCurrentUserEmail() : null;
     if (wasEditing) {
       const idx = entries.findIndex(e => e.id === editingIncomeEntryId);
-      if (idx > -1) entries[idx] = { ...entries[idx], ...fields };
+      if (idx > -1) entries[idx] = { ...entries[idx], ...fields, lastEditedBy: currentUser || entries[idx].lastEditedBy };
     } else {
       newId = Date.now();
-      entries.push({ id: newId, ...fields, origin: 'manual' });
+      entries.push({ id: newId, ...fields, origin: 'manual', createdBy: currentUser, lastEditedBy: currentUser });
     }
     saveIncomeEntries(entries);
 
@@ -1470,7 +1471,7 @@
         <td>${e.date}</td>
         <td>${escapeHtml(e.source || '\u2014')}</td>
         <td>${e.jobRefTitle ? escapeHtml(e.jobRefTitle) : '\u2014'}</td>
-        <td>${escapeHtml(e.desc)}</td>
+        <td>${personDot(e.lastEditedBy)}${escapeHtml(e.desc)}</td>
         <td>${PAYMENT_LABEL[e.payment] || '\u2014'}</td>
         <td>${e.origin === 'invoice' ? '<span class="inline-note" style="margin:0;">Invoice</span>' : 'Manual'}</td>
         <td>$${e.amount.toFixed(2)}</td>
@@ -1601,6 +1602,13 @@
       receiptPath: existingReceiptPath || '',
       partNumber: type === 'mileage' ? '' : document.getElementById('entryPartNumber').value.trim(),
     };
+    // Same attribution pattern as jobs -- createdBy preserved across
+    // edits (carried over from the entry being replaced, since this
+    // entry object gets rebuilt fresh each time, not merged), lastEditedBy
+    // updates every save.
+    const currentUser = (typeof getCurrentUserEmail === 'function') ? getCurrentUserEmail() : null;
+    entry.createdBy = existingEntry ? existingEntry.createdBy : currentUser;
+    entry.lastEditedBy = currentUser;
     if (type === 'mileage') {
       entry.miles = parseFloat(document.getElementById('entryMiles').value) || 0;
       entry.amount = Math.round(entry.miles * getMileageRate() * 100) / 100;
@@ -1737,7 +1745,7 @@
         <td>${e.type === 'mileage' ? 'Mileage' : 'Expense'}</td>
         <td>${escapeHtml(e.vendor || '\u2014')}</td>
         <td>${e.jobRefTitle ? escapeHtml(e.jobRefTitle) : '\u2014'}</td>
-        <td>${escapeHtml(e.desc)}${e.partNumber ? `<div style="color:var(--text-dim); font-size:11.5px; margin-top:2px;">Part #: ${escapeHtml(e.partNumber)}</div>` : ''}</td>
+        <td>${personDot(e.lastEditedBy)}${escapeHtml(e.desc)}${e.partNumber ? `<div style="color:var(--text-dim); font-size:11.5px; margin-top:2px;">Part #: ${escapeHtml(e.partNumber)}</div>` : ''}</td>
         <td>${e.type === 'mileage' ? e.miles + ' mi' : '\u2014'}</td>
         <td>${PAYMENT_LABEL[e.payment] || '\u2014'}</td>
         <td>$${e.amount.toFixed(2)}</td>
