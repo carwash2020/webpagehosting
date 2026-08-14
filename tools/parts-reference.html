@@ -310,20 +310,9 @@
     return div.innerHTML;
   }
 
-  // Same subtle color-coded dot as Dev Tools' Content History panel --
-  // blue for Connor, pink for Steve. Only shows for a real, known
-  // account email; a manually-typed legacy name (from before real
-  // per-person logins existed) or anything unrecognized just gets no
-  // dot, rather than a wrong guess.
-  const PERSON_DOT_COLORS = {
-    'connor@triplehenterprisesllc.biz': '#7ec4ff',
-    'steve@triplehenterprisesllc.biz': '#f0a8c8',
-  };
-  function personDot(email) {
-    const color = PERSON_DOT_COLORS[(email || '').toLowerCase()];
-    if (!color) return '';
-    return '<span style="display:inline-block; width:7px; height:7px; border-radius:50%; background:' + color + '; margin-right:5px; vertical-align:middle;" title="' + escapeHtml(email) + '"></span>';
-  }
+  // personDot() now lives in tools-common.js (shared across all 4 tool
+  // pages that use it) -- see that file for details. Called bare here
+  // (no label) to match this page's original plain-email tooltip.
 
   function loadPrUnits() {
     try { return JSON.parse(localStorage.getItem(PR_STORAGE_KEY) || '[]'); }

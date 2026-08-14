@@ -784,20 +784,13 @@
     }
   }
 
-  // Small, deliberately subtle color-coded dot showing who made a
-  // change -- blue for Connor, pink for Steve. Only shows up for a
-  // real, known account email; anything else (an old manually-typed
-  // device-local name, or unknown) just gets no dot at all rather than
-  // a wrong guess.
-  const PERSON_DOT_COLORS = {
-    'connor@triplehenterprisesllc.biz': '#7ec4ff',
-    'steve@triplehenterprisesllc.biz': '#f0a8c8',
-  };
-  function personDot(email) {
-    const color = PERSON_DOT_COLORS[(email || '').toLowerCase()];
-    if (!color) return '';
-    return '<span style="display:inline-block; width:7px; height:7px; border-radius:50%; background:' + color + '; margin-right:6px; vertical-align:middle;" title="' + escapeHtml(email) + '"></span>';
-  }
+  // personDot() now lives in tools-common.js (shared across all 4 tool
+  // pages that use it) -- see that file for details. Called bare here
+  // (no label) to match this page's original plain-email tooltip. Note:
+  // this page's dot used to render at margin-right:6px while the other
+  // 3 pages used 5px -- an unintentional drift. Now unified to 5px
+  // everywhere via the shared function; the visual difference here is
+  // 1px and not noticeable.
 
   // Downloads everything from the 3 content tables as one JSON file --
   // a safety net to grab before a big editing session, not an
