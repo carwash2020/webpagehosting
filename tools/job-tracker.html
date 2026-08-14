@@ -574,18 +574,9 @@
     return div.innerHTML;
   }
 
-  // Same subtle color-coded dot used in Dev Tools and Appliance Wiki --
-  // blue for Connor, pink for Steve. Only for a real, known account
-  // email; anything else gets no dot rather than a wrong guess.
-  const PERSON_DOT_COLORS = {
-    'connor@triplehenterprisesllc.biz': '#7ec4ff',
-    'steve@triplehenterprisesllc.biz': '#f0a8c8',
-  };
-  function personDot(email) {
-    const color = PERSON_DOT_COLORS[(email || '').toLowerCase()];
-    if (!color) return '';
-    return '<span style="display:inline-block; width:7px; height:7px; border-radius:50%; background:' + color + '; margin-right:5px; vertical-align:middle;" title="Last edited by ' + escapeHtml(email) + '"></span>';
-  }
+  // personDot() now lives in tools-common.js (shared across all 4 tool
+  // pages that use it) -- see that file for details. Call it with the
+  // "Last edited by" label to match this page's original tooltip text.
 
   // ---------- Passive sync status (no buttons, just quiet confirmation) ----------
   function formatSyncStatus(status) {
@@ -1063,7 +1054,7 @@
       return `
         <div class="job-card priority-${job.priority} ${isDone ? 'is-done' : ''} ${job.id === justAddedJobId ? 'list-row-enter' : ''}" data-job-id="${job.id}">
           <div class="job-card-top">
-            <h4 class="job-card-title ${isDone ? 'is-done-text' : ''}">${personDot(job.lastEditedBy)}${escapeHtml(job.title)}</h4>
+            <h4 class="job-card-title ${isDone ? 'is-done-text' : ''}">${personDot(job.lastEditedBy, 'Last edited by')}${escapeHtml(job.title)}</h4>
             <div class="job-badges">
               <span class="badge badge-${job.priority}">${job.priority}</span>
               <span class="badge badge-status">${STATUS_LABEL[job.status]}</span>
@@ -1471,7 +1462,7 @@
         <td>${e.date}</td>
         <td>${escapeHtml(e.source || '\u2014')}</td>
         <td>${e.jobRefTitle ? escapeHtml(e.jobRefTitle) : '\u2014'}</td>
-        <td>${personDot(e.lastEditedBy)}${escapeHtml(e.desc)}</td>
+        <td>${personDot(e.lastEditedBy, 'Last edited by')}${escapeHtml(e.desc)}</td>
         <td>${PAYMENT_LABEL[e.payment] || '\u2014'}</td>
         <td>${e.origin === 'invoice' ? '<span class="inline-note" style="margin:0;">Invoice</span>' : 'Manual'}</td>
         <td>$${e.amount.toFixed(2)}</td>
@@ -1745,7 +1736,7 @@
         <td>${e.type === 'mileage' ? 'Mileage' : 'Expense'}</td>
         <td>${escapeHtml(e.vendor || '\u2014')}</td>
         <td>${e.jobRefTitle ? escapeHtml(e.jobRefTitle) : '\u2014'}</td>
-        <td>${personDot(e.lastEditedBy)}${escapeHtml(e.desc)}${e.partNumber ? `<div style="color:var(--text-dim); font-size:11.5px; margin-top:2px;">Part #: ${escapeHtml(e.partNumber)}</div>` : ''}</td>
+        <td>${personDot(e.lastEditedBy, 'Last edited by')}${escapeHtml(e.desc)}${e.partNumber ? `<div style="color:var(--text-dim); font-size:11.5px; margin-top:2px;">Part #: ${escapeHtml(e.partNumber)}</div>` : ''}</td>
         <td>${e.type === 'mileage' ? e.miles + ' mi' : '\u2014'}</td>
         <td>${PAYMENT_LABEL[e.payment] || '\u2014'}</td>
         <td>$${e.amount.toFixed(2)}</td>
