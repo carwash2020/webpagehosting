@@ -23,13 +23,27 @@
 // should keep failing exactly as they already did; this only helps the
 // app SHELL (the pages themselves) still open.
 
-const CACHE_NAME = 'th-workspace-v1';
+// Bumped 2026-08-14: the URL list changed (see below), and CACHE_NAME is
+// how a service worker knows to actually replace what it has stored --
+// the activate handler below deletes any cache whose name isn't this
+// one, which is what makes bumping this the trigger for a real refresh
+// on every device rather than just editing a file that would otherwise
+// go unnoticed until manually cleared.
+const CACHE_NAME = 'th-workspace-v2';
 const PRECACHE_URLS = [
   '/tools/workspace.html', '/tools/job-tracker.html', '/tools/invoice-generator.html', '/tools/contract-generator.html',
   '/tools/calendar.html', '/tools/route-planner.html', '/tools/review-request.html', '/tools/contact-card.html',
   '/tools/job-cost-lookup.html', '/tools/expense-logger.html', '/tools/login.html',
+  // Added 2026-08-14 -- these 3 pages existed before but were never added
+  // to the precache list, so they wouldn't open at all with no signal.
+  // The Appliance Wiki (parts-reference.html) in particular is exactly
+  // the kind of page worth having offline -- looking up a part number
+  // in a basement with no signal is the scenario this cache exists for.
+  '/tools/dev-tools.html', '/tools/parts-reference.html', '/tools/runway-dashboard.html',
   '/styles.css', '/tools/sync.js', '/tools/auth.js', '/tools/tools-common.js', '/tools/manifest.json',
-  '/images/logo-signature-orange.png', '/images/icon-192.png', '/images/icon-512.png', '/images/apple-touch-icon.png',
+  // Added 2026-08-14 -- same gap as above, these 2 scripts were live but unlisted.
+  '/tools/qrcode-lib.js', '/tools/push-notifications.js',
+  '/images/logo-signature-orange.webp', '/images/icon-192.png', '/images/icon-512.png', '/images/apple-touch-icon.png',
 ];
 
 self.addEventListener('install', (event) => {

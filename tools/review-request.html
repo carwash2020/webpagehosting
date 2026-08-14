@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<script src="/tools/auth.js"></script>
+<script src="/tools/auth.js?v=202608142300"></script>
 <script>
   // Security gate -- redirect to login before this page's own content
   // is meaningfully usable. See auth.js for why this exists (a single
@@ -25,8 +25,8 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;500;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="/styles.css?v=202608112330">
-<script src="/tools/tools-common.js" defer></script>
-<script src="/tools/qrcode-lib.js" defer></script>
+<script src="/tools/tools-common.js?v=202608142300" defer></script>
+<script src="/tools/qrcode-lib.js?v=202608142300" defer></script>
 <style>
   body { padding: 90px 20px 60px; max-width: 640px; margin: 0 auto; }
   .tool-title { font-family:'Oswald',sans-serif; font-weight:700; font-size:28px; color:var(--white); margin-bottom:6px; }
@@ -73,15 +73,16 @@
 </style>
 </head>
 <body>
+<a href="#mainContent" class="skip-link">Skip to main content</a>
 
 <div class="tool-header">
   <a href="/tools/workspace.html" class="tool-header-brand">
-    <img src="/images/logo-signature-orange.png" alt="Triple H Enterprises">
+    <img src="/images/logo-signature-orange.webp" alt="Triple H Enterprises">
     <span>&larr; Back to Workspace</span>
   </a>
   <button class="help-btn" onclick="openHelpModal()" aria-label="How to use this tool" title="How to use this tool">?</button>
 </div>
-<div class="tool-title">Review Request Sender</div>
+<div class="tool-title" id="mainContent">Review Request Sender</div>
 <p class="tool-sub">Internal tool &mdash; fill in the job details after finishing, tap Send. Nothing here is ever sent to a server &mdash; the message itself is built right in this browser tab, and opens your phone's own messaging app to actually send it. A short local log of who's been sent a request is kept on this device, purely to warn you before an accidental double-send.</p>
 
 <div class="tabs" id="reviewTabs" style="margin-bottom:18px;">
@@ -154,7 +155,7 @@
 </div>
 
 <div class="tab-panel" id="panel-google" style="text-align:center;">
-  <img src="/images/logo-signature-orange.png" alt="Triple H Enterprises" style="width:96px; height:auto; margin:0 auto 14px; display:block;">
+  <img src="/images/logo-signature-orange.webp" alt="Triple H Enterprises" style="width:96px; height:auto; margin:0 auto 14px; display:block;">
   <div style="font-family:'Oswald',sans-serif; font-weight:700; font-size:22px; color:var(--white); margin-bottom:4px;">Triple H Enterprises</div>
   <div style="color:var(--text-dim); font-size:14px; margin-bottom:30px;">Handyman &amp; Appliance Repair</div>
 
@@ -167,7 +168,7 @@
 </div>
 
 <div class="tab-panel" id="panel-yelp" style="text-align:center;">
-  <img src="/images/logo-signature-orange.png" alt="Triple H Enterprises" style="width:96px; height:auto; margin:0 auto 14px; display:block;">
+  <img src="/images/logo-signature-orange.webp" alt="Triple H Enterprises" style="width:96px; height:auto; margin:0 auto 14px; display:block;">
   <div style="font-family:'Oswald',sans-serif; font-weight:700; font-size:22px; color:var(--white); margin-bottom:4px;">Triple H Enterprises</div>
   <div style="color:var(--text-dim); font-size:14px; margin-bottom:30px;">Handyman &amp; Appliance Repair</div>
 
