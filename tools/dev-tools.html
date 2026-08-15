@@ -82,6 +82,53 @@
   .dev-issue-detail { font-size: 12.5px; color: var(--text-dim); margin-top: 2px; }
   .dev-blocked { max-width: 480px; margin: 80px auto; text-align: center; }
 
+  /* Sticky section nav -- same pattern as workspace.html's .jump-nav,
+     added here 2026-08-15 because this page has 16 panels and reaching
+     anything past the first few meant a long scroll on a phone. */
+  .jump-nav {
+    position: sticky; top: 0; z-index: 50; display: flex; gap: 6px; overflow-x: auto;
+    background: var(--bg); border-bottom: 1px solid var(--border); padding: 10px 0; margin-bottom: 20px;
+  }
+  .jump-nav a {
+    display: flex; align-items: center; gap: 6px;
+    color: var(--text-dim); font-size: 12.5px; text-decoration: none; white-space: nowrap;
+    padding: 6px 12px; border-radius: 6px; font-family:'Oswald',sans-serif;
+    transition: color .15s ease, background .15s ease;
+  }
+  .jump-nav a:hover { color: var(--orange-light); background: var(--bg-panel-2); }
+  .jump-nav a:active { transform: translateY(1px); }
+  .jump-nav a .jump-nav-icon { font-size: 15px; line-height: 1; }
+
+  /* Anchor targets sit under the sticky nav without scroll-margin. */
+  .dev-anchor { scroll-margin-top: 64px; }
+
+  /* At-a-glance status strip -- answers "is everything healthy?" without
+     scrolling through panels or running the full health check. */
+  .dev-status-strip {
+    display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 20px;
+  }
+  .dev-status-chip {
+    display: inline-flex; align-items: center; gap: 7px;
+    padding: 7px 13px; border-radius: 999px;
+    background: var(--bg-panel-2); border: 1px solid var(--border);
+    font-size: 12.5px; color: var(--text-dim);
+  }
+  .dev-status-chip strong { color: var(--text); font-weight: 600; }
+  .dev-status-dot {
+    width: 8px; height: 8px; border-radius: 50%; flex: 0 0 auto;
+    background: var(--text-dim);
+  }
+  .dev-status-dot.ok { background: #6fcf97; box-shadow: 0 0 6px rgba(111,207,151,.5); }
+  .dev-status-dot.warn { background: var(--orange-light); box-shadow: 0 0 6px rgba(255,179,71,.5); }
+  .dev-status-dot.bad { background: #e05555; box-shadow: 0 0 6px rgba(224,85,85,.5); }
+  .dev-status-dot.checking {
+    background: var(--text-dim); animation: devStatusPulse 1s ease-in-out infinite;
+  }
+  @keyframes devStatusPulse { 0%,100% { opacity: .35; } 50% { opacity: 1; } }
+  @media (prefers-reduced-motion: reduce) {
+    .dev-status-dot.checking { animation: none; }
+  }
+
   /* Added 2026-08-15 -- who's actually signed in, and under what role.
      Sits in the header so it's answerable at a glance instead of
      scrolling to the Session panel. */
@@ -137,6 +184,21 @@
 
   <div id="devIdentityBadge" class="dev-identity" style="display:none;"></div>
 
+  <div class="dev-status-strip" id="devStatusStrip">
+    <span class="dev-status-chip"><span class="dev-status-dot checking" id="statusDotSession"></span><span id="statusTextSession">Session</span></span>
+    <span class="dev-status-chip"><span class="dev-status-dot checking" id="statusDotSupabase"></span><span id="statusTextSupabase">Supabase</span></span>
+    <span class="dev-status-chip"><span class="dev-status-dot checking" id="statusDotSync"></span><span id="statusTextSync">Sync</span></span>
+    <span class="dev-status-chip"><span class="dev-status-dot checking" id="statusDotSW"></span><span id="statusTextSW">Service worker</span></span>
+  </div>
+
+  <nav class="jump-nav">
+    <a href="#nav-diagnostics"><span class="jump-nav-icon">&#129514;</span>Diagnostics</a>
+    <a href="#nav-access"><span class="jump-nav-icon">&#128272;</span>Access</a>
+    <a href="#nav-data"><span class="jump-nav-icon">&#128202;</span>Data</a>
+    <a href="#nav-deploy"><span class="jump-nav-icon">&#128640;</span>Deploy</a>
+    <a href="#nav-content"><span class="jump-nav-icon">&#128221;</span>Content</a>
+  </nav>
+
   <div style="margin-bottom:20px;">
     <button class="secondary-btn" id="fullHealthCheckBtn" onclick="runFullHealthCheck()">Run full health check</button>
     <div id="fullHealthCheckResults" style="margin-top:12px;"></div>
@@ -146,7 +208,7 @@
 
   <div class="dev-panel dev-panel-wide">
     <div class="dev-panel-heading">
-      <h2>Live consistency check</h2>
+      <h2 id="nav-diagnostics" class="dev-anchor">Live consistency check</h2>
       <button class="dev-info-bubble" onclick="openDevInfo('consistency')" aria-label="What does this do?" title="What does this do?">?</button>
     </div>
     <button class="secondary-btn" onclick="runLiveConsistencyCheck()" id="runCheckBtn">Run check</button>
@@ -155,7 +217,7 @@
 
   <div class="dev-panel dev-panel-wide">
     <div class="dev-panel-heading">
-      <h2>Account roles</h2>
+      <h2 id="nav-access" class="dev-anchor">Account roles</h2>
       <button class="dev-info-bubble" onclick="openDevInfo('roles')" aria-label="What does this do?" title="What does this do?">?</button>
     </div>
     <div id="accountRolesList" class="dev-scrollable-list"></div>
@@ -175,7 +237,7 @@
 
   <div class="dev-panel">
     <div class="dev-panel-heading">
-      <h2>Local data snapshot</h2>
+      <h2 id="nav-data" class="dev-anchor">Local data snapshot</h2>
       <button class="dev-info-bubble" onclick="openDevInfo('localdata')" aria-label="What does this do?" title="What does this do?">?</button>
     </div>
     <div id="localDataSnapshot" class="dev-scrollable-list"></div>
@@ -234,7 +296,7 @@
 
   <div class="dev-panel">
     <div class="dev-panel-heading">
-      <h2>Latest deploy</h2>
+      <h2 id="nav-deploy" class="dev-anchor">Latest deploy</h2>
       <button class="dev-info-bubble" onclick="openDevInfo('deploy')" aria-label="What does this do?" title="What does this do?">?</button>
     </div>
     <div id="deployStatus"></div>
@@ -256,7 +318,7 @@
 
   <div class="dev-panel dev-panel-wide is-collapsible" data-collapse-key="sitecontent">
     <div class="dev-panel-heading" onclick="toggleDevPanel(this)">
-      <h2>Site content</h2>
+      <h2 id="nav-content" class="dev-anchor">Site content</h2>
       <button class="dev-info-bubble" onclick="event.stopPropagation(); openDevInfo('sitecontent')" aria-label="What does this do?" title="What does this do?">?</button>
       <span class="dev-collapse-caret">&#9660;</span>
     </div>
@@ -1633,6 +1695,20 @@
       }
       if (wasOpen !== '1') panel.classList.add('is-collapsed');
     });
+
+    // The Content jump-nav link targets "Site content", which is one of
+    // the collapsed-by-default panels -- landing on a collapsed panel
+    // reads as a broken link. Expand whatever a jump lands on.
+    document.querySelectorAll('.jump-nav a').forEach(link => {
+      link.addEventListener('click', () => {
+        const target = document.querySelector(link.getAttribute('href'));
+        const panel = target && target.closest('.dev-panel.is-collapsible');
+        if (panel && panel.classList.contains('is-collapsed')) {
+          const heading = panel.querySelector('.dev-panel-heading');
+          if (heading) toggleDevPanel(heading);
+        }
+      });
+    });
   }
 
   function renderIdentityBadge() {
@@ -1645,6 +1721,86 @@
     el.innerHTML = 'Signed in as <strong>' + escapeHtml(name || email) + '</strong>' +
       (role && role.roleName ? '<span class="dev-role-tag">' + escapeHtml(role.roleName) + '</span>' : '');
     el.style.display = 'inline-flex';
+  }
+
+  // ---------------------------------------------------------------------
+  // STATUS STRIP -- added 2026-08-15. Answers "is everything healthy?"
+  // at a glance, without scrolling through panels or running the full
+  // health check. Deliberately reads the SAME sources the individual
+  // panels use rather than duplicating any check logic -- one place per
+  // check remains the rule, same as runFullHealthCheck() follows.
+  // ---------------------------------------------------------------------
+
+  function setStatusChip(name, state, label) {
+    const dot = document.getElementById('statusDot' + name);
+    const text = document.getElementById('statusText' + name);
+    if (!dot || !text) return;
+    dot.className = 'dev-status-dot ' + state;
+    text.textContent = label;
+  }
+
+  async function renderStatusStrip() {
+    // 1. Session -- straight from auth.js, no network needed.
+    const email = (typeof getCurrentUserEmail === 'function') ? getCurrentUserEmail() : null;
+    const role = (typeof getCurrentUserRole === 'function') ? getCurrentUserRole() : null;
+    if (email && role && role.roleName) {
+      setStatusChip('Session', 'ok', role.roleName);
+    } else if (email) {
+      // Signed in but no role row -- this is exactly the state that makes
+      // Dev Tools vanish, so call it out specifically rather than "ok".
+      setStatusChip('Session', 'warn', 'No role assigned');
+    } else {
+      setStatusChip('Session', 'bad', 'Signed out');
+    }
+
+    // 2. Last sync attempt -- same localStorage key the Session panel reads.
+    let lastSync = null;
+    try { lastSync = JSON.parse(localStorage.getItem('th_sync_last') || 'null'); } catch (e) {}
+    if (!lastSync) {
+      setStatusChip('Sync', 'warn', 'Never synced');
+    } else {
+      const ageMs = Date.now() - new Date(lastSync.time).getTime();
+      const ageHrs = ageMs / 3600000;
+      if (!lastSync.ok) {
+        setStatusChip('Sync', 'bad', 'Last sync failed');
+      } else if (ageHrs > 72) {
+        // Matches SYNC_STALE_DAYS (3) in the Send-Push edge function, so
+        // the strip and the daily push reminder agree on what "stale" means.
+        setStatusChip('Sync', 'warn', 'Stale (' + Math.floor(ageHrs / 24) + 'd)');
+      } else if (ageHrs >= 1) {
+        setStatusChip('Sync', 'ok', Math.floor(ageHrs) + 'h ago');
+      } else {
+        setStatusChip('Sync', 'ok', Math.max(1, Math.round(ageMs / 60000)) + 'm ago');
+      }
+    }
+
+    // 3. Service worker -- registration presence, not a network call.
+    if (!('serviceWorker' in navigator)) {
+      setStatusChip('SW', 'warn', 'Unsupported');
+    } else {
+      try {
+        const reg = await navigator.serviceWorker.getRegistration();
+        setStatusChip('SW', reg ? 'ok' : 'warn', reg ? 'Registered' : 'Not registered');
+      } catch (e) {
+        setStatusChip('SW', 'warn', 'Unknown');
+      }
+    }
+
+    // 4. Supabase -- a real round trip, so this one is genuinely live.
+    // Same request shape as checkSupabaseReachability() in the Session
+    // panel: real data through RLS, not a bare domain ping, so a config
+    // or policy problem shows up here too rather than a false green.
+    try {
+      const start = Date.now();
+      const res = await fetchWithTimeout(SUPABASE_URL + '/rest/v1/site_content?select=key&limit=1', 5000, {
+        headers: { 'apikey': SUPABASE_ANON_KEY },
+      });
+      const ms = Date.now() - start;
+      if (res.ok) setStatusChip('Supabase', ms > 1500 ? 'warn' : 'ok', ms + 'ms');
+      else setStatusChip('Supabase', 'bad', 'HTTP ' + res.status);
+    } catch (e) {
+      setStatusChip('Supabase', 'bad', 'Unreachable');
+    }
   }
 
   function loadKnownIssues() {
@@ -1772,6 +1928,7 @@
       renderAccountRoles();
       renderIdentityBadge();
       initCollapsiblePanels();
+      renderStatusStrip();
     };
     // isDevAccount() depends on a real session already being loaded --
     // give initSyncOnLoad (which handles token refresh) a chance first,
