@@ -95,27 +95,55 @@ def check_internal_links():
     return problems
 
 
-# Platforms that routinely 403/429 scripted requests even when the
+# Platforms that routinely 403/429/999 scripted requests even when the
 # actual link is completely fine -- anti-bot measures, not a real
 # problem. Logged as unverifiable rather than failing the whole check,
-# so this doesn't cry wolf on every single run.
-BOT_HOSTILE_DOMAINS = ('facebook.com', 'instagram.com', 'linkedin.com')
+# so this doesn't cry wolf on every single run. Yelp added 2026-08-15
+# after a real run confirmed it -- Yelp is well known to aggressively
+# block non-browser traffic even on live, correct listing pages.
+BOT_HOSTILE_DOMAINS = ('facebook.com', 'instagram.com', 'linkedin.com', 'yelp.com')
+
+# rel values whose href is a warm-up hint, not a real fetchable
+# resource -- preconnect/dns-prefetch origins are frequently just the
+# bare domain root, which correctly 404s since nothing is actually
+# served there. Added 2026-08-15 after a real CI run flagged
+# fonts.googleapis.com and fonts.gstatic.com as "broken" when they were
+# never meant to resolve as pages in the first place -- the actual
+# stylesheet URL (with the real path and query string) was and is 200.
+NON_FETCHABLE_REL = ('preconnect', 'dns-prefetch')
 
 
 def check_external_links():
     print()
     print("=== External links (public pages only) ===")
     urls = set()
+    preconnect_urls = set()
+    link_tag_re = re.compile(r'<link\b[^>]*>')
     for page in PUBLIC_PAGES:
         path = os.path.join(REPO_ROOT, page)
         if not os.path.exists(path):
             continue
         with open(path, encoding='utf-8') as f:
             content = f.read()
+        # First, find every <link> tag whose rel is a warm-up hint --
+        # its href is never meant to resolve as a real page, so it gets
+        # excluded from the "must return 2xx" set entirely rather than
+        # relying on a domain-based guess.
+        for tag in link_tag_re.finditer(content):
+            tag_text = tag.group(0)
+            rel_match = re.search(r'rel="([^"]+)"', tag_text)
+            href_match = re.search(r'href="([^"]+)"', tag_text)
+            if rel_match and href_match and rel_match.group(1) in NON_FETCHABLE_REL:
+                preconnect_urls.add(href_match.group(1))
+
         for match in HREF_SRC_RE.finditer(content):
             link = match.group(1)
             if link.startswith('https://') or link.startswith('http://'):
                 urls.add(link)
+
+    urls -= preconnect_urls
+    if preconnect_urls:
+        print(f"  (skipping {len(preconnect_urls)} preconnect/dns-prefetch hint(s) -- not real fetchable pages)")
 
     problems = []
     unverifiable = []
