@@ -1650,7 +1650,16 @@
         }, 1200);
       }
     }
+  }
 
+  // Split out from renderWelcomeGreeting() on 2026-08-15 -- this has to
+  // run AFTER initSyncOnLoad() (which loads the account's role over the
+  // network) resolves, not immediately on DOMContentLoaded like the
+  // greeting above. Calling it too early meant hasDevToolsAccess() was
+  // always checked before the role had actually loaded, so the tile
+  // silently stayed hidden for everyone -- including Connor -- from the
+  // moment the role system shipped until this fix.
+  function renderDevToolsTileVisibility() {
     const devTile = document.getElementById('devToolsTile');
     if (devTile && typeof hasDevToolsAccess === 'function' && hasDevToolsAccess()) {
       devTile.style.display = '';
@@ -1776,6 +1785,7 @@
   document.addEventListener('DOMContentLoaded', function () {
     renderWelcomeGreeting();
     initSyncOnLoad().then(renderDashboard).catch(renderDashboard).then(() => {
+      renderDevToolsTileVisibility();
       if (typeof startRealtimeSync === 'function') {
         // One status callback shared by both channels -- last status wins,
         // which is fine here since they're on the same underlying connection.
