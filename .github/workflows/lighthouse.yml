@@ -1,0 +1,32 @@
+name: Lighthouse CI
+
+# Runs against the LIVE deployed site, not a local server -- matches
+# this repo's own "zero build step, deploys straight from the branch"
+# philosophy, and there's no build output to spin up locally anyway.
+#
+# Deliberately NOT triggered directly on push: GitHub Pages takes a
+# little time to actually build and deploy after a push lands, so
+# testing immediately would risk scoring the previous version rather
+# than what was just pushed. Runs on a schedule (comfortably after any
+# same-day pushes would have deployed) and on demand instead.
+
+on:
+  schedule:
+    - cron: '30 11 * * *'  # ~05:30 Mountain Time, daily
+  workflow_dispatch: {}
+
+jobs:
+  lighthouse:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Run Lighthouse CI
+        uses: treosh/lighthouse-ci-action@v11
+        with:
+          urls: |
+            https://www.triplehenterprisesllc.biz/
+            https://www.triplehenterprisesllc.biz/handyman-hurricane-ut.html
+          uploadArtifacts: true
+          temporaryPublicStorage: true
+          configPath: './.github/lighthouserc.json'
