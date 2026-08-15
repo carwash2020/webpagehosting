@@ -1633,23 +1633,48 @@
       </div>`).join('');
   }
 
+  let _welcomeFadeTimeouts = []; // tracked so the role-tag enhancement below can restart the hold/fade cycle cleanly
+
+  function showWelcomeOverlay(text) {
+    _welcomeFadeTimeouts.forEach(clearTimeout);
+    _welcomeFadeTimeouts = [];
+    const overlay = document.getElementById('welcomeOverlay');
+    overlay.classList.remove('is-fading');
+    document.getElementById('welcomeOverlayText').textContent = text;
+    overlay.style.display = 'flex';
+    // Shows immediately, holds briefly, then fades -- the CSS
+    // transition handles the actual fade; this just removes the
+    // overlay from layout afterward so it can't block clicks once
+    // it's invisible.
+    _welcomeFadeTimeouts.push(setTimeout(() => {
+      overlay.classList.add('is-fading');
+      _welcomeFadeTimeouts.push(setTimeout(() => { overlay.style.display = 'none'; }, 550));
+    }, 1200));
+  }
+
   function renderWelcomeGreeting() {
     if (typeof getCurrentUserFirstName === 'function') {
       const name = getCurrentUserFirstName();
-      if (name) {
-        const overlay = document.getElementById('welcomeOverlay');
-        document.getElementById('welcomeOverlayText').textContent = 'Welcome back, ' + name;
-        overlay.style.display = 'flex';
-        // Shows immediately, holds briefly, then fades -- the CSS
-        // transition handles the actual fade; this just removes the
-        // overlay from layout afterward so it can't block clicks once
-        // it's invisible.
-        setTimeout(() => {
-          overlay.classList.add('is-fading');
-          setTimeout(() => { overlay.style.display = 'none'; }, 550);
-        }, 1200);
-      }
+      if (name) showWelcomeOverlay('Welcome back, ' + name);
     }
+  }
+
+  // Added 2026-08-15 -- once the account's role has actually loaded
+  // (same timing fix as renderDevToolsTileVisibility below: this can't
+  // run until AFTER initSyncOnLoad() resolves), upgrade the plain name
+  // greeting to also show the role, e.g. "Welcome back, Steve --
+  // Owner." Mostly for Steve's benefit specifically -- a small,
+  // pleasant confirmation that his account really does carry real
+  // standing in the system now, not just access. Re-shows the overlay
+  // with a fresh hold/fade cycle rather than editing text that might
+  // already be mid-fade or gone, so the fuller message always gets its
+  // own full, readable moment on screen.
+  function enhanceWelcomeGreetingWithRole() {
+    if (typeof getCurrentUserFirstName !== 'function' || typeof getCurrentUserRole !== 'function') return;
+    const name = getCurrentUserFirstName();
+    const role = getCurrentUserRole();
+    if (!name || !role || !role.roleName) return;
+    showWelcomeOverlay('Welcome back, ' + name + ' \u2014 ' + role.roleName);
   }
 
   // Split out from renderWelcomeGreeting() on 2026-08-15 -- this has to
@@ -1786,6 +1811,7 @@
     renderWelcomeGreeting();
     initSyncOnLoad().then(renderDashboard).catch(renderDashboard).then(() => {
       renderDevToolsTileVisibility();
+      enhanceWelcomeGreetingWithRole();
       if (typeof startRealtimeSync === 'function') {
         // One status callback shared by both channels -- last status wins,
         // which is fine here since they're on the same underlying connection.
