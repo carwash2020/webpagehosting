@@ -1,0 +1,64 @@
+name: Backup CMS content
+
+# Free daily backup of the 3 CMS tables (site_content, site_faq,
+# site_terms) -- built specifically because Supabase's own paid-tier
+# daily-backup feature was decided against on cost grounds (see
+# DISASTER_RECOVERY.md / the "known open items" discussion). This gets
+# the same practical protection for zero cost: git history on these 3
+# small JSON files IS the point-in-time backup, one commit per day
+# something actually changed. Uses the public anon key -- the same one
+# already embedded in every page's own source -- since "Anyone can read
+# site content/FAQ/terms" is already a real, intentional RLS policy.
+# No repo secret needed, nothing here is more exposed than it already is.
+
+on:
+  schedule:
+    - cron: '17 9 * * *'  # ~03:17 Mountain Time (UTC-6/-7 depending on DST) -- low-traffic hour
+  workflow_dispatch: {}     # manual "Run workflow" button in the Actions tab
+
+permissions:
+  contents: write
+
+jobs:
+  backup:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Fetch current CMS content from Supabase
+        shell: bash
+        env:
+          SUPABASE_URL: https://csvfqdjuobylgafgolho.supabase.co
+          SUPABASE_ANON_KEY: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNzdmZxZGp1b2J5bGdhZmdvbGhvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODUzNTQ3MjcsImV4cCI6MjEwMDkzMDcyN30.6GlvK-DfXf2lppS1kciZtsl4wHOpZz_yKtwsS1lyjrs
+        run: |
+          mkdir -p backups
+          declare -A ORDER_BY=(
+            [site_content]="key"
+            [site_faq]="sort_order"
+            [site_terms]="sort_order"
+          )
+          for table in site_content site_faq site_terms; do
+            curl -s -f \
+              -H "apikey: $SUPABASE_ANON_KEY" \
+              -H "Authorization: Bearer $SUPABASE_ANON_KEY" \
+              "$SUPABASE_URL/rest/v1/$table?select=*&order=${ORDER_BY[$table]}" \
+              -o "backups/${table}.json.tmp" || {
+                echo "::error::Failed to fetch $table from Supabase"; exit 1;
+              }
+            # Pretty-print so diffs in the commit history are actually
+            # readable, not one giant single-line blob.
+            python3 -m json.tool "backups/${table}.json.tmp" > "backups/${table}.json"
+            rm "backups/${table}.json.tmp"
+          done
+
+      - name: Commit if content actually changed
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add backups/
+          if git diff --cached --quiet; then
+            echo "No content changes since last backup -- nothing to commit."
+          else
+            git commit -m "Automated CMS content backup ($(date -u +%Y-%m-%d))"
+            git push
+          fi
