@@ -1,0 +1,114 @@
+[
+    {
+        "id": 1,
+        "heading": "Business Information",
+        "body": "Triple H Enterprises LLC is a domestic limited liability company registered with the Utah Department of Commerce, Division of Corporations and Commercial Code (Entity Number 14711750-0160).",
+        "sort_order": 1,
+        "updated_at": "2026-08-13T22:56:22.50122+00:00"
+    },
+    {
+        "id": 2,
+        "heading": "1. Scope of Work",
+        "body": "Work performed is limited to what is discussed and agreed upon at the time of scheduling or in a written estimate. Any additional work requested during a visit will be discussed and approved before it begins.",
+        "sort_order": 2,
+        "updated_at": "2026-08-13T22:56:22.50122+00:00"
+    },
+    {
+        "id": 3,
+        "heading": "2. Estimates and Pricing",
+        "body": "Estimates are based on the information provided at the time of booking. Final pricing may vary if the actual scope of work differs once the job is inspected in person. Any change in price will be communicated before additional work proceeds.",
+        "sort_order": 3,
+        "updated_at": "2026-08-13T22:56:22.50122+00:00"
+    },
+    {
+        "id": 4,
+        "heading": "3. Payment Terms",
+        "body": "Payment is due upon completion of the work unless otherwise agreed in advance. Cash, check, Venmo, Cash App, and credit or debit cards (via a secure Stripe invoice) are accepted.",
+        "sort_order": 4,
+        "updated_at": "2026-08-13T22:56:22.50122+00:00"
+    },
+    {
+        "id": 5,
+        "heading": "4. Scheduling and Cancellations",
+        "body": "Appointments are scheduled based on availability. If you need to cancel or reschedule, please provide as much notice as possible so the time slot can be offered to another customer. A $50 cancellation fee may apply if an appointment is cancelled the same day as the scheduled service.",
+        "sort_order": 5,
+        "updated_at": "2026-08-13T22:56:22.50122+00:00"
+    },
+    {
+        "id": 6,
+        "heading": "5. Access to Property",
+        "body": "Customers are responsible for providing safe and reasonable access to the work area, including any necessary parking, entry, or utility access needed to complete the job.",
+        "sort_order": 6,
+        "updated_at": "2026-08-13T22:56:22.50122+00:00"
+    },
+    {
+        "id": 7,
+        "heading": "6. Materials and Permits",
+        "body": "Unless otherwise agreed, materials required for a job are the customer's responsibility to provide or purchase, or will be quoted separately. Some projects may require permits or licensed trade professionals (such as electrical or plumbing work beyond basic repairs); customers will be informed if a job falls outside the scope of general handyman work.",
+        "sort_order": 7,
+        "updated_at": "2026-08-13T22:56:22.50122+00:00"
+    },
+    {
+        "id": 8,
+        "heading": "7. Workmanship",
+        "body": "Work is guaranteed. Parts used are covered under whatever warranty the manufacturer sets, which can vary by part. Any concerns about completed work should be raised as soon as possible so they can be addressed.",
+        "sort_order": 8,
+        "updated_at": "2026-08-13T22:56:22.50122+00:00"
+    },
+    {
+        "id": 9,
+        "heading": "8. Limitation of Liability",
+        "body": "While every effort is made to complete work safely and correctly, liability for pre-existing conditions, hidden damage not visible at the time of inspection, or issues arising from normal wear and tear is limited. Customers are encouraged to disclose any known issues with the property before work begins.",
+        "sort_order": 9,
+        "updated_at": "2026-08-13T22:56:22.50122+00:00"
+    },
+    {
+        "id": 10,
+        "heading": "9. Delays",
+        "body": "Delays caused by weather, parts availability, or circumstances outside of reasonable control will be communicated as soon as they are known.",
+        "sort_order": 10,
+        "updated_at": "2026-08-13T22:56:22.50122+00:00"
+    },
+    {
+        "id": 11,
+        "heading": "10. Photos and Media",
+        "body": "Before-and-after photos of completed work may be taken and used for marketing purposes, including the website, social media, and advertising. Customer names and specific addresses are never shared. Let us know before work begins if you'd prefer photos not be taken.",
+        "sort_order": 11,
+        "updated_at": "2026-08-13T22:56:22.50122+00:00"
+    },
+    {
+        "id": 12,
+        "heading": "11. Third-Party Services",
+        "body": "Online booking, invoicing/payment processing, and website contact forms are handled through third-party platforms, including Cal.com, Stripe, and Formspree. Information submitted through these tools is subject to those providers' own privacy practices, and Triple H Enterprises is not responsible for outages or issues originating from these third-party services.",
+        "sort_order": 12,
+        "updated_at": "2026-08-13T22:56:22.50122+00:00"
+    },
+    {
+        "id": 13,
+        "heading": "12. Cookies and Analytics",
+        "body": "This website uses Google Analytics to understand general site traffic, such as which pages are visited and how visitors arrive at the site. This may involve cookies or similar technologies. No personal information submitted through the contact or scheduling forms is shared with Google Analytics. Visitors who prefer to opt out of analytics tracking can do so using their browser's privacy settings or a browser extension such as Google's Analytics Opt-out add-on.",
+        "sort_order": 13,
+        "updated_at": "2026-08-13T22:56:22.50122+00:00"
+    },
+    {
+        "id": 14,
+        "heading": "13. Missed Appointments",
+        "body": "If no one is available at the scheduled time and access cannot be arranged, the visit may be treated as a same-day cancellation, and the $50 fee outlined above may apply.",
+        "sort_order": 14,
+        "updated_at": "2026-08-13T22:56:22.50122+00:00"
+    },
+    {
+        "id": 15,
+        "heading": "14. Changes to These Terms",
+        "body": "These terms may be updated from time to time. The most current version will always be available on this website.",
+        "sort_order": 15,
+        "updated_at": "2026-08-13T22:56:22.50122+00:00"
+    },
+    {
+        "id": 16,
+        "heading": "15. Contact",
+        "body": "Questions about these terms can be directed to steve@triplehenterprisesllc.biz or (435) 414-1667.",
+        "sort_order": 16,
+        "updated_at": "2026-08-13T22:56:22.50122+00:00"
+    }
+]

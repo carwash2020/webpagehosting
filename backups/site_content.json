@@ -1,0 +1,67 @@
+[
+    {
+        "key": "banner1",
+        "value": null,
+        "updated_at": "2026-08-13T21:53:46.452147+00:00"
+    },
+    {
+        "key": "banner2",
+        "value": null,
+        "updated_at": "2026-08-13T21:53:46.452147+00:00"
+    },
+    {
+        "key": "email",
+        "value": null,
+        "updated_at": "2026-08-13T22:18:59.847616+00:00"
+    },
+    {
+        "key": "hoursFriday",
+        "value": null,
+        "updated_at": "2026-08-13T22:55:40.488548+00:00"
+    },
+    {
+        "key": "hoursLine1",
+        "value": null,
+        "updated_at": "2026-08-13T21:53:46.452147+00:00"
+    },
+    {
+        "key": "hoursLine2",
+        "value": null,
+        "updated_at": "2026-08-13T21:53:46.452147+00:00"
+    },
+    {
+        "key": "hoursMonday",
+        "value": null,
+        "updated_at": "2026-08-13T22:55:40.488548+00:00"
+    },
+    {
+        "key": "hoursSaturday",
+        "value": null,
+        "updated_at": "2026-08-13T22:55:40.488548+00:00"
+    },
+    {
+        "key": "hoursSunday",
+        "value": "Closed",
+        "updated_at": "2026-08-13T22:55:40.488548+00:00"
+    },
+    {
+        "key": "hoursThursday",
+        "value": null,
+        "updated_at": "2026-08-13T22:55:40.488548+00:00"
+    },
+    {
+        "key": "hoursTuesday",
+        "value": null,
+        "updated_at": "2026-08-13T22:55:40.488548+00:00"
+    },
+    {
+        "key": "hoursWednesday",
+        "value": null,
+        "updated_at": "2026-08-13T22:55:40.488548+00:00"
+    },
+    {
+        "key": "phone",
+        "value": null,
+        "updated_at": "2026-08-13T21:53:46.452147+00:00"
+    }
+]

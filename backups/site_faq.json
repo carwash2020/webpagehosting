@@ -1,0 +1,86 @@
+[
+    {
+        "id": 1,
+        "question": "Do you offer estimates before starting work?",
+        "answer": "Pricing is set once the problem has been diagnosed. Some jobs can be estimated over the phone, but many issues need an in-person look before a firm price can be given. Either way, you'll know the cost before any work begins.",
+        "sort_order": 1,
+        "updated_at": "2026-08-13T22:56:04.175908+00:00"
+    },
+    {
+        "id": 2,
+        "question": "How far in advance do I need to book?",
+        "answer": "Availability can vary, so booking at least 7 days out is preferred when possible. If something can't wait, call or text (435) 414-1667 directly instead of using the online scheduling options.",
+        "sort_order": 2,
+        "updated_at": "2026-08-13T22:56:04.175908+00:00"
+    },
+    {
+        "id": 3,
+        "question": "What areas do you serve?",
+        "answer": "St. George, Hurricane, Washington, Santa Clara, and the surrounding Southern Utah area. We can also take on larger jobs in Cedar City or Mesquite, NV by request, just contact us to check availability and scheduling.",
+        "sort_order": 3,
+        "updated_at": "2026-08-13T22:56:04.175908+00:00"
+    },
+    {
+        "id": 4,
+        "question": "Do you guarantee your work?",
+        "answer": "Yes, work is guaranteed. Parts used are covered under whatever warranty the manufacturer sets, which can vary by part.",
+        "sort_order": 4,
+        "updated_at": "2026-08-13T22:56:04.175908+00:00"
+    },
+    {
+        "id": 5,
+        "question": "What payment methods do you accept?",
+        "answer": "Cash, check, Venmo, and Cash App are all accepted, along with credit and debit cards via a secure Stripe invoice.",
+        "sort_order": 5,
+        "updated_at": "2026-08-13T22:56:04.175908+00:00"
+    },
+    {
+        "id": 6,
+        "question": "What's your cancellation policy?",
+        "answer": "Plans change, and that's okay, just try to give as much notice as possible. A $50 cancellation fee may apply if a scheduled visit is cancelled the same day as the appointment.",
+        "sort_order": 6,
+        "updated_at": "2026-08-13T22:56:04.175908+00:00"
+    },
+    {
+        "id": 7,
+        "question": "Is there a trip fee?",
+        "answer": "Jobs within 15 miles have no trip fee. Beyond 15 miles, a $25 trip fee is added to the total.",
+        "sort_order": 7,
+        "updated_at": "2026-08-13T22:56:04.175908+00:00"
+    },
+    {
+        "id": 8,
+        "question": "What if the job I need isn't listed in your services?",
+        "answer": "Reach out anyway. There's a good chance it can still be handled, and if not, you'll get an honest answer and pointed in the right direction.",
+        "sort_order": 8,
+        "updated_at": "2026-08-13T22:56:04.175908+00:00"
+    },
+    {
+        "id": 9,
+        "question": "Do I need to be home while the work is being done?",
+        "answer": "For most jobs, yes, especially anything involving appliance diagnostics or work inside the home. For simple exterior or pre-arranged jobs, other arrangements can sometimes be made. Just ask when scheduling.",
+        "sort_order": 9,
+        "updated_at": "2026-08-13T22:56:04.175908+00:00"
+    },
+    {
+        "id": 10,
+        "question": "Can I text instead of call?",
+        "answer": "Yes, texting (435) 414-1667 works great for quick questions, photos of the issue, or scheduling. Use the \"Text Us\" bubble on the site from a phone, or just text the number directly.",
+        "sort_order": 10,
+        "updated_at": "2026-08-13T22:56:04.175908+00:00"
+    },
+    {
+        "id": 11,
+        "question": "Do you offer emergency or same-day service?",
+        "answer": "Yes, for things that can't wait, like an active leak or a fridge that's failed. Call or text directly rather than booking online so it gets seen right away.",
+        "sort_order": 11,
+        "updated_at": "2026-08-13T22:56:04.175908+00:00"
+    },
+    {
+        "id": 12,
+        "question": "What's the best way to schedule a job?",
+        "answer": "Whichever is easiest for you. Use \"Book Instantly\" to pick an open time slot, fill out the request form for something more detailed, or just call or text (435) 414-1667 directly.",
+        "sort_order": 12,
+        "updated_at": "2026-08-13T22:56:04.175908+00:00"
+    }
+]
