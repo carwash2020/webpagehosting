@@ -201,13 +201,75 @@ function getCurrentUserFirstName() {
   return KNOWN_USER_NAMES[email.toLowerCase()] || email;
 }
 
-// True only for Connor's account -- used to gate the dev-tools page/tile,
-// which isn't a real permissions boundary (Steve's account could still
-// read the page's source or hit the URL directly, same as anyone with
-// dev tools open in any browser could on any site) but keeps it out of
-// Steve's way day to day, which is the actual point of it.
+// ---------------------------------------------------------------------------
+// ACCOUNT ROLES -- added 2026-08-14. Replaces the old hardcoded
+// "only connor@ gets dev tools" check with a real, database-backed role
+// system (role_definitions + account_roles tables in Supabase). Steve's
+// account now holds "Owner" and gets identical dev-tools access to
+// Connor's "Developer" role -- Developer's only extra capability is
+// managing the role system itself (creating new roles, reassigning
+// accounts), tracked as can_manage_roles rather than hardcoded to a
+// specific role name, so a future role could carry that too.
+//
+// loadCurrentUserRole() is called from initSyncOnLoad() in sync.js, so
+// by the time any page's own load logic runs, the synchronous
+// accessors below already have a real answer cached.
+// ---------------------------------------------------------------------------
+
+let _cachedRoleInfo = null; // { roleName, canManageRoles, description } once loaded, or null if unassigned/not loaded
+
+async function loadCurrentUserRole() {
+  const email = getCurrentUserEmail();
+  if (!email) { _cachedRoleInfo = null; return null; }
+  try {
+    const res = await fetch(
+      `${SUPABASE_URL}/rest/v1/account_roles?email=eq.${encodeURIComponent(email.toLowerCase())}&select=role_name,role_definitions(can_manage_roles,description)`,
+      {
+        headers: {
+          'apikey': SUPABASE_ANON_KEY,
+          'Authorization': `Bearer ${getAuthToken()}`,
+        },
+      }
+    );
+    if (!res.ok) { _cachedRoleInfo = null; return null; }
+    const rows = await res.json();
+    if (!rows.length) { _cachedRoleInfo = null; return null; }
+    const row = rows[0];
+    _cachedRoleInfo = {
+      roleName: row.role_name,
+      canManageRoles: !!(row.role_definitions && row.role_definitions.can_manage_roles),
+      description: row.role_definitions ? row.role_definitions.description : '',
+    };
+    return _cachedRoleInfo;
+  } catch (e) {
+    _cachedRoleInfo = null;
+    return null;
+  }
+}
+
+// Synchronous accessor -- only meaningful once loadCurrentUserRole() has
+// resolved (initSyncOnLoad() does this automatically). Returns null if
+// not loaded yet, or if the logged-in account has no role assigned.
+function getCurrentUserRole() {
+  return _cachedRoleInfo;
+}
+
+// True for ANY account with a real assigned role (Owner, Developer, or
+// any future role) -- the actual dev-tools access gate now.
+function hasDevToolsAccess() {
+  return !!_cachedRoleInfo;
+}
+
+// True only for a role with can_manage_roles set (Developer, by
+// default) -- gates creating new roles or reassigning an account's role.
+function canManageRoles() {
+  return !!(_cachedRoleInfo && _cachedRoleInfo.canManageRoles);
+}
+
+// Superseded by hasDevToolsAccess() above -- kept as a thin wrapper
+// since nothing needs to change at any existing call site.
 function isDevAccount() {
-  return getCurrentUserEmail() === 'connor@triplehenterprisesllc.biz';
+  return hasDevToolsAccess();
 }
 
 // Decodes the JWT's payload to pull out the logged-in user's ID (the

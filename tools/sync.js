@@ -689,6 +689,11 @@ async function fetchFeaturedPhotos() {
 // their first pass, so freshly-synced data shows up immediately. Tools call
 // `await initSyncOnLoad()` at the top of their init sequence.
 async function initSyncOnLoad() {
+  // Load the current account's role first (added 2026-08-14) -- cheap,
+  // and every page's own load logic that checks hasDevToolsAccess() /
+  // canManageRoles() needs this to have already resolved by the time
+  // it runs. Runs even on pages where sync itself isn't configured.
+  if (typeof loadCurrentUserRole === 'function') { await loadCurrentUserRole(); }
   if (!isSyncConfigured() || !getSyncCode()) return;
   await pullSync();
 }
