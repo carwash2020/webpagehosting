@@ -81,6 +81,38 @@
   .dev-issue-title { font-weight: 600; }
   .dev-issue-detail { font-size: 12.5px; color: var(--text-dim); margin-top: 2px; }
   .dev-blocked { max-width: 480px; margin: 80px auto; text-align: center; }
+
+  /* Added 2026-08-15 -- who's actually signed in, and under what role.
+     Sits in the header so it's answerable at a glance instead of
+     scrolling to the Session panel. */
+  .dev-identity {
+    display: inline-flex; align-items: center; gap: 8px;
+    padding: 5px 12px; border-radius: 999px;
+    background: var(--bg-panel-3); border: 1px solid var(--border);
+    font-size: 12.5px; color: var(--text-dim); margin-bottom: 14px;
+  }
+  .dev-identity strong { color: var(--text); font-weight: 600; }
+  .dev-identity .dev-role-tag {
+    padding: 1px 8px; border-radius: 999px; font-size: 11.5px; font-weight: 600;
+    background: var(--orange-tint-soft); border: 1px solid var(--orange-tint-border);
+    color: var(--orange-light);
+  }
+
+  /* Collapsible panels -- used for the 4 large CMS editors, which are
+     enormous on a phone. They already sit at the very end of the page
+     for that reason; collapsing them by default means the diagnostics
+     above are actually reachable without a long scroll past them.
+     State is remembered per-panel in sessionStorage. */
+  .dev-panel.is-collapsible .dev-panel-heading { cursor: pointer; user-select: none; }
+  .dev-panel.is-collapsible .dev-panel-heading h2 { flex: 1 1 auto; }
+  .dev-collapse-caret {
+    flex: 0 0 auto; width: 18px; height: 18px; display: inline-flex;
+    align-items: center; justify-content: center; color: var(--text-dim);
+    font-size: 11px; transition: transform .18s ease;
+  }
+  .dev-panel.is-collapsed .dev-collapse-caret { transform: rotate(-90deg); }
+  .dev-panel.is-collapsed .dev-panel-body { display: none; }
+  .dev-panel.is-collapsed .dev-panel-heading { margin-bottom: 0; }
 </style>
 </head>
 <body>
@@ -101,7 +133,9 @@
     <button class="help-btn" onclick="openHelpModal()" aria-label="How to use Dev Tools" title="How to use Dev Tools">?</button>
     <a href="/tools/workspace.html" class="help-btn" aria-label="Back to Dashboard" title="Back to Dashboard" style="text-decoration:none; display:inline-flex; align-items:center; justify-content:center;">&#8617;</a>
   </div>
-  <p class="hub-sub">Site diagnostics and maintenance utilities. Only visible on this account &mdash; see auth.js if that ever needs to change.</p>
+  <p class="hub-sub">Site diagnostics and maintenance utilities. Visible to any account with an assigned role &mdash; see the Account roles panel below to change who has access.</p>
+
+  <div id="devIdentityBadge" class="dev-identity" style="display:none;"></div>
 
   <div style="margin-bottom:20px;">
     <button class="secondary-btn" id="fullHealthCheckBtn" onclick="runFullHealthCheck()">Run full health check</button>
@@ -220,46 +254,58 @@
     </div>
   </div>
 
-  <div class="dev-panel dev-panel-wide">
-    <div class="dev-panel-heading">
+  <div class="dev-panel dev-panel-wide is-collapsible" data-collapse-key="sitecontent">
+    <div class="dev-panel-heading" onclick="toggleDevPanel(this)">
       <h2>Site content</h2>
-      <button class="dev-info-bubble" onclick="openDevInfo('sitecontent')" aria-label="What does this do?" title="What does this do?">?</button>
+      <button class="dev-info-bubble" onclick="event.stopPropagation(); openDevInfo('sitecontent')" aria-label="What does this do?" title="What does this do?">?</button>
+      <span class="dev-collapse-caret">&#9660;</span>
     </div>
-    <div id="siteContentForm"></div>
+    <div class="dev-panel-body">
+      <div id="siteContentForm"></div>
+    </div>
   </div>
 
-  <div class="dev-panel dev-panel-wide">
-    <div class="dev-panel-heading">
+  <div class="dev-panel dev-panel-wide is-collapsible" data-collapse-key="contenthistory">
+    <div class="dev-panel-heading" onclick="toggleDevPanel(this)">
       <h2>Content edit history</h2>
-      <button class="dev-info-bubble" onclick="openDevInfo('contenthistory')" aria-label="What does this do?" title="What does this do?">?</button>
+      <button class="dev-info-bubble" onclick="event.stopPropagation(); openDevInfo('contenthistory')" aria-label="What does this do?" title="What does this do?">?</button>
+      <span class="dev-collapse-caret">&#9660;</span>
     </div>
-    <button class="secondary-btn" style="margin-bottom:12px;" onclick="exportContentBackup()">Download backup (JSON)</button>
-    <div id="contentHistoryList" class="dev-scrollable-list"></div>
+    <div class="dev-panel-body">
+      <button class="secondary-btn" style="margin-bottom:12px;" onclick="exportContentBackup()">Download backup (JSON)</button>
+      <div id="contentHistoryList" class="dev-scrollable-list"></div>
+    </div>
   </div>
 
-  <div class="dev-panel dev-panel-wide">
-    <div class="dev-panel-heading">
+  <div class="dev-panel dev-panel-wide is-collapsible" data-collapse-key="faq">
+    <div class="dev-panel-heading" onclick="toggleDevPanel(this)">
       <h2>FAQ editor</h2>
-      <button class="dev-info-bubble" onclick="openFieldInfo('faq')" aria-label="Where does this appear?" title="Where does this appear?">&#128247;</button>
+      <button class="dev-info-bubble" onclick="event.stopPropagation(); openFieldInfo('faq')" aria-label="Where does this appear?" title="Where does this appear?">&#128247;</button>
+      <span class="dev-collapse-caret">&#9660;</span>
     </div>
-    <p class="tool-sub" style="margin-bottom:12px;">If an answer mentions the phone number as plain text, it won't update automatically if the phone field above ever changes -- edit that answer directly if the number changes.</p>
-    <div id="faqEditorList"></div>
-    <div style="display:flex; gap:10px; margin-top:12px; flex-wrap:wrap;">
-      <button class="secondary-btn" onclick="addFaqItem()">+ Add question</button>
-      <button class="btn blue" id="saveFaqBtn" onclick="saveFaqList()">Save all</button>
+    <div class="dev-panel-body">
+      <p class="tool-sub" style="margin-bottom:12px;">If an answer mentions the phone number as plain text, it won't update automatically if the phone field above ever changes -- edit that answer directly if the number changes.</p>
+      <div id="faqEditorList"></div>
+      <div style="display:flex; gap:10px; margin-top:12px; flex-wrap:wrap;">
+        <button class="secondary-btn" onclick="addFaqItem()">+ Add question</button>
+        <button class="btn blue" id="saveFaqBtn" onclick="saveFaqList()">Save all</button>
+      </div>
     </div>
   </div>
 
-  <div class="dev-panel dev-panel-wide">
-    <div class="dev-panel-heading">
+  <div class="dev-panel dev-panel-wide is-collapsible" data-collapse-key="terms">
+    <div class="dev-panel-heading" onclick="toggleDevPanel(this)">
       <h2>Terms &amp; Conditions editor</h2>
-      <button class="dev-info-bubble" onclick="openFieldInfo('terms')" aria-label="Where does this appear?" title="Where does this appear?">&#128247;</button>
+      <button class="dev-info-bubble" onclick="event.stopPropagation(); openFieldInfo('terms')" aria-label="Where does this appear?" title="Where does this appear?">&#128247;</button>
+      <span class="dev-collapse-caret">&#9660;</span>
     </div>
-    <p class="tool-sub" style="margin-bottom:12px;">The last section mentions the phone number and email as plain text -- won't update automatically if those fields ever change. Edit it directly if either one changes.</p>
-    <div id="termsEditorList"></div>
-    <div style="display:flex; gap:10px; margin-top:12px; flex-wrap:wrap;">
-      <button class="secondary-btn" onclick="addTermsItem()">+ Add section</button>
-      <button class="btn blue" id="saveTermsBtn" onclick="saveTermsList()">Save all</button>
+    <div class="dev-panel-body">
+      <p class="tool-sub" style="margin-bottom:12px;">The last section mentions the phone number and email as plain text -- won't update automatically if those fields ever change. Edit it directly if either one changes.</p>
+      <div id="termsEditorList"></div>
+      <div style="display:flex; gap:10px; margin-top:12px; flex-wrap:wrap;">
+        <button class="secondary-btn" onclick="addTermsItem()">+ Add section</button>
+        <button class="btn blue" id="saveTermsBtn" onclick="saveTermsList()">Save all</button>
+      </div>
     </div>
   </div>
 
@@ -1554,6 +1600,53 @@
     }
   }
 
+  // ---------------------------------------------------------------------
+  // COLLAPSIBLE PANELS + IDENTITY BADGE -- added 2026-08-15
+  // ---------------------------------------------------------------------
+
+  const COLLAPSE_KEY_PREFIX = 'th_dev_panel_open_';
+
+  function toggleDevPanel(headingEl) {
+    const panel = headingEl.closest('.dev-panel');
+    if (!panel) return;
+    const key = panel.getAttribute('data-collapse-key');
+    const nowCollapsed = panel.classList.toggle('is-collapsed');
+    // sessionStorage, not localStorage -- matches the dev password's
+    // own scope, so a fresh tab starts from the same clean default
+    // rather than inheriting a layout set days ago.
+    if (key) {
+      try { sessionStorage.setItem(COLLAPSE_KEY_PREFIX + key, nowCollapsed ? '0' : '1'); } catch (e) { /* private mode, ignore */ }
+    }
+  }
+
+  // The 4 CMS editors start collapsed on purpose -- they're the tallest
+  // things on the page by far and sit at the very end, so having them
+  // open by default meant scrolling past several screens of form
+  // fields to reach anything below. A previously-expanded panel
+  // reopens itself for the rest of the browser session.
+  function initCollapsiblePanels() {
+    document.querySelectorAll('.dev-panel.is-collapsible').forEach(panel => {
+      const key = panel.getAttribute('data-collapse-key');
+      let wasOpen = null;
+      if (key) {
+        try { wasOpen = sessionStorage.getItem(COLLAPSE_KEY_PREFIX + key); } catch (e) { wasOpen = null; }
+      }
+      if (wasOpen !== '1') panel.classList.add('is-collapsed');
+    });
+  }
+
+  function renderIdentityBadge() {
+    const el = document.getElementById('devIdentityBadge');
+    if (!el) return;
+    const email = typeof getCurrentUserEmail === 'function' ? getCurrentUserEmail() : null;
+    const name = typeof getCurrentUserFirstName === 'function' ? getCurrentUserFirstName() : null;
+    const role = typeof getCurrentUserRole === 'function' ? getCurrentUserRole() : null;
+    if (!email) return; // no session -- the page gate will have handled this already
+    el.innerHTML = 'Signed in as <strong>' + escapeHtml(name || email) + '</strong>' +
+      (role && role.roleName ? '<span class="dev-role-tag">' + escapeHtml(role.roleName) + '</span>' : '');
+    el.style.display = 'inline-flex';
+  }
+
   function loadKnownIssues() {
     let list;
     try { list = JSON.parse(localStorage.getItem(KNOWN_ISSUES_KEY) || 'null'); } catch (e) { list = null; }
@@ -1677,6 +1770,8 @@
       renderFaqEditor();
       renderTermsEditor();
       renderAccountRoles();
+      renderIdentityBadge();
+      initCollapsiblePanels();
     };
     // isDevAccount() depends on a real session already being loaded --
     // give initSyncOnLoad (which handles token refresh) a chance first,
