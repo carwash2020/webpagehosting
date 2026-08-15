@@ -119,6 +119,16 @@
     <div id="consistencyResults" style="margin-top:16px;"></div>
   </div>
 
+  <div class="dev-panel dev-panel-wide">
+    <div class="dev-panel-heading">
+      <h2>Account roles</h2>
+      <button class="dev-info-bubble" onclick="openDevInfo('roles')" aria-label="What does this do?" title="What does this do?">?</button>
+    </div>
+    <div id="accountRolesList" class="dev-scrollable-list"></div>
+    <div id="roleDefinitionsList" class="dev-scrollable-list" style="margin-top:14px;"></div>
+    <div id="roleManagerControls" style="margin-top:16px;"></div>
+  </div>
+
   <div class="dev-panel">
     <div class="dev-panel-heading">
       <h2>Session &amp; sync</h2>
@@ -309,6 +319,10 @@
     session: {
       title: 'Session & sync',
       body: `<p>Shows which account is actually logged in on this device, and the result of the last push or pull attempt to Supabase.</p><p>"Push now" and "Pull now" trigger a sync immediately instead of waiting for the normal automatic/debounced sync to happen on its own -- useful when you want to be sure the latest data is saved or fetched right this second.</p><p>The "History" link expands the last 20 attempts (most recent first) -- useful for spotting a pattern, like "this started failing consistently around a specific time" rather than only ever seeing the single latest result.</p>`,
+    },
+    roles: {
+      title: 'Account roles',
+      body: `<p>Replaces the old hardcoded rule (only connor@ ever got Dev Tools access) with a real role system stored in Supabase. Both Owner and Developer get identical access to every feature on this page -- the only difference is that a Developer can also create new roles and reassign which role an account holds, shown here as "can manage roles."</p><p>A safety check in the database itself blocks removing or downgrading the very last role that can manage roles, so a mistake here can't accidentally lock both of you out of ever assigning roles again.</p><p>Anyone signed in can see this list; only someone with a role that can manage roles sees the create/assign controls.</p>`,
     },
     localdata: {
       title: 'Local data snapshot',
@@ -1442,6 +1456,160 @@
   ];
   const KNOWN_ISSUES_KEY = 'th_known_issues';
 
+  // ---------------------------------------------------------------------
+  // ACCOUNT ROLES -- added 2026-08-14. See role_definitions/account_roles
+  // in Supabase and the "roles" entry in DEV_INFO above for the full
+  // rationale. Both lists render for anyone with dev-tools access;
+  // the create/assign controls only render for canManageRoles().
+  // ---------------------------------------------------------------------
+
+  async function fetchAccountRolesData() {
+    const res = await fetchWithTimeout(
+      SUPABASE_URL + '/rest/v1/account_roles?select=email,role_name,assigned_at,role_definitions(can_manage_roles,description)&order=email',
+      8000,
+      { headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': 'Bearer ' + getAuthToken() } }
+    );
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    return res.json();
+  }
+
+  async function fetchRoleDefinitions() {
+    const res = await fetchWithTimeout(
+      SUPABASE_URL + '/rest/v1/role_definitions?select=name,description,can_manage_roles&order=name',
+      8000,
+      { headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': 'Bearer ' + getAuthToken() } }
+    );
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    return res.json();
+  }
+
+  async function renderAccountRoles() {
+    const accountsEl = document.getElementById('accountRolesList');
+    const rolesEl = document.getElementById('roleDefinitionsList');
+    const controlsEl = document.getElementById('roleManagerControls');
+    if (!accountsEl) return; // page not loaded far enough yet, or dev tools access denied
+
+    try {
+      if (typeof ensureFreshToken === 'function') await ensureFreshToken();
+      const [accounts, roleDefs] = await Promise.all([fetchAccountRolesData(), fetchRoleDefinitions()]);
+
+      accountsEl.innerHTML = '<h3 style="margin:0 0 8px; font-size:14px; color:var(--text-dim);">Accounts</h3>' +
+        accounts.map(a => {
+          const canManage = a.role_definitions && a.role_definitions.can_manage_roles;
+          return '<div style="padding:8px 0; border-bottom:1px solid var(--border);"><strong>' + escapeHtml(a.email) + '</strong> &mdash; ' +
+            escapeHtml(a.role_name) + (canManage ? ' <span class="dev-info-bubble" style="cursor:default;" title="Can manage roles">&#9733;</span>' : '') +
+            '</div>';
+        }).join('');
+
+      rolesEl.innerHTML = '<h3 style="margin:0 0 8px; font-size:14px; color:var(--text-dim);">Roles</h3>' +
+        roleDefs.map(r =>
+          '<div style="padding:8px 0; border-bottom:1px solid var(--border);"><strong>' + escapeHtml(r.name) + '</strong>' +
+          (r.can_manage_roles ? ' <span style="color:var(--text-dim); font-size:12px;">(can manage roles)</span>' : '') +
+          '<div style="font-size:12px; color:var(--text-dim); margin-top:2px;">' + escapeHtml(r.description || '') + '</div></div>'
+        ).join('');
+
+      if (!canManageRoles()) {
+        controlsEl.innerHTML = '<p class="tool-sub">Only a role that can manage roles can create new roles or reassign an account here.</p>';
+        return;
+      }
+
+      const roleOptions = roleDefs.map(r => '<option value="' + escapeHtml(r.name) + '">' + escapeHtml(r.name) + '</option>').join('');
+      controlsEl.innerHTML =
+        '<div class="tool-form-row"><div class="form-field"><label>New role name</label><input type="text" id="newRoleName" placeholder="e.g. Contractor"></div>' +
+        '<div class="form-field"><label>Description</label><input type="text" id="newRoleDescription" placeholder="What this role is for"></div></div>' +
+        '<div class="tool-form-row"><div class="form-field"><label style="display:flex; align-items:center; gap:6px;"><input type="checkbox" id="newRoleCanManage" style="width:auto;"> Can this role manage other roles?</label></div></div>' +
+        '<div class="form-footer"><button class="btn blue" id="createRoleBtn" onclick="createRole()">Create role</button></div>' +
+        '<div style="margin-top:18px; border-top:1px solid var(--border); padding-top:14px;">' +
+        '<div class="tool-form-row"><div class="form-field"><label>Account email</label><input type="text" id="assignRoleEmail" placeholder="name@triplehenterprisesllc.biz"></div>' +
+        '<div class="form-field"><label>Assign role</label><select id="assignRoleName">' + roleOptions + '</select></div></div>' +
+        '<div class="form-footer"><button class="btn blue" id="assignRoleBtn" onclick="assignRole()">Assign</button></div></div>';
+    } catch (e) {
+      accountsEl.innerHTML = '<p class="tool-sub">Could not reach Supabase: ' + escapeHtml(e.message || String(e)) + '</p>';
+      rolesEl.innerHTML = '';
+      controlsEl.innerHTML = '';
+    }
+  }
+
+  async function createRole() {
+    if (!(await confirmDevPassword())) return;
+    const nameInput = document.getElementById('newRoleName');
+    const descInput = document.getElementById('newRoleDescription');
+    const canManageInput = document.getElementById('newRoleCanManage');
+    const name = nameInput.value.trim();
+    if (!name) { showToast('Role name is required.', { type: 'error' }); return; }
+    const btn = document.getElementById('createRoleBtn');
+    btn.disabled = true;
+    btn.textContent = 'Creating...';
+    try {
+      if (typeof ensureFreshToken === 'function') await ensureFreshToken();
+      const res = await fetchWithTimeout(SUPABASE_URL + '/rest/v1/role_definitions', 8000, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'apikey': SUPABASE_ANON_KEY,
+          'Authorization': 'Bearer ' + getAuthToken(),
+        },
+        body: JSON.stringify([{
+          name: name,
+          description: descInput.value.trim(),
+          can_manage_roles: !!canManageInput.checked,
+          created_by: (typeof getCurrentUserEmail === 'function' && getCurrentUserEmail()) || null,
+        }]),
+      });
+      if (!res.ok) {
+        const body = await res.text();
+        throw new Error('Create failed (HTTP ' + res.status + '): ' + body.slice(0, 200));
+      }
+      showToast('Role "' + name + '" created.');
+      await renderAccountRoles();
+    } catch (e) {
+      showToast(e.message || String(e), { type: 'error' });
+    } finally {
+      btn.disabled = false;
+      btn.textContent = 'Create role';
+    }
+  }
+
+  async function assignRole() {
+    if (!(await confirmDevPassword())) return;
+    const emailInput = document.getElementById('assignRoleEmail');
+    const roleSelect = document.getElementById('assignRoleName');
+    const email = emailInput.value.trim().toLowerCase();
+    if (!email) { showToast('Account email is required.', { type: 'error' }); return; }
+    const btn = document.getElementById('assignRoleBtn');
+    btn.disabled = true;
+    btn.textContent = 'Assigning...';
+    try {
+      if (typeof ensureFreshToken === 'function') await ensureFreshToken();
+      const res = await fetchWithTimeout(SUPABASE_URL + '/rest/v1/account_roles?on_conflict=email', 8000, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'apikey': SUPABASE_ANON_KEY,
+          'Authorization': 'Bearer ' + getAuthToken(),
+          'Prefer': 'resolution=merge-duplicates',
+        },
+        body: JSON.stringify([{
+          email: email,
+          role_name: roleSelect.value,
+          assigned_by: (typeof getCurrentUserEmail === 'function' && getCurrentUserEmail()) || null,
+        }]),
+      });
+      if (!res.ok) {
+        const body = await res.text();
+        throw new Error('Assign failed (HTTP ' + res.status + '): ' + body.slice(0, 200));
+      }
+      showToast('Assigned ' + email + ' to ' + roleSelect.value + '.');
+      emailInput.value = '';
+      await renderAccountRoles();
+    } catch (e) {
+      showToast(e.message || String(e), { type: 'error' });
+    } finally {
+      btn.disabled = false;
+      btn.textContent = 'Assign';
+    }
+  }
+
   function loadKnownIssues() {
     let list;
     try { list = JSON.parse(localStorage.getItem(KNOWN_ISSUES_KEY) || 'null'); } catch (e) { list = null; }
@@ -1548,7 +1716,7 @@
 
   document.addEventListener('DOMContentLoaded', function () {
     const proceed = () => {
-      const allowed = typeof isDevAccount === 'function' && isDevAccount();
+      const allowed = typeof hasDevToolsAccess === 'function' && hasDevToolsAccess();
       document.getElementById(allowed ? 'devMainView' : 'devBlockedView').style.display = allowed ? 'block' : 'block';
       document.getElementById(allowed ? 'devBlockedView' : 'devMainView').style.display = 'none';
       if (!allowed) return;
@@ -1564,6 +1732,7 @@
       renderContentHistory();
       renderFaqEditor();
       renderTermsEditor();
+      renderAccountRoles();
     };
     // isDevAccount() depends on a real session already being loaded --
     // give initSyncOnLoad (which handles token refresh) a chance first,
