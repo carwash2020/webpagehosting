@@ -504,3 +504,166 @@ window.addEventListener('unhandledrejection', (event) => {
     reason && reason.stack
   );
 });
+
+// ---------------------------------------------------------------------------
+// SWIPE-TO-DISMISS FOR MODALS -- added 2026-08-15
+//
+// Real drag physics rather than a "detect a flick, then close" shortcut:
+// the modal actually tracks your finger, resists being pulled the wrong
+// way, and either flies off or springs back based on how you release it.
+//
+// Three rules, all of which come from how native sheets behave:
+//   1. VELOCITY OVERRIDES DISTANCE. A fast flick dismisses from anywhere,
+//      even 20px in. A slow drag most of the way down still springs back
+//      if you release it stationary -- because stopping means you changed
+//      your mind. Judging on distance alone gets both cases wrong.
+//   2. RESISTANCE UPWARD. Dragging up (the non-dismiss direction) moves
+//      the modal a fraction of your finger's distance, on a curve, so it
+//      feels tethered instead of broken.
+//   3. NEVER FIGHT THE SCROLLBAR. .help-modal is `overflow-y:auto` and
+//      can be taller than the screen. A drag only becomes a dismiss
+//      gesture if the content is already scrolled to the very top AND
+//      you're pulling downward. Otherwise it's a scroll and we don't
+//      touch it. This is the single most common way swipe-to-dismiss
+//      gets implemented badly.
+// ---------------------------------------------------------------------------
+
+const SWIPE_DISMISS_VELOCITY = 0.5;   // px/ms -- a genuine flick, matches the ~500px/s used by native sheet implementations
+const SWIPE_DISMISS_DISTANCE = 0.25;  // fraction of modal height dragged past which a slow release still dismisses
+const SWIPE_START_SLOP = 6;           // px of movement before committing to "this is a drag", so taps stay taps
+const SWIPE_UP_RESISTANCE = 0.32;     // multiplier on upward (wrong-way) movement
+const SWIPE_SPRING_BACK = 'transform .3s cubic-bezier(.22,1,.36,1)'; // decelerating ease-out, no overshoot wobble
+
+function prefersReducedMotion() {
+  return window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+}
+
+function attachSwipeToDismiss(modalEl, onDismiss) {
+  if (!modalEl || modalEl._swipeAttached) return;
+  modalEl._swipeAttached = true;
+
+  let startY = 0;
+  let currentY = 0;
+  let engaged = false;      // committed to dragging (vs scrolling or tapping)
+  let decided = false;      // whether this touch has already been classified
+  let lastY = 0;
+  let lastT = 0;
+  let velocity = 0;         // px/ms, positive = moving down
+
+  function setOffset(px) {
+    modalEl.style.transform = px ? 'translateY(' + px + 'px)' : '';
+  }
+
+  function reset(animate) {
+    modalEl.style.transition = animate && !prefersReducedMotion() ? SWIPE_SPRING_BACK : '';
+    setOffset(0);
+    modalEl.style.opacity = '';
+    if (animate) {
+      setTimeout(() => { modalEl.style.transition = ''; }, 320);
+    } else {
+      modalEl.style.transition = '';
+    }
+  }
+
+  modalEl.addEventListener('touchstart', (e) => {
+    if (e.touches.length !== 1) return;
+    startY = currentY = lastY = e.touches[0].clientY;
+    lastT = e.timeStamp;
+    velocity = 0;
+    engaged = false;
+    decided = false;
+    modalEl.style.transition = '';
+  }, { passive: true });
+
+  // Not passive -- this handler needs preventDefault() to stop the page
+  // scrolling underneath once a drag is actually engaged.
+  modalEl.addEventListener('touchmove', (e) => {
+    if (e.touches.length !== 1) return;
+    const y = e.touches[0].clientY;
+    const dy = y - startY;
+
+    if (!decided) {
+      if (Math.abs(dy) < SWIPE_START_SLOP) return; // still within tap slop
+      decided = true;
+      // Only a downward pull from an already-top-scrolled modal counts.
+      // Anything else is the user scrolling the modal's own content.
+      engaged = (dy > 0 && modalEl.scrollTop <= 0);
+      if (!engaged) return;
+    }
+    if (!engaged) return;
+
+    e.preventDefault();
+
+    const dt = e.timeStamp - lastT;
+    if (dt > 0) {
+      // Smoothed so one jittery sample can't spike the reading
+      velocity = 0.7 * ((y - lastY) / dt) + 0.3 * velocity;
+      lastY = y;
+      lastT = e.timeStamp;
+    }
+    currentY = y;
+
+    const raw = y - startY;
+    // Downward: follow the finger exactly. Upward: heavy resistance on a
+    // curve, so it gives a little but clearly doesn't want to go there.
+    const offset = raw >= 0 ? raw : -Math.pow(-raw, 0.8) * SWIPE_UP_RESISTANCE;
+    setOffset(offset);
+    // Fade slightly as it goes, so dismissal feels continuous rather than
+    // a sudden disappearance at the end.
+    if (offset > 0) {
+      const fade = Math.max(0, 1 - (offset / (modalEl.offsetHeight || 400)) * 0.6);
+      modalEl.style.opacity = String(fade);
+    }
+  }, { passive: false });
+
+  modalEl.addEventListener('touchend', () => {
+    if (!engaged) { decided = false; return; }
+    engaged = false;
+    decided = false;
+
+    const travelled = currentY - startY;
+    const height = modalEl.offsetHeight || 400;
+    const flicked = velocity > SWIPE_DISMISS_VELOCITY;
+    const draggedFar = travelled > height * SWIPE_DISMISS_DISTANCE;
+
+    if (travelled > 0 && (flicked || draggedFar)) {
+      if (prefersReducedMotion()) {
+        reset(false);
+        if (typeof onDismiss === 'function') onDismiss();
+        return;
+      }
+      // Continue in the direction it was already moving rather than
+      // snapping to a fixed animation -- keeps the motion continuous
+      // with the finger that launched it.
+      modalEl.style.transition = 'transform .22s ease-out, opacity .22s ease-out';
+      setOffset(height);
+      modalEl.style.opacity = '0';
+      setTimeout(() => {
+        reset(false);
+        if (typeof onDismiss === 'function') onDismiss();
+      }, 200);
+    } else {
+      reset(true);
+    }
+  }, { passive: true });
+
+  modalEl.addEventListener('touchcancel', () => {
+    if (engaged) reset(true);
+    engaged = false;
+    decided = false;
+  }, { passive: true });
+}
+
+// Wires every .help-modal on the page to close its own overlay. Safe to
+// call more than once -- _swipeAttached guards against double-binding.
+function initSwipeToDismissModals() {
+  document.querySelectorAll('.help-modal-overlay').forEach(overlay => {
+    const modal = overlay.querySelector('.help-modal');
+    if (!modal) return;
+    attachSwipeToDismiss(modal, () => {
+      overlay.classList.remove('is-open');
+    });
+  });
+}
+
+document.addEventListener('DOMContentLoaded', initSwipeToDismissModals);
