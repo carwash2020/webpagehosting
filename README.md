@@ -98,7 +98,7 @@ the assistant's GitHub token was never granted):
 - `weekly-business-digest` — Monday mornings, one summary push (jobs completed, invoiced, new leads, outstanding balance) rather than a specific alert — trend awareness, not task nagging.
 - `archive-old-notification-log` — monthly, deletes `notification_log` rows older than 3700 days. That number isn't arbitrary: two of the 11 daily checks use a 3650-day resend interval specifically to nudge only once, ever — retention has to stay longer than the longest resend interval in use, or a "one-time" nudge would silently start repeating once its log row got archived.
 
-**Dev Tools panels** (`tools/dev-tools.html`) — Storage browser (file counts/sizes across all 3 buckets) and Data integrity check (job-photo records vs. actual files, in both directions, plus contact-less leads).
+**Dev Tools panels** (`tools/dev-tools.html`) — Storage browser (file counts/sizes across all 3 buckets), Data integrity check (job-photo records vs. actual files, in both directions, plus contact-less leads), and Trigger workflows (runs any of the 5 GitHub Actions workflows on demand via the `trigger-workflow` Edge Function — see below, never a GitHub token in this file).
 
 ## ⚠️ Do not delete
 
@@ -118,6 +118,12 @@ the assistant's GitHub token was never granted):
   a deploy-tool mistake on 2026-08-15. It's empty and wired to nothing,
   but there's no tool available to delete it from the assistant side;
   remove it by hand from the Supabase dashboard's Edge Functions list.
+- `trigger-workflow` Edge Function needs a `GITHUB_PAT` secret (Supabase
+  dashboard -> Edge Functions -> Secrets) to actually work -- a
+  fine-grained GitHub PAT scoped to ONLY "Actions: Read and write" on
+  this one repo. Until that's added, the Trigger workflows panel in Dev
+  Tools will return a clear "GITHUB_PAT secret is not set yet" error
+  rather than silently failing.
 - Leaked-password protection is still off in Supabase Auth -- a
   dashboard-only toggle (Authentication → Policies), not something
   scriptable via SQL.

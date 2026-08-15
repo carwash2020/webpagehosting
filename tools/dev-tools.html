@@ -82,6 +82,11 @@
   .dev-issue-detail { font-size: 12.5px; color: var(--text-dim); margin-top: 2px; }
   .dev-blocked { max-width: 480px; margin: 80px auto; text-align: center; }
 
+  .dev-trigger-grid {
+    display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 8px;
+  }
+  .dev-trigger-grid button { font-size: 12.5px; padding: 10px 8px; }
+
   /* Sticky section nav -- same pattern as workspace.html's .jump-nav,
      added here 2026-08-15 because this page has 16 panels and reaching
      anything past the first few meant a long scroll on a phone. */
@@ -329,6 +334,21 @@
     </div>
   </div>
 
+  <div class="dev-panel dev-panel-wide">
+    <div class="dev-panel-heading">
+      <h2>Trigger workflows</h2>
+      <button class="dev-info-bubble" onclick="openDevInfo('triggerworkflows')" aria-label="What does this do?" title="What does this do?">?</button>
+    </div>
+    <div class="dev-trigger-grid">
+      <button class="secondary-btn" data-workflow="backup-cms-content.yml" onclick="triggerWorkflow(this)">Backup CMS content</button>
+      <button class="secondary-btn" data-workflow="backup-business-data.yml" onclick="triggerWorkflow(this)">Backup business data</button>
+      <button class="secondary-btn" data-workflow="check-links.yml" onclick="triggerWorkflow(this)">Check links</button>
+      <button class="secondary-btn" data-workflow="lighthouse.yml" onclick="triggerWorkflow(this)">Lighthouse CI</button>
+      <button class="secondary-btn" data-workflow="cleanup-artifacts.yml" onclick="triggerWorkflow(this)">Clean up artifacts</button>
+    </div>
+    <div id="triggerWorkflowResult" style="margin-top:10px; font-size:12.5px; color:var(--text-dim);"></div>
+  </div>
+
   <div class="dev-panel dev-panel-wide is-collapsible" data-collapse-key="storagebrowser">
     <div class="dev-panel-heading" onclick="toggleDevPanel(this)">
       <h2>Storage browser</h2>
@@ -518,6 +538,10 @@
     dataintegrity: {
       title: 'Data integrity check',
       body: `<p>Cross-checks job photo database records against actual files in Storage, in BOTH directions: a record whose file is missing (an upload that got interrupted after the metadata was saved but before the file finished), and a file sitting in Storage with no matching record (the reverse -- the file landed but the database insert never completed). Either one means a photo that looks like it exists but doesn't actually work.</p><p>Also flags any lead with neither a phone number nor an email on file -- either one alone is completely normal, but both blank usually means the contact form was submitted incompletely and there's currently no way to reach that person back.</p>`,
+    },
+    triggerworkflows: {
+      title: 'Trigger workflows',
+      body: `<p>Runs any of the 5 GitHub Actions workflows on demand instead of waiting for its schedule. Calls a Supabase Edge Function (trigger-workflow) that holds the actual GitHub credential server-side -- it's never present anywhere in this page's own code, since anything sitting in client-side JS on a public page can be read by anyone who views the page source.</p><p>That function separately verifies the account calling it is genuinely signed in AND has a real assigned role (the same account_roles check everything else on this page depends on) before it will do anything, regardless of what this page itself shows -- so this stays safe even if something else about the page's own access control were ever wrong.</p>`,
     },
   };
   function openDevInfo(key) {
@@ -2020,6 +2044,52 @@
       el.innerHTML = html;
     } catch (e) {
       el.innerHTML = '<p class="tool-sub">Could not complete check: ' + escapeHtml(e.message || String(e)) + '</p>';
+    }
+  }
+
+  // ---------------------------------------------------------------------
+  // TRIGGER WORKFLOWS -- added 2026-08-15 (option B, deferred a day on
+  // purpose to build carefully). Calls a Supabase Edge Function
+  // (trigger-workflow) that alone holds the real GitHub credential --
+  // it is NEVER present in this file or anywhere client-side, since
+  // anything in a page's own JS can be read by anyone who views source.
+  // That function independently re-checks the caller has a real
+  // assigned role before doing anything, so this stays safe even if
+  // this page's own gate were ever bypassed some other way.
+  // ---------------------------------------------------------------------
+
+  async function triggerWorkflow(btn) {
+    if (!(await confirmDevPassword())) return;
+    const workflow = btn.getAttribute('data-workflow');
+    const resultEl = document.getElementById('triggerWorkflowResult');
+    const originalText = btn.textContent;
+    btn.disabled = true;
+    btn.textContent = 'Starting...';
+    resultEl.textContent = '';
+    try {
+      if (typeof ensureFreshToken === 'function') await ensureFreshToken();
+      const res = await fetchWithTimeout(SUPABASE_URL + '/functions/v1/trigger-workflow', 15000, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'apikey': SUPABASE_ANON_KEY,
+          'Authorization': 'Bearer ' + getAuthToken(),
+        },
+        body: JSON.stringify({ workflow }),
+      });
+      const body = await res.json().catch(() => ({}));
+      if (res.ok && body.ok) {
+        showToast(originalText + ' started -- check the Actions tab in a few seconds.');
+        resultEl.textContent = 'Last triggered: ' + originalText + ' at ' + new Date().toLocaleTimeString();
+      } else {
+        throw new Error(body.error || ('HTTP ' + res.status));
+      }
+    } catch (e) {
+      showToast(e.message || String(e), { type: 'error' });
+      resultEl.textContent = 'Failed: ' + (e.message || String(e));
+    } finally {
+      btn.disabled = false;
+      btn.textContent = originalText;
     }
   }
 
