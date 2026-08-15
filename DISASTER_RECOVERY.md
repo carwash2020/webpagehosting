@@ -192,10 +192,103 @@ that owns this project, separate from these two app-level accounts) can
 create new Auth users directly from the Supabase dashboard (Authentication
 → Users → Add user), using the same two email addresses, and set new
 passwords. The app's `auth.js` already maps these two specific emails to
-"Connor"/"Steve" display names and dev-account status (`isDevAccount()`),
-so recreating the accounts with the same emails restores full
-functionality without any code changes. **The actual Supabase project
-owner's own login is the one thing with no equivalent recovery path
-described here** -- losing access to the Supabase organization/project
+"Connor"/"Steve" display names (`KNOWN_USER_NAMES`), and each account's
+actual Dev Tools access now comes from the `account_roles` table in
+Supabase (Connor: Developer, Steve: Owner -- see the "Account roles
+system" section below), not from a hardcoded email check anymore. So
+recreating the Auth accounts with the same emails restores login, but
+if `account_roles` itself were ever lost too, the two rows would need
+re-inserting (`connor@... -> Developer`, `steve@... -> Owner`) via a
+direct migration, since the app's own UI requires an already-assigned
+manage-roles account to create new role assignments -- exactly the
+bootstrapping problem the safety triggers described below exist to
+prevent from happening by mistake, but a full Auth-account loss is a
+more fundamental case those triggers can't cover. **The actual Supabase
+project owner's own login is the one thing with no equivalent recovery
+path described here** -- losing access to the Supabase organization/project
 itself is a genuinely different, harder problem than losing one of the
 two app-level accounts, and isn't something a code-level backup can fix.
+
+## Account roles system (added 2026-08-15)
+
+Replaces what used to be a single hardcoded check
+(`getCurrentUserEmail() === 'connor@triplehenterprisesllc.biz'`) gating
+the entire Dev Tools page. Two new tables, `role_definitions` and
+`account_roles`, plus a `current_user_can_manage_roles()` SQL function
+that RLS policies on both tables call to decide who can create new
+roles or change an account's role. Two safety triggers
+(`prevent_removing_last_role_manager`, guards `account_roles`;
+`prevent_disabling_last_role_manager_capability`, guards
+`role_definitions`) block the one real failure mode: accidentally
+leaving no assigned role able to manage roles at all. Both were tested
+directly against the live database before being trusted -- deliberately
+tried to remove the last manager and confirmed it was rejected, then
+confirmed a second-manager scenario correctly allows it.
+
+**If Dev Tools access seems broken for an account:** check
+`select * from account_roles;` first. If the account's row is missing
+or its `role_name` doesn't join to a `role_definitions` row with the
+expected `can_manage_roles` value, that's almost certainly the actual
+cause, rather than anything in the frontend code.
+
+**A real bug already happened here once, worth knowing about:** the
+dev-tools dashboard tile went invisible for *every* account (Connor
+included) for a period after this system first shipped, because the
+tile-visibility check ran synchronously on page load, before the
+account's role had actually finished loading over the network. Fixed
+by moving that specific check to run after `initSyncOnLoad()` resolves
+instead of before it. If a *similar* symptom ever recurs (something
+that depends on `hasDevToolsAccess()` or `canManageRoles()` appearing
+to silently fail), check the calling code's timing relative to
+`initSyncOnLoad()` before assuming the database side is wrong -- it
+usually isn't.
+
+## Realtime cross-device sync (fixed 2026-08-15)
+
+`sync.js` has always subscribed to `postgres_changes` events on
+`workspace_sync` and `th_leads` -- the "Live sync: connected" badge
+across Job Tracker, Invoice Generator, etc. depends on this. But neither
+table was ever actually added to the `supabase_realtime` publication
+until 2026-08-15, so the badge had likely been showing "connected" this
+whole time while silently delivering zero real cross-device events.
+**If live sync ever seems to stop working again:**
+`select tablename from pg_publication_tables where pubname = 'supabase_realtime';`
+should list both `workspace_sync` and `th_leads`. If either is missing,
+that's the whole problem -- `alter publication supabase_realtime add table public.<name>;`
+fixes it immediately, no code deploy needed.
+
+## Daily reminder check / pg_cron (Vault-migrated 2026-08-15)
+
+The `Send-Push` Edge Function's `reminder-check` payload type is called
+once daily by a `pg_cron` job named `daily-reminder-check` (jobid 3,
+`0 1 * * *`). This job used to have the `service_role` key hardcoded
+directly in `cron.job.command` -- same class of issue
+`notify_new_lead()` had before its own Vault migration -- and has since
+been re-scheduled under the same job name to look the key up from
+`vault.decrypted_secrets` (secret name `send_push_service_role_key`,
+the same one `notify_new_lead()` already uses) instead. If this job
+ever needs re-creating from scratch, do NOT hardcode the key again --
+copy the vault-lookup pattern from either this job's current definition
+(`select command from cron.job where jobname = 'daily-reminder-check';`)
+or from `notify_new_lead()`'s own source.
+
+As of the same date, the Edge Function also gained an 11th check:
+leads sitting 24+ hours with `handled = false` get a daily push nudge
+(resends every day on purpose, unlike the other 10 checks which mostly
+notify once) until marked handled. Uses the existing `th_leads.handled`
+column -- no schema change was needed.
+
+## Storage security (fixed 2026-08-14)
+
+`storage.objects` had leftover `anon`-role SELECT policies on the
+`job-photos` and `receipts` buckets, predating the private-bucket +
+signed-URL migration described earlier in this document. These let
+anyone holding the public anon key read customer job photos and
+financial receipts directly, bypassing the signed-URL system entirely.
+Removed after confirming (via `grep`, not by trusting a code comment)
+that the app's only public-URL function had zero call sites anywhere.
+**If storage access ever seems broken for an authenticated account**,
+confirm first that the `authenticated`-role policies (view/upload/delete,
+all 3 buckets) are still present -- those were never touched by this
+fix and should be the only policies `storage.objects` has going forward.
+
