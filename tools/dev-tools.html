@@ -125,8 +125,6 @@
       <button class="dev-info-bubble" onclick="openDevInfo('roles')" aria-label="What does this do?" title="What does this do?">?</button>
     </div>
     <div id="accountRolesList" class="dev-scrollable-list"></div>
-    <div id="roleDefinitionsList" class="dev-scrollable-list" style="margin-top:14px;"></div>
-    <div id="roleManagerControls" style="margin-top:16px;"></div>
   </div>
 
   <div class="dev-panel">
@@ -322,7 +320,7 @@
     },
     roles: {
       title: 'Account roles',
-      body: `<p>Replaces the old hardcoded rule (only connor@ ever got Dev Tools access) with a real role system stored in Supabase. Both Owner and Developer get identical access to every feature on this page -- the only difference is that a Developer can also create new roles and reassign which role an account holds, shown here as "can manage roles."</p><p>A safety check in the database itself blocks removing or downgrading the very last role that can manage roles, so a mistake here can't accidentally lock both of you out of ever assigning roles again.</p><p>Anyone signed in can see this list; only someone with a role that can manage roles sees the create/assign controls.</p>`,
+      body: `<p>Replaces the old hardcoded rule (only connor@ ever got Dev Tools access) with a real role system stored in Supabase. Both Owner and Developer get identical access to every feature on this page -- the only difference is that a Developer can also change which role an account holds.</p><p>A safety check in the database itself blocks removing or downgrading the very last role that can manage roles, so a mistake here can't accidentally lock both of you out of ever assigning roles again.</p><p>Anyone signed in can see this list; only a Developer sees an enabled dropdown to actually change anyone's role.</p>`,
     },
     localdata: {
       title: 'Local data snapshot',
@@ -1465,7 +1463,7 @@
 
   async function fetchAccountRolesData() {
     const res = await fetchWithTimeout(
-      SUPABASE_URL + '/rest/v1/account_roles?select=email,role_name,assigned_at,role_definitions(can_manage_roles,description)&order=email',
+      SUPABASE_URL + '/rest/v1/account_roles?select=email,role_name&order=email',
       8000,
       { headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': 'Bearer ' + getAuthToken() } }
     );
@@ -1475,7 +1473,7 @@
 
   async function fetchRoleDefinitions() {
     const res = await fetchWithTimeout(
-      SUPABASE_URL + '/rest/v1/role_definitions?select=name,description,can_manage_roles&order=name',
+      SUPABASE_URL + '/rest/v1/role_definitions?select=name&order=name',
       8000,
       { headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': 'Bearer ' + getAuthToken() } }
     );
@@ -1483,102 +1481,50 @@
     return res.json();
   }
 
+  // Simplified 2026-08-15 -- was a fuller admin UI (separate lists,
+  // create-role and assign-role forms with free-text email/role
+  // inputs). Cut down to what's actually needed day to day: each known
+  // account, one dropdown next to it showing its current role. Picking
+  // a different option saves immediately. Only a canManageRoles()
+  // account sees an enabled dropdown at all -- everyone else sees the
+  // same list as plain read-only text, so there's still visibility for
+  // both of you without a manage-roles account being able to do
+  // anything through it.
   async function renderAccountRoles() {
     const accountsEl = document.getElementById('accountRolesList');
-    const rolesEl = document.getElementById('roleDefinitionsList');
-    const controlsEl = document.getElementById('roleManagerControls');
     if (!accountsEl) return; // page not loaded far enough yet, or dev tools access denied
 
     try {
       if (typeof ensureFreshToken === 'function') await ensureFreshToken();
       const [accounts, roleDefs] = await Promise.all([fetchAccountRolesData(), fetchRoleDefinitions()]);
+      const manager = canManageRoles();
 
-      accountsEl.innerHTML = '<h3 style="margin:0 0 8px; font-size:14px; color:var(--text-dim);">Accounts</h3>' +
-        accounts.map(a => {
-          const canManage = a.role_definitions && a.role_definitions.can_manage_roles;
-          return '<div style="padding:8px 0; border-bottom:1px solid var(--border);"><strong>' + escapeHtml(a.email) + '</strong> &mdash; ' +
-            escapeHtml(a.role_name) + (canManage ? ' <span class="dev-info-bubble" style="cursor:default;" title="Can manage roles">&#9733;</span>' : '') +
-            '</div>';
-        }).join('');
+      const roleOptionsHtml = roleDefs.map(r => '<option value="' + escapeHtml(r.name) + '">' + escapeHtml(r.name) + '</option>').join('');
 
-      rolesEl.innerHTML = '<h3 style="margin:0 0 8px; font-size:14px; color:var(--text-dim);">Roles</h3>' +
-        roleDefs.map(r =>
-          '<div style="padding:8px 0; border-bottom:1px solid var(--border);"><strong>' + escapeHtml(r.name) + '</strong>' +
-          (r.can_manage_roles ? ' <span style="color:var(--text-dim); font-size:12px;">(can manage roles)</span>' : '') +
-          '<div style="font-size:12px; color:var(--text-dim); margin-top:2px;">' + escapeHtml(r.description || '') + '</div></div>'
-        ).join('');
+      accountsEl.innerHTML = accounts.map(a => {
+        if (!manager) {
+          return '<div style="padding:8px 0; border-bottom:1px solid var(--border);"><strong>' + escapeHtml(a.email) + '</strong> &mdash; ' + escapeHtml(a.role_name) + '</div>';
+        }
+        return '<div style="padding:8px 0; border-bottom:1px solid var(--border); display:flex; align-items:center; justify-content:space-between; gap:10px;">' +
+          '<strong>' + escapeHtml(a.email) + '</strong>' +
+          '<select data-email="' + escapeHtml(a.email) + '" onchange="changeAccountRole(this)" style="width:auto;">' +
+          roleDefs.map(r => '<option value="' + escapeHtml(r.name) + '"' + (r.name === a.role_name ? ' selected' : '') + '>' + escapeHtml(r.name) + '</option>').join('') +
+          '</select></div>';
+      }).join('');
 
-      if (!canManageRoles()) {
-        controlsEl.innerHTML = '<p class="tool-sub">Only a role that can manage roles can create new roles or reassign an account here.</p>';
-        return;
+      if (!manager) {
+        accountsEl.insertAdjacentHTML('beforeend', '<p class="tool-sub" style="margin-top:8px;">Only a Developer can change roles here.</p>');
       }
-
-      const roleOptions = roleDefs.map(r => '<option value="' + escapeHtml(r.name) + '">' + escapeHtml(r.name) + '</option>').join('');
-      controlsEl.innerHTML =
-        '<div class="tool-form-row"><div class="form-field"><label>New role name</label><input type="text" id="newRoleName" placeholder="e.g. Contractor"></div>' +
-        '<div class="form-field"><label>Description</label><input type="text" id="newRoleDescription" placeholder="What this role is for"></div></div>' +
-        '<div class="tool-form-row"><div class="form-field"><label style="display:flex; align-items:center; gap:6px;"><input type="checkbox" id="newRoleCanManage" style="width:auto;"> Can this role manage other roles?</label></div></div>' +
-        '<div class="form-footer"><button class="btn blue" id="createRoleBtn" onclick="createRole()">Create role</button></div>' +
-        '<div style="margin-top:18px; border-top:1px solid var(--border); padding-top:14px;">' +
-        '<div class="tool-form-row"><div class="form-field"><label>Account email</label><input type="text" id="assignRoleEmail" placeholder="name@triplehenterprisesllc.biz"></div>' +
-        '<div class="form-field"><label>Assign role</label><select id="assignRoleName">' + roleOptions + '</select></div></div>' +
-        '<div class="form-footer"><button class="btn blue" id="assignRoleBtn" onclick="assignRole()">Assign</button></div></div>';
     } catch (e) {
       accountsEl.innerHTML = '<p class="tool-sub">Could not reach Supabase: ' + escapeHtml(e.message || String(e)) + '</p>';
-      rolesEl.innerHTML = '';
-      controlsEl.innerHTML = '';
     }
   }
 
-  async function createRole() {
-    if (!(await confirmDevPassword())) return;
-    const nameInput = document.getElementById('newRoleName');
-    const descInput = document.getElementById('newRoleDescription');
-    const canManageInput = document.getElementById('newRoleCanManage');
-    const name = nameInput.value.trim();
-    if (!name) { showToast('Role name is required.', { type: 'error' }); return; }
-    const btn = document.getElementById('createRoleBtn');
-    btn.disabled = true;
-    btn.textContent = 'Creating...';
-    try {
-      if (typeof ensureFreshToken === 'function') await ensureFreshToken();
-      const res = await fetchWithTimeout(SUPABASE_URL + '/rest/v1/role_definitions', 8000, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'apikey': SUPABASE_ANON_KEY,
-          'Authorization': 'Bearer ' + getAuthToken(),
-        },
-        body: JSON.stringify([{
-          name: name,
-          description: descInput.value.trim(),
-          can_manage_roles: !!canManageInput.checked,
-          created_by: (typeof getCurrentUserEmail === 'function' && getCurrentUserEmail()) || null,
-        }]),
-      });
-      if (!res.ok) {
-        const body = await res.text();
-        throw new Error('Create failed (HTTP ' + res.status + '): ' + body.slice(0, 200));
-      }
-      showToast('Role "' + name + '" created.');
-      await renderAccountRoles();
-    } catch (e) {
-      showToast(e.message || String(e), { type: 'error' });
-    } finally {
-      btn.disabled = false;
-      btn.textContent = 'Create role';
-    }
-  }
-
-  async function assignRole() {
-    if (!(await confirmDevPassword())) return;
-    const emailInput = document.getElementById('assignRoleEmail');
-    const roleSelect = document.getElementById('assignRoleName');
-    const email = emailInput.value.trim().toLowerCase();
-    if (!email) { showToast('Account email is required.', { type: 'error' }); return; }
-    const btn = document.getElementById('assignRoleBtn');
-    btn.disabled = true;
-    btn.textContent = 'Assigning...';
+  async function changeAccountRole(selectEl) {
+    if (!(await confirmDevPassword())) { await renderAccountRoles(); return; } // revert the dropdown to the real saved value
+    const email = selectEl.getAttribute('data-email');
+    const newRole = selectEl.value;
+    selectEl.disabled = true;
     try {
       if (typeof ensureFreshToken === 'function') await ensureFreshToken();
       const res = await fetchWithTimeout(SUPABASE_URL + '/rest/v1/account_roles?on_conflict=email', 8000, {
@@ -1591,22 +1537,20 @@
         },
         body: JSON.stringify([{
           email: email,
-          role_name: roleSelect.value,
+          role_name: newRole,
           assigned_by: (typeof getCurrentUserEmail === 'function' && getCurrentUserEmail()) || null,
         }]),
       });
       if (!res.ok) {
         const body = await res.text();
-        throw new Error('Assign failed (HTTP ' + res.status + '): ' + body.slice(0, 200));
+        throw new Error('HTTP ' + res.status + ': ' + body.slice(0, 200));
       }
-      showToast('Assigned ' + email + ' to ' + roleSelect.value + '.');
-      emailInput.value = '';
-      await renderAccountRoles();
+      showToast(email + ' is now ' + newRole + '.');
     } catch (e) {
       showToast(e.message || String(e), { type: 'error' });
+      await renderAccountRoles(); // revert the dropdown to the real saved value
     } finally {
-      btn.disabled = false;
-      btn.textContent = 'Assign';
+      selectEl.disabled = false;
     }
   }
 
