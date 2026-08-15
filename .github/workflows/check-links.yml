@@ -1,0 +1,22 @@
+name: Check links
+
+# Weekly, plus on-demand. Two passes -- see scripts/check-links.py for
+# the full rationale: internal references get checked against every
+# HTML file in the repo (no network needed), external links only
+# against the 6 public pages (index + 5 landing pages), since those are
+# what real visitors and Google actually crawl.
+
+on:
+  schedule:
+    - cron: '15 10 * * 3'  # ~04:15 Mountain Time, Wednesday
+  workflow_dispatch: {}
+  push:
+    branches: [main]
+
+jobs:
+  check-links:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Check internal and external links
+        run: python3 scripts/check-links.py

@@ -1,0 +1,64 @@
+name: Clean up old Actions artifacts
+
+# Every push builds a full Pages deployment artifact (the entire site,
+# several MB), and they were piling up -- 30 at once, 275MB total, found
+# during an August 2026 cleanup pass. They already carry 1-day retention
+# and expire on their own, but this keeps only the most recent few
+# around explicitly rather than waiting on expiry, and handles any
+# artifact type that doesn't have short retention set.
+#
+# Uses the repo's own automatically-provided GITHUB_TOKEN, not a
+# personal access token -- the `permissions: actions: write` block below
+# is what grants it access to delete this repo's own artifacts. No
+# secret setup needed for this one.
+
+on:
+  schedule:
+    - cron: '0 12 * * *'  # ~06:00 Mountain Time, daily
+  workflow_dispatch: {}
+
+permissions:
+  actions: write
+
+jobs:
+  cleanup:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Delete all but the 3 most recent artifacts of each name
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const perPage = 100;
+            let page = 1;
+            const byName = {};
+            while (true) {
+              const res = await github.rest.actions.listArtifactsForRepo({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                per_page: perPage,
+                page,
+              });
+              if (res.data.artifacts.length === 0) break;
+              for (const a of res.data.artifacts) {
+                (byName[a.name] = byName[a.name] || []).push(a);
+              }
+              if (res.data.artifacts.length < perPage) break;
+              page++;
+            }
+
+            let deleted = 0;
+            let freedBytes = 0;
+            for (const name of Object.keys(byName)) {
+              const sorted = byName[name].sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+              const toDelete = sorted.slice(3); // keep the 3 newest of each artifact name
+              for (const a of toDelete) {
+                await github.rest.actions.deleteArtifact({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  artifact_id: a.id,
+                });
+                deleted++;
+                freedBytes += a.size_in_bytes;
+              }
+            }
+            console.log(`Deleted ${deleted} artifact(s), freed ${(freedBytes / 1024 / 1024).toFixed(1)} MB.`);
