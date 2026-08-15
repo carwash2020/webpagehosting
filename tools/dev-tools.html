@@ -184,6 +184,19 @@
 
   <div id="devIdentityBadge" class="dev-identity" style="display:none;"></div>
 
+  <div id="rolePreviewControl" style="display:none; margin-bottom:14px;">
+    <label style="font-size:12.5px; color:var(--text-dim); display:inline-flex; align-items:center; gap:8px;">
+      Preview Account roles as:
+      <select id="rolePreviewSelect" onchange="setRolePreview(this.value)" style="width:auto;">
+        <option value="">My real session</option>
+        <option value="non-manager">A non-manager role (e.g. Owner)</option>
+      </select>
+    </label>
+  </div>
+  <div id="rolePreviewBanner" class="dev-status-chip" style="display:none; border-color:var(--orange-tint-border); background:var(--orange-tint-soft); color:var(--orange-light); margin-bottom:14px;">
+    &#9888;&#65039; Previewing the Account roles panel as a non-manager role. This only changes what this panel SHOWS you -- your actual account and permissions haven't changed, and any real change you make still happens as yourself. <a href="#" onclick="event.preventDefault(); setRolePreview('');" style="color:inherit; text-decoration:underline; margin-left:6px;">Exit preview</a>
+  </div>
+
   <div class="dev-status-strip" id="devStatusStrip">
     <span class="dev-status-chip"><span class="dev-status-dot checking" id="statusDotSession"></span><span id="statusTextSession">Session</span></span>
     <span class="dev-status-chip"><span class="dev-status-dot checking" id="statusDotSupabase"></span><span id="statusTextSupabase">Supabase</span></span>
@@ -313,6 +326,30 @@
       <a href="https://supabase.com/dashboard/project/csvfqdjuobylgafgolho" target="_blank" rel="noopener">&#128202; Supabase</a>
       <a href="https://hetrixtools.com/dashboard/uptime-monitors/" target="_blank" rel="noopener">&#128225; Uptime</a>
       <a href="https://www.triplehenterprisesllc.biz/" target="_blank" rel="noopener">&#127760; Live site</a>
+    </div>
+  </div>
+
+  <div class="dev-panel dev-panel-wide is-collapsible" data-collapse-key="storagebrowser">
+    <div class="dev-panel-heading" onclick="toggleDevPanel(this)">
+      <h2>Storage browser</h2>
+      <button class="dev-info-bubble" onclick="event.stopPropagation(); openDevInfo('storagebrowser')" aria-label="What does this do?" title="What does this do?">?</button>
+      <span class="dev-collapse-caret">&#9660;</span>
+    </div>
+    <div class="dev-panel-body">
+      <button class="secondary-btn" style="margin-bottom:12px;" onclick="renderStorageBrowser()">Refresh</button>
+      <div id="storageBrowserResults"><p class="tool-sub">Click Refresh to scan all 3 buckets.</p></div>
+    </div>
+  </div>
+
+  <div class="dev-panel dev-panel-wide is-collapsible" data-collapse-key="dataintegrity">
+    <div class="dev-panel-heading" onclick="toggleDevPanel(this)">
+      <h2>Data integrity check</h2>
+      <button class="dev-info-bubble" onclick="event.stopPropagation(); openDevInfo('dataintegrity')" aria-label="What does this do?" title="What does this do?">?</button>
+      <span class="dev-collapse-caret">&#9660;</span>
+    </div>
+    <div class="dev-panel-body">
+      <button class="secondary-btn" style="margin-bottom:12px;" onclick="runDataIntegrityCheck()">Run check</button>
+      <div id="dataIntegrityResults"><p class="tool-sub">Cross-checks job photo records against actual storage files in both directions, and flags any lead with obviously missing contact info.</p></div>
     </div>
   </div>
 
@@ -473,6 +510,14 @@
     links: {
       title: 'Quick links',
       body: `<p>Direct shortcuts to the places you'd otherwise have to remember URLs for or dig up bookmarks for: the GitHub repo itself, its Actions run history, the Supabase project dashboard, the HetrixTools uptime monitors (the site itself, plus the keep-alive that stops Supabase's free tier from auto-pausing), and the actual live public site.</p>`,
+    },
+    storagebrowser: {
+      title: 'Storage browser',
+      body: `<p>Scans all 3 Storage buckets (job-photos, receipts, secure-documents) and shows a real file count and total size for each -- there was previously no way to see what's actually in these buckets from inside the app at all.</p><p>Since each bucket stores files inside per-record folders (job-&#123;id&#125; for photos, expense-&#123;id&#125; for receipts) rather than flat, this has to list the bucket root first to find the folders, then list inside each one -- so a bucket with a lot of jobs or expenses will take a few seconds longer than one with just a handful.</p>`,
+    },
+    dataintegrity: {
+      title: 'Data integrity check',
+      body: `<p>Cross-checks job photo database records against actual files in Storage, in BOTH directions: a record whose file is missing (an upload that got interrupted after the metadata was saved but before the file finished), and a file sitting in Storage with no matching record (the reverse -- the file landed but the database insert never completed). Either one means a photo that looks like it exists but doesn't actually work.</p><p>Also flags any lead with neither a phone number nor an email on file -- either one alone is completely normal, but both blank usually means the contact form was submitted incompletely and there's currently no way to reach that person back.</p>`,
     },
   };
   function openDevInfo(key) {
@@ -1598,14 +1643,50 @@
   // same list as plain read-only text, so there's still visibility for
   // both of you without a manage-roles account being able to do
   // anything through it.
+  // ---------------------------------------------------------------------
+  // ROLE PREVIEW -- added 2026-08-15. Deliberately display-only: real
+  // permissions are enforced server-side by RLS against the actual
+  // signed-in JWT, which client-side JS has no way to honestly change.
+  // This can only affect what renderAccountRoles() SHOWS, never what
+  // Supabase will actually allow -- and changeAccountRole() below
+  // refuses to run at all while a preview is active, specifically so
+  // there's never a moment where the screen shows one thing (Steve's
+  // read-only view) while a click would have done another (a real
+  // change, using Connor's real permissions). The banner and the exit
+  // link are the same control -- there's no way to have this active
+  // without it being visually obvious.
+  // ---------------------------------------------------------------------
+
+  let _rolePreview = ''; // '' = real session, 'non-manager' = preview
+
+  function setRolePreview(value) {
+    _rolePreview = value;
+    document.getElementById('rolePreviewSelect').value = value;
+    document.getElementById('rolePreviewBanner').style.display = value ? 'inline-flex' : 'none';
+    renderAccountRoles();
+  }
+
+  // What renderAccountRoles() should actually treat as the manager
+  // state -- the real canManageRoles() unless a preview overrides it.
+  function effectiveCanManageRoles() {
+    if (_rolePreview === 'non-manager') return false;
+    return canManageRoles();
+  }
+
   async function renderAccountRoles() {
     const accountsEl = document.getElementById('accountRolesList');
     if (!accountsEl) return; // page not loaded far enough yet, or dev tools access denied
 
+    // The preview control itself only makes sense to show to someone
+    // who actually can manage roles -- previewing "non-manager" for an
+    // account that already sees the non-manager view is a no-op.
+    const previewControl = document.getElementById('rolePreviewControl');
+    if (previewControl) previewControl.style.display = canManageRoles() ? 'block' : 'none';
+
     try {
       if (typeof ensureFreshToken === 'function') await ensureFreshToken();
       const [accounts, roleDefs] = await Promise.all([fetchAccountRolesData(), fetchRoleDefinitions()]);
-      const manager = canManageRoles();
+      const manager = effectiveCanManageRoles();
 
       const roleOptionsHtml = roleDefs.map(r => '<option value="' + escapeHtml(r.name) + '">' + escapeHtml(r.name) + '</option>').join('');
 
@@ -1629,6 +1710,11 @@
   }
 
   async function changeAccountRole(selectEl) {
+    if (_rolePreview) {
+      showToast('Currently previewing as a non-manager role -- exit preview to make a real change.', { type: 'error' });
+      await renderAccountRoles();
+      return;
+    }
     if (!(await confirmDevPassword())) { await renderAccountRoles(); return; } // revert the dropdown to the real saved value
     const email = selectEl.getAttribute('data-email');
     const newRole = selectEl.value;
@@ -1800,6 +1886,140 @@
       else setStatusChip('Supabase', 'bad', 'HTTP ' + res.status);
     } catch (e) {
       setStatusChip('Supabase', 'bad', 'Unreachable');
+    }
+  }
+
+  // ---------------------------------------------------------------------
+  // STORAGE BROWSER + DATA INTEGRITY CHECK -- added 2026-08-15
+  // ---------------------------------------------------------------------
+
+  function formatBytes(n) {
+    if (n < 1024) return n + ' B';
+    if (n < 1024 * 1024) return (n / 1024).toFixed(1) + ' KB';
+    return (n / (1024 * 1024)).toFixed(2) + ' MB';
+  }
+
+  // Storage's list endpoint is per-folder, not recursive (same
+  // limitation loadSecureDocuments() in sync.js already works around).
+  // Lists the bucket root first to find folders, then lists inside
+  // each one to get real file entries with sizes.
+  async function listBucketFully(bucket) {
+    const rootRes = await fetchWithTimeout(SUPABASE_URL + '/storage/v1/object/list/' + bucket, 8000, {
+      method: 'POST',
+      headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': 'Bearer ' + getAuthToken(), 'Content-Type': 'application/json' },
+      body: JSON.stringify({ prefix: '', limit: 200 }),
+    });
+    if (!rootRes.ok) throw new Error('HTTP ' + rootRes.status + ' listing ' + bucket);
+    const rootEntries = await rootRes.json();
+
+    // Files sitting directly at bucket root (id !== null means a real
+    // object, not a folder) -- neither job-photos nor receipts ever put
+    // anything here by design, but this doesn't assume that.
+    const files = rootEntries
+      .filter(e => e.id !== null)
+      .map(e => ({ path: e.name, size: (e.metadata && e.metadata.size) || 0 }));
+
+    const folders = rootEntries.filter(e => e.id === null).map(e => e.name);
+    for (const folder of folders) {
+      const res = await fetchWithTimeout(SUPABASE_URL + '/storage/v1/object/list/' + bucket, 8000, {
+        method: 'POST',
+        headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': 'Bearer ' + getAuthToken(), 'Content-Type': 'application/json' },
+        body: JSON.stringify({ prefix: folder + '/', limit: 500 }),
+      });
+      if (!res.ok) continue;
+      const entries = await res.json();
+      entries.filter(e => e.id !== null).forEach(e => {
+        files.push({ path: folder + '/' + e.name, size: (e.metadata && e.metadata.size) || 0 });
+      });
+    }
+    return files;
+  }
+
+  async function renderStorageBrowser() {
+    const el = document.getElementById('storageBrowserResults');
+    el.innerHTML = '<p class="tool-sub">Scanning job-photos, receipts, and secure-documents...</p>';
+    try {
+      if (typeof ensureFreshToken === 'function') await ensureFreshToken();
+      const buckets = ['job-photos', 'receipts', 'secure-documents'];
+      const results = await Promise.all(buckets.map(b => listBucketFully(b).catch(e => ({ error: e.message }))));
+
+      let html = '';
+      let grandTotal = 0;
+      buckets.forEach((bucket, i) => {
+        const r = results[i];
+        if (r.error) {
+          html += '<div style="padding:8px 0; border-bottom:1px solid var(--border);"><strong>' + bucket + '</strong> -- <span style="color:#e05555;">' + escapeHtml(r.error) + '</span></div>';
+          return;
+        }
+        const totalSize = r.reduce((s, f) => s + f.size, 0);
+        grandTotal += totalSize;
+        html += '<div style="padding:8px 0; border-bottom:1px solid var(--border);">' +
+          '<strong>' + bucket + '</strong> &mdash; ' + r.length + ' file' + (r.length === 1 ? '' : 's') + ', ' + formatBytes(totalSize) +
+          '</div>';
+      });
+      html += '<div style="padding:10px 0; font-size:13px; color:var(--text-dim);">Total across all 3 buckets: ' + formatBytes(grandTotal) + '</div>';
+      el.innerHTML = html;
+
+      // Stash for the data integrity check below, so it doesn't have to
+      // re-scan storage from scratch if run right after this.
+      window._lastStorageScan = { buckets, results };
+    } catch (e) {
+      el.innerHTML = '<p class="tool-sub">Could not reach Supabase: ' + escapeHtml(e.message || String(e)) + '</p>';
+    }
+  }
+
+  // Cross-checks job photo records against actual storage files in
+  // BOTH directions -- a th_job_photos row whose file is missing (a
+  // failed or interrupted upload never cleaned up), and a file sitting
+  // in storage with no matching database row (an upload that half-
+  // succeeded -- the file landed but the metadata insert never did).
+  // Also flags leads missing both phone AND email, since either being
+  // blank is normal (someone only gave one), but both blank means the
+  // form was likely submitted incompletely and there's no way to
+  // actually reach that person.
+  async function runDataIntegrityCheck() {
+    const el = document.getElementById('dataIntegrityResults');
+    el.innerHTML = '<p class="tool-sub">Checking...</p>';
+    try {
+      if (typeof ensureFreshToken === 'function') await ensureFreshToken();
+
+      const [photosRes, jobPhotoFiles] = await Promise.all([
+        fetchWithTimeout(SUPABASE_URL + '/rest/v1/th_job_photos?select=id,job_title,storage_path', 8000, {
+          headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': 'Bearer ' + getAuthToken() },
+        }),
+        listBucketFully('job-photos'),
+      ]);
+
+      if (!photosRes.ok) throw new Error('Could not read th_job_photos (HTTP ' + photosRes.status + ')');
+      const photoRows = await photosRes.json();
+      const filePaths = new Set(jobPhotoFiles.map(f => f.path));
+      const rowPaths = new Set(photoRows.map(r => r.storage_path));
+
+      const missingFiles = photoRows.filter(r => !filePaths.has(r.storage_path));
+      const orphanFiles = jobPhotoFiles.filter(f => !rowPaths.has(f.path));
+
+      const allLeadsRes = await fetchWithTimeout(SUPABASE_URL + '/rest/v1/th_leads?select=id,name,phone,email', 8000, {
+        headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': 'Bearer ' + getAuthToken() },
+      });
+      const allLeads = allLeadsRes.ok ? await allLeadsRes.json() : [];
+      const contactlessLeads = allLeads.filter(l => !l.phone && !l.email);
+
+      let html = '';
+      html += '<div class="dev-check-row"><span>Job photo records with a missing file</span><span class="dev-check-status ' + (missingFiles.length ? 'fail' : 'pass') + '">' + missingFiles.length + '</span></div>';
+      if (missingFiles.length) {
+        html += missingFiles.map(r => '<div class="dev-check-detail">#' + r.id + ' (' + escapeHtml(r.job_title || 'untitled job') + ') -- ' + escapeHtml(r.storage_path) + '</div>').join('');
+      }
+      html += '<div class="dev-check-row"><span>Storage files with no matching record</span><span class="dev-check-status ' + (orphanFiles.length ? 'fail' : 'pass') + '">' + orphanFiles.length + '</span></div>';
+      if (orphanFiles.length) {
+        html += orphanFiles.map(f => '<div class="dev-check-detail">' + escapeHtml(f.path) + ' (' + formatBytes(f.size) + ')</div>').join('');
+      }
+      html += '<div class="dev-check-row"><span>Leads with no phone or email</span><span class="dev-check-status ' + (contactlessLeads.length ? 'fail' : 'pass') + '">' + contactlessLeads.length + '</span></div>';
+      if (contactlessLeads.length) {
+        html += contactlessLeads.map(l => '<div class="dev-check-detail">#' + l.id + ' -- ' + escapeHtml(l.name || '(no name)') + '</div>').join('');
+      }
+      el.innerHTML = html;
+    } catch (e) {
+      el.innerHTML = '<p class="tool-sub">Could not complete check: ' + escapeHtml(e.message || String(e)) + '</p>';
     }
   }
 

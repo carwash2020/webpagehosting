@@ -292,3 +292,32 @@ confirm first that the `authenticated`-role policies (view/upload/delete,
 all 3 buckets) are still present -- those were never touched by this
 fix and should be the only policies `storage.objects` has going forward.
 
+A second dead public-URL function (`getReceiptUrl()`, the receipts
+equivalent of `getJobPhotoUrl()`) was found and removed the following
+day during unrelated work building the Storage browser -- same pattern,
+zero call sites, would only have worked if the bucket were public.
+
+## Automated jobs added 2026-08-15
+
+Three new `pg_cron` jobs and 4 new GitHub Actions workflows -- see the
+"Automated jobs" section of `README.md` for the full list of what each
+one does. Two things worth knowing if any of them ever misbehave:
+
+- **`archive-old-notification-log` retention is 3700 days, not
+  something shorter.** An earlier draft of this migration used 120
+  days, which would have silently broken the two "nudge once, ever"
+  reminder-check categories (job-no-photos, warranty-checkin, both
+  using a 3650-day resend interval) by deleting their de-dup row and
+  letting them fire again as if they'd never sent. Caught before it
+  ever ran for real. If notification_log retention is ever changed
+  again, it must stay longer than the longest `RESEND_DAYS` value in
+  `edge-functions/send-push-index.ts`, not shorter.
+- **`backup-business-data.yml` needs a `SUPABASE_SERVICE_ROLE_KEY` repo
+  secret to actually run** -- unlike `backup-cms-content.yml`, which
+  uses the public anon key safely because "Anyone can read site
+  content" is a real policy, `workspace_sync` requires a genuine
+  authenticated session. If this workflow's runs show "repo secret is
+  not set" in the Actions log, that secret needs adding (Settings →
+  Secrets and variables → Actions), value from Supabase's own dashboard
+  (Project Settings → API → service_role secret) -- never from this
+  repo or any file in it.
