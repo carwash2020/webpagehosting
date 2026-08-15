@@ -939,10 +939,12 @@ async function deleteSecureDocument(path) {
   }
 }
 
-function getReceiptUrl(storagePath) {
-  return `${SUPABASE_URL}/storage/v1/object/public/${RECEIPTS_BUCKET}/${storagePath}`;
-}
-
+// getReceiptUrl() (the old public-URL version) was removed 2026-08-15,
+// found while building the storage browser below -- same dead-function
+// pattern as getJobPhotoUrl() above, missed during that earlier cleanup
+// since it's in a different section of this file. Zero call sites,
+// confirmed by grep, and would only have worked if the bucket were
+// public anyway. getSignedReceiptUrl() below is the only real path.
 // Same reasoning as getSignedJobPhotoUrl above -- lets the receipts
 // bucket stay private while still being viewable in the app.
 async function getSignedReceiptUrl(storagePath) {

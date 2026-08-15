@@ -30,6 +30,14 @@
 //         there unhandled -- this closes that gap using the existing
 //         th_leads.handled column, no schema change needed)
 //
+//   { "type": "weekly-digest" }
+//     -- fired once a week (Monday mornings) by its own pg_cron job,
+//     separate from daily-reminder-check. This is trend awareness, not
+//     task nagging -- deliberately the one exception to "many small
+//     notifications instead of one digest" above, since a running
+//     count of what happened this week is a genuinely different kind
+//     of thing than "here's a specific problem to go fix."
+//
 //     Only #1 is naturally non-repeating. Everything else is an ONGOING
 //     condition (an unpaid invoice stays unpaid for weeks), so the
 //     notification_log table de-duplicates -- each category only
@@ -447,6 +455,68 @@ async function checkUnrespondedLeads() {
   }
 }
 
+function money(v: number): string {
+  return "$" + v.toFixed(2).replace(/\d(?=(\d{3})+\.)/g, "$&,");
+}
+
+// Weekly digest -- added 2026-08-15. Trend awareness rather than task
+// nagging, so this one is intentionally sent even when every number is
+// zero (a quiet week is itself useful to know), unlike every check
+// above which only ever sends when something needs attention.
+async function sendWeeklyDigest() {
+  const synced = await getSyncedData();
+  const jobs: any[] = synced ? safeParse(synced.data.th_tracker_jobs, []) : [];
+  const invoices: any[] = synced ? safeParse(synced.data.th_invoices, []) : [];
+  const quotes: any[] = synced ? safeParse(synced.data.th_quotes, []) : [];
+
+  const weekAgo = new Date();
+  weekAgo.setDate(weekAgo.getDate() - 7);
+
+  const jobsCompleted = jobs.filter((j) => {
+    if (j.status !== "done" || !j.date) return false;
+    const d = new Date(j.date + "T00:00:00");
+    return !isNaN(d.getTime()) && d >= weekAgo;
+  }).length;
+
+  const invoicedThisWeek = invoices
+    .filter((inv) => {
+      if (!inv.date || typeof inv.total !== "number") return false;
+      const d = new Date(inv.date + "T00:00:00");
+      return !isNaN(d.getTime()) && d >= weekAgo;
+    })
+    .reduce((sum, inv) => sum + inv.total, 0);
+
+  const outstandingTotal = invoices
+    .filter((inv) => !inv.paid && typeof inv.total === "number")
+    .reduce((sum, inv) => sum + inv.total, 0);
+
+  // Same "unconverted" definition as checkUnconvertedQuotes -- a quote
+  // linked to a job that has no matching invoice yet.
+  const invoicedJobRefIds = new Set(invoices.map((inv: any) => inv.jobRefId).filter(Boolean));
+  const quotesOutstanding = quotes.filter((q) => q.jobRefId && !invoicedJobRefIds.has(q.jobRefId)).length;
+
+  // th_leads is its own real table -- read directly rather than through
+  // the workspace_sync blob, same as checkUnrespondedLeads does.
+  const leadsRes = await supabaseRequest(
+    `/rest/v1/th_leads?created_at=gte.${encodeURIComponent(weekAgo.toISOString())}&select=id`,
+  );
+  const newLeads = leadsRes.ok ? (await leadsRes.json()).length : 0;
+
+  const parts = [
+    `${jobsCompleted} job${jobsCompleted === 1 ? "" : "s"} completed`,
+    `${money(invoicedThisWeek)} invoiced`,
+    `${newLeads} new lead${newLeads === 1 ? "" : "s"}`,
+  ];
+  if (outstandingTotal > 0) parts.push(`${money(outstandingTotal)} outstanding`);
+  if (quotesOutstanding > 0) parts.push(`${quotesOutstanding} quote${quotesOutstanding === 1 ? "" : "s"} awaiting conversion`);
+
+  await sendToAllSubscriptions({
+    title: "Weekly Summary",
+    body: parts.join(" \u00b7 "),
+    url: "/workspace.html",
+  });
+}
+
 Deno.serve(async (req: Request) => {
   try {
     const payload = await req.json();
@@ -493,6 +563,11 @@ Deno.serve(async (req: Request) => {
       return new Response(JSON.stringify({ ok: true, ran: true, syncedDataFound: !!synced }), {
         headers: { "Content-Type": "application/json" },
       });
+    }
+
+    if (payload.type === "weekly-digest") {
+      await sendWeeklyDigest();
+      return new Response(JSON.stringify({ ok: true, ran: true }), { headers: { "Content-Type": "application/json" } });
     }
 
     return new Response(JSON.stringify({ ok: false, error: "Unknown type" }), {

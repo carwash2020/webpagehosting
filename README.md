@@ -77,7 +77,28 @@ Two things on this specific repo have caused real, hours-long confusion before. 
 The internal tools sync through a **separate Supabase project belonging to Triple H only** — never shared with any other business. See `DISASTER_RECOVERY.md` at the repo root for incident runbooks, and `sql/` + `edge-functions/` for schema history and the deployed Edge Function's source.
 
 - `sql/` — every schema/migration/fix file actually run against Supabase, kept as a record of what was done and why. Not meant to be blindly re-run; read each file's own comments first, since some are idempotent and some (the duplicate-cleanup fixes) are meant to run exactly once.
-- `edge-functions/send-push-index.ts` — snapshot of the deployed `send-push` Edge Function's source, for reference/disaster-recovery. Restoring it for real requires the Supabase CLI plus re-adding the `VAPID_PUBLIC_KEY`/`VAPID_PRIVATE_KEY` secrets in Supabase's own dashboard — those keys are deliberately never stored in this repo.
+- `edge-functions/send-push-index.ts` — snapshot of the deployed `Send-Push` Edge Function's source (note the capitalized slug — Supabase treats function names case-sensitively, and this matters if you ever redeploy by hand), for reference/disaster-recovery. Restoring it for real requires the Supabase CLI plus re-adding the `VAPID_PUBLIC_KEY`/`VAPID_PRIVATE_KEY` secrets in Supabase's own dashboard — those keys are deliberately never stored in this repo.
+
+## Automated jobs (2026-08-15)
+
+Three independent layers of automation, each doing a different job:
+
+**GitHub Actions** (`.github/workflows/`) — all added because they needed
+to be added by hand in the GitHub web UI (creating/editing anything
+under `.github/workflows/` requires the `workflow` OAuth scope, which
+the assistant's GitHub token was never granted):
+- `backup-cms-content.yml` — daily, backs up `site_content`/`site_faq`/`site_terms` to `backups/` using the public anon key (safe, since "Anyone can read site content" is already a real policy).
+- `backup-business-data.yml` — weekly, backs up `workspace_sync` (every job, invoice, contract, quote) to `backups/`. Needs the `SUPABASE_SERVICE_ROLE_KEY` repo secret set (Settings → Secrets and variables → Actions), since `workspace_sync` requires a real authenticated session, unlike the 3 CMS tables. The key is referenced by name only in the workflow file — never written into it.
+- `check-links.yml` — weekly plus on push, runs `scripts/check-links.py` (internal file references across every HTML file, external links on the 6 public pages only).
+- `lighthouse.yml` — daily, scores the live public site against `.github/lighthouserc.json`'s thresholds. Runs on a schedule rather than directly on push, since Pages needs a little time to actually deploy after a push lands.
+- `cleanup-artifacts.yml` — daily, keeps only the 3 most recent Actions artifacts of each name. Every push generates a full-site Pages deployment artifact; without this they pile up (275MB across 30 of them was the actual trigger for adding this). Uses the workflow's own built-in `GITHUB_TOKEN` with `permissions: actions: write` — no secret needed for this one specifically.
+
+**Supabase `pg_cron`** (`select * from cron.job;` to see live state):
+- `daily-reminder-check` — 1am daily, 11 business-condition checks (see the header comment in `edge-functions/send-push-index.ts` for the full list).
+- `weekly-business-digest` — Monday mornings, one summary push (jobs completed, invoiced, new leads, outstanding balance) rather than a specific alert — trend awareness, not task nagging.
+- `archive-old-notification-log` — monthly, deletes `notification_log` rows older than 3700 days. That number isn't arbitrary: two of the 11 daily checks use a 3650-day resend interval specifically to nudge only once, ever — retention has to stay longer than the longest resend interval in use, or a "one-time" nudge would silently start repeating once its log row got archived.
+
+**Dev Tools panels** (`tools/dev-tools.html`) — Storage browser (file counts/sizes across all 3 buckets) and Data integrity check (job-photo records vs. actual files, in both directions, plus contact-less leads).
 
 ## ⚠️ Do not delete
 
@@ -87,10 +108,21 @@ The internal tools sync through a **separate Supabase project belonging to Tripl
 
 ## Known open items
 
-`DISASTER_RECOVERY.md`, `sql/`, and `edge-functions/` are now committed
-at the repo root as of 2026-08-14 -- they previously existed only as a
-backup zip delivered directly to Connor, referenced here as if they were
-already in the repo, but never actually were. That gap is closed.
+- A lead auto-responder (an automatic "we got your request" reply sent
+  to the customer) was scoped but not built -- it needs a real email-
+  sending provider (Resend, SendGrid, etc.) with its own API key, which
+  doesn't exist yet for this project. Wiring the trigger up is quick
+  once a provider is chosen; picking one is the actual open decision.
+- An accidental second Edge Function exists with the lowercase slug
+  `send-push` (the real one is `Send-Push`, capitalized) -- created by
+  a deploy-tool mistake on 2026-08-15. It's empty and wired to nothing,
+  but there's no tool available to delete it from the assistant side;
+  remove it by hand from the Supabase dashboard's Edge Functions list.
+- Leaked-password protection is still off in Supabase Auth -- a
+  dashboard-only toggle (Authentication → Policies), not something
+  scriptable via SQL.
+
+
 
 ## Deploying changes
 
