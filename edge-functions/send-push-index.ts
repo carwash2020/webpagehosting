@@ -9,7 +9,7 @@
 //
 //   { "type": "reminder-check" }
 //     -- fired once a day by a pg_cron scheduled job. This single call
-//     checks TEN separate conditions and sends a SEPARATE notification
+//     checks ELEVEN separate conditions and sends a SEPARATE notification
 //     for each one that's actually true -- these are deliberately not
 //     bundled into one digest, per an explicit choice to accept more
 //     individual notifications rather than fewer combined ones.
@@ -24,6 +24,11 @@
 //     8. Quotes 14+ days old, linked to a job, never invoiced
 //     9. Jobs marked complete with zero photos attached
 //     10. Completed jobs whose 30-day warranty ends within 5 days
+//     11. Leads sitting 24+ hours with no response (added 2026-08-15 --
+//         a new lead gets an instant push via the other trigger above,
+//         but until now nothing ever followed up if that lead just sat
+//         there unhandled -- this closes that gap using the existing
+//         th_leads.handled column, no schema change needed)
 //
 //     Only #1 is naturally non-repeating. Everything else is an ONGOING
 //     condition (an unpaid invoice stays unpaid for weeks), so the
@@ -31,6 +36,8 @@
 //     re-sends after its own resend interval has passed, not on every
 //     single run. #9 and #10 are effectively one-time nudges (a very
 //     long resend interval rather than a special "never repeat" path).
+//     #11 resends daily on purpose -- an unhandled lead getting one
+//     daily nudge until it's actually dealt with is the whole point.
 //
 // Deploy with: supabase functions deploy send-push
 // Required secrets: VAPID_PUBLIC_KEY, VAPID_PRIVATE_KEY
@@ -58,6 +65,7 @@ const STUCK_IN_PROGRESS_DAYS = 7;
 const SYNC_STALE_DAYS = 3;
 const QUOTE_STALE_DAYS = 14;
 const WARRANTY_WARNING_DAYS = 5; // matches job-tracker.html's 30-day warranty window, warns in the last 5 days of it
+const UNRESPONDED_LEAD_HOURS = 24;
 
 // Resend intervals -- how long to wait before notifying about the SAME
 // still-true item again. Deliberately different per category based on
@@ -74,6 +82,7 @@ const RESEND_DAYS: Record<string, number> = {
   "quote-unconverted": 14,
   "job-no-photos": 3650,
   "warranty-checkin": 3650,
+  "unresponded-lead": 1,
 };
 
 function todayAtMidnight(): Date {
@@ -180,7 +189,7 @@ function safeParse(jsonString: string | undefined, fallback: any) {
   try { return JSON.parse(jsonString || "null") ?? fallback; } catch (e) { return fallback; }
 }
 
-// --- the four checks ------------------------------------------------------
+// --- the checks ------------------------------------------------------
 
 async function checkTomorrowsJobs(jobs: any[]) {
   const tomorrow = new Date();
@@ -406,6 +415,38 @@ async function checkWarrantyCheckIn(jobs: any[]) {
   }
 }
 
+// Added 2026-08-15. Reads th_leads directly (a real table, unlike jobs/
+// invoices/quotes which live inside workspace_sync's JSON blob) since
+// leads already have their own table and their own `handled` column --
+// no schema change needed to build this. Resends daily (see RESEND_DAYS
+// above) rather than once, since an unhandled lead getting nudged every
+// day until it's actually dealt with is the actual point here, unlike
+// the mostly-one-time nudges above.
+async function checkUnrespondedLeads() {
+  const cutoff = new Date(Date.now() - UNRESPONDED_LEAD_HOURS * 60 * 60 * 1000).toISOString();
+  const res = await supabaseRequest(
+    `/rest/v1/th_leads?handled=eq.false&created_at=lt.${encodeURIComponent(cutoff)}&select=id,name,created_at`,
+  );
+  if (!res.ok) return;
+  const leads = await res.json();
+
+  for (const lead of leads) {
+    const itemKey = String(lead.id);
+    if (await wasRecentlyNotified("unresponded-lead", itemKey)) continue;
+
+    const hoursWaiting = Math.round((Date.now() - new Date(lead.created_at).getTime()) / (60 * 60 * 1000));
+    const daysWaiting = Math.floor(hoursWaiting / 24);
+    const waitLabel = daysWaiting >= 1 ? `${daysWaiting} day${daysWaiting === 1 ? "" : "s"}` : `${hoursWaiting} hours`;
+
+    await sendToAllSubscriptions({
+      title: "Lead Still Unanswered",
+      body: `${lead.name || "A lead"} has been waiting ${waitLabel} with no response.`,
+      url: "/workspace.html",
+    });
+    await markNotified("unresponded-lead", itemKey);
+  }
+}
+
 Deno.serve(async (req: Request) => {
   try {
     const payload = await req.json();
@@ -426,29 +467,32 @@ Deno.serve(async (req: Request) => {
 
     if (payload.type === "reminder-check") {
       const synced = await getSyncedData();
-      if (!synced) {
-        return new Response(JSON.stringify({ ok: true, ran: false, reason: "no synced data found" }), {
-          headers: { "Content-Type": "application/json" },
-        });
+
+      const jobs = synced ? safeParse(synced.data.th_tracker_jobs, []) : [];
+      const invoices = synced ? safeParse(synced.data.th_invoices, []) : [];
+      const quotes = synced ? safeParse(synced.data.th_quotes, []) : [];
+      const compliance = synced ? safeParse(synced.data.th_compliance, null) : null;
+
+      if (synced) {
+        await checkTomorrowsJobs(jobs);
+        await checkFollowups(jobs);
+        await checkOverdueInvoices(invoices);
+        await checkCompliance(compliance);
+        await checkOverdueNotStarted(jobs);
+        await checkStuckInProgress(jobs);
+        await checkStaleSync(synced.updatedAt);
+        await checkUnconvertedQuotes(quotes, invoices);
+        await checkPhotolessCompletedJobs(jobs);
+        await checkWarrantyCheckIn(jobs);
       }
 
-      const jobs = safeParse(synced.data.th_tracker_jobs, []);
-      const invoices = safeParse(synced.data.th_invoices, []);
-      const quotes = safeParse(synced.data.th_quotes, []);
-      const compliance = safeParse(synced.data.th_compliance, null);
+      // Independent of workspace_sync -- th_leads is its own table, so
+      // this check runs regardless of whether synced data was found.
+      await checkUnrespondedLeads();
 
-      await checkTomorrowsJobs(jobs);
-      await checkFollowups(jobs);
-      await checkOverdueInvoices(invoices);
-      await checkCompliance(compliance);
-      await checkOverdueNotStarted(jobs);
-      await checkStuckInProgress(jobs);
-      await checkStaleSync(synced.updatedAt);
-      await checkUnconvertedQuotes(quotes, invoices);
-      await checkPhotolessCompletedJobs(jobs);
-      await checkWarrantyCheckIn(jobs);
-
-      return new Response(JSON.stringify({ ok: true, ran: true }), { headers: { "Content-Type": "application/json" } });
+      return new Response(JSON.stringify({ ok: true, ran: true, syncedDataFound: !!synced }), {
+        headers: { "Content-Type": "application/json" },
+      });
     }
 
     return new Response(JSON.stringify({ ok: false, error: "Unknown type" }), {
