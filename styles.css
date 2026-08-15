@@ -1159,6 +1159,19 @@
   overflow-y:auto;
   padding:26px 28px;
 }
+/* Grab handle -- touch devices only. Swipe-to-dismiss is invisible
+   without an affordance, and on a pointer device it would just be a
+   decoration for a gesture that can't be performed. See
+   attachSwipeToDismiss() in tools-common.js for the physics. */
+@media (hover: none) and (pointer: coarse){
+  .help-modal{ padding-top:20px; }
+  .help-modal::before{
+    content:'';
+    position:sticky; top:0; left:50%;
+    display:block; width:38px; height:4px; margin:0 auto 14px;
+    border-radius:999px; background:var(--border);
+  }
+}
 .help-modal h3{
   font-family:'Oswald',sans-serif;
   color:var(--orange-light);
