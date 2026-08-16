@@ -339,15 +339,12 @@
       <h2>Trigger workflows</h2>
       <button class="dev-info-bubble" onclick="openDevInfo('triggerworkflows')" aria-label="What does this do?" title="What does this do?">?</button>
     </div>
-    <div class="dev-status-chip" style="margin-bottom:12px; border-color:var(--orange-tint-border); background:var(--orange-tint-soft); color:var(--orange-light); display:inline-flex;">
-      &#9208; Setup in progress -- waiting on the GITHUB_PAT secret in Supabase (Edge Functions -> Secrets). Buttons are disabled until that's added, so they don't produce a confusing error in the meantime.
-    </div>
     <div class="dev-trigger-grid">
-      <button class="secondary-btn" disabled data-workflow="backup-cms-content.yml" onclick="triggerWorkflow(this)">Backup CMS content</button>
-      <button class="secondary-btn" disabled data-workflow="backup-business-data.yml" onclick="triggerWorkflow(this)">Backup business data</button>
-      <button class="secondary-btn" disabled data-workflow="check-links.yml" onclick="triggerWorkflow(this)">Check links</button>
-      <button class="secondary-btn" disabled data-workflow="lighthouse.yml" onclick="triggerWorkflow(this)">Lighthouse CI</button>
-      <button class="secondary-btn" disabled data-workflow="cleanup-artifacts.yml" onclick="triggerWorkflow(this)">Clean up artifacts</button>
+      <button class="secondary-btn" data-workflow="backup-cms-content.yml" onclick="triggerWorkflow(this)">Backup CMS content</button>
+      <button class="secondary-btn" data-workflow="backup-business-data.yml" onclick="triggerWorkflow(this)">Backup business data</button>
+      <button class="secondary-btn" data-workflow="check-links.yml" onclick="triggerWorkflow(this)">Check links</button>
+      <button class="secondary-btn" data-workflow="lighthouse.yml" onclick="triggerWorkflow(this)">Lighthouse CI</button>
+      <button class="secondary-btn" data-workflow="cleanup-artifacts.yml" onclick="triggerWorkflow(this)">Clean up artifacts</button>
     </div>
     <div id="triggerWorkflowResult" style="margin-top:10px; font-size:12.5px; color:var(--text-dim);"></div>
   </div>
@@ -544,7 +541,7 @@
     },
     triggerworkflows: {
       title: 'Trigger workflows',
-      body: `<p><strong>Setup in progress -- buttons are intentionally disabled right now.</strong> The one remaining step is adding a GITHUB_PAT secret in Supabase (Edge Functions -> Secrets, name it exactly GITHUB_PAT, value from a fine-grained GitHub token scoped to only Actions: Read and write on this one repo). Once that's added, remove the disabled attribute from each button in this panel and the setup-in-progress notice above them.</p><p>Runs any of the 5 GitHub Actions workflows on demand instead of waiting for its schedule. Calls a Supabase Edge Function (trigger-workflow) that holds the actual GitHub credential server-side -- it's never present anywhere in this page's own code, since anything sitting in client-side JS on a public page can be read by anyone who views the page source.</p><p>That function separately verifies the account calling it is genuinely signed in AND has a real assigned role (the same account_roles check everything else on this page depends on) before it will do anything, regardless of what this page itself shows -- so this stays safe even if something else about the page's own access control were ever wrong.</p>`,
+      body: `<p>Runs any of the 5 GitHub Actions workflows on demand instead of waiting for its schedule. Calls a Supabase Edge Function (trigger-workflow) that holds the actual GitHub credential server-side -- it's never present anywhere in this page's own code, since anything sitting in client-side JS on a public page can be read by anyone who views the page source.</p><p>That function separately verifies the account calling it is genuinely signed in AND has a real assigned role (the same account_roles check everything else on this page depends on) before it will do anything, regardless of what this page itself shows -- so this stays safe even if something else about the page's own access control were ever wrong.</p>`,
     },
   };
   function openDevInfo(key) {
