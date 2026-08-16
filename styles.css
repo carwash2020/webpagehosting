@@ -1789,214 +1789,264 @@
 .hours-value { color: var(--white); }
 
 /* ==========================================================================
-   VISUAL POLISH LAYER -- added 2026-08-16
-   One shared layer for BOTH the public site and the internal tool suite
-   (10 tool pages link this same file). Built entirely on the existing
-   :root variables, so the [data-theme="light"] toggle adapts everything
-   automatically -- no light-mode special cases below.
+   TOOL SUITE REDESIGN v2 -- 2026-08-16
+   Replaces the too-subtle "machined edge" layer, which read as a stray
+   orange line. This one is a full visual system: app-bar header, layered
+   ambient background, elevated gradient surfaces, an app-icon tool grid,
+   a segmented jump-nav, big confident numbers, and (from tools-common.js)
+   a native-style bottom navigation bar on mobile.
 
-   Signature element: the "machined edge" -- a high-vis gradient rail
-   across the top of every card/panel, like the painted edge of a pro
-   tool. It brightens and the surface lifts with an orange-tinted glow
-   on hover, so interactive things feel picked-up rather than flat.
+   Every selector is prefixed with `body` so this layer BEATS the pages'
+   own inline <style> blocks (link comes before inline, so bare equal-
+   specificity selectors here would lose). Built on the shared :root
+   tokens, so [data-theme="light"] still adapts automatically.
    ========================================================================== */
 
-/* ---- foundations: selection, scrollbars, focus, motion ---- */
-::selection { background: var(--orange); color: #0a0a0a; }
+/* ---- global feel: rounder, deeper, ambient ---- */
+body.th-tool-page {
+  /* layered ambient light instead of a flat void -- immediately visible */
+  background-image:
+    radial-gradient(90rem 42rem at 8% -12%, rgba(255,128,0,.07), transparent 60%),
+    radial-gradient(70rem 40rem at 108% 8%, rgba(58,160,255,.045), transparent 55%),
+    linear-gradient(var(--bg), var(--bg));
+  background-attachment: fixed;
+}
+body.th-tool-page { --radius: 14px; }
 
+::selection { background: var(--orange); color: #0a0a0a; }
 * { scrollbar-width: thin; scrollbar-color: var(--border) transparent; }
 *::-webkit-scrollbar { width: 9px; height: 9px; }
 *::-webkit-scrollbar-track { background: transparent; }
-*::-webkit-scrollbar-thumb {
-  background: var(--border); border-radius: 8px;
-  border: 2px solid transparent; background-clip: padding-box;
-}
+*::-webkit-scrollbar-thumb { background: var(--border); border-radius: 8px; border: 2px solid transparent; background-clip: padding-box; }
 *::-webkit-scrollbar-thumb:hover { background: var(--orange-dark); background-clip: padding-box; }
+:focus-visible { outline: 2px solid var(--orange); outline-offset: 2px; border-radius: 4px; }
 
-/* Visible keyboard focus everywhere -- quality floor, not decoration. */
-:focus-visible {
-  outline: 2px solid var(--orange);
-  outline-offset: 2px;
-  border-radius: 4px;
+/* ---- surfaces: real elevation, gradient faces ---- */
+body .section-block, body .dev-panel, body .form-section,
+body .card, body .metric-card, body .stat-box, body .job-card,
+body .compliance-card, body .lead-card {
+  background: linear-gradient(180deg, var(--bg-panel-2), var(--bg-panel) 55%);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: 0 1px 0 rgba(255,255,255,.03) inset,
+              0 10px 30px -18px rgba(0,0,0,.7);
 }
 
-/* One shared motion curve so every hover/press feels like the same
-   machine. Everything animated below is guarded at the bottom of this
-   layer by prefers-reduced-motion. */
-.service-card, .faq-item, .gallery-tile, .review-slide, .contact-card,
-.tool-tile, .tool-card, .dev-panel, .card, .stat-box, .metric-card,
-.job-card, .form-section, .dash-list-item,
-.primary-btn, .secondary-btn, .small-btn, .tab-btn, .note-new-btn,
-.dialog-btn, .help-btn, .dev-info-bubble, .hero-ctas a, .jump-nav a {
-  transition: transform .22s cubic-bezier(.2,.8,.2,1),
-              box-shadow .22s cubic-bezier(.2,.8,.2,1),
-              border-color .22s ease, background-color .22s ease,
-              color .18s ease;
+/* section headings: white + orange kicker bar, not tiny orange whisper */
+body .section-heading, body .dev-panel-heading {
+  color: var(--white);
+  font-size: 15px;
+  letter-spacing: .8px;
 }
-
-/* ---- the machined edge: shared card treatment ---- */
-.service-card, .contact-card, .review-slide,
-.tool-tile, .tool-card, .dev-panel, .card, .stat-box, .metric-card,
-.job-card, .form-section {
-  position: relative;
-  overflow: hidden;
-  /* faint inner bevel: brushed metal catching light along the top */
-  box-shadow: inset 0 1px 0 rgba(255,255,255,.045),
-              0 1px 2px rgba(0,0,0,.25),
-              0 8px 24px -18px rgba(0,0,0,.55);
-}
-.service-card::before, .contact-card::before, .review-slide::before,
-.tool-tile::before, .tool-card::before, .dev-panel::before, .card::before,
-.stat-box::before, .metric-card::before, .job-card::before,
-.form-section::before {
+body .section-heading::before, body .dev-panel-heading::before {
   content: '';
-  position: absolute; top: 0; left: 0; right: 0; height: 2px;
-  background: linear-gradient(90deg,
-    var(--orange) 0%, var(--orange-light) 45%, transparent 100%);
-  opacity: .45;
-  pointer-events: none;
-  transition: opacity .22s ease;
+  width: 4px; height: 18px; border-radius: 3px; flex-shrink: 0;
+  margin-right: 10px;
+  background: linear-gradient(180deg, var(--orange-light), var(--orange));
+  display: inline-block;
+}
+body .section-heading { display: flex; align-items: center; }
+body .section-heading > span:first-child,
+body .section-heading > *:first-child { margin-right: auto; }
+
+/* ---- the numbers are the product: make them read across the room ---- */
+body .metric-card .metric-value, body .stat-box .value {
+  font-size: 30px;
+  letter-spacing: .3px;
+  background: linear-gradient(180deg, var(--white), var(--steel));
+  -webkit-background-clip: text; background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+body .metric-card .metric-value.is-orange {
+  background: linear-gradient(180deg, var(--orange-light), var(--orange));
+  -webkit-background-clip: text; background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+body .metric-card .metric-label, body .stat-box .label { letter-spacing: 1.2px; }
+
+/* ---- app bar: the header becomes real chrome ---- */
+body .hub-header, body .tool-header {
+  /* Sticks to the viewport top once scrolled; before that it sits in
+     normal flow, so this works for every page's own top padding (44px
+     and 90px variants both exist). Horizontal padding is 20px on every
+     tool page, so the full-bleed x-margins are safe. */
+  position: sticky; top: 0; z-index: 60;
+  margin: 0 -20px 14px; padding: 12px 20px;
+  background: color-mix(in srgb, var(--bg) 78%, transparent);
+  -webkit-backdrop-filter: blur(14px); backdrop-filter: blur(14px);
+  border-bottom: 1px solid var(--border);
+}
+body .hub-title { font-size: 22px; letter-spacing: .5px; }
+body .hub-header img { height: 36px; width: 36px; }
+
+/* jump-nav: segmented pill control riding just under the app bar */
+body .jump-nav {
+  top: 61px; z-index: 55;
+  background: color-mix(in srgb, var(--bg) 82%, transparent);
+  -webkit-backdrop-filter: blur(12px); backdrop-filter: blur(12px);
+  margin-left: -20px; margin-right: -20px; padding: 8px 20px;
+  border-bottom: 1px solid var(--border);
+}
+body .jump-nav a {
+  border: 1px solid transparent;
+  border-radius: 999px;
+  padding: 7px 14px;
+  background: var(--bg-panel);
+}
+body .jump-nav a:hover {
+  border-color: var(--orange-tint-border);
+  color: var(--orange-light);
+  background: var(--bg-panel-2);
 }
 
-/* Interactive surfaces pick up: lift + brightened rail + orange ambient */
-a.tool-tile:hover, a.tool-card:hover, .service-card:hover,
-.gallery-tile:hover, .dash-list-item:hover, .job-card:hover {
+/* ---- tool grid: app icons, not gray squares ---- */
+body .tool-tile-link {
+  gap: 9px; padding: 18px 6px 14px;
+  background: linear-gradient(180deg, var(--bg-panel-2), var(--bg-panel));
+  border-radius: 16px;
+}
+body .tool-tile-icon {
+  font-size: 24px;
+  width: 52px; height: 52px;
+  display: flex; align-items: center; justify-content: center;
+  border-radius: 15px;
+  background: linear-gradient(160deg, var(--bg-panel-3), var(--bg-panel-2));
+  border: 1px solid var(--border);
+  box-shadow: 0 4px 12px -6px rgba(0,0,0,.6), 0 1px 0 rgba(255,255,255,.05) inset;
+}
+body .tool-tile-link:hover {
   transform: translateY(-3px);
-  box-shadow: inset 0 1px 0 rgba(255,255,255,.06),
-              0 2px 4px rgba(0,0,0,.3),
-              0 14px 34px -14px rgba(0,0,0,.6),
-              0 0 0 1px var(--orange-tint-border),
-              0 10px 40px -12px var(--orange-tint-glow);
+  border-color: var(--orange-tint-border);
+  box-shadow: 0 14px 30px -12px rgba(0,0,0,.7), 0 0 24px -6px var(--orange-tint-glow);
 }
-a.tool-tile:hover::before, a.tool-card:hover::before,
-.service-card:hover::before, .job-card:hover::before { opacity: 1; }
-
-/* Static panels get a quieter acknowledgement -- rail only, no lift,
-   so reading a form doesn't feel like everything is jumping around. */
-.dev-panel:hover::before, .form-section:hover::before,
-.card:hover::before, .stat-box:hover::before,
-.metric-card:hover::before { opacity: .8; }
-
-/* ---- buttons: tactile, gradient primaries, honest press ---- */
-.primary-btn, .dialog-btn-primary, .note-new-btn {
-  background-image: linear-gradient(180deg, var(--orange-light) -40%, var(--orange) 45%, var(--orange-dark) 130%);
-  box-shadow: 0 1px 2px rgba(0,0,0,.35),
-              inset 0 1px 0 rgba(255,255,255,.18);
+body .tool-tile-link:hover .tool-tile-icon {
+  border-color: var(--orange-tint-border);
+  box-shadow: 0 6px 16px -6px var(--orange-tint-glow), 0 1px 0 rgba(255,255,255,.07) inset;
 }
-.primary-btn:hover, .dialog-btn-primary:hover, .note-new-btn:hover {
+body .tool-tile-label { font-size: 13px; letter-spacing: .4px; }
+
+/* ---- rows and lists: tappable cards with direction ---- */
+body .dash-list-item {
+  border: 1px solid transparent;
+  border-radius: 10px;
+  padding: 10px 12px;
+  margin: 0 -12px;
+  transition: background .15s ease, border-color .15s ease, transform .15s ease;
+}
+body a.dash-list-item:hover {
+  background: var(--bg-panel-2);
+  border-color: var(--orange-tint-border);
+  transform: translateX(3px);
+}
+body .dev-check-row:hover { background: var(--orange-tint-soft); }
+body table tbody tr:hover { background: var(--orange-tint-soft); }
+
+/* ---- controls: pill buttons with real states ---- */
+body .primary-btn, body .dialog-btn-primary, body .note-new-btn {
+  border-radius: 999px;
+  background-image: linear-gradient(180deg, var(--orange-light) -35%, var(--orange) 50%, var(--orange-dark) 135%);
+  box-shadow: 0 2px 8px -2px rgba(0,0,0,.5), 0 1px 0 rgba(255,255,255,.2) inset;
+  font-weight: 600; letter-spacing: .3px;
+}
+body .secondary-btn, body .small-btn, body .dialog-btn-cancel { border-radius: 999px; }
+body .primary-btn:hover, body .dialog-btn-primary:hover, body .note-new-btn:hover {
   transform: translateY(-1px);
-  box-shadow: 0 4px 14px -4px var(--orange-tint-glow),
-              0 2px 6px rgba(0,0,0,.4),
-              inset 0 1px 0 rgba(255,255,255,.22);
-  filter: brightness(1.06);
+  box-shadow: 0 6px 18px -6px var(--orange-tint-glow), 0 3px 10px -3px rgba(0,0,0,.55), 0 1px 0 rgba(255,255,255,.25) inset;
+  filter: brightness(1.07);
 }
-.secondary-btn:hover, .small-btn:hover, .dialog-btn-cancel:hover {
+body .secondary-btn:hover, body .small-btn:hover {
   transform: translateY(-1px);
   border-color: var(--orange-tint-border);
-  box-shadow: 0 3px 10px -4px rgba(0,0,0,.5);
 }
-.primary-btn:active, .secondary-btn:active, .small-btn:active,
-.dialog-btn:active, .note-new-btn:active, .tab-btn:active {
-  transform: translateY(1px) scale(.985);
-  box-shadow: 0 0 0 rgba(0,0,0,0), inset 0 1px 3px rgba(0,0,0,.35);
-  transition-duration: .06s;
+body .primary-btn:active, body .secondary-btn:active, body .small-btn:active,
+body .dialog-btn:active, body .note-new-btn:active {
+  transform: translateY(1px) scale(.98);
+  filter: brightness(.95);
 }
-
-/* Tabs: the active tab earns the high-vis rail underneath it. */
-.tab-btn { position: relative; }
-.tab-btn::after {
-  content: '';
-  position: absolute; left: 10%; right: 10%; bottom: -1px; height: 2px;
+body .tab-btn { position: relative; border-radius: 10px 10px 0 0; }
+body .tab-btn::after {
+  content: ''; position: absolute; left: 12%; right: 12%; bottom: -1px; height: 3px;
+  border-radius: 3px 3px 0 0;
   background: linear-gradient(90deg, var(--orange), var(--orange-light));
-  transform: scaleX(0);
-  transform-origin: center;
-  transition: transform .22s cubic-bezier(.2,.8,.2,1);
+  transform: scaleX(0); transition: transform .2s cubic-bezier(.2,.8,.2,1);
 }
-.tab-btn.is-active::after, .tab-btn[aria-selected="true"]::after { transform: scaleX(1); }
-.tab-btn:hover:not(.is-active) { color: var(--orange-light); }
+body .tab-btn.is-active::after { transform: scaleX(1); }
+body .tab-btn.is-active { color: var(--white); }
 
-/* ---- inputs: a focus state that feels wired-in ---- */
-.form-field input:focus, .form-field select:focus, .form-field textarea:focus,
-input[type="text"]:focus, input[type="email"]:focus, input[type="tel"]:focus,
-input[type="number"]:focus, input[type="date"]:focus, input[type="search"]:focus,
-select:focus, textarea:focus {
+body .form-field input:focus, body .form-field select:focus, body .form-field textarea:focus,
+body input[type="text"]:focus, body input[type="email"]:focus, body input[type="tel"]:focus,
+body input[type="number"]:focus, body input[type="date"]:focus, body input[type="search"]:focus,
+body select:focus, body textarea:focus {
   border-color: var(--orange);
-  box-shadow: 0 0 0 3px var(--orange-tint-soft),
-              0 0 14px -4px var(--orange-tint-glow);
+  box-shadow: 0 0 0 3px var(--orange-tint-soft);
   outline: none;
 }
 
-/* ---- tool-suite specifics ---- */
-.stat-box .value { text-shadow: 0 0 22px var(--orange-tint-glow); }
-.dev-check-row:hover { background: var(--orange-tint-soft); margin: 0 -8px; padding-left: 8px; padding-right: 8px; border-radius: 6px; }
-.jump-nav a:hover { box-shadow: inset 0 0 0 1px var(--orange-tint-border); }
-.help-btn:hover, .dev-info-bubble:hover {
-  transform: translateY(-1px) rotate(8deg);
-  color: var(--orange-light);
-  border-color: var(--orange-tint-border);
-}
-table tbody tr { transition: background-color .15s ease; }
-table tbody tr:hover { background: var(--orange-tint-soft); }
-
-/* ---- public-site specifics ---- */
-/* Hero: an ember glow rising off the bottom edge -- shop light, not
-   spotlight. Pure background layers, zero markup changes. */
-.hero {
-  background-image:
-    radial-gradient(120% 90% at 50% 115%, var(--orange-tint-glow) 0%, transparent 55%),
-    radial-gradient(60% 45% at 85% -10%, rgba(255,128,0,.05) 0%, transparent 70%);
-}
-.hero-badge {
-  box-shadow: 0 0 0 1px var(--orange-tint-border),
-              0 0 24px -6px var(--orange-tint-glow);
-}
-.service-icon { transition: transform .25s cubic-bezier(.2,.8,.2,1); }
-.service-card:hover .service-icon { transform: scale(1.12) rotate(-4deg); }
-.faq-item:hover { border-color: var(--orange-tint-border); }
-.faq-question::before { color: var(--orange); }
-.gallery-tile { overflow: hidden; }
-.gallery-tile img { transition: transform .4s cubic-bezier(.2,.8,.2,1); }
-.gallery-tile:hover img { transform: scale(1.05); }
-.review-stars { color: var(--orange); text-shadow: 0 0 12px var(--orange-tint-glow); }
-.footer-grid { position: relative; }
-.footer-grid::before {
-  content: '';
-  position: absolute; top: -1px; left: 0; right: 0; height: 1px;
-  background: linear-gradient(90deg, transparent, var(--orange-tint-border), transparent);
-}
-
-/* ---- mobile: bigger targets, calmer lifts, momentum scroll ---- */
+/* ==========================================================================
+   MOBILE: this is where it has to feel like a different product
+   ========================================================================== */
 @media (max-width: 720px) {
-  .primary-btn, .secondary-btn, .dialog-btn, .note-new-btn,
-  .hero-ctas a, .tab-btn { min-height: 44px; }
-  .small-btn { min-height: 38px; }
-  /* hover-lift is meaningless on touch and can flicker on tap -- keep
-     the rail/glow feedback, drop the translate */
-  a.tool-tile:hover, a.tool-card:hover, .service-card:hover,
-  .gallery-tile:hover, .dash-list-item:hover, .job-card:hover {
-    transform: none;
-  }
-  .jump-nav, .reviews-viewport, .gallery-row {
-    -webkit-overflow-scrolling: touch;
-    scroll-behavior: smooth;
-  }
+  /* full-bleed cards: stop wasting 40px of a 390px screen on gutters */
+  body.th-tool-page { padding-left: 12px; padding-right: 12px; padding-top: 12px; }
+  body .hub-header, body .tool-header { margin: 0 -12px 12px; padding: 10px 14px; }
+  body .jump-nav { margin-left: -12px; margin-right: -12px; padding: 8px 12px; top: 53px; }
+  body .section-block, body .dev-panel, body .form-section { padding-left: 14px; padding-right: 14px; }
+
+  /* type: comfortable, confident */
+  body .hub-title { font-size: 20px; }
+  body .metric-card .metric-value, body .stat-box .value { font-size: 26px; }
+  body .section-heading { font-size: 14px; }
+
+  /* touch targets */
+  body .primary-btn, body .secondary-btn, body .dialog-btn, body .note-new-btn, body .tab-btn { min-height: 46px; }
+  body .small-btn { min-height: 40px; }
+  body .help-btn { width: 36px; height: 36px; }
+  body .dash-list-item { padding: 13px 12px; }
+
+  /* the bottom nav (injected by tools-common.js) needs runway */
+  body.th-has-bottomnav { padding-bottom: calc(76px + env(safe-area-inset-bottom, 0px)); }
+
+  /* hover-lift is meaningless on touch */
+  body .tool-tile-link:hover, body a.dash-list-item:hover,
+  body .primary-btn:hover, body .secondary-btn:hover { transform: none; }
 }
 
-/* ---- reduced motion: everything above degrades to instant ---- */
+/* ---- bottom app nav: injected markup, styled here ---- */
+.th-bottom-nav {
+  position: fixed; left: 0; right: 0; bottom: 0; z-index: 900;
+  display: none;
+  padding: 8px max(10px, env(safe-area-inset-left)) calc(8px + env(safe-area-inset-bottom, 0px)) max(10px, env(safe-area-inset-right));
+  background: color-mix(in srgb, var(--bg) 72%, transparent);
+  -webkit-backdrop-filter: blur(18px); backdrop-filter: blur(18px);
+  border-top: 1px solid var(--border);
+}
+@media (max-width: 720px) { .th-bottom-nav { display: flex; justify-content: space-around; gap: 4px; } }
+.th-bottom-nav a {
+  flex: 1; max-width: 88px;
+  display: flex; flex-direction: column; align-items: center; gap: 3px;
+  text-decoration: none; color: var(--text-dim);
+  font-family: 'Oswald', sans-serif; font-size: 10.5px; letter-spacing: .4px;
+  padding: 5px 2px; border-radius: 12px;
+  transition: color .15s ease, background .15s ease;
+}
+.th-bottom-nav a .th-bn-icon {
+  font-size: 20px; line-height: 1;
+  width: 40px; height: 28px; display: flex; align-items: center; justify-content: center;
+  border-radius: 999px;
+  transition: background .18s ease, box-shadow .18s ease;
+}
+.th-bottom-nav a.is-active { color: var(--orange-light); }
+.th-bottom-nav a.is-active .th-bn-icon {
+  background: var(--orange-tint-soft);
+  box-shadow: 0 0 0 1px var(--orange-tint-border), 0 0 16px -4px var(--orange-tint-glow);
+}
+.th-bottom-nav a:active .th-bn-icon { background: var(--bg-panel-2); }
+
+/* ---- reduced motion ---- */
 @media (prefers-reduced-motion: reduce) {
-  .service-card, .faq-item, .gallery-tile, .gallery-tile img, .review-slide,
-  .contact-card, .tool-tile, .tool-card, .dev-panel, .card, .stat-box,
-  .metric-card, .job-card, .form-section, .dash-list-item, .service-icon,
-  .primary-btn, .secondary-btn, .small-btn, .tab-btn, .tab-btn::after,
-  .note-new-btn, .dialog-btn, .help-btn, .dev-info-bubble, .hero-ctas a,
-  .jump-nav a, table tbody tr {
-    transition: none;
-  }
-  a.tool-tile:hover, a.tool-card:hover, .service-card:hover,
-  .gallery-tile:hover, .dash-list-item:hover, .job-card:hover,
-  .primary-btn:hover, .secondary-btn:hover, .small-btn:hover,
-  .help-btn:hover, .dev-info-bubble:hover {
-    transform: none;
-  }
-  .gallery-tile:hover img { transform: none; }
+  body .tool-tile-link, body .dash-list-item, body .tab-btn::after,
+  body .primary-btn, body .secondary-btn, body .small-btn, body .note-new-btn,
+  .th-bottom-nav a, .th-bottom-nav a .th-bn-icon { transition: none; }
+  body .tool-tile-link:hover, body a.dash-list-item:hover,
+  body .primary-btn:hover, body .secondary-btn:hover { transform: none; }
 }
