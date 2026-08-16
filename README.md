@@ -121,9 +121,19 @@ the assistant's GitHub token was never granted):
 - `trigger-workflow` Edge Function needs a `GITHUB_PAT` secret (Supabase
   dashboard -> Edge Functions -> Secrets) to actually work -- a
   fine-grained GitHub PAT scoped to ONLY "Actions: Read and write" on
-  this one repo. Until that's added, the Trigger workflows panel in Dev
-  Tools will return a clear "GITHUB_PAT secret is not set yet" error
-  rather than silently failing.
+  this one repo. **Confirmed working as of 2026-08-16** -- a real
+  authenticated request (from Steve's account) triggered a real GitHub
+  Actions run, verified via both the Actions run history and the
+  Edge Function's own logs.
+- `advisor-health` Edge Function needs a `SUPABASE_PAT` secret (same
+  place as GITHUB_PAT above) to actually work -- a Supabase Personal
+  Access Token, generated from account settings. Unlike the GitHub
+  token, a Supabase PAT can't be scoped to a single project -- it's
+  account-wide access to advisor data for every project the account
+  can see, so treat it as more sensitive than GITHUB_PAT. Until it's
+  added, the Advisor health panel in Dev Tools returns a clear
+  "SUPABASE_PAT secret is not set yet" error rather than silently
+  failing.
 - Leaked-password protection is still off in Supabase Auth -- a
   dashboard-only toggle (Authentication → Policies), not something
   scriptable via SQL.

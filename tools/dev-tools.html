@@ -376,6 +376,21 @@
     <div id="triggerWorkflowResult" style="margin-top:10px; font-size:12.5px; color:var(--text-dim);"></div>
   </div>
 
+  <div class="dev-panel dev-panel-wide is-collapsible" data-collapse-key="advisorhealth">
+    <div class="dev-panel-heading" onclick="toggleDevPanel(this)">
+      <h2>Advisor health</h2>
+      <button class="dev-info-bubble" onclick="event.stopPropagation(); openDevInfo('advisorhealth')" aria-label="What does this do?" title="What does this do?">?</button>
+      <span class="dev-collapse-caret">&#9660;</span>
+    </div>
+    <div class="dev-panel-body">
+      <div class="dev-status-chip" style="margin-bottom:12px;" id="advisorSetupNotice">
+        Needs the SUPABASE_PAT secret in Supabase (Edge Functions -> Secrets) to work -- click Refresh to check.
+      </div>
+      <button class="secondary-btn" style="margin-bottom:12px;" onclick="renderAdvisorHealth()">Refresh</button>
+      <div id="advisorHealthResults"></div>
+    </div>
+  </div>
+
   <div class="dev-panel dev-panel-wide is-collapsible" data-collapse-key="storagebrowser">
     <div class="dev-panel-heading" onclick="toggleDevPanel(this)">
       <h2>Storage browser</h2>
@@ -565,6 +580,10 @@
     links: {
       title: 'Quick links',
       body: `<p>Direct shortcuts to the places you'd otherwise have to remember URLs for or dig up bookmarks for: the GitHub repo itself, its Actions run history, the Supabase project dashboard, the HetrixTools uptime monitors (the site itself, plus the keep-alive that stops Supabase's free tier from auto-pausing), and the actual live public site.</p>`,
+    },
+    advisorhealth: {
+      title: 'Advisor health',
+      body: `<p>Pulls Supabase's real security and performance advisor findings (the same lints get_advisors surfaces) directly into this page. Calls a Supabase Edge Function (advisor-health) that alone holds a Supabase Management API Personal Access Token -- never present anywhere in this page's own code, same reasoning as the GitHub token used by Trigger workflows.</p><p>Unlike a GitHub fine-grained token, a Supabase PAT can't be scoped to just this one project -- it's account-wide access to advisor data for every project the account can see. Treat it as more sensitive than GITHUB_PAT for that reason.</p><p>Sorted worst-first (errors, then warnings, then info) so whatever most needs attention is always at the top.</p>`,
     },
     storagebrowser: {
       title: 'Storage browser',
@@ -2162,6 +2181,60 @@
     } finally {
       btn.disabled = false;
       btn.textContent = originalText;
+    }
+  }
+
+  // Same secure-proxy pattern as triggerWorkflow above -- calls
+  // advisor-health, which alone holds the Supabase Management API
+  // token needed to read real advisor data, never present in this
+  // file. Renders both security and performance lints, grouped and
+  // counted by level (ERROR/WARN/INFO) so the worst thing needing
+  // attention is obvious without reading every single line.
+  async function renderAdvisorHealth() {
+    const el = document.getElementById('advisorHealthResults');
+    const setupNotice = document.getElementById('advisorSetupNotice');
+    el.innerHTML = '<p class="tool-sub">Checking...</p>';
+    try {
+      if (typeof ensureFreshToken === 'function') await ensureFreshToken();
+      const res = await fetchWithTimeout(SUPABASE_URL + '/functions/v1/advisor-health', 15000, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'apikey': SUPABASE_ANON_KEY,
+          'Authorization': 'Bearer ' + getAuthToken(),
+        },
+        body: '{}',
+      });
+      const body = await res.json().catch(() => ({}));
+      if (!res.ok || !body.ok) {
+        throw new Error(body.error || ('HTTP ' + res.status));
+      }
+      if (setupNotice) setupNotice.style.display = 'none';
+
+      const all = [...(body.security || []), ...(body.performance || [])];
+      if (!all.length) {
+        el.innerHTML = '<p class="tool-sub">No open advisor findings. Clean.</p>';
+        return;
+      }
+      const counts = { ERROR: 0, WARN: 0, INFO: 0 };
+      all.forEach(l => { counts[l.level] = (counts[l.level] || 0) + 1; });
+      const summaryHtml = '<div style="margin-bottom:10px; font-size:12.5px; color:var(--text-dim);">' +
+        (counts.ERROR ? counts.ERROR + ' error, ' : '') +
+        (counts.WARN ? counts.WARN + ' warning, ' : '') +
+        (counts.INFO ? counts.INFO + ' info' : '') + '</div>';
+
+      const levelClass = { ERROR: 'fail', WARN: 'fail', INFO: '' };
+      const sorted = all.slice().sort((a, b) => {
+        const order = { ERROR: 0, WARN: 1, INFO: 2 };
+        return (order[a.level] ?? 3) - (order[b.level] ?? 3);
+      });
+      el.innerHTML = summaryHtml + sorted.map(l =>
+        '<div class="dev-check-row"><span>' + escapeHtml(l.title || l.name) +
+        (l.categories && l.categories.length ? ' <span style="color:var(--text-dim); font-size:11px;">(' + escapeHtml(l.categories.join(', ')) + ')</span>' : '') +
+        '</span><span class="dev-check-status ' + (levelClass[l.level] || '') + '">' + escapeHtml(l.level) + '</span></div>'
+      ).join('');
+    } catch (e) {
+      el.innerHTML = '<p class="tool-sub">Could not load advisor data: ' + escapeHtml(e.message || String(e)) + '</p>';
     }
   }
 
