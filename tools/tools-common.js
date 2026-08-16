@@ -415,6 +415,96 @@ function ensureToastContainerExists() {
   return container;
 }
 
+// ---------------------------------------------------------------------------
+// LONG-PRESS via event delegation -- added 2026-08-17 (item #9). Chosen
+// over a swipe-action system: a hold-timer has no distance/velocity math
+// to get wrong and can never be misread as a scroll gesture the way a
+// horizontal swipe can, since it's cancelled the moment the pointer
+// moves more than a few pixels. Uses pointer events (not touch-specific)
+// so it works identically with touch and mouse, no separate desktop
+// fallback needed.
+//
+// Delegated on a container rather than attached per-item, so a list that
+// re-renders on every data change (job cards, etc.) never risks
+// re-attaching duplicate listeners -- this is wired once per container,
+// ever.
+function attachLongPress(containerEl, itemSelector, onLongPress) {
+  const HOLD_MS = 500;
+  const MOVE_CANCEL_PX = 10;
+  let timer = null;
+  let startX = 0, startY = 0, activeEl = null;
+
+  function cancel() {
+    clearTimeout(timer);
+    timer = null;
+    if (activeEl) activeEl.classList.remove('is-long-pressing');
+    activeEl = null;
+  }
+
+  containerEl.addEventListener('pointerdown', (e) => {
+    const item = e.target.closest(itemSelector);
+    if (!item || !containerEl.contains(item)) return;
+    // A long-press on an interactive control inside the card (a button,
+    // select, or link) should never hijack that control's own normal
+    // tap behavior.
+    if (e.target.closest('button, a, select, input, textarea')) return;
+
+    activeEl = item;
+    startX = e.clientX;
+    startY = e.clientY;
+    timer = setTimeout(() => {
+      if (!activeEl) return;
+      activeEl.classList.remove('is-long-pressing');
+      if (navigator.vibrate) navigator.vibrate(12); // no-ops silently where unsupported (notably iOS Safari)
+      const el = activeEl;
+      activeEl = null;
+      onLongPress(el);
+    }, HOLD_MS);
+    item.classList.add('is-long-pressing');
+  }, { passive: true });
+
+  containerEl.addEventListener('pointermove', (e) => {
+    if (!activeEl) return;
+    if (Math.abs(e.clientX - startX) > MOVE_CANCEL_PX || Math.abs(e.clientY - startY) > MOVE_CANCEL_PX) cancel();
+  }, { passive: true });
+
+  containerEl.addEventListener('pointerup', cancel, { passive: true });
+  containerEl.addEventListener('pointercancel', cancel, { passive: true });
+  containerEl.addEventListener('scroll', cancel, { passive: true });
+}
+
+// Small bottom-sheet action menu, triggered by attachLongPress above.
+// actions: [{ label, onClick, isDanger }]
+function showQuickActionSheet(title, actions) {
+  const overlay = document.createElement('div');
+  overlay.className = 'quick-actions-overlay';
+  const sheet = document.createElement('div');
+  sheet.className = 'quick-actions-sheet';
+  sheet.innerHTML =
+    '<div class="quick-actions-title">' + title + '</div>' +
+    actions.map((a, i) =>
+      '<button class="quick-actions-btn' + (a.isDanger ? ' is-danger' : '') + '" data-action-index="' + i + '">' + a.label + '</button>'
+    ).join('') +
+    '<button class="quick-actions-btn quick-actions-cancel">Cancel</button>';
+
+  function close() {
+    overlay.classList.remove('is-shown');
+    setTimeout(() => overlay.remove(), 200);
+  }
+  overlay.addEventListener('click', (e) => { if (e.target === overlay) close(); });
+  sheet.querySelector('.quick-actions-cancel').addEventListener('click', close);
+  actions.forEach((a, i) => {
+    sheet.querySelector('[data-action-index="' + i + '"]').addEventListener('click', () => {
+      close();
+      a.onClick();
+    });
+  });
+
+  overlay.appendChild(sheet);
+  document.body.appendChild(overlay);
+  requestAnimationFrame(() => overlay.classList.add('is-shown'));
+}
+
 function showToast(message, options) {
   options = options || {};
   const duration = options.duration || 2600;
