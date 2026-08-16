@@ -23,13 +23,19 @@
 // should keep failing exactly as they already did; this only helps the
 // app SHELL (the pages themselves) still open.
 
-// Bumped 2026-08-14: the URL list changed (see below), and CACHE_NAME is
-// how a service worker knows to actually replace what it has stored --
-// the activate handler below deletes any cache whose name isn't this
-// one, which is what makes bumping this the trigger for a real refresh
-// on every device rather than just editing a file that would otherwise
-// go unnoticed until manually cleared.
-const CACHE_NAME = 'th-workspace-v2';
+// Bumped 2026-08-16: auth.js has had two real fixes since the last
+// bump (2026-08-14) -- the session-refresh race that intermittently
+// hid the Dev Tools tile, and the getAuthToken() hardening against a
+// malformed stored token -- and CACHE_NAME was never bumped for
+// either one. auth.js is in the precache list below, so every device
+// that installed the service worker before either fix could still be
+// silently running the OLD cached copy indefinitely, no matter how
+// many times the page itself is refreshed -- refreshing a page doesn't
+// bypass a service worker's own cache the way a hard cache-clear does.
+// This is exactly the trigger that forces every client to actually
+// fetch fresh files instead of continuing to serve what they already
+// have stored.
+const CACHE_NAME = 'th-workspace-v3';
 const PRECACHE_URLS = [
   '/tools/workspace.html', '/tools/job-tracker.html', '/tools/invoice-generator.html', '/tools/contract-generator.html',
   '/tools/calendar.html', '/tools/route-planner.html', '/tools/review-request.html', '/tools/contact-card.html',
