@@ -1137,6 +1137,12 @@
   transition:border-color .15s ease, color .15s ease;
 }
 .help-btn:hover{ border-color:var(--orange-light); color:var(--orange-light); }
+/* 2026-08-16: header row (help / notifications / sign-out) had zero
+   visual hierarchy -- three identical circles with no signal for which
+   is used most. Sign-out is the rarest of the three, so it steps back
+   rather than competing evenly with help and notifications. */
+.help-btn.is-muted { opacity: .55; }
+.help-btn.is-muted:hover { opacity: 1; }
 .help-btn.is-active{ border-color:var(--blue-light); color:var(--blue-light); background:rgba(58,160,255,0.12); }
 .help-btn.is-syncing { animation: helpBtnSpin 0.8s linear infinite; }
 @keyframes helpBtnSpin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
@@ -1285,9 +1291,14 @@
 .tab-btn:hover{ color:var(--text); }
 .tab-btn:active{ transform: translateY(1px); }
 .tab-btn.is-active {
-  color:#1a0d02;
-  background:linear-gradient(135deg, var(--orange-light), var(--orange) 60%, var(--orange-dark));
-  box-shadow:0 0 18px rgba(255,128,0,0.4), 0 2px 6px rgba(0,0,0,0.35);
+  /* 2026-08-16: previously a solid gradient-filled pill with a heavy
+     glow. When a scrolled screenshot cropped this button so only its
+     bottom edge showed, it read as a random floating orange bar rather
+     than a tab. The underline indicator added in the v2 redesign layer
+     (.tab-btn::after) already signals "active" clearly and can never be
+     mistaken for debris even when cropped -- this is now the only
+     active-tab treatment, just a color change plus that thin rail. */
+  color: var(--orange-light);
 }
 .tab-panel { display:none; }
 .tab-panel.is-active { display:block; animation: tabPanelFadeIn .18s ease; }
@@ -1858,6 +1869,12 @@ body .section-heading, body .dev-panel-heading {
   color: var(--white);
   font-size: 15px;
   letter-spacing: .8px;
+  /* 2026-08-16: the base border-bottom (var(--border), #2a2a2a) reads
+     as barely-there next to the bold orange kicker bar to its left --
+     a gradient fade reads as an intentional divider instead of an
+     afterthought, brightest under the text and tapering to nothing. */
+  border-bottom: 1px solid transparent;
+  border-image: linear-gradient(90deg, rgba(255,255,255,.16), rgba(255,255,255,.03) 70%) 1;
 }
 body .section-heading::before, body .dev-panel-heading::before {
   content: '';
@@ -1919,11 +1936,29 @@ body .jump-nav a:hover {
   color: var(--orange-light);
   background: var(--bg-panel-2);
 }
+/* 2026-08-16: the mobile bottom nav and tab buttons both show a clear
+   "you are here" state; the jump-nav -- despite being the thing you
+   scroll past most -- had none. Reuses the same orange-glow chip
+   language as the bottom nav's active icon, driven by the scroll-spy
+   script below. */
+body .jump-nav a.is-active {
+  border-color: var(--orange-tint-border);
+  color: var(--orange-light);
+  background: var(--orange-tint-soft);
+  box-shadow: 0 0 0 1px var(--orange-tint-border), 0 0 14px -4px var(--orange-tint-glow);
+}
 
 /* ---- tool grid: app icons, not gray squares ---- */
 body .tool-tile-link {
   gap: 9px; padding: 18px 6px 14px;
-  background: linear-gradient(180deg, var(--bg-panel-2), var(--bg-panel));
+  /* 2026-08-16: was --bg-panel-2 to --bg-panel, both very close in value
+     to the page's own near-black background -- on an OLED phone screen
+     the whole tool grid read as one flat mass until you looked closely.
+     Bumped the top stop to --bg-panel-3 (one step brighter) and paired
+     it with a slightly stronger border below, so each tile visibly
+     separates at a glance instead of only on close inspection. */
+  background: linear-gradient(180deg, var(--bg-panel-3), var(--bg-panel-2));
+  border-color: rgba(255,255,255,0.08);
   border-radius: 16px;
 }
 body .tool-tile-icon {
@@ -1992,7 +2027,7 @@ body .tab-btn::after {
   transform: scaleX(0); transition: transform .2s cubic-bezier(.2,.8,.2,1);
 }
 body .tab-btn.is-active::after { transform: scaleX(1); }
-body .tab-btn.is-active { color: var(--white); }
+body .tab-btn.is-active { color: var(--orange-light); }
 
 body .form-field input:focus, body .form-field select:focus, body .form-field textarea:focus,
 body input[type="text"]:focus, body input[type="email"]:focus, body input[type="tel"]:focus,
@@ -2044,18 +2079,18 @@ body select:focus, body textarea:focus {
 @media (max-width: 720px) { .th-bottom-nav { display: flex; justify-content: space-around; gap: 4px; } }
 .th-bottom-nav a {
   flex: 1; max-width: 88px;
-  display: flex; flex-direction: column; align-items: center; gap: 3px;
+  display: flex; flex-direction: column; align-items: center; gap: 5px;
   text-decoration: none; color: var(--text-dim);
   font-family: 'Oswald', sans-serif; font-size: 10.5px; letter-spacing: .4px;
   padding: 5px 2px; border-radius: 12px;
   transition: color .15s ease, background .15s ease;
 }
 .th-bottom-nav a .th-bn-icon {
-  font-size: 20px; line-height: 1;
   width: 40px; height: 28px; display: flex; align-items: center; justify-content: center;
   border-radius: 999px;
   transition: background .18s ease, box-shadow .18s ease;
 }
+.th-bottom-nav a .th-bn-icon .th-icon { width: 19px; height: 19px; }
 .th-bottom-nav a.is-active { color: var(--orange-light); }
 .th-bottom-nav a.is-active .th-bn-icon {
   background: var(--orange-tint-soft);
@@ -2079,18 +2114,23 @@ body select:focus, body textarea:focus {
   vertical-align: -0.15em;
   fill: none;
   stroke: currentColor;
-  stroke-width: 1.7;
+  stroke-width: 1.5;
   stroke-linecap: round;
   stroke-linejoin: round;
   flex-shrink: 0;
 }
 .icon-star-filled, svg.th-icon use[href="#icon-star-filled"] { fill: currentColor; }
 
-body .tool-tile-icon .th-icon { width: 26px; height: 26px; }
+/* 2026-08-16: icon at 26px inside a 52px tile squircle left almost no
+   breathing room (icon nearly touched the container's rounded edge).
+   Dropped to 21px (~40% of the container instead of ~50%) -- refined
+   icon sets read premium specifically because of generous internal
+   padding, not because the glyph fills the available space. */
+body .tool-tile-icon .th-icon { width: 21px; height: 21px; }
 body .jump-nav-icon .th-icon, body .jump-nav .th-icon { width: 15px; height: 15px; }
 body .section-heading .th-icon, body .dev-panel-heading .th-icon { width: 15px; height: 15px; margin-right: 2px; }
 body a .th-icon { margin-right: 5px; }
-.lightbox-nav .th-icon { width: 20px; height: 20px; stroke-width: 2; }
+.lightbox-nav .th-icon { width: 20px; height: 20px; stroke-width: 1.8; }
 
 /* ---- empty states: one shared definition, icon + message row ----
    Previously duplicated identically across calendar.html, contract-
@@ -2099,12 +2139,17 @@ body a .th-icon { margin-right: 5px; }
    "No quotes match..." states have been rendering completely
    unstyled (no color, no size, no padding) since that page existed. */
 .empty-state-small {
-  display: flex; align-items: center; gap: 10px;
+  /* 2026-08-16: align-items:center on a 2-line wrapped message centers
+     the icon against the whole paragraph block, so it visually floats
+     above where the eye actually starts reading. flex-start anchors it
+     to the first line instead; the icon's own small top margin nudges
+     it down to sit on that line's baseline rather than its very top. */
+  display: flex; align-items: flex-start; gap: 10px;
   color: var(--text-dim); font-size: 13.5px; line-height: 1.5;
   padding: 16px 4px;
 }
 .empty-state-small .th-icon {
-  width: 20px; height: 20px; flex-shrink: 0;
+  width: 20px; height: 20px; flex-shrink: 0; margin-top: 2px;
   color: var(--text-dim); opacity: .8;
 }
 .empty-state-small.is-good .th-icon { color: #4caf50; }

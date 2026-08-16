@@ -687,11 +687,11 @@ document.addEventListener('DOMContentLoaded', initSwipeToDismissModals);
   var onLogin = /\/login\.html$/.test(path);
 
   var DESTS = [
-    { href: '/tools/workspace.html',         icon: '\u{1F3E0}', label: 'Home' },
-    { href: '/tools/job-tracker.html',       icon: '\u{1F6E0}\uFE0F', label: 'Jobs' },
-    { href: '/tools/invoice-generator.html', icon: '\u{1F9FE}', label: 'Invoices' },
-    { href: '/tools/calendar.html',          icon: '\u{1F4C5}', label: 'Calendar' },
-    { href: '/tools/route-planner.html',     icon: '\u{1F5FA}\uFE0F', label: 'Routes' }
+    { href: '/tools/workspace.html',         icon: 'home',    label: 'Home' },
+    { href: '/tools/job-tracker.html',       icon: 'wrench',  label: 'Jobs' },
+    { href: '/tools/invoice-generator.html', icon: 'receipt', label: 'Invoices' },
+    { href: '/tools/calendar.html',          icon: 'calendar',label: 'Calendar' },
+    { href: '/tools/route-planner.html',     icon: 'map',     label: 'Routes' }
   ];
 
   function inject() {
@@ -706,7 +706,7 @@ document.addEventListener('DOMContentLoaded', initSwipeToDismissModals);
       var active = path === d.href ? ' is-active' : '';
       var current = path === d.href ? ' aria-current="page"' : '';
       return '<a href="' + d.href + '" class="' + active.trim() + '"' + current + '>' +
-        '<span class="th-bn-icon" aria-hidden="true">' + d.icon + '</span>' +
+        '<span class="th-bn-icon" aria-hidden="true"><svg class="th-icon" aria-hidden="true"><use href="#icon-' + d.icon + '" xlink:href="#icon-' + d.icon + '"></use></svg></span>' +
         '<span>' + d.label + '</span></a>';
     }).join('');
     document.body.appendChild(nav);
@@ -808,6 +808,12 @@ document.addEventListener('DOMContentLoaded', initSwipeToDismissModals);
 
     '<symbol id="icon-inbox" viewBox="0 0 24 24"><path d="M4 12.5L6.5 5h11L20 12.5"/><path d="M4 12.5v6c0 .8.7 1.5 1.5 1.5h13c.8 0 1.5-.7 1.5-1.5v-6h-4.8a2.7 2.7 0 0 1-5.4 0z"/></symbol>' +
 
+    '<symbol id="icon-home" viewBox="0 0 24 24"><path d="M4 11.5L12 4l8 7.5"/><path d="M6 10v9.5c0 .8.7 1.5 1.5 1.5h9c.8 0 1.5-.7 1.5-1.5V10"/><path d="M9.5 21v-5.5c0-.55.45-1 1-1h3c.55 0 1 .45 1 1V21"/></symbol>' +
+
+    '<symbol id="icon-terminal" viewBox="0 0 24 24"><rect x="3" y="4.5" width="18" height="15" rx="2"/><path d="M7 9.3l3.3 2.7-3.3 2.7"/><line x1="12" y1="14.7" x2="16.5" y2="14.7"/></symbol>' +
+
+    '<symbol id="icon-book" viewBox="0 0 24 24"><path d="M12 6c-1.9-1.4-4.2-2-6.8-2-.7 0-1.2.6-1.2 1.2v11.6c0 .7.5 1.2 1.2 1.2 2.6 0 4.9.6 6.8 2 1.9-1.4 4.2-2 6.8-2 .7 0 1.2-.5 1.2-1.2V5.2c0-.7-.5-1.2-1.2-1.2-2.6 0-4.9.6-6.8 2z"/><line x1="12" y1="6" x2="12" y2="19"/></symbol>' +
+
     '</defs></svg>';
 
   function injectSprite() {
@@ -818,5 +824,67 @@ document.addEventListener('DOMContentLoaded', initSwipeToDismissModals);
     document.addEventListener('DOMContentLoaded', injectSprite);
   } else {
     injectSprite();
+  }
+})();
+
+// ---------------------------------------------------------------------------
+// JUMP-NAV SCROLL-SPY -- added 2026-08-16
+// Highlights whichever jump-nav pill corresponds to the section currently
+// in view, using IntersectionObserver rather than a scroll listener (no
+// per-frame math, no debouncing needed, and it naturally handles sections
+// of very different heights). Purely additive: pages without a .jump-nav,
+// or whose links don't all resolve to an in-page section, are silently
+// skipped -- this never assumes a page's structure.
+//
+// This closes a real inconsistency: the mobile bottom nav and tab buttons
+// both had a clear "you are here" treatment, but the jump-nav -- despite
+// sitting on every page a person scrolls through -- had none. Reuses the
+// same is-active class + orange-accent language as those two so all three
+// "current location" indicators in the app now agree with each other.
+// ---------------------------------------------------------------------------
+(function () {
+  if (typeof document === 'undefined' || typeof IntersectionObserver === 'undefined') return;
+
+  function initJumpNavScrollSpy() {
+    const nav = document.querySelector('.jump-nav');
+    if (!nav) return;
+
+    const links = Array.from(nav.querySelectorAll('a[href^="#"]'));
+    const sections = links
+      .map(a => ({ link: a, el: document.getElementById(a.getAttribute('href').slice(1)) }))
+      .filter(pair => pair.el);
+    if (sections.length === 0) return;
+
+    function setActive(id) {
+      links.forEach(a => {
+        const isMatch = a.getAttribute('href') === '#' + id;
+        a.classList.toggle('is-active', isMatch);
+        if (isMatch) a.setAttribute('aria-current', 'true'); else a.removeAttribute('aria-current');
+      });
+    }
+
+    // rootMargin biases the trigger line toward the top of the viewport
+    // (just under the sticky header + jump-nav itself) rather than the
+    // exact center, so the pill updates right as a section's heading
+    // scrolls into that zone -- matching where someone's eye actually is.
+    const observer = new IntersectionObserver((entries) => {
+      const visible = entries.filter(e => e.isIntersecting);
+      if (visible.length === 0) return;
+      // If multiple sections are simultaneously in the trigger band
+      // (short sections, fast scroll), prefer the one closest to top.
+      visible.sort((a, b) => a.boundingClientRect.top - b.boundingClientRect.top);
+      setActive(visible[0].target.id);
+    }, { rootMargin: '-120px 0px -70% 0px', threshold: 0 });
+
+    sections.forEach(pair => observer.observe(pair.el));
+    // Set an initial state immediately rather than waiting for the first
+    // scroll/intersection event, so the pill isn't blank on page load.
+    setActive(sections[0].el.id);
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initJumpNavScrollSpy);
+  } else {
+    initJumpNavScrollSpy();
   }
 })();
