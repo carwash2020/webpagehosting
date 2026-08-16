@@ -2283,3 +2283,31 @@ body.is-compact-density .contract-log-item { padding: 6px 0; }
 .quick-actions-btn:active { background: var(--bg-panel); }
 .quick-actions-btn.is-danger { color: #e0807a; }
 .quick-actions-cancel { color: var(--orange-light); font-weight: 600; margin-top: 6px; border-top: none; }
+
+/* ---- Item #5: staggered list-reveal ---- */
+/* Reusable utility: add .list-stagger to a container right before
+   setting its innerHTML, only on that list's very first real render
+   (page load) -- NOT on every subsequent re-render from a search
+   keystroke or filter click, which would make the list visibly
+   re-cascade every time someone types, reading as janky rather than
+   considered. nth-child delays cap at 10 items; anything beyond that
+   shares the last delay rather than making someone wait through an
+   ever-longer tail for a big list. */
+.list-stagger > * {
+  opacity: 0;
+  animation: listStaggerIn .32s ease forwards;
+}
+.list-stagger > *:nth-child(1) { animation-delay: 0ms; }
+.list-stagger > *:nth-child(2) { animation-delay: 30ms; }
+.list-stagger > *:nth-child(3) { animation-delay: 60ms; }
+.list-stagger > *:nth-child(4) { animation-delay: 90ms; }
+.list-stagger > *:nth-child(5) { animation-delay: 120ms; }
+.list-stagger > *:nth-child(6) { animation-delay: 150ms; }
+.list-stagger > *:nth-child(7) { animation-delay: 180ms; }
+.list-stagger > *:nth-child(8) { animation-delay: 210ms; }
+.list-stagger > *:nth-child(9) { animation-delay: 240ms; }
+.list-stagger > *:nth-child(n+10) { animation-delay: 270ms; }
+@keyframes listStaggerIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
+@media (prefers-reduced-motion: reduce) {
+  .list-stagger > * { animation: none; opacity: 1; }
+}

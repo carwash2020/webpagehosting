@@ -24,10 +24,10 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="/styles.css?v=202608172000">
+<link rel="stylesheet" href="/styles.css?v=202608180900">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.112.3/dist/umd/supabase.js" integrity="sha384-qafw21c/iciq0VXsi9FzkfoQv5I/V0iqE4lSNcKXPnW9/UTJLnv5CcN4FHxVLnKg" crossorigin="anonymous" defer></script>
 <script src="/tools/sync.js?v=202608161700" defer></script>
-<script src="/tools/tools-common.js?v=202608171400" defer></script>
+<script src="/tools/tools-common.js?v=202608180900" defer></script>
 <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js" integrity="sha384-JcnsjUPPylna1s1fvi1u12X5qjY5OL56iySh75FdtrwhO/SWXgMjoVqcKyIIWOLk" crossorigin="anonymous"></script>
 <style>
   body { padding: 90px 20px 60px; max-width: 900px; margin: 0 auto; }
@@ -390,7 +390,7 @@
   // walks the array and lays it out on the page with proper text-wrapping
   // and pagination, rather than writing near-identical PDF layout code
   // three separate times.
-  function wrapAndDraw(doc, text, x, y, maxWidth, lineHeight, pageBottom, marginX) {
+  function wrapAndDraw(doc, text, x, y, maxWidth, lineHeight, pageBottom, marginX, pageW, logoDataCache, restoreFont) {
     // Split on real newlines first -- jsPDF's splitTextToSize wraps by
     // width but doesn't reliably respect embedded "\n" characters across
     // versions, and textarea input (like a job description) will often
@@ -400,13 +400,57 @@
     paragraphs.forEach((para, i) => {
       const lines = doc.splitTextToSize(para, maxWidth);
       lines.forEach(line => {
-        if (y > pageBottom) { doc.addPage(); y = 60; }
+        if (y > pageBottom) {
+          doc.addPage();
+          y = drawContractHeader(doc, pageW, logoDataCache) + 26;
+          // The header draw above changes font/size/color to render its
+          // own white/orange text -- restore whatever this paragraph was
+          // using before the break, so its remaining lines don't
+          // silently continue in the header's styling.
+          if (restoreFont) doc.setFont(restoreFont.name, restoreFont.style);
+          if (restoreFont) doc.setFontSize(restoreFont.size);
+          if (restoreFont) doc.setTextColor(...restoreFont.color);
+        }
         doc.text(line, x, y);
         y += lineHeight;
       });
       if (i < paragraphs.length - 1) y += lineHeight * 0.3;
     });
     return y;
+  }
+
+  function drawContractHeader(doc, pageW, logoDataCache) {
+    const NAVY = [26, 26, 26];
+    const ORANGE = [224, 123, 30];
+    doc.setFillColor(...NAVY);
+    doc.rect(0, 0, pageW, 74, 'F');
+    if (logoDataCache) {
+      try { doc.addImage(logoDataCache, 'PNG', 40, 12, 50, 46); }
+      catch (e) { /* logo optional if it fails to draw */ }
+    }
+    doc.setFont('helvetica', 'bold'); doc.setFontSize(15); doc.setTextColor(255, 255, 255);
+    doc.text('TRIPLE H ENTERPRISES LLC', 100, 32);
+    doc.setFont('helvetica', 'normal'); doc.setFontSize(8.5); doc.setTextColor(...ORANGE);
+    doc.text('Handyman & Appliance Repair \u2014 St. George, Utah', 100, 46);
+    doc.setTextColor(207, 207, 207);
+    doc.text('124 N 2750 E, St. George, UT 84790  \u2014  (435) 414-1667  \u2014  steve@triplehenterprisesllc.biz', 100, 58);
+    return 104; // y position content should start at on this page
+  }
+
+  // Drawn as a final pass after all content is laid out (see the end of
+  // buildContractPDF below) rather than incrementally per-page, since
+  // jsPDF doesn't know the total page count until every block has been
+  // placed -- this is what lets the footer correctly say "Page 2 of 3"
+  // instead of an incomplete or guessed total.
+  function drawContractFooter(doc, pageW, pageH, pageNum, totalPages) {
+    const ORANGE = [224, 123, 30];
+    const GRAY = [120, 120, 120];
+    const footerY = pageH - 40;
+    doc.setDrawColor(...ORANGE); doc.setLineWidth(1.2);
+    doc.line(50, footerY, pageW - 50, footerY);
+    doc.setFont('helvetica', 'normal'); doc.setFontSize(8); doc.setTextColor(...GRAY);
+    doc.text('Triple H Enterprises LLC  \u2014  www.triplehenterprisesllc.biz', pageW / 2, footerY + 14, { align: 'center' });
+    doc.text('Page ' + pageNum + ' of ' + totalPages, pageW - 50, footerY + 14, { align: 'right' });
   }
 
   async function buildContractPDF(type, fields, clientSignatureDataUrl, businessSignatureDataUrl) {
@@ -417,30 +461,24 @@
     const marginX = 50;
     const maxWidth = pageW - marginX * 2;
     const pageBottom = pageH - 70;
-    let y = 60;
+
+    let logoDataCache = null;
+    try { logoDataCache = await loadImageAsDataURL('/images/logo-signature-orange.webp'); }
+    catch (e) { /* header still draws fine without it */ }
+
+    let y = drawContractHeader(doc, pageW, logoDataCache);
+    y += 30;
+    doc.setDrawColor(220, 220, 220);
+    doc.line(marginX, y, pageW - marginX, y);
+    y += 26;
 
     const BLACK = [20, 20, 20];
     const GRAY = [90, 90, 90];
     const ORANGE_DARK = [179, 95, 19];
 
-    try {
-      const logoData = await loadImageAsDataURL('/images/logo-signature-orange.webp');
-      doc.addImage(logoData, 'PNG', marginX, y - 10, 34, 32);
-    } catch (e) { /* logo optional if it fails to load */ }
-
-    doc.setFont('helvetica', 'bold'); doc.setFontSize(13); doc.setTextColor(...BLACK);
-    doc.text('TRIPLE H ENTERPRISES LLC', marginX + 44, y + 4);
-    doc.setFont('helvetica', 'normal'); doc.setFontSize(9); doc.setTextColor(...GRAY);
-    doc.text('Handyman & Appliance Repair  \u2014  St. George, Utah', marginX + 44, y + 17);
-    doc.text('124 N 2750 E, St. George, UT 84790  \u2014  (435) 414-1667  \u2014  steve@triplehenterprisesllc.biz', marginX + 44, y + 29);
-    y += 55;
-    doc.setDrawColor(220, 220, 220);
-    doc.line(marginX, y, pageW - marginX, y);
-    y += 26;
-
     const blocks = CONTRACT_TEMPLATES[type].blocks(fields);
     blocks.forEach(block => {
-      if (y > pageBottom - 20 && block.type !== 'pagebreak') { doc.addPage(); y = 60; }
+      if (y > pageBottom - 20 && block.type !== 'pagebreak') { doc.addPage(); y = drawContractHeader(doc, pageW, logoDataCache) + 26; }
 
       if (block.type === 'heading') {
         doc.setFont('helvetica', 'bold'); doc.setFontSize(16); doc.setTextColor(...BLACK);
@@ -462,7 +500,8 @@
         y += 17;
       } else if (block.type === 'paragraph') {
         doc.setFont('helvetica', 'normal'); doc.setFontSize(10); doc.setTextColor(...BLACK);
-        y = wrapAndDraw(doc, block.text, marginX, y, maxWidth, 14, pageBottom, marginX);
+        y = wrapAndDraw(doc, block.text, marginX, y, maxWidth, 14, pageBottom, marginX, pageW, logoDataCache,
+          { name: 'helvetica', style: 'normal', size: 10, color: BLACK });
         y += 8;
       } else if (block.type === 'signature') {
         y += 10;
@@ -502,9 +541,20 @@
       } else if (block.type === 'footnote') {
         y += 10;
         doc.setFont('helvetica', 'italic'); doc.setFontSize(8); doc.setTextColor(...GRAY);
-        y = wrapAndDraw(doc, block.text, marginX, y, maxWidth, 10, pageBottom, marginX);
+        y = wrapAndDraw(doc, block.text, marginX, y, maxWidth, 10, pageBottom, marginX, pageW, logoDataCache,
+          { name: 'helvetica', style: 'italic', size: 8, color: GRAY });
       }
     });
+
+    // Footer final pass: total page count is only known now that every
+    // block has been placed, so this loops back over every page already
+    // drawn and adds the footer -- including the correct "Page X of Y"
+    // rather than an incomplete or guessed total.
+    const totalPages = doc.internal.getNumberOfPages();
+    for (let p = 1; p <= totalPages; p++) {
+      doc.setPage(p);
+      drawContractFooter(doc, pageW, pageH, p, totalPages);
+    }
 
     const safeClientName = (fields.clientName || 'client').replace(/[^a-z0-9]+/gi, '-').replace(/^-+|-+$/g, '') || 'client';
     const filename = `TripleH-${CONTRACT_TYPE_LABELS[type].replace(/\s+/g, '-')}-${safeClientName}.pdf`;

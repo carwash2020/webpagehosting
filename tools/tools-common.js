@@ -990,6 +990,8 @@ if (typeof document !== 'undefined') {
 
     '<symbol id="icon-book" viewBox="0 0 24 24"><path d="M12 6c-1.9-1.4-4.2-2-6.8-2-.7 0-1.2.6-1.2 1.2v11.6c0 .7.5 1.2 1.2 1.2 2.6 0 4.9.6 6.8 2 1.9-1.4 4.2-2 6.8-2 .7 0 1.2-.5 1.2-1.2V5.2c0-.7-.5-1.2-1.2-1.2-2.6 0-4.9.6-6.8 2z"/><line x1="12" y1="6" x2="12" y2="19"/></symbol>' +
 
+    '<symbol id="icon-first-job" viewBox="0 0 48 48"><rect x="8" y="7" width="26" height="34" rx="3"/><rect x="16" y="4" width="10" height="6" rx="1.5"/><line x1="13" y1="19" x2="29" y2="19"/><line x1="13" y1="25" x2="29" y2="25"/><line x1="13" y1="31" x2="23" y2="31"/><circle cx="35" cy="35" r="8" fill="var(--bg-panel-2)" stroke="#ff8000"/><line x1="35" y1="31.5" x2="35" y2="38.5" stroke="#ff8000"/><line x1="31.5" y1="35" x2="38.5" y2="35" stroke="#ff8000"/></symbol>' +
+
     '</defs></svg>';
 
   function injectSprite() {

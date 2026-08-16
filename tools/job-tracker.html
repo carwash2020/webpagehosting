@@ -24,10 +24,10 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="/styles.css?v=202608172000">
+<link rel="stylesheet" href="/styles.css?v=202608180900">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.112.3/dist/umd/supabase.js" integrity="sha384-qafw21c/iciq0VXsi9FzkfoQv5I/V0iqE4lSNcKXPnW9/UTJLnv5CcN4FHxVLnKg" crossorigin="anonymous" defer></script>
 <script src="/tools/sync.js?v=202608161700" defer></script>
-<script src="/tools/tools-common.js?v=202608171400" defer></script>
+<script src="/tools/tools-common.js?v=202608180900" defer></script>
 <style>
   body { padding: 90px 20px 60px; max-width: 1080px; margin: 0 auto; }
   .tool-title { font-family:'Oswald',sans-serif; font-weight:700; font-size:28px; color:var(--white); margin-bottom:6px; }
@@ -100,6 +100,8 @@
   .contact-card-text p { color: var(--text-dim); font-size: 13px; margin: 2px 0; }
 
   .empty-state { text-align: center; color: var(--text-dim); padding: 40px 20px; font-size: 14px; }
+  .empty-state.empty-state-first-run { padding: 48px 24px; font-size: 14.5px; }
+  .empty-state.empty-state-first-run .primary-btn { margin: 0 auto; }
   .empty-state .th-icon { display: block; width: 26px; height: 26px; margin: 0 auto 10px; opacity: .7; }
 
   .save-indicator { color: var(--orange-light); font-size: 12.5px; margin-top: 8px; opacity: 0; transition: opacity 0.3s; }
@@ -1004,6 +1006,11 @@
   let currentStatusFilter = 'not-done';
   let editingJobId = null;
   let justAddedJobId = null;
+  // Item #5 (2026-08-17): staggered reveal on this list's true first
+  // render only -- see the .list-stagger comment in styles.css for why
+  // re-triggering it on every search keystroke or filter click would be
+  // wrong.
+  let jobsListRenderedOnce = false;
 
   function setStatusFilter(filter) {
     currentStatusFilter = filter;
@@ -1067,11 +1074,18 @@
         // deserves its own message.
         container.innerHTML = '<div class="empty-state"><svg class="th-icon" aria-hidden="true"><use href="#icon-check-circle" xlink:href="#icon-check-circle"></use></svg> No jobs in this view. <a href="#" onclick="setStatusFilter(\'all\'); return false;" style="color:var(--orange-light);">Show all jobs</a></div>';
       } else {
-        container.innerHTML = '<div class="empty-state"><svg class="th-icon" aria-hidden="true"><use href="#icon-inbox" xlink:href="#icon-inbox"></use></svg> No jobs yet &mdash; add one above.</div>';
+        container.innerHTML = '<div class="empty-state empty-state-first-run">' +
+          '<svg class="th-icon" aria-hidden="true" style="width:64px; height:64px; opacity:1; margin-bottom:14px;"><use href="#icon-first-job" xlink:href="#icon-first-job"></use></svg>' +
+          '<div style="font-size:16px; color:var(--white); font-family:\'Oswald\',sans-serif; margin-bottom:6px;">No jobs yet</div>' +
+          '<div style="margin-bottom:16px;">Add your first one above to start tracking work, costs, and photos.</div>' +
+          '<button class="primary-btn" onclick="document.getElementById(\'jobTitle\')?.scrollIntoView({behavior:\'smooth\', block:\'center\'}); document.getElementById(\'jobTitle\')?.focus();">+ Add Your First Job</button>' +
+          '</div>';
       }
       return;
     }
 
+    container.classList.toggle('list-stagger', !jobsListRenderedOnce);
+    jobsListRenderedOnce = true;
     container.innerHTML = jobs.map(job => {
       const isDone = job.status === 'done';
       const dateDisplay = job.date ? new Date(job.date + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : 'No date set';

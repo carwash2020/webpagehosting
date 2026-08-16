@@ -24,15 +24,18 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Anton&family=Oswald:wght@400;500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="/styles.css?v=202608172000">
+<link rel="stylesheet" href="/styles.css?v=202608180900">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.112.3/dist/umd/supabase.js" integrity="sha384-qafw21c/iciq0VXsi9FzkfoQv5I/V0iqE4lSNcKXPnW9/UTJLnv5CcN4FHxVLnKg" crossorigin="anonymous" defer></script>
 <script src="/tools/sync.js?v=202608161700" defer></script>
 <script src="/tools/push-notifications.js?v=202608160400" defer></script>
-<script src="/tools/tools-common.js?v=202608171400" defer></script>
+<script src="/tools/tools-common.js?v=202608180900" defer></script>
 <style>
   body { padding: 44px 20px 60px; max-width: 900px; margin: 0 auto; }
   .hub-header { display: flex; align-items: center; justify-content: space-between; gap: 14px; margin-bottom: 8px; }
   .hub-header-left { display: flex; align-items: center; gap: 14px; }
+  #headerLogo.is-syncing { animation: logoSyncPulse 1.4s ease-in-out infinite; }
+  @keyframes logoSyncPulse { 0%, 100% { opacity: 1; } 50% { opacity: .55; } }
+  @media (prefers-reduced-motion: reduce) { #headerLogo.is-syncing { animation: none; } }
   .hub-header-right { display: flex; align-items: center; gap: 8px; }
   .hub-header img { height: 44px; width: 44px; object-fit: contain; }
   .hub-title { font-family:'Anton',sans-serif; font-size: 26px; color: var(--white); }
@@ -87,6 +90,19 @@
   @media (prefers-reduced-motion: reduce){ .section-body{ transition:none; } }
 
   .metrics-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 14px; margin-bottom: 8px; }
+  /* Item #3 (2026-08-17): Net Profit is the one number that answers
+     "are we actually making money" -- previously it sat as an equal-
+     weight card in the middle of the grid like everything else. Full
+     width, larger type, and a real positive/negative color signal
+     instead of flat white regardless of sign. */
+  .metric-card-hero {
+    grid-column: 1 / -1;
+    border-color: var(--orange-tint-border);
+  }
+  body .metric-card-hero .metric-value { font-size: 40px; }
+  body .metric-card-hero .metric-value.is-net-positive { color: #6fcf97; }
+  body .metric-card-hero .metric-value.is-net-negative { color: #e0807a; }
+  @media (max-width: 720px) { body .metric-card-hero .metric-value { font-size: 32px; } }
   .metric-card {
     background: var(--bg-panel); border: 1px solid var(--border); border-radius: var(--radius);
     padding: 18px 20px;
@@ -271,7 +287,7 @@
 
 <div class="hub-header">
   <div class="hub-header-left">
-    <img src="/images/logo-signature-orange.webp?v=202608142300" alt="Triple H Enterprises">
+    <img id="headerLogo" src="/images/logo-signature-orange.webp?v=202608142300" alt="Triple H Enterprises">
     <span class="hub-title">Dashboard</span>
   </div>
   <div class="hub-header-right">
@@ -329,6 +345,11 @@
     </div>
 
     <div class="metrics-grid">
+      <div class="metric-card metric-card-hero" id="netHeroCard">
+        <div class="metric-label">Net Profit (Revenue &minus; Expenses)</div>
+        <div class="metric-value" id="metricNet">$0.00</div>
+        <div class="metric-sub">Before mileage cost</div>
+      </div>
       <div class="metric-card">
         <div class="metric-label">Revenue Invoiced</div>
         <div class="metric-value is-orange" id="metricRevenue">$0.00</div>
@@ -345,11 +366,6 @@
         <div class="metric-label">Mileage</div>
         <div class="metric-value" id="metricMileage">0 mi</div>
         <div class="metric-sub" id="metricMileageCost">$0.00 at current rate</div>
-      </div>
-      <div class="metric-card">
-        <div class="metric-label">Net (Revenue &minus; Expenses)</div>
-        <div class="metric-value" id="metricNet">$0.00</div>
-        <div class="metric-sub">Before mileage cost</div>
       </div>
       <div class="metric-card">
         <div class="metric-label">Est. Tax Set-Aside</div>
@@ -929,14 +945,45 @@
     const mileageCost = mileageEntries.reduce((sum, e) => sum + e.amount, 0);
     const net = revenue - expenseTotal;
 
-    document.getElementById('metricRevenue').textContent = money(revenue);
+    // Item #2 (2026-08-17): count-up animation for the hero currency
+    // numbers, but ONLY on this dashboard's very first render. Animating
+    // on every subsequent call (period toggle, live sync update) would
+    // make the numbers visibly restart their count every time someone
+    // taps "This Month" vs "Last 7 Days," which reads as sluggish rather
+    // than premium -- a live background sync updating a number someone
+    // is mid-read on would be actively distracting, not delightful.
+    const isFirstMetricsRender = !window._metricsRenderedOnce;
+    window._metricsRenderedOnce = true;
+    const reducedMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+    function setMoneyMetric(id, value) {
+      const el = document.getElementById(id);
+      if (!el) return;
+      if (!isFirstMetricsRender || reducedMotion) { el.textContent = money(value); return; }
+      const duration = 700;
+      const start = performance.now();
+      function tick(now) {
+        const progress = Math.min((now - start) / duration, 1);
+        const eased = 1 - Math.pow(1 - progress, 3); // ease-out cubic
+        el.textContent = money(value * eased);
+        if (progress < 1) requestAnimationFrame(tick);
+      }
+      requestAnimationFrame(tick);
+    }
+
+    setMoneyMetric('metricRevenue', revenue);
     document.getElementById('metricInvoiceCount').textContent = invoices.length + ' invoice' + (invoices.length === 1 ? '' : 's');
-    document.getElementById('metricExpenses').textContent = money(expenseTotal);
+    setMoneyMetric('metricExpenses', expenseTotal);
     document.getElementById('metricExpenseCount').textContent = expenses.filter(e => e.type === 'expense').length + ' entries';
     document.getElementById('metricMileage').textContent = totalMiles.toFixed(1) + ' mi';
     document.getElementById('metricMileageCost').textContent = money(mileageCost) + ' at $' + loadRate() + '/mi';
-    document.getElementById('metricNet').textContent = money(net);
-    document.getElementById('metricSetAside').textContent = money(Math.max(0, net) * (loadSetAsideRate() / 100));
+    setMoneyMetric('metricNet', net);
+    const netEl = document.getElementById('metricNet');
+    if (netEl) {
+      netEl.classList.toggle('is-net-positive', net >= 0);
+      netEl.classList.toggle('is-net-negative', net < 0);
+    }
+    setMoneyMetric('metricSetAside', Math.max(0, net) * (loadSetAsideRate() / 100));
 
     const revenueSub = document.getElementById('metricInvoiceCount');
     const revenueTrendEl = document.getElementById('metricRevenueTrend');
@@ -1960,20 +2007,30 @@
   function updateRealtimeBadge(status) {
     const dot = document.getElementById('realtimeDot');
     const text = document.getElementById('realtimeText');
+    const logo = document.getElementById('headerLogo');
     if (!dot || !text) return;
     dot.className = 'realtime-dot';
     if (status === 'SUBSCRIBED') {
       dot.classList.add('is-live');
       text.textContent = 'Live sync active';
+      if (logo) logo.classList.remove('is-syncing');
     } else if (status === 'unavailable') {
       dot.classList.add('is-error');
       text.textContent = 'Live sync unavailable';
+      if (logo) logo.classList.remove('is-syncing');
     } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT' || status === 'CLOSED') {
       dot.classList.add('is-error');
       text.textContent = 'Live sync disconnected';
+      if (logo) logo.classList.remove('is-syncing');
     } else {
       dot.classList.add('is-connecting');
       text.textContent = 'Live sync: connecting...';
+      // Item #4 (2026-08-17): a subtle pulse on the brand mark itself
+      // instead of a generic spinner -- this only ever runs during the
+      // brief real "connecting" window, not on every render, so it
+      // reads as the logo quietly breathing rather than a persistent
+      // distraction.
+      if (logo) logo.classList.add('is-syncing');
     }
   }
 
