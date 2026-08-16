@@ -202,7 +202,11 @@
     &#9888;&#65039; Previewing the Account roles panel as a non-manager role. This only changes what this panel SHOWS you -- your actual account and permissions haven't changed, and any real change you make still happens as yourself. <a href="#" onclick="event.preventDefault(); setRolePreview('');" style="color:inherit; text-decoration:underline; margin-left:6px;">Exit preview</a>
   </div>
 
-  <div class="dev-status-strip" id="devStatusStrip">
+  <div class="dev-status-chip" id="devStatusSummary" onclick="toggleStatusStripDetail()" style="cursor:pointer; margin-bottom:8px;">
+    <span class="dev-status-dot checking" id="statusDotSummary"></span><span id="statusTextSummary">Checking system status...</span>
+    <span class="dev-collapse-caret" id="statusStripCaret" style="margin-left:4px;">&#9660;</span>
+  </div>
+  <div class="dev-status-strip" id="devStatusStrip" style="display:none;">
     <span class="dev-status-chip"><span class="dev-status-dot checking" id="statusDotSession"></span><span id="statusTextSession">Session</span></span>
     <span class="dev-status-chip"><span class="dev-status-dot checking" id="statusDotSupabase"></span><span id="statusTextSupabase">Supabase</span></span>
     <span class="dev-status-chip"><span class="dev-status-dot checking" id="statusDotSync"></span><span id="statusTextSync">Sync</span></span>
@@ -304,6 +308,17 @@
     <button class="secondary-btn" style="margin-top:12px;" id="pushTestBtn" onclick="runPushNotificationTest()">Send test lead</button>
   </div>
 
+  <div class="dev-panel is-collapsible" data-collapse-key="pushhistory">
+    <div class="dev-panel-heading" onclick="toggleDevPanel(this)">
+      <h2>Push notification history</h2>
+      <button class="dev-info-bubble" onclick="event.stopPropagation(); openDevInfo('pushhistory')" aria-label="What does this do?" title="What does this do?">?</button>
+      <span class="dev-collapse-caret">&#9660;</span>
+    </div>
+    <div class="dev-panel-body">
+      <div id="pushHistoryList" class="dev-scrollable-list"><p class="tool-sub">Loading...</p></div>
+    </div>
+  </div>
+
   <div class="dev-panel dev-panel-wide">
     <div class="dev-panel-heading">
       <h2>Known issues</h2>
@@ -312,12 +327,24 @@
     <div id="knownIssuesList"></div>
   </div>
 
-  <div class="dev-panel">
+  <div class="dev-panel dev-panel-wide">
     <div class="dev-panel-heading">
-      <h2 id="nav-deploy" class="dev-anchor">Latest deploy</h2>
+      <h2 id="nav-deploy" class="dev-anchor">Deploy history</h2>
       <button class="dev-info-bubble" onclick="openDevInfo('deploy')" aria-label="What does this do?" title="What does this do?">?</button>
     </div>
     <div id="deployStatus"></div>
+    <div id="deployHistoryList" class="dev-scrollable-list" style="margin-top:10px;"></div>
+  </div>
+
+  <div class="dev-panel dev-panel-wide is-collapsible" data-collapse-key="changelog">
+    <div class="dev-panel-heading" onclick="toggleDevPanel(this)">
+      <h2>What's new</h2>
+      <button class="dev-info-bubble" onclick="event.stopPropagation(); openDevInfo('changelog')" aria-label="What does this do?" title="What does this do?">?</button>
+      <span class="dev-collapse-caret">&#9660;</span>
+    </div>
+    <div class="dev-panel-body">
+      <div id="changelogList"><p class="tool-sub">Loading recent commits...</p></div>
+    </div>
   </div>
 
   <div class="dev-panel">
@@ -446,7 +473,7 @@
           <li><strong>Appliance Wiki health</strong> &mdash; quick counts: brands, models, issues, and the verified/logged-by-you split.</li>
           <li><strong>Device info</strong> &mdash; browser, screen size, and online status &mdash; useful when something behaves differently on phone vs. computer.</li>
           <li><strong>Known issues</strong> &mdash; still-open items from the last security audit, checkable so they don't get lost.</li>
-          <li><strong>Latest deploy</strong> &mdash; the most recent GitHub Actions run, pulled live.</li>
+          <li><strong>Deploy history</strong> &mdash; the last 8 GitHub Actions runs, pulled live.</li>
           <li><strong>Site content</strong> &mdash; edit the phone, email, hours, and up to 2 announcement banners on the public site directly, no code push needed. Changing phone/email updates every place it appears at once.</li>
           <li><strong>Content edit history</strong> &mdash; every past change to those fields, who made it, and when -- a real audit trail from a database trigger.</li>
           <li><strong>FAQ editor</strong> &mdash; add, edit, reorder, or remove questions on the site's FAQ section directly.</li>
@@ -511,13 +538,21 @@
       title: 'Push notification test',
       body: `<p>Inserts a test lead using the exact same path the real contact form uses (not a direct call to the Send-Push function itself, which needs a service_role key that must never sit in this page's JavaScript). That insert should trigger the same server-side notification pipeline a real lead does.</p><p>This can't directly confirm a push was actually received on any device -- only that the insert (and whatever fires from it server-side) ran without an error. The test lead gets deleted automatically a few seconds later either way.</p>`,
     },
+    pushhistory: {
+      title: 'Push notification history',
+      body: `<p>Reads notification_log directly -- the same table the Send-Push edge function's own de-duplication logic uses to decide whether a category has already fired recently, so this is the real record of what's actually gone out, not a separate log kept just for display.</p><p>Doesn't confirm a push was actually received on any device, only that it was sent from this end -- same limitation as the test button above.</p>`,
+    },
     knownissues: {
       title: 'Known issues',
       body: `<p>Real, still-open items -- add a new one right from here with "+ Add issue", check one off once it's actually resolved, or delete it once it's no longer worth tracking. Synced across devices, so anything either account logs shows up for both.</p>`,
     },
     deploy: {
-      title: 'Latest deploy',
-      body: `<p>Pulls the most recent GitHub Actions run for this repo directly from GitHub's public API -- no login needed since the repo is public. Shows whether it passed or failed and how long ago, without needing to leave this page to check the Actions tab.</p>`,
+      title: 'Deploy history',
+      body: `<p>Pulls the last 8 GitHub Actions runs for this repo directly from GitHub's public API -- no login needed since the repo is public. The top summary is the single most recent run; the list below it shows enough history to spot a pattern (e.g. "this started failing consistently a few runs back") rather than just a single snapshot.</p>`,
+    },
+    changelog: {
+      title: "What's new",
+      body: `<p>Real commit messages from this repo, newest first -- same public GitHub API as Deploy History above, so no separate setup. Shows each commit's first line only; the fuller explanation many commits carry underneath is written as a developer audit trail and isn't really phrased for a quick glance here, but the commit link goes straight to the full message on GitHub if you want it.</p>`,
     },
     sitecontent: {
       title: 'Site content',
@@ -781,7 +816,7 @@
       else if (supabaseStatus && supabaseStatus.textContent.includes('HTTP')) issues.push('Supabase responded with an error (see Session & Sync)');
 
       const deployStatusEl = document.querySelector('#deployStatus .dev-check-status');
-      if (deployStatusEl && deployStatusEl.classList.contains('fail')) issues.push('Latest deploy did not pass (see Latest Deploy)');
+      if (deployStatusEl && deployStatusEl.classList.contains('fail')) issues.push('Latest deploy did not pass (see Deploy History)');
 
       results.innerHTML = issues.length
         ? '<div class="dev-check-row"><div>' + issues.map(i => escapeHtml(i)).join('<br>') + '</div><span class="dev-check-status fail">' + issues.length + ' ISSUE' + (issues.length === 1 ? '' : 'S') + '</span></div>'
@@ -1841,12 +1876,49 @@
   // check remains the rule, same as runFullHealthCheck() follows.
   // ---------------------------------------------------------------------
 
+  let _statusStripExpanded = false;
+
+  function toggleStatusStripDetail() {
+    _statusStripExpanded = !_statusStripExpanded;
+    const strip = document.getElementById('devStatusStrip');
+    const caret = document.getElementById('statusStripCaret');
+    if (strip) strip.style.display = _statusStripExpanded ? 'flex' : 'none';
+    if (caret) caret.style.transform = _statusStripExpanded ? 'rotate(0deg)' : 'rotate(-90deg)';
+  }
+
+  // Tracks each chip's last-set state so the summary badge above can
+  // collapse all 4 into one glance -- worst state wins (bad > warn >
+  // checking > ok), so "everything's fine except one thing" never
+  // quietly shows green.
+  const _statusChipStates = {};
+  const STATUS_SEVERITY = { bad: 3, warn: 2, checking: 1, ok: 0 };
+
+  function updateStatusSummary() {
+    const dot = document.getElementById('statusDotSummary');
+    const text = document.getElementById('statusTextSummary');
+    if (!dot || !text) return;
+    const states = Object.values(_statusChipStates);
+    if (!states.length || states.some(s => s === 'checking')) {
+      dot.className = 'dev-status-dot checking';
+      text.textContent = 'Checking system status...';
+      return;
+    }
+    const worst = states.reduce((a, b) => (STATUS_SEVERITY[b] > STATUS_SEVERITY[a] ? b : a), 'ok');
+    const problemCount = states.filter(s => s === 'bad' || s === 'warn').length;
+    dot.className = 'dev-status-dot ' + worst;
+    text.textContent = worst === 'ok'
+      ? 'All systems normal'
+      : problemCount + ' item' + (problemCount === 1 ? '' : 's') + ' need' + (problemCount === 1 ? 's' : '') + ' a look';
+  }
+
   function setStatusChip(name, state, label) {
     const dot = document.getElementById('statusDot' + name);
     const text = document.getElementById('statusText' + name);
     if (!dot || !text) return;
     dot.className = 'dev-status-dot ' + state;
     text.textContent = label;
+    _statusChipStates[name] = state;
+    updateStatusSummary();
   }
 
   async function renderStatusStrip() {
@@ -2160,16 +2232,21 @@
     showToast('Issue added.');
   }
 
-  // Pulls the most recent workflow run from GitHub's public API --
-  // no auth needed since this is a public repo. Shows pass/fail and
-  // how long ago, without needing to leave this page to check.
+  // Pulls recent workflow runs from GitHub's public API -- no auth
+  // needed since this is a public repo. Top summary shows the single
+  // most recent run (unchanged from before); the history list below
+  // shows the last 8 across all workflows so a pattern (e.g. "this
+  // started failing consistently a few runs back") is visible without
+  // leaving this page.
   async function renderDeployStatus() {
     const el = document.getElementById('deployStatus');
+    const historyEl = document.getElementById('deployHistoryList');
     el.innerHTML = '<p class="tool-sub">Loading...</p>';
     try {
-      const res = await fetchWithTimeout('https://api.github.com/repos/carwash2020/webpagehosting/actions/runs?per_page=1', 6000);
+      const res = await fetchWithTimeout('https://api.github.com/repos/carwash2020/webpagehosting/actions/runs?per_page=8', 6000);
       const data = await res.json();
-      const run = data.workflow_runs && data.workflow_runs[0];
+      const runs = data.workflow_runs || [];
+      const run = runs[0];
       if (!run) { el.innerHTML = '<p class="tool-sub">No runs found.</p>'; return; }
       const ok = run.conclusion === 'success';
       const when = new Date(run.updated_at).toLocaleString();
@@ -2177,8 +2254,94 @@
         '<div class="dev-check-row"><div><div>' + escapeHtml(run.name || run.display_title || 'workflow') + '</div>' +
         '<div class="dev-check-detail">' + when + '</div></div>' +
         '<span class="dev-check-status ' + (ok ? 'pass' : 'fail') + '">' + (run.conclusion ? run.conclusion.toUpperCase() : (run.status || '').toUpperCase()) + '</span></div>';
+
+      if (historyEl) {
+        historyEl.innerHTML = '<h3 style="margin:0 0 8px; font-size:14px; color:var(--text-dim);">Last 8 runs</h3>' +
+          runs.map(r => {
+            const rOk = r.conclusion === 'success';
+            const state = r.conclusion ? r.conclusion.toUpperCase() : (r.status || '').toUpperCase();
+            return '<div style="padding:6px 0; border-bottom:1px solid var(--border); display:flex; align-items:center; justify-content:space-between; gap:10px; font-size:12.5px;">' +
+              '<span style="color:var(--text-dim);">' + escapeHtml(r.name || 'workflow') + ' &mdash; ' + new Date(r.updated_at).toLocaleString() + '</span>' +
+              '<span class="dev-check-status ' + (r.conclusion ? (rOk ? 'pass' : 'fail') : '') + '">' + state + '</span></div>';
+          }).join('');
+      }
     } catch (e) {
       el.innerHTML = '<p class="tool-sub">Could not reach GitHub right now.</p>';
+      if (historyEl) historyEl.innerHTML = '';
+    }
+  }
+
+  // Turns real commit messages into a plain-language "what changed"
+  // list -- added 2026-08-16 so neither of you has to ask what changed
+  // after a session like this one. Same public, unauthenticated
+  // GitHub API as deploy history above, no new credential needed.
+  // Shows only each commit's FIRST line (the summary) -- the fuller
+  // body text in commit messages this session is written for a
+  // developer audit trail, not really phrased for a quick glance here.
+  async function renderChangelog() {
+    const el = document.getElementById('changelogList');
+    try {
+      const res = await fetchWithTimeout('https://api.github.com/repos/carwash2020/webpagehosting/commits?per_page=15', 6000);
+      const commits = await res.json();
+      if (!Array.isArray(commits) || !commits.length) {
+        el.innerHTML = '<p class="tool-sub">Could not load recent commits.</p>';
+        return;
+      }
+      el.innerHTML = commits.map(c => {
+        const summary = (c.commit && c.commit.message ? c.commit.message.split('\n')[0] : '(no message)');
+        const when = c.commit && c.commit.author ? new Date(c.commit.author.date).toLocaleDateString() : '';
+        return '<div style="padding:8px 0; border-bottom:1px solid var(--border); font-size:13px;">' +
+          '<div>' + escapeHtml(summary) + '</div>' +
+          '<div style="font-size:11.5px; color:var(--text-dim); margin-top:2px;">' + when + ' &mdash; <a href="' + escapeHtml(c.html_url) + '" target="_blank" rel="noopener" style="color:inherit;">' + c.sha.slice(0, 7) + '</a></div></div>';
+      }).join('');
+    } catch (e) {
+      el.innerHTML = '<p class="tool-sub">Could not reach GitHub right now.</p>';
+    }
+  }
+
+  // Human-readable labels for the internal notif_type keys used
+  // throughout the Send-Push edge function's de-dup logic
+  // (wasRecentlyNotified/markNotified). Kept here rather than
+  // guessing at display time from the raw key, since a couple of
+  // these (e.g. "sync-stale") don't read naturally on their own.
+  const NOTIF_TYPE_LABELS = {
+    'followup': 'Client follow-up',
+    'invoice-overdue': 'Invoice overdue',
+    'compliance-expiring': 'Compliance expiring',
+    'overdue-not-started': 'Overdue, never started',
+    'stuck-in-progress': 'Job stuck in progress',
+    'sync-stale': 'Sync hasn\u2019t run recently',
+    'quote-unconverted': 'Quote never converted',
+    'job-no-photos': 'Completed job, no photos',
+    'warranty-checkin': 'Warranty ending soon',
+    'unresponded-lead': 'Lead still unanswered',
+  };
+
+  // Reads notification_log directly -- the same table
+  // wasRecentlyNotified()/markNotified() in the Send-Push edge
+  // function already use for de-duplication, so this is showing the
+  // real record of what's actually gone out, not a separate log.
+  async function renderPushHistory() {
+    const el = document.getElementById('pushHistoryList');
+    try {
+      if (typeof ensureFreshToken === 'function') await ensureFreshToken();
+      const res = await fetchWithTimeout(SUPABASE_URL + '/rest/v1/notification_log?select=notif_type,item_key,sent_at&order=sent_at.desc&limit=30', 8000, {
+        headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': 'Bearer ' + getAuthToken() },
+      });
+      if (!res.ok) throw new Error('HTTP ' + res.status);
+      const rows = await res.json();
+      if (!rows.length) {
+        el.innerHTML = '<p class="tool-sub">No push notifications sent yet.</p>';
+        return;
+      }
+      el.innerHTML = rows.map(r => {
+        const label = NOTIF_TYPE_LABELS[r.notif_type] || r.notif_type;
+        return '<div style="padding:7px 0; border-bottom:1px solid var(--border); display:flex; align-items:center; justify-content:space-between; gap:10px; font-size:12.5px;">' +
+          '<span>' + escapeHtml(label) + (r.item_key ? ' <span style="color:var(--text-dim);">(' + escapeHtml(r.item_key) + ')</span>' : '') + '</span>' +
+          '<span style="color:var(--text-dim); white-space:nowrap;">' + new Date(r.sent_at).toLocaleString() + '</span></div>';
+      }).join('');
+    } catch (e) {
+      el.innerHTML = '<p class="tool-sub">Could not load push history: ' + escapeHtml(e.message || String(e)) + '</p>';
     }
   }
 
@@ -2211,6 +2374,8 @@
       renderClientErrorLog();
       renderKnownIssues();
       renderDeployStatus();
+      renderChangelog();
+      renderPushHistory();
       renderSiteContentForm();
       renderContentHistory();
       renderFaqEditor();
