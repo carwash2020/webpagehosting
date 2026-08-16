@@ -13,8 +13,10 @@
 
 const fs = require('fs');
 const path = require('path');
+const { execSync } = require('child_process');
 
 const TOOLS_DIR = path.join(__dirname, '..', 'tools');
+const REPO_ROOT = path.join(__dirname, '..');
 
 // Pages that are deliberately different, and why -- see the code review
 // this checker came out of for the full reasoning on each:
@@ -30,11 +32,71 @@ function readTool(filename) {
   return fs.readFileSync(path.join(TOOLS_DIR, filename), 'utf8');
 }
 
+// Added 2026-08-16 after a real, costly bug: auth.js was fixed twice in
+// one day, but every page still requested it as `auth.js?v=202608142300`
+// -- a version string from two days earlier. Browsers correctly served
+// the stale cached copy, so neither fix ever reached a real device, and
+// several rounds of debugging chased phantom causes as a result.
+//
+// The original version of this checker verified only that all pages
+// referenced the SAME version as each other, which passed happily while
+// all 14 pages agreed on the same STALE version. Consistency was never
+// the useful property on its own -- being current is. This compares each
+// versioned script's ?v= timestamp against when git last actually
+// modified that file, and fails if the file is newer than the version
+// string that's supposed to be busting its cache.
+function checkVersionFreshness(problems) {
+  const VERSIONED_SCRIPTS = ['tools-common.js', 'sync.js', 'auth.js', 'push-notifications.js'];
+  const files = fs.readdirSync(TOOLS_DIR).filter(f => f.endsWith('.html'));
+
+  for (const script of VERSIONED_SCRIPTS) {
+    if (!fs.existsSync(path.join(TOOLS_DIR, script))) continue;
+
+    let lastModified;
+    try {
+      const out = execSync(`git log -1 --format=%cI -- tools/${script}`, { cwd: REPO_ROOT, encoding: 'utf8' }).trim();
+      if (!out) continue; // never committed -- nothing to compare against
+      lastModified = new Date(out);
+    } catch (e) {
+      continue; // git unavailable -- skip rather than fail the whole run
+    }
+
+    const escaped = script.replace('.', '\\.');
+    let found = null;
+    for (const f of files) {
+      const m = readTool(f).match(new RegExp(escaped + '\\?v=(\\d{12})'));
+      if (m) { found = m[1]; break; }
+    }
+    if (!found) continue;
+
+    // Version strings are YYYYMMDDHHMM written in local time; parsed as
+    // UTC here, which is close enough for a staleness check measured in
+    // hours given the generous grace window below.
+    const versionDate = new Date(Date.UTC(
+      +found.slice(0, 4), +found.slice(4, 6) - 1, +found.slice(6, 8),
+      +found.slice(8, 10), +found.slice(10, 12)
+    ));
+
+    // 12h grace absorbs timezone skew between the version string's
+    // local-time origin and git's UTC timestamps, while still catching
+    // a genuinely stale version (the real bug was ~2 days stale).
+    const graceMs = 12 * 60 * 60 * 1000;
+    if (lastModified.getTime() - versionDate.getTime() > graceMs) {
+      problems.push(
+        `${script} was last modified ${lastModified.toISOString()} but pages still request ?v=${found} ` +
+        `-- browsers will serve a STALE cached copy. Bump the ?v= string on every page that loads it.`
+      );
+    }
+  }
+}
+
 function main() {
   const files = fs.readdirSync(TOOLS_DIR).filter(f => f.endsWith('.html'));
   const problems = [];
   const versions = {}; // filename -> version string, for the cross-file comparison at the end
   const jsVersions = {}; // script name -> { filename -> version string }
+
+  checkVersionFreshness(problems);
 
   files.forEach(filename => {
     if (EXEMPT[filename]) return;
