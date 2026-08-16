@@ -35,7 +35,14 @@
 // This is exactly the trigger that forces every client to actually
 // fetch fresh files instead of continuing to serve what they already
 // have stored.
-const CACHE_NAME = 'th-workspace-v3';
+// Bumped 2026-08-16 (again, same day): dev-tools.html changed again
+// (added exact-value diagnostic logging to the advisor-health request,
+// after a fix confirmed via cache-bump v3 didn't resolve the reported
+// error) -- and dev-tools.html is also in the precache list below.
+// Same reasoning as the v2->v3 bump just above: without bumping this
+// again, THIS change would hit the identical "device never actually
+// gets it" problem it was meant to help diagnose.
+const CACHE_NAME = 'th-workspace-v4';
 const PRECACHE_URLS = [
   '/tools/workspace.html', '/tools/job-tracker.html', '/tools/invoice-generator.html', '/tools/contract-generator.html',
   '/tools/calendar.html', '/tools/route-planner.html', '/tools/review-request.html', '/tools/contact-card.html',

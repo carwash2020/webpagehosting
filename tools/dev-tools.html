@@ -2190,21 +2190,60 @@
   // file. Renders both security and performance lints, grouped and
   // counted by level (ERROR/WARN/INFO) so the worst thing needing
   // attention is obvious without reading every single line.
+  // Returns a short, safe-to-log preview of a string that flags
+  // exactly which character (if any) is outside the Latin1/ByteString
+  // range and where it sits -- added 2026-08-16 after two rounds of
+  // the same "not a valid ByteString" error with no way to see what
+  // was actually in the value that triggered it.
+  function describeHeaderValue(label, value) {
+    if (typeof value !== 'string') {
+      return label + ': not a string (type ' + typeof value + ')';
+    }
+    for (let i = 0; i < value.length; i++) {
+      const code = value.charCodeAt(i);
+      if (code > 0xFF) {
+        return label + ': length ' + value.length + ', bad char at index ' + i +
+          ' (code point ' + code + ', "' + value.slice(Math.max(0, i - 5), i + 5) + '")';
+      }
+    }
+    return label + ': length ' + value.length + ', clean (starts "' + value.slice(0, 12) + '...")';
+  }
+
   async function renderAdvisorHealth() {
     const el = document.getElementById('advisorHealthResults');
     const setupNotice = document.getElementById('advisorSetupNotice');
     el.innerHTML = '<p class="tool-sub">Checking...</p>';
     try {
       if (typeof ensureFreshToken === 'function') await ensureFreshToken();
-      const res = await fetchWithTimeout(SUPABASE_URL + '/functions/v1/advisor-health', 15000, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'apikey': SUPABASE_ANON_KEY,
-          'Authorization': 'Bearer ' + getAuthToken(),
-        },
-        body: '{}',
-      });
+
+      // Build and inspect every header value BEFORE attempting the
+      // fetch, so if construction itself throws, we already have a
+      // concrete diagnostic captured rather than just the browser's
+      // own generic error with no context.
+      const authValue = 'Bearer ' + getAuthToken();
+      const diagnostics = [
+        describeHeaderValue('apikey', SUPABASE_ANON_KEY),
+        describeHeaderValue('Authorization', authValue),
+      ].join(' | ');
+
+      let res;
+      try {
+        res = await fetchWithTimeout(SUPABASE_URL + '/functions/v1/advisor-health', 15000, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'apikey': SUPABASE_ANON_KEY,
+            'Authorization': authValue,
+          },
+          body: '{}',
+        });
+      } catch (fetchErr) {
+        if (typeof logClientError === 'function') {
+          logClientError('advisor-health request construction failed: ' + (fetchErr.message || String(fetchErr)) + ' -- ' + diagnostics, 'dev-tools.html', null, null, fetchErr.stack);
+        }
+        throw fetchErr;
+      }
+
       const body = await res.json().catch(() => ({}));
       if (!res.ok || !body.ok) {
         throw new Error(body.error || ('HTTP ' + res.status));
@@ -2234,7 +2273,8 @@
         '</span><span class="dev-check-status ' + (levelClass[l.level] || '') + '">' + escapeHtml(l.level) + '</span></div>'
       ).join('');
     } catch (e) {
-      el.innerHTML = '<p class="tool-sub">Could not load advisor data: ' + escapeHtml(e.message || String(e)) + '</p>';
+      el.innerHTML = '<p class="tool-sub">Could not load advisor data: ' + escapeHtml(e.message || String(e)) + '</p>' +
+        '<p class="tool-sub" style="margin-top:6px; font-size:11px;">See the Client errors panel above for exactly which header value caused this, if it happens again.</p>';
     }
   }
 
