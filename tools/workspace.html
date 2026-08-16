@@ -24,11 +24,11 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Anton&family=Oswald:wght@400;500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="/styles.css?v=202608161200">
+<link rel="stylesheet" href="/styles.css?v=202608161430">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.112.3/dist/umd/supabase.js" integrity="sha384-qafw21c/iciq0VXsi9FzkfoQv5I/V0iqE4lSNcKXPnW9/UTJLnv5CcN4FHxVLnKg" crossorigin="anonymous" defer></script>
 <script src="/tools/sync.js?v=202608160400" defer></script>
 <script src="/tools/push-notifications.js?v=202608160400" defer></script>
-<script src="/tools/tools-common.js?v=202608161200" defer></script>
+<script src="/tools/tools-common.js?v=202608161430" defer></script>
 <style>
   body { padding: 44px 20px 60px; max-width: 900px; margin: 0 auto; }
   .hub-header { display: flex; align-items: center; justify-content: space-between; gap: 14px; margin-bottom: 8px; }
@@ -202,7 +202,11 @@
   .tool-tile-icon { font-size: 26px; line-height: 1; }
   .tool-tile-label { font-family:'Oswald',sans-serif; color: var(--white); font-size: 12.5px; text-align: center; }
   .tool-tile-info {
-    position: absolute; top: 4px; right: 4px; width: 20px; height: 20px; border-radius: 50%;
+    /* 2026-08-16: was top/right:4px, which sat right where the tile's
+       16px border-radius starts curving inward -- the circular badge
+       visually clipped into that curve instead of resting on a flat
+       edge. Pulled in to 7px, clear of the curve. */
+    position: absolute; top: 7px; right: 7px; width: 20px; height: 20px; border-radius: 50%;
     border: 1px solid var(--border); background: var(--bg-panel-2); color: var(--text-dim);
     font-size: 11px; cursor: pointer; display: flex; align-items: center; justify-content: center; padding: 0;
     transition: border-color .15s ease, color .15s ease;
@@ -235,7 +239,7 @@
   </div>
   <button class="help-btn" onclick="openHelpModal()" aria-label="How to use this dashboard" title="How to use this dashboard">?</button>
   <button class="help-btn" id="pushToggleBtn" onclick="handlePushToggle()" aria-label="Toggle notifications" title="Toggle notifications"><svg class="th-icon" aria-hidden="true"><use href="#icon-bell" xlink:href="#icon-bell"></use></svg></button>
-  <button class="help-btn" onclick="signOut()" aria-label="Log out" title="Log out">&#x21B0;</button>
+  <button class="help-btn is-muted" onclick="signOut()" aria-label="Log out" title="Log out">&#x21B0;</button>
 </div>
 <p class="hub-sub"><span class="realtime-badge" id="realtimeBadge" style="margin-left:0;"><span class="realtime-dot" id="realtimeDot"></span><span id="realtimeText">Live sync: connecting...</span></span>
   <button class="help-btn" id="refreshSyncLink" onclick="manualRefreshSync(renderDashboard)" aria-label="Refresh synced data now" title="Refresh synced data now" style="width:26px; height:26px; font-size:13px; vertical-align:middle; margin-left:6px;">&#8635;</button>
@@ -498,7 +502,7 @@
 
   <div class="tool-tile">
     <a href="/tools/review-request.html" class="tool-tile-link">
-      <span class="tool-tile-icon"><svg class="th-icon" aria-hidden="true"><use href="#icon-star-filled" xlink:href="#icon-star-filled"></use></svg></span>
+      <span class="tool-tile-icon"><svg class="th-icon" aria-hidden="true"><use href="#icon-star" xlink:href="#icon-star"></use></svg></span>
       <span class="tool-tile-label">Reviews</span>
     </a>
     <button class="tool-tile-info" onclick="event.stopPropagation(); openCardInfo('tool-reviews')" aria-label="What is Review Request Sender?" title="What is this?">?</button>
@@ -537,14 +541,14 @@
   </div>
   <div class="tool-tile">
     <a href="/tools/parts-reference.html" class="tool-tile-link">
-      <span class="tool-tile-icon"><svg class="th-icon" aria-hidden="true"><use href="#icon-toolbox" xlink:href="#icon-toolbox"></use></svg></span>
+      <span class="tool-tile-icon"><svg class="th-icon" aria-hidden="true"><use href="#icon-book" xlink:href="#icon-book"></use></svg></span>
       <span class="tool-tile-label">Wiki</span>
     </a>
     <button class="tool-tile-info" onclick="event.stopPropagation(); openCardInfo('tool-partsreference')" aria-label="What is Appliance Wiki?" title="What is this?">?</button>
   </div>
   <div class="tool-tile" id="devToolsTile" style="display:none;">
     <a href="/tools/dev-tools.html" class="tool-tile-link">
-      <span class="tool-tile-icon"><svg class="th-icon" aria-hidden="true"><use href="#icon-gear" xlink:href="#icon-gear"></use></svg></span>
+      <span class="tool-tile-icon"><svg class="th-icon" aria-hidden="true"><use href="#icon-terminal" xlink:href="#icon-terminal"></use></svg></span>
       <span class="tool-tile-label">Dev</span>
     </a>
     <button class="tool-tile-info" onclick="event.stopPropagation(); openCardInfo('tool-devtools')" aria-label="What is Dev Tools?" title="What is this?">?</button>
