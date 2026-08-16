@@ -24,7 +24,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Anton&family=Oswald:wght@400;500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="/styles.css?v=202608161430">
+<link rel="stylesheet" href="/styles.css?v=202608171100">
 <script src="/tools/tools-common.js?v=202608162000" defer></script>
 <script src="/tools/sync.js?v=202608161700" defer></script>
 <style>
@@ -192,8 +192,10 @@
       <img src="/images/logo-signature-orange.webp?v=202608142300" alt="Triple H Enterprises">
       <span class="hub-title">Dev Tools</span>
     </div>
-    <button class="help-btn" onclick="openHelpModal()" aria-label="How to use Dev Tools" title="How to use Dev Tools">?</button>
-    <a href="/tools/workspace.html" class="help-btn" aria-label="Back to Dashboard" title="Back to Dashboard" style="text-decoration:none; display:inline-flex; align-items:center; justify-content:center;">&#8617;</a>
+    <div class="hub-header-right">
+      <button class="help-btn" onclick="openHelpModal()" aria-label="How to use Dev Tools" title="How to use Dev Tools">?</button>
+      <a href="/tools/workspace.html" class="help-btn" aria-label="Back to Dashboard" title="Back to Dashboard" style="text-decoration:none; display:inline-flex; align-items:center; justify-content:center;">&#8617;</a>
+    </div>
   </div>
   <p class="hub-sub">Site diagnostics and maintenance utilities. Visible to any account with an assigned role &mdash; see the Account roles panel below to change who has access.</p>
 
@@ -581,7 +583,7 @@
     },
     changelog: {
       title: "What's new",
-      body: `<p>Real commit messages from this repo, newest first -- same public GitHub API as Deploy History above, so no separate setup. Shows each commit's first line only; the fuller explanation many commits carry underneath is written as a developer audit trail and isn't really phrased for a quick glance here, but the commit link goes straight to the full message on GitHub if you want it.</p>`,
+      body: `<p>Real commit messages from this repo, newest first -- same public GitHub API as Deploy History above, so no separate setup. Each entry shows its short title by default; "Show full message" expands the complete explanation of what changed and why, right here, without leaving the app. The GitHub link still goes to the actual code diff (the literal before/after of every file), for anyone who wants to see the change itself rather than just read about it.</p><p>To revert something you don't like: just ask in chat which commit (or describe what changed) and it can be reverted directly -- that's a normal git operation, not something this page needs a button for.</p>`,
     },
     sitecontent: {
       title: 'Site content',
@@ -2458,12 +2460,25 @@
         el.innerHTML = '<p class="tool-sub">Could not load recent commits.</p>';
         return;
       }
-      el.innerHTML = commits.map(c => {
-        const summary = (c.commit && c.commit.message ? c.commit.message.split('\n')[0] : '(no message)');
-        const when = c.commit && c.commit.author ? new Date(c.commit.author.date).toLocaleDateString() : '';
-        return '<div style="padding:8px 0; border-bottom:1px solid var(--border); font-size:13px;">' +
-          '<div>' + escapeHtml(summary) + '</div>' +
-          '<div style="font-size:11.5px; color:var(--text-dim); margin-top:2px;">' + when + ' &mdash; <a href="' + escapeHtml(c.html_url) + '" target="_blank" rel="noopener" style="color:inherit;">' + c.sha.slice(0, 7) + '</a></div></div>';
+      // Upgrade (2026-08-17): this used to show only each commit's first
+      // line, which for most commits here is just a short title -- the
+      // actual explanation of what changed and why lives in the rest of
+      // the message. "Show full message" expands that in place, so
+      // seeing exactly what was done doesn't require leaving the app;
+      // the GitHub link still exists for anyone who wants the literal
+      // code diff, not just the written explanation of it.
+      el.innerHTML = commits.map((c, i) => {
+        const fullMessage = (c.commit && c.commit.message) || '(no message)';
+        const summary = fullMessage.split('\n')[0];
+        const rest = fullMessage.split('\n').slice(1).join('\n').trim();
+        const when = c.commit && c.commit.author ? new Date(c.commit.author.date).toLocaleString() : '';
+        const detailId = 'changelogDetail' + i;
+        return '<div style="padding:10px 0; border-bottom:1px solid var(--border); font-size:13px;">' +
+          '<div style="font-weight:600;">' + escapeHtml(summary) + '</div>' +
+          '<div style="font-size:11.5px; color:var(--text-dim); margin-top:2px;">' + when + ' &mdash; <a href="' + escapeHtml(c.html_url) + '" target="_blank" rel="noopener" style="color:inherit;">' + c.sha.slice(0, 7) + ' on GitHub</a></div>' +
+          (rest ? '<button class="small-btn" style="margin-top:6px;" onclick="this.nextElementSibling.style.display=this.nextElementSibling.style.display===\'none\'?\'block\':\'none\'; this.textContent=this.textContent==\'Show full message\'?\'Hide full message\':\'Show full message\';">Show full message</button>' +
+            '<pre id="' + detailId + '" style="display:none; white-space:pre-wrap; font-family:inherit; font-size:12.5px; color:var(--text-dim); background:var(--bg-panel-3); border-radius:6px; padding:10px; margin-top:8px;">' + escapeHtml(rest) + '</pre>' : '') +
+          '</div>';
       }).join('');
     } catch (e) {
       el.innerHTML = '<p class="tool-sub">Could not reach GitHub right now.</p>';
