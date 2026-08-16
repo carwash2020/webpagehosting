@@ -173,7 +173,32 @@ async function requireAuth() {
 // access token once logged in, NOT the anon key, since RLS policies
 // keyed on auth.uid() only resolve correctly with a real user token.
 function getAuthToken() {
-  return hasValidSession() ? getStoredSession().access_token : SUPABASE_ANON_KEY;
+  const token = hasValidSession() ? getStoredSession().access_token : SUPABASE_ANON_KEY;
+  // Defensive validation added 2026-08-16, after a real "Failed to
+  // construct 'Request': ... is not a valid ByteString" error while
+  // testing a new panel -- that specific browser error means a header
+  // value contained a character outside the Latin1 range, which a
+  // genuine JWT (base64url: only A-Z, a-z, 0-9, -, _) can never
+  // actually contain. Static code review turned up nothing -- the
+  // fetch call itself was byte-for-byte the same shape as an already-
+  // working one elsewhere -- so the real cause has to be the STORED
+  // token value itself being unexpectedly malformed on that specific
+  // device/session, not the code building the request. Rather than
+  // let that surface again as a cryptic browser error with no way to
+  // trace it, this validates the token is actually a normal-looking
+  // string before handing it back, and logs a real diagnostic message
+  // if not -- falling back to the anon key, which will correctly get
+  // rejected by RLS rather than crash the request outright.
+  if (typeof token !== 'string' || !/^[\x00-\xFF]*$/.test(token)) {
+    if (typeof logClientError === 'function') {
+      logClientError(
+        'getAuthToken() returned an invalid token (type: ' + typeof token + ', length: ' + (token && token.length) + ') -- falling back to anon key.',
+        'auth.js', null, null, null
+      );
+    }
+    return SUPABASE_ANON_KEY;
+  }
+  return token;
 }
 
 // Whoever is actually logged in on this device right now, or null if
