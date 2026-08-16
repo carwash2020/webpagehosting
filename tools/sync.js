@@ -736,22 +736,35 @@ function startRealtimeSync(onRemoteChange, onStatusChange) {
       'postgres_changes',
       { event: '*', schema: 'public', table: 'workspace_sync', filter: `code=eq.${code}` },
       async (payload) => {
-        // A realtime event fires for EVERY change to this row, including
-        // ones this same device just made -- pushing, then immediately
-        // re-pulling and re-applying data it already has is pure
-        // unnecessary churn, and one clear source of the race window
-        // that could make a just-saved entry flicker or appear to
-        // vanish. If the incoming row's updated_at matches what this
-        // device already recorded as the last known state, skip the
-        // pull entirely rather than redo work that changes nothing.
-        const incomingUpdatedAt = payload && payload.new && payload.new.updated_at;
-        const knownUpdatedAt = localStorage.getItem(SYNC_KNOWN_AT_KEY);
-        if (incomingUpdatedAt && knownUpdatedAt && incomingUpdatedAt === knownUpdatedAt) return;
-        await pullSync();
-        if (onRemoteChange) onRemoteChange();
+        // Wrapped in try/catch and logged explicitly, rather than
+        // relying on the browser's own window.onerror to catch a
+        // failure in here -- this callback runs inside the supabase-js
+        // library's own internals (a cross-origin script), and errors
+        // originating there can get reported as a generic, detail-free
+        // "Script error." with no file/line/message at all. Logging
+        // explicitly here means a real failure gets a real message
+        // instead of that unhelpful placeholder, added 2026-08-16 after
+        // exactly that generic message kept recurring with nothing
+        // useful to go on.
+        try {
+          const incomingUpdatedAt = payload && payload.new && payload.new.updated_at;
+          const knownUpdatedAt = localStorage.getItem(SYNC_KNOWN_AT_KEY);
+          if (incomingUpdatedAt && knownUpdatedAt && incomingUpdatedAt === knownUpdatedAt) return;
+          await pullSync();
+          if (onRemoteChange) onRemoteChange();
+        } catch (e) {
+          if (typeof logClientError === 'function') {
+            logClientError('Realtime workspace_sync callback failed: ' + (e && e.message ? e.message : String(e)), 'sync.js', null, null, e && e.stack);
+          }
+        }
       }
     )
     .subscribe((status) => {
+      if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
+        if (typeof logClientError === 'function') {
+          logClientError('Realtime workspace_sync channel status: ' + status, 'sync.js', null, null, null);
+        }
+      }
       if (onStatusChange) onStatusChange(status);
     });
 }
@@ -769,9 +782,22 @@ function startLeadsRealtime(onChange, onStatusChange) {
     .on(
       'postgres_changes',
       { event: '*', schema: 'public', table: 'th_leads' },
-      () => { if (onChange) onChange(); }
+      () => {
+        try {
+          if (onChange) onChange();
+        } catch (e) {
+          if (typeof logClientError === 'function') {
+            logClientError('Realtime th_leads callback failed: ' + (e && e.message ? e.message : String(e)), 'sync.js', null, null, e && e.stack);
+          }
+        }
+      }
     )
     .subscribe((status) => {
+      if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
+        if (typeof logClientError === 'function') {
+          logClientError('Realtime th_leads channel status: ' + status, 'sync.js', null, null, null);
+        }
+      }
       if (onStatusChange) onStatusChange(status);
     });
 }
