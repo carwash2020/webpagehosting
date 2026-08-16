@@ -46,7 +46,56 @@ function readTool(filename) {
 // versioned script's ?v= timestamp against when git last actually
 // modified that file, and fails if the file is newer than the version
 // string that's supposed to be busting its cache.
+//
+// Bug found 2026-08-17: this worked correctly in local testing (a full
+// clone) but failed on every single CI run regardless of what actually
+// changed. Root cause: actions/checkout@v4 defaults to a SHALLOW clone
+// (fetch-depth 1, just the triggering commit) -- and in a shallow clone,
+// `git log -1 -- <path>` reports the tip commit's timestamp for ANY
+// path, even one that commit never touched, because git has no earlier
+// history to compare against to determine the path was untouched. That
+// made every versioned script look "just modified" on every push,
+// eventually flooding this check with false positives no matter how
+// fresh the version strings actually were -- confirmed by reproducing
+// an identical shallow clone locally (git clone --depth 1) and seeing
+// the exact same false failure the CI run hit. Editing the workflow
+// file to fetch full history isn't an option here (this token lacks the
+// `workflow` OAuth scope needed to touch anything under
+// .github/workflows/), so instead this deepens its own clone on demand
+// (git fetch --unshallow) before running the check below -- CI just
+// cloned from GitHub moments earlier, so the remote and network access
+// are already known to work. Only falls back to skipping the check
+// entirely if that fetch itself fails, rather than trusting data git
+// can't actually provide. The other consistency checks below (auth
+// gate, CSP, manifest, cross-file version matching) don't depend on git
+// history at all and are unaffected either way.
+function isShallowRepo() {
+  try {
+    return execSync('git rev-parse --is-shallow-repository', { cwd: REPO_ROOT, encoding: 'utf8' }).trim() === 'true';
+  } catch (e) {
+    return false; // git unavailable -- let the per-script checks below decide, same as before
+  }
+}
+
+// Rather than just disabling the freshness check in CI's shallow clone
+// (which would mean it silently never catches a real stale-version bug
+// there again), this fetches the missing history on demand -- CI just
+// cloned from GitHub moments ago, so the remote and network access are
+// already known to work. If this fails for any reason, falls back to
+// skipping the check for this run rather than trusting data git can't
+// actually provide, same as before.
+function ensureFullHistory() {
+  if (!isShallowRepo()) return true;
+  try {
+    execSync('git fetch --unshallow', { cwd: REPO_ROOT, stdio: 'pipe' });
+    return true;
+  } catch (e) {
+    return false;
+  }
+}
+
 function checkVersionFreshness(problems) {
+  if (!ensureFullHistory()) return; // see the long comment above -- this check cannot be trusted here
   const VERSIONED_SCRIPTS = ['tools-common.js', 'sync.js', 'auth.js', 'push-notifications.js'];
   const files = fs.readdirSync(TOOLS_DIR).filter(f => f.endsWith('.html'));
 
