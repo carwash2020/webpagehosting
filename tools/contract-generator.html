@@ -23,11 +23,11 @@
 <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data:; connect-src 'self' https://*.supabase.co wss://*.supabase.co; frame-src 'none'; object-src 'none'; base-uri 'self'; frame-ancestors 'none';">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="/styles.css?v=202608160610">
+<link href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/styles.css?v=202608161200">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.112.3/dist/umd/supabase.js" integrity="sha384-qafw21c/iciq0VXsi9FzkfoQv5I/V0iqE4lSNcKXPnW9/UTJLnv5CcN4FHxVLnKg" crossorigin="anonymous" defer></script>
 <script src="/tools/sync.js?v=202608160400" defer></script>
-<script src="/tools/tools-common.js?v=202608160610" defer></script>
+<script src="/tools/tools-common.js?v=202608161200" defer></script>
 <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js" integrity="sha384-JcnsjUPPylna1s1fvi1u12X5qjY5OL56iySh75FdtrwhO/SWXgMjoVqcKyIIWOLk" crossorigin="anonymous"></script>
 <style>
   body { padding: 90px 20px 60px; max-width: 900px; margin: 0 auto; }
@@ -38,7 +38,6 @@
   .realtime-dot.is-live { background: #4caf50; }
   .realtime-dot.is-connecting { background: var(--orange-light); }
   .realtime-dot.is-error { background: #e05252; }
-  .empty-state-small { color: var(--text-dim); font-size: 13.5px; padding: 12px 0; }
 
   .contract-tabs { display: flex; gap: 8px; margin-bottom: 20px; flex-wrap: wrap; background: var(--bg-panel-2); border-radius: 10px; padding: 5px; }
   .contract-tab {
@@ -239,7 +238,7 @@
 <div class="form-section" id="contractLogSection">
   <h3>Recent Contracts</h3>
   <div class="icon-search" id="contractSearchWrap">
-    <button class="icon-search-toggle" onclick="toggleIconSearch('contractSearchWrap')" aria-label="Search contracts" title="Search contracts">&#128269;</button>
+    <button class="icon-search-toggle" onclick="toggleIconSearch('contractSearchWrap')" aria-label="Search contracts" title="Search contracts"><svg class="th-icon" aria-hidden="true"><use href="#icon-search" xlink:href="#icon-search"></use></svg></button>
     <input type="text" id="contractSearch" class="icon-search-input" placeholder="Search by client or contract type..." oninput="renderContractLog()" aria-label="Search contracts">
   </div>
   <div id="contractLogList"></div>
@@ -341,8 +340,8 @@
     const container = document.getElementById('contractLogList');
     if (log.length === 0) {
       container.innerHTML = searchTerm
-        ? '<div class="empty-state-small">No contracts match "' + escapeHtml(searchTerm) + '".</div>'
-        : '<div class="empty-state-small">No contracts generated yet.</div>';
+        ? '<div class="empty-state-small"><svg class="th-icon" aria-hidden="true"><use href="#icon-search" xlink:href="#icon-search"></use></svg>No contracts match "' + escapeHtml(searchTerm) + '".</div>'
+        : '<div class="empty-state-small"><svg class="th-icon" aria-hidden="true"><use href="#icon-inbox" xlink:href="#icon-inbox"></use></svg>No contracts generated yet.</div>';
       return;
     }
     container.innerHTML = log.map(entry => {

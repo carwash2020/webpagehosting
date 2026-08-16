@@ -23,11 +23,11 @@
 <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data: https://*.supabase.co; connect-src 'self' https://*.supabase.co wss://*.supabase.co; frame-src 'none'; object-src 'none'; base-uri 'self'; frame-ancestors 'none';">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="/styles.css?v=202608160610">
+<link href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/styles.css?v=202608161200">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.112.3/dist/umd/supabase.js" integrity="sha384-qafw21c/iciq0VXsi9FzkfoQv5I/V0iqE4lSNcKXPnW9/UTJLnv5CcN4FHxVLnKg" crossorigin="anonymous" defer></script>
 <script src="/tools/sync.js?v=202608160400" defer></script>
-<script src="/tools/tools-common.js?v=202608160610" defer></script>
+<script src="/tools/tools-common.js?v=202608161200" defer></script>
 <style>
   body { padding: 90px 20px 60px; max-width: 1080px; margin: 0 auto; }
   .tool-title { font-family:'Oswald',sans-serif; font-weight:700; font-size:28px; color:var(--white); margin-bottom:6px; }
@@ -254,7 +254,7 @@
 
   <div class="tool-form-row">
     <div class="icon-search" id="jobSearchWrap">
-      <button class="icon-search-toggle" onclick="toggleIconSearch('jobSearchWrap')" aria-label="Search jobs" title="Search jobs">&#128269;</button>
+      <button class="icon-search-toggle" onclick="toggleIconSearch('jobSearchWrap')" aria-label="Search jobs" title="Search jobs"><svg class="th-icon" aria-hidden="true"><use href="#icon-search" xlink:href="#icon-search"></use></svg></button>
       <input type="text" id="jobSearch" class="icon-search-input" placeholder="Search jobs by title or client..." oninput="renderJobs()">
     </div>
   </div>
@@ -488,7 +488,7 @@
     </div>
   </div>
   <div class="icon-search" id="contactSearchWrap">
-    <button class="icon-search-toggle" onclick="toggleIconSearch('contactSearchWrap')" aria-label="Search contacts" title="Search contacts">&#128269;</button>
+    <button class="icon-search-toggle" onclick="toggleIconSearch('contactSearchWrap')" aria-label="Search contacts" title="Search contacts"><svg class="th-icon" aria-hidden="true"><use href="#icon-search" xlink:href="#icon-search"></use></svg></button>
     <input type="text" id="contactSearch" class="icon-search-input" placeholder="Search contacts by name, phone, or email..." oninput="renderContacts()" aria-label="Search contacts">
   </div>
   <div id="contactsList"></div>
@@ -500,7 +500,7 @@
     <div class="notes-sidebar">
       <button class="primary-btn note-new-btn" onclick="createNote()">+ New Note</button>
       <div class="icon-search" id="noteSearchWrap" style="margin-bottom:10px;">
-        <button class="icon-search-toggle" onclick="toggleIconSearch('noteSearchWrap')" aria-label="Search notes" title="Search notes">&#128269;</button>
+        <button class="icon-search-toggle" onclick="toggleIconSearch('noteSearchWrap')" aria-label="Search notes" title="Search notes"><svg class="th-icon" aria-hidden="true"><use href="#icon-search" xlink:href="#icon-search"></use></svg></button>
         <input type="text" id="noteSearch" class="icon-search-input" placeholder="Search notes..." oninput="renderNotesList()">
       </div>
       <div id="notesList"></div>
@@ -524,7 +524,7 @@
     <div class="help-modal-body">
       <p>This page combines five related tools into tabs. Data lives in this browser, and also syncs to the cloud if you've set that up on the Workspace page.</p>
       <ul>
-        <li><strong>Jobs</strong> &mdash; search by title or client name, add a job with priority/status/due date, sort by date or priority, hide completed jobs (remembered next time you visit), tap "Advance Status" to cycle Not Started &rarr; In Progress &rarr; Done, or "Photos" to attach before/after pictures (on mobile, your phone offers both the camera and your photo gallery). Tap the &#9734; star on any photo to queue it for the public website's gallery with a caption &mdash; this doesn't publish it automatically, it just adds it to a review queue on the Dashboard.</li>
+        <li><strong>Jobs</strong> &mdash; search by title or client name, add a job with priority/status/due date, sort by date or priority, hide completed jobs (remembered next time you visit), tap "Advance Status" to cycle Not Started &rarr; In Progress &rarr; Done, or "Photos" to attach before/after pictures (on mobile, your phone offers both the camera and your photo gallery). Tap the <svg class="th-icon" aria-hidden="true"><use href="#icon-star" xlink:href="#icon-star"></use></svg> star on any photo to queue it for the public website's gallery with a caption &mdash; this doesn't publish it automatically, it just adds it to a review queue on the Dashboard.</li>
         <li><strong>Cost Lookup</strong> &mdash; type in hours and parts cost to see the standard price instantly, now with sales tax included in the total. Check/uncheck "Tax labor" and "Tax parts/materials" separately since Utah's rules genuinely differ by job type (not tax advice — confirm your specific situation with the Utah State Tax Commission or your accountant). Optionally type the client's name first — it checks your job history and auto-suggests whether they're new or returning (still overridable). Save frequent job types under "Price Reference" and tap one anytime to reload it.</li>
         <li><strong>Expenses</strong> &mdash; log expenses or mileage, now with vendor, payment method, and an optional link to a specific job. A receipt photo is required for expense entries (not mileage, since there's no physical receipt for driving miles) &mdash; tap "View" on any logged entry to see its receipt. Mileage rate lives right next to the Miles field since it's only relevant for mileage entries. Export CSV anytime for a backup or for taxes &mdash; now includes a link to each receipt too.</li>
         <li><strong>Contacts</strong> &mdash; a quick address book for vendors, suppliers, or recurring clients. Tap "History" on any contact to see their past jobs and lifetime spend (matched by exact name against Jobs and Invoices).</li>

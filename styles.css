@@ -42,7 +42,16 @@
     margin:0;
     background:var(--bg);
     color:var(--text);
-    font-family:'Oswald', sans-serif;
+    /* 2026-08-16: body copy, form values, and table data now read in
+       Inter -- a face built for long-form and dense-data legibility --
+       instead of Oswald, a condensed DISPLAY face never meant to carry
+       paragraph text at length. Oswald stays exactly where it already
+       was doing real work: headings, labels, buttons, and every other
+       selector that names it explicitly (all untouched by this change,
+       since they declare their own font-family rather than inheriting
+       this one). Anton is untouched too -- still only the giant hero
+       title. */
+    font-family:'Inter', -apple-system, 'Segoe UI', sans-serif;
     font-weight:400;
     line-height:1.6;
     -webkit-font-smoothing:antialiased;
@@ -1348,15 +1357,27 @@
   position:fixed; left:50%; bottom:24px; transform:translateX(-50%);
   z-index:400; display:flex; flex-direction:column; gap:8px; align-items:center;
   pointer-events:none; width:100%; padding:0 20px; box-sizing:border-box;
+  transition: bottom .2s ease;
+}
+/* Bug fix (2026-08-16): the mobile bottom app nav added in the last
+   redesign pass is fixed at the viewport bottom with its own height
+   (~60px) plus safe-area inset -- a toast sitting at a flat bottom:24px
+   would render underneath or flush against it on every phone. Raised to
+   clear the bar with real breathing room whenever it's present. */
+body.th-has-bottomnav .th-toast-container{
+  bottom: calc(76px + env(safe-area-inset-bottom, 0px) + 12px);
 }
 .th-toast{
   pointer-events:auto; cursor:pointer;
+  display:flex; align-items:center; gap:10px;
   background:var(--bg-panel-2); border:1px solid var(--border); border-left:3px solid var(--orange);
   color:var(--white); font-size:14px; font-family:inherit; line-height:1.4;
   padding:12px 18px; border-radius:8px; max-width:420px; width:max-content;
   box-shadow:0 6px 20px rgba(0,0,0,0.35);
   opacity:0; transform:translateY(8px); transition:opacity .18s ease, transform .18s ease;
 }
+.th-toast .th-icon{ width:17px; height:17px; flex-shrink:0; color:#6fcf97; }
+.th-toast.is-error .th-icon{ color:#e0807a; }
 .th-toast.is-shown{ opacity:1; transform:translateY(0); }
 .th-toast.is-error{ border-left-color:#e05252; }
 @media (prefers-reduced-motion: reduce){
@@ -2050,3 +2071,41 @@ body select:focus, body textarea:focus {
   body .tool-tile-link:hover, body a.dash-list-item:hover,
   body .primary-btn:hover, body .secondary-btn:hover { transform: none; }
 }
+
+/* ---- th-icon: shared sizing for the SVG icon sprite ---- */
+.th-icon {
+  display: inline-block;
+  width: 1em; height: 1em;
+  vertical-align: -0.15em;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.7;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  flex-shrink: 0;
+}
+.icon-star-filled, svg.th-icon use[href="#icon-star-filled"] { fill: currentColor; }
+
+body .tool-tile-icon .th-icon { width: 26px; height: 26px; }
+body .jump-nav-icon .th-icon, body .jump-nav .th-icon { width: 15px; height: 15px; }
+body .section-heading .th-icon, body .dev-panel-heading .th-icon { width: 15px; height: 15px; margin-right: 2px; }
+body a .th-icon { margin-right: 5px; }
+.lightbox-nav .th-icon { width: 20px; height: 20px; stroke-width: 2; }
+
+/* ---- empty states: one shared definition, icon + message row ----
+   Previously duplicated identically across calendar.html, contract-
+   generator.html, and workspace.html -- and never defined at all for
+   invoice-generator.html, whose "No invoices generated yet" /
+   "No quotes match..." states have been rendering completely
+   unstyled (no color, no size, no padding) since that page existed. */
+.empty-state-small {
+  display: flex; align-items: center; gap: 10px;
+  color: var(--text-dim); font-size: 13.5px; line-height: 1.5;
+  padding: 16px 4px;
+}
+.empty-state-small .th-icon {
+  width: 20px; height: 20px; flex-shrink: 0;
+  color: var(--text-dim); opacity: .8;
+}
+.empty-state-small.is-good .th-icon { color: #4caf50; }
+.empty-state-small.is-warning .th-icon { color: #e0a552; }

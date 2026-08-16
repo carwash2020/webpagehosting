@@ -23,9 +23,9 @@
 <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data:; connect-src 'self'; frame-src 'none'; object-src 'none'; base-uri 'self'; frame-ancestors 'none';">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="/styles.css?v=202608160610">
-<script src="/tools/tools-common.js?v=202608160610" defer></script>
+<link href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/styles.css?v=202608161200">
+<script src="/tools/tools-common.js?v=202608161200" defer></script>
 <script src="/tools/qrcode-lib.js?v=202608160400" defer></script>
 <style>
   body { padding: 90px 20px 60px; max-width: 640px; margin: 0 auto; }
@@ -131,7 +131,7 @@
   <div class="message-preview-wrap"><div class="message-preview" id="messagePreview"></div></div>
   <div id="duplicateWarning" style="display:none; color: var(--orange-light); font-size: 13px; margin-bottom: 12px; padding: 10px 12px; background: var(--orange-tint-soft); border: 1px solid var(--orange-tint-border); border-radius: 6px;"></div>
   <div class="btn-row">
-    <button class="action-btn btn-copy" onclick="shuffleMessage()">&#128256; Try Another</button>
+    <button class="action-btn btn-copy" onclick="shuffleMessage()"><svg class="th-icon" aria-hidden="true"><use href="#icon-shuffle" xlink:href="#icon-shuffle"></use></svg> Try Another</button>
     <button class="action-btn btn-copy" onclick="copyMessage()">Copy Message</button>
     <a class="action-btn btn-send" id="sendLink" href="#" onclick="logSentRequest('sms')">Open Text Message</a>
   </div>
