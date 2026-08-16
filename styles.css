@@ -1787,3 +1787,216 @@
 .hours-row { display: flex; justify-content: space-between; gap: 12px; font-size: 13.5px; }
 .hours-day { color: var(--text-dim); font-weight: 600; }
 .hours-value { color: var(--white); }
+
+/* ==========================================================================
+   VISUAL POLISH LAYER -- added 2026-08-16
+   One shared layer for BOTH the public site and the internal tool suite
+   (10 tool pages link this same file). Built entirely on the existing
+   :root variables, so the [data-theme="light"] toggle adapts everything
+   automatically -- no light-mode special cases below.
+
+   Signature element: the "machined edge" -- a high-vis gradient rail
+   across the top of every card/panel, like the painted edge of a pro
+   tool. It brightens and the surface lifts with an orange-tinted glow
+   on hover, so interactive things feel picked-up rather than flat.
+   ========================================================================== */
+
+/* ---- foundations: selection, scrollbars, focus, motion ---- */
+::selection { background: var(--orange); color: #0a0a0a; }
+
+* { scrollbar-width: thin; scrollbar-color: var(--border) transparent; }
+*::-webkit-scrollbar { width: 9px; height: 9px; }
+*::-webkit-scrollbar-track { background: transparent; }
+*::-webkit-scrollbar-thumb {
+  background: var(--border); border-radius: 8px;
+  border: 2px solid transparent; background-clip: padding-box;
+}
+*::-webkit-scrollbar-thumb:hover { background: var(--orange-dark); background-clip: padding-box; }
+
+/* Visible keyboard focus everywhere -- quality floor, not decoration. */
+:focus-visible {
+  outline: 2px solid var(--orange);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+/* One shared motion curve so every hover/press feels like the same
+   machine. Everything animated below is guarded at the bottom of this
+   layer by prefers-reduced-motion. */
+.service-card, .faq-item, .gallery-tile, .review-slide, .contact-card,
+.tool-tile, .tool-card, .dev-panel, .card, .stat-box, .metric-card,
+.job-card, .form-section, .dash-list-item,
+.primary-btn, .secondary-btn, .small-btn, .tab-btn, .note-new-btn,
+.dialog-btn, .help-btn, .dev-info-bubble, .hero-ctas a, .jump-nav a {
+  transition: transform .22s cubic-bezier(.2,.8,.2,1),
+              box-shadow .22s cubic-bezier(.2,.8,.2,1),
+              border-color .22s ease, background-color .22s ease,
+              color .18s ease;
+}
+
+/* ---- the machined edge: shared card treatment ---- */
+.service-card, .contact-card, .review-slide,
+.tool-tile, .tool-card, .dev-panel, .card, .stat-box, .metric-card,
+.job-card, .form-section {
+  position: relative;
+  overflow: hidden;
+  /* faint inner bevel: brushed metal catching light along the top */
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.045),
+              0 1px 2px rgba(0,0,0,.25),
+              0 8px 24px -18px rgba(0,0,0,.55);
+}
+.service-card::before, .contact-card::before, .review-slide::before,
+.tool-tile::before, .tool-card::before, .dev-panel::before, .card::before,
+.stat-box::before, .metric-card::before, .job-card::before,
+.form-section::before {
+  content: '';
+  position: absolute; top: 0; left: 0; right: 0; height: 2px;
+  background: linear-gradient(90deg,
+    var(--orange) 0%, var(--orange-light) 45%, transparent 100%);
+  opacity: .45;
+  pointer-events: none;
+  transition: opacity .22s ease;
+}
+
+/* Interactive surfaces pick up: lift + brightened rail + orange ambient */
+a.tool-tile:hover, a.tool-card:hover, .service-card:hover,
+.gallery-tile:hover, .dash-list-item:hover, .job-card:hover {
+  transform: translateY(-3px);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.06),
+              0 2px 4px rgba(0,0,0,.3),
+              0 14px 34px -14px rgba(0,0,0,.6),
+              0 0 0 1px var(--orange-tint-border),
+              0 10px 40px -12px var(--orange-tint-glow);
+}
+a.tool-tile:hover::before, a.tool-card:hover::before,
+.service-card:hover::before, .job-card:hover::before { opacity: 1; }
+
+/* Static panels get a quieter acknowledgement -- rail only, no lift,
+   so reading a form doesn't feel like everything is jumping around. */
+.dev-panel:hover::before, .form-section:hover::before,
+.card:hover::before, .stat-box:hover::before,
+.metric-card:hover::before { opacity: .8; }
+
+/* ---- buttons: tactile, gradient primaries, honest press ---- */
+.primary-btn, .dialog-btn-primary, .note-new-btn {
+  background-image: linear-gradient(180deg, var(--orange-light) -40%, var(--orange) 45%, var(--orange-dark) 130%);
+  box-shadow: 0 1px 2px rgba(0,0,0,.35),
+              inset 0 1px 0 rgba(255,255,255,.18);
+}
+.primary-btn:hover, .dialog-btn-primary:hover, .note-new-btn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 14px -4px var(--orange-tint-glow),
+              0 2px 6px rgba(0,0,0,.4),
+              inset 0 1px 0 rgba(255,255,255,.22);
+  filter: brightness(1.06);
+}
+.secondary-btn:hover, .small-btn:hover, .dialog-btn-cancel:hover {
+  transform: translateY(-1px);
+  border-color: var(--orange-tint-border);
+  box-shadow: 0 3px 10px -4px rgba(0,0,0,.5);
+}
+.primary-btn:active, .secondary-btn:active, .small-btn:active,
+.dialog-btn:active, .note-new-btn:active, .tab-btn:active {
+  transform: translateY(1px) scale(.985);
+  box-shadow: 0 0 0 rgba(0,0,0,0), inset 0 1px 3px rgba(0,0,0,.35);
+  transition-duration: .06s;
+}
+
+/* Tabs: the active tab earns the high-vis rail underneath it. */
+.tab-btn { position: relative; }
+.tab-btn::after {
+  content: '';
+  position: absolute; left: 10%; right: 10%; bottom: -1px; height: 2px;
+  background: linear-gradient(90deg, var(--orange), var(--orange-light));
+  transform: scaleX(0);
+  transform-origin: center;
+  transition: transform .22s cubic-bezier(.2,.8,.2,1);
+}
+.tab-btn.is-active::after, .tab-btn[aria-selected="true"]::after { transform: scaleX(1); }
+.tab-btn:hover:not(.is-active) { color: var(--orange-light); }
+
+/* ---- inputs: a focus state that feels wired-in ---- */
+.form-field input:focus, .form-field select:focus, .form-field textarea:focus,
+input[type="text"]:focus, input[type="email"]:focus, input[type="tel"]:focus,
+input[type="number"]:focus, input[type="date"]:focus, input[type="search"]:focus,
+select:focus, textarea:focus {
+  border-color: var(--orange);
+  box-shadow: 0 0 0 3px var(--orange-tint-soft),
+              0 0 14px -4px var(--orange-tint-glow);
+  outline: none;
+}
+
+/* ---- tool-suite specifics ---- */
+.stat-box .value { text-shadow: 0 0 22px var(--orange-tint-glow); }
+.dev-check-row:hover { background: var(--orange-tint-soft); margin: 0 -8px; padding-left: 8px; padding-right: 8px; border-radius: 6px; }
+.jump-nav a:hover { box-shadow: inset 0 0 0 1px var(--orange-tint-border); }
+.help-btn:hover, .dev-info-bubble:hover {
+  transform: translateY(-1px) rotate(8deg);
+  color: var(--orange-light);
+  border-color: var(--orange-tint-border);
+}
+table tbody tr { transition: background-color .15s ease; }
+table tbody tr:hover { background: var(--orange-tint-soft); }
+
+/* ---- public-site specifics ---- */
+/* Hero: an ember glow rising off the bottom edge -- shop light, not
+   spotlight. Pure background layers, zero markup changes. */
+.hero {
+  background-image:
+    radial-gradient(120% 90% at 50% 115%, var(--orange-tint-glow) 0%, transparent 55%),
+    radial-gradient(60% 45% at 85% -10%, rgba(255,128,0,.05) 0%, transparent 70%);
+}
+.hero-badge {
+  box-shadow: 0 0 0 1px var(--orange-tint-border),
+              0 0 24px -6px var(--orange-tint-glow);
+}
+.service-icon { transition: transform .25s cubic-bezier(.2,.8,.2,1); }
+.service-card:hover .service-icon { transform: scale(1.12) rotate(-4deg); }
+.faq-item:hover { border-color: var(--orange-tint-border); }
+.faq-question::before { color: var(--orange); }
+.gallery-tile { overflow: hidden; }
+.gallery-tile img { transition: transform .4s cubic-bezier(.2,.8,.2,1); }
+.gallery-tile:hover img { transform: scale(1.05); }
+.review-stars { color: var(--orange); text-shadow: 0 0 12px var(--orange-tint-glow); }
+.footer-grid { position: relative; }
+.footer-grid::before {
+  content: '';
+  position: absolute; top: -1px; left: 0; right: 0; height: 1px;
+  background: linear-gradient(90deg, transparent, var(--orange-tint-border), transparent);
+}
+
+/* ---- mobile: bigger targets, calmer lifts, momentum scroll ---- */
+@media (max-width: 720px) {
+  .primary-btn, .secondary-btn, .dialog-btn, .note-new-btn,
+  .hero-ctas a, .tab-btn { min-height: 44px; }
+  .small-btn { min-height: 38px; }
+  /* hover-lift is meaningless on touch and can flicker on tap -- keep
+     the rail/glow feedback, drop the translate */
+  a.tool-tile:hover, a.tool-card:hover, .service-card:hover,
+  .gallery-tile:hover, .dash-list-item:hover, .job-card:hover {
+    transform: none;
+  }
+  .jump-nav, .reviews-viewport, .gallery-row {
+    -webkit-overflow-scrolling: touch;
+    scroll-behavior: smooth;
+  }
+}
+
+/* ---- reduced motion: everything above degrades to instant ---- */
+@media (prefers-reduced-motion: reduce) {
+  .service-card, .faq-item, .gallery-tile, .gallery-tile img, .review-slide,
+  .contact-card, .tool-tile, .tool-card, .dev-panel, .card, .stat-box,
+  .metric-card, .job-card, .form-section, .dash-list-item, .service-icon,
+  .primary-btn, .secondary-btn, .small-btn, .tab-btn, .tab-btn::after,
+  .note-new-btn, .dialog-btn, .help-btn, .dev-info-bubble, .hero-ctas a,
+  .jump-nav a, table tbody tr {
+    transition: none;
+  }
+  a.tool-tile:hover, a.tool-card:hover, .service-card:hover,
+  .gallery-tile:hover, .dash-list-item:hover, .job-card:hover,
+  .primary-btn:hover, .secondary-btn:hover, .small-btn:hover,
+  .help-btn:hover, .dev-info-bubble:hover {
+    transform: none;
+  }
+  .gallery-tile:hover img { transform: none; }
+}
