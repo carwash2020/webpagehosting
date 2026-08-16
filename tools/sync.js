@@ -404,12 +404,34 @@ function warnIfSyncFailed(result) {
   showToast(message, { type: 'error', duration: 6000 });
 }
 
+// Item #7 (2026-08-16): sync-pending indicator, distinct from the
+// existing live-sync connection dot (which only shows whether realtime
+// is CONNECTED, not whether THIS device has local edits it hasn't
+// successfully pushed yet). Purely observational -- doesn't change when
+// scheduleSync/pushSync actually run or what they do, just tracks and
+// broadcasts the state so any page can show it.
+let _hasPendingLocalChanges = false;
+function setSyncPending(pending) {
+  _hasPendingLocalChanges = pending;
+  try { window.dispatchEvent(new CustomEvent('th-sync-pending-change', { detail: { pending } })); } catch (e) { /* ignore */ }
+}
+function hasPendingLocalChanges() { return _hasPendingLocalChanges; }
+
 function scheduleSync() {
   if (!isSyncConfigured() || !getSyncCode()) return;
+  setSyncPending(true);
   clearTimeout(_syncTimer);
   _syncTimer = setTimeout(() => {
     _syncTimer = null;
-    pushSync().then(warnIfSyncFailed);
+    pushSync().then((result) => {
+      // Left pending on failure -- the edit genuinely hasn't made it to
+      // the cloud yet, so showing "synced" would be inaccurate. The
+      // existing warnIfSyncFailed() toast already covers alerting on
+      // the failure itself; this indicator is a separate, quieter signal
+      // for "is there anything not yet backed up right now."
+      if (result && result.ok) setSyncPending(false);
+      warnIfSyncFailed(result);
+    });
   }, 2500);
 }
 
@@ -430,7 +452,10 @@ function flushSyncNow() {
   if (_syncTimer) {
     clearTimeout(_syncTimer);
     _syncTimer = null;
-    pushSync().then(warnIfSyncFailed);
+    pushSync().then((result) => {
+      if (result && result.ok) setSyncPending(false);
+      warnIfSyncFailed(result);
+    });
   }
 }
 if (typeof document !== 'undefined') {

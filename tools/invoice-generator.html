@@ -26,8 +26,8 @@
 <link href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="/styles.css?v=202608161430">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.112.3/dist/umd/supabase.js" integrity="sha384-qafw21c/iciq0VXsi9FzkfoQv5I/V0iqE4lSNcKXPnW9/UTJLnv5CcN4FHxVLnKg" crossorigin="anonymous" defer></script>
-<script src="/tools/sync.js?v=202608160400" defer></script>
-<script src="/tools/tools-common.js?v=202608161500" defer></script>
+<script src="/tools/sync.js?v=202608161700" defer></script>
+<script src="/tools/tools-common.js?v=202608161700" defer></script>
 <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js" integrity="sha384-JcnsjUPPylna1s1fvi1u12X5qjY5OL56iySh75FdtrwhO/SWXgMjoVqcKyIIWOLk" crossorigin="anonymous"></script>
 <style>
   body { padding: 90px 20px 60px; max-width: 900px; margin: 0 auto; }
@@ -298,8 +298,11 @@
 
 <div class="tab-panel" id="tab-recent">
   <div class="form-section">
-    <h3>Recent Invoices</h3>
-    <input type="text" id="invoiceLogSearch" placeholder="Search by client or invoice #..." style="width:100%; box-sizing:border-box; margin-bottom:14px;" oninput="renderInvoiceLog()">
+    <div style="display:flex; justify-content:space-between; align-items:center; gap:12px; margin-bottom:2px;">
+      <h3 style="margin:0;">Recent Invoices</h3>
+      <button class="small-btn" data-density-toggle onclick="toggleDensityPreference()" aria-pressed="false">Compact view</button>
+    </div>
+    <input type="text" id="invoiceLogSearch" placeholder="Search by client or invoice #..." style="width:100%; box-sizing:border-box; margin-bottom:14px; margin-top:12px;" oninput="renderInvoiceLog()">
     <div id="invoiceLogList"></div>
   </div>
   <div class="form-section">
@@ -873,6 +876,18 @@
       const qrX = pageW - 40 - qrW;
       const qrY = paymentSectionTop + 34;
       doc.addImage(qrData, 'PNG', qrX, qrY, qrW, qrH);
+      // Item #16 (2026-08-16): a bare QR square pasted onto the invoice
+      // read like a barcode, not part of a designed document. Four short
+      // orange corner-accent brackets (not a full box, which would
+      // compete with the QR's own contrast) frame it without touching
+      // the scannable area inside.
+      doc.setDrawColor(...ORANGE); doc.setLineWidth(1.8);
+      const pad = 6, cornerLen = 10;
+      const fx0 = qrX - pad, fy0 = qrY - pad, fx1 = qrX + qrW + pad, fy1 = qrY + qrH + pad;
+      doc.line(fx0, fy0, fx0 + cornerLen, fy0); doc.line(fx0, fy0, fx0, fy0 + cornerLen);
+      doc.line(fx1, fy0, fx1 - cornerLen, fy0); doc.line(fx1, fy0, fx1, fy0 + cornerLen);
+      doc.line(fx0, fy1, fx0 + cornerLen, fy1); doc.line(fx0, fy1, fx0, fy1 - cornerLen);
+      doc.line(fx1, fy1, fx1 - cornerLen, fy1); doc.line(fx1, fy1, fx1, fy1 - cornerLen);
       doc.setFont('helvetica', 'bold'); doc.setFontSize(8.5); doc.setTextColor(20, 20, 20);
       doc.text('Scan to pay via Venmo', qrX + qrW / 2, qrY + qrH + 12, { align: 'center' });
     } catch (e) { /* QR optional if it fails to load -- payment text alone still works */ }

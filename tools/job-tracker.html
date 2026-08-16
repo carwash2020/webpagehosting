@@ -26,8 +26,8 @@
 <link href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="/styles.css?v=202608161430">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.112.3/dist/umd/supabase.js" integrity="sha384-qafw21c/iciq0VXsi9FzkfoQv5I/V0iqE4lSNcKXPnW9/UTJLnv5CcN4FHxVLnKg" crossorigin="anonymous" defer></script>
-<script src="/tools/sync.js?v=202608160400" defer></script>
-<script src="/tools/tools-common.js?v=202608161500" defer></script>
+<script src="/tools/sync.js?v=202608161700" defer></script>
+<script src="/tools/tools-common.js?v=202608161700" defer></script>
 <style>
   body { padding: 90px 20px 60px; max-width: 1080px; margin: 0 auto; }
   .tool-title { font-family:'Oswald',sans-serif; font-weight:700; font-size:28px; color:var(--white); margin-bottom:6px; }
@@ -55,6 +55,10 @@
   .job-card.priority-medium { border-left-color: var(--orange); }
   .job-card.priority-low { border-left-color: var(--blue); }
   .job-card.is-done { opacity: 0.55; }
+  /* Item #5 (density toggle, 2026-08-16): tighter spacing for people who
+     know the app well and would rather see more jobs per screen. */
+  body.is-compact-density .job-card { padding: 10px 14px; margin-bottom: 6px; }
+  body.is-compact-density .job-card-notes { display: none; }
   .job-card-top { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; margin-bottom: 8px; }
   .job-card-title { font-family:'Oswald',sans-serif; font-size: 16px; color: var(--white); margin: 0; }
   .job-card-title.is-done-text { text-decoration: line-through; }
@@ -64,6 +68,12 @@
   .badge-medium { background: rgba(224,123,30,0.15); color: var(--orange-light); }
   .badge-low { background: rgba(58,160,255,0.15); color: var(--blue-light); }
   .badge-status { background: var(--bg-panel-2); color: var(--text-dim); }
+  /* Visual add (2026-08-16): status badges rendered identically gray
+     regardless of actual status -- couldn't scan a list for "what's
+     still not started" at a glance. Color now carries the status. */
+  .badge-status.status-not-started { background: var(--bg-panel-2); color: var(--text-dim); }
+  .badge-status.status-in-progress { background: var(--blue-tint-soft, rgba(58,160,255,0.1)); color: var(--blue-light); border-color: var(--blue-tint-border, rgba(58,160,255,0.3)); }
+  .badge-status.status-done { background: rgba(76,175,80,0.12); color: #6fcf97; border-color: rgba(76,175,80,0.3); }
   .badge-warranty.is-active { background: rgba(76,175,80,0.15); color: #4caf50; }
   .badge-warranty.is-expired { background: var(--bg-panel-2); color: var(--text-dim); }
   .job-card-meta { color: var(--text-dim); font-size: 13px; margin-bottom: 6px; }
@@ -90,6 +100,7 @@
   .contact-card-text p { color: var(--text-dim); font-size: 13px; margin: 2px 0; }
 
   .empty-state { text-align: center; color: var(--text-dim); padding: 40px 20px; font-size: 14px; }
+  .empty-state .th-icon { display: block; width: 26px; height: 26px; margin: 0 auto 10px; opacity: .7; }
 
   .save-indicator { color: var(--orange-light); font-size: 12.5px; margin-top: 8px; opacity: 0; transition: opacity 0.3s; }
   .save-indicator.is-visible { opacity: 1; }
@@ -257,6 +268,7 @@
       <button class="icon-search-toggle" onclick="toggleIconSearch('jobSearchWrap')" aria-label="Search jobs" title="Search jobs"><svg class="th-icon" aria-hidden="true"><use href="#icon-search" xlink:href="#icon-search"></use></svg></button>
       <input type="text" id="jobSearch" class="icon-search-input" placeholder="Search jobs by title or client..." oninput="renderJobs()">
     </div>
+    <button class="small-btn" data-density-toggle onclick="toggleDensityPreference()" aria-pressed="false">Compact view</button>
   </div>
 
   <div class="controls-row">
@@ -845,6 +857,7 @@
     renderJobs();
 
     if (wasNotDone && job.status === 'done') {
+      if (typeof celebrateCompletion === 'function') celebrateCompletion();
       const goSend = await showConfirm(`"${job.title}" marked Done. Send a review request${job.client ? ' to ' + job.client : ''} now?`, { confirmText: 'Send Request' });
       if (goSend) {
         const params = new URLSearchParams();
@@ -1043,9 +1056,19 @@
 
     const container = document.getElementById('jobsList');
     if (jobs.length === 0) {
-      container.innerHTML = searchTerm
-        ? '<div class="empty-state">No jobs match "' + escapeHtml(searchTerm) + '".</div>'
-        : '<div class="empty-state">No jobs yet &mdash; add one above.</div>';
+      const totalJobsEverAdded = loadJobs().length;
+      if (searchTerm) {
+        container.innerHTML = '<div class="empty-state"><svg class="th-icon" aria-hidden="true"><use href="#icon-search" xlink:href="#icon-search"></use></svg> No jobs match "' + escapeHtml(searchTerm) + '".</div>';
+      } else if (totalJobsEverAdded > 0) {
+        // Item #6 (2026-08-16): this used to say "No jobs yet -- add one
+        // above" even when jobs clearly exist, just none match the
+        // current status tab (e.g. clicking "Completed" before anything
+        // is done). That's a filtered view, not a first-run state, and
+        // deserves its own message.
+        container.innerHTML = '<div class="empty-state"><svg class="th-icon" aria-hidden="true"><use href="#icon-check-circle" xlink:href="#icon-check-circle"></use></svg> No jobs in this view. <a href="#" onclick="setStatusFilter(\'all\'); return false;" style="color:var(--orange-light);">Show all jobs</a></div>';
+      } else {
+        container.innerHTML = '<div class="empty-state"><svg class="th-icon" aria-hidden="true"><use href="#icon-inbox" xlink:href="#icon-inbox"></use></svg> No jobs yet &mdash; add one above.</div>';
+      }
       return;
     }
 
@@ -1058,7 +1081,7 @@
             <h4 class="job-card-title ${isDone ? 'is-done-text' : ''}">${personDot(job.lastEditedBy, 'Last edited by')}${escapeHtml(job.title)}</h4>
             <div class="job-badges">
               <span class="badge badge-${job.priority}">${job.priority}</span>
-              <span class="badge badge-status">${STATUS_LABEL[job.status]}</span>
+              <span class="badge badge-status status-${job.status}">${STATUS_LABEL[job.status]}</span>
               ${warrantyBadgeHtml(job)}
             </div>
           </div>
@@ -2107,6 +2130,13 @@
 
   document.addEventListener('DOMContentLoaded', function () {
     (async function init() {
+      // Item #12 (2026-08-16): the real loading gap on this page is this
+      // network pull, not renderJobs() itself (which just reads already-
+      // local data synchronously). Previously the list sat fully blank
+      // until this resolved; now it shows the same shimmer treatment
+      // Workspace already uses elsewhere.
+      const jobsListEl = document.getElementById('jobsList');
+      if (jobsListEl) jobsListEl.innerHTML = '<div class="skeleton-line w-60"></div><div class="skeleton-line w-100"></div><div class="skeleton-line w-40"></div>';
       await initSyncOnLoad();
       updateSyncStatusText();
       loadTaxSettings();
