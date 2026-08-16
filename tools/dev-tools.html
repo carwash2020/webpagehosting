@@ -269,6 +269,15 @@
 
   <div class="dev-panel">
     <div class="dev-panel-heading">
+      <h2>Onboarding tour</h2>
+      <button class="dev-info-bubble" onclick="openDevInfo('onboarding')" aria-label="What does this do?" title="What does this do?">?</button>
+    </div>
+    <p style="color:var(--text-dim); font-size:13.5px; margin:0 0 12px;">The 3-step Dashboard walkthrough only shows itself once per account. Use this to see it again.</p>
+    <a href="/tools/workspace.html?tour=1" class="secondary-btn" style="text-decoration:none; display:inline-block;">Replay quick tour</a>
+  </div>
+
+  <div class="dev-panel">
+    <div class="dev-panel-heading">
       <h2 id="nav-data" class="dev-anchor">Local data snapshot</h2>
       <button class="dev-info-bubble" onclick="openDevInfo('localdata')" aria-label="What does this do?" title="What does this do?">?</button>
     </div>
@@ -534,6 +543,10 @@
     session: {
       title: 'Session & sync',
       body: `<p>Shows which account is actually logged in on this device, and the result of the last push or pull attempt to Supabase.</p><p>"Push now" and "Pull now" trigger a sync immediately instead of waiting for the normal automatic/debounced sync to happen on its own -- useful when you want to be sure the latest data is saved or fetched right this second.</p><p>The "History" link expands the last 20 attempts (most recent first) -- useful for spotting a pattern, like "this started failing consistently around a specific time" rather than only ever seeing the single latest result.</p>`,
+    },
+    onboarding: {
+      title: 'Onboarding tour',
+      body: `<p>The 3-step Dashboard walkthrough (Snapshot, Action Items, Tools) that new visitors see, shown exactly once per logged-in account -- keyed to the account's email specifically, not just the browser, so if Connor and Steve ever share a device, dismissing it on one account doesn't hide it from the other.</p><p>"Replay quick tour" forces it to run again regardless of whether it's already been seen, by opening the Dashboard with a one-time override in the URL. It clears itself from the URL as soon as the tour finishes or gets skipped.</p>`,
     },
     roles: {
       title: 'Account roles',
