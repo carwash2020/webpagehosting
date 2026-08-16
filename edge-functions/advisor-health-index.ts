@@ -81,12 +81,37 @@ Deno.serve(async (req: Request) => {
       return json({ ok: false, error: "MANAGEMENT_API_PAT secret is not set yet -- add it in the Supabase dashboard under Edge Functions -> Secrets." }, 500);
     }
 
+    // Sanitize + validate the stored secret before it ever reaches a
+    // header. Added 2026-08-16 after a long debugging chase: the
+    // browser was reporting "Failed to construct 'Request': 'headers'
+    // ... is not a valid ByteString", which looked like a client bug
+    // for several rounds -- but the stack trace eventually showed the
+    // browser's fetch SUCCEEDING and simply relaying this function's
+    // own error message back. The real failure was HERE, inside Deno,
+    // building the Authorization header for the Management API call.
+    // A stored secret that picked up an invisible character on
+    // copy/paste (zero-width space, smart quote, non-breaking space --
+    // all common when copying from a web UI) is enough to do it, since
+    // any code point above U+00FF is illegal in an HTTP header value.
+    // Trim first (handles the harmless trailing-newline case silently),
+    // then report precisely rather than throwing an opaque error.
+    const cleanedPat = MANAGEMENT_API_PAT.trim();
+    for (let i = 0; i < cleanedPat.length; i++) {
+      const code = cleanedPat.charCodeAt(i);
+      if (code > 0xFF) {
+        return json({
+          ok: false,
+          error: `MANAGEMENT_API_PAT contains an invalid character at position ${i} (code point U+${code.toString(16).toUpperCase().padStart(4, "0")}). This usually means an invisible character (zero-width space, smart quote, or non-breaking space) was picked up when copying the token. Re-copy the token as plain text and save the secret again.`,
+        }, 400);
+      }
+    }
+
     const [secRes, perfRes] = await Promise.all([
       fetch(`https://api.supabase.com/v1/projects/${PROJECT_REF}/advisors/security`, {
-        headers: { Authorization: `Bearer ${MANAGEMENT_API_PAT}` },
+        headers: { Authorization: `Bearer ${cleanedPat}` },
       }),
       fetch(`https://api.supabase.com/v1/projects/${PROJECT_REF}/advisors/performance`, {
-        headers: { Authorization: `Bearer ${MANAGEMENT_API_PAT}` },
+        headers: { Authorization: `Bearer ${cleanedPat}` },
       }),
     ]);
 
