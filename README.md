@@ -125,14 +125,14 @@ the assistant's GitHub token was never granted):
   authenticated request (from Steve's account) triggered a real GitHub
   Actions run, verified via both the Actions run history and the
   Edge Function's own logs.
-- `advisor-health` Edge Function needs a `SUPABASE_PAT` secret (same
+- `advisor-health` Edge Function needs a `MANAGEMENT_API_PAT` secret (same
   place as GITHUB_PAT above) to actually work -- a Supabase Personal
   Access Token, generated from account settings. Unlike the GitHub
   token, a Supabase PAT can't be scoped to a single project -- it's
   account-wide access to advisor data for every project the account
   can see, so treat it as more sensitive than GITHUB_PAT. Until it's
   added, the Advisor health panel in Dev Tools returns a clear
-  "SUPABASE_PAT secret is not set yet" error rather than silently
+  "MANAGEMENT_API_PAT secret is not set yet" error rather than silently
   failing.
 - Leaked-password protection is still off in Supabase Auth -- a
   dashboard-only toggle (Authentication → Policies), not something

@@ -10,7 +10,7 @@
 // proxies the two advisor endpoints server-side.
 //
 // Required secret (Supabase dashboard -> Edge Functions -> Secrets):
-//   SUPABASE_PAT -- a Supabase Personal Access Token, generated from
+//   MANAGEMENT_API_PAT -- a Supabase Personal Access Token, generated from
 //                   account settings (not project settings). This
 //                   token can read advisor data for every project the
 //                   account has access to -- there's no way to scope
@@ -22,7 +22,7 @@
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-const SUPABASE_PAT = Deno.env.get("SUPABASE_PAT");
+const MANAGEMENT_API_PAT = Deno.env.get("MANAGEMENT_API_PAT");
 
 const PROJECT_REF = "csvfqdjuobylgafgolho";
 
@@ -77,16 +77,16 @@ Deno.serve(async (req: Request) => {
       return json({ ok: false, error: "This account has no assigned role." }, 403);
     }
 
-    if (!SUPABASE_PAT) {
-      return json({ ok: false, error: "SUPABASE_PAT secret is not set yet -- add it in the Supabase dashboard under Edge Functions -> Secrets." }, 500);
+    if (!MANAGEMENT_API_PAT) {
+      return json({ ok: false, error: "MANAGEMENT_API_PAT secret is not set yet -- add it in the Supabase dashboard under Edge Functions -> Secrets." }, 500);
     }
 
     const [secRes, perfRes] = await Promise.all([
       fetch(`https://api.supabase.com/v1/projects/${PROJECT_REF}/advisors/security`, {
-        headers: { Authorization: `Bearer ${SUPABASE_PAT}` },
+        headers: { Authorization: `Bearer ${MANAGEMENT_API_PAT}` },
       }),
       fetch(`https://api.supabase.com/v1/projects/${PROJECT_REF}/advisors/performance`, {
-        headers: { Authorization: `Bearer ${SUPABASE_PAT}` },
+        headers: { Authorization: `Bearer ${MANAGEMENT_API_PAT}` },
       }),
     ]);
 
