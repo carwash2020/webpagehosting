@@ -22,6 +22,7 @@ const REPO_ROOT = path.join(__dirname, '..');
 // this checker came out of for the full reasoning on each:
 const EXEMPT = {
   'login.html': 'the login gate itself -- requireAuth() would be circular here',
+  'reset-password.html': "reached from a password-recovery email link before the person is logged in -- requireAuth() would lock them out of the one page meant to get them back in",
   'contact-card.html': 'retired page, just a redirect stub to job-tracker.html',
   'expense-logger.html': 'retired page, just a redirect stub to job-tracker.html',
   'job-cost-lookup.html': 'retired page, just a redirect stub to job-tracker.html',

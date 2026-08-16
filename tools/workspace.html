@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<script src="/tools/auth.js?v=202608160400"></script>
+<script src="/tools/auth.js?v=202608162000"></script>
 <script>
   // Security gate -- redirect to login before this page's own content
   // is meaningfully usable. See auth.js for why this exists (a single
@@ -28,7 +28,7 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.112.3/dist/umd/supabase.js" integrity="sha384-qafw21c/iciq0VXsi9FzkfoQv5I/V0iqE4lSNcKXPnW9/UTJLnv5CcN4FHxVLnKg" crossorigin="anonymous" defer></script>
 <script src="/tools/sync.js?v=202608161700" defer></script>
 <script src="/tools/push-notifications.js?v=202608160400" defer></script>
-<script src="/tools/tools-common.js?v=202608161700" defer></script>
+<script src="/tools/tools-common.js?v=202608162000" defer></script>
 <style>
   body { padding: 44px 20px 60px; max-width: 900px; margin: 0 auto; }
   .hub-header { display: flex; align-items: center; justify-content: space-between; gap: 14px; margin-bottom: 8px; }
@@ -274,8 +274,7 @@
     <span class="hub-title">Dashboard</span>
   </div>
   <button class="help-btn" onclick="openHelpModal()" aria-label="How to use this dashboard" title="How to use this dashboard">?</button>
-  <button class="help-btn" id="pushToggleBtn" onclick="handlePushToggle()" aria-label="Toggle notifications" title="Toggle notifications"><svg class="th-icon" aria-hidden="true"><use href="#icon-bell" xlink:href="#icon-bell"></use></svg></button>
-  <a href="/tools/settings.html" class="help-btn" aria-label="Settings" title="Settings" style="text-decoration:none; display:inline-flex; align-items:center; justify-content:center;"><svg class="th-icon" aria-hidden="true"><use href="#icon-gear" xlink:href="#icon-gear"></use></svg></a>
+  <a href="/tools/settings.html" class="help-btn" aria-label="Settings" title="Settings" style="text-decoration:none; display:inline-flex; align-items:center; justify-content:center;"><svg class="th-icon" aria-hidden="true"><use href="#icon-settings" xlink:href="#icon-settings"></use></svg></a>
 </div>
 <p class="hub-sub"><span class="realtime-badge" id="realtimeBadge" style="margin-left:0;"><span class="realtime-dot" id="realtimeDot"></span><span id="realtimeText">Live sync: connecting...</span></span><span class="pending-changes-badge" id="pendingChangesBadge" style="display:none;">&#9679; Unsynced changes</span>
   <button class="help-btn" id="refreshSyncLink" onclick="manualRefreshSync(renderDashboard)" aria-label="Refresh synced data now" title="Refresh synced data now" style="width:26px; height:26px; font-size:13px; vertical-align:middle; margin-left:6px;">&#8635;</button>
@@ -1982,35 +1981,6 @@
   // block runs immediately at parse time regardless. Waiting for
   // DOMContentLoaded guarantees initSyncOnLoad() actually exists by the
   // time we call it.
-  async function handlePushToggle() {
-    const btn = document.getElementById('pushToggleBtn');
-    const currentlyEnabled = await isPushEnabled();
-
-    if (currentlyEnabled) {
-      const confirmed = await showConfirm('Turn off notifications on this device?');
-      if (!confirmed) return;
-      await disablePushNotifications();
-      btn.classList.remove('is-active');
-      return;
-    }
-
-    btn.disabled = true;
-    const result = await enablePushNotifications();
-    btn.disabled = false;
-    if (!result.ok) {
-      await showAlert(result.error);
-      return;
-    }
-    btn.classList.add('is-active');
-    showToast('Notifications are on for this device.');
-  }
-
-  async function refreshPushToggleState() {
-    const btn = document.getElementById('pushToggleBtn');
-    if (!btn || !pushNotificationsSupported()) { if (btn) btn.style.display = 'none'; return; }
-    const enabled = await isPushEnabled();
-    btn.classList.toggle('is-active', enabled);
-  }
 
   // ---------------------------------------------------------------------
   // Snapshot "last updated" readout -- added 2026-08-16. Reads the same
@@ -2052,7 +2022,6 @@
         startLeadsRealtime(loadAndRenderLeads, updateRealtimeBadge);
       }
     });
-    refreshPushToggleState();
     window.addEventListener('th-sync-status', renderSnapshotLastUpdated);
     // Keeps "3m ago" counting up while the page sits open, without a
     // sync event to trigger a re-render.

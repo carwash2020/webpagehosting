@@ -17,8 +17,8 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="/styles.css?v=202608161430">
-<script src="/tools/auth.js?v=202608160400"></script>
-<script src="/tools/tools-common.js?v=202608161700" defer></script>
+<script src="/tools/auth.js?v=202608162000"></script>
+<script src="/tools/tools-common.js?v=202608162000" defer></script>
 <style>
   body { display: flex; align-items: center; justify-content: center; min-height: 100vh; padding: 20px; }
   .login-box { max-width: 380px; width: 100%; text-align: center; }
@@ -57,7 +57,20 @@
       <label for="rememberMe">Remember me for 30 days</label>
     </div>
     <button type="submit" class="primary-btn login-btn" id="loginBtn">Sign In</button>
+    <button type="button" id="forgotPasswordLink" style="background:none; border:none; color:var(--text-dim); font-size:13px; margin-top:14px; cursor:pointer; text-decoration:underline;">Forgot password?</button>
   </form>
+
+  <div id="forgotPasswordPanel" style="display:none; margin-top:18px; text-align:left;">
+    <p style="color:var(--text-dim); font-size:13.5px; margin-bottom:12px;">Enter your email and we'll send a link to reset your password.</p>
+    <div class="login-field">
+      <label for="resetEmail">Email</label>
+      <input type="email" id="resetEmail" autocomplete="username">
+    </div>
+    <div class="login-error" id="resetError"></div>
+    <div id="resetSuccess" style="display:none; color:#6fcf97; font-size:13.5px; margin:4px 0 16px;">Check your email for a reset link.</div>
+    <button type="button" class="secondary-btn" id="sendResetBtn" style="width:100%; justify-content:center;">Send reset link</button>
+    <button type="button" id="cancelResetLink" style="background:none; border:none; color:var(--text-dim); font-size:13px; margin-top:14px; cursor:pointer; text-decoration:underline; width:100%;">Back to sign in</button>
+  </div>
 </div>
 
 <script>
@@ -86,6 +99,38 @@
     // Only ever redirect to a same-site path -- never follow an
     // external "return" value, which would make this an open redirect.
     window.location.href = (returnTo && returnTo.startsWith('/')) ? returnTo : '/tools/workspace.html';
+  });
+
+  document.getElementById('forgotPasswordLink').addEventListener('click', () => {
+    document.getElementById('loginForm').style.display = 'none';
+    document.getElementById('forgotPasswordPanel').style.display = '';
+    document.getElementById('resetEmail').value = document.getElementById('loginEmail').value;
+    document.getElementById('resetError').textContent = '';
+    document.getElementById('resetSuccess').style.display = 'none';
+  });
+
+  document.getElementById('cancelResetLink').addEventListener('click', () => {
+    document.getElementById('forgotPasswordPanel').style.display = 'none';
+    document.getElementById('loginForm').style.display = '';
+  });
+
+  document.getElementById('sendResetBtn').addEventListener('click', async () => {
+    const email = document.getElementById('resetEmail').value.trim();
+    const errorEl = document.getElementById('resetError');
+    const successEl = document.getElementById('resetSuccess');
+    errorEl.textContent = '';
+    successEl.style.display = 'none';
+    if (!email) { errorEl.textContent = 'Enter your email first.'; return; }
+
+    const btn = document.getElementById('sendResetBtn');
+    btn.disabled = true;
+    btn.textContent = 'Sending...';
+    const result = await requestPasswordReset(email);
+    btn.disabled = false;
+    btn.textContent = 'Send reset link';
+
+    if (!result.ok) { errorEl.textContent = result.error; return; }
+    successEl.style.display = '';
   });
 
   // Already logged in? Skip the form entirely.

@@ -1584,6 +1584,14 @@ body.th-has-bottomnav .th-toast-container{
   box-shadow: inset 0 1px 3px rgba(0,0,0,0.3);
   transition: border-color .15s ease, box-shadow .15s ease;
 }
+/* A native date input's internal shadow-DOM content (the day/month/year
+   segments) has its own intrinsic minimum width on iOS Safari that
+   ignores width:100%/box-sizing:border-box above, so it can visibly
+   overflow its own flex container even though every other input type
+   respects that same rule. min-width:0 is what actually lets a flex
+   item shrink below its content's natural size; without it, flexbox
+   defaults to min-width:auto, which is the real cause of the overflow. */
+.form-field input[type="date"] { min-width: 0; max-width: 100%; }
 /* :focus-visible above already gives keyboard users a blue outline: this
    is deliberately separate -- :focus-visible's own browser heuristics
    often don't fire for a plain tap/click, which on a touch-primary tool
