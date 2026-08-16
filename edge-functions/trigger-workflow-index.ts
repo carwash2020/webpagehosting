@@ -19,6 +19,23 @@ const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 const GITHUB_PAT = Deno.env.get("GITHUB_PAT");
 
+// CORS -- unlike Send-Push, which is only ever called server-to-server
+// (from a database trigger via net.http_post, never subject to browser
+// CORS at all), this function is called DIRECTLY from the browser via
+// fetch() in dev-tools.html. Missing these headers doesn't produce an
+// HTTP error status -- the browser blocks the request before a
+// response is even read, surfacing as a generic "Failed to fetch"
+// with no further detail, which is exactly what happened testing this
+// for real the first time. The origin is restricted to the actual
+// site rather than left as a wildcard, since this function performs a
+// real privileged action, not a public read.
+const ALLOWED_ORIGIN = "https://www.triplehenterprisesllc.biz";
+const CORS_HEADERS: Record<string, string> = {
+  "Access-Control-Allow-Origin": ALLOWED_ORIGIN,
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+  "Access-Control-Allow-Methods": "POST, OPTIONS",
+};
+
 const REPO_OWNER = "carwash2020";
 const REPO_NAME = "webpagehosting";
 
@@ -64,37 +81,45 @@ async function callerHasAssignedRole(email: string): Promise<boolean> {
 }
 
 Deno.serve(async (req: Request) => {
+  // Preflight -- the browser sends this automatically before the real
+  // POST for any cross-origin request carrying custom headers
+  // (Authorization, apikey). Must return 200 with the CORS headers
+  // above, or the browser cancels the real request before it's ever
+  // sent, regardless of anything the code below would have done.
+  if (req.method === "OPTIONS") {
+    return new Response(null, { status: 200, headers: CORS_HEADERS });
+  }
+
+  // Every real response goes through this, so CORS headers can never
+  // be accidentally missing from one code path and not another --
+  // exactly the kind of one-off mistake that caused this to need
+  // fixing in the first place.
+  function json(body: unknown, status = 200): Response {
+    return new Response(JSON.stringify(body), {
+      status,
+      headers: { ...CORS_HEADERS, "Content-Type": "application/json" },
+    });
+  }
+
   try {
     const authHeader = req.headers.get("Authorization") || "";
     const token = authHeader.replace(/^Bearer\s+/i, "");
     const claims = decodeJwtPayload(token);
 
     if (claims.role !== "authenticated" || !claims.email) {
-      return new Response(JSON.stringify({ ok: false, error: "Must be signed in with a real session." }), {
-        status: 401,
-        headers: { "Content-Type": "application/json" },
-      });
+      return json({ ok: false, error: "Must be signed in with a real session." }, 401);
     }
     if (!(await callerHasAssignedRole(claims.email))) {
-      return new Response(JSON.stringify({ ok: false, error: "This account has no assigned role." }), {
-        status: 403,
-        headers: { "Content-Type": "application/json" },
-      });
+      return json({ ok: false, error: "This account has no assigned role." }, 403);
     }
 
     if (!GITHUB_PAT) {
-      return new Response(
-        JSON.stringify({ ok: false, error: "GITHUB_PAT secret is not set yet -- add it in the Supabase dashboard under Edge Functions -> Secrets." }),
-        { status: 500, headers: { "Content-Type": "application/json" } },
-      );
+      return json({ ok: false, error: "GITHUB_PAT secret is not set yet -- add it in the Supabase dashboard under Edge Functions -> Secrets." }, 500);
     }
 
     const { workflow } = await req.json();
     if (typeof workflow !== "string" || !ALLOWED_WORKFLOWS.has(workflow)) {
-      return new Response(JSON.stringify({ ok: false, error: "Unknown or disallowed workflow." }), {
-        status: 400,
-        headers: { "Content-Type": "application/json" },
-      });
+      return json({ ok: false, error: "Unknown or disallowed workflow." }, 400);
     }
 
     const ghRes = await fetch(
@@ -112,17 +137,11 @@ Deno.serve(async (req: Request) => {
     );
 
     if (ghRes.status === 204) {
-      return new Response(JSON.stringify({ ok: true }), { headers: { "Content-Type": "application/json" } });
+      return json({ ok: true });
     }
     const errText = await ghRes.text();
-    return new Response(
-      JSON.stringify({ ok: false, error: `GitHub API HTTP ${ghRes.status}: ${errText.slice(0, 300)}` }),
-      { status: 502, headers: { "Content-Type": "application/json" } },
-    );
+    return json({ ok: false, error: `GitHub API HTTP ${ghRes.status}: ${errText.slice(0, 300)}` }, 502);
   } catch (err: any) {
-    return new Response(JSON.stringify({ ok: false, error: err.message }), {
-      status: 500,
-      headers: { "Content-Type": "application/json" },
-    });
+    return json({ ok: false, error: err.message }, 500);
   }
 });
