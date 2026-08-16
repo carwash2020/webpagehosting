@@ -23,8 +23,9 @@
 <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data:; connect-src 'self' https://*.supabase.co wss://*.supabase.co; frame-src 'none'; object-src 'none'; base-uri 'self'; frame-ancestors 'none';">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="/styles.css?v=202608160610">
-<script src="/tools/tools-common.js?v=202608160610" defer></script>
+<link href="https://fonts.googleapis.com/css2?family=Anton&family=Oswald:wght@400;500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/styles.css?v=202608161200">
+<script src="/tools/tools-common.js?v=202608161200" defer></script>
 <script src="/tools/sync.js?v=202608160400" defer></script>
 <style>
   .pr-search-filter-row { display: flex; gap: 8px; margin-bottom: 16px; }
@@ -2345,11 +2346,11 @@
         '</div>';
     }
     var linkHtml = iss.link ? (
-      '<a class="pr-row-icon-btn" title="View source" href="' + escapeHtml(iss.link) + '" target="_blank" rel="noopener">&#128279;</a>'
+      '<a class="pr-row-icon-btn" title="View source" href="' + escapeHtml(iss.link) + '" target="_blank" rel="noopener"><svg class="th-icon" aria-hidden="true"><use href="#icon-link" xlink:href="#icon-link"></use></svg></a>'
     ) : '';
-    var copyHtml = '<button class="pr-row-icon-btn" title="Copy" onclick="copyPrIssueText(' + unitId + ', ' + iss.id + ')">&#128203;</button>';
-    var editIssueHtml = '<button class="pr-row-icon-btn" title="Edit" onclick="toggleEditIssue(' + unitId + ', ' + iss.id + ')">&#9998;</button>';
-    var deleteIssueHtml = '<button class="pr-row-icon-btn danger" title="Delete" onclick="deletePrIssue(' + unitId + ', ' + iss.id + ')">&#128465;</button>';
+    var copyHtml = '<button class="pr-row-icon-btn" title="Copy" onclick="copyPrIssueText(' + unitId + ', ' + iss.id + ')"><svg class="th-icon" aria-hidden="true"><use href="#icon-clipboard" xlink:href="#icon-clipboard"></use></svg></button>';
+    var editIssueHtml = '<button class="pr-row-icon-btn" title="Edit" onclick="toggleEditIssue(' + unitId + ', ' + iss.id + ')"><svg class="th-icon" aria-hidden="true"><use href="#icon-edit" xlink:href="#icon-edit"></use></svg></button>';
+    var deleteIssueHtml = '<button class="pr-row-icon-btn danger" title="Delete" onclick="deletePrIssue(' + unitId + ', ' + iss.id + ')"><svg class="th-icon" aria-hidden="true"><use href="#icon-trash" xlink:href="#icon-trash"></use></svg></button>';
     var noteHtml = iss.note ? ('<div class="pr-issue-note">' + escapeHtml(iss.note) + '</div>') : '';
     var partNumHtml = iss.partNumber ? (' <span class="pr-issue-partnum">(#' + escapeHtml(iss.partNumber) + ')</span>') : '';
     var enterClass = iss.id === justAddedPrIssueId ? 'list-row-enter' : '';
@@ -2451,9 +2452,9 @@
         '<span class="pr-type-section-name">' + sectionLabel + '</span>' +
         '<span class="pr-type-section-meta" style="display:flex; align-items:center; gap:6px;">' +
         u.issues.length + ' logged' +
-        '<button class="pr-row-icon-btn' + (u.pinned ? ' active' : '') + '" title="' + (u.pinned ? 'Unpin' : 'Pin for quick access') + '" onclick="event.stopPropagation(); togglePinUnit(' + u.id + ');">' + (u.pinned ? '&#9733;' : '&#9734;') + '</button>' +
-        '<button class="pr-row-icon-btn" title="Edit" onclick="event.stopPropagation(); toggleEditUnit(' + u.id + ');">&#9998;</button>' +
-        '<button class="pr-row-icon-btn danger" title="Delete" onclick="event.stopPropagation(); deletePrUnitType(' + u.id + ');">&#128465;</button>' +
+        '<button class="pr-row-icon-btn' + (u.pinned ? ' active' : '') + '" title="' + (u.pinned ? 'Unpin' : 'Pin for quick access') + '" onclick="event.stopPropagation(); togglePinUnit(' + u.id + ');">' + (u.pinned ? '<svg class="th-icon" aria-hidden="true"><use href="#icon-star-filled" xlink:href="#icon-star-filled"></use></svg>' : '<svg class="th-icon" aria-hidden="true"><use href="#icon-star" xlink:href="#icon-star"></use></svg>') + '</button>' +
+        '<button class="pr-row-icon-btn" title="Edit" onclick="event.stopPropagation(); toggleEditUnit(' + u.id + ');"><svg class="th-icon" aria-hidden="true"><use href="#icon-edit" xlink:href="#icon-edit"></use></svg></button>' +
+        '<button class="pr-row-icon-btn danger" title="Delete" onclick="event.stopPropagation(); deletePrUnitType(' + u.id + ');"><svg class="th-icon" aria-hidden="true"><use href="#icon-trash" xlink:href="#icon-trash"></use></svg></button>' +
         '<svg class="pr-chevron' + (isExpanded ? ' is-open' : '') + '" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>' +
         '</span>' +
         '</div>' +
@@ -2621,7 +2622,7 @@
       '<div class="pr-quick-strip">' + combined.map(function(u) {
         var modelLabel = u.model ? u.model.split(' \u2014 ')[0] : u.type;
         return '<button class="pr-quick-chip" data-pr-quick-id="' + u.id + '">' +
-          '<span class="pr-quick-brand">' + (u.pinned ? '<span class="pr-quick-pin">&#9733;</span>' : '') + escapeHtml(u.brand) + '</span>' +
+          '<span class="pr-quick-brand">' + (u.pinned ? '<span class="pr-quick-pin"><svg class="th-icon" aria-hidden="true"><use href="#icon-star-filled" xlink:href="#icon-star-filled"></use></svg></span>' : '') + escapeHtml(u.brand) + '</span>' +
           '<span class="pr-quick-model">' + escapeHtml(modelLabel) + '</span>' +
           '</button>';
       }).join('') + '</div>';

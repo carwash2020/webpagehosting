@@ -23,12 +23,12 @@
 <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data: https://*.supabase.co; connect-src 'self' https://*.supabase.co wss://*.supabase.co; frame-src 'none'; object-src 'none'; base-uri 'self'; frame-ancestors 'none';">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Anton&family=Oswald:wght@400;500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="/styles.css?v=202608160610">
+<link href="https://fonts.googleapis.com/css2?family=Anton&family=Oswald:wght@400;500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/styles.css?v=202608161200">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.112.3/dist/umd/supabase.js" integrity="sha384-qafw21c/iciq0VXsi9FzkfoQv5I/V0iqE4lSNcKXPnW9/UTJLnv5CcN4FHxVLnKg" crossorigin="anonymous" defer></script>
 <script src="/tools/sync.js?v=202608160400" defer></script>
 <script src="/tools/push-notifications.js?v=202608160400" defer></script>
-<script src="/tools/tools-common.js?v=202608160610" defer></script>
+<script src="/tools/tools-common.js?v=202608161200" defer></script>
 <style>
   body { padding: 44px 20px 60px; max-width: 900px; margin: 0 auto; }
   .hub-header { display: flex; align-items: center; justify-content: space-between; gap: 14px; margin-bottom: 8px; }
@@ -122,7 +122,6 @@
   .analytics-subheading { font-family:'Oswald',sans-serif; color: var(--text-dim); font-size: 12px; text-transform: uppercase; letter-spacing: 0.5px; margin: 20px 0 12px; }
   .analytics-subheading.is-first { margin-top: 0; }
 
-  .empty-state-small { color: var(--text-dim); font-size: 13.5px; padding: 12px 0; }
 
   .paid-toggle-btn, .lead-toggle-btn {
     border-radius: 12px; padding: 4px 12px; font-size: 11.5px; font-weight: 600;
@@ -235,22 +234,22 @@
     <span class="hub-title">Dashboard</span>
   </div>
   <button class="help-btn" onclick="openHelpModal()" aria-label="How to use this dashboard" title="How to use this dashboard">?</button>
-  <button class="help-btn" id="pushToggleBtn" onclick="handlePushToggle()" aria-label="Toggle notifications" title="Toggle notifications">&#128276;</button>
+  <button class="help-btn" id="pushToggleBtn" onclick="handlePushToggle()" aria-label="Toggle notifications" title="Toggle notifications"><svg class="th-icon" aria-hidden="true"><use href="#icon-bell" xlink:href="#icon-bell"></use></svg></button>
   <button class="help-btn" onclick="signOut()" aria-label="Log out" title="Log out">&#x21B0;</button>
 </div>
 <p class="hub-sub"><span class="realtime-badge" id="realtimeBadge" style="margin-left:0;"><span class="realtime-dot" id="realtimeDot"></span><span id="realtimeText">Live sync: connecting...</span></span>
   <button class="help-btn" id="refreshSyncLink" onclick="manualRefreshSync(renderDashboard)" aria-label="Refresh synced data now" title="Refresh synced data now" style="width:26px; height:26px; font-size:13px; vertical-align:middle; margin-left:6px;">&#8635;</button>
 </p>
 <nav class="jump-nav">
-  <a href="#section-snapshot"><span class="jump-nav-icon">&#128202;</span>Snapshot</a>
-  <a href="#section-actionitems"><span class="jump-nav-icon">&#9989;</span>Action Items</a>
-  <a href="#section-businesshealth"><span class="jump-nav-icon">&#128737;&#65039;</span>Business Health</a>
-  <a href="#section-tools"><span class="jump-nav-icon">&#128736;&#65039;</span>Tools</a>
+  <a href="#section-snapshot"><span class="jump-nav-icon"><svg class="th-icon" aria-hidden="true"><use href="#icon-chart" xlink:href="#icon-chart"></use></svg></span>Snapshot</a>
+  <a href="#section-actionitems"><span class="jump-nav-icon"><svg class="th-icon" aria-hidden="true"><use href="#icon-check-circle" xlink:href="#icon-check-circle"></use></svg></span>Action Items</a>
+  <a href="#section-businesshealth"><span class="jump-nav-icon"><svg class="th-icon" aria-hidden="true"><use href="#icon-shield" xlink:href="#icon-shield"></use></svg></span>Business Health</a>
+  <a href="#section-tools"><span class="jump-nav-icon"><svg class="th-icon" aria-hidden="true"><use href="#icon-wrench" xlink:href="#icon-wrench"></use></svg></span>Tools</a>
 </nav>
 
 <div class="global-search-block">
   <div class="icon-search" id="globalSearchWrap">
-    <button class="icon-search-toggle" onclick="toggleIconSearch('globalSearchWrap')" aria-label="Find a client" title="Find a client">&#128269;</button>
+    <button class="icon-search-toggle" onclick="toggleIconSearch('globalSearchWrap')" aria-label="Find a client" title="Find a client"><svg class="th-icon" aria-hidden="true"><use href="#icon-search" xlink:href="#icon-search"></use></svg></button>
     <input type="text" id="globalSearch" class="icon-search-input" placeholder="Find a client &mdash; searches jobs, contacts, invoices, quotes, and contracts..." oninput="renderGlobalSearch()" aria-label="Search everything by client name">
   </div>
   <div id="globalSearchResults"></div>
@@ -346,7 +345,7 @@
 
     <div class="analytics-subheading">Income</div>
     <div class="icon-search" id="invoiceSearchWrap">
-      <button class="icon-search-toggle" onclick="toggleIconSearch('invoiceSearchWrap')" aria-label="Search income" title="Search income">&#128269;</button>
+      <button class="icon-search-toggle" onclick="toggleIconSearch('invoiceSearchWrap')" aria-label="Search income" title="Search income"><svg class="th-icon" aria-hidden="true"><use href="#icon-search" xlink:href="#icon-search"></use></svg></button>
       <input type="text" id="invoiceSearch" class="icon-search-input" placeholder="Search income by client, invoice #, or description..." oninput="renderInvoicesList()" aria-label="Search income">
     </div>
     <div id="invoicesList"></div>
@@ -483,7 +482,7 @@
   <div class="tools-grid">
   <div class="tool-tile">
     <a href="/tools/job-tracker.html" class="tool-tile-link">
-      <span class="tool-tile-icon">&#128736;&#65039;</span>
+      <span class="tool-tile-icon"><svg class="th-icon" aria-hidden="true"><use href="#icon-wrench" xlink:href="#icon-wrench"></use></svg></span>
       <span class="tool-tile-label">Jobs</span>
     </a>
     <button class="tool-tile-info" onclick="event.stopPropagation(); openCardInfo('tool-jobtracker')" aria-label="What is Job Tracker?" title="What is this?">?</button>
@@ -491,7 +490,7 @@
 
   <div class="tool-tile">
     <a href="/tools/invoice-generator.html" class="tool-tile-link">
-      <span class="tool-tile-icon">&#129534;</span>
+      <span class="tool-tile-icon"><svg class="th-icon" aria-hidden="true"><use href="#icon-receipt" xlink:href="#icon-receipt"></use></svg></span>
       <span class="tool-tile-label">Invoices</span>
     </a>
     <button class="tool-tile-info" onclick="event.stopPropagation(); openCardInfo('tool-invoices')" aria-label="What is Invoice Generator?" title="What is this?">?</button>
@@ -499,7 +498,7 @@
 
   <div class="tool-tile">
     <a href="/tools/review-request.html" class="tool-tile-link">
-      <span class="tool-tile-icon">&#11088;</span>
+      <span class="tool-tile-icon"><svg class="th-icon" aria-hidden="true"><use href="#icon-star-filled" xlink:href="#icon-star-filled"></use></svg></span>
       <span class="tool-tile-label">Reviews</span>
     </a>
     <button class="tool-tile-info" onclick="event.stopPropagation(); openCardInfo('tool-reviews')" aria-label="What is Review Request Sender?" title="What is this?">?</button>
@@ -507,7 +506,7 @@
 
   <div class="tool-tile">
     <a href="/tools/route-planner.html" class="tool-tile-link">
-      <span class="tool-tile-icon">&#128506;&#65039;</span>
+      <span class="tool-tile-icon"><svg class="th-icon" aria-hidden="true"><use href="#icon-map" xlink:href="#icon-map"></use></svg></span>
       <span class="tool-tile-label">Routes</span>
     </a>
     <button class="tool-tile-info" onclick="event.stopPropagation(); openCardInfo('tool-routes')" aria-label="What is Route Planner?" title="What is this?">?</button>
@@ -515,7 +514,7 @@
 
   <div class="tool-tile">
     <a href="/tools/contract-generator.html" class="tool-tile-link">
-      <span class="tool-tile-icon">&#128220;</span>
+      <span class="tool-tile-icon"><svg class="th-icon" aria-hidden="true"><use href="#icon-scroll" xlink:href="#icon-scroll"></use></svg></span>
       <span class="tool-tile-label">Contracts</span>
     </a>
     <button class="tool-tile-info" onclick="event.stopPropagation(); openCardInfo('tool-contracts')" aria-label="What is Contract Generator?" title="What is this?">?</button>
@@ -523,7 +522,7 @@
 
   <div class="tool-tile">
     <a href="/tools/calendar.html" class="tool-tile-link">
-      <span class="tool-tile-icon">&#128197;</span>
+      <span class="tool-tile-icon"><svg class="th-icon" aria-hidden="true"><use href="#icon-calendar" xlink:href="#icon-calendar"></use></svg></span>
       <span class="tool-tile-label">Calendar</span>
     </a>
     <button class="tool-tile-info" onclick="event.stopPropagation(); openCardInfo('tool-calendar')" aria-label="What is Calendar?" title="What is this?">?</button>
@@ -531,21 +530,21 @@
 
   <div class="tool-tile">
     <a href="/tools/runway-dashboard.html" class="tool-tile-link">
-      <span class="tool-tile-icon">&#128176;</span>
+      <span class="tool-tile-icon"><svg class="th-icon" aria-hidden="true"><use href="#icon-dollar" xlink:href="#icon-dollar"></use></svg></span>
       <span class="tool-tile-label">Runway</span>
     </a>
     <button class="tool-tile-info" onclick="event.stopPropagation(); openCardInfo('tool-runway')" aria-label="What is Runway Dashboard?" title="What is this?">?</button>
   </div>
   <div class="tool-tile">
     <a href="/tools/parts-reference.html" class="tool-tile-link">
-      <span class="tool-tile-icon">&#128295;</span>
+      <span class="tool-tile-icon"><svg class="th-icon" aria-hidden="true"><use href="#icon-toolbox" xlink:href="#icon-toolbox"></use></svg></span>
       <span class="tool-tile-label">Wiki</span>
     </a>
     <button class="tool-tile-info" onclick="event.stopPropagation(); openCardInfo('tool-partsreference')" aria-label="What is Appliance Wiki?" title="What is this?">?</button>
   </div>
   <div class="tool-tile" id="devToolsTile" style="display:none;">
     <a href="/tools/dev-tools.html" class="tool-tile-link">
-      <span class="tool-tile-icon">&#9881;&#65039;</span>
+      <span class="tool-tile-icon"><svg class="th-icon" aria-hidden="true"><use href="#icon-gear" xlink:href="#icon-gear"></use></svg></span>
       <span class="tool-tile-label">Dev</span>
     </a>
     <button class="tool-tile-info" onclick="event.stopPropagation(); openCardInfo('tool-devtools')" aria-label="What is Dev Tools?" title="What is this?">?</button>
@@ -760,7 +759,7 @@
     });
 
     if (groups.length === 0) {
-      container.innerHTML = '<div class="empty-state-small">No matches for "' + escapeHtml(term) + '".</div>';
+      container.innerHTML = '<div class="empty-state-small"><svg class="th-icon" aria-hidden="true"><use href="#icon-search" xlink:href="#icon-search"></use></svg>No matches for "' + escapeHtml(term) + '".</div>';
       return;
     }
     container.innerHTML = groups.map(g =>
@@ -949,7 +948,7 @@
 
     const container = document.getElementById('topVendors');
     if (sorted.length === 0) {
-      container.innerHTML = '<div class="empty-state-small">No vendor-tagged expenses in this period yet.</div>';
+      container.innerHTML = '<div class="empty-state-small"><svg class="th-icon" aria-hidden="true"><use href="#icon-inbox" xlink:href="#icon-inbox"></use></svg>No vendor-tagged expenses in this period yet.</div>';
       return;
     }
     const max = sorted[0][1];
@@ -985,7 +984,7 @@
     actionItemCounts.followups = overdue.length;
     updateActionItemsBadge();
     if (overdue.length === 0) {
-      container.innerHTML = '<div class="empty-state-small">No clients overdue for a follow-up right now.</div>';
+      container.innerHTML = '<div class="empty-state-small is-good"><svg class="th-icon" aria-hidden="true"><use href="#icon-check-circle" xlink:href="#icon-check-circle"></use></svg>No clients overdue for a follow-up right now.</div>';
       return;
     }
     container.innerHTML = overdue.map(entry => {
@@ -1018,7 +1017,7 @@
     actionItemCounts.duesoon = upcoming.length;
     updateActionItemsBadge();
     if (upcoming.length === 0) {
-      container.innerHTML = '<div class="empty-state-small">Nothing due in the next 7 days.</div>';
+      container.innerHTML = '<div class="empty-state-small is-good"><svg class="th-icon" aria-hidden="true"><use href="#icon-check-circle" xlink:href="#icon-check-circle"></use></svg>Nothing due in the next 7 days.</div>';
       return;
     }
     container.innerHTML = upcoming.map(j => `
@@ -1093,8 +1092,8 @@
     const container = document.getElementById('invoicesList');
     if (items.length === 0) {
       container.innerHTML = searchTerm
-        ? '<div class="empty-state-small">No income matches "' + escapeHtml(searchTerm) + '".</div>'
-        : '<div class="empty-state-small">No income logged yet.</div>';
+        ? '<div class="empty-state-small"><svg class="th-icon" aria-hidden="true"><use href="#icon-search" xlink:href="#icon-search"></use></svg>No income matches "' + escapeHtml(searchTerm) + '".</div>'
+        : '<div class="empty-state-small"><svg class="th-icon" aria-hidden="true"><use href="#icon-inbox" xlink:href="#icon-inbox"></use></svg>No income logged yet.</div>';
       return;
     }
     container.innerHTML = items.map(it => {
@@ -1136,14 +1135,14 @@
   async function loadAndRenderLeads() {
     const container = document.getElementById('leadsList');
     if (typeof fetchLeads !== 'function' || !isSyncConfigured()) {
-      container.innerHTML = '<div class="empty-state-small">Cloud sync isn\'t set up yet, so leads can\'t load.</div>';
+      container.innerHTML = '<div class="empty-state-small"><svg class="th-icon" aria-hidden="true"><use href="#icon-link" xlink:href="#icon-link"></use></svg>Cloud sync isn\'t set up yet, so leads can\'t load.</div>';
       actionItemCounts.leads = 0;
       updateActionItemsBadge();
       return;
     }
     const result = await fetchLeads();
     if (!result.ok) {
-      container.innerHTML = '<div class="empty-state-small">Couldn\'t load leads (' + escapeHtml(result.error) + '). Make sure the th_leads table exists in Supabase.</div>';
+      container.innerHTML = '<div class="empty-state-small is-warning"><svg class="th-icon" aria-hidden="true"><use href="#icon-warning" xlink:href="#icon-warning"></use></svg>Couldn\'t load leads (' + escapeHtml(result.error) + '). Make sure the th_leads table exists in Supabase.</div>';
       actionItemCounts.leads = 0;
       updateActionItemsBadge();
       return;
@@ -1151,7 +1150,7 @@
     actionItemCounts.leads = result.leads.filter(l => !l.handled).length;
     updateActionItemsBadge();
     if (result.leads.length === 0) {
-      container.innerHTML = '<div class="empty-state-small">No leads yet.</div>';
+      container.innerHTML = '<div class="empty-state-small"><svg class="th-icon" aria-hidden="true"><use href="#icon-inbox" xlink:href="#icon-inbox"></use></svg>No leads yet.</div>';
       return;
     }
     container.innerHTML = result.leads.map(l => `
@@ -1368,7 +1367,7 @@
     const licenses = compliance.licenses || [];
     const container = document.getElementById('licensesList');
     if (licenses.length === 0) {
-      container.innerHTML = '<div class="empty-state-small">No city licenses on file yet.</div>';
+      container.innerHTML = '<div class="empty-state-small"><svg class="th-icon" aria-hidden="true"><use href="#icon-inbox" xlink:href="#icon-inbox"></use></svg>No city licenses on file yet.</div>';
       return;
     }
     container.innerHTML = licenses.map((lic, idx) => {
@@ -1401,7 +1400,7 @@
     const container = document.getElementById('secureDocsList');
     if (!container) return;
     if (typeof listSecureDocuments !== 'function') {
-      container.innerHTML = '<div class="empty-state-small">Secure document storage isn\'t available on this page yet.</div>';
+      container.innerHTML = '<div class="empty-state-small"><svg class="th-icon" aria-hidden="true"><use href="#icon-link" xlink:href="#icon-link"></use></svg>Secure document storage isn\'t available on this page yet.</div>';
       return;
     }
     container.innerHTML = `
@@ -1411,12 +1410,12 @@
     const result = await listSecureDocuments();
     if (!result.ok) {
       container.innerHTML = result.error === 'not-configured'
-        ? '<div class="empty-state-small">Set up Cloud Sync to use secure document storage.</div>'
-        : `<div class="empty-state-small">Couldn't load documents (${escapeHtml(result.error)}). Make sure the secure-documents bucket exists in Supabase with its access policies set up.</div>`;
+        ? '<div class="empty-state-small"><svg class="th-icon" aria-hidden="true"><use href="#icon-link" xlink:href="#icon-link"></use></svg>Set up Cloud Sync to use secure document storage.</div>'
+        : `<div class="empty-state-small is-warning"><svg class="th-icon" aria-hidden="true"><use href="#icon-warning" xlink:href="#icon-warning"></use></svg>Couldn't load documents (${escapeHtml(result.error)}). Make sure the secure-documents bucket exists in Supabase with its access policies set up.</div>`;
       return;
     }
     if (result.documents.length === 0) {
-      container.innerHTML = '<div class="empty-state-small">No documents uploaded yet.</div>';
+      container.innerHTML = '<div class="empty-state-small"><svg class="th-icon" aria-hidden="true"><use href="#icon-inbox" xlink:href="#icon-inbox"></use></svg>No documents uploaded yet.</div>';
       return;
     }
     container.innerHTML = result.documents.map(d => `
@@ -1570,16 +1569,16 @@
   async function loadAndRenderGalleryQueue() {
     const container = document.getElementById('galleryQueueList');
     if (typeof fetchFeaturedPhotos !== 'function' || !isSyncConfigured()) {
-      container.innerHTML = '<div class="empty-state-small">Cloud sync isn\'t set up yet.</div>';
+      container.innerHTML = '<div class="empty-state-small"><svg class="th-icon" aria-hidden="true"><use href="#icon-link" xlink:href="#icon-link"></use></svg>Cloud sync isn\'t set up yet.</div>';
       return;
     }
     const result = await fetchFeaturedPhotos();
     if (!result.ok) {
-      container.innerHTML = '<div class="empty-state-small">Couldn\'t load the queue (' + escapeHtml(result.error) + ').</div>';
+      container.innerHTML = '<div class="empty-state-small is-warning"><svg class="th-icon" aria-hidden="true"><use href="#icon-warning" xlink:href="#icon-warning"></use></svg>Couldn\'t load the queue (' + escapeHtml(result.error) + ').</div>';
       return;
     }
     if (result.photos.length === 0) {
-      container.innerHTML = '<div class="empty-state-small">Nothing queued yet &mdash; star a photo in the Job Tracker\'s Photos section to add it here.</div>';
+      container.innerHTML = '<div class="empty-state-small"><svg class="th-icon" aria-hidden="true"><use href="#icon-camera" xlink:href="#icon-camera"></use></svg>Nothing queued yet &mdash; star a photo in the Job Tracker\'s Photos section to add it here.</div>';
       return;
     }
     const signedUrls = await getSignedJobPhotoUrls(result.photos.map(p => p.storage_path));
@@ -1609,7 +1608,7 @@
     const todaysJobs = jobs.filter(j => j.date === todayKey && j.status !== 'done');
 
     if (todaysJobs.length === 0) {
-      container.innerHTML = '<div class="empty-state-small">Nothing on the schedule for today.</div>';
+      container.innerHTML = '<div class="empty-state-small is-good"><svg class="th-icon" aria-hidden="true"><use href="#icon-check-circle" xlink:href="#icon-check-circle"></use></svg>Nothing on the schedule for today.</div>';
       return;
     }
 

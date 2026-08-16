@@ -23,7 +23,7 @@
 <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data:; connect-src 'self' https://*.supabase.co wss://*.supabase.co; frame-src 'none'; object-src 'none'; base-uri 'self'; frame-ancestors 'none';">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Anton&family=Oswald:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Anton&family=Oswald:wght@300;400;500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.112.3/dist/umd/supabase.js" integrity="sha384-qafw21c/iciq0VXsi9FzkfoQv5I/V0iqE4lSNcKXPnW9/UTJLnv5CcN4FHxVLnKg" crossorigin="anonymous" defer></script>
 <script src="/tools/sync.js?v=202608160400" defer></script>
 <style>
@@ -45,7 +45,7 @@
     --radius:10px;
   }
   *{box-sizing:border-box;}
-  body{margin:0;background:var(--bg);color:var(--text);font-family:'Oswald',sans-serif;font-weight:400;-webkit-font-smoothing:antialiased;}
+  body{margin:0;background:var(--bg);color:var(--text);font-family:'Inter', -apple-system, 'Segoe UI', sans-serif;font-weight:400;-webkit-font-smoothing:antialiased;}
   h1,h2,h3{font-family:'Anton',sans-serif;font-weight:400;letter-spacing:0.5px;margin:0;}
   header{padding:20px 20px 0;max-width:900px;margin:0 auto;}
   header h1{font-size:22px;color:var(--orange-light);text-transform:uppercase;}
@@ -1876,17 +1876,61 @@ function drawTrendChart(nets, min){
     ctx.setLineDash([]);
   }
 
+  // Visual upgrade (2026-08-16): rounded-top bars with a vertical
+  // gradient fill instead of flat color, matching the rest of the
+  // redesign's "elevated surface" language. Radius clamps to half the
+  // bar's own height/width so a very short bar (barH < radius*2) still
+  // draws a valid rounded rect instead of a self-intersecting path.
+  function roundedTopRect(ctx, x, y, width, height, radius) {
+    const r = Math.min(radius, height / 2, width / 2);
+    ctx.beginPath();
+    ctx.moveTo(x, y + height);
+    ctx.lineTo(x, y + r);
+    ctx.arcTo(x, y, x + r, y, r);
+    ctx.lineTo(x + width - r, y);
+    ctx.arcTo(x + width, y, x + width, y + r, r);
+    ctx.lineTo(x + width, y + height);
+    ctx.closePath();
+  }
+
   nets.forEach((n, i) => {
     const barH = Math.abs(n.y - 0) / range * plotH;
     const x = padding.left + i * barW + barW * 0.15;
     const bw = barW * 0.7;
     const y = n.y >= 0 ? zeroY - barH : zeroY;
-    ctx.fillStyle = n.y >= 0 ? '#3ac96a' : '#e0554d';
-    ctx.fillRect(x, y, bw, barH || 1);
+    const h = barH || 1;
+
+    const gradient = ctx.createLinearGradient(0, y, 0, y + h);
+    if (n.y >= 0) {
+      gradient.addColorStop(0, '#5fe08c');
+      gradient.addColorStop(1, '#2fa860');
+    } else {
+      gradient.addColorStop(0, '#e77a72');
+      gradient.addColorStop(1, '#c23f37');
+    }
+    ctx.fillStyle = gradient;
+
+    // The rounded corner should always be on the bar's OUTER end (top
+    // for a positive/green bar rising from the baseline, bottom for a
+    // negative/red bar hanging below it) -- so a negative bar is drawn
+    // flipped rather than reusing the same corner placement.
+    if (n.y >= 0) {
+      roundedTopRect(ctx, x, y, bw, h, 4);
+    } else {
+      ctx.save();
+      ctx.translate(x, y + h);
+      ctx.scale(1, -1);
+      roundedTopRect(ctx, 0, 0, bw, h, 4);
+      ctx.restore();
+    }
+    ctx.fill();
   });
 
-  // Baseline (zero line)
-  ctx.strokeStyle = 'rgba(255,255,255,0.15)';
+  // Baseline (zero line) -- softened further and drawn last so it reads
+  // as a clean reference line sitting on top of the bars, not a seam
+  // between two flat blocks.
+  ctx.strokeStyle = 'rgba(255,255,255,0.18)';
+  ctx.lineWidth = 1;
   ctx.beginPath();
   ctx.moveTo(padding.left, zeroY);
   ctx.lineTo(w - padding.right, zeroY);

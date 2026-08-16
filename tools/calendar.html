@@ -23,16 +23,15 @@
 <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data:; connect-src 'self' https://*.supabase.co wss://*.supabase.co; frame-src 'none'; object-src 'none'; base-uri 'self'; frame-ancestors 'none';">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="/styles.css?v=202608160610">
+<link href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/styles.css?v=202608161200">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.112.3/dist/umd/supabase.js" integrity="sha384-qafw21c/iciq0VXsi9FzkfoQv5I/V0iqE4lSNcKXPnW9/UTJLnv5CcN4FHxVLnKg" crossorigin="anonymous" defer></script>
 <script src="/tools/sync.js?v=202608160400" defer></script>
-<script src="/tools/tools-common.js?v=202608160610" defer></script>
+<script src="/tools/tools-common.js?v=202608161200" defer></script>
 <style>
   body { padding: 90px 20px 60px; max-width: 780px; margin: 0 auto; }
   .tool-title { font-family:'Oswald',sans-serif; font-weight:700; font-size:28px; color:var(--white); margin-bottom:6px; }
   .tool-sub { color: var(--text-dim); margin-bottom: 24px; }
-  .empty-state-small { color: var(--text-dim); font-size: 13.5px; padding: 12px 0; }
 
   .cal-nav { display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; }
   .cal-nav-btn {
@@ -117,7 +116,7 @@
 
 <div class="form-section cal-day-detail">
   <h3 id="calDetailHeading">Select a day</h3>
-  <div id="calDayJobs"><div class="empty-state-small">Tap a day above with a dot to see what's scheduled.</div></div>
+  <div id="calDayJobs"><div class="empty-state-small"><svg class="th-icon" aria-hidden="true"><use href="#icon-calendar" xlink:href="#icon-calendar"></use></svg>Tap a day above with a dot to see what's scheduled.</div></div>
 </div>
 
 <div class="help-modal-overlay" id="helpModalOverlay" onclick="if(event.target===this) closeHelpModal()">
@@ -234,7 +233,7 @@
     const container = document.getElementById('calDayJobs');
     if (!selectedDateStr) {
       heading.textContent = 'Select a day';
-      container.innerHTML = '<div class="empty-state-small">Tap a day above with a dot to see what\'s scheduled.</div>';
+      container.innerHTML = '<div class="empty-state-small"><svg class="th-icon" aria-hidden="true"><use href="#icon-calendar" xlink:href="#icon-calendar"></use></svg>Tap a day above with a dot to see what\'s scheduled.</div>';
       return;
     }
     const niceDate = new Date(selectedDateStr + 'T00:00:00').toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' });
@@ -242,7 +241,7 @@
 
     const jobs = loadJobsForCalendar().filter(j => j.date === selectedDateStr);
     if (jobs.length === 0) {
-      container.innerHTML = '<div class="empty-state-small">Nothing scheduled on this day.</div>';
+      container.innerHTML = '<div class="empty-state-small is-good"><svg class="th-icon" aria-hidden="true"><use href="#icon-check-circle" xlink:href="#icon-check-circle"></use></svg>Nothing scheduled on this day.</div>';
       return;
     }
     container.innerHTML = jobs.map(j => `

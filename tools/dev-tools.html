@@ -23,8 +23,9 @@
 <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data:; connect-src 'self' https://*.supabase.co wss://*.supabase.co https://api.github.com; frame-src 'none'; object-src 'none'; base-uri 'self'; frame-ancestors 'none';">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="/styles.css?v=202608160610">
-<script src="/tools/tools-common.js?v=202608160610" defer></script>
+<link href="https://fonts.googleapis.com/css2?family=Anton&family=Oswald:wght@400;500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/styles.css?v=202608161200">
+<script src="/tools/tools-common.js?v=202608161200" defer></script>
 <script src="/tools/sync.js?v=202608160400" defer></script>
 <style>
   body { padding: 44px 20px 60px; max-width: 1080px; margin: 0 auto; }
@@ -208,7 +209,7 @@
     </label>
   </div>
   <div id="rolePreviewBanner" class="dev-status-chip" style="display:none; border-color:var(--orange-tint-border); background:var(--orange-tint-soft); color:var(--orange-light); margin-bottom:14px;">
-    &#9888;&#65039; Previewing the Account roles panel as a non-manager role. This only changes what this panel SHOWS you -- your actual account and permissions haven't changed, and any real change you make still happens as yourself. <a href="#" onclick="event.preventDefault(); setRolePreview('');" style="color:inherit; text-decoration:underline; margin-left:6px;">Exit preview</a>
+    <svg class="th-icon" aria-hidden="true"><use href="#icon-warning" xlink:href="#icon-warning"></use></svg> Previewing the Account roles panel as a non-manager role. This only changes what this panel SHOWS you -- your actual account and permissions haven't changed, and any real change you make still happens as yourself. <a href="#" onclick="event.preventDefault(); setRolePreview('');" style="color:inherit; text-decoration:underline; margin-left:6px;">Exit preview</a>
   </div>
 
   <div class="dev-status-chip" id="devStatusSummary" onclick="toggleStatusStripDetail()" style="cursor:pointer; margin-bottom:8px;">
@@ -223,11 +224,11 @@
   </div>
 
   <nav class="jump-nav">
-    <a href="#nav-diagnostics"><span class="jump-nav-icon">&#129514;</span>Diagnostics</a>
-    <a href="#nav-access"><span class="jump-nav-icon">&#128272;</span>Access</a>
-    <a href="#nav-data"><span class="jump-nav-icon">&#128202;</span>Data</a>
-    <a href="#nav-deploy"><span class="jump-nav-icon">&#128640;</span>Deploy</a>
-    <a href="#nav-content"><span class="jump-nav-icon">&#128221;</span>Content</a>
+    <a href="#nav-diagnostics"><span class="jump-nav-icon"><svg class="th-icon" aria-hidden="true"><use href="#icon-flask" xlink:href="#icon-flask"></use></svg></span>Diagnostics</a>
+    <a href="#nav-access"><span class="jump-nav-icon"><svg class="th-icon" aria-hidden="true"><use href="#icon-lock" xlink:href="#icon-lock"></use></svg></span>Access</a>
+    <a href="#nav-data"><span class="jump-nav-icon"><svg class="th-icon" aria-hidden="true"><use href="#icon-chart" xlink:href="#icon-chart"></use></svg></span>Data</a>
+    <a href="#nav-deploy"><span class="jump-nav-icon"><svg class="th-icon" aria-hidden="true"><use href="#icon-rocket" xlink:href="#icon-rocket"></use></svg></span>Deploy</a>
+    <a href="#nav-content"><span class="jump-nav-icon"><svg class="th-icon" aria-hidden="true"><use href="#icon-note" xlink:href="#icon-note"></use></svg></span>Content</a>
   </nav>
 
   <div style="margin-bottom:20px;">
@@ -362,11 +363,11 @@
       <button class="dev-info-bubble" onclick="openDevInfo('links')" aria-label="What does this do?" title="What does this do?">?</button>
     </div>
     <div class="dev-links">
-      <a href="https://github.com/carwash2020/webpagehosting" target="_blank" rel="noopener">&#128193; Repo</a>
-      <a href="https://github.com/carwash2020/webpagehosting/actions" target="_blank" rel="noopener">&#9889; Actions</a>
-      <a href="https://supabase.com/dashboard/project/csvfqdjuobylgafgolho" target="_blank" rel="noopener">&#128202; Supabase</a>
-      <a href="https://hetrixtools.com/dashboard/uptime-monitors/" target="_blank" rel="noopener">&#128225; Uptime</a>
-      <a href="https://www.triplehenterprisesllc.biz/" target="_blank" rel="noopener">&#127760; Live site</a>
+      <a href="https://github.com/carwash2020/webpagehosting" target="_blank" rel="noopener"><svg class="th-icon" aria-hidden="true"><use href="#icon-folder" xlink:href="#icon-folder"></use></svg> Repo</a>
+      <a href="https://github.com/carwash2020/webpagehosting/actions" target="_blank" rel="noopener"><svg class="th-icon" aria-hidden="true"><use href="#icon-bolt" xlink:href="#icon-bolt"></use></svg> Actions</a>
+      <a href="https://supabase.com/dashboard/project/csvfqdjuobylgafgolho" target="_blank" rel="noopener"><svg class="th-icon" aria-hidden="true"><use href="#icon-chart" xlink:href="#icon-chart"></use></svg> Supabase</a>
+      <a href="https://hetrixtools.com/dashboard/uptime-monitors/" target="_blank" rel="noopener"><svg class="th-icon" aria-hidden="true"><use href="#icon-signal" xlink:href="#icon-signal"></use></svg> Uptime</a>
+      <a href="https://www.triplehenterprisesllc.biz/" target="_blank" rel="noopener"><svg class="th-icon" aria-hidden="true"><use href="#icon-globe" xlink:href="#icon-globe"></use></svg> Live site</a>
     </div>
   </div>
 
@@ -450,7 +451,7 @@
   <div class="dev-panel dev-panel-wide is-collapsible" data-collapse-key="faq">
     <div class="dev-panel-heading" onclick="toggleDevPanel(this)">
       <h2>FAQ editor</h2>
-      <button class="dev-info-bubble" onclick="event.stopPropagation(); openFieldInfo('faq')" aria-label="Where does this appear?" title="Where does this appear?">&#128247;</button>
+      <button class="dev-info-bubble" onclick="event.stopPropagation(); openFieldInfo('faq')" aria-label="Where does this appear?" title="Where does this appear?"><svg class="th-icon" aria-hidden="true"><use href="#icon-camera" xlink:href="#icon-camera"></use></svg></button>
       <span class="dev-collapse-caret">&#9660;</span>
     </div>
     <div class="dev-panel-body">
@@ -466,7 +467,7 @@
   <div class="dev-panel dev-panel-wide is-collapsible" data-collapse-key="terms">
     <div class="dev-panel-heading" onclick="toggleDevPanel(this)">
       <h2>Terms &amp; Conditions editor</h2>
-      <button class="dev-info-bubble" onclick="event.stopPropagation(); openFieldInfo('terms')" aria-label="Where does this appear?" title="Where does this appear?">&#128247;</button>
+      <button class="dev-info-bubble" onclick="event.stopPropagation(); openFieldInfo('terms')" aria-label="Where does this appear?" title="Where does this appear?"><svg class="th-icon" aria-hidden="true"><use href="#icon-camera" xlink:href="#icon-camera"></use></svg></button>
       <span class="dev-collapse-caret">&#9660;</span>
     </div>
     <div class="dev-panel-body">
@@ -992,7 +993,7 @@
 
       el.innerHTML = SITE_CONTENT_FIELDS.map(f =>
         '<div class="tool-form-row"><div class="form-field full"><label style="display:flex; align-items:center; gap:6px;">' + escapeHtml(f.label) +
-        (f.info ? '<button class="dev-info-bubble" onclick="openFieldInfo(\'' + f.info + '\')" title="Where does this appear?" aria-label="Where does this appear?">&#128247;</button>' : '') +
+        (f.info ? '<button class="dev-info-bubble" onclick="openFieldInfo(\'' + f.info + '\')" title="Where does this appear?" aria-label="Where does this appear?"><svg class="th-icon" aria-hidden="true"><use href="#icon-camera" xlink:href="#icon-camera"></use></svg></button>' : '') +
         '</label>' +
         '<input type="text" id="siteContent_' + f.key + '" placeholder="' + escapeHtml(f.placeholder) + '" value="' + escapeHtml(current[f.key] || '') + '"></div></div>'
       ).join('') +
@@ -1249,7 +1250,7 @@
           <div>
             <button class="dev-info-bubble" title="Move up" onclick="moveFaqItem(${i}, -1)" ${i === 0 ? 'disabled' : ''}>&#9650;</button>
             <button class="dev-info-bubble" title="Move down" onclick="moveFaqItem(${i}, 1)" ${i === faqItems.length - 1 ? 'disabled' : ''}>&#9660;</button>
-            <button class="dev-info-bubble dev-danger-btn" title="Delete" onclick="deleteFaqItem(${i})">&#128465;</button>
+            <button class="dev-info-bubble dev-danger-btn" title="Delete" onclick="deleteFaqItem(${i})"><svg class="th-icon" aria-hidden="true"><use href="#icon-trash" xlink:href="#icon-trash"></use></svg></button>
           </div>
         </div>
         <div class="tool-form-row"><div class="form-field full">
@@ -1359,7 +1360,7 @@
           <div>
             <button class="dev-info-bubble" title="Move up" onclick="moveTermsItem(${i}, -1)" ${i === 0 ? 'disabled' : ''}>&#9650;</button>
             <button class="dev-info-bubble" title="Move down" onclick="moveTermsItem(${i}, 1)" ${i === termsItems.length - 1 ? 'disabled' : ''}>&#9660;</button>
-            <button class="dev-info-bubble dev-danger-btn" title="Delete" onclick="deleteTermsItem(${i})">&#128465;</button>
+            <button class="dev-info-bubble dev-danger-btn" title="Delete" onclick="deleteTermsItem(${i})"><svg class="th-icon" aria-hidden="true"><use href="#icon-trash" xlink:href="#icon-trash"></use></svg></button>
           </div>
         </div>
         <div class="tool-form-row"><div class="form-field full">
@@ -1467,7 +1468,7 @@
       '<span class="k">' + escapeHtml(k) + '</span>' +
       '<span style="display:flex; align-items:center; gap:8px;">' +
       '<span class="v">' + (size / 1024).toFixed(1) + ' KB</span>' +
-      '<button class="dev-info-bubble dev-danger-btn" title="Delete this key" onclick="event.stopPropagation(); deleteLocalDataKey(\'' + escapeHtml(k) + '\')">&#128465;</button>' +
+      '<button class="dev-info-bubble dev-danger-btn" title="Delete this key" onclick="event.stopPropagation(); deleteLocalDataKey(\'' + escapeHtml(k) + '\')"><svg class="th-icon" aria-hidden="true"><use href="#icon-trash" xlink:href="#icon-trash"></use></svg></button>' +
       '</span>' +
       '<pre class="dev-raw-view" style="display:none; width:100%; margin:8px 0 0; font-size:11.5px; white-space:pre-wrap; word-break:break-all; max-height:240px; overflow:auto;"></pre>' +
       '</div>';
@@ -2358,7 +2359,7 @@
         '<input type="checkbox" ' + (isDone ? 'checked' : '') + ' onchange="toggleKnownIssue(\'' + issue.id + '\')">' +
         '<div style="flex:1;"><div class="dev-issue-title">' + personDot(issue.createdBy) + escapeHtml(issue.title) + '</div>' +
         '<div class="dev-issue-detail">' + escapeHtml(issue.detail || '') + '</div></div>' +
-        '<button class="dev-info-bubble dev-danger-btn" title="Delete" onclick="deleteKnownIssue(\'' + issue.id + '\')">&#128465;</button>' +
+        '<button class="dev-info-bubble dev-danger-btn" title="Delete" onclick="deleteKnownIssue(\'' + issue.id + '\')"><svg class="th-icon" aria-hidden="true"><use href="#icon-trash" xlink:href="#icon-trash"></use></svg></button>' +
         '</div>';
     }).join('') : '<p class="tool-sub">No known issues logged.</p>') +
     '<div style="margin-top:12px; display:flex; gap:8px; flex-wrap:wrap;">' +
