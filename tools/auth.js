@@ -218,7 +218,26 @@ function getCurrentUserFirstName() {
 
 let _cachedRoleInfo = null; // { roleName, canManageRoles, description } once loaded, or null if unassigned/not loaded
 
+// Called from initSyncOnLoad() before anything else touches the
+// session, added 2026-08-16 after "sometimes I have to refresh for
+// Dev Tools to show up" turned out to be a real, explainable race
+// rather than something flaky: if the stored access token happened to
+// be expired at the exact moment this ran, getCurrentUserEmail()
+// returned null (bailing out immediately, below) and separately
+// getAuthToken() would have silently fallen back to the public anon
+// key -- which account_roles' RLS correctly rejects for anyone but a
+// real authenticated user, coming back as zero rows rather than an
+// error. Either path alone was enough to leave the role permanently
+// null for that page load, even though a background session refresh
+// (kicked off elsewhere, unawaited) would often finish a moment
+// later -- too late to matter, since nothing re-ran the role check
+// afterward. A second load (i.e. hitting refresh) worked because by
+// then the earlier refresh had already completed and been stored.
+// ensureFreshToken() is exactly the same guard already used
+// defensively before other authenticated calls elsewhere in this
+// codebase -- this closes the one place it was missing.
 async function loadCurrentUserRole() {
+  await ensureFreshToken();
   const email = getCurrentUserEmail();
   if (!email) { _cachedRoleInfo = null; return null; }
   try {
