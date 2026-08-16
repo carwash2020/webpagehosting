@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" style="background:#0a0a0a;">
 <head>
 <script src="/tools/auth.js?v=202608162000"></script>
 <script>
@@ -46,6 +46,15 @@
   }
   *{box-sizing:border-box;}
   body{margin:0;background:var(--bg);color:var(--text);font-family:'Inter', -apple-system, 'Segoe UI', sans-serif;font-weight:400;-webkit-font-smoothing:antialiased;}
+  /* Item #3: this page is exempt from loading the shared styles.css
+     (self-contained styles), so it never inherited the slim custom
+     scrollbar every other tool page has -- its help-modal and any
+     scrollable panels were falling back to the plain OS scrollbar. */
+  *{scrollbar-width:thin;scrollbar-color:var(--border) transparent;}
+  *::-webkit-scrollbar{width:9px;height:9px;}
+  *::-webkit-scrollbar-track{background:transparent;}
+  *::-webkit-scrollbar-thumb{background:var(--border);border-radius:8px;border:2px solid transparent;background-clip:padding-box;}
+  *::-webkit-scrollbar-thumb:hover{background:var(--orange-dark);background-clip:padding-box;}
   h1,h2,h3{font-family:'Anton',sans-serif;font-weight:400;letter-spacing:0.5px;margin:0;}
   header{padding:20px 20px 0;max-width:900px;margin:0 auto;}
   header h1{font-size:22px;color:var(--orange-light);text-transform:uppercase;}

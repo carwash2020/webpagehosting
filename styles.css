@@ -19,6 +19,12 @@
     --blue-light:#7ec4ff;
     --radius:10px;
     --maxw:1180px;
+    /* #2: a deliberate 3-tier shadow depth scale (resting / hover /
+       active) instead of every elevated surface picking its own ad-hoc
+       shadow values -- applied within the tool suite below. */
+    --shadow-resting: 0 1px 2px rgba(0,0,0,.25), 0 8px 24px -18px rgba(0,0,0,.55);
+    --shadow-hover: 0 4px 14px -4px rgba(0,0,0,.5), 0 14px 34px -14px rgba(0,0,0,.65);
+    --shadow-active: 0 1px 3px rgba(0,0,0,.4);
   }
 
   *{box-sizing:border-box;}
@@ -1851,6 +1857,18 @@ body.th-tool-page {
     linear-gradient(var(--bg), var(--bg));
   background-attachment: fixed;
 }
+/* Item #1: barely-there grain texture -- an inline SVG feTurbulence
+   noise tile, alpha reduced to ~3% via feComponentTransfer so it reads
+   as a subtle material texture rather than visible static. Scoped to
+   .th-tool-page only (not the public site) via a separate ::before
+   layer rather than folding into the background-image stack above, so
+   it can repeat/tile independently of those fixed-position gradients. */
+body.th-tool-page::before {
+  content: '';
+  position: fixed; inset: 0; z-index: 0; pointer-events: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix type='matrix' values='0 0 0 0 1 0 0 0 0 1 0 0 0 0 1 0 0 0 0.03 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  background-repeat: repeat;
+}
 body.th-tool-page { --radius: 14px; }
 
 ::selection { background: var(--orange); color: #0a0a0a; }
@@ -1859,7 +1877,14 @@ body.th-tool-page { --radius: 14px; }
 *::-webkit-scrollbar-track { background: transparent; }
 *::-webkit-scrollbar-thumb { background: var(--border); border-radius: 8px; border: 2px solid transparent; background-clip: padding-box; }
 *::-webkit-scrollbar-thumb:hover { background: var(--orange-dark); background-clip: padding-box; }
-:focus-visible { outline: 2px solid var(--orange); outline-offset: 2px; border-radius: 4px; }
+:focus-visible {
+  outline: 2px solid var(--orange);
+  outline-offset: 2px;
+  border-radius: 4px;
+  /* matches the glow language already used on button hovers and card
+     hovers elsewhere, instead of being a plain, generic flat outline */
+  box-shadow: 0 0 0 5px var(--orange-tint-soft);
+}
 
 /* ---- surfaces: real elevation, gradient faces ---- */
 body .section-block, body .dev-panel, body .form-section,
@@ -1868,8 +1893,7 @@ body .compliance-card, body .lead-card {
   background: linear-gradient(180deg, var(--bg-panel-2), var(--bg-panel) 55%);
   border: 1px solid var(--border);
   border-radius: var(--radius);
-  box-shadow: 0 1px 0 rgba(255,255,255,.03) inset,
-              0 10px 30px -18px rgba(0,0,0,.7);
+  box-shadow: 0 1px 0 rgba(255,255,255,.03) inset, var(--shadow-resting);
 }
 
 /* section headings: white + orange kicker bar, not tiny orange whisper */
@@ -1994,7 +2018,7 @@ body .tool-tile-icon {
 body .tool-tile-link:hover {
   transform: translateY(-3px);
   border-color: var(--orange-tint-border);
-  box-shadow: 0 14px 30px -12px rgba(0,0,0,.7), 0 0 24px -6px var(--orange-tint-glow);
+  box-shadow: var(--shadow-hover), 0 0 24px -6px var(--orange-tint-glow);
 }
 body .tool-tile-link:hover .tool-tile-icon {
   border-color: var(--orange-tint-border);
@@ -2039,6 +2063,7 @@ body .primary-btn:active, body .secondary-btn:active, body .small-btn:active,
 body .dialog-btn:active, body .note-new-btn:active {
   transform: translateY(1px) scale(.98);
   filter: brightness(.95);
+  box-shadow: inset var(--shadow-active);
 }
 body .tab-btn { position: relative; border-radius: 10px 10px 0 0; }
 body .tab-btn::after {
