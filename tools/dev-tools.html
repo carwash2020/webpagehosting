@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<script src="/tools/auth.js?v=202608160300"></script>
+<script src="/tools/auth.js?v=202608160400"></script>
 <script>
   // Security gate -- redirect to login before this page's own content
   // is meaningfully usable. See auth.js for why this exists (a single
@@ -24,8 +24,8 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="/styles.css?v=202608150500">
-<script src="/tools/tools-common.js?v=202608160300" defer></script>
-<script src="/tools/sync.js?v=202608160300" defer></script>
+<script src="/tools/tools-common.js?v=202608160400" defer></script>
+<script src="/tools/sync.js?v=202608160400" defer></script>
 <style>
   body { padding: 44px 20px 60px; max-width: 1080px; margin: 0 auto; }
 
@@ -2298,8 +2298,27 @@
         '</span><span class="dev-check-status ' + (levelClass[l.level] || '') + '">' + escapeHtml(l.level) + '</span></div>'
       ).join('');
     } catch (e) {
+      // Catch-all logging added 2026-08-16 -- the previous round of
+      // instrumentation had a real hole: ensureFreshToken() runs at the
+      // top of this try, OUTSIDE both inner catch blocks, so if IT
+      // threw, execution landed here and only rendered a message
+      // without ever logging anything. That exactly matched the
+      // observed symptom (error visible on screen, Client errors panel
+      // completely empty of new entries), which is what pointed at this
+      // gap. Logging unconditionally here means there is no longer any
+      // path through this function that can fail silently, wherever the
+      // throw actually originates.
+      if (typeof logClientError === 'function') {
+        logClientError(
+          'advisor-health failed: ' + (e && e.message ? e.message : String(e)),
+          'dev-tools.html', null, null,
+          (e && e.stack) ? e.stack : '(no stack available)'
+        );
+      }
+      if (typeof renderClientErrorLog === 'function') renderClientErrorLog();
       el.innerHTML = '<p class="tool-sub">Could not load advisor data: ' + escapeHtml(e.message || String(e)) + '</p>' +
-        '<p class="tool-sub" style="margin-top:6px; font-size:11px;">See the Client errors panel above for exactly which header value caused this, if it happens again.</p>';
+        '<p class="tool-sub" style="margin-top:6px; font-size:11px; white-space:pre-wrap;">Origin: ' +
+        escapeHtml((e && e.stack) ? String(e.stack).split('\n').slice(0, 4).join('\n') : '(no stack available)') + '</p>';
     }
   }
 
