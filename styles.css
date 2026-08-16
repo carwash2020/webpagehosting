@@ -2041,6 +2041,12 @@ body a.dash-list-item:hover {
 }
 body .dev-check-row:hover { background: var(--orange-tint-soft); }
 body table tbody tr:hover { background: var(--orange-tint-soft); }
+/* Zebra striping for dense multi-column tables (Job Tracker's income/
+   expense logs, 8-9 columns each and growing over months of use) --
+   subtle enough on a dark theme to help scan a row across many columns
+   without competing with the existing hover tint above. */
+body table tbody tr:nth-child(even) { background: rgba(255,255,255,0.02); }
+body table tbody tr:nth-child(even):hover { background: var(--orange-tint-soft); }
 
 /* ---- controls: pill buttons with real states ---- */
 body .primary-btn, body .dialog-btn-primary, body .note-new-btn {
