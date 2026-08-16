@@ -489,6 +489,12 @@
     </div>
 
     <div class="card">
+      <div class="card-header"><h3>Revenue vs. Costs <button class="help-btn" onclick="openCardInfo('revCostChart')" aria-label="What is this?" title="What is this?">?</button></h3></div>
+      <canvas id="revCostChart" height="140" style="width:100%;display:block;"></canvas>
+      <div class="note" id="revCostChartNote"></div>
+    </div>
+
+    <div class="card">
       <div class="card-header"><h3>Safe Draw Calculator <button class="help-btn" onclick="openCardInfo('safeDraw')" aria-label="What is this?" title="What is this?">?</button></h3></div>
       <div class="form-grid">
         <div><label>Months of buffer to keep in the account</label><input type="number" inputmode="decimal" id="drawBufferMonths" value="3" min="0" step="0.5"></div>
@@ -658,6 +664,11 @@ const CARD_INFO = {
     title: 'Net Profit Trend',
     body: `<p>A simple bar chart of your business's net profit for each month you've logged, so you can see at a glance whether it's climbing, flat, or dropping.</p>
       <p>The orange line marks your monthly bills \u2014 bars that reach it or go above it are months the business alone covered your expenses.</p>`,
+  },
+  revCostChart: {
+    title: 'Revenue vs. Costs',
+    body: `<p>The Net Profit Trend chart shows one number per month -- which can't tell you whether a bad month was a low-revenue month or a high-cost one, since both net out to the same result.</p>
+      <p>This splits it apart: orange bars are revenue invoiced, steel bars are total costs (expenses + fuel + other) for that same month, side by side. A shrinking orange bar and a growing steel bar are two very different problems that look identical on the net-profit chart alone.</p>`,
   },
   momComparison: {
     title: 'Month over Month',
@@ -1830,6 +1841,7 @@ function renderRunway(){
   }
 
   drawTrendChart(nets, min);
+  drawRevCostChart(sorted);
 
   renderSafeDraw(min);
 }
@@ -1934,6 +1946,83 @@ function drawTrendChart(nets, min){
   ctx.beginPath();
   ctx.moveTo(padding.left, zeroY);
   ctx.lineTo(w - padding.right, zeroY);
+  ctx.stroke();
+}
+
+// Item #4 (2026-08-17): the trend chart shows NET profit only -- useful,
+// but it can't answer "is this a low-revenue month or a high-cost one,"
+// since both look identical once netted against each other. This shows
+// revenue and total costs (expenses + fuel + other) as paired bars per
+// month, using the exact same logged business-month data as the trend
+// chart above, so a revenue dip and a cost spike finally look different
+// from each other instead of collapsing into the same net number.
+function drawRevCostChart(sortedMonths) {
+  const canvas = document.getElementById('revCostChart');
+  const note = document.getElementById('revCostChartNote');
+  const ctx = canvas.getContext('2d');
+  const dpr = window.devicePixelRatio || 1;
+  const w = canvas.clientWidth || canvas.parentElement.clientWidth;
+  const h = 140;
+  canvas.width = w * dpr;
+  canvas.height = h * dpr;
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  ctx.clearRect(0, 0, w, h);
+
+  if (sortedMonths.length === 0) {
+    note.textContent = 'Log a business month to start seeing this.';
+    return;
+  }
+  note.textContent = 'Orange = revenue invoiced. Steel = expenses, fuel, and other costs combined.';
+
+  const padding = { top: 10, bottom: 20, left: 4, right: 4 };
+  const plotW = w - padding.left - padding.right;
+  const plotH = h - padding.top - padding.bottom;
+  const points = sortedMonths.map(m => ({
+    revenue: Number(m.revenue) || 0,
+    costs: (Number(m.expenses) || 0) + (Number(m.fuel) || 0) + (Number(m.other) || 0),
+  }));
+  const maxVal = Math.max(...points.map(p => Math.max(p.revenue, p.costs)), 1);
+  const groupW = plotW / points.length;
+  const barW = Math.min(groupW * 0.36, 26);
+  const gap = 3;
+
+  function roundedTopRect(x, y, width, height, radius) {
+    const r = Math.min(radius, height / 2, width / 2);
+    ctx.beginPath();
+    ctx.moveTo(x, y + height);
+    ctx.lineTo(x, y + r);
+    ctx.arcTo(x, y, x + r, y, r);
+    ctx.lineTo(x + width - r, y);
+    ctx.arcTo(x + width, y, x + width, y + r, r);
+    ctx.lineTo(x + width, y + height);
+    ctx.closePath();
+  }
+
+  points.forEach((p, i) => {
+    const groupCenter = padding.left + i * groupW + groupW / 2;
+    const revH = Math.max((p.revenue / maxVal) * plotH, 1);
+    const costH = Math.max((p.costs / maxVal) * plotH, 1);
+
+    const revGrad = ctx.createLinearGradient(0, padding.top + plotH - revH, 0, padding.top + plotH);
+    revGrad.addColorStop(0, '#ffb347');
+    revGrad.addColorStop(1, '#cc6600');
+    ctx.fillStyle = revGrad;
+    roundedTopRect(groupCenter - gap / 2 - barW, padding.top + plotH - revH, barW, revH, 3);
+    ctx.fill();
+
+    const costGrad = ctx.createLinearGradient(0, padding.top + plotH - costH, 0, padding.top + plotH);
+    costGrad.addColorStop(0, '#b8bec7');
+    costGrad.addColorStop(1, '#7d8590');
+    ctx.fillStyle = costGrad;
+    roundedTopRect(groupCenter + gap / 2, padding.top + plotH - costH, barW, costH, 3);
+    ctx.fill();
+  });
+
+  ctx.strokeStyle = 'rgba(255,255,255,0.18)';
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  ctx.moveTo(padding.left, padding.top + plotH);
+  ctx.lineTo(w - padding.right, padding.top + plotH);
   ctx.stroke();
 }
 
