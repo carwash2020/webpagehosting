@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<script src="/tools/auth.js?v=202608160400"></script>
+<script>
+  // Security gate -- redirect to login before this page's own content
+  // is meaningfully usable. See auth.js for why this exists (a single
+  // shared account keeping randoms out, not a multi-user system).
+  requireAuth();
+</script>
+<link rel="manifest" href="/tools/manifest.json">
+<meta name="theme-color" content="#0a0a0a">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Triple H">
+<link rel="apple-touch-icon" href="/images/apple-touch-icon.png">
+
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="robots" content="noindex, nofollow">
+<title>Settings · Triple H Enterprises</title>
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data:; connect-src 'self' https://*.supabase.co wss://*.supabase.co https://api.github.com; frame-src 'none'; object-src 'none'; base-uri 'self'; frame-ancestors 'none';">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Anton&family=Oswald:wght@400;500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/styles.css?v=202608161430">
+<script src="/tools/tools-common.js?v=202608161700" defer></script>
+<script src="/tools/sync.js?v=202608161700" defer></script>
+<script src="/tools/push-notifications.js?v=202608160400" defer></script>
+<style>
+  body { padding: 44px 20px 60px; max-width: 640px; margin: 0 auto; }
+
+  .settings-section {
+    background: var(--bg-panel-2); border: 1px solid var(--border); border-radius: var(--radius);
+    padding: 20px; margin-bottom: 16px;
+  }
+  .settings-section h2 {
+    font-family: 'Oswald', sans-serif; font-size: 15px; color: var(--white);
+    text-transform: uppercase; letter-spacing: 1px; margin: 0 0 4px;
+  }
+  .settings-section .settings-desc { color: var(--text-dim); font-size: 13px; margin: 0 0 16px; line-height: 1.5; }
+  .settings-row {
+    display: flex; justify-content: space-between; align-items: center; gap: 12px;
+    padding: 12px 0; border-bottom: 1px solid var(--border);
+  }
+  .settings-row:last-child { border-bottom: none; }
+  .settings-row-label { font-size: 14px; color: var(--white); }
+  .settings-row-sub { font-size: 12.5px; color: var(--text-dim); margin-top: 2px; }
+  .settings-account-name { font-family: 'Oswald', sans-serif; font-size: 20px; color: var(--white); }
+  .settings-account-email { color: var(--text-dim); font-size: 13.5px; margin-top: 2px; }
+  .settings-role-badge {
+    display: inline-block; margin-top: 8px; padding: 3px 10px; border-radius: 20px;
+    background: var(--orange-tint-soft); border: 1px solid var(--orange-tint-border);
+    color: var(--orange-light); font-size: 11.5px; font-weight: 600; text-transform: uppercase; letter-spacing: .4px;
+  }
+  .danger-zone { border-color: rgba(224,82,82,0.3); }
+</style>
+</head>
+<body>
+
+<div id="settingsMainView" style="display:none;">
+  <div class="hub-header">
+    <div class="hub-header-left">
+      <img src="/images/logo-signature-orange.webp?v=202608142300" alt="Triple H Enterprises">
+      <span class="hub-title">Settings</span>
+    </div>
+    <a href="/tools/workspace.html" class="help-btn" aria-label="Back to Dashboard" title="Back to Dashboard" style="text-decoration:none; display:inline-flex; align-items:center; justify-content:center;">&#8617;</a>
+  </div>
+  <p class="hub-sub">Account, display, and notification preferences.</p>
+
+  <div class="settings-section">
+    <h2>Account</h2>
+    <div class="settings-account-name" id="settingsAccountName">&nbsp;</div>
+    <div class="settings-account-email" id="settingsAccountEmail"></div>
+    <div class="settings-role-badge" id="settingsRoleBadge" style="display:none;"></div>
+  </div>
+
+  <div class="settings-section">
+    <h2>Display</h2>
+    <p class="settings-desc">A personal preference for this device -- doesn't affect how the app looks for anyone else.</p>
+    <div class="settings-row">
+      <div>
+        <div class="settings-row-label">Row density</div>
+        <div class="settings-row-sub">Compact view fits more on screen at once.</div>
+      </div>
+      <button class="secondary-btn" data-density-toggle onclick="toggleDensityPreference()" aria-pressed="false">Compact view</button>
+    </div>
+  </div>
+
+  <div class="settings-section">
+    <h2>Notifications</h2>
+    <p class="settings-desc">Push alerts for tomorrow's jobs, overdue invoices, new leads, and the weekly summary -- sent to this device specifically.</p>
+    <div class="settings-row">
+      <div>
+        <div class="settings-row-label">Push notifications</div>
+        <div class="settings-row-sub" id="settingsPushStatus">Checking...</div>
+      </div>
+      <button class="secondary-btn" id="settingsPushToggleBtn" onclick="handleSettingsPushToggle()">Turn on</button>
+    </div>
+  </div>
+
+  <div class="settings-section">
+    <h2>Quick tour</h2>
+    <p class="settings-desc">The 3-step Dashboard walkthrough (Snapshot, Action Items, Tools) shown when you first log in.</p>
+    <div class="settings-row">
+      <div>
+        <div class="settings-row-label">Replay the tour</div>
+        <div class="settings-row-sub">Runs the walkthrough again next time you open the Dashboard.</div>
+      </div>
+      <a href="/tools/workspace.html?tour=1" class="secondary-btn" style="text-decoration:none;">Replay tour</a>
+    </div>
+  </div>
+
+  <div class="settings-section danger-zone">
+    <h2>Session</h2>
+    <div class="settings-row">
+      <div>
+        <div class="settings-row-label">Sign out</div>
+        <div class="settings-row-sub">You'll need to log in again on this device.</div>
+      </div>
+      <button class="secondary-btn" onclick="signOut()">Sign out</button>
+    </div>
+  </div>
+</div>
+
+<script>
+  document.addEventListener('DOMContentLoaded', async function () {
+    document.getElementById('settingsMainView').style.display = '';
+
+    // Account info
+    const email = (typeof getCurrentUserEmail === 'function' && getCurrentUserEmail()) || '';
+    const firstName = (typeof getCurrentUserFirstName === 'function' && getCurrentUserFirstName()) || null;
+    document.getElementById('settingsAccountName').textContent = firstName || (email || 'Signed in');
+    document.getElementById('settingsAccountEmail').textContent = email;
+
+    if (typeof loadCurrentUserRole === 'function') {
+      const role = await loadCurrentUserRole();
+      const badge = document.getElementById('settingsRoleBadge');
+      if (role && role.roleName) {
+        badge.textContent = role.roleName;
+        badge.style.display = 'inline-block';
+      }
+    }
+
+    // Notifications -- reuses the exact same push-notifications.js
+    // functions the Dashboard header's bell icon already calls, so
+    // toggling here and toggling there always agree with each other.
+    await refreshSettingsPushState();
+  });
+
+  async function refreshSettingsPushState() {
+    const btn = document.getElementById('settingsPushToggleBtn');
+    const status = document.getElementById('settingsPushStatus');
+    if (typeof pushNotificationsSupported !== 'function' || !pushNotificationsSupported()) {
+      status.textContent = 'Not supported on this browser.';
+      btn.disabled = true;
+      btn.textContent = 'Unavailable';
+      return;
+    }
+    const enabled = await isPushEnabled();
+    status.textContent = enabled ? 'On for this device.' : 'Off for this device.';
+    btn.textContent = enabled ? 'Turn off' : 'Turn on';
+  }
+
+  async function handleSettingsPushToggle() {
+    const btn = document.getElementById('settingsPushToggleBtn');
+    const currentlyEnabled = await isPushEnabled();
+
+    if (currentlyEnabled) {
+      const confirmed = await showConfirm('Turn off notifications on this device?');
+      if (!confirmed) return;
+      await disablePushNotifications();
+      await refreshSettingsPushState();
+      return;
+    }
+
+    btn.disabled = true;
+    const result = await enablePushNotifications();
+    btn.disabled = false;
+    if (!result.ok) {
+      await showAlert(result.error);
+      return;
+    }
+    await refreshSettingsPushState();
+    showToast('Notifications are on for this device.');
+  }
+</script>
+
+</body>
+</html>

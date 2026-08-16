@@ -275,7 +275,7 @@
   </div>
   <button class="help-btn" onclick="openHelpModal()" aria-label="How to use this dashboard" title="How to use this dashboard">?</button>
   <button class="help-btn" id="pushToggleBtn" onclick="handlePushToggle()" aria-label="Toggle notifications" title="Toggle notifications"><svg class="th-icon" aria-hidden="true"><use href="#icon-bell" xlink:href="#icon-bell"></use></svg></button>
-  <button class="help-btn is-muted" onclick="signOut()" aria-label="Log out" title="Log out">&#x21B0;</button>
+  <a href="/tools/settings.html" class="help-btn" aria-label="Settings" title="Settings" style="text-decoration:none; display:inline-flex; align-items:center; justify-content:center;"><svg class="th-icon" aria-hidden="true"><use href="#icon-gear" xlink:href="#icon-gear"></use></svg></a>
 </div>
 <p class="hub-sub"><span class="realtime-badge" id="realtimeBadge" style="margin-left:0;"><span class="realtime-dot" id="realtimeDot"></span><span id="realtimeText">Live sync: connecting...</span></span><span class="pending-changes-badge" id="pendingChangesBadge" style="display:none;">&#9679; Unsynced changes</span>
   <button class="help-btn" id="refreshSyncLink" onclick="manualRefreshSync(renderDashboard)" aria-label="Refresh synced data now" title="Refresh synced data now" style="width:26px; height:26px; font-size:13px; vertical-align:middle; margin-left:6px;">&#8635;</button>

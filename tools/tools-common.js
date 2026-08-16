@@ -860,7 +860,7 @@ if (typeof document !== 'undefined') {
 
     '<symbol id="icon-calendar" viewBox="0 0 24 24"><rect x="3.5" y="5" width="17" height="15.5" rx="1.5"/><line x1="3.5" y1="9.5" x2="20.5" y2="9.5"/><line x1="8" y1="3" x2="8" y2="7"/><line x1="16" y1="3" x2="16" y2="7"/></symbol>' +
 
-    '<symbol id="icon-dollar" viewBox="0 0 24 24"><line x1="12" y1="3" x2="12" y2="21"/><path d="M15 7.2C15.6 5.6 8.4 8.2 12 12C15.6 15.8 8.4 18.4 9 16.8"/></symbol>' +
+    '<symbol id="icon-dollar" viewBox="0 0 24 24"><text x="12" y="17.5" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="17" font-weight="700" fill="currentColor" stroke="none">$</text></symbol>' +
 
     '<symbol id="icon-toolbox" viewBox="0 0 24 24"><rect x="3" y="9" width="18" height="10.5" rx="1.5"/><path d="M8 9V6.5c0-.8.7-1.5 1.5-1.5h5c.8 0 1.5.7 1.5 1.5V9"/><line x1="3" y1="13.5" x2="21" y2="13.5"/><line x1="10.5" y1="13.5" x2="10.5" y2="15.5"/><line x1="13.5" y1="13.5" x2="13.5" y2="15.5"/></symbol>' +
 
