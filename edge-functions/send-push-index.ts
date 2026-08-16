@@ -212,7 +212,7 @@ async function checkTomorrowsJobs(jobs: any[]) {
   const body = dueTomorrow.length === 1
     ? `"${dueTomorrow[0].title}" is scheduled for tomorrow.`
     : `${dueTomorrow.length} jobs are scheduled for tomorrow.`;
-  await sendToAllSubscriptions({ title: "Tomorrow's Schedule", body, url: "/workspace.html" });
+  await sendToAllSubscriptions({ title: "Tomorrow's Schedule", body, url: "/tools/workspace.html" });
 }
 
 async function checkFollowups(jobs: any[]) {
@@ -234,7 +234,7 @@ async function checkFollowups(jobs: any[]) {
     await sendToAllSubscriptions({
       title: "Client Follow-Up",
       body: `It's been ${Math.round(daysSince / 30)} months since ${client}'s last job.`,
-      url: "/workspace.html",
+      url: "/tools/workspace.html",
     });
     await markNotified("followup", client);
   }
@@ -256,7 +256,7 @@ async function checkOverdueInvoices(invoices: any[]) {
     await sendToAllSubscriptions({
       title: "Invoice Overdue",
       body: `${inv.clientName || "A client"}'s invoice (#${inv.invoiceNumber || inv.id}) is overdue.`,
-      url: "/workspace.html",
+      url: "/tools/workspace.html",
     });
     await markNotified("invoice-overdue", itemKey);
   }
@@ -286,7 +286,7 @@ async function checkCompliance(compliance: any) {
     const body = days < 0
       ? `${item.label} has expired.`
       : `${item.label} expires in ${days} day${days === 1 ? "" : "s"}.`;
-    await sendToAllSubscriptions({ title: "Compliance Alert", body, url: "/workspace.html" });
+    await sendToAllSubscriptions({ title: "Compliance Alert", body, url: "/tools/workspace.html" });
     await markNotified("compliance-expiring", item.key);
   }
 }
@@ -304,7 +304,7 @@ async function checkOverdueNotStarted(jobs: any[]) {
     await sendToAllSubscriptions({
       title: "Overdue: Never Started",
       body: `"${job.title}" was a high-priority job due ${job.date} and hasn't been started.`,
-      url: "/workspace.html",
+      url: "/tools/workspace.html",
     });
     await markNotified("overdue-not-started", itemKey);
   }
@@ -328,7 +328,7 @@ async function checkStuckInProgress(jobs: any[]) {
     await sendToAllSubscriptions({
       title: "Job Stuck In Progress",
       body: `"${job.title}" has been In Progress for ${daysSince} days.`,
-      url: "/workspace.html",
+      url: "/tools/workspace.html",
     });
     await markNotified("stuck-in-progress", itemKey);
   }
@@ -348,7 +348,7 @@ async function checkStaleSync(syncUpdatedAt: string | undefined) {
   await sendToAllSubscriptions({
     title: "Sync Hasn't Run Recently",
     body: `Your data hasn't synced to the cloud in ${daysSince} days. Open the app with a connection to back it up.`,
-    url: "/workspace.html",
+    url: "/tools/workspace.html",
   });
   await markNotified("sync-stale", "sync");
 }
@@ -375,7 +375,7 @@ async function checkUnconvertedQuotes(quotes: any[], invoices: any[]) {
     await sendToAllSubscriptions({
       title: "Quote Never Followed Up",
       body: `${quote.clientName || "A client"}'s quote from ${quote.date} was never converted to an invoice.`,
-      url: "/workspace.html",
+      url: "/tools/workspace.html",
     });
     await markNotified("quote-unconverted", itemKey);
   }
@@ -395,7 +395,7 @@ async function checkPhotolessCompletedJobs(jobs: any[]) {
     await sendToAllSubscriptions({
       title: "Completed Job Has No Photos",
       body: `"${job.title}" was marked complete with no photos attached.`,
-      url: "/workspace.html",
+      url: "/tools/workspace.html",
     });
     await markNotified("job-no-photos", itemKey);
   }
@@ -417,7 +417,7 @@ async function checkWarrantyCheckIn(jobs: any[]) {
     await sendToAllSubscriptions({
       title: "Warranty Ending Soon",
       body: `${job.client ? job.client + "'s" : "A"} 30-day warranty on "${job.title}" ends in ${daysLeft} day${daysLeft === 1 ? "" : "s"} -- worth a check-in call.`,
-      url: "/workspace.html",
+      url: "/tools/workspace.html",
     });
     await markNotified("warranty-checkin", itemKey);
   }
@@ -449,7 +449,7 @@ async function checkUnrespondedLeads() {
     await sendToAllSubscriptions({
       title: "Lead Still Unanswered",
       body: `${lead.name || "A lead"} has been waiting ${waitLabel} with no response.`,
-      url: "/workspace.html",
+      url: "/tools/workspace.html",
     });
     await markNotified("unresponded-lead", itemKey);
   }
@@ -513,7 +513,7 @@ async function sendWeeklyDigest() {
   await sendToAllSubscriptions({
     title: "Weekly Summary",
     body: parts.join(" \u00b7 "),
-    url: "/workspace.html",
+    url: "/tools/workspace.html",
   });
 }
 
@@ -530,7 +530,7 @@ Deno.serve(async (req: Request) => {
       await sendToAllSubscriptions({
         title: "New Lead",
         body: `${name} just submitted the contact form.`,
-        url: "/workspace.html",
+        url: "/tools/workspace.html",
       });
       return new Response(JSON.stringify({ ok: true }), { headers: { "Content-Type": "application/json" } });
     }

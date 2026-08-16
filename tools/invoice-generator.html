@@ -1279,6 +1279,14 @@
   document.addEventListener('DOMContentLoaded', () => {
     populateKnownContactsList();
     populatePriceRefPickers();
+    // Bug fix (2026-08-16): same missed-initial-pull bug as calendar.html
+    // and contract-generator.html -- realtime only delivers changes that
+    // happen while this tab is open. Without an initial pull, contacts,
+    // price references, and the shared tax rate edited on another device
+    // were stale here on every fresh page load.
+    if (typeof initSyncOnLoad === 'function') {
+      initSyncOnLoad().then(() => { loadSharedTaxRate(); populateKnownContactsList(); populatePriceRefPickers(); });
+    }
     if (typeof startRealtimeSync === 'function') {
       startRealtimeSync(() => { loadSharedTaxRate(); populateKnownContactsList(); populatePriceRefPickers(); }, updateRealtimeBadge);
     }

@@ -347,8 +347,23 @@
     viewYear = today.getFullYear();
     viewMonth = today.getMonth();
     selectedDateStr = dateKey(viewYear, viewMonth, today.getDate());
+    // First pass renders whatever localStorage has so the page isn't blank
+    // while the network round-trip runs.
     renderCalendar();
     renderDayDetail();
+    // Bug fix (2026-08-16): this page loaded sync.js but never called
+    // initSyncOnLoad(), so it only ever showed this device's stale
+    // localStorage copy of th_tracker_jobs -- jobs added on another device
+    // never appeared here until some other tool happened to pull. Pull
+    // once on load and re-render, matching every other synced tool page.
+    if (typeof initSyncOnLoad === 'function') {
+      initSyncOnLoad().then(() => { renderCalendar(); renderDayDetail(); });
+    }
+    // Live updates too: a job scheduled from Job Tracker on another device
+    // now shows up here without a manual refresh.
+    if (typeof startRealtimeSync === 'function') {
+      startRealtimeSync(() => { renderCalendar(); renderDayDetail(); });
+    }
   });
 </script>
 </body>

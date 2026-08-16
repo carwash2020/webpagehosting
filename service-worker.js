@@ -53,7 +53,7 @@
 // immediately after logging. Still bumping this so that fix reaches
 // devices without needing yet another round-trip to explain why it
 // didn't show up.
-const CACHE_NAME = 'th-workspace-v5';
+const CACHE_NAME = 'th-workspace-v6';
 const PRECACHE_URLS = [
   '/tools/workspace.html', '/tools/job-tracker.html', '/tools/invoice-generator.html', '/tools/contract-generator.html',
   '/tools/calendar.html', '/tools/route-planner.html', '/tools/review-request.html', '/tools/contact-card.html',
@@ -113,14 +113,14 @@ self.addEventListener('push', (event) => {
       body: data.body,
       icon: '/images/icon-192.png',
       badge: '/images/icon-192.png',
-      data: { url: data.url || '/workspace.html' },
+      data: { url: data.url || '/tools/workspace.html' },
     })
   );
 });
 
 self.addEventListener('notificationclick', (event) => {
   event.notification.close();
-  const targetUrl = (event.notification.data && event.notification.data.url) || '/workspace.html';
+  const targetUrl = (event.notification.data && event.notification.data.url) || '/tools/workspace.html';
   event.waitUntil(
     self.clients.matchAll({ type: 'window' }).then((clientsList) => {
       for (const client of clientsList) {

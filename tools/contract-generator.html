@@ -782,6 +782,13 @@
     renderContractLog();
     initSignaturePad('signatureCanvas', 'signatureStatus');
     initSignaturePad('businessSignatureCanvas', 'businessSignatureStatus');
+    // Bug fix (2026-08-16): same missed-initial-pull bug as calendar.html --
+    // realtime was wired up but nothing pulled on load, so contracts and
+    // contacts saved from another device stayed invisible here until a live
+    // event happened to arrive. Pull once, then re-render from fresh data.
+    if (typeof initSyncOnLoad === 'function') {
+      initSyncOnLoad().then(() => { populateContactPickers(); renderContractLog(); });
+    }
     if (typeof startRealtimeSync === 'function') {
       startRealtimeSync(renderContractLog, updateRealtimeBadge);
     }

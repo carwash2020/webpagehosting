@@ -91,8 +91,17 @@
      added here 2026-08-15 because this page has 16 panels and reaching
      anything past the first few meant a long scroll on a phone. */
   .jump-nav {
-    position: sticky; top: 0; z-index: 50; display: flex; gap: 6px; overflow-x: auto;
-    background: var(--bg); border-bottom: 1px solid var(--border); padding: 10px 0; margin-bottom: 20px;
+    position: sticky; top: 0; z-index: 100; display: flex; gap: 6px; overflow-x: auto;
+    background: var(--bg); border-bottom: 1px solid var(--border);
+    /* Full-bleed fix (2026-08-16): body has 44px top / 20px side padding, so
+       the old 0-margin nav left see-through gutters where panel content
+       (notably the Advisor Health rows) scrolled visibly above and beside
+       the sticky bar. Negative x-margins + matching padding close the side
+       gutters; the first box-shadow layer paints an opaque block over the
+       44px top-padding zone; the second adds depth so content sliding
+       underneath reads as intentional. */
+    padding: 10px 20px; margin: 0 -20px 20px;
+    box-shadow: 0 -44px 0 0 var(--bg), 0 4px 12px rgba(0,0,0,.35);
   }
   .jump-nav a {
     display: flex; align-items: center; gap: 6px;
