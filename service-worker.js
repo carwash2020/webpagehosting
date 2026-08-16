@@ -42,7 +42,18 @@
 // Same reasoning as the v2->v3 bump just above: without bumping this
 // again, THIS change would hit the identical "device never actually
 // gets it" problem it was meant to help diagnose.
-const CACHE_NAME = 'th-workspace-v4';
+// Bumped 2026-08-16 (third time today): dev-tools.html changed again --
+// found the diagnostic added in v4 WAS actually firing correctly, but
+// the Client errors panel display only renders once at page load and
+// wasn't refreshing itself after a new entry got logged mid-session.
+// Screenshots confirmed the new code was already live (a new hint line
+// in the error text was showing) but the panel still only showed old
+// entries from before -- not a caching problem this time, a real bug
+// in the render logic, now fixed by calling renderClientErrorLog()
+// immediately after logging. Still bumping this so that fix reaches
+// devices without needing yet another round-trip to explain why it
+// didn't show up.
+const CACHE_NAME = 'th-workspace-v5';
 const PRECACHE_URLS = [
   '/tools/workspace.html', '/tools/job-tracker.html', '/tools/invoice-generator.html', '/tools/contract-generator.html',
   '/tools/calendar.html', '/tools/route-planner.html', '/tools/review-request.html', '/tools/contact-card.html',

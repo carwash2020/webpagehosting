@@ -2216,32 +2216,57 @@
     try {
       if (typeof ensureFreshToken === 'function') await ensureFreshToken();
 
-      // Build and inspect every header value BEFORE attempting the
-      // fetch, so if construction itself throws, we already have a
-      // concrete diagnostic captured rather than just the browser's
-      // own generic error with no context.
-      const authValue = 'Bearer ' + getAuthToken();
-      const diagnostics = [
-        describeHeaderValue('apikey', SUPABASE_ANON_KEY),
-        describeHeaderValue('Authorization', authValue),
-      ].join(' | ');
-
       let res;
+      let alreadyLogged = false;
       try {
-        res = await fetchWithTimeout(SUPABASE_URL + '/functions/v1/advisor-health', 15000, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'apikey': SUPABASE_ANON_KEY,
-            'Authorization': authValue,
-          },
-          body: '{}',
-        });
-      } catch (fetchErr) {
-        if (typeof logClientError === 'function') {
-          logClientError('advisor-health request construction failed: ' + (fetchErr.message || String(fetchErr)) + ' -- ' + diagnostics, 'dev-tools.html', null, null, fetchErr.stack);
+        // authValue/diagnostics built INSIDE this try too -- if
+        // getAuthToken() or the diagnostic helper itself is somehow
+        // where this actually fails, that gets caught below as well,
+        // not just a failure inside fetchWithTimeout specifically.
+        const authValue = 'Bearer ' + getAuthToken();
+        const diagnostics = [
+          describeHeaderValue('apikey', SUPABASE_ANON_KEY),
+          describeHeaderValue('Authorization', authValue),
+        ].join(' | ');
+
+        try {
+          res = await fetchWithTimeout(SUPABASE_URL + '/functions/v1/advisor-health', 15000, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'apikey': SUPABASE_ANON_KEY,
+              'Authorization': authValue,
+            },
+            body: '{}',
+          });
+        } catch (fetchErr) {
+          alreadyLogged = true;
+          if (typeof logClientError === 'function') {
+            logClientError('advisor-health request construction failed: ' + (fetchErr.message || String(fetchErr)) + ' -- ' + diagnostics, 'dev-tools.html', null, null, fetchErr.stack);
+          }
+          // Without this, the diagnostic above is written to storage
+          // but the Client errors panel keeps showing whatever it
+          // rendered at page load -- exactly what happened testing
+          // this the first time: the real entry was there, just
+          // invisible until the next full page reload re-ran
+          // renderClientErrorLog(). This makes the new entry show up
+          // immediately instead.
+          if (typeof renderClientErrorLog === 'function') renderClientErrorLog();
+          throw fetchErr;
         }
-        throw fetchErr;
+      } catch (buildErr) {
+        // If alreadyLogged, this is just the same error propagating up
+        // from the inner catch above -- don't log it twice. Only a
+        // genuinely different failure point (getAuthToken() or the
+        // diagnostic helper itself throwing, before the fetch attempt
+        // was even reached) lands here for the first time.
+        if (!alreadyLogged) {
+          if (typeof logClientError === 'function') {
+            logClientError('advisor-health header/token construction failed before fetch: ' + (buildErr.message || String(buildErr)), 'dev-tools.html', null, null, buildErr.stack);
+          }
+          if (typeof renderClientErrorLog === 'function') renderClientErrorLog();
+        }
+        throw buildErr;
       }
 
       const body = await res.json().catch(() => ({}));
