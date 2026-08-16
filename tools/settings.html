@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<script src="/tools/auth.js?v=202608160400"></script>
+<script src="/tools/auth.js?v=202608162000"></script>
 <script>
   // Security gate -- redirect to login before this page's own content
   // is meaningfully usable. See auth.js for why this exists (a single
@@ -25,7 +25,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Anton&family=Oswald:wght@400;500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="/styles.css?v=202608161430">
-<script src="/tools/tools-common.js?v=202608161700" defer></script>
+<script src="/tools/tools-common.js?v=202608162000" defer></script>
 <script src="/tools/sync.js?v=202608161700" defer></script>
 <script src="/tools/push-notifications.js?v=202608160400" defer></script>
 <style>
@@ -112,6 +112,18 @@
     </div>
   </div>
 
+  <div class="settings-section">
+    <h2>Password</h2>
+    <p class="settings-desc">Sends a reset link to your own email address -- there's no in-app password field, since Supabase Auth doesn't accept a password change without re-verifying it's really you first.</p>
+    <div class="settings-row">
+      <div>
+        <div class="settings-row-label">Change password</div>
+        <div class="settings-row-sub" id="settingsPwStatus">&nbsp;</div>
+      </div>
+      <button class="secondary-btn" id="settingsPwResetBtn" onclick="handleSettingsPasswordReset()">Send reset link</button>
+    </div>
+  </div>
+
   <div class="settings-section danger-zone">
     <h2>Session</h2>
     <div class="settings-row">
@@ -184,6 +196,20 @@
     }
     await refreshSettingsPushState();
     showToast('Notifications are on for this device.');
+  }
+  async function handleSettingsPasswordReset() {
+    const email = (typeof getCurrentUserEmail === 'function' && getCurrentUserEmail()) || '';
+    const btn = document.getElementById('settingsPwResetBtn');
+    const status = document.getElementById('settingsPwStatus');
+    if (!email) { status.textContent = "Couldn't find your email -- try signing out and back in."; return; }
+
+    btn.disabled = true;
+    btn.textContent = 'Sending...';
+    const result = await requestPasswordReset(email);
+    btn.disabled = false;
+    btn.textContent = 'Send reset link';
+
+    status.textContent = result.ok ? `Sent to ${email} -- check your inbox.` : result.error;
   }
 </script>
 

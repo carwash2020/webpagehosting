@@ -100,6 +100,56 @@ async function signIn(email, password, rememberMe) {
   }
 }
 
+// Sends Supabase's built-in password-recovery email. redirect_to tells
+// Supabase where the link inside that email should land -- if this URL
+// isn't in the project's Auth > URL Configuration > Redirect URLs
+// allow-list, Supabase silently falls back to the project's default Site
+// URL instead of erroring here, so the send itself still succeeds even
+// if that one-time dashboard setup hasn't been done yet.
+async function requestPasswordReset(email) {
+  try {
+    const redirectTo = window.location.origin + '/tools/reset-password.html';
+    const res = await fetch(`${SUPABASE_URL}/auth/v1/recover?redirect_to=${encodeURIComponent(redirectTo)}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'apikey': SUPABASE_ANON_KEY },
+      body: JSON.stringify({ email }),
+    });
+    // Supabase returns 200 here regardless of whether the email address
+    // actually has an account, by design (so this endpoint can't be used
+    // to check which emails are registered). A non-2xx response means
+    // something else went wrong (rate limit, malformed request, etc.).
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({}));
+      return { ok: false, error: data.error_description || data.msg || 'Could not send reset email.' };
+    }
+    return { ok: true };
+  } catch (e) {
+    return { ok: false, error: 'Network error -- check your connection and try again.' };
+  }
+}
+
+// Used only by reset-password.html, with the one-time recovery access
+// token Supabase put in that page's URL -- not the normal stored
+// session, since at this point the person isn't logged in yet.
+async function updatePasswordWithRecoveryToken(recoveryAccessToken, newPassword) {
+  try {
+    const res = await fetch(`${SUPABASE_URL}/auth/v1/user`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+        'apikey': SUPABASE_ANON_KEY,
+        'Authorization': `Bearer ${recoveryAccessToken}`,
+      },
+      body: JSON.stringify({ password: newPassword }),
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) return { ok: false, error: data.error_description || data.msg || 'Could not update password.' };
+    return { ok: true };
+  } catch (e) {
+    return { ok: false, error: 'Network error -- check your connection and try again.' };
+  }
+}
+
 async function refreshSession() {
   const s = getStoredSession();
   if (!s || !s.refresh_token) return false;

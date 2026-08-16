@@ -866,6 +866,8 @@ if (typeof document !== 'undefined') {
 
     '<symbol id="icon-gear" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3.2"/><path d="M12 3.5v2.3M12 18.2v2.3M20.5 12h-2.3M5.8 12H3.5M18 6l-1.6 1.6M7.6 16.4L6 18M18 18l-1.6-1.6M7.6 7.6L6 6"/></symbol>' +
 
+    '<symbol id="icon-settings" viewBox="0 0 24 24"><line x1="3.5" y1="7" x2="20.5" y2="7"/><circle cx="8.5" cy="7" r="2.3"/><line x1="3.5" y1="12" x2="20.5" y2="12"/><circle cx="16" cy="12" r="2.3"/><line x1="3.5" y1="17" x2="20.5" y2="17"/><circle cx="11" cy="17" r="2.3"/></symbol>' +
+
     '<symbol id="icon-link" viewBox="0 0 24 24"><rect x="3" y="9" width="9" height="6" rx="3" transform="rotate(-45 7.5 12)"/><rect x="12" y="9" width="9" height="6" rx="3" transform="rotate(-45 16.5 12)"/></symbol>' +
 
     '<symbol id="icon-clipboard" viewBox="0 0 24 24"><rect x="5" y="4.5" width="14" height="17" rx="1.5"/><rect x="9" y="3" width="6" height="3" rx="1"/><line x1="8" y1="10.5" x2="16" y2="10.5"/><line x1="8" y1="14" x2="16" y2="14"/><line x1="8" y1="17.5" x2="13" y2="17.5"/></symbol>' +
