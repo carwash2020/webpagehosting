@@ -667,3 +667,50 @@ function initSwipeToDismissModals() {
 }
 
 document.addEventListener('DOMContentLoaded', initSwipeToDismissModals);
+
+// ---------------------------------------------------------------------------
+// MOBILE BOTTOM APP NAV -- added 2026-08-16 (redesign v2)
+// Injected here so every tool page gets it from one file. Styled entirely
+// by the "TOOL SUITE REDESIGN v2" layer in /styles.css (.th-bottom-nav),
+// which only displays it under 720px -- desktop never sees it. Also tags
+// <body> with th-tool-page (ambient background + radius tokens) and
+// th-has-bottomnav (bottom padding so content clears the fixed bar).
+// login.html is excluded: no point navigating before you're signed in.
+// ---------------------------------------------------------------------------
+(function () {
+  if (typeof document === 'undefined') return;
+  var path = (window.location && window.location.pathname) || '';
+  var onLogin = /\/login\.html$/.test(path);
+
+  var DESTS = [
+    { href: '/tools/workspace.html',         icon: '\u{1F3E0}', label: 'Home' },
+    { href: '/tools/job-tracker.html',       icon: '\u{1F6E0}\uFE0F', label: 'Jobs' },
+    { href: '/tools/invoice-generator.html', icon: '\u{1F9FE}', label: 'Invoices' },
+    { href: '/tools/calendar.html',          icon: '\u{1F4C5}', label: 'Calendar' },
+    { href: '/tools/route-planner.html',     icon: '\u{1F5FA}\uFE0F', label: 'Routes' }
+  ];
+
+  function inject() {
+    document.body.classList.add('th-tool-page');
+    if (onLogin) return;
+    document.body.classList.add('th-has-bottomnav');
+
+    var nav = document.createElement('nav');
+    nav.className = 'th-bottom-nav';
+    nav.setAttribute('aria-label', 'Quick navigation');
+    nav.innerHTML = DESTS.map(function (d) {
+      var active = path === d.href ? ' is-active' : '';
+      var current = path === d.href ? ' aria-current="page"' : '';
+      return '<a href="' + d.href + '" class="' + active.trim() + '"' + current + '>' +
+        '<span class="th-bn-icon" aria-hidden="true">' + d.icon + '</span>' +
+        '<span>' + d.label + '</span></a>';
+    }).join('');
+    document.body.appendChild(nav);
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', inject);
+  } else {
+    inject();
+  }
+})();
