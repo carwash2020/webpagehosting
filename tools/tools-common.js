@@ -1,6 +1,53 @@
 // Shared behavior for the internal Workspace tool suite.
 // Loaded by workspace.html and every tool page via <script src="/tools-common.js" defer>.
 
+// ---------------------------------------------------------------------------
+// COMPLETION CELEBRATION -- added 2026-08-16. A brief, tasteful moment for
+// completion events (marking a job done, crossing a revenue milestone) --
+// small pieces falling from the top of the viewport for ~1.1s, then fully
+// removed. Deliberately NOT used for routine actions (saving a form,
+// syncing) -- reserved for things worth a small acknowledgment. Respects
+// prefers-reduced-motion by skipping the falling pieces entirely and
+// showing nothing rather than a static substitute -- a decorative moment
+// isn't worth overriding someone's motion preference for.
+// ---------------------------------------------------------------------------
+function celebrateCompletion() {
+  if (typeof document === 'undefined') return;
+  if (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+
+  const colors = ['#ff8000', '#ffb347', '#d8d8d8', '#6fcf97'];
+  const container = document.createElement('div');
+  container.setAttribute('aria-hidden', 'true');
+  container.style.cssText = 'position:fixed; inset:0; z-index:9999; pointer-events:none; overflow:hidden;';
+
+  const pieceCount = 24;
+  for (let i = 0; i < pieceCount; i++) {
+    const piece = document.createElement('span');
+    const size = 5 + Math.random() * 4;
+    const left = Math.random() * 100;
+    const delay = Math.random() * 0.15;
+    const duration = 0.7 + Math.random() * 0.4;
+    const drift = (Math.random() - 0.5) * 60;
+    const color = colors[i % colors.length];
+    piece.style.cssText =
+      'position:absolute; top:-12px; left:' + left + 'vw; width:' + size + 'px; height:' + size + 'px;' +
+      'background:' + color + '; border-radius:' + (i % 2 === 0 ? '50%' : '2px') + ';' +
+      'opacity:0.9; transform:translateY(0);' +
+      'animation:th-confetti-fall ' + duration + 's ease-in ' + delay + 's forwards;' +
+      '--th-confetti-drift:' + drift + 'px;';
+    container.appendChild(piece);
+  }
+  document.body.appendChild(container);
+  setTimeout(() => container.remove(), 1300);
+}
+
+if (typeof document !== 'undefined' && !document.getElementById('thConfettiKeyframes')) {
+  const style = document.createElement('style');
+  style.id = 'thConfettiKeyframes';
+  style.textContent = '@keyframes th-confetti-fall { to { transform: translate(var(--th-confetti-drift), 100vh) rotate(280deg); opacity: 0; } }';
+  document.head.appendChild(style);
+}
+
 // Small color-coded attribution dot -- blue for Connor, pink for Steve.
 // Used anywhere a record shows who last touched it (Job Tracker, Invoice
 // Generator, Parts & Reference / Appliance Wiki, Dev Tools). Consolidated
@@ -719,6 +766,43 @@ document.addEventListener('DOMContentLoaded', initSwipeToDismissModals);
   }
 })();
 
+// ---------------------------------------------------------------------------
+// DISPLAY DENSITY TOGGLE -- added 2026-08-16. A personal display
+// preference (comfortable vs compact row spacing), so it lives in plain
+// localStorage rather than the synced data blob -- there's no reason a
+// density choice made on one device should override another's screen
+// size preference. Applies as a body class; each page's own CSS defines
+// what ".is-compact-density" actually tightens for its own row markup.
+// ---------------------------------------------------------------------------
+const DENSITY_KEY = 'th_density';
+
+function loadDensityPreference() {
+  try { return localStorage.getItem(DENSITY_KEY) === 'compact' ? 'compact' : 'comfortable'; }
+  catch (e) { return 'comfortable'; }
+}
+
+function applyDensityPreference() {
+  const density = loadDensityPreference();
+  document.body.classList.toggle('is-compact-density', density === 'compact');
+  document.querySelectorAll('[data-density-toggle]').forEach(btn => {
+    btn.setAttribute('aria-pressed', density === 'compact' ? 'true' : 'false');
+    btn.textContent = density === 'compact' ? 'Comfortable view' : 'Compact view';
+  });
+}
+
+function toggleDensityPreference() {
+  const next = loadDensityPreference() === 'compact' ? 'comfortable' : 'compact';
+  try { localStorage.setItem(DENSITY_KEY, next); } catch (e) { /* ignore */ }
+  applyDensityPreference();
+}
+
+if (typeof document !== 'undefined') {
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', applyDensityPreference);
+  } else {
+    applyDensityPreference();
+  }
+}
 // ---------------------------------------------------------------------------
 // SHARED ICON SPRITE -- added 2026-08-16 (visual redesign v3)
 // Replaces the 29 semantic pictographic emoji used across the tool suite

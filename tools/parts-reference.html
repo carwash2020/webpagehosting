@@ -25,8 +25,8 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Anton&family=Oswald:wght@400;500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="/styles.css?v=202608161430">
-<script src="/tools/tools-common.js?v=202608161500" defer></script>
-<script src="/tools/sync.js?v=202608160400" defer></script>
+<script src="/tools/tools-common.js?v=202608161700" defer></script>
+<script src="/tools/sync.js?v=202608161700" defer></script>
 <style>
   .pr-search-filter-row { display: flex; gap: 8px; margin-bottom: 16px; }
   .pr-search-filter-row .pr-search-field { flex: 1 1 auto; min-width: 0; }
@@ -48,6 +48,7 @@
   .pr-unit-card:hover { border-color: var(--orange-light); transform: translateY(-1px); box-shadow: 0 4px 14px rgba(0,0,0,.18); }
   .pr-unit-card:active { transform: translateY(1px); box-shadow: none; }
   .pr-unit-type { font-family:'Oswald',sans-serif; font-size: 12.5px; letter-spacing: .04em; text-transform: uppercase; color: var(--orange-light); }
+  .pr-category-dot { display: inline-block; width: 7px; height: 7px; border-radius: 50%; margin-right: 6px; vertical-align: middle; }
   .pr-unit-name { font-size: 17px; font-weight: 600; color: var(--white); margin-top: 2px; }
   .pr-unit-count { font-size: 13px; color: var(--text-dim); margin-top: 4px; }
   .pr-unit-badge {
@@ -310,6 +311,27 @@
     const div = document.createElement('div');
     div.textContent = str;
     return div.innerHTML;
+  }
+
+  // Item #14 (2026-08-16): category color tags. With 20 appliance types
+  // (Washer, Dryer, Dishwasher, Range, ... ) all rendering as identical
+  // orange uppercase text, scanning a long list meant reading every
+  // label. A hand-maintained color-per-category map would silently stop
+  // covering new categories the moment a 21st gets added -- a small
+  // fixed palette selected by hashing the category name is deterministic
+  // (the same category always lands on the same color) and needs zero
+  // maintenance as the list grows.
+  const PR_CATEGORY_PALETTE = [
+    '#3aa0ff', '#ff8000', '#4caf50', '#c77dff', '#ffca3a',
+    '#ff6b6b', '#2ec4b6', '#c9a876', '#8ecae6', '#e07a5f'
+  ];
+  function categoryColor(type) {
+    let hash = 0;
+    for (let i = 0; i < type.length; i++) hash = (hash * 31 + type.charCodeAt(i)) >>> 0;
+    return PR_CATEGORY_PALETTE[hash % PR_CATEGORY_PALETTE.length];
+  }
+  function categoryTag(type) {
+    return '<span class="pr-category-dot" style="background:' + categoryColor(type) + ';" aria-hidden="true"></span>';
   }
 
   // personDot() now lives in tools-common.js (shared across all 4 tool
@@ -2169,7 +2191,7 @@
       const badge = totalIssues ? '<span class="pr-unit-badge">' + totalIssues + ' logged issue' + (totalIssues === 1 ? '' : 's') + '</span>' : '';
       return '<div class="pr-unit-card" data-pr-detail-type="' + escapeHtml(type) + '">' +
         '<div class="pr-unit-type">' + entryLabel + '</div>' +
-        '<div class="pr-unit-name">' + escapeHtml(type) + '</div>' +
+        '<div class="pr-unit-name">' + categoryTag(type) + escapeHtml(type) + '</div>' +
         badge + '</div>';
     }).join('');
 
@@ -2715,7 +2737,7 @@
         ? '<div class="pr-search-snippet">Matched issue: &ldquo;' + escapeHtml(r.matchedIssue.symptom) + '&rdquo;</div>'
         : '';
       return '<div class="pr-unit-card" data-pr-unit-id="' + u.id + '">' +
-        '<div class="pr-unit-type">' + escapeHtml(u.brand) + ' &middot; ' + escapeHtml(u.type) + '</div>' +
+        '<div class="pr-unit-type">' + categoryTag(u.type) + escapeHtml(u.brand) + ' &middot; ' + escapeHtml(u.type) + '</div>' +
         '<div class="pr-unit-name">' + escapeHtml(modelLabel) + '</div>' +
         snippet +
         '</div>';

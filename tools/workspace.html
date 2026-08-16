@@ -26,9 +26,9 @@
 <link href="https://fonts.googleapis.com/css2?family=Anton&family=Oswald:wght@400;500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="/styles.css?v=202608161430">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.112.3/dist/umd/supabase.js" integrity="sha384-qafw21c/iciq0VXsi9FzkfoQv5I/V0iqE4lSNcKXPnW9/UTJLnv5CcN4FHxVLnKg" crossorigin="anonymous" defer></script>
-<script src="/tools/sync.js?v=202608160400" defer></script>
+<script src="/tools/sync.js?v=202608161700" defer></script>
 <script src="/tools/push-notifications.js?v=202608160400" defer></script>
-<script src="/tools/tools-common.js?v=202608161500" defer></script>
+<script src="/tools/tools-common.js?v=202608161700" defer></script>
 <style>
   body { padding: 44px 20px 60px; max-width: 900px; margin: 0 auto; }
   .hub-header { display: flex; align-items: center; justify-content: space-between; gap: 14px; margin-bottom: 8px; }
@@ -79,6 +79,7 @@
   }
   .section-heading.is-static { cursor: default; }
   .section-heading .collapse-arrow { color: var(--text-dim); font-size: 12px; transition: transform 0.15s ease; }
+  .last-updated-note { color: var(--text-dim); font-size: 11px; font-weight: 400; text-transform: none; letter-spacing: normal; margin-right: 12px; white-space: nowrap; }
   .section-heading.is-collapsed .collapse-arrow { transform: rotate(-90deg); }
   .section-body { padding-top: 18px; max-height: 4000px; opacity: 1; overflow: hidden; transition: max-height .3s ease, opacity .2s ease, padding-top .3s ease; }
   .section-body.is-collapsed { max-height: 0; opacity: 0; padding-top: 0; overflow: hidden; }
@@ -94,8 +95,15 @@
   .metric-card .metric-value { font-family:'Oswald',sans-serif; font-weight: 700; font-size: 24px; color: var(--white); }
   .metric-card .metric-value.is-orange { color: var(--orange-light); }
   .metric-card .metric-sub { color: var(--text-dim); font-size: 12px; margin-top: 4px; }
-  .metric-card .metric-sub.is-up { color: #4caf50; }
-  .metric-card .metric-sub.is-down { color: #e05252; }
+  /* trend-badge (2026-08-16): small ▲/▼ chip, replaces the old plain
+     colored-text approach (is-up/is-down on .metric-sub) with an actual
+     visual badge that reads as a distinct UI element, not just tinted
+     text easy to miss next to the count line. */
+  .trend-badge { display: inline-flex; align-items: center; gap: 4px; font-size: 11.5px; font-weight: 600; padding: 2px 7px; border-radius: 20px; margin-top: 4px; }
+  .trend-badge.is-up { background: rgba(76,175,80,0.12); color: #6fcf97; }
+  .trend-badge.is-down { background: rgba(224,82,82,0.12); color: #e0807a; }
+  .trend-badge.is-neutral { background: var(--bg-panel-2); color: var(--text-dim); }
+  .metric-sparkline { height: 26px; margin-top: 8px; opacity: .85; }
 
   .period-toggle { display: flex; gap: 6px; margin-bottom: 14px; flex-wrap: wrap; }
   .period-btn {
@@ -171,19 +179,47 @@
   .license-item:last-child { border-bottom: none; }
 
   .realtime-badge { display: inline-flex; align-items: center; gap: 5px; font-size: 11.5px; color: var(--text-dim); margin-left: 10px; }
+  .pending-changes-badge { display: inline-flex; align-items: center; gap: 5px; font-size: 11.5px; color: var(--orange-light); margin-left: 10px; }
+
+  /* Item #13: before/after comparison slider */
+  .ba-slider { position: relative; width: 100%; aspect-ratio: 4/3; border-radius: 10px; overflow: hidden; touch-action: none; cursor: ew-resize; user-select: none; background: var(--bg-panel-3); }
+  .ba-slider img { position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: cover; display: block; pointer-events: none; }
+  .ba-slider-after { width: 100% !important; }
+  .ba-slider-before-wrap { position: absolute; top: 0; left: 0; height: 100%; overflow: hidden; }
+  .ba-slider-before-wrap img { position: absolute; top: 0; left: 0; height: 100%; max-width: none; }
+  .ba-slider-handle { position: absolute; top: 0; bottom: 0; width: 3px; background: var(--white); transform: translateX(-50%); box-shadow: 0 0 8px rgba(0,0,0,.5); }
+  .ba-slider-handle span { position: absolute; top: 50%; left: 50%; transform: translate(-50%,-50%); width: 30px; height: 30px; border-radius: 50%; background: var(--orange); color: #1a0d02; display: flex; align-items: center; justify-content: center; font-size: 15px; box-shadow: 0 2px 8px rgba(0,0,0,.4); }
+  .ba-slider-label { position: absolute; top: 8px; font-size: 10.5px; font-weight: 700; letter-spacing: .5px; text-transform: uppercase; padding: 3px 8px; border-radius: 20px; background: rgba(0,0,0,.55); color: var(--white); }
+  .ba-label-before { left: 8px; }
+  .ba-label-after { right: 8px; }
+  .gallery-queue-actions { display: flex; gap: 6px; margin-top: 8px; }
+
+  /* Item #1: onboarding tour coach-mark card */
+  .onboarding-card {
+    position: fixed; left: 16px; right: 16px; bottom: 16px; z-index: 800;
+    max-width: 420px; margin: 0 auto;
+    background: linear-gradient(180deg, var(--bg-panel-3), var(--bg-panel-2));
+    border: 1px solid var(--orange-tint-border); border-radius: 16px;
+    padding: 16px 18px; box-shadow: 0 -4px 30px rgba(0,0,0,.5), 0 0 30px -8px var(--orange-tint-glow);
+    animation: onboardingSlideUp .3s cubic-bezier(.2,.8,.2,1);
+  }
+  @keyframes onboardingSlideUp { from { transform: translateY(16px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+  @media (prefers-reduced-motion: reduce) { .onboarding-card { animation: none; } }
+  body.th-has-bottomnav .onboarding-card { bottom: calc(76px + env(safe-area-inset-bottom, 0px) + 10px); }
+  .onboarding-dots { display: flex; gap: 5px; margin-bottom: 10px; }
+  .onboarding-dots span { width: 6px; height: 6px; border-radius: 50%; background: var(--border); }
+  .onboarding-dots span.is-active { background: var(--orange); width: 16px; border-radius: 3px; }
+  .onboarding-title { font-family: 'Oswald', sans-serif; color: var(--white); font-size: 16px; margin-bottom: 4px; }
+  .onboarding-body { color: var(--text-dim); font-size: 13.5px; line-height: 1.5; margin-bottom: 14px; }
+  .onboarding-actions { display: flex; justify-content: space-between; align-items: center; gap: 10px; }
+  .onboarding-skip { background: none; border: none; color: var(--text-dim); font-size: 13px; cursor: pointer; padding: 8px 4px; }
+  .onboarding-skip:hover { color: var(--white); }
   .realtime-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--text-dim); flex-shrink: 0; }
   .realtime-dot.is-live { background: #4caf50; }
   .realtime-dot.is-connecting { background: var(--orange-light); }
   .realtime-dot.is-error { background: #e05252; }
 
   .backup-row { display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 10px; }
-
-  .skeleton-line{height:14px;border-radius:6px;margin-bottom:10px;background:linear-gradient(90deg, var(--bg-panel-2) 25%, var(--bg-panel) 50%, var(--bg-panel-2) 75%);background-size:200% 100%;animation:shimmer 1.4s ease-in-out infinite;}
-  .skeleton-line.w-40{width:40%;}
-  .skeleton-line.w-60{width:60%;}
-  .skeleton-line.w-100{width:100%;}
-  @keyframes shimmer{0%{background-position:200% 0;} 100%{background-position:-200% 0;}}
-  @media (prefers-reduced-motion: reduce){ .skeleton-line{animation:none; opacity:0.6;} }
 
   /* Tools grid -- naturally one column on a phone (minmax(260px,1fr) can't
      fit two side by side under ~520px), becomes two columns on anything
@@ -241,7 +277,7 @@
   <button class="help-btn" id="pushToggleBtn" onclick="handlePushToggle()" aria-label="Toggle notifications" title="Toggle notifications"><svg class="th-icon" aria-hidden="true"><use href="#icon-bell" xlink:href="#icon-bell"></use></svg></button>
   <button class="help-btn is-muted" onclick="signOut()" aria-label="Log out" title="Log out">&#x21B0;</button>
 </div>
-<p class="hub-sub"><span class="realtime-badge" id="realtimeBadge" style="margin-left:0;"><span class="realtime-dot" id="realtimeDot"></span><span id="realtimeText">Live sync: connecting...</span></span>
+<p class="hub-sub"><span class="realtime-badge" id="realtimeBadge" style="margin-left:0;"><span class="realtime-dot" id="realtimeDot"></span><span id="realtimeText">Live sync: connecting...</span></span><span class="pending-changes-badge" id="pendingChangesBadge" style="display:none;">&#9679; Unsynced changes</span>
   <button class="help-btn" id="refreshSyncLink" onclick="manualRefreshSync(renderDashboard)" aria-label="Refresh synced data now" title="Refresh synced data now" style="width:26px; height:26px; font-size:13px; vertical-align:middle; margin-left:6px;">&#8635;</button>
 </p>
 <nav class="jump-nav">
@@ -272,6 +308,7 @@
 <div class="section-block" id="section-snapshot">
   <div class="section-heading" onclick="toggleSection('snapshot')">
     <span>Business Snapshot</span>
+    <span class="last-updated-note" id="snapshotLastUpdated"></span>
     <span class="collapse-arrow">&#9660;</span>
   </div>
   <div class="section-body" id="body-snapshot">
@@ -294,6 +331,8 @@
         <div class="metric-label">Revenue Invoiced</div>
         <div class="metric-value is-orange" id="metricRevenue">$0.00</div>
         <div class="metric-sub" id="metricInvoiceCount">0 invoices</div>
+        <div id="metricRevenueTrend"></div>
+        <div class="metric-sparkline" id="metricRevenueSparkline" aria-hidden="true"></div>
       </div>
       <div class="metric-card">
         <div class="metric-label">Expenses</div>
@@ -898,21 +937,77 @@
     document.getElementById('metricSetAside').textContent = money(Math.max(0, net) * (loadSetAsideRate() / 100));
 
     const revenueSub = document.getElementById('metricInvoiceCount');
+    const revenueTrendEl = document.getElementById('metricRevenueTrend');
+    // Visual add (2026-08-16): was plain parenthetical text buried in the
+    // count line, and only ever computed for the 'week' period. Extracted
+    // into a small ▲/▼ + percentage badge, and extended to 'month' too
+    // (comparing to the prior calendar month) since that's the default
+    // view most people land on.
+    function renderTrendBadge(el, current, previous, label) {
+      if (!el) return;
+      if (previous <= 0) {
+        el.innerHTML = current > 0 ? `<span class="trend-badge is-neutral">${label} had none</span>` : '';
+        return;
+      }
+      const pct = Math.round((current - previous) / previous * 100);
+      const dir = pct >= 0 ? 'up' : 'down';
+      const arrow = pct >= 0 ? '&#9650;' : '&#9660;';
+      el.innerHTML = `<span class="trend-badge is-${dir}">${arrow} ${Math.abs(pct)}% vs ${label}</span>`;
+    }
+
+    // Item #11 (2026-08-16): a real 6-month revenue history rendered as
+    // a small inline sparkline, independent of whichever period filter
+    // is selected above -- this is always "the last 6 calendar months,"
+    // giving a shape-of-the-business glance that a single filtered
+    // number can't.
+    function computeMonthlyRevenueSeries(months) {
+      const all = loadInvoices();
+      const now = new Date();
+      const series = [];
+      for (let i = months - 1; i >= 0; i--) {
+        const start = new Date(now.getFullYear(), now.getMonth() - i, 1);
+        const end = new Date(now.getFullYear(), now.getMonth() - i + 1, 0);
+        const total = all.filter(inv => inRange(inv.date, { start, end })).reduce((s, inv) => s + (inv.total || 0), 0);
+        series.push(total);
+      }
+      return series;
+    }
+
+    function renderSparkline(containerId, values) {
+      const el = document.getElementById(containerId);
+      if (!el || values.length < 2) { if (el) el.innerHTML = ''; return; }
+      const w = 100, h = 26, pad = 2;
+      const max = Math.max(...values, 1);
+      const min = Math.min(...values, 0);
+      const spread = (max - min) || 1;
+      const stepX = (w - pad * 2) / (values.length - 1);
+      const points = values.map((v, i) => {
+        const x = pad + i * stepX;
+        const y = h - pad - ((v - min) / spread) * (h - pad * 2);
+        return x.toFixed(1) + ',' + y.toFixed(1);
+      }).join(' ');
+      const trendingUp = values[values.length - 1] >= values[0];
+      const color = trendingUp ? '#6fcf97' : '#e0807a';
+      el.innerHTML = '<svg viewBox="0 0 ' + w + ' ' + h + '" width="100%" height="' + h + '" preserveAspectRatio="none" role="img" aria-label="6-month revenue trend">' +
+        '<polyline points="' + points + '" fill="none" stroke="' + color + '" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+    }
+    renderSparkline('metricRevenueSparkline', computeMonthlyRevenueSeries(6));
     if (currentPeriod === 'week') {
       const prevStart = startOfDay(new Date(range.start.getTime() - 7 * 24 * 60 * 60 * 1000));
       const prevEnd = startOfDay(new Date(range.start.getTime() - 1 * 24 * 60 * 60 * 1000));
       const prevRevenue = loadInvoices().filter(i => inRange(i.date, { start: prevStart, end: prevEnd })).reduce((sum, i) => sum + (i.total || 0), 0);
-      let compareText = '';
-      if (prevRevenue > 0) {
-        const pct = Math.round((revenue - prevRevenue) / prevRevenue * 100);
-        compareText = (pct >= 0 ? ' (+' : ' (') + pct + '% vs prior 7 days)';
-      } else if (revenue > 0) {
-        compareText = ' (prior 7 days had none)';
-      }
-      revenueSub.textContent = invoices.length + ' invoice' + (invoices.length === 1 ? '' : 's') + compareText;
-      revenueSub.className = 'metric-sub' + (revenue >= prevRevenue ? ' is-up' : ' is-down');
+      renderTrendBadge(revenueTrendEl, revenue, prevRevenue, 'prior 7 days');
+      revenueSub.textContent = invoices.length + ' invoice' + (invoices.length === 1 ? '' : 's');
+    } else if (currentPeriod === 'month') {
+      const now = new Date();
+      const prevMonthStart = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+      const prevMonthEnd = new Date(now.getFullYear(), now.getMonth(), 0);
+      const prevRevenue = loadInvoices().filter(i => inRange(i.date, { start: prevMonthStart, end: prevMonthEnd })).reduce((sum, i) => sum + (i.total || 0), 0);
+      renderTrendBadge(revenueTrendEl, revenue, prevRevenue, 'last month');
+      revenueSub.textContent = invoices.length + ' invoice' + (invoices.length === 1 ? '' : 's');
     } else {
-      revenueSub.className = 'metric-sub';
+      if (revenueTrendEl) revenueTrendEl.innerHTML = '';
+      revenueSub.textContent = invoices.length + ' invoice' + (invoices.length === 1 ? '' : 's');
     }
 
     const allInvoices = loadInvoices();
@@ -1586,13 +1681,109 @@
       return;
     }
     const signedUrls = await getSignedJobPhotoUrls(result.photos.map(p => p.storage_path));
-    container.innerHTML = '<div class="gallery-queue-grid">' + result.photos.map(p => `
+
+    // Item #13 (2026-08-16): before/after comparison slider. th_job_photos
+    // already has a photo_type column ('before'/'after'/'photo') used
+    // elsewhere in Job Tracker's own photo picker -- this groups featured
+    // photos by job_id and, wherever a job has BOTH a starred before and
+    // a starred after shot, renders a draggable split-slider instead of
+    // two flat tiles. Anything without a matching pair (most photos,
+    // realistically) falls back to the existing single-tile treatment
+    // unchanged.
+    const byJob = {};
+    result.photos.forEach((p, i) => {
+      // job_id is nullable in the schema -- grouping every null-job_id
+      // photo under one shared key would risk pairing two unrelated
+      // photos from different (or no) jobs as if they were a real
+      // before/after set. Each null-job_id photo gets its own unique
+      // group key instead, so it can only ever render standalone.
+      const key = p.job_id != null ? p.job_id : 'no-job-' + i;
+      (byJob[key] = byJob[key] || []).push(p);
+    });
+
+    let html = '<div class="gallery-queue-grid">';
+    Object.values(byJob).forEach(jobPhotos => {
+      const before = jobPhotos.find(x => x.photo_type === 'before');
+      const after = jobPhotos.find(x => x.photo_type === 'after');
+      const hasPair = before && after && before.id !== after.id;
+      if (hasPair) {
+        const beforeUrl = signedUrls[before.storage_path] || '';
+        const afterUrl = signedUrls[after.storage_path] || '';
+        html += `
+      <div class="gallery-queue-item ba-slider-item">
+        <div class="ba-slider" data-before="${before.id}" data-after="${after.id}">
+          <img class="ba-slider-after" src="${afterUrl}" alt="After" loading="lazy">
+          <div class="ba-slider-before-wrap" style="width:50%;">
+            <img class="ba-slider-before" src="${beforeUrl}" alt="Before" loading="lazy">
+          </div>
+          <div class="ba-slider-handle" style="left:50%;"><span>&#8596;</span></div>
+          <span class="ba-slider-label ba-label-before">Before</span>
+          <span class="ba-slider-label ba-label-after">After</span>
+        </div>
+        <div class="gallery-queue-caption">${escapeHtml(after.public_caption || before.public_caption || '(no caption)')}</div>
+        <div class="gallery-queue-meta">${escapeHtml(after.job_title || '')}</div>
+        <div class="gallery-queue-actions">
+          <button class="small-btn danger" onclick="unqueueGalleryPhoto(${before.id})">Remove Before</button>
+          <button class="small-btn danger" onclick="unqueueGalleryPhoto(${after.id})">Remove After</button>
+        </div>
+      </div>`;
+      }
+      // Any photo not part of the rendered pair (including every photo
+      // at all, when this job has no valid pair) still gets its own
+      // standalone tile -- a job with before+after+one extra shot never
+      // silently loses that extra photo.
+      jobPhotos.forEach(p => {
+        if (hasPair && (p.id === before.id || p.id === after.id)) return;
+        html += `
       <div class="gallery-queue-item">
         <img src="${signedUrls[p.storage_path] || ''}" alt="${escapeHtml(p.public_caption || '')}" loading="lazy">
         <div class="gallery-queue-caption">${escapeHtml(p.public_caption || '(no caption)')}</div>
         <div class="gallery-queue-meta">${escapeHtml(p.job_title || '')}</div>
         <button class="small-btn danger" onclick="unqueueGalleryPhoto(${p.id})">Remove from Queue</button>
-      </div>`).join('') + '</div>';
+      </div>`;
+      });
+    });
+    html += '</div>';
+    container.innerHTML = html;
+    initBeforeAfterSliders(container);
+  }
+
+  // Pointer-events based (not touch-specific gesture code) so this works
+  // identically with mouse drag and touch drag without device-specific
+  // tuning -- a simple 1D drag is much lower-risk than a full swipe
+  // gesture system.
+  function initBeforeAfterSliders(root) {
+    root.querySelectorAll('.ba-slider').forEach(slider => {
+      if (slider.dataset.wired) return;
+      slider.dataset.wired = '1';
+      const beforeWrap = slider.querySelector('.ba-slider-before-wrap');
+      const beforeImg = slider.querySelector('.ba-slider-before');
+      const handle = slider.querySelector('.ba-slider-handle');
+      let dragging = false;
+
+      function setPosition(clientX) {
+        const rect = slider.getBoundingClientRect();
+        let pct = ((clientX - rect.left) / rect.width) * 100;
+        pct = Math.max(0, Math.min(100, pct));
+        beforeWrap.style.width = pct + '%';
+        // Fixed pixel width matching the FULL slider (not the shrinking
+        // wrapper) -- this is what makes the before image clip/reveal
+        // as the handle moves, instead of squishing/zooming to fit
+        // whatever width the wrapper currently is.
+        beforeImg.style.width = rect.width + 'px';
+        handle.style.left = pct + '%';
+      }
+      slider.addEventListener('pointerdown', (e) => { dragging = true; slider.setPointerCapture(e.pointerId); setPosition(e.clientX); });
+      slider.addEventListener('pointermove', (e) => { if (dragging) setPosition(e.clientX); });
+      slider.addEventListener('pointerup', () => { dragging = false; });
+      slider.addEventListener('pointercancel', () => { dragging = false; });
+
+      // Initial 50/50 split -- without this, the before-image would
+      // render at its natural size (no explicit width set yet) until
+      // the first drag, which can look broken on first paint.
+      const rect = slider.getBoundingClientRect();
+      beforeImg.style.width = rect.width + 'px';
+    });
   }
 
   async function unqueueGalleryPhoto(photoId) {
@@ -1752,6 +1943,18 @@
     reader.readAsText(file);
   }
 
+  // Item #7 (2026-08-16): distinct from the live-sync connection dot
+  // above -- this reflects whether THIS device has local edits it hasn't
+  // successfully pushed yet, driven by the th-sync-pending-change event
+  // sync.js already fires (see scheduleSync/pushSync in sync.js).
+  function updatePendingChangesBadge(pending) {
+    const badge = document.getElementById('pendingChangesBadge');
+    if (!badge) return;
+    badge.style.display = pending ? '' : 'none';
+  }
+  window.addEventListener('th-sync-pending-change', (e) => updatePendingChangesBadge(e.detail.pending));
+  if (typeof hasPendingLocalChanges === 'function') updatePendingChangesBadge(hasPendingLocalChanges());
+
   function updateRealtimeBadge(status) {
     const dot = document.getElementById('realtimeDot');
     const text = document.getElementById('realtimeText');
@@ -1809,11 +2012,39 @@
     btn.classList.toggle('is-active', enabled);
   }
 
+  // ---------------------------------------------------------------------
+  // Snapshot "last updated" readout -- added 2026-08-16. Reads the same
+  // th_sync_last value sync.js already writes on every pull/push attempt
+  // (and the th-sync-status event it already fires), so this never
+  // invents its own timestamp tracking -- it's purely a display on top
+  // of state that already existed.
+  // ---------------------------------------------------------------------
+  function relativeTimeFromNow(iso) {
+    const then = new Date(iso).getTime();
+    if (isNaN(then)) return '';
+    const diffSec = Math.round((Date.now() - then) / 1000);
+    if (diffSec < 30) return 'just now';
+    if (diffSec < 90) return '1m ago';
+    if (diffSec < 3600) return Math.round(diffSec / 60) + 'm ago';
+    if (diffSec < 86400) return Math.round(diffSec / 3600) + 'h ago';
+    return Math.round(diffSec / 86400) + 'd ago';
+  }
+
+  function renderSnapshotLastUpdated() {
+    const el = document.getElementById('snapshotLastUpdated');
+    if (!el) return;
+    let last;
+    try { last = JSON.parse(localStorage.getItem('th_sync_last') || 'null'); } catch (e) { last = null; }
+    if (!last || !last.ok) { el.textContent = ''; return; }
+    el.textContent = 'Updated ' + relativeTimeFromNow(last.time);
+  }
+
   document.addEventListener('DOMContentLoaded', function () {
     renderWelcomeGreeting();
     initSyncOnLoad().then(renderDashboard).catch(renderDashboard).then(() => {
       renderDevToolsTileVisibility();
       enhanceWelcomeGreetingWithRole();
+      renderSnapshotLastUpdated();
       if (typeof startRealtimeSync === 'function') {
         // One status callback shared by both channels -- last status wins,
         // which is fine here since they're on the same underlying connection.
@@ -1822,10 +2053,73 @@
       }
     });
     refreshPushToggleState();
+    window.addEventListener('th-sync-status', renderSnapshotLastUpdated);
+    // Keeps "3m ago" counting up while the page sits open, without a
+    // sync event to trigger a re-render.
+    setInterval(renderSnapshotLastUpdated, 30000);
     if (window.location.hash === '#today') {
       document.getElementById('section-today')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
     }
+    initOnboardingTour();
   });
+
+  // ---------------------------------------------------------------------
+  // Item #1 (2026-08-16): lightweight first-run onboarding tour. Shown
+  // once ever (localStorage flag), walks through the 3 real dashboard
+  // sections with a bottom coach-mark card rather than a full spotlight
+  // overlay -- simpler, and doesn't risk covering content on small
+  // screens. Skippable at any step; dismissing (Skip or finishing)
+  // permanently sets the flag so it never reappears.
+  // ---------------------------------------------------------------------
+  const ONBOARDING_KEY = 'th_onboarding_v1_seen';
+  const ONBOARDING_STEPS = [
+    { sectionId: 'section-snapshot', title: 'Business Snapshot', body: 'Revenue, expenses, and outstanding balances for whatever period you pick above.' },
+    { sectionId: 'section-actionitems', title: 'Action Items', body: 'Anything that actually needs your attention today -- overdue invoices, jobs due tomorrow, follow-ups.' },
+    { sectionId: 'section-tools', title: 'Tools', body: 'Every tool in the suite lives here, or in the bar at the bottom of the screen on mobile.' }
+  ];
+
+  function initOnboardingTour() {
+    let seen = false;
+    try { seen = localStorage.getItem(ONBOARDING_KEY) === '1'; } catch (e) { /* ignore */ }
+    if (seen) return;
+
+    let step = 0;
+    const card = document.createElement('div');
+    card.className = 'onboarding-card';
+    card.setAttribute('role', 'dialog');
+    card.setAttribute('aria-label', 'Quick tour');
+    document.body.appendChild(card);
+
+    function dismiss() {
+      try { localStorage.setItem(ONBOARDING_KEY, '1'); } catch (e) { /* ignore */ }
+      card.remove();
+    }
+
+    function renderStep() {
+      const s = ONBOARDING_STEPS[step];
+      const el = document.getElementById(s.sectionId);
+      if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      const isLast = step === ONBOARDING_STEPS.length - 1;
+      card.innerHTML =
+        '<div class="onboarding-dots">' + ONBOARDING_STEPS.map((_, i) => '<span class="' + (i === step ? 'is-active' : '') + '"></span>').join('') + '</div>' +
+        '<div class="onboarding-title">' + s.title + '</div>' +
+        '<div class="onboarding-body">' + s.body + '</div>' +
+        '<div class="onboarding-actions">' +
+          '<button class="onboarding-skip">Skip</button>' +
+          '<button class="onboarding-next primary-btn">' + (isLast ? 'Got it' : 'Next') + '</button>' +
+        '</div>';
+      card.querySelector('.onboarding-skip').onclick = dismiss;
+      card.querySelector('.onboarding-next').onclick = () => {
+        if (isLast) { dismiss(); return; }
+        step++;
+        renderStep();
+      };
+    }
+
+    // Small delay so this shows after the dashboard's own first render,
+    // not fighting it for attention the instant the page appears.
+    setTimeout(renderStep, 900);
+  }
 </script>
 
 </body>

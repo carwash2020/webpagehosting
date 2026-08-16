@@ -2154,3 +2154,35 @@ body a .th-icon { margin-right: 5px; }
 }
 .empty-state-small.is-good .th-icon { color: #4caf50; }
 .empty-state-small.is-warning .th-icon { color: #e0a552; }
+
+/* ---- shared log-item row (contracts, invoices, quotes) ----
+   Previously defined only inside contract-generator.html's own <style>
+   block. invoice-generator.html uses this exact same markup for its
+   Invoice and Quote logs but never defined the class anywhere -- its
+   lists have been rendering completely unstyled (no padding, no border,
+   no badge shape) since that page existed. Moved here once so both
+   pages -- and any future page using the same pattern -- get it. */
+.contract-log-item {
+  display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap;
+  padding: 12px 0; border-bottom: 1px solid var(--border);
+}
+.contract-log-item:last-child { border-bottom: none; }
+.contract-log-title { font-family:'Oswald',sans-serif; color: var(--white); font-size: 14.5px; }
+.contract-log-meta { color: var(--text-dim); font-size: 12.5px; margin-top: 2px; }
+.badge-pending-signature {
+  display: inline-block; background: rgba(255,128,0,0.12); border: 1px solid rgba(255,128,0,0.4);
+  color: var(--orange-light); font-size: 11px; padding: 2px 8px; border-radius: 20px; margin-left: 6px; vertical-align: middle;
+}
+body.is-compact-density .contract-log-item { padding: 6px 0; }
+
+/* ---- skeleton loading shimmer -- shared ----
+   Previously only defined locally inside workspace.html. Moved here so
+   Job Tracker and Invoice Generator can use the same treatment during
+   their own real async gap (the initial cloud-sync pull), instead of
+   sitting fully blank until that resolves. */
+.skeleton-line{height:14px;border-radius:6px;margin-bottom:10px;background:linear-gradient(90deg, var(--bg-panel-2) 25%, var(--bg-panel) 50%, var(--bg-panel-2) 75%);background-size:200% 100%;animation:shimmer 1.4s ease-in-out infinite;}
+.skeleton-line.w-40{width:40%;}
+.skeleton-line.w-60{width:60%;}
+.skeleton-line.w-100{width:100%;}
+@keyframes shimmer{0%{background-position:200% 0;} 100%{background-position:-200% 0;}}
+@media (prefers-reduced-motion: reduce){ .skeleton-line{animation:none; opacity:0.6;} }
