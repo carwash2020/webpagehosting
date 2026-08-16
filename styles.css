@@ -1921,9 +1921,22 @@ body .hub-header, body .tool-header {
   background: color-mix(in srgb, var(--bg) 78%, transparent);
   -webkit-backdrop-filter: blur(14px); backdrop-filter: blur(14px);
   border-bottom: 1px solid var(--border);
+  /* This was missing entirely -- with no display:flex here, any page
+     relying on this shared rule (dev-tools.html, settings.html; unlike
+     workspace.html, which has always had its own local override) had
+     its logo, title, and every header button stacking vertically as
+     plain block elements instead of sitting in a row. */
+  display: flex; align-items: center; justify-content: space-between; gap: 14px;
 }
 body .hub-title { font-size: 22px; letter-spacing: .5px; }
 body .hub-header img { height: 36px; width: 36px; }
+body .hub-header-left { display: flex; align-items: center; gap: 14px; }
+/* Groups multiple header buttons (help, settings, back-arrow) so
+   space-between above distributes between the left content and this
+   ONE right-hand group -- not evenly across every individual button,
+   which used to spread them apart from each other instead of keeping
+   them together at the right edge. */
+body .hub-header-right { display: flex; align-items: center; gap: 8px; }
 
 /* jump-nav: segmented pill control riding just under the app bar */
 body .jump-nav {
@@ -2138,6 +2151,11 @@ body .tool-tile-icon .th-icon { width: 21px; height: 21px; }
 body .jump-nav-icon .th-icon, body .jump-nav .th-icon { width: 15px; height: 15px; }
 body .section-heading .th-icon, body .dev-panel-heading .th-icon { width: 15px; height: 15px; margin-right: 2px; }
 body a .th-icon { margin-right: 5px; }
+/* Icon-only circular buttons (.help-btn, used for Settings/back-arrow/
+   refresh links) never pair an icon with trailing text -- the margin
+   above was pushing their icon 5px left of the button's actual center
+   with nothing on the right to balance it. */
+body a.help-btn .th-icon { margin-right: 0; }
 .lightbox-nav .th-icon { width: 20px; height: 20px; stroke-width: 1.8; }
 
 /* ---- empty states: one shared definition, icon + message row ----

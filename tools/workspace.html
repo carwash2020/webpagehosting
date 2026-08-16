@@ -24,7 +24,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Anton&family=Oswald:wght@400;500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="/styles.css?v=202608161430">
+<link rel="stylesheet" href="/styles.css?v=202608171100">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.112.3/dist/umd/supabase.js" integrity="sha384-qafw21c/iciq0VXsi9FzkfoQv5I/V0iqE4lSNcKXPnW9/UTJLnv5CcN4FHxVLnKg" crossorigin="anonymous" defer></script>
 <script src="/tools/sync.js?v=202608161700" defer></script>
 <script src="/tools/push-notifications.js?v=202608160400" defer></script>
@@ -33,6 +33,7 @@
   body { padding: 44px 20px 60px; max-width: 900px; margin: 0 auto; }
   .hub-header { display: flex; align-items: center; justify-content: space-between; gap: 14px; margin-bottom: 8px; }
   .hub-header-left { display: flex; align-items: center; gap: 14px; }
+  .hub-header-right { display: flex; align-items: center; gap: 8px; }
   .hub-header img { height: 44px; width: 44px; object-fit: contain; }
   .hub-title { font-family:'Anton',sans-serif; font-size: 26px; color: var(--white); }
   .hub-sub { color: var(--text-dim); margin-bottom: 20px; }
@@ -273,8 +274,10 @@
     <img src="/images/logo-signature-orange.webp?v=202608142300" alt="Triple H Enterprises">
     <span class="hub-title">Dashboard</span>
   </div>
-  <button class="help-btn" onclick="openHelpModal()" aria-label="How to use this dashboard" title="How to use this dashboard">?</button>
-  <a href="/tools/settings.html" class="help-btn" aria-label="Settings" title="Settings" style="text-decoration:none; display:inline-flex; align-items:center; justify-content:center;"><svg class="th-icon" aria-hidden="true"><use href="#icon-settings" xlink:href="#icon-settings"></use></svg></a>
+  <div class="hub-header-right">
+    <button class="help-btn" onclick="openHelpModal()" aria-label="How to use this dashboard" title="How to use this dashboard">?</button>
+    <a href="/tools/settings.html" class="help-btn" aria-label="Settings" title="Settings" style="text-decoration:none; display:inline-flex; align-items:center; justify-content:center;"><svg class="th-icon" aria-hidden="true"><use href="#icon-settings" xlink:href="#icon-settings"></use></svg></a>
+  </div>
 </div>
 <p class="hub-sub"><span class="realtime-badge" id="realtimeBadge" style="margin-left:0;"><span class="realtime-dot" id="realtimeDot"></span><span id="realtimeText">Live sync: connecting...</span></span><span class="pending-changes-badge" id="pendingChangesBadge" style="display:none;">&#9679; Unsynced changes</span>
   <button class="help-btn" id="refreshSyncLink" onclick="manualRefreshSync(renderDashboard)" aria-label="Refresh synced data now" title="Refresh synced data now" style="width:26px; height:26px; font-size:13px; vertical-align:middle; margin-left:6px;">&#8635;</button>
