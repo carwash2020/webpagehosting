@@ -25,13 +25,13 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="/styles.css?v=202608201800">
-<link rel="stylesheet" href="/tools/styles-tools.css?v=202608201800">
+<link rel="stylesheet" href="/tools/styles-tools.css?v=202608201900">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.112.3/dist/umd/supabase.js" integrity="sha384-qafw21c/iciq0VXsi9FzkfoQv5I/V0iqE4lSNcKXPnW9/UTJLnv5CcN4FHxVLnKg" crossorigin="anonymous" defer></script>
 <script src="/tools/sync.js?v=202608201700" defer></script>
 <script src="/tools/data-layer.js?v=202608200900" defer></script>
 <script src="/tools/tools-effects.js?v=202608201400" defer></script>
 <script src="/tools/tools-dialogs.js?v=202608201400" defer></script>
-<script src="/tools/tools-media-sharing.js?v=202608201400" defer></script>
+<script src="/tools/tools-media-sharing.js?v=202608201900" defer></script>
 <script src="/tools/tools-nav-pwa.js?v=202608201400" defer></script>
 <style>
   body { padding: 90px 20px 60px; max-width: 1080px; margin: 0 auto; }
@@ -647,20 +647,26 @@
   }
 
   async function deleteJob(id) {
-    const confirmed = await showConfirm('Delete this job? This cannot be undone.', { danger: true, confirmText: 'Delete' });
+    const confirmed = await showConfirm('Delete this job?', { danger: true, confirmText: 'Delete' });
     if (!confirmed) return;
     if (editingJobId === id) cancelJobEdit();
 
     const row = document.querySelector('[data-job-id="' + id + '"]');
-    const animationDone = new Promise(resolve => animateRowExit(row, resolve));
+    await new Promise(resolve => animateRowExit(row, resolve));
 
-    // Photos live only in Supabase (th_job_photos + the job-photos bucket),
-    // keyed by job ID -- once the job itself is gone, there's no longer
-    // any way to find or clean these up later, so this has to happen
-    // before the job record disappears, not after. Runs alongside the
-    // exit animation rather than after it, so the row starts fading
-    // immediately instead of sitting frozen while a network call runs.
-    const cleanupDone = (async () => {
+    // Item #13 (2026-08-20): the job disappears from view right away
+    // (renderJobs() filters out anything in pendingDeleteJobIds), but
+    // storage is untouched and the real deletion -- including the
+    // Supabase photo cleanup, which is genuinely irreversible once it
+    // runs -- is deferred for a real undo window rather than happening
+    // immediately and permanently on confirmation.
+    const timer = setTimeout(async () => {
+      pendingDeleteJobIds.delete(id);
+
+      // Photos live only in Supabase (th_job_photos + the job-photos
+      // bucket), keyed by job ID -- once the job itself is gone, there's
+      // no longer any way to find or clean these up later, so this has
+      // to happen alongside the job's own removal, not after.
       if (typeof fetchJobPhotos === 'function' && typeof deleteJobPhoto === 'function') {
         const photoResult = await fetchJobPhotos(id);
         if (photoResult.ok && photoResult.photos.length > 0) {
@@ -674,14 +680,18 @@
           }
         }
       }
-    })();
 
-    await Promise.all([animationDone, cleanupDone]);
-    saveJobs(loadJobs().filter(j => j.id !== id));
+      saveJobs(loadJobs().filter(j => j.id !== id));
+      renderJobs();
+    }, 6000);
+
+    pendingDeleteJobIds.set(id, timer);
     renderJobs();
-    // Push 4 (2026-08-20): see the same note in addJob() above -- those
-    // dropdowns now live on finance.html, not this page.
-    showToast('Job deleted.');
+    showUndoToast('Job deleted.', () => {
+      clearTimeout(pendingDeleteJobIds.get(id));
+      pendingDeleteJobIds.delete(id);
+      renderJobs();
+    });
   }
 
   async function setJobStatus(id, newStatus) {
@@ -841,6 +851,12 @@
 
   let currentStatusFilter = 'not-done';
   let editingJobId = null;
+  // Item #13 (2026-08-20): jobs currently within their undo window --
+  // id -> the pending setTimeout that will finalize the real deletion
+  // (Supabase photo cleanup + removal from storage) if not cancelled.
+  // A job's id sits in here for exactly the ~6 seconds between clicking
+  // Delete and the deletion actually becoming permanent.
+  const pendingDeleteJobIds = new Map();
   let justAddedJobId = null;
   // Item #5 (2026-08-17): staggered reveal on this list's true first
   // render only -- see the .list-stagger comment in styles.css for why
@@ -901,12 +917,49 @@
   async function bulkDeleteJobs() {
     if (selectedJobIds.size === 0) { showToast('Nothing selected.', { type: 'error' }); return; }
     const count = selectedJobIds.size;
-    const confirmed = await showConfirm('Delete ' + count + ' job' + (count === 1 ? '' : 's') + '? This can\'t be undone.', { confirmText: 'Delete', danger: true });
+    const confirmed = await showConfirm('Delete ' + count + ' job' + (count === 1 ? '' : 's') + '?', { confirmText: 'Delete', danger: true });
     if (!confirmed) return;
-    const jobs = loadJobs().filter(j => !selectedJobIds.has(j.id));
-    saveJobs(jobs);
-    toggleJobSelectionMode();
-    showToast(count + ' job' + (count === 1 ? '' : 's') + ' deleted.');
+
+    const idsToDelete = new Set(selectedJobIds);
+    toggleJobSelectionMode(); // clears selectedJobIds and exits selection mode
+
+    // Item #13 (2026-08-20): same undo window as single-job delete, but
+    // ONE shared timer covering the whole batch as one atomic action --
+    // matches how a person actually thinks about "I just bulk-deleted
+    // these," not N independent deletions that could each be undone
+    // separately. Also fixes a separate, pre-existing gap found while
+    // making this change: this function never cleaned up Supabase
+    // photos at all before, unlike single-job delete -- bulk-deleted
+    // jobs' photos were being silently orphaned in cloud storage.
+    const timer = setTimeout(async () => {
+      idsToDelete.forEach(id => pendingDeleteJobIds.delete(id));
+
+      let failedPhotoCount = 0;
+      if (typeof fetchJobPhotos === 'function' && typeof deleteJobPhoto === 'function') {
+        for (const id of idsToDelete) {
+          const photoResult = await fetchJobPhotos(id);
+          if (!photoResult.ok || photoResult.photos.length === 0) continue;
+          for (const photo of photoResult.photos) {
+            const delResult = await deleteJobPhoto(photo.id, photo.storage_path);
+            if (!delResult.ok) failedPhotoCount++;
+          }
+        }
+      }
+      if (failedPhotoCount > 0) {
+        await showAlert(`Deleted the jobs, but ${failedPhotoCount} photo${failedPhotoCount === 1 ? '' : 's'} across them couldn't be removed from cloud storage (likely a network issue) and may still be sitting there unused.`);
+      }
+
+      saveJobs(loadJobs().filter(j => !idsToDelete.has(j.id)));
+      renderJobs();
+    }, 6000);
+
+    idsToDelete.forEach(id => pendingDeleteJobIds.set(id, timer));
+    renderJobs();
+    showUndoToast(count + ' job' + (count === 1 ? '' : 's') + ' deleted.', () => {
+      clearTimeout(timer);
+      idsToDelete.forEach(id => pendingDeleteJobIds.delete(id));
+      renderJobs();
+    });
   }
 
   function setStatusFilter(filter) {
@@ -949,6 +1002,12 @@
   function renderJobs() {
     const searchTerm = document.getElementById('jobSearch').value.trim().toLowerCase();
     let jobs = sortJobs(loadJobs());
+    // Item #13 (2026-08-20): jobs pending an undoable delete (see
+    // deleteJob below) are filtered out of the rendered list here --
+    // storage is untouched until the undo window actually expires, so
+    // this filter is the ONLY thing making a pending-delete job
+    // disappear from view in the meantime.
+    if (pendingDeleteJobIds.size > 0) jobs = jobs.filter(j => !pendingDeleteJobIds.has(j.id));
     if (currentStatusFilter === 'not-done') jobs = jobs.filter(j => j.status !== 'done');
     else if (currentStatusFilter !== 'all') jobs = jobs.filter(j => j.status === currentStatusFilter);
     if (searchTerm) {
@@ -1285,22 +1344,21 @@
 
 
 
-  // ---------- Expenses ----------
-
-  const PAYMENT_LABEL = { cash: 'Cash', card: 'Card', check: 'Check', venmo: 'Venmo', cashapp: 'Cash App', other: 'Other' };
-
-  document.getElementById('entryType').addEventListener('change', () => {
-    const isMileage = document.getElementById('entryType').value === 'mileage';
-    document.getElementById('amountField').style.display = isMileage ? 'none' : '';
-    document.getElementById('milesField').style.display = isMileage ? '' : 'none';
-    document.getElementById('receiptField').style.display = isMileage ? 'none' : '';
-    document.getElementById('partNumberField').style.display = isMileage ? 'none' : '';
-  });
-
-  document.getElementById('entryReceipt').addEventListener('change', (e) => {
-    const file = e.target.files[0];
-    document.getElementById('receiptPreviewName').textContent = file ? 'Selected: ' + file.name : '';
-  });
+  // Bug fix (2026-08-20): this whole block used to wire up the Expenses
+  // tab's entry-type toggle and receipt-file preview. Those form fields
+  // (entryType, amountField, milesField, receiptField, partNumberField,
+  // entryReceipt, receiptPreviewName) all moved to finance.html back in
+  // Push 4 -- but this specific code was bare, unnamed top-level
+  // wiring, not a named function, so Push 4's function-name-based
+  // extraction never found it to move it along with everything else.
+  // It sat here throwing an uncaught "Cannot read properties of null"
+  // on every single page load since, which HALTED all further top-level
+  // script execution in this same <script> tag -- including the
+  // DOMContentLoaded listener registration near the bottom of this
+  // file, meaning renderJobs() and every other piece of this page's own
+  // init likely never actually ran on a fresh load. Confirmed empirically
+  // with jsdom against this exact file before treating it as fixed, not
+  // just reasoned about.
 
 
   let editingExpenseId = null;

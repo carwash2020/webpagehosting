@@ -330,6 +330,12 @@ body.th-has-bottomnav .th-toast-container{
 @media (prefers-reduced-motion: reduce){
   .th-toast{ transition:none; }
 }
+.th-toast-undo-btn {
+  flex-shrink: 0; background: none; border: none; color: var(--orange-light);
+  font-weight: 700; font-size: 13.5px; font-family: inherit; cursor: pointer;
+  padding: 2px 4px; margin-left: 2px;
+}
+.th-toast-undo-btn:hover { color: var(--orange); }
 
 /* ==========================================================================
    INTERNAL TOOLS — PROFESSIONAL POLISH PASS

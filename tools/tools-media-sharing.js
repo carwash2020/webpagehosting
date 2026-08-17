@@ -189,6 +189,45 @@ function dismissToast(toast) {
   setTimeout(() => toast.remove(), 200);
 }
 
+// Item #13 (2026-08-20): a dedicated toast with a real Undo action, for
+// deletions that are actually reversible for a short window -- built as
+// its own function rather than extending showToast() itself, which is
+// called from dozens of places throughout the app that don't need this
+// and shouldn't risk being affected by it. This function owns no
+// deletion logic of its own: onUndo is whatever the caller needs to run
+// to cancel its own pending action (typically clearTimeout on a
+// setTimeout that would otherwise finalize the delete).
+function showUndoToast(message, onUndo, options) {
+  options = options || {};
+  const duration = options.duration || 6000; // longer than a normal toast's 2.6s -- undo needs a real moment to notice and react
+  const container = ensureToastContainerExists();
+
+  const toast = document.createElement('div');
+  toast.className = 'th-toast th-toast-undo';
+  toast.innerHTML =
+    '<svg class="th-icon" aria-hidden="true"><use href="#icon-check-circle" xlink:href="#icon-check-circle"></use></svg>' +
+    '<span></span>' +
+    '<button type="button" class="th-toast-undo-btn">Undo</button>';
+  toast.querySelector('span').textContent = message; // textContent, not innerHTML -- message may contain user data
+
+  toast.querySelector('.th-toast-undo-btn').addEventListener('click', (e) => {
+    e.stopPropagation(); // don't also trigger the toast's own dismiss-on-click below
+    onUndo();
+    dismissToast(toast);
+  });
+  // Clicking anywhere else on the toast (not the Undo button) just
+  // dismisses it early WITHOUT undoing -- same as a normal toast's
+  // click-to-dismiss, and correctly does nothing to cancel the pending
+  // action, since that's not what tapping past a toast means.
+  toast.addEventListener('click', () => dismissToast(toast));
+
+  container.appendChild(toast);
+  requestAnimationFrame(() => toast.classList.add('is-shown'));
+
+  const timer = setTimeout(() => dismissToast(toast), duration);
+  toast._thTimer = timer;
+}
+
 // ---------------------------------------------------------------------------
 // Share-or-download for generated PDFs -- tries the native share sheet
 // (text it, email it, AirDrop it) first on devices that support sharing

@@ -510,3 +510,123 @@ test('the direct-jump shortcut (openUnitDirectly, used by search results) also r
   assert.ok(fn, 'openUnitDirectly not found');
   assert.match(fn[0], /renderBrandDetail\(\)/);
 });
+
+// Push 12 (2026-08-20): a critical, previously-undiscovered bug found
+// while cross-checking element-id references for an unrelated feature
+// (item #13's undo-delete work). Dead code left over from Push 4's
+// Job Tracker split -- bare, unnamed top-level statements wiring up
+// the Expenses tab's entryType/entryReceipt fields, which moved to
+// finance.html -- was throwing an uncaught exception at TOP-LEVEL
+// script execution on every single Job Tracker page load. Confirmed
+// empirically via jsdom (not just reasoned about) that this halted ALL
+// subsequent top-level code in the same <script> tag, including the
+// DOMContentLoaded listener registration itself -- meaning renderJobs()
+// and every other piece of this page's init likely never actually ran
+// on a fresh load since Push 4 shipped. This test actually LOADS the
+// real page and dispatches DOMContentLoaded, rather than just grepping
+// for the dead code textually, specifically so this exact class of "the
+// script never gets far enough to do anything" bug can never silently
+// reappear undetected.
+
+test('job-tracker.html\'s DOMContentLoaded init actually runs end-to-end without an uncaught top-level exception blocking it', async () => {
+  const { JSDOM } = require('jsdom');
+  const html = fs.readFileSync(JOB_TRACKER_PATH, 'utf8');
+  const dom = new JSDOM(html, {
+    runScripts: 'dangerously', url: 'https://example.com/',
+    // requireAuth() is called unconditionally by an inline <script> at
+    // the very top of this page, before external auth.js (which
+    // defines it) has a chance to load -- and external <script src>
+    // tags never resolve in this sandbox anyway. beforeParse injects it
+    // onto the window before ANY script runs, which a plain post-
+    // construction assignment can't do (the page's own top-of-file
+    // script already ran and threw by the time the constructor returns).
+    beforeParse(window) { window.requireAuth = () => {}; },
+  });
+  const { window } = dom;
+  window.showToast = () => {};
+  window.showConfirm = () => Promise.resolve(true);
+  window.initSyncOnLoad = () => Promise.resolve();
+  window.getCurrentUserEmail = () => null;
+  // data-layer.js (real file, real <script src>) doesn't resolve in
+  // this sandbox either -- renderJobs() calls thRead()/TH_KEYS
+  // unconditionally for the margin badge, so both need a real-shaped
+  // stub rather than being left undefined.
+  window.TH_KEYS = { invoices: 'th_invoices', expenses: 'th_expense_log', income: 'th_income_log' };
+  window.thRead = (key, fallback) => fallback;
+  window.attachLongPress = () => {};
+  window.wireSearchClear = () => {};
+  window.attachVoiceDictation = () => {};
+
+  let uncaughtDuringInit = null;
+  window.addEventListener('error', (e) => { uncaughtDuringInit = e.error; });
+
+  window.document.dispatchEvent(new window.Event('DOMContentLoaded'));
+  // Lets any already-scheduled microtasks/promise continuations from the
+  // page's own async init IIFE settle before this test function returns
+  // -- otherwise anything still pending surfaces as a dangling
+  // unhandled rejection attributed to a test that already finished,
+  // rather than a clear assertion failure right here.
+  await new Promise(resolve => setTimeout(resolve, 50));
+
+  assert.equal(uncaughtDuringInit, null, 'DOMContentLoaded handler should not throw synchronously');
+  assert.equal(typeof window.renderJobs, 'function', 'renderJobs should be defined (hoisting works regardless)');
+  // The real regression check: renderJobs() must have actually been
+  // CALLED during init, not just defined. An empty jobsList div is
+  // exactly what the page looked like the whole time this bug was live.
+  const jobsList = window.document.getElementById('jobsList');
+  assert.ok(jobsList, 'jobsList element should exist');
+  assert.ok(jobsList.innerHTML.length > 0, 'renderJobs() should have populated jobsList during init -- an empty div here is the exact symptom this bug caused');
+});
+
+test('the dead entryType/entryReceipt wiring code that caused the above bug is gone, and PAYMENT_LABEL (which nothing referenced) went with it', () => {
+  const src = fs.readFileSync(JOB_TRACKER_PATH, 'utf8');
+  assert.doesNotMatch(src, /getElementById\('entryType'\)/);
+  assert.doesNotMatch(src, /getElementById\('entryReceipt'\)/);
+  assert.doesNotMatch(src, /PAYMENT_LABEL/);
+});
+
+// Push 12 continued: item #13, soft-delete/undo. Scoped safely to jobs
+// specifically rather than a comprehensive all-entity data-model change
+// -- the real deletion (including the Supabase photo cleanup, which is
+// genuinely irreversible once it runs) is deferred behind a real undo
+// window instead of happening immediately and permanently on
+// confirmation.
+
+test('showUndoToast exists as its own function, not grafted onto showToast (which dozens of other callers use and shouldn\'t be affected)', () => {
+  const src = fs.readFileSync(path.join(__dirname, '..', 'tools', 'tools-media-sharing.js'), 'utf8');
+  assert.match(src, /function showUndoToast\(message, onUndo, options\)/);
+});
+
+test('deleteJob defers the real deletion behind a timer rather than executing immediately on confirmation', () => {
+  const src = fs.readFileSync(JOB_TRACKER_PATH, 'utf8');
+  const fn = src.match(/async function deleteJob\(id\)[\s\S]*?\n  \}\n/);
+  assert.ok(fn, 'deleteJob not found');
+  assert.match(fn[0], /setTimeout\(async \(\) => \{/, 'the real deletion logic should be deferred inside a setTimeout');
+  assert.match(fn[0], /showUndoToast\(/, 'should show an undo toast rather than a plain toast');
+  assert.match(fn[0], /pendingDeleteJobIds\.set\(id, timer\)/, 'the pending job id must be tracked so renderJobs() can filter it out of view');
+});
+
+test('renderJobs filters out jobs with a pending deletion, without touching underlying storage', () => {
+  const src = fs.readFileSync(JOB_TRACKER_PATH, 'utf8');
+  const fn = src.match(/function renderJobs\(\)[\s\S]*?(?=\n  function |\n  async function )/);
+  assert.ok(fn, 'renderJobs not found');
+  assert.match(fn[0], /pendingDeleteJobIds\.size > 0.*jobs = jobs\.filter/, 'should filter jobs currently pending deletion out of the rendered list');
+});
+
+test('bulkDeleteJobs now cleans up Supabase photos, a gap found while adding undo (it never did this before)', () => {
+  const src = fs.readFileSync(JOB_TRACKER_PATH, 'utf8');
+  const fn = src.match(/async function bulkDeleteJobs\(\)[\s\S]*?\n  \}\n/);
+  assert.ok(fn, 'bulkDeleteJobs not found');
+  assert.match(fn[0], /fetchJobPhotos/, 'should fetch each deleted job\'s photos');
+  assert.match(fn[0], /deleteJobPhoto/, 'should actually delete them from Supabase storage');
+  assert.match(fn[0], /showUndoToast\(/, 'should give the same undo protection as single-job delete');
+});
+
+test('undoing a bulk delete cancels the ONE shared timer and restores every job in the batch, not just one', () => {
+  const src = fs.readFileSync(JOB_TRACKER_PATH, 'utf8');
+  const fn = src.match(/async function bulkDeleteJobs\(\)[\s\S]*?\n  \}\n/);
+  const undoCallback = fn[0].match(/showUndoToast\([^,]+,\s*\(\) => \{([\s\S]*?)\}\);/);
+  assert.ok(undoCallback, 'undo callback not found');
+  assert.match(undoCallback[1], /clearTimeout\(timer\)/);
+  assert.match(undoCallback[1], /idsToDelete\.forEach\(id => pendingDeleteJobIds\.delete\(id\)\)/);
+});
