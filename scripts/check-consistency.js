@@ -100,7 +100,7 @@ function checkVersionFreshness(problems) {
   // PWA concerns together) was split into 4 focused files -- updated
   // here so this check keeps tracking real files instead of one that
   // no longer exists.
-  const VERSIONED_SCRIPTS = ['tools-effects.js', 'tools-dialogs.js', 'tools-media-sharing.js', 'tools-nav-pwa.js', 'sync.js', 'auth.js', 'push-notifications.js', 'styles-tools.css'];
+  const VERSIONED_SCRIPTS = ['tools-effects.js', 'tools-dialogs.js', 'tools-media-sharing.js', 'tools-nav-pwa.js', 'sync.js', 'auth.js', 'push-notifications.js', 'styles-tools.css', 'dev-tools-shared.js'];
   const files = fs.readdirSync(TOOLS_DIR).filter(f => f.endsWith('.html'));
 
   for (const script of VERSIONED_SCRIPTS) {
@@ -184,7 +184,7 @@ function main() {
     // again. Each script is optional per-page (not every tool loads all
     // three), but whichever ones a page DOES load must carry a matching
     // ?v= version, and that version must match every other page's.
-    ['tools-effects.js', 'tools-dialogs.js', 'tools-media-sharing.js', 'tools-nav-pwa.js', 'sync.js', 'auth.js', 'styles-tools.css'].forEach(script => {
+    ['tools-effects.js', 'tools-dialogs.js', 'tools-media-sharing.js', 'tools-nav-pwa.js', 'sync.js', 'auth.js', 'styles-tools.css', 'dev-tools-shared.js'].forEach(script => {
       const re = new RegExp(`${script.replace('.', '\\.')}(\\?v=(\\d+))?`);
       const m = html.match(re);
       if (!m) return; // page doesn't load this script at all -- fine
