@@ -2799,6 +2799,13 @@
     prunePrMergeGenericIssuesV3IfNeeded();
     backfillPrIssueMetadataV1IfNeeded();
     renderTypeFilterOptions();
+    // Item #37/#24 (2026-08-20): Parts Reference was the one page
+    // inconsistent with the ?search= deep-link convention every other
+    // page already supports (Job Tracker, Contract Generator, etc.) --
+    // set before the first render so the initial view already reflects
+    // the filter, rather than flashing the full unfiltered list first.
+    const presetSearch = new URLSearchParams(location.search).get('search');
+    if (presetSearch) document.getElementById('prSearchInput').value = presetSearch;
     renderUnits();
     populatePrDatalists();
     renderPrDisplayNameRow();

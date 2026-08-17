@@ -207,3 +207,39 @@ test('autofillFromJobRef follows the same never-overwrite safety convention as t
   assert.match(body, /if \(nameEl && !nameEl\.value\.trim\(\)\)/);
   assert.match(body, /if \(addrEl && !addrEl\.value\.trim\(\)/);
 });
+
+// Push 7 (2026-08-20, structural item #37/#24): connecting Parts
+// Reference to the rest of the app via a safe, link-based lookup rather
+// than pulling its dataset into another page directly, plus bringing
+// Parts Reference in line with the ?search= deep-link convention every
+// other page already supports.
+
+test('Parts Reference now supports the ?search= deep-link convention used everywhere else', () => {
+  const src = fs.readFileSync(path.join(__dirname, '..', 'tools', 'parts-reference.html'), 'utf8');
+  assert.match(src, /new URLSearchParams\(location\.search\)\.get\('search'\)/);
+  assert.match(src, /document\.getElementById\('prSearchInput'\)\.value = presetSearch/);
+});
+
+test('the search prefill is set before the first render, not after (avoids a flash of the unfiltered list)', () => {
+  const src = fs.readFileSync(path.join(__dirname, '..', 'tools', 'parts-reference.html'), 'utf8');
+  const initBlock = src.slice(src.indexOf("document.addEventListener('DOMContentLoaded'"));
+  const presetIdx = initBlock.indexOf("get('search')");
+  const firstRenderIdx = initBlock.indexOf('renderUnits();');
+  assert.ok(presetIdx > 0 && firstRenderIdx > 0, 'both should be present in the init block');
+  assert.ok(presetIdx < firstRenderIdx, 'the search value must be set before renderUnits() runs the first time');
+});
+
+test('openWikiLookup exists and is wired to both the invoice and quote forms', () => {
+  const src = fs.readFileSync(path.join(__dirname, '..', 'tools', 'invoice-generator.html'), 'utf8');
+  assert.match(src, /function openWikiLookup\(descriptionFieldId\)/);
+  assert.match(src, /onclick="openWikiLookup\('jobDescription'\)"/);
+  assert.match(src, /onclick="openWikiLookup\('quoteJobDescription'\)"/);
+});
+
+test('openWikiLookup builds a URL using the same ?search= convention Parts Reference now supports', () => {
+  const src = fs.readFileSync(path.join(__dirname, '..', 'tools', 'invoice-generator.html'), 'utf8');
+  const fnMatch = src.match(/function openWikiLookup\([\s\S]*?\n  \}\n/);
+  assert.ok(fnMatch, 'openWikiLookup() not found');
+  assert.match(fnMatch[0], /\/tools\/parts-reference\.html/);
+  assert.match(fnMatch[0], /\?search=' \+ encodeURIComponent\(query\)/);
+});
