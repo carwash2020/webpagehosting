@@ -346,6 +346,41 @@ function ensureDialogModalExists() {
   });
 }
 
+// Shared money formatter -- previously defined identically (or nearly
+// so) 4 separate times across workspace.html, job-tracker.html,
+// invoice-generator.html, and route-planner.html. One copy now.
+function money(v) { return '$' + (v || 0).toFixed(2).replace(/\d(?=(\d{3})+\.)/g, '$&,'); }
+
+// Shared HTML-escaping helper -- previously defined 9 separate times
+// across the tool suite. 8 copies used a DOM-based trick (assign to
+// textContent, read back innerHTML); review-request.html used a
+// different regex-based version that explicitly returned '' for
+// null/undefined. That distinction mattered: it's called there as
+// escapeHtml(entry.phone) with no `|| ''` fallback, and an older saved
+// entry with no phone on file would otherwise render the literal string
+// "undefined" on screen (since assigning undefined to textContent
+// coerces to that word). This keeps the explicit guard, but still uses
+// the DOM-based approach -- the majority pattern -- for real strings.
+function escapeHtml(str) {
+  if (str === null || str === undefined) return '';
+  const div = document.createElement('div');
+  div.textContent = str;
+  return div.innerHTML;
+}
+
+// Item #5 (2026-08-18): shared debounce utility for the 9 live-search
+// inputs across the tool suite, all of which previously re-ran a full
+// list render on every single keystroke with no debounce at all -- fine
+// for a short list, real jank risk as data grows. Keyed by name (not a
+// plain debounce(fn) HOF) specifically so it can be called directly from
+// an inline oninput="..." attribute without each page needing to
+// declare and manage its own wrapper variable.
+const _debounceTimers = {};
+function debouncedCall(key, fn, delay) {
+  clearTimeout(_debounceTimers[key]);
+  _debounceTimers[key] = setTimeout(fn, delay || 200);
+}
+
 function showAlert(message) {
   return new Promise((resolve) => {
     ensureDialogModalExists();
