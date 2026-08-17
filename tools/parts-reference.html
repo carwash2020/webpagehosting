@@ -2764,40 +2764,38 @@
   document.addEventListener('DOMContentLoaded', () => {
     seedPrExampleIfEmpty();
     migrateLegacyPrDataIfNeeded();
-    upgradePrSeedV2IfNeeded();
-    upgradePrSeedV3IfNeeded();
-    upgradePrSeedV4IfNeeded();
-    upgradePrSeedV5IfNeeded();
-    upgradePrSeedV6IfNeeded();
-    upgradePrSeedV7IfNeeded();
-    upgradePrSeedV8IfNeeded();
-    upgradePrSeedV9IfNeeded();
-    upgradePrSeedV10IfNeeded();
-    upgradePrSeedV11IfNeeded();
-    upgradePrSeedV12IfNeeded();
-    upgradePrSeedV13IfNeeded();
-    upgradePrSeedV14IfNeeded();
-    upgradePrSeedV15IfNeeded();
-    upgradePrSeedV16IfNeeded();
-    upgradePrSeedV17IfNeeded();
-    upgradePrSeedV18IfNeeded();
-    upgradePrSeedV19IfNeeded();
-    upgradePrSeedV20IfNeeded();
-    upgradePrSeedV21IfNeeded();
-    upgradePrSeedV22IfNeeded();
-    upgradePrSeedV23IfNeeded();
-    upgradePrSeedV24IfNeeded();
-    prunePrPhantomBrandsV1IfNeeded();
-    upgradePrSeedV25IfNeeded();
-    upgradePrSeedV26IfNeeded();
-    upgradePrSeedV27IfNeeded();
-    upgradePrSeedV28IfNeeded();
-    upgradePrSeedV29IfNeeded();
-    upgradePrSeedV30IfNeeded();
-    upgradePrSeedV31IfNeeded();
-    prunePrBlankReferencesV2IfNeeded();
-    prunePrMergeGenericIssuesV3IfNeeded();
-    backfillPrIssueMetadataV1IfNeeded();
+    // Structural item #14 (2026-08-20): this used to be 34 individual
+    // call lines in a row. Consolidated to an ordered array + loop --
+    // the array preserves the EXACT same execution order as before,
+    // including prunePrPhantomBrandsV1IfNeeded sitting between V24 and
+    // V25 at its original position, in case any later migration
+    // implicitly depends on an earlier prune having already run.
+    // Deliberately does NOT touch any individual migration function's
+    // body -- after an initial pass suggested all ~30 were the same
+    // simple "add new units if not already present" shape, a deeper
+    // check found two (V2 and V4) that actually inject new issues into
+    // EXISTING units via a differently-shaped pattern. Consolidating
+    // the actual migration logic itself would need the same exhaustive,
+    // function-by-function verification Push 4's extraction needed --
+    // not worth that risk against live, months-of-work wiki content for
+    // a change that's purely about code tidiness, not an active bug.
+    const PR_SEED_MIGRATIONS = [
+      upgradePrSeedV2IfNeeded, upgradePrSeedV3IfNeeded, upgradePrSeedV4IfNeeded,
+      upgradePrSeedV5IfNeeded, upgradePrSeedV6IfNeeded, upgradePrSeedV7IfNeeded,
+      upgradePrSeedV8IfNeeded, upgradePrSeedV9IfNeeded, upgradePrSeedV10IfNeeded,
+      upgradePrSeedV11IfNeeded, upgradePrSeedV12IfNeeded, upgradePrSeedV13IfNeeded,
+      upgradePrSeedV14IfNeeded, upgradePrSeedV15IfNeeded, upgradePrSeedV16IfNeeded,
+      upgradePrSeedV17IfNeeded, upgradePrSeedV18IfNeeded, upgradePrSeedV19IfNeeded,
+      upgradePrSeedV20IfNeeded, upgradePrSeedV21IfNeeded, upgradePrSeedV22IfNeeded,
+      upgradePrSeedV23IfNeeded, upgradePrSeedV24IfNeeded,
+      prunePrPhantomBrandsV1IfNeeded,
+      upgradePrSeedV25IfNeeded, upgradePrSeedV26IfNeeded, upgradePrSeedV27IfNeeded,
+      upgradePrSeedV28IfNeeded, upgradePrSeedV29IfNeeded, upgradePrSeedV30IfNeeded,
+      upgradePrSeedV31IfNeeded,
+      prunePrBlankReferencesV2IfNeeded, prunePrMergeGenericIssuesV3IfNeeded,
+      backfillPrIssueMetadataV1IfNeeded,
+    ];
+    PR_SEED_MIGRATIONS.forEach(fn => fn());
     renderTypeFilterOptions();
     // Item #37/#24 (2026-08-20): Parts Reference was the one page
     // inconsistent with the ?search= deep-link convention every other
