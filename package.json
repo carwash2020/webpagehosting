@@ -3,7 +3,7 @@
   "private": true,
   "description": "Automated tests and consistency checks for triplehenterprisesllc.biz. Dev-only tooling -- has no effect on the deployed static site, which still has zero build step.",
   "scripts": {
-    "test": "node --test tests/parts-reference.test.js tests/sync-merge.test.js",
+    "test": "node --test tests/parts-reference.test.js tests/sync-merge.test.js tests/data-layer.test.js",
     "check-consistency": "node scripts/check-consistency.js"
   },
   "devDependencies": {
