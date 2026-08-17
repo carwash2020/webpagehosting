@@ -39,6 +39,7 @@ function loadLayer(seed) {
     'thRead', 'thWrite', 'thNormalizeClientName', 'thLoadClients', 'thBackfillClients',
     'thFindClientByName', 'thFindClientById', 'thEnsureClient', 'thGetClientBundle',
     'thGetAllClientsWithTotals', 'thRunClientBackfillOnce', 'TH_KEYS',
+    'thComputeJobMargin', 'thGetJobBundle',
   ];
   const fn = new Function('window', 'document', 'localStorage',
     src + '\nreturn {' + exportNames.join(',') + '};');
@@ -245,4 +246,83 @@ test('contract save in contract-generator.html calls thEnsureClient and stores c
   // the log entry), not c.fields.clientId -- this guards against that
   // exact mismatch being reintroduced silently.
   assert.match(src, /clientId:\s*contractClientId,/, 'clientId must be a top-level field on the log entry, not nested inside fields');
+});
+
+// Push 3 (2026-08-20): thComputeJobMargin/thGetJobBundle -- moved out of
+// job-tracker.html (which had the only copy) into the shared data layer,
+// since the new Job Detail page needed the exact same calculation. These
+// lock in the math itself; a separate test below confirms job-tracker.html
+// was actually updated to delegate to it rather than keeping its own copy.
+
+test('thComputeJobMargin sums linked invoices and manual income, subtracts linked expenses', () => {
+  const L = loadLayer({});
+  const job = { id: 1, title: 'Fix sink' };
+  const invoices = [{ id: 10, jobRefId: 1, total: 300 }, { id: 11, jobRefId: 2, total: 999 }];
+  const expenses = [{ id: 20, jobRefId: 1, amount: 80 }, { id: 21, jobRefId: 2, amount: 999 }];
+  const income = [{ id: 30, jobRefId: 1, amount: 50 }];
+  const result = L.thComputeJobMargin(job, invoices, expenses, income);
+  assert.equal(result.revenue, 350, 'invoice total + manual income for THIS job only');
+  assert.equal(result.cost, 80);
+  assert.equal(result.margin, 270);
+  assert.equal(result.hasInvoice, true);
+  assert.equal(result.hasCost, true);
+  // job 2's numbers must never leak into job 1's result
+  assert.notEqual(result.revenue, 350 + 999);
+});
+
+test('thComputeJobMargin reports hasInvoice/hasCost false with no linked records, without dividing by zero', () => {
+  const L = loadLayer({});
+  const result = L.thComputeJobMargin({ id: 1 }, [], [], []);
+  assert.equal(result.hasInvoice, false);
+  assert.equal(result.hasCost, false);
+  assert.equal(result.revenue, 0);
+  assert.equal(result.marginPct, 0, 'percentage of zero revenue should be 0, not NaN or Infinity');
+});
+
+test('thGetJobBundle returns null for an unknown job id rather than throwing', () => {
+  const L = loadLayer({ th_tracker_jobs: [{ id: 1, title: 'a' }] });
+  assert.equal(L.thGetJobBundle('does-not-exist'), null);
+  assert.equal(L.thGetJobBundle(999), null);
+});
+
+test('thGetJobBundle resolves the client via clientId first, falling back to name matching', () => {
+  const L = loadLayer({
+    th_tracker_jobs: [
+      { id: 1, title: 'Job with id', client: 'Old Name On File', clientId: 'c_fixed' },
+      { id: 2, title: 'Job without id', client: 'Sarah Miller' },
+    ],
+  });
+  // Manually seed a client whose CURRENT name differs from what job 1
+  // still has on file -- clientId must win over the stale name.
+  L._localStorage.setItem('th_clients', JSON.stringify([
+    { id: 'c_fixed', name: 'Current Correct Name' },
+  ]));
+  const bundle1 = L.thGetJobBundle(1);
+  assert.equal(bundle1.client.name, 'Current Correct Name', 'clientId should be preferred over the possibly-stale name string');
+
+  L.thBackfillClients();
+  const bundle2 = L.thGetJobBundle(2);
+  assert.equal(bundle2.client.name, 'Sarah Miller', 'a job with no clientId should still resolve by name');
+});
+
+test('thGetJobBundle only links records for the requested job, never a different one', () => {
+  const L = loadLayer({
+    th_tracker_jobs: [{ id: 1, title: 'a' }, { id: 2, title: 'b' }],
+    th_invoices: [{ id: 10, jobRefId: 1, total: 100 }, { id: 11, jobRefId: 2, total: 999 }],
+    th_quotes: [{ id: 20, jobRefId: 1, total: 50 }],
+    th_expense_log: [{ id: 30, jobRefId: 2, amount: 999 }],
+  });
+  const bundle = L.thGetJobBundle(1);
+  assert.equal(bundle.linkedInvoices.length, 1);
+  assert.equal(bundle.linkedInvoices[0].total, 100);
+  assert.equal(bundle.linkedQuotes.length, 1);
+  assert.equal(bundle.linkedExpenses.length, 0, 'job 2\'s expense must not appear on job 1\'s bundle');
+});
+
+test('job-tracker.html delegates to the shared thComputeJobMargin rather than keeping its own duplicate copy', () => {
+  const src = fs.readFileSync(path.join(__dirname, '..', 'tools', 'job-tracker.html'), 'utf8');
+  const fnMatch = src.match(/function computeJobMargin\(job, invoices, expenses, manualIncome\)[\s\S]*?\n  \}\n/);
+  assert.ok(fnMatch, 'computeJobMargin() not found in job-tracker.html');
+  assert.match(fnMatch[0], /return thComputeJobMargin\(/,
+    'computeJobMargin() should delegate to the shared thComputeJobMargin(), not recompute the math itself');
 });
