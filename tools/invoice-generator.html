@@ -17,7 +17,7 @@
 <link rel="apple-touch-icon" href="/images/apple-touch-icon.png">
 
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <meta name="robots" content="noindex, nofollow">
 <title>Invoice Generator | Triple H Enterprises (Internal Tool)</title>
 <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data:; connect-src 'self' https://*.supabase.co wss://*.supabase.co; frame-src 'none'; object-src 'none'; base-uri 'self'; frame-ancestors 'none';">
@@ -27,7 +27,7 @@
 <link rel="stylesheet" href="/styles.css?v=202608182000">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.112.3/dist/umd/supabase.js" integrity="sha384-qafw21c/iciq0VXsi9FzkfoQv5I/V0iqE4lSNcKXPnW9/UTJLnv5CcN4FHxVLnKg" crossorigin="anonymous" defer></script>
 <script src="/tools/sync.js?v=202608161700" defer></script>
-<script src="/tools/tools-common.js?v=202608182000" defer></script>
+<script src="/tools/tools-common.js?v=202608190900" defer></script>
 <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js" integrity="sha384-JcnsjUPPylna1s1fvi1u12X5qjY5OL56iySh75FdtrwhO/SWXgMjoVqcKyIIWOLk" crossorigin="anonymous"></script>
 <style>
   body { padding: 90px 20px 60px; max-width: 900px; margin: 0 auto; }
@@ -302,12 +302,12 @@
       <h3 style="margin:0;">Recent Invoices</h3>
       <button class="small-btn" data-density-toggle onclick="toggleDensityPreference()" aria-pressed="false">Compact view</button>
     </div>
-    <input type="text" id="invoiceLogSearch" placeholder="Search by client or invoice #..." style="width:100%; box-sizing:border-box; margin-bottom:14px; margin-top:12px;" oninput="renderInvoiceLog()">
+    <input type="text" id="invoiceLogSearch" placeholder="Search by client or invoice #..." style="width:100%; box-sizing:border-box; margin-bottom:14px; margin-top:12px;" oninput="debouncedCall('invoiceLogSearch', renderInvoiceLog)">
     <div id="invoiceLogList"></div>
   </div>
   <div class="form-section">
     <h3>Recent Quotes</h3>
-    <input type="text" id="quoteLogSearch" placeholder="Search by client or quote #..." style="width:100%; box-sizing:border-box; margin-bottom:14px;" oninput="renderQuoteLog()">
+    <input type="text" id="quoteLogSearch" placeholder="Search by client or quote #..." style="width:100%; box-sizing:border-box; margin-bottom:14px;" oninput="debouncedCall('quoteLogSearch', renderQuoteLog)">
     <div id="quoteLogList"></div>
   </div>
 </div>
@@ -470,11 +470,6 @@
     document.getElementById(selectId).value = '';
   }
 
-  function escapeHtml(str) {
-    const div = document.createElement('div');
-    div.textContent = str;
-    return div.innerHTML;
-  }
 
   function populateJobRefOptions() {
     const jobs = loadJobs();
@@ -539,7 +534,6 @@
   }
   addLineItem(); // start with one blank row
 
-  function money(v) { return '$' + v.toFixed(2).replace(/\d(?=(\d{3})+\.)/g, '$&,'); }
 
   function saveInvoiceTaxRate() {
     const rate = document.getElementById('invoiceTaxRate').value;

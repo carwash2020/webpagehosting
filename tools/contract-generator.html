@@ -17,7 +17,7 @@
 <link rel="apple-touch-icon" href="/images/apple-touch-icon.png">
 
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <meta name="robots" content="noindex, nofollow">
 <title>Contract Generator | Triple H Enterprises (Internal Tool)</title>
 <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data:; connect-src 'self' https://*.supabase.co wss://*.supabase.co; frame-src 'none'; object-src 'none'; base-uri 'self'; frame-ancestors 'none';">
@@ -27,7 +27,7 @@
 <link rel="stylesheet" href="/styles.css?v=202608182000">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.112.3/dist/umd/supabase.js" integrity="sha384-qafw21c/iciq0VXsi9FzkfoQv5I/V0iqE4lSNcKXPnW9/UTJLnv5CcN4FHxVLnKg" crossorigin="anonymous" defer></script>
 <script src="/tools/sync.js?v=202608161700" defer></script>
-<script src="/tools/tools-common.js?v=202608182000" defer></script>
+<script src="/tools/tools-common.js?v=202608190900" defer></script>
 <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js" integrity="sha384-JcnsjUPPylna1s1fvi1u12X5qjY5OL56iySh75FdtrwhO/SWXgMjoVqcKyIIWOLk" crossorigin="anonymous"></script>
 <style>
   body { padding: 90px 20px 60px; max-width: 900px; margin: 0 auto; }
@@ -227,7 +227,7 @@
   <h3>Recent Contracts</h3>
   <div class="icon-search" id="contractSearchWrap">
     <button class="icon-search-toggle" onclick="toggleIconSearch('contractSearchWrap')" aria-label="Search contracts" title="Search contracts"><svg class="th-icon" aria-hidden="true"><use href="#icon-search" xlink:href="#icon-search"></use></svg></button>
-    <input type="text" id="contractSearch" class="icon-search-input" placeholder="Search by client or contract type..." oninput="renderContractLog()" aria-label="Search contracts">
+    <input type="text" id="contractSearch" class="icon-search-input" placeholder="Search by client or contract type..." oninput="debouncedCall('contractSearch', renderContractLog)" aria-label="Search contracts">
   </div>
   <div id="contractLogList"></div>
 </div>
@@ -262,11 +262,6 @@
 
   function startOfDay(d) { const c = new Date(d); c.setHours(0, 0, 0, 0); return c; }
 
-  function escapeHtml(str) {
-    const div = document.createElement('div');
-    div.textContent = str;
-    return div.innerHTML;
-  }
 
   function switchContractTab(tab) {
     document.querySelectorAll('.contract-tab').forEach(t => t.classList.toggle('is-active', t.dataset.tab === tab));

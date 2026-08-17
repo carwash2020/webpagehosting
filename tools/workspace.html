@@ -17,7 +17,7 @@
 <link rel="apple-touch-icon" href="/images/apple-touch-icon.png">
 
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <meta name="robots" content="noindex, nofollow">
 <title>Dashboard | Triple H Enterprises (Internal)</title>
 <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data: https://*.supabase.co; connect-src 'self' https://*.supabase.co wss://*.supabase.co; frame-src 'none'; object-src 'none'; base-uri 'self'; frame-ancestors 'none';">
@@ -28,7 +28,7 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.112.3/dist/umd/supabase.js" integrity="sha384-qafw21c/iciq0VXsi9FzkfoQv5I/V0iqE4lSNcKXPnW9/UTJLnv5CcN4FHxVLnKg" crossorigin="anonymous" defer></script>
 <script src="/tools/sync.js?v=202608161700" defer></script>
 <script src="/tools/push-notifications.js?v=202608160400" defer></script>
-<script src="/tools/tools-common.js?v=202608182000" defer></script>
+<script src="/tools/tools-common.js?v=202608190900" defer></script>
 <style>
   body { padding: 44px 20px 60px; max-width: 900px; margin: 0 auto; }
   .hub-header { display: flex; align-items: center; justify-content: space-between; gap: 14px; margin-bottom: 8px; }
@@ -301,7 +301,7 @@
 <div class="global-search-block">
   <div class="icon-search" id="globalSearchWrap">
     <button class="icon-search-toggle" onclick="toggleIconSearch('globalSearchWrap')" aria-label="Find a client" title="Find a client"><svg class="th-icon" aria-hidden="true"><use href="#icon-search" xlink:href="#icon-search"></use></svg></button>
-    <input type="text" id="globalSearch" class="icon-search-input" placeholder="Find a client &mdash; searches jobs, contacts, invoices, quotes, and contracts..." oninput="renderGlobalSearch()" aria-label="Search everything by client name">
+    <input type="text" id="globalSearch" class="icon-search-input" placeholder="Find a client &mdash; searches jobs, contacts, invoices, quotes, and contracts..." oninput="debouncedCall('globalSearch', renderGlobalSearch)" aria-label="Search everything by client name">
   </div>
   <div id="globalSearchResults"></div>
 </div>
@@ -400,7 +400,7 @@
     <div class="analytics-subheading">Income</div>
     <div class="icon-search" id="invoiceSearchWrap">
       <button class="icon-search-toggle" onclick="toggleIconSearch('invoiceSearchWrap')" aria-label="Search income" title="Search income"><svg class="th-icon" aria-hidden="true"><use href="#icon-search" xlink:href="#icon-search"></use></svg></button>
-      <input type="text" id="invoiceSearch" class="icon-search-input" placeholder="Search income by client, invoice #, or description..." oninput="renderInvoicesList()" aria-label="Search income">
+      <input type="text" id="invoiceSearch" class="icon-search-input" placeholder="Search income by client, invoice #, or description..." oninput="debouncedCall('invoiceSearch', renderInvoicesList)" aria-label="Search income">
     </div>
     <div id="invoicesList"></div>
 
@@ -642,7 +642,6 @@
 </div>
 
 <script>
-  function money(v) { return '$' + (v || 0).toFixed(2).replace(/\d(?=(\d{3})+\.)/g, '$&,'); }
   const CARD_INFO = {
     secureDocuments: {
       title: 'Secure Documents',
@@ -690,11 +689,6 @@
     if (info) openInfoModal(info.title, info.body);
   }
 
-  function escapeHtml(str) {
-    const div = document.createElement('div');
-    div.textContent = str;
-    return div.innerHTML;
-  }
 
   const COLLAPSE_STATE_KEY = 'th_dash_collapsed';
   const DEFAULT_COLLAPSE = { today: false, snapshot: true, actionitems: false, businesshealth: true };

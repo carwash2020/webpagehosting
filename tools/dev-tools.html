@@ -17,7 +17,7 @@
 <link rel="apple-touch-icon" href="/images/apple-touch-icon.png">
 
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <meta name="robots" content="noindex, nofollow">
 <title>Dev Tools · Triple H Enterprises</title>
 <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data:; connect-src 'self' https://*.supabase.co wss://*.supabase.co https://api.github.com; frame-src 'none'; object-src 'none'; base-uri 'self'; frame-ancestors 'none';">
@@ -25,7 +25,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Anton&family=Oswald:wght@400;500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="/styles.css?v=202608182000">
-<script src="/tools/tools-common.js?v=202608182000" defer></script>
+<script src="/tools/tools-common.js?v=202608190900" defer></script>
 <script src="/tools/sync.js?v=202608161700" defer></script>
 <style>
   body { padding: 44px 20px 60px; max-width: 1080px; margin: 0 auto; }
@@ -674,11 +674,6 @@
     return true;
   }
 
-  function escapeHtml(str) {
-    const div = document.createElement('div');
-    div.textContent = str;
-    return div.innerHTML;
-  }
 
   const TOOL_PAGES_TO_CHECK = [
     'workspace.html', 'calendar.html', 'contract-generator.html', 'invoice-generator.html',

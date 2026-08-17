@@ -31,6 +31,18 @@ function loadPage() {
   window.showToast = () => {};
   window.showConfirm = () => Promise.resolve(true);
   window.navigator.clipboard = { writeText: () => Promise.resolve() };
+  // escapeHtml/money moved into tools-common.js (2026-08-18) to remove
+  // 13 total duplicated function definitions across the tool suite --
+  // same real implementations as tools-common.js, not simplified stand-
+  // ins, so these tests still validate real escaping/formatting
+  // behavior rather than a fake pass-through.
+  window.escapeHtml = (str) => {
+    if (str === null || str === undefined) return '';
+    const div = window.document.createElement('div');
+    div.textContent = str;
+    return div.innerHTML;
+  };
+  window.money = (v) => '$' + (v || 0).toFixed(2).replace(/\d(?=(\d{3})+\.)/g, '$&,');
   return window;
 }
 
