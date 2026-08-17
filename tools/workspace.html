@@ -24,11 +24,11 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Anton&family=Oswald:wght@400;500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="/styles.css?v=202608182000">
+<link rel="stylesheet" href="/styles.css?v=202608191300">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.112.3/dist/umd/supabase.js" integrity="sha384-qafw21c/iciq0VXsi9FzkfoQv5I/V0iqE4lSNcKXPnW9/UTJLnv5CcN4FHxVLnKg" crossorigin="anonymous" defer></script>
 <script src="/tools/sync.js?v=202608161700" defer></script>
 <script src="/tools/push-notifications.js?v=202608160400" defer></script>
-<script src="/tools/tools-common.js?v=202608190900" defer></script>
+<script src="/tools/tools-common.js?v=202608191300" defer></script>
 <style>
   body { padding: 44px 20px 60px; max-width: 900px; margin: 0 auto; }
   .hub-header { display: flex; align-items: center; justify-content: space-between; gap: 14px; margin-bottom: 8px; }
@@ -738,9 +738,9 @@
     'th_quotes', 'th_tax_rate', 'th_tax_labor', 'th_tax_parts', 'th_compliance', 'th_job_templates', 'th_contracts', 'th_setaside_rate',
   ];
 
-  function loadJobs() { return JSON.parse(localStorage.getItem('th_tracker_jobs') || '[]'); }
-  function loadExpenses() { return JSON.parse(localStorage.getItem('th_expense_log') || '[]'); }
-  function loadInvoices() { return JSON.parse(localStorage.getItem('th_invoices') || '[]'); }
+  function loadJobs() { try { return JSON.parse(localStorage.getItem('th_tracker_jobs') || '[]'); } catch (e) { return []; } }
+  function loadExpenses() { try { return JSON.parse(localStorage.getItem('th_expense_log') || '[]'); } catch (e) { return []; } }
+  function loadInvoices() { try { return JSON.parse(localStorage.getItem('th_invoices') || '[]'); } catch (e) { return []; } }
   function saveInvoices(list) { localStorage.setItem('th_invoices', JSON.stringify(list)); if (typeof scheduleSync === 'function') scheduleSync(); }
   function loadRate() { return parseFloat(localStorage.getItem('th_mileage_rate')) || 0.76; }
   function loadContactsForSearch() { try { return JSON.parse(localStorage.getItem('th_tracker_contacts') || '[]'); } catch (e) { return []; } }
@@ -2116,6 +2116,8 @@
         startLeadsRealtime(loadAndRenderLeads, updateRealtimeBadge);
       }
     });
+    wireSearchClear('globalSearch', renderGlobalSearch);
+    wireSearchClear('invoiceSearch', renderInvoicesList);
     window.addEventListener('th-sync-status', renderSnapshotLastUpdated);
     // Keeps "3m ago" counting up while the page sits open, without a
     // sync event to trigger a re-render.

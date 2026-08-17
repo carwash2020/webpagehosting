@@ -349,6 +349,34 @@ function ensureDialogModalExists() {
 // Shared money formatter -- previously defined identically (or nearly
 // so) 4 separate times across workspace.html, job-tracker.html,
 // invoice-generator.html, and route-planner.html. One copy now.
+// Item #54 (2026-08-19): wires a clear (x) button onto the shared
+// icon-search input pattern. Call once per input, right after its own
+// markup exists. Clicking clears the field and re-renders immediately
+// (not through the debounce used for typing, since a deliberate clear
+// click should feel instant, not delayed).
+function wireSearchClear(inputId, renderFn) {
+  const input = document.getElementById(inputId);
+  if (!input) return;
+  const wrap = input.closest('.icon-search');
+  if (!wrap) return;
+  const clearBtn = document.createElement('button');
+  clearBtn.type = 'button';
+  clearBtn.className = 'icon-search-clear';
+  clearBtn.setAttribute('aria-label', 'Clear search');
+  clearBtn.textContent = '\u00d7';
+  wrap.appendChild(clearBtn);
+
+  function sync() { wrap.classList.toggle('has-text', input.value.length > 0); }
+  input.addEventListener('input', sync);
+  clearBtn.addEventListener('click', () => {
+    input.value = '';
+    sync();
+    input.focus();
+    renderFn();
+  });
+  sync();
+}
+
 function money(v) { return '$' + (v || 0).toFixed(2).replace(/\d(?=(\d{3})+\.)/g, '$&,'); }
 
 // Shared HTML-escaping helper -- previously defined 9 separate times

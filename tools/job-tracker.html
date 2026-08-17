@@ -24,10 +24,10 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="/styles.css?v=202608182000">
+<link rel="stylesheet" href="/styles.css?v=202608191300">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.112.3/dist/umd/supabase.js" integrity="sha384-qafw21c/iciq0VXsi9FzkfoQv5I/V0iqE4lSNcKXPnW9/UTJLnv5CcN4FHxVLnKg" crossorigin="anonymous" defer></script>
 <script src="/tools/sync.js?v=202608161700" defer></script>
-<script src="/tools/tools-common.js?v=202608190900" defer></script>
+<script src="/tools/tools-common.js?v=202608191300" defer></script>
 <style>
   body { padding: 90px 20px 60px; max-width: 1080px; margin: 0 auto; }
   .tool-title { font-family:'Oswald',sans-serif; font-weight:700; font-size:28px; color:var(--white); margin-bottom:6px; }
@@ -775,7 +775,7 @@
   });
 
   // ---------- Jobs ----------
-  function loadJobs() { return JSON.parse(localStorage.getItem(STORAGE_KEYS.jobs) || '[]'); }
+  function loadJobs() { try { return JSON.parse(localStorage.getItem(STORAGE_KEYS.jobs) || '[]'); } catch (e) { return []; } }
   function saveJobs(jobs) { localStorage.setItem(STORAGE_KEYS.jobs, JSON.stringify(jobs)); scheduleSync(); }
   let currentSort = 'date';
 
@@ -928,7 +928,7 @@
 
   // ---------- Recurring Job Templates ----------
   const TEMPLATES_KEY = 'th_job_templates';
-  function loadTemplates() { return JSON.parse(localStorage.getItem(TEMPLATES_KEY) || '[]'); }
+  function loadTemplates() { try { return JSON.parse(localStorage.getItem(TEMPLATES_KEY) || '[]'); } catch (e) { return []; } }
   function saveTemplates(list) { localStorage.setItem(TEMPLATES_KEY, JSON.stringify(list)); if (typeof scheduleSync === 'function') scheduleSync(); }
 
   function templateDueInfo(template) {
@@ -1527,7 +1527,7 @@
   }
 
   // ---------- Price Reference ----------
-  function loadPriceReferences() { return JSON.parse(localStorage.getItem(STORAGE_KEYS.priceRef) || '[]'); }
+  function loadPriceReferences() { try { return JSON.parse(localStorage.getItem(STORAGE_KEYS.priceRef) || '[]'); } catch (e) { return []; } }
   function savePriceReferences(list) { localStorage.setItem(STORAGE_KEYS.priceRef, JSON.stringify(list)); scheduleSync(); }
 
   function savePriceReference() {
@@ -1570,7 +1570,7 @@
   }
 
   // ---------- Income ----------
-  function loadIncomeEntries() { return JSON.parse(localStorage.getItem(INCOME_STORAGE_KEY) || '[]'); }
+  function loadIncomeEntries() { try { return JSON.parse(localStorage.getItem(INCOME_STORAGE_KEY) || '[]'); } catch (e) { return []; } }
   function saveIncomeEntries(entries) { localStorage.setItem(INCOME_STORAGE_KEY, JSON.stringify(entries)); scheduleSync(); }
 
   function populateIncomeJobRefOptions() {
@@ -1687,7 +1687,9 @@
   // this finds nothing left to backfill and does nothing. Safe to call
   // as often as needed, including from other pages that sync this data.
   function backfillLegacyInvoicesIntoIncomeLog() {
-    const invoices = JSON.parse(localStorage.getItem('th_invoices') || '[]');
+    let invoices;
+    try { invoices = JSON.parse(localStorage.getItem('th_invoices') || '[]'); }
+    catch (e) { return; } // malformed data here shouldn't block the rest of page init
     const incomeLog = loadIncomeEntries();
     const mirroredIds = new Set(incomeLog.filter(e => e.origin === 'invoice').map(e => e.invoiceId));
     const unmirrored = invoices.filter(i => !mirroredIds.has(i.id));
@@ -1780,7 +1782,7 @@
   }
 
   // ---------- Expenses ----------
-  function loadExpenses() { return JSON.parse(localStorage.getItem(EXPENSE_STORAGE_KEY) || '[]'); }
+  function loadExpenses() { try { return JSON.parse(localStorage.getItem(EXPENSE_STORAGE_KEY) || '[]'); } catch (e) { return []; } }
   function saveExpenses(entries) { localStorage.setItem(EXPENSE_STORAGE_KEY, JSON.stringify(entries)); scheduleSync(); }
   function getMileageRate() { return parseFloat(document.getElementById('mileageRate').value) || 0; }
   function saveMileageRate() { localStorage.setItem(RATE_STORAGE_KEY, document.getElementById('mileageRate').value); scheduleSync(); }
@@ -2072,7 +2074,7 @@
   }
 
   // ---------- Contacts ----------
-  function loadContacts() { return JSON.parse(localStorage.getItem(STORAGE_KEYS.contacts) || '[]'); }
+  function loadContacts() { try { return JSON.parse(localStorage.getItem(STORAGE_KEYS.contacts) || '[]'); } catch (e) { return []; } }
   function saveContacts(contacts) { localStorage.setItem(STORAGE_KEYS.contacts, JSON.stringify(contacts)); scheduleSync(); }
 
   let editingContactId = null;
@@ -2144,7 +2146,7 @@
     });
   }
 
-  function loadInvoicesForHistory() { return JSON.parse(localStorage.getItem('th_invoices') || '[]'); }
+  function loadInvoicesForHistory() { try { return JSON.parse(localStorage.getItem('th_invoices') || '[]'); } catch (e) { return []; } }
 
   function renderContacts() {
     const searchTerm = (document.getElementById('contactSearch')?.value || '').trim().toLowerCase();
@@ -2219,7 +2221,7 @@
   let currentNoteId = null;
   let noteSaveTimer = null;
 
-  function loadNotes() { return JSON.parse(localStorage.getItem(STORAGE_KEYS.notes) || '[]'); }
+  function loadNotes() { try { return JSON.parse(localStorage.getItem(STORAGE_KEYS.notes) || '[]'); } catch (e) { return []; } }
   function saveNotesList(list) { localStorage.setItem(STORAGE_KEYS.notes, JSON.stringify(list)); scheduleSync(); }
 
   function migrateOldNoteIfNeeded() {
@@ -2385,6 +2387,9 @@
       loadMileageRate();
       renderJobs();
       initJobCardLongPress();
+      wireSearchClear('jobSearch', renderJobs);
+      wireSearchClear('contactSearch', renderContacts);
+      wireSearchClear('noteSearch', renderNotesList);
       attachVoiceDictation('jobNotes', 'jobNotesMicBtn');
       calculateCost();
       populateJobRefOptions();
