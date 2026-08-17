@@ -165,6 +165,7 @@
     <button type="button" class="add-row-btn" style="align-self:flex-end;" onclick="addLineItemFromPriceRef('invoicePriceRefSelect', 'addLineItem')">Add This Line Item</button>
   </div>
   <button type="button" class="add-row-btn" onclick="addLineItem('', '', 1, '', true, true)">+ Add line item</button>
+  <button type="button" class="secondary-btn" style="margin-left:8px;" onclick="openWikiLookup('jobDescription')">Look Up in Wiki</button>
 
   <div class="totals-box">
     <div style="margin:0 0 10px; display:flex; align-items:center; gap:6px;"><button class="help-btn" onclick="openCardInfo('salesTax')" aria-label="About sales tax on this invoice" title="About sales tax on this invoice">?</button><span class="inline-note" style="margin:0;">Sales tax on repair labor</span></div>
@@ -267,6 +268,7 @@
     <button type="button" class="add-row-btn" style="align-self:flex-end;" onclick="addLineItemFromPriceRef('quotePriceRefSelect', 'addQuoteLineItem')">Add This Line Item</button>
   </div>
   <button type="button" class="add-row-btn" onclick="addQuoteLineItem('', '', 1, '', true, true)">+ Add line item</button>
+  <button type="button" class="secondary-btn" style="margin-left:8px;" onclick="openWikiLookup('quoteJobDescription')">Look Up in Wiki</button>
 
   <div class="totals-box">
     <div style="margin:0 0 10px; display:flex; align-items:center; gap:6px;"><button class="help-btn" onclick="openCardInfo('salesTax')" aria-label="About sales tax on this estimate" title="About sales tax on this estimate">?</button><span class="inline-note" style="margin:0;">Sales tax on repair labor</span></div>
@@ -1302,6 +1304,19 @@
   // Follows the exact same safety convention autofillFromContact()
   // above already established: only fills fields that are still blank,
   // never overwrites something already typed.
+  // Item #37 (2026-08-20): a safe, link-based connection to the Parts
+  // Reference wiki, rather than pulling its (much larger, differently-
+  // structured) dataset into this page directly. Complements the
+  // existing "Add From Saved Job Types" picker above, which covers
+  // Connor's own curated common jobs one click at a time -- this is for
+  // the less-common cases that quick list doesn't have, checked against
+  // the comprehensive wiki instead.
+  function openWikiLookup(descriptionFieldId) {
+    const query = (document.getElementById(descriptionFieldId).value || '').trim();
+    const url = '/tools/parts-reference.html' + (query ? '?search=' + encodeURIComponent(query) : '');
+    window.open(url, '_blank', 'noopener');
+  }
+
   function autofillFromJobRef(jobRefSelectId, descriptionFieldId, clientNameFieldId, clientAddressFieldId) {
     const jobId = document.getElementById(jobRefSelectId).value;
     if (!jobId || typeof thRead !== 'function') return;
