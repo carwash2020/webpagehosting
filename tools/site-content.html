@@ -1,0 +1,803 @@
+<!DOCTYPE html>
+<html lang="en" style="background:#0a0a0a;">
+<head>
+<script src="/tools/auth.js?v=202608162000"></script>
+<script>
+  // Security gate -- redirect to login before this page's own content
+  // is meaningfully usable. See auth.js for why this exists (a single
+  // shared account keeping randoms out, not a multi-user system).
+  requireAuth();
+</script>
+<link rel="manifest" href="/tools/manifest.json">
+<meta name="theme-color" content="#0a0a0a">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Triple H">
+<link rel="apple-touch-icon" href="/images/apple-touch-icon.png">
+
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="robots" content="noindex, nofollow">
+<title>Site Content · Triple H Enterprises</title>
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data:; connect-src 'self' https://*.supabase.co wss://*.supabase.co; frame-src 'none'; object-src 'none'; base-uri 'self'; frame-ancestors 'none';">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Anton&family=Oswald:wght@400;500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/styles.css?v=202608201800">
+<link rel="stylesheet" href="/tools/styles-tools.css?v=202608201900">
+<script src="/tools/data-layer.js?v=202608200900" defer></script>
+<script src="/tools/dev-tools-shared.js?v=202608201400" defer></script>
+<script src="/tools/tools-effects.js?v=202608201400" defer></script>
+<script src="/tools/tools-dialogs.js?v=202608201400" defer></script>
+<script src="/tools/tools-media-sharing.js?v=202608201900" defer></script>
+<script src="/tools/tools-nav-pwa.js?v=202608201400" defer></script>
+<script src="/tools/sync.js?v=202608201700" defer></script>
+<style>
+<style>
+  body { padding: 44px 20px 60px; max-width: 1080px; margin: 0 auto; }
+
+  .dev-panels-grid {
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+    gap: 20px; align-items: start;
+  }
+  .dev-panel-wide { grid-column: 1 / -1; }
+
+  .dev-panel {
+    background: var(--bg-panel-2); border: 1px solid var(--border); border-radius: var(--radius);
+    padding: 20px;
+  }
+  .dev-panel-heading { display: flex; align-items: center; gap: 8px; margin-bottom: 14px; }
+  .dev-panel h2 { margin: 0; font-size: 17px; }
+  .dev-info-bubble {
+    display: inline-flex; align-items: center; justify-content: center; flex: 0 0 auto;
+    width: 20px; height: 20px; border-radius: 50%; padding: 0;
+    border: 1px solid var(--border); background: var(--bg-panel-3); color: var(--text-dim);
+    font-size: 11px; cursor: pointer; transition: border-color .15s ease, color .15s ease;
+  }
+  .dev-info-bubble:hover { border-color: var(--orange-light); color: var(--orange-light); }
+  .dev-info-bubble.dev-danger-btn:hover { border-color: #e05555; color: #e05555; }
+  .dev-check-row {
+    display: flex; justify-content: space-between; align-items: center; gap: 12px;
+    padding: 10px 0; border-bottom: 1px solid var(--border); font-size: 14px;
+  }
+  .dev-check-row:last-child { border-bottom: none; }
+  .dev-check-status { font-size: 13px; font-weight: 600; white-space: nowrap; }
+  .dev-check-status.pass { color: #6fcf97; }
+  .dev-check-status.fail { color: #e05555; }
+  .dev-check-detail { font-size: 12.5px; color: var(--text-dim); margin-top: 2px; }
+  .dev-kv-row { display: flex; justify-content: space-between; gap: 12px; padding: 6px 0; font-size: 14px; }
+  .dev-scrollable-list {
+    max-height: 260px; overflow-y: auto; padding-right: 4px;
+  }
+  .dev-kv-row .k { color: var(--text-dim); }
+  .dev-kv-row .v { font-family: monospace; font-size: 13px; text-align: right; word-break: break-all; }
+  .dev-links { display: flex; flex-wrap: wrap; gap: 10px; }
+  .dev-links a {
+    display: inline-flex; align-items: center; gap: 6px; padding: 8px 14px; border-radius: 8px;
+    background: var(--bg-panel-3); border: 1px solid var(--border); color: var(--text);
+    text-decoration: none; font-size: 13.5px; transition: border-color .15s ease;
+  }
+  .dev-links a:hover { border-color: var(--orange-light); }
+  .dev-issue-row {
+    display: flex; align-items: flex-start; gap: 10px; padding: 10px 0;
+    border-bottom: 1px solid var(--border); font-size: 14px;
+  }
+  .dev-issue-row:last-child { border-bottom: none; }
+  .dev-issue-row input[type="checkbox"] { margin-top: 3px; flex: 0 0 auto; width: 16px; height: 16px; }
+  .dev-issue-row.is-done .dev-issue-title { text-decoration: line-through; color: var(--text-dim); }
+  .dev-issue-title { font-weight: 600; }
+  .dev-issue-detail { font-size: 12.5px; color: var(--text-dim); margin-top: 2px; }
+  .dev-blocked { max-width: 480px; margin: 80px auto; text-align: center; }
+
+  .dev-trigger-grid {
+    display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 8px;
+  }
+  .dev-trigger-grid button { font-size: 12.5px; padding: 10px 8px; }
+
+  /* Sticky section nav -- same pattern as workspace.html's .jump-nav,
+     added here 2026-08-15 because this page has 16 panels and reaching
+     anything past the first few meant a long scroll on a phone. */
+  .jump-nav {
+    position: sticky; top: 0; z-index: 100; display: flex; gap: 6px; overflow-x: auto;
+    background: var(--bg); border-bottom: 1px solid var(--border);
+    /* Full-bleed fix (2026-08-16): body has 44px top / 20px side padding, so
+       the old 0-margin nav left see-through gutters where panel content
+       (notably the Advisor Health rows) scrolled visibly above and beside
+       the sticky bar. Negative x-margins + matching padding close the side
+       gutters; the first box-shadow layer paints an opaque block over the
+       44px top-padding zone; the second adds depth so content sliding
+       underneath reads as intentional. */
+    padding: 10px 20px; margin: 0 -20px 20px;
+    box-shadow: 0 -44px 0 0 var(--bg), 0 4px 12px rgba(0,0,0,.35);
+  }
+  .jump-nav a {
+    display: flex; align-items: center; gap: 6px;
+    color: var(--text-dim); font-size: 12.5px; text-decoration: none; white-space: nowrap;
+    padding: 6px 12px; border-radius: 6px; font-family:'Oswald',sans-serif;
+    transition: color .15s ease, background .15s ease;
+  }
+  .jump-nav a:hover { color: var(--orange-light); background: var(--bg-panel-2); }
+  .jump-nav a:active { transform: translateY(1px); }
+  .jump-nav a .jump-nav-icon { font-size: 15px; line-height: 1; }
+
+  /* Anchor targets sit under the sticky nav without scroll-margin. */
+  .dev-anchor { scroll-margin-top: 64px; }
+
+  /* At-a-glance status strip -- answers "is everything healthy?" without
+     scrolling through panels or running the full health check. */
+  .dev-status-strip {
+    display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 20px;
+  }
+  .dev-status-chip {
+    display: inline-flex; align-items: center; gap: 7px;
+    padding: 7px 13px; border-radius: 999px;
+    background: var(--bg-panel-2); border: 1px solid var(--border);
+    font-size: 12.5px; color: var(--text-dim);
+  }
+  .dev-status-chip strong { color: var(--text); font-weight: 600; }
+  .dev-status-dot {
+    width: 8px; height: 8px; border-radius: 50%; flex: 0 0 auto;
+    background: var(--text-dim);
+  }
+  .dev-status-dot.ok { background: #6fcf97; box-shadow: 0 0 6px rgba(111,207,151,.5); }
+  .dev-status-dot.warn { background: var(--orange-light); box-shadow: 0 0 6px rgba(255,179,71,.5); }
+  .dev-status-dot.bad { background: #e05555; box-shadow: 0 0 6px rgba(224,85,85,.5); }
+  .dev-status-dot.checking {
+    background: var(--text-dim); animation: devStatusPulse 1s ease-in-out infinite;
+  }
+  @keyframes devStatusPulse { 0%,100% { opacity: .35; } 50% { opacity: 1; } }
+  @media (prefers-reduced-motion: reduce) {
+    .dev-status-dot.checking { animation: none; }
+  }
+
+  /* Added 2026-08-15 -- who's actually signed in, and under what role.
+     Sits in the header so it's answerable at a glance instead of
+     scrolling to the Session panel. */
+  .dev-identity {
+    display: inline-flex; align-items: center; gap: 8px;
+    padding: 5px 12px; border-radius: 999px;
+    background: var(--bg-panel-3); border: 1px solid var(--border);
+    font-size: 12.5px; color: var(--text-dim); margin-bottom: 14px;
+  }
+  .dev-identity strong { color: var(--text); font-weight: 600; }
+  .dev-identity .dev-role-tag {
+    padding: 1px 8px; border-radius: 999px; font-size: 11.5px; font-weight: 600;
+    background: var(--orange-tint-soft); border: 1px solid var(--orange-tint-border);
+    color: var(--orange-light);
+  }
+
+  /* Collapsible panels -- used for the 4 large CMS editors, which are
+     enormous on a phone. They already sit at the very end of the page
+     for that reason; collapsing them by default means the diagnostics
+     above are actually reachable without a long scroll past them.
+     State is remembered per-panel in sessionStorage. */
+  .dev-panel.is-collapsible .dev-panel-heading { cursor: pointer; user-select: none; }
+  .dev-panel.is-collapsible .dev-panel-heading h2 { flex: 1 1 auto; }
+  .dev-collapse-caret {
+    flex: 0 0 auto; width: 18px; height: 18px; display: inline-flex;
+    align-items: center; justify-content: center; color: var(--text-dim);
+    font-size: 11px; transition: transform .18s ease;
+  }
+  .dev-panel.is-collapsed .dev-collapse-caret { transform: rotate(-90deg); }
+  .dev-panel.is-collapsed .dev-panel-body { display: none; }
+  .dev-panel.is-collapsed .dev-panel-heading { margin-bottom: 0; }
+</style>
+</style>
+</head>
+<body>
+
+<div id="contentBlockedView" class="dev-blocked" style="display:none;">
+  <div class="tool-title" style="font-size:22px;">Not available here</div>
+  <p class="tool-sub">Site Content is only shown on the account actively developing this site. Nothing's wrong with your account — this page just isn't meant for day-to-day use.</p>
+  <a href="/tools/workspace.html" class="btn blue" style="display:inline-block; margin-top:12px; text-decoration:none;">Back to Dashboard</a>
+</div>
+
+<div id="contentMainView" style="display:none;">
+<div class="hub-header">
+  <div class="hub-header-left">
+    <img src="/images/logo-signature-orange.webp?v=202608142300" alt="Triple H Enterprises">
+    <span class="hub-title">Site Content</span>
+  </div>
+  <div class="hub-header-right">
+    <a href="/tools/dev-tools.html" class="help-btn" aria-label="Back to Dev Tools" title="Back to Dev Tools" style="text-decoration:none; display:inline-flex; align-items:center; justify-content:center;">&#8617;</a>
+  </div>
+</div>
+
+<p class="tool-sub">Editable public-site text: phone/email/hours/banners, the FAQ, and the Terms page — moved out of Dev Tools into its own page (2026-08-20) since this alone was 83% of that file's lines.</p>
+
+  <div class="dev-panel dev-panel-wide is-collapsible" data-collapse-key="sitecontent">
+    <div class="dev-panel-heading" onclick="toggleDevPanel(this)">
+      <h2 id="nav-content" class="dev-anchor">Site content</h2>
+      <button class="dev-info-bubble" onclick="event.stopPropagation(); openDevInfo('sitecontent')" aria-label="What does this do?" title="What does this do?">?</button>
+      <span class="dev-collapse-caret">&#9660;</span>
+    </div>
+    <div class="dev-panel-body">
+      <div id="siteContentForm"></div>
+    </div>
+  </div>
+
+  <div class="dev-panel dev-panel-wide is-collapsible" data-collapse-key="contenthistory">
+    <div class="dev-panel-heading" onclick="toggleDevPanel(this)">
+      <h2>Content edit history</h2>
+      <button class="dev-info-bubble" onclick="event.stopPropagation(); openDevInfo('contenthistory')" aria-label="What does this do?" title="What does this do?">?</button>
+      <span class="dev-collapse-caret">&#9660;</span>
+    </div>
+    <div class="dev-panel-body">
+      <button class="secondary-btn" style="margin-bottom:12px;" onclick="exportContentBackup()">Download backup (JSON)</button>
+      <div id="contentHistoryList" class="dev-scrollable-list"></div>
+    </div>
+  </div>
+
+  <div class="dev-panel dev-panel-wide is-collapsible" data-collapse-key="faq">
+    <div class="dev-panel-heading" onclick="toggleDevPanel(this)">
+      <h2>FAQ editor</h2>
+      <button class="dev-info-bubble" onclick="event.stopPropagation(); openFieldInfo('faq')" aria-label="Where does this appear?" title="Where does this appear?"><svg class="th-icon" aria-hidden="true"><use href="#icon-camera" xlink:href="#icon-camera"></use></svg></button>
+      <span class="dev-collapse-caret">&#9660;</span>
+    </div>
+    <div class="dev-panel-body">
+      <p class="tool-sub" style="margin-bottom:12px;">If an answer mentions the phone number as plain text, it won't update automatically if the phone field above ever changes -- edit that answer directly if the number changes.</p>
+      <div id="faqEditorList"></div>
+      <div style="display:flex; gap:10px; margin-top:12px; flex-wrap:wrap;">
+        <button class="secondary-btn" onclick="addFaqItem()">+ Add question</button>
+        <button class="btn blue" id="saveFaqBtn" onclick="saveFaqList()">Save all</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="dev-panel dev-panel-wide is-collapsible" data-collapse-key="terms">
+    <div class="dev-panel-heading" onclick="toggleDevPanel(this)">
+      <h2>Terms &amp; Conditions editor</h2>
+      <button class="dev-info-bubble" onclick="event.stopPropagation(); openFieldInfo('terms')" aria-label="Where does this appear?" title="Where does this appear?"><svg class="th-icon" aria-hidden="true"><use href="#icon-camera" xlink:href="#icon-camera"></use></svg></button>
+      <span class="dev-collapse-caret">&#9660;</span>
+    </div>
+    <div class="dev-panel-body">
+      <p class="tool-sub" style="margin-bottom:12px;">The last section mentions the phone number and email as plain text -- won't update automatically if those fields ever change. Edit it directly if either one changes.</p>
+      <div id="termsEditorList"></div>
+      <div style="display:flex; gap:10px; margin-top:12px; flex-wrap:wrap;">
+        <button class="secondary-btn" onclick="addTermsItem()">+ Add section</button>
+        <button class="btn blue" id="saveTermsBtn" onclick="saveTermsList()">Save all</button>
+      </div>
+    </div>
+  </div>
+
+  </div>
+
+  <div class="help-modal-overlay" id="helpModalOverlay" onclick="if(event.target===this) closeHelpModal()">
+    <div class="help-modal">
+      <button class="help-modal-close" onclick="closeHelpModal()" aria-label="Close">&times;</button>
+      <h3>How to Use: Dev Tools</h3>
+      <div class="help-modal-body">
+        <p>Site diagnostics and maintenance utilities, visible only on the account actively developing this site.</p>
+        <ul>
+          <li><strong>Live consistency check</strong> &mdash; fetches every tool page right now and checks each one for the login gate, a CSP, the PWA manifest link, a matching styles.css version, and that manifest.json's own URLs all have the /tools/ prefix. The same checks run automatically in GitHub Actions on every push; this just lets you run them on demand.</li>
+          <li><strong>Session &amp; sync</strong> &mdash; who's logged in on this device, the last sync result, and manual Push/Pull buttons to force a sync right now.</li>
+          <li><strong>Local data snapshot</strong> &mdash; every th_/rd_ key in this browser, its size, and an expandable raw view of its actual contents. This device only.</li>
+          <li><strong>Service worker &amp; cache</strong> &mdash; registration status, what's cached, and a one-click clear if something seems stale.</li>
+          <li><strong>Client errors</strong> &mdash; the last 20 JavaScript errors across every tool page, synced across both devices.</li>
+          <li><strong>Push notification test</strong> &mdash; sends a test lead through the real notification pipeline, cleaned up automatically after.</li>
+          <li><strong>Appliance Wiki health</strong> &mdash; quick counts: brands, models, issues, and the verified/logged-by-you split.</li>
+          <li><strong>Device info</strong> &mdash; browser, screen size, and online status &mdash; useful when something behaves differently on phone vs. computer.</li>
+          <li><strong>Known issues</strong> &mdash; still-open items from the last security audit, checkable so they don't get lost.</li>
+          <li><strong>Deploy history</strong> &mdash; the last 8 GitHub Actions runs, pulled live.</li>
+          <li><strong>Site content</strong> &mdash; edit the phone, email, hours, and up to 2 announcement banners on the public site directly, no code push needed. Changing phone/email updates every place it appears at once.</li>
+          <li><strong>Content edit history</strong> &mdash; every past change to those fields, who made it, and when -- a real audit trail from a database trigger.</li>
+          <li><strong>FAQ editor</strong> &mdash; add, edit, reorder, or remove questions on the site's FAQ section directly.</li>
+          <li><strong>Terms &amp; Conditions editor</strong> &mdash; add, edit, reorder, or remove sections of the Terms document directly.</li>
+          <li><strong>Quick links</strong> &mdash; the repo, its Actions history, the Supabase dashboard, the uptime monitors, and the live site.</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <div class="help-modal-overlay" id="devPasswordOverlay">
+    <div class="help-modal" style="max-width:380px;">
+      <button class="help-modal-close" onclick="devPasswordCancel()" aria-label="Close">&times;</button>
+      <h3>Confirm dev password</h3>
+      <div class="help-modal-body">
+        <p style="margin-bottom:14px;">This is a soft confirmation to catch an accidental save, not real protection against someone technically determined -- anyone who's already logged into Connor's account and views this page's source could bypass it. It exists to stop a stray tap or someone else picking up an unlocked phone. Only asked once per browser session -- closing the tab resets it.</p>
+        <input type="password" id="devPasswordInput" placeholder="Dev password" style="width:100%; margin-bottom:12px;" onkeydown="if(event.key==='Enter') devPasswordSubmit();">
+        <div class="form-footer">
+          <button class="btn blue" onclick="devPasswordSubmit()">Confirm</button>
+          <button class="secondary-btn" onclick="devPasswordCancel()">Cancel</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+</div>
+
+<script>
+  // Editable public-site content -- a small, separate Supabase table
+  // (public.site_content), NOT part of the same synced blob as private
+  // business data, specifically because this one needs to be readable
+  // by anonymous visitors on the live public site. See the matching
+  // fetch-and-apply script near the end of index.html for the read
+  // side of this; this panel is the write side.
+  const SITE_CONTENT_FIELDS = [
+    { key: 'phone', label: 'Phone number', placeholder: 'e.g. (435) 414-1667 -- blank uses the default already in the code.', info: 'phone' },
+    { key: 'email', label: 'Email address', placeholder: 'e.g. steve@triplehenterprisesllc.biz -- blank uses the default.', info: 'email' },
+    { key: 'hoursMonday', label: 'Hours -- Monday', placeholder: 'e.g. 7:00 AM \u2013 10:00 PM, or "Closed"', info: 'hours' },
+    { key: 'hoursTuesday', label: 'Hours -- Tuesday', placeholder: 'e.g. 7:00 AM \u2013 10:00 PM, or "Closed"', info: 'hours' },
+    { key: 'hoursWednesday', label: 'Hours -- Wednesday', placeholder: 'e.g. 7:00 AM \u2013 10:00 PM, or "Closed"', info: 'hours' },
+    { key: 'hoursThursday', label: 'Hours -- Thursday', placeholder: 'e.g. 7:00 AM \u2013 10:00 PM, or "Closed"', info: 'hours' },
+    { key: 'hoursFriday', label: 'Hours -- Friday', placeholder: 'e.g. 7:00 AM \u2013 10:00 PM, or "Closed"', info: 'hours' },
+    { key: 'hoursSaturday', label: 'Hours -- Saturday', placeholder: 'e.g. 7:00 AM \u2013 10:00 PM, or "Closed"', info: 'hours' },
+    { key: 'hoursSunday', label: 'Hours -- Sunday', placeholder: 'e.g. 7:00 AM \u2013 10:00 PM, or "Closed"', info: 'hours' },
+    { key: 'banner1', label: 'Banner 1 (orange bar, top of site)', placeholder: 'Blank hides it. e.g. Currently booking 2+ weeks out', info: 'banner1' },
+    { key: 'banner2', label: 'Banner 2 (blue bar, top of site)', placeholder: 'Blank hides it.', info: 'banner2' },
+  ];
+  const FIELD_INFO = {
+    phone: {
+      title: 'Phone number',
+      description: 'Appears in the header, the hero "Call" button, the mobile menu, the sticky call button on scroll, the Contact section\'s "Call or Text" card, the footer, all 3 FAQ answers that mention it, and the Terms &amp; Conditions modal -- all of them update together.',
+      image: 'help-contact-cards.webp',
+    },
+    email: {
+      title: 'Email address',
+      description: 'Appears in the Contact section\'s "Email" card, the footer, and the Terms &amp; Conditions modal.',
+      image: 'help-contact-cards.webp',
+    },
+    hours: {
+      title: 'Hours',
+      description: 'Shown in the Contact section\'s "Hours" card, one line per day. Each day is independent -- set Saturday to "Closed" without affecting any other day.',
+      image: 'help-contact-cards.webp',
+    },
+    banner1: {
+      title: 'Banner 1',
+      description: 'Shows as an orange bar across the very top of the site, above the header -- the first thing a visitor sees. Completely hidden when this field is blank.',
+      image: null,
+    },
+    banner2: {
+      title: 'Banner 2',
+      description: 'Shows as a blue bar directly below Banner 1 (or at the top if Banner 1 is blank). Completely hidden when this field is blank.',
+      image: null,
+    },
+    faq: {
+      title: 'FAQ',
+      description: 'The full "Frequently Asked Questions" section, opened from the FAQ link in the site\'s navigation. Reorder, edit, add, or remove questions freely -- each one shown as an expandable accordion item on the live site.',
+      image: 'help-faq-modal.webp',
+    },
+    terms: {
+      title: 'Terms & Conditions',
+      description: 'The full Terms and Conditions document, opened from the "Terms & Conditions" link in the footer and Contact section. Each section has its own heading and body text, reorderable the same way as the FAQ.',
+      image: 'help-terms-modal.webp',
+    },
+  };
+  function openFieldInfo(key) {
+    const info = FIELD_INFO[key];
+    if (!info) return;
+    const img = info.image ? '<img src="/images/dev-help/' + info.image + '" alt="" style="max-width:100%; border-radius:8px; margin-top:10px; border:1px solid var(--border);">' : '';
+    if (typeof openInfoModal === 'function') openInfoModal(info.title, '<p>' + info.description + '</p>' + img);
+  }
+  async function renderSiteContentForm() {
+    const el = document.getElementById('siteContentForm');
+    el.innerHTML = '<p class="tool-sub">Loading...</p>';
+    try {
+      if (typeof ensureFreshToken === 'function') await ensureFreshToken();
+      const res = await fetchWithTimeout(SUPABASE_URL + '/rest/v1/site_content?select=key,value', 6000, {
+        headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': 'Bearer ' + getAuthToken() },
+      });
+      const rows = res.ok ? await res.json() : [];
+      const current = {};
+      (Array.isArray(rows) ? rows : []).forEach(r => { current[r.key] = r.value || ''; });
+
+      el.innerHTML = SITE_CONTENT_FIELDS.map(f =>
+        '<div class="tool-form-row"><div class="form-field full"><label style="display:flex; align-items:center; gap:6px;">' + escapeHtml(f.label) +
+        (f.info ? '<button class="dev-info-bubble" onclick="openFieldInfo(\'' + f.info + '\')" title="Where does this appear?" aria-label="Where does this appear?"><svg class="th-icon" aria-hidden="true"><use href="#icon-camera" xlink:href="#icon-camera"></use></svg></button>' : '') +
+        '</label>' +
+        '<input type="text" id="siteContent_' + f.key + '" placeholder="' + escapeHtml(f.placeholder) + '" value="' + escapeHtml(current[f.key] || '') + '"></div></div>'
+      ).join('') +
+      '<div class="form-footer"><button class="btn blue" id="saveSiteContentBtn" onclick="saveSiteContent()">Save all</button></div>' +
+      '<p class="tool-sub" style="margin-top:8px;">Changes go live on the public site the next time it loads -- no push needed, usually within a few seconds.</p>';
+
+      if (!res.ok) el.insertAdjacentHTML('afterbegin', '<p class="tool-sub" style="color:#e05555;">Could not load current values -- the table below might not exist yet. Run the setup SQL in Supabase first.</p>');
+    } catch (e) {
+      el.innerHTML = '<p class="tool-sub">Could not reach Supabase: ' + escapeHtml(e.message || String(e)) + '</p>';
+    }
+  }
+  async function saveSiteContent() {
+    if (!(await confirmDevPassword())) return;
+    const btn = document.getElementById('saveSiteContentBtn');
+    btn.disabled = true;
+    btn.textContent = 'Saving...';
+    try {
+      if (typeof ensureFreshToken === 'function') await ensureFreshToken();
+      const rows = SITE_CONTENT_FIELDS.map(f => ({
+        key: f.key,
+        value: document.getElementById('siteContent_' + f.key).value.trim() || null,
+      }));
+      const res = await fetchWithTimeout(SUPABASE_URL + '/rest/v1/site_content?on_conflict=key', 8000, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'apikey': SUPABASE_ANON_KEY,
+          'Authorization': 'Bearer ' + getAuthToken(),
+          'Prefer': 'resolution=merge-duplicates',
+        },
+        body: JSON.stringify(rows),
+      });
+      if (!res.ok) throw new Error('Save failed (HTTP ' + res.status + ') -- check that the setup SQL has been run and RLS policies allow this account to write.');
+      showToast('Saved. Live on the site within a few seconds.');
+      renderContentHistory();
+    } catch (e) {
+      showToast(e.message || String(e), { type: 'error' });
+    } finally {
+      btn.disabled = false;
+      btn.textContent = 'Save all';
+    }
+  }
+  async function exportContentBackup() {
+    try {
+      if (typeof ensureFreshToken === 'function') await ensureFreshToken();
+      const headers = { 'apikey': SUPABASE_ANON_KEY, 'Authorization': 'Bearer ' + getAuthToken() };
+      const [contentRes, faqRes, termsRes] = await Promise.all([
+        fetchWithTimeout(SUPABASE_URL + '/rest/v1/site_content?select=key,value', 8000, { headers }),
+        fetchWithTimeout(SUPABASE_URL + '/rest/v1/site_faq?select=question,answer,sort_order&order=sort_order.asc', 8000, { headers }),
+        fetchWithTimeout(SUPABASE_URL + '/rest/v1/site_terms?select=heading,body,sort_order&order=sort_order.asc', 8000, { headers }),
+      ]);
+      const backup = {
+        exportedAt: new Date().toISOString(),
+        site_content: contentRes.ok ? await contentRes.json() : [],
+        site_faq: faqRes.ok ? await faqRes.json() : [],
+        site_terms: termsRes.ok ? await termsRes.json() : [],
+      };
+      const blob = new Blob([JSON.stringify(backup, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'site-content-backup-' + new Date().toISOString().slice(0, 10) + '.json';
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      showToast('Backup downloaded.');
+    } catch (e) {
+      showToast('Backup failed: ' + (e.message || String(e)), { type: 'error' });
+    }
+  }
+  async function renderContentHistory() {
+    const el = document.getElementById('contentHistoryList');
+    el.innerHTML = '<p class="tool-sub">Loading...</p>';
+    try {
+      if (typeof ensureFreshToken === 'function') await ensureFreshToken();
+      const headers = { 'apikey': SUPABASE_ANON_KEY, 'Authorization': 'Bearer ' + getAuthToken() };
+
+      // All 3 audit tables, fetched in parallel and merged -- this used
+      // to only show site_content's history, silently missing FAQ and
+      // Terms edits despite both having the exact same trigger-based
+      // audit trail built for them.
+      const [contentRes, faqRes, termsRes] = await Promise.all([
+        fetchWithTimeout(SUPABASE_URL + '/rest/v1/site_content_history?select=key,old_value,new_value,changed_by,changed_at&order=changed_at.desc&limit=50', 6000, { headers }),
+        fetchWithTimeout(SUPABASE_URL + '/rest/v1/site_faq_history?select=action,faq_id,question,old_answer,new_answer,changed_by,changed_at&order=changed_at.desc&limit=50', 6000, { headers }),
+        fetchWithTimeout(SUPABASE_URL + '/rest/v1/site_terms_history?select=action,term_id,heading,old_body,new_body,changed_by,changed_at&order=changed_at.desc&limit=50', 6000, { headers }),
+      ]);
+
+      const rows = [];
+      if (contentRes.ok) {
+        (await contentRes.json()).forEach(r => rows.push({
+          table: 'content', source: 'Site content', label: r.key, old_value: r.old_value, new_value: r.new_value,
+          changed_by: r.changed_by, changed_at: r.changed_at, action: 'updated',
+        }));
+      }
+      if (faqRes.ok) {
+        (await faqRes.json()).forEach(r => rows.push({
+          table: 'faq', rowId: r.faq_id, source: 'FAQ', label: r.question, old_value: r.old_answer, new_value: r.new_answer,
+          changed_by: r.changed_by, changed_at: r.changed_at, action: r.action,
+        }));
+      }
+      if (termsRes.ok) {
+        (await termsRes.json()).forEach(r => rows.push({
+          table: 'terms', rowId: r.term_id, source: 'Terms', label: r.heading, old_value: r.old_body, new_value: r.new_body,
+          changed_by: r.changed_by, changed_at: r.changed_at, action: r.action,
+        }));
+      }
+
+      if (!rows.length) {
+        el.innerHTML = '<p class="tool-sub">No edits recorded yet, or the setup SQL hasn\'t been run for any of the 3 content tables.</p>';
+        return;
+      }
+
+      rows.sort((a, b) => new Date(b.changed_at) - new Date(a.changed_at));
+      window._contentHistoryRows = rows.slice(0, 50); // stashed so restoreHistoryEntry can look up by index without re-fetching
+      el.innerHTML = window._contentHistoryRows.map((r, i) => {
+        const detail = r.action === 'delete'
+          ? 'Deleted: ' + escapeHtml(r.old_value || '')
+          : r.action === 'insert'
+          ? 'Added: ' + escapeHtml(r.new_value || '')
+          : escapeHtml(r.old_value || '(blank)') + ' &rarr; ' + escapeHtml(r.new_value || '(blank)');
+        // No restore offered for a plain "insert" -- there's no old
+        // value to go back to; undoing an insert is a delete, which
+        // is already what each editor's own delete button is for.
+        const canRestore = r.action !== 'insert' && r.old_value != null;
+        return '<div class="dev-check-row" style="align-items:flex-start;"><div>' +
+          '<div>' + personDot(r.changed_by) + '<strong>' + escapeHtml(r.source) + ': ' + escapeHtml(r.label) + '</strong> &mdash; ' + escapeHtml(r.changed_by || 'unknown') + ' &mdash; ' + new Date(r.changed_at).toLocaleString() + '</div>' +
+          '<div class="dev-check-detail">' + detail + '</div>' +
+          (canRestore ? '<button class="small-btn" style="margin-top:6px;" onclick="restoreHistoryEntry(' + i + ')">Restore this value</button>' : '') +
+          '</div></div>';
+      }).join('');
+    } catch (e) {
+      el.innerHTML = '<p class="tool-sub">Could not load history: ' + escapeHtml(e.message || String(e)) + '</p>';
+    }
+  }
+  async function restoreHistoryEntry(index) {
+    const entry = (window._contentHistoryRows || [])[index];
+    if (!entry) return;
+    if (!(await confirmDevPassword())) return;
+    try {
+      if (typeof ensureFreshToken === 'function') await ensureFreshToken();
+      const headers = {
+        'Content-Type': 'application/json',
+        'apikey': SUPABASE_ANON_KEY,
+        'Authorization': 'Bearer ' + getAuthToken(),
+      };
+
+      if (entry.table === 'content') {
+        const res = await fetchWithTimeout(SUPABASE_URL + '/rest/v1/site_content?on_conflict=key', 8000, {
+          method: 'POST',
+          headers: Object.assign({ 'Prefer': 'resolution=merge-duplicates' }, headers),
+          body: JSON.stringify([{ key: entry.label, value: entry.old_value }]),
+        });
+        if (!res.ok) throw new Error('Restore failed (HTTP ' + res.status + ')');
+      } else if (entry.table === 'faq' || entry.table === 'terms') {
+        const tableName = entry.table === 'faq' ? 'site_faq' : 'site_terms';
+        const bodyField = entry.table === 'faq' ? 'answer' : 'body';
+        const labelField = entry.table === 'faq' ? 'question' : 'heading';
+
+        if (entry.action === 'delete') {
+          // Row no longer exists -- re-insert fresh at the end of the list.
+          const listRes = await fetchWithTimeout(SUPABASE_URL + '/rest/v1/' + tableName + '?select=sort_order&order=sort_order.desc&limit=1', 6000, { headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': headers.Authorization } });
+          const listData = listRes.ok ? await listRes.json() : [];
+          const nextSort = (listData[0] && typeof listData[0].sort_order === 'number') ? listData[0].sort_order + 1 : 0;
+          const insertBody = {};
+          insertBody[labelField] = entry.label;
+          insertBody[bodyField] = entry.old_value;
+          insertBody.sort_order = nextSort;
+          const res = await fetchWithTimeout(SUPABASE_URL + '/rest/v1/' + tableName, 8000, {
+            method: 'POST', headers, body: JSON.stringify([insertBody]),
+          });
+          if (!res.ok) throw new Error('Restore (re-insert) failed (HTTP ' + res.status + ')');
+        } else {
+          // 'update' -- the row still exists, restore it in place by id.
+          if (!entry.rowId) throw new Error('Missing row id -- cannot restore safely.');
+          const updateBody = {};
+          updateBody[bodyField] = entry.old_value;
+          const res = await fetchWithTimeout(SUPABASE_URL + '/rest/v1/' + tableName + '?id=eq.' + entry.rowId, 8000, {
+            method: 'PATCH', headers, body: JSON.stringify(updateBody),
+          });
+          if (!res.ok) throw new Error('Restore failed (HTTP ' + res.status + ')');
+        }
+      }
+      showToast('Restored. Live on the site within a few seconds.');
+      renderContentHistory();
+      if (entry.table === 'content' && typeof renderSiteContentForm === 'function') renderSiteContentForm();
+      if (entry.table === 'faq' && typeof renderFaqEditor === 'function') renderFaqEditor();
+      if (entry.table === 'terms' && typeof renderTermsEditor === 'function') renderTermsEditor();
+    } catch (e) {
+      showToast(e.message || String(e), { type: 'error' });
+    }
+  }
+  let faqItems = [];
+  async function renderFaqEditor() {
+    const el = document.getElementById('faqEditorList');
+    el.innerHTML = '<p class="tool-sub">Loading...</p>';
+    try {
+      if (typeof ensureFreshToken === 'function') await ensureFreshToken();
+      const res = await fetchWithTimeout(SUPABASE_URL + '/rest/v1/site_faq?select=question,answer&order=sort_order.asc', 6000, {
+        headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': 'Bearer ' + getAuthToken() },
+      });
+      if (!res.ok) {
+        el.innerHTML = '<p class="tool-sub" style="color:#e05555;">Could not load current FAQ -- the table might not exist yet. Run the FAQ setup SQL in Supabase first.</p>';
+        faqItems = [];
+        return;
+      }
+      faqItems = await res.json();
+      if (!Array.isArray(faqItems)) faqItems = [];
+      renderFaqEditorRows();
+    } catch (e) {
+      el.innerHTML = '<p class="tool-sub">Could not reach Supabase: ' + escapeHtml(e.message || String(e)) + '</p>';
+    }
+  }
+  function renderFaqEditorRows() {
+    const el = document.getElementById('faqEditorList');
+    if (!faqItems.length) { el.innerHTML = '<p class="tool-sub">No FAQ items yet -- add one below.</p>'; return; }
+    el.innerHTML = faqItems.map((item, i) => `
+      <div class="dev-panel" style="margin-bottom:10px; background:var(--bg-panel-3);">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+          <strong style="font-size:13px; color:var(--text-dim);">#${i + 1}</strong>
+          <div>
+            <button class="dev-info-bubble" title="Move up" aria-label="Move FAQ item up" onclick="moveFaqItem(${i}, -1)" ${i === 0 ? 'disabled' : ''}>&#9650;</button>
+            <button class="dev-info-bubble" title="Move down" aria-label="Move FAQ item down" onclick="moveFaqItem(${i}, 1)" ${i === faqItems.length - 1 ? 'disabled' : ''}>&#9660;</button>
+            <button class="dev-info-bubble dev-danger-btn" title="Delete" aria-label="Delete FAQ item" onclick="deleteFaqItem(${i})"><svg class="th-icon" aria-hidden="true"><use href="#icon-trash" xlink:href="#icon-trash"></use></svg></button>
+          </div>
+        </div>
+        <div class="tool-form-row"><div class="form-field full">
+          <label>Question</label>
+          <input type="text" value="${escapeHtml(item.question || '')}" oninput="updateFaqField(${i}, 'question', this.value)">
+        </div></div>
+        <div class="tool-form-row"><div class="form-field full">
+          <label>Answer</label>
+          <textarea rows="3" style="width:100%; resize:vertical;" oninput="updateFaqField(${i}, 'answer', this.value)">${escapeHtml(item.answer || '')}</textarea>
+        </div></div>
+      </div>
+    `).join('');
+  }
+  function updateFaqField(index, field, value) {
+    if (faqItems[index]) faqItems[index][field] = value;
+  }
+  function moveFaqItem(index, direction) {
+    const target = index + direction;
+    if (target < 0 || target >= faqItems.length) return;
+    [faqItems[index], faqItems[target]] = [faqItems[target], faqItems[index]];
+    renderFaqEditorRows();
+  }
+  function deleteFaqItem(index) {
+    faqItems.splice(index, 1);
+    renderFaqEditorRows();
+  }
+  function addFaqItem() {
+    faqItems.push({ question: '', answer: '' });
+    renderFaqEditorRows();
+  }
+  async function saveFaqList() {
+    if (!(await confirmDevPassword())) return;
+    const btn = document.getElementById('saveFaqBtn');
+    btn.disabled = true;
+    btn.textContent = 'Saving...';
+    try {
+      if (typeof ensureFreshToken === 'function') await ensureFreshToken();
+      const cleaned = faqItems
+        .map(item => ({ question: (item.question || '').trim(), answer: (item.answer || '').trim() }))
+        .filter(item => item.question && item.answer);
+
+      const delRes = await fetchWithTimeout(SUPABASE_URL + '/rest/v1/site_faq?id=gte.0', 8000, {
+        method: 'DELETE',
+        headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': 'Bearer ' + getAuthToken() },
+      });
+      if (!delRes.ok) throw new Error('Could not clear the old list (HTTP ' + delRes.status + ')');
+
+      if (cleaned.length) {
+        const insertRes = await fetchWithTimeout(SUPABASE_URL + '/rest/v1/site_faq', 8000, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'apikey': SUPABASE_ANON_KEY,
+            'Authorization': 'Bearer ' + getAuthToken(),
+          },
+          body: JSON.stringify(cleaned.map((item, i) => Object.assign({ sort_order: i }, item))),
+        });
+        if (!insertRes.ok) throw new Error('Could not save the new list (HTTP ' + insertRes.status + ')');
+      }
+      showToast('FAQ saved. Live on the site within a few seconds.');
+      await renderFaqEditor();
+    } catch (e) {
+      showToast(e.message || String(e), { type: 'error' });
+    } finally {
+      btn.disabled = false;
+      btn.textContent = 'Save all';
+    }
+  }
+  let termsItems = [];
+  async function renderTermsEditor() {
+    const el = document.getElementById('termsEditorList');
+    el.innerHTML = '<p class="tool-sub">Loading...</p>';
+    try {
+      if (typeof ensureFreshToken === 'function') await ensureFreshToken();
+      const res = await fetchWithTimeout(SUPABASE_URL + '/rest/v1/site_terms?select=heading,body&order=sort_order.asc', 6000, {
+        headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': 'Bearer ' + getAuthToken() },
+      });
+      if (!res.ok) {
+        el.innerHTML = '<p class="tool-sub" style="color:#e05555;">Could not load current Terms -- the table might not exist yet. Run the Terms setup SQL in Supabase first.</p>';
+        termsItems = [];
+        return;
+      }
+      termsItems = await res.json();
+      if (!Array.isArray(termsItems)) termsItems = [];
+      renderTermsEditorRows();
+    } catch (e) {
+      el.innerHTML = '<p class="tool-sub">Could not reach Supabase: ' + escapeHtml(e.message || String(e)) + '</p>';
+    }
+  }
+  function renderTermsEditorRows() {
+    const el = document.getElementById('termsEditorList');
+    if (!termsItems.length) { el.innerHTML = '<p class="tool-sub">No sections yet -- add one below.</p>'; return; }
+    el.innerHTML = termsItems.map((item, i) => `
+      <div class="dev-panel" style="margin-bottom:10px; background:var(--bg-panel-3);">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+          <strong style="font-size:13px; color:var(--text-dim);">#${i + 1}</strong>
+          <div>
+            <button class="dev-info-bubble" title="Move up" aria-label="Move terms item up" onclick="moveTermsItem(${i}, -1)" ${i === 0 ? 'disabled' : ''}>&#9650;</button>
+            <button class="dev-info-bubble" title="Move down" aria-label="Move terms item down" onclick="moveTermsItem(${i}, 1)" ${i === termsItems.length - 1 ? 'disabled' : ''}>&#9660;</button>
+            <button class="dev-info-bubble dev-danger-btn" title="Delete" aria-label="Delete terms item" onclick="deleteTermsItem(${i})"><svg class="th-icon" aria-hidden="true"><use href="#icon-trash" xlink:href="#icon-trash"></use></svg></button>
+          </div>
+        </div>
+        <div class="tool-form-row"><div class="form-field full">
+          <label>Section heading</label>
+          <input type="text" value="${escapeHtml(item.heading || '')}" oninput="updateTermsField(${i}, 'heading', this.value)">
+        </div></div>
+        <div class="tool-form-row"><div class="form-field full">
+          <label>Section text</label>
+          <textarea rows="4" style="width:100%; resize:vertical;" oninput="updateTermsField(${i}, 'body', this.value)">${escapeHtml(item.body || '')}</textarea>
+        </div></div>
+      </div>
+    `).join('');
+  }
+  function updateTermsField(index, field, value) {
+    if (termsItems[index]) termsItems[index][field] = value;
+  }
+  function moveTermsItem(index, direction) {
+    const target = index + direction;
+    if (target < 0 || target >= termsItems.length) return;
+    [termsItems[index], termsItems[target]] = [termsItems[target], termsItems[index]];
+    renderTermsEditorRows();
+  }
+  function deleteTermsItem(index) {
+    termsItems.splice(index, 1);
+    renderTermsEditorRows();
+  }
+  function addTermsItem() {
+    termsItems.push({ heading: '', body: '' });
+    renderTermsEditorRows();
+  }
+  async function saveTermsList() {
+    if (!(await confirmDevPassword())) return;
+    const btn = document.getElementById('saveTermsBtn');
+    btn.disabled = true;
+    btn.textContent = 'Saving...';
+    try {
+      if (typeof ensureFreshToken === 'function') await ensureFreshToken();
+      const cleaned = termsItems
+        .map(item => ({ heading: (item.heading || '').trim(), body: (item.body || '').trim() }))
+        .filter(item => item.heading && item.body);
+
+      const delRes = await fetchWithTimeout(SUPABASE_URL + '/rest/v1/site_terms?id=gte.0', 8000, {
+        method: 'DELETE',
+        headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': 'Bearer ' + getAuthToken() },
+      });
+      if (!delRes.ok) throw new Error('Could not clear the old list (HTTP ' + delRes.status + ')');
+
+      if (cleaned.length) {
+        const insertRes = await fetchWithTimeout(SUPABASE_URL + '/rest/v1/site_terms', 8000, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'apikey': SUPABASE_ANON_KEY,
+            'Authorization': 'Bearer ' + getAuthToken(),
+          },
+          body: JSON.stringify(cleaned.map((item, i) => Object.assign({ sort_order: i }, item))),
+        });
+        if (!insertRes.ok) throw new Error('Could not save the new list (HTTP ' + insertRes.status + ')');
+      }
+      showToast('Terms saved. Live on the site within a few seconds.');
+      await renderTermsEditor();
+    } catch (e) {
+      showToast(e.message || String(e), { type: 'error' });
+    } finally {
+      btn.disabled = false;
+      btn.textContent = 'Save all';
+    }
+  }
+
+  document.addEventListener('DOMContentLoaded', function () {
+    const proceed = () => {
+      const allowed = typeof hasDevToolsAccess === 'function' && hasDevToolsAccess();
+      document.getElementById(allowed ? 'contentMainView' : 'contentBlockedView').style.display = 'block';
+      document.getElementById(allowed ? 'contentBlockedView' : 'contentMainView').style.display = 'none';
+      if (!allowed) return;
+      renderSiteContentForm();
+      renderContentHistory();
+      renderFaqEditor();
+      renderTermsEditor();
+      initCollapsiblePanels();
+    };
+    if (typeof initSyncOnLoad === 'function') {
+      initSyncOnLoad().then(proceed).catch(proceed);
+    } else {
+      setTimeout(proceed, 300);
+    }
+  });
+</script>
+
+</body>
+</html>

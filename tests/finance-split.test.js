@@ -630,3 +630,126 @@ test('undoing a bulk delete cancels the ONE shared timer and restores every job 
   assert.match(undoCallback[1], /clearTimeout\(timer\)/);
   assert.match(undoCallback[1], /idsToDelete\.forEach\(id => pendingDeleteJobIds\.delete\(id\)\)/);
 });
+
+// Push 13 (2026-08-20, structural item #15): splitting Dev Tools'
+// Site Content/FAQ/Terms editor (83% of the file's 2,692 lines) into
+// its own page, site-content.html. Investigated this once before
+// (Push 11) and deferred it after an automated call-graph propagation
+// flooded almost every function with "belongs to all 5 categories" --
+// one ubiquitous shared helper (openDevInfo, called from every
+// panel's "?" button) acted as a hub connecting everything to
+// everything once labels propagated bidirectionally through it. Redid
+// the analysis this time using the raw (un-propagated) call graph as
+// evidence for manual classification instead of trusting automated
+// propagation, which correctly separated 9 genuinely shared utilities
+// (the password-gate system, fetchWithTimeout, openDevInfo, the
+// collapsible-panel mechanism) from 20 Content-only and 50 Dev-Core-
+// only functions.
+
+const DEV_TOOLS_PATH = path.join(__dirname, '..', 'tools', 'dev-tools.html');
+const SITE_CONTENT_PATH = path.join(__dirname, '..', 'tools', 'site-content.html');
+const DEV_SHARED_PATH = path.join(__dirname, '..', 'tools', 'dev-tools-shared.js');
+
+const DEV_TOOLS_SHARED_FNS = ['sha256Hex', 'showDevPasswordPrompt', 'devPasswordSubmit',
+  'devPasswordCancel', 'confirmDevPassword', 'fetchWithTimeout', 'openDevInfo',
+  'toggleDevPanel', 'initCollapsiblePanels'];
+const CONTENT_ONLY_FNS = ['openFieldInfo', 'renderSiteContentForm', 'saveSiteContent',
+  'exportContentBackup', 'renderContentHistory', 'restoreHistoryEntry', 'renderFaqEditor',
+  'renderFaqEditorRows', 'updateFaqField', 'moveFaqItem', 'deleteFaqItem', 'addFaqItem',
+  'saveFaqList', 'renderTermsEditor', 'renderTermsEditorRows', 'updateTermsField',
+  'moveTermsItem', 'deleteTermsItem', 'addTermsItem', 'saveTermsList'];
+
+test('all 9 shared functions are defined in dev-tools-shared.js, and nowhere else', () => {
+  const sharedSrc = fs.readFileSync(DEV_SHARED_PATH, 'utf8');
+  const devSrc = fs.readFileSync(DEV_TOOLS_PATH, 'utf8');
+  const contentSrc = fs.readFileSync(SITE_CONTENT_PATH, 'utf8');
+  for (const name of DEV_TOOLS_SHARED_FNS) {
+    assert.match(sharedSrc, new RegExp('function ' + name + '\\('), name + ' should be in dev-tools-shared.js');
+    assert.doesNotMatch(devSrc, new RegExp('function ' + name + '\\('), name + ' should NOT be redefined in dev-tools.html');
+    assert.doesNotMatch(contentSrc, new RegExp('function ' + name + '\\('), name + ' should NOT be redefined in site-content.html');
+  }
+});
+
+test('all 20 Content-only functions are defined in site-content.html, and nowhere else', () => {
+  const contentSrc = fs.readFileSync(SITE_CONTENT_PATH, 'utf8');
+  const devSrc = fs.readFileSync(DEV_TOOLS_PATH, 'utf8');
+  for (const name of CONTENT_ONLY_FNS) {
+    assert.match(contentSrc, new RegExp('function ' + name + '\\('), name + ' should be in site-content.html');
+    assert.doesNotMatch(devSrc, new RegExp('function ' + name + '\\('), name + ' should have moved out of dev-tools.html');
+  }
+});
+
+test('none of the 20 Content-only functions are CALLED from dev-tools.html (not just undefined)', () => {
+  const devSrc = fs.readFileSync(DEV_TOOLS_PATH, 'utf8');
+  const stillCalled = CONTENT_ONLY_FNS.filter(name => {
+    const re = new RegExp(name + '\\(', 'g');
+    for (const m of devSrc.matchAll(re)) {
+      const lineStart = devSrc.lastIndexOf('\n', m.index) + 1;
+      const lineEnd = devSrc.indexOf('\n', m.index);
+      const line = devSrc.slice(lineStart, lineEnd).trim();
+      if (!line.startsWith('//') && !line.startsWith('*')) return true;
+    }
+    return false;
+  });
+  assert.deepEqual(stillCalled, [], 'these would throw at runtime since their definitions moved: ' + stillCalled.join(', '));
+});
+
+test('the two large data objects (DEV_INFO, FIELD_INFO) and the two module-level state arrays (faqItems, termsItems) moved with the functions that need them', () => {
+  const sharedSrc = fs.readFileSync(DEV_SHARED_PATH, 'utf8');
+  const contentSrc = fs.readFileSync(SITE_CONTENT_PATH, 'utf8');
+  const devSrc = fs.readFileSync(DEV_TOOLS_PATH, 'utf8');
+  assert.match(sharedSrc, /const DEV_INFO = \{/, 'DEV_INFO must be in the shared file (openDevInfo reads from it)');
+  assert.match(contentSrc, /const FIELD_INFO = \{/, 'FIELD_INFO must be in site-content.html (openFieldInfo reads from it)');
+  assert.match(contentSrc, /const SITE_CONTENT_FIELDS = \[/);
+  assert.match(contentSrc, /let faqItems = \[\];/);
+  assert.match(contentSrc, /let termsItems = \[\];/);
+  assert.doesNotMatch(devSrc, /const DEV_INFO = \{/);
+  assert.doesNotMatch(devSrc, /const FIELD_INFO = \{/);
+});
+
+test('dev-tools.html loads dev-tools-shared.js before its own script needs it', () => {
+  const src = fs.readFileSync(DEV_TOOLS_PATH, 'utf8');
+  const sharedPos = src.indexOf('dev-tools-shared.js');
+  const dataLayerPos = src.indexOf('data-layer.js');
+  assert.ok(sharedPos > 0, 'dev-tools-shared.js should be loaded');
+  assert.ok(dataLayerPos < sharedPos, 'data-layer.js should load first, matching every other page');
+});
+
+test('site-content.html loads dev-tools-shared.js too, and has the standard access-gating wrapper', () => {
+  const src = fs.readFileSync(SITE_CONTENT_PATH, 'utf8');
+  assert.match(src, /dev-tools-shared\.js/);
+  assert.match(src, /id="contentBlockedView"/);
+  assert.match(src, /id="contentMainView"/);
+  assert.match(src, /hasDevToolsAccess/);
+});
+
+test('dev-tools.html\'s jump-nav Content pill now links to the new page instead of an in-page anchor', () => {
+  const src = fs.readFileSync(DEV_TOOLS_PATH, 'utf8');
+  assert.match(src, /href="\/tools\/site-content\.html"/);
+  assert.doesNotMatch(src, /href="#nav-content"/);
+});
+
+test('old #nav-content bookmarks on dev-tools.html redirect to site-content.html', () => {
+  const src = fs.readFileSync(DEV_TOOLS_PATH, 'utf8');
+  assert.match(src, /location\.hash === '#nav-content'/);
+  assert.match(src, /window\.location\.replace\('\/tools\/site-content\.html'\)/);
+});
+
+test('every getElementById call in site-content.html has a matching element defined on the page', () => {
+  const src = fs.readFileSync(SITE_CONTENT_PATH, 'utf8');
+  const referenced = new Set([...src.matchAll(/getElementById\(['"]([\w-]+)['"]\)/g)].map(m => m[1]));
+  const defined = new Set([...src.matchAll(/id="([\w-]+)"/g)].map(m => m[1]));
+  const missing = [...referenced].filter(id => !defined.has(id));
+  assert.deepEqual(missing, []);
+});
+
+test('the service worker precaches both new files, and the consistency checker tracks dev-tools-shared.js', () => {
+  const swSrc = fs.readFileSync(path.join(__dirname, '..', 'service-worker.js'), 'utf8');
+  const arrayMatch = swSrc.match(/const PRECACHE_URLS = \[([\s\S]*?)\n\];/);
+  assert.match(arrayMatch[1], /'\/tools\/site-content\.html'/);
+  assert.match(arrayMatch[1], /'\/tools\/dev-tools-shared\.js'/);
+
+  const checkerSrc = fs.readFileSync(path.join(__dirname, '..', 'scripts', 'check-consistency.js'), 'utf8');
+  const versionedMatch = checkerSrc.match(/const VERSIONED_SCRIPTS = \[([^\]]*)\]/);
+  assert.match(versionedMatch[1], /'dev-tools-shared\.js'/);
+});

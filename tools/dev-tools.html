@@ -27,6 +27,7 @@
 <link rel="stylesheet" href="/styles.css?v=202608201800">
 <link rel="stylesheet" href="/tools/styles-tools.css?v=202608201900">
 <script src="/tools/data-layer.js?v=202608200900" defer></script>
+<script src="/tools/dev-tools-shared.js?v=202608201400" defer></script>
 <script src="/tools/tools-effects.js?v=202608201400" defer></script>
 <script src="/tools/tools-dialogs.js?v=202608201400" defer></script>
 <script src="/tools/tools-media-sharing.js?v=202608201900" defer></script>
@@ -235,7 +236,7 @@
     <a href="#nav-access"><span class="jump-nav-icon"><svg class="th-icon" aria-hidden="true"><use href="#icon-lock" xlink:href="#icon-lock"></use></svg></span>Access</a>
     <a href="#nav-data"><span class="jump-nav-icon"><svg class="th-icon" aria-hidden="true"><use href="#icon-chart" xlink:href="#icon-chart"></use></svg></span>Data</a>
     <a href="#nav-deploy"><span class="jump-nav-icon"><svg class="th-icon" aria-hidden="true"><use href="#icon-rocket" xlink:href="#icon-rocket"></use></svg></span>Deploy</a>
-    <a href="#nav-content"><span class="jump-nav-icon"><svg class="th-icon" aria-hidden="true"><use href="#icon-note" xlink:href="#icon-note"></use></svg></span>Content</a>
+    <a href="/tools/site-content.html"><span class="jump-nav-icon"><svg class="th-icon" aria-hidden="true"><use href="#icon-note" xlink:href="#icon-note"></use></svg></span>Content</a>
   </nav>
 
   <div style="margin-bottom:20px;">
@@ -450,260 +451,13 @@
     </div>
   </div>
 
-  <div class="dev-panel dev-panel-wide is-collapsible" data-collapse-key="sitecontent">
-    <div class="dev-panel-heading" onclick="toggleDevPanel(this)">
-      <h2 id="nav-content" class="dev-anchor">Site content</h2>
-      <button class="dev-info-bubble" onclick="event.stopPropagation(); openDevInfo('sitecontent')" aria-label="What does this do?" title="What does this do?">?</button>
-      <span class="dev-collapse-caret">&#9660;</span>
-    </div>
-    <div class="dev-panel-body">
-      <div id="siteContentForm"></div>
-    </div>
-  </div>
-
-  <div class="dev-panel dev-panel-wide is-collapsible" data-collapse-key="contenthistory">
-    <div class="dev-panel-heading" onclick="toggleDevPanel(this)">
-      <h2>Content edit history</h2>
-      <button class="dev-info-bubble" onclick="event.stopPropagation(); openDevInfo('contenthistory')" aria-label="What does this do?" title="What does this do?">?</button>
-      <span class="dev-collapse-caret">&#9660;</span>
-    </div>
-    <div class="dev-panel-body">
-      <button class="secondary-btn" style="margin-bottom:12px;" onclick="exportContentBackup()">Download backup (JSON)</button>
-      <div id="contentHistoryList" class="dev-scrollable-list"></div>
-    </div>
-  </div>
-
-  <div class="dev-panel dev-panel-wide is-collapsible" data-collapse-key="faq">
-    <div class="dev-panel-heading" onclick="toggleDevPanel(this)">
-      <h2>FAQ editor</h2>
-      <button class="dev-info-bubble" onclick="event.stopPropagation(); openFieldInfo('faq')" aria-label="Where does this appear?" title="Where does this appear?"><svg class="th-icon" aria-hidden="true"><use href="#icon-camera" xlink:href="#icon-camera"></use></svg></button>
-      <span class="dev-collapse-caret">&#9660;</span>
-    </div>
-    <div class="dev-panel-body">
-      <p class="tool-sub" style="margin-bottom:12px;">If an answer mentions the phone number as plain text, it won't update automatically if the phone field above ever changes -- edit that answer directly if the number changes.</p>
-      <div id="faqEditorList"></div>
-      <div style="display:flex; gap:10px; margin-top:12px; flex-wrap:wrap;">
-        <button class="secondary-btn" onclick="addFaqItem()">+ Add question</button>
-        <button class="btn blue" id="saveFaqBtn" onclick="saveFaqList()">Save all</button>
-      </div>
-    </div>
-  </div>
-
-  <div class="dev-panel dev-panel-wide is-collapsible" data-collapse-key="terms">
-    <div class="dev-panel-heading" onclick="toggleDevPanel(this)">
-      <h2>Terms &amp; Conditions editor</h2>
-      <button class="dev-info-bubble" onclick="event.stopPropagation(); openFieldInfo('terms')" aria-label="Where does this appear?" title="Where does this appear?"><svg class="th-icon" aria-hidden="true"><use href="#icon-camera" xlink:href="#icon-camera"></use></svg></button>
-      <span class="dev-collapse-caret">&#9660;</span>
-    </div>
-    <div class="dev-panel-body">
-      <p class="tool-sub" style="margin-bottom:12px;">The last section mentions the phone number and email as plain text -- won't update automatically if those fields ever change. Edit it directly if either one changes.</p>
-      <div id="termsEditorList"></div>
-      <div style="display:flex; gap:10px; margin-top:12px; flex-wrap:wrap;">
-        <button class="secondary-btn" onclick="addTermsItem()">+ Add section</button>
-        <button class="btn blue" id="saveTermsBtn" onclick="saveTermsList()">Save all</button>
-      </div>
-    </div>
-  </div>
-
-  </div>
-
-  <div class="help-modal-overlay" id="helpModalOverlay" onclick="if(event.target===this) closeHelpModal()">
-    <div class="help-modal">
-      <button class="help-modal-close" onclick="closeHelpModal()" aria-label="Close">&times;</button>
-      <h3>How to Use: Dev Tools</h3>
-      <div class="help-modal-body">
-        <p>Site diagnostics and maintenance utilities, visible only on the account actively developing this site.</p>
-        <ul>
-          <li><strong>Live consistency check</strong> &mdash; fetches every tool page right now and checks each one for the login gate, a CSP, the PWA manifest link, a matching styles.css version, and that manifest.json's own URLs all have the /tools/ prefix. The same checks run automatically in GitHub Actions on every push; this just lets you run them on demand.</li>
-          <li><strong>Session &amp; sync</strong> &mdash; who's logged in on this device, the last sync result, and manual Push/Pull buttons to force a sync right now.</li>
-          <li><strong>Local data snapshot</strong> &mdash; every th_/rd_ key in this browser, its size, and an expandable raw view of its actual contents. This device only.</li>
-          <li><strong>Service worker &amp; cache</strong> &mdash; registration status, what's cached, and a one-click clear if something seems stale.</li>
-          <li><strong>Client errors</strong> &mdash; the last 20 JavaScript errors across every tool page, synced across both devices.</li>
-          <li><strong>Push notification test</strong> &mdash; sends a test lead through the real notification pipeline, cleaned up automatically after.</li>
-          <li><strong>Appliance Wiki health</strong> &mdash; quick counts: brands, models, issues, and the verified/logged-by-you split.</li>
-          <li><strong>Device info</strong> &mdash; browser, screen size, and online status &mdash; useful when something behaves differently on phone vs. computer.</li>
-          <li><strong>Known issues</strong> &mdash; still-open items from the last security audit, checkable so they don't get lost.</li>
-          <li><strong>Deploy history</strong> &mdash; the last 8 GitHub Actions runs, pulled live.</li>
-          <li><strong>Site content</strong> &mdash; edit the phone, email, hours, and up to 2 announcement banners on the public site directly, no code push needed. Changing phone/email updates every place it appears at once.</li>
-          <li><strong>Content edit history</strong> &mdash; every past change to those fields, who made it, and when -- a real audit trail from a database trigger.</li>
-          <li><strong>FAQ editor</strong> &mdash; add, edit, reorder, or remove questions on the site's FAQ section directly.</li>
-          <li><strong>Terms &amp; Conditions editor</strong> &mdash; add, edit, reorder, or remove sections of the Terms document directly.</li>
-          <li><strong>Quick links</strong> &mdash; the repo, its Actions history, the Supabase dashboard, the uptime monitors, and the live site.</li>
-        </ul>
-      </div>
-    </div>
-  </div>
-
-  <div class="help-modal-overlay" id="devPasswordOverlay">
-    <div class="help-modal" style="max-width:380px;">
-      <button class="help-modal-close" onclick="devPasswordCancel()" aria-label="Close">&times;</button>
-      <h3>Confirm dev password</h3>
-      <div class="help-modal-body">
-        <p style="margin-bottom:14px;">This is a soft confirmation to catch an accidental save, not real protection against someone technically determined -- anyone who's already logged into Connor's account and views this page's source could bypass it. It exists to stop a stray tap or someone else picking up an unlocked phone. Only asked once per browser session -- closing the tab resets it.</p>
-        <input type="password" id="devPasswordInput" placeholder="Dev password" style="width:100%; margin-bottom:12px;" onkeydown="if(event.key==='Enter') devPasswordSubmit();">
-        <div class="form-footer">
-          <button class="btn blue" onclick="devPasswordSubmit()">Confirm</button>
-          <button class="secondary-btn" onclick="devPasswordCancel()">Cancel</button>
-        </div>
-      </div>
-    </div>
-  </div>
-</div>
-
 <script>
-  const DEV_INFO = {
-    consistency: {
-      title: 'Live consistency check',
-      body: `<p>Checks every tool page for the boilerplate they're all supposed to carry: the login gate, a Content-Security-Policy, the PWA manifest link, and a styles.css version that matches everyone else's -- plus a check that manifest.json's own URLs all have the /tools/ prefix, since a missing prefix there caused a real "Add to Home Screen" bug once already.</p><p>This is the exact same logic that runs automatically in GitHub Actions on every push -- this just lets you run it on demand, from right here, without waiting on a push or checking the Actions tab.</p>`,
-    },
-    dataquality: {
-      title: 'Data quality check',
-      body: `<p>A different concern from the check above this one -- that one asks "is the site configured right," this one asks "is the actual business data clean." Flags client names that only differ by capitalization or spacing (like "Sarah Miller" vs. "sarah miller"), since Top Clients and Job Density both group by exact name match -- a near-duplicate silently splits one client's real numbers into two smaller, wrong-looking entries instead of one accurate one.</p><p>Also flags jobs with no date or no client name on file, since those are the two fields several other features (weekday density, the client leaderboard, follow-up reminders) all quietly depend on being present.</p>`,
-    },
-    clientregistry: {
-      title: 'Client registry',
-      body: `<p>A client has never been a real record in this app -- just a name retyped into jobs, invoices, quotes, contracts, and contacts separately, with nothing linking them but exact spelling. That's why navigating between pages passes the name as a search term in the URL, and why "Sarah Miller" and "sarah miller" show up as two different people in every report that groups by name.</p><p>The registry fixes that at the root: one record per real client, matched case- and spacing-insensitively, with contact details recovered from wherever they were first entered. It's built by a one-time backfill that runs when you open the Dashboard.</p><p>This panel exists so the result can actually be checked against real data -- if a client here shows the wrong job count or two people got merged who shouldn't have, that's visible now rather than surfacing later as a quietly wrong number in a report.</p><p>Important: the backfill only ever ADDS a new record set. It never edits or deletes anything already stored, so nothing existing can be damaged by it (there's a test enforcing exactly that).</p>`,
-    },
-    session: {
-      title: 'Session & sync',
-      body: `<p>Shows which account is actually logged in on this device, and the result of the last push or pull attempt to Supabase.</p><p>"Push now" and "Pull now" trigger a sync immediately instead of waiting for the normal automatic/debounced sync to happen on its own -- useful when you want to be sure the latest data is saved or fetched right this second.</p><p>The "History" link expands the last 20 attempts (most recent first) -- useful for spotting a pattern, like "this started failing consistently around a specific time" rather than only ever seeing the single latest result.</p>`,
-    },
-    onboarding: {
-      title: 'Onboarding tour',
-      body: `<p>The 3-step Dashboard walkthrough (Snapshot, Action Items, Tools) that new visitors see, shown exactly once per logged-in account -- keyed to the account's email specifically, not just the browser, so if Connor and Steve ever share a device, dismissing it on one account doesn't hide it from the other.</p><p>"Replay quick tour" forces it to run again regardless of whether it's already been seen, by opening the Dashboard with a one-time override in the URL. It clears itself from the URL as soon as the tour finishes or gets skipped.</p>`,
-    },
-    roles: {
-      title: 'Account roles',
-      body: `<p>Replaces the old hardcoded rule (only connor@ ever got Dev Tools access) with a real role system stored in Supabase. Both Owner and Developer get identical access to every feature on this page -- the only difference is that a Developer can also change which role an account holds.</p><p>A safety check in the database itself blocks removing or downgrading the very last role that can manage roles, so a mistake here can't accidentally lock both of you out of ever assigning roles again.</p><p>Anyone signed in can see this list; only a Developer sees an enabled dropdown to actually change anyone's role.</p>`,
-    },
-    localdata: {
-      title: 'Local data snapshot',
-      body: `<p>Every piece of Triple H data stored in this browser's localStorage right now, and how much space each one is using.</p><p>This reflects THIS device only, deliberately -- not synced. A few of these (the login session, migration "have I run yet" flags) would actually break things if synced across devices, so this stays local on purpose.</p><p>The internal migration/seed flags are collapsed behind their own toggle since there can be 30+ of them and they add no diagnostic value on their own -- just real data stays visible up top.</p>`,
-    },
-    wikihealth: {
-      title: 'Appliance Wiki health',
-      body: `<p>A quick read on how much is in the Appliance Wiki: how many brands and specific models, how many issues logged in total, and how many of those are Verified (sourced from a real catalog) versus Logged by you (a firsthand field report).</p>`,
-    },
-    device: {
-      title: 'Device info',
-      body: `<p>What this specific device and browser currently report: screen size, viewport size, online status, and the full browser identification string. Useful for figuring out why something looks or behaves differently on a phone versus a computer.</p>`,
-    },
-    serviceworker: {
-      title: 'Service worker & cache',
-      body: `<p>Shows whether a service worker is actually registered on this device, its current state, what's in Cache Storage, and roughly how much space it's using.</p><p>"Clear cache & unregister" wipes all of it and reloads a clean slate -- the same thing Chrome's own DevTools "Clear Storage" button does. Useful when something looks stale or behaves differently after a real update, since a leftover cached file is a common cause of that.</p>`,
-    },
-    clienterrors: {
-      title: 'Client errors',
-      body: `<p>The last 20 JavaScript errors that happened on ANY tool page, on either device, captured automatically in the background (no action needed to log them). Shows the error message, which page it happened on, who was on it, and when.</p><p>Synced across devices -- an error on Steve's phone shows up here on Connor's device too, once the next sync happens.</p>`,
-    },
-    pushtest: {
-      title: 'Push notification test',
-      body: `<p>Inserts a test lead using the exact same path the real contact form uses (not a direct call to the Send-Push function itself, which needs a service_role key that must never sit in this page's JavaScript). That insert should trigger the same server-side notification pipeline a real lead does.</p><p>This can't directly confirm a push was actually received on any device -- only that the insert (and whatever fires from it server-side) ran without an error. The test lead gets deleted automatically a few seconds later either way.</p>`,
-    },
-    pushhistory: {
-      title: 'Push notification history',
-      body: `<p>Reads notification_log directly -- the same table the Send-Push edge function's own de-duplication logic uses to decide whether a category has already fired recently, so this is the real record of what's actually gone out, not a separate log kept just for display.</p><p>Doesn't confirm a push was actually received on any device, only that it was sent from this end -- same limitation as the test button above.</p>`,
-    },
-    knownissues: {
-      title: 'Known issues',
-      body: `<p>Real, still-open items -- add a new one right from here with "+ Add issue", check one off once it's actually resolved, or delete it once it's no longer worth tracking. Synced across devices, so anything either account logs shows up for both.</p>`,
-    },
-    deploy: {
-      title: 'Deploy history',
-      body: `<p>Pulls the last 8 GitHub Actions runs for this repo directly from GitHub's public API -- no login needed since the repo is public. The top summary is the single most recent run; the list below it shows enough history to spot a pattern (e.g. "this started failing consistently a few runs back") rather than just a single snapshot.</p>`,
-    },
-    changelog: {
-      title: "What's new",
-      body: `<p>Real commit messages from this repo, newest first -- same public GitHub API as Deploy History above, so no separate setup. Each entry shows its short title by default; "Show full message" expands the complete explanation of what changed and why, right here, without leaving the app. The GitHub link still goes to the actual code diff (the literal before/after of every file), for anyone who wants to see the change itself rather than just read about it.</p><p>To revert something you don't like: just ask in chat which commit (or describe what changed) and it can be reverted directly -- that's a normal git operation, not something this page needs a button for.</p>`,
-    },
-    sitecontent: {
-      title: 'Site content',
-      body: `<p>Edits a small set of fields on the public site directly -- the phone number, email, both hours lines, and up to 2 announcement banners -- without touching any code or pushing through GitHub.</p><p>Phone and email are the big ones: changing either updates EVERY place it appears across the whole homepage at once -- the header, the hero button, the mobile menu, the contact cards, the footer, all 3 FAQ answers that mention it, and the Terms modal -- not just one spot.</p><p>Leave a field blank to fall back to whatever's already hardcoded in the page (for phone/email/hours) or to hide it entirely (for the banners). Changes typically go live within a few seconds. Needs a one-time SQL setup run in Supabase before this will work -- see the setup notes if the form below shows an error.</p>`,
-    },
-    contenthistory: {
-      title: 'Content edit history',
-      body: `<p>Every change ever made to Site Content, the FAQ, or Terms &amp; Conditions -- what it was, what it became, who changed it, and when. The last 50 edits across all three, merged together.</p><p>This is written by a database trigger, not by this page's own save button -- so it's a real audit trail that would catch a change made any other way too, not just through this specific form.</p><p>The small colored dot shows who made it -- blue for Connor, pink for Steve.</p><p>"Restore this value" puts an old value back -- for a deleted FAQ/Terms item, it re-adds it as a new entry at the end of the list rather than in its original spot, since the original no longer exists to restore into directly.</p><p>"Download backup" saves everything currently in all 3 content tables as one JSON file -- a safety net to grab before a big editing session, not an automatic backup.</p>`,
-    },
-    links: {
-      title: 'Quick links',
-      body: `<p>Direct shortcuts to the places you'd otherwise have to remember URLs for or dig up bookmarks for: the GitHub repo itself, its Actions run history, the Supabase project dashboard, the HetrixTools uptime monitors (the site itself, plus the keep-alive that stops Supabase's free tier from auto-pausing), and the actual live public site.</p>`,
-    },
-    advisorhealth: {
-      title: 'Advisor health',
-      body: `<p>Pulls Supabase's real security and performance advisor findings (the same lints get_advisors surfaces) directly into this page. Calls a Supabase Edge Function (advisor-health) that alone holds a Supabase Management API Personal Access Token -- never present anywhere in this page's own code, same reasoning as the GitHub token used by Trigger workflows.</p><p>Unlike a GitHub fine-grained token, a Supabase PAT can't be scoped to just this one project -- it's account-wide access to advisor data for every project the account can see. Treat it as more sensitive than GITHUB_PAT for that reason.</p><p>Sorted worst-first (errors, then warnings, then info) so whatever most needs attention is always at the top.</p>`,
-    },
-    storagebrowser: {
-      title: 'Storage browser',
-      body: `<p>Scans all 3 Storage buckets (job-photos, receipts, secure-documents) and shows a real file count and total size for each -- there was previously no way to see what's actually in these buckets from inside the app at all.</p><p>Since each bucket stores files inside per-record folders (job-&#123;id&#125; for photos, expense-&#123;id&#125; for receipts) rather than flat, this has to list the bucket root first to find the folders, then list inside each one -- so a bucket with a lot of jobs or expenses will take a few seconds longer than one with just a handful.</p>`,
-    },
-    dataintegrity: {
-      title: 'Data integrity check',
-      body: `<p>Cross-checks job photo database records against actual files in Storage, in BOTH directions: a record whose file is missing (an upload that got interrupted after the metadata was saved but before the file finished), and a file sitting in Storage with no matching record (the reverse -- the file landed but the database insert never completed). Either one means a photo that looks like it exists but doesn't actually work.</p><p>Also flags any lead with neither a phone number nor an email on file -- either one alone is completely normal, but both blank usually means the contact form was submitted incompletely and there's currently no way to reach that person back.</p>`,
-    },
-    triggerworkflows: {
-      title: 'Trigger workflows',
-      body: `<p>Runs any of the 5 GitHub Actions workflows on demand instead of waiting for its schedule. Calls a Supabase Edge Function (trigger-workflow) that holds the actual GitHub credential server-side -- it's never present anywhere in this page's own code, since anything sitting in client-side JS on a public page can be read by anyone who views the page source.</p><p>That function separately verifies the account calling it is genuinely signed in AND has a real assigned role (the same account_roles check everything else on this page depends on) before it will do anything, regardless of what this page itself shows -- so this stays safe even if something else about the page's own access control were ever wrong.</p>`,
-    },
-  };
-  function openDevInfo(key) {
-    const info = DEV_INFO[key];
-    if (info && typeof openInfoModal === 'function') openInfoModal(info.title, info.body);
-  }
 
-  // Soft confirmation gate before publishing anything to the live site
-  // (Site Content, FAQ, or Terms saves) -- see the modal's own text for
-  // the honest limit of what this actually protects against. Hashed
-  // rather than stored in plain text so it's not trivially visible at
-  // a glance, though that's a small speed bump, not real security --
-  // anyone who views this page's source and is determined enough can
-  // still bypass it.
-  const DEV_PASSWORD_HASH = '70abb329febcd9d03819bedb5c5c9d67d6d3ca2a31711ee7dff634b7982e893c';
-  let _devPasswordResolve = null;
 
-  async function sha256Hex(text) {
-    const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(text));
-    return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2, '0')).join('');
-  }
 
-  function showDevPasswordPrompt() {
-    return new Promise(resolve => {
-      _devPasswordResolve = resolve;
-      const overlay = document.getElementById('devPasswordOverlay');
-      const input = document.getElementById('devPasswordInput');
-      input.value = '';
-      overlay.classList.add('is-open');
-      setTimeout(() => input.focus(), 50);
-    });
-  }
 
-  function devPasswordSubmit() {
-    const value = document.getElementById('devPasswordInput').value;
-    document.getElementById('devPasswordOverlay').classList.remove('is-open');
-    if (_devPasswordResolve) { _devPasswordResolve(value); _devPasswordResolve = null; }
-  }
 
-  function devPasswordCancel() {
-    document.getElementById('devPasswordOverlay').classList.remove('is-open');
-    if (_devPasswordResolve) { _devPasswordResolve(null); _devPasswordResolve = null; }
-  }
 
-  async function confirmDevPassword() {
-    // Remembered for the rest of this browser session (sessionStorage,
-    // not localStorage -- clears automatically the moment the tab
-    // closes) so editing several things back-to-back doesn't mean
-    // re-typing the password every single time.
-    if (sessionStorage.getItem('th_dev_password_confirmed') === '1') return true;
-    const entered = await showDevPasswordPrompt();
-    if (entered === null) return false; // cancelled
-    if (!entered) { showToast('Dev password required.', { type: 'error' }); return false; }
-    const hash = await sha256Hex(entered);
-    if (hash !== DEV_PASSWORD_HASH) {
-      showToast('Incorrect dev password.', { type: 'error' });
-      return false;
-    }
-    sessionStorage.setItem('th_dev_password_confirmed', '1');
-    return true;
-  }
 
 
   const TOOL_PAGES_TO_CHECK = [
@@ -718,15 +472,6 @@
   const NO_AUTH_CHECK = ['login.html'];
   const NO_STYLES_VERSION_CHECK = ['runway-dashboard.html'];
 
-  async function fetchWithTimeout(url, ms, extraOpts) {
-    const controller = new AbortController();
-    const timer = setTimeout(() => controller.abort(), ms);
-    try {
-      return await fetch(url, Object.assign({ cache: 'no-store', signal: controller.signal }, extraOpts || {}));
-    } finally {
-      clearTimeout(timer);
-    }
-  }
 
   // Shared by every "click a button, run an async check, show the
   // result" panel here -- handles disabling the button, resetting it
@@ -1020,25 +765,6 @@
     renderSessionInfo();
   }
 
-  // Editable public-site content -- a small, separate Supabase table
-  // (public.site_content), NOT part of the same synced blob as private
-  // business data, specifically because this one needs to be readable
-  // by anonymous visitors on the live public site. See the matching
-  // fetch-and-apply script near the end of index.html for the read
-  // side of this; this panel is the write side.
-  const SITE_CONTENT_FIELDS = [
-    { key: 'phone', label: 'Phone number', placeholder: 'e.g. (435) 414-1667 -- blank uses the default already in the code.', info: 'phone' },
-    { key: 'email', label: 'Email address', placeholder: 'e.g. steve@triplehenterprisesllc.biz -- blank uses the default.', info: 'email' },
-    { key: 'hoursMonday', label: 'Hours -- Monday', placeholder: 'e.g. 7:00 AM \u2013 10:00 PM, or "Closed"', info: 'hours' },
-    { key: 'hoursTuesday', label: 'Hours -- Tuesday', placeholder: 'e.g. 7:00 AM \u2013 10:00 PM, or "Closed"', info: 'hours' },
-    { key: 'hoursWednesday', label: 'Hours -- Wednesday', placeholder: 'e.g. 7:00 AM \u2013 10:00 PM, or "Closed"', info: 'hours' },
-    { key: 'hoursThursday', label: 'Hours -- Thursday', placeholder: 'e.g. 7:00 AM \u2013 10:00 PM, or "Closed"', info: 'hours' },
-    { key: 'hoursFriday', label: 'Hours -- Friday', placeholder: 'e.g. 7:00 AM \u2013 10:00 PM, or "Closed"', info: 'hours' },
-    { key: 'hoursSaturday', label: 'Hours -- Saturday', placeholder: 'e.g. 7:00 AM \u2013 10:00 PM, or "Closed"', info: 'hours' },
-    { key: 'hoursSunday', label: 'Hours -- Sunday', placeholder: 'e.g. 7:00 AM \u2013 10:00 PM, or "Closed"', info: 'hours' },
-    { key: 'banner1', label: 'Banner 1 (orange bar, top of site)', placeholder: 'Blank hides it. e.g. Currently booking 2+ weeks out', info: 'banner1' },
-    { key: 'banner2', label: 'Banner 2 (blue bar, top of site)', placeholder: 'Blank hides it.', info: 'banner2' },
-  ];
 
   // Per-field "where does this actually appear?" popups -- a real
   // screenshot of the relevant part of the live site, plus a specific
@@ -1046,109 +772,9 @@
   // Keyed by a short id (not by the site_content key directly) since
   // several fields sharing the same appearance (all 7 hours fields
   // show in the same one card) can point at the same entry.
-  const FIELD_INFO = {
-    phone: {
-      title: 'Phone number',
-      description: 'Appears in the header, the hero "Call" button, the mobile menu, the sticky call button on scroll, the Contact section\'s "Call or Text" card, the footer, all 3 FAQ answers that mention it, and the Terms &amp; Conditions modal -- all of them update together.',
-      image: 'help-contact-cards.webp',
-    },
-    email: {
-      title: 'Email address',
-      description: 'Appears in the Contact section\'s "Email" card, the footer, and the Terms &amp; Conditions modal.',
-      image: 'help-contact-cards.webp',
-    },
-    hours: {
-      title: 'Hours',
-      description: 'Shown in the Contact section\'s "Hours" card, one line per day. Each day is independent -- set Saturday to "Closed" without affecting any other day.',
-      image: 'help-contact-cards.webp',
-    },
-    banner1: {
-      title: 'Banner 1',
-      description: 'Shows as an orange bar across the very top of the site, above the header -- the first thing a visitor sees. Completely hidden when this field is blank.',
-      image: null,
-    },
-    banner2: {
-      title: 'Banner 2',
-      description: 'Shows as a blue bar directly below Banner 1 (or at the top if Banner 1 is blank). Completely hidden when this field is blank.',
-      image: null,
-    },
-    faq: {
-      title: 'FAQ',
-      description: 'The full "Frequently Asked Questions" section, opened from the FAQ link in the site\'s navigation. Reorder, edit, add, or remove questions freely -- each one shown as an expandable accordion item on the live site.',
-      image: 'help-faq-modal.webp',
-    },
-    terms: {
-      title: 'Terms & Conditions',
-      description: 'The full Terms and Conditions document, opened from the "Terms & Conditions" link in the footer and Contact section. Each section has its own heading and body text, reorderable the same way as the FAQ.',
-      image: 'help-terms-modal.webp',
-    },
-  };
 
-  function openFieldInfo(key) {
-    const info = FIELD_INFO[key];
-    if (!info) return;
-    const img = info.image ? '<img src="/images/dev-help/' + info.image + '" alt="" style="max-width:100%; border-radius:8px; margin-top:10px; border:1px solid var(--border);">' : '';
-    if (typeof openInfoModal === 'function') openInfoModal(info.title, '<p>' + info.description + '</p>' + img);
-  }
 
-  async function renderSiteContentForm() {
-    const el = document.getElementById('siteContentForm');
-    el.innerHTML = '<p class="tool-sub">Loading...</p>';
-    try {
-      if (typeof ensureFreshToken === 'function') await ensureFreshToken();
-      const res = await fetchWithTimeout(SUPABASE_URL + '/rest/v1/site_content?select=key,value', 6000, {
-        headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': 'Bearer ' + getAuthToken() },
-      });
-      const rows = res.ok ? await res.json() : [];
-      const current = {};
-      (Array.isArray(rows) ? rows : []).forEach(r => { current[r.key] = r.value || ''; });
 
-      el.innerHTML = SITE_CONTENT_FIELDS.map(f =>
-        '<div class="tool-form-row"><div class="form-field full"><label style="display:flex; align-items:center; gap:6px;">' + escapeHtml(f.label) +
-        (f.info ? '<button class="dev-info-bubble" onclick="openFieldInfo(\'' + f.info + '\')" title="Where does this appear?" aria-label="Where does this appear?"><svg class="th-icon" aria-hidden="true"><use href="#icon-camera" xlink:href="#icon-camera"></use></svg></button>' : '') +
-        '</label>' +
-        '<input type="text" id="siteContent_' + f.key + '" placeholder="' + escapeHtml(f.placeholder) + '" value="' + escapeHtml(current[f.key] || '') + '"></div></div>'
-      ).join('') +
-      '<div class="form-footer"><button class="btn blue" id="saveSiteContentBtn" onclick="saveSiteContent()">Save all</button></div>' +
-      '<p class="tool-sub" style="margin-top:8px;">Changes go live on the public site the next time it loads -- no push needed, usually within a few seconds.</p>';
-
-      if (!res.ok) el.insertAdjacentHTML('afterbegin', '<p class="tool-sub" style="color:#e05555;">Could not load current values -- the table below might not exist yet. Run the setup SQL in Supabase first.</p>');
-    } catch (e) {
-      el.innerHTML = '<p class="tool-sub">Could not reach Supabase: ' + escapeHtml(e.message || String(e)) + '</p>';
-    }
-  }
-
-  async function saveSiteContent() {
-    if (!(await confirmDevPassword())) return;
-    const btn = document.getElementById('saveSiteContentBtn');
-    btn.disabled = true;
-    btn.textContent = 'Saving...';
-    try {
-      if (typeof ensureFreshToken === 'function') await ensureFreshToken();
-      const rows = SITE_CONTENT_FIELDS.map(f => ({
-        key: f.key,
-        value: document.getElementById('siteContent_' + f.key).value.trim() || null,
-      }));
-      const res = await fetchWithTimeout(SUPABASE_URL + '/rest/v1/site_content?on_conflict=key', 8000, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'apikey': SUPABASE_ANON_KEY,
-          'Authorization': 'Bearer ' + getAuthToken(),
-          'Prefer': 'resolution=merge-duplicates',
-        },
-        body: JSON.stringify(rows),
-      });
-      if (!res.ok) throw new Error('Save failed (HTTP ' + res.status + ') -- check that the setup SQL has been run and RLS policies allow this account to write.');
-      showToast('Saved. Live on the site within a few seconds.');
-      renderContentHistory();
-    } catch (e) {
-      showToast(e.message || String(e), { type: 'error' });
-    } finally {
-      btn.disabled = false;
-      btn.textContent = 'Save all';
-    }
-  }
 
   // personDot() now lives in tools-effects.js (shared across all 4 tool
   // pages that use it) -- see that file for details. Called bare here
@@ -1162,100 +788,7 @@
   // a safety net to grab before a big editing session, not an
   // automatic backup system. Read-only (no dev password needed, this
   // never writes anything).
-  async function exportContentBackup() {
-    try {
-      if (typeof ensureFreshToken === 'function') await ensureFreshToken();
-      const headers = { 'apikey': SUPABASE_ANON_KEY, 'Authorization': 'Bearer ' + getAuthToken() };
-      const [contentRes, faqRes, termsRes] = await Promise.all([
-        fetchWithTimeout(SUPABASE_URL + '/rest/v1/site_content?select=key,value', 8000, { headers }),
-        fetchWithTimeout(SUPABASE_URL + '/rest/v1/site_faq?select=question,answer,sort_order&order=sort_order.asc', 8000, { headers }),
-        fetchWithTimeout(SUPABASE_URL + '/rest/v1/site_terms?select=heading,body,sort_order&order=sort_order.asc', 8000, { headers }),
-      ]);
-      const backup = {
-        exportedAt: new Date().toISOString(),
-        site_content: contentRes.ok ? await contentRes.json() : [],
-        site_faq: faqRes.ok ? await faqRes.json() : [],
-        site_terms: termsRes.ok ? await termsRes.json() : [],
-      };
-      const blob = new Blob([JSON.stringify(backup, null, 2)], { type: 'application/json' });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = 'site-content-backup-' + new Date().toISOString().slice(0, 10) + '.json';
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      URL.revokeObjectURL(url);
-      showToast('Backup downloaded.');
-    } catch (e) {
-      showToast('Backup failed: ' + (e.message || String(e)), { type: 'error' });
-    }
-  }
 
-  async function renderContentHistory() {
-    const el = document.getElementById('contentHistoryList');
-    el.innerHTML = '<p class="tool-sub">Loading...</p>';
-    try {
-      if (typeof ensureFreshToken === 'function') await ensureFreshToken();
-      const headers = { 'apikey': SUPABASE_ANON_KEY, 'Authorization': 'Bearer ' + getAuthToken() };
-
-      // All 3 audit tables, fetched in parallel and merged -- this used
-      // to only show site_content's history, silently missing FAQ and
-      // Terms edits despite both having the exact same trigger-based
-      // audit trail built for them.
-      const [contentRes, faqRes, termsRes] = await Promise.all([
-        fetchWithTimeout(SUPABASE_URL + '/rest/v1/site_content_history?select=key,old_value,new_value,changed_by,changed_at&order=changed_at.desc&limit=50', 6000, { headers }),
-        fetchWithTimeout(SUPABASE_URL + '/rest/v1/site_faq_history?select=action,faq_id,question,old_answer,new_answer,changed_by,changed_at&order=changed_at.desc&limit=50', 6000, { headers }),
-        fetchWithTimeout(SUPABASE_URL + '/rest/v1/site_terms_history?select=action,term_id,heading,old_body,new_body,changed_by,changed_at&order=changed_at.desc&limit=50', 6000, { headers }),
-      ]);
-
-      const rows = [];
-      if (contentRes.ok) {
-        (await contentRes.json()).forEach(r => rows.push({
-          table: 'content', source: 'Site content', label: r.key, old_value: r.old_value, new_value: r.new_value,
-          changed_by: r.changed_by, changed_at: r.changed_at, action: 'updated',
-        }));
-      }
-      if (faqRes.ok) {
-        (await faqRes.json()).forEach(r => rows.push({
-          table: 'faq', rowId: r.faq_id, source: 'FAQ', label: r.question, old_value: r.old_answer, new_value: r.new_answer,
-          changed_by: r.changed_by, changed_at: r.changed_at, action: r.action,
-        }));
-      }
-      if (termsRes.ok) {
-        (await termsRes.json()).forEach(r => rows.push({
-          table: 'terms', rowId: r.term_id, source: 'Terms', label: r.heading, old_value: r.old_body, new_value: r.new_body,
-          changed_by: r.changed_by, changed_at: r.changed_at, action: r.action,
-        }));
-      }
-
-      if (!rows.length) {
-        el.innerHTML = '<p class="tool-sub">No edits recorded yet, or the setup SQL hasn\'t been run for any of the 3 content tables.</p>';
-        return;
-      }
-
-      rows.sort((a, b) => new Date(b.changed_at) - new Date(a.changed_at));
-      window._contentHistoryRows = rows.slice(0, 50); // stashed so restoreHistoryEntry can look up by index without re-fetching
-      el.innerHTML = window._contentHistoryRows.map((r, i) => {
-        const detail = r.action === 'delete'
-          ? 'Deleted: ' + escapeHtml(r.old_value || '')
-          : r.action === 'insert'
-          ? 'Added: ' + escapeHtml(r.new_value || '')
-          : escapeHtml(r.old_value || '(blank)') + ' &rarr; ' + escapeHtml(r.new_value || '(blank)');
-        // No restore offered for a plain "insert" -- there's no old
-        // value to go back to; undoing an insert is a delete, which
-        // is already what each editor's own delete button is for.
-        const canRestore = r.action !== 'insert' && r.old_value != null;
-        return '<div class="dev-check-row" style="align-items:flex-start;"><div>' +
-          '<div>' + personDot(r.changed_by) + '<strong>' + escapeHtml(r.source) + ': ' + escapeHtml(r.label) + '</strong> &mdash; ' + escapeHtml(r.changed_by || 'unknown') + ' &mdash; ' + new Date(r.changed_at).toLocaleString() + '</div>' +
-          '<div class="dev-check-detail">' + detail + '</div>' +
-          (canRestore ? '<button class="small-btn" style="margin-top:6px;" onclick="restoreHistoryEntry(' + i + ')">Restore this value</button>' : '') +
-          '</div></div>';
-      }).join('');
-    } catch (e) {
-      el.innerHTML = '<p class="tool-sub">Could not load history: ' + escapeHtml(e.message || String(e)) + '</p>';
-    }
-  }
 
   // Restores a past value from Content Edit History. Site Content is
   // simple (upsert by key). FAQ/Terms: an 'update' restores in place
@@ -1264,63 +797,6 @@
   // (its original position isn't preserved -- reorder afterward via
   // that editor if it matters), since the original row no longer
   // exists to update.
-  async function restoreHistoryEntry(index) {
-    const entry = (window._contentHistoryRows || [])[index];
-    if (!entry) return;
-    if (!(await confirmDevPassword())) return;
-    try {
-      if (typeof ensureFreshToken === 'function') await ensureFreshToken();
-      const headers = {
-        'Content-Type': 'application/json',
-        'apikey': SUPABASE_ANON_KEY,
-        'Authorization': 'Bearer ' + getAuthToken(),
-      };
-
-      if (entry.table === 'content') {
-        const res = await fetchWithTimeout(SUPABASE_URL + '/rest/v1/site_content?on_conflict=key', 8000, {
-          method: 'POST',
-          headers: Object.assign({ 'Prefer': 'resolution=merge-duplicates' }, headers),
-          body: JSON.stringify([{ key: entry.label, value: entry.old_value }]),
-        });
-        if (!res.ok) throw new Error('Restore failed (HTTP ' + res.status + ')');
-      } else if (entry.table === 'faq' || entry.table === 'terms') {
-        const tableName = entry.table === 'faq' ? 'site_faq' : 'site_terms';
-        const bodyField = entry.table === 'faq' ? 'answer' : 'body';
-        const labelField = entry.table === 'faq' ? 'question' : 'heading';
-
-        if (entry.action === 'delete') {
-          // Row no longer exists -- re-insert fresh at the end of the list.
-          const listRes = await fetchWithTimeout(SUPABASE_URL + '/rest/v1/' + tableName + '?select=sort_order&order=sort_order.desc&limit=1', 6000, { headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': headers.Authorization } });
-          const listData = listRes.ok ? await listRes.json() : [];
-          const nextSort = (listData[0] && typeof listData[0].sort_order === 'number') ? listData[0].sort_order + 1 : 0;
-          const insertBody = {};
-          insertBody[labelField] = entry.label;
-          insertBody[bodyField] = entry.old_value;
-          insertBody.sort_order = nextSort;
-          const res = await fetchWithTimeout(SUPABASE_URL + '/rest/v1/' + tableName, 8000, {
-            method: 'POST', headers, body: JSON.stringify([insertBody]),
-          });
-          if (!res.ok) throw new Error('Restore (re-insert) failed (HTTP ' + res.status + ')');
-        } else {
-          // 'update' -- the row still exists, restore it in place by id.
-          if (!entry.rowId) throw new Error('Missing row id -- cannot restore safely.');
-          const updateBody = {};
-          updateBody[bodyField] = entry.old_value;
-          const res = await fetchWithTimeout(SUPABASE_URL + '/rest/v1/' + tableName + '?id=eq.' + entry.rowId, 8000, {
-            method: 'PATCH', headers, body: JSON.stringify(updateBody),
-          });
-          if (!res.ok) throw new Error('Restore failed (HTTP ' + res.status + ')');
-        }
-      }
-      showToast('Restored. Live on the site within a few seconds.');
-      renderContentHistory();
-      if (entry.table === 'content' && typeof renderSiteContentForm === 'function') renderSiteContentForm();
-      if (entry.table === 'faq' && typeof renderFaqEditor === 'function') renderFaqEditor();
-      if (entry.table === 'terms' && typeof renderTermsEditor === 'function') renderTermsEditor();
-    } catch (e) {
-      showToast(e.message || String(e), { type: 'error' });
-    }
-  }
 
   // --- FAQ editor ---
   // Works on an in-memory copy (faqItems) rather than saving on every
@@ -1329,223 +805,23 @@
   // On save: deletes every existing row and inserts the current list
   // fresh, rather than trying to diff individual changes -- simpler and
   // safe enough for how infrequently this actually gets edited.
-  let faqItems = [];
 
-  async function renderFaqEditor() {
-    const el = document.getElementById('faqEditorList');
-    el.innerHTML = '<p class="tool-sub">Loading...</p>';
-    try {
-      if (typeof ensureFreshToken === 'function') await ensureFreshToken();
-      const res = await fetchWithTimeout(SUPABASE_URL + '/rest/v1/site_faq?select=question,answer&order=sort_order.asc', 6000, {
-        headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': 'Bearer ' + getAuthToken() },
-      });
-      if (!res.ok) {
-        el.innerHTML = '<p class="tool-sub" style="color:#e05555;">Could not load current FAQ -- the table might not exist yet. Run the FAQ setup SQL in Supabase first.</p>';
-        faqItems = [];
-        return;
-      }
-      faqItems = await res.json();
-      if (!Array.isArray(faqItems)) faqItems = [];
-      renderFaqEditorRows();
-    } catch (e) {
-      el.innerHTML = '<p class="tool-sub">Could not reach Supabase: ' + escapeHtml(e.message || String(e)) + '</p>';
-    }
-  }
 
-  function renderFaqEditorRows() {
-    const el = document.getElementById('faqEditorList');
-    if (!faqItems.length) { el.innerHTML = '<p class="tool-sub">No FAQ items yet -- add one below.</p>'; return; }
-    el.innerHTML = faqItems.map((item, i) => `
-      <div class="dev-panel" style="margin-bottom:10px; background:var(--bg-panel-3);">
-        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
-          <strong style="font-size:13px; color:var(--text-dim);">#${i + 1}</strong>
-          <div>
-            <button class="dev-info-bubble" title="Move up" aria-label="Move FAQ item up" onclick="moveFaqItem(${i}, -1)" ${i === 0 ? 'disabled' : ''}>&#9650;</button>
-            <button class="dev-info-bubble" title="Move down" aria-label="Move FAQ item down" onclick="moveFaqItem(${i}, 1)" ${i === faqItems.length - 1 ? 'disabled' : ''}>&#9660;</button>
-            <button class="dev-info-bubble dev-danger-btn" title="Delete" aria-label="Delete FAQ item" onclick="deleteFaqItem(${i})"><svg class="th-icon" aria-hidden="true"><use href="#icon-trash" xlink:href="#icon-trash"></use></svg></button>
-          </div>
-        </div>
-        <div class="tool-form-row"><div class="form-field full">
-          <label>Question</label>
-          <input type="text" value="${escapeHtml(item.question || '')}" oninput="updateFaqField(${i}, 'question', this.value)">
-        </div></div>
-        <div class="tool-form-row"><div class="form-field full">
-          <label>Answer</label>
-          <textarea rows="3" style="width:100%; resize:vertical;" oninput="updateFaqField(${i}, 'answer', this.value)">${escapeHtml(item.answer || '')}</textarea>
-        </div></div>
-      </div>
-    `).join('');
-  }
 
-  function updateFaqField(index, field, value) {
-    if (faqItems[index]) faqItems[index][field] = value;
-  }
 
-  function moveFaqItem(index, direction) {
-    const target = index + direction;
-    if (target < 0 || target >= faqItems.length) return;
-    [faqItems[index], faqItems[target]] = [faqItems[target], faqItems[index]];
-    renderFaqEditorRows();
-  }
 
-  function deleteFaqItem(index) {
-    faqItems.splice(index, 1);
-    renderFaqEditorRows();
-  }
 
-  function addFaqItem() {
-    faqItems.push({ question: '', answer: '' });
-    renderFaqEditorRows();
-  }
 
-  async function saveFaqList() {
-    if (!(await confirmDevPassword())) return;
-    const btn = document.getElementById('saveFaqBtn');
-    btn.disabled = true;
-    btn.textContent = 'Saving...';
-    try {
-      if (typeof ensureFreshToken === 'function') await ensureFreshToken();
-      const cleaned = faqItems
-        .map(item => ({ question: (item.question || '').trim(), answer: (item.answer || '').trim() }))
-        .filter(item => item.question && item.answer);
-
-      const delRes = await fetchWithTimeout(SUPABASE_URL + '/rest/v1/site_faq?id=gte.0', 8000, {
-        method: 'DELETE',
-        headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': 'Bearer ' + getAuthToken() },
-      });
-      if (!delRes.ok) throw new Error('Could not clear the old list (HTTP ' + delRes.status + ')');
-
-      if (cleaned.length) {
-        const insertRes = await fetchWithTimeout(SUPABASE_URL + '/rest/v1/site_faq', 8000, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'apikey': SUPABASE_ANON_KEY,
-            'Authorization': 'Bearer ' + getAuthToken(),
-          },
-          body: JSON.stringify(cleaned.map((item, i) => Object.assign({ sort_order: i }, item))),
-        });
-        if (!insertRes.ok) throw new Error('Could not save the new list (HTTP ' + insertRes.status + ')');
-      }
-      showToast('FAQ saved. Live on the site within a few seconds.');
-      await renderFaqEditor();
-    } catch (e) {
-      showToast(e.message || String(e), { type: 'error' });
-    } finally {
-      btn.disabled = false;
-      btn.textContent = 'Save all';
-    }
-  }
 
   // --- Terms & Conditions editor ---
   // Same in-memory-then-batch-save pattern as the FAQ editor above.
-  let termsItems = [];
 
-  async function renderTermsEditor() {
-    const el = document.getElementById('termsEditorList');
-    el.innerHTML = '<p class="tool-sub">Loading...</p>';
-    try {
-      if (typeof ensureFreshToken === 'function') await ensureFreshToken();
-      const res = await fetchWithTimeout(SUPABASE_URL + '/rest/v1/site_terms?select=heading,body&order=sort_order.asc', 6000, {
-        headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': 'Bearer ' + getAuthToken() },
-      });
-      if (!res.ok) {
-        el.innerHTML = '<p class="tool-sub" style="color:#e05555;">Could not load current Terms -- the table might not exist yet. Run the Terms setup SQL in Supabase first.</p>';
-        termsItems = [];
-        return;
-      }
-      termsItems = await res.json();
-      if (!Array.isArray(termsItems)) termsItems = [];
-      renderTermsEditorRows();
-    } catch (e) {
-      el.innerHTML = '<p class="tool-sub">Could not reach Supabase: ' + escapeHtml(e.message || String(e)) + '</p>';
-    }
-  }
 
-  function renderTermsEditorRows() {
-    const el = document.getElementById('termsEditorList');
-    if (!termsItems.length) { el.innerHTML = '<p class="tool-sub">No sections yet -- add one below.</p>'; return; }
-    el.innerHTML = termsItems.map((item, i) => `
-      <div class="dev-panel" style="margin-bottom:10px; background:var(--bg-panel-3);">
-        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
-          <strong style="font-size:13px; color:var(--text-dim);">#${i + 1}</strong>
-          <div>
-            <button class="dev-info-bubble" title="Move up" aria-label="Move terms item up" onclick="moveTermsItem(${i}, -1)" ${i === 0 ? 'disabled' : ''}>&#9650;</button>
-            <button class="dev-info-bubble" title="Move down" aria-label="Move terms item down" onclick="moveTermsItem(${i}, 1)" ${i === termsItems.length - 1 ? 'disabled' : ''}>&#9660;</button>
-            <button class="dev-info-bubble dev-danger-btn" title="Delete" aria-label="Delete terms item" onclick="deleteTermsItem(${i})"><svg class="th-icon" aria-hidden="true"><use href="#icon-trash" xlink:href="#icon-trash"></use></svg></button>
-          </div>
-        </div>
-        <div class="tool-form-row"><div class="form-field full">
-          <label>Section heading</label>
-          <input type="text" value="${escapeHtml(item.heading || '')}" oninput="updateTermsField(${i}, 'heading', this.value)">
-        </div></div>
-        <div class="tool-form-row"><div class="form-field full">
-          <label>Section text</label>
-          <textarea rows="4" style="width:100%; resize:vertical;" oninput="updateTermsField(${i}, 'body', this.value)">${escapeHtml(item.body || '')}</textarea>
-        </div></div>
-      </div>
-    `).join('');
-  }
 
-  function updateTermsField(index, field, value) {
-    if (termsItems[index]) termsItems[index][field] = value;
-  }
 
-  function moveTermsItem(index, direction) {
-    const target = index + direction;
-    if (target < 0 || target >= termsItems.length) return;
-    [termsItems[index], termsItems[target]] = [termsItems[target], termsItems[index]];
-    renderTermsEditorRows();
-  }
 
-  function deleteTermsItem(index) {
-    termsItems.splice(index, 1);
-    renderTermsEditorRows();
-  }
 
-  function addTermsItem() {
-    termsItems.push({ heading: '', body: '' });
-    renderTermsEditorRows();
-  }
 
-  async function saveTermsList() {
-    if (!(await confirmDevPassword())) return;
-    const btn = document.getElementById('saveTermsBtn');
-    btn.disabled = true;
-    btn.textContent = 'Saving...';
-    try {
-      if (typeof ensureFreshToken === 'function') await ensureFreshToken();
-      const cleaned = termsItems
-        .map(item => ({ heading: (item.heading || '').trim(), body: (item.body || '').trim() }))
-        .filter(item => item.heading && item.body);
-
-      const delRes = await fetchWithTimeout(SUPABASE_URL + '/rest/v1/site_terms?id=gte.0', 8000, {
-        method: 'DELETE',
-        headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': 'Bearer ' + getAuthToken() },
-      });
-      if (!delRes.ok) throw new Error('Could not clear the old list (HTTP ' + delRes.status + ')');
-
-      if (cleaned.length) {
-        const insertRes = await fetchWithTimeout(SUPABASE_URL + '/rest/v1/site_terms', 8000, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'apikey': SUPABASE_ANON_KEY,
-            'Authorization': 'Bearer ' + getAuthToken(),
-          },
-          body: JSON.stringify(cleaned.map((item, i) => Object.assign({ sort_order: i }, item))),
-        });
-        if (!insertRes.ok) throw new Error('Could not save the new list (HTTP ' + insertRes.status + ')');
-      }
-      showToast('Terms saved. Live on the site within a few seconds.');
-      await renderTermsEditor();
-    } catch (e) {
-      showToast(e.message || String(e), { type: 'error' });
-    } finally {
-      btn.disabled = false;
-      btn.textContent = 'Save all';
-    }
-  }
 
   function renderLocalDataSnapshot() {
     const el = document.getElementById('localDataSnapshot');
@@ -1952,50 +1228,13 @@
   // COLLAPSIBLE PANELS + IDENTITY BADGE -- added 2026-08-15
   // ---------------------------------------------------------------------
 
-  const COLLAPSE_KEY_PREFIX = 'th_dev_panel_open_';
 
-  function toggleDevPanel(headingEl) {
-    const panel = headingEl.closest('.dev-panel');
-    if (!panel) return;
-    const key = panel.getAttribute('data-collapse-key');
-    const nowCollapsed = panel.classList.toggle('is-collapsed');
-    // sessionStorage, not localStorage -- matches the dev password's
-    // own scope, so a fresh tab starts from the same clean default
-    // rather than inheriting a layout set days ago.
-    if (key) {
-      try { sessionStorage.setItem(COLLAPSE_KEY_PREFIX + key, nowCollapsed ? '0' : '1'); } catch (e) { /* private mode, ignore */ }
-    }
-  }
 
   // The 4 CMS editors start collapsed on purpose -- they're the tallest
   // things on the page by far and sit at the very end, so having them
   // open by default meant scrolling past several screens of form
   // fields to reach anything below. A previously-expanded panel
   // reopens itself for the rest of the browser session.
-  function initCollapsiblePanels() {
-    document.querySelectorAll('.dev-panel.is-collapsible').forEach(panel => {
-      const key = panel.getAttribute('data-collapse-key');
-      let wasOpen = null;
-      if (key) {
-        try { wasOpen = sessionStorage.getItem(COLLAPSE_KEY_PREFIX + key); } catch (e) { wasOpen = null; }
-      }
-      if (wasOpen !== '1') panel.classList.add('is-collapsed');
-    });
-
-    // The Content jump-nav link targets "Site content", which is one of
-    // the collapsed-by-default panels -- landing on a collapsed panel
-    // reads as a broken link. Expand whatever a jump lands on.
-    document.querySelectorAll('.jump-nav a').forEach(link => {
-      link.addEventListener('click', () => {
-        const target = document.querySelector(link.getAttribute('href'));
-        const panel = target && target.closest('.dev-panel.is-collapsible');
-        if (panel && panel.classList.contains('is-collapsed')) {
-          const heading = panel.querySelector('.dev-panel-heading');
-          if (heading) toggleDevPanel(heading);
-        }
-      });
-    });
-  }
 
   function renderIdentityBadge() {
     const el = document.getElementById('devIdentityBadge');
@@ -2653,6 +1892,14 @@
   }
 
   document.addEventListener('DOMContentLoaded', function () {
+    // Structural item #15 (2026-08-20): Site Content, FAQ, and Terms
+    // editing moved to their own page -- redirects an old #nav-content
+    // bookmark there instead of landing on this page with nothing to
+    // scroll to (the anchor no longer exists here).
+    if (location.hash === '#nav-content') {
+      window.location.replace('/tools/site-content.html');
+      return;
+    }
     const proceed = () => {
       const allowed = typeof hasDevToolsAccess === 'function' && hasDevToolsAccess();
       document.getElementById(allowed ? 'devMainView' : 'devBlockedView').style.display = allowed ? 'block' : 'block';
@@ -2668,10 +1915,9 @@
       renderDeployStatus();
       renderChangelog();
       renderPushHistory();
-      renderSiteContentForm();
-      renderContentHistory();
-      renderFaqEditor();
-      renderTermsEditor();
+      // Structural item #15 (2026-08-20): Site Content, FAQ, and Terms
+      // editing moved to their own page (site-content.html) -- this
+      // page's init no longer renders any of that.
       renderAccountRoles();
       renderIdentityBadge();
       initCollapsiblePanels();
