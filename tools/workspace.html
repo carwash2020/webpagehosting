@@ -24,11 +24,11 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Anton&family=Oswald:wght@400;500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="/styles.css?v=202608180900">
+<link rel="stylesheet" href="/styles.css?v=202608181400">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.112.3/dist/umd/supabase.js" integrity="sha384-qafw21c/iciq0VXsi9FzkfoQv5I/V0iqE4lSNcKXPnW9/UTJLnv5CcN4FHxVLnKg" crossorigin="anonymous" defer></script>
 <script src="/tools/sync.js?v=202608161700" defer></script>
 <script src="/tools/push-notifications.js?v=202608160400" defer></script>
-<script src="/tools/tools-common.js?v=202608180900" defer></script>
+<script src="/tools/tools-common.js?v=202608181400" defer></script>
 <style>
   body { padding: 44px 20px 60px; max-width: 900px; margin: 0 auto; }
   .hub-header { display: flex; align-items: center; justify-content: space-between; gap: 14px; margin-bottom: 8px; }
@@ -136,13 +136,6 @@
     border-radius: 6px; color: var(--white); font-size: 13.5px; font-family: inherit;
   }
   .custom-range-row span { color: var(--text-dim); font-size: 13px; }
-
-  .status-bar-row, .vendor-bar-row { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; font-size: 13px; }
-  .status-bar-label, .vendor-bar-label { width: 110px; flex-shrink: 0; color: var(--text-dim); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-  .status-bar-track, .vendor-bar-track { flex: 1; height: 8px; background: var(--bg-panel-2); border-radius: 4px; overflow: hidden; }
-  .status-bar-fill { height: 100%; background: var(--orange); }
-  .vendor-bar-fill { height: 100%; background: var(--blue); }
-  .status-bar-count, .vendor-bar-count { width: 60px; text-align: right; color: var(--white); flex-shrink: 0; font-size: 12.5px; }
 
   .analytics-subheading { font-family:'Oswald',sans-serif; color: var(--text-dim); font-size: 12px; text-transform: uppercase; letter-spacing: 0.5px; margin: 20px 0 12px; }
   .analytics-subheading.is-first { margin-top: 0; }
@@ -519,6 +512,8 @@
       <div id="statusBars"></div>
       <div class="analytics-subheading">Top Vendors <span style="text-transform:none; letter-spacing:0;">(for the period selected in Business Snapshot)</span></div>
       <div id="topVendors"></div>
+      <div class="analytics-subheading">Top Clients <span style="text-transform:none; letter-spacing:0;">(lifetime revenue, not limited to the period above)</span></div>
+      <div id="topClients"></div>
     </div>
 
     <div class="tab-panel" id="bh-panel-backup">
@@ -931,6 +926,7 @@
     document.getElementById('customRangeRow').classList.toggle('is-visible', period === 'custom');
     renderMetrics();
     renderTopVendors();
+    renderTopClients();
   }
 
   function renderMetrics() {
@@ -1106,6 +1102,49 @@
         <div class="vendor-bar-track"><div class="vendor-bar-fill" style="width:${(total / max * 100)}%"></div></div>
         <div class="vendor-bar-count">${money(total)}</div>
       </div>`).join('');
+  }
+
+  function renderTopClients() {
+    // Item #4 (2026-08-18): lifetime value, not scoped to the Business
+    // Snapshot period filter above -- "who are my best clients" is a
+    // relationship question, not a this-month question. All invoices
+    // ever, aggregated by client name.
+    const invoices = loadInvoices().filter(i => i.clientName && i.clientName.trim());
+    const jobs = loadJobs();
+    const totals = {};
+    invoices.forEach(inv => {
+      const key = inv.clientName.trim();
+      if (!totals[key]) totals[key] = { revenue: 0, invoiceCount: 0 };
+      totals[key].revenue += inv.total || 0;
+      totals[key].invoiceCount += 1;
+    });
+    // Last-seen date comes from jobs (which usually has more entries and
+    // richer date history than invoices alone), matched by client name --
+    // same matching convention renderFollowups() already uses above.
+    const lastSeenByClient = {};
+    jobs.forEach(j => {
+      if (!j.client || !j.client.trim() || !j.date) return;
+      const key = j.client.trim();
+      if (!lastSeenByClient[key] || j.date > lastSeenByClient[key]) lastSeenByClient[key] = j.date;
+    });
+
+    const sorted = Object.entries(totals).sort((a, b) => b[1].revenue - a[1].revenue).slice(0, 8);
+    const container = document.getElementById('topClients');
+    if (sorted.length === 0) {
+      container.innerHTML = '<div class="empty-state-small"><svg class="th-icon" aria-hidden="true"><use href="#icon-inbox" xlink:href="#icon-inbox"></use></svg>No invoiced clients yet.</div>';
+      return;
+    }
+    const max = sorted[0][1].revenue;
+    container.innerHTML = sorted.map(([client, data]) => {
+      const lastSeen = lastSeenByClient[client];
+      const lastSeenLabel = lastSeen ? new Date(lastSeen + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', year: 'numeric' }) : '';
+      return `
+      <div class="vendor-bar-row">
+        <div class="vendor-bar-label" title="${escapeHtml(client)}">${escapeHtml(client)}</div>
+        <div class="vendor-bar-track"><div class="vendor-bar-fill" style="width:${(data.revenue / max * 100)}%"></div></div>
+        <div class="vendor-bar-count">${money(data.revenue)}<span style="display:block; font-size:10.5px; color:var(--text-dim); font-weight:400;">${data.invoiceCount} invoice${data.invoiceCount === 1 ? '' : 's'}${lastSeenLabel ? ' \u00b7 last ' + lastSeenLabel : ''}</span></div>
+      </div>`;
+    }).join('');
   }
 
   const FOLLOWUP_THRESHOLD_DAYS = 182; // ~6 months
@@ -1939,6 +1978,7 @@
     renderMetrics();
     renderStatusBars();
     renderTopVendors();
+    renderTopClients();
     renderUpcoming();
     renderFollowups();
     renderInvoicesList();

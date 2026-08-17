@@ -24,10 +24,10 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="/styles.css?v=202608180900">
+<link rel="stylesheet" href="/styles.css?v=202608181400">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.112.3/dist/umd/supabase.js" integrity="sha384-qafw21c/iciq0VXsi9FzkfoQv5I/V0iqE4lSNcKXPnW9/UTJLnv5CcN4FHxVLnKg" crossorigin="anonymous" defer></script>
 <script src="/tools/sync.js?v=202608161700" defer></script>
-<script src="/tools/tools-common.js?v=202608180900" defer></script>
+<script src="/tools/tools-common.js?v=202608181400" defer></script>
 <style>
   body { padding: 90px 20px 60px; max-width: 780px; margin: 0 auto; }
   .tool-title { font-family:'Oswald',sans-serif; font-weight:700; font-size:28px; color:var(--white); margin-bottom:6px; }
@@ -114,6 +114,12 @@
   <div class="cal-grid" id="calGrid" style="margin-top:6px;"></div>
 </div>
 
+<div class="form-section" id="calDowDensitySection">
+  <h3>Job Density by Weekday <button class="help-btn" onclick="openHelpModal()" aria-label="What is this?" title="What is this?">?</button></h3>
+  <p class="tool-sub" style="margin-top:-4px; margin-bottom:14px;">Every job you've ever scheduled, grouped by day of the week -- useful for spotting a pattern like always overbooking Fridays, across your whole history rather than one month at a time.</p>
+  <div id="calDowDensity"></div>
+</div>
+
 <div class="form-section cal-day-detail">
   <h3 id="calDetailHeading">Select a day</h3>
   <div id="calDayJobs"><div class="empty-state-small"><svg class="th-icon" aria-hidden="true"><use href="#icon-calendar" xlink:href="#icon-calendar"></use></svg>Tap a day above with a dot to see what's scheduled.</div></div>
@@ -188,6 +194,36 @@
         </div>`;
     }
     document.getElementById('calGrid').innerHTML = cells;
+    renderCalDowDensity(jobs);
+  }
+
+  // Item #3 (2026-08-18): job density by day of week, using the same
+  // calendar-visible job set the grid above already uses (jobs with
+  // showOnCalendar set), so this panel never disagrees with what's
+  // actually shown on the calendar itself. Answers a pattern question
+  // ("do I always overbook Fridays") that a single month's grid can't,
+  // since it spans every job ever logged rather than one month at a time.
+  function renderCalDowDensity(allCalendarJobs) {
+    const container = document.getElementById('calDowDensity');
+    if (!container) return;
+    if (allCalendarJobs.length === 0) {
+      container.innerHTML = '<div class="empty-state-small"><svg class="th-icon" aria-hidden="true"><use href="#icon-inbox" xlink:href="#icon-inbox"></use></svg>No jobs logged yet.</div>';
+      return;
+    }
+    const DOW_LABELS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+    const counts = [0, 0, 0, 0, 0, 0, 0];
+    allCalendarJobs.forEach(j => {
+      const d = new Date(j.date + 'T00:00:00');
+      if (isNaN(d.getTime())) return;
+      counts[d.getDay()]++;
+    });
+    const max = Math.max(...counts, 1);
+    container.innerHTML = DOW_LABELS.map((label, i) => `
+      <div class="vendor-bar-row">
+        <div class="vendor-bar-label">${label}</div>
+        <div class="vendor-bar-track"><div class="vendor-bar-fill" style="width:${(counts[i] / max * 100)}%"></div></div>
+        <div class="vendor-bar-count">${counts[i]} job${counts[i] === 1 ? '' : 's'}</div>
+      </div>`).join('');
   }
 
   function playCalGridTransition(direction) {

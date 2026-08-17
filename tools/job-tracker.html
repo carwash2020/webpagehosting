@@ -24,10 +24,10 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="/styles.css?v=202608180900">
+<link rel="stylesheet" href="/styles.css?v=202608181400">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.112.3/dist/umd/supabase.js" integrity="sha384-qafw21c/iciq0VXsi9FzkfoQv5I/V0iqE4lSNcKXPnW9/UTJLnv5CcN4FHxVLnKg" crossorigin="anonymous" defer></script>
 <script src="/tools/sync.js?v=202608161700" defer></script>
-<script src="/tools/tools-common.js?v=202608180900" defer></script>
+<script src="/tools/tools-common.js?v=202608181400" defer></script>
 <style>
   body { padding: 90px 20px 60px; max-width: 1080px; margin: 0 auto; }
   .tool-title { font-family:'Oswald',sans-serif; font-weight:700; font-size:28px; color:var(--white); margin-bottom:6px; }
@@ -47,17 +47,33 @@
   .filter-checkbox { display: flex; align-items: center; gap: 6px; color: var(--text-dim); font-size: 13px; }
 
   .job-card {
-    background: var(--bg-panel); border: 1px solid var(--border); border-left: 4px solid var(--border);
-    border-radius: var(--radius); padding: 18px 20px; margin-bottom: 12px;
+    position: relative; overflow: hidden;
+    border: 1px solid var(--border); border-left: 4px solid var(--border);
+    border-radius: var(--radius); margin-bottom: 12px;
     box-shadow: 0 3px 12px rgba(0,0,0,0.18), 0 1px 3px rgba(0,0,0,0.12);
+    touch-action: pan-y;
   }
+  .job-card-swipe-inner {
+    background: var(--bg-panel); padding: 18px 20px;
+    transition: transform .2s cubic-bezier(.2,.8,.2,1);
+    position: relative; z-index: 2;
+  }
+  .job-card-swipe-action {
+    position: absolute; top: 0; right: 0; bottom: 0; width: 84px; z-index: 1;
+    display: flex; align-items: center; justify-content: center;
+    background: #2f8f52;
+  }
+  .job-card-swipe-action .small-btn { background: none; border: none; color: #fff; font-weight: 600; }
+  .job-card.is-swipe-open .job-card-swipe-inner { transition: transform .15s ease; }
+  @media (prefers-reduced-motion: reduce) { .job-card-swipe-inner { transition: none; } }
   .job-card.priority-high { border-left-color: #e05252; }
   .job-card.priority-medium { border-left-color: var(--orange); }
   .job-card.priority-low { border-left-color: var(--blue); }
   .job-card.is-done { opacity: 0.55; }
   /* Item #5 (density toggle, 2026-08-16): tighter spacing for people who
      know the app well and would rather see more jobs per screen. */
-  body.is-compact-density .job-card { padding: 10px 14px; margin-bottom: 6px; }
+  body.is-compact-density .job-card-swipe-inner { padding: 10px 14px; }
+  body.is-compact-density .job-card { margin-bottom: 6px; }
   body.is-compact-density .job-card-notes { display: none; }
   .job-card-top { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; margin-bottom: 8px; }
   .job-card-title { font-family:'Oswald',sans-serif; font-size: 16px; color: var(--white); margin: 0; }
@@ -245,7 +261,12 @@
     <div class="tool-form-row">
       <div class="form-field">
         <label>Notes</label>
-        <textarea id="jobNotes" placeholder="Anything worth remembering about this job"></textarea>
+        <div style="position:relative;">
+          <textarea id="jobNotes" placeholder="Anything worth remembering about this job"></textarea>
+          <button type="button" id="jobNotesMicBtn" class="voice-dictation-btn" style="display:none;" aria-label="Dictate notes" title="Dictate notes">
+            <svg class="th-icon" aria-hidden="true"><use href="#icon-mic" xlink:href="#icon-mic"></use></svg>
+          </button>
+        </div>
       </div>
     </div>
     <div class="edit-mode-note" id="jobEditNote" style="display:none;"></div>
@@ -1091,6 +1112,8 @@
       const dateDisplay = job.date ? new Date(job.date + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : 'No date set';
       return `
         <div class="job-card priority-${job.priority} ${isDone ? 'is-done' : ''} ${job.id === justAddedJobId ? 'list-row-enter' : ''}" data-job-id="${job.id}">
+          ${!isDone ? `<div class="job-card-swipe-action"><button class="small-btn" onclick="setJobStatus(${job.id}, 'done')">Done</button></div>` : ''}
+          <div class="job-card-swipe-inner">
           <div class="job-card-top">
             <h4 class="job-card-title ${isDone ? 'is-done-text' : ''}">${personDot(job.lastEditedBy, 'Last edited by')}${escapeHtml(job.title)}</h4>
             <div class="job-badges">
@@ -1115,6 +1138,7 @@
             <button class="small-btn danger" onclick="deleteJob(${job.id})">Delete</button>
           </div>
           <div id="photos-${job.id}" style="display:none; margin-top:14px; padding-top:14px; border-top:1px solid var(--border);"></div>
+          </div>
         </div>`;
     }).join('');
     justAddedJobId = null;
@@ -1141,6 +1165,69 @@
       actions.push({ label: 'Delete', isDanger: true, onClick: () => deleteJob(jobId) });
       showQuickActionSheet(job.title, actions);
     });
+    initJobCardSwipeReveal(container);
+  }
+
+  // Item #6 (2026-08-18): swipe-left on a job card reveals a "Done"
+  // button; swiping alone never fires it -- only a subsequent tap on
+  // the revealed button does. Chosen over a direct swipe-to-fire
+  // pattern specifically because a threshold-crossing swipe with no
+  // confirmation step risks accidentally completing a job with a single
+  // careless gesture. touch-action:pan-y on the card means vertical
+  // page scroll always wins by default; a real horizontal-vs-vertical
+  // margin (same doubling check the photo lightbox swipe uses) gates
+  // whether this logic engages at all.
+  function initJobCardSwipeReveal(container) {
+    const REVEAL_WIDTH = 84;
+    let activeCard = null, activeInner = null, startX = 0, startY = 0, currentX = 0, dragging = false, openCard = null;
+
+    function closeCard(card) {
+      if (!card) return;
+      const inner = card.querySelector('.job-card-swipe-inner');
+      if (inner) inner.style.transform = 'translateX(0px)';
+      card.classList.remove('is-swipe-open');
+      if (openCard === card) openCard = null;
+    }
+
+    container.addEventListener('pointerdown', (e) => {
+      if (e.target.closest('button, a, select, input, textarea')) return;
+      const card = e.target.closest('.job-card');
+      if (!card || !container.contains(card)) return;
+      if (!card.querySelector('.job-card-swipe-action')) return; // nothing to reveal (e.g. a done job)
+      if (openCard && openCard !== card) closeCard(openCard);
+      activeCard = card;
+      activeInner = card.querySelector('.job-card-swipe-inner');
+      startX = e.clientX; startY = e.clientY; currentX = 0; dragging = false;
+    }, { passive: true });
+
+    container.addEventListener('pointermove', (e) => {
+      if (!activeCard) return;
+      const dx = e.clientX - startX, dy = e.clientY - startY;
+      if (!dragging) {
+        // Only commit to a horizontal swipe once movement is clearly
+        // horizontal, not vertical -- otherwise this does nothing and
+        // the browser's own vertical scroll (touch-action:pan-y) handles it.
+        if (Math.abs(dx) < 12) return;
+        if (Math.abs(dy) > Math.abs(dx) * 0.6) { activeCard = null; return; }
+        dragging = true;
+      }
+      // Only leftward drag reveals anything; rightward drag beyond
+      // closed (0) is simply clamped, so this can never accidentally
+      // reveal something on the wrong side.
+      currentX = Math.max(-REVEAL_WIDTH, Math.min(0, dx));
+      if (activeInner) activeInner.style.transform = 'translateX(' + currentX + 'px)';
+    }, { passive: true });
+
+    function endDrag() {
+      if (!activeCard || !dragging) { activeCard = null; return; }
+      const shouldOpen = currentX < -REVEAL_WIDTH * 0.45;
+      if (activeInner) activeInner.style.transform = 'translateX(' + (shouldOpen ? -REVEAL_WIDTH : 0) + 'px)';
+      activeCard.classList.toggle('is-swipe-open', shouldOpen);
+      openCard = shouldOpen ? activeCard : null;
+      activeCard = null; dragging = false;
+    }
+    container.addEventListener('pointerup', endDrag, { passive: true });
+    container.addEventListener('pointercancel', endDrag, { passive: true });
   }
 
   function toggleShowOnCalendar(jobId) {
@@ -1200,9 +1287,18 @@
     }
 
     const signedUrls = await getSignedJobPhotoUrls(result.photos.map(p => p.storage_path));
-    const gridHtml = '<div class="photo-grid">' + result.photos.map(p => `
+    // Item #1 (2026-08-18): cached once per render, keyed by jobId, so
+    // each photo's onclick can reference it by array index rather than
+    // embedding the URL/label directly in an HTML attribute (which risks
+    // breaking on a caption containing a quote character).
+    window._jobPhotoLightboxCache = window._jobPhotoLightboxCache || {};
+    window._jobPhotoLightboxCache[jobId] = result.photos.map(p => ({
+      url: signedUrls[p.storage_path] || '',
+      label: PHOTO_TYPE_LABEL[p.photo_type] || 'Photo',
+    }));
+    const gridHtml = '<div class="photo-grid">' + result.photos.map((p, i) => `
       <div class="photo-thumb ${p.featured ? 'has-star-featured' : ''}">
-        <img src="${signedUrls[p.storage_path] || ''}" alt="Job photo" loading="lazy">
+        <img src="${signedUrls[p.storage_path] || ''}" alt="Job photo" loading="lazy" onclick="openPhotoLightbox(window._jobPhotoLightboxCache[${jobId}], ${i})" style="cursor:pointer;">
         <div class="photo-thumb-label">${escapeHtml(PHOTO_TYPE_LABEL[p.photo_type] || 'Photo')}</div>
         <button class="photo-thumb-star ${p.featured ? 'is-featured' : ''}" onclick="toggleFeatureUI(${p.id}, ${!p.featured}, ${jobId}, '${escapeHtml(jobTitle).replace(/'/g, "\\'")}')" title="${p.featured ? 'Remove from website gallery queue' : 'Queue for website gallery'}">${p.featured ? '\u2605' : '\u2606'}</button>
         <button class="photo-thumb-delete" onclick="deletePhotoUI(${p.id}, '${p.storage_path}', ${jobId}, '${escapeHtml(jobTitle).replace(/'/g, "\\'")}')" aria-label="Delete photo">&times;</button>
@@ -2182,6 +2278,7 @@
       loadMileageRate();
       renderJobs();
       initJobCardLongPress();
+      attachVoiceDictation('jobNotes', 'jobNotesMicBtn');
       calculateCost();
       populateJobRefOptions();
       populateIncomeJobRefOptions();
