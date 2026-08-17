@@ -243,3 +243,41 @@ test('openWikiLookup builds a URL using the same ?search= convention Parts Refer
   assert.match(fnMatch[0], /\/tools\/parts-reference\.html/);
   assert.match(fnMatch[0], /\?search=' \+ encodeURIComponent\(query\)/);
 });
+
+// Push 8 (2026-08-20, structural item #14, scoped safely): Parts
+// Reference's DOMContentLoaded init used to call 34 near-identical data
+// migrations as individual sequential lines. Consolidated the CALLING
+// SEQUENCE into an ordered array + loop -- deliberately NOT the
+// individual migration function bodies, since a deeper check (done
+// before touching anything) found two of them (V2, V4) actually inject
+// new issues into EXISTING units via a differently-shaped pattern from
+// the other ~28's "add new units if not already present" shape, which
+// would need Push-4-level exhaustive verification against live wiki
+// content to consolidate safely. This test exists so a future edit
+// can't silently drop or reorder one of these calls -- execution order
+// matters here, since prunePrPhantomBrandsV1IfNeeded sits deliberately
+// between V24 and V25 in case a later migration depends on that prune
+// having already run.
+
+test('the Parts Reference seed-migration order is preserved exactly, including the interspersed prune call', () => {
+  const src = fs.readFileSync(path.join(__dirname, '..', 'tools', 'parts-reference.html'), 'utf8');
+  const arrayMatch = src.match(/const PR_SEED_MIGRATIONS = \[([\s\S]*?)\];/);
+  assert.ok(arrayMatch, 'PR_SEED_MIGRATIONS array not found');
+  const names = arrayMatch[1].match(/\b\w+\b/g);
+
+  const expected = [];
+  for (let v = 2; v <= 24; v++) expected.push('upgradePrSeedV' + v + 'IfNeeded');
+  expected.push('prunePrPhantomBrandsV1IfNeeded');
+  for (let v = 25; v <= 31; v++) expected.push('upgradePrSeedV' + v + 'IfNeeded');
+  expected.push('prunePrBlankReferencesV2IfNeeded', 'prunePrMergeGenericIssuesV3IfNeeded', 'backfillPrIssueMetadataV1IfNeeded');
+
+  assert.deepEqual(names, expected);
+});
+
+test('every function referenced in PR_SEED_MIGRATIONS is actually defined somewhere in the file', () => {
+  const src = fs.readFileSync(path.join(__dirname, '..', 'tools', 'parts-reference.html'), 'utf8');
+  const arrayMatch = src.match(/const PR_SEED_MIGRATIONS = \[([\s\S]*?)\];/);
+  const names = [...new Set(arrayMatch[1].match(/\b\w+\b/g))];
+  const undefinedFns = names.filter(name => !new RegExp('function ' + name + '\\(').test(src));
+  assert.deepEqual(undefinedFns, []);
+});
