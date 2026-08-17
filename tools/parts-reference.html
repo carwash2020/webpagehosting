@@ -2365,7 +2365,7 @@
     var linkHtml = iss.link ? (
       '<a class="pr-row-icon-btn" title="View source" href="' + escapeHtml(iss.link) + '" target="_blank" rel="noopener"><svg class="th-icon" aria-hidden="true"><use href="#icon-link" xlink:href="#icon-link"></use></svg></a>'
     ) : '';
-    var copyHtml = '<button class="pr-row-icon-btn" title="Copy" aria-label="Copy issue text" onclick="copyPrIssueText(' + unitId + ', ' + iss.id + ')"><svg class="th-icon" aria-hidden="true"><use href="#icon-clipboard" xlink:href="#icon-clipboard"></use></svg></button>';
+    var copyHtml = '<button class="pr-row-icon-btn" title="Copy" aria-label="Copy issue text" onclick="copyPrIssueText(' + unitId + ', ' + iss.id + ', this)"><svg class="th-icon" aria-hidden="true"><use href="#icon-clipboard" xlink:href="#icon-clipboard"></use></svg></button>';
     var editIssueHtml = '<button class="pr-row-icon-btn" title="Edit" aria-label="Edit issue" onclick="toggleEditIssue(' + unitId + ', ' + iss.id + ')"><svg class="th-icon" aria-hidden="true"><use href="#icon-edit" xlink:href="#icon-edit"></use></svg></button>';
     var deleteIssueHtml = '<button class="pr-row-icon-btn danger" title="Delete" aria-label="Delete issue" onclick="deletePrIssue(' + unitId + ', ' + iss.id + ')"><svg class="th-icon" aria-hidden="true"><use href="#icon-trash" xlink:href="#icon-trash"></use></svg></button>';
     var noteHtml = iss.note ? ('<div class="pr-issue-note">' + escapeHtml(iss.note) + '</div>') : '';
@@ -2568,21 +2568,40 @@
     return lines;
   }
 
-  function copyTextToClipboard(text, successMessage) {
+  function copyTextToClipboard(text, successMessage, triggerBtn) {
     if (navigator.clipboard && navigator.clipboard.writeText) {
       navigator.clipboard.writeText(text)
-        .then(() => showToast(successMessage))
+        .then(() => {
+          showToast(successMessage);
+          if (triggerBtn) flashCopyCheckmark(triggerBtn);
+        })
         .catch(() => showToast('Could not copy.', { type: 'error' }));
     } else {
       showToast('Clipboard not available in this browser.', { type: 'error' });
     }
   }
 
-  function copyPrIssueText(unitId, issueId) {
+  // Item #48 (2026-08-19): a brief checkmark swap on the button itself,
+  // alongside the existing toast rather than instead of it -- a purely
+  // visual icon swap alone wouldn't help someone using a screen reader,
+  // so the toast (which is announced) stays the real feedback and this
+  // is just a nice-to-have visual confirmation for everyone else.
+  function flashCopyCheckmark(btn) {
+    if (btn.dataset.flashing) return; // ignore a rapid double-click mid-animation
+    btn.dataset.flashing = '1';
+    const original = btn.innerHTML;
+    btn.innerHTML = '<svg class="th-icon" aria-hidden="true" style="color:#6fcf97;"><use href="#icon-check-circle" xlink:href="#icon-check-circle"></use></svg>';
+    setTimeout(() => {
+      btn.innerHTML = original;
+      delete btn.dataset.flashing;
+    }, 1100);
+  }
+
+  function copyPrIssueText(unitId, issueId, triggerBtn) {
     const unit = loadPrUnits().find(u => u.id === unitId);
     const iss = unit && unit.issues.find(i => i.id === issueId);
     if (!iss) return;
-    copyTextToClipboard(buildPrIssueTextLines(iss).join('\n'), 'Copied to clipboard.');
+    copyTextToClipboard(buildPrIssueTextLines(iss).join('\n'), 'Copied to clipboard.', triggerBtn);
   }
 
   function copyAllPrIssuesText(unitId) {

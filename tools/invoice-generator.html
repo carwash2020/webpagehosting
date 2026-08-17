@@ -788,14 +788,24 @@
     // line items table
     const items = getLineItems();
     const tableW = pageW - 80;
-    doc.setFillColor(...NAVY);
-    doc.rect(40, y - 14, tableW, 20, 'F');
-    doc.setFont('helvetica', 'bold'); doc.setFontSize(8.5); doc.setTextColor(255, 255, 255);
-    doc.text('DESCRIPTION', 46, y);
-    doc.text('PART #', 40 + tableW * 0.5, y);
-    doc.text('QTY', 40 + tableW * 0.68, y, { align: 'center' });
-    doc.text('PRICE', 40 + tableW * 0.83, y, { align: 'right' });
-    doc.text('AMOUNT', pageW - 46, y, { align: 'right' });
+    const pageH = doc.internal.pageSize.getHeight();
+    // Leaves room below for the totals block and footer that render
+    // after this loop -- a row landing past this line triggers a new
+    // page rather than drawing off the bottom of this one.
+    const tableBottom = pageH - 170;
+
+    function drawTableHeaderBand(atY) {
+      doc.setFillColor(...NAVY);
+      doc.rect(40, atY - 14, tableW, 20, 'F');
+      doc.setFont('helvetica', 'bold'); doc.setFontSize(8.5); doc.setTextColor(255, 255, 255);
+      doc.text('DESCRIPTION', 46, atY);
+      doc.text('PART #', 40 + tableW * 0.5, atY);
+      doc.text('QTY', 40 + tableW * 0.68, atY, { align: 'center' });
+      doc.text('PRICE', 40 + tableW * 0.83, atY, { align: 'right' });
+      doc.text('AMOUNT', pageW - 46, atY, { align: 'right' });
+    }
+
+    drawTableHeaderBand(y);
     y += 8;
 
     let subtotal = 0;
@@ -803,6 +813,18 @@
     let stripe = false;
     items.forEach(item => {
       const rowH = 22;
+      // Item #52 (2026-08-19): real pagination -- this loop previously
+      // had no bounds check at all and never called doc.addPage(),
+      // so enough line items would silently draw past the bottom of
+      // the page with no warning. Continuation pages repeat the column
+      // header band so the table stays readable without paging back.
+      if (y + rowH > tableBottom) {
+        doc.addPage();
+        y = 60;
+        drawTableHeaderBand(y);
+        y += 8;
+        stripe = false; // restart the zebra pattern cleanly on the new page
+      }
       if (stripe) { doc.setFillColor(...LIGHTGRAY); doc.rect(40, y, tableW, rowH, 'F'); }
       stripe = !stripe;
       doc.setFont('helvetica', 'normal'); doc.setFontSize(9.5); doc.setTextColor(20, 20, 20);
@@ -894,6 +916,20 @@
     doc.text('Triple H Enterprises LLC   |   (435) 414-1667   |   steve@triplehenterprisesllc.biz   |   www.triplehenterprisesllc.biz', pageW / 2, footerY + 14, { align: 'center' });
     doc.setFont('helvetica', 'italic');
     doc.text('Thank you for choosing Triple H Enterprises. Work guaranteed.', pageW / 2, footerY + 26, { align: 'center' });
+
+    // Item #52 (2026-08-19): "Page X of Y" on every page -- only matters
+    // once an invoice has enough line items to actually paginate, but
+    // costs nothing on the common single-page case. Drawn as a final
+    // pass since the true page count is only known now that every line
+    // item has been placed.
+    const totalInvoicePages = doc.internal.getNumberOfPages();
+    if (totalInvoicePages > 1) {
+      for (let p = 1; p <= totalInvoicePages; p++) {
+        doc.setPage(p);
+        doc.setFont('helvetica', 'normal'); doc.setFontSize(8); doc.setTextColor(...GRAY);
+        doc.text('Page ' + p + ' of ' + totalInvoicePages, pageW - 40, doc.internal.pageSize.getHeight() - 20, { align: 'right' });
+      }
+    }
 
     const filename = 'TripleH_Invoice_' + (document.getElementById('clientName').value || 'Client').replace(/[^a-z0-9]/gi, '_') + '.pdf';
     logInvoice({ subtotal, tax, discount, total });
