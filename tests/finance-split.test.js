@@ -403,3 +403,64 @@ test('JT_TAB_ORDER only lists tabs that actually still exist on job-tracker.html
     assert.ok(!tabs.includes(removed), removed + ' should not be in JT_TAB_ORDER -- it moved to finance.html');
   }
 });
+
+// Push 10 (2026-08-20, structural item #43): splitting styles.css into
+// a public-site file (kept at the same filename/URL, so the public
+// site's own <link> tag was never touched at all) and a new tools/
+// styles-tools.css for the tool suite. Verified lossless before
+// touching anything further: the two pieces were confirmed to
+// concatenate back into a byte-for-byte exact copy of the original file.
+
+test('the public site pages were not touched at all -- same filename, no new link tag needed', () => {
+  const publicPages = ['index.html', 'handyman-cedar-city-ut.html', 'handyman-hurricane-ut.html',
+    'handyman-mesquite-nv.html', 'handyman-santa-clara-ivins-ut.html', 'handyman-washington-city-ut.html'];
+  for (const page of publicPages) {
+    const src = fs.readFileSync(path.join(__dirname, '..', page), 'utf8');
+    assert.doesNotMatch(src, /styles-tools\.css/, page + ' is public-facing and should never load the tool-suite stylesheet');
+  }
+});
+
+test('every tool page loads styles-tools.css after styles.css, preserving the original cascade order', () => {
+  const pages = [
+    'calendar.html', 'client-detail.html', 'contract-generator.html', 'dev-tools.html',
+    'finance.html', 'invoice-generator.html', 'job-detail.html', 'job-tracker.html',
+    'login.html', 'parts-reference.html', 'reset-password.html', 'review-request.html',
+    'route-planner.html', 'settings.html', 'workspace.html',
+  ];
+  for (const page of pages) {
+    const src = fs.readFileSync(path.join(__dirname, '..', 'tools', page), 'utf8');
+    const basePos = src.indexOf('href="/styles.css?v=');
+    const toolsPos = src.indexOf('href="/tools/styles-tools.css?v=');
+    assert.ok(basePos > 0, page + ' should load the base styles.css');
+    assert.ok(toolsPos > 0, page + ' should load styles-tools.css');
+    assert.ok(basePos < toolsPos, page + ': styles.css must load before styles-tools.css to preserve the original cascade order');
+  }
+});
+
+test('styles.css and styles-tools.css both have balanced braces (a mid-rule cut would leave one or both unbalanced)', () => {
+  for (const p of [path.join(__dirname, '..', 'styles.css'), path.join(__dirname, '..', 'tools', 'styles-tools.css')]) {
+    const css = fs.readFileSync(p, 'utf8');
+    let depth = 0;
+    for (const ch of css) { if (ch === '{') depth++; if (ch === '}') depth--; }
+    assert.equal(depth, 0, p + ' should have balanced braces');
+  }
+});
+
+test('the shared design tokens (:root) live in styles.css, which every tool page loads before styles-tools.css needs them', () => {
+  const src = fs.readFileSync(path.join(__dirname, '..', 'styles.css'), 'utf8');
+  assert.match(src, /:root\s*\{/);
+  assert.match(src, /--orange:/);
+  assert.match(src, /--bg:/);
+});
+
+test('the service worker precaches styles-tools.css alongside styles.css', () => {
+  const src = fs.readFileSync(path.join(__dirname, '..', 'service-worker.js'), 'utf8');
+  const arrayMatch = src.match(/const PRECACHE_URLS = \[([\s\S]*?)\n\];/);
+  assert.match(arrayMatch[1], /'\/tools\/styles-tools\.css'/);
+});
+
+test('the consistency checker tracks styles-tools.css for version-freshness and cross-page matching', () => {
+  const src = fs.readFileSync(path.join(__dirname, '..', 'scripts', 'check-consistency.js'), 'utf8');
+  const versionedMatch = src.match(/const VERSIONED_SCRIPTS = \[([^\]]*)\]/);
+  assert.match(versionedMatch[1], /'styles-tools\.css'/);
+});
