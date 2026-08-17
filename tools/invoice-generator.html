@@ -140,7 +140,7 @@
     </div>
     <div class="form-field">
       <label>Link to Job (optional, enables Job Profitability tracking)</label>
-      <select id="invoiceJobRef"><option value="">&mdash; None &mdash;</option></select>
+      <select id="invoiceJobRef" onchange="autofillFromJobRef('invoiceJobRef', 'jobDescription', 'clientName', 'clientAddress')"><option value="">&mdash; None &mdash;</option></select>
     </div>
   </div>
 </div>
@@ -242,7 +242,7 @@
     </div>
     <div class="form-field">
       <label>Link to Job (optional, carries over if converted to an invoice)</label>
-      <select id="quoteJobRef"><option value="">&mdash; None &mdash;</option></select>
+      <select id="quoteJobRef" onchange="autofillFromJobRef('quoteJobRef', 'quoteJobDescription', 'quoteClientName', 'quoteClientAddress')"><option value="">&mdash; None &mdash;</option></select>
     </div>
   </div>
 </div>
@@ -1294,6 +1294,31 @@
     if (!list) return;
     list.innerHTML = loadContactsForAutofill().map(c => `<option value="${escapeHtml(c.name)}">`).join('');
   }
+  // Push 6 (2026-08-20, structural item #35): selecting a job from the
+  // "Link to Job" dropdown previously did nothing until save time --
+  // jobRefId existed purely as a passive link, and every field below it
+  // (description, client name, address) still needed manual re-entry
+  // despite the job record already having that information on file.
+  // Follows the exact same safety convention autofillFromContact()
+  // above already established: only fills fields that are still blank,
+  // never overwrites something already typed.
+  function autofillFromJobRef(jobRefSelectId, descriptionFieldId, clientNameFieldId, clientAddressFieldId) {
+    const jobId = document.getElementById(jobRefSelectId).value;
+    if (!jobId || typeof thRead !== 'function') return;
+    const jobs = thRead(TH_KEYS.jobs, []);
+    const job = jobs.find(j => String(j.id) === jobId);
+    if (!job) return;
+
+    const descEl = document.getElementById(descriptionFieldId);
+    if (descEl && !descEl.value.trim()) descEl.value = job.title || '';
+
+    const nameEl = document.getElementById(clientNameFieldId);
+    if (nameEl && !nameEl.value.trim()) nameEl.value = job.client || '';
+
+    const addrEl = document.getElementById(clientAddressFieldId);
+    if (addrEl && !addrEl.value.trim() && job.address) addrEl.value = job.address;
+  }
+
   function autofillFromContact(nameFieldId, firstContactRowId) {
     const typedName = document.getElementById(nameFieldId).value.trim();
     if (!typedName) return;

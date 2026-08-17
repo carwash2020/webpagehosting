@@ -181,3 +181,29 @@ test('renderSentLog treats entries with no status field (logged before this upgr
   assert.match(src, /const status = entry\.status \|\| 'sent'/,
     'old entries logged before this feature existed have no status field -- must default gracefully, not show "undefined"');
 });
+
+// Push 6 (2026-08-20, structural item #35): job-to-invoice/quote
+// auto-fill. Selecting a job from the "Link to Job" dropdown previously
+// did nothing until save time -- every field still needed manual
+// re-entry despite the job record already having that information.
+
+test('autofillFromJobRef exists and is wired to both the invoice and quote job-ref dropdowns', () => {
+  const src = fs.readFileSync(path.join(__dirname, '..', 'tools', 'invoice-generator.html'), 'utf8');
+  assert.match(src, /function autofillFromJobRef\(/);
+  assert.match(src, /id="invoiceJobRef" onchange="autofillFromJobRef\('invoiceJobRef', 'jobDescription', 'clientName', 'clientAddress'\)"/);
+  assert.match(src, /id="quoteJobRef" onchange="autofillFromJobRef\('quoteJobRef', 'quoteJobDescription', 'quoteClientName', 'quoteClientAddress'\)"/);
+});
+
+test('autofillFromJobRef follows the same never-overwrite safety convention as the existing autofillFromContact', () => {
+  const src = fs.readFileSync(path.join(__dirname, '..', 'tools', 'invoice-generator.html'), 'utf8');
+  const fnMatch = src.match(/function autofillFromJobRef\([\s\S]*?\n  \}\n/);
+  assert.ok(fnMatch, 'autofillFromJobRef() not found');
+  const body = fnMatch[0];
+  // Every field it touches must be gated on the field currently being
+  // blank -- this is what prevents it from clobbering something the
+  // person already typed if they pick a job after starting to fill
+  // the form in by hand.
+  assert.match(body, /if \(descEl && !descEl\.value\.trim\(\)\)/);
+  assert.match(body, /if \(nameEl && !nameEl\.value\.trim\(\)\)/);
+  assert.match(body, /if \(addrEl && !addrEl\.value\.trim\(\)/);
+});
