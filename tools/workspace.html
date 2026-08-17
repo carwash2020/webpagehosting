@@ -28,6 +28,7 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.112.3/dist/umd/supabase.js" integrity="sha384-qafw21c/iciq0VXsi9FzkfoQv5I/V0iqE4lSNcKXPnW9/UTJLnv5CcN4FHxVLnKg" crossorigin="anonymous" defer></script>
 <script src="/tools/sync.js?v=202608161700" defer></script>
 <script src="/tools/push-notifications.js?v=202608160400" defer></script>
+<script src="/tools/data-layer.js?v=202608200900" defer></script>
 <script src="/tools/tools-common.js?v=202608191700" defer></script>
 <style>
   body { padding: 44px 20px 60px; max-width: 900px; margin: 0 auto; }
@@ -2128,6 +2129,16 @@
     if (window.location.hash === '#backup') {
       document.getElementById('section-businesshealth')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
       if (typeof activateBusinessHealthTab === 'function') activateBusinessHealthTab('backup');
+    }
+    // Structural item #7, push 1 (2026-08-20): builds the client registry
+    // from existing jobs/invoices/quotes/contacts/contracts. Deliberately
+    // silent and additive -- it only ever ADDS a new th_clients key and
+    // never modifies an existing record (enforced by a test), so every
+    // current string-matching code path keeps working exactly as before.
+    // Nothing reads from the registry yet; this push exists to prove the
+    // migration is correct against real data before anything depends on it.
+    if (typeof thRunClientBackfillOnce === 'function') {
+      try { thRunClientBackfillOnce(); } catch (e) { /* never block dashboard init */ }
     }
     initOnboardingTour();
   });

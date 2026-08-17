@@ -25,6 +25,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Anton&family=Oswald:wght@400;500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="/styles.css?v=202608191300">
+<script src="/tools/data-layer.js?v=202608200900" defer></script>
 <script src="/tools/tools-common.js?v=202608191700" defer></script>
 <script src="/tools/sync.js?v=202608161700" defer></script>
 <style>
@@ -256,6 +257,15 @@
     </div>
     <button class="secondary-btn" onclick="runDataQualityCheck()" id="runDataQualityBtn">Run check</button>
     <div id="dataQualityResults" style="margin-top:16px;"></div>
+  </div>
+
+  <div class="dev-panel dev-panel-wide">
+    <div class="dev-panel-heading">
+      <h2 id="nav-clients" class="dev-anchor">Client registry</h2>
+      <button class="dev-info-bubble" onclick="openDevInfo('clientregistry')" aria-label="What does this do?" title="What does this do?">?</button>
+    </div>
+    <button class="secondary-btn" onclick="renderClientRegistry()" id="clientRegistryBtn">Show registry</button>
+    <div id="clientRegistryResults" style="margin-top:16px;"></div>
   </div>
 
   <div class="dev-panel dev-panel-wide">
@@ -546,6 +556,10 @@
       title: 'Data quality check',
       body: `<p>A different concern from the check above this one -- that one asks "is the site configured right," this one asks "is the actual business data clean." Flags client names that only differ by capitalization or spacing (like "Sarah Miller" vs. "sarah miller"), since Top Clients and Job Density both group by exact name match -- a near-duplicate silently splits one client's real numbers into two smaller, wrong-looking entries instead of one accurate one.</p><p>Also flags jobs with no date or no client name on file, since those are the two fields several other features (weekday density, the client leaderboard, follow-up reminders) all quietly depend on being present.</p>`,
     },
+    clientregistry: {
+      title: 'Client registry',
+      body: `<p>A client has never been a real record in this app -- just a name retyped into jobs, invoices, quotes, contracts, and contacts separately, with nothing linking them but exact spelling. That's why navigating between pages passes the name as a search term in the URL, and why "Sarah Miller" and "sarah miller" show up as two different people in every report that groups by name.</p><p>The registry fixes that at the root: one record per real client, matched case- and spacing-insensitively, with contact details recovered from wherever they were first entered. It's built by a one-time backfill that runs when you open the Dashboard.</p><p>This panel exists so the result can actually be checked against real data -- if a client here shows the wrong job count or two people got merged who shouldn't have, that's visible now rather than surfacing later as a quietly wrong number in a report.</p><p>Important: the backfill only ever ADDS a new record set. It never edits or deletes anything already stored, so nothing existing can be damaged by it (there's a test enforcing exactly that).</p>`,
+    },
     session: {
       title: 'Session & sync',
       body: `<p>Shows which account is actually logged in on this device, and the result of the last push or pull attempt to Supabase.</p><p>"Push now" and "Pull now" trigger a sync immediately instead of waiting for the normal automatic/debounced sync to happen on its own -- useful when you want to be sure the latest data is saved or fetched right this second.</p><p>The "History" link expands the last 20 attempts (most recent first) -- useful for spotting a pattern, like "this started failing consistently around a specific time" rather than only ever seeing the single latest result.</p>`,
@@ -818,6 +832,39 @@
   // Object.entries()-style grouping elsewhere in the app (Top Clients,
   // Job Density) treats them as two, silently fragmenting whatever
   // report groups by that name.
+  // Structural item #7, push 1 (2026-08-20): lets the client registry
+  // built by the backfill actually be inspected against real data --
+  // showing what each client resolved to and what got linked to them,
+  // so a mis-attribution would be visible here rather than silently
+  // wrong in a report later.
+  function renderClientRegistry() {
+    const el = document.getElementById('clientRegistryResults');
+    if (typeof thGetAllClientsWithTotals !== 'function') {
+      el.innerHTML = '<p class="tool-sub">Data layer not loaded on this page.</p>';
+      return;
+    }
+    const clients = thGetAllClientsWithTotals();
+    if (clients.length === 0) {
+      el.innerHTML = '<p class="tool-sub">No clients registered yet. Open the Dashboard once to run the backfill, then come back.</p>';
+      return;
+    }
+    el.innerHTML =
+      '<p class="tool-sub" style="margin-bottom:12px;">' + clients.length + ' client' + (clients.length === 1 ? '' : 's') +
+      ' registered, sorted by lifetime revenue. Jobs/invoices/quotes shown are what resolved to each client across every spelling variant.</p>' +
+      clients.map(c =>
+        '<div class="dev-check-row"><div>' +
+          '<div>' + escapeHtml(c.name) + '</div>' +
+          '<div class="dev-check-detail">' +
+            c.jobCount + ' job' + (c.jobCount === 1 ? '' : 's') + ' &middot; ' +
+            c.invoiceCount + ' invoice' + (c.invoiceCount === 1 ? '' : 's') +
+            (c.lastJobDate ? ' &middot; last job ' + escapeHtml(c.lastJobDate) : '') +
+            (c.phone ? ' &middot; ' + escapeHtml(c.phone) : '') +
+          '</div>' +
+        '</div>' +
+        '<span class="dev-check-status pass">' + money(c.revenue) + '</span></div>'
+      ).join('');
+  }
+
   async function runDataQualityCheck() {
     return runWithButtonState('runDataQualityBtn', 'dataQualityResults', 'Checking...', 'Run check', async () => {
       let jobs = [];
