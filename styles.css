@@ -1332,7 +1332,7 @@
 .list-row-enter{ animation: rowEnterFade .22s ease; }
 @media (prefers-reduced-motion: reduce){ .list-row-enter{ animation:none; } }
 
-.icon-search { display: inline-flex; align-items: center; }
+.icon-search { display: inline-flex; align-items: center; position: relative; }
 .icon-search-toggle {
   width: 36px; height: 36px; border-radius: 8px; border: 1px solid var(--border);
   background: var(--bg-panel-2); color: var(--text-dim); cursor: pointer;
@@ -1346,7 +1346,19 @@
   transition: width .25s ease, opacity .2s ease, padding .25s ease, margin-left .25s ease;
   overflow: hidden;
 }
-.icon-search.is-expanded .icon-search-input { width: 240px; opacity: 1; padding: 9px 11px; margin-left: 8px; border: 1px solid var(--border); }
+.icon-search.is-expanded .icon-search-input { width: 240px; opacity: 1; padding: 9px 28px 9px 11px; margin-left: 8px; border: 1px solid var(--border); }
+/* Item #54: clear (x) button -- shown only once there's text to clear,
+   positioned at the input's right edge (the input is the rightmost
+   child of .icon-search, so right:8px on the wrapper naturally lands
+   there without needing to know the toggle button's own width). */
+.icon-search-clear {
+  display: none; position: absolute; right: 8px; top: 50%; transform: translateY(-50%);
+  width: 20px; height: 20px; border-radius: 50%; border: none; background: none;
+  color: var(--text-dim); font-size: 15px; line-height: 1; cursor: pointer; padding: 0;
+  align-items: center; justify-content: center;
+}
+.icon-search-clear:hover { color: var(--orange-light); }
+.icon-search.has-text .icon-search-clear { display: flex; }
 @media (max-width: 480px) {
   .icon-search.is-expanded .icon-search-input { width: 55vw; }
 }
