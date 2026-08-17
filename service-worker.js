@@ -53,7 +53,7 @@
 // immediately after logging. Still bumping this so that fix reaches
 // devices without needing yet another round-trip to explain why it
 // didn't show up.
-const CACHE_NAME = 'th-workspace-v6';
+const CACHE_NAME = 'th-workspace-v7';
 const PRECACHE_URLS = [
   '/tools/workspace.html', '/tools/job-tracker.html', '/tools/invoice-generator.html', '/tools/contract-generator.html',
   '/tools/calendar.html', '/tools/route-planner.html', '/tools/review-request.html', '/tools/contact-card.html',
@@ -92,8 +92,21 @@ self.addEventListener('fetch', (event) => {
   const url = new URL(event.request.url);
   if (url.origin !== self.location.origin) return; // never intercept Supabase or other cross-origin calls
 
+  // Bug fix (2026-08-20): fetch(event.request) alone does NOT guarantee
+  // the network-first behavior described in the comment above -- it's
+  // still subject to the browser's own HTTP cache underneath this
+  // service worker, and could be silently satisfied from disk with no
+  // real round-trip to the server at all, depending on what cache
+  // headers the response happened to carry. { cache: 'reload' } forces
+  // an actual revalidation with the server on every request, which is
+  // what "network-first" was always meant to guarantee here. Found
+  // after a page failed to show new content despite a confirmed-live
+  // deploy -- exactly the failure mode this whole file exists to
+  // prevent.
+  const networkRequest = new Request(event.request, { cache: 'reload' });
+
   event.respondWith(
-    fetch(event.request)
+    fetch(networkRequest)
       .then((networkResponse) => {
         const responseClone = networkResponse.clone();
         caches.open(CACHE_NAME).then((cache) => cache.put(event.request, responseClone));
