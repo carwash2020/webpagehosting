@@ -753,3 +753,50 @@ test('the service worker precaches both new files, and the consistency checker t
   const versionedMatch = checkerSrc.match(/const VERSIONED_SCRIPTS = \[([^\]]*)\]/);
   assert.match(versionedMatch[1], /'dev-tools-shared\.js'/);
 });
+
+// Push 14 (2026-08-20, structural item #10): quote/invoice linkage.
+// The two record shapes were already very similar -- merging them into
+// one storage array with a type discriminator would have been invasive
+// for uncertain benefit. The real gap was narrower: converting a quote
+// into an invoice copied form fields but created no linkage at all --
+// no way to tell later which invoices came from quotes, or which
+// quotes were still open vs. already converted.
+
+test('logQuote stamps every new quote with a pending status', () => {
+  const src = fs.readFileSync(path.join(__dirname, '..', 'tools', 'invoice-generator.html'), 'utf8');
+  const fn = src.match(/function logQuote\(totals\)[\s\S]*?\n  \}\n/);
+  assert.ok(fn, 'logQuote not found');
+  assert.match(fn[0], /status:\s*'pending'/);
+});
+
+test('convertQuoteToInvoice finds the matching saved quote by quote number, without requiring one to exist', () => {
+  const src = fs.readFileSync(path.join(__dirname, '..', 'tools', 'invoice-generator.html'), 'utf8');
+  const fn = src.match(/async function convertQuoteToInvoice\(\)[\s\S]*?showToast/);
+  assert.ok(fn, 'convertQuoteToInvoice not found');
+  assert.match(fn[0], /loadQuoteLog\(\)\.find\(q => q\.quoteNumber === currentQuoteNumber\)/);
+  assert.match(fn[0], /pendingSourceQuoteId = matchingQuote \? matchingQuote\.id : null/,
+    'must handle the case where no saved quote matches -- clicking Convert without ever saving a quote first is a valid workflow');
+});
+
+test('logInvoice only marks the source quote converted at the moment the invoice is actually saved, not earlier', () => {
+  const src = fs.readFileSync(path.join(__dirname, '..', 'tools', 'invoice-generator.html'), 'utf8');
+  const fn = src.match(/function logInvoice\(totals\)[\s\S]*?\n  \}\n/);
+  assert.ok(fn, 'logInvoice not found');
+  assert.match(fn[0], /sourceQuoteId: pendingSourceQuoteId \|\| undefined/);
+  assert.match(fn[0], /quote\.status = 'converted'/);
+  assert.match(fn[0], /quote\.convertedToInvoiceId = newEntry\.id/);
+  assert.match(fn[0], /pendingSourceQuoteId = null/, 'must clear the pending link after consuming it, so a later unrelated invoice save never inherits a stale reference');
+});
+
+test('the quote log UI shows converted status, defaulting old entries (no status field) to pending rather than showing undefined', () => {
+  const src = fs.readFileSync(path.join(__dirname, '..', 'tools', 'invoice-generator.html'), 'utf8');
+  const fn = src.match(/function renderQuoteLog\(\)[\s\S]*?\n  \}\n/);
+  assert.match(fn[0], /const status = q\.status \|\| 'pending'/);
+  assert.match(fn[0], /Converted to invoice/);
+});
+
+test('the invoice log UI shows which quote an invoice was converted from, when applicable', () => {
+  const src = fs.readFileSync(path.join(__dirname, '..', 'tools', 'invoice-generator.html'), 'utf8');
+  const fn = src.match(/function renderInvoiceLog\(\)[\s\S]*?\n  \}\n/);
+  assert.match(fn[0], /Converted from quote #/);
+});
