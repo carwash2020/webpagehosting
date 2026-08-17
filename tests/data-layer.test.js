@@ -205,3 +205,44 @@ test('run-once helper does not repeat its work on a second call', () => {
   assert.equal(first.created, 1);
   assert.equal(L.thRunClientBackfillOnce(), null, 'second call should no-op');
 });
+
+// Push 2 (2026-08-20): verifies the ACTUAL wiring added to job-tracker.html's
+// addJob(), invoice-generator.html's logInvoice()/logQuote(), and
+// contract-generator.html's contract save -- not just thEnsureClient() in
+// isolation (already covered above), but the real call sites that now run
+// on every save going forward. Extracts the relevant source rather than
+// loading the full page (job-tracker.html alone is 2,400+ lines with a
+// realtime-sync/photo/calendar init sequence unrelated to what's being
+// verified here), matching the extraction approach sync-merge.test.js
+// already uses for sync.js.
+
+test('addJob() in job-tracker.html calls thEnsureClient with the typed client name', () => {
+  const src = fs.readFileSync(path.join(__dirname, '..', 'tools', 'job-tracker.html'), 'utf8');
+  const fnMatch = src.match(/async function addJob\(\)[\s\S]*?\n  \}\n/);
+  assert.ok(fnMatch, 'addJob() not found -- did it get renamed or removed?');
+  const fnSrc = fnMatch[0];
+  assert.match(fnSrc, /thEnsureClient\(clientName,\s*\{\s*phone,\s*address\s*\}\)/,
+    'addJob() should call thEnsureClient with the client name and phone/address');
+  assert.match(fnSrc, /clientId,/, 'the resulting id should be stored on the job record as clientId');
+});
+
+test('logInvoice() and logQuote() in invoice-generator.html both call thEnsureClient', () => {
+  const src = fs.readFileSync(path.join(__dirname, '..', 'tools', 'invoice-generator.html'), 'utf8');
+  const invoiceFn = src.match(/function logInvoice\(totals\)[\s\S]*?\n  \}\n/);
+  const quoteFn = src.match(/function logQuote\(totals\)[\s\S]*?\n  \}\n/);
+  assert.ok(invoiceFn, 'logInvoice() not found');
+  assert.ok(quoteFn, 'logQuote() not found');
+  assert.match(invoiceFn[0], /thEnsureClient\(/, 'logInvoice() should register/look up the client');
+  assert.match(quoteFn[0], /thEnsureClient\(/, 'logQuote() should register/look up the client');
+  assert.match(invoiceFn[0], /clientId,/);
+  assert.match(quoteFn[0], /clientId:/);
+});
+
+test('contract save in contract-generator.html calls thEnsureClient and stores clientId at the top level (matching thGetClientBundle\'s check)', () => {
+  const src = fs.readFileSync(path.join(__dirname, '..', 'tools', 'contract-generator.html'), 'utf8');
+  assert.match(src, /thEnsureClient\(fields\.clientName/, 'contract save should register/look up the client from fields.clientName');
+  // thGetClientBundle() in data-layer.js checks c.clientId (top-level on
+  // the log entry), not c.fields.clientId -- this guards against that
+  // exact mismatch being reintroduced silently.
+  assert.match(src, /clientId:\s*contractClientId,/, 'clientId must be a top-level field on the log entry, not nested inside fields');
+});
