@@ -21,7 +21,7 @@ const PAGE_PATH = path.join(__dirname, '..', 'tools', 'parts-reference.html');
 // each other, same as a real fresh page load would.
 function loadPage() {
   const html = fs.readFileSync(PAGE_PATH, 'utf8');
-  const dom = new JSDOM(html, { runScripts: 'dangerously', resources: 'usable', url: 'https://example.com/' });
+  const dom = new JSDOM(html, { runScripts: 'dangerously', url: 'https://example.com/' });
   const { window } = dom;
   // auth.js and tools-common.js load via relative <script src> tags that
   // don't resolve to a real server in this sandbox, so requireAuth(),
