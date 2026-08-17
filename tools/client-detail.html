@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="en" style="background:#0a0a0a;">
+<head>
+<script src="/tools/auth.js?v=202608162000"></script>
+<script>
+  // Security gate -- redirect to login before this page's own content
+  // is meaningfully usable. See auth.js for why this exists (a single
+  // shared account keeping randoms out, not a multi-user system).
+  requireAuth();
+</script>
+<link rel="manifest" href="/tools/manifest.json">
+<meta name="theme-color" content="#0a0a0a">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Triple H">
+<link rel="apple-touch-icon" href="/images/apple-touch-icon.png">
+
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="robots" content="noindex, nofollow">
+<title>Client | Triple H Enterprises (Internal Tool)</title>
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data:; connect-src 'self' https://*.supabase.co wss://*.supabase.co; frame-src 'none'; object-src 'none'; base-uri 'self'; frame-ancestors 'none';">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Anton&family=Oswald:wght@400;500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/styles.css?v=202608191300">
+<script src="/tools/sync.js?v=202608161700" defer></script>
+<script src="/tools/data-layer.js?v=202608200900" defer></script>
+<script src="/tools/tools-common.js?v=202608191700" defer></script>
+<style>
+  body { padding: 44px 20px 60px; max-width: 720px; margin: 0 auto; }
+
+  .client-hero {
+    background: linear-gradient(180deg, var(--bg-panel-3), var(--bg-panel-2));
+    border: 1px solid var(--border); border-radius: var(--radius);
+    padding: 22px 20px; margin-bottom: 18px;
+  }
+  .client-hero-name { font-family: 'Anton', sans-serif; font-size: 26px; color: var(--white); letter-spacing: .3px; }
+  .client-hero-meta { color: var(--text-dim); font-size: 13.5px; margin-top: 6px; line-height: 1.6; }
+  .client-hero-meta a { color: var(--orange-light); text-decoration: none; }
+  .client-stat-row { display: flex; gap: 10px; margin-top: 16px; flex-wrap: wrap; }
+  .client-stat { flex: 1; min-width: 100px; background: var(--bg-panel-2); border: 1px solid var(--border); border-radius: 10px; padding: 10px 12px; }
+  .client-stat-value { font-family: 'Oswald', sans-serif; font-weight: 700; font-size: 20px; color: var(--white); }
+  .client-stat-label { color: var(--text-dim); font-size: 11px; text-transform: uppercase; letter-spacing: .5px; margin-top: 2px; }
+
+  .client-record-row {
+    display: flex; justify-content: space-between; align-items: center; gap: 12px;
+    padding: 11px 0; border-bottom: 1px solid var(--border); font-size: 13.5px;
+  }
+  .client-record-row:last-child { border-bottom: none; }
+  .client-record-title { color: var(--white); }
+  .client-record-meta { color: var(--text-dim); font-size: 12px; margin-top: 2px; }
+  .client-record-amount { color: var(--orange-light); font-weight: 600; flex-shrink: 0; }
+</style>
+</head>
+<body>
+
+<div id="clientDetailView" style="display:none;">
+  <div class="hub-header">
+    <div class="hub-header-left">
+      <img src="/images/logo-signature-orange.webp?v=202608142300" alt="Triple H Enterprises">
+      <span class="hub-title">Client</span>
+    </div>
+    <div class="hub-header-right">
+      <a href="/tools/workspace.html" class="help-btn" aria-label="Back to Dashboard" title="Back to Dashboard" style="text-decoration:none; display:inline-flex; align-items:center; justify-content:center;">&#8617;</a>
+    </div>
+  </div>
+
+  <div id="clientContent"></div>
+</div>
+
+<div id="clientNotFound" style="display:none; text-align:center; padding:60px 20px;">
+  <div style="color:var(--text-dim); font-size:14px; margin-bottom:16px;">Client not found. It may have been removed, or the link is out of date.</div>
+  <a href="/tools/workspace.html" class="secondary-btn" style="text-decoration:none;">Back to Dashboard</a>
+</div>
+
+<script>
+  document.addEventListener('DOMContentLoaded', async () => {
+    if (typeof initSyncOnLoad === 'function') { try { await initSyncOnLoad(); } catch (e) { /* renders with whatever local data exists */ } }
+
+    const clientId = new URLSearchParams(window.location.search).get('id');
+    const bundle = (clientId && typeof thGetClientBundle === 'function') ? thGetClientBundle(clientId) : null;
+
+    if (!bundle) {
+      document.getElementById('clientNotFound').style.display = '';
+      return;
+    }
+    document.getElementById('clientDetailView').style.display = '';
+    renderClientDetail(bundle);
+  });
+
+  function renderClientDetail(bundle) {
+    const c = bundle.client;
+    document.title = c.name + ' | Triple H Enterprises (Internal Tool)';
+
+    const metaLines = [];
+    if (c.phone) metaLines.push('<a href="tel:' + escapeHtml(c.phone) + '">' + escapeHtml(c.phone) + '</a>');
+    if (c.email) metaLines.push('<a href="mailto:' + escapeHtml(c.email) + '">' + escapeHtml(c.email) + '</a>');
+    if (c.address) metaLines.push(escapeHtml(c.address));
+
+    const openJobs = bundle.jobs.filter(j => j.status !== 'done').length;
+
+    let html = '<div class="client-hero">' +
+      '<div class="client-hero-name">' + escapeHtml(c.name) + '</div>' +
+      (metaLines.length ? '<div class="client-hero-meta">' + metaLines.join(' &middot; ') + '</div>' : '') +
+      '<div class="client-stat-row">' +
+        '<div class="client-stat"><div class="client-stat-value">' + money(bundle.revenue) + '</div><div class="client-stat-label">Lifetime Revenue</div></div>' +
+        '<div class="client-stat"><div class="client-stat-value">' + bundle.jobs.length + '</div><div class="client-stat-label">Jobs' + (openJobs ? ' (' + openJobs + ' open)' : '') + '</div></div>' +
+        '<div class="client-stat"><div class="client-stat-value">' + (bundle.lastJobDate || '\u2014') + '</div><div class="client-stat-label">Last Job</div></div>' +
+      '</div>' +
+    '</div>';
+
+    html += renderRecordSection('Jobs', bundle.jobs.slice().sort((a, b) => (b.date || '').localeCompare(a.date || '')).map(j => ({
+      title: j.title,
+      meta: (j.date || 'No date') + ' \u00b7 ' + (j.status || ''),
+      amount: '',
+      href: '/tools/job-tracker.html?search=' + encodeURIComponent(j.title) + '#jobs',
+    })), 'No jobs on file for this client yet.');
+
+    html += renderRecordSection('Invoices', bundle.invoices.slice().sort((a, b) => (b.date || '').localeCompare(a.date || '')).map(i => ({
+      title: 'Invoice ' + (i.invoiceNumber || ''),
+      meta: (i.date || '') + (i.paid ? ' \u00b7 Paid' : ' \u00b7 Unpaid'),
+      amount: money(i.total || 0),
+      href: '/tools/invoice-generator.html?search=' + encodeURIComponent(c.name) + '#tab-recent',
+    })), 'No invoices sent to this client yet.');
+
+    html += renderRecordSection('Quotes', bundle.quotes.slice().sort((a, b) => (b.date || '').localeCompare(a.date || '')).map(q => ({
+      title: 'Quote ' + (q.quoteNumber || ''),
+      meta: q.date || '',
+      amount: money(q.total || 0),
+      href: '/tools/invoice-generator.html?search=' + encodeURIComponent(c.name) + '#tab-recent',
+    })), 'No quotes sent to this client yet.');
+
+    html += renderRecordSection('Contracts', bundle.contracts.slice().sort((a, b) => (b.dateGeneratedISO || '').localeCompare(a.dateGeneratedISO || '')).map(k => ({
+      title: (k.type || 'Contract'),
+      meta: k.dateGenerated || '',
+      amount: '',
+      href: '/tools/contract-generator.html?search=' + encodeURIComponent(c.name),
+    })), 'No contracts on file for this client yet.');
+
+    document.getElementById('clientContent').innerHTML = html;
+  }
+
+  function renderRecordSection(label, rows, emptyText) {
+    let inner;
+    if (rows.length === 0) {
+      inner = '<div class="empty-state-small"><svg class="th-icon" aria-hidden="true"><use href="#icon-inbox" xlink:href="#icon-inbox"></use></svg>' + escapeHtml(emptyText) + '</div>';
+    } else {
+      inner = rows.map(r =>
+        '<a class="client-record-row" href="' + r.href + '" style="text-decoration:none; color:inherit;">' +
+          '<div><div class="client-record-title">' + escapeHtml(r.title) + '</div><div class="client-record-meta">' + escapeHtml(r.meta) + '</div></div>' +
+          (r.amount ? '<div class="client-record-amount">' + r.amount + '</div>' : '') +
+        '</a>'
+      ).join('');
+    }
+    return '<div class="section-block"><div class="section-heading is-static"><span>' + label + ' (' + rows.length + ')</span></div>' + inner + '</div>';
+  }
+</script>
+
+</body>
+</html>

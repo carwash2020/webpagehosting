@@ -1133,12 +1133,20 @@
     container.innerHTML = sorted.map(([client, data]) => {
       const lastSeen = lastSeenByClient[client];
       const lastSeenLabel = lastSeen ? new Date(lastSeen + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', year: 'numeric' }) : '';
+      // Additive only -- looks up the registry id for a link, but never
+      // changes the revenue/count numbers themselves, which come from
+      // this function's own proven aggregation above. Falls back to a
+      // plain row (no link) on the rare case the registry doesn't have
+      // this client yet, rather than showing a broken link.
+      const registryMatch = (typeof thFindClientByName === 'function') ? thFindClientByName(client) : null;
+      const rowTag = registryMatch ? 'a' : 'div';
+      const rowHref = registryMatch ? ' href="/tools/client-detail.html?id=' + encodeURIComponent(registryMatch.id) + '" style="text-decoration:none; color:inherit; cursor:pointer;"' : '';
       return `
-      <div class="vendor-bar-row">
+      <${rowTag} class="vendor-bar-row"${rowHref}>
         <div class="vendor-bar-label" title="${escapeHtml(client)}">${escapeHtml(client)}</div>
         <div class="vendor-bar-track"><div class="vendor-bar-fill" style="width:${(data.revenue / max * 100)}%"></div></div>
         <div class="vendor-bar-count">${money(data.revenue)}<span style="display:block; font-size:10.5px; color:var(--text-dim); font-weight:400;">${data.invoiceCount} invoice${data.invoiceCount === 1 ? '' : 's'}${lastSeenLabel ? ' \u00b7 last ' + lastSeenLabel : ''}</span></div>
-      </div>`;
+      </${rowTag}>`;
     }).join('');
   }
 

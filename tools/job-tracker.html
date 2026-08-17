@@ -784,11 +784,24 @@
     const title = document.getElementById('jobTitle').value.trim();
     if (!title) { await showAlert('Give the job a title first.'); return; }
     const jobs = loadJobs();
+    const clientName = document.getElementById('jobClient').value.trim();
+    const phone = document.getElementById('jobPhone').value.trim();
+    const address = document.getElementById('jobAddress').value.trim();
+    // Push 2 (2026-08-20): get-or-create the client record for whatever
+    // name is typed here, and stash its id alongside the existing
+    // string field -- additive, the 'client' string is untouched. This
+    // is what lets thGetClientBundle() start preferring an exact id
+    // match over name-matching for every job created from here on,
+    // rather than needing a single risky flag-day cutover.
+    const clientId = (clientName && typeof thEnsureClient === 'function')
+      ? (thEnsureClient(clientName, { phone, address }) || {}).id
+      : undefined;
     const fields = {
       title,
-      client: document.getElementById('jobClient').value.trim(),
-      phone: document.getElementById('jobPhone').value.trim(),
-      address: document.getElementById('jobAddress').value.trim(),
+      client: clientName,
+      clientId,
+      phone,
+      address,
       priority: document.getElementById('jobPriority').value,
       date: document.getElementById('jobDate').value,
       status: document.getElementById('jobStatus').value,

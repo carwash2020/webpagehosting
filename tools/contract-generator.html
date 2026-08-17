@@ -691,10 +691,14 @@
     const log = loadContractLog();
     const nextId = log.length ? Math.max(...log.map(e => e.id)) + 1 : 1;
     const now = new Date();
+    const contractClientId = (fields.clientName && typeof thEnsureClient === 'function')
+      ? (thEnsureClient(fields.clientName, { phone: fields.clientPhone, address: fields.clientAddress, email: fields.clientEmail }) || {}).id
+      : undefined;
     log.push({
       id: nextId,
       type,
       fields,
+      clientId: contractClientId,
       dateGenerated: now.toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' }),
       dateGeneratedISO: now.toISOString().slice(0, 10),
       signedByClient: !!clientSignatureDataUrl,

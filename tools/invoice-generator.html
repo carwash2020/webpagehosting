@@ -1017,10 +1017,15 @@
     const list = loadInvoiceLog();
     const jobRefId = document.getElementById('invoiceJobRef').value;
     const jobRefTitle = jobRefId ? (loadJobs().find(j => String(j.id) === jobRefId) || {}).title || '' : '';
+    const clientNameVal = document.getElementById('clientName').value;
+    const clientId = (clientNameVal && typeof thEnsureClient === 'function')
+      ? (thEnsureClient(clientNameVal, { address: document.getElementById('clientAddress').value }) || {}).id
+      : undefined;
     const newEntry = {
       id: Date.now(),
       invoiceNumber: document.getElementById('invoiceNumber').value,
-      clientName: document.getElementById('clientName').value || '(no name)',
+      clientName: clientNameVal || '(no name)',
+      clientId,
       date: document.getElementById('invoiceDate').value || new Date().toISOString().slice(0, 10),
       terms: document.getElementById('invoiceTerms').value,
       subtotal: totals.subtotal,
@@ -1049,10 +1054,15 @@
     const list = loadQuoteLog();
     const jobRefId = document.getElementById('quoteJobRef').value;
     const jobRefTitle = jobRefId ? (loadJobs().find(j => String(j.id) === jobRefId) || {}).title || '' : '';
+    const quoteClientNameVal = document.getElementById('quoteClientName').value;
+    const quoteClientId = (quoteClientNameVal && typeof thEnsureClient === 'function')
+      ? (thEnsureClient(quoteClientNameVal) || {}).id
+      : undefined;
     list.push({
       id: Date.now(),
       quoteNumber: document.getElementById('quoteNumber').value,
-      clientName: document.getElementById('quoteClientName').value || '(no name)',
+      clientName: quoteClientNameVal || '(no name)',
+      clientId: quoteClientId,
       date: document.getElementById('quoteDate').value || new Date().toISOString().slice(0, 10),
       subtotal: totals.subtotal,
       tax: totals.tax || 0,
