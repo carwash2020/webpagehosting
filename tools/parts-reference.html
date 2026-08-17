@@ -25,7 +25,10 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Anton&family=Oswald:wght@400;500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="/styles.css?v=202608191300">
-<script src="/tools/tools-common.js?v=202608191700" defer></script>
+<script src="/tools/tools-effects.js?v=202608201400" defer></script>
+<script src="/tools/tools-dialogs.js?v=202608201400" defer></script>
+<script src="/tools/tools-media-sharing.js?v=202608201400" defer></script>
+<script src="/tools/tools-nav-pwa.js?v=202608201400" defer></script>
 <script src="/tools/sync.js?v=202608161700" defer></script>
 <style>
   .pr-search-filter-row { display: flex; gap: 8px; margin-bottom: 16px; }
@@ -329,7 +332,7 @@
     return '<span class="pr-category-dot" style="background:' + categoryColor(type) + ';" aria-hidden="true"></span>';
   }
 
-  // personDot() now lives in tools-common.js (shared across all 4 tool
+  // personDot() now lives in tools-effects.js (shared across all 4 tool
   // pages that use it) -- see that file for details. Called bare here
   // (no label) to match this page's original plain-email tooltip.
 

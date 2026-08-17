@@ -53,7 +53,7 @@
 // immediately after logging. Still bumping this so that fix reaches
 // devices without needing yet another round-trip to explain why it
 // didn't show up.
-const CACHE_NAME = 'th-workspace-v7';
+const CACHE_NAME = 'th-workspace-v8';
 const PRECACHE_URLS = [
   '/tools/workspace.html', '/tools/job-tracker.html', '/tools/invoice-generator.html', '/tools/contract-generator.html',
   '/tools/calendar.html', '/tools/route-planner.html', '/tools/review-request.html', '/tools/contact-card.html',
@@ -64,7 +64,22 @@ const PRECACHE_URLS = [
   // the kind of page worth having offline -- looking up a part number
   // in a basement with no signal is the scenario this cache exists for.
   '/tools/dev-tools.html', '/tools/parts-reference.html', '/tools/runway-dashboard.html',
-  '/styles.css', '/tools/sync.js', '/tools/auth.js', '/tools/tools-common.js', '/tools/manifest.json',
+  // Added 2026-08-20 -- same gap as above, these 3 pages (all from the
+  // structural rework's Client/Job Detail views and the Finance split)
+  // existed live but were never added here either.
+  '/tools/finance.html', '/tools/client-detail.html', '/tools/job-detail.html',
+  // Bug fix (2026-08-20): tools-common.js no longer exists -- it was
+  // split into 4 focused files (structural item #42). cache.addAll()
+  // fails ATOMICALLY: if even one URL in this list 404s, NONE of the
+  // files get precached, not just the missing one. Leaving a reference
+  // to a retired file here would have silently broken offline support
+  // for this entire app, not just for that one script. data-layer.js
+  // (added in an earlier push) was also missing from this list --
+  // found and fixed at the same time, while already touching this list
+  // for the same reason.
+  '/styles.css', '/tools/sync.js', '/tools/auth.js', '/tools/data-layer.js',
+  '/tools/tools-effects.js', '/tools/tools-dialogs.js', '/tools/tools-media-sharing.js', '/tools/tools-nav-pwa.js',
+  '/tools/manifest.json',
   // Added 2026-08-14 -- same gap as above, these 2 scripts were live but unlisted.
   '/tools/qrcode-lib.js', '/tools/push-notifications.js',
   '/images/logo-signature-orange.webp', '/images/icon-192.png', '/images/icon-512.png', '/images/apple-touch-icon.png',
