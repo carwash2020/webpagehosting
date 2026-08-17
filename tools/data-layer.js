@@ -265,3 +265,56 @@ function thRunClientBackfillOnce() {
   try { localStorage.setItem(TH_CLIENT_BACKFILL_FLAG, '1'); } catch (e) { /* ignore */ }
   return result;
 }
+
+// --- job margin & bundle (supports Push 3: Job Detail view) ---------------
+//
+// Moved here from job-tracker.html, which is where this logic lived alone
+// until now. The new Job Detail page needs the exact same math the
+// Profitability tab and job-card margin badge already use -- duplicating
+// it into a second file would recreate the exact problem this whole data
+// layer exists to prevent (money() and escapeHtml() both existed multiple
+// times before being consolidated the same way).
+
+function thComputeJobMargin(job, invoices, expenses, manualIncome) {
+  const linkedInvoices = invoices.filter(inv => String(inv.jobRefId) === String(job.id));
+  const linkedManualIncome = manualIncome.filter(e => String(e.jobRefId) === String(job.id));
+  const revenue = linkedInvoices.reduce((sum, inv) => sum + (inv.total || 0), 0)
+                + linkedManualIncome.reduce((sum, e) => sum + (e.amount || 0), 0);
+  const hasInvoice = linkedInvoices.length > 0 || linkedManualIncome.length > 0;
+
+  const linkedExpenses = expenses.filter(e => String(e.jobRefId) === String(job.id));
+  const cost = linkedExpenses.reduce((sum, e) => sum + (e.amount || 0), 0);
+  const hasCost = linkedExpenses.length > 0;
+
+  const margin = revenue - cost;
+  const marginPct = revenue > 0 ? (margin / revenue * 100) : 0;
+  return { revenue, cost, hasInvoice, hasCost, margin, marginPct };
+}
+
+// Everything for one job in a single call -- the query that makes a real
+// Job Detail view possible, the same way thGetClientBundle() enabled
+// Client Detail. Client resolution prefers job.clientId (written on every
+// job created since Push 2) and falls back to name-matching for jobs that
+// predate that, exactly like thGetClientBundle() already does.
+function thGetJobBundle(jobId) {
+  const jobs = thRead(TH_KEYS.jobs, []);
+  const job = jobs.find(j => String(j.id) === String(jobId));
+  if (!job) return null;
+
+  const invoices = thRead(TH_KEYS.invoices, []);
+  const quotes = thRead(TH_KEYS.quotes, []);
+  const expenses = thRead(TH_KEYS.expenses, []);
+  const income = thRead(TH_KEYS.income, []).filter(e => e.origin !== 'invoice');
+
+  const margin = thComputeJobMargin(job, invoices, expenses, income);
+  const linkedInvoices = invoices.filter(inv => String(inv.jobRefId) === String(job.id));
+  const linkedQuotes = quotes.filter(q => String(q.jobRefId) === String(job.id));
+  const linkedExpenses = expenses.filter(e => String(e.jobRefId) === String(job.id));
+
+  let client = null;
+  if (job.clientId) client = thFindClientById(job.clientId);
+  if (!client && job.client) client = thFindClientByName(job.client);
+
+  return { job, margin, linkedInvoices, linkedQuotes, linkedExpenses, client };
+}
+

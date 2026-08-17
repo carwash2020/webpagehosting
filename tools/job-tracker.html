@@ -713,20 +713,13 @@
   // Shared by renderJobProfitability() below and the job-card margin
   // badge (item #1) -- extracted so both surfaces can never quietly
   // disagree about what "profit" means for a given job.
+  //
+  // Push 3 (2026-08-20): the actual math moved into data-layer.js as
+  // thComputeJobMargin(), since the new Job Detail page needs the exact
+  // same calculation -- this stays as a thin wrapper so both existing
+  // call sites in this file need zero changes.
   function computeJobMargin(job, invoices, expenses, manualIncome) {
-    const linkedInvoices = invoices.filter(inv => String(inv.jobRefId) === String(job.id));
-    const linkedManualIncome = manualIncome.filter(e => String(e.jobRefId) === String(job.id));
-    const revenue = linkedInvoices.reduce((sum, inv) => sum + (inv.total || 0), 0)
-                  + linkedManualIncome.reduce((sum, e) => sum + (e.amount || 0), 0);
-    const hasInvoice = linkedInvoices.length > 0 || linkedManualIncome.length > 0;
-
-    const linkedExpenses = expenses.filter(e => String(e.jobRefId) === String(job.id));
-    const cost = linkedExpenses.reduce((sum, e) => sum + (e.amount || 0), 0);
-    const hasCost = linkedExpenses.length > 0;
-
-    const margin = revenue - cost;
-    const marginPct = revenue > 0 ? (margin / revenue * 100) : 0;
-    return { revenue, cost, hasInvoice, hasCost, margin, marginPct };
+    return thComputeJobMargin(job, invoices, expenses, manualIncome);
   }
 
   function renderJobProfitability() {
@@ -1236,7 +1229,7 @@
           <div class="job-card-swipe-inner">
           ${jobSelectionMode ? `<label class="job-card-select"><input type="checkbox" ${selectedJobIds.has(job.id) ? 'checked' : ''} onchange="toggleJobSelected(${job.id}, this.checked)"></label>` : ''}
           <div class="job-card-top">
-            <h4 class="job-card-title ${isDone ? 'is-done-text' : ''}">${personDot(job.lastEditedBy, 'Last edited by')}${escapeHtml(job.title)}</h4>
+            <h4 class="job-card-title ${isDone ? 'is-done-text' : ''}">${personDot(job.lastEditedBy, 'Last edited by')}<a href="/tools/job-detail.html?id=${job.id}" style="color:inherit; text-decoration:none;">${escapeHtml(job.title)}</a></h4>
             <div class="job-badges">
               <span class="badge badge-${job.priority}">${job.priority}</span>
               <span class="badge badge-status status-${job.status}">${STATUS_LABEL[job.status]}</span>

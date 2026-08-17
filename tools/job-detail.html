@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html lang="en" style="background:#0a0a0a;">
+<head>
+<script src="/tools/auth.js?v=202608162000"></script>
+<script>
+  // Security gate -- redirect to login before this page's own content
+  // is meaningfully usable. See auth.js for why this exists (a single
+  // shared account keeping randoms out, not a multi-user system).
+  requireAuth();
+</script>
+<link rel="manifest" href="/tools/manifest.json">
+<meta name="theme-color" content="#0a0a0a">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Triple H">
+<link rel="apple-touch-icon" href="/images/apple-touch-icon.png">
+
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="robots" content="noindex, nofollow">
+<title>Job | Triple H Enterprises (Internal Tool)</title>
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data: https://*.supabase.co; connect-src 'self' https://*.supabase.co wss://*.supabase.co; frame-src 'none'; object-src 'none'; base-uri 'self'; frame-ancestors 'none';">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Anton&family=Oswald:wght@400;500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/styles.css?v=202608191300">
+<script src="/tools/sync.js?v=202608161700" defer></script>
+<script src="/tools/data-layer.js?v=202608200900" defer></script>
+<script src="/tools/tools-common.js?v=202608191700" defer></script>
+<style>
+  body { padding: 44px 20px 60px; max-width: 720px; margin: 0 auto; }
+
+  .job-hero {
+    background: linear-gradient(180deg, var(--bg-panel-3), var(--bg-panel-2));
+    border: 1px solid var(--border); border-radius: var(--radius);
+    padding: 22px 20px; margin-bottom: 18px;
+  }
+  .job-hero-title { font-family: 'Anton', sans-serif; font-size: 22px; color: var(--white); letter-spacing: .3px; }
+  .job-hero-meta { color: var(--text-dim); font-size: 13.5px; margin-top: 6px; line-height: 1.6; }
+  .job-hero-meta a { color: var(--orange-light); text-decoration: none; }
+  .job-hero-badges { display: flex; gap: 8px; margin-top: 10px; flex-wrap: wrap; }
+  .job-stat-row { display: flex; gap: 10px; margin-top: 16px; flex-wrap: wrap; }
+  .job-stat { flex: 1; min-width: 100px; background: var(--bg-panel-2); border: 1px solid var(--border); border-radius: 10px; padding: 10px 12px; }
+  .job-stat-value { font-family: 'Oswald', sans-serif; font-weight: 700; font-size: 20px; color: var(--white); }
+  .job-stat-label { color: var(--text-dim); font-size: 11px; text-transform: uppercase; letter-spacing: .5px; margin-top: 2px; }
+
+  .job-record-row {
+    display: flex; justify-content: space-between; align-items: center; gap: 12px;
+    padding: 11px 0; border-bottom: 1px solid var(--border); font-size: 13.5px;
+  }
+  .job-record-row:last-child { border-bottom: none; }
+  .job-record-title { color: var(--white); }
+  .job-record-meta { color: var(--text-dim); font-size: 12px; margin-top: 2px; }
+  .job-record-amount { color: var(--orange-light); font-weight: 600; flex-shrink: 0; }
+
+  .job-photo-grid { display: flex; flex-wrap: wrap; gap: 8px; }
+  .job-photo-thumb { width: 96px; height: 96px; border-radius: 8px; overflow: hidden; border: 1px solid var(--border); cursor: pointer; }
+  .job-photo-thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
+</style>
+</head>
+<body>
+
+<div id="jobDetailView" style="display:none;">
+  <div class="hub-header">
+    <div class="hub-header-left">
+      <img src="/images/logo-signature-orange.webp?v=202608142300" alt="Triple H Enterprises">
+      <span class="hub-title">Job</span>
+    </div>
+    <div class="hub-header-right">
+      <a href="/tools/job-tracker.html" class="help-btn" aria-label="Back to Job Tracker" title="Back to Job Tracker" style="text-decoration:none; display:inline-flex; align-items:center; justify-content:center;">&#8617;</a>
+    </div>
+  </div>
+
+  <div id="jobContent"></div>
+</div>
+
+<div id="jobNotFound" style="display:none; text-align:center; padding:60px 20px;">
+  <div style="color:var(--text-dim); font-size:14px; margin-bottom:16px;">Job not found. It may have been deleted, or the link is out of date.</div>
+  <a href="/tools/job-tracker.html" class="secondary-btn" style="text-decoration:none;">Back to Job Tracker</a>
+</div>
+
+<script>
+  const STATUS_LABEL = { 'not-started': 'Not Started', 'in-progress': 'In Progress', 'done': 'Done' };
+  let currentJobId = null;
+  let currentJobPhotos = [];
+
+  document.addEventListener('DOMContentLoaded', async () => {
+    if (typeof initSyncOnLoad === 'function') { try { await initSyncOnLoad(); } catch (e) { /* renders with whatever local data exists */ } }
+
+    currentJobId = new URLSearchParams(window.location.search).get('id');
+    const bundle = (currentJobId && typeof thGetJobBundle === 'function') ? thGetJobBundle(currentJobId) : null;
+
+    if (!bundle) {
+      document.getElementById('jobNotFound').style.display = '';
+      return;
+    }
+    document.getElementById('jobDetailView').style.display = '';
+    renderJobDetail(bundle);
+    loadPhotosReadOnly(currentJobId);
+  });
+
+  function renderJobDetail(bundle) {
+    const j = bundle.job;
+    document.title = j.title + ' | Triple H Enterprises (Internal Tool)';
+
+    const dateDisplay = j.date ? new Date(j.date + 'T00:00:00').toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }) : 'No date set';
+    const metaParts = [dateDisplay];
+    if (j.address) metaParts.push(escapeHtml(j.address));
+
+    let clientLine = '';
+    if (bundle.client) {
+      clientLine = '<a href="/tools/client-detail.html?id=' + encodeURIComponent(bundle.client.id) + '">' + escapeHtml(bundle.client.name) + '</a>';
+    } else if (j.client) {
+      clientLine = escapeHtml(j.client); // no registry match yet -- plain text rather than a broken link
+    }
+    if (clientLine) metaParts.push(clientLine);
+    if (j.phone) metaParts.push('<a href="tel:' + escapeHtml(j.phone) + '">' + escapeHtml(j.phone) + '</a>');
+
+    const marginHtml = bundle.margin.hasInvoice
+      ? (bundle.margin.margin >= 0 ? '+' : '') + money(bundle.margin.margin)
+      : '\u2014';
+
+    let html = '<div class="job-hero">' +
+      '<div class="job-hero-title">' + escapeHtml(j.title) + '</div>' +
+      '<div class="job-hero-meta">' + metaParts.join(' &middot; ') + '</div>' +
+      '<div class="job-hero-badges">' +
+        '<span class="badge badge-' + escapeHtml(j.priority || 'medium') + '">' + escapeHtml(j.priority || 'medium') + '</span>' +
+        '<span class="badge badge-status status-' + escapeHtml(j.status || 'not-started') + '">' + (STATUS_LABEL[j.status] || j.status || 'Not Started') + '</span>' +
+      '</div>' +
+      '<div class="job-stat-row">' +
+        '<div class="job-stat"><div class="job-stat-value">' + money(bundle.margin.revenue) + '</div><div class="job-stat-label">Revenue</div></div>' +
+        '<div class="job-stat"><div class="job-stat-value">' + money(bundle.margin.cost) + '</div><div class="job-stat-label">Cost</div></div>' +
+        '<div class="job-stat"><div class="job-stat-value">' + marginHtml + '</div><div class="job-stat-label">Margin</div></div>' +
+      '</div>' +
+    '</div>';
+
+    if (j.notes) {
+      html += '<div class="section-block"><div class="section-heading is-static"><span>Notes</span></div><div style="color:var(--text);font-size:13.5px;line-height:1.6;">' + escapeHtml(j.notes) + '</div></div>';
+    }
+
+    html += renderRecordSection('Invoices', bundle.linkedInvoices.map(i => ({
+      title: 'Invoice ' + (i.invoiceNumber || ''), meta: (i.date || '') + (i.paid ? ' \u00b7 Paid' : ' \u00b7 Unpaid'),
+      amount: money(i.total || 0), href: '/tools/invoice-generator.html?search=' + encodeURIComponent(j.client || '') + '#tab-recent',
+    })), 'No invoice linked to this job yet.');
+
+    html += renderRecordSection('Quotes', bundle.linkedQuotes.map(q => ({
+      title: 'Quote ' + (q.quoteNumber || ''), meta: q.date || '',
+      amount: money(q.total || 0), href: '/tools/invoice-generator.html?search=' + encodeURIComponent(j.client || '') + '#tab-recent',
+    })), 'No quote linked to this job yet.');
+
+    html += renderRecordSection('Expenses', bundle.linkedExpenses.map(e => ({
+      title: e.description || e.category || 'Expense', meta: e.date || '',
+      amount: money(e.amount || 0), href: '/tools/job-tracker.html?search=' + encodeURIComponent(j.title) + '#expenses',
+    })), 'No expenses logged against this job yet.');
+
+    html += '<div class="section-block"><div class="section-heading is-static"><span>Photos</span></div><div class="job-photo-grid" id="jobPhotosGrid"><div class="empty-state-small"><svg class="th-icon" aria-hidden="true"><use href="#icon-camera" xlink:href="#icon-camera"></use></svg>Loading...</div></div></div>';
+
+    document.getElementById('jobContent').innerHTML = html;
+  }
+
+  function renderRecordSection(label, rows, emptyText) {
+    let inner;
+    if (rows.length === 0) {
+      inner = '<div class="empty-state-small"><svg class="th-icon" aria-hidden="true"><use href="#icon-inbox" xlink:href="#icon-inbox"></use></svg>' + escapeHtml(emptyText) + '</div>';
+    } else {
+      inner = rows.map(r =>
+        '<a class="job-record-row" href="' + r.href + '" style="text-decoration:none; color:inherit;">' +
+          '<div><div class="job-record-title">' + escapeHtml(r.title) + '</div><div class="job-record-meta">' + escapeHtml(r.meta) + '</div></div>' +
+          '<div class="job-record-amount">' + r.amount + '</div>' +
+        '</a>'
+      ).join('');
+    }
+    return '<div class="section-block"><div class="section-heading is-static"><span>' + label + ' (' + rows.length + ')</span></div>' + inner + '</div>';
+  }
+
+  // Read-only: view + lightbox only. Starring for the website gallery and
+  // deleting a photo both still happen from Job Tracker's own Photos
+  // section, which already does that well -- duplicating those actions
+  // here isn't worth the added surface area for this first version.
+  async function loadPhotosReadOnly(jobId) {
+    const grid = document.getElementById('jobPhotosGrid');
+    if (typeof fetchJobPhotos !== 'function') { grid.innerHTML = ''; return; }
+    const result = await fetchJobPhotos(jobId);
+    if (!result.ok) {
+      grid.innerHTML = '<div class="empty-state-small is-warning"><svg class="th-icon" aria-hidden="true"><use href="#icon-warning" xlink:href="#icon-warning"></use></svg>Couldn\'t load photos.</div>';
+      return;
+    }
+    if (result.photos.length === 0) {
+      grid.innerHTML = '<div class="empty-state-small"><svg class="th-icon" aria-hidden="true"><use href="#icon-camera" xlink:href="#icon-camera"></use></svg>No photos on this job yet.</div>';
+      return;
+    }
+    const signedUrls = await getSignedJobPhotoUrls(result.photos.map(p => p.storage_path));
+    currentJobPhotos = result.photos.map(p => ({ url: signedUrls[p.storage_path] || '', label: 'Photo' }));
+    grid.innerHTML = result.photos.map((p, i) =>
+      '<div class="job-photo-thumb" onclick="openPhotoLightbox(currentJobPhotos, ' + i + ')"><img src="' + (signedUrls[p.storage_path] || '') + '" alt="Job photo" loading="lazy"></div>'
+    ).join('');
+  }
+</script>
+
+</body>
+</html>
