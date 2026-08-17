@@ -344,6 +344,36 @@ function ensureDialogModalExists() {
       if (cancelBtn) cancelBtn.click();
     }
   });
+
+  // Item #30 (2026-08-19): real Tab-key focus-trapping. Previously
+  // absent entirely -- a keyboard user could Tab past the last button
+  // in an open confirm/alert dialog and land on content behind it,
+  // which is supposed to be blocked while the dialog is open. Wired
+  // once here (the overlay element itself is created once and reused
+  // for every showConfirm/showAlert call), but queries the CURRENT
+  // buttons live at keydown time, since those are rebuilt fresh on
+  // every call.
+  overlay.addEventListener('keydown', (e) => {
+    if (e.key !== 'Tab') return;
+    const focusable = Array.from(overlay.querySelectorAll('button, a, input, select, textarea'))
+      .filter(el => !el.disabled && el.offsetParent !== null);
+    if (focusable.length === 0) return;
+    const first = focusable[0], last = focusable[focusable.length - 1];
+    if (e.shiftKey && document.activeElement === first) {
+      e.preventDefault(); last.focus();
+    } else if (!e.shiftKey && document.activeElement === last) {
+      e.preventDefault(); first.focus();
+    }
+  });
+}
+
+// Remembers whatever had focus right before a dialog opened, so it can
+// be restored once the dialog closes -- the other half of the standard
+// modal accessibility pattern (trap focus while open, return it after).
+let _dialogPreviousFocus = null;
+function _restoreFocusAfterDialog() {
+  if (_dialogPreviousFocus && document.body.contains(_dialogPreviousFocus)) _dialogPreviousFocus.focus();
+  _dialogPreviousFocus = null;
 }
 
 // Shared money formatter -- previously defined identically (or nearly
@@ -412,6 +442,7 @@ function debouncedCall(key, fn, delay) {
 function showAlert(message) {
   return new Promise((resolve) => {
     ensureDialogModalExists();
+    _dialogPreviousFocus = document.activeElement;
     const overlay = document.getElementById('customDialogOverlay');
     document.getElementById('customDialogMessage').textContent = message;
     const buttons = document.getElementById('customDialogButtons');
@@ -421,7 +452,7 @@ function showAlert(message) {
     okBtn.className = 'dialog-btn dialog-btn-primary';
     okBtn.id = 'customDialogCancelAction'; // Escape/backdrop-click resolves the same as OK for a plain alert
     okBtn.textContent = 'OK';
-    okBtn.onclick = () => { overlay.classList.remove('is-open'); resolve(true); };
+    okBtn.onclick = () => { overlay.classList.remove('is-open'); _restoreFocusAfterDialog(); resolve(true); };
     buttons.appendChild(okBtn);
 
     overlay.classList.add('is-open');
@@ -433,6 +464,7 @@ function showConfirm(message, options) {
   options = options || {};
   return new Promise((resolve) => {
     ensureDialogModalExists();
+    _dialogPreviousFocus = document.activeElement;
     const overlay = document.getElementById('customDialogOverlay');
     document.getElementById('customDialogMessage').textContent = message;
     const buttons = document.getElementById('customDialogButtons');
@@ -442,16 +474,20 @@ function showConfirm(message, options) {
     cancelBtn.className = 'dialog-btn dialog-btn-cancel';
     cancelBtn.id = 'customDialogCancelAction'; // Escape/backdrop-click cancels, same as native confirm()
     cancelBtn.textContent = options.cancelText || 'Cancel';
-    cancelBtn.onclick = () => { overlay.classList.remove('is-open'); resolve(false); };
+    cancelBtn.onclick = () => { overlay.classList.remove('is-open'); _restoreFocusAfterDialog(); resolve(false); };
 
     const confirmBtn = document.createElement('button');
     confirmBtn.className = 'dialog-btn ' + (options.danger ? 'dialog-btn-danger' : 'dialog-btn-primary');
     confirmBtn.textContent = options.confirmText || 'OK';
-    confirmBtn.onclick = () => { overlay.classList.remove('is-open'); resolve(true); };
+    confirmBtn.onclick = () => { overlay.classList.remove('is-open'); _restoreFocusAfterDialog(); resolve(true); };
 
     buttons.appendChild(cancelBtn);
     buttons.appendChild(confirmBtn);
     overlay.classList.add('is-open');
+    // Focuses Cancel, not Confirm -- the safe default, so accidentally
+    // hitting Enter/Space without reading carefully never triggers the
+    // action being confirmed, destructive or not.
+    cancelBtn.focus();
   });
 }
 

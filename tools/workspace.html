@@ -28,7 +28,7 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.112.3/dist/umd/supabase.js" integrity="sha384-qafw21c/iciq0VXsi9FzkfoQv5I/V0iqE4lSNcKXPnW9/UTJLnv5CcN4FHxVLnKg" crossorigin="anonymous" defer></script>
 <script src="/tools/sync.js?v=202608161700" defer></script>
 <script src="/tools/push-notifications.js?v=202608160400" defer></script>
-<script src="/tools/tools-common.js?v=202608191300" defer></script>
+<script src="/tools/tools-common.js?v=202608191700" defer></script>
 <style>
   body { padding: 44px 20px 60px; max-width: 900px; margin: 0 auto; }
   .hub-header { display: flex; align-items: center; justify-content: space-between; gap: 14px; margin-bottom: 8px; }
@@ -2124,6 +2124,10 @@
     setInterval(renderSnapshotLastUpdated, 30000);
     if (window.location.hash === '#today') {
       document.getElementById('section-today')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+    if (window.location.hash === '#backup') {
+      document.getElementById('section-businesshealth')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      if (typeof activateBusinessHealthTab === 'function') activateBusinessHealthTab('backup');
     }
     initOnboardingTour();
   });

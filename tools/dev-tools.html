@@ -25,7 +25,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Anton&family=Oswald:wght@400;500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="/styles.css?v=202608191300">
-<script src="/tools/tools-common.js?v=202608191300" defer></script>
+<script src="/tools/tools-common.js?v=202608191700" defer></script>
 <script src="/tools/sync.js?v=202608161700" defer></script>
 <style>
   body { padding: 44px 20px 60px; max-width: 1080px; margin: 0 auto; }
@@ -247,6 +247,15 @@
     </div>
     <button class="secondary-btn" onclick="runLiveConsistencyCheck()" id="runCheckBtn">Run check</button>
     <div id="consistencyResults" style="margin-top:16px;"></div>
+  </div>
+
+  <div class="dev-panel dev-panel-wide">
+    <div class="dev-panel-heading">
+      <h2 id="nav-dataquality" class="dev-anchor">Data quality check</h2>
+      <button class="dev-info-bubble" onclick="openDevInfo('dataquality')" aria-label="What does this do?" title="What does this do?">?</button>
+    </div>
+    <button class="secondary-btn" onclick="runDataQualityCheck()" id="runDataQualityBtn">Run check</button>
+    <div id="dataQualityResults" style="margin-top:16px;"></div>
   </div>
 
   <div class="dev-panel dev-panel-wide">
@@ -533,6 +542,10 @@
       title: 'Live consistency check',
       body: `<p>Checks every tool page for the boilerplate they're all supposed to carry: the login gate, a Content-Security-Policy, the PWA manifest link, and a styles.css version that matches everyone else's -- plus a check that manifest.json's own URLs all have the /tools/ prefix, since a missing prefix there caused a real "Add to Home Screen" bug once already.</p><p>This is the exact same logic that runs automatically in GitHub Actions on every push -- this just lets you run it on demand, from right here, without waiting on a push or checking the Actions tab.</p>`,
     },
+    dataquality: {
+      title: 'Data quality check',
+      body: `<p>A different concern from the check above this one -- that one asks "is the site configured right," this one asks "is the actual business data clean." Flags client names that only differ by capitalization or spacing (like "Sarah Miller" vs. "sarah miller"), since Top Clients and Job Density both group by exact name match -- a near-duplicate silently splits one client's real numbers into two smaller, wrong-looking entries instead of one accurate one.</p><p>Also flags jobs with no date or no client name on file, since those are the two fields several other features (weekday density, the client leaderboard, follow-up reminders) all quietly depend on being present.</p>`,
+    },
     session: {
       title: 'Session & sync',
       body: `<p>Shows which account is actually logged in on this device, and the result of the last push or pull attempt to Supabase.</p><p>"Push now" and "Pull now" trigger a sync immediately instead of waiting for the normal automatic/debounced sync to happen on its own -- useful when you want to be sure the latest data is saved or fetched right this second.</p><p>The "History" link expands the last 20 attempts (most recent first) -- useful for spotting a pattern, like "this started failing consistently around a specific time" rather than only ever seeing the single latest result.</p>`,
@@ -793,6 +806,53 @@
         '<div class="dev-check-row"><div><div>' + escapeHtml(r.page) + '</div>' +
         (r.detail ? '<div class="dev-check-detail">' + escapeHtml(r.detail) + '</div>' : '') + '</div>' +
         '<span class="dev-check-status ' + (r.ok ? 'pass' : 'fail') + '">' + (r.ok ? 'PASS' : 'FAIL') + '</span></div>'
+      ).join('');
+    });
+  }
+
+  // Item #60/#61 (2026-08-19): a distinct concern from the site-
+  // configuration checker above -- this looks at the actual business
+  // DATA quality, not whether the deployed code is set up right.
+  // Client-name matching is case/whitespace-insensitive on purpose:
+  // "Sarah Miller" and "sarah miller" are the same real client, but
+  // Object.entries()-style grouping elsewhere in the app (Top Clients,
+  // Job Density) treats them as two, silently fragmenting whatever
+  // report groups by that name.
+  async function runDataQualityCheck() {
+    return runWithButtonState('runDataQualityBtn', 'dataQualityResults', 'Checking...', 'Run check', async () => {
+      let jobs = [];
+      try { jobs = JSON.parse(localStorage.getItem('th_tracker_jobs') || '[]'); } catch (e) { jobs = []; }
+
+      const rows = [];
+
+      // Near-duplicate client names: group by a normalized (lowercased,
+      // whitespace-collapsed) key, flag any key with more than one
+      // distinct real spelling behind it.
+      const normalizedGroups = {};
+      jobs.forEach(j => {
+        if (!j.client || !j.client.trim()) return;
+        const key = j.client.trim().toLowerCase().replace(/\s+/g, ' ');
+        (normalizedGroups[key] = normalizedGroups[key] || new Set()).add(j.client.trim());
+      });
+      const dupeGroups = Object.values(normalizedGroups).filter(variants => variants.size > 1);
+      if (dupeGroups.length === 0) {
+        rows.push({ page: 'Client name duplicates', ok: true, detail: 'No near-duplicate client names found across ' + jobs.length + ' jobs.' });
+      } else {
+        dupeGroups.forEach(variants => {
+          rows.push({ page: 'Possible duplicate client', ok: false, detail: Array.from(variants).join('  vs.  ') });
+        });
+      }
+
+      const noDate = jobs.filter(j => !j.date);
+      rows.push({ page: 'Jobs with no date', ok: noDate.length === 0, detail: noDate.length ? noDate.length + ' job(s): ' + noDate.slice(0, 5).map(j => j.title).join(', ') + (noDate.length > 5 ? '...' : '') : 'Every job has a date.' });
+
+      const noClient = jobs.filter(j => !j.client || !j.client.trim());
+      rows.push({ page: 'Jobs with no client name', ok: noClient.length === 0, detail: noClient.length ? noClient.length + ' job(s): ' + noClient.slice(0, 5).map(j => j.title).join(', ') + (noClient.length > 5 ? '...' : '') : 'Every job has a client name.' });
+
+      return rows.map(r =>
+        '<div class="dev-check-row"><div><div>' + escapeHtml(r.page) + '</div>' +
+        (r.detail ? '<div class="dev-check-detail">' + escapeHtml(r.detail) + '</div>' : '') + '</div>' +
+        '<span class="dev-check-status ' + (r.ok ? 'pass' : 'fail') + '">' + (r.ok ? 'PASS' : 'FLAG') + '</span></div>'
       ).join('');
     });
   }

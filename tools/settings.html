@@ -25,7 +25,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Anton&family=Oswald:wght@400;500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="/styles.css?v=202608191300">
-<script src="/tools/tools-common.js?v=202608191300" defer></script>
+<script src="/tools/tools-common.js?v=202608191700" defer></script>
 <script src="/tools/sync.js?v=202608161700" defer></script>
 <script src="/tools/push-notifications.js?v=202608160400" defer></script>
 <style>
@@ -123,6 +123,18 @@
         <div class="settings-row-sub" id="settingsPwStatus">&nbsp;</div>
       </div>
       <button class="secondary-btn" id="settingsPwResetBtn" onclick="handleSettingsPasswordReset()">Send reset link</button>
+    </div>
+  </div>
+
+  <div class="settings-section">
+    <h2>Your Data</h2>
+    <p class="settings-desc">A full export of every job, invoice, expense, contact, and note stored on this account -- the same backup used to restore onto a new device if needed.</p>
+    <div class="settings-row">
+      <div>
+        <div class="settings-row-label">Download a full backup</div>
+        <div class="settings-row-sub">Saves everything as one JSON file.</div>
+      </div>
+      <a href="/tools/workspace.html#backup" class="secondary-btn" style="text-decoration:none;">Go to Backup</a>
     </div>
   </div>
 
