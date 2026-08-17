@@ -505,6 +505,157 @@ function showQuickActionSheet(title, actions) {
   requestAnimationFrame(() => overlay.classList.add('is-shown'));
 }
 
+// ---------------------------------------------------------------------------
+// PHOTO LIGHTBOX -- added 2026-08-18 (item #1). Job photos were fixed
+// 110x110px thumbnails with no way to actually see the detail in them --
+// someone documenting a leaking pipe or a damaged part couldn't zoom in
+// at all. photos: [{ url, label }], startIndex: which one was tapped.
+//
+// Swipe uses the same pointer-events technique already proven safe by
+// the before/after slider elsewhere in this app (not a new gesture
+// system) -- a real drag distance threshold, cancelled on any large
+// vertical movement so it can't be confused with a page-scroll attempt.
+// Prev/next buttons exist independently as the primary, always-visible
+// way to navigate, so swipe is a bonus, not the only path.
+// ---------------------------------------------------------------------------
+function openPhotoLightbox(photos, startIndex) {
+  if (!photos || !photos.length) return;
+  let index = Math.max(0, Math.min(startIndex || 0, photos.length - 1));
+
+  const overlay = document.createElement('div');
+  overlay.className = 'photo-lightbox-overlay';
+  overlay.setAttribute('role', 'dialog');
+  overlay.setAttribute('aria-label', 'Photo viewer');
+  overlay.innerHTML =
+    '<button class="photo-lightbox-close" aria-label="Close">&times;</button>' +
+    '<div class="photo-lightbox-stage">' +
+      '<img class="photo-lightbox-img" alt="">' +
+      '<button class="photo-lightbox-nav photo-lightbox-prev" aria-label="Previous photo">&#10094;</button>' +
+      '<button class="photo-lightbox-nav photo-lightbox-next" aria-label="Next photo">&#10095;</button>' +
+    '</div>' +
+    '<div class="photo-lightbox-caption"></div>' +
+    '<div class="photo-lightbox-counter"></div>';
+
+  const imgEl = overlay.querySelector('.photo-lightbox-img');
+  const captionEl = overlay.querySelector('.photo-lightbox-caption');
+  const counterEl = overlay.querySelector('.photo-lightbox-counter');
+  const prevBtn = overlay.querySelector('.photo-lightbox-prev');
+  const nextBtn = overlay.querySelector('.photo-lightbox-next');
+  const stage = overlay.querySelector('.photo-lightbox-stage');
+
+  function render() {
+    const p = photos[index];
+    imgEl.src = p.url;
+    imgEl.alt = p.label || 'Job photo';
+    captionEl.textContent = p.label || '';
+    counterEl.textContent = photos.length > 1 ? (index + 1) + ' / ' + photos.length : '';
+    prevBtn.style.display = photos.length > 1 ? '' : 'none';
+    nextBtn.style.display = photos.length > 1 ? '' : 'none';
+  }
+  function go(delta) {
+    index = (index + delta + photos.length) % photos.length;
+    render();
+  }
+  function close() {
+    overlay.classList.remove('is-shown');
+    document.removeEventListener('keydown', onKey);
+    setTimeout(() => overlay.remove(), 200);
+  }
+  function onKey(e) {
+    if (e.key === 'Escape') close();
+    else if (e.key === 'ArrowLeft') go(-1);
+    else if (e.key === 'ArrowRight') go(1);
+  }
+
+  overlay.querySelector('.photo-lightbox-close').addEventListener('click', close);
+  overlay.addEventListener('click', (e) => { if (e.target === overlay) close(); });
+  prevBtn.addEventListener('click', () => go(-1));
+  nextBtn.addEventListener('click', () => go(1));
+  document.addEventListener('keydown', onKey);
+
+  // Swipe: same drag-and-cancel pattern as the before/after slider.
+  let dragStartX = 0, dragStartY = 0, dragging = false;
+  stage.addEventListener('pointerdown', (e) => {
+    if (e.target.closest('button')) return;
+    dragging = true; dragStartX = e.clientX; dragStartY = e.clientY;
+  });
+  stage.addEventListener('pointerup', (e) => {
+    if (!dragging) return;
+    dragging = false;
+    const dx = e.clientX - dragStartX, dy = e.clientY - dragStartY;
+    if (Math.abs(dy) > Math.abs(dx) * 1.5) return; // treat as a vertical/scroll gesture, not a swipe
+    if (dx > 50) go(-1);
+    else if (dx < -50) go(1);
+  });
+  stage.addEventListener('pointercancel', () => { dragging = false; });
+
+  render();
+  document.body.appendChild(overlay);
+  requestAnimationFrame(() => overlay.classList.add('is-shown'));
+}
+
+// ---------------------------------------------------------------------------
+// VOICE DICTATION -- added 2026-08-18 (item #2). Useful for exactly how
+// this app gets used -- describing a job while standing in a client's
+// kitchen with dirty hands. Checks for real browser support first
+// (SpeechRecognition is not implemented in every browser) and simply
+// never shows the mic button where it's missing, rather than showing a
+// button that would error when tapped.
+// ---------------------------------------------------------------------------
+function voiceDictationSupported() {
+  return typeof window !== 'undefined' && !!(window.SpeechRecognition || window.webkitSpeechRecognition);
+}
+
+// Call once per field, right after that field's own markup exists in the
+// DOM. Appends recognized speech to whatever the field already contains
+// (with a separating space) rather than overwriting it, so dictating
+// doesn't destroy something already typed.
+function attachVoiceDictation(fieldId, buttonId) {
+  if (!voiceDictationSupported()) return;
+  const field = document.getElementById(fieldId);
+  const button = document.getElementById(buttonId);
+  if (!field || !button) return;
+  button.style.display = '';
+
+  const SpeechRecognitionCtor = window.SpeechRecognition || window.webkitSpeechRecognition;
+  let recognizer = null;
+  let listening = false;
+
+  function stop() {
+    if (recognizer) recognizer.stop();
+    listening = false;
+    button.classList.remove('is-listening');
+  }
+
+  button.addEventListener('click', () => {
+    if (listening) { stop(); return; }
+
+    recognizer = new SpeechRecognitionCtor();
+    recognizer.lang = 'en-US';
+    recognizer.interimResults = false;
+    recognizer.continuous = true;
+
+    recognizer.onresult = (event) => {
+      let addition = '';
+      for (let i = event.resultIndex; i < event.results.length; i++) {
+        if (event.results[i].isFinal) addition += event.results[i][0].transcript;
+      }
+      if (!addition.trim()) return;
+      const sep = field.value && !/\s$/.test(field.value) ? ' ' : '';
+      field.value += sep + addition.trim();
+      field.dispatchEvent(new Event('input', { bubbles: true }));
+    };
+    recognizer.onerror = () => stop();
+    recognizer.onend = () => stop();
+
+    try {
+      recognizer.start();
+      listening = true;
+      button.classList.add('is-listening');
+    } catch (e) { stop(); }
+  });
+}
+
 function showToast(message, options) {
   options = options || {};
   const duration = options.duration || 2600;
@@ -986,6 +1137,8 @@ if (typeof document !== 'undefined') {
 
     '<symbol id="icon-home" viewBox="0 0 24 24"><path d="M4 11.5L12 4l8 7.5"/><path d="M6 10v9.5c0 .8.7 1.5 1.5 1.5h9c.8 0 1.5-.7 1.5-1.5V10"/><path d="M9.5 21v-5.5c0-.55.45-1 1-1h3c.55 0 1 .45 1 1V21"/></symbol>' +
 
+    '<symbol id="icon-mic" viewBox="0 0 24 24"><path d="M12 15a3.5 3.5 0 0 0 3.5-3.5V6a3.5 3.5 0 0 0-7 0v5.5A3.5 3.5 0 0 0 12 15z"/><path d="M6 11.5a6 6 0 0 0 12 0"/><line x1="12" y1="17.5" x2="12" y2="21"/><line x1="8.5" y1="21" x2="15.5" y2="21"/></symbol>' +
+
     '<symbol id="icon-terminal" viewBox="0 0 24 24"><rect x="3" y="4.5" width="18" height="15" rx="2"/><path d="M7 9.3l3.3 2.7-3.3 2.7"/><line x1="12" y1="14.7" x2="16.5" y2="14.7"/></symbol>' +
 
     '<symbol id="icon-book" viewBox="0 0 24 24"><path d="M12 6c-1.9-1.4-4.2-2-6.8-2-.7 0-1.2.6-1.2 1.2v11.6c0 .7.5 1.2 1.2 1.2 2.6 0 4.9.6 6.8 2 1.9-1.4 4.2-2 6.8-2 .7 0 1.2-.5 1.2-1.2V5.2c0-.7-.5-1.2-1.2-1.2-2.6 0-4.9.6-6.8 2z"/><line x1="12" y1="6" x2="12" y2="19"/></symbol>' +
@@ -1064,5 +1217,47 @@ if (typeof document !== 'undefined') {
     document.addEventListener('DOMContentLoaded', initJumpNavScrollSpy);
   } else {
     initJumpNavScrollSpy();
+  }
+})();
+
+// ---------------------------------------------------------------------------
+// OFFLINE BANNER -- added 2026-08-18 (item #5). Distinct from the
+// sync-pending indicator (sync.js's th-sync-pending-change event), which
+// only ever signals "this device has local edits it hasn't successfully
+// pushed yet" -- it says nothing about whether the device currently has
+// a network connection at all. This is the connectivity signal itself,
+// which matters a lot for an app used at job sites with spotty signal.
+// ---------------------------------------------------------------------------
+(function () {
+  if (typeof document === 'undefined' || typeof navigator === 'undefined') return;
+
+  let banner = null;
+  function ensureBanner() {
+    if (banner) return banner;
+    banner = document.createElement('div');
+    banner.className = 'th-offline-banner';
+    banner.setAttribute('role', 'status');
+    banner.innerHTML = '<svg class="th-icon" aria-hidden="true"><use href="#icon-signal" xlink:href="#icon-signal"></use></svg><span>You\'re offline \u2014 changes will sync once you\'re back online.</span>';
+    document.body.appendChild(banner);
+    return banner;
+  }
+
+  function updateOfflineState() {
+    const offline = !navigator.onLine;
+    if (offline) {
+      ensureBanner().classList.add('is-shown');
+      document.body.classList.add('th-is-offline');
+    } else if (banner) {
+      banner.classList.remove('is-shown');
+      document.body.classList.remove('th-is-offline');
+    }
+  }
+
+  window.addEventListener('online', updateOfflineState);
+  window.addEventListener('offline', updateOfflineState);
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', updateOfflineState);
+  } else {
+    updateOfflineState();
   }
 })();
