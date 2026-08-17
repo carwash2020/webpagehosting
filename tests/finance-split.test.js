@@ -123,12 +123,17 @@ test('job-detail.html\'s Expenses link points at finance.html, not the old job-t
   assert.doesNotMatch(src, /job-tracker\.html[^']*#expenses/);
 });
 
-test('finance.html loads the shared data layer before tools-common.js, matching every other page that needs it', () => {
+test('finance.html loads the shared data layer before the tool-suite shared scripts, matching every other page that needs it', () => {
   const src = fs.readFileSync(FINANCE_PATH, 'utf8');
   const dataLayerPos = src.indexOf('data-layer.js');
-  const toolsCommonPos = src.indexOf('tools-common.js');
-  assert.ok(dataLayerPos > 0 && toolsCommonPos > 0, 'both scripts should be present');
-  assert.ok(dataLayerPos < toolsCommonPos, 'data-layer.js must load before tools-common.js');
+  assert.ok(dataLayerPos > 0, 'data-layer.js should be present');
+  // tools-common.js was split into 4 files in a later push (structural
+  // item #42) -- data-layer.js must load before every one of them.
+  for (const name of ['tools-effects.js', 'tools-dialogs.js', 'tools-media-sharing.js', 'tools-nav-pwa.js']) {
+    const pos = src.indexOf(name);
+    assert.ok(pos > 0, name + ' should be present');
+    assert.ok(dataLayerPos < pos, 'data-layer.js must load before ' + name);
+  }
 });
 
 test('finance.html\'s Content-Security-Policy exactly matches job-tracker.html\'s (needed for the CDN script and Supabase receipt images that moved here)', () => {
@@ -280,4 +285,121 @@ test('every function referenced in PR_SEED_MIGRATIONS is actually defined somewh
   const names = [...new Set(arrayMatch[1].match(/\b\w+\b/g))];
   const undefinedFns = names.filter(name => !new RegExp('function ' + name + '\\(').test(src));
   assert.deepEqual(undefinedFns, []);
+});
+
+// Push 9 (2026-08-20, structural item #42): splitting tools-common.js
+// (1,447 lines mixing dialogs/media/nav/PWA concerns together) into 4
+// focused files. Verified lossless before any of the 4 files were
+// touched -- concatenating them in order reproduced a byte-for-byte
+// exact copy of the original file. These tests guard against the real
+// bugs found and fixed while wiring the split in: a stale reference to
+// the retired filename in the service worker's precache list, which
+// would have broken cache.addAll() ATOMICALLY (failing the entire
+// precache, not just that one file, since addAll rejects if any single
+// URL in the list 404s) -- and the consistency checker's own hardcoded
+// filename list, which would have silently stopped tracking real files.
+
+test('tools-common.js no longer exists -- it was fully replaced, not left behind as dead weight', () => {
+  assert.equal(fs.existsSync(path.join(__dirname, '..', 'tools', 'tools-common.js')), false);
+});
+
+test('all 4 files that replaced it exist and each is syntactically valid on its own', () => {
+  const { execFileSync } = require('node:child_process');
+  for (const name of ['tools-effects.js', 'tools-dialogs.js', 'tools-media-sharing.js', 'tools-nav-pwa.js']) {
+    const p = path.join(__dirname, '..', 'tools', name);
+    assert.ok(fs.existsSync(p), name + ' should exist');
+    assert.doesNotThrow(() => execFileSync('node', ['--check', p]), name + ' should be valid JS on its own');
+  }
+});
+
+test('every one of the 15 pages that used to load tools-common.js now loads all 4 replacement files in the correct order', () => {
+  const pages = [
+    'calendar.html', 'client-detail.html', 'contract-generator.html', 'dev-tools.html',
+    'finance.html', 'invoice-generator.html', 'job-detail.html', 'job-tracker.html',
+    'login.html', 'parts-reference.html', 'reset-password.html', 'review-request.html',
+    'route-planner.html', 'settings.html', 'workspace.html',
+  ];
+  const order = ['tools-effects.js', 'tools-dialogs.js', 'tools-media-sharing.js', 'tools-nav-pwa.js'];
+  for (const page of pages) {
+    const src = fs.readFileSync(path.join(__dirname, '..', 'tools', page), 'utf8');
+    assert.doesNotMatch(src, /tools-common\.js/, page + ' should not reference the retired file');
+    let lastPos = -1;
+    for (const name of order) {
+      const pos = src.indexOf(name);
+      assert.ok(pos > lastPos, page + ': ' + name + ' should appear, in order, after the previous replacement file');
+      lastPos = pos;
+    }
+  }
+});
+
+test('the service worker\'s offline precache list references the 4 replacement files and data-layer.js, not the retired tools-common.js', () => {
+  const src = fs.readFileSync(path.join(__dirname, '..', 'service-worker.js'), 'utf8');
+  // Scoped to the actual PRECACHE_URLS array, not the whole file -- an
+  // explanatory comment elsewhere in this file legitimately mentions
+  // "tools-common.js" while describing why this fix was needed, which
+  // is valuable documentation, not a lingering bug. Only a real entry
+  // in the array itself would actually break cache.addAll().
+  const arrayMatch = src.match(/const PRECACHE_URLS = \[([\s\S]*?)\n\];/);
+  assert.ok(arrayMatch, 'PRECACHE_URLS array not found');
+  assert.doesNotMatch(arrayMatch[1], /'\/tools\/tools-common\.js'/, 'precache list itself should not contain an actual entry for the retired file (an explanatory comment mentioning it by name elsewhere in the array is fine)');
+  for (const name of ['tools-effects.js', 'tools-dialogs.js', 'tools-media-sharing.js', 'tools-nav-pwa.js', 'data-layer.js']) {
+    assert.match(arrayMatch[1], new RegExp("'/tools/" + name.replace('.', '\\.') + "'"), name + ' should be in the precache list');
+  }
+});
+
+test('the consistency checker tracks the 4 replacement files for version-freshness, not the retired tools-common.js', () => {
+  const src = fs.readFileSync(path.join(__dirname, '..', 'scripts', 'check-consistency.js'), 'utf8');
+  const versionedMatch = src.match(/const VERSIONED_SCRIPTS = \[([^\]]*)\]/);
+  assert.ok(versionedMatch, 'VERSIONED_SCRIPTS not found');
+  assert.doesNotMatch(versionedMatch[1], /tools-common\.js/);
+  for (const name of ['tools-effects.js', 'tools-dialogs.js', 'tools-media-sharing.js', 'tools-nav-pwa.js']) {
+    assert.match(versionedMatch[1], new RegExp("'" + name.replace('.', '\\.') + "'"));
+  }
+});
+
+test('the 4 replacement files, concatenated in their original split order, still contain every function the original file had', () => {
+  // Doesn't re-verify the byte-for-byte reassembly (that was a one-time
+  // check done before any headers or fixes were added) -- verifies the
+  // more durable property instead: every function this app actually
+  // depends on (money, escapeHtml, showToast, showConfirm, etc.) is
+  // still defined SOMEWHERE across the 4 files.
+  const names = ['tools-effects.js', 'tools-dialogs.js', 'tools-media-sharing.js', 'tools-nav-pwa.js'];
+  const combined = names.map(n => fs.readFileSync(path.join(__dirname, '..', 'tools', n), 'utf8')).join('\n');
+  const mustExist = [
+    'celebrateCompletion', 'personDot', 'toggleIconSearch', 'animateRowExit',
+    'ensureDialogModalExists', 'money', 'escapeHtml', 'debouncedCall', 'showAlert', 'showConfirm',
+    'wireSearchClear', 'attachLongPress', 'showQuickActionSheet', 'openPhotoLightbox',
+    'voiceDictationSupported', 'attachVoiceDictation', 'showToast', 'dismissToast',
+    'canShareFiles', 'logClientError', 'attachSwipeToDismiss', 'initSwipeToDismissModals',
+    'loadDensityPreference', 'applyDensityPreference', 'toggleDensityPreference',
+  ];
+  const missing = mustExist.filter(name => !new RegExp('function ' + name + '\\(').test(combined));
+  assert.deepEqual(missing, []);
+});
+
+// Push 9 continued: a real, live bug found while doing the final sweep
+// for stray references to the retired tools-common.js -- JT_TAB_ORDER
+// (used by the swipe-between-tabs gesture) still listed all 7 of Job
+// Tracker's ORIGINAL tabs, 4 of which moved to finance.html back in
+// Push 4. Swiping left on the Jobs tab was silently setting the URL
+// hash to #cost (a tab that no longer exists on this page), which on
+// the next reload triggered Push 4's own redirect and bounced the
+// person to Finance with no warning. Caught by searching for the
+// removed tab names as literal DATA, not just as function calls --
+// Push 4's own exhaustive scan only checked for calls to moved
+// functions and missed this entirely.
+
+test('JT_TAB_ORDER only lists tabs that actually still exist on job-tracker.html', () => {
+  const src = fs.readFileSync(JOB_TRACKER_PATH, 'utf8');
+  const m = src.match(/const JT_TAB_ORDER = \[([^\]]*)\]/);
+  assert.ok(m, 'JT_TAB_ORDER not found');
+  const tabs = m[1].match(/'(\w+)'/g).map(s => s.replace(/'/g, ''));
+  assert.deepEqual(tabs, ['jobs', 'contacts', 'notes']);
+  // Belt and suspenders: also confirm none of the moved tab names
+  // appear anywhere in the array, not just that the array equals the
+  // expected value -- catches a future re-introduction even if someone
+  // reorders or adds alongside the correct 3.
+  for (const removed of ['cost', 'profitability', 'income', 'expenses']) {
+    assert.ok(!tabs.includes(removed), removed + ' should not be in JT_TAB_ORDER -- it moved to finance.html');
+  }
 });

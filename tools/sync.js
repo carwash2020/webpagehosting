@@ -69,7 +69,7 @@ const SYNC_DATA_KEYS = [
   // pushes, so every entry only ever lived on whichever single device
   // it was typed into.
   'th_parts_reference_units',
-  // Client-side error log from tools-common.js. Small and naturally
+  // Client-side error log from tools-media-sharing.js. Small and naturally
   // self-capping (see mergeClientErrorLog below), so this doesn't risk
   // repeating the payload-size lesson from adding the Wiki data above.
   'th_client_errors',
@@ -204,12 +204,12 @@ function mergePartsReferenceUnits(localArr, remoteArr) {
   return Array.from(byId.values());
 }
 
-// Each device caps its OWN error log at 20 entries (see tools-common.js)
+// Each device caps its OWN error log at 20 entries (see tools-media-sharing.js)
 // before it ever reaches here -- but merging two already-capped-at-20
 // lists together can produce up to 40, so this re-caps the COMBINED
 // result too, keeping only the 20 most recent overall rather than
 // letting the list grow every time two devices sync. 20 is duplicated
-// here rather than shared with tools-common.js's CLIENT_ERROR_LOG_MAX
+// here rather than shared with tools-media-sharing.js's CLIENT_ERROR_LOG_MAX
 // constant -- top-level const/let in one <script> tag isn't visible to
 // a different <script> tag, only var/function declarations are, so
 // there's no way to reference it directly. Keep both in sync by hand

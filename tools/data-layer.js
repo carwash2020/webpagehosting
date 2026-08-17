@@ -12,8 +12,10 @@
 // do today, and can be migrated onto it one at a time rather than in one
 // risky sweep.
 //
-// Loaded BEFORE tools-common.js on every page (see the <script> order in each
-// page's <head>), so anything in tools-common.js may safely depend on it.
+// Loaded BEFORE the shared tools-effects.js/tools-dialogs.js/
+// tools-media-sharing.js/tools-nav-pwa.js files on every page (see the
+// <script> order in each page's <head>), so anything in those files may
+// safely depend on it.
 // ---------------------------------------------------------------------------
 
 // Canonical key names. Pages currently hardcode these strings in ~40 places;

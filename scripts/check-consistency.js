@@ -96,7 +96,11 @@ function ensureFullHistory() {
 
 function checkVersionFreshness(problems) {
   if (!ensureFullHistory()) return; // see the long comment above -- this check cannot be trusted here
-  const VERSIONED_SCRIPTS = ['tools-common.js', 'sync.js', 'auth.js', 'push-notifications.js'];
+  // 2026-08-20: tools-common.js (1,447 lines, mixing dialogs/media/nav/
+  // PWA concerns together) was split into 4 focused files -- updated
+  // here so this check keeps tracking real files instead of one that
+  // no longer exists.
+  const VERSIONED_SCRIPTS = ['tools-effects.js', 'tools-dialogs.js', 'tools-media-sharing.js', 'tools-nav-pwa.js', 'sync.js', 'auth.js', 'push-notifications.js'];
   const files = fs.readdirSync(TOOLS_DIR).filter(f => f.endsWith('.html'));
 
   for (const script of VERSIONED_SCRIPTS) {
@@ -180,7 +184,7 @@ function main() {
     // again. Each script is optional per-page (not every tool loads all
     // three), but whichever ones a page DOES load must carry a matching
     // ?v= version, and that version must match every other page's.
-    ['tools-common.js', 'sync.js', 'auth.js'].forEach(script => {
+    ['tools-effects.js', 'tools-dialogs.js', 'tools-media-sharing.js', 'tools-nav-pwa.js', 'sync.js', 'auth.js'].forEach(script => {
       const re = new RegExp(`${script.replace('.', '\\.')}(\\?v=(\\d+))?`);
       const m = html.match(re);
       if (!m) return; // page doesn't load this script at all -- fine

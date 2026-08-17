@@ -28,7 +28,10 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.112.3/dist/umd/supabase.js" integrity="sha384-qafw21c/iciq0VXsi9FzkfoQv5I/V0iqE4lSNcKXPnW9/UTJLnv5CcN4FHxVLnKg" crossorigin="anonymous" defer></script>
 <script src="/tools/sync.js?v=202608161700" defer></script>
 <script src="/tools/data-layer.js?v=202608200900" defer></script>
-<script src="/tools/tools-common.js?v=202608191700" defer></script>
+<script src="/tools/tools-effects.js?v=202608201400" defer></script>
+<script src="/tools/tools-dialogs.js?v=202608201400" defer></script>
+<script src="/tools/tools-media-sharing.js?v=202608201400" defer></script>
+<script src="/tools/tools-nav-pwa.js?v=202608201400" defer></script>
 <style>
   body { padding: 90px 20px 60px; max-width: 1080px; margin: 0 auto; }
   .tool-title { font-family:'Oswald',sans-serif; font-weight:700; font-size:28px; color:var(--white); margin-bottom:6px; }
@@ -436,7 +439,7 @@
   }
 
 
-  // personDot() now lives in tools-common.js (shared across all 4 tool
+  // personDot() now lives in tools-effects.js (shared across all 4 tool
   // pages that use it) -- see that file for details. Call it with the
   // "Last edited by" label to match this page's original tooltip text.
 
@@ -1568,13 +1571,14 @@
   }
 
   // ---------- Init ----------
-  // sync.js/tools-common.js load with `defer`, which only affects scripts
-  // with a `src` -- it has no effect on this inline block, which the
-  // browser runs immediately at parse time regardless. Waiting for
+  // sync.js and the shared tools-*.js files all load with `defer`, which
+  // only affects scripts with a `src` -- it has no effect on this inline
+  // block, which the browser runs immediately at parse time regardless.
+  // Waiting for
   // DOMContentLoaded (which fires only after deferred scripts finish)
   // guarantees initSyncOnLoad() and friends actually exist by the time
   // we call them here.
-  const JT_TAB_ORDER = ['jobs', 'cost', 'profitability', 'income', 'expenses', 'contacts', 'notes'];
+  const JT_TAB_ORDER = ['jobs', 'contacts', 'notes']; // cost/profitability/income/expenses moved to finance.html in Push 4 -- bug fix (2026-08-20): this still listed all 7 original tabs, so swiping left on Jobs silently set the URL hash to #cost (a tab that no longer exists here), which on the next reload triggered the redirect to finance.html with no warning
   (function setupJobTrackerSwipe() {
     let touchStartX = 0, touchStartY = 0, touchStartTime = 0, startedInExcluded = false;
     document.body.addEventListener('touchstart', (e) => {
