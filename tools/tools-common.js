@@ -1261,3 +1261,88 @@ if (typeof document !== 'undefined') {
     updateOfflineState();
   }
 })();
+
+// ---------------------------------------------------------------------------
+// PWA INSTALL PROMPT -- added 2026-08-18 (item #3). Two genuinely
+// different paths, not one feature with a gap:
+//
+// - Chrome/Android etc. fire a real `beforeinstallprompt` event this
+//   code can capture and trigger programmatically on tap.
+// - iOS Safari NEVER fires that event -- Apple has never implemented
+//   it, on purpose, as part of keeping the install decision manual.
+//   Since this app's primary audience is confirmed iPhone users, only
+//   building the Android path would silently leave the actual target
+//   audience with nothing. iOS gets its own banner with the real manual
+//   steps (Share -> Add to Home Screen) instead.
+//
+// Neither path shows anything if already running installed
+// (display-mode: standalone), and both remember a dismissal
+// permanently so this never nags someone who said no once.
+// ---------------------------------------------------------------------------
+(function () {
+  if (typeof document === 'undefined' || typeof navigator === 'undefined') return;
+  const DISMISS_KEY = 'th_install_prompt_dismissed';
+
+  function alreadyInstalled() {
+    return (window.matchMedia && window.matchMedia('(display-mode: standalone)').matches) || navigator.standalone === true;
+  }
+  function wasDismissed() {
+    try { return localStorage.getItem(DISMISS_KEY) === '1'; } catch (e) { return false; }
+  }
+  function dismiss(banner) {
+    try { localStorage.setItem(DISMISS_KEY, '1'); } catch (e) { /* ignore */ }
+    banner.classList.remove('is-shown');
+    setTimeout(() => banner.remove(), 250);
+  }
+
+  function isIOS() {
+    return /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+  }
+  function isSafari() {
+    return /^((?!chrome|android|crios|fxios).)*safari/i.test(navigator.userAgent);
+  }
+
+  function showBanner(message, actionLabel, onAction) {
+    const banner = document.createElement('div');
+    banner.className = 'th-install-banner';
+    banner.innerHTML =
+      '<span>' + message + '</span>' +
+      '<span class="th-install-actions">' +
+        (actionLabel ? '<button class="th-install-action">' + actionLabel + '</button>' : '') +
+        '<button class="th-install-dismiss" aria-label="Dismiss">&times;</button>' +
+      '</span>';
+    document.body.appendChild(banner);
+    requestAnimationFrame(() => banner.classList.add('is-shown'));
+    banner.querySelector('.th-install-dismiss').addEventListener('click', () => dismiss(banner));
+    if (actionLabel) {
+      banner.querySelector('.th-install-action').addEventListener('click', () => {
+        onAction();
+        dismiss(banner);
+      });
+    }
+  }
+
+  function init() {
+    if (alreadyInstalled() || wasDismissed()) return;
+
+    if (isIOS() && isSafari()) {
+      // No programmatic prompt exists here -- this IS the feature for
+      // this platform, not a fallback for a missing one.
+      showBanner('Add Triple H to your Home Screen: tap Share, then "Add to Home Screen."', null, null);
+      return;
+    }
+
+    window.addEventListener('beforeinstallprompt', (e) => {
+      e.preventDefault();
+      showBanner('Add Triple H to your Home Screen for the full app experience.', 'Install', () => {
+        e.prompt();
+      });
+    });
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', init);
+  } else {
+    init();
+  }
+})();

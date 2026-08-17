@@ -24,10 +24,10 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="/styles.css?v=202608181400">
+<link rel="stylesheet" href="/styles.css?v=202608182000">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.112.3/dist/umd/supabase.js" integrity="sha384-qafw21c/iciq0VXsi9FzkfoQv5I/V0iqE4lSNcKXPnW9/UTJLnv5CcN4FHxVLnKg" crossorigin="anonymous" defer></script>
 <script src="/tools/sync.js?v=202608161700" defer></script>
-<script src="/tools/tools-common.js?v=202608181400" defer></script>
+<script src="/tools/tools-common.js?v=202608182000" defer></script>
 <style>
   body { padding: 90px 20px 60px; max-width: 1080px; margin: 0 auto; }
   .tool-title { font-family:'Oswald',sans-serif; font-weight:700; font-size:28px; color:var(--white); margin-bottom:6px; }
@@ -75,6 +75,14 @@
   body.is-compact-density .job-card-swipe-inner { padding: 10px 14px; }
   body.is-compact-density .job-card { margin-bottom: 6px; }
   body.is-compact-density .job-card-notes { display: none; }
+  .job-bulk-action-bar {
+    display: flex; align-items: center; justify-content: space-between; gap: 12px;
+    background: var(--bg-panel-2); border: 1px solid var(--orange-tint-border); border-radius: 10px;
+    padding: 10px 14px; margin: 10px 0 16px; font-size: 13px; color: var(--white);
+  }
+  .job-bulk-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+  .job-card-select { display: flex; align-items: center; margin-bottom: 10px; cursor: pointer; }
+  .job-card-select input { width: 20px; height: 20px; accent-color: var(--orange); cursor: pointer; }
   .job-card-top { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; margin-bottom: 8px; }
   .job-card-title { font-family:'Oswald',sans-serif; font-size: 16px; color: var(--white); margin: 0; }
   .job-card-title.is-done-text { text-decoration: line-through; }
@@ -291,7 +299,18 @@
       <button class="icon-search-toggle" onclick="toggleIconSearch('jobSearchWrap')" aria-label="Search jobs" title="Search jobs"><svg class="th-icon" aria-hidden="true"><use href="#icon-search" xlink:href="#icon-search"></use></svg></button>
       <input type="text" id="jobSearch" class="icon-search-input" placeholder="Search jobs by title or client..." oninput="renderJobs()">
     </div>
+    <button class="small-btn" id="jobSelectModeBtn" onclick="toggleJobSelectionMode()">Select</button>
     <button class="small-btn" data-density-toggle onclick="toggleDensityPreference()" aria-pressed="false">Compact view</button>
+  </div>
+
+  <div id="jobBulkActionBar" class="job-bulk-action-bar" style="display:none;">
+    <span id="jobBulkCount">0 selected</span>
+    <span class="job-bulk-actions">
+      <button class="small-btn" onclick="bulkSelectAllJobs()">Select All</button>
+      <button class="small-btn" onclick="bulkMarkJobsDone()">Mark Done</button>
+      <button class="small-btn danger" onclick="bulkDeleteJobs()">Delete</button>
+      <button class="small-btn" onclick="toggleJobSelectionMode()">Cancel</button>
+    </span>
   </div>
 
   <div class="controls-row">
@@ -695,6 +714,25 @@
     catch (e) { return []; }
   }
 
+  // Shared by renderJobProfitability() below and the job-card margin
+  // badge (item #1) -- extracted so both surfaces can never quietly
+  // disagree about what "profit" means for a given job.
+  function computeJobMargin(job, invoices, expenses, manualIncome) {
+    const linkedInvoices = invoices.filter(inv => String(inv.jobRefId) === String(job.id));
+    const linkedManualIncome = manualIncome.filter(e => String(e.jobRefId) === String(job.id));
+    const revenue = linkedInvoices.reduce((sum, inv) => sum + (inv.total || 0), 0)
+                  + linkedManualIncome.reduce((sum, e) => sum + (e.amount || 0), 0);
+    const hasInvoice = linkedInvoices.length > 0 || linkedManualIncome.length > 0;
+
+    const linkedExpenses = expenses.filter(e => String(e.jobRefId) === String(job.id));
+    const cost = linkedExpenses.reduce((sum, e) => sum + (e.amount || 0), 0);
+    const hasCost = linkedExpenses.length > 0;
+
+    const margin = revenue - cost;
+    const marginPct = revenue > 0 ? (margin / revenue * 100) : 0;
+    return { revenue, cost, hasInvoice, hasCost, margin, marginPct };
+  }
+
   function renderJobProfitability() {
     const jobs = loadJobs().filter(j => j.status === 'done');
     const invoices = loadInvoicesForProfitability();
@@ -709,20 +747,10 @@
     }
 
     const rows = [...jobs].sort((a, b) => new Date(b.date || 0) - new Date(a.date || 0)).map(job => {
-      const linkedInvoices = invoices.filter(inv => String(inv.jobRefId) === String(job.id));
-      const linkedManualIncome = manualIncome.filter(e => String(e.jobRefId) === String(job.id));
-      const revenue = linkedInvoices.reduce((sum, inv) => sum + (inv.total || 0), 0)
-                    + linkedManualIncome.reduce((sum, e) => sum + (e.amount || 0), 0);
-      const hasInvoice = linkedInvoices.length > 0 || linkedManualIncome.length > 0;
-
-      const linkedExpenses = expenses.filter(e => String(e.jobRefId) === String(job.id));
-      const cost = linkedExpenses.reduce((sum, e) => sum + (e.amount || 0), 0);
-      const hasCost = linkedExpenses.length > 0;
+      const { revenue, cost, hasInvoice, hasCost, margin, marginPct } = computeJobMargin(job, invoices, expenses, manualIncome);
 
       let marginHtml = '<span style="color:var(--text-dim);">&mdash;</span>';
       if (hasInvoice) {
-        const margin = revenue - cost;
-        const marginPct = revenue > 0 ? (margin / revenue * 100) : 0;
         const marginColor = margin >= 0 ? '#4caf50' : '#e05252';
         marginHtml = `<strong style="color:${marginColor};">${money(margin)}</strong> <span style="color:var(--text-dim); font-size:12px;">(${marginPct.toFixed(0)}%)</span>`;
       }
@@ -797,7 +825,18 @@
     renderJobs();
     populateJobRefOptions();
     populateIncomeJobRefOptions();
-    showToast(wasEditing ? 'Job updated.' : 'Job added.');
+
+    // Item #5 (2026-08-18): a quiet nudge when a client name was entered
+    // but neither a phone nor an address was -- folded into the existing
+    // save toast rather than a second, separate interruption. Only for
+    // a genuinely new job, not every edit of an existing one (which
+    // would get repetitive fast if someone's deliberately leaving a
+    // field blank on purpose).
+    if (!wasEditing && fields.client && !fields.phone && !fields.address) {
+      showToast('Job added \u2014 no phone or address on file for ' + fields.client + ' yet.', { duration: 4200 });
+    } else {
+      showToast(wasEditing ? 'Job updated.' : 'Job added.');
+    }
   }
 
   function editJob(id) {
@@ -1033,6 +1072,67 @@
   // wrong.
   let jobsListRenderedOnce = false;
 
+  // Item #4 (2026-08-18): bulk actions. A checkbox is an <input>, which
+  // both attachLongPress and the swipe-reveal system already exclude
+  // from their own pointerdown handling (they skip anything matching
+  // "button, a, select, input, textarea") -- so selection checkboxes
+  // never fight either of those existing gestures, no extra guarding
+  // needed here.
+  let jobSelectionMode = false;
+  let selectedJobIds = new Set();
+
+  function toggleJobSelectionMode() {
+    jobSelectionMode = !jobSelectionMode;
+    if (!jobSelectionMode) selectedJobIds.clear();
+    document.getElementById('jobSelectModeBtn').classList.toggle('is-active', jobSelectionMode);
+    document.getElementById('jobBulkActionBar').style.display = jobSelectionMode ? '' : 'none';
+    updateJobBulkCount();
+    renderJobs();
+  }
+
+  function toggleJobSelected(jobId, checked) {
+    if (checked) selectedJobIds.add(jobId); else selectedJobIds.delete(jobId);
+    updateJobBulkCount();
+  }
+
+  function updateJobBulkCount() {
+    const el = document.getElementById('jobBulkCount');
+    if (el) el.textContent = selectedJobIds.size + ' selected';
+  }
+
+  function bulkSelectAllJobs() {
+    // Selects every job currently visible in the list (respecting
+    // whatever search/status filter is active), not every job that
+    // exists -- selecting something you can't currently see would be
+    // confusing.
+    document.querySelectorAll('#jobsList .job-card').forEach(card => {
+      selectedJobIds.add(Number(card.dataset.jobId));
+    });
+    updateJobBulkCount();
+    renderJobs();
+  }
+
+  async function bulkMarkJobsDone() {
+    if (selectedJobIds.size === 0) { showToast('Nothing selected.', { type: 'error' }); return; }
+    const jobs = loadJobs();
+    jobs.forEach(j => { if (selectedJobIds.has(j.id) && j.status !== 'done') j.status = 'done'; });
+    saveJobs(jobs);
+    const count = selectedJobIds.size;
+    toggleJobSelectionMode();
+    showToast(count + ' job' + (count === 1 ? '' : 's') + ' marked done.');
+  }
+
+  async function bulkDeleteJobs() {
+    if (selectedJobIds.size === 0) { showToast('Nothing selected.', { type: 'error' }); return; }
+    const count = selectedJobIds.size;
+    const confirmed = await showConfirm('Delete ' + count + ' job' + (count === 1 ? '' : 's') + '? This can\'t be undone.', { confirmText: 'Delete', danger: true });
+    if (!confirmed) return;
+    const jobs = loadJobs().filter(j => !selectedJobIds.has(j.id));
+    saveJobs(jobs);
+    toggleJobSelectionMode();
+    showToast(count + ' job' + (count === 1 ? '' : 's') + ' deleted.');
+  }
+
   function setStatusFilter(filter) {
     currentStatusFilter = filter;
     document.querySelectorAll('#statusFilterGroup .sort-btn').forEach(b => b.classList.toggle('is-active', b.dataset.statusFilter === filter));
@@ -1083,6 +1183,13 @@
     }
 
     const container = document.getElementById('jobsList');
+    // Item #1 (2026-08-18): loaded once per render rather than per-card
+    // -- computeJobMargin() itself is cheap, but there's no reason to
+    // re-parse these three localStorage keys once per job card when one
+    // shared read covers the whole list.
+    const marginInvoices = loadInvoicesForProfitability();
+    const marginExpenses = loadExpenses();
+    const marginManualIncome = loadIncomeEntries().filter(e => e.origin !== 'invoice');
     if (jobs.length === 0) {
       const totalJobsEverAdded = loadJobs().length;
       if (searchTerm) {
@@ -1109,16 +1216,22 @@
     jobsListRenderedOnce = true;
     container.innerHTML = jobs.map(job => {
       const isDone = job.status === 'done';
+      const margin = isDone ? computeJobMargin(job, marginInvoices, marginExpenses, marginManualIncome) : null;
+      const marginBadgeHtml = (margin && margin.hasInvoice)
+        ? `<span class="badge" style="background:${margin.margin >= 0 ? 'rgba(76,175,80,0.15)' : 'rgba(224,82,82,0.15)'}; color:${margin.margin >= 0 ? '#6fcf97' : '#e0807a'};">${margin.margin >= 0 ? '+' : ''}${money(margin.margin)}</span>`
+        : '';
       const dateDisplay = job.date ? new Date(job.date + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : 'No date set';
       return `
         <div class="job-card priority-${job.priority} ${isDone ? 'is-done' : ''} ${job.id === justAddedJobId ? 'list-row-enter' : ''}" data-job-id="${job.id}">
           ${!isDone ? `<div class="job-card-swipe-action"><button class="small-btn" onclick="setJobStatus(${job.id}, 'done')">Done</button></div>` : ''}
           <div class="job-card-swipe-inner">
+          ${jobSelectionMode ? `<label class="job-card-select"><input type="checkbox" ${selectedJobIds.has(job.id) ? 'checked' : ''} onchange="toggleJobSelected(${job.id}, this.checked)"></label>` : ''}
           <div class="job-card-top">
             <h4 class="job-card-title ${isDone ? 'is-done-text' : ''}">${personDot(job.lastEditedBy, 'Last edited by')}${escapeHtml(job.title)}</h4>
             <div class="job-badges">
               <span class="badge badge-${job.priority}">${job.priority}</span>
               <span class="badge badge-status status-${job.status}">${STATUS_LABEL[job.status]}</span>
+              ${marginBadgeHtml}
               ${warrantyBadgeHtml(job)}
             </div>
           </div>

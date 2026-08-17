@@ -2388,3 +2388,57 @@ body.th-is-offline .hub-header, body.th-is-offline .tool-header {
 }
 @keyframes micListeningPulse { 0%, 100% { box-shadow: 0 0 0 0 rgba(224,82,82,.5); } 50% { box-shadow: 0 0 0 6px rgba(224,82,82,0); } }
 @media (prefers-reduced-motion: reduce) { .voice-dictation-btn.is-listening { animation: none; } }
+
+/* ---- Item #6: generic print stylesheet for the tool suite ----
+   Distinct from runway-dashboard.html's own bespoke print-only report
+   builder (a purpose-built financial report, different problem). This
+   is the fix for every OTHER tool page: hitting Ctrl+P on Parts
+   Reference, a SOP, or Dev Tools currently printed exactly what was on
+   screen -- dark background, sticky nav, buttons and all. Hides chrome,
+   flips to a light/readable palette, and lets the actual content print.
+   Scoped to .th-tool-page so the public marketing site is unaffected. */
+@media print {
+  body.th-tool-page {
+    background: #fff !important; color: #111 !important;
+  }
+  body.th-tool-page::before { display: none !important; } /* grain texture -- pure ink waste on paper */
+  .hub-header, .tool-header, .jump-nav, .th-bottom-nav,
+  .th-offline-banner, .th-toast-container, .onboarding-card,
+  .photo-lightbox-overlay, .quick-actions-overlay,
+  .primary-btn, .secondary-btn, .small-btn, .help-btn, .dev-info-bubble,
+  .job-card-swipe-action, .icon-search-toggle, .voice-dictation-btn,
+  input[type="file"], .backup-row {
+    display: none !important;
+  }
+  body.th-tool-page .section-block, body.th-tool-page .card,
+  body.th-tool-page .job-card-swipe-inner, body.th-tool-page .form-section,
+  body.th-tool-page .dev-panel {
+    background: #fff !important; border-color: #ccc !important;
+    box-shadow: none !important; color: #111 !important;
+  }
+  body.th-tool-page .text-dim, body.th-tool-page [class*="-dim"] { color: #555 !important; }
+  a { color: #111 !important; text-decoration: underline; }
+}
+
+/* ---- Item #3: PWA install banner ---- */
+.th-install-banner {
+  position: fixed; left: 12px; right: 12px; z-index: 985;
+  bottom: 16px;
+  display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  background: linear-gradient(180deg, var(--bg-panel-3), var(--bg-panel-2));
+  border: 1px solid var(--orange-tint-border); border-radius: 14px;
+  padding: 12px 14px; color: var(--white); font-size: 13px;
+  box-shadow: 0 8px 30px rgba(0,0,0,.5), 0 0 24px -8px var(--orange-tint-glow);
+  transform: translateY(120%);
+  transition: transform .25s cubic-bezier(.2,.8,.2,1);
+}
+body.th-has-bottomnav .th-install-banner { bottom: calc(76px + env(safe-area-inset-bottom, 0px) + 10px); }
+.th-install-banner.is-shown { transform: translateY(0); }
+.th-install-actions { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
+.th-install-action {
+  background: linear-gradient(180deg, var(--orange-light), var(--orange) 60%, var(--orange-dark));
+  color: #1a0d02; border: none; border-radius: 999px; padding: 7px 14px;
+  font-weight: 700; font-size: 12.5px; cursor: pointer;
+}
+.th-install-dismiss { background: none; border: none; color: var(--text-dim); font-size: 18px; line-height: 1; cursor: pointer; padding: 4px; }
+@media (prefers-reduced-motion: reduce) { .th-install-banner { transition: none; } }
