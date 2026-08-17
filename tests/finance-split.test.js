@@ -464,3 +464,49 @@ test('the consistency checker tracks styles-tools.css for version-freshness and 
   const versionedMatch = src.match(/const VERSIONED_SCRIPTS = \[([^\]]*)\]/);
   assert.match(versionedMatch[1], /'styles-tools\.css'/);
 });
+
+// Push 11 (2026-08-20, structural item #23): breadcrumbs for Parts
+// Reference's drill-down navigation, which previously only had a
+// single-step "Back" link at each of its 3 levels with no sense of
+// where you actually are. Investigated a full Dev Tools page split
+// first (item #15) and found the JS functions aren't cleanly separable
+// by the page's own visual categories -- deferred that to a future
+// session with fresh capacity rather than force through the same class
+// of risk Push 4 already proved is real, three major structural pushes
+// deep into one session.
+
+test('Level 2 and Level 3 breadcrumb elements exist alongside the existing back-links, not replacing them', () => {
+  const src = fs.readFileSync(path.join(__dirname, '..', 'tools', 'parts-reference.html'), 'utf8');
+  assert.match(src, /id="prBreadcrumbL2"/);
+  assert.match(src, /id="prBreadcrumbL2Current"/);
+  assert.match(src, /id="prBreadcrumbL3"/);
+  assert.match(src, /id="prBreadcrumbL3Brand"/);
+  assert.match(src, /id="prBreadcrumbL3Current"/);
+  // The single-step back-links must still be there too.
+  const backLinkCount = (src.match(/class="pr-back-link"/g) || []).length;
+  assert.equal(backLinkCount, 2, 'both existing back-links (Level 2 and Level 3) should be untouched');
+});
+
+test('Level 3\'s "All Brands" breadcrumb chains closeTypeDetail() then closeBrandDetail(), since calling closeBrandDetail() alone from Level 3 would leave it visibly stuck open', () => {
+  const src = fs.readFileSync(path.join(__dirname, '..', 'tools', 'parts-reference.html'), 'utf8');
+  assert.match(src, /onclick="closeTypeDetail\(\); closeBrandDetail\(\);"/,
+    'the All Brands link inside Level 3 must close Level 3 before closing Level 2, in that order');
+});
+
+test('renderBrandTypeList (Level 2) and renderBrandDetail (Level 3) both populate their breadcrumb text on every render, so it can never go stale', () => {
+  const src = fs.readFileSync(path.join(__dirname, '..', 'tools', 'parts-reference.html'), 'utf8');
+  const l2Fn = src.match(/function renderBrandTypeList\(\)[\s\S]*?\n  \}\n/);
+  const l3Fn = src.match(/function renderBrandDetail\(\)[\s\S]*?\n  \}\n/);
+  assert.ok(l2Fn, 'renderBrandTypeList not found');
+  assert.ok(l3Fn, 'renderBrandDetail not found');
+  assert.match(l2Fn[0], /getElementById\('prBreadcrumbL2Current'\)\.textContent = activePrBrand/);
+  assert.match(l3Fn[0], /getElementById\('prBreadcrumbL3Brand'\)\.textContent = activePrBrand/);
+  assert.match(l3Fn[0], /getElementById\('prBreadcrumbL3Current'\)\.textContent = activePrDetailType/);
+});
+
+test('the direct-jump shortcut (openUnitDirectly, used by search results) also renders through renderBrandDetail, so its breadcrumb gets populated without a separate fix', () => {
+  const src = fs.readFileSync(path.join(__dirname, '..', 'tools', 'parts-reference.html'), 'utf8');
+  const fn = src.match(/function openUnitDirectly\(unitId\)[\s\S]*?\n  \}\n/);
+  assert.ok(fn, 'openUnitDirectly not found');
+  assert.match(fn[0], /renderBrandDetail\(\)/);
+});
