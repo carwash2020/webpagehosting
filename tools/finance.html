@@ -1,0 +1,932 @@
+<!DOCTYPE html>
+<html lang="en" style="background:#0a0a0a;">
+<head>
+<script src="/tools/auth.js?v=202608162000"></script>
+<script>
+  // Security gate -- redirect to login before this page’s own content
+  // is meaningfully usable. See auth.js for why this exists (a single
+  // shared account keeping randoms out, not a multi-user system).
+  requireAuth();
+</script>
+<link rel="manifest" href="/tools/manifest.json">
+<meta name="theme-color" content="#0a0a0a">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Triple H">
+<link rel="apple-touch-icon" href="/images/apple-touch-icon.png">
+
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="robots" content="noindex, nofollow">
+<title>Finance | Triple H Enterprises (Internal Tool)</title>
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data: https://*.supabase.co; connect-src 'self' https://*.supabase.co wss://*.supabase.co; frame-src 'none'; object-src 'none'; base-uri 'self'; frame-ancestors 'none';">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Anton&family=Oswald:wght@400;500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/styles.css?v=202608191300">
+<script src="/tools/sync.js?v=202608161700" defer></script>
+<script src="/tools/data-layer.js?v=202608200900" defer></script>
+<script src="/tools/tools-common.js?v=202608191700" defer></script>
+<style>
+  .tool-title { font-family:'Oswald',sans-serif; font-weight:700; font-size:28px; color:var(--white); margin-bottom:6px; }
+  .tool-sub { color: var(--text-dim); margin-bottom: 24px; }
+  .results-box { margin-top: 8px; }
+  .result-row { display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid var(--border); font-size: 15px; }
+  .result-row.final { font-weight: 700; font-size: 19px; color: var(--orange-light); border-bottom: none; padding-top: 16px; }
+  .result-row.is-hidden { display: none; }
+  .result-label { color: var(--text-dim); }
+  .result-label.final { color: var(--white); }
+
+  /* --- Expenses tab --- */
+  table { width: 100%; border-collapse: collapse; margin-top: 8px; }
+  th { text-align: left; font-size: 11.5px; color: var(--text-dim); padding: 8px; text-transform: uppercase; border-bottom: 1px solid var(--border); white-space: nowrap; }
+  td { padding: 10px 8px; font-size: 14px; color: var(--white); border-bottom: 1px solid var(--border); }
+  .totals-row-money { display: flex; gap: 24px; margin-top: 16px; padding-top: 16px; border-top: 1px solid var(--border); flex-wrap: wrap; }
+  .totals-row-money div { color: var(--text-dim); font-size: 14px; }
+  .totals-row-money strong { color: var(--orange-light); font-size: 17px; }
+  .btn-row { display: flex; gap: 12px; margin-top: 16px; flex-wrap: wrap; }
+  .mileage-rate-inline { display: flex; align-items: center; gap: 8px; }
+  .mileage-rate-inline label { font-size: 12.5px; color: var(--text-dim); white-space: nowrap; }
+</style>
+</head>
+<body>
+
+<div class="hub-header">
+  <div class="hub-header-left">
+    <img src="/images/logo-signature-orange.webp?v=202608142300" alt="Triple H Enterprises">
+    <span class="hub-title">Finance</span>
+  </div>
+  <div class="hub-header-right">
+    <a href="/tools/job-tracker.html" class="help-btn" aria-label="Back to Job Tracker" title="Back to Job Tracker" style="text-decoration:none; display:inline-flex; align-items:center; justify-content:center;">&#8617;</a>
+  </div>
+</div>
+
+<p class="tool-sub">Cost calculator, job profitability, income, and expenses -- moved out of Job Tracker into its own page (2026-08-20) since these four together had grown into an entire bookkeeping system living inside a job list.</p>
+
+<div class="tab-row">
+  <button class="tab-btn is-active" data-tab="cost">Cost Lookup</button>
+  <button class="tab-btn" data-tab="profitability">Profitability</button>
+  <button class="tab-btn" data-tab="income">Income</button>
+  <button class="tab-btn" data-tab="expenses">Expenses</button>
+</div>
+
+<!-- COST LOOKUP TAB -->
+<div class="tab-panel" id="tab-cost">
+  <div class="form-section">
+    <h3>Job Inputs</h3>
+    <div class="tool-form-row">
+      <div class="form-field"><label>Client Name (optional &mdash; checks your job history)</label><input type="text" id="costClientName" placeholder="Sarah Miller" oninput="checkClientHistory()"></div>
+    </div>
+    <p class="inline-note" id="clientHistoryNote"></p>
+    <div class="tool-form-row">
+      <div class="form-field"><label>Labor hours</label><input type="number" id="hours" value="1" min="0" step="0.25" oninput="calculateCost()"></div>
+      <div class="form-field"><label>Hourly rate ($)</label><input type="number" id="rate" value="75" min="0" step="1" oninput="calculateCost()"></div>
+    </div>
+    <div class="tool-form-row">
+      <div class="form-field"><label>Parts/materials cost ($)</label><input type="number" id="parts" value="0" min="0" step="0.01" oninput="calculateCost()"></div>
+    </div>
+    <div class="checkbox-row">
+      <input type="checkbox" id="firstTimeClient" onchange="calculateCost()">
+      <label for="firstTimeClient">First-time client &mdash; apply discount</label>
+    </div>
+    <div class="tool-form-row" id="discountRow">
+      <div class="form-field" style="max-width:220px;"><label>First-time discount ($)</label><input type="number" id="discount" value="15" min="0" step="1" oninput="calculateCost()"></div>
+    </div>
+  </div>
+
+  <div class="form-section">
+    <h3>Sales Tax <button class="help-btn" onclick="openCardInfo('salesTax')" aria-label="What is this?" title="What is this?">?</button></h3>
+    <div class="tool-form-row">
+      <div class="form-field" style="max-width:220px;"><label>Sales tax rate (%)</label><input type="number" id="taxRate" value="6.75" min="0" step="0.01" onchange="saveTaxSettings(); calculateCost();" oninput="calculateCost()"></div>
+    </div>
+    <div class="checkbox-row">
+      <input type="checkbox" id="taxLabor" checked onchange="saveTaxSettings(); calculateCost();">
+      <label for="taxLabor">Tax labor</label>
+    </div>
+    <div class="checkbox-row">
+      <input type="checkbox" id="taxParts" checked onchange="saveTaxSettings(); calculateCost();">
+      <label for="taxParts">Tax parts/materials</label>
+    </div>
+  </div>
+
+  <div class="form-section">
+    <h3>Results</h3>
+    <div class="results-box">
+      <div class="result-row"><span class="result-label">Labor</span><span id="laborResult">$0.00</span></div>
+      <div class="result-row"><span class="result-label">Parts/materials</span><span id="partsResult">$0.00</span></div>
+      <div class="result-row"><span class="result-label">Subtotal (before tax)</span><span id="subtotalResult">$0.00</span></div>
+      <div class="result-row"><span class="result-label">Sales tax</span><span id="taxResult">$0.00</span></div>
+      <div class="result-row final" id="standardFinalRow"><span class="result-label final">Standard total (with tax)</span><span id="standardResult">$0.00</span></div>
+      <div class="result-row final" id="discountedFinalRow"><span class="result-label final">First-time client price (with tax)</span><span id="discountedResult">$0.00</span></div>
+    </div>
+  </div>
+
+  <div class="form-section">
+    <h3>Price Reference</h3>
+    <p style="color:var(--text-dim); font-size: 13px; margin: -6px 0 12px;">Save common job types here once, then tap one anytime to instantly load its hours/rate back into the calculator above.</p>
+    <div class="price-ref-list" id="priceRefList"></div>
+    <button class="secondary-btn" style="margin-top:14px;" onclick="savePriceReference()">+ Save Current as Reference</button>
+  </div>
+</div>
+
+<!-- PROFITABILITY TAB -->
+<div class="tab-panel" id="tab-profitability">
+  <div class="form-section">
+    <h3>Job Profitability</h3>
+    <p style="color:var(--text-dim); font-size: 13px; margin: -6px 0 12px;">Compares each completed job's linked invoice total against its linked expenses and mileage. Only jobs with an invoice linked via "Link to Job" in the Invoice Generator, and/or expenses linked via the Job Ref field on the Expenses tab, will show real numbers &mdash; anything unlinked shows as &mdash;.</p>
+    <div id="profitabilityList"></div>
+  </div>
+</div>
+
+<!-- INCOME TAB -->
+<div class="tab-panel" id="tab-income">
+  <div class="form-section is-collapsed" id="incomeFormSection">
+    <div class="form-section-header" onclick="toggleFormSection('incomeFormSection')">
+      <h3>Add Entry <button class="help-btn" onclick="event.stopPropagation(); openCardInfo('incomeEntry')" aria-label="What is this?" title="What is this?">?</button></h3>
+      <span class="collapse-chevron">&#9660;</span>
+    </div>
+    <div class="form-section-body">
+    <div class="tool-form-row">
+      <div class="form-field"><label>Date</label><input type="date" id="incomeDate"></div>
+      <div class="form-field"><label>Client / Source</label><input type="text" id="incomeSource" placeholder="Jane Smith, or 'Cash job'"></div>
+      <div class="form-field"><label>Job (optional)</label>
+        <select id="incomeJobRef"><option value="">&mdash; None &mdash;</option></select>
+      </div>
+    </div>
+    <div class="tool-form-row">
+      <div class="form-field"><label>Payment Method</label>
+        <select id="incomePayment">
+          <option value="cash">Cash</option>
+          <option value="card">Card</option>
+          <option value="check">Check</option>
+          <option value="venmo">Venmo</option>
+          <option value="cashapp">Cash App</option>
+          <option value="other">Other</option>
+        </select>
+      </div>
+      <div class="form-field"><label>Description</label><input type="text" id="incomeDesc" placeholder="Deck repair, final payment"></div>
+      <div class="form-field"><label>Amount ($)</label><input type="number" id="incomeAmount" step="0.01" min="0"></div>
+    </div>
+    <div class="edit-mode-note" id="incomeEditNote" style="display:none;"></div>
+    <button class="primary-btn" id="addIncomeEntryBtn" onclick="addIncomeEntry()" style="margin-top:10px;">Add Entry</button>
+    <button class="secondary-btn" id="cancelIncomeEditBtn" style="display:none;" onclick="cancelIncomeEntryEdit()">Cancel</button>
+    </div>
+  </div>
+
+  <div class="form-section">
+    <h3>Log</h3>
+    <div class="table-scroll">
+      <div id="incomeTable"></div>
+    </div>
+    <div class="totals-row-money" id="incomeTotalsRow"></div>
+    <div class="btn-row">
+      <button class="secondary-btn" onclick="exportIncomeCSV()">Export CSV</button>
+      <button class="secondary-btn" onclick="clearAllIncome()">Clear All</button>
+    </div>
+  </div>
+</div>
+
+<!-- EXPENSES TAB -->
+<div class="tab-panel" id="tab-expenses">
+  <div class="form-section is-collapsed" id="expenseFormSection">
+    <div class="form-section-header" onclick="toggleFormSection('expenseFormSection')">
+      <h3>Add Entry</h3>
+      <span class="collapse-chevron">&#9660;</span>
+    </div>
+    <div class="form-section-body">
+    <div class="tool-form-row">
+      <div class="form-field"><label>Date</label><input type="date" id="entryDate"></div>
+      <div class="form-field"><label>Type</label>
+        <select id="entryType"><option value="expense">Expense</option><option value="mileage">Mileage</option></select>
+      </div>
+      <div class="form-field"><label>Vendor / Store</label><input type="text" id="entryVendor" placeholder="Home Depot"></div>
+    </div>
+    <div class="tool-form-row">
+      <div class="form-field"><label>Job (optional)</label>
+        <select id="entryJobRef"><option value="">&mdash; None &mdash;</option></select>
+      </div>
+      <div class="form-field"><label>Payment Method</label>
+        <select id="entryPayment">
+          <option value="cash">Cash</option>
+          <option value="card">Card</option>
+          <option value="check">Check</option>
+          <option value="venmo">Venmo</option>
+          <option value="cashapp">Cash App</option>
+          <option value="other">Other</option>
+        </select>
+      </div>
+      <div class="form-field"><label>Description</label><input type="text" id="entryDesc" placeholder="Parts for the job"></div>
+      <div class="form-field" id="partNumberField"><label>Part Number (if applicable)</label><input type="text" id="entryPartNumber" placeholder="e.g. WPW10321304"></div>
+    </div>
+    <div class="tool-form-row">
+      <div class="form-field" id="amountField"><label>Amount ($)</label><input type="number" id="entryAmount" step="0.01" min="0"></div>
+      <div class="form-field" id="milesField" style="display:none;">
+        <label>Miles <button class="help-btn" onclick="openCardInfo('mileageRate')" aria-label="What is this?" title="What is this?" style="width:18px;height:18px;font-size:11px;">?</button></label>
+        <div class="mileage-rate-inline">
+          <input type="number" id="entryMiles" step="0.1" min="0" style="flex:1;">
+          <label for="mileageRate">at $</label>
+          <input type="number" id="mileageRate" value="0.76" step="0.01" min="0" onchange="saveMileageRate(); renderExpenses();">
+          <label for="mileageRate">/mi</label>
+        </div>
+      </div>
+    </div>
+    <div class="tool-form-row" id="receiptField">
+      <div class="form-field">
+        <label>Receipt Photo (required for expenses)</label>
+        <input type="file" id="entryReceipt" accept="image/*">
+        <div id="receiptPreviewName" class="inline-note"></div>
+      </div>
+    </div>
+    <div class="edit-mode-note" id="expenseEditNote" style="display:none;"></div>
+    <button class="primary-btn" id="addEntryBtn" onclick="addExpense()" style="margin-top:10px;">Add Entry</button>
+    <button class="secondary-btn" id="cancelExpenseEditBtn" style="display:none;" onclick="cancelExpenseEdit()">Cancel</button>
+    </div>
+  </div>
+
+  <div class="form-section">
+    <h3>Log</h3>
+    <div class="table-scroll">
+      <div id="entriesTable"></div>
+    </div>
+    <div class="totals-row-money" id="totalsRowMoney"></div>
+    <div class="btn-row">
+      <button class="secondary-btn" onclick="exportCSV()">Export CSV</button>
+      <button class="secondary-btn" onclick="clearAllExpenses()">Clear All</button>
+    </div>
+  </div>
+</div>
+
+
+<script>
+  const TAB_HASHES = { cost: 'cost', profitability: 'profitability', income: 'income', expenses: 'expenses' };
+
+  function activateTab(tabName) {
+    if (!document.getElementById('tab-' + tabName)) return;
+    document.querySelectorAll('.tab-btn').forEach(b => b.classList.toggle('is-active', b.dataset.tab === tabName));
+    document.querySelectorAll('.tab-panel').forEach(p => p.classList.toggle('is-active', p.id === 'tab-' + tabName));
+    if (tabName === 'expenses') populateJobRefOptions();
+    if (tabName === 'income') populateIncomeJobRefOptions();
+    if (tabName === 'profitability') renderJobProfitability();
+  }
+
+  document.querySelectorAll('.tab-btn[data-tab]').forEach(btn => {
+    btn.addEventListener('click', () => activateTab(btn.dataset.tab));
+  });
+
+  function renderJobProfitability() {
+    const jobs = thRead(TH_KEYS.jobs, []).filter(j => j.status === 'done');
+    const invoices = thRead(TH_KEYS.invoices, []); // this tab doesn't own invoices -- read-only via the shared data layer, comparing against expenses this tab does own
+    const expenses = loadExpenses();
+    const manualIncome = loadIncomeEntries().filter(e => e.origin !== 'invoice'); // invoices are already counted directly below -- this avoids double-counting the ones mirrored into the income log
+    const container = document.getElementById('profitabilityList');
+    if (!container) return;
+
+    if (jobs.length === 0) {
+      container.innerHTML = '<div class="empty-state">Nothing marked complete yet &mdash; finished jobs will show up here.</div>';
+      return;
+    }
+
+    const rows = [...jobs].sort((a, b) => new Date(b.date || 0) - new Date(a.date || 0)).map(job => {
+      const { revenue, cost, hasInvoice, hasCost, margin, marginPct } = thComputeJobMargin(job, invoices, expenses, manualIncome);
+
+      let marginHtml = '<span style="color:var(--text-dim);">&mdash;</span>';
+      if (hasInvoice) {
+        const marginColor = margin >= 0 ? '#4caf50' : '#e05252';
+        marginHtml = `<strong style="color:${marginColor};">${money(margin)}</strong> <span style="color:var(--text-dim); font-size:12px;">(${marginPct.toFixed(0)}%)</span>`;
+      }
+
+      return `
+      <div class="dash-list-item">
+        <div>
+          <div class="dash-list-item-title">${escapeHtml(job.title)}${job.client ? ' &mdash; ' + escapeHtml(job.client) : ''}</div>
+          <div class="dash-list-item-meta">
+            ${job.date ? escapeHtml(job.date) + ' &middot; ' : ''}
+            Revenue: ${hasInvoice ? money(revenue) : '\u2014 (no invoice or income linked)'} &middot;
+            Cost: ${hasCost ? money(cost) : '\u2014 (no expenses linked)'}
+          </div>
+        </div>
+        <div class="dash-list-item-right">${marginHtml}</div>
+      </div>`;
+    }).join('');
+
+    container.innerHTML = rows;
+  }
+
+  function checkClientHistory() {
+    const name = document.getElementById('costClientName').value.trim().toLowerCase();
+    const note = document.getElementById('clientHistoryNote');
+    if (!name) { note.textContent = ''; return; }
+    const priorJobs = thRead(TH_KEYS.jobs, []).filter(j => j.client && j.client.trim().toLowerCase() === name);
+    const isNew = priorJobs.length === 0;
+    document.getElementById('firstTimeClient').checked = isNew;
+    note.textContent = isNew
+      ? 'No prior jobs found for this name — treated as a first-time client (you can still uncheck the box below).'
+      : 'Returning client — ' + priorJobs.length + ' prior job' + (priorJobs.length === 1 ? '' : 's') + ' found.';
+    calculateCost();
+  }
+
+  function saveTaxSettings() {
+    localStorage.setItem(TAX_RATE_KEY, document.getElementById('taxRate').value);
+    localStorage.setItem(TAX_LABOR_KEY, document.getElementById('taxLabor').checked ? '1' : '0');
+    localStorage.setItem(TAX_PARTS_KEY, document.getElementById('taxParts').checked ? '1' : '0');
+    if (typeof scheduleSync === 'function') scheduleSync();
+  }
+
+  function loadTaxSettings() {
+    const rate = localStorage.getItem(TAX_RATE_KEY);
+    const labor = localStorage.getItem(TAX_LABOR_KEY);
+    const parts = localStorage.getItem(TAX_PARTS_KEY);
+    if (rate !== null) document.getElementById('taxRate').value = rate;
+    if (labor !== null) document.getElementById('taxLabor').checked = labor === '1';
+    if (parts !== null) document.getElementById('taxParts').checked = parts === '1';
+  }
+
+  function calculateCost() {
+    const hours = parseFloat(document.getElementById('hours').value) || 0;
+    const rate = parseFloat(document.getElementById('rate').value) || 0;
+    const parts = parseFloat(document.getElementById('parts').value) || 0;
+    const discount = parseFloat(document.getElementById('discount').value) || 0;
+    const isFirstTime = document.getElementById('firstTimeClient').checked;
+    const taxRate = parseFloat(document.getElementById('taxRate').value) || 0;
+    const taxLabor = document.getElementById('taxLabor').checked;
+    const taxParts = document.getElementById('taxParts').checked;
+
+    const labor = hours * rate;
+    const subtotal = labor + parts;
+    const taxableAmount = (taxLabor ? labor : 0) + (taxParts ? parts : 0);
+    const tax = taxableAmount * (taxRate / 100);
+    const standardTotal = subtotal + tax;
+    // Discount is applied to the final (tax-included) price -- a flat
+    // dollar-off-the-bill discount, not a pre-tax price adjustment. This
+    // keeps the tax math simple and matches how a flat discount usually
+    // works in practice for a small job like this.
+    const discountedTotal = Math.max(0, standardTotal - discount);
+
+    document.getElementById('laborResult').textContent = money(labor);
+    document.getElementById('partsResult').textContent = money(parts);
+    document.getElementById('subtotalResult').textContent = money(subtotal);
+    document.getElementById('taxResult').textContent = money(tax);
+    document.getElementById('standardResult').textContent = money(standardTotal);
+    document.getElementById('discountedResult').textContent = money(discountedTotal);
+
+    document.getElementById('discountRow').style.display = isFirstTime ? '' : 'none';
+    document.getElementById('discountedFinalRow').classList.toggle('is-hidden', !isFirstTime);
+    document.getElementById('standardFinalRow').classList.toggle('final', !isFirstTime);
+  }
+
+  function loadPriceReferences() { try { return JSON.parse(localStorage.getItem(STORAGE_KEYS.priceRef) || '[]'); } catch (e) { return []; } }
+
+  function savePriceReferences(list) { localStorage.setItem(STORAGE_KEYS.priceRef, JSON.stringify(list)); scheduleSync(); }
+
+  function savePriceReference() {
+    const label = prompt('Name this job type (e.g. "Dishwasher install", "Drywall patch - small"):');
+    if (!label || !label.trim()) return;
+    const hours = parseFloat(document.getElementById('hours').value) || 0;
+    const rate = parseFloat(document.getElementById('rate').value) || 0;
+    const list = loadPriceReferences();
+    list.push({ id: Date.now(), label: label.trim(), hours, rate });
+    savePriceReferences(list);
+    renderPriceReferences();
+  }
+
+  function loadPriceReference(id) {
+    const ref = loadPriceReferences().find(r => r.id === id);
+    if (!ref) return;
+    document.getElementById('hours').value = ref.hours;
+    document.getElementById('rate').value = ref.rate;
+    calculateCost();
+  }
+
+  function deletePriceReference(id) {
+    savePriceReferences(loadPriceReferences().filter(r => r.id !== id));
+    renderPriceReferences();
+  }
+
+  function renderPriceReferences() {
+    const list = loadPriceReferences();
+    const container = document.getElementById('priceRefList');
+    if (list.length === 0) {
+      container.innerHTML = '<div class="inline-note">No saved job types yet &mdash; use the button below after entering hours/rate above.</div>';
+      return;
+    }
+    container.innerHTML = list.map(r => `
+      <div class="price-ref-chip" onclick="loadPriceReference(${r.id})">
+        <span>${escapeHtml(r.label)}</span>
+        <span class="chip-price">${money(r.hours * r.rate)}</span>
+        <button class="chip-remove" onclick="event.stopPropagation(); deletePriceReference(${r.id})" aria-label="Remove">&times;</button>
+      </div>`).join('');
+  }
+
+  function loadIncomeEntries() { try { return JSON.parse(localStorage.getItem(INCOME_STORAGE_KEY) || '[]'); } catch (e) { return []; } }
+
+  function saveIncomeEntries(entries) { localStorage.setItem(INCOME_STORAGE_KEY, JSON.stringify(entries)); scheduleSync(); }
+
+  function populateIncomeJobRefOptions() {
+    const select = document.getElementById('incomeJobRef');
+    const current = select.value;
+    const jobs = thRead(TH_KEYS.jobs, []);
+    select.innerHTML = '<option value="">&mdash; None &mdash;</option>' +
+      jobs.map(j => `<option value="${j.id}">${escapeHtml(j.title)}</option>`).join('');
+    if (jobs.some(j => String(j.id) === current)) select.value = current;
+  }
+
+  async function addIncomeEntry() {
+    const date = document.getElementById('incomeDate').value;
+    const desc = document.getElementById('incomeDesc').value.trim();
+    const amount = parseFloat(document.getElementById('incomeAmount').value) || 0;
+    if (!date || !desc) { await showAlert('Date and description are required.'); return; }
+    if (!amount) { await showAlert('Give this entry an amount.'); return; }
+
+    const jobRefId = document.getElementById('incomeJobRef').value;
+    const jobRefTitle = jobRefId ? (thRead(TH_KEYS.jobs, []).find(j => String(j.id) === jobRefId) || {}).title || '' : '';
+
+    const entries = loadIncomeEntries();
+    const fields = {
+      date, desc, amount,
+      source: document.getElementById('incomeSource').value.trim(),
+      payment: document.getElementById('incomePayment').value,
+      jobRefId: jobRefId || '',
+      jobRefTitle,
+    };
+    const wasEditing = !!editingIncomeEntryId;
+    let newId = null;
+    const currentUser = (typeof getCurrentUserEmail === 'function') ? getCurrentUserEmail() : null;
+    if (wasEditing) {
+      const idx = entries.findIndex(e => e.id === editingIncomeEntryId);
+      if (idx > -1) entries[idx] = { ...entries[idx], ...fields, lastEditedBy: currentUser || entries[idx].lastEditedBy };
+    } else {
+      newId = Date.now();
+      entries.push({ id: newId, ...fields, origin: 'manual', createdBy: currentUser, lastEditedBy: currentUser });
+    }
+    saveIncomeEntries(entries);
+
+    document.getElementById('incomeSource').value = '';
+    document.getElementById('incomeDesc').value = '';
+    document.getElementById('incomeAmount').value = '';
+    cancelIncomeEntryEdit();
+    justAddedIncomeEntryId = newId;
+    renderIncomeEntries();
+    showToast(wasEditing ? 'Income entry updated.' : 'Income logged.');
+  }
+
+  function editIncomeEntry(id) {
+    const entry = loadIncomeEntries().find(e => e.id === id);
+    if (!entry || entry.origin === 'invoice') return; // invoice-derived entries stay tied to their real document, not editable here
+    editingIncomeEntryId = id;
+    toggleFormSection('incomeFormSection', true);
+    document.getElementById('incomeDate').value = entry.date || '';
+    document.getElementById('incomeSource').value = entry.source || '';
+    document.getElementById('incomeJobRef').value = entry.jobRefId || '';
+    document.getElementById('incomePayment').value = entry.payment || 'cash';
+    document.getElementById('incomeDesc').value = entry.desc || '';
+    document.getElementById('incomeAmount').value = entry.amount || '';
+
+    document.getElementById('addIncomeEntryBtn').textContent = 'Update Entry';
+    document.getElementById('cancelIncomeEditBtn').style.display = '';
+    const note = document.getElementById('incomeEditNote');
+    note.textContent = 'Editing this income entry \u2014 saving will update it instead of creating a new one.';
+    note.style.display = '';
+    document.getElementById('incomeDate').scrollIntoView({ behavior: 'smooth', block: 'center' });
+  }
+
+  function cancelIncomeEntryEdit() {
+    editingIncomeEntryId = null;
+    document.getElementById('addIncomeEntryBtn').textContent = 'Add Entry';
+    document.getElementById('cancelIncomeEditBtn').style.display = 'none';
+    document.getElementById('incomeEditNote').style.display = 'none';
+    document.getElementById('incomeFormSection').classList.add('is-collapsed');
+  }
+
+  async function deleteIncomeEntry(id) {
+    const entry = loadIncomeEntries().find(e => e.id === id);
+    const msg = entry && entry.origin === 'invoice'
+      ? 'This entry came from a generated invoice. Deleting it only removes it from this log \u2014 the invoice itself is untouched. Continue?'
+      : 'Delete this income entry? This cannot be undone.';
+    const confirmed = await showConfirm(msg, { danger: true, confirmText: 'Delete' });
+    if (!confirmed) return;
+    if (editingIncomeEntryId === id) cancelIncomeEntryEdit();
+    const row = document.querySelector('[data-income-id="' + id + '"]');
+    animateRowExit(row, () => {
+      saveIncomeEntries(loadIncomeEntries().filter(e => e.id !== id));
+      renderIncomeEntries();
+      showToast('Entry deleted.');
+    });
+  }
+
+  async function clearAllIncome() {
+    const confirmed = await showConfirm('Delete every logged income entry, including ones from invoices? This cannot be undone and does not touch the invoices themselves.', { danger: true, confirmText: 'Delete All' });
+    if (confirmed) {
+      saveIncomeEntries([]);
+      renderIncomeEntries();
+    }
+  }
+
+  function backfillLegacyInvoicesIntoIncomeLog() {
+    let invoices;
+    try { invoices = JSON.parse(localStorage.getItem('th_invoices') || '[]'); }
+    catch (e) { return; } // malformed data here shouldn't block the rest of page init
+    const incomeLog = loadIncomeEntries();
+    const mirroredIds = new Set(incomeLog.filter(e => e.origin === 'invoice').map(e => e.invoiceId));
+    const unmirrored = invoices.filter(i => !mirroredIds.has(i.id));
+    if (unmirrored.length === 0) return;
+
+    unmirrored.forEach((i, idx) => {
+      incomeLog.push({
+        id: Date.now() + idx, // +idx keeps ids unique even when backfilling several in the same tick
+        date: i.date,
+        desc: 'Invoice #' + (i.invoiceNumber || ''),
+        amount: i.total || 0,
+        source: i.clientName || '',
+        payment: '',
+        jobRefId: i.jobRefId || '',
+        jobRefTitle: i.jobRefTitle || '',
+        origin: 'invoice',
+        invoiceId: i.id,
+      });
+    });
+    saveIncomeEntries(incomeLog);
+  }
+
+  function renderIncomeEntries() {
+    backfillLegacyInvoicesIntoIncomeLog();
+    const entries = [...loadIncomeEntries()].sort((a, b) => new Date(b.date) - new Date(a.date));
+    const container = document.getElementById('incomeTable');
+
+    if (entries.length === 0) {
+      container.innerHTML = '<div class="empty-state">No income logged yet &mdash; add a manual entry above, or generate an invoice and it\'ll show up here automatically.</div>';
+      document.getElementById('incomeTotalsRow').innerHTML = '';
+      return;
+    }
+
+    let rows = entries.map(e => `
+      <tr class="${e.id === justAddedIncomeEntryId ? 'list-row-enter' : ''}" data-income-id="${e.id}">
+        <td>${e.date}</td>
+        <td>${escapeHtml(e.source || '\u2014')}</td>
+        <td>${e.jobRefTitle ? escapeHtml(e.jobRefTitle) : '\u2014'}</td>
+        <td>${personDot(e.lastEditedBy, 'Last edited by')}${escapeHtml(e.desc)}</td>
+        <td>${PAYMENT_LABEL[e.payment] || '\u2014'}</td>
+        <td>${e.origin === 'invoice' ? '<span class="inline-note" style="margin:0;">Invoice</span>' : 'Manual'}</td>
+        <td>$${e.amount.toFixed(2)}</td>
+        <td>
+          ${e.origin !== 'invoice' ? `<button class="small-btn" onclick="editIncomeEntry(${e.id})" aria-label="Edit entry" title="Edit entry">Edit</button>` : ''}
+          <button class="small-btn danger" onclick="deleteIncomeEntry(${e.id})" aria-label="Delete entry" title="Delete entry">&times;</button>
+        </td>
+      </tr>`).join('');
+    justAddedIncomeEntryId = null;
+
+    container.innerHTML = `
+      <table>
+        <thead><tr><th>Date</th><th>Source</th><th>Job</th><th>Description</th><th>Payment</th><th>Origin</th><th>Amount</th><th></th></tr></thead>
+        <tbody>${rows}</tbody>
+      </table>`;
+
+    const manualTotal = entries.filter(e => e.origin !== 'invoice').reduce((sum, e) => sum + e.amount, 0);
+    const invoiceTotal = entries.filter(e => e.origin === 'invoice').reduce((sum, e) => sum + e.amount, 0);
+
+    document.getElementById('incomeTotalsRow').innerHTML = `
+      <div>Manual entries: <strong>$${manualTotal.toFixed(2)}</strong></div>
+      <div>From invoices: <strong>$${invoiceTotal.toFixed(2)}</strong></div>
+      <div>Combined total: <strong>$${(manualTotal + invoiceTotal).toFixed(2)}</strong></div>`;
+  }
+
+  function buildIncomeCSV() {
+    const entries = [...loadIncomeEntries()].sort((a, b) => new Date(a.date) - new Date(b.date));
+    let csv = 'Date,Source,Job,Description,Payment,Origin,Amount\n';
+    entries.forEach(e => {
+      const desc = '"' + e.desc.replace(/"/g, '""') + '"';
+      const source = '"' + (e.source || '').replace(/"/g, '""') + '"';
+      const job = '"' + (e.jobRefTitle || '').replace(/"/g, '""') + '"';
+      csv += `${e.date},${source},${job},${desc},${PAYMENT_LABEL[e.payment] || ''},${e.origin || 'manual'},${e.amount.toFixed(2)}\n`;
+    });
+    return csv;
+  }
+
+  async function exportIncomeCSV() {
+    const entries = loadIncomeEntries();
+    if (entries.length === 0) { await showAlert('Nothing to export yet.'); return; }
+    const csv = buildIncomeCSV();
+    const blob = new Blob([csv], { type: 'text/csv' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'TripleH_Income_' + new Date().toISOString().slice(0, 10) + '.csv';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  }
+
+  function loadExpenses() { try { return JSON.parse(localStorage.getItem(EXPENSE_STORAGE_KEY) || '[]'); } catch (e) { return []; } }
+
+  function saveExpenses(entries) { localStorage.setItem(EXPENSE_STORAGE_KEY, JSON.stringify(entries)); scheduleSync(); }
+
+  function getMileageRate() { return parseFloat(document.getElementById('mileageRate').value) || 0; }
+
+  function saveMileageRate() { localStorage.setItem(RATE_STORAGE_KEY, document.getElementById('mileageRate').value); scheduleSync(); }
+
+  function loadMileageRate() {
+    const saved = localStorage.getItem(RATE_STORAGE_KEY);
+    if (saved) document.getElementById('mileageRate').value = saved;
+  }
+
+  function populateJobRefOptions() {
+    const select = document.getElementById('entryJobRef');
+    const current = select.value;
+    const jobs = thRead(TH_KEYS.jobs, []);
+    select.innerHTML = '<option value="">&mdash; None &mdash;</option>' +
+      jobs.map(j => `<option value="${j.id}">${escapeHtml(j.title)}</option>`).join('');
+    if (jobs.some(j => String(j.id) === current)) select.value = current;
+  }
+
+  async function addExpense() {
+    if (expenseSaveInProgress) return;
+    expenseSaveInProgress = true;
+    const addBtn = document.getElementById('addEntryBtn');
+    const originalBtnText = addBtn.textContent;
+    addBtn.disabled = true;
+    try {
+    const date = document.getElementById('entryDate').value;
+    const type = document.getElementById('entryType').value;
+    const desc = document.getElementById('entryDesc').value.trim();
+    if (!date || !desc) { await showAlert('Date and description are required.'); return; }
+
+    const wasEditing = !!editingExpenseId;
+    const existingEntry = wasEditing ? loadExpenses().find(e => e.id === editingExpenseId) : null;
+    const existingReceiptPath = existingEntry ? existingEntry.receiptPath : '';
+
+    const receiptFile = document.getElementById('entryReceipt').files[0];
+    // A receipt is required for a new expense entry -- but if this is an
+    // edit and one was already attached, it's fine to leave it as-is
+    // without forcing a re-upload just to fix a typo elsewhere in the form.
+    if (type === 'expense' && !receiptFile && !existingReceiptPath) {
+      await showAlert('A receipt photo is required to log an expense. Take or choose a photo of the receipt first.');
+      return;
+    }
+    if (receiptFile && !receiptFile.type.startsWith('image/')) {
+      await showAlert('Please choose an image file for the receipt.');
+      return;
+    }
+
+    const jobRefId = document.getElementById('entryJobRef').value;
+    const jobRefTitle = jobRefId ? (thRead(TH_KEYS.jobs, []).find(j => String(j.id) === jobRefId) || {}).title || '' : '';
+
+    const entry = {
+      id: wasEditing ? editingExpenseId : Date.now(), date, type, desc,
+      vendor: document.getElementById('entryVendor').value.trim(),
+      payment: document.getElementById('entryPayment').value,
+      jobRefId: jobRefId || '',
+      jobRefTitle,
+      receiptPath: existingReceiptPath || '',
+      partNumber: type === 'mileage' ? '' : document.getElementById('entryPartNumber').value.trim(),
+    };
+    // Same attribution pattern as jobs -- createdBy preserved across
+    // edits (carried over from the entry being replaced, since this
+    // entry object gets rebuilt fresh each time, not merged), lastEditedBy
+    // updates every save.
+    const currentUser = (typeof getCurrentUserEmail === 'function') ? getCurrentUserEmail() : null;
+    entry.createdBy = existingEntry ? existingEntry.createdBy : currentUser;
+    entry.lastEditedBy = currentUser;
+    if (type === 'mileage') {
+      entry.miles = parseFloat(document.getElementById('entryMiles').value) || 0;
+      entry.amount = Math.round(entry.miles * getMileageRate() * 100) / 100;
+    } else {
+      entry.amount = parseFloat(document.getElementById('entryAmount').value) || 0;
+      entry.miles = 0;
+    }
+
+    if (receiptFile) {
+      addBtn.textContent = 'Uploading receipt...';
+      const result = await uploadReceipt(receiptFile, entry.id);
+      addBtn.textContent = originalBtnText;
+      if (!result.ok) {
+        const msg = result.error === 'too-large'
+          ? 'That receipt photo is over 8MB \u2014 try a smaller photo or lower camera resolution.'
+          : 'Receipt upload failed: ' + result.error + (result.detail ? ' \u2014 ' + result.detail : '') + '. The expense was NOT saved \u2014 try again.';
+        await showAlert(msg);
+        return;
+      }
+      // A new receipt replacing an old one during an edit -- clean up the
+      // old file rather than leaving it sitting in storage unreferenced.
+      if (existingReceiptPath && existingReceiptPath !== result.path && typeof deleteReceipt === 'function') {
+        await deleteReceipt(existingReceiptPath);
+      }
+      entry.receiptPath = result.path;
+    }
+
+    const entries = loadExpenses();
+    if (wasEditing) {
+      const idx = entries.findIndex(e => e.id === editingExpenseId);
+      if (idx > -1) entries[idx] = entry;
+      else entries.push(entry);
+    } else {
+      entries.push(entry);
+    }
+    saveExpenses(entries);
+
+    document.getElementById('entryVendor').value = '';
+    document.getElementById('entryDesc').value = '';
+    document.getElementById('entryAmount').value = '';
+    document.getElementById('entryMiles').value = '';
+    document.getElementById('entryPartNumber').value = '';
+    document.getElementById('entryReceipt').value = '';
+    document.getElementById('receiptPreviewName').textContent = '';
+    cancelExpenseEdit();
+    justAddedExpenseId = wasEditing ? null : entry.id;
+    renderExpenses();
+    showToast(wasEditing ? 'Entry updated.' : (type === 'mileage' ? 'Mileage logged.' : 'Expense logged.'));
+    } finally {
+      expenseSaveInProgress = false;
+      addBtn.disabled = false;
+      addBtn.textContent = originalBtnText;
+    }
+  }
+
+  function editExpense(id) {
+    const entry = loadExpenses().find(e => e.id === id);
+    if (!entry) return;
+    editingExpenseId = id;
+    toggleFormSection('expenseFormSection', true);
+    document.getElementById('entryDate').value = entry.date || '';
+    document.getElementById('entryType').value = entry.type || 'expense';
+    document.getElementById('entryType').dispatchEvent(new Event('change'));
+    document.getElementById('entryDesc').value = entry.desc || '';
+    document.getElementById('entryPartNumber').value = entry.partNumber || '';
+    document.getElementById('entryVendor').value = entry.vendor || '';
+    document.getElementById('entryPayment').value = entry.payment || 'cash';
+    document.getElementById('entryJobRef').value = entry.jobRefId || '';
+    if (entry.type === 'mileage') {
+      document.getElementById('entryMiles').value = entry.miles || '';
+    } else {
+      document.getElementById('entryAmount').value = entry.amount || '';
+    }
+    // Browsers won't let a file input be pre-filled with an existing file,
+    // so the receipt field just stays empty -- addExpense() knows to keep
+    // the existing receiptPath untouched unless a new file is chosen here.
+
+    document.getElementById('addEntryBtn').textContent = 'Update Entry';
+    document.getElementById('cancelExpenseEditBtn').style.display = '';
+    const note = document.getElementById('expenseEditNote');
+    note.textContent = entry.receiptPath
+      ? 'Editing this entry \u2014 its existing receipt photo stays attached unless you choose a new one below.'
+      : 'Editing this entry.';
+    note.style.display = '';
+    document.getElementById('entryDate').scrollIntoView({ behavior: 'smooth', block: 'center' });
+  }
+
+  function cancelExpenseEdit() {
+    editingExpenseId = null;
+    document.getElementById('addEntryBtn').textContent = 'Add Entry';
+    document.getElementById('cancelExpenseEditBtn').style.display = 'none';
+    document.getElementById('expenseEditNote').style.display = 'none';
+    document.getElementById('expenseFormSection').classList.add('is-collapsed');
+  }
+
+  async function deleteExpense(id) {
+    const confirmed = await showConfirm('Delete this expense entry? This cannot be undone.', { danger: true, confirmText: 'Delete' });
+    if (!confirmed) return;
+    if (editingExpenseId === id) cancelExpenseEdit();
+    const row = document.querySelector('[data-expense-id="' + id + '"]');
+    animateRowExit(row, async () => {
+      const entries = loadExpenses();
+      const entry = entries.find(e => e.id === id);
+      if (entry && entry.receiptPath && typeof deleteReceipt === 'function') {
+        await deleteReceipt(entry.receiptPath); // best-effort cleanup of the actual file too
+      }
+      saveExpenses(entries.filter(e => e.id !== id));
+      renderExpenses();
+      showToast('Entry deleted.');
+    });
+  }
+
+  async function clearAllExpenses() {
+    const confirmed = await showConfirm('Delete every logged entry? This cannot be undone.', { danger: true, confirmText: 'Delete All' });
+    if (confirmed) {
+      saveExpenses([]);
+      renderExpenses();
+    }
+  }
+
+  function renderExpenses() {
+    const entries = [...loadExpenses()].sort((a, b) => new Date(b.date) - new Date(a.date));
+    const container = document.getElementById('entriesTable');
+
+    if (entries.length === 0) {
+      container.innerHTML = '<div class="empty-state">No expenses logged yet &mdash; add your first one above.</div>';
+      document.getElementById('totalsRowMoney').innerHTML = '';
+      return;
+    }
+
+    let rows = entries.map(e => `
+      <tr class="${e.id === justAddedExpenseId ? 'list-row-enter' : ''}" data-expense-id="${e.id}">
+        <td>${e.date}</td>
+        <td>${e.type === 'mileage' ? 'Mileage' : 'Expense'}</td>
+        <td>${escapeHtml(e.vendor || '\u2014')}</td>
+        <td>${e.jobRefTitle ? escapeHtml(e.jobRefTitle) : '\u2014'}</td>
+        <td>${personDot(e.lastEditedBy, 'Last edited by')}${escapeHtml(e.desc)}${e.partNumber ? `<div style="color:var(--text-dim); font-size:11.5px; margin-top:2px;">Part #: ${escapeHtml(e.partNumber)}</div>` : ''}</td>
+        <td>${e.type === 'mileage' ? e.miles + ' mi' : '\u2014'}</td>
+        <td>${PAYMENT_LABEL[e.payment] || '\u2014'}</td>
+        <td>$${e.amount.toFixed(2)}</td>
+        <td>${e.receiptPath ? `<a href="#" onclick="openSignedReceipt(event, '${escapeHtml(e.receiptPath).replace(/'/g, "\\'")}')" style="color:var(--blue-light);">View</a>` : '\u2014'}</td>
+        <td>
+          <button class="small-btn" onclick="editExpense(${e.id})" aria-label="Edit entry" title="Edit entry">Edit</button>
+          <button class="small-btn danger" onclick="deleteExpense(${e.id})" aria-label="Delete entry" title="Delete entry">&times;</button>
+        </td>
+      </tr>`).join('');
+    justAddedExpenseId = null;
+
+    container.innerHTML = `
+      <table>
+        <thead><tr><th>Date</th><th>Type</th><th>Vendor</th><th>Job</th><th>Description</th><th>Miles</th><th>Payment</th><th>Amount</th><th>Receipt</th><th></th></tr></thead>
+        <tbody>${rows}</tbody>
+      </table>`;
+
+    const expenseTotal = entries.filter(e => e.type === 'expense').reduce((sum, e) => sum + e.amount, 0);
+    const mileageTotal = entries.filter(e => e.type === 'mileage').reduce((sum, e) => sum + e.amount, 0);
+    const totalMiles = entries.filter(e => e.type === 'mileage').reduce((sum, e) => sum + e.miles, 0);
+
+    document.getElementById('totalsRowMoney').innerHTML = `
+      <div>Expenses: <strong>$${expenseTotal.toFixed(2)}</strong></div>
+      <div>Mileage: <strong>${totalMiles.toFixed(1)} mi</strong> (<strong>$${mileageTotal.toFixed(2)}</strong> at $${getMileageRate()}/mi)</div>
+      <div>Combined total: <strong>$${(expenseTotal + mileageTotal).toFixed(2)}</strong></div>`;
+  }
+
+  function buildCSV() {
+    const entries = [...loadExpenses()].sort((a, b) => new Date(a.date) - new Date(b.date));
+    // Note: this column holds the raw storage path, not a clickable URL.
+    // A signed URL expires in an hour, so baking one into an exported
+    // file meant to be opened again later (for taxes, bookkeeping, etc.)
+    // would just be a dead link by the time anyone opens it. Open the
+    // Job Tracker and use the "View" button for the real, live signed
+    // link instead.
+    let csv = 'Date,Type,Vendor,Job,Description,Miles,Payment,Amount,Receipt Path\n';
+    entries.forEach(e => {
+      const desc = '"' + e.desc.replace(/"/g, '""') + '"';
+      const vendor = '"' + (e.vendor || '').replace(/"/g, '""') + '"';
+      const job = '"' + (e.jobRefTitle || '').replace(/"/g, '""') + '"';
+      const receiptPath = e.receiptPath || '';
+      csv += `${e.date},${e.type},${vendor},${job},${desc},${e.miles || ''},${PAYMENT_LABEL[e.payment] || ''},${e.amount.toFixed(2)},${receiptPath}\n`;
+    });
+    return csv;
+  }
+
+  async function openSignedReceipt(event, path) {
+    event.preventDefault();
+    if (typeof getSignedReceiptUrl !== 'function') { showToast('Receipt viewing isn\'t available right now.', { type: 'error' }); return; }
+    const url = await getSignedReceiptUrl(path);
+    if (url) window.open(url, '_blank', 'noopener');
+    else showToast('Could not load that receipt.', { type: 'error' });
+  }
+
+  async function exportCSV() {
+    const entries = loadExpenses();
+    if (entries.length === 0) { await showAlert('Nothing to export yet.'); return; }
+
+    const csv = buildCSV();
+    const blob = new Blob([csv], { type: 'text/csv' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'TripleH_Expenses_' + new Date().toISOString().slice(0, 10) + '.csv';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  }
+
+  document.addEventListener('DOMContentLoaded', function () {
+    (async function init() {
+      await initSyncOnLoad();
+      loadTaxSettings();
+      document.getElementById('entryDate').value = new Date().toISOString().slice(0, 10);
+      document.getElementById('incomeDate').value = new Date().toISOString().slice(0, 10);
+      loadMileageRate();
+      calculateCost();
+      populateJobRefOptions();
+      populateIncomeJobRefOptions();
+      renderExpenses();
+      renderIncomeEntries();
+      renderPriceReferences();
+
+      const initialHash = (location.hash || '').replace('#', '');
+      if (TAB_HASHES[initialHash]) activateTab(initialHash);
+
+      if (typeof startRealtimeSync === 'function') {
+        startRealtimeSync(async () => {
+          loadMileageRate();
+          loadTaxSettings();
+          calculateCost();
+          populateJobRefOptions();
+          populateIncomeJobRefOptions();
+          renderExpenses();
+          renderIncomeEntries();
+          renderPriceReferences();
+          if (document.getElementById('tab-profitability')?.classList.contains('is-active')) renderJobProfitability();
+        }, function () {});
+      }
+    })();
+  });
+</script>
+
+</body>
+</html>
