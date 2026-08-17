@@ -151,7 +151,7 @@
 
     html += renderRecordSection('Expenses', bundle.linkedExpenses.map(e => ({
       title: e.description || e.category || 'Expense', meta: e.date || '',
-      amount: money(e.amount || 0), href: '/tools/job-tracker.html?search=' + encodeURIComponent(j.title) + '#expenses',
+      amount: money(e.amount || 0), href: '/tools/finance.html#expenses',
     })), 'No expenses logged against this job yet.');
 
     html += '<div class="section-block"><div class="section-heading is-static"><span>Photos</span></div><div class="job-photo-grid" id="jobPhotosGrid"><div class="empty-state-small"><svg class="th-icon" aria-hidden="true"><use href="#icon-camera" xlink:href="#icon-camera"></use></svg>Loading...</div></div></div>';
