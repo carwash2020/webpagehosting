@@ -1,0 +1,1374 @@
+/* styles-tools.css -- one of 2 files split out of the former styles.css
+   (2026-08-20, structural item #43). See the header of styles.css itself
+   for the full explanation of why and how this split was done safely.
+
+   This file: everything the internal Workspace tool suite needs beyond
+   the shared tokens/resets in styles.css (which this file still depends
+   on -- loaded AFTER styles.css on every tool page, exactly matching
+   this content's original position at the end of the single combined
+   file). Not used by the public-facing pages.
+*/
+
+/* ==========================================================================
+   INTERNAL TOOLS SUITE — shared styles for /workspace.html and its 7 tools.
+   Not used by the public-facing pages (index.html + 5 landing pages).
+   Scoped under distinct classnames (tool-header, help-*) so nothing here
+   overlaps or overrides public-site styles above.
+   ========================================================================== */
+
+.tool-header{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:16px;
+  margin-bottom:18px;
+}
+.tool-header-brand{
+  display:flex;
+  align-items:center;
+  gap:10px;
+  text-decoration:none;
+  color:var(--blue-light);
+}
+.tool-header-brand img{
+  height:32px;
+  width:32px;
+  object-fit:contain;
+  flex-shrink:0;
+}
+.tool-header-brand span{
+  font-family:'Oswald',sans-serif;
+  font-size:14px;
+  font-weight:600;
+}
+.tool-header-brand:hover span{ color:var(--orange-light); }
+
+.help-btn{
+  flex-shrink:0;
+  width:30px;
+  height:30px;
+  border-radius:50%;
+  border:1px solid var(--border);
+  background:var(--bg-panel-2);
+  color:var(--text-dim);
+  font-family:'Oswald',sans-serif;
+  font-weight:700;
+  font-size:14px;
+  cursor:pointer;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  transition:border-color .15s ease, color .15s ease;
+}
+.help-btn:hover{ border-color:var(--orange-light); color:var(--orange-light); }
+/* 2026-08-16: header row (help / notifications / sign-out) had zero
+   visual hierarchy -- three identical circles with no signal for which
+   is used most. Sign-out is the rarest of the three, so it steps back
+   rather than competing evenly with help and notifications. */
+.help-btn.is-muted { opacity: .55; }
+.help-btn.is-muted:hover { opacity: 1; }
+.help-btn.is-active{ border-color:var(--blue-light); color:var(--blue-light); background:rgba(58,160,255,0.12); }
+.help-btn.is-syncing { animation: helpBtnSpin 0.8s linear infinite; }
+@keyframes helpBtnSpin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) { .help-btn.is-syncing { animation: none; opacity: 0.5; } }
+
+.help-modal-overlay{
+  display:none;
+  position:fixed;
+  inset:0;
+  background:rgba(0,0,0,0.6);
+  z-index:200;
+  align-items:center;
+  justify-content:center;
+  padding:20px;
+}
+.help-modal-overlay.is-open{ display:flex; animation: helpOverlayFadeIn .15s ease; }
+@keyframes helpOverlayFadeIn{ from{ background:rgba(0,0,0,0); } to{ background:rgba(0,0,0,0.6); } }
+.help-modal-overlay.is-open .help-modal{ animation: helpModalPopIn .18s ease; }
+@keyframes helpModalPopIn{ from{ opacity:0; transform:scale(0.95) translateY(8px); } to{ opacity:1; transform:scale(1) translateY(0); } }
+@media (prefers-reduced-motion: reduce){ .help-modal-overlay.is-open, .help-modal-overlay.is-open .help-modal{ animation:none; } }
+.help-modal{
+  position:relative;
+  background:var(--bg-panel);
+  border:1px solid var(--border);
+  border-radius:var(--radius);
+  max-width:520px;
+  width:100%;
+  max-height:80vh;
+  overflow-y:auto;
+  padding:26px 28px;
+}
+/* Grab handle -- touch devices only. Swipe-to-dismiss is invisible
+   without an affordance, and on a pointer device it would just be a
+   decoration for a gesture that can't be performed. See
+   attachSwipeToDismiss() in tools-common.js for the physics. */
+@media (hover: none) and (pointer: coarse){
+  .help-modal{ padding-top:20px; }
+  .help-modal::before{
+    content:'';
+    position:sticky; top:0; left:50%;
+    display:block; width:38px; height:4px; margin:0 auto 14px;
+    border-radius:999px; background:var(--border);
+  }
+}
+.help-modal h3{
+  font-family:'Oswald',sans-serif;
+  color:var(--orange-light);
+  font-size:19px;
+  margin:0 0 14px;
+  padding-right:24px;
+}
+.help-modal-body{ color:var(--text); font-size:14.5px; line-height:1.65; }
+.help-modal-body p{ margin:0 0 12px; }
+.help-modal-body ul{ margin:0 0 12px; padding-left:20px; }
+.help-modal-body li{ margin-bottom:8px; }
+.help-modal-body strong{ color:var(--white); }
+.help-modal-close{
+  position:absolute;
+  top:16px;
+  right:16px;
+  background:none;
+  border:none;
+  color:var(--text-dim);
+  font-size:22px;
+  line-height:1;
+  cursor:pointer;
+  padding:4px 8px;
+}
+.help-modal-close:hover{ color:var(--white); }
+
+/* --- Notes tab (multi-note) --- */
+.notes-layout{ display:flex; gap:20px; align-items:flex-start; flex-wrap:wrap; }
+.notes-sidebar{ flex:0 0 260px; min-width:220px; }
+.notes-editor{ flex:1; min-width:280px; }
+.note-new-btn{ width:100%; margin-bottom: 10px; }
+.note-list-item{
+  display:flex; justify-content:space-between; align-items:center; gap:8px;
+  padding:12px 14px; border-radius:8px; border:1px solid var(--border); background:var(--bg-panel);
+  margin-bottom:8px; cursor:pointer;
+}
+.note-list-item.is-active{ border-color:var(--orange-light); background:var(--bg-panel-2); }
+.note-list-item-text{ overflow:hidden; }
+.note-list-item-text h4{ font-family:'Oswald',sans-serif; font-size:14px; color:var(--white); margin:0 0 3px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.note-list-item-text p{ font-size:12px; color:var(--text-dim); margin:0; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.note-list-item .small-btn{ flex-shrink:0; }
+#noteTitle{
+  display:block; width:100%; box-sizing:border-box;
+  padding:10px 12px; background:var(--bg-panel-2); border:1px solid var(--border); border-radius:6px;
+  color:var(--white); font-family:'Oswald',sans-serif; font-size:18px; font-weight:600; margin-bottom:12px;
+}
+#noteBody{
+  display:block; width:100%; box-sizing:border-box;
+  padding:14px 16px; background:var(--bg-panel-2); border:1px solid var(--border); border-radius:var(--radius);
+  color:var(--white); font-size:15px; font-family:inherit; min-height:340px; resize:vertical;
+}
+
+/* --- Checkbox rows (Cost Lookup first-time discount, etc) --- */
+.checkbox-row{ display:flex; align-items:center; gap:8px; margin-bottom:14px; color:var(--white); font-size:14px; }
+.checkbox-row input[type="checkbox"]{ width:16px; height:16px; accent-color:var(--orange); }
+
+/* --- Price reference chips (Cost Lookup) --- */
+.price-ref-list{ display:flex; flex-wrap:wrap; gap:8px; margin-top: 4px; }
+.price-ref-chip{
+  display:flex; align-items:center; gap:8px; background:var(--bg-panel-2); border:1px solid var(--border);
+  border-radius:8px; padding:8px 10px 8px 14px; cursor:pointer; font-size:13px; color:var(--white);
+}
+.price-ref-chip:hover{ border-color:var(--orange-light); }
+.price-ref-chip .chip-price{ color:var(--orange-light); font-weight:600; }
+.price-ref-chip .chip-remove{
+  background:none; border:none; color:var(--text-dim); cursor:pointer; font-size:14px; padding:2px 4px;
+}
+.price-ref-chip .chip-remove:hover{ color:#e05252; }
+
+/* --- Responsive table wrapper (prevents page-wide horizontal scroll) --- */
+.table-scroll{ overflow-x:auto; -webkit-overflow-scrolling:touch; }
+.table-scroll table{ min-width:640px; }
+
+/* --- Inline helper text --- */
+.inline-note{ color:var(--text-dim); font-size:12px; margin-top:4px; }
+
+/* --- Sync section (workspace.html) --- */
+.sync-section{
+  background: var(--bg-panel); border: 1px solid var(--border); border-radius: var(--radius);
+  padding: 18px 20px; margin: 24px 0; font-size: 13.5px;
+}
+.sync-section h4{ font-family:'Oswald',sans-serif; color: var(--orange-light); font-size: 13px; margin: 0 0 10px; text-transform: uppercase; letter-spacing: 1px; }
+.sync-row{ display:flex; gap:10px; flex-wrap:wrap; align-items:center; margin-bottom:8px; }
+.sync-row input{
+  flex:1; min-width:160px; padding:9px 11px; background: var(--bg-panel-2); border: 1px solid var(--border);
+  border-radius: 6px; color: var(--white); font-size: 14px; font-family: inherit; box-sizing: border-box;
+}
+.sync-status{ font-size:12.5px; color:var(--text-dim); margin-top:6px; }
+.sync-status.is-ok{ color:var(--orange-light); }
+.sync-status.is-error{ color:#e05252; }
+
+/* --- Shared tab component (used by job-tracker.html and invoice-generator.html) --- */
+.tabs {
+  display:flex; gap:4px; margin-bottom:22px; flex-wrap:wrap;
+  background:var(--bg-panel); border:1px solid var(--border); border-radius:12px; padding:5px;
+}
+.tab-btn {
+  background:none; border:none; color:var(--text-dim); font-family:'Oswald',sans-serif;
+  font-size:14px; font-weight:600; padding:10px 18px; cursor:pointer;
+  border-radius:8px; transition:color .18s ease, background .18s ease, box-shadow .18s ease;
+}
+.tab-btn:hover{ color:var(--text); }
+.tab-btn:active{ transform: translateY(1px); }
+.tab-btn.is-active {
+  /* 2026-08-16: previously a solid gradient-filled pill with a heavy
+     glow. When a scrolled screenshot cropped this button so only its
+     bottom edge showed, it read as a random floating orange bar rather
+     than a tab. The underline indicator added in the v2 redesign layer
+     (.tab-btn::after) already signals "active" clearly and can never be
+     mistaken for debris even when cropped -- this is now the only
+     active-tab treatment, just a color change plus that thin rail. */
+  color: var(--orange-light);
+}
+.tab-panel { display:none; }
+.tab-panel.is-active { display:block; animation: tabPanelFadeIn .18s ease; }
+@keyframes tabPanelFadeIn{ from{ opacity:0; transform:translateY(4px); } to{ opacity:1; transform:translateY(0); } }
+@media (prefers-reduced-motion: reduce){ .tab-panel.is-active{ animation:none; } }
+
+.upload-progress-bar { height: 3px; background: var(--bg-panel-2); border-radius: 2px; overflow: hidden; margin-top: 10px; position: relative; }
+.upload-progress-bar::after {
+  content: ''; position: absolute; top: 0; left: -40%; height: 100%; width: 40%;
+  background: var(--orange-light); border-radius: 2px;
+  animation: uploadProgressSlide 1.1s ease-in-out infinite;
+}
+@keyframes uploadProgressSlide { 0% { left: -40%; } 100% { left: 100%; } }
+@media (prefers-reduced-motion: reduce) { .upload-progress-bar::after { animation: none; left: 0; width: 100%; } }
+
+/* Row entrance/exit -- deliberately scoped to ONE specific row at a
+   time, never the whole list. Entrance is a keyframe animation applied
+   only to the row matching whatever ID was just added, cleared
+   immediately after one render so a later re-render (searching,
+   filtering) never replays it. Exit is driven entirely from JS
+   (animateRowExit in tools-common.js), which measures the row's real
+   height before collapsing it, rather than guessing a fixed value that
+   wouldn't fit every row's actual content. */
+@keyframes rowEnterFade{ from{ opacity:0; transform:translateY(-6px); } to{ opacity:1; transform:translateY(0); } }
+.list-row-enter{ animation: rowEnterFade .22s ease; }
+@media (prefers-reduced-motion: reduce){ .list-row-enter{ animation:none; } }
+
+.icon-search { display: inline-flex; align-items: center; position: relative; }
+.icon-search-toggle {
+  width: 36px; height: 36px; border-radius: 8px; border: 1px solid var(--border);
+  background: var(--bg-panel-2); color: var(--text-dim); cursor: pointer;
+  display: flex; align-items: center; justify-content: center; flex-shrink: 0; font-size: 16px;
+  transition: border-color .15s ease, color .15s ease;
+}
+.icon-search-toggle:hover, .icon-search.is-expanded .icon-search-toggle { border-color: var(--orange-light); color: var(--orange-light); }
+.icon-search-input {
+  width: 0; opacity: 0; padding: 0; margin-left: 0; border: none; background: var(--bg-panel-2);
+  color: var(--white); font-size: 14px; font-family: inherit; border-radius: 8px; box-sizing: border-box;
+  transition: width .25s ease, opacity .2s ease, padding .25s ease, margin-left .25s ease;
+  overflow: hidden;
+}
+.icon-search.is-expanded .icon-search-input { width: 240px; opacity: 1; padding: 9px 28px 9px 11px; margin-left: 8px; border: 1px solid var(--border); }
+/* Item #54: clear (x) button -- shown only once there's text to clear,
+   positioned at the input's right edge (the input is the rightmost
+   child of .icon-search, so right:8px on the wrapper naturally lands
+   there without needing to know the toggle button's own width). */
+.icon-search-clear {
+  display: none; position: absolute; right: 8px; top: 50%; transform: translateY(-50%);
+  width: 20px; height: 20px; border-radius: 50%; border: none; background: none;
+  color: var(--text-dim); font-size: 15px; line-height: 1; cursor: pointer; padding: 0;
+  align-items: center; justify-content: center;
+}
+.icon-search-clear:hover { color: var(--orange-light); }
+.icon-search.has-text .icon-search-clear { display: flex; }
+@media (max-width: 480px) {
+  .icon-search.is-expanded .icon-search-input { width: 55vw; }
+}
+@media (prefers-reduced-motion: reduce){ .icon-search-input{ transition:none; } }
+
+/* --- Custom confirm/alert dialog (replaces native browser confirm()/alert()
+   with something styled to match the app instead of the browser's default
+   system dialog look) --- */
+#customDialogOverlay .help-modal { max-width: 400px; text-align: center; padding: 30px 26px; }
+.dialog-message { font-size: 15px; color: var(--white); margin: 4px 0 22px; line-height: 1.5; white-space: pre-line; }
+.dialog-buttons { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; }
+.dialog-btn {
+  border: none; border-radius: 8px; padding: 11px 22px; cursor: pointer;
+  font-family: 'Oswald', sans-serif; font-size: 14.5px; font-weight: 600;
+}
+.dialog-btn-primary {
+  background: linear-gradient(135deg, var(--orange-light), var(--orange) 60%, var(--orange-dark));
+  color: #1a0d02;
+}
+.dialog-btn-danger { background: #e05252; color: #fff; }
+.dialog-btn-cancel { background: var(--bg-panel-2); border: 1px solid var(--border); color: var(--white); }
+
+/* --- Toast notifications (tools-common.js showToast()) --- */
+.th-toast-container{
+  position:fixed; left:50%; bottom:24px; transform:translateX(-50%);
+  z-index:400; display:flex; flex-direction:column; gap:8px; align-items:center;
+  pointer-events:none; width:100%; padding:0 20px; box-sizing:border-box;
+  transition: bottom .2s ease;
+}
+/* Bug fix (2026-08-16): the mobile bottom app nav added in the last
+   redesign pass is fixed at the viewport bottom with its own height
+   (~60px) plus safe-area inset -- a toast sitting at a flat bottom:24px
+   would render underneath or flush against it on every phone. Raised to
+   clear the bar with real breathing room whenever it's present. */
+body.th-has-bottomnav .th-toast-container{
+  bottom: calc(76px + env(safe-area-inset-bottom, 0px) + 12px);
+}
+.th-toast{
+  pointer-events:auto; cursor:pointer;
+  display:flex; align-items:center; gap:10px;
+  background:var(--bg-panel-2); border:1px solid var(--border); border-left:3px solid var(--orange);
+  color:var(--white); font-size:14px; font-family:inherit; line-height:1.4;
+  padding:12px 18px; border-radius:8px; max-width:420px; width:max-content;
+  box-shadow:0 6px 20px rgba(0,0,0,0.35);
+  opacity:0; transform:translateY(8px); transition:opacity .18s ease, transform .18s ease;
+}
+.th-toast .th-icon{ width:17px; height:17px; flex-shrink:0; color:#6fcf97; }
+.th-toast.is-error .th-icon{ color:#e0807a; }
+.th-toast.is-shown{ opacity:1; transform:translateY(0); }
+.th-toast.is-error{ border-left-color:#e05252; }
+@media (prefers-reduced-motion: reduce){
+  .th-toast{ transition:none; }
+}
+
+/* ==========================================================================
+   INTERNAL TOOLS — PROFESSIONAL POLISH PASS
+   Subtle glow + smoother interaction states, scoped deliberately to classes
+   used only by the Workspace tool suite (never the public marketing site's
+   chat bubble / copy-email buttons, which stay exactly as they were).
+   Respects the existing global prefers-reduced-motion rule above (already
+   disables all transitions/animations site-wide when requested) and the
+   existing blue focus-visible glow (already enhanced above) rather than
+   introducing a second, conflicting focus treatment.
+   ========================================================================== */
+
+/* --- Primary / call-to-action buttons: soft orange glow + slight lift --- */
+.primary-btn, .generate-btn, .note-new-btn, .dialog-btn-primary {
+  transition: box-shadow .18s ease, transform .12s ease, filter .18s ease;
+}
+.primary-btn:hover, .generate-btn:hover, .note-new-btn:hover, .dialog-btn-primary:hover {
+  box-shadow: 0 0 16px rgba(255,128,0,0.4);
+  transform: translateY(-1px);
+  filter: brightness(1.04);
+}
+.primary-btn:active, .generate-btn:active, .note-new-btn:active, .dialog-btn-primary:active {
+  transform: translateY(0);
+  filter: brightness(0.97);
+}
+
+/* --- Secondary / neutral buttons: understated lift, no color glow --- */
+.secondary-btn, .backup-btn, .add-stop-btn, .add-contact-btn, .dialog-btn-cancel {
+  transition: border-color .18s ease, box-shadow .18s ease, transform .12s ease;
+}
+.secondary-btn:hover, .backup-btn:hover, .add-stop-btn:hover, .add-contact-btn:hover, .dialog-btn-cancel:hover {
+  box-shadow: 0 0 10px rgba(255,255,255,0.05);
+  transform: translateY(-1px);
+}
+
+/* --- Small utility buttons: quiet, just smoother transitions --- */
+.small-btn, .sort-btn, .period-btn, .help-btn, .icon-btn,
+.remove-contact-btn, .remove-row-btn, .lead-toggle-btn, .action-btn {
+  transition: border-color .15s ease, color .15s ease, background .15s ease;
+}
+
+/* --- Interactive cards: tool links, metrics, compliance cards --- */
+.tool-card, .metric-card, .compliance-card, .lead-card, .job-card {
+  transition: border-color .18s ease, box-shadow .18s ease, transform .15s ease;
+}
+.tool-card:hover {
+  box-shadow: 0 0 20px rgba(255,128,0,0.12);
+  transform: translateY(-2px);
+}
+.metric-card:hover {
+  border-color: var(--border);
+  box-shadow: 0 0 14px rgba(255,255,255,0.04);
+}
+.job-card:hover {
+  box-shadow: 0 0 14px rgba(255,255,255,0.05);
+  transform: translateY(-1px);
+}
+
+/* --- Live-sync indicator: a gentle pulse so "active" reads as alive,
+   not just a static dot. Already covered by the global reduced-motion
+   rule above, which disables this automatically when requested. --- */
+.realtime-dot.is-live {
+  box-shadow: 0 0 5px rgba(76,175,80,0.7);
+  animation: th-pulse-glow 2.2s ease-in-out infinite;
+}
+@keyframes th-pulse-glow {
+  0%, 100% { box-shadow: 0 0 4px rgba(76,175,80,0.55); }
+  50% { box-shadow: 0 0 10px rgba(76,175,80,0.9); }
+}
+
+/* --- Help "?" button: small glow on hover so it reads as tappable --- */
+.help-btn:hover {
+  box-shadow: 0 0 10px rgba(255,128,0,0.25);
+}
+
+/* --- Shared button system ---
+   Consolidated from what used to be separately defined, near-duplicate
+   rules in workspace.html (.backup-btn), job-tracker.html (.primary-btn,
+   .secondary-btn), route-planner.html (.primary-btn), and
+   invoice-generator.html (.generate-btn, plus an undefined .secondary-btn
+   that was silently relying on browser defaults). Base classes now live
+   here once; page-specific sizing/layout needs are modifier classes. */
+.primary-btn {
+  background: linear-gradient(135deg, var(--orange-light), var(--orange) 60%, var(--orange-dark));
+  color: #1a0d02; font-weight: 700; font-family:'Oswald',sans-serif; font-size: 14.5px;
+  border: none; border-radius: 8px; padding: 11px 22px; cursor: pointer;
+}
+.primary-btn.is-disabled { opacity: 0.4; cursor: not-allowed; pointer-events: none; }
+.primary-btn.block {
+  width: 100%; margin-top: 16px; text-decoration: none; display: block;
+  text-align: center; box-sizing: border-box; font-size: 15px; padding: 13px 24px;
+}
+.primary-btn.wide {
+  width: 100%; font-size: 16px; padding: 14px 28px;
+  text-transform: uppercase; letter-spacing: 1px;
+}
+.primary-btn.wide:hover { opacity: 0.92; }
+
+.secondary-btn {
+  background: var(--bg-panel-2); border: 1px solid var(--border); color: var(--white);
+  border-radius: 8px; padding: 11px 18px; cursor: pointer; font-size: 14px; font-family: inherit;
+}
+.secondary-btn:hover { border-color: var(--blue-light); }
+.secondary-btn:active { transform: translateY(1px); filter: brightness(0.95); }
+
+/* --- Shared "tool card" link row (Dashboard's Tools section, and
+   available now for any future page that needs the same pattern) --- */
+.tool-card {
+  display: flex; align-items: center; justify-content: space-between; gap: 20px;
+  background: var(--bg-panel); border: 1px solid var(--border); border-left: 3px solid var(--orange);
+  border-radius: var(--radius); padding: 22px 24px; margin-bottom: 14px; text-decoration: none;
+  box-shadow: 0 3px 12px rgba(0,0,0,0.18), 0 1px 3px rgba(0,0,0,0.12);
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+.tool-card:hover { border-color: var(--orange-light); box-shadow: 0 8px 22px rgba(0,0,0,0.28); }
+.tool-card-text h3 { font-family:'Oswald',sans-serif; color: var(--white); font-size: 17px; margin: 0 0 6px; }
+.tool-card-text p { color: var(--text-dim); font-size: 14px; margin: 0; }
+.tool-card-arrow { color: var(--orange-light); font-size: 22px; flex-shrink: 0; }
+
+/* --- Shared small-btn (Delete/History/etc. secondary actions) ---
+   Was only ever defined locally in job-tracker.html, hover-only for the
+   .danger variant. workspace.html and contract-generator.html both use
+   these exact classes in markup without any definition at all -- meaning
+   workspace.html's delete buttons (Leads, etc.) have been rendering
+   completely unstyled on the live site. Moved here once, and added a
+   resting-state red tint for .danger so it reads as destructive even
+   without hovering (matters more on touch devices, which don't hover). */
+.small-btn {
+  background: none; border: 1px solid var(--border); color: var(--text-dim); border-radius: 6px;
+  padding: 6px 12px; cursor: pointer; font-size: 12.5px; font-family: inherit;
+}
+.small-btn:hover { border-color: var(--orange-light); color: var(--orange-light); }
+.small-btn:active { transform: translateY(1px); filter: brightness(0.95); }
+.small-btn.is-active { border-color: var(--blue-light); color: var(--blue-light); background: rgba(58,160,255,0.1); }
+.small-btn.danger { border-color: rgba(224,82,82,0.4); color: #e0a0a0; }
+.small-btn.danger:hover { border-color: #e05252; color: #e05252; }
+
+/* --- Shared dash-list-item (used for Leads, Invoices, Job Profitability,
+   and any other "row of items with a right-aligned value" list). Was only
+   ever defined locally in workspace.html; job-tracker.html now needs it
+   too for the new Job Profitability tab. --- */
+.dash-list-item {
+  display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap;
+  padding: 12px 0; border-bottom: 1px solid var(--border); font-size: 14px;
+}
+.dash-list-item:last-child { border-bottom: none; }
+.dash-list-item-title { color: var(--white); }
+.dash-list-item-meta { color: var(--text-dim); font-size: 12.5px; }
+.dash-list-item-amount { color: var(--orange-light); font-weight: 600; flex-shrink: 0; }
+.dash-list-item-right { display: flex; align-items: center; gap: 10px; flex-shrink: 0; }
+
+/* --- Shared form-section / form-field system ---
+   Was copy-pasted across invoice-generator.html, job-tracker.html, and
+   contract-generator.html with real drift: invoice-generator's version
+   was missing box-sizing:border-box (a genuine minor bug -- a width:100%
+   input with padding+border but no border-box renders wider than its
+   container), and textarea min-height varied (60px vs 70px). Standardized
+   on the more defensive version here. route-planner.html only used the
+   .form-section base (not .form-row/.form-field), so only that piece was
+   removed there. review-request.html's form-field is a genuinely
+   different single-column layout by design and was left untouched --
+   its own local <style> block still wins the cascade for anything it
+   overrides here, so nothing changes on that page. */
+.form-section {
+  background: var(--bg-panel); border: 1px solid var(--border); border-radius: var(--radius);
+  padding: 24px; margin-bottom: 22px;
+  box-shadow: 0 3px 12px rgba(0,0,0,0.18), 0 1px 3px rgba(0,0,0,0.12);
+}
+.form-section h3 { font-family:'Oswald',sans-serif; color: var(--orange-light); font-size: 15px; margin: 0 0 15px; text-transform: uppercase; letter-spacing: 1px; }
+.form-section-header {
+  display: flex; justify-content: space-between; align-items: center;
+  cursor: pointer; user-select: none;
+}
+.form-section-header h3 { margin: 0; }
+.form-section-header .collapse-chevron {
+  color: var(--text-dim); font-size: 13px; transition: transform 0.2s ease; flex-shrink: 0; margin-left: 10px;
+}
+.form-section.is-collapsed .collapse-chevron { transform: rotate(-90deg); }
+.form-section-body { margin-top: 14px; max-height: 4000px; opacity: 1; overflow: hidden; transition: max-height .3s ease, opacity .2s ease, margin-top .3s ease; }
+.form-section.is-collapsed .form-section-body { max-height: 0; opacity: 0; margin-top: 0; overflow: hidden; }
+@media (prefers-reduced-motion: reduce){ .form-section-body{ transition:none; } }
+.tool-form-row { display: flex; gap: 15px; margin-bottom: 13px; flex-wrap: wrap; }
+.form-field { flex: 1; min-width: 170px; }
+.form-field label { display: block; font-size: 13px; color: var(--text-dim); margin-bottom: 5px; }
+.form-field input, .form-field select, .form-field textarea {
+  width: 100%; padding: 9px 11px; background: var(--bg-panel-2); border: 1px solid var(--border);
+  border-radius: 6px; color: var(--white); font-size: 14.5px; font-family: inherit; box-sizing: border-box;
+  box-shadow: inset 0 1px 3px rgba(0,0,0,0.3);
+  transition: border-color .15s ease, box-shadow .15s ease;
+}
+/* A native date input's internal shadow-DOM content (the day/month/year
+   segments) has its own intrinsic minimum width on iOS Safari that
+   ignores width:100%/box-sizing:border-box above, so it can visibly
+   overflow its own flex container even though every other input type
+   respects that same rule. min-width:0 is what actually lets a flex
+   item shrink below its content's natural size; without it, flexbox
+   defaults to min-width:auto, which is the real cause of the overflow. */
+.form-field input[type="date"] { min-width: 0; max-width: 100%; }
+/* :focus-visible above already gives keyboard users a blue outline: this
+   is deliberately separate -- :focus-visible's own browser heuristics
+   often don't fire for a plain tap/click, which on a touch-primary tool
+   like this one would mean NO visible feedback at all when tapping into
+   a field. This fires for every focus method, tap included, and uses
+   orange instead of blue to actually read as this app's own state
+   rather than a generic browser default. */
+/* :focus-visible above already gives keyboard users a blue outline: this
+   is deliberately separate and scoped to :not(:focus-visible), since
+   :focus-visible's own browser heuristics often don't fire for a plain
+   tap/click, which on a touch-primary tool like this one would mean NO
+   visible feedback at all when tapping into a field. This covers that
+   gap without double-applying alongside the keyboard outline, and uses
+   orange instead of blue to read as this app's own state rather than a
+   generic browser default. */
+.form-field input:focus:not(:focus-visible),
+.form-field select:focus:not(:focus-visible),
+.form-field textarea:focus:not(:focus-visible) {
+  border-color: var(--orange-light);
+  box-shadow: inset 0 1px 3px rgba(0,0,0,0.3), 0 0 0 3px rgba(255,128,0,0.25);
+}
+.form-field textarea { resize: vertical; min-height: 70px; }
+
+/* --- Scroll-reveal: progressive enhancement only ---
+   Elements are fully visible by default. The "start hidden, fade/slide
+   in on scroll" behavior ONLY applies once JS confirms IntersectionObserver
+   support and adds .reveal-ready to <html> -- so no-JS visitors and old
+   browsers always see full content immediately, nothing is ever
+   permanently hidden behind a JS dependency. Wrapped in
+   prefers-reduced-motion: no-preference so reduced-motion visitors never
+   get the hidden starting state at all -- not just a faster animation,
+   genuinely no scroll-gating, matching what reduced-motion actually asks for. */
+@media (prefers-reduced-motion: no-preference) {
+  .reveal-ready [data-reveal] {
+    opacity: 0;
+    transform: translateY(28px);
+    transition: opacity 0.7s ease, transform 0.7s ease;
+  }
+  .reveal-ready [data-reveal].is-visible {
+    opacity: 1;
+    transform: translateY(0);
+  }
+  /* Slight stagger within a grid, so cards cascade in rather than
+     popping in as one flat block */
+  .reveal-ready [data-reveal]:nth-child(2) { transition-delay: 0.08s; }
+  .reveal-ready [data-reveal]:nth-child(3) { transition-delay: 0.16s; }
+  .reveal-ready [data-reveal]:nth-child(4) { transition-delay: 0.24s; }
+  .reveal-ready [data-reveal]:nth-child(5) { transition-delay: 0.32s; }
+  .reveal-ready [data-reveal]:nth-child(6) { transition-delay: 0.4s; }
+  .reveal-ready [data-reveal]:nth-child(7) { transition-delay: 0.48s; }
+}
+
+/* --- Cross-document View Transitions ---
+   Pure CSS opt-in, zero JavaScript. Chrome 126+ and some Safari versions
+   support this; browsers that don't just navigate the old way with zero
+   errors -- this is a true native progressive enhancement, not a
+   feature-detected fallback pattern. Support is genuinely still
+   Chromium-led as of mid-2026; Firefox and full cross-browser Safari
+   coverage isn't settled yet. Worth revisiting this comment in a future
+   session to check whether that's changed.
+   This rule has to be present on EVERY page that should participate --
+   both the page navigated FROM and the page navigated TO need it, which
+   is exactly why this lives in the shared styles.css rather than being
+   added per-page: all 6 public pages already load this file, so this
+   one addition covers every page-to-page link across the whole site at
+   once, and any future landing page automatically gets it too, with no
+   extra work. */
+@view-transition {
+  navigation: auto;
+}
+
+/* Slightly faster and punchier than the browser default cross-fade */
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation-duration: 0.28s;
+  animation-timing-function: ease-out;
+}
+
+/* --- Light mode (theme toggle) ---
+   Overrides the same CSS custom properties the dark theme already uses,
+   rather than duplicating every rule that references them. Every color
+   here was chosen and verified against WCAG AA contrast requirements
+   against the --bg value below (not just eyeballed) -- --orange-light
+   and --blue-light specifically needed real recoloring, not just a
+   lighter/darker flip, since they're used as TEXT color in 19 and 17
+   places respectively (eyebrow labels, links) and the original dark-mode
+   pastel values would fail contrast on a light background. Toggled via
+   [data-theme="light"] on <html>, set by theme.js. Defaults to the
+   visitor's OS-level preference on first visit (prefers-color-scheme),
+   then remembers their explicit choice in localStorage after that. */
+[data-theme="light"] {
+  --bg: #f3f1ec;
+  --bg-panel: #ffffff;
+  --bg-panel-2: #f2f0ec;
+  --bg-panel-3: #e9e6e0;
+  --border: #ddd8d0;
+  --text: #2b2b28;
+  --text-dim: #544f49;
+  --white: #14120f;
+  --steel: #55524c;
+  --orange: #d85f0a;
+  --orange-dark: #b04808;
+  --orange-light: #a84408;
+  --orange-tint-soft: rgba(216,95,10,0.08);
+  --orange-tint-border: rgba(216,95,10,0.3);
+  --orange-tint-glow: rgba(216,95,10,0.12);
+  --blue: #0d6efd;
+  --blue-dark: #0a52c2;
+  --blue-light: #0650bd;
+}
+
+/* Note: a few subtle ambient effects (the soft orange/blue radial glow
+   behind the hero section, and some box-shadow opacities) were tuned
+   for a dark background and weren't individually re-tuned for light
+   mode -- they'll still work, just possibly read as a bit more washed
+   out or subtle than intended. Worth a look once this is live and
+   visible for real, rather than guessing at values now. */
+
+/* --- Light-mode shadow & glow corrections ---
+   The dark theme uses colored "glows" around buttons and soft ambient
+   light behind the hero -- a visual metaphor of light emanating into
+   darkness that doesn't have a sensible light-mode equivalent (there's
+   no "darkness" for a glow to emanate into on a white background, so it
+   either disappears or reads as a faint stain). Button glows are
+   replaced with a standard neutral elevation shadow instead. Heavy
+   black box-shadows (0.5-0.6 opacity, tuned to read clearly against
+   near-black) are reduced substantially, since the same opacity on a
+   white background looks muddy and dated rather than crisp -- modern
+   light UI shadows are usually soft and in the 0.10-0.20 range.
+   Deliberately NOT touched: .gallery-caption's dark gradient and the
+   lightbox overlay's dark scrim, since both sit on top of a photograph
+   or dim the whole viewport respectively -- both are correct dark
+   regardless of site theme, not something tied to the page's own
+   light/dark mode. */
+[data-theme="light"] .hero::before,
+[data-theme="light"] .hero::after {
+  opacity: 0.85;
+}
+[data-theme="light"] .hero-badge img {
+  filter: drop-shadow(0 16px 28px rgba(20, 18, 15, 0.14));
+}
+[data-theme="light"] .modal {
+  box-shadow: 0 20px 48px rgba(20, 18, 15, 0.18);
+}
+[data-theme="light"] .chat-panel {
+  box-shadow: 0 10px 30px rgba(20, 18, 15, 0.16);
+}
+
+/* --- Theme toggle controls (desktop button + mobile switch) --- */
+.theme-toggle {
+  background: none; border: 1px solid rgba(255,255,255,0.25); border-radius: 999px;
+  height: 40px; padding: 0 16px 0 12px; display: flex; align-items: center; gap: 7px;
+  color: #d8d8d8; cursor: pointer; flex-shrink: 0; margin-right: 4px;
+  font-family: inherit; font-size: 13px; font-weight: 600; white-space: nowrap;
+  transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+}
+.theme-toggle:hover { background: rgba(255,255,255,0.08); color: var(--orange-light); }
+.theme-toggle svg { width: 17px; height: 17px; flex-shrink: 0; }
+.theme-icon-light { display: none; }
+[data-theme="light"] .theme-icon-dark { display: none; }
+[data-theme="light"] .theme-icon-light { display: block; }
+
+.mobile-theme-row {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 16px 20px; border-top: 1px solid var(--border); margin-top: 4px;
+  color: #e8e8e8; font-weight: 600;
+}
+.theme-switch { position: relative; display: inline-block; width: 46px; height: 26px; flex-shrink: 0; }
+.theme-switch input { opacity: 0; width: 0; height: 0; position: absolute; }
+.theme-switch-track {
+  position: absolute; inset: 0; background: var(--bg-panel-2); border: 1px solid var(--border);
+  border-radius: 999px; transition: background 0.2s ease; cursor: pointer; display: block;
+}
+.theme-switch-thumb {
+  position: absolute; top: 2px; left: 2px; width: 20px; height: 20px; border-radius: 50%;
+  background: var(--text-dim); transition: transform 0.2s ease, background 0.2s ease; display: block;
+}
+.theme-switch input:checked + .theme-switch-track { background: var(--orange-dark); }
+.theme-switch input:checked + .theme-switch-track .theme-switch-thumb { transform: translateX(20px); background: var(--white); }
+.theme-switch input:focus-visible + .theme-switch-track { outline: 2px solid var(--blue-light); outline-offset: 2px; }
+
+/* --- Internal tools: mobile touch-target improvements ---
+   These tools are used primarily on a phone, often on an actual job
+   site rather than at a desk -- reliable tapping matters more here than
+   on the marketing site. .small-btn in particular sits multiple-in-a-row
+   on every job card (Advance Status, Photos, Show on Calendar, Delete)
+   with only 8px between them at its previous ~28px height, well under
+   the 44px minimum both Apple and Google recommend for a reliable tap
+   target. Scoped to a phone-width breakpoint rather than changing
+   desktop, which already works fine as-is. */
+@media (max-width: 768px) {
+  .small-btn {
+    padding: 11px 15px;
+    font-size: 13.5px;
+    min-height: 42px;
+  }
+  .job-card-actions { gap: 10px; row-gap: 10px; }
+  .tabs {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+  }
+  .tabs::-webkit-scrollbar { display: none; }
+  .tab-btn {
+    padding: 13px 18px;
+    flex-shrink: 0;
+  }
+  .checkbox-row { padding: 4px 0; }
+  .checkbox-row input[type="checkbox"] {
+    width: 20px;
+    height: 20px;
+    flex-shrink: 0;
+  }
+}
+
+/* Editable public-site announcement banners -- content comes from
+   Supabase (see /tools/dev-tools.html to edit), hidden by default and
+   only shown by index.html's own script if a message is actually set.
+   Falls back to simply not showing at all if that fetch ever fails,
+   never breaks the page underneath it. */
+.site-banner {
+  background: var(--orange); color: #1a1200; text-align: center;
+  font-weight: 600; font-size: 14px; padding: 10px 16px;
+  position: relative; z-index: 500;
+}
+.site-banner:nth-of-type(2) { background: var(--blue); color: #071b2e; }
+
+/* Per-day hours breakdown -- replaces what used to be 2 static lines
+   ("Monday to Sunday" / "7:00 AM to 10:00 PM MST") with 7 independent
+   rows, each editable on its own from Dev Tools. */
+.hours-grid { display: flex; flex-direction: column; gap: 2px; margin-top: 4px; }
+.hours-row { display: flex; justify-content: space-between; gap: 12px; font-size: 13.5px; }
+.hours-day { color: var(--text-dim); font-weight: 600; }
+.hours-value { color: var(--white); }
+
+/* ==========================================================================
+   TOOL SUITE REDESIGN v2 -- 2026-08-16
+   Replaces the too-subtle "machined edge" layer, which read as a stray
+   orange line. This one is a full visual system: app-bar header, layered
+   ambient background, elevated gradient surfaces, an app-icon tool grid,
+   a segmented jump-nav, big confident numbers, and (from tools-common.js)
+   a native-style bottom navigation bar on mobile.
+
+   Every selector is prefixed with `body` so this layer BEATS the pages'
+   own inline <style> blocks (link comes before inline, so bare equal-
+   specificity selectors here would lose). Built on the shared :root
+   tokens, so [data-theme="light"] still adapts automatically.
+   ========================================================================== */
+
+/* ---- global feel: rounder, deeper, ambient ---- */
+body.th-tool-page {
+  /* layered ambient light instead of a flat void -- immediately visible */
+  background-image:
+    radial-gradient(90rem 42rem at 8% -12%, rgba(255,128,0,.07), transparent 60%),
+    radial-gradient(70rem 40rem at 108% 8%, rgba(58,160,255,.045), transparent 55%),
+    linear-gradient(var(--bg), var(--bg));
+  background-attachment: fixed;
+}
+/* Item #1: barely-there grain texture -- an inline SVG feTurbulence
+   noise tile, alpha reduced to ~3% via feComponentTransfer so it reads
+   as a subtle material texture rather than visible static. Scoped to
+   .th-tool-page only (not the public site) via a separate ::before
+   layer rather than folding into the background-image stack above, so
+   it can repeat/tile independently of those fixed-position gradients. */
+body.th-tool-page::before {
+  content: '';
+  position: fixed; inset: 0; z-index: 0; pointer-events: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix type='matrix' values='0 0 0 0 1 0 0 0 0 1 0 0 0 0 1 0 0 0 0.03 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  background-repeat: repeat;
+}
+body.th-tool-page { --radius: 14px; }
+
+::selection { background: var(--orange); color: #0a0a0a; }
+* { scrollbar-width: thin; scrollbar-color: var(--border) transparent; }
+*::-webkit-scrollbar { width: 9px; height: 9px; }
+*::-webkit-scrollbar-track { background: transparent; }
+*::-webkit-scrollbar-thumb { background: var(--border); border-radius: 8px; border: 2px solid transparent; background-clip: padding-box; }
+*::-webkit-scrollbar-thumb:hover { background: var(--orange-dark); background-clip: padding-box; }
+:focus-visible {
+  outline: 2px solid var(--orange);
+  outline-offset: 2px;
+  border-radius: 4px;
+  /* matches the glow language already used on button hovers and card
+     hovers elsewhere, instead of being a plain, generic flat outline */
+  box-shadow: 0 0 0 5px var(--orange-tint-soft);
+}
+
+/* ---- surfaces: real elevation, gradient faces ---- */
+body .section-block, body .dev-panel, body .form-section,
+body .card, body .metric-card, body .stat-box, body .job-card,
+body .compliance-card, body .lead-card {
+  background: linear-gradient(180deg, var(--bg-panel-2), var(--bg-panel) 55%);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: 0 1px 0 rgba(255,255,255,.03) inset, var(--shadow-resting);
+}
+
+/* section headings: white + orange kicker bar, not tiny orange whisper */
+body .section-heading, body .dev-panel-heading {
+  color: var(--white);
+  font-size: 15px;
+  letter-spacing: .8px;
+  /* 2026-08-16: the base border-bottom (var(--border), #2a2a2a) reads
+     as barely-there next to the bold orange kicker bar to its left --
+     a gradient fade reads as an intentional divider instead of an
+     afterthought, brightest under the text and tapering to nothing. */
+  border-bottom: 1px solid transparent;
+  border-image: linear-gradient(90deg, rgba(255,255,255,.16), rgba(255,255,255,.03) 70%) 1;
+}
+body .section-heading::before, body .dev-panel-heading::before {
+  content: '';
+  width: 4px; height: 18px; border-radius: 3px; flex-shrink: 0;
+  margin-right: 10px;
+  background: linear-gradient(180deg, var(--orange-light), var(--orange));
+  display: inline-block;
+}
+body .section-heading { display: flex; align-items: center; }
+body .section-heading > span:first-child,
+body .section-heading > *:first-child { margin-right: auto; }
+
+/* ---- the numbers are the product: make them read across the room ---- */
+body .metric-card .metric-value, body .stat-box .value {
+  font-size: 30px;
+  letter-spacing: .3px;
+  background: linear-gradient(180deg, var(--white), var(--steel));
+  -webkit-background-clip: text; background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+body .metric-card .metric-value.is-orange {
+  background: linear-gradient(180deg, var(--orange-light), var(--orange));
+  -webkit-background-clip: text; background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+body .metric-card .metric-label, body .stat-box .label { letter-spacing: 1.2px; }
+
+/* ---- app bar: the header becomes real chrome ---- */
+body .hub-header, body .tool-header {
+  /* Sticks to the viewport top once scrolled; before that it sits in
+     normal flow, so this works for every page's own top padding (44px
+     and 90px variants both exist). Horizontal padding is 20px on every
+     tool page, so the full-bleed x-margins are safe. */
+  position: sticky; top: 0; z-index: 60;
+  margin: 0 -20px 14px; padding: 12px 20px;
+  background: color-mix(in srgb, var(--bg) 78%, transparent);
+  -webkit-backdrop-filter: blur(14px); backdrop-filter: blur(14px);
+  border-bottom: 1px solid var(--border);
+  /* This was missing entirely -- with no display:flex here, any page
+     relying on this shared rule (dev-tools.html, settings.html; unlike
+     workspace.html, which has always had its own local override) had
+     its logo, title, and every header button stacking vertically as
+     plain block elements instead of sitting in a row. */
+  display: flex; align-items: center; justify-content: space-between; gap: 14px;
+}
+body .hub-title { font-size: 22px; letter-spacing: .5px; }
+body .hub-header img { height: 36px; width: 36px; }
+body .hub-header-left { display: flex; align-items: center; gap: 14px; }
+/* Groups multiple header buttons (help, settings, back-arrow) so
+   space-between above distributes between the left content and this
+   ONE right-hand group -- not evenly across every individual button,
+   which used to spread them apart from each other instead of keeping
+   them together at the right edge. */
+body .hub-header-right { display: flex; align-items: center; gap: 8px; }
+
+/* jump-nav: segmented pill control riding just under the app bar */
+body .jump-nav {
+  top: 61px; z-index: 55;
+  background: color-mix(in srgb, var(--bg) 82%, transparent);
+  -webkit-backdrop-filter: blur(12px); backdrop-filter: blur(12px);
+  margin-left: -20px; margin-right: -20px; padding: 8px 20px;
+  border-bottom: 1px solid var(--border);
+}
+body .jump-nav a {
+  border: 1px solid transparent;
+  border-radius: 999px;
+  padding: 7px 14px;
+  background: var(--bg-panel);
+}
+body .jump-nav a:hover {
+  border-color: var(--orange-tint-border);
+  color: var(--orange-light);
+  background: var(--bg-panel-2);
+}
+/* 2026-08-16: the mobile bottom nav and tab buttons both show a clear
+   "you are here" state; the jump-nav -- despite being the thing you
+   scroll past most -- had none. Reuses the same orange-glow chip
+   language as the bottom nav's active icon, driven by the scroll-spy
+   script below. */
+body .jump-nav a.is-active {
+  border-color: var(--orange-tint-border);
+  color: var(--orange-light);
+  background: var(--orange-tint-soft);
+  box-shadow: 0 0 0 1px var(--orange-tint-border), 0 0 14px -4px var(--orange-tint-glow);
+}
+
+/* ---- tool grid: app icons, not gray squares ---- */
+body .tool-tile-link {
+  gap: 9px; padding: 18px 6px 14px;
+  /* 2026-08-16: was --bg-panel-2 to --bg-panel, both very close in value
+     to the page's own near-black background -- on an OLED phone screen
+     the whole tool grid read as one flat mass until you looked closely.
+     Bumped the top stop to --bg-panel-3 (one step brighter) and paired
+     it with a slightly stronger border below, so each tile visibly
+     separates at a glance instead of only on close inspection. */
+  background: linear-gradient(180deg, var(--bg-panel-3), var(--bg-panel-2));
+  border-color: rgba(255,255,255,0.08);
+  border-radius: 16px;
+}
+body .tool-tile-icon {
+  font-size: 24px;
+  width: 52px; height: 52px;
+  display: flex; align-items: center; justify-content: center;
+  border-radius: 15px;
+  background: linear-gradient(160deg, var(--bg-panel-3), var(--bg-panel-2));
+  border: 1px solid var(--border);
+  box-shadow: 0 4px 12px -6px rgba(0,0,0,.6), 0 1px 0 rgba(255,255,255,.05) inset;
+}
+body .tool-tile-link:hover {
+  transform: translateY(-3px);
+  border-color: var(--orange-tint-border);
+  box-shadow: var(--shadow-hover), 0 0 24px -6px var(--orange-tint-glow);
+}
+body .tool-tile-link:hover .tool-tile-icon {
+  border-color: var(--orange-tint-border);
+  box-shadow: 0 6px 16px -6px var(--orange-tint-glow), 0 1px 0 rgba(255,255,255,.07) inset;
+}
+body .tool-tile-label { font-size: 13px; letter-spacing: .4px; }
+
+/* ---- rows and lists: tappable cards with direction ---- */
+body .dash-list-item {
+  border: 1px solid transparent;
+  border-radius: 10px;
+  padding: 10px 12px;
+  margin: 0 -12px;
+  transition: background .15s ease, border-color .15s ease, transform .15s ease;
+}
+body a.dash-list-item:hover {
+  background: var(--bg-panel-2);
+  border-color: var(--orange-tint-border);
+  transform: translateX(3px);
+}
+body .dev-check-row:hover { background: var(--orange-tint-soft); }
+body table tbody tr:hover { background: var(--orange-tint-soft); }
+/* Zebra striping for dense multi-column tables (Job Tracker's income/
+   expense logs, 8-9 columns each and growing over months of use) --
+   subtle enough on a dark theme to help scan a row across many columns
+   without competing with the existing hover tint above. */
+body table tbody tr:nth-child(even) { background: rgba(255,255,255,0.02); }
+body table tbody tr:nth-child(even):hover { background: var(--orange-tint-soft); }
+
+/* ---- controls: pill buttons with real states ---- */
+body .primary-btn, body .dialog-btn-primary, body .note-new-btn {
+  border-radius: 999px;
+  background-image: linear-gradient(180deg, var(--orange-light) -35%, var(--orange) 50%, var(--orange-dark) 135%);
+  box-shadow: 0 2px 8px -2px rgba(0,0,0,.5), 0 1px 0 rgba(255,255,255,.2) inset;
+  font-weight: 600; letter-spacing: .3px;
+}
+body .secondary-btn, body .small-btn, body .dialog-btn-cancel { border-radius: 999px; }
+body .primary-btn:hover, body .dialog-btn-primary:hover, body .note-new-btn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 6px 18px -6px var(--orange-tint-glow), 0 3px 10px -3px rgba(0,0,0,.55), 0 1px 0 rgba(255,255,255,.25) inset;
+  filter: brightness(1.07);
+}
+body .secondary-btn:hover, body .small-btn:hover {
+  transform: translateY(-1px);
+  border-color: var(--orange-tint-border);
+}
+body .primary-btn:active, body .secondary-btn:active, body .small-btn:active,
+body .dialog-btn:active, body .note-new-btn:active {
+  transform: translateY(1px) scale(.98);
+  filter: brightness(.95);
+  box-shadow: inset var(--shadow-active);
+}
+body .tab-btn { position: relative; border-radius: 10px 10px 0 0; }
+body .tab-btn::after {
+  content: ''; position: absolute; left: 12%; right: 12%; bottom: -1px; height: 3px;
+  border-radius: 3px 3px 0 0;
+  background: linear-gradient(90deg, var(--orange), var(--orange-light));
+  transform: scaleX(0); transition: transform .2s cubic-bezier(.2,.8,.2,1);
+}
+body .tab-btn.is-active::after { transform: scaleX(1); }
+body .tab-btn.is-active { color: var(--orange-light); }
+
+body .form-field input:focus, body .form-field select:focus, body .form-field textarea:focus,
+body input[type="text"]:focus, body input[type="email"]:focus, body input[type="tel"]:focus,
+body input[type="number"]:focus, body input[type="date"]:focus, body input[type="search"]:focus,
+body select:focus, body textarea:focus {
+  border-color: var(--orange);
+  box-shadow: 0 0 0 3px var(--orange-tint-soft);
+  outline: none;
+}
+
+/* ==========================================================================
+   MOBILE: this is where it has to feel like a different product
+   ========================================================================== */
+@media (max-width: 720px) {
+  /* full-bleed cards: stop wasting 40px of a 390px screen on gutters */
+  body.th-tool-page { padding-left: 12px; padding-right: 12px; padding-top: 12px; }
+  body .hub-header, body .tool-header { margin: 0 -12px 12px; padding: 10px 14px; }
+  body .jump-nav { margin-left: -12px; margin-right: -12px; padding: 8px 12px; top: 53px; }
+  body .section-block, body .dev-panel, body .form-section { padding-left: 14px; padding-right: 14px; }
+
+  /* type: comfortable, confident */
+  body .hub-title { font-size: 20px; }
+  body .metric-card .metric-value, body .stat-box .value { font-size: 26px; }
+  body .section-heading { font-size: 14px; }
+
+  /* touch targets */
+  body .primary-btn, body .secondary-btn, body .dialog-btn, body .note-new-btn, body .tab-btn { min-height: 46px; }
+  body .small-btn { min-height: 40px; }
+  body .help-btn { width: 36px; height: 36px; }
+  body .dash-list-item { padding: 13px 12px; }
+
+  /* the bottom nav (injected by tools-common.js) needs runway */
+  body.th-has-bottomnav { padding-bottom: calc(76px + env(safe-area-inset-bottom, 0px)); }
+
+  /* hover-lift is meaningless on touch */
+  body .tool-tile-link:hover, body a.dash-list-item:hover,
+  body .primary-btn:hover, body .secondary-btn:hover { transform: none; }
+}
+
+/* ---- bottom app nav: injected markup, styled here ---- */
+.th-bottom-nav {
+  position: fixed; left: 0; right: 0; bottom: 0; z-index: 900;
+  display: none;
+  padding: 8px max(10px, env(safe-area-inset-left)) calc(8px + env(safe-area-inset-bottom, 0px)) max(10px, env(safe-area-inset-right));
+  background: color-mix(in srgb, var(--bg) 72%, transparent);
+  -webkit-backdrop-filter: blur(18px); backdrop-filter: blur(18px);
+  border-top: 1px solid var(--border);
+}
+@media (max-width: 720px) { .th-bottom-nav { display: flex; justify-content: space-around; gap: 4px; } }
+.th-bottom-nav a {
+  flex: 1; max-width: 88px;
+  display: flex; flex-direction: column; align-items: center; gap: 5px;
+  text-decoration: none; color: var(--text-dim);
+  font-family: 'Oswald', sans-serif; font-size: 10.5px; letter-spacing: .4px;
+  padding: 5px 2px; border-radius: 12px;
+  transition: color .15s ease, background .15s ease;
+}
+.th-bottom-nav a .th-bn-icon {
+  width: 40px; height: 28px; display: flex; align-items: center; justify-content: center;
+  border-radius: 999px;
+  transition: background .18s ease, box-shadow .18s ease;
+}
+.th-bottom-nav a .th-bn-icon .th-icon { width: 19px; height: 19px; }
+.th-bottom-nav a.is-active { color: var(--orange-light); }
+.th-bottom-nav a.is-active .th-bn-icon {
+  background: var(--orange-tint-soft);
+  box-shadow: 0 0 0 1px var(--orange-tint-border), 0 0 16px -4px var(--orange-tint-glow);
+}
+.th-bottom-nav a:active .th-bn-icon { background: var(--bg-panel-2); }
+
+/* ---- reduced motion ---- */
+@media (prefers-reduced-motion: reduce) {
+  body .tool-tile-link, body .dash-list-item, body .tab-btn::after,
+  body .primary-btn, body .secondary-btn, body .small-btn, body .note-new-btn,
+  .th-bottom-nav a, .th-bottom-nav a .th-bn-icon { transition: none; }
+  body .tool-tile-link:hover, body a.dash-list-item:hover,
+  body .primary-btn:hover, body .secondary-btn:hover { transform: none; }
+}
+
+/* ---- th-icon: shared sizing for the SVG icon sprite ---- */
+.th-icon {
+  display: inline-block;
+  width: 1em; height: 1em;
+  vertical-align: -0.15em;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.5;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  flex-shrink: 0;
+}
+.icon-star-filled, svg.th-icon use[href="#icon-star-filled"] { fill: currentColor; }
+
+/* 2026-08-16: icon at 26px inside a 52px tile squircle left almost no
+   breathing room (icon nearly touched the container's rounded edge).
+   Dropped to 21px (~40% of the container instead of ~50%) -- refined
+   icon sets read premium specifically because of generous internal
+   padding, not because the glyph fills the available space. */
+body .tool-tile-icon .th-icon { width: 21px; height: 21px; }
+body .jump-nav-icon .th-icon, body .jump-nav .th-icon { width: 15px; height: 15px; }
+body .section-heading .th-icon, body .dev-panel-heading .th-icon { width: 15px; height: 15px; margin-right: 2px; }
+body a .th-icon { margin-right: 5px; }
+/* Icon-only circular buttons (.help-btn, used for Settings/back-arrow/
+   refresh links) never pair an icon with trailing text -- the margin
+   above was pushing their icon 5px left of the button's actual center
+   with nothing on the right to balance it. */
+body a.help-btn .th-icon { margin-right: 0; }
+.lightbox-nav .th-icon { width: 20px; height: 20px; stroke-width: 1.8; }
+
+/* ---- empty states: one shared definition, icon + message row ----
+   Previously duplicated identically across calendar.html, contract-
+   generator.html, and workspace.html -- and never defined at all for
+   invoice-generator.html, whose "No invoices generated yet" /
+   "No quotes match..." states have been rendering completely
+   unstyled (no color, no size, no padding) since that page existed. */
+.empty-state-small {
+  /* 2026-08-16: align-items:center on a 2-line wrapped message centers
+     the icon against the whole paragraph block, so it visually floats
+     above where the eye actually starts reading. flex-start anchors it
+     to the first line instead; the icon's own small top margin nudges
+     it down to sit on that line's baseline rather than its very top. */
+  display: flex; align-items: flex-start; gap: 10px;
+  color: var(--text-dim); font-size: 13.5px; line-height: 1.5;
+  padding: 16px 4px;
+}
+.empty-state-small .th-icon {
+  width: 20px; height: 20px; flex-shrink: 0; margin-top: 2px;
+  color: var(--text-dim); opacity: .8;
+}
+.empty-state-small.is-good .th-icon { color: #4caf50; }
+.empty-state-small.is-warning .th-icon { color: #e0a552; }
+
+/* ---- shared log-item row (contracts, invoices, quotes) ----
+   Previously defined only inside contract-generator.html's own <style>
+   block. invoice-generator.html uses this exact same markup for its
+   Invoice and Quote logs but never defined the class anywhere -- its
+   lists have been rendering completely unstyled (no padding, no border,
+   no badge shape) since that page existed. Moved here once so both
+   pages -- and any future page using the same pattern -- get it. */
+.contract-log-item {
+  display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap;
+  padding: 12px 0; border-bottom: 1px solid var(--border);
+}
+.contract-log-item:last-child { border-bottom: none; }
+.contract-log-title { font-family:'Oswald',sans-serif; color: var(--white); font-size: 14.5px; }
+.contract-log-meta { color: var(--text-dim); font-size: 12.5px; margin-top: 2px; }
+.badge-pending-signature {
+  display: inline-block; background: rgba(255,128,0,0.12); border: 1px solid rgba(255,128,0,0.4);
+  color: var(--orange-light); font-size: 11px; padding: 2px 8px; border-radius: 20px; margin-left: 6px; vertical-align: middle;
+}
+body.is-compact-density .contract-log-item { padding: 6px 0; }
+
+/* ---- skeleton loading shimmer -- shared ----
+   Previously only defined locally inside workspace.html. Moved here so
+   Job Tracker and Invoice Generator can use the same treatment during
+   their own real async gap (the initial cloud-sync pull), instead of
+   sitting fully blank until that resolves. */
+.skeleton-line{height:14px;border-radius:6px;margin-bottom:10px;background:linear-gradient(90deg, var(--bg-panel-2) 25%, var(--bg-panel) 50%, var(--bg-panel-2) 75%);background-size:200% 100%;animation:shimmer 1.4s ease-in-out infinite;}
+.skeleton-line.w-40{width:40%;}
+.skeleton-line.w-60{width:60%;}
+.skeleton-line.w-100{width:100%;}
+@keyframes shimmer{0%{background-position:200% 0;} 100%{background-position:-200% 0;}}
+@media (prefers-reduced-motion: reduce){ .skeleton-line{animation:none; opacity:0.6;} }
+
+/* ---- long-press quick actions (item #9) ---- */
+.is-long-pressing {
+  transform: scale(0.97);
+  transition: transform .15s ease;
+  box-shadow: 0 0 0 2px var(--orange-tint-border), 0 4px 16px -4px var(--orange-tint-glow);
+}
+@media (prefers-reduced-motion: reduce) { .is-long-pressing { transition: none; transform: none; } }
+
+.quick-actions-overlay {
+  position: fixed; inset: 0; z-index: 950;
+  background: rgba(0,0,0,0);
+  display: flex; align-items: flex-end; justify-content: center;
+  transition: background .2s ease;
+}
+.quick-actions-overlay.is-shown { background: rgba(0,0,0,0.55); }
+.quick-actions-sheet {
+  width: 100%; max-width: 480px;
+  background: linear-gradient(180deg, var(--bg-panel-3), var(--bg-panel-2));
+  border: 1px solid var(--border); border-radius: 18px 18px 0 0;
+  padding: 10px 16px calc(16px + env(safe-area-inset-bottom, 0px));
+  transform: translateY(100%);
+  transition: transform .22s cubic-bezier(.2,.8,.2,1);
+}
+.quick-actions-overlay.is-shown .quick-actions-sheet { transform: translateY(0); }
+@media (prefers-reduced-motion: reduce) {
+  .quick-actions-overlay, .quick-actions-sheet { transition: none; }
+}
+.quick-actions-title {
+  text-align: center; color: var(--text-dim); font-size: 12.5px; font-weight: 600;
+  text-transform: uppercase; letter-spacing: .6px; padding: 10px 0 6px;
+}
+.quick-actions-btn {
+  display: block; width: 100%; text-align: center; background: none; border: none;
+  border-top: 1px solid var(--border); color: var(--white); font-size: 16px;
+  font-family: inherit; padding: 15px 0; cursor: pointer;
+}
+.quick-actions-btn:active { background: var(--bg-panel); }
+.quick-actions-btn.is-danger { color: #e0807a; }
+.quick-actions-cancel { color: var(--orange-light); font-weight: 600; margin-top: 6px; border-top: none; }
+
+/* ---- Item #5: staggered list-reveal ---- */
+/* Reusable utility: add .list-stagger to a container right before
+   setting its innerHTML, only on that list's very first real render
+   (page load) -- NOT on every subsequent re-render from a search
+   keystroke or filter click, which would make the list visibly
+   re-cascade every time someone types, reading as janky rather than
+   considered. nth-child delays cap at 10 items; anything beyond that
+   shares the last delay rather than making someone wait through an
+   ever-longer tail for a big list. */
+.list-stagger > * {
+  opacity: 0;
+  animation: listStaggerIn .32s ease forwards;
+}
+.list-stagger > *:nth-child(1) { animation-delay: 0ms; }
+.list-stagger > *:nth-child(2) { animation-delay: 30ms; }
+.list-stagger > *:nth-child(3) { animation-delay: 60ms; }
+.list-stagger > *:nth-child(4) { animation-delay: 90ms; }
+.list-stagger > *:nth-child(5) { animation-delay: 120ms; }
+.list-stagger > *:nth-child(6) { animation-delay: 150ms; }
+.list-stagger > *:nth-child(7) { animation-delay: 180ms; }
+.list-stagger > *:nth-child(8) { animation-delay: 210ms; }
+.list-stagger > *:nth-child(9) { animation-delay: 240ms; }
+.list-stagger > *:nth-child(n+10) { animation-delay: 270ms; }
+@keyframes listStaggerIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
+@media (prefers-reduced-motion: reduce) {
+  .list-stagger > * { animation: none; opacity: 1; }
+}
+
+/* ---- Item #5: offline banner ---- */
+.th-offline-banner {
+  position: fixed; top: 0; left: 0; right: 0; z-index: 990;
+  display: flex; align-items: center; justify-content: center; gap: 8px;
+  background: linear-gradient(90deg, #b34a15, #d9601a);
+  color: #fff; font-size: 13px; font-weight: 600;
+  padding: 10px 16px; padding-top: calc(10px + env(safe-area-inset-top, 0px));
+  transform: translateY(-100%);
+  transition: transform .25s cubic-bezier(.2,.8,.2,1);
+}
+.th-offline-banner.is-shown { transform: translateY(0); }
+.th-offline-banner .th-icon { width: 15px; height: 15px; flex-shrink: 0; }
+/* Push page content down while the banner is visible, on tool pages
+   whose header is sticky to the very top -- otherwise the banner covers
+   the first ~40px of the header. */
+body.th-is-offline .hub-header, body.th-is-offline .tool-header {
+  margin-top: 40px;
+}
+@media (prefers-reduced-motion: reduce) { .th-offline-banner { transition: none; } }
+
+/* ---- shared bar-row component (status/vendor/client/weekday bars) ----
+   Previously only defined inside workspace.html's own <style> block.
+   Job Density by Weekday (calendar.html) needs this same pattern, so
+   moved here once rather than duplicated a second time. */
+.status-bar-row, .vendor-bar-row { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; font-size: 13px; }
+.status-bar-label, .vendor-bar-label { width: 110px; flex-shrink: 0; color: var(--text-dim); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.status-bar-track, .vendor-bar-track { flex: 1; height: 8px; background: var(--bg-panel-2); border-radius: 4px; overflow: hidden; }
+.status-bar-fill { height: 100%; background: var(--orange); }
+.vendor-bar-fill { height: 100%; background: var(--blue); }
+.status-bar-count, .vendor-bar-count { width: 60px; text-align: right; color: var(--white); flex-shrink: 0; font-size: 12.5px; }
+
+/* ---- Item #1: photo lightbox ---- */
+.photo-lightbox-overlay {
+  position: fixed; inset: 0; z-index: 970;
+  background: rgba(0,0,0,0);
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  transition: background .2s ease;
+  padding: env(safe-area-inset-top, 0px) env(safe-area-inset-right, 0px) env(safe-area-inset-bottom, 0px) env(safe-area-inset-left, 0px);
+}
+.photo-lightbox-overlay.is-shown { background: rgba(0,0,0,0.92); }
+.photo-lightbox-stage { position: relative; width: 100%; flex: 1; display: flex; align-items: center; justify-content: center; touch-action: none; }
+.photo-lightbox-img { max-width: 92vw; max-height: 78vh; object-fit: contain; border-radius: 6px; opacity: 0; transition: opacity .15s ease; }
+.photo-lightbox-overlay.is-shown .photo-lightbox-img { opacity: 1; }
+.photo-lightbox-close {
+  position: absolute; top: max(14px, env(safe-area-inset-top, 0px)); right: 16px; z-index: 5;
+  width: 38px; height: 38px; border-radius: 50%; border: none;
+  background: rgba(255,255,255,0.1); color: #fff; font-size: 22px; line-height: 1; cursor: pointer;
+}
+.photo-lightbox-nav {
+  position: absolute; top: 50%; transform: translateY(-50%);
+  width: 42px; height: 42px; border-radius: 50%; border: none;
+  background: rgba(255,255,255,0.1); color: #fff; font-size: 18px; cursor: pointer;
+}
+.photo-lightbox-prev { left: 10px; }
+.photo-lightbox-next { right: 10px; }
+.photo-lightbox-caption { color: var(--text-dim); font-size: 13px; padding: 4px 0; text-align: center; }
+.photo-lightbox-counter { color: var(--text-dim); font-size: 12px; padding-bottom: max(12px, env(safe-area-inset-bottom, 0px)); }
+@media (prefers-reduced-motion: reduce) {
+  .photo-lightbox-overlay, .photo-lightbox-img { transition: none; }
+}
+
+/* ---- Item #2: voice dictation button ---- */
+.voice-dictation-btn {
+  position: absolute; bottom: 8px; right: 8px; z-index: 2;
+  width: 30px; height: 30px; border-radius: 50%;
+  background: var(--bg-panel-3); border: 1px solid var(--border); color: var(--text-dim);
+  display: flex; align-items: center; justify-content: center; cursor: pointer;
+  transition: color .15s ease, border-color .15s ease, background .15s ease;
+}
+.voice-dictation-btn:hover { color: var(--orange-light); border-color: var(--orange-tint-border); }
+.voice-dictation-btn.is-listening {
+  color: #fff; background: #e05252; border-color: #e05252;
+  animation: micListeningPulse 1.2s ease-in-out infinite;
+}
+@keyframes micListeningPulse { 0%, 100% { box-shadow: 0 0 0 0 rgba(224,82,82,.5); } 50% { box-shadow: 0 0 0 6px rgba(224,82,82,0); } }
+@media (prefers-reduced-motion: reduce) { .voice-dictation-btn.is-listening { animation: none; } }
+
+/* ---- Item #6: generic print stylesheet for the tool suite ----
+   Distinct from runway-dashboard.html's own bespoke print-only report
+   builder (a purpose-built financial report, different problem). This
+   is the fix for every OTHER tool page: hitting Ctrl+P on Parts
+   Reference, a SOP, or Dev Tools currently printed exactly what was on
+   screen -- dark background, sticky nav, buttons and all. Hides chrome,
+   flips to a light/readable palette, and lets the actual content print.
+   Scoped to .th-tool-page so the public marketing site is unaffected. */
+@media print {
+  body.th-tool-page {
+    background: #fff !important; color: #111 !important;
+  }
+  body.th-tool-page::before { display: none !important; } /* grain texture -- pure ink waste on paper */
+  .hub-header, .tool-header, .jump-nav, .th-bottom-nav,
+  .th-offline-banner, .th-toast-container, .onboarding-card,
+  .photo-lightbox-overlay, .quick-actions-overlay,
+  .primary-btn, .secondary-btn, .small-btn, .help-btn, .dev-info-bubble,
+  .job-card-swipe-action, .icon-search-toggle, .voice-dictation-btn,
+  input[type="file"], .backup-row {
+    display: none !important;
+  }
+  body.th-tool-page .section-block, body.th-tool-page .card,
+  body.th-tool-page .job-card-swipe-inner, body.th-tool-page .form-section,
+  body.th-tool-page .dev-panel {
+    background: #fff !important; border-color: #ccc !important;
+    box-shadow: none !important; color: #111 !important;
+  }
+  body.th-tool-page .text-dim, body.th-tool-page [class*="-dim"] { color: #555 !important; }
+  a { color: #111 !important; text-decoration: underline; }
+}
+
+/* ---- Item #3: PWA install banner ---- */
+.th-install-banner {
+  position: fixed; left: 12px; right: 12px; z-index: 985;
+  bottom: 16px;
+  display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  background: linear-gradient(180deg, var(--bg-panel-3), var(--bg-panel-2));
+  border: 1px solid var(--orange-tint-border); border-radius: 14px;
+  padding: 12px 14px; color: var(--white); font-size: 13px;
+  box-shadow: 0 8px 30px rgba(0,0,0,.5), 0 0 24px -8px var(--orange-tint-glow);
+  transform: translateY(120%);
+  transition: transform .25s cubic-bezier(.2,.8,.2,1);
+}
+body.th-has-bottomnav .th-install-banner { bottom: calc(76px + env(safe-area-inset-bottom, 0px) + 10px); }
+.th-install-banner.is-shown { transform: translateY(0); }
+.th-install-actions { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
+.th-install-action {
+  background: linear-gradient(180deg, var(--orange-light), var(--orange) 60%, var(--orange-dark));
+  color: #1a0d02; border: none; border-radius: 999px; padding: 7px 14px;
+  font-weight: 700; font-size: 12.5px; cursor: pointer;
+}
+.th-install-dismiss { background: none; border: none; color: var(--text-dim); font-size: 18px; line-height: 1; cursor: pointer; padding: 4px; }
+@media (prefers-reduced-motion: reduce) { .th-install-banner { transition: none; } }

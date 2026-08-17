@@ -53,7 +53,7 @@
 // immediately after logging. Still bumping this so that fix reaches
 // devices without needing yet another round-trip to explain why it
 // didn't show up.
-const CACHE_NAME = 'th-workspace-v8';
+const CACHE_NAME = 'th-workspace-v9';
 const PRECACHE_URLS = [
   '/tools/workspace.html', '/tools/job-tracker.html', '/tools/invoice-generator.html', '/tools/contract-generator.html',
   '/tools/calendar.html', '/tools/route-planner.html', '/tools/review-request.html', '/tools/contact-card.html',
@@ -77,7 +77,7 @@ const PRECACHE_URLS = [
   // (added in an earlier push) was also missing from this list --
   // found and fixed at the same time, while already touching this list
   // for the same reason.
-  '/styles.css', '/tools/sync.js', '/tools/auth.js', '/tools/data-layer.js',
+  '/styles.css', '/tools/styles-tools.css', '/tools/sync.js', '/tools/auth.js', '/tools/data-layer.js',
   '/tools/tools-effects.js', '/tools/tools-dialogs.js', '/tools/tools-media-sharing.js', '/tools/tools-nav-pwa.js',
   '/tools/manifest.json',
   // Added 2026-08-14 -- same gap as above, these 2 scripts were live but unlisted.
