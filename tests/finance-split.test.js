@@ -148,3 +148,36 @@ test('every getElementById call in finance.html has a matching element defined o
   const missing = [...referenced].filter(id => !defined.has(id));
   assert.deepEqual(missing, []);
 });
+
+// Push 5 (2026-08-20, structural item #36): review-request outcome
+// tracking. Previously sending a review request was a one-way action --
+// no way to tell later whether it worked, and (a separate real gap found
+// while making this change) the sent-request log never called
+// scheduleSync() at all, meaning it silently never left whichever single
+// device created it. These lock in the fix.
+
+test('saveSentLog in review-request.html now calls scheduleSync (previously it never did)', () => {
+  const src = fs.readFileSync(path.join(__dirname, '..', 'tools', 'review-request.html'), 'utf8');
+  const fnMatch = src.match(/function saveSentLog\(log\)[\s\S]*?\n  \}\n/);
+  assert.ok(fnMatch, 'saveSentLog() not found');
+  assert.match(fnMatch[0], /scheduleSync/, 'saveSentLog should call scheduleSync so this log actually syncs across devices');
+});
+
+test('logSentRequest stamps a status field on every new entry', () => {
+  const src = fs.readFileSync(path.join(__dirname, '..', 'tools', 'review-request.html'), 'utf8');
+  const fnMatch = src.match(/function logSentRequest\(method\)[\s\S]*?\n  \}\n/);
+  assert.ok(fnMatch, 'logSentRequest() not found');
+  assert.match(fnMatch[0], /status:\s*'sent'/);
+});
+
+test('setRequestStatus exists and can move an entry to received or no_response', () => {
+  const src = fs.readFileSync(path.join(__dirname, '..', 'tools', 'review-request.html'), 'utf8');
+  assert.match(src, /function setRequestStatus\(id, status\)/);
+  assert.match(src, /STATUS_LABEL\s*=\s*\{\s*sent:.*received:.*no_response:/s);
+});
+
+test('renderSentLog treats entries with no status field (logged before this upgrade) as "sent", not undefined', () => {
+  const src = fs.readFileSync(path.join(__dirname, '..', 'tools', 'review-request.html'), 'utf8');
+  assert.match(src, /const status = entry\.status \|\| 'sent'/,
+    'old entries logged before this feature existed have no status field -- must default gracefully, not show "undefined"');
+});
