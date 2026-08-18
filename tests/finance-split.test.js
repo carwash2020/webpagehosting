@@ -975,3 +975,87 @@ test('finance.html reads ?job= and pre-selects it in the expense entry job dropd
   assert.ok(populatePos > 0 && presetPos > 0, 'both should be present');
   assert.ok(populatePos < presetPos, 'the job dropdown must be populated with real options before trying to pre-select one');
 });
+
+// CRITICAL BUG FIX (2026-08-20), found from a direct user report of a
+// blank Cost Lookup tab and a Finance page that "loads weird." finance.html
+// has been fundamentally broken since Push 4 created it: 5 module-level
+// constants (TAX_RATE_KEY, TAX_LABOR_KEY, TAX_PARTS_KEY, STORAGE_KEYS,
+// INCOME_STORAGE_KEY, EXPENSE_STORAGE_KEY, RATE_STORAGE_KEY, PAYMENT_LABEL)
+// were used throughout the file but never declared anywhere -- the exact
+// same class of bug caught for DEV_INFO/FIELD_INFO in Push 13, just missed
+// here at the time of the original Push 4 extraction. Because
+// loadTaxSettings() runs early in the async init sequence, throwing on the
+// very first of these silently aborted EVERYTHING after it in that same
+// function: calculateCost(), populateJobRefOptions(), renderExpenses(),
+// renderIncomeEntries(), renderPriceReferences(), and the tab-activation
+// logic never ran. That's exactly why every tab rendered its header and
+// buttons but no actual content -- confirmed directly against a user
+// screenshot showing this exact symptom.
+//
+// None of this project's existing 116 tests caught it, because they all
+// check structural properties (a function exists, a function calls X) via
+// source-text matching, never actually loading the page and checking it
+// renders. This test actually does that, the same discipline that caught
+// the Push 12 bug on job-tracker.html -- applied here for the first time.
+
+test('finance.html has zero undeclared ALL-CAPS constants (the exact class of bug that broke this page since Push 4)', () => {
+  const src = fs.readFileSync(FINANCE_PATH, 'utf8');
+  const scripts = [...src.matchAll(/<script(?![^>]*src)[^>]*>([\s\S]*?)<\/script>/g)].map(m => m[1]);
+  const mainScript = scripts[1];
+  const used = new Set([...mainScript.matchAll(/\b([A-Z][A-Z0-9_]{2,})\b/g)].map(m => m[1]));
+  const declared = new Set([...mainScript.matchAll(/\b(?:const|let|var)\s+([A-Z][A-Z0-9_]{2,})\b/g)].map(m => m[1]));
+  // Known-legitimate exceptions: JS built-ins, and names that belong to
+  // shared external files (data-layer.js/sync.js), never declared here
+  // on purpose.
+  const knownExternal = new Set(['JSON', 'URL', 'TH_KEYS', 'SYNC_DATA_KEYS', 'NOT']);
+  const candidates = [...used].filter(c => !declared.has(c) && !knownExternal.has(c));
+
+  // For each candidate, confirm every real usage is inside an actual
+  // comment (// or /* */ line), not live code -- e.g. "DEV_INFO" is
+  // only ever mentioned in an explanatory comment about a DIFFERENT
+  // file's bug, never referenced as real code here.
+  const trulyMissing = candidates.filter(name => {
+    const re = new RegExp('\\b' + name + '\\b', 'g');
+    for (const m of mainScript.matchAll(re)) {
+      const lineStart = mainScript.lastIndexOf('\n', m.index) + 1;
+      const lineEnd = mainScript.indexOf('\n', m.index);
+      const line = mainScript.slice(lineStart, lineEnd === -1 ? undefined : lineEnd).trim();
+      if (!line.startsWith('//') && !line.startsWith('*')) return true;
+    }
+    return false;
+  });
+  assert.deepEqual(trulyMissing, []);
+});
+
+test('finance.html\'s DOMContentLoaded init actually runs to completion and renders real content in every major panel', async () => {
+  const { JSDOM } = require('jsdom');
+  const html = fs.readFileSync(FINANCE_PATH, 'utf8');
+  const dom = new JSDOM(html, {
+    runScripts: 'dangerously', url: 'https://example.com/',
+    beforeParse(window) { window.requireAuth = () => {}; },
+  });
+  const { window } = dom;
+  window.showToast = () => {};
+  window.showConfirm = () => Promise.resolve(true);
+  window.initSyncOnLoad = () => Promise.resolve();
+  window.getCurrentUserEmail = () => null;
+  window.hasDevToolsAccess = () => true;
+  window.TH_KEYS = { jobs: 'th_tracker_jobs', invoices: 'th_invoices', expenses: 'th_expense_log', income: 'th_income_log' };
+  window.thRead = (key, fallback) => fallback;
+  window.money = (n) => '$' + (Number(n) || 0).toFixed(2);
+  window.escapeHtml = (s) => String(s == null ? '' : s);
+
+  let uncaught = null;
+  window.addEventListener('error', (e) => { uncaught = e.error; });
+  window.document.dispatchEvent(new window.Event('DOMContentLoaded'));
+  await new Promise(resolve => setTimeout(resolve, 100));
+
+  assert.equal(uncaught, null, 'DOMContentLoaded init should not throw');
+  // The real regression check: each of these must have actually
+  // rendered CONTENT, not just exist as empty containers. An empty
+  // laborResult/entriesTable/priceRefList is exactly the symptom the
+  // user's screenshots showed.
+  assert.ok(window.document.getElementById('laborResult').textContent.length > 0, 'Cost Lookup calculator should have computed and displayed a real value');
+  assert.ok(window.document.getElementById('entriesTable').innerHTML.length > 0, 'Expenses table should have rendered (even if just an empty-state message)');
+  assert.ok(window.document.getElementById('priceRefList').innerHTML.length > 0, 'Price references should have rendered');
+});
