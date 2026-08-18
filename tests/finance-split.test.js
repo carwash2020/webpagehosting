@@ -943,7 +943,7 @@ test('invoice-generator.html\'s .line-items-table is untouched -- a genuinely di
 
 test('Finance is no longer styled as a tab -- it\'s visually distinct from the real instant-switching tabs', () => {
   const src = fs.readFileSync(JOB_TRACKER_PATH, 'utf8');
-  const tabsBlock = src.match(/<div class="tabs">[\s\S]*?<\/div>/);
+  const tabsBlock = src.match(/<div class="tabs[^"]*">[\s\S]*?<\/div>/);
   assert.ok(tabsBlock, 'tabs block not found');
   assert.doesNotMatch(tabsBlock[0], /finance\.html/, 'Finance should not be inside the tabs container styled like Jobs/Contacts/Notes');
   assert.match(src, /Pricing, income, and expenses are on Finance/, 'a clearly-distinct link to Finance should still exist nearby');
@@ -1058,4 +1058,57 @@ test('finance.html\'s DOMContentLoaded init actually runs to completion and rend
   assert.ok(window.document.getElementById('laborResult').textContent.length > 0, 'Cost Lookup calculator should have computed and displayed a real value');
   assert.ok(window.document.getElementById('entriesTable').innerHTML.length > 0, 'Expenses table should have rendered (even if just an empty-state message)');
   assert.ok(window.document.getElementById('priceRefList').innerHTML.length > 0, 'Price references should have rendered');
+});
+
+// Redesign round (2026-08-20): swapped Routes for Finance in the
+// bottom nav (explicit direction), and made the 4 real primary-nav tab
+// bars sticky (Runway Dashboard's own pattern, adopted more broadly on
+// explicit direction) -- deliberately opt-in via a new .tabs-sticky
+// modifier rather than changing the base .tabs class, since
+// workspace.html's Business Health tabs use that same base class but
+// are a small embedded sub-widget partway down the page, not primary
+// navigation, and making those sticky-to-viewport while scrolling past
+// unrelated page content would be disorienting. Also found and fixed a
+// real bug while investigating: finance.html used a different wrapper
+// class (tab-row) with zero CSS defined anywhere, meaning its tabs
+// rendered as bare floating buttons with no container background --
+// exactly matching what the reported screenshots showed.
+
+test('the bottom nav has Finance instead of Routes, and Route Planner is still reachable from the Workspace dashboard', () => {
+  const navSrc = fs.readFileSync(path.join(__dirname, '..', 'tools', 'tools-nav-pwa.js'), 'utf8');
+  assert.match(navSrc, /href:\s*'\/tools\/finance\.html'.*icon:\s*'dollar'.*label:\s*'Finance'/s);
+  assert.doesNotMatch(navSrc, /label:\s*'Routes'/);
+  const wsSrc = fs.readFileSync(path.join(__dirname, '..', 'tools', 'workspace.html'), 'utf8');
+  assert.match(wsSrc, /href="\/tools\/route-planner\.html"/, 'Route Planner must still be linked from somewhere, or it becomes unreachable');
+});
+
+test('finance.html uses the shared .tabs class (not the old, unstyled tab-row) and gets the sticky modifier', () => {
+  const src = fs.readFileSync(FINANCE_PATH, 'utf8');
+  assert.doesNotMatch(src, /class="tab-row"/, 'tab-row had zero CSS anywhere -- this was the real bug behind the reported blank-looking tab bar');
+  assert.match(src, /class="tabs tabs-sticky"/);
+});
+
+test('the 4 real primary-nav tab bars (Finance, Job Tracker, Invoice Generator, Review Request) all have tabs-sticky', () => {
+  for (const [file, label] of [
+    ['finance.html', 'Finance'], ['job-tracker.html', 'Job Tracker'],
+    ['invoice-generator.html', 'Invoice Generator'], ['review-request.html', 'Review Request'],
+  ]) {
+    const src = fs.readFileSync(path.join(__dirname, '..', 'tools', file), 'utf8');
+    assert.match(src, /class="tabs tabs-sticky"/, label + ' should have tabs-sticky');
+  }
+});
+
+test('workspace.html\'s Business Health tabs deliberately do NOT get tabs-sticky -- a small embedded sub-widget, not primary page navigation', () => {
+  const src = fs.readFileSync(path.join(__dirname, '..', 'tools', 'workspace.html'), 'utf8');
+  const businessHealthTabs = src.match(/<div class="tabs[^"]*" id="businessHealthTabs"/);
+  assert.ok(businessHealthTabs, 'businessHealthTabs not found');
+  assert.doesNotMatch(businessHealthTabs[0], /tabs-sticky/);
+});
+
+test('.tabs-sticky positions below the already-sticky header, matching the proven .jump-nav pattern exactly (not top:0, which would overlap the header)', () => {
+  const src = fs.readFileSync(path.join(__dirname, '..', 'tools', 'styles-tools.css'), 'utf8');
+  const rule = src.match(/\.tabs\.tabs-sticky\s*\{[^}]*\}/);
+  assert.ok(rule, '.tabs-sticky rule not found');
+  assert.match(rule[0], /top:\s*61px/, 'must match .jump-nav\'s proven top offset, not overlap the sticky header at top:0');
+  assert.match(rule[0], /position:\s*sticky/);
 });

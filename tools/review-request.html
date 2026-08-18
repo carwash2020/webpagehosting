@@ -25,7 +25,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="/styles.css?v=202608201800">
-<link rel="stylesheet" href="/tools/styles-tools.css?v=202608202100">
+<link rel="stylesheet" href="/tools/styles-tools.css?v=202608202200">
 <script src="/tools/tools-effects.js?v=202608201400" defer></script>
 <script src="/tools/tools-dialogs.js?v=202608201400" defer></script>
 <script src="/tools/tools-media-sharing.js?v=202608201900" defer></script>
@@ -92,7 +92,7 @@
 <div class="tool-title" id="mainContent">Review Request Sender</div>
 <p class="tool-sub">Internal tool &mdash; fill in the job details after finishing, tap Send. Nothing here is ever sent to a server &mdash; the message itself is built right in this browser tab, and opens your phone's own messaging app to actually send it. A short local log of who's been sent a request is kept on this device, purely to warn you before an accidental double-send.</p>
 
-<div class="tabs" id="reviewTabs" style="margin-bottom:18px;">
+<div class="tabs tabs-sticky" id="reviewTabs">
   <button class="tab-btn is-active" data-tab="send" onclick="activateReviewTab('send')">Send Request</button>
   <button class="tab-btn" data-tab="google" onclick="activateReviewTab('google')">Google QR</button>
   <button class="tab-btn" data-tab="yelp" onclick="activateReviewTab('yelp')">Yelp QR</button>

@@ -229,6 +229,22 @@
 @keyframes tabPanelFadeIn{ from{ opacity:0; transform:translateY(4px); } to{ opacity:1; transform:translateY(0); } }
 @media (prefers-reduced-motion: reduce){ .tab-panel.is-active{ animation:none; } }
 
+/* Sticky tabs (2026-08-20) -- opt-in via this modifier, not the base
+   .tabs class, so workspace.html's Business Health tabs (the same base
+   class, but a small embedded sub-widget partway down the page, not
+   primary navigation) are unaffected. Matches Runway Dashboard's own
+   tab bar, which already does this -- direct fix for pages where a
+   long tab's content pushed the tab row itself off-screen while
+   scrolling, meaning switching tabs required scrolling all the way
+   back up first. top/z-index match the existing .jump-nav pattern
+   exactly, since both are a secondary bar riding just under the
+   already-sticky .hub-header/.tool-header. */
+.tabs.tabs-sticky {
+  position: sticky; top: 61px; z-index: 55;
+  background: color-mix(in srgb, var(--bg-panel) 92%, transparent);
+  -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px);
+}
+
 .upload-progress-bar { height: 3px; background: var(--bg-panel-2); border-radius: 2px; overflow: hidden; margin-top: 10px; position: relative; }
 .upload-progress-bar::after {
   content: ''; position: absolute; top: 0; left: -40%; height: 100%; width: 40%;
