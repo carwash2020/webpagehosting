@@ -800,3 +800,33 @@ test('the invoice log UI shows which quote an invoice was converted from, when a
   const fn = src.match(/function renderInvoiceLog\(\)[\s\S]*?\n  \}\n/);
   assert.match(fn[0], /Converted from quote #/);
 });
+
+// Push 15 (2026-08-20, structural item #8 investigation): went looking
+// for how to namespace the ~36 flat localStorage keys and found two
+// real bugs instead, which turned out to be far more valuable to fix
+// than the namespacing idea itself would have been.
+
+test('th_clients is in sync.js\'s SYNC_DATA_KEYS -- the client registry from Push 1/2 must actually sync across devices', () => {
+  const src = fs.readFileSync(path.join(__dirname, '..', 'tools', 'sync.js'), 'utf8');
+  const arrayMatch = src.match(/const SYNC_DATA_KEYS = \[([\s\S]*?)\n\];/);
+  assert.ok(arrayMatch, 'SYNC_DATA_KEYS not found');
+  assert.match(arrayMatch[1], /'th_clients'/);
+});
+
+test('th_clients has a MERGE_KEY_FIELD entry of "id" -- without this, adding it to SYNC_DATA_KEYS alone would cause a plain overwrite instead of a real merge, which is a worse bug than not syncing at all (silent data loss vs. just staying local)', () => {
+  const src = fs.readFileSync(path.join(__dirname, '..', 'tools', 'sync.js'), 'utf8');
+  const objMatch = src.match(/const MERGE_KEY_FIELD = \{([\s\S]*?)\n\};/);
+  assert.ok(objMatch, 'MERGE_KEY_FIELD not found');
+  assert.match(objMatch[1], /th_clients:\s*'id'/);
+});
+
+test('TH_KEYS.notes points at the real current notes key (th_tracker_notes_v2), not the legacy migration-only key', () => {
+  const src = fs.readFileSync(path.join(__dirname, '..', 'tools', 'data-layer.js'), 'utf8');
+  assert.match(src, /notes:\s*'th_tracker_notes_v2'/);
+  assert.doesNotMatch(src, /notes:\s*'th_tracker_notes'(?!_v2)/);
+});
+
+test('the dead clientLinks entry (confirmed zero usages anywhere) is gone from TH_KEYS', () => {
+  const src = fs.readFileSync(path.join(__dirname, '..', 'tools', 'data-layer.js'), 'utf8');
+  assert.doesNotMatch(src, /clientLinks/);
+});

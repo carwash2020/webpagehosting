@@ -48,6 +48,7 @@ const SYNC_TABLE = 'workspace_sync';
 
 const SYNC_DATA_KEYS = [
   'th_tracker_jobs',
+  'th_clients',
   'th_tracker_contacts',
   'th_tracker_notes_v2',
   'th_expense_log',
@@ -137,6 +138,7 @@ function collectSyncData() {
 // last silently wins with no idea what the other one just added.
 const MERGE_KEY_FIELD = {
   th_tracker_jobs: 'id',
+  th_clients: 'id',
   th_tracker_contacts: 'id',
   th_tracker_notes_v2: 'id',
   th_expense_log: 'id',
