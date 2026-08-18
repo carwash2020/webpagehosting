@@ -1256,3 +1256,120 @@ test('the end-to-end flow actually works: open the modal, fill it out, submit, a
   assert.ok(saved[0].receiptPath.length > 0);
   assert.equal(window.document.getElementById('quickExpenseOverlay').classList.contains('is-open'), false, 'modal should close after a successful save');
 });
+
+// CRITICAL BUG FIX (2026-08-20), found from a direct follow-up report
+// that Finance "still isn't working right" after the earlier
+// undeclared-constants fix. A genuinely different, separate bug: that
+// earlier fix resolved a CRASH (nothing rendered at all, including the
+// tabs and header). Once fixed, the page's init ran successfully and
+// computed everything correctly -- but activateTab() was only ever
+// called if the URL happened to have a hash matching a real tab name.
+// On a completely normal visit (tapping Finance from the bottom nav, a
+// bookmark, or just typing the URL with no #hash), that line did
+// nothing, and since the HTML only hardcodes is-active on the tab
+// BUTTON (not the panel itself), the panel stayed hidden behind its
+// default display:none forever. The page LOOKED like it was still
+// broken -- header and tabs visible, nothing underneath -- even though
+// every calculation underneath had actually run correctly. Caught by
+// checking the ACTUAL is-active state of the default panel after a
+// simulated normal page load, not just that nothing throws.
+//
+// job-tracker.html shares the exact same conditional-activation
+// pattern but wasn't actually broken -- its default panel (tab-jobs)
+// happens to have is-active hardcoded in the HTML already. Hardened it
+// anyway with the same unconditional-with-fallback fix, since relying
+// on a button's class and a panel's class staying manually
+// synchronized in two separate places is exactly the kind of fragile
+// coupling that caused this bug on finance.html in the first place.
+
+test('finance.html shows its default tab (Cost Lookup) on a completely normal, hash-less page load -- not just that nothing throws', async () => {
+  const { JSDOM } = require('jsdom');
+  const html = fs.readFileSync(FINANCE_PATH, 'utf8');
+  const dom = new JSDOM(html, {
+    runScripts: 'dangerously', url: 'https://example.com/', // deliberately no hash
+    beforeParse(window) { window.requireAuth = () => {}; },
+  });
+  const { window } = dom;
+  window.showToast = () => {};
+  window.showConfirm = () => Promise.resolve(true);
+  window.initSyncOnLoad = () => Promise.resolve();
+  window.getCurrentUserEmail = () => null;
+  window.hasDevToolsAccess = () => true;
+  window.TH_KEYS = { jobs: 'th_tracker_jobs', invoices: 'th_invoices', expenses: 'th_expense_log', income: 'th_income_log' };
+  window.thRead = (key, fallback) => fallback;
+  window.money = (n) => '$' + (Number(n) || 0).toFixed(2);
+  window.escapeHtml = (s) => String(s == null ? '' : s);
+  window.document.dispatchEvent(new window.Event('DOMContentLoaded'));
+  await new Promise(resolve => setTimeout(resolve, 100));
+
+  assert.ok(window.document.getElementById('tab-cost').classList.contains('is-active'),
+    'the default tab panel must actually be visible on a normal visit -- this is the exact bug that made the page look broken even after content was computed correctly');
+  for (const id of ['tab-profitability', 'tab-income', 'tab-expenses']) {
+    assert.equal(window.document.getElementById(id).classList.contains('is-active'), false, id + ' should NOT be active by default');
+  }
+});
+
+test('finance.html still correctly activates a DIFFERENT tab when a real hash is present, not just the fallback default', async () => {
+  const { JSDOM } = require('jsdom');
+  const html = fs.readFileSync(FINANCE_PATH, 'utf8');
+  const dom = new JSDOM(html, {
+    runScripts: 'dangerously', url: 'https://example.com/#expenses',
+    beforeParse(window) { window.requireAuth = () => {}; },
+  });
+  const { window } = dom;
+  window.showToast = () => {};
+  window.showConfirm = () => Promise.resolve(true);
+  window.initSyncOnLoad = () => Promise.resolve();
+  window.getCurrentUserEmail = () => null;
+  window.hasDevToolsAccess = () => true;
+  window.TH_KEYS = { jobs: 'th_tracker_jobs', invoices: 'th_invoices', expenses: 'th_expense_log', income: 'th_income_log' };
+  window.thRead = (key, fallback) => fallback;
+  window.money = (n) => '$' + (Number(n) || 0).toFixed(2);
+  window.escapeHtml = (s) => String(s == null ? '' : s);
+  window.document.dispatchEvent(new window.Event('DOMContentLoaded'));
+  await new Promise(resolve => setTimeout(resolve, 100));
+
+  assert.ok(window.document.getElementById('tab-expenses').classList.contains('is-active'));
+  assert.equal(window.document.getElementById('tab-cost').classList.contains('is-active'), false);
+});
+
+test('job-tracker.html shows its default tab (Jobs) on a normal, hash-less load, and still respects a real hash when present', async () => {
+  const { JSDOM } = require('jsdom');
+  const html = fs.readFileSync(JOB_TRACKER_PATH, 'utf8');
+
+  for (const [url, expectedActive, expectedInactive] of [
+    ['https://example.com/', 'tab-jobs', ['tab-contacts', 'tab-notes']],
+    ['https://example.com/#contacts', 'tab-contacts', ['tab-jobs', 'tab-notes']],
+  ]) {
+    const dom = new JSDOM(html, {
+      runScripts: 'dangerously', url,
+      beforeParse(window) { window.requireAuth = () => {}; },
+    });
+    const { window } = dom;
+    window.showToast = () => {};
+    window.showConfirm = () => Promise.resolve(true);
+    window.initSyncOnLoad = () => Promise.resolve();
+    window.getCurrentUserEmail = () => null;
+    window.TH_KEYS = { jobs: 'th_tracker_jobs', invoices: 'th_invoices', expenses: 'th_expense_log', income: 'th_income_log' };
+    window.thRead = (key, fallback) => fallback;
+    window.attachLongPress = () => {};
+    window.wireSearchClear = () => {};
+    window.attachVoiceDictation = () => {};
+    window.document.dispatchEvent(new window.Event('DOMContentLoaded'));
+    await new Promise(resolve => setTimeout(resolve, 100));
+
+    assert.ok(window.document.getElementById(expectedActive).classList.contains('is-active'), url + ' should activate ' + expectedActive);
+    for (const id of expectedInactive) {
+      assert.equal(window.document.getElementById(id).classList.contains('is-active'), false, url + ': ' + id + ' should not be active');
+    }
+  }
+});
+
+test('both pages use the unconditional activateTab(...) fallback pattern now, not the fragile conditional-only version', () => {
+  const finSrc = fs.readFileSync(FINANCE_PATH, 'utf8');
+  const jtSrc = fs.readFileSync(JOB_TRACKER_PATH, 'utf8');
+  assert.match(finSrc, /activateTab\(TAB_HASHES\[initialHash\] \? initialHash : 'cost'\)/);
+  assert.match(jtSrc, /activateTab\(TAB_HASHES\[initialHash\] \? initialHash : 'jobs'\)/);
+  assert.doesNotMatch(finSrc, /if \(TAB_HASHES\[initialHash\]\) activateTab\(initialHash\);/);
+  assert.doesNotMatch(jtSrc, /if \(TAB_HASHES\[initialHash\]\) activateTab\(initialHash\);/);
+});
