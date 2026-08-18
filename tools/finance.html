@@ -326,6 +326,24 @@
     calculateCost();
   }
 
+  // Bug fix (2026-08-20): these three were used by saveTaxSettings/
+  // loadTaxSettings below but never declared anywhere in this file --
+  // missed during Push 4's extraction from job-tracker.html (a bare
+  // module-level constant near a function, the same class of bug found
+  // and fixed for DEV_INFO/FIELD_INFO in Push 13, just not caught here
+  // at the time). Real keys confirmed against sync.js's SYNC_DATA_KEYS
+  // before adding these, not guessed. This has been throwing a
+  // ReferenceError on every single page load since Push 4 -- and
+  // because loadTaxSettings() runs early in the async init sequence,
+  // the throw silently aborted everything after it in that same
+  // function: calculateCost(), populateJobRefOptions(),
+  // renderExpenses(), renderIncomeEntries(), renderPriceReferences(),
+  // and the tab-activation logic never ran. That's exactly why every
+  // tab rendered its header and buttons but no actual content.
+  const TAX_RATE_KEY = 'th_tax_rate';
+  const TAX_LABOR_KEY = 'th_tax_labor';
+  const TAX_PARTS_KEY = 'th_tax_parts';
+
   function saveTaxSettings() {
     localStorage.setItem(TAX_RATE_KEY, document.getElementById('taxRate').value);
     localStorage.setItem(TAX_LABOR_KEY, document.getElementById('taxLabor').checked ? '1' : '0');
@@ -375,6 +393,13 @@
     document.getElementById('standardFinalRow').classList.toggle('final', !isFirstTime);
   }
 
+  // Bug fix (2026-08-20): STORAGE_KEYS was used below but never declared
+  // anywhere in this file -- same class of bug as TAX_RATE_KEY above,
+  // missed during Push 4's extraction from job-tracker.html. Confirmed
+  // against job-tracker.html's own STORAGE_KEYS.priceRef value before
+  // adding this, not guessed.
+  const STORAGE_KEYS = { priceRef: 'th_price_reference' };
+
   function loadPriceReferences() { try { return JSON.parse(localStorage.getItem(STORAGE_KEYS.priceRef) || '[]'); } catch (e) { return []; } }
 
   function savePriceReferences(list) { localStorage.setItem(STORAGE_KEYS.priceRef, JSON.stringify(list)); scheduleSync(); }
@@ -417,6 +442,11 @@
         <button class="chip-remove" onclick="event.stopPropagation(); deletePriceReference(${r.id})" aria-label="Remove">&times;</button>
       </div>`).join('');
   }
+
+  // Bug fix (2026-08-20): same class of bug as TAX_RATE_KEY above --
+  // used below but never declared. Confirmed against sync.js's
+  // SYNC_DATA_KEYS before adding this.
+  const INCOME_STORAGE_KEY = 'th_income_log';
 
   function loadIncomeEntries() { try { return JSON.parse(localStorage.getItem(INCOME_STORAGE_KEY) || '[]'); } catch (e) { return []; } }
   // Item #13 extended (2026-08-20): undoable-delete tracking for Income
@@ -636,9 +666,19 @@
     URL.revokeObjectURL(url);
   }
 
+  // Bug fix (2026-08-20): same class of bug as TAX_RATE_KEY above --
+  // used below but never declared. Confirmed against sync.js's
+  // SYNC_DATA_KEYS before adding this.
+  const EXPENSE_STORAGE_KEY = 'th_expense_log';
+
   function loadExpenses() { try { return JSON.parse(localStorage.getItem(EXPENSE_STORAGE_KEY) || '[]'); } catch (e) { return []; } }
 
   function saveExpenses(entries) { localStorage.setItem(EXPENSE_STORAGE_KEY, JSON.stringify(entries)); scheduleSync(); }
+
+  // Bug fix (2026-08-20): same class of bug as TAX_RATE_KEY above --
+  // used below but never declared. Confirmed against sync.js's
+  // SYNC_DATA_KEYS before adding this.
+  const RATE_STORAGE_KEY = 'th_mileage_rate';
 
   function getMileageRate() { return parseFloat(document.getElementById('mileageRate').value) || 0; }
 
@@ -835,6 +875,13 @@
       renderExpenses();
     }
   }
+
+  // Bug fix (2026-08-20): same class of bug as TAX_RATE_KEY above -- used
+  // in 3 places below but never declared. Confirmed the exact original
+  // mapping via git history (job-tracker.html had this, byte-for-byte,
+  // before Push 4) rather than guessing at label text, and cross-checked
+  // against the real payment <select> options to confirm all 6 keys match.
+  const PAYMENT_LABEL = { cash: 'Cash', card: 'Card', check: 'Check', venmo: 'Venmo', cashapp: 'Cash App', other: 'Other' };
 
   function renderExpenses() {
     let entries = [...loadExpenses()].sort((a, b) => new Date(b.date) - new Date(a.date));
