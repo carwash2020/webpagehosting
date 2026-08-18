@@ -830,3 +830,40 @@ test('the dead clientLinks entry (confirmed zero usages anywhere) is gone from T
   const src = fs.readFileSync(path.join(__dirname, '..', 'tools', 'data-layer.js'), 'utf8');
   assert.doesNotMatch(src, /clientLinks/);
 });
+
+// Performance fix (2026-08-20): the service worker was forcing a full
+// network round-trip on EVERY request via cache:'reload', including
+// versioned JS/CSS assets that are immutable once published. Fine when
+// there were fewer files to load, but today's structural splits took
+// most tool pages from ~5-6 shared-file requests to 9-10, and every one
+// of those was bypassing HTTP cache entirely -- a real, compounding
+// slowdown, found while investigating a live report of the app loading
+// slowly and pages sometimes not loading at all.
+
+test('the service worker serves versioned (?v=) requests cache-first, not forced through the network every time', () => {
+  const src = fs.readFileSync(path.join(__dirname, '..', 'service-worker.js'), 'utf8');
+  const fetchHandler = src.match(/self\.addEventListener\('fetch'[\s\S]*?\n\}\);/);
+  assert.ok(fetchHandler, 'fetch handler not found');
+  assert.match(fetchHandler[0], /url\.searchParams\.has\('v'\)/, 'should branch on the presence of a ?v= param');
+  // The cache-first branch must return before reaching the
+  // cache:'reload' network-first logic below it.
+  const versionedBranchIdx = fetchHandler[0].indexOf("searchParams.has('v')");
+  const reloadIdx = fetchHandler[0].indexOf("cache: 'reload'");
+  assert.ok(versionedBranchIdx > 0 && reloadIdx > 0, 'both branches should exist');
+  assert.ok(versionedBranchIdx < reloadIdx, 'the versioned-asset check must come first, before the network-first fallback');
+});
+
+test('unversioned requests (HTML pages) still get the network-first-with-reload behavior, so a deploy is never masked by a stale cache', () => {
+  const src = fs.readFileSync(path.join(__dirname, '..', 'service-worker.js'), 'utf8');
+  const fetchHandler = src.match(/self\.addEventListener\('fetch'[\s\S]*?\n\}\);/);
+  assert.match(fetchHandler[0], /cache:\s*'reload'/);
+});
+
+test('every URL in the precache list actually exists as a real file', () => {
+  const src = fs.readFileSync(path.join(__dirname, '..', 'service-worker.js'), 'utf8');
+  const arrayMatch = src.match(/const PRECACHE_URLS = \[([\s\S]*?)\n\];/);
+  const urls = [...arrayMatch[1].matchAll(/'(\/[^']+)'/g)].map(m => m[1]);
+  assert.ok(urls.length > 20, 'sanity check that the list was actually parsed');
+  const missing = urls.filter(u => !fs.existsSync(path.join(__dirname, '..', u.replace(/^\//, ''))));
+  assert.deepEqual(missing, []);
+});
