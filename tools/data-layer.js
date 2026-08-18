@@ -22,6 +22,35 @@
 // centralizing them here is the first step toward the namespacing cleanup
 // (structural item #8) without breaking any existing stored data, since the
 // VALUES here are exactly the keys already in use.
+// This registry deliberately does NOT cover every localStorage key in
+// the tool suite -- just the ones read/written through thRead/thWrite
+// below. A few things worth knowing if you're ever tempted to rename
+// keys wholesale for the sake of a consistent namespace (structural
+// item flagged repeatedly, never attempted): it would touch nearly
+// every file in the suite for a purely organizational benefit, while
+// investigating that exact idea (2026-08-20) surfaced two REAL bugs
+// instead, fixed alongside this comment:
+//   - th_clients (this whole registry) was never in sync.js's
+//     SYNC_DATA_KEYS list, meaning the client identity system built in
+//     Push 1/2 never actually synced across devices -- a client
+//     created on one device could silently never appear on another, or
+//     worse, get a second, different clientId on the other device for
+//     the same person. Fixed by adding it to both SYNC_DATA_KEYS and
+//     MERGE_KEY_FIELD in sync.js (the second one matters just as much
+//     as the first -- without it, one device's whole client list would
+//     have silently overwritten the other's on sync instead of merging).
+//   - TH_KEYS.notes pointed at th_tracker_notes, a legacy migration-only
+//     key, instead of th_tracker_notes_v2, the real one job-tracker.html
+//     actually uses. Zero current callers of TH_KEYS.notes existed, so
+//     this was a latent bug rather than a live one -- caught before it
+//     could bite anyone.
+// Also worth knowing: Runway Dashboard's own synced keys use a
+// DIFFERENT naming convention entirely (rd_kebab-case, not
+// th_snake_case -- see sync.js's SYNC_DATA_KEYS), and th_leads isn't a
+// localStorage key at all -- it's a real Supabase table with its own
+// direct REST calls and realtime subscription (see sync.js and
+// dev-tools.html), a genuinely different and already-working sync
+// mechanism, not a gap.
 const TH_KEYS = {
   jobs: 'th_tracker_jobs',
   invoices: 'th_invoices',
@@ -30,9 +59,8 @@ const TH_KEYS = {
   income: 'th_income_log',
   contacts: 'th_tracker_contacts',
   contracts: 'th_contracts',
-  notes: 'th_tracker_notes',
+  notes: 'th_tracker_notes_v2', // bug fix (2026-08-20): was 'th_tracker_notes', the LEGACY migration-only key -- see the comment above this block
   clients: 'th_clients',
-  clientLinks: 'th_client_links_v1',
 };
 
 // --- core read/write -------------------------------------------------------
