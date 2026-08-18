@@ -423,6 +423,11 @@
   }
 
   function loadIncomeEntries() { try { return JSON.parse(localStorage.getItem(INCOME_STORAGE_KEY) || '[]'); } catch (e) { return []; } }
+  // Item #13 extended (2026-08-20): undoable-delete tracking for Income
+  // and Expense entries, matching job-tracker.html's pattern -- id ->
+  // the pending setTimeout that finalizes the real deletion if not undone.
+  const pendingDeleteIncomeIds = new Map();
+  const pendingDeleteExpenseIds = new Map();
 
   function saveIncomeEntries(entries) { localStorage.setItem(INCOME_STORAGE_KEY, JSON.stringify(entries)); scheduleSync(); }
 
@@ -506,15 +511,25 @@
     const entry = loadIncomeEntries().find(e => e.id === id);
     const msg = entry && entry.origin === 'invoice'
       ? 'This entry came from a generated invoice. Deleting it only removes it from this log \u2014 the invoice itself is untouched. Continue?'
-      : 'Delete this income entry? This cannot be undone.';
+      : 'Delete this income entry?';
     const confirmed = await showConfirm(msg, { danger: true, confirmText: 'Delete' });
     if (!confirmed) return;
     if (editingIncomeEntryId === id) cancelIncomeEntryEdit();
     const row = document.querySelector('[data-income-id="' + id + '"]');
-    animateRowExit(row, () => {
+    await new Promise(resolve => animateRowExit(row, resolve));
+
+    const timer = setTimeout(() => {
+      pendingDeleteIncomeIds.delete(id);
       saveIncomeEntries(loadIncomeEntries().filter(e => e.id !== id));
       renderIncomeEntries();
-      showToast('Entry deleted.');
+    }, 6000);
+
+    pendingDeleteIncomeIds.set(id, timer);
+    renderIncomeEntries();
+    showUndoToast('Entry deleted.', () => {
+      clearTimeout(pendingDeleteIncomeIds.get(id));
+      pendingDeleteIncomeIds.delete(id);
+      renderIncomeEntries();
     });
   }
 
@@ -554,7 +569,11 @@
 
   function renderIncomeEntries() {
     backfillLegacyInvoicesIntoIncomeLog();
-    const entries = [...loadIncomeEntries()].sort((a, b) => new Date(b.date) - new Date(a.date));
+    let entries = [...loadIncomeEntries()].sort((a, b) => new Date(b.date) - new Date(a.date));
+    // Item #13 extended (2026-08-20): filters out any entry pending an
+    // undoable delete, matching job-tracker.html's pattern -- storage
+    // stays untouched until the undo window actually expires.
+    if (pendingDeleteIncomeIds.size > 0) entries = entries.filter(e => !pendingDeleteIncomeIds.has(e.id));
     const container = document.getElementById('incomeTable');
 
     if (entries.length === 0) {
@@ -787,11 +806,14 @@
   }
 
   async function deleteExpense(id) {
-    const confirmed = await showConfirm('Delete this expense entry? This cannot be undone.', { danger: true, confirmText: 'Delete' });
+    const confirmed = await showConfirm('Delete this expense entry?', { danger: true, confirmText: 'Delete' });
     if (!confirmed) return;
     if (editingExpenseId === id) cancelExpenseEdit();
     const row = document.querySelector('[data-expense-id="' + id + '"]');
-    animateRowExit(row, async () => {
+    await new Promise(resolve => animateRowExit(row, resolve));
+
+    const timer = setTimeout(async () => {
+      pendingDeleteExpenseIds.delete(id);
       const entries = loadExpenses();
       const entry = entries.find(e => e.id === id);
       if (entry && entry.receiptPath && typeof deleteReceipt === 'function') {
@@ -799,7 +821,14 @@
       }
       saveExpenses(entries.filter(e => e.id !== id));
       renderExpenses();
-      showToast('Entry deleted.');
+    }, 6000);
+
+    pendingDeleteExpenseIds.set(id, timer);
+    renderExpenses();
+    showUndoToast('Entry deleted.', () => {
+      clearTimeout(pendingDeleteExpenseIds.get(id));
+      pendingDeleteExpenseIds.delete(id);
+      renderExpenses();
     });
   }
 
@@ -812,7 +841,8 @@
   }
 
   function renderExpenses() {
-    const entries = [...loadExpenses()].sort((a, b) => new Date(b.date) - new Date(a.date));
+    let entries = [...loadExpenses()].sort((a, b) => new Date(b.date) - new Date(a.date));
+    if (pendingDeleteExpenseIds.size > 0) entries = entries.filter(e => !pendingDeleteExpenseIds.has(e.id));
     const container = document.getElementById('entriesTable');
 
     if (entries.length === 0) {

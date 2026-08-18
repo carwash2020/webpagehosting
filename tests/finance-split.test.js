@@ -867,3 +867,47 @@ test('every URL in the precache list actually exists as a real file', () => {
   const missing = urls.filter(u => !fs.existsSync(path.join(__dirname, '..', u.replace(/^\//, ''))));
   assert.deepEqual(missing, []);
 });
+
+// Item #13 extended (2026-08-20): the undo-delete pattern from Push 12
+// (jobs only) extended to Income, Expenses, Contracts, and Leads --
+// real business records with similar stakes to jobs. Leads are a real
+// Supabase table (not localStorage), confirmed in Push 15's
+// investigation -- the same deferral pattern still applies, just
+// deferring the actual DELETE API call instead of a local save.
+
+test('deleteIncomeEntry and deleteExpense both defer the real deletion behind a timer, matching the jobs pattern', () => {
+  const src = fs.readFileSync(path.join(__dirname, '..', 'tools', 'finance.html'), 'utf8');
+  for (const fn of ['deleteIncomeEntry', 'deleteExpense']) {
+    const m = src.match(new RegExp('async function ' + fn + '\\(id\\)[\\s\\S]*?\\n  \\}\\n'));
+    assert.ok(m, fn + ' not found');
+    assert.match(m[0], /setTimeout\(/);
+    assert.match(m[0], /showUndoToast\(/);
+  }
+});
+
+test('deleteContractLogEntry defers behind a timer', () => {
+  const src = fs.readFileSync(path.join(__dirname, '..', 'tools', 'contract-generator.html'), 'utf8');
+  const m = src.match(/async function deleteContractLogEntry\(id\)[\s\S]*?\n  \}\n/);
+  assert.ok(m, 'deleteContractLogEntry not found');
+  assert.match(m[0], /setTimeout\(/);
+  assert.match(m[0], /showUndoToast\(/);
+});
+
+test('deleteLeadFromDashboard defers the real Supabase DELETE call, not just a local save', () => {
+  const src = fs.readFileSync(path.join(__dirname, '..', 'tools', 'workspace.html'), 'utf8');
+  const m = src.match(/async function deleteLeadFromDashboard\(id\)[\s\S]*?\n  \}\n/);
+  assert.ok(m, 'deleteLeadFromDashboard not found');
+  assert.match(m[0], /setTimeout\(async \(\) => \{/);
+  assert.match(m[0], /await deleteLead\(id\)/);
+  assert.match(m[0], /showUndoToast\(/);
+});
+
+test('all 3 render functions filter out entries pending an undoable delete', () => {
+  const finSrc = fs.readFileSync(path.join(__dirname, '..', 'tools', 'finance.html'), 'utf8');
+  const contractSrc = fs.readFileSync(path.join(__dirname, '..', 'tools', 'contract-generator.html'), 'utf8');
+  const wsSrc = fs.readFileSync(path.join(__dirname, '..', 'tools', 'workspace.html'), 'utf8');
+  assert.match(finSrc, /pendingDeleteIncomeIds\.has/);
+  assert.match(finSrc, /pendingDeleteExpenseIds\.has/);
+  assert.match(contractSrc, /pendingDeleteContractIds\.has/);
+  assert.match(wsSrc, /pendingDeleteLeadIds\.has/);
+});

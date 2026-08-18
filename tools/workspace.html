@@ -1341,13 +1341,19 @@
       updateActionItemsBadge();
       return;
     }
-    actionItemCounts.leads = result.leads.filter(l => !l.handled).length;
+    let visibleLeads = result.leads;
+    if (pendingDeleteLeadIds.size > 0) visibleLeads = visibleLeads.filter(l => !pendingDeleteLeadIds.has(l.id));
+    actionItemCounts.leads = visibleLeads.filter(l => !l.handled).length;
     updateActionItemsBadge();
-    if (result.leads.length === 0) {
+    // Item #13 extended (2026-08-20): filters out any lead pending an
+    // undoable delete -- the real DELETE call to Supabase is deferred
+    // (see deleteLeadFromDashboard), so fetchLeads() above still
+    // legitimately returns it during the pending window.
+    if (visibleLeads.length === 0) {
       container.innerHTML = '<div class="empty-state-small"><svg class="th-icon" aria-hidden="true"><use href="#icon-inbox" xlink:href="#icon-inbox"></use></svg>No leads yet.</div>';
       return;
     }
-    container.innerHTML = result.leads.map(l => `
+    container.innerHTML = visibleLeads.map(l => `
       <div class="lead-card" data-lead-id="${l.id}">
         <div class="lead-card-top">
           <div>
@@ -1364,15 +1370,28 @@
       </div>`).join('');
   }
 
+  // Item #13 extended (2026-08-20): undoable-delete tracking for leads.
+  const pendingDeleteLeadIds = new Map();
+
   async function deleteLeadFromDashboard(id) {
-    const confirmed = await showConfirm('Delete this lead? This cannot be undone.', { danger: true, confirmText: 'Delete' });
+    const confirmed = await showConfirm('Delete this lead?', { danger: true, confirmText: 'Delete' });
     if (!confirmed) return;
     const row = document.querySelector('[data-lead-id="' + id + '"]');
-    animateRowExit(row, async () => {
+    await new Promise(resolve => animateRowExit(row, resolve));
+
+    const timer = setTimeout(async () => {
+      pendingDeleteLeadIds.delete(id);
       const result = await deleteLead(id);
-      if (!result.ok) { await showAlert('Could not delete: ' + result.error); return; }
+      if (!result.ok) { await showAlert('Could not delete: ' + result.error); }
       loadAndRenderLeads();
-      showToast('Lead deleted.');
+    }, 6000);
+
+    pendingDeleteLeadIds.set(id, timer);
+    loadAndRenderLeads();
+    showUndoToast('Lead deleted.', () => {
+      clearTimeout(pendingDeleteLeadIds.get(id));
+      pendingDeleteLeadIds.delete(id);
+      loadAndRenderLeads();
     });
   }
 
