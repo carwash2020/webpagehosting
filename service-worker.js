@@ -4,17 +4,28 @@
 // once looked like the whole site was broken purely from a stale cached
 // copy, and the fix at the time was to cache nothing at all. That's
 // being reversed here now that the project is more stable, but the
-// SAME underlying risk still needs guarding against, so this uses a
-// network-first strategy rather than cache-first:
+// SAME underlying risk still needs guarding against, so requests are
+// split into two different strategies depending on what's being asked
+// for:
 //
-//   - Online: every request still goes to the network first, exactly
-//     like before this file existed. You always get the current
-//     version. The cache is only ever updated as a side effect of a
-//     successful network fetch, never served ahead of one.
-//   - Offline (a dead zone on a job site, no signal): only THEN does
-//     this fall back to whatever was last successfully cached, so the
-//     app can still open and show existing local data instead of
-//     failing to load entirely.
+//   - Versioned assets (any URL with a ?v= param -- every shared JS/CSS
+//     file): cache-first. These are IMMUTABLE once published -- the
+//     whole point of the version string is that a content change always
+//     comes with a NEW version, so the exact same URL never needs
+//     re-fetching to pick up fresh content. A cache hit here needs zero
+//     network round-trip at all, which matters more than it used to:
+//     most tool pages went from ~5-6 shared-file requests to 9-10 after
+//     splitting tools-common.js and styles.css into focused pieces
+//     (2026-08-20), and forcing every one of those onto the network on
+//     every single page load was a real, compounding slowdown.
+//   - Everything else (HTML pages, anything without a ?v=): network-
+//     first, same as before this fix. Online, every request still goes
+//     to the network first -- you always get the current version, and
+//     the cache only updates as a side effect of a successful fetch,
+//     never served ahead of one. Offline (a dead zone on a job site, no
+//     signal), only THEN does this fall back to whatever was last
+//     successfully cached, so the app can still open and show existing
+//     local data instead of failing to load entirely.
 //
 // Cross-origin requests (Supabase API calls) are never touched here --
 // those always go straight to the network with no caching, since
@@ -53,7 +64,7 @@
 // immediately after logging. Still bumping this so that fix reaches
 // devices without needing yet another round-trip to explain why it
 // didn't show up.
-const CACHE_NAME = 'th-workspace-v10';
+const CACHE_NAME = 'th-workspace-v11';
 const PRECACHE_URLS = [
   '/tools/workspace.html', '/tools/job-tracker.html', '/tools/invoice-generator.html', '/tools/contract-generator.html',
   '/tools/calendar.html', '/tools/route-planner.html', '/tools/review-request.html', '/tools/contact-card.html',
@@ -106,6 +117,30 @@ self.addEventListener('fetch', (event) => {
   if (event.request.method !== 'GET') return;
   const url = new URL(event.request.url);
   if (url.origin !== self.location.origin) return; // never intercept Supabase or other cross-origin calls
+
+  // Performance fix (2026-08-20): a request carrying a ?v= cache-bust
+  // param is for an IMMUTABLE resource -- the whole point of that param
+  // is that a content change always comes with a NEW version string, so
+  // the exact same URL never needs re-fetching to pick up fresh content.
+  // These are safe (and much faster) to serve cache-first: a cache hit
+  // needs zero network round-trip at all. Only requests WITHOUT a ?v=
+  // (HTML pages, and anything else) still need the network-first-with-
+  // reload behavior below, since guaranteeing fresh HTML after a deploy
+  // is what that behavior exists to protect -- an HTML page's own URL
+  // doesn't change when its content does.
+  if (url.searchParams.has('v')) {
+    event.respondWith(
+      caches.match(event.request).then((cached) => {
+        if (cached) return cached;
+        return fetch(event.request).then((networkResponse) => {
+          const responseClone = networkResponse.clone();
+          caches.open(CACHE_NAME).then((cache) => cache.put(event.request, responseClone));
+          return networkResponse;
+        });
+      })
+    );
+    return;
+  }
 
   // Bug fix (2026-08-20): fetch(event.request) alone does NOT guarantee
   // the network-first behavior described in the comment above -- it's
