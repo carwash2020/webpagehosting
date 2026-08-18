@@ -156,14 +156,14 @@
     html += renderRecordSection('Expenses', bundle.linkedExpenses.map(e => ({
       title: e.description || e.category || 'Expense', meta: e.date || '',
       amount: money(e.amount || 0), href: '/tools/finance.html#expenses',
-    })), 'No expenses logged against this job yet.');
+    })), 'No expenses logged against this job yet.', '/tools/finance.html?job=' + j.id + '#expenses');
 
     html += '<div class="section-block"><div class="section-heading is-static"><span>Photos</span></div><div class="job-photo-grid" id="jobPhotosGrid"><div class="empty-state-small"><svg class="th-icon" aria-hidden="true"><use href="#icon-camera" xlink:href="#icon-camera"></use></svg>Loading...</div></div></div>';
 
     document.getElementById('jobContent').innerHTML = html;
   }
 
-  function renderRecordSection(label, rows, emptyText) {
+  function renderRecordSection(label, rows, emptyText, addHref) {
     let inner;
     if (rows.length === 0) {
       inner = '<div class="empty-state-small"><svg class="th-icon" aria-hidden="true"><use href="#icon-inbox" xlink:href="#icon-inbox"></use></svg>' + escapeHtml(emptyText) + '</div>';
@@ -175,7 +175,20 @@
         '</a>'
       ).join('');
     }
-    return '<div class="section-block"><div class="section-heading is-static"><span>' + label + ' (' + rows.length + ')</span></div>' + inner + '</div>';
+    // Item #2 fix (2026-08-20): an optional "add new" link next to the
+    // section heading -- deliberately opt-in (only Expenses uses it
+    // below) rather than a change to every section's behavior, matching
+    // this page's existing read-only design intent for Invoices/Quotes/
+    // Photos (see the comment on loadPhotosReadOnly below for the same
+    // reasoning). Directly addresses the concrete friction found while
+    // investigating the Job Tracker/Finance split: logging a new
+    // expense against a job you're already looking at required leaving
+    // this page, landing on Finance, and re-picking the job from a
+    // dropdown that has to load fresh.
+    const addLink = addHref
+      ? '<a href="' + addHref + '" class="help-btn" aria-label="Log an expense for this job" title="Log an expense for this job" style="text-decoration:none; display:inline-flex; align-items:center; justify-content:center; margin-left:8px;">+</a>'
+      : '';
+    return '<div class="section-block"><div class="section-heading is-static"><span>' + label + ' (' + rows.length + ')</span>' + addLink + '</div>' + inner + '</div>';
   }
 
   // Read-only: view + lightbox only. Starring for the website gallery and

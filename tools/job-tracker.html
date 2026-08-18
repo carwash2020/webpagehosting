@@ -222,15 +222,17 @@
   <button class="help-btn" onclick="openHelpModal()" aria-label="How to use this tool" title="How to use this tool">?</button>
 </div>
 <div class="tool-title" id="mainContent">Job Tracker</div>
-<p class="tool-sub">Jobs, pricing, expenses, contacts, and notes &mdash; the whole day-to-day workflow in one place, organized by tab.<span id="syncStatusText"></span> Force a full refresh from the <a href="/tools/workspace.html" style="color:var(--blue-light);">Workspace</a> page.
+<p class="tool-sub">Jobs, contacts, and notes here &mdash; pricing, income, and expenses live on <a href="/tools/finance.html" style="color:var(--orange-light);">Finance &rarr;</a>.<span id="syncStatusText"></span> Force a full refresh from the <a href="/tools/workspace.html" style="color:var(--blue-light);">Workspace</a> page.
   <span class="realtime-badge" id="realtimeBadge"><span class="realtime-dot" id="realtimeDot"></span><span id="realtimeText">Live sync: connecting...</span></span>
 </p>
 
 <div class="tabs">
   <button class="tab-btn is-active" data-tab="jobs">Jobs</button>
-  <a class="tab-btn" href="/tools/finance.html" style="text-decoration:none; display:inline-flex; align-items:center;">Finance</a>
   <button class="tab-btn" data-tab="contacts">Contacts</button>
   <button class="tab-btn" data-tab="notes">Notes</button>
+</div>
+<div style="margin-bottom:22px;">
+  <a href="/tools/finance.html" style="display:inline-flex; align-items:center; gap:6px; text-decoration:none; color:var(--text-dim); font-size:13.5px;">Pricing, income, and expenses are on Finance <span style="color:var(--orange-light);">&rarr;</span></a>
 </div>
 
 <!-- JOBS TAB -->
@@ -1110,6 +1112,7 @@
       if (job.status !== 'done') {
         actions.push({ label: 'Mark Done', onClick: () => setJobStatus(jobId, 'done') });
       }
+      actions.push({ label: 'Log Expense', onClick: () => { window.location.href = '/tools/finance.html?job=' + jobId + '#expenses'; } });
       actions.push({ label: 'Edit', onClick: () => editJob(jobId) });
       actions.push({ label: 'Delete', isDanger: true, onClick: () => deleteJob(jobId) });
       showQuickActionSheet(job.title, actions);
