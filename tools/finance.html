@@ -941,6 +941,20 @@
       const initialHash = (location.hash || '').replace('#', '');
       if (TAB_HASHES[initialHash]) activateTab(initialHash);
 
+      // Item #2 fix (2026-08-20): pre-selects the job passed via
+      // ?job=<id> in the Expense entry form -- set by job-tracker.html's
+      // "Log Expense" long-press quick action and job-detail.html's new
+      // "+" link next to its Expenses section, both landing here with
+      // #expenses already, so this only needs to fill in the job
+      // dropdown itself, not also handle tab-switching.
+      const presetJobId = new URLSearchParams(location.search).get('job');
+      if (presetJobId) {
+        const entryJobRefEl = document.getElementById('entryJobRef');
+        if (entryJobRefEl && [...entryJobRefEl.options].some(o => o.value === presetJobId)) {
+          entryJobRefEl.value = presetJobId;
+        }
+      }
+
       if (typeof startRealtimeSync === 'function') {
         startRealtimeSync(async () => {
           loadMileageRate();

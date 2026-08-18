@@ -932,3 +932,46 @@ test('invoice-generator.html\'s .line-items-table is untouched -- a genuinely di
   const src = fs.readFileSync(path.join(__dirname, '..', 'tools', 'invoice-generator.html'), 'utf8');
   assert.match(src, /\.line-items-table \{/);
 });
+
+// Job Tracker / Finance UX fixes (2026-08-20), following a direct user
+// report that the split felt "hard to find" and "loaded weird." Two
+// real problems found: the Finance link was styled identically to the
+// instant-switching tabs despite being a real page navigation, and
+// logging a new expense against a job required a multi-step detour
+// through Finance's own job picker instead of a direct path from the
+// job itself.
+
+test('Finance is no longer styled as a tab -- it\'s visually distinct from the real instant-switching tabs', () => {
+  const src = fs.readFileSync(JOB_TRACKER_PATH, 'utf8');
+  const tabsBlock = src.match(/<div class="tabs">[\s\S]*?<\/div>/);
+  assert.ok(tabsBlock, 'tabs block not found');
+  assert.doesNotMatch(tabsBlock[0], /finance\.html/, 'Finance should not be inside the tabs container styled like Jobs/Contacts/Notes');
+  assert.match(src, /Pricing, income, and expenses are on Finance/, 'a clearly-distinct link to Finance should still exist nearby');
+});
+
+test('the "Log Expense" quick action exists on job cards, linking to Finance with the job pre-selected', () => {
+  const src = fs.readFileSync(JOB_TRACKER_PATH, 'utf8');
+  assert.match(src, /label: 'Log Expense'/);
+  assert.match(src, /finance\.html\?job=' \+ jobId \+ '#expenses'/);
+});
+
+test('job-detail.html\'s Expenses section has a "+" link to log a new expense for this specific job, while Invoices/Quotes stay read-only', () => {
+  const src = fs.readFileSync(path.join(__dirname, '..', 'tools', 'job-detail.html'), 'utf8');
+  const fn = src.match(/function renderRecordSection\([\s\S]*?\n  \}\n/);
+  assert.ok(fn, 'renderRecordSection not found');
+  assert.match(fn[0], /addHref/);
+  // Only the Expenses call site should actually pass one.
+  const expensesCall = src.match(/renderRecordSection\('Expenses'[\s\S]*?\);/);
+  const invoicesCall = src.match(/renderRecordSection\('Invoices'[\s\S]*?\);/);
+  assert.match(expensesCall[0], /finance\.html\?job=' \+ j\.id \+ '#expenses'/);
+  assert.doesNotMatch(invoicesCall[0], /addHref|,\s*'\/tools\//, 'Invoices should stay read-only, no add-new link');
+});
+
+test('finance.html reads ?job= and pre-selects it in the expense entry job dropdown, after the dropdown has real options to select from', () => {
+  const src = fs.readFileSync(path.join(__dirname, '..', 'tools', 'finance.html'), 'utf8');
+  const initBlock = src.slice(src.indexOf("document.addEventListener('DOMContentLoaded'"));
+  const populatePos = initBlock.indexOf('populateJobRefOptions();');
+  const presetPos = initBlock.indexOf("get('job')");
+  assert.ok(populatePos > 0 && presetPos > 0, 'both should be present');
+  assert.ok(populatePos < presetPos, 'the job dropdown must be populated with real options before trying to pre-select one');
+});
