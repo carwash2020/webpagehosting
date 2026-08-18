@@ -1773,6 +1773,7 @@
 
   document.addEventListener('DOMContentLoaded', function () {
     (async function init() {
+      try {
       // Item #12 (2026-08-16): the real loading gap on this page is this
       // network pull, not renderJobs() itself (which just reads already-
       // local data synchronously). Previously the list sat fully blank
@@ -1832,6 +1833,15 @@
 
       if (typeof startRealtimeSync === 'function') {
         startRealtimeSync(onRealtimeChange, updateRealtimeBadge);
+      }
+      } catch (initError) {
+        const errorBanner = document.createElement('div');
+        errorBanner.style.cssText = 'background:#3a1414; border:1px solid #e05252; border-radius:8px; padding:14px 16px; margin:16px 0; color:#ffb3b3; font-size:13.5px; font-family:monospace; white-space:pre-wrap; word-break:break-word;';
+        errorBanner.textContent = 'Job Tracker page failed to load properly.\n\nError: ' + (initError && initError.message ? initError.message : String(initError)) + '\n\nStack: ' + (initError && initError.stack ? initError.stack : 'unavailable') + '\n\nPlease screenshot this and share it.';
+        document.body.insertBefore(errorBanner, document.body.firstChild);
+        if (typeof logClientError === 'function') {
+          logClientError('job-tracker.html init failed: ' + (initError && initError.message), 'job-tracker.html', initError && initError.stack, null, null);
+        }
       }
     })();
   });
