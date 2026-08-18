@@ -309,6 +309,9 @@
     localStorage.setItem('th_contracts', JSON.stringify(list));
     if (typeof scheduleSync === 'function') scheduleSync();
   }
+  // Item #13 extended (2026-08-20): undoable-delete tracking, matching
+  // job-tracker.html's pattern.
+  const pendingDeleteContractIds = new Map();
 
   const CONTRACT_TYPE_LABELS = {
     pwo: 'Per-Job Work Order',
@@ -319,6 +322,7 @@
   function renderContractLog() {
     const searchTerm = (document.getElementById('contractSearch')?.value || '').trim().toLowerCase();
     let log = [...loadContractLog()].sort((a, b) => b.id - a.id);
+    if (pendingDeleteContractIds.size > 0) log = log.filter(e => !pendingDeleteContractIds.has(e.id));
     if (searchTerm) {
       log = log.filter(entry =>
         (entry.fields.clientName || '').toLowerCase().includes(searchTerm) ||
@@ -356,14 +360,23 @@
   }
 
   async function deleteContractLogEntry(id) {
-    const confirmed = await showConfirm('Delete this contract from the log? This cannot be undone.', { danger: true, confirmText: 'Delete' });
+    const confirmed = await showConfirm('Delete this contract from the log?', { danger: true, confirmText: 'Delete' });
     if (!confirmed) return;
     const row = document.querySelector('[data-contract-id="' + id + '"]');
-    animateRowExit(row, () => {
-      const log = loadContractLog().filter(e => e.id !== id);
-      saveContractLog(log);
+    await new Promise(resolve => animateRowExit(row, resolve));
+
+    const timer = setTimeout(() => {
+      pendingDeleteContractIds.delete(id);
+      saveContractLog(loadContractLog().filter(e => e.id !== id));
       renderContractLog();
-      showToast('Contract removed from log.');
+    }, 6000);
+
+    pendingDeleteContractIds.set(id, timer);
+    renderContractLog();
+    showUndoToast('Contract removed from log.', () => {
+      clearTimeout(pendingDeleteContractIds.get(id));
+      pendingDeleteContractIds.delete(id);
+      renderContractLog();
     });
   }
 
