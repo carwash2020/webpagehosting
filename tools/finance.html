@@ -448,6 +448,13 @@
   // SYNC_DATA_KEYS before adding this.
   const INCOME_STORAGE_KEY = 'th_income_log';
 
+  // Bug fix (2026-08-20): same Push 4 extraction gap as
+  // justAddedExpenseId -- both used extensively below but never
+  // declared anywhere in this file. Matches job-tracker.html's own
+  // editingJobId/justAddedJobId pattern exactly.
+  let editingIncomeEntryId = null;
+  let justAddedIncomeEntryId = null;
+
   function loadIncomeEntries() { try { return JSON.parse(localStorage.getItem(INCOME_STORAGE_KEY) || '[]'); } catch (e) { return []; } }
   // Item #13 extended (2026-08-20): undoable-delete tracking for Income
   // and Expense entries, matching job-tracker.html's pattern -- id ->
@@ -670,8 +677,28 @@
   // used below but never declared. Confirmed against sync.js's
   // SYNC_DATA_KEYS before adding this.
   const EXPENSE_STORAGE_KEY = 'th_expense_log';
+  // Bug fix (2026-08-20), found via the visible error banner on a real
+  // device: this drives the "just added" row-highlight animation
+  // (list-row-enter), matching job-tracker.html's own justAddedJobId --
+  // used in 3 places below (set after saving, read during render, then
+  // cleared) but never actually declared anywhere in this file. On a
+  // fresh page load, renderExpenses() tries to read this before
+  // addExpense() has ever run, and reading a never-declared identifier
+  // throws immediately -- which, inside the same init sequence that
+  // caused the earlier undeclared-constants bug, silently aborted
+  // everything after it in that same async function all over again.
+  let justAddedExpenseId = null;
 
   function loadExpenses() { try { return JSON.parse(localStorage.getItem(EXPENSE_STORAGE_KEY) || '[]'); } catch (e) { return []; } }
+  // Bug fix (2026-08-20): same Push 4 extraction gap as above --
+  // editingExpenseId matches job-tracker.html's editingJobId
+  // pattern; expenseSaveInProgress was actually found already
+  // declared there too, but as confirmed-dead leftover code (zero
+  // other references) since the Expenses tab it guards moved to
+  // this page in Push 4 -- removed from there, declared here where
+  // it's actually used.
+  let editingExpenseId = null;
+  let expenseSaveInProgress = false;
 
   function saveExpenses(entries) { localStorage.setItem(EXPENSE_STORAGE_KEY, JSON.stringify(entries)); scheduleSync(); }
 

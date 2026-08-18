@@ -1422,3 +1422,123 @@ test('the error banner actually appears and shows the real error message when in
   assert.match(banner.textContent, /Finance page failed to load properly/);
   assert.match(banner.textContent, /Error:/);
 });
+
+// CRITICAL BUG FIX (2026-08-20), the third distinct instance of the
+// same Push 4 extraction gap. The visible error banner (added in the
+// previous fix) caught the FIRST of these (justAddedExpenseId) on a
+// real device -- but investigating further with a proper scanner (this
+// time checking camelCase assign-without-declare identifiers, not just
+// the ALL-CAPS constants the earlier scan was limited to) found 3 MORE
+// in the same file: editingIncomeEntryId, justAddedIncomeEntryId,
+// expenseSaveInProgress, and editingExpenseId. Critically,
+// expenseSaveInProgress isn't touched during page load at all -- only
+// the FIRST time someone actually tries to add an expense -- meaning
+// fixing just the one caught bug would have led straight into another,
+// different-looking crash the moment the page's core purpose (logging
+// an expense) was actually attempted. All 4 verified with a real,
+// full end-to-end simulation: add -> confirm the highlight animation
+// class is applied -> edit -> cancel -> re-render, for both expenses
+// and income, with zero throws.
+//
+// Also found 3 confirmed-orphaned declarations in job-tracker.html
+// (editingExpenseId, justAddedExpenseId, expenseSaveInProgress) --
+// each had exactly one reference anywhere in that file (its own
+// declaration), left over from before Push 4 moved the code that used
+// them to finance.html. Removed from there; the real, actually-needed
+// versions now live in finance.html instead.
+
+test('all 4 previously-undeclared state variables (editingIncomeEntryId, justAddedIncomeEntryId, editingExpenseId, expenseSaveInProgress) are now properly declared in finance.html', () => {
+  const src = fs.readFileSync(FINANCE_PATH, 'utf8');
+  assert.match(src, /let editingIncomeEntryId = null;/);
+  assert.match(src, /let justAddedIncomeEntryId = null;/);
+  assert.match(src, /let editingExpenseId = null;/);
+  assert.match(src, /let expenseSaveInProgress = false;/);
+});
+
+test('job-tracker.html\'s 3 confirmed-orphaned declarations for the same variables are gone -- the real ones live in finance.html now', () => {
+  const src = fs.readFileSync(JOB_TRACKER_PATH, 'utf8');
+  assert.doesNotMatch(src, /editingExpenseId/);
+  assert.doesNotMatch(src, /justAddedExpenseId/);
+  assert.doesNotMatch(src, /expenseSaveInProgress/);
+});
+
+test('the full expense lifecycle (add, highlight, edit, cancel, re-render) works end to end with zero throws -- not just that init completes', async () => {
+  const { JSDOM } = require('jsdom');
+  const html = fs.readFileSync(FINANCE_PATH, 'utf8');
+  const dom = new JSDOM(html, {
+    runScripts: 'dangerously', url: 'https://example.com/',
+    beforeParse(window) { window.requireAuth = () => {}; },
+  });
+  const { window } = dom;
+  window.HTMLElement.prototype.scrollIntoView = () => {};
+  window.showToast = () => {};
+  window.showConfirm = () => Promise.resolve(true);
+  window.showAlert = async () => {};
+  window.initSyncOnLoad = () => Promise.resolve();
+  window.getCurrentUserEmail = () => 'connor@triplehenterprisesllc.biz';
+  window.TH_KEYS = { jobs: 'th_tracker_jobs', invoices: 'th_invoices', expenses: 'th_expense_log', income: 'th_income_log' };
+  window.thRead = (key, fallback) => fallback;
+  window.money = (n) => '$' + (Number(n) || 0).toFixed(2);
+  window.escapeHtml = (s) => String(s == null ? '' : s);
+  window.uploadReceipt = async () => ({ ok: true, path: 'fake.jpg' });
+  window.scheduleSync = () => {};
+  window.personDot = () => '';
+  window.toggleFormSection = () => {};
+  window.document.dispatchEvent(new window.Event('DOMContentLoaded'));
+  await new Promise(resolve => setTimeout(resolve, 100));
+
+  window.document.getElementById('entryDate').value = '2026-08-18';
+  window.document.getElementById('entryDesc').value = 'Test part';
+  Object.defineProperty(window.document.getElementById('entryReceipt'), 'files', {
+    value: [{ type: 'image/jpeg', name: 'r.jpg' }], configurable: true,
+  });
+
+  await window.addExpense();
+  const saved = JSON.parse(window.localStorage.getItem('th_expense_log') || '[]');
+  assert.equal(saved.length, 1);
+  assert.ok(window.document.getElementById('entriesTable').innerHTML.includes('list-row-enter'), 'the just-added row should get the highlight class');
+
+  // These would throw immediately if editingExpenseId were still undeclared.
+  window.editExpense(saved[0].id);
+  window.cancelExpenseEdit();
+  window.renderExpenses();
+});
+
+test('the full income lifecycle (add, highlight, edit, cancel, re-render) also works end to end with zero throws', async () => {
+  const { JSDOM } = require('jsdom');
+  const html = fs.readFileSync(FINANCE_PATH, 'utf8');
+  const dom = new JSDOM(html, {
+    runScripts: 'dangerously', url: 'https://example.com/',
+    beforeParse(window) { window.requireAuth = () => {}; },
+  });
+  const { window } = dom;
+  window.HTMLElement.prototype.scrollIntoView = () => {};
+  window.showToast = () => {};
+  window.showConfirm = () => Promise.resolve(true);
+  window.showAlert = async () => {};
+  window.initSyncOnLoad = () => Promise.resolve();
+  window.getCurrentUserEmail = () => null;
+  window.TH_KEYS = { jobs: 'th_tracker_jobs', invoices: 'th_invoices', expenses: 'th_expense_log', income: 'th_income_log' };
+  window.thRead = (key, fallback) => fallback;
+  window.money = (n) => '$' + (Number(n) || 0).toFixed(2);
+  window.escapeHtml = (s) => String(s == null ? '' : s);
+  window.scheduleSync = () => {};
+  window.personDot = () => '';
+  window.toggleFormSection = () => {};
+  window.document.dispatchEvent(new window.Event('DOMContentLoaded'));
+  await new Promise(resolve => setTimeout(resolve, 100));
+
+  window.document.getElementById('incomeDate').value = '2026-08-18';
+  window.document.getElementById('incomeSource').value = 'Test client';
+  window.document.getElementById('incomeDesc').value = 'Final payment';
+  window.document.getElementById('incomeAmount').value = '200';
+
+  await window.addIncomeEntry();
+  const saved = JSON.parse(window.localStorage.getItem('th_income_log') || '[]');
+  assert.equal(saved.length, 1);
+  assert.ok(window.document.getElementById('incomeTable').innerHTML.includes('list-row-enter'));
+
+  window.editIncomeEntry(saved[0].id);
+  window.cancelIncomeEntryEdit();
+  window.renderIncomeEntries();
+});
