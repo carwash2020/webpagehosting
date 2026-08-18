@@ -1098,11 +1098,15 @@ test('the 4 real primary-nav tab bars (Finance, Job Tracker, Invoice Generator, 
   }
 });
 
-test('workspace.html\'s Business Health tabs deliberately do NOT get tabs-sticky -- a small embedded sub-widget, not primary page navigation', () => {
+test('the old combined "Business Health" sub-tab system is gone -- restructured into 5 independent, honestly-labeled sections (2026-08-20)', () => {
   const src = fs.readFileSync(path.join(__dirname, '..', 'tools', 'workspace.html'), 'utf8');
-  const businessHealthTabs = src.match(/<div class="tabs[^"]*" id="businessHealthTabs"/);
-  assert.ok(businessHealthTabs, 'businessHealthTabs not found');
-  assert.doesNotMatch(businessHealthTabs[0], /tabs-sticky/);
+  assert.doesNotMatch(src, /businessHealthTabs/);
+  assert.doesNotMatch(src, /activateBusinessHealthTab/);
+  assert.doesNotMatch(src, /bh-panel-/);
+  for (const key of ['gallery', 'compliance', 'documents', 'analytics', 'backup']) {
+    assert.match(src, new RegExp('id="section-' + key + '"'));
+    assert.match(src, new RegExp('id="body-' + key + '"'));
+  }
 });
 
 test('.tabs-sticky positions below the already-sticky header, matching the proven .jump-nav pattern exactly (not top:0, which would overlap the header)', () => {
@@ -1111,4 +1115,47 @@ test('.tabs-sticky positions below the already-sticky header, matching the prove
   assert.ok(rule, '.tabs-sticky rule not found');
   assert.match(rule[0], /top:\s*61px/, 'must match .jump-nav\'s proven top offset, not overlap the sticky header at top:0');
   assert.match(rule[0], /position:\s*sticky/);
+});
+
+// Business Health restructuring (2026-08-20). "Business Health" bundled
+// 5 genuinely unrelated concerns (Gallery Queue, Compliance, Documents,
+// Analytics, Backup) into one collapsible section with an internal
+// sub-tab switcher -- flagged from the very first review of this app.
+// Restructured into 5 independent, always-visible, independently-
+// collapsible sections using the SAME generic pattern already proven
+// throughout this page (toggleSection/applyCollapseState), rather than
+// inventing something new. Verified every real content id (form
+// fields, buttons, list containers) survived the extraction unchanged
+// before this was ever installed -- diffed the id sets between the
+// original block and the rebuilt one and confirmed the only ids that
+// changed were the wrapper ids themselves.
+
+test('applyCollapseState is fully generic and needs no changes to handle the 5 new sections -- it already works by iterating DEFAULT_COLLAPSE\'s own keys', () => {
+  const src = fs.readFileSync(path.join(__dirname, '..', 'tools', 'workspace.html'), 'utf8');
+  const defaultCollapseMatch = src.match(/const DEFAULT_COLLAPSE = \{([^}]*)\}/);
+  assert.ok(defaultCollapseMatch, 'DEFAULT_COLLAPSE not found');
+  for (const key of ['gallery', 'compliance', 'documents', 'analytics', 'backup']) {
+    assert.match(defaultCollapseMatch[1], new RegExp(key + ':\\s*true'));
+  }
+});
+
+test('the compliance status badge moved with its own section (same element id, just relocated), so the existing JS that populates it needed zero changes', () => {
+  const src = fs.readFileSync(path.join(__dirname, '..', 'tools', 'workspace.html'), 'utf8');
+  const complianceSection = src.match(/<div class="section-block" id="section-compliance">[\s\S]*?<\/div>\s*<\/div>\s*<\/div>/);
+  assert.ok(complianceSection, 'compliance section not found');
+  assert.match(complianceSection[0], /id="complianceHeadingBadge"/);
+});
+
+test('the #backup deep-link handler scrolls to the new independent section and forces it open via expandSection, not the old sub-tab activation', () => {
+  const src = fs.readFileSync(path.join(__dirname, '..', 'tools', 'workspace.html'), 'utf8');
+  const handler = src.match(/if \(window\.location\.hash === '#backup'\) \{[\s\S]*?\n    \}/);
+  assert.ok(handler, '#backup handler not found');
+  assert.match(handler[0], /expandSection\('backup'\)/);
+  assert.match(handler[0], /getElementById\('section-backup'\)/);
+  assert.doesNotMatch(handler[0], /activateBusinessHealthTab/);
+});
+
+test('the jump-nav no longer points at the removed combined section', () => {
+  const src = fs.readFileSync(path.join(__dirname, '..', 'tools', 'workspace.html'), 'utf8');
+  assert.doesNotMatch(src, /href="#section-businesshealth"/);
 });

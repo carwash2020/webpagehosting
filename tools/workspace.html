@@ -299,7 +299,7 @@
 <nav class="jump-nav">
   <a href="#section-snapshot"><span class="jump-nav-icon"><svg class="th-icon" aria-hidden="true"><use href="#icon-chart" xlink:href="#icon-chart"></use></svg></span>Snapshot</a>
   <a href="#section-actionitems"><span class="jump-nav-icon"><svg class="th-icon" aria-hidden="true"><use href="#icon-check-circle" xlink:href="#icon-check-circle"></use></svg></span>Action Items</a>
-  <a href="#section-businesshealth"><span class="jump-nav-icon"><svg class="th-icon" aria-hidden="true"><use href="#icon-shield" xlink:href="#icon-shield"></use></svg></span>Business Health</a>
+  <a href="#section-gallery"><span class="jump-nav-icon"><svg class="th-icon" aria-hidden="true"><use href="#icon-shield" xlink:href="#icon-shield"></use></svg></span>More</a>
   <a href="#section-tools"><span class="jump-nav-icon"><svg class="th-icon" aria-hidden="true"><use href="#icon-wrench" xlink:href="#icon-wrench"></use></svg></span>Tools</a>
 </nav>
 
@@ -412,26 +412,22 @@
   </div>
 </div>
 
-<div class="section-block" id="section-businesshealth">
-  <div class="section-heading" onclick="toggleSection('businesshealth')">
-    <span>Business Health <span id="complianceHeadingBadge"></span></span>
+<div class="section-block" id="section-gallery">
+  <div class="section-heading" onclick="toggleSection('gallery')">
+    <span>Gallery Queue</span>
     <span class="collapse-arrow">&#9660;</span>
   </div>
-  <div class="section-body" id="body-businesshealth">
-
-    <div class="tabs" id="businessHealthTabs" style="margin-bottom:18px;">
-      <button class="tab-btn is-active" data-bh-tab="gallery" onclick="activateBusinessHealthTab('gallery')">Gallery Queue</button>
-      <button class="tab-btn" data-bh-tab="compliance" onclick="activateBusinessHealthTab('compliance')">Compliance</button>
-      <button class="tab-btn" data-bh-tab="documents" onclick="activateBusinessHealthTab('documents')">Documents</button>
-      <button class="tab-btn" data-bh-tab="analytics" onclick="activateBusinessHealthTab('analytics')">Analytics</button>
-      <button class="tab-btn" data-bh-tab="backup" onclick="activateBusinessHealthTab('backup')">Backup</button>
-    </div>
-
-    <div class="tab-panel is-active" id="bh-panel-gallery">
+  <div class="section-body" id="body-gallery">
       <div id="galleryQueueList"></div>
-    </div>
+  </div>
+</div>
 
-    <div class="tab-panel" id="bh-panel-compliance">
+<div class="section-block" id="section-compliance">
+  <div class="section-heading" onclick="toggleSection('compliance')">
+    <span>Compliance <span id="complianceHeadingBadge"></span></span>
+    <span class="collapse-arrow">&#9660;</span>
+  </div>
+  <div class="section-body" id="body-compliance">
       <div class="analytics-subheading is-first">Business Compliance</div>
       <div id="insuranceCard"></div>
 
@@ -479,9 +475,15 @@
       <div class="analytics-subheading" style="margin-top:26px;">City Business Licenses</div>
       <div id="licensesList"></div>
       <button class="secondary-btn" style="margin-top:10px;" onclick="addLicensePrompt()">+ Add License</button>
-    </div>
+  </div>
+</div>
 
-    <div class="tab-panel" id="bh-panel-documents">
+<div class="section-block" id="section-documents">
+  <div class="section-heading" onclick="toggleSection('documents')">
+    <span>Documents</span>
+    <span class="collapse-arrow">&#9660;</span>
+  </div>
+  <div class="section-body" id="body-documents">
       <div class="analytics-subheading is-first">Secure Documents <button class="help-btn" onclick="openCardInfo('secureDocuments')" aria-label="What is this?" title="What is this?">?</button></div>
       <div id="secureDocsList"></div>
       <div class="icon-search" id="secureDocsUploadWrap" style="width:100%; margin-top:10px;">
@@ -510,18 +512,30 @@
           <div class="upload-progress-bar" id="secureDocUploadProgress" style="display:none;"></div>
         </div>
       </div>
-    </div>
+  </div>
+</div>
 
-    <div class="tab-panel" id="bh-panel-analytics">
+<div class="section-block" id="section-analytics">
+  <div class="section-heading" onclick="toggleSection('analytics')">
+    <span>Analytics</span>
+    <span class="collapse-arrow">&#9660;</span>
+  </div>
+  <div class="section-body" id="body-analytics">
       <div class="analytics-subheading is-first">Job Status</div>
       <div id="statusBars"></div>
       <div class="analytics-subheading">Top Vendors <span style="text-transform:none; letter-spacing:0;">(for the period selected in Business Snapshot)</span></div>
       <div id="topVendors"></div>
       <div class="analytics-subheading">Top Clients <span style="text-transform:none; letter-spacing:0;">(lifetime revenue, not limited to the period above)</span></div>
       <div id="topClients"></div>
-    </div>
+  </div>
+</div>
 
-    <div class="tab-panel" id="bh-panel-backup">
+<div class="section-block" id="section-backup">
+  <div class="section-heading" onclick="toggleSection('backup')">
+    <span>Backup</span>
+    <span class="collapse-arrow">&#9660;</span>
+  </div>
+  <div class="section-body" id="body-backup">
       <div class="analytics-subheading is-first">Backup &amp; Restore</div>
       <div class="backup-row">
         <button class="secondary-btn" onclick="downloadBackup()">Download Full Backup</button>
@@ -530,7 +544,8 @@
           <input type="file" accept="application/json" onchange="restoreBackup(event)" style="display:none;">
         </label>
       </div>
-    </div>
+  </div>
+</div>
 
   </div>
 </div>
@@ -696,7 +711,7 @@
 
 
   const COLLAPSE_STATE_KEY = 'th_dash_collapsed';
-  const DEFAULT_COLLAPSE = { today: false, snapshot: true, actionitems: false, businesshealth: true };
+  const DEFAULT_COLLAPSE = { today: false, snapshot: true, actionitems: false, gallery: true, compliance: true, documents: true, analytics: true, backup: true };
 
   function loadCollapseState() {
     try {
@@ -713,11 +728,6 @@
       heading.classList.toggle('is-collapsed', !!state[key]);
       body.classList.toggle('is-collapsed', !!state[key]);
     });
-  }
-
-  function activateBusinessHealthTab(tabKey) {
-    document.querySelectorAll('#businessHealthTabs .tab-btn').forEach(b => b.classList.toggle('is-active', b.dataset.bhTab === tabKey));
-    document.querySelectorAll('#body-businesshealth .tab-panel').forEach(p => p.classList.toggle('is-active', p.id === 'bh-panel-' + tabKey));
   }
 
   function toggleSection(key) {
@@ -2158,8 +2168,8 @@
       document.getElementById('section-today')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
     }
     if (window.location.hash === '#backup') {
-      document.getElementById('section-businesshealth')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-      if (typeof activateBusinessHealthTab === 'function') activateBusinessHealthTab('backup');
+      expandSection('backup');
+      document.getElementById('section-backup')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
     }
     // Structural item #7, push 1 (2026-08-20): builds the client registry
     // from existing jobs/invoices/quotes/contacts/contracts. Deliberately
