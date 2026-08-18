@@ -973,6 +973,7 @@
 
   document.addEventListener('DOMContentLoaded', function () {
     (async function init() {
+      try {
       await initSyncOnLoad();
       loadTaxSettings();
       document.getElementById('entryDate').value = new Date().toISOString().slice(0, 10);
@@ -1014,6 +1015,21 @@
           renderPriceReferences();
           if (document.getElementById('tab-profitability')?.classList.contains('is-active')) renderJobProfitability();
         }, function () {});
+      }
+      } catch (initError) {
+        // Diagnostic fix (2026-08-20): this whole init function
+        // previously had no error handling at all -- any throw
+        // anywhere in it failed completely silently, invisible to
+        // anyone but someone checking the browser console. This makes
+        // the failure visible directly on the page instead, so a real
+        // occurrence becomes actionable diagnostic data.
+        const errorBanner = document.createElement('div');
+        errorBanner.style.cssText = 'background:#3a1414; border:1px solid #e05252; border-radius:8px; padding:14px 16px; margin:16px 0; color:#ffb3b3; font-size:13.5px; font-family:monospace; white-space:pre-wrap; word-break:break-word;';
+        errorBanner.textContent = 'Finance page failed to load properly.\n\nError: ' + (initError && initError.message ? initError.message : String(initError)) + '\n\nStack: ' + (initError && initError.stack ? initError.stack : 'unavailable') + '\n\nPlease screenshot this and share it.';
+        document.body.insertBefore(errorBanner, document.body.firstChild);
+        if (typeof logClientError === 'function') {
+          logClientError('finance.html init failed: ' + (initError && initError.message), 'finance.html', initError && initError.stack, null, null);
+        }
       }
     })();
   });

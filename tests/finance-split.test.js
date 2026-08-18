@@ -1373,3 +1373,52 @@ test('both pages use the unconditional activateTab(...) fallback pattern now, no
   assert.doesNotMatch(finSrc, /if \(TAB_HASHES\[initialHash\]\) activateTab\(initialHash\);/);
   assert.doesNotMatch(jtSrc, /if \(TAB_HASHES\[initialHash\]\) activateTab\(initialHash\);/);
 });
+
+// Diagnostic visibility fix (2026-08-20), added after a persisted,
+// unexplained report that Finance still showed no tab content even
+// after a completely fresh reinstall (ruling out caching entirely).
+// Extensively traced the sync/auth network chain (initSyncOnLoad ->
+// pullSync -> ensureFreshToken -> refreshSession -> loadCurrentUserRole)
+// and confirmed every one already has proper try/catch around its own
+// network calls. Rather than keep guessing blindly, wrapped the entire
+// init function in both finance.html and job-tracker.html in a
+// try/catch that surfaces the real error directly and visibly on the
+// page -- previously, ANY throw anywhere in either init function
+// failed completely silently, invisible to anyone but someone checking
+// the browser console. Verified this actually catches and displays a
+// real error, not just that the syntax is valid.
+
+test('finance.html and job-tracker.html both wrap their entire init function in a try/catch that displays the real error visibly', () => {
+  for (const path of [FINANCE_PATH, JOB_TRACKER_PATH]) {
+    const src = fs.readFileSync(path, 'utf8');
+    const initFn = src.match(/\(async function init\(\) \{[\s\S]*?\n    \}\)\(\);/);
+    assert.ok(initFn, 'init function not found in ' + path);
+    assert.match(initFn[0], /try \{/);
+    assert.match(initFn[0], /\} catch \(initError\) \{/);
+    assert.match(initFn[0], /failed to load properly/);
+    assert.match(initFn[0], /Please screenshot this and share it/);
+  }
+});
+
+test('the error banner actually appears and shows the real error message when init genuinely throws, verified with jsdom, not just checked for valid syntax', async () => {
+  const { JSDOM } = require('jsdom');
+  const html = fs.readFileSync(FINANCE_PATH, 'utf8');
+  const dom = new JSDOM(html, {
+    runScripts: 'dangerously', url: 'https://example.com/',
+    beforeParse(window) { window.requireAuth = () => {}; },
+  });
+  const { window } = dom;
+  window.showToast = () => {};
+  window.showConfirm = () => Promise.resolve(true);
+  window.initSyncOnLoad = () => Promise.resolve();
+  window.getCurrentUserEmail = () => null;
+  window.hasDevToolsAccess = () => true;
+  // Deliberately NOT stubbing money/TH_KEYS/thRead, to force a real throw.
+  window.document.dispatchEvent(new window.Event('DOMContentLoaded'));
+  await new Promise(resolve => setTimeout(resolve, 100));
+
+  const banner = window.document.body.firstElementChild;
+  assert.ok(banner, 'an error banner should have been inserted');
+  assert.match(banner.textContent, /Finance page failed to load properly/);
+  assert.match(banner.textContent, /Error:/);
+});
