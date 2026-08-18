@@ -403,6 +403,39 @@
   </div>
 </div>
 
+<!-- Item: quick expense logging without leaving this page (2026-08-20)
+     -- built as its own standalone modal (matching help-modal-overlay's
+     look, not its shared JS) so the receipt-required business rule and
+     the exact th_expense_log record shape both stay correct without
+     touching finance.html's own, recently-fixed Expenses-tab save logic
+     at all. -->
+<div class="help-modal-overlay" id="quickExpenseOverlay" onclick="if(event.target===this) closeQuickExpenseModal()">
+  <div class="help-modal">
+    <button class="help-modal-close" onclick="closeQuickExpenseModal()" aria-label="Close">&times;</button>
+    <h3>Log Expense<span id="quickExpenseJobLabel" style="display:block; font-size:13px; color:var(--text-dim); font-weight:400; margin-top:4px;"></span></h3>
+    <div class="help-modal-body">
+      <div class="form-field"><label>Description</label><input type="text" id="quickExpenseDesc" placeholder="e.g. Replacement thermostat"></div>
+      <div class="tool-form-row">
+        <div class="form-field"><label>Amount</label><input type="number" inputmode="decimal" id="quickExpenseAmount" placeholder="0.00"></div>
+        <div class="form-field"><label>Payment</label>
+          <select id="quickExpensePayment">
+            <option value="cash">Cash</option>
+            <option value="card">Card</option>
+            <option value="check">Check</option>
+            <option value="venmo">Venmo</option>
+            <option value="cashapp">Cash App</option>
+            <option value="other">Other</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-field"><label>Receipt photo (required)</label><input type="file" id="quickExpenseReceipt" accept="image/*"></div>
+      <div class="save-indicator" id="quickExpenseSaveIndicator"></div>
+      <button class="primary-btn wide" id="quickExpenseSaveBtn" onclick="submitQuickExpense()" style="margin-top:14px;">Save Expense</button>
+      <p class="tool-sub" style="margin-top:10px; margin-bottom:0;">For mileage, vendor details, or a part number, use the full <a href="/tools/finance.html#expenses" style="color:var(--blue-light);">Expenses page</a> instead.</p>
+    </div>
+  </div>
+</div>
+
 <script>
   const STORAGE_KEYS = { jobs: 'th_tracker_jobs', contacts: 'th_tracker_contacts', notes: 'th_tracker_notes_v2', priceRef: 'th_price_reference' };
   const EXPENSE_STORAGE_KEY = 'th_expense_log';
@@ -642,6 +675,70 @@
     document.getElementById('cancelJobEditBtn').style.display = 'none';
     document.getElementById('jobEditNote').style.display = 'none';
     document.getElementById('jobFormSection').classList.add('is-collapsed');
+  }
+
+  function showQuickExpenseModal(jobId, jobTitle) {
+    document.getElementById('quickExpenseOverlay').dataset.jobId = jobId;
+    document.getElementById('quickExpenseJobLabel').textContent = jobTitle;
+    document.getElementById('quickExpenseDesc').value = '';
+    document.getElementById('quickExpenseAmount').value = '';
+    document.getElementById('quickExpensePayment').value = 'cash';
+    document.getElementById('quickExpenseReceipt').value = '';
+    document.getElementById('quickExpenseSaveIndicator').textContent = '';
+    document.getElementById('quickExpenseOverlay').classList.add('is-open');
+  }
+
+  function closeQuickExpenseModal() {
+    document.getElementById('quickExpenseOverlay').classList.remove('is-open');
+  }
+
+  async function submitQuickExpense() {
+    const overlay = document.getElementById('quickExpenseOverlay');
+    const jobId = overlay.dataset.jobId;
+    const desc = document.getElementById('quickExpenseDesc').value.trim();
+    const amount = parseFloat(document.getElementById('quickExpenseAmount').value) || 0;
+    const payment = document.getElementById('quickExpensePayment').value;
+    const receiptFile = document.getElementById('quickExpenseReceipt').files[0];
+    const indicator = document.getElementById('quickExpenseSaveIndicator');
+
+    if (!desc) { await showAlert('A description is required.'); return; }
+    if (amount <= 0) { await showAlert('Enter an amount greater than zero.'); return; }
+    // Same rule finance.html's own Expenses tab enforces -- a receipt
+    // is required to log an expense, not optional here just because
+    // this is the quick version.
+    if (!receiptFile) { await showAlert('A receipt photo is required to log an expense. Take or choose a photo of the receipt first.'); return; }
+    if (!receiptFile.type.startsWith('image/')) { await showAlert('Please choose an image file for the receipt.'); return; }
+
+    const saveBtn = document.getElementById('quickExpenseSaveBtn');
+    saveBtn.disabled = true;
+    const entryId = Date.now();
+    indicator.textContent = 'Uploading receipt...';
+    const uploadResult = await uploadReceipt(receiptFile, entryId);
+    saveBtn.disabled = false;
+    indicator.textContent = '';
+    if (!uploadResult.ok) {
+      const msg = uploadResult.error === 'too-large'
+        ? 'That receipt photo is over 8MB \u2014 try a smaller photo or lower camera resolution.'
+        : 'Receipt upload failed: ' + uploadResult.error + (uploadResult.detail ? ' \u2014 ' + uploadResult.detail : '') + '. The expense was NOT saved \u2014 try again.';
+      await showAlert(msg);
+      return;
+    }
+
+    const jobs = thRead(TH_KEYS.jobs, []);
+    const job = jobs.find(j => String(j.id) === String(jobId));
+    const currentUser = (typeof getCurrentUserEmail === 'function') ? getCurrentUserEmail() : null;
+    const entry = {
+      id: entryId, date: new Date().toISOString().slice(0, 10), type: 'expense', desc,
+      vendor: '', payment, jobRefId: jobId || '', jobRefTitle: job ? job.title : '',
+      receiptPath: uploadResult.path, partNumber: '', amount, miles: 0,
+      createdBy: currentUser, lastEditedBy: currentUser,
+    };
+    const entries = thRead(TH_KEYS.expenses, []);
+    entries.push(entry);
+    thWrite(TH_KEYS.expenses, entries);
+
+    closeQuickExpenseModal();
+    showToast('Expense logged.');
   }
 
   async function deleteJob(id) {
@@ -1112,7 +1209,7 @@
       if (job.status !== 'done') {
         actions.push({ label: 'Mark Done', onClick: () => setJobStatus(jobId, 'done') });
       }
-      actions.push({ label: 'Log Expense', onClick: () => { window.location.href = '/tools/finance.html?job=' + jobId + '#expenses'; } });
+      actions.push({ label: 'Log Expense', onClick: () => showQuickExpenseModal(jobId, job.title) });
       actions.push({ label: 'Edit', onClick: () => editJob(jobId) });
       actions.push({ label: 'Delete', isDanger: true, onClick: () => deleteJob(jobId) });
       showQuickActionSheet(job.title, actions);
