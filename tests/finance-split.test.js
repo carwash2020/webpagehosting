@@ -911,3 +911,24 @@ test('all 3 render functions filter out entries pending an undoable delete', () 
   assert.match(contractSrc, /pendingDeleteContractIds\.has/);
   assert.match(wsSrc, /pendingDeleteLeadIds\.has/);
 });
+
+// Item #28 (shared UI components, 2026-08-20): consolidated table
+// styling that was byte-for-byte duplicated in finance.html and
+// job-tracker.html into the shared stylesheet both already load.
+// Discovered job-tracker.html's copy was already dead CSS (zero
+// <table> elements exist on that page, leftover from before Push 4
+// moved those tables to Finance) -- confirmed before removing it.
+
+test('the consolidated table styling lives in the shared stylesheet, not duplicated in finance.html or job-tracker.html', () => {
+  const sharedSrc = fs.readFileSync(path.join(__dirname, '..', 'tools', 'styles-tools.css'), 'utf8');
+  const finSrc = fs.readFileSync(path.join(__dirname, '..', 'tools', 'finance.html'), 'utf8');
+  const jtSrc = fs.readFileSync(JOB_TRACKER_PATH, 'utf8');
+  assert.match(sharedSrc, /^table \{ width: 100%/m);
+  assert.doesNotMatch(finSrc, /^\s*table \{ width: 100%/m);
+  assert.doesNotMatch(jtSrc, /^\s*table \{ width: 100%/m);
+});
+
+test('invoice-generator.html\'s .line-items-table is untouched -- a genuinely different, more specific style, not the same pattern', () => {
+  const src = fs.readFileSync(path.join(__dirname, '..', 'tools', 'invoice-generator.html'), 'utf8');
+  assert.match(src, /\.line-items-table \{/);
+});
