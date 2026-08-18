@@ -1810,7 +1810,7 @@
         window.location.replace('/tools/finance.html' + window.location.search + '#' + initialHash);
         return;
       }
-      if (TAB_HASHES[initialHash]) activateTab(initialHash);
+      activateTab(TAB_HASHES[initialHash] ? initialHash : 'jobs');
       if (initialHash === 'add-job') {
         document.getElementById('jobTitle')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
         document.getElementById('jobTitle')?.focus();
