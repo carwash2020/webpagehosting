@@ -25,7 +25,7 @@
     { href: '/tools/job-tracker.html',       icon: 'wrench',  label: 'Jobs' },
     { href: '/tools/invoice-generator.html', icon: 'receipt', label: 'Invoices' },
     { href: '/tools/calendar.html',          icon: 'calendar',label: 'Calendar' },
-    { href: '/tools/route-planner.html',     icon: 'map',     label: 'Routes' }
+    { href: '/tools/finance.html',           icon: 'dollar',  label: 'Finance' }
   ];
 
   function inject() {
