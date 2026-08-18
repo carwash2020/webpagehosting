@@ -949,10 +949,11 @@ test('Finance is no longer styled as a tab -- it\'s visually distinct from the r
   assert.match(src, /Pricing, income, and expenses are on Finance/, 'a clearly-distinct link to Finance should still exist nearby');
 });
 
-test('the "Log Expense" quick action exists on job cards, linking to Finance with the job pre-selected', () => {
+test('the "Log Expense" quick action opens the instant modal, not a navigation to Finance (2026-08-20 usability fix)', () => {
   const src = fs.readFileSync(JOB_TRACKER_PATH, 'utf8');
   assert.match(src, /label: 'Log Expense'/);
-  assert.match(src, /finance\.html\?job=' \+ jobId \+ '#expenses'/);
+  assert.match(src, /onClick: \(\) => showQuickExpenseModal\(jobId, job\.title\)/);
+  assert.doesNotMatch(src, /finance\.html\?job=' \+ jobId \+ '#expenses'/, 'this quick action should no longer navigate away at all');
 });
 
 test('job-detail.html\'s Expenses section has a "+" link to log a new expense for this specific job, while Invoices/Quotes stay read-only', () => {
@@ -1098,12 +1099,18 @@ test('the 4 real primary-nav tab bars (Finance, Job Tracker, Invoice Generator, 
   }
 });
 
-test('the old combined "Business Health" sub-tab system is gone -- restructured into 5 independent, honestly-labeled sections (2026-08-20)', () => {
+test('the old combined "Business Health" sub-tab system is gone -- restructured into independent, honestly-labeled sections (2026-08-20, then Compliance+Documents merged back together shortly after on usability feedback)', () => {
   const src = fs.readFileSync(path.join(__dirname, '..', 'tools', 'workspace.html'), 'utf8');
   assert.doesNotMatch(src, /businessHealthTabs/);
   assert.doesNotMatch(src, /activateBusinessHealthTab/);
   assert.doesNotMatch(src, /bh-panel-/);
-  for (const key of ['gallery', 'compliance', 'documents', 'analytics', 'backup']) {
+  // "documents" was merged into "compliance" -- it should NOT have its
+  // own section anymore, but its real content (the secure-documents
+  // list, upload form) must still exist somewhere.
+  assert.doesNotMatch(src, /id="section-documents"/);
+  assert.doesNotMatch(src, /id="body-documents"/);
+  assert.match(src, /id="secureDocsList"/, 'the real Documents content must still exist, just inside the merged Compliance section');
+  for (const key of ['gallery', 'compliance', 'analytics', 'backup']) {
     assert.match(src, new RegExp('id="section-' + key + '"'));
     assert.match(src, new RegExp('id="body-' + key + '"'));
   }
@@ -1130,11 +1137,11 @@ test('.tabs-sticky positions below the already-sticky header, matching the prove
 // original block and the rebuilt one and confirmed the only ids that
 // changed were the wrapper ids themselves.
 
-test('applyCollapseState is fully generic and needs no changes to handle the 5 new sections -- it already works by iterating DEFAULT_COLLAPSE\'s own keys', () => {
+test('applyCollapseState is fully generic and needs no changes to handle these sections -- it already works by iterating DEFAULT_COLLAPSE\'s own keys', () => {
   const src = fs.readFileSync(path.join(__dirname, '..', 'tools', 'workspace.html'), 'utf8');
   const defaultCollapseMatch = src.match(/const DEFAULT_COLLAPSE = \{([^}]*)\}/);
   assert.ok(defaultCollapseMatch, 'DEFAULT_COLLAPSE not found');
-  for (const key of ['gallery', 'compliance', 'documents', 'analytics', 'backup']) {
+  for (const key of ['gallery', 'compliance', 'analytics', 'backup']) {
     assert.match(defaultCollapseMatch[1], new RegExp(key + ':\\s*true'));
   }
 });
@@ -1158,4 +1165,94 @@ test('the #backup deep-link handler scrolls to the new independent section and f
 test('the jump-nav no longer points at the removed combined section', () => {
   const src = fs.readFileSync(path.join(__dirname, '..', 'tools', 'workspace.html'), 'utf8');
   assert.doesNotMatch(src, /href="#section-businesshealth"/);
+});
+
+// Real usability fix (2026-08-20), responding directly to feedback that
+// the app got harder to use after the structural splits. The biggest
+// single source of friction: logging an expense against a job used to
+// be one tab click before Push 4 split Job Tracker and Finance apart,
+// and even with the earlier "Log Expense" quick-action shortcut, it was
+// still a real page navigation. This closes that gap for real: a
+// standalone modal, built without touching finance.html's own,
+// recently-fixed Expenses-tab logic at all, so getting this feature
+// right couldn't risk re-breaking what was just fixed there.
+
+test('showQuickExpenseModal, closeQuickExpenseModal, and submitQuickExpense all exist and the quick action calls the right one', () => {
+  const src = fs.readFileSync(JOB_TRACKER_PATH, 'utf8');
+  assert.match(src, /function showQuickExpenseModal\(jobId, jobTitle\)/);
+  assert.match(src, /function closeQuickExpenseModal\(\)/);
+  assert.match(src, /async function submitQuickExpense\(\)/);
+});
+
+test('submitQuickExpense enforces the same receipt-required rule finance.html\'s own Expenses tab uses, not a relaxed version', () => {
+  const src = fs.readFileSync(JOB_TRACKER_PATH, 'utf8');
+  const fn = src.match(/async function submitQuickExpense\(\)[\s\S]*?\n  \}\n/);
+  assert.ok(fn, 'submitQuickExpense not found');
+  assert.match(fn[0], /if \(!receiptFile\)/);
+  assert.match(fn[0], /required to log an expense/);
+});
+
+test('submitQuickExpense builds a record matching finance.html\'s exact field shape, and reuses the already-shared uploadReceipt/thRead/thWrite rather than duplicating that logic', () => {
+  const src = fs.readFileSync(JOB_TRACKER_PATH, 'utf8');
+  const fn = src.match(/async function submitQuickExpense\(\)[\s\S]*?\n  \}\n/);
+  for (const field of ['id:', 'date:', "type: 'expense'", 'desc,', 'vendor:', 'payment,', 'jobRefId:', 'jobRefTitle:', 'receiptPath:', 'partNumber:', 'amount,', 'miles: 0', 'createdBy:', 'lastEditedBy:']) {
+    assert.match(fn[0], new RegExp(field.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')), 'missing field: ' + field);
+  }
+  assert.match(fn[0], /await uploadReceipt\(receiptFile, entryId\)/);
+  assert.match(fn[0], /thRead\(TH_KEYS\.expenses, \[\]\)/);
+  assert.match(fn[0], /thWrite\(TH_KEYS\.expenses, entries\)/);
+});
+
+test('the end-to-end flow actually works: open the modal, fill it out, submit, and the expense lands in the real storage key finance.html reads from', async () => {
+  const { JSDOM } = require('jsdom');
+  const html = fs.readFileSync(JOB_TRACKER_PATH, 'utf8');
+  const dom = new JSDOM(html, {
+    runScripts: 'dangerously', url: 'https://example.com/',
+    beforeParse(window) { window.requireAuth = () => {}; },
+  });
+  const { window } = dom;
+  window.showToast = () => {};
+  window.showConfirm = () => Promise.resolve(true);
+  let alertMsg = null;
+  window.showAlert = async (msg) => { alertMsg = msg; };
+  window.initSyncOnLoad = () => Promise.resolve();
+  window.getCurrentUserEmail = () => 'connor@triplehenterprisesllc.biz';
+  window.TH_KEYS = { jobs: 'th_tracker_jobs', invoices: 'th_invoices', expenses: 'th_expense_log', income: 'th_income_log' };
+  window.thRead = (key, fallback) => { try { const v = JSON.parse(window.localStorage.getItem(key)); return v === null ? fallback : v; } catch (e) { return fallback; } };
+  window.thWrite = (key, val) => { window.localStorage.setItem(key, JSON.stringify(val)); };
+  window.attachLongPress = () => {};
+  window.wireSearchClear = () => {};
+  window.attachVoiceDictation = () => {};
+  window.personDot = () => '';
+  window.escapeHtml = (s) => String(s == null ? '' : s);
+  window.money = (n) => '$' + (Number(n) || 0).toFixed(2);
+  window.uploadReceipt = async (file, id) => ({ ok: true, path: 'expense-' + id + '/fake.jpg' });
+  window.localStorage.setItem('th_tracker_jobs', JSON.stringify([{ id: 555, title: 'End-to-end Test Job' }]));
+
+  window.document.dispatchEvent(new window.Event('DOMContentLoaded'));
+  await new Promise(resolve => setTimeout(resolve, 50));
+
+  // Case 1: missing receipt should block the save with the right message.
+  window.showQuickExpenseModal(555, 'End-to-end Test Job');
+  window.document.getElementById('quickExpenseDesc').value = 'Part';
+  window.document.getElementById('quickExpenseAmount').value = '25';
+  await window.submitQuickExpense();
+  assert.match(alertMsg || '', /receipt photo is required/);
+  assert.ok(window.document.getElementById('quickExpenseOverlay').classList.contains('is-open'), 'modal should stay open when the save is blocked');
+
+  // Case 2: a real submission should actually save correctly and close the modal.
+  Object.defineProperty(window.document.getElementById('quickExpenseReceipt'), 'files', {
+    value: [{ type: 'image/jpeg', name: 'receipt.jpg' }], configurable: true,
+  });
+  await window.submitQuickExpense();
+
+  const saved = JSON.parse(window.localStorage.getItem('th_expense_log') || '[]');
+  assert.equal(saved.length, 1);
+  assert.equal(saved[0].desc, 'Part');
+  assert.equal(saved[0].amount, 25);
+  assert.equal(saved[0].jobRefId, '555');
+  assert.equal(saved[0].jobRefTitle, 'End-to-end Test Job');
+  assert.equal(saved[0].type, 'expense');
+  assert.ok(saved[0].receiptPath.length > 0);
+  assert.equal(window.document.getElementById('quickExpenseOverlay').classList.contains('is-open'), false, 'modal should close after a successful save');
 });

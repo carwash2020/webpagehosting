@@ -424,7 +424,7 @@
 
 <div class="section-block" id="section-compliance">
   <div class="section-heading" onclick="toggleSection('compliance')">
-    <span>Compliance <span id="complianceHeadingBadge"></span></span>
+    <span>Compliance &amp; Documents <span id="complianceHeadingBadge"></span></span>
     <span class="collapse-arrow">&#9660;</span>
   </div>
   <div class="section-body" id="body-compliance">
@@ -475,16 +475,7 @@
       <div class="analytics-subheading" style="margin-top:26px;">City Business Licenses</div>
       <div id="licensesList"></div>
       <button class="secondary-btn" style="margin-top:10px;" onclick="addLicensePrompt()">+ Add License</button>
-  </div>
-</div>
-
-<div class="section-block" id="section-documents">
-  <div class="section-heading" onclick="toggleSection('documents')">
-    <span>Documents</span>
-    <span class="collapse-arrow">&#9660;</span>
-  </div>
-  <div class="section-body" id="body-documents">
-      <div class="analytics-subheading is-first">Secure Documents <button class="help-btn" onclick="openCardInfo('secureDocuments')" aria-label="What is this?" title="What is this?">?</button></div>
+      <div class="analytics-subheading">Secure Documents <button class="help-btn" onclick="openCardInfo('secureDocuments')" aria-label="What is this?" title="What is this?">?</button></div>
       <div id="secureDocsList"></div>
       <div class="icon-search" id="secureDocsUploadWrap" style="width:100%; margin-top:10px;">
         <button class="icon-search-toggle" onclick="toggleFormSection('secureDocsUploadCard')" aria-label="Upload a document" title="Upload a document">+</button>
@@ -711,7 +702,7 @@
 
 
   const COLLAPSE_STATE_KEY = 'th_dash_collapsed';
-  const DEFAULT_COLLAPSE = { today: false, snapshot: true, actionitems: false, gallery: true, compliance: true, documents: true, analytics: true, backup: true };
+  const DEFAULT_COLLAPSE = { today: false, snapshot: true, actionitems: false, gallery: true, compliance: true, analytics: true, backup: true };
 
   function loadCollapseState() {
     try {
