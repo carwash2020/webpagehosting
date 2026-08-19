@@ -34,7 +34,7 @@
 <script src="/tools/tools-media-sharing.js?v=202608201900" defer></script>
 <script src="/tools/tools-nav-pwa.js?v=202608202100" defer></script>
 <script src="/tools/tools-tour.js?v=202608202100" defer></script>
-<script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js" integrity="sha384-JcnsjUPPylna1s1fvi1u12X5qjY5OL56iySh75FdtrwhO/SWXgMjoVqcKyIIWOLk" crossorigin="anonymous"></script>
+<script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js" integrity="sha384-JcnsjUPPylna1s1fvi1u12X5qjY5OL56iySh75FdtrwhO/SWXgMjoVqcKyIIWOLk" crossorigin="anonymous" async></script>
 <style>
   body { padding: 90px 20px 60px; max-width: 900px; margin: 0 auto; }
   .tool-title { font-family:'Oswald',sans-serif; font-weight:700; font-size:28px; color:var(--white); margin-bottom:6px; }
@@ -742,6 +742,11 @@
   let pendingSourceQuoteId = null;
   async function generatePDF() {
     if (invoiceGenerationInProgress) return; // a fast double-tap shouldn't create two logged invoices
+    // Bug fix (2026-08-20): jsPDF now loads async (see the script tag's
+    // own comment for why), which means there's a real, if brief,
+    // window right after page load where window.jspdf might not exist
+    // yet -- unguarded, this would throw with zero visible feedback.
+    if (!window.jspdf) { await showAlert("Still finishing loading -- give it a second and try again."); return; }
     invoiceGenerationInProgress = true;
     try {
     const { jsPDF } = window.jspdf;
@@ -1167,6 +1172,8 @@
   let quoteGenerationInProgress = false;
   async function generateQuotePDF() {
     if (quoteGenerationInProgress) return;
+    // Same guard as generatePDF() above -- see that comment for why.
+    if (!window.jspdf) { await showAlert("Still finishing loading -- give it a second and try again."); return; }
     quoteGenerationInProgress = true;
     try {
     const { jsPDF } = window.jspdf;
