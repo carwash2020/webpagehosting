@@ -1192,10 +1192,10 @@ test('submitQuickExpense enforces the same receipt-required rule finance.html\'s
   assert.match(fn[0], /required to log an expense/);
 });
 
-test('submitQuickExpense builds a record matching finance.html\'s exact field shape, and reuses the already-shared uploadReceipt/thRead/thWrite rather than duplicating that logic', () => {
+test('submitQuickExpense builds a record matching finance.html\'s exact field shape (now including type/vendor/partNumber/miles), and reuses the already-shared uploadReceipt/thRead/thWrite rather than duplicating that logic', () => {
   const src = fs.readFileSync(JOB_TRACKER_PATH, 'utf8');
   const fn = src.match(/async function submitQuickExpense\(\)[\s\S]*?\n  \}\n/);
-  for (const field of ['id:', 'date:', "type: 'expense'", 'desc,', 'vendor:', 'payment,', 'jobRefId:', 'jobRefTitle:', 'receiptPath:', 'partNumber:', 'amount,', 'miles: 0', 'createdBy:', 'lastEditedBy:']) {
+  for (const field of ['id:', 'date,', 'type,', 'desc,', 'vendor,', 'payment,', 'jobRefId:', 'jobRefTitle:', 'receiptPath,', 'partNumber,', 'amount,', 'miles,', 'createdBy:', 'lastEditedBy:']) {
     assert.match(fn[0], new RegExp(field.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')), 'missing field: ' + field);
   }
   assert.match(fn[0], /await uploadReceipt\(receiptFile, entryId\)/);
@@ -1583,4 +1583,147 @@ test('selecting Mileage as the expense type actually shows the Miles field and h
   window.document.getElementById('entryType').dispatchEvent(new window.Event('change'));
   assert.equal(window.document.getElementById('milesField').style.display, 'none');
   assert.notEqual(window.document.getElementById('amountField').style.display, 'none');
+});
+
+// Popup fleshed out with full field parity + first-time tutorial
+// (2026-08-20), per explicit direction: add the missing fields (vendor,
+// part number, mileage) so the popup can fully replace the Finance form
+// for this, plus a guided walkthrough on first use.
+
+test('the quick-expense popup has a working type toggle matching finance.html\'s own field-visibility fix (Amount/Miles/Part Number/Receipt)', () => {
+  const src = fs.readFileSync(JOB_TRACKER_PATH, 'utf8');
+  const fn = src.match(/function toggleQuickExpenseTypeFields\(\)[\s\S]*?\n  \}\n/);
+  assert.ok(fn, 'toggleQuickExpenseTypeFields not found');
+  for (const id of ['quickExpenseAmountField', 'quickExpenseMilesField', 'quickExpensePartNumberField', 'quickExpenseReceiptField']) {
+    assert.match(fn[0], new RegExp(id));
+  }
+});
+
+test('the tutorial system exists: 5 steps, a seen-flag key, show/advance/skip functions, and only shows automatically on first open', () => {
+  const src = fs.readFileSync(JOB_TRACKER_PATH, 'utf8');
+  assert.match(src, /QUICK_EXPENSE_TUTORIAL_SEEN_KEY = 'th_quickexpense_tutorial_seen'/);
+  const stepsMatch = src.match(/QUICK_EXPENSE_TUTORIAL_STEPS = \[([\s\S]*?)\n  \];/);
+  assert.ok(stepsMatch, 'tutorial steps array not found');
+  const stepCount = [...stepsMatch[1].matchAll(/\{ title:/g)].length;
+  assert.equal(stepCount, 5);
+  assert.match(src, /function showQuickExpenseTutorial\(\)/);
+  assert.match(src, /function advanceQuickExpenseTutorial\(\)/);
+  assert.match(src, /function skipQuickExpenseTutorial\(\)/);
+  const showModal = src.match(/function showQuickExpenseModal\(jobId, jobTitle\)[\s\S]*?\n  \}\n/);
+  assert.match(showModal[0], /localStorage\.getItem\(QUICK_EXPENSE_TUTORIAL_SEEN_KEY\)/, 'must check the seen-flag before deciding whether to show the tutorial');
+});
+
+test('the full tutorial lifecycle actually works end to end: shows on first open, completing it sets the seen flag, and it does NOT show again on a second open', async () => {
+  const { JSDOM } = require('jsdom');
+  const html = fs.readFileSync(JOB_TRACKER_PATH, 'utf8');
+  const dom = new JSDOM(html, {
+    runScripts: 'dangerously', url: 'https://example.com/',
+    beforeParse(window) { window.requireAuth = () => {}; },
+  });
+  const { window } = dom;
+  window.showToast = () => {};
+  window.showConfirm = () => Promise.resolve(true);
+  window.initSyncOnLoad = () => Promise.resolve();
+  window.getCurrentUserEmail = () => null;
+  window.TH_KEYS = { jobs: 'th_tracker_jobs', invoices: 'th_invoices', expenses: 'th_expense_log', income: 'th_income_log' };
+  window.thRead = (key, fallback) => fallback;
+  window.thWrite = () => {};
+  window.attachLongPress = () => {};
+  window.wireSearchClear = () => {};
+  window.attachVoiceDictation = () => {};
+  window.document.dispatchEvent(new window.Event('DOMContentLoaded'));
+  await new Promise(resolve => setTimeout(resolve, 50));
+
+  window.showQuickExpenseModal(1, 'Job');
+  assert.notEqual(window.document.getElementById('quickExpenseTutorial').style.display, 'none', 'tutorial should show on first open');
+  assert.equal(window.document.getElementById('quickExpenseFormView').style.display, 'none');
+
+  for (let i = 0; i < 4; i++) window.advanceQuickExpenseTutorial();
+  window.advanceQuickExpenseTutorial(); // final "Got it" click
+  assert.notEqual(window.document.getElementById('quickExpenseFormView').style.display, 'none', 'form should show after completing the tutorial');
+  assert.equal(window.localStorage.getItem('th_quickexpense_tutorial_seen'), '1');
+
+  window.closeQuickExpenseModal();
+  window.showQuickExpenseModal(1, 'Job');
+  assert.equal(window.document.getElementById('quickExpenseTutorial').style.display, 'none', 'tutorial should NOT show on a second open');
+});
+
+test('a real mileage entry saves correctly: no receipt required, amount computed from miles times the stored mileage rate, partNumber blanked', async () => {
+  const { JSDOM } = require('jsdom');
+  const html = fs.readFileSync(JOB_TRACKER_PATH, 'utf8');
+  const dom = new JSDOM(html, {
+    runScripts: 'dangerously', url: 'https://example.com/',
+    beforeParse(window) { window.requireAuth = () => {}; },
+  });
+  const { window } = dom;
+  window.showToast = () => {};
+  window.showConfirm = () => Promise.resolve(true);
+  window.initSyncOnLoad = () => Promise.resolve();
+  window.getCurrentUserEmail = () => null;
+  window.TH_KEYS = { jobs: 'th_tracker_jobs', invoices: 'th_invoices', expenses: 'th_expense_log', income: 'th_income_log' };
+  window.thRead = (key, fallback) => { try { const v = JSON.parse(window.localStorage.getItem(key)); return v === null ? fallback : v; } catch (e) { return fallback; } };
+  window.thWrite = (key, val) => { window.localStorage.setItem(key, JSON.stringify(val)); };
+  window.attachLongPress = () => {};
+  window.wireSearchClear = () => {};
+  window.attachVoiceDictation = () => {};
+  window.localStorage.setItem('th_mileage_rate', '0.67');
+  window.localStorage.setItem('th_quickexpense_tutorial_seen', '1');
+  window.document.dispatchEvent(new window.Event('DOMContentLoaded'));
+  await new Promise(resolve => setTimeout(resolve, 50));
+
+  window.showQuickExpenseModal(1, 'Job');
+  window.document.getElementById('quickExpenseType').value = 'mileage';
+  window.toggleQuickExpenseTypeFields();
+  window.document.getElementById('quickExpenseDesc').value = 'Supplier run';
+  window.document.getElementById('quickExpenseMiles').value = '10';
+  await window.submitQuickExpense();
+
+  const saved = JSON.parse(window.localStorage.getItem('th_expense_log') || '[]');
+  assert.equal(saved.length, 1);
+  assert.equal(saved[0].type, 'mileage');
+  assert.equal(saved[0].miles, 10);
+  assert.equal(saved[0].amount, 6.7);
+  assert.equal(saved[0].receiptPath, '');
+  assert.equal(saved[0].partNumber, '');
+});
+
+test('a real expense entry with vendor and part number saves both correctly', async () => {
+  const { JSDOM } = require('jsdom');
+  const html = fs.readFileSync(JOB_TRACKER_PATH, 'utf8');
+  const dom = new JSDOM(html, {
+    runScripts: 'dangerously', url: 'https://example.com/',
+    beforeParse(window) { window.requireAuth = () => {}; },
+  });
+  const { window } = dom;
+  window.showToast = () => {};
+  window.showConfirm = () => Promise.resolve(true);
+  window.initSyncOnLoad = () => Promise.resolve();
+  window.getCurrentUserEmail = () => null;
+  window.TH_KEYS = { jobs: 'th_tracker_jobs', invoices: 'th_invoices', expenses: 'th_expense_log', income: 'th_income_log' };
+  window.thRead = (key, fallback) => { try { const v = JSON.parse(window.localStorage.getItem(key)); return v === null ? fallback : v; } catch (e) { return fallback; } };
+  window.thWrite = (key, val) => { window.localStorage.setItem(key, JSON.stringify(val)); };
+  window.attachLongPress = () => {};
+  window.wireSearchClear = () => {};
+  window.attachVoiceDictation = () => {};
+  window.uploadReceipt = async (file, id) => ({ ok: true, path: 'expense-' + id + '/r.jpg' });
+  window.localStorage.setItem('th_quickexpense_tutorial_seen', '1');
+  window.document.dispatchEvent(new window.Event('DOMContentLoaded'));
+  await new Promise(resolve => setTimeout(resolve, 50));
+
+  window.showQuickExpenseModal(1, 'Job');
+  window.document.getElementById('quickExpenseDesc').value = 'New capacitor';
+  window.document.getElementById('quickExpenseAmount').value = '45.99';
+  window.document.getElementById('quickExpenseVendor').value = 'Grainger';
+  window.document.getElementById('quickExpensePartNumber').value = 'CAP-4400';
+  Object.defineProperty(window.document.getElementById('quickExpenseReceipt'), 'files', {
+    value: [{ type: 'image/jpeg', name: 'r.jpg' }], configurable: true,
+  });
+  await window.submitQuickExpense();
+
+  const saved = JSON.parse(window.localStorage.getItem('th_expense_log') || '[]');
+  assert.equal(saved.length, 1);
+  assert.equal(saved[0].vendor, 'Grainger');
+  assert.equal(saved[0].partNumber, 'CAP-4400');
+  assert.equal(saved[0].amount, 45.99);
+  assert.ok(saved[0].receiptPath.length > 0);
 });
