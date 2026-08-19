@@ -2274,3 +2274,66 @@ test('the source no longer has the vulnerable "only create if none exists" patte
   assert.doesNotMatch(src, /let card = document\.getElementById\('appTourCard'\);\s*\n\s*if \(!card\)/);
   assert.match(src, /document\.querySelectorAll\('#appTourCard'\)\.forEach\(el => el\.remove\(\)\)/);
 });
+
+// CRITICAL BUG FIX (2026-08-20), found from a direct screenshot showing
+// the header rendering twice on the page while scrolling. Confirmed via
+// research this is a real, well-documented WebKit rendering bug,
+// especially prominent on iOS 26: a sticky or fixed element that
+// carries backdrop-filter directly on itself can visually duplicate/
+// ghost during scroll. The documented fix is to keep position: sticky
+// on the element itself but move the actual blur/background onto an
+// absolutely-positioned child instead. Applied to all 3 places this
+// app combines position: sticky with backdrop-filter: the header,
+// .tabs-sticky, and .jump-nav -- the last of which also turned out to
+// be missing position: sticky entirely, a separate, real bug (it was
+// never actually sticky despite a comment describing it as riding
+// under the app bar) found in the same investigation.
+
+test('the header, tabs-sticky, and jump-nav no longer carry backdrop-filter directly on the sticky element itself -- it lives on a ::before child instead', () => {
+  const src = fs.readFileSync(path.join(__dirname, '..', 'tools', 'styles-tools.css'), 'utf8');
+
+  const headerRule = src.match(/body \.hub-header, body \.tool-header \{[^}]*\}/);
+  assert.ok(headerRule, 'header rule not found');
+  assert.doesNotMatch(headerRule[0], /backdrop-filter/, 'backdrop-filter should not be directly on the sticky header element');
+  assert.match(src, /body \.hub-header::before, body \.tool-header::before \{[^}]*backdrop-filter/s);
+
+  const tabsRule = src.match(/\.tabs\.tabs-sticky \{[^}]*\}/);
+  assert.ok(tabsRule, 'tabs-sticky rule not found');
+  assert.doesNotMatch(tabsRule[0], /backdrop-filter/);
+  assert.match(src, /\.tabs\.tabs-sticky::before \{[^}]*backdrop-filter/s);
+
+  const jumpNavRule = src.match(/body \.jump-nav \{[^}]*\}/);
+  assert.ok(jumpNavRule, 'jump-nav rule not found');
+  assert.doesNotMatch(jumpNavRule[0], /backdrop-filter/);
+  assert.match(src, /body \.jump-nav::before \{[^}]*backdrop-filter/s);
+});
+
+test('all 3 ::before fixes correctly position as an absolute overlay filling their sticky parent, and preserve the original visual appearance (same background/blur values as before)', () => {
+  const src = fs.readFileSync(path.join(__dirname, '..', 'tools', 'styles-tools.css'), 'utf8');
+  const beforeRules = [
+    { selector: 'body .hub-header::before, body .tool-header::before', bg: '78%', blur: '14px' },
+    { selector: '.tabs.tabs-sticky::before', bg: '92%', blur: '10px' },
+    { selector: 'body .jump-nav::before', bg: '82%', blur: '12px' },
+  ];
+  for (const { selector, bg, blur } of beforeRules) {
+    const escaped = selector.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const rule = src.match(new RegExp(escaped + ' \\{([^}]*)\\}'));
+    assert.ok(rule, selector + ' rule not found');
+    assert.match(rule[1], /position:\s*absolute/);
+    assert.match(rule[1], /inset:\s*0/);
+    assert.match(rule[1], new RegExp(bg));
+    assert.match(rule[1], new RegExp('blur\\(' + blur + '\\)'));
+  }
+});
+
+test('.jump-nav now actually has position: sticky, a real, separate bug found in this same investigation -- it was previously missing entirely', () => {
+  const src = fs.readFileSync(path.join(__dirname, '..', 'tools', 'styles-tools.css'), 'utf8');
+  const rule = src.match(/body \.jump-nav \{[^}]*\}/);
+  assert.match(rule[0], /position:\s*sticky/);
+});
+
+test('.tabs.tabs-sticky::before uses border-radius: inherit, since the base .tabs class has rounded corners that the overlay must match', () => {
+  const src = fs.readFileSync(path.join(__dirname, '..', 'tools', 'styles-tools.css'), 'utf8');
+  const rule = src.match(/\.tabs\.tabs-sticky::before \{([^}]*)\}/);
+  assert.match(rule[1], /border-radius:\s*inherit/);
+});

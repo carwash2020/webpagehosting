@@ -280,6 +280,14 @@ body.th-has-bottomnav .onboarding-card { bottom: calc(76px + env(safe-area-inset
 
 .tabs.tabs-sticky {
   position: sticky; top: calc(61px + env(safe-area-inset-top, 0px)); z-index: 55;
+}
+/* Same WebKit ghosting fix as .hub-header/.tool-header above -- see
+   that comment for the full explanation. border-radius: inherit
+   matches .tabs' own rounded corners (12px), since this pseudo-element
+   would otherwise show square corners peeking out from behind the
+   rounded pill shape. */
+.tabs.tabs-sticky::before {
+  content: ''; position: absolute; inset: 0; z-index: -1; border-radius: inherit;
   background: color-mix(in srgb, var(--bg-panel) 92%, transparent);
   -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px);
 }
@@ -955,8 +963,6 @@ body .hub-header, body .tool-header {
      sticky) on initial load, before any scrolling. */
   position: sticky; top: env(safe-area-inset-top, 0px); z-index: 60;
   margin: 0 -20px 14px; padding: calc(12px + env(safe-area-inset-top, 0px)) 20px 12px;
-  background: color-mix(in srgb, var(--bg) 78%, transparent);
-  -webkit-backdrop-filter: blur(14px); backdrop-filter: blur(14px);
   border-bottom: 1px solid var(--border);
   /* This was missing entirely -- with no display:flex here, any page
      relying on this shared rule (dev-tools.html, settings.html; unlike
@@ -964,6 +970,20 @@ body .hub-header, body .tool-header {
      its logo, title, and every header button stacking vertically as
      plain block elements instead of sitting in a row. */
   display: flex; align-items: center; justify-content: space-between; gap: 14px;
+}
+/* Bug fix (2026-08-20), found from a direct report with a screenshot
+   showing the header rendering twice while scrolling: iOS Safari
+   (confirmed via research to be a known, documented issue, especially
+   on iOS 26) can visually duplicate/ghost a sticky or fixed element
+   that carries backdrop-filter directly on itself. The documented fix
+   is to keep the sticky positioning on the element itself, but move
+   the actual blur/background onto an absolutely-positioned child
+   instead -- position: sticky already provides a valid containing
+   block for this, no extra positioning context needed. */
+body .hub-header::before, body .tool-header::before {
+  content: ''; position: absolute; inset: 0; z-index: -1;
+  background: color-mix(in srgb, var(--bg) 78%, transparent);
+  -webkit-backdrop-filter: blur(14px); backdrop-filter: blur(14px);
 }
 /* Bug fix (2026-08-20), found from a direct report: "Skip to main
    content" (and any other #mainContent anchor jump) positioned the
@@ -987,11 +1007,21 @@ body .hub-header-right { display: flex; align-items: center; gap: 8px; }
 
 /* jump-nav: segmented pill control riding just under the app bar */
 body .jump-nav {
+  position: sticky;
   top: calc(61px + env(safe-area-inset-top, 0px)); z-index: 55;
-  background: color-mix(in srgb, var(--bg) 82%, transparent);
-  -webkit-backdrop-filter: blur(12px); backdrop-filter: blur(12px);
   margin-left: -20px; margin-right: -20px; padding: 8px 20px;
   border-bottom: 1px solid var(--border);
+}
+/* Same WebKit ghosting fix as .hub-header/.tool-header and
+   .tabs-sticky above -- see the first of those comments for the full
+   explanation. Also fixes a real, separate bug found in the process:
+   position: sticky was missing from this rule entirely, so this
+   element was never actually sticky at all despite the comment above
+   describing it as riding just under the app bar. */
+body .jump-nav::before {
+  content: ''; position: absolute; inset: 0; z-index: -1;
+  background: color-mix(in srgb, var(--bg) 82%, transparent);
+  -webkit-backdrop-filter: blur(12px); backdrop-filter: blur(12px);
 }
 body .jump-nav a {
   border: 1px solid transparent;
