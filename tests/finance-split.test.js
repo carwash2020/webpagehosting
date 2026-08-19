@@ -1542,3 +1542,45 @@ test('the full income lifecycle (add, highlight, edit, cancel, re-render) also w
   window.cancelIncomeEntryEdit();
   window.renderIncomeEntries();
 });
+
+// CRITICAL BUG FIX (2026-08-20), found while investigating the Expense
+// form structure in preparation for building a fuller quick-add popup.
+// entryType's change event was dispatched in editExpense() specifically
+// to trigger a field-visibility toggle (Miles field for mileage entries,
+// Amount field otherwise) -- but no listener ever existed to respond to
+// it. Selecting "Mileage" as the type silently did nothing visually:
+// the Amount field stayed visible and the Miles field stayed hidden, so
+// every mileage entry logged through the UI would have saved as 0 miles
+// and $0, since addExpense's own logic only reads the Amount field for
+// type !== 'mileage'.
+
+test('selecting Mileage as the expense type actually shows the Miles field and hides Amount/Part Number, not just internally records the type', async () => {
+  const { JSDOM } = require('jsdom');
+  const html = fs.readFileSync(FINANCE_PATH, 'utf8');
+  const dom = new JSDOM(html, {
+    runScripts: 'dangerously', url: 'https://example.com/',
+    beforeParse(window) { window.requireAuth = () => {}; },
+  });
+  const { window } = dom;
+  window.showToast = () => {};
+  window.showConfirm = () => Promise.resolve(true);
+  window.initSyncOnLoad = () => Promise.resolve();
+  window.getCurrentUserEmail = () => null;
+  window.TH_KEYS = { jobs: 'th_tracker_jobs', invoices: 'th_invoices', expenses: 'th_expense_log', income: 'th_income_log' };
+  window.thRead = (key, fallback) => fallback;
+  window.money = (n) => '$' + (Number(n) || 0).toFixed(2);
+  window.escapeHtml = (s) => String(s == null ? '' : s);
+  window.document.dispatchEvent(new window.Event('DOMContentLoaded'));
+  await new Promise(resolve => setTimeout(resolve, 100));
+
+  window.document.getElementById('entryType').value = 'mileage';
+  window.document.getElementById('entryType').dispatchEvent(new window.Event('change'));
+  assert.notEqual(window.document.getElementById('milesField').style.display, 'none');
+  assert.equal(window.document.getElementById('amountField').style.display, 'none');
+  assert.equal(window.document.getElementById('partNumberField').style.display, 'none');
+
+  window.document.getElementById('entryType').value = 'expense';
+  window.document.getElementById('entryType').dispatchEvent(new window.Event('change'));
+  assert.equal(window.document.getElementById('milesField').style.display, 'none');
+  assert.notEqual(window.document.getElementById('amountField').style.display, 'none');
+});

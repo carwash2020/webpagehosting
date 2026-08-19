@@ -828,6 +828,14 @@
     }
   }
 
+  function toggleExpenseTypeFields() {
+    const isMileage = document.getElementById('entryType').value === 'mileage';
+    document.getElementById('milesField').style.display = isMileage ? '' : 'none';
+    document.getElementById('amountField').style.display = isMileage ? 'none' : '';
+    document.getElementById('partNumberField').style.display = isMileage ? 'none' : '';
+  }
+  document.getElementById('entryType').addEventListener('change', toggleExpenseTypeFields);
+
   function editExpense(id) {
     const entry = loadExpenses().find(e => e.id === id);
     if (!entry) return;
