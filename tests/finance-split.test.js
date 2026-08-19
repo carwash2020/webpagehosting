@@ -1120,7 +1120,7 @@ test('.tabs-sticky positions below the already-sticky header, matching the prove
   const src = fs.readFileSync(path.join(__dirname, '..', 'tools', 'styles-tools.css'), 'utf8');
   const rule = src.match(/\.tabs\.tabs-sticky\s*\{[^}]*\}/);
   assert.ok(rule, '.tabs-sticky rule not found');
-  assert.match(rule[0], /top:\s*61px/, 'must match .jump-nav\'s proven top offset, not overlap the sticky header at top:0');
+  assert.match(rule[0], /top:\s*calc\(61px \+ env\(safe-area-inset-top, 0px\)\)/, 'must include the safe-area-inset-top fix (added 2026-08-20 after a real notch-overlap report), not just the bare 61px offset');
   assert.match(rule[0], /position:\s*sticky/);
 });
 
@@ -1726,4 +1726,89 @@ test('a real expense entry with vendor and part number saves both correctly', as
   assert.equal(saved[0].partNumber, 'CAP-4400');
   assert.equal(saved[0].amount, 45.99);
   assert.ok(saved[0].receiptPath.length > 0);
+});
+
+// CRITICAL BUG FIXES (2026-08-20), found from a direct report: "invoices
+// won't sync and I can't reach settings to restart the tutorial because
+// I'm on iPhone." Two separate real bugs.
+
+// BUG 1: the sticky header positioning added earlier this session
+// (top: 0) had zero accounting for the iOS safe-area-inset-top, despite
+// this app already using that exact pattern elsewhere (photo lightbox,
+// jump-nav) and setting viewport-fit=cover, which means content
+// genuinely extends under the notch/Dynamic Island unless explicitly
+// pushed clear of it. On a large-notch device, this pushed the header's
+// own right-side buttons -- including the Settings link -- up under the
+// status bar, unreachable rather than just visually cramped.
+
+test('the sticky header (.hub-header/.tool-header) accounts for the iOS safe-area-inset-top in both its sticky position and its own top padding', () => {
+  const src = fs.readFileSync(path.join(__dirname, '..', 'tools', 'styles-tools.css'), 'utf8');
+  const rule = src.match(/body \.hub-header, body \.tool-header \{[\s\S]*?\n\}/);
+  assert.ok(rule, 'header rule not found');
+  assert.match(rule[0], /top:\s*env\(safe-area-inset-top, 0px\)/, 'the sticky position itself must clear the notch');
+  assert.match(rule[0], /padding:\s*calc\(12px \+ env\(safe-area-inset-top, 0px\)\)/, 'the header\'s own top padding must also clear the notch, since it sits in normal page flow before any scrolling');
+});
+
+test('the mobile jump-nav override also accounts for the safe-area-inset-top, not just the desktop-width version', () => {
+  const src = fs.readFileSync(path.join(__dirname, '..', 'tools', 'styles-tools.css'), 'utf8');
+  const mobileRule = src.match(/body \.jump-nav \{ margin-left: -12px[^}]*\}/);
+  assert.ok(mobileRule, 'mobile jump-nav override not found');
+  assert.match(mobileRule[0], /env\(safe-area-inset-top, 0px\)/);
+});
+
+// BUG 2: startRealtimeSync() had no timeout/watchdog at all -- if the
+// underlying WebSocket subscription never reaches a terminal state, the
+// status callback never fires, and the page's sync indicator stays
+// stuck at its initial "connecting..." text forever, with no
+// indication anything is wrong and no way to retry.
+
+test('startRealtimeSync fires a \'timeout\' status if the subscription never resolves within 12 seconds, verified with the real function against a genuinely stuck mock subscription', async () => {
+  const vm = require('vm');
+  const src = fs.readFileSync(path.join(__dirname, '..', 'tools', 'sync.js'), 'utf8');
+  const sandbox = {
+    console, setTimeout,
+    localStorage: { getItem: () => null, setItem: () => {} },
+    window: { addEventListener: () => {} },
+    SUPABASE_URL: 'https://fake.supabase.co', SUPABASE_ANON_KEY: 'fake-key',
+    getAuthToken: () => 'fake-token', logClientError: () => {},
+  };
+  sandbox.window.supabase = {
+    createClient: () => ({ channel: () => ({ on: () => ({ subscribe: () => ({}) }) }) }), // never calls back
+  };
+  vm.createContext(sandbox);
+  vm.runInContext(src, sandbox);
+
+  let received = null;
+  sandbox.startRealtimeSync(() => {}, (status) => { received = status; });
+  await new Promise(resolve => setTimeout(resolve, 12200));
+  assert.equal(received, 'timeout');
+});
+
+test('startRealtimeSync does NOT fire a spurious timeout if the subscription resolves normally and quickly', async () => {
+  const vm = require('vm');
+  const src = fs.readFileSync(path.join(__dirname, '..', 'tools', 'sync.js'), 'utf8');
+  const sandbox = {
+    console, setTimeout,
+    localStorage: { getItem: () => null, setItem: () => {} },
+    window: { addEventListener: () => {} },
+    SUPABASE_URL: 'https://fake.supabase.co', SUPABASE_ANON_KEY: 'fake-key',
+    getAuthToken: () => 'fake-token', logClientError: () => {},
+  };
+  sandbox.window.supabase = {
+    createClient: () => ({ channel: () => ({ on: () => ({ subscribe: (cb) => { setTimeout(() => cb('SUBSCRIBED'), 20); return {}; } }) }) }),
+  };
+  vm.createContext(sandbox);
+  vm.runInContext(src, sandbox);
+
+  const statuses = [];
+  sandbox.startRealtimeSync(() => {}, (status) => statuses.push(status));
+  await new Promise(resolve => setTimeout(resolve, 12200));
+  assert.deepEqual(statuses, ['SUBSCRIBED']);
+});
+
+test('every page using the CHANNEL_ERROR/TIMED_OUT/CLOSED disconnected-state check now also treats \'timeout\' the same way, not the generic "still connecting" fallback', () => {
+  for (const file of ['contract-generator.html', 'invoice-generator.html', 'job-tracker.html', 'route-planner.html', 'workspace.html', 'runway-dashboard.html']) {
+    const src = fs.readFileSync(path.join(__dirname, '..', 'tools', file), 'utf8');
+    assert.match(src, /status === 'CHANNEL_ERROR' \|\| status === 'TIMED_OUT' \|\| status === 'CLOSED' \|\| status === 'timeout'/, file + ' should treat timeout as disconnected, not fall through to the generic connecting message');
+  }
 });

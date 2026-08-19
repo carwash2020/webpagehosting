@@ -787,6 +787,7 @@ function startRealtimeSync(onRemoteChange, onStatusChange) {
       }
     )
     .subscribe((status) => {
+      realtimeResolved = true;
       if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
         if (typeof logClientError === 'function') {
           logClientError('Realtime workspace_sync channel status: ' + status, 'sync.js', null, null, null);
@@ -794,6 +795,19 @@ function startRealtimeSync(onRemoteChange, onStatusChange) {
       }
       if (onStatusChange) onStatusChange(status);
     });
+  // Reliability fix (2026-08-20): if the subscription never reaches ANY
+  // terminal state at all, the line above never runs, and the status
+  // stays stuck at whatever the page's own initial HTML said forever --
+  // no indication anything is wrong, no way to retry. This gives it 12
+  // seconds, then treats a still-unresolved connection as its own
+  // status so the page can show something actionable instead of an
+  // indefinite silent hang. Each page's existing status handler already
+  // has an else-branch for an unrecognized status, so no per-page
+  // changes are needed for this to surface correctly.
+  let realtimeResolved = false;
+  setTimeout(() => {
+    if (!realtimeResolved && onStatusChange) onStatusChange('timeout');
+  }, 12000);
 }
 
 // Same idea, for the Leads inbox specifically -- fires when a new lead
