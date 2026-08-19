@@ -164,15 +164,16 @@ function renderAppTourStep(stepIndex) {
       el.classList.add(TOUR_HIGHLIGHT_CLASS);
     }
   }
-  let card = document.getElementById('appTourCard');
-  if (!card) {
-    card = document.createElement('div');
-    card.id = 'appTourCard';
-    card.className = 'onboarding-card';
-    card.setAttribute('role', 'dialog');
-    card.setAttribute('aria-label', 'App tour');
-    document.body.appendChild(card);
-  }
+  // Always start from a clean slate -- guarantees exactly one
+  // #appTourCard exists and the click handler below is always attached
+  // to the one actually visible, never a stale duplicate.
+  document.querySelectorAll('#appTourCard').forEach(el => el.remove());
+  const card = document.createElement('div');
+  card.id = 'appTourCard';
+  card.className = 'onboarding-card';
+  card.setAttribute('role', 'dialog');
+  card.setAttribute('aria-label', 'App tour');
+  document.body.appendChild(card);
   const isFirst = stepIndex === 0;
   const isLast = stepIndex === APP_TOUR_STEPS.length - 1;
   card.innerHTML =
