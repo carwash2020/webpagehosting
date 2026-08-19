@@ -1870,12 +1870,12 @@ test('the tour step list covers exactly the intended pages, and excludes redirec
   for (const e of excluded) assert.ok(!pages.some(p => p.includes(e)), e + ' should not appear in the tour');
 });
 
-test('every one of tools-tour.js\'s 4 workspace.html section ids actually exists on that page', () => {
+test('every one of tools-tour.js\'s 4 workspace.html highlight selectors actually exists on that page', () => {
   const tourSrc = fs.readFileSync(path.join(__dirname, '..', 'tools', 'tools-tour.js'), 'utf8');
   const wsSrc = fs.readFileSync(path.join(__dirname, '..', 'tools', 'workspace.html'), 'utf8');
-  const sectionIds = [...tourSrc.matchAll(/sectionId: '([\w-]+)'/g)].map(m => m[1]);
-  assert.equal(sectionIds.length, 4);
-  for (const id of sectionIds) {
+  const workspaceSteps = [...tourSrc.matchAll(/\{ page: '\/tools\/workspace\.html', highlightSelector: '#([\w-]+)'/g)].map(m => m[1]);
+  assert.equal(workspaceSteps.length, 4);
+  for (const id of workspaceSteps) {
     assert.match(wsSrc, new RegExp('id="' + id + '"'), id + ' referenced by the tour but not found on workspace.html');
   }
 });
@@ -2026,4 +2026,99 @@ test('running check-links.py against the real repo actually passes now (not just
   const { execSync } = require('child_process');
   const output = execSync('python3 ' + path.join(__dirname, '..', 'scripts', 'check-links.py'), { encoding: 'utf8' });
   assert.match(output, /Link check passed/);
+});
+
+// Tour improvements (2026-08-20), per direct feedback: "doesn't
+// highlight anything as you talk about it, doesn't give any use
+// cases." Added a real visual highlight (a pulsing glow) applied to
+// whatever element a step is actually describing, and rewrote every
+// step's copy around a concrete use case rather than an abstract
+// description of what the page contains. Renamed sectionId to
+// highlightSelector and switched from getElementById to querySelector,
+// so a single field covers both the 4 workspace.html sections (id
+// selectors) and the other 10 pages (class/attribute selectors) --
+// verified every one of the 14 selectors actually matches something
+// real on its target page before using any of them, and added zero
+// new ids to any of those 10 pages to make that possible.
+
+test('every one of the 14 tour steps has a highlightSelector, and every selector actually matches something real on its target page', () => {
+  const tourSrc = fs.readFileSync(path.join(__dirname, '..', 'tools', 'tools-tour.js'), 'utf8');
+  const steps = [...tourSrc.matchAll(/\{ page: '(\/tools\/[\w-]+\.html)', highlightSelector: '([^']+)'/g)];
+  assert.equal(steps.length, 14, 'every step should have a highlightSelector');
+  for (const [, pagePath, selector] of steps) {
+    const file = pagePath.replace('/tools/', '');
+    const pageSrc = fs.readFileSync(path.join(__dirname, '..', 'tools', file), 'utf8');
+    // Convert the CSS selector into a simple substring presence check --
+    // good enough here since every selector used is a plain id, class,
+    // or single-attribute match, not a compound/descendant selector.
+    let ok;
+    if (selector.startsWith('#')) {
+      ok = pageSrc.includes('id="' + selector.slice(1) + '"');
+    } else if (selector.startsWith('.')) {
+      // Compound class selectors (e.g. .tabs.tabs-sticky) need every
+      // class name present, not the dotted selector treated as one
+      // literal string -- HTML writes multiple classes space-separated.
+      const classNames = selector.slice(1).split('.');
+      ok = classNames.every(c => new RegExp('class="[^"]*\\b' + c + '\\b[^"]*"').test(pageSrc));
+    } else {
+      const attrMatch = selector.match(/\[([^*=]+)\*?="([^"]+)"\]/);
+      ok = attrMatch ? pageSrc.includes(attrMatch[2]) && new RegExp(attrMatch[1] + '="[^"]*' + attrMatch[2].replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '[^"]*"').test(pageSrc) : false;
+    }
+    assert.ok(ok, file + ': highlightSelector "' + selector + '" not found');
+  }
+});
+
+test('the tour visually highlights the real target element, clears any previous highlight on re-render, and clears fully on dismiss', () => {
+  const { JSDOM } = require('jsdom');
+  const tourSrc = fs.readFileSync(path.join(__dirname, '..', 'tools', 'tools-tour.js'), 'utf8');
+  const dom = new JSDOM('<!DOCTYPE html><html><body><button id="addJobBtn">Add a Job</button></body></html>', {
+    url: 'https://example.com/tools/job-tracker.html', runScripts: 'dangerously',
+  });
+  const { window } = dom;
+  window.getCurrentUserEmail = () => null;
+  window.HTMLElement.prototype.scrollIntoView = () => {};
+  const script = window.document.createElement('script');
+  script.textContent = tourSrc;
+  window.document.head.appendChild(script);
+
+  window.localStorage.setItem('th_app_tour_step', '4');
+  window.initAppTour();
+  const btn = window.document.getElementById('addJobBtn');
+  assert.ok(btn.classList.contains('th-tour-highlight'));
+
+  window.goToAppTourStep(4); // re-render the same step
+  assert.equal(window.document.querySelectorAll('.th-tour-highlight').length, 1, 're-rendering should not duplicate the highlight');
+
+  window.dismissAppTour();
+  assert.equal(window.document.querySelectorAll('.th-tour-highlight').length, 0);
+});
+
+test('.th-tour-highlight is defined in the shared stylesheet using real, existing color variables', () => {
+  const src = fs.readFileSync(path.join(__dirname, '..', 'tools', 'styles-tools.css'), 'utf8');
+  assert.match(src, /\.th-tour-highlight \{/);
+  assert.match(src, /var\(--orange\)/);
+  assert.match(src, /var\(--orange-tint-glow\)/);
+});
+
+// #mainContent scroll-margin-top fix (2026-08-20), from a direct report
+// with a screenshot showing "Invoice Generator" overlapping the status
+// bar. The "Skip to main content" accessibility link (and any other
+// jump to #mainContent) positioned the page title at the very top of
+// the viewport with no awareness that the sticky header above it also
+// occupies that space.
+
+test('#mainContent has scroll-margin-top accounting for both the header height and the iOS safe-area-inset-top', () => {
+  const src = fs.readFileSync(path.join(__dirname, '..', 'tools', 'styles-tools.css'), 'utf8');
+  const rule = src.match(/#mainContent \{[^}]*\}/);
+  assert.ok(rule, '#mainContent rule not found');
+  assert.match(rule[0], /scroll-margin-top:\s*calc\(61px \+ env\(safe-area-inset-top, 0px\)\)/);
+});
+
+test('all 8 pages sharing the #mainContent skip-link pattern are covered by this one shared rule', () => {
+  const pages = ['calendar.html', 'contract-generator.html', 'invoice-generator.html', 'job-tracker.html',
+    'parts-reference.html', 'review-request.html', 'route-planner.html', 'runway-dashboard.html'];
+  for (const file of pages) {
+    const src = fs.readFileSync(path.join(__dirname, '..', 'tools', file), 'utf8');
+    assert.match(src, /id="mainContent"/, file + ' should use the id this shared fix targets');
+  }
 });
