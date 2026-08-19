@@ -25,7 +25,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Anton&family=Oswald:wght@400;500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="/styles.css?v=202608201800">
-<link rel="stylesheet" href="/tools/styles-tools.css?v=202608202300">
+<link rel="stylesheet" href="/tools/styles-tools.css?v=202608202400">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.112.3/dist/umd/supabase.js" integrity="sha384-qafw21c/iciq0VXsi9FzkfoQv5I/V0iqE4lSNcKXPnW9/UTJLnv5CcN4FHxVLnKg" crossorigin="anonymous" defer></script>
 <script src="/tools/sync.js?v=202608202100" defer></script>
 <script src="/tools/push-notifications.js?v=202608160400" defer></script>
@@ -34,6 +34,7 @@
 <script src="/tools/tools-dialogs.js?v=202608201400" defer></script>
 <script src="/tools/tools-media-sharing.js?v=202608201900" defer></script>
 <script src="/tools/tools-nav-pwa.js?v=202608201400" defer></script>
+<script src="/tools/tools-tour.js?v=202608202000" defer></script>
 <style>
   body { padding: 44px 20px 60px; max-width: 900px; margin: 0 auto; }
   .hub-header { display: flex; align-items: center; justify-content: space-between; gap: 14px; margin-bottom: 8px; }
@@ -208,27 +209,6 @@
   .ba-label-before { left: 8px; }
   .ba-label-after { right: 8px; }
   .gallery-queue-actions { display: flex; gap: 6px; margin-top: 8px; }
-
-  /* Item #1: onboarding tour coach-mark card */
-  .onboarding-card {
-    position: fixed; left: 16px; right: 16px; bottom: 16px; z-index: 800;
-    max-width: 420px; margin: 0 auto;
-    background: linear-gradient(180deg, var(--bg-panel-3), var(--bg-panel-2));
-    border: 1px solid var(--orange-tint-border); border-radius: 16px;
-    padding: 16px 18px; box-shadow: 0 -4px 30px rgba(0,0,0,.5), 0 0 30px -8px var(--orange-tint-glow);
-    animation: onboardingSlideUp .3s cubic-bezier(.2,.8,.2,1);
-  }
-  @keyframes onboardingSlideUp { from { transform: translateY(16px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
-  @media (prefers-reduced-motion: reduce) { .onboarding-card { animation: none; } }
-  body.th-has-bottomnav .onboarding-card { bottom: calc(76px + env(safe-area-inset-bottom, 0px) + 10px); }
-  .onboarding-dots { display: flex; gap: 5px; margin-bottom: 10px; }
-  .onboarding-dots span { width: 6px; height: 6px; border-radius: 50%; background: var(--border); }
-  .onboarding-dots span.is-active { background: var(--orange); width: 16px; border-radius: 3px; }
-  .onboarding-title { font-family: 'Oswald', sans-serif; color: var(--white); font-size: 16px; margin-bottom: 4px; }
-  .onboarding-body { color: var(--text-dim); font-size: 13.5px; line-height: 1.5; margin-bottom: 14px; }
-  .onboarding-actions { display: flex; justify-content: space-between; align-items: center; gap: 10px; }
-  .onboarding-skip { background: none; border: none; color: var(--text-dim); font-size: 13px; cursor: pointer; padding: 8px 4px; }
-  .onboarding-skip:hover { color: var(--white); }
   .realtime-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--text-dim); flex-shrink: 0; }
   .realtime-dot.is-live { background: #4caf50; }
   .realtime-dot.is-connecting { background: var(--orange-light); }
@@ -2172,98 +2152,10 @@
     if (typeof thRunClientBackfillOnce === 'function') {
       try { thRunClientBackfillOnce(); } catch (e) { /* never block dashboard init */ }
     }
-    initOnboardingTour();
+    initAppTour();
   });
 
   // ---------------------------------------------------------------------
-  // Item #1 (2026-08-16): lightweight first-run onboarding tour. Shown
-  // once ever (localStorage flag), walks through the 3 real dashboard
-  // sections with a bottom coach-mark card rather than a full spotlight
-  // overlay -- simpler, and doesn't risk covering content on small
-  // screens. Skippable at any step; dismissing (Skip or finishing)
-  // permanently sets the flag so it never reappears.
-  // ---------------------------------------------------------------------
-  const ONBOARDING_STEPS = [
-    { sectionId: 'section-snapshot', title: 'Business Snapshot', body: 'Revenue, expenses, and outstanding balances for whatever period you pick above.' },
-    { sectionId: 'section-actionitems', title: 'Action Items', body: 'Anything that actually needs your attention today -- overdue invoices, jobs due tomorrow, follow-ups.' },
-    { sectionId: 'section-tools', title: 'Tools', body: 'Every tool in the suite lives here, or in the bar at the bottom of the screen on mobile.' }
-  ];
-
-  // Keyed by the logged-in account's email, not just the browser --
-  // previously a single shared key meant if Connor dismissed it on a
-  // shared device, Steve would never see it there either (and vice
-  // versa). Falls back to a generic key only if somehow called before
-  // login resolves.
-  function onboardingKey() {
-    const email = (typeof getCurrentUserEmail === 'function' && getCurrentUserEmail()) || 'anon';
-    return 'th_onboarding_v1_seen_' + email.toLowerCase();
-  }
-
-  function initOnboardingTour() {
-    // ?tour=1 forces the tour to run regardless of the seen-flag --
-    // this is what the "Replay Quick Tour" button in Dev Tools links to.
-    const forceReplay = new URLSearchParams(window.location.search).get('tour') === '1';
-
-    // One-time migration: the flag used to be a single shared key with
-    // no per-user distinction. Anyone who already dismissed the tour
-    // under that old key shouldn't see it run again just because the
-    // key scheme changed underneath them.
-    try {
-      if (localStorage.getItem('th_onboarding_v1_seen') === '1' && !localStorage.getItem(onboardingKey())) {
-        localStorage.setItem(onboardingKey(), '1');
-      }
-    } catch (e) { /* ignore */ }
-
-    let seen = false;
-    if (!forceReplay) {
-      try { seen = localStorage.getItem(onboardingKey()) === '1'; } catch (e) { /* ignore */ }
-    }
-    if (seen) return;
-
-    let step = 0;
-    const card = document.createElement('div');
-    card.className = 'onboarding-card';
-    card.setAttribute('role', 'dialog');
-    card.setAttribute('aria-label', 'Quick tour');
-    document.body.appendChild(card);
-
-    function dismiss() {
-      try { localStorage.setItem(onboardingKey(), '1'); } catch (e) { /* ignore */ }
-      card.remove();
-      // Clean the URL so refreshing or sharing the link doesn't re-run
-      // the tour every time.
-      if (forceReplay) {
-        const url = new URL(window.location.href);
-        url.searchParams.delete('tour');
-        window.history.replaceState({}, '', url);
-      }
-    }
-
-    function renderStep() {
-      const s = ONBOARDING_STEPS[step];
-      const el = document.getElementById(s.sectionId);
-      if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
-      const isLast = step === ONBOARDING_STEPS.length - 1;
-      card.innerHTML =
-        '<div class="onboarding-dots">' + ONBOARDING_STEPS.map((_, i) => '<span class="' + (i === step ? 'is-active' : '') + '"></span>').join('') + '</div>' +
-        '<div class="onboarding-title">' + s.title + '</div>' +
-        '<div class="onboarding-body">' + s.body + '</div>' +
-        '<div class="onboarding-actions">' +
-          '<button class="onboarding-skip">Skip</button>' +
-          '<button class="onboarding-next primary-btn">' + (isLast ? 'Got it' : 'Next') + '</button>' +
-        '</div>';
-      card.querySelector('.onboarding-skip').onclick = dismiss;
-      card.querySelector('.onboarding-next').onclick = () => {
-        if (isLast) { dismiss(); return; }
-        step++;
-        renderStep();
-      };
-    }
-
-    // Small delay so this shows after the dashboard's own first render,
-    // not fighting it for attention the instant the page appears.
-    setTimeout(renderStep, 900);
-  }
 </script>
 
 </body>

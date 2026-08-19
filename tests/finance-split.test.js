@@ -543,6 +543,7 @@ test('job-tracker.html\'s DOMContentLoaded init actually runs end-to-end without
     beforeParse(window) { window.requireAuth = () => {}; },
   });
   const { window } = dom;
+  window.initAppTour = () => {}; // real fn lives in the external tools-tour.js, not loaded in this minimal sandbox
   window.showToast = () => {};
   window.showConfirm = () => Promise.resolve(true);
   window.initSyncOnLoad = () => Promise.resolve();
@@ -1036,6 +1037,7 @@ test('finance.html\'s DOMContentLoaded init actually runs to completion and rend
     beforeParse(window) { window.requireAuth = () => {}; },
   });
   const { window } = dom;
+  window.initAppTour = () => {}; // real fn lives in the external tools-tour.js, not loaded in this minimal sandbox
   window.showToast = () => {};
   window.showConfirm = () => Promise.resolve(true);
   window.initSyncOnLoad = () => Promise.resolve();
@@ -1211,6 +1213,7 @@ test('the end-to-end flow actually works: open the modal, fill it out, submit, a
     beforeParse(window) { window.requireAuth = () => {}; },
   });
   const { window } = dom;
+  window.initAppTour = () => {}; // real fn lives in the external tools-tour.js, not loaded in this minimal sandbox
   window.showToast = () => {};
   window.showConfirm = () => Promise.resolve(true);
   let alertMsg = null;
@@ -1290,6 +1293,7 @@ test('finance.html shows its default tab (Cost Lookup) on a completely normal, h
     beforeParse(window) { window.requireAuth = () => {}; },
   });
   const { window } = dom;
+  window.initAppTour = () => {}; // real fn lives in the external tools-tour.js, not loaded in this minimal sandbox
   window.showToast = () => {};
   window.showConfirm = () => Promise.resolve(true);
   window.initSyncOnLoad = () => Promise.resolve();
@@ -1317,6 +1321,7 @@ test('finance.html still correctly activates a DIFFERENT tab when a real hash is
     beforeParse(window) { window.requireAuth = () => {}; },
   });
   const { window } = dom;
+  window.initAppTour = () => {}; // real fn lives in the external tools-tour.js, not loaded in this minimal sandbox
   window.showToast = () => {};
   window.showConfirm = () => Promise.resolve(true);
   window.initSyncOnLoad = () => Promise.resolve();
@@ -1346,6 +1351,7 @@ test('job-tracker.html shows its default tab (Jobs) on a normal, hash-less load,
       beforeParse(window) { window.requireAuth = () => {}; },
     });
     const { window } = dom;
+  window.initAppTour = () => {}; // real fn lives in the external tools-tour.js, not loaded in this minimal sandbox
     window.showToast = () => {};
     window.showConfirm = () => Promise.resolve(true);
     window.initSyncOnLoad = () => Promise.resolve();
@@ -1408,6 +1414,7 @@ test('the error banner actually appears and shows the real error message when in
     beforeParse(window) { window.requireAuth = () => {}; },
   });
   const { window } = dom;
+  window.initAppTour = () => {}; // real fn lives in the external tools-tour.js, not loaded in this minimal sandbox
   window.showToast = () => {};
   window.showConfirm = () => Promise.resolve(true);
   window.initSyncOnLoad = () => Promise.resolve();
@@ -1470,6 +1477,7 @@ test('the full expense lifecycle (add, highlight, edit, cancel, re-render) works
     beforeParse(window) { window.requireAuth = () => {}; },
   });
   const { window } = dom;
+  window.initAppTour = () => {}; // real fn lives in the external tools-tour.js, not loaded in this minimal sandbox
   window.HTMLElement.prototype.scrollIntoView = () => {};
   window.showToast = () => {};
   window.showConfirm = () => Promise.resolve(true);
@@ -1512,6 +1520,7 @@ test('the full income lifecycle (add, highlight, edit, cancel, re-render) also w
     beforeParse(window) { window.requireAuth = () => {}; },
   });
   const { window } = dom;
+  window.initAppTour = () => {}; // real fn lives in the external tools-tour.js, not loaded in this minimal sandbox
   window.HTMLElement.prototype.scrollIntoView = () => {};
   window.showToast = () => {};
   window.showConfirm = () => Promise.resolve(true);
@@ -1562,6 +1571,7 @@ test('selecting Mileage as the expense type actually shows the Miles field and h
     beforeParse(window) { window.requireAuth = () => {}; },
   });
   const { window } = dom;
+  window.initAppTour = () => {}; // real fn lives in the external tools-tour.js, not loaded in this minimal sandbox
   window.showToast = () => {};
   window.showConfirm = () => Promise.resolve(true);
   window.initSyncOnLoad = () => Promise.resolve();
@@ -1621,6 +1631,7 @@ test('the full tutorial lifecycle actually works end to end: shows on first open
     beforeParse(window) { window.requireAuth = () => {}; },
   });
   const { window } = dom;
+  window.initAppTour = () => {}; // real fn lives in the external tools-tour.js, not loaded in this minimal sandbox
   window.showToast = () => {};
   window.showConfirm = () => Promise.resolve(true);
   window.initSyncOnLoad = () => Promise.resolve();
@@ -1656,6 +1667,7 @@ test('a real mileage entry saves correctly: no receipt required, amount computed
     beforeParse(window) { window.requireAuth = () => {}; },
   });
   const { window } = dom;
+  window.initAppTour = () => {}; // real fn lives in the external tools-tour.js, not loaded in this minimal sandbox
   window.showToast = () => {};
   window.showConfirm = () => Promise.resolve(true);
   window.initSyncOnLoad = () => Promise.resolve();
@@ -1695,6 +1707,7 @@ test('a real expense entry with vendor and part number saves both correctly', as
     beforeParse(window) { window.requireAuth = () => {}; },
   });
   const { window } = dom;
+  window.initAppTour = () => {}; // real fn lives in the external tools-tour.js, not loaded in this minimal sandbox
   window.showToast = () => {};
   window.showConfirm = () => Promise.resolve(true);
   window.initSyncOnLoad = () => Promise.resolve();
@@ -1811,4 +1824,170 @@ test('every page using the CHANNEL_ERROR/TIMED_OUT/CLOSED disconnected-state che
     const src = fs.readFileSync(path.join(__dirname, '..', 'tools', file), 'utf8');
     assert.match(src, /status === 'CHANNEL_ERROR' \|\| status === 'TIMED_OUT' \|\| status === 'CLOSED' \|\| status === 'timeout'/, file + ' should treat timeout as disconnected, not fall through to the generic connecting message');
   }
+});
+
+// Full cross-page app tour (2026-08-20). Expanded from a 3-step,
+// dashboard-only onboarding tour into a walkthrough spanning every real
+// tool page, per explicit direction: "I want this to become the
+// tutorial and take you through each page and explain everything."
+// State (which step you're on) lives in localStorage rather than the
+// URL, so it survives a real page navigation between steps. Each page
+// calls initAppTour() on its own DOMContentLoaded; that function is
+// self-correcting -- if the stored step doesn't match the page you're
+// actually on (say, you tapped the bottom nav instead of "Next"), it
+// finds whichever step DOES belong to this page and shows that one
+// instead of showing nothing or the wrong page's content.
+
+function loadTourInWindow(url, email) {
+  const { JSDOM } = require('jsdom');
+  const src = fs.readFileSync(path.join(__dirname, '..', 'tools', 'tools-tour.js'), 'utf8');
+  const dom = new JSDOM('<!DOCTYPE html><html><body></body></html>', { url, runScripts: 'dangerously' });
+  const { window } = dom;
+  window.getCurrentUserEmail = () => email || null;
+  const script = window.document.createElement('script');
+  script.textContent = src;
+  window.document.head.appendChild(script);
+  return window;
+}
+
+test('the tour step list covers exactly the intended pages, and excludes redirect stubs, auth pages, dev tools, and detail views on purpose', () => {
+  const src = fs.readFileSync(path.join(__dirname, '..', 'tools', 'tools-tour.js'), 'utf8');
+  const pages = [...src.matchAll(/page: '(\/tools\/[\w-]+\.html)'/g)].map(m => m[1]);
+  const expectedPages = [
+    '/tools/workspace.html', '/tools/job-tracker.html', '/tools/finance.html',
+    '/tools/invoice-generator.html', '/tools/calendar.html', '/tools/route-planner.html',
+    '/tools/contract-generator.html', '/tools/review-request.html', '/tools/parts-reference.html',
+    '/tools/runway-dashboard.html', '/tools/settings.html',
+  ];
+  const uniquePages = [...new Set(pages)];
+  assert.deepEqual(uniquePages, expectedPages);
+  // workspace.html should have exactly 4 steps (its own sections); every other page exactly 1.
+  assert.equal(pages.filter(p => p === '/tools/workspace.html').length, 4);
+  for (const p of expectedPages.slice(1)) {
+    assert.equal(pages.filter(x => x === p).length, 1, p + ' should have exactly one step');
+  }
+  const excluded = ['job-cost-lookup.html', 'expense-logger.html', 'contact-card.html', 'login.html', 'reset-password.html', 'dev-tools.html', 'site-content.html', 'client-detail.html', 'job-detail.html'];
+  for (const e of excluded) assert.ok(!pages.some(p => p.includes(e)), e + ' should not appear in the tour');
+});
+
+test('every one of tools-tour.js\'s 4 workspace.html section ids actually exists on that page', () => {
+  const tourSrc = fs.readFileSync(path.join(__dirname, '..', 'tools', 'tools-tour.js'), 'utf8');
+  const wsSrc = fs.readFileSync(path.join(__dirname, '..', 'tools', 'workspace.html'), 'utf8');
+  const sectionIds = [...tourSrc.matchAll(/sectionId: '([\w-]+)'/g)].map(m => m[1]);
+  assert.equal(sectionIds.length, 4);
+  for (const id of sectionIds) {
+    assert.match(wsSrc, new RegExp('id="' + id + '"'), id + ' referenced by the tour but not found on workspace.html');
+  }
+});
+
+test('a fresh, never-seen visit to workspace.html auto-starts the tour at step 0', () => {
+  const w = loadTourInWindow('https://example.com/tools/workspace.html');
+  w.initAppTour();
+  assert.equal(w.localStorage.getItem('th_app_tour_step'), '0');
+  assert.ok(w.document.getElementById('appTourCard'));
+  assert.equal(w.document.querySelector('.onboarding-title').textContent, 'Business Snapshot');
+});
+
+test('a returning user (seen flag already set) does NOT auto-start the tour', () => {
+  const w = loadTourInWindow('https://example.com/tools/workspace.html', 'connor@triplehenterprisesllc.biz');
+  w.localStorage.setItem('th_onboarding_v1_seen_connor@triplehenterprisesllc.biz', '1');
+  w.initAppTour();
+  assert.ok(!w.document.getElementById('appTourCard'));
+});
+
+test('the old shared seen-flag key migrates correctly to the new per-user key, without forcing a restart', () => {
+  const w = loadTourInWindow('https://example.com/tools/workspace.html', 'steve@triplehenterprisesllc.biz');
+  w.localStorage.setItem('th_onboarding_v1_seen', '1');
+  w.initAppTour();
+  assert.equal(w.localStorage.getItem('th_onboarding_v1_seen_steve@triplehenterprisesllc.biz'), '1');
+  assert.ok(!w.document.getElementById('appTourCard'));
+});
+
+test('advancing through workspace.html\'s own 4 steps stays on the same page (no navigation), and the Back button correctly reverts', () => {
+  const w = loadTourInWindow('https://example.com/tools/workspace.html');
+  w.initAppTour();
+  assert.ok(!w.document.querySelector('.onboarding-back'), 'no Back button on the very first step');
+
+  w.goToAppTourStep(1);
+  assert.equal(w.document.querySelector('.onboarding-title').textContent, 'Action Items');
+  assert.ok(w.document.querySelector('.onboarding-back'), 'Back button should exist from step 1 onward');
+
+  w.goToAppTourStep(2);
+  assert.equal(w.document.querySelector('.onboarding-title').textContent, 'More');
+  w.goToAppTourStep(3);
+  assert.equal(w.document.querySelector('.onboarding-title').textContent, 'Tools');
+  assert.equal(w.document.querySelector('.onboarding-next').textContent, 'Next', 'step 3 of 14 total is not the last step overall');
+
+  w.document.querySelector('.onboarding-back').click();
+  assert.equal(w.localStorage.getItem('th_app_tour_step'), '2');
+  assert.equal(w.document.querySelector('.onboarding-title').textContent, 'More');
+});
+
+test('advancing from workspace.html\'s last step correctly records the next step (job-tracker.html) before attempting to navigate there', () => {
+  const w = loadTourInWindow('https://example.com/tools/workspace.html');
+  w.initAppTour();
+  w.goToAppTourStep(1); w.goToAppTourStep(2); w.goToAppTourStep(3);
+  try { w.goToAppTourStep(4); } catch (e) { /* jsdom can't actually navigate cross-page; expected */ }
+  assert.equal(w.localStorage.getItem('th_app_tour_step'), '4');
+});
+
+test('self-correction: landing on a page that doesn\'t match the stored step shows THAT page\'s real content and fixes the stored step, rather than showing nothing or the wrong page', () => {
+  // Stored step 5 points at finance.html, but the person is actually on calendar.html (step 7).
+  const w = loadTourInWindow('https://example.com/tools/calendar.html');
+  w.localStorage.setItem('th_app_tour_step', '5');
+  w.initAppTour();
+  assert.ok(w.document.getElementById('appTourCard'));
+  assert.equal(w.document.querySelector('.onboarding-title').textContent, 'Calendar');
+  assert.equal(w.localStorage.getItem('th_app_tour_step'), '7');
+});
+
+test('landing on a page that isn\'t part of the tour at all renders no card, even with an active tour in progress', () => {
+  const w = loadTourInWindow('https://example.com/tools/login.html');
+  w.localStorage.setItem('th_app_tour_step', '2');
+  w.initAppTour();
+  assert.ok(!w.document.getElementById('appTourCard'));
+});
+
+test('dismissing (Skip) clears the active-step flag, sets the per-user seen flag, and removes the card from the DOM', () => {
+  const w = loadTourInWindow('https://example.com/tools/workspace.html', 'connor@triplehenterprisesllc.biz');
+  w.initAppTour();
+  w.dismissAppTour();
+  assert.equal(w.localStorage.getItem('th_app_tour_step'), null);
+  assert.equal(w.localStorage.getItem('th_onboarding_v1_seen_connor@triplehenterprisesllc.biz'), '1');
+  assert.ok(!w.document.getElementById('appTourCard'));
+});
+
+test('on the very last step (Settings), the button reads "Got it" and clicking it dismisses cleanly rather than advancing past the end of the array', () => {
+  const w = loadTourInWindow('https://example.com/tools/settings.html');
+  w.localStorage.setItem('th_app_tour_step', '13');
+  w.initAppTour();
+  assert.equal(w.document.querySelector('.onboarding-next').textContent, 'Got it');
+  w.document.querySelector('.onboarding-next').click();
+  assert.equal(w.localStorage.getItem('th_app_tour_step'), null);
+});
+
+test('?tour=1 forces a restart from step 0 regardless of the seen flag, and cleans the query param off the URL afterward', () => {
+  const w = loadTourInWindow('https://example.com/tools/workspace.html?tour=1', 'connor@triplehenterprisesllc.biz');
+  w.localStorage.setItem('th_onboarding_v1_seen_connor@triplehenterprisesllc.biz', '1'); // already seen
+  w.initAppTour();
+  assert.equal(w.localStorage.getItem('th_app_tour_step'), '0');
+  assert.equal(w.document.querySelector('.onboarding-title').textContent, 'Business Snapshot');
+  assert.ok(!w.location.search.includes('tour=1'), 'the ?tour=1 param should be cleaned off the URL');
+});
+
+test('every one of the 11 target pages actually loads tools-tour.js and calls initAppTour() on its own DOMContentLoaded', () => {
+  const pages = ['workspace.html', 'job-tracker.html', 'finance.html', 'invoice-generator.html',
+    'calendar.html', 'route-planner.html', 'contract-generator.html', 'review-request.html',
+    'parts-reference.html', 'settings.html', 'runway-dashboard.html'];
+  for (const file of pages) {
+    const src = fs.readFileSync(path.join(__dirname, '..', 'tools', file), 'utf8');
+    assert.match(src, /<script src="\/tools\/tools-tour\.js/, file + ' should load tools-tour.js');
+    assert.match(src, /initAppTour\(\);/, file + ' should call initAppTour()');
+  }
+});
+
+test('settings.html\'s tour description reflects the real, expanded scope, not the old 3-step Dashboard-only wording', () => {
+  const src = fs.readFileSync(path.join(__dirname, '..', 'tools', 'settings.html'), 'utf8');
+  assert.doesNotMatch(src, /3-step Dashboard walkthrough/);
+  assert.match(src, /walkthrough of every page/);
 });

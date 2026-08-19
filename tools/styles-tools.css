@@ -239,6 +239,30 @@
    back up first. top/z-index match the existing .jump-nav pattern
    exactly, since both are a secondary bar riding just under the
    already-sticky .hub-header/.tool-header. */
+/* App tour coach-mark card (2026-08-20: expanded from a 3-step dashboard-
+   only tour into a full cross-page walkthrough, moved here from
+   workspace.html's own local styles since every tool page needs it now). */
+.onboarding-card {
+  position: fixed; left: 16px; right: 16px; bottom: 16px; z-index: 800;
+  max-width: 420px; margin: 0 auto;
+  background: linear-gradient(180deg, var(--bg-panel-3), var(--bg-panel-2));
+  border: 1px solid var(--orange-tint-border); border-radius: 16px;
+  padding: 16px 18px; box-shadow: 0 -4px 30px rgba(0,0,0,.5), 0 0 30px -8px var(--orange-tint-glow);
+  animation: onboardingSlideUp .3s cubic-bezier(.2,.8,.2,1);
+}
+@keyframes onboardingSlideUp { from { transform: translateY(16px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+@media (prefers-reduced-motion: reduce) { .onboarding-card { animation: none; } }
+body.th-has-bottomnav .onboarding-card { bottom: calc(76px + env(safe-area-inset-bottom, 0px) + 10px); }
+.onboarding-dots { display: flex; gap: 5px; margin-bottom: 10px; }
+.onboarding-dots span { width: 6px; height: 6px; border-radius: 50%; background: var(--border); }
+.onboarding-dots span.is-active { background: var(--orange); width: 16px; border-radius: 3px; }
+.onboarding-title { font-family: 'Oswald', sans-serif; color: var(--white); font-size: 16px; margin-bottom: 4px; }
+.onboarding-body { color: var(--text-dim); font-size: 13.5px; line-height: 1.5; margin-bottom: 14px; }
+.onboarding-actions { display: flex; justify-content: space-between; align-items: center; gap: 10px; }
+.onboarding-skip, .onboarding-back { background: none; border: none; color: var(--text-dim); font-size: 13px; cursor: pointer; padding: 8px 4px; }
+.onboarding-skip:hover, .onboarding-back:hover { color: var(--white); }
+.onboarding-actions-left { display: flex; gap: 4px; align-items: center; }
+
 .tabs.tabs-sticky {
   position: sticky; top: calc(61px + env(safe-area-inset-top, 0px)); z-index: 55;
   background: color-mix(in srgb, var(--bg-panel) 92%, transparent);
