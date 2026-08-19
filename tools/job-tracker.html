@@ -403,35 +403,70 @@
   </div>
 </div>
 
-<!-- Item: quick expense logging without leaving this page (2026-08-20)
-     -- built as its own standalone modal (matching help-modal-overlay's
-     look, not its shared JS) so the receipt-required business rule and
-     the exact th_expense_log record shape both stay correct without
-     touching finance.html's own, recently-fixed Expenses-tab save logic
-     at all. -->
+<!-- Item: quick expense logging without leaving this page (2026-08-20,
+     fleshed out further same day) -- built as its own standalone modal
+     (matching help-modal-overlay's look, not its shared JS) so the
+     receipt-required business rule and the exact th_expense_log record
+     shape both stay correct without touching finance.html's own,
+     recently-fixed Expenses-tab save logic at all. Now covers the full
+     field set (type, vendor, part number, miles) to fully match that
+     page's own form, plus a first-time guided tutorial. -->
 <div class="help-modal-overlay" id="quickExpenseOverlay" onclick="if(event.target===this) closeQuickExpenseModal()">
   <div class="help-modal">
     <button class="help-modal-close" onclick="closeQuickExpenseModal()" aria-label="Close">&times;</button>
-    <h3>Log Expense<span id="quickExpenseJobLabel" style="display:block; font-size:13px; color:var(--text-dim); font-weight:400; margin-top:4px;"></span></h3>
-    <div class="help-modal-body">
-      <div class="form-field"><label>Description</label><input type="text" id="quickExpenseDesc" placeholder="e.g. Replacement thermostat"></div>
-      <div class="tool-form-row">
-        <div class="form-field"><label>Amount</label><input type="number" inputmode="decimal" id="quickExpenseAmount" placeholder="0.00"></div>
-        <div class="form-field"><label>Payment</label>
-          <select id="quickExpensePayment">
-            <option value="cash">Cash</option>
-            <option value="card">Card</option>
-            <option value="check">Check</option>
-            <option value="venmo">Venmo</option>
-            <option value="cashapp">Cash App</option>
-            <option value="other">Other</option>
-          </select>
+
+    <!-- Tutorial view: shown automatically the first time this modal
+         opens on a given device (th_quickexpense_tutorial_seen), and
+         re-openable any time via the "How this works" link in the real
+         form below. -->
+    <div id="quickExpenseTutorial">
+      <h3 id="quickExpenseTutorialTitle"></h3>
+      <div class="help-modal-body">
+        <p id="quickExpenseTutorialBody" style="min-height:110px;"></p>
+        <div id="quickExpenseTutorialDots" style="display:flex; gap:6px; justify-content:center; margin:16px 0;"></div>
+        <div style="display:flex; gap:10px;">
+          <button class="secondary-btn" id="quickExpenseTutorialSkip" onclick="skipQuickExpenseTutorial()" style="flex:1;">Skip</button>
+          <button class="primary-btn" id="quickExpenseTutorialNext" onclick="advanceQuickExpenseTutorial()" style="flex:1;">Next</button>
         </div>
       </div>
-      <div class="form-field"><label>Receipt photo (required)</label><input type="file" id="quickExpenseReceipt" accept="image/*"></div>
-      <div class="save-indicator" id="quickExpenseSaveIndicator"></div>
-      <button class="primary-btn wide" id="quickExpenseSaveBtn" onclick="submitQuickExpense()" style="margin-top:14px;">Save Expense</button>
-      <p class="tool-sub" style="margin-top:10px; margin-bottom:0;">For mileage, vendor details, or a part number, use the full <a href="/tools/finance.html#expenses" style="color:var(--blue-light);">Expenses page</a> instead.</p>
+    </div>
+
+    <!-- Real form view -->
+    <div id="quickExpenseFormView" style="display:none;">
+      <h3>Log Expense<span id="quickExpenseJobLabel" style="display:block; font-size:13px; color:var(--text-dim); font-weight:400; margin-top:4px;"></span></h3>
+      <div class="help-modal-body">
+        <div class="tool-form-row">
+          <div class="form-field"><label>Type</label>
+            <select id="quickExpenseType" onchange="toggleQuickExpenseTypeFields()">
+              <option value="expense">Expense</option>
+              <option value="mileage">Mileage</option>
+            </select>
+          </div>
+          <div class="form-field"><label>Date</label><input type="date" id="quickExpenseDate"></div>
+        </div>
+        <div class="form-field"><label>Description</label><input type="text" id="quickExpenseDesc" placeholder="e.g. Replacement thermostat"></div>
+        <div class="tool-form-row">
+          <div class="form-field" id="quickExpenseAmountField"><label>Amount</label><input type="number" inputmode="decimal" id="quickExpenseAmount" placeholder="0.00"></div>
+          <div class="form-field" id="quickExpenseMilesField" style="display:none;"><label>Miles</label><input type="number" inputmode="decimal" id="quickExpenseMiles" placeholder="0"></div>
+          <div class="form-field"><label>Payment</label>
+            <select id="quickExpensePayment">
+              <option value="cash">Cash</option>
+              <option value="card">Card</option>
+              <option value="check">Check</option>
+              <option value="venmo">Venmo</option>
+              <option value="cashapp">Cash App</option>
+              <option value="other">Other</option>
+            </select>
+          </div>
+        </div>
+        <div class="tool-form-row">
+          <div class="form-field"><label>Vendor / Store (optional)</label><input type="text" id="quickExpenseVendor" placeholder="Home Depot"></div>
+          <div class="form-field" id="quickExpensePartNumberField"><label>Part Number (optional)</label><input type="text" id="quickExpensePartNumber" placeholder="e.g. WPW10321304"></div>
+        </div>
+        <div class="form-field" id="quickExpenseReceiptField"><label>Receipt photo (required)</label><input type="file" id="quickExpenseReceipt" accept="image/*"></div>
+        <div class="save-indicator" id="quickExpenseSaveIndicator"></div>
+        <button class="primary-btn wide" id="quickExpenseSaveBtn" onclick="submitQuickExpense()" style="margin-top:14px;">Save Expense</button>
+        <p class="tool-sub" style="margin-top:10px; margin-bottom:0;"><a href="#" onclick="showQuickExpenseTutorial(); return false;" style="color:var(--blue-light);">How this works</a> &middot; or use the full <a href="/tools/finance.html#expenses" style="color:var(--blue-light);">Expenses page</a> instead.</p>
     </div>
   </div>
 </div>
@@ -677,15 +712,79 @@
     document.getElementById('jobFormSection').classList.add('is-collapsed');
   }
 
+  const QUICK_EXPENSE_TUTORIAL_SEEN_KEY = 'th_quickexpense_tutorial_seen';
+  const QUICK_EXPENSE_TUTORIAL_STEPS = [
+    { title: 'Log an expense in seconds', body: "No need to leave your job list. Long-press any job, tap \u201cLog Expense,\u201d and this pops up with that job already linked \u2014 nothing else to pick." },
+    { title: 'Expense or Mileage', body: 'Switch the Type at the top. Expense wants a dollar amount and a receipt photo. Mileage just wants the miles \u2014 the dollar amount gets calculated for you automatically from your mileage rate.' },
+    { title: 'The receipt rule', body: "A receipt photo is required for a real Expense entry \u2014 no exceptions, even here. Mileage entries don't need one." },
+    { title: "Vendor and Part Number are optional", body: "Fill them in if you've got them handy, or just skip straight to Save \u2014 the description and amount are all that's really required." },
+    { title: "That's the whole thing", body: 'Save it, and it shows up instantly on the Finance page too \u2014 same entry, same place, this is just a faster way in.' },
+  ];
+  let quickExpenseTutorialStep = 0;
+
+  function renderQuickExpenseTutorialStep() {
+    const step = QUICK_EXPENSE_TUTORIAL_STEPS[quickExpenseTutorialStep];
+    document.getElementById('quickExpenseTutorialTitle').textContent = step.title;
+    document.getElementById('quickExpenseTutorialBody').textContent = step.body;
+    document.getElementById('quickExpenseTutorialDots').innerHTML = QUICK_EXPENSE_TUTORIAL_STEPS.map((s, i) =>
+      '<span style="width:7px; height:7px; border-radius:50%; background:' + (i === quickExpenseTutorialStep ? 'var(--orange-light)' : 'var(--border)') + ';"></span>'
+    ).join('');
+    const isLast = quickExpenseTutorialStep === QUICK_EXPENSE_TUTORIAL_STEPS.length - 1;
+    document.getElementById('quickExpenseTutorialNext').textContent = isLast ? "Got it, let's log one" : 'Next';
+    document.getElementById('quickExpenseTutorialSkip').style.display = isLast ? 'none' : '';
+  }
+
+  function showQuickExpenseTutorial() {
+    quickExpenseTutorialStep = 0;
+    renderQuickExpenseTutorialStep();
+    document.getElementById('quickExpenseTutorial').style.display = '';
+    document.getElementById('quickExpenseFormView').style.display = 'none';
+  }
+
+  function advanceQuickExpenseTutorial() {
+    if (quickExpenseTutorialStep < QUICK_EXPENSE_TUTORIAL_STEPS.length - 1) {
+      quickExpenseTutorialStep++;
+      renderQuickExpenseTutorialStep();
+    } else {
+      skipQuickExpenseTutorial();
+    }
+  }
+
+  function skipQuickExpenseTutorial() {
+    localStorage.setItem(QUICK_EXPENSE_TUTORIAL_SEEN_KEY, '1');
+    document.getElementById('quickExpenseTutorial').style.display = 'none';
+    document.getElementById('quickExpenseFormView').style.display = '';
+  }
+
+  function toggleQuickExpenseTypeFields() {
+    const isMileage = document.getElementById('quickExpenseType').value === 'mileage';
+    document.getElementById('quickExpenseAmountField').style.display = isMileage ? 'none' : '';
+    document.getElementById('quickExpenseMilesField').style.display = isMileage ? '' : 'none';
+    document.getElementById('quickExpensePartNumberField').style.display = isMileage ? 'none' : '';
+    document.getElementById('quickExpenseReceiptField').style.display = isMileage ? 'none' : '';
+  }
+
   function showQuickExpenseModal(jobId, jobTitle) {
     document.getElementById('quickExpenseOverlay').dataset.jobId = jobId;
     document.getElementById('quickExpenseJobLabel').textContent = jobTitle;
+    document.getElementById('quickExpenseType').value = 'expense';
+    toggleQuickExpenseTypeFields();
+    document.getElementById('quickExpenseDate').value = new Date().toISOString().slice(0, 10);
     document.getElementById('quickExpenseDesc').value = '';
     document.getElementById('quickExpenseAmount').value = '';
+    document.getElementById('quickExpenseMiles').value = '';
+    document.getElementById('quickExpenseVendor').value = '';
+    document.getElementById('quickExpensePartNumber').value = '';
     document.getElementById('quickExpensePayment').value = 'cash';
     document.getElementById('quickExpenseReceipt').value = '';
     document.getElementById('quickExpenseSaveIndicator').textContent = '';
     document.getElementById('quickExpenseOverlay').classList.add('is-open');
+    if (localStorage.getItem(QUICK_EXPENSE_TUTORIAL_SEEN_KEY)) {
+      document.getElementById('quickExpenseTutorial').style.display = 'none';
+      document.getElementById('quickExpenseFormView').style.display = '';
+    } else {
+      showQuickExpenseTutorial();
+    }
   }
 
   function closeQuickExpenseModal() {
@@ -695,42 +794,66 @@
   async function submitQuickExpense() {
     const overlay = document.getElementById('quickExpenseOverlay');
     const jobId = overlay.dataset.jobId;
+    const type = document.getElementById('quickExpenseType').value;
+    const date = document.getElementById('quickExpenseDate').value || new Date().toISOString().slice(0, 10);
     const desc = document.getElementById('quickExpenseDesc').value.trim();
-    const amount = parseFloat(document.getElementById('quickExpenseAmount').value) || 0;
+    const vendor = document.getElementById('quickExpenseVendor').value.trim();
+    const partNumber = type === 'mileage' ? '' : document.getElementById('quickExpensePartNumber').value.trim();
     const payment = document.getElementById('quickExpensePayment').value;
     const receiptFile = document.getElementById('quickExpenseReceipt').files[0];
     const indicator = document.getElementById('quickExpenseSaveIndicator');
 
     if (!desc) { await showAlert('A description is required.'); return; }
-    if (amount <= 0) { await showAlert('Enter an amount greater than zero.'); return; }
-    // Same rule finance.html's own Expenses tab enforces -- a receipt
-    // is required to log an expense, not optional here just because
-    // this is the quick version.
-    if (!receiptFile) { await showAlert('A receipt photo is required to log an expense. Take or choose a photo of the receipt first.'); return; }
-    if (!receiptFile.type.startsWith('image/')) { await showAlert('Please choose an image file for the receipt.'); return; }
+
+    let amount, miles;
+    if (type === 'mileage') {
+      miles = parseFloat(document.getElementById('quickExpenseMiles').value) || 0;
+      if (miles <= 0) { await showAlert('Enter a number of miles greater than zero.'); return; }
+      // Same source finance.html's own getMileageRate() reads -- that
+      // function reads it from a DOM element that only exists on that
+      // page's own form, so this reads the same underlying stored value
+      // directly instead.
+      const mileageRate = parseFloat(localStorage.getItem('th_mileage_rate')) || 0;
+      amount = Math.round(miles * mileageRate * 100) / 100;
+    } else {
+      amount = parseFloat(document.getElementById('quickExpenseAmount').value) || 0;
+      miles = 0;
+      if (amount <= 0) { await showAlert('Enter an amount greater than zero.'); return; }
+      // Same rule finance.html's own Expenses tab enforces -- a receipt
+      // is required for a real expense, not optional here just because
+      // this is the quick version. Mileage entries don't need one,
+      // matching that page's own rule too.
+      if (!receiptFile) { await showAlert('A receipt photo is required to log an expense. Take or choose a photo of the receipt first.'); return; }
+      if (!receiptFile.type.startsWith('image/')) { await showAlert('Please choose an image file for the receipt.'); return; }
+    }
 
     const saveBtn = document.getElementById('quickExpenseSaveBtn');
     saveBtn.disabled = true;
     const entryId = Date.now();
-    indicator.textContent = 'Uploading receipt...';
-    const uploadResult = await uploadReceipt(receiptFile, entryId);
-    saveBtn.disabled = false;
-    indicator.textContent = '';
-    if (!uploadResult.ok) {
-      const msg = uploadResult.error === 'too-large'
-        ? 'That receipt photo is over 8MB \u2014 try a smaller photo or lower camera resolution.'
-        : 'Receipt upload failed: ' + uploadResult.error + (uploadResult.detail ? ' \u2014 ' + uploadResult.detail : '') + '. The expense was NOT saved \u2014 try again.';
-      await showAlert(msg);
-      return;
+    let receiptPath = '';
+    if (receiptFile && type !== 'mileage') {
+      indicator.textContent = 'Uploading receipt...';
+      const uploadResult = await uploadReceipt(receiptFile, entryId);
+      indicator.textContent = '';
+      if (!uploadResult.ok) {
+        saveBtn.disabled = false;
+        const msg = uploadResult.error === 'too-large'
+          ? 'That receipt photo is over 8MB \u2014 try a smaller photo or lower camera resolution.'
+          : 'Receipt upload failed: ' + uploadResult.error + (uploadResult.detail ? ' \u2014 ' + uploadResult.detail : '') + '. The expense was NOT saved \u2014 try again.';
+        await showAlert(msg);
+        return;
+      }
+      receiptPath = uploadResult.path;
     }
+    saveBtn.disabled = false;
 
     const jobs = thRead(TH_KEYS.jobs, []);
     const job = jobs.find(j => String(j.id) === String(jobId));
     const currentUser = (typeof getCurrentUserEmail === 'function') ? getCurrentUserEmail() : null;
     const entry = {
-      id: entryId, date: new Date().toISOString().slice(0, 10), type: 'expense', desc,
-      vendor: '', payment, jobRefId: jobId || '', jobRefTitle: job ? job.title : '',
-      receiptPath: uploadResult.path, partNumber: '', amount, miles: 0,
+      id: entryId, date, type, desc,
+      vendor, payment, jobRefId: jobId || '', jobRefTitle: job ? job.title : '',
+      receiptPath, partNumber, amount, miles,
       createdBy: currentUser, lastEditedBy: currentUser,
     };
     const entries = thRead(TH_KEYS.expenses, []);
@@ -738,7 +861,7 @@
     thWrite(TH_KEYS.expenses, entries);
 
     closeQuickExpenseModal();
-    showToast('Expense logged.');
+    showToast(type === 'mileage' ? 'Mileage logged.' : 'Expense logged.');
   }
 
   async function deleteJob(id) {
