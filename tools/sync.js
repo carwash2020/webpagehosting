@@ -757,44 +757,70 @@ function startRealtimeSync(onRemoteChange, onStatusChange) {
     return;
   }
   const code = getSyncCode();
-  _realtimeChannel = client
-    .channel('workspace-sync-' + code)
-    .on(
-      'postgres_changes',
-      { event: '*', schema: 'public', table: 'workspace_sync', filter: `code=eq.${code}` },
-      async (payload) => {
-        // Wrapped in try/catch and logged explicitly, rather than
-        // relying on the browser's own window.onerror to catch a
-        // failure in here -- this callback runs inside the supabase-js
-        // library's own internals (a cross-origin script), and errors
-        // originating there can get reported as a generic, detail-free
-        // "Script error." with no file/line/message at all. Logging
-        // explicitly here means a real failure gets a real message
-        // instead of that unhelpful placeholder, added 2026-08-16 after
-        // exactly that generic message kept recurring with nothing
-        // useful to go on.
-        try {
-          const incomingUpdatedAt = payload && payload.new && payload.new.updated_at;
-          const knownUpdatedAt = localStorage.getItem(SYNC_KNOWN_AT_KEY);
-          if (incomingUpdatedAt && knownUpdatedAt && incomingUpdatedAt === knownUpdatedAt) return;
-          await pullSync();
-          if (onRemoteChange) onRemoteChange();
-        } catch (e) {
-          if (typeof logClientError === 'function') {
-            logClientError('Realtime workspace_sync callback failed: ' + (e && e.message ? e.message : String(e)), 'sync.js', null, null, e && e.stack);
+  let realtimeResolved = false;
+
+  // Reliability fix (2026-08-20), based on real evidence from this
+  // project's own Supabase logs: the realtime "tenant" (the backend
+  // process actually handling channel subscriptions) shuts down after
+  // a period of no connected clients, then has to cold-start again --
+  // creating replication partitions, checking publications, starting
+  // stream replication -- the next time someone connects. CHANNEL_ERROR
+  // showed up as a transient condition during that window in the real
+  // logs, with the tenant reaching a stable, working state shortly
+  // after. This retries specifically on CHANNEL_ERROR (not TIMED_OUT,
+  // which likely reflects something more persistent), cleaning up the
+  // failed channel and trying again after a short delay, up to twice,
+  // before giving up and surfacing the error to the page.
+  function attemptSubscribe(retriesLeft) {
+    _realtimeChannel = client
+      .channel('workspace-sync-' + code)
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'workspace_sync', filter: `code=eq.${code}` },
+        async (payload) => {
+          // Wrapped in try/catch and logged explicitly, rather than
+          // relying on the browser's own window.onerror to catch a
+          // failure in here -- this callback runs inside the supabase-js
+          // library's own internals (a cross-origin script), and errors
+          // originating there can get reported as a generic, detail-free
+          // "Script error." with no file/line/message at all. Logging
+          // explicitly here means a real failure gets a real message
+          // instead of that unhelpful placeholder, added 2026-08-16 after
+          // exactly that generic message kept recurring with nothing
+          // useful to go on.
+          try {
+            const incomingUpdatedAt = payload && payload.new && payload.new.updated_at;
+            const knownUpdatedAt = localStorage.getItem(SYNC_KNOWN_AT_KEY);
+            if (incomingUpdatedAt && knownUpdatedAt && incomingUpdatedAt === knownUpdatedAt) return;
+            await pullSync();
+            if (onRemoteChange) onRemoteChange();
+          } catch (e) {
+            if (typeof logClientError === 'function') {
+              logClientError('Realtime workspace_sync callback failed: ' + (e && e.message ? e.message : String(e)), 'sync.js', null, null, e && e.stack);
+            }
           }
         }
-      }
-    )
-    .subscribe((status) => {
-      realtimeResolved = true;
-      if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
-        if (typeof logClientError === 'function') {
-          logClientError('Realtime workspace_sync channel status: ' + status, 'sync.js', null, null, null);
+      )
+      .subscribe((status) => {
+        if (status === 'CHANNEL_ERROR' && retriesLeft > 0) {
+          if (typeof logClientError === 'function') {
+            logClientError('Realtime workspace_sync channel status: CHANNEL_ERROR -- retrying (' + retriesLeft + ' attempt(s) left)', 'sync.js', null, null, null);
+          }
+          client.removeChannel(_realtimeChannel);
+          setTimeout(() => attemptSubscribe(retriesLeft - 1), 2000);
+          return; // don't mark resolved or notify the page yet -- a retry is still in flight
         }
-      }
-      if (onStatusChange) onStatusChange(status);
-    });
+        realtimeResolved = true;
+        if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
+          if (typeof logClientError === 'function') {
+            logClientError('Realtime workspace_sync channel status: ' + status, 'sync.js', null, null, null);
+          }
+        }
+        if (onStatusChange) onStatusChange(status);
+      });
+  }
+  attemptSubscribe(2);
+
   // Reliability fix (2026-08-20): if the subscription never reaches ANY
   // terminal state at all, the line above never runs, and the status
   // stays stuck at whatever the page's own initial HTML said forever --
@@ -804,7 +830,6 @@ function startRealtimeSync(onRemoteChange, onStatusChange) {
   // indefinite silent hang. Each page's existing status handler already
   // has an else-branch for an unrecognized status, so no per-page
   // changes are needed for this to surface correctly.
-  let realtimeResolved = false;
   setTimeout(() => {
     if (!realtimeResolved && onStatusChange) onStatusChange('timeout');
   }, 12000);
@@ -818,29 +843,52 @@ function startLeadsRealtime(onChange, onStatusChange) {
     if (onStatusChange) onStatusChange('unavailable');
     return;
   }
-  _leadsRealtimeChannel = client
-    .channel('leads-realtime')
-    .on(
-      'postgres_changes',
-      { event: '*', schema: 'public', table: 'th_leads' },
-      () => {
-        try {
-          if (onChange) onChange();
-        } catch (e) {
-          if (typeof logClientError === 'function') {
-            logClientError('Realtime th_leads callback failed: ' + (e && e.message ? e.message : String(e)), 'sync.js', null, null, e && e.stack);
+  let realtimeResolved = false;
+
+  // Same retry fix as startRealtimeSync above -- see that comment for
+  // the full explanation, backed by this project's own Supabase logs.
+  function attemptSubscribe(retriesLeft) {
+    _leadsRealtimeChannel = client
+      .channel('leads-realtime')
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'th_leads' },
+        () => {
+          try {
+            if (onChange) onChange();
+          } catch (e) {
+            if (typeof logClientError === 'function') {
+              logClientError('Realtime th_leads callback failed: ' + (e && e.message ? e.message : String(e)), 'sync.js', null, null, e && e.stack);
+            }
           }
         }
-      }
-    )
-    .subscribe((status) => {
-      if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
-        if (typeof logClientError === 'function') {
-          logClientError('Realtime th_leads channel status: ' + status, 'sync.js', null, null, null);
+      )
+      .subscribe((status) => {
+        if (status === 'CHANNEL_ERROR' && retriesLeft > 0) {
+          if (typeof logClientError === 'function') {
+            logClientError('Realtime th_leads channel status: CHANNEL_ERROR -- retrying (' + retriesLeft + ' attempt(s) left)', 'sync.js', null, null, null);
+          }
+          client.removeChannel(_leadsRealtimeChannel);
+          setTimeout(() => attemptSubscribe(retriesLeft - 1), 2000);
+          return;
         }
-      }
-      if (onStatusChange) onStatusChange(status);
-    });
+        realtimeResolved = true;
+        if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
+          if (typeof logClientError === 'function') {
+            logClientError('Realtime th_leads channel status: ' + status, 'sync.js', null, null, null);
+          }
+        }
+        if (onStatusChange) onStatusChange(status);
+      });
+  }
+  attemptSubscribe(2);
+
+  // Same watchdog as startRealtimeSync above -- this channel was
+  // missing it entirely, meaning if it ever got stuck in a non-terminal
+  // state, there was no recovery path at all for it specifically.
+  setTimeout(() => {
+    if (!realtimeResolved && onStatusChange) onStatusChange('timeout');
+  }, 12000);
 }
 
 function stopRealtimeSync() {
