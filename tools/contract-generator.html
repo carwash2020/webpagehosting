@@ -34,7 +34,7 @@
 <script src="/tools/tools-media-sharing.js?v=202608201900" defer></script>
 <script src="/tools/tools-nav-pwa.js?v=202608202100" defer></script>
 <script src="/tools/tools-tour.js?v=202608202100" defer></script>
-<script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js" integrity="sha384-JcnsjUPPylna1s1fvi1u12X5qjY5OL56iySh75FdtrwhO/SWXgMjoVqcKyIIWOLk" crossorigin="anonymous"></script>
+<script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js" integrity="sha384-JcnsjUPPylna1s1fvi1u12X5qjY5OL56iySh75FdtrwhO/SWXgMjoVqcKyIIWOLk" crossorigin="anonymous" async></script>
 <style>
   body { padding: 90px 20px 60px; max-width: 900px; margin: 0 auto; }
   .tool-title { font-family:'Oswald',sans-serif; font-weight:700; font-size:28px; color:var(--white); margin-bottom:6px; }
@@ -468,6 +468,10 @@
   }
 
   async function buildContractPDF(type, fields, clientSignatureDataUrl, businessSignatureDataUrl) {
+    // Bug fix (2026-08-20): same guard as invoice-generator.html's
+    // generatePDF() -- jsPDF now loads async, so there's a real, if
+    // brief, window right after page load where it might not exist yet.
+    if (!window.jspdf) { await showAlert("Still finishing loading -- give it a second and try again."); return; }
     const { jsPDF } = window.jspdf;
     const doc = new jsPDF({ unit: 'pt', format: 'letter' });
     const pageW = doc.internal.pageSize.getWidth();

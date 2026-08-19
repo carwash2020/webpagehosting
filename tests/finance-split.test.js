@@ -2337,3 +2337,81 @@ test('.tabs.tabs-sticky::before uses border-radius: inherit, since the base .tab
   const rule = src.match(/\.tabs\.tabs-sticky::before \{([^}]*)\}/);
   assert.match(rule[1], /border-radius:\s*inherit/);
 });
+
+// CRITICAL BUG FIX (2026-08-20), found from a direct, repeated report
+// ("tried like 5 times") that both Live sync and the app tour were
+// completely silent on invoice-generator.html -- no error, nothing
+// working, nothing visible. Found a real, concrete structural
+// difference from every other page in the app: this was the only page
+// with a non-deferred (blocking) third-party script tag, placed after
+// every other shared script. A blocking script tag halts ALL further
+// HTML parsing -- including the inline <script> block below it that
+// registers the DOMContentLoaded listener calling initAppTour() and
+// startRealtimeSync() -- until the browser fetches and executes it. If
+// that CDN request is slow, throttled, or hangs on a real mobile
+// connection, none of the page's own JS runs at all, with zero
+// exceptions thrown anywhere, because nothing actually failed -- the
+// page is just still waiting. jsPDF is only ever referenced later,
+// inside on-demand click handlers (Generate PDF), never during initial
+// page setup, so switching it to async is completely safe -- and
+// strictly better than defer here, since defer would still delay
+// DOMContentLoaded until jsPDF finishes, while async does not.
+// contract-generator.html had the identical gap and got the identical
+// fix, even though it hadn't been specifically reported broken yet.
+
+test('the jsPDF script tag uses async (not the default blocking behavior, and not defer) on both pages that load it', () => {
+  for (const file of ['invoice-generator.html', 'contract-generator.html']) {
+    const src = fs.readFileSync(path.join(__dirname, '..', 'tools', file), 'utf8');
+    const tag = src.match(/<script src="https:\/\/cdn\.jsdelivr\.net\/npm\/jspdf[^>]*>/);
+    assert.ok(tag, file + ': jsPDF script tag not found');
+    assert.match(tag[0], /\basync\b/, file + ': jsPDF should load async, not block parsing');
+    assert.doesNotMatch(tag[0], /\bdefer\b/, file + ': async is strictly better than defer here (does not delay DOMContentLoaded)');
+  }
+});
+
+test('all 3 PDF-generating functions guard against window.jspdf not being ready yet, showing a helpful message instead of throwing', () => {
+  const igSrc = fs.readFileSync(path.join(__dirname, '..', 'tools', 'invoice-generator.html'), 'utf8');
+  const cgSrc = fs.readFileSync(path.join(__dirname, '..', 'tools', 'contract-generator.html'), 'utf8');
+  for (const fnSrc of [
+    igSrc.match(/async function generatePDF\(\)[\s\S]*?\n  \}\n/)[0],
+    igSrc.match(/async function generateQuotePDF\(\)[\s\S]*?\n  \}\n/)[0],
+    cgSrc.match(/async function buildContractPDF\([\s\S]*?\n  \}\n/)[0],
+  ]) {
+    assert.match(fnSrc, /if \(!window\.jspdf\)/);
+    assert.match(fnSrc, /Still finishing loading/);
+  }
+});
+
+test('the jsPDF-not-ready guard actually works end to end: shows the real alert and does not throw, verified against the real page', async () => {
+  const { JSDOM } = require('jsdom');
+  const html = fs.readFileSync(path.join(__dirname, '..', 'tools', 'invoice-generator.html'), 'utf8');
+  const dom = new JSDOM(html, {
+    runScripts: 'dangerously', url: 'https://example.com/tools/invoice-generator.html',
+    beforeParse(window) {
+      window.requireAuth = () => {};
+      window.HTMLElement.prototype.scrollIntoView = () => {};
+      window.showToast = () => {};
+      window.showConfirm = () => Promise.resolve(true);
+      window.initSyncOnLoad = () => Promise.resolve();
+      window.getCurrentUserEmail = () => null;
+      window.thEnsureClient = () => null;
+      window.wireSearchClear = () => {};
+      window.attachVoiceDictation = () => {};
+      window.money = (n) => '$' + (Number(n) || 0).toFixed(2);
+      window.escapeHtml = (s) => String(s == null ? '' : s);
+      window.showAlert = async (msg) => { window.__lastAlert = msg; };
+    },
+  });
+  const { window } = dom;
+  window.document.dispatchEvent(new window.Event('DOMContentLoaded'));
+  await new Promise(resolve => setTimeout(resolve, 100));
+
+  // window.jspdf genuinely doesn't exist here -- jsdom never actually
+  // fetches external scripts, which is exactly the condition (jsPDF
+  // not yet ready) this guard is meant to handle gracefully.
+  assert.equal(window.jspdf, undefined);
+  let threw = false;
+  try { await window.generatePDF(); } catch (e) { threw = true; }
+  assert.equal(threw, false, 'generatePDF should not throw when jspdf is not ready');
+  assert.match(window.__lastAlert || '', /Still finishing loading/);
+});
