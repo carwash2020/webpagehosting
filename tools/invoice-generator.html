@@ -1440,22 +1440,55 @@
     }
   }
   document.addEventListener('DOMContentLoaded', () => {
+    // Temporary diagnostic trace (2026-08-20), added after two prior
+    // fix attempts on this exact page didn't resolve a repeated,
+    // specific report: the tour never shows here and sync never
+    // connects, with zero errors. Logs every real milestone directly
+    // and persistently on the page (not just on a crash), so the next
+    // screenshot shows exactly how far execution gets, instead of
+    // guessing again from symptoms alone. Safe to remove once the
+    // real cause is found.
+    const __traceLog = [];
+    function __trace(msg) {
+      __traceLog.push('[' + new Date().toLocaleTimeString() + '] ' + msg);
+      let panel = document.getElementById('__diagTracePanel');
+      if (!panel) {
+        panel = document.createElement('div');
+        panel.id = '__diagTracePanel';
+        panel.style.cssText = 'position:fixed; left:8px; right:8px; bottom:8px; z-index:99999; background:#0a0a0a; border:2px solid #ffb020; border-radius:8px; padding:10px 12px; color:#ffd580; font-size:11px; font-family:monospace; white-space:pre-wrap; max-height:45vh; overflow-y:auto;';
+        document.body.appendChild(panel);
+      }
+      panel.textContent = 'DIAGNOSTIC TRACE -- screenshot this box\n' + __traceLog.join('\n');
+    }
+    __trace('DOMContentLoaded fired');
     try {
+    __trace('calling initAppTour()');
     initAppTour();
+    __trace('initAppTour() returned -- card in DOM: ' + !!document.getElementById('appTourCard'));
     populateKnownContactsList();
     populatePriceRefPickers();
+    __trace('calling initSyncOnLoad(), typeof=' + typeof initSyncOnLoad);
     // Bug fix (2026-08-16): same missed-initial-pull bug as calendar.html
     // and contract-generator.html -- realtime only delivers changes that
     // happen while this tab is open. Without an initial pull, contacts,
     // price references, and the shared tax rate edited on another device
     // were stale here on every fresh page load.
     if (typeof initSyncOnLoad === 'function') {
-      initSyncOnLoad().then(() => { loadSharedTaxRate(); populateKnownContactsList(); populatePriceRefPickers(); });
+      initSyncOnLoad().then(() => {
+        __trace('initSyncOnLoad() resolved successfully');
+        loadSharedTaxRate(); populateKnownContactsList(); populatePriceRefPickers();
+      }).catch((e) => { __trace('initSyncOnLoad() REJECTED: ' + (e && e.message)); });
     }
+    __trace('calling startRealtimeSync(), typeof=' + typeof startRealtimeSync);
     if (typeof startRealtimeSync === 'function') {
-      startRealtimeSync(() => { loadSharedTaxRate(); populateKnownContactsList(); populatePriceRefPickers(); }, updateRealtimeBadge);
+      startRealtimeSync(() => { loadSharedTaxRate(); populateKnownContactsList(); populatePriceRefPickers(); }, (status) => {
+        __trace('realtime status: ' + status);
+        updateRealtimeBadge(status);
+      });
     }
+    __trace('sync init try block completed without throwing');
     } catch (initError) {
+      __trace('CAUGHT ERROR: ' + (initError && initError.message));
       showInitErrorBanner('Invoice Generator', initError);
     }
   });

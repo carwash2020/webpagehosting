@@ -19,6 +19,7 @@ const path = require('path');
 
 const JOB_TRACKER_PATH = path.join(__dirname, '..', 'tools', 'job-tracker.html');
 const FINANCE_PATH = path.join(__dirname, '..', 'tools', 'finance.html');
+const INVOICE_GENERATOR_PATH = path.join(__dirname, '..', 'tools', 'invoice-generator.html');
 
 const MOVED_FUNCTIONS = [
   'renderJobProfitability', 'checkClientHistory', 'saveTaxSettings', 'loadTaxSettings',
@@ -2414,4 +2415,50 @@ test('the jsPDF-not-ready guard actually works end to end: shows the real alert 
   try { await window.generatePDF(); } catch (e) { threw = true; }
   assert.equal(threw, false, 'generatePDF should not throw when jspdf is not ready');
   assert.match(window.__lastAlert || '', /Still finishing loading/);
+});
+
+// Temporary diagnostic trace (2026-08-20), added after two prior fix
+// attempts on invoice-generator.html didn't resolve a repeated,
+// specific report -- the tour never shows and sync never connects on
+// this exact page, with zero errors. Logs every real milestone of the
+// init sequence directly and persistently on the page with
+// timestamps, so the next screenshot shows exactly how far execution
+// actually gets, instead of continuing to infer from symptoms alone.
+
+test('the diagnostic trace panel captures every real milestone of the init sequence, verified end to end against the real page', async () => {
+  const { JSDOM } = require('jsdom');
+  const html = fs.readFileSync(INVOICE_GENERATOR_PATH, 'utf8');
+  const tourSrc = fs.readFileSync(path.join(__dirname, '..', 'tools', 'tools-tour.js'), 'utf8');
+  const navPwaSrc = fs.readFileSync(path.join(__dirname, '..', 'tools', 'tools-nav-pwa.js'), 'utf8');
+  const dom = new JSDOM(html, {
+    runScripts: 'dangerously', url: 'https://example.com/tools/invoice-generator.html',
+    beforeParse(window) {
+      window.requireAuth = () => {};
+      window.HTMLElement.prototype.scrollIntoView = () => {};
+      window.money = (n) => '$' + (Number(n) || 0).toFixed(2);
+      window.escapeHtml = (s) => String(s == null ? '' : s);
+      window.thEnsureClient = () => null;
+      window.wireSearchClear = () => {};
+      window.attachVoiceDictation = () => {};
+      window.showToast = () => {};
+      window.getCurrentUserEmail = () => null;
+      window.initSyncOnLoad = () => Promise.resolve();
+    },
+  });
+  const { window } = dom;
+  for (const src of [navPwaSrc, tourSrc]) {
+    const s = window.document.createElement('script');
+    s.textContent = src;
+    window.document.head.insertBefore(s, window.document.head.firstChild);
+  }
+  window.document.dispatchEvent(new window.Event('DOMContentLoaded'));
+  await new Promise(resolve => setTimeout(resolve, 300));
+
+  const panel = window.document.getElementById('__diagTracePanel');
+  assert.ok(panel, 'trace panel should exist after init runs');
+  assert.match(panel.textContent, /DOMContentLoaded fired/);
+  assert.match(panel.textContent, /calling initAppTour\(\)/);
+  assert.match(panel.textContent, /initAppTour\(\) returned/);
+  assert.match(panel.textContent, /calling initSyncOnLoad\(\)/);
+  assert.match(panel.textContent, /sync init try block completed/);
 });
