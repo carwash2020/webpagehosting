@@ -101,7 +101,22 @@ def check_internal_links():
 # so this doesn't cry wolf on every single run. Yelp added 2026-08-15
 # after a real run confirmed it -- Yelp is well known to aggressively
 # block non-browser traffic even on live, correct listing pages.
-BOT_HOSTILE_DOMAINS = ('facebook.com', 'instagram.com', 'linkedin.com', 'yelp.com')
+BOT_HOSTILE_DOMAINS = ('facebook.com', 'instagram.com', 'linkedin.com', 'yelp.com',
+                        'fonts.googleapis.com', 'cal.com', 'google.com', 'googletagmanager.com', 'g.page')
+
+# The site's own domain is deliberately NOT in the list above, even
+# though it returned the identical HTTP 403 in the same CI run
+# (2026-08-20) that added the other four. A third-party site blocking
+# automated requests is a shrug; this site returning 403 to its own
+# link checker is a different, more worth-knowing thing -- if a WAF or
+# CDN in front of it is blocking datacenter/cloud IP ranges broadly
+# (the likely cause, given the checker's own sandbox saw the same 403
+# independently of GitHub Actions), that could plausibly also be
+# blocking real crawlers or monitoring tools, not just this checker.
+# Silently suppressing it here would hide that from view instead of
+# surfacing it. If this keeps happening, it's worth an explicit ping to
+# whoever manages that WAF/CDN config, not a permanent allowlist entry.
+SITE_OWN_DOMAIN = 'triplehenterprisesllc.biz'
 
 # rel values whose href is a warm-up hint, not a real fetchable
 # resource -- preconnect/dns-prefetch origins are frequently just the
@@ -147,8 +162,10 @@ def check_external_links():
 
     problems = []
     unverifiable = []
+    site_own_domain_flags = []
     for url in sorted(urls):
         is_bot_hostile = any(d in url for d in BOT_HOSTILE_DOMAINS)
+        is_own_domain = SITE_OWN_DOMAIN in url
         try:
             req = urllib.request.Request(url, method='HEAD', headers={'User-Agent': 'Mozilla/5.0 (link-checker)'})
             with urllib.request.urlopen(req, timeout=10) as resp:
@@ -167,6 +184,9 @@ def check_external_links():
                         unverifiable.append(f"{url} -> {e2} (known bot-hostile platform)")
                     else:
                         problems.append(f"{url} -> {e2}")
+            elif e.code in (403, 429) and is_own_domain:
+                status = None
+                site_own_domain_flags.append(f"{url} -> HTTP {e.code}")
             elif e.code in (403, 429) and is_bot_hostile:
                 status = None
                 unverifiable.append(f"{url} -> HTTP {e.code} (known bot-hostile platform, not treated as broken)")
@@ -181,6 +201,10 @@ def check_external_links():
         if status is not None:
             print(f"  {status}  {url}")
 
+    if site_own_domain_flags:
+        print()
+        for f in site_own_domain_flags:
+            print(f"  WORTH CHECKING (this site's own domain, not treated as broken -- see SITE_OWN_DOMAIN's comment above for why): {f}")
     if unverifiable:
         print()
         for u in unverifiable:
