@@ -33,7 +33,7 @@
 <script src="/tools/tools-effects.js?v=202608201400" defer></script>
 <script src="/tools/tools-dialogs.js?v=202608201400" defer></script>
 <script src="/tools/tools-media-sharing.js?v=202608201900" defer></script>
-<script src="/tools/tools-nav-pwa.js?v=202608201400" defer></script>
+<script src="/tools/tools-nav-pwa.js?v=202608202100" defer></script>
 <script src="/tools/tools-tour.js?v=202608202000" defer></script>
 <style>
   body { padding: 44px 20px 60px; max-width: 900px; margin: 0 auto; }
@@ -2117,6 +2117,7 @@
   }
 
   document.addEventListener('DOMContentLoaded', function () {
+    try {
     renderWelcomeGreeting();
     initSyncOnLoad().then(renderDashboard).catch(renderDashboard).then(() => {
       renderDevToolsTileVisibility();
@@ -2153,6 +2154,9 @@
       try { thRunClientBackfillOnce(); } catch (e) { /* never block dashboard init */ }
     }
     initAppTour();
+  } catch (initError) {
+    showInitErrorBanner('Dashboard', initError);
+  }
   });
 
   // ---------------------------------------------------------------------

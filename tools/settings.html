@@ -29,7 +29,7 @@
 <script src="/tools/tools-effects.js?v=202608201400" defer></script>
 <script src="/tools/tools-dialogs.js?v=202608201400" defer></script>
 <script src="/tools/tools-media-sharing.js?v=202608201900" defer></script>
-<script src="/tools/tools-nav-pwa.js?v=202608201400" defer></script>
+<script src="/tools/tools-nav-pwa.js?v=202608202100" defer></script>
 <script src="/tools/tools-tour.js?v=202608202000" defer></script>
 <script src="/tools/sync.js?v=202608202100" defer></script>
 <script src="/tools/push-notifications.js?v=202608160400" defer></script>
@@ -157,6 +157,7 @@
 
 <script>
   document.addEventListener('DOMContentLoaded', async function () {
+    try {
     initAppTour();
     document.getElementById('settingsMainView').style.display = '';
 
@@ -179,6 +180,9 @@
     // functions the Dashboard header's bell icon already calls, so
     // toggling here and toggling there always agree with each other.
     await refreshSettingsPushState();
+  } catch (initError) {
+    showInitErrorBanner('Settings', initError);
+  }
   });
 
   async function refreshSettingsPushState() {

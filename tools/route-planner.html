@@ -31,7 +31,7 @@
 <script src="/tools/tools-effects.js?v=202608201400" defer></script>
 <script src="/tools/tools-dialogs.js?v=202608201400" defer></script>
 <script src="/tools/tools-media-sharing.js?v=202608201900" defer></script>
-<script src="/tools/tools-nav-pwa.js?v=202608201400" defer></script>
+<script src="/tools/tools-nav-pwa.js?v=202608202100" defer></script>
 <script src="/tools/tools-tour.js?v=202608202000" defer></script>
 <style>
   body { padding: 90px 20px 60px; max-width: 680px; margin: 0 auto; }
@@ -335,6 +335,7 @@
   // parse time instead. Waiting for DOMContentLoaded guarantees sync.js
   // has actually finished loading before we call its functions.
   document.addEventListener('DOMContentLoaded', function () {
+    try {
     initAppTour();
     initSyncOnLoad().then(() => {
       loadSharedMileageRate();
@@ -343,6 +344,9 @@
         startRealtimeSync(() => { loadSharedMileageRate(); calculateTripCost(); }, updateRealtimeBadge);
       }
     });
+  } catch (initError) {
+    showInitErrorBanner('Route Planner', initError);
+  }
   });
 </script>
 </body>

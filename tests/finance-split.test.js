@@ -2122,3 +2122,103 @@ test('all 8 pages sharing the #mainContent skip-link pattern are covered by this
     assert.match(src, /id="mainContent"/, file + ' should use the id this shared fix targets');
   }
 });
+
+// Extending the visible-error-banner protection to all 9 remaining
+// pages (2026-08-20), following a second report of a real problem on
+// invoice-generator.html specifically. That page's original init had
+// no protection at all -- unlike finance.html/job-tracker.html, which
+// got this after their real bugs were nearly impossible to pin down
+// from a description alone. Extracted the banner logic into one shared
+// function (showInitErrorBanner, in tools-nav-pwa.js, already loaded
+// everywhere) rather than duplicating the same HTML/styling 9 times.
+//
+// Investigated the original report thoroughly first: loading just
+// invoice-generator.html's real init without the other real shared
+// scripts it depends on (tools-nav-pwa.js, tools-tour.js) produces a
+// misleading false failure -- confirmed that with BOTH real shared
+// scripts actually injected, matching what a real browser has, the
+// tour renders correctly on that page with no error at all. Caught and
+// fixed a real bug in my OWN first attempt at this rollout before it
+// shipped: a Python script wrapping all 9 pages' init functions had a
+// systematic off-by-one in how it located each closing brace after
+// modifying the array in place, breaking all 9 identically -- caught
+// by running a real syntax check immediately after, not assumed correct.
+
+test('showInitErrorBanner is a real, shared function in tools-nav-pwa.js, not duplicated per-page', () => {
+  const src = fs.readFileSync(path.join(__dirname, '..', 'tools', 'tools-nav-pwa.js'), 'utf8');
+  assert.match(src, /function showInitErrorBanner\(pageLabel, error\)/);
+  assert.match(src, /failed to load properly/);
+});
+
+test('all 9 remaining pages wrap their entire init function in try/catch calling the shared showInitErrorBanner, with the correct page label', () => {
+  const pages = {
+    'invoice-generator.html': 'Invoice Generator', 'calendar.html': 'Calendar',
+    'route-planner.html': 'Route Planner', 'contract-generator.html': 'Contract Generator',
+    'review-request.html': 'Review Request', 'parts-reference.html': 'Parts Reference',
+    'runway-dashboard.html': 'Runway Dashboard', 'workspace.html': 'Dashboard', 'settings.html': 'Settings',
+  };
+  for (const [file, label] of Object.entries(pages)) {
+    const src = fs.readFileSync(path.join(__dirname, '..', 'tools', file), 'utf8');
+    assert.match(src, /try \{/, file + ' should have a try block in its init');
+    assert.match(src, new RegExp("showInitErrorBanner\\('" + label.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + "', initError\\)"), file + ': wrong or missing label');
+  }
+});
+
+test('a genuinely thrown error inside runway-dashboard.html\'s real init is caught and shown, not left uncaught', async () => {
+  const { JSDOM } = require('jsdom');
+  const html = fs.readFileSync(path.join(__dirname, '..', 'tools', 'runway-dashboard.html'), 'utf8');
+  const tourSrc = fs.readFileSync(path.join(__dirname, '..', 'tools', 'tools-tour.js'), 'utf8');
+  const navPwaSrc = fs.readFileSync(path.join(__dirname, '..', 'tools', 'tools-nav-pwa.js'), 'utf8');
+  const dom = new JSDOM(html, {
+    runScripts: 'dangerously', url: 'https://example.com/tools/runway-dashboard.html',
+    beforeParse(window) { window.requireAuth = () => {}; window.HTMLElement.prototype.scrollIntoView = () => {}; },
+  });
+  const { window } = dom;
+  window.HTMLCanvasElement.prototype.getContext = () => ({
+    setTransform(){}, scale(){}, clearRect(){}, beginPath(){}, moveTo(){}, lineTo(){}, stroke(){}, fill(){}, fillRect(){}, arc(){}, closePath(){},
+  });
+  for (const src of [navPwaSrc, tourSrc]) {
+    const s = window.document.createElement('script');
+    s.textContent = src;
+    window.document.head.insertBefore(s, window.document.head.firstChild);
+  }
+  window.getCurrentUserEmail = () => null;
+  // Deliberately force pullSync to throw, to genuinely exercise the catch block.
+  window.pullSync = () => { throw new Error('deliberate test failure'); };
+  window.document.dispatchEvent(new window.Event('DOMContentLoaded'));
+  await new Promise(resolve => setTimeout(resolve, 100)); // let the async handler actually run
+  // Find the banner reliably by its actual text content, not by assuming
+  // it's the body's first element (the page's own icon-sprite SVGs also
+  // occupy early body positions depending on script execution order).
+  const banner = [...window.document.querySelectorAll('div')].find(d => d.textContent.includes('deliberate test failure'));
+  assert.ok(banner, 'no banner containing the deliberate error text was found anywhere in the body');
+  assert.match(banner.textContent, /Runway Dashboard page failed to load properly/);
+  assert.match(banner.textContent, /deliberate test failure/);
+});
+
+test('the tour still renders correctly (including the visual highlight) on a page wrapped in the new try/catch, confirming the wrapper doesn\'t interfere with normal operation', async () => {
+  const { JSDOM } = require('jsdom');
+  const html = fs.readFileSync(path.join(__dirname, '..', 'tools', 'runway-dashboard.html'), 'utf8');
+  const tourSrc = fs.readFileSync(path.join(__dirname, '..', 'tools', 'tools-tour.js'), 'utf8');
+  const navPwaSrc = fs.readFileSync(path.join(__dirname, '..', 'tools', 'tools-nav-pwa.js'), 'utf8');
+  const dom = new JSDOM(html, {
+    runScripts: 'dangerously', url: 'https://example.com/tools/runway-dashboard.html',
+    beforeParse(window) { window.requireAuth = () => {}; window.HTMLElement.prototype.scrollIntoView = () => {}; },
+  });
+  const { window } = dom;
+  window.HTMLCanvasElement.prototype.getContext = () => ({
+    setTransform(){}, scale(){}, clearRect(){}, beginPath(){}, moveTo(){}, lineTo(){}, stroke(){}, fill(){}, fillRect(){}, arc(){}, closePath(){},
+  });
+  for (const src of [navPwaSrc, tourSrc]) {
+    const s = window.document.createElement('script');
+    s.textContent = src;
+    window.document.head.insertBefore(s, window.document.head.firstChild);
+  }
+  window.getCurrentUserEmail = () => null;
+  window.localStorage.setItem('th_app_tour_step', '12');
+  window.document.dispatchEvent(new window.Event('DOMContentLoaded'));
+  await new Promise(resolve => setTimeout(resolve, 100));
+  assert.ok(window.document.getElementById('appTourCard'));
+  assert.equal(window.document.querySelector('.onboarding-title').textContent, 'Runway Dashboard');
+  assert.equal(window.document.querySelectorAll('.th-tour-highlight').length, 1);
+});

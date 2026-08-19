@@ -29,7 +29,7 @@
 <script src="/tools/tools-effects.js?v=202608201400" defer></script>
 <script src="/tools/tools-dialogs.js?v=202608201400" defer></script>
 <script src="/tools/tools-media-sharing.js?v=202608201900" defer></script>
-<script src="/tools/tools-nav-pwa.js?v=202608201400" defer></script>
+<script src="/tools/tools-nav-pwa.js?v=202608202100" defer></script>
 <script src="/tools/tools-tour.js?v=202608202000" defer></script>
 <script src="/tools/qrcode-lib.js?v=202608160400" defer></script>
 <style>
@@ -677,9 +677,13 @@
   }
 
   document.addEventListener('DOMContentLoaded', () => {
+    try {
     initAppTour();
     renderQR('googleQrCard', GOOGLE_REVIEW_LINK);
     renderQR('yelpQrCard', YELP_REVIEW_LINK);
+  } catch (initError) {
+    showInitErrorBanner('Review Request', initError);
+  }
   });
 </script>
 </body>
