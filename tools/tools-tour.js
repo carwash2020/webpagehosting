@@ -15,7 +15,12 @@
 //
 // MECHANISM: one flat, ordered list of steps. Most pages get exactly
 // one step; workspace.html gets 4 (its own sections). Each step names
-// the page it belongs to. State (which step you're on) is stored in
+// the page it belongs to, an optional highlightSelector (any real CSS
+// selector -- an id for the 4 workspace.html sections, a class or
+// attribute selector everywhere else, since none of the other 10 pages
+// needed a single new id added just for this), a title, and body copy
+// written around a concrete use case, not just an abstract description
+// of what the page contains. State (which step you're on) is stored in
 // localStorage, not the URL, so it survives a real page navigation.
 // Every page in the list calls initAppTour() on its own DOMContentLoaded;
 // that function is self-correcting -- if the stored step doesn't match
@@ -24,23 +29,24 @@
 // shows that one instead of showing nothing or showing the wrong info.
 
 const APP_TOUR_STEPS = [
-  { page: '/tools/workspace.html', sectionId: 'section-snapshot', title: 'Business Snapshot', body: 'Revenue, expenses, and outstanding balances for whatever period you pick above.' },
-  { page: '/tools/workspace.html', sectionId: 'section-actionitems', title: 'Action Items', body: 'Anything that actually needs your attention today \u2014 overdue invoices, jobs due tomorrow, follow-ups, new leads.' },
-  { page: '/tools/workspace.html', sectionId: 'section-gallery', title: 'More', body: 'Website gallery photos waiting to be published, insurance and license tracking, job analytics, and a one-tap full data backup \u2014 all tucked in here, collapsed by default.' },
-  { page: '/tools/workspace.html', sectionId: 'section-tools', title: 'Tools', body: 'Every tool in this app lives here as a tile, or in the bar at the bottom of the screen on mobile.' },
-  { page: '/tools/job-tracker.html', title: 'Jobs', body: 'Every job you\u2019re running: add one, mark it done, and long-press any job for quick actions like logging an expense on the spot. Contacts and Notes live here too.' },
-  { page: '/tools/finance.html', title: 'Finance', body: 'A cost calculator for estimating a job before you take it, job profitability, and your income and expense logs \u2014 including mileage.' },
-  { page: '/tools/invoice-generator.html', title: 'Invoices', body: 'Fill out a job, hit Generate, and a branded PDF invoice or quote downloads straight to your device. Recent Invoices keeps a running log.' },
-  { page: '/tools/calendar.html', title: 'Calendar', body: 'Everything scheduled \u2014 jobs, follow-ups, anything with a date \u2014 in one monthly view.' },
-  { page: '/tools/route-planner.html', title: 'Routes', body: 'Line up several stops for the day and get the most efficient driving order between them.' },
-  { page: '/tools/contract-generator.html', title: 'Contracts', body: 'Per-job work orders, short-term agreements, and long-term service agreements \u2014 fill in the blanks and get a signed-ready PDF.' },
-  { page: '/tools/review-request.html', title: 'Review Requests', body: 'Send a guest a quick link to leave a Google or Yelp review, and track whether they actually left one.' },
-  { page: '/tools/parts-reference.html', title: 'Parts Reference', body: 'A running wiki of appliance parts and known issues you\u2019ve looked up before, so you\u2019re not searching the same part number twice.' },
-  { page: '/tools/runway-dashboard.html', title: 'Runway Dashboard', body: 'Personal budget and business numbers side by side \u2014 how much runway you\u2019ve got, and whether the business is covering its own costs yet.' },
-  { page: '/tools/settings.html', title: 'Settings', body: 'Sync setup and your account live here \u2014 and you can replay this tour any time from this same page.' },
+  { page: '/tools/workspace.html', highlightSelector: '#section-snapshot', title: 'Business Snapshot', body: 'Revenue, expenses, and outstanding balances for whatever period you pick above. Check this first thing in the morning to see where things actually stand before you head out.' },
+  { page: '/tools/workspace.html', highlightSelector: '#section-actionitems', title: 'Action Items', body: 'Anything that actually needs your attention today \u2014 overdue invoices, jobs due tomorrow, follow-ups, new leads. If it\u2019s empty, you\u2019re genuinely caught up.' },
+  { page: '/tools/workspace.html', highlightSelector: '#section-gallery', title: 'More', body: 'Website gallery photos waiting to be published, insurance and license tracking, job analytics, and a one-tap full data backup \u2014 collapsed by default so they don\u2019t clutter this page, but a couple taps away the moment you need one of them.' },
+  { page: '/tools/workspace.html', highlightSelector: '#section-tools', title: 'Tools', body: 'Every tool in this app lives here as a tile, or in the bar at the bottom of the screen on mobile. Lost on some other page? This is always the way back.' },
+  { page: '/tools/job-tracker.html', highlightSelector: '#addJobBtn', title: 'Jobs', body: 'The moment you book a job, add it here. Long-press any job on the list to mark it done, edit it, or log an expense against it on the spot \u2014 no need to leave this page for that last one. Contacts and Notes tabs are right up top.' },
+  { page: '/tools/finance.html', highlightSelector: '.tabs.tabs-sticky', title: 'Finance', body: 'Quoting a new job? Run the numbers in Cost Lookup first. Once it\u2019s done, Profitability shows what you actually made. Income and Expenses \u2014 including mileage \u2014 are the other two tabs, for everything money-related outside a specific job.' },
+  { page: '/tools/invoice-generator.html', highlightSelector: 'button[onclick="generatePDF()"]', title: 'Invoices', body: 'Fill out a job here and hit Generate \u2014 a branded PDF invoice downloads straight to your device, ready to text or email to a client on the spot. Need a price before the work starts instead? Switch to the Quote/Estimate tab.' },
+  { page: '/tools/calendar.html', highlightSelector: '#calGrid', title: 'Calendar', body: 'Every job with a date on it shows up here automatically \u2014 nothing to enter twice. Tap any day with a dot to see exactly what\u2019s scheduled.' },
+  { page: '/tools/route-planner.html', highlightSelector: '.add-stop-btn', title: 'Routes', body: 'Got three or four stops lined up for the day? Add them here and get the fastest order to drive them in, opened straight into Google Maps.' },
+  { page: '/tools/contract-generator.html', highlightSelector: '.form-section', title: 'Contracts', body: 'Need something signed before you start a job? Fill in a Per-Job Work Order for a one-off, or a Service Agreement for ongoing work, and get a ready-to-send PDF back.' },
+  { page: '/tools/review-request.html', highlightSelector: '#sendLink', title: 'Review Requests', body: 'Right after a job wraps up, send the guest a text with a direct link to leave a Google or Yelp review. This page keeps track of who actually left one, so you know who\u2019s worth a follow-up.' },
+  { page: '/tools/parts-reference.html', highlightSelector: '#prSearchInput', title: 'Parts Reference', body: 'Once you\u2019ve looked up a part number for a tricky repair, it\u2019s saved here \u2014 search it here first next time instead of digging through the same manual again.' },
+  { page: '/tools/runway-dashboard.html', highlightSelector: '.tabs', title: 'Runway Dashboard', body: 'Your personal budget and the business\u2019s numbers side by side \u2014 this is where you actually check whether the business is covering its own costs yet, not just guess at it.' },
+  { page: '/tools/settings.html', highlightSelector: 'a[href*="tour=1"]', title: 'Settings', body: 'Sync setup and your account live here. Forget something from this tour, or want to show someone else how this all works? This button brings the whole thing back from the start.' },
 ];
 
 const APP_TOUR_STEP_KEY = 'th_app_tour_step';
+const TOUR_HIGHLIGHT_CLASS = 'th-tour-highlight';
 
 // Keyed by the logged-in account's email, not just the browser --
 // otherwise one shared device would only ever show this to whichever
@@ -119,6 +125,11 @@ function initAppTour() {
   renderAppTourStep(stepIndex);
 }
 
+function clearAppTourHighlight() {
+  const highlighted = document.querySelectorAll('.' + TOUR_HIGHLIGHT_CLASS);
+  highlighted.forEach(el => el.classList.remove(TOUR_HIGHLIGHT_CLASS));
+}
+
 function dismissAppTour() {
   try {
     localStorage.removeItem(APP_TOUR_STEP_KEY);
@@ -126,6 +137,7 @@ function dismissAppTour() {
   } catch (e) { /* ignore */ }
   const card = document.getElementById('appTourCard');
   if (card) card.remove();
+  clearAppTourHighlight();
 }
 
 function goToAppTourStep(nextIndex) {
@@ -140,9 +152,17 @@ function goToAppTourStep(nextIndex) {
 
 function renderAppTourStep(stepIndex) {
   const step = APP_TOUR_STEPS[stepIndex];
-  if (step.sectionId) {
-    const el = document.getElementById(step.sectionId);
-    if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  clearAppTourHighlight(); // remove whatever the PREVIOUS step highlighted, if anything
+  if (step.highlightSelector) {
+    // querySelector, not getElementById -- highlightSelector can be an
+    // id (the 4 workspace.html sections) or a class/attribute selector
+    // (every other page), so a single field covers both without
+    // needing a new id added anywhere.
+    const el = document.querySelector(step.highlightSelector);
+    if (el) {
+      el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      el.classList.add(TOUR_HIGHLIGHT_CLASS);
+    }
   }
   let card = document.getElementById('appTourCard');
   if (!card) {

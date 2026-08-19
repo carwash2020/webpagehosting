@@ -262,6 +262,21 @@ body.th-has-bottomnav .onboarding-card { bottom: calc(76px + env(safe-area-inset
 .onboarding-skip, .onboarding-back { background: none; border: none; color: var(--text-dim); font-size: 13px; cursor: pointer; padding: 8px 4px; }
 .onboarding-skip:hover, .onboarding-back:hover { color: var(--white); }
 .onboarding-actions-left { display: flex; gap: 4px; align-items: center; }
+/* Tour highlight (2026-08-20): applied to whatever real element a step
+   is actually talking about, per direct feedback that the tour
+   described things without ever visually pointing at them. A pulsing
+   glow rather than a static border, so it's noticeable even if the
+   element is partway down a busy page. */
+.th-tour-highlight {
+  outline: 2px solid var(--orange); outline-offset: 3px; border-radius: 8px;
+  animation: tourHighlightPulse 1.6s ease-in-out infinite;
+  position: relative; z-index: 700;
+}
+@keyframes tourHighlightPulse {
+  0%, 100% { box-shadow: 0 0 0 0 var(--orange-tint-glow); }
+  50% { box-shadow: 0 0 0 8px var(--orange-tint-glow); }
+}
+@media (prefers-reduced-motion: reduce) { .th-tour-highlight { animation: none; } }
 
 .tabs.tabs-sticky {
   position: sticky; top: calc(61px + env(safe-area-inset-top, 0px)); z-index: 55;
@@ -950,6 +965,16 @@ body .hub-header, body .tool-header {
      plain block elements instead of sitting in a row. */
   display: flex; align-items: center; justify-content: space-between; gap: 14px;
 }
+/* Bug fix (2026-08-20), found from a direct report: "Skip to main
+   content" (and any other #mainContent anchor jump) positioned the
+   page's own title at the very top of the viewport with no awareness
+   that the sticky header above also occupies that space -- the header
+   rendered directly on top of the title instead of the title sitting
+   below it. scroll-margin-top tells the browser to leave room for the
+   header's real height (including the safe-area-inset-top it also
+   needs to clear) when jumping to this target. Applies identically
+   across all 8 pages sharing this exact #mainContent skip-link pattern. */
+#mainContent { scroll-margin-top: calc(61px + env(safe-area-inset-top, 0px)); }
 body .hub-title { font-size: 22px; letter-spacing: .5px; }
 body .hub-header img { height: 36px; width: 36px; }
 body .hub-header-left { display: flex; align-items: center; gap: 14px; }
