@@ -2387,6 +2387,7 @@ document.getElementById('resetAllBtn').addEventListener('click', async () => {
 
 loadAll();
 document.addEventListener('DOMContentLoaded', async () => {
+    try {
   initAppTour();
   if(typeof pullSync === 'function'){
     const result = await pullSync(); // refreshes th_ AND rd_ keys from the shared blob
@@ -2401,6 +2402,9 @@ document.addEventListener('DOMContentLoaded', async () => {
     startRealtimeSync(() => { loadAll(); }, updateJobTrackerBadge);
   } else {
     updateJobTrackerBadge('unavailable');
+  }
+  } catch (initError) {
+    showInitErrorBanner('Runway Dashboard', initError);
   }
 });
 </script>

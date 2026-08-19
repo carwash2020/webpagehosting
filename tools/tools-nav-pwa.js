@@ -63,6 +63,24 @@
 // ---------------------------------------------------------------------------
 const DENSITY_KEY = 'th_density';
 
+// Shared init-failure diagnostic banner (2026-08-20). Originally built
+// as a one-off on finance.html and job-tracker.html after those pages'
+// real bugs were nearly impossible to pin down from a description and
+// a screenshot alone -- a visible error message turned "still isn't
+// working" into an exact line number in minutes. Extracted here as one
+// shared implementation so every other page can get the same
+// protection without 9 separate, slightly-inconsistent copies of the
+// same banner HTML.
+function showInitErrorBanner(pageLabel, error) {
+  const errorBanner = document.createElement('div');
+  errorBanner.style.cssText = 'background:#3a1414; border:1px solid #e05252; border-radius:8px; padding:14px 16px; margin:16px 0; color:#ffb3b3; font-size:13.5px; font-family:monospace; white-space:pre-wrap; word-break:break-word;';
+  errorBanner.textContent = pageLabel + ' page failed to load properly.\n\nError: ' + (error && error.message ? error.message : String(error)) + '\n\nStack: ' + (error && error.stack ? error.stack : 'unavailable') + '\n\nPlease screenshot this and share it.';
+  document.body.insertBefore(errorBanner, document.body.firstChild);
+  if (typeof logClientError === 'function') {
+    logClientError(pageLabel + ' init failed: ' + (error && error.message), pageLabel, error && error.stack, null, null);
+  }
+}
+
 function loadDensityPreference() {
   try { return localStorage.getItem(DENSITY_KEY) === 'compact' ? 'compact' : 'comfortable'; }
   catch (e) { return 'comfortable'; }
