@@ -2222,3 +2222,55 @@ test('the tour still renders correctly (including the visual highlight) on a pag
   assert.equal(window.document.querySelector('.onboarding-title').textContent, 'Runway Dashboard');
   assert.equal(window.document.querySelectorAll('.th-tour-highlight').length, 1);
 });
+
+// CRITICAL BUG FIX (2026-08-20), found from a third, more specific
+// report: "the tutorial still stopped and did not show an error." No
+// error banner meant the code inside the try block completed without
+// throwing -- ruling out a crash, which meant something else entirely
+// had to explain "Next does nothing." Found a real, confirmed race:
+// renderAppTourStep checked getElementById('appTourCard') and only
+// created a new one if none existed -- but if this function is ever
+// called more than once before the first render's card fully attaches
+// (a genuinely possible race, not just theoretical; jsdom testing
+// during this same investigation already showed DOMContentLoaded firing
+// more than once under some conditions), two elements could end up
+// sharing the same id. getElementById/querySelector always return the
+// FIRST matching element in document order -- but the SECOND, later-
+// appended one is the one actually visible and clicked. That means the
+// click handler gets attached to an invisible duplicate while the
+// visible one has none at all: tapping "Next" would silently do
+// nothing, with zero exceptions thrown anywhere. Exactly matches the
+// reported symptom.
+
+test('renderAppTourStep always removes any existing #appTourCard before creating a fresh one, guaranteeing exactly one exists no matter how many times it fires in quick succession', () => {
+  const { JSDOM } = require('jsdom');
+  const tourSrc = fs.readFileSync(path.join(__dirname, '..', 'tools', 'tools-tour.js'), 'utf8');
+  const dom = new JSDOM('<!DOCTYPE html><html><body></body></html>', {
+    url: 'https://example.com/tools/workspace.html', runScripts: 'dangerously',
+  });
+  const { window } = dom;
+  window.HTMLElement.prototype.scrollIntoView = () => {};
+  window.getCurrentUserEmail = () => null;
+  const script = window.document.createElement('script');
+  script.textContent = tourSrc;
+  window.document.head.appendChild(script);
+
+  // Simulate the exact race: called repeatedly before a real render
+  // would ever have a chance to "settle."
+  window.renderAppTourStep(0);
+  window.renderAppTourStep(0);
+  window.renderAppTourStep(0);
+  assert.equal(window.document.querySelectorAll('#appTourCard').length, 1, 'exactly one card should exist, never a duplicate');
+
+  // The critical part: the click handler must be on the one-and-only
+  // card that's actually in the document, not lost on a removed duplicate.
+  const nextBtn = window.document.querySelector('#appTourCard .onboarding-next');
+  assert.ok(nextBtn, 'Next button should exist inside the single real card');
+  assert.equal(typeof nextBtn.onclick, 'function', 'the click handler must be attached to the actual, currently-visible card');
+});
+
+test('the source no longer has the vulnerable "only create if none exists" pattern that allowed duplicate cards to occur', () => {
+  const src = fs.readFileSync(path.join(__dirname, '..', 'tools', 'tools-tour.js'), 'utf8');
+  assert.doesNotMatch(src, /let card = document\.getElementById\('appTourCard'\);\s*\n\s*if \(!card\)/);
+  assert.match(src, /document\.querySelectorAll\('#appTourCard'\)\.forEach\(el => el\.remove\(\)\)/);
+});
