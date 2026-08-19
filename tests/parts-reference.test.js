@@ -23,6 +23,7 @@ function loadPage() {
   const html = fs.readFileSync(PAGE_PATH, 'utf8');
   const dom = new JSDOM(html, { runScripts: 'dangerously', url: 'https://example.com/' });
   const { window } = dom;
+  window.initAppTour = () => {}; // real fn lives in the external tools-tour.js, not loaded in this minimal sandbox
   // auth.js and tools-common.js load via relative <script src> tags that
   // don't resolve to a real server in this sandbox, so requireAuth(),
   // showToast(), and showConfirm() need stand-ins. This mirrors what

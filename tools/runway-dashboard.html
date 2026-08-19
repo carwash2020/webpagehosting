@@ -26,6 +26,7 @@
 <link href="https://fonts.googleapis.com/css2?family=Anton&family=Oswald:wght@300;400;500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.112.3/dist/umd/supabase.js" integrity="sha384-qafw21c/iciq0VXsi9FzkfoQv5I/V0iqE4lSNcKXPnW9/UTJLnv5CcN4FHxVLnKg" crossorigin="anonymous" defer></script>
 <script src="/tools/sync.js?v=202608202100" defer></script>
+<script src="/tools/tools-tour.js?v=202608202000" defer></script>
 <style>
   :root{
     --bg:#0a0a0a;
@@ -2386,6 +2387,7 @@ document.getElementById('resetAllBtn').addEventListener('click', async () => {
 
 loadAll();
 document.addEventListener('DOMContentLoaded', async () => {
+  initAppTour();
   if(typeof pullSync === 'function'){
     const result = await pullSync(); // refreshes th_ AND rd_ keys from the shared blob
     if(result && result.ok){
