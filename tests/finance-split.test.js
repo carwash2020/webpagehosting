@@ -1991,3 +1991,39 @@ test('settings.html\'s tour description reflects the real, expanded scope, not t
   assert.doesNotMatch(src, /3-step Dashboard walkthrough/);
   assert.match(src, /walkthrough of every page/);
 });
+
+// Check-links false-positive fix (2026-08-20), after a real CI failure
+// email: 5 legitimate third-party domains (fonts.googleapis.com, cal.com,
+// google.com maps links, googletagmanager.com, g.page) were returning
+// HTTP 403 to the checker's automated requests specifically -- confirmed
+// via a real web search that Google's own crawler has successfully
+// indexed the Cal.com booking page's actual content, meaning the block
+// targets this kind of automated request pattern, not everyone.
+// Deliberately did NOT add the site's own domain to the same allowlist
+// even though it returned the identical 403 in the same run -- a
+// third-party site blocking bots is a shrug, but the site blocking its
+// own link checker is a separate, more worth-knowing thing that
+// deserves a distinct, visible flag rather than silent suppression.
+
+test('check-links.py\'s bot-hostile allowlist includes the 5 domains added after the 2026-08-20 false-positive CI failure', () => {
+  const src = fs.readFileSync(path.join(__dirname, '..', 'scripts', 'check-links.py'), 'utf8');
+  const match = src.match(/BOT_HOSTILE_DOMAINS = \(([\s\S]*?)\)/);
+  assert.ok(match, 'BOT_HOSTILE_DOMAINS not found');
+  for (const domain of ['fonts.googleapis.com', 'cal.com', 'google.com', 'googletagmanager.com', 'g.page']) {
+    assert.match(match[1], new RegExp("'" + domain.replace(/\./g, '\\.') + "'"), domain + ' should be in the allowlist');
+  }
+});
+
+test('the site\'s own domain is deliberately NOT in the bot-hostile allowlist, and instead gets its own distinct, visible flag', () => {
+  const src = fs.readFileSync(path.join(__dirname, '..', 'scripts', 'check-links.py'), 'utf8');
+  const allowlistMatch = src.match(/BOT_HOSTILE_DOMAINS = \(([\s\S]*?)\)/);
+  assert.doesNotMatch(allowlistMatch[1], /triplehenterprisesllc/, 'the site\'s own domain should not be silently lumped in with third-party bot-hostile platforms');
+  assert.match(src, /SITE_OWN_DOMAIN = 'triplehenterprisesllc\.biz'/);
+  assert.match(src, /WORTH CHECKING \(this site's own domain/, 'a 403 from the site\'s own domain should get a distinct, visible message');
+});
+
+test('running check-links.py against the real repo actually passes now (not just that the allowlist text looks right)', () => {
+  const { execSync } = require('child_process');
+  const output = execSync('python3 ' + path.join(__dirname, '..', 'scripts', 'check-links.py'), { encoding: 'utf8' });
+  assert.match(output, /Link check passed/);
+});
