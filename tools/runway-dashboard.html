@@ -2409,7 +2409,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       if (!panel) {
         panel = document.createElement('div');
         panel.id = '__diagTracePanel';
-        panel.style.cssText = 'position:fixed; left:8px; right:8px; bottom:8px; z-index:99999; background:#0a0a0a; border:2px solid #ffb020; border-radius:8px; padding:10px 12px; color:#ffd580; font-size:11px; font-family:monospace; white-space:pre-wrap; max-height:45vh; overflow-y:auto;';
+        panel.style.cssText = 'position:fixed; left:8px; right:8px; top:8px; z-index:99999; background:#0a0a0a; border:2px solid #ffb020; border-radius:8px; padding:10px 12px; color:#ffd580; font-size:11px; font-family:monospace; white-space:pre-wrap; max-height:40vh; overflow-y:auto;';
         document.body.appendChild(panel);
       }
       panel.textContent = 'DIAGNOSTIC TRACE -- screenshot this box\n' + __traceLog.join('\n');
