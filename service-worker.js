@@ -72,7 +72,10 @@
 // list: settings.html itself was never added to the precache list at
 // all, unlike every other real app page -- same class of oversight
 // already documented and fixed twice above for other pages.
-const CACHE_NAME = 'th-workspace-v12';
+// Bumped again (2026-08-20): desktop-width layout improvements across
+// 15 HTML pages -- efficient on phone stays exactly as it was,
+// efficient on computer gets more room to use.
+const CACHE_NAME = 'th-workspace-v13';
 const PRECACHE_URLS = [
   '/tools/workspace.html', '/tools/job-tracker.html', '/tools/invoice-generator.html', '/tools/contract-generator.html',
   '/tools/calendar.html', '/tools/route-planner.html', '/tools/review-request.html', '/tools/contact-card.html',

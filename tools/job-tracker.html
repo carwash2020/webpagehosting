@@ -47,6 +47,11 @@
 <script src="/tools/tools-tour.js?v=202608202100" defer></script>
 <style>
   body { padding: 90px 20px 60px; max-width: 1080px; margin: 0 auto; }
+  /* Desktop layout (2026-08-20), requested directly: efficient on
+     phone stays exactly as it was (nothing below 1024px changes at
+     all) -- this only widens the container on a real desktop-size
+     screen. */
+  @media (min-width: 1024px) { body { max-width: 1500px; } }
   .tool-title { font-family:'Oswald',sans-serif; font-weight:700; font-size:28px; color:var(--white); margin-bottom:6px; }
   .tool-sub { color: var(--text-dim); margin-bottom: 24px; }
   .storage-note {

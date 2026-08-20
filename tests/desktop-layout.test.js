@@ -1,0 +1,73 @@
+// Tests for the desktop-width layout improvements (2026-08-20),
+// requested directly: efficient on phone stays efficient on phone,
+// efficient on computer becomes efficient on computer too, via a
+// min-width:1024px media query per page that leaves everything below
+// that width completely untouched.
+
+const { test } = require('node:test');
+const assert = require('node:assert/strict');
+const fs = require('fs');
+const path = require('path');
+
+const TOOLS_DIR = path.join(__dirname, '..', 'tools');
+
+// Pages that had a direct body{max-width:Npx} rule widened.
+const STANDARD_PAGES = [
+  'workspace.html', 'calendar.html', 'client-detail.html', 'contract-generator.html',
+  'dev-tools.html', 'invoice-generator.html', 'job-detail.html', 'job-tracker.html',
+  'review-request.html', 'route-planner.html', 'settings.html', 'site-content.html',
+];
+
+test('every standard tool page has a min-width:1024px media query widening its container, positioned after the original mobile-default rule', () => {
+  for (const page of STANDARD_PAGES) {
+    const src = fs.readFileSync(path.join(TOOLS_DIR, page), 'utf8');
+    const mobileMatch = src.match(/body \{ padding: [^;]+; max-width: (\d+)px; margin: 0 auto; \}/);
+    assert.ok(mobileMatch, page + ': original mobile body rule not found -- did something change unexpectedly?');
+    const desktopMatch = src.match(/@media \(min-width: 1024px\) \{ body \{ max-width: (\d+)px; \} \}/);
+    assert.ok(desktopMatch, page + ' is missing the desktop-width media query');
+    const mobileWidth = parseInt(mobileMatch[1], 10);
+    const desktopWidth = parseInt(desktopMatch[1], 10);
+    assert.ok(desktopWidth > mobileWidth, page + ': desktop width (' + desktopWidth + ') should be wider than the mobile default (' + mobileWidth + ')');
+    // The desktop rule must come AFTER the mobile rule in the file, so
+    // it correctly overrides at wider widths rather than being
+    // overridden itself.
+    assert.ok(src.indexOf(mobileMatch[0]) < src.indexOf(desktopMatch[0]), page + ': desktop media query must come after the mobile default rule');
+  }
+});
+
+test('runway-dashboard.html, which uses 3 separate max-width selectors instead of one body rule, has all 3 widened together in a single desktop media query', () => {
+  const src = fs.readFileSync(path.join(TOOLS_DIR, 'runway-dashboard.html'), 'utf8');
+  assert.match(src, /@media \(min-width: 1024px\) \{ header, \.tabs, main \{ max-width: \d+px; \} \}/);
+});
+
+test('finance.html and parts-reference.html, which previously had NO container width constraint at all, now have one added -- but only on desktop, leaving mobile completely unaffected', () => {
+  for (const page of ['finance.html', 'parts-reference.html']) {
+    const src = fs.readFileSync(path.join(TOOLS_DIR, page), 'utf8');
+    // Should NOT have an unconditional body{max-width} rule -- that
+    // would also affect mobile, which currently works fine
+    // unconstrained on a narrow screen.
+    assert.doesNotMatch(src, /(?<!media \(min-width: 1024px\) \{ )body \{[^}]*max-width/, page + ' should not have an unconditional max-width rule affecting mobile too');
+    assert.match(src, /@media \(min-width: 1024px\) \{ body \{ max-width: \d+px; margin: 0 auto; \} \}/, page + ' is missing its new desktop-only container constraint');
+  }
+});
+
+test('the bottom nav bar stays display:none by default, only appearing under 720px -- confirms widening the container on desktop is safe and does not create a stray mobile-style nav on a wide screen', () => {
+  const src = fs.readFileSync(path.join(TOOLS_DIR, 'styles-tools.css'), 'utf8');
+  const rule = src.match(/\.th-bottom-nav \{([^}]*)\}/)[1];
+  assert.match(rule, /display:\s*none/);
+  assert.match(src, /@media \(max-width: 720px\) \{ \.th-bottom-nav \{ display: flex/);
+});
+
+test('CSS brace balance stays correct across every file touched by this change', () => {
+  const files = [...STANDARD_PAGES, 'runway-dashboard.html', 'finance.html', 'parts-reference.html'];
+  for (const f of files) {
+    const text = fs.readFileSync(path.join(TOOLS_DIR, f), 'utf8');
+    const style = text.slice(text.indexOf('<style>'), text.indexOf('</style>'));
+    let depth = 0;
+    for (const ch of style) {
+      if (ch === '{') depth++;
+      if (ch === '}') depth--;
+    }
+    assert.equal(depth, 0, f + ': unbalanced braces in <style> block');
+  }
+});

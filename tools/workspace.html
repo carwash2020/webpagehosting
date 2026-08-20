@@ -48,6 +48,13 @@
 <script src="/tools/tools-tour.js?v=202608202100" defer></script>
 <style>
   body { padding: 44px 20px 60px; max-width: 900px; margin: 0 auto; }
+  /* Desktop layout (2026-08-20), requested directly: efficient on
+     phone stays exactly as it was (nothing below 1024px changes at
+     all) -- this only widens the container on a real desktop-size
+     screen, letting the existing .metrics-grid (already a responsive
+     auto-fit grid) spread into more columns on its own, rather than
+     rebuilding the layout from scratch. */
+  @media (min-width: 1024px) { body { max-width: 1400px; } }
   .hub-header { display: flex; align-items: center; justify-content: space-between; gap: 14px; margin-bottom: 8px; }
   .hub-header-left { display: flex; align-items: center; gap: 14px; }
   #headerLogo.is-syncing { animation: logoSyncPulse 1.4s ease-in-out infinite; }
