@@ -101,6 +101,87 @@ function ensureFullHistory() {
 // tour step points at a highlightSelector that doesn't actually exist
 // on that page, and a page that never loaded the CSS the tour needs to
 // even be visible (runway-dashboard.html's real bug, exactly).
+// Site audit improvement #4 (2026-08-20): automates the exact
+// detection that found 3 real, confirmed bugs this past week
+// (invoice-generator.html, route-planner.html, review-request.html) --
+// a function called immediately at the top level of a page's own
+// script, before document.addEventListener('DOMContentLoaded') even
+// registers, whose body references a function that only exists in a
+// deferred script (tools-dialogs.js, tools-effects.js, etc.). Per the
+// HTML spec, every inline script runs during parsing, before any
+// deferred script executes -- meaning a top-level call like this is
+// guaranteed to throw on every real page load, not a maybe, and
+// because the throw happens before the DOMContentLoaded listener can
+// even register, everything inside it (the tour, sync, error
+// reporting) silently never runs either.
+const DEFERRED_SCRIPT_FILES = ['tools-dialogs.js', 'tools-effects.js', 'tools-nav-pwa.js', 'tools-tour.js', 'tools-media-sharing.js'];
+
+function getDeferredFunctionNames() {
+  const names = new Set();
+  for (const file of DEFERRED_SCRIPT_FILES) {
+    const filePath = path.join(TOOLS_DIR, file);
+    if (!fs.existsSync(filePath)) continue;
+    const src = fs.readFileSync(filePath, 'utf8');
+    for (const m of src.matchAll(/function\s+([a-zA-Z_][a-zA-Z0-9_]*)\s*\(/g)) names.add(m[1]);
+  }
+  return names;
+}
+
+function findFunctionBody(src, name) {
+  const m = src.match(new RegExp('(async\\s+)?function\\s+' + name + '\\s*\\([^)]*\\)\\s*\\{'));
+  if (!m) return null;
+  const isAsync = !!m[1];
+  let depth = 1;
+  let i = m.index + m[0].length;
+  const start = i;
+  while (depth > 0 && i < src.length) {
+    if (src[i] === '{') depth++;
+    else if (src[i] === '}') depth--;
+    i++;
+  }
+  return { body: src.slice(start, i), isAsync };
+}
+
+function checkTopLevelDeferredCalls(problems) {
+  const deferredNames = getDeferredFunctionNames();
+  const files = fs.readdirSync(TOOLS_DIR).filter(f => f.endsWith('.html'));
+
+  for (const filename of files) {
+    const src = readTool(filename);
+    const dclIndex = src.indexOf("document.addEventListener('DOMContentLoaded'");
+    if (dclIndex === -1) continue; // no init handler on this page at all -- nothing to check
+    const before = src.slice(0, dclIndex);
+
+    // Real brace-depth tracking (not an indentation guess) to find
+    // which lines are genuinely at the top level of the script, not
+    // nested inside some other function or block that merely happens
+    // to share the same indentation.
+    const lines = before.split('\n');
+    let depth = 0;
+    const topLevelCalls = [];
+    for (const line of lines) {
+      const startDepth = depth;
+      for (const ch of line) {
+        if (ch === '{') depth++;
+        else if (ch === '}') depth--;
+      }
+      if (startDepth !== 0) continue; // this line started inside a nested block -- not top level
+      const callMatch = line.match(/^\s*([a-zA-Z_][a-zA-Z0-9_]*)\(\s*[^)]*\)\s*;/);
+      if (callMatch) topLevelCalls.push(callMatch[1]);
+    }
+
+    for (const fnName of topLevelCalls) {
+      const found = findFunctionBody(before, fnName);
+      if (!found) continue; // not a locally-defined function (e.g. requireAuth from auth.js) -- not what this check is for
+      if (found.isAsync && /\bawait\b/.test(found.body)) continue; // an async function's own await points naturally give deferred scripts time to load first -- confirmed safe for this exact pattern on runway-dashboard.html earlier this session
+      const referencedDeferred = [...deferredNames].filter(d => new RegExp('\\b' + d + '\\(').test(found.body));
+      if (referencedDeferred.length) {
+        problems.push(`${filename}: ${fnName}() is called at the top level of the script (before DOMContentLoaded registers), but references ${referencedDeferred.join(', ')}, which only exist in a deferred script -- guaranteed to throw on every real page load`);
+      }
+    }
+  }
+}
+
 function checkTourHealth(problems) {
   const tourSrc = fs.readFileSync(path.join(TOOLS_DIR, 'tools-tour.js'), 'utf8');
   const stepPattern = /\{ page: '\/tools\/([\w-]+\.html)', highlightSelector: '([^']+)'/g;
@@ -208,6 +289,7 @@ function main() {
 
   checkVersionFreshness(problems);
   checkTourHealth(problems);
+  checkTopLevelDeferredCalls(problems);
 
   files.forEach(filename => {
     if (EXEMPT[filename]) return;

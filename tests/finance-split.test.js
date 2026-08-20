@@ -2738,3 +2738,42 @@ test('the tour health check genuinely catches a page missing the tour\'s require
     fs.writeFileSync(rdPath, original); // always restore, even if an assertion above failed
   }
 });
+
+// Improvement #4 from the 8/14-8/20 site audit (2026-08-20): a new
+// checkTopLevelDeferredCalls function in scripts/check-consistency.js,
+// running automatically on every push. Automates the exact detection
+// that found 3 real, confirmed bugs this past week
+// (invoice-generator.html, route-planner.html, review-request.html) --
+// a function called at the top level of a page's script, before
+// DOMContentLoaded even registers, whose body references a function
+// that only exists in a deferred script. Uses real brace-depth
+// tracking (not an indentation guess) to find genuinely top-level
+// calls, and correctly skips async functions that contain an await,
+// matching the real, tested conclusion from investigating
+// runway-dashboard.html's loadAll() earlier this session.
+
+test('checkTopLevelDeferredCalls passes cleanly against the real, current codebase, including runway-dashboard.html\'s known-safe async pattern', () => {
+  const result = runCheckConsistency();
+  assert.equal(result.passed, true, result.output);
+});
+
+test('genuinely reintroducing the exact historical bug (a top-level call to a function referencing a deferred-script function) is caught, with the real function/dependency named in the message', () => {
+  const igPath = path.join(__dirname, '..', 'tools', 'invoice-generator.html');
+  const original = fs.readFileSync(igPath, 'utf8');
+  try {
+    // Insert right after the immediately-preceding function's closing
+    // brace (found via the actual DOMContentLoaded registration site),
+    // not one line too early -- landing inside that previous function
+    // instead of at the true top level was a real mistake caught while
+    // building this same test.
+    const dclIndex = original.indexOf("document.addEventListener('DOMContentLoaded'");
+    const broken = original.slice(0, dclIndex) + '  recalc();\n  ' + original.slice(dclIndex);
+    fs.writeFileSync(igPath, broken);
+    const result = runCheckConsistency();
+    assert.equal(result.passed, false, 'should have failed with recalc() reintroduced at the top level');
+    assert.match(result.output, /recalc\(\) is called at the top level/);
+    assert.match(result.output, /references money/);
+  } finally {
+    fs.writeFileSync(igPath, original); // always restore, even if an assertion above failed
+  }
+});
