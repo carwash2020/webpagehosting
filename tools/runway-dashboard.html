@@ -161,7 +161,41 @@
      screen. This page uses 3 separate max-width:900px selectors
      (header/.tabs/main) rather than one body rule, unlike most other
      pages -- widening all 3 together. */
-  @media (min-width: 1024px) { header, .tabs, main { max-width: 1500px; } }
+  @media (min-width: 1024px) { header, .tabs, main { max-width: 1500px; margin-left: 240px; } }
+  /* Desktop sidebar (2026-08-20), requested directly. This page is
+     deliberately self-contained and doesn't load styles-tools.css
+     where the shared version of this lives -- copied to match
+     exactly. */
+  .th-desktop-sidebar {
+    display: none;
+    position: fixed; left: 0; top: 0; bottom: 0; z-index: 100;
+    width: 240px; overflow-y: auto;
+    background: var(--bg-card); border-right: 1px solid var(--border);
+    padding: 20px 12px;
+  }
+  @media (min-width: 1024px) { .th-desktop-sidebar { display: flex; flex-direction: column; gap: 4px; } }
+  .th-sidebar-brand {
+    display: flex; align-items: center; gap: 10px;
+    padding: 8px 10px 20px; margin-bottom: 8px; border-bottom: 1px solid var(--border);
+    text-decoration: none; color: var(--white);
+    font-family: 'Anton', sans-serif; font-size: 16px; letter-spacing: .5px;
+  }
+  .th-sidebar-brand img { width: 32px; height: 32px; object-fit: contain; border-radius: 6px; }
+  .th-sidebar-links { display: flex; flex-direction: column; gap: 2px; }
+  .th-sidebar-link {
+    display: flex; align-items: center; gap: 12px;
+    padding: 10px 12px; border-radius: 10px;
+    text-decoration: none; color: var(--text-dim);
+    font-family: 'Oswald', sans-serif; font-size: 13.5px; font-weight: 500; letter-spacing: .2px;
+    transition: color .15s ease, background .15s ease;
+  }
+  .th-sidebar-link .th-icon { width: 18px; height: 18px; flex-shrink: 0; }
+  .th-sidebar-link:hover { background: var(--bg-elevated); color: var(--text); }
+  .th-sidebar-link.is-active {
+    background: var(--orange-tint-glow); color: var(--orange-light);
+    box-shadow: inset 0 0 0 1px var(--orange-tint-border);
+  }
+  @media (prefers-reduced-motion: reduce) { .th-sidebar-link { transition: none; } }
   .panel{display:none;}
   .panel.active{display:block; animation:panelFadeIn .22s ease;}
   .panel.fade-out{display:block; opacity:0; transition:opacity .2s ease;}
@@ -307,7 +341,41 @@
   }
 </style>
 </head>
-<body>
+<body class="th-has-sidebar">
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <symbol id="icon-home" viewBox="0 0 24 24"><path d="M4 11.5L12 4l8 7.5"/><path d="M6 10v9.5c0 .8.7 1.5 1.5 1.5h9c.8 0 1.5-.7 1.5-1.5V10"/><path d="M9.5 21v-5.5c0-.55.45-1 1-1h3c.55 0 1 .45 1 1V21"/></symbol>
+    <symbol id="icon-wrench" viewBox="0 0 24 24"><path d="M14.7 9.3a4 4 0 0 1-5.4 5.4L4 20l-1-1 5.3-5.3a4 4 0 0 1 5.4-5.4l-2.4 2.4 1.5 1.5z"/></symbol>
+    <symbol id="icon-dollar" viewBox="0 0 24 24"><text x="12" y="17.5" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="17" font-weight="700" fill="currentColor" stroke="none">$</text></symbol>
+    <symbol id="icon-receipt" viewBox="0 0 24 24"><path d="M6 3.5h12v17l-2-1.4-2 1.4-2-1.4-2 1.4-2-1.4-2 1.4z"/><line x1="9" y1="8.5" x2="15" y2="8.5"/><line x1="9" y1="12" x2="15" y2="12"/><line x1="9" y1="15.5" x2="13" y2="15.5"/></symbol>
+    <symbol id="icon-scroll" viewBox="0 0 24 24"><rect x="5" y="3.5" width="14" height="17" rx="1.5"/><line x1="8" y1="8" x2="16" y2="8"/><line x1="8" y1="11.5" x2="16" y2="11.5"/><line x1="8" y1="15" x2="13" y2="15"/></symbol>
+    <symbol id="icon-calendar" viewBox="0 0 24 24"><rect x="3.5" y="5" width="17" height="15.5" rx="1.5"/><line x1="3.5" y1="9.5" x2="20.5" y2="9.5"/><line x1="8" y1="3" x2="8" y2="7"/><line x1="16" y1="3" x2="16" y2="7"/></symbol>
+    <symbol id="icon-map" viewBox="0 0 24 24"><path d="M9 4.5L4 6.5v13l5-2 6 2 5-2v-13l-5 2z"/><line x1="9" y1="4.5" x2="9" y2="17.5"/><line x1="15" y1="6.5" x2="15" y2="19.5"/><circle cx="12" cy="11.5" r="1.3" fill="currentColor" stroke="none"/></symbol>
+    <symbol id="icon-star" viewBox="0 0 24 24"><path d="M 12.0 2.8 L 14.7 8.28 L 20.75 9.16 L 16.37 13.42 L 17.41 19.44 L 12.0 16.6 L 6.59 19.44 L 7.63 13.42 L 3.25 9.16 L 9.3 8.28 Z"/></symbol>
+    <symbol id="icon-book" viewBox="0 0 24 24"><path d="M12 6c-1.9-1.4-4.2-2-6.8-2-.7 0-1.2.6-1.2 1.2v11.6c0 .7.5 1.2 1.2 1.2 2.6 0 4.9.6 6.8 2 1.9-1.4 4.2-2 6.8-2 .7 0 1.2-.5 1.2-1.2V5.2c0-.7-.5-1.2-1.2-1.2-2.6 0-4.9.6-6.8 2z"/><line x1="12" y1="6" x2="12" y2="19"/></symbol>
+    <symbol id="icon-chart" viewBox="0 0 24 24"><line x1="4" y1="20" x2="20" y2="20"/><rect x="5.5" y="13" width="3.4" height="7"/><rect x="10.3" y="8" width="3.4" height="12"/><rect x="15.1" y="4.5" width="3.4" height="15.5"/></symbol>
+    <symbol id="icon-gear" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3.2"/><path d="M12 3.5v2.3M12 18.2v2.3M20.5 12h-2.3M5.8 12H3.5M18 6l-1.6 1.6M7.6 16.4L6 18M18 18l-1.6-1.6M7.6 7.6L6 6"/></symbol>
+  </defs>
+</svg>
+<nav class="th-desktop-sidebar" aria-label="Main navigation">
+  <a href="/tools/workspace.html" class="th-sidebar-brand">
+    <img src="/images/logo-signature-orange.webp?v=202608142300" alt="">
+    <span>Triple H</span>
+  </a>
+  <div class="th-sidebar-links">
+    <a href="/tools/workspace.html" class="th-sidebar-link"><svg class="th-icon" aria-hidden="true"><use href="#icon-home" xlink:href="#icon-home"></use></svg><span>Dashboard</span></a>
+    <a href="/tools/job-tracker.html" class="th-sidebar-link"><svg class="th-icon" aria-hidden="true"><use href="#icon-wrench" xlink:href="#icon-wrench"></use></svg><span>Job Tracker</span></a>
+    <a href="/tools/finance.html" class="th-sidebar-link"><svg class="th-icon" aria-hidden="true"><use href="#icon-dollar" xlink:href="#icon-dollar"></use></svg><span>Finance</span></a>
+    <a href="/tools/invoice-generator.html" class="th-sidebar-link"><svg class="th-icon" aria-hidden="true"><use href="#icon-receipt" xlink:href="#icon-receipt"></use></svg><span>Invoice Generator</span></a>
+    <a href="/tools/contract-generator.html" class="th-sidebar-link"><svg class="th-icon" aria-hidden="true"><use href="#icon-scroll" xlink:href="#icon-scroll"></use></svg><span>Contract Generator</span></a>
+    <a href="/tools/calendar.html" class="th-sidebar-link"><svg class="th-icon" aria-hidden="true"><use href="#icon-calendar" xlink:href="#icon-calendar"></use></svg><span>Calendar</span></a>
+    <a href="/tools/route-planner.html" class="th-sidebar-link"><svg class="th-icon" aria-hidden="true"><use href="#icon-map" xlink:href="#icon-map"></use></svg><span>Route Planner</span></a>
+    <a href="/tools/review-request.html" class="th-sidebar-link"><svg class="th-icon" aria-hidden="true"><use href="#icon-star" xlink:href="#icon-star"></use></svg><span>Review Requests</span></a>
+    <a href="/tools/parts-reference.html" class="th-sidebar-link"><svg class="th-icon" aria-hidden="true"><use href="#icon-book" xlink:href="#icon-book"></use></svg><span>Appliance Wiki</span></a>
+    <a href="/tools/runway-dashboard.html" class="th-sidebar-link is-active" aria-current="page"><svg class="th-icon" aria-hidden="true"><use href="#icon-chart" xlink:href="#icon-chart"></use></svg><span>Runway Dashboard</span></a>
+    <a href="/tools/settings.html" class="th-sidebar-link"><svg class="th-icon" aria-hidden="true"><use href="#icon-gear" xlink:href="#icon-gear"></use></svg><span>Settings</span></a>
+  </div>
+</nav>
 <a href="#mainContent" class="skip-link">Skip to main content</a>
 
 <div class="help-modal-overlay" id="helpModalOverlay" onclick="if(event.target===this) closeHelpModal()">

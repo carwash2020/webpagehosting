@@ -28,10 +28,56 @@
     { href: '/tools/finance.html',           icon: 'dollar',  label: 'Finance' }
   ];
 
+  // Desktop sidebar (2026-08-20), requested directly: a persistent
+  // left sidebar on desktop, replacing top-tab-only navigation --
+  // styled entirely by the ".th-desktop-sidebar" rules in
+  // styles-tools.css, which only display it at min-width:1024px;
+  // mobile never sees it (the bottom nav above stays exactly as it
+  // was). A fuller destination list than the bottom nav's 5 items,
+  // since the sidebar has real vertical room -- still scoped to
+  // everyday tools, not admin-only pages.
+  var SIDEBAR_DESTS = [
+    { href: '/tools/workspace.html',          icon: 'home',     label: 'Dashboard' },
+    { href: '/tools/job-tracker.html',        icon: 'wrench',   label: 'Job Tracker' },
+    { href: '/tools/finance.html',            icon: 'dollar',   label: 'Finance' },
+    { href: '/tools/invoice-generator.html',  icon: 'receipt',  label: 'Invoice Generator' },
+    { href: '/tools/contract-generator.html', icon: 'scroll',   label: 'Contract Generator' },
+    { href: '/tools/calendar.html',           icon: 'calendar', label: 'Calendar' },
+    { href: '/tools/route-planner.html',      icon: 'map',      label: 'Route Planner' },
+    { href: '/tools/review-request.html',     icon: 'star',     label: 'Review Requests' },
+    { href: '/tools/parts-reference.html',    icon: 'book',     label: 'Appliance Wiki' },
+    { href: '/tools/runway-dashboard.html',   icon: 'chart',    label: 'Runway Dashboard' },
+    { href: '/tools/settings.html',           icon: 'gear',     label: 'Settings' }
+  ];
+
+  function injectSidebar() {
+    document.body.classList.add('th-has-sidebar');
+
+    var sidebar = document.createElement('nav');
+    sidebar.className = 'th-desktop-sidebar';
+    sidebar.setAttribute('aria-label', 'Main navigation');
+    sidebar.innerHTML =
+      '<a href="/tools/workspace.html" class="th-sidebar-brand">' +
+        '<img src="/images/logo-signature-orange.webp?v=202608142300" alt="">' +
+        '<span>Triple H</span>' +
+      '</a>' +
+      '<div class="th-sidebar-links">' +
+      SIDEBAR_DESTS.map(function (d) {
+        var active = path === d.href ? ' is-active' : '';
+        var current = path === d.href ? ' aria-current="page"' : '';
+        return '<a href="' + d.href + '" class="th-sidebar-link' + active + '"' + current + '>' +
+          '<svg class="th-icon" aria-hidden="true"><use href="#icon-' + d.icon + '" xlink:href="#icon-' + d.icon + '"></use></svg>' +
+          '<span>' + d.label + '</span></a>';
+      }).join('') +
+      '</div>';
+    document.body.insertBefore(sidebar, document.body.firstChild);
+  }
+
   function inject() {
     document.body.classList.add('th-tool-page');
     if (onLogin) return;
     document.body.classList.add('th-has-bottomnav');
+    injectSidebar();
 
     var nav = document.createElement('nav');
     nav.className = 'th-bottom-nav';

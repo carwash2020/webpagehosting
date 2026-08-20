@@ -1216,6 +1216,47 @@ body select:focus, body textarea:focus {
 }
 .th-bottom-nav a:active .th-bn-icon { background: var(--bg-panel-2); }
 
+/* ---- desktop sidebar: injected markup, styled here ---- */
+/* Requested directly (2026-08-20): a persistent left sidebar on
+   desktop, replacing top-tab-only navigation. Hidden by default,
+   shown only at min-width:1024px -- mobile is completely unaffected,
+   the bottom nav above still does the job there exactly as before. */
+.th-desktop-sidebar {
+  display: none;
+  position: fixed; left: 0; top: 0; bottom: 0; z-index: 100;
+  width: 240px; overflow-y: auto;
+  background: var(--bg-panel); border-right: 1px solid var(--border);
+  padding: 20px 12px;
+}
+@media (min-width: 1024px) { .th-desktop-sidebar { display: flex; flex-direction: column; gap: 4px; } }
+/* Offsets the main content column to make room for the fixed sidebar
+   above -- same class-boosted-specificity technique already proven
+   for body.th-has-bottomnav's padding offset, so this correctly wins
+   over each page's own bare body{margin:0 auto} rule. */
+@media (min-width: 1024px) { body.th-has-sidebar { margin-left: 240px; } }
+.th-sidebar-brand {
+  display: flex; align-items: center; gap: 10px;
+  padding: 8px 10px 20px; margin-bottom: 8px; border-bottom: 1px solid var(--border);
+  text-decoration: none; color: var(--white);
+  font-family: 'Anton', sans-serif; font-size: 16px; letter-spacing: .5px;
+}
+.th-sidebar-brand img { width: 32px; height: 32px; object-fit: contain; border-radius: 6px; }
+.th-sidebar-links { display: flex; flex-direction: column; gap: 2px; }
+.th-sidebar-link {
+  display: flex; align-items: center; gap: 12px;
+  padding: 10px 12px; border-radius: 10px;
+  text-decoration: none; color: var(--text-dim);
+  font-family: 'Oswald', sans-serif; font-size: 13.5px; font-weight: 500; letter-spacing: .2px;
+  transition: color .15s ease, background .15s ease;
+}
+.th-sidebar-link .th-icon { width: 18px; height: 18px; flex-shrink: 0; }
+.th-sidebar-link:hover { background: var(--bg-panel-2); color: var(--text); }
+.th-sidebar-link.is-active {
+  background: var(--orange-tint-soft); color: var(--orange-light);
+  box-shadow: inset 0 0 0 1px var(--orange-tint-border);
+}
+@media (prefers-reduced-motion: reduce) { .th-sidebar-link { transition: none; } }
+
 /* ---- reduced motion ---- */
 @media (prefers-reduced-motion: reduce) {
   body .tool-tile-link, body .dash-list-item, body .tab-btn::after,

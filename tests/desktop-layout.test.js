@@ -37,7 +37,7 @@ test('every standard tool page has a min-width:1024px media query widening its c
 
 test('runway-dashboard.html, which uses 3 separate max-width selectors instead of one body rule, has all 3 widened together in a single desktop media query', () => {
   const src = fs.readFileSync(path.join(TOOLS_DIR, 'runway-dashboard.html'), 'utf8');
-  assert.match(src, /@media \(min-width: 1024px\) \{ header, \.tabs, main \{ max-width: \d+px; \} \}/);
+  assert.match(src, /@media \(min-width: 1024px\) \{ header, \.tabs, main \{ max-width: \d+px; margin-left: \d+px; \} \}/);
 });
 
 test('finance.html and parts-reference.html, which previously had NO container width constraint at all, now have one added -- but only on desktop, leaving mobile completely unaffected', () => {
