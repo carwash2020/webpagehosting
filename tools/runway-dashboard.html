@@ -1904,7 +1904,7 @@ function drawTrendChart(nets, min){
   // bar's own height/width so a very short bar (barH < radius*2) still
   // draws a valid rounded rect instead of a self-intersecting path.
   function roundedTopRect(ctx, x, y, width, height, radius) {
-    const r = Math.min(radius, height / 2, width / 2);
+    const r = Math.max(0, Math.min(radius, height / 2, width / 2));
     ctx.beginPath();
     ctx.moveTo(x, y + height);
     ctx.lineTo(x, y + r);
@@ -1920,7 +1920,7 @@ function drawTrendChart(nets, min){
     const x = padding.left + i * barW + barW * 0.15;
     const bw = barW * 0.7;
     const y = n.y >= 0 ? zeroY - barH : zeroY;
-    const h = barH || 1;
+    const h = Math.max(barH, 1);
 
     const gradient = ctx.createLinearGradient(0, y, 0, y + h);
     if (n.y >= 0) {
@@ -1993,11 +1993,19 @@ function drawRevCostChart(sortedMonths) {
   }));
   const maxVal = Math.max(...points.map(p => Math.max(p.revenue, p.costs)), 1);
   const groupW = plotW / points.length;
-  const barW = Math.min(groupW * 0.36, 26);
+  // Bug fix (2026-08-20): no floor here previously, unlike revH/costH
+  // just below (which already use Math.max(...,1)) -- if this canvas
+  // is hidden (clientWidth 0) when it draws, which happens for any
+  // non-active tab's chart during initial page load, plotW/groupW cascade
+  // negative, and this had nothing stopping it from following suit.
+  const barW = Math.max(Math.min(groupW * 0.36, 26), 1);
   const gap = 3;
 
   function roundedTopRect(x, y, width, height, radius) {
-    const r = Math.min(radius, height / 2, width / 2);
+    // Defense in depth alongside the barW fix above: never let a
+    // negative width/height (from some other, unanticipated path)
+    // produce a negative radius here, which is what crashed arcTo.
+    const r = Math.max(0, Math.min(radius, height / 2, width / 2));
     ctx.beginPath();
     ctx.moveTo(x, y + height);
     ctx.lineTo(x, y + r);
