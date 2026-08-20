@@ -44,6 +44,17 @@
     --green:#3ac96a;
     --red:#e0554d;
     --radius:10px;
+    /* Added (2026-08-20) for the tour's copied CSS below -- new names
+       only, none collide with or change anything already used on this
+       page. See the comment above .onboarding-card for the full
+       explanation of why these rules are copied here rather than
+       loading the shared stylesheet. */
+    --bg-panel-2:#1c1c1c;
+    --bg-panel-3:#242424;
+    --border:#2a2a2a;
+    --white:#ffffff;
+    --orange-tint-border: rgba(255,128,0,0.3);
+    --orange-tint-glow: rgba(255,128,0,0.12);
   }
   *{box-sizing:border-box;}
   body{margin:0;background:var(--bg);color:var(--text);font-family:'Inter', -apple-system, 'Segoe UI', sans-serif;font-weight:400;-webkit-font-smoothing:antialiased;}
@@ -56,6 +67,55 @@
   *::-webkit-scrollbar-track{background:transparent;}
   *::-webkit-scrollbar-thumb{background:var(--border);border-radius:8px;border:2px solid transparent;background-clip:padding-box;}
   *::-webkit-scrollbar-thumb:hover{background:var(--orange-dark);background-clip:padding-box;}
+
+  /* App tour styling, copied from styles-tools.css (2026-08-20) --
+     same reasoning as the scrollbar fix in the comment above: this
+     page is deliberately self-contained and never loads the shared
+     stylesheet, so it never inherited these rules either. Copied
+     rather than linked to avoid 26 confirmed class-name collisions
+     with this page's own styles (.tabs, .card, .stat-box, etc.) --
+     CSS overriding works per-property, not per-rule, so linking the
+     whole file would leak unintended properties through wherever this
+     page's own rule doesn't redeclare every property the shared one
+     sets (confirmed directly: .tabs picked up an unwanted
+     border-radius this way before this fix). */
+  .onboarding-card {
+    position: fixed; left: 16px; right: 16px; bottom: 16px; z-index: 800;
+    max-width: 420px; margin: 0 auto;
+    background: linear-gradient(180deg, var(--bg-panel-3), var(--bg-panel-2));
+    border: 1px solid var(--orange-tint-border); border-radius: 16px;
+    padding: 16px 18px; box-shadow: 0 -4px 30px rgba(0,0,0,.5), 0 0 30px -8px var(--orange-tint-glow);
+    animation: onboardingSlideUp .3s cubic-bezier(.2,.8,.2,1);
+  }
+  @keyframes onboardingSlideUp { from { transform: translateY(16px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+  @media (prefers-reduced-motion: reduce) { .onboarding-card { animation: none; } }
+  .onboarding-dots { display: flex; gap: 5px; margin-bottom: 10px; }
+  .onboarding-dots span { width: 6px; height: 6px; border-radius: 50%; background: var(--border); }
+  .onboarding-dots span.is-active { background: var(--orange); width: 16px; border-radius: 3px; }
+  .onboarding-title { font-family: 'Oswald', sans-serif; color: var(--white); font-size: 16px; margin-bottom: 4px; }
+  .onboarding-body { color: var(--text-dim); font-size: 13.5px; line-height: 1.5; margin-bottom: 14px; }
+  .onboarding-actions { display: flex; justify-content: space-between; align-items: center; gap: 10px; }
+  .onboarding-skip, .onboarding-back { background: none; border: none; color: var(--text-dim); font-size: 13px; cursor: pointer; padding: 8px 4px; }
+  .onboarding-skip:hover, .onboarding-back:hover { color: var(--white); }
+  .onboarding-actions-left { display: flex; gap: 4px; align-items: center; }
+  .th-tour-highlight {
+    outline: 2px solid var(--orange); outline-offset: 3px; border-radius: 8px;
+    animation: tourHighlightPulse 1.6s ease-in-out infinite;
+    position: relative; z-index: 700;
+  }
+  @keyframes tourHighlightPulse {
+    0%, 100% { box-shadow: 0 0 0 0 var(--orange-tint-glow); }
+    50% { box-shadow: 0 0 0 8px var(--orange-tint-glow); }
+  }
+  @media (prefers-reduced-motion: reduce) { .th-tour-highlight { animation: none; } }
+  .primary-btn {
+    background: linear-gradient(135deg, var(--orange-light), var(--orange) 60%, var(--orange-dark));
+    color: #1a0d02; font-weight: 700; font-family:'Oswald',sans-serif; font-size: 14.5px;
+    border: none; border-radius: 8px; padding: 11px 22px; cursor: pointer;
+    transition: box-shadow .18s ease, transform .12s ease, filter .18s ease;
+  }
+  .primary-btn:hover { box-shadow: 0 0 16px rgba(255,128,0,0.4); transform: translateY(-1px); filter: brightness(1.04); }
+  .primary-btn:active { transform: translateY(0); filter: brightness(0.97); }
   h1,h2,h3{font-family:'Anton',sans-serif;font-weight:400;letter-spacing:0.5px;margin:0;}
   header{padding:20px 20px 0;max-width:900px;margin:0 auto;}
   header h1{font-size:22px;color:var(--orange-light);text-transform:uppercase;}
@@ -2395,40 +2455,15 @@ document.getElementById('resetAllBtn').addEventListener('click', async () => {
 
 loadAll();
 document.addEventListener('DOMContentLoaded', async () => {
-    // Temporary diagnostic trace (2026-08-20), added after a direct
-    // screen recording confirmed the tour card genuinely never renders
-    // on this page (not delayed, not briefly shown then hidden) with
-    // no error at all -- and a direct simulation of the same scenario
-    // couldn't reproduce it. Matches the exact approach that
-    // successfully found the real root cause on invoice-generator.html
-    // earlier this session. Safe to remove once the real cause is found.
-    const __traceLog = [];
-    function __trace(msg) {
-      __traceLog.push('[' + new Date().toLocaleTimeString() + '] ' + msg);
-      let panel = document.getElementById('__diagTracePanel');
-      if (!panel) {
-        panel = document.createElement('div');
-        panel.id = '__diagTracePanel';
-        panel.style.cssText = 'position:fixed; left:8px; right:8px; top:8px; z-index:99999; background:#0a0a0a; border:2px solid #ffb020; border-radius:8px; padding:10px 12px; color:#ffd580; font-size:11px; font-family:monospace; white-space:pre-wrap; max-height:40vh; overflow-y:auto;';
-        document.body.appendChild(panel);
-      }
-      panel.textContent = 'DIAGNOSTIC TRACE -- screenshot this box\n' + __traceLog.join('\n');
-    }
-    __trace('DOMContentLoaded fired. th_app_tour_step=' + localStorage.getItem('th_app_tour_step') + ', pathname=' + window.location.pathname);
     try {
-  __trace('calling initAppTour(), typeof=' + typeof initAppTour);
   initAppTour();
-  __trace('initAppTour() returned -- card in DOM: ' + !!document.getElementById('appTourCard'));
   if(typeof pullSync === 'function'){
-    __trace('calling pullSync()');
     const result = await pullSync(); // refreshes th_ AND rd_ keys from the shared blob
-    __trace('pullSync() resolved, ok=' + (result && result.ok) + ' -- card in DOM: ' + !!document.getElementById('appTourCard'));
     if(result && result.ok){
       // Personal/business data may have just changed under us (e.g. logged
       // from another device) -- reload from storage and re-render everything,
       // not just re-read Job Tracker's data.
       await loadAll();
-      __trace('loadAll() (post-sync) resolved -- card in DOM: ' + !!document.getElementById('appTourCard'));
     }
   }
   if(typeof startRealtimeSync === 'function'){
@@ -2436,9 +2471,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   } else {
     updateJobTrackerBadge('unavailable');
   }
-  __trace('init try block completed without throwing -- card in DOM: ' + !!document.getElementById('appTourCard'));
   } catch (initError) {
-    __trace('CAUGHT ERROR: ' + (initError && initError.message));
     try {
         showInitErrorBanner('Runway Dashboard', initError);
       } catch (bannerError) {
