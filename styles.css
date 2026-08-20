@@ -241,6 +241,7 @@
     display:flex;
     align-items:center;
     gap:12px;
+    flex-shrink:0;
   }
   .brand img{height:44px; width:44px; object-fit:contain;}
   .brand-name{
@@ -249,6 +250,7 @@
     letter-spacing:1px;
     color:#ffffff;
     line-height:1.1;
+    white-space:nowrap;
   }
   .brand-name span{
     display:block;
@@ -258,6 +260,7 @@
     letter-spacing:2px;
     color:var(--orange);
     margin-top:2px;
+    white-space:nowrap;
   }
 
   .nav-links{
