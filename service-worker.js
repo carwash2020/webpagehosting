@@ -64,7 +64,15 @@
 // immediately after logging. Still bumping this so that fix reaches
 // devices without needing yet another round-trip to explain why it
 // didn't show up.
-const CACHE_NAME = 'th-workspace-v11';
+// Bumped again (2026-08-20): light mode for the internal tools app,
+// tucked into Settings -- 17 HTML pages changed (the anti-flash theme
+// snippet on all of them, plus the toggle itself on settings.html and
+// its own separate light override on runway-dashboard.html). Also
+// fixing a genuine, pre-existing gap found while already touching this
+// list: settings.html itself was never added to the precache list at
+// all, unlike every other real app page -- same class of oversight
+// already documented and fixed twice above for other pages.
+const CACHE_NAME = 'th-workspace-v12';
 const PRECACHE_URLS = [
   '/tools/workspace.html', '/tools/job-tracker.html', '/tools/invoice-generator.html', '/tools/contract-generator.html',
   '/tools/calendar.html', '/tools/route-planner.html', '/tools/review-request.html', '/tools/contact-card.html',
@@ -79,6 +87,9 @@ const PRECACHE_URLS = [
   // structural rework's Client/Job Detail views and the Finance split)
   // existed live but were never added here either.
   '/tools/finance.html', '/tools/client-detail.html', '/tools/job-detail.html',
+  // Added 2026-08-20 -- same gap yet again, found while already
+  // touching this list for the light-mode work above.
+  '/tools/settings.html',
   // Bug fix (2026-08-20): tools-common.js no longer exists -- it was
   // split into 4 focused files (structural item #42). cache.addAll()
   // fails ATOMICALLY: if even one URL in this list 404s, NONE of the
