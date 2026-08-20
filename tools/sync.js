@@ -44,6 +44,49 @@
 // SUPABASE_URL and SUPABASE_ANON_KEY are declared in auth.js, which
 // loads before this file on every page that uses sync.js. Not
 // re-declared here to avoid a duplicate-const error.
+// Site audit improvement #5 (2026-08-20): a reusable debug-trace
+// utility, replacing the diagnostic panel pattern hand-built from
+// scratch twice this past week (invoice-generator.html,
+// runway-dashboard.html) to track down hard-to-reproduce issues.
+// Placed here specifically -- sync.js is one of only two files
+// (alongside auth.js) genuinely loaded on every single tool page,
+// including runway-dashboard.html, which is deliberately self-
+// contained and doesn't load most of the other shared scripts. That
+// was exactly the page where a one-off trace had to be hand-built
+// this week; this makes the same capability available everywhere
+// without writing it again.
+//
+// Usage: add ?debug=1 to any tool page's URL once -- the flag
+// persists in sessionStorage from then on, so a multi-step flow (like
+// the app tour moving across several pages) can be traced end to end
+// without needing to re-add the query param on every navigation.
+// Then call debugTrace('some message') anywhere in that page's own
+// code. Anchored to the TOP of the screen specifically, not the
+// bottom -- a bottom-anchored version of this exact idea once ended
+// up covering the very thing it was built to help diagnose (a real
+// mistake made and fixed on Runway Dashboard earlier this session).
+function isDebugModeOn() {
+  try {
+    if (new URLSearchParams(window.location.search).get('debug') === '1') {
+      sessionStorage.setItem('th_debug_mode', '1');
+    }
+    return sessionStorage.getItem('th_debug_mode') === '1';
+  } catch (e) { return false; }
+}
+
+function debugTrace(msg) {
+  if (!isDebugModeOn()) return;
+  let panel = document.getElementById('__debugTracePanel');
+  if (!panel) {
+    panel = document.createElement('div');
+    panel.id = '__debugTracePanel';
+    panel.style.cssText = 'position:fixed; left:8px; right:8px; top:8px; z-index:99999; background:#0a0a0a; border:2px solid #ffb020; border-radius:8px; padding:10px 12px; color:#ffd580; font-size:11px; font-family:monospace; white-space:pre-wrap; max-height:40vh; overflow-y:auto;';
+    document.body.appendChild(panel);
+    panel.textContent = 'DEBUG TRACE (?debug=1) -- screenshot this box\n';
+  }
+  panel.textContent += '[' + new Date().toLocaleTimeString() + '] ' + msg + '\n';
+}
+
 const SYNC_TABLE = 'workspace_sync';
 
 const SYNC_DATA_KEYS = [
