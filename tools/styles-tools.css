@@ -860,13 +860,26 @@ td { padding: 10px 8px; font-size: 14px; color: var(--white); border-bottom: 1px
    ========================================================================== */
 
 /* ---- global feel: rounder, deeper, ambient ---- */
-body.th-tool-page {
-  /* layered ambient light instead of a flat void -- immediately visible */
+/* Bug fix (2026-08-20): this used to live on body.th-tool-page itself
+   -- the same element the page's own max-width constraint applies to.
+   Widening that container for the desktop layout work shifted where
+   this gradient (fixed rem-based size, percentage-based position)
+   landed relative to the visible content, and left the margin area
+   outside max-width with no background at all (visible black bars in
+   a screenshot). Moved to html, which is never width-constrained, so
+   this now always spans the full window consistently regardless of
+   how wide the content column itself is. body's own background below
+   is now transparent so this shows through everywhere, including
+   within the content column, not just in the margins. */
+html {
   background-image:
     radial-gradient(90rem 42rem at 8% -12%, rgba(255,128,0,.07), transparent 60%),
     radial-gradient(70rem 40rem at 108% 8%, rgba(58,160,255,.045), transparent 55%),
     linear-gradient(var(--bg), var(--bg));
   background-attachment: fixed;
+}
+body.th-tool-page {
+  background: transparent;
 }
 /* Item #1: barely-there grain texture -- an inline SVG feTurbulence
    noise tile, alpha reduced to ~3% via feComponentTransfer so it reads
