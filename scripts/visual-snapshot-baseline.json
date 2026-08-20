@@ -1,0 +1,25 @@
+{
+  "public site: header (backdrop-filter must live on ::before, not the sticky element itself -- the WebKit ghosting bug)": {
+    "headerItselfHasBackdropFilter": false,
+    "headerBeforeHasBackdropFilter": true
+  },
+  "public site: footer brand name (must use the theme-aware --white variable, not hardcoded white -- the invisible-in-light-mode bug)": {
+    "color": "var(--white)"
+  },
+  "public site: header brand name (deliberately stays hardcoded white -- the header background never changes with theme)": {
+    "color": "rgb(255, 255, 255)",
+    "whiteSpace": "nowrap"
+  },
+  "public site: logo/brand block (must never shrink below its natural width -- the subtitle-wrapping bug)": {
+    "flexShrink": "0"
+  },
+  "public site: hours list row (must be a real flex row with a gap -- the \"Mon7:00 AM\" zero-space bug)": {
+    "display": "flex",
+    "gap": "10px"
+  },
+  "internal tools: app tour card (must be position:fixed with a real background -- the invisible-tour-card bug, twice)": {
+    "position": "fixed",
+    "zIndex": "800",
+    "hasBackground": true
+  }
+}
