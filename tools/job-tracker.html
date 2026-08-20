@@ -97,6 +97,41 @@
   body.is-compact-density .job-card-swipe-inner { padding: 10px 14px; }
   body.is-compact-density .job-card { margin-bottom: 6px; }
   body.is-compact-density .job-card-notes { display: none; }
+  /* ---- desktop board/table view (2026-08-20), requested directly ----
+     Hidden by default, shown only at min-width:1024px -- mobile's card
+     list above is completely unaffected. */
+  .jobs-table-wrap {
+    display: none;
+    border: 1px solid var(--border); border-radius: var(--radius);
+    overflow: auto;
+    box-shadow: 0 3px 12px rgba(0,0,0,0.18), 0 1px 3px rgba(0,0,0,0.12);
+  }
+  @media (min-width: 1024px) { .jobs-table-wrap { display: block; } }
+  .jobs-table { width: 100%; border-collapse: collapse; font-size: 13.5px; }
+  .jobs-table thead th {
+    position: sticky; top: 0; z-index: 2;
+    background: var(--bg-panel-2); color: var(--text-dim);
+    text-align: left; font-family: 'Oswald', sans-serif; font-weight: 600;
+    font-size: 11.5px; text-transform: uppercase; letter-spacing: .5px;
+    padding: 12px 14px; border-bottom: 1px solid var(--border); white-space: nowrap;
+  }
+  .jobs-table thead th.is-sortable { cursor: pointer; user-select: none; }
+  .jobs-table thead th.is-sortable:hover { color: var(--text); }
+  .jobs-table thead th.is-sortable::after { content: ''; display: inline-block; width: 12px; }
+  .jobs-table thead th.is-sorted::after { content: '\2191'; }
+  .jobs-table thead th.is-sorted.is-sorted-desc::after { content: '\2193'; }
+  .jobs-table tbody td {
+    padding: 12px 14px; border-bottom: 1px solid var(--border);
+    color: var(--text); vertical-align: middle; white-space: nowrap;
+  }
+  .jobs-table tbody tr:last-child td { border-bottom: none; }
+  .jobs-table tbody tr:hover td { background: var(--bg-panel-2); }
+  .jobs-table tbody tr.is-done td { opacity: 0.55; }
+  .jt-title-cell { max-width: 260px; overflow: hidden; text-overflow: ellipsis; }
+  .jt-title-link { color: var(--white); text-decoration: none; font-weight: 600; }
+  .jt-title-link:hover { color: var(--orange-light); }
+  .jt-actions-cell { display: flex; gap: 6px; }
+
   .job-bulk-action-bar {
     display: flex; align-items: center; justify-content: space-between; gap: 12px;
     background: var(--bg-panel-2); border: 1px solid var(--orange-tint-border); border-radius: 10px;
@@ -346,6 +381,24 @@
   </div>
 
   <div id="jobsList"></div>
+  <div id="jobsTableWrap" class="jobs-table-wrap">
+    <table class="jobs-table">
+      <thead>
+        <tr>
+          <th class="is-sortable" data-sort-key="title">Job</th>
+          <th>Client</th>
+          <th class="is-sortable" data-sort-key="status">Status</th>
+          <th class="is-sortable" data-sort-key="priority">Priority</th>
+          <th class="is-sortable" data-sort-key="date">Date</th>
+          <th>Phone</th>
+          <th>Address</th>
+          <th>Margin</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody id="jobsTableBody"></tbody>
+    </table>
+  </div>
 </div>
 
 <!-- CONTACTS TAB -->
@@ -1253,6 +1306,7 @@
     }
 
     const container = document.getElementById('jobsList');
+    const tableBody = document.getElementById('jobsTableBody');
     // Item #1 (2026-08-18): loaded once per render rather than per-card
     // -- computeJobMargin() itself is cheap, but there's no reason to
     // re-parse these three localStorage keys once per job card when one
@@ -1267,23 +1321,26 @@
     const marginManualIncome = thRead(TH_KEYS.income, []).filter(e => e.origin !== 'invoice');
     if (jobs.length === 0) {
       const totalJobsEverAdded = loadJobs().length;
+      let emptyHtml;
       if (searchTerm) {
-        container.innerHTML = '<div class="empty-state"><svg class="th-icon" aria-hidden="true"><use href="#icon-search" xlink:href="#icon-search"></use></svg> No jobs match "' + escapeHtml(searchTerm) + '".</div>';
+        emptyHtml = '<div class="empty-state"><svg class="th-icon" aria-hidden="true"><use href="#icon-search" xlink:href="#icon-search"></use></svg> No jobs match "' + escapeHtml(searchTerm) + '".</div>';
       } else if (totalJobsEverAdded > 0) {
         // Item #6 (2026-08-16): this used to say "No jobs yet -- add one
         // above" even when jobs clearly exist, just none match the
         // current status tab (e.g. clicking "Completed" before anything
         // is done). That's a filtered view, not a first-run state, and
         // deserves its own message.
-        container.innerHTML = '<div class="empty-state"><svg class="th-icon" aria-hidden="true"><use href="#icon-check-circle" xlink:href="#icon-check-circle"></use></svg> No jobs in this view. <a href="#" onclick="setStatusFilter(\'all\'); return false;" style="color:var(--orange-light);">Show all jobs</a></div>';
+        emptyHtml = '<div class="empty-state"><svg class="th-icon" aria-hidden="true"><use href="#icon-check-circle" xlink:href="#icon-check-circle"></use></svg> No jobs in this view. <a href="#" onclick="setStatusFilter(\'all\'); return false;" style="color:var(--orange-light);">Show all jobs</a></div>';
       } else {
-        container.innerHTML = '<div class="empty-state empty-state-first-run">' +
+        emptyHtml = '<div class="empty-state empty-state-first-run">' +
           '<svg class="th-icon" aria-hidden="true" style="width:64px; height:64px; opacity:1; margin-bottom:14px;"><use href="#icon-first-job" xlink:href="#icon-first-job"></use></svg>' +
           '<div style="font-size:16px; color:var(--white); font-family:\'Oswald\',sans-serif; margin-bottom:6px;">No jobs yet</div>' +
           '<div style="margin-bottom:16px;">Add your first one above to start tracking work, costs, and photos.</div>' +
           '<button class="primary-btn" onclick="document.getElementById(\'jobTitle\')?.scrollIntoView({behavior:\'smooth\', block:\'center\'}); document.getElementById(\'jobTitle\')?.focus();">+ Add Your First Job</button>' +
           '</div>';
       }
+      container.innerHTML = emptyHtml;
+      tableBody.innerHTML = '<tr><td colspan="9">' + emptyHtml + '</td></tr>';
       return;
     }
 
@@ -1330,6 +1387,66 @@
         </div>`;
     }).join('');
     justAddedJobId = null;
+
+    const tableJobs = applyTableSort(jobs);
+    tableBody.innerHTML = tableJobs.map(job => {
+      const isDone = job.status === 'done';
+      const margin = isDone ? computeJobMargin(job, marginInvoices, marginExpenses, marginManualIncome) : null;
+      const marginCellHtml = (margin && margin.hasInvoice)
+        ? `<span class="badge" style="background:${margin.margin >= 0 ? 'rgba(76,175,80,0.15)' : 'rgba(224,82,82,0.15)'}; color:${margin.margin >= 0 ? '#6fcf97' : '#e0807a'};">${margin.margin >= 0 ? '+' : ''}${money(margin.margin)}</span>`
+        : '&mdash;';
+      const dateDisplay = job.date ? new Date(job.date + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '&mdash;';
+      return `
+        <tr class="${isDone ? 'is-done' : ''}" data-job-id="${job.id}">
+          <td class="jt-title-cell">${personDot(job.lastEditedBy, 'Last edited by')}<a href="/tools/job-detail.html?id=${job.id}" class="jt-title-link">${escapeHtml(job.title)}</a>${warrantyBadgeHtml(job)}</td>
+          <td>${job.client ? escapeHtml(job.client) : '&mdash;'}</td>
+          <td><span class="badge badge-status status-${job.status}">${STATUS_LABEL[job.status]}</span></td>
+          <td><span class="badge badge-${job.priority}">${job.priority}</span></td>
+          <td>${dateDisplay}</td>
+          <td>${job.phone ? escapeHtml(job.phone) : '&mdash;'}</td>
+          <td>${job.address ? escapeHtml(job.address) : '&mdash;'}</td>
+          <td>${marginCellHtml}</td>
+          <td class="jt-actions-cell">
+            <button class="small-btn" onclick="editJob(${job.id})">Edit</button>
+            <button class="small-btn danger" onclick="deleteJob(${job.id})">Delete</button>
+          </td>
+        </tr>`;
+    }).join('');
+  }
+
+  // Desktop table sort (2026-08-20), requested directly: clickable
+  // column headers, separate from the mobile card list's own sort
+  // (currentSort/sortJobs above) since this is a new, desktop-specific
+  // interaction -- clicking a header here doesn't change what order
+  // the phone's card list shows.
+  let tableSortKey = null;
+  let tableSortDir = 1;
+  function applyTableSort(jobs) {
+    if (!tableSortKey) return jobs;
+    const copy = [...jobs];
+    copy.sort((a, b) => {
+      let av, bv;
+      if (tableSortKey === 'priority') { av = PRIORITY_RANK[a.priority]; bv = PRIORITY_RANK[b.priority]; }
+      else if (tableSortKey === 'date') { av = a.date ? new Date(a.date).getTime() : 0; bv = b.date ? new Date(b.date).getTime() : 0; }
+      else { av = (a[tableSortKey] || '').toString().toLowerCase(); bv = (b[tableSortKey] || '').toString().toLowerCase(); }
+      if (av < bv) return -1 * tableSortDir;
+      if (av > bv) return 1 * tableSortDir;
+      return 0;
+    });
+    return copy;
+  }
+  function setTableSort(key) {
+    if (tableSortKey === key) { tableSortDir *= -1; } else { tableSortKey = key; tableSortDir = 1; }
+    document.querySelectorAll('.jobs-table th.is-sortable').forEach(th => {
+      th.classList.toggle('is-sorted', th.dataset.sortKey === tableSortKey);
+      th.classList.toggle('is-sorted-desc', th.dataset.sortKey === tableSortKey && tableSortDir === -1);
+    });
+    renderJobs();
+  }
+  function initJobsTableSort() {
+    document.querySelectorAll('.jobs-table th.is-sortable').forEach(th => {
+      th.addEventListener('click', () => setTableSort(th.dataset.sortKey));
+    });
   }
 
   // Item #9 (2026-08-17): long-press a job card for Mark Done / Edit /
@@ -1930,6 +2047,7 @@
       renderJobs();
       initJobCardLongPress();
       wireSearchClear('jobSearch', renderJobs);
+      initJobsTableSort();
       wireSearchClear('contactSearch', renderContacts);
       wireSearchClear('noteSearch', renderNotesList);
       attachVoiceDictation('jobNotes', 'jobNotesMicBtn');
