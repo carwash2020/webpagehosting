@@ -741,6 +741,15 @@
   footer{background:var(--bg-panel); border-top:1px solid var(--border); padding:48px 0 28px;}
   .footer-grid{display:grid; grid-template-columns:1.4fr 1fr 1fr 1fr; gap:32px; margin-bottom:36px;}
   .footer-brand{display:flex; align-items:center; gap:12px; margin-bottom:14px;}
+  /* Bug fix (2026-08-20), found from a direct screenshot pair: white-
+     on-white in light mode. .brand-name is shared with the header,
+     where the background is always hardcoded dark regardless of
+     theme (so hardcoded white text there is correct and safe) -- but
+     the footer's own background correctly flips via var(--bg-panel),
+     and .brand-name's hardcoded #ffffff never flips to match. Scoped
+     here rather than changing the shared rule, which would break the
+     always-dark header instead. */
+  .footer-brand .brand-name{color:var(--white);}
   .footer-brand img{height:38px; width:38px; object-fit:contain;}
   .footer-tagline{color:var(--text); font-size:13.5px; letter-spacing:1px; text-transform:uppercase;}
   .social-links{display:flex; gap:10px; margin-top:16px;}

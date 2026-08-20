@@ -216,3 +216,33 @@ test('the fix actually resolves correctly end to end against the real page, not 
   assert.equal(window.getComputedStyle(brand).flexShrink, '0');
   assert.equal(window.getComputedStyle(subtitle).whiteSpace, 'nowrap');
 });
+
+// Bug fix (2026-08-20), found from a direct screenshot pair showing
+// "TRIPLE H ENTERPRISES" completely invisible in light mode --
+// white-on-white. .brand-name is shared with the header, where the
+// background is always hardcoded dark regardless of theme (so
+// hardcoded white text there is correct and safe) -- but the footer's
+// own background correctly flips via var(--bg-panel), and
+// .brand-name's hardcoded #ffffff never flipped to match.
+
+test('.footer-brand .brand-name overrides the shared .brand-name rule to use the theme-aware --white variable, without changing the header (which stays hardcoded white on purpose, since its background never changes with theme)', () => {
+  const css = fs.readFileSync(STYLES_CSS_PATH, 'utf8');
+  const footerOverride = css.match(/\.footer-brand \.brand-name\{([^}]*)\}/);
+  assert.ok(footerOverride, '.footer-brand .brand-name override not found');
+  assert.match(footerOverride[1], /color:\s*var\(--white\)/);
+
+  // The shared .brand-name rule (used by the header) should remain
+  // untouched -- still hardcoded white, since the header's own
+  // background never changes with theme.
+  const sharedRule = css.match(/(?<!-brand )\.brand-name\{([^}]*)\}/);
+  assert.match(sharedRule[1], /color:\s*#ffffff/, 'the shared .brand-name rule should stay hardcoded white for the header');
+});
+
+test('--white is defined in both the dark (default) and light theme overrides, with genuinely different values', () => {
+  const css = fs.readFileSync(STYLES_CSS_PATH, 'utf8');
+  const rootBlock = css.match(/:root\s*\{([^}]*)\}/)[1];
+  const lightBlock = css.match(/\[data-theme="light"\]\s*\{([^}]*)\}/)[1];
+  const rootWhite = rootBlock.match(/--white:\s*(#[0-9a-f]+)/i)[1];
+  const lightWhite = lightBlock.match(/--white:\s*(#[0-9a-f]+)/i)[1];
+  assert.notEqual(rootWhite.toLowerCase(), lightWhite.toLowerCase(), '--white should genuinely flip between themes, not stay the same value');
+});
