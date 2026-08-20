@@ -178,3 +178,41 @@ test('the hours list actually renders with visible separation end to end, verifi
   const gap = parseFloat(window.getComputedStyle(row).gap);
   assert.ok(gap > 0, 'the day and time value should have a real, non-zero gap between them');
 });
+
+// Bug fix (2026-08-20), found from a direct screenshot showing the
+// subtitle ("Handyman and Appliance Repair") wrapping across 3 lines
+// and visually colliding with the "Services" nav link. .brand had no
+// flex-shrink:0, so on a real desktop width with a full nav (8 links
+// plus phone, button, and toggle), the flex row shrank the logo block
+// below its natural width -- with no white-space:nowrap on the
+// subtitle, that narrower space made it wrap instead of staying on
+// one line.
+
+test('the logo/brand block cannot shrink below its natural width, and its title and subtitle can never wrap to multiple lines', () => {
+  const css = fs.readFileSync(STYLES_CSS_PATH, 'utf8');
+  const brandRule = css.match(/\.brand\{([^}]*)\}/)[1];
+  assert.match(brandRule, /flex-shrink:\s*0/, '.brand should never shrink below its natural width');
+  const brandNameRule = css.match(/\.brand-name\{([^}]*)\}/)[1];
+  assert.match(brandNameRule, /white-space:\s*nowrap/, '.brand-name (the title) should never wrap');
+  const subtitleRule = css.match(/\.brand-name span\{([^}]*)\}/)[1];
+  assert.match(subtitleRule, /white-space:\s*nowrap/, '.brand-name span (the subtitle) should never wrap');
+});
+
+test('the fix actually resolves correctly end to end against the real page, not just that the CSS text looks plausible', async () => {
+  const { JSDOM } = require('jsdom');
+  const html = fs.readFileSync(INDEX_HTML_PATH, 'utf8');
+  const css = fs.readFileSync(STYLES_CSS_PATH, 'utf8');
+  const dom = new JSDOM(html, { runScripts: 'dangerously', url: 'https://example.com/', pretendToBeVisual: true });
+  const { window } = dom;
+  window.matchMedia = () => ({ matches: false, addEventListener: () => {} });
+  window.fetch = () => Promise.resolve({ ok: true, json: () => Promise.resolve({}) });
+  const styleEl = window.document.createElement('style');
+  styleEl.textContent = css;
+  window.document.head.appendChild(styleEl);
+  await new Promise(resolve => setTimeout(resolve, 100));
+
+  const brand = window.document.querySelector('.brand');
+  const subtitle = window.document.querySelector('.brand-name span');
+  assert.equal(window.getComputedStyle(brand).flexShrink, '0');
+  assert.equal(window.getComputedStyle(subtitle).whiteSpace, 'nowrap');
+});
