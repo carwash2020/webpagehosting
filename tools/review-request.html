@@ -649,11 +649,6 @@
   if (params.get('job')) document.getElementById('jobDesc').value = params.get('job');
   if (params.get('phone')) document.getElementById('custPhone').value = formatPhoneStatic(params.get('phone'));
 
-  updatePreviewAndLink();
-  renderRecentJobs();
-  renderPendingReminders();
-  renderSentLog();
-
   function copyMessage() {
     const message = buildMessage();
     navigator.clipboard.writeText(message).then(() => {
@@ -678,11 +673,34 @@
 
   document.addEventListener('DOMContentLoaded', () => {
     try {
+    // Moved here (2026-08-20) from top-level calls earlier in this
+    // script -- all 4 reference escapeHtml(), which only exists in a
+    // deferred script, and per the HTML spec every inline script runs
+    // before any deferred one -- calling these at top level meant they
+    // threw deterministically on every real page load, before this
+    // very addEventListener call could even execute. Same root-cause
+    // bug class just found and fixed on invoice-generator.html and
+    // route-planner.html.
+    updatePreviewAndLink();
+    renderRecentJobs();
+    renderPendingReminders();
+    renderSentLog();
     initAppTour();
     renderQR('googleQrCard', GOOGLE_REVIEW_LINK);
     renderQR('yelpQrCard', YELP_REVIEW_LINK);
   } catch (initError) {
-    showInitErrorBanner('Review Request', initError);
+    try {
+        showInitErrorBanner('Review Request', initError);
+      } catch (bannerError) {
+        // showInitErrorBanner itself is unavailable (e.g.
+        // tools-nav-pwa.js failed to load) -- fall back to a
+        // minimal banner using only built-in DOM APIs, so a
+        // failure is never completely silent.
+        var __b = document.createElement('div');
+        __b.style.cssText = 'background:#3a1414;border:1px solid #e05252;border-radius:8px;padding:14px 16px;margin:16px 0;color:#ffb3b3;font-size:13.5px;font-family:monospace;white-space:pre-wrap;word-break:break-word;';
+        __b.textContent = 'Review Request page failed to load properly (and the usual error banner also failed to load).\n\nError: ' + (initError && initError.message ? initError.message : String(initError)) + '\n\nPlease screenshot this and share it.';
+        document.body.insertBefore(__b, document.body.firstChild);
+      }
   }
   });
 </script>

@@ -2841,7 +2841,18 @@
       initSyncOnLoad().then(() => { renderTypeFilterOptions(); renderUnits(); populatePrDatalists(); });
     }
   } catch (initError) {
-    showInitErrorBanner('Parts Reference', initError);
+    try {
+        showInitErrorBanner('Parts Reference', initError);
+      } catch (bannerError) {
+        // showInitErrorBanner itself is unavailable (e.g.
+        // tools-nav-pwa.js failed to load) -- fall back to a
+        // minimal banner using only built-in DOM APIs, so a
+        // failure is never completely silent.
+        var __b = document.createElement('div');
+        __b.style.cssText = 'background:#3a1414;border:1px solid #e05252;border-radius:8px;padding:14px 16px;margin:16px 0;color:#ffb3b3;font-size:13.5px;font-family:monospace;white-space:pre-wrap;word-break:break-word;';
+        __b.textContent = 'Parts Reference page failed to load properly (and the usual error banner also failed to load).\n\nError: ' + (initError && initError.message ? initError.message : String(initError)) + '\n\nPlease screenshot this and share it.';
+        document.body.insertBefore(__b, document.body.firstChild);
+      }
   }
   });
 </script>

@@ -2417,48 +2417,105 @@ test('the jsPDF-not-ready guard actually works end to end: shows the real alert 
   assert.match(window.__lastAlert || '', /Still finishing loading/);
 });
 
-// Temporary diagnostic trace (2026-08-20), added after two prior fix
-// attempts on invoice-generator.html didn't resolve a repeated,
-// specific report -- the tour never shows and sync never connects on
-// this exact page, with zero errors. Logs every real milestone of the
-// init sequence directly and persistently on the page with
-// timestamps, so the next screenshot shows exactly how far execution
-// actually gets, instead of continuing to infer from symptoms alone.
 
-test('the diagnostic trace panel captures every real milestone of the init sequence, verified end to end against the real page', async () => {
-  const { JSDOM } = require('jsdom');
-  const html = fs.readFileSync(INVOICE_GENERATOR_PATH, 'utf8');
-  const tourSrc = fs.readFileSync(path.join(__dirname, '..', 'tools', 'tools-tour.js'), 'utf8');
-  const navPwaSrc = fs.readFileSync(path.join(__dirname, '..', 'tools', 'tools-nav-pwa.js'), 'utf8');
-  const dom = new JSDOM(html, {
-    runScripts: 'dangerously', url: 'https://example.com/tools/invoice-generator.html',
-    beforeParse(window) {
-      window.requireAuth = () => {};
-      window.HTMLElement.prototype.scrollIntoView = () => {};
-      window.money = (n) => '$' + (Number(n) || 0).toFixed(2);
-      window.escapeHtml = (s) => String(s == null ? '' : s);
-      window.thEnsureClient = () => null;
-      window.wireSearchClear = () => {};
-      window.attachVoiceDictation = () => {};
-      window.showToast = () => {};
-      window.getCurrentUserEmail = () => null;
-      window.initSyncOnLoad = () => Promise.resolve();
-    },
+// CRITICAL BUG FIX (2026-08-20), the actual root cause behind a
+// repeated, specific report on invoice-generator.html: no tour, no
+// sync, and genuinely zero errors visible, across multiple prior fix
+// attempts that all turned out to be treating symptoms rather than the
+// real cause. Found it by tracing why the DOMContentLoaded listener
+// itself never registered at all: recalc(), recalcQuote(), and
+// populateJobRefOptions() were being called immediately at the top
+// level of the script, but they call money()/escapeHtml(), which only
+// exist in tools-dialogs.js, a DEFERRED script. Per the HTML spec,
+// every inline script executes during parsing, and every deferred
+// script executes only after the entire document has been parsed --
+// meaning this top-level call was guaranteed to throw
+// "money is not defined" on every single real page load,
+// deterministically, not as any kind of timing race. Because that
+// throw happened before the addEventListener('DOMContentLoaded', ...)
+// line could even execute, the entire handler below it -- the tour,
+// sync, the try/catch protection, even a diagnostic trace built
+// specifically to investigate this -- never ran at all. Same root
+// cause, same fix, found and applied to route-planner.html
+// (calculateTripCost) and review-request.html (renderRecentJobs,
+// renderPendingReminders, renderSentLog, updatePreviewAndLink) in the
+// same pass -- both had the identical pattern, likely explaining
+// problems on those pages too, even ones not yet reported.
+//
+// Also investigated runway-dashboard.html, which a cruder sweep
+// initially flagged as a possible 4th instance (animateRowExit) --
+// confirmed directly that it is NOT actually affected: its
+// initialization runs through an async function with real await
+// points before reaching the same class of call, which in practice
+// gives deferred scripts enough time to load first. Verified this by
+// deliberately delaying tools-effects.js's injection in a real test
+// and confirming no throw occurred either way, rather than assuming
+// and changing code that wasn't actually broken.
+
+function testTopLevelInitNoLongerThrows(pageFile, pagePath, tourStepIndex, extraSetup) {
+  test('no top-level call throws on ' + pageFile + ' with real, non-empty data present, and the tour renders correctly', async () => {
+    const { JSDOM } = require('jsdom');
+    const html = fs.readFileSync(pagePath, 'utf8');
+    const tourSrc = fs.readFileSync(path.join(__dirname, '..', 'tools', 'tools-tour.js'), 'utf8');
+    const navPwaSrc = fs.readFileSync(path.join(__dirname, '..', 'tools', 'tools-nav-pwa.js'), 'utf8');
+    const dom = new JSDOM(html, {
+      runScripts: 'dangerously', url: 'https://example.com/tools/' + pageFile,
+      beforeParse(window) {
+        window.requireAuth = () => {};
+        window.HTMLElement.prototype.scrollIntoView = () => {};
+        window.money = (n) => '$' + (Number(n) || 0).toFixed(2);
+        window.escapeHtml = (s) => String(s == null ? '' : s);
+        window.thEnsureClient = () => null;
+        window.wireSearchClear = () => {};
+        window.attachVoiceDictation = () => {};
+        window.showToast = () => {};
+        window.getCurrentUserEmail = () => null;
+        window.initSyncOnLoad = () => Promise.resolve();
+        window.startRealtimeSync = () => {};
+        window.updateRealtimeBadge = () => {};
+        window.localStorage.setItem('th_tracker_jobs', JSON.stringify([{ id: 1, title: 'Fix dryer', client: 'Smith' }]));
+        if (extraSetup) extraSetup(window);
+      },
+    });
+    const { window } = dom;
+    for (const src of [navPwaSrc, tourSrc]) {
+      const s = window.document.createElement('script');
+      s.textContent = src;
+      window.document.head.insertBefore(s, window.document.head.firstChild);
+    }
+    window.localStorage.setItem('th_app_tour_step', String(tourStepIndex));
+    window.document.dispatchEvent(new window.Event('DOMContentLoaded'));
+    await new Promise(resolve => setTimeout(resolve, 300));
+
+    const errorBanner = [...window.document.querySelectorAll('div')].find(d => d.textContent.includes('failed to load'));
+    assert.ok(!errorBanner, pageFile + ' should not show an error banner: ' + (errorBanner ? errorBanner.textContent.slice(0, 200) : ''));
+    assert.ok(window.document.getElementById('appTourCard'), pageFile + ': tour card should render');
   });
-  const { window } = dom;
-  for (const src of [navPwaSrc, tourSrc]) {
-    const s = window.document.createElement('script');
-    s.textContent = src;
-    window.document.head.insertBefore(s, window.document.head.firstChild);
-  }
-  window.document.dispatchEvent(new window.Event('DOMContentLoaded'));
-  await new Promise(resolve => setTimeout(resolve, 300));
+}
 
-  const panel = window.document.getElementById('__diagTracePanel');
-  assert.ok(panel, 'trace panel should exist after init runs');
-  assert.match(panel.textContent, /DOMContentLoaded fired/);
-  assert.match(panel.textContent, /calling initAppTour\(\)/);
-  assert.match(panel.textContent, /initAppTour\(\) returned/);
-  assert.match(panel.textContent, /calling initSyncOnLoad\(\)/);
-  assert.match(panel.textContent, /sync init try block completed/);
+testTopLevelInitNoLongerThrows('invoice-generator.html', INVOICE_GENERATOR_PATH, 6);
+testTopLevelInitNoLongerThrows('route-planner.html', path.join(__dirname, '..', 'tools', 'route-planner.html'), 8);
+testTopLevelInitNoLongerThrows('review-request.html', path.join(__dirname, '..', 'tools', 'review-request.html'), 10);
+
+test('none of the 3 fixed pages call a deferred-script-dependent function (money/escapeHtml) at the top level anymore, before DOMContentLoaded is registered', () => {
+  const pages = ['invoice-generator.html', 'route-planner.html', 'review-request.html'];
+  for (const file of pages) {
+    const text = fs.readFileSync(path.join(__dirname, '..', 'tools', file), 'utf8');
+    const dclIndex = text.indexOf("document.addEventListener('DOMContentLoaded'");
+    assert.ok(dclIndex > -1, file + ': DOMContentLoaded registration not found');
+    const before = text.slice(0, dclIndex);
+    const topLevelCalls = [...before.matchAll(/^  ([a-zA-Z_][a-zA-Z0-9_]*)\(\);/gm)].map(m => m[1]);
+    for (const call of topLevelCalls) {
+      const fnMatch = text.match(new RegExp('function ' + call + '\\([^)]*\\)\\s*\\{'));
+      if (!fnMatch) continue;
+      let depth = 1, i = fnMatch.index + fnMatch[0].length;
+      while (depth > 0 && i < text.length) {
+        if (text[i] === '{') depth++;
+        else if (text[i] === '}') depth--;
+        i++;
+      }
+      const body = text.slice(fnMatch.index + fnMatch[0].length, i);
+      assert.doesNotMatch(body, /\b(money|escapeHtml)\(/, file + ': ' + call + '() is still called at top level and still references a deferred-script function');
+    }
+  }
 });
