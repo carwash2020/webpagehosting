@@ -24,6 +24,17 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Anton&family=Oswald:wght@400;500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script>
+  (function () {
+    // Tools app light/dark theme (2026-08-20), tucked into Settings.
+    // A separate preference from the public site's own theme toggle --
+    // different audience, different devices. Defaults to dark,
+    // matching the tools app's original look; applied here, before any
+    // stylesheet loads, to avoid a flash of the wrong theme on load.
+    var saved = localStorage.getItem('th_tools_theme');
+    if (saved === 'light') document.documentElement.setAttribute('data-theme', 'light');
+  })();
+</script>
 <link rel="stylesheet" href="/styles.css?v=202608202000">
 <link rel="stylesheet" href="/tools/styles-tools.css?v=202608202600">
 <script src="/tools/tools-effects.js?v=202608201400" defer></script>
@@ -92,6 +103,13 @@
         <div class="settings-row-sub">Compact view fits more on screen at once.</div>
       </div>
       <button class="secondary-btn" data-density-toggle onclick="toggleDensityPreference()" aria-pressed="false">Compact view</button>
+    </div>
+    <div class="settings-row">
+      <div>
+        <div class="settings-row-label">Color theme</div>
+        <div class="settings-row-sub">Applies across every page in the tool suite, not just this one.</div>
+      </div>
+      <button class="secondary-btn" id="toolsThemeToggleBtn" onclick="toggleToolsThemePreference()" aria-pressed="false">Light mode</button>
     </div>
   </div>
 
@@ -195,6 +213,35 @@
       }
   }
   });
+
+  // Tools app light/dark theme (2026-08-20), tucked into Settings.
+  // Mirrors the exact same pattern already established for the
+  // density toggle in tools-nav-pwa.js. The anti-flash snippet at the
+  // top of every page already sets data-theme correctly before any
+  // stylesheet loads -- this handles keeping the button's own text
+  // and aria-pressed state in sync, and re-applying immediately when
+  // clicked, without needing a full page reload to see the change.
+  const TOOLS_THEME_KEY = 'th_tools_theme';
+  function loadToolsThemePreference() {
+    try { return localStorage.getItem(TOOLS_THEME_KEY) === 'light' ? 'light' : 'dark'; }
+    catch (e) { return 'dark'; }
+  }
+  function applyToolsThemePreference() {
+    const theme = loadToolsThemePreference();
+    if (theme === 'light') document.documentElement.setAttribute('data-theme', 'light');
+    else document.documentElement.removeAttribute('data-theme');
+    const btn = document.getElementById('toolsThemeToggleBtn');
+    if (btn) {
+      btn.setAttribute('aria-pressed', theme === 'light' ? 'true' : 'false');
+      btn.textContent = theme === 'light' ? 'Dark mode' : 'Light mode';
+    }
+  }
+  function toggleToolsThemePreference() {
+    const next = loadToolsThemePreference() === 'light' ? 'dark' : 'light';
+    try { localStorage.setItem(TOOLS_THEME_KEY, next); } catch (e) { /* ignore */ }
+    applyToolsThemePreference();
+  }
+  applyToolsThemePreference();
 
   async function refreshSettingsPushState() {
     const btn = document.getElementById('settingsPushToggleBtn');

@@ -2777,3 +2777,28 @@ test('genuinely reintroducing the exact historical bug (a top-level call to a fu
     fs.writeFileSync(igPath, original); // always restore, even if an assertion above failed
   }
 });
+
+// Improvement (2026-08-20), while fixing settings.html's own missing
+// precache entry: this exact gap (a real page existing live but never
+// added to the offline precache list) has now happened 4 separate
+// times this session (3 pages found and fixed 2026-08-14, 3 more
+// 2026-08-20, and now settings.html). A general test that checks every
+// real page at once, rather than re-discovering this by hand each
+// time a new page ships.
+
+test('every real, navigable tool page is in the service worker\'s offline precache list -- this exact gap has recurred 4 times this session already', () => {
+  const swSrc = fs.readFileSync(path.join(__dirname, '..', 'service-worker.js'), 'utf8');
+  const arrayMatch = swSrc.match(/const PRECACHE_URLS = \[([\s\S]*?)\n\];/);
+  assert.ok(arrayMatch, 'PRECACHE_URLS array not found');
+
+  const toolsDir = path.join(__dirname, '..', 'tools');
+  const allPages = fs.readdirSync(toolsDir).filter(f => f.endsWith('.html'));
+
+  // reset-password.html is reached only via an email link, which
+  // already requires network access to receive in the first place --
+  // a deliberate, reasoned exclusion, not an oversight.
+  const exempt = new Set(['reset-password.html']);
+
+  const missing = allPages.filter(p => !exempt.has(p) && !arrayMatch[1].includes("'/tools/" + p + "'"));
+  assert.deepEqual(missing, [], 'these real pages are missing from the offline precache list: ' + missing.join(', '));
+});

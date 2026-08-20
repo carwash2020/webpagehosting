@@ -27,6 +27,15 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.112.3/dist/umd/supabase.js" integrity="sha384-qafw21c/iciq0VXsi9FzkfoQv5I/V0iqE4lSNcKXPnW9/UTJLnv5CcN4FHxVLnKg" crossorigin="anonymous" defer></script>
 <script src="/tools/sync.js?v=202608202400" defer></script>
 <script src="/tools/tools-tour.js?v=202608202100" defer></script>
+<script>
+  (function () {
+    // Tools app light/dark theme (2026-08-20), tucked into Settings.
+    // Same mechanism as the other 16 pages, just anchored differently
+    // here since this page has no /styles.css link to insert before.
+    var saved = localStorage.getItem('th_tools_theme');
+    if (saved === 'light') document.documentElement.setAttribute('data-theme', 'light');
+  })();
+</script>
 <style>
   :root{
     --bg:#0a0a0a;
@@ -55,6 +64,27 @@
     --white:#ffffff;
     --orange-tint-border: rgba(255,128,0,0.3);
     --orange-tint-glow: rgba(255,128,0,0.12);
+  }
+  /* Light mode (2026-08-20), toggled from Settings. This page is
+     deliberately self-contained and never loads the shared
+     stylesheet where the public site's own light override lives, so
+     it needs its own copy here -- same reasoning already applied to
+     this page's tour CSS above. Values mirror the public site's light
+     theme directly, since it's the same brand: neutrals invert, brand
+     orange/blue/green/red stay unchanged. */
+  [data-theme="light"]{
+    --bg:#f7f5f1;
+    --bg-card:#ffffff;
+    --bg-elevated:#f0eee9;
+    --bg-hover:#e8e5df;
+    --border-soft: rgba(0,0,0,0.08);
+    --text:#201d18;
+    --text-dim:#6b665e;
+    --text-faint:#8a8478;
+    --bg-panel-2:#f0eee9;
+    --bg-panel-3:#e8e5df;
+    --border:#ddd9d1;
+    --white:#161310;
   }
   *{box-sizing:border-box;}
   body{margin:0;background:var(--bg);color:var(--text);font-family:'Inter', -apple-system, 'Segoe UI', sans-serif;font-weight:400;-webkit-font-smoothing:antialiased;}
