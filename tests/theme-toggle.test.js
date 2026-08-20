@@ -119,3 +119,62 @@ test('elements sitting on a permanently dark photo backdrop (.hero h1, .gallery-
   assert.ok(captionRule && /#[0-9a-f]{3,6}/i.test(captionRule[0]), '.gallery-caption should use a hardcoded color, not var(--white)');
   assert.doesNotMatch(captionRule[0], /var\(--white\)/);
 });
+
+// CRITICAL BUG FIX (2026-08-20), found from a direct screenshot
+// showing the logo overlapping with nav text. Confirmed the public
+// site's header had the exact same WebKit ghosting-bug pattern fixed
+// earlier this session on the internal tools app (a sticky element
+// carrying backdrop-filter directly on itself), which that earlier
+// fix never checked for here. Moved the blur/background onto a
+// ::before pseudo-element, matching the exact same proven fix.
+
+test('the public site\'s sticky header no longer carries backdrop-filter directly on itself -- it lives on a ::before child instead, matching the fix already applied to the internal tools app', () => {
+  const css = fs.readFileSync(STYLES_CSS_PATH, 'utf8');
+  const headerRule = css.match(/(?<!:)header\{[^}]*\}/);
+  assert.ok(headerRule, 'header rule not found');
+  assert.doesNotMatch(headerRule[0], /backdrop-filter/, 'backdrop-filter should not be directly on the sticky header element');
+  assert.match(css, /header::before\{[^}]*backdrop-filter/s);
+});
+
+test('no other position:sticky element in the public site\'s stylesheet has this same vulnerable pattern', () => {
+  const css = fs.readFileSync(STYLES_CSS_PATH, 'utf8');
+  const stickyBlocks = [...css.matchAll(/([a-zA-Z0-9_.:-]+)\{[^}]*position:\s*sticky[^}]*\}/g)];
+  for (const [block, selector] of stickyBlocks) {
+    assert.doesNotMatch(block, /backdrop-filter/, selector + ' combines position:sticky with backdrop-filter directly -- same vulnerable pattern');
+  }
+});
+
+// Bug fix (2026-08-20), found from a direct screenshot showing
+// "Mon7:00 AM" with zero space between the day and time. Confirmed
+// .hours-grid/.hours-row/.hours-day/.hours-value had no CSS at all
+// anywhere -- matching the exact same "feature built without styling"
+// pattern as the earlier theme-toggle bug.
+
+test('the hours list has real CSS now, with a visible separation between the day and the time value', () => {
+  const css = fs.readFileSync(STYLES_CSS_PATH, 'utf8');
+  for (const selector of ['.hours-grid{', '.hours-row{', '.hours-day{', '.hours-value{']) {
+    assert.ok(css.includes(selector), selector + ' should have a real CSS rule now');
+  }
+  const rowRule = css.match(/\.hours-row\{([^}]*)\}/)[1];
+  assert.match(rowRule, /display:\s*flex/, '.hours-row should be a flex container so its children have real layout, not plain inline default spacing');
+  assert.match(rowRule, /gap:\s*\d/, '.hours-row should have a real gap between the day and the time value');
+});
+
+test('the hours list actually renders with visible separation end to end, verified against the real page', async () => {
+  const { JSDOM } = require('jsdom');
+  const html = fs.readFileSync(INDEX_HTML_PATH, 'utf8');
+  const css = fs.readFileSync(STYLES_CSS_PATH, 'utf8');
+  const dom = new JSDOM(html, { runScripts: 'dangerously', url: 'https://example.com/', pretendToBeVisual: true });
+  const { window } = dom;
+  window.matchMedia = () => ({ matches: false, addEventListener: () => {} });
+  window.fetch = () => Promise.resolve({ ok: true, json: () => Promise.resolve({}) });
+  const styleEl = window.document.createElement('style');
+  styleEl.textContent = css;
+  window.document.head.appendChild(styleEl);
+  await new Promise(resolve => setTimeout(resolve, 100));
+
+  const row = window.document.querySelector('.hours-row');
+  assert.equal(window.getComputedStyle(row).display, 'flex');
+  const gap = parseFloat(window.getComputedStyle(row).gap);
+  assert.ok(gap > 0, 'the day and time value should have a real, non-zero gap between them');
+});

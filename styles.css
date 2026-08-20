@@ -211,9 +211,22 @@
     position:sticky;
     top:0;
     z-index:60;
-    background:rgba(10,10,10,.88);
-    backdrop-filter:blur(8px);
     border-bottom:1px solid var(--border);
+  }
+  /* Bug fix (2026-08-20), found from a direct screenshot showing the
+     logo overlapping with nav text: sticky elements that carry
+     backdrop-filter directly on themselves can visually duplicate/
+     ghost during scroll on iOS Safari (confirmed via research earlier
+     this session to be a real, documented issue, especially on iOS
+     26) -- that fix only covered the internal tools app's own
+     stylesheet, missing this identical pattern on the public site's
+     header. Moves the blur/background onto an absolutely-positioned
+     child instead -- position: sticky already provides a valid
+     containing block for this, no extra positioning context needed. */
+  header::before{
+    content:''; position:absolute; inset:0; z-index:-1;
+    background:rgba(10,10,10,.88);
+    -webkit-backdrop-filter:blur(8px); backdrop-filter:blur(8px);
   }
   .nav{
     display:flex;
@@ -697,6 +710,16 @@
   .contact-card a.value, .contact-card p.value{color:var(--white); font-size:16px; font-weight:500;}
   .contact-card a.value:hover{color:var(--orange-light);}
   .contact-card p.sub{color:var(--text-dim); font-size:13.5px; margin-top:6px;}
+  /* Bug fix (2026-08-20): had zero CSS at all, anywhere -- with none,
+     the day and time spans defaulted to plain inline display with no
+     separation, rendering as "Mon7:00 AM" with zero space between
+     them. Fixed-width day column so all 7 time values line up
+     vertically; colors match this card's existing .value/.sub
+     language above. */
+  .hours-grid{display:flex; flex-direction:column; gap:5px;}
+  .hours-row{display:flex; gap:10px; font-size:14px;}
+  .hours-day{color:var(--white); font-weight:600; width:34px; flex-shrink:0;}
+  .hours-value{color:var(--text-dim);}
   .map-link{
     display:inline-flex;
     align-items:center;
