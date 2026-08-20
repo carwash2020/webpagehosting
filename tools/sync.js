@@ -274,6 +274,34 @@ function loadSyncHistory() {
   try { return JSON.parse(localStorage.getItem(SYNC_HISTORY_KEY) || '[]'); } catch (e) { return []; }
 }
 
+// Shared retry helper (2026-08-20), extending the same resilience
+// pattern already proven for startRealtimeSync/startLeadsRealtime's
+// CHANNEL_ERROR retry to pushSync/pullSync below -- both had zero
+// retry logic at all despite running on every page load and every
+// save. Only retries genuinely transient conditions: a network-level
+// exception (a bad connection moment, a DNS blip) or a 5xx server
+// error. Deliberately does NOT retry 4xx client errors -- those mean
+// something is actually wrong (bad auth, a malformed request), and
+// retrying would just fail identically again, wasting time instead of
+// surfacing the real problem.
+async function fetchWithRetry(url, options, maxRetries = 2, delayMs = 1500) {
+  let lastError = null;
+  for (let attempt = 0; attempt <= maxRetries; attempt++) {
+    try {
+      const res = await fetch(url, options);
+      if (res.ok || (res.status >= 400 && res.status < 500)) return res; // success, or a real client error -- either way, stop here
+      lastError = new Error('http-' + res.status); // a 5xx -- worth retrying
+      if (attempt < maxRetries) { await new Promise(r => setTimeout(r, delayMs)); continue; }
+      return res; // out of retries -- return the last (failing) response so the caller's existing http-status handling still applies
+    } catch (e) {
+      lastError = e;
+      if (attempt < maxRetries) { await new Promise(r => setTimeout(r, delayMs)); continue; }
+      throw e; // out of retries -- let the caller's existing catch block handle it exactly as before
+    }
+  }
+  throw lastError;
+}
+
 async function pushSync() {
   if (!isSyncConfigured()) return { ok: false, error: 'not-configured' };
   const code = getSyncCode();
@@ -287,7 +315,7 @@ async function pushSync() {
   const body = [{ code, data: collectSyncData(), updated_at: nowIso }];
 
   try {
-    const res = await fetch(`${SUPABASE_URL}/rest/v1/${SYNC_TABLE}?on_conflict=code`, {
+    const res = await fetchWithRetry(`${SUPABASE_URL}/rest/v1/${SYNC_TABLE}?on_conflict=code`, {
       method: 'POST',
       // NOT keepalive: true anymore -- that flag caps the total request
       // body at a hard 64 KiB (part of the Fetch spec itself, not a
@@ -335,7 +363,7 @@ async function pullSync() {
   }
 
   try {
-    const res = await fetch(`${SUPABASE_URL}/rest/v1/${SYNC_TABLE}?code=eq.${encodeURIComponent(code)}&select=data,updated_at`, {
+    const res = await fetchWithRetry(`${SUPABASE_URL}/rest/v1/${SYNC_TABLE}?code=eq.${encodeURIComponent(code)}&select=data,updated_at`, {
       headers: {
         'apikey': SUPABASE_ANON_KEY,
         'Authorization': `Bearer ${getAuthToken()}`,

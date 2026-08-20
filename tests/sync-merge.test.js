@@ -174,3 +174,69 @@ test('startLeadsRealtime has the same retry behavior and the same 12-second watc
   assert.match(fnSrc, /retriesLeft/);
   assert.match(fnSrc, /setTimeout\(\(\) => \{\s*\n\s*if \(!realtimeResolved/, 'should have the same watchdog pattern as startRealtimeSync');
 });
+
+// Improvement #7 from the 8/14-8/20 site audit (2026-08-20): extending
+// the same resilience pattern already proven for
+// startRealtimeSync/startLeadsRealtime's CHANNEL_ERROR retry to
+// pushSync/pullSync, which had zero retry logic at all despite running
+// on every page load and every save. Only retries genuinely transient
+// conditions (a network-level exception, a 5xx server error) --
+// deliberately never retries 4xx client errors, since those mean
+// something is actually wrong and a retry would just fail identically
+// again.
+
+function loadFetchWithRetry() {
+  const src = fs.readFileSync(SYNC_JS_PATH, 'utf8');
+  const fnSrc = src.match(/async function fetchWithRetry\([\s\S]*?\n}\n/);
+  assert.ok(fnSrc, 'fetchWithRetry not found in sync.js -- did it get renamed or removed?');
+  const sandbox = {};
+  new Function('sandbox', fnSrc[0] + 'sandbox.fetchWithRetry = fetchWithRetry;')(sandbox);
+  return sandbox.fetchWithRetry;
+}
+
+test('fetchWithRetry retries a network-level exception and succeeds once the connection recovers', async () => {
+  const fetchWithRetry = loadFetchWithRetry();
+  let callCount = 0;
+  global.fetch = async () => {
+    callCount++;
+    if (callCount < 3) throw new Error('network blip');
+    return { ok: true, status: 200 };
+  };
+  const res = await fetchWithRetry('http://x', {}, 2, 10);
+  assert.equal(res.ok, true);
+  assert.equal(callCount, 3);
+});
+
+test('fetchWithRetry does NOT retry a 4xx client error -- that means something is really wrong, not transient', async () => {
+  const fetchWithRetry = loadFetchWithRetry();
+  let callCount = 0;
+  global.fetch = async () => { callCount++; return { ok: false, status: 401 }; };
+  const res = await fetchWithRetry('http://x', {}, 2, 10);
+  assert.equal(res.status, 401);
+  assert.equal(callCount, 1, 'should not retry a 4xx at all');
+});
+
+test('fetchWithRetry retries a 5xx server error up to the configured limit, then returns the failing response for the caller\'s existing error handling', async () => {
+  const fetchWithRetry = loadFetchWithRetry();
+  let callCount = 0;
+  global.fetch = async () => { callCount++; return { ok: false, status: 503 }; };
+  const res = await fetchWithRetry('http://x', {}, 2, 10);
+  assert.equal(res.status, 503);
+  assert.equal(callCount, 3, 'initial attempt + 2 retries');
+});
+
+test('fetchWithRetry re-throws the original exception once retries are exhausted, so the caller\'s existing catch block still works exactly as before', async () => {
+  const fetchWithRetry = loadFetchWithRetry();
+  let callCount = 0;
+  global.fetch = async () => { callCount++; throw new Error('persistent network failure'); };
+  await assert.rejects(() => fetchWithRetry('http://x', {}, 2, 10), /persistent network failure/);
+  assert.equal(callCount, 3);
+});
+
+test('pushSync and pullSync both use fetchWithRetry for their core fetch call, not a bare fetch', () => {
+  const src = fs.readFileSync(SYNC_JS_PATH, 'utf8');
+  const pushFn = src.match(/async function pushSync\(\)[\s\S]*?\n}\n/)[0];
+  const pullFn = src.match(/async function pullSync\(\)[\s\S]*?\n}\n/)[0];
+  assert.match(pushFn, /await fetchWithRetry\(/);
+  assert.match(pullFn, /await fetchWithRetry\(/);
+});
