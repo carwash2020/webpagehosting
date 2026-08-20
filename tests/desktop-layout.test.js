@@ -71,3 +71,30 @@ test('CSS brace balance stays correct across every file touched by this change',
     assert.equal(depth, 0, f + ': unbalanced braces in <style> block');
   }
 });
+
+// Bug fix (2026-08-20), found from a direct screenshot showing an odd
+// gradient/shading at the top and persistent black bars on either
+// side, after the desktop-width work above widened each page's
+// container. Root cause: the ambient background gradient lived on
+// body.th-tool-page itself -- the same element the max-width
+// constraint applies to. Widening it shifted where the fixed-size,
+// percentage-positioned gradient landed, and left the margin area
+// outside max-width with no background at all.
+
+test('the ambient background gradient lives on html (never width-constrained), not on body.th-tool-page (which the desktop-width work above widens)', () => {
+  const src = fs.readFileSync(path.join(TOOLS_DIR, 'styles-tools.css'), 'utf8');
+  const htmlRule = src.match(/(?<!<)html \{([^}]*)\}/);
+  assert.ok(htmlRule, 'html rule not found');
+  assert.match(htmlRule[1], /radial-gradient/);
+  assert.match(htmlRule[1], /background-attachment:\s*fixed/);
+
+  const bodyToolPageRule = src.match(/body\.th-tool-page \{([^}]*)\}/);
+  assert.ok(bodyToolPageRule, 'body.th-tool-page rule not found');
+  assert.doesNotMatch(bodyToolPageRule[1], /radial-gradient/, 'the gradient should no longer live on the width-constrained element');
+  assert.match(bodyToolPageRule[1], /background:\s*transparent/, 'body.th-tool-page should be transparent so html\'s background shows through everywhere, including within the content column');
+});
+
+test('body.th-tool-page still gets its class added at runtime by tools-nav-pwa.js, confirming the transparent-background rule actually applies on a real page load, not just in theory', () => {
+  const navSrc = fs.readFileSync(path.join(TOOLS_DIR, 'tools-nav-pwa.js'), 'utf8');
+  assert.match(navSrc, /document\.body\.classList\.add\('th-tool-page'\)/);
+});
