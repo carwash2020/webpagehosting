@@ -2685,3 +2685,56 @@ test('this page\'s own colliding classes are completely unaffected -- no shared 
   // untested.
   assert.doesNotMatch(src, /<link[^>]*styles-tools/);
 });
+
+// Improvement #6 from the 8/14-8/20 site audit (2026-08-20): a new
+// checkTourHealth function in scripts/check-consistency.js, running
+// automatically on every push. Confirms every tour step's
+// highlightSelector actually resolves to something real on its target
+// page, and that every tour-enabled page has the CSS the tour needs to
+// be visible at all (either the shared stylesheet, or a copied-in
+// local rule). Two real, confirmed bugs from the past week matched
+// exactly these two failure modes -- this catches both automatically
+// now, rather than needing another hard-to-reproduce user report.
+
+function runCheckConsistency() {
+  const { execSync } = require('child_process');
+  try {
+    const output = execSync('node ' + path.join(__dirname, '..', 'scripts', 'check-consistency.js'), { encoding: 'utf8' });
+    return { passed: true, output };
+  } catch (e) {
+    return { passed: false, output: e.stdout + e.stderr };
+  }
+}
+
+test('check-consistency.js\'s tour health check passes cleanly against the real, current codebase', () => {
+  const result = runCheckConsistency();
+  assert.equal(result.passed, true, result.output);
+});
+
+test('the tour health check genuinely catches a broken highlightSelector, not just a plausible-looking rule', () => {
+  const tourPath = path.join(__dirname, '..', 'tools', 'tools-tour.js');
+  const original = fs.readFileSync(tourPath, 'utf8');
+  try {
+    const broken = original.replace("highlightSelector: '#addJobBtn'", "highlightSelector: '#thisElementDoesNotExist'");
+    fs.writeFileSync(tourPath, broken);
+    const result = runCheckConsistency();
+    assert.equal(result.passed, false, 'should have failed with a broken selector');
+    assert.match(result.output, /thisElementDoesNotExist/);
+  } finally {
+    fs.writeFileSync(tourPath, original); // always restore, even if an assertion above failed
+  }
+});
+
+test('the tour health check genuinely catches a page missing the tour\'s required CSS, not just a plausible-looking rule', () => {
+  const rdPath = path.join(__dirname, '..', 'tools', 'runway-dashboard.html');
+  const original = fs.readFileSync(rdPath, 'utf8');
+  try {
+    const broken = original.replaceAll('.onboarding-card {', '.onboarding-card-renamed {');
+    fs.writeFileSync(rdPath, broken);
+    const result = runCheckConsistency();
+    assert.equal(result.passed, false, 'should have failed with the tour CSS renamed away');
+    assert.match(result.output, /never loads styles-tools\.css and has no local \.onboarding-card rule/);
+  } finally {
+    fs.writeFileSync(rdPath, original); // always restore, even if an assertion above failed
+  }
+});
