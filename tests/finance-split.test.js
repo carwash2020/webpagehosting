@@ -2588,3 +2588,100 @@ test('barW and h both have a real floor (Math.max), not the old barH || 1 patter
   assert.match(src, /const h = Math\.max\(barH, 1\);/);
   assert.doesNotMatch(src, /const h = barH \|\| 1;/);
 });
+
+// CRITICAL BUG FIX (2026-08-20), the actual, definitive root cause of a
+// repeatedly-reported issue: the tour card never visible on Runway
+// Dashboard specifically. Confirmed via a direct screenshot showing
+// the diagnostic trace itself reporting "card in DOM: true" at every
+// single checkpoint through the whole init sequence -- yet nothing
+// visible in a real, single-viewport screenshot, confirmed explicitly
+// NOT to be a full-page/scrolling capture. That contradiction (exists
+// in the DOM, but genuinely invisible) pointed directly at CSS rather
+// than JS logic.
+//
+// Root cause: this page never loaded /tools/styles-tools.css at all --
+// the ONLY place .onboarding-card, .th-tour-highlight, and .primary-btn
+// are defined. Without it, the tour card (created via
+// document.createElement + className = 'onboarding-card') was a
+// completely unstyled div: no position:fixed, no background, nothing --
+// just plain content appended at the very end of this page's normal
+// document flow, far below all real content, invisible without
+// scrolling well past everything else. This explains every symptom
+// from every prior report on this page: it existed in the DOM exactly
+// as the diagnostics showed, but had nothing making it look or behave
+// like a visible card.
+//
+// Fixed by copying the tour's specific CSS rules directly into this
+// page's own <style> block, rather than linking the full shared
+// stylesheet -- confirmed 26 colliding class names between the two
+// files (.tabs, .card, .stat-box, .help-modal, etc.), and confirmed
+// directly that simply controlling link order isn't sufficient: CSS
+// overriding works per-property, not per-rule, so .tabs picked up an
+// unwanted border-radius from the shared file even with correct load
+// order, since this page's own .tabs rule doesn't redeclare that
+// specific property. This matches an existing, established pattern
+// already used on this exact page for an identical problem with a
+// different feature (a comment already documents this page missing
+// the shared custom scrollbar styling for the same self-contained-page
+// reason, fixed the same way: copied in directly).
+
+test('runway-dashboard.html defines the tour\'s CSS rules directly (copied, not linked), since it never loads the shared stylesheet where they normally live', () => {
+  const src = fs.readFileSync(path.join(__dirname, '..', 'tools', 'runway-dashboard.html'), 'utf8');
+  assert.doesNotMatch(src, /<link[^>]*styles-tools\.css/, 'should not link the shared stylesheet, to avoid the 26 confirmed class collisions');
+  for (const selector of ['.onboarding-card {', '.onboarding-dots {', '.onboarding-title {', '.onboarding-body {', '.onboarding-actions {', '.th-tour-highlight {', '.primary-btn {']) {
+    assert.ok(src.includes(selector), selector + ' should be defined directly on this page');
+  }
+});
+
+test('runway-dashboard.html\'s own :root defines every CSS variable the copied tour rules reference, using new names that don\'t collide with anything already on this page', () => {
+  const src = fs.readFileSync(path.join(__dirname, '..', 'tools', 'runway-dashboard.html'), 'utf8');
+  const rootBlock = src.match(/:root\{([\s\S]*?)\}/)[1];
+  for (const varName of ['--bg-panel-2', '--bg-panel-3', '--border', '--white', '--orange-tint-border', '--orange-tint-glow']) {
+    assert.match(rootBlock, new RegExp(varName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + ':'), varName + ' should be defined in this page\'s own :root');
+  }
+});
+
+test('the tour card gets real, correct styling on runway-dashboard.html now -- position:fixed, a real gradient background, and the Next button correctly styled as a primary-btn', async () => {
+  const { JSDOM } = require('jsdom');
+  const html = fs.readFileSync(path.join(__dirname, '..', 'tools', 'runway-dashboard.html'), 'utf8');
+  const tourSrc = fs.readFileSync(path.join(__dirname, '..', 'tools', 'tools-tour.js'), 'utf8');
+  const dom = new JSDOM(html, {
+    runScripts: 'dangerously', url: 'https://example.com/tools/runway-dashboard.html',
+    beforeParse(window) {
+      window.requireAuth = () => {};
+      window.HTMLElement.prototype.scrollIntoView = () => {};
+      window.HTMLCanvasElement.prototype.getContext = () => ({
+        setTransform(){}, scale(){}, clearRect(){}, beginPath(){}, moveTo(){}, lineTo(){}, stroke(){}, fill(){}, fillRect(){}, arc(){}, arcTo(){}, closePath(){}, createLinearGradient(){ return { addColorStop(){} }; }, setLineDash(){},
+      });
+      window.pullSync = () => Promise.resolve({ ok: true });
+      window.getCurrentUserEmail = () => null;
+    },
+  });
+  const { window } = dom;
+  const s = window.document.createElement('script');
+  s.textContent = tourSrc;
+  window.document.head.insertBefore(s, window.document.head.firstChild);
+  window.localStorage.setItem('th_app_tour_step', '12');
+  window.document.dispatchEvent(new window.Event('DOMContentLoaded'));
+  await new Promise(resolve => setTimeout(resolve, 300));
+
+  const card = window.document.getElementById('appTourCard');
+  const cardStyle = window.getComputedStyle(card);
+  assert.equal(cardStyle.position, 'fixed');
+  assert.equal(cardStyle.zIndex, '800');
+  assert.ok(cardStyle.background.includes('linear-gradient'), 'card should have a real gradient background, not be unstyled');
+
+  const nextBtn = window.document.querySelector('.onboarding-next');
+  assert.match(nextBtn.className, /\bprimary-btn\b/);
+  assert.ok(window.getComputedStyle(nextBtn).background.includes('linear-gradient'), 'Next button should have real primary-btn styling');
+});
+
+test('this page\'s own colliding classes are completely unaffected -- no shared stylesheet is loaded at all, so there is nothing to leak in from it', () => {
+  const src = fs.readFileSync(path.join(__dirname, '..', 'tools', 'runway-dashboard.html'), 'utf8');
+  // The whole point of copying rules in directly instead of linking the
+  // shared file: confirm there is no <link> to it anywhere, which is
+  // what makes the earlier-confirmed leak (.tabs picking up an unwanted
+  // border-radius) structurally impossible now, rather than just
+  // untested.
+  assert.doesNotMatch(src, /<link[^>]*styles-tools/);
+});
