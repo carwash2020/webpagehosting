@@ -46,6 +46,31 @@
     --shadow-active: 0 1px 3px rgba(0,0,0,.4);
   }
 
+  /* Light theme (2026-08-20): the JS toggle has always correctly set
+     this attribute and saved the preference -- this override block is
+     what was actually missing the whole time, which is why toggling
+     never visibly changed anything. Neutrals invert; brand accent
+     colors (orange, blue) stay the same on purpose, since they're
+     brand identity rather than theme-dependent, and already read fine
+     against a light background. Shadow alpha values are reduced
+     slightly, since the same rgba(0,0,0,.55) that reads as a subtle
+     "resting" depth cue against near-black reads as noticeably heavier
+     against a light panel. */
+  [data-theme="light"]{
+    --bg:#f7f5f1;
+    --bg-panel:#ffffff;
+    --bg-panel-2:#f0eee9;
+    --bg-panel-3:#e8e5df;
+    --border:#ddd9d1;
+    --text:#201d18;
+    --text-dim:#6b665e;
+    --white:#161310;
+    --steel:#4a4640;
+    --shadow-resting: 0 1px 2px rgba(0,0,0,.10), 0 8px 24px -18px rgba(0,0,0,.20);
+    --shadow-hover: 0 4px 14px -4px rgba(0,0,0,.18), 0 14px 34px -14px rgba(0,0,0,.28);
+    --shadow-active: 0 1px 3px rgba(0,0,0,.16);
+  }
+
   *{box-sizing:border-box;}
 
   /* dark themed scrollbar, so scrolling inside modals (FAQ, Terms, Gallery) matches the site instead of a default light scrollbar */
@@ -269,6 +294,32 @@
   }
   .nav-toggle svg{width:20px; height:20px;}
 
+  /* theme toggle (desktop button) -- previously had zero CSS at all,
+     which is why it looked unstyled/"dumb": a plain, borderless button
+     with both the sun and moon icon rendering simultaneously (nothing
+     ever hid either one). Styled as a compact pill matching this nav's
+     existing bordered-button conventions (.nav-toggle above uses the
+     same border/radius approach). */
+  .theme-toggle{
+    display:flex; align-items:center; gap:7px;
+    background:none;
+    border:1px solid var(--border);
+    border-radius:999px;
+    padding:8px 14px;
+    color:var(--text-dim);
+    font-size:13px; font-weight:500;
+    cursor:pointer;
+    transition:color .15s, border-color .15s;
+  }
+  .theme-toggle:hover{color:var(--white); border-color:var(--steel);}
+  .theme-toggle svg{width:16px; height:16px; flex-shrink:0;}
+  /* Icon show/hide -- mirrors how the text label already shows the
+     CURRENT mode's name, not the destination: the moon shows while
+     currently in dark mode, the sun while currently in light mode. */
+  .theme-icon-light{display:none;}
+  [data-theme="light"] .theme-icon-dark{display:none;}
+  [data-theme="light"] .theme-icon-light{display:block;}
+
   .mobile-menu{
     display:none;
     flex-direction:column;
@@ -278,9 +329,44 @@
   }
   .mobile-menu.is-open{display:flex;}
 
+  /* mobile theme row + switch -- same "zero CSS at all" problem as the
+     desktop button above. Built as a standard sliding toggle switch:
+     an invisible checkbox input, a pill-shaped track, and a circular
+     thumb that slides across it -- the checked state (dark mode, per
+     the JS) uses the brand accent color to read as "on", matching how
+     toggle switches conventionally show their active state regardless
+     of what the underlying boolean means semantically. */
+  .mobile-theme-row{
+    display:flex; align-items:center; justify-content:space-between;
+    padding:14px 4px;
+    font-size:15px; font-weight:500; letter-spacing:1px; text-transform:uppercase;
+    color:#e8e8e8;
+    border-bottom:1px solid var(--border);
+  }
+  .theme-switch{position:relative; display:inline-block; width:46px; height:26px; flex-shrink:0;}
+  .theme-switch input{opacity:0; width:0; height:0; position:absolute;}
+  .theme-switch-track{
+    position:absolute; inset:0;
+    background:var(--bg-panel-3);
+    border:1px solid var(--border);
+    border-radius:999px;
+    cursor:pointer;
+    transition:background .15s, border-color .15s;
+  }
+  .theme-switch-thumb{
+    position:absolute; top:2px; left:2px;
+    width:20px; height:20px;
+    border-radius:50%;
+    background:var(--text-dim);
+    transition:transform .15s, background .15s;
+  }
+  .theme-switch input:checked + .theme-switch-track{background:var(--orange-tint-soft); border-color:var(--orange);}
+  .theme-switch input:checked + .theme-switch-track .theme-switch-thumb{transform:translateX(20px); background:var(--orange);}
+
   @media (max-width:860px){
     .nav-links, .nav-phone-desktop{display:none;}
     .nav-toggle{display:flex;}
+    .theme-toggle{display:none;} /* the mobile menu's own switch covers this on small screens */
     .mobile-menu a{
       padding:14px 4px;
       font-size:15px;
@@ -1003,7 +1089,12 @@
     position:absolute;
     bottom:0; left:0; right:0;
     background:linear-gradient(to top, rgba(0,0,0,.8), transparent);
-    color:var(--white);
+    /* Bug fix, found during the light-theme audit: this sits on a dark
+       photo overlay just like .hero h1 above, which already has this
+       same hardcoded-color treatment for the same reason -- var(--white)
+       would flip to a dark color in light mode and become illegible
+       against its own overlay. */
+    color:#ffffff;
     font-size:12.5px;
     font-weight:500;
     letter-spacing:.3px;
