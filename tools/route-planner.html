@@ -305,11 +305,6 @@
     document.getElementById('tripTotalResult').textContent = money(total);
   }
 
-  loadSharedMileageRate();
-  calculateTripCost();
-  addStop();
-  addStop();
-
   function updateRealtimeBadge(status) {
     const dot = document.getElementById('realtimeDot');
     const text = document.getElementById('realtimeText');
@@ -336,6 +331,17 @@
   // has actually finished loading before we call its functions.
   document.addEventListener('DOMContentLoaded', function () {
     try {
+    // Moved here (2026-08-20) from top-level calls earlier in this
+    // script -- calculateTripCost() calls money(), which only exists
+    // in a deferred script, and per the HTML spec every inline script
+    // runs before any deferred one -- calling this at top level meant
+    // it threw deterministically on every real page load, before this
+    // very addEventListener call could even execute. Same root-cause
+    // bug class just found and fixed on invoice-generator.html.
+    loadSharedMileageRate();
+    calculateTripCost();
+    addStop();
+    addStop();
     initAppTour();
     initSyncOnLoad().then(() => {
       loadSharedMileageRate();
@@ -345,7 +351,18 @@
       }
     });
   } catch (initError) {
-    showInitErrorBanner('Route Planner', initError);
+    try {
+        showInitErrorBanner('Route Planner', initError);
+      } catch (bannerError) {
+        // showInitErrorBanner itself is unavailable (e.g.
+        // tools-nav-pwa.js failed to load) -- fall back to a
+        // minimal banner using only built-in DOM APIs, so a
+        // failure is never completely silent.
+        var __b = document.createElement('div');
+        __b.style.cssText = 'background:#3a1414;border:1px solid #e05252;border-radius:8px;padding:14px 16px;margin:16px 0;color:#ffb3b3;font-size:13.5px;font-family:monospace;white-space:pre-wrap;word-break:break-word;';
+        __b.textContent = 'Route Planner page failed to load properly (and the usual error banner also failed to load).\n\nError: ' + (initError && initError.message ? initError.message : String(initError)) + '\n\nPlease screenshot this and share it.';
+        document.body.insertBefore(__b, document.body.firstChild);
+      }
   }
   });
 </script>

@@ -433,7 +433,6 @@
   document.getElementById('invoiceNumber').value = 'INV-' + new Date().getFullYear() + '-' + String(Math.floor(Math.random() * 9000) + 1000);
   document.getElementById('quoteDate').value = new Date().toISOString().slice(0, 10);
   document.getElementById('quoteNumber').value = 'EST-' + new Date().getFullYear() + '-' + String(Math.floor(Math.random() * 9000) + 1000);
-  loadSharedTaxRate();
 
   function loadJobs() {
     try { return JSON.parse(localStorage.getItem('th_tracker_jobs') || '[]'); }
@@ -498,7 +497,6 @@
       if (jobs.some(j => String(j.id) === current)) select.value = current;
     });
   }
-  populateJobRefOptions();
 
   let contactCount = 0;
   function addContact(name = '', title = '', email = '', phone = '', isUserAdd = false) {
@@ -524,7 +522,6 @@
     const el = document.getElementById('contact-' + id);
     animateRowExit(el, () => el.remove());
   }
-  addContact(); // start with one contact row
 
   let rowCount = 0;
   function addLineItem(desc = '', part = '', qty = 1, price = '', taxable = true, isUserAdd = false) {
@@ -548,7 +545,7 @@
     const row = document.getElementById('row-' + id);
     animateRowExit(row, () => { row.remove(); recalc(); });
   }
-  addLineItem(); // start with one blank row
+
 
 
   function saveInvoiceTaxRate() {
@@ -591,7 +588,6 @@
     return { subtotal, tax, discount, total };
   }
   document.getElementById('discountAmount').addEventListener('input', recalc);
-  recalc();
 
   // ---------- Quote line items (mirrors invoice line items above) ----------
   let quoteRowCount = 0;
@@ -616,7 +612,6 @@
     const row = document.getElementById('qrow-' + id);
     animateRowExit(row, () => { row.remove(); recalcQuote(); });
   }
-  addQuoteLineItem();
 
   function recalcQuote() {
     let subtotal = 0;
@@ -639,7 +634,6 @@
     return { subtotal, tax, discount, total };
   }
   document.getElementById('quoteDiscountAmount').addEventListener('input', recalcQuote);
-  recalcQuote();
 
   function getQuoteLineItems() {
     const items = [];
@@ -1440,56 +1434,53 @@
     }
   }
   document.addEventListener('DOMContentLoaded', () => {
-    // Temporary diagnostic trace (2026-08-20), added after two prior
-    // fix attempts on this exact page didn't resolve a repeated,
-    // specific report: the tour never shows here and sync never
-    // connects, with zero errors. Logs every real milestone directly
-    // and persistently on the page (not just on a crash), so the next
-    // screenshot shows exactly how far execution gets, instead of
-    // guessing again from symptoms alone. Safe to remove once the
-    // real cause is found.
-    const __traceLog = [];
-    function __trace(msg) {
-      __traceLog.push('[' + new Date().toLocaleTimeString() + '] ' + msg);
-      let panel = document.getElementById('__diagTracePanel');
-      if (!panel) {
-        panel = document.createElement('div');
-        panel.id = '__diagTracePanel';
-        panel.style.cssText = 'position:fixed; left:8px; right:8px; bottom:8px; z-index:99999; background:#0a0a0a; border:2px solid #ffb020; border-radius:8px; padding:10px 12px; color:#ffd580; font-size:11px; font-family:monospace; white-space:pre-wrap; max-height:45vh; overflow-y:auto;';
-        document.body.appendChild(panel);
-      }
-      panel.textContent = 'DIAGNOSTIC TRACE -- screenshot this box\n' + __traceLog.join('\n');
-    }
-    __trace('DOMContentLoaded fired');
     try {
-    __trace('calling initAppTour()');
+    // Moved here (2026-08-20) from top-level calls earlier in this
+    // script -- they call money()/escapeHtml(), which only exist in
+    // tools-dialogs.js, a DEFERRED script. Per the HTML spec, every
+    // inline script executes during parsing, before any deferred
+    // script runs -- calling these at top level meant they threw
+    // "money is not defined" on every single real page load,
+    // deterministically. Because that happened before this very
+    // addEventListener call could even execute, the whole handler
+    // below -- the tour, sync, everything -- never ran at all. Order
+    // preserved exactly as it was: recalc() depends on addLineItem()
+    // having already created the row it calculates a total for, and
+    // so on down this list.
+    loadSharedTaxRate();
+    populateJobRefOptions();
+    addContact(); // start with one contact row
+    addLineItem(); // start with one blank row
+    recalc();
+    addQuoteLineItem();
+    recalcQuote();
     initAppTour();
-    __trace('initAppTour() returned -- card in DOM: ' + !!document.getElementById('appTourCard'));
     populateKnownContactsList();
     populatePriceRefPickers();
-    __trace('calling initSyncOnLoad(), typeof=' + typeof initSyncOnLoad);
     // Bug fix (2026-08-16): same missed-initial-pull bug as calendar.html
     // and contract-generator.html -- realtime only delivers changes that
     // happen while this tab is open. Without an initial pull, contacts,
     // price references, and the shared tax rate edited on another device
     // were stale here on every fresh page load.
     if (typeof initSyncOnLoad === 'function') {
-      initSyncOnLoad().then(() => {
-        __trace('initSyncOnLoad() resolved successfully');
-        loadSharedTaxRate(); populateKnownContactsList(); populatePriceRefPickers();
-      }).catch((e) => { __trace('initSyncOnLoad() REJECTED: ' + (e && e.message)); });
+      initSyncOnLoad().then(() => { loadSharedTaxRate(); populateKnownContactsList(); populatePriceRefPickers(); });
     }
-    __trace('calling startRealtimeSync(), typeof=' + typeof startRealtimeSync);
     if (typeof startRealtimeSync === 'function') {
-      startRealtimeSync(() => { loadSharedTaxRate(); populateKnownContactsList(); populatePriceRefPickers(); }, (status) => {
-        __trace('realtime status: ' + status);
-        updateRealtimeBadge(status);
-      });
+      startRealtimeSync(() => { loadSharedTaxRate(); populateKnownContactsList(); populatePriceRefPickers(); }, updateRealtimeBadge);
     }
-    __trace('sync init try block completed without throwing');
     } catch (initError) {
-      __trace('CAUGHT ERROR: ' + (initError && initError.message));
-      showInitErrorBanner('Invoice Generator', initError);
+      try {
+        showInitErrorBanner('Invoice Generator', initError);
+      } catch (bannerError) {
+        // showInitErrorBanner itself is unavailable (e.g.
+        // tools-nav-pwa.js failed to load) -- fall back to a
+        // minimal banner using only built-in DOM APIs, so a
+        // failure is never completely silent.
+        var __b = document.createElement('div');
+        __b.style.cssText = 'background:#3a1414;border:1px solid #e05252;border-radius:8px;padding:14px 16px;margin:16px 0;color:#ffb3b3;font-size:13.5px;font-family:monospace;white-space:pre-wrap;word-break:break-word;';
+        __b.textContent = 'Invoice Generator page failed to load properly (and the usual error banner also failed to load).\n\nError: ' + (initError && initError.message ? initError.message : String(initError)) + '\n\nPlease screenshot this and share it.';
+        document.body.insertBefore(__b, document.body.firstChild);
+      }
     }
   });
 </script>
