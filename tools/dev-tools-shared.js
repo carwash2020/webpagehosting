@@ -72,6 +72,10 @@
       title: 'Deploy history',
       body: `<p>Pulls the last 8 GitHub Actions runs for this repo directly from GitHub's public API -- no login needed since the repo is public. The top summary is the single most recent run; the list below it shows enough history to spot a pattern (e.g. "this started failing consistently a few runs back") rather than just a single snapshot.</p>`,
     },
+    regressioncheck: {
+      title: 'Regression checker',
+      body: `<p>Compares the current code against an earlier commit and flags anything that looks like it disappeared without a clear replacement -- a JavaScript function, an HTML element id, or a CSS class that existed in the older version but can't be found anywhere in the newer one.</p><p>Uses GitHub's own diff for the comparison (one API call, not dozens), so it only looks inside files that actually changed between the two commits. If something moved into a file that <em>didn't</em> change in this same range -- rare, but possible -- this won't catch it. Flags things to look at, not a guarantee either way; always worth a real look at anything it surfaces, and it's normal for planned renames or intentional removals to show up here too.</p><p>Very large files sometimes come back from GitHub without a full diff -- those are listed separately as "couldn't auto-check," worth a manual look rather than assumed fine.</p>`,
+    },
     changelog: {
       title: "What's new",
       body: `<p>Real commit messages from this repo, newest first -- same public GitHub API as Deploy History above, so no separate setup. Each entry shows its short title by default; "Show full message" expands the complete explanation of what changed and why, right here, without leaving the app. The GitHub link still goes to the actual code diff (the literal before/after of every file), for anyone who wants to see the change itself rather than just read about it.</p><p>To revert something you don't like: just ask in chat which commit (or describe what changed) and it can be reverted directly -- that's a normal git operation, not something this page needs a button for.</p>`,

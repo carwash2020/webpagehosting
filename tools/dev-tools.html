@@ -27,7 +27,7 @@
 <link rel="stylesheet" href="/styles.css?v=202608202000">
 <link rel="stylesheet" href="/tools/styles-tools.css?v=202608202600">
 <script src="/tools/data-layer.js?v=202608202000" defer></script>
-<script src="/tools/dev-tools-shared.js?v=202608201400" defer></script>
+<script src="/tools/dev-tools-shared.js?v=202608202000" defer></script>
 <script src="/tools/tools-effects.js?v=202608201400" defer></script>
 <script src="/tools/tools-dialogs.js?v=202608201400" defer></script>
 <script src="/tools/tools-media-sharing.js?v=202608201900" defer></script>
@@ -370,6 +370,25 @@
     </div>
     <div id="deployStatus"></div>
     <div id="deployHistoryList" class="dev-scrollable-list" style="margin-top:10px;"></div>
+  </div>
+
+  <div class="dev-panel dev-panel-wide is-collapsible" data-collapse-key="regressioncheck">
+    <div class="dev-panel-heading" onclick="toggleDevPanel(this)">
+      <h2>Regression checker</h2>
+      <button class="dev-info-bubble" onclick="event.stopPropagation(); openDevInfo('regressioncheck')" aria-label="What does this do?" title="What does this do?">?</button>
+      <span class="dev-collapse-caret">&#9660;</span>
+    </div>
+    <div class="dev-panel-body">
+      <p class="tool-sub">Compares the current code against an earlier commit and flags anything that looks like it disappeared without a clear replacement.</p>
+      <div style="display:flex; gap:10px; align-items:center; flex-wrap:wrap; margin:12px 0;">
+        <label for="regressionFromCommit" style="font-size:12.5px; color:var(--text-dim);">Compare from:</label>
+        <select id="regressionFromCommit" style="flex:1; min-width:220px; background:var(--bg-panel-2); color:var(--text); border:1px solid var(--border); border-radius:6px; padding:8px 10px; font-size:13px;">
+          <option>Loading recent commits...</option>
+        </select>
+        <button class="secondary-btn" id="regressionCheckBtn" onclick="runRegressionCheck()">Run check</button>
+      </div>
+      <div id="regressionCheckResult"></div>
+    </div>
   </div>
 
   <div class="dev-panel dev-panel-wide is-collapsible" data-collapse-key="changelog">
@@ -1835,6 +1854,113 @@
   // (wasRecentlyNotified/markNotified). Kept here rather than
   // guessing at display time from the raw key, since a couple of
   // these (e.g. "sync-stale") don't read naturally on their own.
+  async function populateRegressionCommitDropdown() {
+    const select = document.getElementById('regressionFromCommit');
+    try {
+      const res = await fetchWithTimeout('https://api.github.com/repos/carwash2020/webpagehosting/commits?per_page=20', 6000);
+      const commits = await res.json();
+      if (!Array.isArray(commits) || !commits.length) {
+        select.innerHTML = '<option value="">Could not load commits</option>';
+        return;
+      }
+      select.innerHTML = commits.map((c, i) => {
+        const summary = ((c.commit && c.commit.message) || '(no message)').split('\n')[0];
+        const when = c.commit && c.commit.author ? new Date(c.commit.author.date).toLocaleDateString() : '';
+        // Default to comparing against 10 commits back -- recent enough
+        // to be relevant, far enough to actually span real changes
+        // rather than the single most recent push.
+        return '<option value="' + c.sha + '"' + (i === 10 ? ' selected' : '') + '>' +
+          when + ' \u2014 ' + escapeHtml(summary.slice(0, 60)) + (summary.length > 60 ? '\u2026' : '') +
+          '</option>';
+      }).join('');
+    } catch (e) {
+      select.innerHTML = '<option value="">Could not reach GitHub right now</option>';
+    }
+  }
+
+  // Extracts a rough set of "symbols" (JS function names, HTML element
+  // ids, CSS class selectors) from a block of diff lines. Deliberately
+  // simple regexes, not a real parser -- this is a heuristic signal to
+  // flag things worth a human look, not a definitive test.
+  function extractRegressionSymbols(lines) {
+    // Strip the diff's own leading +/- marker first -- the CSS regex
+    // below anchors to the actual start of the line (^), which would
+    // never match a removed rule like "-.someClass{...}" if that
+    // leading marker were still there.
+    const text = lines.map(l => l.slice(1)).join('\n');
+    const symbols = new Set();
+    for (const m of text.matchAll(/function\s+([a-zA-Z_][a-zA-Z0-9_]*)\s*\(/g)) symbols.add('fn:' + m[1]);
+    for (const m of text.matchAll(/id="([a-zA-Z_][a-zA-Z0-9_-]*)"/g)) symbols.add('id:' + m[1]);
+    for (const m of text.matchAll(/^\s*\.([a-zA-Z][a-zA-Z0-9_-]*)\s*\{/gm)) symbols.add('css:' + m[1]);
+    return symbols;
+  }
+
+  async function runRegressionCheck() {
+    const fromSha = document.getElementById('regressionFromCommit').value;
+    const btn = document.getElementById('regressionCheckBtn');
+    const resultEl = document.getElementById('regressionCheckResult');
+    if (!fromSha) { resultEl.innerHTML = '<p class="tool-sub">Pick a commit to compare from first.</p>'; return; }
+    btn.disabled = true; btn.textContent = 'Checking...';
+    resultEl.innerHTML = '<p class="tool-sub">Comparing against GitHub...</p>';
+    try {
+      const res = await fetchWithTimeout('https://api.github.com/repos/carwash2020/webpagehosting/compare/' + fromSha + '...main', 15000);
+      const data = await res.json();
+      if (!data.files || !Array.isArray(data.files)) {
+        resultEl.innerHTML = '<p class="tool-sub">GitHub didn\'t return a usable comparison. Try a different commit.</p>';
+        return;
+      }
+      const relevantFiles = data.files.filter(f => /\.(html|js|css)$/.test(f.filename) && !f.filename.startsWith('node_modules/'));
+
+      // Gather every added-line symbol across ALL changed files first --
+      // this is what lets a symbol that moved from file A to file B (both
+      // changed in this same range) be correctly recognized as moved,
+      // not missing.
+      const allAddedSymbols = new Set();
+      const noDiffFiles = [];
+      for (const f of relevantFiles) {
+        if (!f.patch) { noDiffFiles.push(f.filename); continue; }
+        const addedLines = f.patch.split('\n').filter(l => l.startsWith('+') && !l.startsWith('+++'));
+        for (const s of extractRegressionSymbols(addedLines)) allAddedSymbols.add(s);
+      }
+
+      const flaggedByFile = {};
+      for (const f of relevantFiles) {
+        if (!f.patch) continue;
+        const removedLines = f.patch.split('\n').filter(l => l.startsWith('-') && !l.startsWith('---'));
+        const removedSymbols = extractRegressionSymbols(removedLines);
+        const flagged = [...removedSymbols].filter(s => !allAddedSymbols.has(s));
+        if (flagged.length) flaggedByFile[f.filename] = flagged;
+      }
+
+      const flaggedCount = Object.values(flaggedByFile).reduce((n, arr) => n + arr.length, 0);
+      let html = '';
+      if (flaggedCount === 0) {
+        html += '<p style="color:var(--green); font-weight:600;">Nothing flagged -- every removed function, id, and CSS class either still exists or reappears elsewhere in this same comparison.</p>';
+      } else {
+        html += '<p style="color:var(--orange-light); font-weight:600;">' + flaggedCount + ' item(s) worth a look:</p>';
+        for (const [filename, symbols] of Object.entries(flaggedByFile)) {
+          html += '<div style="margin-top:10px; padding:10px; background:var(--bg-panel-2); border-radius:6px;">';
+          html += '<div style="font-weight:600; font-size:13px;">' + escapeHtml(filename) + '</div>';
+          html += '<ul style="margin:6px 0 0; padding-left:20px; font-size:12.5px; color:var(--text-dim);">';
+          for (const s of symbols) {
+            const [kind, name] = s.split(':');
+            const label = kind === 'fn' ? 'function ' : kind === 'id' ? 'element id ' : 'CSS class ';
+            html += '<li>' + label + '<code>' + escapeHtml(name) + '</code></li>';
+          }
+          html += '</ul></div>';
+        }
+      }
+      if (noDiffFiles.length) {
+        html += '<p class="tool-sub" style="margin-top:12px;">Couldn\'t auto-check (too large for a full diff, worth a manual look): ' + noDiffFiles.map(escapeHtml).join(', ') + '</p>';
+      }
+      resultEl.innerHTML = html;
+    } catch (e) {
+      resultEl.innerHTML = '<p class="tool-sub">Could not complete the check: ' + escapeHtml(e.message) + '</p>';
+    } finally {
+      btn.disabled = false; btn.textContent = 'Run check';
+    }
+  }
+
   const NOTIF_TYPE_LABELS = {
     'followup': 'Client follow-up',
     'invoice-overdue': 'Invoice overdue',
@@ -1914,6 +2040,7 @@
       renderKnownIssues();
       renderDeployStatus();
       renderChangelog();
+      populateRegressionCommitDropdown();
       renderPushHistory();
       // Structural item #15 (2026-08-20): Site Content, FAQ, and Terms
       // editing moved to their own page (site-content.html) -- this
