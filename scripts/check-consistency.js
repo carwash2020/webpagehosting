@@ -94,6 +94,62 @@ function ensureFullHistory() {
   }
 }
 
+// Site audit improvement #6 (2026-08-20): confirms the app tour's own
+// health automatically on every push, rather than waiting for another
+// hard-to-reproduce user report to find the same class of bug again.
+// Two real, confirmed failure modes from the past week: a page whose
+// tour step points at a highlightSelector that doesn't actually exist
+// on that page, and a page that never loaded the CSS the tour needs to
+// even be visible (runway-dashboard.html's real bug, exactly).
+function checkTourHealth(problems) {
+  const tourSrc = fs.readFileSync(path.join(TOOLS_DIR, 'tools-tour.js'), 'utf8');
+  const stepPattern = /\{ page: '\/tools\/([\w-]+\.html)', highlightSelector: '([^']+)'/g;
+  const steps = [...tourSrc.matchAll(stepPattern)];
+  if (!steps.length) {
+    problems.push('checkTourHealth: found zero steps in tools-tour.js -- did its step format change?');
+    return;
+  }
+
+  for (const [, filename, selector] of steps) {
+    let pageSrc;
+    try {
+      pageSrc = readTool(filename);
+    } catch (e) {
+      problems.push(`tour step references ${filename}, but that file doesn't exist`);
+      continue;
+    }
+
+    // The tour needs .onboarding-card's real CSS to be visible at
+    // all -- either via the shared stylesheet, or (runway-dashboard.html's
+    // exact situation) copied in directly for a page that's deliberately
+    // self-contained.
+    const hasSharedStylesheet = /<link[^>]*styles-tools\.css/.test(pageSrc);
+    const hasOwnCopy = /\.onboarding-card\s*\{/.test(pageSrc);
+    if (!hasSharedStylesheet && !hasOwnCopy) {
+      problems.push(`${filename}: has a tour step, but never loads styles-tools.css and has no local .onboarding-card rule -- the tour card would be invisible, unstyled content (this exact bug happened for real on runway-dashboard.html)`);
+    }
+
+    // Confirm the highlightSelector actually resolves to something
+    // real. Same selector-to-substring conversion already proven
+    // correct in the test suite: an id selector, a compound class
+    // selector (every class name must be present), or a single
+    // attribute-value selector (including the *= substring operator).
+    let selectorFound;
+    if (selector.startsWith('#')) {
+      selectorFound = pageSrc.includes('id="' + selector.slice(1) + '"');
+    } else if (selector.startsWith('.')) {
+      const classNames = selector.slice(1).split('.');
+      selectorFound = classNames.every(c => new RegExp('class="[^"]*\\b' + c + '\\b[^"]*"').test(pageSrc));
+    } else {
+      const attrMatch = selector.match(/\[([^*=]+)\*?="([^"]+)"\]/);
+      selectorFound = attrMatch ? new RegExp(attrMatch[1] + '="[^"]*' + attrMatch[2].replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '[^"]*"').test(pageSrc) : false;
+    }
+    if (!selectorFound) {
+      problems.push(`${filename}: tour step's highlightSelector "${selector}" does not match anything in this page's real HTML`);
+    }
+  }
+}
+
 function checkVersionFreshness(problems) {
   if (!ensureFullHistory()) return; // see the long comment above -- this check cannot be trusted here
   // 2026-08-20: tools-common.js (1,447 lines, mixing dialogs/media/nav/
@@ -151,6 +207,7 @@ function main() {
   const jsVersions = {}; // script name -> { filename -> version string }
 
   checkVersionFreshness(problems);
+  checkTourHealth(problems);
 
   files.forEach(filename => {
     if (EXEMPT[filename]) return;
