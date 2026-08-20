@@ -45,6 +45,11 @@
 <script src="/tools/tools-nav-pwa.js?v=202608202100" defer></script>
 <style>
   body { padding: 44px 20px 60px; max-width: 720px; margin: 0 auto; }
+  /* Desktop layout (2026-08-20), requested directly: efficient on
+     phone stays exactly as it was (nothing below 1024px changes at
+     all) -- this only widens the container on a real desktop-size
+     screen. */
+  @media (min-width: 1024px) { body { max-width: 1050px; } }
 
   .job-hero {
     background: linear-gradient(180deg, var(--bg-panel-3), var(--bg-panel-2));

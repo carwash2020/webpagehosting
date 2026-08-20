@@ -60,6 +60,12 @@
   .btn-row { display: flex; gap: 12px; margin-top: 16px; flex-wrap: wrap; }
   .mileage-rate-inline { display: flex; align-items: center; gap: 8px; }
   .mileage-rate-inline label { font-size: 12.5px; color: var(--text-dim); white-space: nowrap; }
+  /* Desktop layout (2026-08-20), requested directly: this page had no
+     container width constraint at all, which looks fine on a narrow
+     phone screen but stretches awkwardly wide on a real desktop
+     monitor. Constrained only above 1024px -- phone is completely
+     unaffected. */
+  @media (min-width: 1024px) { body { max-width: 1300px; margin: 0 auto; } }
 </style>
 </head>
 <body>

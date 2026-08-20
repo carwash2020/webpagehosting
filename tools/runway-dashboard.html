@@ -155,6 +155,13 @@
   .tab-btn{background:var(--bg-card);color:var(--text-dim);border:none;padding:10px 16px;border-radius:8px 8px 0 0;font-family:'Oswald',sans-serif;font-weight:600;font-size:13px;text-transform:uppercase;letter-spacing:0.5px;cursor:pointer;white-space:nowrap;transition:background .15s, color .15s;}
   .tab-btn.active{background:var(--bg-elevated);color:var(--orange-light);box-shadow: inset 0 2px 0 var(--orange);}
   main{max-width:900px;margin:0 auto;padding:16px 20px 80px;}
+  /* Desktop layout (2026-08-20), requested directly: efficient on
+     phone stays exactly as it was (nothing below 1024px changes at
+     all) -- this only widens the container on a real desktop-size
+     screen. This page uses 3 separate max-width:900px selectors
+     (header/.tabs/main) rather than one body rule, unlike most other
+     pages -- widening all 3 together. */
+  @media (min-width: 1024px) { header, .tabs, main { max-width: 1500px; } }
   .panel{display:none;}
   .panel.active{display:block; animation:panelFadeIn .22s ease;}
   .panel.fade-out{display:block; opacity:0; transition:opacity .2s ease;}

@@ -197,6 +197,12 @@
     100% { box-shadow: 0 0 0 2px transparent; }
   }
   .pr-issue-flash { animation: prIssueFlash 1.4s ease; }
+  /* Desktop layout (2026-08-20), requested directly: this page had no
+     container width constraint at all, which looks fine on a narrow
+     phone screen but stretches awkwardly wide on a real desktop
+     monitor. Constrained only above 1024px -- phone is completely
+     unaffected. */
+  @media (min-width: 1024px) { body { max-width: 1300px; margin: 0 auto; } }
 </style>
 </head>
 <body>
