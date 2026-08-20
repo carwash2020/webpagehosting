@@ -78,7 +78,10 @@
 // Bumped again (2026-08-20): moved the ambient background gradient
 // from body.th-tool-page to html, fixing the black-bar/gradient-
 // positioning bug found right after the desktop-width work above.
-const CACHE_NAME = 'th-workspace-v14';
+// Bumped again (2026-08-20): desktop sidebar navigation, requested
+// directly -- runway-dashboard.html (precached) gained its own static
+// copy of the sidebar.
+const CACHE_NAME = 'th-workspace-v15';
 const PRECACHE_URLS = [
   '/tools/workspace.html', '/tools/job-tracker.html', '/tools/invoice-generator.html', '/tools/contract-generator.html',
   '/tools/calendar.html', '/tools/route-planner.html', '/tools/review-request.html', '/tools/contact-card.html',
