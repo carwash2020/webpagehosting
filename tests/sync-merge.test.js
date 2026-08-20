@@ -240,3 +240,75 @@ test('pushSync and pullSync both use fetchWithRetry for their core fetch call, n
   assert.match(pushFn, /await fetchWithRetry\(/);
   assert.match(pullFn, /await fetchWithRetry\(/);
 });
+
+// Improvement #5 from the 8/14-8/20 site audit (2026-08-20): a
+// reusable debug-trace utility, replacing the diagnostic panel pattern
+// hand-built from scratch twice this past week to track down hard-to-
+// reproduce issues. Placed in sync.js specifically since it's one of
+// only two files (alongside auth.js) genuinely loaded on every single
+// tool page, including runway-dashboard.html.
+
+test('debugTrace does nothing at all without ?debug=1 -- silent by default, no panel created', () => {
+  const { JSDOM } = require('jsdom');
+  const src = fs.readFileSync(SYNC_JS_PATH, 'utf8');
+  const dom = new JSDOM('<!DOCTYPE html><html><body></body></html>', { url: 'https://example.com/tools/job-tracker.html', runScripts: 'dangerously' });
+  const { window } = dom;
+  const s = window.document.createElement('script');
+  s.textContent = src;
+  window.document.head.appendChild(s);
+  window.debugTrace('should not appear');
+  assert.equal(window.document.getElementById('__debugTracePanel'), null);
+});
+
+test('debugTrace activates with ?debug=1 and logs real, timestamped messages to a visible panel anchored at the TOP of the screen', () => {
+  const { JSDOM } = require('jsdom');
+  const src = fs.readFileSync(SYNC_JS_PATH, 'utf8');
+  const dom = new JSDOM('<!DOCTYPE html><html><body></body></html>', { url: 'https://example.com/tools/job-tracker.html?debug=1', runScripts: 'dangerously' });
+  const { window } = dom;
+  const s = window.document.createElement('script');
+  s.textContent = src;
+  window.document.head.appendChild(s);
+  window.debugTrace('page init started');
+  window.debugTrace('sync resolved ok');
+  const panel = window.document.getElementById('__debugTracePanel');
+  assert.ok(panel);
+  assert.match(panel.textContent, /page init started/);
+  assert.match(panel.textContent, /sync resolved ok/);
+  // Anchored to the top, not the bottom -- a bottom-anchored version of
+  // this exact idea once ended up covering the very thing it was built
+  // to help diagnose, a real mistake made and fixed on Runway Dashboard
+  // earlier this session.
+  assert.equal(panel.style.top, '8px');
+  assert.equal(panel.style.bottom, '');
+});
+
+test('the debug flag persists into a new page load that never had ?debug=1 in its own URL, simulating a multi-page flow like the app tour', () => {
+  const { JSDOM } = require('jsdom');
+  const src = fs.readFileSync(SYNC_JS_PATH, 'utf8');
+  const dom1 = new JSDOM('<!DOCTYPE html><html><body></body></html>', { url: 'https://example.com/tools/job-tracker.html?debug=1', runScripts: 'dangerously' });
+  const window1 = dom1.window;
+  const s1 = window1.document.createElement('script');
+  s1.textContent = src;
+  window1.document.head.appendChild(s1);
+  window1.isDebugModeOn(); // triggers the sessionStorage write from the ?debug=1 param
+
+  const dom2 = new JSDOM('<!DOCTYPE html><html><body></body></html>', { url: 'https://example.com/tools/finance.html', runScripts: 'dangerously' });
+  const window2 = dom2.window;
+  // Simulate sessionStorage carrying over, as it genuinely does across
+  // same-origin navigation in a real browser (a fresh JSDOM instance
+  // doesn't share storage automatically the way real tabs do).
+  window2.sessionStorage.setItem('th_debug_mode', window1.sessionStorage.getItem('th_debug_mode'));
+  const s2 = window2.document.createElement('script');
+  s2.textContent = src;
+  window2.document.head.appendChild(s2);
+  window2.debugTrace('this page never had ?debug=1 in its own URL');
+  assert.ok(window2.document.getElementById('__debugTracePanel'));
+});
+
+test('debugTrace is defined in sync.js, one of only two files loaded on every tool page including the deliberately self-contained runway-dashboard.html', () => {
+  const src = fs.readFileSync(SYNC_JS_PATH, 'utf8');
+  assert.match(src, /function debugTrace\(msg\)/);
+  assert.match(src, /function isDebugModeOn\(\)/);
+  const rdSrc = fs.readFileSync(path.join(__dirname, '..', 'tools', 'runway-dashboard.html'), 'utf8');
+  assert.match(rdSrc, /<script src="\/tools\/sync\.js/, 'runway-dashboard.html should load sync.js, confirming debugTrace is genuinely available there too');
+});
