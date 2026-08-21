@@ -134,3 +134,45 @@ test('checkButtonHandlers correctly ignores JS keywords (like "if") and native b
   assert.match(src, /JS_KEYWORDS = new Set\(\[[\s\S]*?'if'/);
   assert.match(src, /KNOWN_GLOBALS = new Set\(\[[\s\S]*?'confirm'/);
 });
+
+// Follow-up sweep (2026-08-21), requested directly: a more thorough
+// pass beyond the first round found finance.html's own back link
+// still went to Job Tracker (not Workspace, unlike every other tool
+// page), plus 4 more diagnostic-message/comment stale references on
+// finance.html and runway-dashboard.html that the first pass's exact
+// regex pattern didn't catch.
+
+test('finance.html\'s back link goes to Workspace, matching every other tool page -- not to Job Tracker, which it incorrectly still did (left over from before the split)', () => {
+  const src = fs.readFileSync(path.join(TOOLS_DIR, 'finance.html'), 'utf8');
+  assert.match(src, /href="\/tools\/workspace\.html" class="help-btn" aria-label="Back to Workspace"/);
+  assert.doesNotMatch(src, /Back to Job Tracker/);
+});
+
+test('runway-dashboard.html\'s diagnostic messages (shown when Pull from Finance finds no data) say Finance, not Job Tracker', () => {
+  const src = fs.readFileSync(path.join(TOOLS_DIR, 'runway-dashboard.html'), 'utf8');
+  assert.match(src, /Finance doesn't have any income or expenses logged/);
+  assert.match(src, /Nothing logged in Finance for this specific month/);
+  assert.match(src, /Pulled from Finance/);
+  assert.doesNotMatch(src, /doesn't have any income or expenses logged on this device yet.*Job Tracker/s);
+});
+
+test('the README\'s internal tool list is complete -- includes Finance, Appliance Wiki, Settings, Dev Tools, and Site Content, all of which were missing entirely from the first-pass list', () => {
+  const readme = fs.readFileSync(path.join(__dirname, '..', 'README.md'), 'utf8');
+  for (const tool of ['Finance', 'Appliance Wiki', 'Settings', 'Dev Tools', 'Site Content']) {
+    assert.match(readme, new RegExp(tool), `README should mention ${tool}`);
+  }
+  assert.match(readme, /tools\/finance\.html/);
+});
+
+test('the README no longer claims tools-common.js exists -- that file was replaced by 4 separate files, and the README previously still described the old, single file', () => {
+  const readme = fs.readFileSync(path.join(__dirname, '..', 'README.md'), 'utf8');
+  assert.doesNotMatch(readme, /tools-common\.js.*Shared tool behavior/);
+  assert.match(readme, /tools-effects\.js/);
+  assert.match(readme, /tools-dialogs\.js/);
+});
+
+test('DISASTER_RECOVERY.md documents the new Owner-restricted Dev Tools view, since an Owner reporting "most panels are missing" could otherwise look like a bug rather than the intended, documented behavior', () => {
+  const doc = fs.readFileSync(path.join(__dirname, '..', 'DISASTER_RECOVERY.md'), 'utf8');
+  assert.match(doc, /Owner-restricted view/);
+  assert.match(doc, /applyOwnerRestrictedView/);
+});
