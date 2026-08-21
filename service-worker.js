@@ -120,7 +120,9 @@
 // went to Job Tracker, not Workspace like every other page) plus 4
 // more missed stale Job Tracker/Finance references found on a more
 // thorough follow-up sweep.
-const CACHE_NAME = 'th-workspace-v28';
+// Bumped again (2026-08-21): "What's new" changelog now groups
+// commits by calendar day, requested directly.
+const CACHE_NAME = 'th-workspace-v29';
 const PRECACHE_URLS = [
   '/tools/workspace.html', '/tools/job-tracker.html', '/tools/invoice-generator.html', '/tools/contract-generator.html',
   '/tools/calendar.html', '/tools/route-planner.html', '/tools/review-request.html', '/tools/contact-card.html',
