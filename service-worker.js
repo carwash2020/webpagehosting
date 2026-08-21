@@ -86,7 +86,10 @@
 // Bumped again (2026-08-20): fixed the black-bar-on-the-right bug
 // found from a direct screenshot -- 16 HTML pages plus
 // styles-tools.css (all precached) genuinely changed.
-const CACHE_NAME = 'th-workspace-v17';
+// Bumped again (2026-08-20): header now spans the full width next to
+// the sidebar on desktop, requested directly from a screenshot -- 14
+// HTML pages plus styles-tools.css (all precached) genuinely changed.
+const CACHE_NAME = 'th-workspace-v18';
 const PRECACHE_URLS = [
   '/tools/workspace.html', '/tools/job-tracker.html', '/tools/invoice-generator.html', '/tools/contract-generator.html',
   '/tools/calendar.html', '/tools/route-planner.html', '/tools/review-request.html', '/tools/contact-card.html',

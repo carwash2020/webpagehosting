@@ -984,6 +984,23 @@ body .hub-header, body .tool-header {
      plain block elements instead of sitting in a row. */
   display: flex; align-items: center; justify-content: space-between; gap: 14px;
 }
+/* Desktop (2026-08-20), requested directly from a screenshot: the
+   header was still constrained to the same narrow, centered column as
+   the rest of the page's content, with visible dark space on either
+   side -- it should span the full remaining width next to the
+   sidebar instead, like a real app toolbar. Switches from sticky
+   (which stays within its own containing block's width) to fixed
+   (independent of it), spanning from right after the sidebar
+   (left:240px) to the browser's right edge (right:0). Each page's own
+   desktop media query below adds matching padding-top to its body, to
+   compensate for the header no longer contributing to normal page
+   flow. */
+@media (min-width: 1024px) {
+  body .hub-header, body .tool-header {
+    position: fixed; top: 0; left: 240px; right: 0; z-index: 90;
+    margin: 0; padding: 12px 24px; border-radius: 0;
+  }
+}
 /* Bug fix (2026-08-20), found from a direct report with a screenshot
    showing the header rendering twice while scrolling: iOS Safari
    (confirmed via research to be a known, documented issue, especially
