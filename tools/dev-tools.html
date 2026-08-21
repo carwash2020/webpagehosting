@@ -37,7 +37,7 @@
 </script>
 <link rel="stylesheet" href="/styles.css?v=202608202000">
 <link rel="stylesheet" href="/tools/styles-tools.css?v=202608210900">
-<script src="/tools/data-layer.js?v=202608202000" defer></script>
+<script src="/tools/data-layer.js?v=202608210900" defer></script>
 <script src="/tools/dev-tools-shared.js?v=202608202000" defer></script>
 <script src="/tools/tools-effects.js?v=202608201400" defer></script>
 <script src="/tools/tools-dialogs.js?v=202608201400" defer></script>
@@ -636,7 +636,7 @@
       '<p class="tool-sub" style="margin-bottom:12px;">' + clients.length + ' client' + (clients.length === 1 ? '' : 's') +
       ' registered, sorted by lifetime revenue. Jobs/invoices/quotes shown are what resolved to each client across every spelling variant.</p>' +
       clients.map(c =>
-        '<div class="dev-check-row"><div>' +
+        '<div class="dev-check-row" data-client-id="' + escapeHtml(c.id) + '"><div>' +
           '<div>' + escapeHtml(c.name) + '</div>' +
           '<div class="dev-check-detail">' +
             c.jobCount + ' job' + (c.jobCount === 1 ? '' : 's') + ' &middot; ' +
@@ -645,8 +645,19 @@
             (c.phone ? ' &middot; ' + escapeHtml(c.phone) : '') +
           '</div>' +
         '</div>' +
-        '<span class="dev-check-status pass">' + money(c.revenue) + '</span></div>'
+        '<div style="display:flex; align-items:center; gap:10px;">' +
+          '<span class="dev-check-status pass">' + money(c.revenue) + '</span>' +
+          '<button class="small-btn danger" onclick="deleteClientFromRegistry(\'' + c.id.replace(/'/g, "\\'") + '\')">Delete</button>' +
+        '</div></div>'
       ).join('');
+  }
+
+  async function deleteClientFromRegistry(id) {
+    const confirmed = await showConfirm('Remove this client from the registry? Their jobs and invoices are not affected -- this only removes the registry entry itself.', { danger: true, confirmText: 'Delete' });
+    if (!confirmed) return;
+    thDeleteClient(id);
+    renderClientRegistry();
+    showToast('Removed.');
   }
 
   async function runDataQualityCheck() {

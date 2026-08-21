@@ -132,6 +132,17 @@ function thNormalizeClientName(name) {
 function thLoadClients() { return thRead(TH_KEYS.clients, []); }
 function thSaveClients(list) { return thWrite(TH_KEYS.clients, list); }
 
+// Requested directly (2026-08-21): the Client Registry had no way to
+// remove a duplicate entry. Removes only the registry record itself --
+// never the underlying jobs/invoices/quotes, which are separate, real
+// records matched by name independently of any specific registry
+// entry, so nothing else is affected by removing one.
+function thDeleteClient(id) {
+  const list = thLoadClients().filter(c => c.id !== id);
+  thSaveClients(list);
+  return list;
+}
+
 // Gathers every distinct client name currently referenced anywhere, with the
 // best contact details available for each. Read-only -- inspects, never writes.
 function thCollectClientNamesFromExistingData() {
