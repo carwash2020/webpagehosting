@@ -971,10 +971,19 @@ body .hub-header, body .tool-header {
      that area unless explicitly pushed clear of it. On a large-notch
      device this pushed the header's own right-side buttons (including
      Settings) up under the status bar -- unreachable, not just
-     visually cramped. Fixed both the sticky position and the header's
-     own top padding, since it sits in NORMAL page flow (not yet
-     sticky) on initial load, before any scrolling. */
-  position: sticky; top: env(safe-area-inset-top, 0px); z-index: 60;
+     visually cramped. Fixed the header's own top padding below (which
+     alone already solves this, by pushing the header's inner content
+     down clear of the notch).
+     Bug fix (2026-08-21), reported directly with a screenshot: also
+     changing the sticky top value itself (to env(safe-area-inset-top)
+     instead of 0) was an unnecessary over-correction from the fix
+     above -- on a notched device, that meant the header only started
+     sticking partway down the screen, leaving the true top of the
+     viewport completely uncovered. Scrolled-past content became
+     visible through that gap. Reverted to top:0 -- the padding fix
+     alone already keeps buttons clear of the notch, so the sticky
+     position itself never needed to change too. */
+  position: sticky; top: 0; z-index: 60;
   margin: 0 -20px 14px; padding: calc(12px + env(safe-area-inset-top, 0px)) 20px 12px;
   border-bottom: 1px solid var(--border);
   /* This was missing entirely -- with no display:flex here, any page
