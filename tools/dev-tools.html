@@ -1864,7 +1864,7 @@
   async function renderChangelog() {
     const el = document.getElementById('changelogList');
     try {
-      const res = await fetchWithTimeout('https://api.github.com/repos/carwash2020/webpagehosting/commits?per_page=15', 6000);
+      const res = await fetchWithTimeout('https://api.github.com/repos/carwash2020/webpagehosting/commits?per_page=25', 6000);
       const commits = await res.json();
       if (!Array.isArray(commits) || !commits.length) {
         el.innerHTML = '<p class="tool-sub">Could not load recent commits.</p>';
@@ -1877,13 +1877,28 @@
       // seeing exactly what was done doesn't require leaving the app;
       // the GitHub link still exists for anyone who wants the literal
       // code diff, not just the written explanation of it.
+      // Upgrade (2026-08-21), requested directly: grouped by calendar
+      // day rather than a flat list -- a single day's work is often
+      // several separate commits (found, fixed, tested, shipped, then
+      // a follow-up fix), and seeing them clustered under one date
+      // header makes it obvious they're the same effort rather than
+      // reading as unrelated, scattered entries.
+      let lastDateHeader = null;
       el.innerHTML = commits.map((c, i) => {
         const fullMessage = (c.commit && c.commit.message) || '(no message)';
         const summary = fullMessage.split('\n')[0];
         const rest = fullMessage.split('\n').slice(1).join('\n').trim();
-        const when = c.commit && c.commit.author ? new Date(c.commit.author.date).toLocaleString() : '';
+        const commitDate = c.commit && c.commit.author ? new Date(c.commit.author.date) : null;
+        const when = commitDate ? commitDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '';
+        const dateHeader = commitDate ? commitDate.toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric' }) : '';
         const detailId = 'changelogDetail' + i;
-        return '<div style="padding:10px 0; border-bottom:1px solid var(--border); font-size:13px;">' +
+        let headerHtml = '';
+        if (dateHeader && dateHeader !== lastDateHeader) {
+          headerHtml = '<div style="font-family:\'Oswald\',sans-serif; font-size:11.5px; letter-spacing:.5px; text-transform:uppercase; color:var(--orange-light); margin-top:' + (lastDateHeader ? '18px' : '0') + '; margin-bottom:6px;">' + dateHeader + '</div>';
+          lastDateHeader = dateHeader;
+        }
+        return headerHtml +
+          '<div style="padding:10px 0; border-bottom:1px solid var(--border); font-size:13px;">' +
           '<div style="font-weight:600;">' + escapeHtml(summary) + '</div>' +
           '<div style="font-size:11.5px; color:var(--text-dim); margin-top:2px;">' + when + ' &mdash; <a href="' + escapeHtml(c.html_url) + '" target="_blank" rel="noopener" style="color:inherit;">' + c.sha.slice(0, 7) + ' on GitHub</a></div>' +
           (rest ? '<button class="small-btn" style="margin-top:6px;" onclick="this.nextElementSibling.style.display=this.nextElementSibling.style.display===\'none\'?\'block\':\'none\'; this.textContent=this.textContent==\'Show full message\'?\'Hide full message\':\'Show full message\';">Show full message</button>' +
