@@ -161,7 +161,7 @@
      screen. This page uses 3 separate max-width:900px selectors
      (header/.tabs/main) rather than one body rule, unlike most other
      pages -- widening all 3 together. */
-  @media (min-width: 1024px) { header, .tabs, main { max-width: 1500px; margin-left: 240px; } }
+  @media (min-width: 1024px) { header, .tabs, main { max-width: 1500px; margin-left: calc(240px + max(0px, (100vw - 240px - 1500px) / 2)); } }
   /* Desktop sidebar (2026-08-20), requested directly. This page is
      deliberately self-contained and doesn't load styles-tools.css
      where the shared version of this lives -- copied to match

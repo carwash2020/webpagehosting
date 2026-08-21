@@ -1233,7 +1233,13 @@ body select:focus, body textarea:focus {
    above -- same class-boosted-specificity technique already proven
    for body.th-has-bottomnav's padding offset, so this correctly wins
    over each page's own bare body{margin:0 auto} rule. */
-@media (min-width: 1024px) { body.th-has-sidebar { margin-left: 240px; } }
+/* The flat 240px offset that used to live here was removed (2026-08-20):
+   found, from a direct screenshot, that a fixed offset combined with
+   max-width and a leftover auto margin piled all the extra space onto
+   one side instead of centering it. Every real page now computes its
+   own correct margin-left directly (a real centering calc using that
+   page's own max-width), which this rule's higher specificity would
+   otherwise have silently overridden regardless of load order. */
 .th-sidebar-brand {
   display: flex; align-items: center; gap: 10px;
   padding: 8px 10px 20px; margin-bottom: 8px; border-bottom: 1px solid var(--border);

@@ -36,7 +36,7 @@
   })();
 </script>
 <link rel="stylesheet" href="/styles.css?v=202608202000">
-<link rel="stylesheet" href="/tools/styles-tools.css?v=202608202800">
+<link rel="stylesheet" href="/tools/styles-tools.css?v=202608202900">
 <script src="/tools/tools-effects.js?v=202608201400" defer></script>
 <script src="/tools/tools-dialogs.js?v=202608201400" defer></script>
 <script src="/tools/tools-media-sharing.js?v=202608201900" defer></script>
@@ -49,7 +49,7 @@
      phone stays exactly as it was (nothing below 1024px changes at
      all) -- this only widens the container on a real desktop-size
      screen. */
-  @media (min-width: 1024px) { body { max-width: 950px; } }
+  @media (min-width: 1024px) { body { max-width: 950px; margin-left: calc(240px + max(0px, (100vw - 240px - 950px) / 2)); } }
   .tool-title { font-family:'Oswald',sans-serif; font-weight:700; font-size:28px; color:var(--white); margin-bottom:6px; }
   .tool-sub { color: var(--text-dim); margin-bottom: 30px; }
   .home-link { display:inline-block; margin-bottom: 20px; color: var(--blue-light); font-size: 14px; }

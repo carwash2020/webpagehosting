@@ -36,7 +36,7 @@
   })();
 </script>
 <link rel="stylesheet" href="/styles.css?v=202608202000">
-<link rel="stylesheet" href="/tools/styles-tools.css?v=202608202800">
+<link rel="stylesheet" href="/tools/styles-tools.css?v=202608202900">
 <script src="/tools/sync.js?v=202608202400" defer></script>
 <script src="/tools/data-layer.js?v=202608202000" defer></script>
 <script src="/tools/tools-effects.js?v=202608201400" defer></script>
@@ -65,7 +65,7 @@
      phone screen but stretches awkwardly wide on a real desktop
      monitor. Constrained only above 1024px -- phone is completely
      unaffected. */
-  @media (min-width: 1024px) { body { max-width: 1300px; margin: 0 auto; } }
+  @media (min-width: 1024px) { body { max-width: 1300px; margin-left: calc(240px + max(0px, (100vw - 240px - 1300px) / 2)); } }
 </style>
 </head>
 <body>

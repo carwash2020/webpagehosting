@@ -21,12 +21,21 @@ test('the sidebar is hidden by default and only shown at min-width:1024px -- mob
   assert.match(css, /@media \(min-width: 1024px\) \{ \.th-desktop-sidebar \{ display: flex/);
 });
 
-test('the sidebar\'s width and the content offset (body.th-has-sidebar margin-left) match exactly -- otherwise content would either overlap the sidebar or leave an unwanted gap', () => {
+test('the sidebar\'s width and every real page\'s own centering calc agree on the same base offset -- the shared flat-offset rule that used to live in styles-tools.css was deliberately removed (its higher specificity would have silently overridden every page\'s own corrected margin-left), so each page now computes its own, and they must all agree with the sidebar\'s real width', () => {
   const css = fs.readFileSync(STYLES_TOOLS_CSS_PATH, 'utf8');
   const sidebarWidth = css.match(/\.th-desktop-sidebar \{[^}]*width:\s*(\d+)px/)[1];
-  const offsetMatch = css.match(/@media \(min-width: 1024px\) \{ body\.th-has-sidebar \{ margin-left:\s*(\d+)px/);
-  assert.ok(offsetMatch, 'body.th-has-sidebar margin-left rule not found');
-  assert.equal(sidebarWidth, offsetMatch[1], 'sidebar width and content offset must match exactly');
+  assert.doesNotMatch(css, /body\.th-has-sidebar \{ margin-left:/, 'the old flat-offset rule should be gone -- it would silently override every page\'s own corrected calc due to higher specificity');
+
+  const pages = ['workspace.html', 'calendar.html', 'client-detail.html', 'contract-generator.html',
+    'dev-tools.html', 'invoice-generator.html', 'job-detail.html', 'job-tracker.html',
+    'review-request.html', 'route-planner.html', 'settings.html', 'site-content.html',
+    'finance.html', 'parts-reference.html'];
+  for (const page of pages) {
+    const pageSrc = fs.readFileSync(path.join(TOOLS_DIR, page), 'utf8');
+    const offsetMatch = pageSrc.match(/margin-left: calc\((\d+)px \+ max\(0px, \(100vw - \d+px - \d+px\) \/ 2\)\)/);
+    assert.ok(offsetMatch, page + ' is missing its own centering calc');
+    assert.equal(offsetMatch[1], sidebarWidth, page + '\'s base offset must match the sidebar\'s real width');
+  }
 });
 
 test('injecting the sidebar on a real page produces the correct number of links, and correctly marks the current page as active', () => {

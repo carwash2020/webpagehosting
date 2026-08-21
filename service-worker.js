@@ -83,7 +83,10 @@
 // copy of the sidebar.
 // Bumped again (2026-08-20): desktop board/table view added to Job
 // Tracker, requested directly following the sidebar work above.
-const CACHE_NAME = 'th-workspace-v16';
+// Bumped again (2026-08-20): fixed the black-bar-on-the-right bug
+// found from a direct screenshot -- 16 HTML pages plus
+// styles-tools.css (all precached) genuinely changed.
+const CACHE_NAME = 'th-workspace-v17';
 const PRECACHE_URLS = [
   '/tools/workspace.html', '/tools/job-tracker.html', '/tools/invoice-generator.html', '/tools/contract-generator.html',
   '/tools/calendar.html', '/tools/route-planner.html', '/tools/review-request.html', '/tools/contact-card.html',
