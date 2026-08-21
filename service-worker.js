@@ -100,7 +100,10 @@
 // Income, and Profitability all moved to Finance during this week's
 // structural rework, but 5 pages still attributed them to Job
 // Tracker.
-const CACHE_NAME = 'th-workspace-v21';
+// Bumped again (2026-08-21): fixed 3 genuinely broken help buttons on
+// finance.html (openCardInfo was never defined there), found by a new
+// automated button-handler check requested directly.
+const CACHE_NAME = 'th-workspace-v22';
 const PRECACHE_URLS = [
   '/tools/workspace.html', '/tools/job-tracker.html', '/tools/invoice-generator.html', '/tools/contract-generator.html',
   '/tools/calendar.html', '/tools/route-planner.html', '/tools/review-request.html', '/tools/contact-card.html',
