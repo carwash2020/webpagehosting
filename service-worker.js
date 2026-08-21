@@ -146,7 +146,10 @@
 // Bumped again (2026-08-21): swapped the order of the refresh button
 // and the live sync badge, requested directly -- refresh button now
 // on top.
-const CACHE_NAME = 'th-workspace-v36';
+// Bumped again (2026-08-21): fixed the refresh button crowding the
+// settings gear icon above it, reported directly -- the order swap
+// left only ~8px of breathing room; now a real 20px gap.
+const CACHE_NAME = 'th-workspace-v37';
 const PRECACHE_URLS = [
   '/tools/workspace.html', '/tools/job-tracker.html', '/tools/invoice-generator.html', '/tools/contract-generator.html',
   '/tools/calendar.html', '/tools/route-planner.html', '/tools/review-request.html', '/tools/contact-card.html',
