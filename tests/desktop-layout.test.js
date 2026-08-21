@@ -23,7 +23,7 @@ test('every standard tool page has a min-width:1024px media query widening its c
     const src = fs.readFileSync(path.join(TOOLS_DIR, page), 'utf8');
     const mobileMatch = src.match(/body \{ padding: [^;]+; max-width: (\d+)px; margin: 0 auto; \}/);
     assert.ok(mobileMatch, page + ': original mobile body rule not found -- did something change unexpectedly?');
-    const desktopMatch = src.match(/@media \(min-width: 1024px\) \{ body \{ max-width: (\d+)px; margin-left: calc\(240px \+ max\(0px, \(100vw - 240px - \d+px\) \/ 2\)\); padding-top: 75px; \} \}/);
+    const desktopMatch = src.match(/@media \(min-width: 1024px\) \{ body \{ max-width: (\d+)px; margin-left: calc\(240px \+ max\(0px, \(100vw - 240px - \d+px\) \/ 2\)\); padding-top: \d+px; \} \}/);
     assert.ok(desktopMatch, page + ' is missing the desktop-width media query');
     const mobileWidth = parseInt(mobileMatch[1], 10);
     const desktopWidth = parseInt(desktopMatch[1], 10);
@@ -47,7 +47,7 @@ test('finance.html and parts-reference.html, which previously had NO container w
     // would also affect mobile, which currently works fine
     // unconstrained on a narrow screen.
     assert.doesNotMatch(src, /(?<!media \(min-width: 1024px\) \{ )body \{[^}]*max-width/, page + ' should not have an unconditional max-width rule affecting mobile too');
-    assert.match(src, /@media \(min-width: 1024px\) \{ body \{ max-width: \d+px; margin-left: calc\(240px \+ max\(0px, \(100vw - 240px - \d+px\) \/ 2\)\); padding-top: 75px; \} \}/, page + ' is missing its new desktop-only container constraint');
+    assert.match(src, /@media \(min-width: 1024px\) \{ body \{ max-width: \d+px; margin-left: calc\(240px \+ max\(0px, \(100vw - 240px - \d+px\) \/ 2\)\); padding-top: \d+px; \} \}/, page + ' is missing its new desktop-only container constraint');
   }
 });
 
@@ -169,7 +169,7 @@ test('every page using either header class has matching padding-top added to its
     const src = fs.readFileSync(path.join(TOOLS_DIR, page), 'utf8');
     const hasHeader = /class="(hub-header|tool-header)"/.test(src);
     assert.ok(hasHeader, page + ' was expected to use one of the two header classes');
-    assert.match(src, /@media \(min-width: 1024px\) \{ body \{[^}]*padding-top: 75px;[^}]*\} \}/, page + ' is missing the compensating padding-top for the now-fixed header');
+    assert.match(src, /@media \(min-width: 1024px\) \{ body \{[^}]*padding-top: \d+px;[^}]*\} \}/, page + ' is missing the compensating padding-top for the now-fixed header');
   }
 });
 
@@ -178,4 +178,30 @@ test('runway-dashboard.html\'s own header is NOT sticky/fixed at all (it scrolls
   const headerRule = src.match(/(?<!<)header\{([^}]*)\}/);
   assert.ok(headerRule);
   assert.doesNotMatch(headerRule[1], /position:\s*(sticky|fixed)/);
+});
+
+// Bug fix (2026-08-20), found from a direct screenshot: after fixing
+// the main header to span the full width, the separate .jump-nav tab
+// bar (Snapshot/Action Items/More/Tools) below it still had the exact
+// same "sticky but width-constrained to the narrow content column"
+// issue -- looking like its own separate floating box.
+
+test('the shared .jump-nav rule switches from sticky to fixed on desktop, positioned right below the fixed header, spanning the same width', () => {
+  const css = fs.readFileSync(path.join(TOOLS_DIR, 'styles-tools.css'), 'utf8');
+  const desktopBlock = css.match(/@media \(min-width: 1024px\) \{\s*body \.jump-nav \{([^}]*)\}\s*\}/);
+  assert.ok(desktopBlock, 'desktop jump-nav override not found');
+  assert.match(desktopBlock[1], /position:\s*fixed/);
+  assert.match(desktopBlock[1], /left:\s*240px/);
+  assert.match(desktopBlock[1], /right:\s*0/);
+  assert.match(desktopBlock[1], /top:\s*61px/, 'should sit right below the fixed header, not overlap it');
+});
+
+test('workspace.html and dev-tools.html, the only 2 pages with a .jump-nav bar, have extra padding-top to account for both the header AND the jump-nav stacked, not just the header alone', () => {
+  for (const page of ['workspace.html', 'dev-tools.html']) {
+    const src = fs.readFileSync(path.join(TOOLS_DIR, page), 'utf8');
+    assert.match(src, /class="jump-nav"/, page + ' was expected to have a jump-nav bar');
+    const paddingMatch = src.match(/@media \(min-width: 1024px\) \{ body \{[^}]*padding-top: (\d+)px;[^}]*\} \}/);
+    assert.ok(paddingMatch);
+    assert.ok(parseInt(paddingMatch[1], 10) > 75, page + ' needs more than the header-only 75px, since it also has a jump-nav bar stacked below it');
+  }
 });
