@@ -92,7 +92,10 @@
 // Bumped again (2026-08-20): fixed the .jump-nav tab bar (Snapshot/
 // Action Items/More/Tools) to span the full width on desktop too,
 // same fix as the header, requested directly from a screenshot.
-const CACHE_NAME = 'th-workspace-v19';
+// Bumped again (2026-08-21): moved the Live sync indicator to sit as
+// a second row under the settings button on desktop, requested
+// directly.
+const CACHE_NAME = 'th-workspace-v20';
 const PRECACHE_URLS = [
   '/tools/workspace.html', '/tools/job-tracker.html', '/tools/invoice-generator.html', '/tools/contract-generator.html',
   '/tools/calendar.html', '/tools/route-planner.html', '/tools/review-request.html', '/tools/contact-card.html',
