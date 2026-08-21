@@ -231,6 +231,20 @@ or its `role_name` doesn't join to a `role_definitions` row with the
 expected `can_manage_roles` value, that's almost certainly the actual
 cause, rather than anything in the frontend code.
 
+**Owner-restricted view (added 2026-08-21):** a role having
+`can_manage_roles` set (Developer) now also controls how much of Dev
+Tools that account actually *sees*, not just whether it can change
+roles. An Owner-role account (`can_manage_roles` false) only sees
+Client Registry and Account Roles -- the other 19 panels (everything
+code/technical/error-diagnostic in nature) are hidden via
+`applyOwnerRestrictedView()` in `dev-tools.html`, keyed off the real
+`canManageRoles()`. If an Owner reports "most of Dev Tools is
+missing," that's this feature working as intended, not a bug --
+confirm by checking their `account_roles` row's `role_name` first.
+This is separate from the page's own role-preview toggle
+(`effectiveCanManageRoles()`), which only changes what the Account
+Roles panel itself displays and never affects this restriction.
+
 **A real bug already happened here once, worth knowing about:** the
 dev-tools dashboard tile went invisible for *every* account (Connor
 included) for a period after this system first shipped, because the

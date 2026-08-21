@@ -7,9 +7,9 @@ Hosted on GitHub Pages, deployed automatically on push to `main`.
 This repo actually serves **two separate things** from the same domain:
 
 1. **The public marketing site** — homepage + 5 city landing pages, meant for customers and search engines. Lives at the repo root.
-2. **An internal Workspace tool suite** — Job Tracker, Invoice Generator, Contract Generator, Route Planner, Calendar, Review Request Sender, Runway Dashboard, and a Dashboard, at `/tools/workspace.html`. Not linked from the public site, not indexed, but hosted on the same domain and repo since it's all static files anyway. **As of 2026-08-10, these live under `/tools/`, not the repo root** — see below.
+2. **An internal Workspace tool suite** — Dashboard, Job Tracker, Finance, Invoice Generator, Contract Generator, Route Planner, Calendar, Review Request Sender, Runway Dashboard, Appliance Wiki, Settings, Dev Tools, and Site Content, at `/tools/workspace.html` onward. Not linked from the public site, not indexed, but hosted on the same domain and repo since it's all static files anyway. **As of 2026-08-10, these live under `/tools/`, not the repo root** — see below.
 
-They share one stylesheet (`styles.css`) and are otherwise independent.
+The public site uses one shared stylesheet (`styles.css`, repo root). The tool suite has its own separate stylesheet (`tools/styles-tools.css`) — genuinely two files now, not one shared across everything; see "Shared files" below for what `styles.css` actually still covers.
 
 ## ⚠️ Read this before touching deployment at all
 
@@ -44,22 +44,30 @@ Two things on this specific repo have caused real, hours-long confusion before. 
 
 | File | Purpose |
 |---|---|
-| `tools/workspace.html` | **Dashboard** — the entry point for the whole suite. Business metrics, Leads inbox, Due Soon jobs, Invoices list, Website Gallery Queue, Analytics, tool links, Backup & Restore. Bookmark this one. |
-| `tools/job-tracker.html` | Jobs, Cost Lookup (with sales tax), Expenses (receipt required, now with an optional Part Number field), Contacts (with client history), Notes — tabs, one page. |
+| `tools/workspace.html` | **Dashboard** — the entry point for the whole suite, organized into 4 tabs: Snapshot (business metrics), Action Items (invoices/leads/due-soon jobs), More (Business Health: gallery queue, compliance, analytics, backup/restore — collapsed by default), and Tools (every internal tool, one tap away). Bookmark this one. |
+| `tools/job-tracker.html` | Jobs, Contacts (with client history), Notes — 3 tabs, one page. Cost Lookup, Profitability, Income, and Expenses moved out to `finance.html` on 2026-08-20 (see below) — this page is jobs/contacts/notes only now. On a real desktop screen, the Jobs list also renders as a sortable table. |
+| `tools/finance.html` | Cost Lookup (with sales tax), Profitability, Income, Expenses (receipt required, mileage rate shared with Route Planner's cost analyzer) — split out of `job-tracker.html` on 2026-08-20 once these four had grown into an entire bookkeeping system living inside a job list. |
 | `tools/invoice-generator.html` | Invoice + Quote/Estimate tabs. Tax-aware, per-line "Taxable" toggle. Convert a Quote to an Invoice with one tap. Generates a branded PDF with your Venmo QR built in. |
 | `tools/contract-generator.html` | Fill in a client/job, generate a branded contract PDF to email/text. Has two signature canvases — see the swipe-gesture note below if working on touch gestures anywhere near this page. |
 | `tools/route-planner.html` | Multi-stop Google Maps route links + a fuel-cost/sales-tax "to and from" cost analyzer. |
 | `tools/review-request.html` | Generates a review-request text message; deep-linkable with a client name/job pre-filled. Also has Google/Yelp QR code tabs. |
 | `tools/calendar.html` | Shows jobs flagged "Show on Calendar" from Job Tracker. Doesn't manage its own data. |
-| `tools/runway-dashboard.html` | Personal + business financial runway tracking — debts, income, expenses, month-by-month. |
+| `tools/runway-dashboard.html` | Personal + business financial runway tracking — debts, income, expenses, month-by-month. Pulls revenue/expenses straight from Finance (`finance.html`), no double entry. |
+| `tools/parts-reference.html` | **Appliance Wiki** — quick lookup for common appliance issues: what part it usually is, the part number, roughly what it costs. |
+| `tools/settings.html` | Account info, Cloud Sync setup, notification preferences, Color theme — personal, per-device options that don't belong on any one specific tool page. |
+| `tools/dev-tools.html` | Site diagnostics and maintenance utilities — see "Dev Tools panels" further down for the full list. Access is role-gated (`account_roles` table, see `DISASTER_RECOVERY.md`); as of 2026-08-21, an Owner-role account only sees Client Registry and Account Roles here, while a Developer-role account sees every panel. |
+| `tools/site-content.html` | Site Content / FAQ / Terms editing — split out of `dev-tools.html` on 2026-08-20. |
+| `tools/client-detail.html` | Full history for one client (jobs, invoices, quotes, contracts) — reached from workspace.html or job-detail.html, not linked from the main nav directly. |
+| `tools/job-detail.html` | Full detail view for one job (photos, linked invoices, margin) — reached from job-tracker.html or finance.html, not linked from the main nav directly. |
 | `tools/login.html` | Auth entry point for the whole suite. |
-| `tools/contact-card.html`, `tools/job-cost-lookup.html`, `tools/expense-logger.html` | Retired — now just redirect stubs into `job-tracker.html`'s tabs, kept so old bookmarks don't 404. |
+| `tools/reset-password.html` | Password reset flow, reached from a Supabase auth email link. |
+| `tools/contact-card.html`, `tools/job-cost-lookup.html`, `tools/expense-logger.html` | Retired — redirect stubs kept so old bookmarks don't 404. `contact-card.html` redirects into `job-tracker.html`'s Contacts tab (never moved); `job-cost-lookup.html` and `expense-logger.html` redirect into `finance.html`'s Cost Lookup/Expenses tabs (both moved there from Job Tracker on 2026-08-20). |
 
 ## Shared files (used by BOTH the public site and internal tools — stayed at repo root deliberately)
 
 | File | Purpose |
 |---|---|
-| `styles.css` | **One shared stylesheet for every page on the whole site**, public and internal alike. Edit once, applies everywhere. Referenced via the absolute path `/styles.css` from every page regardless of folder, so it never needed to move. |
+| `styles.css` | The public site's stylesheet, plus shared design tokens (colors, fonts) both halves of the site draw from. **No longer the tool suite's own CSS** — that split out into `tools/styles-tools.css` once the tool suite's own styling grew large enough to warrant its own file (see below). Referenced via the absolute path `/styles.css` from every page regardless of folder, so it never needed to move. |
 | `service-worker.js` | Shared PWA service worker. **Deliberately stayed at the repo root, not moved into `/tools/`**, even though it's mostly tool-related — confirmed it's also referenced by the public site's pages, and a service worker's scope defaults to wherever the file itself lives (not wherever it's registered from), so keeping it at root is what lets one service worker cover the whole site. Has a hardcoded `PRECACHE_URLS` list — if any page referenced in that list ever moves again, this list needs updating too, the same way it did during the `/tools/` move. |
 | `images/` | Logos, favicons, gallery photos, OG share image, Venmo QR code. Should contain only actual image files — a past upload mistake once left duplicate copies of `index.html`, `job-tracker.html`, and `styles.css` sitting in here; if any stray HTML/CSS ever turns up in this folder again, it's a mistake, not intentional. |
 
@@ -68,8 +76,10 @@ Two things on this specific repo have caused real, hours-long confusion before. 
 | File | Purpose |
 |---|---|
 | `tools/sync.js` | The entire cloud-sync engine — push/pull to Supabase, real-time subscriptions, Leads fetch/update/delete, Job Photos and Receipts upload/delete. Supabase credentials live here (anon/public key only — never the secret key). |
-| `tools/tools-common.js` | Shared tool behavior: help-modal open/close, the custom confirm/alert dialog system, row entrance/exit animations, the swipe-back-to-workspace gesture used by pages without their own tabs. |
-| `tools/auth.js` | Login/session handling, including the redirect-to-login-and-back-again flow. |
+| `tools/data-layer.js` | Shared read/write path for jobs, invoices, expenses, and the client registry (`clientId`s, backfill migration from name-matching). Every page reading or writing this data should go through here rather than touching `localStorage` directly, so a fix (or a sync-push trigger) only needs to happen in one place. |
+| `tools/styles-tools.css` | The tool suite's own stylesheet — everything specific to `/tools/` pages (sticky header, sidebar, bottom nav, badges, forms) lives here, separate from the public site's `styles.css`. Every page loading it must use the exact same `?v=` cache-bust version — the consistency checker (`scripts/check-consistency.js`) catches drift automatically. |
+| `tools/tools-effects.js`, `tools/tools-dialogs.js`, `tools/tools-media-sharing.js`, `tools/tools-nav-pwa.js` | Shared tool behavior, split out of a since-retired `tools-common.js` (2026-08-20, once it had grown to 1,447 lines mixing everything together): completion celebration/help-modal content/icon-search; the custom confirm/alert dialog system (`escapeHtml` lives here specifically, not in `tools-effects.js` — worth double-checking before assuming which file has a given helper); photo lightbox/voice dictation/toasts; and the mobile bottom nav + desktop sidebar injection (sidebar added 2026-08-20), respectively. |
+| `tools/auth.js` | Login/session handling, including the redirect-to-login-and-back-again flow, plus the account-roles system (`hasDevToolsAccess()`, `canManageRoles()`) that gates Dev Tools access. |
 | `tools/push-notifications.js`, `tools/qrcode-lib.js`, `tools/manifest.json` | Push notification setup, QR code generation, and the internal-tools PWA manifest (separate from the public site's `site-manifest.json` at the root). |
 
 ## Backend
@@ -98,7 +108,7 @@ the assistant's GitHub token was never granted):
 - `weekly-business-digest` — Monday mornings, one summary push (jobs completed, invoiced, new leads, outstanding balance) rather than a specific alert — trend awareness, not task nagging.
 - `archive-old-notification-log` — monthly, deletes `notification_log` rows older than 3700 days. That number isn't arbitrary: two of the 11 daily checks use a 3650-day resend interval specifically to nudge only once, ever — retention has to stay longer than the longest resend interval in use, or a "one-time" nudge would silently start repeating once its log row got archived.
 
-**Dev Tools panels** (`tools/dev-tools.html`) — Storage browser (file counts/sizes across all 3 buckets), Data integrity check (job-photo records vs. actual files, in both directions, plus contact-less leads), and Trigger workflows (runs any of the 5 GitHub Actions workflows on demand via the `trigger-workflow` Edge Function — see below, never a GitHub token in this file).
+**Dev Tools panels** (`tools/dev-tools.html`, all 3 Developer-only as of 2026-08-21 — see the table above) — Storage browser (file counts/sizes across all 3 buckets), Data integrity check (job-photo records vs. actual files, in both directions, plus contact-less leads), and Trigger workflows (runs any of the 5 GitHub Actions workflows on demand via the `trigger-workflow` Edge Function — see below, never a GitHub token in this file).
 
 ## ⚠️ Do not delete
 
