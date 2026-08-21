@@ -215,18 +215,18 @@ test('on the dashboard, the live sync indicator moves under the settings button 
   const desktopBlock = src.match(/@media \(min-width: 1024px\) \{\s*\.hub-header \{([^}]*)\}\s*\.hub-sub \{([^}]*)\}/);
   assert.ok(desktopBlock, 'desktop hub-header/hub-sub override block not found');
   assert.match(desktopBlock[1], /align-items:\s*flex-start/);
-  assert.match(desktopBlock[1], /min-height:\s*130px/);
+  assert.match(desktopBlock[1], /min-height:\s*140px/);
   assert.match(desktopBlock[2], /position:\s*fixed/);
   assert.match(desktopBlock[2], /right:\s*24px/, 'should align under the settings button on the right, not the left');
 
   // jump-nav must be overridden specifically for this page (its header
   // is now taller than the shared 61px default other pages use).
-  assert.match(src, /body \.jump-nav \{ top: 130px; \}/);
+  assert.match(src, /body \.jump-nav \{ top: 140px; \}/);
 
   // body's own padding-top must account for the new, taller header.
   const paddingMatch = src.match(/@media \(min-width: 1024px\) \{ body \{[^}]*padding-top: (\d+)px;[^}]*\} \}/);
   assert.ok(paddingMatch);
-  assert.ok(parseInt(paddingMatch[1], 10) >= 195, 'padding-top should account for the taller 130px header plus the jump-nav below it');
+  assert.ok(parseInt(paddingMatch[1], 10) >= 205, 'padding-top should account for the taller 140px header plus the jump-nav below it');
 });
 
 test('dev-tools.html, which shares the same jump-nav CSS rule but did NOT move its live sync indicator, is unaffected by workspace.html\'s page-specific header height override', () => {

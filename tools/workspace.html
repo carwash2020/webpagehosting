@@ -54,7 +54,7 @@
      screen, letting the existing .metrics-grid (already a responsive
      auto-fit grid) spread into more columns on its own, rather than
      rebuilding the layout from scratch. */
-  @media (min-width: 1024px) { body { max-width: 1400px; margin-left: calc(240px + max(0px, (100vw - 240px - 1400px) / 2)); padding-top: 195px; } }
+  @media (min-width: 1024px) { body { max-width: 1400px; margin-left: calc(240px + max(0px, (100vw - 240px - 1400px) / 2)); padding-top: 205px; } }
   .hub-header { display: flex; align-items: center; justify-content: space-between; gap: 14px; margin-bottom: 8px; }
   /* Live sync indicator moved (2026-08-21), requested directly: on
      desktop, sits as a second row under the settings button instead
@@ -64,8 +64,8 @@
      vertically centering it) so there's real space underneath for the
      overlaid second row. */
   @media (min-width: 1024px) {
-    .hub-header { align-items: flex-start; min-height: 130px; }
-    .hub-sub { position: fixed; top: 96px; right: 24px; left: auto; margin: 0 !important; z-index: 90; }
+    .hub-header { align-items: flex-start; min-height: 140px; }
+    .hub-sub { position: fixed; top: 108px; right: 24px; left: auto; margin: 0 !important; z-index: 90; }
     /* Made its own, fully independent position:fixed element (2026-08-21),
        reported directly with a screenshot showing the previous flexbox
        approach still producing a small but real offset -- anchored
@@ -77,14 +77,14 @@
        inline margin-left:6px (meant for its previous inline-flow
        position next to the badge on the same line), since it's no
        longer relevant once taken out of that flow entirely. */
-    #refreshSyncLink { position: fixed !important; top: 64px; right: 24px; margin-left: 0 !important; z-index: 90; }
+    #refreshSyncLink { position: fixed !important; top: 76px; right: 24px; margin-left: 0 !important; z-index: 90; }
     /* jump-nav's shared default (styles-tools.css) assumes the
        standard, single-row header height -- this page's header is
        taller now that Live sync moved into it as a second row, so it
        needs its own override here. Same "body .jump-nav" selector as
        the shared rule for equal specificity; this page's own <style>
        loads after styles-tools.css, so it correctly wins that tie. */
-    body .jump-nav { top: 130px; }
+    body .jump-nav { top: 140px; }
   }
   .hub-header-left { display: flex; align-items: center; gap: 14px; }
   #headerLogo.is-syncing { animation: logoSyncPulse 1.4s ease-in-out infinite; }
