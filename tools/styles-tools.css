@@ -1042,6 +1042,15 @@ body .jump-nav {
   margin-left: -20px; margin-right: -20px; padding: 8px 20px;
   border-bottom: 1px solid var(--border);
 }
+/* Desktop (2026-08-20), requested directly from a screenshot: this bar
+   still spanned only the narrow content column beneath the now-fixed
+   header, looking like a separate floating box -- same fix as
+   .hub-header/.tool-header above, same reasoning. Positioned right
+   below the fixed header (top:61px, that header's own real height on
+   desktop, no safe-area-inset needed there). */
+@media (min-width: 1024px) {
+  body .jump-nav { position: fixed; top: 61px; left: 240px; right: 0; margin: 0; padding: 8px 24px; }
+}
 /* Same WebKit ghosting fix as .hub-header/.tool-header and
    .tabs-sticky above -- see the first of those comments for the full
    explanation. Also fixes a real, separate bug found in the process:
