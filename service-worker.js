@@ -111,7 +111,9 @@
 // of staying at 0, reported directly with a screenshot.
 // Bumped again (2026-08-21): added a real Delete button to the Client
 // Registry in Dev Tools, requested directly.
-const CACHE_NAME = 'th-workspace-v25';
+// Bumped again (2026-08-21): added Finance and Settings tiles to the
+// mobile Tools grid, requested directly.
+const CACHE_NAME = 'th-workspace-v26';
 const PRECACHE_URLS = [
   '/tools/workspace.html', '/tools/job-tracker.html', '/tools/invoice-generator.html', '/tools/contract-generator.html',
   '/tools/calendar.html', '/tools/route-planner.html', '/tools/review-request.html', '/tools/contact-card.html',
