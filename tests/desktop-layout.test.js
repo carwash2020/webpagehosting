@@ -245,3 +245,23 @@ test('a plain mouse-click focus state has its native outline explicitly suppress
   const css = fs.readFileSync(path.join(TOOLS_DIR, 'styles-tools.css'), 'utf8');
   assert.match(css, /:focus:not\(:focus-visible\)\s*\{\s*outline:\s*none;\s*\}/);
 });
+
+// Bug fix (2026-08-21), reported directly with a screenshot: the live
+// sync indicator and the refresh button below it weren't lining up on
+// the same right edge -- the refresh button looked centered/floating,
+// disconnected from the text above it.
+
+test('the live sync indicator uses explicit flexbox column alignment (not text-align, which depends on fragile inline-wrapping behavior), guaranteeing the badge and the refresh button both land on the exact same right edge', () => {
+  const src = fs.readFileSync(path.join(TOOLS_DIR, 'workspace.html'), 'utf8');
+  const hubSubRule = src.match(/\.hub-sub \{ position: fixed;[^}]*\}/);
+  assert.ok(hubSubRule, '.hub-sub desktop rule not found');
+  assert.match(hubSubRule[0], /display:\s*flex/);
+  assert.match(hubSubRule[0], /flex-direction:\s*column/);
+  assert.match(hubSubRule[0], /align-items:\s*flex-end/);
+  assert.doesNotMatch(hubSubRule[0], /text-align/, 'should no longer rely on text-align, which produced the misalignment reported directly');
+});
+
+test('the refresh button\'s old inline margin-left (meant for its previous inline-flow position next to the badge) is explicitly cleared on desktop, since it now sits on its own row below the badge instead', () => {
+  const src = fs.readFileSync(path.join(TOOLS_DIR, 'workspace.html'), 'utf8');
+  assert.match(src, /\.hub-sub #refreshSyncLink \{ margin-left:\s*0\s*!important;\s*\}/);
+});

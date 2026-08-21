@@ -132,7 +132,11 @@
 // showing around buttons after a click, reported directly with a
 // screenshot -- only this app's own orange :focus-visible ring should
 // ever show, and only for real keyboard navigation.
-const CACHE_NAME = 'th-workspace-v32';
+// Bumped again (2026-08-21): fixed the live sync indicator and its
+// refresh button not lining up on the same right edge, reported
+// directly with a screenshot -- replaced fragile text-align with
+// explicit flexbox column alignment.
+const CACHE_NAME = 'th-workspace-v33';
 const PRECACHE_URLS = [
   '/tools/workspace.html', '/tools/job-tracker.html', '/tools/invoice-generator.html', '/tools/contract-generator.html',
   '/tools/calendar.html', '/tools/route-planner.html', '/tools/review-request.html', '/tools/contact-card.html',

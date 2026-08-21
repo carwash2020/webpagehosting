@@ -65,7 +65,14 @@
      overlaid second row. */
   @media (min-width: 1024px) {
     .hub-header { align-items: flex-start; min-height: 105px; }
-    .hub-sub { position: fixed; top: 64px; right: 24px; left: auto; margin: 0; text-align: right; z-index: 90; }
+    .hub-sub { position: fixed; top: 64px; right: 24px; left: auto; margin: 0; z-index: 90; display: flex; flex-direction: column; align-items: flex-end; gap: 6px; }
+    /* The refresh button's margin-left:6px (inline style, in the HTML)
+       is meant for its old inline-flow position right next to the
+       badge on the same line -- with the column layout above, it now
+       sits on its own row below the badge, so that margin would just
+       shift it left of the badge's own right edge instead of lining
+       up with it. */
+    .hub-sub #refreshSyncLink { margin-left: 0 !important; }
     /* jump-nav's shared default (styles-tools.css) assumes the
        standard, single-row header height -- this page's header is
        taller now that Live sync moved into it as a second row, so it
