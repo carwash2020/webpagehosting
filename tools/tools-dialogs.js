@@ -25,6 +25,7 @@ function ensureDialogModalExists() {
   overlay.innerHTML =
     '<div class="help-modal">' +
       '<p class="dialog-message" id="customDialogMessage"></p>' +
+      '<textarea id="customDialogTextarea" class="dialog-textarea" style="display:none;" rows="3"></textarea>' +
       '<div class="dialog-buttons" id="customDialogButtons"></div>' +
     '</div>';
   document.body.appendChild(overlay);
@@ -182,6 +183,48 @@ function showConfirm(message, options) {
     cancelBtn.focus();
   });
 }
+
+// "Flag this page" (2026-08-21), requested directly: a quick way to
+// flag something to come back to later, for a moment when there isn't
+// time to write a full message -- just the current page, an optional
+// short note, and a timestamp, logged to a queue reviewed later in Dev
+// Tools. Resolves with the entered note (a string, possibly empty) or
+// null if cancelled -- distinct from an empty string, so the caller
+// can tell "flagged with no note" apart from "cancelled, don't log
+// anything at all."
+function showFlagDialog(pageLabel) {
+  return new Promise((resolve) => {
+    ensureDialogModalExists();
+    _dialogPreviousFocus = document.activeElement;
+    const overlay = document.getElementById('customDialogOverlay');
+    document.getElementById('customDialogMessage').textContent = 'Flag ' + pageLabel + ' for later? Add a quick note if you want (optional).';
+    const textarea = document.getElementById('customDialogTextarea');
+    textarea.value = '';
+    textarea.style.display = 'block';
+    textarea.placeholder = 'What\'s off? (optional)';
+    const buttons = document.getElementById('customDialogButtons');
+    buttons.innerHTML = '';
+
+    const close = () => { textarea.style.display = 'none'; overlay.classList.remove('is-open'); _restoreFocusAfterDialog(); };
+
+    const cancelBtn = document.createElement('button');
+    cancelBtn.className = 'dialog-btn dialog-btn-cancel';
+    cancelBtn.id = 'customDialogCancelAction';
+    cancelBtn.textContent = 'Cancel';
+    cancelBtn.onclick = () => { close(); resolve(null); };
+
+    const flagBtn = document.createElement('button');
+    flagBtn.className = 'dialog-btn dialog-btn-primary';
+    flagBtn.textContent = 'Flag it';
+    flagBtn.onclick = () => { const note = textarea.value.trim(); close(); resolve(note); };
+
+    buttons.appendChild(cancelBtn);
+    buttons.appendChild(flagBtn);
+    overlay.classList.add('is-open');
+    textarea.focus();
+  });
+}
+
 
 // ---------------------------------------------------------------------------
 // Toast -- a brief, non-blocking confirmation for routine successes (job

@@ -132,6 +132,39 @@ function thNormalizeClientName(name) {
 function thLoadClients() { return thRead(TH_KEYS.clients, []); }
 function thSaveClients(list) { return thWrite(TH_KEYS.clients, list); }
 
+// "Flag this page" queue (2026-08-21), requested directly: a quick way
+// to flag something to come back to later, for a moment when there
+// isn't time to write a full message. Each entry: { id, page, note,
+// time, resolved }. Newest first when read, so the most recent flag is
+// always the first thing seen in the queue.
+const TH_FLAGGED_ITEMS_KEY = 'th_flagged_items';
+function thLoadFlaggedItems() {
+  return thRead(TH_FLAGGED_ITEMS_KEY, []).slice().sort((a, b) => new Date(b.time) - new Date(a.time));
+}
+function thAddFlaggedItem(page, note) {
+  const list = thRead(TH_FLAGGED_ITEMS_KEY, []);
+  const entry = {
+    id: 'f_' + Date.now().toString(36) + '_' + Math.random().toString(36).slice(2, 8),
+    page: page,
+    note: note || '',
+    time: new Date().toISOString(),
+    resolved: false,
+  };
+  list.push(entry);
+  thWrite(TH_FLAGGED_ITEMS_KEY, list);
+  return entry;
+}
+function thResolveFlaggedItem(id) {
+  const list = thRead(TH_FLAGGED_ITEMS_KEY, []).map(item => item.id === id ? Object.assign({}, item, { resolved: true }) : item);
+  thWrite(TH_FLAGGED_ITEMS_KEY, list);
+  return list;
+}
+function thDeleteFlaggedItem(id) {
+  const list = thRead(TH_FLAGGED_ITEMS_KEY, []).filter(item => item.id !== id);
+  thWrite(TH_FLAGGED_ITEMS_KEY, list);
+  return list;
+}
+
 // Requested directly (2026-08-21): the Client Registry had no way to
 // remove a duplicate entry. Removes only the registry record itself --
 // never the underlying jobs/invoices/quotes, which are separate, real

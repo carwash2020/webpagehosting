@@ -361,8 +361,14 @@ body.th-has-bottomnav .onboarding-card { bottom: calc(76px + env(safe-area-inset
 }
 .dialog-btn-danger { background: #e05252; color: #fff; }
 .dialog-btn-cancel { background: var(--bg-panel-2); border: 1px solid var(--border); color: var(--white); }
+.dialog-textarea {
+  width: 100%; resize: vertical; margin-bottom: 18px;
+  background: var(--bg-panel-2); border: 1px solid var(--border); border-radius: 8px;
+  color: var(--white); font-family: 'Oswald', sans-serif; font-size: 14px; padding: 10px 12px;
+}
+.dialog-textarea:focus { outline: none; border-color: var(--orange-light); }
 
-/* --- Toast notifications (tools-common.js showToast()) --- */
+/* --- Toast notifications (tools-media-sharing.js showToast()) --- */
 .th-toast-container{
   position:fixed; left:50%; bottom:24px; transform:translateX(-50%);
   z-index:400; display:flex; flex-direction:column; gap:8px; align-items:center;
@@ -1256,6 +1262,27 @@ body select:focus, body textarea:focus {
    desktop, replacing top-tab-only navigation. Hidden by default,
    shown only at min-width:1024px -- mobile is completely unaffected,
    the bottom nav above still does the job there exactly as before. */
+/* ---- "flag this page" button (2026-08-21), requested directly:
+   a quick way to flag something to come back to later without
+   writing a full message. Small and muted -- a utility, not a
+   primary action -- fixed in the bottom-right corner. On mobile,
+   sits above the bottom nav (its own height plus the safe-area
+   inset); on desktop, there's no bottom nav there, so it sits at
+   the true bottom-right instead. ---- */
+.th-flag-btn {
+  position: fixed; right: 16px; z-index: 70;
+  bottom: calc(76px + env(safe-area-inset-bottom, 0px) + 16px);
+  width: 44px; height: 44px; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  background: var(--bg-panel-2); border: 1px solid var(--border); color: var(--text-dim);
+  box-shadow: 0 3px 10px rgba(0,0,0,0.25);
+  cursor: pointer; transition: color .15s ease, border-color .15s ease;
+}
+.th-flag-btn .th-icon { width: 20px; height: 20px; }
+.th-flag-btn:hover { color: var(--orange-light); border-color: var(--orange-light); }
+@media (min-width: 1024px) { .th-flag-btn { bottom: 16px; } }
+@media (prefers-reduced-motion: reduce) { .th-flag-btn { transition: none; } }
+
 .th-desktop-sidebar {
   display: none;
   position: fixed; left: 0; top: 0; bottom: 0; z-index: 100;
