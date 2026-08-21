@@ -262,7 +262,7 @@
 
   <div class="dev-panels-grid">
 
-  <div class="dev-panel dev-panel-wide">
+  <div class="dev-panel dev-owner-hidden dev-panel-wide">
     <div class="dev-panel-heading">
       <h2 id="nav-diagnostics" class="dev-anchor">Live consistency check</h2>
       <button class="dev-info-bubble" onclick="openDevInfo('consistency')" aria-label="What does this do?" title="What does this do?">?</button>
@@ -271,7 +271,7 @@
     <div id="consistencyResults" style="margin-top:16px;"></div>
   </div>
 
-  <div class="dev-panel dev-panel-wide">
+  <div class="dev-panel dev-owner-hidden dev-panel-wide">
     <div class="dev-panel-heading">
       <h2 id="nav-dataquality" class="dev-anchor">Data quality check</h2>
       <button class="dev-info-bubble" onclick="openDevInfo('dataquality')" aria-label="What does this do?" title="What does this do?">?</button>
@@ -297,7 +297,7 @@
     <div id="accountRolesList" class="dev-scrollable-list"></div>
   </div>
 
-  <div class="dev-panel">
+  <div class="dev-panel dev-owner-hidden">
     <div class="dev-panel-heading">
       <h2>Session &amp; sync</h2>
       <button class="dev-info-bubble" onclick="openDevInfo('session')" aria-label="What does this do?" title="What does this do?">?</button>
@@ -309,7 +309,7 @@
     </div>
   </div>
 
-  <div class="dev-panel">
+  <div class="dev-panel dev-owner-hidden">
     <div class="dev-panel-heading">
       <h2 id="nav-data" class="dev-anchor">Local data snapshot</h2>
       <button class="dev-info-bubble" onclick="openDevInfo('localdata')" aria-label="What does this do?" title="What does this do?">?</button>
@@ -317,7 +317,7 @@
     <div id="localDataSnapshot" class="dev-scrollable-list"></div>
   </div>
 
-  <div class="dev-panel">
+  <div class="dev-panel dev-owner-hidden">
     <div class="dev-panel-heading">
       <h2>Appliance Wiki health</h2>
       <button class="dev-info-bubble" onclick="openDevInfo('wikihealth')" aria-label="What does this do?" title="What does this do?">?</button>
@@ -325,7 +325,7 @@
     <div id="wikiHealth"></div>
   </div>
 
-  <div class="dev-panel">
+  <div class="dev-panel dev-owner-hidden">
     <div class="dev-panel-heading">
       <h2>Device info</h2>
       <button class="dev-info-bubble" onclick="openDevInfo('device')" aria-label="What does this do?" title="What does this do?">?</button>
@@ -333,7 +333,7 @@
     <div id="deviceInfo"></div>
   </div>
 
-  <div class="dev-panel">
+  <div class="dev-panel dev-owner-hidden">
     <div class="dev-panel-heading">
       <h2>Service worker &amp; cache</h2>
       <button class="dev-info-bubble" onclick="openDevInfo('serviceworker')" aria-label="What does this do?" title="What does this do?">?</button>
@@ -342,7 +342,7 @@
     <button class="secondary-btn" style="margin-top:12px;" onclick="clearServiceWorkerAndCaches()">Clear cache &amp; unregister</button>
   </div>
 
-  <div class="dev-panel">
+  <div class="dev-panel dev-owner-hidden">
     <div class="dev-panel-heading">
       <h2>Client errors</h2>
       <button class="dev-info-bubble" onclick="openDevInfo('clienterrors')" aria-label="What does this do?" title="What does this do?">?</button>
@@ -351,7 +351,7 @@
     <button class="secondary-btn" style="margin-top:12px;" onclick="clearClientErrorLog()">Clear log</button>
   </div>
 
-  <div class="dev-panel">
+  <div class="dev-panel dev-owner-hidden">
     <div class="dev-panel-heading">
       <h2>Push notification test</h2>
       <button class="dev-info-bubble" onclick="openDevInfo('pushtest')" aria-label="What does this do?" title="What does this do?">?</button>
@@ -360,7 +360,7 @@
     <button class="secondary-btn" style="margin-top:12px;" id="pushTestBtn" onclick="runPushNotificationTest()">Send test lead</button>
   </div>
 
-  <div class="dev-panel is-collapsible" data-collapse-key="pushhistory">
+  <div class="dev-panel dev-owner-hidden is-collapsible" data-collapse-key="pushhistory">
     <div class="dev-panel-heading" onclick="toggleDevPanel(this)">
       <h2>Push notification history</h2>
       <button class="dev-info-bubble" onclick="event.stopPropagation(); openDevInfo('pushhistory')" aria-label="What does this do?" title="What does this do?">?</button>
@@ -371,7 +371,7 @@
     </div>
   </div>
 
-  <div class="dev-panel dev-panel-wide">
+  <div class="dev-panel dev-owner-hidden dev-panel-wide">
     <div class="dev-panel-heading">
       <h2>Known issues</h2>
       <button class="dev-info-bubble" onclick="openDevInfo('knownissues')" aria-label="What does this do?" title="What does this do?">?</button>
@@ -379,7 +379,7 @@
     <div id="knownIssuesList"></div>
   </div>
 
-  <div class="dev-panel dev-panel-wide">
+  <div class="dev-panel dev-owner-hidden dev-panel-wide">
     <div class="dev-panel-heading">
       <h2 id="nav-deploy" class="dev-anchor">Deploy history</h2>
       <button class="dev-info-bubble" onclick="openDevInfo('deploy')" aria-label="What does this do?" title="What does this do?">?</button>
@@ -388,7 +388,7 @@
     <div id="deployHistoryList" class="dev-scrollable-list" style="margin-top:10px;"></div>
   </div>
 
-  <div class="dev-panel dev-panel-wide is-collapsible" data-collapse-key="regressioncheck">
+  <div class="dev-panel dev-owner-hidden dev-panel-wide is-collapsible" data-collapse-key="regressioncheck">
     <div class="dev-panel-heading" onclick="toggleDevPanel(this)">
       <h2>Regression checker</h2>
       <button class="dev-info-bubble" onclick="event.stopPropagation(); openDevInfo('regressioncheck')" aria-label="What does this do?" title="What does this do?">?</button>
@@ -407,7 +407,7 @@
     </div>
   </div>
 
-  <div class="dev-panel dev-panel-wide is-collapsible" data-collapse-key="changelog">
+  <div class="dev-panel dev-owner-hidden dev-panel-wide is-collapsible" data-collapse-key="changelog">
     <div class="dev-panel-heading" onclick="toggleDevPanel(this)">
       <h2>What's new</h2>
       <button class="dev-info-bubble" onclick="event.stopPropagation(); openDevInfo('changelog')" aria-label="What does this do?" title="What does this do?">?</button>
@@ -418,7 +418,7 @@
     </div>
   </div>
 
-  <div class="dev-panel">
+  <div class="dev-panel dev-owner-hidden">
     <div class="dev-panel-heading">
       <h2>Quick links</h2>
       <button class="dev-info-bubble" onclick="openDevInfo('links')" aria-label="What does this do?" title="What does this do?">?</button>
@@ -432,7 +432,7 @@
     </div>
   </div>
 
-  <div class="dev-panel dev-panel-wide">
+  <div class="dev-panel dev-owner-hidden dev-panel-wide">
     <div class="dev-panel-heading">
       <h2>Trigger workflows</h2>
       <button class="dev-info-bubble" onclick="openDevInfo('triggerworkflows')" aria-label="What does this do?" title="What does this do?">?</button>
@@ -447,7 +447,7 @@
     <div id="triggerWorkflowResult" style="margin-top:10px; font-size:12.5px; color:var(--text-dim);"></div>
   </div>
 
-  <div class="dev-panel dev-panel-wide is-collapsible" data-collapse-key="advisorhealth">
+  <div class="dev-panel dev-owner-hidden dev-panel-wide is-collapsible" data-collapse-key="advisorhealth">
     <div class="dev-panel-heading" onclick="toggleDevPanel(this)">
       <h2>Advisor health</h2>
       <button class="dev-info-bubble" onclick="event.stopPropagation(); openDevInfo('advisorhealth')" aria-label="What does this do?" title="What does this do?">?</button>
@@ -462,7 +462,7 @@
     </div>
   </div>
 
-  <div class="dev-panel dev-panel-wide is-collapsible" data-collapse-key="storagebrowser">
+  <div class="dev-panel dev-owner-hidden dev-panel-wide is-collapsible" data-collapse-key="storagebrowser">
     <div class="dev-panel-heading" onclick="toggleDevPanel(this)">
       <h2>Storage browser</h2>
       <button class="dev-info-bubble" onclick="event.stopPropagation(); openDevInfo('storagebrowser')" aria-label="What does this do?" title="What does this do?">?</button>
@@ -474,7 +474,7 @@
     </div>
   </div>
 
-  <div class="dev-panel dev-panel-wide is-collapsible" data-collapse-key="dataintegrity">
+  <div class="dev-panel dev-owner-hidden dev-panel-wide is-collapsible" data-collapse-key="dataintegrity">
     <div class="dev-panel-heading" onclick="toggleDevPanel(this)">
       <h2>Data integrity check</h2>
       <button class="dev-info-bubble" onclick="event.stopPropagation(); openDevInfo('dataintegrity')" aria-label="What does this do?" title="What does this do?">?</button>
@@ -1195,6 +1195,20 @@
 
   // What renderAccountRoles() should actually treat as the manager
   // state -- the real canManageRoles() unless a preview overrides it.
+  // Requested directly (2026-08-21): Steve (Owner) only needs Client
+  // Registry and Account Roles here -- everything else on this page
+  // is code/technical/error-diagnostic in nature and doesn't matter to
+  // him. Connor (Developer, canManageRoles() true) keeps everything,
+  // completely unchanged. Deliberately the REAL canManageRoles(), not
+  // effectiveCanManageRoles() (the existing role-preview toggle) --
+  // that preview is narrowly scoped to just the Account Roles panel's
+  // own display; this is a real, permanent restriction based on the
+  // actual logged-in account, not a temporary preview.
+  function applyOwnerRestrictedView() {
+    if (canManageRoles()) return; // Developer -- full access, nothing hidden
+    document.querySelectorAll('.dev-owner-hidden').forEach(el => { el.style.display = 'none'; });
+  }
+
   function effectiveCanManageRoles() {
     if (_rolePreview === 'non-manager') return false;
     return canManageRoles();
@@ -2081,6 +2095,7 @@
       renderIdentityBadge();
       initCollapsiblePanels();
       renderStatusStrip();
+      applyOwnerRestrictedView();
     };
     // isDevAccount() depends on a real session already being loaded --
     // give initSyncOnLoad (which handles token refresh) a chance first,
