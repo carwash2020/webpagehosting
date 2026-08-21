@@ -215,18 +215,18 @@ test('on the dashboard, the live sync indicator moves under the settings button 
   const desktopBlock = src.match(/@media \(min-width: 1024px\) \{\s*\.hub-header \{([^}]*)\}\s*\.hub-sub \{([^}]*)\}/);
   assert.ok(desktopBlock, 'desktop hub-header/hub-sub override block not found');
   assert.match(desktopBlock[1], /align-items:\s*flex-start/);
-  assert.match(desktopBlock[1], /min-height:\s*105px/);
+  assert.match(desktopBlock[1], /min-height:\s*130px/);
   assert.match(desktopBlock[2], /position:\s*fixed/);
   assert.match(desktopBlock[2], /right:\s*24px/, 'should align under the settings button on the right, not the left');
 
   // jump-nav must be overridden specifically for this page (its header
   // is now taller than the shared 61px default other pages use).
-  assert.match(src, /body \.jump-nav \{ top: 105px; \}/);
+  assert.match(src, /body \.jump-nav \{ top: 130px; \}/);
 
   // body's own padding-top must account for the new, taller header.
   const paddingMatch = src.match(/@media \(min-width: 1024px\) \{ body \{[^}]*padding-top: (\d+)px;[^}]*\} \}/);
   assert.ok(paddingMatch);
-  assert.ok(parseInt(paddingMatch[1], 10) >= 170, 'padding-top should account for the taller 105px header plus the jump-nav below it');
+  assert.ok(parseInt(paddingMatch[1], 10) >= 195, 'padding-top should account for the taller 130px header plus the jump-nav below it');
 });
 
 test('dev-tools.html, which shares the same jump-nav CSS rule but did NOT move its live sync indicator, is unaffected by workspace.html\'s page-specific header height override', () => {
@@ -251,17 +251,20 @@ test('a plain mouse-click focus state has its native outline explicitly suppress
 // the same right edge -- the refresh button looked centered/floating,
 // disconnected from the text above it.
 
-test('the live sync indicator uses explicit flexbox column alignment (not text-align, which depends on fragile inline-wrapping behavior), guaranteeing the badge and the refresh button both land on the exact same right edge', () => {
+test('the refresh button is its own, fully independent position:fixed element, anchored directly to the exact same right:24px value as the live sync badge above it -- not relying on any shared-container flexbox/shrink-to-fit sizing, which is what actually eliminates the alignment ambiguity reported directly across two earlier attempts', () => {
   const src = fs.readFileSync(path.join(TOOLS_DIR, 'workspace.html'), 'utf8');
   const hubSubRule = src.match(/\.hub-sub \{ position: fixed;[^}]*\}/);
+  const refreshRule = src.match(/#refreshSyncLink \{ position: fixed[^}]*\}/);
   assert.ok(hubSubRule, '.hub-sub desktop rule not found');
-  assert.match(hubSubRule[0], /display:\s*flex/);
-  assert.match(hubSubRule[0], /flex-direction:\s*column/);
-  assert.match(hubSubRule[0], /align-items:\s*flex-end/);
-  assert.doesNotMatch(hubSubRule[0], /text-align/, 'should no longer rely on text-align, which produced the misalignment reported directly');
+  assert.ok(refreshRule, '#refreshSyncLink desktop rule not found');
+
+  const hubSubRight = hubSubRule[0].match(/right:\s*(\d+)px/);
+  const refreshRight = refreshRule[0].match(/right:\s*(\d+)px/);
+  assert.ok(hubSubRight && refreshRight);
+  assert.equal(hubSubRight[1], refreshRight[1], 'both must anchor to the exact same right value to guarantee alignment');
 });
 
-test('the refresh button\'s old inline margin-left (meant for its previous inline-flow position next to the badge) is explicitly cleared on desktop, since it now sits on its own row below the badge instead', () => {
+test('the refresh button\'s old inline margin-left (meant for its previous inline-flow position next to the badge) is explicitly cleared on desktop, since it\'s now an independently-positioned element entirely', () => {
   const src = fs.readFileSync(path.join(TOOLS_DIR, 'workspace.html'), 'utf8');
-  assert.match(src, /\.hub-sub #refreshSyncLink \{ margin-left:\s*0\s*!important;\s*\}/);
+  assert.match(src, /#refreshSyncLink \{ position: fixed !important;[^}]*margin-left:\s*0\s*!important;/);
 });
