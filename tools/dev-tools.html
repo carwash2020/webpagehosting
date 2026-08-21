@@ -1130,14 +1130,14 @@
     {
       id: 'th-leads-select-policy',
       title: 'th_leads SELECT policy never verified',
-      detail: 'Flagged by Supabase Advisor as "RLS Policy Always True." The actual USING expression was never obtained -- if it really does evaluate to always-true, every lead (name, phone, message) is readable by anyone with the site\u2019s public anon key. Database \u2192 Policies \u2192 "Only logged-in can view or manage leads" \u2192 Edit policy.',
-      done: false,
+      detail: 'Flagged by Supabase Advisor as "RLS Policy Always True." Verified directly (2026-08-21): the actual USING expression is (( SELECT auth.role() AS role) = \'authenticated\'::text), NOT always-true -- correctly restricts to logged-in accounts only. Also already using the wrapped auth.role() pattern from the issue below. This Advisor warning appears to have been a false positive, or was already fixed with no record of when.',
+      done: true,
     },
     {
       id: 'auth-rls-init-plan',
       title: 'Auth RLS Initialization Plan wrapping',
-      detail: 'workspace_sync, th_job_photos, push_subscriptions, notification_log, th_leads all have policies calling auth.uid()/auth.role() unwrapped. Performance-only, not urgent -- wrap each in (select ...) whenever convenient.',
-      done: false,
+      detail: 'Verified directly (2026-08-21): all 5 named tables (workspace_sync, th_job_photos, push_subscriptions, notification_log, th_leads) now use the correctly-wrapped (SELECT auth.role()) pattern, confirmed via a live query against pg_policies. Resolved.',
+      done: true,
     },
   ];
   const KNOWN_ISSUES_KEY = 'th_known_issues';
