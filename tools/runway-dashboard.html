@@ -391,7 +391,7 @@
       <h4>Bills &amp; Expenses</h4>
       <p>Add each bill. If it's the same amount every time, mark it Fixed. If it changes (like a power bill), mark it Variable and log the real amount each month.</p>
       <h4>Business Dashboard</h4>
-      <p>Pick a month and tap "Pull from Job Tracker" to fill in Revenue, Expenses, and Fuel automatically from what you've already logged there.</p>
+      <p>Pick a month and tap "Pull from Finance" to fill in Revenue, Expenses, and Fuel automatically from what you've already logged there.</p>
       <h4>Runway Summary</h4>
       <p>Your emergency fund progress, how much the business is currently supplementing your income, a rough estimate of when the business alone could cover your bills, and a Safe Draw Calculator.</p>
       <h4>Syncing</h4>
@@ -532,7 +532,7 @@
         <div><label>Year</label><select id="biz-year-select"></select></div>
       </div>
       <div class="form-grid">
-        <div class="full"><button class="action-btn" id="pullMonthBtn">Pull from Job Tracker</button></div>
+        <div class="full"><button class="action-btn" id="pullMonthBtn">Pull from Finance</button></div>
       </div>
       <div class="note" id="pullDiagnosticNote" style="margin-top:-4px;"></div>
       <div class="form-grid">
@@ -580,7 +580,7 @@
       <div class="empty-state" id="noMonthsNote" style="display:none;">
         <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M3 9h18M8 2v4M16 2v4"/><circle cx="8" cy="14" r="1.2" fill="currentColor" stroke="none"/></svg>
         <div class="empty-title">No months logged yet</div>
-        <div class="empty-sub">Pick a month above and tap "Pull from Job Tracker" to bring in your first one.</div>
+        <div class="empty-sub">Pick a month above and tap "Pull from Finance" to bring in your first one.</div>
       </div>
     </div>
   </div>
@@ -787,7 +787,7 @@ const CARD_INFO = {
   },
   businessMonth: {
     title: 'Add / Update a Month',
-    body: `<p>Pick a month, tap "Pull from Job Tracker," and Revenue, Business Expenses, and Fuel fill in automatically from what you've already logged there \u2014 Revenue now includes both invoices and any manual income entries logged in Job Tracker's Income tab.</p>
+    body: `<p>Pick a month, tap "Pull from Finance," and Revenue, Business Expenses, and Fuel fill in automatically from what you've already logged there \u2014 Revenue now includes both invoices and any manual income entries logged in Finance's Income tab.</p>
       <p>Everything's still editable after it fills in. Other Expenses, Owner Draws, and Cash aren't tracked anywhere else, so those three always need to be typed in by hand.</p>`,
   },
   emergencyFund: {
@@ -812,7 +812,7 @@ const CARD_INFO = {
   },
   accountsReceivable: {
     title: 'Accounts Receivable',
-    body: `<p>Money you've invoiced but haven't actually collected yet -- read straight from Job Tracker's invoice log and Workspace's paid/unpaid tracking.</p>
+    body: `<p>Money you've invoiced but haven't actually collected yet -- read straight from Invoice Generator's invoice log and Workspace's paid/unpaid tracking.</p>
       <p>Deliberately kept separate from Break-Even and Safe-to-Spend, since those are about cash you actually have on hand right now. This is a reminder that revenue on paper isn't the same as money in the bank until it's actually paid.</p>`,
   },
   businessTrend: {
@@ -1726,9 +1726,9 @@ function renderTaxSetAside(sorted){
 }
 
 // ---------------------------------------------------------------------------
-// Pull straight from Job Tracker's own data. th_expense_log and th_invoices
-// already live in localStorage on this same origin -- and if sync.js has
-// pulled the latest blob (see startJobTrackerSync below), they're current
+// Pull straight from this app's own already-synced data. th_expense_log and
+// th_invoices already live in localStorage on this same origin -- and if
+// sync.js has pulled the latest blob (see pullSync() below), they're current
 // even if the actual logging happened on a different device. No new
 // storage of any kind needed for this part; it's reading data that's
 // already real and already there.
@@ -2280,7 +2280,7 @@ function renderAR(){
   `;
 
   if(outstanding.length === 0){
-    noteEl.textContent = `Nothing outstanding right now, based on Job Tracker's invoice log -- every logged invoice is either fully paid or there aren't any yet.`;
+    noteEl.textContent = `Nothing outstanding right now, based on Invoice Generator's invoice log -- every logged invoice is either fully paid or there aren't any yet.`;
   } else {
     noteEl.textContent = `${fmt(totalAR)} across ${outstanding.length} invoice${outstanding.length===1?'':'s'} hasn't actually been collected yet${overdueCount>0 ? `, and ${overdueCount} of those ${overdueCount===1?'is':'are'} already overdue` : ''}. Break-Even and Safe-to-Spend above are both based on cash you actually have -- this is a reminder that this much revenue is still just on paper.`;
   }
@@ -2567,7 +2567,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     if(result && result.ok){
       // Personal/business data may have just changed under us (e.g. logged
       // from another device) -- reload from storage and re-render everything,
-      // not just re-read Job Tracker's data.
+      // not just one specific data source.
       await loadAll();
     }
   }

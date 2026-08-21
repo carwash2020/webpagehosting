@@ -463,8 +463,8 @@
     },
     priceRefPicker: {
       title: 'Add From Saved Job Types',
-      body: `<p>Pulls from the price references saved in Job Tracker's Cost Lookup tab &mdash; the same label, hours, and rate you've already saved get added as a line item, so you're not retyping something you've billed for before.</p>
-        <p>Only shows up if you actually have any saved job types &mdash; add some in Job Tracker first if this section isn't visible.</p>`,
+      body: `<p>Pulls from the price references saved in Finance's Cost Lookup tab &mdash; the same label, hours, and rate you've already saved get added as a line item, so you're not retyping something you've billed for before.</p>
+        <p>Only shows up if you actually have any saved job types &mdash; add some in Finance first if this section isn't visible.</p>`,
     },
   };
   function openCardInfo(key) {
@@ -472,7 +472,7 @@
     if (info) openInfoModal(info.title, info.body);
   }
 
-  // ---------- Price reference picker -- reads Job Tracker's saved job
+  // ---------- Price reference picker -- reads Finance's saved job
   // types (same-device localStorage, no API call needed) and lets a line
   // item get added from one directly, instead of retyping a description,
   // hours, and rate you've already saved once before. ----------
@@ -595,7 +595,7 @@
     const tax = taxableSubtotal * (rate / 100);
     const discount = parseFloat(document.getElementById('discountAmount').value) || 0;
     // Discount applies to the tax-inclusive total, same precedent as the
-    // Job Tracker's Cost Lookup calculator -- a flat dollar-off-the-bill
+    // Finance's Cost Lookup calculator -- a flat dollar-off-the-bill
     // discount, not a pre-tax price adjustment.
     const total = Math.max(0, subtotal + tax - discount);
     document.getElementById('subtotalDisplay').textContent = money(subtotal);
@@ -1033,7 +1033,7 @@
     if (typeof scheduleSync === 'function') scheduleSync();
   }
 
-  // Every generated invoice gets mirrored into Job Tracker's Income log
+  // Every generated invoice gets mirrored into Finance's Income log
   // automatically, so income shows up in one place without re-entering it.
   // th_invoices stays exactly as it was (the actual invoice documents,
   // used for re-download/paid-status/client details) -- this is a
@@ -1510,8 +1510,8 @@
       <ul>
         <li><strong>Invoice tab</strong> &mdash; fill in <strong>Invoice Details</strong> and <strong>Bill To</strong>, then add each line item (labor, parts, etc.) in the line-items table. Uncheck "Tax?" on any row that's exempt (see the note above the totals for why some rows might not be taxable). Tap Generate for a branded PDF with your Venmo QR built in.</li>
         <li><strong>Quote / Estimate tab</strong> &mdash; same idea, before a job starts, including the same tax handling. Download an estimate PDF (clearly labeled as an estimate, not a bill), or tap <strong>Convert to Invoice</strong> once the work's done to copy everything straight over to the Invoice tab instead of re-typing it &mdash; including which rows were marked taxable.</li>
-        <li>The sales tax rate is shared with the Job Tracker's Cost Lookup tab &mdash; change it in either place and it updates everywhere.</li>
-        <li>Everything generated here is saved automatically &mdash; invoices and estimates are logged on this device (and synced, if Cloud Sync is set up), and every invoice also flows into Job Tracker's Income tab. Nothing needs re-entering elsewhere.</li>
+        <li>The sales tax rate is shared with Finance's Cost Lookup tab &mdash; change it in either place and it updates everywhere.</li>
+        <li>Everything generated here is saved automatically &mdash; invoices and estimates are logged on this device (and synced, if Cloud Sync is set up), and every invoice also flows into Finance's Income tab. Nothing needs re-entering elsewhere.</li>
       </ul>
     </div>
   </div>
