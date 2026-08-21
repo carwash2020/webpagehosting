@@ -143,7 +143,10 @@
 // fully independent position:fixed element, no longer relying on
 // flexbox/shrink-to-fit sizing at all -- reported directly (twice)
 // that alignment still wasn't quite right.
-const CACHE_NAME = 'th-workspace-v35';
+// Bumped again (2026-08-21): swapped the order of the refresh button
+// and the live sync badge, requested directly -- refresh button now
+// on top.
+const CACHE_NAME = 'th-workspace-v36';
 const PRECACHE_URLS = [
   '/tools/workspace.html', '/tools/job-tracker.html', '/tools/invoice-generator.html', '/tools/contract-generator.html',
   '/tools/calendar.html', '/tools/route-planner.html', '/tools/review-request.html', '/tools/contact-card.html',

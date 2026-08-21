@@ -268,3 +268,17 @@ test('the refresh button\'s old inline margin-left (meant for its previous inlin
   const src = fs.readFileSync(path.join(TOOLS_DIR, 'workspace.html'), 'utf8');
   assert.match(src, /#refreshSyncLink \{ position: fixed !important;[^}]*margin-left:\s*0\s*!important;/);
 });
+
+// Order swapped (2026-08-21), requested directly: the refresh button
+// now sits on top, with the "Live sync active" badge below it.
+
+test('the refresh button sits above the live sync badge (lower top value), with a real, consistent gap between them accounting for the button\'s actual height, not a naive value swap', () => {
+  const src = fs.readFileSync(path.join(TOOLS_DIR, 'workspace.html'), 'utf8');
+  const hubSubTop = parseInt(src.match(/\.hub-sub \{ position: fixed; top: (\d+)px;/)[1], 10);
+  const refreshTop = parseInt(src.match(/#refreshSyncLink \{ position: fixed !important; top: (\d+)px;/)[1], 10);
+  assert.ok(refreshTop < hubSubTop, 'the refresh button should be above the badge now');
+
+  const REFRESH_BUTTON_HEIGHT = 26;
+  const GAP = 6;
+  assert.equal(hubSubTop, refreshTop + REFRESH_BUTTON_HEIGHT + GAP, 'the badge\'s top should account for the button\'s real height plus a consistent gap, not just be an arbitrary swapped number');
+});
