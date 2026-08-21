@@ -95,7 +95,12 @@
 // Bumped again (2026-08-21): moved the Live sync indicator to sit as
 // a second row under the settings button on desktop, requested
 // directly.
-const CACHE_NAME = 'th-workspace-v20';
+// Bumped again (2026-08-21): fixed a widespread stale-reference
+// pattern found during a direct text audit -- Cost Lookup, Expenses,
+// Income, and Profitability all moved to Finance during this week's
+// structural rework, but 5 pages still attributed them to Job
+// Tracker.
+const CACHE_NAME = 'th-workspace-v21';
 const PRECACHE_URLS = [
   '/tools/workspace.html', '/tools/job-tracker.html', '/tools/invoice-generator.html', '/tools/contract-generator.html',
   '/tools/calendar.html', '/tools/route-planner.html', '/tools/review-request.html', '/tools/contact-card.html',

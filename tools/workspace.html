@@ -656,7 +656,7 @@
         <li>New job comes in? Add it in <strong>Job Tracker</strong> &mdash; check "Show on Calendar" if you want it on your phone's own calendar app too, and use the microphone icon next to Notes to dictate instead of typing.</li>
         <li>On site, update the job's status directly from the dropdown on its card (Not Started / In Progress / Mark as Complete), and attach photos with the Photos button.</li>
         <li>Marking a job Complete offers to jump straight to a pre-filled review request for that client.</li>
-        <li>Need to invoice? Open <strong>Invoice Generator</strong> and use "Link to Job" so it counts toward that job's profitability in Job Tracker's Profitability tab.</li>
+        <li>Need to invoice? Open <strong>Invoice Generator</strong> and use "Link to Job" so it counts toward that job's profitability in Finance's Profitability tab.</li>
         <li>Need a signed agreement? <strong>Contract Generator</strong> can capture a client's signature right on the screen if they're there in person, embedded directly into the PDF &mdash; or skip that and just print/text it for them to sign on their own.</li>
         <li>End of week: skim <strong>Action Items</strong> for anything waiting, and <strong>Business Health</strong> for anything expiring soon.</li>
       </ol>
@@ -708,7 +708,7 @@
     },
     'tool-devtools': {
       title: 'Dev Tools',
-      body: `<p>Site diagnostics and maintenance utilities for whoever's actively developing this site. Only visible on Connor's account.</p>`,
+      body: `<p>Site diagnostics and maintenance utilities, shown only on the account actively developing this site &mdash; visible to any account with an assigned role, not tied to one specific person.</p>`,
     },
   };
   function openCardInfo(key) {
@@ -1278,8 +1278,8 @@
     const searchTerm = (document.getElementById('invoiceSearch')?.value || '').trim().toLowerCase();
 
     // Income here now means invoices AND manual entries (cash jobs, etc.)
-    // logged in Job Tracker's Income tab -- merged into one list so this
-    // dashboard reflects the same total Job Tracker and Runway Dashboard
+    // logged in Finance's Income tab -- merged into one list so this
+    // dashboard reflects the same total Finance and Runway Dashboard
     // already agree on, instead of only showing formally invoiced amounts.
     let invoiceItems = loadInvoices().map(i => ({
       kind: 'invoice', id: i.id, sortKey: i.id,

@@ -187,12 +187,6 @@
 
   .save-indicator { color: var(--orange-light); font-size: 12.5px; margin-top: 8px; opacity: 0; transition: opacity 0.3s; }
   .save-indicator.is-visible { opacity: 1; }
-
-  /* --- Cost Lookup tab --- */
-  .results-box { margin-top: 8px; }
-  .result-row { display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid var(--border); font-size: 15px; }
-  .result-row.final { font-weight: 700; font-size: 19px; color: var(--orange-light); border-bottom: none; padding-top: 16px; }
-  .result-row.is-hidden { display: none; }
   .result-label { color: var(--text-dim); }
   .result-label.final { color: var(--white); }
 
@@ -463,8 +457,7 @@
       <p>This page combines five related tools into tabs. Data lives in this browser, and also syncs to the cloud if you've set that up on the Workspace page.</p>
       <ul>
         <li><strong>Jobs</strong> &mdash; search by title or client name, add a job with priority/status/due date, sort by date or priority, hide completed jobs (remembered next time you visit), tap "Advance Status" to cycle Not Started &rarr; In Progress &rarr; Done, or "Photos" to attach before/after pictures (on mobile, your phone offers both the camera and your photo gallery). Tap the <svg class="th-icon" aria-hidden="true"><use href="#icon-star" xlink:href="#icon-star"></use></svg> star on any photo to queue it for the public website's gallery with a caption &mdash; this doesn't publish it automatically, it just adds it to a review queue on the Dashboard.</li>
-        <li><strong>Cost Lookup</strong> &mdash; type in hours and parts cost to see the standard price instantly, now with sales tax included in the total. Check/uncheck "Tax labor" and "Tax parts/materials" separately since Utah's rules genuinely differ by job type (not tax advice — confirm your specific situation with the Utah State Tax Commission or your accountant). Optionally type the client's name first — it checks your job history and auto-suggests whether they're new or returning (still overridable). Save frequent job types under "Price Reference" and tap one anytime to reload it.</li>
-        <li><strong>Expenses</strong> &mdash; log expenses or mileage, now with vendor, payment method, and an optional link to a specific job. A receipt photo is required for expense entries (not mileage, since there's no physical receipt for driving miles) &mdash; tap "View" on any logged entry to see its receipt. Mileage rate lives right next to the Miles field since it's only relevant for mileage entries. Export CSV anytime for a backup or for taxes &mdash; now includes a link to each receipt too.</li>
+        <li><strong>Jobs</strong> &mdash; the main list: title, client, status, priority, date, and notes, with search and status filters. Swipe a card to reveal a quick "Done" button, or long-press for more actions. Filed under "Done," a job shows the profit margin once it's linked to an invoice. On a real desktop screen, this same list also shows as a sortable table &mdash; click any column header to sort by it, click again to reverse.</li>
         <li><strong>Contacts</strong> &mdash; a quick address book for vendors, suppliers, or recurring clients. Tap "History" on any contact to see their past jobs and lifetime spend (matched by exact name against Jobs and Invoices).</li>
         <li><strong>Notes</strong> &mdash; keep as many separate, named notes as you want. Search by title or content, click one on the left to open it, or start a new one. Saves automatically as you type.</li>
       </ul>
