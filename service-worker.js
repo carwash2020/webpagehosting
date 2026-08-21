@@ -128,7 +128,11 @@
 // Bumped again (2026-08-21): Known Issues audit (suggestion #3,
 // requested directly) -- both seeded issues verified resolved against
 // the live database, marked done rather than left showing as open.
-const CACHE_NAME = 'th-workspace-v31';
+// Bumped again (2026-08-21): fixed a stray blue native focus outline
+// showing around buttons after a click, reported directly with a
+// screenshot -- only this app's own orange :focus-visible ring should
+// ever show, and only for real keyboard navigation.
+const CACHE_NAME = 'th-workspace-v32';
 const PRECACHE_URLS = [
   '/tools/workspace.html', '/tools/job-tracker.html', '/tools/invoice-generator.html', '/tools/contract-generator.html',
   '/tools/calendar.html', '/tools/route-planner.html', '/tools/review-request.html', '/tools/contact-card.html',

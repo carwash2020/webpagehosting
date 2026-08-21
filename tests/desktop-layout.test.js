@@ -235,3 +235,13 @@ test('dev-tools.html, which shares the same jump-nav CSS rule but did NOT move i
   const paddingMatch = src.match(/@media \(min-width: 1024px\) \{ body \{[^}]*padding-top: (\d+)px;[^}]*\} \}/);
   assert.equal(paddingMatch[1], '130', 'dev-tools.html\'s header height did not change, so its padding-top should stay at the original header+jump-nav value');
 });
+
+// Bug fix (2026-08-21), reported directly with a screenshot: a stray
+// blue box (the browser's own native focus outline, not this app's
+// deliberate orange :focus-visible styling) showed around a button
+// right after a click.
+
+test('a plain mouse-click focus state has its native outline explicitly suppressed, leaving only the app\'s deliberate orange :focus-visible ring for real keyboard navigation', () => {
+  const css = fs.readFileSync(path.join(TOOLS_DIR, 'styles-tools.css'), 'utf8');
+  assert.match(css, /:focus:not\(:focus-visible\)\s*\{\s*outline:\s*none;\s*\}/);
+});

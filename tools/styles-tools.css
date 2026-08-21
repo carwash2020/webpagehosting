@@ -915,6 +915,15 @@ body.th-tool-page { --radius: 14px; }
      hovers elsewhere, instead of being a plain, generic flat outline */
   box-shadow: 0 0 0 5px var(--orange-tint-soft);
 }
+/* Bug fix (2026-08-21), reported directly with a screenshot: a stray
+   blue box -- the browser's own native focus outline, not this app's
+   deliberate orange :focus-visible styling above -- showed around a
+   button right after a click. Nothing suppressed the plain :focus
+   state for a mouse click; only :focus-visible (keyboard-style focus)
+   was styled. This explicitly clears the outline whenever focus
+   wasn't keyboard-triggered, leaving the intended orange ring above
+   completely untouched for actual keyboard navigation. */
+:focus:not(:focus-visible) { outline: none; }
 
 /* ---- surfaces: real elevation, gradient faces ---- */
 body .section-block, body .dev-panel, body .form-section,
