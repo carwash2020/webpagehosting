@@ -113,7 +113,10 @@
 // Registry in Dev Tools, requested directly.
 // Bumped again (2026-08-21): added Finance and Settings tiles to the
 // mobile Tools grid, requested directly.
-const CACHE_NAME = 'th-workspace-v26';
+// Bumped again (2026-08-21): Owner accounts now only see Client
+// Registry and Account Roles in Dev Tools, requested directly --
+// Developer keeps full, unchanged access.
+const CACHE_NAME = 'th-workspace-v27';
 const PRECACHE_URLS = [
   '/tools/workspace.html', '/tools/job-tracker.html', '/tools/invoice-generator.html', '/tools/contract-generator.html',
   '/tools/calendar.html', '/tools/route-planner.html', '/tools/review-request.html', '/tools/contact-card.html',
