@@ -65,7 +65,7 @@
      overlaid second row. */
   @media (min-width: 1024px) {
     .hub-header { align-items: flex-start; min-height: 130px; }
-    .hub-sub { position: fixed; top: 64px; right: 24px; left: auto; margin: 0 !important; z-index: 90; }
+    .hub-sub { position: fixed; top: 96px; right: 24px; left: auto; margin: 0 !important; z-index: 90; }
     /* Made its own, fully independent position:fixed element (2026-08-21),
        reported directly with a screenshot showing the previous flexbox
        approach still producing a small but real offset -- anchored
@@ -77,7 +77,7 @@
        inline margin-left:6px (meant for its previous inline-flow
        position next to the badge on the same line), since it's no
        longer relevant once taken out of that flow entirely. */
-    #refreshSyncLink { position: fixed !important; top: 88px; right: 24px; margin-left: 0 !important; z-index: 90; }
+    #refreshSyncLink { position: fixed !important; top: 64px; right: 24px; margin-left: 0 !important; z-index: 90; }
     /* jump-nav's shared default (styles-tools.css) assumes the
        standard, single-row header height -- this page's header is
        taller now that Live sync moved into it as a second row, so it
