@@ -36,7 +36,7 @@
   })();
 </script>
 <link rel="stylesheet" href="/styles.css?v=202608202000">
-<link rel="stylesheet" href="/tools/styles-tools.css?v=202608202900">
+<link rel="stylesheet" href="/tools/styles-tools.css?v=202608203000">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.112.3/dist/umd/supabase.js" integrity="sha384-qafw21c/iciq0VXsi9FzkfoQv5I/V0iqE4lSNcKXPnW9/UTJLnv5CcN4FHxVLnKg" crossorigin="anonymous" defer></script>
 <script src="/tools/sync.js?v=202608202400" defer></script>
 <script src="/tools/push-notifications.js?v=202608160400" defer></script>
@@ -54,7 +54,7 @@
      screen, letting the existing .metrics-grid (already a responsive
      auto-fit grid) spread into more columns on its own, rather than
      rebuilding the layout from scratch. */
-  @media (min-width: 1024px) { body { max-width: 1400px; margin-left: calc(240px + max(0px, (100vw - 240px - 1400px) / 2)); } }
+  @media (min-width: 1024px) { body { max-width: 1400px; margin-left: calc(240px + max(0px, (100vw - 240px - 1400px) / 2)); padding-top: 75px; } }
   .hub-header { display: flex; align-items: center; justify-content: space-between; gap: 14px; margin-bottom: 8px; }
   .hub-header-left { display: flex; align-items: center; gap: 14px; }
   #headerLogo.is-syncing { animation: logoSyncPulse 1.4s ease-in-out infinite; }

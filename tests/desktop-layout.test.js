@@ -23,7 +23,7 @@ test('every standard tool page has a min-width:1024px media query widening its c
     const src = fs.readFileSync(path.join(TOOLS_DIR, page), 'utf8');
     const mobileMatch = src.match(/body \{ padding: [^;]+; max-width: (\d+)px; margin: 0 auto; \}/);
     assert.ok(mobileMatch, page + ': original mobile body rule not found -- did something change unexpectedly?');
-    const desktopMatch = src.match(/@media \(min-width: 1024px\) \{ body \{ max-width: (\d+)px; margin-left: calc\(240px \+ max\(0px, \(100vw - 240px - \d+px\) \/ 2\)\); \} \}/);
+    const desktopMatch = src.match(/@media \(min-width: 1024px\) \{ body \{ max-width: (\d+)px; margin-left: calc\(240px \+ max\(0px, \(100vw - 240px - \d+px\) \/ 2\)\); padding-top: 75px; \} \}/);
     assert.ok(desktopMatch, page + ' is missing the desktop-width media query');
     const mobileWidth = parseInt(mobileMatch[1], 10);
     const desktopWidth = parseInt(desktopMatch[1], 10);
@@ -47,7 +47,7 @@ test('finance.html and parts-reference.html, which previously had NO container w
     // would also affect mobile, which currently works fine
     // unconstrained on a narrow screen.
     assert.doesNotMatch(src, /(?<!media \(min-width: 1024px\) \{ )body \{[^}]*max-width/, page + ' should not have an unconditional max-width rule affecting mobile too');
-    assert.match(src, /@media \(min-width: 1024px\) \{ body \{ max-width: \d+px; margin-left: calc\(240px \+ max\(0px, \(100vw - 240px - \d+px\) \/ 2\)\); \} \}/, page + ' is missing its new desktop-only container constraint');
+    assert.match(src, /@media \(min-width: 1024px\) \{ body \{ max-width: \d+px; margin-left: calc\(240px \+ max\(0px, \(100vw - 240px - \d+px\) \/ 2\)\); padding-top: 75px; \} \}/, page + ' is missing its new desktop-only container constraint');
   }
 });
 
@@ -142,4 +142,40 @@ test('the centering calc formula produces mathematically correct results: flush 
   r = resolve(1540, 240, 1300);
   assert.equal(r.marginLeft, 240);
   assert.equal(r.marginRight, 0);
+});
+
+// Bug fix (2026-08-20), found from a direct screenshot: the sticky
+// header still spanned only the same narrow, centered column as the
+// rest of the page's content, with visible dark space on either side
+// -- it should span the full remaining width next to the sidebar
+// instead, like a real app toolbar, and sit flush at the very top of
+// the screen.
+
+test('the shared header rule (.hub-header/.tool-header) switches from sticky to fixed on desktop, spanning from right after the sidebar to the browser\'s right edge', () => {
+  const css = fs.readFileSync(path.join(TOOLS_DIR, 'styles-tools.css'), 'utf8');
+  const desktopBlock = css.match(/@media \(min-width: 1024px\) \{\s*body \.hub-header, body \.tool-header \{([^}]*)\}\s*\}/);
+  assert.ok(desktopBlock, 'desktop header override not found');
+  assert.match(desktopBlock[1], /position:\s*fixed/);
+  assert.match(desktopBlock[1], /left:\s*240px/);
+  assert.match(desktopBlock[1], /right:\s*0/);
+});
+
+test('every page using either header class has matching padding-top added to its own desktop media query, to compensate for the header no longer contributing to normal page flow', () => {
+  const pages = ['workspace.html', 'calendar.html', 'client-detail.html', 'contract-generator.html',
+    'dev-tools.html', 'invoice-generator.html', 'job-detail.html', 'job-tracker.html',
+    'review-request.html', 'route-planner.html', 'settings.html', 'site-content.html',
+    'finance.html', 'parts-reference.html'];
+  for (const page of pages) {
+    const src = fs.readFileSync(path.join(TOOLS_DIR, page), 'utf8');
+    const hasHeader = /class="(hub-header|tool-header)"/.test(src);
+    assert.ok(hasHeader, page + ' was expected to use one of the two header classes');
+    assert.match(src, /@media \(min-width: 1024px\) \{ body \{[^}]*padding-top: 75px;[^}]*\} \}/, page + ' is missing the compensating padding-top for the now-fixed header');
+  }
+});
+
+test('runway-dashboard.html\'s own header is NOT sticky/fixed at all (it scrolls normally with the page), so it correctly has no matching desktop override -- this fix is specific to the sticky header pattern the other 14 pages share', () => {
+  const src = fs.readFileSync(path.join(TOOLS_DIR, 'runway-dashboard.html'), 'utf8');
+  const headerRule = src.match(/(?<!<)header\{([^}]*)\}/);
+  assert.ok(headerRule);
+  assert.doesNotMatch(headerRule[1], /position:\s*(sticky|fixed)/);
 });
