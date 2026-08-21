@@ -205,3 +205,33 @@ test('workspace.html and dev-tools.html, the only 2 pages with a .jump-nav bar, 
     assert.ok(parseInt(paddingMatch[1], 10) > 75, page + ' needs more than the header-only 75px, since it also has a jump-nav bar stacked below it');
   }
 });
+
+// Live sync indicator moved (2026-08-21), requested directly: on
+// desktop, sits as a second row under the settings button instead of
+// its own separate, full-width paragraph below the header.
+
+test('on the dashboard, the live sync indicator moves under the settings button on desktop, with the header grown taller to make room, and the jump-nav/body padding both adjusted to match the new header height', () => {
+  const src = fs.readFileSync(path.join(TOOLS_DIR, 'workspace.html'), 'utf8');
+  const desktopBlock = src.match(/@media \(min-width: 1024px\) \{\s*\.hub-header \{([^}]*)\}\s*\.hub-sub \{([^}]*)\}/);
+  assert.ok(desktopBlock, 'desktop hub-header/hub-sub override block not found');
+  assert.match(desktopBlock[1], /align-items:\s*flex-start/);
+  assert.match(desktopBlock[1], /min-height:\s*105px/);
+  assert.match(desktopBlock[2], /position:\s*fixed/);
+  assert.match(desktopBlock[2], /right:\s*24px/, 'should align under the settings button on the right, not the left');
+
+  // jump-nav must be overridden specifically for this page (its header
+  // is now taller than the shared 61px default other pages use).
+  assert.match(src, /body \.jump-nav \{ top: 105px; \}/);
+
+  // body's own padding-top must account for the new, taller header.
+  const paddingMatch = src.match(/@media \(min-width: 1024px\) \{ body \{[^}]*padding-top: (\d+)px;[^}]*\} \}/);
+  assert.ok(paddingMatch);
+  assert.ok(parseInt(paddingMatch[1], 10) >= 170, 'padding-top should account for the taller 105px header plus the jump-nav below it');
+});
+
+test('dev-tools.html, which shares the same jump-nav CSS rule but did NOT move its live sync indicator, is unaffected by workspace.html\'s page-specific header height override', () => {
+  const src = fs.readFileSync(path.join(TOOLS_DIR, 'dev-tools.html'), 'utf8');
+  assert.doesNotMatch(src, /body \.jump-nav \{ top: 105px; \}/, 'this override is specific to workspace.html\'s own <style> block, not shared');
+  const paddingMatch = src.match(/@media \(min-width: 1024px\) \{ body \{[^}]*padding-top: (\d+)px;[^}]*\} \}/);
+  assert.equal(paddingMatch[1], '130', 'dev-tools.html\'s header height did not change, so its padding-top should stay at the original header+jump-nav value');
+});
