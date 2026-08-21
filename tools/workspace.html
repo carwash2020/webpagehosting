@@ -45,7 +45,7 @@
 <script src="/tools/tools-dialogs.js?v=202608211000" defer></script>
 <script src="/tools/tools-media-sharing.js?v=202608201900" defer></script>
 <script src="/tools/tools-nav-pwa.js?v=202608211000" defer></script>
-<script src="/tools/tools-tour.js?v=202608202100" defer></script>
+<script src="/tools/tools-tour.js?v=202608211600" defer></script>
 <style>
   body { padding: 44px 20px 60px; max-width: 900px; margin: 0 auto; }
   /* Desktop layout (2026-08-20), requested directly: efficient on
@@ -65,7 +65,7 @@
      overlaid second row. */
   @media (min-width: 1024px) {
     .hub-header { align-items: flex-start; min-height: 105px; }
-    .hub-sub { position: fixed; top: 64px; right: 24px; left: auto; margin: 0; z-index: 90; display: flex; flex-direction: column; align-items: flex-end; gap: 6px; }
+    .hub-sub { position: fixed; top: 64px; right: 24px; left: auto; width: max-content; margin: 0 !important; z-index: 90; display: flex; flex-direction: column; align-items: flex-end; gap: 6px; }
     /* The refresh button's margin-left:6px (inline style, in the HTML)
        is meant for its old inline-flow position right next to the
        badge on the same line -- with the column layout above, it now

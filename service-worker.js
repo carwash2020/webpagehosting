@@ -136,7 +136,10 @@
 // refresh button not lining up on the same right edge, reported
 // directly with a screenshot -- replaced fragile text-align with
 // explicit flexbox column alignment.
-const CACHE_NAME = 'th-workspace-v33';
+// Bumped again (2026-08-21): fixed the tour popping up on every load
+// instead of once, and the live sync/refresh button alignment,
+// requested directly with screenshots.
+const CACHE_NAME = 'th-workspace-v34';
 const PRECACHE_URLS = [
   '/tools/workspace.html', '/tools/job-tracker.html', '/tools/invoice-generator.html', '/tools/contract-generator.html',
   '/tools/calendar.html', '/tools/route-planner.html', '/tools/review-request.html', '/tools/contact-card.html',

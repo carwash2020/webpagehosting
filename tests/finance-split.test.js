@@ -1936,6 +1936,7 @@ test('self-correction: landing on a page that doesn\'t match the stored step sho
   // Stored step 5 points at finance.html, but the person is actually on calendar.html (step 7).
   const w = loadTourInWindow('https://example.com/tools/calendar.html');
   w.localStorage.setItem('th_app_tour_step', '5');
+  w.localStorage.setItem('th_app_tour_step_started_at', String(Date.now()));
   w.initAppTour();
   assert.ok(w.document.getElementById('appTourCard'));
   assert.equal(w.document.querySelector('.onboarding-title').textContent, 'Calendar');
@@ -1945,6 +1946,7 @@ test('self-correction: landing on a page that doesn\'t match the stored step sho
 test('landing on a page that isn\'t part of the tour at all renders no card, even with an active tour in progress', () => {
   const w = loadTourInWindow('https://example.com/tools/login.html');
   w.localStorage.setItem('th_app_tour_step', '2');
+  w.localStorage.setItem('th_app_tour_step_started_at', String(Date.now()));
   w.initAppTour();
   assert.ok(!w.document.getElementById('appTourCard'));
 });
@@ -1961,6 +1963,7 @@ test('dismissing (Skip) clears the active-step flag, sets the per-user seen flag
 test('on the very last step (Settings), the button reads "Got it" and clicking it dismisses cleanly rather than advancing past the end of the array', () => {
   const w = loadTourInWindow('https://example.com/tools/settings.html');
   w.localStorage.setItem('th_app_tour_step', '13');
+  w.localStorage.setItem('th_app_tour_step_started_at', String(Date.now()));
   w.initAppTour();
   assert.equal(w.document.querySelector('.onboarding-next').textContent, 'Got it');
   w.document.querySelector('.onboarding-next').click();
@@ -2083,6 +2086,7 @@ test('the tour visually highlights the real target element, clears any previous 
   window.document.head.appendChild(script);
 
   window.localStorage.setItem('th_app_tour_step', '4');
+  window.localStorage.setItem('th_app_tour_step_started_at', String(Date.now()));
   window.initAppTour();
   const btn = window.document.getElementById('addJobBtn');
   assert.ok(btn.classList.contains('th-tour-highlight'));
@@ -2217,6 +2221,7 @@ test('the tour still renders correctly (including the visual highlight) on a pag
   }
   window.getCurrentUserEmail = () => null;
   window.localStorage.setItem('th_app_tour_step', '12');
+  window.localStorage.setItem('th_app_tour_step_started_at', String(Date.now()));
   window.document.dispatchEvent(new window.Event('DOMContentLoaded'));
   await new Promise(resolve => setTimeout(resolve, 100));
   assert.ok(window.document.getElementById('appTourCard'));
@@ -2484,6 +2489,7 @@ function testTopLevelInitNoLongerThrows(pageFile, pagePath, tourStepIndex, extra
       window.document.head.insertBefore(s, window.document.head.firstChild);
     }
     window.localStorage.setItem('th_app_tour_step', String(tourStepIndex));
+    window.localStorage.setItem('th_app_tour_step_started_at', String(Date.now()));
     window.document.dispatchEvent(new window.Event('DOMContentLoaded'));
     await new Promise(resolve => setTimeout(resolve, 300));
 
@@ -2662,6 +2668,7 @@ test('the tour card gets real, correct styling on runway-dashboard.html now -- p
   s.textContent = tourSrc;
   window.document.head.insertBefore(s, window.document.head.firstChild);
   window.localStorage.setItem('th_app_tour_step', '12');
+  window.localStorage.setItem('th_app_tour_step_started_at', String(Date.now()));
   window.document.dispatchEvent(new window.Event('DOMContentLoaded'));
   await new Promise(resolve => setTimeout(resolve, 300));
 
@@ -2801,4 +2808,74 @@ test('every real, navigable tool page is in the service worker\'s offline precac
 
   const missing = allPages.filter(p => !exempt.has(p) && !arrayMatch[1].includes("'/tools/" + p + "'"));
   assert.deepEqual(missing, [], 'these real pages are missing from the offline precache list: ' + missing.join(', '));
+});
+
+// Bug fix (2026-08-21), reported directly: the tour was popping up
+// every load instead of once. Root cause: if someone navigated away
+// mid-tour without explicitly dismissing it, the in-progress step
+// state in localStorage never got cleared -- and having ANY
+// in-progress step bypassed the one-time "seen" check entirely,
+// forever. Added a timestamp; an in-progress tour older than 2 hours
+// (or with no timestamp at all -- the exact real-world legacy state
+// this bug produced) is now treated as abandoned rather than resumed.
+
+function loadWorkspaceWithTour(setupFn) {
+  const { JSDOM } = require('jsdom');
+  const html = fs.readFileSync(path.join(__dirname, '..', 'tools', 'workspace.html'), 'utf8');
+  const tourSrc = fs.readFileSync(path.join(__dirname, '..', 'tools', 'tools-tour.js'), 'utf8');
+  const dom = new JSDOM(html, {
+    runScripts: 'dangerously', url: 'https://example.com/tools/workspace.html',
+    beforeParse(w) {
+      w.requireAuth = () => {};
+      w.getCurrentUserEmail = () => 'connor@triplehenterprisesllc.biz';
+      w.Element.prototype.scrollIntoView = () => {};
+      if (setupFn) setupFn(w);
+    },
+  });
+  const { window } = dom;
+  const s = window.document.createElement('script');
+  s.textContent = tourSrc;
+  window.document.head.appendChild(s);
+  return window;
+}
+
+test('an in-progress tour step with NO timestamp at all (the exact legacy stuck state this bug produced before the fix existed) is treated as abandoned, not resumed', () => {
+  const window = loadWorkspaceWithTour(w => {
+    w.localStorage.setItem('th_app_tour_step', '4');
+  });
+  window.initAppTour();
+  assert.equal(window.document.getElementById('appTourCard'), null, 'the tour should not pop back up');
+  assert.equal(window.localStorage.getItem('th_app_tour_step'), null, 'the stale step should be cleared');
+  assert.equal(window.localStorage.getItem('th_onboarding_v1_seen_connor@triplehenterprisesllc.biz'), '1', 'should be marked seen so it never auto-starts again either');
+});
+
+test('an in-progress tour step with a timestamp older than 2 hours is treated as abandoned', () => {
+  const window = loadWorkspaceWithTour(w => {
+    w.localStorage.setItem('th_app_tour_step', '4');
+    w.localStorage.setItem('th_app_tour_step_started_at', String(Date.now() - 5 * 60 * 60 * 1000));
+  });
+  window.initAppTour();
+  assert.equal(window.document.getElementById('appTourCard'), null);
+  assert.equal(window.localStorage.getItem('th_app_tour_step'), null);
+});
+
+test('an in-progress tour step with a fresh, recent timestamp is correctly resumed, not treated as abandoned -- confirms the fix doesn\'t break someone genuinely, actively working through the tour right now', () => {
+  const window = loadWorkspaceWithTour(w => {
+    w.localStorage.setItem('th_app_tour_step', '0');
+    w.localStorage.setItem('th_app_tour_step_started_at', String(Date.now()));
+  });
+  window.initAppTour();
+  assert.ok(window.document.getElementById('appTourCard'), 'a genuinely fresh, in-progress tour should still show');
+  assert.equal(window.localStorage.getItem('th_app_tour_step'), '0', 'should not have been cleared');
+});
+
+test('clicking "Next" during the tour refreshes the timestamp, so a real, actively-progressing user is never treated as abandoned partway through just because more than 2 hours passed since the very start', () => {
+  const window = loadWorkspaceWithTour(w => {
+    w.localStorage.setItem('th_app_tour_step', '0');
+    w.localStorage.setItem('th_app_tour_step_started_at', String(Date.now() - 3 * 60 * 60 * 1000)); // 3 hours ago -- would be "abandoned" if never refreshed
+  });
+  // Directly call the real advance function, matching what a "Next" click does internally, staying on the same page (step 1, section-actionitems, is also workspace.html).
+  window.goToAppTourStep(1);
+  const refreshedAt = parseInt(window.localStorage.getItem('th_app_tour_step_started_at'), 10);
+  assert.ok(Date.now() - refreshedAt < 5000, 'the timestamp should have just been refreshed to now');
 });
