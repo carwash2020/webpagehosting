@@ -46,6 +46,7 @@ const APP_TOUR_STEPS = [
 ];
 
 const APP_TOUR_STEP_KEY = 'th_app_tour_step';
+const APP_TOUR_STEP_STARTED_AT_KEY = 'th_app_tour_step_started_at';
 const TOUR_HIGHLIGHT_CLASS = 'th-tour-highlight';
 
 // Keyed by the logged-in account's email, not just the browser --
@@ -59,7 +60,10 @@ function appTourSeenKey() {
 }
 
 function startAppTour() {
-  try { localStorage.setItem(APP_TOUR_STEP_KEY, '0'); } catch (e) { /* ignore */ }
+  try {
+    localStorage.setItem(APP_TOUR_STEP_KEY, '0');
+    localStorage.setItem(APP_TOUR_STEP_STARTED_AT_KEY, String(Date.now()));
+  } catch (e) { /* ignore */ }
   const firstPage = APP_TOUR_STEPS[0].page;
   if (window.location.pathname === firstPage) {
     renderAppTourStep(0);
@@ -99,6 +103,26 @@ function initAppTour() {
     if (stored !== null) stepIndex = parseInt(stored, 10);
   } catch (e) { /* ignore */ }
 
+  // An in-progress tour that's sat untouched for too long almost
+  // certainly means the person navigated away and moved on with their
+  // day, not that they're still actively working through it -- without
+  // this, that stale in-progress state would keep bypassing the
+  // one-time "seen" check below forever, popping the tour back up on
+  // every unrelated visit to any tour-included page.
+  const TOUR_ABANDON_MS = 2 * 60 * 60 * 1000; // 2 hours
+  if (stepIndex !== null) {
+    let startedAt = null;
+    try { startedAt = parseInt(localStorage.getItem(APP_TOUR_STEP_STARTED_AT_KEY) || '', 10); } catch (e) { /* ignore */ }
+    if (!startedAt || isNaN(startedAt) || (Date.now() - startedAt) > TOUR_ABANDON_MS) {
+      try {
+        localStorage.removeItem(APP_TOUR_STEP_KEY);
+        localStorage.removeItem(APP_TOUR_STEP_STARTED_AT_KEY);
+        localStorage.setItem(appTourSeenKey(), '1');
+      } catch (e) { /* ignore */ }
+      stepIndex = null;
+    }
+  }
+
   if (stepIndex === null) {
     // No tour currently in progress. Auto-start it once, ever, for a
     // brand new user -- but only from the dashboard, the natural first
@@ -107,7 +131,10 @@ function initAppTour() {
     try { seen = localStorage.getItem(appTourSeenKey()) === '1'; } catch (e) { /* ignore */ }
     if (seen || window.location.pathname !== APP_TOUR_STEPS[0].page) return;
     stepIndex = 0;
-    try { localStorage.setItem(APP_TOUR_STEP_KEY, '0'); } catch (e) { /* ignore */ }
+    try {
+      localStorage.setItem(APP_TOUR_STEP_KEY, '0');
+      localStorage.setItem(APP_TOUR_STEP_STARTED_AT_KEY, String(Date.now()));
+    } catch (e) { /* ignore */ }
   }
 
   // Self-correcting: if the stored step's page doesn't match where we
@@ -133,6 +160,7 @@ function clearAppTourHighlight() {
 function dismissAppTour() {
   try {
     localStorage.removeItem(APP_TOUR_STEP_KEY);
+    localStorage.removeItem(APP_TOUR_STEP_STARTED_AT_KEY);
     localStorage.setItem(appTourSeenKey(), '1');
   } catch (e) { /* ignore */ }
   const card = document.getElementById('appTourCard');
@@ -141,7 +169,10 @@ function dismissAppTour() {
 }
 
 function goToAppTourStep(nextIndex) {
-  try { localStorage.setItem(APP_TOUR_STEP_KEY, String(nextIndex)); } catch (e) { /* ignore */ }
+  try {
+    localStorage.setItem(APP_TOUR_STEP_KEY, String(nextIndex));
+    localStorage.setItem(APP_TOUR_STEP_STARTED_AT_KEY, String(Date.now()));
+  } catch (e) { /* ignore */ }
   const nextStep = APP_TOUR_STEPS[nextIndex];
   if (nextStep.page === window.location.pathname) {
     renderAppTourStep(nextIndex);
