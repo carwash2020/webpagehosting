@@ -105,7 +105,11 @@
 // automated button-handler check requested directly.
 // Bumped again (2026-08-21): fixed the Client Errors "Clear" button
 // not actually persisting past a page reload, reported directly.
-const CACHE_NAME = 'th-workspace-v23';
+// Bumped again (2026-08-21): fixed a gap at the top of the screen on
+// mobile with scrolled content visible through it -- the sticky
+// header's top value had been offset by the safe-area-inset instead
+// of staying at 0, reported directly with a screenshot.
+const CACHE_NAME = 'th-workspace-v24';
 const PRECACHE_URLS = [
   '/tools/workspace.html', '/tools/job-tracker.html', '/tools/invoice-generator.html', '/tools/contract-generator.html',
   '/tools/calendar.html', '/tools/route-planner.html', '/tools/review-request.html', '/tools/contact-card.html',

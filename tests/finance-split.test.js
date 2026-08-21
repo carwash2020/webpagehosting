@@ -1755,12 +1755,12 @@ test('a real expense entry with vendor and part number saves both correctly', as
 // own right-side buttons -- including the Settings link -- up under the
 // status bar, unreachable rather than just visually cramped.
 
-test('the sticky header (.hub-header/.tool-header) accounts for the iOS safe-area-inset-top in both its sticky position and its own top padding', () => {
+test('the sticky header (.hub-header/.tool-header) stays pinned at the true top of the screen (top:0, no gap), while its own top padding alone clears the notch for its inner content', () => {
   const src = fs.readFileSync(path.join(__dirname, '..', 'tools', 'styles-tools.css'), 'utf8');
   const rule = src.match(/body \.hub-header, body \.tool-header \{[\s\S]*?\n\}/);
   assert.ok(rule, 'header rule not found');
-  assert.match(rule[0], /top:\s*env\(safe-area-inset-top, 0px\)/, 'the sticky position itself must clear the notch');
-  assert.match(rule[0], /padding:\s*calc\(12px \+ env\(safe-area-inset-top, 0px\)\)/, 'the header\'s own top padding must also clear the notch, since it sits in normal page flow before any scrolling');
+  assert.match(rule[0], /top:\s*0;/, 'the sticky position itself must stay at the true top -- offsetting it (e.g. to env(safe-area-inset-top)) leaves a gap at the top of the screen with scrolled content visible through it, a real bug found from a direct screenshot');
+  assert.match(rule[0], /padding:\s*calc\(12px \+ env\(safe-area-inset-top, 0px\)\)/, 'the header\'s own top padding must clear the notch, since it sits in normal page flow before any scrolling -- this alone is sufficient, without also needing to offset the sticky position itself');
 });
 
 test('the mobile jump-nav override also accounts for the safe-area-inset-top, not just the desktop-width version', () => {
