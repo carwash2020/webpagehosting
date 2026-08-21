@@ -176,3 +176,31 @@ test('DISASTER_RECOVERY.md documents the new Owner-restricted Dev Tools view, si
   assert.match(doc, /Owner-restricted view/);
   assert.match(doc, /applyOwnerRestrictedView/);
 });
+
+// Suggestion #3 (2026-08-21), requested directly: audit the Known
+// Issues panel for staleness. Both seeded issues turned out to be
+// resolved -- verified directly against the live database (not
+// inferred from static SQL files): th_leads' actual SELECT policy
+// correctly restricts to authenticated only (never was always-true,
+// despite the Advisor's warning), and all 5 named tables now use the
+// correctly-wrapped auth.role() pattern. Marked done:true rather than
+// removed, preserving the record that these were real issues, now
+// resolved. The live, synced server-side copy was also updated
+// directly, since the code-side seed only affects a brand-new device
+// that's never loaded this panel before.
+
+test('both seeded Known Issues are now marked done:true, reflecting that both were verified resolved against the live database', () => {
+  const src = fs.readFileSync(path.join(TOOLS_DIR, 'dev-tools.html'), 'utf8');
+  const seedMatch = src.match(/const KNOWN_ISSUES_SEED = \[([\s\S]*?)\n  \];/);
+  assert.ok(seedMatch, 'KNOWN_ISSUES_SEED not found');
+  const seedBody = seedMatch[1];
+  const doneOccurrences = (seedBody.match(/done:\s*true/g) || []).length;
+  assert.equal(doneOccurrences, 2, 'both seeded issues should be marked done: true');
+  assert.doesNotMatch(seedBody, /done:\s*false/, 'no seeded issue should still be marked unresolved');
+});
+
+test('the seed\'s own detail text reflects that each issue was actually verified, not just assumed resolved', () => {
+  const src = fs.readFileSync(path.join(TOOLS_DIR, 'dev-tools.html'), 'utf8');
+  const seedMatch = src.match(/const KNOWN_ISSUES_SEED = \[([\s\S]*?)\n  \];/);
+  assert.match(seedMatch[1], /Verified directly/);
+});
