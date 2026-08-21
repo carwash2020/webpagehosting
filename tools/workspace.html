@@ -619,11 +619,25 @@
     <button class="tool-tile-info" onclick="event.stopPropagation(); openCardInfo('tool-runway')" aria-label="What is Runway Dashboard?" title="What is this?">?</button>
   </div>
   <div class="tool-tile">
+    <a href="/tools/finance.html" class="tool-tile-link">
+      <span class="tool-tile-icon"><svg class="th-icon" aria-hidden="true"><use href="#icon-chart" xlink:href="#icon-chart"></use></svg></span>
+      <span class="tool-tile-label">Finance</span>
+    </a>
+    <button class="tool-tile-info" onclick="event.stopPropagation(); openCardInfo('tool-finance')" aria-label="What is Finance?" title="What is this?">?</button>
+  </div>
+  <div class="tool-tile">
     <a href="/tools/parts-reference.html" class="tool-tile-link">
       <span class="tool-tile-icon"><svg class="th-icon" aria-hidden="true"><use href="#icon-book" xlink:href="#icon-book"></use></svg></span>
       <span class="tool-tile-label">Wiki</span>
     </a>
     <button class="tool-tile-info" onclick="event.stopPropagation(); openCardInfo('tool-partsreference')" aria-label="What is Appliance Wiki?" title="What is this?">?</button>
+  </div>
+  <div class="tool-tile">
+    <a href="/tools/settings.html" class="tool-tile-link">
+      <span class="tool-tile-icon"><svg class="th-icon" aria-hidden="true"><use href="#icon-gear" xlink:href="#icon-gear"></use></svg></span>
+      <span class="tool-tile-label">Settings</span>
+    </a>
+    <button class="tool-tile-info" onclick="event.stopPropagation(); openCardInfo('tool-settings')" aria-label="What is Settings?" title="What is this?">?</button>
   </div>
   <div class="tool-tile" id="devToolsTile" style="display:none;">
     <a href="/tools/dev-tools.html" class="tool-tile-link">
@@ -677,7 +691,8 @@
     },
     'tool-jobtracker': {
       title: 'Job Tracker',
-      body: `<p>Jobs, cost lookup, expenses &amp; mileage, contacts, and notes &mdash; all five in one page, organized by tab.</p>`,    },
+      body: `<p>Jobs, contacts, and notes &mdash; all three in one page, organized by tab. On a real desktop screen, the Jobs list also shows as a sortable table.</p>`,
+    },
     'tool-invoices': {
       title: 'Invoice Generator',
       body: `<p>Invoices and quotes/estimates in one place &mdash; convert an estimate straight into a real invoice with one tap.</p>`,
@@ -698,13 +713,21 @@
       title: 'Calendar',
       body: `<p>See jobs flagged "Show on Calendar" in Job Tracker on a month view, and export any of them to your phone's own calendar app.</p>`,
     },
+    'tool-finance': {
+      title: 'Finance',
+      body: `<p>Cost Lookup, Profitability, Income, and Expenses (including mileage) &mdash; everything money-related outside a specific job, all in one page, organized by tab.</p>`,
+    },
     'tool-runway': {
       title: 'Runway Dashboard',
-      body: `<p>Personal budget and business runway tracking &mdash; pulls revenue and expenses straight from Job Tracker, no double entry.</p>`,
+      body: `<p>Personal budget and business runway tracking &mdash; pulls revenue and expenses straight from Finance, no double entry.</p>`,
     },
     'tool-partsreference': {
       title: 'Appliance Wiki',
       body: `<p>A quick lookup for common appliance issues &mdash; what part it usually is, the part number, and roughly what it costs. Add to it as you actually run into things on real jobs.</p>`,
+    },
+    'tool-settings': {
+      title: 'Settings',
+      body: `<p>Account info, Cloud Sync setup, notification preferences, and Color theme &mdash; the personal, per-device options that don't belong on any one specific tool page.</p>`,
     },
     'tool-devtools': {
       title: 'Dev Tools',
