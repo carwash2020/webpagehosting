@@ -994,9 +994,14 @@
     ).join('');
   }
 
-  function clearClientErrorLog() {
+  async function clearClientErrorLog() {
     localStorage.removeItem('th_client_errors');
     renderClientErrorLog();
+    // Pushes immediately rather than scheduleSync()'s usual 2.5-second
+    // debounce -- this is a single, deliberate click, not rapid typing,
+    // and reopening this page before a debounced push actually fires
+    // would pull the still-populated remote copy right back in.
+    if (typeof pushSync === 'function') await pushSync();
     showToast('Cleared.');
   }
 

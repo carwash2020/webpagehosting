@@ -103,7 +103,9 @@
 // Bumped again (2026-08-21): fixed 3 genuinely broken help buttons on
 // finance.html (openCardInfo was never defined there), found by a new
 // automated button-handler check requested directly.
-const CACHE_NAME = 'th-workspace-v22';
+// Bumped again (2026-08-21): fixed the Client Errors "Clear" button
+// not actually persisting past a page reload, reported directly.
+const CACHE_NAME = 'th-workspace-v23';
 const PRECACHE_URLS = [
   '/tools/workspace.html', '/tools/job-tracker.html', '/tools/invoice-generator.html', '/tools/contract-generator.html',
   '/tools/calendar.html', '/tools/route-planner.html', '/tools/review-request.html', '/tools/contact-card.html',
