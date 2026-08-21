@@ -36,7 +36,7 @@
   })();
 </script>
 <link rel="stylesheet" href="/styles.css?v=202608202000">
-<link rel="stylesheet" href="/tools/styles-tools.css?v=202608202800">
+<link rel="stylesheet" href="/tools/styles-tools.css?v=202608202900">
 <script src="/tools/data-layer.js?v=202608202000" defer></script>
 <script src="/tools/dev-tools-shared.js?v=202608202000" defer></script>
 <script src="/tools/tools-effects.js?v=202608201400" defer></script>
@@ -50,7 +50,7 @@
      phone stays exactly as it was (nothing below 1024px changes at
      all) -- this only widens the container on a real desktop-size
      screen. */
-  @media (min-width: 1024px) { body { max-width: 1500px; } }
+  @media (min-width: 1024px) { body { max-width: 1500px; margin-left: calc(240px + max(0px, (100vw - 240px - 1500px) / 2)); } }
 
   .dev-panels-grid {
     display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));

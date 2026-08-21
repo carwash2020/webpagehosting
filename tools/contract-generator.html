@@ -36,7 +36,7 @@
   })();
 </script>
 <link rel="stylesheet" href="/styles.css?v=202608202000">
-<link rel="stylesheet" href="/tools/styles-tools.css?v=202608202800">
+<link rel="stylesheet" href="/tools/styles-tools.css?v=202608202900">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.112.3/dist/umd/supabase.js" integrity="sha384-qafw21c/iciq0VXsi9FzkfoQv5I/V0iqE4lSNcKXPnW9/UTJLnv5CcN4FHxVLnKg" crossorigin="anonymous" defer></script>
 <script src="/tools/sync.js?v=202608202400" defer></script>
 <script src="/tools/data-layer.js?v=202608202000" defer></script>
@@ -52,7 +52,7 @@
      phone stays exactly as it was (nothing below 1024px changes at
      all) -- this only widens the container on a real desktop-size
      screen. */
-  @media (min-width: 1024px) { body { max-width: 1300px; } }
+  @media (min-width: 1024px) { body { max-width: 1300px; margin-left: calc(240px + max(0px, (100vw - 240px - 1300px) / 2)); } }
   .tool-title { font-family:'Oswald',sans-serif; font-weight:700; font-size:28px; color:var(--white); margin-bottom:6px; }
   .tool-sub { color: var(--text-dim); margin-bottom: 24px; }
   .realtime-badge { display: inline-flex; align-items: center; gap: 5px; font-size: 11.5px; color: var(--text-dim); margin-left: 10px; }

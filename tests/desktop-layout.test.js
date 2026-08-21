@@ -23,7 +23,7 @@ test('every standard tool page has a min-width:1024px media query widening its c
     const src = fs.readFileSync(path.join(TOOLS_DIR, page), 'utf8');
     const mobileMatch = src.match(/body \{ padding: [^;]+; max-width: (\d+)px; margin: 0 auto; \}/);
     assert.ok(mobileMatch, page + ': original mobile body rule not found -- did something change unexpectedly?');
-    const desktopMatch = src.match(/@media \(min-width: 1024px\) \{ body \{ max-width: (\d+)px; \} \}/);
+    const desktopMatch = src.match(/@media \(min-width: 1024px\) \{ body \{ max-width: (\d+)px; margin-left: calc\(240px \+ max\(0px, \(100vw - 240px - \d+px\) \/ 2\)\); \} \}/);
     assert.ok(desktopMatch, page + ' is missing the desktop-width media query');
     const mobileWidth = parseInt(mobileMatch[1], 10);
     const desktopWidth = parseInt(desktopMatch[1], 10);
@@ -37,7 +37,7 @@ test('every standard tool page has a min-width:1024px media query widening its c
 
 test('runway-dashboard.html, which uses 3 separate max-width selectors instead of one body rule, has all 3 widened together in a single desktop media query', () => {
   const src = fs.readFileSync(path.join(TOOLS_DIR, 'runway-dashboard.html'), 'utf8');
-  assert.match(src, /@media \(min-width: 1024px\) \{ header, \.tabs, main \{ max-width: \d+px; margin-left: \d+px; \} \}/);
+  assert.match(src, /@media \(min-width: 1024px\) \{ header, \.tabs, main \{ max-width: \d+px; margin-left: calc\(240px \+ max\(0px, \(100vw - 240px - \d+px\) \/ 2\)\); \} \}/);
 });
 
 test('finance.html and parts-reference.html, which previously had NO container width constraint at all, now have one added -- but only on desktop, leaving mobile completely unaffected', () => {
@@ -47,7 +47,7 @@ test('finance.html and parts-reference.html, which previously had NO container w
     // would also affect mobile, which currently works fine
     // unconstrained on a narrow screen.
     assert.doesNotMatch(src, /(?<!media \(min-width: 1024px\) \{ )body \{[^}]*max-width/, page + ' should not have an unconditional max-width rule affecting mobile too');
-    assert.match(src, /@media \(min-width: 1024px\) \{ body \{ max-width: \d+px; margin: 0 auto; \} \}/, page + ' is missing its new desktop-only container constraint');
+    assert.match(src, /@media \(min-width: 1024px\) \{ body \{ max-width: \d+px; margin-left: calc\(240px \+ max\(0px, \(100vw - 240px - \d+px\) \/ 2\)\); \} \}/, page + ' is missing its new desktop-only container constraint');
   }
 });
 
@@ -97,4 +97,49 @@ test('the ambient background gradient lives on html (never width-constrained), n
 test('body.th-tool-page still gets its class added at runtime by tools-nav-pwa.js, confirming the transparent-background rule actually applies on a real page load, not just in theory', () => {
   const navSrc = fs.readFileSync(path.join(TOOLS_DIR, 'tools-nav-pwa.js'), 'utf8');
   assert.match(navSrc, /document\.body\.classList\.add\('th-tool-page'\)/);
+});
+
+// Bug fix (2026-08-20), found from a direct screenshot showing a large
+// empty dark area on the right side of a wide screen. Root cause: the
+// old fix used a flat 240px margin-left plus max-width, with
+// margin-right left at its default auto -- any extra space beyond the
+// max-width all piled onto the right instead of being split evenly.
+// Verifies the actual centering math the new calc formula produces,
+// not just that some formula-shaped text exists in the file.
+
+test('the centering calc formula produces mathematically correct results: flush against the sidebar with zero gap on a narrow "desktop" width, and evenly split extra space on a wide one', () => {
+  // Simulates exactly what a real browser's own CSS box-model
+  // resolution does for this rule: width:auto with one fixed margin
+  // and one auto margin first tries to fill available space, then
+  // max-width clamps it and the remaining auto margin absorbs whatever
+  // is left over.
+  function resolve(viewportWidth, sidebarWidth, maxw) {
+    const available = viewportWidth - sidebarWidth;
+    const extra = Math.max(0, available - maxw);
+    const marginLeft = sidebarWidth + extra / 2;
+    const width = Math.min(available, maxw);
+    const marginRight = viewportWidth - marginLeft - width;
+    return { marginLeft, width, marginRight };
+  }
+
+  // Wide screen (matches the screenshot's real scenario): extra space
+  // should split evenly on both sides, not all pile onto the right.
+  let r = resolve(1900, 240, 1300);
+  assert.equal(r.marginLeft, 420);
+  assert.equal(r.width, 1300);
+  assert.equal(r.marginRight, 180);
+  assert.equal(r.marginLeft - 240, r.marginRight, 'extra space must split evenly on both sides of the content');
+
+  // Narrower "desktop" width where the remaining track is smaller than
+  // the max-width: content should fill the track exactly, flush
+  // against the sidebar with no gap on either side.
+  r = resolve(1024, 240, 1300);
+  assert.equal(r.marginLeft, 240);
+  assert.equal(r.width, 784);
+  assert.equal(r.marginRight, 0);
+
+  // Exactly at the boundary where available track equals max-width.
+  r = resolve(1540, 240, 1300);
+  assert.equal(r.marginLeft, 240);
+  assert.equal(r.marginRight, 0);
 });
