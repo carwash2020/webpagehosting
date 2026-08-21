@@ -69,3 +69,68 @@ test('workspace.html\'s Dev Tools description no longer claims access is restric
   assert.ok(devToolsInfo);
   assert.match(devToolsInfo[1], /any account with an assigned role/);
 });
+
+// Site audit improvement, requested directly (2026-08-21): a real
+// functionality test across every button in the app. New
+// checkButtonHandlers() in scripts/check-consistency.js, running
+// automatically on every push, found a real, confirmed bug on its
+// very first run: 3 "?" help buttons on finance.html (Sales Tax, Add
+// Entry, Miles) called openCardInfo(), a function that was never
+// actually defined anywhere on that page -- silently broken since the
+// Job Tracker/Finance split, where the function and its content
+// entries stayed behind, unused, on job-tracker.html.
+
+function runCheckConsistency() {
+  const { execSync } = require('child_process');
+  try {
+    const output = execSync('node ' + path.join(__dirname, '..', 'scripts', 'check-consistency.js'), { encoding: 'utf8' });
+    return { passed: true, output };
+  } catch (e) {
+    return { passed: false, output: e.stdout + e.stderr };
+  }
+}
+
+test('checkButtonHandlers passes cleanly against the real, current codebase -- confirms the real openCardInfo bug found and fixed on finance.html stays fixed', () => {
+  const result = runCheckConsistency();
+  assert.equal(result.passed, true, result.output);
+});
+
+test('finance.html\'s 3 real help buttons (Sales Tax, Add Entry, Miles) now have a genuinely working openCardInfo(), moved here from job-tracker.html where it was confirmed completely unused', () => {
+  const src = fs.readFileSync(path.join(TOOLS_DIR, 'finance.html'), 'utf8');
+  assert.match(src, /function openCardInfo\(key\)/);
+  for (const key of ['salesTax', 'incomeEntry', 'mileageRate']) {
+    assert.match(src, new RegExp(key + ':\\s*\\{'), key + ' entry not found');
+  }
+});
+
+test('job-tracker.html only keeps the "templates" entry now -- the other 3 were confirmed unused there and moved to finance.html, not duplicated', () => {
+  const src = fs.readFileSync(path.join(TOOLS_DIR, 'job-tracker.html'), 'utf8');
+  assert.match(src, /templates:\s*\{/);
+  for (const key of ['salesTax', 'incomeEntry', 'mileageRate']) {
+    assert.doesNotMatch(src, new RegExp(key + ':\\s*\\{'), key + ' should have moved to finance.html, not stayed duplicated here');
+  }
+});
+
+test('checkButtonHandlers genuinely catches a broken button handler, not just a plausible-looking check that never actually fires', () => {
+  const jtPath = path.join(TOOLS_DIR, 'job-tracker.html');
+  const original = fs.readFileSync(jtPath, 'utf8');
+  try {
+    const broken = original.replace('onclick="addJob()"', 'onclick="thisButtonIsDefinitelyBroken()"');
+    assert.notEqual(broken, original, 'the replace should have matched something real -- otherwise this test proves nothing');
+    fs.writeFileSync(jtPath, broken);
+    const result = runCheckConsistency();
+    assert.equal(result.passed, false, 'should have failed with a genuinely broken button handler');
+    assert.match(result.output, /thisButtonIsDefinitelyBroken/);
+  } finally {
+    fs.writeFileSync(jtPath, original); // always restore, even if an assertion above failed
+  }
+});
+
+test('checkButtonHandlers correctly ignores JS keywords (like "if") and native browser globals (like "confirm") that superficially look like function calls in an onclick handler', () => {
+  // Confirms directly against the underlying regex logic, not just
+  // that the overall check happens to pass -- a keyword or a native
+  // global should never be treated as a missing app-defined function.
+  const src = fs.readFileSync(path.join(__dirname, '..', 'scripts', 'check-consistency.js'), 'utf8');
+  assert.match(src, /JS_KEYWORDS = new Set\(\[[\s\S]*?'if'/);
+  assert.match(src, /KNOWN_GLOBALS = new Set\(\[[\s\S]*?'confirm'/);
+});

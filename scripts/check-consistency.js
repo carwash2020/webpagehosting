@@ -142,6 +142,81 @@ function findFunctionBody(src, name) {
   return { body: src.slice(start, i), isAsync };
 }
 
+// Site audit improvement, requested directly (2026-08-21): a real
+// functionality test across every button in the app. Manually clicking
+// through hundreds of buttons isn't a repeatable, ongoing check --
+// this scans every onclick/onchange/oninput/onkeydown handler on every
+// page and confirms the function it actually calls is genuinely
+// defined somewhere that page can reach: either inline on the page
+// itself, or in one of the specific shared scripts that page actually
+// loads (not just any shared script anywhere in the app, which would
+// hide a real broken reference behind an unrelated file that happens
+// to define a same-named function elsewhere).
+const JS_KEYWORDS = new Set([
+  'if', 'else', 'for', 'while', 'switch', 'case', 'catch', 'function', 'return',
+  'typeof', 'new', 'delete', 'void', 'in', 'of', 'instanceof', 'do', 'try', 'finally',
+  'throw', 'const', 'let', 'var', 'await', 'async', 'yield',
+]);
+// Native browser/JS globals every page can always call, regardless of
+// what it loads -- not app-defined functions, so never worth flagging.
+const KNOWN_GLOBALS = new Set([
+  'confirm', 'alert', 'prompt', 'parseInt', 'parseFloat', 'isNaN', 'isFinite',
+  'encodeURIComponent', 'decodeURIComponent', 'encodeURI', 'decodeURI',
+  'setTimeout', 'setInterval', 'clearTimeout', 'clearInterval', 'requestAnimationFrame',
+  'Boolean', 'Number', 'String', 'Array', 'Object', 'Date', 'Math', 'JSON', 'Promise',
+  'fetch', 'structuredClone',
+]);
+
+function extractDefinedFunctionNames(src) {
+  const names = new Set();
+  for (const m of src.matchAll(/function\s+([a-zA-Z_$][\w$]*)\s*\(/g)) names.add(m[1]);
+  for (const m of src.matchAll(/(?:const|let|var)\s+([a-zA-Z_$][\w$]*)\s*=\s*(?:async\s*)?(?:\([^)]*\)|[a-zA-Z_$][\w$]*)\s*=>/g)) names.add(m[1]);
+  for (const m of src.matchAll(/window\.([a-zA-Z_$][\w$]*)\s*=/g)) names.add(m[1]);
+  return names;
+}
+
+function checkButtonHandlers(problems) {
+  const files = fs.readdirSync(TOOLS_DIR).filter(f => f.endsWith('.html'));
+  // Cache each shared script's own defined-function set once, rather
+  // than re-parsing the same file for every page that loads it.
+  const sharedScriptCache = {};
+  function getSharedScriptFunctions(scriptName) {
+    if (sharedScriptCache[scriptName]) return sharedScriptCache[scriptName];
+    const scriptPath = path.join(TOOLS_DIR, scriptName);
+    const names = fs.existsSync(scriptPath) ? extractDefinedFunctionNames(fs.readFileSync(scriptPath, 'utf8')) : new Set();
+    sharedScriptCache[scriptName] = names;
+    return names;
+  }
+
+  for (const filename of files) {
+    const src = readTool(filename);
+    const availableFns = extractDefinedFunctionNames(src);
+    for (const m of src.matchAll(/<script src="\/tools\/([\w-]+\.js)/g)) {
+      for (const fn of getSharedScriptFunctions(m[1])) availableFns.add(fn);
+    }
+
+    const handlerValues = new Set();
+    for (const m of src.matchAll(/on(?:click|change|input|keydown)=\\?"([^"]*)\\?"/g)) handlerValues.add(m[1]);
+
+    const calledFns = new Set();
+    for (const handler of handlerValues) {
+      // Bare identifier immediately followed by "(" -- not preceded by
+      // "." (excludes method calls like event.stopPropagation() or
+      // this.closest(...), which aren't app-defined functions to check).
+      for (const m of handler.matchAll(/(?<![.\w$])([a-zA-Z_$][\w$]*)\s*\(/g)) {
+        const name = m[1];
+        if (JS_KEYWORDS.has(name) || KNOWN_GLOBALS.has(name)) continue;
+        calledFns.add(name);
+      }
+    }
+
+    const missing = [...calledFns].filter(fn => !availableFns.has(fn));
+    if (missing.length) {
+      problems.push(`${filename}: ${missing.length} button handler(s) call a function that isn't defined anywhere this page can reach: ${missing.join(', ')}`);
+    }
+  }
+}
+
 function checkTopLevelDeferredCalls(problems) {
   const deferredNames = getDeferredFunctionNames();
   const files = fs.readdirSync(TOOLS_DIR).filter(f => f.endsWith('.html'));
@@ -290,6 +365,7 @@ function main() {
   checkVersionFreshness(problems);
   checkTourHealth(problems);
   checkTopLevelDeferredCalls(problems);
+  checkButtonHandlers(problems);
 
   files.forEach(filename => {
     if (EXEMPT[filename]) return;
