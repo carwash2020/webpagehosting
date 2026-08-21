@@ -68,6 +68,10 @@
       title: 'Known issues',
       body: `<p>Real, still-open items -- add a new one right from here with "+ Add issue", check one off once it's actually resolved, or delete it once it's no longer worth tracking. Synced across devices, so anything either account logs shows up for both.</p>`,
     },
+    flaggedpages: {
+      title: 'Flagged pages',
+      body: `<p>Anything flagged from the small button in the bottom-right corner of any tool page -- for a moment when something looks off but there isn't time to write it up properly. Just the page, an optional note, and when it was flagged. Resolve once it's actually fixed, or delete it if it turns out not to be worth chasing. Synced across devices, same as Known Issues.</p>`,
+    },
     deploy: {
       title: 'Deploy history',
       body: `<p>Pulls the last 8 GitHub Actions runs for this repo directly from GitHub's public API -- no login needed since the repo is public. The top summary is the single most recent run; the list below it shows enough history to spot a pattern (e.g. "this started failing consistently a few runs back") rather than just a single snapshot.</p>`,

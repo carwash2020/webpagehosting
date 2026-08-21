@@ -122,6 +122,12 @@ const SYNC_DATA_KEYS = [
   // each other's, rather than only Connor being able to log a new one
   // (by editing this file).
   'th_known_issues',
+  // "Flag this page" queue (2026-08-21), requested directly: a quick
+  // way to flag something to come back to later without writing a
+  // full message -- just the page, an optional note, and a timestamp.
+  // Synced for the same reason as Known Issues above: flagged on the
+  // phone, reviewed later in Dev Tools on any device.
+  'th_flagged_items',
   'th_setaside_rate',
   // Runway Dashboard's own data -- personal budget, business-month
   // rollups, emergency fund, and the readiness checklist. Deliberately
@@ -194,6 +200,7 @@ const MERGE_KEY_FIELD = {
   th_parts_reference_units: 'id',
   th_client_errors: 'id',
   th_known_issues: 'id',
+  th_flagged_items: 'id',
   'rd_personal-expenses': 'id',
   'rd_personal-income': 'id',
   'rd_business-months': 'month',

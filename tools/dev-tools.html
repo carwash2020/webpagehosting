@@ -36,14 +36,14 @@
   })();
 </script>
 <link rel="stylesheet" href="/styles.css?v=202608202000">
-<link rel="stylesheet" href="/tools/styles-tools.css?v=202608210900">
-<script src="/tools/data-layer.js?v=202608210900" defer></script>
-<script src="/tools/dev-tools-shared.js?v=202608202000" defer></script>
+<link rel="stylesheet" href="/tools/styles-tools.css?v=202608211000">
+<script src="/tools/data-layer.js?v=202608211000" defer></script>
+<script src="/tools/dev-tools-shared.js?v=202608211000" defer></script>
 <script src="/tools/tools-effects.js?v=202608201400" defer></script>
-<script src="/tools/tools-dialogs.js?v=202608201400" defer></script>
+<script src="/tools/tools-dialogs.js?v=202608211000" defer></script>
 <script src="/tools/tools-media-sharing.js?v=202608201900" defer></script>
-<script src="/tools/tools-nav-pwa.js?v=202608202200" defer></script>
-<script src="/tools/sync.js?v=202608202400" defer></script>
+<script src="/tools/tools-nav-pwa.js?v=202608211000" defer></script>
+<script src="/tools/sync.js?v=202608211000" defer></script>
 <style>
   body { padding: 44px 20px 60px; max-width: 1080px; margin: 0 auto; }
   /* Desktop layout (2026-08-20), requested directly: efficient on
@@ -377,6 +377,14 @@
       <button class="dev-info-bubble" onclick="openDevInfo('knownissues')" aria-label="What does this do?" title="What does this do?">?</button>
     </div>
     <div id="knownIssuesList"></div>
+  </div>
+
+  <div class="dev-panel dev-owner-hidden dev-panel-wide">
+    <div class="dev-panel-heading">
+      <h2>Flagged pages</h2>
+      <button class="dev-info-bubble" onclick="openDevInfo('flaggedpages')" aria-label="What does this do?" title="What does this do?">?</button>
+    </div>
+    <div id="flaggedItemsList"></div>
   </div>
 
   <div class="dev-panel dev-owner-hidden dev-panel-wide">
@@ -1815,6 +1823,43 @@
     showToast('Issue added.');
   }
 
+  const FLAGGED_ITEMS_KEY = 'th_flagged_items';
+  function loadFlaggedItems() {
+    let list = [];
+    try { list = JSON.parse(localStorage.getItem(FLAGGED_ITEMS_KEY) || '[]'); } catch (e) {}
+    return list.slice().sort((a, b) => new Date(b.time) - new Date(a.time));
+  }
+  function saveFlaggedItems(list) {
+    localStorage.setItem(FLAGGED_ITEMS_KEY, JSON.stringify(list));
+    if (typeof scheduleSync === 'function') scheduleSync();
+  }
+  function renderFlaggedItems() {
+    const el = document.getElementById('flaggedItemsList');
+    const items = loadFlaggedItems();
+    el.innerHTML = items.length ? items.map(item => {
+      const isResolved = !!item.resolved;
+      const when = new Date(item.time).toLocaleString();
+      return '<div class="dev-issue-row' + (isResolved ? ' is-done' : '') + '">' +
+        '<input type="checkbox" ' + (isResolved ? 'checked' : '') + ' onchange="resolveFlaggedItem(\'' + item.id + '\')" aria-label="Mark resolved">' +
+        '<div style="flex:1;"><div class="dev-issue-title">' + escapeHtml(item.page) + '</div>' +
+        '<div class="dev-issue-detail">' + (item.note ? escapeHtml(item.note) + ' &mdash; ' : '') + when + '</div></div>' +
+        '<button class="dev-info-bubble dev-danger-btn" title="Delete" aria-label="Delete flagged item" onclick="deleteFlaggedItem(\'' + item.id + '\')"><svg class="th-icon" aria-hidden="true"><use href="#icon-trash" xlink:href="#icon-trash"></use></svg></button>' +
+        '</div>';
+    }).join('') : '<p class="tool-sub">Nothing flagged right now.</p>';
+  }
+  function resolveFlaggedItem(id) {
+    const items = loadFlaggedItems();
+    const item = items.find(i => i.id === id);
+    if (item) item.resolved = !item.resolved;
+    saveFlaggedItems(items);
+    renderFlaggedItems();
+  }
+  function deleteFlaggedItem(id) {
+    const items = loadFlaggedItems().filter(i => i.id !== id);
+    saveFlaggedItems(items);
+    renderFlaggedItems();
+  }
+
   // Pulls recent workflow runs from GitHub's public API -- no auth
   // needed since this is a public repo. Top summary shows the single
   // most recent run (unchanged from before); the history list below
@@ -2099,6 +2144,7 @@
       renderServiceWorkerInfo();
       renderClientErrorLog();
       renderKnownIssues();
+      renderFlaggedItems();
       renderDeployStatus();
       renderChangelog();
       populateRegressionCommitDropdown();

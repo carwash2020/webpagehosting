@@ -50,6 +50,35 @@
     { href: '/tools/settings.html',           icon: 'gear',     label: 'Settings' }
   ];
 
+  var FLAGGED_ITEMS_KEY = 'th_flagged_items';
+  function injectFlagButton() {
+    var btn = document.createElement('button');
+    btn.className = 'th-flag-btn';
+    btn.setAttribute('aria-label', 'Flag this page for later');
+    btn.title = 'Flag this page for later';
+    btn.innerHTML = '<svg class="th-icon" aria-hidden="true"><use href="#icon-warning" xlink:href="#icon-warning"></use></svg>';
+    btn.onclick = function () {
+      if (typeof showFlagDialog !== 'function') return; // tools-dialogs.js not loaded yet -- fails silently rather than throwing
+      var pageLabel = (document.title || '').split('\u00b7')[0].trim() || location.pathname;
+      showFlagDialog(pageLabel).then(function (note) {
+        if (note === null) return; // cancelled
+        var list;
+        try { list = JSON.parse(localStorage.getItem(FLAGGED_ITEMS_KEY) || '[]'); } catch (e) { list = []; }
+        list.push({
+          id: 'f_' + Date.now().toString(36) + '_' + Math.random().toString(36).slice(2, 8),
+          page: pageLabel,
+          note: note,
+          time: new Date().toISOString(),
+          resolved: false,
+        });
+        localStorage.setItem(FLAGGED_ITEMS_KEY, JSON.stringify(list));
+        if (typeof scheduleSync === 'function') scheduleSync();
+        if (typeof showToast === 'function') showToast('Flagged.');
+      });
+    };
+    document.body.appendChild(btn);
+  }
+
   function injectSidebar() {
     document.body.classList.add('th-has-sidebar');
 
@@ -78,6 +107,7 @@
     if (onLogin) return;
     document.body.classList.add('th-has-bottomnav');
     injectSidebar();
+    injectFlagButton();
 
     var nav = document.createElement('nav');
     nav.className = 'th-bottom-nav';
