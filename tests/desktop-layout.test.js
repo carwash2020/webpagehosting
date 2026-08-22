@@ -214,7 +214,6 @@ test('on the dashboard, the live sync indicator moves under the settings button 
   const src = fs.readFileSync(path.join(TOOLS_DIR, 'workspace.html'), 'utf8');
   const desktopBlock = src.match(/@media \(min-width: 1024px\) \{\s*body \.hub-header \{([^}]*)\}\s*\.hub-sub \{([^}]*)\}/);
   assert.ok(desktopBlock, 'desktop hub-header/hub-sub override block not found');
-  assert.match(desktopBlock[1], /align-items:\s*flex-start/);
   assert.match(desktopBlock[1], /min-height:\s*140px/);
   assert.match(desktopBlock[2], /position:\s*fixed/);
   assert.match(desktopBlock[2], /right:\s*24px/, 'should align under the settings button on the right, not the left');
@@ -305,8 +304,16 @@ test('this page\'s align-items override matches the shared rule\'s exact selecto
   assert.match(sharedCss, /body \.hub-header, body \.tool-header \{[^}]*align-items:\s*center/, 'the shared rule this page needs to beat should still be using "body .hub-header" with align-items:center');
 
   // Confirm this page's own override matches that exact selector.
-  assert.match(src, /body \.hub-header \{ align-items: flex-start;/, 'this override must use the same "body .hub-header" selector to correctly win at equal specificity via later source order');
-  assert.doesNotMatch(src, /(?<!body )\.hub-header \{ align-items: flex-start/, 'a bare .hub-header selector here would be silently overridden by the shared, higher-specificity rule');
+  // Restructured (2026-08-22), requested directly ("move the bars
+  // together"): Live sync now lives as a second row inside
+  // .hub-header itself (rather than a separate element pinned to the
+  // top of a taller box), so .hub-header-main-row (the wrapper around
+  // the original logo/buttons row) needs align-items:stretch to span
+  // full width and keep its own internal justify-content:space-between
+  // working correctly -- not flex-start, which would shrink it to its
+  // content width and break that layout.
+  assert.match(src, /body \.hub-header \{ align-items: stretch;/, 'this override must use the same "body .hub-header" selector to correctly win at equal specificity via later source order');
+  assert.doesNotMatch(src, /(?<!body )\.hub-header \{ align-items: (flex-start|stretch)/, 'a bare .hub-header selector here would be silently overridden by the shared, higher-specificity rule');
 });
 
 // Live sync indicator restructured on mobile (2026-08-21), requested
@@ -332,3 +339,53 @@ test('this change does not affect the desktop refresh button\'s own position:fix
   const src = fs.readFileSync(path.join(TOOLS_DIR, 'workspace.html'), 'utf8');
   assert.match(src, /#refreshSyncLink \{ position: fixed !important;/);
 });
+
+// Restructured (2026-08-22), requested directly ("move the bars
+// together and put sync under it"): "Live sync active" now lives
+// inside .hub-header itself as a second row, so it visually reads as
+// part of the same dark header bar rather than a separate, lighter
+// section below it with a visible gap. .hub-header-main-row wraps the
+// original logo/title/buttons row, preserving its own internal
+// space-between layout.
+
+test('.hub-sub is now a real, nested child of .hub-header (not a sibling element after it), so it inherits the same dark background automatically via that element\'s own inset:0 ::before pseudo-element', () => {
+  const window = loadWorkspace();
+  const header = window.document.querySelector('.hub-header');
+  const hubSub = window.document.querySelector('.hub-sub');
+  assert.ok(header.contains(hubSub), '.hub-sub should be nested inside .hub-header');
+  assert.equal(header.lastElementChild, hubSub, '.hub-sub should be the last child, after the main row');
+});
+
+test('.hub-header-main-row wraps the original logo/title/buttons row, and still correctly spreads them via justify-content:space-between (not shrunk/centered by the parent\'s own flex-direction:column)', () => {
+  const window = loadWorkspace();
+  const mainRow = window.document.querySelector('.hub-header-main-row');
+  assert.ok(mainRow, '.hub-header-main-row not found');
+  const logo = window.document.getElementById('headerLogo');
+  const settingsBtn = window.document.querySelector('a[href="/tools/settings.html"]');
+  assert.ok(mainRow.contains(logo));
+  assert.ok(mainRow.contains(settingsBtn));
+  assert.equal(window.getComputedStyle(mainRow).justifyContent, 'space-between');
+});
+
+test('.hub-header is a flex column container with align-items:stretch (not flex-start, which would shrink .hub-header-main-row to its content width and break its own internal space-between layout)', () => {
+  const window = loadWorkspace();
+  const header = window.document.querySelector('.hub-header');
+  const style = window.getComputedStyle(header);
+  assert.equal(style.display, 'flex');
+  assert.equal(style.flexDirection, 'column');
+  assert.equal(style.alignItems, 'stretch');
+});
+
+test('jump-nav remains a sibling after the whole .hub-header block, not accidentally nested inside it during the restructuring', () => {
+  const window = loadWorkspace();
+  const header = window.document.querySelector('.hub-header');
+  const jumpNav = window.document.querySelector('.jump-nav');
+  assert.equal(header.nextElementSibling, jumpNav);
+});
+
+function loadWorkspace() {
+  const { JSDOM } = require('jsdom');
+  const html = fs.readFileSync(path.join(TOOLS_DIR, 'workspace.html'), 'utf8');
+  const dom = new JSDOM(html, { runScripts: 'dangerously', url: 'https://example.com/tools/workspace.html', beforeParse(w) { w.requireAuth = () => {}; } });
+  return dom.window;
+}

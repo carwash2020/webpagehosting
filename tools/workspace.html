@@ -55,7 +55,9 @@
      auto-fit grid) spread into more columns on its own, rather than
      rebuilding the layout from scratch. */
   @media (min-width: 1024px) { body { max-width: 1400px; margin-left: calc(240px + max(0px, (100vw - 240px - 1400px) / 2)); padding-top: 205px; } }
-  .hub-header { display: flex; align-items: center; justify-content: space-between; gap: 14px; margin-bottom: 8px; }
+  .hub-header { display: flex; flex-direction: column; gap: 6px; margin-bottom: 8px; }
+  body .hub-header { align-items: stretch; }
+  .hub-header-main-row { display: flex; align-items: center; justify-content: space-between; gap: 14px; }
   /* Live sync indicator moved (2026-08-21), requested directly: on
      desktop, sits as a second row under the settings button instead
      of its own separate, full-width paragraph below the whole header.
@@ -64,7 +66,7 @@
      vertically centering it) so there's real space underneath for the
      overlaid second row. */
   @media (min-width: 1024px) {
-    body .hub-header { align-items: flex-start; min-height: 140px; }
+    body .hub-header { min-height: 140px; }
     .hub-sub { position: fixed; top: 108px; right: 24px; left: auto; margin: 0 !important; z-index: 90; }
     /* Made its own, fully independent position:fixed element (2026-08-21),
        reported directly with a screenshot showing the previous flexbox
@@ -93,7 +95,7 @@
   .hub-header-right { display: flex; align-items: center; gap: 8px; }
   .hub-header img { height: 44px; width: 44px; object-fit: contain; }
   .hub-title { font-family:'Anton',sans-serif; font-size: 26px; color: var(--white); }
-  .hub-sub { color: var(--text-dim); margin-bottom: 8px; display: flex; flex-direction: column; align-items: flex-start; gap: 4px; }
+  .hub-sub { color: var(--text-dim); display: flex; flex-direction: column; align-items: flex-start; gap: 4px; }
   #refreshSyncLink { margin-left: 0; }
   @media (min-width: 1024px) { .hub-sub { display: block; } }
 
@@ -314,6 +316,7 @@
 
 
 <div class="hub-header">
+  <div class="hub-header-main-row">
   <div class="hub-header-left">
     <img id="headerLogo" src="/images/logo-signature-orange.webp?v=202608142300" alt="Triple H Enterprises">
     <span class="hub-title">Dashboard</span>
@@ -322,10 +325,11 @@
     <button class="help-btn" onclick="openHelpModal()" aria-label="How to use this dashboard" title="How to use this dashboard">?</button>
     <a href="/tools/settings.html" class="help-btn" aria-label="Settings" title="Settings" style="text-decoration:none; display:inline-flex; align-items:center; justify-content:center;"><svg class="th-icon" aria-hidden="true"><use href="#icon-settings" xlink:href="#icon-settings"></use></svg></a>
   </div>
+  </div>
+  <p class="hub-sub"><span class="realtime-badge" id="realtimeBadge" style="margin-left:0;"><span class="realtime-dot" id="realtimeDot"></span><span id="realtimeText">Live sync: connecting...</span></span><span class="pending-changes-badge" id="pendingChangesBadge" style="display:none;">&#9679; Unsynced changes</span>
+    <button class="help-btn" id="refreshSyncLink" onclick="manualRefreshSync(renderDashboard)" aria-label="Refresh synced data now" title="Refresh synced data now" style="width:26px; height:26px; font-size:13px; vertical-align:middle; margin-left:6px;">&#8635;</button>
+  </p>
 </div>
-<p class="hub-sub"><span class="realtime-badge" id="realtimeBadge" style="margin-left:0;"><span class="realtime-dot" id="realtimeDot"></span><span id="realtimeText">Live sync: connecting...</span></span><span class="pending-changes-badge" id="pendingChangesBadge" style="display:none;">&#9679; Unsynced changes</span>
-  <button class="help-btn" id="refreshSyncLink" onclick="manualRefreshSync(renderDashboard)" aria-label="Refresh synced data now" title="Refresh synced data now" style="width:26px; height:26px; font-size:13px; vertical-align:middle; margin-left:6px;">&#8635;</button>
-</p>
 <nav class="jump-nav">
   <a href="#section-snapshot"><span class="jump-nav-icon"><svg class="th-icon" aria-hidden="true"><use href="#icon-chart" xlink:href="#icon-chart"></use></svg></span>Snapshot</a>
   <a href="#section-actionitems"><span class="jump-nav-icon"><svg class="th-icon" aria-hidden="true"><use href="#icon-check-circle" xlink:href="#icon-check-circle"></use></svg></span>Action Items</a>
