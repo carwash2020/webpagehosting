@@ -163,7 +163,10 @@
 // showing the earlier fix had no effect at all -- a separate,
 // mobile-specific media-query rule was silently overriding it with a
 // flat, non-safe-area-aware padding value.
-const CACHE_NAME = 'th-workspace-v40';
+// Bumped again (2026-08-22): on mobile, the refresh button now stacks
+// below "Live sync active" (matching desktop), with tighter spacing
+// under the header, requested directly.
+const CACHE_NAME = 'th-workspace-v41';
 const PRECACHE_URLS = [
   '/tools/workspace.html', '/tools/job-tracker.html', '/tools/invoice-generator.html', '/tools/contract-generator.html',
   '/tools/calendar.html', '/tools/route-planner.html', '/tools/review-request.html', '/tools/contact-card.html',

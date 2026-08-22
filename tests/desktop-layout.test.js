@@ -308,3 +308,27 @@ test('this page\'s align-items override matches the shared rule\'s exact selecto
   assert.match(src, /body \.hub-header \{ align-items: flex-start;/, 'this override must use the same "body .hub-header" selector to correctly win at equal specificity via later source order');
   assert.doesNotMatch(src, /(?<!body )\.hub-header \{ align-items: flex-start/, 'a bare .hub-header selector here would be silently overridden by the shared, higher-specificity rule');
 });
+
+// Live sync indicator restructured on mobile (2026-08-21), requested
+// directly: the refresh button now stacks below "Live sync active"
+// (matching the desktop layout already built), with tighter spacing
+// so it sits closer to the header instead of floating with extra
+// whitespace above it.
+
+test('on mobile, .hub-sub uses a flex column layout, stacking the refresh button below the badge rather than side-by-side on the same line', () => {
+  const src = fs.readFileSync(path.join(TOOLS_DIR, 'workspace.html'), 'utf8');
+  const mobileRule = src.match(/\.hub-sub \{ color: var\(--text-dim\);[^}]*\}/);
+  assert.ok(mobileRule, 'base .hub-sub rule not found');
+  assert.match(mobileRule[0], /display:\s*flex/);
+  assert.match(mobileRule[0], /flex-direction:\s*column/);
+});
+
+test('desktop resets .hub-sub back to display:block, since the refresh button there is already its own independent position:fixed element (unaffected by the parent\'s display mode either way) and doesn\'t need the mobile column stacking', () => {
+  const src = fs.readFileSync(path.join(TOOLS_DIR, 'workspace.html'), 'utf8');
+  assert.match(src, /@media \(min-width: 1024px\) \{ \.hub-sub \{ display: block; \} \}/);
+});
+
+test('this change does not affect the desktop refresh button\'s own position:fixed rule, which still exists unchanged', () => {
+  const src = fs.readFileSync(path.join(TOOLS_DIR, 'workspace.html'), 'utf8');
+  assert.match(src, /#refreshSyncLink \{ position: fixed !important;/);
+});
