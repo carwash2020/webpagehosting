@@ -93,7 +93,9 @@
   .hub-header-right { display: flex; align-items: center; gap: 8px; }
   .hub-header img { height: 44px; width: 44px; object-fit: contain; }
   .hub-title { font-family:'Anton',sans-serif; font-size: 26px; color: var(--white); }
-  .hub-sub { color: var(--text-dim); margin-bottom: 20px; }
+  .hub-sub { color: var(--text-dim); margin-bottom: 8px; display: flex; flex-direction: column; align-items: flex-start; gap: 4px; }
+  #refreshSyncLink { margin-left: 0; }
+  @media (min-width: 1024px) { .hub-sub { display: block; } }
 
   .jump-nav {
     position: sticky; top: 0; z-index: 50; display: flex; gap: 6px; overflow-x: auto;
