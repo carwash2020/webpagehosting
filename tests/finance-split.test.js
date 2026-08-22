@@ -2927,3 +2927,24 @@ test('the 44px floor value is consistent everywhere it appears -- a mismatched f
   assert.ok(allFloors.length >= 5, 'expected multiple guarded usages');
   assert.ok(allFloors.every(f => f === '44'), 'all floors should use the same 44px value: ' + allFloors.join(', '));
 });
+
+// Bug fix (2026-08-21), reported directly with a second real-device
+// screenshot showing the overlap completely unchanged despite the
+// earlier max()-floor fix. Real, different root cause this time: a
+// separate, mobile-specific @media(max-width:720px) rule was setting
+// a flat padding:10px 14px with zero safe-area awareness at all --
+// and since it comes later in the file at equal selector specificity
+// to the base rule with the safe-area calc, it always won on mobile,
+// completely undoing that earlier fix without ever touching the
+// literal string "env(safe-area-inset-top)" at all (so the earlier
+// "scan for unguarded env() usage" test never could have caught this
+// specific class of bug).
+
+test('the mobile-specific @media(max-width:720px) override for .hub-header/.tool-header also has safe-area-aware top padding, matching the already-correct adjacent .jump-nav rule in the same block -- this exact rule previously set a flat padding:10px 14px that silently undid the base rule\'s safe-area fix on every real phone', () => {
+  const src = fs.readFileSync(path.join(__dirname, '..', 'tools', 'styles-tools.css'), 'utf8');
+  const mobileBlock = src.match(/@media \(max-width: 720px\) \{([\s\S]*?)\n\}/);
+  assert.ok(mobileBlock, 'mobile media query block not found');
+  const headerRule = mobileBlock[1].match(/body \.hub-header, body \.tool-header \{[^}]*\}/);
+  assert.ok(headerRule, '.hub-header/.tool-header rule not found inside the mobile block');
+  assert.match(headerRule[0], /max\(env\(safe-area-inset-top, 0px\), 44px\)/, 'the mobile override must account for the safe area too -- a flat, unaware padding value here silently wins over the base rule\'s fix on every real phone');
+});

@@ -1212,7 +1212,7 @@ body select:focus, body textarea:focus {
 @media (max-width: 720px) {
   /* full-bleed cards: stop wasting 40px of a 390px screen on gutters */
   body.th-tool-page { padding-left: 12px; padding-right: 12px; padding-top: 12px; }
-  body .hub-header, body .tool-header { margin: 0 -12px 12px; padding: 10px 14px; }
+  body .hub-header, body .tool-header { margin: 0 -12px 12px; padding: calc(10px + max(env(safe-area-inset-top, 0px), 44px)) 14px 10px; }
   body .jump-nav { margin-left: -12px; margin-right: -12px; padding: 8px 12px; top: calc(53px + max(env(safe-area-inset-top, 0px), 44px)); }
   body .section-block, body .dev-panel, body .form-section { padding-left: 14px; padding-right: 14px; }
 
