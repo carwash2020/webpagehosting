@@ -2193,9 +2193,28 @@
     el.textContent = 'Updated ' + relativeTimeFromNow(last.time);
   }
 
+  // Bug fix (2026-08-22), reported directly with a screenshot: jump-nav's
+  // sticky top offset is set in CSS as a hardcoded pixel value elsewhere,
+  // which has proven repeatedly fragile every time this header's real
+  // height changes (moving Live sync inside it being the latest example --
+  // jump-nav stuck at a position now covered by the taller header,
+  // disappearing from view entirely when scrolled). This measures the
+  // header's actual, real rendered height directly and sets jump-nav's
+  // position to match, eliminating hardcoded-pixel guesswork permanently.
+  function syncJumpNavPositionToHeaderHeight() {
+    const header = document.querySelector('.hub-header');
+    const jumpNav = document.querySelector('.jump-nav');
+    if (!header || !jumpNav) return;
+    const headerHeight = header.getBoundingClientRect().height;
+    if (headerHeight > 0) jumpNav.style.top = headerHeight + 'px';
+  }
+
   document.addEventListener('DOMContentLoaded', function () {
     try {
     renderWelcomeGreeting();
+    syncJumpNavPositionToHeaderHeight();
+    requestAnimationFrame(syncJumpNavPositionToHeaderHeight);
+    window.addEventListener('resize', syncJumpNavPositionToHeaderHeight);
     initSyncOnLoad().then(renderDashboard).catch(renderDashboard).then(() => {
       renderDevToolsTileVisibility();
       enhanceWelcomeGreetingWithRole();

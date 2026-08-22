@@ -389,3 +389,55 @@ function loadWorkspace() {
   const dom = new JSDOM(html, { runScripts: 'dangerously', url: 'https://example.com/tools/workspace.html', beforeParse(w) { w.requireAuth = () => {}; } });
   return dom.window;
 }
+
+// Bug fix (2026-08-22), reported directly with a screenshot: after
+// moving Live sync inside .hub-header (making it taller), jump-nav's
+// hardcoded CSS top offset (still assuming the old, shorter header
+// height) was too small -- jump-nav stuck at a position now covered
+// by the taller header, disappearing from view entirely when
+// scrolled. Rather than hardcode yet another pixel value (a class of
+// bug that's proven repeatedly fragile every time this header's real
+// height changes), jump-nav's position is now measured and set
+// dynamically from the header's real, actual rendered height.
+
+function loadWorkspaceForJumpNav(headerHeight) {
+  const { JSDOM } = require('jsdom');
+  const html = fs.readFileSync(path.join(TOOLS_DIR, 'workspace.html'), 'utf8');
+  const dom = new JSDOM(html, {
+    runScripts: 'dangerously', url: 'https://example.com/tools/workspace.html',
+    beforeParse(w) {
+      w.requireAuth = () => {};
+      w.Element.prototype.getBoundingClientRect = function () {
+        if (this.classList.contains('hub-header')) {
+          return { height: headerHeight, top: 0, left: 0, right: 0, bottom: headerHeight, width: 400, x: 0, y: 0 };
+        }
+        return { height: 0, top: 0, left: 0, right: 0, bottom: 0, width: 0, x: 0, y: 0 };
+      };
+    },
+  });
+  return dom.window;
+}
+
+test('jump-nav\'s position is measured and set dynamically from the header\'s real, actual rendered height -- not a hardcoded pixel guess that breaks every time the header\'s real content changes', () => {
+  const window = loadWorkspaceForJumpNav(150);
+  window.syncJumpNavPositionToHeaderHeight();
+  assert.equal(window.document.querySelector('.jump-nav').style.top, '150px');
+});
+
+test('the same function correctly follows a genuinely different header height, confirming this is dynamic measurement, not a disguised constant', () => {
+  const window = loadWorkspaceForJumpNav(88);
+  window.syncJumpNavPositionToHeaderHeight();
+  assert.equal(window.document.querySelector('.jump-nav').style.top, '88px');
+});
+
+test('syncJumpNavPositionToHeaderHeight is wired into page init (called on DOMContentLoaded) and also listens for window resize, since the viewport could cross the mobile/desktop breakpoint while the page is open', () => {
+  const src = fs.readFileSync(path.join(TOOLS_DIR, 'workspace.html'), 'utf8');
+  assert.match(src, /syncJumpNavPositionToHeaderHeight\(\);\s*\n\s*requestAnimationFrame\(syncJumpNavPositionToHeaderHeight\);/);
+  assert.match(src, /window\.addEventListener\('resize', syncJumpNavPositionToHeaderHeight\)/);
+});
+
+test('the function gracefully does nothing if the header or jump-nav elements are missing, rather than throwing', () => {
+  const window = loadWorkspaceForJumpNav(150);
+  window.document.querySelector('.hub-header').remove();
+  assert.doesNotThrow(() => window.syncJumpNavPositionToHeaderHeight());
+});

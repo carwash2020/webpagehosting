@@ -169,7 +169,12 @@
 // Bumped again (2026-08-22): "Live sync active" now lives inside the
 // header itself as a second row, requested directly ("move the bars
 // together"), rather than a separate section below with a visible gap.
-const CACHE_NAME = 'th-workspace-v42';
+// Bumped again (2026-08-22): fixed jump-nav (the Snapshot/Action
+// Items/More/Tools tabs) disappearing when scrolled -- it was sticking
+// at a position now covered by the taller header, reported directly
+// with a screenshot. Now measures the header's real height dynamically
+// instead of relying on a hardcoded pixel value.
+const CACHE_NAME = 'th-workspace-v43';
 const PRECACHE_URLS = [
   '/tools/workspace.html', '/tools/job-tracker.html', '/tools/invoice-generator.html', '/tools/contract-generator.html',
   '/tools/calendar.html', '/tools/route-planner.html', '/tools/review-request.html', '/tools/contact-card.html',
