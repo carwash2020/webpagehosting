@@ -1123,7 +1123,7 @@ test('.tabs-sticky positions below the already-sticky header, matching the prove
   const src = fs.readFileSync(path.join(__dirname, '..', 'tools', 'styles-tools.css'), 'utf8');
   const rule = src.match(/\.tabs\.tabs-sticky\s*\{[^}]*\}/);
   assert.ok(rule, '.tabs-sticky rule not found');
-  assert.match(rule[0], /top:\s*calc\(61px \+ env\(safe-area-inset-top, 0px\)\)/, 'must include the safe-area-inset-top fix (added 2026-08-20 after a real notch-overlap report), not just the bare 61px offset');
+  assert.match(rule[0], /top:\s*calc\(61px \+ max\(env\(safe-area-inset-top, 0px\), 44px\)\)/, 'must include the safe-area-inset-top fix with a 44px floor (added 2026-08-21 after a real notch-overlap report on a real device, tracing back to a known iOS Safari bug where env() can unexpectedly return 0px), not just the bare env() value');
   assert.match(rule[0], /position:\s*sticky/);
 });
 
@@ -1760,7 +1760,7 @@ test('the sticky header (.hub-header/.tool-header) stays pinned at the true top 
   const rule = src.match(/body \.hub-header, body \.tool-header \{[\s\S]*?\n\}/);
   assert.ok(rule, 'header rule not found');
   assert.match(rule[0], /top:\s*0;/, 'the sticky position itself must stay at the true top -- offsetting it (e.g. to env(safe-area-inset-top)) leaves a gap at the top of the screen with scrolled content visible through it, a real bug found from a direct screenshot');
-  assert.match(rule[0], /padding:\s*calc\(12px \+ env\(safe-area-inset-top, 0px\)\)/, 'the header\'s own top padding must clear the notch, since it sits in normal page flow before any scrolling -- this alone is sufficient, without also needing to offset the sticky position itself');
+  assert.match(rule[0], /padding:\s*calc\(12px \+ max\(env\(safe-area-inset-top, 0px\), 44px\)\)/, 'the header\'s own top padding must clear the notch, since it sits in normal page flow before any scrolling -- this alone is sufficient, without also needing to offset the sticky position itself. Needs the max() floor too, guarding a known iOS Safari bug where env() can unexpectedly return 0px.');
 });
 
 test('the mobile jump-nav override also accounts for the safe-area-inset-top, not just the desktop-width version', () => {
@@ -2116,7 +2116,7 @@ test('#mainContent has scroll-margin-top accounting for both the header height a
   const src = fs.readFileSync(path.join(__dirname, '..', 'tools', 'styles-tools.css'), 'utf8');
   const rule = src.match(/#mainContent \{[^}]*\}/);
   assert.ok(rule, '#mainContent rule not found');
-  assert.match(rule[0], /scroll-margin-top:\s*calc\(61px \+ env\(safe-area-inset-top, 0px\)\)/);
+  assert.match(rule[0], /scroll-margin-top:\s*calc\(61px \+ max\(env\(safe-area-inset-top, 0px\), 44px\)\)/);
 });
 
 test('all 8 pages sharing the #mainContent skip-link pattern are covered by this one shared rule', () => {
@@ -2878,4 +2878,52 @@ test('clicking "Next" during the tour refreshes the timestamp, so a real, active
   window.goToAppTourStep(1);
   const refreshedAt = parseInt(window.localStorage.getItem('th_app_tour_step_started_at'), 10);
   assert.ok(Date.now() - refreshedAt < 5000, 'the timestamp should have just been refreshed to now');
+});
+
+// Bug fix (2026-08-21), reported directly with a real-device screenshot
+// showing the header title overlapping the phone's own status bar/
+// time display. Root cause: a known, widely-documented iOS Safari bug
+// where env(safe-area-inset-*) can unexpectedly return 0px depending
+// on the browser's toolbar/UI chrome state, even with viewport-fit=cover,
+// apple-mobile-web-app-status-bar-style=black-translucent, and
+// everything else configured correctly. Relying purely on the dynamic
+// env() value for critical top-clearance spacing is inherently
+// fragile on iOS -- the standard, documented workaround is combining
+// it with a hardcoded minimum floor via max(), so content still
+// clears the notch/Dynamic Island even when the dynamic value misbehaves.
+
+test('every real usage of env(safe-area-inset-top) for top-clearance spacing is protected with a 44px floor via max(), guarding the known iOS Safari bug where the dynamic value can unexpectedly return 0px', () => {
+  const src = fs.readFileSync(path.join(__dirname, '..', 'tools', 'styles-tools.css'), 'utf8');
+
+  // Every remaining bare env(safe-area-inset-top, 0px) usage (not
+  // wrapped in max(...)) is a genuine regression risk -- confirm none
+  // exist except inside a comment.
+  const lines = src.split('\n');
+  const unguarded = [];
+  let inBlockComment = false;
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
+    // Track actual /* */ block-comment state, since this codebase's
+    // comments don't consistently prefix continuation lines with "*".
+    const hasOpen = line.includes('/*');
+    const hasClose = line.includes('*/');
+    const lineStartedInComment = inBlockComment;
+    if (hasOpen && !hasClose) inBlockComment = true;
+    else if (hasClose) inBlockComment = false;
+    if (lineStartedInComment || line.trim().startsWith('*') || line.trim().startsWith('//')) continue;
+
+    if (line.includes('env(safe-area-inset-top') && !line.includes('max(env(safe-area-inset-top') && !line.includes('max(14px, env(safe-area-inset-top')) {
+      unguarded.push(`line ${i + 1}: ${line.trim()}`);
+    }
+  }
+  assert.deepEqual(unguarded, [], 'found unguarded env(safe-area-inset-top) usage(s), missing the 44px floor:\n' + unguarded.join('\n'));
+});
+
+test('the 44px floor value is consistent everywhere it appears -- a mismatched floor across different rules would reintroduce inconsistent spacing between related elements (e.g. the header vs. the jump-nav below it)', () => {
+  const src = fs.readFileSync(path.join(__dirname, '..', 'tools', 'styles-tools.css'), 'utf8');
+  const floors = [...src.matchAll(/max\(env\(safe-area-inset-top, 0px\), (\d+)px\)/g)].map(m => m[1]);
+  const floors2 = [...src.matchAll(/max\(14px, env\(safe-area-inset-top, 0px\), (\d+)px\)/g)].map(m => m[1]);
+  const allFloors = [...floors, ...floors2];
+  assert.ok(allFloors.length >= 5, 'expected multiple guarded usages');
+  assert.ok(allFloors.every(f => f === '44'), 'all floors should use the same 44px value: ' + allFloors.join(', '));
 });

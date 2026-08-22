@@ -153,7 +153,12 @@
 // the persistent header-button collision, reported directly across
 // multiple screenshots -- a CSS selector specificity bug meant the
 // main row was never actually pinned to the top of the header at all.
-const CACHE_NAME = 'th-workspace-v38';
+// Bumped again (2026-08-21): found and fixed a known iOS Safari bug
+// where env(safe-area-inset-top) can unexpectedly return 0px, causing
+// header content to overlap the phone's own status bar on real
+// devices -- reported directly with a screenshot. Guarded every real
+// usage app-wide with a 44px floor.
+const CACHE_NAME = 'th-workspace-v39';
 const PRECACHE_URLS = [
   '/tools/workspace.html', '/tools/job-tracker.html', '/tools/invoice-generator.html', '/tools/contract-generator.html',
   '/tools/calendar.html', '/tools/route-planner.html', '/tools/review-request.html', '/tools/contact-card.html',
