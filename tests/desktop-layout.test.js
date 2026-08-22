@@ -212,7 +212,7 @@ test('workspace.html and dev-tools.html, the only 2 pages with a .jump-nav bar, 
 
 test('on the dashboard, the live sync indicator moves under the settings button on desktop, with the header grown taller to make room, and the jump-nav/body padding both adjusted to match the new header height', () => {
   const src = fs.readFileSync(path.join(TOOLS_DIR, 'workspace.html'), 'utf8');
-  const desktopBlock = src.match(/@media \(min-width: 1024px\) \{\s*\.hub-header \{([^}]*)\}\s*\.hub-sub \{([^}]*)\}/);
+  const desktopBlock = src.match(/@media \(min-width: 1024px\) \{\s*body \.hub-header \{([^}]*)\}\s*\.hub-sub \{([^}]*)\}/);
   assert.ok(desktopBlock, 'desktop hub-header/hub-sub override block not found');
   assert.match(desktopBlock[1], /align-items:\s*flex-start/);
   assert.match(desktopBlock[1], /min-height:\s*140px/);
@@ -281,4 +281,30 @@ test('the refresh button sits above the live sync badge (lower top value), with 
   const REFRESH_BUTTON_HEIGHT = 26;
   const GAP = 6;
   assert.equal(hubSubTop, refreshTop + REFRESH_BUTTON_HEIGHT + GAP, 'the badge\'s top should account for the button\'s real height plus a consistent gap, not just be an arbitrary swapped number');
+});
+
+// Root cause finally found (2026-08-21), after the collision persisted
+// across multiple earlier attempts that all assumed the main header
+// row was correctly pinned to the top: the shared styles-tools.css
+// header rule uses selector "body .hub-header" (element + class
+// specificity), which beats a bare ".hub-header" selector (class
+// only) regardless of source order. This page's own align-items
+// override was therefore silently never applying at all -- the shared
+// rule's align-items:center kept winning, vertically centering the
+// main row within the tall header instead of pinning it to the top,
+// which is what was actually causing the refresh button collision no
+// matter how its own top value was adjusted.
+
+test('this page\'s align-items override matches the shared rule\'s exact selector specificity ("body .hub-header", not a bare ".hub-header"), which is required for it to actually win against that shared rule rather than being silently overridden by it regardless of source order', () => {
+  const src = fs.readFileSync(path.join(TOOLS_DIR, 'workspace.html'), 'utf8');
+  const sharedCss = fs.readFileSync(path.join(TOOLS_DIR, 'styles-tools.css'), 'utf8');
+
+  // Confirm the shared rule really does use this higher-specificity
+  // selector -- if this shared selector ever changes, this override
+  // needs to be revisited too.
+  assert.match(sharedCss, /body \.hub-header, body \.tool-header \{[^}]*align-items:\s*center/, 'the shared rule this page needs to beat should still be using "body .hub-header" with align-items:center');
+
+  // Confirm this page's own override matches that exact selector.
+  assert.match(src, /body \.hub-header \{ align-items: flex-start;/, 'this override must use the same "body .hub-header" selector to correctly win at equal specificity via later source order');
+  assert.doesNotMatch(src, /(?<!body )\.hub-header \{ align-items: flex-start/, 'a bare .hub-header selector here would be silently overridden by the shared, higher-specificity rule');
 });
