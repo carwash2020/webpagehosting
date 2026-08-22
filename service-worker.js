@@ -158,7 +158,12 @@
 // header content to overlap the phone's own status bar on real
 // devices -- reported directly with a screenshot. Guarded every real
 // usage app-wide with a 44px floor.
-const CACHE_NAME = 'th-workspace-v39';
+// Bumped again (2026-08-22): found the REAL root cause of the header/
+// status-bar overlap, reported directly with a second screenshot
+// showing the earlier fix had no effect at all -- a separate,
+// mobile-specific media-query rule was silently overriding it with a
+// flat, non-safe-area-aware padding value.
+const CACHE_NAME = 'th-workspace-v40';
 const PRECACHE_URLS = [
   '/tools/workspace.html', '/tools/job-tracker.html', '/tools/invoice-generator.html', '/tools/contract-generator.html',
   '/tools/calendar.html', '/tools/route-planner.html', '/tools/review-request.html', '/tools/contact-card.html',
