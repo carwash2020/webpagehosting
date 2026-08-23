@@ -174,7 +174,12 @@
 // at a position now covered by the taller header, reported directly
 // with a screenshot. Now measures the header's real height dynamically
 // instead of relying on a hardcoded pixel value.
-const CACHE_NAME = 'th-workspace-v43';
+// Bumped again (2026-08-22): jump-nav (Snapshot/Action Items/More/
+// Tools) now scrolls away normally with the page instead of staying
+// sticky/pinned, requested directly ("the tools to slide") -- the
+// previous fix correctly positioned it below the header but kept it
+// sticky, which was reported as exactly the wrong behavior.
+const CACHE_NAME = 'th-workspace-v44';
 const PRECACHE_URLS = [
   '/tools/workspace.html', '/tools/job-tracker.html', '/tools/invoice-generator.html', '/tools/contract-generator.html',
   '/tools/calendar.html', '/tools/route-planner.html', '/tools/review-request.html', '/tools/contact-card.html',
