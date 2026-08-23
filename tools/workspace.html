@@ -80,13 +80,6 @@
        position next to the badge on the same line), since it's no
        longer relevant once taken out of that flow entirely. */
     #refreshSyncLink { position: fixed !important; top: 76px; right: 24px; margin-left: 0 !important; z-index: 90; }
-    /* jump-nav's shared default (styles-tools.css) assumes the
-       standard, single-row header height -- this page's header is
-       taller now that Live sync moved into it as a second row, so it
-       needs its own override here. Same "body .jump-nav" selector as
-       the shared rule for equal specificity; this page's own <style>
-       loads after styles-tools.css, so it correctly wins that tie. */
-    body .jump-nav { top: 140px; }
   }
   .hub-header-left { display: flex; align-items: center; gap: 14px; }
   #headerLogo.is-syncing { animation: logoSyncPulse 1.4s ease-in-out infinite; }
@@ -103,6 +96,15 @@
     position: sticky; top: 0; z-index: 50; display: flex; gap: 6px; overflow-x: auto;
     background: var(--bg); border-bottom: 1px solid var(--border); padding: 10px 0; margin-bottom: 20px;
   }
+  /* Requested directly ("the tools to slide"): jump-nav should scroll
+     away normally with the rest of the page, not stay pinned below
+     the sticky header. Using the body-prefixed selector to correctly
+     match and beat the shared styles-tools.css rule's higher
+     specificity -- a bare .jump-nav selector here would be silently
+     overridden by that shared rule's position:sticky regardless of
+     source order, the same lesson learned earlier this session for
+     this exact header area. */
+  body .jump-nav { position: static; margin-top: 0; }
   .jump-nav a {
     display: flex; align-items: center; gap: 6px;
     color: var(--text-dim); font-size: 12.5px; text-decoration: none; white-space: nowrap;
@@ -2193,28 +2195,9 @@
     el.textContent = 'Updated ' + relativeTimeFromNow(last.time);
   }
 
-  // Bug fix (2026-08-22), reported directly with a screenshot: jump-nav's
-  // sticky top offset is set in CSS as a hardcoded pixel value elsewhere,
-  // which has proven repeatedly fragile every time this header's real
-  // height changes (moving Live sync inside it being the latest example --
-  // jump-nav stuck at a position now covered by the taller header,
-  // disappearing from view entirely when scrolled). This measures the
-  // header's actual, real rendered height directly and sets jump-nav's
-  // position to match, eliminating hardcoded-pixel guesswork permanently.
-  function syncJumpNavPositionToHeaderHeight() {
-    const header = document.querySelector('.hub-header');
-    const jumpNav = document.querySelector('.jump-nav');
-    if (!header || !jumpNav) return;
-    const headerHeight = header.getBoundingClientRect().height;
-    if (headerHeight > 0) jumpNav.style.top = headerHeight + 'px';
-  }
-
   document.addEventListener('DOMContentLoaded', function () {
     try {
     renderWelcomeGreeting();
-    syncJumpNavPositionToHeaderHeight();
-    requestAnimationFrame(syncJumpNavPositionToHeaderHeight);
-    window.addEventListener('resize', syncJumpNavPositionToHeaderHeight);
     initSyncOnLoad().then(renderDashboard).catch(renderDashboard).then(() => {
       renderDevToolsTileVisibility();
       enhanceWelcomeGreetingWithRole();
