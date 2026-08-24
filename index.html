@@ -54,7 +54,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="Triple H">
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://www.googletagmanager.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data:; connect-src 'self' https://formspree.io https://www.google-analytics.com https://*.google-analytics.com https://analytics.google.com https://*.analytics.google.com https://www.google.com https://*.supabase.co; frame-src 'none'; object-src 'none'; base-uri 'self'; frame-ancestors 'none';">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://www.googletagmanager.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data:; connect-src 'self' https://www.google-analytics.com https://*.google-analytics.com https://analytics.google.com https://*.analytics.google.com https://www.google.com https://*.supabase.co; frame-src 'none'; object-src 'none'; base-uri 'self'; frame-ancestors 'none';">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <meta http-equiv="Permissions-Policy" content="camera=(), microphone=(), geolocation=()">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -573,10 +573,9 @@
       <h3 id="emailModalTitle">Send Us The Details</h3>
       <p class="modal-intro">Fill this out and we'll follow up by phone or email to confirm the time.</p>
 
-      <form class="email-form" id="scheduleForm" action="https://formspree.io/f/mlgqokdp" method="POST">
+      <form class="email-form" id="scheduleForm" method="POST">
         <!-- honeypot spam trap: real visitors never fill this in, bots often do -->
         <input type="text" name="_gotcha" style="display:none" tabindex="-1" autocomplete="off">
-        <input type="hidden" name="_subject" value="New Service Request from Website">
 
         <div class="form-row">
           <div class="field">
@@ -592,7 +591,7 @@
         <div class="form-row">
           <div class="field">
             <label for="email">Email</label>
-            <input id="email" name="_replyto" type="email" placeholder="you@email.com" required>
+            <input id="email" name="email" type="email" placeholder="you@email.com" required>
           </div>
           <div class="field">
             <label for="service">Service Needed</label>
@@ -921,7 +920,7 @@
         <p>Before-and-after photos of completed work may be taken and used for marketing purposes, including the website, social media, and advertising. Customer names and specific addresses are never shared. Let us know before work begins if you'd prefer photos not be taken.</p>
 
         <h4>11. Third-Party Services</h4>
-        <p>Online booking, invoicing/payment processing, and website contact forms are handled through third-party platforms, including Cal.com, Stripe, and Formspree. Information submitted through these tools is subject to those providers' own privacy practices, and Triple H Enterprises is not responsible for outages or issues originating from these third-party services.</p>
+        <p>Online booking, invoicing/payment processing, and website contact forms are handled through third-party platforms, including Cal.com, Stripe, Supabase, and Resend. Information submitted through these tools is subject to those providers' own privacy practices, and Triple H Enterprises is not responsible for outages or issues originating from these third-party services.</p>
 
         <h4>12. Cookies and Analytics</h4>
         <p>This website uses Google Analytics to understand general site traffic, such as which pages are visited and how visitors arrive at the site. This may involve cookies or similar technologies. No personal information submitted through the contact or scheduling forms is shared with Google Analytics. Visitors who prefer to opt out of analytics tracking can do so using their browser's privacy settings or a browser extension such as Google's Analytics Opt-out add-on.</p>
@@ -1635,17 +1634,39 @@
   const status = document.getElementById('formStatus');
   const submitBtn = document.getElementById('formSubmitBtn');
 
-  // Leads Inbox mirror -- these are the SAME Supabase project used by the
+  // Leads pipeline -- these are the SAME Supabase project used by the
   // internal Workspace tools (see /sync.js for full setup notes). Kept as
   // separate constants here, not shared via a script include, so this
   // public-facing contact form never depends on the internal tools bundle
   // being present or working. If the Supabase project URL/anon key are
   // ever rotated, update both this file and /sync.js.
+  //
+  // This insert is now the real, primary submission path -- confirmed
+  // end-to-end working directly with a real test lead and a real email
+  // received (2026-08-24) before Formspree was removed. A database
+  // trigger on th_leads fires an Edge Function that emails Steve and
+  // Connor via Resend the instant this insert lands.
   const LEADS_SUPABASE_URL = 'https://csvfqdjuobylgafgolho.supabase.co';
   const LEADS_SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNzdmZxZGp1b2J5bGdhZmdvbGhvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODUzNTQ3MjcsImV4cCI6MjEwMDkzMDcyN30.6GlvK-DfXf2lppS1kciZtsl4wHOpZz_yKtwsS1lyjrs';
 
   form.addEventListener('submit', function (e) {
     e.preventDefault();
+
+    const formData = new FormData(form);
+
+    // Honeypot check -- Formspree used to enforce this server-side;
+    // now enforced here, before the insert even happens. A caught bot
+    // gets a fake "success" response (never told it was caught, so a
+    // bot author watching the response can't adapt) without ever
+    // touching the database or sending a real email to Steve/Connor.
+    if (formData.get('_gotcha')) {
+      status.textContent = "Request sent! We'll follow up by phone or email shortly.";
+      status.classList.remove('is-error');
+      status.classList.add('is-success', 'is-visible');
+      submitBtn.textContent = 'Sent ✓';
+      form.reset();
+      return;
+    }
 
     submitBtn.disabled = true;
     submitBtn.textContent = 'Sending...';
@@ -1653,12 +1674,22 @@
     status.classList.remove('is-error', 'is-success');
     status.classList.add('is-visible');
 
-    const formData = new FormData(form);
-
-    fetch(form.action, {
+    fetch(LEADS_SUPABASE_URL + '/rest/v1/th_leads', {
       method: 'POST',
-      body: formData,
-      headers: { 'Accept': 'application/json' }
+      headers: {
+        'Content-Type': 'application/json',
+        'apikey': LEADS_SUPABASE_ANON_KEY,
+        'Authorization': 'Bearer ' + LEADS_SUPABASE_ANON_KEY,
+      },
+      body: JSON.stringify([{
+        name: formData.get('name'),
+        phone: formData.get('phone'),
+        email: formData.get('email'),
+        service: formData.get('service'),
+        preferred_date: formData.get('date'),
+        preferred_time: formData.get('time'),
+        details: formData.get('details'),
+      }]),
     })
     .then((response) => {
       if (response.ok) {
@@ -1676,31 +1707,6 @@
       submitBtn.disabled = false;
       submitBtn.textContent = 'Submit Request';
     });
-
-    // Mirror this lead into the Supabase Leads inbox for the Dashboard --
-    // deliberately fire-and-forget and never affects the Formspree flow
-    // above in any way (success or failure). Formspree emailing Steve
-    // directly remains the reliable primary channel; this is just a copy
-    // for the Dashboard to display.
-    try {
-      fetch(LEADS_SUPABASE_URL + '/rest/v1/th_leads', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'apikey': LEADS_SUPABASE_ANON_KEY,
-          'Authorization': 'Bearer ' + LEADS_SUPABASE_ANON_KEY,
-        },
-        body: JSON.stringify([{
-          name: formData.get('name'),
-          phone: formData.get('phone'),
-          email: formData.get('_replyto'),
-          service: formData.get('service'),
-          preferred_date: formData.get('date'),
-          preferred_time: formData.get('time'),
-          details: formData.get('details'),
-        }]),
-      }).catch(() => { /* silently ignore -- Formspree above is the real channel */ });
-    } catch (e) { /* silently ignore */ }
   });
 
 
