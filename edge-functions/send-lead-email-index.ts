@@ -1,10 +1,25 @@
 // Supabase Edge Function: send-lead-email
 //
-// Sends an email via Resend the instant a new row lands in th_leads --
-// this is the in-house replacement for Formspree's email-on-submit
-// behavior. Deliberately a separate function from send-push (not an
-// added branch inside it): if Resend has an outage, push notifications
-// for everything else (overdue invoices, stuck jobs, etc.) keep working
+// Sends TWO emails via Resend the instant a new row lands in th_leads:
+//   1. An internal notification to Steve/Connor (LEAD_EMAIL_TO) -- the
+//      in-house replacement for Formspree's email-on-submit behavior.
+//   2. A guest-facing confirmation to the person who submitted the form
+//      (only when they gave an email address -- optional at the DB/API
+//      level even though the form marks it required, since a direct
+//      POST to the insert endpoint bypasses HTML5 validation entirely).
+//      Reply-To on this one points back to LEAD_EMAIL_TO, so if the
+//      guest replies with an added detail, it reaches Steve/Connor.
+//
+// These two sends are deliberately independent of each other (each in
+// its own try/catch) -- if Resend rejects one, the other still goes
+// out. The internal notification is the more important of the two
+// (Steve/Connor can always follow up manually even if the guest
+// confirmation fails), so its failure is logged but never blocks the
+// guest send from being attempted.
+//
+// Deliberately a separate function from send-push (not an added branch
+// inside it): if Resend has an outage, push notifications for
+// everything else (overdue invoices, stuck jobs, etc.) keep working
 // completely unaffected, and vice versa.
 //
 // Payload shape (fired by a Database Webhook / trigger on INSERT to
@@ -26,6 +41,13 @@ const LEAD_EMAIL_TO = Deno.env.get("LEAD_EMAIL_TO")!
   .map((addr: string) => addr.trim())
   .filter((addr: string) => addr.length > 0);
 const LEAD_EMAIL_FROM = Deno.env.get("LEAD_EMAIL_FROM")!;
+
+// Publicly hosted on the live site -- email clients fetch images over
+// plain HTTP(S), never from a relative/local path. A palette-quantized
+// PNG, not the site's own .webp logo: some email clients (older
+// Outlook in particular) have poor or no WebP support, while PNG is
+// universally supported.
+const LOGO_URL = "https://www.triplehenterprisesllc.biz/images/logo-signature-email.png";
 
 function escapeHtml(value: unknown): string {
   const s = value === null || value === undefined ? "" : String(value);
@@ -83,6 +105,93 @@ function buildEmailText(lead: Record<string, unknown>): string {
   return parts.join("\n");
 }
 
+function buildGuestEmailHtml(lead: Record<string, unknown>): string {
+  const firstName = lead.name ? String(lead.name).trim().split(/\s+/)[0] : "";
+  const greeting = firstName ? `Hi ${escapeHtml(firstName)},` : "Hi there,";
+
+  // Only shown when actually given -- an empty "Preferred date: not
+  // given" line reads as clutter in a short, friendly guest email in a
+  // way it doesn't in the fuller internal notification above.
+  const detailRows = [
+    lead.service ? `<tr><td style="padding: 6px 0; color: #666; width: 130px;">Service</td><td style="padding: 6px 0;">${escapeHtml(lead.service)}</td></tr>` : "",
+    lead.preferred_date ? `<tr><td style="padding: 6px 0; color: #666;">Preferred date</td><td style="padding: 6px 0;">${escapeHtml(lead.preferred_date)}</td></tr>` : "",
+    lead.preferred_time ? `<tr><td style="padding: 6px 0; color: #666;">Preferred time</td><td style="padding: 6px 0;">${escapeHtml(lead.preferred_time)}</td></tr>` : "",
+  ].filter(Boolean).join("");
+
+  return `
+    <div style="font-family: -apple-system, Helvetica, Arial, sans-serif; max-width: 480px; margin: 0 auto; color: #222;">
+      <div style="text-align: center; padding: 24px 0 8px;">
+        <img src="${LOGO_URL}" alt="Triple H Enterprises" width="110" style="display: inline-block;">
+      </div>
+      <h2 style="color: #F5811F; text-align: center; margin: 8px 0 20px;">We got your request!</h2>
+      <p>${greeting}</p>
+      <p>Thanks for reaching out to Triple H Enterprises. We've received your request and will follow up by phone or email shortly to confirm the details.</p>
+      ${detailRows ? `<table style="width: 100%; border-collapse: collapse; margin: 16px 0; border-top: 1px solid #eee; border-bottom: 1px solid #eee;">${detailRows}</table>` : ""}
+      <p>If anything changes or you think of another detail worth mentioning before we call, just reply directly to this email.</p>
+      <p style="margin-top: 24px;">Talk soon,<br>Triple H Enterprises</p>
+      <p style="margin-top: 24px; color: #999; font-size: 12px; text-align: center;">(435) 414-1667 &middot; triplehenterprisesllc.biz</p>
+    </div>
+  `;
+}
+
+function buildGuestEmailText(lead: Record<string, unknown>): string {
+  const firstName = lead.name ? String(lead.name).trim().split(/\s+/)[0] : "";
+  const parts = [
+    firstName ? `Hi ${firstName},` : "Hi there,",
+    "",
+    "Thanks for reaching out to Triple H Enterprises. We've received your request and will follow up by phone or email shortly to confirm the details.",
+  ];
+  if (lead.service) parts.push("", `Service: ${lead.service}`);
+  if (lead.preferred_date) parts.push(`Preferred date: ${lead.preferred_date}`);
+  if (lead.preferred_time) parts.push(`Preferred time: ${lead.preferred_time}`);
+  parts.push(
+    "",
+    "If anything changes or you think of another detail worth mentioning before we call, just reply directly to this email.",
+    "",
+    "Talk soon,",
+    "Triple H Enterprises",
+    "(435) 414-1667 -- triplehenterprisesllc.biz",
+  );
+  return parts.join("\n");
+}
+
+// Sends the guest-facing confirmation. Deliberately its own function
+// with its own try/catch, called independently of the internal
+// notification -- a failure here (or a lead with no email at all) is
+// logged but never affects whether Steve/Connor's notification sends.
+async function sendGuestConfirmation(lead: Record<string, unknown>): Promise<void> {
+  const guestEmail = lead.email ? String(lead.email).trim() : "";
+  if (!guestEmail) {
+    console.log("sendGuestConfirmation: lead has no email address, skipping guest confirmation");
+    return;
+  }
+
+  try {
+    const res = await fetch("https://api.resend.com/emails", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${RESEND_API_KEY}`,
+      },
+      body: JSON.stringify({
+        from: `Triple H Enterprises <${LEAD_EMAIL_FROM}>`,
+        to: guestEmail,
+        reply_to: LEAD_EMAIL_TO, // a guest reply reaches Steve/Connor, not an unmonitored address
+        subject: "We got your request -- Triple H Enterprises",
+        html: buildGuestEmailHtml(lead),
+        text: buildGuestEmailText(lead),
+      }),
+    });
+
+    if (!res.ok) {
+      const errBody = await res.text();
+      console.error("sendGuestConfirmation: Resend API error:", res.status, errBody);
+    }
+  } catch (err: any) {
+    console.error("sendGuestConfirmation error:", err.message);
+  }
+}
+
 Deno.serve(async (req: Request) => {
   try {
     const payload = await req.json();
@@ -99,26 +208,44 @@ Deno.serve(async (req: Request) => {
     const lead = payload.record || {};
     const subjectName = lead.name ? String(lead.name).trim() : "Someone";
 
-    const res = await fetch("https://api.resend.com/emails", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${RESEND_API_KEY}`,
-      },
-      body: JSON.stringify({
-        from: LEAD_EMAIL_FROM,
-        to: LEAD_EMAIL_TO,
-        reply_to: lead.email || undefined, // one click to reply straight to the lead, when they gave an email
-        subject: `New lead: ${subjectName}${lead.service ? " -- " + lead.service : ""}`,
-        html: buildEmailHtml(lead),
-        text: buildEmailText(lead),
-      }),
-    });
+    // Internal notification to Steve/Connor. Its own try/catch, tracking
+    // success/failure without returning early -- a failure here must
+    // never prevent the guest confirmation below from being attempted,
+    // since the two are deliberately independent.
+    let internalOk = false;
+    try {
+      const res = await fetch("https://api.resend.com/emails", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${RESEND_API_KEY}`,
+        },
+        body: JSON.stringify({
+          from: LEAD_EMAIL_FROM,
+          to: LEAD_EMAIL_TO,
+          reply_to: lead.email || undefined, // one click to reply straight to the lead, when they gave an email
+          subject: `New lead: ${subjectName}${lead.service ? " -- " + lead.service : ""}`,
+          html: buildEmailHtml(lead),
+          text: buildEmailText(lead),
+        }),
+      });
 
-    if (!res.ok) {
-      const errBody = await res.text();
-      console.error("Resend API error:", res.status, errBody);
-      return new Response(JSON.stringify({ ok: false, error: `Resend API returned ${res.status}` }), {
+      if (res.ok) {
+        internalOk = true;
+      } else {
+        const errBody = await res.text();
+        console.error("Internal notification: Resend API error:", res.status, errBody);
+      }
+    } catch (err: any) {
+      console.error("Internal notification error:", err.message);
+    }
+
+    // Guest confirmation. Already has its own internal try/catch and
+    // its own "no email given" skip -- safe to call unconditionally.
+    await sendGuestConfirmation(lead);
+
+    if (!internalOk) {
+      return new Response(JSON.stringify({ ok: false, error: "internal notification failed, see function logs" }), {
         status: 502,
         headers: { "Content-Type": "application/json" },
       });
