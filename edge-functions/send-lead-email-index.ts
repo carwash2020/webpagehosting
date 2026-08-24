@@ -14,12 +14,17 @@
 // Deploy with: supabase functions deploy send-lead-email
 // Required secrets:
 //   RESEND_API_KEY   -- from resend.com, after verifying the sending domain
-//   LEAD_EMAIL_TO    -- where new-lead emails should land, e.g. steve@triplehenterprisesllc.biz
+//   LEAD_EMAIL_TO    -- where new-lead emails should land. Comma-separated
+//                       for multiple recipients, e.g.
+//                       "steve@triplehenterprisesllc.biz,connor@triplehenterprisesllc.biz"
 //   LEAD_EMAIL_FROM  -- must be on the verified Resend domain, e.g. leads@triplehenterprisesllc.biz
 // (SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY are auto-provided, not needed here)
 
 const RESEND_API_KEY = Deno.env.get("RESEND_API_KEY")!;
-const LEAD_EMAIL_TO = Deno.env.get("LEAD_EMAIL_TO")!;
+const LEAD_EMAIL_TO = Deno.env.get("LEAD_EMAIL_TO")!
+  .split(",")
+  .map((addr: string) => addr.trim())
+  .filter((addr: string) => addr.length > 0);
 const LEAD_EMAIL_FROM = Deno.env.get("LEAD_EMAIL_FROM")!;
 
 function escapeHtml(value: unknown): string {
