@@ -1,0 +1,108 @@
+name: Uptime monitoring (in-house replacement for HetrixTools)
+
+# Requested directly, replacing HetrixTools: checks the live site every
+# 10 minutes from GitHub's own network (deliberately external to
+# Supabase entirely, not a pg_cron job -- if the database ever did
+# pause for any reason, pg_cron runs inside the database itself and
+# can't wake a paused database back up to run its own job; an external
+# check has no such blind spot, and also tests the site the way a real
+# visitor's network actually would). Every check is logged to
+# th_uptime_checks. An alert (push notification + email, via the new
+# uptime-alert Edge Function) only fires on a genuine state transition
+# -- going from up to down, or recovering from down to up -- never
+# repeated on every check during an extended outage, to avoid alert
+# fatigue.
+#
+# Reuses the SUPABASE_SERVICE_ROLE_KEY secret already configured for
+# backup-business-data.yml -- no new secret setup needed. th_uptime_checks
+# has no anon/authenticated insert policy on purpose (see
+# sql/create_uptime_monitoring.sql), so this key is required to write here.
+
+on:
+  schedule:
+    - cron: '*/10 * * * *'
+  workflow_dispatch: {}
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check the live site and log + alert on any state change
+        env:
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+        run: |
+          set -euo pipefail
+
+          SUPABASE_URL="https://csvfqdjuobylgafgolho.supabase.co"
+          SITE_URL="https://www.triplehenterprisesllc.biz/"
+          TARGET="website"
+
+          # Check the live site. --max-time caps total request time so a
+          # hung connection doesn't leave the check waiting indefinitely.
+          # Capture status code and timing in one call; curl writes 0 for
+          # http_code on a connection failure (DNS/timeout/refused), not
+          # a real HTTP status, so that's handled as its own case below.
+          RESPONSE=$(curl -s -o /dev/null -w "%{http_code} %{time_total}" --max-time 15 "$SITE_URL" || echo "0 0")
+          HTTP_CODE=$(echo "$RESPONSE" | awk '{print $1}')
+          TIME_TOTAL=$(echo "$RESPONSE" | awk '{print $2}')
+          RESPONSE_MS=$(awk "BEGIN {printf \"%d\", $TIME_TOTAL * 1000}")
+
+          if [ "$HTTP_CODE" -ge 200 ] && [ "$HTTP_CODE" -lt 400 ]; then
+            STATUS="up"
+            ERROR_MSG_JSON="null"
+            STATUS_CODE_JSON="$HTTP_CODE"
+          elif [ "$HTTP_CODE" = "0" ]; then
+            STATUS="down"
+            ERROR_MSG="Connection failed or timed out"
+            ERROR_MSG_JSON="\"$ERROR_MSG\""
+            STATUS_CODE_JSON="null"
+          else
+            STATUS="down"
+            ERROR_MSG="HTTP $HTTP_CODE"
+            ERROR_MSG_JSON="\"$ERROR_MSG\""
+            STATUS_CODE_JSON="$HTTP_CODE"
+          fi
+
+          echo "Check result: status=$STATUS http_code=$HTTP_CODE response_ms=$RESPONSE_MS"
+
+          # Look up the most recent prior check for this target, to
+          # detect a real state transition rather than alerting on
+          # every single check during an extended outage.
+          PREV=$(curl -s \
+            "$SUPABASE_URL/rest/v1/th_uptime_checks?target=eq.$TARGET&select=status&order=checked_at.desc&limit=1" \
+            -H "apikey: $SUPABASE_SERVICE_ROLE_KEY" \
+            -H "Authorization: Bearer $SUPABASE_SERVICE_ROLE_KEY")
+          PREV_STATUS=$(echo "$PREV" | python3 -c "import sys,json; data=json.load(sys.stdin); print(data[0]['status'] if data else '')")
+
+          echo "Previous status: '${PREV_STATUS:-<none, first check>}'"
+
+          # Log this check regardless of whether it's a transition --
+          # every check is recorded for real history, only alerting is
+          # conditional.
+          curl -s -X POST "$SUPABASE_URL/rest/v1/th_uptime_checks" \
+            -H "apikey: $SUPABASE_SERVICE_ROLE_KEY" \
+            -H "Authorization: Bearer $SUPABASE_SERVICE_ROLE_KEY" \
+            -H "Content-Type: application/json" \
+            -d "{\"target\": \"$TARGET\", \"status\": \"$STATUS\", \"status_code\": $STATUS_CODE_JSON, \"response_time_ms\": $RESPONSE_MS, \"error_message\": $ERROR_MSG_JSON}" \
+            -o /dev/null -w "Logged check, insert HTTP status: %{http_code}\n"
+
+          # Alert only on a genuine transition. A blank PREV_STATUS means
+          # this is the very first check ever logged for this target --
+          # not a real transition, just initialization, so no alert.
+          if [ -n "$PREV_STATUS" ] && [ "$PREV_STATUS" != "$STATUS" ]; then
+            echo "State transition detected: $PREV_STATUS -> $STATUS. Sending alert."
+            if [ "$STATUS" = "down" ]; then
+              ALERT_TITLE="Site is DOWN"
+              ALERT_BODY="triplehenterprisesllc.biz stopped responding ($ERROR_MSG)."
+            else
+              ALERT_TITLE="Site is back UP"
+              ALERT_BODY="triplehenterprisesllc.biz is responding again."
+            fi
+            curl -s -X POST "$SUPABASE_URL/functions/v1/uptime-alert" \
+              -H "Authorization: Bearer $SUPABASE_SERVICE_ROLE_KEY" \
+              -H "Content-Type: application/json" \
+              -d "{\"status\": \"$STATUS\", \"message\": \"$ALERT_BODY\", \"title\": \"$ALERT_TITLE\"}" \
+              -o /dev/null -w "Alert sent, response HTTP status: %{http_code}\n"
+          else
+            echo "No state transition -- no alert sent."
+          fi

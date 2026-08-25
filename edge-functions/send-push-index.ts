@@ -570,6 +570,13 @@ Deno.serve(async (req: Request) => {
       return new Response(JSON.stringify({ ok: true, ran: true }), { headers: { "Content-Type": "application/json" } });
     }
 
+    if (payload.type === "uptime-alert") {
+      const title = typeof payload.title === "string" ? payload.title : "Uptime alert";
+      const body = typeof payload.body === "string" ? payload.body : "";
+      await sendToAllSubscriptions({ title, body, url: "/tools/dev-tools.html" });
+      return new Response(JSON.stringify({ ok: true }), { headers: { "Content-Type": "application/json" } });
+    }
+
     return new Response(JSON.stringify({ ok: false, error: "Unknown type" }), {
       status: 400,
       headers: { "Content-Type": "application/json" },
