@@ -115,3 +115,99 @@ test('a genuine submission (honeypot left empty) reaches the real insert normall
 
   assert.equal(insertCalled, true, 'a genuine submission with an empty honeypot should reach the real insert');
 });
+
+test('typing a phone number progressively auto-formats to (XXX) XXX-XXXX', async () => {
+  const window = loadPage(async (url) => {
+    if (String(url).includes('th_bookings_availability')) return { ok: true, json: async () => ([]) };
+    return { ok: false };
+  });
+  await waitFor(200);
+  window.document.querySelector('.service-option').dispatchEvent(new window.Event('click', { bubbles: true }));
+  await waitFor(200);
+  window.document.querySelector('.slot-btn').dispatchEvent(new window.Event('click', { bubbles: true }));
+
+  const phone = window.document.getElementById('bPhone');
+  const digits = '5551234567';
+  for (let i = 1; i <= digits.length; i++) {
+    phone.value = digits.slice(0, i).replace(/\D/g, '');
+    phone.dispatchEvent(new window.Event('input', { bubbles: true }));
+  }
+  assert.equal(phone.value, '(555) 123-4567');
+});
+
+test('an incomplete phone number shows a clear inline error and blocks submission', async () => {
+  let insertCalled = false;
+  const window = loadPage(async (url) => {
+    if (String(url).includes('th_bookings_availability')) return { ok: true, json: async () => ([]) };
+    if (String(url).includes('/rest/v1/th_bookings') && !String(url).includes('availability')) {
+      insertCalled = true;
+      return { ok: true };
+    }
+    return { ok: false };
+  });
+  await waitFor(200);
+  window.document.querySelector('.service-option').dispatchEvent(new window.Event('click', { bubbles: true }));
+  await waitFor(200);
+  window.document.querySelector('.slot-btn').dispatchEvent(new window.Event('click', { bubbles: true }));
+
+  window.document.getElementById('bName').value = 'Jane Smith';
+  const phone = window.document.getElementById('bPhone');
+  phone.value = '555123';
+  phone.dispatchEvent(new window.Event('input', { bubbles: true }));
+  phone.dispatchEvent(new window.Event('blur', { bubbles: true }));
+  await waitFor(100);
+
+  assert.match(window.document.getElementById('phoneError').textContent, /10-digit/);
+  assert.ok(phone.classList.contains('is-invalid'));
+  assert.equal(phone.checkValidity(), false, 'an incomplete phone number should fail native constraint validation too');
+});
+
+test('an invalid email shows a clear inline error, and a valid one clears it', async () => {
+  const window = loadPage(async (url) => {
+    if (String(url).includes('th_bookings_availability')) return { ok: true, json: async () => ([]) };
+    return { ok: false };
+  });
+  await waitFor(200);
+  window.document.querySelector('.service-option').dispatchEvent(new window.Event('click', { bubbles: true }));
+  await waitFor(200);
+  window.document.querySelector('.slot-btn').dispatchEvent(new window.Event('click', { bubbles: true }));
+
+  const email = window.document.getElementById('bEmail');
+  email.value = 'not-an-email';
+  email.dispatchEvent(new window.Event('input', { bubbles: true }));
+  email.dispatchEvent(new window.Event('blur', { bubbles: true }));
+  await waitFor(100);
+  assert.match(window.document.getElementById('emailError').textContent, /valid email/);
+  assert.ok(email.classList.contains('is-invalid'));
+
+  email.value = 'jane@example.com';
+  email.dispatchEvent(new window.Event('input', { bubbles: true }));
+  await waitFor(100);
+  assert.equal(window.document.getElementById('emailError').classList.contains('is-visible'), false, 'a fixed, valid email should clear the error immediately');
+  assert.equal(email.classList.contains('is-invalid'), false);
+});
+
+test('leaving email empty is still valid -- it is optional, only a non-empty invalid value is flagged', async () => {
+  let insertCalled = false;
+  const window = loadPage(async (url) => {
+    if (String(url).includes('th_bookings_availability')) return { ok: true, json: async () => ([]) };
+    if (String(url).includes('/rest/v1/th_bookings') && !String(url).includes('availability')) {
+      insertCalled = true;
+      return { ok: true };
+    }
+    return { ok: false };
+  });
+  await waitFor(200);
+  window.document.querySelector('.service-option').dispatchEvent(new window.Event('click', { bubbles: true }));
+  await waitFor(200);
+  window.document.querySelector('.slot-btn').dispatchEvent(new window.Event('click', { bubbles: true }));
+
+  window.document.getElementById('bName').value = 'Jane Smith';
+  const phone = window.document.getElementById('bPhone');
+  phone.value = '5551234567';
+  phone.dispatchEvent(new window.Event('input', { bubbles: true }));
+  // Email left empty entirely.
+  window.document.getElementById('bookingForm').dispatchEvent(new window.Event('submit', { bubbles: true, cancelable: true }));
+  await waitFor(200);
+  assert.equal(insertCalled, true, 'an empty, optional email should never block submission');
+});

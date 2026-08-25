@@ -188,6 +188,10 @@
     transition:border-color .15s ease;
   }
   input:focus, textarea:focus{outline:2px solid var(--orange); outline-offset:1px; border-color:var(--orange);}
+  input.is-invalid{border-color:#e05252;}
+  input.is-invalid:focus{outline-color:#e05252;}
+  .field-error{color:#ff8a80; font-size:12.5px; margin:6px 0 0; min-height:0; display:none;}
+  .field-error.is-visible{display:block;}
   textarea{resize:vertical; min-height:80px;}
 
   .btn{
@@ -314,9 +318,11 @@
         <label for="bName">Name</label>
         <input type="text" id="bName" name="name" required autocomplete="name" maxlength="100">
         <label for="bPhone">Phone</label>
-        <input type="tel" id="bPhone" name="phone" required autocomplete="tel" maxlength="30">
+        <input type="tel" id="bPhone" name="phone" required autocomplete="tel" inputmode="numeric" placeholder="(555) 123-4567" pattern="^\(\d{3}\) \d{3}-\d{4}$" maxlength="14" title="Enter a 10-digit phone number">
+        <p class="field-error" id="phoneError" aria-live="polite"></p>
         <label for="bEmail">Email</label>
-        <input type="email" id="bEmail" name="email" autocomplete="email" maxlength="200">
+        <input type="email" id="bEmail" name="email" autocomplete="email" maxlength="200" placeholder="you@example.com">
+        <p class="field-error" id="emailError" aria-live="polite"></p>
         <label for="bAddress">Address</label>
         <input type="text" id="bAddress" name="address" autocomplete="street-address" maxlength="200">
         <label for="bNotes">Anything we should know? (optional)</label>
@@ -606,6 +612,70 @@
   document.getElementById('backToDateTime').addEventListener('click', function () { goToStep(2); });
 
   // --- submission ------------------------------------------------------------
+
+  // Phone number auto-formatting as the guest types, requested
+  // directly. There's no native browser masking for type="tel", so
+  // this reformats to (XXX) XXX-XXXX on every keystroke. Cursor
+  // position is tracked by DIGIT count rather than raw character
+  // index, since the formatting itself inserts/removes punctuation --
+  // using character index would make the cursor jump unpredictably
+  // when editing or deleting in the middle of a number.
+  function formatPhoneValue(digits) {
+    digits = digits.slice(0, 10);
+    if (digits.length === 0) return '';
+    if (digits.length < 4) return '(' + digits;
+    if (digits.length < 7) return '(' + digits.slice(0, 3) + ') ' + digits.slice(3);
+    return '(' + digits.slice(0, 3) + ') ' + digits.slice(3, 6) + '-' + digits.slice(6);
+  }
+
+  function wirePhoneMask(input) {
+    input.addEventListener('input', function () {
+      const cursorPos = input.selectionStart;
+      const digitsBeforeCursor = input.value.slice(0, cursorPos).replace(/\D/g, '').length;
+      const digits = input.value.replace(/\D/g, '').slice(0, 10);
+      const formatted = formatPhoneValue(digits);
+      input.value = formatted;
+
+      let newCursorPos = formatted.length;
+      let seenDigits = 0;
+      for (let i = 0; i < formatted.length; i++) {
+        if (seenDigits >= digitsBeforeCursor) { newCursorPos = i; break; }
+        if (/\d/.test(formatted[i])) seenDigits++;
+      }
+      input.setSelectionRange(newCursorPos, newCursorPos);
+      updateFieldValidity(input);
+    });
+  }
+
+  // Live, on-theme feedback for whichever native constraint already
+  // exists (required, pattern, type="email") -- confirmed directly
+  // that the browser already blocks submission on its own; this just
+  // makes that enforcement visible in the site's own visual language
+  // instead of a default, easy-to-miss tooltip in a dark theme.
+  function updateFieldValidity(input) {
+    const errorEl = document.getElementById(input.id === 'bPhone' ? 'phoneError' : 'emailError');
+    const hasContent = input.value.trim().length > 0;
+    const showError = hasContent && !input.validity.valid;
+    input.classList.toggle('is-invalid', showError);
+    if (errorEl) {
+      errorEl.classList.toggle('is-visible', showError);
+      errorEl.textContent = showError
+        ? (input.id === 'bPhone' ? 'Enter a complete 10-digit phone number.' : 'Enter a valid email address, like name@example.com.')
+        : '';
+    }
+  }
+
+  function wireLiveValidation(input) {
+    input.addEventListener('blur', function () { updateFieldValidity(input); });
+    input.addEventListener('invalid', function () { updateFieldValidity(input); });
+    input.addEventListener('input', function () {
+      if (input.validity.valid || input.value.trim().length === 0) updateFieldValidity(input);
+    });
+  }
+
+  wirePhoneMask(document.getElementById('bPhone'));
+  wireLiveValidation(document.getElementById('bPhone'));
+  wireLiveValidation(document.getElementById('bEmail'));
 
   document.getElementById('bookingForm').addEventListener('submit', function (e) {
     e.preventDefault();
