@@ -6,6 +6,14 @@
 <title>Book an Appointment | Triple H Enterprises</title>
 <meta name="description" content="Book a repair, install, or handyman visit online with Triple H Enterprises -- pick a service, a real open time slot, and you're on the calendar.">
 <meta name="robots" content="index, follow">
+<meta property="og:title" content="Book an Appointment | Triple H Enterprises">
+<meta property="og:description" content="Pick a service and a real open time slot with Triple H Enterprises -- you'll get a confirmation right away.">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://www.triplehenterprisesllc.biz/booking.html">
+<meta property="og:image" content="https://www.triplehenterprisesllc.biz/images/og-image.jpg">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="628">
+<meta property="og:image:alt" content="Triple H Enterprises - Handyman and Appliance Repair, St. George Utah">
 <link rel="apple-touch-icon" href="/images/apple-touch-icon.png">
 <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data:; connect-src 'self' https://*.supabase.co; frame-src 'none'; object-src 'none'; base-uri 'self'; frame-ancestors 'none';">
 <meta name="referrer" content="strict-origin-when-cross-origin">
@@ -181,16 +189,18 @@
     <button type="button" class="btn-back" id="backToDateTime">&larr; Change date/time</button>
     <div class="booking-summary" id="fullSummary"></div>
     <form id="bookingForm">
+      <!-- honeypot spam trap: real visitors never fill this in, bots often do -->
+      <input type="text" name="_gotcha" style="display:none" tabindex="-1" autocomplete="off">
       <label for="bName">Name</label>
-      <input type="text" id="bName" name="name" required autocomplete="name">
+      <input type="text" id="bName" name="name" required autocomplete="name" maxlength="100">
       <label for="bPhone">Phone</label>
-      <input type="tel" id="bPhone" name="phone" required autocomplete="tel">
+      <input type="tel" id="bPhone" name="phone" required autocomplete="tel" maxlength="30">
       <label for="bEmail">Email</label>
-      <input type="email" id="bEmail" name="email" autocomplete="email">
+      <input type="email" id="bEmail" name="email" autocomplete="email" maxlength="200">
       <label for="bAddress">Address</label>
-      <input type="text" id="bAddress" name="address" autocomplete="street-address">
+      <input type="text" id="bAddress" name="address" autocomplete="street-address" maxlength="200">
       <label for="bNotes">Anything we should know? (optional)</label>
-      <textarea id="bNotes" name="notes"></textarea>
+      <textarea id="bNotes" name="notes" maxlength="1000"></textarea>
       <button type="submit" class="btn orange" id="submitBtn">Confirm Booking</button>
       <div class="status-msg" id="statusMsg"></div>
     </form>
@@ -475,6 +485,22 @@
     statusEl.classList.remove('is-visible', 'is-error');
 
     const formData = new FormData(e.target);
+
+    // Honeypot check -- same proven pattern as index.html's lead form.
+    // A caught bot gets a fake success confirmation (never told it was
+    // caught, so a bot author watching the response can't adapt)
+    // without ever touching the database or consuming a real time
+    // slot -- arguably more important here than on a lead form, since
+    // spam bookings would actively deny real customers a slot rather
+    // than just creating an ignorable lead.
+    if (formData.get('_gotcha')) {
+      const dateLabel = new Intl.DateTimeFormat('en-US', { timeZone: BUSINESS_TIMEZONE, weekday: 'long', month: 'long', day: 'numeric' }).format(selectedSlot.startUtc);
+      document.getElementById('confirmationDetail').innerHTML =
+        '<strong>' + selectedService.label + '</strong><br>' + dateLabel + ' at ' + selectedSlot.label;
+      goToStep(4);
+      return;
+    }
+
     submitBtn.disabled = true;
     submitBtn.textContent = 'Booking...';
 
