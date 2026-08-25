@@ -33,7 +33,7 @@ function waitFor(ms) {
 test('a genuinely failed availability check (a real server/network failure, not "no slots") shows a clear error with a real retry, not an indefinite loading state', async () => {
   let attemptCount = 0;
   const window = loadPage(async (url) => {
-    if (String(url).includes('th_bookings_availability')) {
+    if (String(url).includes('get_booking_availability')) {
       attemptCount++;
       if (attemptCount === 1) return { ok: false, status: 500 };
       return { ok: true, json: async () => ([]) };
@@ -69,7 +69,7 @@ test('a non-OK response from the availability endpoint is never silently treated
 test('a bot filling in the honeypot field never actually creates a booking, but sees a normal-looking confirmation', async () => {
   let insertCalled = false;
   const window = loadPage(async (url) => {
-    if (String(url).includes('th_bookings_availability')) return { ok: true, json: async () => ([]) };
+    if (String(url).includes('get_booking_availability')) return { ok: true, json: async () => ([]) };
     if (String(url).includes('/rest/v1/th_bookings') && !String(url).includes('availability')) {
       insertCalled = true;
       return { ok: true };
@@ -95,7 +95,7 @@ test('a bot filling in the honeypot field never actually creates a booking, but 
 test('a genuine submission (honeypot left empty) reaches the real insert normally', async () => {
   let insertCalled = false;
   const window = loadPage(async (url) => {
-    if (String(url).includes('th_bookings_availability')) return { ok: true, json: async () => ([]) };
+    if (String(url).includes('get_booking_availability')) return { ok: true, json: async () => ([]) };
     if (String(url).includes('/rest/v1/th_bookings') && !String(url).includes('availability')) {
       insertCalled = true;
       return { ok: true };
@@ -118,7 +118,7 @@ test('a genuine submission (honeypot left empty) reaches the real insert normall
 
 test('typing a phone number progressively auto-formats to (XXX) XXX-XXXX', async () => {
   const window = loadPage(async (url) => {
-    if (String(url).includes('th_bookings_availability')) return { ok: true, json: async () => ([]) };
+    if (String(url).includes('get_booking_availability')) return { ok: true, json: async () => ([]) };
     return { ok: false };
   });
   await waitFor(200);
@@ -138,7 +138,7 @@ test('typing a phone number progressively auto-formats to (XXX) XXX-XXXX', async
 test('an incomplete phone number shows a clear inline error and blocks submission', async () => {
   let insertCalled = false;
   const window = loadPage(async (url) => {
-    if (String(url).includes('th_bookings_availability')) return { ok: true, json: async () => ([]) };
+    if (String(url).includes('get_booking_availability')) return { ok: true, json: async () => ([]) };
     if (String(url).includes('/rest/v1/th_bookings') && !String(url).includes('availability')) {
       insertCalled = true;
       return { ok: true };
@@ -164,7 +164,7 @@ test('an incomplete phone number shows a clear inline error and blocks submissio
 
 test('an invalid email shows a clear inline error, and a valid one clears it', async () => {
   const window = loadPage(async (url) => {
-    if (String(url).includes('th_bookings_availability')) return { ok: true, json: async () => ([]) };
+    if (String(url).includes('get_booking_availability')) return { ok: true, json: async () => ([]) };
     return { ok: false };
   });
   await waitFor(200);
@@ -190,7 +190,7 @@ test('an invalid email shows a clear inline error, and a valid one clears it', a
 test('leaving email empty is still valid -- it is optional, only a non-empty invalid value is flagged', async () => {
   let insertCalled = false;
   const window = loadPage(async (url) => {
-    if (String(url).includes('th_bookings_availability')) return { ok: true, json: async () => ([]) };
+    if (String(url).includes('get_booking_availability')) return { ok: true, json: async () => ([]) };
     if (String(url).includes('/rest/v1/th_bookings') && !String(url).includes('availability')) {
       insertCalled = true;
       return { ok: true };
