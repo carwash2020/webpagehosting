@@ -23,13 +23,14 @@ Two things on this specific repo have caused real, hours-long confusion before. 
 | File | Purpose |
 |---|---|
 | `index.html` | Main homepage — single-page site (services, reviews, about, areas, schedule, contact/FAQ/terms). Contact form inserts directly into `th_leads` (anon key) -- Formspree was removed 2026-08-24, replaced by a real, in-house Resend email pipeline (see "Booking system" below for the equivalent pipeline on the booking side). |
-| `booking.html` | **In-house booking system** (added 2026-08-25, replacing Cal.com entirely). 3-step flow: service → real open time slot → contact info. See "Booking system" below for the full picture. |
+| `booking.html` | **In-house booking system** (added 2026-08-25, replacing Cal.com entirely -- subscription itself confirmed cancelled). 3-step flow: service → real open time slot → contact info. Phone number auto-formats live to `(XXX) XXX-XXXX` as the guest types; both phone and email get on-theme inline validation (native browser constraint validation was already enforcing a real `@`, this just makes it visible instead of a default tooltip). Redesigned 2026-08-25 with a real desktop layout (a sidebar builds up the appointment summary progressively) and a hexagon icon motif echoing the brand mark. See "Booking system" below for the full picture. |
+| `manage-booking.html` | Guest self-service cancel/reschedule, reached via a unique token link in the confirmation email -- **not in the sitemap** (`noindex, nofollow`, deliberately unreachable except through that link). Same design system as `booking.html`. See "Booking system" below. |
 | `handyman-hurricane-ut.html` | Dedicated landing page — Hurricane, UT |
 | `handyman-washington-city-ut.html` | Dedicated landing page — Washington City, UT |
 | `handyman-santa-clara-ivins-ut.html` | Dedicated landing page — Santa Clara & Ivins, UT |
 | `handyman-cedar-city-ut.html` | Dedicated landing page — Cedar City, UT (by-request service area) |
 | `handyman-mesquite-nv.html` | Dedicated landing page — Mesquite, NV (by-request service area) |
-| `sitemap.xml` | Lists all 6 live public pages — update this and resubmit in Google Search Console any time a page is added or removed |
+| `sitemap.xml` | Lists all 7 live, indexable public pages (`manage-booking.html` is deliberately excluded -- `noindex, nofollow`, token-gated, not meant for search discovery) — update this and resubmit in Google Search Console any time a page is added or removed |
 | `robots.txt` | Allows all crawlers |
 | `404.html` | Custom not-found page (self-contained, own inline styles, doesn't use `styles.css`) |
 | `.well-known/security.txt` | RFC 9116 security contact file. Requires `.nojekyll` (see above) to actually be reachable — this is exactly what broke for a long time. |
@@ -52,11 +53,11 @@ Two things on this specific repo have caused real, hours-long confusion before. 
 | `tools/contract-generator.html` | Fill in a client/job, generate a branded contract PDF to email/text. Has two signature canvases — see the swipe-gesture note below if working on touch gestures anywhere near this page. |
 | `tools/route-planner.html` | Multi-stop Google Maps route links + a fuel-cost/sales-tax "to and from" cost analyzer. |
 | `tools/review-request.html` | Generates a review-request text message; deep-linkable with a client name/job pre-filled. Also has Google/Yelp QR code tabs. |
-| `tools/calendar.html` | Shows jobs flagged "Show on Calendar" from Job Tracker, **plus** (added 2026-08-25) unconverted online bookings from `booking.html` -- fetched once on load and merged in as job-shaped pseudo-objects, visually distinguished with a purple dot and a "Booked online" badge. A booking shows up here the moment it's made, without waiting for anyone to manually add it to Job Tracker. |
+| `tools/calendar.html` | Shows jobs flagged "Show on Calendar" from Job Tracker, **plus** (added 2026-08-25) unconverted online bookings from `booking.html` -- fetched once on load and merged in as job-shaped pseudo-objects, visually distinguished with a purple dot and a "Booked online" badge. A booking shows up here the moment it's made, without waiting for anyone to manually add it to Job Tracker. Also subscribed to `th_bookings` realtime changes -- a guest cancelling or rescheduling their own booking through `manage-booking.html` now shows up live here too, not just on the initial load. |
 | `tools/runway-dashboard.html` | Personal + business financial runway tracking — debts, income, expenses, month-by-month. Pulls revenue/expenses straight from Finance (`finance.html`), no double entry. |
 | `tools/parts-reference.html` | **Appliance Wiki** — quick lookup for common appliance issues: what part it usually is, the part number, roughly what it costs. |
 | `tools/settings.html` | Account info, Cloud Sync setup, notification preferences, Color theme — personal, per-device options that don't belong on any one specific tool page. |
-| `tools/dev-tools.html` | Site diagnostics and maintenance utilities, organized into 5 tabs (Health, Access, Session, Notifications, Deploy) as of 2026-08-25 -- replaced the old scroll-to-anchor nav, which no longer scaled once this page reached 22 panels. Access is role-gated (`account_roles` table, see `DISASTER_RECOVERY.md`); an Owner-role account only sees the Access tab (Client Registry, Account Roles), while a Developer-role account sees all 5 tabs. |
+| `tools/dev-tools.html` | Site diagnostics and maintenance utilities, organized into 5 tabs (Health, Access, Session, Notifications, Deploy) as of 2026-08-25 -- replaced the old scroll-to-anchor nav, which no longer scaled once this page reached 22 panels (now 23, after the Booking notification test panel below). Access is role-gated (`account_roles` table, see `DISASTER_RECOVERY.md`); an Owner-role account only sees the Access tab (Client Registry, Account Roles), while a Developer-role account sees all 5 tabs. |
 | `tools/site-content.html` | Site Content / FAQ / Terms editing — split out of `dev-tools.html` on 2026-08-20. |
 | `tools/client-detail.html` | Full history for one client (jobs, invoices, quotes, contracts) — reached from workspace.html or job-detail.html, not linked from the main nav directly. |
 | `tools/job-detail.html` | Full detail view for one job (photos, linked invoices, margin) — reached from job-tracker.html or finance.html, not linked from the main nav directly. |
@@ -92,15 +93,19 @@ The internal tools sync through a **separate Supabase project belonging to Tripl
 
 ## Booking system (added 2026-08-25, replaces Cal.com entirely)
 
-Requested directly: full ownership and Triple H branding (not Cal.com's), plus a real database-level guarantee against double-booking. `booking.html` is the public-facing page (all 16 old Cal.com links across `index.html` and the 5 city pages now point to it); `th_bookings` is the Supabase table backing it.
+Requested directly: full ownership and Triple H branding (not Cal.com's), plus a real database-level guarantee against double-booking. `booking.html` is the public-facing page (all 16 old Cal.com links across `index.html` and the 5 city pages now point to it); `th_bookings` is the Supabase table backing it. The Cal.com subscription itself has been cancelled.
 
 - **The actual protection against double-booking is a database exclusion constraint**, not client-side JS -- `no_overlapping_confirmed_bookings` on `th_bookings`, using a `padded_range` column (set by a `BEFORE INSERT/UPDATE` trigger, not a generated column -- Postgres requires generated-column expressions to be IMMUTABLE, and `timestamptz +/- interval` is only STABLE even for a fixed-duration interval like minutes) that pads each booking 15 minutes on both sides. This gives a real 30-minute gap between any two adjacent bookings for travel/wrap-up time, added after the original constraint (exact-overlap only, zero gap) was found not to actually guarantee this.
-- **Privacy**: `th_bookings` holds real customer PII (name, phone, email, address). The `anon` role has no SELECT policy on it at all -- the public booking page's own availability check reads through a separate view, `th_bookings_availability`, which exposes only `start_at`/`end_at` and nothing else. Staff (authenticated) has full SELECT/UPDATE.
-- **Notifications**: two independent triggers on `th_bookings` insert (`on_new_booking_send_push`, `on_new_booking_send_email`), same proven pattern as `th_leads`' own triggers -- if Resend has an outage, the push notification still goes out, and vice versa.
+- **Privacy**: `th_bookings` holds real customer PII (name, phone, email, address). The `anon` role has no SELECT policy on it at all -- the public booking page's own availability check reads through a separate view, `th_bookings_availability`, which exposes only `start_at`/`end_at` and nothing else. Staff (authenticated) has full SELECT/UPDATE/DELETE (the DELETE policy was missing entirely until caught while building the Dev Tools test panel below -- its own cleanup step was silently failing).
+- **Guest self-service cancel/reschedule** (`manage-booking.html`, added after the initial build): each booking gets a random, unguessable `cancel_token` (uuid, server-generated at insert, never client-settable) included only in the guest's own confirmation email. Two SECURITY DEFINER RPC functions, `get_booking_by_cancel_token` (read-only lookup) and `cancel_booking_by_token`/`reschedule_booking_by_token`, let a guest manage their own booking without a login. Rescheduling derives duration from the existing booking server-side (never trusted from the client) and relies on the same exclusion constraint for collision safety -- a genuine conflict is caught and reported as `slot-taken`, not a raw database error.
+- **Notifications**: one consolidated trigger (`notify_booking_status_change`) fires on `th_bookings` INSERT or UPDATE and calls the `Send-Push` Edge Function, which distinguishes new/cancelled/rescheduled by comparing old vs. new status and start time. (This replaced two separate triggers that each tried to fire their own notification on the same event -- consolidated on general principle even though the real missing-notification bug traced to something else: `Send-Push`'s own UPDATE handler originally only recognized a cancellation and silently discarded a genuine reschedule.) A second, independent trigger sends the guest confirmation email (`send-booking-email`) -- same proven pattern as `th_leads`, so a Resend outage and a push-notification outage are independent failure modes.
+- **Realtime**: `th_bookings` is in the `supabase_realtime` publication (added after launch -- it wasn't originally, so a guest's own cancellation or reschedule was invisible to staff watching `workspace.html` or `calendar.html` until a manual reload). Both pages subscribe via `startBookingsRealtime()` in `sync.js`.
 - **Job Tracker integration**: a new "Upcoming Bookings" panel on the Dashboard (`workspace.html`, Action Items) shows confirmed, unconverted bookings; "Add to Jobs" creates a real job entry (`fetchUnconvertedBookings`/`markBookingConverted` in `sync.js`). The job schema has no time-of-day field, so the booking's actual time window goes into the new job's `notes`.
 - **Calendar integration**: `calendar.html` shows unconverted bookings too (see its entry above) -- a booking is visible there the moment it's made, without waiting for manual conversion.
-- **Dev Tools integration**: a "Recent Bookings" panel (Notifications tab) shows the last 20 bookings regardless of conversion status, for confirming the pipeline itself worked.
-- **Business hours and service durations are plain constants in `booking.html`** (`HOURS_BY_WEEKDAY`, `SERVICES`), not a database-configurable setting -- adjust directly in that file if either ever changes. Current hours: Mon-Fri 2pm-10pm, Sat 7am-10pm, Sun 2pm-8pm.
+- **Dev Tools integration**: a "Recent Bookings" panel (Notifications tab) shows the last 20 bookings regardless of conversion status. A separate "Booking notification test" panel runs a real booking through its full lifecycle (create, reschedule, cancel) in one pass on far-future dates, exercising all three notification paths and cleaning up after itself -- directly automates the same manual debugging sequence originally used to find the reschedule-notification bug above.
+- **Business hours and service durations are plain constants in `booking.html`** (`HOURS_BY_WEEKDAY`, `SERVICES`), not a database-configurable setting -- adjust directly in that file if either ever changes (and in `manage-booking.html`'s own copy of the same constants, used for the reschedule picker). Current hours: Mon-Fri 2pm-10pm, Sat 7am-10pm, Sun 2pm-8pm.
+- **Design**: both pages share one visual system -- a hexagon icon motif (CSS `clip-path`) echoing the brand's own hex logo mark, reusing the site's existing service icons from `index.html`. `booking.html` has a real desktop layout (a sticky sidebar builds up the appointment summary progressively) rather than the mobile column simply stretched wide, which was the original state before a design pass caught it.
+- **Phone/email**: the phone field auto-formats live to `(XXX) XXX-XXXX` as the guest types (no native browser masking exists for `type="tel"`); both fields get on-theme inline validation styling -- native constraint validation (`type="email"`, a `pattern` on phone) already blocked bad input, this just makes that enforcement visible instead of a default, easy-to-miss browser tooltip.
 
 ## Automated jobs (2026-08-15, substantially expanded 2026-08-25)
 
@@ -132,16 +137,6 @@ the assistant's GitHub token was never granted):
 
 ## Known open items
 
-- **The actual Cal.com subscription was never explicitly cancelled.**
-  The in-house replacement (`booking.html`) is fully live and every
-  link on the public site points to it now, but the old Cal.com
-  account itself is a separate, manual cancellation step this repo
-  can't do for you.
-- An accidental second Edge Function exists with the lowercase slug
-  `send-push` (the real one is `Send-Push`, capitalized) -- created by
-  a deploy-tool mistake on 2026-08-15. It's empty and wired to nothing,
-  but there's no tool available to delete it from the assistant side;
-  remove it by hand from the Supabase dashboard's Edge Functions list.
 - `trigger-workflow` Edge Function needs a `GITHUB_PAT` secret (Supabase
   dashboard -> Edge Functions -> Secrets) to actually work -- a
   fine-grained GitHub PAT scoped to ONLY "Actions: Read and write" on
@@ -149,18 +144,19 @@ the assistant's GitHub token was never granted):
   authenticated request (from Steve's account) triggered a real GitHub
   Actions run, verified via both the Actions run history and the
   Edge Function's own logs.
-- `advisor-health` Edge Function needs a `MANAGEMENT_API_PAT` secret (same
-  place as GITHUB_PAT above) to actually work -- a Supabase Personal
-  Access Token, generated from account settings. Unlike the GitHub
-  token, a Supabase PAT can't be scoped to a single project -- it's
-  account-wide access to advisor data for every project the account
-  can see, so treat it as more sensitive than GITHUB_PAT. Until it's
-  added, the Advisor health panel in Dev Tools returns a clear
-  "MANAGEMENT_API_PAT secret is not set yet" error rather than silently
-  failing.
 - Leaked-password protection is still off in Supabase Auth -- a
   dashboard-only toggle (Authentication → Policies), not something
   scriptable via SQL.
+
+**Resolved since first written (kept here briefly for history, not
+because they're still open):** the Cal.com subscription has been
+cancelled (confirmed 2026-08-25); the accidental lowercase `send-push`
+Edge Function no longer appears in the project's function list at
+all; `advisor-health` is confirmed actually working (a real request
+returned HTTP 200 in the function's own logs, and that function
+returns a hard 500 whenever `MANAGEMENT_API_PAT` is missing, so a 200
+means the secret is genuinely set and the Management API calls
+succeeded).
 
 
 
