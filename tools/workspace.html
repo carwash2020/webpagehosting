@@ -2313,6 +2313,7 @@
         // which is fine here since they're on the same underlying connection.
         startRealtimeSync(renderDashboard, updateRealtimeBadge);
         startLeadsRealtime(loadAndRenderLeads, updateRealtimeBadge);
+        startBookingsRealtime(loadAndRenderBookings, updateRealtimeBadge);
       }
     });
     wireSearchClear('globalSearch', renderGlobalSearch);

@@ -241,7 +241,7 @@
     const rangeEnd = new Date(dayStartUtc.getTime() + 2 * 24 * 60 * 60 * 1000).toISOString();
     const url = SUPABASE_URL + '/rest/v1/th_bookings_availability?start_at=gte.' + encodeURIComponent(rangeStart) + '&start_at=lt.' + encodeURIComponent(rangeEnd) + '&select=start_at,end_at';
     const res = await fetch(url, { headers: { apikey: SUPABASE_ANON_KEY, Authorization: 'Bearer ' + SUPABASE_ANON_KEY } });
-    if (!res.ok) return [];
+    if (!res.ok) throw new Error('availability check failed (HTTP ' + res.status + ')');
     const rows = await res.json();
     return rows
       // Excludes this booking's OWN current slot -- the database's
@@ -259,6 +259,21 @@
         '<div class="booking-card"><div class="svc">' + escapeHtml(booking.service_label) + '</div>' +
         '<div class="when">' + formatWhen(booking.start_at, booking.end_at) + '</div></div>' +
         '<div class="state-msg"><p>This booking has already been cancelled.</p></div>' +
+        '<a href="/booking.html" class="btn orange">Book a new appointment</a>'
+      );
+      return;
+    }
+
+    // Real gap, flagged directly: an old confirmation email for a
+    // visit that already happened would otherwise still show live
+    // Cancel/Reschedule buttons. Checked against end_at, not start_at,
+    // so a visit still in progress isn't treated as "already
+    // happened" the instant its scheduled start time passes.
+    if (new Date(booking.end_at) < new Date()) {
+      renderState(
+        '<div class="booking-card"><div class="svc">' + escapeHtml(booking.service_label) + '</div>' +
+        '<div class="when">' + formatWhen(booking.start_at, booking.end_at) + '</div></div>' +
+        '<div class="state-msg"><p>This appointment has already happened.</p></div>' +
         '<a href="/booking.html" class="btn orange">Book a new appointment</a>'
       );
       return;
@@ -312,7 +327,16 @@
       grid.innerHTML = '<p style="color:var(--text-dim); font-size:13px;">Loading times...</p>';
       emptyEl.style.display = 'none';
 
-      const existingBookings = await fetchBookingsForDate(dateStr, booking.start_at);
+      let existingBookings;
+      try {
+        existingBookings = await fetchBookingsForDate(dateStr, booking.start_at);
+      } catch (e) {
+        grid.innerHTML =
+          '<p style="color:#ff8a80; font-size:13.5px; text-align:center; grid-column:1/-1;">Couldn\'t load available times. Check your connection and try again.</p>' +
+          '<button type="button" class="btn ghost" id="retryDateBtn" style="grid-column:1/-1;">Try again</button>';
+        document.getElementById('retryDateBtn').addEventListener('click', function () { selectDate(dateStr); });
+        return;
+      }
       const slots = computeSlotsForDate(dateStr, durationMinutes, existingBookings);
 
       if (slots.length === 0) {

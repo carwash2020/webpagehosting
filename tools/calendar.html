@@ -467,6 +467,12 @@
     if (typeof startRealtimeSync === 'function') {
       startRealtimeSync(() => { renderCalendar(); renderDayDetail(); });
     }
+    // Same for bookings specifically -- a guest cancelling or
+    // rescheduling their own appointment through manage-booking.html
+    // now shows up here live too, rather than needing a manual reload.
+    if (typeof startBookingsRealtime === 'function') {
+      startBookingsRealtime(() => { refreshBookingsCache().then(() => { renderCalendar(); renderDayDetail(); }); });
+    }
   } catch (initError) {
     try {
         showInitErrorBanner('Calendar', initError);

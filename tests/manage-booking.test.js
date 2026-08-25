@@ -253,3 +253,54 @@ test('a slot-taken response (a real collision caught by the database) is handled
   await waitFor(300);
   assert.match(window.document.getElementById('content').innerHTML, /just taken/);
 });
+
+test('a confirmed booking whose time has already passed shows that clearly, with no Cancel or Reschedule buttons offered', async () => {
+  const window = loadPage(
+    'https://www.triplehenterprisesllc.biz/manage-booking.html?token=abc-123',
+    async () => ({
+      ok: true,
+      json: async () => ([{
+        service_label: 'Inspection', start_at: '2020-01-01T15:00:00+00:00', end_at: '2020-01-01T15:45:00+00:00', name: 'Test', status: 'confirmed',
+      }]),
+    }),
+  );
+  await waitFor(200);
+  const content = window.document.getElementById('content').innerHTML;
+  assert.match(content, /already happened/);
+  assert.equal(window.document.getElementById('startCancelBtn'), null, 'no cancel button should be offered for an appointment that already happened');
+  assert.equal(window.document.getElementById('startRescheduleBtn'), null, 'no reschedule button should be offered for an appointment that already happened');
+});
+
+test('a genuinely failed availability check (not "no slots", an actual server/network failure) shows a clear error with a real retry, not an indefinite loading state', async () => {
+  let attemptCount = 0;
+  const window = loadPage(
+    'https://www.triplehenterprisesllc.biz/manage-booking.html?token=abc-123',
+    async (url) => {
+      if (String(url).includes('get_booking_by_cancel_token')) {
+        return {
+          ok: true,
+          json: async () => ([{ service_label: 'Inspection', start_at: '2026-09-20T21:00:00+00:00', end_at: '2026-09-20T21:45:00+00:00', name: 'Test', status: 'confirmed' }]),
+        };
+      }
+      if (String(url).includes('th_bookings_availability')) {
+        attemptCount++;
+        if (attemptCount === 1) return { ok: false, status: 500 };
+        return { ok: true, json: async () => ([]) };
+      }
+      return { ok: false };
+    },
+  );
+  await waitFor(200);
+  window.document.getElementById('startRescheduleBtn').dispatchEvent(new window.Event('click', { bubbles: true }));
+  await waitFor(300);
+
+  const grid = window.document.getElementById('slotsGrid');
+  assert.match(grid.innerHTML, /Couldn.t load/);
+  const retryBtn = window.document.getElementById('retryDateBtn');
+  assert.ok(retryBtn, 'a real retry button should be offered, not just a stuck loading state');
+
+  retryBtn.dispatchEvent(new window.Event('click', { bubbles: true }));
+  await waitFor(300);
+  assert.equal(attemptCount, 2, 'retry should have made a real second attempt');
+  assert.doesNotMatch(window.document.getElementById('slotsGrid').innerHTML, /Couldn.t load/, 'the retry succeeding should clear the error state');
+});
