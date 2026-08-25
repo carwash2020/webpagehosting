@@ -165,7 +165,7 @@ test('clicking Reschedule shows a real date/time picker with actual open slots',
           json: async () => ([{ service_label: 'Inspection', start_at: '2026-09-20T21:00:00+00:00', end_at: '2026-09-20T21:45:00+00:00', name: 'Test', status: 'confirmed' }]),
         };
       }
-      if (String(url).includes('th_bookings_availability')) return { ok: true, json: async () => ([]) };
+      if (String(url).includes('get_booking_availability')) return { ok: true, json: async () => ([]) };
       return { ok: false };
     },
   );
@@ -186,7 +186,7 @@ test('the booking\'s own current slot does not block itself when picking a new t
           json: async () => ([{ service_label: 'Inspection', start_at: '2026-09-20T21:00:00+00:00', end_at: '2026-09-20T21:45:00+00:00', name: 'Test', status: 'confirmed' }]),
         };
       }
-      if (String(url).includes('th_bookings_availability')) {
+      if (String(url).includes('get_booking_availability')) {
         return { ok: true, json: async () => ([{ start_at: '2026-09-20T21:00:00+00:00', end_at: '2026-09-20T21:45:00+00:00' }]) };
       }
       return { ok: false };
@@ -210,7 +210,7 @@ test('picking a slot calls the real reschedule RPC with the correct token and a 
           json: async () => ([{ service_label: 'Inspection', start_at: '2026-09-20T21:00:00+00:00', end_at: '2026-09-20T21:45:00+00:00', name: 'Test', status: 'confirmed' }]),
         };
       }
-      if (String(url).includes('th_bookings_availability')) return { ok: true, json: async () => ([]) };
+      if (String(url).includes('get_booking_availability')) return { ok: true, json: async () => ([]) };
       if (String(url).includes('reschedule_booking_by_token')) {
         rpcCalled = true;
         rpcArgs = JSON.parse(opts.body);
@@ -241,7 +241,7 @@ test('a slot-taken response (a real collision caught by the database) is handled
           json: async () => ([{ service_label: 'Inspection', start_at: '2026-09-20T21:00:00+00:00', end_at: '2026-09-20T21:45:00+00:00', name: 'Test', status: 'confirmed' }]),
         };
       }
-      if (String(url).includes('th_bookings_availability')) return { ok: true, json: async () => ([]) };
+      if (String(url).includes('get_booking_availability')) return { ok: true, json: async () => ([]) };
       if (String(url).includes('reschedule_booking_by_token')) return { ok: true, json: async () => ([{ ok: false, message: 'slot-taken' }]) };
       return { ok: false };
     },
@@ -282,7 +282,7 @@ test('a genuinely failed availability check (not "no slots", an actual server/ne
           json: async () => ([{ service_label: 'Inspection', start_at: '2026-09-20T21:00:00+00:00', end_at: '2026-09-20T21:45:00+00:00', name: 'Test', status: 'confirmed' }]),
         };
       }
-      if (String(url).includes('th_bookings_availability')) {
+      if (String(url).includes('get_booking_availability')) {
         attemptCount++;
         if (attemptCount === 1) return { ok: false, status: 500 };
         return { ok: true, json: async () => ([]) };

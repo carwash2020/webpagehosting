@@ -497,9 +497,14 @@
     const dayStartUtc = zonedTimeToUtc(dateStr, 0, 0);
     const rangeStart = new Date(dayStartUtc.getTime() - 24 * 60 * 60 * 1000).toISOString();
     const rangeEnd = new Date(dayStartUtc.getTime() + 2 * 24 * 60 * 60 * 1000).toISOString();
-    const url = SUPABASE_URL + '/rest/v1/th_bookings_availability?start_at=gte.' + encodeURIComponent(rangeStart) + '&start_at=lt.' + encodeURIComponent(rangeEnd) + '&select=start_at,end_at';
-    const res = await fetch(url, {
-      headers: { apikey: SUPABASE_ANON_KEY, Authorization: 'Bearer ' + SUPABASE_ANON_KEY },
+    const res = await fetch(SUPABASE_URL + '/rest/v1/rpc/get_booking_availability', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        apikey: SUPABASE_ANON_KEY,
+        Authorization: 'Bearer ' + SUPABASE_ANON_KEY,
+      },
+      body: JSON.stringify({ p_range_start: rangeStart, p_range_end: rangeEnd }),
     });
     if (!res.ok) throw new Error('availability check failed (HTTP ' + res.status + ')');
     const rows = await res.json();
