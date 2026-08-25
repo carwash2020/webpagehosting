@@ -56,6 +56,11 @@
     display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
     gap: 20px; align-items: start;
   }
+  /* Tab show/hide -- a tab-panel group is hidden unless it carries
+     is-active-tab-panel, at which point it's restored to the exact
+     same grid display the un-tabbed version always used. */
+  .dev-panels-grid[data-tab-panel] { display: none; }
+  .dev-panels-grid[data-tab-panel].is-active-tab-panel { display: grid; }
   .dev-panel-wide { grid-column: 1 / -1; }
 
   .dev-panel {
@@ -139,6 +144,43 @@
   /* Anchor targets sit under the sticky nav without scroll-margin. */
   .dev-anchor { scroll-margin-top: 64px; }
 
+  /* Real show/hide tabs, requested directly to replace the scroll-to-
+     anchor jump-nav above on this specific page -- 23 panels spread
+     across only 4 anchor links meant clicking a category still dumped
+     you into a long, undifferentiated scroll of unrelated panels.
+     Reuses the exact same sticky/full-bleed/box-shadow solution as
+     .jump-nav (same real problems: 44px top body padding leaving a
+     see-through gutter, side padding needing a matching negative
+     margin) since nothing about switching to buttons changes any of
+     that geometry. */
+  .dev-tab-bar {
+    position: sticky; top: 0; z-index: 100; display: flex; gap: 6px; overflow-x: auto;
+    background: var(--bg); border-bottom: 1px solid var(--border);
+    padding: 10px 20px; margin: 0 -20px 20px;
+    box-shadow: 0 -44px 0 0 var(--bg), 0 4px 12px rgba(0,0,0,.35);
+  }
+  .dev-tab-btn {
+    display: flex; align-items: center; gap: 6px;
+    background: transparent; border: none; cursor: pointer;
+    color: var(--text-dim); font-size: 12.5px; white-space: nowrap;
+    padding: 6px 12px; border-radius: 6px; font-family:'Oswald',sans-serif;
+    transition: color .15s ease, background .15s ease;
+  }
+  .dev-tab-btn:hover { color: var(--orange-light); background: var(--bg-panel-2); }
+  .dev-tab-btn:active { transform: translateY(1px); }
+  .dev-tab-btn.is-active { color: var(--orange-light); background: var(--bg-panel-2); font-weight: 600; }
+  .dev-tab-btn .jump-nav-icon { font-size: 15px; line-height: 1; }
+  /* The one real <a> in this bar (Content, links to a different page
+     entirely) -- same visual treatment as the buttons beside it. */
+  .dev-tab-bar > a {
+    display: flex; align-items: center; gap: 6px;
+    color: var(--text-dim); font-size: 12.5px; text-decoration: none; white-space: nowrap;
+    padding: 6px 12px; border-radius: 6px; font-family:'Oswald',sans-serif;
+    transition: color .15s ease, background .15s ease;
+  }
+  .dev-tab-bar > a:hover { color: var(--orange-light); background: var(--bg-panel-2); }
+  .dev-tab-bar > a:active { transform: translateY(1px); }
+
   /* At-a-glance status strip -- answers "is everything healthy?" without
      scrolling through panels or running the full health check. */
   .dev-status-strip {
@@ -164,6 +206,24 @@
   @keyframes devStatusPulse { 0%,100% { opacity: .35; } 50% { opacity: 1; } }
   @media (prefers-reduced-motion: reduce) {
     .dev-status-dot.checking { animation: none; }
+  }
+
+  /* Mobile-specific tightening, requested directly -- no dedicated
+     mobile rules existed for this page before this. Reclaims usable
+     width by trimming body/panel padding and the inter-panel gap, and
+     gives the new tab buttons a real minimum tap-target height (their
+     base 6px/12px padding alone doesn't reliably clear common mobile
+     touch-target guidelines). */
+  @media (max-width: 720px) {
+    body { padding: 44px 14px 60px; }
+    .dev-panel { padding: 14px; }
+    .dev-panels-grid { gap: 14px; }
+    .dev-tab-bar { padding: 8px 10px; margin: 0 -14px 16px; gap: 2px; }
+    .dev-tab-btn, .dev-tab-bar > a { min-height: 40px; padding: 8px 6px; font-size: 11.5px; }
+    /* Icons dropped on mobile specifically -- without this, 5 tabs
+       with icons genuinely don't fit on one row at real phone widths,
+       leaving the last tab invisible with no scroll hint at all. */
+    .dev-tab-btn .jump-nav-icon, .dev-tab-bar > a .jump-nav-icon { display: none; }
   }
 
   /* Added 2026-08-15 -- who's actually signed in, and under what role.
@@ -247,11 +307,12 @@
     <span class="dev-status-chip"><span class="dev-status-dot checking" id="statusDotSW"></span><span id="statusTextSW">Service worker</span></span>
   </div>
 
-  <nav class="jump-nav">
-    <a href="#nav-diagnostics"><span class="jump-nav-icon"><svg class="th-icon" aria-hidden="true"><use href="#icon-flask" xlink:href="#icon-flask"></use></svg></span>Diagnostics</a>
-    <a href="#nav-access"><span class="jump-nav-icon"><svg class="th-icon" aria-hidden="true"><use href="#icon-lock" xlink:href="#icon-lock"></use></svg></span>Access</a>
-    <a href="#nav-data"><span class="jump-nav-icon"><svg class="th-icon" aria-hidden="true"><use href="#icon-chart" xlink:href="#icon-chart"></use></svg></span>Data</a>
-    <a href="#nav-deploy"><span class="jump-nav-icon"><svg class="th-icon" aria-hidden="true"><use href="#icon-rocket" xlink:href="#icon-rocket"></use></svg></span>Deploy</a>
+  <nav class="dev-tab-bar" id="devTabBar">
+    <button type="button" class="dev-tab-btn" data-tab="health" onclick="switchDevToolsTab('health')"><span class="jump-nav-icon"><svg class="th-icon" aria-hidden="true"><use href="#icon-flask" xlink:href="#icon-flask"></use></svg></span>Health</button>
+    <button type="button" class="dev-tab-btn" data-tab="access" onclick="switchDevToolsTab('access')"><span class="jump-nav-icon"><svg class="th-icon" aria-hidden="true"><use href="#icon-lock" xlink:href="#icon-lock"></use></svg></span>Access</button>
+    <button type="button" class="dev-tab-btn" data-tab="session" onclick="switchDevToolsTab('session')"><span class="jump-nav-icon"><svg class="th-icon" aria-hidden="true"><use href="#icon-chart" xlink:href="#icon-chart"></use></svg></span>Session</button>
+    <button type="button" class="dev-tab-btn" data-tab="notifications" onclick="switchDevToolsTab('notifications')"><span class="jump-nav-icon"><svg class="th-icon" aria-hidden="true"><use href="#icon-bolt" xlink:href="#icon-bolt"></use></svg></span>Notifications</button>
+    <button type="button" class="dev-tab-btn" data-tab="deploy" onclick="switchDevToolsTab('deploy')"><span class="jump-nav-icon"><svg class="th-icon" aria-hidden="true"><use href="#icon-rocket" xlink:href="#icon-rocket"></use></svg></span>Deploy</button>
     <a href="/tools/site-content.html"><span class="jump-nav-icon"><svg class="th-icon" aria-hidden="true"><use href="#icon-note" xlink:href="#icon-note"></use></svg></span>Content</a>
   </nav>
 
@@ -260,29 +321,92 @@
     <div id="fullHealthCheckResults" style="margin-top:12px;"></div>
   </div>
 
-  <div class="dev-panels-grid">
+  <div class="dev-panels-grid" data-tab-panel="health">
 
-  <div class="dev-panel dev-owner-hidden dev-panel-wide">
-    <div class="dev-panel-heading">
-      <h2 id="nav-diagnostics" class="dev-anchor">Live consistency check</h2>
-      <button class="dev-info-bubble" onclick="openDevInfo('consistency')" aria-label="What does this do?" title="What does this do?">?</button>
+  <div class="dev-panel dev-owner-hidden dev-panel-wide is-collapsible" data-collapse-key="consistency">
+    <div class="dev-panel-heading" onclick="toggleDevPanel(this)">
+      <h2>Live consistency check</h2>
+      <button class="dev-info-bubble" onclick="event.stopPropagation(); openDevInfo('consistency')" aria-label="What does this do?" title="What does this do?">?</button>
+      <span class="dev-collapse-caret">&#9660;</span>
     </div>
-    <button class="secondary-btn" onclick="runLiveConsistencyCheck()" id="runCheckBtn">Run check</button>
-    <div id="consistencyResults" style="margin-top:16px;"></div>
+    <div class="dev-panel-body">
+      <button class="secondary-btn" onclick="runLiveConsistencyCheck()" id="runCheckBtn">Run check</button>
+      <div id="consistencyResults" style="margin-top:16px;"></div>
+    </div>
+  </div>
+
+  <div class="dev-panel dev-owner-hidden dev-panel-wide is-collapsible" data-collapse-key="dataquality">
+    <div class="dev-panel-heading" onclick="toggleDevPanel(this)">
+      <h2>Data quality check</h2>
+      <button class="dev-info-bubble" onclick="event.stopPropagation(); openDevInfo('dataquality')" aria-label="What does this do?" title="What does this do?">?</button>
+      <span class="dev-collapse-caret">&#9660;</span>
+    </div>
+    <div class="dev-panel-body">
+      <button class="secondary-btn" onclick="runDataQualityCheck()" id="runDataQualityBtn">Run check</button>
+      <div id="dataQualityResults" style="margin-top:16px;"></div>
+    </div>
+  </div>
+
+  <div class="dev-panel dev-owner-hidden">
+    <div class="dev-panel-heading">
+      <h2>Appliance Wiki health</h2>
+      <button class="dev-info-bubble" onclick="openDevInfo('wikihealth')" aria-label="What does this do?" title="What does this do?">?</button>
+    </div>
+    <div id="wikiHealth"></div>
+  </div>
+
+  <div class="dev-panel dev-owner-hidden">
+    <div class="dev-panel-heading">
+      <h2>Client errors</h2>
+      <button class="dev-info-bubble" onclick="openDevInfo('clienterrors')" aria-label="What does this do?" title="What does this do?">?</button>
+    </div>
+    <div id="clientErrorLog"></div>
+    <button class="secondary-btn" style="margin-top:12px;" onclick="clearClientErrorLog()">Clear log</button>
   </div>
 
   <div class="dev-panel dev-owner-hidden dev-panel-wide">
     <div class="dev-panel-heading">
-      <h2 id="nav-dataquality" class="dev-anchor">Data quality check</h2>
-      <button class="dev-info-bubble" onclick="openDevInfo('dataquality')" aria-label="What does this do?" title="What does this do?">?</button>
+      <h2>Uptime monitoring</h2>
+      <button class="dev-info-bubble" onclick="openDevInfo('uptimemonitoring')" aria-label="What does this do?" title="What does this do?">?</button>
     </div>
-    <button class="secondary-btn" onclick="runDataQualityCheck()" id="runDataQualityBtn">Run check</button>
-    <div id="dataQualityResults" style="margin-top:16px;"></div>
+    <div id="uptimeStatus"></div>
+    <div id="uptimeIncidentsList" class="dev-scrollable-list" style="margin-top:10px;"></div>
   </div>
+
+  <div class="dev-panel dev-owner-hidden dev-panel-wide is-collapsible" data-collapse-key="advisorhealth">
+    <div class="dev-panel-heading" onclick="toggleDevPanel(this)">
+      <h2>Advisor health</h2>
+      <button class="dev-info-bubble" onclick="event.stopPropagation(); openDevInfo('advisorhealth')" aria-label="What does this do?" title="What does this do?">?</button>
+      <span class="dev-collapse-caret">&#9660;</span>
+    </div>
+    <div class="dev-panel-body">
+      <div class="dev-status-chip" style="margin-bottom:12px;" id="advisorSetupNotice">
+        Needs the MANAGEMENT_API_PAT secret in Supabase (Edge Functions -> Secrets) to work -- click Refresh to check.
+      </div>
+      <button class="secondary-btn" style="margin-bottom:12px;" onclick="renderAdvisorHealth()">Refresh</button>
+      <div id="advisorHealthResults"></div>
+    </div>
+  </div>
+
+  <div class="dev-panel dev-owner-hidden dev-panel-wide is-collapsible" data-collapse-key="dataintegrity">
+    <div class="dev-panel-heading" onclick="toggleDevPanel(this)">
+      <h2>Data integrity check</h2>
+      <button class="dev-info-bubble" onclick="event.stopPropagation(); openDevInfo('dataintegrity')" aria-label="What does this do?" title="What does this do?">?</button>
+      <span class="dev-collapse-caret">&#9660;</span>
+    </div>
+    <div class="dev-panel-body">
+      <button class="secondary-btn" style="margin-bottom:12px;" onclick="runDataIntegrityCheck()">Run check</button>
+      <div id="dataIntegrityResults"><p class="tool-sub">Cross-checks job photo records against actual storage files in both directions, and flags any lead with obviously missing contact info.</p></div>
+    </div>
+  </div>
+
+  </div>
+
+  <div class="dev-panels-grid" data-tab-panel="access">
 
   <div class="dev-panel dev-panel-wide">
     <div class="dev-panel-heading">
-      <h2 id="nav-clients" class="dev-anchor">Client registry</h2>
+      <h2>Client registry</h2>
       <button class="dev-info-bubble" onclick="openDevInfo('clientregistry')" aria-label="What does this do?" title="What does this do?">?</button>
     </div>
     <button class="secondary-btn" onclick="renderClientRegistry()" id="clientRegistryBtn">Show registry</button>
@@ -291,11 +415,15 @@
 
   <div class="dev-panel dev-panel-wide">
     <div class="dev-panel-heading">
-      <h2 id="nav-access" class="dev-anchor">Account roles</h2>
+      <h2>Account roles</h2>
       <button class="dev-info-bubble" onclick="openDevInfo('roles')" aria-label="What does this do?" title="What does this do?">?</button>
     </div>
     <div id="accountRolesList" class="dev-scrollable-list"></div>
   </div>
+
+  </div>
+
+  <div class="dev-panels-grid" data-tab-panel="session">
 
   <div class="dev-panel dev-owner-hidden">
     <div class="dev-panel-heading">
@@ -311,18 +439,10 @@
 
   <div class="dev-panel dev-owner-hidden">
     <div class="dev-panel-heading">
-      <h2 id="nav-data" class="dev-anchor">Local data snapshot</h2>
+      <h2>Local data snapshot</h2>
       <button class="dev-info-bubble" onclick="openDevInfo('localdata')" aria-label="What does this do?" title="What does this do?">?</button>
     </div>
     <div id="localDataSnapshot" class="dev-scrollable-list"></div>
-  </div>
-
-  <div class="dev-panel dev-owner-hidden">
-    <div class="dev-panel-heading">
-      <h2>Appliance Wiki health</h2>
-      <button class="dev-info-bubble" onclick="openDevInfo('wikihealth')" aria-label="What does this do?" title="What does this do?">?</button>
-    </div>
-    <div id="wikiHealth"></div>
   </div>
 
   <div class="dev-panel dev-owner-hidden">
@@ -342,22 +462,20 @@
     <button class="secondary-btn" style="margin-top:12px;" onclick="clearServiceWorkerAndCaches()">Clear cache &amp; unregister</button>
   </div>
 
-  <div class="dev-panel dev-owner-hidden">
-    <div class="dev-panel-heading">
-      <h2>Client errors</h2>
-      <button class="dev-info-bubble" onclick="openDevInfo('clienterrors')" aria-label="What does this do?" title="What does this do?">?</button>
-    </div>
-    <div id="clientErrorLog"></div>
-    <button class="secondary-btn" style="margin-top:12px;" onclick="clearClientErrorLog()">Clear log</button>
   </div>
 
-  <div class="dev-panel dev-owner-hidden">
-    <div class="dev-panel-heading">
+  <div class="dev-panels-grid" data-tab-panel="notifications">
+
+  <div class="dev-panel dev-owner-hidden is-collapsible" data-collapse-key="pushtest">
+    <div class="dev-panel-heading" onclick="toggleDevPanel(this)">
       <h2>Push notification test</h2>
-      <button class="dev-info-bubble" onclick="openDevInfo('pushtest')" aria-label="What does this do?" title="What does this do?">?</button>
+      <button class="dev-info-bubble" onclick="event.stopPropagation(); openDevInfo('pushtest')" aria-label="What does this do?" title="What does this do?">?</button>
+      <span class="dev-collapse-caret">&#9660;</span>
     </div>
-    <div id="pushTestResult"></div>
-    <button class="secondary-btn" style="margin-top:12px;" id="pushTestBtn" onclick="runPushNotificationTest()">Send test lead</button>
+    <div class="dev-panel-body">
+      <div id="pushTestResult"></div>
+      <button class="secondary-btn" style="margin-top:12px;" id="pushTestBtn" onclick="runPushNotificationTest()">Send test lead</button>
+    </div>
   </div>
 
   <div class="dev-panel dev-owner-hidden is-collapsible" data-collapse-key="pushhistory">
@@ -387,18 +505,13 @@
     <div id="flaggedItemsList"></div>
   </div>
 
-  <div class="dev-panel dev-owner-hidden dev-panel-wide">
-    <div class="dev-panel-heading">
-      <h2>Uptime monitoring</h2>
-      <button class="dev-info-bubble" onclick="openDevInfo('uptimemonitoring')" aria-label="What does this do?" title="What does this do?">?</button>
-    </div>
-    <div id="uptimeStatus"></div>
-    <div id="uptimeIncidentsList" class="dev-scrollable-list" style="margin-top:10px;"></div>
   </div>
+
+  <div class="dev-panels-grid" data-tab-panel="deploy">
 
   <div class="dev-panel dev-owner-hidden dev-panel-wide">
     <div class="dev-panel-heading">
-      <h2 id="nav-deploy" class="dev-anchor">Deploy history</h2>
+      <h2>Deploy history</h2>
       <button class="dev-info-bubble" onclick="openDevInfo('deploy')" aria-label="What does this do?" title="What does this do?">?</button>
     </div>
     <div id="deployStatus"></div>
@@ -435,47 +548,38 @@
     </div>
   </div>
 
-  <div class="dev-panel dev-owner-hidden">
-    <div class="dev-panel-heading">
-      <h2>Quick links</h2>
-      <button class="dev-info-bubble" onclick="openDevInfo('links')" aria-label="What does this do?" title="What does this do?">?</button>
-    </div>
-    <div class="dev-links">
-      <a href="https://github.com/carwash2020/webpagehosting" target="_blank" rel="noopener"><svg class="th-icon" aria-hidden="true"><use href="#icon-folder" xlink:href="#icon-folder"></use></svg> Repo</a>
-      <a href="https://github.com/carwash2020/webpagehosting/actions" target="_blank" rel="noopener"><svg class="th-icon" aria-hidden="true"><use href="#icon-bolt" xlink:href="#icon-bolt"></use></svg> Actions</a>
-      <a href="https://supabase.com/dashboard/project/csvfqdjuobylgafgolho" target="_blank" rel="noopener"><svg class="th-icon" aria-hidden="true"><use href="#icon-chart" xlink:href="#icon-chart"></use></svg> Supabase</a>
-      <a href="https://hetrixtools.com/dashboard/uptime-monitors/" target="_blank" rel="noopener"><svg class="th-icon" aria-hidden="true"><use href="#icon-signal" xlink:href="#icon-signal"></use></svg> Uptime</a>
-      <a href="https://www.triplehenterprisesllc.biz/" target="_blank" rel="noopener"><svg class="th-icon" aria-hidden="true"><use href="#icon-globe" xlink:href="#icon-globe"></use></svg> Live site</a>
-    </div>
-  </div>
-
-  <div class="dev-panel dev-owner-hidden dev-panel-wide">
-    <div class="dev-panel-heading">
-      <h2>Trigger workflows</h2>
-      <button class="dev-info-bubble" onclick="openDevInfo('triggerworkflows')" aria-label="What does this do?" title="What does this do?">?</button>
-    </div>
-    <div class="dev-trigger-grid">
-      <button class="secondary-btn" data-workflow="backup-cms-content.yml" onclick="triggerWorkflow(this)">Backup CMS content</button>
-      <button class="secondary-btn" data-workflow="backup-business-data.yml" onclick="triggerWorkflow(this)">Backup business data</button>
-      <button class="secondary-btn" data-workflow="check-links.yml" onclick="triggerWorkflow(this)">Check links</button>
-      <button class="secondary-btn" data-workflow="lighthouse.yml" onclick="triggerWorkflow(this)">Lighthouse CI</button>
-      <button class="secondary-btn" data-workflow="cleanup-artifacts.yml" onclick="triggerWorkflow(this)">Clean up artifacts</button>
-    </div>
-    <div id="triggerWorkflowResult" style="margin-top:10px; font-size:12.5px; color:var(--text-dim);"></div>
-  </div>
-
-  <div class="dev-panel dev-owner-hidden dev-panel-wide is-collapsible" data-collapse-key="advisorhealth">
+  <div class="dev-panel dev-owner-hidden is-collapsible" data-collapse-key="quicklinks">
     <div class="dev-panel-heading" onclick="toggleDevPanel(this)">
-      <h2>Advisor health</h2>
-      <button class="dev-info-bubble" onclick="event.stopPropagation(); openDevInfo('advisorhealth')" aria-label="What does this do?" title="What does this do?">?</button>
+      <h2>Quick links</h2>
+      <button class="dev-info-bubble" onclick="event.stopPropagation(); openDevInfo('links')" aria-label="What does this do?" title="What does this do?">?</button>
       <span class="dev-collapse-caret">&#9660;</span>
     </div>
     <div class="dev-panel-body">
-      <div class="dev-status-chip" style="margin-bottom:12px;" id="advisorSetupNotice">
-        Needs the MANAGEMENT_API_PAT secret in Supabase (Edge Functions -> Secrets) to work -- click Refresh to check.
+      <div class="dev-links">
+        <a href="https://github.com/carwash2020/webpagehosting" target="_blank" rel="noopener"><svg class="th-icon" aria-hidden="true"><use href="#icon-folder" xlink:href="#icon-folder"></use></svg> Repo</a>
+        <a href="https://github.com/carwash2020/webpagehosting/actions" target="_blank" rel="noopener"><svg class="th-icon" aria-hidden="true"><use href="#icon-bolt" xlink:href="#icon-bolt"></use></svg> Actions</a>
+        <a href="https://supabase.com/dashboard/project/csvfqdjuobylgafgolho" target="_blank" rel="noopener"><svg class="th-icon" aria-hidden="true"><use href="#icon-chart" xlink:href="#icon-chart"></use></svg> Supabase</a>
+        <a href="https://hetrixtools.com/dashboard/uptime-monitors/" target="_blank" rel="noopener"><svg class="th-icon" aria-hidden="true"><use href="#icon-signal" xlink:href="#icon-signal"></use></svg> Uptime</a>
+        <a href="https://www.triplehenterprisesllc.biz/" target="_blank" rel="noopener"><svg class="th-icon" aria-hidden="true"><use href="#icon-globe" xlink:href="#icon-globe"></use></svg> Live site</a>
       </div>
-      <button class="secondary-btn" style="margin-bottom:12px;" onclick="renderAdvisorHealth()">Refresh</button>
-      <div id="advisorHealthResults"></div>
+    </div>
+  </div>
+
+  <div class="dev-panel dev-owner-hidden dev-panel-wide is-collapsible" data-collapse-key="triggerworkflows">
+    <div class="dev-panel-heading" onclick="toggleDevPanel(this)">
+      <h2>Trigger workflows</h2>
+      <button class="dev-info-bubble" onclick="event.stopPropagation(); openDevInfo('triggerworkflows')" aria-label="What does this do?" title="What does this do?">?</button>
+      <span class="dev-collapse-caret">&#9660;</span>
+    </div>
+    <div class="dev-panel-body">
+      <div class="dev-trigger-grid">
+        <button class="secondary-btn" data-workflow="backup-cms-content.yml" onclick="triggerWorkflow(this)">Backup CMS content</button>
+        <button class="secondary-btn" data-workflow="backup-business-data.yml" onclick="triggerWorkflow(this)">Backup business data</button>
+        <button class="secondary-btn" data-workflow="check-links.yml" onclick="triggerWorkflow(this)">Check links</button>
+        <button class="secondary-btn" data-workflow="lighthouse.yml" onclick="triggerWorkflow(this)">Lighthouse CI</button>
+        <button class="secondary-btn" data-workflow="cleanup-artifacts.yml" onclick="triggerWorkflow(this)">Clean up artifacts</button>
+      </div>
+      <div id="triggerWorkflowResult" style="margin-top:10px; font-size:12.5px; color:var(--text-dim);"></div>
     </div>
   </div>
 
@@ -491,16 +595,6 @@
     </div>
   </div>
 
-  <div class="dev-panel dev-owner-hidden dev-panel-wide is-collapsible" data-collapse-key="dataintegrity">
-    <div class="dev-panel-heading" onclick="toggleDevPanel(this)">
-      <h2>Data integrity check</h2>
-      <button class="dev-info-bubble" onclick="event.stopPropagation(); openDevInfo('dataintegrity')" aria-label="What does this do?" title="What does this do?">?</button>
-      <span class="dev-collapse-caret">&#9660;</span>
-    </div>
-    <div class="dev-panel-body">
-      <button class="secondary-btn" style="margin-bottom:12px;" onclick="runDataIntegrityCheck()">Run check</button>
-      <div id="dataIntegrityResults"><p class="tool-sub">Cross-checks job photo records against actual storage files in both directions, and flags any lead with obviously missing contact info.</p></div>
-    </div>
   </div>
 
 <script>
@@ -1224,6 +1318,43 @@
   function applyOwnerRestrictedView() {
     if (canManageRoles()) return; // Developer -- full access, nothing hidden
     document.querySelectorAll('.dev-owner-hidden').forEach(el => { el.style.display = 'none'; });
+  }
+
+  const DEV_TAB_KEY = 'th_dev_tools_active_tab';
+
+  function switchDevToolsTab(name) {
+    document.querySelectorAll('.dev-panels-grid[data-tab-panel]').forEach(grid => {
+      grid.classList.toggle('is-active-tab-panel', grid.getAttribute('data-tab-panel') === name);
+    });
+    document.querySelectorAll('.dev-tab-btn').forEach(btn => {
+      btn.classList.toggle('is-active', btn.getAttribute('data-tab') === name);
+    });
+    try { sessionStorage.setItem(DEV_TAB_KEY, name); } catch (e) { /* private mode, ignore */ }
+  }
+
+  // Runs after applyOwnerRestrictedView, so it can tell which tabs
+  // actually still have visible content for the current role -- an
+  // Owner account ends up with every panel hidden except Access, so
+  // every other tab button is hidden here too rather than left
+  // clickable-but-empty, and the initial tab shown is always one that
+  // genuinely has something in it.
+  function initDevToolsTabs() {
+    const tabBtns = Array.from(document.querySelectorAll('.dev-tab-btn'));
+    const visibleTabNames = [];
+
+    tabBtns.forEach(btn => {
+      const name = btn.getAttribute('data-tab');
+      const grid = document.querySelector('.dev-panels-grid[data-tab-panel="' + name + '"]');
+      const hasVisiblePanel = grid && Array.from(grid.children).some(child => child.style.display !== 'none');
+      btn.style.display = hasVisiblePanel ? '' : 'none';
+      if (hasVisiblePanel) visibleTabNames.push(name);
+    });
+
+    let initial = null;
+    try { initial = sessionStorage.getItem(DEV_TAB_KEY); } catch (e) { initial = null; }
+    if (!initial || !visibleTabNames.includes(initial)) initial = visibleTabNames[0] || 'health';
+
+    switchDevToolsTab(initial);
   }
 
   function effectiveCanManageRoles() {
@@ -2258,6 +2389,7 @@
       initCollapsiblePanels();
       renderStatusStrip();
       applyOwnerRestrictedView();
+      initDevToolsTabs();
     };
     // isDevAccount() depends on a real session already being loaded --
     // give initSyncOnLoad (which handles token refresh) a chance first,

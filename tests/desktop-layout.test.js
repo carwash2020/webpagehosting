@@ -196,13 +196,14 @@ test('the shared .jump-nav rule switches from sticky to fixed on desktop, positi
   assert.match(desktopBlock[1], /top:\s*61px/, 'should sit right below the fixed header, not overlap it');
 });
 
-test('workspace.html and dev-tools.html, the only 2 pages with a .jump-nav bar, have extra padding-top to account for both the header AND the jump-nav stacked, not just the header alone', () => {
-  for (const page of ['workspace.html', 'dev-tools.html']) {
+test('workspace.html and dev-tools.html each have a sticky bar stacked below the header (jump-nav on workspace.html, dev-tab-bar on dev-tools.html since its tab redesign), and both have extra padding-top to account for header AND that bar stacked, not just the header alone', () => {
+  const stickyBarClassByPage = { 'workspace.html': 'jump-nav', 'dev-tools.html': 'dev-tab-bar' };
+  for (const [page, stickyBarClass] of Object.entries(stickyBarClassByPage)) {
     const src = fs.readFileSync(path.join(TOOLS_DIR, page), 'utf8');
-    assert.match(src, /class="jump-nav"/, page + ' was expected to have a jump-nav bar');
+    assert.match(src, new RegExp('class="' + stickyBarClass + '"'), page + ' was expected to have a ' + stickyBarClass + ' bar');
     const paddingMatch = src.match(/@media \(min-width: 1024px\) \{ body \{[^}]*padding-top: (\d+)px;[^}]*\} \}/);
     assert.ok(paddingMatch);
-    assert.ok(parseInt(paddingMatch[1], 10) > 75, page + ' needs more than the header-only 75px, since it also has a jump-nav bar stacked below it');
+    assert.ok(parseInt(paddingMatch[1], 10) > 75, page + ' needs more than the header-only 75px, since it also has a sticky bar stacked below it');
   }
 });
 
