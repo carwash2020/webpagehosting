@@ -632,6 +632,69 @@ async function deleteLead(id) {
   }
 }
 
+// Requested directly, as part of connecting the new booking system
+// (replacing Cal.com) to the Job Tracker and Dev Tools. Only ever
+// fetches unconverted, confirmed bookings from today onward -- a
+// booking that's already become a job (job_id set), is cancelled, or
+// is in the past has nothing left to do here.
+async function fetchUnconvertedBookings() {
+  if (!isSyncConfigured()) return { ok: false, error: 'not-configured', bookings: [] };
+  try {
+    const todayMidnightUtc = new Date();
+    todayMidnightUtc.setHours(0, 0, 0, 0);
+    const res = await fetch(
+      `${SUPABASE_URL}/rest/v1/th_bookings?select=*&status=eq.confirmed&job_id=is.null&start_at=gte.${encodeURIComponent(todayMidnightUtc.toISOString())}&order=start_at.asc&limit=50`,
+      { headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': `Bearer ${getAuthToken()}` } },
+    );
+    if (!res.ok) return { ok: false, error: 'http-' + res.status, bookings: [] };
+    const bookings = await res.json();
+    return { ok: true, bookings };
+  } catch (e) {
+    return { ok: false, error: 'network', bookings: [] };
+  }
+}
+
+// Sets job_id on a booking once it's been turned into a real Job
+// Tracker entry -- this is what keeps fetchUnconvertedBookings() from
+// showing the same booking again on the next load.
+async function markBookingConverted(id, jobId) {
+  if (!isSyncConfigured()) return { ok: false, error: 'not-configured' };
+  try {
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/th_bookings?id=eq.${id}`, {
+      method: 'PATCH',
+      headers: {
+        'Content-Type': 'application/json',
+        'apikey': SUPABASE_ANON_KEY,
+        'Authorization': `Bearer ${getAuthToken()}`,
+        'Prefer': 'return=minimal',
+      },
+      body: JSON.stringify({ job_id: jobId }),
+    });
+    if (!res.ok) return { ok: false, error: 'http-' + res.status };
+    return { ok: true };
+  } catch (e) {
+    return { ok: false, error: 'network' };
+  }
+}
+
+async function deleteBooking(id) {
+  if (!isSyncConfigured()) return { ok: false, error: 'not-configured' };
+  try {
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/th_bookings?id=eq.${id}`, {
+      method: 'DELETE',
+      headers: {
+        'apikey': SUPABASE_ANON_KEY,
+        'Authorization': `Bearer ${getAuthToken()}`,
+        'Prefer': 'return=minimal',
+      },
+    });
+    if (!res.ok) return { ok: false, error: 'http-' + res.status };
+    return { ok: true };
+  } catch (e) {
+    return { ok: false, error: 'network' };
+  }
+}
+
 // ---------------------------------------------------------------------------
 // JOB PHOTOS — actual image files live in Supabase Storage (a bucket named
 // `job-photos`), which is a different thing from the database tables above.

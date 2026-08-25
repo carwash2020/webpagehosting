@@ -432,6 +432,9 @@
     <div class="analytics-subheading is-first">New Leads</div>
     <div id="leadsList"></div>
 
+    <div class="analytics-subheading">Upcoming Bookings</div>
+    <div id="bookingsList"></div>
+
     <div class="analytics-subheading">Due Soon (next 7 days, not done)</div>
     <div id="upcomingJobs"></div>
 
@@ -1460,6 +1463,107 @@
     loadAndRenderLeads();
   }
 
+  // Requested directly, connecting the new booking system (replacing
+  // Cal.com) to the Job Tracker: a real appointment shouldn't sit in
+  // a separate, disconnected system from every other job.
+  async function loadAndRenderBookings() {
+    const container = document.getElementById('bookingsList');
+    if (typeof fetchUnconvertedBookings !== 'function' || !isSyncConfigured()) {
+      container.innerHTML = '<div class="empty-state-small"><svg class="th-icon" aria-hidden="true"><use href="#icon-link" xlink:href="#icon-link"></use></svg>Cloud sync isn\'t set up yet, so bookings can\'t load.</div>';
+      actionItemCounts.bookings = 0;
+      updateActionItemsBadge();
+      return;
+    }
+    const result = await fetchUnconvertedBookings();
+    if (!result.ok) {
+      container.innerHTML = '<div class="empty-state-small is-warning"><svg class="th-icon" aria-hidden="true"><use href="#icon-warning" xlink:href="#icon-warning"></use></svg>Couldn\'t load bookings (' + escapeHtml(result.error) + ').</div>';
+      actionItemCounts.bookings = 0;
+      updateActionItemsBadge();
+      return;
+    }
+    actionItemCounts.bookings = result.bookings.length;
+    updateActionItemsBadge();
+    if (result.bookings.length === 0) {
+      container.innerHTML = '<div class="empty-state-small"><svg class="th-icon" aria-hidden="true"><use href="#icon-inbox" xlink:href="#icon-inbox"></use></svg>No new bookings.</div>';
+      return;
+    }
+    container.innerHTML = result.bookings.map(b => {
+      const start = new Date(b.start_at);
+      const dateLabel = new Intl.DateTimeFormat('en-US', { timeZone: 'America/Denver', weekday: 'short', month: 'short', day: 'numeric' }).format(start);
+      const timeLabel = new Intl.DateTimeFormat('en-US', { timeZone: 'America/Denver', hour: 'numeric', minute: '2-digit' }).format(start);
+      return `
+      <div class="lead-card" data-booking-id="${b.id}">
+        <div class="lead-card-top">
+          <div>
+            <div class="lead-card-name">${escapeHtml(b.name || '(no name)')}</div>
+            <div class="lead-card-meta">${escapeHtml(b.phone || '')}${b.email ? ' &middot; ' + escapeHtml(b.email) : ''}</div>
+            <div class="lead-card-meta">${escapeHtml(b.service_label)} &middot; ${dateLabel} at ${timeLabel}</div>
+          </div>
+          <div class="dash-list-item-right">
+            <button class="lead-toggle-btn is-new" onclick="convertBookingToJob(${b.id})">Add to Jobs</button>
+            <button class="small-btn danger" onclick="deleteBookingFromDashboard(${b.id})">Delete</button>
+          </div>
+        </div>
+        ${b.notes ? '<div class="lead-card-details">"' + escapeHtml(b.notes) + '"</div>' : ''}
+      </div>`;
+    }).join('');
+  }
+
+  async function convertBookingToJob(id) {
+    const result = await fetchUnconvertedBookings();
+    const booking = result.ok ? result.bookings.find(b => b.id === id) : null;
+    if (!booking) { await showAlert('Could not find that booking -- it may have already been converted or removed.'); loadAndRenderBookings(); return; }
+
+    const start = new Date(booking.start_at);
+    const end = new Date(booking.end_at);
+    const dateParts = new Intl.DateTimeFormat('en-US', { timeZone: 'America/Denver', year: 'numeric', month: '2-digit', day: '2-digit' }).formatToParts(start);
+    const map = {};
+    dateParts.forEach(p => { map[p.type] = p.value; });
+    const jobDate = `${map.year}-${map.month}-${map.day}`;
+    const timeFmt = new Intl.DateTimeFormat('en-US', { timeZone: 'America/Denver', hour: 'numeric', minute: '2-digit' });
+    const timeWindow = timeFmt.format(start) + ' \u2013 ' + timeFmt.format(end);
+
+    const clientId = (booking.name && typeof thEnsureClient === 'function')
+      ? (thEnsureClient(booking.name, { phone: booking.phone, address: booking.address }) || {}).id
+      : undefined;
+
+    const jobs = loadJobs();
+    const newId = Date.now();
+    const currentUser = (typeof getCurrentUserEmail === 'function') ? getCurrentUserEmail() : null;
+    jobs.push({
+      id: newId,
+      title: booking.service_label,
+      client: booking.name || '',
+      clientId,
+      phone: booking.phone || '',
+      address: booking.address || '',
+      priority: 'medium',
+      date: jobDate,
+      status: 'not-started',
+      notes: 'Booked online for ' + timeWindow + (booking.notes ? '\n\n' + booking.notes : ''),
+      showOnCalendar: true,
+      createdBy: currentUser,
+      lastEditedBy: currentUser,
+    });
+    localStorage.setItem('th_tracker_jobs', JSON.stringify(jobs));
+    if (typeof scheduleSync === 'function') scheduleSync();
+
+    const markResult = await markBookingConverted(id, newId);
+    if (!markResult.ok) {
+      await showAlert('Job created, but could not mark the booking as converted (' + markResult.error + ') -- it may show here again.');
+    }
+    showToast('Added to Jobs.');
+    loadAndRenderBookings();
+  }
+
+  async function deleteBookingFromDashboard(id) {
+    const confirmed = await showConfirm('Delete this booking? This cannot be undone.', { danger: true, confirmText: 'Delete' });
+    if (!confirmed) return;
+    const result = await deleteBooking(id);
+    if (!result.ok) { await showAlert('Could not delete: ' + result.error); }
+    loadAndRenderBookings();
+  }
+
   // ---------- Business Compliance (insurance + licenses) ----------
   const COMPLIANCE_KEY = 'th_compliance';
 
@@ -1584,13 +1688,14 @@
   // functions below (leads, due-soon, follow-ups, invoices) stashes its
   // own count here, then calls updateActionItemsBadge(). Keeps the badge
   // logic in one place instead of scattered across four functions.
-  const actionItemCounts = { leads: 0, duesoon: 0, followups: 0, unpaid: 0 };
+  const actionItemCounts = { leads: 0, bookings: 0, duesoon: 0, followups: 0, unpaid: 0 };
 
   function updateActionItemsBadge() {
     const badge = document.getElementById('actionItemsHeadingBadge');
     if (!badge) return;
     const parts = [];
     if (actionItemCounts.leads > 0) parts.push(actionItemCounts.leads + ' new lead' + (actionItemCounts.leads === 1 ? '' : 's'));
+    if (actionItemCounts.bookings > 0) parts.push(actionItemCounts.bookings + ' new booking' + (actionItemCounts.bookings === 1 ? '' : 's'));
     if (actionItemCounts.duesoon > 0) parts.push(actionItemCounts.duesoon + ' due soon');
     if (actionItemCounts.followups > 0) parts.push(actionItemCounts.followups + ' follow-up' + (actionItemCounts.followups === 1 ? '' : 's'));
     if (actionItemCounts.unpaid > 0) parts.push(actionItemCounts.unpaid + ' unpaid');
@@ -2069,6 +2174,7 @@
     renderFollowups();
     renderInvoicesList();
     loadAndRenderLeads();
+    loadAndRenderBookings();
     loadAndRenderGalleryQueue();
     renderCompliance();
   }

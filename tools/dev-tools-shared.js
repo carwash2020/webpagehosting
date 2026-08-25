@@ -64,6 +64,10 @@
       title: 'Push notification history',
       body: `<p>Reads notification_log directly -- the same table the Send-Push edge function's own de-duplication logic uses to decide whether a category has already fired recently, so this is the real record of what's actually gone out, not a separate log kept just for display.</p><p>Doesn't confirm a push was actually received on any device, only that it was sent from this end -- same limitation as the test button above.</p>`,
     },
+    recentbookings: {
+      title: 'Recent bookings',
+      body: `<p>Reads th_bookings directly -- the last 20 appointments booked through the site, regardless of whether they've already been converted into a Job Tracker entry. This is specifically for confirming the booking pipeline itself actually worked (the guest's submission landed, the notification fired), separate from the Job Tracker conversion step, which is its own action taken later from the Dashboard's Upcoming Bookings panel.</p>`,
+    },
     knownissues: {
       title: 'Known issues',
       body: `<p>Real, still-open items -- add a new one right from here with "+ Add issue", check one off once it's actually resolved, or delete it once it's no longer worth tracking. Synced across devices, so anything either account logs shows up for both.</p>`,

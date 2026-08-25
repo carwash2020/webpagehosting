@@ -489,6 +489,18 @@
     </div>
   </div>
 
+  <div class="dev-panel dev-owner-hidden dev-panel-wide is-collapsible" data-collapse-key="recentbookings">
+    <div class="dev-panel-heading" onclick="toggleDevPanel(this)">
+      <h2>Recent bookings</h2>
+      <button class="dev-info-bubble" onclick="event.stopPropagation(); openDevInfo('recentbookings')" aria-label="What does this do?" title="What does this do?">?</button>
+      <span class="dev-collapse-caret">&#9660;</span>
+    </div>
+    <div class="dev-panel-body">
+      <button class="secondary-btn" style="margin-bottom:12px;" onclick="renderRecentBookings()">Refresh</button>
+      <div id="recentBookingsList" class="dev-scrollable-list"><p class="tool-sub">Click Refresh to load.</p></div>
+    </div>
+  </div>
+
   <div class="dev-panel dev-owner-hidden dev-panel-wide">
     <div class="dev-panel-heading">
       <h2>Known issues</h2>
@@ -769,6 +781,42 @@
     thDeleteClient(id);
     renderClientRegistry();
     showToast('Removed.');
+  }
+
+  // Requested directly, as the Dev Tools half of connecting the new
+  // booking system to the rest of the app. Deliberately shows EVERY
+  // recent booking regardless of conversion status -- unlike the
+  // Dashboard's Upcoming Bookings panel (unconverted only, since
+  // that's an action queue), this is specifically for confirming the
+  // pipeline itself worked, which conversion status doesn't answer.
+  async function renderRecentBookings() {
+    const el = document.getElementById('recentBookingsList');
+    el.innerHTML = '<p class="tool-sub">Loading...</p>';
+    try {
+      const res = await fetchWithTimeout(
+        SUPABASE_URL + '/rest/v1/th_bookings?select=*&order=created_at.desc&limit=20',
+        8000,
+        { headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': 'Bearer ' + getAuthToken() } }
+      );
+      if (!res.ok) throw new Error('HTTP ' + res.status);
+      const bookings = await res.json();
+      if (!bookings.length) {
+        el.innerHTML = '<p class="tool-sub">No bookings yet.</p>';
+        return;
+      }
+      el.innerHTML = bookings.map(b => {
+        const start = new Date(b.start_at);
+        const dateLabel = new Intl.DateTimeFormat('en-US', { timeZone: 'America/Denver', weekday: 'short', month: 'short', day: 'numeric' }).format(start);
+        const timeLabel = new Intl.DateTimeFormat('en-US', { timeZone: 'America/Denver', hour: 'numeric', minute: '2-digit' }).format(start);
+        const statusLabel = b.status === 'cancelled' ? 'Cancelled' : (b.job_id ? 'Converted to job' : 'Confirmed');
+        const statusClass = b.status === 'cancelled' ? 'fail' : (b.job_id ? 'pass' : 'pass');
+        return '<div class="dev-check-row"><div><div>' + escapeHtml(b.name) + ' \u2014 ' + escapeHtml(b.service_label) + '</div>' +
+          '<div class="dev-check-detail">' + dateLabel + ' at ' + timeLabel + (b.phone ? ' &middot; ' + escapeHtml(b.phone) : '') + '</div></div>' +
+          '<span class="dev-check-status ' + statusClass + '">' + statusLabel + '</span></div>';
+      }).join('');
+    } catch (e) {
+      el.innerHTML = '<p class="tool-sub">Couldn\'t load bookings (' + escapeHtml(e.message) + ').</p>';
+    }
   }
 
   async function runDataQualityCheck() {
