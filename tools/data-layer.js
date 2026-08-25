@@ -132,6 +132,27 @@ function thNormalizeClientName(name) {
 function thLoadClients() { return thRead(TH_KEYS.clients, []); }
 function thSaveClients(list) { return thWrite(TH_KEYS.clients, list); }
 
+// Tombstones for deleted clients (2026-08-25) -- fixes a real, reported
+// bug: deleting a client silently re-added it. thDeleteClient only ever
+// removes the registry entry, by design leaving the client's jobs/
+// invoices untouched (see its own confirm dialog text) -- which means
+// thBackfillClients, seeing that name still referenced with no matching
+// registry record, would recreate it the next time it ran. A cross-
+// device sync could resurrect it even sooner, since a union merge (see
+// sync.js's mergeRecordArrays) brings back any record still present on
+// a stale remote copy -- it has no way to tell "never existed" apart
+// from "existed and was deleted." Recording BOTH the id (consulted by
+// the sync-merge path, since a stale copy carries the same original id)
+// and the normalized name (consulted by the backfill path, since that's
+// the only thing it has to go on) closes both resurrection routes.
+const TH_CLIENT_TOMBSTONES_KEY = 'th_client_tombstones';
+function thLoadClientTombstones() { return thRead(TH_CLIENT_TOMBSTONES_KEY, []); }
+function thAddClientTombstone(id, name) {
+  const list = thLoadClientTombstones();
+  list.push({ id, normalizedName: thNormalizeClientName(name), deletedAt: new Date().toISOString() });
+  thWrite(TH_CLIENT_TOMBSTONES_KEY, list);
+}
+
 // "Flag this page" queue (2026-08-21), requested directly: a quick way
 // to flag something to come back to later, for a moment when there
 // isn't time to write a full message. Each entry: { id, page, note,
@@ -169,10 +190,14 @@ function thDeleteFlaggedItem(id) {
 // remove a duplicate entry. Removes only the registry record itself --
 // never the underlying jobs/invoices/quotes, which are separate, real
 // records matched by name independently of any specific registry
-// entry, so nothing else is affected by removing one.
+// entry, so nothing else is affected by removing one. Now also records
+// a tombstone (see above) so the deletion actually sticks.
 function thDeleteClient(id) {
-  const list = thLoadClients().filter(c => c.id !== id);
+  const existing = thLoadClients();
+  const target = existing.find(c => c.id === id);
+  const list = existing.filter(c => c.id !== id);
   thSaveClients(list);
+  if (target) thAddClientTombstone(id, target.name);
   return list;
 }
 
@@ -221,11 +246,14 @@ function thBackfillClients() {
   const byKey = {};
   existing.forEach(c => { byKey[thNormalizeClientName(c.name)] = c; });
 
+  const tombstonedNames = new Set(thLoadClientTombstones().map(t => t.normalizedName));
+
   const discovered = thCollectClientNamesFromExistingData();
   let created = 0;
 
   Object.entries(discovered).forEach(([key, info]) => {
     if (byKey[key]) return; // already registered
+    if (tombstonedNames.has(key)) return; // deliberately deleted -- do not recreate
     const record = {
       // Date.now() alone would collide when creating several in the same
       // millisecond, which is exactly what a bulk backfill does.
