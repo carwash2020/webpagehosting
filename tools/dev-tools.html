@@ -60,7 +60,8 @@
      is-active-tab-panel, at which point it's restored to the exact
      same grid display the un-tabbed version always used. */
   .dev-panels-grid[data-tab-panel] { display: none; }
-  .dev-panels-grid[data-tab-panel].is-active-tab-panel { display: grid; }
+  .dev-panels-grid[data-tab-panel].is-active-tab-panel { display: grid; animation: devTabIn .2s ease both; }
+  @keyframes devTabIn { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: translateY(0); } }
   .dev-panel-wide { grid-column: 1 / -1; }
 
   .dev-panel {
@@ -313,6 +314,7 @@
     <button type="button" class="dev-tab-btn" data-tab="session" onclick="switchDevToolsTab('session')"><span class="jump-nav-icon"><svg class="th-icon" aria-hidden="true"><use href="#icon-chart" xlink:href="#icon-chart"></use></svg></span>Session</button>
     <button type="button" class="dev-tab-btn" data-tab="notifications" onclick="switchDevToolsTab('notifications')"><span class="jump-nav-icon"><svg class="th-icon" aria-hidden="true"><use href="#icon-bolt" xlink:href="#icon-bolt"></use></svg></span>Notifications</button>
     <button type="button" class="dev-tab-btn" data-tab="deploy" onclick="switchDevToolsTab('deploy')"><span class="jump-nav-icon"><svg class="th-icon" aria-hidden="true"><use href="#icon-rocket" xlink:href="#icon-rocket"></use></svg></span>Deploy</button>
+    <button type="button" class="dev-tab-btn" data-tab="reports" onclick="switchDevToolsTab('reports')"><span class="jump-nav-icon"><svg class="th-icon" aria-hidden="true"><use href="#icon-trending" xlink:href="#icon-trending"></use></svg></span>Reports</button>
     <a href="/tools/site-content.html"><span class="jump-nav-icon"><svg class="th-icon" aria-hidden="true"><use href="#icon-note" xlink:href="#icon-note"></use></svg></span>Content</a>
   </nav>
 
@@ -617,6 +619,37 @@
       <button class="secondary-btn" style="margin-bottom:12px;" onclick="renderStorageBrowser()">Refresh</button>
       <div id="storageBrowserResults"><p class="tool-sub">Click Refresh to scan all 3 buckets.</p></div>
     </div>
+  </div>
+
+  </div>
+
+  <div class="dev-panels-grid" data-tab-panel="reports">
+
+  <div class="dev-panel dev-owner-hidden dev-panel-wide">
+    <div class="dev-panel-heading">
+      <h2>Booking funnel health</h2>
+      <button class="dev-info-bubble" onclick="openDevInfo('bookingfunnel')" aria-label="What does this do?" title="What does this do?">?</button>
+    </div>
+    <button class="secondary-btn" style="margin-bottom:12px;" onclick="renderBookingFunnelReport()">Refresh</button>
+    <div id="bookingFunnelReport"><p class="tool-sub">Click Refresh to load.</p></div>
+  </div>
+
+  <div class="dev-panel dev-owner-hidden dev-panel-wide">
+    <div class="dev-panel-heading">
+      <h2>Lead response time</h2>
+      <button class="dev-info-bubble" onclick="openDevInfo('leadresponsetime')" aria-label="What does this do?" title="What does this do?">?</button>
+    </div>
+    <button class="secondary-btn" style="margin-bottom:12px;" onclick="renderLeadResponseTimeReport()">Refresh</button>
+    <div id="leadResponseTimeReport"><p class="tool-sub">Click Refresh to load.</p></div>
+  </div>
+
+  <div class="dev-panel dev-owner-hidden dev-panel-wide">
+    <div class="dev-panel-heading">
+      <h2>Uptime trend</h2>
+      <button class="dev-info-bubble" onclick="openDevInfo('uptimetrend')" aria-label="What does this do?" title="What does this do?">?</button>
+    </div>
+    <button class="secondary-btn" style="margin-bottom:12px;" onclick="renderUptimeTrendReport()">Refresh</button>
+    <div id="uptimeTrendReport"><p class="tool-sub">Click Refresh to load.</p></div>
   </div>
 
   </div>
@@ -1487,6 +1520,51 @@
     try { sessionStorage.setItem(DEV_TAB_KEY, name); } catch (e) { /* private mode, ignore */ }
   }
 
+  // Mobile swipe between tabs, requested directly. Attached to the
+  // panel content area specifically (checked via closest() on the
+  // touch target), not the tab bar itself -- the tab bar already has
+  // its own overflow-x:auto scroll for when the tabs don't all fit, and
+  // this shouldn't fight with that. Requires a clearly horizontal
+  // gesture (not just longer than it is tall, but decisively so) past a
+  // real minimum distance before treating it as a swipe rather than an
+  // incidental touch or a vertical scroll that happened to drift a
+  // little sideways.
+  (function initDevToolsSwipe() {
+    let startX = null, startY = null, active = false;
+    const MIN_DISTANCE = 60;
+    const HORIZONTAL_RATIO = 1.5; // deltaX must be at least this many times deltaY
+
+    document.addEventListener('touchstart', function (e) {
+      if (!e.target.closest('.dev-panels-grid[data-tab-panel]')) { active = false; return; }
+      if (e.touches.length !== 1) { active = false; return; }
+      startX = e.touches[0].clientX;
+      startY = e.touches[0].clientY;
+      active = true;
+    }, { passive: true });
+
+    document.addEventListener('touchend', function (e) {
+      if (!active || startX === null) return;
+      active = false;
+      const endX = e.changedTouches[0].clientX;
+      const endY = e.changedTouches[0].clientY;
+      const deltaX = endX - startX;
+      const deltaY = endY - startY;
+      if (Math.abs(deltaX) < MIN_DISTANCE) return;
+      if (Math.abs(deltaX) < Math.abs(deltaY) * HORIZONTAL_RATIO) return;
+
+      const tabBtns = Array.from(document.querySelectorAll('.dev-tab-btn')).filter(b => b.style.display !== 'none');
+      const currentBtn = tabBtns.find(b => b.classList.contains('is-active'));
+      if (!currentBtn) return;
+      const currentIdx = tabBtns.indexOf(currentBtn);
+      // Swiping left (finger moves toward the start, deltaX negative)
+      // advances to the next tab, matching how swiping between pages
+      // works everywhere else on a phone; swiping right goes back.
+      const nextIdx = deltaX < 0 ? currentIdx + 1 : currentIdx - 1;
+      if (nextIdx < 0 || nextIdx >= tabBtns.length) return; // never wraps
+      switchDevToolsTab(tabBtns[nextIdx].getAttribute('data-tab'));
+    }, { passive: true });
+  })();
+
   // Runs after applyOwnerRestrictedView, so it can tell which tabs
   // actually still have visible content for the current role -- an
   // Owner account ends up with every panel hidden except Access, so
@@ -1809,6 +1887,192 @@
       window._lastStorageScan = { buckets, results };
     } catch (e) {
       el.innerHTML = '<p class="tool-sub">Could not reach Supabase: ' + escapeHtml(e.message || String(e)) + '</p>';
+    }
+  }
+
+  // ---------------------------------------------------------------------
+  // REPORTS -- requested directly. Simple bars built from plain divs,
+  // matching every other panel on this page -- no charting library.
+  // Weekly buckets are rolling 7-day windows counting back from right
+  // now (bucket 0 = the last 7 days), not calendar weeks -- simpler to
+  // compute correctly and avoids a Sun-vs-Mon boundary argument nobody
+  // asked for.
+  // ---------------------------------------------------------------------
+
+  const REPORT_WEEKS = 8;
+
+  function bucketByWeek(dateStrings) {
+    // Returns an array of REPORT_WEEKS counts, oldest first, for a list
+    // of ISO date strings (nulls are skipped -- e.g. a booking that was
+    // never cancelled has no cancelled_at at all).
+    const buckets = new Array(REPORT_WEEKS).fill(0);
+    const now = Date.now();
+    const weekMs = 7 * 24 * 60 * 60 * 1000;
+    for (const s of dateStrings) {
+      if (!s) continue;
+      const ageMs = now - new Date(s).getTime();
+      if (ageMs < 0) continue; // clock skew or a future-dated row -- skip rather than guess
+      const idx = Math.floor(ageMs / weekMs);
+      if (idx < REPORT_WEEKS) buckets[REPORT_WEEKS - 1 - idx]++;
+    }
+    return buckets; // oldest week first, most recent (this week) last
+  }
+
+  function renderWeeklyBarRow(label, counts, color) {
+    const max = Math.max(1, ...counts);
+    return '<div style="margin-bottom:10px;">' +
+      '<div style="font-size:12px; color:var(--text-dim); margin-bottom:4px;">' + escapeHtml(label) + '</div>' +
+      '<div style="display:flex; align-items:flex-end; gap:4px; height:40px;">' +
+      counts.map(c => {
+        const h = Math.max(2, Math.round((c / max) * 40));
+        return '<div title="' + c + '" style="flex:1; background:' + color + '; height:' + h + 'px; border-radius:2px 2px 0 0;"></div>';
+      }).join('') +
+      '</div></div>';
+  }
+
+  async function renderBookingFunnelReport() {
+    const el = document.getElementById('bookingFunnelReport');
+    el.innerHTML = '<p class="tool-sub">Loading...</p>';
+    try {
+      if (typeof ensureFreshToken === 'function') await ensureFreshToken();
+      const res = await fetchWithTimeout(
+        SUPABASE_URL + '/rest/v1/th_bookings?select=created_at,cancelled_at,last_rescheduled_at',
+        8000,
+        { headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': 'Bearer ' + getAuthToken() } }
+      );
+      if (!res.ok) throw new Error('HTTP ' + res.status);
+      const rows = await res.json();
+
+      const newCounts = bucketByWeek(rows.map(r => r.created_at));
+      const cancelledCounts = bucketByWeek(rows.map(r => r.cancelled_at));
+      const rescheduledCounts = bucketByWeek(rows.map(r => r.last_rescheduled_at));
+
+      const totalNew = newCounts.reduce((a, b) => a + b, 0);
+      const totalCancelled = cancelledCounts.reduce((a, b) => a + b, 0);
+      const totalRescheduled = rescheduledCounts.reduce((a, b) => a + b, 0);
+
+      let html = '<p class="tool-sub" style="margin-bottom:12px;">Last ' + REPORT_WEEKS + ' weeks, oldest to most recent (right-most bar = this week).</p>';
+      html += renderWeeklyBarRow('New bookings (' + totalNew + ' total)', newCounts, 'var(--orange, #ff8000)');
+      html += renderWeeklyBarRow('Cancelled (' + totalCancelled + ' total)', cancelledCounts, '#e05555');
+      html += renderWeeklyBarRow('Rescheduled (' + totalRescheduled + ' total)', rescheduledCounts, '#5b9bd5');
+      if (totalNew > 0) {
+        const cancelPct = Math.round((totalCancelled / totalNew) * 100);
+        html += '<p class="tool-sub" style="margin-top:8px;">' + cancelPct + '% of new bookings over this window were later cancelled.</p>';
+      }
+      el.innerHTML = html;
+    } catch (e) {
+      el.innerHTML = '<p class="tool-sub">Could not load report: ' + escapeHtml(e.message || String(e)) + '</p>';
+    }
+  }
+
+  async function renderLeadResponseTimeReport() {
+    const el = document.getElementById('leadResponseTimeReport');
+    el.innerHTML = '<p class="tool-sub">Loading...</p>';
+    try {
+      if (typeof ensureFreshToken === 'function') await ensureFreshToken();
+      const res = await fetchWithTimeout(
+        SUPABASE_URL + '/rest/v1/th_leads?select=name,created_at,handled,handled_at',
+        8000,
+        { headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': 'Bearer ' + getAuthToken() } }
+      );
+      if (!res.ok) throw new Error('HTTP ' + res.status);
+      const rows = await res.json();
+
+      const handledWithTiming = rows.filter(r => r.handled && r.handled_at);
+      const hoursToHandle = handledWithTiming
+        .map(r => (new Date(r.handled_at).getTime() - new Date(r.created_at).getTime()) / (60 * 60 * 1000))
+        .filter(h => h >= 0); // guards against any bad data rather than letting a negative skew the average
+      hoursToHandle.sort((a, b) => a - b);
+
+      const unhandled = rows.filter(r => !r.handled);
+      const now = Date.now();
+      let oldestUnhandledHours = null;
+      if (unhandled.length) {
+        oldestUnhandledHours = Math.max(...unhandled.map(r => (now - new Date(r.created_at).getTime()) / (60 * 60 * 1000)));
+      }
+
+      function fmtHours(h) {
+        if (h < 24) return Math.round(h) + ' hour' + (Math.round(h) === 1 ? '' : 's');
+        return (h / 24).toFixed(1) + ' days';
+      }
+
+      let html = '';
+      if (hoursToHandle.length) {
+        const avg = hoursToHandle.reduce((a, b) => a + b, 0) / hoursToHandle.length;
+        const mid = Math.floor(hoursToHandle.length / 2);
+        const median = hoursToHandle.length % 2 === 0
+          ? (hoursToHandle[mid - 1] + hoursToHandle[mid]) / 2
+          : hoursToHandle[mid];
+        html += '<div class="dev-check-row"><span>Average time to mark a lead handled (last ' + hoursToHandle.length + ' handled leads)</span><span class="dev-check-status pass">' + fmtHours(avg) + '</span></div>';
+        html += '<div class="dev-check-row"><span>Median time to handle</span><span class="dev-check-status pass">' + fmtHours(median) + '</span></div>';
+      } else {
+        html += '<p class="tool-sub">No leads have been marked handled yet with timing data.</p>';
+      }
+      html += '<div class="dev-check-row"><span>Currently unhandled leads</span><span class="dev-check-status ' + (unhandled.length ? 'fail' : 'pass') + '">' + unhandled.length + '</span></div>';
+      if (oldestUnhandledHours !== null) {
+        html += '<p class="tool-sub" style="margin-top:6px;">The oldest of those has been waiting ' + fmtHours(oldestUnhandledHours) + '.</p>';
+      }
+      el.innerHTML = html;
+    } catch (e) {
+      el.innerHTML = '<p class="tool-sub">Could not load report: ' + escapeHtml(e.message || String(e)) + '</p>';
+    }
+  }
+
+  async function renderUptimeTrendReport() {
+    const el = document.getElementById('uptimeTrendReport');
+    el.innerHTML = '<p class="tool-sub">Loading...</p>';
+    try {
+      if (typeof ensureFreshToken === 'function') await ensureFreshToken();
+      const windowStart = new Date(Date.now() - REPORT_WEEKS * 7 * 24 * 60 * 60 * 1000).toISOString();
+      const res = await fetchWithTimeout(
+        SUPABASE_URL + '/rest/v1/th_uptime_checks?target=eq.website&checked_at=gte.' + encodeURIComponent(windowStart) + '&select=checked_at,status&order=checked_at.asc',
+        8000,
+        { headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': 'Bearer ' + getAuthToken() } }
+      );
+      if (!res.ok) throw new Error('HTTP ' + res.status);
+      const rows = await res.json();
+      if (!rows.length) {
+        el.innerHTML = '<p class="tool-sub">No uptime checks logged in this window yet.</p>';
+        return;
+      }
+
+      const now = Date.now();
+      const weekMs = 7 * 24 * 60 * 60 * 1000;
+      const upCounts = new Array(REPORT_WEEKS).fill(0);
+      const totalCounts = new Array(REPORT_WEEKS).fill(0);
+      for (const r of rows) {
+        const ageMs = now - new Date(r.checked_at).getTime();
+        if (ageMs < 0) continue;
+        const idx = Math.floor(ageMs / weekMs);
+        if (idx >= REPORT_WEEKS) continue;
+        const bucket = REPORT_WEEKS - 1 - idx;
+        totalCounts[bucket]++;
+        if (r.status === 'up') upCounts[bucket]++;
+      }
+      const pctByWeek = totalCounts.map((total, i) => total ? (upCounts[i] / total) * 100 : null);
+
+      const max = 100;
+      let barsHtml = '<div style="display:flex; align-items:flex-end; gap:4px; height:60px; margin-bottom:6px;">';
+      pctByWeek.forEach(pct => {
+        if (pct === null) {
+          barsHtml += '<div style="flex:1; background:var(--border); height:2px; border-radius:2px 2px 0 0;" title="no data"></div>';
+          return;
+        }
+        const h = Math.max(2, Math.round((pct / max) * 60));
+        const color = pct >= 99.5 ? '#2e7d4f' : pct >= 95 ? 'var(--orange, #ff8000)' : '#e05555';
+        barsHtml += '<div title="' + pct.toFixed(2) + '%" style="flex:1; background:' + color + '; height:' + h + 'px; border-radius:2px 2px 0 0;"></div>';
+      });
+      barsHtml += '</div>';
+
+      const overallUp = rows.filter(r => r.status === 'up').length;
+      const overallPct = (overallUp / rows.length) * 100;
+
+      let html = '<p class="tool-sub" style="margin-bottom:8px;">Last ' + REPORT_WEEKS + ' weeks, oldest to most recent (right-most bar = this week).</p>';
+      html += barsHtml;
+      html += '<p class="tool-sub">Overall uptime across this window: <strong style="color:var(--text);">' + overallPct.toFixed(2) + '%</strong></p>';
+      el.innerHTML = html;
+    } catch (e) {
+      el.innerHTML = '<p class="tool-sub">Could not load report: ' + escapeHtml(e.message || String(e)) + '</p>';
     }
   }
 
@@ -2598,12 +2862,13 @@
     <button class="help-modal-close" onclick="closeHelpModal()" aria-label="Close">&times;</button>
     <h3>How to Use: Dev Tools</h3>
     <div class="help-modal-body">
-      <p>Site diagnostics and maintenance utilities, visible only on the account actively developing this site -- grouped into 5 tabs.</p>
+      <p>Site diagnostics and maintenance utilities, visible only on the account actively developing this site -- grouped into 6 tabs.</p>
       <p><strong>Health</strong> -- automated checks: Live consistency check, Data quality check, Appliance Wiki health, Client errors, Uptime monitoring, Advisor health, and Data integrity check.</p>
       <p><strong>Access</strong> -- Client registry and Account roles. The only tab an Owner account sees.</p>
       <p><strong>Session</strong> -- Session &amp; sync, Local data snapshot, Device info, and Service worker &amp; cache -- all about this specific device/browser, not the business data itself.</p>
       <p><strong>Notifications</strong> -- Push notification test and history, Known issues, and Flagged pages.</p>
       <p><strong>Deploy</strong> -- Deploy history, Regression checker, What's new, Quick links, Trigger workflows, and Storage browser.</p>
+      <p><strong>Reports</strong> -- Booking funnel health, Lead response time, and Uptime trend, over rolling 8-week windows.</p>
       <p>Each panel's own "?" bubble explains that specific one in more detail. Site content, FAQ, and Terms editing live on their own page (Content, in the tab bar above).</p>
     </div>
   </div>

@@ -18,6 +18,7 @@ const DEV_ONLY_HEADINGS = [
   'Push notification history', 'Booking notification test', 'Recent bookings', 'Known issues', 'Flagged pages', 'Uptime monitoring', 'Deploy history',
   'Regression checker', "What's new", 'Quick links', 'Trigger workflows',
   'Advisor health', 'Storage browser', 'Data integrity check',
+  'Booking funnel health', 'Lead response time', 'Uptime trend',
 ];
 const OWNER_VISIBLE_HEADINGS = ['Client registry', 'Account roles'];
 
@@ -40,10 +41,10 @@ function panelFor(window, headingText) {
   return heading ? heading.closest('.dev-panel') : null;
 }
 
-test('exactly 23 panels are marked dev-owner-hidden, matching the full, deliberate list of code/technical/error-diagnostic panels (19 original + Flagged Pages + Uptime Monitoring + Recent Bookings + the new Booking notification test panel)', () => {
+test('exactly 26 panels are marked dev-owner-hidden, matching the full, deliberate list of code/technical/error-diagnostic panels (23 previous + the new Reports tab: Booking funnel health, Lead response time, Uptime trend)', () => {
   const src = fs.readFileSync(DEV_TOOLS_PATH, 'utf8');
   const count = (src.match(/class="dev-panel dev-owner-hidden/g) || []).length;
-  assert.equal(count, 23);
+  assert.equal(count, 26);
 });
 
 test('an Owner account (canManageRoles false) has every one of the 23 developer-only panels hidden', () => {
