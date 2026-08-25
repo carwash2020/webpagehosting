@@ -26,6 +26,7 @@
     --bg:#0a0a0a;
     --bg-panel:#141414;
     --bg-panel-2:#1a1a1a;
+    --bg-panel-3:#1f1a14;
     --border:#2a2a2a;
     --text:#e8e8e8;
     --text-dim:#9a9a9a;
@@ -33,112 +34,209 @@
     --orange-dark:#c96400;
     --orange-light:#ffb347;
     --orange-tint-soft: rgba(255,128,0,0.08);
-    --orange-tint-border: rgba(255,128,0,0.3);
-    --radius:10px;
+    --orange-tint-border: rgba(255,128,0,0.32);
+    --radius:12px;
+    --hex: polygon(25% 6%, 75% 6%, 97% 50%, 75% 94%, 25% 94%, 3% 50%);
   }
   *{box-sizing:border-box;}
+  html{scroll-behavior:smooth;}
   body{
     margin:0; background:var(--bg); color:var(--text);
     font-family:'Inter', sans-serif; line-height:1.5;
     padding-bottom:80px;
   }
-  .wrap{max-width:640px; margin:0 auto; padding:0 20px;}
-  header.site-header{
-    padding:20px 0; border-bottom:1px solid var(--border); margin-bottom:32px;
+  @media (prefers-reduced-motion: reduce){
+    *{animation-duration:0.001ms !important; transition-duration:0.001ms !important;}
   }
+
+  .wrap{max-width:1120px; margin:0 auto; padding:0 24px;}
+  header.site-header{ padding:22px 0; border-bottom:1px solid var(--border); margin-bottom:0; background:linear-gradient(180deg, #0a0a0a, #0a0a0a 60%, transparent);}
   header.site-header .wrap{display:flex; align-items:center; justify-content:space-between; gap:16px;}
   .brand{display:flex; align-items:center; gap:12px; text-decoration:none; color:var(--text);}
-  .brand img{width:40px; height:auto;}
-  .brand-name{font-family:'Oswald', sans-serif; font-weight:700; letter-spacing:1px; font-size:15px;}
-  .phone-link{display:flex; align-items:center; gap:8px; color:var(--orange-light); text-decoration:none; font-weight:600; font-size:14px; white-space:nowrap;}
-  .phone-link svg{width:16px; height:16px;}
+  .brand img{width:38px; height:auto;}
+  .brand-name{font-family:'Oswald', sans-serif; font-weight:700; letter-spacing:1.5px; font-size:14px;}
+  .phone-link{display:flex; align-items:center; gap:8px; color:var(--orange-light); text-decoration:none; font-weight:600; font-size:14.5px; white-space:nowrap; padding:8px 10px; border-radius:8px; transition:background .15s ease;}
+  .phone-link:hover{background:var(--orange-tint-soft);}
+  .phone-link:focus-visible, a:focus-visible, button:focus-visible, input:focus-visible, textarea:focus-visible{outline:2px solid var(--orange-light); outline-offset:2px;}
+  .phone-link svg{width:16px; height:16px; flex-shrink:0;}
 
-  h1{font-family:'Oswald', sans-serif; font-size:26px; letter-spacing:0.5px; margin:0 0 6px;}
-  .subhead{color:var(--text-dim); font-size:14.5px; margin:0 0 28px;}
+  /* --- layout: sidebar (desktop) + main working column ------------------- */
+  .booking-layout{
+    display:grid; grid-template-columns: 300px minmax(0, 1fr); gap:48px;
+    max-width:1120px; margin:0 auto; padding:40px 24px 0;
+    align-items:start;
+  }
+  .booking-sidebar{position:sticky; top:24px;}
+  .eyebrow{
+    font-family:'Oswald', sans-serif; font-size:12px; font-weight:600; letter-spacing:2px;
+    text-transform:uppercase; color:var(--orange-light); margin:0 0 16px;
+  }
+  .sidebar-item{
+    display:flex; gap:14px; align-items:flex-start; padding:16px 0; border-bottom:1px solid var(--border);
+  }
+  .sidebar-item:last-child{border-bottom:none;}
+  .sidebar-item .hex-icon{width:38px; height:38px; flex-shrink:0;}
+  .sidebar-item.is-pending{opacity:0.4;}
+  .sidebar-item .si-label{font-size:11px; text-transform:uppercase; letter-spacing:1px; color:var(--text-dim); margin-bottom:3px;}
+  .sidebar-item .si-value{font-weight:600; font-size:15px; color:var(--text);}
+  .sidebar-item .si-sub{font-size:13px; color:var(--text-dim); margin-top:2px;}
+  .sidebar-note{
+    margin-top:20px; padding-top:20px; border-top:1px solid var(--border);
+    font-size:13px; color:var(--text-dim); display:flex; gap:10px; align-items:flex-start;
+  }
+  .sidebar-note svg{width:16px; height:16px; flex-shrink:0; margin-top:2px; color:var(--orange-light);}
 
-  .step-indicator{display:flex; gap:8px; margin-bottom:28px;}
-  .step-dot{flex:1; height:4px; border-radius:4px; background:var(--border); transition:background .2s ease;}
-  .step-dot.is-active, .step-dot.is-done{background:var(--orange);}
+  .booking-main{min-width:0;}
+  h1{font-family:'Oswald', sans-serif; font-size:32px; letter-spacing:0.3px; margin:0 0 8px; font-weight:700;}
+  .subhead{color:var(--text-dim); font-size:15.5px; margin:0 0 28px;}
+
+  /* --- hexagon icon containers: the page's signature element, echoing the brand's own hex badge mark --- */
+  .hex-icon{
+    width:44px; height:44px; flex-shrink:0; position:relative;
+    background:var(--orange-tint-soft); border:1px solid var(--orange-tint-border);
+    clip-path:var(--hex); display:flex; align-items:center; justify-content:center;
+    transition:background .18s ease, border-color .18s ease;
+  }
+  .hex-icon svg{width:20px; height:20px; color:var(--orange-light); stroke-width:2;}
+
+  /* --- step indicator: labeled, not just bars -------------------------- */
+  .step-indicator{display:flex; align-items:center; gap:0; margin-bottom:32px;}
+  .step-node{display:flex; align-items:center; gap:9px; flex-shrink:0;}
+  .step-node .dot{
+    width:26px; height:26px; border-radius:50%; border:2px solid var(--border); flex-shrink:0;
+    display:flex; align-items:center; justify-content:center; font-family:'Oswald', sans-serif;
+    font-size:12px; font-weight:700; color:var(--text-dim); background:var(--bg);
+    transition:border-color .2s ease, background .2s ease, color .2s ease;
+  }
+  .step-node .label{font-size:13px; color:var(--text-dim); font-weight:600; white-space:nowrap; transition:color .2s ease;}
+  .step-node.is-active .dot{border-color:var(--orange); color:var(--orange); background:var(--orange-tint-soft);}
+  .step-node.is-active .label{color:var(--text);}
+  .step-node.is-done .dot{border-color:var(--orange); background:var(--orange); color:#1a1a1a;}
+  .step-node.is-done .label{color:var(--text-dim);}
+  .step-connector{flex:1; height:2px; background:var(--border); margin:0 10px; position:relative; top:-1px; transition:background .2s ease;}
+  .step-connector.is-done{background:var(--orange);}
+  @media (max-width:600px){ .step-node .label{display:none;} }
 
   .step-panel{display:none;}
-  .step-panel.is-active{display:block;}
+  .step-panel.is-active{display:block; animation:stepIn .28s ease both;}
+  @keyframes stepIn{from{opacity:0; transform:translateY(6px);} to{opacity:1; transform:translateY(0);}}
 
+  .service-grid{display:grid; grid-template-columns:1fr; gap:12px;}
   .service-option{
-    display:block; width:100%; text-align:left; background:var(--bg-panel-2);
-    border:1px solid var(--border); border-radius:var(--radius); padding:16px 18px;
-    margin-bottom:12px; cursor:pointer; color:var(--text); font-family:inherit;
-    transition:border-color .15s ease, background .15s ease;
+    display:flex; gap:16px; align-items:flex-start; width:100%; text-align:left;
+    background:var(--bg-panel-2); border:1px solid var(--border); border-radius:var(--radius); padding:18px;
+    cursor:pointer; color:var(--text); font-family:inherit;
+    transition:border-color .15s ease, background .15s ease, transform .15s ease, box-shadow .15s ease;
   }
-  .service-option:hover{border-color:var(--orange-tint-border); background:var(--orange-tint-soft);}
+  .service-option:hover{border-color:var(--orange-tint-border); background:var(--orange-tint-soft); transform:translateY(-2px); box-shadow:0 8px 20px -12px rgba(0,0,0,.6);}
   .service-option.is-selected{border-color:var(--orange); background:var(--orange-tint-soft);}
+  .service-option .svc-body{flex:1; min-width:0;}
   .service-option .svc-name{font-weight:700; font-size:15.5px; display:flex; justify-content:space-between; align-items:baseline; gap:10px;}
-  .service-option .svc-duration{color:var(--orange-light); font-size:12.5px; font-weight:600; white-space:nowrap;}
-  .service-option .svc-desc{color:var(--text-dim); font-size:13.5px; margin-top:5px;}
-  .duration-caveat{color:var(--text-dim); font-size:12.5px; margin-top:4px; margin-bottom:24px; font-style:italic;}
+  .service-option .svc-duration{color:var(--orange-light); font-size:12px; font-weight:600; white-space:nowrap; font-family:'Oswald', sans-serif; letter-spacing:0.3px;}
+  .service-option .svc-desc{color:var(--text-dim); font-size:13.5px; margin-top:5px; line-height:1.45;}
+  .duration-caveat{color:var(--text-dim); font-size:12.5px; margin-top:20px; margin-bottom:0; font-style:italic; display:flex; gap:8px; align-items:flex-start;}
+  .duration-caveat svg{width:14px; height:14px; flex-shrink:0; margin-top:2px;}
 
-  .date-row{display:flex; gap:8px; overflow-x:auto; padding-bottom:6px; margin-bottom:20px; -webkit-overflow-scrolling:touch;}
-  .date-btn{
-    flex:0 0 auto; min-width:64px; text-align:center; background:var(--bg-panel-2);
-    border:1px solid var(--border); border-radius:8px; padding:10px 8px; cursor:pointer;
-    color:var(--text); font-family:inherit;
+  @media (min-width:640px){
+    .service-grid{grid-template-columns:1fr 1fr;}
   }
+
+  .btn-back{
+    background:transparent; border:none; color:var(--text-dim); font-family:inherit; font-size:14px;
+    cursor:pointer; padding:6px 0; margin-bottom:16px; display:flex; align-items:center; gap:6px;
+    transition:color .15s ease;
+  }
+  .btn-back:hover{color:var(--orange-light);}
+  .btn-back svg{width:15px; height:15px;}
+
+  .btn-retry{
+    display:inline-flex; align-items:center; gap:8px; margin:12px auto 0; grid-column:1/-1; justify-self:center;
+    background:transparent; border:1.5px solid var(--orange-tint-border); color:var(--orange-light);
+    font-family:'Oswald', sans-serif; font-weight:600; letter-spacing:0.5px; font-size:13px;
+    padding:10px 20px; border-radius:8px; cursor:pointer; transition:background .15s ease, border-color .15s ease;
+  }
+  .btn-retry:hover{background:var(--orange-tint-soft); border-color:var(--orange);}
+  .btn-retry svg{width:15px; height:15px;}
+
+  .date-row{display:flex; gap:8px; overflow-x:auto; padding-bottom:8px; margin-bottom:20px; -webkit-overflow-scrolling:touch; scroll-snap-type:x proximity;}
+  .date-btn{
+    flex:0 0 auto; min-width:66px; text-align:center; background:var(--bg-panel-2);
+    border:1px solid var(--border); border-radius:10px; padding:11px 8px; cursor:pointer;
+    color:var(--text); font-family:inherit; scroll-snap-align:start;
+    transition:border-color .15s ease, background .15s ease, transform .15s ease;
+  }
+  .date-btn:hover{border-color:var(--orange-tint-border); transform:translateY(-2px);}
   .date-btn .dow{font-size:11px; color:var(--text-dim); text-transform:uppercase; letter-spacing:0.5px;}
-  .date-btn .dom{font-size:17px; font-weight:700; margin-top:2px;}
+  .date-btn .dom{font-size:18px; font-weight:700; margin-top:2px; font-family:'Oswald', sans-serif;}
   .date-btn.is-selected{border-color:var(--orange); background:var(--orange-tint-soft); color:var(--orange-light);}
 
-  .slots-grid{display:grid; grid-template-columns:repeat(auto-fill, minmax(96px, 1fr)); gap:8px; margin-bottom:8px;}
+  .slots-grid{display:grid; grid-template-columns:repeat(auto-fill, minmax(104px, 1fr)); gap:10px; margin-bottom:8px;}
   .slot-btn{
-    background:var(--bg-panel-2); border:1px solid var(--border); border-radius:8px;
-    padding:10px 6px; cursor:pointer; color:var(--text); font-family:inherit; font-size:13.5px;
-    text-align:center;
+    background:var(--bg-panel-2); border:1px solid var(--border); border-radius:10px;
+    padding:12px 8px; cursor:pointer; color:var(--text); font-family:inherit; font-size:14px;
+    text-align:center; font-weight:500; transition:border-color .15s ease, background .15s ease, transform .15s ease;
   }
-  .slot-btn:hover{border-color:var(--orange-tint-border);}
-  .slot-btn.is-selected{border-color:var(--orange); background:var(--orange-tint-soft); color:var(--orange-light); font-weight:600;}
-  .slots-empty{color:var(--text-dim); font-size:14px; padding:24px 0; text-align:center;}
+  .slot-btn:hover{border-color:var(--orange-tint-border); transform:translateY(-2px);}
+  .slot-btn.is-selected{border-color:var(--orange); background:var(--orange-tint-soft); color:var(--orange-light); font-weight:700;}
+  .slots-empty{color:var(--text-dim); font-size:14px; padding:28px 0; text-align:center;}
 
-  label{display:block; font-size:13px; color:var(--text-dim); margin-bottom:6px; margin-top:16px;}
+  label{display:block; font-size:13px; color:var(--text-dim); margin-bottom:6px; margin-top:18px; font-weight:500;}
   label:first-of-type{margin-top:0;}
   input, textarea{
-    width:100%; background:var(--bg-panel-2); border:1px solid var(--border); border-radius:8px;
-    padding:11px 12px; color:var(--text); font-family:inherit; font-size:15px;
+    width:100%; background:var(--bg-panel-2); border:1px solid var(--border); border-radius:10px;
+    padding:12px 14px; color:var(--text); font-family:inherit; font-size:15px;
+    transition:border-color .15s ease;
   }
   input:focus, textarea:focus{outline:2px solid var(--orange); outline-offset:1px; border-color:var(--orange);}
-  textarea{resize:vertical; min-height:70px;}
+  textarea{resize:vertical; min-height:80px;}
 
   .btn{
     display:inline-flex; align-items:center; justify-content:center; gap:8px;
-    padding:14px 24px; border-radius:8px; font-family:'Oswald', sans-serif; font-weight:600;
+    padding:15px 26px; border-radius:10px; font-family:'Oswald', sans-serif; font-weight:600;
     letter-spacing:1px; text-transform:uppercase; font-size:13.5px; border:2px solid transparent;
-    cursor:pointer; width:100%; margin-top:24px;
+    cursor:pointer; width:100%; margin-top:26px;
+    transition:background .15s ease, transform .1s ease, box-shadow .15s ease;
   }
-  .btn.orange{background:var(--orange); color:#1a1a1a;}
-  .btn.orange:hover{background:var(--orange-dark);}
-  .btn.orange:disabled{opacity:0.5; cursor:not-allowed;}
-  .btn-back{
-    background:transparent; border:none; color:var(--text-dim); font-family:inherit; font-size:14px;
-    cursor:pointer; padding:0; margin-bottom:16px; display:flex; align-items:center; gap:6px;
-  }
-  .btn-back:hover{color:var(--text);}
+  .btn.orange{background:var(--orange); color:#1a1a1a; box-shadow:0 6px 18px -8px rgba(255,128,0,.55);}
+  .btn.orange:hover{background:var(--orange-dark); transform:translateY(-1px);}
+  .btn.orange:active{transform:translateY(0);}
+  .btn.orange:disabled{opacity:0.5; cursor:not-allowed; transform:none; box-shadow:none;}
 
   .booking-summary{
     background:var(--bg-panel); border:1px solid var(--border); border-radius:var(--radius);
-    padding:14px 16px; margin-bottom:20px; font-size:14px;
+    padding:16px 18px; margin-bottom:22px; font-size:14px; display:flex; gap:14px; align-items:flex-start;
   }
-  .booking-summary strong{color:var(--orange-light);}
+  .booking-summary .hex-icon{width:36px; height:36px;}
+  .booking-summary strong, .conf-detail strong{color:var(--orange-light); display:block; font-size:15px; margin-bottom:2px;}
 
-  .status-msg{padding:12px 14px; border-radius:8px; font-size:14px; margin-top:16px; display:none;}
+  .status-msg{padding:12px 14px; border-radius:10px; font-size:14px; margin-top:16px; display:none;}
   .status-msg.is-visible{display:block;}
   .status-msg.is-error{background:rgba(220,60,50,0.12); border:1px solid rgba(220,60,50,0.3); color:#ff8a80;}
 
-  .confirmation{text-align:center; padding:20px 0;}
-  .confirmation .checkmark{width:56px; height:56px; border-radius:50%; background:var(--orange); color:#1a1a1a; display:flex; align-items:center; justify-content:center; margin:0 auto 20px; font-size:28px;}
-  .confirmation h2{font-family:'Oswald', sans-serif; font-size:22px; margin-bottom:10px;}
+  .confirmation{text-align:center; padding:24px 0 8px; max-width:440px; margin:0 auto;}
+  .confirmation .checkmark{
+    width:72px; height:72px; clip-path:var(--hex); background:var(--orange); color:#1a1a1a;
+    display:flex; align-items:center; justify-content:center; margin:0 auto 22px; font-size:30px; font-weight:700;
+    animation:popIn .4s cubic-bezier(.2,1.4,.4,1) both;
+  }
+  @keyframes popIn{from{opacity:0; transform:scale(.5);} to{opacity:1; transform:scale(1);}}
+  .confirmation h2{font-family:'Oswald', sans-serif; font-size:25px; margin-bottom:10px;}
   .confirmation p{color:var(--text-dim); font-size:14.5px;}
-  .confirmation .conf-detail{background:var(--bg-panel-2); border:1px solid var(--border); border-radius:var(--radius); padding:16px; margin:20px 0; text-align:left; font-size:14.5px; color:var(--text);}
+  .confirmation .conf-detail{
+    background:var(--bg-panel-2); border:1px solid var(--border); border-radius:var(--radius); padding:20px;
+    margin:22px 0; text-align:left; font-size:14.5px; color:var(--text); display:flex; gap:14px; align-items:flex-start;
+  }
+  .confirmation .conf-detail .hex-icon{width:40px; height:40px;}
 
-  @media (max-width: 480px){
+  @media (max-width:960px){
+    .booking-layout{grid-template-columns:1fr; gap:0; padding:24px 20px 0;}
+    .booking-sidebar{display:none;}
+  }
+  @media (max-width:480px){
     .brand-name{display:none;}
-    .slots-grid{grid-template-columns:repeat(auto-fill, minmax(84px, 1fr));}
+    h1{font-size:26px;}
+    .slots-grid{grid-template-columns:repeat(auto-fill, minmax(88px, 1fr));}
+    .service-grid{gap:10px;}
   }
 </style>
 </head>
@@ -151,72 +249,95 @@
       <span class="brand-name">TRIPLE H ENTERPRISES</span>
     </a>
     <a href="tel:+14354141667" class="phone-link">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
       (435) 414-1667
     </a>
   </div>
 </header>
 
-<main class="wrap">
-  <h1>Book an Appointment</h1>
-  <p class="subhead">Pick a service and a real open time -- you'll get a confirmation right away.</p>
-
-  <div class="step-indicator" role="progressbar" aria-valuemin="1" aria-valuemax="3" aria-valuenow="1" aria-label="Booking step 1 of 3: Service">
-    <div class="step-dot is-active" data-step="1"></div>
-    <div class="step-dot" data-step="2"></div>
-    <div class="step-dot" data-step="3"></div>
-  </div>
-
-  <!-- Step 1: Service selection -->
-  <section class="step-panel is-active" id="stepService">
-    <div id="serviceList"></div>
-    <p class="duration-caveat">Times shown are estimates -- the actual visit may run longer depending on what we find once we're there.</p>
-  </section>
-
-  <!-- Step 2: Date & time -->
-  <section class="step-panel" id="stepDateTime">
-    <button type="button" class="btn-back" id="backToService">&larr; Change service</button>
-    <div class="booking-summary" id="selectedServiceSummary"></div>
-    <label>Choose a date</label>
-    <div class="date-row" id="dateRow"></div>
-    <label>Choose a time</label>
-    <div class="slots-grid" id="slotsGrid"></div>
-    <div class="slots-empty" id="slotsEmpty" style="display:none;">No open times this day -- try another date.</div>
-  </section>
-
-  <!-- Step 3: Contact info -->
-  <section class="step-panel" id="stepContact">
-    <button type="button" class="btn-back" id="backToDateTime">&larr; Change date/time</button>
-    <div class="booking-summary" id="fullSummary"></div>
-    <form id="bookingForm">
-      <!-- honeypot spam trap: real visitors never fill this in, bots often do -->
-      <input type="text" name="_gotcha" style="display:none" tabindex="-1" autocomplete="off">
-      <label for="bName">Name</label>
-      <input type="text" id="bName" name="name" required autocomplete="name" maxlength="100">
-      <label for="bPhone">Phone</label>
-      <input type="tel" id="bPhone" name="phone" required autocomplete="tel" maxlength="30">
-      <label for="bEmail">Email</label>
-      <input type="email" id="bEmail" name="email" autocomplete="email" maxlength="200">
-      <label for="bAddress">Address</label>
-      <input type="text" id="bAddress" name="address" autocomplete="street-address" maxlength="200">
-      <label for="bNotes">Anything we should know? (optional)</label>
-      <textarea id="bNotes" name="notes" maxlength="1000"></textarea>
-      <button type="submit" class="btn orange" id="submitBtn">Confirm Booking</button>
-      <div class="status-msg" id="statusMsg"></div>
-    </form>
-  </section>
-
-  <!-- Confirmation -->
-  <section class="step-panel" id="stepConfirmed">
-    <div class="confirmation">
-      <div class="checkmark" aria-hidden="true">&#10003;</div>
-      <h2>You're booked!</h2>
-      <p>A confirmation is on its way to your email if you gave us one.</p>
-      <div class="conf-detail" id="confirmationDetail"></div>
-      <a href="/" class="btn orange" style="text-decoration:none;">Back to site</a>
+<div class="booking-layout">
+  <aside class="booking-sidebar" aria-hidden="true">
+    <p class="eyebrow">Your Appointment</p>
+    <div class="sidebar-item is-pending" id="sidebarService">
+      <div class="hex-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 3"/></svg></div>
+      <div><div class="si-label">Service</div><div class="si-value">Not chosen yet</div></div>
     </div>
-  </section>
-</main>
+    <div class="sidebar-item is-pending" id="sidebarDateTime">
+      <div class="hex-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/></svg></div>
+      <div><div class="si-label">Date &amp; time</div><div class="si-value">Not chosen yet</div></div>
+    </div>
+    <div class="sidebar-note">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg>
+      <span>You'll get a confirmation email with a link to reschedule or cancel anytime.</span>
+    </div>
+  </aside>
+
+  <main class="booking-main">
+    <h1>Book an Appointment</h1>
+    <p class="subhead">Pick a service and a real open time -- you'll get a confirmation right away.</p>
+
+    <div class="step-indicator" role="progressbar" aria-valuemin="1" aria-valuemax="3" aria-valuenow="1" aria-label="Booking step 1 of 3: Service" id="stepIndicator">
+      <div class="step-node is-active" data-step="1"><div class="dot">1</div><div class="label">Service</div></div>
+      <div class="step-connector" data-connector="1"></div>
+      <div class="step-node" data-step="2"><div class="dot">2</div><div class="label">Date &amp; time</div></div>
+      <div class="step-connector" data-connector="2"></div>
+      <div class="step-node" data-step="3"><div class="dot">3</div><div class="label">Your info</div></div>
+    </div>
+
+    <!-- Step 1: Service selection -->
+    <section class="step-panel is-active" id="stepService">
+      <div class="service-grid" id="serviceList"></div>
+      <p class="duration-caveat">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg>
+        Times shown are estimates -- the actual visit may run longer depending on what we find once we're there.
+      </p>
+    </section>
+
+    <!-- Step 2: Date & time -->
+    <section class="step-panel" id="stepDateTime">
+      <button type="button" class="btn-back" id="backToService"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>Change service</button>
+      <div class="booking-summary" id="selectedServiceSummary"></div>
+      <label>Choose a date</label>
+      <div class="date-row" id="dateRow"></div>
+      <label>Choose a time</label>
+      <div class="slots-grid" id="slotsGrid"></div>
+      <div class="slots-empty" id="slotsEmpty" style="display:none;">No open times this day -- try another date.</div>
+    </section>
+
+    <!-- Step 3: Contact info -->
+    <section class="step-panel" id="stepContact">
+      <button type="button" class="btn-back" id="backToDateTime"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>Change date/time</button>
+      <div class="booking-summary" id="fullSummary"></div>
+      <form id="bookingForm">
+        <!-- honeypot spam trap: real visitors never fill this in, bots often do -->
+        <input type="text" name="_gotcha" style="display:none" tabindex="-1" autocomplete="off">
+        <label for="bName">Name</label>
+        <input type="text" id="bName" name="name" required autocomplete="name" maxlength="100">
+        <label for="bPhone">Phone</label>
+        <input type="tel" id="bPhone" name="phone" required autocomplete="tel" maxlength="30">
+        <label for="bEmail">Email</label>
+        <input type="email" id="bEmail" name="email" autocomplete="email" maxlength="200">
+        <label for="bAddress">Address</label>
+        <input type="text" id="bAddress" name="address" autocomplete="street-address" maxlength="200">
+        <label for="bNotes">Anything we should know? (optional)</label>
+        <textarea id="bNotes" name="notes" maxlength="1000"></textarea>
+        <button type="submit" class="btn orange" id="submitBtn">Confirm Booking</button>
+        <div class="status-msg" id="statusMsg"></div>
+      </form>
+    </section>
+
+    <!-- Confirmation -->
+    <section class="step-panel" id="stepConfirmed">
+      <div class="confirmation">
+        <div class="checkmark" aria-hidden="true">&#10003;</div>
+        <h2>You're booked!</h2>
+        <p>A confirmation is on its way to your email if you gave us one.</p>
+        <div class="conf-detail" id="confirmationDetail"></div>
+        <a href="/" class="btn orange" style="text-decoration:none;">Back to site</a>
+      </div>
+    </section>
+  </main>
+</div>
 
 <script>
 (function () {
@@ -225,43 +346,45 @@
   const BUSINESS_TIMEZONE = 'America/Denver';
 
   // Confirmed directly: Mon-Fri 2PM-10PM, Sat 7AM-10PM, Sun 2PM-8PM.
-  // Hours are [openHour, closeHour] in 24h, in BUSINESS_TIMEZONE.
   const HOURS_BY_WEEKDAY = {
-    0: [14, 20], // Sunday
-    1: [14, 22], // Monday
-    2: [14, 22],
-    3: [14, 22],
-    4: [14, 22],
-    5: [14, 22], // Friday
-    6: [7, 22],  // Saturday
+    0: [14, 20], 1: [14, 22], 2: [14, 22], 3: [14, 22], 4: [14, 22], 5: [14, 22], 6: [7, 22],
   };
 
-  // Confirmed directly, including the newly-added Inspection type.
+  // Confirmed directly, including Inspection. Icons reuse the site's
+  // own existing service icons from index.html exactly, for visual
+  // consistency -- only Inspection is new artwork (a magnifying glass),
+  // since that service doesn't appear on the homepage.
   const SERVICES = [
-    { key: 'inspection', label: 'Inspection', minutes: 45, desc: 'A diagnostic visit to figure out what\'s actually wrong before committing to a repair.' },
-    { key: 'plumbing', label: 'Plumbing Fixes & Leaks', minutes: 60, desc: 'Faucets, toilets, garbage disposals, and leaks that need to stop before they turn into bigger problems.' },
-    { key: 'appliance', label: 'Appliance Repair', minutes: 120, desc: 'Washing machines, dryers, dishwashers, refrigerators, and ranges.' },
-    { key: 'handyman', label: 'General Handyman Repairs', minutes: 120, desc: 'Doors, drywall, fixtures, and the growing list of small jobs that never seem to get done on their own.' },
-    { key: 'assembly', label: 'Assembly & Installation', minutes: 120, desc: 'Furniture, shelving, TV mounts, and ceiling fans, built and hung right the first time.' },
-    { key: 'drywall', label: 'Drywall & Painting', minutes: 180, desc: 'Patch work, touch ups, and full room paint jobs finished clean, with no dust left behind.' },
+    { key: 'inspection', label: 'Inspection', minutes: 45, desc: 'A diagnostic visit to figure out what\'s actually wrong before committing to a repair.',
+      icon: '<circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/>' },
+    { key: 'plumbing', label: 'Plumbing Fixes & Leaks', minutes: 60, desc: 'Faucets, toilets, garbage disposals, and leaks that need to stop before they turn into bigger problems.',
+      icon: '<path d="M12 2c-3 4-6 7-6 11a6 6 0 0 0 12 0c0-4-3-7-6-11z"/>' },
+    { key: 'appliance', label: 'Appliance Repair', minutes: 120, desc: 'Washing machines, dryers, dishwashers, refrigerators, and ranges.',
+      icon: '<rect x="4" y="2" width="16" height="20" rx="2"/><line x1="8" y1="7" x2="16" y2="7"/><circle cx="12" cy="15" r="3"/>' },
+    { key: 'handyman', label: 'General Handyman Repairs', minutes: 120, desc: 'Doors, drywall, fixtures, and the growing list of small jobs that never seem to get done on their own.',
+      icon: '<path d="M14.7 6.3a4 4 0 1 0-5.4 5.4L3 18l3 3 6.3-6.3a4 4 0 0 0 5.4-5.4l-2.8 2.8-2.1-2.1z"/>' },
+    { key: 'assembly', label: 'Assembly & Installation', minutes: 120, desc: 'Furniture, shelving, TV mounts, and ceiling fans, built and hung right the first time.',
+      icon: '<circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.6 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.6a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>' },
+    { key: 'drywall', label: 'Drywall & Painting', minutes: 180, desc: 'Patch work, touch ups, and full room paint jobs finished clean, with no dust left behind.',
+      icon: '<path d="M3 21l4.5-1.5L21 6a2.1 2.1 0 0 0-3-3L4.5 16.5 3 21z"/>' },
   ];
 
   const SLOT_INCREMENT_MINUTES = 30;
   const MIN_LEAD_HOURS = 2; // no booking sooner than this from right now
   const DAYS_AHEAD_SHOWN = 14;
+  const SCHEDULE_BUFFER_MINUTES = 15;
 
   let selectedService = null;
   let selectedDateStr = null; // "YYYY-MM-DD" in business-local terms
   let selectedSlot = null; // { startUtc: Date, endUtc: Date, label: string }
   let existingBookings = []; // [{start_at, end_at}] for the currently-viewed date, as Date objects
 
+  function svgIcon(pathContent) {
+    return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">' + pathContent + '</svg>';
+  }
+
   // --- timezone helpers ---------------------------------------------------
 
-  // Converts a wall-clock date+time intended for BUSINESS_TIMEZONE into the
-  // correct UTC instant. JS's Date has no native "construct in an arbitrary
-  // zone" -- this uses the standard trick of formatting a naive guess back
-  // through the target zone and correcting by the observed offset, which
-  // correctly accounts for DST since the offset is derived per-instant.
   function zonedTimeToUtc(dateStr, hh, mm) {
     const timeStr = String(hh).padStart(2, '0') + ':' + String(mm).padStart(2, '0');
     const naiveUtc = new Date(dateStr + 'T' + timeStr + ':00Z');
@@ -278,8 +401,6 @@
   }
 
   function businessWeekday(dateStr) {
-    // Sunday=0 .. Saturday=6, as evaluated IN business time for that
-    // calendar date (noon avoids any midnight-boundary edge case).
     const noonUtc = zonedTimeToUtc(dateStr, 12, 0);
     const s = new Intl.DateTimeFormat('en-US', { timeZone: BUSINESS_TIMEZONE, weekday: 'short' }).format(noonUtc);
     return ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].indexOf(s);
@@ -295,8 +416,6 @@
   }
 
   function addDaysToDateStr(dateStr, days) {
-    // Pure calendar-date math, done at noon UTC to sidestep any DST
-    // boundary shifting the date itself.
     const d = new Date(dateStr + 'T12:00:00Z');
     d.setUTCDate(d.getUTCDate() + days);
     return d.toISOString().slice(0, 10);
@@ -309,20 +428,42 @@
     el.innerHTML = SERVICES.map(function (s) {
       const hrs = s.minutes >= 60 ? (s.minutes / 60) + ' hr' + (s.minutes > 60 ? 's' : '') : s.minutes + ' min';
       return '<button type="button" class="service-option" data-key="' + s.key + '">' +
+        '<div class="hex-icon">' + svgIcon(s.icon) + '</div>' +
+        '<div class="svc-body">' +
         '<div class="svc-name"><span>' + s.label + '</span><span class="svc-duration">~' + hrs + '</span></div>' +
         '<div class="svc-desc">' + s.desc + '</div>' +
-        '</button>';
+        '</div></button>';
     }).join('');
     el.querySelectorAll('.service-option').forEach(function (btn) {
       btn.addEventListener('click', function () {
         selectedService = SERVICES.find(function (s) { return s.key === btn.dataset.key; });
         const hrs = selectedService.minutes >= 60 ? (selectedService.minutes / 60) + ' hr' + (selectedService.minutes > 60 ? 's' : '') : selectedService.minutes + ' min';
-        document.getElementById('selectedServiceSummary').innerHTML = '<strong>' + selectedService.label + '</strong> &middot; ~' + hrs;
+        document.getElementById('selectedServiceSummary').innerHTML =
+          '<div class="hex-icon">' + svgIcon(selectedService.icon) + '</div>' +
+          '<div><strong>' + selectedService.label + '</strong>~' + hrs + '</div>';
+        updateSidebar();
         goToStep(2);
         renderDateRow();
         selectDate(todayDateStrInBusinessTz());
       });
     });
+  }
+
+  function updateSidebar() {
+    if (selectedService) {
+      const hrs = selectedService.minutes >= 60 ? (selectedService.minutes / 60) + ' hr' + (selectedService.minutes > 60 ? 's' : '') : selectedService.minutes + ' min';
+      const svcEl = document.getElementById('sidebarService');
+      svcEl.classList.remove('is-pending');
+      svcEl.innerHTML = '<div class="hex-icon">' + svgIcon(selectedService.icon) + '</div>' +
+        '<div><div class="si-label">Service</div><div class="si-value">' + selectedService.label + '</div><div class="si-sub">~' + hrs + '</div></div>';
+    }
+    if (selectedSlot) {
+      const dateLabel = new Intl.DateTimeFormat('en-US', { timeZone: BUSINESS_TIMEZONE, month: 'short', day: 'numeric' }).format(selectedSlot.startUtc);
+      const dtEl = document.getElementById('sidebarDateTime');
+      dtEl.classList.remove('is-pending');
+      dtEl.innerHTML = '<div class="hex-icon">' + svgIcon('<rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/>') + '</div>' +
+        '<div><div class="si-label">Date &amp; time</div><div class="si-value">' + dateLabel + '</div><div class="si-sub">' + selectedSlot.label + '</div></div>';
+    }
   }
 
   // --- rendering: date row -------------------------------------------------
@@ -347,9 +488,6 @@
   // --- availability + slot computation -------------------------------------
 
   async function fetchBookingsForDate(dateStr) {
-    // Widen the query window by a day on each side so a booking that
-    // starts late one day and would overlap into the early hours of
-    // this one (or vice versa) is never missed by an exact-day filter.
     const dayStartUtc = zonedTimeToUtc(dateStr, 0, 0);
     const rangeStart = new Date(dayStartUtc.getTime() - 24 * 60 * 60 * 1000).toISOString();
     const rangeEnd = new Date(dayStartUtc.getTime() + 2 * 24 * 60 * 60 * 1000).toISOString();
@@ -357,24 +495,10 @@
     const res = await fetch(url, {
       headers: { apikey: SUPABASE_ANON_KEY, Authorization: 'Bearer ' + SUPABASE_ANON_KEY },
     });
-    // A failed availability check must never be treated the same as
-    // "no conflicts that day" -- the exact wrong direction for
-    // something that exists to prevent double-booking. Throws so the
-    // caller shows this clearly instead of silently presenting an
-    // unverified page as if everything were fine.
     if (!res.ok) throw new Error('availability check failed (HTTP ' + res.status + ')');
     const rows = await res.json();
     return rows.map(function (r) { return { start: new Date(r.start_at), end: new Date(r.end_at) }; });
   }
-
-  // Matches the database's own buffer exactly (see
-  // sql/add_booking_schedule_buffer.sql) -- 15 minutes on each side of
-  // an existing booking, producing a real 30-minute gap between any
-  // two adjacent appointments for wrap-up and travel time. Kept in
-  // sync deliberately: without this, a slot could show as available
-  // here but get rejected by the database's own buffer-aware
-  // exclusion constraint on submit.
-  const SCHEDULE_BUFFER_MINUTES = 15;
 
   function overlaps(aStart, aEnd, bStart, bEnd) {
     return aStart < bEnd && bStart < aEnd;
@@ -422,7 +546,7 @@
     } catch (e) {
       grid.innerHTML =
         '<p style="color:#ff8a80; font-size:13.5px; text-align:center; grid-column:1/-1;">Couldn\'t load available times. Check your connection and try again.</p>' +
-        '<button type="button" class="btn ghost" id="retryDateBtn" style="grid-column:1/-1;">Try again</button>';
+        '<button type="button" class="btn-retry" id="retryDateBtn">' + svgIcon('<path d="M23 4v6h-6M1 20v-6h6"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/>') + 'Try again</button>';
       document.getElementById('retryDateBtn').addEventListener('click', function () { selectDate(dateStr); });
       return;
     }
@@ -443,6 +567,7 @@
         grid.querySelectorAll('.slot-btn').forEach(function (b) { b.classList.remove('is-selected'); });
         btn.classList.add('is-selected');
         updateSelectedServiceSummary();
+        updateSidebar();
         goToStep(3);
       });
     });
@@ -451,26 +576,30 @@
   function updateSelectedServiceSummary() {
     const dateLabel = new Intl.DateTimeFormat('en-US', { timeZone: BUSINESS_TIMEZONE, weekday: 'long', month: 'long', day: 'numeric' }).format(selectedSlot.startUtc);
     document.getElementById('fullSummary').innerHTML =
-      '<strong>' + selectedService.label + '</strong><br>' + dateLabel + ' at ' + selectedSlot.label;
+      '<div class="hex-icon">' + svgIcon(selectedService.icon) + '</div>' +
+      '<div><strong>' + selectedService.label + '</strong>' + dateLabel + ' at ' + selectedSlot.label + '</div>';
   }
 
   // --- step navigation -----------------------------------------------------
 
   function goToStep(n) {
     document.querySelectorAll('.step-panel').forEach(function (p) { p.classList.remove('is-active'); });
-    document.querySelectorAll('.step-dot').forEach(function (d) {
-      const step = parseInt(d.dataset.step, 10);
-      d.classList.toggle('is-active', step === n);
-      d.classList.toggle('is-done', step < n);
+    document.querySelectorAll('.step-node').forEach(function (node) {
+      const step = parseInt(node.dataset.step, 10);
+      node.classList.toggle('is-active', step === n);
+      node.classList.toggle('is-done', step < n);
     });
-    const stepLabels = { 1: 'Service', 2: 'Date & time', 3: 'Contact info', 4: 'Confirmed' };
-    const indicator = document.querySelector('.step-indicator');
-    if (indicator && stepLabels[n]) {
-      indicator.setAttribute('aria-valuenow', Math.min(n, 3));
-      indicator.setAttribute('aria-label', 'Booking step ' + Math.min(n, 3) + ' of 3: ' + stepLabels[n]);
-    }
+    document.querySelectorAll('.step-connector').forEach(function (c) {
+      const idx = parseInt(c.dataset.connector, 10);
+      c.classList.toggle('is-done', idx < n);
+    });
+    const indicator = document.getElementById('stepIndicator');
+    const stepLabels = { 1: 'Service', 2: 'Date & time', 3: 'Your info' };
+    if (n <= 3) indicator.setAttribute('aria-valuenow', String(n));
+    if (stepLabels[n]) indicator.setAttribute('aria-label', 'Booking step ' + n + ' of 3: ' + stepLabels[n]);
     const panels = { 1: 'stepService', 2: 'stepDateTime', 3: 'stepContact', 4: 'stepConfirmed' };
     if (panels[n]) document.getElementById(panels[n]).classList.add('is-active');
+    if (n <= 3) window.scrollTo({ top: 0, behavior: 'smooth' });
   }
 
   document.getElementById('backToService').addEventListener('click', function () { goToStep(1); });
@@ -487,16 +616,11 @@
     const formData = new FormData(e.target);
 
     // Honeypot check -- same proven pattern as index.html's lead form.
-    // A caught bot gets a fake success confirmation (never told it was
-    // caught, so a bot author watching the response can't adapt)
-    // without ever touching the database or consuming a real time
-    // slot -- arguably more important here than on a lead form, since
-    // spam bookings would actively deny real customers a slot rather
-    // than just creating an ignorable lead.
     if (formData.get('_gotcha')) {
       const dateLabel = new Intl.DateTimeFormat('en-US', { timeZone: BUSINESS_TIMEZONE, weekday: 'long', month: 'long', day: 'numeric' }).format(selectedSlot.startUtc);
       document.getElementById('confirmationDetail').innerHTML =
-        '<strong>' + selectedService.label + '</strong><br>' + dateLabel + ' at ' + selectedSlot.label;
+        '<div class="hex-icon">' + svgIcon(selectedService.icon) + '</div>' +
+        '<div><strong>' + selectedService.label + '</strong>' + dateLabel + ' at ' + selectedSlot.label + '</div>';
       goToStep(4);
       return;
     }
@@ -510,11 +634,6 @@
         'Content-Type': 'application/json',
         apikey: SUPABASE_ANON_KEY,
         Authorization: 'Bearer ' + SUPABASE_ANON_KEY,
-        // No Prefer: return=representation -- the anon role has no
-        // SELECT policy on this table by design (it holds customer
-        // PII), so asking for the row back would fail even though
-        // the insert itself succeeds. Success is read from the HTTP
-        // status alone.
       },
       body: JSON.stringify({
         service_key: selectedService.key,
@@ -532,15 +651,11 @@
         if (res.ok) {
           const dateLabel = new Intl.DateTimeFormat('en-US', { timeZone: BUSINESS_TIMEZONE, weekday: 'long', month: 'long', day: 'numeric' }).format(selectedSlot.startUtc);
           document.getElementById('confirmationDetail').innerHTML =
-            '<strong>' + selectedService.label + '</strong><br>' + dateLabel + ' at ' + selectedSlot.label;
+            '<div class="hex-icon">' + svgIcon(selectedService.icon) + '</div>' +
+            '<div><strong>' + selectedService.label + '</strong>' + dateLabel + ' at ' + selectedSlot.label + '</div>';
           goToStep(4);
           return;
         }
-        // A 409/exclusion-constraint conflict means someone else just
-        // took this exact slot -- the real, race-condition-safe check
-        // is the database constraint itself, not this client-side
-        // computation, so this case is expected to happen occasionally
-        // and needs a clear, actionable recovery, not a generic error.
         return res.text().then(function (body) {
           const wasConflict = body.indexOf('23P01') !== -1 || body.indexOf('exclusion') !== -1 || res.status === 409;
           statusEl.textContent = wasConflict
