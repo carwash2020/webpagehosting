@@ -68,6 +68,28 @@
 
   #confirmStep{display:none;}
   #confirmStep.is-active{display:block;}
+  #rescheduleStep{display:none;}
+  #rescheduleStep.is-active{display:block;}
+
+  .date-row{display:flex; gap:8px; overflow-x:auto; padding-bottom:6px; margin:16px 0; -webkit-overflow-scrolling:touch;}
+  .date-btn{
+    flex:0 0 auto; min-width:64px; text-align:center; background:var(--bg-panel-2);
+    border:1px solid var(--border); border-radius:8px; padding:10px 8px; cursor:pointer;
+    color:var(--text); font-family:inherit;
+  }
+  .date-btn .dow{font-size:11px; color:var(--text-dim); text-transform:uppercase; letter-spacing:0.5px;}
+  .date-btn .dom{font-size:17px; font-weight:700; margin-top:2px;}
+  .date-btn.is-selected{border-color:var(--orange); background:rgba(255,128,0,0.08); color:var(--orange-light);}
+
+  .slots-grid{display:grid; grid-template-columns:repeat(auto-fill, minmax(96px, 1fr)); gap:8px; margin-bottom:8px;}
+  .slot-btn{
+    background:var(--bg-panel-2); border:1px solid var(--border); border-radius:8px;
+    padding:10px 6px; cursor:pointer; color:var(--text); font-family:inherit; font-size:13.5px;
+    text-align:center;
+  }
+  .slot-btn:hover{border-color:rgba(255,128,0,0.3);}
+  .slot-btn.is-selected{border-color:var(--orange); background:rgba(255,128,0,0.08); color:var(--orange-light); font-weight:600;}
+  .slots-empty{color:var(--text-dim); font-size:14px; padding:16px 0; text-align:center;}
 </style>
 </head>
 <body>
@@ -142,6 +164,95 @@
     return dateLabel + ' at ' + timeFmt.format(start) + ' \u2013 ' + timeFmt.format(end);
   }
 
+  // --- reschedule: slot computation, matching booking.html exactly ---------
+
+  const HOURS_BY_WEEKDAY = { 0: [14, 20], 1: [14, 22], 2: [14, 22], 3: [14, 22], 4: [14, 22], 5: [14, 22], 6: [7, 22] };
+  const SLOT_INCREMENT_MINUTES = 30;
+  const MIN_LEAD_HOURS = 2;
+  const SCHEDULE_BUFFER_MINUTES = 15;
+  const DAYS_AHEAD_SHOWN = 14;
+
+  function zonedTimeToUtc(dateStr, hh, mm) {
+    const timeStr = String(hh).padStart(2, '0') + ':' + String(mm).padStart(2, '0');
+    const naiveUtc = new Date(dateStr + 'T' + timeStr + ':00Z');
+    const parts = new Intl.DateTimeFormat('en-US', {
+      timeZone: BUSINESS_TIMEZONE, year: 'numeric', month: '2-digit', day: '2-digit',
+      hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false,
+    }).formatToParts(naiveUtc);
+    const map = {};
+    parts.forEach(function (p) { map[p.type] = p.value; });
+    const hourFixed = map.hour === '24' ? '00' : map.hour;
+    const asIfLocal = new Date(map.year + '-' + map.month + '-' + map.day + 'T' + hourFixed + ':' + map.minute + ':' + map.second + 'Z');
+    const diff = naiveUtc.getTime() - asIfLocal.getTime();
+    return new Date(naiveUtc.getTime() + diff);
+  }
+
+  function businessWeekday(dateStr) {
+    const noonUtc = zonedTimeToUtc(dateStr, 12, 0);
+    const s = new Intl.DateTimeFormat('en-US', { timeZone: BUSINESS_TIMEZONE, weekday: 'short' }).format(noonUtc);
+    return ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].indexOf(s);
+  }
+
+  function todayDateStrInBusinessTz() {
+    const parts = new Intl.DateTimeFormat('en-US', { timeZone: BUSINESS_TIMEZONE, year: 'numeric', month: '2-digit', day: '2-digit' }).formatToParts(new Date());
+    const map = {};
+    parts.forEach(function (p) { map[p.type] = p.value; });
+    return map.year + '-' + map.month + '-' + map.day;
+  }
+
+  function addDaysToDateStr(dateStr, days) {
+    const d = new Date(dateStr + 'T12:00:00Z');
+    d.setUTCDate(d.getUTCDate() + days);
+    return d.toISOString().slice(0, 10);
+  }
+
+  function overlaps(aStart, aEnd, bStart, bEnd) {
+    return aStart < bEnd && bStart < aEnd;
+  }
+
+  function computeSlotsForDate(dateStr, durationMinutes, bookings) {
+    const weekday = businessWeekday(dateStr);
+    const hours = HOURS_BY_WEEKDAY[weekday];
+    if (!hours) return [];
+    const openHour = hours[0], closeHour = hours[1];
+    const now = new Date();
+    const earliestAllowed = new Date(now.getTime() + MIN_LEAD_HOURS * 60 * 60 * 1000);
+    const bufferMs = SCHEDULE_BUFFER_MINUTES * 60000;
+
+    const slots = [];
+    for (let mins = openHour * 60; mins + durationMinutes <= closeHour * 60; mins += SLOT_INCREMENT_MINUTES) {
+      const hh = Math.floor(mins / 60), mm = mins % 60;
+      const startUtc = zonedTimeToUtc(dateStr, hh, mm);
+      const endUtc = new Date(startUtc.getTime() + durationMinutes * 60000);
+      if (startUtc < earliestAllowed) continue;
+      const conflict = bookings.some(function (b) {
+        return overlaps(startUtc, endUtc, new Date(b.start.getTime() - bufferMs), new Date(b.end.getTime() + bufferMs));
+      });
+      if (conflict) continue;
+      const label = new Intl.DateTimeFormat('en-US', { timeZone: BUSINESS_TIMEZONE, hour: 'numeric', minute: '2-digit' }).format(startUtc);
+      slots.push({ startUtc: startUtc, endUtc: endUtc, label: label });
+    }
+    return slots;
+  }
+
+  async function fetchBookingsForDate(dateStr, excludeStartIso) {
+    const dayStartUtc = zonedTimeToUtc(dateStr, 0, 0);
+    const rangeStart = new Date(dayStartUtc.getTime() - 24 * 60 * 60 * 1000).toISOString();
+    const rangeEnd = new Date(dayStartUtc.getTime() + 2 * 24 * 60 * 60 * 1000).toISOString();
+    const url = SUPABASE_URL + '/rest/v1/th_bookings_availability?start_at=gte.' + encodeURIComponent(rangeStart) + '&start_at=lt.' + encodeURIComponent(rangeEnd) + '&select=start_at,end_at';
+    const res = await fetch(url, { headers: { apikey: SUPABASE_ANON_KEY, Authorization: 'Bearer ' + SUPABASE_ANON_KEY } });
+    if (!res.ok) return [];
+    const rows = await res.json();
+    return rows
+      // Excludes this booking's OWN current slot -- the database's
+      // exclusion constraint never conflicts with the same row being
+      // updated, so the client-side check needs to match that or a
+      // guest shifting by 30 minutes on the same day would incorrectly
+      // see it as unavailable.
+      .filter(function (r) { return r.start_at !== excludeStartIso; })
+      .map(function (r) { return { start: new Date(r.start_at), end: new Date(r.end_at) }; });
+  }
+
   function renderBooking(booking, token) {
     if (booking.status === 'cancelled') {
       renderState(
@@ -155,8 +266,17 @@
 
     renderState(
       '<div class="booking-card"><div class="svc">' + escapeHtml(booking.service_label) + '</div>' +
-      '<div class="when">' + formatWhen(booking.start_at, booking.end_at) + '</div></div>' +
+      '<div class="when" id="currentWhen">' + formatWhen(booking.start_at, booking.end_at) + '</div></div>' +
+      '<button type="button" class="btn orange" id="startRescheduleBtn">Reschedule</button>' +
       '<button type="button" class="btn danger" id="startCancelBtn">Cancel this booking</button>' +
+      '<div id="rescheduleStep">' +
+      '  <label style="display:block; font-size:13px; color:var(--text-dim); margin:20px 0 6px;">Choose a new date</label>' +
+      '  <div class="date-row" id="dateRow"></div>' +
+      '  <label style="display:block; font-size:13px; color:var(--text-dim); margin:0 0 6px;">Choose a new time</label>' +
+      '  <div class="slots-grid" id="slotsGrid"></div>' +
+      '  <div class="slots-empty" id="slotsEmpty" style="display:none;">No open times this day -- try another date.</div>' +
+      '  <button type="button" class="btn ghost" id="cancelRescheduleBtn">Never mind</button>' +
+      '</div>' +
       '<div id="confirmStep">' +
       '  <p style="text-align:center; color:var(--text-dim); font-size:14.5px; margin-top:20px;">Are you sure? This can\'t be undone -- you\'ll need to book a new time if you change your mind.</p>' +
       '  <button type="button" class="btn danger" id="confirmCancelBtn">Yes, cancel it</button>' +
@@ -164,13 +284,92 @@
       '</div>'
     );
 
+    const durationMinutes = Math.round((new Date(booking.end_at) - new Date(booking.start_at)) / 60000);
+    let selectedSlot = null;
+
+    function renderDateRow() {
+      const el = document.getElementById('dateRow');
+      const today = todayDateStrInBusinessTz();
+      let html = '';
+      for (let i = 0; i < DAYS_AHEAD_SHOWN; i++) {
+        const dateStr = addDaysToDateStr(today, i);
+        const noonUtc = zonedTimeToUtc(dateStr, 12, 0);
+        const dow = new Intl.DateTimeFormat('en-US', { timeZone: BUSINESS_TIMEZONE, weekday: 'short' }).format(noonUtc);
+        const dom = new Intl.DateTimeFormat('en-US', { timeZone: BUSINESS_TIMEZONE, day: 'numeric' }).format(noonUtc);
+        html += '<button type="button" class="date-btn" data-date="' + dateStr + '"><div class="dow">' + dow + '</div><div class="dom">' + dom + '</div></button>';
+      }
+      el.innerHTML = html;
+      el.querySelectorAll('.date-btn').forEach(function (btn) {
+        btn.addEventListener('click', function () { selectDate(btn.dataset.date); });
+      });
+    }
+
+    async function selectDate(dateStr) {
+      selectedSlot = null;
+      document.querySelectorAll('.date-btn').forEach(function (b) { b.classList.toggle('is-selected', b.dataset.date === dateStr); });
+      const grid = document.getElementById('slotsGrid');
+      const emptyEl = document.getElementById('slotsEmpty');
+      grid.innerHTML = '<p style="color:var(--text-dim); font-size:13px;">Loading times...</p>';
+      emptyEl.style.display = 'none';
+
+      const existingBookings = await fetchBookingsForDate(dateStr, booking.start_at);
+      const slots = computeSlotsForDate(dateStr, durationMinutes, existingBookings);
+
+      if (slots.length === 0) {
+        grid.innerHTML = '';
+        emptyEl.style.display = 'block';
+        return;
+      }
+      grid.innerHTML = slots.map(function (s, i) { return '<button type="button" class="slot-btn" data-idx="' + i + '">' + s.label + '</button>'; }).join('');
+      grid.querySelectorAll('.slot-btn').forEach(function (btn, i) {
+        btn.addEventListener('click', async function () {
+          selectedSlot = slots[i];
+          grid.querySelectorAll('.slot-btn').forEach(function (b) { b.classList.remove('is-selected'); });
+          btn.classList.add('is-selected');
+
+          btn.disabled = true;
+          const result = await callRpc('reschedule_booking_by_token', { p_token: token, p_new_start: selectedSlot.startUtc.toISOString() });
+          const row = result && result[0];
+          if (row && row.ok) {
+            renderState(
+              '<div class="state-msg"><div class="checkmark">&#10003;</div><p>Your booking has been rescheduled.</p></div>' +
+              '<div class="booking-card"><div class="svc">' + escapeHtml(booking.service_label) + '</div>' +
+              '<div class="when">' + formatWhen(selectedSlot.startUtc.toISOString(), selectedSlot.endUtc.toISOString()) + '</div></div>'
+            );
+          } else if (row && row.message === 'slot-taken') {
+            btn.disabled = false;
+            await selectDate(dateStr); // someone else just took it -- refresh this date's real availability
+            document.getElementById('slotsEmpty').insertAdjacentHTML('beforebegin', '<p class="slots-empty" style="color:#ff8a80;">That time was just taken -- please pick another.</p>');
+          } else {
+            btn.disabled = false;
+            alert('Something went wrong. Please call us at (435) 414-1667.');
+          }
+        });
+      });
+    }
+
+    document.getElementById('startRescheduleBtn').addEventListener('click', function () {
+      document.getElementById('startRescheduleBtn').style.display = 'none';
+      document.getElementById('startCancelBtn').style.display = 'none';
+      document.getElementById('rescheduleStep').classList.add('is-active');
+      renderDateRow();
+      selectDate(todayDateStrInBusinessTz());
+    });
+    document.getElementById('cancelRescheduleBtn').addEventListener('click', function () {
+      document.getElementById('rescheduleStep').classList.remove('is-active');
+      document.getElementById('startRescheduleBtn').style.display = '';
+      document.getElementById('startCancelBtn').style.display = '';
+    });
+
     document.getElementById('startCancelBtn').addEventListener('click', function () {
       document.getElementById('startCancelBtn').style.display = 'none';
+      document.getElementById('startRescheduleBtn').style.display = 'none';
       document.getElementById('confirmStep').classList.add('is-active');
     });
     document.getElementById('backOutBtn').addEventListener('click', function () {
       document.getElementById('confirmStep').classList.remove('is-active');
       document.getElementById('startCancelBtn').style.display = '';
+      document.getElementById('startRescheduleBtn').style.display = '';
     });
     document.getElementById('confirmCancelBtn').addEventListener('click', async function () {
       const btn = document.getElementById('confirmCancelBtn');
