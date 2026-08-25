@@ -76,6 +76,10 @@
       title: 'Deploy history',
       body: `<p>Pulls the last 8 GitHub Actions runs for this repo directly from GitHub's public API -- no login needed since the repo is public. The top summary is the single most recent run; the list below it shows enough history to spot a pattern (e.g. "this started failing consistently a few runs back") rather than just a single snapshot.</p>`,
     },
+    uptimemonitoring: {
+      title: 'Uptime monitoring',
+      body: `<p>In-house replacement for HetrixTools. A GitHub Actions workflow checks the live site every 10 minutes from outside Supabase entirely, logs every result, and alerts (push + email) only on a real state change -- going down, or recovering. This panel shows the current status, uptime over the last 24 hours and 7 days, average response time, and recent incidents grouped into single entries rather than every individual check.</p>`,
+    },
     regressioncheck: {
       title: 'Regression checker',
       body: `<p>Compares the current code against an earlier commit and flags anything that looks like it disappeared without a clear replacement -- a JavaScript function, an HTML element id, or a CSS class that existed in the older version but can't be found anywhere in the newer one.</p><p>Uses GitHub's own diff for the comparison (one API call, not dozens), so it only looks inside files that actually changed between the two commits. If something moved into a file that <em>didn't</em> change in this same range -- rare, but possible -- this won't catch it. Flags things to look at, not a guarantee either way; always worth a real look at anything it surfaces, and it's normal for planned renames or intentional removals to show up here too.</p><p>Very large files sometimes come back from GitHub without a full diff -- those are listed separately as "couldn't auto-check," worth a manual look rather than assumed fine.</p>`,
