@@ -23,7 +23,10 @@
     --orange:#ff8000;
     --orange-dark:#c96400;
     --orange-light:#ffb347;
-    --radius:10px;
+    --orange-tint-soft: rgba(255,128,0,0.08);
+    --orange-tint-border: rgba(255,128,0,0.32);
+    --radius:12px;
+    --hex: polygon(25% 6%, 75% 6%, 97% 50%, 75% 94%, 25% 94%, 3% 50%);
   }
   *{box-sizing:border-box;}
   body{
@@ -31,68 +34,103 @@
     font-family:'Inter', sans-serif; line-height:1.5;
     padding-bottom:80px;
   }
-  .wrap{max-width:560px; margin:0 auto; padding:0 20px;}
-  header.site-header{ padding:20px 0; border-bottom:1px solid var(--border); margin-bottom:32px; }
+  @media (prefers-reduced-motion: reduce){
+    *{animation-duration:0.001ms !important; transition-duration:0.001ms !important;}
+  }
+  .wrap{max-width:600px; margin:0 auto; padding:0 20px;}
+  header.site-header{ padding:22px 0; border-bottom:1px solid var(--border); margin-bottom:40px; }
   header.site-header .wrap{display:flex; align-items:center; justify-content:space-between; gap:16px;}
   .brand{display:flex; align-items:center; gap:12px; text-decoration:none; color:var(--text);}
-  .brand img{width:40px; height:auto;}
-  .brand-name{font-family:'Oswald', sans-serif; font-weight:700; letter-spacing:1px; font-size:15px;}
-  .phone-link{display:flex; align-items:center; gap:8px; color:var(--orange-light); text-decoration:none; font-weight:600; font-size:14px; white-space:nowrap;}
-  .phone-link svg{width:16px; height:16px;}
+  .brand img{width:38px; height:auto;}
+  .brand-name{font-family:'Oswald', sans-serif; font-weight:700; letter-spacing:1.5px; font-size:14px;}
+  .phone-link{display:flex; align-items:center; gap:8px; color:var(--orange-light); text-decoration:none; font-weight:600; font-size:14.5px; white-space:nowrap; padding:8px 10px; border-radius:8px; transition:background .15s ease;}
+  .phone-link:hover{background:var(--orange-tint-soft);}
+  .phone-link:focus-visible, a:focus-visible, button:focus-visible{outline:2px solid var(--orange-light); outline-offset:2px;}
+  .phone-link svg{width:16px; height:16px; flex-shrink:0;}
 
-  h1{font-family:'Oswald', sans-serif; font-size:24px; letter-spacing:0.5px; margin:0 0 20px;}
+  h1{font-family:'Oswald', sans-serif; font-size:28px; letter-spacing:0.3px; margin:0 0 24px; font-weight:700;}
+
+  .hex-icon{
+    width:44px; height:44px; flex-shrink:0; position:relative;
+    background:var(--orange-tint-soft); border:1px solid var(--orange-tint-border);
+    clip-path:var(--hex); display:flex; align-items:center; justify-content:center;
+  }
+  .hex-icon svg{width:20px; height:20px; color:var(--orange-light); stroke-width:2;}
+  .hex-icon.is-muted{background:var(--bg-panel-2); border-color:var(--border);}
+  .hex-icon.is-muted svg{color:var(--text-dim);}
 
   .booking-card{
     background:var(--bg-panel-2); border:1px solid var(--border); border-radius:var(--radius);
-    padding:20px; margin-bottom:20px;
+    padding:20px; margin-bottom:22px; display:flex; gap:16px; align-items:flex-start;
   }
-  .booking-card .svc{font-weight:700; font-size:17px; margin-bottom:6px;}
+  .booking-card .svc{font-weight:700; font-size:16.5px; margin-bottom:4px;}
   .booking-card .when{color:var(--text-dim); font-size:14.5px;}
 
-  .state-msg{text-align:center; padding:40px 20px; color:var(--text-dim);}
+  .state-msg{text-align:center; padding:36px 20px 8px; color:var(--text-dim);}
   .state-msg.is-error{color:#ff8a80;}
-  .state-msg .checkmark{width:52px; height:52px; border-radius:50%; background:var(--orange); color:#1a1a1a; display:flex; align-items:center; justify-content:center; margin:0 auto 16px; font-size:26px;}
+  .state-msg .checkmark{
+    width:64px; height:64px; clip-path:var(--hex); background:var(--orange); color:#1a1a1a;
+    display:flex; align-items:center; justify-content:center; margin:0 auto 18px; font-size:27px; font-weight:700;
+    animation:popIn .4s cubic-bezier(.2,1.4,.4,1) both;
+  }
+  @keyframes popIn{from{opacity:0; transform:scale(.5);} to{opacity:1; transform:scale(1);}}
+  .state-msg .hex-icon{margin:0 auto 18px;}
 
   .btn{
     display:inline-flex; align-items:center; justify-content:center; gap:8px;
-    padding:14px 24px; border-radius:8px; font-family:'Oswald', sans-serif; font-weight:600;
+    padding:15px 24px; border-radius:10px; font-family:'Oswald', sans-serif; font-weight:600;
     letter-spacing:1px; text-transform:uppercase; font-size:13.5px; border:2px solid transparent;
     cursor:pointer; width:100%; margin-top:16px; text-decoration:none;
+    transition:background .15s ease, border-color .15s ease, transform .1s ease, box-shadow .15s ease;
   }
   .btn.danger{background:transparent; border-color:#e05252; color:#e05252;}
   .btn.danger:hover{background:rgba(224,82,82,0.1);}
-  .btn.danger:disabled{opacity:0.5; cursor:not-allowed;}
-  .btn.orange{background:var(--orange); color:#1a1a1a;}
-  .btn.orange:hover{background:var(--orange-dark);}
+  .btn.danger:disabled{opacity:0.5; cursor:not-allowed; transform:none;}
+  .btn.orange{background:var(--orange); color:#1a1a1a; box-shadow:0 6px 18px -8px rgba(255,128,0,.55);}
+  .btn.orange:hover{background:var(--orange-dark); transform:translateY(-1px);}
   .btn.ghost{background:transparent; border-color:var(--border); color:var(--text-dim);}
+  .btn.ghost:hover{border-color:var(--orange-tint-border); color:var(--text);}
 
   #confirmStep{display:none;}
-  #confirmStep.is-active{display:block;}
+  #confirmStep.is-active{display:block; animation:stepIn .25s ease both;}
   #rescheduleStep{display:none;}
-  #rescheduleStep.is-active{display:block;}
+  #rescheduleStep.is-active{display:block; animation:stepIn .25s ease both;}
+  @keyframes stepIn{from{opacity:0; transform:translateY(6px);} to{opacity:1; transform:translateY(0);}}
 
-  .date-row{display:flex; gap:8px; overflow-x:auto; padding-bottom:6px; margin:16px 0; -webkit-overflow-scrolling:touch;}
+  .date-row{display:flex; gap:8px; overflow-x:auto; padding-bottom:8px; margin:18px 0; -webkit-overflow-scrolling:touch; scroll-snap-type:x proximity;}
   .date-btn{
-    flex:0 0 auto; min-width:64px; text-align:center; background:var(--bg-panel-2);
-    border:1px solid var(--border); border-radius:8px; padding:10px 8px; cursor:pointer;
-    color:var(--text); font-family:inherit;
+    flex:0 0 auto; min-width:66px; text-align:center; background:var(--bg-panel-2);
+    border:1px solid var(--border); border-radius:10px; padding:11px 8px; cursor:pointer;
+    color:var(--text); font-family:inherit; scroll-snap-align:start;
+    transition:border-color .15s ease, transform .15s ease;
   }
+  .date-btn:hover{border-color:var(--orange-tint-border); transform:translateY(-2px);}
   .date-btn .dow{font-size:11px; color:var(--text-dim); text-transform:uppercase; letter-spacing:0.5px;}
-  .date-btn .dom{font-size:17px; font-weight:700; margin-top:2px;}
-  .date-btn.is-selected{border-color:var(--orange); background:rgba(255,128,0,0.08); color:var(--orange-light);}
+  .date-btn .dom{font-size:18px; font-weight:700; margin-top:2px; font-family:'Oswald', sans-serif;}
+  .date-btn.is-selected{border-color:var(--orange); background:var(--orange-tint-soft); color:var(--orange-light);}
 
-  .slots-grid{display:grid; grid-template-columns:repeat(auto-fill, minmax(96px, 1fr)); gap:8px; margin-bottom:8px;}
+  .slots-grid{display:grid; grid-template-columns:repeat(auto-fill, minmax(96px, 1fr)); gap:10px; margin-bottom:8px;}
   .slot-btn{
-    background:var(--bg-panel-2); border:1px solid var(--border); border-radius:8px;
-    padding:10px 6px; cursor:pointer; color:var(--text); font-family:inherit; font-size:13.5px;
-    text-align:center;
+    background:var(--bg-panel-2); border:1px solid var(--border); border-radius:10px;
+    padding:12px 6px; cursor:pointer; color:var(--text); font-family:inherit; font-size:13.5px;
+    text-align:center; font-weight:500; transition:border-color .15s ease, transform .15s ease;
   }
-  .slot-btn:hover{border-color:rgba(255,128,0,0.3);}
-  .slot-btn.is-selected{border-color:var(--orange); background:rgba(255,128,0,0.08); color:var(--orange-light); font-weight:600;}
-  .slots-empty{color:var(--text-dim); font-size:14px; padding:16px 0; text-align:center;}
+  .slot-btn:hover{border-color:var(--orange-tint-border); transform:translateY(-2px);}
+  .slot-btn.is-selected{border-color:var(--orange); background:var(--orange-tint-soft); color:var(--orange-light); font-weight:700;}
+  .slots-empty{color:var(--text-dim); font-size:14px; padding:20px 0; text-align:center;}
+
+  .btn-retry{
+    display:inline-flex; align-items:center; gap:8px; margin:12px auto 0; grid-column:1/-1; justify-self:center;
+    background:transparent; border:1.5px solid var(--orange-tint-border); color:var(--orange-light);
+    font-family:'Oswald', sans-serif; font-weight:600; letter-spacing:0.5px; font-size:13px;
+    padding:10px 20px; border-radius:8px; cursor:pointer; transition:background .15s ease, border-color .15s ease;
+  }
+  .btn-retry:hover{background:var(--orange-tint-soft); border-color:var(--orange);}
+  .btn-retry svg{width:15px; height:15px;}
 
   @media (max-width: 480px){
     .brand-name{display:none;}
+    h1{font-size:24px;}
     .slots-grid{grid-template-columns:repeat(auto-fill, minmax(84px, 1fr));}
   }
 </style>
@@ -125,6 +163,29 @@
   const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNzdmZxZGp1b2J5bGdhZmdvbGhvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODUzNTQ3MjcsImV4cCI6MjEwMDkzMDcyN30.6GlvK-DfXf2lppS1kciZtsl4wHOpZz_yKtwsS1lyjrs';
   const BUSINESS_TIMEZONE = 'America/Denver';
 
+  // Same icon set as booking.html, matched here by label since
+  // get_booking_by_cancel_token only returns service_label, not
+  // service_key -- safe because the label is always one of these
+  // exact, fixed strings, since booking.html's own form is the only
+  // way a th_bookings row is ever created.
+  const SERVICE_ICONS = {
+    'Inspection': '<circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/>',
+    'Plumbing Fixes & Leaks': '<path d="M12 2c-3 4-6 7-6 11a6 6 0 0 0 12 0c0-4-3-7-6-11z"/>',
+    'Appliance Repair': '<rect x="4" y="2" width="16" height="20" rx="2"/><line x1="8" y1="7" x2="16" y2="7"/><circle cx="12" cy="15" r="3"/>',
+    'General Handyman Repairs': '<path d="M14.7 6.3a4 4 0 1 0-5.4 5.4L3 18l3 3 6.3-6.3a4 4 0 0 0 5.4-5.4l-2.8 2.8-2.1-2.1z"/>',
+    'Assembly & Installation': '<circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.6 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.6a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>',
+    'Drywall & Painting': '<path d="M3 21l4.5-1.5L21 6a2.1 2.1 0 0 0-3-3L4.5 16.5 3 21z"/>',
+  };
+  const DEFAULT_ICON = '<rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/>';
+
+  function svgIcon(pathContent) {
+    return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">' + pathContent + '</svg>';
+  }
+
+  function serviceHexIcon(label) {
+    return '<div class="hex-icon">' + svgIcon(SERVICE_ICONS[label] || DEFAULT_ICON) + '</div>';
+  }
+
   function escapeHtml(value) {
     const s = value === null || value === undefined ? '' : String(value);
     return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
@@ -154,11 +215,19 @@
   }
 
   function renderNoToken() {
-    renderState('<div class="state-msg is-error"><p>This link is missing some information. If you followed a link from your confirmation email, try copying the full link into your browser, or call us and we\'ll take care of it.</p></div>');
+    renderState(
+      '<div class="state-msg is-error">' +
+      '<div class="hex-icon is-muted">' + svgIcon('<circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/>') + '</div>' +
+      '<p>This link is missing some information. If you followed a link from your confirmation email, try copying the full link into your browser, or call us and we\'ll take care of it.</p></div>'
+    );
   }
 
   function renderNotFound() {
-    renderState('<div class="state-msg is-error"><p>We couldn\'t find a booking for this link. If you think this is a mistake, give us a call and we\'ll sort it out.</p></div>');
+    renderState(
+      '<div class="state-msg is-error">' +
+      '<div class="hex-icon is-muted">' + svgIcon('<circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/>') + '</div>' +
+      '<p>We couldn\'t find a booking for this link. If you think this is a mistake, give us a call and we\'ll sort it out.</p></div>'
+    );
   }
 
   function formatWhen(startAtStr, endAtStr) {
@@ -249,11 +318,6 @@
     if (!res.ok) throw new Error('availability check failed (HTTP ' + res.status + ')');
     const rows = await res.json();
     return rows
-      // Excludes this booking's OWN current slot -- the database's
-      // exclusion constraint never conflicts with the same row being
-      // updated, so the client-side check needs to match that or a
-      // guest shifting by 30 minutes on the same day would incorrectly
-      // see it as unavailable.
       .filter(function (r) { return r.start_at !== excludeStartIso; })
       .map(function (r) { return { start: new Date(r.start_at), end: new Date(r.end_at) }; });
   }
@@ -261,32 +325,27 @@
   function renderBooking(booking, token) {
     if (booking.status === 'cancelled') {
       renderState(
-        '<div class="booking-card"><div class="svc">' + escapeHtml(booking.service_label) + '</div>' +
-        '<div class="when">' + formatWhen(booking.start_at, booking.end_at) + '</div></div>' +
-        '<div class="state-msg"><p>This booking has already been cancelled.</p></div>' +
+        '<div class="booking-card">' + serviceHexIcon(booking.service_label) + '<div><div class="svc">' + escapeHtml(booking.service_label) + '</div>' +
+        '<div class="when">' + formatWhen(booking.start_at, booking.end_at) + '</div></div></div>' +
+        '<div class="state-msg"><div class="hex-icon is-muted">' + svgIcon('<circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/>') + '</div><p>This booking has already been cancelled.</p></div>' +
         '<a href="/booking.html" class="btn orange">Book a new appointment</a>'
       );
       return;
     }
 
-    // Real gap, flagged directly: an old confirmation email for a
-    // visit that already happened would otherwise still show live
-    // Cancel/Reschedule buttons. Checked against end_at, not start_at,
-    // so a visit still in progress isn't treated as "already
-    // happened" the instant its scheduled start time passes.
     if (new Date(booking.end_at) < new Date()) {
       renderState(
-        '<div class="booking-card"><div class="svc">' + escapeHtml(booking.service_label) + '</div>' +
-        '<div class="when">' + formatWhen(booking.start_at, booking.end_at) + '</div></div>' +
-        '<div class="state-msg"><p>This appointment has already happened.</p></div>' +
+        '<div class="booking-card">' + serviceHexIcon(booking.service_label) + '<div><div class="svc">' + escapeHtml(booking.service_label) + '</div>' +
+        '<div class="when">' + formatWhen(booking.start_at, booking.end_at) + '</div></div></div>' +
+        '<div class="state-msg"><div class="hex-icon is-muted">' + svgIcon('<circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/>') + '</div><p>This appointment has already happened.</p></div>' +
         '<a href="/booking.html" class="btn orange">Book a new appointment</a>'
       );
       return;
     }
 
     renderState(
-      '<div class="booking-card"><div class="svc">' + escapeHtml(booking.service_label) + '</div>' +
-      '<div class="when" id="currentWhen">' + formatWhen(booking.start_at, booking.end_at) + '</div></div>' +
+      '<div class="booking-card">' + serviceHexIcon(booking.service_label) + '<div><div class="svc">' + escapeHtml(booking.service_label) + '</div>' +
+      '<div class="when" id="currentWhen">' + formatWhen(booking.start_at, booking.end_at) + '</div></div></div>' +
       '<button type="button" class="btn orange" id="startRescheduleBtn">Reschedule</button>' +
       '<button type="button" class="btn danger" id="startCancelBtn">Cancel this booking</button>' +
       '<div id="rescheduleStep">' +
@@ -338,7 +397,7 @@
       } catch (e) {
         grid.innerHTML =
           '<p style="color:#ff8a80; font-size:13.5px; text-align:center; grid-column:1/-1;">Couldn\'t load available times. Check your connection and try again.</p>' +
-          '<button type="button" class="btn ghost" id="retryDateBtn" style="grid-column:1/-1;">Try again</button>';
+          '<button type="button" class="btn-retry" id="retryDateBtn">' + svgIcon('<path d="M23 4v6h-6M1 20v-6h6"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/>') + 'Try again</button>';
         document.getElementById('retryDateBtn').addEventListener('click', function () { selectDate(dateStr); });
         return;
       }
@@ -362,12 +421,12 @@
           if (row && row.ok) {
             renderState(
               '<div class="state-msg"><div class="checkmark" aria-hidden="true">&#10003;</div><p>Your booking has been rescheduled.</p></div>' +
-              '<div class="booking-card"><div class="svc">' + escapeHtml(booking.service_label) + '</div>' +
-              '<div class="when">' + formatWhen(selectedSlot.startUtc.toISOString(), selectedSlot.endUtc.toISOString()) + '</div></div>'
+              '<div class="booking-card">' + serviceHexIcon(booking.service_label) + '<div><div class="svc">' + escapeHtml(booking.service_label) + '</div>' +
+              '<div class="when">' + formatWhen(selectedSlot.startUtc.toISOString(), selectedSlot.endUtc.toISOString()) + '</div></div></div>'
             );
           } else if (row && row.message === 'slot-taken') {
             btn.disabled = false;
-            await selectDate(dateStr); // someone else just took it -- refresh this date's real availability
+            await selectDate(dateStr);
             document.getElementById('slotsEmpty').insertAdjacentHTML('beforebegin', '<p class="slots-empty" style="color:#ff8a80;">That time was just taken -- please pick another.</p>');
           } else {
             btn.disabled = false;
