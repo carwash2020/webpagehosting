@@ -1,15 +1,24 @@
-name: Backup business data (workspace_sync)
+name: Backup business data (workspace_sync, th_leads, th_bookings)
 
-# Weekly backup of workspace_sync -- the table where every job, invoice,
-# contract, quote, and Runway Dashboard number actually lives. Different
-# from backup-cms-content.yml on purpose: that workflow reads 3 public
-# tables using the anon key, which works because "Anyone can read site
-# content/FAQ/terms" is a real, intentional policy. workspace_sync has
-# no such policy -- it requires an authenticated session ("Require
-# login", auth.role() = 'authenticated') -- so this workflow needs the
-# service_role key instead, via a real GitHub secret. The service_role
-# key is NEVER written into this file; it's referenced by name only and
-# lives solely in this repo's own encrypted secrets.
+# Weekly backup of the tables holding real, otherwise-unbacked-up
+# business data: workspace_sync (every job, invoice, contract, quote,
+# and Runway Dashboard number), th_leads (contact-form submissions),
+# and th_bookings (confirmed appointments from the in-house booking
+# system). th_leads and th_bookings added 2026-08-25, alongside the
+# booking system itself -- both are real, separate tables with real
+# customer data (a lead's contact info, a confirmed appointment) that
+# had no backup coverage at all until now, same gap workspace_sync
+# already had before this workflow first existed.
+#
+# Different from backup-cms-content.yml on purpose: that workflow
+# reads 3 public tables using the anon key, which works because
+# "Anyone can read site content/FAQ/terms" is a real, intentional
+# policy. None of these 3 tables have an anon SELECT policy (by
+# design, in th_leads/th_bookings' case, since they hold real PII) --
+# so this workflow needs the service_role key instead, via a real
+# GitHub secret. The service_role key is NEVER written into this
+# file; it's referenced by name only and lives solely in this repo's
+# own encrypted secrets.
 #
 # ONE-TIME SETUP (not done by this file, has to be done by hand in the
 # GitHub UI): Settings -> Secrets and variables -> Actions -> New
@@ -19,7 +28,7 @@ name: Backup business data (workspace_sync)
 
 on:
   schedule:
-    - cron: '41 9 * * 1'  # ~03:41 Mountain Time, Monday -- low-traffic, once a week is enough for this table
+    - cron: '41 9 * * 1'  # ~03:41 Mountain Time, Monday -- low-traffic, once a week is enough for these tables
   workflow_dispatch: {}
 
 permissions:
@@ -31,7 +40,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Fetch workspace_sync from Supabase
+      - name: Fetch workspace_sync, th_leads, and th_bookings from Supabase
         shell: bash
         env:
           SUPABASE_URL: https://csvfqdjuobylgafgolho.supabase.co
@@ -42,21 +51,28 @@ jobs:
             exit 1
           fi
           mkdir -p backups
-          curl -s -f \
-            -H "apikey: $SUPABASE_SERVICE_ROLE_KEY" \
-            -H "Authorization: Bearer $SUPABASE_SERVICE_ROLE_KEY" \
-            "$SUPABASE_URL/rest/v1/workspace_sync?select=code,data,updated_at&order=code" \
-            -o "backups/workspace_sync.json.tmp" || {
-              echo "::error::Failed to fetch workspace_sync from Supabase"; exit 1;
-            }
-          python3 -m json.tool "backups/workspace_sync.json.tmp" > "backups/workspace_sync.json"
-          rm "backups/workspace_sync.json.tmp"
+          declare -A QUERY=(
+            [workspace_sync]="select=code,data,updated_at&order=code"
+            [th_leads]="select=*&order=created_at"
+            [th_bookings]="select=*&order=start_at"
+          )
+          for table in workspace_sync th_leads th_bookings; do
+            curl -s -f \
+              -H "apikey: $SUPABASE_SERVICE_ROLE_KEY" \
+              -H "Authorization: Bearer $SUPABASE_SERVICE_ROLE_KEY" \
+              "$SUPABASE_URL/rest/v1/$table?${QUERY[$table]}" \
+              -o "backups/${table}.json.tmp" || {
+                echo "::error::Failed to fetch $table from Supabase"; exit 1;
+              }
+            python3 -m json.tool "backups/${table}.json.tmp" > "backups/${table}.json"
+            rm "backups/${table}.json.tmp"
+          done
 
       - name: Commit if content actually changed
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add backups/workspace_sync.json
+          git add backups/workspace_sync.json backups/th_leads.json backups/th_bookings.json
           if git diff --cached --quiet; then
             echo "No content changes since last backup -- nothing to commit."
           else

@@ -22,7 +22,8 @@ Two things on this specific repo have caused real, hours-long confusion before. 
 
 | File | Purpose |
 |---|---|
-| `index.html` | Main homepage — single-page site (services, reviews, about, areas, schedule, contact/FAQ/terms). Contact form posts to Formspree AND mirrors into the internal Leads inbox (see below). |
+| `index.html` | Main homepage — single-page site (services, reviews, about, areas, schedule, contact/FAQ/terms). Contact form inserts directly into `th_leads` (anon key) -- Formspree was removed 2026-08-24, replaced by a real, in-house Resend email pipeline (see "Booking system" below for the equivalent pipeline on the booking side). |
+| `booking.html` | **In-house booking system** (added 2026-08-25, replacing Cal.com entirely). 3-step flow: service → real open time slot → contact info. See "Booking system" below for the full picture. |
 | `handyman-hurricane-ut.html` | Dedicated landing page — Hurricane, UT |
 | `handyman-washington-city-ut.html` | Dedicated landing page — Washington City, UT |
 | `handyman-santa-clara-ivins-ut.html` | Dedicated landing page — Santa Clara & Ivins, UT |
@@ -44,18 +45,18 @@ Two things on this specific repo have caused real, hours-long confusion before. 
 
 | File | Purpose |
 |---|---|
-| `tools/workspace.html` | **Dashboard** — the entry point for the whole suite, organized into 4 tabs: Snapshot (business metrics), Action Items (invoices/leads/due-soon jobs), More (Business Health: gallery queue, compliance, analytics, backup/restore — collapsed by default), and Tools (every internal tool, one tap away). Bookmark this one. |
+| `tools/workspace.html` | **Dashboard** — the entry point for the whole suite, organized into 4 tabs: Snapshot (business metrics), Action Items (invoices/leads/new bookings/due-soon jobs), More (Business Health: gallery queue, compliance, analytics, backup/restore — collapsed by default), and Tools (every internal tool, one tap away). Bookmark this one. |
 | `tools/job-tracker.html` | Jobs, Contacts (with client history), Notes — 3 tabs, one page. Cost Lookup, Profitability, Income, and Expenses moved out to `finance.html` on 2026-08-20 (see below) — this page is jobs/contacts/notes only now. On a real desktop screen, the Jobs list also renders as a sortable table. |
 | `tools/finance.html` | Cost Lookup (with sales tax), Profitability, Income, Expenses (receipt required, mileage rate shared with Route Planner's cost analyzer) — split out of `job-tracker.html` on 2026-08-20 once these four had grown into an entire bookkeeping system living inside a job list. |
 | `tools/invoice-generator.html` | Invoice + Quote/Estimate tabs. Tax-aware, per-line "Taxable" toggle. Convert a Quote to an Invoice with one tap. Generates a branded PDF with your Venmo QR built in. |
 | `tools/contract-generator.html` | Fill in a client/job, generate a branded contract PDF to email/text. Has two signature canvases — see the swipe-gesture note below if working on touch gestures anywhere near this page. |
 | `tools/route-planner.html` | Multi-stop Google Maps route links + a fuel-cost/sales-tax "to and from" cost analyzer. |
 | `tools/review-request.html` | Generates a review-request text message; deep-linkable with a client name/job pre-filled. Also has Google/Yelp QR code tabs. |
-| `tools/calendar.html` | Shows jobs flagged "Show on Calendar" from Job Tracker. Doesn't manage its own data. |
+| `tools/calendar.html` | Shows jobs flagged "Show on Calendar" from Job Tracker, **plus** (added 2026-08-25) unconverted online bookings from `booking.html` -- fetched once on load and merged in as job-shaped pseudo-objects, visually distinguished with a purple dot and a "Booked online" badge. A booking shows up here the moment it's made, without waiting for anyone to manually add it to Job Tracker. |
 | `tools/runway-dashboard.html` | Personal + business financial runway tracking — debts, income, expenses, month-by-month. Pulls revenue/expenses straight from Finance (`finance.html`), no double entry. |
 | `tools/parts-reference.html` | **Appliance Wiki** — quick lookup for common appliance issues: what part it usually is, the part number, roughly what it costs. |
 | `tools/settings.html` | Account info, Cloud Sync setup, notification preferences, Color theme — personal, per-device options that don't belong on any one specific tool page. |
-| `tools/dev-tools.html` | Site diagnostics and maintenance utilities — see "Dev Tools panels" further down for the full list. Access is role-gated (`account_roles` table, see `DISASTER_RECOVERY.md`); as of 2026-08-21, an Owner-role account only sees Client Registry and Account Roles here, while a Developer-role account sees every panel. |
+| `tools/dev-tools.html` | Site diagnostics and maintenance utilities, organized into 5 tabs (Health, Access, Session, Notifications, Deploy) as of 2026-08-25 -- replaced the old scroll-to-anchor nav, which no longer scaled once this page reached 22 panels. Access is role-gated (`account_roles` table, see `DISASTER_RECOVERY.md`); an Owner-role account only sees the Access tab (Client Registry, Account Roles), while a Developer-role account sees all 5 tabs. |
 | `tools/site-content.html` | Site Content / FAQ / Terms editing — split out of `dev-tools.html` on 2026-08-20. |
 | `tools/client-detail.html` | Full history for one client (jobs, invoices, quotes, contracts) — reached from workspace.html or job-detail.html, not linked from the main nav directly. |
 | `tools/job-detail.html` | Full detail view for one job (photos, linked invoices, margin) — reached from job-tracker.html or finance.html, not linked from the main nav directly. |
@@ -87,9 +88,21 @@ Two things on this specific repo have caused real, hours-long confusion before. 
 The internal tools sync through a **separate Supabase project belonging to Triple H only** — never shared with any other business. See `DISASTER_RECOVERY.md` at the repo root for incident runbooks, and `sql/` + `edge-functions/` for schema history and the deployed Edge Function's source.
 
 - `sql/` — every schema/migration/fix file actually run against Supabase, kept as a record of what was done and why. Not meant to be blindly re-run; read each file's own comments first, since some are idempotent and some (the duplicate-cleanup fixes) are meant to run exactly once.
-- `edge-functions/send-push-index.ts` — snapshot of the deployed `Send-Push` Edge Function's source (note the capitalized slug — Supabase treats function names case-sensitively, and this matters if you ever redeploy by hand), for reference/disaster-recovery. Restoring it for real requires the Supabase CLI plus re-adding the `VAPID_PUBLIC_KEY`/`VAPID_PRIVATE_KEY` secrets in Supabase's own dashboard — those keys are deliberately never stored in this repo.
+- `edge-functions/` — snapshots of every deployed Edge Function's source, for reference/disaster-recovery: `send-push-index.ts` (`Send-Push`, capitalized slug -- Supabase treats function names case-sensitively), `send-lead-email-index.ts` (`send-lead-email`, replaces Formspree), `send-booking-email-index.ts` (`send-booking-email`, added 2026-08-25 with the booking system), and `uptime-alert-index.ts` (`uptime-alert`, added 2026-08-25 with uptime monitoring). Restoring any of these for real requires the Supabase CLI plus re-adding that function's own secrets in Supabase's own dashboard -- none of those keys are ever stored in this repo.
 
-## Automated jobs (2026-08-15)
+## Booking system (added 2026-08-25, replaces Cal.com entirely)
+
+Requested directly: full ownership and Triple H branding (not Cal.com's), plus a real database-level guarantee against double-booking. `booking.html` is the public-facing page (all 16 old Cal.com links across `index.html` and the 5 city pages now point to it); `th_bookings` is the Supabase table backing it.
+
+- **The actual protection against double-booking is a database exclusion constraint**, not client-side JS -- `no_overlapping_confirmed_bookings` on `th_bookings`, using a `padded_range` column (set by a `BEFORE INSERT/UPDATE` trigger, not a generated column -- Postgres requires generated-column expressions to be IMMUTABLE, and `timestamptz +/- interval` is only STABLE even for a fixed-duration interval like minutes) that pads each booking 15 minutes on both sides. This gives a real 30-minute gap between any two adjacent bookings for travel/wrap-up time, added after the original constraint (exact-overlap only, zero gap) was found not to actually guarantee this.
+- **Privacy**: `th_bookings` holds real customer PII (name, phone, email, address). The `anon` role has no SELECT policy on it at all -- the public booking page's own availability check reads through a separate view, `th_bookings_availability`, which exposes only `start_at`/`end_at` and nothing else. Staff (authenticated) has full SELECT/UPDATE.
+- **Notifications**: two independent triggers on `th_bookings` insert (`on_new_booking_send_push`, `on_new_booking_send_email`), same proven pattern as `th_leads`' own triggers -- if Resend has an outage, the push notification still goes out, and vice versa.
+- **Job Tracker integration**: a new "Upcoming Bookings" panel on the Dashboard (`workspace.html`, Action Items) shows confirmed, unconverted bookings; "Add to Jobs" creates a real job entry (`fetchUnconvertedBookings`/`markBookingConverted` in `sync.js`). The job schema has no time-of-day field, so the booking's actual time window goes into the new job's `notes`.
+- **Calendar integration**: `calendar.html` shows unconverted bookings too (see its entry above) -- a booking is visible there the moment it's made, without waiting for manual conversion.
+- **Dev Tools integration**: a "Recent Bookings" panel (Notifications tab) shows the last 20 bookings regardless of conversion status, for confirming the pipeline itself worked.
+- **Business hours and service durations are plain constants in `booking.html`** (`HOURS_BY_WEEKDAY`, `SERVICES`), not a database-configurable setting -- adjust directly in that file if either ever changes. Current hours: Mon-Fri 2pm-10pm, Sat 7am-10pm, Sun 2pm-8pm.
+
+## Automated jobs (2026-08-15, substantially expanded 2026-08-25)
 
 Three independent layers of automation, each doing a different job:
 
@@ -98,17 +111,18 @@ to be added by hand in the GitHub web UI (creating/editing anything
 under `.github/workflows/` requires the `workflow` OAuth scope, which
 the assistant's GitHub token was never granted):
 - `backup-cms-content.yml` — daily, backs up `site_content`/`site_faq`/`site_terms` to `backups/` using the public anon key (safe, since "Anyone can read site content" is already a real policy).
-- `backup-business-data.yml` — weekly, backs up `workspace_sync` (every job, invoice, contract, quote) to `backups/`. Needs the `SUPABASE_SERVICE_ROLE_KEY` repo secret set (Settings → Secrets and variables → Actions), since `workspace_sync` requires a real authenticated session, unlike the 3 CMS tables. The key is referenced by name only in the workflow file — never written into it.
+- `backup-business-data.yml` — weekly, backs up `workspace_sync` (every job, invoice, contract, quote), plus `th_leads` and `th_bookings` (added 2026-08-25 -- both real, separate tables that had no backup coverage at all until then). Needs the `SUPABASE_SERVICE_ROLE_KEY` repo secret set (Settings → Secrets and variables → Actions), since none of these 3 tables have an anon SELECT policy. The key is referenced by name only in the workflow file — never written into it.
+- `uptime-check.yml` — every 10 minutes, the in-house replacement for HetrixTools (requested directly). Checks the live site from GitHub's own network (deliberately external to Supabase -- a `pg_cron` job running inside the database can't wake a paused database back up to run itself), logs every check to `th_uptime_checks`, and calls the `uptime-alert` Edge Function on a real state change (up→down or down→up) only, never on every check during an ongoing outage.
 - `check-links.yml` — weekly plus on push, runs `scripts/check-links.py` (internal file references across every HTML file, external links on the 6 public pages only).
 - `lighthouse.yml` — daily, scores the live public site against `.github/lighthouserc.json`'s thresholds. Runs on a schedule rather than directly on push, since Pages needs a little time to actually deploy after a push lands.
 - `cleanup-artifacts.yml` — daily, keeps only the 3 most recent Actions artifacts of each name. Every push generates a full-site Pages deployment artifact; without this they pile up (275MB across 30 of them was the actual trigger for adding this). Uses the workflow's own built-in `GITHUB_TOKEN` with `permissions: actions: write` — no secret needed for this one specifically.
 
 **Supabase `pg_cron`** (`select * from cron.job;` to see live state):
 - `daily-reminder-check` — 1am daily, 11 business-condition checks (see the header comment in `edge-functions/send-push-index.ts` for the full list).
-- `weekly-business-digest` — Monday mornings, one summary push (jobs completed, invoiced, new leads, outstanding balance) rather than a specific alert — trend awareness, not task nagging.
+- `weekly-business-digest` — Monday mornings, one summary push AND email (jobs completed, invoiced, new leads, outstanding balance, weekly uptime %) rather than a specific alert — trend awareness, not task nagging. The email half (`REPORTS_EMAIL_FROM` secret) is optional and gracefully skips if not configured, without ever blocking the push half.
 - `archive-old-notification-log` — monthly, deletes `notification_log` rows older than 3700 days. That number isn't arbitrary: two of the 11 daily checks use a 3650-day resend interval specifically to nudge only once, ever — retention has to stay longer than the longest resend interval in use, or a "one-time" nudge would silently start repeating once its log row got archived.
 
-**Dev Tools panels** (`tools/dev-tools.html`, all 3 Developer-only as of 2026-08-21 — see the table above) — Storage browser (file counts/sizes across all 3 buckets), Data integrity check (job-photo records vs. actual files, in both directions, plus contact-less leads), and Trigger workflows (runs any of the 5 GitHub Actions workflows on demand via the `trigger-workflow` Edge Function — see below, never a GitHub token in this file).
+**Dev Tools panels** (`tools/dev-tools.html`, organized into 5 tabs as of 2026-08-25 — see the table above) — Storage browser (file counts/sizes across all 3 buckets), Data integrity check (job-photo records vs. actual files, in both directions, plus contact-less leads), Trigger workflows (runs any GitHub Actions workflow on demand via the `trigger-workflow` Edge Function — never a GitHub token in this file), Uptime monitoring (current status, 24h/7d uptime %, recent incidents), and Recent bookings (last 20 bookings regardless of conversion status).
 
 ## ⚠️ Do not delete
 
@@ -118,11 +132,11 @@ the assistant's GitHub token was never granted):
 
 ## Known open items
 
-- A lead auto-responder (an automatic "we got your request" reply sent
-  to the customer) was scoped but not built -- it needs a real email-
-  sending provider (Resend, SendGrid, etc.) with its own API key, which
-  doesn't exist yet for this project. Wiring the trigger up is quick
-  once a provider is chosen; picking one is the actual open decision.
+- **The actual Cal.com subscription was never explicitly cancelled.**
+  The in-house replacement (`booking.html`) is fully live and every
+  link on the public site points to it now, but the old Cal.com
+  account itself is a separate, manual cancellation step this repo
+  can't do for you.
 - An accidental second Edge Function exists with the lowercase slug
   `send-push` (the real one is `Send-Push`, capitalized) -- created by
   a deploy-tool mistake on 2026-08-15. It's empty and wired to nothing,

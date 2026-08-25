@@ -13,6 +13,12 @@ that the tool-page consistency check Scenario 2 refers to now also runs
 automatically in CI on every push (`.github/workflows/test.yml` ->
 `scripts/check-consistency.js`), not just on demand from inside Dev Tools.
 
+**Substantially updated 2026-08-25** after the session that replaced
+Cal.com with an in-house booking system, added in-house uptime
+monitoring (replacing HetrixTools), and extended the weekly backup
+workflow to cover `th_leads` and `th_bookings` (see Scenarios 7 and 8,
+new this update, plus the "Automated jobs" section at the bottom).
+
 **The two accounts that matter:** `connor@triplehenterprisesllc.biz` and
 `steve@triplehenterprisesllc.biz`, both real Supabase Auth accounts.
 Losing access to *both* is the actual worst case -- see the very last
@@ -164,7 +170,90 @@ The full pipeline, in order, for tracing where it actually broke:
   to see how many exist; a stale one from an old device won't error,
   it'll just never show anything on a device nobody's watching anymore.
 
-## Scenario 7: A sync stops working / data won't save across devices
+## Scenario 7: A double-booking happens, or the booking system seems broken
+
+**The actual protection against double-booking is a database exclusion
+constraint on `th_bookings`** (`no_overlapping_confirmed_bookings`),
+not anything in `booking.html`'s own JS -- client-side slot computation
+matches the same rules for display purposes, but a genuine race
+condition (two people submitting near-simultaneously) is only ever
+actually resolved by the database rejecting the second insert. If a
+double-booking somehow got through:
+
+1. Check the constraint still exists:
+   `select conname from pg_constraint where conrelid = 'public.th_bookings'::regclass;`
+   should show `no_overlapping_confirmed_bookings`. If it's missing,
+   that's the whole problem -- see `sql/create_booking_system.sql` and
+   `sql/add_booking_schedule_buffer.sql` for the exact definition to
+   restore.
+2. Check the `padded_range` trigger is actually firing: a genuinely
+   new booking's `padded_range` column should never be null --
+   `select id, start_at, end_at, padded_range from public.th_bookings order by id desc limit 5;`.
+   A null `padded_range` on a recent row means the
+   `set_padded_range` trigger (`public.set_th_bookings_padded_range()`)
+   isn't running -- `select tgname from pg_trigger where tgrelid = 'public.th_bookings'::regclass;`
+   should list it.
+3. **A real, non-obvious trap already hit once while building this:**
+   Postgres requires generated-column expressions to be IMMUTABLE, and
+   `timestamptz +/- interval` is only STABLE in its catalog -- even for
+   a fixed-duration interval like minutes. A generated column using it
+   will be rejected outright at creation time. This is why
+   `padded_range` is a plain column set by a `BEFORE INSERT/UPDATE`
+   trigger instead -- if this ever needs rebuilding, don't reach for a
+   generated column again.
+4. **The buffer amount itself:** 15 minutes on each side of every
+   confirmed booking (30 real minutes between any two adjacent
+   appointments) -- both the database trigger and `booking.html`'s own
+   client-side `SCHEDULE_BUFFER_MINUTES` constant need to agree, or a
+   slot can show as available on the page and then get rejected on
+   submit. If this value is ever changed, change it in both places.
+5. If the guest-facing availability check itself seems wrong (showing
+   slots that shouldn't be open, or hiding ones that should be), check
+   `th_bookings_availability` -- a view, not the base table, exposing
+   only `start_at`/`end_at` to `anon` (deliberately no `security_invoker`,
+   since that would make the view enforce the base table's own lack of
+   an `anon` SELECT policy and return zero rows for everyone -- the
+   opposite of the intent). `select * from th_bookings_availability;`
+   as the `anon` role (`set role anon;` in the SQL editor) should show
+   real upcoming bookings' times and nothing else -- no name, phone,
+   email, or address.
+6. **A submission can succeed without ever getting the row back.** The
+   public booking form explicitly does NOT use
+   `Prefer: return=representation` on its insert, because `anon` has no
+   SELECT policy on `th_bookings` at all (real customer PII) -- asking
+   for the row back would fail even though the insert itself succeeds,
+   the same general trap described in Scenario 5 above. If a "booking
+   failed" report turns out to actually be in the database, this is
+   almost certainly why -- check success by HTTP status alone, not by
+   whether a row came back.
+
+## Scenario 8: Uptime monitoring shows wrong status, or stops alerting
+
+The in-house HetrixTools replacement. Deliberately entirely external
+to Supabase -- a `pg_cron` job running inside a paused database can't
+wake that same database back up to run itself, so this runs from
+GitHub Actions instead (`uptime-check.yml`, every 10 minutes), checking
+the live site the way a real visitor would.
+
+1. **Check the workflow is actually running:** GitHub → Actions tab →
+   "Uptime monitoring" -- a long gap between runs, or a run failing
+   outright, means checks have simply stopped happening, which will
+   look identical to "the site has been up this whole time" in
+   `th_uptime_checks` (no new rows either way).
+2. **Alerts only fire on a genuine state transition** (up→down or
+   down→up), never on every check during an ongoing outage -- this is
+   intentional, not a bug, so don't expect a push every 10 minutes
+   while something's actually down.
+3. `select * from th_uptime_checks order by checked_at desc limit 20;`
+   shows the real, raw history if the Dev Tools panel's own summary
+   ever seems to disagree with reality.
+4. The alert itself goes through the same two-channel pattern as every
+   other notification in this app: the `uptime-alert` Edge Function
+   calls `Send-Push` directly for the push half, and Resend directly
+   (reusing the lead-email pipeline's existing secrets) for the email
+   half -- independent failure modes, same reasoning as Scenario 6.
+
+## Scenario 9: A sync stops working / data won't save across devices
 
 1. Dev Tools → Session & Sync → check "Last sync attempt" and its
    History dropdown -- shows the actual error, not just pass/fail.
@@ -235,15 +324,17 @@ cause, rather than anything in the frontend code.
 `can_manage_roles` set (Developer) now also controls how much of Dev
 Tools that account actually *sees*, not just whether it can change
 roles. An Owner-role account (`can_manage_roles` false) only sees
-Client Registry and Account Roles -- the other 19 panels (everything
-code/technical/error-diagnostic in nature) are hidden via
-`applyOwnerRestrictedView()` in `dev-tools.html`, keyed off the real
-`canManageRoles()`. If an Owner reports "most of Dev Tools is
-missing," that's this feature working as intended, not a bug --
-confirm by checking their `account_roles` row's `role_name` first.
-This is separate from the page's own role-preview toggle
-(`effectiveCanManageRoles()`), which only changes what the Account
-Roles panel itself displays and never affects this restriction.
+Client Registry and Account Roles -- the other 22 panels (everything
+code/technical/error-diagnostic in nature, organized into 5 tabs as
+of 2026-08-25's navigation redesign -- Health, Access, Session,
+Notifications, Deploy) are hidden via `applyOwnerRestrictedView()` in
+`dev-tools.html`, keyed off the real `canManageRoles()`. If an Owner
+reports "most of Dev Tools is missing," that's this feature working
+as intended, not a bug -- confirm by checking their `account_roles`
+row's `role_name` first. This is separate from the page's own
+role-preview toggle (`effectiveCanManageRoles()`), which only changes
+what the Account Roles panel itself displays and never affects this
+restriction.
 
 **A real bug already happened here once, worth knowing about:** the
 dev-tools dashboard tile went invisible for *every* account (Connor
@@ -329,9 +420,12 @@ one does. Two things worth knowing if any of them ever misbehave:
 - **`backup-business-data.yml` needs a `SUPABASE_SERVICE_ROLE_KEY` repo
   secret to actually run** -- unlike `backup-cms-content.yml`, which
   uses the public anon key safely because "Anyone can read site
-  content" is a real policy, `workspace_sync` requires a genuine
-  authenticated session. If this workflow's runs show "repo secret is
-  not set" in the Actions log, that secret needs adding (Settings →
-  Secrets and variables → Actions), value from Supabase's own dashboard
-  (Project Settings → API → service_role secret) -- never from this
-  repo or any file in it.
+  content" is a real policy, none of `workspace_sync`, `th_leads`, or
+  `th_bookings` have an anon SELECT policy. If this workflow's runs
+  show "repo secret is not set" in the Actions log, that secret needs
+  adding (Settings → Secrets and variables → Actions), value from
+  Supabase's own dashboard (Project Settings → API → service_role
+  secret) -- never from this repo or any file in it. Extended
+  2026-08-25 to also cover `th_leads` and `th_bookings` -- both had
+  been sitting with zero backup coverage since they were created,
+  same gap `workspace_sync` had before this workflow first existed.
