@@ -53,10 +53,10 @@ test('an "info bubble" click on any panel actually opens the shared help modal w
   assert.equal(window.document.querySelector('#helpModalOverlay h3').innerHTML, 'Live consistency check');
 });
 
-test('a Developer account sees all 5 tab buttons, with "health" active by default', () => {
+test('a Developer account sees all 6 tab buttons, with "health" active by default', () => {
   const window = loadAs(true);
   const tabBtns = Array.from(window.document.querySelectorAll('.dev-tab-btn'));
-  assert.equal(tabBtns.length, 5, 'expected exactly 5 tab buttons');
+  assert.equal(tabBtns.length, 6, 'expected exactly 6 tab buttons');
   tabBtns.forEach(btn => {
     assert.notEqual(btn.style.display, 'none', 'tab "' + btn.getAttribute('data-tab') + '" should be visible for a Developer');
   });
@@ -67,7 +67,7 @@ test('a Developer account sees all 5 tab buttons, with "health" active by defaul
   assert.ok(healthGrid.classList.contains('is-active-tab-panel'), 'health panel group should start active');
 
   const otherGrids = window.document.querySelectorAll('.dev-panels-grid[data-tab-panel]:not([data-tab-panel="health"])');
-  assert.equal(otherGrids.length, 4, 'expected 4 other tab-panel groups');
+  assert.equal(otherGrids.length, 5, 'expected 5 other tab-panel groups');
   otherGrids.forEach(grid => {
     assert.ok(!grid.classList.contains('is-active-tab-panel'), 'tab-panel "' + grid.getAttribute('data-tab-panel') + '" should not be active initially');
   });
@@ -97,7 +97,7 @@ test('an Owner account (canManageRoles false) sees only the Access tab button, a
   assert.notEqual(accessBtn.style.display, 'none', 'Access tab button should stay visible for an Owner');
 
   const nonAccessBtns = tabBtns.filter(b => b.getAttribute('data-tab') !== 'access');
-  assert.equal(nonAccessBtns.length, 4, 'expected 4 non-Access tab buttons');
+  assert.equal(nonAccessBtns.length, 5, 'expected 5 non-Access tab buttons');
   nonAccessBtns.forEach(btn => {
     assert.equal(btn.style.display, 'none', 'tab "' + btn.getAttribute('data-tab') + '" should be hidden for an Owner, since every one of its panels is dev-owner-hidden');
   });

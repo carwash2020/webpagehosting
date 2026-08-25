@@ -260,6 +260,7 @@ if (typeof document !== 'undefined') {
     '<symbol id="icon-lock" viewBox="0 0 24 24"><rect x="5" y="10.5" width="14" height="9.5" rx="1.5"/><path d="M8 10.5V7.5a4 4 0 0 1 8 0v3"/></symbol>' +
 
     '<symbol id="icon-rocket" viewBox="0 0 24 24"><path d="M12 2.5c3 2 4.5 5.5 4.5 9.5 0 2-.5 3.7-1.3 5.2h-6.4C8 15.7 7.5 14 7.5 12c0-4 1.5-7.5 4.5-9.5z"/><circle cx="12" cy="10.5" r="1.6"/><path d="M8.8 17.2L6 20.5M15.2 17.2l2.8 3.3"/></symbol>' +
+    '<symbol id="icon-trending" viewBox="0 0 24 24"><polyline points="3.5,17 9,11.5 13,15.5 20.5,7"/><polyline points="14.5,7 20.5,7 20.5,13"/></symbol>' +
 
     '<symbol id="icon-note" viewBox="0 0 24 24"><rect x="4.5" y="3.5" width="15" height="17" rx="1.5"/><line x1="8" y1="8" x2="16" y2="8"/><line x1="8" y1="11.5" x2="16" y2="11.5"/><line x1="8" y1="15" x2="12.5" y2="15"/></symbol>' +
 
