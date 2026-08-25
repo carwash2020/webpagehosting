@@ -702,6 +702,39 @@ Deno.serve(async (req: Request) => {
       return new Response(JSON.stringify({ ok: true }), { headers: { "Content-Type": "application/json" } });
     }
 
+    if (payload.type === "UPDATE" && payload.table === "th_bookings") {
+      const oldRecord = payload.old_record || {};
+      const newRecord = payload.record || {};
+      // Only a genuine confirmed -> cancelled transition is a real
+      // cancellation notification -- the DB trigger itself already
+      // guards this, but checking again here means this branch stays
+      // correct even if some other UPDATE-triggering path is ever
+      // added to th_bookings later without remembering this guard.
+      if (oldRecord.status !== "confirmed" || newRecord.status !== "cancelled") {
+        return new Response(JSON.stringify({ ok: true, skipped: true }), { headers: { "Content-Type": "application/json" } });
+      }
+      const name = newRecord.name || "Someone";
+      let whenLabel = "";
+      try {
+        const start = new Date(newRecord.start_at);
+        whenLabel = new Intl.DateTimeFormat("en-US", {
+          timeZone: "America/Denver",
+          weekday: "short",
+          month: "short",
+          day: "numeric",
+          hour: "numeric",
+          minute: "2-digit",
+        }).format(start);
+      } catch (e) { /* malformed date -- fall back to no time in the body below */ }
+      const alreadyAJobNote = newRecord.job_id ? " Already added to Jobs -- update or remove that job too." : "";
+      await sendToAllSubscriptions({
+        title: "Booking Cancelled",
+        body: `${name} cancelled ${newRecord.service_label || "an appointment"}${whenLabel ? ` for ${whenLabel}` : ""}.${alreadyAJobNote}`,
+        url: "/tools/workspace.html",
+      });
+      return new Response(JSON.stringify({ ok: true }), { headers: { "Content-Type": "application/json" } });
+    }
+
     if (payload.type === "reminder-check") {
       const synced = await getSyncedData();
 
