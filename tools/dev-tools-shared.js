@@ -64,6 +64,10 @@
       title: 'Push notification history',
       body: `<p>Reads notification_log directly -- the same table the Send-Push edge function's own de-duplication logic uses to decide whether a category has already fired recently, so this is the real record of what's actually gone out, not a separate log kept just for display.</p><p>Doesn't confirm a push was actually received on any device, only that it was sent from this end -- same limitation as the test button above.</p>`,
     },
+    bookingtest: {
+      title: 'Booking notification test',
+      body: `<p>Runs a real booking through its full lifecycle: creates a test booking, reschedules it, then cancels it -- exercising all three notification paths (new booking, rescheduled, cancelled) in one run, using far-future dates that can't collide with a real appointment. Cleaned up automatically afterward.</p><p>Doesn't confirm a push or email was actually received, only that each step ran and the server accepted it -- same limitation as the Push notification test above. Check the Send-Push and send-booking-email edge function logs in Supabase directly to confirm delivery.</p>`,
+    },
     recentbookings: {
       title: 'Recent bookings',
       body: `<p>Reads th_bookings directly -- the last 20 appointments booked through the site, regardless of whether they've already been converted into a Job Tracker entry. This is specifically for confirming the booking pipeline itself actually worked (the guest's submission landed, the notification fired), separate from the Job Tracker conversion step, which is its own action taken later from the Dashboard's Upcoming Bookings panel.</p>`,

@@ -15,7 +15,7 @@ const DEV_ONLY_HEADINGS = [
   'Live consistency check', 'Data quality check', 'Session & sync',
   'Local data snapshot', 'Appliance Wiki health', 'Device info',
   'Service worker & cache', 'Client errors', 'Push notification test',
-  'Push notification history', 'Recent bookings', 'Known issues', 'Flagged pages', 'Uptime monitoring', 'Deploy history',
+  'Push notification history', 'Booking notification test', 'Recent bookings', 'Known issues', 'Flagged pages', 'Uptime monitoring', 'Deploy history',
   'Regression checker', "What's new", 'Quick links', 'Trigger workflows',
   'Advisor health', 'Storage browser', 'Data integrity check',
 ];
@@ -40,13 +40,13 @@ function panelFor(window, headingText) {
   return heading ? heading.closest('.dev-panel') : null;
 }
 
-test('exactly 22 panels are marked dev-owner-hidden, matching the full, deliberate list of code/technical/error-diagnostic panels (19 original + Flagged Pages + Uptime Monitoring + the new Recent Bookings panel)', () => {
+test('exactly 23 panels are marked dev-owner-hidden, matching the full, deliberate list of code/technical/error-diagnostic panels (19 original + Flagged Pages + Uptime Monitoring + Recent Bookings + the new Booking notification test panel)', () => {
   const src = fs.readFileSync(DEV_TOOLS_PATH, 'utf8');
   const count = (src.match(/class="dev-panel dev-owner-hidden/g) || []).length;
-  assert.equal(count, 22);
+  assert.equal(count, 23);
 });
 
-test('an Owner account (canManageRoles false) has every one of the 22 developer-only panels hidden', () => {
+test('an Owner account (canManageRoles false) has every one of the 23 developer-only panels hidden', () => {
   const window = loadAs(false);
   for (const heading of DEV_ONLY_HEADINGS) {
     const panel = panelFor(window, heading);
