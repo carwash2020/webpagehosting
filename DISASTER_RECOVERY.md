@@ -19,6 +19,16 @@ monitoring (replacing HetrixTools), and extended the weekly backup
 workflow to cover `th_leads` and `th_bookings` (see Scenarios 7 and 8,
 new this update, plus the "Automated jobs" section at the bottom).
 
+**Updated again 2026-08-25 (later the same day)** to cover guest
+self-service cancel/reschedule, added after the initial booking-system
+build -- Scenario 7 now covers the cancel/reschedule RPC functions, a
+real notification bug found while building them (documented as its
+own numbered step, since the obvious-looking cause turned out to be
+wrong), and a real auth-testing gotcha (`set role authenticated` alone
+doesn't satisfy `auth.role()`) that made a missing DELETE policy look
+like it was working when it silently wasn't. Also fixed the panel
+count (23, not 22, after a new Dev Tools test panel).
+
 **The two accounts that matter:** `connor@triplehenterprisesllc.biz` and
 `steve@triplehenterprisesllc.biz`, both real Supabase Auth accounts.
 Losing access to *both* is the actual worst case -- see the very last
@@ -226,6 +236,49 @@ double-booking somehow got through:
    failed" report turns out to actually be in the database, this is
    almost certainly why -- check success by HTTP status alone, not by
    whether a row came back.
+7. **If a guest's cancel or reschedule link doesn't seem to be working:**
+   check `select cancel_token from public.th_bookings where id = <id>;`
+   and confirm the guest's link actually matches. The two RPC functions
+   (`get_booking_by_cancel_token`, `cancel_booking_by_token`,
+   `reschedule_booking_by_token` -- `sql/add_booking_cancellation.sql`
+   and `sql/add_booking_reschedule.sql`) are all `security definer`, so
+   they work for `anon` despite `anon` having no SELECT/UPDATE policy
+   on the base table at all. If a reschedule keeps failing with
+   `slot-taken` for a time that looks genuinely open, check whether the
+   guest's OWN current booking is being counted as a conflict against
+   itself -- `manage-booking.html`'s own availability fetch filters out
+   the booking's own `start_at` before computing slots; if that filter
+   is ever removed, a guest trying to shift their own time by 30
+   minutes on the same day will incorrectly see it as unavailable.
+8. **If staff push notifications for a cancellation or reschedule stop
+   arriving (new-booking notifications still work fine):** the
+   consolidated `notify_booking_status_change` trigger on `th_bookings`
+   fires on every UPDATE, but `Send-Push`'s own `UPDATE`/`th_bookings`
+   handler has to correctly distinguish "cancelled" from "rescheduled"
+   from "neither" -- this exact bug happened once already (the handler
+   only ever recognized the cancellation transition and silently
+   discarded a genuine reschedule, even though the trigger fired
+   correctly and the HTTP call itself succeeded every time). Don't
+   assume the trigger is the problem first -- insert a real test row
+   (or use the Booking notification test panel in Dev Tools, which
+   automates exactly this), then check `net._http_response` for the
+   actual response body the Edge Function returned, not just whether a
+   row landed in `net._http_response` at all. `{"ok":true,"skipped":true}`
+   means the trigger fired but the Edge Function's own logic decided
+   nothing needed to happen -- that's the bug, not the trigger.
+9. **Testing any of this directly in the SQL editor:** `set role
+   authenticated;` on its own is NOT enough to make `auth.role()`
+   return `'authenticated'` -- that function specifically reads from
+   the `request.jwt.claim.role` session setting, which a bare role
+   switch never populates, so every `authenticated`-gated RLS policy
+   will silently behave as if the caller were unauthenticated (a
+   SELECT returns zero rows, an UPDATE/DELETE silently affects zero
+   rows -- no error either way). Add
+   `set request.jwt.claim.role = 'authenticated';` right after the
+   role switch to actually simulate a real logged-in session. This is
+   exactly how the missing DELETE policy on `th_bookings` was found --
+   a plain `set role authenticated;` made a DELETE look like it
+   succeeded (no error) when it had actually silently done nothing.
 
 ## Scenario 8: Uptime monitoring shows wrong status, or stops alerting
 
@@ -324,7 +377,7 @@ cause, rather than anything in the frontend code.
 `can_manage_roles` set (Developer) now also controls how much of Dev
 Tools that account actually *sees*, not just whether it can change
 roles. An Owner-role account (`can_manage_roles` false) only sees
-Client Registry and Account Roles -- the other 22 panels (everything
+Client Registry and Account Roles -- the other 23 panels (everything
 code/technical/error-diagnostic in nature, organized into 5 tabs as
 of 2026-08-25's navigation redesign -- Health, Access, Session,
 Notifications, Deploy) are hidden via `applyOwnerRestrictedView()` in
