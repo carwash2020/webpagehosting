@@ -1510,9 +1510,21 @@
   }
 
   async function convertBookingToJob(id) {
+    // Guards against a real race: without this, a rapid double-click
+    // (or just a slow network response between clicks) could create
+    // two duplicate jobs from the same booking, since the job gets
+    // pushed to localStorage before markBookingConverted() resolves
+    // and clears this booking from the unconverted list.
+    const btn = document.querySelector('[data-booking-id="' + id + '"] .lead-toggle-btn');
+    if (btn) { if (btn.disabled) return; btn.disabled = true; btn.textContent = 'Adding...'; }
+
     const result = await fetchUnconvertedBookings();
     const booking = result.ok ? result.bookings.find(b => b.id === id) : null;
-    if (!booking) { await showAlert('Could not find that booking -- it may have already been converted or removed.'); loadAndRenderBookings(); return; }
+    if (!booking) {
+      await showAlert('Could not find that booking -- it may have already been converted or removed.');
+      loadAndRenderBookings();
+      return;
+    }
 
     const start = new Date(booking.start_at);
     const end = new Date(booking.end_at);
