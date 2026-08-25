@@ -84,6 +84,12 @@
   .cal-day-dot.is-high { background: #e05252; }
   .cal-day-dot.is-medium { background: var(--orange); }
   .cal-day-dot.is-low { background: var(--blue); }
+  .cal-day-dot.is-booking { background: #b083f0; }
+  .cal-booking-badge {
+    display: inline-block; font-size: 11px; font-weight: 600; letter-spacing: 0.3px;
+    background: rgba(176,131,240,0.15); color: #b083f0; border: 1px solid rgba(176,131,240,0.35);
+    border-radius: 5px; padding: 2px 7px; margin-left: 6px; vertical-align: middle;
+  }
   .cal-day-more { font-size: 9px; color: var(--text-dim); flex-shrink: 0; line-height: 6px; }
 
   .cal-day-detail { margin-top: 24px; }
@@ -160,11 +166,50 @@
 
 <script>
 
+  // Requested directly: a fresh booking wouldn't show up here at all
+  // until manually converted to a job on the Dashboard, which
+  // defeats the point of using this calendar to avoid scheduling
+  // conflicts. Fetched once on load (see the init block below) and
+  // cached here -- loadJobsForCalendar() merges this in every time
+  // it's called, so renderCalendar()/renderDayDetail() stay fully
+  // synchronous and don't need restructuring around a network call.
+  let cachedUnconvertedBookings = [];
+
+  async function refreshBookingsCache() {
+    if (typeof fetchUnconvertedBookings !== 'function') return;
+    const result = await fetchUnconvertedBookings();
+    if (!result.ok) return;
+    cachedUnconvertedBookings = result.bookings.map(b => {
+      const start = new Date(b.start_at);
+      const end = new Date(b.end_at);
+      const dateParts = new Intl.DateTimeFormat('en-US', { timeZone: 'America/Denver', year: 'numeric', month: '2-digit', day: '2-digit' }).formatToParts(start);
+      const map = {};
+      dateParts.forEach(p => { map[p.type] = p.value; });
+      const timeFmt = new Intl.DateTimeFormat('en-US', { timeZone: 'America/Denver', hour: 'numeric', minute: '2-digit' });
+      return {
+        // String-prefixed so this can never collide with a real job's
+        // Date.now()-based numeric id.
+        id: 'booking-' + b.id,
+        title: b.service_label,
+        client: b.name,
+        phone: b.phone,
+        address: b.address,
+        notes: 'Booked online for ' + timeFmt.format(start) + ' \u2013 ' + timeFmt.format(end) + (b.notes ? '\n\n' + b.notes : ''),
+        date: map.year + '-' + map.month + '-' + map.day,
+        status: 'not-started',
+        priority: 'medium',
+        showOnCalendar: true,
+        isUnconvertedBooking: true,
+      };
+    });
+  }
+
   function loadJobsForCalendar() {
+    let jobs = [];
     try {
-      const jobs = JSON.parse(localStorage.getItem('th_tracker_jobs') || '[]');
-      return jobs.filter(j => j.showOnCalendar && j.date);
-    } catch (e) { return []; }
+      jobs = JSON.parse(localStorage.getItem('th_tracker_jobs') || '[]');
+    } catch (e) { jobs = []; }
+    return jobs.filter(j => j.showOnCalendar && j.date).concat(cachedUnconvertedBookings);
   }
 
   let viewYear, viewMonth, selectedDateStr = null;
@@ -198,7 +243,7 @@
       const isSelected = key === selectedDateStr;
       const shownJobs = dayJobs.slice(0, 4);
       const dots = shownJobs.map(j => {
-        const cls = j.status === 'done' ? 'is-done' : 'is-' + (j.priority || 'medium');
+        const cls = j.isUnconvertedBooking ? 'is-booking' : (j.status === 'done' ? 'is-done' : 'is-' + (j.priority || 'medium'));
         return `<span class="cal-day-dot ${cls}"></span>`;
       }).join('');
       const extraCount = dayJobs.length - shownJobs.length;
@@ -299,10 +344,12 @@
     container.innerHTML = jobs.map(j => `
       <div class="cal-job-item">
         <div>
-          <div class="cal-job-title">${escapeHtml(j.title)}</div>
+          <div class="cal-job-title">${escapeHtml(j.title)}${j.isUnconvertedBooking ? ' <span class="cal-booking-badge">Booked online</span>' : ''}</div>
           <div class="cal-job-meta">${j.client ? escapeHtml(j.client) : ''}${j.address ? ' &middot; ' + escapeHtml(j.address) : ''}</div>
         </div>
-        <button class="secondary-btn" onclick="downloadJobIcs(${j.id})">Add to Phone</button>
+        ${j.isUnconvertedBooking
+          ? '<a class="secondary-btn" href="/tools/workspace.html">Add to Jobs</a>'
+          : `<button class="secondary-btn" onclick="downloadJobIcs(${j.id})">Add to Phone</button>`}
       </div>`).join('');
   }
 
@@ -412,6 +459,9 @@
     if (typeof initSyncOnLoad === 'function') {
       initSyncOnLoad().then(() => { renderCalendar(); renderDayDetail(); });
     }
+    // Requested directly: a fresh booking should show up here without
+    // waiting for anyone to manually convert it to a job first.
+    refreshBookingsCache().then(() => { renderCalendar(); renderDayDetail(); });
     // Live updates too: a job scheduled from Job Tracker on another device
     // now shows up here without a manual refresh.
     if (typeof startRealtimeSync === 'function') {
