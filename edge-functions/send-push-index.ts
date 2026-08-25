@@ -78,6 +78,11 @@ const LEAD_EMAIL_TO = (Deno.env.get("LEAD_EMAIL_TO") || "")
   .map((addr: string) => addr.trim())
   .filter((addr: string) => addr.length > 0);
 
+// Same publicly-hosted, email-client-safe logo already used by
+// send-lead-email-index.ts -- see that file's own comment for why
+// this is a dedicated PNG rather than the site's .webp logo.
+const LOGO_URL = "https://www.triplehenterprisesllc.biz/images/logo-signature-email.png";
+
 webpush.setVapidDetails(
   "mailto:contact@triplehenterprisesllc.biz",
   VAPID_PUBLIC_KEY,
@@ -479,6 +484,87 @@ function money(v: number): string {
   return "$" + v.toFixed(2).replace(/\d(?=(\d{3})+\.)/g, "$&,");
 }
 
+// Weekly uptime stats for the digest, requested directly. Counts
+// distinct incidents (transitions INTO a down state, not every
+// individual down check) using the same underlying logic as the Dev
+// Tools panel's groupIntoIncidents, simplified here since the digest
+// only needs a count and a percentage, not each incident's own
+// start/end times.
+async function getWeeklyUptimeStats(): Promise<{ uptimePct: number; incidentCount: number } | null> {
+  const weekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
+  const res = await supabaseRequest(
+    `/rest/v1/th_uptime_checks?target=eq.website&checked_at=gte.${encodeURIComponent(weekAgo)}&select=status&order=checked_at.asc`,
+  );
+  if (!res.ok) return null;
+  const checks = await res.json();
+  if (!checks.length) return null;
+
+  const upCount = checks.filter((c: any) => c.status === "up").length;
+  const uptimePct = (upCount / checks.length) * 100;
+
+  let incidentCount = 0;
+  let wasDown = false;
+  for (const c of checks) {
+    if (c.status === "down" && !wasDown) { incidentCount++; wasDown = true; }
+    else if (c.status === "up") wasDown = false;
+  }
+
+  return { uptimePct, incidentCount };
+}
+
+function buildWeeklyDigestEmailHtml(parts: string[], uptimeStats: { uptimePct: number; incidentCount: number } | null): string {
+  const listItems = parts.map((p) => `<tr><td style="padding: 6px 0; font-size: 15px; color: #222;">&bull; ${p}</td></tr>`).join("");
+
+  const uptimeRow = uptimeStats
+    ? `<tr><td style="padding: 20px 28px 4px; font-family: -apple-system, Helvetica, Arial, sans-serif;"><p style="color: #777; font-size: 13px; text-transform: uppercase; letter-spacing: 0.5px; margin: 0 0 8px;">Uptime this week</p><p style="color: #222; font-size: 15px; margin: 0;">${uptimeStats.uptimePct.toFixed(2)}% uptime${uptimeStats.incidentCount > 0 ? `, ${uptimeStats.incidentCount} incident${uptimeStats.incidentCount === 1 ? "" : "s"}` : ", no incidents"}</p></td></tr>`
+    : "";
+
+  return `<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="color-scheme" content="light">
+<meta name="supported-color-schemes" content="light">
+<title>Weekly Summary -- Triple H Enterprises</title>
+</head>
+<body style="margin: 0; padding: 0; background-color: #f4f4f4;">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" bgcolor="#f4f4f4" style="background: #f4f4f4; padding: 32px 16px;">
+  <tr>
+    <td align="center">
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" bgcolor="#ffffff" style="max-width: 480px; background: #ffffff; border-radius: 10px; overflow: hidden; border: 1px solid #e5e5e5;">
+        <tr>
+          <td align="center" bgcolor="#0a0a0a" style="background: #0a0a0a; padding: 28px 24px;">
+            <img src="${LOGO_URL}" alt="Triple H Enterprises" width="140" style="display: block; border: 0;">
+          </td>
+        </tr>
+        <tr>
+          <td style="padding: 32px 28px 8px; font-family: -apple-system, Helvetica, Arial, sans-serif;">
+            <h1 style="color: #ff8000; font-size: 22px; margin: 0 0 20px; text-align: center;">Weekly Summary</h1>
+          </td>
+        </tr>
+        <tr>
+          <td style="padding: 0 28px;">
+            <table role="presentation" width="100%" cellpadding="0" cellspacing="0">${listItems}</table>
+          </td>
+        </tr>
+        ${uptimeRow}
+        <tr>
+          <td style="background: #ff8000; height: 4px; line-height: 4px; font-size: 1px; margin-top: 20px;">&nbsp;</td>
+        </tr>
+        <tr>
+          <td align="center" bgcolor="#ffffff" style="background: #ffffff; padding: 16px 24px; font-family: -apple-system, Helvetica, Arial, sans-serif;">
+            <p style="color: #999; font-size: 12px; margin: 0;">(435) 414-1667 &middot; triplehenterprisesllc.biz</p>
+          </td>
+        </tr>
+      </table>
+    </td>
+  </tr>
+</table>
+</body>
+</html>`;
+}
+
 // Weekly digest -- added 2026-08-15. Trend awareness rather than task
 // nagging, so this one is intentionally sent even when every number is
 // zero (a quiet week is itself useful to know), unlike every check
@@ -530,6 +616,13 @@ async function sendWeeklyDigest() {
   if (outstandingTotal > 0) parts.push(`${money(outstandingTotal)} outstanding`);
   if (quotesOutstanding > 0) parts.push(`${quotesOutstanding} quote${quotesOutstanding === 1 ? "" : "s"} awaiting conversion`);
 
+  // Weekly uptime stats, requested directly -- added to both channels,
+  // computed once, same as every other figure in this digest.
+  const uptimeStats = await getWeeklyUptimeStats();
+  if (uptimeStats) {
+    parts.push(`${uptimeStats.uptimePct.toFixed(2)}% uptime${uptimeStats.incidentCount > 0 ? ` (${uptimeStats.incidentCount} incident${uptimeStats.incidentCount === 1 ? "" : "s"})` : ""}`);
+  }
+
   await sendToAllSubscriptions({
     title: "Weekly Summary",
     body: parts.join(" \u00b7 "),
@@ -553,7 +646,7 @@ async function sendWeeklyDigest() {
           to: LEAD_EMAIL_TO,
           subject: "Weekly Summary -- Triple H Enterprises",
           text: parts.join("\n"),
-          html: `<div style="font-family: -apple-system, Helvetica, Arial, sans-serif; font-size: 15px;"><h2 style="color: #ff8000;">Weekly Summary</h2><ul>${parts.map((p) => `<li>${p}</li>`).join("")}</ul></div>`,
+          html: buildWeeklyDigestEmailHtml(parts, uptimeStats),
         }),
       });
       if (!res.ok) {
