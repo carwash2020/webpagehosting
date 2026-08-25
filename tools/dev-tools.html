@@ -1848,6 +1848,30 @@
       const allLeads = allLeadsRes.ok ? await allLeadsRes.json() : [];
       const contactlessLeads = allLeads.filter(l => !l.phone && !l.email);
 
+      // Booking-system checks, added directly: this panel had nothing
+      // about bookings at all despite real invariants worth watching.
+      const [bookingsRes, syncRes] = await Promise.all([
+        fetchWithTimeout(SUPABASE_URL + '/rest/v1/th_bookings?select=id,name,service_label,status,job_id,start_at,end_at', 8000, {
+          headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': 'Bearer ' + getAuthToken() },
+        }),
+        fetchWithTimeout(SUPABASE_URL + '/rest/v1/workspace_sync?select=data&limit=1', 8000, {
+          headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': 'Bearer ' + getAuthToken() },
+        }),
+      ]);
+      const bookings = bookingsRes.ok ? await bookingsRes.json() : [];
+      let realJobIds = new Set();
+      if (syncRes.ok) {
+        const syncRows = await syncRes.json();
+        try {
+          const jobs = JSON.parse((syncRows[0] && syncRows[0].data && syncRows[0].data.th_tracker_jobs) || '[]');
+          realJobIds = new Set(jobs.map(j => String(j.id)));
+        } catch (e) { /* malformed sync blob -- treated as no real jobs found, same as an empty list */ }
+      }
+
+      const orphanedJobLinks = bookings.filter(b => b.job_id && !realJobIds.has(String(b.job_id)));
+      const cancelledButStillLinked = bookings.filter(b => b.status === 'cancelled' && b.job_id);
+      const malformedRanges = bookings.filter(b => new Date(b.end_at) <= new Date(b.start_at));
+
       let html = '';
       html += '<div class="dev-check-row"><span>Job photo records with a missing file</span><span class="dev-check-status ' + (missingFiles.length ? 'fail' : 'pass') + '">' + missingFiles.length + '</span></div>';
       if (missingFiles.length) {
@@ -1860,6 +1884,18 @@
       html += '<div class="dev-check-row"><span>Leads with no phone or email</span><span class="dev-check-status ' + (contactlessLeads.length ? 'fail' : 'pass') + '">' + contactlessLeads.length + '</span></div>';
       if (contactlessLeads.length) {
         html += contactlessLeads.map(l => '<div class="dev-check-detail">#' + l.id + ' -- ' + escapeHtml(l.name || '(no name)') + '</div>').join('');
+      }
+      html += '<div class="dev-check-row"><span>Bookings linked to a job that no longer exists</span><span class="dev-check-status ' + (orphanedJobLinks.length ? 'fail' : 'pass') + '">' + orphanedJobLinks.length + '</span></div>';
+      if (orphanedJobLinks.length) {
+        html += orphanedJobLinks.map(b => '<div class="dev-check-detail">#' + b.id + ' -- ' + escapeHtml(b.name || '(no name)') + ', ' + escapeHtml(b.service_label || '') + ' (job_id ' + escapeHtml(String(b.job_id)) + ' not found)</div>').join('');
+      }
+      html += '<div class="dev-check-row"><span>Cancelled bookings still linked to a job -- may need manual cleanup there too</span><span class="dev-check-status ' + (cancelledButStillLinked.length ? 'fail' : 'pass') + '">' + cancelledButStillLinked.length + '</span></div>';
+      if (cancelledButStillLinked.length) {
+        html += cancelledButStillLinked.map(b => '<div class="dev-check-detail">#' + b.id + ' -- ' + escapeHtml(b.name || '(no name)') + ', ' + escapeHtml(b.service_label || '') + '</div>').join('');
+      }
+      html += '<div class="dev-check-row"><span>Bookings with a malformed time range (ends before or when it starts)</span><span class="dev-check-status ' + (malformedRanges.length ? 'fail' : 'pass') + '">' + malformedRanges.length + '</span></div>';
+      if (malformedRanges.length) {
+        html += malformedRanges.map(b => '<div class="dev-check-detail">#' + b.id + ' -- ' + escapeHtml(b.name || '(no name)') + ', ' + escapeHtml(b.service_label || '') + '</div>').join('');
       }
       el.innerHTML = html;
     } catch (e) {
