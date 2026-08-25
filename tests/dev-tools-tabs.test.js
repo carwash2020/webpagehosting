@@ -29,6 +29,30 @@ function loadAs(canManage) {
   return window;
 }
 
+test('an "info bubble" click on any panel actually opens the shared help modal with that panel\'s real content -- previously silently did nothing since helpModalOverlay did not exist on this page at all', () => {
+  const devToolsHtml = fs.readFileSync(DEV_TOOLS_PATH, 'utf8');
+  const overlayMatch = devToolsHtml.match(/<div class="help-modal-overlay"[\s\S]*?<\/div>\s*<\/div>\s*<\/div>/);
+  assert.ok(overlayMatch, 'helpModalOverlay element should exist in dev-tools.html');
+
+  const sharedJs = fs.readFileSync(path.join(__dirname, '..', 'tools', 'dev-tools-shared.js'), 'utf8');
+  const devInfoMatch = sharedJs.match(/const DEV_INFO = \{[\s\S]*?\n  \};/);
+  const openDevInfoMatch = sharedJs.match(/function openDevInfo[\s\S]*?\n  \}/);
+  assert.ok(devInfoMatch && openDevInfoMatch, 'DEV_INFO / openDevInfo should exist in dev-tools-shared.js');
+
+  const effectsJs = fs.readFileSync(path.join(__dirname, '..', 'tools', 'tools-effects.js'), 'utf8');
+  const openInfoModalMatch = effectsJs.match(/function openInfoModal[\s\S]*?\n\}/);
+  assert.ok(openInfoModalMatch, 'openInfoModal should exist in tools-effects.js');
+
+  const dom = new JSDOM('<!DOCTYPE html><html><body>' + overlayMatch[0] + '</body></html>', { runScripts: 'dangerously' });
+  const { window } = dom;
+  window.eval(devInfoMatch[0] + '\n' + openInfoModalMatch[0] + '\n' + openDevInfoMatch[0] + '\nwindow.openDevInfo = openDevInfo;');
+
+  window.openDevInfo('consistency');
+  const overlay = window.document.getElementById('helpModalOverlay');
+  assert.ok(overlay.classList.contains('is-open'), 'modal should be open after calling openDevInfo');
+  assert.equal(window.document.querySelector('#helpModalOverlay h3').innerHTML, 'Live consistency check');
+});
+
 test('a Developer account sees all 5 tab buttons, with "health" active by default', () => {
   const window = loadAs(true);
   const tabBtns = Array.from(window.document.querySelectorAll('.dev-tab-btn'));

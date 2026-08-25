@@ -2402,5 +2402,21 @@
   });
 </script>
 
+<div class="help-modal-overlay" id="helpModalOverlay" onclick="if(event.target===this) closeHelpModal()">
+  <div class="help-modal">
+    <button class="help-modal-close" onclick="closeHelpModal()" aria-label="Close">&times;</button>
+    <h3>How to Use: Dev Tools</h3>
+    <div class="help-modal-body">
+      <p>Site diagnostics and maintenance utilities, visible only on the account actively developing this site -- grouped into 5 tabs.</p>
+      <p><strong>Health</strong> -- automated checks: Live consistency check, Data quality check, Appliance Wiki health, Client errors, Uptime monitoring, Advisor health, and Data integrity check.</p>
+      <p><strong>Access</strong> -- Client registry and Account roles. The only tab an Owner account sees.</p>
+      <p><strong>Session</strong> -- Session &amp; sync, Local data snapshot, Device info, and Service worker &amp; cache -- all about this specific device/browser, not the business data itself.</p>
+      <p><strong>Notifications</strong> -- Push notification test and history, Known issues, and Flagged pages.</p>
+      <p><strong>Deploy</strong> -- Deploy history, Regression checker, What's new, Quick links, Trigger workflows, and Storage browser.</p>
+      <p>Each panel's own "?" bubble explains that specific one in more detail. Site content, FAQ, and Terms editing live on their own page (Content, in the tab bar above).</p>
+    </div>
+  </div>
+</div>
+
 </body>
 </html>

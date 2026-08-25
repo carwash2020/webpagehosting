@@ -91,6 +91,12 @@ const SYNC_TABLE = 'workspace_sync';
 
 const SYNC_DATA_KEYS = [
   'th_tracker_jobs',
+  // Must come before th_clients: applySyncData's th_clients branch reads
+  // this key fresh from localStorage right after merging it, to filter
+  // out any client a tombstone says was deliberately deleted -- that
+  // only works if this key's own merge has already run and been
+  // written by the time th_clients is processed.
+  'th_client_tombstones',
   'th_clients',
   'th_tracker_contacts',
   'th_tracker_notes_v2',
@@ -188,6 +194,7 @@ function collectSyncData() {
 const MERGE_KEY_FIELD = {
   th_tracker_jobs: 'id',
   th_clients: 'id',
+  th_client_tombstones: 'id',
   th_tracker_contacts: 'id',
   th_tracker_notes_v2: 'id',
   th_expense_log: 'id',
@@ -297,7 +304,26 @@ function applySyncData(obj) {
         : k === 'th_client_errors'
         ? mergeClientErrorLog(localArr, remoteArr)
         : mergeRecordArrays(localArr, remoteArr, keyField);
-      localStorage.setItem(k, JSON.stringify(mergedArr));
+
+      // The actual fix for a real, reported bug: a union merge alone
+      // can't tell "never existed" apart from "existed and was
+      // deleted" -- a stale device pushing back its old copy of a
+      // deleted client would otherwise resurrect it right here. This
+      // reads th_client_tombstones fresh from localStorage rather than
+      // from any variable in this closure, specifically because it's
+      // listed earlier in SYNC_DATA_KEYS and has therefore already
+      // been merged and written by the time this branch runs.
+      let finalArr = mergedArr;
+      if (k === 'th_clients') {
+        let tombstonedIds = [];
+        try { tombstonedIds = JSON.parse(localStorage.getItem('th_client_tombstones') || '[]').map(t => t.id); } catch (e) { tombstonedIds = []; }
+        if (tombstonedIds.length) {
+          const tombstoneSet = new Set(tombstonedIds);
+          finalArr = mergedArr.filter(c => !tombstoneSet.has(c.id));
+        }
+      }
+
+      localStorage.setItem(k, JSON.stringify(finalArr));
     } catch (e) {
       localStorage.setItem(k, obj[k]); // malformed JSON on either side -- fall back to the old behavior rather than throw
     }

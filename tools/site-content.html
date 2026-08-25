@@ -220,7 +220,7 @@
   </div>
 </div>
 
-<p class="tool-sub">Editable public-site text: phone/email/hours/banners, the FAQ, and the Terms page — moved out of Dev Tools into its own page (2026-08-20) since this alone was 83% of that file's lines.</p>
+<p class="tool-sub">Edit the public site's phone, email, hours, banners, FAQ, and Terms page directly -- changes go live without a code push.</p>
 
   <div class="dev-panel dev-panel-wide is-collapsible" data-collapse-key="sitecontent">
     <div class="dev-panel-heading" onclick="toggleDevPanel(this)">
@@ -282,25 +282,14 @@
   <div class="help-modal-overlay" id="helpModalOverlay" onclick="if(event.target===this) closeHelpModal()">
     <div class="help-modal">
       <button class="help-modal-close" onclick="closeHelpModal()" aria-label="Close">&times;</button>
-      <h3>How to Use: Dev Tools</h3>
+      <h3>How to Use: Site Content</h3>
       <div class="help-modal-body">
         <p>Site diagnostics and maintenance utilities, visible only on the account actively developing this site.</p>
         <ul>
-          <li><strong>Live consistency check</strong> &mdash; fetches every tool page right now and checks each one for the login gate, a CSP, the PWA manifest link, a matching styles.css version, and that manifest.json's own URLs all have the /tools/ prefix. The same checks run automatically in GitHub Actions on every push; this just lets you run them on demand.</li>
-          <li><strong>Session &amp; sync</strong> &mdash; who's logged in on this device, the last sync result, and manual Push/Pull buttons to force a sync right now.</li>
-          <li><strong>Local data snapshot</strong> &mdash; every th_/rd_ key in this browser, its size, and an expandable raw view of its actual contents. This device only.</li>
-          <li><strong>Service worker &amp; cache</strong> &mdash; registration status, what's cached, and a one-click clear if something seems stale.</li>
-          <li><strong>Client errors</strong> &mdash; the last 20 JavaScript errors across every tool page, synced across both devices.</li>
-          <li><strong>Push notification test</strong> &mdash; sends a test lead through the real notification pipeline, cleaned up automatically after.</li>
-          <li><strong>Appliance Wiki health</strong> &mdash; quick counts: brands, models, issues, and the verified/logged-by-you split.</li>
-          <li><strong>Device info</strong> &mdash; browser, screen size, and online status &mdash; useful when something behaves differently on phone vs. computer.</li>
-          <li><strong>Known issues</strong> &mdash; still-open items from the last security audit, checkable so they don't get lost.</li>
-          <li><strong>Deploy history</strong> &mdash; the last 8 GitHub Actions runs, pulled live.</li>
           <li><strong>Site content</strong> &mdash; edit the phone, email, hours, and up to 2 announcement banners on the public site directly, no code push needed. Changing phone/email updates every place it appears at once.</li>
           <li><strong>Content edit history</strong> &mdash; every past change to those fields, who made it, and when -- a real audit trail from a database trigger.</li>
           <li><strong>FAQ editor</strong> &mdash; add, edit, reorder, or remove questions on the site's FAQ section directly.</li>
           <li><strong>Terms &amp; Conditions editor</strong> &mdash; add, edit, reorder, or remove sections of the Terms document directly.</li>
-          <li><strong>Quick links</strong> &mdash; the repo, its Actions history, the Supabase dashboard, the uptime monitors, and the live site.</li>
         </ul>
       </div>
     </div>

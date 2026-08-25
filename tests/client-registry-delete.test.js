@@ -85,3 +85,62 @@ test('deleteClientFromRegistry uses showConfirm (the app\'s shared custom modal)
   assert.match(fnMatch[0], /showConfirm\(/);
   assert.doesNotMatch(fnMatch[0], /window\.confirm\(/);
 });
+
+// Bug fix (2026-08-25), reported directly: "when i delete people out of
+// the client registry it readds them on its own." Root cause: deleting
+// a client only ever removed the registry entry, by design leaving the
+// underlying jobs/invoices untouched -- so thBackfillClients, seeing
+// that name still referenced with no matching registry record, would
+// recreate it on its very next run. Fixed with a real tombstone.
+
+test('thDeleteClient records a tombstone (by id and by normalized name) alongside removing the registry entry', () => {
+  const window = loadDevTools([{ id: 'c1', name: 'Sarah Miller' }]);
+  window.thDeleteClient('c1');
+
+  const tombstones = JSON.parse(window.localStorage.getItem('th_client_tombstones') || '[]');
+  assert.equal(tombstones.length, 1);
+  assert.equal(tombstones[0].id, 'c1');
+  assert.equal(tombstones[0].normalizedName, 'sarah miller');
+});
+
+test('thBackfillClients does not recreate a deleted client, even though their job still references that exact name (deletion deliberately never touches jobs/invoices)', () => {
+  const window = loadDevTools([{ id: 'c1', name: 'Sarah Miller' }]);
+  window.localStorage.setItem('th_tracker_jobs', JSON.stringify([{ id: 'j1', client: 'Sarah Miller', date: '2026-08-01' }]));
+
+  window.thDeleteClient('c1');
+  assert.deepEqual(JSON.parse(window.localStorage.getItem('th_clients')), [], 'client should be gone immediately after delete');
+
+  const result = window.thBackfillClients();
+  assert.equal(result.created, 0, 'backfill should not have created anything -- the name is tombstoned');
+  assert.deepEqual(JSON.parse(window.localStorage.getItem('th_clients')), [], 'client should still be gone after a backfill run');
+});
+
+test('a stale device pushing back its old copy of a deleted client does not resurrect it on pull, since the tombstone (already merged first) is consulted when merging th_clients', () => {
+  const syncJs = fs.readFileSync(path.join(TOOLS_DIR, 'sync.js'), 'utf8');
+  const syncDataKeysMatch = syncJs.match(/const SYNC_DATA_KEYS = \[[\s\S]*?\n\];/);
+  const mergeKeyFieldMatch = syncJs.match(/const MERGE_KEY_FIELD = \{[\s\S]*?\n\};/);
+  const mergeRecordArraysMatch = syncJs.match(/function mergeRecordArrays[\s\S]*?\n\}/);
+  const mergePartsMatch = syncJs.match(/function mergePartsReferenceUnits[\s\S]*?\n\}/);
+  const mergeClientErrorLogMatch = syncJs.match(/const CLIENT_ERROR_LOG_MAX_AFTER_MERGE[\s\S]*?function mergeClientErrorLog[\s\S]*?\n\}/);
+  const applySyncDataMatch = syncJs.match(/function applySyncData[\s\S]*?\n\}/);
+  assert.ok(syncDataKeysMatch && mergeKeyFieldMatch && mergeRecordArraysMatch && mergePartsMatch && mergeClientErrorLogMatch && applySyncDataMatch, 'one or more required sync.js functions not found');
+  assert.match(syncDataKeysMatch[0], /th_client_tombstones/, 'th_client_tombstones should be a synced key');
+
+  const window = loadDevTools([{ id: 'c1', name: 'Sarah Miller' }]);
+  window.thDeleteClient('c1'); // local delete + local tombstone
+
+  const combined = [
+    syncDataKeysMatch[0], mergeKeyFieldMatch[0], mergeRecordArraysMatch[0],
+    mergePartsMatch[0], mergeClientErrorLogMatch[0], applySyncDataMatch[0],
+  ].join('\n');
+  window.eval(combined);
+
+  // A stale device that never pulled the deletion, pushing its old copy back.
+  window.applySyncData({
+    th_clients: JSON.stringify([{ id: 'c1', name: 'Sarah Miller' }]),
+    th_client_tombstones: JSON.stringify([]),
+  });
+
+  const finalClients = JSON.parse(window.localStorage.getItem('th_clients'));
+  assert.deepEqual(finalClients, [], 'the resurrected client from the stale push should have been filtered back out by the tombstone');
+});
