@@ -148,7 +148,7 @@ function buildGuestEmailHtml(booking: Record<string, unknown>): string {
         <tr>
           <td style="padding: 20px 28px 28px; font-family: -apple-system, Helvetica, Arial, sans-serif;">
             <p style="color: #777; font-size: 13px; line-height: 1.5; margin: 0 0 20px;">This is an estimated time slot -- the actual visit may run longer depending on what we find once we're there.</p>
-            <p style="color: #222; font-size: 15px; line-height: 1.5; margin: 0 0 20px;">Need to cancel? <a href="https://www.triplehenterprisesllc.biz/manage-booking.html?token=${escapeHtml(booking.cancel_token)}" style="color: #ff8000;">Manage your booking here</a>, or just reply to this email or give us a call.</p>
+            <p style="color: #222; font-size: 15px; line-height: 1.5; margin: 0 0 20px;">Need to reschedule or cancel? <a href="https://www.triplehenterprisesllc.biz/manage-booking.html?token=${escapeHtml(booking.cancel_token)}" style="color: #ff8000;">Manage your booking here</a>, or just reply to this email or give us a call.</p>
             <p style="color: #222; font-size: 15px; line-height: 1.5; margin: 0;">Talk soon,<br><strong>Triple H Enterprises</strong></p>
           </td>
         </tr>
@@ -182,7 +182,7 @@ function buildGuestEmailText(booking: Record<string, unknown>): string {
     "",
     "This is an estimated time slot -- the actual visit may run longer depending on what we find once we're there.",
     "",
-    `Need to cancel? Manage your booking here: https://www.triplehenterprisesllc.biz/manage-booking.html?token=${booking.cancel_token}`,
+    `Need to reschedule or cancel? Manage your booking here: https://www.triplehenterprisesllc.biz/manage-booking.html?token=${booking.cancel_token}`,
     "",
     "Or just reply to this email or give us a call.",
     "",
