@@ -49,6 +49,13 @@
 //
 // Deploy with: supabase functions deploy send-push
 // Required secrets: VAPID_PUBLIC_KEY, VAPID_PRIVATE_KEY
+// Optional (email version of the weekly digest; gracefully skipped if
+// not yet configured -- see sendWeeklyDigest):
+//   RESEND_API_KEY, REPORTS_EMAIL_FROM (a new, dedicated address, e.g.
+//   reports@triplehenterprisesllc.biz -- deliberately not leads@, so
+//   this reads as its own kind of automated message), LEAD_EMAIL_TO
+//   (RESEND_API_KEY and LEAD_EMAIL_TO are likely already configured
+//   for the lead-email pipeline; only REPORTS_EMAIL_FROM is new)
 // (SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY are auto-provided)
 
 import webpush from "npm:web-push@3.6.7";
@@ -57,6 +64,19 @@ const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 const VAPID_PUBLIC_KEY = Deno.env.get("VAPID_PUBLIC_KEY")!;
 const VAPID_PRIVATE_KEY = Deno.env.get("VAPID_PRIVATE_KEY")!;
+
+// Weekly digest email -- requested directly. Reuses RESEND_API_KEY and
+// LEAD_EMAIL_TO (already configured for the lead-email pipeline), but
+// uses its OWN, dedicated sending address (REPORTS_EMAIL_FROM) rather
+// than leads@ -- an automated weekly summary is a different kind of
+// message than a new-lead notification, worth its own identity in an
+// inbox rather than looking like it came from the same source.
+const RESEND_API_KEY = Deno.env.get("RESEND_API_KEY") || "";
+const REPORTS_EMAIL_FROM = Deno.env.get("REPORTS_EMAIL_FROM") || "";
+const LEAD_EMAIL_TO = (Deno.env.get("LEAD_EMAIL_TO") || "")
+  .split(",")
+  .map((addr: string) => addr.trim())
+  .filter((addr: string) => addr.length > 0);
 
 webpush.setVapidDetails(
   "mailto:contact@triplehenterprisesllc.biz",
@@ -515,6 +535,37 @@ async function sendWeeklyDigest() {
     body: parts.join(" \u00b7 "),
     url: "/tools/workspace.html",
   });
+
+  // Email version of the same digest, requested directly. Independent
+  // of the push send above (its own try/catch) -- a failure here, or
+  // this secret simply not being configured yet, never blocks the
+  // push notification that already works today.
+  if (RESEND_API_KEY && REPORTS_EMAIL_FROM && LEAD_EMAIL_TO.length) {
+    try {
+      const res = await fetch("https://api.resend.com/emails", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${RESEND_API_KEY}`,
+        },
+        body: JSON.stringify({
+          from: `Triple H Reports <${REPORTS_EMAIL_FROM}>`,
+          to: LEAD_EMAIL_TO,
+          subject: "Weekly Summary -- Triple H Enterprises",
+          text: parts.join("\n"),
+          html: `<div style="font-family: -apple-system, Helvetica, Arial, sans-serif; font-size: 15px;"><h2 style="color: #ff8000;">Weekly Summary</h2><ul>${parts.map((p) => `<li>${p}</li>`).join("")}</ul></div>`,
+        }),
+      });
+      if (!res.ok) {
+        const errBody = await res.text();
+        console.error("Weekly digest email: Resend API error:", res.status, errBody);
+      }
+    } catch (err: any) {
+      console.error("Weekly digest email error:", err.message);
+    }
+  } else {
+    console.log("Weekly digest email skipped -- REPORTS_EMAIL_FROM not yet configured.");
+  }
 }
 
 Deno.serve(async (req: Request) => {

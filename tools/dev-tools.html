@@ -389,6 +389,15 @@
 
   <div class="dev-panel dev-owner-hidden dev-panel-wide">
     <div class="dev-panel-heading">
+      <h2>Uptime monitoring</h2>
+      <button class="dev-info-bubble" onclick="openDevInfo('uptimemonitoring')" aria-label="What does this do?" title="What does this do?">?</button>
+    </div>
+    <div id="uptimeStatus"></div>
+    <div id="uptimeIncidentsList" class="dev-scrollable-list" style="margin-top:10px;"></div>
+  </div>
+
+  <div class="dev-panel dev-owner-hidden dev-panel-wide">
+    <div class="dev-panel-heading">
       <h2 id="nav-deploy" class="dev-anchor">Deploy history</h2>
       <button class="dev-info-bubble" onclick="openDevInfo('deploy')" aria-label="What does this do?" title="What does this do?">?</button>
     </div>
@@ -1860,6 +1869,97 @@
     renderFlaggedItems();
   }
 
+  // In-house replacement for HetrixTools -- requested directly.
+  // Fetches the last 7 days of checks (a real time window, not a row
+  // count, since check frequency could change) and computes current
+  // status, uptime % over 24h/7d, and average response time (only
+  // over "up" checks -- a "down" check's response_time_ms is either
+  // null or reflects however long it took to fail, neither of which
+  // is a meaningful "site speed" number to average in). Consecutive
+  // "down" checks are grouped into a single incident rather than
+  // shown as dozens of individual rows.
+  async function fetchUptimeChecks() {
+    const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
+    const res = await fetchWithTimeout(
+      SUPABASE_URL + '/rest/v1/th_uptime_checks?target=eq.website&checked_at=gte.' + encodeURIComponent(sevenDaysAgo) + '&select=checked_at,status,status_code,response_time_ms,error_message&order=checked_at.desc',
+      8000,
+      { headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': 'Bearer ' + getAuthToken() } }
+    );
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    return res.json();
+  }
+
+  function groupIntoIncidents(checksOldestFirst) {
+    const incidents = [];
+    let current = null;
+    for (const check of checksOldestFirst) {
+      if (check.status === 'down') {
+        if (!current) current = { start: check.checked_at, end: check.checked_at, error_message: check.error_message };
+        else current.end = check.checked_at;
+      } else if (current) {
+        incidents.push(current);
+        current = null;
+      }
+    }
+    if (current) { current.ongoing = true; incidents.push(current); }
+    return incidents.reverse(); // most recent incident first
+  }
+
+  async function renderUptimeStatus() {
+    const statusEl = document.getElementById('uptimeStatus');
+    const incidentsEl = document.getElementById('uptimeIncidentsList');
+    statusEl.innerHTML = '<p class="tool-sub">Loading...</p>';
+    try {
+      const checks = await fetchUptimeChecks();
+      if (!checks.length) {
+        statusEl.innerHTML = '<p class="tool-sub">No checks logged yet.</p>';
+        incidentsEl.innerHTML = '';
+        return;
+      }
+
+      const now = Date.now();
+      const current = checks[0]; // already ordered desc
+      const last24h = checks.filter(c => now - new Date(c.checked_at).getTime() <= 24 * 60 * 60 * 1000);
+      const upCount24h = last24h.filter(c => c.status === 'up').length;
+      const uptimePct24h = last24h.length ? (upCount24h / last24h.length * 100) : 100;
+      const upCount7d = checks.filter(c => c.status === 'up').length;
+      const uptimePct7d = (upCount7d / checks.length * 100);
+
+      const upChecksWithTiming = checks.filter(c => c.status === 'up' && typeof c.response_time_ms === 'number');
+      const avgResponseMs = upChecksWithTiming.length
+        ? Math.round(upChecksWithTiming.reduce((sum, c) => sum + c.response_time_ms, 0) / upChecksWithTiming.length)
+        : null;
+
+      const isUp = current.status === 'up';
+      const statusColor = isUp ? 'var(--green, #2e7d4f)' : 'var(--red, #c0392b)';
+      statusEl.innerHTML =
+        '<div style="display:flex; align-items:center; gap:8px; margin-bottom:10px;">' +
+          '<span style="width:10px; height:10px; border-radius:50%; background:' + statusColor + ';"></span>' +
+          '<strong>' + (isUp ? 'Up' : 'Down') + '</strong>' +
+          '<span class="tool-sub" style="margin-left:auto;">Last checked ' + new Date(current.checked_at).toLocaleString() + '</span>' +
+        '</div>' +
+        '<div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(120px, 1fr)); gap:10px;">' +
+          '<div><div class="tool-sub">Last 24 hours</div><strong>' + uptimePct24h.toFixed(2) + '%</strong></div>' +
+          '<div><div class="tool-sub">Last 7 days</div><strong>' + uptimePct7d.toFixed(2) + '%</strong></div>' +
+          '<div><div class="tool-sub">Avg. response time</div><strong>' + (avgResponseMs !== null ? avgResponseMs + ' ms' : '&mdash;') + '</strong></div>' +
+        '</div>';
+
+      const incidents = groupIntoIncidents(checks.slice().reverse()); // oldest first for grouping
+      incidentsEl.innerHTML = incidents.length ? incidents.map(inc => {
+        const startStr = new Date(inc.start).toLocaleString();
+        const durationMin = Math.round((new Date(inc.end).getTime() - new Date(inc.start).getTime()) / 60000);
+        const durationLabel = inc.ongoing ? 'ongoing' : (durationMin < 1 ? 'under a minute' : durationMin + ' min');
+        return '<div class="dev-issue-row">' +
+          '<div style="flex:1;"><div class="dev-issue-title">' + startStr + '</div>' +
+          '<div class="dev-issue-detail">' + escapeHtml(inc.error_message || 'Down') + ' &mdash; ' + durationLabel + '</div></div>' +
+          '</div>';
+      }).join('') : '<p class="tool-sub">No incidents in the last 7 days.</p>';
+    } catch (e) {
+      statusEl.innerHTML = '<p class="tool-sub">Couldn\'t load uptime data (' + escapeHtml(e.message) + ').</p>';
+      incidentsEl.innerHTML = '';
+    }
+  }
+
   // Pulls recent workflow runs from GitHub's public API -- no auth
   // needed since this is a public repo. Top summary shows the single
   // most recent run (unchanged from before); the history list below
@@ -2145,6 +2245,7 @@
       renderClientErrorLog();
       renderKnownIssues();
       renderFlaggedItems();
+      renderUptimeStatus();
       renderDeployStatus();
       renderChangelog();
       populateRegressionCommitDropdown();
