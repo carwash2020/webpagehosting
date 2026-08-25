@@ -489,6 +489,18 @@
     </div>
   </div>
 
+  <div class="dev-panel dev-owner-hidden is-collapsible" data-collapse-key="bookingtest">
+    <div class="dev-panel-heading" onclick="toggleDevPanel(this)">
+      <h2>Booking notification test</h2>
+      <button class="dev-info-bubble" onclick="event.stopPropagation(); openDevInfo('bookingtest')" aria-label="What does this do?" title="What does this do?">?</button>
+      <span class="dev-collapse-caret">&#9660;</span>
+    </div>
+    <div class="dev-panel-body">
+      <div id="bookingTestResult"></div>
+      <button class="secondary-btn" style="margin-top:12px;" id="bookingTestBtn" onclick="runBookingNotificationTest()">Run full lifecycle test</button>
+    </div>
+  </div>
+
   <div class="dev-panel dev-owner-hidden dev-panel-wide is-collapsible" data-collapse-key="recentbookings">
     <div class="dev-panel-heading" onclick="toggleDevPanel(this)">
       <h2>Recent bookings</h2>
@@ -1256,6 +1268,101 @@
     } finally {
       btn.disabled = false;
       btn.textContent = 'Send test lead';
+    }
+  }
+
+  async function runBookingNotificationTest() {
+    if (!(await confirmDevPassword())) return;
+    const btn = document.getElementById('bookingTestBtn');
+    const resultEl = document.getElementById('bookingTestResult');
+    btn.disabled = true;
+    btn.textContent = 'Running...';
+
+    const steps = [];
+    function logStep(ok, text) {
+      steps.push('<div class="dev-check-row"><div>' + escapeHtml(text) + '</div><span class="dev-check-status ' + (ok ? 'pass' : 'fail') + '">' + (ok ? 'OK' : 'FAILED') + '</span></div>');
+      resultEl.innerHTML = steps.join('');
+    }
+
+    const farFuture = new Date();
+    farFuture.setFullYear(farFuture.getFullYear() + 1);
+    const testStart = new Date(farFuture); testStart.setHours(15, 0, 0, 0);
+    const testEnd = new Date(testStart.getTime() + 45 * 60000);
+    const rescheduledStart = new Date(testStart.getTime() + 3 * 60 * 60000);
+    // A unique token in the name field, same purpose as the lead test's
+    // own token above: finds exactly this run's row afterward via a
+    // real authenticated SELECT, rather than trusting
+    // Prefer: return=representation to work here -- directly tested
+    // and found that it does NOT reliably satisfy th_bookings' own
+    // authenticated-only SELECT policy in every context, so this
+    // avoids relying on it at all, matching the lead test's own,
+    // already-proven approach.
+    const testToken = 'devtest-' + Date.now() + '-' + Math.random().toString(36).slice(2, 8);
+
+    let testBookingId = null;
+    try {
+      if (typeof ensureFreshToken === 'function') await ensureFreshToken();
+      const authHeaders = { 'Content-Type': 'application/json', 'apikey': SUPABASE_ANON_KEY, 'Authorization': 'Bearer ' + getAuthToken() };
+
+      const insertRes = await fetchWithTimeout(SUPABASE_URL + '/rest/v1/th_bookings', 8000, {
+        method: 'POST',
+        headers: authHeaders,
+        body: JSON.stringify({
+          service_key: 'inspection',
+          service_label: 'DEV TOOLS TEST -- safe to ignore',
+          start_at: testStart.toISOString(),
+          end_at: testEnd.toISOString(),
+          name: 'DEV TOOLS TEST BOOKING [' + testToken + ']',
+          phone: '0000000000',
+        }),
+      });
+      if (!insertRes.ok) throw new Error('Insert failed (HTTP ' + insertRes.status + ')');
+
+      const findRes = await fetchWithTimeout(
+        SUPABASE_URL + '/rest/v1/th_bookings?name=ilike.*' + encodeURIComponent(testToken) + '*&select=id,cancel_token',
+        8000, { headers: authHeaders }
+      );
+      const found = findRes.ok ? await findRes.json() : [];
+      testBookingId = found && found[0] && found[0].id;
+      const cancelToken = found && found[0] && found[0].cancel_token;
+      if (!testBookingId || !cancelToken) throw new Error('Insert succeeded but could not find the row afterward to continue the test');
+      logStep(true, 'Created test booking (should trigger: new-booking push + email)');
+
+      await new Promise(function (r) { setTimeout(r, 1500); });
+
+      const reschedRes = await fetchWithTimeout(SUPABASE_URL + '/rest/v1/rpc/reschedule_booking_by_token', 8000, {
+        method: 'POST', headers: authHeaders,
+        body: JSON.stringify({ p_token: cancelToken, p_new_start: rescheduledStart.toISOString() }),
+      });
+      const reschedRows = reschedRes.ok ? await reschedRes.json() : null;
+      const reschedOk = !!(reschedRows && reschedRows[0] && reschedRows[0].ok);
+      logStep(reschedOk, 'Rescheduled test booking (should trigger: rescheduled push)' + (reschedOk ? '' : ' -- ' + (reschedRows && reschedRows[0] && reschedRows[0].message)));
+
+      await new Promise(function (r) { setTimeout(r, 1500); });
+
+      const cancelRes = await fetchWithTimeout(SUPABASE_URL + '/rest/v1/rpc/cancel_booking_by_token', 8000, {
+        method: 'POST', headers: authHeaders,
+        body: JSON.stringify({ p_token: cancelToken }),
+      });
+      const cancelRows = cancelRes.ok ? await cancelRes.json() : null;
+      const cancelOk = !!(cancelRows && cancelRows[0] && cancelRows[0].ok);
+      logStep(cancelOk, 'Cancelled test booking (should trigger: cancelled push)' + (cancelOk ? '' : ' -- ' + (cancelRows && cancelRows[0] && cancelRows[0].message)));
+
+      resultEl.insertAdjacentHTML('beforeend', '<p class="tool-sub" style="margin-top:8px;">This confirms each step ran and was accepted by the server -- it can\'t directly confirm a push or email was actually received. Check the Send-Push and send-booking-email edge function logs in Supabase if anything above says FAILED, or if nothing arrived despite everything above passing.</p>');
+    } catch (e) {
+      logStep(false, e.message || String(e));
+    } finally {
+      if (testBookingId) {
+        try {
+          if (typeof ensureFreshToken === 'function') await ensureFreshToken();
+          await fetchWithTimeout(SUPABASE_URL + '/rest/v1/th_bookings?id=eq.' + testBookingId, 8000, {
+            method: 'DELETE',
+            headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': 'Bearer ' + getAuthToken() },
+          });
+        } catch (e) { /* best-effort cleanup -- surfaced via Recent Bookings if it ever fails */ }
+      }
+      btn.disabled = false;
+      btn.textContent = 'Run full lifecycle test';
     }
   }
 
