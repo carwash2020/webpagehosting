@@ -679,6 +679,29 @@ Deno.serve(async (req: Request) => {
       return new Response(JSON.stringify({ ok: true }), { headers: { "Content-Type": "application/json" } });
     }
 
+    if (payload.type === "INSERT" && payload.table === "th_bookings") {
+      const b = payload.record || {};
+      const name = b.name || "Someone";
+      let whenLabel = "";
+      try {
+        const start = new Date(b.start_at);
+        whenLabel = new Intl.DateTimeFormat("en-US", {
+          timeZone: "America/Denver",
+          weekday: "short",
+          month: "short",
+          day: "numeric",
+          hour: "numeric",
+          minute: "2-digit",
+        }).format(start);
+      } catch (e) { /* malformed date -- fall back to no time in the body below */ }
+      await sendToAllSubscriptions({
+        title: "New Booking",
+        body: `${name} booked ${b.service_label || "an appointment"}${whenLabel ? ` for ${whenLabel}` : ""}.`,
+        url: "/tools/workspace.html",
+      });
+      return new Response(JSON.stringify({ ok: true }), { headers: { "Content-Type": "application/json" } });
+    }
+
     if (payload.type === "reminder-check") {
       const synced = await getSyncedData();
 
