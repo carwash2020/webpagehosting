@@ -118,49 +118,60 @@ function buildGuestEmailHtml(lead: Record<string, unknown>): string {
     lead.preferred_time ? `<tr><td style="padding: 8px 0; border-bottom: 1px solid #eee; color: #777; font-size: 14px;">Preferred time</td><td style="padding: 8px 0; border-bottom: 1px solid #eee; font-size: 14px; color: #222;">${escapeHtml(lead.preferred_time)}</td></tr>` : "",
   ].filter(Boolean).join("");
 
-  return `
-<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background: #f4f4f4; padding: 32px 16px;">
+  return `<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="color-scheme" content="light">
+<meta name="supported-color-schemes" content="light">
+<title>We got your request -- Triple H Enterprises</title>
+</head>
+<body style="margin: 0; padding: 0; background-color: #f4f4f4;">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" bgcolor="#f4f4f4" style="background: #f4f4f4; padding: 32px 16px;">
   <tr>
     <td align="center">
-      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width: 480px; background: #ffffff; border-radius: 10px; overflow: hidden; border: 1px solid #e5e5e5;">
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" bgcolor="#ffffff" style="max-width: 480px; background: #ffffff; border-radius: 10px; overflow: hidden; border: 1px solid #e5e5e5;">
         <tr>
-          <td align="center" style="background: #0a0a0a; padding: 28px 24px;">
+          <td align="center" bgcolor="#0a0a0a" style="background: #0a0a0a; padding: 28px 24px;">
             <img src="${LOGO_URL}" alt="Triple H Enterprises" width="140" style="display: block; border: 0;">
           </td>
         </tr>
         <tr>
-          <td style="padding: 32px 28px 8px; font-family: -apple-system, Helvetica, Arial, sans-serif;">
+          <td bgcolor="#ffffff" style="background: #ffffff; padding: 32px 28px 8px; font-family: -apple-system, Helvetica, Arial, sans-serif;">
             <h1 style="color: #ff8000; font-size: 22px; margin: 0 0 20px; text-align: center;">We got your request!</h1>
-            <p style="color: #222; font-size: 15px; line-height: 1.5; margin: 0 0 12px;">${greeting}</p>
-            <p style="color: #222; font-size: 15px; line-height: 1.5; margin: 0 0 8px;">Thanks for reaching out to Triple H Enterprises. We've received your request and will follow up by phone or email shortly to confirm the details.</p>
+            <p style="color: #222222; font-size: 15px; line-height: 1.5; margin: 0 0 12px;">${greeting}</p>
+            <p style="color: #222222; font-size: 15px; line-height: 1.5; margin: 0 0 8px;">Thanks for reaching out to Triple H Enterprises. We've received your request and will follow up by phone or email shortly to confirm the details.</p>
           </td>
         </tr>
         ${detailRows ? `
         <tr>
-          <td style="padding: 0 28px;">
+          <td bgcolor="#ffffff" style="background: #ffffff; padding: 0 28px;">
             <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="font-family: -apple-system, Helvetica, Arial, sans-serif;">
               ${detailRows}
             </table>
           </td>
         </tr>` : ""}
         <tr>
-          <td style="padding: 20px 28px 28px; font-family: -apple-system, Helvetica, Arial, sans-serif;">
-            <p style="color: #222; font-size: 15px; line-height: 1.5; margin: 0 0 20px;">If anything changes or you think of another detail worth mentioning before we call, just reply directly to this email.</p>
-            <p style="color: #222; font-size: 15px; line-height: 1.5; margin: 0;">Talk soon,<br><strong>Triple H Enterprises</strong></p>
+          <td bgcolor="#ffffff" style="background: #ffffff; padding: 20px 28px 28px; font-family: -apple-system, Helvetica, Arial, sans-serif;">
+            <p style="color: #222222; font-size: 15px; line-height: 1.5; margin: 0 0 20px;">If anything changes or you think of another detail worth mentioning before we call, just reply directly to this email.</p>
+            <p style="color: #222222; font-size: 15px; line-height: 1.5; margin: 0;">Talk soon,<br><strong>Triple H Enterprises</strong></p>
           </td>
         </tr>
         <tr>
-          <td style="background: #ff8000; height: 4px; line-height: 4px; font-size: 1px;">&nbsp;</td>
+          <td bgcolor="#ff8000" style="background: #ff8000; height: 4px; line-height: 4px; font-size: 1px;">&nbsp;</td>
         </tr>
         <tr>
-          <td align="center" style="padding: 16px 24px; font-family: -apple-system, Helvetica, Arial, sans-serif;">
-            <p style="color: #999; font-size: 12px; margin: 0;">(435) 414-1667 &middot; triplehenterprisesllc.biz</p>
+          <td align="center" bgcolor="#ffffff" style="background: #ffffff; padding: 16px 24px; font-family: -apple-system, Helvetica, Arial, sans-serif;">
+            <p style="color: #999999; font-size: 12px; margin: 0;">(435) 414-1667 &middot; triplehenterprisesllc.biz</p>
           </td>
         </tr>
       </table>
     </td>
   </tr>
 </table>
+</body>
+</html>
   `;
 }
 
