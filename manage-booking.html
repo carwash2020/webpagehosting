@@ -90,6 +90,11 @@
   .slot-btn:hover{border-color:rgba(255,128,0,0.3);}
   .slot-btn.is-selected{border-color:var(--orange); background:rgba(255,128,0,0.08); color:var(--orange-light); font-weight:600;}
   .slots-empty{color:var(--text-dim); font-size:14px; padding:16px 0; text-align:center;}
+
+  @media (max-width: 480px){
+    .brand-name{display:none;}
+    .slots-grid{grid-template-columns:repeat(auto-fill, minmax(84px, 1fr));}
+  }
 </style>
 </head>
 <body>

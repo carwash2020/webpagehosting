@@ -65,3 +65,53 @@ test('a non-OK response from the availability endpoint is never silently treated
   const src = fs.readFileSync(PAGE_PATH, 'utf8');
   assert.match(src, /if \(!res\.ok\) throw new Error/, 'fetchBookingsForDate should throw on a non-OK response, not silently return []');
 });
+
+test('a bot filling in the honeypot field never actually creates a booking, but sees a normal-looking confirmation', async () => {
+  let insertCalled = false;
+  const window = loadPage(async (url) => {
+    if (String(url).includes('th_bookings_availability')) return { ok: true, json: async () => ([]) };
+    if (String(url).includes('/rest/v1/th_bookings') && !String(url).includes('availability')) {
+      insertCalled = true;
+      return { ok: true };
+    }
+    return { ok: false };
+  });
+
+  await waitFor(200);
+  window.document.querySelector('.service-option').dispatchEvent(new window.Event('click', { bubbles: true }));
+  await waitFor(200);
+  window.document.querySelector('.slot-btn').dispatchEvent(new window.Event('click', { bubbles: true }));
+
+  window.document.querySelector('[name="_gotcha"]').value = 'a bot filled this in';
+  window.document.getElementById('bName').value = 'Bot Name';
+  window.document.getElementById('bPhone').value = '5555555555';
+  window.document.getElementById('bookingForm').dispatchEvent(new window.Event('submit', { bubbles: true, cancelable: true }));
+  await waitFor(200);
+
+  assert.equal(insertCalled, false, 'a caught bot should never actually reach the real insert');
+  assert.ok(window.document.getElementById('stepConfirmed').classList.contains('is-active'), 'a caught bot should still see a normal-looking confirmation, never told it was caught');
+});
+
+test('a genuine submission (honeypot left empty) reaches the real insert normally', async () => {
+  let insertCalled = false;
+  const window = loadPage(async (url) => {
+    if (String(url).includes('th_bookings_availability')) return { ok: true, json: async () => ([]) };
+    if (String(url).includes('/rest/v1/th_bookings') && !String(url).includes('availability')) {
+      insertCalled = true;
+      return { ok: true };
+    }
+    return { ok: false };
+  });
+
+  await waitFor(200);
+  window.document.querySelector('.service-option').dispatchEvent(new window.Event('click', { bubbles: true }));
+  await waitFor(200);
+  window.document.querySelector('.slot-btn').dispatchEvent(new window.Event('click', { bubbles: true }));
+
+  window.document.getElementById('bName').value = 'Jane Real Customer';
+  window.document.getElementById('bPhone').value = '5551234567';
+  window.document.getElementById('bookingForm').dispatchEvent(new window.Event('submit', { bubbles: true, cancelable: true }));
+  await waitFor(200);
+
+  assert.equal(insertCalled, true, 'a genuine submission with an empty honeypot should reach the real insert');
+});
