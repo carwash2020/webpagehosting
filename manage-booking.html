@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Manage Your Booking | Triple H Enterprises</title>
+<meta name="robots" content="noindex, nofollow">
+<link rel="apple-touch-icon" href="/images/apple-touch-icon.png">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data:; connect-src 'self' https://*.supabase.co; frame-src 'none'; object-src 'none'; base-uri 'self'; frame-ancestors 'none';">
+<meta name="referrer" content="strict-origin-when-cross-origin">
+<meta http-equiv="Permissions-Policy" content="camera=(), microphone=(), geolocation=()">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#0a0a0a;
+    --bg-panel:#141414;
+    --bg-panel-2:#1a1a1a;
+    --border:#2a2a2a;
+    --text:#e8e8e8;
+    --text-dim:#9a9a9a;
+    --orange:#ff8000;
+    --orange-dark:#c96400;
+    --orange-light:#ffb347;
+    --radius:10px;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0; background:var(--bg); color:var(--text);
+    font-family:'Inter', sans-serif; line-height:1.5;
+    padding-bottom:80px;
+  }
+  .wrap{max-width:560px; margin:0 auto; padding:0 20px;}
+  header.site-header{ padding:20px 0; border-bottom:1px solid var(--border); margin-bottom:32px; }
+  header.site-header .wrap{display:flex; align-items:center; justify-content:space-between; gap:16px;}
+  .brand{display:flex; align-items:center; gap:12px; text-decoration:none; color:var(--text);}
+  .brand img{width:40px; height:auto;}
+  .brand-name{font-family:'Oswald', sans-serif; font-weight:700; letter-spacing:1px; font-size:15px;}
+  .phone-link{display:flex; align-items:center; gap:8px; color:var(--orange-light); text-decoration:none; font-weight:600; font-size:14px; white-space:nowrap;}
+  .phone-link svg{width:16px; height:16px;}
+
+  h1{font-family:'Oswald', sans-serif; font-size:24px; letter-spacing:0.5px; margin:0 0 20px;}
+
+  .booking-card{
+    background:var(--bg-panel-2); border:1px solid var(--border); border-radius:var(--radius);
+    padding:20px; margin-bottom:20px;
+  }
+  .booking-card .svc{font-weight:700; font-size:17px; margin-bottom:6px;}
+  .booking-card .when{color:var(--text-dim); font-size:14.5px;}
+
+  .state-msg{text-align:center; padding:40px 20px; color:var(--text-dim);}
+  .state-msg.is-error{color:#ff8a80;}
+  .state-msg .checkmark{width:52px; height:52px; border-radius:50%; background:var(--orange); color:#1a1a1a; display:flex; align-items:center; justify-content:center; margin:0 auto 16px; font-size:26px;}
+
+  .btn{
+    display:inline-flex; align-items:center; justify-content:center; gap:8px;
+    padding:14px 24px; border-radius:8px; font-family:'Oswald', sans-serif; font-weight:600;
+    letter-spacing:1px; text-transform:uppercase; font-size:13.5px; border:2px solid transparent;
+    cursor:pointer; width:100%; margin-top:16px; text-decoration:none;
+  }
+  .btn.danger{background:transparent; border-color:#e05252; color:#e05252;}
+  .btn.danger:hover{background:rgba(224,82,82,0.1);}
+  .btn.danger:disabled{opacity:0.5; cursor:not-allowed;}
+  .btn.orange{background:var(--orange); color:#1a1a1a;}
+  .btn.orange:hover{background:var(--orange-dark);}
+  .btn.ghost{background:transparent; border-color:var(--border); color:var(--text-dim);}
+
+  #confirmStep{display:none;}
+  #confirmStep.is-active{display:block;}
+</style>
+</head>
+<body>
+
+<header class="site-header">
+  <div class="wrap">
+    <a href="/" class="brand">
+      <img src="/images/logo-signature.webp?v=202608010300" alt="Triple H Enterprises logo">
+      <span class="brand-name">TRIPLE H ENTERPRISES</span>
+    </a>
+    <a href="tel:+14354141667" class="phone-link">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
+      (435) 414-1667
+    </a>
+  </div>
+</header>
+
+<main class="wrap">
+  <h1>Manage Your Booking</h1>
+  <div id="content">
+    <div class="state-msg"><p>Loading your booking...</p></div>
+  </div>
+</main>
+
+<script>
+(function () {
+  const SUPABASE_URL = 'https://csvfqdjuobylgafgolho.supabase.co';
+  const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNzdmZxZGp1b2J5bGdhZmdvbGhvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODUzNTQ3MjcsImV4cCI6MjEwMDkzMDcyN30.6GlvK-DfXf2lppS1kciZtsl4wHOpZz_yKtwsS1lyjrs';
+  const BUSINESS_TIMEZONE = 'America/Denver';
+
+  function escapeHtml(value) {
+    const s = value === null || value === undefined ? '' : String(value);
+    return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+  }
+
+  function getTokenFromUrl() {
+    const params = new URLSearchParams(window.location.search);
+    return params.get('token');
+  }
+
+  async function callRpc(fnName, args) {
+    const res = await fetch(SUPABASE_URL + '/rest/v1/rpc/' + fnName, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        apikey: SUPABASE_ANON_KEY,
+        Authorization: 'Bearer ' + SUPABASE_ANON_KEY,
+      },
+      body: JSON.stringify(args),
+    });
+    if (!res.ok) return null;
+    return res.json();
+  }
+
+  function renderState(html) {
+    document.getElementById('content').innerHTML = html;
+  }
+
+  function renderNoToken() {
+    renderState('<div class="state-msg is-error"><p>This link is missing some information. If you followed a link from your confirmation email, try copying the full link into your browser, or call us and we\'ll take care of it.</p></div>');
+  }
+
+  function renderNotFound() {
+    renderState('<div class="state-msg is-error"><p>We couldn\'t find a booking for this link. If you think this is a mistake, give us a call and we\'ll sort it out.</p></div>');
+  }
+
+  function formatWhen(startAtStr, endAtStr) {
+    const start = new Date(startAtStr);
+    const end = new Date(endAtStr);
+    const dateLabel = new Intl.DateTimeFormat('en-US', { timeZone: BUSINESS_TIMEZONE, weekday: 'long', month: 'long', day: 'numeric' }).format(start);
+    const timeFmt = new Intl.DateTimeFormat('en-US', { timeZone: BUSINESS_TIMEZONE, hour: 'numeric', minute: '2-digit' });
+    return dateLabel + ' at ' + timeFmt.format(start) + ' \u2013 ' + timeFmt.format(end);
+  }
+
+  function renderBooking(booking, token) {
+    if (booking.status === 'cancelled') {
+      renderState(
+        '<div class="booking-card"><div class="svc">' + escapeHtml(booking.service_label) + '</div>' +
+        '<div class="when">' + formatWhen(booking.start_at, booking.end_at) + '</div></div>' +
+        '<div class="state-msg"><p>This booking has already been cancelled.</p></div>' +
+        '<a href="/booking.html" class="btn orange">Book a new appointment</a>'
+      );
+      return;
+    }
+
+    renderState(
+      '<div class="booking-card"><div class="svc">' + escapeHtml(booking.service_label) + '</div>' +
+      '<div class="when">' + formatWhen(booking.start_at, booking.end_at) + '</div></div>' +
+      '<button type="button" class="btn danger" id="startCancelBtn">Cancel this booking</button>' +
+      '<div id="confirmStep">' +
+      '  <p style="text-align:center; color:var(--text-dim); font-size:14.5px; margin-top:20px;">Are you sure? This can\'t be undone -- you\'ll need to book a new time if you change your mind.</p>' +
+      '  <button type="button" class="btn danger" id="confirmCancelBtn">Yes, cancel it</button>' +
+      '  <button type="button" class="btn ghost" id="backOutBtn">Never mind, keep it</button>' +
+      '</div>'
+    );
+
+    document.getElementById('startCancelBtn').addEventListener('click', function () {
+      document.getElementById('startCancelBtn').style.display = 'none';
+      document.getElementById('confirmStep').classList.add('is-active');
+    });
+    document.getElementById('backOutBtn').addEventListener('click', function () {
+      document.getElementById('confirmStep').classList.remove('is-active');
+      document.getElementById('startCancelBtn').style.display = '';
+    });
+    document.getElementById('confirmCancelBtn').addEventListener('click', async function () {
+      const btn = document.getElementById('confirmCancelBtn');
+      btn.disabled = true;
+      btn.textContent = 'Cancelling...';
+      const result = await callRpc('cancel_booking_by_token', { p_token: token });
+      const row = result && result[0];
+      if (row && row.ok) {
+        renderState(
+          '<div class="state-msg"><div class="checkmark">&#10003;</div><p>Your booking has been cancelled.</p></div>' +
+          '<a href="/booking.html" class="btn orange">Book a new appointment</a>'
+        );
+      } else if (row && row.message === 'already-cancelled') {
+        renderState('<div class="state-msg"><p>This booking was already cancelled.</p></div><a href="/booking.html" class="btn orange">Book a new appointment</a>');
+      } else {
+        renderState('<div class="state-msg is-error"><p>Something went wrong cancelling this booking. Please call us at (435) 414-1667.</p></div>');
+      }
+    });
+  }
+
+  async function init() {
+    const token = getTokenFromUrl();
+    if (!token) { renderNoToken(); return; }
+
+    const result = await callRpc('get_booking_by_cancel_token', { p_token: token });
+    if (!result || !result.length) { renderNotFound(); return; }
+    renderBooking(result[0], token);
+  }
+
+  init();
+})();
+</script>
+
+</body>
+</html>
