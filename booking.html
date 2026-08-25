@@ -352,6 +352,15 @@
     return rows.map(function (r) { return { start: new Date(r.start_at), end: new Date(r.end_at) }; });
   }
 
+  // Matches the database's own buffer exactly (see
+  // sql/add_booking_schedule_buffer.sql) -- 15 minutes on each side of
+  // an existing booking, producing a real 30-minute gap between any
+  // two adjacent appointments for wrap-up and travel time. Kept in
+  // sync deliberately: without this, a slot could show as available
+  // here but get rejected by the database's own buffer-aware
+  // exclusion constraint on submit.
+  const SCHEDULE_BUFFER_MINUTES = 15;
+
   function overlaps(aStart, aEnd, bStart, bEnd) {
     return aStart < bEnd && bStart < aEnd;
   }
@@ -364,6 +373,7 @@
 
     const now = new Date();
     const earliestAllowed = new Date(now.getTime() + MIN_LEAD_HOURS * 60 * 60 * 1000);
+    const bufferMs = SCHEDULE_BUFFER_MINUTES * 60000;
 
     const slots = [];
     for (let mins = openHour * 60; mins + durationMinutes <= closeHour * 60; mins += SLOT_INCREMENT_MINUTES) {
@@ -371,7 +381,9 @@
       const startUtc = zonedTimeToUtc(dateStr, hh, mm);
       const endUtc = new Date(startUtc.getTime() + durationMinutes * 60000);
       if (startUtc < earliestAllowed) continue;
-      const conflict = bookings.some(function (b) { return overlaps(startUtc, endUtc, b.start, b.end); });
+      const conflict = bookings.some(function (b) {
+        return overlaps(startUtc, endUtc, new Date(b.start.getTime() - bufferMs), new Date(b.end.getTime() + bufferMs));
+      });
       if (conflict) continue;
       const label = new Intl.DateTimeFormat('en-US', { timeZone: BUSINESS_TIMEZONE, hour: 'numeric', minute: '2-digit' }).format(startUtc);
       slots.push({ startUtc: startUtc, endUtc: endUtc, label: label });
