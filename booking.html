@@ -347,7 +347,12 @@
     const res = await fetch(url, {
       headers: { apikey: SUPABASE_ANON_KEY, Authorization: 'Bearer ' + SUPABASE_ANON_KEY },
     });
-    if (!res.ok) return [];
+    // A failed availability check must never be treated the same as
+    // "no conflicts that day" -- the exact wrong direction for
+    // something that exists to prevent double-booking. Throws so the
+    // caller shows this clearly instead of silently presenting an
+    // unverified page as if everything were fine.
+    if (!res.ok) throw new Error('availability check failed (HTTP ' + res.status + ')');
     const rows = await res.json();
     return rows.map(function (r) { return { start: new Date(r.start_at), end: new Date(r.end_at) }; });
   }
@@ -402,7 +407,15 @@
     grid.innerHTML = '<p style="color:var(--text-dim); font-size:13px;">Loading times...</p>';
     emptyEl.style.display = 'none';
 
-    existingBookings = await fetchBookingsForDate(dateStr);
+    try {
+      existingBookings = await fetchBookingsForDate(dateStr);
+    } catch (e) {
+      grid.innerHTML =
+        '<p style="color:#ff8a80; font-size:13.5px; text-align:center; grid-column:1/-1;">Couldn\'t load available times. Check your connection and try again.</p>' +
+        '<button type="button" class="btn ghost" id="retryDateBtn" style="grid-column:1/-1;">Try again</button>';
+      document.getElementById('retryDateBtn').addEventListener('click', function () { selectDate(dateStr); });
+      return;
+    }
     const slots = computeSlotsForDate(dateStr, selectedService.minutes, existingBookings);
 
     if (slots.length === 0) {

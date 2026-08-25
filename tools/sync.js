@@ -902,6 +902,7 @@ async function initSyncOnLoad() {
 let _supabaseClient = null;
 let _realtimeChannel = null;
 let _leadsRealtimeChannel = null;
+let _bookingsRealtimeChannel = null;
 
 function getSupabaseClient() {
   if (!isSyncConfigured()) return null;
@@ -1061,6 +1062,64 @@ function startLeadsRealtime(onChange, onStatusChange) {
 function stopRealtimeSync() {
   if (_realtimeChannel) { _realtimeChannel.unsubscribe(); _realtimeChannel = null; }
   if (_leadsRealtimeChannel) { _leadsRealtimeChannel.unsubscribe(); _leadsRealtimeChannel = null; }
+  if (_bookingsRealtimeChannel) { _bookingsRealtimeChannel.unsubscribe(); _bookingsRealtimeChannel = null; }
+}
+
+// Same idea again, for th_bookings specifically -- fires on a new
+// booking, or a guest's own cancellation/reschedule. Added 2026-08-25:
+// th_bookings was never in the supabase_realtime publication at all
+// (see sql/add_bookings_to_realtime.sql), so a guest managing their
+// own booking through manage-booking.html was invisible to staff
+// watching the calendar or dashboard until a manual reload -- directly
+// undercutting the point of this whole system, which is avoiding
+// scheduling conflicts by keeping staff actually informed.
+function startBookingsRealtime(onChange, onStatusChange) {
+  const client = getSupabaseClient();
+  if (!client) {
+    if (onStatusChange) onStatusChange('unavailable');
+    return;
+  }
+  let realtimeResolved = false;
+
+  function attemptSubscribe(retriesLeft) {
+    _bookingsRealtimeChannel = client
+      .channel('bookings-realtime')
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'th_bookings' },
+        () => {
+          try {
+            if (onChange) onChange();
+          } catch (e) {
+            if (typeof logClientError === 'function') {
+              logClientError('Realtime th_bookings callback failed: ' + (e && e.message ? e.message : String(e)), 'sync.js', null, null, e && e.stack);
+            }
+          }
+        }
+      )
+      .subscribe((status) => {
+        if (status === 'CHANNEL_ERROR' && retriesLeft > 0) {
+          if (typeof logClientError === 'function') {
+            logClientError('Realtime th_bookings channel status: CHANNEL_ERROR -- retrying (' + retriesLeft + ' attempt(s) left)', 'sync.js', null, null, null);
+          }
+          client.removeChannel(_bookingsRealtimeChannel);
+          setTimeout(() => attemptSubscribe(retriesLeft - 1), 2000);
+          return;
+        }
+        realtimeResolved = true;
+        if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
+          if (typeof logClientError === 'function') {
+            logClientError('Realtime th_bookings channel status: ' + status, 'sync.js', null, null, null);
+          }
+        }
+        if (onStatusChange) onStatusChange(status);
+      });
+  }
+  attemptSubscribe(2);
+
+  setTimeout(() => {
+    if (!realtimeResolved && onStatusChange) onStatusChange('timeout');
+  }, 12000);
 }
 
 // ---------------------------------------------------------------------------
