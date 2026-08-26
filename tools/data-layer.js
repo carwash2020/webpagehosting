@@ -169,6 +169,44 @@ function thAddJobTombstone(id) {
   thWrite(TH_JOB_TOMBSTONES_KEY, list);
 }
 
+// Extended 2026-08-26 to the remaining record types with a real delete
+// action, after finding the same union-merge resurrection bug (already
+// fixed for clients and jobs above) was still open for all of these.
+// Same shape each time: id-only, no normalized-name tracking, since
+// nothing backfills any of these from other data by name the way
+// clients do.
+const TH_EXPENSE_TOMBSTONES_KEY = 'th_expense_tombstones';
+function thLoadExpenseTombstones() { return thRead(TH_EXPENSE_TOMBSTONES_KEY, []); }
+function thAddExpenseTombstone(id) {
+  const list = thLoadExpenseTombstones();
+  list.push({ id, deletedAt: new Date().toISOString() });
+  thWrite(TH_EXPENSE_TOMBSTONES_KEY, list);
+}
+
+const TH_INCOME_TOMBSTONES_KEY = 'th_income_tombstones';
+function thLoadIncomeTombstones() { return thRead(TH_INCOME_TOMBSTONES_KEY, []); }
+function thAddIncomeTombstone(id) {
+  const list = thLoadIncomeTombstones();
+  list.push({ id, deletedAt: new Date().toISOString() });
+  thWrite(TH_INCOME_TOMBSTONES_KEY, list);
+}
+
+const TH_CONTACT_TOMBSTONES_KEY = 'th_contact_tombstones';
+function thLoadContactTombstones() { return thRead(TH_CONTACT_TOMBSTONES_KEY, []); }
+function thAddContactTombstone(id) {
+  const list = thLoadContactTombstones();
+  list.push({ id, deletedAt: new Date().toISOString() });
+  thWrite(TH_CONTACT_TOMBSTONES_KEY, list);
+}
+
+const TH_CONTRACT_TOMBSTONES_KEY = 'th_contract_tombstones';
+function thLoadContractTombstones() { return thRead(TH_CONTRACT_TOMBSTONES_KEY, []); }
+function thAddContractTombstone(id) {
+  const list = thLoadContractTombstones();
+  list.push({ id, deletedAt: new Date().toISOString() });
+  thWrite(TH_CONTRACT_TOMBSTONES_KEY, list);
+}
+
 // "Flag this page" queue (2026-08-21), requested directly: a quick way
 // to flag something to come back to later, for a moment when there
 // isn't time to write a full message. Each entry: { id, page, note,

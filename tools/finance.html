@@ -37,8 +37,8 @@
 </script>
 <link rel="stylesheet" href="/styles.css?v=202608202000">
 <link rel="stylesheet" href="/tools/styles-tools.css?v=7888067c8f">
-<script src="/tools/sync.js?v=f92fcfdef4" defer></script>
-<script src="/tools/data-layer.js?v=ff9e4db03f" defer></script>
+<script src="/tools/sync.js?v=0bebd74da1" defer></script>
+<script src="/tools/data-layer.js?v=61995b687f" defer></script>
 <script src="/tools/tools-effects.js?v=fff945a03c" defer></script>
 <script src="/tools/tools-dialogs.js?v=b5defd210d" defer></script>
 <script src="/tools/tools-media-sharing.js?v=fe0110f6d1" defer></script>
@@ -602,6 +602,7 @@
     const timer = setTimeout(() => {
       pendingDeleteIncomeIds.delete(id);
       saveIncomeEntries(loadIncomeEntries().filter(e => e.id !== id));
+      if (typeof thAddIncomeTombstone === 'function') thAddIncomeTombstone(id);
       renderIncomeEntries();
     }, 6000);
 
@@ -617,6 +618,9 @@
   async function clearAllIncome() {
     const confirmed = await showConfirm('Delete every logged income entry, including ones from invoices? This cannot be undone and does not touch the invoices themselves.', { danger: true, confirmText: 'Delete All' });
     if (confirmed) {
+      if (typeof thAddIncomeTombstone === 'function') {
+        loadIncomeEntries().forEach(e => thAddIncomeTombstone(e.id));
+      }
       saveIncomeEntries([]);
       renderIncomeEntries();
     }
@@ -939,6 +943,7 @@
         await deleteReceipt(entry.receiptPath); // best-effort cleanup of the actual file too
       }
       saveExpenses(entries.filter(e => e.id !== id));
+      if (typeof thAddExpenseTombstone === 'function') thAddExpenseTombstone(id);
       renderExpenses();
     }, 6000);
 
@@ -954,6 +959,9 @@
   async function clearAllExpenses() {
     const confirmed = await showConfirm('Delete every logged entry? This cannot be undone.', { danger: true, confirmText: 'Delete All' });
     if (confirmed) {
+      if (typeof thAddExpenseTombstone === 'function') {
+        loadExpenses().forEach(e => thAddExpenseTombstone(e.id));
+      }
       saveExpenses([]);
       renderExpenses();
     }
