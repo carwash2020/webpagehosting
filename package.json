@@ -5,7 +5,8 @@
   "scripts": {
     "test": "node --test tests/parts-reference.test.js tests/sync-merge.test.js tests/data-layer.test.js tests/finance-split.test.js tests/theme-toggle.test.js tests/regression-checker.test.js tests/visual-snapshot.test.js tests/tools-light-mode.test.js tests/desktop-layout.test.js tests/desktop-sidebar.test.js tests/job-tracker-board.test.js tests/text-audit.test.js tests/client-error-log.test.js tests/client-registry-delete.test.js tests/tools-grid-finance.test.js tests/dev-tools-owner-view.test.js tests/dev-tools-tabs.test.js tests/changelog-grouping.test.js tests/flag-for-later.test.js tests/manage-booking.test.js tests/booking.test.js tests/workspace.test.js tests/data-integrity-booking.test.js tests/dev-tools-reports.test.js",
     "check-visual-snapshot": "node scripts/check-visual-snapshot.js",
-    "check-consistency": "node scripts/check-consistency.js"
+    "check-consistency": "node scripts/check-consistency.js",
+    "fix-versions": "node scripts/check-consistency.js --fix-versions"
   },
   "devDependencies": {
     "jsdom": "^24.0.0"

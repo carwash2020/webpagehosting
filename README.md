@@ -79,7 +79,7 @@ Two things on this specific repo have caused real, hours-long confusion before. 
 |---|---|
 | `tools/sync.js` | The entire cloud-sync engine — push/pull to Supabase, real-time subscriptions, Leads fetch/update/delete, Job Photos and Receipts upload/delete. Supabase credentials live here (anon/public key only — never the secret key). |
 | `tools/data-layer.js` | Shared read/write path for jobs, invoices, expenses, and the client registry (`clientId`s, backfill migration from name-matching). Every page reading or writing this data should go through here rather than touching `localStorage` directly, so a fix (or a sync-push trigger) only needs to happen in one place. |
-| `tools/styles-tools.css` | The tool suite's own stylesheet — everything specific to `/tools/` pages (sticky header, sidebar, bottom nav, badges, forms) lives here, separate from the public site's `styles.css`. Every page loading it must use the exact same `?v=` cache-bust version — the consistency checker (`scripts/check-consistency.js`) catches drift automatically. |
+| `tools/styles-tools.css` | The tool suite's own stylesheet — everything specific to `/tools/` pages (sticky header, sidebar, bottom nav, badges, forms) lives here, separate from the public site's `styles.css`. Every page loading it must use the exact same `?v=` cache-bust version, and that version is the file's own real content hash (not a manually-chosen date) as of 2026-08-26 -- see "Cache-busting" below. |
 | `tools/tools-effects.js`, `tools/tools-dialogs.js`, `tools/tools-media-sharing.js`, `tools/tools-nav-pwa.js` | Shared tool behavior, split out of a since-retired `tools-common.js` (2026-08-20, once it had grown to 1,447 lines mixing everything together): completion celebration/help-modal content/icon-search; the custom confirm/alert dialog system (`escapeHtml` lives here specifically, not in `tools-effects.js` — worth double-checking before assuming which file has a given helper); photo lightbox/voice dictation/toasts; and the mobile bottom nav + desktop sidebar injection (sidebar added 2026-08-20), respectively. |
 | `tools/auth.js` | Login/session handling, including the redirect-to-login-and-back-again flow, plus the account-roles system (`hasDevToolsAccess()`, `canManageRoles()`) that gates Dev Tools access. |
 | `tools/push-notifications.js`, `tools/qrcode-lib.js`, `tools/manifest.json` | Push notification setup, QR code generation, and the internal-tools PWA manifest (separate from the public site's `site-manifest.json` at the root). |
@@ -160,6 +160,42 @@ means the secret is genuinely set and the Management API calls
 succeeded).
 
 
+
+## Cache-busting -- how it actually works now (rewritten 2026-08-26)
+
+Every page loading a shared file (`tools-effects.js`, `tools-dialogs.js`,
+`tools-media-sharing.js`, `tools-nav-pwa.js`, `sync.js`, `auth.js`,
+`push-notifications.js`, `styles-tools.css`, `dev-tools-shared.js`)
+does so with a `?v=` query string. **That string is the file's own
+real content hash, not a date or timestamp anyone chooses by hand.**
+
+**If you edit any of those 9 files, run this before committing:**
+
+```
+npm run fix-versions
+```
+
+This rewrites every `?v=` reference to each file's real, current
+hash, across every page that loads it, in one command. There is
+nothing else to remember and nothing to compute by hand.
+
+**Why this exists, and why it changed:** the previous scheme used a
+human/AI-chosen `YYYYMMDDHHMM` timestamp, checked by comparing the
+file's last-commit time against that timestamp inside a 12-hour grace
+window (meant to absorb timezone skew). That check let the exact bug
+it existed to catch through three separate times in one real day: a
+real function was added to `sync.js`, the `?v=` string was never
+bumped to match, the gap between them happened to be under 12 hours,
+and the check passed cleanly -- while real users' browsers kept
+serving the stale, function-missing file regardless, causing a live
+`Can't find variable` error on the actual site. A content hash has no
+grace window and no timing judgment call to get wrong: the version
+either matches what the file contains right now, or it doesn't.
+
+`npm run check-consistency` (also run automatically on every push,
+see `.github/workflows/test.yml`) verifies every reference matches;
+`npm run fix-versions` is the same script, run with `--fix-versions`,
+correcting instead of just reporting.
 
 ## Deploying changes
 

@@ -2746,6 +2746,61 @@ test('the tour health check genuinely catches a page missing the tour\'s require
   }
 });
 
+// Cache-bust versioning, rewritten 2026-08-26 after the time-based
+// version of this check (comparing a file's last-commit time against
+// its ?v= string's encoded date, inside a 12-hour grace window meant
+// to absorb timezone skew) let the exact bug it existed to catch
+// through three times in one real day: a function added to sync.js
+// with the ?v= never bumped to match sat within the grace window and
+// was never flagged, while real users kept getting served the stale,
+// function-missing file regardless. Replaced with a content hash --
+// no time, no grace window, no judgment call to get wrong.
+
+test('the cache-bust check passes cleanly against the real, current codebase -- every versioned script\'s ?v= actually matches its real content hash right now', () => {
+  const result = runCheckConsistency();
+  assert.equal(result.passed, true, result.output);
+});
+
+test('the cache-bust check genuinely catches a real mismatch, not just a plausible-looking check -- a stale ?v= that happens to be recent is still caught, unlike the old time-based version of this check', () => {
+  const wsPath = path.join(__dirname, '..', 'tools', 'workspace.html');
+  const original = fs.readFileSync(wsPath, 'utf8');
+  try {
+    // A deliberately WRONG hash, but one that looks recent/plausible --
+    // exactly the case the old grace-window logic would have let
+    // through if the timing happened to line up.
+    const broken = original.replace(/sync\.js\?v=[a-zA-Z0-9]+/, 'sync.js?v=0000000000');
+    fs.writeFileSync(wsPath, broken);
+    const result = runCheckConsistency();
+    assert.equal(result.passed, false, 'a real content-hash mismatch should always be caught, regardless of timing');
+    assert.match(result.output, /workspace\.html requests sync\.js\?v=0000000000, but sync\.js's real content hash right now is/);
+  } finally {
+    fs.writeFileSync(wsPath, original);
+  }
+});
+
+test('npm run fix-versions actually corrects a real mismatch to the file\'s genuine current content hash, not just report it', () => {
+  const wsPath = path.join(__dirname, '..', 'tools', 'workspace.html');
+  const syncPath = path.join(__dirname, '..', 'tools', 'sync.js');
+  const originalWs = fs.readFileSync(wsPath, 'utf8');
+  try {
+    const broken = originalWs.replace(/sync\.js\?v=[a-zA-Z0-9]+/, 'sync.js?v=0000000000');
+    fs.writeFileSync(wsPath, broken);
+
+    const { execSync } = require('child_process');
+    execSync('node ' + path.join(__dirname, '..', 'scripts', 'check-consistency.js') + ' --fix-versions', { encoding: 'utf8' });
+
+    const crypto = require('crypto');
+    const realHash = crypto.createHash('sha256').update(fs.readFileSync(syncPath, 'utf8')).digest('hex').slice(0, 10);
+    const fixedContent = fs.readFileSync(wsPath, 'utf8');
+    assert.match(fixedContent, new RegExp('sync\\.js\\?v=' + realHash), 'fix-versions should have rewritten the deliberately-wrong version to the real, current hash');
+
+    const result = runCheckConsistency();
+    assert.equal(result.passed, true, 'the check should now pass after fix-versions corrected the mismatch');
+  } finally {
+    fs.writeFileSync(wsPath, originalWs);
+  }
+});
+
 // Improvement #4 from the 8/14-8/20 site audit (2026-08-20): a new
 // checkTopLevelDeferredCalls function in scripts/check-consistency.js,
 // running automatically on every push. Automates the exact detection
