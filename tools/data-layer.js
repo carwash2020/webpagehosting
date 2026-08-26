@@ -153,6 +153,22 @@ function thAddClientTombstone(id, name) {
   thWrite(TH_CLIENT_TOMBSTONES_KEY, list);
 }
 
+// Same fix, extended to jobs (2026-08-26): found while adding live sync
+// to job-detail.html and directly testing the "job deleted by someone
+// else while this page is open" case -- deleteJob() in job-tracker.html
+// removed the job locally but recorded nothing, so the exact same union-
+// merge resurrection bug already fixed for clients above was still live
+// for jobs. No normalized-name tracking needed here (unlike clients,
+// nothing backfills a job from other data by name), just the id, since
+// that's the only thing the sync-merge path in applySyncData needs.
+const TH_JOB_TOMBSTONES_KEY = 'th_job_tombstones';
+function thLoadJobTombstones() { return thRead(TH_JOB_TOMBSTONES_KEY, []); }
+function thAddJobTombstone(id) {
+  const list = thLoadJobTombstones();
+  list.push({ id, deletedAt: new Date().toISOString() });
+  thWrite(TH_JOB_TOMBSTONES_KEY, list);
+}
+
 // "Flag this page" queue (2026-08-21), requested directly: a quick way
 // to flag something to come back to later, for a moment when there
 // isn't time to write a full message. Each entry: { id, page, note,

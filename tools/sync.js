@@ -90,6 +90,10 @@ function debugTrace(msg) {
 const SYNC_TABLE = 'workspace_sync';
 
 const SYNC_DATA_KEYS = [
+  // Must come before th_tracker_jobs, same reasoning as
+  // th_client_tombstones below: applySyncData's th_tracker_jobs branch
+  // reads this key fresh from localStorage right after merging it.
+  'th_job_tombstones',
   'th_tracker_jobs',
   // Must come before th_clients: applySyncData's th_clients branch reads
   // this key fresh from localStorage right after merging it, to filter
@@ -195,6 +199,7 @@ const MERGE_KEY_FIELD = {
   th_tracker_jobs: 'id',
   th_clients: 'id',
   th_client_tombstones: 'id',
+  th_job_tombstones: 'id',
   th_tracker_contacts: 'id',
   th_tracker_notes_v2: 'id',
   th_expense_log: 'id',
@@ -320,6 +325,13 @@ function applySyncData(obj) {
         if (tombstonedIds.length) {
           const tombstoneSet = new Set(tombstonedIds);
           finalArr = mergedArr.filter(c => !tombstoneSet.has(c.id));
+        }
+      } else if (k === 'th_tracker_jobs') {
+        let tombstonedIds = [];
+        try { tombstonedIds = JSON.parse(localStorage.getItem('th_job_tombstones') || '[]').map(t => t.id); } catch (e) { tombstonedIds = []; }
+        if (tombstonedIds.length) {
+          const tombstoneSet = new Set(tombstonedIds);
+          finalArr = mergedArr.filter(j => !tombstoneSet.has(j.id));
         }
       }
 

@@ -37,14 +37,20 @@
 </script>
 <link rel="stylesheet" href="/styles.css?v=202608202000">
 <link rel="stylesheet" href="/tools/styles-tools.css?v=7888067c8f">
-<script src="/tools/sync.js?v=675644f87c" defer></script>
-<script src="/tools/data-layer.js?v=0c6c1c5572" defer></script>
+<script src="/tools/sync.js?v=f92fcfdef4" defer></script>
+<script src="/tools/data-layer.js?v=ff9e4db03f" defer></script>
 <script src="/tools/tools-effects.js?v=fff945a03c" defer></script>
 <script src="/tools/tools-dialogs.js?v=b5defd210d" defer></script>
 <script src="/tools/tools-media-sharing.js?v=fe0110f6d1" defer></script>
 <script src="/tools/tools-nav-pwa.js?v=0f204a44e9" defer></script>
 <style>
   body { padding: 44px 20px 60px; max-width: 720px; margin: 0 auto; }
+  .realtime-badge { display: inline-flex; align-items: center; gap: 5px; font-size: 11.5px; color: var(--text-dim); }
+  .realtime-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--text-dim); flex-shrink: 0; }
+  .realtime-dot.is-live { background: #4caf50; }
+  .realtime-dot.is-connecting { background: var(--orange-light); }
+  .realtime-dot.is-error { background: #e05252; }
+  .hub-sub { margin: 4px 0 0; }
   /* Desktop layout (2026-08-20), requested directly: efficient on
      phone stays exactly as it was (nothing below 1024px changes at
      all) -- this only widens the container on a real desktop-size
@@ -91,6 +97,7 @@
       <a href="/tools/job-tracker.html" class="help-btn" aria-label="Back to Job Tracker" title="Back to Job Tracker" style="text-decoration:none; display:inline-flex; align-items:center; justify-content:center;">&#8617;</a>
     </div>
   </div>
+  <p class="hub-sub"><span class="realtime-badge" id="realtimeBadge" style="margin-left:0;"><span class="realtime-dot" id="realtimeDot"></span><span id="realtimeText">Live sync: connecting...</span></span></p>
 
   <div id="jobContent"></div>
 </div>
@@ -118,7 +125,48 @@
     document.getElementById('jobDetailView').style.display = '';
     renderJobDetail(bundle);
     loadPhotosReadOnly(currentJobId);
+
+    if (typeof startRealtimeSync === 'function') {
+      startRealtimeSync(onJobRealtimeChange, updateRealtimeBadge);
+    }
   });
+
+  function updateRealtimeBadge(status) {
+    const dot = document.getElementById('realtimeDot');
+    const text = document.getElementById('realtimeText');
+    if (!dot || !text) return;
+    dot.className = 'realtime-dot';
+    if (status === 'SUBSCRIBED') {
+      dot.classList.add('is-live');
+      text.textContent = 'Live sync active';
+    } else if (status === 'unavailable') {
+      dot.classList.add('is-error');
+      text.textContent = 'Live sync unavailable';
+    } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT' || status === 'CLOSED' || status === 'timeout') {
+      dot.classList.add('is-error');
+      text.textContent = 'Live sync disconnected';
+    } else {
+      dot.classList.add('is-connecting');
+      text.textContent = 'Live sync: connecting...';
+    }
+  }
+
+  // Re-checks this specific job against the freshly-pulled data on any
+  // remote change -- not just re-rendering blindly, since the one
+  // genuinely new scenario live sync introduces here is the job having
+  // been deleted by someone else while this page was open. Photos
+  // aren't re-fetched here: th_job_photos isn't part of workspace_sync
+  // at all, so a workspace_sync change event says nothing about
+  // whether photos changed.
+  function onJobRealtimeChange() {
+    const bundle = (currentJobId && typeof thGetJobBundle === 'function') ? thGetJobBundle(currentJobId) : null;
+    if (!bundle) {
+      document.getElementById('jobDetailView').style.display = 'none';
+      document.getElementById('jobNotFound').style.display = '';
+      return;
+    }
+    renderJobDetail(bundle);
+  }
 
   function renderJobDetail(bundle) {
     const j = bundle.job;

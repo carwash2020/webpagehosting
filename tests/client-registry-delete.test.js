@@ -144,3 +144,55 @@ test('a stale device pushing back its old copy of a deleted client does not resu
   const finalClients = JSON.parse(window.localStorage.getItem('th_clients'));
   assert.deepEqual(finalClients, [], 'the resurrected client from the stale push should have been filtered back out by the tombstone');
 });
+
+// Same bug class, found for jobs (2026-08-26) while adding live sync to
+// job-detail.html and directly testing "job deleted by someone else
+// while this page is open": deleteJob() removed the job locally but
+// recorded nothing, unlike thDeleteClient right above. Fixed with the
+// identical tombstone mechanism, extended to jobs.
+
+test('thAddJobTombstone records a tombstone by id, readable back via thLoadJobTombstones', () => {
+  const window = loadDevTools([]);
+  window.thAddJobTombstone('j1');
+  const tombstones = window.thLoadJobTombstones();
+  assert.equal(tombstones.length, 1);
+  assert.equal(tombstones[0].id, 'j1');
+  assert.ok(tombstones[0].deletedAt, 'should record when the deletion happened');
+});
+
+test('deleteJob (job-tracker.html) actually calls thAddJobTombstone when the deletion finalizes, not just removing the job locally', () => {
+  const src = fs.readFileSync(path.join(TOOLS_DIR, 'job-tracker.html'), 'utf8');
+  const fnMatch = src.match(/async function deleteJob\(id\)[\s\S]*?\n  \}/);
+  assert.ok(fnMatch, 'deleteJob not found');
+  assert.match(fnMatch[0], /thAddJobTombstone\(/, 'deleteJob should record a tombstone, the same fix already applied to thDeleteClient');
+});
+
+test('a stale device pushing back its old copy of a deleted job does not resurrect it on pull, since the tombstone (already merged first) is consulted when merging th_tracker_jobs -- the exact same scenario already fixed for clients, extended to jobs', () => {
+  const syncJs = fs.readFileSync(path.join(TOOLS_DIR, 'sync.js'), 'utf8');
+  const syncDataKeysMatch = syncJs.match(/const SYNC_DATA_KEYS = \[[\s\S]*?\n\];/);
+  const mergeKeyFieldMatch = syncJs.match(/const MERGE_KEY_FIELD = \{[\s\S]*?\n\};/);
+  const mergeRecordArraysMatch = syncJs.match(/function mergeRecordArrays[\s\S]*?\n\}/);
+  const mergePartsMatch = syncJs.match(/function mergePartsReferenceUnits[\s\S]*?\n\}/);
+  const mergeClientErrorLogMatch = syncJs.match(/const CLIENT_ERROR_LOG_MAX_AFTER_MERGE[\s\S]*?function mergeClientErrorLog[\s\S]*?\n\}/);
+  const applySyncDataMatch = syncJs.match(/function applySyncData[\s\S]*?\n\}/);
+  assert.ok(syncDataKeysMatch && mergeKeyFieldMatch && mergeRecordArraysMatch && mergePartsMatch && mergeClientErrorLogMatch && applySyncDataMatch, 'one or more required sync.js functions not found');
+  assert.match(syncDataKeysMatch[0], /th_job_tombstones/, 'th_job_tombstones should be a synced key');
+
+  const window = loadDevTools([]);
+  window.thAddJobTombstone('j1'); // simulates deleteJob's own tombstone-recording step
+
+  const combined = [
+    syncDataKeysMatch[0], mergeKeyFieldMatch[0], mergeRecordArraysMatch[0],
+    mergePartsMatch[0], mergeClientErrorLogMatch[0], applySyncDataMatch[0],
+  ].join('\n');
+  window.eval(combined);
+
+  // A stale device that never pulled the deletion, pushing its old copy back.
+  window.applySyncData({
+    th_tracker_jobs: JSON.stringify([{ id: 'j1', title: 'Old Job' }]),
+    th_job_tombstones: JSON.stringify([]),
+  });
+
+  const finalJobs = JSON.parse(window.localStorage.getItem('th_tracker_jobs'));
+  assert.deepEqual(finalJobs, [], 'the resurrected job from the stale push should have been filtered back out by the tombstone');
+});
