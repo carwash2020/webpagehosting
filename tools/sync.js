@@ -117,6 +117,7 @@ const SYNC_DATA_KEYS = [
   'th_tracker_contacts',
   'th_tracker_notes_v2',
   'th_mileage_rate',
+  'th_price_ref_tombstones',
   'th_price_reference',
   // Delete added to invoices and quotes for the first time (2026-08-26)
   // -- built in with the tombstone from the start, same reasoning as
@@ -129,6 +130,7 @@ const SYNC_DATA_KEYS = [
   'th_tax_labor',
   'th_tax_parts',
   'th_compliance',
+  'th_template_tombstones',
   'th_job_templates',
   'th_contract_tombstones',
   'th_contracts',
@@ -138,6 +140,8 @@ const SYNC_DATA_KEYS = [
   // syncing, but this key was never on the list scheduleSync() actually
   // pushes, so every entry only ever lived on whichever single device
   // it was typed into.
+  'th_pr_unit_tombstones',
+  'th_pr_issue_tombstones',
   'th_parts_reference_units',
   // Client-side error log from tools-media-sharing.js. Small and naturally
   // self-capping (see mergeClientErrorLog below), so this doesn't risk
@@ -147,6 +151,7 @@ const SYNC_DATA_KEYS = [
   // real synced list so both accounts can add/check off items and see
   // each other's, rather than only Connor being able to log a new one
   // (by editing this file).
+  'th_known_issue_tombstones',
   'th_known_issues',
   // "Flag this page" queue (2026-08-21), requested directly: a quick
   // way to flag something to come back to later without writing a
@@ -222,6 +227,11 @@ const MERGE_KEY_FIELD = {
   th_contract_tombstones: 'id',
   th_invoice_tombstones: 'id',
   th_quote_tombstones: 'id',
+  th_price_ref_tombstones: 'id',
+  th_template_tombstones: 'id',
+  th_known_issue_tombstones: 'id',
+  th_pr_unit_tombstones: 'id',
+  th_pr_issue_tombstones: 'id',
   th_tracker_contacts: 'id',
   th_tracker_notes_v2: 'id',
   th_expense_log: 'id',
@@ -397,6 +407,39 @@ function applySyncData(obj) {
           const tombstoneSet = new Set(tombstonedIds);
           finalArr = mergedArr.filter(q => !tombstoneSet.has(q.id));
         }
+      } else if (k === 'th_price_reference') {
+        let tombstonedIds = [];
+        try { tombstonedIds = JSON.parse(localStorage.getItem('th_price_ref_tombstones') || '[]').map(t => t.id); } catch (e) { tombstonedIds = []; }
+        if (tombstonedIds.length) {
+          const tombstoneSet = new Set(tombstonedIds);
+          finalArr = mergedArr.filter(r => !tombstoneSet.has(r.id));
+        }
+      } else if (k === 'th_job_templates') {
+        let tombstonedIds = [];
+        try { tombstonedIds = JSON.parse(localStorage.getItem('th_template_tombstones') || '[]').map(t => t.id); } catch (e) { tombstonedIds = []; }
+        if (tombstonedIds.length) {
+          const tombstoneSet = new Set(tombstonedIds);
+          finalArr = mergedArr.filter(t => !tombstoneSet.has(t.id));
+        }
+      } else if (k === 'th_known_issues') {
+        let tombstonedIds = [];
+        try { tombstonedIds = JSON.parse(localStorage.getItem('th_known_issue_tombstones') || '[]').map(t => t.id); } catch (e) { tombstonedIds = []; }
+        if (tombstonedIds.length) {
+          const tombstoneSet = new Set(tombstonedIds);
+          finalArr = mergedArr.filter(i => !tombstoneSet.has(i.id));
+        }
+      } else if (k === 'th_parts_reference_units') {
+        let tombstonedUnitIds = [];
+        try { tombstonedUnitIds = JSON.parse(localStorage.getItem('th_pr_unit_tombstones') || '[]').map(t => t.id); } catch (e) { tombstonedUnitIds = []; }
+        let tombstonedIssueIds = [];
+        try { tombstonedIssueIds = JSON.parse(localStorage.getItem('th_pr_issue_tombstones') || '[]').map(t => t.id); } catch (e) { tombstonedIssueIds = []; }
+        const unitTombstoneSet = new Set(tombstonedUnitIds);
+        const issueTombstoneSet = new Set(tombstonedIssueIds);
+        finalArr = mergedArr
+          .filter(u => !unitTombstoneSet.has(u.id))
+          .map(u => (u.issues && u.issues.length)
+            ? Object.assign({}, u, { issues: u.issues.filter(iss => !issueTombstoneSet.has(u.id + '::' + iss.id)) })
+            : u);
       }
 
       localStorage.setItem(k, JSON.stringify(finalArr));

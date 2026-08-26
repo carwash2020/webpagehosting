@@ -42,7 +42,7 @@
 <script src="/tools/tools-media-sharing.js?v=fe0110f6d1" defer></script>
 <script src="/tools/tools-nav-pwa.js?v=0f204a44e9" defer></script>
 <script src="/tools/tools-tour.js?v=886e40d6c9" defer></script>
-<script src="/tools/sync.js?v=014ca77580" defer></script>
+<script src="/tools/sync.js?v=a6ae33ca8d" defer></script>
 <style>
   .pr-search-filter-row { display: flex; gap: 8px; margin-bottom: 16px; }
   .pr-search-filter-row .pr-search-field { flex: 1 1 auto; min-width: 0; }
@@ -2542,6 +2542,7 @@
     showConfirm('Delete this appliance type and every issue logged under it? This cannot be undone.', { danger: true, confirmText: 'Delete' }).then(confirmed => {
       if (!confirmed) return;
       savePrUnits(loadPrUnits().filter(u => u.id !== unitId));
+      if (typeof thAddPrUnitTombstone === 'function') thAddPrUnitTombstone(unitId);
       renderBrandDetail();
     });
   }
@@ -2584,6 +2585,7 @@
         const unit = list.find(u => u.id === unitId);
         if (unit) unit.issues = unit.issues.filter(i => i.id !== issueId);
         savePrUnits(list);
+        if (typeof thAddPrIssueTombstone === 'function') thAddPrIssueTombstone(unitId, issueId);
         renderBrandDetail();
       });
     });

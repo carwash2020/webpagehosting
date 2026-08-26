@@ -187,6 +187,125 @@ test('a stale device pushing back its old copy of a deleted contract does not re
   assert.deepEqual(JSON.parse(window.localStorage.getItem('th_contracts')), []);
 });
 
+// --- Round 3 (2026-08-26): price reference, job templates, known
+// issues, and Appliance Wiki -- found by re-checking whether the
+// earlier "every delete function in the codebase" sweep actually
+// covered everything. It hadn't.
+
+test('thAddPriceRefTombstone records a tombstone by id, and a stale push does not resurrect the deleted entry', () => {
+  const window = loadDevTools();
+  window.thAddPriceRefTombstone(1);
+  const tombstones = window.thLoadPriceRefTombstones();
+  assert.equal(tombstones.length, 1);
+  assert.equal(tombstones[0].id, 1);
+
+  const syncDataKeys = loadSyncFunctions(window);
+  assert.match(syncDataKeys, /th_price_ref_tombstones/);
+  window.applySyncData({
+    th_price_reference: JSON.stringify([{ id: 1, jobType: 'Old' }]),
+    th_price_ref_tombstones: JSON.stringify([]),
+  });
+  assert.deepEqual(JSON.parse(window.localStorage.getItem('th_price_reference')), []);
+});
+
+test('deletePriceReference (finance.html) actually calls thAddPriceRefTombstone', () => {
+  const src = fs.readFileSync(path.join(TOOLS_DIR, 'finance.html'), 'utf8');
+  const fnMatch = src.match(/function deletePriceReference\(id\)[\s\S]*?\n  \}/);
+  assert.ok(fnMatch, 'deletePriceReference not found');
+  assert.match(fnMatch[0], /thAddPriceRefTombstone\(/);
+});
+
+test('thAddTemplateTombstone records a tombstone by id, and a stale push does not resurrect the deleted template', () => {
+  const window = loadDevTools();
+  window.thAddTemplateTombstone(2);
+  assert.equal(window.thLoadTemplateTombstones()[0].id, 2);
+
+  const syncDataKeys = loadSyncFunctions(window);
+  assert.match(syncDataKeys, /th_template_tombstones/);
+  window.applySyncData({
+    th_job_templates: JSON.stringify([{ id: 2, title: 'Old Template' }]),
+    th_template_tombstones: JSON.stringify([]),
+  });
+  assert.deepEqual(JSON.parse(window.localStorage.getItem('th_job_templates')), []);
+});
+
+test('deleteTemplate (job-tracker.html) actually calls thAddTemplateTombstone', () => {
+  const src = fs.readFileSync(path.join(TOOLS_DIR, 'job-tracker.html'), 'utf8');
+  const fnMatch = src.match(/async function deleteTemplate\(id\)[\s\S]*?\n  \}/);
+  assert.ok(fnMatch, 'deleteTemplate not found');
+  assert.match(fnMatch[0], /thAddTemplateTombstone\(/);
+});
+
+test('thAddKnownIssueTombstone records a tombstone by id, and a stale push does not resurrect the deleted issue', () => {
+  const window = loadDevTools();
+  window.thAddKnownIssueTombstone(3);
+  assert.equal(window.thLoadKnownIssueTombstones()[0].id, 3);
+
+  const syncDataKeys = loadSyncFunctions(window);
+  assert.match(syncDataKeys, /th_known_issue_tombstones/);
+  window.applySyncData({
+    th_known_issues: JSON.stringify([{ id: 3, title: 'Old Issue' }]),
+    th_known_issue_tombstones: JSON.stringify([]),
+  });
+  assert.deepEqual(JSON.parse(window.localStorage.getItem('th_known_issues')), []);
+});
+
+test('deleteKnownIssue (dev-tools.html) actually calls thAddKnownIssueTombstone', () => {
+  const src = fs.readFileSync(path.join(TOOLS_DIR, 'dev-tools.html'), 'utf8');
+  const fnMatch = src.match(/function deleteKnownIssue\(id\)[\s\S]*?\n  \}/);
+  assert.ok(fnMatch, 'deleteKnownIssue not found');
+  assert.match(fnMatch[0], /thAddKnownIssueTombstone\(/);
+});
+
+test('deletePrUnitType and deletePrIssue (parts-reference.html) actually call their respective tombstone functions', () => {
+  const src = fs.readFileSync(path.join(TOOLS_DIR, 'parts-reference.html'), 'utf8');
+  const unitFnMatch = src.match(/function deletePrUnitType\(unitId\)[\s\S]*?\n  \}/);
+  assert.ok(unitFnMatch, 'deletePrUnitType not found');
+  assert.match(unitFnMatch[0], /thAddPrUnitTombstone\(/);
+
+  const issueFnMatch = src.match(/function deletePrIssue\(unitId, issueId\)[\s\S]*?\n  \}/);
+  assert.ok(issueFnMatch, 'deletePrIssue not found');
+  assert.match(issueFnMatch[0], /thAddPrIssueTombstone\(/);
+});
+
+test('a deleted Appliance Wiki unit (with all its issues) does not resurrect from a stale device push', () => {
+  const window = loadDevTools();
+  window.thAddPrUnitTombstone('unitA');
+  const syncDataKeys = loadSyncFunctions(window);
+  assert.match(syncDataKeys, /th_pr_unit_tombstones/);
+
+  window.applySyncData({
+    th_parts_reference_units: JSON.stringify([
+      { id: 'unitA', brand: 'Whirlpool', issues: [] },
+      { id: 'unitB', brand: 'GE', issues: [] },
+    ]),
+    th_pr_unit_tombstones: JSON.stringify([]),
+    th_pr_issue_tombstones: JSON.stringify([]),
+  });
+
+  const result = JSON.parse(window.localStorage.getItem('th_parts_reference_units'));
+  assert.deepEqual(result.map(u => u.id), ['unitB'], 'unitA should have been filtered out, unitB should survive');
+});
+
+test('a deleted Appliance Wiki issue is scoped by (unitId, issueId) -- a different unit\'s issue sharing the exact same numeric id (Date.now()-based) is never affected', () => {
+  const window = loadDevTools();
+  window.thAddPrIssueTombstone('unitB', 555);
+  loadSyncFunctions(window);
+
+  window.applySyncData({
+    th_parts_reference_units: JSON.stringify([
+      { id: 'unitB', brand: 'GE', issues: [{ id: 555, symptom: 'Old issue' }, { id: 999, symptom: 'Keep this one' }] },
+      { id: 'unitC', brand: 'Samsung', issues: [{ id: 555, symptom: 'Different unit, same issue id' }] },
+    ]),
+    th_pr_unit_tombstones: JSON.stringify([]),
+    th_pr_issue_tombstones: JSON.stringify([]),
+  });
+
+  const result = JSON.parse(window.localStorage.getItem('th_parts_reference_units'));
+  assert.deepEqual(result.find(u => u.id === 'unitB').issues.map(i => i.id), [999], 'unitB\'s own issue 555 should be gone, 999 should remain');
+  assert.deepEqual(result.find(u => u.id === 'unitC').issues.map(i => i.id), [555], 'unitC\'s issue 555 must survive -- it is a different, unrelated issue that happens to share the same id');
+});
+
 // --- Invoices and quotes ---------------------------------------------
 // Unlike every record type above, delete never existed for these two
 // at all before now (2026-08-26) -- added for the first time here,

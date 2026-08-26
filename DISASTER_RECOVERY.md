@@ -457,6 +457,27 @@ record type with a real delete action has this:
 | Contracts | `deleteContractLogEntry` (contract-generator.html) | `th_contract_tombstones` |
 | Invoices | `deleteInvoiceLogEntry` (invoice-generator.html) | `th_invoice_tombstones` |
 | Quotes | `deleteQuoteLogEntry` (invoice-generator.html) | `th_quote_tombstones` |
+| Price reference | `deletePriceReference` (finance.html) | `th_price_ref_tombstones` |
+| Job templates | `deleteTemplate` (job-tracker.html) | `th_template_tombstones` |
+| Known issues | `deleteKnownIssue` (dev-tools.html) | `th_known_issue_tombstones` |
+| Appliance Wiki units | `deletePrUnitType` (parts-reference.html) | `th_pr_unit_tombstones` |
+| Appliance Wiki issues | `deletePrIssue` (parts-reference.html) | `th_pr_issue_tombstones` |
+
+The last row above has a real wrinkle worth knowing if this pattern is
+ever extended again: issue ids are `Date.now()`-based and only unique
+*within* their own unit's `issues` array (the merge for issues runs
+separately per unit), not globally -- so this tombstone is keyed by a
+composite `unitId::issueId`, not the issue id alone. A global-only
+tombstone here could have accidentally filtered out an unrelated issue
+in a *different* unit that happened to share the same millisecond-based
+id. Confirmed directly with a test covering exactly that collision.
+
+The bottom 5 rows above were found by directly re-checking, after the
+first pass, whether "every delete function in the codebase" actually
+meant every one -- it hadn't. Worth remembering next time this list
+needs extending: grep for every `function delete` in `tools/*.html`
+and check each one against `MERGE_KEY_FIELD`, rather than trusting an
+earlier pass's claim of completeness.
 
 Invoices and quotes didn't have a delete action of any kind until
 2026-08-26 -- added then, with the tombstone built in from the start
