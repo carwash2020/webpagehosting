@@ -29,6 +29,15 @@ function waitFor(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
+async function waitForCondition(conditionFn, { timeout = 5000, interval = 20 } = {}) {
+  const start = Date.now();
+  while (Date.now() - start < timeout) {
+    if (conditionFn()) return;
+    await waitFor(interval);
+  }
+  throw new Error('waitForCondition: condition never became true within ' + timeout + 'ms');
+}
+
 test('a valid, confirmed booking shows its real details and a working cancel button', async () => {
   const window = loadPage(
     'https://www.triplehenterprisesllc.biz/manage-booking.html?token=abc-123',
@@ -169,11 +178,13 @@ test('clicking Reschedule shows a real date/time picker with actual open slots',
       return { ok: false };
     },
   );
-  await waitFor(200);
+  await waitForCondition(() => window.document.getElementById('startRescheduleBtn'));
   window.document.getElementById('startRescheduleBtn').dispatchEvent(new window.Event('click', { bubbles: true }));
-  await waitFor(300);
+  await waitForCondition(() => window.document.querySelectorAll('.date-btn').length > 1);
+  window.document.querySelectorAll('.date-btn')[1].dispatchEvent(new window.Event('click', { bubbles: true }));
+  await waitForCondition(() => window.document.querySelector('.slot-btn'));
   assert.ok(window.document.querySelectorAll('.date-btn').length > 0, 'real date options should render');
-  assert.ok(window.document.querySelectorAll('.slot-btn').length > 0, 'real, open time slots should render for the default (today) date');
+  assert.ok(window.document.querySelectorAll('.slot-btn').length > 0, 'real, open time slots should render for the selected date');
 });
 
 test('the booking\'s own current slot does not block itself when picking a new time', async () => {
@@ -192,9 +203,11 @@ test('the booking\'s own current slot does not block itself when picking a new t
       return { ok: false };
     },
   );
-  await waitFor(200);
+  await waitForCondition(() => window.document.getElementById('startRescheduleBtn'));
   window.document.getElementById('startRescheduleBtn').dispatchEvent(new window.Event('click', { bubbles: true }));
-  await waitFor(300);
+  await waitForCondition(() => window.document.querySelectorAll('.date-btn').length > 1);
+  window.document.querySelectorAll('.date-btn')[1].dispatchEvent(new window.Event('click', { bubbles: true }));
+  await waitForCondition(() => window.document.querySelector('.slot-btn'));
   assert.ok(window.document.querySelectorAll('.slot-btn').length > 0, 'slots should still be offered -- the booking\'s own current time should not block itself');
 });
 
@@ -219,11 +232,13 @@ test('picking a slot calls the real reschedule RPC with the correct token and a 
       return { ok: false };
     },
   );
-  await waitFor(200);
+  await waitForCondition(() => window.document.getElementById('startRescheduleBtn'));
   window.document.getElementById('startRescheduleBtn').dispatchEvent(new window.Event('click', { bubbles: true }));
-  await waitFor(300);
+  await waitForCondition(() => window.document.querySelectorAll('.date-btn').length > 1);
+  window.document.querySelectorAll('.date-btn')[1].dispatchEvent(new window.Event('click', { bubbles: true }));
+  await waitForCondition(() => window.document.querySelector('.slot-btn'));
   window.document.querySelector('.slot-btn').dispatchEvent(new window.Event('click', { bubbles: true }));
-  await waitFor(300);
+  await waitForCondition(() => window.document.getElementById('content').innerHTML.includes('has been rescheduled'));
 
   assert.ok(rpcCalled, 'the real reschedule RPC should have been called');
   assert.equal(rpcArgs.p_token, 'abc-123');
@@ -246,11 +261,13 @@ test('a slot-taken response (a real collision caught by the database) is handled
       return { ok: false };
     },
   );
-  await waitFor(200);
+  await waitForCondition(() => window.document.getElementById('startRescheduleBtn'));
   window.document.getElementById('startRescheduleBtn').dispatchEvent(new window.Event('click', { bubbles: true }));
-  await waitFor(300);
+  await waitForCondition(() => window.document.querySelectorAll('.date-btn').length > 1);
+  window.document.querySelectorAll('.date-btn')[1].dispatchEvent(new window.Event('click', { bubbles: true }));
+  await waitForCondition(() => window.document.querySelector('.slot-btn'));
   window.document.querySelector('.slot-btn').dispatchEvent(new window.Event('click', { bubbles: true }));
-  await waitFor(300);
+  await waitForCondition(() => window.document.getElementById('content').innerHTML.includes('just taken'));
   assert.match(window.document.getElementById('content').innerHTML, /just taken/);
 });
 
