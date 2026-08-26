@@ -111,23 +111,28 @@
 
     const params = new URLSearchParams(window.location.search);
     const returnTo = params.get('return');
-    // Only ever redirect to a same-site path -- never follow an
-    // external "return" value, which would make this an open redirect.
-    // startsWith('/') alone is NOT enough: '//evil.com/phishing' also
-    // starts with '/', and browsers resolve a leading-// URL as
-    // protocol-relative (using the current page's own protocol),
-    // navigating off-site. Confirmed this bypass is real before fixing
-    // it -- resolving against the real origin and comparing origins
-    // directly closes it properly.
-    function isSafeSameSiteReturnPath(path) {
-      if (!path || !path.startsWith('/') || path.startsWith('//')) return false;
-      try {
-        return new URL(path, window.location.origin).origin === window.location.origin;
-      } catch (e) {
-        return false;
-      }
-    }
-    window.location.href = isSafeSameSiteReturnPath(returnTo) ? returnTo : '/tools/workspace.html';
+    // Only ever redirect to a known internal tool page -- never follow
+    // an arbitrary external "return" value, which would make this an
+    // open redirect. An earlier version tried to validate an arbitrary
+    // path was "safe" (same-origin, not protocol-relative) rather than
+    // checking against a known set -- that version was verified
+    // correct against real adversarial cases (including the classic
+    // '//evil.com' protocol-relative bypass), but a hand-written
+    // validator function isn't something static analysis tools
+    // reliably recognize as an effective sanitizer. An explicit
+    // allowlist is both easier to verify at a glance and matches
+    // reality exactly: requireAuth() in auth.js always builds this
+    // parameter from window.location.pathname on this same site, so
+    // it can only ever legitimately be one of these real pages.
+    const ALLOWED_RETURN_PATHS = new Set([
+      '/tools/calendar.html', '/tools/client-detail.html', '/tools/contact-card.html',
+      '/tools/contract-generator.html', '/tools/dev-tools.html', '/tools/expense-logger.html',
+      '/tools/finance.html', '/tools/invoice-generator.html', '/tools/job-cost-lookup.html',
+      '/tools/job-detail.html', '/tools/job-tracker.html', '/tools/parts-reference.html',
+      '/tools/review-request.html', '/tools/route-planner.html', '/tools/runway-dashboard.html',
+      '/tools/settings.html', '/tools/site-content.html', '/tools/workspace.html',
+    ]);
+    window.location.href = ALLOWED_RETURN_PATHS.has(returnTo) ? returnTo : '/tools/workspace.html';
   });
 
   document.getElementById('forgotPasswordLink').addEventListener('click', () => {
