@@ -227,6 +227,60 @@ function thAddQuoteTombstone(id) {
   thWrite(TH_QUOTE_TOMBSTONES_KEY, list);
 }
 
+// Round 3 (2026-08-26) -- found by re-checking whether the earlier
+// "every delete function in the codebase" sweep actually covered
+// everything. It hadn't: deletePriceReference, deleteTemplate,
+// deleteKnownIssue, deletePrUnitType, and deletePrIssue all had the
+// identical union-merge resurrection gap, still open.
+const TH_PRICE_REF_TOMBSTONES_KEY = 'th_price_ref_tombstones';
+function thLoadPriceRefTombstones() { return thRead(TH_PRICE_REF_TOMBSTONES_KEY, []); }
+function thAddPriceRefTombstone(id) {
+  const list = thLoadPriceRefTombstones();
+  list.push({ id, deletedAt: new Date().toISOString() });
+  thWrite(TH_PRICE_REF_TOMBSTONES_KEY, list);
+}
+
+const TH_TEMPLATE_TOMBSTONES_KEY = 'th_template_tombstones';
+function thLoadTemplateTombstones() { return thRead(TH_TEMPLATE_TOMBSTONES_KEY, []); }
+function thAddTemplateTombstone(id) {
+  const list = thLoadTemplateTombstones();
+  list.push({ id, deletedAt: new Date().toISOString() });
+  thWrite(TH_TEMPLATE_TOMBSTONES_KEY, list);
+}
+
+const TH_KNOWN_ISSUE_TOMBSTONES_KEY = 'th_known_issue_tombstones';
+function thLoadKnownIssueTombstones() { return thRead(TH_KNOWN_ISSUE_TOMBSTONES_KEY, []); }
+function thAddKnownIssueTombstone(id) {
+  const list = thLoadKnownIssueTombstones();
+  list.push({ id, deletedAt: new Date().toISOString() });
+  thWrite(TH_KNOWN_ISSUE_TOMBSTONES_KEY, list);
+}
+
+const TH_PR_UNIT_TOMBSTONES_KEY = 'th_pr_unit_tombstones';
+function thLoadPrUnitTombstones() { return thRead(TH_PR_UNIT_TOMBSTONES_KEY, []); }
+function thAddPrUnitTombstone(id) {
+  const list = thLoadPrUnitTombstones();
+  list.push({ id, deletedAt: new Date().toISOString() });
+  thWrite(TH_PR_UNIT_TOMBSTONES_KEY, list);
+}
+
+// Scoped by (unitId, issueId) rather than issueId alone -- issue ids
+// are Date.now()-based and only guaranteed unique within their own
+// unit's issues array (mergeRecordArrays for issues is called
+// separately per unit), not globally, so a global-only tombstone
+// could accidentally filter out an unrelated issue in a different
+// unit that happens to share the same millisecond-based id. Also
+// carries a composite `id` (unitId::issueId) since mergeRecordArrays
+// needs a real keyField present on every record to deduplicate by --
+// without one, these tombstones would silently never actually merge.
+const TH_PR_ISSUE_TOMBSTONES_KEY = 'th_pr_issue_tombstones';
+function thLoadPrIssueTombstones() { return thRead(TH_PR_ISSUE_TOMBSTONES_KEY, []); }
+function thAddPrIssueTombstone(unitId, issueId) {
+  const list = thLoadPrIssueTombstones();
+  list.push({ id: unitId + '::' + issueId, unitId, issueId, deletedAt: new Date().toISOString() });
+  thWrite(TH_PR_ISSUE_TOMBSTONES_KEY, list);
+}
+
 // "Flag this page" queue (2026-08-21), requested directly: a quick way
 // to flag something to come back to later, for a moment when there
 // isn't time to write a full message. Each entry: { id, page, note,
