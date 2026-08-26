@@ -1058,6 +1058,7 @@ test('finance.html\'s DOMContentLoaded init actually runs to completion and rend
   window.thRead = (key, fallback) => fallback;
   window.money = (n) => '$' + (Number(n) || 0).toFixed(2);
   window.escapeHtml = (s) => String(s == null ? '' : s);
+      window.escapeForInlineHandler = (s) => String(s == null ? '' : s);
 
   let uncaught = null;
   window.addEventListener('error', (e) => { uncaught = e.error; });
@@ -1239,6 +1240,7 @@ test('the end-to-end flow actually works: open the modal, fill it out, submit, a
   window.attachVoiceDictation = () => {};
   window.personDot = () => '';
   window.escapeHtml = (s) => String(s == null ? '' : s);
+      window.escapeForInlineHandler = (s) => String(s == null ? '' : s);
   window.money = (n) => '$' + (Number(n) || 0).toFixed(2);
   window.uploadReceipt = async (file, id) => ({ ok: true, path: 'expense-' + id + '/fake.jpg' });
   window.localStorage.setItem('th_tracker_jobs', JSON.stringify([{ id: 555, title: 'End-to-end Test Job' }]));
@@ -1314,6 +1316,7 @@ test('finance.html shows its default tab (Cost Lookup) on a completely normal, h
   window.thRead = (key, fallback) => fallback;
   window.money = (n) => '$' + (Number(n) || 0).toFixed(2);
   window.escapeHtml = (s) => String(s == null ? '' : s);
+      window.escapeForInlineHandler = (s) => String(s == null ? '' : s);
   window.document.dispatchEvent(new window.Event('DOMContentLoaded'));
   await new Promise(resolve => setTimeout(resolve, 100));
 
@@ -1342,6 +1345,7 @@ test('finance.html still correctly activates a DIFFERENT tab when a real hash is
   window.thRead = (key, fallback) => fallback;
   window.money = (n) => '$' + (Number(n) || 0).toFixed(2);
   window.escapeHtml = (s) => String(s == null ? '' : s);
+      window.escapeForInlineHandler = (s) => String(s == null ? '' : s);
   window.document.dispatchEvent(new window.Event('DOMContentLoaded'));
   await new Promise(resolve => setTimeout(resolve, 100));
 
@@ -1499,6 +1503,7 @@ test('the full expense lifecycle (add, highlight, edit, cancel, re-render) works
   window.thRead = (key, fallback) => fallback;
   window.money = (n) => '$' + (Number(n) || 0).toFixed(2);
   window.escapeHtml = (s) => String(s == null ? '' : s);
+      window.escapeForInlineHandler = (s) => String(s == null ? '' : s);
   window.uploadReceipt = async () => ({ ok: true, path: 'fake.jpg' });
   window.scheduleSync = () => {};
   window.personDot = () => '';
@@ -1542,6 +1547,7 @@ test('the full income lifecycle (add, highlight, edit, cancel, re-render) also w
   window.thRead = (key, fallback) => fallback;
   window.money = (n) => '$' + (Number(n) || 0).toFixed(2);
   window.escapeHtml = (s) => String(s == null ? '' : s);
+      window.escapeForInlineHandler = (s) => String(s == null ? '' : s);
   window.scheduleSync = () => {};
   window.personDot = () => '';
   window.toggleFormSection = () => {};
@@ -1591,6 +1597,7 @@ test('selecting Mileage as the expense type actually shows the Miles field and h
   window.thRead = (key, fallback) => fallback;
   window.money = (n) => '$' + (Number(n) || 0).toFixed(2);
   window.escapeHtml = (s) => String(s == null ? '' : s);
+      window.escapeForInlineHandler = (s) => String(s == null ? '' : s);
   window.document.dispatchEvent(new window.Event('DOMContentLoaded'));
   await new Promise(resolve => setTimeout(resolve, 100));
 
@@ -2024,7 +2031,8 @@ test('check-links.py\'s bot-hostile allowlist includes the 5 domains added after
   const match = src.match(/BOT_HOSTILE_DOMAINS = \(([\s\S]*?)\)/);
   assert.ok(match, 'BOT_HOSTILE_DOMAINS not found');
   for (const domain of ['fonts.googleapis.com', 'cal.com', 'google.com', 'googletagmanager.com', 'g.page']) {
-    assert.match(match[1], new RegExp("'" + domain.replace(/\./g, '\\.') + "'"), domain + ' should be in the allowlist');
+    const escapedDomain = domain.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    assert.match(match[1], new RegExp("'" + escapedDomain + "'"), domain + ' should be in the allowlist');
   }
 });
 
@@ -2037,8 +2045,8 @@ test('the site\'s own domain is deliberately NOT in the bot-hostile allowlist, a
 });
 
 test('running check-links.py against the real repo actually passes now (not just that the allowlist text looks right)', () => {
-  const { execSync } = require('child_process');
-  const output = execSync('python3 ' + path.join(__dirname, '..', '..', 'scripts', 'check-links.py'), { encoding: 'utf8' });
+  const { execFileSync } = require('child_process');
+  const output = execFileSync('python3', [path.join(__dirname, '..', '..', 'scripts', 'check-links.py')], { encoding: 'utf8' });
   assert.match(output, /Link check passed/);
 });
 
@@ -2415,6 +2423,7 @@ test('the jsPDF-not-ready guard actually works end to end: shows the real alert 
       window.attachVoiceDictation = () => {};
       window.money = (n) => '$' + (Number(n) || 0).toFixed(2);
       window.escapeHtml = (s) => String(s == null ? '' : s);
+      window.escapeForInlineHandler = (s) => String(s == null ? '' : s);
       window.showAlert = async (msg) => { window.__lastAlert = msg; };
     },
   });
@@ -2480,6 +2489,7 @@ function testTopLevelInitNoLongerThrows(pageFile, pagePath, tourStepIndex, extra
         window.HTMLElement.prototype.scrollIntoView = () => {};
         window.money = (n) => '$' + (Number(n) || 0).toFixed(2);
         window.escapeHtml = (s) => String(s == null ? '' : s);
+      window.escapeForInlineHandler = (s) => String(s == null ? '' : s);
         window.thEnsureClient = () => null;
         window.wireSearchClear = () => {};
         window.attachVoiceDictation = () => {};
@@ -2714,9 +2724,9 @@ test('this page\'s own colliding classes are completely unaffected -- no shared 
 // now, rather than needing another hard-to-reproduce user report.
 
 function runCheckConsistency() {
-  const { execSync } = require('child_process');
+  const { execFileSync } = require('child_process');
   try {
-    const output = execSync('node ' + path.join(__dirname, '..', '..', 'scripts', 'check-consistency.js'), { encoding: 'utf8' });
+    const output = execFileSync('node', [path.join(__dirname, '..', '..', 'scripts', 'check-consistency.js')], { encoding: 'utf8' });
     return { passed: true, output };
   } catch (e) {
     return { passed: false, output: e.stdout + e.stderr };
@@ -2846,8 +2856,8 @@ test('npm run fix-versions actually corrects a real mismatch to the file\'s genu
     const broken = originalWs.replace(/sync\.js\?v=[a-zA-Z0-9]+/, 'sync.js?v=0000000000');
     fs.writeFileSync(wsPath, broken);
 
-    const { execSync } = require('child_process');
-    execSync('node ' + path.join(__dirname, '..', '..', 'scripts', 'check-consistency.js') + ' --fix-versions', { encoding: 'utf8' });
+    const { execFileSync } = require('child_process');
+    execFileSync('node', [path.join(__dirname, '..', '..', 'scripts', 'check-consistency.js'), '--fix-versions'], { encoding: 'utf8' });
 
     const crypto = require('crypto');
     const realHash = crypto.createHash('sha256').update(fs.readFileSync(syncPath, 'utf8')).digest('hex').slice(0, 10);

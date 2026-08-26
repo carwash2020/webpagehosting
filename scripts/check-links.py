@@ -38,7 +38,7 @@ PUBLIC_PAGES = [
 ]
 
 HREF_SRC_RE = re.compile(r'(?:href|src)="([^"]+)"')
-SCRIPT_BLOCK_RE = re.compile(r'<script\b[^>]*>.*?</script>', re.DOTALL | re.IGNORECASE)
+SCRIPT_BLOCK_RE = re.compile(r'<script\b[^>]*>.*?</script[^>]*>', re.DOTALL | re.IGNORECASE)
 
 # Not real broken-link candidates -- don't even attempt these.
 SKIP_PREFIXES = ('mailto:', 'tel:', 'sms:', 'javascript:', '#', 'data:')

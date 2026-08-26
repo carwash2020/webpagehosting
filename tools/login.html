@@ -31,7 +31,7 @@
 <link rel="stylesheet" href="/tools/styles-tools.css?v=7888067c8f">
 <script src="/tools/auth.js?v=52e9e98903"></script>
 <script src="/tools/tools-effects.js?v=fff945a03c" defer></script>
-<script src="/tools/tools-dialogs.js?v=b5defd210d" defer></script>
+<script src="/tools/tools-dialogs.js?v=36c369b5d2" defer></script>
 <script src="/tools/tools-media-sharing.js?v=fe0110f6d1" defer></script>
 <script src="/tools/tools-nav-pwa.js?v=0f204a44e9" defer></script>
 <style>
@@ -113,7 +113,21 @@
     const returnTo = params.get('return');
     // Only ever redirect to a same-site path -- never follow an
     // external "return" value, which would make this an open redirect.
-    window.location.href = (returnTo && returnTo.startsWith('/')) ? returnTo : '/tools/workspace.html';
+    // startsWith('/') alone is NOT enough: '//evil.com/phishing' also
+    // starts with '/', and browsers resolve a leading-// URL as
+    // protocol-relative (using the current page's own protocol),
+    // navigating off-site. Confirmed this bypass is real before fixing
+    // it -- resolving against the real origin and comparing origins
+    // directly closes it properly.
+    function isSafeSameSiteReturnPath(path) {
+      if (!path || !path.startsWith('/') || path.startsWith('//')) return false;
+      try {
+        return new URL(path, window.location.origin).origin === window.location.origin;
+      } catch (e) {
+        return false;
+      }
+    }
+    window.location.href = isSafeSameSiteReturnPath(returnTo) ? returnTo : '/tools/workspace.html';
   });
 
   document.getElementById('forgotPasswordLink').addEventListener('click', () => {

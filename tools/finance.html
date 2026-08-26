@@ -40,7 +40,7 @@
 <script src="/tools/sync.js?v=e46eb5ff7b" defer></script>
 <script src="/tools/data-layer.js?v=469402246e" defer></script>
 <script src="/tools/tools-effects.js?v=fff945a03c" defer></script>
-<script src="/tools/tools-dialogs.js?v=b5defd210d" defer></script>
+<script src="/tools/tools-dialogs.js?v=36c369b5d2" defer></script>
 <script src="/tools/tools-media-sharing.js?v=fe0110f6d1" defer></script>
 <script src="/tools/tools-nav-pwa.js?v=0f204a44e9" defer></script>
 <script src="/tools/tools-tour.js?v=886e40d6c9" defer></script>
@@ -1010,7 +1010,7 @@
         <td>${e.type === 'mileage' ? e.miles + ' mi' : '\u2014'}</td>
         <td>${PAYMENT_LABEL[e.payment] || '\u2014'}</td>
         <td>$${e.amount.toFixed(2)}</td>
-        <td>${e.receiptPath ? `<a href="#" onclick="openSignedReceipt(event, '${escapeHtml(e.receiptPath).replace(/'/g, "\\'")}')" style="color:var(--blue-light);">View</a>` : '\u2014'}</td>
+        <td>${e.receiptPath ? `<a href="#" onclick="openSignedReceipt(event, '${escapeForInlineHandler(e.receiptPath)}')" style="color:var(--blue-light);">View</a>` : '\u2014'}</td>
         <td>
           <button class="small-btn" onclick="editExpense(${e.id})" aria-label="Edit entry" title="Edit entry">Edit</button>
           <button class="small-btn danger" onclick="deleteExpense(${e.id})" aria-label="Delete entry" title="Delete entry">&times;</button>

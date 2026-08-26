@@ -41,7 +41,7 @@
 <script src="/tools/sync.js?v=e46eb5ff7b" defer></script>
 <script src="/tools/data-layer.js?v=469402246e" defer></script>
 <script src="/tools/tools-effects.js?v=fff945a03c" defer></script>
-<script src="/tools/tools-dialogs.js?v=b5defd210d" defer></script>
+<script src="/tools/tools-dialogs.js?v=36c369b5d2" defer></script>
 <script src="/tools/tools-media-sharing.js?v=fe0110f6d1" defer></script>
 <script src="/tools/tools-nav-pwa.js?v=0f204a44e9" defer></script>
 <script src="/tools/tools-tour.js?v=886e40d6c9" defer></script>
@@ -1367,7 +1367,7 @@
               <option value="in-progress" ${job.status === 'in-progress' ? 'selected' : ''}>In Progress</option>
               <option value="done" ${job.status === 'done' ? 'selected' : ''}>Mark as Complete</option>
             </select>
-            <button class="small-btn" onclick="toggleJobPhotos(${job.id}, '${escapeHtml(job.title).replace(/'/g, "\\'")}')">Photos</button>
+            <button class="small-btn" onclick="toggleJobPhotos(${job.id}, '${escapeForInlineHandler(job.title)}')">Photos</button>
             <button class="small-btn ${job.showOnCalendar ? 'is-active' : ''}" onclick="toggleShowOnCalendar(${job.id})">${job.showOnCalendar ? '\u2713 On Calendar' : 'Show on Calendar'}</button>
             <button class="small-btn" onclick="editJob(${job.id})">Edit</button>
             <button class="small-btn danger" onclick="deleteJob(${job.id})">Delete</button>
@@ -1568,7 +1568,7 @@
         </select>
         <label class="secondary-btn" style="display:inline-flex; align-items:center; cursor:pointer; padding:8px 14px;">
           + Add Photo
-          <input type="file" accept="image/*" style="display:none;" onchange="handlePhotoUpload(${jobId}, '${escapeHtml(jobTitle).replace(/'/g, "\\'")}', event)">
+          <input type="file" accept="image/*" style="display:none;" onchange="handlePhotoUpload(${jobId}, '${escapeForInlineHandler(jobTitle)}', event)">
         </label>
       </div>`;
 
@@ -1596,8 +1596,8 @@
       <div class="photo-thumb ${p.featured ? 'has-star-featured' : ''}">
         <img src="${signedUrls[p.storage_path] || ''}" alt="Job photo" loading="lazy" onclick="openPhotoLightbox(window._jobPhotoLightboxCache[${jobId}], ${i})" style="cursor:pointer;">
         <div class="photo-thumb-label">${escapeHtml(PHOTO_TYPE_LABEL[p.photo_type] || 'Photo')}</div>
-        <button class="photo-thumb-star ${p.featured ? 'is-featured' : ''}" onclick="toggleFeatureUI(${p.id}, ${!p.featured}, ${jobId}, '${escapeHtml(jobTitle).replace(/'/g, "\\'")}')" title="${p.featured ? 'Remove from website gallery queue' : 'Queue for website gallery'}">${p.featured ? '\u2605' : '\u2606'}</button>
-        <button class="photo-thumb-delete" onclick="deletePhotoUI(${p.id}, '${p.storage_path}', ${jobId}, '${escapeHtml(jobTitle).replace(/'/g, "\\'")}')" aria-label="Delete photo">&times;</button>
+        <button class="photo-thumb-star ${p.featured ? 'is-featured' : ''}" onclick="toggleFeatureUI(${p.id}, ${!p.featured}, ${jobId}, '${escapeForInlineHandler(jobTitle)}')" title="${p.featured ? 'Remove from website gallery queue' : 'Queue for website gallery'}">${p.featured ? '\u2605' : '\u2606'}</button>
+        <button class="photo-thumb-delete" onclick="deletePhotoUI(${p.id}, '${escapeForInlineHandler(p.storage_path)}', ${jobId}, '${escapeForInlineHandler(jobTitle)}')" aria-label="Delete photo">&times;</button>
       </div>`).join('') + '</div>';
 
     el.innerHTML = uploadRowHtml + gridHtml;

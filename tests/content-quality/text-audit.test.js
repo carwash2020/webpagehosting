@@ -81,9 +81,9 @@ test('workspace.html\'s Dev Tools description no longer claims access is restric
 // entries stayed behind, unused, on job-tracker.html.
 
 function runCheckConsistency() {
-  const { execSync } = require('child_process');
+  const { execFileSync } = require('child_process');
   try {
-    const output = execSync('node ' + path.join(__dirname, '..', '..', 'scripts', 'check-consistency.js'), { encoding: 'utf8' });
+    const output = execFileSync('node', [path.join(__dirname, '..', '..', 'scripts', 'check-consistency.js')], { encoding: 'utf8' });
     return { passed: true, output };
   } catch (e) {
     return { passed: false, output: e.stdout + e.stderr };

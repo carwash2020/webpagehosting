@@ -14,9 +14,9 @@ const STYLES_CSS_PATH = path.join(__dirname, '..', '..', 'styles.css');
 const STYLES_TOOLS_CSS_PATH = path.join(__dirname, '..', '..', 'tools', 'styles-tools.css');
 
 function runCheck() {
-  const { execSync } = require('child_process');
+  const { execFileSync } = require('child_process');
   try {
-    const output = execSync('node ' + SCRIPT_PATH, { encoding: 'utf8', stdio: ['pipe', 'pipe', 'pipe'] });
+    const output = execFileSync('node', [SCRIPT_PATH], { encoding: 'utf8', stdio: ['pipe', 'pipe', 'pipe'] });
     return { passed: true, output };
   } catch (e) {
     return { passed: false, output: (e.stdout || '') + (e.stderr || '') };
@@ -75,8 +75,8 @@ test('genuinely renaming away the tour card\'s CSS rule (the invisible-tour-card
 test('--update-baseline genuinely accepts a real, intentional change rather than just always passing', () => {
   const original = fs.readFileSync(BASELINE_PATH, 'utf8');
   try {
-    const { execSync } = require('child_process');
-    execSync('node ' + SCRIPT_PATH + ' --update-baseline', { encoding: 'utf8' });
+    const { execFileSync } = require('child_process');
+    execFileSync('node', [SCRIPT_PATH, '--update-baseline'], { encoding: 'utf8' });
     const updated = fs.readFileSync(BASELINE_PATH, 'utf8');
     // Against an unchanged codebase, the freshly regenerated baseline
     // should be identical to what was already there -- confirming

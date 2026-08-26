@@ -15,6 +15,9 @@ on:
     - cron: '30 11 * * *'  # ~05:30 Mountain Time, daily
   workflow_dispatch: {}
 
+permissions:
+  contents: read
+
 jobs:
   lighthouse:
     runs-on: ubuntu-latest

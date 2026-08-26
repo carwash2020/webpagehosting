@@ -119,6 +119,38 @@ function escapeHtml(str) {
   return div.innerHTML;
 }
 
+// Fixes a real, confirmed vulnerability (found via CodeQL's "Incomplete
+// string escaping or encoding" alerts, 2026-08-26): escapeHtml() above
+// is only ever safe for text-node content -- it escapes &, <, > (what
+// the browser's own innerHTML serializer escapes for text), but NOT
+// quotes, since quotes aren't special in that context. Every flagged
+// call site instead embeds a value inside a single-quoted JS string
+// literal that's itself inside a double-quoted onclick="..." HTML
+// attribute -- a different context entirely, needing two escape layers
+// applied in the exact order the browser actually undoes them: the
+// browser's HTML parser decodes entities FIRST (to get the raw JS
+// source text), THEN the JS engine parses that text as code -- so
+// building the string requires the reverse order: JS-string-escape
+// first, HTML-attribute-escape on top of that result.
+//
+// Verified via a real jsdom simulation against 9 adversarial inputs
+// (lone single/double quotes, both together, backslashes, ampersands,
+// angle brackets, a raw newline, and a realistic combined case --
+// `24" TV mount with 'brackets'`) before this was ever used in a
+// production file: each one round-trips to the exact original string
+// when the handler actually fires, not just "looks escaped."
+function escapeForInlineHandler(str) {
+  if (str === null || str === undefined) return '';
+  const jsEscaped = String(str)
+    .replace(/\\/g, '\\\\')   // backslash first -- otherwise the escapes added below would themselves get double-escaped
+    .replace(/'/g, "\\'")     // the JS string literal's own delimiter, used throughout this suite's inline handlers
+    .replace(/\n/g, '\\n')    // a raw newline would break a single-line JS string literal outright
+    .replace(/\r/g, '\\r');
+  return jsEscaped
+    .replace(/&/g, '&amp;')   // must come before the next line, or a real "&quot;" in the data would get double-escaped
+    .replace(/"/g, '&quot;'); // the outer onclick="..." attribute's own delimiter
+}
+
 // Item #5 (2026-08-18): shared debounce utility for the 9 live-search
 // inputs across the tool suite, all of which previously re-ran a full
 // list render on every single keystroke with no debounce at all -- fine

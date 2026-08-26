@@ -701,6 +701,21 @@
 <div class="print-only" id="printReport"></div>
 
 <script>
+// Self-contained copy of the shared escapeHtml() helper (tools-dialogs.js),
+// matching this page's deliberate "no shared UI-behavior script
+// dependencies" design -- see "Don't re-litigate these" in
+// docs/ARCHITECTURE-NOTES.md. Added 2026-08-26 to fix a real, confirmed
+// vulnerability (CodeQL's "DOM text reinterpreted as HTML" alerts):
+// user-entered names (debts, income, expenses, categories) were
+// interpolated directly into innerHTML with zero escaping anywhere in
+// this file.
+function escapeHtml(str) {
+  if (str === null || str === undefined) return '';
+  const div = document.createElement('div');
+  div.textContent = str;
+  return div.innerHTML;
+}
+
 // ---------------------------------------------------------------------------
 // window.storage shim -- the get/set calls below were written against
 // Claude's Artifacts persistent-storage API, which only exists inside
@@ -1055,7 +1070,7 @@ function renderDebts(){
   container.innerHTML = debts.map(d => `
     <div class="row ${d.id === justAddedDebtId ? 'list-row-enter' : ''}" data-debt-row-id="${d.id}">
       <div class="row-main">
-        <div class="row-label">${d.name}</div>
+        <div class="row-label">${escapeHtml(d.name)}</div>
         ${d.minPayment ? `<div class="row-freq">Min payment ${fmt(Number(d.minPayment)||0)}/mo</div>` : ''}
       </div>
       <div class="row-amounts"><b>${fmt(Number(d.balance)||0)}</b></div>
@@ -1291,7 +1306,7 @@ function renderIncome(){
   container.innerHTML = income.map(item => `
     <div class="row ${item.id === justAddedIncomeId ? 'list-row-enter' : ''}" data-income-row-id="${item.id}">
       <div class="row-main">
-        <div class="row-label">${item.name}</div>
+        <div class="row-label">${escapeHtml(item.name)}</div>
         <div class="row-freq">${FREQ_LABEL[item.frequency]}</div>
       </div>
       <div class="row-amounts"><b>${fmt(monthlyEquiv(item.amount, item.frequency))}</b>/mo</div>
@@ -1394,14 +1409,14 @@ function renderPersonal(){
     card.style.borderLeft = `4px solid ${cat.color}`;
     card.innerHTML = `
       <div class="card-header">
-        <h3><span class="cat-dot" style="background:${cat.color};"></span>${cat.name}</h3>
+        <h3><span class="cat-dot" style="background:${cat.color};"></span>${escapeHtml(cat.name)}</h3>
         <span class="subtotal">${fmt(total)}/mo</span>
-        <button class="cat-add-btn" data-cat="${cat.key}" title="Add to ${cat.name}">+</button>
+        <button class="cat-add-btn" data-cat="${cat.key}" title="Add to ${escapeHtml(cat.name)}">+</button>
       </div>
       ${items.map(item => item.variable ? `
         <div class="row ${item.id === justAddedExpenseId ? 'list-row-enter' : ''}" data-expense-row-id="${item.id}">
           <div class="row-main">
-            <div class="row-label">${item.name} <span class="col-hint">VARIABLE</span></div>
+            <div class="row-label">${escapeHtml(item.name)} <span class="col-hint">VARIABLE</span></div>
             <div class="row-freq">${variableHint(item)}</div>
           </div>
           <div class="row-amounts"><b>${fmt(itemMonthlyAmount(item))}</b>/mo</div>
@@ -1414,7 +1429,7 @@ function renderPersonal(){
       ` : `
         <div class="row ${item.id === justAddedExpenseId ? 'list-row-enter' : ''}" data-expense-row-id="${item.id}">
           <div class="row-main">
-            <div class="row-label">${item.name}</div>
+            <div class="row-label">${escapeHtml(item.name)}</div>
             <div class="row-freq">${FREQ_LABEL[item.frequency]}</div>
           </div>
           <div class="row-amounts"><b>${fmt(itemMonthlyAmount(item))}</b>/mo</div>
@@ -1540,10 +1555,10 @@ function renderMonths(){
     tr.dataset.monthRow = m.month;
     if (m.month === justAddedMonthKey) tr.classList.add('list-row-enter');
     tr.innerHTML = `
-      <td>${m.month}</td><td>${fmt(m.revenue||0)}</td><td>${fmt(costs)}</td>
+      <td>${escapeHtml(m.month)}</td><td>${fmt(m.revenue||0)}</td><td>${fmt(costs)}</td>
       <td class="${net>=0?'net-positive':'net-negative'}">${fmt(net)}</td>
       <td>${fmt(m.draws||0)}</td><td>${fmt(m.cash||0)}</td>
-      <td><button class="danger-btn" data-month="${m.month}">Delete</button></td>
+      <td><button class="danger-btn" data-month="${escapeHtml(m.month)}">Delete</button></td>
     `;
     tbody.appendChild(tr);
   });
@@ -1592,10 +1607,10 @@ function renderMoM(sorted){
   const cls = (n) => n > 0 ? 'green' : (n < 0 ? '' : '');
 
   statsEl.innerHTML = `
-    <div class="stat-box"><div class="label">Revenue: ${curr.month}</div><div class="value">${fmt(curr.revenue||0)}</div></div>
-    <div class="stat-box ${cls(deltaRev)}"><div class="label">vs. ${prev.month}</div><div class="value">${arrow(deltaRev)} ${fmt(Math.abs(deltaRev))}</div></div>
-    <div class="stat-box"><div class="label">Net Profit: ${curr.month}</div><div class="value">${fmt(currNet)}</div></div>
-    <div class="stat-box ${cls(deltaNet)}"><div class="label">vs. ${prev.month}</div><div class="value">${arrow(deltaNet)} ${fmt(Math.abs(deltaNet))}</div></div>
+    <div class="stat-box"><div class="label">Revenue: ${escapeHtml(curr.month)}</div><div class="value">${fmt(curr.revenue||0)}</div></div>
+    <div class="stat-box ${cls(deltaRev)}"><div class="label">vs. ${escapeHtml(prev.month)}</div><div class="value">${arrow(deltaRev)} ${fmt(Math.abs(deltaRev))}</div></div>
+    <div class="stat-box"><div class="label">Net Profit: ${escapeHtml(curr.month)}</div><div class="value">${fmt(currNet)}</div></div>
+    <div class="stat-box ${cls(deltaNet)}"><div class="label">vs. ${escapeHtml(prev.month)}</div><div class="value">${arrow(deltaNet)} ${fmt(Math.abs(deltaNet))}</div></div>
   `;
   noteEl.textContent = deltaNet >= 0
     ? `Net profit is up ${fmt(Math.abs(deltaNet))} compared to ${prev.month}.`
@@ -1624,7 +1639,7 @@ function renderYoY(sorted){
   const prior = sorted.find(m => m.month === lastYearKey);
 
   if(!prior){
-    statsEl.innerHTML = `<div class="stat-box"><div class="label">Revenue: ${curr.month}</div><div class="value">${fmt(curr.revenue||0)}</div></div>`;
+    statsEl.innerHTML = `<div class="stat-box"><div class="label">Revenue: ${escapeHtml(curr.month)}</div><div class="value">${fmt(curr.revenue||0)}</div></div>`;
     noteEl.textContent = `No ${lastYearKey} logged yet to compare against -- this fills in once you've got a full year of history.`;
     return;
   }
@@ -1637,10 +1652,10 @@ function renderYoY(sorted){
   const cls = (n) => n > 0 ? 'green' : (n < 0 ? '' : '');
 
   statsEl.innerHTML = `
-    <div class="stat-box"><div class="label">Revenue: ${curr.month}</div><div class="value">${fmt(curr.revenue||0)}</div></div>
-    <div class="stat-box ${cls(deltaRev)}"><div class="label">vs. ${lastYearKey}</div><div class="value">${arrow(deltaRev)} ${fmt(Math.abs(deltaRev))}</div></div>
-    <div class="stat-box"><div class="label">Net Profit: ${curr.month}</div><div class="value">${fmt(currNet)}</div></div>
-    <div class="stat-box ${cls(deltaNet)}"><div class="label">vs. ${lastYearKey}</div><div class="value">${arrow(deltaNet)} ${fmt(Math.abs(deltaNet))}</div></div>
+    <div class="stat-box"><div class="label">Revenue: ${escapeHtml(curr.month)}</div><div class="value">${fmt(curr.revenue||0)}</div></div>
+    <div class="stat-box ${cls(deltaRev)}"><div class="label">vs. ${escapeHtml(lastYearKey)}</div><div class="value">${arrow(deltaRev)} ${fmt(Math.abs(deltaRev))}</div></div>
+    <div class="stat-box"><div class="label">Net Profit: ${escapeHtml(curr.month)}</div><div class="value">${fmt(currNet)}</div></div>
+    <div class="stat-box ${cls(deltaNet)}"><div class="label">vs. ${escapeHtml(lastYearKey)}</div><div class="value">${arrow(deltaNet)} ${fmt(Math.abs(deltaNet))}</div></div>
   `;
   noteEl.textContent = deltaNet >= 0
     ? `Net profit is up ${fmt(Math.abs(deltaNet))} compared to the same month last year.`
@@ -1719,8 +1734,8 @@ function renderTaxSetAside(sorted){
   const ytdSetAside = ytdRevenue * rate;
 
   statsEl.innerHTML = `
-    <div class="stat-box"><div class="label">Set Aside for ${latest.month}</div><div class="value">${fmt(latestSetAside)}</div></div>
-    <div class="stat-box blue"><div class="label">${currentYear} Year-to-Date</div><div class="value">${fmt(ytdSetAside)}</div></div>
+    <div class="stat-box"><div class="label">Set Aside for ${escapeHtml(latest.month)}</div><div class="value">${fmt(latestSetAside)}</div></div>
+    <div class="stat-box blue"><div class="label">${escapeHtml(currentYear)} Year-to-Date</div><div class="value">${fmt(ytdSetAside)}</div></div>
   `;
   noteEl.textContent = `Based on ${budgetSettings.taxSetAsideRate}% of revenue, not profit -- taxes are owed on what came in, and this doesn't replace real advice from an accountant.`;
 }
@@ -1899,7 +1914,7 @@ function renderNetWorth(){
 
   statsEl.innerHTML = `
     <div class="stat-box"><div class="label">Personal Savings</div><div class="value">${fmt(efBalance)}</div></div>
-    <div class="stat-box blue"><div class="label">Business Cash${latestMonth ? ' (' + latestMonth.month + ')' : ''}</div><div class="value">${fmt(businessCash)}</div></div>
+    <div class="stat-box blue"><div class="label">Business Cash${latestMonth ? ' (' + escapeHtml(latestMonth.month) + ')' : ''}</div><div class="value">${fmt(businessCash)}</div></div>
     ${totalDebt > 0 ? `<div class="stat-box red"><div class="label">Total Debt</div><div class="value">-${fmt(totalDebt)}</div></div>` : ''}
     <div class="stat-box green" style="grid-column:1/-1;"><div class="label">${totalDebt > 0 ? 'True Net Worth (cash minus debt)' : 'Combined Total'}</div><div class="value" id="netWorthTotalValue">${fmt(trueNetWorth)}</div></div>
   `;
@@ -2239,7 +2254,7 @@ function renderBreakEven(min, personalIncome, sorted){
     <div class="stat-box"><div class="label">Business's Own Costs</div><div class="value">${fmt(businessCosts)}</div></div>
     <div class="stat-box"><div class="label">Gap Left by Personal Income</div><div class="value">${fmt(personalGap)}</div></div>
     <div class="stat-box blue" style="grid-column:1/-1;"><div class="label">Revenue Needed to Break Even</div><div class="value">${fmt(breakEvenRevenue)}</div></div>
-    <div class="stat-box ${surplus>=0?'green':''}" style="grid-column:1/-1;"><div class="label">${latestMonth.month} Actual Revenue</div><div class="value">${fmt(actualRevenue)}</div></div>
+    <div class="stat-box ${surplus>=0?'green':''}" style="grid-column:1/-1;"><div class="label">${escapeHtml(latestMonth.month)} Actual Revenue</div><div class="value">${fmt(actualRevenue)}</div></div>
   `;
 
   if(surplus >= 0){
@@ -2303,7 +2318,7 @@ function renderSafeDraw(min){
   const prevSafeToDraw = readPrevStatValue('safeToDrawValue');
 
   output.innerHTML = `
-    <div class="stat-box"><div class="label">Cash on Hand (${latestMonth.month})</div><div class="value">${fmt(cash)}</div></div>
+    <div class="stat-box"><div class="label">Cash on Hand (${escapeHtml(latestMonth.month)})</div><div class="value">${fmt(cash)}</div></div>
     <div class="stat-box blue"><div class="label">Buffer to Keep</div><div class="value">${fmt(bufferTarget)}</div></div>
     <div class="stat-box green"><div class="label">Safe to Draw Now</div><div class="value" id="safeToDrawValue">${fmt(safeToDraw)}</div></div>
   `;
@@ -2428,7 +2443,7 @@ function statBoxesOf(containerId){
 }
 function reportSection(title, rows){
   if(!rows.length) return '';
-  return `<h2>${title}</h2><table>${rows.map(r => `<tr><td>${r.label}</td><td>${r.value}</td></tr>`).join('')}</table>`;
+  return `<h2>${escapeHtml(title)}</h2><table>${rows.map(r => `<tr><td>${escapeHtml(r.label)}</td><td>${escapeHtml(r.value)}</td></tr>`).join('')}</table>`;
 }
 
 document.getElementById('downloadPdfBtn').addEventListener('click', () => {
@@ -2440,15 +2455,15 @@ document.getElementById('downloadPdfBtn').addEventListener('click', () => {
 
   const html = `
     <h1>Runway Dashboard \u2014 Summary</h1>
-    <div class="print-date">${today}</div>
+    <div class="print-date">${escapeHtml(today)}</div>
     ${reportSection('Safe to Spend', statBoxesOf('safeToSpendStats'))}
-    <div class="print-note">${safeToSpendNote}</div>
+    <div class="print-note">${escapeHtml(safeToSpendNote)}</div>
     ${reportSection('Emergency Fund', [{label:'Current Balance', value: document.getElementById('ef-balance').value ? '$' + Number(document.getElementById('ef-balance').value).toLocaleString() : '$0'}])}
-    <div class="print-note">${efNote}</div>
+    <div class="print-note">${escapeHtml(efNote)}</div>
     ${reportSection('Income Picture', statBoxesOf('incomePictureStats'))}
-    <div class="print-note">${supplementNote}</div>
+    <div class="print-note">${escapeHtml(supplementNote)}</div>
     ${reportSection('Business Trend', statBoxesOf('trendStats'))}
-    <div class="print-note">${textOf('quitEstimate')} \u2014 ${quitNote}</div>
+    <div class="print-note">${escapeHtml(textOf('quitEstimate'))} \u2014 ${escapeHtml(quitNote)}</div>
     ${reportSection('Safe Draw Calculator', statBoxesOf('safeDrawOutput'))}
   `;
   document.getElementById('printReport').innerHTML = html;
