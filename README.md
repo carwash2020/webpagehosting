@@ -163,30 +163,43 @@ succeeded).
 
 ## Cache-busting -- how it actually works now (rewritten 2026-08-26)
 
-Every page loading a shared file (`tools-effects.js`, `tools-dialogs.js`,
-`tools-media-sharing.js`, `tools-nav-pwa.js`, `sync.js`, `auth.js`,
-`push-notifications.js`, `styles-tools.css`, `dev-tools-shared.js`)
-does so with a `?v=` query string. **That string is the file's own
-real content hash, not a date or timestamp anyone chooses by hand.**
+Any `.js` or `.css` file in `tools/` that's genuinely loaded by 2 or
+more real pages gets a `?v=` query string wherever it's loaded, and
+that string is the file's own real content hash -- not a date or
+timestamp anyone chooses by hand, and not a hardcoded list anyone has
+to remember to update either. `scripts/check-consistency.js`'s
+`detectSharedScripts()` derives the list fresh, every run, straight
+from actual usage: reference it from a second page and it's covered
+automatically, with nothing to add anywhere.
 
-**If you edit any of those 9 files, run this before committing:**
+(This replaced an actual hardcoded 9-file list on 2026-08-26, found
+by asking "what else could let this class of bug through" right after
+fixing it once already: `data-layer.js` and `tools-tour.js`, genuinely
+shared by 9 and 11 pages, were both missing from that list entirely,
+so neither had any cache-bust monitoring at all -- `data-layer.js` was
+already sitting on a real, ~4-day-stale version as a direct result,
+caught only by asking the question, not by any check that existed at
+the time.)
+
+**If you edit any shared file (or aren't sure whether one counts),
+run this before committing:**
 
 ```
 npm run fix-versions
 ```
 
-This rewrites every `?v=` reference to each file's real, current
-hash, across every page that loads it, in one command. There is
-nothing else to remember and nothing to compute by hand.
+This rewrites every `?v=` reference to each shared file's real,
+current hash, across every page that loads it, in one command. There
+is nothing else to remember and nothing to compute by hand.
 
-**Why this exists, and why it changed:** the previous scheme used a
-human/AI-chosen `YYYYMMDDHHMM` timestamp, checked by comparing the
-file's last-commit time against that timestamp inside a 12-hour grace
-window (meant to absorb timezone skew). That check let the exact bug
-it existed to catch through three separate times in one real day: a
-real function was added to `sync.js`, the `?v=` string was never
-bumped to match, the gap between them happened to be under 12 hours,
-and the check passed cleanly -- while real users' browsers kept
+**Why the versioning itself is a hash, not a date:** the original
+scheme used a human/AI-chosen `YYYYMMDDHHMM` timestamp, checked by
+comparing the file's last-commit time against that timestamp inside a
+12-hour grace window (meant to absorb timezone skew). That check let
+the exact bug it existed to catch through three separate times in one
+real day: a real function was added to `sync.js`, the `?v=` string was
+never bumped to match, the gap between them happened to be under 12
+hours, and the check passed cleanly -- while real users' browsers kept
 serving the stale, function-missing file regardless, causing a live
 `Can't find variable` error on the actual site. A content hash has no
 grace window and no timing judgment call to get wrong: the version

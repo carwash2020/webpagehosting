@@ -349,12 +349,20 @@ test('the service worker\'s offline precache list references the 4 replacement f
 });
 
 test('the consistency checker tracks the 4 replacement files for version-freshness, not the retired tools-common.js', () => {
-  const src = fs.readFileSync(path.join(__dirname, '..', 'scripts', 'check-consistency.js'), 'utf8');
-  const versionedMatch = src.match(/const VERSIONED_SCRIPTS = \[([^\]]*)\]/);
-  assert.ok(versionedMatch, 'VERSIONED_SCRIPTS not found');
-  assert.doesNotMatch(versionedMatch[1], /tools-common\.js/);
+  // "Which files get tracked" is derived automatically now (2026-08-26)
+  // from real page-reference counts, not a hardcoded list -- so the
+  // real thing to verify is the actual, observable outcome: the
+  // retired file can never be tracked (it no longer exists as a real
+  // file at all, so detectSharedScripts() can't find it to check), and
+  // the 4 real replacement files -- genuinely referenced by multiple
+  // pages -- are.
+  const toolsDir = path.join(__dirname, '..', 'tools');
+  assert.equal(fs.existsSync(path.join(toolsDir, 'tools-common.js')), false, 'tools-common.js should not exist as a real file -- it was split into 4 focused files');
+
+  const htmlFiles = fs.readdirSync(toolsDir).filter(f => f.endsWith('.html'));
   for (const name of ['tools-effects.js', 'tools-dialogs.js', 'tools-media-sharing.js', 'tools-nav-pwa.js']) {
-    assert.match(versionedMatch[1], new RegExp("'" + name.replace('.', '\\.') + "'"));
+    const referencingPages = htmlFiles.filter(f => fs.readFileSync(path.join(toolsDir, f), 'utf8').includes(name));
+    assert.ok(referencingPages.length >= 2, name + ' should genuinely be referenced by 2+ real pages, so it gets picked up as shared automatically');
   }
 });
 
@@ -461,9 +469,10 @@ test('the service worker precaches styles-tools.css alongside styles.css', () =>
 });
 
 test('the consistency checker tracks styles-tools.css for version-freshness and cross-page matching', () => {
-  const src = fs.readFileSync(path.join(__dirname, '..', 'scripts', 'check-consistency.js'), 'utf8');
-  const versionedMatch = src.match(/const VERSIONED_SCRIPTS = \[([^\]]*)\]/);
-  assert.match(versionedMatch[1], /'styles-tools\.css'/);
+  const toolsDir = path.join(__dirname, '..', 'tools');
+  const htmlFiles = fs.readdirSync(toolsDir).filter(f => f.endsWith('.html'));
+  const referencingPages = htmlFiles.filter(f => fs.readFileSync(path.join(toolsDir, f), 'utf8').includes('styles-tools.css'));
+  assert.ok(referencingPages.length >= 2, 'styles-tools.css should genuinely be referenced by 2+ real pages, so it gets picked up as shared automatically');
 });
 
 // Push 11 (2026-08-20, structural item #23): breadcrumbs for Parts
@@ -751,9 +760,10 @@ test('the service worker precaches both new files, and the consistency checker t
   assert.match(arrayMatch[1], /'\/tools\/site-content\.html'/);
   assert.match(arrayMatch[1], /'\/tools\/dev-tools-shared\.js'/);
 
-  const checkerSrc = fs.readFileSync(path.join(__dirname, '..', 'scripts', 'check-consistency.js'), 'utf8');
-  const versionedMatch = checkerSrc.match(/const VERSIONED_SCRIPTS = \[([^\]]*)\]/);
-  assert.match(versionedMatch[1], /'dev-tools-shared\.js'/);
+  const toolsDir = path.join(__dirname, '..', 'tools');
+  const htmlFiles = fs.readdirSync(toolsDir).filter(f => f.endsWith('.html'));
+  const referencingPages = htmlFiles.filter(f => fs.readFileSync(path.join(toolsDir, f), 'utf8').includes('dev-tools-shared.js'));
+  assert.ok(referencingPages.length >= 2, 'dev-tools-shared.js should genuinely be referenced by 2+ real pages, so it gets picked up as shared automatically');
 });
 
 // Push 14 (2026-08-20, structural item #10): quote/invoice linkage.
@@ -2775,6 +2785,48 @@ test('the cache-bust check genuinely catches a real mismatch, not just a plausib
     assert.match(result.output, /workspace\.html requests sync\.js\?v=0000000000, but sync\.js's real content hash right now is/);
   } finally {
     fs.writeFileSync(wsPath, original);
+  }
+});
+
+test('a brand-new file, referenced by 2+ real pages with no ?v= at all, is caught automatically -- nothing to add to any list', () => {
+  const toolsDir = path.join(__dirname, '..', 'tools');
+  const newFilePath = path.join(toolsDir, 'a-brand-new-shared-test-file.js');
+  const wsPath = path.join(toolsDir, 'workspace.html');
+  const jtPath = path.join(toolsDir, 'job-tracker.html');
+  const originalWs = fs.readFileSync(wsPath, 'utf8');
+  const originalJt = fs.readFileSync(jtPath, 'utf8');
+  try {
+    fs.writeFileSync(newFilePath, '// a brand new shared file, never mentioned anywhere in check-consistency.js');
+    // Referenced by exactly 2 real pages -- genuinely shared, with no
+    // ?v= at all, exactly the state a real new file would start in
+    // before anyone thought to add cache-busting to it.
+    fs.writeFileSync(wsPath, originalWs.replace('</body>', '<script src="a-brand-new-shared-test-file.js"></script></body>'));
+    fs.writeFileSync(jtPath, originalJt.replace('</body>', '<script src="a-brand-new-shared-test-file.js"></script></body>'));
+
+    const result = runCheckConsistency();
+    assert.equal(result.passed, false, 'a genuinely shared file with no cache-busting at all should be caught, with zero configuration needed anywhere');
+    assert.match(result.output, /a-brand-new-shared-test-file\.js with no \?v= cache-busting param/);
+  } finally {
+    fs.writeFileSync(wsPath, originalWs);
+    fs.writeFileSync(jtPath, originalJt);
+    if (fs.existsSync(newFilePath)) fs.unlinkSync(newFilePath);
+  }
+});
+
+test('a file referenced by only 1 real page is left alone -- not every script needs cross-page cache-bust tracking, only genuinely shared ones', () => {
+  const toolsDir = path.join(__dirname, '..', 'tools');
+  const newFilePath = path.join(toolsDir, 'a-single-page-test-file.js');
+  const wsPath = path.join(toolsDir, 'workspace.html');
+  const originalWs = fs.readFileSync(wsPath, 'utf8');
+  try {
+    fs.writeFileSync(newFilePath, '// referenced by exactly one page -- not shared');
+    fs.writeFileSync(wsPath, originalWs.replace('</body>', '<script src="a-single-page-test-file.js"></script></body>'));
+
+    const result = runCheckConsistency();
+    assert.doesNotMatch(result.output, /a-single-page-test-file\.js/, 'a file used by only one page has no cross-page drift risk and should not be flagged at all');
+  } finally {
+    fs.writeFileSync(wsPath, originalWs);
+    if (fs.existsSync(newFilePath)) fs.unlinkSync(newFilePath);
   }
 });
 
