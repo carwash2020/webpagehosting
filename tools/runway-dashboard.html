@@ -1068,15 +1068,15 @@ function renderDebts(){
     return;
   }
   container.innerHTML = debts.map(d => `
-    <div class="row ${d.id === justAddedDebtId ? 'list-row-enter' : ''}" data-debt-row-id="${d.id}">
+    <div class="row ${d.id === justAddedDebtId ? 'list-row-enter' : ''}" data-debt-row-id="${escapeHtml(d.id)}">
       <div class="row-main">
         <div class="row-label">${escapeHtml(d.name)}</div>
         ${d.minPayment ? `<div class="row-freq">Min payment ${fmt(Number(d.minPayment)||0)}/mo</div>` : ''}
       </div>
       <div class="row-amounts"><b>${fmt(Number(d.balance)||0)}</b></div>
       <div class="row-actions">
-        <button class="icon-btn" data-edit-debt="${d.id}" title="Edit">Edit</button>
-        <button class="icon-btn danger" data-delete-debt="${d.id}" title="Delete">Del</button>
+        <button class="icon-btn" data-edit-debt="${escapeHtml(d.id)}" title="Edit">Edit</button>
+        <button class="icon-btn danger" data-delete-debt="${escapeHtml(d.id)}" title="Delete">Del</button>
       </div>
     </div>
   `).join('');
@@ -1304,15 +1304,15 @@ function renderIncome(){
     return;
   }
   container.innerHTML = income.map(item => `
-    <div class="row ${item.id === justAddedIncomeId ? 'list-row-enter' : ''}" data-income-row-id="${item.id}">
+    <div class="row ${item.id === justAddedIncomeId ? 'list-row-enter' : ''}" data-income-row-id="${escapeHtml(item.id)}">
       <div class="row-main">
         <div class="row-label">${escapeHtml(item.name)}</div>
         <div class="row-freq">${FREQ_LABEL[item.frequency]}</div>
       </div>
       <div class="row-amounts"><b>${fmt(monthlyEquiv(item.amount, item.frequency))}</b>/mo</div>
       <div class="row-actions">
-        <button class="icon-btn" data-edit-inc="${item.id}" title="Edit">Edit</button>
-        <button class="icon-btn danger" data-delete-inc="${item.id}" title="Delete">Del</button>
+        <button class="icon-btn" data-edit-inc="${escapeHtml(item.id)}" title="Edit">Edit</button>
+        <button class="icon-btn danger" data-delete-inc="${escapeHtml(item.id)}" title="Delete">Del</button>
       </div>
     </div>
   `).join('');
@@ -1411,31 +1411,31 @@ function renderPersonal(){
       <div class="card-header">
         <h3><span class="cat-dot" style="background:${cat.color};"></span>${escapeHtml(cat.name)}</h3>
         <span class="subtotal">${fmt(total)}/mo</span>
-        <button class="cat-add-btn" data-cat="${cat.key}" title="Add to ${escapeHtml(cat.name)}">+</button>
+        <button class="cat-add-btn" data-cat="${escapeHtml(cat.key)}" title="Add to ${escapeHtml(cat.name)}">+</button>
       </div>
       ${items.map(item => item.variable ? `
-        <div class="row ${item.id === justAddedExpenseId ? 'list-row-enter' : ''}" data-expense-row-id="${item.id}">
+        <div class="row ${item.id === justAddedExpenseId ? 'list-row-enter' : ''}" data-expense-row-id="${escapeHtml(item.id)}">
           <div class="row-main">
             <div class="row-label">${escapeHtml(item.name)} <span class="col-hint">VARIABLE</span></div>
             <div class="row-freq">${variableHint(item)}</div>
           </div>
           <div class="row-amounts"><b>${fmt(itemMonthlyAmount(item))}</b>/mo</div>
           <div class="row-actions">
-            <input type="number" inputmode="decimal" class="var-log-input" id="varlog-${item.id}" placeholder="This month's bill">
-            <button class="icon-btn" data-log-var="${item.id}" title="Log this month's actual amount">Log</button>
-            <button class="icon-btn danger" data-delete="${item.id}" title="Delete">Del</button>
+            <input type="number" inputmode="decimal" class="var-log-input" id="varlog-${escapeHtml(item.id)}" placeholder="This month's bill">
+            <button class="icon-btn" data-log-var="${escapeHtml(item.id)}" title="Log this month's actual amount">Log</button>
+            <button class="icon-btn danger" data-delete="${escapeHtml(item.id)}" title="Delete">Del</button>
           </div>
         </div>
       ` : `
-        <div class="row ${item.id === justAddedExpenseId ? 'list-row-enter' : ''}" data-expense-row-id="${item.id}">
+        <div class="row ${item.id === justAddedExpenseId ? 'list-row-enter' : ''}" data-expense-row-id="${escapeHtml(item.id)}">
           <div class="row-main">
             <div class="row-label">${escapeHtml(item.name)}</div>
             <div class="row-freq">${FREQ_LABEL[item.frequency]}</div>
           </div>
           <div class="row-amounts"><b>${fmt(itemMonthlyAmount(item))}</b>/mo</div>
           <div class="row-actions">
-            <button class="icon-btn" data-edit="${item.id}" title="Edit">Edit</button>
-            <button class="icon-btn danger" data-delete="${item.id}" title="Delete">Del</button>
+            <button class="icon-btn" data-edit="${escapeHtml(item.id)}" title="Edit">Edit</button>
+            <button class="icon-btn danger" data-delete="${escapeHtml(item.id)}" title="Delete">Del</button>
           </div>
         </div>
       `).join('')}

@@ -2031,8 +2031,7 @@ test('check-links.py\'s bot-hostile allowlist includes the 5 domains added after
   const match = src.match(/BOT_HOSTILE_DOMAINS = \(([\s\S]*?)\)/);
   assert.ok(match, 'BOT_HOSTILE_DOMAINS not found');
   for (const domain of ['fonts.googleapis.com', 'cal.com', 'google.com', 'googletagmanager.com', 'g.page']) {
-    const escapedDomain = domain.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-    assert.match(match[1], new RegExp("'" + escapedDomain + "'"), domain + ' should be in the allowlist');
+    assert.ok(match[1].includes("'" + domain + "'"), domain + ' should be in the allowlist');
   }
 });
 
