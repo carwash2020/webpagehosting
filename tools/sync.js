@@ -1205,7 +1205,7 @@ function stopRealtimeSync() {
 // Same idea again, for th_bookings specifically -- fires on a new
 // booking, or a guest's own cancellation/reschedule. Added 2026-08-25:
 // th_bookings was never in the supabase_realtime publication at all
-// (see sql/add_bookings_to_realtime.sql), so a guest managing their
+// (see sql/booking/add_bookings_to_realtime.sql), so a guest managing their
 // own booking through manage-booking.html was invisible to staff
 // watching the calendar or dashboard until a manual reload -- directly
 // undercutting the point of this whole system, which is avoiding

@@ -14,6 +14,10 @@ UI needed.
   AI) opening this repo for the first time: what to read, in what
   order, and how to verify a change is actually safe before shipping
   it.
+- **[ARCHITECTURE-NOTES.md](ARCHITECTURE-NOTES.md)** -- the real
+  backlog of deferred architectural work, a hard-won lesson about file
+  splitting, and decisions already made with real reasons, so they
+  don't get re-litigated later.
 
 For the deep, authoritative detail on any specific system --
 architecture, exact mechanisms, incident history, step-by-step
