@@ -16,7 +16,7 @@ name: Uptime monitoring (in-house replacement for HetrixTools)
 # Reuses the SUPABASE_SERVICE_ROLE_KEY secret already configured for
 # backup-business-data.yml -- no new secret setup needed. th_uptime_checks
 # has no anon/authenticated insert policy on purpose (see
-# sql/create_uptime_monitoring.sql), so this key is required to write here.
+# sql/infra/create_uptime_monitoring.sql), so this key is required to write here.
 
 on:
   schedule:

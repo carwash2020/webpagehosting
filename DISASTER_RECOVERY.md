@@ -193,8 +193,8 @@ double-booking somehow got through:
 1. Check the constraint still exists:
    `select conname from pg_constraint where conrelid = 'public.th_bookings'::regclass;`
    should show `no_overlapping_confirmed_bookings`. If it's missing,
-   that's the whole problem -- see `sql/create_booking_system.sql` and
-   `sql/add_booking_schedule_buffer.sql` for the exact definition to
+   that's the whole problem -- see `sql/booking/create_booking_system.sql` and
+   `sql/booking/add_booking_schedule_buffer.sql` for the exact definition to
    restore.
 2. Check the `padded_range` trigger is actually firing: a genuinely
    new booking's `padded_range` column should never be null --
@@ -240,8 +240,8 @@ double-booking somehow got through:
    check `select cancel_token from public.th_bookings where id = <id>;`
    and confirm the guest's link actually matches. The two RPC functions
    (`get_booking_by_cancel_token`, `cancel_booking_by_token`,
-   `reschedule_booking_by_token` -- `sql/add_booking_cancellation.sql`
-   and `sql/add_booking_reschedule.sql`) are all `security definer`, so
+   `reschedule_booking_by_token` -- `sql/booking/add_booking_cancellation.sql`
+   and `sql/booking/add_booking_reschedule.sql`) are all `security definer`, so
    they work for `anon` despite `anon` having no SELECT/UPDATE policy
    on the base table at all. If a reschedule keeps failing with
    `slot-taken` for a time that looks genuinely open, check whether the
