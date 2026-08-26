@@ -11,6 +11,23 @@ This repo actually serves **two separate things** from the same domain:
 
 The public site uses one shared stylesheet (`styles.css`, repo root). The tool suite has its own separate stylesheet (`tools/styles-tools.css`) — genuinely two files now, not one shared across everything; see "Shared files" below for what `styles.css` actually still covers.
 
+## Contents
+
+- [Read this before touching deployment at all](#️-read-this-before-touching-deployment-at-all)
+- [Public site — file structure](#public-site--file-structure-repo-root)
+- [Internal tools — file structure](#internal-tools--file-structure-tools)
+- [Shared files](#shared-files-used-by-both-the-public-site-and-internal-tools--stayed-at-repo-root-deliberately)
+- [Files inside `/tools/` that are NOT shared](#files-inside-tools-that-are-not-shared-with-the-public-site)
+- [Backend](#backend)
+- [Cross-device sync — how it actually works](#cross-device-sync--how-it-actually-works-substantially-extended-2026-08-25-through-2026-08-26)
+- [Booking system](#booking-system-added-2026-08-25-replaces-calcom-entirely)
+- [Automated jobs](#automated-jobs-2026-08-15-substantially-expanded-2026-08-25)
+- [Do not delete](#️-do-not-delete)
+- [Known open items](#known-open-items)
+- [Cache-busting — how it actually works now](#cache-busting----how-it-actually-works-now-rewritten-2026-08-26)
+- [Deploying changes](#deploying-changes)
+- [Security, and where the rest of the docs live](#security-and-where-the-rest-of-the-docs-live)
+
 ## ⚠️ Read this before touching deployment at all
 
 Two things on this specific repo have caused real, hours-long confusion before. Both are cheap to avoid if you know about them going in:
@@ -227,3 +244,11 @@ No build step, no CI/CD. Push to `main`, GitHub Pages redeploys automatically (u
 - For moving/adding many files at once into a folder, drag the **entire folder itself** onto the upload area, not the individual files loose — dragging loose files that were meant to go into a subfolder can flatten them out to the root instead, which has happened on this repo more than once.
 
 **After any change, don't trust how it looks and assume it's live.** Hard-refresh (`Ctrl+Shift+R` / `Cmd+Shift+R`) at minimum before drawing any conclusion — browsers cache aggressively. But for anything where it actually matters (a fix that's still not showing, confirming a folder move went cleanly), the reliable method is downloading and inspecting the actual `github-pages` build artifact from the Actions tab, described at the top of this document. See the disaster-recovery guide's "worth knowing" notes for more on caching specifically.
+
+## Security, and where the rest of the docs live
+
+**`SECURITY.md`** (repo root) covers the actual current security model plainly — the RLS strategy, why `SECURITY DEFINER` functions are used and how they're locked down, and a real reporting path — plus the most recent concrete fixes and why the remaining Advisor warnings are confirmed intentional, not overlooked.
+
+**`docs/`** is a wiki-style companion folder, built as real files in this repo rather than GitHub's separate Wiki feature (which needs its first page created once through the web UI before it exists at all — not something scriptable from here). Start at `docs/README.md`; `docs/GETTING-STARTED.md` is the right first read for anyone new to this codebase, and `docs/GLOSSARY.md` covers terms used throughout this file and `DISASTER_RECOVERY.md` that don't mean the obvious thing on first read.
+
+**`DISASTER_RECOVERY.md`** remains the deepest, most authoritative source for exact mechanisms and incident history — everything above points back to it rather than duplicating it.
