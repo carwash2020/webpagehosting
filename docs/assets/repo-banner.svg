@@ -1,0 +1,38 @@
+<svg viewBox="0 0 1200 300" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#0a0a0a"/>
+      <stop offset="100%" stop-color="#161616"/>
+    </linearGradient>
+    <linearGradient id="orangeGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#ffb347"/>
+      <stop offset="100%" stop-color="#ff8000"/>
+    </linearGradient>
+    <polygon id="hex" points="25,2 75,2 97,50 75,98 25,98 3,50"/>
+  </defs>
+
+  <rect width="1200" height="300" fill="url(#bg)"/>
+
+  <!-- Faint repeated hex motif, echoing the tools suite's own signature shape -->
+  <g opacity="0.06" fill="#ff8000">
+    <use href="#hex" x="-30" y="-10" transform="scale(0.9)"/>
+    <use href="#hex" x="1050" y="20" transform="scale(1.1)"/>
+    <use href="#hex" x="1120" y="180" transform="scale(0.8)"/>
+    <use href="#hex" x="20" y="200" transform="scale(0.7)"/>
+    <use href="#hex" x="980" y="220" transform="scale(0.6)"/>
+  </g>
+
+  <!-- One solid hex mark, matching the "current page" filled badge style -->
+  <g transform="translate(88, 108)">
+    <polygon points="0,4 50,4 68,44 50,84 0,84 -18,44" fill="url(#orangeGrad)"/>
+    <text x="25" y="55" font-family="Arial, Helvetica, sans-serif" font-weight="900" font-size="40" fill="#0a0a0a" text-anchor="middle">H</text>
+  </g>
+
+  <text x="185" y="140" font-family="Arial, Helvetica, sans-serif" font-weight="900" font-size="64" letter-spacing="1" fill="#ffffff">TRIPLE H</text>
+  <text x="185" y="195" font-family="Arial, Helvetica, sans-serif" font-weight="900" font-size="64" letter-spacing="1" fill="url(#orangeGrad)">ENTERPRISES</text>
+
+  <text x="185" y="230" font-family="Arial, Helvetica, sans-serif" font-weight="500" font-size="20" letter-spacing="3" fill="#9a9a9a">HANDYMAN &amp; APPLIANCE REPAIR — ST. GEORGE, UT</text>
+
+  <rect x="185" y="248" width="480" height="2" fill="#2a2a2a"/>
+  <text x="185" y="275" font-family="Arial, Helvetica, sans-serif" font-weight="400" font-size="16" fill="#9a9a9a">Public site + internal Workspace tool suite, one repo</text>
+</svg>

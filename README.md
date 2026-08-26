@@ -1,5 +1,10 @@
 # Triple-H-Enterprise-Webpage
 
+<img src="docs/assets/repo-banner.svg" alt="Triple H Enterprises" width="100%">
+
+[![Tests and consistency check](https://github.com/carwash2020/webpagehosting/actions/workflows/test.yml/badge.svg)](https://github.com/carwash2020/webpagehosting/actions/workflows/test.yml)
+[![Check links](https://github.com/carwash2020/webpagehosting/actions/workflows/check-links.yml/badge.svg)](https://github.com/carwash2020/webpagehosting/actions/workflows/check-links.yml)
+
 Source for the live website at **[www.triplehenterprisesllc.biz](https://www.triplehenterprisesllc.biz)**
 — Triple H Enterprises LLC, handyman & appliance repair, St. George, UT.
 Hosted on GitHub Pages, deployed automatically on push to `main`.
