@@ -255,7 +255,32 @@ function checkTourHealth(problems) {
 // and was never flagged, while real users' browsers kept serving the
 // stale, function-missing copy regardless. A content hash has no
 // grace window and no judgment call to get wrong.
-const VERSIONED_SCRIPTS = ['tools-effects.js', 'tools-dialogs.js', 'tools-media-sharing.js', 'tools-nav-pwa.js', 'sync.js', 'auth.js', 'push-notifications.js', 'styles-tools.css', 'dev-tools-shared.js'];
+//
+// "Which files need this" is ALSO derived automatically now, rather
+// than a hardcoded list -- found by asking exactly this question
+// ("what else could let this class of bug through") that
+// data-layer.js and tools-tour.js, genuinely shared by 9 and 11 pages,
+// were both missing from the old hardcoded list entirely, so neither
+// had any cache-bust monitoring at all. data-layer.js was already
+// sitting on a real, ~4-day-stale version as a direct result, caught
+// only by asking this question, not by any check. A .js/.css file in
+// tools/ referenced by 2 or more real pages is "shared" and gets
+// checked -- computed fresh every run, so a brand new shared file is
+// covered automatically the moment a second page loads it, with
+// nothing to remember to add anywhere.
+function detectSharedScripts() {
+  const htmlFiles = fs.readdirSync(TOOLS_DIR).filter(f => f.endsWith('.html'));
+  const candidates = fs.readdirSync(TOOLS_DIR).filter(f => f.endsWith('.js') || f.endsWith('.css'));
+  const shared = [];
+
+  for (const candidate of candidates) {
+    const escaped = candidate.replace('.', '\\.');
+    const pattern = new RegExp(escaped + '(\\?v=[a-zA-Z0-9]+)?["\']');
+    const referencingPages = htmlFiles.filter(f => pattern.test(readTool(f)));
+    if (referencingPages.length >= 2) shared.push(candidate);
+  }
+  return shared;
+}
 
 function currentContentHash(script) {
   const scriptPath = path.join(TOOLS_DIR, script);
@@ -265,6 +290,7 @@ function currentContentHash(script) {
 }
 
 function checkVersionFreshness(problems) {
+  const VERSIONED_SCRIPTS = detectSharedScripts();
   const files = fs.readdirSync(TOOLS_DIR).filter(f => f.endsWith('.html'));
 
   for (const script of VERSIONED_SCRIPTS) {
@@ -287,11 +313,12 @@ function checkVersionFreshness(problems) {
 }
 
 // Companion to the check above -- rewrites every ?v= reference to
-// each versioned file's real, current content hash, across every page
-// that loads it. Run directly with `npm run fix-versions` any time one
-// of the 9 shared files changes, removing the "remember to bump it by
-// hand, and compute the right value" step entirely.
+// each shared file's real, current content hash, across every page
+// that loads it. Run directly with `npm run fix-versions` any time a
+// file shared by 2+ pages changes, removing the "remember to bump it
+// by hand, and compute the right value" step entirely.
 function fixVersions() {
+  const VERSIONED_SCRIPTS = detectSharedScripts();
   const files = fs.readdirSync(TOOLS_DIR).filter(f => f.endsWith('.html'));
   let changedCount = 0;
 
@@ -333,6 +360,7 @@ function main() {
   const problems = [];
   const versions = {}; // filename -> version string, for the cross-file comparison at the end
   const jsVersions = {}; // script name -> { filename -> version string }
+  const sharedScripts = detectSharedScripts();
 
   checkVersionFreshness(problems);
   checkTourHealth(problems);
@@ -371,7 +399,12 @@ function main() {
     // again. Each script is optional per-page (not every tool loads all
     // three), but whichever ones a page DOES load must carry a matching
     // ?v= version, and that version must match every other page's.
-    ['tools-effects.js', 'tools-dialogs.js', 'tools-media-sharing.js', 'tools-nav-pwa.js', 'sync.js', 'auth.js', 'styles-tools.css', 'dev-tools-shared.js'].forEach(script => {
+    //
+    // Uses the same detectSharedScripts() as checkVersionFreshness --
+    // this used to be its own, separately hardcoded list, which had
+    // already drifted from the other one (missing push-notifications.js
+    // entirely). One derived source of truth can't disagree with itself.
+    sharedScripts.forEach(script => {
       const re = new RegExp(`${script.replace('.', '\\.')}(\\?v=([a-zA-Z0-9]+))?`);
       const m = html.match(re);
       if (!m) return; // page doesn't load this script at all -- fine
