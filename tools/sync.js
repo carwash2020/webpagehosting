@@ -102,10 +102,20 @@ const SYNC_DATA_KEYS = [
   // written by the time th_clients is processed.
   'th_client_tombstones',
   'th_clients',
+  // th_expense_tombstones/th_income_tombstones must come before their
+  // respective logs, same reasoning as above -- extended 2026-08-26
+  // after finding the same union-merge resurrection bug already fixed
+  // for clients and jobs was still open for expenses, income,
+  // contracts, and contacts. Financial records prioritized first: a
+  // resurrected deleted expense or income entry would silently skew
+  // real profit numbers, not just show a stray row.
+  'th_expense_tombstones',
+  'th_expense_log',
+  'th_income_tombstones',
+  'th_income_log',
+  'th_contact_tombstones',
   'th_tracker_contacts',
   'th_tracker_notes_v2',
-  'th_expense_log',
-  'th_income_log',
   'th_mileage_rate',
   'th_price_reference',
   'th_invoices',
@@ -115,6 +125,7 @@ const SYNC_DATA_KEYS = [
   'th_tax_parts',
   'th_compliance',
   'th_job_templates',
+  'th_contract_tombstones',
   'th_contracts',
   // Appliance Wiki's model/issue reference data. Added so it actually
   // participates in cross-device sync -- it was loading sync.js and
@@ -200,6 +211,10 @@ const MERGE_KEY_FIELD = {
   th_clients: 'id',
   th_client_tombstones: 'id',
   th_job_tombstones: 'id',
+  th_expense_tombstones: 'id',
+  th_income_tombstones: 'id',
+  th_contact_tombstones: 'id',
+  th_contract_tombstones: 'id',
   th_tracker_contacts: 'id',
   th_tracker_notes_v2: 'id',
   th_expense_log: 'id',
@@ -332,6 +347,34 @@ function applySyncData(obj) {
         if (tombstonedIds.length) {
           const tombstoneSet = new Set(tombstonedIds);
           finalArr = mergedArr.filter(j => !tombstoneSet.has(j.id));
+        }
+      } else if (k === 'th_expense_log') {
+        let tombstonedIds = [];
+        try { tombstonedIds = JSON.parse(localStorage.getItem('th_expense_tombstones') || '[]').map(t => t.id); } catch (e) { tombstonedIds = []; }
+        if (tombstonedIds.length) {
+          const tombstoneSet = new Set(tombstonedIds);
+          finalArr = mergedArr.filter(e => !tombstoneSet.has(e.id));
+        }
+      } else if (k === 'th_income_log') {
+        let tombstonedIds = [];
+        try { tombstonedIds = JSON.parse(localStorage.getItem('th_income_tombstones') || '[]').map(t => t.id); } catch (e) { tombstonedIds = []; }
+        if (tombstonedIds.length) {
+          const tombstoneSet = new Set(tombstonedIds);
+          finalArr = mergedArr.filter(i => !tombstoneSet.has(i.id));
+        }
+      } else if (k === 'th_tracker_contacts') {
+        let tombstonedIds = [];
+        try { tombstonedIds = JSON.parse(localStorage.getItem('th_contact_tombstones') || '[]').map(t => t.id); } catch (e) { tombstonedIds = []; }
+        if (tombstonedIds.length) {
+          const tombstoneSet = new Set(tombstonedIds);
+          finalArr = mergedArr.filter(c => !tombstoneSet.has(c.id));
+        }
+      } else if (k === 'th_contracts') {
+        let tombstonedIds = [];
+        try { tombstonedIds = JSON.parse(localStorage.getItem('th_contract_tombstones') || '[]').map(t => t.id); } catch (e) { tombstonedIds = []; }
+        if (tombstonedIds.length) {
+          const tombstoneSet = new Set(tombstonedIds);
+          finalArr = mergedArr.filter(c => !tombstoneSet.has(c.id));
         }
       }
 
