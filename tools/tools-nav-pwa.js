@@ -223,7 +223,7 @@ if (typeof document !== 'undefined') {
     '<symbol id="icon-star" viewBox="0 0 24 24"><path d="M 12.0 2.8 L 14.7 8.28 L 20.75 9.16 L 16.37 13.42 L 17.41 19.44 L 12.0 16.6 L 6.59 19.44 L 7.63 13.42 L 3.25 9.16 L 9.3 8.28 Z"/></symbol>' +
     '<symbol id="icon-star-filled" viewBox="0 0 24 24"><path fill="currentColor" stroke="none" d="M 12.0 2.8 L 14.7 8.28 L 20.75 9.16 L 16.37 13.42 L 17.41 19.44 L 12.0 16.6 L 6.59 19.44 L 7.63 13.42 L 3.25 9.16 L 9.3 8.28 Z"/></symbol>' +
 
-    '<symbol id="icon-wrench" viewBox="0 0 24 24"><path d="M14.7 9.3a4 4 0 0 1-5.4 5.4L4 20l-1-1 5.3-5.3a4 4 0 0 1 5.4-5.4l-2.4 2.4 1.5 1.5z"/></symbol>' +
+    '<symbol id="icon-wrench" viewBox="0 0 24 24"><path transform="translate(2.92,-1.92)" d="M14.7 9.3a4 4 0 0 1-5.4 5.4L4 20l-1-1 5.3-5.3a4 4 0 0 1 5.4-5.4l-2.4 2.4 1.5 1.5z"/></symbol>' +
 
     '<symbol id="icon-edit" viewBox="0 0 24 24"><path d="M16.5 4.5l3 3L8 19H5v-3z"/></symbol>' +
 
@@ -241,7 +241,7 @@ if (typeof document !== 'undefined') {
 
     '<symbol id="icon-calendar" viewBox="0 0 24 24"><rect x="5.2" y="6.6" width="13.6" height="12.4" rx="1.2"/><line x1="5.2" y1="10.2" x2="18.8" y2="10.2"/><line x1="8.8" y1="5" x2="8.8" y2="8.2"/><line x1="15.2" y1="5" x2="15.2" y2="8.2"/></symbol>' +
 
-    '<symbol id="icon-dollar" viewBox="0 0 24 24"><text x="12" y="16.5" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="14" font-weight="700" fill="currentColor" stroke="none">$</text></symbol>' +
+    '<symbol id="icon-dollar" viewBox="0 0 24 24"><text transform="translate(-0.1,0.5)" x="12" y="16.5" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="14" font-weight="700" fill="currentColor" stroke="none">$</text></symbol>' +
 
     '<symbol id="icon-toolbox" viewBox="0 0 24 24"><rect x="3" y="9" width="18" height="10.5" rx="1.5"/><path d="M8 9V6.5c0-.8.7-1.5 1.5-1.5h5c.8 0 1.5.7 1.5 1.5V9"/><line x1="3" y1="13.5" x2="21" y2="13.5"/><line x1="10.5" y1="13.5" x2="10.5" y2="15.5"/><line x1="13.5" y1="13.5" x2="13.5" y2="15.5"/></symbol>' +
 
@@ -276,7 +276,7 @@ if (typeof document !== 'undefined') {
 
     '<symbol id="icon-inbox" viewBox="0 0 24 24"><path d="M4 12.5L6.5 5h11L20 12.5"/><path d="M4 12.5v6c0 .8.7 1.5 1.5 1.5h13c.8 0 1.5-.7 1.5-1.5v-6h-4.8a2.7 2.7 0 0 1-5.4 0z"/></symbol>' +
 
-    '<symbol id="icon-home" viewBox="0 0 24 24"><path d="M4 11.5L12 4l8 7.5"/><path d="M6 10v9.5c0 .8.7 1.5 1.5 1.5h9c.8 0 1.5-.7 1.5-1.5V10"/><path d="M9.5 21v-5.5c0-.55.45-1 1-1h3c.55 0 1 .45 1 1V21"/></symbol>' +
+    '<symbol id="icon-home" viewBox="0 0 24 24"><g transform="translate(0,-0.5)"><path d="M4 11.5L12 4l8 7.5"/><path d="M6 10v9.5c0 .8.7 1.5 1.5 1.5h9c.8 0 1.5-.7 1.5-1.5V10"/><path d="M9.5 21v-5.5c0-.55.45-1 1-1h3c.55 0 1 .45 1 1V21"/></g></symbol>' +
 
     '<symbol id="icon-mic" viewBox="0 0 24 24"><path d="M12 15a3.5 3.5 0 0 0 3.5-3.5V6a3.5 3.5 0 0 0-7 0v5.5A3.5 3.5 0 0 0 12 15z"/><path d="M6 11.5a6 6 0 0 0 12 0"/><line x1="12" y1="17.5" x2="12" y2="21"/><line x1="8.5" y1="21" x2="15.5" y2="21"/></symbol>' +
 
