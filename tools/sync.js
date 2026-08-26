@@ -174,6 +174,10 @@ const SYNC_DATA_KEYS = [
   'rd_business-months',
   'rd_emergency-fund',
   'rd_debts',
+  // Graveyard (2026-08-26) -- full snapshots of deleted records, kept
+  // separate from the lean tombstones above so a genuine mistake can
+  // actually be restored, not just prevented from resurrecting.
+  'th_graveyard',
 ];
 
 const SYNC_CODE_KEY = 'th_sync_code';
@@ -232,6 +236,7 @@ const MERGE_KEY_FIELD = {
   th_known_issue_tombstones: 'id',
   th_pr_unit_tombstones: 'id',
   th_pr_issue_tombstones: 'id',
+  th_graveyard: 'graveyardId',
   th_tracker_contacts: 'id',
   th_tracker_notes_v2: 'id',
   th_expense_log: 'id',
@@ -317,6 +322,17 @@ function mergeClientErrorLog(localArr, remoteArr) {
   return merged.slice(0, CLIENT_ERROR_LOG_MAX_AFTER_MERGE);
 }
 
+// Same reasoning as mergeClientErrorLog directly above: a plain union
+// merge could grow the graveyard past its intended 200-entry cap once
+// two devices' independently-capped copies merge together (up to 400).
+// Keeps the most recently deleted entries.
+const GRAVEYARD_MAX_AFTER_MERGE = 200;
+function mergeGraveyard(localArr, remoteArr) {
+  const merged = mergeRecordArrays(localArr, remoteArr, 'graveyardId');
+  merged.sort((a, b) => new Date(b.deletedAt) - new Date(a.deletedAt));
+  return merged.slice(0, GRAVEYARD_MAX_AFTER_MERGE);
+}
+
 function applySyncData(obj) {
   if (!obj) return;
   SYNC_DATA_KEYS.forEach(k => {
@@ -340,6 +356,8 @@ function applySyncData(obj) {
         ? mergePartsReferenceUnits(localArr, remoteArr)
         : k === 'th_client_errors'
         ? mergeClientErrorLog(localArr, remoteArr)
+        : k === 'th_graveyard'
+        ? mergeGraveyard(localArr, remoteArr)
         : mergeRecordArrays(localArr, remoteArr, keyField);
 
       // The actual fix for a real, reported bug: a union merge alone

@@ -37,13 +37,13 @@
 </script>
 <link rel="stylesheet" href="/styles.css?v=202608202000">
 <link rel="stylesheet" href="/tools/styles-tools.css?v=7888067c8f">
-<script src="/tools/data-layer.js?v=e2d2a19f1f" defer></script>
-<script src="/tools/dev-tools-shared.js?v=7bb8a9d4c4" defer></script>
+<script src="/tools/data-layer.js?v=469402246e" defer></script>
+<script src="/tools/dev-tools-shared.js?v=56f990a832" defer></script>
 <script src="/tools/tools-effects.js?v=fff945a03c" defer></script>
 <script src="/tools/tools-dialogs.js?v=b5defd210d" defer></script>
 <script src="/tools/tools-media-sharing.js?v=fe0110f6d1" defer></script>
 <script src="/tools/tools-nav-pwa.js?v=0f204a44e9" defer></script>
-<script src="/tools/sync.js?v=a6ae33ca8d" defer></script>
+<script src="/tools/sync.js?v=228db11afb" defer></script>
 <style>
   body { padding: 44px 20px 60px; max-width: 1080px; margin: 0 auto; }
   /* Desktop layout (2026-08-20), requested directly: efficient on
@@ -521,6 +521,14 @@
       <button class="dev-info-bubble" onclick="openDevInfo('knownissues')" aria-label="What does this do?" title="What does this do?">?</button>
     </div>
     <div id="knownIssuesList"></div>
+  </div>
+
+  <div class="dev-panel dev-owner-hidden dev-panel-wide">
+    <div class="dev-panel-heading">
+      <h2>Graveyard</h2>
+      <button class="dev-info-bubble" onclick="openDevInfo('graveyard')" aria-label="What does this do?" title="What does this do?">?</button>
+    </div>
+    <div id="graveyardList" class="dev-scrollable-list"></div>
   </div>
 
   <div class="dev-panel dev-owner-hidden dev-panel-wide">
@@ -2396,9 +2404,11 @@
   }
 
   function deleteKnownIssue(id) {
-    const issues = loadKnownIssues().filter(i => i.id !== id);
-    saveKnownIssues(issues);
+    const issues = loadKnownIssues();
+    const target = issues.find(i => i.id === id);
+    saveKnownIssues(issues.filter(i => i.id !== id));
     if (typeof thAddKnownIssueTombstone === 'function') thAddKnownIssueTombstone(id);
+    if (target && typeof thAddToGraveyard === 'function') thAddToGraveyard('knownIssue', target);
     renderKnownIssues();
   }
 
@@ -2417,6 +2427,98 @@
     saveKnownIssues(issues);
     renderKnownIssues();
     showToast('Issue added.');
+  }
+
+  // Graveyard (2026-08-26), requested directly: "so items aren't gone
+  // forever in the event of a mistake." Config covers every flat,
+  // id-keyed record type (12 of the 13 that can be deleted) --
+  // prIssue is handled separately below since it's nested under a
+  // unit rather than living in its own flat array.
+  const GRAVEYARD_TYPE_CONFIG = {
+    client: { dataKey: 'th_clients', tombstoneKey: 'th_client_tombstones', label: r => r.name || 'Client' },
+    job: { dataKey: 'th_tracker_jobs', tombstoneKey: 'th_job_tombstones', label: r => r.title || 'Job' },
+    expense: { dataKey: 'th_expense_log', tombstoneKey: 'th_expense_tombstones', label: r => (r.desc || 'Expense') + ' -- ' + (typeof money === 'function' ? money(r.amount) : r.amount) },
+    income: { dataKey: 'th_income_log', tombstoneKey: 'th_income_tombstones', label: r => (r.desc || 'Income') + ' -- ' + (typeof money === 'function' ? money(r.amount) : r.amount) },
+    contact: { dataKey: 'th_tracker_contacts', tombstoneKey: 'th_contact_tombstones', label: r => r.name || 'Contact' },
+    contract: { dataKey: 'th_contracts', tombstoneKey: 'th_contract_tombstones', label: r => (r.fields && r.fields.clientName) || 'Contract' },
+    invoice: { dataKey: 'th_invoices', tombstoneKey: 'th_invoice_tombstones', label: r => '#' + (r.invoiceNumber || '') + ' -- ' + (r.clientName || '') },
+    quote: { dataKey: 'th_quotes', tombstoneKey: 'th_quote_tombstones', label: r => '#' + (r.quoteNumber || '') + ' -- ' + (r.clientName || '') },
+    priceReference: { dataKey: 'th_price_reference', tombstoneKey: 'th_price_ref_tombstones', label: r => r.label || 'Price reference' },
+    template: { dataKey: 'th_job_templates', tombstoneKey: 'th_template_tombstones', label: r => r.title || 'Template' },
+    knownIssue: { dataKey: 'th_known_issues', tombstoneKey: 'th_known_issue_tombstones', label: r => r.title || 'Known issue' },
+    prUnit: { dataKey: 'th_parts_reference_units', tombstoneKey: 'th_pr_unit_tombstones', label: r => [r.brand, r.type || r.model].filter(Boolean).join(' ') || 'Appliance Wiki unit' },
+  };
+  const GRAVEYARD_TYPE_TITLES = {
+    client: 'Client', job: 'Job', expense: 'Expense', income: 'Income', contact: 'Contact',
+    contract: 'Contract', invoice: 'Invoice', quote: 'Quote', priceReference: 'Price reference',
+    template: 'Job template', knownIssue: 'Known issue', prUnit: 'Appliance Wiki unit', prIssue: 'Appliance Wiki issue',
+  };
+
+  function graveyardEntryLabel(entry) {
+    if (entry.recordType === 'prIssue') return (entry.record && entry.record.issue && entry.record.issue.symptom) || 'Appliance Wiki issue';
+    const cfg = GRAVEYARD_TYPE_CONFIG[entry.recordType];
+    try { return cfg ? cfg.label(entry.record) : 'Deleted item'; } catch (e) { return 'Deleted item'; }
+  }
+
+  function renderGraveyard() {
+    const el = document.getElementById('graveyardList');
+    if (!el) return;
+    const entries = (typeof thLoadGraveyard === 'function' ? thLoadGraveyard() : [])
+      .slice().sort((a, b) => new Date(b.deletedAt) - new Date(a.deletedAt));
+    if (entries.length === 0) {
+      el.innerHTML = '<p class="tool-sub">Nothing deleted yet.</p>';
+      return;
+    }
+    el.innerHTML = entries.map(entry => {
+      const typeLabel = GRAVEYARD_TYPE_TITLES[entry.recordType] || entry.recordType;
+      const when = new Date(entry.deletedAt).toLocaleString();
+      return '<div class="dev-issue-row">' +
+        '<div style="flex:1;"><div class="dev-issue-title">' + escapeHtml(typeLabel) + ': ' + escapeHtml(graveyardEntryLabel(entry)) + '</div>' +
+        '<div class="dev-issue-detail">Deleted ' + escapeHtml(when) + '</div></div>' +
+        '<button class="secondary-btn" onclick="restoreFromGraveyard(\'' + entry.graveyardId + '\')">Restore</button>' +
+        '<button class="dev-info-bubble dev-danger-btn" title="Delete permanently" aria-label="Delete permanently" onclick="permanentlyDeleteFromGraveyard(\'' + entry.graveyardId + '\')"><svg class="th-icon" aria-hidden="true"><use href="#icon-trash" xlink:href="#icon-trash"></use></svg></button>' +
+        '</div>';
+    }).join('');
+  }
+
+  async function restoreFromGraveyard(graveyardId) {
+    const entries = thLoadGraveyard();
+    const entry = entries.find(e => e.graveyardId === graveyardId);
+    if (!entry) return;
+
+    if (entry.recordType === 'prIssue') {
+      const units = thRead('th_parts_reference_units', []);
+      const unit = units.find(u => u.id === entry.record.unitId);
+      if (!unit) {
+        await showAlert('Can\'t restore this issue -- its appliance type was also deleted. Restore that first, then this issue.');
+        return;
+      }
+      unit.issues = unit.issues || [];
+      unit.issues.push(entry.record.issue);
+      thWrite('th_parts_reference_units', units);
+      const tombstoneId = entry.record.unitId + '::' + entry.record.issue.id;
+      thWrite('th_pr_issue_tombstones', thRead('th_pr_issue_tombstones', []).filter(t => t.id !== tombstoneId));
+    } else {
+      const cfg = GRAVEYARD_TYPE_CONFIG[entry.recordType];
+      if (!cfg) { showToast('Unknown record type -- cannot restore.', { type: 'error' }); return; }
+      const list = thRead(cfg.dataKey, []);
+      if (!list.some(r => r.id === entry.record.id)) {
+        list.push(entry.record);
+        thWrite(cfg.dataKey, list);
+      }
+      thWrite(cfg.tombstoneKey, thRead(cfg.tombstoneKey, []).filter(t => t.id !== entry.record.id));
+    }
+
+    thRemoveFromGraveyard(graveyardId);
+    renderGraveyard();
+    showToast('Restored.');
+  }
+
+  async function permanentlyDeleteFromGraveyard(graveyardId) {
+    const confirmed = await showConfirm('Delete this permanently? This really cannot be undone.', { danger: true, confirmText: 'Delete Permanently' });
+    if (!confirmed) return;
+    thRemoveFromGraveyard(graveyardId);
+    renderGraveyard();
   }
 
   const FLAGGED_ITEMS_KEY = 'th_flagged_items';

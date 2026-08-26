@@ -38,8 +38,8 @@
 <link rel="stylesheet" href="/styles.css?v=202608202000">
 <link rel="stylesheet" href="/tools/styles-tools.css?v=7888067c8f">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.112.3/dist/umd/supabase.js" integrity="sha384-qafw21c/iciq0VXsi9FzkfoQv5I/V0iqE4lSNcKXPnW9/UTJLnv5CcN4FHxVLnKg" crossorigin="anonymous" defer></script>
-<script src="/tools/sync.js?v=a6ae33ca8d" defer></script>
-<script src="/tools/data-layer.js?v=e2d2a19f1f" defer></script>
+<script src="/tools/sync.js?v=228db11afb" defer></script>
+<script src="/tools/data-layer.js?v=469402246e" defer></script>
 <script src="/tools/tools-effects.js?v=fff945a03c" defer></script>
 <script src="/tools/tools-dialogs.js?v=b5defd210d" defer></script>
 <script src="/tools/tools-media-sharing.js?v=fe0110f6d1" defer></script>
@@ -947,8 +947,10 @@
         }
       }
 
+      const jobToDelete = loadJobs().find(j => j.id === id);
       saveJobs(loadJobs().filter(j => j.id !== id));
       if (typeof thAddJobTombstone === 'function') thAddJobTombstone(id);
+      if (jobToDelete && typeof thAddToGraveyard === 'function') thAddToGraveyard('job', jobToDelete);
       renderJobs();
     }, 6000);
 
@@ -1105,8 +1107,10 @@
     if (!confirmed) return;
     const row = document.querySelector('[data-template-id="' + id + '"]');
     animateRowExit(row, () => {
+      const templateToDelete = loadTemplates().find(t => t.id === id);
       saveTemplates(loadTemplates().filter(t => t.id !== id));
       if (typeof thAddTemplateTombstone === 'function') thAddTemplateTombstone(id);
+      if (templateToDelete && typeof thAddToGraveyard === 'function') thAddToGraveyard('template', templateToDelete);
       renderTemplates();
     });
   }
@@ -1217,7 +1221,13 @@
         await showAlert(`Deleted the jobs, but ${failedPhotoCount} photo${failedPhotoCount === 1 ? '' : 's'} across them couldn't be removed from cloud storage (likely a network issue) and may still be sitting there unused.`);
       }
 
-      saveJobs(loadJobs().filter(j => !idsToDelete.has(j.id)));
+      const allJobs = loadJobs();
+      const deletedJobs = allJobs.filter(j => idsToDelete.has(j.id));
+      deletedJobs.forEach(j => {
+        if (typeof thAddJobTombstone === 'function') thAddJobTombstone(j.id);
+        if (typeof thAddToGraveyard === 'function') thAddToGraveyard('job', j);
+      });
+      saveJobs(allJobs.filter(j => !idsToDelete.has(j.id)));
       renderJobs();
     }, 6000);
 
@@ -1770,8 +1780,10 @@
     if (editingContactId === id) cancelContactEdit();
     const row = document.querySelector('[data-contact-id="' + id + '"]');
     animateRowExit(row, () => {
+      const contactToDelete = loadContacts().find(c => c.id === id);
       saveContacts(loadContacts().filter(c => c.id !== id));
       if (typeof thAddContactTombstone === 'function') thAddContactTombstone(id);
+      if (contactToDelete && typeof thAddToGraveyard === 'function') thAddToGraveyard('contact', contactToDelete);
       renderContacts();
       showToast('Contact deleted.');
     });
