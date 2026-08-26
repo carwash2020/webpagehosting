@@ -195,6 +195,60 @@ function checkTopLevelDeferredCalls(problems) {
   }
 }
 
+// Requested directly ("what else could this same bug class be
+// hiding"), right after fixing the cache-bust version list's own
+// hardcoded-list problem: service-worker.js's PRECACHE_URLS is a
+// SEPARATE hardcoded list with the identical shape, and its own
+// comments already admit this exact class of drift happened at least
+// 4 times before ("was missing, found and fixed" appears 4 times in
+// that file's history). Checked directly rather than assuming it was
+// now complete: tools-tour.js -- the same file already found missing
+// from the cache-bust list earlier -- is ALSO missing here, and
+// reset-password.html is missing entirely, meaning a password-reset
+// link opened with no connectivity would fail to load at all. Unlike
+// the cache-bust list, this can't be auto-derived from inside
+// service-worker.js itself (a service worker has no filesystem access
+// at runtime to discover new files), so this check instead verifies
+// completeness at dev/CI time, against the real, current file list.
+function checkPrecacheCompleteness(problems) {
+  const swPath = path.join(__dirname, '..', 'service-worker.js');
+  if (!fs.existsSync(swPath)) return;
+  const swSrc = fs.readFileSync(swPath, 'utf8');
+  const arrayMatch = swSrc.match(/const PRECACHE_URLS = \[([\s\S]*?)\n\];/);
+  if (!arrayMatch) {
+    problems.push('service-worker.js: could not find a PRECACHE_URLS array to check');
+    return;
+  }
+  const precached = new Set((arrayMatch[1].match(/'\/tools\/[^']+'/g) || []).map(s => s.slice(1, -1)));
+
+  const realHtmlFiles = fs.readdirSync(TOOLS_DIR).filter(f => f.endsWith('.html'));
+  const realScriptFiles = fs.readdirSync(TOOLS_DIR).filter(f => f.endsWith('.js') || f.endsWith('.css'));
+
+  for (const f of [...realHtmlFiles, ...realScriptFiles]) {
+    const url = '/tools/' + f;
+    if (!precached.has(url)) {
+      problems.push(`service-worker.js: ${url} is a real file but missing from PRECACHE_URLS -- won't be available offline, and cache.addAll() aborts atomically on any 404, so a stale/retired reference elsewhere in the list is just as dangerous as a missing real one`);
+    }
+  }
+
+  // The reverse direction matters just as much: a precached URL for a
+  // file that's since been deleted or renamed causes cache.addAll() to
+  // 404 and abort the ENTIRE precache atomically -- exactly what
+  // happened for real when tools-common.js was split into 4 files but
+  // the old reference was left behind, silently breaking offline
+  // support for every other file in the list too, not just the one.
+  // Scans every real file in tools/ regardless of extension (not just
+  // .html/.js/.css) -- manifest.json, for instance, is real and
+  // precached but neither of those two extensions, and would
+  // otherwise show up here as a false "doesn't exist" positive.
+  const allRealFiles = new Set(fs.readdirSync(TOOLS_DIR).map(f => '/tools/' + f));
+  for (const url of precached) {
+    if (!allRealFiles.has(url)) {
+      problems.push(`service-worker.js: PRECACHE_URLS references ${url}, but that file doesn't exist -- cache.addAll() will 404 and abort precaching for EVERY file in the list, not just this one`);
+    }
+  }
+}
+
 function checkTourHealth(problems) {
   const tourSrc = fs.readFileSync(path.join(TOOLS_DIR, 'tools-tour.js'), 'utf8');
   const stepPattern = /\{ page: '\/tools\/([\w-]+\.html)', highlightSelector: '([^']+)'/g;
@@ -363,6 +417,7 @@ function main() {
   const sharedScripts = detectSharedScripts();
 
   checkVersionFreshness(problems);
+  checkPrecacheCompleteness(problems);
   checkTourHealth(problems);
   checkTopLevelDeferredCalls(problems);
   checkButtonHandlers(problems);

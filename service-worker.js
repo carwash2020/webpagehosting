@@ -179,7 +179,7 @@
 // sticky/pinned, requested directly ("the tools to slide") -- the
 // previous fix correctly positioned it below the header but kept it
 // sticky, which was reported as exactly the wrong behavior.
-const CACHE_NAME = 'th-workspace-v44';
+const CACHE_NAME = 'th-workspace-v45';
 const PRECACHE_URLS = [
   '/tools/workspace.html', '/tools/job-tracker.html', '/tools/invoice-generator.html', '/tools/contract-generator.html',
   '/tools/calendar.html', '/tools/route-planner.html', '/tools/review-request.html', '/tools/contact-card.html',
@@ -197,6 +197,15 @@ const PRECACHE_URLS = [
   // Added 2026-08-20 -- same gap yet again, found while already
   // touching this list for the light-mode work above.
   '/tools/settings.html',
+  // Added 2026-08-26 -- found by a new, automated check comparing this
+  // list against the real file set, rather than another manual audit.
+  // reset-password.html was missing entirely (a password-reset link
+  // opened with flaky connectivity would fail to load at all), and
+  // tools-tour.js was missing too -- the exact same file already found
+  // missing from the separate cache-bust version list earlier the same
+  // day, for the same underlying reason: a hardcoded list, maintained
+  // by hand, drifting from reality.
+  '/tools/reset-password.html', '/tools/tools-tour.js',
   // Bug fix (2026-08-20): tools-common.js no longer exists -- it was
   // split into 4 focused files (structural item #42). cache.addAll()
   // fails ATOMICALLY: if even one URL in this list 404s, NONE of the
