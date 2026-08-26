@@ -27,26 +27,38 @@ sit silently broken for several pushes before it was found).
 
 ## What's still open, roughly in priority order
 
-1. **Namespacing the many flat `localStorage` keys**, and giving
+1. **CI's Node version (`.github/workflows/test.yml`) will need a
+   manual bump again someday.** Currently pinned to 24 (Active LTS
+   through ~April 2028) after Node 20 was found to have quietly gone
+   end-of-life while CI kept using it (2026-08-26). A bare major-
+   version pin is deliberate, not a compromise: `lts/*` looked like
+   it would solve this automatically, but real, documented bugs in
+   `actions/setup-node` (confirmed via its own GitHub issues) show it
+   can resolve to a stale LTS line even with `check-latest: true`. No
+   good way to fully automate this away -- the realistic plan is
+   revisiting this pin roughly every 2 years, the same way it was
+   just fixed this time.
+
+2. **Namespacing the many flat `localStorage` keys**, and giving
    synced data real schema versioning. The Appliance Wiki's own
    sequential migration functions (`upgradePrSeedV2IfNeeded` and
    successors) are a live example of the cost of not having this from
    the start.
-2. **Unifying quote and invoice into one data model** with a real
+3. **Unifying quote and invoice into one data model** with a real
    status field, rather than two similar-but-separate shapes. (Note:
    delete was added to both independently, 2026-08-26, each with its
    own tombstone from day one -- worth remembering if this
    unification ever actually happens, so the tombstone logic gets
    merged correctly rather than duplicated or dropped.)
-3. **Shared UI components** (list-row, form-section, table) -- every
+4. **Shared UI components** (list-row, form-section, table) -- every
    page still implements its own version of these.
-4. **Splitting Dev Tools further** (Diagnostics/Access/Data/Deploy
+5. **Splitting Dev Tools further** (Diagnostics/Access/Data/Deploy
    into separate pages) was considered and declined -- no clean,
    evidence-backed boundary the way Site Content had when *it* was
    split out. Don't attempt this without first doing the same
    call-graph-by-hand analysis that split did, and expect it might not
    be worth doing at all.
-5. **Reconsidering the bottom nav**, splitting Business Health's
+6. **Reconsidering the bottom nav**, splitting Business Health's
    unrelated tabs, making the Appliance Wiki search-first by default
    -- all flagged early in this project, never revisited.
 
