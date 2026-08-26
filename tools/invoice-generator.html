@@ -38,8 +38,8 @@
 <link rel="stylesheet" href="/styles.css?v=202608202000">
 <link rel="stylesheet" href="/tools/styles-tools.css?v=7888067c8f">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.112.3/dist/umd/supabase.js" integrity="sha384-qafw21c/iciq0VXsi9FzkfoQv5I/V0iqE4lSNcKXPnW9/UTJLnv5CcN4FHxVLnKg" crossorigin="anonymous" defer></script>
-<script src="/tools/sync.js?v=0bebd74da1" defer></script>
-<script src="/tools/data-layer.js?v=61995b687f" defer></script>
+<script src="/tools/sync.js?v=014ca77580" defer></script>
+<script src="/tools/data-layer.js?v=425bc14bb9" defer></script>
 <script src="/tools/tools-effects.js?v=fff945a03c" defer></script>
 <script src="/tools/tools-dialogs.js?v=b5defd210d" defer></script>
 <script src="/tools/tools-media-sharing.js?v=fe0110f6d1" defer></script>
@@ -344,6 +344,7 @@
   function renderInvoiceLog() {
     const searchTerm = (document.getElementById('invoiceLogSearch')?.value || '').trim().toLowerCase();
     let log = [...loadInvoiceLog()].sort((a, b) => b.id - a.id);
+    if (pendingDeleteInvoiceIds.size > 0) log = log.filter(inv => !pendingDeleteInvoiceIds.has(inv.id));
     if (searchTerm) {
       log = log.filter(inv =>
         (inv.clientName || '').toLowerCase().includes(searchTerm) ||
@@ -371,7 +372,10 @@
           <div class="contract-log-meta">#${escapeHtml(inv.invoiceNumber || '')} &middot; ${escapeHtml(inv.date || '')} &middot; ${money(inv.total)}</div>
           ${sourceNote}
         </div>
-        <button class="small-btn" onclick="toggleInvoicePaid(${inv.id})">${inv.paid ? 'Mark Unpaid' : 'Mark Paid'}</button>
+        <div style="display:flex; gap:6px; flex-shrink:0;">
+          <button class="small-btn" onclick="toggleInvoicePaid(${inv.id})">${inv.paid ? 'Mark Unpaid' : 'Mark Paid'}</button>
+          <button class="small-btn" style="color:#e05252; border-color:#e05252;" onclick="deleteInvoiceLogEntry(${inv.id})" aria-label="Delete this invoice">Delete</button>
+        </div>
       </div>`;
     }).join('');
   }
@@ -1033,6 +1037,29 @@
     if (typeof scheduleSync === 'function') scheduleSync();
   }
 
+  const pendingDeleteInvoiceIds = new Map();
+  async function deleteInvoiceLogEntry(id) {
+    const confirmed = await showConfirm('Delete this invoice from the log? This does not touch any matching income log entry -- delete that separately on Finance if you want it gone too.', { danger: true, confirmText: 'Delete' });
+    if (!confirmed) return;
+    const row = document.querySelector('[data-invoice-id="' + id + '"]');
+    await new Promise(resolve => animateRowExit(row, resolve));
+
+    const timer = setTimeout(() => {
+      pendingDeleteInvoiceIds.delete(id);
+      saveInvoiceLog(loadInvoiceLog().filter(i => i.id !== id));
+      if (typeof thAddInvoiceTombstone === 'function') thAddInvoiceTombstone(id);
+      renderInvoiceLog();
+    }, 6000);
+
+    pendingDeleteInvoiceIds.set(id, timer);
+    renderInvoiceLog();
+    showUndoToast('Invoice removed from log.', () => {
+      clearTimeout(pendingDeleteInvoiceIds.get(id));
+      pendingDeleteInvoiceIds.delete(id);
+      renderInvoiceLog();
+    });
+  }
+
   // Every generated invoice gets mirrored into Finance's Income log
   // automatically, so income shows up in one place without re-entering it.
   // th_invoices stays exactly as it was (the actual invoice documents,
@@ -1116,6 +1143,29 @@
     localStorage.setItem(QUOTE_STORAGE_KEY, JSON.stringify(list));
     if (typeof scheduleSync === 'function') scheduleSync();
   }
+
+  const pendingDeleteQuoteIds = new Map();
+  async function deleteQuoteLogEntry(id) {
+    const confirmed = await showConfirm('Delete this quote from the log?', { danger: true, confirmText: 'Delete' });
+    if (!confirmed) return;
+    const row = document.querySelector('[data-quote-id="' + id + '"]');
+    await new Promise(resolve => animateRowExit(row, resolve));
+
+    const timer = setTimeout(() => {
+      pendingDeleteQuoteIds.delete(id);
+      saveQuoteLog(loadQuoteLog().filter(q => q.id !== id));
+      if (typeof thAddQuoteTombstone === 'function') thAddQuoteTombstone(id);
+      renderQuoteLog();
+    }, 6000);
+
+    pendingDeleteQuoteIds.set(id, timer);
+    renderQuoteLog();
+    showUndoToast('Quote removed from log.', () => {
+      clearTimeout(pendingDeleteQuoteIds.get(id));
+      pendingDeleteQuoteIds.delete(id);
+      renderQuoteLog();
+    });
+  }
   function logQuote(totals) {
     const list = loadQuoteLog();
     const jobRefId = document.getElementById('quoteJobRef').value;
@@ -1149,6 +1199,7 @@
   function renderQuoteLog() {
     const searchTerm = (document.getElementById('quoteLogSearch')?.value || '').trim().toLowerCase();
     let log = [...loadQuoteLog()].sort((a, b) => b.id - a.id);
+    if (pendingDeleteQuoteIds.size > 0) log = log.filter(q => !pendingDeleteQuoteIds.has(q.id));
     if (searchTerm) {
       log = log.filter(q =>
         (q.clientName || '').toLowerCase().includes(searchTerm) ||
@@ -1175,6 +1226,7 @@
           <div class="contract-log-meta">#${escapeHtml(q.quoteNumber || '')} &middot; ${escapeHtml(q.date || '')} &middot; ${money(q.total)}${q.jobRefTitle ? ' &middot; ' + escapeHtml(q.jobRefTitle) : ''}</div>
           <div class="contract-log-meta">${statusLabel}</div>
         </div>
+        <button class="small-btn" style="color:#e05252; border-color:#e05252;" onclick="deleteQuoteLogEntry(${q.id})" aria-label="Delete this quote">Delete</button>
       </div>`;
     }).join('');
   }

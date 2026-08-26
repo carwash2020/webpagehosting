@@ -207,6 +207,26 @@ function thAddContractTombstone(id) {
   thWrite(TH_CONTRACT_TOMBSTONES_KEY, list);
 }
 
+// Added alongside delete itself being added to invoices and quotes for
+// the first time (2026-08-26) -- built in with the tombstone from the
+// start this time, rather than added as a later fix the way jobs,
+// expenses, income, contacts, and contracts all needed.
+const TH_INVOICE_TOMBSTONES_KEY = 'th_invoice_tombstones';
+function thLoadInvoiceTombstones() { return thRead(TH_INVOICE_TOMBSTONES_KEY, []); }
+function thAddInvoiceTombstone(id) {
+  const list = thLoadInvoiceTombstones();
+  list.push({ id, deletedAt: new Date().toISOString() });
+  thWrite(TH_INVOICE_TOMBSTONES_KEY, list);
+}
+
+const TH_QUOTE_TOMBSTONES_KEY = 'th_quote_tombstones';
+function thLoadQuoteTombstones() { return thRead(TH_QUOTE_TOMBSTONES_KEY, []); }
+function thAddQuoteTombstone(id) {
+  const list = thLoadQuoteTombstones();
+  list.push({ id, deletedAt: new Date().toISOString() });
+  thWrite(TH_QUOTE_TOMBSTONES_KEY, list);
+}
+
 // "Flag this page" queue (2026-08-21), requested directly: a quick way
 // to flag something to come back to later, for a moment when there
 // isn't time to write a full message. Each entry: { id, page, note,
