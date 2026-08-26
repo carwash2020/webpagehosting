@@ -8,7 +8,7 @@ that's Connor, Steve, or an AI assistant doing the work.
 
 ## Who actually touches this repo
 
-Connor (and Steve, for the parts of the business he's involved in),
+Connor and Steve,
 often working directly with an AI coding assistant rather than typing
 every line by hand. If that's how a change gets made, the same
 verification steps below still apply in full -- "an AI wrote it"
