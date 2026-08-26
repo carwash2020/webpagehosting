@@ -21,11 +21,6 @@ who can actually act on it.
 
 ## The actual security model, stated plainly
 
-**Two Supabase projects, deliberately separate.** Tagg-N-Go (the car
-wash chain) and Triple H Enterprises each have their own, entirely
-separate Supabase project. Nothing is shared between them -- not
-credentials, not tables, not Edge Functions.
-
 **Row-Level Security is on for every table**, but the actual policies
 vary by what a table is for, and that's deliberate:
 
