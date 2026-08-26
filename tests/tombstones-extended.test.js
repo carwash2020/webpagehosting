@@ -186,3 +186,80 @@ test('a stale device pushing back its old copy of a deleted contract does not re
 
   assert.deepEqual(JSON.parse(window.localStorage.getItem('th_contracts')), []);
 });
+
+// --- Invoices and quotes ---------------------------------------------
+// Unlike every record type above, delete never existed for these two
+// at all before now (2026-08-26) -- added for the first time here,
+// with the tombstone fix built in from the start rather than as a
+// later fix, per the direct request.
+
+test('thAddInvoiceTombstone records a tombstone by id', () => {
+  const window = loadDevTools();
+  window.thAddInvoiceTombstone(501);
+  const tombstones = window.thLoadInvoiceTombstones();
+  assert.equal(tombstones.length, 1);
+  assert.equal(tombstones[0].id, 501);
+});
+
+test('deleteInvoiceLogEntry (invoice-generator.html) actually calls thAddInvoiceTombstone when the deletion finalizes', () => {
+  const src = fs.readFileSync(path.join(TOOLS_DIR, 'invoice-generator.html'), 'utf8');
+  const fnMatch = src.match(/async function deleteInvoiceLogEntry\(id\)[\s\S]*?\n  \}/);
+  assert.ok(fnMatch, 'deleteInvoiceLogEntry not found');
+  assert.match(fnMatch[0], /thAddInvoiceTombstone\(/);
+});
+
+test('deleteInvoiceLogEntry deliberately never touches the income log, matching this codebase\'s established "deletion never cascades to a different record type" philosophy', () => {
+  const src = fs.readFileSync(path.join(TOOLS_DIR, 'invoice-generator.html'), 'utf8');
+  const fnMatch = src.match(/async function deleteInvoiceLogEntry\(id\)[\s\S]*?\n  \}/);
+  assert.ok(fnMatch, 'deleteInvoiceLogEntry not found');
+  assert.doesNotMatch(fnMatch[0], /INCOME_LOG_KEY|income_log/i, 'should not touch the income log directly');
+});
+
+test('a stale device pushing back its old copy of a deleted invoice does not resurrect it on pull', () => {
+  const window = loadDevTools();
+  window.thAddInvoiceTombstone(501);
+  const syncDataKeys = loadSyncFunctions(window);
+  assert.match(syncDataKeys, /th_invoice_tombstones/, 'th_invoice_tombstones should be a synced key');
+
+  window.applySyncData({
+    th_invoices: JSON.stringify([{ id: 501, invoiceNumber: 'INV-501', total: 800 }]),
+    th_invoice_tombstones: JSON.stringify([]),
+  });
+
+  assert.deepEqual(JSON.parse(window.localStorage.getItem('th_invoices')), []);
+});
+
+test('thAddQuoteTombstone records a tombstone by id', () => {
+  const window = loadDevTools();
+  window.thAddQuoteTombstone(601);
+  const tombstones = window.thLoadQuoteTombstones();
+  assert.equal(tombstones.length, 1);
+  assert.equal(tombstones[0].id, 601);
+});
+
+test('deleteQuoteLogEntry (invoice-generator.html) actually calls thAddQuoteTombstone when the deletion finalizes', () => {
+  const src = fs.readFileSync(path.join(TOOLS_DIR, 'invoice-generator.html'), 'utf8');
+  const fnMatch = src.match(/async function deleteQuoteLogEntry\(id\)[\s\S]*?\n  \}/);
+  assert.ok(fnMatch, 'deleteQuoteLogEntry not found');
+  assert.match(fnMatch[0], /thAddQuoteTombstone\(/);
+});
+
+test('a stale device pushing back its old copy of a deleted quote does not resurrect it on pull', () => {
+  const window = loadDevTools();
+  window.thAddQuoteTombstone(601);
+  const syncDataKeys = loadSyncFunctions(window);
+  assert.match(syncDataKeys, /th_quote_tombstones/, 'th_quote_tombstones should be a synced key');
+
+  window.applySyncData({
+    th_quotes: JSON.stringify([{ id: 601, quoteNumber: 'Q-601', total: 300 }]),
+    th_quote_tombstones: JSON.stringify([]),
+  });
+
+  assert.deepEqual(JSON.parse(window.localStorage.getItem('th_quotes')), []);
+});
+
+test('the invoice log and quote log rendering both filter out entries pending deletion (mid-undo-window), matching the established pattern from expenses/contacts', () => {
+  const src = fs.readFileSync(path.join(TOOLS_DIR, 'invoice-generator.html'), 'utf8');
+  assert.match(src, /pendingDeleteInvoiceIds\.size > 0.*filter/, 'renderInvoiceLog should filter pending deletions');
+  assert.match(src, /pendingDeleteQuoteIds\.size > 0.*filter/, 'renderQuoteLog should filter pending deletions');
+});

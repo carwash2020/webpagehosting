@@ -320,6 +320,9 @@ the live site the way a real visitor would.
    data got added to the sync bundle without being capped.
 3. Each device's own local data can be inspected directly: Dev Tools →
    Local Data Snapshot.
+4. If the specific symptom is "a deleted record keeps coming back"
+   rather than data failing to save at all, that's not this scenario --
+   see "Deletion resurrection / tombstones" below instead.
 
 ## Worst case: both `connor@` and `steve@` Supabase accounts are lost
 
@@ -414,6 +417,73 @@ whole time while silently delivering zero real cross-device events.
 should list both `workspace_sync` and `th_leads`. If either is missing,
 that's the whole problem -- `alter publication supabase_realtime add table public.<name>;`
 fixes it immediately, no code deploy needed.
+
+## Deletion resurrection / tombstones (2026-08-25 through 2026-08-26)
+
+**The symptom, if this mechanism is ever missing for something:** a
+job, client, expense, invoice, or similar record gets deleted on one
+device, then reappears later, unprompted, usually after another device
+syncs. This is not a UI bug and not a "sync is broken" issue in the
+sense Scenario 9 above covers -- it's a specific, structural gap in how
+`applySyncData()` merges data, and it now has a real, working fix.
+
+**Why it happens at all.** `workspace_sync` holds everything (jobs,
+invoices, contracts, clients, expenses, income, contacts, quotes) as
+one JSON blob, and `mergeRecordArrays()` reconciles a device's local
+copy against whatever it just pulled by taking the *union* of both
+sides, by id. A union can't tell "this record never existed here"
+apart from "this record existed here and was deliberately deleted" --
+so a device that still has a since-deleted record cached locally (it
+hasn't pulled the deletion yet) will keep pushing it right back,
+resurrecting it on every other device that pulls after that.
+
+**The fix: a tombstone per record type that supports deletion.**
+Deleting something doesn't just remove it from its own array -- it
+also appends `{ id, deletedAt }` to a matching `th_X_tombstones` array,
+which is itself a synced key (unioned across devices exactly like
+everything else, so a tombstone recorded on one device reaches every
+other one too). `applySyncData()` reads the relevant tombstone list
+right after merging it, and filters any tombstoned id back out of the
+record type it protects, every single pull. As of 2026-08-26, every
+record type with a real delete action has this:
+
+| Record type | Delete function | Tombstone key |
+|---|---|---|
+| Clients | `thDeleteClient` (dev-tools.html) | `th_client_tombstones` |
+| Jobs | `deleteJob` (job-tracker.html) | `th_job_tombstones` |
+| Expenses | `deleteExpense`, `clearAllExpenses` (finance.html) | `th_expense_tombstones` |
+| Income | `deleteIncomeEntry`, `clearAllIncome` (finance.html) | `th_income_tombstones` |
+| Contacts | `deleteContact` (job-tracker.html) | `th_contact_tombstones` |
+| Contracts | `deleteContractLogEntry` (contract-generator.html) | `th_contract_tombstones` |
+| Invoices | `deleteInvoiceLogEntry` (invoice-generator.html) | `th_invoice_tombstones` |
+| Quotes | `deleteQuoteLogEntry` (invoice-generator.html) | `th_quote_tombstones` |
+
+Invoices and quotes didn't have a delete action of any kind until
+2026-08-26 -- added then, with the tombstone built in from the start
+rather than as a later fix, unlike every row above it in this table.
+
+**If a new record type ever gets a delete button added later,** it
+needs this same treatment from day one, not as an afterthought: a
+`thAddXTombstone(id)` / `thLoadXTombstones()` pair in `data-layer.js`
+(id-only is enough -- none of these track a normalized name the way
+clients do, since nothing else backfills any of them from other data
+by name), the new tombstone key added to both `SYNC_DATA_KEYS` in
+`sync.js` (positioned *before* the record type it protects -- the
+filter step in `applySyncData` reads it fresh from localStorage right
+after its own merge runs, which only works if that's already happened)
+and `MERGE_KEY_FIELD` (`'id'`), a new `else if` branch in
+`applySyncData()` filtering the merged array against that tombstone
+set, and the actual delete function calling `thAddXTombstone(id)` at
+the point the record is actually, permanently removed -- not at the
+point the undo window starts, if there is one.
+
+`tests/tombstones-extended.test.js` and the job/client-specific tests
+in `tests/client-registry-delete.test.js` show the exact, repeatable
+test shape for verifying a new one of these: the tombstone function
+directly, confirming the real delete function actually calls it (via
+source inspection for anything async/modal-driven, since those aren't
+practical to simulate end-to-end), and the real stale-device
+resurrection scenario via a direct `applySyncData()` call.
 
 ## Daily reminder check / pg_cron (Vault-migrated 2026-08-15)
 

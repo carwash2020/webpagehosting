@@ -118,7 +118,12 @@ const SYNC_DATA_KEYS = [
   'th_tracker_notes_v2',
   'th_mileage_rate',
   'th_price_reference',
+  // Delete added to invoices and quotes for the first time (2026-08-26)
+  // -- built in with the tombstone from the start, same reasoning as
+  // every entry above, rather than added as a later fix.
+  'th_invoice_tombstones',
   'th_invoices',
+  'th_quote_tombstones',
   'th_quotes',
   'th_tax_rate',
   'th_tax_labor',
@@ -215,6 +220,8 @@ const MERGE_KEY_FIELD = {
   th_income_tombstones: 'id',
   th_contact_tombstones: 'id',
   th_contract_tombstones: 'id',
+  th_invoice_tombstones: 'id',
+  th_quote_tombstones: 'id',
   th_tracker_contacts: 'id',
   th_tracker_notes_v2: 'id',
   th_expense_log: 'id',
@@ -375,6 +382,20 @@ function applySyncData(obj) {
         if (tombstonedIds.length) {
           const tombstoneSet = new Set(tombstonedIds);
           finalArr = mergedArr.filter(c => !tombstoneSet.has(c.id));
+        }
+      } else if (k === 'th_invoices') {
+        let tombstonedIds = [];
+        try { tombstonedIds = JSON.parse(localStorage.getItem('th_invoice_tombstones') || '[]').map(t => t.id); } catch (e) { tombstonedIds = []; }
+        if (tombstonedIds.length) {
+          const tombstoneSet = new Set(tombstonedIds);
+          finalArr = mergedArr.filter(i => !tombstoneSet.has(i.id));
+        }
+      } else if (k === 'th_quotes') {
+        let tombstonedIds = [];
+        try { tombstonedIds = JSON.parse(localStorage.getItem('th_quote_tombstones') || '[]').map(t => t.id); } catch (e) { tombstonedIds = []; }
+        if (tombstonedIds.length) {
+          const tombstoneSet = new Set(tombstonedIds);
+          finalArr = mergedArr.filter(q => !tombstoneSet.has(q.id));
         }
       }
 
