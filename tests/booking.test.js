@@ -30,6 +30,22 @@ function waitFor(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
+// Replaces a fixed-duration guess with a real poll for the actual
+// condition a test needs -- robust regardless of how fast or slow the
+// machine running it is, unlike waitFor(200) above (kept only for the
+// handful of places where nothing async is actually being waited on).
+// Confirmed directly as a real fix, not a guess: this exact bug (tests
+// timing out under added CI load from an unrelated change) reproduced
+// deterministically in real CI, twice in a row on the same commit.
+async function waitForCondition(conditionFn, { timeout = 5000, interval = 20 } = {}) {
+  const start = Date.now();
+  while (Date.now() - start < timeout) {
+    if (conditionFn()) return;
+    await waitFor(interval);
+  }
+  throw new Error('waitForCondition: condition never became true within ' + timeout + 'ms');
+}
+
 test('a genuinely failed availability check (a real server/network failure, not "no slots") shows a clear error with a real retry, not an indefinite loading state', async () => {
   let attemptCount = 0;
   const window = loadPage(async (url) => {
@@ -41,9 +57,9 @@ test('a genuinely failed availability check (a real server/network failure, not 
     return { ok: false };
   });
 
-  await waitFor(200);
+  await waitForCondition(() => window.document.querySelector('.service-option'));
   window.document.querySelector('.service-option').dispatchEvent(new window.Event('click', { bubbles: true }));
-  await waitFor(200);
+  await waitForCondition(() => window.document.getElementById('retryDateBtn'));
 
   const grid = window.document.getElementById('slotsGrid');
   assert.match(grid.innerHTML, /Couldn.t load/);
@@ -51,7 +67,7 @@ test('a genuinely failed availability check (a real server/network failure, not 
   assert.ok(retryBtn, 'a real retry button should be offered, not just a stuck loading state');
 
   retryBtn.dispatchEvent(new window.Event('click', { bubbles: true }));
-  await waitFor(200);
+  await waitForCondition(() => attemptCount === 2 && !window.document.getElementById('slotsGrid').innerHTML.includes('Couldn'));
   assert.equal(attemptCount, 2, 'retry should have made a real second attempt');
   assert.doesNotMatch(window.document.getElementById('slotsGrid').innerHTML, /Couldn.t load/, 'the retry succeeding should clear the error state');
 });
@@ -77,16 +93,24 @@ test('a bot filling in the honeypot field never actually creates a booking, but 
     return { ok: false };
   });
 
-  await waitFor(200);
+  await waitForCondition(() => window.document.querySelector('.service-option'));
   window.document.querySelector('.service-option').dispatchEvent(new window.Event('click', { bubbles: true }));
-  await waitFor(200);
+  // Explicitly select a guaranteed-future date (the 2nd date button,
+  // i.e. tomorrow) rather than relying on "today" auto-selecting --
+  // "today" can genuinely have zero open slots left depending on
+  // what time this test happens to run (business hours + the
+  // 2-hour minimum lead time can rule out the rest of a real day),
+  // which is real, deterministic behavior, not test flakiness.
+  await waitForCondition(() => window.document.querySelectorAll('.date-btn').length > 1);
+  window.document.querySelectorAll('.date-btn')[1].dispatchEvent(new window.Event('click', { bubbles: true }));
+  await waitForCondition(() => window.document.querySelector('.slot-btn'));
   window.document.querySelector('.slot-btn').dispatchEvent(new window.Event('click', { bubbles: true }));
 
   window.document.querySelector('[name="_gotcha"]').value = 'a bot filled this in';
   window.document.getElementById('bName').value = 'Bot Name';
   window.document.getElementById('bPhone').value = '5555555555';
   window.document.getElementById('bookingForm').dispatchEvent(new window.Event('submit', { bubbles: true, cancelable: true }));
-  await waitFor(200);
+  await waitForCondition(() => window.document.getElementById('stepConfirmed').classList.contains('is-active'));
 
   assert.equal(insertCalled, false, 'a caught bot should never actually reach the real insert');
   assert.ok(window.document.getElementById('stepConfirmed').classList.contains('is-active'), 'a caught bot should still see a normal-looking confirmation, never told it was caught');
@@ -103,15 +127,23 @@ test('a genuine submission (honeypot left empty) reaches the real insert normall
     return { ok: false };
   });
 
-  await waitFor(200);
+  await waitForCondition(() => window.document.querySelector('.service-option'));
   window.document.querySelector('.service-option').dispatchEvent(new window.Event('click', { bubbles: true }));
-  await waitFor(200);
+  // Explicitly select a guaranteed-future date (the 2nd date button,
+  // i.e. tomorrow) rather than relying on "today" auto-selecting --
+  // "today" can genuinely have zero open slots left depending on
+  // what time this test happens to run (business hours + the
+  // 2-hour minimum lead time can rule out the rest of a real day),
+  // which is real, deterministic behavior, not test flakiness.
+  await waitForCondition(() => window.document.querySelectorAll('.date-btn').length > 1);
+  window.document.querySelectorAll('.date-btn')[1].dispatchEvent(new window.Event('click', { bubbles: true }));
+  await waitForCondition(() => window.document.querySelector('.slot-btn'));
   window.document.querySelector('.slot-btn').dispatchEvent(new window.Event('click', { bubbles: true }));
 
   window.document.getElementById('bName').value = 'Jane Real Customer';
   window.document.getElementById('bPhone').value = '5551234567';
   window.document.getElementById('bookingForm').dispatchEvent(new window.Event('submit', { bubbles: true, cancelable: true }));
-  await waitFor(200);
+  await waitForCondition(() => insertCalled === true);
 
   assert.equal(insertCalled, true, 'a genuine submission with an empty honeypot should reach the real insert');
 });
@@ -121,9 +153,17 @@ test('typing a phone number progressively auto-formats to (XXX) XXX-XXXX', async
     if (String(url).includes('get_booking_availability')) return { ok: true, json: async () => ([]) };
     return { ok: false };
   });
-  await waitFor(200);
+  await waitForCondition(() => window.document.querySelector('.service-option'));
   window.document.querySelector('.service-option').dispatchEvent(new window.Event('click', { bubbles: true }));
-  await waitFor(200);
+  // Explicitly select a guaranteed-future date (the 2nd date button,
+  // i.e. tomorrow) rather than relying on "today" auto-selecting --
+  // "today" can genuinely have zero open slots left depending on
+  // what time this test happens to run (business hours + the
+  // 2-hour minimum lead time can rule out the rest of a real day),
+  // which is real, deterministic behavior, not test flakiness.
+  await waitForCondition(() => window.document.querySelectorAll('.date-btn').length > 1);
+  window.document.querySelectorAll('.date-btn')[1].dispatchEvent(new window.Event('click', { bubbles: true }));
+  await waitForCondition(() => window.document.querySelector('.slot-btn'));
   window.document.querySelector('.slot-btn').dispatchEvent(new window.Event('click', { bubbles: true }));
 
   const phone = window.document.getElementById('bPhone');
@@ -145,9 +185,17 @@ test('an incomplete phone number shows a clear inline error and blocks submissio
     }
     return { ok: false };
   });
-  await waitFor(200);
+  await waitForCondition(() => window.document.querySelector('.service-option'));
   window.document.querySelector('.service-option').dispatchEvent(new window.Event('click', { bubbles: true }));
-  await waitFor(200);
+  // Explicitly select a guaranteed-future date (the 2nd date button,
+  // i.e. tomorrow) rather than relying on "today" auto-selecting --
+  // "today" can genuinely have zero open slots left depending on
+  // what time this test happens to run (business hours + the
+  // 2-hour minimum lead time can rule out the rest of a real day),
+  // which is real, deterministic behavior, not test flakiness.
+  await waitForCondition(() => window.document.querySelectorAll('.date-btn').length > 1);
+  window.document.querySelectorAll('.date-btn')[1].dispatchEvent(new window.Event('click', { bubbles: true }));
+  await waitForCondition(() => window.document.querySelector('.slot-btn'));
   window.document.querySelector('.slot-btn').dispatchEvent(new window.Event('click', { bubbles: true }));
 
   window.document.getElementById('bName').value = 'Jane Smith';
@@ -155,7 +203,7 @@ test('an incomplete phone number shows a clear inline error and blocks submissio
   phone.value = '555123';
   phone.dispatchEvent(new window.Event('input', { bubbles: true }));
   phone.dispatchEvent(new window.Event('blur', { bubbles: true }));
-  await waitFor(100);
+  await waitForCondition(() => window.document.getElementById('phoneError').classList.contains('is-visible'));
 
   assert.match(window.document.getElementById('phoneError').textContent, /10-digit/);
   assert.ok(phone.classList.contains('is-invalid'));
@@ -167,22 +215,30 @@ test('an invalid email shows a clear inline error, and a valid one clears it', a
     if (String(url).includes('get_booking_availability')) return { ok: true, json: async () => ([]) };
     return { ok: false };
   });
-  await waitFor(200);
+  await waitForCondition(() => window.document.querySelector('.service-option'));
   window.document.querySelector('.service-option').dispatchEvent(new window.Event('click', { bubbles: true }));
-  await waitFor(200);
+  // Explicitly select a guaranteed-future date (the 2nd date button,
+  // i.e. tomorrow) rather than relying on "today" auto-selecting --
+  // "today" can genuinely have zero open slots left depending on
+  // what time this test happens to run (business hours + the
+  // 2-hour minimum lead time can rule out the rest of a real day),
+  // which is real, deterministic behavior, not test flakiness.
+  await waitForCondition(() => window.document.querySelectorAll('.date-btn').length > 1);
+  window.document.querySelectorAll('.date-btn')[1].dispatchEvent(new window.Event('click', { bubbles: true }));
+  await waitForCondition(() => window.document.querySelector('.slot-btn'));
   window.document.querySelector('.slot-btn').dispatchEvent(new window.Event('click', { bubbles: true }));
 
   const email = window.document.getElementById('bEmail');
   email.value = 'not-an-email';
   email.dispatchEvent(new window.Event('input', { bubbles: true }));
   email.dispatchEvent(new window.Event('blur', { bubbles: true }));
-  await waitFor(100);
+  await waitForCondition(() => window.document.getElementById('emailError').classList.contains('is-visible'));
   assert.match(window.document.getElementById('emailError').textContent, /valid email/);
   assert.ok(email.classList.contains('is-invalid'));
 
   email.value = 'jane@example.com';
   email.dispatchEvent(new window.Event('input', { bubbles: true }));
-  await waitFor(100);
+  await waitForCondition(() => !window.document.getElementById('emailError').classList.contains('is-visible'));
   assert.equal(window.document.getElementById('emailError').classList.contains('is-visible'), false, 'a fixed, valid email should clear the error immediately');
   assert.equal(email.classList.contains('is-invalid'), false);
 });
@@ -197,9 +253,17 @@ test('leaving email empty is still valid -- it is optional, only a non-empty inv
     }
     return { ok: false };
   });
-  await waitFor(200);
+  await waitForCondition(() => window.document.querySelector('.service-option'));
   window.document.querySelector('.service-option').dispatchEvent(new window.Event('click', { bubbles: true }));
-  await waitFor(200);
+  // Explicitly select a guaranteed-future date (the 2nd date button,
+  // i.e. tomorrow) rather than relying on "today" auto-selecting --
+  // "today" can genuinely have zero open slots left depending on
+  // what time this test happens to run (business hours + the
+  // 2-hour minimum lead time can rule out the rest of a real day),
+  // which is real, deterministic behavior, not test flakiness.
+  await waitForCondition(() => window.document.querySelectorAll('.date-btn').length > 1);
+  window.document.querySelectorAll('.date-btn')[1].dispatchEvent(new window.Event('click', { bubbles: true }));
+  await waitForCondition(() => window.document.querySelector('.slot-btn'));
   window.document.querySelector('.slot-btn').dispatchEvent(new window.Event('click', { bubbles: true }));
 
   window.document.getElementById('bName').value = 'Jane Smith';
@@ -208,6 +272,6 @@ test('leaving email empty is still valid -- it is optional, only a non-empty inv
   phone.dispatchEvent(new window.Event('input', { bubbles: true }));
   // Email left empty entirely.
   window.document.getElementById('bookingForm').dispatchEvent(new window.Event('submit', { bubbles: true, cancelable: true }));
-  await waitFor(200);
+  await waitForCondition(() => insertCalled === true);
   assert.equal(insertCalled, true, 'an empty, optional email should never block submission');
 });
