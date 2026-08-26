@@ -2817,15 +2817,23 @@ test('a file referenced by only 1 real page is left alone -- not every script ne
   const toolsDir = path.join(__dirname, '..', 'tools');
   const newFilePath = path.join(toolsDir, 'a-single-page-test-file.js');
   const wsPath = path.join(toolsDir, 'workspace.html');
+  const swPath = path.join(__dirname, '..', 'service-worker.js');
   const originalWs = fs.readFileSync(wsPath, 'utf8');
+  const originalSw = fs.readFileSync(swPath, 'utf8');
   try {
     fs.writeFileSync(newFilePath, '// referenced by exactly one page -- not shared');
     fs.writeFileSync(wsPath, originalWs.replace('</body>', '<script src="a-single-page-test-file.js"></script></body>'));
+    // Also precached, so the separate precache-completeness check (a
+    // different concern -- "is every real file offline-available",
+    // not "does this file need cross-page version tracking") doesn't
+    // fire and obscure what this test is actually checking.
+    fs.writeFileSync(swPath, originalSw.replace("'/tools/settings.html',", "'/tools/settings.html', '/tools/a-single-page-test-file.js',"));
 
     const result = runCheckConsistency();
-    assert.doesNotMatch(result.output, /a-single-page-test-file\.js/, 'a file used by only one page has no cross-page drift risk and should not be flagged at all');
+    assert.doesNotMatch(result.output, /a-single-page-test-file\.js is not shared|requests a-single-page-test-file\.js\?v=/, 'a file used by only one page has no cross-page version-drift risk and should not be flagged for that reason');
   } finally {
     fs.writeFileSync(wsPath, originalWs);
+    fs.writeFileSync(swPath, originalSw);
     if (fs.existsSync(newFilePath)) fs.unlinkSync(newFilePath);
   }
 });
@@ -2892,29 +2900,45 @@ test('genuinely reintroducing the exact historical bug (a top-level call to a fu
   }
 });
 
-// Improvement (2026-08-20), while fixing settings.html's own missing
-// precache entry: this exact gap (a real page existing live but never
-// added to the offline precache list) has now happened 4 separate
-// times this session (3 pages found and fixed 2026-08-14, 3 more
-// 2026-08-20, and now settings.html). A general test that checks every
-// real page at once, rather than re-discovering this by hand each
-// time a new page ships.
+// The dedicated test for this now lives with checkPrecacheCompleteness
+// itself, added 2026-08-26 -- see below. That check supersedes this
+// one entirely (HTML+JS+CSS, both directions -- missing AND stale/
+// retired entries -- and runs as part of the real CLI tool on every
+// push, not just a separate test-suite assertion). Keeping two
+// independent, overlapping implementations of the same check is
+// exactly the kind of drift risk this whole pass exists to eliminate.
 
-test('every real, navigable tool page is in the service worker\'s offline precache list -- this exact gap has recurred 4 times this session already', () => {
-  const swSrc = fs.readFileSync(path.join(__dirname, '..', 'service-worker.js'), 'utf8');
-  const arrayMatch = swSrc.match(/const PRECACHE_URLS = \[([\s\S]*?)\n\];/);
-  assert.ok(arrayMatch, 'PRECACHE_URLS array not found');
+test('the precache-completeness check passes cleanly against the real, current codebase', () => {
+  const result = runCheckConsistency();
+  assert.equal(result.passed, true, result.output);
+});
 
-  const toolsDir = path.join(__dirname, '..', 'tools');
-  const allPages = fs.readdirSync(toolsDir).filter(f => f.endsWith('.html'));
+test('the precache-completeness check genuinely catches a real file missing from PRECACHE_URLS, not just a plausible-looking rule -- this exact gap has recurred at least 6 times now (4 documented in service-worker.js itself, plus reset-password.html and tools-tour.js found by this new check)', () => {
+  const swPath = path.join(__dirname, '..', 'service-worker.js');
+  const original = fs.readFileSync(swPath, 'utf8');
+  try {
+    const broken = original.replace("'/tools/settings.html',", '');
+    fs.writeFileSync(swPath, broken);
+    const result = runCheckConsistency();
+    assert.equal(result.passed, false, 'should have failed with a real page missing from the precache list');
+    assert.match(result.output, /\/tools\/settings\.html is a real file but missing from PRECACHE_URLS/);
+  } finally {
+    fs.writeFileSync(swPath, original);
+  }
+});
 
-  // reset-password.html is reached only via an email link, which
-  // already requires network access to receive in the first place --
-  // a deliberate, reasoned exclusion, not an oversight.
-  const exempt = new Set(['reset-password.html']);
-
-  const missing = allPages.filter(p => !exempt.has(p) && !arrayMatch[1].includes("'/tools/" + p + "'"));
-  assert.deepEqual(missing, [], 'these real pages are missing from the offline precache list: ' + missing.join(', '));
+test('the precache-completeness check genuinely catches a stale entry pointing at a file that no longer exists -- the exact failure mode that already broke offline caching entirely once before (tools-common.js, retired but left in the list, causing cache.addAll() to 404 and abort for every real file too)', () => {
+  const swPath = path.join(__dirname, '..', 'service-worker.js');
+  const original = fs.readFileSync(swPath, 'utf8');
+  try {
+    const broken = original.replace("'/tools/settings.html',", "'/tools/settings.html', '/tools/this-file-was-deleted.js',");
+    fs.writeFileSync(swPath, broken);
+    const result = runCheckConsistency();
+    assert.equal(result.passed, false, 'should have failed with a stale reference to a file that does not exist');
+    assert.match(result.output, /PRECACHE_URLS references \/tools\/this-file-was-deleted\.js, but that file doesn't exist/);
+  } finally {
+    fs.writeFileSync(swPath, original);
+  }
 });
 
 // Bug fix (2026-08-21), reported directly: the tour was popping up
