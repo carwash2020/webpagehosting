@@ -9,6 +9,6 @@
     "fix-versions": "node scripts/check-consistency.js --fix-versions"
   },
   "devDependencies": {
-    "jsdom": "^24.0.0"
+    "jsdom": "^30.0.1"
   }
 }
