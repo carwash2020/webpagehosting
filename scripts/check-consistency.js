@@ -13,10 +13,9 @@
 
 const fs = require('fs');
 const path = require('path');
-const { execSync } = require('child_process');
+const crypto = require('crypto');
 
 const TOOLS_DIR = path.join(__dirname, '..', 'tools');
-const REPO_ROOT = path.join(__dirname, '..');
 
 // Pages that are deliberately different, and why -- see the code review
 // this checker came out of for the full reasoning on each:
@@ -31,67 +30,6 @@ const EXEMPT = {
 
 function readTool(filename) {
   return fs.readFileSync(path.join(TOOLS_DIR, filename), 'utf8');
-}
-
-// Added 2026-08-16 after a real, costly bug: auth.js was fixed twice in
-// one day, but every page still requested it as `auth.js?v=202608142300`
-// -- a version string from two days earlier. Browsers correctly served
-// the stale cached copy, so neither fix ever reached a real device, and
-// several rounds of debugging chased phantom causes as a result.
-//
-// The original version of this checker verified only that all pages
-// referenced the SAME version as each other, which passed happily while
-// all 14 pages agreed on the same STALE version. Consistency was never
-// the useful property on its own -- being current is. This compares each
-// versioned script's ?v= timestamp against when git last actually
-// modified that file, and fails if the file is newer than the version
-// string that's supposed to be busting its cache.
-//
-// Bug found 2026-08-17: this worked correctly in local testing (a full
-// clone) but failed on every single CI run regardless of what actually
-// changed. Root cause: actions/checkout@v4 defaults to a SHALLOW clone
-// (fetch-depth 1, just the triggering commit) -- and in a shallow clone,
-// `git log -1 -- <path>` reports the tip commit's timestamp for ANY
-// path, even one that commit never touched, because git has no earlier
-// history to compare against to determine the path was untouched. That
-// made every versioned script look "just modified" on every push,
-// eventually flooding this check with false positives no matter how
-// fresh the version strings actually were -- confirmed by reproducing
-// an identical shallow clone locally (git clone --depth 1) and seeing
-// the exact same false failure the CI run hit. Editing the workflow
-// file to fetch full history isn't an option here (this token lacks the
-// `workflow` OAuth scope needed to touch anything under
-// .github/workflows/), so instead this deepens its own clone on demand
-// (git fetch --unshallow) before running the check below -- CI just
-// cloned from GitHub moments earlier, so the remote and network access
-// are already known to work. Only falls back to skipping the check
-// entirely if that fetch itself fails, rather than trusting data git
-// can't actually provide. The other consistency checks below (auth
-// gate, CSP, manifest, cross-file version matching) don't depend on git
-// history at all and are unaffected either way.
-function isShallowRepo() {
-  try {
-    return execSync('git rev-parse --is-shallow-repository', { cwd: REPO_ROOT, encoding: 'utf8' }).trim() === 'true';
-  } catch (e) {
-    return false; // git unavailable -- let the per-script checks below decide, same as before
-  }
-}
-
-// Rather than just disabling the freshness check in CI's shallow clone
-// (which would mean it silently never catches a real stale-version bug
-// there again), this fetches the missing history on demand -- CI just
-// cloned from GitHub moments ago, so the remote and network access are
-// already known to work. If this fails for any reason, falls back to
-// skipping the check for this run rather than trusting data git can't
-// actually provide, same as before.
-function ensureFullHistory() {
-  if (!isShallowRepo()) return true;
-  try {
-    execSync('git fetch --unshallow', { cwd: REPO_ROOT, stdio: 'pipe' });
-    return true;
-  } catch (e) {
-    return false;
-  }
 }
 
 // Site audit improvement #6 (2026-08-20): confirms the app tour's own
@@ -306,54 +244,88 @@ function checkTourHealth(problems) {
   }
 }
 
+// Real, deterministic cache-bust versioning: the ?v= string on every
+// page loading a shared file is its own content hash, not a
+// human/AI-chosen timestamp. Replaces a time-based heuristic (the
+// file's last-commit time compared against the version string's
+// encoded date, inside a 12-hour grace window meant to absorb
+// timezone skew) that let the exact bug it existed to catch through
+// three times in one day -- a real function added to sync.js, with
+// the ?v= string never bumped to match, sat within the grace window
+// and was never flagged, while real users' browsers kept serving the
+// stale, function-missing copy regardless. A content hash has no
+// grace window and no judgment call to get wrong.
+const VERSIONED_SCRIPTS = ['tools-effects.js', 'tools-dialogs.js', 'tools-media-sharing.js', 'tools-nav-pwa.js', 'sync.js', 'auth.js', 'push-notifications.js', 'styles-tools.css', 'dev-tools-shared.js'];
+
+function currentContentHash(script) {
+  const scriptPath = path.join(TOOLS_DIR, script);
+  if (!fs.existsSync(scriptPath)) return null;
+  const content = fs.readFileSync(scriptPath, 'utf8');
+  return crypto.createHash('sha256').update(content).digest('hex').slice(0, 10);
+}
+
 function checkVersionFreshness(problems) {
-  if (!ensureFullHistory()) return; // see the long comment above -- this check cannot be trusted here
-  // 2026-08-20: tools-common.js (1,447 lines, mixing dialogs/media/nav/
-  // PWA concerns together) was split into 4 focused files -- updated
-  // here so this check keeps tracking real files instead of one that
-  // no longer exists.
-  const VERSIONED_SCRIPTS = ['tools-effects.js', 'tools-dialogs.js', 'tools-media-sharing.js', 'tools-nav-pwa.js', 'sync.js', 'auth.js', 'push-notifications.js', 'styles-tools.css', 'dev-tools-shared.js'];
   const files = fs.readdirSync(TOOLS_DIR).filter(f => f.endsWith('.html'));
 
   for (const script of VERSIONED_SCRIPTS) {
-    if (!fs.existsSync(path.join(TOOLS_DIR, script))) continue;
-
-    let lastModified;
-    try {
-      const out = execSync(`git log -1 --format=%cI -- tools/${script}`, { cwd: REPO_ROOT, encoding: 'utf8' }).trim();
-      if (!out) continue; // never committed -- nothing to compare against
-      lastModified = new Date(out);
-    } catch (e) {
-      continue; // git unavailable -- skip rather than fail the whole run
-    }
+    const realHash = currentContentHash(script);
+    if (realHash === null) continue;
 
     const escaped = script.replace('.', '\\.');
-    let found = null;
+    const pattern = new RegExp(escaped + '\\?v=([a-zA-Z0-9]+)');
     for (const f of files) {
-      const m = readTool(f).match(new RegExp(escaped + '\\?v=(\\d{12})'));
-      if (m) { found = m[1]; break; }
-    }
-    if (!found) continue;
-
-    // Version strings are YYYYMMDDHHMM written in local time; parsed as
-    // UTC here, which is close enough for a staleness check measured in
-    // hours given the generous grace window below.
-    const versionDate = new Date(Date.UTC(
-      +found.slice(0, 4), +found.slice(4, 6) - 1, +found.slice(6, 8),
-      +found.slice(8, 10), +found.slice(10, 12)
-    ));
-
-    // 12h grace absorbs timezone skew between the version string's
-    // local-time origin and git's UTC timestamps, while still catching
-    // a genuinely stale version (the real bug was ~2 days stale).
-    const graceMs = 12 * 60 * 60 * 1000;
-    if (lastModified.getTime() - versionDate.getTime() > graceMs) {
-      problems.push(
-        `${script} was last modified ${lastModified.toISOString()} but pages still request ?v=${found} ` +
-        `-- browsers will serve a STALE cached copy. Bump the ?v= string on every page that loads it.`
-      );
+      const m = readTool(f).match(pattern);
+      if (!m) continue; // this page doesn't load this script at all
+      if (m[1] !== realHash) {
+        problems.push(
+          `${f} requests ${script}?v=${m[1]}, but ${script}'s real content hash right now is ${realHash} -- ` +
+          `these don't match, so browsers may serve a STALE cached copy. Run "npm run fix-versions" to correct every reference automatically.`
+        );
+      }
     }
   }
+}
+
+// Companion to the check above -- rewrites every ?v= reference to
+// each versioned file's real, current content hash, across every page
+// that loads it. Run directly with `npm run fix-versions` any time one
+// of the 9 shared files changes, removing the "remember to bump it by
+// hand, and compute the right value" step entirely.
+function fixVersions() {
+  const files = fs.readdirSync(TOOLS_DIR).filter(f => f.endsWith('.html'));
+  let changedCount = 0;
+
+  for (const script of VERSIONED_SCRIPTS) {
+    const realHash = currentContentHash(script);
+    if (realHash === null) continue;
+
+    const escaped = script.replace('.', '\\.');
+    const pattern = new RegExp(escaped + '\\?v=([a-zA-Z0-9]+)', 'g');
+
+    for (const f of files) {
+      const filePath = path.join(TOOLS_DIR, f);
+      const content = fs.readFileSync(filePath, 'utf8');
+      if (!pattern.test(content)) continue;
+      pattern.lastIndex = 0; // reset after .test() above, since this regex has the g flag
+      const updated = content.replace(pattern, script + '?v=' + realHash);
+      if (updated !== content) {
+        fs.writeFileSync(filePath, updated);
+        console.log(`  ${f}: ${script}?v=... -> ${realHash}`);
+        changedCount++;
+      }
+    }
+  }
+
+  if (changedCount === 0) {
+    console.log('All cache-bust versions already match their real content hashes -- nothing to fix.');
+  } else {
+    console.log(`\nUpdated ${changedCount} reference(s) across the affected pages.`);
+  }
+}
+
+if (require.main === module && process.argv.includes('--fix-versions')) {
+  fixVersions();
+  process.exit(0);
 }
 
 function main() {
@@ -384,7 +356,7 @@ function main() {
       problems.push(`${filename}: missing the apple-mobile-web-app-capable meta tag`);
     }
 
-    const versionMatch = html.match(/styles\.css\?v=(\d+)/);
+    const versionMatch = html.match(/styles\.css\?v=([a-zA-Z0-9]+)/);
     if (versionMatch) {
       versions[filename] = versionMatch[1];
     } else if (/href="\/styles\.css"/.test(html)) {
@@ -400,7 +372,7 @@ function main() {
     // three), but whichever ones a page DOES load must carry a matching
     // ?v= version, and that version must match every other page's.
     ['tools-effects.js', 'tools-dialogs.js', 'tools-media-sharing.js', 'tools-nav-pwa.js', 'sync.js', 'auth.js', 'styles-tools.css', 'dev-tools-shared.js'].forEach(script => {
-      const re = new RegExp(`${script.replace('.', '\\.')}(\\?v=(\\d+))?`);
+      const re = new RegExp(`${script.replace('.', '\\.')}(\\?v=([a-zA-Z0-9]+))?`);
       const m = html.match(re);
       if (!m) return; // page doesn't load this script at all -- fine
       if (!m[2]) {
