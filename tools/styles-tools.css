@@ -1254,7 +1254,7 @@ body select:focus, body textarea:focus {
   transition: color .15s ease, background .15s ease;
 }
 .th-bottom-nav a .th-bn-icon {
-  width: 32px; height: 30px; display: flex; align-items: center; justify-content: center;
+  width: 30px; height: 30px; display: flex; align-items: center; justify-content: center;
   transition: background .18s ease, border-color .18s ease;
 }
 .th-bottom-nav a .th-bn-icon .th-icon { width: 17px; height: 17px; }
