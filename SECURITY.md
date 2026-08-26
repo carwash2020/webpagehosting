@@ -80,6 +80,39 @@ key that does appear in client-side code (`tools/auth.js`) is meant to
 be public -- that's what an anon key is for -- and carries no
 privilege beyond what RLS already allows it.
 
+## Repo-level hardening (added 2026-08-26)
+
+Beyond the application-level security above, the repo itself has real
+protections now, each verified working directly rather than assumed:
+
+- **Branch protection on `main`** blocks force-push and deletion.
+  Deliberately does *not* require PRs or status checks before a
+  direct push -- this project's real, working history is direct
+  pushes to `main` (often by an AI assistant), and gating that would
+  fight the actual workflow, not improve it.
+- **Tag protection** on `checkpoint-*` blocks deletion and updates.
+  Confirmed directly: attempted a real delete of a real checkpoint
+  tag via the API, correctly rejected.
+- **Actions restricted** to GitHub-owned actions and Marketplace
+  verified creators (was "any action from anywhere," the platform
+  default), with the one third-party exception actually in use
+  (`treosh/lighthouse-ci-action`) explicitly allowlisted rather than
+  left to chance.
+- **Every action reference is pinned to a commit SHA**, not a mutable
+  version tag, with `sha_pinning_required` enforced at the repo level
+  so this can't silently drift back to tag-pinning later. Dependabot
+  still tracks and proposes version bumps against these pins the same
+  way it did against tags.
+- **CodeQL's default setup found 35 real findings on 2026-08-26** --
+  incomplete escaping enabling real XSS in `onclick` handlers across
+  4 tool pages, a genuine open-redirect bypass in `login.html`
+  (`startsWith('/')` doesn't exclude `//evil.com`, which browsers
+  resolve as protocol-relative), zero HTML escaping anywhere in
+  `runway-dashboard.html`, and more. All 35 fixed and reconfirmed at
+  zero directly against GitHub's own Code Scanning API after a fresh
+  scan, not assumed from local testing. See the commit history around
+  this date for the full, itemized breakdown of each finding and fix.
+
 ## Known, accepted gaps (not oversights)
 
 - **Leaked-password protection is off** in Supabase Auth. This is a
@@ -90,6 +123,15 @@ privilege beyond what RLS already allows it.
 - **No MFA enforcement** on the two Supabase Auth accounts. Same
   reasoning as above -- worth reconsidering if this ever grows past a
   trusted two-person team.
+- **`escapeHtml()` (in `tools-dialogs.js`) is only safe for text-node
+  content**, not HTML-attribute-value contexts -- it escapes `&`,
+  `<`, `>` but not quotes, since quotes aren't special in the context
+  it was originally built for. The CodeQL sweep above fixed every
+  attribute-context call site it actually flagged, but that was
+  targeted, not an exhaustive codebase-wide audit of every
+  `escapeHtml()` call. Worth a real, dedicated pass someday rather
+  than assuming the targeted fixes closed every instance of this
+  class of gap.
 
 ## Where the real detail lives
 
