@@ -95,7 +95,7 @@
         var active = path === d.href ? ' is-active' : '';
         var current = path === d.href ? ' aria-current="page"' : '';
         return '<a href="' + d.href + '" class="th-sidebar-link' + active + '"' + current + '>' +
-          '<svg class="th-icon" aria-hidden="true"><use href="#icon-' + d.icon + '" xlink:href="#icon-' + d.icon + '"></use></svg>' +
+          '<span class="th-hex-icon"><svg class="th-icon" aria-hidden="true"><use href="#icon-' + d.icon + '" xlink:href="#icon-' + d.icon + '"></use></svg></span>' +
           '<span>' + d.label + '</span></a>';
       }).join('') +
       '</div>';
@@ -116,7 +116,7 @@
       var active = path === d.href ? ' is-active' : '';
       var current = path === d.href ? ' aria-current="page"' : '';
       return '<a href="' + d.href + '" class="' + active.trim() + '"' + current + '>' +
-        '<span class="th-bn-icon" aria-hidden="true"><svg class="th-icon" aria-hidden="true"><use href="#icon-' + d.icon + '" xlink:href="#icon-' + d.icon + '"></use></svg></span>' +
+        '<span class="th-bn-icon th-hex-icon" aria-hidden="true"><svg class="th-icon" aria-hidden="true"><use href="#icon-' + d.icon + '" xlink:href="#icon-' + d.icon + '"></use></svg></span>' +
         '<span>' + d.label + '</span></a>';
     }).join('');
     document.body.appendChild(nav);

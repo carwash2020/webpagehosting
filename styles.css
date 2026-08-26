@@ -37,6 +37,7 @@
     --blue-dark:#1f5f9e;
     --blue-light:#7ec4ff;
     --radius:10px;
+    --hex: polygon(25% 6%, 75% 6%, 97% 50%, 75% 94%, 25% 94%, 3% 50%);
     --maxw:1180px;
     /* #2: a deliberate 3-tier shadow depth scale (resting / hover /
        active) instead of every elevated surface picking its own ad-hoc
