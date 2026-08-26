@@ -506,6 +506,57 @@ source inspection for anything async/modal-driven, since those aren't
 practical to simulate end-to-end), and the real stale-device
 resurrection scenario via a direct `applySyncData()` call.
 
+## Graveyard (added 2026-08-26, requested directly: "so items aren't gone forever in the event of a mistake")
+
+A deliberately separate mechanism from the tombstones above. Worth
+being clear about the distinction, since it's easy to conflate them:
+tombstones only ever record `{ id, deletedAt }` -- just enough to stop
+a stale device's union merge from resurrecting something. They were
+never meant to enable recovery and don't carry the record's actual
+data. The graveyard does: a full snapshot of the deleted record
+itself, in a separate synced key (`th_graveyard`), so a genuine
+mistake can actually be undone rather than merely prevented from
+silently reappearing.
+
+**Where it lives:** Dev Tools → Session & Sync tab → "Graveyard"
+panel. Lists every deleted job, client, expense, contact, and so on
+(newest first), each with a Restore button and a permanent-delete
+button. Capped at the most recent 200 entries -- `mergeGraveyard()` in
+`sync.js` re-applies this cap after merging two devices' copies
+together, for the identical reason `mergeClientErrorLog()` already
+needed to (a plain union of two independently-capped 200-entry lists
+could otherwise reach 400).
+
+**How restore actually works, and why the tombstone removal matters:**
+`restoreFromGraveyard()` puts the record back into its live array
+*and* removes the matching tombstone. Skipping that second step would
+make the restored record disappear again on the very next sync pull --
+the tombstone would still say "this was deliberately deleted," and
+`applySyncData()` would filter it right back out. A small,
+config-driven map (`GRAVEYARD_TYPE_CONFIG` in `dev-tools.html`) covers
+the storage key, tombstone key, and a display label for every flat,
+id-keyed record type. Appliance Wiki issues are the one exception --
+they're nested inside a unit rather than living in their own array, so
+restoring one means finding its parent unit and pushing the issue back
+into that unit's `issues` array. If the parent unit was *also*
+deleted, restore refuses with a clear message rather than silently
+failing or losing the graveyard entry -- restore the unit first, then
+the issue.
+
+**A real, honest limit, not glossed over:** a deleted expense's
+attached receipt photo is not recoverable through this. The actual
+file removal from Supabase storage happens immediately as part of
+`deleteExpense()`, before the graveyard would even have a chance to
+help -- restoring the expense brings back its own fields (amount,
+description, date, etc.) but not the receipt image itself, since that
+file is genuinely, separately gone by the time restore could run.
+
+`tests/graveyard.test.js` covers the data-layer basics, the merge/cap
+behavior, that every delete function actually calls
+`thAddToGraveyard()`, the full delete-then-restore-then-survives-a-
+sync-pull flow, the nested Appliance Wiki issue case (including the
+parent-unit-also-deleted refusal), and permanent deletion.
+
 ## Daily reminder check / pg_cron (Vault-migrated 2026-08-15)
 
 The `Send-Push` Edge Function's `reminder-check` payload type is called

@@ -281,6 +281,39 @@ function thAddPrIssueTombstone(unitId, issueId) {
   thWrite(TH_PR_ISSUE_TOMBSTONES_KEY, list);
 }
 
+// Graveyard (2026-08-26), requested directly: "so items aren't gone
+// forever in the event of a mistake." A deliberately separate
+// mechanism from the tombstones above -- tombstones only ever record
+// {id, deletedAt}, just enough to stop a stale device's union merge
+// from resurrecting something. They were never meant to enable
+// recovery and don't carry the record's actual data. The graveyard
+// does: a full snapshot of the record itself, so a genuine mistake
+// can actually be undone, not just prevented from silently reappearing.
+//
+// Capped at 200 entries (oldest dropped first) for the same reason
+// th_client_errors caps itself -- bounds payload growth over time
+// without needing to think about it. graveyardId is separate from the
+// record's own id, since two different record types could otherwise
+// collide on the same id value.
+const TH_GRAVEYARD_KEY = 'th_graveyard';
+const TH_GRAVEYARD_MAX = 200;
+function thLoadGraveyard() { return thRead(TH_GRAVEYARD_KEY, []); }
+function thAddToGraveyard(recordType, record) {
+  const list = thLoadGraveyard();
+  list.push({
+    graveyardId: 'gy_' + Date.now().toString(36) + '_' + Math.random().toString(36).slice(2, 8),
+    recordType,
+    record,
+    deletedAt: new Date().toISOString(),
+  });
+  while (list.length > TH_GRAVEYARD_MAX) list.shift();
+  thWrite(TH_GRAVEYARD_KEY, list);
+}
+function thRemoveFromGraveyard(graveyardId) {
+  const list = thLoadGraveyard().filter(g => g.graveyardId !== graveyardId);
+  thWrite(TH_GRAVEYARD_KEY, list);
+}
+
 // "Flag this page" queue (2026-08-21), requested directly: a quick way
 // to flag something to come back to later, for a moment when there
 // isn't time to write a full message. Each entry: { id, page, note,
@@ -325,7 +358,10 @@ function thDeleteClient(id) {
   const target = existing.find(c => c.id === id);
   const list = existing.filter(c => c.id !== id);
   thSaveClients(list);
-  if (target) thAddClientTombstone(id, target.name);
+  if (target) {
+    thAddClientTombstone(id, target.name);
+    if (typeof thAddToGraveyard === 'function') thAddToGraveyard('client', target);
+  }
   return list;
 }
 

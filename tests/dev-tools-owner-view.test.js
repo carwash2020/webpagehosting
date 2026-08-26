@@ -41,10 +41,10 @@ function panelFor(window, headingText) {
   return heading ? heading.closest('.dev-panel') : null;
 }
 
-test('exactly 26 panels are marked dev-owner-hidden, matching the full, deliberate list of code/technical/error-diagnostic panels (23 previous + the new Reports tab: Booking funnel health, Lead response time, Uptime trend)', () => {
+test('exactly 27 panels are marked dev-owner-hidden, matching the full, deliberate list of code/technical/error-diagnostic panels (26 previous + the new Graveyard panel)', () => {
   const src = fs.readFileSync(DEV_TOOLS_PATH, 'utf8');
   const count = (src.match(/class="dev-panel dev-owner-hidden/g) || []).length;
-  assert.equal(count, 26);
+  assert.equal(count, 27);
 });
 
 test('an Owner account (canManageRoles false) has every one of the 23 developer-only panels hidden', () => {

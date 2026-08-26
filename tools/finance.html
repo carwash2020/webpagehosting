@@ -37,8 +37,8 @@
 </script>
 <link rel="stylesheet" href="/styles.css?v=202608202000">
 <link rel="stylesheet" href="/tools/styles-tools.css?v=7888067c8f">
-<script src="/tools/sync.js?v=a6ae33ca8d" defer></script>
-<script src="/tools/data-layer.js?v=e2d2a19f1f" defer></script>
+<script src="/tools/sync.js?v=228db11afb" defer></script>
+<script src="/tools/data-layer.js?v=469402246e" defer></script>
 <script src="/tools/tools-effects.js?v=fff945a03c" defer></script>
 <script src="/tools/tools-dialogs.js?v=b5defd210d" defer></script>
 <script src="/tools/tools-media-sharing.js?v=fe0110f6d1" defer></script>
@@ -472,8 +472,10 @@
   }
 
   function deletePriceReference(id) {
+    const target = loadPriceReferences().find(r => r.id === id);
     savePriceReferences(loadPriceReferences().filter(r => r.id !== id));
     if (typeof thAddPriceRefTombstone === 'function') thAddPriceRefTombstone(id);
+    if (target && typeof thAddToGraveyard === 'function') thAddToGraveyard('priceReference', target);
     renderPriceReferences();
   }
 
@@ -604,6 +606,7 @@
       pendingDeleteIncomeIds.delete(id);
       saveIncomeEntries(loadIncomeEntries().filter(e => e.id !== id));
       if (typeof thAddIncomeTombstone === 'function') thAddIncomeTombstone(id);
+      if (entry && typeof thAddToGraveyard === 'function') thAddToGraveyard('income', entry);
       renderIncomeEntries();
     }, 6000);
 
@@ -620,7 +623,10 @@
     const confirmed = await showConfirm('Delete every logged income entry, including ones from invoices? This cannot be undone and does not touch the invoices themselves.', { danger: true, confirmText: 'Delete All' });
     if (confirmed) {
       if (typeof thAddIncomeTombstone === 'function') {
-        loadIncomeEntries().forEach(e => thAddIncomeTombstone(e.id));
+        loadIncomeEntries().forEach(e => {
+          thAddIncomeTombstone(e.id);
+          if (typeof thAddToGraveyard === 'function') thAddToGraveyard('income', e);
+        });
       }
       saveIncomeEntries([]);
       renderIncomeEntries();
@@ -940,6 +946,11 @@
       pendingDeleteExpenseIds.delete(id);
       const entries = loadExpenses();
       const entry = entries.find(e => e.id === id);
+      // Snapshotted before the receipt cleanup below, which is
+      // already irreversible -- restoring this from the graveyard
+      // later brings back the expense's own fields, but not the
+      // actual receipt image, since that file is really gone by now.
+      if (entry && typeof thAddToGraveyard === 'function') thAddToGraveyard('expense', entry);
       if (entry && entry.receiptPath && typeof deleteReceipt === 'function') {
         await deleteReceipt(entry.receiptPath); // best-effort cleanup of the actual file too
       }
@@ -961,7 +972,10 @@
     const confirmed = await showConfirm('Delete every logged entry? This cannot be undone.', { danger: true, confirmText: 'Delete All' });
     if (confirmed) {
       if (typeof thAddExpenseTombstone === 'function') {
-        loadExpenses().forEach(e => thAddExpenseTombstone(e.id));
+        loadExpenses().forEach(e => {
+          thAddExpenseTombstone(e.id);
+          if (typeof thAddToGraveyard === 'function') thAddToGraveyard('expense', e);
+        });
       }
       saveExpenses([]);
       renderExpenses();

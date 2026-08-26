@@ -42,7 +42,7 @@
 <script src="/tools/tools-media-sharing.js?v=fe0110f6d1" defer></script>
 <script src="/tools/tools-nav-pwa.js?v=0f204a44e9" defer></script>
 <script src="/tools/tools-tour.js?v=886e40d6c9" defer></script>
-<script src="/tools/sync.js?v=a6ae33ca8d" defer></script>
+<script src="/tools/sync.js?v=228db11afb" defer></script>
 <style>
   .pr-search-filter-row { display: flex; gap: 8px; margin-bottom: 16px; }
   .pr-search-filter-row .pr-search-field { flex: 1 1 auto; min-width: 0; }
@@ -2541,8 +2541,10 @@
   function deletePrUnitType(unitId) {
     showConfirm('Delete this appliance type and every issue logged under it? This cannot be undone.', { danger: true, confirmText: 'Delete' }).then(confirmed => {
       if (!confirmed) return;
+      const unitToDelete = loadPrUnits().find(u => u.id === unitId);
       savePrUnits(loadPrUnits().filter(u => u.id !== unitId));
       if (typeof thAddPrUnitTombstone === 'function') thAddPrUnitTombstone(unitId);
+      if (unitToDelete && typeof thAddToGraveyard === 'function') thAddToGraveyard('prUnit', unitToDelete);
       renderBrandDetail();
     });
   }
@@ -2583,9 +2585,11 @@
       animateRowExit(row, () => {
         const list = loadPrUnits();
         const unit = list.find(u => u.id === unitId);
+        const issueToDelete = unit ? unit.issues.find(i => i.id === issueId) : null;
         if (unit) unit.issues = unit.issues.filter(i => i.id !== issueId);
         savePrUnits(list);
         if (typeof thAddPrIssueTombstone === 'function') thAddPrIssueTombstone(unitId, issueId);
+        if (issueToDelete && typeof thAddToGraveyard === 'function') thAddToGraveyard('prIssue', { unitId, issue: issueToDelete });
         renderBrandDetail();
       });
     });
