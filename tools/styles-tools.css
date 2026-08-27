@@ -886,6 +886,13 @@ html {
 }
 body.th-tool-page {
   background: transparent;
+  /* Item #63: stops scroll chaining to the browser chrome (its own
+     pull-to-refresh and address-bar-reveal behavior on mobile Chrome),
+     which would otherwise fight the custom pull-to-refresh gesture
+     built for this page. The page's own content can still bounce
+     naturally at its edges -- only the escape to browser-level
+     gestures is contained. */
+  overscroll-behavior-y: contain;
 }
 /* Item #1: barely-there grain texture -- an inline SVG feTurbulence
    noise tile, alpha reduced to ~3% via feComponentTransfer so it reads

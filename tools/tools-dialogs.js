@@ -7,6 +7,28 @@
 // the toast container setup, and the shared long-press gesture utility.
 
 // ---------------------------------------------------------------------------
+// Haptic feedback (expanded 2026-08-26, requested directly as part of a
+// broader "make it feel like an app" pass). Previously only fired on
+// long-press (see the gesture utility further down). Deliberately kept
+// to meaningful moments -- a real confirmation, a real error, a real
+// preference change -- not wired to every button tap generally, which
+// on a real device feels like noise rather than polish; that's not how
+// native apps use haptics either. no-ops silently everywhere unsupported
+// (notably iOS Safari, which has never implemented the Vibration API at
+// all -- there's no feature-detection workaround for that, only Apple
+// shipping it).
+function haptic(type) {
+  if (!navigator.vibrate) return;
+  switch (type) {
+    case 'light': navigator.vibrate(12); break;
+    case 'success': navigator.vibrate([10, 40, 10]); break;
+    case 'warning': navigator.vibrate([15, 50, 15]); break;
+    case 'error': navigator.vibrate([20, 60, 20, 60, 20]); break;
+    default: navigator.vibrate(12);
+  }
+}
+
+// ---------------------------------------------------------------------------
 // Custom confirm/alert dialogs -- replace native browser confirm()/alert()
 // with something styled to match the app instead of the browser's plain
 // system dialog look. Both return a Promise, so call sites use `await`.
@@ -204,7 +226,7 @@ function showConfirm(message, options) {
     const confirmBtn = document.createElement('button');
     confirmBtn.className = 'dialog-btn ' + (options.danger ? 'dialog-btn-danger' : 'dialog-btn-primary');
     confirmBtn.textContent = options.confirmText || 'OK';
-    confirmBtn.onclick = () => { overlay.classList.remove('is-open'); _restoreFocusAfterDialog(); resolve(true); };
+    confirmBtn.onclick = () => { haptic(options.danger ? 'warning' : 'success'); overlay.classList.remove('is-open'); _restoreFocusAfterDialog(); resolve(true); };
 
     buttons.appendChild(cancelBtn);
     buttons.appendChild(confirmBtn);
@@ -321,7 +343,7 @@ function attachLongPress(containerEl, itemSelector, onLongPress) {
     timer = setTimeout(() => {
       if (!activeEl) return;
       activeEl.classList.remove('is-long-pressing');
-      if (navigator.vibrate) navigator.vibrate(12); // no-ops silently where unsupported (notably iOS Safari)
+      haptic('light'); // no-ops silently where unsupported (notably iOS Safari)
       const el = activeEl;
       activeEl = null;
       onLongPress(el);

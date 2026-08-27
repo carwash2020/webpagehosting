@@ -36,10 +36,10 @@
   })();
 </script>
 <link rel="stylesheet" href="/styles.css?v=202608202000">
-<link rel="stylesheet" href="/tools/styles-tools.css?v=b04715c0d7">
+<link rel="stylesheet" href="/tools/styles-tools.css?v=b55afaa1c0">
 <script src="/tools/tools-effects.js?v=fff945a03c" defer></script>
-<script src="/tools/tools-dialogs.js?v=36c369b5d2" defer></script>
-<script src="/tools/tools-media-sharing.js?v=fe0110f6d1" defer></script>
+<script src="/tools/tools-dialogs.js?v=e1dfaa11a1" defer></script>
+<script src="/tools/tools-media-sharing.js?v=4e2769b10d" defer></script>
 <script src="/tools/tools-nav-pwa.js?v=e5d0172349" defer></script>
 <script src="/tools/tools-tour.js?v=886e40d6c9" defer></script>
 <script src="/tools/sync.js?v=e46eb5ff7b" defer></script>
@@ -242,6 +242,7 @@
     }
   }
   function toggleToolsThemePreference() {
+    if (typeof haptic === 'function') haptic('light');
     const next = loadToolsThemePreference() === 'light' ? 'dark' : 'light';
     try { localStorage.setItem(TOOLS_THEME_KEY, next); } catch (e) { /* ignore */ }
     applyToolsThemePreference();

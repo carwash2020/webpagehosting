@@ -161,6 +161,7 @@ function showToast(message, options) {
   options = options || {};
   const duration = options.duration || 2600;
   const container = ensureToastContainerExists();
+  if (typeof haptic === 'function') haptic(options.type === 'error' ? 'error' : 'success');
 
   const toast = document.createElement('div');
   toast.className = 'th-toast' + (options.type === 'error' ? ' is-error' : '');
