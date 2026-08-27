@@ -36,7 +36,7 @@
   })();
 </script>
 <link rel="stylesheet" href="/styles.css?v=202608202000">
-<link rel="stylesheet" href="/tools/styles-tools.css?v=d1dccfb839">
+<link rel="stylesheet" href="/tools/styles-tools.css?v=b04715c0d7">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.112.3/dist/umd/supabase.js" integrity="sha384-qafw21c/iciq0VXsi9FzkfoQv5I/V0iqE4lSNcKXPnW9/UTJLnv5CcN4FHxVLnKg" crossorigin="anonymous" defer></script>
 <script src="/tools/sync.js?v=e46eb5ff7b" defer></script>
 <script src="/tools/push-notifications.js?v=b55dfa1172" defer></script>
@@ -304,9 +304,17 @@
        16px border-radius starts curving inward -- the circular badge
        visually clipped into that curve instead of resting on a flat
        edge. Pulled in to 7px, clear of the curve. */
-    position: absolute; top: 7px; right: 7px; width: 20px; height: 20px; border-radius: 50%;
+    /* 2026-08-26: enlarged from 20x20 to 26x26 -- a real touch-target-
+       size gap (well under the ~44x44 most guidelines recommend),
+       found investigating the same "buttons could be larger" feedback
+       already applied to the bottom nav. This one's tapped far more
+       often, since it's on every tile of the daily-use dashboard.
+       Verified via Playwright at both the realistic real tile width
+       (~97px, confirmed against the actual live page) and the CSS
+       auto-fit worst case (84px) before settling on this size. */
+    position: absolute; top: 6px; right: 6px; width: 26px; height: 26px; border-radius: 50%;
     border: 1px solid var(--border); background: var(--bg-panel-2); color: var(--text-dim);
-    font-size: 11px; cursor: pointer; display: flex; align-items: center; justify-content: center; padding: 0;
+    font-size: 13px; cursor: pointer; display: flex; align-items: center; justify-content: center; padding: 0;
     transition: border-color .15s ease, color .15s ease;
   }
   .tool-tile-info:hover { border-color: var(--orange-light); color: var(--orange-light); }

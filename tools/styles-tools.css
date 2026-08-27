@@ -334,8 +334,8 @@ body.th-has-bottomnav .onboarding-card { bottom: calc(76px + env(safe-area-inset
    there without needing to know the toggle button's own width). */
 .icon-search-clear {
   display: none; position: absolute; right: 8px; top: 50%; transform: translateY(-50%);
-  width: 20px; height: 20px; border-radius: 50%; border: none; background: none;
-  color: var(--text-dim); font-size: 15px; line-height: 1; cursor: pointer; padding: 0;
+  width: 24px; height: 24px; border-radius: 50%; border: none; background: none;
+  color: var(--text-dim); font-size: 17px; line-height: 1; cursor: pointer; padding: 0;
   align-items: center; justify-content: center;
 }
 .icon-search-clear:hover { color: var(--orange-light); }
