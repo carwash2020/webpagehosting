@@ -62,7 +62,14 @@ test('runway-dashboard.html\'s light override defines every neutral variable its
 test('every CSS variable styles-tools.css actually uses is defined somewhere in styles.css (both the dark default and the light override) -- confirms the shared 21-page mechanism has no gaps', () => {
   const rootVars = new Set([...fs.readFileSync(STYLES_CSS_PATH, 'utf8').matchAll(/--([a-zA-Z0-9-]+):/g)].map(m => m[1]));
   const usedInTools = new Set([...fs.readFileSync(STYLES_TOOLS_CSS_PATH, 'utf8').matchAll(/var\(--([a-zA-Z0-9-]+)/g)].map(m => m[1]));
-  const missing = [...usedInTools].filter(v => !rootVars.has(v));
+  // Not a real theme token -- set at runtime per-element via
+  // element.style.setProperty('--pull-progress', ...) on the pull-to-
+  // refresh indicator specifically, with its own inline var(...,0)
+  // fallback already covering the unset case. A :root default would
+  // look like a real theme color/spacing token among the rest of this
+  // list, which it isn't.
+  const RUNTIME_ONLY_VARS = new Set(['pull-progress']);
+  const missing = [...usedInTools].filter(v => !rootVars.has(v) && !RUNTIME_ONLY_VARS.has(v));
   assert.deepEqual(missing, [], 'styles-tools.css references variables not defined anywhere in styles.css: ' + missing.join(', '));
 });
 

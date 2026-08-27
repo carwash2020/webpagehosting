@@ -36,10 +36,10 @@
   })();
 </script>
 <link rel="stylesheet" href="/styles.css?v=202608202000">
-<link rel="stylesheet" href="/tools/styles-tools.css?v=92a9f46990">
+<link rel="stylesheet" href="/tools/styles-tools.css?v=3c107e3e1a">
 <script src="/tools/data-layer.js?v=469402246e" defer></script>
 <script src="/tools/dev-tools-shared.js?v=56f990a832" defer></script>
-<script src="/tools/tools-effects.js?v=fff945a03c" defer></script>
+<script src="/tools/tools-effects.js?v=3e7b6cb94f" defer></script>
 <script src="/tools/tools-dialogs.js?v=e1dfaa11a1" defer></script>
 <script src="/tools/tools-media-sharing.js?v=4e2769b10d" defer></script>
 <script src="/tools/tools-nav-pwa.js?v=e5d0172349" defer></script>
@@ -801,6 +801,7 @@
     } else {
       setTimeout(proceed, 300);
     }
+    if (typeof setupPullToRefresh === 'function') setupPullToRefresh(proceed);
   });
 </script>
 

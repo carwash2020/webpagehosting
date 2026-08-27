@@ -1663,3 +1663,22 @@ body.th-has-bottomnav .th-install-banner { bottom: calc(76px + env(safe-area-ins
 }
 .th-install-dismiss { background: none; border: none; color: var(--text-dim); font-size: 18px; line-height: 1; cursor: pointer; padding: 4px; }
 @media (prefers-reduced-motion: reduce) { .th-install-banner { transition: none; } }
+
+/* Pull-to-refresh indicator (2026-08-27) -- moved here from workspace.html's
+   own inline style once setupPullToRefresh() (tools-effects.js) became a
+   shared function every synced tool page uses, not just workspace.html.
+   No transition on --pull-progress itself while actively dragging (set
+   inline by JS) so it tracks the finger exactly; a transition applies
+   only for the release/snap-back. */
+.pull-refresh-indicator {
+  position: fixed; top: 10px; left: 50%; margin-left: -18px; z-index: 200;
+  width: 36px; height: 36px; border-radius: 50%;
+  background: var(--bg-panel-2); border: 1px solid var(--border); color: var(--orange-light);
+  display: flex; align-items: center; justify-content: center; font-size: 18px;
+  opacity: 0; transform: scale(0) rotate(calc(var(--pull-progress, 0) * 180deg));
+  pointer-events: none;
+}
+.pull-refresh-indicator.is-visible { opacity: 1; transform: scale(var(--pull-progress, 0)) rotate(calc(var(--pull-progress, 0) * 180deg)); }
+.pull-refresh-indicator.is-refreshing { opacity: 1; transform: scale(1); animation: pullRefreshSpin 0.7s linear infinite; }
+@keyframes pullRefreshSpin { from { transform: scale(1) rotate(0deg); } to { transform: scale(1) rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) { .pull-refresh-indicator.is-refreshing { animation: none; } }

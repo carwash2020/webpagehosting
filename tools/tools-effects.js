@@ -333,3 +333,97 @@ document.addEventListener('keydown', (e) => {
   closeHelpModal();
 });
 
+// Shared pull-to-refresh (2026-08-27), extracted from workspace.html's
+// original (the first page to have this, tested there with real,
+// simulated touch event sequences via Playwright) so every synced tool
+// page can get the same gesture with its own render callback, instead
+// of duplicating this touch-handling logic per page. Self-injects its
+// own indicator element if the page doesn't already have one, matching
+// how tools-nav-pwa.js already injects the bottom nav rather than
+// requiring markup added to every page by hand.
+//
+// refreshFn is called after a successful pull-past-threshold release --
+// pass whatever function(s) a given page already uses to reload and
+// re-render its own synced data (e.g. () => { renderJobs(); renderContacts(); }).
+// manualRefreshSync() itself is reused unchanged; it already no-ops
+// safely if a page has no #refreshSyncLink button to update.
+function setupPullToRefresh(refreshFn) {
+  if (typeof refreshFn !== 'function') return;
+  let indicator = document.getElementById('pullToRefreshIndicator');
+  if (!indicator) {
+    indicator = document.createElement('div');
+    indicator.id = 'pullToRefreshIndicator';
+    indicator.className = 'pull-refresh-indicator';
+    indicator.setAttribute('aria-hidden', 'true');
+    indicator.innerHTML = '&#8635;';
+    document.body.insertBefore(indicator, document.body.firstChild);
+  }
+  const THRESHOLD = 70; // px pulled before release actually triggers a refresh
+  const MAX_PULL = 100; // caps visual growth even on a much longer pull
+  let startY = 0, pulling = false, thresholdCrossed = false, refreshing = false;
+
+  function anyOverlayOpen() {
+    // Both real overlay-visibility conventions actually used across
+    // this app: .is-open for the shared dialog system
+    // (ensureDialogModalExists' overlay.className = 'help-modal-overlay'),
+    // .is-shown specifically for the photo lightbox.
+    return !!document.querySelector('.help-modal-overlay.is-open, .photo-lightbox-overlay.is-shown');
+  }
+
+  document.body.addEventListener('touchstart', (e) => {
+    if (refreshing || e.touches.length !== 1) return;
+    if (window.scrollY > 0 || anyOverlayOpen()) { pulling = false; return; }
+    startY = e.touches[0].clientY;
+    pulling = true;
+    thresholdCrossed = false;
+    indicator.style.transition = 'none';
+  }, { passive: true });
+
+  document.body.addEventListener('touchmove', (e) => {
+    if (!pulling || refreshing || !e.touches.length) return;
+    const dy = e.touches[0].clientY - startY;
+    if (dy <= 0) {
+      // Not an actual downward pull (or scrolled back up past the
+      // start point) -- reset visually and stop tracking for the
+      // rest of this touch, the same way a native pull-to-refresh
+      // cancels if you don't keep pulling down.
+      indicator.classList.remove('is-visible');
+      indicator.style.setProperty('--pull-progress', '0');
+      pulling = false;
+      return;
+    }
+    const progress = Math.min(Math.min(dy, MAX_PULL) / THRESHOLD, 1);
+    indicator.classList.add('is-visible');
+    indicator.style.setProperty('--pull-progress', String(progress));
+    if (progress >= 1 && !thresholdCrossed) {
+      thresholdCrossed = true;
+      if (typeof haptic === 'function') haptic('light'); // "you've pulled enough, release to refresh"
+    } else if (progress < 1 && thresholdCrossed) {
+      thresholdCrossed = false;
+    }
+  }, { passive: true });
+
+  document.body.addEventListener('touchend', async () => {
+    if (!pulling) return;
+    pulling = false;
+    indicator.style.transition = '';
+    if (thresholdCrossed) {
+      refreshing = true;
+      indicator.classList.remove('is-visible');
+      indicator.classList.add('is-refreshing');
+      if (typeof manualRefreshSync === 'function') {
+        await manualRefreshSync(refreshFn);
+      } else {
+        await refreshFn();
+      }
+      if (typeof haptic === 'function') haptic('success');
+      indicator.classList.remove('is-refreshing');
+      indicator.style.setProperty('--pull-progress', '0');
+      refreshing = false;
+    } else {
+      indicator.classList.remove('is-visible');
+      indicator.style.setProperty('--pull-progress', '0');
+    }
+  }, { passive: true });
+}
+

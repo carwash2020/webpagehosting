@@ -52,12 +52,12 @@
   })();
 </script>
 <link rel="stylesheet" href="/styles.css?v=202608202000">
-<link rel="stylesheet" href="/tools/styles-tools.css?v=92a9f46990">
+<link rel="stylesheet" href="/tools/styles-tools.css?v=3c107e3e1a">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.112.3/dist/umd/supabase.js" integrity="sha384-qafw21c/iciq0VXsi9FzkfoQv5I/V0iqE4lSNcKXPnW9/UTJLnv5CcN4FHxVLnKg" crossorigin="anonymous" defer></script>
 <script src="/tools/sync.js?v=e46eb5ff7b" defer></script>
 <script src="/tools/push-notifications.js?v=b55dfa1172" defer></script>
 <script src="/tools/data-layer.js?v=469402246e" defer></script>
-<script src="/tools/tools-effects.js?v=fff945a03c" defer></script>
+<script src="/tools/tools-effects.js?v=3e7b6cb94f" defer></script>
 <script src="/tools/tools-dialogs.js?v=e1dfaa11a1" defer></script>
 <script src="/tools/tools-media-sharing.js?v=4e2769b10d" defer></script>
 <script src="/tools/tools-nav-pwa.js?v=e5d0172349" defer></script>
@@ -81,18 +81,6 @@
      same way native pull-to-refresh does. No transition while
      actively dragging (set inline by JS) so it tracks the finger
      exactly; a transition applies only for the release/snap-back. */
-  .pull-refresh-indicator {
-    position: fixed; top: 10px; left: 50%; margin-left: -18px; z-index: 200;
-    width: 36px; height: 36px; border-radius: 50%;
-    background: var(--bg-panel-2); border: 1px solid var(--border); color: var(--orange-light);
-    display: flex; align-items: center; justify-content: center; font-size: 18px;
-    opacity: 0; transform: scale(0) rotate(calc(var(--pull-progress, 0) * 180deg));
-    pointer-events: none;
-  }
-  .pull-refresh-indicator.is-visible { opacity: 1; transform: scale(var(--pull-progress, 0)) rotate(calc(var(--pull-progress, 0) * 180deg)); }
-  .pull-refresh-indicator.is-refreshing { opacity: 1; transform: scale(1); animation: pullRefreshSpin 0.7s linear infinite; }
-  @keyframes pullRefreshSpin { from { transform: scale(1) rotate(0deg); } to { transform: scale(1) rotate(360deg); } }
-  @media (prefers-reduced-motion: reduce) { .pull-refresh-indicator.is-refreshing { animation: none; } }
   body .hub-header { align-items: stretch; }
   .hub-header-main-row { display: flex; align-items: center; justify-content: space-between; gap: 14px; }
   /* Live sync indicator moved (2026-08-21), requested directly: on
@@ -128,6 +116,13 @@
   .hub-sub { color: var(--text-dim); display: flex; flex-direction: row; flex-wrap: wrap; align-items: center; gap: 4px 8px; }
   #refreshSyncLink { margin-left: 0; }
   @media (min-width: 1024px) { .hub-sub { display: block; } }
+  /* Pull-to-refresh (2026-08-27) now covers the touch case this button
+     existed for -- hide it specifically where touch is the primary
+     input, keep it for desktop/mouse-primary devices, which have no
+     pull gesture at all. hover:none + pointer:coarse (not just a
+     width check) since a touchscreen laptop still has a real mouse
+     and should keep the button. */
+  @media (hover: none) and (pointer: coarse) { #refreshSyncLink { display: none; } }
 
   .jump-nav {
     position: sticky; top: 0; z-index: 50; display: flex; gap: 6px; overflow-x: auto;
@@ -369,7 +364,6 @@
 <body>
 <a href="#section-snapshot" class="skip-link">Skip to main content</a>
 
-<div id="pullToRefreshIndicator" class="pull-refresh-indicator" aria-hidden="true">&#8635;</div>
 
 <div id="welcomeOverlay" class="welcome-overlay" style="display:none;">
   <img src="/images/logo-signature-orange.webp?v=202608142300" alt="">
@@ -2393,83 +2387,6 @@
     el.textContent = 'Updated ' + relativeTimeFromNow(last.time);
   }
 
-  // Pull-to-refresh (2026-08-26), requested directly as part of a
-  // broader "make it feel like an app" pass. Reuses the exact same
-  // manualRefreshSync(renderDashboard) call the existing refresh
-  // button already makes, rather than duplicating that logic. Uses
-  // { passive: true } listeners throughout, matching the existing
-  // swipe-back-to-workspace gesture's own approach in tools-effects.js
-  // -- doesn't fight the browser's native scroll at all, just tracks
-  // finger position. overscroll-behavior-y: contain (added on
-  // body.th-tool-page in styles-tools.css) stops the browser's own
-  // competing pull-to-refresh from firing at the same time.
-  function setupPullToRefresh() {
-    const indicator = document.getElementById('pullToRefreshIndicator');
-    if (!indicator) return;
-    const THRESHOLD = 70; // px pulled before release actually triggers a refresh
-    const MAX_PULL = 100; // caps visual growth even on a much longer pull
-    let startY = 0, pulling = false, thresholdCrossed = false, refreshing = false;
-
-    function anyOverlayOpen() {
-      // Both real overlay-visibility conventions actually used across
-      // this app: .is-open for the shared dialog system
-      // (ensureDialogModalExists' overlay.className = 'help-modal-overlay'),
-      // .is-shown specifically for the photo lightbox.
-      return !!document.querySelector('.help-modal-overlay.is-open, .photo-lightbox-overlay.is-shown');
-    }
-
-    document.body.addEventListener('touchstart', (e) => {
-      if (refreshing || e.touches.length !== 1) return;
-      if (window.scrollY > 0 || anyOverlayOpen()) { pulling = false; return; }
-      startY = e.touches[0].clientY;
-      pulling = true;
-      thresholdCrossed = false;
-      indicator.style.transition = 'none';
-    }, { passive: true });
-
-    document.body.addEventListener('touchmove', (e) => {
-      if (!pulling || refreshing || !e.touches.length) return;
-      const dy = e.touches[0].clientY - startY;
-      if (dy <= 0) {
-        // Not an actual downward pull (or scrolled back up past the
-        // start point) -- reset visually and stop tracking for the
-        // rest of this touch, the same way a native pull-to-refresh
-        // cancels if you don't keep pulling down.
-        indicator.classList.remove('is-visible');
-        indicator.style.setProperty('--pull-progress', '0');
-        pulling = false;
-        return;
-      }
-      const progress = Math.min(Math.min(dy, MAX_PULL) / THRESHOLD, 1);
-      indicator.classList.add('is-visible');
-      indicator.style.setProperty('--pull-progress', String(progress));
-      if (progress >= 1 && !thresholdCrossed) {
-        thresholdCrossed = true;
-        if (typeof haptic === 'function') haptic('light'); // "you've pulled enough, release to refresh"
-      } else if (progress < 1 && thresholdCrossed) {
-        thresholdCrossed = false;
-      }
-    }, { passive: true });
-
-    document.body.addEventListener('touchend', async () => {
-      if (!pulling) return;
-      pulling = false;
-      indicator.style.transition = '';
-      if (thresholdCrossed) {
-        refreshing = true;
-        indicator.classList.remove('is-visible');
-        indicator.classList.add('is-refreshing');
-        await manualRefreshSync(renderDashboard);
-        if (typeof haptic === 'function') haptic('success');
-        indicator.classList.remove('is-refreshing');
-        indicator.style.setProperty('--pull-progress', '0');
-        refreshing = false;
-      } else {
-        indicator.classList.remove('is-visible');
-        indicator.style.setProperty('--pull-progress', '0');
-      }
-    }, { passive: true });
-  }
 
   document.addEventListener('DOMContentLoaded', function () {
     try {
@@ -2488,7 +2405,7 @@
     });
     wireSearchClear('globalSearch', renderGlobalSearch);
     wireSearchClear('invoiceSearch', renderInvoicesList);
-    if (typeof setupPullToRefresh === 'function') setupPullToRefresh();
+    if (typeof setupPullToRefresh === 'function') setupPullToRefresh(renderDashboard);
     window.addEventListener('th-sync-status', renderSnapshotLastUpdated);
     // Keeps "3m ago" counting up while the page sits open, without a
     // sync event to trigger a re-render.

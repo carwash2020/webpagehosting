@@ -36,10 +36,10 @@
   })();
 </script>
 <link rel="stylesheet" href="/styles.css?v=202608202000">
-<link rel="stylesheet" href="/tools/styles-tools.css?v=92a9f46990">
+<link rel="stylesheet" href="/tools/styles-tools.css?v=3c107e3e1a">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.112.3/dist/umd/supabase.js" integrity="sha384-qafw21c/iciq0VXsi9FzkfoQv5I/V0iqE4lSNcKXPnW9/UTJLnv5CcN4FHxVLnKg" crossorigin="anonymous" defer></script>
 <script src="/tools/sync.js?v=e46eb5ff7b" defer></script>
-<script src="/tools/tools-effects.js?v=fff945a03c" defer></script>
+<script src="/tools/tools-effects.js?v=3e7b6cb94f" defer></script>
 <script src="/tools/tools-dialogs.js?v=e1dfaa11a1" defer></script>
 <script src="/tools/tools-media-sharing.js?v=4e2769b10d" defer></script>
 <script src="/tools/tools-nav-pwa.js?v=e5d0172349" defer></script>
@@ -458,6 +458,7 @@
     // once on load and re-render, matching every other synced tool page.
     if (typeof initSyncOnLoad === 'function') {
       initSyncOnLoad().then(() => { renderCalendar(); renderDayDetail(); });
+      if (typeof setupPullToRefresh === 'function') setupPullToRefresh(() => { renderCalendar(); renderDayDetail(); });
     }
     // Requested directly: a fresh booking should show up here without
     // waiting for anyone to manually convert it to a job first.
