@@ -282,7 +282,7 @@ test('debugTrace activates with ?debug=1 and logs real, timestamped messages to 
   assert.equal(panel.style.bottom, '');
 });
 
-test('the debug flag persists into a new page load that never had ?debug=1 in its own URL, simulating a multi-page flow like the app tour', () => {
+test('the debug flag persists into a new page load that never had ?debug=1 in its own URL, simulating both a multi-page flow like the app tour and setting the flag via a regular Safari tab so it carries into a standalone home-screen-installed PWA', () => {
   const { JSDOM } = require('jsdom');
   const src = fs.readFileSync(SYNC_JS_PATH, 'utf8');
   const dom1 = new JSDOM('<!DOCTYPE html><html><body></body></html>', { url: 'https://example.com/tools/job-tracker.html?debug=1', runScripts: 'dangerously' });
@@ -290,14 +290,18 @@ test('the debug flag persists into a new page load that never had ?debug=1 in it
   const s1 = window1.document.createElement('script');
   s1.textContent = src;
   window1.document.head.appendChild(s1);
-  window1.isDebugModeOn(); // triggers the sessionStorage write from the ?debug=1 param
+  window1.isDebugModeOn(); // triggers the localStorage write from the ?debug=1 param
 
   const dom2 = new JSDOM('<!DOCTYPE html><html><body></body></html>', { url: 'https://example.com/tools/finance.html', runScripts: 'dangerously' });
   const window2 = dom2.window;
-  // Simulate sessionStorage carrying over, as it genuinely does across
-  // same-origin navigation in a real browser (a fresh JSDOM instance
-  // doesn't share storage automatically the way real tabs do).
-  window2.sessionStorage.setItem('th_debug_mode', window1.sessionStorage.getItem('th_debug_mode'));
+  // Simulate localStorage carrying over, as it genuinely does across
+  // same-origin navigation in a real browser -- switched from
+  // sessionStorage (2026-08-27) specifically because sessionStorage
+  // does NOT carry over between a regular Safari tab and a standalone
+  // home-screen-installed PWA on iOS, even for the same origin, but
+  // localStorage does. A fresh JSDOM instance doesn't share storage
+  // automatically the way real tabs/apps do, hence simulating it here.
+  window2.localStorage.setItem('th_debug_mode', window1.localStorage.getItem('th_debug_mode'));
   const s2 = window2.document.createElement('script');
   s2.textContent = src;
   window2.document.head.appendChild(s2);

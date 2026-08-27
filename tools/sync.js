@@ -57,9 +57,15 @@
 // without writing it again.
 //
 // Usage: add ?debug=1 to any tool page's URL once -- the flag
-// persists in sessionStorage from then on, so a multi-step flow (like
+// persists in localStorage from then on, so a multi-step flow (like
 // the app tour moving across several pages) can be traced end to end
 // without needing to re-add the query param on every navigation.
+// Switched from sessionStorage to localStorage (2026-08-27) -- a real,
+// practical need: a standalone home-screen-installed PWA on iOS has no
+// address bar at all to type a query param into, but localStorage (not
+// sessionStorage) IS shared with a regular Safari tab on the same
+// origin, so setting this once via Safari's visible address bar
+// actually carries over into the installed app too.
 // Then call debugTrace('some message') anywhere in that page's own
 // code. Anchored to the TOP of the screen specifically, not the
 // bottom -- a bottom-anchored version of this exact idea once ended
@@ -68,9 +74,9 @@
 function isDebugModeOn() {
   try {
     if (new URLSearchParams(window.location.search).get('debug') === '1') {
-      sessionStorage.setItem('th_debug_mode', '1');
+      localStorage.setItem('th_debug_mode', '1');
     }
-    return sessionStorage.getItem('th_debug_mode') === '1';
+    return localStorage.getItem('th_debug_mode') === '1';
   } catch (e) { return false; }
 }
 
