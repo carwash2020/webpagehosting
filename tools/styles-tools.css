@@ -9,6 +9,22 @@
    file). Not used by the public-facing pages.
 */
 
+/* Item #65: cross-document view transitions (2026-08-26), requested
+   directly as part of a broader "make it feel like an app" pass --
+   navigating between tool pages is a series of real, separate page
+   loads (this isn't an SPA), which is exactly the case this CSS
+   at-rule was built for. Pure CSS, no JavaScript needed for the
+   default cross-fade -- both the source and destination page need
+   this same rule for a transition to actually happen between them,
+   which is automatically true here since every tool page loads this
+   shared file. Genuinely safe regardless of browser support gaps: a
+   browser that doesn't understand this at-rule just ignores it and
+   falls back to a normal, instant navigation -- true progressive
+   enhancement, not something that could break anything anywhere. */
+@view-transition {
+  navigation: auto;
+}
+
 /* ==========================================================================
    INTERNAL TOOLS SUITE — shared styles for /workspace.html and its 7 tools.
    Not used by the public-facing pages (index.html + 5 landing pages).

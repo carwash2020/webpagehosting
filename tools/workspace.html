@@ -36,7 +36,7 @@
   })();
 </script>
 <link rel="stylesheet" href="/styles.css?v=202608202000">
-<link rel="stylesheet" href="/tools/styles-tools.css?v=b55afaa1c0">
+<link rel="stylesheet" href="/tools/styles-tools.css?v=92a9f46990">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.112.3/dist/umd/supabase.js" integrity="sha384-qafw21c/iciq0VXsi9FzkfoQv5I/V0iqE4lSNcKXPnW9/UTJLnv5CcN4FHxVLnKg" crossorigin="anonymous" defer></script>
 <script src="/tools/sync.js?v=e46eb5ff7b" defer></script>
 <script src="/tools/push-notifications.js?v=b55dfa1172" defer></script>
@@ -1753,6 +1753,21 @@
 
   function updateActionItemsBadge() {
     const badge = document.getElementById('actionItemsHeadingBadge');
+    const total = actionItemCounts.leads + actionItemCounts.bookings + actionItemCounts.duesoon + actionItemCounts.followups + actionItemCounts.unpaid;
+    // App icon badge (2026-08-26), requested directly as part of a
+    // broader "make it feel like an app" pass -- the real home-screen
+    // number badge, not just the in-page one below. Feature-detected
+    // rather than gated on whether the app is currently installed
+    // (Chrome's own docs specifically recommend this: just call it
+    // when the API exists). Not supported by Chrome for Android at
+    // all, and requires notification permission granted on iOS --
+    // both handled by feature-detection and .catch() respectively,
+    // no error surfaced to the user either way since this is a
+    // "nice if it works" enhancement, not a load-bearing feature.
+    if ('setAppBadge' in navigator) {
+      if (total > 0) navigator.setAppBadge(total).catch(() => {});
+      else if ('clearAppBadge' in navigator) navigator.clearAppBadge().catch(() => {});
+    }
     if (!badge) return;
     const parts = [];
     if (actionItemCounts.leads > 0) parts.push(actionItemCounts.leads + ' new lead' + (actionItemCounts.leads === 1 ? '' : 's'));
