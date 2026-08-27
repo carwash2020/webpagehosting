@@ -317,18 +317,31 @@ test('this page\'s align-items override matches the shared rule\'s exact selecto
   assert.doesNotMatch(src, /(?<!body )\.hub-header \{ align-items: (flex-start|stretch)/, 'a bare .hub-header selector here would be silently overridden by the shared, higher-specificity rule');
 });
 
-// Live sync indicator restructured on mobile (2026-08-21), requested
-// directly: the refresh button now stacks below "Live sync active"
-// (matching the desktop layout already built), with tighter spacing
-// so it sits closer to the header instead of floating with extra
-// whitespace above it.
+// Live sync indicator changed back to a row layout on mobile
+// (2026-08-26), requested directly: "the live sync still glued itself
+// and takes a lot of room up top." The prior column layout
+// (2026-08-21) was itself a real, deliberate fix for a genuine
+// problem -- the refresh button "floating with extra whitespace above
+// it" -- but that traced specifically to the button using
+// position:fixed on mobile at the time, a completely different
+// mechanism than a plain flex-row layout. This version keeps the
+// button in normal flex flow on mobile (only desktop uses
+// position:fixed, unchanged below), so it doesn't repeat the original
+// problem. Verified directly via Playwright with the real markup --
+// including the "Unsynced changes" badge visible at the same time,
+// and a longer status string ("Live sync disconnected") on a narrow
+// 360px viewport -- before concluding align-items:center + flex-wrap
+// was safe: saves ~22px of header height in the common case, wraps
+// gracefully rather than overflowing in the worst case.
 
-test('on mobile, .hub-sub uses a flex column layout, stacking the refresh button below the badge rather than side-by-side on the same line', () => {
+test('on mobile, .hub-sub uses a flex row layout with wrap, keeping the refresh button beside the badge on the same line rather than stacked below it', () => {
   const src = fs.readFileSync(path.join(TOOLS_DIR, 'workspace.html'), 'utf8');
   const mobileRule = src.match(/\.hub-sub \{ color: var\(--text-dim\);[^}]*\}/);
   assert.ok(mobileRule, 'base .hub-sub rule not found');
   assert.match(mobileRule[0], /display:\s*flex/);
-  assert.match(mobileRule[0], /flex-direction:\s*column/);
+  assert.match(mobileRule[0], /flex-direction:\s*row/);
+  assert.match(mobileRule[0], /flex-wrap:\s*wrap/, 'needs to wrap gracefully rather than overflow when the status text is long or the pending-changes badge is also showing');
+  assert.match(mobileRule[0], /align-items:\s*center/, 'center alignment is what avoids repeating the original "floating with extra whitespace" problem this layout had before');
 });
 
 test('desktop resets .hub-sub back to display:block, since the refresh button there is already its own independent position:fixed element (unaffected by the parent\'s display mode either way) and doesn\'t need the mobile column stacking', () => {

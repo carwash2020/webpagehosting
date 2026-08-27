@@ -88,7 +88,7 @@
   .hub-header-right { display: flex; align-items: center; gap: 8px; }
   .hub-header img { height: 44px; width: 44px; object-fit: contain; }
   .hub-title { font-family:'Anton',sans-serif; font-size: 26px; color: var(--white); }
-  .hub-sub { color: var(--text-dim); display: flex; flex-direction: column; align-items: flex-start; gap: 4px; }
+  .hub-sub { color: var(--text-dim); display: flex; flex-direction: row; flex-wrap: wrap; align-items: center; gap: 4px 8px; }
   #refreshSyncLink { margin-left: 0; }
   @media (min-width: 1024px) { .hub-sub { display: block; } }
 
@@ -350,7 +350,7 @@
   </div>
   </div>
   <p class="hub-sub"><span class="realtime-badge" id="realtimeBadge" style="margin-left:0;"><span class="realtime-dot" id="realtimeDot"></span><span id="realtimeText">Live sync: connecting...</span></span><span class="pending-changes-badge" id="pendingChangesBadge" style="display:none;">&#9679; Unsynced changes</span>
-    <button class="help-btn" id="refreshSyncLink" onclick="manualRefreshSync(renderDashboard)" aria-label="Refresh synced data now" title="Refresh synced data now" style="width:26px; height:26px; font-size:13px; vertical-align:middle; margin-left:6px;">&#8635;</button>
+    <button class="help-btn" id="refreshSyncLink" onclick="manualRefreshSync(renderDashboard)" aria-label="Refresh synced data now" title="Refresh synced data now" style="width:26px; height:26px; font-size:13px;">&#8635;</button>
   </p>
 </div>
 <nav class="jump-nav">
