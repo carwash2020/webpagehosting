@@ -349,6 +349,13 @@ document.addEventListener('keydown', (e) => {
 // safely if a page has no #refreshSyncLink button to update.
 function setupPullToRefresh(refreshFn) {
   if (typeof refreshFn !== 'function') return;
+  // TEMPORARY diagnostic logging (2026-08-27) -- added specifically to
+  // find a real, reported bug (zero visual feedback on an iPhone
+  // installed to the home screen, confirmed still broken after a full
+  // fresh reopen, so not a caching issue) that automated testing with
+  // simulated touch events didn't catch. Remove once the real device's
+  // actual behavior is confirmed via ?debug=1's on-screen trace panel.
+  if (typeof debugTrace === 'function') debugTrace('setupPullToRefresh() called');
   let indicator = document.getElementById('pullToRefreshIndicator');
   if (!indicator) {
     indicator = document.createElement('div');
@@ -357,6 +364,9 @@ function setupPullToRefresh(refreshFn) {
     indicator.setAttribute('aria-hidden', 'true');
     indicator.innerHTML = '&#8635;';
     document.body.insertBefore(indicator, document.body.firstChild);
+    if (typeof debugTrace === 'function') debugTrace('indicator created fresh');
+  } else {
+    if (typeof debugTrace === 'function') debugTrace('indicator already existed');
   }
   const THRESHOLD = 70; // px pulled before release actually triggers a refresh
   const MAX_PULL = 100; // caps visual growth even on a much longer pull
@@ -371,6 +381,7 @@ function setupPullToRefresh(refreshFn) {
   }
 
   document.body.addEventListener('touchstart', (e) => {
+    if (typeof debugTrace === 'function') debugTrace('touchstart: refreshing=' + refreshing + ' touches=' + e.touches.length + ' scrollY=' + window.scrollY + ' overlayOpen=' + anyOverlayOpen());
     if (refreshing || e.touches.length !== 1) return;
     // Confirmed via direct testing: window.scrollY > 0 alone was too
     // strict for real mobile use -- even a few pixels of scroll offset
@@ -380,16 +391,24 @@ function setupPullToRefresh(refreshFn) {
     // A small tolerance (matching the common convention in real pull-
     // to-refresh implementations) treats "basically at the top" the
     // same as "exactly at the top."
-    if (window.scrollY > 5 || anyOverlayOpen()) { pulling = false; return; }
+    if (window.scrollY > 5 || anyOverlayOpen()) {
+      if (typeof debugTrace === 'function') debugTrace('touchstart: bailed on scrollY/overlay check');
+      pulling = false; return;
+    }
     startY = e.touches[0].clientY;
     pulling = true;
     thresholdCrossed = false;
     indicator.style.transition = 'none';
+    if (typeof debugTrace === 'function') debugTrace('touchstart: pulling=true, startY=' + startY);
   }, { passive: true });
 
   document.body.addEventListener('touchmove', (e) => {
-    if (!pulling || refreshing || !e.touches.length) return;
+    if (!pulling || refreshing || !e.touches.length) {
+      if (typeof debugTrace === 'function' && Math.random() < 0.1) debugTrace('touchmove: SKIPPED (pulling=' + pulling + ' refreshing=' + refreshing + ')');
+      return;
+    }
     const dy = e.touches[0].clientY - startY;
+    if (typeof debugTrace === 'function') debugTrace('touchmove: dy=' + dy);
     if (dy <= 0) {
       // Not an actual downward pull (or scrolled back up past the
       // start point) -- reset visually and stop tracking for the
@@ -412,6 +431,7 @@ function setupPullToRefresh(refreshFn) {
   }, { passive: true });
 
   document.body.addEventListener('touchend', async () => {
+    if (typeof debugTrace === 'function') debugTrace('touchend: pulling=' + pulling + ' thresholdCrossed=' + thresholdCrossed);
     if (!pulling) return;
     pulling = false;
     indicator.style.transition = '';
