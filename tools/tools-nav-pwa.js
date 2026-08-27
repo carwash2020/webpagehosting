@@ -404,6 +404,39 @@ if (typeof document !== 'undefined') {
 })();
 
 // ---------------------------------------------------------------------------
+// Shared banner helpers -- used by both the PWA install prompt below and
+// the "app update available" banner further down. Extracted here
+// (2026-08-27) rather than duplicated, since both are the exact same
+// dismissible-bottom-banner-with-an-action-button UI.
+// ---------------------------------------------------------------------------
+function dismissThBanner(banner, onDismiss) {
+  if (typeof onDismiss === 'function') onDismiss();
+  banner.classList.remove('is-shown');
+  setTimeout(() => banner.remove(), 250);
+}
+
+function showThBanner(message, actionLabel, onAction, onDismiss) {
+  const banner = document.createElement('div');
+  banner.className = 'th-install-banner';
+  banner.innerHTML =
+    '<span>' + message + '</span>' +
+    '<span class="th-install-actions">' +
+      (actionLabel ? '<button class="th-install-action">' + actionLabel + '</button>' : '') +
+      '<button class="th-install-dismiss" aria-label="Dismiss">&times;</button>' +
+    '</span>';
+  document.body.appendChild(banner);
+  requestAnimationFrame(() => banner.classList.add('is-shown'));
+  banner.querySelector('.th-install-dismiss').addEventListener('click', () => dismissThBanner(banner, onDismiss));
+  if (actionLabel) {
+    banner.querySelector('.th-install-action').addEventListener('click', () => {
+      onAction();
+      dismissThBanner(banner, onDismiss);
+    });
+  }
+  return banner;
+}
+
+// ---------------------------------------------------------------------------
 // PWA INSTALL PROMPT -- added 2026-08-18 (item #3). Two genuinely
 // different paths, not one feature with a gap:
 //
@@ -430,10 +463,8 @@ if (typeof document !== 'undefined') {
   function wasDismissed() {
     try { return localStorage.getItem(DISMISS_KEY) === '1'; } catch (e) { return false; }
   }
-  function dismiss(banner) {
+  function rememberDismissal() {
     try { localStorage.setItem(DISMISS_KEY, '1'); } catch (e) { /* ignore */ }
-    banner.classList.remove('is-shown');
-    setTimeout(() => banner.remove(), 250);
   }
 
   function isIOS() {
@@ -443,41 +474,21 @@ if (typeof document !== 'undefined') {
     return /^((?!chrome|android|crios|fxios).)*safari/i.test(navigator.userAgent);
   }
 
-  function showBanner(message, actionLabel, onAction) {
-    const banner = document.createElement('div');
-    banner.className = 'th-install-banner';
-    banner.innerHTML =
-      '<span>' + message + '</span>' +
-      '<span class="th-install-actions">' +
-        (actionLabel ? '<button class="th-install-action">' + actionLabel + '</button>' : '') +
-        '<button class="th-install-dismiss" aria-label="Dismiss">&times;</button>' +
-      '</span>';
-    document.body.appendChild(banner);
-    requestAnimationFrame(() => banner.classList.add('is-shown'));
-    banner.querySelector('.th-install-dismiss').addEventListener('click', () => dismiss(banner));
-    if (actionLabel) {
-      banner.querySelector('.th-install-action').addEventListener('click', () => {
-        onAction();
-        dismiss(banner);
-      });
-    }
-  }
-
   function init() {
     if (alreadyInstalled() || wasDismissed()) return;
 
     if (isIOS() && isSafari()) {
       // No programmatic prompt exists here -- this IS the feature for
       // this platform, not a fallback for a missing one.
-      showBanner('Add Triple H to your Home Screen: tap Share, then "Add to Home Screen."', null, null);
+      showThBanner('Add Triple H to your Home Screen: tap Share, then "Add to Home Screen."', null, null, rememberDismissal);
       return;
     }
 
     window.addEventListener('beforeinstallprompt', (e) => {
       e.preventDefault();
-      showBanner('Add Triple H to your Home Screen for the full app experience.', 'Install', () => {
+      showThBanner('Add Triple H to your Home Screen for the full app experience.', 'Install', () => {
         e.prompt();
-      });
+      }, rememberDismissal);
     });
   }
 
@@ -487,3 +498,47 @@ if (typeof document !== 'undefined') {
     init();
   }
 })();
+
+// ---------------------------------------------------------------------------
+// APP UPDATE AVAILABLE -- added 2026-08-27, requested directly ("a pop up
+// for when a app becomes stale and needs to be redownloaded"). Confirmed
+// this app's own service worker (service-worker.js) already calls
+// self.skipWaiting() unconditionally on install and self.clients.claim()
+// on activate -- meaning a new version, once deployed, already takes
+// over as the active worker without waiting for every tab to close.
+// That part isn't new here.
+//
+// What's still missing without this: the currently OPEN page instance
+// keeps running the OLD already-loaded JS/HTML/CSS even after a newer
+// service worker has silently taken control in the background -- exactly
+// the "stale, needs redownloading" case. The real signal for this is the
+// `controllerchange` event on navigator.serviceWorker -- but confirmed
+// directly, via a real isolated test server (not assumed from docs),
+// that this event ALSO fires on a page's very first-ever service worker
+// registration, which would be a false positive (nothing is stale on a
+// first visit). Guarded against this by capturing whether a controller
+// already existed at script-start, BEFORE calling register() at all --
+// only a controllerchange that happens when one already existed means a
+// real handoff from an old worker to a new one. Verified this exact
+// three-step sequence (first load: no false positive; reload with an
+// existing controller: still no false positive; a genuine update while
+// that page stays open: correctly detected) with real Playwright tests
+// against a disposable service worker before relying on it here.
+//
+// Deliberately NOT a forced auto-reload -- this app has real forms
+// (adding a job, typing notes) where silently reloading out from under
+// someone mid-task would lose unsaved work. Shows a dismissible banner
+// instead, reusing the exact same UI as the install prompt. Unlike that
+// one, dismissing this does NOT persist anything -- each real update is
+// a new, genuine event, not a repeated nag for the same thing, and the
+// already-active new worker will serve the fresh version automatically
+// the next time this page naturally reloads anyway.
+if (typeof navigator !== 'undefined' && 'serviceWorker' in navigator) {
+  const hadControllerAtScriptStart = navigator.serviceWorker.controller !== null;
+  navigator.serviceWorker.addEventListener('controllerchange', () => {
+    if (!hadControllerAtScriptStart) return; // first-ever registration, not a real update
+    showThBanner('A new version of Triple H is available.', 'Update', () => {
+      window.location.reload();
+    });
+  });
+}
