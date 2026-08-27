@@ -1535,7 +1535,7 @@
     // price references, and the shared tax rate edited on another device
     // were stale here on every fresh page load.
     if (typeof initSyncOnLoad === 'function') {
-      initSyncOnLoad().then(() => { loadSharedTaxRate(); populateKnownContactsList(); populatePriceRefPickers(); });
+      initSyncOnLoad().then(() => { loadSharedTaxRate(); populateKnownContactsList(); populatePriceRefPickers(); }).catch(() => { loadSharedTaxRate(); populateKnownContactsList(); populatePriceRefPickers(); });
       if (typeof setupPullToRefresh === 'function') setupPullToRefresh(() => { loadSharedTaxRate(); populateKnownContactsList(); populatePriceRefPickers(); renderInvoiceLog(); renderQuoteLog(); });
     }
     if (typeof startRealtimeSync === 'function') {

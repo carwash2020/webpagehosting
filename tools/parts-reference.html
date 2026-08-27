@@ -2861,7 +2861,7 @@
     populatePrDatalists();
     renderPrDisplayNameRow();
     if (typeof initSyncOnLoad === 'function') {
-      initSyncOnLoad().then(() => { renderTypeFilterOptions(); renderUnits(); populatePrDatalists(); });
+      initSyncOnLoad().then(() => { renderTypeFilterOptions(); renderUnits(); populatePrDatalists(); }).catch(() => { renderTypeFilterOptions(); renderUnits(); populatePrDatalists(); });
       if (typeof setupPullToRefresh === 'function') setupPullToRefresh(() => { renderTypeFilterOptions(); renderUnits(); populatePrDatalists(); });
     }
   } catch (initError) {

@@ -868,7 +868,7 @@
     // contacts saved from another device stayed invisible here until a live
     // event happened to arrive. Pull once, then re-render from fresh data.
     if (typeof initSyncOnLoad === 'function') {
-      initSyncOnLoad().then(() => { populateContactPickers(); renderContractLog(); });
+      initSyncOnLoad().then(() => { populateContactPickers(); renderContractLog(); }).catch(() => { populateContactPickers(); renderContractLog(); });
       if (typeof setupPullToRefresh === 'function') setupPullToRefresh(() => { populateContactPickers(); renderContractLog(); });
     }
     if (typeof startRealtimeSync === 'function') {

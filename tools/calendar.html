@@ -457,12 +457,12 @@
     // never appeared here until some other tool happened to pull. Pull
     // once on load and re-render, matching every other synced tool page.
     if (typeof initSyncOnLoad === 'function') {
-      initSyncOnLoad().then(() => { renderCalendar(); renderDayDetail(); });
+      initSyncOnLoad().then(() => { renderCalendar(); renderDayDetail(); }).catch(() => { renderCalendar(); renderDayDetail(); });
       if (typeof setupPullToRefresh === 'function') setupPullToRefresh(() => { renderCalendar(); renderDayDetail(); });
     }
     // Requested directly: a fresh booking should show up here without
     // waiting for anyone to manually convert it to a job first.
-    refreshBookingsCache().then(() => { renderCalendar(); renderDayDetail(); });
+    refreshBookingsCache().then(() => { renderCalendar(); renderDayDetail(); }).catch(() => { renderCalendar(); renderDayDetail(); });
     // Live updates too: a job scheduled from Job Tracker on another device
     // now shows up here without a manual refresh.
     if (typeof startRealtimeSync === 'function') {
