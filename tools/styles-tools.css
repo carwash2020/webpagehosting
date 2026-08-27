@@ -1257,7 +1257,7 @@ body select:focus, body textarea:focus {
   width: 36px; height: 36px; display: flex; align-items: center; justify-content: center;
   transition: background .18s ease, border-color .18s ease;
 }
-.th-bottom-nav a .th-bn-icon .th-icon { width: 20px; height: 20px; }
+.th-bottom-nav a .th-bn-icon .th-icon { width: 20px; height: 20px; margin-right: 0; }
 .th-bottom-nav a.is-active { color: var(--orange-light); }
 .th-bottom-nav a.is-active .th-bn-icon {
   background: var(--orange); border-color: var(--orange);
@@ -1376,7 +1376,7 @@ body select:focus, body textarea:focus {
    Dropped to 21px (~40% of the container instead of ~50%) -- refined
    icon sets read premium specifically because of generous internal
    padding, not because the glyph fills the available space. */
-body .tool-tile-icon .th-icon { width: 21px; height: 21px; }
+body .tool-tile-icon .th-icon { width: 21px; height: 21px; margin-right: 0; }
 body .jump-nav-icon .th-icon, body .jump-nav .th-icon { width: 15px; height: 15px; }
 body .section-heading .th-icon, body .dev-panel-heading .th-icon { width: 15px; height: 15px; margin-right: 2px; }
 body a .th-icon { margin-right: 5px; }
