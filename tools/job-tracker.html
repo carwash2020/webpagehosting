@@ -40,7 +40,7 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.112.3/dist/umd/supabase.js" integrity="sha384-qafw21c/iciq0VXsi9FzkfoQv5I/V0iqE4lSNcKXPnW9/UTJLnv5CcN4FHxVLnKg" crossorigin="anonymous" defer></script>
 <script src="/tools/sync.js?v=e46eb5ff7b" defer></script>
 <script src="/tools/data-layer.js?v=469402246e" defer></script>
-<script src="/tools/tools-effects.js?v=3e7b6cb94f" defer></script>
+<script src="/tools/tools-effects.js?v=9a2a59040e" defer></script>
 <script src="/tools/tools-dialogs.js?v=e1dfaa11a1" defer></script>
 <script src="/tools/tools-media-sharing.js?v=4e2769b10d" defer></script>
 <script src="/tools/tools-nav-pwa.js?v=68a14209dc" defer></script>
@@ -2029,6 +2029,15 @@
       // Workspace already uses elsewhere.
       const jobsListEl = document.getElementById('jobsList');
       if (jobsListEl) jobsListEl.innerHTML = '<div class="skeleton-line w-60"></div><div class="skeleton-line w-100"></div><div class="skeleton-line w-40"></div>';
+      // Wired up BEFORE the blocking await below (2026-08-27, real bug
+      // found and fixed) -- setupPullToRefresh doesn't depend on the
+      // sync having succeeded, it just attaches listeners for later. If
+      // await initSyncOnLoad() ever rejects (a real possibility on a
+      // job site with poor connectivity), execution jumps straight to
+      // this function's catch block below, and pull-to-refresh would
+      // never get wired up at all for that page load if it were placed
+      // after the await like it originally was.
+      if (typeof setupPullToRefresh === 'function') setupPullToRefresh(() => { renderJobs(); renderContacts(); renderNotesList(); });
       await initSyncOnLoad();
       updateSyncStatusText();
       // Push 4 (2026-08-20): Cost Lookup, Profitability, Income, and

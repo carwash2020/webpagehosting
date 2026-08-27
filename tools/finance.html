@@ -39,7 +39,7 @@
 <link rel="stylesheet" href="/tools/styles-tools.css?v=3c107e3e1a">
 <script src="/tools/sync.js?v=e46eb5ff7b" defer></script>
 <script src="/tools/data-layer.js?v=469402246e" defer></script>
-<script src="/tools/tools-effects.js?v=3e7b6cb94f" defer></script>
+<script src="/tools/tools-effects.js?v=9a2a59040e" defer></script>
 <script src="/tools/tools-dialogs.js?v=e1dfaa11a1" defer></script>
 <script src="/tools/tools-media-sharing.js?v=4e2769b10d" defer></script>
 <script src="/tools/tools-nav-pwa.js?v=68a14209dc" defer></script>
@@ -1081,6 +1081,19 @@
     initAppTour();
     (async function init() {
       try {
+      // Wired up BEFORE the blocking await below (2026-08-27, real bug
+      // found and fixed, same as job-tracker.html) -- setupPullToRefresh
+      // doesn't depend on the sync having succeeded, it just attaches
+      // listeners for later. If await initSyncOnLoad() ever rejects (a
+      // real possibility on a job site with poor connectivity),
+      // execution jumps straight to this function's catch block below,
+      // and pull-to-refresh would never get wired up at all for that
+      // page load if it were placed after the await like it originally
+      // was -- the render callback closes over renderExpenses/
+      // renderIncomeEntries/renderPriceReferences by reference, so
+      // defining it here before those functions run doesn't matter;
+      // they're only actually called later, when the user pulls.
+      if (typeof setupPullToRefresh === 'function') setupPullToRefresh(() => { renderExpenses(); renderIncomeEntries(); renderPriceReferences(); });
       await initSyncOnLoad();
       loadTaxSettings();
       document.getElementById('entryDate').value = new Date().toISOString().slice(0, 10);
@@ -1092,7 +1105,6 @@
       renderExpenses();
       renderIncomeEntries();
       renderPriceReferences();
-      if (typeof setupPullToRefresh === 'function') setupPullToRefresh(() => { renderExpenses(); renderIncomeEntries(); renderPriceReferences(); });
 
       const initialHash = (location.hash || '').replace('#', '');
       activateTab(TAB_HASHES[initialHash] ? initialHash : 'cost');

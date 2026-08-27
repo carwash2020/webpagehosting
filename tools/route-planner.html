@@ -39,7 +39,7 @@
 <link rel="stylesheet" href="/tools/styles-tools.css?v=3c107e3e1a">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.112.3/dist/umd/supabase.js" integrity="sha384-qafw21c/iciq0VXsi9FzkfoQv5I/V0iqE4lSNcKXPnW9/UTJLnv5CcN4FHxVLnKg" crossorigin="anonymous" defer></script>
 <script src="/tools/sync.js?v=e46eb5ff7b" defer></script>
-<script src="/tools/tools-effects.js?v=3e7b6cb94f" defer></script>
+<script src="/tools/tools-effects.js?v=9a2a59040e" defer></script>
 <script src="/tools/tools-dialogs.js?v=e1dfaa11a1" defer></script>
 <script src="/tools/tools-media-sharing.js?v=4e2769b10d" defer></script>
 <script src="/tools/tools-nav-pwa.js?v=68a14209dc" defer></script>
@@ -365,8 +365,17 @@
       if (typeof startRealtimeSync === 'function') {
         startRealtimeSync(() => { loadSharedMileageRate(); calculateTripCost(); }, updateRealtimeBadge);
       }
-      if (typeof setupPullToRefresh === 'function') setupPullToRefresh(() => { loadSharedMileageRate(); calculateTripCost(); });
     });
+    // Moved outside the .then() above (2026-08-27, real bug found and
+    // fixed) -- that promise chain has no .catch() at all, so if
+    // initSyncOnLoad() ever rejects, the whole callback (including
+    // setupPullToRefresh, which used to live inside it) silently never
+    // runs, with no error banner anywhere since an unhandled promise
+    // rejection never reaches this function's surrounding try/catch.
+    // Confirmed directly: waited up to 6 real seconds and the indicator
+    // still never appeared. This call doesn't depend on the sync
+    // having succeeded, so it belongs out here, unconditional.
+    if (typeof setupPullToRefresh === 'function') setupPullToRefresh(() => { loadSharedMileageRate(); calculateTripCost(); });
   } catch (initError) {
     try {
         showInitErrorBanner('Route Planner', initError);

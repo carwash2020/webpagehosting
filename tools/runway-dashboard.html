@@ -766,7 +766,10 @@ function setupPullToRefresh(refreshFn) {
   document.body.addEventListener('touchstart', (e) => {
     if (refreshing || e.touches.length !== 1) return;
     const overlayOpen = !!document.querySelector('.help-modal-overlay.is-open');
-    if (window.scrollY > 0 || overlayOpen) { pulling = false; return; }
+    // Same fix as the shared version (tools-effects.js) -- window.scrollY
+    // > 0 alone was too strict, confirmed directly via testing that even
+    // a few pixels of scroll offset silently blocked the gesture entirely.
+    if (window.scrollY > 5 || overlayOpen) { pulling = false; return; }
     startY = e.touches[0].clientY;
     pulling = true;
     thresholdCrossed = false;
@@ -2674,6 +2677,14 @@ loadAll();
 document.addEventListener('DOMContentLoaded', async () => {
     try {
   initAppTour();
+  // Wired up BEFORE the blocking await below (2026-08-27, real bug
+  // found and fixed, same class as job-tracker.html/finance.html) --
+  // if await pullSync() ever rejects (a real possibility on a job
+  // site with poor connectivity), execution jumps straight to this
+  // function's catch block, and pull-to-refresh would never get wired
+  // up at all for that page load if it stayed after the await like it
+  // originally was.
+  setupPullToRefresh(() => loadAll());
   if(typeof pullSync === 'function'){
     const result = await pullSync(); // refreshes th_ AND rd_ keys from the shared blob
     if(result && result.ok){
@@ -2688,7 +2699,6 @@ document.addEventListener('DOMContentLoaded', async () => {
   } else {
     updateJobTrackerBadge('unavailable');
   }
-  setupPullToRefresh(() => loadAll());
   } catch (initError) {
     try {
         showInitErrorBanner('Runway Dashboard', initError);

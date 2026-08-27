@@ -39,7 +39,7 @@
 <link rel="stylesheet" href="/tools/styles-tools.css?v=3c107e3e1a">
 <script src="/tools/sync.js?v=e46eb5ff7b" defer></script>
 <script src="/tools/data-layer.js?v=469402246e" defer></script>
-<script src="/tools/tools-effects.js?v=3e7b6cb94f" defer></script>
+<script src="/tools/tools-effects.js?v=9a2a59040e" defer></script>
 <script src="/tools/tools-dialogs.js?v=e1dfaa11a1" defer></script>
 <script src="/tools/tools-media-sharing.js?v=4e2769b10d" defer></script>
 <script src="/tools/tools-nav-pwa.js?v=68a14209dc" defer></script>
@@ -118,6 +118,14 @@
     currentJobId = new URLSearchParams(window.location.search).get('id');
     const bundle = (currentJobId && typeof thGetJobBundle === 'function') ? thGetJobBundle(currentJobId) : null;
 
+    // Wired up BEFORE the not-found check below (2026-08-27, real gap
+    // found and fixed, same as client-detail.html) -- a user landing
+    // here for a job that just hasn't synced to this device yet would
+    // otherwise never get pull-to-refresh at all, right when they'd
+    // most want to retry. onJobRealtimeChange already re-checks the
+    // bundle and switches views correctly either way.
+    if (typeof setupPullToRefresh === 'function') setupPullToRefresh(onJobRealtimeChange);
+
     if (!bundle) {
       document.getElementById('jobNotFound').style.display = '';
       return;
@@ -129,7 +137,6 @@
     if (typeof startRealtimeSync === 'function') {
       startRealtimeSync(onJobRealtimeChange, updateRealtimeBadge);
     }
-    if (typeof setupPullToRefresh === 'function') setupPullToRefresh(onJobRealtimeChange);
   });
 
   function updateRealtimeBadge(status) {

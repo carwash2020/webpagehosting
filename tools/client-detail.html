@@ -39,7 +39,7 @@
 <link rel="stylesheet" href="/tools/styles-tools.css?v=3c107e3e1a">
 <script src="/tools/sync.js?v=e46eb5ff7b" defer></script>
 <script src="/tools/data-layer.js?v=469402246e" defer></script>
-<script src="/tools/tools-effects.js?v=3e7b6cb94f" defer></script>
+<script src="/tools/tools-effects.js?v=9a2a59040e" defer></script>
 <script src="/tools/tools-dialogs.js?v=e1dfaa11a1" defer></script>
 <script src="/tools/tools-media-sharing.js?v=4e2769b10d" defer></script>
 <script src="/tools/tools-nav-pwa.js?v=68a14209dc" defer></script>
@@ -111,6 +111,15 @@
     currentClientId = new URLSearchParams(window.location.search).get('id');
     const bundle = (currentClientId && typeof thGetClientBundle === 'function') ? thGetClientBundle(currentClientId) : null;
 
+    // Wired up BEFORE the not-found check below (2026-08-27, real gap
+    // found and fixed) -- a user landing here for a record that just
+    // hasn't synced to this device yet (new device, or the record was
+    // created moments ago on another device) would otherwise never get
+    // pull-to-refresh at all, right when they'd most want to retry.
+    // onClientRealtimeChange already re-checks the bundle and switches
+    // views correctly either way, so this is safe to call regardless.
+    if (typeof setupPullToRefresh === 'function') setupPullToRefresh(onClientRealtimeChange);
+
     if (!bundle) {
       document.getElementById('clientNotFound').style.display = '';
       return;
@@ -121,7 +130,6 @@
     if (typeof startRealtimeSync === 'function') {
       startRealtimeSync(onClientRealtimeChange, updateRealtimeBadge);
     }
-    if (typeof setupPullToRefresh === 'function') setupPullToRefresh(onClientRealtimeChange);
   });
 
   function updateRealtimeBadge(status) {

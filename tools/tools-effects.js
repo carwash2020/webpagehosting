@@ -372,7 +372,15 @@ function setupPullToRefresh(refreshFn) {
 
   document.body.addEventListener('touchstart', (e) => {
     if (refreshing || e.touches.length !== 1) return;
-    if (window.scrollY > 0 || anyOverlayOpen()) { pulling = false; return; }
+    // Confirmed via direct testing: window.scrollY > 0 alone was too
+    // strict for real mobile use -- even a few pixels of scroll offset
+    // (easily caused by minor layout shifts: fonts loading, the fixed
+    // bottom nav, the address bar collapsing) silently blocked the
+    // gesture from ever engaging at all, with zero visual feedback.
+    // A small tolerance (matching the common convention in real pull-
+    // to-refresh implementations) treats "basically at the top" the
+    // same as "exactly at the top."
+    if (window.scrollY > 5 || anyOverlayOpen()) { pulling = false; return; }
     startY = e.touches[0].clientY;
     pulling = true;
     thresholdCrossed = false;
