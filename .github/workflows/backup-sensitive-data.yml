@@ -1,0 +1,126 @@
+name: Backup sensitive data (workspace_sync, leads, bookings, Storage files) to private repo
+
+# Everything backed up here contains either real customer PII (a
+# client's name/phone/address/email, a lead's contact info, a
+# confirmed booking's details) or real files (job-site photos,
+# receipts, secure documents) -- moved OUT of this repo's own backup
+# workflow (backup-business-data.yml, now retired) after finding, while
+# building this, that ALL THREE of workspace_sync/th_leads/th_bookings
+# were being committed here even though THIS repo is public.
+# workspace_sync specifically was checked directly and confirmed to
+# already contain real, exposed client records (name, phone, address,
+# email) and job records (client, phone, address) -- this had already
+# happened, not just a latent risk like th_leads/th_bookings (both
+# still empty at the time this was found). Storage files (job-photos,
+# receipts, secure-documents) had no backup coverage anywhere at all
+# until this workflow -- confirmed directly: neither this repo's old
+# backup workflow nor Supabase's own Pro-tier daily backups cover
+# Storage files, only database tables.
+#
+# Runs daily -- workspace_sync already lives safely in Supabase with
+# its own real-time sync and (now, on Pro) daily platform backups, so
+# this GitHub copy is a secondary, belt-and-suspenders backup, same as
+# it always was. Storage files have no other backup at all until they
+# land here, so a wide gap is a real, avoidable risk for something
+# irreplaceable (a job-site photo can't be "re-taken" after the fact).
+#
+# ONE-TIME SETUP (has to be done by hand, cannot be done by this file):
+# 1. Create a new fine-grained GitHub PAT scoped ONLY to the
+#    tripleh-private-backups repo, with Contents: Read and write
+#    permission. Settings -> Developer settings -> Personal access
+#    tokens -> Fine-grained tokens -> Generate new token.
+# 2. In THIS repo (webpagehosting): Settings -> Secrets and variables
+#    -> Actions -> New repository secret, name it exactly
+#    PRIVATE_BACKUP_REPO_TOKEN, paste the token from step 1.
+# This workflow will fail loudly (not silently) until that secret
+# exists -- see the check at the start of the first real step below.
+
+on:
+  schedule:
+    - cron: '15 9 * * *'  # ~03:15 Mountain Time, daily
+  workflow_dispatch: {}
+
+permissions:
+  contents: read  # this workflow never writes to THIS repo -- it only clones and pushes to the separate private repo via PRIVATE_BACKUP_REPO_TOKEN
+
+jobs:
+  backup:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        # Needed for this repo's own scripts/backup-storage-bucket.py --
+        # this workflow does NOT write anything back to this repo
+        # (permissions: contents: read above is correct and sufficient).
+
+      - name: Check required secrets are set
+        shell: bash
+        env:
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          PRIVATE_BACKUP_REPO_TOKEN: ${{ secrets.PRIVATE_BACKUP_REPO_TOKEN }}
+        run: |
+          if [ -z "$SUPABASE_SERVICE_ROLE_KEY" ]; then
+            echo "::error::SUPABASE_SERVICE_ROLE_KEY repo secret is not set."
+            exit 1
+          fi
+          if [ -z "$PRIVATE_BACKUP_REPO_TOKEN" ]; then
+            echo "::error::PRIVATE_BACKUP_REPO_TOKEN repo secret is not set -- see the comment at the top of this workflow file for setup steps. This backup cannot run without it."
+            exit 1
+          fi
+
+      - name: Clone the private backup repo
+        shell: bash
+        env:
+          PRIVATE_BACKUP_REPO_TOKEN: ${{ secrets.PRIVATE_BACKUP_REPO_TOKEN }}
+        run: |
+          git clone --quiet "https://x-access-token:${PRIVATE_BACKUP_REPO_TOKEN}@github.com/carwash2020/tripleh-private-backups.git" private-backups
+          mkdir -p private-backups/database
+          mkdir -p private-backups/storage/secure-documents
+          mkdir -p private-backups/storage/job-photos
+          mkdir -p private-backups/storage/receipts
+
+      - name: Fetch workspace_sync, th_leads, and th_bookings from Supabase
+        shell: bash
+        env:
+          SUPABASE_URL: https://csvfqdjuobylgafgolho.supabase.co
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+        run: |
+          declare -A QUERY=(
+            [workspace_sync]="select=code,data,updated_at&order=code"
+            [th_leads]="select=*&order=created_at"
+            [th_bookings]="select=*&order=start_at"
+          )
+          for table in workspace_sync th_leads th_bookings; do
+            curl -s -f \
+              -H "apikey: $SUPABASE_SERVICE_ROLE_KEY" \
+              -H "Authorization: Bearer $SUPABASE_SERVICE_ROLE_KEY" \
+              "$SUPABASE_URL/rest/v1/$table?${QUERY[$table]}" \
+              -o "private-backups/database/${table}.json.tmp" || {
+                echo "::error::Failed to fetch $table from Supabase"; exit 1;
+              }
+            python3 -m json.tool "private-backups/database/${table}.json.tmp" > "private-backups/database/${table}.json"
+            rm "private-backups/database/${table}.json.tmp"
+          done
+
+      - name: Fetch every file from the 3 Storage buckets
+        shell: bash
+        env:
+          SUPABASE_URL: https://csvfqdjuobylgafgolho.supabase.co
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+        run: |
+          for bucket in secure-documents job-photos receipts; do
+            python3 scripts/backup-storage-bucket.py "$bucket" "private-backups/storage/$bucket"
+          done
+
+      - name: Commit and push to the private repo if content actually changed
+        shell: bash
+        run: |
+          cd private-backups
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add -A
+          if git diff --cached --quiet; then
+            echo "No content changes since last backup -- nothing to commit."
+          else
+            git commit -m "Automated sensitive-data backup ($(date -u +%Y-%m-%d))"
+            git push
+          fi

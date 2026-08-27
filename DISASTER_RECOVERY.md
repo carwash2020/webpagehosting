@@ -612,15 +612,40 @@ one does. Two things worth knowing if any of them ever misbehave:
   ever ran for real. If notification_log retention is ever changed
   again, it must stay longer than the longest `RESEND_DAYS` value in
   `edge-functions/send-push-index.ts`, not shorter.
-- **`backup-business-data.yml` needs a `SUPABASE_SERVICE_ROLE_KEY` repo
-  secret to actually run** -- unlike `backup-cms-content.yml`, which
-  uses the public anon key safely because "Anyone can read site
-  content" is a real policy, none of `workspace_sync`, `th_leads`, or
-  `th_bookings` have an anon SELECT policy. If this workflow's runs
-  show "repo secret is not set" in the Actions log, that secret needs
-  adding (Settings → Secrets and variables → Actions), value from
-  Supabase's own dashboard (Project Settings → API → service_role
-  secret) -- never from this repo or any file in it. Extended
-  2026-08-25 to also cover `th_leads` and `th_bookings` -- both had
-  been sitting with zero backup coverage since they were created,
-  same gap `workspace_sync` had before this workflow first existed.
+- **`backup-business-data.yml` was retired (2026-08-27), replaced by
+  `backup-sensitive-data.yml`, which pushes to a separate, private repo
+  (`tripleh-private-backups`) instead of this one.** Found directly,
+  while building the Storage-file backup below: `workspace_sync`
+  (which this workflow already backed up, since it first existed) had
+  already committed real, exposed client PII -- real names, phone
+  numbers, addresses, emails -- into this repo's history, because this
+  repo is public and the original workflow was never built with that
+  constraint in mind. `th_leads`/`th_bookings` hadn't leaked real data
+  yet (both were still empty when this was found) but had the exact
+  same latent risk. The new workflow needs a `SUPABASE_SERVICE_ROLE_KEY`
+  repo secret (already set, same key as before) AND a new
+  `PRIVATE_BACKUP_REPO_TOKEN` repo secret -- see
+  `backup-sensitive-data.yml`'s own header comment for the one manual
+  setup step this requires (fine-grained PATs can't be minted via the
+  API, only created by hand in GitHub's own UI). If this workflow's
+  runs show "repo secret is not set" in the Actions log, that's the
+  secret that needs adding.
+- **Storage files (job-site photos, receipts, secure documents) had
+  zero backup coverage anywhere at all until `backup-sensitive-data.yml`
+  -- confirmed directly, not assumed.** Neither the old
+  `backup-business-data.yml` nor Supabase's own Pro-tier daily backups
+  cover Storage, only database tables. `scripts/backup-storage-bucket.py`
+  handles this now, recursing into each bucket's real subfolder
+  structure -- a real bug caught during testing before this ever ran
+  for real: a flat, non-recursive list of these buckets returns only
+  top-level folder placeholders (`id: null`), not the actual files one
+  level deeper, which would have made this "succeed" every day while
+  silently backing up nothing.
+- **The exposed data already committed to this repo's history (from
+  before 2026-08-27) has not been purged from git history as of this
+  writing** -- removing the current files stops new exposure but does
+  not remove what's already in past commits. That's a separate,
+  deliberate decision requiring a force-push (this repo has branch
+  protection against exactly that, which would need temporarily
+  disabling) -- check with Connor directly on current status before
+  assuming either way.
