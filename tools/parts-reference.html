@@ -42,7 +42,7 @@
 <script src="/tools/tools-media-sharing.js?v=4e2769b10d" defer></script>
 <script src="/tools/tools-nav-pwa.js?v=68a14209dc" defer></script>
 <script src="/tools/tools-tour.js?v=886e40d6c9" defer></script>
-<script src="/tools/sync.js?v=e46eb5ff7b" defer></script>
+<script src="/tools/sync.js?v=d5c331f789" defer></script>
 <style>
   .pr-search-filter-row { display: flex; gap: 8px; margin-bottom: 16px; }
   .pr-search-filter-row .pr-search-field { flex: 1 1 auto; min-width: 0; }
@@ -380,8 +380,22 @@
     catch (e) { return []; }
   }
   function savePrUnits(list) {
-    localStorage.setItem(PR_STORAGE_KEY, JSON.stringify(list));
-    if (typeof scheduleSync === 'function') scheduleSync();
+    // Same try/catch protection thWrite()/thWriteWiki() already have
+    // elsewhere (a full localStorage quota) -- this page doesn't load
+    // the shared data-layer script, so matched the pattern locally
+    // rather than add a new script dependency just for this one
+    // function. Routed through the Appliance Wiki's own scheduler
+    // (2026-08-27), not the main scheduleSync() -- the whole point of
+    // the sync split, so editing a unit doesn't also re-push every
+    // job/invoice/expense along with it.
+    try {
+      localStorage.setItem(PR_STORAGE_KEY, JSON.stringify(list));
+      if (typeof scheduleWikiSync === 'function') scheduleWikiSync();
+    } catch (e) {
+      if (typeof showToast === 'function') {
+        showToast('Could not save -- device storage may be full.', { type: 'error' });
+      }
+    }
   }
 
   // Recently-viewed tracking for the quick-access strip. Stored as a
@@ -2862,8 +2876,18 @@
     renderPrDisplayNameRow();
     if (typeof initSyncOnLoad === 'function') {
       initSyncOnLoad().then(() => { renderTypeFilterOptions(); renderUnits(); populatePrDatalists(); }).catch(() => { renderTypeFilterOptions(); renderUnits(); populatePrDatalists(); });
-      if (typeof setupPullToRefresh === 'function') setupPullToRefresh(() => { renderTypeFilterOptions(); renderUnits(); populatePrDatalists(); });
     }
+    // Appliance Wiki's own, separate pull (2026-08-27) -- this page's
+    // whole purpose is the Wiki, so both the main initSyncOnLoad()
+    // above (now trivial -- this page has no other synced data left)
+    // and this one run alongside each other.
+    if (typeof initWikiSyncOnLoad === 'function') {
+      initWikiSyncOnLoad().then(() => { renderTypeFilterOptions(); renderUnits(); populatePrDatalists(); }).catch(() => { renderTypeFilterOptions(); renderUnits(); populatePrDatalists(); });
+    }
+    if (typeof setupPullToRefresh === 'function') setupPullToRefresh(async () => {
+      if (typeof pullWikiSync === 'function') await pullWikiSync();
+      renderTypeFilterOptions(); renderUnits(); populatePrDatalists();
+    });
   } catch (initError) {
     try {
         showInitErrorBanner('Parts Reference', initError);

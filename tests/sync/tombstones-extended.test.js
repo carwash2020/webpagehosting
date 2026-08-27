@@ -35,15 +35,21 @@ function loadDevTools() {
 function loadSyncFunctions(window) {
   const syncJs = fs.readFileSync(path.join(TOOLS_DIR, 'sync.js'), 'utf8');
   const syncDataKeysMatch = syncJs.match(/const SYNC_DATA_KEYS = \[[\s\S]*?\n\];/);
+  const wikiSyncKeysMatch = syncJs.match(/const WIKI_SYNC_KEYS = \[[\s\S]*?\n\];/);
   const mergeKeyFieldMatch = syncJs.match(/const MERGE_KEY_FIELD = \{[\s\S]*?\n\};/);
   const mergeRecordArraysMatch = syncJs.match(/function mergeRecordArrays[\s\S]*?\n\}/);
   const mergePartsMatch = syncJs.match(/function mergePartsReferenceUnits[\s\S]*?\n\}/);
   const mergeClientErrorLogMatch = syncJs.match(/const CLIENT_ERROR_LOG_MAX_AFTER_MERGE[\s\S]*?function mergeClientErrorLog[\s\S]*?\n\}/);
   const applySyncDataMatch = syncJs.match(/function applySyncData[\s\S]*?\n\}/);
-  assert.ok(syncDataKeysMatch && mergeKeyFieldMatch && mergeRecordArraysMatch && mergePartsMatch && mergeClientErrorLogMatch && applySyncDataMatch, 'one or more required sync.js functions not found');
+  assert.ok(syncDataKeysMatch && wikiSyncKeysMatch && mergeKeyFieldMatch && mergeRecordArraysMatch && mergePartsMatch && mergeClientErrorLogMatch && applySyncDataMatch, 'one or more required sync.js functions not found');
   const combined = [
-    syncDataKeysMatch[0], mergeKeyFieldMatch[0], mergeRecordArraysMatch[0],
+    syncDataKeysMatch[0], wikiSyncKeysMatch[0], mergeKeyFieldMatch[0], mergeRecordArraysMatch[0],
     mergePartsMatch[0], mergeClientErrorLogMatch[0], applySyncDataMatch[0],
+    // const declarations evaluated via window.eval() create lexical
+    // bindings, not window properties the way function declarations
+    // do -- explicitly copying WIKI_SYNC_KEYS onto window so tests
+    // outside this eval's scope can actually read it.
+    'window.WIKI_SYNC_KEYS = WIKI_SYNC_KEYS;',
   ].join('\n');
   window.eval(combined);
   return syncDataKeysMatch[0];
@@ -271,8 +277,8 @@ test('deletePrUnitType and deletePrIssue (parts-reference.html) actually call th
 test('a deleted Appliance Wiki unit (with all its issues) does not resurrect from a stale device push', () => {
   const window = loadDevTools();
   window.thAddPrUnitTombstone('unitA');
-  const syncDataKeys = loadSyncFunctions(window);
-  assert.match(syncDataKeys, /th_pr_unit_tombstones/);
+  loadSyncFunctions(window);
+  assert.ok(window.WIKI_SYNC_KEYS.includes('th_pr_unit_tombstones'), 'th_pr_unit_tombstones should be part of the Wiki\'s own sync key list (moved there 2026-08-27, no longer in SYNC_DATA_KEYS)');
 
   window.applySyncData({
     th_parts_reference_units: JSON.stringify([
@@ -281,7 +287,7 @@ test('a deleted Appliance Wiki unit (with all its issues) does not resurrect fro
     ]),
     th_pr_unit_tombstones: JSON.stringify([]),
     th_pr_issue_tombstones: JSON.stringify([]),
-  });
+  }, window.WIKI_SYNC_KEYS);
 
   const result = JSON.parse(window.localStorage.getItem('th_parts_reference_units'));
   assert.deepEqual(result.map(u => u.id), ['unitB'], 'unitA should have been filtered out, unitB should survive');
@@ -299,7 +305,7 @@ test('a deleted Appliance Wiki issue is scoped by (unitId, issueId) -- a differe
     ]),
     th_pr_unit_tombstones: JSON.stringify([]),
     th_pr_issue_tombstones: JSON.stringify([]),
-  });
+  }, window.WIKI_SYNC_KEYS);
 
   const result = JSON.parse(window.localStorage.getItem('th_parts_reference_units'));
   assert.deepEqual(result.find(u => u.id === 'unitB').issues.map(i => i.id), [999], 'unitB\'s own issue 555 should be gone, 999 should remain');

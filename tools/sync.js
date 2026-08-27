@@ -89,6 +89,20 @@ function debugTrace(msg) {
 
 const SYNC_TABLE = 'workspace_sync';
 
+// Appliance Wiki's own, separate sync target (2026-08-27) -- see the
+// note on SYNC_DATA_KEYS below for why this exists. Order matters here
+// the same way it does in SYNC_DATA_KEYS: both tombstone keys must be
+// applied before th_parts_reference_units itself, since applySyncData's
+// tombstone-filtering branch for that key reads both fresh from
+// localStorage right after they've already been merged and written.
+const WIKI_SYNC_TABLE = 'workspace_sync_wiki';
+const WIKI_SYNC_KEYS = [
+  'th_pr_unit_tombstones',
+  'th_pr_issue_tombstones',
+  'th_parts_reference_units',
+];
+const WIKI_SYNC_KNOWN_AT_KEY = 'th_wiki_sync_known_at';
+
 const SYNC_DATA_KEYS = [
   // Must come before th_tracker_jobs, same reasoning as
   // th_client_tombstones below: applySyncData's th_tracker_jobs branch
@@ -134,18 +148,15 @@ const SYNC_DATA_KEYS = [
   'th_job_templates',
   'th_contract_tombstones',
   'th_contracts',
-  // Appliance Wiki's model/issue reference data. Added so it actually
-  // participates in cross-device sync -- it was loading sync.js and
-  // calling scheduleSync() after every save, which looked like it was
-  // syncing, but this key was never on the list scheduleSync() actually
-  // pushes, so every entry only ever lived on whichever single device
-  // it was typed into.
-  'th_pr_unit_tombstones',
-  'th_pr_issue_tombstones',
-  'th_parts_reference_units',
-  // Client-side error log from tools-media-sharing.js. Small and naturally
-  // self-capping (see mergeClientErrorLog below), so this doesn't risk
-  // repeating the payload-size lesson from adding the Wiki data above.
+  // Appliance Wiki's model/issue reference data moved to its own,
+  // separately-synced table (2026-08-27) -- see WIKI_SYNC_KEYS/
+  // WIKI_SYNC_TABLE below. Measured directly before this change: these
+  // 3 keys alone were 205KB of the 223KB total sync payload (92%),
+  // meaning every single edit anywhere in the app -- adding one
+  // expense, one job -- re-transferred this entire, largely-static
+  // reference dataset every time. Same underlying pattern that already
+  // caused one real outage (the 64KB keepalive limit, see the note on
+  // pushSync() below). No longer listed here at all.
   'th_client_errors',
   // Known Issues checklist -- migrated from a hardcoded array to a
   // real synced list so both accounts can add/check off items and see
@@ -212,6 +223,12 @@ function clearSyncCode() { localStorage.removeItem(SYNC_CODE_KEY); }
 function collectSyncData() {
   const out = {};
   SYNC_DATA_KEYS.forEach(k => { out[k] = localStorage.getItem(k); });
+  return out;
+}
+
+function collectWikiSyncData() {
+  const out = {};
+  WIKI_SYNC_KEYS.forEach(k => { out[k] = localStorage.getItem(k); });
   return out;
 }
 
@@ -333,9 +350,20 @@ function mergeGraveyard(localArr, remoteArr) {
   return merged.slice(0, GRAVEYARD_MAX_AFTER_MERGE);
 }
 
-function applySyncData(obj) {
+function applySyncData(obj, keysToApply) {
   if (!obj) return;
-  SYNC_DATA_KEYS.forEach(k => {
+  // keysToApply defaults to SYNC_DATA_KEYS -- every existing caller
+  // (pullSync(), every test in this codebase) keeps working exactly as
+  // before. Added as a parameter (2026-08-27) specifically so
+  // pullWikiSync() can pass WIKI_SYNC_KEYS instead: this function was
+  // wrongly assumed to generically process Object.keys(obj), but it
+  // actually always iterated the module-level SYNC_DATA_KEYS constant
+  // -- a real bug the test suite caught directly, since th_pr_unit_
+  // tombstones/th_pr_issue_tombstones/th_parts_reference_units had
+  // just been removed from that list (moved to WIKI_SYNC_KEYS), which
+  // meant this function would silently ignore all 3 keys entirely
+  // regardless of what was actually in the object it was given.
+  (keysToApply || SYNC_DATA_KEYS).forEach(k => {
     if (obj[k] === undefined || obj[k] === null) return;
     const keyField = MERGE_KEY_FIELD[k];
     if (!keyField) {
@@ -597,6 +625,77 @@ async function pullSync() {
   }
 }
 
+// Appliance Wiki's own push/pull (2026-08-27), mirroring pushSync()/
+// pullSync() above exactly but targeting WIKI_SYNC_TABLE with just
+// WIKI_SYNC_KEYS -- the whole point of the separate table, so a save
+// on parts-reference.html doesn't also re-transfer every job/invoice/
+// expense, and a save anywhere else doesn't re-transfer the Wiki.
+// Deliberately does NOT call recordSyncStatus() -- that drives the
+// shared "Updated Xm ago" indicator for the main data throughout the
+// app; calling it here would conflate this with that. Reuses
+// applySyncData() as-is, unchanged -- it already generically merges
+// whatever keys are present in the object it's given, including the
+// exact tombstone-filtering logic these 3 keys already had before this
+// split, so there was nothing to duplicate here.
+async function pushWikiSync() {
+  if (!isSyncConfigured()) return { ok: false, error: 'not-configured' };
+  const code = getSyncCode();
+  if (!code) return { ok: false, error: 'no-code' };
+  if (typeof ensureFreshToken === 'function') {
+    const fresh = await ensureFreshToken();
+    if (!fresh) return { ok: false, error: 'session-expired' };
+  }
+
+  const nowIso = new Date().toISOString();
+  const body = [{ code, data: collectWikiSyncData(), updated_at: nowIso }];
+
+  try {
+    const res = await fetchWithRetry(`${SUPABASE_URL}/rest/v1/${WIKI_SYNC_TABLE}?on_conflict=code`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'apikey': SUPABASE_ANON_KEY,
+        'Authorization': `Bearer ${getAuthToken()}`,
+        'Prefer': 'resolution=merge-duplicates',
+      },
+      body: JSON.stringify(body),
+    });
+    if (!res.ok) return { ok: false, error: 'http-' + res.status };
+    localStorage.setItem(WIKI_SYNC_KNOWN_AT_KEY, nowIso);
+    return { ok: true };
+  } catch (e) {
+    return { ok: false, error: 'network: ' + (e && e.message ? e.message : String(e)) };
+  }
+}
+
+async function pullWikiSync() {
+  if (!isSyncConfigured()) return { ok: false, error: 'not-configured' };
+  const code = getSyncCode();
+  if (!code) return { ok: false, error: 'no-code' };
+  if (typeof ensureFreshToken === 'function') {
+    const fresh = await ensureFreshToken();
+    if (!fresh) return { ok: false, error: 'session-expired' };
+  }
+
+  try {
+    const res = await fetchWithRetry(`${SUPABASE_URL}/rest/v1/${WIKI_SYNC_TABLE}?code=eq.${encodeURIComponent(code)}&select=data,updated_at`, {
+      headers: {
+        'apikey': SUPABASE_ANON_KEY,
+        'Authorization': `Bearer ${getAuthToken()}`,
+      },
+    });
+    if (!res.ok) return { ok: false, error: 'http-' + res.status };
+    const rows = await res.json();
+    if (!rows.length) return { ok: false, error: 'no-data-yet' };
+
+    applySyncData(rows[0].data, WIKI_SYNC_KEYS);
+    localStorage.setItem(WIKI_SYNC_KNOWN_AT_KEY, rows[0].updated_at);
+    return { ok: true };
+  } catch (e) {
+    return { ok: false, error: 'network: ' + (e && e.message ? e.message : String(e)) };
+  }
+}
+
 // Shared "Refresh synced data now" link handler. Used to be copy-pasted
 // with slight drift between workspace.html and job-tracker.html -- one
 // page's link showed a friendlier "nothing in the cloud yet" message,
@@ -678,6 +777,26 @@ function scheduleSync() {
   }, 2500);
 }
 
+// Appliance Wiki's own scheduler (2026-08-27), mirroring scheduleSync()'s
+// debounce pattern -- but with its OWN, separate timer variable. Sharing
+// _syncTimer with the main scheduler would be a real bug: a Wiki save
+// would cancel/delay a pending main-data push (and vice versa), silently
+// dropping or postponing whichever one lost the race. Reuses
+// warnIfSyncFailed() (a generic, stateless toast helper, safe to share)
+// but deliberately skips setSyncPending() -- that drives the shared
+// "pending changes" indicator specifically for the main data throughout
+// the app; conflating a Wiki save into that would confuse it rather than
+// help.
+let _wikiSyncTimer = null;
+function scheduleWikiSync() {
+  if (!isSyncConfigured() || !getSyncCode()) return;
+  clearTimeout(_wikiSyncTimer);
+  _wikiSyncTimer = setTimeout(() => {
+    _wikiSyncTimer = null;
+    pushWikiSync().then((result) => { warnIfSyncFailed(result); });
+  }, 2500);
+}
+
 // Safety net: if the page is closed/backgrounded/navigated away from
 // before the 2.5s debounce above fires, the scheduled push would
 // otherwise be silently lost (a quick edit followed by immediately
@@ -699,6 +818,14 @@ function flushSyncNow() {
       if (result && result.ok) setSyncPending(false);
       warnIfSyncFailed(result);
     });
+  }
+  // Same gap, same fix, for a pending Wiki save (2026-08-27) -- a quick
+  // Appliance Wiki edit immediately followed by closing the tab is
+  // exactly the scenario this safety net exists for.
+  if (_wikiSyncTimer) {
+    clearTimeout(_wikiSyncTimer);
+    _wikiSyncTimer = null;
+    pushWikiSync().then((result) => { warnIfSyncFailed(result); });
   }
 }
 if (typeof document !== 'undefined') {
@@ -1027,6 +1154,17 @@ async function initSyncOnLoad() {
   if (typeof loadCurrentUserRole === 'function') { await loadCurrentUserRole(); }
   if (!isSyncConfigured() || !getSyncCode()) return;
   await pullSync();
+}
+
+// Appliance Wiki's own load-time pull (2026-08-27) -- separate from
+// initSyncOnLoad() above since most pages never touch this data at all
+// and shouldn't pull it. Only called by parts-reference.html and
+// dev-tools.html (Wiki Health check, Graveyard restore for prUnit/
+// prIssue records), each alongside their own initSyncOnLoad() call, not
+// instead of it -- this only covers the Wiki-specific keys.
+async function initWikiSyncOnLoad() {
+  if (!isSyncConfigured() || !getSyncCode()) return;
+  await pullWikiSync();
 }
 
 // ---------------------------------------------------------------------------

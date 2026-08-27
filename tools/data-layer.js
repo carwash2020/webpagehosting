@@ -99,6 +99,30 @@ function thWrite(key, value) {
   }
 }
 
+// Appliance Wiki's own write helper (2026-08-27), mirroring thWrite()
+// exactly -- same try/catch protection, same failure toast -- but
+// routed through scheduleWikiSync() instead of scheduleSync(). Added
+// after a real test run caught a genuine gap: the Wiki write call
+// sites below originally called localStorage.setItem() +
+// scheduleWikiSync() directly with no try/catch at all, unlike
+// thWrite(). An uncaught exception from scheduleWikiSync() (confirmed
+// via that same test run -- isSyncConfigured() throws a real
+// ReferenceError if SUPABASE_URL isn't defined yet) would propagate
+// up and break whichever function called it, rather than failing
+// gracefully the way every other save in this app already does.
+function thWriteWiki(key, value) {
+  try {
+    localStorage.setItem(key, JSON.stringify(value));
+    if (typeof scheduleWikiSync === 'function') scheduleWikiSync();
+    return true;
+  } catch (e) {
+    if (typeof showToast === 'function') {
+      showToast('Could not save -- device storage may be full.', { type: 'error' });
+    }
+    return false;
+  }
+}
+
 // --- client identity (structural item #7) ----------------------------------
 //
 // THE PROBLEM THIS SOLVES
@@ -261,7 +285,10 @@ function thLoadPrUnitTombstones() { return thRead(TH_PR_UNIT_TOMBSTONES_KEY, [])
 function thAddPrUnitTombstone(id) {
   const list = thLoadPrUnitTombstones();
   list.push({ id, deletedAt: new Date().toISOString() });
-  thWrite(TH_PR_UNIT_TOMBSTONES_KEY, list);
+  // thWriteWiki (not thWrite) -- see its own comment above for why:
+  // routes through scheduleWikiSync() instead of scheduleSync(), so
+  // this doesn't also re-push every job/invoice/expense.
+  thWriteWiki(TH_PR_UNIT_TOMBSTONES_KEY, list);
 }
 
 // Scoped by (unitId, issueId) rather than issueId alone -- issue ids
@@ -278,7 +305,7 @@ function thLoadPrIssueTombstones() { return thRead(TH_PR_ISSUE_TOMBSTONES_KEY, [
 function thAddPrIssueTombstone(unitId, issueId) {
   const list = thLoadPrIssueTombstones();
   list.push({ id: unitId + '::' + issueId, unitId, issueId, deletedAt: new Date().toISOString() });
-  thWrite(TH_PR_ISSUE_TOMBSTONES_KEY, list);
+  thWriteWiki(TH_PR_ISSUE_TOMBSTONES_KEY, list);
 }
 
 // Graveyard (2026-08-26), requested directly: "so items aren't gone

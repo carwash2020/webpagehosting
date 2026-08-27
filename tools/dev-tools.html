@@ -37,13 +37,13 @@
 </script>
 <link rel="stylesheet" href="/styles.css?v=202608202000">
 <link rel="stylesheet" href="/tools/styles-tools.css?v=3c107e3e1a">
-<script src="/tools/data-layer.js?v=469402246e" defer></script>
+<script src="/tools/data-layer.js?v=44a1c3df77" defer></script>
 <script src="/tools/dev-tools-shared.js?v=56f990a832" defer></script>
 <script src="/tools/tools-effects.js?v=9a2a59040e" defer></script>
 <script src="/tools/tools-dialogs.js?v=e1dfaa11a1" defer></script>
 <script src="/tools/tools-media-sharing.js?v=4e2769b10d" defer></script>
 <script src="/tools/tools-nav-pwa.js?v=68a14209dc" defer></script>
-<script src="/tools/sync.js?v=e46eb5ff7b" defer></script>
+<script src="/tools/sync.js?v=d5c331f789" defer></script>
 <style>
   body { padding: 44px 20px 60px; max-width: 1080px; margin: 0 auto; }
   /* Desktop layout (2026-08-20), requested directly: efficient on
@@ -2495,9 +2495,26 @@
       }
       unit.issues = unit.issues || [];
       unit.issues.push(entry.record.issue);
-      thWrite('th_parts_reference_units', units);
+      // thWriteWiki (data-layer.js), not thWrite() -- same reasoning as
+      // thAddPrUnitTombstone/thAddPrIssueTombstone there: thWrite()
+      // would trigger the MAIN scheduleSync(), re-pushing every job/
+      // invoice/expense along with this restore. thWriteWiki() already
+      // has the same try/catch protection thWrite() does and calls
+      // scheduleWikiSync() internally, so no need to call it again here.
+      thWriteWiki('th_parts_reference_units', units);
       const tombstoneId = entry.record.unitId + '::' + entry.record.issue.id;
-      thWrite('th_pr_issue_tombstones', thRead('th_pr_issue_tombstones', []).filter(t => t.id !== tombstoneId));
+      thWriteWiki('th_pr_issue_tombstones', thRead('th_pr_issue_tombstones', []).filter(t => t.id !== tombstoneId));
+    } else if (entry.recordType === 'prUnit') {
+      // Same fix as prIssue above, for the OTHER Wiki-related graveyard
+      // type -- otherwise identical to the generic branch below, which
+      // every non-Wiki record type still uses unchanged.
+      const cfg = GRAVEYARD_TYPE_CONFIG.prUnit;
+      const list = thRead(cfg.dataKey, []);
+      if (!list.some(r => r.id === entry.record.id)) {
+        list.push(entry.record);
+        thWriteWiki(cfg.dataKey, list);
+      }
+      thWriteWiki(cfg.tombstoneKey, thRead(cfg.tombstoneKey, []).filter(t => t.id !== entry.record.id));
     } else {
       const cfg = GRAVEYARD_TYPE_CONFIG[entry.recordType];
       if (!cfg) { showToast('Unknown record type -- cannot restore.', { type: 'error' }); return; }
@@ -2957,7 +2974,21 @@
     } else {
       setTimeout(proceed, 300);
     }
-    if (typeof setupPullToRefresh === 'function') setupPullToRefresh(proceed);
+    // Appliance Wiki's own, separate pull (2026-08-27) -- alongside the
+    // main initSyncOnLoad() above, not instead of it. Re-renders Wiki
+    // Health once fresh data actually arrives (proceed() above already
+    // renders it once with whatever was already in localStorage, which
+    // could be stale or missing entirely). The Graveyard itself renders
+    // lazily on demand rather than on load, so it doesn't need a
+    // matching re-render call here -- it'll read fresh localStorage
+    // whenever it's actually opened.
+    if (typeof initWikiSyncOnLoad === 'function') {
+      initWikiSyncOnLoad().then(() => { if (typeof renderWikiHealth === 'function') renderWikiHealth(); }).catch(() => {});
+    }
+    if (typeof setupPullToRefresh === 'function') setupPullToRefresh(async () => {
+      if (typeof pullWikiSync === 'function') await pullWikiSync();
+      proceed();
+    });
   });
 </script>
 
