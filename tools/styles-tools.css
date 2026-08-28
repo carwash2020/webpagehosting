@@ -1669,9 +1669,19 @@ body.th-has-bottomnav .th-install-banner { bottom: calc(76px + env(safe-area-ins
    shared function every synced tool page uses, not just workspace.html.
    No transition on --pull-progress itself while actively dragging (set
    inline by JS) so it tracks the finger exactly; a transition applies
-   only for the release/snap-back. */
+   only for the release/snap-back.
+   top uses env(safe-area-inset-top) with the same max(...,44px)
+   floor used everywhere else in this file (real bug found via
+   on-device debugging, 2026-08-27) -- a plain top:10px landed
+   directly behind the Dynamic Island on newer iPhones (confirmed via
+   research: ~59px safe-area-inset-top on those devices vs ~0-20px on
+   older iPhones and most Android). The 44px floor guards a separate,
+   known iOS Safari bug (already documented elsewhere in this file)
+   where the dynamic env() value can unexpectedly return 0px even on
+   a real notched device -- caught by this project's own existing
+   test for exactly that, not something noticed independently. */
 .pull-refresh-indicator {
-  position: fixed; top: 10px; left: 50%; margin-left: -18px; z-index: 200;
+  position: fixed; top: calc(max(env(safe-area-inset-top, 0px), 44px) + 10px); left: 50%; margin-left: -18px; z-index: 200;
   width: 36px; height: 36px; border-radius: 50%;
   background: var(--bg-panel-2); border: 1px solid var(--border); color: var(--orange-light);
   display: flex; align-items: center; justify-content: center; font-size: 18px;

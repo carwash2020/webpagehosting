@@ -315,9 +315,14 @@
   .help-modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.6);z-index:200;align-items:center;justify-content:center;padding:20px;}
   .help-modal-overlay.is-open{display:flex;}
   /* Pull-to-refresh indicator (2026-08-27) -- own copy since this page
-     doesn't load styles-tools.css, matching the shared version exactly. */
+     doesn't load styles-tools.css, matching the shared version exactly,
+     including the max(env(safe-area-inset-top, 0px), 44px) floor fix
+     for the Dynamic Island bug found via on-device debugging the same
+     day -- see styles-tools.css's own comment on this rule for the
+     full story, including the separate, known iOS Safari bug the
+     44px floor itself guards against. */
   .pull-refresh-indicator {
-    position: fixed; top: 10px; left: 50%; margin-left: -18px; z-index: 200;
+    position: fixed; top: calc(max(env(safe-area-inset-top, 0px), 44px) + 10px); left: 50%; margin-left: -18px; z-index: 200;
     width: 36px; height: 36px; border-radius: 50%;
     background: var(--bg-panel-2); border: 1px solid var(--border); color: var(--orange-light);
     display: flex; align-items: center; justify-content: center; font-size: 18px;
