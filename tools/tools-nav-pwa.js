@@ -28,6 +28,40 @@
     { href: '/tools/finance.html',           icon: 'dollar',  label: 'Finance' }
   ];
 
+  // Requested directly, alongside the new Employee role -- these 5
+  // real pages (out of everything in DESTS/SIDEBAR_DESTS below) are
+  // the ones actually gated behind canManageBusinessFinances()
+  // (finance.html, runway-dashboard.html, invoice-generator.html,
+  // contract-generator.html, review-request.html) -- same list used
+  // to decide which links to hide once the role is known, in both the
+  // mobile bottom nav and the desktop sidebar.
+  var BUSINESS_FINANCE_HREFS = [
+    '/tools/finance.html',
+    '/tools/runway-dashboard.html',
+    '/tools/invoice-generator.html',
+    '/tools/contract-generator.html',
+    '/tools/review-request.html'
+  ];
+
+  // Hides specific already-injected nav/sidebar links by href, rather
+  // than re-rendering the whole nav from scratch -- avoids a visible
+  // flicker on every page load while the role is still being fetched.
+  // Listens for th-role-loaded (dispatched by loadCurrentUserRole() in
+  // auth.js) so this reacts centrally, on every tool page, without
+  // needing each page's own init sequence to explicitly call this --
+  // most tool pages never call loadCurrentUserRole() directly at all,
+  // but plenty call initSyncOnLoad(), which does, and this only needs
+  // to fire once, whenever that happens to resolve on this page.
+  function hideRestrictedNavLinks() {
+    if (typeof canManageBusinessFinances !== 'function' || canManageBusinessFinances()) return;
+    BUSINESS_FINANCE_HREFS.forEach(function (href) {
+      document.querySelectorAll('a[href="' + href + '"]').forEach(function (el) {
+        el.style.display = 'none';
+      });
+    });
+  }
+  window.addEventListener('th-role-loaded', hideRestrictedNavLinks);
+
   // Desktop sidebar (2026-08-20), requested directly: a persistent
   // left sidebar on desktop, replacing top-tab-only navigation --
   // styled entirely by the ".th-desktop-sidebar" rules in

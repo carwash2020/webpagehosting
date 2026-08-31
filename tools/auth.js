@@ -312,45 +312,63 @@ let _cachedRoleInfo = null; // { roleName, canManageRoles, description } once lo
 // defensively before other authenticated calls elsewhere in this
 // codebase -- this closes the one place it was missing.
 async function loadCurrentUserRole() {
-  await ensureFreshToken();
-  const email = getCurrentUserEmail();
-  if (!email) { _cachedRoleInfo = null; return null; }
   try {
-    const res = await fetch(
-      `${SUPABASE_URL}/rest/v1/account_roles?email=eq.${encodeURIComponent(email.toLowerCase())}&select=role_name,role_definitions(can_manage_roles,can_access_dev_tools,can_manage_site_content,can_manage_business_finances,description)`,
-      {
-        headers: {
-          'apikey': SUPABASE_ANON_KEY,
-          'Authorization': `Bearer ${getAuthToken()}`,
-        },
-      }
-    );
-    if (!res.ok) { _cachedRoleInfo = null; return null; }
-    const rows = await res.json();
-    if (!rows.length) { _cachedRoleInfo = null; return null; }
-    const row = rows[0];
-    const def = row.role_definitions || {};
-    _cachedRoleInfo = {
-      roleName: row.role_name,
-      canManageRoles: !!def.can_manage_roles,
-      // Added 2026-08-27, alongside the new Employee role -- before
-      // this, hasDevToolsAccess() below just checked "does this
-      // account have ANY role assigned at all," which would have
-      // wrongly granted a restricted Employee role full Dev Tools
-      // access too, the same as Owner or Developer. Defaults to true
-      // if this column is ever missing from a response for some
-      // reason (a role predating this change, or a query that didn't
-      // select it) -- fails open to the pre-existing behavior rather
-      // than silently locking out an account that used to have access.
-      canAccessDevTools: def.can_access_dev_tools !== false,
-      canManageSiteContent: def.can_manage_site_content !== false,
-      canManageBusinessFinances: def.can_manage_business_finances !== false,
-      description: def.description || '',
-    };
-    return _cachedRoleInfo;
-  } catch (e) {
-    _cachedRoleInfo = null;
-    return null;
+    await ensureFreshToken();
+    const email = getCurrentUserEmail();
+    if (!email) { _cachedRoleInfo = null; return null; }
+    try {
+      const res = await fetch(
+        `${SUPABASE_URL}/rest/v1/account_roles?email=eq.${encodeURIComponent(email.toLowerCase())}&select=role_name,role_definitions(can_manage_roles,can_access_dev_tools,can_manage_site_content,can_manage_business_finances,description)`,
+        {
+          headers: {
+            'apikey': SUPABASE_ANON_KEY,
+            'Authorization': `Bearer ${getAuthToken()}`,
+          },
+        }
+      );
+      if (!res.ok) { _cachedRoleInfo = null; return null; }
+      const rows = await res.json();
+      if (!rows.length) { _cachedRoleInfo = null; return null; }
+      const row = rows[0];
+      const def = row.role_definitions || {};
+      _cachedRoleInfo = {
+        roleName: row.role_name,
+        canManageRoles: !!def.can_manage_roles,
+        // Added 2026-08-27, alongside the new Employee role -- before
+        // this, hasDevToolsAccess() below just checked "does this
+        // account have ANY role assigned at all," which would have
+        // wrongly granted a restricted Employee role full Dev Tools
+        // access too, the same as Owner or Developer. Defaults to true
+        // if this column is ever missing from a response for some
+        // reason (a role predating this change, or a query that didn't
+        // select it) -- fails open to the pre-existing behavior rather
+        // than silently locking out an account that used to have access.
+        canAccessDevTools: def.can_access_dev_tools !== false,
+        canManageSiteContent: def.can_manage_site_content !== false,
+        canManageBusinessFinances: def.can_manage_business_finances !== false,
+        description: def.description || '',
+      };
+      return _cachedRoleInfo;
+    } catch (e) {
+      _cachedRoleInfo = null;
+      return null;
+    }
+  } finally {
+    // Fires exactly once, regardless of which return path above was
+    // taken (including the early "no email"/"no role assigned"/error
+    // cases, which are just as final a state as a successful load).
+    // Added 2026-08-27 specifically so tools-nav-pwa.js -- loaded on
+    // every tool page, with its own independent DOMContentLoaded
+    // timing relative to whenever this function happens to resolve on
+    // that particular page -- can react to the role actually being
+    // known, without needing every single page's own init sequence to
+    // explicitly call a separate "update nav" function after its own
+    // initSyncOnLoad(). A page that never calls loadCurrentUserRole()
+    // at all (most tool pages don't need role data directly) simply
+    // never fires this, which is fine -- listeners are only relevant
+    // where the page's own init pulls in something that calls this,
+    // directly or via initSyncOnLoad().
+    try { window.dispatchEvent(new CustomEvent('th-role-loaded', { detail: _cachedRoleInfo })); } catch (e) { /* ignore */ }
   }
 }
 

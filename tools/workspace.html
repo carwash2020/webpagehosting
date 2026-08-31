@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="en" style="background:#0a0a0a;">
 <head>
-<script src="/tools/auth.js?v=083961c3fa"></script>
+<script src="/tools/auth.js?v=4a81109d3b"></script>
 <script>
   // Security gate -- redirect to login before this page's own content
   // is meaningfully usable. See auth.js for why this exists (a single
@@ -60,7 +60,7 @@
 <script src="/tools/tools-effects.js?v=9a2a59040e" defer></script>
 <script src="/tools/tools-dialogs.js?v=e1dfaa11a1" defer></script>
 <script src="/tools/tools-media-sharing.js?v=4e2769b10d" defer></script>
-<script src="/tools/tools-nav-pwa.js?v=68a14209dc" defer></script>
+<script src="/tools/tools-nav-pwa.js?v=9b16eefb86" defer></script>
 <script src="/tools/tools-tour.js?v=21f63bf17f" defer></script>
 <style>
   body { padding: 44px 20px 60px; max-width: 900px; margin: 0 auto; }
@@ -2211,28 +2211,12 @@
   }
 
   function renderWelcomeGreeting() {
-    if (typeof getCurrentUserFirstName === 'function') {
-      const name = getCurrentUserFirstName();
-      if (name) showWelcomeOverlay('Welcome back, ' + name);
-    }
-  }
-
-  // Added 2026-08-15 -- once the account's role has actually loaded
-  // (same timing fix as renderDevToolsTileVisibility below: this can't
-  // run until AFTER initSyncOnLoad() resolves), upgrade the plain name
-  // greeting to also show the role, e.g. "Welcome back, Steve --
-  // Owner." Mostly for Steve's benefit specifically -- a small,
-  // pleasant confirmation that his account really does carry real
-  // standing in the system now, not just access. Re-shows the overlay
-  // with a fresh hold/fade cycle rather than editing text that might
-  // already be mid-fade or gone, so the fuller message always gets its
-  // own full, readable moment on screen.
-  function enhanceWelcomeGreetingWithRole() {
-    if (typeof getCurrentUserFirstName !== 'function' || typeof getCurrentUserRole !== 'function') return;
+    if (typeof getCurrentUserFirstName !== 'function') return;
     const name = getCurrentUserFirstName();
-    const role = getCurrentUserRole();
-    if (!name || !role || !role.roleName) return;
-    showWelcomeOverlay('Welcome back, ' + name + ' \u2014 ' + role.roleName);
+    if (!name) return;
+    const role = (typeof getCurrentUserRole === 'function') ? getCurrentUserRole() : null;
+    const text = (role && role.roleName) ? ('Welcome back, ' + name + ' \u2014 ' + role.roleName) : ('Welcome back, ' + name);
+    showWelcomeOverlay(text);
   }
 
   // Split out from renderWelcomeGreeting() on 2026-08-15 -- this has to
@@ -2408,11 +2392,10 @@
 
   document.addEventListener('DOMContentLoaded', function () {
     try {
-    renderWelcomeGreeting();
     initSyncOnLoad().then(renderDashboard).catch(renderDashboard).then(() => {
       renderDevToolsTileVisibility();
       renderBusinessFinanceTileVisibility();
-      enhanceWelcomeGreetingWithRole();
+      renderWelcomeGreeting();
       renderSnapshotLastUpdated();
       if (typeof startRealtimeSync === 'function') {
         // One status callback shared by both channels -- last status wins,
