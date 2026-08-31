@@ -20,8 +20,8 @@ it, not less.
 Read `docs/GETTING-STARTED.md` first if this is a new area of the
 codebase -- it lists the real reading order (`README.md` ->
 `DISASTER_RECOVERY.md` -> `SECURITY.md` -> `docs/GLOSSARY.md`) and
-explains the two genuinely separate projects sharing this one repo
-(Tagg-N-Go and Triple H Enterprises).
+explains the two genuinely separate projects.
+(Triple H Enterprises).
 
 ## Making the change
 
