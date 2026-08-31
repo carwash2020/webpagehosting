@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="en" style="background:#0a0a0a;">
 <head>
-<script src="/tools/auth.js?v=52e9e98903"></script>
+<script src="/tools/auth.js?v=083961c3fa"></script>
 <script>
   // Security gate -- redirect to login before this page's own content
   // is meaningfully usable. See auth.js for why this exists (a single
@@ -36,7 +36,7 @@
   })();
 </script>
 <link rel="stylesheet" href="/styles.css?v=202608202000">
-<link rel="stylesheet" href="/tools/styles-tools.css?v=3774342439">
+<link rel="stylesheet" href="/tools/styles-tools.css?v=a2e87effb3">
 <script src="/tools/data-layer.js?v=44a1c3df77" defer></script>
 <script src="/tools/dev-tools-shared.js?v=56f990a832" defer></script>
 <script src="/tools/tools-effects.js?v=9a2a59040e" defer></script>
@@ -786,7 +786,7 @@
 
   document.addEventListener('DOMContentLoaded', function () {
     const proceed = () => {
-      const allowed = typeof hasDevToolsAccess === 'function' && hasDevToolsAccess();
+      const allowed = typeof canManageSiteContent === 'function' && canManageSiteContent();
       document.getElementById(allowed ? 'contentMainView' : 'contentBlockedView').style.display = 'block';
       document.getElementById(allowed ? 'contentBlockedView' : 'contentMainView').style.display = 'none';
       if (!allowed) return;

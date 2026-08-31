@@ -317,7 +317,7 @@ async function loadCurrentUserRole() {
   if (!email) { _cachedRoleInfo = null; return null; }
   try {
     const res = await fetch(
-      `${SUPABASE_URL}/rest/v1/account_roles?email=eq.${encodeURIComponent(email.toLowerCase())}&select=role_name,role_definitions(can_manage_roles,description)`,
+      `${SUPABASE_URL}/rest/v1/account_roles?email=eq.${encodeURIComponent(email.toLowerCase())}&select=role_name,role_definitions(can_manage_roles,can_access_dev_tools,can_manage_site_content,can_manage_business_finances,description)`,
       {
         headers: {
           'apikey': SUPABASE_ANON_KEY,
@@ -329,10 +329,23 @@ async function loadCurrentUserRole() {
     const rows = await res.json();
     if (!rows.length) { _cachedRoleInfo = null; return null; }
     const row = rows[0];
+    const def = row.role_definitions || {};
     _cachedRoleInfo = {
       roleName: row.role_name,
-      canManageRoles: !!(row.role_definitions && row.role_definitions.can_manage_roles),
-      description: row.role_definitions ? row.role_definitions.description : '',
+      canManageRoles: !!def.can_manage_roles,
+      // Added 2026-08-27, alongside the new Employee role -- before
+      // this, hasDevToolsAccess() below just checked "does this
+      // account have ANY role assigned at all," which would have
+      // wrongly granted a restricted Employee role full Dev Tools
+      // access too, the same as Owner or Developer. Defaults to true
+      // if this column is ever missing from a response for some
+      // reason (a role predating this change, or a query that didn't
+      // select it) -- fails open to the pre-existing behavior rather
+      // than silently locking out an account that used to have access.
+      canAccessDevTools: def.can_access_dev_tools !== false,
+      canManageSiteContent: def.can_manage_site_content !== false,
+      canManageBusinessFinances: def.can_manage_business_finances !== false,
+      description: def.description || '',
     };
     return _cachedRoleInfo;
   } catch (e) {
@@ -348,16 +361,43 @@ function getCurrentUserRole() {
   return _cachedRoleInfo;
 }
 
-// True for ANY account with a real assigned role (Owner, Developer, or
-// any future role) -- the actual dev-tools access gate now.
+// True only for a role with can_access_dev_tools set (Owner and
+// Developer, by default -- NOT Employee, added 2026-08-27 specifically
+// to be excluded here). Used to be "any account with a real assigned
+// role at all," which was correct back when only Owner/Developer
+// existed, but would have wrongly given a restricted Employee role
+// full Dev Tools access the same as everyone else.
 function hasDevToolsAccess() {
-  return !!_cachedRoleInfo;
+  return !!(_cachedRoleInfo && _cachedRoleInfo.canAccessDevTools);
 }
 
 // True only for a role with can_manage_roles set (Developer, by
 // default) -- gates creating new roles or reassigning an account's role.
 function canManageRoles() {
   return !!(_cachedRoleInfo && _cachedRoleInfo.canManageRoles);
+}
+
+// True for a role with can_manage_site_content set (Owner and
+// Developer, by default). Added 2026-08-27, requested directly ("bump
+// the owner role to be able to manage the main site through dev
+// tools") -- previously, site-content.html gated on hasDevToolsAccess()
+// alone, which happened to already include Owner, but wasn't an
+// explicit, named permission the way this is. Gates site-content.html
+// specifically, separate from Dev Tools access in general, so a
+// future role could have one without the other.
+function canManageSiteContent() {
+  return !!(_cachedRoleInfo && _cachedRoleInfo.canManageSiteContent);
+}
+
+// True for a role with can_manage_business_finances set (Owner and
+// Developer, by default -- NOT Employee). Added 2026-08-27 alongside
+// the new Employee role. Gates finance.html, runway-dashboard.html,
+// invoice-generator.html, contract-generator.html, and
+// review-request.html -- pricing, billing, contracts, and the
+// business's actual financial numbers, none of which a basic,
+// job-focused Employee role needs to see or touch.
+function canManageBusinessFinances() {
+  return !!(_cachedRoleInfo && _cachedRoleInfo.canManageBusinessFinances);
 }
 
 // Superseded by hasDevToolsAccess() above -- kept as a thin wrapper

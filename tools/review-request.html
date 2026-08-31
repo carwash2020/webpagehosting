@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="en" style="background:#0a0a0a;">
 <head>
-<script src="/tools/auth.js?v=52e9e98903"></script>
+<script src="/tools/auth.js?v=083961c3fa"></script>
 <script>
   // Security gate -- redirect to login before this page's own content
   // is meaningfully usable. See auth.js for why this exists (a single
@@ -36,12 +36,12 @@
   })();
 </script>
 <link rel="stylesheet" href="/styles.css?v=202608202000">
-<link rel="stylesheet" href="/tools/styles-tools.css?v=3774342439">
+<link rel="stylesheet" href="/tools/styles-tools.css?v=a2e87effb3">
 <script src="/tools/tools-effects.js?v=9a2a59040e" defer></script>
 <script src="/tools/tools-dialogs.js?v=e1dfaa11a1" defer></script>
 <script src="/tools/tools-media-sharing.js?v=4e2769b10d" defer></script>
 <script src="/tools/tools-nav-pwa.js?v=68a14209dc" defer></script>
-<script src="/tools/tools-tour.js?v=886e40d6c9" defer></script>
+<script src="/tools/tools-tour.js?v=21f63bf17f" defer></script>
 <script src="/tools/qrcode-lib.js?v=202608160400" defer></script>
 <style>
   body { padding: 90px 20px 60px; max-width: 640px; margin: 0 auto; }
@@ -97,6 +97,12 @@
 </style>
 </head>
 <body>
+
+<div id="roleBlockedOverlay" class="role-blocked-overlay">
+  <div class="tool-title" style="font-size:22px;">Not available here</div>
+  <p class="tool-sub" style="max-width:420px;">Review Requests isn't part of your role's access. Nothing's wrong with your account -- check with whoever manages roles if you think this should be different.</p>
+  <a href="/tools/workspace.html" class="btn blue" style="display:inline-block; margin-top:12px; text-decoration:none;">Back to Dashboard</a>
+</div>
 <a href="#mainContent" class="skip-link">Skip to main content</a>
 
 <div class="tool-header">
@@ -687,8 +693,21 @@
     });
   }
 
-  document.addEventListener('DOMContentLoaded', () => {
+  document.addEventListener('DOMContentLoaded', async () => {
     try {
+    // Gated 2026-08-27, alongside the new Employee role. This page
+    // never called loadCurrentUserRole() before (it doesn't sync at
+    // all) -- added it here specifically, since the gate below would
+    // otherwise always block everyone, including Owner and Developer.
+    // Unlike runway-dashboard.html/invoice-generator.html, this page's
+    // own render calls all happen synchronously right here, so this
+    // gate runs before any of them -- no flash-of-content trade-off
+    // needed on this specific page.
+    if (typeof loadCurrentUserRole === 'function') { await loadCurrentUserRole(); }
+    if (typeof canManageBusinessFinances === 'function' && !canManageBusinessFinances()) {
+      document.getElementById('roleBlockedOverlay').classList.add('is-shown');
+      return;
+    }
     // Moved here (2026-08-20) from top-level calls earlier in this
     // script -- all 4 reference escapeHtml(), which only exists in a
     // deferred script, and per the HTML spec every inline script runs

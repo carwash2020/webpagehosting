@@ -54,8 +54,34 @@ const TOUR_HIGHLIGHT_CLASS = 'th-tour-highlight';
 // person happened to dismiss it first. Same key name the original
 // 3-step dashboard tour used, so anyone who already dismissed THAT
 // tour doesn't get this longer one forced on them unexpectedly.
+//
+// Reads the stored session directly, NOT via getCurrentUserEmail()
+// (real bug found and fixed 2026-08-27, reported directly as the tour
+// "still pops up almost daily") -- getCurrentUserEmail() gates on
+// hasValidSession()'s strict token-expiry check, but initAppTour()
+// runs synchronously, immediately, on every page that includes it --
+// before that page's own initSyncOnLoad() has any chance to refresh
+// an expired access token. Confirmed via a real, simulated test:
+// since JWT access tokens routinely expire (hourly, by default), this
+// meant getCurrentUserEmail() returned null on a very ordinary,
+// routine re-open of the app (whenever the token happened to be
+// expired at that exact moment), which fell back to checking
+// th_onboarding_v1_seen_anon instead of the real, already-dismissed
+// per-user key. The email itself is still present in the stored
+// session object regardless of whether its access_token has expired
+// (expiry only means the token can't be trusted for a live API call
+// anymore, not that the stored session data was erased), so reading
+// it directly here is reliable in exactly the case where
+// getCurrentUserEmail() wasn't. Falls back to getCurrentUserEmail()
+// if getStoredSession isn't available for some reason, matching this
+// file's existing defensive-check convention.
 function appTourSeenKey() {
-  const email = (typeof getCurrentUserEmail === 'function' && getCurrentUserEmail()) || 'anon';
+  let email = null;
+  try {
+    const s = (typeof getStoredSession === 'function') ? getStoredSession() : null;
+    email = (s && s.email) || null;
+  } catch (e) { /* ignore */ }
+  if (!email) email = (typeof getCurrentUserEmail === 'function' && getCurrentUserEmail()) || 'anon';
   return 'th_onboarding_v1_seen_' + email.toLowerCase();
 }
 

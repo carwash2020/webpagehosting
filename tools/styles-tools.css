@@ -1692,3 +1692,21 @@ body.th-has-bottomnav .th-install-banner { bottom: calc(76px + env(safe-area-ins
 .pull-refresh-indicator.is-refreshing { opacity: 1; transform: scale(1); animation: pullRefreshSpin 0.7s linear infinite; }
 @keyframes pullRefreshSpin { from { transform: scale(1) rotate(0deg); } to { transform: scale(1) rotate(360deg); } }
 @media (prefers-reduced-motion: reduce) { .pull-refresh-indicator.is-refreshing { animation: none; } }
+
+/* Role-restricted page overlay (2026-08-27) -- shared across
+   finance.html, runway-dashboard.html, invoice-generator.html,
+   contract-generator.html, and review-request.html, all newly gated
+   behind canManageBusinessFinances() alongside the new Employee role.
+   A true full-viewport overlay (not a "swap which view is displayed"
+   div like site-content.html/dev-tools.html use) specifically so a
+   blocked page never needs its whole existing body wrapped in a new
+   container -- lower-risk than restructuring 5 already-complex pages'
+   DOM just for this. Paired with gating the actual init/render logic
+   itself (not just this visual overlay), so a blocked account's data
+   never actually populates the DOM underneath it either. */
+.role-blocked-overlay {
+  position: fixed; inset: 0; z-index: 9999; background: var(--bg);
+  display: none; flex-direction: column; align-items: center; justify-content: center;
+  text-align: center; padding: 24px;
+}
+.role-blocked-overlay.is-shown { display: flex; }

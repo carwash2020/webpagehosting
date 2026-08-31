@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="en" style="background:#0a0a0a;">
 <head>
-<script src="/tools/auth.js?v=52e9e98903"></script>
+<script src="/tools/auth.js?v=083961c3fa"></script>
 <script>
   // Security gate -- redirect to login before this page's own content
   // is meaningfully usable. See auth.js for why this exists (a single
@@ -36,7 +36,7 @@
   })();
 </script>
 <link rel="stylesheet" href="/styles.css?v=202608202000">
-<link rel="stylesheet" href="/tools/styles-tools.css?v=3774342439">
+<link rel="stylesheet" href="/tools/styles-tools.css?v=a2e87effb3">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.112.3/dist/umd/supabase.js" integrity="sha384-qafw21c/iciq0VXsi9FzkfoQv5I/V0iqE4lSNcKXPnW9/UTJLnv5CcN4FHxVLnKg" crossorigin="anonymous" defer></script>
 <script src="/tools/sync.js?v=73576c99e1" defer></script>
 <script src="/tools/data-layer.js?v=44a1c3df77" defer></script>
@@ -44,7 +44,7 @@
 <script src="/tools/tools-dialogs.js?v=e1dfaa11a1" defer></script>
 <script src="/tools/tools-media-sharing.js?v=4e2769b10d" defer></script>
 <script src="/tools/tools-nav-pwa.js?v=68a14209dc" defer></script>
-<script src="/tools/tools-tour.js?v=886e40d6c9" defer></script>
+<script src="/tools/tools-tour.js?v=21f63bf17f" defer></script>
 <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js" integrity="sha384-JcnsjUPPylna1s1fvi1u12X5qjY5OL56iySh75FdtrwhO/SWXgMjoVqcKyIIWOLk" crossorigin="anonymous" async></script>
 <style>
   body { padding: 90px 20px 60px; max-width: 900px; margin: 0 auto; }
@@ -81,6 +81,12 @@
 </style>
 </head>
 <body>
+
+<div id="roleBlockedOverlay" class="role-blocked-overlay">
+  <div class="tool-title" style="font-size:22px;">Not available here</div>
+  <p class="tool-sub" style="max-width:420px;">Contracts isn't part of your role's access. Nothing's wrong with your account -- check with whoever manages roles if you think this should be different.</p>
+  <a href="/tools/workspace.html" class="btn blue" style="display:inline-block; margin-top:12px; text-decoration:none;">Back to Dashboard</a>
+</div>
 <a href="#mainContent" class="skip-link">Skip to main content</a>
 
 <div class="tool-header">
@@ -867,12 +873,24 @@
     // realtime was wired up but nothing pulled on load, so contracts and
     // contacts saved from another device stayed invisible here until a live
     // event happened to arrive. Pull once, then re-render from fresh data.
+    //
+    // Gated 2026-08-27, alongside the new Employee role -- same pattern
+    // as invoice-generator.html: refactored the previously-duplicated
+    // then()/catch() callback into this one shared function so the gate
+    // check only needs to exist in one place.
+    function afterInitialSync() {
+      if (typeof canManageBusinessFinances === 'function' && !canManageBusinessFinances()) {
+        document.getElementById('roleBlockedOverlay').classList.add('is-shown');
+        return;
+      }
+      populateContactPickers(); renderContractLog();
+    }
     if (typeof initSyncOnLoad === 'function') {
-      initSyncOnLoad().then(() => { populateContactPickers(); renderContractLog(); }).catch(() => { populateContactPickers(); renderContractLog(); });
-      if (typeof setupPullToRefresh === 'function') setupPullToRefresh(() => { populateContactPickers(); renderContractLog(); });
+      initSyncOnLoad().then(afterInitialSync).catch(afterInitialSync);
+      if (typeof setupPullToRefresh === 'function') setupPullToRefresh(() => { if (typeof canManageBusinessFinances === 'function' && !canManageBusinessFinances()) return; populateContactPickers(); renderContractLog(); });
     }
     if (typeof startRealtimeSync === 'function') {
-      startRealtimeSync(renderContractLog, updateRealtimeBadge);
+      startRealtimeSync(() => { if (typeof canManageBusinessFinances === 'function' && !canManageBusinessFinances()) return; renderContractLog(); }, updateRealtimeBadge);
     }
   } catch (initError) {
     try {

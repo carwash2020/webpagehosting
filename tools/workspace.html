@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="en" style="background:#0a0a0a;">
 <head>
-<script src="/tools/auth.js?v=52e9e98903"></script>
+<script src="/tools/auth.js?v=083961c3fa"></script>
 <script>
   // Security gate -- redirect to login before this page's own content
   // is meaningfully usable. See auth.js for why this exists (a single
@@ -52,7 +52,7 @@
   })();
 </script>
 <link rel="stylesheet" href="/styles.css?v=202608202000">
-<link rel="stylesheet" href="/tools/styles-tools.css?v=3774342439">
+<link rel="stylesheet" href="/tools/styles-tools.css?v=a2e87effb3">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.112.3/dist/umd/supabase.js" integrity="sha384-qafw21c/iciq0VXsi9FzkfoQv5I/V0iqE4lSNcKXPnW9/UTJLnv5CcN4FHxVLnKg" crossorigin="anonymous" defer></script>
 <script src="/tools/sync.js?v=73576c99e1" defer></script>
 <script src="/tools/push-notifications.js?v=b55dfa1172" defer></script>
@@ -61,7 +61,7 @@
 <script src="/tools/tools-dialogs.js?v=e1dfaa11a1" defer></script>
 <script src="/tools/tools-media-sharing.js?v=4e2769b10d" defer></script>
 <script src="/tools/tools-nav-pwa.js?v=68a14209dc" defer></script>
-<script src="/tools/tools-tour.js?v=886e40d6c9" defer></script>
+<script src="/tools/tools-tour.js?v=21f63bf17f" defer></script>
 <style>
   body { padding: 44px 20px 60px; max-width: 900px; margin: 0 auto; }
   /* Desktop layout (2026-08-20), requested directly: efficient on
@@ -665,7 +665,7 @@
     <button class="tool-tile-info" onclick="event.stopPropagation(); openCardInfo('tool-routes')" aria-label="What is Route Planner?" title="What is this?">?</button>
   </div>
 
-  <div class="tool-tile">
+  <div class="tool-tile business-finance-tile">
     <a href="/tools/contract-generator.html" class="tool-tile-link">
       <span class="tool-tile-icon"><svg class="th-icon" aria-hidden="true"><use href="#icon-scroll" xlink:href="#icon-scroll"></use></svg></span>
       <span class="tool-tile-label">Contracts</span>
@@ -674,7 +674,7 @@
   </div>
 
   <div class="tool-group-label">Money</div>
-  <div class="tool-tile">
+  <div class="tool-tile business-finance-tile">
     <a href="/tools/invoice-generator.html" class="tool-tile-link">
       <span class="tool-tile-icon"><svg class="th-icon" aria-hidden="true"><use href="#icon-receipt" xlink:href="#icon-receipt"></use></svg></span>
       <span class="tool-tile-label">Invoices</span>
@@ -682,14 +682,14 @@
     <button class="tool-tile-info" onclick="event.stopPropagation(); openCardInfo('tool-invoices')" aria-label="What is Invoice Generator?" title="What is this?">?</button>
   </div>
 
-  <div class="tool-tile">
+  <div class="tool-tile business-finance-tile">
     <a href="/tools/finance.html" class="tool-tile-link">
       <span class="tool-tile-icon"><svg class="th-icon" aria-hidden="true"><use href="#icon-chart" xlink:href="#icon-chart"></use></svg></span>
       <span class="tool-tile-label">Finance</span>
     </a>
     <button class="tool-tile-info" onclick="event.stopPropagation(); openCardInfo('tool-finance')" aria-label="What is Finance?" title="What is this?">?</button>
   </div>
-  <div class="tool-tile">
+  <div class="tool-tile business-finance-tile">
     <a href="/tools/runway-dashboard.html" class="tool-tile-link">
       <span class="tool-tile-icon"><svg class="th-icon" aria-hidden="true"><use href="#icon-dollar" xlink:href="#icon-dollar"></use></svg></span>
       <span class="tool-tile-label">Runway</span>
@@ -698,7 +698,7 @@
   </div>
 
   <div class="tool-group-label">Grow</div>
-  <div class="tool-tile">
+  <div class="tool-tile business-finance-tile">
     <a href="/tools/review-request.html" class="tool-tile-link">
       <span class="tool-tile-icon"><svg class="th-icon" aria-hidden="true"><use href="#icon-star" xlink:href="#icon-star"></use></svg></span>
       <span class="tool-tile-label">Reviews</span>
@@ -2249,6 +2249,24 @@
     }
   }
 
+  // Added 2026-08-27, alongside the new Employee role and the 5 pages
+  // now gated behind canManageBusinessFinances() (Finance, Runway
+  // Dashboard, Invoices, Contracts, Review Requests) -- these tiles
+  // are shown by default (opposite direction from devToolsTile above,
+  // which is hidden by default), so a restricted role doesn't see
+  // dead-end links to pages it can't actually open.
+  function renderBusinessFinanceTileVisibility() {
+    if (typeof canManageBusinessFinances === 'function' && !canManageBusinessFinances()) {
+      document.querySelectorAll('.business-finance-tile').forEach(el => { el.style.display = 'none'; });
+      // Same reasoning, extended to the dashboard's own financial
+      // summary -- restricting the dedicated Finance/Runway pages
+      // while leaving Net Profit/Revenue/Expenses freely visible right
+      // here would be a real, direct inconsistency.
+      const snapshot = document.getElementById('section-snapshot');
+      if (snapshot) snapshot.style.display = 'none';
+    }
+  }
+
   function renderDashboard() {
     document.getElementById('setAsideRate').value = loadSetAsideRate();
     renderTodayJobs();
@@ -2393,6 +2411,7 @@
     renderWelcomeGreeting();
     initSyncOnLoad().then(renderDashboard).catch(renderDashboard).then(() => {
       renderDevToolsTileVisibility();
+      renderBusinessFinanceTileVisibility();
       enhanceWelcomeGreetingWithRole();
       renderSnapshotLastUpdated();
       if (typeof startRealtimeSync === 'function') {

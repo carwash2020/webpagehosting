@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="en" style="background:#0a0a0a;">
 <head>
-<script src="/tools/auth.js?v=52e9e98903"></script>
+<script src="/tools/auth.js?v=083961c3fa"></script>
 <script>
   // Security gate -- same pattern as every other internal tool page.
   // This one matters more than most: it holds real mortgage, debt, and
@@ -26,7 +26,7 @@
 <link href="https://fonts.googleapis.com/css2?family=Anton&family=Oswald:wght@300;400;500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.112.3/dist/umd/supabase.js" integrity="sha384-qafw21c/iciq0VXsi9FzkfoQv5I/V0iqE4lSNcKXPnW9/UTJLnv5CcN4FHxVLnKg" crossorigin="anonymous" defer></script>
 <script src="/tools/sync.js?v=73576c99e1" defer></script>
-<script src="/tools/tools-tour.js?v=886e40d6c9" defer></script>
+<script src="/tools/tools-tour.js?v=21f63bf17f" defer></script>
 <script>
   (function () {
     // Tools app light/dark theme (2026-08-20), tucked into Settings.
@@ -361,6 +361,12 @@
 </style>
 </head>
 <body class="th-has-sidebar">
+
+<div id="roleBlockedOverlay" class="role-blocked-overlay">
+  <div class="tool-title" style="font-size:22px;">Not available here</div>
+  <p class="tool-sub" style="max-width:420px;">Runway Dashboard isn't part of your role's access. Nothing's wrong with your account -- check with whoever manages roles if you think this should be different.</p>
+  <a href="/tools/workspace.html" class="btn blue" style="display:inline-block; margin-top:12px; text-decoration:none;">Back to Dashboard</a>
+</div>
 <svg width="0" height="0" style="position:absolute" aria-hidden="true">
   <defs>
     <symbol id="icon-home" viewBox="0 0 24 24"><g transform="translate(0,-0.5)"><path d="M4 11.5L12 4l8 7.5"/><path d="M6 10v9.5c0 .8.7 1.5 1.5 1.5h9c.8 0 1.5-.7 1.5-1.5V10"/><path d="M9.5 21v-5.5c0-.55.45-1 1-1h3c.55 0 1 .45 1 1V21"/></g></symbol>
@@ -2682,6 +2688,23 @@ loadAll();
 document.addEventListener('DOMContentLoaded', async () => {
     try {
   initAppTour();
+  // Real, honest limitation: this page's own loadAll() (line ~2681,
+  // above) already renders from local cache unconditionally, before
+  // this handler even runs -- so a brief flash of content before this
+  // overlay appears isn't fully eliminable without restructuring when
+  // this page first loads data, which felt like more risk than this
+  // change warranted. Accepted as reasonable given this is already a
+  // UI-level gate (not a true security boundary -- the underlying data
+  // still lives in Supabase/window.storage regardless), consistent
+  // with this app's existing threat model. Confirmed this page never
+  // called loadCurrentUserRole() at all before this -- added it here
+  // specifically, since the gate below would otherwise always block
+  // everyone, including Owner and Developer.
+  if (typeof loadCurrentUserRole === 'function') { await loadCurrentUserRole(); }
+  if (typeof canManageBusinessFinances === 'function' && !canManageBusinessFinances()) {
+    document.getElementById('roleBlockedOverlay').classList.add('is-shown');
+    return;
+  }
   // Wired up BEFORE the blocking await below (2026-08-27, real bug
   // found and fixed, same class as job-tracker.html/finance.html) --
   // if await pullSync() ever rejects (a real possibility on a job

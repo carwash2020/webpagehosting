@@ -731,7 +731,14 @@ test('site-content.html loads dev-tools-shared.js too, and has the standard acce
   assert.match(src, /dev-tools-shared\.js/);
   assert.match(src, /id="contentBlockedView"/);
   assert.match(src, /id="contentMainView"/);
-  assert.match(src, /hasDevToolsAccess/);
+  // Changed 2026-08-27 from hasDevToolsAccess() to the new, explicit
+  // canManageSiteContent() permission, requested directly ("bump the
+  // owner role to be able to manage the main site through dev
+  // tools") -- functionally identical for Owner/Developer today
+  // (both flags are true for both), but now a named permission
+  // rather than a side effect of general Dev Tools access, and
+  // correctly excludes the new Employee role either way.
+  assert.match(src, /canManageSiteContent/);
 });
 
 test('dev-tools.html\'s jump-nav Content pill now links to the new page instead of an in-page anchor', () => {

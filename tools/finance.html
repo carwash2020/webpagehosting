@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="en" style="background:#0a0a0a;">
 <head>
-<script src="/tools/auth.js?v=52e9e98903"></script>
+<script src="/tools/auth.js?v=083961c3fa"></script>
 <script>
   // Security gate -- redirect to login before this page’s own content
   // is meaningfully usable. See auth.js for why this exists (a single
@@ -36,14 +36,14 @@
   })();
 </script>
 <link rel="stylesheet" href="/styles.css?v=202608202000">
-<link rel="stylesheet" href="/tools/styles-tools.css?v=3774342439">
+<link rel="stylesheet" href="/tools/styles-tools.css?v=a2e87effb3">
 <script src="/tools/sync.js?v=73576c99e1" defer></script>
 <script src="/tools/data-layer.js?v=44a1c3df77" defer></script>
 <script src="/tools/tools-effects.js?v=9a2a59040e" defer></script>
 <script src="/tools/tools-dialogs.js?v=e1dfaa11a1" defer></script>
 <script src="/tools/tools-media-sharing.js?v=4e2769b10d" defer></script>
 <script src="/tools/tools-nav-pwa.js?v=68a14209dc" defer></script>
-<script src="/tools/tools-tour.js?v=886e40d6c9" defer></script>
+<script src="/tools/tools-tour.js?v=21f63bf17f" defer></script>
 <style>
   .tool-title { font-family:'Oswald',sans-serif; font-weight:700; font-size:28px; color:var(--white); margin-bottom:6px; }
   .tool-sub { color: var(--text-dim); margin-bottom: 24px; }
@@ -69,6 +69,13 @@
 </style>
 </head>
 <body>
+
+<div id="roleBlockedOverlay" class="role-blocked-overlay">
+  <div class="tool-title" style="font-size:22px;">Not available here</div>
+  <p class="tool-sub" style="max-width:420px;">Finance isn't part of your role's access. Nothing's wrong with your account -- check with whoever manages roles if you think this should be different.</p>
+  <a href="/tools/workspace.html" class="btn blue" style="display:inline-block; margin-top:12px; text-decoration:none;">Back to Dashboard</a>
+</div>
+
 
 <div class="hub-header">
   <div class="hub-header-left">
@@ -1095,6 +1102,16 @@
       // they're only actually called later, when the user pulls.
       if (typeof setupPullToRefresh === 'function') setupPullToRefresh(() => { renderExpenses(); renderIncomeEntries(); renderPriceReferences(); });
       await initSyncOnLoad();
+      // Gated 2026-08-27, alongside the new Employee role -- checked
+      // right after initSyncOnLoad() resolves (which is what actually
+      // loads the role via loadCurrentUserRole()), before any real
+      // render/setup logic below runs, so a blocked account's data
+      // never populates the DOM at all -- not just visually covered by
+      // the overlay.
+      if (typeof canManageBusinessFinances === 'function' && !canManageBusinessFinances()) {
+        document.getElementById('roleBlockedOverlay').classList.add('is-shown');
+        return;
+      }
       loadTaxSettings();
       document.getElementById('entryDate').value = new Date().toISOString().slice(0, 10);
       document.getElementById('incomeDate').value = new Date().toISOString().slice(0, 10);
