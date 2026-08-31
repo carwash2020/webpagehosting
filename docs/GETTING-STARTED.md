@@ -20,16 +20,15 @@ needing to actually get oriented, not just skim.
    make sense on first read, check here before assuming it means the
    obvious thing.
 
-## Two separate projects, two separate Supabase backends
+## What this repo actually hosts
 
-This repo hosts **two genuinely separate things** from one GitHub
-Pages deployment: Tagg-N-Go's public car wash site and internal
-incident tools, and Triple H Enterprises' public site and internal
-tool suite. They share this repo and some genuinely shared files
-(see "Shared files" in the README), but their data, Supabase
-projects, and business logic never cross. Know which one you're
-actually working on before you start -- the file structure sections in
-the README tell you which files belong to which.
+This repo hosts Triple H Enterprises' public marketing site and its
+internal tool suite (the Workspace apps under `/tools/`) from one
+GitHub Pages deployment. They share this repo and some genuinely
+shared files (see "Shared files" in the README), but the public site
+and the internal tools are still meaningfully separate things -- know
+which one you're actually working on before you start. The file
+structure sections in the README tell you which files belong to which.
 
 ## Before shipping any change
 
