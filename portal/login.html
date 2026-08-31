@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="en" style="background:#0a0a0a;">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="robots" content="noindex, nofollow">
+<title>Client Portal | Triple H Enterprises</title>
+<!--
+  Client Portal login (2026-08-31) -- a genuinely separate build from
+  everything under /tools/. Deliberately does NOT load auth.js, sync.js,
+  data-layer.js, or tools-nav-pwa.js -- all of those are built entirely
+  around the internal team's login (account_roles, Owner/Developer/
+  Employee, Dev Tools access) and none of it should exist on a page an
+  external client can reach. Only the shared stylesheets are reused,
+  for visual consistency with the rest of the brand -- no shared JS at
+  all. Uses the official Supabase JS SDK (not this project's usual
+  hand-rolled fetch() pattern) specifically for this page, since the
+  SDK's signInWithOtp()/onAuthStateChange() correctly handle the
+  magic-link callback's token parsing, which is real, easy-to-get-
+  subtly-wrong logic not worth reimplementing by hand for
+  security-relevant auth code.
+-->
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data:; connect-src 'self' https://csvfqdjuobylgafgolho.supabase.co; frame-src 'none'; object-src 'none'; base-uri 'self'; frame-ancestors 'none';">
+<meta name="theme-color" content="#0a0a0a">
+<link rel="apple-touch-icon" href="/images/apple-touch-icon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/styles.css?v=202608202000">
+<link rel="stylesheet" href="/tools/styles-tools.css?v=a2e87effb3">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+  body { display: flex; align-items: center; justify-content: center; min-height: 100vh; padding: 20px; }
+  .login-box { max-width: 380px; width: 100%; text-align: center; }
+  .login-logo { width: 72px; height: auto; margin-bottom: 20px; }
+  .login-title { font-family: 'Oswald', sans-serif; font-weight: 700; font-size: 22px; color: var(--white); margin-bottom: 6px; }
+  .login-sub { color: var(--text-dim); font-size: 14px; margin-bottom: 28px; }
+  .login-field { margin-bottom: 16px; text-align: left; }
+  .login-field label { display: block; font-size: 13px; color: var(--text-dim); margin-bottom: 5px; }
+  .login-field input {
+    width: 100%; padding: 11px 13px; background: var(--bg-panel-2); border: 1px solid var(--border);
+    border-radius: 8px; color: var(--white); font-size: 15px; font-family: inherit; box-sizing: border-box;
+  }
+  .login-error { color: #e05252; font-size: 13.5px; margin: 4px 0 16px; min-height: 1px; }
+  .login-success { color: #4caf78; font-size: 14px; margin: 4px 0 16px; line-height: 1.5; }
+  .login-btn { width: 100%; justify-content: center; }
+</style>
+</head>
+<body>
+
+<div class="login-box">
+  <img src="/images/logo-signature-orange.webp?v=202608142300" alt="Triple H Enterprises" class="login-logo">
+  <div class="login-title">Client Portal</div>
+  <div class="login-sub" id="loginSub">Enter your email and we'll send you a secure sign-in link -- no password needed.</div>
+
+  <form id="loginForm">
+    <div class="login-field">
+      <label for="clientEmail">Email</label>
+      <input type="email" id="clientEmail" required autocomplete="email" placeholder="you@example.com">
+    </div>
+    <div class="login-error" id="loginError"></div>
+    <div class="login-success" id="loginSuccess" style="display:none;"></div>
+    <button type="submit" class="btn blue login-btn" id="loginSubmitBtn">Send me a link</button>
+  </form>
+</div>
+
+<script>
+  const { createClient } = supabase;
+  const client = createClient(
+    'https://csvfqdjuobylgafgolho.supabase.co',
+    'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNzdmZxZGp1b2J5bGdhZmdvbGhvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODUzNTQ3MjcsImV4cCI6MjEwMDkzMDcyN30.6GlvK-DfXf2lppS1kciZtsl4wHOpZz_yKtwsS1lyjrs'
+  );
+
+  client.auth.getSession().then(({ data }) => {
+    if (data.session) window.location.replace('/portal/dashboard.html');
+  });
+
+  document.getElementById('loginForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const email = document.getElementById('clientEmail').value.trim();
+    const errorEl = document.getElementById('loginError');
+    const successEl = document.getElementById('loginSuccess');
+    const btn = document.getElementById('loginSubmitBtn');
+    errorEl.textContent = '';
+    successEl.style.display = 'none';
+    btn.disabled = true;
+    btn.textContent = 'Sending...';
+
+    const { error } = await client.auth.signInWithOtp({
+      email,
+      options: { emailRedirectTo: window.location.origin + '/portal/dashboard.html' },
+    });
+
+    if (error) {
+      errorEl.textContent = 'Something went wrong -- ' + (error.message || 'please try again.');
+      btn.disabled = false;
+      btn.textContent = 'Send me a link';
+      return;
+    }
+
+    document.getElementById('loginForm').style.display = 'none';
+    document.getElementById('loginSub').style.display = 'none';
+    successEl.textContent = `Check ${email} for a sign-in link. It'll bring you right back here.`;
+    successEl.style.display = 'block';
+  });
+</script>
+
+</body>
+</html>
