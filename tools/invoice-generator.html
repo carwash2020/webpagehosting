@@ -154,6 +154,12 @@
       <input type="text" id="clientAddress" placeholder="237 N Bluff St #C, St. George, UT 84770">
     </div>
   </div>
+  <div class="tool-form-row">
+    <div class="form-field">
+      <label>Client Email <span class="tool-sub" style="font-weight:normal;">(optional -- lets this client view and pay this invoice online)</span></label>
+      <input type="email" id="clientEmail" placeholder="client@example.com">
+    </div>
+  </div>
   <div id="contactsContainer"></div>
   <button type="button" class="add-contact-btn" onclick="addContact('', '', '', '', true)">+ Add contact</button>
 </div>
@@ -1128,6 +1134,33 @@
     list.push(newEntry);
     saveInvoiceLog(list);
     logInvoiceToIncomeLog(newEntry);
+
+    // Portal sync (2026-08-31) -- fires only when a client email was
+    // actually provided (this field is optional; most invoices won't
+    // need this at all). Best-effort: a failure here logs to the
+    // console but never blocks saving the invoice itself, since the
+    // local invoice log above is the real, primary record -- the
+    // portal table is a secondary, client-safe mirror of it.
+    const clientEmailVal = document.getElementById('clientEmail').value.trim();
+    if (clientEmailVal && typeof getAuthToken === 'function') {
+      fetch(`${SUPABASE_URL}/functions/v1/sync-invoice-to-portal`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'apikey': SUPABASE_ANON_KEY,
+          'Authorization': `Bearer ${getAuthToken()}`,
+        },
+        body: JSON.stringify({
+          source_invoice_id: newEntry.id,
+          client_email: clientEmailVal,
+          client_name: newEntry.clientName,
+          invoice_number: newEntry.invoiceNumber,
+          invoice_date: newEntry.date,
+          description: newEntry.jobRefTitle || null,
+          total: newEntry.total,
+        }),
+      }).catch(e => console.warn('Portal sync failed (invoice still saved locally):', e));
+    }
 
     if (pendingSourceQuoteId) {
       const quotes = loadQuoteLog();
