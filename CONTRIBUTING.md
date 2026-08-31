@@ -20,8 +20,7 @@ it, not less.
 Read `docs/GETTING-STARTED.md` first if this is a new area of the
 codebase -- it lists the real reading order (`README.md` ->
 `DISASTER_RECOVERY.md` -> `SECURITY.md` -> `docs/GLOSSARY.md`) and
-explains the two genuinely separate projects.
-(Triple H Enterprises).
+explains what this repo actually hosts.
 
 ## Making the change
 
@@ -34,6 +33,28 @@ explains the two genuinely separate projects.
   remember it.
 - Deliver only what actually changed, not a full-repo re-push, unless
   a real structural reason requires one.
+
+## Getting real review from the installed bots (added 2026-08-31)
+
+Snyk, CodeRabbit, and Repowise are all installed on this repo, but
+none of them add any value on a direct push to `main` -- they only
+actually review a **pull request**. Every real change from here
+forward should go through a PR rather than a direct push, specifically
+so these tools get a genuine chance to weigh in before it merges.
+
+- Repowise and Snyk trigger automatically on their own, no extra step.
+- CodeRabbit does **not** run automatically on this repo -- confirmed
+  directly in its own posted comment: it requires 10+ GitHub stars to
+  review by default, and this repo doesn't have that many. Trigger it
+  manually, every single PR, by checking the "Trigger review" box on
+  its initial comment, or commenting `@coderabbitai review`.
+- A failing check named "Code scanning AI findings on PR #N" (app:
+  `github-actions`, a dynamic GitHub platform agent -- not anything
+  in this repo's own workflow files, and not one of the three bots
+  above) is a known, benign quirk specifically on documentation-only
+  PRs with no real code changes. Confirmed directly, not assumed:
+  zero actual code-scanning alerts exist when this happens. Not
+  something to chase or try to fix.
 
 ## Verifying it before it ships
 
