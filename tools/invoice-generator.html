@@ -261,6 +261,12 @@
   </div>
   <div class="tool-form-row">
     <div class="form-field">
+      <label>Client Email <span class="tool-sub" style="font-weight:normal;">(optional -- lets this client review and approve this quote online)</span></label>
+      <input type="email" id="quoteClientEmail" placeholder="client@example.com">
+    </div>
+  </div>
+  <div class="tool-form-row">
+    <div class="form-field">
       <label>Address</label>
       <input type="text" id="quoteClientAddress" placeholder="123 Main St, St. George, UT">
     </div>
@@ -453,6 +459,7 @@
     document.getElementById('tab-recent').classList.toggle('is-active', tab === 'recent');
     if (tab === 'recent' && typeof renderInvoiceLog === 'function') renderInvoiceLog();
     if (tab === 'recent' && typeof renderQuoteLog === 'function') renderQuoteLog();
+    if (tab === 'recent' && typeof refreshPortalQuoteStatuses === 'function') refreshPortalQuoteStatuses();
   }
 
   const GEN_TAB_ORDER = ['invoice', 'quote', 'recent'];
@@ -1270,6 +1277,38 @@
     });
     saveQuoteLog(list);
     if (typeof renderQuoteLog === 'function') renderQuoteLog();
+
+    // Portal sync (2026-09-01) -- same fire-and-forget, best-effort
+    // pattern as the invoice side: fires only when a client email was
+    // actually provided, never blocks saving the quote locally (the
+    // local quote log above is the real, primary record; the portal
+    // table is a secondary, client-safe mirror of it). This is a
+    // DIFFERENT status field from the 'pending'/'converted' one just
+    // saved above -- that one tracks whether this quote has become an
+    // invoice yet; client_portal_quotes.status tracks whether the
+    // CLIENT has approved/declined it. The two are never merged back
+    // into each other.
+    const quoteClientEmailVal = document.getElementById('quoteClientEmail').value.trim();
+    if (quoteClientEmailVal && typeof getAuthToken === 'function') {
+      fetch(`${SUPABASE_URL}/functions/v1/sync-quote-to-portal`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'apikey': SUPABASE_ANON_KEY,
+          'Authorization': `Bearer ${getAuthToken()}`,
+        },
+        body: JSON.stringify({
+          source_quote_id: list[list.length - 1].id,
+          client_email: quoteClientEmailVal,
+          client_name: quoteClientNameVal || '(no name)',
+          quote_number: document.getElementById('quoteNumber').value,
+          quote_date: document.getElementById('quoteDate').value || new Date().toISOString().slice(0, 10),
+          description: jobRefTitle || document.getElementById('quoteJobDescription').value || null,
+          line_items: getQuoteLineItems(),
+          total: totals.total,
+        }),
+      }).catch(e => console.warn('Portal sync failed (quote still saved locally):', e));
+    }
   }
 
   function renderQuoteLog() {
@@ -1295,16 +1334,110 @@
       const statusLabel = status === 'converted'
         ? '<span style="color:#6fcf97; font-weight:600;">&#10003; Converted to invoice</span>'
         : '<span style="color:var(--text-dim);">Pending</span>';
+      // Portal response status -- same idea as the invoice log's
+      // Paid/Unpaid badge and Resend Invite button, right on the
+      // record Steve is already looking at, not a separate settings
+      // page. Only shows up at all for a quote that was actually
+      // synced to the portal (client email was provided); live-fetched
+      // via refreshPortalQuoteStatuses() rather than written back into
+      // this quote's own local record, so there's no risk of this read
+      // ever colliding with a concurrent sync-merge write to th_quotes.
+      const portalInfo = portalQuoteInfoBySourceId[q.id];
+      let portalHtml = '';
+      if (portalInfo) {
+        const portalStatusColor = portalInfo.status === 'approved' ? '#6fcf97' : portalInfo.status === 'declined' ? '#e05252' : 'var(--orange-light)';
+        const portalStatusLabel = portalInfo.status === 'approved' ? 'Approved' : portalInfo.status === 'declined' ? 'Declined' : 'Awaiting client response';
+        portalHtml += `<div class="contract-log-meta">Portal: <span style="color:${portalStatusColor}; font-weight:600;">${portalStatusLabel}</span></div>`;
+        const openQuestions = portalInfo.questions.filter(qq => !qq.resolved);
+        if (openQuestions.length) {
+          portalHtml += openQuestions.map(qq => `
+            <div class="contract-log-meta" style="margin-top:4px; padding:6px 8px; background:var(--bg-panel-2); border-radius:6px;">
+              <strong>Client question:</strong> ${escapeHtml(qq.message)}
+              <button class="small-btn" style="margin-left:6px;" onclick="resolveQuoteQuestion(${qq.id})">Mark answered</button>
+            </div>
+          `).join('');
+        }
+      }
       return `
       <div class="contract-log-item" data-quote-id="${q.id}">
         <div>
           <div class="contract-log-title">${personDot(q.generatedBy, 'Generated by')}${escapeHtml(q.clientName || '(no name)')}</div>
           <div class="contract-log-meta">#${escapeHtml(q.quoteNumber || '')} &middot; ${escapeHtml(q.date || '')} &middot; ${money(q.total)}${q.jobRefTitle ? ' &middot; ' + escapeHtml(q.jobRefTitle) : ''}</div>
           <div class="contract-log-meta">${statusLabel}</div>
+          ${portalHtml}
         </div>
         <button class="small-btn" style="color:#e05252; border-color:#e05252;" onclick="deleteQuoteLogEntry(${q.id})" aria-label="Delete this quote">Delete</button>
       </div>`;
     }).join('');
+  }
+
+  // Cache of live portal-side quote status, keyed by the LOCAL quote's
+  // own id (which is exactly what source_quote_id was set to when
+  // sync-quote-to-portal ran -- see logQuote()). Populated by
+  // refreshPortalQuoteStatuses(), read by renderQuoteLog() above.
+  let portalQuoteInfoBySourceId = {};
+
+  // Fetched fresh every time the Recent tab is opened (see
+  // activateGenTab below) -- a direct, real-time read against
+  // client_portal_quotes/quote_questions, the exact same tables and
+  // RLS (internal accounts can view all quotes/questions) already
+  // proven for the Dev Tools "Portal bug reports" panel. Deliberately
+  // NOT written back into this quote's own local th_quotes record --
+  // see the comment on portalQuoteInfoBySourceId above for why a read
+  // here is safe where a write into the sync-merge blob would not be.
+  async function refreshPortalQuoteStatuses() {
+    if (typeof getAuthToken !== 'function') return;
+    try {
+      const [quotesRes, questionsRes] = await Promise.all([
+        fetch(`${SUPABASE_URL}/rest/v1/client_portal_quotes?select=id,source_quote_id,status,responded_at`, {
+          headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': `Bearer ${getAuthToken()}` },
+        }),
+        fetch(`${SUPABASE_URL}/rest/v1/quote_questions?select=*&order=created_at.desc`, {
+          headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': `Bearer ${getAuthToken()}` },
+        }),
+      ]);
+      if (!quotesRes.ok || !questionsRes.ok) return; // best-effort -- the log still renders fine without portal status
+      const portalQuotes = await quotesRes.json();
+      const questions = await questionsRes.json();
+
+      const questionsByPortalQuoteId = {};
+      questions.forEach(qq => {
+        if (!questionsByPortalQuoteId[qq.quote_id]) questionsByPortalQuoteId[qq.quote_id] = [];
+        questionsByPortalQuoteId[qq.quote_id].push(qq);
+      });
+
+      const bySourceId = {};
+      portalQuotes.forEach(pq => {
+        bySourceId[pq.source_quote_id] = {
+          status: pq.status,
+          respondedAt: pq.responded_at,
+          questions: questionsByPortalQuoteId[pq.id] || [],
+        };
+      });
+      portalQuoteInfoBySourceId = bySourceId;
+      renderQuoteLog();
+    } catch (e) {
+      console.warn('Could not refresh portal quote status:', e);
+    }
+  }
+
+  async function resolveQuoteQuestion(id) {
+    if (typeof getAuthToken !== 'function') return;
+    try {
+      const res = await fetch(`${SUPABASE_URL}/rest/v1/quote_questions?id=eq.${id}`, {
+        method: 'PATCH',
+        headers: {
+          'apikey': SUPABASE_ANON_KEY,
+          'Authorization': `Bearer ${getAuthToken()}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ resolved: true, resolved_at: new Date().toISOString() }),
+      });
+      if (!res.ok) throw new Error('HTTP ' + res.status);
+      refreshPortalQuoteStatuses();
+    } catch (e) {
+      if (typeof showToast === 'function') showToast('Could not mark answered: ' + (e.message || String(e)), { type: 'error' });
+    }
   }
 
   let quoteGenerationInProgress = false;
@@ -1624,7 +1757,7 @@
     }
     if (typeof initSyncOnLoad === 'function') {
       initSyncOnLoad().then(afterInitialSync).catch(afterInitialSync);
-      if (typeof setupPullToRefresh === 'function') setupPullToRefresh(() => { if (typeof canManageBusinessFinances === 'function' && !canManageBusinessFinances()) return; loadSharedTaxRate(); populateKnownContactsList(); populatePriceRefPickers(); renderInvoiceLog(); renderQuoteLog(); });
+      if (typeof setupPullToRefresh === 'function') setupPullToRefresh(() => { if (typeof canManageBusinessFinances === 'function' && !canManageBusinessFinances()) return; loadSharedTaxRate(); populateKnownContactsList(); populatePriceRefPickers(); renderInvoiceLog(); renderQuoteLog(); if (typeof refreshPortalQuoteStatuses === 'function') refreshPortalQuoteStatuses(); });
     }
     if (typeof startRealtimeSync === 'function') {
       startRealtimeSync(() => { if (typeof canManageBusinessFinances === 'function' && !canManageBusinessFinances()) return; loadSharedTaxRate(); populateKnownContactsList(); populatePriceRefPickers(); }, updateRealtimeBadge);

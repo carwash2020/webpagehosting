@@ -64,6 +64,26 @@ RLS: anyone (anon or authenticated) can INSERT with a message between
 can SELECT or UPDATE. A client can submit but can never read anything
 back, including their own past reports.
 
+**`client_portal_quotes`** (added 2026-09-02, phase 2) -- same shape
+as `client_portal_invoices`: separate table from the internal
+`th_quotes` (which lives in the `workspace_sync` JSON blob),
+deliberately not two-way synced back into it. Unique constraint on
+`source_quote_id`. RLS: clients see only their own quote; internal
+accounts (via `account_roles`) can see every quote -- a SECOND
+permissive SELECT policy on the same table, not a replacement for the
+first. No insert/update/delete for the `authenticated` role at all;
+writes happen only through `sync-quote-to-portal` and
+`respond-to-quote`, using the service role key.
+
+**`quote_questions`** (added 2026-09-02, phase 2) -- deliberately
+narrower than an open-ended messaging thread (see "Worth considering
+but has real tradeoffs" further down this file): a client can ask one
+question tied to one specific quote. RLS: INSERT requires being
+signed in (unlike `portal_bug_reports`, which must work pre-login) AND
+the inserted `client_email` matching the caller's own session AND that
+`quote_id` genuinely belonging to them. SELECT/UPDATE are internal-only,
+same shape as `portal_bug_reports`.
+
 ## Edge functions
 
 All deployed and ACTIVE. Source backed up in `edge-functions/`.
@@ -75,17 +95,35 @@ All deployed and ACTIVE. Source backed up in `edge-functions/`.
 | `send-invoice-notification` | true | "You have a new invoice" email to an existing client |
 | `create-payment-intent` | true | Creates a Stripe PaymentIntent server-side, verifying the invoice actually belongs to the caller's email |
 | `stripe-webhook` | **false** | Receives `payment_intent.succeeded`, marks paid in both `client_portal_invoices` and `workspace_sync`'s `th_invoices` |
+| `sync-quote-to-portal` | true | Writes to `client_portal_quotes`; same new-client-vs-new-item branching as `sync-invoice-to-portal`, triggering `send-invite` or `send-quote-notification` |
+| `send-quote-notification` | true | "You have a new quote to review" email to an existing client |
+| `respond-to-quote` | true | Client-only (no `account_roles` check, unlike the internal functions above) -- verifies the quote belongs to the caller's own email and is still `pending`, then sets `approved`/`declined` |
 
 Two non-obvious things worth not rediscovering the hard way:
 
 - **`sync-invoice-to-portal` forwards the original caller's own auth
   token** to the downstream functions, not the service role key,
   because both of those require the `authenticated` role plus
-  `can_manage_business_finances`.
+  `can_manage_business_finances`. `sync-quote-to-portal` does the same.
 - **`stripe-webhook` must be `verify_jwt: false`.** Stripe cannot
   send a Supabase JWT; the `Stripe-Signature` header is the only
   auth, verified with `constructEventAsync()` against the **raw**
   `.text()` body. Using `.json()` breaks signature verification.
+
+**Deliberate difference from `stripe-webhook`'s pattern:**
+`stripe-webhook` writes `paid` directly into `workspace_sync`'s
+`th_invoices` blob -- an accepted, known risk (an unconditional
+read-modify-write of the whole blob, no merge check against a
+concurrent write from an active browser session) that was judged
+worth it specifically because payment status is important enough.
+`respond-to-quote` does **not** do the equivalent for quote approval
+status -- there's no write back into `th_quotes` at all. Internal
+visibility instead comes from a live, real-time read against
+`client_portal_quotes`/`quote_questions`, surfaced inline in the Quote
+Log in `tools/invoice-generator.html` (`refreshPortalQuoteStatuses()`),
+the same place the existing Paid/Unpaid badge and "Resend Invite"
+button already live for invoices -- not a separate Dev Tools panel,
+since Dev Tools hides almost everything from Steve's Owner role.
 
 ## Real bugs found by testing, worth not reintroducing
 
@@ -201,14 +239,15 @@ Real dependencies, not preference, decide this order:
 
 1. ~~**Invoices** (view, pay, PDF, receipts)~~ -- **done**, everything
    above this line in this file.
-2. **Quote review + questions + approval.** The biggest real gap:
-   `th_quotes` today is internal-only `localStorage`/`workspace_sync`
-   data with no client-email link and no portal table at all --
-   needs the exact same treatment invoices got (a
-   `client_portal_quotes` table, a sync edge function, RLS scoped to
-   `client_email`), plus new surface area invoices never needed: a way
-   for the client to ask a question, and an approval write-back Steve
-   can see.
+2. ~~**Quote review + questions + approval.**~~ -- **done** (2026-09-02).
+   `client_portal_quotes` + `quote_questions` tables, `sync-quote-to-
+   portal`/`send-quote-notification`/`respond-to-quote` edge functions,
+   `portal/quotes.html`, and a `quoteClientEmail` field + auto-sync in
+   the Quote tab of `tools/invoice-generator.html`. Deliberately scoped
+   narrower than the full idea in two ways: no client-facing quote PDF
+   yet (reusable from `portal/dashboard.html`'s jsPDF pattern whenever
+   wanted), and questions are insert-only from the client side (Steve
+   follows up by phone/text/email, not an in-portal reply).
 3. **Scheduling the job from an approved quote.** Deliberately after
    approval, not a standalone feature -- the real booking backend
    already exists and is reusable as-is (`th_bookings` table,
