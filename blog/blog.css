@@ -26,8 +26,12 @@
 }
 
 .blog-kicker {
-  color: var(--text-dim);
-  font-size: 14px;
+  font-family: 'Oswald', sans-serif;
+  font-weight: 600;
+  letter-spacing: 3px;
+  text-transform: uppercase;
+  font-size: 13px;
+  color: var(--orange);
   margin-bottom: 10px;
 }
 
@@ -40,13 +44,13 @@
 }
 
 .blog-title {
-  font-family: 'Oswald', sans-serif;
-  font-weight: 700;
+  font-family: 'Anton', sans-serif;
+  font-weight: 400;
   font-size: 36px;
   line-height: 1.15;
   color: var(--white);
   margin: 0 0 12px;
-  letter-spacing: -0.01em;
+  letter-spacing: 0.5px;
 }
 
 .blog-dek {
