@@ -58,6 +58,15 @@
   .job-warranty.is-active { background: rgba(76,175,80,0.15); color: #4caf50; }
   .job-warranty.is-expired { background: var(--bg-panel); color: var(--text-dim); }
   .empty-state { text-align: center; color: var(--text-dim); padding: 60px 20px; }
+  .checkup-banner {
+    background: var(--orange-tint-soft); border: 1px solid var(--orange-tint-border); border-radius: 10px;
+    padding: 14px 16px; margin-bottom: 12px; display: flex; justify-content: space-between; align-items: center; gap: 10px;
+  }
+  .checkup-banner.is-not-due { background: var(--bg-panel-2); border-color: var(--border); }
+  .checkup-title { font-weight: 600; color: var(--white); font-size: 14.5px; }
+  .checkup-due-label { font-size: 12.5px; color: var(--orange-light); margin-top: 2px; }
+  .checkup-banner.is-not-due .checkup-due-label { color: var(--text-dim); }
+  .checkup-note { color: var(--text-dim); font-size: 12px; margin: -4px 0 14px; }
 </style>
 </head>
 <body>
@@ -79,6 +88,7 @@
   <a href="/portal/jobs.html" class="is-active">Jobs</a>
 </div>
 
+<div id="checkupList"></div>
 <div id="jobList"></div>
 
 <script>
@@ -87,6 +97,49 @@
     'https://csvfqdjuobylgafgolho.supabase.co',
     'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNzdmZxZGp1b2J5bGdhZmdvbGhvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODUzNTQ3MjcsImV4cCI6MjEwMDkzMDcyN30.6GlvK-DfXf2lppS1kciZtsl4wHOpZz_yKtwsS1lyjrs'
   );
+
+  // The exact same formula as tools/job-tracker.html's own
+  // templateDueInfo() -- computed fresh every render from
+  // interval_months/last_created_date, never stored, so this can
+  // never show a stale due status that drifted from a stored value
+  // nobody updated. See portal/jobs.html's own warrantyBadgeHtml()
+  // above for the same reasoning applied to warranty status.
+  function checkupDueInfo(c) {
+    if (!c.last_created_date) return { isDue: true, label: 'Due now' };
+    const last = new Date(c.last_created_date + 'T00:00:00');
+    const next = new Date(last);
+    next.setMonth(next.getMonth() + (c.interval_months || 1));
+    const today = new Date(new Date().toDateString());
+    if (next <= today) return { isDue: true, label: 'Due now' };
+    const days = Math.round((next - today) / (24 * 60 * 60 * 1000));
+    return { isDue: false, label: 'Next due in ' + days + ' day' + (days === 1 ? '' : 's') };
+  }
+
+  function renderCheckupBanner(c) {
+    const due = checkupDueInfo(c);
+    return `
+      <div class="checkup-banner ${due.isDue ? '' : 'is-not-due'}">
+        <div>
+          <div class="checkup-title">${escapeHtml(c.title)}</div>
+          <div class="checkup-due-label">${escapeHtml(due.label)}</div>
+        </div>
+      </div>
+    `;
+  }
+
+  async function renderCheckups() {
+    const { data: checkups, error } = await client
+      .from('client_portal_checkups')
+      .select('*');
+    const listEl = document.getElementById('checkupList');
+    if (error || !checkups || !checkups.length) {
+      listEl.innerHTML = '';
+      return;
+    }
+    listEl.innerHTML =
+      '<div class="checkup-note">Suggested based on your service history -- call or text us to schedule.</div>' +
+      checkups.map(renderCheckupBanner).join('');
+  }
 
   function formatDate(d) {
     return new Date(d + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
@@ -158,7 +211,7 @@
     window.location.replace('/portal/login.html');
   });
 
-  renderJobs();
+  renderJobs().then(renderCheckups);
 </script>
 </body>
 </html>
