@@ -1027,7 +1027,45 @@
   // ---------- Recurring Job Templates ----------
   const TEMPLATES_KEY = 'th_job_templates';
   function loadTemplates() { try { return JSON.parse(localStorage.getItem(TEMPLATES_KEY) || '[]'); } catch (e) { return []; } }
-  function saveTemplates(list) { localStorage.setItem(TEMPLATES_KEY, JSON.stringify(list)); if (typeof scheduleSync === 'function') scheduleSync(); }
+  function saveTemplates(list) {
+    localStorage.setItem(TEMPLATES_KEY, JSON.stringify(list));
+    if (typeof scheduleSync === 'function') scheduleSync();
+
+    // Portal sync (2026-09-02, phase 5) -- centralized here rather
+    // than at each of the 4 call sites (add/edit/delete/create-job-
+    // from-template), since every one of them already goes through
+    // this function. Only syncs a template that's actually tied to
+    // one specific client (the 'applies to different clients each
+    // time' blank-client templates never sync -- there's no single
+    // client_email to attach them to) AND where that client name
+    // resolves to a real registry record with an email on file.
+    // Fire-and-forget, best-effort, same as every other portal sync --
+    // never blocks the local save, which is the real, primary record.
+    if (typeof getAuthToken === 'function' && typeof thFindClientByName === 'function') {
+      list.forEach(t => {
+        if (!t.client) return;
+        const clientRecord = thFindClientByName(t.client);
+        const clientEmail = clientRecord && clientRecord.email;
+        if (!clientEmail) return;
+        fetch(`${SUPABASE_URL}/functions/v1/sync-checkup-to-portal`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'apikey': SUPABASE_ANON_KEY,
+            'Authorization': `Bearer ${getAuthToken()}`,
+          },
+          body: JSON.stringify({
+            source_template_id: t.id,
+            client_email: clientEmail,
+            client_name: t.client,
+            title: t.title,
+            interval_months: t.intervalMonths,
+            last_created_date: t.lastCreatedDate || null,
+          }),
+        }).catch(e => console.warn('Portal checkup sync failed (template still saved locally):', e));
+      });
+    }
+  }
 
   function templateDueInfo(template) {
     if (!template.lastCreatedDate) return { isDue: true, label: 'Never created \u2014 due now' };
@@ -1149,6 +1187,22 @@
       saveTemplates(loadTemplates().filter(t => t.id !== id));
       if (typeof thAddTemplateTombstone === 'function') thAddTemplateTombstone(id);
       if (templateToDelete && typeof thAddToGraveyard === 'function') thAddToGraveyard('template', templateToDelete);
+      // Portal cleanup -- removes any synced checkup reminder for this
+      // template so a deleted template never leaves a stale "due
+      // soon" note lingering in the portal. Fire-and-forget, same as
+      // the sync in saveTemplates() above; harmless no-op if this
+      // template was never client-linked/synced in the first place.
+      if (typeof getAuthToken === 'function') {
+        fetch(`${SUPABASE_URL}/functions/v1/sync-checkup-to-portal`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'apikey': SUPABASE_ANON_KEY,
+            'Authorization': `Bearer ${getAuthToken()}`,
+          },
+          body: JSON.stringify({ source_template_id: id, delete: true }),
+        }).catch(e => console.warn('Portal checkup cleanup failed:', e));
+      }
       renderTemplates();
     });
   }

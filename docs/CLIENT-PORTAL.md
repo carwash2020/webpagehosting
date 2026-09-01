@@ -114,6 +114,22 @@ already uses -- duplicating the formula (not the data) so this page
 can never show a stale warranty status that drifted from a stored
 value nobody updated.
 
+**`client_portal_checkups`** (added 2026-09-02, phase 5) -- mirrors
+`client_portal_jobs`' simple shape, surfacing Recurring Job Templates
+(`th_job_templates`) data. Only syncs a template genuinely tied to one
+specific client (the "applies to different clients each time" blank-
+client templates never sync) whose name resolves to a real client
+registry record with an email on file, AND only for a client who
+already has some other portal presence -- a template being merely due
+someday isn't a strong enough signal to create a brand-new portal
+account. "Due" status is never stored, only computed fresh in the
+portal from `interval_months`/`last_created_date`, using the exact
+same formula `tools/job-tracker.html`'s own `templateDueInfo()`
+already uses. Deletion is a real operation here (unlike the other
+portal tables, which are pure one-way mirrors that only ever grow) --
+deleting a template internally also removes its portal row, so a
+stale reminder never lingers for a template that no longer exists.
+
 ## Edge functions
 
 All deployed and ACTIVE. Source backed up in `edge-functions/`.
@@ -130,6 +146,7 @@ All deployed and ACTIVE. Source backed up in `edge-functions/`.
 | `respond-to-quote` | true | Client-only (no `account_roles` check, unlike the internal functions above) -- verifies the quote belongs to the caller's own email and is still `pending`, then sets `approved`/`declined` |
 | `schedule-quote-job` | true | Client-only -- verifies the quote is `approved`, belongs to the caller, and isn't already scheduled; inserts into `th_bookings` (service role) with `quote_id` set, then marks `client_portal_quotes.scheduled_at` |
 | `sync-job-to-portal` | true | Writes to `client_portal_jobs` when a job is marked `done` with a client email on file; no email-notification branch (unlike invoices/quotes) since a completed job isn't worth a dedicated notification -- `send-invite` still fires for a genuinely new client |
+| `sync-checkup-to-portal` | true | Writes to `client_portal_checkups` for a client-linked Recurring Job Template, only if that client already has some portal presence; also handles deletion (`{ source_template_id, delete: true }`) when a template is removed internally |
 
 Two non-obvious things worth not rediscovering the hard way:
 
@@ -315,11 +332,16 @@ Real dependencies, not preference, decide this order:
    Terms); `portal/jobs.html` recomputes the identical formula
    client-side from `job_date` rather than storing and risking a
    stale value.
-5. **Return-service / check-up reminders.** Naturally last -- surfaces
-   the existing Recurring Job Templates data (`th_job_templates`,
-   already built in Job Tracker) as a read-only "next suggested visit"
-   banner, then eventually lets the client self-schedule against it
-   once phase 3's scheduling UI already exists to reuse.
+5. ~~**Return-service / check-up reminders.**~~ -- **done**
+   (2026-09-02). New `client_portal_checkups` table surfacing
+   Recurring Job Templates data as a read-only banner on
+   `portal/jobs.html` -- genuinely read-only in this pass, no
+   self-scheduling against it yet (a natural next step once wanted,
+   reusing phase 3's scheduling UI). "Due" status is computed fresh
+   from the raw `interval_months`/`last_created_date` inputs using the
+   identical formula `templateDueInfo()` already uses internally, same
+   never-store-a-computed-value discipline as job warranty. This
+   closes out all five phases of the original roadmap.
 
 ## Smaller ideas not yet folded into a phase above
 
