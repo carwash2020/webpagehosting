@@ -56,7 +56,7 @@ test('the PDF only reads fields that actually exist on client_portal_invoices', 
   assert.ok(fnMatch, 'expected to isolate the downloadInvoicePDF function body');
   const fnBody = fnMatch[0];
 
-  const realFields = ['invoice_number', 'invoice_date', 'paid', 'client_name', 'client_email', 'description', 'line_items', 'total', 'paid_at'];
+  const realFields = ['invoice_number', 'invoice_date', 'paid', 'client_name', 'client_email', 'description', 'line_items', 'total', 'paid_at', 'stripe_payment_intent_id'];
   const fieldRefs = [...fnBody.matchAll(/inv\.([a-zA-Z_]+)/g)].map(m => m[1]);
   for (const field of fieldRefs) {
     assert.ok(realFields.includes(field), `downloadInvoicePDF references inv.${field}, which isn't a real client_portal_invoices column`);
@@ -69,4 +69,32 @@ test('portal/dashboard.html still loads none of the internal /tools/ scripts', (
   for (const forbidden of ['auth.js', 'sync.js', 'data-layer.js', 'tools-nav-pwa.js']) {
     assert.ok(!html.includes(forbidden), `portal/dashboard.html should never load /tools/${forbidden}`);
   }
+});
+
+// Payment history / receipts (2026-09-01) -- the pending idea from
+// docs/CLIENT-PORTAL.md was "a client can't see when they paid or get
+// any proof of it." Both halves: the card shows paid_at, and the PDF
+// becomes a real receipt (not just an invoice relabeled) once paid.
+
+test('a paid invoice card shows the paid date', () => {
+  assert.match(html, /inv\.paid && inv\.paid_at \? `<div class="invoice-desc"[^`]*\$\{formatDate\(inv\.paid_at\.slice\(0, 10\)\)\}/);
+});
+
+test('the download button reads "Download Receipt" once paid, not just "Download PDF"', () => {
+  assert.match(html, /\$\{inv\.paid \? 'Download Receipt' : 'Download PDF'\}/);
+});
+
+test('the generated PDF is labeled RECEIPT when paid and INVOICE when not', () => {
+  assert.match(html, /doc\.text\(inv\.paid \? 'RECEIPT' : 'INVOICE', pageW - 40, 30/);
+});
+
+test('a paid receipt includes the Stripe payment reference when one exists', () => {
+  const fnMatch = html.match(/async function downloadInvoicePDF\(invoiceId\) \{[\s\S]*?\n  \}\n/);
+  const fnBody = fnMatch[0];
+  assert.match(fnBody, /if \(inv\.stripe_payment_intent_id\) \{/);
+  assert.match(fnBody, /Payment reference: ' \+ inv\.stripe_payment_intent_id/);
+});
+
+test('the saved filename distinguishes a receipt from an invoice', () => {
+  assert.match(html, /doc\.save\(\(inv\.paid \? 'Receipt-' : 'Invoice-'\) \+ inv\.invoice_number \+ '\.pdf'\);/);
 });

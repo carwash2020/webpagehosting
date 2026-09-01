@@ -158,12 +158,13 @@
           <div style="text-align:right;">
             <div class="invoice-total">${formatCurrency(inv.total)}</div>
             <span class="invoice-status ${inv.paid ? 'is-paid' : 'is-unpaid'}">${inv.paid ? 'Paid' : 'Unpaid'}</span>
+            ${inv.paid && inv.paid_at ? `<div class="invoice-desc" style="margin-top:4px;">${formatDate(inv.paid_at.slice(0, 10))}</div>` : ''}
           </div>
         </div>
         ${renderLineItemsTable(inv.line_items)}
         <div style="display:flex; gap:8px; margin-top:8px;">
           ${!inv.paid ? `<button class="btn blue" style="flex:1; justify-content:center;" onclick="startPayment(${inv.id})">Pay now</button>` : ''}
-          <button class="btn secondary-btn" style="${inv.paid ? 'width:100%;' : 'flex:1;'} justify-content:center;" onclick="downloadInvoicePDF(${inv.id})">Download PDF</button>
+          <button class="btn secondary-btn" style="${inv.paid ? 'width:100%;' : 'flex:1;'} justify-content:center;" onclick="downloadInvoicePDF(${inv.id})">${inv.paid ? 'Download Receipt' : 'Download PDF'}</button>
         </div>
       </div>
     `;
@@ -289,7 +290,7 @@
     doc.text('Honesty.  Hustle.  Helpfulness.', 118, 62);
 
     doc.setFont('helvetica', 'bold'); doc.setFontSize(13); doc.setTextColor(...ORANGE);
-    doc.text('INVOICE', pageW - 40, 30, { align: 'right' });
+    doc.text(inv.paid ? 'RECEIPT' : 'INVOICE', pageW - 40, 30, { align: 'right' });
     doc.setFont('helvetica', 'normal'); doc.setFontSize(9); doc.setTextColor(255, 255, 255);
     doc.text('(435) 414-1667', pageW - 40, 46, { align: 'right' });
     doc.text('steve@triplehenterprisesllc.biz', pageW - 40, 58, { align: 'right' });
@@ -379,11 +380,16 @@
     doc.setFont('helvetica', 'normal'); doc.setFontSize(9); doc.setTextColor(...GRAY);
     if (inv.paid && inv.paid_at) {
       doc.text('Paid ' + formatDate(inv.paid_at.slice(0, 10)) + '.', 40, y);
+      if (inv.stripe_payment_intent_id) {
+        y += 14;
+        doc.setFontSize(8);
+        doc.text('Payment reference: ' + inv.stripe_payment_intent_id, 40, y);
+      }
     } else if (!inv.paid) {
       doc.text('Questions about this invoice? Call (435) 414-1667 or email steve@triplehenterprisesllc.biz.', 40, y);
     }
 
-    doc.save('Invoice-' + inv.invoice_number + '.pdf');
+    doc.save((inv.paid ? 'Receipt-' : 'Invoice-') + inv.invoice_number + '.pdf');
   }
 
   // TODO (Connor): replace with the real Stripe TEST MODE publishable
