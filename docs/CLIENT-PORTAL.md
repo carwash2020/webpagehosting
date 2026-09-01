@@ -114,6 +114,12 @@ already uses -- duplicating the formula (not the data) so this page
 can never show a stale warranty status that drifted from a stored
 value nobody updated.
 
+**`client_portal_jobs.photo_storage_paths`** (added 2026-09-02) --
+raw Storage paths only, never signed URLs (a signed URL expires; a
+stored one would go stale). `get-job-photo-urls` signs these fresh on
+demand -- see that function's own notes on why this needed to be more
+than a thin wrapper around Storage's sign endpoint.
+
 **`client_portal_checkups`** (added 2026-09-02, phase 5) -- mirrors
 `client_portal_jobs`' simple shape, surfacing Recurring Job Templates
 (`th_job_templates`) data. Only syncs a template genuinely tied to one
@@ -130,6 +136,13 @@ portal tables, which are pure one-way mirrors that only ever grow) --
 deleting a template internally also removes its portal row, so a
 stale reminder never lingers for a template that no longer exists.
 
+**`th_bookings.checkup_id`** (added 2026-09-02) -- a REAL foreign key
+to `client_portal_checkups(id)`, same reasoning as the existing
+`quote_id`. Set by `schedule-checkup-visit` when a client self-
+schedules a visit from a due reminder. Unlike a quote-scheduled
+booking, a checkup-scheduled one has no "already scheduled" guard --
+a recurring reminder can reasonably be requested again.
+
 ## Edge functions
 
 All deployed and ACTIVE. Source backed up in `edge-functions/`.
@@ -140,13 +153,16 @@ All deployed and ACTIVE. Source backed up in `edge-functions/`.
 | `send-invite` | true | Generates an invite link via the admin SDK, sends a branded Resend email, redirects to `set-password.html` |
 | `send-invoice-notification` | true | "You have a new invoice" email to an existing client |
 | `create-payment-intent` | true | Creates a Stripe PaymentIntent server-side, verifying the invoice actually belongs to the caller's email |
-| `stripe-webhook` | **false** | Receives `payment_intent.succeeded`, marks paid in both `client_portal_invoices` and `workspace_sync`'s `th_invoices` |
+| `create-bulk-payment-intent` | true | "Pay All Outstanding" -- same as `create-payment-intent` but for 2+ invoices at once, one combined PaymentIntent |
+| `stripe-webhook` | **false** | Receives `payment_intent.succeeded`, marks paid in both `client_portal_invoices` and `workspace_sync`'s `th_invoices` -- generalized (2026-09-02) to mark every invoice sharing a PaymentIntent id, not just one |
 | `sync-quote-to-portal` | true | Writes to `client_portal_quotes`; same new-client-vs-new-item branching as `sync-invoice-to-portal`, triggering `send-invite` or `send-quote-notification` |
 | `send-quote-notification` | true | "You have a new quote to review" email to an existing client |
 | `respond-to-quote` | true | Client-only (no `account_roles` check, unlike the internal functions above) -- verifies the quote belongs to the caller's own email and is still `pending`, then sets `approved`/`declined` |
 | `schedule-quote-job` | true | Client-only -- verifies the quote is `approved`, belongs to the caller, and isn't already scheduled; inserts into `th_bookings` (service role) with `quote_id` set, then marks `client_portal_quotes.scheduled_at` |
 | `sync-job-to-portal` | true | Writes to `client_portal_jobs` when a job is marked `done` with a client email on file; no email-notification branch (unlike invoices/quotes) since a completed job isn't worth a dedicated notification -- `send-invite` still fires for a genuinely new client |
 | `sync-checkup-to-portal` | true | Writes to `client_portal_checkups` for a client-linked Recurring Job Template, only if that client already has some portal presence; also handles deletion (`{ source_template_id, delete: true }`) when a template is removed internally |
+| `get-job-photo-urls` | true | Client-only -- verifies the job belongs to the caller, then signs each `photo_storage_paths` entry fresh (service role bypasses the job-photos bucket's own looser RLS, safe only because ownership was already checked) |
+| `schedule-checkup-visit` | true | Client-only -- no approval/already-scheduled guard (unlike `schedule-quote-job`); inserts into `th_bookings` with `checkup_id` set |
 
 Two non-obvious things worth not rediscovering the hard way:
 
@@ -335,11 +351,13 @@ Real dependencies, not preference, decide this order:
 5. ~~**Return-service / check-up reminders.**~~ -- **done**
    (2026-09-02). New `client_portal_checkups` table surfacing
    Recurring Job Templates data as a read-only banner on
-   `portal/jobs.html` -- genuinely read-only in this pass, no
-   self-scheduling against it yet (a natural next step once wanted,
-   reusing phase 3's scheduling UI). "Due" status is computed fresh
-   from the raw `interval_months`/`last_created_date` inputs using the
-   identical formula `templateDueInfo()` already uses internally, same
+   `portal/jobs.html`. Self-scheduling against a due reminder --
+   originally flagged as a future step -- also shipped the same day
+   (new `schedule-checkup-visit` edge function and `th_bookings.
+   checkup_id`, reusing the exact scheduling UI already built for
+   phase 3). "Due" status is computed fresh from the raw
+   `interval_months`/`last_created_date` inputs using the identical
+   formula `templateDueInfo()` already uses internally, same
    never-store-a-computed-value discipline as job warranty. This
    closes out all five phases of the original roadmap.
 
@@ -350,23 +368,32 @@ approval, scheduling, job history, warranty, and service history all
 now live in the numbered roadmap above -- this list is what's left.
 
 **Worth doing soon**
-- **Real "pay all outstanding" option.** If a client has three unpaid
-  invoices they currently pay them one at a time. Doesn't depend on
-  any of the roadmap phases -- could land any time.
-- **Job photos visible per invoice / per job.** Genuinely
-  differentiating for a handyman business -- "here's what you paid
-  for" is a real trust builder. Naturally rides along with phase 4
-  (job history) once `client_portal_jobs` exists, rather than being
-  its own separate sync pipeline.
+- ~~**Real "pay all outstanding" option.**~~ -- **done** (2026-09-02).
+  New `create-bulk-payment-intent` edge function combines every unpaid
+  invoice into ONE Stripe PaymentIntent; `stripe-webhook` generalized
+  to mark ALL covered invoices paid (it already naturally looked up
+  every row sharing a PaymentIntent id, it just used to assume there
+  was only ever one). Only offered once there are 2+ unpaid invoices
+  -- a single one already has its own "Pay now" button.
+- ~~**Job photos visible per invoice / per job.**~~ -- **done**
+  (2026-09-02). `client_portal_jobs.photo_storage_paths` stores raw
+  Storage paths only, never signed URLs (those expire). New
+  `get-job-photo-urls` edge function generates fresh signed URLs on
+  demand -- this ended up being more than a convenience wrapper: the
+  `job-photos` Storage bucket's own RLS policies (confirmed directly
+  against `pg_policies`) only check `bucket_id = 'job-photos'` for the
+  `authenticated` role with no owner scoping at all, meaning a
+  client's own session could otherwise sign a path for ANY job's
+  photos, not just their own. Routing every sign request through this
+  function's explicit ownership check closes that gap for this
+  feature specifically -- it does not fix the underlying bucket
+  policy itself, which predates this feature.
 
 **Smaller polish**
 - **"Remember me" / longer sessions.** Clients sign in rarely, so
   being logged out every time is more annoying here than in a tool
   used daily.
 - **Partial payments** for larger jobs.
-- **A client-visible "your next appointment" banner.** Natural
-  companion to phase 3 (scheduling) and phase 5 (check-up reminders)
-  once either exists.
 - **Email preferences** (invoice notifications on/off), which is also
   the honest thing to offer if notification volume ever grows.
 

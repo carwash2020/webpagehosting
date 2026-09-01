@@ -33,7 +33,7 @@ test('the checkup banner only reads fields that actually exist on client_portal_
     html.match(/function checkupDueInfo\(c\) \{[\s\S]*?\n  \}\n/),
     html.match(/function renderCheckupBanner\(c\) \{[\s\S]*?\n  \}\n/),
   ];
-  const realFields = ['title', 'interval_months', 'last_created_date'];
+  const realFields = ['id', 'title', 'interval_months', 'last_created_date'];
   for (const fnMatch of fnMatches) {
     assert.ok(fnMatch, 'expected to isolate a checkup-related function body');
     const fieldRefs = [...fnMatch[0].matchAll(/c\.([a-zA-Z_]+)/g)].map(m => m[1]);
@@ -43,11 +43,18 @@ test('the checkup banner only reads fields that actually exist on client_portal_
   }
 });
 
-test('the checkup banner is read-only -- no scheduling action wired to it in this phase', () => {
+test('the checkup banner uses its own scheduling function, never the quote-specific one', () => {
+  // Self-scheduling from a check-up reminder shipped the same day as
+  // this banner (see tests/portal/checkup-scheduling.test.js for full
+  // coverage of that flow) -- this just confirms renderCheckupBanner
+  // wires up its own toggleCheckupSchedule/schedule-checkup-visit
+  // path, never schedule-quote-job, which is specific to an approved
+  // quote and has an approval/already-scheduled guard that doesn't
+  // apply here.
   const fnMatch = html.match(/function renderCheckupBanner\(c\) \{[\s\S]*?\n  \}\n/);
   assert.ok(fnMatch);
   assert.doesNotMatch(fnMatch[0], /schedule-quote-job/);
-  assert.doesNotMatch(fnMatch[0], /onclick/);
+  assert.match(fnMatch[0], /toggleCheckupSchedule/);
 });
 
 // ---- tools/job-tracker.html: the internal side of phase 5 ----

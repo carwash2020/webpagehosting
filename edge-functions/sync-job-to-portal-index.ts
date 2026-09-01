@@ -21,6 +21,12 @@
 // something worth a dedicated notification the way a new invoice or
 // quote to review is. If the client is brand new (no prior portal
 // presence at all), send-invite still fires so they have a way in.
+//
+// Updated 2026-09-02: now also accepts and stores photo_storage_paths
+// -- raw Storage paths only, never signed URLs (those expire). See
+// get-job-photo-urls for how those paths turn into something the
+// client can actually view, and why that has to be its own function
+// with its own ownership check rather than a public URL stored here.
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
@@ -78,7 +84,7 @@ Deno.serve(async (req: Request) => {
       return json({ ok: false, error: "This account can't manage jobs." }, 403);
     }
 
-    const { source_job_id, client_email, client_name, title, job_date } = await req.json();
+    const { source_job_id, client_email, client_name, title, job_date, photo_storage_paths } = await req.json();
 
     if (
       typeof source_job_id !== "number" ||
@@ -88,6 +94,9 @@ Deno.serve(async (req: Request) => {
       typeof job_date !== "string" || !job_date
     ) {
       return json({ ok: false, error: "Missing or invalid job fields." }, 400);
+    }
+    if (photo_storage_paths !== undefined && photo_storage_paths !== null && !Array.isArray(photo_storage_paths)) {
+      return json({ ok: false, error: "photo_storage_paths must be an array if provided." }, 400);
     }
 
     const normalizedEmail = client_email.toLowerCase().trim();
@@ -125,6 +134,7 @@ Deno.serve(async (req: Request) => {
           client_name,
           title,
           job_date,
+          photo_storage_paths: photo_storage_paths || null,
           updated_at: new Date().toISOString(),
         }]),
       },
