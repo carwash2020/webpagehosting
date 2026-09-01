@@ -298,6 +298,12 @@
       <div class="form-field"><label>Address</label><input type="text" id="jobAddress" placeholder="123 Main St, St. George"></div>
     </div>
     <div class="tool-form-row">
+      <div class="form-field">
+        <label>Client Email <span class="tool-sub" style="font-weight:normal;">(optional -- lets this client see this job and its warranty status in the portal once marked Done)</span></label>
+        <input type="email" id="jobClientEmail" placeholder="client@example.com">
+      </div>
+    </div>
+    <div class="tool-form-row">
       <div class="form-field"><label>Priority</label>
         <select id="jobPriority"><option value="high">High</option><option value="medium" selected>Medium</option><option value="low">Low</option></select>
       </div>
@@ -666,6 +672,7 @@
     const clientName = document.getElementById('jobClient').value.trim();
     const phone = document.getElementById('jobPhone').value.trim();
     const address = document.getElementById('jobAddress').value.trim();
+    const clientEmailVal = document.getElementById('jobClientEmail').value.trim();
     // Push 2 (2026-08-20): get-or-create the client record for whatever
     // name is typed here, and stash its id alongside the existing
     // string field -- additive, the 'client' string is untouched. This
@@ -681,6 +688,7 @@
       clientId,
       phone,
       address,
+      clientEmail: clientEmailVal || null,
       priority: document.getElementById('jobPriority').value,
       date: document.getElementById('jobDate').value,
       status: document.getElementById('jobStatus').value,
@@ -703,7 +711,8 @@
       jobs.push({ id: newId, ...fields, createdBy: currentUser, lastEditedBy: currentUser });
     }
     saveJobs(jobs);
-    ['jobTitle','jobClient','jobPhone','jobAddress','jobNotes'].forEach(id => document.getElementById(id).value = '');
+    const savedJobId = wasEditing ? editingJobId : newId;
+    ['jobTitle','jobClient','jobPhone','jobAddress','jobClientEmail','jobNotes'].forEach(id => document.getElementById(id).value = '');
     document.getElementById('jobDate').value = '';
     document.getElementById('jobPriority').value = 'medium';
     document.getElementById('jobStatus').value = 'not-started';
@@ -727,6 +736,34 @@
     } else {
       showToast(wasEditing ? 'Job updated.' : 'Job added.');
     }
+
+    // Portal sync (2026-09-02, phase 4) -- same fire-and-forget,
+    // best-effort pattern as the invoice/quote sides: only fires when
+    // BOTH a client email was provided AND the job is actually marked
+    // Done, since "job history" means completed work, and Done is also
+    // the exact moment the 30-day warranty clock (warrantyBadgeHtml,
+    // above) starts. An edit that changes status to Done later fires
+    // this the same as a job created as Done from the start. The
+    // internal jobNotes field is deliberately NEVER sent -- that's for
+    // internal use (e.g. access instructions, difficult-customer
+    // flags), not something to expose to a client.
+    if (fields.status === 'done' && clientEmailVal && fields.date && typeof getAuthToken === 'function') {
+      fetch(`${SUPABASE_URL}/functions/v1/sync-job-to-portal`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'apikey': SUPABASE_ANON_KEY,
+          'Authorization': `Bearer ${getAuthToken()}`,
+        },
+        body: JSON.stringify({
+          source_job_id: savedJobId,
+          client_email: clientEmailVal,
+          client_name: fields.client || '(no name)',
+          title: fields.title,
+          job_date: fields.date,
+        }),
+      }).catch(e => console.warn('Portal sync failed (job still saved locally):', e));
+    }
   }
 
   function editJob(id) {
@@ -738,6 +775,7 @@
     document.getElementById('jobClient').value = job.client || '';
     document.getElementById('jobPhone').value = job.phone || '';
     document.getElementById('jobAddress').value = job.address || '';
+    document.getElementById('jobClientEmail').value = job.clientEmail || '';
     document.getElementById('jobPriority').value = job.priority || 'medium';
     document.getElementById('jobDate').value = job.date || '';
     document.getElementById('jobStatus').value = job.status || 'not-started';

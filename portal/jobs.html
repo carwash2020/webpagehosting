@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="en" style="background:#0a0a0a;">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="robots" content="noindex, nofollow">
+<title>Your Jobs | Triple H Enterprises</title>
+<!--
+  Client Portal jobs page (2026-09-02), phase 4 of the full
+  client-hub roadmap in docs/CLIENT-PORTAL.md. Same isolation as
+  dashboard.html/quotes.html/login.html: no internal /tools/ scripts
+  loaded at all, only shared stylesheets for visual consistency.
+  Every job shown here comes from client_portal_jobs, whose RLS policy
+  guarantees a signed-in client can only ever receive rows matching
+  their own authenticated email.
+
+  Warranty status is computed HERE, client-side, from job_date --
+  never stored or fetched as a precomputed value. This is the exact
+  same 30-day-from-completion-date rule tools/job-tracker.html's own
+  warrantyBadgeHtml() already uses; duplicating the FORMULA (not the
+  data) keeps this page from ever showing a stale warranty status that
+  drifted from a stored value nobody updated.
+-->
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data:; connect-src 'self' https://csvfqdjuobylgafgolho.supabase.co; frame-src 'none'; object-src 'none'; base-uri 'self'; frame-ancestors 'none';">
+<meta name="theme-color" content="#0a0a0a">
+<link rel="shortcut icon" href="/favicon.ico">
+<link rel="icon" href="/favicon.ico" sizes="any">
+<link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32.png">
+<link rel="icon" type="image/png" sizes="192x192" href="/images/favicon-192.png?v=202608010300">
+<link rel="apple-touch-icon" href="/images/apple-touch-icon.png?v=202608010300">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/styles.css?v=202608202000">
+<link rel="stylesheet" href="/tools/styles-tools.css?v=a2e87effb3">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+  body { max-width: 640px; margin: 0 auto; padding: 24px 16px 60px; }
+  .portal-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; }
+  .portal-header-left { display: flex; align-items: center; gap: 12px; }
+  .portal-header img { width: 40px; height: auto; }
+  .portal-title { font-family: 'Oswald', sans-serif; font-weight: 700; font-size: 19px; color: var(--white); }
+  .portal-sub { color: var(--text-dim); font-size: 13px; }
+  .portal-nav { display: flex; gap: 8px; margin-bottom: 24px; }
+  .portal-nav a {
+    flex: 1; text-align: center; padding: 9px 12px; border-radius: 8px; font-size: 13.5px; font-weight: 600;
+    text-decoration: none; border: 1px solid var(--border); color: var(--text-dim);
+  }
+  .portal-nav a.is-active { background: var(--orange-tint-soft); border-color: var(--orange-tint-border); color: var(--orange-light); }
+  .job-card {
+    background: var(--bg-panel-2); border: 1px solid var(--border); border-radius: 10px;
+    padding: 16px; margin-bottom: 12px;
+  }
+  .job-card-top { display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; }
+  .job-title { font-weight: 600; color: var(--white); font-size: 15px; }
+  .job-date { color: var(--text-dim); font-size: 13px; margin-top: 2px; }
+  .job-warranty { font-size: 12px; padding: 3px 10px; border-radius: 20px; font-weight: 600; display: inline-block; white-space: nowrap; }
+  .job-warranty.is-active { background: rgba(76,175,80,0.15); color: #4caf50; }
+  .job-warranty.is-expired { background: var(--bg-panel); color: var(--text-dim); }
+  .empty-state { text-align: center; color: var(--text-dim); padding: 60px 20px; }
+</style>
+</head>
+<body>
+
+<div class="portal-header">
+  <div class="portal-header-left">
+    <img src="/images/logo-signature-orange.webp?v=202608142300" alt="Triple H Enterprises">
+    <div>
+      <div class="portal-title">Your Jobs</div>
+      <div class="portal-sub" id="clientEmailDisplay"></div>
+    </div>
+  </div>
+  <button class="secondary-btn" id="signOutBtn">Sign out</button>
+</div>
+
+<div class="portal-nav">
+  <a href="/portal/quotes.html">Quotes</a>
+  <a href="/portal/dashboard.html">Invoices</a>
+  <a href="/portal/jobs.html" class="is-active">Jobs</a>
+</div>
+
+<div id="jobList"></div>
+
+<script>
+  const { createClient } = supabase;
+  const client = createClient(
+    'https://csvfqdjuobylgafgolho.supabase.co',
+    'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNzdmZxZGp1b2J5bGdhZmdvbGhvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODUzNTQ3MjcsImV4cCI6MjEwMDkzMDcyN30.6GlvK-DfXf2lppS1kciZtsl4wHOpZz_yKtwsS1lyjrs'
+  );
+
+  function formatDate(d) {
+    return new Date(d + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+  }
+
+  function escapeHtml(str) {
+    const div = document.createElement('div');
+    div.textContent = String(str == null ? '' : str);
+    return div.innerHTML;
+  }
+
+  // The exact same formula as tools/job-tracker.html's
+  // warrantyBadgeHtml() -- 30 days from job_date, computed fresh every
+  // render rather than stored, so it's never stale.
+  function warrantyBadgeHtml(jobDate) {
+    const completionDate = new Date(jobDate + 'T00:00:00');
+    if (isNaN(completionDate.getTime())) return '';
+    const today = new Date(new Date().toDateString());
+    const daysSince = Math.round((today - completionDate) / (24 * 60 * 60 * 1000));
+    const daysLeft = 30 - daysSince;
+    if (daysLeft >= 0) {
+      return `<span class="job-warranty is-active" title="30-day labor warranty, based on this job's date">Warranty: ${daysLeft} day${daysLeft === 1 ? '' : 's'} left</span>`;
+    }
+    return `<span class="job-warranty is-expired" title="30-day labor warranty, based on this job's date">Warranty expired</span>`;
+  }
+
+  function renderJobCard(j) {
+    return `
+      <div class="job-card">
+        <div class="job-card-top">
+          <div>
+            <div class="job-title">${escapeHtml(j.title)}</div>
+            <div class="job-date">${formatDate(j.job_date)}</div>
+          </div>
+          ${warrantyBadgeHtml(j.job_date)}
+        </div>
+      </div>
+    `;
+  }
+
+  async function renderJobs() {
+    const { data: { session } } = await client.auth.getSession();
+    if (!session) {
+      window.location.replace('/portal/login.html');
+      return;
+    }
+    document.getElementById('clientEmailDisplay').textContent = session.user.email;
+
+    const { data: jobs, error } = await client
+      .from('client_portal_jobs')
+      .select('*')
+      .order('job_date', { ascending: false });
+
+    const listEl = document.getElementById('jobList');
+    if (error) {
+      listEl.innerHTML = `<div class="empty-state">Couldn't load your job history right now. Please try again in a moment.</div>`;
+      console.error(error);
+      return;
+    }
+    if (!jobs.length) {
+      listEl.innerHTML = `<div class="empty-state">No completed jobs on file yet.</div>`;
+      return;
+    }
+    listEl.innerHTML = jobs.map(renderJobCard).join('');
+  }
+
+  document.getElementById('signOutBtn').addEventListener('click', async () => {
+    await client.auth.signOut();
+    window.location.replace('/portal/login.html');
+  });
+
+  renderJobs();
+</script>
+</body>
+</html>
