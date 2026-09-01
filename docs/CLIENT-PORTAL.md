@@ -178,41 +178,81 @@ its own SELECT policy. That distinction is easy to miss.
 7. **Job photos on the portal** -- clients can't see photos from their
    own jobs. This is an unmade product decision, not an oversight.
 
-## Ideas for where to take the portal next
+## The full vision (recorded 2026-09-01, Connor's own framing)
 
-Roughly ordered by likely value-to-effort, not committed to:
+The portal's end goal is a genuine one-stop hub for a Triple H client's
+entire relationship with the business, not just invoice payment:
 
-**Probably highest value**
-- **Invoice PDF download.** Clients will ask for this for their own
-  records or taxes. The internal `invoice-generator.html` already
-  produces the layout, so the real work is making a client-facing
-  read-only render, not designing something new.
-- **Payment history / receipts.** Right now a paid invoice just moves
-  to the Paid section. A client can't see *when* they paid or get any
-  proof of it.
+1. Steve creates a quote for a job. The client signs into the portal,
+   reviews it, can ask questions, and can approve it.
+2. Approving a quote lets the client schedule the job directly in the
+   portal -- a more client-friendly version of the public booking
+   flow, not a redirect to it.
+3. The client can review and pay invoices in the portal (done --
+   see above).
+4. The client can review, and download, both invoices and receipts
+   (done -- see above).
+5. Warranty info shows up per job where applicable.
+6. Return-service / check-up dates show up where applicable.
+
+## Build order, and why it's ordered this way
+
+Real dependencies, not preference, decide this order:
+
+1. ~~**Invoices** (view, pay, PDF, receipts)~~ -- **done**, everything
+   above this line in this file.
+2. **Quote review + questions + approval.** The biggest real gap:
+   `th_quotes` today is internal-only `localStorage`/`workspace_sync`
+   data with no client-email link and no portal table at all --
+   needs the exact same treatment invoices got (a
+   `client_portal_quotes` table, a sync edge function, RLS scoped to
+   `client_email`), plus new surface area invoices never needed: a way
+   for the client to ask a question, and an approval write-back Steve
+   can see.
+3. **Scheduling the job from an approved quote.** Deliberately after
+   approval, not a standalone feature -- the real booking backend
+   already exists and is reusable as-is (`th_bookings` table,
+   `get_booking_availability` RPC, both already proven by
+   `booking.html`). The portal version is mostly wiring: pre-filled
+   with the already-known client identity, tied back to the specific
+   approved quote, not a generic anonymous slot picker.
+4. **Job history + warranty status.** Needs its own new
+   `client_portal_jobs` table (same sync-table pattern again) --
+   nothing job-related is client-visible yet. Warranty itself is
+   already a real, computed rule internally (30 days from completion
+   date -- see `tools/job-tracker.html`'s `warrantyBadgeHtml()`, and
+   the same 30-day figure in `tools/contract-generator.html` and the
+   public Terms), just never surfaced anywhere a client can see it.
+5. **Return-service / check-up reminders.** Naturally last -- surfaces
+   the existing Recurring Job Templates data (`th_job_templates`,
+   already built in Job Tracker) as a read-only "next suggested visit"
+   banner, then eventually lets the client self-schedule against it
+   once phase 3's scheduling UI already exists to reuse.
+
+## Smaller ideas not yet folded into a phase above
+
+Roughly ordered by likely value-to-effort, not committed to. Quote
+approval, scheduling, job history, warranty, and service history all
+now live in the numbered roadmap above -- this list is what's left.
+
+**Worth doing soon**
 - **Real "pay all outstanding" option.** If a client has three unpaid
-  invoices they currently pay them one at a time.
-
-**Solid, moderate effort**
-- **Job photos visible per invoice** (see pending item 7). Genuinely
+  invoices they currently pay them one at a time. Doesn't depend on
+  any of the roadmap phases -- could land any time.
+- **Job photos visible per invoice / per job.** Genuinely
   differentiating for a handyman business -- "here's what you paid
-  for" is a real trust builder.
-- **Quote approval.** Let a client accept or decline a quote in the
-  portal rather than over text. Ties into the unification of quote
-  and invoice already noted in `ARCHITECTURE-NOTES.md` item 3.
-- **Service history.** A simple list of past jobs at that client's
-  property. Useful for the client, and quietly useful for Triple H
-  when a repeat call comes in.
-- **Appointment self-scheduling from the portal**, reusing the
-  existing booking flow, but pre-filled since the client is already
-  known.
+  for" is a real trust builder. Naturally rides along with phase 4
+  (job history) once `client_portal_jobs` exists, rather than being
+  its own separate sync pipeline.
 
 **Smaller polish**
 - **"Remember me" / longer sessions.** Clients sign in rarely, so
   being logged out every time is more annoying here than in a tool
   used daily.
 - **Partial payments** for larger jobs.
-- **A client-visible "your next appointment" banner** if one's booked.
+- **A client-visible "your next appointment" banner.** Natural
+  companion to phase 3 (scheduling) and phase 5 (check-up reminders)
+  once either exists.
 - **Email preferences** (invoice notifications on/off), which is also
   the honest thing to offer if notification volume ever grows.
 
@@ -222,4 +262,6 @@ Roughly ordered by likely value-to-effort, not committed to:
   the whole portal. Not something to add casually.
 - **A messaging thread per job.** Sounds useful, but competes with
   text messaging, which is what clients actually use. Easy to build
-  something nobody touches.
+  something nobody touches. The quote-questions feature in phase 2 is
+  deliberately scoped narrower than this -- questions on one specific
+  quote, not an open-ended thread.
