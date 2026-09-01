@@ -271,6 +271,7 @@
   if (themeToggleBtn) {
     const initialLabel = themeToggleBtn.querySelector('.theme-toggle-label');
     if (initialLabel) initialLabel.textContent = getCurrentTheme() === 'light' ? 'Light Mode' : 'Dark Mode';
+    themeToggleBtn.setAttribute('aria-label', getCurrentTheme() === 'light' ? 'Switch to dark mode' : 'Switch to light mode');
   }
   // Sync the mobile switch to whatever the flash-prevention script in
   // <head> already decided, before any click happens
