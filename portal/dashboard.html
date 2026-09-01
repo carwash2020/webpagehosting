@@ -33,11 +33,17 @@
 <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js" integrity="sha384-JcnsjUPPylna1s1fvi1u12X5qjY5OL56iySh75FdtrwhO/SWXgMjoVqcKyIIWOLk" crossorigin="anonymous" async></script>
 <style>
   body { max-width: 640px; margin: 0 auto; padding: 24px 16px 60px; }
-  .portal-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 24px; }
+  .portal-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; }
   .portal-header-left { display: flex; align-items: center; gap: 12px; }
   .portal-header img { width: 40px; height: auto; }
   .portal-title { font-family: 'Oswald', sans-serif; font-weight: 700; font-size: 19px; color: var(--white); }
   .portal-sub { color: var(--text-dim); font-size: 13px; }
+  .portal-nav { display: flex; gap: 8px; margin-bottom: 24px; }
+  .portal-nav a {
+    flex: 1; text-align: center; padding: 9px 12px; border-radius: 8px; font-size: 13.5px; font-weight: 600;
+    text-decoration: none; border: 1px solid var(--border); color: var(--text-dim);
+  }
+  .portal-nav a.is-active { background: var(--orange-tint-soft); border-color: var(--orange-tint-border); color: var(--orange-light); }
   .invoice-card {
     background: var(--bg-panel-2); border: 1px solid var(--border); border-radius: 10px;
     padding: 16px; margin-bottom: 12px;
@@ -83,6 +89,11 @@
     </div>
   </div>
   <button class="secondary-btn" id="signOutBtn">Sign out</button>
+</div>
+
+<div class="portal-nav">
+  <a href="/portal/quotes.html">Quotes</a>
+  <a href="/portal/dashboard.html" class="is-active">Invoices</a>
 </div>
 
 <div id="invoiceList"></div>
