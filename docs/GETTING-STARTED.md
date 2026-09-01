@@ -22,13 +22,25 @@ needing to actually get oriented, not just skim.
 
 ## What this repo actually hosts
 
-This repo hosts Triple H Enterprises' public marketing site and its
-internal tool suite (the Workspace apps under `/tools/`) from one
-GitHub Pages deployment. They share this repo and some genuinely
-shared files (see "Shared files" in the README), but the public site
-and the internal tools are still meaningfully separate things -- know
-which one you're actually working on before you start. The file
-structure sections in the README tell you which files belong to which.
+This repo hosts three meaningfully separate things from one GitHub
+Pages deployment:
+
+1. **The public marketing site** (`index.html`, the
+   `handyman-*.html` service-area pages, `booking.html`, and the blog
+   under `/blog/`).
+2. **The internal tool suite** (the Workspace apps under `/tools/`),
+   for Connor and Steve only.
+3. **The client portal** (`/portal/`), where a client signs in to view
+   and pay their own invoices. Built 2026-08-31, deliberately shares
+   no JavaScript at all with `/tools/` -- see
+   **`docs/CLIENT-PORTAL.md`** before touching anything under
+   `/portal/`, and note especially the RLS lesson recorded there,
+   which affected seven tables well outside the portal itself.
+
+They share this repo and some genuinely shared files (see "Shared
+files" in the README), but know which of the three you're actually
+working on before you start. The file structure sections in the
+README tell you which files belong to which.
 
 ## Before shipping any change
 
