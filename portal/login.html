@@ -3,8 +3,10 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-<meta name="robots" content="noindex, nofollow">
+<meta name="robots" content="index, follow">
 <title>Client Portal | Triple H Enterprises</title>
+<meta name="description" content="Sign in to view and pay your Triple H Enterprises invoices online.">
+<link rel="canonical" href="https://www.triplehenterprisesllc.biz/portal/login.html">
 <!--
   Client Portal login (2026-08-31, rebuilt from magic-link to
   email+password the same day) -- a genuinely separate build from
@@ -23,6 +25,15 @@
   Triple H Enterprises invoiced this client first (see send-invite
   edge function) -- a client can only ever sign in here or ask to
   reset a password they already have, never self-register.
+
+  Indexable on purpose (2026-09-01), unlike dashboard.html and
+  set-password.html, which both stay noindex: this page is just an
+  empty email/password form with no client data anywhere on it, so
+  there's no real exposure from letting it be found, and it's exactly
+  what a client searching "Triple H client portal" or "Triple H login"
+  is trying to reach. dashboard.html is meaningless without a real
+  session regardless, and set-password.html is a one-time link flow,
+  not something anyone should be navigating to directly from search.
 -->
 <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data:; connect-src 'self' https://csvfqdjuobylgafgolho.supabase.co; frame-src 'none'; object-src 'none'; base-uri 'self'; frame-ancestors 'none';">
 <meta name="theme-color" content="#0a0a0a">
