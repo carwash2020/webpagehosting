@@ -1,7 +1,7 @@
 // Supabase Edge Function: stripe-webhook
 //
 // Receives payment_intent.succeeded events from Stripe once a client
-// actually completes a payment, and marks the corresponding invoice
+// actually completes a payment, and marks the corresponding invoice(s)
 // paid in both client_portal_invoices and the internal th_invoices
 // log (so Connor/Steve see it as paid too, not just the portal).
 //
@@ -16,6 +16,16 @@
 // .text(), never .json() -- signature verification needs the exact
 // original bytes Stripe sent, and parsing then re-serializing JSON
 // can subtly change them enough to break verification.
+//
+// Updated 2026-09-02 ("Pay All Outstanding"): a single PaymentIntent
+// can now cover MULTIPLE invoices (create-bulk-payment-intent writes
+// the same stripe_payment_intent_id onto every invoice in the batch).
+// The lookup-by-payment-intent-id below already naturally returns every
+// matching row, not just one -- this just needed to stop assuming
+// rows[0] was the only one and loop over all of them instead. The
+// metadata fallback checks BOTH the singular (client_portal_invoice_id,
+// one invoice) and plural (client_portal_invoice_ids, comma-separated
+// list, bulk) shapes.
 //
 // Required secrets (Supabase dashboard -> Edge Functions -> Secrets):
 //   STRIPE_SECRET_KEY -- same test-mode key create-payment-intent uses.
@@ -74,47 +84,59 @@ Deno.serve(async (req: Request) => {
   }
 
   const pi = event.data.object as Stripe.PaymentIntent;
-  const invoiceIdFromMetadata = pi.metadata?.client_portal_invoice_id;
 
   // Looked up by the PaymentIntent id first (set by create-payment-intent
-  // when the intent was originally created) -- metadata is the belt-
-  // and-suspenders fallback if that earlier write ever failed for some
-  // reason, not the primary lookup.
+  // or create-bulk-payment-intent when the intent was originally
+  // created) -- naturally returns every invoice sharing this
+  // PaymentIntent id, whether that's one (single-invoice pay) or
+  // several (Pay All Outstanding). Metadata is the belt-and-suspenders
+  // fallback if that earlier write ever failed for some reason, not
+  // the primary lookup.
   let invoiceRes = await fetch(
     `${SUPABASE_URL}/rest/v1/client_portal_invoices?stripe_payment_intent_id=eq.${pi.id}&select=id,source_invoice_id,paid`,
     { headers: { apikey: SERVICE_ROLE_KEY, Authorization: `Bearer ${SERVICE_ROLE_KEY}` } },
   );
   let rows = await invoiceRes.json();
-  if (!rows.length && invoiceIdFromMetadata) {
-    invoiceRes = await fetch(
-      `${SUPABASE_URL}/rest/v1/client_portal_invoices?id=eq.${invoiceIdFromMetadata}&select=id,source_invoice_id,paid`,
-      { headers: { apikey: SERVICE_ROLE_KEY, Authorization: `Bearer ${SERVICE_ROLE_KEY}` } },
-    );
-    rows = await invoiceRes.json();
+  if (!rows.length) {
+    const singleId = pi.metadata?.client_portal_invoice_id;
+    const idsCsv = pi.metadata?.client_portal_invoice_ids;
+    const fallbackIds = idsCsv ? idsCsv.split(",") : (singleId ? [singleId] : []);
+    if (fallbackIds.length) {
+      invoiceRes = await fetch(
+        `${SUPABASE_URL}/rest/v1/client_portal_invoices?id=in.(${fallbackIds.join(",")})&select=id,source_invoice_id,paid`,
+        { headers: { apikey: SERVICE_ROLE_KEY, Authorization: `Bearer ${SERVICE_ROLE_KEY}` } },
+      );
+      rows = await invoiceRes.json();
+    }
   }
   if (!rows.length) {
     // Acknowledge with 200 regardless -- returning an error here would
     // make Stripe retry this same event repeatedly, which won't ever
-    // resolve a genuinely missing invoice. Logged so this is still
+    // resolve genuinely missing invoices. Logged so this is still
     // visible for manual follow-up rather than silently lost.
-    console.error(`payment_intent.succeeded for ${pi.id} but no matching invoice found`);
+    console.error(`payment_intent.succeeded for ${pi.id} but no matching invoice(s) found`);
     return new Response(JSON.stringify({ received: true, warning: "no matching invoice" }), { status: 200 });
   }
-  const invoice = rows[0];
 
-  if (invoice.paid) {
-    // Already processed -- Stripe can and does redeliver the same
-    // event more than once by design; this makes handling it a second
-    // time a harmless no-op instead of a duplicate side effect.
+  // Stripe can and does redeliver the same event more than once by
+  // design -- filtering to only the not-yet-paid rows makes
+  // reprocessing a harmless no-op instead of a duplicate side effect,
+  // and means a redelivered event after a PARTIAL earlier failure
+  // (some invoices marked, some not) correctly finishes the rest
+  // rather than skipping everything because at least one was already done.
+  const unpaidRows = rows.filter((inv: any) => !inv.paid);
+  if (!unpaidRows.length) {
     return new Response(JSON.stringify({ received: true, already_processed: true }), { status: 200 });
   }
 
   const paidAt = new Date().toISOString();
+  const unpaidIds = unpaidRows.map((inv: any) => inv.id);
 
   // Mark paid in the client-facing table -- this is what the client
-  // actually sees reflected back on their next dashboard load.
+  // actually sees reflected back on their next dashboard load. One
+  // PATCH covering every unpaid id in this PaymentIntent, not a loop.
   await fetch(
-    `${SUPABASE_URL}/rest/v1/client_portal_invoices?id=eq.${invoice.id}`,
+    `${SUPABASE_URL}/rest/v1/client_portal_invoices?id=in.(${unpaidIds.join(",")})`,
     {
       method: "PATCH",
       headers: { apikey: SERVICE_ROLE_KEY, Authorization: `Bearer ${SERVICE_ROLE_KEY}`, "Content-Type": "application/json" },
@@ -126,9 +148,11 @@ Deno.serve(async (req: Request) => {
   // own invoice log reflects this too, not just the portal --
   // workspace_sync stores one row per sync "code" as a single JSON
   // blob (confirmed against the real schema before writing this, not
-  // assumed), so this reads the current blob, updates just the one
-  // matching invoice entry within its th_invoices array, and writes
-  // the whole blob back.
+  // assumed), so this reads the current blob, updates every matching
+  // invoice entry within its th_invoices array (could be more than one
+  // now, with Pay All Outstanding), and writes the whole blob back ONCE
+  // -- not once per invoice, to avoid multiple concurrent read-modify-
+  // write cycles racing each other within this same webhook call.
   const syncRes = await fetch(
     `${SUPABASE_URL}/rest/v1/workspace_sync?code=eq.tripleh-workspace-2026&select=data`,
     { headers: { apikey: SERVICE_ROLE_KEY, Authorization: `Bearer ${SERVICE_ROLE_KEY}` } },
@@ -137,9 +161,15 @@ Deno.serve(async (req: Request) => {
   if (syncRows.length) {
     const blob = syncRows[0].data;
     const invoices = JSON.parse(blob.th_invoices || "[]");
-    const idx = invoices.findIndex((inv: any) => inv.id === invoice.source_invoice_id);
-    if (idx !== -1 && !invoices[idx].paid) {
-      invoices[idx].paid = true;
+    const sourceIds = new Set(unpaidRows.map((inv: any) => inv.source_invoice_id));
+    let changed = false;
+    invoices.forEach((inv: any) => {
+      if (sourceIds.has(inv.id) && !inv.paid) {
+        inv.paid = true;
+        changed = true;
+      }
+    });
+    if (changed) {
       blob.th_invoices = JSON.stringify(invoices);
       await fetch(
         `${SUPABASE_URL}/rest/v1/workspace_sync?code=eq.tripleh-workspace-2026`,
@@ -152,5 +182,5 @@ Deno.serve(async (req: Request) => {
     }
   }
 
-  return new Response(JSON.stringify({ received: true }), { status: 200 });
+  return new Response(JSON.stringify({ received: true, invoices_marked_paid: unpaidIds.length }), { status: 200 });
 });

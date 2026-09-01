@@ -1,0 +1,21 @@
+-- Job photos on the portal (2026-09-02). Applied directly via the
+-- Supabase MCP migration tool; recorded here after the fact, same
+-- convention as the other files in sql/portal/.
+--
+-- Stores STORAGE PATHS only, never signed URLs -- a signed URL
+-- expires (the internal tools sign them for 1 hour at a time,
+-- tools/sync.js's getSignedJobPhotoUrl()), so storing one directly
+-- here would go stale quickly. The get-job-photo-urls edge function
+-- generates fresh signed URLs on demand, after verifying the
+-- requesting client actually owns this job -- the job-photos Storage
+-- bucket's own RLS policies only check `bucket_id = 'job-photos'` for
+-- the `authenticated` role with no further scoping (confirmed
+-- directly against pg_policies), meaning a client's own session could
+-- otherwise call Storage's sign endpoint itself for a path it was
+-- never meant to see. Never generating a signed URL from the client's
+-- own credentials, only from the edge function's service-role
+-- credentials after an explicit ownership check, is what actually
+-- closes that gap for this feature -- it does not fix the underlying
+-- looser bucket policy itself, which predates this feature and is out
+-- of scope here.
+alter table client_portal_jobs add column photo_storage_paths jsonb;

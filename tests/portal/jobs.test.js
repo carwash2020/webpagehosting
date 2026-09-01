@@ -51,7 +51,7 @@ test('warranty status is computed from job_date every render, never read from a 
 test('the job card only reads fields that actually exist on client_portal_jobs', () => {
   const fnMatch = html.match(/function renderJobCard\(j\) \{[\s\S]*?\n  \}\n/);
   assert.ok(fnMatch, 'expected to isolate the renderJobCard function body');
-  const realFields = ['title', 'job_date'];
+  const realFields = ['id', 'title', 'job_date', 'photo_storage_paths'];
   const fieldRefs = [...fnMatch[0].matchAll(/j\.([a-zA-Z_]+)/g)].map(m => m[1]);
   for (const field of fieldRefs) {
     assert.ok(realFields.includes(field), `renderJobCard references j.${field}, which isn't a real client_portal_jobs column read here`);
@@ -75,7 +75,12 @@ test('a job only syncs to the portal once marked Done, with both an email and a 
 test('the internal jobNotes field is never sent to the portal', () => {
   const fnMatch = trackerHtml.match(/if \(fields\.status === 'done' && clientEmailVal[\s\S]*?\n    \}\n/);
   assert.ok(fnMatch, 'expected to isolate the sync-to-portal call block');
-  assert.doesNotMatch(fnMatch[0], /notes/);
+  // Matches the actual field usage (fields.notes, or a notes: key in
+  // the request body) rather than any occurrence of the English word
+  // "notes" -- a surrounding comment mentioning something unrelated
+  // (e.g. "see that function's own notes") shouldn't fail this.
+  assert.doesNotMatch(fnMatch[0], /fields\.notes\b/);
+  assert.doesNotMatch(fnMatch[0], /\bnotes\s*:/);
 });
 
 test('editing a job repopulates the previously-saved client email', () => {

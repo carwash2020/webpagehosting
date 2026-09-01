@@ -748,6 +748,21 @@
     // internal use (e.g. access instructions, difficult-customer
     // flags), not something to expose to a client.
     if (fields.status === 'done' && clientEmailVal && fields.date && typeof getAuthToken === 'function') {
+      // Job photos on the portal (2026-09-02) -- gathered here, right
+      // before the sync call, rather than as a separate later step,
+      // since this is already the one place a completed job's sync
+      // fires from. Only the storage paths go to the portal table;
+      // see get-job-photo-urls for why signed URLs are generated on
+      // demand instead of stored (they expire, and the job-photos
+      // bucket's own RLS is looser than it should be for a client to
+      // sign its own paths directly -- see that function's own notes).
+      let photoStoragePaths = [];
+      if (typeof fetchJobPhotos === 'function') {
+        try {
+          const photoResult = await fetchJobPhotos(savedJobId);
+          if (photoResult.ok) photoStoragePaths = photoResult.photos.map(p => p.storage_path);
+        } catch (e) { /* best-effort -- job still syncs without photos if this fails */ }
+      }
       fetch(`${SUPABASE_URL}/functions/v1/sync-job-to-portal`, {
         method: 'POST',
         headers: {
@@ -761,6 +776,7 @@
           client_name: fields.client || '(no name)',
           title: fields.title,
           job_date: fields.date,
+          photo_storage_paths: photoStoragePaths,
         }),
       }).catch(e => console.warn('Portal sync failed (job still saved locally):', e));
     }
