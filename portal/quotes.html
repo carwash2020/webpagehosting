@@ -72,6 +72,31 @@
   .quote-question-error { color: #e05252; font-size: 12.5px; margin: 6px 0 0; }
   .quote-question-success { color: #4caf78; font-size: 13px; margin: 6px 0 0; }
   .responded-note { color: var(--text-dim); font-size: 12.5px; margin-top: 8px; }
+  .schedule-toggle { display: block; margin-top: 10px; font-size: 12.5px; color: var(--text-dim); text-decoration: underline; cursor: pointer; background: none; border: none; font-family: inherit; padding: 0; }
+  .schedule-toggle:hover { color: var(--orange-light); }
+  .schedule-panel { margin-top: 10px; display: none; }
+  .schedule-panel.is-open { display: block; }
+  .schedule-note { color: #4caf78; font-size: 13px; margin-top: 8px; }
+  .date-row { display: flex; gap: 8px; overflow-x: auto; padding-bottom: 8px; margin-bottom: 12px; -webkit-overflow-scrolling: touch; scroll-snap-type: x proximity; }
+  .date-btn {
+    flex: 0 0 auto; min-width: 60px; text-align: center; background: var(--bg-panel);
+    border: 1px solid var(--border); border-radius: 10px; padding: 9px 7px; cursor: pointer;
+    color: var(--text); font-family: inherit; scroll-snap-align: start;
+    transition: border-color .15s ease, background .15s ease;
+  }
+  .date-btn .dow { font-size: 10.5px; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.5px; }
+  .date-btn .dom { font-size: 16px; font-weight: 700; margin-top: 2px; font-family: 'Oswald', sans-serif; }
+  .date-btn.is-selected { border-color: var(--orange); background: var(--orange-tint-soft); color: var(--orange-light); }
+  .slots-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(90px, 1fr)); gap: 8px; margin-bottom: 8px; }
+  .slot-btn {
+    background: var(--bg-panel); border: 1px solid var(--border); border-radius: 10px;
+    padding: 10px 6px; cursor: pointer; color: var(--text); font-family: inherit; font-size: 13px;
+    text-align: center; font-weight: 500; transition: border-color .15s ease, background .15s ease;
+  }
+  .slot-btn.is-selected { border-color: var(--orange); background: var(--orange-tint-soft); color: var(--orange-light); font-weight: 700; }
+  .slots-empty { color: var(--text-dim); font-size: 13px; padding: 12px 0; text-align: center; }
+  .schedule-summary { font-size: 13.5px; color: var(--text); margin: 10px 0; }
+  .schedule-error { color: #e05252; font-size: 12.5px; margin: 6px 0 0; }
 </style>
 </head>
 <body>
@@ -170,6 +195,19 @@
           </div>
         ` : `
           <div class="responded-note">${q.status === 'approved' ? 'Approved' : 'Declined'}${q.responded_at ? ' on ' + formatDate(q.responded_at.slice(0, 10)) : ''}.</div>
+          ${q.status === 'approved' ? (q.scheduled_at ? `
+            <div class="responded-note" style="color:#4caf78;">Job scheduled -- we'll see you then! Call or text us if you need to reschedule.</div>
+          ` : `
+            <button type="button" class="schedule-toggle" onclick="toggleScheduleForm(${q.id})">Schedule this job</button>
+            <div class="schedule-panel" id="schedulePanel-${q.id}">
+              <div class="date-row" id="dateRow-${q.id}"></div>
+              <div class="slots-grid" id="slotsGrid-${q.id}"></div>
+              <div class="slots-empty" id="slotsEmpty-${q.id}" style="display:none;">No open times that day. Try another.</div>
+              <div class="schedule-summary" id="scheduleSummary-${q.id}" style="display:none;"></div>
+              <div class="schedule-error" id="scheduleError-${q.id}"></div>
+              <button class="btn blue" style="width:100%; justify-content:center; margin-top:8px; display:none;" id="scheduleConfirmBtn-${q.id}" onclick="confirmSchedule(${q.id})">Confirm this time</button>
+            </div>
+          `) : ''}
         `}
       </div>
     `;
@@ -251,6 +289,220 @@
       renderQuotes();
     } catch (e) {
       alert("Couldn't reach the server. Please check your connection and try again.");
+    }
+  }
+
+  // ---------- scheduling (phase 3) ----------
+  // Timezone/hours logic copied verbatim from booking.html rather than
+  // shared -- this page deliberately loads none of the internal
+  // scripts, same isolation reason as escapeHtml/loadImageAsDataURL
+  // above, and booking.html itself has no shared module to import
+  // from either (it's a standalone public page). Keep these in sync
+  // manually if business hours or timezone ever change.
+  const BUSINESS_TIMEZONE = 'America/Denver';
+  const HOURS_BY_WEEKDAY = { 0: [14, 20], 1: [14, 22], 2: [14, 22], 3: [14, 22], 4: [14, 22], 5: [14, 22], 6: [7, 22] };
+  const SLOT_INCREMENT_MINUTES = 30;
+  const MIN_LEAD_HOURS = 2;
+  const DAYS_AHEAD_SHOWN = 14;
+  const SCHEDULE_BUFFER_MINUTES = 15;
+  // A quote-scheduled job has no service picker (unlike booking.html)
+  // since it's already tied to a specific, already-quoted job -- 120
+  // minutes matches the most common service durations in booking.html
+  // (appliance/handyman/assembly) as a reasonable generic default.
+  const DEFAULT_JOB_MINUTES = 120;
+
+  function zonedTimeToUtc(dateStr, hh, mm) {
+    const timeStr = String(hh).padStart(2, '0') + ':' + String(mm).padStart(2, '0');
+    const naiveUtc = new Date(dateStr + 'T' + timeStr + ':00Z');
+    const parts = new Intl.DateTimeFormat('en-US', {
+      timeZone: BUSINESS_TIMEZONE, year: 'numeric', month: '2-digit', day: '2-digit',
+      hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false,
+    }).formatToParts(naiveUtc);
+    const map = {};
+    parts.forEach(p => { map[p.type] = p.value; });
+    const hourFixed = map.hour === '24' ? '00' : map.hour;
+    const asIfLocal = new Date(map.year + '-' + map.month + '-' + map.day + 'T' + hourFixed + ':' + map.minute + ':' + map.second + 'Z');
+    const diff = naiveUtc.getTime() - asIfLocal.getTime();
+    return new Date(naiveUtc.getTime() + diff);
+  }
+  function businessWeekday(dateStr) {
+    const noonUtc = zonedTimeToUtc(dateStr, 12, 0);
+    const s = new Intl.DateTimeFormat('en-US', { timeZone: BUSINESS_TIMEZONE, weekday: 'short' }).format(noonUtc);
+    return ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].indexOf(s);
+  }
+  function todayDateStrInBusinessTz() {
+    const parts = new Intl.DateTimeFormat('en-US', { timeZone: BUSINESS_TIMEZONE, year: 'numeric', month: '2-digit', day: '2-digit' }).formatToParts(new Date());
+    const map = {};
+    parts.forEach(p => { map[p.type] = p.value; });
+    return map.year + '-' + map.month + '-' + map.day;
+  }
+  function addDaysToDateStr(dateStr, days) {
+    const d = new Date(dateStr + 'T12:00:00Z');
+    d.setUTCDate(d.getUTCDate() + days);
+    return d.toISOString().slice(0, 10);
+  }
+  function overlaps(aStart, aEnd, bStart, bEnd) {
+    return aStart < bEnd && bStart < aEnd;
+  }
+
+  // Only one scheduling panel is ever meaningfully open at a time in
+  // practice, so this stays a single set of module-level variables
+  // rather than per-quote state -- simpler, and matches how only one
+  // question form realistically gets filled out at once too.
+  let schedulingQuoteId = null;
+  let selectedScheduleSlot = null;
+
+  function toggleScheduleForm(quoteId) {
+    const panel = document.getElementById('schedulePanel-' + quoteId);
+    if (!panel) return;
+    const opening = !panel.classList.contains('is-open');
+    panel.classList.toggle('is-open');
+    if (opening) {
+      schedulingQuoteId = quoteId;
+      renderScheduleDateRow(quoteId);
+    }
+  }
+
+  function renderScheduleDateRow(quoteId) {
+    const el = document.getElementById('dateRow-' + quoteId);
+    if (!el) return;
+    const today = todayDateStrInBusinessTz();
+    let html = '';
+    for (let i = 0; i < DAYS_AHEAD_SHOWN; i++) {
+      const dateStr = addDaysToDateStr(today, i);
+      const noonUtc = zonedTimeToUtc(dateStr, 12, 0);
+      const dow = new Intl.DateTimeFormat('en-US', { timeZone: BUSINESS_TIMEZONE, weekday: 'short' }).format(noonUtc);
+      const dom = new Intl.DateTimeFormat('en-US', { timeZone: BUSINESS_TIMEZONE, day: 'numeric' }).format(noonUtc);
+      html += '<button type="button" class="date-btn" data-date="' + dateStr + '"><div class="dow">' + dow + '</div><div class="dom">' + dom + '</div></button>';
+    }
+    el.innerHTML = html;
+    el.querySelectorAll('.date-btn').forEach(btn => {
+      btn.addEventListener('click', () => selectScheduleDate(quoteId, btn.dataset.date));
+    });
+  }
+
+  async function fetchBookingsForDate(dateStr) {
+    const dayStartUtc = zonedTimeToUtc(dateStr, 0, 0);
+    const rangeStart = new Date(dayStartUtc.getTime() - 24 * 60 * 60 * 1000).toISOString();
+    const rangeEnd = new Date(dayStartUtc.getTime() + 2 * 24 * 60 * 60 * 1000).toISOString();
+    const res = await fetch('https://csvfqdjuobylgafgolho.supabase.co/rest/v1/rpc/get_booking_availability', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        apikey: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNzdmZxZGp1b2J5bGdhZmdvbGhvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODUzNTQ3MjcsImV4cCI6MjEwMDkzMDcyN30.6GlvK-DfXf2lppS1kciZtsl4wHOpZz_yKtwsS1lyjrs',
+        Authorization: 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNzdmZxZGp1b2J5bGdhZmdvbGhvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODUzNTQ3MjcsImV4cCI6MjEwMDkzMDcyN30.6GlvK-DfXf2lppS1kciZtsl4wHOpZz_yKtwsS1lyjrs',
+      },
+      body: JSON.stringify({ p_range_start: rangeStart, p_range_end: rangeEnd }),
+    });
+    if (!res.ok) throw new Error('availability check failed (HTTP ' + res.status + ')');
+    const rows = await res.json();
+    return rows.map(r => ({ start: new Date(r.start_at), end: new Date(r.end_at) }));
+  }
+
+  function computeScheduleSlots(dateStr, bookings) {
+    const weekday = businessWeekday(dateStr);
+    const hours = HOURS_BY_WEEKDAY[weekday];
+    if (!hours) return [];
+    const openHour = hours[0], closeHour = hours[1];
+    const earliestAllowed = new Date(Date.now() + MIN_LEAD_HOURS * 60 * 60 * 1000);
+    const bufferMs = SCHEDULE_BUFFER_MINUTES * 60000;
+
+    const slots = [];
+    for (let mins = openHour * 60; mins + DEFAULT_JOB_MINUTES <= closeHour * 60; mins += SLOT_INCREMENT_MINUTES) {
+      const hh = Math.floor(mins / 60), mm = mins % 60;
+      const startUtc = zonedTimeToUtc(dateStr, hh, mm);
+      const endUtc = new Date(startUtc.getTime() + DEFAULT_JOB_MINUTES * 60000);
+      if (startUtc < earliestAllowed) continue;
+      const conflict = bookings.some(b => overlaps(startUtc, endUtc, new Date(b.start.getTime() - bufferMs), new Date(b.end.getTime() + bufferMs)));
+      if (conflict) continue;
+      const label = new Intl.DateTimeFormat('en-US', { timeZone: BUSINESS_TIMEZONE, hour: 'numeric', minute: '2-digit' }).format(startUtc);
+      slots.push({ startUtc, endUtc, label });
+    }
+    return slots;
+  }
+
+  async function selectScheduleDate(quoteId, dateStr) {
+    document.querySelectorAll('#dateRow-' + quoteId + ' .date-btn').forEach(b => {
+      b.classList.toggle('is-selected', b.dataset.date === dateStr);
+    });
+    const grid = document.getElementById('slotsGrid-' + quoteId);
+    const emptyEl = document.getElementById('slotsEmpty-' + quoteId);
+    const summaryEl = document.getElementById('scheduleSummary-' + quoteId);
+    const confirmBtn = document.getElementById('scheduleConfirmBtn-' + quoteId);
+    selectedScheduleSlot = null;
+    summaryEl.style.display = 'none';
+    confirmBtn.style.display = 'none';
+    grid.innerHTML = '<p style="color:var(--text-dim); font-size:13px;">Loading times...</p>';
+    emptyEl.style.display = 'none';
+
+    let bookings;
+    try {
+      bookings = await fetchBookingsForDate(dateStr);
+    } catch (e) {
+      grid.innerHTML = '<p style="color:#ff8a80; font-size:13px; grid-column:1/-1;">Couldn\'t load available times. Try again.</p>';
+      return;
+    }
+    const slots = computeScheduleSlots(dateStr, bookings);
+    if (!slots.length) {
+      grid.innerHTML = '';
+      emptyEl.style.display = 'block';
+      return;
+    }
+    grid.innerHTML = slots.map((s, i) => '<button type="button" class="slot-btn" data-idx="' + i + '">' + s.label + '</button>').join('');
+    grid.querySelectorAll('.slot-btn').forEach((btn, i) => {
+      btn.addEventListener('click', () => {
+        selectedScheduleSlot = slots[i];
+        grid.querySelectorAll('.slot-btn').forEach(b => b.classList.remove('is-selected'));
+        btn.classList.add('is-selected');
+        const dateLabel = new Intl.DateTimeFormat('en-US', { timeZone: BUSINESS_TIMEZONE, weekday: 'long', month: 'long', day: 'numeric' }).format(slots[i].startUtc);
+        summaryEl.textContent = dateLabel + ' at ' + slots[i].label;
+        summaryEl.style.display = 'block';
+        confirmBtn.style.display = 'block';
+        document.getElementById('scheduleError-' + quoteId).textContent = '';
+      });
+    });
+  }
+
+  async function confirmSchedule(quoteId) {
+    if (!selectedScheduleSlot) return;
+    const { data: { session } } = await client.auth.getSession();
+    if (!session) { window.location.replace('/portal/login.html'); return; }
+
+    const errorEl = document.getElementById('scheduleError-' + quoteId);
+    const confirmBtn = document.getElementById('scheduleConfirmBtn-' + quoteId);
+    errorEl.textContent = '';
+    confirmBtn.disabled = true;
+    confirmBtn.textContent = 'Scheduling...';
+
+    try {
+      const res = await fetch(
+        'https://csvfqdjuobylgafgolho.supabase.co/functions/v1/schedule-quote-job',
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'apikey': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNzdmZxZGp1b2J5bGdhZmdvbGhvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODUzNTQ3MjcsImV4cCI6MjEwMDkzMDcyN30.6GlvK-DfXf2lppS1kciZtsl4wHOpZz_yKtwsS1lyjrs',
+            'Authorization': `Bearer ${session.access_token}`,
+          },
+          body: JSON.stringify({
+            quote_id: quoteId,
+            start_at: selectedScheduleSlot.startUtc.toISOString(),
+            end_at: selectedScheduleSlot.endUtc.toISOString(),
+          }),
+        }
+      );
+      const result = await res.json();
+      if (!result.ok) {
+        errorEl.textContent = result.error || 'Something went wrong. Please try again.';
+        confirmBtn.disabled = false;
+        confirmBtn.textContent = 'Confirm this time';
+        return;
+      }
+      renderQuotes();
+    } catch (e) {
+      errorEl.textContent = "Couldn't reach the server. Please check your connection and try again.";
+      confirmBtn.disabled = false;
+      confirmBtn.textContent = 'Confirm this time';
     }
   }
 

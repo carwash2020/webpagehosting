@@ -1301,6 +1301,7 @@
           source_quote_id: list[list.length - 1].id,
           client_email: quoteClientEmailVal,
           client_name: quoteClientNameVal || '(no name)',
+          client_address: document.getElementById('quoteClientAddress').value.trim() || null,
           quote_number: document.getElementById('quoteNumber').value,
           quote_date: document.getElementById('quoteDate').value || new Date().toISOString().slice(0, 10),
           description: jobRefTitle || document.getElementById('quoteJobDescription').value || null,

@@ -84,6 +84,21 @@ the inserted `client_email` matching the caller's own session AND that
 `quote_id` genuinely belonging to them. SELECT/UPDATE are internal-only,
 same shape as `portal_bug_reports`.
 
+**`client_portal_quotes.client_address` and `.scheduled_at`** (added
+2026-09-02, phase 3) -- `client_address` mirrors the Quote form's
+existing address field, added once scheduling needed a real visit
+address rather than re-asking for one. `scheduled_at` is set only by
+`schedule-quote-job` (service role), never by the client's own
+session, so the portal knows not to show the scheduling flow again
+once a job is booked.
+
+**`th_bookings.quote_id`** (added 2026-09-02, phase 3) -- a REAL
+foreign key to `client_portal_quotes(id)`, unlike `th_bookings`'
+existing `job_id`, which is a deliberately loose, unenforced reference
+(documented as such -- `th_jobs` lives only in the `workspace_sync`
+blob and can't be a real FK target). `quote_id` can be a proper FK
+because `client_portal_quotes` is a real table.
+
 ## Edge functions
 
 All deployed and ACTIVE. Source backed up in `edge-functions/`.
@@ -98,6 +113,7 @@ All deployed and ACTIVE. Source backed up in `edge-functions/`.
 | `sync-quote-to-portal` | true | Writes to `client_portal_quotes`; same new-client-vs-new-item branching as `sync-invoice-to-portal`, triggering `send-invite` or `send-quote-notification` |
 | `send-quote-notification` | true | "You have a new quote to review" email to an existing client |
 | `respond-to-quote` | true | Client-only (no `account_roles` check, unlike the internal functions above) -- verifies the quote belongs to the caller's own email and is still `pending`, then sets `approved`/`declined` |
+| `schedule-quote-job` | true | Client-only -- verifies the quote is `approved`, belongs to the caller, and isn't already scheduled; inserts into `th_bookings` (service role) with `quote_id` set, then marks `client_portal_quotes.scheduled_at` |
 
 Two non-obvious things worth not rediscovering the hard way:
 
@@ -124,6 +140,15 @@ Log in `tools/invoice-generator.html` (`refreshPortalQuoteStatuses()`),
 the same place the existing Paid/Unpaid badge and "Resend Invite"
 button already live for invoices -- not a separate Dev Tools panel,
 since Dev Tools hides almost everything from Steve's Owner role.
+
+**`schedule-quote-job` reuses `th_bookings`' existing conflict
+detection rather than reimplementing it.** `th_bookings` has a real
+Postgres `EXCLUDE` constraint on `padded_range` (the same one
+`booking.html` already relies on, confirmed by its own `23P01`/
+"exclusion" error handling) -- this function inserts and lets that
+constraint be the actual source of truth for "is this time free,"
+surfacing a conflict as a friendly message instead of a raw Postgres
+error, exactly like `booking.html` does.
 
 ## Real bugs found by testing, worth not reintroducing
 
@@ -248,13 +273,19 @@ Real dependencies, not preference, decide this order:
    yet (reusable from `portal/dashboard.html`'s jsPDF pattern whenever
    wanted), and questions are insert-only from the client side (Steve
    follows up by phone/text/email, not an in-portal reply).
-3. **Scheduling the job from an approved quote.** Deliberately after
-   approval, not a standalone feature -- the real booking backend
-   already exists and is reusable as-is (`th_bookings` table,
-   `get_booking_availability` RPC, both already proven by
-   `booking.html`). The portal version is mostly wiring: pre-filled
-   with the already-known client identity, tied back to the specific
-   approved quote, not a generic anonymous slot picker.
+3. ~~**Scheduling the job from an approved quote.**~~ -- **done**
+   (2026-09-02). Deliberately after approval, not a standalone
+   feature -- the real booking backend already existed and was reused
+   as-is (`th_bookings` table, `get_booking_availability` RPC, the
+   exact timezone/business-hours logic from `booking.html`, copied
+   rather than shared since `booking.html` has no shared module of its
+   own either). The portal version is simpler than the public flow on
+   purpose: no service picker (already tied to one specific quote), a
+   flat 120-minute default duration, and pre-filled with the
+   already-known client identity/address -- not a generic anonymous
+   slot picker. A new `schedule-quote-job` edge function centralizes
+   both the `th_bookings` insert and the `client_portal_quotes.
+   scheduled_at` write-back as one server-side operation.
 4. **Job history + warranty status.** Needs its own new
    `client_portal_jobs` table (same sync-table pattern again) --
    nothing job-related is client-visible yet. Warranty itself is
