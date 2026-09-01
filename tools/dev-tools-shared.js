@@ -56,6 +56,10 @@
       title: 'Client errors',
       body: `<p>The last 20 JavaScript errors that happened on ANY tool page, on either device, captured automatically in the background (no action needed to log them). Shows the error message, which page it happened on, who was on it, and when.</p><p>Synced across devices -- an error on Steve's phone shows up here on Connor's device too, once the next sync happens.</p>`,
     },
+    portalbugreports: {
+      title: 'Portal bug reports',
+      body: `<p>Problems submitted by clients through the "Report a problem" link on the client portal (login, dashboard, and set-password pages). Works whether or not the client is signed in, since a login problem can't require a session to report.</p><p>Only visible here, to accounts with an internal role. A client can submit a report but can never read their own or anyone else's back, including through this same page's own login.</p>`,
+    },
     pushtest: {
       title: 'Push notification test',
       body: `<p>Inserts a test lead using the exact same path the real contact form uses (not a direct call to the Send-Push function itself, which needs a service_role key that must never sit in this page's JavaScript). That insert should trigger the same server-side notification pipeline a real lead does.</p><p>This can't directly confirm a push was actually received on any device -- only that the insert (and whatever fires from it server-side) ran without an error. The test lead gets deleted automatically a few seconds later either way.</p>`,
