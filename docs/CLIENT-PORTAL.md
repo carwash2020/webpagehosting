@@ -99,6 +99,21 @@ existing `job_id`, which is a deliberately loose, unenforced reference
 blob and can't be a real FK target). `quote_id` can be a proper FK
 because `client_portal_quotes` is a real table.
 
+**`client_portal_jobs`** (added 2026-09-02, phase 4) -- mirrors
+`client_portal_invoices`' simpler shape: no internal SELECT policy
+needed here, unlike `client_portal_quotes` -- Steve already sees jobs
+directly in `tools/job-tracker.html`, there's no separate client-driven
+state change to observe via the portal. Only synced when a job is
+marked `done` (the same moment the 30-day warranty clock starts) AND
+a client email is on file. Deliberately does NOT store the internal
+`jobNotes` field -- that's for internal use only, never something to
+expose to a client. Warranty status is never stored, only computed
+fresh from `job_date` in `portal/jobs.html`, using the exact same
+30-day formula `tools/job-tracker.html`'s own `warrantyBadgeHtml()`
+already uses -- duplicating the formula (not the data) so this page
+can never show a stale warranty status that drifted from a stored
+value nobody updated.
+
 ## Edge functions
 
 All deployed and ACTIVE. Source backed up in `edge-functions/`.
@@ -114,6 +129,7 @@ All deployed and ACTIVE. Source backed up in `edge-functions/`.
 | `send-quote-notification` | true | "You have a new quote to review" email to an existing client |
 | `respond-to-quote` | true | Client-only (no `account_roles` check, unlike the internal functions above) -- verifies the quote belongs to the caller's own email and is still `pending`, then sets `approved`/`declined` |
 | `schedule-quote-job` | true | Client-only -- verifies the quote is `approved`, belongs to the caller, and isn't already scheduled; inserts into `th_bookings` (service role) with `quote_id` set, then marks `client_portal_quotes.scheduled_at` |
+| `sync-job-to-portal` | true | Writes to `client_portal_jobs` when a job is marked `done` with a client email on file; no email-notification branch (unlike invoices/quotes) since a completed job isn't worth a dedicated notification -- `send-invite` still fires for a genuinely new client |
 
 Two non-obvious things worth not rediscovering the hard way:
 
@@ -286,13 +302,19 @@ Real dependencies, not preference, decide this order:
    slot picker. A new `schedule-quote-job` edge function centralizes
    both the `th_bookings` insert and the `client_portal_quotes.
    scheduled_at` write-back as one server-side operation.
-4. **Job history + warranty status.** Needs its own new
-   `client_portal_jobs` table (same sync-table pattern again) --
-   nothing job-related is client-visible yet. Warranty itself is
-   already a real, computed rule internally (30 days from completion
-   date -- see `tools/job-tracker.html`'s `warrantyBadgeHtml()`, and
-   the same 30-day figure in `tools/contract-generator.html` and the
-   public Terms), just never surfaced anywhere a client can see it.
+4. ~~**Job history + warranty status.**~~ -- **done** (2026-09-02).
+   New `client_portal_jobs` table (same sync-table pattern again, but
+   simpler than quotes' -- no internal SELECT policy needed since
+   Steve already sees jobs directly in Job Tracker) and a
+   `jobClientEmail` field on the job form. Only syncs when a job is
+   marked `done` with a client email on file -- the exact moment the
+   30-day warranty clock starts. Warranty itself is already a real,
+   computed rule internally (30 days from completion date -- see
+   `tools/job-tracker.html`'s `warrantyBadgeHtml()`, and the same
+   30-day figure in `tools/contract-generator.html` and the public
+   Terms); `portal/jobs.html` recomputes the identical formula
+   client-side from `job_date` rather than storing and risking a
+   stale value.
 5. **Return-service / check-up reminders.** Naturally last -- surfaces
    the existing Recurring Job Templates data (`th_job_templates`,
    already built in Job Tracker) as a read-only "next suggested visit"
