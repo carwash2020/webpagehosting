@@ -18,6 +18,12 @@ UI needed.
   backlog of deferred architectural work, a hard-won lesson about file
   splitting, and decisions already made with real reasons, so they
   don't get re-litigated later.
+- **[CLIENT-PORTAL.md](CLIENT-PORTAL.md)** -- everything about the
+  client-facing portal at `/portal/`: its deliberate architectural
+  separation from `/tools/`, its two database tables, its five edge
+  functions, real bugs already found and fixed there, the critical
+  2026-09-01 RLS security fix and its general lesson, what's still
+  pending, and ideas for where to take it next.
 
 For the deep, authoritative detail on any specific system --
 architecture, exact mechanisms, incident history, step-by-step
