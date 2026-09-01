@@ -1,0 +1,222 @@
+/* blog.css -- shared stylesheet for the Triple H Enterprises blog
+   (blog/index.html + individual post pages).
+
+   Deliberately extends this site's own existing brand system
+   (styles.css :root tokens: --bg, --orange, Oswald/Inter) rather than
+   introducing a disconnected new palette -- the brand's already
+   established, so this isn't a free axis to redesign from scratch.
+
+   One real, purposeful addition: --rust, a muted copper reserved
+   specifically for diagnostic illustration linework (the exploded-
+   part diagrams on each post). Keeps the bright --orange reserved for
+   actual calls-to-action, so a reader's eye has one clear signal for
+   "this is clickable" instead of the same color doing every job.
+*/
+
+.blog-body {
+  max-width: 680px;
+  margin: 0 auto;
+  padding: 0 20px;
+}
+
+.blog-header {
+  padding: 48px 0 32px;
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 40px;
+}
+
+.blog-kicker {
+  color: var(--text-dim);
+  font-size: 14px;
+  margin-bottom: 10px;
+}
+
+.blog-kicker a {
+  color: var(--orange);
+  text-decoration: none;
+}
+.blog-kicker a:hover {
+  text-decoration: underline;
+}
+
+.blog-title {
+  font-family: 'Oswald', sans-serif;
+  font-weight: 700;
+  font-size: 36px;
+  line-height: 1.15;
+  color: var(--white);
+  margin: 0 0 12px;
+  letter-spacing: -0.01em;
+}
+
+.blog-dek {
+  font-size: 18px;
+  line-height: 1.55;
+  color: var(--text-dim);
+  margin: 0;
+  max-width: 58ch;
+}
+
+.blog-meta {
+  margin-top: 20px;
+  font-size: 14px;
+  color: var(--text-dim);
+}
+
+/* The signature visual device for post pages: a full-width diagnostic
+   illustration rendered directly as inline SVG (no external image
+   files, no stock photography -- see the file-level comment on why).
+   Reserved for exactly one appearance near the top of a post; this is
+   the "spend your boldness in one place" element, not a decoration
+   repeated throughout. */
+.blog-diagram {
+  width: 100%;
+  height: auto;
+  margin: 8px 0 40px;
+  border-radius: 8px;
+  background: var(--bg-panel);
+  border: 1px solid var(--border);
+}
+
+.blog-article {
+  font-size: 17px;
+  line-height: 1.7;
+  color: var(--text);
+}
+
+.blog-article p {
+  margin: 0 0 24px;
+  max-width: 62ch;
+}
+
+.blog-article h2 {
+  font-family: 'Oswald', sans-serif;
+  font-weight: 600;
+  font-size: 24px;
+  color: var(--white);
+  margin: 44px 0 18px;
+  letter-spacing: -0.005em;
+}
+
+.blog-article ul, .blog-article ol {
+  margin: 0 0 24px;
+  padding-left: 22px;
+  max-width: 62ch;
+}
+.blog-article li {
+  margin-bottom: 8px;
+}
+
+.blog-article strong {
+  color: var(--white);
+  font-weight: 600;
+}
+
+/* The recurring "here's the actual fix" callout -- a real structural
+   device tied to what this content actually is (a diagnosis followed
+   by a specific fix), not decorative card-ification. Left border in
+   the illustration rust tone, not the CTA orange, so it doesn't
+   compete visually with the one place orange is actually clickable. */
+.fix-callout {
+  border-left: 3px solid #b8562f;
+  background: var(--bg-panel);
+  padding: 20px 24px;
+  margin: 32px 0;
+  border-radius: 0 8px 8px 0;
+}
+.fix-callout .fix-label {
+  font-weight: 600;
+  color: var(--white);
+  font-size: 15px;
+  margin-bottom: 8px;
+}
+.fix-callout p {
+  margin: 0;
+  font-size: 16px;
+  color: var(--text-dim);
+}
+.fix-callout .part-number {
+  font-family: 'SFMono-Regular', Consolas, monospace;
+  color: var(--orange-light);
+  font-size: 15px;
+}
+
+.blog-cta {
+  margin: 56px 0 40px;
+  padding: 32px;
+  background: var(--bg-panel);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  text-align: center;
+}
+.blog-cta p {
+  max-width: none;
+  margin: 0 0 18px;
+  color: var(--text);
+  font-size: 17px;
+}
+.blog-cta .btn {
+  display: inline-flex;
+}
+
+.blog-related {
+  margin: 48px 0 60px;
+  padding-top: 32px;
+  border-top: 1px solid var(--border);
+}
+.blog-related-title {
+  font-family: 'Oswald', sans-serif;
+  font-weight: 600;
+  font-size: 20px;
+  color: var(--white);
+  margin: 0 0 20px;
+}
+.blog-related-list a {
+  display: block;
+  color: var(--text);
+  text-decoration: none;
+  font-size: 16px;
+  padding: 12px 0;
+  border-bottom: 1px solid var(--border);
+}
+.blog-related-list a:last-child { border-bottom: none; }
+.blog-related-list a:hover { color: var(--orange-light); }
+
+/* Index page */
+.blog-index-list {
+  display: flex;
+  flex-direction: column;
+  gap: 32px;
+  margin-bottom: 60px;
+}
+.blog-index-item {
+  padding-bottom: 32px;
+  border-bottom: 1px solid var(--border);
+}
+.blog-index-item:last-child { border-bottom: none; }
+.blog-index-item a {
+  text-decoration: none;
+}
+.blog-index-item-title {
+  font-family: 'Oswald', sans-serif;
+  font-weight: 600;
+  font-size: 24px;
+  color: var(--white);
+  margin: 0 0 10px;
+  line-height: 1.25;
+}
+.blog-index-item a:hover .blog-index-item-title {
+  color: var(--orange-light);
+}
+.blog-index-item-dek {
+  color: var(--text-dim);
+  font-size: 16px;
+  line-height: 1.55;
+  margin: 0;
+  max-width: 58ch;
+}
+
+@media (max-width: 640px) {
+  .blog-title { font-size: 28px; }
+  .blog-article { font-size: 16px; }
+}
