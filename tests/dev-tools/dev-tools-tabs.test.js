@@ -89,19 +89,22 @@ test('switching tabs actually shows the target panel group and hides the rest, f
   assert.ok(!healthBtn.classList.contains('is-active'), 'health tab button should no longer be marked active after switching away from it');
 });
 
-test('an Owner account (canManageRoles false) sees only the Access tab button, and it is selected automatically since every other tab has zero visible panels', () => {
+test('an Owner account (canManageRoles false) sees only the Access and Health tab buttons, with Health selected automatically since it comes first and now has a visible panel', () => {
   const window = loadAs(false);
   const tabBtns = Array.from(window.document.querySelectorAll('.dev-tab-btn'));
 
   const accessBtn = tabBtns.find(b => b.getAttribute('data-tab') === 'access');
   assert.notEqual(accessBtn.style.display, 'none', 'Access tab button should stay visible for an Owner');
 
-  const nonAccessBtns = tabBtns.filter(b => b.getAttribute('data-tab') !== 'access');
-  assert.equal(nonAccessBtns.length, 5, 'expected 5 non-Access tab buttons');
-  nonAccessBtns.forEach(btn => {
+  const healthBtn = tabBtns.find(b => b.getAttribute('data-tab') === 'health');
+  assert.notEqual(healthBtn.style.display, 'none', 'Health tab button should stay visible for an Owner, since Portal bug reports is not dev-owner-hidden');
+
+  const otherBtns = tabBtns.filter(b => !['access', 'health'].includes(b.getAttribute('data-tab')));
+  assert.equal(otherBtns.length, 4, 'expected 4 remaining tab buttons besides Access and Health');
+  otherBtns.forEach(btn => {
     assert.equal(btn.style.display, 'none', 'tab "' + btn.getAttribute('data-tab') + '" should be hidden for an Owner, since every one of its panels is dev-owner-hidden');
   });
 
-  const accessGrid = window.document.querySelector('.dev-panels-grid[data-tab-panel="access"]');
-  assert.ok(accessGrid.classList.contains('is-active-tab-panel'), 'Access should be the automatically-selected tab for an Owner, since it is the only one with real content');
+  const healthGrid = window.document.querySelector('.dev-panels-grid[data-tab-panel="health"]');
+  assert.ok(healthGrid.classList.contains('is-active-tab-panel'), 'Health should be the automatically-selected tab for an Owner, since it is first in tab order and now has a visible panel (Portal bug reports)');
 });

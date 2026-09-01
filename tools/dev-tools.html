@@ -38,7 +38,7 @@
 <link rel="stylesheet" href="/styles.css?v=202608202000">
 <link rel="stylesheet" href="/tools/styles-tools.css?v=a2e87effb3">
 <script src="/tools/data-layer.js?v=44a1c3df77" defer></script>
-<script src="/tools/dev-tools-shared.js?v=56f990a832" defer></script>
+<script src="/tools/dev-tools-shared.js?v=5af39d7da8" defer></script>
 <script src="/tools/tools-effects.js?v=9a2a59040e" defer></script>
 <script src="/tools/tools-dialogs.js?v=e1dfaa11a1" defer></script>
 <script src="/tools/tools-media-sharing.js?v=4e2769b10d" defer></script>
@@ -364,6 +364,14 @@
     </div>
     <div id="clientErrorLog"></div>
     <button class="secondary-btn" style="margin-top:12px;" onclick="clearClientErrorLog()">Clear log</button>
+  </div>
+
+  <div class="dev-panel">
+    <div class="dev-panel-heading">
+      <h2>Portal bug reports</h2>
+      <button class="dev-info-bubble" onclick="openDevInfo('portalbugreports')" aria-label="What does this do?" title="What does this do?">?</button>
+    </div>
+    <div id="portalBugReports"></div>
   </div>
 
   <div class="dev-panel dev-owner-hidden dev-panel-wide">
@@ -1228,6 +1236,61 @@
     showToast('Cleared.');
   }
 
+  async function renderPortalBugReports() {
+    const el = document.getElementById('portalBugReports');
+    el.innerHTML = '<p class="tool-sub">Loading...</p>';
+    try {
+      const res = await fetchWithTimeout(
+        SUPABASE_URL + '/rest/v1/portal_bug_reports?select=*&order=created_at.desc&limit=50',
+        8000,
+        { headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': 'Bearer ' + getAuthToken() } }
+      );
+      if (!res.ok) throw new Error('HTTP ' + res.status);
+      const reports = await res.json();
+      if (!reports.length) {
+        el.innerHTML = '<p class="tool-sub">No bug reports submitted from the client portal.</p>';
+        return;
+      }
+      el.innerHTML = reports.map(r => {
+        const when = new Date(r.created_at).toLocaleString();
+        const who = r.client_email ? escapeHtml(r.client_email) : 'Not signed in';
+        const statusClass = r.resolved ? 'pass' : 'fail';
+        const statusLabel = r.resolved ? 'Resolved' : 'Open';
+        const resolveBtn = r.resolved ? '' :
+          '<button class="secondary-btn" style="margin-top:8px;" onclick="resolveBugReport(' + r.id + ')">Mark resolved</button>';
+        return '<div class="dev-check-row" style="align-items:flex-start;"><div>' +
+          '<div>' + escapeHtml(r.message) + '</div>' +
+          '<div class="dev-check-detail">' + who + ' on ' + escapeHtml(r.page_url) + '. ' + when + '</div>' +
+          resolveBtn +
+          '</div><span class="dev-check-status ' + statusClass + '">' + statusLabel + '</span></div>';
+      }).join('');
+    } catch (e) {
+      el.innerHTML = '<p class="tool-sub">Could not load bug reports: ' + escapeHtml(e.message || String(e)) + '</p>';
+    }
+  }
+
+  async function resolveBugReport(id) {
+    try {
+      const res = await fetchWithTimeout(
+        SUPABASE_URL + '/rest/v1/portal_bug_reports?id=eq.' + id,
+        8000,
+        {
+          method: 'PATCH',
+          headers: {
+            'apikey': SUPABASE_ANON_KEY,
+            'Authorization': 'Bearer ' + getAuthToken(),
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ resolved: true, resolved_at: new Date().toISOString() }),
+        }
+      );
+      if (!res.ok) throw new Error('HTTP ' + res.status);
+      renderPortalBugReports();
+    } catch (e) {
+      showToast('Could not mark resolved: ' + (e.message || String(e)), { type: 'error' });
+    }
+  }
+
   // Tests the REAL end-to-end push pipeline (a lead insert triggering
   // notify_new_lead, which calls the Send-Push edge function server-
   // side) rather than calling Send-Push directly -- that function
@@ -1575,10 +1638,10 @@
 
   // Runs after applyOwnerRestrictedView, so it can tell which tabs
   // actually still have visible content for the current role -- an
-  // Owner account ends up with every panel hidden except Access, so
-  // every other tab button is hidden here too rather than left
-  // clickable-but-empty, and the initial tab shown is always one that
-  // genuinely has something in it.
+  // Owner account ends up with every panel hidden except Access and
+  // Portal bug reports (within Health), so every other tab button is
+  // hidden here too rather than left clickable-but-empty, and the
+  // initial tab shown is always one that genuinely has something in it.
   function initDevToolsTabs() {
     const tabBtns = Array.from(document.querySelectorAll('.dev-tab-btn'));
     const visibleTabNames = [];
@@ -2949,6 +3012,7 @@
       renderDeviceInfo();
       renderServiceWorkerInfo();
       renderClientErrorLog();
+      renderPortalBugReports();
       renderKnownIssues();
       renderFlaggedItems();
       renderUptimeStatus();
@@ -2998,8 +3062,8 @@
     <h3>How to Use: Dev Tools</h3>
     <div class="help-modal-body">
       <p>Site diagnostics and maintenance utilities, visible only on the account actively developing this site -- grouped into 6 tabs.</p>
-      <p><strong>Health</strong> -- automated checks: Live consistency check, Data quality check, Appliance Wiki health, Client errors, Uptime monitoring, Advisor health, and Data integrity check.</p>
-      <p><strong>Access</strong> -- Client registry and Account roles. The only tab an Owner account sees.</p>
+      <p><strong>Health</strong> -- automated checks: Live consistency check, Data quality check, Appliance Wiki health, Client errors, Portal bug reports, Uptime monitoring, Advisor health, and Data integrity check. An Owner account sees only Portal bug reports here, everything else on this tab is Developer-only.</p>
+      <p><strong>Access</strong> -- Client registry and Account roles. Fully visible to an Owner account, same as everyone else with dev tools access.</p>
       <p><strong>Session</strong> -- Session &amp; sync, Local data snapshot, Device info, and Service worker &amp; cache -- all about this specific device/browser, not the business data itself.</p>
       <p><strong>Notifications</strong> -- Push notification test and history, Known issues, and Flagged pages.</p>
       <p><strong>Deploy</strong> -- Deploy history, Regression checker, What's new, Quick links, Trigger workflows, and Storage browser.</p>
