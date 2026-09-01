@@ -1189,6 +1189,7 @@
           invoice_number: newEntry.invoiceNumber,
           invoice_date: newEntry.date,
           description: newEntry.jobRefTitle || null,
+          line_items: getLineItems(),
           total: newEntry.total,
         }),
       }).catch(e => console.warn('Portal sync failed (invoice still saved locally):', e));

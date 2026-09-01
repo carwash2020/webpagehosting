@@ -45,6 +45,8 @@
   .invoice-status.is-paid { background: rgba(76,175,120,0.15); color: #4caf78; }
   .invoice-status.is-unpaid { background: rgba(255,167,38,0.15); color: #ffa726; }
   .empty-state { text-align: center; color: var(--text-dim); padding: 60px 20px; }
+  .invoice-section-title { font-family: 'Oswald', sans-serif; font-weight: 600; font-size: 14px; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.5px; margin: 20px 0 10px; }
+  .invoice-section-title:first-child { margin-top: 0; }
   .payment-modal-overlay {
     position: fixed; inset: 0; z-index: 9999; background: rgba(0,0,0,0.7);
     display: none; align-items: center; justify-content: center; padding: 20px;
@@ -91,6 +93,45 @@
     return new Date(d + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
   }
 
+  function renderLineItemsTable(items) {
+    if (!Array.isArray(items) || !items.length) return '';
+    const rows = items.map(li => `
+      <tr>
+        <td style="padding:4px 0; color:var(--text-dim); font-size:13px;">${escapeHtml(li.desc || '')}</td>
+        <td style="padding:4px 0; text-align:center; color:var(--text-dim); font-size:13px;">${escapeHtml(String(li.qty ?? ''))}</td>
+        <td style="padding:4px 0; text-align:right; color:var(--text-dim); font-size:13px;">${formatCurrency(li.amount || 0)}</td>
+      </tr>
+    `).join('');
+    return `
+      <details style="margin-top:8px;">
+        <summary style="cursor:pointer; font-size:13px; color:var(--text-dim);">View details</summary>
+        <table style="width:100%; margin-top:8px; border-top:1px solid var(--border); padding-top:6px;">
+          <tbody>${rows}</tbody>
+        </table>
+      </details>
+    `;
+  }
+
+  function renderInvoiceCard(inv) {
+    return `
+      <div class="invoice-card">
+        <div class="invoice-card-top">
+          <div>
+            <div class="invoice-number">${escapeHtml(inv.invoice_number)}</div>
+            ${inv.description ? `<div class="invoice-desc">${escapeHtml(inv.description)}</div>` : ''}
+            <div class="invoice-desc">${formatDate(inv.invoice_date)}</div>
+          </div>
+          <div style="text-align:right;">
+            <div class="invoice-total">${formatCurrency(inv.total)}</div>
+            <span class="invoice-status ${inv.paid ? 'is-paid' : 'is-unpaid'}">${inv.paid ? 'Paid' : 'Unpaid'}</span>
+          </div>
+        </div>
+        ${renderLineItemsTable(inv.line_items)}
+        ${!inv.paid ? `<button class="btn blue" style="width:100%; justify-content:center; margin-top:8px;" onclick="startPayment(${inv.id})">Pay now</button>` : ''}
+      </div>
+    `;
+  }
+
   async function renderInvoices() {
     const { data: { session } } = await client.auth.getSession();
     if (!session) {
@@ -115,22 +156,24 @@
       return;
     }
 
-    listEl.innerHTML = invoices.map(inv => `
-      <div class="invoice-card">
-        <div class="invoice-card-top">
-          <div>
-            <div class="invoice-number">${escapeHtml(inv.invoice_number)}</div>
-            ${inv.description ? `<div class="invoice-desc">${escapeHtml(inv.description)}</div>` : ''}
-            <div class="invoice-desc">${formatDate(inv.invoice_date)}</div>
-          </div>
-          <div style="text-align:right;">
-            <div class="invoice-total">${formatCurrency(inv.total)}</div>
-            <span class="invoice-status ${inv.paid ? 'is-paid' : 'is-unpaid'}">${inv.paid ? 'Paid' : 'Unpaid'}</span>
-          </div>
-        </div>
-        ${!inv.paid ? `<button class="btn blue" style="width:100%; justify-content:center; margin-top:8px;" onclick="startPayment(${inv.id})">Pay now</button>` : ''}
-      </div>
-    `).join('');
+    // Split into two real sections rather than one mixed list --
+    // requested directly, since a client's most relevant question is
+    // usually "what do I still owe," not scanning past everything
+    // already settled to find it.
+    const outstanding = invoices.filter(inv => !inv.paid);
+    const paid = invoices.filter(inv => inv.paid);
+
+    let html = '';
+    if (outstanding.length) {
+      html += `<div class="invoice-section-title">Outstanding</div>` + outstanding.map(renderInvoiceCard).join('');
+    }
+    if (paid.length) {
+      html += `<div class="invoice-section-title">Paid</div>` + paid.map(renderInvoiceCard).join('');
+    }
+    if (!outstanding.length && !paid.length) {
+      html = `<div class="empty-state">No invoices on file yet.</div>`;
+    }
+    listEl.innerHTML = html;
   }
 
   // Matches this project's own escapeHtml() convention exactly (used
