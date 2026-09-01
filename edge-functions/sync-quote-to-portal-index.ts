@@ -15,6 +15,11 @@
 // the reverse direction (approval status) goes through a direct
 // real-time query in the Quote Log (invoice-generator.html) instead
 // of a blob write.
+//
+// Updated 2026-09-02 (phase 3): now also accepts and stores
+// client_address -- needed once a client can schedule a job straight
+// from an approved quote (schedule-quote-job), so the visit address
+// doesn't have to be re-typed during scheduling.
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
@@ -74,7 +79,7 @@ Deno.serve(async (req: Request) => {
 
     const body = await req.json();
     const {
-      source_quote_id, client_email, client_name,
+      source_quote_id, client_email, client_name, client_address,
       quote_number, quote_date, description, total, line_items,
     } = body;
 
@@ -133,6 +138,7 @@ Deno.serve(async (req: Request) => {
           source_quote_id,
           client_email: normalizedEmail,
           client_name,
+          client_address: client_address || null,
           quote_number,
           quote_date,
           description: description || null,

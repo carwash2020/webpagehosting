@@ -54,7 +54,7 @@ test('the quote card only reads fields that actually exist on client_portal_quot
   const fnMatch = html.match(/function renderQuoteCard\(q\) \{[\s\S]*?\n  \}\n/);
   assert.ok(fnMatch, 'expected to isolate the renderQuoteCard function body');
   const fnBody = fnMatch[0];
-  const realFields = ['id', 'quote_number', 'quote_date', 'description', 'total', 'status', 'line_items', 'responded_at'];
+  const realFields = ['id', 'quote_number', 'quote_date', 'description', 'total', 'status', 'line_items', 'responded_at', 'scheduled_at'];
   const fieldRefs = [...fnBody.matchAll(/q\.([a-zA-Z_]+)/g)].map(m => m[1]);
   for (const field of fieldRefs) {
     assert.ok(realFields.includes(field), `renderQuoteCard references q.${field}, which isn't a real client_portal_quotes column`);
@@ -90,4 +90,47 @@ test('portal quote status is read live, never written back into the local quote 
 test('resolving a client question is a real PATCH against quote_questions, wired to a real button', () => {
   assert.match(generatorHtml, /async function resolveQuoteQuestion\(id\)/);
   assert.match(generatorHtml, /onclick="resolveQuoteQuestion\(\$\{qq\.id\}\)"/);
+});
+
+// ---- phase 3: scheduling the job from an approved quote ----
+
+test('scheduling only ever offered for an approved, not-yet-scheduled quote', () => {
+  assert.match(html, /q\.status === 'approved' \? \(q\.scheduled_at \? `/);
+  assert.match(html, /toggleScheduleForm\(\$\{q\.id\}\)/);
+});
+
+test('a scheduled job shows a confirmation note instead of the scheduling flow again', () => {
+  assert.match(html, /Job scheduled -- we'll see you then!/);
+});
+
+test('booking creation and the quote scheduled_at write-back both go through schedule-quote-job, never a direct table write', () => {
+  assert.match(html, /functions\/v1\/schedule-quote-job/);
+  assert.doesNotMatch(html, /client\s*\.\s*from\(['"]th_bookings['"]\)/);
+  assert.doesNotMatch(html, /client\s*\.\s*from\(['"]client_portal_quotes['"]\)[\s\S]{0,80}\.(update|upsert|insert|delete)\(/);
+});
+
+test('the scheduling flow reuses booking.html\'s real business hours and timezone, not invented values', () => {
+  const bookingHtml = fs.readFileSync(path.join(__dirname, '..', '..', 'booking.html'), 'utf8');
+  const bookingTzMatch = bookingHtml.match(/const BUSINESS_TIMEZONE = '([^']+)'/);
+  const bookingHoursMatch = bookingHtml.match(/const HOURS_BY_WEEKDAY = (\{[\s\S]+?\});/);
+  assert.ok(bookingTzMatch && bookingHoursMatch, 'expected to find booking.html\'s own timezone/hours constants to compare against');
+
+  const quotesTzMatch = html.match(/const BUSINESS_TIMEZONE = '([^']+)'/);
+  const quotesHoursMatch = html.match(/const HOURS_BY_WEEKDAY = (\{[\s\S]+?\});/);
+  assert.ok(quotesTzMatch && quotesHoursMatch, 'expected quotes.html to define the same constants');
+  assert.equal(quotesTzMatch[1], bookingTzMatch[1]);
+
+  // Compares the actual open/close hour values, not formatting -- the
+  // two files are free to format this object differently (one line vs.
+  // spread across several), what matters is the hours themselves match.
+  const normalize = (s) => s.replace(/\s+/g, '').replace(/,\}/g, '}');
+  assert.equal(normalize(quotesHoursMatch[1]), normalize(bookingHoursMatch[1]));
+});
+
+test('a booking is never confirmed sooner than MIN_LEAD_HOURS from now, matching booking.html', () => {
+  const bookingHtml = fs.readFileSync(path.join(__dirname, '..', '..', 'booking.html'), 'utf8');
+  const bookingLead = bookingHtml.match(/const MIN_LEAD_HOURS = (\d+)/);
+  const quotesLead = html.match(/const MIN_LEAD_HOURS = (\d+)/);
+  assert.ok(bookingLead && quotesLead);
+  assert.equal(quotesLead[1], bookingLead[1]);
 });
