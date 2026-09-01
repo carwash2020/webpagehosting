@@ -42,4 +42,28 @@
     <changefreq>monthly</changefreq>
     <priority>0.6</priority>
   </url>
+  <url>
+    <loc>https://www.triplehenterprisesllc.biz/blog/</loc>
+    <lastmod>2026-09-01</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://www.triplehenterprisesllc.biz/blog/dryer-not-heating.html</loc>
+    <lastmod>2026-09-01</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.6</priority>
+  </url>
+  <url>
+    <loc>https://www.triplehenterprisesllc.biz/blog/handyman-to-do-list.html</loc>
+    <lastmod>2026-09-01</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.6</priority>
+  </url>
+  <url>
+    <loc>https://www.triplehenterprisesllc.biz/blog/appliance-repair-or-replace.html</loc>
+    <lastmod>2026-09-01</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.6</priority>
+  </url>
 </urlset>
