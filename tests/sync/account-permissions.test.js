@@ -136,13 +136,14 @@ test('each of the 5 previously-bundled tools is gated on its own specific permis
   }
 
   // Contract Generator and Invoice Generator each have multiple call
-  // sites (page gate, pull-to-refresh, realtime), all updated.
+  // sites (page gate, pull-to-refresh, realtime, and the Try again
+  // retry button added 2026-09-02), all updated consistently.
   const contractSrc = fs.readFileSync(path.join(__dirname, '..', '..', 'tools', 'contract-generator.html'), 'utf8');
-  assert.equal((contractSrc.match(/canManageContracts/g) || []).length, 6, 'expected 3 call sites x 2 (typeof check + call) for canManageContracts');
+  assert.equal((contractSrc.match(/canManageContracts/g) || []).length, 7, 'expected 3 gate call sites x 2 (typeof check + call) plus 1 retry-button reference for canManageContracts');
   assert.doesNotMatch(contractSrc, /canManageBusinessFinances/);
 
   const invoiceSrc = fs.readFileSync(path.join(__dirname, '..', '..', 'tools', 'invoice-generator.html'), 'utf8');
-  assert.equal((invoiceSrc.match(/canManageInvoices/g) || []).length, 6, 'expected 3 call sites x 2 (typeof check + call) for canManageInvoices');
+  assert.equal((invoiceSrc.match(/canManageInvoices/g) || []).length, 7, 'expected 3 gate call sites x 2 (typeof check + call) plus 1 retry-button reference for canManageInvoices');
   assert.doesNotMatch(invoiceSrc, /canManageBusinessFinances/);
 });
 

@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="en" style="background:#0a0a0a;">
 <head>
-<script src="/tools/auth.js?v=9b138ca110"></script>
+<script src="/tools/auth.js?v=92beb978de"></script>
 <script>
   // Security gate -- redirect to login before this page's own content
   // is meaningfully usable. See auth.js for why this exists (a single
@@ -85,6 +85,7 @@
 <div id="roleBlockedOverlay" class="role-blocked-overlay">
   <div class="tool-title" style="font-size:22px;">Not available here</div>
   <p class="tool-sub" style="max-width:420px;">Contracts isn't part of your role's access. Nothing's wrong with your account -- check with whoever manages roles if you think this should be different.</p>
+  <button class="btn blue" style="margin-top:12px;" onclick="retryRoleCheck(this, canManageContracts)">Try again</button>
   <a href="/tools/workspace.html" class="btn blue" style="display:inline-block; margin-top:12px; text-decoration:none;">Back to Dashboard</a>
 </div>
 <a href="#mainContent" class="skip-link">Skip to main content</a>
