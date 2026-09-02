@@ -483,7 +483,10 @@
   </div>
   <div class="section-body" id="body-actionitems">
 
-    <div class="analytics-subheading has-icon is-first"><span class="th-hex-icon"><svg class="th-icon" aria-hidden="true"><use href="#icon-inbox" xlink:href="#icon-inbox"></use></svg></span>New Leads</div>
+    <div class="analytics-subheading has-icon is-first"><span class="th-hex-icon"><svg class="th-icon" aria-hidden="true"><use href="#icon-wrench" xlink:href="#icon-wrench"></use></svg></span>Work Requests <span id="workRequestsBadge"></span></div>
+    <div id="workRequestsList"></div>
+
+    <div class="analytics-subheading has-icon"><span class="th-hex-icon"><svg class="th-icon" aria-hidden="true"><use href="#icon-inbox" xlink:href="#icon-inbox"></use></svg></span>New Leads</div>
     <div id="leadsList"></div>
 
     <div class="analytics-subheading has-icon"><span class="th-hex-icon"><svg class="th-icon" aria-hidden="true"><use href="#icon-calendar" xlink:href="#icon-calendar"></use></svg></span>Upcoming Bookings</div>
@@ -1448,6 +1451,115 @@
     }).join('');
   }
 
+  // Work requests queue (2026-09-02) -- the internal side of the guest
+  // request flow added in portal/work-orders.html. Lives at the top of
+  // Action Items, right above New Leads, because it's the same kind of
+  // thing: something a client sent in that needs a response.
+  //
+  // Reads client_portal_work_orders directly rather than through an
+  // edge function: that table's RLS already grants full read to any
+  // account with an account_roles row, so a normal authenticated
+  // query is correct here and needs no service-role bridge.
+  //
+  // Deliberately shows ONLY open requests (submitted/reviewing/quoted).
+  // Once something is scheduled or completed it lives in the Job
+  // Tracker and calendar; keeping it here too would mean two places
+  // showing the same work with no clear owner. 'declined' drops off
+  // for the same reason -- it's closed, not pending.
+  const WORK_REQUEST_OPEN_STATUSES = ['submitted', 'reviewing', 'quoted'];
+
+  const WORK_REQUEST_NEXT_STATUS = {
+    submitted: { next: 'reviewing', label: 'Mark reviewing' },
+    reviewing: { next: 'quoted', label: 'Mark quoted' },
+    quoted: { next: 'scheduled', label: 'Mark scheduled' },
+  };
+
+  async function loadAndRenderWorkRequests() {
+    const container = document.getElementById('workRequestsList');
+    if (!container) return;
+    if (!isSyncConfigured()) {
+      container.innerHTML = '<div class="empty-state-small"><svg class="th-icon" aria-hidden="true"><use href="#icon-link" xlink:href="#icon-link"></use></svg>Cloud sync isn\'t set up yet, so work requests can\'t load.</div>';
+      actionItemCounts.workrequests = 0;
+      updateActionItemsBadge();
+      return;
+    }
+    try {
+      if (typeof ensureFreshToken === 'function') await ensureFreshToken();
+      const statusList = WORK_REQUEST_OPEN_STATUSES.join(',');
+      const res = await fetch(
+        `${SUPABASE_URL}/rest/v1/client_portal_work_orders?status=in.(${statusList})&select=*&order=created_at.desc`,
+        { headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': 'Bearer ' + getAuthToken() } }
+      );
+      if (!res.ok) throw new Error('HTTP ' + res.status);
+      const requests = await res.json();
+
+      actionItemCounts.workrequests = requests.length;
+      updateActionItemsBadge();
+
+      if (!requests.length) {
+        container.innerHTML = '<div class="empty-state-small"><svg class="th-icon" aria-hidden="true"><use href="#icon-check" xlink:href="#icon-check"></use></svg>No open work requests.</div>';
+        return;
+      }
+
+      container.innerHTML = requests.map(wo => {
+        const urgencyTag = wo.urgency === 'urgent'
+          ? '<span style="color:#ff8a80; font-weight:600;">URGENT</span> &middot; '
+          : (wo.urgency === 'soon' ? '<span style="color:var(--orange-light);">Soon</span> &middot; ' : '');
+        const advance = WORK_REQUEST_NEXT_STATUS[wo.status];
+        const detailBits = [
+          wo.preferred_timing ? 'Prefers: ' + wo.preferred_timing : '',
+          wo.address || '',
+          wo.phone || '',
+        ].filter(Boolean).map(escapeHtml).join(' &middot; ');
+        return `
+        <div class="dash-list-item" style="align-items:flex-start;">
+          <div style="flex:1; min-width:0;">
+            <div class="dash-list-item-title">${escapeHtml(wo.title)}</div>
+            <div class="dash-list-item-meta">${urgencyTag}${escapeHtml(wo.client_email)} &middot; ${escapeHtml((wo.created_at || '').slice(0, 10))} &middot; ${escapeHtml(wo.status)}</div>
+            <div style="color:var(--text); font-size:13px; line-height:1.5; margin-top:6px; white-space:pre-wrap;">${escapeHtml(wo.description)}</div>
+            ${detailBits ? `<div class="dash-list-item-meta" style="margin-top:6px;">${detailBits}</div>` : ''}
+          </div>
+          <div class="dash-list-item-right" style="flex-direction:column; gap:6px; align-items:flex-end;">
+            ${advance ? `<button class="small-btn" onclick="advanceWorkRequest(${wo.id}, '${advance.next}')">${escapeHtml(advance.label)}</button>` : ''}
+            <button class="small-btn" style="color:var(--text-dim);" onclick="advanceWorkRequest(${wo.id}, 'declined')">Close</button>
+          </div>
+        </div>`;
+      }).join('');
+    } catch (e) {
+      container.innerHTML = '<div class="empty-state-small is-warning"><svg class="th-icon" aria-hidden="true"><use href="#icon-warning" xlink:href="#icon-warning"></use></svg>Couldn\'t load work requests (' + escapeHtml(e.message || String(e)) + ').</div>';
+      actionItemCounts.workrequests = 0;
+      updateActionItemsBadge();
+    }
+  }
+
+  // Moves a request along the workflow. A direct PATCH is correct
+  // here: client_portal_work_orders' RLS grants UPDATE to any account
+  // with an account_roles row, and the status CHECK constraint on the
+  // table itself rejects any value outside the known set -- so a
+  // typo in the caller can't write a nonsense status.
+  async function advanceWorkRequest(id, newStatus) {
+    try {
+      if (typeof ensureFreshToken === 'function') await ensureFreshToken();
+      const res = await fetch(`${SUPABASE_URL}/rest/v1/client_portal_work_orders?id=eq.${id}`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          'apikey': SUPABASE_ANON_KEY,
+          'Authorization': 'Bearer ' + getAuthToken(),
+        },
+        body: JSON.stringify({ status: newStatus, updated_at: new Date().toISOString() }),
+      });
+      if (!res.ok) {
+        const body = await res.text();
+        throw new Error('HTTP ' + res.status + ': ' + body.slice(0, 160));
+      }
+      showToast('Request updated.');
+      loadAndRenderWorkRequests();
+    } catch (e) {
+      showToast(e.message || String(e), { type: 'error' });
+    }
+  }
+
   async function loadAndRenderLeads() {
     const container = document.getElementById('leadsList');
     if (typeof fetchLeads !== 'function' || !isSyncConfigured()) {
@@ -1766,11 +1878,11 @@
   // functions below (leads, due-soon, follow-ups, invoices) stashes its
   // own count here, then calls updateActionItemsBadge(). Keeps the badge
   // logic in one place instead of scattered across four functions.
-  const actionItemCounts = { leads: 0, bookings: 0, duesoon: 0, followups: 0, unpaid: 0 };
+  const actionItemCounts = { workrequests: 0, leads: 0, bookings: 0, duesoon: 0, followups: 0, unpaid: 0 };
 
   function updateActionItemsBadge() {
     const badge = document.getElementById('actionItemsHeadingBadge');
-    const total = actionItemCounts.leads + actionItemCounts.bookings + actionItemCounts.duesoon + actionItemCounts.followups + actionItemCounts.unpaid;
+    const total = actionItemCounts.workrequests + actionItemCounts.leads + actionItemCounts.bookings + actionItemCounts.duesoon + actionItemCounts.followups + actionItemCounts.unpaid;
     // App icon badge (2026-08-26), requested directly as part of a
     // broader "make it feel like an app" pass -- the real home-screen
     // number badge, not just the in-page one below. Feature-detected
@@ -2292,6 +2404,7 @@
     renderUpcoming();
     renderFollowups();
     renderInvoicesList();
+    loadAndRenderWorkRequests();
     loadAndRenderLeads();
     loadAndRenderBookings();
     loadAndRenderGalleryQueue();

@@ -169,3 +169,44 @@ test('a failed number draw falls back to a clearly-marked temporary number, neve
   assert.match(body, /'-TMP-'/);
   assert.match(body, /logClientError/, 'a fallback should be logged so it can be found and corrected later');
 });
+
+// ---- internal queue (tools/workspace.html) ----
+
+const WORKSPACE = fs.readFileSync(path.join(__dirname, '..', '..', 'tools', 'workspace.html'), 'utf8');
+
+test('the internal queue shows only OPEN work requests, not scheduled or completed ones', () => {
+  // Once a request is scheduled or completed it lives in the Job
+  // Tracker and calendar -- showing it here too would mean two places
+  // displaying the same work with no clear owner. 'declined' drops off
+  // for the same reason: it's closed, not pending.
+  assert.match(WORKSPACE, /const WORK_REQUEST_OPEN_STATUSES = \['submitted', 'reviewing', 'quoted'\];/);
+  const fnMatch = WORKSPACE.match(/async function loadAndRenderWorkRequests\(\)[\s\S]*?\n  \}\n/);
+  assert.ok(fnMatch, 'expected to isolate loadAndRenderWorkRequests()');
+  assert.match(fnMatch[0], /status=in\.\(\$\{statusList\}\)/);
+});
+
+test('work requests count toward the Action Items badge, like every other item in that section', () => {
+  assert.match(WORKSPACE, /const actionItemCounts = \{ workrequests: 0,/);
+  assert.match(WORKSPACE, /actionItemCounts\.workrequests \+ actionItemCounts\.leads/,
+    'the badge total must include work requests');
+});
+
+test('advancing a request is a real PATCH, and the status set matches the database CHECK constraint', () => {
+  const fnMatch = WORKSPACE.match(/async function advanceWorkRequest\(id, newStatus\)[\s\S]*?\n  \}\n/);
+  assert.ok(fnMatch, 'expected to isolate advanceWorkRequest()');
+  assert.match(fnMatch[0], /method: 'PATCH'/);
+  assert.match(fnMatch[0], /client_portal_work_orders\?id=eq\./);
+  // Every status this UI can write must be one the table's own CHECK
+  // constraint actually permits, or the PATCH fails at the database.
+  const allowed = ['submitted', 'reviewing', 'quoted', 'scheduled', 'completed', 'declined'];
+  const nextMatch = WORKSPACE.match(/const WORK_REQUEST_NEXT_STATUS = \{[\s\S]*?\n  \};/);
+  assert.ok(nextMatch, 'expected to find WORK_REQUEST_NEXT_STATUS');
+  for (const m of nextMatch[0].matchAll(/next: '([a-z]+)'/g)) {
+    assert.ok(allowed.includes(m[1]), `${m[1]} is not a valid work order status`);
+  }
+});
+
+test('the queue is loaded on dashboard init, not only on demand', () => {
+  assert.match(WORKSPACE, /loadAndRenderWorkRequests\(\);\n    loadAndRenderLeads\(\);/,
+    'work requests should load alongside leads on dashboard load');
+});
