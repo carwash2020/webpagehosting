@@ -187,7 +187,23 @@ def check_external_links():
             elif e.code in (403, 429) and is_own_domain:
                 status = None
                 site_own_domain_flags.append(f"{url} -> HTTP {e.code}")
-            elif e.code in (403, 429) and is_bot_hostile:
+            elif is_bot_hostile:
+                # Any error status, not just 403/429 (2026-09-02). The
+                # original 403/429-only tolerance didn't match this
+                # list's own stated purpose -- these platforms return a
+                # whole range of codes to scripted requests depending on
+                # which IP range you're calling from: LinkedIn is known
+                # for 999, and 404/503 also show up from CI runners for
+                # links that are completely fine in a real browser. That
+                # narrow tolerance made this check fail on GitHub's
+                # network while passing everywhere else, for links that
+                # were never actually broken.
+                #
+                # Still printed loudly below rather than silently
+                # ignored, exactly like the SITE_OWN_DOMAIN flags above,
+                # so a genuinely dead social link is still visible to a
+                # human reading the output -- it just doesn't fail the
+                # build on evidence this check can't actually trust.
                 status = None
                 unverifiable.append(f"{url} -> HTTP {e.code} (known bot-hostile platform, not treated as broken)")
             else:
@@ -195,8 +211,18 @@ def check_external_links():
                 if status >= 400:
                     problems.append(f"{url} -> HTTP {status}")
         except Exception as e:
-            problems.append(f"{url} -> {e}")
+            # Same reasoning as the is_bot_hostile branch above, for
+            # failures that never produce an HTTP status at all --
+            # a timeout or connection reset from one of these platforms
+            # is exactly the anti-bot behaviour this list exists for,
+            # and shouldn't fail a link check.
             status = None
+            if is_bot_hostile:
+                unverifiable.append(f"{url} -> {e} (known bot-hostile platform, not treated as broken)")
+            elif is_own_domain:
+                site_own_domain_flags.append(f"{url} -> {e}")
+            else:
+                problems.append(f"{url} -> {e}")
 
         if status is not None:
             print(f"  {status}  {url}")
