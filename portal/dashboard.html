@@ -17,6 +17,13 @@
   boundary, not this page's own query logic.
 -->
 <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://js.stripe.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data:; connect-src 'self' https://csvfqdjuobylgafgolho.supabase.co https://api.stripe.com; frame-src https://js.stripe.com; object-src 'none'; base-uri 'self'; frame-ancestors 'none';">
+<!-- color-scheme (2026-09-02): tells the browser to use a DARK default
+     canvas BEFORE any CSS is parsed. Without it the browser paints its
+     own white default first, which showed as a white flash on every
+     navigation between portal pages. The inline background on <html>
+     below is not enough on its own -- that only applies once the HTML
+     starts parsing, which is already too late. -->
+<meta name="color-scheme" content="dark">
 <meta name="theme-color" content="#0a0a0a">
 <link rel="shortcut icon" href="/favicon.ico">
 <link rel="icon" href="/favicon.ico" sizes="any">
@@ -26,18 +33,26 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="/styles.css?v=202608202000">
+<link rel="stylesheet" href="/styles.css?v=202609022200">
 <link rel="stylesheet" href="/tools/styles-tools.css?v=a2e87effb3">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://js.stripe.com/v3/"></script>
 <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js" integrity="sha384-JcnsjUPPylna1s1fvi1u12X5qjY5OL56iySh75FdtrwhO/SWXgMjoVqcKyIIWOLk" crossorigin="anonymous" async></script>
 <style>
-  body { max-width: 640px; margin: 0 auto; padding: 24px 16px 60px; }
+  body { background: #0a0a0a; max-width: 640px; margin: 0 auto; padding: 24px 16px 60px; }
   .portal-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; }
   .portal-header-left { display: flex; align-items: center; gap: 12px; }
   .portal-header img { width: 40px; height: auto; }
   .portal-title { font-family: 'Oswald', sans-serif; font-weight: 700; font-size: 19px; color: var(--white); }
   .portal-sub { color: var(--text-dim); font-size: 13px; }
+  .portal-header-actions { display: flex; gap: 8px; align-items: center; }
+  .portal-icon-btn {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 36px; height: 36px; border-radius: 8px; border: 1px solid var(--border);
+    background: var(--bg-panel-2); color: var(--text-dim); text-decoration: none; cursor: pointer;
+  }
+  .portal-icon-btn:hover { border-color: var(--orange); color: var(--orange-light); }
+  .portal-icon-btn svg { width: 18px; height: 18px; }
   .portal-nav { display: flex; gap: 8px; margin-bottom: 24px; flex-wrap: wrap; }
   .portal-nav a {
     flex: 1; min-width: 72px; text-align: center; padding: 9px 12px; border-radius: 8px; font-size: 13.5px; font-weight: 600;
@@ -88,10 +103,16 @@
       <div class="portal-sub" id="clientEmailDisplay"></div>
     </div>
   </div>
-  <button class="secondary-btn" id="signOutBtn">Sign out</button>
+  <div class="portal-header-actions">
+    <a href="/portal/settings.html" class="portal-icon-btn" aria-label="Settings" title="Settings">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3.2"/><path d="M12 3.5v2.3M12 18.2v2.3M20.5 12h-2.3M5.8 12H3.5M18 6l-1.6 1.6M7.6 16.4L6 18M18 18l-1.6-1.6M7.6 7.6L6 6"/></svg>
+    </a>
+    <button class="secondary-btn" id="signOutBtn">Sign out</button>
+  </div>
 </div>
 
 <div class="portal-nav">
+  <a href="/portal/home.html">Home</a>
   <a href="/portal/work-orders.html">Request</a>
   <a href="/portal/quotes.html">Quotes</a>
   <a href="/portal/dashboard.html" class="is-active">Invoices</a>
