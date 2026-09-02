@@ -2403,7 +2403,10 @@ test('all 3 PDF-generating functions guard against window.jspdf not being ready 
   const igSrc = fs.readFileSync(path.join(__dirname, '..', '..', 'tools', 'invoice-generator.html'), 'utf8');
   const cgSrc = fs.readFileSync(path.join(__dirname, '..', '..', 'tools', 'contract-generator.html'), 'utf8');
   for (const fnSrc of [
-    igSrc.match(/async function generatePDF\(\)[\s\S]*?\n  \}\n/)[0],
+    // generatePDF now takes an opts argument (2026-09-02) -- it was
+    // split into Download PDF vs Send to Client, so the signature is
+    // no longer bare parentheses.
+    igSrc.match(/async function generatePDF\(opts\)[\s\S]*?\n  \}\n/)[0],
     igSrc.match(/async function generateQuotePDF\(\)[\s\S]*?\n  \}\n/)[0],
     cgSrc.match(/async function buildContractPDF\([\s\S]*?\n  \}\n/)[0],
   ]) {

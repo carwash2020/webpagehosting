@@ -179,29 +179,11 @@ Deno.serve(async (req: Request) => {
 
     const targetEmail = client_email.toLowerCase().trim();
 
-    // Internal tool accounts are NOT portal clients (2026-09-02),
-    // requested directly after a real confusing outcome: an invite
-    // sent to connor@ appeared to do nothing, because that address
-    // already had an account (an INTERNAL one) and the
-    // already-registered branch below quietly reported success.
-    //
-    // This is a genuine guard, not just nicer messaging. The two
-    // account types are deliberately different things: an internal
-    // account is listed in account_roles and grants access to
-    // /tools/ (invoices, finance, dev tools); a portal account is a
-    // CLIENT who signs in at /portal/ to view their own invoices and
-    // request work. They happen to share one Supabase auth user
-    // table, which is exactly why this needs an explicit check --
-    // "invite this person as a client" is close to meaningless for
-    // someone who is staff, and quietly sending a client-facing
-    // "You've been invoiced" setup email to your own team is the kind
-    // of thing that erodes trust in the tool.
-    //
-    // Checked server-side rather than only in the Dev Tools UI so the
-    // rule holds for every caller -- including sync-invoice-to-portal
-    // and the quote/job sync functions, which fire send-invite
-    // automatically for any new client email. If an internal address
-    // ever ended up on an invoice, this stops the invite there too.
+    // Internal tool accounts are NOT portal clients (2026-09-02).
+    // See the git history for the full reasoning; in short, an
+    // internal account (account_roles + /tools/ access) and a portal
+    // client (/portal/ access to their own invoices) are deliberately
+    // different things that happen to share one auth user table.
     const internalRes = await fetch(
       `${SUPABASE_URL}/rest/v1/account_roles?email=eq.${encodeURIComponent(targetEmail)}&select=email&limit=1`,
       { headers: { apikey: SERVICE_ROLE_KEY, Authorization: `Bearer ${SERVICE_ROLE_KEY}` } },
@@ -217,9 +199,52 @@ Deno.serve(async (req: Request) => {
       }
     }
 
+    // "Account exists" and "account is actually set up" are different
+    // things (2026-09-02), requested directly after a real dead end:
+    // an invite was sent, its link failed to open (a separate Supabase
+    // redirect-allowlist config issue), and then every resend attempt
+    // was REFUSED because the auth user already existed -- leaving a
+    // client with an account they could never finish setting up and no
+    // way for anyone to fix it from the tools.
+    //
+    // portal_account_status() (SECURITY DEFINER, service_role only)
+    // returns one of three states, because auth.users isn't reachable
+    // via PostgREST and supabase-js's admin API has no
+    // get-user-by-email -- only a paginated listUsers().
+    const statusRes = await fetch(`${SUPABASE_URL}/rest/v1/rpc/portal_account_status`, {
+      method: "POST",
+      headers: {
+        apikey: SERVICE_ROLE_KEY,
+        Authorization: `Bearer ${SERVICE_ROLE_KEY}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ p_email: targetEmail }),
+    });
+    const accountStatus = statusRes.ok ? await statusRes.json() : "unknown";
+
+    // Genuinely set up: has confirmed and/or signed in. A fresh invite
+    // is the wrong tool -- they need a password reset.
+    if (accountStatus === "confirmed") {
+      return json({
+        ok: true,
+        already_has_account: true,
+        error: `${targetEmail} already has a working client portal account, so no new invite was sent. If they can't get in, have them use "Forgot password" on the portal login page.`,
+      });
+    }
+
     const adminClient = createClient(SUPABASE_URL, SERVICE_ROLE_KEY);
+
+    // An 'invite' link can only be generated for an email with no user
+    // yet. For a user who exists but never confirmed, 'magiclink' is
+    // the correct type: it produces a working sign-in link for the
+    // existing user, pointed at the same set-password page, so they
+    // land exactly where a first-time invite would have taken them.
+    // This is the specific case that was previously impossible to
+    // recover from.
+    const linkType = accountStatus === "unconfirmed" ? "magiclink" : "invite";
+
     const { data: linkData, error: linkError } = await adminClient.auth.admin.generateLink({
-      type: "invite",
+      type: linkType,
       email: targetEmail,
       options: {
         redirectTo: `${ALLOWED_ORIGIN}/portal/set-password.html`,
@@ -227,20 +252,12 @@ Deno.serve(async (req: Request) => {
     });
 
     if (linkError) {
-      // This email already has a portal account.
-      //
-      // Still ok:true, deliberately -- the automatic callers
-      // (sync-invoice-to-portal and friends) fire send-invite for any
-      // client email they haven't seen before, and re-invoicing an
-      // existing client is completely normal, not a failure. Those
-      // callers correctly ignore this and carry on.
-      //
-      // But already_has_account is now accompanied by an explicit
-      // message (2026-09-02), because a HUMAN calling this from Dev
-      // Tools needs to know no email was actually sent -- reporting a
-      // bare success left someone waiting on an invite that was never
-      // going to arrive, when what the client actually needs is the
-      // password-reset link.
+      // Kept as a real fallback rather than removed: if the status
+      // lookup above ever failed (returning "unknown") and we guessed
+      // 'invite' for an email that does have a user, this is where
+      // that surfaces. Still ok:true so the automatic callers
+      // (sync-invoice-to-portal and friends, which fire on any unseen
+      // client email) don't treat normal re-invoicing as a failure.
       if (linkError.message?.includes("already been registered") || linkError.message?.includes("already registered")) {
         return json({
           ok: true,
