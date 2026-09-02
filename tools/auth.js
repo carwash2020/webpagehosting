@@ -549,6 +549,45 @@ function isDevAccount() {
   return hasDevToolsAccess();
 }
 
+// Shared "Try again" handler for the role-blocked overlay on every
+// page gated by a specific permission (2026-09-02), added after a
+// real report where the actual cause turned out to be a transient
+// network failure -- "Failed to fetch" on all 3 attempts inside
+// loadCurrentUserRole() itself (confirmed directly via the new
+// diagnostic logging), not a real permission problem at all (the
+// account's own row was correct throughout). Previously the ONLY way
+// to recover from a blocked screen was a full manual page reload,
+// with zero feedback about whether trying again would even help. This
+// re-runs the exact same permission check inline and only reloads
+// once it actually confirms success, so a connection that's still
+// down gives a clear, specific message instead of an unexplained
+// repeat of the same blocked screen after a full navigation.
+async function retryRoleCheck(buttonEl, checkFn, reloadFn) {
+  const originalText = buttonEl.textContent;
+  buttonEl.disabled = true;
+  buttonEl.textContent = 'Checking...';
+  const existingNote = buttonEl.parentElement.querySelector('.role-blocked-retry-note');
+  if (existingNote) existingNote.remove();
+
+  await loadCurrentUserRole();
+  if (typeof checkFn === 'function' && checkFn()) {
+    // reloadFn is an injectable third argument purely for testability
+    // (a bare window.location.reload() call isn't reliably
+    // interceptable in a jsdom test environment) -- every real call
+    // site omits it, so this always defaults to a genuine reload.
+    (reloadFn || (() => window.location.reload()))();
+    return;
+  }
+
+  buttonEl.disabled = false;
+  buttonEl.textContent = originalText;
+  const note = document.createElement('p');
+  note.className = 'tool-sub role-blocked-retry-note';
+  note.style.cssText = 'color:#ff8a80; font-size:13px; margin-top:8px;';
+  note.textContent = "Still can't confirm access -- if this keeps happening, check your internet connection.";
+  buttonEl.insertAdjacentElement('afterend', note);
+}
+
 // Decodes the JWT's payload to pull out the logged-in user's ID (the
 // `sub` claim) without needing a network round-trip. Doesn't verify the
 // token's signature -- that's the database's job via RLS, not this
