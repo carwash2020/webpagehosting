@@ -60,23 +60,50 @@ test('loadCurrentUserRole() queries the 4 permission booleans directly off accou
   assert.doesNotMatch(urlLine[0], /role_definitions/);
 });
 
-test('the Access panel renders one checkbox per permission per account, not a single role dropdown', () => {
+test('the Access panel groups the 9 permissions into 5 categories, not a flat row and not a single role dropdown', () => {
   assert.match(DEV_TOOLS, /toggleAccountPermission\(this\)/);
   assert.doesNotMatch(DEV_TOOLS, /onchange="changeAccountRole\(this\)"/, 'the old single-dropdown control should be gone');
-  // The checkbox's data-field attribute is built dynamically from
-  // p.field (a JS string concatenation), not a literal HTML attribute
-  // anywhere in the source -- so what's actually checkable here is
-  // that the PERMISSIONS array driving that loop lists all 4 fields.
-  const permsMatch = DEV_TOOLS.match(/const PERMISSIONS = \[[\s\S]*?\];/);
-  assert.ok(permsMatch, 'expected to find the PERMISSIONS array definition');
-  for (const field of [
+  // Redesigned 2026-09-02, requested directly, for a cleaner look:
+  // PERMISSION_CATEGORIES groups the 9 fields into 5 categories
+  // (Dev Tools, Money, Grow, Site, Admin), each with its own nested
+  // fields array -- not a flat list of 9 checkboxes shown at once.
+  const catsMatch = DEV_TOOLS.match(/const PERMISSION_CATEGORIES = \[[\s\S]*?\n  \];/);
+  assert.ok(catsMatch, 'expected to find the PERMISSION_CATEGORIES array definition');
+  const allFields = [
     'can_access_dev_tools', 'can_access_dev_tools_full', 'can_manage_invoices',
     'can_manage_contracts', 'can_view_finance', 'can_view_runway',
     'can_manage_reviews', 'can_manage_site_content', 'can_manage_roles',
-  ]) {
-    assert.match(permsMatch[0], new RegExp(`field: '${field}'`));
+  ];
+  for (const field of allFields) {
+    assert.match(catsMatch[0], new RegExp(`field: '${field}'`), `expected ${field} to appear somewhere in the category groups`);
   }
-  assert.match(DEV_TOOLS, /data-field="' \+ p\.field \+ '"/);
+  for (const categoryKey of ['devtools', 'money', 'grow', 'site', 'admin']) {
+    assert.match(catsMatch[0], new RegExp(`key: '${categoryKey}'`));
+  }
+  assert.match(DEV_TOOLS, /data-field="' \+ f\.field \+ '"/);
+});
+
+test('only one category is expanded at a time, via a single _openPermCategory, not an independent flag per category', () => {
+  assert.match(DEV_TOOLS, /let _openPermCategory = null;/);
+  const fnMatch = DEV_TOOLS.match(/function togglePermCategory\(key\) \{[\s\S]*?\n  \}\n/);
+  assert.ok(fnMatch, 'expected to isolate togglePermCategory()');
+  // Toggling the same key closes it; toggling a different key replaces
+  // whichever was open -- a single variable assignment, not an array
+  // or set of independently-open categories.
+  assert.match(fnMatch[0], /_openPermCategory = _openPermCategory === key \? null : key;/);
+});
+
+test('each category button shows how many of its own checkboxes are currently on', () => {
+  const fnMatch = DEV_TOOLS.match(/function renderPermCategoryUI\(\)[\s\S]*?\n  \}\n/);
+  assert.ok(fnMatch, 'expected to isolate renderPermCategoryUI()');
+  assert.match(fnMatch[0], /cat\.fields\.filter\(f => account\[f\.field\]\)\.length/, 'expected an on-count computed per category, per account');
+});
+
+test('the role-preview simulation feature was removed entirely, not just hidden', () => {
+  for (const src of [DEV_TOOLS]) {
+    assert.doesNotMatch(src, /rolePreview/i);
+    assert.doesNotMatch(src, /effectiveCanManageRoles/);
+  }
 });
 
 test('toggling a permission is a live PATCH to that one account\'s row, not a batch save', () => {
@@ -90,9 +117,9 @@ test('toggling a permission is a live PATCH to that one account\'s row, not a ba
   assert.match(body, /body: JSON\.stringify\(\{ \[field\]: newValue \}\)/);
 });
 
-test('a non-manager sees the same checkboxes, disabled, rather than a separate read-only view', () => {
-  const fnMatch = DEV_TOOLS.match(/async function renderAccountRoles\(\)[\s\S]*?\n  \}\n\n  let _cachedRoleDefsForPresets/);
-  assert.ok(fnMatch, 'expected to isolate renderAccountRoles()');
+test('a non-manager sees the same categories and checkboxes, disabled, rather than a separate read-only view', () => {
+  const fnMatch = DEV_TOOLS.match(/function renderPermCategoryUI\(\)[\s\S]*?\n  \}\n/);
+  assert.ok(fnMatch, 'expected to isolate renderPermCategoryUI()');
   assert.match(fnMatch[0], /const disabled = manager \? '' : ' disabled';/);
 });
 
