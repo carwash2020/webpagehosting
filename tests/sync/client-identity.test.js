@@ -26,6 +26,17 @@ function loadLayer(seed) {
   const dom = new JSDOM('<!DOCTYPE html><html><body></body></html>', { url: 'https://example.com/' });
   const { window } = dom;
 
+  // Set these on global as well as passing them in, matching
+  // data-layer.test.js's own harness. Passing them as function
+  // parameters alone covers direct references, but anything in
+  // data-layer.js that reaches a global some other way (or any helper
+  // it calls) would otherwise resolve against whatever a previously-run
+  // test file happened to leave on global -- which passes locally and
+  // fails in CI purely on test ordering and Node version.
+  global.window = window;
+  global.document = window.document;
+  global.localStorage = window.localStorage;
+
   Object.entries(seed || {}).forEach(([k, v]) => {
     window.localStorage.setItem(k, typeof v === 'string' ? v : JSON.stringify(v));
   });
