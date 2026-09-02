@@ -441,13 +441,21 @@
   // design, unlike the secret key, which must never appear here or
   // anywhere else client-side -- but this placeholder needs a real
   // value before payments can actually work.
-  // Stripe test-mode publishable key (2026-09-02). Publishable keys are
-  // designed to be public and live in browser code -- this is not a
-  // secret, unlike STRIPE_SECRET_KEY which only ever exists as a
-  // Supabase edge-function secret and never appears in this repo.
-  // Swap to the pk_live_... value when going live; the matching
-  // secret-side swap happens in Supabase secrets, not here.
-  const STRIPE_PUBLISHABLE_KEY = 'pk_test_51TxzzNLJyq7HLm12G7UEK2krKDQDmTOoYJThQTdwvbdyW0oC7375Twk0GbrbqM6y389jOgvfI8KoF74rqWkLxPJv001JNJiFtw';
+  // Stripe LIVE publishable key (switched 2026-09-02, after a real
+  // test-mode payment was confirmed end to end: card entered in the
+  // portal -> PaymentIntent created -> webhook fired -> invoice marked
+  // paid). Publishable keys are designed to be public and live in
+  // browser code -- this is not a secret, unlike STRIPE_SECRET_KEY,
+  // which only ever exists as a Supabase edge-function secret and
+  // never appears in this repo.
+  //
+  // MODES MUST MATCH: this key and the STRIPE_SECRET_KEY /
+  // STRIPE_WEBHOOK_SIGNING_SECRET in Supabase must all be live-mode
+  // together. A live publishable key against a test-mode secret (or
+  // vice versa) fails LOUDLY at Stripe.js confirm time -- a clear
+  // error, never a silent wrong charge -- so a brief mismatch during
+  // cutover is safe, just visibly broken until both sides agree.
+  const STRIPE_PUBLISHABLE_KEY = 'pk_live_51TxzzNLJyq7HLm12tpc3XfPvsQK1vN7qHJ5KhvYhhi2YSFtPOqNXMTr2bTm7ADjwxtbUl2UmXg9kHGfzKve1izn700mFVhdVRo';
   let stripeInstance = null;
   let elementsInstance = null;
 

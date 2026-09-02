@@ -53,10 +53,12 @@ test('an "info bubble" click on any panel actually opens the shared help modal w
   assert.equal(window.document.querySelector('#helpModalOverlay h3').innerHTML, 'Live consistency check');
 });
 
-test('a Developer account sees all 6 tab buttons, with "health" active by default', () => {
+test('a Developer account sees all 7 tab buttons, with "health" active by default', () => {
   const window = loadAs(true);
   const tabBtns = Array.from(window.document.querySelectorAll('.dev-tab-btn'));
-  assert.equal(tabBtns.length, 6, 'expected exactly 6 tab buttons');
+  // 7 as of 2026-09-02: a dedicated Portal tab was added, gathering
+  // every client-portal panel that had been scattered through Health.
+  assert.equal(tabBtns.length, 7, 'expected exactly 7 tab buttons');
   tabBtns.forEach(btn => {
     assert.notEqual(btn.style.display, 'none', 'tab "' + btn.getAttribute('data-tab') + '" should be visible for a Developer');
   });
@@ -67,7 +69,7 @@ test('a Developer account sees all 6 tab buttons, with "health" active by defaul
   assert.ok(healthGrid.classList.contains('is-active-tab-panel'), 'health panel group should start active');
 
   const otherGrids = window.document.querySelectorAll('.dev-panels-grid[data-tab-panel]:not([data-tab-panel="health"])');
-  assert.equal(otherGrids.length, 5, 'expected 5 other tab-panel groups');
+  assert.equal(otherGrids.length, 6, 'expected 6 other tab-panel groups');
   otherGrids.forEach(grid => {
     assert.ok(!grid.classList.contains('is-active-tab-panel'), 'tab-panel "' + grid.getAttribute('data-tab-panel') + '" should not be active initially');
   });
@@ -89,22 +91,31 @@ test('switching tabs actually shows the target panel group and hides the rest, f
   assert.ok(!healthBtn.classList.contains('is-active'), 'health tab button should no longer be marked active after switching away from it');
 });
 
-test('an account without the full-technical permission sees only the Access and Health tab buttons, with Health selected automatically since it comes first and now has a visible panel', () => {
+test('an account without the full-technical permission sees only the Portal and Access tab buttons, landing on Portal', () => {
+  // Changed 2026-09-02 when the Portal tab was created. Previously an
+  // Owner saw Access + Health, because Health happened to hold the two
+  // non-technical portal panels (Portal accounts, Portal bug reports).
+  // Those moved into their own Portal tab, which leaves Health ENTIRELY
+  // technical -- so it now correctly disappears for an Owner, and the
+  // first visible tab (Portal) becomes the landing tab. That is the
+  // right outcome: Steve lands on the client-portal controls, not on a
+  // health page with every panel hidden.
   const window = loadAs(false);
   const tabBtns = Array.from(window.document.querySelectorAll('.dev-tab-btn'));
+
+  const portalBtn = tabBtns.find(b => b.getAttribute('data-tab') === 'portal');
+  assert.notEqual(portalBtn.style.display, 'none', 'Portal tab button should be visible for an Owner');
+  assert.ok(portalBtn.classList.contains('is-active'), 'Portal should be the landing tab for an Owner, since it comes first among visible tabs');
 
   const accessBtn = tabBtns.find(b => b.getAttribute('data-tab') === 'access');
   assert.notEqual(accessBtn.style.display, 'none', 'Access tab button should stay visible for an Owner');
 
   const healthBtn = tabBtns.find(b => b.getAttribute('data-tab') === 'health');
-  assert.notEqual(healthBtn.style.display, 'none', 'Health tab button should stay visible for an Owner, since Portal bug reports is not dev-owner-hidden');
+  assert.equal(healthBtn.style.display, 'none', 'Health is now entirely technical and should be hidden for an Owner');
 
-  const otherBtns = tabBtns.filter(b => !['access', 'health'].includes(b.getAttribute('data-tab')));
-  assert.equal(otherBtns.length, 4, 'expected 4 remaining tab buttons besides Access and Health');
+  const otherBtns = tabBtns.filter(b => !['portal', 'access'].includes(b.getAttribute('data-tab')));
+  assert.equal(otherBtns.length, 5, 'expected 5 remaining tab buttons besides Portal and Access');
   otherBtns.forEach(btn => {
     assert.equal(btn.style.display, 'none', 'tab "' + btn.getAttribute('data-tab') + '" should be hidden for an Owner, since every one of its panels is dev-owner-hidden');
   });
-
-  const healthGrid = window.document.querySelector('.dev-panels-grid[data-tab-panel="health"]');
-  assert.ok(healthGrid.classList.contains('is-active-tab-panel'), 'Health should be the automatically-selected tab for an Owner, since it is first in tab order and now has a visible panel (Portal bug reports)');
 });

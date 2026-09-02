@@ -119,13 +119,14 @@ test('a real horizontal swipe left advances to the next tab', () => {
   dispatchTouch(window, panel, 'touchstart', 200, 100);
   dispatchTouch(window, panel, 'touchend', 50, 100);
 
-  assert.equal(window.document.querySelector('.dev-tab-btn.is-active').getAttribute('data-tab'), 'access');
+  // Portal sits between Health and Access as of 2026-09-02.
+  assert.equal(window.document.querySelector('.dev-tab-btn.is-active').getAttribute('data-tab'), 'portal');
 });
 
 test('a real horizontal swipe right goes back to the previous tab', () => {
   const window = loadPage(async () => ({ ok: false }));
   window.initDevToolsTabs();
-  window.switchDevToolsTab('access');
+  window.switchDevToolsTab('portal');
 
   const panel = window.document.querySelector('.dev-panels-grid[data-tab-panel].is-active-tab-panel');
   dispatchTouch(window, panel, 'touchstart', 50, 100);
