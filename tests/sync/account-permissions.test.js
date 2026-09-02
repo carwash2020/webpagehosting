@@ -38,7 +38,7 @@ test('nothing still queries account_roles with a role_definitions(...) join', ()
   assert.deepEqual(offenders, [], 'these files still request the old joined shape: ' + offenders.join(', '));
 });
 
-test('loadCurrentUserRole() queries the 4 permission booleans directly off account_roles, no join', () => {
+test('loadCurrentUserRole() queries all 9 permission booleans directly off account_roles, no join, no email in the URL', () => {
   const startIdx = AUTH_JS.indexOf('async function loadCurrentUserRole()');
   assert.ok(startIdx !== -1, 'expected to find loadCurrentUserRole()');
   // The function is at top-level scope, so its closing brace sits
@@ -49,7 +49,7 @@ test('loadCurrentUserRole() queries the 4 permission booleans directly off accou
   const endIdx = AUTH_JS.indexOf('\n}', startIdx);
   assert.ok(endIdx !== -1, 'expected to find the function\'s closing brace');
   const body = AUTH_JS.slice(startIdx, endIdx);
-  assert.match(body, /select=role_name,can_manage_roles,can_access_dev_tools,can_access_dev_tools_full,can_manage_site_content,can_manage_invoices,can_manage_contracts,can_view_finance,can_view_runway,can_manage_reviews/);
+  assert.match(body, /select=email,role_name,can_manage_roles,can_access_dev_tools,can_access_dev_tools_full,can_manage_site_content,can_manage_invoices,can_manage_contracts,can_view_finance,can_view_runway,can_manage_reviews/);
   // Checks the actual fetch URL specifically, not the whole function
   // body -- a legitimate historical comment elsewhere in this function
   // (explaining the 2026-09-02 retry fix) still mentions
@@ -58,6 +58,18 @@ test('loadCurrentUserRole() queries the 4 permission booleans directly off accou
   const urlLine = body.match(/`\$\{SUPABASE_URL\}\/rest\/v1\/account_roles\?[^`]*`/);
   assert.ok(urlLine, 'expected to find the account_roles fetch URL');
   assert.doesNotMatch(urlLine[0], /role_definitions/);
+  // No email=eq.X filter (2026-09-02) -- a real report, reproduced
+  // across 3 separate network connections by the same account (ruling
+  // out a flaky connection), traced to this being the one query in
+  // the app that put a plaintext email address in a URL query string
+  // -- some privacy tools specifically block that pattern. RLS
+  // already permits any account with a role to read every row
+  // (current_user_has_any_role(), no per-row email match), matching
+  // fetchAccountRolesData()'s own no-filter query in dev-tools.html,
+  // so this costs nothing extra RLS wasn't already allowing.
+  assert.doesNotMatch(urlLine[0], /email=eq\./);
+  assert.match(body, /allRows\.filter\(r => \(r\.email \|\| ''\)\.toLowerCase\(\) === email\.toLowerCase\(\)\)/,
+    'should find the caller\'s own row client-side from the full result set');
 });
 
 test('the Access panel groups the 9 permissions into 5 categories, not a flat row and not a single role dropdown', () => {
