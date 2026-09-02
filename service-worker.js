@@ -182,16 +182,28 @@
 // Bumped 2026-09-02: data-layer.js, dev-tools-shared.js, and auth.js
 // all changed across two separate merges (client-identity unification,
 // then the role-check retry fix below) and NEITHER one bumped
-// CACHE_NAME -- exactly the failure mode the 2026-08-16 comment above
-// already warned about, and it happened again anyway. Real, confirmed
-// consequence: a report of being blocked from a role-gated page
-// recurred a second time even after the auth.js fix for it had
-// already been merged and deployed, because the device's service
-// worker was still serving the pre-fix auth.js from its own cache --
-// no number of page reloads bypasses that, only a real CACHE_NAME
-// change does. Whoever/whatever merges a change to any file in the
-// precache list below MUST bump this string in the same change, not
-// as an afterthought once someone notices something's stale again.
+// CACHE_NAME -- the failure mode the 2026-08-16 comment above already
+// warned about.
+//
+// Worth being precise about what this bump does and doesn't guarantee
+// (caught in review, and correct): every reference to these files
+// carries a content-hash ?v= query param, and caches.match(event.request)
+// below matches on the FULL request URL, search params included. So a
+// genuine ?v= change on its own already produces a cache MISS for that
+// new URL regardless of CACHE_NAME -- a real network fetch happens
+// either way once the HTML referencing the new ?v= is loaded. Bumping
+// CACHE_NAME is not what makes a correctly-?v=-bumped file fresh; what
+// it actually does is (1) force every OLD versioned-URL entry to be
+// dropped for good, via the activate handler's cache-name cleanup
+// below, rather than sitting in storage unused forever, and (2) act as
+// the real safety net for the two cases where a ?v= bump alone
+// wouldn't save you: a file that's precached under its BARE path with
+// no ?v= at all (this happens during install, before any page has
+// requested a versioned URL), or any future change that lands without
+// its ?v= correctly bumped alongside it. Bump this whenever a file in
+// PRECACHE_URLS changes, even if you're confident every ?v= reference
+// was updated too -- it's the backstop for the case where that
+// confidence turns out to be wrong.
 const CACHE_NAME = 'th-workspace-v46';
 const PRECACHE_URLS = [
   '/tools/workspace.html', '/tools/job-tracker.html', '/tools/invoice-generator.html', '/tools/contract-generator.html',
