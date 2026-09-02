@@ -179,7 +179,20 @@
 // sticky/pinned, requested directly ("the tools to slide") -- the
 // previous fix correctly positioned it below the header but kept it
 // sticky, which was reported as exactly the wrong behavior.
-const CACHE_NAME = 'th-workspace-v45';
+// Bumped 2026-09-02: data-layer.js, dev-tools-shared.js, and auth.js
+// all changed across two separate merges (client-identity unification,
+// then the role-check retry fix below) and NEITHER one bumped
+// CACHE_NAME -- exactly the failure mode the 2026-08-16 comment above
+// already warned about, and it happened again anyway. Real, confirmed
+// consequence: a report of being blocked from a role-gated page
+// recurred a second time even after the auth.js fix for it had
+// already been merged and deployed, because the device's service
+// worker was still serving the pre-fix auth.js from its own cache --
+// no number of page reloads bypasses that, only a real CACHE_NAME
+// change does. Whoever/whatever merges a change to any file in the
+// precache list below MUST bump this string in the same change, not
+// as an afterthought once someone notices something's stale again.
+const CACHE_NAME = 'th-workspace-v46';
 const PRECACHE_URLS = [
   '/tools/workspace.html', '/tools/job-tracker.html', '/tools/invoice-generator.html', '/tools/contract-generator.html',
   '/tools/calendar.html', '/tools/route-planner.html', '/tools/review-request.html', '/tools/contact-card.html',
