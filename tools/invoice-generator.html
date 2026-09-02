@@ -495,9 +495,61 @@
 
   // ---------- defaults ----------
   document.getElementById('invoiceDate').value = new Date().toISOString().slice(0, 10);
-  document.getElementById('invoiceNumber').value = 'INV-' + new Date().getFullYear() + '-' + String(Math.floor(Math.random() * 9000) + 1000);
   document.getElementById('quoteDate').value = new Date().toISOString().slice(0, 10);
-  document.getElementById('quoteNumber').value = 'EST-' + new Date().getFullYear() + '-' + String(Math.floor(Math.random() * 9000) + 1000);
+
+  // Collision-proof numbering (2026-09-02), requested directly: "I
+  // want this part to be future proof, Invoices never collide."
+  //
+  // Draws from a Postgres SEQUENCE via next_invoice_number() /
+  // next_quote_number() rather than generating a random 4-digit
+  // number in the browser. nextval() is atomic and transactional, so
+  // it cannot return the same value twice even with Connor and Steve
+  // creating invoices simultaneously on different devices -- a real
+  // guarantee, where the old scheme was only a ~1-in-10,000
+  // probability per pair whose sole guard (checkDuplicateInvoiceNumber)
+  // could see just ONE device's own localStorage and could warn but
+  // never prevent. There are also unique indexes on the portal
+  // tables' number columns as a second layer.
+  //
+  // FALLBACK, deliberately kept: if the number can't be drawn (offline,
+  // dropped connection, not signed in yet), the field falls back to a
+  // clearly-marked local number rather than leaving it blank or
+  // blocking invoice creation entirely -- being unable to invoice a
+  // client standing in front of you is worse than a number needing a
+  // manual fix later. The TMP- prefix makes such a number obvious on
+  // sight, and duplicate-checking still runs against it.
+  async function assignNextNumber(fieldId, rpcName, fallbackPrefix) {
+    const el = document.getElementById(fieldId);
+    if (!el) return;
+    try {
+      if (typeof ensureFreshToken === 'function') await ensureFreshToken();
+      const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/${rpcName}`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'apikey': SUPABASE_ANON_KEY,
+          'Authorization': `Bearer ${getAuthToken()}`,
+        },
+        body: '{}',
+      });
+      if (!res.ok) throw new Error('HTTP ' + res.status);
+      const number = await res.json();
+      if (typeof number !== 'string' || !number) throw new Error('unexpected response');
+      el.value = number;
+    } catch (e) {
+      el.value = fallbackPrefix + new Date().getFullYear() + '-TMP-' + Date.now().toString().slice(-6);
+      if (typeof logClientError === 'function') {
+        logClientError(
+          `Could not draw a ${rpcName} -- fell back to a temporary local number (${el.value}). ${e.message}`,
+          'invoice-generator.html', null, null, null
+        );
+      }
+    }
+    if (typeof checkDuplicateInvoiceNumber === 'function' && fieldId === 'invoiceNumber') checkDuplicateInvoiceNumber();
+  }
+
+  assignNextNumber('invoiceNumber', 'next_invoice_number', 'INV-');
+  assignNextNumber('quoteNumber', 'next_quote_number', 'EST-');
 
   function loadJobs() {
     try { return JSON.parse(localStorage.getItem('th_tracker_jobs') || '[]'); }
@@ -1055,7 +1107,10 @@
     document.getElementById('lineItemsBody').innerHTML = '';
     addLineItem();
     document.getElementById('invoiceDate').value = new Date().toISOString().slice(0, 10);
-    document.getElementById('invoiceNumber').value = 'INV-' + new Date().getFullYear() + '-' + String(Math.floor(Math.random() * 9000) + 1000);
+    // Draws a genuinely new sequence number for the next invoice --
+    // same collision-proof path as the initial page load above, not a
+    // fresh random number.
+    assignNextNumber('invoiceNumber', 'next_invoice_number', 'INV-');
     document.getElementById('invoiceTerms').value = 'Net 15';
     recalc();
   }
@@ -1609,7 +1664,8 @@
     document.getElementById('quoteLineItemsBody').innerHTML = '';
     addQuoteLineItem();
     document.getElementById('quoteDate').value = new Date().toISOString().slice(0, 10);
-    document.getElementById('quoteNumber').value = 'EST-' + new Date().getFullYear() + '-' + String(Math.floor(Math.random() * 9000) + 1000);
+    // Same collision-proof sequence draw as the invoice reset above.
+    assignNextNumber('quoteNumber', 'next_quote_number', 'EST-');
     recalcQuote();
   }
 
