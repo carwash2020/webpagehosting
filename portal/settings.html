@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="en" style="background:#0a0a0a;">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="robots" content="noindex, nofollow">
+<title>Settings | Triple H Enterprises</title>
+<!--
+  Client Portal settings page (2026-09-02), requested directly: "It
+  needs a settings button like our tools."
+
+  Deliberately narrow in scope. A client can change their own
+  password and see what's on file, and that's it:
+
+  - Email is shown but NOT editable. It's the key every portal table
+    joins on (client_email) and what RLS scopes every query by, so
+    letting a client change it themselves would orphan every invoice,
+    quote, job and request they have. Changing it is a real
+    operation that has to move that data too, so it goes through
+    Connor/Steve -- stated plainly here rather than presented as a
+    disabled field with no explanation.
+
+  - Name and phone are shown as read-only from whatever is already on
+    file from a real invoice/quote/job. Those live in the internal
+    client registry, which is the source of truth; a client editing
+    them here would immediately drift from it.
+
+  Same isolation as every other portal page: no internal /tools/
+  scripts, only shared stylesheets.
+-->
+<!-- color-scheme (2026-09-02): tells the browser to use a DARK default
+     canvas BEFORE any CSS is parsed. Without it the browser paints its
+     own white default first, which showed as a white flash on every
+     navigation between portal pages. -->
+<meta name="color-scheme" content="dark">
+<meta name="theme-color" content="#0a0a0a">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data:; connect-src 'self' https://csvfqdjuobylgafgolho.supabase.co; frame-src 'none'; object-src 'none'; base-uri 'self'; frame-ancestors 'none';">
+<link rel="shortcut icon" href="/favicon.ico">
+<link rel="icon" href="/favicon.ico" sizes="any">
+<link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32.png">
+<link rel="icon" type="image/png" sizes="192x192" href="/images/favicon-192.png?v=202608010300">
+<link rel="apple-touch-icon" href="/images/apple-touch-icon.png?v=202608010300">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/styles.css?v=202609022200">
+<link rel="stylesheet" href="/tools/styles-tools.css?v=a2e87effb3">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+  body { background: #0a0a0a; max-width: 640px; margin: 0 auto; padding: 24px 16px 60px; }
+  .portal-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; }
+  .portal-header-left { display: flex; align-items: center; gap: 12px; }
+  .portal-header img { width: 40px; height: auto; }
+  .portal-title { font-family: 'Oswald', sans-serif; font-weight: 700; font-size: 19px; color: var(--white); }
+  .portal-sub { color: var(--text-dim); font-size: 13px; }
+  .portal-nav { display: flex; gap: 8px; margin-bottom: 24px; flex-wrap: wrap; }
+  .portal-nav a {
+    flex: 1; min-width: 72px; text-align: center; padding: 9px 12px; border-radius: 8px; font-size: 13.5px; font-weight: 600;
+    text-decoration: none; border: 1px solid var(--border); color: var(--text-dim);
+  }
+  .portal-nav a.is-active { background: var(--orange-tint-soft); border-color: var(--orange-tint-border); color: var(--orange-light); }
+
+  .set-card {
+    background: var(--bg-panel); border: 1px solid var(--border); border-radius: 12px;
+    padding: 18px 16px; margin-bottom: 18px;
+  }
+  .set-card-title { font-family: 'Oswald', sans-serif; font-weight: 600; font-size: 15px; color: var(--white); margin-bottom: 4px; }
+  .set-card-sub { color: var(--text-dim); font-size: 13px; line-height: 1.5; margin-bottom: 14px; }
+  .set-row { display: flex; justify-content: space-between; gap: 12px; padding: 9px 0; border-bottom: 1px solid var(--border); font-size: 14px; }
+  .set-row:last-child { border-bottom: none; }
+  .set-row-key { color: var(--text-dim); }
+  .set-row-val { color: var(--white); text-align: right; word-break: break-word; }
+  .set-field { margin-bottom: 12px; }
+  .set-field label { display: block; font-size: 13px; font-weight: 600; color: var(--white); margin-bottom: 5px; }
+  .set-field input {
+    width: 100%; box-sizing: border-box; padding: 10px 12px; background: var(--bg-panel-2);
+    border: 1px solid var(--border); border-radius: 8px; color: var(--white);
+    font-size: 14.5px; font-family: inherit;
+  }
+  .set-field input:focus { outline: none; border-color: var(--orange); background: var(--bg-panel); }
+  .set-msg { font-size: 13px; margin-top: 10px; line-height: 1.5; }
+  .set-msg.is-error { color: #ff8a80; }
+  .set-msg.is-ok { color: #4caf78; }
+</style>
+</head>
+<body>
+
+<div class="portal-header">
+  <div class="portal-header-left">
+    <img src="/images/logo-signature-orange.webp?v=202608142300" alt="Triple H Enterprises">
+    <div>
+      <div class="portal-title">Settings</div>
+      <div class="portal-sub" id="clientEmailDisplay"></div>
+    </div>
+  </div>
+  <button class="secondary-btn" id="signOutBtn">Sign out</button>
+</div>
+
+<div class="portal-nav">
+  <a href="/portal/home.html">Home</a>
+  <a href="/portal/work-orders.html">Request</a>
+  <a href="/portal/quotes.html">Quotes</a>
+  <a href="/portal/dashboard.html">Invoices</a>
+  <a href="/portal/jobs.html">Jobs</a>
+</div>
+
+<div class="set-card">
+  <div class="set-card-title">Your Details</div>
+  <div class="set-card-sub">This is what we have on file. To change your email, name, or phone number, just call or text us at <a href="tel:+14354141667" style="color:var(--orange-light);">(435) 414-1667</a> &mdash; your email is tied to all your invoices and job history, so we update it on our end to keep everything connected.</div>
+  <div id="detailRows"></div>
+</div>
+
+<div class="set-card">
+  <div class="set-card-title">Change Password</div>
+  <div class="set-card-sub">Pick something at least 8 characters long.</div>
+  <div class="set-field">
+    <label for="newPassword">New password</label>
+    <input type="password" id="newPassword" autocomplete="new-password" placeholder="At least 8 characters">
+  </div>
+  <div class="set-field">
+    <label for="confirmPassword">Confirm new password</label>
+    <input type="password" id="confirmPassword" autocomplete="new-password" placeholder="Type it again">
+  </div>
+  <button class="btn blue" style="width:100%; justify-content:center;" id="savePasswordBtn">Update Password</button>
+  <div class="set-msg" id="passwordMsg" style="display:none;"></div>
+</div>
+
+<div class="set-card">
+  <div class="set-card-title">Notifications</div>
+  <div class="set-card-sub">We email you when there's a new invoice or estimate waiting. That's it &mdash; no marketing, no newsletters. If those emails aren't arriving, check your spam folder first, then let us know.</div>
+</div>
+
+<script>
+  const { createClient } = supabase;
+  const client = createClient(
+    'https://csvfqdjuobylgafgolho.supabase.co',
+    'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNzdmZxZGp1b2J5bGdhZmdvbGhvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODUzNTQ3MjcsImV4cCI6MjEwMDkzMDcyN30.6GlvK-DfXf2lppS1kciZtsl4wHOpZz_yKtwsS1lyjrs'
+  );
+
+  function escapeHtml(str) {
+    const div = document.createElement('div');
+    div.textContent = String(str == null ? '' : str);
+    return div.innerHTML;
+  }
+
+  function showPasswordMsg(text, isError) {
+    const el = document.getElementById('passwordMsg');
+    el.textContent = text;
+    el.className = 'set-msg ' + (isError ? 'is-error' : 'is-ok');
+    el.style.display = 'block';
+  }
+
+  async function updatePassword() {
+    const btn = document.getElementById('savePasswordBtn');
+    const pw = document.getElementById('newPassword').value;
+    const confirm = document.getElementById('confirmPassword').value;
+
+    if (pw.length < 8) { showPasswordMsg('Please use at least 8 characters.', true); return; }
+    if (pw !== confirm) { showPasswordMsg("Those two passwords don't match.", true); return; }
+
+    btn.disabled = true;
+    btn.textContent = 'Updating...';
+    const { error } = await client.auth.updateUser({ password: pw });
+    btn.disabled = false;
+    btn.textContent = 'Update Password';
+
+    if (error) {
+      showPasswordMsg(error.message || "Couldn't update your password just now. Please try again.", true);
+      return;
+    }
+    document.getElementById('newPassword').value = '';
+    document.getElementById('confirmPassword').value = '';
+    showPasswordMsg('Password updated. Use the new one next time you sign in.', false);
+  }
+
+  document.getElementById('savePasswordBtn').addEventListener('click', updatePassword);
+
+  async function init() {
+    const { data: { session } } = await client.auth.getSession();
+    if (!session) { window.location.replace('/portal/login.html'); return; }
+    const email = session.user.email;
+    document.getElementById('clientEmailDisplay').textContent = email;
+
+    // Name and phone come from whatever is already on file from a real
+    // invoice, quote, or job -- the internal client registry is the
+    // source of truth for those, so they're read-only here rather than
+    // editable and immediately drifting from it.
+    let name = '';
+    try {
+      const { data } = await client
+        .from('client_portal_invoices')
+        .select('client_name')
+        .limit(1);
+      if (data && data.length) name = data[0].client_name || '';
+      if (!name) {
+        const { data: q } = await client
+          .from('client_portal_quotes')
+          .select('client_name')
+          .limit(1);
+        if (q && q.length) name = q[0].client_name || '';
+      }
+    } catch (e) { /* non-fatal: the email row below still renders */ }
+
+    document.getElementById('detailRows').innerHTML =
+      '<div class="set-row"><span class="set-row-key">Email</span><span class="set-row-val">' + escapeHtml(email) + '</span></div>' +
+      (name ? '<div class="set-row"><span class="set-row-key">Name</span><span class="set-row-val">' + escapeHtml(name) + '</span></div>' : '');
+  }
+
+  document.getElementById('signOutBtn').addEventListener('click', async () => {
+    await client.auth.signOut();
+    window.location.replace('/portal/login.html');
+  });
+
+  init();
+</script>
+
+</body>
+</html>

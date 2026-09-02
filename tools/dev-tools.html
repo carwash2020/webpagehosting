@@ -35,7 +35,7 @@
     if (saved === 'light') document.documentElement.setAttribute('data-theme', 'light');
   })();
 </script>
-<link rel="stylesheet" href="/styles.css?v=202608202000">
+<link rel="stylesheet" href="/styles.css?v=202609022200">
 <link rel="stylesheet" href="/tools/styles-tools.css?v=a2e87effb3">
 <script src="/tools/data-layer.js?v=1133747765" defer></script>
 <script src="/tools/dev-tools-shared.js?v=5982c06af2" defer></script>
@@ -161,7 +161,28 @@
     position: sticky; top: 0; z-index: 100; display: flex; gap: 6px; overflow-x: auto;
     background: var(--bg); border-bottom: 1px solid var(--border);
     padding: 10px 20px; margin: 0 -20px 20px;
-    box-shadow: 0 -44px 0 0 var(--bg), 0 4px 12px rgba(0,0,0,.35);
+    box-shadow: 0 4px 12px rgba(0,0,0,.35);
+  }
+  /* Two real bugs fixed here 2026-09-02, both from a direct screenshot
+     showing the status chips sliced in half by an opaque band just
+     above the tab bar:
+
+     1. The old rule carried `box-shadow: 0 -44px 0 0 var(--bg)` -- a
+        trick to paint a 44px block of background ABOVE the bar. But a
+        box-shadow paints unconditionally, not only while stuck, so it
+        permanently covered the bottom 44px of whatever sat above the
+        bar in normal flow (the identity badge and status chips).
+        Removed entirely; the downward drop shadow is kept.
+
+     2. On desktop the page header is `position: fixed; top: 0`
+        (styles-tools.css, min-width:1024px), so a tab bar sticking to
+        top:0 lands underneath it. The bar has the higher z-index so it
+        won and covered the header instead. Sticking below the real
+        header height (32px logo + 12px padding top and bottom = 56px)
+        puts it where it belongs. Mobile keeps top:0, where the header
+        is in normal flow and scrolls away as expected. */
+  @media (min-width: 1024px) {
+    .dev-tab-bar { top: 56px; }
   }
   .dev-tab-btn {
     display: flex; align-items: center; gap: 6px;
