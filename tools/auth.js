@@ -344,7 +344,22 @@ async function loadCurrentUserRole() {
   try {
     await ensureFreshToken();
     const email = getCurrentUserEmail();
-    if (!email) { _cachedRoleInfo = null; return null; }
+    if (!email) {
+      // Diagnostic logging added 2026-09-02, after a real report this
+      // function had NO logging anywhere on a genuine failure -- if
+      // this was actually happening in someone's browser, there was
+      // nothing anywhere to look at afterward. hasValidSession()
+      // returning false here (right after a real, fresh sign-in) would
+      // point at the login flow itself, not the permission check --
+      // worth distinguishing from every other failure path below.
+      if (typeof logClientError === 'function') {
+        logClientError(
+          'loadCurrentUserRole(): getCurrentUserEmail() returned null -- no valid session found.',
+          'auth.js', null, null, null
+        );
+      }
+      _cachedRoleInfo = null; return null;
+    }
     try {
       // Retries the network call itself up to 3 total attempts with a
       // short backoff (2026-09-02) -- added after a real report: a
@@ -394,9 +409,38 @@ async function loadCurrentUserRole() {
         }
         if (attempt < 3) await new Promise(r => setTimeout(r, 400 * attempt));
       }
-      if (lastErr) { _cachedRoleInfo = null; return null; }
+      if (lastErr) {
+        // Diagnostic logging added 2026-09-02 -- this branch (3
+        // attempts exhausted) previously left NO trace anywhere. Logs
+        // the email being looked up (not the token) so a real report
+        // can actually be investigated afterward instead of only
+        // reproduced live.
+        if (typeof logClientError === 'function') {
+          logClientError(
+            `loadCurrentUserRole(): all 3 attempts failed for ${email} -- ${lastErr.message}`,
+            'auth.js', null, null, lastErr.stack || null
+          );
+        }
+        _cachedRoleInfo = null; return null;
+      }
       const rows = await res.json();
-      if (!rows.length) { _cachedRoleInfo = null; return null; }
+      if (!rows.length) {
+        // Diagnostic logging added 2026-09-02 -- a genuine "no row
+        // found" response for an email that SHOULD have one (per a
+        // direct database check) points at something more specific
+        // than "no role assigned": a real email-casing/whitespace
+        // mismatch, an RLS policy rejecting this specific caller, or a
+        // token whose email claim doesn't match what's actually
+        // stored. Logging the exact email queried, not just "empty",
+        // makes that distinguishable after the fact.
+        if (typeof logClientError === 'function') {
+          logClientError(
+            `loadCurrentUserRole(): account_roles returned zero rows for ${email} (HTTP ${res.status}, request succeeded).`,
+            'auth.js', null, null, null
+          );
+        }
+        _cachedRoleInfo = null; return null;
+      }
       const row = rows[0];
       _cachedRoleInfo = {
         roleName: row.role_name,
