@@ -1,7 +1,9 @@
 // Tests for the Owner-restricted view in Dev Tools (2026-08-21),
 // requested directly: Steve (Owner) only needs Client Registry and
-// Account Roles -- code diagnostics and error logs don't matter to
-// him -- while Connor (Developer) keeps full, unchanged access.
+// Account permissions -- code diagnostics and error logs don't matter
+// to him -- while Connor (Developer) keeps full, unchanged access.
+// Panel renamed 'Account roles' -> 'Account permissions' 2026-09-02
+// alongside the permission model redesign.
 
 const { test } = require('node:test');
 const assert = require('node:assert/strict');
@@ -20,7 +22,7 @@ const DEV_ONLY_HEADINGS = [
   'Advisor health', 'Storage browser', 'Data integrity check',
   'Booking funnel health', 'Lead response time', 'Uptime trend',
 ];
-const OWNER_VISIBLE_HEADINGS = ['Client registry', 'Account roles'];
+const OWNER_VISIBLE_HEADINGS = ['Client registry', 'Account permissions'];
 
 function loadAs(canManage) {
   const html = fs.readFileSync(DEV_TOOLS_PATH, 'utf8');
@@ -56,7 +58,7 @@ test('an Owner account (canManageRoles false) has every one of the 23 developer-
   }
 });
 
-test('an Owner account still sees Client Registry and Account Roles -- the two panels requested directly to stay visible', () => {
+test('an Owner account still sees Client Registry and Account permissions -- the two panels requested directly to stay visible', () => {
   const window = loadAs(false);
   for (const heading of OWNER_VISIBLE_HEADINGS) {
     const panel = panelFor(window, heading);
@@ -74,7 +76,7 @@ test('a Developer account (canManageRoles true) keeps every panel visible -- ful
   }
 });
 
-test('applyOwnerRestrictedView uses the real canManageRoles(), not the existing role-preview toggle (effectiveCanManageRoles) -- that preview is deliberately scoped to just the Account Roles panel\'s own display, not a real, permanent restriction', () => {
+test('applyOwnerRestrictedView uses the real canManageRoles(), not the existing role-preview toggle (effectiveCanManageRoles) -- that preview is deliberately scoped to just the Account permissions panel\'s own display, not a real, permanent restriction', () => {
   const src = fs.readFileSync(DEV_TOOLS_PATH, 'utf8');
   const fnMatch = src.match(/function applyOwnerRestrictedView\(\)[\s\S]*?\n  \}/);
   assert.ok(fnMatch, 'applyOwnerRestrictedView not found');

@@ -354,43 +354,66 @@ path described here** -- losing access to the Supabase organization/project
 itself is a genuinely different, harder problem than losing one of the
 two app-level accounts, and isn't something a code-level backup can fix.
 
-## Account roles system (added 2026-08-15)
+## Account permissions system (added 2026-08-15, redesigned 2026-09-02)
 
 Replaces what used to be a single hardcoded check
 (`getCurrentUserEmail() === 'connor@triplehenterprisesllc.biz'`) gating
-the entire Dev Tools page. Two new tables, `role_definitions` and
-`account_roles`, plus a `current_user_can_manage_roles()` SQL function
-that RLS policies on both tables call to decide who can create new
-roles or change an account's role. Two safety triggers
-(`prevent_removing_last_role_manager`, guards `account_roles`;
-`prevent_disabling_last_role_manager_capability`, guards
-`role_definitions`) block the one real failure mode: accidentally
-leaving no assigned role able to manage roles at all. Both were tested
-directly against the live database before being trusted -- deliberately
-tried to remove the last manager and confirmed it was rejected, then
-confirmed a second-manager scenario correctly allows it.
+the entire Dev Tools page.
+
+**Redesigned 2026-09-02** from role-locked to per-account: the 4
+booleans (`can_manage_roles`, `can_access_dev_tools`,
+`can_manage_site_content`, `can_manage_business_finances`) now live
+directly on each account's own `account_roles` row, individually
+toggleable in Dev Tools -> Access -> Account permissions, live
+immediately (no deploy, no role reassignment). `role_definitions`
+still exists but is no longer read at authorization time anywhere --
+it's a PRESETS table only, for prefilling a brand-new account's
+checkboxes in the management UI. `role_name` on `account_roles` is
+now an optional display label ("started from the Owner preset"), not
+authoritative.
+
+A single `current_user_can_manage_roles()` SQL function is what RLS
+policies on `account_roles` call to decide who can change permissions
+at all -- reads `can_manage_roles` directly off the caller's own row,
+no join. One safety trigger (`guard_last_role_manager_permission`,
+replacing the old pair `prevent_removing_last_role_manager` +
+`prevent_disabling_last_role_manager_capability`, which existed only
+because permissions used to live in two places) blocks the one real
+failure mode: an UPDATE or DELETE on `account_roles` leaving zero
+accounts with `can_manage_roles = true`, which would permanently lock
+everyone out of ever granting anyone anything again. Tested directly
+against the live database before being trusted -- deliberately tried
+to remove the last manager's permission and confirmed it was rejected.
 
 **If Dev Tools access seems broken for an account:** check
-`select * from account_roles;` first. If the account's row is missing
-or its `role_name` doesn't join to a `role_definitions` row with the
-expected `can_manage_roles` value, that's almost certainly the actual
-cause, rather than anything in the frontend code.
+`select email, can_manage_roles, can_access_dev_tools, can_manage_site_content, can_manage_business_finances from account_roles;`
+first. If the account's row is missing, or the relevant boolean is
+`false`, that's almost certainly the actual cause, rather than
+anything in the frontend code. **A real report of exactly this
+happened 2026-09-02** with a fully-permissioned account (see
+`tools/auth.js`'s `loadCurrentUserRole()` -- it makes a single network
+request to confirm the caller's permissions and fails CLOSED by
+design; a dropped connection on that one request alone was enough to
+show a false "not available here," even though the account's actual
+row was completely intact) -- a retry (up to 3 attempts with backoff)
+was added the same day. Worth checking the database directly before
+assuming a real permission change happened.
 
-**Owner-restricted view (added 2026-08-21):** a role having
-`can_manage_roles` set (Developer) now also controls how much of Dev
-Tools that account actually *sees*, not just whether it can change
-roles. An Owner-role account (`can_manage_roles` false) only sees
-Client Registry and Account Roles -- the other 23 panels (everything
-code/technical/error-diagnostic in nature, organized into 5 tabs as
-of 2026-08-25's navigation redesign -- Health, Access, Session,
-Notifications, Deploy) are hidden via `applyOwnerRestrictedView()` in
-`dev-tools.html`, keyed off the real `canManageRoles()`. If an Owner
-reports "most of Dev Tools is missing," that's this feature working
-as intended, not a bug -- confirm by checking their `account_roles`
-row's `role_name` first. This is separate from the page's own
-role-preview toggle (`effectiveCanManageRoles()`), which only changes
-what the Account Roles panel itself displays and never affects this
-restriction.
+**Owner-restricted view (added 2026-08-21):** `can_manage_roles`
+being true (Developer, historically) now also controls how much of
+Dev Tools that account actually *sees*, not just whether it can change
+permissions. An account with `can_manage_roles` false only sees
+Client Registry and Account permissions -- the other 23 panels
+(everything code/technical/error-diagnostic in nature, organized into
+5 tabs as of 2026-08-25's navigation redesign -- Health, Access,
+Session, Notifications, Deploy) are hidden via
+`applyOwnerRestrictedView()` in `dev-tools.html`, keyed off the real
+`canManageRoles()`. If an account reports "most of Dev Tools is
+missing," that's this feature working as intended, not a bug --
+confirm by checking their `account_roles` row's `can_manage_roles`
+value first. This is separate from the page's own role-preview toggle
+(`effectiveCanManageRoles()`), which only changes what the Account
+permissions panel itself displays and never affects this restriction.
 
 **A real bug already happened here once, worth knowing about:** the
 dev-tools dashboard tile went invisible for *every* account (Connor
