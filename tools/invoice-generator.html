@@ -44,7 +44,7 @@
 <script src="/tools/tools-dialogs.js?v=e1dfaa11a1" defer></script>
 <script src="/tools/tools-media-sharing.js?v=4e2769b10d" defer></script>
 <script src="/tools/tools-nav-pwa.js?v=9b16eefb86" defer></script>
-<script src="/tools/tools-tour.js?v=21f63bf17f" defer></script>
+<script src="/tools/tools-tour.js?v=cf6652f5b1" defer></script>
 <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js" integrity="sha384-JcnsjUPPylna1s1fvi1u12X5qjY5OL56iySh75FdtrwhO/SWXgMjoVqcKyIIWOLk" crossorigin="anonymous" async></script>
 <style>
   body { padding: 90px 20px 60px; max-width: 900px; margin: 0 auto; }
@@ -230,7 +230,26 @@
   <textarea id="paymentText">We accept cash, check, Venmo, Cash App, and credit/debit cards via a secure Stripe invoice.</textarea>
 </div>
 
-<button class="primary-btn wide" onclick="generatePDF()">Generate PDF</button>
+<!--
+  Split from a single "Generate PDF" button (2026-09-02), requested
+  directly after a real confusing outcome: pressing it opened the OS
+  share sheet (offering Mail, which looked like being asked to send
+  the invoice by hand) AND separately fired an automatic email to the
+  client via the portal sync. Two sends for one press, neither
+  obviously connected to the other.
+
+  Now explicit. Download PDF only makes the file. Send to Client
+  emails them, after confirming exactly who is about to receive it.
+  Both still log the invoice internally either way -- the Invoice
+  Log, the income log, and the portal record are written regardless,
+  since that's the business record and must not depend on which
+  button was pressed.
+-->
+<div style="display:flex; gap:10px; flex-wrap:wrap;">
+  <button class="secondary-btn" style="flex:1; min-width:150px;" onclick="generatePDF({ send: false })">Download PDF</button>
+  <button class="primary-btn" style="flex:1; min-width:150px;" onclick="generatePDF({ send: true })">Send to Client</button>
+</div>
+<p class="tool-sub" style="margin-top:8px; font-size:12.5px;">Both save the invoice to your log. <strong>Send to Client</strong> also emails it to them and puts it in their portal.</p>
 
 </div>
 
@@ -391,12 +410,65 @@
           <div class="contract-log-meta">#${escapeHtml(inv.invoiceNumber || '')} &middot; ${escapeHtml(inv.date || '')} &middot; ${money(inv.total)}</div>
           ${sourceNote}
         </div>
-        <div style="display:flex; gap:6px; flex-shrink:0;">
+        <div style="display:flex; gap:6px; flex-shrink:0; flex-wrap:wrap; justify-content:flex-end;">
+          ${inv.clientEmail ? `<button class="small-btn" onclick="resendInvoiceToClient(${inv.id})">Resend</button>` : ''}
           <button class="small-btn" onclick="toggleInvoicePaid(${inv.id})">${inv.paid ? 'Mark Unpaid' : 'Mark Paid'}</button>
           <button class="small-btn" style="color:#e05252; border-color:#e05252;" onclick="deleteInvoiceLogEntry(${inv.id})" aria-label="Delete this invoice">Delete</button>
         </div>
       </div>`;
     }).join('');
+  }
+
+  // Re-sends an already-logged invoice to its client (2026-09-02),
+  // requested directly: "we need a Recent Invoices area so in the
+  // event we need to resend we dont have to recreate."
+  //
+  // Re-syncs from the STORED log entry rather than from whatever is
+  // currently typed into the form -- so resending an invoice from
+  // last week sends that invoice, not a mix of its saved totals and
+  // the form's current contents. sync-invoice-to-portal upserts on
+  // source_invoice_id, so this updates the existing portal row rather
+  // than creating a duplicate, and re-fires the notification email.
+  //
+  // Line items are the one thing NOT recoverable here: they live only
+  // in the form at generation time, never in the log entry. The
+  // portal row already has them from the original send, and the
+  // upsert deliberately omits the field rather than overwriting real
+  // line items with an empty array.
+  async function resendInvoiceToClient(invoiceId) {
+    const inv = loadInvoiceLog().find(i => i.id === invoiceId);
+    if (!inv) { showToast('Could not find that invoice in the log.', { type: 'error' }); return; }
+    if (!inv.clientEmail) { showToast('That invoice has no client email on it.', { type: 'error' }); return; }
+    if (!(await showConfirm(`Resend invoice #${inv.invoiceNumber} to ${inv.clientEmail}?`))) return;
+
+    try {
+      if (typeof ensureFreshToken === 'function') await ensureFreshToken();
+      const res = await fetch(`${SUPABASE_URL}/functions/v1/sync-invoice-to-portal`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'apikey': SUPABASE_ANON_KEY,
+          'Authorization': `Bearer ${getAuthToken()}`,
+        },
+        body: JSON.stringify({
+          source_invoice_id: inv.id,
+          client_email: inv.clientEmail,
+          client_name: inv.clientName,
+          invoice_number: inv.invoiceNumber,
+          invoice_date: inv.date,
+          description: inv.jobRefTitle || null,
+          total: inv.total,
+        }),
+      });
+      const result = await res.json().catch(() => ({}));
+      if (result && result.ok) {
+        showToast('Invoice #' + inv.invoiceNumber + ' resent to ' + inv.clientEmail + '.');
+      } else {
+        showToast('Resend failed: ' + ((result && result.error) || 'unknown error'), { type: 'error' });
+      }
+    } catch (e) {
+      showToast('Resend failed: ' + (e.message || String(e)), { type: 'error' });
+    }
   }
 
   // resendInvite() lived here until 2026-09-02 -- superseded by the
@@ -851,7 +923,13 @@
   // actually became a real invoice would be worse than no linkage at
   // all. The quote only gets marked once the invoice is genuinely saved.
   let pendingSourceQuoteId = null;
-  async function generatePDF() {
+  // opts.send (2026-09-02): false = just produce the PDF for Connor;
+  // true = also sync to the portal and email the client. Defaults to
+  // FALSE deliberately -- any future caller that forgets to pass this
+  // should quietly do the safe thing (no client email) rather than
+  // messaging a client unexpectedly.
+  async function generatePDF(opts) {
+    const shouldSend = !!(opts && opts.send);
     if (invoiceGenerationInProgress) return; // a fast double-tap shouldn't create two logged invoices
     // Bug fix (2026-08-20): jsPDF now loads async (see the script tag's
     // own comment for why), which means there's a real, if brief,
@@ -1083,7 +1161,19 @@
 
     const filename = 'TripleH_Invoice_' + (document.getElementById('clientName').value || 'Client').replace(/[^a-z0-9]/gi, '_') + '.pdf';
     logInvoice({ subtotal, tax, discount, total });
-    await sharePdfOrDownload(doc, filename, 'Invoice');
+    // Download PDF uses a plain save; only the explicit Send path
+    // offers the OS share sheet (2026-09-02). Previously every press
+    // went through sharePdfOrDownload(), whose native share sheet
+    // surfaces Mail on iOS/macOS -- which read as "you need to email
+    // this yourself" right at the moment an automatic email was also
+    // being sent. On the Send path the sheet is genuinely useful (a
+    // way to hand the client the PDF directly, e.g. by text), so it
+    // stays there.
+    if (shouldSend) {
+      await sharePdfOrDownload(doc, filename, 'Invoice');
+    } else {
+      doc.save(filename);
+    }
     showToast('Invoice logged and ready.');
     resetInvoiceForm();
     } finally {
@@ -1227,14 +1317,19 @@
     saveInvoiceLog(list);
     logInvoiceToIncomeLog(newEntry);
 
-    // Portal sync (2026-08-31) -- fires only when a client email was
-    // actually provided (this field is optional; most invoices won't
-    // need this at all). Best-effort: a failure here logs to the
-    // console but never blocks saving the invoice itself, since the
-    // local invoice log above is the real, primary record -- the
-    // portal table is a secondary, client-safe mirror of it.
+    // Portal sync + client email (2026-08-31, gated 2026-09-02).
+    //
+    // Now only runs when "Send to Client" was pressed. Previously it
+    // fired on every PDF generation, which meant a client got an
+    // email the moment an invoice was created -- surprising if you
+    // were only trying to produce a PDF, and impossible to avoid.
+    //
+    // The invoice itself is ALREADY saved to the invoice log, income
+    // log, and (below) the portal regardless of this branch -- the
+    // business record must never depend on which button was pressed.
+    // What's gated here is specifically the outbound client email.
     const clientEmailVal = document.getElementById('clientEmail').value.trim();
-    if (clientEmailVal && typeof getAuthToken === 'function') {
+    if (shouldSend && clientEmailVal && typeof getAuthToken === 'function') {
       fetch(`${SUPABASE_URL}/functions/v1/sync-invoice-to-portal`, {
         method: 'POST',
         headers: {
@@ -1252,7 +1347,19 @@
           line_items: getLineItems(),
           total: newEntry.total,
         }),
-      }).catch(e => console.warn('Portal sync failed (invoice still saved locally):', e));
+      }).then(async res => {
+        const result = await res.json().catch(() => ({}));
+        if (result && result.ok) {
+          showToast('Invoice sent to ' + clientEmailVal + '.');
+        } else {
+          showToast('Invoice saved, but the email may not have sent: ' + ((result && result.error) || 'unknown error'), { type: 'error' });
+        }
+      }).catch(e => {
+        console.warn('Portal sync failed (invoice still saved locally):', e);
+        showToast('Invoice saved locally, but sending to the client failed. Check your connection and use Resend from the Invoice Log.', { type: 'error' });
+      });
+    } else if (shouldSend && !clientEmailVal) {
+      showToast("No client email on this invoice, so there's nobody to send it to. Add one and use Resend from the Invoice Log.", { type: 'error' });
     }
 
     if (pendingSourceQuoteId) {
