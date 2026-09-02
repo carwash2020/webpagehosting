@@ -482,9 +482,48 @@ function thFindClientById(id) {
 // Returns the client record for a name, creating one if it doesn't exist yet.
 // This is what new save paths should call so records created from here on
 // are linked from birth, rather than needing another backfill later.
+//
+// ENRICHMENT (2026-09-02): if the client already exists, any detail in
+// `extras` that the record is currently MISSING gets filled in and saved,
+// rather than the old behavior of returning the existing record untouched
+// and silently discarding whatever was just learned. That old behavior was
+// a real, load-bearing bug once the client portal existed: a client's email
+// is typed on the Invoice/Quote/Job forms, but if that client already had a
+// registry record (which they almost always do by then), the email was
+// thrown away every single time -- leaving registry.email permanently blank
+// for essentially everyone. sync-checkup-to-portal reads exactly that field
+// to decide whether a check-up reminder can sync at all, so that feature was
+// effectively dead until this was fixed.
+//
+// Deliberately FILL-ONLY, never overwrite: an existing non-empty value always
+// wins over an incoming one. A blank field being filled in is unambiguously
+// new information; a differing non-blank value is a genuine conflict (a typo?
+// a real change of address?) that shouldn't be silently resolved by whoever
+// happened to save last. Same "first non-empty value wins" rule
+// thCollectClientNamesFromExistingData() above already uses for the backfill.
 function thEnsureClient(name, extras) {
   const existingRecord = thFindClientByName(name);
-  if (existingRecord) return existingRecord;
+  if (existingRecord) {
+    if (extras) {
+      let changed = false;
+      ['phone', 'address', 'email'].forEach(field => {
+        const incoming = extras[field] ? String(extras[field]).trim() : '';
+        if (incoming && !existingRecord[field]) {
+          existingRecord[field] = incoming;
+          changed = true;
+        }
+      });
+      if (changed) {
+        const list = thLoadClients();
+        const idx = list.findIndex(c => c.id === existingRecord.id);
+        if (idx > -1) {
+          list[idx] = existingRecord;
+          thSaveClients(list);
+        }
+      }
+    }
+    return existingRecord;
+  }
   const trimmed = String(name || '').trim();
   if (!trimmed) return null;
 
@@ -500,6 +539,30 @@ function thEnsureClient(name, extras) {
   };
   list.push(record);
   thSaveClients(list);
+  return record;
+}
+
+// Fills blank client contact fields on any form from the shared client
+// registry, given a typed client name. The read-side counterpart to
+// thEnsureClient()'s write-side enrichment (2026-09-02): together they
+// mean a client's email/phone/address is typed ONCE, anywhere, and is
+// then available on every other form automatically -- instead of being
+// re-typed per form, where a single typo silently creates a second
+// portal identity for the same person.
+//
+// Deliberately FILL-ONLY, matching thEnsureClient()'s own rule: never
+// overwrites a field the user has already typed into. Pass a map of
+// { phone, address, email } -> element id; omit any the form lacks.
+// Returns the matched registry record, or null.
+function thAutofillClientFields(typedName, fieldIds) {
+  if (typeof thFindClientByName !== 'function') return null;
+  const record = thFindClientByName(typedName);
+  if (!record) return null;
+  Object.entries(fieldIds || {}).forEach(([field, elId]) => {
+    if (!elId) return;
+    const el = document.getElementById(elId);
+    if (el && !el.value.trim() && record[field]) el.value = record[field];
+  });
   return record;
 }
 

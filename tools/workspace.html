@@ -56,7 +56,7 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.112.3/dist/umd/supabase.js" integrity="sha384-qafw21c/iciq0VXsi9FzkfoQv5I/V0iqE4lSNcKXPnW9/UTJLnv5CcN4FHxVLnKg" crossorigin="anonymous" defer></script>
 <script src="/tools/sync.js?v=73576c99e1" defer></script>
 <script src="/tools/push-notifications.js?v=b55dfa1172" defer></script>
-<script src="/tools/data-layer.js?v=44a1c3df77" defer></script>
+<script src="/tools/data-layer.js?v=1133747765" defer></script>
 <script src="/tools/tools-effects.js?v=9a2a59040e" defer></script>
 <script src="/tools/tools-dialogs.js?v=e1dfaa11a1" defer></script>
 <script src="/tools/tools-media-sharing.js?v=4e2769b10d" defer></script>
@@ -1594,8 +1594,14 @@
     const timeFmt = new Intl.DateTimeFormat('en-US', { timeZone: 'America/Denver', hour: 'numeric', minute: '2-digit' });
     const timeWindow = timeFmt.format(start) + ' \u2013 ' + timeFmt.format(end);
 
+    // booking.email comes from the PUBLIC website's own booking form
+    // (booking.html) -- captured at the real front door, but until
+    // 2026-09-02 it was dropped right here, so the same client's email
+    // had to be re-typed by hand later on an invoice/quote/job form
+    // before the portal could reach them. Now it flows straight into
+    // the shared client registry, which every other form reads from.
     const clientId = (booking.name && typeof thEnsureClient === 'function')
-      ? (thEnsureClient(booking.name, { phone: booking.phone, address: booking.address }) || {}).id
+      ? (thEnsureClient(booking.name, { phone: booking.phone, address: booking.address, email: booking.email }) || {}).id
       : undefined;
 
     const jobs = loadJobs();
@@ -1608,6 +1614,7 @@
       clientId,
       phone: booking.phone || '',
       address: booking.address || '',
+      clientEmail: booking.email || null,
       priority: 'medium',
       date: jobDate,
       status: 'not-started',

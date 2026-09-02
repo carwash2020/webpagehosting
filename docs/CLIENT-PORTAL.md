@@ -163,6 +163,7 @@ All deployed and ACTIVE. Source backed up in `edge-functions/`.
 | `sync-checkup-to-portal` | true | Writes to `client_portal_checkups` for a client-linked Recurring Job Template, only if that client already has some portal presence; also handles deletion (`{ source_template_id, delete: true }`) when a template is removed internally |
 | `get-job-photo-urls` | true | Client-only -- verifies the job belongs to the caller, then signs each `photo_storage_paths` entry fresh (service role bypasses the job-photos bucket's own looser RLS, safe only because ownership was already checked) |
 | `schedule-checkup-visit` | true | Client-only -- no approval/already-scheduled guard (unlike `schedule-quote-job`); inserts into `th_bookings` with `checkup_id` set |
+| `set-invoice-paid` | true | **Internal-only** (`account_roles` + `can_manage_business_finances`) -- marks a portal invoice paid/unpaid by hand, for the cash/check/Venmo payments that never touch Stripe. Keyed by `source_invoice_id`, since the caller is the internal Invoice Log |
 
 Two non-obvious things worth not rediscovering the hard way:
 
@@ -360,6 +361,85 @@ Real dependencies, not preference, decide this order:
    formula `templateDueInfo()` already uses internally, same
    never-store-a-computed-value discipline as job warranty. This
    closes out all five phases of the original roadmap.
+
+## Client identity: one client, one email (2026-09-02)
+
+The single highest-value fix found in a full audit of how the internal
+app, the client portal, and the public website fit together. Worth
+understanding before touching any of these paths.
+
+**What was wrong.** A client's email could be typed on four separate
+forms -- Invoice, Quote, Job, Contract -- and three of the four never
+wrote it back to the shared client registry (`th_clients`). Worse,
+`thEnsureClient()` returned early whenever a client already existed,
+silently discarding any newly-learned detail. Since a client almost
+always DOES already exist by the time you're invoicing them,
+`registry.email` was effectively **blank for everyone, permanently**.
+
+Three real consequences, all now fixed:
+
+1. **Check-up reminders were dead on arrival.** `sync-checkup-to-portal`
+   reads exactly that blank field to decide whether a reminder can sync
+   at all. Phase 5 could never have fired for anyone.
+2. **A typo silently created a second portal identity.** Same real
+   person, invoices under one email, quotes under another, nothing
+   surfacing the split.
+3. **The website threw the email away at the front door.**
+   `booking.html` captures it into `th_bookings`, but
+   `convertBookingToJob()` dropped it -- so the one place a client had
+   already typed their own email correctly was discarded, and it got
+   re-typed by hand later.
+
+**The fix, both directions:**
+
+- **Write side** -- `thEnsureClient()` now *enriches*: any detail in
+  `extras` that the existing record is MISSING gets filled in and
+  saved. Deliberately fill-only, never overwrite: a blank field being
+  filled is unambiguously new information, but a differing non-blank
+  value is a genuine conflict (a typo? a real change of address?) that
+  shouldn't be silently resolved by whoever saved last. Same
+  "first non-empty value wins" rule the backfill already used.
+- **Read side** -- new `thAutofillClientFields()` in `data-layer.js`,
+  wired to the Invoice, Quote (which had no autofill at all before),
+  and Job forms. Type a known client's name and their details fill in
+  from the registry. Also fill-only; never overwrites typed input.
+- **Website side** -- `convertBookingToJob()` now passes
+  `booking.email` into the registry and onto the job record.
+
+Net effect: a client's email is typed **once, anywhere** -- including
+by the client themselves on the public booking form -- and is then
+available everywhere else automatically.
+
+## When Stripe goes live: what should and shouldn't move
+
+Recorded during the same audit, while Stripe is still blocked on the
+EIN. The instinct to "link everything through Stripe" is right for
+some of this and actively wrong for the rest.
+
+**Good fits -- Stripe is genuinely better at these:**
+invoice numbering (today's `INV-YEAR-<random 4 digits>` is random, not
+sequential, with a real collision risk that's exactly why
+`checkDuplicateInvoiceNumber()` exists), PDF generation and hosting,
+payment status as a single source of truth, receipt emails, payment
+history, partial payments, and the hosted invoice page. Stripe
+Invoices would replace a large chunk of `invoice-generator.html`'s PDF
+code and all of `client_portal_invoices`' status tracking.
+
+**Bad fits -- keep these ours:** quotes/estimates (Stripe Quotes are
+B2B-contract-shaped, not handyman-estimate-shaped, and can't do the
+approval + questions flow in phase 2), job tracking, warranty,
+scheduling, and job photos. Also worth knowing before committing:
+Stripe's own invoice PDFs are unbranded compared to what's already
+built here.
+
+**The trap to avoid.** Stripe as source of truth for invoices means
+the internal Invoice Log becomes a *view* of Stripe, not its own
+writable store. Keeping both writable would make the sync problem
+strictly worse than it is today, not better. Note that today there are
+already three places paid-status lives (`th_invoices`,
+`client_portal_invoices`, Stripe) -- `set-invoice-paid` closed the
+worst gap between them, but that's a patch over a design that
+consolidation should actually fix.
 
 ## Smaller ideas not yet folded into a phase above
 

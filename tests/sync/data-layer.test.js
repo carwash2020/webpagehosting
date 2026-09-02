@@ -222,8 +222,16 @@ test('addJob() in job-tracker.html calls thEnsureClient with the typed client na
   const fnMatch = src.match(/async function addJob\(\)[\s\S]*?\n  \}\n/);
   assert.ok(fnMatch, 'addJob() not found -- did it get renamed or removed?');
   const fnSrc = fnMatch[0];
-  assert.match(fnSrc, /thEnsureClient\(clientName,\s*\{\s*phone,\s*address\s*\}\)/,
-    'addJob() should call thEnsureClient with the client name and phone/address');
+  // Asserts the details are passed, not the exact object formatting --
+  // this used to hardcode `{ phone, address }` and broke the moment
+  // email was added (2026-09-02, the client-identity unification).
+  // email matters most here: it's what lets the portal reach this
+  // client at all, and what sync-checkup-to-portal reads.
+  const callMatch = fnSrc.match(/thEnsureClient\(clientName,\s*\{[\s\S]*?\}\)/);
+  assert.ok(callMatch, 'addJob() should call thEnsureClient with the client name and a details object');
+  assert.match(callMatch[0], /\bphone\b/, 'should pass phone');
+  assert.match(callMatch[0], /\baddress\b/, 'should pass address');
+  assert.match(callMatch[0], /\bemail\b/, 'should pass email -- the portal depends on it reaching the client registry');
   assert.match(fnSrc, /clientId,/, 'the resulting id should be stored on the job record as clientId');
 });
 
