@@ -44,6 +44,35 @@ function loadThemeToggleDOM() {
   return window;
 }
 
+// Waits until index.html's own inline scripts have actually run and
+// wired up the toggle, rather than sleeping a flat 100ms and hoping.
+//
+// The flat sleep this replaced was a real, confirmed source of CI
+// flakiness (2026-09-02): the same commit failed one run and passed
+// the next with no code change at all. Locally the suite runs test
+// files sequentially, so 100ms was always plenty; CI runners have
+// several cores, so node --test runs files in PARALLEL and this
+// file -- which parses all ~2,100 lines of index.html in jsdom WITH
+// scripts enabled, six separate times -- can easily need longer than
+// 100ms under that contention. Polling for the real ready condition
+// is both faster in the common case and immune to how loaded the
+// machine is.
+//
+// Mirrors the waitForCondition() helper the booking tests already use.
+async function waitForToggleReady(window, { timeout = 5000, interval = 10 } = {}) {
+  const start = Date.now();
+  while (Date.now() - start < timeout) {
+    const btn = window.document.getElementById('themeToggle');
+    // The label text is set by the page's own init code, so a non-empty
+    // label is the real signal that the script ran -- the button
+    // element itself exists in the static HTML before any JS executes.
+    const label = window.document.querySelector('.theme-toggle-label');
+    if (btn && label && label.textContent.trim()) return;
+    await new Promise(resolve => setTimeout(resolve, interval));
+  }
+  throw new Error('waitForToggleReady: the theme toggle never initialised within ' + timeout + 'ms');
+}
+
 test('a [data-theme="light"] CSS override block exists in styles.css -- this was the actual missing piece', () => {
   const css = fs.readFileSync(STYLES_CSS_PATH, 'utf8');
   assert.match(css, /\[data-theme="light"\]\s*\{/);
@@ -51,7 +80,7 @@ test('a [data-theme="light"] CSS override block exists in styles.css -- this was
 
 test('clicking the desktop theme toggle button correctly sets data-theme, updates the label, and swaps which icon is visible', async () => {
   const window = loadThemeToggleDOM();
-  await new Promise(resolve => setTimeout(resolve, 100));
+  await waitForToggleReady(window);
 
   const moon = window.document.querySelector('.theme-icon-dark');
   const sun = window.document.querySelector('.theme-icon-light');
@@ -68,7 +97,7 @@ test('clicking the desktop theme toggle button correctly sets data-theme, update
 
 test('switching to light mode actually changes the real CSS variables the rest of the page uses, not just the attribute', async () => {
   const window = loadThemeToggleDOM();
-  await new Promise(resolve => setTimeout(resolve, 100));
+  await waitForToggleReady(window);
 
   const darkBg = window.getComputedStyle(window.document.documentElement).getPropertyValue('--bg').trim();
   window.document.getElementById('themeToggle').click();
@@ -81,7 +110,7 @@ test('switching to light mode actually changes the real CSS variables the rest o
 
 test('the mobile theme switch and the desktop button stay in sync, and toggling the mobile switch also updates the real theme', async () => {
   const window = loadThemeToggleDOM();
-  await new Promise(resolve => setTimeout(resolve, 100));
+  await waitForToggleReady(window);
 
   const mobileSwitch = window.document.getElementById('themeSwitchMobile');
   assert.equal(mobileSwitch.checked, true, 'mobile switch should start checked, matching the default dark theme');
@@ -95,7 +124,7 @@ test('the mobile theme switch and the desktop button stay in sync, and toggling 
 
 test('the theme preference persists to localStorage under the expected key', async () => {
   const window = loadThemeToggleDOM();
-  await new Promise(resolve => setTimeout(resolve, 100));
+  await waitForToggleReady(window);
 
   window.document.getElementById('themeToggle').click();
   assert.equal(window.localStorage.getItem('th-theme'), 'light');
@@ -171,7 +200,7 @@ test('the hours list actually renders with visible separation end to end, verifi
   const styleEl = window.document.createElement('style');
   styleEl.textContent = css;
   window.document.head.appendChild(styleEl);
-  await new Promise(resolve => setTimeout(resolve, 100));
+  await waitForToggleReady(window);
 
   const row = window.document.querySelector('.hours-row');
   assert.equal(window.getComputedStyle(row).display, 'flex');
@@ -209,7 +238,7 @@ test('the fix actually resolves correctly end to end against the real page, not 
   const styleEl = window.document.createElement('style');
   styleEl.textContent = css;
   window.document.head.appendChild(styleEl);
-  await new Promise(resolve => setTimeout(resolve, 100));
+  await waitForToggleReady(window);
 
   const brand = window.document.querySelector('.brand');
   const subtitle = window.document.querySelector('.brand-name span');
