@@ -163,6 +163,7 @@ All deployed and ACTIVE. Source backed up in `edge-functions/`.
 | `sync-checkup-to-portal` | true | Writes to `client_portal_checkups` for a client-linked Recurring Job Template, only if that client already has some portal presence; also handles deletion (`{ source_template_id, delete: true }`) when a template is removed internally |
 | `get-job-photo-urls` | true | Client-only -- verifies the job belongs to the caller, then signs each `photo_storage_paths` entry fresh (service role bypasses the job-photos bucket's own looser RLS, safe only because ownership was already checked) |
 | `schedule-checkup-visit` | true | Client-only -- no approval/already-scheduled guard (unlike `schedule-quote-job`); inserts into `th_bookings` with `checkup_id` set |
+| `set-invoice-paid` | true | **Internal-only** (`account_roles` + `can_manage_business_finances`) -- marks a portal invoice paid/unpaid by hand, for the cash/check/Venmo payments that never touch Stripe. Keyed by `source_invoice_id`, not the portal row id, since the caller is the internal Invoice Log |
 | `set-invoice-paid` | true | **Internal-only** (`account_roles` + `can_manage_business_finances`) -- marks a portal invoice paid/unpaid by hand, for the cash/check/Venmo payments that never touch Stripe. Keyed by `source_invoice_id`, since the caller is the internal Invoice Log |
 
 Two non-obvious things worth not rediscovering the hard way:
@@ -410,7 +411,41 @@ Net effect: a client's email is typed **once, anywhere** -- including
 by the client themselves on the public booking form -- and is then
 available everywhere else automatically.
 
-## When Stripe goes live: what should and shouldn't move
+## How Connor and Steve actually manage this day to day
+
+Written 2026-09-02, in answer to a direct question. The short version:
+**almost nothing new to learn** -- portal management is deliberately
+folded into the tools they already use, not a separate admin app.
+
+| To do this | Go here |
+|---|---|
+| Give a client portal access | Just fill in the client email field on an Invoice, Quote, or Job. Sync + invite email happen automatically |
+| See if a client approved/declined a quote | Quote Log in `invoice-generator.html` -- shown inline per quote |
+| Answer a client's question about a quote | Same place, inline, with a "Mark answered" button |
+| Mark a cash/check/Venmo payment paid | Invoice Log's Mark Paid toggle -- now syncs to the portal (`set-invoice-paid`) |
+| Resend a client's invite | Dev Tools -> Health -> **Portal accounts**, search and press Resend invite |
+| See what a client can actually see | Same Portal accounts panel -- counts of their invoices/quotes/jobs |
+| See a portal-submitted problem report | Dev Tools -> Health -> Portal bug reports |
+| See a portal-booked appointment | The normal booking views -- each one's note says where it came from ("Scheduled from approved quote #...", "Requested from check-up reminder: ...") |
+| Show a client job photos | Nothing extra -- photos already uploaded to a job appear in the portal once that job is marked Done |
+
+**Why Portal accounts lives in Dev Tools -> Health specifically:**
+almost every Dev Tools panel is `dev-owner-hidden` (Developer-only).
+Health and Access are among the only areas an **Owner** account can
+see, so putting it there is what makes it usable by Steve at all.
+Same reasoning as `portal_bug_reports` before it.
+
+**Known remaining gaps** (not blockers, recorded honestly):
+
+- The Quote tab has no "resend notification" equivalent -- the Portal
+  accounts panel's Resend invite covers account access, but not
+  re-sending a specific quote notification a client missed.
+- No way to change a client's portal email from inside the tools. If a
+  client's email changes, the registry updates fine, but their existing
+  Supabase Auth account still has the old address -- that needs the
+  Supabase dashboard directly. Worth building if it ever comes up twice.
+
+
 
 Recorded during the same audit, while Stripe is still blocked on the
 EIN. The instinct to "link everything through Stripe" is right for
