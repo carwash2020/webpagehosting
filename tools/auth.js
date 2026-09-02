@@ -277,14 +277,16 @@ function getCurrentUserFirstName() {
 }
 
 // ---------------------------------------------------------------------------
-// ACCOUNT ROLES -- added 2026-08-14. Replaces the old hardcoded
-// "only connor@ gets dev tools" check with a real, database-backed role
-// system (role_definitions + account_roles tables in Supabase). Steve's
-// account now holds "Owner" and gets identical dev-tools access to
-// Connor's "Developer" role -- Developer's only extra capability is
-// managing the role system itself (creating new roles, reassigning
-// accounts), tracked as can_manage_roles rather than hardcoded to a
-// specific role name, so a future role could carry that too.
+// ACCOUNT PERMISSIONS -- added 2026-08-14 as a database-backed role
+// system (role_definitions + account_roles), redesigned 2026-09-02 into
+// per-account, individually-toggleable permissions: each account's 4
+// booleans (can_manage_roles, can_access_dev_tools, can_manage_site_content,
+// can_manage_business_finances) now live directly on its own account_roles
+// row, not inherited from a shared role tier. role_definitions still
+// exists, but only as PRESETS for the management UI's convenience --
+// nothing reads it to decide what an account can actually do anymore.
+// role_name on account_roles is now just a display label ("started from
+// the Owner preset"), never authoritative.
 //
 // loadCurrentUserRole() is called from initSyncOnLoad() in sync.js, so
 // by the time any page's own load logic runs, the synchronous
@@ -337,8 +339,15 @@ async function loadCurrentUserRole() {
       let res, lastErr;
       for (let attempt = 1; attempt <= 3; attempt++) {
         try {
+          // Permission model redesign (2026-09-02): reads the 4
+          // booleans directly off account_roles now, no join to
+          // role_definitions. Each account's permissions are its own
+          // -- individually toggleable, take effect immediately (no
+          // code deploy, no role reassignment), rather than being
+          // entirely bound to one of a fixed set of role tiers.
+          // role_name is kept only as a display label.
           res = await fetch(
-            `${SUPABASE_URL}/rest/v1/account_roles?email=eq.${encodeURIComponent(email.toLowerCase())}&select=role_name,role_definitions(can_manage_roles,can_access_dev_tools,can_manage_site_content,can_manage_business_finances,description)`,
+            `${SUPABASE_URL}/rest/v1/account_roles?email=eq.${encodeURIComponent(email.toLowerCase())}&select=role_name,can_manage_roles,can_access_dev_tools,can_manage_site_content,can_manage_business_finances`,
             {
               headers: {
                 'apikey': SUPABASE_ANON_KEY,
@@ -357,23 +366,13 @@ async function loadCurrentUserRole() {
       const rows = await res.json();
       if (!rows.length) { _cachedRoleInfo = null; return null; }
       const row = rows[0];
-      const def = row.role_definitions || {};
       _cachedRoleInfo = {
         roleName: row.role_name,
-        canManageRoles: !!def.can_manage_roles,
-        // Added 2026-08-27, alongside the new Employee role -- before
-        // this, hasDevToolsAccess() below just checked "does this
-        // account have ANY role assigned at all," which would have
-        // wrongly granted a restricted Employee role full Dev Tools
-        // access too, the same as Owner or Developer. Defaults to true
-        // if this column is ever missing from a response for some
-        // reason (a role predating this change, or a query that didn't
-        // select it) -- fails open to the pre-existing behavior rather
-        // than silently locking out an account that used to have access.
-        canAccessDevTools: def.can_access_dev_tools !== false,
-        canManageSiteContent: def.can_manage_site_content !== false,
-        canManageBusinessFinances: def.can_manage_business_finances !== false,
-        description: def.description || '',
+        canManageRoles: !!row.can_manage_roles,
+        canAccessDevTools: !!row.can_access_dev_tools,
+        canManageSiteContent: !!row.can_manage_site_content,
+        canManageBusinessFinances: !!row.can_manage_business_finances,
+        description: '',
       };
       return _cachedRoleInfo;
     } catch (e) {

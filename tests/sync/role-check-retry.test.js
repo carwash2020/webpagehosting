@@ -60,15 +60,17 @@ function jsonResponse(body, ok = true, status = 200) {
   return { ok, status, json: async () => body };
 }
 
+// Permission model redesign (2026-09-02): loadCurrentUserRole() now
+// queries account_roles directly for its 4 booleans, no join to
+// role_definitions -- this mock response shape has to match that
+// real query, or these tests would pass against a shape the actual
+// code no longer requests.
 const ROLE_ROW = [{
   role_name: 'Developer',
-  role_definitions: {
-    can_manage_roles: true,
-    can_access_dev_tools: true,
-    can_manage_site_content: true,
-    can_manage_business_finances: true,
-    description: 'Full technical access.',
-  },
+  can_manage_roles: true,
+  can_access_dev_tools: true,
+  can_manage_site_content: true,
+  can_manage_business_finances: true,
 }];
 
 test('a single transient network failure no longer fails the whole role check', async () => {

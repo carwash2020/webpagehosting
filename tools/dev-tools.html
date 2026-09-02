@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="en" style="background:#0a0a0a;">
 <head>
-<script src="/tools/auth.js?v=7890d23075"></script>
+<script src="/tools/auth.js?v=f368e051a4"></script>
 <script>
   // Security gate -- redirect to login before this page's own content
   // is meaningfully usable. See auth.js for why this exists (a single
@@ -38,7 +38,7 @@
 <link rel="stylesheet" href="/styles.css?v=202608202000">
 <link rel="stylesheet" href="/tools/styles-tools.css?v=a2e87effb3">
 <script src="/tools/data-layer.js?v=1133747765" defer></script>
-<script src="/tools/dev-tools-shared.js?v=948e19d395" defer></script>
+<script src="/tools/dev-tools-shared.js?v=aa918417a8" defer></script>
 <script src="/tools/tools-effects.js?v=9a2a59040e" defer></script>
 <script src="/tools/tools-dialogs.js?v=e1dfaa11a1" defer></script>
 <script src="/tools/tools-media-sharing.js?v=4e2769b10d" defer></script>
@@ -280,13 +280,13 @@
       <a href="/tools/workspace.html" class="help-btn" aria-label="Back to Dashboard" title="Back to Dashboard" style="text-decoration:none; display:inline-flex; align-items:center; justify-content:center;">&#8617;</a>
     </div>
   </div>
-  <p class="hub-sub">Site diagnostics and maintenance utilities. Visible to any account with an assigned role &mdash; see the Account roles panel below to change who has access.</p>
+  <p class="hub-sub">Site diagnostics and maintenance utilities. Visible to any account with the "Dev Tools" permission checked &mdash; see the Account permissions panel below to change who has access.</p>
 
   <div id="devIdentityBadge" class="dev-identity" style="display:none;"></div>
 
   <div id="rolePreviewControl" style="display:none; margin-bottom:14px;">
     <label style="font-size:12.5px; color:var(--text-dim); display:inline-flex; align-items:center; gap:8px;">
-      Preview Account roles as:
+      Preview Account permissions as:
       <select id="rolePreviewSelect" onchange="setRolePreview(this.value)" style="width:auto;">
         <option value="">My real session</option>
         <option value="non-manager">A non-manager role (e.g. Owner)</option>
@@ -294,7 +294,7 @@
     </label>
   </div>
   <div id="rolePreviewBanner" class="dev-status-chip" style="display:none; border-color:var(--orange-tint-border); background:var(--orange-tint-soft); color:var(--orange-light); margin-bottom:14px;">
-    <svg class="th-icon" aria-hidden="true"><use href="#icon-warning" xlink:href="#icon-warning"></use></svg> Previewing the Account roles panel as a non-manager role. This only changes what this panel SHOWS you -- your actual account and permissions haven't changed, and any real change you make still happens as yourself. <a href="#" onclick="event.preventDefault(); setRolePreview('');" style="color:inherit; text-decoration:underline; margin-left:6px;">Exit preview</a>
+    <svg class="th-icon" aria-hidden="true"><use href="#icon-warning" xlink:href="#icon-warning"></use></svg> Previewing the Account permissions panel as a non-manager. This only changes what this panel SHOWS you -- your actual account and permissions haven't changed, and any real change you make still happens as yourself. <a href="#" onclick="event.preventDefault(); setRolePreview('');" style="color:inherit; text-decoration:underline; margin-left:6px;">Exit preview</a>
   </div>
 
   <div class="dev-status-chip" id="devStatusSummary" onclick="toggleStatusStripDetail()" style="cursor:pointer; margin-bottom:8px;">
@@ -434,10 +434,19 @@
 
   <div class="dev-panel dev-panel-wide">
     <div class="dev-panel-heading">
-      <h2>Account roles</h2>
+      <h2>Account permissions</h2>
       <button class="dev-info-bubble" onclick="openDevInfo('roles')" aria-label="What does this do?" title="What does this do?">?</button>
     </div>
     <div id="accountRolesList" class="dev-scrollable-list"></div>
+    <div id="addAccountForm" style="display:none; margin-top:16px; padding-top:16px; border-top:1px solid var(--border);">
+      <label style="display:block; margin-bottom:8px;">Add an account
+        <input type="email" id="newAccountEmail" placeholder="name@example.com" style="margin-top:4px;">
+      </label>
+      <label style="display:block; margin-bottom:10px; font-size:13px; color:var(--text-dim);">Start from a preset (optional)
+        <select id="newAccountPreset" style="margin-top:4px;"><option value="">None -- start with everything unchecked</option></select>
+      </label>
+      <button class="secondary-btn" onclick="addAccount()">Add account</button>
+    </div>
   </div>
 
   </div>
@@ -1622,8 +1631,11 @@
   // ---------------------------------------------------------------------
 
   async function fetchAccountRolesData() {
+    // Permission model redesign (2026-09-02): the 4 booleans are read
+    // directly off account_roles now -- each account's own row is the
+    // full, authoritative answer, no join to role_definitions needed.
     const res = await fetchWithTimeout(
-      SUPABASE_URL + '/rest/v1/account_roles?select=email,role_name&order=email',
+      SUPABASE_URL + '/rest/v1/account_roles?select=email,role_name,can_manage_roles,can_access_dev_tools,can_manage_site_content,can_manage_business_finances&order=email',
       8000,
       { headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': 'Bearer ' + getAuthToken() } }
     );
@@ -1631,9 +1643,13 @@
     return res.json();
   }
 
+  // role_definitions is read only here now -- purely PRESETS for the
+  // "Add account" form's convenience (prefilling a new account's
+  // checkboxes from a familiar starting point), never consulted at
+  // authorization time anywhere in the app anymore.
   async function fetchRoleDefinitions() {
     const res = await fetchWithTimeout(
-      SUPABASE_URL + '/rest/v1/role_definitions?select=name&order=name',
+      SUPABASE_URL + '/rest/v1/role_definitions?select=name,can_manage_roles,can_access_dev_tools,can_manage_site_content,can_manage_business_finances&order=name',
       8000,
       { headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': 'Bearer ' + getAuthToken() } }
     );
@@ -1786,42 +1802,118 @@
     const previewControl = document.getElementById('rolePreviewControl');
     if (previewControl) previewControl.style.display = canManageRoles() ? 'block' : 'none';
 
+    const PERMISSIONS = [
+      { field: 'can_access_dev_tools', label: 'Dev Tools' },
+      { field: 'can_manage_business_finances', label: 'Invoices/quotes' },
+      { field: 'can_manage_site_content', label: 'Site content' },
+      { field: 'can_manage_roles', label: 'Manage permissions' },
+    ];
+
     try {
       if (typeof ensureFreshToken === 'function') await ensureFreshToken();
       const [accounts, roleDefs] = await Promise.all([fetchAccountRolesData(), fetchRoleDefinitions()]);
       const manager = effectiveCanManageRoles();
 
-      const roleOptionsHtml = roleDefs.map(r => '<option value="' + escapeHtml(r.name) + '">' + escapeHtml(r.name) + '</option>').join('');
+      _cachedRoleDefsForPresets = roleDefs;
+      const presetSelect = document.getElementById('newAccountPreset');
+      if (presetSelect) {
+        presetSelect.innerHTML = '<option value="">None -- start with everything unchecked</option>' +
+          roleDefs.map(r => '<option value="' + escapeHtml(r.name) + '">' + escapeHtml(r.name) + ' preset</option>').join('');
+      }
+      const addForm = document.getElementById('addAccountForm');
+      if (addForm) addForm.style.display = manager ? 'block' : 'none';
 
       accountsEl.innerHTML = accounts.map(a => {
-        if (!manager) {
-          return '<div style="padding:8px 0; border-bottom:1px solid var(--border);"><strong>' + escapeHtml(a.email) + '</strong> &mdash; ' + escapeHtml(a.role_name) + '</div>';
-        }
-        return '<div style="padding:8px 0; border-bottom:1px solid var(--border); display:flex; align-items:center; justify-content:space-between; gap:10px;">' +
-          '<strong>' + escapeHtml(a.email) + '</strong>' +
-          '<select data-email="' + escapeHtml(a.email) + '" onchange="changeAccountRole(this)" style="width:auto;">' +
-          roleDefs.map(r => '<option value="' + escapeHtml(r.name) + '"' + (r.name === a.role_name ? ' selected' : '') + '>' + escapeHtml(r.name) + '</option>').join('') +
-          '</select></div>';
+        const roleLabel = a.role_name ? ' <span style="color:var(--text-dim); font-weight:normal; font-size:12px;">(started from ' + escapeHtml(a.role_name) + ')</span>' : '';
+        const checkboxesHtml = PERMISSIONS.map(p => {
+          const checked = a[p.field] ? ' checked' : '';
+          const disabled = manager ? '' : ' disabled';
+          return '<label style="display:flex; align-items:center; gap:6px; font-size:13px; font-weight:normal;">' +
+            '<input type="checkbox" data-email="' + escapeHtml(a.email) + '" data-field="' + p.field + '"' + checked + disabled +
+            ' onchange="toggleAccountPermission(this)"> ' + p.label + '</label>';
+        }).join('');
+        return '<div style="padding:10px 0; border-bottom:1px solid var(--border);">' +
+          '<div style="margin-bottom:8px;"><strong>' + escapeHtml(a.email) + '</strong>' + roleLabel + '</div>' +
+          '<div style="display:flex; flex-wrap:wrap; gap:14px;">' + checkboxesHtml + '</div>' +
+          '</div>';
       }).join('');
 
       if (!manager) {
-        accountsEl.insertAdjacentHTML('beforeend', '<p class="tool-sub" style="margin-top:8px;">Only a Developer can change roles here.</p>');
+        accountsEl.insertAdjacentHTML('beforeend', '<p class="tool-sub" style="margin-top:8px;">Only an account with \'Manage permissions\' can change this.</p>');
       }
     } catch (e) {
       accountsEl.innerHTML = '<p class="tool-sub">Could not reach Supabase: ' + escapeHtml(e.message || String(e)) + '</p>';
     }
   }
 
-  async function changeAccountRole(selectEl) {
+  let _cachedRoleDefsForPresets = [];
+
+  // Live, per-checkbox (2026-09-02) -- replaces the old single role
+  // dropdown. Each checkbox is its own PATCH, takes effect immediately
+  // (the affected account picks it up on their NEXT page load or
+  // refresh -- loadCurrentUserRole() always fetches fresh, there's no
+  // separate cache to invalidate or deploy to wait on).
+  async function toggleAccountPermission(checkboxEl) {
     if (_rolePreview) {
       showToast('Currently previewing as a non-manager role -- exit preview to make a real change.', { type: 'error' });
-      await renderAccountRoles();
+      checkboxEl.checked = !checkboxEl.checked;
       return;
     }
-    if (!(await confirmDevPassword())) { await renderAccountRoles(); return; } // revert the dropdown to the real saved value
-    const email = selectEl.getAttribute('data-email');
-    const newRole = selectEl.value;
-    selectEl.disabled = true;
+    const email = checkboxEl.getAttribute('data-email');
+    const field = checkboxEl.getAttribute('data-field');
+    const newValue = checkboxEl.checked;
+    if (!(await confirmDevPassword())) { checkboxEl.checked = !newValue; return; }
+    checkboxEl.disabled = true;
+    try {
+      if (typeof ensureFreshToken === 'function') await ensureFreshToken();
+      const res = await fetchWithTimeout(SUPABASE_URL + '/rest/v1/account_roles?email=eq.' + encodeURIComponent(email), 8000, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          'apikey': SUPABASE_ANON_KEY,
+          'Authorization': 'Bearer ' + getAuthToken(),
+        },
+        body: JSON.stringify({ [field]: newValue }),
+      });
+      if (!res.ok) {
+        const body = await res.text();
+        throw new Error('HTTP ' + res.status + ': ' + body.slice(0, 200));
+      }
+      showToast(email + (newValue ? ' can now ' : ' can no longer ') + field.replace(/^can_/, '').replace(/_/g, ' ') + '.');
+    } catch (e) {
+      showToast(e.message || String(e), { type: 'error' });
+      checkboxEl.checked = !newValue; // revert to the real saved value
+    } finally {
+      checkboxEl.disabled = false;
+    }
+  }
+
+  // Adds a brand-new account. Starts from a preset's booleans if one
+  // was picked (a convenience only -- the resulting row is a normal,
+  // independently-editable account_roles row from that point on, not
+  // tied to the preset afterward), or all-false if "None" was picked.
+  async function addAccount() {
+    if (_rolePreview) {
+      showToast('Currently previewing as a non-manager role -- exit preview to make a real change.', { type: 'error' });
+      return;
+    }
+    const emailEl = document.getElementById('newAccountEmail');
+    const email = emailEl.value.trim().toLowerCase();
+    if (!email || !email.includes('@')) { showToast('Enter a real email address.', { type: 'error' }); return; }
+    if (!(await confirmDevPassword())) return;
+
+    const presetName = document.getElementById('newAccountPreset').value;
+    const preset = _cachedRoleDefsForPresets.find(r => r.name === presetName);
+    const body = {
+      email,
+      role_name: presetName || null,
+      can_manage_roles: preset ? !!preset.can_manage_roles : false,
+      can_access_dev_tools: preset ? !!preset.can_access_dev_tools : false,
+      can_manage_site_content: preset ? !!preset.can_manage_site_content : false,
+      can_manage_business_finances: preset ? !!preset.can_manage_business_finances : false,
+      assigned_by: (typeof getCurrentUserEmail === 'function' && getCurrentUserEmail()) || null,
+    };
+
     try {
       if (typeof ensureFreshToken === 'function') await ensureFreshToken();
       const res = await fetchWithTimeout(SUPABASE_URL + '/rest/v1/account_roles?on_conflict=email', 8000, {
@@ -1832,22 +1924,17 @@
           'Authorization': 'Bearer ' + getAuthToken(),
           'Prefer': 'resolution=merge-duplicates',
         },
-        body: JSON.stringify([{
-          email: email,
-          role_name: newRole,
-          assigned_by: (typeof getCurrentUserEmail === 'function' && getCurrentUserEmail()) || null,
-        }]),
+        body: JSON.stringify([body]),
       });
       if (!res.ok) {
-        const body = await res.text();
-        throw new Error('HTTP ' + res.status + ': ' + body.slice(0, 200));
+        const respBody = await res.text();
+        throw new Error('HTTP ' + res.status + ': ' + respBody.slice(0, 200));
       }
-      showToast(email + ' is now ' + newRole + '.');
+      emailEl.value = '';
+      showToast(email + ' added.');
+      await renderAccountRoles();
     } catch (e) {
       showToast(e.message || String(e), { type: 'error' });
-      await renderAccountRoles(); // revert the dropdown to the real saved value
-    } finally {
-      selectEl.disabled = false;
     }
   }
 
@@ -3174,7 +3261,7 @@
     <div class="help-modal-body">
       <p>Site diagnostics and maintenance utilities, visible only on the account actively developing this site -- grouped into 6 tabs.</p>
       <p><strong>Health</strong> -- automated checks: Live consistency check, Data quality check, Appliance Wiki health, Client errors, Portal bug reports, Uptime monitoring, Advisor health, and Data integrity check. An Owner account sees only Portal bug reports here, everything else on this tab is Developer-only.</p>
-      <p><strong>Access</strong> -- Client registry and Account roles. Fully visible to an Owner account, same as everyone else with dev tools access.</p>
+      <p><strong>Access</strong> -- Client registry and Account permissions. Fully visible to an Owner account, same as everyone else with dev tools access.</p>
       <p><strong>Session</strong> -- Session &amp; sync, Local data snapshot, Device info, and Service worker &amp; cache -- all about this specific device/browser, not the business data itself.</p>
       <p><strong>Notifications</strong> -- Push notification test and history, Known issues, and Flagged pages.</p>
       <p><strong>Deploy</strong> -- Deploy history, Regression checker, What's new, Quick links, Trigger workflows, and Storage browser.</p>

@@ -43,16 +43,19 @@ function decodeJwtPayload(token: string): { email?: string; role?: string } {
   }
 }
 
+// Permission model redesign (2026-09-02): reads can_manage_business_finances
+// directly off account_roles now -- no join to role_definitions. Each
+// account's permissions are its own, individually toggleable in Dev
+// Tools -> Access, not inherited from a shared role tier.
 async function callerCanManageInvoices(email: string): Promise<boolean> {
   const res = await fetch(
-    `${SUPABASE_URL}/rest/v1/account_roles?email=eq.${encodeURIComponent(email.toLowerCase())}&select=role_definitions(can_manage_business_finances)`,
+    `${SUPABASE_URL}/rest/v1/account_roles?email=eq.${encodeURIComponent(email.toLowerCase())}&select=can_manage_business_finances`,
     { headers: { apikey: SERVICE_ROLE_KEY, Authorization: `Bearer ${SERVICE_ROLE_KEY}` } },
   );
   if (!res.ok) return false;
   const rows = await res.json();
   if (!rows.length) return false;
-  const def = rows[0].role_definitions;
-  return !!(def && def.can_manage_business_finances !== false);
+  return rows[0].can_manage_business_finances === true;
 }
 
 Deno.serve(async (req: Request) => {
