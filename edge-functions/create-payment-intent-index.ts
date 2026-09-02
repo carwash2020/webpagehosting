@@ -7,13 +7,15 @@
 // frontend needs to actually collect and confirm the card payment.
 //
 // Required secret (Supabase dashboard -> Edge Functions -> Secrets):
-//   STRIPE_SECRET_KEY -- currently the TEST MODE secret key
-//   (starts with sk_test_...), specifically because the real Stripe
-//   account is still pending tax ID verification. Test mode works
-//   completely independently of that -- swapping this one secret to
-//   the live sk_live_... key, once the account is unblocked, is the
-//   entire cutover; nothing else in this function or the frontend
-//   needs to change.
+//   STRIPE_SECRET_KEY -- the TEST MODE secret key (sk_test_...) while
+//   the payment flow is being proven end to end. The Stripe account
+//   itself is fully verified and live-capable as of 2026-09-02;
+//   test mode is a deliberate choice for the build, not a
+//   restriction. Swapping this one secret to the live sk_live_... key
+//   (together with STRIPE_WEBHOOK_SIGNING_SECRET, which is per-mode)
+//   is the entire cutover -- nothing in this function needs to change.
+//   The frontend's publishable key in portal/dashboard.html swaps at
+//   the same time.
 // (SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY are auto-provided by Supabase.)
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
