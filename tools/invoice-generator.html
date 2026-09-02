@@ -39,7 +39,7 @@
 <link rel="stylesheet" href="/tools/styles-tools.css?v=a2e87effb3">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.112.3/dist/umd/supabase.js" integrity="sha384-qafw21c/iciq0VXsi9FzkfoQv5I/V0iqE4lSNcKXPnW9/UTJLnv5CcN4FHxVLnKg" crossorigin="anonymous" defer></script>
 <script src="/tools/sync.js?v=73576c99e1" defer></script>
-<script src="/tools/data-layer.js?v=44a1c3df77" defer></script>
+<script src="/tools/data-layer.js?v=1133747765" defer></script>
 <script src="/tools/tools-effects.js?v=9a2a59040e" defer></script>
 <script src="/tools/tools-dialogs.js?v=e1dfaa11a1" defer></script>
 <script src="/tools/tools-media-sharing.js?v=4e2769b10d" defer></script>
@@ -256,7 +256,7 @@
   <div class="tool-form-row">
     <div class="form-field">
       <label>Client / Company Name</label>
-      <input type="text" id="quoteClientName" list="knownContactsList" placeholder="Sarah Miller">
+      <input type="text" id="quoteClientName" list="knownContactsList" placeholder="Sarah Miller" onchange="autofillQuoteClient()">
     </div>
   </div>
   <div class="tool-form-row">
@@ -392,42 +392,16 @@
         </div>
         <div style="display:flex; gap:6px; flex-shrink:0;">
           <button class="small-btn" onclick="toggleInvoicePaid(${inv.id})">${inv.paid ? 'Mark Unpaid' : 'Mark Paid'}</button>
-          ${inv.clientEmail ? `<button class="small-btn" onclick="resendInvite('${escapeHtml(inv.clientEmail)}', '${escapeHtml(inv.clientName || '')}', this)">Resend Invite</button>` : ''}
           <button class="small-btn" style="color:#e05252; border-color:#e05252;" onclick="deleteInvoiceLogEntry(${inv.id})" aria-label="Delete this invoice">Delete</button>
         </div>
       </div>`;
     }).join('');
   }
 
-  // Added 2026-08-31, alongside the client portal's move from
-  // magic-link to email+password: an account only ever gets created
-  // via send-invite, so "the client says they never got the email" is
-  // a real, expected support need -- this lets Connor/Steve trigger
-  // exactly the same invite email again for a client who already has
-  // an invoice on file, without needing to re-save or duplicate it.
-  async function resendInvite(clientEmail, clientName, btnEl) {
-    if (typeof getAuthToken !== 'function') return;
-    btnEl.disabled = true;
-    const originalText = btnEl.textContent;
-    btnEl.textContent = 'Sending...';
-    try {
-      const res = await fetch(`${SUPABASE_URL}/functions/v1/send-invite`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'apikey': SUPABASE_ANON_KEY,
-          'Authorization': `Bearer ${getAuthToken()}`,
-        },
-        body: JSON.stringify({ client_email: clientEmail, client_name: clientName }),
-      });
-      const result = await res.json();
-      btnEl.textContent = result.ok ? 'Sent!' : 'Failed';
-    } catch (e) {
-      btnEl.textContent = 'Failed';
-      console.warn('Resend invite failed:', e);
-    }
-    setTimeout(() => { btnEl.disabled = false; btnEl.textContent = originalText; }, 2500);
-  }
+  // resendInvite() lived here until 2026-09-02 -- superseded by the
+  // Portal accounts panel in Dev Tools -> Health, which can resend to
+  // ANY client with portal presence rather than only one whose invoice
+  // you can find in this log.
 
   function toggleInvoicePaid(id) {
     const log = loadInvoiceLog();
@@ -437,6 +411,26 @@
     saveInvoiceLog(log);
     renderInvoiceLog();
     showToast(entry.paid ? 'Marked paid.' : 'Marked unpaid.');
+
+    // Portal sync (2026-09-02) -- real bug this closes: most payments
+    // here are cash, check, or Venmo, marked paid by hand right here.
+    // Without this, the portal kept showing that invoice as UNPAID
+    // afterwards, so a client could log in and pay it a second time
+    // through Stripe. Only fires for an invoice that was actually
+    // synced to the portal in the first place (client email on file).
+    // Fire-and-forget, same as every other portal sync -- the local
+    // log above is the real record.
+    if (entry.clientEmail && typeof getAuthToken === 'function') {
+      fetch(`${SUPABASE_URL}/functions/v1/set-invoice-paid`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'apikey': SUPABASE_ANON_KEY,
+          'Authorization': `Bearer ${getAuthToken()}`,
+        },
+        body: JSON.stringify({ source_invoice_id: id, paid: entry.paid }),
+      }).catch(e => console.warn('Portal paid-status sync failed (invoice still updated locally):', e));
+    }
   }
 </script>
 
@@ -1146,7 +1140,10 @@
     const jobRefTitle = jobRefId ? (loadJobs().find(j => String(j.id) === jobRefId) || {}).title || '' : '';
     const clientNameVal = document.getElementById('clientName').value;
     const clientId = (clientNameVal && typeof thEnsureClient === 'function')
-      ? (thEnsureClient(clientNameVal, { address: document.getElementById('clientAddress').value }) || {}).id
+      ? (thEnsureClient(clientNameVal, {
+          address: document.getElementById('clientAddress').value,
+          email: document.getElementById('clientEmail').value.trim(),
+        }) || {}).id
       : undefined;
     const newEntry = {
       id: Date.now(),
@@ -1255,7 +1252,10 @@
     const jobRefTitle = jobRefId ? (loadJobs().find(j => String(j.id) === jobRefId) || {}).title || '' : '';
     const quoteClientNameVal = document.getElementById('quoteClientName').value;
     const quoteClientId = (quoteClientNameVal && typeof thEnsureClient === 'function')
-      ? (thEnsureClient(quoteClientNameVal) || {}).id
+      ? (thEnsureClient(quoteClientNameVal, {
+          address: document.getElementById('quoteClientAddress').value.trim(),
+          email: document.getElementById('quoteClientEmail').value.trim(),
+        }) || {}).id
       : undefined;
     list.push({
       id: Date.now(),
@@ -1676,6 +1676,13 @@
   function autofillFromContact(nameFieldId, firstContactRowId) {
     const typedName = document.getElementById(nameFieldId).value.trim();
     if (!typedName) return;
+    // Shared client registry first (2026-09-02) -- fills the client's
+    // own email/address if we already know them from ANY other form,
+    // so the same details never need re-typing per form. Fill-only,
+    // never overwrites something already typed.
+    if (typeof thAutofillClientFields === 'function') {
+      thAutofillClientFields(typedName, { email: 'clientEmail', address: 'clientAddress' });
+    }
     const match = loadContactsForAutofill().find(c => (c.name || '').toLowerCase() === typedName.toLowerCase());
     if (!match) return;
     const row = document.getElementById(firstContactRowId);
@@ -1690,6 +1697,18 @@
     if (titleEl && !titleEl.value.trim()) titleEl.value = match.role || '';
     if (emailEl && !emailEl.value.trim()) emailEl.value = match.email || '';
     if (phoneEl && !phoneEl.value.trim()) phoneEl.value = match.phone || '';
+  }
+
+  // Quote tab's counterpart to autofillFromContact() above -- simpler,
+  // since the Quote tab has no per-contact rows, just the client's own
+  // email/address. Added 2026-09-02 alongside the registry unification;
+  // this field previously had no autofill at all.
+  function autofillQuoteClient() {
+    const typedName = document.getElementById('quoteClientName').value.trim();
+    if (!typedName) return;
+    if (typeof thAutofillClientFields === 'function') {
+      thAutofillClientFields(typedName, { email: 'quoteClientEmail', address: 'quoteClientAddress' });
+    }
   }
 
   function updateRealtimeBadge(status) {

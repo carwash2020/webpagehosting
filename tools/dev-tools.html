@@ -37,8 +37,8 @@
 </script>
 <link rel="stylesheet" href="/styles.css?v=202608202000">
 <link rel="stylesheet" href="/tools/styles-tools.css?v=a2e87effb3">
-<script src="/tools/data-layer.js?v=44a1c3df77" defer></script>
-<script src="/tools/dev-tools-shared.js?v=5af39d7da8" defer></script>
+<script src="/tools/data-layer.js?v=1133747765" defer></script>
+<script src="/tools/dev-tools-shared.js?v=948e19d395" defer></script>
 <script src="/tools/tools-effects.js?v=9a2a59040e" defer></script>
 <script src="/tools/tools-dialogs.js?v=e1dfaa11a1" defer></script>
 <script src="/tools/tools-media-sharing.js?v=4e2769b10d" defer></script>
@@ -372,6 +372,15 @@
       <button class="dev-info-bubble" onclick="openDevInfo('portalbugreports')" aria-label="What does this do?" title="What does this do?">?</button>
     </div>
     <div id="portalBugReports"></div>
+  </div>
+
+  <div class="dev-panel dev-panel-wide">
+    <div class="dev-panel-heading">
+      <h2>Portal accounts</h2>
+      <button class="dev-info-bubble" onclick="openDevInfo('portalaccounts')" aria-label="What does this do?" title="What does this do?">?</button>
+    </div>
+    <input type="text" id="portalAccountSearch" placeholder="Search by name or email..." style="width:100%; box-sizing:border-box; margin-bottom:12px;" oninput="renderPortalAccounts()">
+    <div id="portalAccounts"></div>
   </div>
 
   <div class="dev-panel dev-owner-hidden dev-panel-wide">
@@ -1289,6 +1298,107 @@
     } catch (e) {
       showToast('Could not mark resolved: ' + (e.message || String(e)), { type: 'error' });
     }
+  }
+
+  // Portal accounts (2026-09-02) -- one place to see every client who
+  // has portal presence and what they actually have there, replacing
+  // the old per-invoice "Resend Invite" button in the Invoice Log
+  // (which could only ever act on one invoice's email, and only if you
+  // could find that invoice). Deliberately in Dev Tools' Health tab,
+  // which is one of the only two areas an Owner account can see -- so
+  // this is usable by Steve, not Developer-only.
+  //
+  // Built from the three portal tables directly rather than from
+  // Supabase Auth's user list: an auth user list would need the
+  // service_role key (which must never be in this page's JS), and what
+  // actually matters operationally is "what does this client have in
+  // the portal," not "does an auth row exist."
+  let _portalAccountsCache = null;
+
+  async function loadPortalAccounts() {
+    const tables = [
+      { name: 'client_portal_invoices', label: 'invoices' },
+      { name: 'client_portal_quotes', label: 'quotes' },
+      { name: 'client_portal_jobs', label: 'jobs' },
+    ];
+    const byEmail = {};
+    for (const t of tables) {
+      const res = await fetchWithTimeout(
+        SUPABASE_URL + '/rest/v1/' + t.name + '?select=client_email,client_name',
+        8000,
+        { headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': 'Bearer ' + getAuthToken() } }
+      );
+      if (!res.ok) throw new Error(t.name + ' HTTP ' + res.status);
+      (await res.json()).forEach(row => {
+        const email = (row.client_email || '').toLowerCase();
+        if (!email) return;
+        if (!byEmail[email]) byEmail[email] = { email, name: row.client_name || '', counts: {} };
+        byEmail[email].counts[t.label] = (byEmail[email].counts[t.label] || 0) + 1;
+        if (!byEmail[email].name && row.client_name) byEmail[email].name = row.client_name;
+      });
+    }
+    return Object.values(byEmail).sort((a, b) => (a.name || a.email).localeCompare(b.name || b.email));
+  }
+
+  async function renderPortalAccounts() {
+    const el = document.getElementById('portalAccounts');
+    const term = (document.getElementById('portalAccountSearch')?.value || '').trim().toLowerCase();
+
+    if (!_portalAccountsCache) {
+      el.innerHTML = '<p class="tool-sub">Loading...</p>';
+      try {
+        _portalAccountsCache = await loadPortalAccounts();
+      } catch (e) {
+        el.innerHTML = '<p class="tool-sub">Could not load portal accounts: ' + escapeHtml(e.message || String(e)) + '</p>';
+        return;
+      }
+    }
+
+    const accounts = term
+      ? _portalAccountsCache.filter(a => a.email.includes(term) || (a.name || '').toLowerCase().includes(term))
+      : _portalAccountsCache;
+
+    if (!accounts.length) {
+      el.innerHTML = '<p class="tool-sub">' + (term ? 'No portal accounts match "' + escapeHtml(term) + '".' : 'No clients have portal access yet.') + '</p>';
+      return;
+    }
+
+    el.innerHTML = accounts.map(a => {
+      const parts = ['invoices', 'quotes', 'jobs']
+        .filter(k => a.counts[k])
+        .map(k => a.counts[k] + ' ' + (a.counts[k] === 1 ? k.replace(/s$/, '') : k));
+      return '<div class="dev-check-row" style="align-items:flex-start;"><div>' +
+        '<div><strong>' + escapeHtml(a.name || '(no name)') + '</strong></div>' +
+        '<div class="dev-check-detail">' + escapeHtml(a.email) + ' &middot; ' + (parts.join(', ') || 'nothing yet') + '</div>' +
+        '<button class="secondary-btn" style="margin-top:8px;" onclick="resendPortalInvite(\'' + escapeHtml(a.email) + '\', \'' + escapeHtml(a.name || '') + '\', this)">Resend invite</button>' +
+        '</div></div>';
+    }).join('');
+  }
+
+  // Same send-invite edge function the Invoice Log's old button used --
+  // that function already treats "this email already has an account"
+  // as a success case, so this is safe to press for any client,
+  // whether they never got the original invite or just lost it.
+  async function resendPortalInvite(email, name, btnEl) {
+    btnEl.disabled = true;
+    const original = btnEl.textContent;
+    btnEl.textContent = 'Sending...';
+    try {
+      const res = await fetchWithTimeout(SUPABASE_URL + '/functions/v1/send-invite', 8000, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'apikey': SUPABASE_ANON_KEY,
+          'Authorization': 'Bearer ' + getAuthToken(),
+        },
+        body: JSON.stringify({ client_email: email, client_name: name }),
+      });
+      const result = await res.json();
+      btnEl.textContent = result.ok ? 'Sent!' : 'Failed';
+    } catch (e) {
+      btnEl.textContent = 'Failed';
+    }
+    setTimeout(() => { btnEl.disabled = false; btnEl.textContent = original; }, 2500);
   }
 
   // Tests the REAL end-to-end push pipeline (a lead insert triggering
@@ -3013,6 +3123,7 @@
       renderServiceWorkerInfo();
       renderClientErrorLog();
       renderPortalBugReports();
+      renderPortalAccounts();
       renderKnownIssues();
       renderFlaggedItems();
       renderUptimeStatus();

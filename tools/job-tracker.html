@@ -39,7 +39,7 @@
 <link rel="stylesheet" href="/tools/styles-tools.css?v=a2e87effb3">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.112.3/dist/umd/supabase.js" integrity="sha384-qafw21c/iciq0VXsi9FzkfoQv5I/V0iqE4lSNcKXPnW9/UTJLnv5CcN4FHxVLnKg" crossorigin="anonymous" defer></script>
 <script src="/tools/sync.js?v=73576c99e1" defer></script>
-<script src="/tools/data-layer.js?v=44a1c3df77" defer></script>
+<script src="/tools/data-layer.js?v=1133747765" defer></script>
 <script src="/tools/tools-effects.js?v=9a2a59040e" defer></script>
 <script src="/tools/tools-dialogs.js?v=e1dfaa11a1" defer></script>
 <script src="/tools/tools-media-sharing.js?v=4e2769b10d" defer></script>
@@ -291,7 +291,7 @@
     <div class="form-section-body">
     <div class="tool-form-row">
       <div class="form-field"><label>Job Title / Description</label><input type="text" id="jobTitle" placeholder="Fix leaking kitchen faucet"></div>
-      <div class="form-field"><label>Client Name</label><input type="text" id="jobClient" placeholder="Sarah Miller"></div>
+      <div class="form-field"><label>Client Name</label><input type="text" id="jobClient" placeholder="Sarah Miller" onchange="autofillJobClient()"></div>
     </div>
     <div class="tool-form-row">
       <div class="form-field"><label>Client Phone</label><input type="tel" id="jobPhone" placeholder="(435) 555-0123"></div>
@@ -665,6 +665,18 @@
   function saveJobs(jobs) { localStorage.setItem(STORAGE_KEYS.jobs, JSON.stringify(jobs)); scheduleSync(); }
   let currentSort = 'date';
 
+  // Fills phone/address/email from the shared client registry when a
+  // known client name is entered (2026-09-02) -- the read side of the
+  // same unification thEnsureClient()'s enrichment provides on save.
+  // Fill-only, never overwrites something already typed.
+  function autofillJobClient() {
+    const typedName = document.getElementById('jobClient').value.trim();
+    if (!typedName) return;
+    if (typeof thAutofillClientFields === 'function') {
+      thAutofillClientFields(typedName, { phone: 'jobPhone', address: 'jobAddress', email: 'jobClientEmail' });
+    }
+  }
+
   async function addJob() {
     const title = document.getElementById('jobTitle').value.trim();
     if (!title) { await showAlert('Give the job a title first.'); return; }
@@ -680,7 +692,7 @@
     // match over name-matching for every job created from here on,
     // rather than needing a single risky flag-day cutover.
     const clientId = (clientName && typeof thEnsureClient === 'function')
-      ? (thEnsureClient(clientName, { phone, address }) || {}).id
+      ? (thEnsureClient(clientName, { phone, address, email: clientEmailVal }) || {}).id
       : undefined;
     const fields = {
       title,

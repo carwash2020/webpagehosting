@@ -60,6 +60,10 @@
       title: 'Portal bug reports',
       body: `<p>Problems submitted by clients through the "Report a problem" link on the client portal (login, dashboard, and set-password pages). Works whether or not the client is signed in, since a login problem can't require a session to report.</p><p>Only visible here, to accounts with an internal role. A client can submit a report but can never read their own or anyone else's back, including through this same page's own login.</p>`,
     },
+    portalaccounts: {
+      title: 'Portal accounts',
+      body: `<p>Every client who has anything in the client portal, built from their real invoices, quotes, and completed jobs -- with a count of each, so you can see at a glance what a given client can actually log in and see.</p><p><strong>Resend invite</strong> sends that client the same account-setup email they got originally. Safe to press any time: if they already have an account, the underlying function treats that as success rather than an error, so this works both for "never got the email" and "lost the email."</p><p>This replaced a per-invoice Resend Invite button that used to live in the Invoice Log -- that one could only act on one invoice's email at a time, and only if you could find that invoice first.</p><p>Built from the portal tables rather than Supabase's own auth user list, since reading that would need the service_role key (which must never sit in this page's JavaScript) and what actually matters day to day is what a client HAS in the portal, not whether an auth row exists.</p>`,
+    },
     pushtest: {
       title: 'Push notification test',
       body: `<p>Inserts a test lead using the exact same path the real contact form uses (not a direct call to the Send-Push function itself, which needs a service_role key that must never sit in this page's JavaScript). That insert should trigger the same server-side notification pipeline a real lead does.</p><p>This can't directly confirm a push was actually received on any device -- only that the insert (and whatever fires from it server-side) ran without an error. The test lead gets deleted automatically a few seconds later either way.</p>`,
