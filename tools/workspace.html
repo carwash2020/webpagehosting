@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="en" style="background:#0a0a0a;">
 <head>
-<script src="/tools/auth.js?v=f368e051a4"></script>
+<script src="/tools/auth.js?v=925ec71572"></script>
 <script>
   // Security gate -- redirect to login before this page's own content
   // is meaningfully usable. See auth.js for why this exists (a single
@@ -665,7 +665,7 @@
     <button class="tool-tile-info" onclick="event.stopPropagation(); openCardInfo('tool-routes')" aria-label="What is Route Planner?" title="What is this?">?</button>
   </div>
 
-  <div class="tool-tile business-finance-tile">
+  <div class="tool-tile" data-tile-perm="can_manage_contracts">
     <a href="/tools/contract-generator.html" class="tool-tile-link">
       <span class="tool-tile-icon"><svg class="th-icon" aria-hidden="true"><use href="#icon-scroll" xlink:href="#icon-scroll"></use></svg></span>
       <span class="tool-tile-label">Contracts</span>
@@ -674,7 +674,7 @@
   </div>
 
   <div class="tool-group-label">Money</div>
-  <div class="tool-tile business-finance-tile">
+  <div class="tool-tile" data-tile-perm="can_manage_invoices">
     <a href="/tools/invoice-generator.html" class="tool-tile-link">
       <span class="tool-tile-icon"><svg class="th-icon" aria-hidden="true"><use href="#icon-receipt" xlink:href="#icon-receipt"></use></svg></span>
       <span class="tool-tile-label">Invoices</span>
@@ -682,14 +682,14 @@
     <button class="tool-tile-info" onclick="event.stopPropagation(); openCardInfo('tool-invoices')" aria-label="What is Invoice Generator?" title="What is this?">?</button>
   </div>
 
-  <div class="tool-tile business-finance-tile">
+  <div class="tool-tile" data-tile-perm="can_view_finance">
     <a href="/tools/finance.html" class="tool-tile-link">
       <span class="tool-tile-icon"><svg class="th-icon" aria-hidden="true"><use href="#icon-chart" xlink:href="#icon-chart"></use></svg></span>
       <span class="tool-tile-label">Finance</span>
     </a>
     <button class="tool-tile-info" onclick="event.stopPropagation(); openCardInfo('tool-finance')" aria-label="What is Finance?" title="What is this?">?</button>
   </div>
-  <div class="tool-tile business-finance-tile">
+  <div class="tool-tile" data-tile-perm="can_view_runway">
     <a href="/tools/runway-dashboard.html" class="tool-tile-link">
       <span class="tool-tile-icon"><svg class="th-icon" aria-hidden="true"><use href="#icon-dollar" xlink:href="#icon-dollar"></use></svg></span>
       <span class="tool-tile-label">Runway</span>
@@ -698,7 +698,7 @@
   </div>
 
   <div class="tool-group-label">Grow</div>
-  <div class="tool-tile business-finance-tile">
+  <div class="tool-tile" data-tile-perm="can_manage_reviews">
     <a href="/tools/review-request.html" class="tool-tile-link">
       <span class="tool-tile-icon"><svg class="th-icon" aria-hidden="true"><use href="#icon-star" xlink:href="#icon-star"></use></svg></span>
       <span class="tool-tile-label">Reviews</span>
@@ -2246,13 +2246,37 @@
   // are shown by default (opposite direction from devToolsTile above,
   // which is hidden by default), so a restricted role doesn't see
   // dead-end links to pages it can't actually open.
+  // Granular permission expansion (2026-09-02) -- replaces the old
+  // single canManageBusinessFinances() check, which hid or showed all
+  // 5 tiles as one block. Each tile now carries its own
+  // data-tile-perm attribute and is checked against its OWN specific
+  // permission, so an account with e.g. only Reviews checked sees
+  // just that one tile, not all 5 or none. The snapshot section still
+  // needs SOME finance visibility to make sense of showing at all --
+  // hidden only if none of the 5 finance-domain permissions are set,
+  // rather than tied to one specific one of them.
+  const TILE_PERMISSION_CHECKS = {
+    can_manage_contracts: () => (typeof canManageContracts === 'function' && canManageContracts()),
+    can_manage_invoices: () => (typeof canManageInvoices === 'function' && canManageInvoices()),
+    can_view_finance: () => (typeof canViewFinance === 'function' && canViewFinance()),
+    can_view_runway: () => (typeof canViewRunway === 'function' && canViewRunway()),
+    can_manage_reviews: () => (typeof canManageReviews === 'function' && canManageReviews()),
+  };
+
   function renderBusinessFinanceTileVisibility() {
-    if (typeof canManageBusinessFinances === 'function' && !canManageBusinessFinances()) {
-      document.querySelectorAll('.business-finance-tile').forEach(el => { el.style.display = 'none'; });
-      // Same reasoning, extended to the dashboard's own financial
-      // summary -- restricting the dedicated Finance/Runway pages
-      // while leaving Net Profit/Revenue/Expenses freely visible right
-      // here would be a real, direct inconsistency.
+    document.querySelectorAll('[data-tile-perm]').forEach(el => {
+      const perm = el.getAttribute('data-tile-perm');
+      const check = TILE_PERMISSION_CHECKS[perm];
+      if (check && !check()) el.style.display = 'none';
+    });
+    // Same reasoning as before, extended to the dashboard's own
+    // financial summary -- hidden only if an account has NONE of the
+    // 5 finance-domain permissions, so someone with just e.g. Reviews
+    // still doesn't see raw profit/revenue numbers they have no other
+    // access to, but someone with any real finance-domain access
+    // keeps seeing it.
+    const anyFinanceAccess = Object.values(TILE_PERMISSION_CHECKS).some(check => check());
+    if (!anyFinanceAccess) {
       const snapshot = document.getElementById('section-snapshot');
       if (snapshot) snapshot.style.display = 'none';
     }

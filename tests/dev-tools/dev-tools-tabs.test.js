@@ -14,13 +14,13 @@ const { JSDOM } = require('jsdom');
 
 const DEV_TOOLS_PATH = path.join(__dirname, '..', '..', 'tools', 'dev-tools.html');
 
-function loadAs(canManage) {
+function loadAs(canAccessFull) {
   const html = fs.readFileSync(DEV_TOOLS_PATH, 'utf8');
   const dom = new JSDOM(html, {
     runScripts: 'dangerously', url: 'https://example.com/tools/dev-tools.html',
     beforeParse(w) {
       w.requireAuth = () => {};
-      w.canManageRoles = () => canManage;
+      w.canAccessDevToolsFull = () => canAccessFull;
     },
   });
   const { window } = dom;
@@ -89,7 +89,7 @@ test('switching tabs actually shows the target panel group and hides the rest, f
   assert.ok(!healthBtn.classList.contains('is-active'), 'health tab button should no longer be marked active after switching away from it');
 });
 
-test('an Owner account (canManageRoles false) sees only the Access and Health tab buttons, with Health selected automatically since it comes first and now has a visible panel', () => {
+test('an account without the full-technical permission sees only the Access and Health tab buttons, with Health selected automatically since it comes first and now has a visible panel', () => {
   const window = loadAs(false);
   const tabBtns = Array.from(window.document.querySelectorAll('.dev-tab-btn'));
 

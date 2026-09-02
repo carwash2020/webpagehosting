@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="en" style="background:#0a0a0a;">
 <head>
-<script src="/tools/auth.js?v=f368e051a4"></script>
+<script src="/tools/auth.js?v=925ec71572"></script>
 <script>
   // Security gate -- same pattern as every other internal tool page.
   // This one matters more than most: it holds real mortgage, debt, and
@@ -2701,7 +2701,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   // specifically, since the gate below would otherwise always block
   // everyone, including Owner and Developer.
   if (typeof loadCurrentUserRole === 'function') { await loadCurrentUserRole(); }
-  if (typeof canManageBusinessFinances === 'function' && !canManageBusinessFinances()) {
+  if (typeof canViewRunway === 'function' && !canViewRunway()) {
     document.getElementById('roleBlockedOverlay').classList.add('is-shown');
     return;
   }

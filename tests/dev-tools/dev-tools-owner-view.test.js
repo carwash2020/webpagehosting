@@ -3,7 +3,12 @@
 // Account permissions -- code diagnostics and error logs don't matter
 // to him -- while Connor (Developer) keeps full, unchanged access.
 // Panel renamed 'Account roles' -> 'Account permissions' 2026-09-02
-// alongside the permission model redesign.
+// alongside the permission model redesign, which ALSO decoupled this
+// restriction from canManageRoles() ("Manage permissions") onto its
+// own dedicated canAccessDevToolsFull() ("Dev Tools (full technical)")
+// -- seeing the 27 technical panels no longer requires also being
+// able to manage everyone's permissions, a conflation that was never
+// actually the intent.
 
 const { test } = require('node:test');
 const assert = require('node:assert/strict');
@@ -24,13 +29,13 @@ const DEV_ONLY_HEADINGS = [
 ];
 const OWNER_VISIBLE_HEADINGS = ['Client registry', 'Account permissions'];
 
-function loadAs(canManage) {
+function loadAs(canAccessFull) {
   const html = fs.readFileSync(DEV_TOOLS_PATH, 'utf8');
   const dom = new JSDOM(html, {
     runScripts: 'dangerously', url: 'https://example.com/tools/dev-tools.html',
     beforeParse(w) {
       w.requireAuth = () => {};
-      w.canManageRoles = () => canManage;
+      w.canAccessDevToolsFull = () => canAccessFull;
     },
   });
   const { window } = dom;
@@ -49,37 +54,38 @@ test('exactly 27 panels are marked dev-owner-hidden, matching the full, delibera
   assert.equal(count, 27);
 });
 
-test('an Owner account (canManageRoles false) has every one of the 23 developer-only panels hidden', () => {
+test('an account without the full-technical permission has every one of the 23 developer-only panels hidden', () => {
   const window = loadAs(false);
   for (const heading of DEV_ONLY_HEADINGS) {
     const panel = panelFor(window, heading);
     assert.ok(panel, `panel "${heading}" not found`);
-    assert.equal(panel.style.display, 'none', `"${heading}" should be hidden for an Owner`);
+    assert.equal(panel.style.display, 'none', `"${heading}" should be hidden without the full-technical permission`);
   }
 });
 
-test('an Owner account still sees Client Registry and Account permissions -- the two panels requested directly to stay visible', () => {
+test('an account still sees Client Registry and Account permissions without the full-technical permission -- the two panels requested directly to stay visible', () => {
   const window = loadAs(false);
   for (const heading of OWNER_VISIBLE_HEADINGS) {
     const panel = panelFor(window, heading);
     assert.ok(panel, `panel "${heading}" not found`);
-    assert.notEqual(panel.style.display, 'none', `"${heading}" should stay visible for an Owner`);
+    assert.notEqual(panel.style.display, 'none', `"${heading}" should stay visible`);
   }
 });
 
-test('a Developer account (canManageRoles true) keeps every panel visible -- full, completely unchanged access', () => {
+test('an account with the full-technical permission keeps every panel visible -- full, completely unchanged access', () => {
   const window = loadAs(true);
   for (const heading of [...DEV_ONLY_HEADINGS, ...OWNER_VISIBLE_HEADINGS]) {
     const panel = panelFor(window, heading);
     assert.ok(panel, `panel "${heading}" not found`);
-    assert.notEqual(panel.style.display, 'none', `"${heading}" should stay visible for a Developer`);
+    assert.notEqual(panel.style.display, 'none', `"${heading}" should stay visible with the full-technical permission`);
   }
 });
 
-test('applyOwnerRestrictedView uses the real canManageRoles(), not the existing role-preview toggle (effectiveCanManageRoles) -- that preview is deliberately scoped to just the Account permissions panel\'s own display, not a real, permanent restriction', () => {
+test('applyOwnerRestrictedView uses canAccessDevToolsFull(), not canManageRoles() or the existing role-preview toggle (effectiveCanManageRoles) -- decoupled 2026-09-02 so seeing the technical panels no longer requires also being able to manage everyone\'s permissions', () => {
   const src = fs.readFileSync(DEV_TOOLS_PATH, 'utf8');
   const fnMatch = src.match(/function applyOwnerRestrictedView\(\)[\s\S]*?\n  \}/);
   assert.ok(fnMatch, 'applyOwnerRestrictedView not found');
-  assert.match(fnMatch[0], /if \(canManageRoles\(\)\) return;/);
+  assert.match(fnMatch[0], /if \(canAccessDevToolsFull\(\)\) return;/);
+  assert.doesNotMatch(fnMatch[0], /canManageRoles\(\)/);
   assert.doesNotMatch(fnMatch[0], /effectiveCanManageRoles/);
 });

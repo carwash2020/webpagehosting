@@ -354,23 +354,50 @@ path described here** -- losing access to the Supabase organization/project
 itself is a genuinely different, harder problem than losing one of the
 two app-level accounts, and isn't something a code-level backup can fix.
 
-## Account permissions system (added 2026-08-15, redesigned 2026-09-02)
+## Account permissions system (added 2026-08-15, redesigned 2026-09-02, expanded 2026-09-02)
 
 Replaces what used to be a single hardcoded check
 (`getCurrentUserEmail() === 'connor@triplehenterprisesllc.biz'`) gating
 the entire Dev Tools page.
 
-**Redesigned 2026-09-02** from role-locked to per-account: the 4
-booleans (`can_manage_roles`, `can_access_dev_tools`,
-`can_manage_site_content`, `can_manage_business_finances`) now live
-directly on each account's own `account_roles` row, individually
-toggleable in Dev Tools -> Access -> Account permissions, live
-immediately (no deploy, no role reassignment). `role_definitions`
-still exists but is no longer read at authorization time anywhere --
-it's a PRESETS table only, for prefilling a brand-new account's
-checkboxes in the management UI. `role_name` on `account_roles` is
-now an optional display label ("started from the Owner preset"), not
-authoritative.
+**Redesigned 2026-09-02** from role-locked to per-account: booleans
+now live directly on each account's own `account_roles` row,
+individually toggleable in Dev Tools -> Access -> Account
+permissions, live immediately (no deploy, no role reassignment).
+`role_definitions` still exists but is no longer read at authorization
+time anywhere -- it's a PRESETS table only, for prefilling a
+brand-new account's checkboxes in the management UI. `role_name` on
+`account_roles` is now an optional display label ("started from the
+Owner preset"), not authoritative.
+
+**Expanded to 9 checkboxes the same day**, requested directly:
+"Review tool? Checkbox. Dev tool stats? On today, off tomorrow." The
+original redesign still had 2 real coarse spots: `can_manage_business_finances`
+bundled 5 genuinely distinct tools (Invoices, Contracts, Finance,
+Runway, Review Requests) under one checkbox, and the 27 technical Dev
+Tools panels were gated on `can_manage_roles` (an unrelated
+capability -- "can this account manage everyone's permissions" has
+nothing to do with "can this account see diagnostic panels"). Current
+9: `can_manage_roles`, `can_access_dev_tools`, `can_access_dev_tools_full`
+(the 27 technical panels, now its own checkbox), `can_manage_site_content`,
+`can_manage_invoices`, `can_manage_contracts`, `can_view_finance`,
+`can_view_runway`, `can_manage_reviews`. `can_manage_business_finances`
+was dropped as a column entirely -- every real reader (`auth.js`,
+`dev-tools.html`, and 8 edge functions) was updated in the same
+change; see `sql/security/granular_permissions_expansion.sql` for the
+full migration and `docs/CLIENT-PORTAL.md`'s "Permission model, in
+brief" for which specific check each edge function uses.
+
+**A real mistake happened during that expansion, worth recording
+here plainly:** the migration dropped `can_manage_business_finances`
+before all 8 dependent edge functions were redeployed with their
+corrected queries, which meant every one of them was briefly
+live-broken (querying a column that no longer existed, rejecting
+every legitimate caller with 403) until each was individually
+redeployed. The correct order for a change like this: deploy every
+dependent's new code first (harmless while the old column still
+exists alongside the new ones), THEN drop the old column in a
+separate, later step -- never drop first and fix callers after.
 
 A single `current_user_can_manage_roles()` SQL function is what RLS
 policies on `account_roles` call to decide who can change permissions
@@ -385,32 +412,57 @@ everyone out of ever granting anyone anything again. Tested directly
 against the live database before being trusted -- deliberately tried
 to remove the last manager's permission and confirmed it was rejected.
 
-**If Dev Tools access seems broken for an account:** check
-`select email, can_manage_roles, can_access_dev_tools, can_manage_site_content, can_manage_business_finances from account_roles;`
+**If Dev Tools access (or any specific tool) seems broken for an
+account:** check
+`select email, can_manage_roles, can_access_dev_tools, can_access_dev_tools_full, can_manage_site_content, can_manage_invoices, can_manage_contracts, can_view_finance, can_view_runway, can_manage_reviews from account_roles;`
 first. If the account's row is missing, or the relevant boolean is
 `false`, that's almost certainly the actual cause, rather than
-anything in the frontend code. **A real report of exactly this
-happened 2026-09-02** with a fully-permissioned account (see
-`tools/auth.js`'s `loadCurrentUserRole()` -- it makes a single network
-request to confirm the caller's permissions and fails CLOSED by
-design; a dropped connection on that one request alone was enough to
-show a false "not available here," even though the account's actual
-row was completely intact) -- a retry (up to 3 attempts with backoff)
-was added the same day. Worth checking the database directly before
+anything in the frontend code.
+
+**Two genuinely separate real bugs were found investigating one
+report, 2026-09-02** -- a fully-permissioned account got blocked from
+`review-request.html`, and BOTH turned out to matter, not just one:
+
+1. `loadCurrentUserRole()` (`tools/auth.js`) makes a single network
+   request to confirm the caller's permissions and fails CLOSED by
+   design; a dropped connection on that one request alone was enough
+   to show a false "not available here," even though the account's
+   actual row was completely intact. Fixed with a retry (up to 3
+   attempts with backoff), same day.
+2. **The more serious one, found while double-checking the first fix
+   actually explained everything:** `requireAuth()` fires
+   `refreshSession()` UN-awaited at the top of every protected page,
+   and `loadCurrentUserRole()`'s own `ensureFreshToken()` can trigger
+   a SECOND, independent `refreshSession()` call moments later on the
+   same page load. Supabase rotates refresh tokens on use, so two
+   concurrent calls sharing one stored `refresh_token` is a genuine
+   race -- whichever request loses gets rejected, and the old code
+   responded to that rejection by calling `clearStoredSession()`,
+   **wiping out a session the FIRST call had just successfully
+   refreshed a moment earlier.** This is a substantially better
+   explanation for an intermittent, unpredictable-looking lockout than
+   a permissions problem ever was. Fixed by de-duplicating concurrent
+   `refreshSession()` calls into one shared in-flight promise -- see
+   `tests/sync/role-check-retry.test.js` for a test that reproduces
+   the exact race directly (two overlapping calls, confirms only ONE
+   real network request ever fires) rather than just asserting the
+   fix exists.
+
+Worth checking the database and both of these directly before
 assuming a real permission change happened.
 
-**Owner-restricted view (added 2026-08-21):** `can_manage_roles`
-being true (Developer, historically) now also controls how much of
-Dev Tools that account actually *sees*, not just whether it can change
-permissions. An account with `can_manage_roles` false only sees
-Client Registry and Account permissions -- the other 23 panels
-(everything code/technical/error-diagnostic in nature, organized into
-5 tabs as of 2026-08-25's navigation redesign -- Health, Access,
-Session, Notifications, Deploy) are hidden via
-`applyOwnerRestrictedView()` in `dev-tools.html`, keyed off the real
-`canManageRoles()`. If an account reports "most of Dev Tools is
-missing," that's this feature working as intended, not a bug --
-confirm by checking their `account_roles` row's `can_manage_roles`
+**Owner-restricted view (added 2026-08-21, decoupled 2026-09-02):**
+`can_access_dev_tools_full` (not `can_manage_roles` anymore -- see the
+granular expansion above) controls how much of Dev Tools an account
+actually *sees*, not just whether it can change permissions. An
+account without that permission only sees Client Registry and Account
+permissions -- the other 23 panels (everything code/technical/error-diagnostic
+in nature, organized into 5 tabs as of 2026-08-25's navigation
+redesign -- Health, Access, Session, Notifications, Deploy) are
+hidden via `applyOwnerRestrictedView()` in `dev-tools.html`, keyed off
+the real `canAccessDevToolsFull()`. If an account reports "most of Dev
+Tools is missing," that's this feature working as intended, not a bug --
+confirm by checking their `account_roles` row's `can_access_dev_tools_full`
 value first. This is separate from the page's own role-preview toggle
 (`effectiveCanManageRoles()`), which only changes what the Account
 permissions panel itself displays and never affects this restriction.

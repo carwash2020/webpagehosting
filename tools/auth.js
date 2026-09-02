@@ -150,30 +150,57 @@ async function updatePasswordWithRecoveryToken(recoveryAccessToken, newPassword)
   }
 }
 
+// De-duplicated (2026-09-02) -- a real, previously undiagnosed bug:
+// requireAuth() at the top of every protected page fires this
+// UN-awaited, and loadCurrentUserRole()'s own ensureFreshToken() can
+// trigger a second, fully independent call moments later on the same
+// page load. Supabase rotates refresh tokens on use, so two
+// concurrent calls sharing the same stored refresh_token is a genuine
+// race: whichever request reaches Supabase second gets rejected
+// (that token was already consumed by the first), and the old
+// !res.ok branch below responds by calling clearStoredSession() --
+// wiping out the session the FIRST call had just successfully
+// refreshed a moment earlier. That produced a real, reported symptom
+// indistinguishable from a permissions problem: a fully-permissioned
+// account intermittently landing on a role-blocked screen for no
+// database-side reason, because getCurrentUserEmail() started
+// returning null right when the permission check ran. Sharing one
+// in-flight promise across every caller means only ONE actual network
+// refresh ever happens per genuine expiry, regardless of how many
+// places call refreshSession() around the same moment.
+let _refreshInFlight = null;
 async function refreshSession() {
-  const s = getStoredSession();
-  if (!s || !s.refresh_token) return false;
+  if (_refreshInFlight) return _refreshInFlight;
+  _refreshInFlight = (async () => {
+    const s = getStoredSession();
+    if (!s || !s.refresh_token) return false;
+    try {
+      const res = await fetch(`${SUPABASE_URL}/auth/v1/token?grant_type=refresh_token`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'apikey': SUPABASE_ANON_KEY },
+        body: JSON.stringify({ refresh_token: s.refresh_token }),
+      });
+      if (!res.ok) { clearStoredSession(); return false; }
+      const data = await res.json();
+      storeSession({
+        access_token: data.access_token,
+        refresh_token: data.refresh_token,
+        expires_at: data.expires_at,
+        // A silent refresh also gets a user object back -- but fall back
+        // to whatever email was already stored, just in case Supabase ever
+        // omits it on this grant type, rather than let a real logged-in
+        // person suddenly show up unattributed after a routine refresh.
+        email: (data.user && data.user.email) || s.email,
+      });
+      return true;
+    } catch (e) {
+      return false;
+    }
+  })();
   try {
-    const res = await fetch(`${SUPABASE_URL}/auth/v1/token?grant_type=refresh_token`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'apikey': SUPABASE_ANON_KEY },
-      body: JSON.stringify({ refresh_token: s.refresh_token }),
-    });
-    if (!res.ok) { clearStoredSession(); return false; }
-    const data = await res.json();
-    storeSession({
-      access_token: data.access_token,
-      refresh_token: data.refresh_token,
-      expires_at: data.expires_at,
-      // A silent refresh also gets a user object back -- but fall back
-      // to whatever email was already stored, just in case Supabase ever
-      // omits it on this grant type, rather than let a real logged-in
-      // person suddenly show up unattributed after a routine refresh.
-      email: (data.user && data.user.email) || s.email,
-    });
-    return true;
-  } catch (e) {
-    return false;
+    return await _refreshInFlight;
+  } finally {
+    _refreshInFlight = null;
   }
 }
 
@@ -346,8 +373,13 @@ async function loadCurrentUserRole() {
           // code deploy, no role reassignment), rather than being
           // entirely bound to one of a fixed set of role tiers.
           // role_name is kept only as a display label.
+          // Granular permission expansion (2026-09-02): 9 booleans now,
+          // replacing the old 4 -- can_manage_business_finances split
+          // into 5 (invoices, contracts, finance, runway, reviews),
+          // and the 27 technical Dev Tools panels decoupled from
+          // can_manage_roles into their own can_access_dev_tools_full.
           res = await fetch(
-            `${SUPABASE_URL}/rest/v1/account_roles?email=eq.${encodeURIComponent(email.toLowerCase())}&select=role_name,can_manage_roles,can_access_dev_tools,can_manage_site_content,can_manage_business_finances`,
+            `${SUPABASE_URL}/rest/v1/account_roles?email=eq.${encodeURIComponent(email.toLowerCase())}&select=role_name,can_manage_roles,can_access_dev_tools,can_access_dev_tools_full,can_manage_site_content,can_manage_invoices,can_manage_contracts,can_view_finance,can_view_runway,can_manage_reviews`,
             {
               headers: {
                 'apikey': SUPABASE_ANON_KEY,
@@ -370,8 +402,13 @@ async function loadCurrentUserRole() {
         roleName: row.role_name,
         canManageRoles: !!row.can_manage_roles,
         canAccessDevTools: !!row.can_access_dev_tools,
+        canAccessDevToolsFull: !!row.can_access_dev_tools_full,
         canManageSiteContent: !!row.can_manage_site_content,
-        canManageBusinessFinances: !!row.can_manage_business_finances,
+        canManageInvoices: !!row.can_manage_invoices,
+        canManageContracts: !!row.can_manage_contracts,
+        canViewFinance: !!row.can_view_finance,
+        canViewRunway: !!row.can_view_runway,
+        canManageReviews: !!row.can_manage_reviews,
         description: '',
       };
       return _cachedRoleInfo;
@@ -415,6 +452,15 @@ function hasDevToolsAccess() {
   return !!(_cachedRoleInfo && _cachedRoleInfo.canAccessDevTools);
 }
 
+// Gates the 27 diagnostic/technical Dev Tools panels specifically --
+// decoupled from canManageRoles() (2026-09-02). Previously the ONLY
+// way to see these panels was to also be able to manage everyone's
+// permissions, which conflated two genuinely unrelated capabilities;
+// an account can now have one without the other.
+function canAccessDevToolsFull() {
+  return !!(_cachedRoleInfo && _cachedRoleInfo.canAccessDevToolsFull);
+}
+
 // True only for a role with can_manage_roles set (Developer, by
 // default) -- gates creating new roles or reassigning an account's role.
 function canManageRoles() {
@@ -433,15 +479,24 @@ function canManageSiteContent() {
   return !!(_cachedRoleInfo && _cachedRoleInfo.canManageSiteContent);
 }
 
-// True for a role with can_manage_business_finances set (Owner and
-// Developer, by default -- NOT Employee). Added 2026-08-27 alongside
-// the new Employee role. Gates finance.html, runway-dashboard.html,
-// invoice-generator.html, contract-generator.html, and
-// review-request.html -- pricing, billing, contracts, and the
-// business's actual financial numbers, none of which a basic,
-// job-focused Employee role needs to see or touch.
-function canManageBusinessFinances() {
-  return !!(_cachedRoleInfo && _cachedRoleInfo.canManageBusinessFinances);
+// Granular permission expansion (2026-09-02) -- replaces the old
+// single canManageBusinessFinances(), which bundled 5 genuinely
+// distinct tools under one checkbox. Requested directly: "Review
+// tool? Checkbox." Each of these gates exactly one page.
+function canManageInvoices() {
+  return !!(_cachedRoleInfo && _cachedRoleInfo.canManageInvoices);
+}
+function canManageContracts() {
+  return !!(_cachedRoleInfo && _cachedRoleInfo.canManageContracts);
+}
+function canViewFinance() {
+  return !!(_cachedRoleInfo && _cachedRoleInfo.canViewFinance);
+}
+function canViewRunway() {
+  return !!(_cachedRoleInfo && _cachedRoleInfo.canViewRunway);
+}
+function canManageReviews() {
+  return !!(_cachedRoleInfo && _cachedRoleInfo.canManageReviews);
 }
 
 // Superseded by hasDevToolsAccess() above -- kept as a thin wrapper
