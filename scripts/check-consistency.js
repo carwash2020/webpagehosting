@@ -432,6 +432,27 @@ function main() {
     if (!/<meta[^>]+Content-Security-Policy/i.test(html)) {
       problems.push(`${filename}: missing a Content-Security-Policy meta tag`);
     }
+    // Added 2026-09-02 after a real, hard-to-find bug: review-request.html
+    // had `connect-src 'self'` with no Supabase origin, so the browser
+    // silently blocked auth.js's own permission check before it ever hit
+    // the network -- surfacing only as a generic "Failed to fetch" and a
+    // "not part of your role's access" screen, on every device and
+    // network, for an account whose permissions were completely correct.
+    // It went unnoticed because the page's own source never mentions
+    // Supabase at all (grepping it for SUPABASE_URL finds nothing) --
+    // the call comes from auth.js, which every gated page loads. So the
+    // rule is keyed on loading auth.js, not on referencing Supabase
+    // directly: if a page can run a permission check, it must be allowed
+    // to actually reach Supabase to do it.
+    if (/<script[^>]+src="\/tools\/auth\.js/.test(html)) {
+      const connectSrc = (html.match(/connect-src([^;"]*)/) || [])[1] || '';
+      if (!/supabase\.co/.test(connectSrc)) {
+        problems.push(
+          `${filename}: loads auth.js (so it can run a permission check) but its CSP connect-src does not allow https://*.supabase.co -- ` +
+          `the browser will block that check before it reaches the network, showing a false "not part of your role's access" screen`
+        );
+      }
+    }
     if (!/<link[^>]+rel="manifest"/.test(html)) {
       problems.push(`${filename}: missing the PWA manifest link`);
     }
