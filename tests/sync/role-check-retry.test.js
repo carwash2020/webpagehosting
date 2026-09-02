@@ -83,18 +83,46 @@ const VALID_SESSION = {
 // a column at all anymore -- this mock response shape has to match
 // the real query, or these tests would pass against a shape the
 // actual code no longer requests.
-const ROLE_ROW = [{
-  role_name: 'Developer',
-  can_manage_roles: true,
-  can_access_dev_tools: true,
-  can_access_dev_tools_full: true,
-  can_manage_site_content: true,
-  can_manage_invoices: true,
-  can_manage_contracts: true,
-  can_view_finance: true,
-  can_view_runway: true,
-  can_manage_reviews: true,
-}];
+//
+// No-email-filter fix (2026-09-02): the real query no longer filters
+// by email in the URL (a plaintext email in a query string turned out
+// to be exactly what a privacy tool was blocking, on a real report
+// reproduced across 3 different network connections) -- it fetches
+// every row and finds the caller's own client-side, matching
+// fetchAccountRolesData()'s already-working pattern in dev-tools.html.
+// ROLE_ROW now needs an `email` field for that client-side filter to
+// actually match, and is wrapped in an array of two rows (this
+// account's real one, plus an unrelated other account) specifically
+// to prove the filter picks the RIGHT row rather than just happening
+// to work with only one row ever returned.
+const ROLE_ROW = [
+  {
+    email: 'someone-else@triplehenterprisesllc.biz',
+    role_name: 'Employee',
+    can_manage_roles: false,
+    can_access_dev_tools: false,
+    can_access_dev_tools_full: false,
+    can_manage_site_content: false,
+    can_manage_invoices: false,
+    can_manage_contracts: false,
+    can_view_finance: false,
+    can_view_runway: false,
+    can_manage_reviews: false,
+  },
+  {
+    email: 'connor@triplehenterprisesllc.biz',
+    role_name: 'Developer',
+    can_manage_roles: true,
+    can_access_dev_tools: true,
+    can_access_dev_tools_full: true,
+    can_manage_site_content: true,
+    can_manage_invoices: true,
+    can_manage_contracts: true,
+    can_view_finance: true,
+    can_view_runway: true,
+    can_manage_reviews: true,
+  },
+];
 
 const ROLE_EXPORTS = ['loadCurrentUserRole', 'canManageInvoices', 'hasDevToolsAccess'];
 

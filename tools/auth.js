@@ -393,8 +393,30 @@ async function loadCurrentUserRole() {
           // into 5 (invoices, contracts, finance, runway, reviews),
           // and the 27 technical Dev Tools panels decoupled from
           // can_manage_roles into their own can_access_dev_tools_full.
+          //
+          // No email=eq.X filter in the URL (2026-09-02) -- a real
+          // report, reproduced across 3 separate network connections
+          // by the same account (ruling out a flaky connection),
+          // traced to this being the ONE query in the app that puts a
+          // plaintext email address in a URL query string. Dev Tools'
+          // own Account permissions panel queries this exact same
+          // table with no email filter at all (fetches every row,
+          // same shape below) and never had this problem -- the RLS
+          // policy on this table already permits any account with a
+          // role to read every row (current_user_has_any_role(), no
+          // per-row email match), which is exactly why that panel can
+          // show every account's permissions to begin with. Some
+          // privacy tools (ad blockers, browser privacy extensions,
+          // DNS-level filters like NextDNS/AdGuard) specifically watch
+          // for and block requests carrying a plaintext email address
+          // as a URL parameter, treating it as a tracking signal --
+          // consistent with a failure that follows one account across
+          // different networks rather than one that's tied to a
+          // single flaky connection. Fetching every row and finding
+          // the caller's own afterward costs nothing extra RLS
+          // wasn't already allowing.
           res = await fetch(
-            `${SUPABASE_URL}/rest/v1/account_roles?email=eq.${encodeURIComponent(email.toLowerCase())}&select=role_name,can_manage_roles,can_access_dev_tools,can_access_dev_tools_full,can_manage_site_content,can_manage_invoices,can_manage_contracts,can_view_finance,can_view_runway,can_manage_reviews`,
+            `${SUPABASE_URL}/rest/v1/account_roles?select=email,role_name,can_manage_roles,can_access_dev_tools,can_access_dev_tools_full,can_manage_site_content,can_manage_invoices,can_manage_contracts,can_view_finance,can_view_runway,can_manage_reviews`,
             {
               headers: {
                 'apikey': SUPABASE_ANON_KEY,
@@ -423,7 +445,11 @@ async function loadCurrentUserRole() {
         }
         _cachedRoleInfo = null; return null;
       }
-      const rows = await res.json();
+      const allRows = await res.json();
+      // Case-insensitive match, same normalization every other
+      // account_roles lookup in this codebase already applies before
+      // comparing emails.
+      const rows = allRows.filter(r => (r.email || '').toLowerCase() === email.toLowerCase());
       if (!rows.length) {
         // Diagnostic logging added 2026-09-02 -- a genuine "no row
         // found" response for an email that SHOULD have one (per a
