@@ -456,6 +456,19 @@ function main() {
     if (!/<link[^>]+rel="manifest"/.test(html)) {
       problems.push(`${filename}: missing the PWA manifest link`);
     }
+    // Added 2026-09-02 after a real bug: dev-tools.html called
+    // confirmDevPassword() from many places (permission toggles, Add
+    // account, both notification test buttons) via dev-tools-shared.js,
+    // but never had the #devPasswordOverlay/#devPasswordInput modal
+    // markup that function's showDevPasswordPrompt() actually needs --
+    // only site-content.html did. It stayed hidden because
+    // confirmDevPassword() has a sessionStorage-cached "already
+    // confirmed" fast path that skips the modal entirely once used
+    // once in a session -- so it only threw the FIRST time a fresh
+    // session genuinely needed to show the prompt, not on every call.
+    if (/confirmDevPassword\s*\(/.test(html) && !/id="devPasswordOverlay"/.test(html)) {
+      problems.push(`${filename}: calls confirmDevPassword() but is missing the #devPasswordOverlay/#devPasswordInput modal markup it depends on -- this throws "Cannot set properties of null" the first time a session actually needs to show the prompt, rather than using its cached fast path`);
+    }
     if (!/apple-mobile-web-app-capable/.test(html)) {
       problems.push(`${filename}: missing the apple-mobile-web-app-capable meta tag`);
     }

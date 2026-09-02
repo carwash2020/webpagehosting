@@ -3330,5 +3330,35 @@
   </div>
 </div>
 
+<!-- Added 2026-09-02: dev-tools.html calls confirmDevPassword() from
+     many places (Account permissions toggles, Add account, the Push
+     and Booking notification tests, and more) via dev-tools-shared.js,
+     but never actually had this modal's markup -- only site-content.html
+     did. Real bug this caused, confirmed via a live stack trace in
+     Client Errors: showDevPasswordPrompt() threw
+     "Cannot set properties of null (setting 'value')" trying to focus
+     an input that didn't exist on this page, the first time in a
+     session confirmDevPassword() actually needed to show the prompt
+     rather than use its sessionStorage-cached "already confirmed"
+     fast path -- which is exactly why earlier actions in the same
+     session (e.g. toggling a permission checkbox) could work fine
+     while these two test buttons failed, if the password had already
+     been confirmed once for something else first. Copied verbatim
+     from site-content.html, the only other page using this modal. -->
+<div class="help-modal-overlay" id="devPasswordOverlay">
+  <div class="help-modal" style="max-width:380px;">
+    <button class="help-modal-close" onclick="devPasswordCancel()" aria-label="Close">&times;</button>
+    <h3>Confirm dev password</h3>
+    <div class="help-modal-body">
+      <p style="margin-bottom:14px;">This is a soft confirmation to catch an accidental save, not real protection against someone technically determined -- anyone who's already logged into Connor's account and views this page's source could bypass it. It exists to stop a stray tap or someone else picking up an unlocked phone. Only asked once per browser session -- closing the tab resets it.</p>
+      <input type="password" id="devPasswordInput" placeholder="Dev password" style="width:100%; margin-bottom:12px;" onkeydown="if(event.key==='Enter') devPasswordSubmit();">
+      <div class="form-footer">
+        <button class="btn blue" onclick="devPasswordSubmit()">Confirm</button>
+        <button class="secondary-btn" onclick="devPasswordCancel()">Cancel</button>
+      </div>
+    </div>
+  </div>
+</div>
+
 </body>
 </html>
