@@ -38,7 +38,7 @@
 <link rel="stylesheet" href="/styles.css?v=202609022200">
 <link rel="stylesheet" href="/tools/styles-tools.css?v=a2e87effb3">
 <script src="/tools/data-layer.js?v=1133747765" defer></script>
-<script src="/tools/dev-tools-shared.js?v=5982c06af2" defer></script>
+<script src="/tools/dev-tools-shared.js?v=da006a4f13" defer></script>
 <script src="/tools/tools-effects.js?v=9a2a59040e" defer></script>
 <script src="/tools/tools-dialogs.js?v=e1dfaa11a1" defer></script>
 <script src="/tools/tools-media-sharing.js?v=4e2769b10d" defer></script>
@@ -321,6 +321,7 @@
 
   <nav class="dev-tab-bar" id="devTabBar">
     <button type="button" class="dev-tab-btn" data-tab="health" onclick="switchDevToolsTab('health')"><span class="jump-nav-icon"><svg class="th-icon" aria-hidden="true"><use href="#icon-flask" xlink:href="#icon-flask"></use></svg></span>Health</button>
+    <button type="button" class="dev-tab-btn" data-tab="portal" onclick="switchDevToolsTab('portal')"><span class="jump-nav-icon"><svg class="th-icon" aria-hidden="true"><use href="#icon-inbox" xlink:href="#icon-inbox"></use></svg></span>Portal</button>
     <button type="button" class="dev-tab-btn" data-tab="access" onclick="switchDevToolsTab('access')"><span class="jump-nav-icon"><svg class="th-icon" aria-hidden="true"><use href="#icon-lock" xlink:href="#icon-lock"></use></svg></span>Access</button>
     <button type="button" class="dev-tab-btn" data-tab="session" onclick="switchDevToolsTab('session')"><span class="jump-nav-icon"><svg class="th-icon" aria-hidden="true"><use href="#icon-chart" xlink:href="#icon-chart"></use></svg></span>Session</button>
     <button type="button" class="dev-tab-btn" data-tab="notifications" onclick="switchDevToolsTab('notifications')"><span class="jump-nav-icon"><svg class="th-icon" aria-hidden="true"><use href="#icon-bolt" xlink:href="#icon-bolt"></use></svg></span>Notifications</button>
@@ -377,48 +378,6 @@
     <button class="secondary-btn" style="margin-top:12px;" onclick="clearClientErrorLog()">Clear log</button>
   </div>
 
-  <div class="dev-panel">
-    <div class="dev-panel-heading">
-      <h2>Portal bug reports</h2>
-      <button class="dev-info-bubble" onclick="openDevInfo('portalbugreports')" aria-label="What does this do?" title="What does this do?">?</button>
-    </div>
-    <div id="portalBugReports"></div>
-  </div>
-
-  <div class="dev-panel dev-panel-wide">
-    <div class="dev-panel-heading">
-      <h2>Portal accounts</h2>
-      <button class="dev-info-bubble" onclick="openDevInfo('portalaccounts')" aria-label="What does this do?" title="What does this do?">?</button>
-    </div>
-    <!--
-      Send/resend an invite to ANY email (2026-09-02), requested
-      directly: "add a Section in Dev tools where i can Resend the
-      email to Create a account."
-
-      The list below can only resend to a client who ALREADY has
-      portal presence -- an invoice, quote, or completed job on file --
-      because that's what it's built from. This closes the real gap:
-      inviting someone who has none of those yet (a client who only
-      ever paid cash, or someone you want set up before their first
-      invoice). send-invite handles an existing account gracefully,
-      returning already_has_account rather than erroring, so this is
-      also the reliable "just resend it" path for a client who says
-      the email never arrived.
-    -->
-    <div style="display:flex; gap:8px; flex-wrap:wrap; align-items:flex-end; margin-bottom:14px; padding-bottom:14px; border-bottom:1px solid var(--border);">
-      <label style="flex:1; min-width:200px; font-size:12.5px; color:var(--text-dim);">Send or resend an account invite
-        <input type="email" id="inviteAnyEmail" placeholder="client@example.com" style="width:100%; box-sizing:border-box; margin-top:4px;">
-      </label>
-      <label style="flex:1; min-width:140px; font-size:12.5px; color:var(--text-dim);">Their name (optional)
-        <input type="text" id="inviteAnyName" placeholder="Jane Smith" style="width:100%; box-sizing:border-box; margin-top:4px;">
-      </label>
-      <button class="secondary-btn" id="inviteAnyBtn" onclick="sendInviteToAnyEmail()">Send invite</button>
-    </div>
-    <div id="inviteAnyResult" style="margin-bottom:12px;"></div>
-    <input type="text" id="portalAccountSearch" placeholder="Search by name or email..." style="width:100%; box-sizing:border-box; margin-bottom:12px;" oninput="renderPortalAccounts()">
-    <div id="portalAccounts"></div>
-  </div>
-
   <div class="dev-panel dev-owner-hidden dev-panel-wide">
     <div class="dev-panel-heading">
       <h2>Uptime monitoring</h2>
@@ -453,6 +412,81 @@
       <button class="secondary-btn" style="margin-bottom:12px;" onclick="runDataIntegrityCheck()">Run check</button>
       <div id="dataIntegrityResults"><p class="tool-sub">Cross-checks job photo records against actual storage files in both directions, and flags any lead with obviously missing contact info.</p></div>
     </div>
+  </div>
+
+  </div>
+
+  <!--
+    Portal tab (2026-09-02), requested directly: "Dev tools should just
+    have a portal tab instead of having portal things split accross
+    multiple tabs." Everything about the client-facing portal now
+    lives here -- who has access, what they have been sent, and what
+    they have reported -- instead of being scattered through Health.
+    None of these panels are dev-owner-hidden: this is operational,
+    not technical, and Steve needs all of it.
+  -->
+  <div class="dev-panels-grid" data-tab-panel="portal">
+  <div class="dev-panel dev-panel-wide">
+    <div class="dev-panel-heading">
+      <h2>Portal accounts</h2>
+      <button class="dev-info-bubble" onclick="openDevInfo('portalaccounts')" aria-label="What does this do?" title="What does this do?">?</button>
+    </div>
+    <!--
+      Send/resend an invite to ANY email (2026-09-02), requested
+      directly: "add a Section in Dev tools where i can Resend the
+      email to Create a account."
+
+      The list below can only resend to a client who ALREADY has
+      portal presence -- an invoice, quote, or completed job on file --
+      because that's what it's built from. This closes the real gap:
+      inviting someone who has none of those yet (a client who only
+      ever paid cash, or someone you want set up before their first
+      invoice). send-invite handles an existing account gracefully,
+      returning already_has_account rather than erroring, so this is
+      also the reliable "just resend it" path for a client who says
+      the email never arrived.
+    -->
+    <div style="display:flex; gap:8px; flex-wrap:wrap; align-items:flex-end; margin-bottom:14px; padding-bottom:14px; border-bottom:1px solid var(--border);">
+      <label style="flex:1; min-width:200px; font-size:12.5px; color:var(--text-dim);">Send or resend an account invite
+        <input type="email" id="inviteAnyEmail" placeholder="client@example.com" style="width:100%; box-sizing:border-box; margin-top:4px;">
+      </label>
+      <label style="flex:1; min-width:140px; font-size:12.5px; color:var(--text-dim);">Their name (optional)
+        <input type="text" id="inviteAnyName" placeholder="Jane Smith" style="width:100%; box-sizing:border-box; margin-top:4px;">
+      </label>
+      <button class="secondary-btn" id="inviteAnyBtn" onclick="sendInviteToAnyEmail()">Send invite</button>
+    </div>
+    <div id="inviteAnyResult" style="margin-bottom:12px;"></div>
+    <input type="text" id="portalAccountSearch" placeholder="Search by name or email..." style="width:100%; box-sizing:border-box; margin-bottom:12px;" oninput="renderPortalAccounts()">
+    <div id="portalAccounts"></div>
+  </div>
+
+  <div class="dev-panel dev-panel-wide">
+    <div class="dev-panel-heading">
+      <h2>Portal invoices</h2>
+      <button class="dev-info-bubble" onclick="openDevInfo('portalinvoices')" aria-label="What does this do?" title="What does this do?">?</button>
+    </div>
+    <!--
+      Every invoice that has been sent to the client portal, with its
+      real paid status and a Resend button (2026-09-02), requested
+      directly: "we also need a Recent Invoices area so in the event
+      we need to resend we dont have to recreate."
+
+      Reads client_portal_invoices -- the portal's own record -- rather
+      than the internal Invoice Log, because THIS is what the client
+      actually sees and what Stripe marks paid. If an invoice is in
+      the internal log but not here, it was never sent to the client,
+      which is exactly the kind of gap this panel makes visible.
+    -->
+    <input type="text" id="portalInvoiceSearch" placeholder="Search by client, email, or invoice #..." style="width:100%; box-sizing:border-box; margin-bottom:12px;" oninput="renderPortalInvoices()">
+    <div id="portalInvoices"></div>
+  </div>
+
+  <div class="dev-panel">
+    <div class="dev-panel-heading">
+      <h2>Portal bug reports</h2>
+      <button class="dev-info-bubble" onclick="openDevInfo('portalbugreports')" aria-label="What does this do?" title="What does this do?">?</button>
+    </div>
+    <div id="portalBugReports"></div>
   </div>
 
   </div>
@@ -1531,6 +1565,98 @@
     }
     btn.disabled = false;
     btn.textContent = 'Send invite';
+  }
+
+  // Portal invoices (2026-09-02) -- every invoice actually sent to the
+  // client portal, with the REAL paid status Stripe/set-invoice-paid
+  // wrote, and a Resend for each. Reads client_portal_invoices rather
+  // than the internal Invoice Log because this is what the client
+  // sees and what payment actually updates; the internal log is one
+  // device's localStorage view and can lag it. See the panel's own
+  // HTML comment for why the two lists differing is itself useful.
+  let _portalInvoicesCache = null;
+
+  async function renderPortalInvoices() {
+    const el = document.getElementById('portalInvoices');
+    if (!el) return;
+    const term = (document.getElementById('portalInvoiceSearch')?.value || '').trim().toLowerCase();
+
+    if (!_portalInvoicesCache) {
+      el.innerHTML = '<p class="tool-sub">Loading...</p>';
+      try {
+        if (typeof ensureFreshToken === 'function') await ensureFreshToken();
+        const res = await fetchWithTimeout(
+          SUPABASE_URL + '/rest/v1/client_portal_invoices?select=id,source_invoice_id,client_email,client_name,invoice_number,invoice_date,total,paid,paid_at,stripe_payment_intent_id&order=invoice_date.desc,id.desc&limit=100',
+          8000,
+          { headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': 'Bearer ' + getAuthToken() } }
+        );
+        if (!res.ok) throw new Error('HTTP ' + res.status);
+        _portalInvoicesCache = await res.json();
+      } catch (e) {
+        el.innerHTML = '<p class="tool-sub">Could not load portal invoices: ' + escapeHtml(e.message || String(e)) + '</p>';
+        return;
+      }
+    }
+
+    const rows = term
+      ? _portalInvoicesCache.filter(i =>
+          (i.client_email || '').toLowerCase().includes(term) ||
+          (i.client_name || '').toLowerCase().includes(term) ||
+          (i.invoice_number || '').toLowerCase().includes(term))
+      : _portalInvoicesCache;
+
+    if (!rows.length) {
+      el.innerHTML = '<p class="tool-sub">' + (term ? 'No portal invoices match "' + escapeHtml(term) + '".' : 'No invoices have been sent to the portal yet.') + '</p>';
+      return;
+    }
+
+    el.innerHTML = rows.map(i => {
+      const paidBadge = i.paid
+        ? '<span class="badge-pending-signature" style="background:var(--blue-tint-soft); border-color:var(--blue-tint-border); color:var(--blue-light);">Paid' + (i.paid_at ? ' ' + escapeHtml(String(i.paid_at).slice(0, 10)) : '') + '</span>'
+        : '<span class="badge-pending-signature">Unpaid</span>';
+      const via = i.stripe_payment_intent_id ? ' &middot; via Stripe' : '';
+      return '<div class="dev-check-row" style="align-items:flex-start;"><div style="flex:1; min-width:0;">' +
+        '<div><strong>#' + escapeHtml(i.invoice_number || '') + '</strong> ' + paidBadge + '</div>' +
+        '<div class="dev-check-detail">' + escapeHtml(i.client_name || i.client_email) + ' &middot; ' + escapeHtml(i.client_email) + ' &middot; ' + escapeHtml(i.invoice_date || '') + ' &middot; $' + (Number(i.total) || 0).toFixed(2) + via + '</div>' +
+        '</div>' +
+        '<button class="secondary-btn" style="flex-shrink:0;" onclick="resendPortalInvoice(' + i.id + ', this)">Resend</button>' +
+        '</div>';
+    }).join('');
+  }
+
+  // Re-sends the notification email for an invoice already in the
+  // portal. Goes through sync-invoice-to-portal so it upserts the same
+  // row (no duplicate) and re-fires the email; line_items is omitted
+  // so the existing ones are never overwritten with an empty array.
+  async function resendPortalInvoice(portalRowId, btnEl) {
+    const inv = (_portalInvoicesCache || []).find(i => i.id === portalRowId);
+    if (!inv) { showToast('Could not find that invoice.', { type: 'error' }); return; }
+    if (!(await showConfirm('Resend invoice #' + inv.invoice_number + ' to ' + inv.client_email + '?'))) return;
+    btnEl.disabled = true;
+    const original = btnEl.textContent;
+    btnEl.textContent = 'Sending...';
+    try {
+      if (typeof ensureFreshToken === 'function') await ensureFreshToken();
+      const res = await fetchWithTimeout(SUPABASE_URL + '/functions/v1/sync-invoice-to-portal', 10000, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'apikey': SUPABASE_ANON_KEY, 'Authorization': 'Bearer ' + getAuthToken() },
+        body: JSON.stringify({
+          source_invoice_id: inv.source_invoice_id,
+          client_email: inv.client_email,
+          client_name: inv.client_name,
+          invoice_number: inv.invoice_number,
+          invoice_date: inv.invoice_date,
+          total: Number(inv.total),
+        }),
+      });
+      const result = await res.json().catch(() => ({}));
+      btnEl.textContent = result.ok ? 'Sent!' : 'Failed';
+      if (!result.ok) showToast('Resend failed: ' + (result.error || 'unknown error'), { type: 'error' });
+    } catch (e) {
+      btnEl.textContent = 'Failed';
+      showToast('Resend failed: ' + (e.message || String(e)), { type: 'error' });
+    }
+    setTimeout(() => { btnEl.disabled = false; btnEl.textContent = original; }, 2500);
   }
 
   async function resendPortalInvite(email, name, btnEl) {
@@ -3422,6 +3548,7 @@
       renderClientErrorLog();
       renderPortalBugReports();
       renderPortalAccounts();
+      renderPortalInvoices();
       renderKnownIssues();
       renderFlaggedItems();
       renderUptimeStatus();
@@ -3470,9 +3597,10 @@
     <button class="help-modal-close" onclick="closeHelpModal()" aria-label="Close">&times;</button>
     <h3>How to Use: Dev Tools</h3>
     <div class="help-modal-body">
-      <p>Site diagnostics and maintenance utilities, visible only on the account actively developing this site -- grouped into 6 tabs.</p>
-      <p><strong>Health</strong> -- automated checks: Live consistency check, Data quality check, Appliance Wiki health, Client errors, Portal bug reports, Uptime monitoring, Advisor health, and Data integrity check. An Owner account sees only Portal bug reports here, everything else on this tab is Developer-only.</p>
-      <p><strong>Access</strong> -- Client registry and Account permissions. Fully visible to an Owner account, same as everyone else with dev tools access.</p>
+      <p>Site diagnostics and maintenance utilities -- grouped into 7 tabs.</p>
+      <p><strong>Health</strong> -- automated technical checks: Live consistency check, Data quality check, Appliance Wiki health, Client errors, Uptime monitoring, Advisor health, and Data integrity check. Entirely Developer-only; an Owner account doesn't see this tab at all.</p>
+      <p><strong>Portal</strong> -- everything about the client portal in one place: Portal accounts (who has access, send or resend an invite to any email), Portal invoices (every invoice sent to a client, with real paid status and Resend), and Portal bug reports. Fully visible to an Owner account -- this is where Steve lands.</p>
+      <p><strong>Access</strong> -- Client registry and Account permissions. Fully visible to an Owner account.</p>
       <p><strong>Session</strong> -- Session &amp; sync, Local data snapshot, Device info, and Service worker &amp; cache -- all about this specific device/browser, not the business data itself.</p>
       <p><strong>Notifications</strong> -- Push notification test and history, Known issues, and Flagged pages.</p>
       <p><strong>Deploy</strong> -- Deploy history, Regression checker, What's new, Quick links, Trigger workflows, and Storage browser.</p>
