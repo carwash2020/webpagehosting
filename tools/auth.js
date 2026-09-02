@@ -317,16 +317,43 @@ async function loadCurrentUserRole() {
     const email = getCurrentUserEmail();
     if (!email) { _cachedRoleInfo = null; return null; }
     try {
-      const res = await fetch(
-        `${SUPABASE_URL}/rest/v1/account_roles?email=eq.${encodeURIComponent(email.toLowerCase())}&select=role_name,role_definitions(can_manage_roles,can_access_dev_tools,can_manage_site_content,can_manage_business_finances,description)`,
-        {
-          headers: {
-            'apikey': SUPABASE_ANON_KEY,
-            'Authorization': `Bearer ${getAuthToken()}`,
-          },
+      // Retries the network call itself up to 3 total attempts with a
+      // short backoff (2026-09-02) -- added after a real report: a
+      // single dropped cellular connection failed this ONE fetch, and
+      // since this whole function fails CLOSED by design (right,
+      // deliberate security posture -- if the role can't be confirmed,
+      // don't guess), that one blip alone was enough to show "not
+      // available here" on a fully-permissioned Developer account.
+      // Confirmed directly against account_roles/role_definitions at
+      // the time: the account's actual permissions were completely
+      // intact -- this really was just a flaky connection, the exact
+      // same failure mode already visible (and already retried) on the
+      // Realtime channel subscriptions elsewhere in this codebase.
+      // Mirrors that existing retry shape rather than inventing a new
+      // one. Deliberately does NOT retry the "no email" case above (not
+      // a network failure, retrying can't fix it) or a genuine "no
+      // role assigned" result below (retrying a real, current answer
+      // just delays showing it).
+      let res, lastErr;
+      for (let attempt = 1; attempt <= 3; attempt++) {
+        try {
+          res = await fetch(
+            `${SUPABASE_URL}/rest/v1/account_roles?email=eq.${encodeURIComponent(email.toLowerCase())}&select=role_name,role_definitions(can_manage_roles,can_access_dev_tools,can_manage_site_content,can_manage_business_finances,description)`,
+            {
+              headers: {
+                'apikey': SUPABASE_ANON_KEY,
+                'Authorization': `Bearer ${getAuthToken()}`,
+              },
+            }
+          );
+          if (res.ok) { lastErr = null; break; }
+          lastErr = new Error('HTTP ' + res.status);
+        } catch (e) {
+          lastErr = e;
         }
-      );
-      if (!res.ok) { _cachedRoleInfo = null; return null; }
+        if (attempt < 3) await new Promise(r => setTimeout(r, 400 * attempt));
+      }
+      if (lastErr) { _cachedRoleInfo = null; return null; }
       const rows = await res.json();
       if (!rows.length) { _cachedRoleInfo = null; return null; }
       const row = rows[0];
