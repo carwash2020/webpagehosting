@@ -1340,7 +1340,33 @@
   // service_role key (which must never be in this page's JS), and what
   // actually matters operationally is "what does this client have in
   // the portal," not "does an auth row exist."
+  //
+  // A useful consequence of building it this way (2026-09-02):
+  // internal tool accounts never show up here just for being staff --
+  // only for genuinely having a client invoice/quote/job on file.
+  // That's the right behavior, not a gap: an internal account and a
+  // portal client are deliberately different things that happen to
+  // share one auth table. If an internal address DOES appear below,
+  // it's flagged, because that means a staff email was invoiced as a
+  // client and is worth a second look rather than blending in.
   let _portalAccountsCache = null;
+  let _internalEmailsCache = null;
+
+  async function loadInternalEmails() {
+    if (_internalEmailsCache) return _internalEmailsCache;
+    try {
+      const res = await fetchWithTimeout(
+        SUPABASE_URL + '/rest/v1/account_roles?select=email',
+        8000,
+        { headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': 'Bearer ' + getAuthToken() } }
+      );
+      if (!res.ok) return new Set();
+      _internalEmailsCache = new Set((await res.json()).map(r => (r.email || '').toLowerCase()));
+      return _internalEmailsCache;
+    } catch (e) {
+      return new Set(); // non-fatal: the list still renders, just without the flag
+    }
+  }
 
   async function loadPortalAccounts() {
     const tables = [
@@ -1390,12 +1416,22 @@
       return;
     }
 
+    const internalEmails = await loadInternalEmails();
+
     el.innerHTML = accounts.map(a => {
       const parts = ['invoices', 'quotes', 'jobs']
         .filter(k => a.counts[k])
         .map(k => a.counts[k] + ' ' + (a.counts[k] === 1 ? k.replace(/s$/, '') : k));
+      // Flagged, not hidden: a staff address with real client
+      // invoices on file is a legitimate (if unusual) situation --
+      // Steve invoicing his own rental property, say -- so this
+      // surfaces it for a second look rather than quietly filtering
+      // it out and making the list disagree with the actual data.
+      const internalFlag = internalEmails.has(a.email)
+        ? ' <span style="color:var(--orange-light); font-size:11.5px; font-weight:600;">INTERNAL ACCOUNT</span>'
+        : '';
       return '<div class="dev-check-row" style="align-items:flex-start;"><div>' +
-        '<div><strong>' + escapeHtml(a.name || '(no name)') + '</strong></div>' +
+        '<div><strong>' + escapeHtml(a.name || '(no name)') + '</strong>' + internalFlag + '</div>' +
         '<div class="dev-check-detail">' + escapeHtml(a.email) + ' &middot; ' + (parts.join(', ') || 'nothing yet') + '</div>' +
         '<button class="secondary-btn" style="margin-top:8px;" onclick="resendPortalInvite(\'' + escapeHtml(a.email) + '\', \'' + escapeHtml(a.name || '') + '\', this)">Resend invite</button>' +
         '</div></div>';
@@ -1444,9 +1480,23 @@
         body: JSON.stringify({ client_email: email, client_name: nameEl.value.trim() }),
       });
       const result = await res.json();
-      if (result.ok && result.already_has_account) {
-        resultEl.innerHTML = '<div class="empty-state-small"><svg class="th-icon" aria-hidden="true"><use href="#icon-check" xlink:href="#icon-check"></use></svg>' +
-          escapeHtml(email) + ' already has an account, so no new invite was sent. If they can\'t get in, have them use "Forgot password" on the portal login page instead.</div>';
+      // Three genuinely different outcomes, deliberately styled
+      // differently (2026-09-02, requested directly) rather than all
+      // reported as a soft note -- the whole reason this needed
+      // fixing is that a quiet "already has an account" message read
+      // as if nothing had happened at all.
+      if (result.is_internal_account) {
+        // An internal tool account, not a client. A real error: this
+        // is almost certainly a mistake, and sending a client-facing
+        // "You've been invoiced" setup email to your own team is
+        // worth blocking outright rather than smoothing over.
+        resultEl.innerHTML = '<div class="empty-state-small is-warning"><svg class="th-icon" aria-hidden="true"><use href="#icon-warning" xlink:href="#icon-warning"></use></svg>' +
+          escapeHtml(result.error) + '</div>';
+      } else if (result.already_has_account) {
+        // Already a portal client. Not a mistake exactly, but no email
+        // was sent, so this must NOT look like a success.
+        resultEl.innerHTML = '<div class="empty-state-small is-warning"><svg class="th-icon" aria-hidden="true"><use href="#icon-warning" xlink:href="#icon-warning"></use></svg>' +
+          escapeHtml(result.error || (email + ' already has a client portal account, so no new invite was sent.')) + '</div>';
       } else if (result.ok) {
         resultEl.innerHTML = '<div class="empty-state-small"><svg class="th-icon" aria-hidden="true"><use href="#icon-check" xlink:href="#icon-check"></use></svg>Invite sent to ' + escapeHtml(email) + '. It may take a minute to arrive, and could land in spam the first time.</div>';
         emailEl.value = '';
