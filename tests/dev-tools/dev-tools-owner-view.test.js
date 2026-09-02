@@ -81,7 +81,7 @@ test('an account with the full-technical permission keeps every panel visible --
   }
 });
 
-test('applyOwnerRestrictedView uses canAccessDevToolsFull(), not canManageRoles() or the existing role-preview toggle (effectiveCanManageRoles) -- decoupled 2026-09-02 so seeing the technical panels no longer requires also being able to manage everyone\'s permissions', () => {
+test('applyOwnerRestrictedView uses canAccessDevToolsFull(), not canManageRoles() -- decoupled 2026-09-02 so seeing the technical panels no longer requires also being able to manage everyone\'s permissions', () => {
   const src = fs.readFileSync(DEV_TOOLS_PATH, 'utf8');
   const fnMatch = src.match(/function applyOwnerRestrictedView\(\)[\s\S]*?\n  \}/);
   assert.ok(fnMatch, 'applyOwnerRestrictedView not found');

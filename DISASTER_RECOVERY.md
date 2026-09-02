@@ -463,9 +463,22 @@ hidden via `applyOwnerRestrictedView()` in `dev-tools.html`, keyed off
 the real `canAccessDevToolsFull()`. If an account reports "most of Dev
 Tools is missing," that's this feature working as intended, not a bug --
 confirm by checking their `account_roles` row's `can_access_dev_tools_full`
-value first. This is separate from the page's own role-preview toggle
-(`effectiveCanManageRoles()`), which only changes what the Account
-permissions panel itself displays and never affects this restriction.
+value first.
+
+**Account permissions panel UI, redesigned 2026-09-02, requested
+directly.** Was a full row of 9 checkboxes per account; the
+"Preview Account permissions as" simulation toggle was also removed
+entirely in the same change (it added a layer of "is this real or a
+preview" ambiguity that wasn't worth keeping). Now: pick ONE account
+from a dropdown (`#permAccountSelect`), then click a category button
+(Dev Tools, Money, Grow, Site, Admin -- grouped in
+`PERMISSION_CATEGORIES` in `dev-tools.html`, matching workspace.html's
+own tool-group-label names for "Money" and "Grow") to expand just that
+category's checkboxes, one category open at a time
+(`_openPermCategory`). `_cachedAccountsData` holds the last fetch so a
+single checkbox toggle updates the local cache and re-renders only the
+category panel -- no refetch, no losing the open category or selected
+account.
 
 **A real bug already happened here once, worth knowing about:** the
 dev-tools dashboard tile went invisible for *every* account (Connor

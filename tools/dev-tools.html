@@ -38,7 +38,7 @@
 <link rel="stylesheet" href="/styles.css?v=202608202000">
 <link rel="stylesheet" href="/tools/styles-tools.css?v=a2e87effb3">
 <script src="/tools/data-layer.js?v=1133747765" defer></script>
-<script src="/tools/dev-tools-shared.js?v=05d270b145" defer></script>
+<script src="/tools/dev-tools-shared.js?v=74c7dca60a" defer></script>
 <script src="/tools/tools-effects.js?v=9a2a59040e" defer></script>
 <script src="/tools/tools-dialogs.js?v=e1dfaa11a1" defer></script>
 <script src="/tools/tools-media-sharing.js?v=4e2769b10d" defer></script>
@@ -90,6 +90,9 @@
   .dev-kv-row { display: flex; justify-content: space-between; gap: 12px; padding: 6px 0; font-size: 14px; }
   .dev-scrollable-list {
     max-height: 260px; overflow-y: auto; padding-right: 4px;
+  }
+  #permCategoriesRow .secondary-btn.is-active {
+    border-color: var(--orange); color: var(--orange-light); background: var(--orange-tint-soft);
   }
   .dev-kv-row .k { color: var(--text-dim); }
   .dev-kv-row .v { font-family: monospace; font-size: 13px; text-align: right; word-break: break-all; }
@@ -284,19 +287,6 @@
 
   <div id="devIdentityBadge" class="dev-identity" style="display:none;"></div>
 
-  <div id="rolePreviewControl" style="display:none; margin-bottom:14px;">
-    <label style="font-size:12.5px; color:var(--text-dim); display:inline-flex; align-items:center; gap:8px;">
-      Preview Account permissions as:
-      <select id="rolePreviewSelect" onchange="setRolePreview(this.value)" style="width:auto;">
-        <option value="">My real session</option>
-        <option value="non-manager">A non-manager role (e.g. Owner)</option>
-      </select>
-    </label>
-  </div>
-  <div id="rolePreviewBanner" class="dev-status-chip" style="display:none; border-color:var(--orange-tint-border); background:var(--orange-tint-soft); color:var(--orange-light); margin-bottom:14px;">
-    <svg class="th-icon" aria-hidden="true"><use href="#icon-warning" xlink:href="#icon-warning"></use></svg> Previewing the Account permissions panel as a non-manager. This only changes what this panel SHOWS you -- your actual account and permissions haven't changed, and any real change you make still happens as yourself. <a href="#" onclick="event.preventDefault(); setRolePreview('');" style="color:inherit; text-decoration:underline; margin-left:6px;">Exit preview</a>
-  </div>
-
   <div class="dev-status-chip" id="devStatusSummary" onclick="toggleStatusStripDetail()" style="cursor:pointer; margin-bottom:8px;">
     <span class="dev-status-dot checking" id="statusDotSummary"></span><span id="statusTextSummary">Checking system status...</span>
     <span class="dev-collapse-caret" id="statusStripCaret" style="margin-left:4px;">&#9660;</span>
@@ -437,7 +427,10 @@
       <h2>Account permissions</h2>
       <button class="dev-info-bubble" onclick="openDevInfo('roles')" aria-label="What does this do?" title="What does this do?">?</button>
     </div>
-    <div id="accountRolesList" class="dev-scrollable-list"></div>
+    <div id="accountRolesList"></div>
+    <div id="permCategoriesRow" style="display:flex; flex-wrap:wrap; gap:8px; margin-top:12px;"></div>
+    <div id="permCategoryPanel" style="margin-top:10px;"></div>
+    <p id="permNonManagerNote" class="tool-sub" style="display:none; margin-top:8px;">Only an account with "Manage permissions" can change this.</p>
     <div id="addAccountForm" style="display:none; margin-top:16px; padding-top:16px; border-top:1px solid var(--border);">
       <label style="display:block; margin-bottom:8px;">Add an account
         <input type="email" id="newAccountEmail" placeholder="name@example.com" style="margin-top:4px;">
@@ -1682,26 +1675,6 @@
   // without it being visually obvious.
   // ---------------------------------------------------------------------
 
-  let _rolePreview = ''; // '' = real session, 'non-manager' = preview
-
-  function setRolePreview(value) {
-    _rolePreview = value;
-    document.getElementById('rolePreviewSelect').value = value;
-    document.getElementById('rolePreviewBanner').style.display = value ? 'inline-flex' : 'none';
-    renderAccountRoles();
-  }
-
-  // What renderAccountRoles() should actually treat as the manager
-  // state -- the real canManageRoles() unless a preview overrides it.
-  // Requested directly (2026-08-21): Steve (Owner) only needs Client
-  // Registry and Account Roles here -- everything else on this page
-  // is code/technical/error-diagnostic in nature and doesn't matter to
-  // him. Connor (Developer, canManageRoles() true) keeps everything,
-  // completely unchanged. Deliberately the REAL canManageRoles(), not
-  // effectiveCanManageRoles() (the existing role-preview toggle) --
-  // that preview is narrowly scoped to just the Account Roles panel's
-  // own display; this is a real, permanent restriction based on the
-  // actual logged-in account, not a temporary preview.
   // Decoupled from canManageRoles() (2026-09-02) -- previously the
   // ONLY way to see the 27 technical/diagnostic panels was to also be
   // able to manage everyone's permissions, which conflated two
@@ -1795,45 +1768,67 @@
     switchDevToolsTab(initial);
   }
 
-  function effectiveCanManageRoles() {
-    if (_rolePreview === 'non-manager') return false;
-    return canManageRoles();
-  }
+  // Granular permission expansion (2026-09-02) -- requested directly:
+  // "Review tool? Checkbox. Dev tool stats? On today, off tomorrow."
+  // 9 checkboxes now, each gating exactly one real page/capability.
+  // Grouped into 5 categories for the UI below -- "Money" and "Grow"
+  // match workspace.html's own tool-group-label names for the same
+  // tools, so the grouping here isn't a new vocabulary to learn.
+  const PERMISSION_CATEGORIES = [
+    { key: 'devtools', label: 'Dev Tools', fields: [
+      { field: 'can_access_dev_tools', label: 'Dev Tools' },
+      { field: 'can_access_dev_tools_full', label: 'Dev Tools (full technical)' },
+    ] },
+    { key: 'money', label: 'Money', fields: [
+      { field: 'can_manage_invoices', label: 'Invoices & Quotes' },
+      { field: 'can_manage_contracts', label: 'Contracts' },
+      { field: 'can_view_finance', label: 'Finance dashboard' },
+      { field: 'can_view_runway', label: 'Runway dashboard' },
+    ] },
+    { key: 'grow', label: 'Grow', fields: [
+      { field: 'can_manage_reviews', label: 'Review requests' },
+    ] },
+    { key: 'site', label: 'Site', fields: [
+      { field: 'can_manage_site_content', label: 'Site content' },
+    ] },
+    { key: 'admin', label: 'Admin', fields: [
+      { field: 'can_manage_roles', label: 'Manage permissions' },
+    ] },
+  ];
+
+  // Redesigned 2026-09-02, requested directly for a cleaner look than
+  // a full row of 9 checkboxes per account: pick ONE account from a
+  // dropdown, then click a category (Dev Tools, Money, ...) to expand
+  // just that category's checkboxes, one category open at a time.
+  // _cachedAccountsData/_selectedPermEmail/_openPermCategory hold
+  // state ACROSS re-renders after a single checkbox toggle, so
+  // toggling one box doesn't collapse the panel, change the selected
+  // account, or force a network refetch of everything -- only
+  // addAccount() and the initial load do a real refetch.
+  let _cachedAccountsData = [];
+  let _selectedPermEmail = '';
+  let _openPermCategory = null;
+  let _cachedRoleDefsForPresets = [];
 
   async function renderAccountRoles() {
     const accountsEl = document.getElementById('accountRolesList');
     if (!accountsEl) return; // page not loaded far enough yet, or dev tools access denied
 
-    // The preview control itself only makes sense to show to someone
-    // who actually can manage roles -- previewing "non-manager" for an
-    // account that already sees the non-manager view is a no-op.
-    const previewControl = document.getElementById('rolePreviewControl');
-    if (previewControl) previewControl.style.display = canManageRoles() ? 'block' : 'none';
-
-    // Granular permission expansion (2026-09-02) -- requested
-    // directly: "Review tool? Checkbox. Dev tool stats? On today, off
-    // tomorrow." 9 checkboxes now, each gating exactly one real
-    // page/capability, replacing the old 4 (which bundled 5 distinct
-    // tools under one "Invoices/quotes" checkbox, and coupled the 27
-    // technical Dev Tools panels to Manage permissions).
-    const PERMISSIONS = [
-      { field: 'can_access_dev_tools', label: 'Dev Tools' },
-      { field: 'can_access_dev_tools_full', label: 'Dev Tools (full technical)' },
-      { field: 'can_manage_invoices', label: 'Invoices & Quotes' },
-      { field: 'can_manage_contracts', label: 'Contracts' },
-      { field: 'can_view_finance', label: 'Finance dashboard' },
-      { field: 'can_view_runway', label: 'Runway dashboard' },
-      { field: 'can_manage_reviews', label: 'Review requests' },
-      { field: 'can_manage_site_content', label: 'Site content' },
-      { field: 'can_manage_roles', label: 'Manage permissions' },
-    ];
-
     try {
       if (typeof ensureFreshToken === 'function') await ensureFreshToken();
       const [accounts, roleDefs] = await Promise.all([fetchAccountRolesData(), fetchRoleDefinitions()]);
-      const manager = effectiveCanManageRoles();
+      const manager = canManageRoles();
 
+      _cachedAccountsData = accounts;
       _cachedRoleDefsForPresets = roleDefs;
+      // Keep whatever was already selected if it still exists (e.g.
+      // after a checkbox toggle's lighter re-render); otherwise default
+      // to the first account, so the panel is never left pointing at
+      // a since-removed email.
+      if (!accounts.some(a => a.email === _selectedPermEmail)) {
+        _selectedPermEmail = accounts.length ? accounts[0].email : '';
+      }
+
       const presetSelect = document.getElementById('newAccountPreset');
       if (presetSelect) {
         presetSelect.innerHTML = '<option value="">None -- start with everything unchecked</option>' +
@@ -1841,43 +1836,83 @@
       }
       const addForm = document.getElementById('addAccountForm');
       if (addForm) addForm.style.display = manager ? 'block' : 'none';
+      const nonManagerNote = document.getElementById('permNonManagerNote');
+      if (nonManagerNote) nonManagerNote.style.display = manager ? 'none' : 'block';
 
-      accountsEl.innerHTML = accounts.map(a => {
-        const roleLabel = a.role_name ? ' <span style="color:var(--text-dim); font-weight:normal; font-size:12px;">(started from ' + escapeHtml(a.role_name) + ')</span>' : '';
-        const checkboxesHtml = PERMISSIONS.map(p => {
-          const checked = a[p.field] ? ' checked' : '';
-          const disabled = manager ? '' : ' disabled';
-          return '<label style="display:flex; align-items:center; gap:6px; font-size:13px; font-weight:normal;">' +
-            '<input type="checkbox" data-email="' + escapeHtml(a.email) + '" data-field="' + p.field + '"' + checked + disabled +
-            ' onchange="toggleAccountPermission(this)"> ' + p.label + '</label>';
-        }).join('');
-        return '<div style="padding:10px 0; border-bottom:1px solid var(--border);">' +
-          '<div style="margin-bottom:8px;"><strong>' + escapeHtml(a.email) + '</strong>' + roleLabel + '</div>' +
-          '<div style="display:flex; flex-wrap:wrap; gap:14px;">' + checkboxesHtml + '</div>' +
-          '</div>';
-      }).join('');
+      accountsEl.innerHTML = '<label style="display:block;">Account' +
+        '<select id="permAccountSelect" onchange="selectPermAccount(this.value)" style="margin-top:4px; width:auto; min-width:260px;">' +
+        accounts.map(a => {
+          const suffix = a.role_name ? ' (started from ' + a.role_name + ')' : '';
+          const selected = a.email === _selectedPermEmail ? ' selected' : '';
+          return '<option value="' + escapeHtml(a.email) + '"' + selected + '>' + escapeHtml(a.email + suffix) + '</option>';
+        }).join('') +
+        '</select></label>';
 
-      if (!manager) {
-        accountsEl.insertAdjacentHTML('beforeend', '<p class="tool-sub" style="margin-top:8px;">Only an account with \'Manage permissions\' can change this.</p>');
-      }
+      renderPermCategoryUI();
     } catch (e) {
       accountsEl.innerHTML = '<p class="tool-sub">Could not reach Supabase: ' + escapeHtml(e.message || String(e)) + '</p>';
+      document.getElementById('permCategoriesRow').innerHTML = '';
+      document.getElementById('permCategoryPanel').innerHTML = '';
     }
   }
 
-  let _cachedRoleDefsForPresets = [];
+  function selectPermAccount(email) {
+    _selectedPermEmail = email;
+    _openPermCategory = null; // switching accounts collapses whatever was open, rather than showing it against the wrong account
+    renderPermCategoryUI();
+  }
 
-  // Live, per-checkbox (2026-09-02) -- replaces the old single role
-  // dropdown. Each checkbox is its own PATCH, takes effect immediately
-  // (the affected account picks it up on their NEXT page load or
-  // refresh -- loadCurrentUserRole() always fetches fresh, there's no
-  // separate cache to invalidate or deploy to wait on).
+  // Renders the category row (with each category's on/off count) and
+  // the expanded panel for whichever ONE category is currently open,
+  // for whichever account is currently selected. Called after the
+  // full account list loads, after switching the selected account,
+  // and after a single checkbox toggle -- purely a re-render against
+  // already-cached data, no network call of its own.
+  function renderPermCategoryUI() {
+    const rowEl = document.getElementById('permCategoriesRow');
+    const panelEl = document.getElementById('permCategoryPanel');
+    if (!rowEl || !panelEl) return;
+
+    const account = _cachedAccountsData.find(a => a.email === _selectedPermEmail);
+    if (!account) { rowEl.innerHTML = ''; panelEl.innerHTML = ''; return; }
+
+    const manager = canManageRoles();
+
+    rowEl.innerHTML = PERMISSION_CATEGORIES.map(cat => {
+      const onCount = cat.fields.filter(f => account[f.field]).length;
+      const isOpen = _openPermCategory === cat.key;
+      return '<button type="button" class="secondary-btn' + (isOpen ? ' is-active' : '') + '" onclick="togglePermCategory(\'' + cat.key + '\')">' +
+        escapeHtml(cat.label) + ' <span style="color:var(--text-dim); font-weight:normal;">(' + onCount + '/' + cat.fields.length + ')</span>' +
+        '</button>';
+    }).join('');
+
+    const openCat = PERMISSION_CATEGORIES.find(c => c.key === _openPermCategory);
+    if (!openCat) { panelEl.innerHTML = ''; return; }
+
+    const disabled = manager ? '' : ' disabled';
+    panelEl.innerHTML = '<div style="padding:10px 12px; border:1px solid var(--border); border-radius:8px; display:flex; flex-wrap:wrap; gap:14px;">' +
+      openCat.fields.map(f => {
+        const checked = account[f.field] ? ' checked' : '';
+        return '<label style="display:flex; align-items:center; gap:6px; font-size:13px; font-weight:normal;">' +
+          '<input type="checkbox" data-email="' + escapeHtml(account.email) + '" data-field="' + f.field + '"' + checked + disabled +
+          ' onchange="toggleAccountPermission(this)"> ' + escapeHtml(f.label) + '</label>';
+      }).join('') +
+      '</div>';
+  }
+
+  function togglePermCategory(key) {
+    _openPermCategory = _openPermCategory === key ? null : key;
+    renderPermCategoryUI();
+  }
+
+  // Live, per-checkbox (2026-09-02) -- each checkbox is its own PATCH,
+  // takes effect immediately (the affected account picks it up on
+  // their NEXT page load or refresh -- loadCurrentUserRole() always
+  // fetches fresh, there's no separate cache to invalidate or deploy
+  // to wait on). Updates the local cache directly on success rather
+  // than refetching everything, so the category counts update
+  // instantly without a network round trip or losing the open panel.
   async function toggleAccountPermission(checkboxEl) {
-    if (_rolePreview) {
-      showToast('Currently previewing as a non-manager role -- exit preview to make a real change.', { type: 'error' });
-      checkboxEl.checked = !checkboxEl.checked;
-      return;
-    }
     const email = checkboxEl.getAttribute('data-email');
     const field = checkboxEl.getAttribute('data-field');
     const newValue = checkboxEl.checked;
@@ -1898,6 +1933,9 @@
         const body = await res.text();
         throw new Error('HTTP ' + res.status + ': ' + body.slice(0, 200));
       }
+      const cachedAccount = _cachedAccountsData.find(a => a.email === email);
+      if (cachedAccount) cachedAccount[field] = newValue;
+      renderPermCategoryUI();
       showToast(email + (newValue ? ' can now ' : ' can no longer ') + field.replace(/^can_/, '').replace(/_/g, ' ') + '.');
     } catch (e) {
       showToast(e.message || String(e), { type: 'error' });
@@ -1912,10 +1950,6 @@
   // independently-editable account_roles row from that point on, not
   // tied to the preset afterward), or all-false if "None" was picked.
   async function addAccount() {
-    if (_rolePreview) {
-      showToast('Currently previewing as a non-manager role -- exit preview to make a real change.', { type: 'error' });
-      return;
-    }
     const emailEl = document.getElementById('newAccountEmail');
     const email = emailEl.value.trim().toLowerCase();
     if (!email || !email.includes('@')) { showToast('Enter a real email address.', { type: 'error' }); return; }
@@ -1955,6 +1989,7 @@
         throw new Error('HTTP ' + res.status + ': ' + respBody.slice(0, 200));
       }
       emailEl.value = '';
+      _selectedPermEmail = email; // jump straight to the account just added
       showToast(email + ' added.');
       await renderAccountRoles();
     } catch (e) {
