@@ -49,7 +49,7 @@ test('loadCurrentUserRole() queries the 4 permission booleans directly off accou
   const endIdx = AUTH_JS.indexOf('\n}', startIdx);
   assert.ok(endIdx !== -1, 'expected to find the function\'s closing brace');
   const body = AUTH_JS.slice(startIdx, endIdx);
-  assert.match(body, /select=role_name,can_manage_roles,can_access_dev_tools,can_manage_site_content,can_manage_business_finances/);
+  assert.match(body, /select=role_name,can_manage_roles,can_access_dev_tools,can_access_dev_tools_full,can_manage_site_content,can_manage_invoices,can_manage_contracts,can_view_finance,can_view_runway,can_manage_reviews/);
   // Checks the actual fetch URL specifically, not the whole function
   // body -- a legitimate historical comment elsewhere in this function
   // (explaining the 2026-09-02 retry fix) still mentions
@@ -69,7 +69,11 @@ test('the Access panel renders one checkbox per permission per account, not a si
   // that the PERMISSIONS array driving that loop lists all 4 fields.
   const permsMatch = DEV_TOOLS.match(/const PERMISSIONS = \[[\s\S]*?\];/);
   assert.ok(permsMatch, 'expected to find the PERMISSIONS array definition');
-  for (const field of ['can_access_dev_tools', 'can_manage_business_finances', 'can_manage_site_content', 'can_manage_roles']) {
+  for (const field of [
+    'can_access_dev_tools', 'can_access_dev_tools_full', 'can_manage_invoices',
+    'can_manage_contracts', 'can_view_finance', 'can_view_runway',
+    'can_manage_reviews', 'can_manage_site_content', 'can_manage_roles',
+  ]) {
     assert.match(permsMatch[0], new RegExp(`field: '${field}'`));
   }
   assert.match(DEV_TOOLS, /data-field="' \+ p\.field \+ '"/);
@@ -97,6 +101,12 @@ test('adding a new account can start from a preset but the row becomes independe
   assert.ok(fnMatch, 'expected to isolate addAccount()');
   const body = fnMatch[0];
   assert.match(body, /can_manage_roles: preset \? !!preset\.can_manage_roles : false/);
+  assert.match(body, /can_access_dev_tools_full: preset \? !!preset\.can_access_dev_tools_full : false/);
+  assert.match(body, /can_manage_invoices: preset \? !!preset\.can_manage_invoices : false/);
+  assert.match(body, /can_manage_contracts: preset \? !!preset\.can_manage_contracts : false/);
+  assert.match(body, /can_view_finance: preset \? !!preset\.can_view_finance : false/);
+  assert.match(body, /can_view_runway: preset \? !!preset\.can_view_runway : false/);
+  assert.match(body, /can_manage_reviews: preset \? !!preset\.can_manage_reviews : false/);
   assert.match(body, /role_name: presetName \|\| null/);
 });
 
@@ -107,4 +117,58 @@ test('role_definitions is only read for presets in the Add-account form, never t
   // (to populate the preset dropdown) via Promise.all, nothing else.
   const callSites = [...DEV_TOOLS.matchAll(/fetchRoleDefinitions\(\)/g)];
   assert.equal(callSites.length, 2, 'expected exactly the definition itself plus one call site');
+});
+
+// ---- each of the 5 previously-bundled tools gates on its OWN
+// permission now (2026-09-02), requested directly: "Review tool?
+// Checkbox." ----
+
+test('each of the 5 previously-bundled tools is gated on its own specific permission, not a shared one', () => {
+  const cases = [
+    { file: 'review-request.html', fn: /canManageReviews/ },
+    { file: 'finance.html', fn: /canViewFinance/ },
+    { file: 'runway-dashboard.html', fn: /canViewRunway/ },
+  ];
+  for (const c of cases) {
+    const src = fs.readFileSync(path.join(__dirname, '..', '..', 'tools', c.file), 'utf8');
+    assert.match(src, c.fn, `${c.file} should gate on its own dedicated permission`);
+    assert.doesNotMatch(src, /canManageBusinessFinances/, `${c.file} should not reference the retired shared permission`);
+  }
+
+  // Contract Generator and Invoice Generator each have multiple call
+  // sites (page gate, pull-to-refresh, realtime), all updated.
+  const contractSrc = fs.readFileSync(path.join(__dirname, '..', '..', 'tools', 'contract-generator.html'), 'utf8');
+  assert.equal((contractSrc.match(/canManageContracts/g) || []).length, 6, 'expected 3 call sites x 2 (typeof check + call) for canManageContracts');
+  assert.doesNotMatch(contractSrc, /canManageBusinessFinances/);
+
+  const invoiceSrc = fs.readFileSync(path.join(__dirname, '..', '..', 'tools', 'invoice-generator.html'), 'utf8');
+  assert.equal((invoiceSrc.match(/canManageInvoices/g) || []).length, 6, 'expected 3 call sites x 2 (typeof check + call) for canManageInvoices');
+  assert.doesNotMatch(invoiceSrc, /canManageBusinessFinances/);
+});
+
+test('the workspace dashboard tiles are each gated on their own permission, not shown/hidden as one block', () => {
+  const src = fs.readFileSync(path.join(__dirname, '..', '..', 'tools', 'workspace.html'), 'utf8');
+  const tilePerms = ['can_manage_contracts', 'can_manage_invoices', 'can_view_finance', 'can_view_runway', 'can_manage_reviews'];
+  for (const perm of tilePerms) {
+    assert.match(src, new RegExp(`data-tile-perm="${perm}"`), `expected a tile tagged with ${perm}`);
+  }
+  assert.doesNotMatch(src, /business-finance-tile/, 'the old shared class should be gone');
+
+  const fnMatch = src.match(/function renderBusinessFinanceTileVisibility\(\)[\s\S]*?\n  \}\n/);
+  assert.ok(fnMatch, 'expected to isolate renderBusinessFinanceTileVisibility()');
+  assert.match(fnMatch[0], /data-tile-perm/, 'should check each tile individually via its own attribute');
+});
+
+test('the 27 technical Dev Tools panels are gated on their own permission, decoupled from Manage permissions', () => {
+  const fnMatch = DEV_TOOLS.match(/function applyOwnerRestrictedView\(\)[\s\S]*?\n  \}\n/);
+  assert.ok(fnMatch, 'expected to isolate applyOwnerRestrictedView()');
+  assert.match(fnMatch[0], /if \(canAccessDevToolsFull\(\)\) return;/);
+  assert.doesNotMatch(fnMatch[0], /canManageRoles\(\)/,
+    'seeing the technical panels should no longer require the ability to manage everyone\'s permissions');
+});
+
+test('canAccessDevToolsFull() is a real accessor reading its own cached field', () => {
+  const fnMatch = AUTH_JS.match(/function canAccessDevToolsFull\(\)[\s\S]*?\n\}/);
+  assert.ok(fnMatch, 'expected to find canAccessDevToolsFull()');
+  assert.match(fnMatch[0], /_cachedRoleInfo\.canAccessDevToolsFull/);
 });

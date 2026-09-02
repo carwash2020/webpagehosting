@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="en" style="background:#0a0a0a;">
 <head>
-<script src="/tools/auth.js?v=f368e051a4"></script>
+<script src="/tools/auth.js?v=925ec71572"></script>
 <script>
   // Security gate -- redirect to login before this page's own content
   // is meaningfully usable. See auth.js for why this exists (a single
@@ -879,7 +879,7 @@
     // then()/catch() callback into this one shared function so the gate
     // check only needs to exist in one place.
     function afterInitialSync() {
-      if (typeof canManageBusinessFinances === 'function' && !canManageBusinessFinances()) {
+      if (typeof canManageContracts === 'function' && !canManageContracts()) {
         document.getElementById('roleBlockedOverlay').classList.add('is-shown');
         return;
       }
@@ -887,10 +887,10 @@
     }
     if (typeof initSyncOnLoad === 'function') {
       initSyncOnLoad().then(afterInitialSync).catch(afterInitialSync);
-      if (typeof setupPullToRefresh === 'function') setupPullToRefresh(() => { if (typeof canManageBusinessFinances === 'function' && !canManageBusinessFinances()) return; populateContactPickers(); renderContractLog(); });
+      if (typeof setupPullToRefresh === 'function') setupPullToRefresh(() => { if (typeof canManageContracts === 'function' && !canManageContracts()) return; populateContactPickers(); renderContractLog(); });
     }
     if (typeof startRealtimeSync === 'function') {
-      startRealtimeSync(() => { if (typeof canManageBusinessFinances === 'function' && !canManageBusinessFinances()) return; renderContractLog(); }, updateRealtimeBadge);
+      startRealtimeSync(() => { if (typeof canManageContracts === 'function' && !canManageContracts()) return; renderContractLog(); }, updateRealtimeBadge);
     }
   } catch (initError) {
     try {

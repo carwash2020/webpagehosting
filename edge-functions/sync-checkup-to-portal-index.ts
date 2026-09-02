@@ -43,19 +43,22 @@ function decodeJwtPayload(token: string): { email?: string; role?: string } {
   }
 }
 
-// Permission model redesign (2026-09-02): reads can_manage_business_finances
-// directly off account_roles now -- no join to role_definitions. Each
-// account's permissions are its own, individually toggleable in Dev
-// Tools -> Access, not inherited from a shared role tier.
-async function callerCanManageInvoices(email: string): Promise<boolean> {
+// Granular permission expansion (2026-09-02): job-tracker.html (the
+// caller here, via a completed job or a recurring template) has no
+// specific permission gate of its own -- any recognized internal
+// account can use it. "Has a real account_roles row at all" is the
+// correct matching check here, not any one specific granular
+// permission that wouldn't actually fit. can_manage_business_finances
+// (the old, broader checkbox this used to read) no longer exists as a
+// column at all.
+async function callerIsInternalAccount(email: string): Promise<boolean> {
   const res = await fetch(
-    `${SUPABASE_URL}/rest/v1/account_roles?email=eq.${encodeURIComponent(email.toLowerCase())}&select=can_manage_business_finances`,
+    `${SUPABASE_URL}/rest/v1/account_roles?email=eq.${encodeURIComponent(email.toLowerCase())}&select=email&limit=1`,
     { headers: { apikey: SERVICE_ROLE_KEY, Authorization: `Bearer ${SERVICE_ROLE_KEY}` } },
   );
   if (!res.ok) return false;
   const rows = await res.json();
-  if (!rows.length) return false;
-  return rows[0].can_manage_business_finances === true;
+  return rows.length > 0;
 }
 
 async function clientHasPortalPresence(normalizedEmail: string): Promise<boolean> {
@@ -91,8 +94,8 @@ Deno.serve(async (req: Request) => {
     if (claims.role !== "authenticated" || !claims.email) {
       return json({ ok: false, error: "Must be signed in with a real session." }, 401);
     }
-    if (!(await callerCanManageInvoices(claims.email))) {
-      return json({ ok: false, error: "This account can't manage checkup reminders." }, 403);
+    if (!(await callerIsInternalAccount(claims.email))) {
+      return json({ ok: false, error: "This account isn't recognized." }, 403);
     }
 
     const body = await req.json();

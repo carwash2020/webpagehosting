@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="en" style="background:#0a0a0a;">
 <head>
-<script src="/tools/auth.js?v=f368e051a4"></script>
+<script src="/tools/auth.js?v=925ec71572"></script>
 <script>
   // Security gate -- redirect to login before this page's own content
   // is meaningfully usable. See auth.js for why this exists (a single
@@ -38,7 +38,7 @@
 <link rel="stylesheet" href="/styles.css?v=202608202000">
 <link rel="stylesheet" href="/tools/styles-tools.css?v=a2e87effb3">
 <script src="/tools/data-layer.js?v=1133747765" defer></script>
-<script src="/tools/dev-tools-shared.js?v=aa918417a8" defer></script>
+<script src="/tools/dev-tools-shared.js?v=05d270b145" defer></script>
 <script src="/tools/tools-effects.js?v=9a2a59040e" defer></script>
 <script src="/tools/tools-dialogs.js?v=e1dfaa11a1" defer></script>
 <script src="/tools/tools-media-sharing.js?v=4e2769b10d" defer></script>
@@ -1631,11 +1631,13 @@
   // ---------------------------------------------------------------------
 
   async function fetchAccountRolesData() {
-    // Permission model redesign (2026-09-02): the 4 booleans are read
-    // directly off account_roles now -- each account's own row is the
-    // full, authoritative answer, no join to role_definitions needed.
+    // Granular permission expansion (2026-09-02): 9 booleans now,
+    // read directly off account_roles -- each account's own row is
+    // the full, authoritative answer, no join to role_definitions
+    // needed. can_manage_business_finances (the old, broader
+    // checkbox) no longer exists as a column at all.
     const res = await fetchWithTimeout(
-      SUPABASE_URL + '/rest/v1/account_roles?select=email,role_name,can_manage_roles,can_access_dev_tools,can_manage_site_content,can_manage_business_finances&order=email',
+      SUPABASE_URL + '/rest/v1/account_roles?select=email,role_name,can_manage_roles,can_access_dev_tools,can_access_dev_tools_full,can_manage_site_content,can_manage_invoices,can_manage_contracts,can_view_finance,can_view_runway,can_manage_reviews&order=email',
       8000,
       { headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': 'Bearer ' + getAuthToken() } }
     );
@@ -1649,7 +1651,7 @@
   // authorization time anywhere in the app anymore.
   async function fetchRoleDefinitions() {
     const res = await fetchWithTimeout(
-      SUPABASE_URL + '/rest/v1/role_definitions?select=name,can_manage_roles,can_access_dev_tools,can_manage_site_content,can_manage_business_finances&order=name',
+      SUPABASE_URL + '/rest/v1/role_definitions?select=name,can_manage_roles,can_access_dev_tools,can_access_dev_tools_full,can_manage_site_content,can_manage_invoices,can_manage_contracts,can_view_finance,can_view_runway,can_manage_reviews&order=name',
       8000,
       { headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': 'Bearer ' + getAuthToken() } }
     );
@@ -1700,8 +1702,14 @@
   // that preview is narrowly scoped to just the Account Roles panel's
   // own display; this is a real, permanent restriction based on the
   // actual logged-in account, not a temporary preview.
+  // Decoupled from canManageRoles() (2026-09-02) -- previously the
+  // ONLY way to see the 27 technical/diagnostic panels was to also be
+  // able to manage everyone's permissions, which conflated two
+  // genuinely unrelated capabilities. canAccessDevToolsFull() is its
+  // own dedicated checkbox now, independently toggleable in Dev Tools
+  // -> Access -> Account permissions.
   function applyOwnerRestrictedView() {
-    if (canManageRoles()) return; // Developer -- full access, nothing hidden
+    if (canAccessDevToolsFull()) return; // full technical access -- nothing hidden
     document.querySelectorAll('.dev-owner-hidden').forEach(el => { el.style.display = 'none'; });
   }
 
@@ -1802,9 +1810,20 @@
     const previewControl = document.getElementById('rolePreviewControl');
     if (previewControl) previewControl.style.display = canManageRoles() ? 'block' : 'none';
 
+    // Granular permission expansion (2026-09-02) -- requested
+    // directly: "Review tool? Checkbox. Dev tool stats? On today, off
+    // tomorrow." 9 checkboxes now, each gating exactly one real
+    // page/capability, replacing the old 4 (which bundled 5 distinct
+    // tools under one "Invoices/quotes" checkbox, and coupled the 27
+    // technical Dev Tools panels to Manage permissions).
     const PERMISSIONS = [
       { field: 'can_access_dev_tools', label: 'Dev Tools' },
-      { field: 'can_manage_business_finances', label: 'Invoices/quotes' },
+      { field: 'can_access_dev_tools_full', label: 'Dev Tools (full technical)' },
+      { field: 'can_manage_invoices', label: 'Invoices & Quotes' },
+      { field: 'can_manage_contracts', label: 'Contracts' },
+      { field: 'can_view_finance', label: 'Finance dashboard' },
+      { field: 'can_view_runway', label: 'Runway dashboard' },
+      { field: 'can_manage_reviews', label: 'Review requests' },
       { field: 'can_manage_site_content', label: 'Site content' },
       { field: 'can_manage_roles', label: 'Manage permissions' },
     ];
@@ -1909,8 +1928,13 @@
       role_name: presetName || null,
       can_manage_roles: preset ? !!preset.can_manage_roles : false,
       can_access_dev_tools: preset ? !!preset.can_access_dev_tools : false,
+      can_access_dev_tools_full: preset ? !!preset.can_access_dev_tools_full : false,
       can_manage_site_content: preset ? !!preset.can_manage_site_content : false,
-      can_manage_business_finances: preset ? !!preset.can_manage_business_finances : false,
+      can_manage_invoices: preset ? !!preset.can_manage_invoices : false,
+      can_manage_contracts: preset ? !!preset.can_manage_contracts : false,
+      can_view_finance: preset ? !!preset.can_view_finance : false,
+      can_view_runway: preset ? !!preset.can_view_runway : false,
+      can_manage_reviews: preset ? !!preset.can_manage_reviews : false,
       assigned_by: (typeof getCurrentUserEmail === 'function' && getCurrentUserEmail()) || null,
     };
 

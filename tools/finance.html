@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="en" style="background:#0a0a0a;">
 <head>
-<script src="/tools/auth.js?v=f368e051a4"></script>
+<script src="/tools/auth.js?v=925ec71572"></script>
 <script>
   // Security gate -- redirect to login before this page’s own content
   // is meaningfully usable. See auth.js for why this exists (a single
@@ -1108,7 +1108,7 @@
       // render/setup logic below runs, so a blocked account's data
       // never populates the DOM at all -- not just visually covered by
       // the overlay.
-      if (typeof canManageBusinessFinances === 'function' && !canManageBusinessFinances()) {
+      if (typeof canViewFinance === 'function' && !canViewFinance()) {
         document.getElementById('roleBlockedOverlay').classList.add('is-shown');
         return;
       }

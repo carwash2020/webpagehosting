@@ -8,9 +8,9 @@
 // UNPAID and they could pay it a second time through Stripe.
 //
 // INTERNAL-only, unlike the client-facing payment functions: this
-// takes the same account_roles + can_manage_business_finances check
-// every other internal write uses. A client must never be able to
-// mark their own invoice paid.
+// takes the same account_roles + can_manage_invoices check
+// invoice-generator.html itself is gated on. A client must never be
+// able to mark their own invoice paid.
 //
 // Keyed by source_invoice_id (the internal th_invoices id), not the
 // portal row's own id -- the caller is the internal Invoice Log,
@@ -43,19 +43,20 @@ function decodeJwtPayload(token: string): { email?: string; role?: string } {
   }
 }
 
-// Permission model redesign (2026-09-02): reads can_manage_business_finances
-// directly off account_roles now -- no join to role_definitions. Each
-// account's permissions are its own, individually toggleable in Dev
-// Tools -> Access, not inherited from a shared role tier.
+// Granular permission expansion (2026-09-02): reads can_manage_invoices
+// directly off account_roles -- matches invoice-generator.html's own
+// gate exactly (Invoices & Quotes both live in that one tool).
+// can_manage_business_finances (the old, broader checkbox this used
+// to read) no longer exists as a column at all.
 async function callerCanManageInvoices(email: string): Promise<boolean> {
   const res = await fetch(
-    `${SUPABASE_URL}/rest/v1/account_roles?email=eq.${encodeURIComponent(email.toLowerCase())}&select=can_manage_business_finances`,
+    `${SUPABASE_URL}/rest/v1/account_roles?email=eq.${encodeURIComponent(email.toLowerCase())}&select=can_manage_invoices`,
     { headers: { apikey: SERVICE_ROLE_KEY, Authorization: `Bearer ${SERVICE_ROLE_KEY}` } },
   );
   if (!res.ok) return false;
   const rows = await res.json();
   if (!rows.length) return false;
-  return rows[0].can_manage_business_finances === true;
+  return rows[0].can_manage_invoices === true;
 }
 
 Deno.serve(async (req: Request) => {

@@ -163,15 +163,14 @@ All deployed and ACTIVE. Source backed up in `edge-functions/`.
 | `sync-checkup-to-portal` | true | Writes to `client_portal_checkups` for a client-linked Recurring Job Template, only if that client already has some portal presence; also handles deletion (`{ source_template_id, delete: true }`) when a template is removed internally |
 | `get-job-photo-urls` | true | Client-only -- verifies the job belongs to the caller, then signs each `photo_storage_paths` entry fresh (service role bypasses the job-photos bucket's own looser RLS, safe only because ownership was already checked) |
 | `schedule-checkup-visit` | true | Client-only -- no approval/already-scheduled guard (unlike `schedule-quote-job`); inserts into `th_bookings` with `checkup_id` set |
-| `set-invoice-paid` | true | **Internal-only** (`account_roles` + `can_manage_business_finances`) -- marks a portal invoice paid/unpaid by hand, for the cash/check/Venmo payments that never touch Stripe. Keyed by `source_invoice_id`, not the portal row id, since the caller is the internal Invoice Log |
-| `set-invoice-paid` | true | **Internal-only** (`account_roles` + `can_manage_business_finances`) -- marks a portal invoice paid/unpaid by hand, for the cash/check/Venmo payments that never touch Stripe. Keyed by `source_invoice_id`, since the caller is the internal Invoice Log |
+| `set-invoice-paid` | true | **Internal-only** (`account_roles` + `can_manage_invoices`) -- marks a portal invoice paid/unpaid by hand, for the cash/check/Venmo payments that never touch Stripe. Keyed by `source_invoice_id`, not the portal row id, since the caller is the internal Invoice Log |
 
 Two non-obvious things worth not rediscovering the hard way:
 
 - **`sync-invoice-to-portal` forwards the original caller's own auth
   token** to the downstream functions, not the service role key,
   because both of those require the `authenticated` role plus
-  `can_manage_business_finances`. `sync-quote-to-portal` does the same.
+  `can_manage_invoices`. `sync-quote-to-portal` does the same.
 - **`stripe-webhook` must be `verify_jwt: false`.** Stripe cannot
   send a Supabase JWT; the `Stripe-Signature` header is the only
   auth, verified with `constructEventAsync()` against the **raw**
@@ -362,6 +361,25 @@ Real dependencies, not preference, decide this order:
    formula `templateDueInfo()` already uses internally, same
    never-store-a-computed-value discipline as job warranty. This
    closes out all five phases of the original roadmap.
+
+## Permission model, in brief
+
+`sync-job-to-portal`/`sync-checkup-to-portal`/`send-invite` check "is
+this a real, recognized internal account at all" (`callerIsInternalAccount()`)
+rather than any one specific granular permission -- job-tracker.html
+(the caller in both cases) has no permission gate of its own, and
+`send-invite` is shared by contexts that do and don't have one, so the
+least-restrictive, correct check for these is account existence, not
+a specific checkbox that wouldn't actually fit. Every other portal
+edge function checks `can_manage_invoices` specifically, matching
+`invoice-generator.html`'s own gate (Invoices and Quotes both live in
+that one tool).
+
+Full detail on the account-permissions system itself -- how the 9
+granular checkboxes work, the safety trigger, and a real incident this
+system caused and then fixed the same day -- lives in
+`DISASTER_RECOVERY.md`'s "Account permissions system" section, not
+duplicated here.
 
 ## Client identity: one client, one email (2026-09-02)
 

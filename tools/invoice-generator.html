@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="en" style="background:#0a0a0a;">
 <head>
-<script src="/tools/auth.js?v=f368e051a4"></script>
+<script src="/tools/auth.js?v=925ec71572"></script>
 <script>
   // Security gate -- redirect to login before this page's own content
   // is meaningfully usable. See auth.js for why this exists (a single
@@ -1769,7 +1769,7 @@
     // same UI-level-gate trade-off already accepted on runway-dashboard.html,
     // not a true security boundary either way.
     function afterInitialSync() {
-      if (typeof canManageBusinessFinances === 'function' && !canManageBusinessFinances()) {
+      if (typeof canManageInvoices === 'function' && !canManageInvoices()) {
         document.getElementById('roleBlockedOverlay').classList.add('is-shown');
         return;
       }
@@ -1777,10 +1777,10 @@
     }
     if (typeof initSyncOnLoad === 'function') {
       initSyncOnLoad().then(afterInitialSync).catch(afterInitialSync);
-      if (typeof setupPullToRefresh === 'function') setupPullToRefresh(() => { if (typeof canManageBusinessFinances === 'function' && !canManageBusinessFinances()) return; loadSharedTaxRate(); populateKnownContactsList(); populatePriceRefPickers(); renderInvoiceLog(); renderQuoteLog(); if (typeof refreshPortalQuoteStatuses === 'function') refreshPortalQuoteStatuses(); });
+      if (typeof setupPullToRefresh === 'function') setupPullToRefresh(() => { if (typeof canManageInvoices === 'function' && !canManageInvoices()) return; loadSharedTaxRate(); populateKnownContactsList(); populatePriceRefPickers(); renderInvoiceLog(); renderQuoteLog(); if (typeof refreshPortalQuoteStatuses === 'function') refreshPortalQuoteStatuses(); });
     }
     if (typeof startRealtimeSync === 'function') {
-      startRealtimeSync(() => { if (typeof canManageBusinessFinances === 'function' && !canManageBusinessFinances()) return; loadSharedTaxRate(); populateKnownContactsList(); populatePriceRefPickers(); }, updateRealtimeBadge);
+      startRealtimeSync(() => { if (typeof canManageInvoices === 'function' && !canManageInvoices()) return; loadSharedTaxRate(); populateKnownContactsList(); populatePriceRefPickers(); }, updateRealtimeBadge);
     }
     } catch (initError) {
       try {
