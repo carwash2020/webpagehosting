@@ -1,0 +1,367 @@
+<!DOCTYPE html>
+<html lang="en" style="background:#0a0a0a;">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="robots" content="noindex, nofollow">
+<title>Request Work | Triple H Enterprises</title>
+<!--
+  Client Portal work-order request page (2026-09-02), requested
+  directly: "add a workflow on the portal for the guest to create
+  work orders or request a job be done."
+
+  Same isolation as every other portal page
+  (dashboard/quotes/jobs/login): no internal /tools/ scripts loaded at
+  all, only shared stylesheets for visual consistency.
+
+  IMPORTANT, and different from every other portal page: this is the
+  first and only place a CLIENT writes rows rather than just reading a
+  one-way mirror. client_portal_work_orders' RLS is written to match:
+  client_email defaults to the caller's own verified JWT email and the
+  INSERT policy requires the inserted value to equal auth.email(), so
+  a signed-in client physically cannot file a request attributed to
+  someone else. A client can only ever create status='submitted' --
+  they cannot self-assign 'scheduled' or 'declined' -- and there is no
+  client UPDATE or DELETE policy at all, so a submitted request stays
+  an honest record of what was actually asked for.
+
+  This page deliberately never SELECTs internal_notes. Postgres RLS is
+  row-level, not column-level, so a client reading their own row could
+  technically read that column too -- the protection here is the query
+  itself, which is exactly why nothing genuinely sensitive should ever
+  be written into it. Same reasoning as never syncing jobNotes to the
+  portal.
+-->
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data:; connect-src 'self' https://csvfqdjuobylgafgolho.supabase.co; frame-src 'none'; object-src 'none'; base-uri 'self'; frame-ancestors 'none';">
+<meta name="theme-color" content="#0a0a0a">
+<link rel="shortcut icon" href="/favicon.ico">
+<link rel="icon" href="/favicon.ico" sizes="any">
+<link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32.png">
+<link rel="icon" type="image/png" sizes="192x192" href="/images/favicon-192.png?v=202608010300">
+<link rel="apple-touch-icon" href="/images/apple-touch-icon.png?v=202608010300">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/styles.css?v=202608202000">
+<link rel="stylesheet" href="/tools/styles-tools.css?v=a2e87effb3">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+  body { max-width: 640px; margin: 0 auto; padding: 24px 16px 60px; }
+  .portal-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; }
+  .portal-header-left { display: flex; align-items: center; gap: 12px; }
+  .portal-header img { width: 40px; height: auto; }
+  .portal-title { font-family: 'Oswald', sans-serif; font-weight: 700; font-size: 19px; color: var(--white); }
+  .portal-sub { color: var(--text-dim); font-size: 13px; }
+  .portal-nav { display: flex; gap: 8px; margin-bottom: 24px; flex-wrap: wrap; }
+  .portal-nav a {
+    flex: 1; min-width: 72px; text-align: center; padding: 9px 12px; border-radius: 8px; font-size: 13.5px; font-weight: 600;
+    text-decoration: none; border: 1px solid var(--border); color: var(--text-dim);
+  }
+  .portal-nav a.is-active { background: var(--orange-tint-soft); border-color: var(--orange-tint-border); color: var(--orange-light); }
+
+  .wo-intro { color: var(--text-dim); font-size: 13.5px; line-height: 1.55; margin-bottom: 20px; }
+  .wo-form-card {
+    background: var(--bg-panel); border: 1px solid var(--border); border-radius: 12px;
+    padding: 18px 16px; margin-bottom: 28px;
+  }
+  .wo-field { margin-bottom: 14px; }
+  .wo-field label { display: block; font-size: 13px; font-weight: 600; color: var(--white); margin-bottom: 5px; }
+  .wo-field .wo-hint { display: block; font-weight: 400; color: var(--text-dim); font-size: 12px; margin-top: 2px; }
+  .wo-field input[type="text"], .wo-field input[type="tel"], .wo-field textarea, .wo-field select {
+    width: 100%; box-sizing: border-box; padding: 10px 12px; background: var(--bg-panel-2);
+    border: 1px solid var(--border); border-radius: 8px; color: var(--white);
+    font-size: 14.5px; font-family: inherit;
+  }
+  .wo-field textarea { min-height: 96px; resize: vertical; line-height: 1.5; }
+  .wo-field input:focus, .wo-field textarea:focus, .wo-field select:focus {
+    outline: none; border-color: var(--orange); background: var(--bg-panel);
+  }
+  .wo-urgency-row { display: flex; gap: 8px; }
+  .wo-urgency-btn {
+    flex: 1; padding: 10px 6px; border-radius: 8px; border: 1px solid var(--border);
+    background: var(--bg-panel-2); color: var(--text); font-family: inherit; font-size: 13px;
+    font-weight: 600; cursor: pointer; text-align: center;
+  }
+  .wo-urgency-btn.is-selected { border-color: var(--orange); background: var(--orange-tint-soft); color: var(--orange-light); }
+  .wo-urgency-btn .wo-urgency-sub { display: block; font-weight: 400; font-size: 11px; color: var(--text-dim); margin-top: 2px; }
+  .wo-urgency-btn.is-selected .wo-urgency-sub { color: var(--orange-light); }
+  .wo-error { color: #ff8a80; font-size: 13px; margin-top: 10px; }
+  .wo-success {
+    background: var(--bg-panel); border: 1px solid #2e5c46; border-radius: 12px;
+    padding: 20px 18px; text-align: center; margin-bottom: 28px;
+  }
+  .wo-success-title { font-family: 'Oswald', sans-serif; font-weight: 700; font-size: 18px; color: #4caf78; margin-bottom: 8px; }
+  .wo-success-body { color: var(--text-dim); font-size: 13.5px; line-height: 1.55; }
+
+  .wo-section-title {
+    font-family: 'Oswald', sans-serif; font-weight: 600; font-size: 13px; letter-spacing: 0.6px;
+    text-transform: uppercase; color: var(--text-dim); margin: 0 0 10px;
+  }
+  .wo-card {
+    background: var(--bg-panel); border: 1px solid var(--border); border-radius: 10px;
+    padding: 14px 15px; margin-bottom: 10px;
+  }
+  .wo-card-top { display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; }
+  .wo-card-title { font-weight: 600; color: var(--white); font-size: 14.5px; }
+  .wo-card-date { color: var(--text-dim); font-size: 12px; margin-top: 2px; }
+  .wo-card-desc { color: var(--text); font-size: 13.5px; line-height: 1.5; margin-top: 8px; white-space: pre-wrap; }
+  .wo-status {
+    flex: 0 0 auto; font-size: 11.5px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px;
+    padding: 4px 9px; border-radius: 999px; border: 1px solid var(--border); color: var(--text-dim);
+  }
+  .wo-status.is-submitted { border-color: var(--orange-tint-border); background: var(--orange-tint-soft); color: var(--orange-light); }
+  .wo-status.is-reviewing { border-color: #3a5a8c; background: rgba(58,90,140,0.18); color: #8ab4f8; }
+  .wo-status.is-quoted   { border-color: #3a5a8c; background: rgba(58,90,140,0.18); color: #8ab4f8; }
+  .wo-status.is-scheduled { border-color: #2e5c46; background: rgba(46,92,70,0.18); color: #4caf78; }
+  .wo-status.is-completed { border-color: #2e5c46; background: rgba(46,92,70,0.18); color: #4caf78; }
+  .wo-status.is-declined  { background: var(--bg-panel-2); color: var(--text-dim); }
+  .wo-urgency-tag { font-size: 11.5px; color: var(--text-dim); margin-top: 6px; }
+  .wo-urgency-tag.is-urgent { color: #ff8a80; font-weight: 600; }
+  .empty-state { text-align: center; color: var(--text-dim); padding: 28px 20px; font-size: 13.5px; }
+</style>
+</head>
+<body>
+
+<div class="portal-header">
+  <div class="portal-header-left">
+    <img src="/images/logo-signature-orange.webp?v=202608142300" alt="Triple H Enterprises">
+    <div>
+      <div class="portal-title">Request Work</div>
+      <div class="portal-sub" id="clientEmailDisplay"></div>
+    </div>
+  </div>
+  <button class="secondary-btn" id="signOutBtn">Sign out</button>
+</div>
+
+<div class="portal-nav">
+  <a href="/portal/work-orders.html" class="is-active">Request</a>
+  <a href="/portal/quotes.html">Quotes</a>
+  <a href="/portal/dashboard.html">Invoices</a>
+  <a href="/portal/jobs.html">Jobs</a>
+</div>
+
+<p class="wo-intro">Tell us what needs doing and we'll follow up to confirm details and pricing. For anything urgent &mdash; an active leak, no power, a fridge that's failed &mdash; call or text <a href="tel:+14354141667" style="color:var(--orange-light);">(435) 414-1667</a> instead, that reaches us faster.</p>
+
+<div id="successMessage" class="wo-success" style="display:none;">
+  <div class="wo-success-title">Request sent</div>
+  <div class="wo-success-body">We've got it and we'll be in touch to confirm the details. You can track its status below.</div>
+</div>
+
+<div class="wo-form-card" id="requestForm">
+  <div class="wo-field">
+    <label for="woTitle">What do you need done?
+      <span class="wo-hint">A short summary &mdash; e.g. "Dishwasher won't drain"</span>
+    </label>
+    <input type="text" id="woTitle" maxlength="120" placeholder="Dishwasher won't drain">
+  </div>
+
+  <div class="wo-field">
+    <label for="woDescription">Tell us more
+      <span class="wo-hint">What's happening, how long it's been going on, anything you've already tried. The more detail, the better we can prepare.</span>
+    </label>
+    <textarea id="woDescription" maxlength="2000" placeholder="Standing water in the bottom after every cycle. Started about a week ago. Tried cleaning the filter, no change."></textarea>
+  </div>
+
+  <div class="wo-field">
+    <label>How soon do you need it?</label>
+    <div class="wo-urgency-row" id="woUrgencyRow">
+      <button type="button" class="wo-urgency-btn is-selected" data-urgency="normal">Whenever<span class="wo-urgency-sub">Flexible</span></button>
+      <button type="button" class="wo-urgency-btn" data-urgency="soon">Soon<span class="wo-urgency-sub">This week</span></button>
+      <button type="button" class="wo-urgency-btn" data-urgency="urgent">Urgent<span class="wo-urgency-sub">ASAP</span></button>
+    </div>
+  </div>
+
+  <div class="wo-field">
+    <label for="woTiming">Any timing that works best?
+      <span class="wo-hint">Optional &mdash; e.g. "Weekday afternoons" or "Any day after the 15th"</span>
+    </label>
+    <input type="text" id="woTiming" maxlength="200" placeholder="Weekday afternoons">
+  </div>
+
+  <div class="wo-field">
+    <label for="woAddress">Where's the work?
+      <span class="wo-hint">Optional if we've been there before</span>
+    </label>
+    <input type="text" id="woAddress" maxlength="300" placeholder="123 Main St, St. George, UT">
+  </div>
+
+  <div class="wo-field">
+    <label for="woPhone">Best number to reach you
+      <span class="wo-hint">Optional &mdash; helps us confirm faster than email</span>
+    </label>
+    <input type="tel" id="woPhone" maxlength="40" placeholder="(435) 555-0123">
+  </div>
+
+  <div class="wo-error" id="woError" style="display:none;"></div>
+
+  <button class="btn blue" style="width:100%; justify-content:center; margin-top:6px;" id="woSubmitBtn">Send Request</button>
+</div>
+
+<div id="myRequests"></div>
+
+<script>
+  const { createClient } = supabase;
+  const client = createClient(
+    'https://csvfqdjuobylgafgolho.supabase.co',
+    'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNzdmZxZGp1b2J5bGdhZmdvbGhvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODUzNTQ3MjcsImV4cCI6MjEwMDkzMDcyN30.6GlvK-DfXf2lppS1kciZtsl4wHOpZz_yKtwsS1lyjrs'
+  );
+
+  function escapeHtml(str) {
+    const div = document.createElement('div');
+    div.textContent = String(str == null ? '' : str);
+    return div.innerHTML;
+  }
+
+  function formatDate(iso) {
+    if (!iso) return '';
+    return new Intl.DateTimeFormat('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+      .format(new Date(iso));
+  }
+
+  // Client-facing status wording. Deliberately NOT the raw database
+  // values: 'reviewing' and 'quoted' both mean "we've seen it and
+  // we're working on it" from the client's side, and a bare
+  // 'declined' with no context reads far harsher than intended --
+  // Steve's actual reason gets communicated by phone or in a quote,
+  // not by a one-word badge.
+  const STATUS_LABELS = {
+    submitted: 'Received',
+    reviewing: 'Being reviewed',
+    quoted: 'Quote sent',
+    scheduled: 'Scheduled',
+    completed: 'Completed',
+    declined: 'Closed',
+  };
+
+  const URGENCY_LABELS = {
+    normal: 'Flexible timing',
+    soon: 'Needed this week',
+    urgent: 'Urgent',
+  };
+
+  let selectedUrgency = 'normal';
+
+  document.getElementById('woUrgencyRow').addEventListener('click', (e) => {
+    const btn = e.target.closest('.wo-urgency-btn');
+    if (!btn) return;
+    selectedUrgency = btn.getAttribute('data-urgency');
+    document.querySelectorAll('.wo-urgency-btn').forEach(b => {
+      b.classList.toggle('is-selected', b === btn);
+    });
+  });
+
+  async function submitRequest() {
+    const btn = document.getElementById('woSubmitBtn');
+    const errorEl = document.getElementById('woError');
+    const title = document.getElementById('woTitle').value.trim();
+    const description = document.getElementById('woDescription').value.trim();
+
+    errorEl.style.display = 'none';
+    // Matches the database's own not-blank CHECK constraints rather
+    // than letting a blank submission round-trip just to be rejected.
+    if (!title) { errorEl.textContent = 'Please add a short summary of what you need done.'; errorEl.style.display = 'block'; return; }
+    if (!description) { errorEl.textContent = 'Please tell us a bit more so we can prepare properly.'; errorEl.style.display = 'block'; return; }
+
+    const { data: { session } } = await client.auth.getSession();
+    if (!session) { window.location.replace('/portal/login.html'); return; }
+
+    btn.disabled = true;
+    btn.textContent = 'Sending...';
+
+    // client_email is deliberately NOT sent. The column defaults to
+    // auth.email() and the INSERT policy requires it to equal
+    // auth.email(), so the database itself attributes this to the
+    // signed-in client -- sending it from here would be both
+    // redundant and a thing to get wrong. Same for status, which
+    // defaults to 'submitted' and is the only value the policy
+    // permits a client to create.
+    const { error } = await client.from('client_portal_work_orders').insert({
+      client_name: session.user.email,
+      title,
+      description,
+      urgency: selectedUrgency,
+      preferred_timing: document.getElementById('woTiming').value.trim() || null,
+      address: document.getElementById('woAddress').value.trim() || null,
+      phone: document.getElementById('woPhone').value.trim() || null,
+    });
+
+    if (error) {
+      errorEl.textContent = "Couldn't send that just now. Please try again, or call us at (435) 414-1667.";
+      errorEl.style.display = 'block';
+      btn.disabled = false;
+      btn.textContent = 'Send Request';
+      return;
+    }
+
+    document.getElementById('woTitle').value = '';
+    document.getElementById('woDescription').value = '';
+    document.getElementById('woTiming').value = '';
+    document.getElementById('woAddress').value = '';
+    document.getElementById('woPhone').value = '';
+    document.getElementById('successMessage').style.display = 'block';
+    btn.disabled = false;
+    btn.textContent = 'Send Request';
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+    renderMyRequests();
+  }
+
+  document.getElementById('woSubmitBtn').addEventListener('click', submitRequest);
+
+  function renderRequestCard(wo) {
+    const statusKey = wo.status || 'submitted';
+    const statusLabel = STATUS_LABELS[statusKey] || statusKey;
+    const urgencyLabel = URGENCY_LABELS[wo.urgency] || '';
+    const urgentClass = wo.urgency === 'urgent' ? ' is-urgent' : '';
+    return `
+      <div class="wo-card">
+        <div class="wo-card-top">
+          <div>
+            <div class="wo-card-title">${escapeHtml(wo.title)}</div>
+            <div class="wo-card-date">Requested ${escapeHtml(formatDate(wo.created_at))}</div>
+          </div>
+          <span class="wo-status is-${escapeHtml(statusKey)}">${escapeHtml(statusLabel)}</span>
+        </div>
+        <div class="wo-card-desc">${escapeHtml(wo.description)}</div>
+        ${urgencyLabel ? `<div class="wo-urgency-tag${urgentClass}">${escapeHtml(urgencyLabel)}</div>` : ''}
+      </div>
+    `;
+  }
+
+  async function renderMyRequests() {
+    const listEl = document.getElementById('myRequests');
+    // Deliberately selects an explicit column list rather than '*' --
+    // internal_notes must never reach a client, and Postgres RLS is
+    // row-level, not column-level, so the query itself is what keeps
+    // it out. See this page's head comment.
+    const { data: requests, error } = await client
+      .from('client_portal_work_orders')
+      .select('id,title,description,urgency,status,created_at')
+      .order('created_at', { ascending: false });
+
+    if (error) { listEl.innerHTML = ''; return; }
+    if (!requests || !requests.length) {
+      listEl.innerHTML = '<div class="wo-section-title">Your requests</div>' +
+        '<div class="empty-state">Nothing requested yet. Anything you send above will show up here so you can track it.</div>';
+      return;
+    }
+    listEl.innerHTML = '<div class="wo-section-title">Your requests</div>' +
+      requests.map(renderRequestCard).join('');
+  }
+
+  async function init() {
+    const { data: { session } } = await client.auth.getSession();
+    if (!session) { window.location.replace('/portal/login.html'); return; }
+    document.getElementById('clientEmailDisplay').textContent = session.user.email;
+    renderMyRequests();
+  }
+
+  document.getElementById('signOutBtn').addEventListener('click', async () => {
+    await client.auth.signOut();
+    window.location.replace('/portal/login.html');
+  });
+
+  init();
+</script>
+
+</body>
+</html>

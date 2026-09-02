@@ -38,9 +38,9 @@
   .portal-header img { width: 40px; height: auto; }
   .portal-title { font-family: 'Oswald', sans-serif; font-weight: 700; font-size: 19px; color: var(--white); }
   .portal-sub { color: var(--text-dim); font-size: 13px; }
-  .portal-nav { display: flex; gap: 8px; margin-bottom: 24px; }
+  .portal-nav { display: flex; gap: 8px; margin-bottom: 24px; flex-wrap: wrap; }
   .portal-nav a {
-    flex: 1; text-align: center; padding: 9px 12px; border-radius: 8px; font-size: 13.5px; font-weight: 600;
+    flex: 1; min-width: 72px; text-align: center; padding: 9px 12px; border-radius: 8px; font-size: 13.5px; font-weight: 600;
     text-decoration: none; border: 1px solid var(--border); color: var(--text-dim);
   }
   .portal-nav a.is-active { background: var(--orange-tint-soft); border-color: var(--orange-tint-border); color: var(--orange-light); }
@@ -92,6 +92,7 @@
 </div>
 
 <div class="portal-nav">
+  <a href="/portal/work-orders.html">Request</a>
   <a href="/portal/quotes.html">Quotes</a>
   <a href="/portal/dashboard.html" class="is-active">Invoices</a>
   <a href="/portal/jobs.html">Jobs</a>
@@ -419,7 +420,13 @@
   // design, unlike the secret key, which must never appear here or
   // anywhere else client-side -- but this placeholder needs a real
   // value before payments can actually work.
-  const STRIPE_PUBLISHABLE_KEY = 'pk_test_REPLACE_ME';
+  // Stripe test-mode publishable key (2026-09-02). Publishable keys are
+  // designed to be public and live in browser code -- this is not a
+  // secret, unlike STRIPE_SECRET_KEY which only ever exists as a
+  // Supabase edge-function secret and never appears in this repo.
+  // Swap to the pk_live_... value when going live; the matching
+  // secret-side swap happens in Supabase secrets, not here.
+  const STRIPE_PUBLISHABLE_KEY = 'pk_test_51TxzzNLJyq7HLm12G7UEK2krKDQDmTOoYJThQTdwvbdyW0oC7375Twk0GbrbqM6y389jOgvfI8KoF74rqWkLxPJv001JNJiFtw';
   let stripeInstance = null;
   let elementsInstance = null;
 
