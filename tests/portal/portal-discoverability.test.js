@@ -62,8 +62,12 @@ test('an already-registered email is reported as such, not as a sent invite', ()
   const fnMatch = DEV_TOOLS.match(/async function sendInviteToAnyEmail\(\)[\s\S]*?\n  \}\n/);
   const body = fnMatch[0];
   assert.match(body, /result\.already_has_account/);
-  assert.match(body, /Forgot password/,
-    'should point at the actual remedy for a client who already has an account');
+  // The "Forgot password" guidance itself now lives in send-invite's
+  // own response message (so every caller gets it, not just this UI),
+  // and the frontend renders that message -- asserted directly in the
+  // edge-function tests further down this file.
+  assert.match(body, /escapeHtml\(result\.error/,
+    'should render the explanatory message the server returns');
 });
 
 test('a bad email is rejected before the dev password prompt, not after', () => {
@@ -76,4 +80,80 @@ test('a bad email is rejected before the dev password prompt, not after', () => 
   assert.ok(validationIdx !== -1 && passwordIdx !== -1);
   assert.ok(validationIdx < passwordIdx,
     'email validation should come before the dev password prompt');
+});
+
+// ---- internal accounts are not portal clients (2026-09-02) ----
+//
+// Requested directly after a real confusing outcome: an invite sent to
+// connor@ appeared to do nothing. Cause: that address already had an
+// account -- an INTERNAL one -- and send-invite's already-registered
+// branch quietly returned ok:true with no message, which the UI showed
+// as a soft note that read like nothing had happened. Nothing had.
+
+const SEND_INVITE = fs.readFileSync(path.join(__dirname, '..', '..', 'edge-functions', 'send-invite-index.ts'), 'utf8');
+
+test('send-invite refuses an internal tool account outright, server-side', () => {
+  // Enforced in the edge function, NOT only in the Dev Tools UI, so
+  // the rule holds for every caller -- including
+  // sync-invoice-to-portal and the quote/job sync functions, which
+  // fire send-invite automatically for any new client email.
+  assert.match(SEND_INVITE, /account_roles\?email=eq\.\$\{encodeURIComponent\(targetEmail\)\}/);
+  assert.match(SEND_INVITE, /is_internal_account: true/);
+  assert.match(SEND_INVITE, /is an internal tool account, not a client/);
+  // 409 Conflict, not 200 -- this is a refusal, not a soft success.
+  const guardMatch = SEND_INVITE.match(/if \(internalRows\.length\) \{[\s\S]*?\}, 409\);/);
+  assert.ok(guardMatch, 'the internal-account guard should return 409');
+});
+
+test('the internal-account check runs BEFORE the invite link is generated', () => {
+  // Order matters: generateLink() creates the auth user as a side
+  // effect, so checking afterward would already have done the thing
+  // we are trying to prevent.
+  const internalIdx = SEND_INVITE.indexOf('is_internal_account');
+  // Matches the real CALL, not the mention of generateLink() in this
+  // file's own header comment -- a bare indexOf('admin.generateLink')
+  // finds that comment on line 11 and makes this test meaningless.
+  const generateIdx = SEND_INVITE.indexOf('await adminClient.auth.admin.generateLink');
+  assert.ok(internalIdx !== -1, 'expected the internal-account guard');
+  assert.ok(generateIdx !== -1, 'expected the real generateLink call');
+  assert.ok(internalIdx < generateIdx,
+    'the internal-account guard must run before generateLink creates a user');
+});
+
+test('an existing portal account now returns an explanatory message, not a bare success', () => {
+  const branchMatch = SEND_INVITE.match(/already_has_account: true,[\s\S]*?\}\);/);
+  assert.ok(branchMatch, 'expected the already_has_account branch');
+  assert.match(branchMatch[0], /no new invite was sent/);
+  assert.match(branchMatch[0], /Forgot password/,
+    'should point at the actual remedy rather than leaving them waiting');
+});
+
+test('already_has_account stays ok:true so automatic callers are not broken', () => {
+  // sync-invoice-to-portal fires send-invite for any client email it
+  // has not seen; re-invoicing an existing client is completely
+  // normal and must not surface as a failure there.
+  const branchMatch = SEND_INVITE.match(/if \(linkError\.message\?\.includes\("already been registered"\)[\s\S]*?\}\n/);
+  assert.ok(branchMatch);
+  assert.match(branchMatch[0], /ok: true/);
+});
+
+test('Dev Tools shows internal-account and already-a-client as warnings, not as sent', () => {
+  const fnMatch = DEV_TOOLS.match(/async function sendInviteToAnyEmail\(\)[\s\S]*?\n  \}\n/);
+  assert.ok(fnMatch);
+  const body = fnMatch[0];
+  assert.match(body, /result\.is_internal_account/);
+  // Both non-send outcomes must use the warning style -- the original
+  // bug was that "already has an account" looked like a success.
+  const internalBranch = body.match(/if \(result\.is_internal_account\) \{[\s\S]*?\} else if/);
+  assert.match(internalBranch[0], /is-warning/);
+  const existingBranch = body.match(/else if \(result\.already_has_account\) \{[\s\S]*?\} else if/);
+  assert.match(existingBranch[0], /is-warning/);
+});
+
+test('an internal account appearing in the portal client list is flagged, not hidden', () => {
+  // Flagged rather than filtered: a staff address with real client
+  // invoices on file is legitimate but unusual, and hiding it would
+  // make the list silently disagree with the actual data.
+  assert.match(DEV_TOOLS, /INTERNAL ACCOUNT/);
+  assert.match(DEV_TOOLS, /async function loadInternalEmails\(\)/);
 });

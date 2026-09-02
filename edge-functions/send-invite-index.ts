@@ -177,22 +177,76 @@ Deno.serve(async (req: Request) => {
       return json({ ok: false, error: "Missing or invalid client_email." }, 400);
     }
 
+    const targetEmail = client_email.toLowerCase().trim();
+
+    // Internal tool accounts are NOT portal clients (2026-09-02),
+    // requested directly after a real confusing outcome: an invite
+    // sent to connor@ appeared to do nothing, because that address
+    // already had an account (an INTERNAL one) and the
+    // already-registered branch below quietly reported success.
+    //
+    // This is a genuine guard, not just nicer messaging. The two
+    // account types are deliberately different things: an internal
+    // account is listed in account_roles and grants access to
+    // /tools/ (invoices, finance, dev tools); a portal account is a
+    // CLIENT who signs in at /portal/ to view their own invoices and
+    // request work. They happen to share one Supabase auth user
+    // table, which is exactly why this needs an explicit check --
+    // "invite this person as a client" is close to meaningless for
+    // someone who is staff, and quietly sending a client-facing
+    // "You've been invoiced" setup email to your own team is the kind
+    // of thing that erodes trust in the tool.
+    //
+    // Checked server-side rather than only in the Dev Tools UI so the
+    // rule holds for every caller -- including sync-invoice-to-portal
+    // and the quote/job sync functions, which fire send-invite
+    // automatically for any new client email. If an internal address
+    // ever ended up on an invoice, this stops the invite there too.
+    const internalRes = await fetch(
+      `${SUPABASE_URL}/rest/v1/account_roles?email=eq.${encodeURIComponent(targetEmail)}&select=email&limit=1`,
+      { headers: { apikey: SERVICE_ROLE_KEY, Authorization: `Bearer ${SERVICE_ROLE_KEY}` } },
+    );
+    if (internalRes.ok) {
+      const internalRows = await internalRes.json();
+      if (internalRows.length) {
+        return json({
+          ok: false,
+          is_internal_account: true,
+          error: `${targetEmail} is an internal tool account, not a client. Internal accounts sign in at /tools/ and don't need a client portal invite. If this person also needs a separate client portal login, use a different email address for it.`,
+        }, 409);
+      }
+    }
+
     const adminClient = createClient(SUPABASE_URL, SERVICE_ROLE_KEY);
     const { data: linkData, error: linkError } = await adminClient.auth.admin.generateLink({
       type: "invite",
-      email: client_email.toLowerCase().trim(),
+      email: targetEmail,
       options: {
         redirectTo: `${ALLOWED_ORIGIN}/portal/set-password.html`,
       },
     });
 
     if (linkError) {
-      // A real, expected case, not just an error path: this email
-      // already has an account (e.g. re-invoicing an existing client).
-      // Treated as success from the caller's perspective -- there's
-      // nothing wrong, the client just already has a way in.
+      // This email already has a portal account.
+      //
+      // Still ok:true, deliberately -- the automatic callers
+      // (sync-invoice-to-portal and friends) fire send-invite for any
+      // client email they haven't seen before, and re-invoicing an
+      // existing client is completely normal, not a failure. Those
+      // callers correctly ignore this and carry on.
+      //
+      // But already_has_account is now accompanied by an explicit
+      // message (2026-09-02), because a HUMAN calling this from Dev
+      // Tools needs to know no email was actually sent -- reporting a
+      // bare success left someone waiting on an invite that was never
+      // going to arrive, when what the client actually needs is the
+      // password-reset link.
       if (linkError.message?.includes("already been registered") || linkError.message?.includes("already registered")) {
-        return json({ ok: true, already_has_account: true });
+        return json({
+          ok: true,
+          already_has_account: true,
+          error: `${targetEmail} already has a client portal account, so no new invite was sent. If they can't get in, have them use "Forgot password" on the portal login page.`,
+        });
       }
       return json({ ok: false, error: `Could not generate invite link: ${linkError.message}` }, 502);
     }
