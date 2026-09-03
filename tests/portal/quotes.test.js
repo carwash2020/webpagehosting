@@ -70,9 +70,33 @@ test('the Quote tab has a client email field, mirroring the Invoice tab\'s field
   assert.match(generatorHtml, /<input type="email" id="quoteClientEmail"/);
 });
 
-test('saving a quote with a client email syncs to the portal, matching the invoice save pattern', () => {
+test('saving a quote with a client email syncs to the portal, with real Sent/Failed pop-up feedback rather than a silent console.warn', () => {
+  // Changed 2026-09-03, matching the exact fix made to the invoice
+  // side the same day: the old pattern was a detached fire-and-forget
+  // call whose failure handler only logged to the console (invisible
+  // to Connor) and had no success handler at all. Now properly
+  // awaited from generateQuotePDF(), with a real showAlert() pop-up --
+  // a modal that must be dismissed -- on both outcomes.
   assert.match(generatorHtml, /functions\/v1\/sync-quote-to-portal/);
-  assert.match(generatorHtml, /Portal sync failed \(quote still saved locally\)/);
+  assert.doesNotMatch(generatorHtml, /Portal sync failed \(quote still saved locally\)/,
+    'the old silent console.warn-only failure path should be gone');
+  const fnMatch = generatorHtml.match(/async function generateQuotePDF\(\)[\s\S]*?\n  \}\n/);
+  assert.ok(fnMatch, 'expected to isolate generateQuotePDF()');
+  const body = fnMatch[0];
+  assert.match(body, /const newEntry = logQuote\(\{ subtotal, tax, discount, total \}\);/,
+    'generateQuotePDF() should capture logQuote()\'s return value, not call it as a bare statement');
+  assert.match(body, /const syncRes = await fetch\(`\$\{SUPABASE_URL\}\/functions\/v1\/sync-quote-to-portal`/,
+    'the sync should be properly awaited, not a detached .then()/.catch() chain');
+  assert.match(body, /await showAlert\('Sent! Estimate ' \+ newEntry\.quoteNumber/);
+  assert.match(body, /await showAlert\('Failed to send: ' \+/);
+});
+
+test('logQuote() returns the entry it creates, rather than leaving callers to reference an out-of-scope variable', () => {
+  const fnMatch = generatorHtml.match(/function logQuote\(totals\) \{[\s\S]*?\n  \}\n/);
+  assert.ok(fnMatch, 'expected to isolate logQuote()');
+  assert.match(fnMatch[0], /const newEntry = \{/,
+    'the quote entry should be a named variable, not an anonymous object literal pushed directly');
+  assert.match(fnMatch[0], /return newEntry;\n  \}\n$/);
 });
 
 test('portal quote status is read live, never written back into the local quote record', () => {

@@ -3232,6 +3232,90 @@ test('generatePDF() completes all the way through to resetInvoiceForm() without 
   window.close();
 });
 
+// Found proactively (2026-09-03) while double-checking whether the
+// same class of bug existed anywhere else after fixing the invoice
+// side: generateQuotePDF() had the identical detached fire-and-forget
+// pattern, actually WORSE -- its failure handler only did
+// console.warn() (invisible to Connor) and had no success handler at
+// all, so a sent estimate gave no feedback whatsoever, ever. Fixed the
+// same way, verified the same way: a real execution test, not just a
+// source-text check.
+test('generateQuotePDF() completes all the way through to resetQuoteForm() without throwing', async () => {
+  const { JSDOM } = require('jsdom');
+  const html = fs.readFileSync(path.join(__dirname, '..', '..', 'tools', 'invoice-generator.html'), 'utf8');
+
+  function makeFakeJsPdfInstance() {
+    const inst = {
+      internal: { pageSize: { getWidth: () => 612, getHeight: () => 792 }, getNumberOfPages: () => 1 },
+      setFillColor() { return inst; }, setDrawColor() { return inst; }, setLineWidth() { return inst; },
+      setFont() { return inst; }, setFontSize() { return inst; }, setTextColor() { return inst; },
+      rect() { return inst; }, line() { return inst; }, roundedRect() { return inst; }, circle() { return inst; },
+      text() { return inst; }, addImage() { return inst; }, addPage() { return inst; }, setPage() { return inst; },
+      getTextWidth: () => 10,
+      splitTextToSize: (t) => [String(t)],
+      output: () => new Blob(['fake pdf bytes'], { type: 'application/pdf' }),
+      save() {},
+    };
+    return inst;
+  }
+
+  const dom = new JSDOM(html, {
+    runScripts: 'dangerously', url: 'https://example.com/tools/invoice-generator.html',
+    beforeParse(window) {
+      window.requireAuth = () => {};
+      window.HTMLElement.prototype.scrollIntoView = () => {};
+      window.showToast = () => {};
+      window.showConfirm = () => Promise.resolve(true);
+      window.showAlert = async (msg) => { window.__alerts = window.__alerts || []; window.__alerts.push(msg); };
+      window.initSyncOnLoad = () => Promise.resolve();
+      window.getCurrentUserEmail = () => 'connor@triplehenterprisesllc.biz';
+      window.getAuthToken = () => 'fake-token';
+      window.ensureFreshToken = async () => true;
+      window.logClientError = () => {};
+      window.thEnsureClient = () => null;
+      window.wireSearchClear = () => {};
+      window.attachVoiceDictation = () => {};
+      window.money = (n) => '$' + (Number(n) || 0).toFixed(2);
+      window.escapeHtml = (s) => String(s == null ? '' : s);
+      window.escapeForInlineHandler = (s) => String(s == null ? '' : s);
+      window.personDot = () => '';
+      // generateQuotePDF() always calls this (unlike the invoice
+      // Download path, which uses doc.save() directly) -- a real
+      // function from tools-media-sharing.js, a deferred script jsdom
+      // never loads.
+      window.sharePdfOrDownload = async () => {};
+      window.fetch = async () => ({ ok: false, status: 500, text: async () => '', json: async () => ({}) });
+      window.jspdf = { jsPDF: function FakeJsPdf() { return makeFakeJsPdfInstance(); } };
+    },
+  });
+  const { window } = dom;
+  window.document.dispatchEvent(new window.Event('DOMContentLoaded'));
+  await new Promise(resolve => setTimeout(resolve, 100));
+
+  window.document.getElementById('quoteClientName').value = 'Test Client';
+  window.document.getElementById('quoteNumber').value = 'EST-2026-TEST';
+  // Deliberately no quoteClientEmail -- exercises the plain
+  // "logged and ready" toast path (no send attempted), keeping this
+  // test independent of mocking a full sync-quote-to-portal response.
+
+  let resetCalled = false;
+  const originalReset = window.resetQuoteForm;
+  window.resetQuoteForm = function (...args) { resetCalled = true; return originalReset.apply(this, args); };
+
+  let threw = null;
+  try {
+    await window.generateQuotePDF();
+  } catch (e) {
+    threw = e;
+  }
+
+  assert.equal(threw, null, 'generateQuotePDF() must not throw: ' + (threw && threw.message));
+  assert.equal(resetCalled, true, 'resetQuoteForm() should have been reached -- confirms the function ran all the way to completion');
+
+  await new Promise(resolve => setTimeout(resolve, 150));
+  window.close();
+});
+
 test('logInvoice() returns the entry it creates, rather than leaving callers to reference an out-of-scope variable', () => {
   const src = fs.readFileSync(path.join(__dirname, '..', '..', 'tools', 'invoice-generator.html'), 'utf8');
   const fnMatch = src.match(/function logInvoice\(totals\)[\s\S]*?\n  \}\n/);
