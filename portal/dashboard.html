@@ -41,10 +41,20 @@
 <style>
   body { background: #0a0a0a; max-width: 640px; margin: 0 auto; padding: 24px 16px 60px; }
   .portal-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; }
-  .portal-header-left { display: flex; align-items: center; gap: 12px; }
+  /* min-width:0 (2026-09-02, from a direct screenshot): a flex child
+     defaults to min-width:auto, which means it will NEVER shrink
+     below its content's natural width -- so a long email address just
+     overflowed straight through the settings/sign-out buttons next to
+     it rather than truncating. min-width:0 lets it actually shrink,
+     and .portal-sub below does the truncating. */
+  .portal-header-left { display: flex; align-items: center; gap: 12px; min-width: 0; flex: 1; }
+  .portal-header-left > div { min-width: 0; }
   .portal-header img { width: 40px; height: auto; }
   .portal-title { font-family: 'Oswald', sans-serif; font-weight: 700; font-size: 19px; color: var(--white); }
-  .portal-sub { color: var(--text-dim); font-size: 13px; }
+  .portal-sub {
+    color: var(--text-dim); font-size: 13px;
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  }
   .portal-header-actions { display: flex; gap: 8px; align-items: center; }
   .portal-icon-btn {
     display: inline-flex; align-items: center; justify-content: center;
@@ -53,9 +63,20 @@
   }
   .portal-icon-btn:hover { border-color: var(--orange); color: var(--orange-light); }
   .portal-icon-btn svg { width: 18px; height: 18px; }
-  .portal-nav { display: flex; gap: 8px; margin-bottom: 24px; flex-wrap: wrap; }
+  /* Fixed 2026-09-02, from a direct screenshot: with flex-wrap and
+     flex:1 on 5 items, the 5th item (Jobs) couldn't fit on the first
+     row at real phone widths, wrapped alone onto a second row, and
+     then stretched to fill the FULL width by itself (a lone flex:1
+     item on its own row always does) -- a huge, orphaned pill that
+     looked broken rather than intentional.
+     A CSS grid with exactly 5 equal columns never has this failure
+     mode: every item is always on one row, at whatever width 1/5 of
+     the container comes out to, right down to genuinely tiny phones.
+     Narrower labels wrap to two lines inside their own cell instead
+     of the layout itself breaking. */
+  .portal-nav { display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px; margin-bottom: 24px; }
   .portal-nav a {
-    flex: 1; min-width: 72px; text-align: center; padding: 9px 12px; border-radius: 8px; font-size: 13.5px; font-weight: 600;
+    text-align: center; padding: 9px 6px; border-radius: 8px; font-size: 12.5px; font-weight: 600; line-height: 1.25;
     text-decoration: none; border: 1px solid var(--border); color: var(--text-dim);
   }
   .portal-nav a.is-active { background: var(--orange-tint-soft); border-color: var(--orange-tint-border); color: var(--orange-light); }
