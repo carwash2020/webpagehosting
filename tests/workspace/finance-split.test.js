@@ -3098,3 +3098,164 @@ test('the mobile-specific @media(max-width:720px) override for .hub-header/.tool
   assert.ok(headerRule, '.hub-header/.tool-header rule not found inside the mobile block');
   assert.match(headerRule[0], /max\(env\(safe-area-inset-top, 0px\), 44px\)/, 'the mobile override must account for the safe area too -- a flat, unaware padding value here silently wins over the base rule\'s fix on every real phone');
 });
+
+// EMERGENCY BUG FIX (2026-09-02), a real regression I introduced
+// building the PDF-archiving feature earlier the same day, reported
+// directly: "clicked send invoice... didn't link it and didn't send
+// him one at all" plus "deleted invoices still show up in the
+// profit." Confirmed the real cause directly against the live
+// database before touching anything -- not assumed:
+//   - invoice_number_seq had only EVER been drawn once (last_value:1000)
+//   - yet FOUR separate income-log entries all shared "INV-2026-1000"
+// generatePDF() called `storeInvoicePdf(doc, newEntry.invoiceNumber)`
+// referencing `newEntry` -- but that variable only ever existed
+// LOCALLY inside the separate logInvoice() function, never returned
+// or captured by its caller. Every single invoice generation (Download
+// OR Send) threw an uncaught ReferenceError immediately after
+// logInvoice() returned, which silently skipped resetInvoiceForm()
+// (leaving the same stale invoice number in the field for the next
+// click -- exactly matching four duplicate entries all sharing one
+// number) AND meant storeInvoicePdf() -- the whole PDF-archiving
+// feature shipped earlier today -- had never actually run even once.
+//
+// A purely static/regex test (asserting the source merely CONTAINS
+// "storeInvoicePdf(") could never have caught this: the call was
+// present, correctly spelled, in the right place -- the bug was a
+// variable simply never being in scope, which only actual execution
+// reveals. This test genuinely runs generatePDF() against a real
+// jsdom-loaded copy of the page with a minimal mocked jsPDF, the same
+// pattern already proven for the jsPDF-not-ready guard test above.
+test('generatePDF() completes all the way through to resetInvoiceForm() without throwing -- the real regression, not just a source-text check', async () => {
+  const { JSDOM } = require('jsdom');
+  const html = fs.readFileSync(path.join(__dirname, '..', '..', 'tools', 'invoice-generator.html'), 'utf8');
+
+  // A minimal jsPDF mock: every method generatePDF() actually calls,
+  // each a safe no-op/dummy return. Not a real PDF renderer -- this
+  // test cares whether the JAVASCRIPT completes, not what the
+  // resulting document looks like (the receipt-makeover and other
+  // rendering tests elsewhere already cover real output).
+  function makeFakeJsPdfInstance() {
+    const inst = {
+      internal: {
+        pageSize: { getWidth: () => 612, getHeight: () => 792 },
+        getNumberOfPages: () => 1,
+      },
+      setFillColor() { return inst; }, setDrawColor() { return inst; }, setLineWidth() { return inst; },
+      setFont() { return inst; }, setFontSize() { return inst; }, setTextColor() { return inst; },
+      rect() { return inst; }, line() { return inst; }, roundedRect() { return inst; }, circle() { return inst; },
+      text() { return inst; }, addImage() { return inst; }, addPage() { return inst; }, setPage() { return inst; },
+      getTextWidth: () => 10,
+      splitTextToSize: (t) => [String(t)],
+      output: () => new Blob(['fake pdf bytes'], { type: 'application/pdf' }),
+      save() { /* no-op instead of a real browser download */ },
+    };
+    return inst;
+  }
+
+  const dom = new JSDOM(html, {
+    runScripts: 'dangerously', url: 'https://example.com/tools/invoice-generator.html',
+    beforeParse(window) {
+      window.requireAuth = () => {};
+      window.HTMLElement.prototype.scrollIntoView = () => {};
+      window.showToast = () => {};
+      window.showConfirm = () => Promise.resolve(true);
+      window.showAlert = async (msg) => { window.__alerts = window.__alerts || []; window.__alerts.push(msg); };
+      window.initSyncOnLoad = () => Promise.resolve();
+      window.getCurrentUserEmail = () => 'connor@triplehenterprisesllc.biz';
+      window.getAuthToken = () => 'fake-token';
+      window.ensureFreshToken = async () => true;
+      window.logClientError = () => {};
+      window.thEnsureClient = () => null;
+      window.wireSearchClear = () => {};
+      window.attachVoiceDictation = () => {};
+      window.money = (n) => '$' + (Number(n) || 0).toFixed(2);
+      window.escapeHtml = (s) => String(s == null ? '' : s);
+      window.escapeForInlineHandler = (s) => String(s == null ? '' : s);
+      // personDot() (tools-effects.js, a deferred script jsdom never
+      // loads) is called by renderInvoiceLog(), itself called from
+      // inside logInvoice() -- reached on the normal, successful path
+      // this test exercises, not something specific to the bug being
+      // tested for.
+      window.personDot = () => '';
+      // Real fetch is never reached on the Download path this test
+      // exercises (that branch is gated behind shouldSend), but
+      // storeInvoicePdf()'s archive upload runs unconditionally --
+      // stubbed so the test never makes a real network call.
+      window.fetch = async () => ({ ok: false, status: 500, text: async () => '', json: async () => ({}) });
+      window.jspdf = { jsPDF: function FakeJsPdf() { return makeFakeJsPdfInstance(); } };
+    },
+  });
+  const { window } = dom;
+  window.document.dispatchEvent(new window.Event('DOMContentLoaded'));
+  await new Promise(resolve => setTimeout(resolve, 100));
+
+  assert.notEqual(window.jspdf, undefined, 'the fake jsPDF should be in place for this test');
+
+  // Minimum real form data so the flow proceeds past field reads --
+  // this test is not about financial accuracy, only about the
+  // function completing without an uncaught exception.
+  window.document.getElementById('clientName').value = 'Test Client';
+  window.document.getElementById('invoiceNumber').value = 'INV-2026-TEST';
+
+  // Spies on the two functions that mark real completion of a
+  // successful generatePDF() call. resetInvoiceForm() in particular
+  // is the exact call that silently never ran under the real bug --
+  // it sits immediately after the crash point, so confirming it was
+  // reached is the clearest possible proof the fix works, not just
+  // that no exception happened to propagate out.
+  let resetCalled = false, storeCalled = false;
+  const originalReset = window.resetInvoiceForm;
+  window.resetInvoiceForm = function (...args) { resetCalled = true; return originalReset.apply(this, args); };
+  const originalStore = window.storeInvoicePdf;
+  window.storeInvoicePdf = function (...args) { storeCalled = true; return originalStore.apply(this, args); };
+
+  let threw = null;
+  try {
+    await window.generatePDF({ send: false }); // Download path -- doesn't require mocking the full sync-invoice-to-portal response
+  } catch (e) {
+    threw = e;
+  }
+
+  assert.equal(threw, null, 'generatePDF() must not throw -- if it does, that is the exact regression this test exists to catch: ' + (threw && threw.message));
+  assert.equal(storeCalled, true, 'storeInvoicePdf() should have been reached -- confirms newEntry was actually in scope at that call site');
+  assert.equal(resetCalled, true, 'resetInvoiceForm() should have been reached -- confirms the function ran all the way to completion, not aborted mid-flight');
+});
+
+test('logInvoice() returns the entry it creates, rather than leaving callers to reference an out-of-scope variable', () => {
+  const src = fs.readFileSync(path.join(__dirname, '..', '..', 'tools', 'invoice-generator.html'), 'utf8');
+  const fnMatch = src.match(/function logInvoice\(totals\)[\s\S]*?\n  \}\n/);
+  assert.ok(fnMatch, 'expected to isolate logInvoice()');
+  assert.match(fnMatch[0], /return newEntry;\n  \}\n$/, 'logInvoice() must return the entry it built');
+});
+
+test('generatePDF() captures logInvoice()\'s return value, rather than calling it as a bare statement', () => {
+  const src = fs.readFileSync(path.join(__dirname, '..', '..', 'tools', 'invoice-generator.html'), 'utf8');
+  const fnMatch = src.match(/async function generatePDF\(opts\)[\s\S]*?\n  \}\n/);
+  assert.ok(fnMatch, 'expected to isolate generatePDF()');
+  assert.match(fnMatch[0], /const newEntry = logInvoice\(\{ subtotal, tax, discount, total \}\);/);
+});
+
+test('the portal-sync send is properly awaited inside generatePDF(), not a detached fire-and-forget chain', () => {
+  const src = fs.readFileSync(path.join(__dirname, '..', '..', 'tools', 'invoice-generator.html'), 'utf8');
+  const fnMatch = src.match(/async function generatePDF\(opts\)[\s\S]*?\n  \}\n/);
+  const body = fnMatch[0];
+  assert.match(body, /const syncRes = await fetch\(`\$\{SUPABASE_URL\}\/functions\/v1\/sync-invoice-to-portal`/);
+  // The old detached pattern must be gone from generatePDF() -- a
+  // bare .then()/.catch() chain with no await is exactly what let the
+  // rest of the function (and the crash) run before the real outcome
+  // was known.
+  assert.doesNotMatch(body, /\}\)\.then\(async res => \{/);
+});
+
+test('Send shows a real pop-up (a dialog the user must dismiss) for both success and failure, not just a toast', () => {
+  const src = fs.readFileSync(path.join(__dirname, '..', '..', 'tools', 'invoice-generator.html'), 'utf8');
+  const fnMatch = src.match(/async function generatePDF\(opts\)[\s\S]*?\n  \}\n/);
+  const body = fnMatch[0];
+  // showAlert() is a real modal (ensureDialogModalExists + an OK
+  // button the user must click), unlike showToast() which
+  // auto-dismisses and can be missed or overwritten by a later one --
+  // requested directly as a "pop up," not reinforced-but-still-a-toast.
+  assert.match(body, /await showAlert\('Sent! Invoice ' \+ newEntry\.invoiceNumber/);
+  assert.match(body, /await showAlert\('Failed to send: ' \+/);
+  assert.match(body, /await showAlert\("No client email on this invoice/);
+});
