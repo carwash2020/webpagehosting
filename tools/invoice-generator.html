@@ -1587,7 +1587,7 @@
           email: document.getElementById('quoteClientEmail').value.trim(),
         }) || {}).id
       : undefined;
-    list.push({
+    const newEntry = {
       id: Date.now(),
       quoteNumber: document.getElementById('quoteNumber').value,
       clientName: quoteClientNameVal || '(no name)',
@@ -1604,42 +1604,17 @@
       // + a real logInvoice() save marks it 'converted' -- see logInvoice()
       // for where that transition actually happens.
       status: 'pending',
-    });
+    };
+    list.push(newEntry);
     saveQuoteLog(list);
     if (typeof renderQuoteLog === 'function') renderQuoteLog();
-
-    // Portal sync (2026-09-01) -- same fire-and-forget, best-effort
-    // pattern as the invoice side: fires only when a client email was
-    // actually provided, never blocks saving the quote locally (the
-    // local quote log above is the real, primary record; the portal
-    // table is a secondary, client-safe mirror of it). This is a
-    // DIFFERENT status field from the 'pending'/'converted' one just
-    // saved above -- that one tracks whether this quote has become an
-    // invoice yet; client_portal_quotes.status tracks whether the
-    // CLIENT has approved/declined it. The two are never merged back
-    // into each other.
-    const quoteClientEmailVal = document.getElementById('quoteClientEmail').value.trim();
-    if (quoteClientEmailVal && typeof getAuthToken === 'function') {
-      fetch(`${SUPABASE_URL}/functions/v1/sync-quote-to-portal`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'apikey': SUPABASE_ANON_KEY,
-          'Authorization': `Bearer ${getAuthToken()}`,
-        },
-        body: JSON.stringify({
-          source_quote_id: list[list.length - 1].id,
-          client_email: quoteClientEmailVal,
-          client_name: quoteClientNameVal || '(no name)',
-          client_address: document.getElementById('quoteClientAddress').value.trim() || null,
-          quote_number: document.getElementById('quoteNumber').value,
-          quote_date: document.getElementById('quoteDate').value || new Date().toISOString().slice(0, 10),
-          description: jobRefTitle || document.getElementById('quoteJobDescription').value || null,
-          line_items: getQuoteLineItems(),
-          total: totals.total,
-        }),
-      }).catch(e => console.warn('Portal sync failed (quote still saved locally):', e));
-    }
+    // Returns the entry it just created (2026-09-03), matching the
+    // same fix just made to logInvoice() for the exact same reason:
+    // the portal-sync send below used to live here as a detached,
+    // give-nothing-back fire-and-forget call. Moved out to the
+    // caller, generateQuotePDF(), where it can be properly awaited
+    // and connected to a real Sent/Failed pop-up instead.
+    return newEntry;
   }
 
   function renderQuoteLog() {
@@ -1920,9 +1895,56 @@
     doc.text('Triple H Enterprises LLC   |   (435) 414-1667   |   steve@triplehenterprisesllc.biz   |   www.triplehenterprisesllc.biz', pageW / 2, footerY + 14, { align: 'center' });
 
     const filename = 'TripleH_Estimate_' + (document.getElementById('quoteClientName').value || 'Client').replace(/[^a-z0-9]/gi, '_') + '.pdf';
-    logQuote({ subtotal, tax, discount, total });
+    const newEntry = logQuote({ subtotal, tax, discount, total });
     await sharePdfOrDownload(doc, filename, 'Estimate');
-    showToast('Estimate logged and ready.');
+
+    // Portal sync + client email (2026-09-01, moved here and made a
+    // real AWAITED call 2026-09-03, matching the exact fix just made
+    // to the invoice side for the exact same reason). Only runs when
+    // a client email was actually provided -- the local quote log is
+    // already the real, primary record regardless of this branch.
+    //
+    // Used to be a detached fire-and-forget call whose failure
+    // handler only did console.warn() (invisible to Connor) and had
+    // no success handler at all -- meaning a sent estimate gave
+    // absolutely no feedback, ever, success or failure. Same real
+    // pop-up treatment as invoices now: a modal that must be
+    // dismissed, with the actual server-returned reason on failure.
+    const quoteClientEmailVal = document.getElementById('quoteClientEmail').value.trim();
+    if (quoteClientEmailVal && typeof getAuthToken === 'function') {
+      try {
+        if (typeof ensureFreshToken === 'function') await ensureFreshToken();
+        const syncRes = await fetch(`${SUPABASE_URL}/functions/v1/sync-quote-to-portal`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'apikey': SUPABASE_ANON_KEY,
+            'Authorization': `Bearer ${getAuthToken()}`,
+          },
+          body: JSON.stringify({
+            source_quote_id: newEntry.id,
+            client_email: quoteClientEmailVal,
+            client_name: newEntry.clientName,
+            client_address: document.getElementById('quoteClientAddress').value.trim() || null,
+            quote_number: newEntry.quoteNumber,
+            quote_date: newEntry.date,
+            description: newEntry.jobRefTitle || document.getElementById('quoteJobDescription').value || null,
+            line_items: getQuoteLineItems(),
+            total: newEntry.total,
+          }),
+        });
+        const result = await syncRes.json().catch(() => ({}));
+        if (result && result.ok) {
+          await showAlert('Sent! Estimate ' + newEntry.quoteNumber + ' was emailed to ' + quoteClientEmailVal + ' and posted to their portal.');
+        } else {
+          await showAlert('Failed to send: ' + ((result && result.error) || 'unknown error') + '\n\nThe estimate is still saved in your log.');
+        }
+      } catch (e) {
+        await showAlert('Failed to send: could not reach the server (' + (e.message || String(e)) + ').\n\nThe estimate is still saved in your log -- check your connection and try again.');
+      }
+    } else {
+      showToast('Estimate logged and ready.');
+    }
     resetQuoteForm();
     } finally {
       quoteGenerationInProgress = false;
