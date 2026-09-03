@@ -204,7 +204,11 @@
 // PRECACHE_URLS changes, even if you're confident every ?v= reference
 // was updated too -- it's the backstop for the case where that
 // confidence turns out to be wrong.
-const CACHE_NAME = 'th-workspace-v46';
+// Bumped 2026-09-03: dev-tools.html (precached) changed across several
+// merges this week -- Portal tab panels, inline photo viewer, the
+// onclick quoting fix -- without a bump. Same failure mode the
+// 2026-08-16 and 2026-09-02 notes above already warned about.
+const CACHE_NAME = 'th-workspace-v47';
 const PRECACHE_URLS = [
   '/tools/workspace.html', '/tools/job-tracker.html', '/tools/invoice-generator.html', '/tools/contract-generator.html',
   '/tools/calendar.html', '/tools/route-planner.html', '/tools/review-request.html', '/tools/contact-card.html',

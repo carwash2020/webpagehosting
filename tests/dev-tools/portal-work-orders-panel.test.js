@@ -41,7 +41,7 @@ test('photos render inline under the row -- no window.open() at all, which Safar
   // called window.open() AFTER awaiting the signed-URL fetch, which
   // Safari treats as an unrequested popup and silently drops. Inline
   // rendering sidesteps popups entirely.
-  const fnMatch = DEV_TOOLS.match(/async function toggleWorkOrderPhotos\(workOrderId, paths, btnEl\)[\s\S]*?\n  \}\n/);
+  const fnMatch = DEV_TOOLS.match(/async function toggleWorkOrderPhotos\(workOrderId, btnEl\)[\s\S]*?\n  \}\n/);
   assert.ok(fnMatch, 'expected to isolate toggleWorkOrderPhotos()');
   const body = fnMatch[0];
   assert.doesNotMatch(body, /window\.open\(/);
@@ -56,12 +56,12 @@ test('dev-tools.html\'s CSP allows signed Storage image URLs, or the inline phot
 });
 
 test('the photo viewer strips the bucket prefix stored paths carry, rather than hardcoding it twice', () => {
-  const fnMatch = DEV_TOOLS.match(/async function toggleWorkOrderPhotos\(workOrderId, paths, btnEl\)[\s\S]*?\n  \}\n/);
+  const fnMatch = DEV_TOOLS.match(/async function toggleWorkOrderPhotos\(workOrderId, btnEl\)[\s\S]*?\n  \}\n/);
   assert.match(fnMatch[0], /fullPath\.replace\(\/\^work-order-photos\\\/\/, ''\)/);
 });
 
 test('the invoice PDF viewer opens its tab synchronously, before any await -- the same Safari popup fix', () => {
-  const fnMatch = DEV_TOOLS.match(/async function viewArchivedInvoicePdf\(invoiceNumber, btnEl\)[\s\S]*?\n  \}\n/);
+  const fnMatch = DEV_TOOLS.match(/async function viewArchivedInvoicePdf\(portalRowId, btnEl\)[\s\S]*?\n  \}\n/);
   assert.ok(fnMatch, 'expected to isolate viewArchivedInvoicePdf()');
   const body = fnMatch[0];
   const openIdx = body.indexOf("window.open('', '_blank')");
@@ -112,4 +112,18 @@ test('the permission that actually gates Portal access says so in its label', ()
   // full access; the label just never said so.
   assert.match(DEV_TOOLS, /\{ field: 'can_manage_invoices', label: 'Invoices, Quotes & Portal' \}/);
   assert.doesNotMatch(DEV_TOOLS, /label: 'Invoices & Quotes' \}/);
+});
+
+test('no inline event handler anywhere embeds JSON.stringify -- its double quotes truncate a double-quoted attribute', () => {
+  // The real cause of "the photo will not open," twice: the button was
+  // built as onclick="fn(1, ["path"], this)" -- the JSON's own double
+  // quotes end the attribute at `fn(1, [`, a syntax error, and the tap
+  // does nothing. Proven with jsdom. The invoice View PDF button had it
+  // too and had never worked. Inline handlers should carry only a
+  // numeric id and look everything else up.
+  for (const rel of ['tools/dev-tools.html', 'tools/workspace.html', 'tools/invoice-generator.html', 'tools/job-tracker.html', 'portal/dashboard.html', 'portal/quotes.html', 'portal/jobs.html', 'portal/work-orders.html']) {
+    const s = fs.readFileSync(repo(...rel.split('/')), 'utf8');
+    const hits = [...s.matchAll(/on(?:click|input|change|submit)="[^"\n]*JSON\.stringify/g)];
+    assert.equal(hits.length, 0, rel + ': inline handler embeds JSON.stringify: ' + hits.map(h => h[0]).join(' | '));
+  }
 });

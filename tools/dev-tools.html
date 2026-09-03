@@ -1668,7 +1668,11 @@
         '<div class="dev-check-detail">' + escapeHtml(i.client_name || i.client_email) + ' &middot; ' + escapeHtml(i.client_email) + ' &middot; ' + escapeHtml(i.invoice_date || '') + ' &middot; $' + (Number(i.total) || 0).toFixed(2) + via + '</div>' +
         '</div>' +
         '<div style="display:flex; flex-direction:column; gap:6px; flex-shrink:0;">' +
-        '<button class="secondary-btn" onclick="viewArchivedInvoicePdf(' + JSON.stringify(i.invoice_number) + ', this)">View PDF</button>' +
+        // Numeric id only -- JSON.stringify(invoice_number) here produced
+        // "INV-2026-1000" WITH double quotes inside a double-quoted
+        // onclick, truncating the handler (same bug as the photo
+        // viewer, found while fixing that one). Never actually worked.
+        '<button class="secondary-btn" onclick="viewArchivedInvoicePdf(' + i.id + ', this)">View PDF</button>' +
         '<button class="secondary-btn" onclick="resendPortalInvoice(' + i.id + ', this)">Resend</button>' +
         '</div>' +
         '</div>';
@@ -1691,7 +1695,10 @@
   // A "not found" result is a real, expected case, not a bug: any
   // invoice generated before this feature existed has no archived
   // copy, and this says so plainly rather than showing a broken link.
-  async function viewArchivedInvoicePdf(invoiceNumber, btnEl) {
+  async function viewArchivedInvoicePdf(portalRowId, btnEl) {
+    const inv = (_portalInvoicesCache || []).find(i => i.id === portalRowId);
+    if (!inv) { showToast('Could not find that invoice.', { type: 'error' }); return; }
+    const invoiceNumber = inv.invoice_number;
     const original = btnEl.textContent;
     btnEl.disabled = true;
     btnEl.textContent = 'Opening...';
@@ -1808,7 +1815,17 @@
         : '<span class="badge-pending-signature">' + (URGENCY_LABELS[w.urgency] || w.urgency) + '</span>';
       const photoCount = (w.photo_storage_paths && w.photo_storage_paths.length) || 0;
       const photoBtn = photoCount
-        ? '<button class="secondary-btn" onclick="toggleWorkOrderPhotos(' + w.id + ', ' + JSON.stringify(w.photo_storage_paths) + ', this)">View Photo' + (photoCount > 1 ? 's (' + photoCount + ')' : '') + '</button>'
+        // Numeric id only in the inline handler (2026-09-03). The first
+        // two versions embedded JSON.stringify(paths) here -- whose
+        // double quotes terminate a double-quoted onclick attribute,
+        // truncating the handler to `toggleWorkOrderPhotos(1, [` (a
+        // syntax error) and turning the rest of the JSON into junk
+        // attributes. Proven with jsdom, not guessed. That, not
+        // Safari's popup blocker, is why "the photo will not open"
+        // both times. Paths are looked up from the cache by id inside
+        // the function instead, matching how resendPortalInvoice()
+        // already passes only i.id.
+        ? '<button class="secondary-btn" onclick="toggleWorkOrderPhotos(' + w.id + ', this)">View Photo' + (photoCount > 1 ? 's (' + photoCount + ')' : '') + '</button>'
         : '';
       return '<div class="dev-check-row" style="align-items:flex-start; flex-wrap:wrap;"><div style="flex:1; min-width:0;">' +
         '<div><strong>' + escapeHtml(w.title || '(no title)') + '</strong> ' + urgencyBadge + ' <span class="tool-sub" style="font-size:11.5px;">' + (STATUS_LABELS[w.status] || w.status) + '</span></div>' +
@@ -1864,9 +1881,12 @@
   // Stored paths already include the bucket name as their first
   // segment (see uploadSelectedPhotos() in portal/work-orders.html),
   // stripped here rather than hardcoded twice in two different places.
-  async function toggleWorkOrderPhotos(workOrderId, paths, btnEl) {
+  async function toggleWorkOrderPhotos(workOrderId, btnEl) {
     const strip = document.getElementById('woPhotos-' + workOrderId);
     if (!strip) return;
+    const row = (_portalWorkOrdersCache || []).find(w => w.id === workOrderId);
+    const paths = (row && row.photo_storage_paths) || [];
+    if (!paths.length) return;
     if (strip.style.display !== 'none') {
       strip.style.display = 'none';
       btnEl.textContent = btnEl.textContent.replace(/^Hide/, 'View');
