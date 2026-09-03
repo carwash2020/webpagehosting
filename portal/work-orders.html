@@ -211,6 +211,19 @@
     padding: 8px 10px; background: var(--orange-tint-soft); border: 1px solid var(--orange-tint-border); border-radius: 8px;
   }
   .wo-urgency-tag.is-urgent { color: #ff8a80; font-weight: 600; }
+  /* Two-way messaging (2026-09-03) -- quotes already let a client ask
+     a question; this is the same idea for work requests. */
+  .wo-messages-toggle {
+    margin-top: 10px; background: none; border: none; color: var(--orange-light); font-size: 12.5px;
+    font-weight: 600; cursor: pointer; padding: 0; font-family: inherit; text-decoration: underline;
+  }
+  .wo-messages-panel { margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--border); }
+  .wo-message-bubble { max-width: 85%; margin-bottom: 8px; padding: 8px 11px; border-radius: 10px; font-size: 13px; line-height: 1.45; white-space: pre-wrap; }
+  .wo-message-bubble.is-client { background: var(--orange-tint-soft); border: 1px solid var(--orange-tint-border); margin-left: auto; }
+  .wo-message-bubble.is-internal { background: var(--bg-panel-2); border: 1px solid var(--border); }
+  .wo-message-meta { font-size: 10.5px; color: var(--text-dim); margin-top: 3px; }
+  .wo-message-form { display: flex; gap: 8px; margin-top: 8px; }
+  .wo-message-form textarea { flex: 1; min-height: 40px; max-height: 120px; resize: vertical; font-family: inherit; font-size: 13px; padding: 8px 10px; border-radius: 8px; border: 1px solid var(--border); background: var(--bg-panel); color: var(--white); }
   .empty-state { text-align: center; color: var(--text-dim); padding: 28px 20px; font-size: 13.5px; }
   .report-bug-link { display: block; margin-top: 14px; font-size: 12px; color: var(--text-dim); text-decoration: underline; cursor: pointer; text-align: center; background: none; border: none; font-family: inherit; padding: 0; }
   .report-bug-link:hover { color: var(--orange-light); }
@@ -584,6 +597,8 @@
         <div class="wo-card-desc">${escapeHtml(wo.description)}</div>
         ${urgencyLabel ? `<div class="wo-urgency-tag${urgentClass}">${escapeHtml(urgencyLabel)}</div>` : ''}
         ${(statusKey === 'scheduled' && wo.scheduled_at) ? `<div class="wo-scheduled-tag">Scheduled for ${escapeHtml(formatScheduledAt(wo.scheduled_at))}</div>` : ''}
+        <button type="button" class="wo-messages-toggle" onclick="toggleMessages(${wo.id}, this)">Messages</button>
+        <div class="wo-messages-panel" id="woMessages-${wo.id}" style="display:none;"></div>
       </div>
     `;
   }
@@ -632,6 +647,76 @@
     }
     listEl.innerHTML = '<div class="wo-section-title">Your requests</div>' +
       requests.map(renderRequestCard).join('');
+  }
+
+  // Two-way messaging (2026-09-03), requested directly as item 2 of a
+  // roadmap: quotes already let a client ask a question about their
+  // estimate; work requests had no equivalent channel at all.
+  //
+  // Loaded on demand (toggle), not on page load for every card -- most
+  // requests will have zero messages, and fetching an empty thread for
+  // each one on every visit would be wasted work for the common case.
+  async function toggleMessages(workOrderId, btnEl) {
+    const panel = document.getElementById('woMessages-' + workOrderId);
+    if (!panel) return;
+    if (panel.style.display !== 'none') { panel.style.display = 'none'; return; }
+    panel.style.display = 'block';
+    await loadAndRenderThread(workOrderId);
+  }
+
+  async function loadAndRenderThread(workOrderId) {
+    const panel = document.getElementById('woMessages-' + workOrderId);
+    if (!panel) return;
+    panel.innerHTML = '<p class="wo-message-meta">Loading...</p>';
+
+    const { data: messages, error } = await client
+      .from('client_portal_work_order_messages')
+      .select('sender_type,message,created_at')
+      .eq('work_order_id', workOrderId)
+      .order('created_at', { ascending: true });
+
+    if (error) {
+      panel.innerHTML = '<p class="wo-message-meta">Couldn\'t load messages right now.</p>';
+      return;
+    }
+
+    const thread = (messages || []).map(m =>
+      '<div class="wo-message-bubble is-' + escapeHtml(m.sender_type) + '">' + escapeHtml(m.message) +
+      '<div class="wo-message-meta">' + escapeHtml(m.sender_type === 'client' ? 'You' : 'Triple H') + ' &middot; ' + escapeHtml(formatDate(m.created_at)) + '</div>' +
+      '</div>'
+    ).join('');
+
+    panel.innerHTML = (thread || '<p class="wo-message-meta">No messages yet.</p>') +
+      '<div class="wo-message-form">' +
+      '<textarea id="woMessageInput-' + workOrderId + '" placeholder="Ask a question or add a note..."></textarea>' +
+      '<button type="button" class="secondary-btn" onclick="sendMessage(' + workOrderId + ')">Send</button>' +
+      '</div>';
+  }
+
+  async function sendMessage(workOrderId) {
+    const input = document.getElementById('woMessageInput-' + workOrderId);
+    const text = input.value.trim();
+    if (!text) return;
+
+    const { data: { session } } = await client.auth.getSession();
+    if (!session) { window.location.replace('/portal/login.html'); return; }
+
+    const { error } = await client.from('client_portal_work_order_messages').insert({
+      work_order_id: workOrderId,
+      sender_type: 'client',
+      sender_email: session.user.email,
+      message: text,
+    });
+
+    if (error) {
+      showToast("Couldn't send that just now. Please try again.", { type: 'error' });
+      return;
+    }
+
+    // Reloaded from scratch rather than appended locally -- confirms
+    // the send actually landed, and keeps the displayed thread as the
+    // real source of truth rather than an optimistic local guess.
+    await loadAndRenderThread(workOrderId);
   }
 
   async function init() {

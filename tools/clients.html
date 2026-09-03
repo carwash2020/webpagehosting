@@ -735,10 +735,14 @@
         '<div class="dev-check-detail" style="margin-top:4px;">' + escapeHtml(w.description || '') + '</div>' +
         (w.preferred_timing ? '<div class="dev-check-detail" style="margin-top:4px; color:var(--orange-light);">Preferred: ' + escapeHtml(w.preferred_timing) + '</div>' : '') +
         '</div>' +
-        (photoBtn ? '<div style="flex-shrink:0;">' + photoBtn + '</div>' : '') +
+        '<div style="display:flex; flex-direction:column; gap:6px; flex-shrink:0;">' +
+        (photoBtn || '') +
+        '<button class="secondary-btn" onclick="toggleWorkOrderMessages(' + w.id + ', this)">Messages</button>' +
+        '</div>' +
         // Inline photo strip, filled on demand -- full-width below the
         // row (flex-basis:100% inside the wrapping row).
         (photoCount ? '<div id="woPhotos-' + w.id + '" style="flex-basis:100%; display:none; gap:8px; flex-wrap:wrap; margin-top:8px;"></div>' : '') +
+        '<div id="woMessages-' + w.id + '" style="flex-basis:100%; display:none; margin-top:8px; padding-top:8px; border-top:1px solid var(--border);"></div>' +
         '</div>';
     }).join('');
   }
@@ -958,6 +962,84 @@
     }
     strip.style.display = 'flex';
     btnEl.textContent = btnEl.textContent.replace(/^View/, 'Hide');
+  }
+
+  // Two-way messaging, internal side (2026-09-03) -- the same thread
+  // a client sees and adds to from portal/work-orders.html, viewed and
+  // replied to here. Loaded on demand per row, matching the same
+  // reasoning as the photo strip above: most requests have no messages
+  // yet, so fetching a thread for every row on every render would be
+  // wasted work for the common case.
+  async function toggleWorkOrderMessages(workOrderId, btnEl) {
+    const panel = document.getElementById('woMessages-' + workOrderId);
+    if (!panel) return;
+    if (panel.style.display !== 'none') {
+      panel.style.display = 'none';
+      btnEl.textContent = 'Messages';
+      return;
+    }
+    panel.style.display = 'block';
+    btnEl.textContent = 'Hide Messages';
+    await loadAndRenderWorkOrderThread(workOrderId);
+  }
+
+  async function loadAndRenderWorkOrderThread(workOrderId) {
+    const panel = document.getElementById('woMessages-' + workOrderId);
+    if (!panel) return;
+    panel.innerHTML = '<p class="dev-check-detail">Loading...</p>';
+    try {
+      if (typeof ensureFreshToken === 'function') await ensureFreshToken();
+      const res = await fetchWithTimeout(
+        SUPABASE_URL + '/rest/v1/client_portal_work_order_messages?work_order_id=eq.' + workOrderId + '&select=sender_type,message,created_at&order=created_at.asc',
+        8000,
+        { headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': 'Bearer ' + getAuthToken() } }
+      );
+      if (!res.ok) throw new Error('HTTP ' + res.status);
+      const messages = await res.json();
+      const thread = messages.map(m =>
+        '<div class="dev-check-detail" style="margin-bottom:6px;"><strong style="color:' + (m.sender_type === 'client' ? 'var(--white)' : 'var(--orange-light)') + ';">' +
+        (m.sender_type === 'client' ? 'Client' : 'You') + ':</strong> ' + escapeHtml(m.message) +
+        ' <span style="opacity:0.7;">(' + escapeHtml(String(m.created_at || '').slice(0, 16).replace('T', ' ')) + ')</span></div>'
+      ).join('');
+      panel.innerHTML = (thread || '<p class="dev-check-detail">No messages yet.</p>') +
+        '<div style="display:flex; gap:8px; margin-top:6px;">' +
+        '<textarea id="woMsgInput-' + workOrderId + '" placeholder="Reply to the client..." style="flex:1; min-height:36px; font-family:inherit; font-size:13px; padding:6px 8px; border-radius:6px; border:1px solid var(--border); background:var(--bg-panel); color:var(--white);"></textarea>' +
+        '<button class="secondary-btn" onclick="sendWorkOrderMessage(' + workOrderId + ')">Send</button>' +
+        '</div>';
+    } catch (e) {
+      panel.innerHTML = '<p class="dev-check-detail">Could not load messages: ' + escapeHtml(e.message || String(e)) + '</p>';
+    }
+  }
+
+  async function sendWorkOrderMessage(workOrderId) {
+    const input = document.getElementById('woMsgInput-' + workOrderId);
+    const text = input.value.trim();
+    if (!text) return;
+    try {
+      if (typeof ensureFreshToken === 'function') await ensureFreshToken();
+      const res = await fetchWithTimeout(SUPABASE_URL + '/rest/v1/client_portal_work_order_messages', 8000, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'apikey': SUPABASE_ANON_KEY,
+          'Authorization': 'Bearer ' + getAuthToken(),
+          'Prefer': 'return=minimal',
+        },
+        body: JSON.stringify({
+          work_order_id: workOrderId,
+          sender_type: 'internal',
+          sender_email: (typeof getCurrentUserEmail === 'function') ? getCurrentUserEmail() : '',
+          message: text,
+        }),
+      });
+      if (!res.ok) throw new Error('HTTP ' + res.status);
+      // Reloaded from scratch rather than appended locally -- confirms
+      // the send actually landed, matching the same reasoning as the
+      // portal's own sendMessage().
+      await loadAndRenderWorkOrderThread(workOrderId);
+    } catch (e) {
+      showToast('Could not send: ' + (e.message || String(e)), { type: 'error' });
+    }
   }
 
   async function resendPortalInvoice(portalRowId, btnEl) {
