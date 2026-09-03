@@ -127,7 +127,7 @@ test('a failed archive upload never blocks the invoice workflow', () => {
 });
 
 test('Dev Tools can open an archived invoice PDF via a signed URL, scoped to the invoice-pdfs bucket', () => {
-  const fnMatch = DEV_TOOLS.match(/async function viewArchivedInvoicePdf\(invoiceNumber, btnEl\)[\s\S]*?\n  \}\n/);
+  const fnMatch = DEV_TOOLS.match(/async function viewArchivedInvoicePdf\(portalRowId, btnEl\)[\s\S]*?\n  \}\n/);
   assert.ok(fnMatch, 'expected to isolate viewArchivedInvoicePdf()');
   const body = fnMatch[0];
   assert.match(body, /storage\/v1\/object\/sign\/invoice-pdfs\//);
