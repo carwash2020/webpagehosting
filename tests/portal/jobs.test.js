@@ -51,7 +51,7 @@ test('warranty status is computed from job_date every render, never read from a 
 test('the job card only reads fields that actually exist on client_portal_jobs', () => {
   const fnMatch = html.match(/function renderJobCard\(j\) \{[\s\S]*?\n  \}\n/);
   assert.ok(fnMatch, 'expected to isolate the renderJobCard function body');
-  const realFields = ['id', 'title', 'job_date', 'photo_storage_paths'];
+  const realFields = ['id', 'title', 'job_date', 'photo_storage_paths', 'linked_invoice_number'];
   const fieldRefs = [...fnMatch[0].matchAll(/j\.([a-zA-Z_]+)/g)].map(m => m[1]);
   for (const field of fieldRefs) {
     assert.ok(realFields.includes(field), `renderJobCard references j.${field}, which isn't a real client_portal_jobs column read here`);

@@ -27,6 +27,18 @@
 // get-job-photo-urls for how those paths turn into something the
 // client can actually view, and why that has to be its own function
 // with its own ownership check rather than a public URL stored here.
+//
+// Updated 2026-09-03: also accepts an optional linked_invoice_number,
+// requested directly as item 6 of a roadmap ("no downloadable receipt
+// per job"). Sourced from the internal Invoice Log's own jobRefId
+// link (an invoice already tracks which job it was for) -- passed
+// through here as a plain text value, not validated against
+// client_portal_invoices, since the two tables sync independently and
+// this function has no reason to depend on invoice-portal internals.
+// portal/jobs.html only shows a receipt link when this is present,
+// and portal/dashboard.html simply shows nothing if the referenced
+// invoice never made it to the portal for some reason -- a dead link
+// is a much smaller problem than a hard failure here would be.
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
@@ -90,7 +102,7 @@ Deno.serve(async (req: Request) => {
       return json({ ok: false, error: "This account isn't recognized." }, 403);
     }
 
-    const { source_job_id, client_email, client_name, title, job_date, photo_storage_paths } = await req.json();
+    const { source_job_id, client_email, client_name, title, job_date, photo_storage_paths, linked_invoice_number } = await req.json();
 
     if (
       typeof source_job_id !== "number" ||
@@ -103,6 +115,9 @@ Deno.serve(async (req: Request) => {
     }
     if (photo_storage_paths !== undefined && photo_storage_paths !== null && !Array.isArray(photo_storage_paths)) {
       return json({ ok: false, error: "photo_storage_paths must be an array if provided." }, 400);
+    }
+    if (linked_invoice_number !== undefined && linked_invoice_number !== null && typeof linked_invoice_number !== "string") {
+      return json({ ok: false, error: "linked_invoice_number must be a string if provided." }, 400);
     }
 
     const normalizedEmail = client_email.toLowerCase().trim();
@@ -141,6 +156,7 @@ Deno.serve(async (req: Request) => {
           title,
           job_date,
           photo_storage_paths: photo_storage_paths || null,
+          linked_invoice_number: linked_invoice_number || null,
           updated_at: new Date().toISOString(),
         }]),
       },
