@@ -146,3 +146,53 @@ test('settings does not let a client edit the email every portal table joins on'
   // And says why rather than showing an unexplained disabled field.
   assert.match(settings, /tied to all your invoices/);
 });
+
+// ---- three more fixes, all from real screenshots ----
+
+test('the portal nav uses a 5-column grid, never flex-wrap, so the last tab cannot orphan onto its own stretched row', () => {
+  // The actual reported bug: flex-wrap + flex:1 meant "Jobs" (the 5th
+  // item) couldn't fit on the first row on a real phone, wrapped alone
+  // onto a second row, and a lone flex:1 item on its own row always
+  // stretches to fill 100% width -- a huge, broken-looking orphan pill.
+  for (const page of PORTAL_PAGES) {
+    const src = fs.readFileSync(repo('portal', page), 'utf8');
+    if (!src.includes('.portal-nav {')) continue;
+    assert.match(src, /\.portal-nav \{ display: grid; grid-template-columns: repeat\(5, 1fr\);/,
+      `${page}: nav should be a 5-column grid, not flex-wrap`);
+    assert.doesNotMatch(src, /\.portal-nav \{ display: flex[^}]*flex-wrap: wrap/,
+      `${page}: the old flex-wrap nav rule should be gone`);
+  }
+});
+
+test('the header can shrink and the email truncates, instead of overflowing into the action buttons', () => {
+  // The actual reported bug: a flex child defaults to min-width:auto,
+  // so a long email never shrank and ran straight through the
+  // settings/sign-out buttons next to it.
+  for (const page of PORTAL_PAGES) {
+    const src = fs.readFileSync(repo('portal', page), 'utf8');
+    if (!src.includes('.portal-header-left {')) continue;
+    assert.match(src, /\.portal-header-left \{[^}]*min-width: 0/,
+      `${page}: header-left must be allowed to shrink`);
+    assert.match(src, /\.portal-sub \{[^}]*text-overflow: ellipsis/,
+      `${page}: the email display must truncate rather than overflow`);
+  }
+});
+
+test('every signed-in portal page can report a problem, not only Invoices', () => {
+  // Previously only dashboard.html had this -- a client hitting a
+  // problem on Home, Settings, Quotes, Jobs, or Request had no way to
+  // report it at all.
+  for (const page of PORTAL_PAGES) {
+    const src = fs.readFileSync(repo('portal', page), 'utf8');
+    assert.match(src, /id="reportBugLink"/, `${page}: missing the report-a-problem link`);
+    assert.match(src, /id="reportBugOverlay"/, `${page}: missing the report-a-problem modal`);
+  }
+});
+
+test('reporting a problem posts page_url as the real current page, so every page is distinguishable in the reports panel', () => {
+  for (const page of PORTAL_PAGES) {
+    const src = fs.readFileSync(repo('portal', page), 'utf8');
+    if (!src.includes('reportBugLink')) continue;
+    assert.match(src, /page_url: window\.location\.pathname/, `${page}: should report its own real path`);
+  }
+});

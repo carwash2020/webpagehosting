@@ -49,13 +49,34 @@
 <style>
   body { background: #0a0a0a; max-width: 640px; margin: 0 auto; padding: 24px 16px 60px; }
   .portal-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; }
-  .portal-header-left { display: flex; align-items: center; gap: 12px; }
+  /* min-width:0 (2026-09-02, from a direct screenshot): a flex child
+     defaults to min-width:auto, which means it will NEVER shrink
+     below its content's natural width -- so a long email address just
+     overflowed straight through the settings/sign-out buttons next to
+     it rather than truncating. min-width:0 lets it actually shrink,
+     and .portal-sub below does the truncating. */
+  .portal-header-left { display: flex; align-items: center; gap: 12px; min-width: 0; flex: 1; }
+  .portal-header-left > div { min-width: 0; }
   .portal-header img { width: 40px; height: auto; }
   .portal-title { font-family: 'Oswald', sans-serif; font-weight: 700; font-size: 19px; color: var(--white); }
-  .portal-sub { color: var(--text-dim); font-size: 13px; }
-  .portal-nav { display: flex; gap: 8px; margin-bottom: 24px; flex-wrap: wrap; }
+  .portal-sub {
+    color: var(--text-dim); font-size: 13px;
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  }
+  /* Fixed 2026-09-02, from a direct screenshot: with flex-wrap and
+     flex:1 on 5 items, the 5th item (Jobs) couldn't fit on the first
+     row at real phone widths, wrapped alone onto a second row, and
+     then stretched to fill the FULL width by itself (a lone flex:1
+     item on its own row always does) -- a huge, orphaned pill that
+     looked broken rather than intentional.
+     A CSS grid with exactly 5 equal columns never has this failure
+     mode: every item is always on one row, at whatever width 1/5 of
+     the container comes out to, right down to genuinely tiny phones.
+     Narrower labels wrap to two lines inside their own cell instead
+     of the layout itself breaking. */
+  .portal-nav { display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px; margin-bottom: 24px; }
   .portal-nav a {
-    flex: 1; min-width: 72px; text-align: center; padding: 9px 12px; border-radius: 8px; font-size: 13.5px; font-weight: 600;
+    text-align: center; padding: 9px 6px; border-radius: 8px; font-size: 12.5px; font-weight: 600; line-height: 1.25;
     text-decoration: none; border: 1px solid var(--border); color: var(--text-dim);
   }
   .portal-nav a.is-active { background: var(--orange-tint-soft); border-color: var(--orange-tint-border); color: var(--orange-light); }
@@ -81,6 +102,17 @@
   .set-msg { font-size: 13px; margin-top: 10px; line-height: 1.5; }
   .set-msg.is-error { color: #ff8a80; }
   .set-msg.is-ok { color: #4caf78; }
+  .report-bug-link { display: block; margin-top: 14px; font-size: 12px; color: var(--text-dim); text-decoration: underline; cursor: pointer; text-align: center; background: none; border: none; font-family: inherit; padding: 0; }
+  .report-bug-link:hover { color: var(--orange-light); }
+  .report-bug-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.6); display: flex; align-items: center; justify-content: center; padding: 20px; z-index: 1000; }
+  .report-bug-modal { background: var(--bg-panel); border: 1px solid var(--border); border-radius: 12px; padding: 24px; max-width: 400px; width: 100%; }
+  .report-bug-title { font-family: 'Oswald', sans-serif; font-weight: 600; font-size: 18px; color: var(--white); margin-bottom: 6px; }
+  .report-bug-sub { font-size: 13px; color: var(--text-dim); margin-bottom: 14px; }
+  .report-bug-modal textarea { width: 100%; padding: 11px 13px; background: var(--bg-panel-2); border: 1px solid var(--border); border-radius: 8px; color: var(--white); font-size: 14px; font-family: inherit; box-sizing: border-box; resize: vertical; }
+  .report-bug-error { color: #e05252; font-size: 13px; margin: 8px 0 0; min-height: 1px; }
+  .report-bug-success { color: #4caf78; font-size: 14px; margin: 4px 0; line-height: 1.5; }
+  .report-bug-actions { display: flex; gap: 10px; margin-top: 16px; }
+  .report-bug-actions button { flex: 1; justify-content: center; }
 </style>
 </head>
 <body>
@@ -212,6 +244,97 @@
   });
 
   init();
+</script>
+
+
+<!--
+  Report a problem (2026-09-02) -- extended from dashboard.html, the
+  only page that originally had it, to every signed-in portal page.
+  Works whether or not the client is signed in (client_email is best-
+  effort, from the current session if one exists) since a real problem
+  can happen on any page, not just Invoices.
+-->
+<button type="button" class="report-bug-link" id="reportBugLink">Report a problem</button>
+
+<div class="report-bug-overlay" id="reportBugOverlay" style="display:none;">
+  <div class="report-bug-modal">
+    <div class="report-bug-title" id="reportBugTitle">Report a problem</div>
+    <p class="report-bug-sub" id="reportBugSub">Tell us what happened. We'll take a look.</p>
+    <div id="reportBugFormArea">
+      <textarea id="reportBugMessage" placeholder="What went wrong?" rows="4"></textarea>
+      <div class="report-bug-error" id="reportBugError"></div>
+      <div class="report-bug-actions">
+        <button class="btn secondary-btn" id="reportBugCancel" type="button">Cancel</button>
+        <button class="btn orange" id="reportBugSubmit" type="button">Send</button>
+      </div>
+    </div>
+    <div class="report-bug-success" id="reportBugSuccess" style="display:none;">Thanks, we got your report and will take a look.</div>
+  </div>
+</div>
+
+
+<script>
+  (function () {
+    const link = document.getElementById('reportBugLink');
+    const overlay = document.getElementById('reportBugOverlay');
+    const cancelBtn = document.getElementById('reportBugCancel');
+    const submitBtn = document.getElementById('reportBugSubmit');
+    const messageInput = document.getElementById('reportBugMessage');
+    const errorEl = document.getElementById('reportBugError');
+    const formArea = document.getElementById('reportBugFormArea');
+    const successEl = document.getElementById('reportBugSuccess');
+
+    function openReportBug() {
+      overlay.style.display = 'flex';
+      formArea.style.display = 'block';
+      successEl.style.display = 'none';
+      messageInput.value = '';
+      errorEl.textContent = '';
+    }
+    function closeReportBug() {
+      overlay.style.display = 'none';
+    }
+    link.addEventListener('click', openReportBug);
+    cancelBtn.addEventListener('click', closeReportBug);
+    overlay.addEventListener('click', (e) => { if (e.target === overlay) closeReportBug(); });
+
+    submitBtn.addEventListener('click', async () => {
+      const message = messageInput.value.trim();
+      if (!message) { errorEl.textContent = 'Please describe the problem first.'; return; }
+      submitBtn.disabled = true;
+      submitBtn.textContent = 'Sending...';
+      errorEl.textContent = '';
+      let clientEmail = null;
+      try {
+        const { data } = await client.auth.getSession();
+        clientEmail = data.session ? data.session.user.email : null;
+      } catch (e) { /* not signed in, that's fine -- report goes in anonymous */ }
+      try {
+        const res = await fetch('https://csvfqdjuobylgafgolho.supabase.co/rest/v1/portal_bug_reports', {
+          method: 'POST',
+          headers: {
+            'apikey': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNzdmZxZGp1b2J5bGdhZmdvbGhvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODUzNTQ3MjcsImV4cCI6MjEwMDkzMDcyN30.6GlvK-DfXf2lppS1kciZtsl4wHOpZz_yKtwsS1lyjrs',
+            'Authorization': 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNzdmZxZGp1b2J5bGdhZmdvbGhvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODUzNTQ3MjcsImV4cCI6MjEwMDkzMDcyN30.6GlvK-DfXf2lppS1kciZtsl4wHOpZz_yKtwsS1lyjrs',
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            client_email: clientEmail,
+            message: message,
+            page_url: window.location.pathname,
+            user_agent: navigator.userAgent,
+          }),
+        });
+        if (!res.ok) throw new Error('HTTP ' + res.status);
+        formArea.style.display = 'none';
+        successEl.style.display = 'block';
+      } catch (e) {
+        errorEl.textContent = "Couldn't send that. Please call us instead.";
+      } finally {
+        submitBtn.disabled = false;
+        submitBtn.textContent = 'Send';
+      }
+    });
+  })();
 </script>
 
 </body>
