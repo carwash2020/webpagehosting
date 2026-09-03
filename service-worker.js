@@ -210,7 +210,8 @@
 // 2026-08-16 and 2026-09-02 notes above already warned about.
 // Bumped 2026-09-03: clients.html added to PRECACHE_URLS, and
 // dev-tools.html/workspace.html both changed (Portal tab split out).
-const CACHE_NAME = 'th-workspace-v48';
+// Bumped 2026-09-03 (again): pos.html added to PRECACHE_URLS.
+const CACHE_NAME = 'th-workspace-v49';
 const PRECACHE_URLS = [
   '/tools/workspace.html', '/tools/job-tracker.html', '/tools/invoice-generator.html', '/tools/contract-generator.html',
   '/tools/calendar.html', '/tools/route-planner.html', '/tools/review-request.html', '/tools/contact-card.html',
@@ -225,6 +226,8 @@ const PRECACHE_URLS = [
   // own page, now a genuine daily operational tool in its own right,
   // same reasoning as everything else on this line.
   '/tools/clients.html',
+  // Added 2026-09-03 -- the new POS tool, same reasoning.
+  '/tools/pos.html',
   // Added 2026-08-20 -- same gap as above, these 3 pages (all from the
   // structural rework's Client/Job Detail views and the Finance split)
   // existed live but were never added here either.

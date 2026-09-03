@@ -17,10 +17,68 @@
 //   The frontend's publishable key in portal/dashboard.html swaps at
 //   the same time.
 // (SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY are auto-provided by Supabase.)
+//
+// Updated 2026-09-03: every payment now goes through a real Stripe
+// Customer, requested directly: "We need to start collecting card
+// info to each email to make it easy to pay next time." A Customer is
+// found or created for the client's own email (never trusting a
+// client-supplied stripe_customer_id -- always looked up server-side
+// by the caller's own verified session email), and
+// setup_future_usage: 'off_session' tells Stripe to vault whatever
+// card is used here on that Customer for later off-session charges.
+// This project never sees or stores the card itself -- only the
+// resulting stripe_customer_id, in the new stripe_customers table.
+// A card the client's bank doesn't support saving is silently not
+// saved by Stripe; this never blocks or fails the actual payment.
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 const STRIPE_SECRET_KEY = Deno.env.get("STRIPE_SECRET_KEY");
+
+// Finds this email's existing Stripe Customer, or creates a new one
+// and records the mapping. Shared logic duplicated (not imported)
+// across create-payment-intent, create-bulk-payment-intent, and
+// create-pos-charge -- each Supabase Edge Function is its own
+// isolated deployment with no shared-module system across functions,
+// and this is short enough that duplicating it is simpler and safer
+// than the alternative (an extra function-to-function HTTP hop just
+// to look up a customer id).
+async function getOrCreateStripeCustomer(email: string): Promise<string> {
+  const lookupRes = await fetch(
+    `${SUPABASE_URL}/rest/v1/stripe_customers?client_email=eq.${encodeURIComponent(email)}&select=stripe_customer_id&limit=1`,
+    { headers: { apikey: SERVICE_ROLE_KEY, Authorization: `Bearer ${SERVICE_ROLE_KEY}` } },
+  );
+  if (lookupRes.ok) {
+    const rows = await lookupRes.json();
+    if (rows.length) return rows[0].stripe_customer_id;
+  }
+
+  const customerRes = await fetch("https://api.stripe.com/v1/customers", {
+    method: "POST",
+    headers: { Authorization: `Bearer ${STRIPE_SECRET_KEY}`, "Content-Type": "application/x-www-form-urlencoded" },
+    body: new URLSearchParams({ email }),
+  });
+  if (!customerRes.ok) {
+    throw new Error(`Stripe customer creation failed: ${(await customerRes.text()).slice(0, 300)}`);
+  }
+  const customer = await customerRes.json();
+
+  // Upsert, not a plain insert -- a race between two near-simultaneous
+  // requests for the same brand-new email (unlikely, but not
+  // impossible) should never produce two Stripe Customers for one
+  // person. on_conflict keeps whichever row won the race as the real
+  // mapping, harmlessly discarding this one if it lost.
+  await fetch(`${SUPABASE_URL}/rest/v1/stripe_customers?on_conflict=client_email`, {
+    method: "POST",
+    headers: {
+      apikey: SERVICE_ROLE_KEY, Authorization: `Bearer ${SERVICE_ROLE_KEY}`,
+      "Content-Type": "application/json", Prefer: "resolution=ignore-duplicates",
+    },
+    body: JSON.stringify([{ client_email: email, stripe_customer_id: customer.id }]),
+  });
+
+  return customer.id;
+}
 
 // Same CORS pattern as every other browser-callable function in this
 // project (trigger-workflow, sync-invoice-to-portal) -- origin
@@ -112,6 +170,8 @@ Deno.serve(async (req: Request) => {
     // 19.999999999998 ever becoming a rejected, non-integer amount.
     const amountCents = Math.round(Number(invoice.total) * 100);
 
+    const stripeCustomerId = await getOrCreateStripeCustomer(claims.email);
+
     const piRes = await fetch("https://api.stripe.com/v1/payment_intents", {
       method: "POST",
       headers: {
@@ -121,7 +181,9 @@ Deno.serve(async (req: Request) => {
       body: new URLSearchParams({
         amount: String(amountCents),
         currency: "usd",
+        customer: stripeCustomerId,
         "automatic_payment_methods[enabled]": "true",
+        setup_future_usage: "off_session",
         "metadata[client_portal_invoice_id]": String(invoice.id),
       }),
     });

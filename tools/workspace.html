@@ -705,6 +705,20 @@
     </a>
     <button class="tool-tile-info" onclick="event.stopPropagation(); openCardInfo('tool-clients')" aria-label="What is Clients?" title="What is this?">?</button>
   </div>
+  <!--
+    POS tile (2026-09-03) -- charge a client's card directly, no
+    invoice needed, requested directly: "add a tool to type in and
+    charge a client from my phone... we could name the tool POS."
+    Same permission as Invoices/Clients since it's the same money-
+    handling trust level, not a separate group.
+  -->
+  <div class="tool-tile" data-tile-perm="can_manage_invoices">
+    <a href="/tools/pos.html" class="tool-tile-link">
+      <span class="tool-tile-icon"><svg class="th-icon" aria-hidden="true"><use href="#icon-dollar" xlink:href="#icon-dollar"></use></svg></span>
+      <span class="tool-tile-label">POS</span>
+    </a>
+    <button class="tool-tile-info" onclick="event.stopPropagation(); openCardInfo('tool-pos')" aria-label="What is POS?" title="What is this?">?</button>
+  </div>
 
   <div class="tool-tile" data-tile-perm="can_view_finance">
     <a href="/tools/finance.html" class="tool-tile-link">
@@ -806,6 +820,10 @@
     'tool-clients': {
       title: 'Clients',
       body: `<p>Everything about the client-facing portal in one place &mdash; who has access, what's been sent, what they've requested, and who gets emailed about a new request. Split off Dev Tools onto its own page (2026-09-03) since it had become a daily operational tool, not a diagnostics screen.</p>`,
+    },
+    'tool-pos': {
+      title: 'POS',
+      body: `<p>Charge a client's card directly for a quick job that doesn't need a real invoice &mdash; no line items, no due date, just an amount. If the client has paid before, their card is already saved and this is one tap. Otherwise it's a normal card entry, which also gets saved for next time.</p><p>Every POS sale logs to Income the same way any other payment does. Never creates an invoice, quote, or portal record of any kind.</p>`,
     },
     'tool-reviews': {
       title: 'Review Request Sender',
