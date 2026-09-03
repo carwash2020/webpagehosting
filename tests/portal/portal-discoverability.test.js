@@ -10,7 +10,10 @@ const fs = require('fs');
 const path = require('path');
 
 const INDEX = fs.readFileSync(path.join(__dirname, '..', '..', 'index.html'), 'utf8');
-const DEV_TOOLS = fs.readFileSync(path.join(__dirname, '..', '..', 'tools', 'dev-tools.html'), 'utf8');
+// sendInviteToAnyEmail() and loadInternalEmails() split off Dev Tools
+// onto their own /tools/clients.html (2026-09-03), requested directly:
+// "lets split the portal out of tools and add it as its own [tool]."
+const CLIENTS = fs.readFileSync(path.join(__dirname, '..', '..', 'tools', 'clients.html'), 'utf8');
 
 test('the homepage footer has a Client Portal column linking to the portal login', () => {
   assert.match(INDEX, /<h4>Client Portal<\/h4>/);
@@ -38,19 +41,19 @@ test('the footer column states plainly that the portal is for existing clients',
   assert.match(colMatch[0], /[Ee]xisting clients only/);
 });
 
-test('Dev Tools can send an account invite to any email, not only to clients already in the list', () => {
+test('the Clients tool can send an account invite to any email, not only to clients already in the list', () => {
   // The Portal accounts list is built from the portal tables, so it
   // can only ever show clients who ALREADY have an invoice, quote, or
   // job. This control covers everyone else.
-  assert.match(DEV_TOOLS, /id="inviteAnyEmail"/);
-  assert.match(DEV_TOOLS, /onclick="sendInviteToAnyEmail\(\)"/);
-  const fnMatch = DEV_TOOLS.match(/async function sendInviteToAnyEmail\(\)[\s\S]*?\n  \}\n/);
+  assert.match(CLIENTS, /id="inviteAnyEmail"/);
+  assert.match(CLIENTS, /onclick="sendInviteToAnyEmail\(\)"/);
+  const fnMatch = CLIENTS.match(/async function sendInviteToAnyEmail\(\)[\s\S]*?\n  \}\n/);
   assert.ok(fnMatch, 'expected to isolate sendInviteToAnyEmail()');
   assert.match(fnMatch[0], /functions\/v1\/send-invite/);
 });
 
-test('sending an invite requires the dev password, like every other real action in Dev Tools', () => {
-  const fnMatch = DEV_TOOLS.match(/async function sendInviteToAnyEmail\(\)[\s\S]*?\n  \}\n/);
+test('sending an invite requires the dev password, like every other real action on the Clients tool', () => {
+  const fnMatch = CLIENTS.match(/async function sendInviteToAnyEmail\(\)[\s\S]*?\n  \}\n/);
   assert.match(fnMatch[0], /await confirmDevPassword\(\)/);
 });
 
@@ -59,7 +62,7 @@ test('an already-registered email is reported as such, not as a sent invite', ()
   // account -- a success, but no email was sent. Reporting that as
   // "Sent!" would leave a client waiting on an email that never
   // arrives when what they need is a password reset.
-  const fnMatch = DEV_TOOLS.match(/async function sendInviteToAnyEmail\(\)[\s\S]*?\n  \}\n/);
+  const fnMatch = CLIENTS.match(/async function sendInviteToAnyEmail\(\)[\s\S]*?\n  \}\n/);
   const body = fnMatch[0];
   assert.match(body, /result\.already_has_account/);
   // The "Forgot password" guidance itself now lives in send-invite's
@@ -73,7 +76,7 @@ test('an already-registered email is reported as such, not as a sent invite', ()
 test('a bad email is rejected before the dev password prompt, not after', () => {
   // Asking for a password and THEN rejecting the input would be a
   // pointless extra step.
-  const fnMatch = DEV_TOOLS.match(/async function sendInviteToAnyEmail\(\)[\s\S]*?\n  \}\n/);
+  const fnMatch = CLIENTS.match(/async function sendInviteToAnyEmail\(\)[\s\S]*?\n  \}\n/);
   const body = fnMatch[0];
   const validationIdx = body.indexOf("includes('@')");
   const passwordIdx = body.indexOf('confirmDevPassword');
@@ -93,7 +96,7 @@ test('a bad email is rejected before the dev password prompt, not after', () => 
 const SEND_INVITE = fs.readFileSync(path.join(__dirname, '..', '..', 'edge-functions', 'send-invite-index.ts'), 'utf8');
 
 test('send-invite refuses an internal tool account outright, server-side', () => {
-  // Enforced in the edge function, NOT only in the Dev Tools UI, so
+  // Enforced in the edge function, NOT only in the Clients tool's UI, so
   // the rule holds for every caller -- including
   // sync-invoice-to-portal and the quote/job sync functions, which
   // fire send-invite automatically for any new client email.
@@ -137,8 +140,8 @@ test('already_has_account stays ok:true so automatic callers are not broken', ()
   assert.match(branchMatch[0], /ok: true/);
 });
 
-test('Dev Tools shows internal-account and already-a-client as warnings, not as sent', () => {
-  const fnMatch = DEV_TOOLS.match(/async function sendInviteToAnyEmail\(\)[\s\S]*?\n  \}\n/);
+test('the Clients tool shows internal-account and already-a-client as warnings, not as sent', () => {
+  const fnMatch = CLIENTS.match(/async function sendInviteToAnyEmail\(\)[\s\S]*?\n  \}\n/);
   assert.ok(fnMatch);
   const body = fnMatch[0];
   assert.match(body, /result\.is_internal_account/);
@@ -154,6 +157,6 @@ test('an internal account appearing in the portal client list is flagged, not hi
   // Flagged rather than filtered: a staff address with real client
   // invoices on file is legitimate but unusual, and hiding it would
   // make the list silently disagree with the actual data.
-  assert.match(DEV_TOOLS, /INTERNAL ACCOUNT/);
-  assert.match(DEV_TOOLS, /async function loadInternalEmails\(\)/);
+  assert.match(CLIENTS, /INTERNAL ACCOUNT/);
+  assert.match(CLIENTS, /async function loadInternalEmails\(\)/);
 });

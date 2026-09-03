@@ -208,7 +208,9 @@
 // merges this week -- Portal tab panels, inline photo viewer, the
 // onclick quoting fix -- without a bump. Same failure mode the
 // 2026-08-16 and 2026-09-02 notes above already warned about.
-const CACHE_NAME = 'th-workspace-v47';
+// Bumped 2026-09-03: clients.html added to PRECACHE_URLS, and
+// dev-tools.html/workspace.html both changed (Portal tab split out).
+const CACHE_NAME = 'th-workspace-v48';
 const PRECACHE_URLS = [
   '/tools/workspace.html', '/tools/job-tracker.html', '/tools/invoice-generator.html', '/tools/contract-generator.html',
   '/tools/calendar.html', '/tools/route-planner.html', '/tools/review-request.html', '/tools/contact-card.html',
@@ -219,6 +221,10 @@ const PRECACHE_URLS = [
   // the kind of page worth having offline -- looking up a part number
   // in a basement with no signal is the scenario this cache exists for.
   '/tools/dev-tools.html', '/tools/site-content.html', '/tools/parts-reference.html', '/tools/runway-dashboard.html',
+  // Added 2026-09-03 -- split off Dev Tools' own Portal tab onto its
+  // own page, now a genuine daily operational tool in its own right,
+  // same reasoning as everything else on this line.
+  '/tools/clients.html',
   // Added 2026-08-20 -- same gap as above, these 3 pages (all from the
   // structural rework's Client/Job Detail views and the Finance split)
   // existed live but were never added here either.

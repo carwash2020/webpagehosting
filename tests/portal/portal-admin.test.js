@@ -17,7 +17,10 @@ const fs = require('fs');
 const path = require('path');
 
 const INVOICE_GEN = fs.readFileSync(path.join(__dirname, '..', '..', 'tools', 'invoice-generator.html'), 'utf8');
-const DEV_TOOLS = fs.readFileSync(path.join(__dirname, '..', '..', 'tools', 'dev-tools.html'), 'utf8');
+// The Portal accounts panel split off Dev Tools onto its own
+// /tools/clients.html (2026-09-03), requested directly: "lets split
+// the portal out of tools and add it as its own [tool]."
+const CLIENTS = fs.readFileSync(path.join(__dirname, '..', '..', 'tools', 'clients.html'), 'utf8');
 const DEV_SHARED = fs.readFileSync(path.join(__dirname, '..', '..', 'tools', 'dev-tools-shared.js'), 'utf8');
 
 test('marking an invoice paid by hand syncs that status to the portal', () => {
@@ -54,28 +57,30 @@ test('the old per-invoice Resend Invite button and its function are both gone', 
   assert.doesNotMatch(INVOICE_GEN, /async function resendInvite\(/);
 });
 
-test('Dev Tools has a Portal accounts panel, wired up and initialised', () => {
-  assert.match(DEV_TOOLS, /<h2>Portal accounts<\/h2>/);
-  assert.match(DEV_TOOLS, /id="portalAccounts"/);
-  assert.match(DEV_TOOLS, /async function renderPortalAccounts\(\)/);
-  assert.match(DEV_TOOLS, /async function resendPortalInvite\(/);
+test('the Clients tool has a Portal accounts panel, wired up and initialised', () => {
+  assert.match(CLIENTS, /<h2>Portal accounts<\/h2>/);
+  assert.match(CLIENTS, /id="portalAccounts"/);
+  assert.match(CLIENTS, /async function renderPortalAccounts\(\)/);
+  assert.match(CLIENTS, /async function resendPortalInvite\(/);
   // Must actually be called on load, not just defined.
-  assert.match(DEV_TOOLS, /renderPortalBugReports\(\);\s*\n\s*renderPortalAccounts\(\);/);
+  assert.match(CLIENTS, /renderPortalBugReports\(\);\s*\n\s*renderPortalAccounts\(\);/);
 });
 
-test('the Portal accounts panel is Owner-visible, so Steve can actually use it', () => {
-  // Almost every Dev Tools panel carries dev-owner-hidden, which would
-  // hide this from Steve's Owner account entirely -- the whole point
-  // of putting it here rather than in a Developer-only area is that
-  // he needs it day to day.
-  const panelMatch = DEV_TOOLS.match(/<div class="([^"]*)">\s*<div class="dev-panel-heading">\s*<h2>Portal accounts<\/h2>/);
+test('the Portal accounts panel is visible with no owner-hiding, so Steve can actually use it', () => {
+  // clients.html is its own standalone page now (2026-09-03) -- there
+  // is no dev-owner-hidden tab system on it at all, unlike when this
+  // panel lived inside Dev Tools alongside Developer-only panels.
+  // Still worth confirming directly rather than assuming: this panel
+  // is exactly why the split happened, and it must render for anyone
+  // who opens the page, no permission-based hiding on the element itself.
+  const panelMatch = CLIENTS.match(/<div class="([^"]*)">\s*<div class="dev-panel-heading">\s*<h2>Portal accounts<\/h2>/);
   assert.ok(panelMatch, 'could not isolate the Portal accounts panel element');
   assert.doesNotMatch(panelMatch[1], /dev-owner-hidden/,
     'Portal accounts must NOT be owner-hidden -- Steve is the primary user of it');
 });
 
 test('the Portal accounts panel builds from the portal tables, never the auth user list', () => {
-  const fnMatch = DEV_TOOLS.match(/async function loadPortalAccounts\(\) \{[\s\S]*?\n  \}\n/);
+  const fnMatch = CLIENTS.match(/async function loadPortalAccounts\(\) \{[\s\S]*?\n  \}\n/);
   assert.ok(fnMatch, 'loadPortalAccounts() not found');
   for (const t of ['client_portal_invoices', 'client_portal_quotes', 'client_portal_jobs']) {
     assert.match(fnMatch[0], new RegExp(t), `should read ${t}`);
@@ -83,10 +88,10 @@ test('the Portal accounts panel builds from the portal tables, never the auth us
   // Reading Supabase's own auth user list needs the service_role key,
   // which must never sit in this page's JavaScript.
   assert.doesNotMatch(fnMatch[0], /auth\/v1\/admin/);
-  assert.doesNotMatch(DEV_TOOLS, /SERVICE_ROLE/);
+  assert.doesNotMatch(CLIENTS, /SERVICE_ROLE/);
 });
 
-test('the Portal accounts panel has help text like every other Dev Tools panel', () => {
-  assert.match(DEV_TOOLS, /openDevInfo\('portalaccounts'\)/);
+test('the Portal accounts panel has help text like every other Clients panel', () => {
+  assert.match(CLIENTS, /openDevInfo\('portalaccounts'\)/);
   assert.match(DEV_SHARED, /portalaccounts:\s*\{/);
 });

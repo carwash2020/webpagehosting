@@ -689,6 +689,22 @@
     </a>
     <button class="tool-tile-info" onclick="event.stopPropagation(); openCardInfo('tool-invoices')" aria-label="What is Invoice Generator?" title="What is this?">?</button>
   </div>
+  <!--
+    Clients tile (2026-09-03) -- split off Dev Tools' own Portal tab
+    onto its own page, requested directly: "lets split the portal out
+    of tools and add it as its own [tool]." Gated by the same
+    permission (can_manage_invoices, relabeled "Invoices, Quotes &
+    Portal") the panels themselves already require -- placed right
+    next to Invoices since it's the same permission and a closely
+    related daily task, not a separate group.
+  -->
+  <div class="tool-tile" data-tile-perm="can_manage_invoices">
+    <a href="/tools/clients.html" class="tool-tile-link">
+      <span class="tool-tile-icon"><svg class="th-icon" aria-hidden="true"><use href="#icon-inbox" xlink:href="#icon-inbox"></use></svg></span>
+      <span class="tool-tile-label">Clients</span>
+    </a>
+    <button class="tool-tile-info" onclick="event.stopPropagation(); openCardInfo('tool-clients')" aria-label="What is Clients?" title="What is this?">?</button>
+  </div>
 
   <div class="tool-tile" data-tile-perm="can_view_finance">
     <a href="/tools/finance.html" class="tool-tile-link">
@@ -786,6 +802,10 @@
     'tool-invoices': {
       title: 'Invoice Generator',
       body: `<p>Invoices and quotes/estimates in one place &mdash; convert an estimate straight into a real invoice with one tap.</p>`,
+    },
+    'tool-clients': {
+      title: 'Clients',
+      body: `<p>Everything about the client-facing portal in one place &mdash; who has access, what's been sent, what they've requested, and who gets emailed about a new request. Split off Dev Tools onto its own page (2026-09-03) since it had become a daily operational tool, not a diagnostics screen.</p>`,
     },
     'tool-reviews': {
       title: 'Review Request Sender',

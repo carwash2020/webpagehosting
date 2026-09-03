@@ -2807,6 +2807,31 @@ test('the cache-bust check genuinely catches a real mismatch, not just a plausib
   }
 });
 
+test('a shared .css file with a stale ?v= is caught the same way a shared .js file is -- href=, not just src=', () => {
+  // Regression test for a real bug found and fixed while building
+  // tools/clients.html (2026-09-03): the shared-script version-check
+  // regex was tightened to require an actual attribute rather than a
+  // bare filename mention anywhere in the HTML, but the fix initially
+  // anchored to src="..." only -- which silently never matches
+  // styles-tools.css, loaded via <link href="...">, not <script src>.
+  // No existing test caught that at the time; this one specifically
+  // exercises the .css path so it can't recur unnoticed.
+  const toolsDir = path.join(__dirname, '..', '..', 'tools');
+  const wsPath = path.join(toolsDir, 'workspace.html');
+  const original = fs.readFileSync(wsPath, 'utf8');
+  try {
+    const stale = original.replace(/styles-tools\.css\?v=[a-zA-Z0-9]+/, 'styles-tools.css?v=deliberatelystalevalue');
+    assert.notEqual(stale, original, 'expected to actually find and mutate a real styles-tools.css reference');
+    fs.writeFileSync(wsPath, stale);
+
+    const result = runCheckConsistency();
+    assert.equal(result.passed, false, 'a stale shared .css version should be caught');
+    assert.match(result.output, /styles-tools\.css/);
+  } finally {
+    fs.writeFileSync(wsPath, original);
+  }
+});
+
 test('a brand-new file, referenced by 2+ real pages with no ?v= at all, is caught automatically -- nothing to add to any list', () => {
   const toolsDir = path.join(__dirname, '..', '..', 'tools');
   const newFilePath = path.join(toolsDir, 'a-brand-new-shared-test-file.js');
@@ -2819,8 +2844,16 @@ test('a brand-new file, referenced by 2+ real pages with no ?v= at all, is caugh
     // Referenced by exactly 2 real pages -- genuinely shared, with no
     // ?v= at all, exactly the state a real new file would start in
     // before anyone thought to add cache-busting to it.
-    fs.writeFileSync(wsPath, originalWs.replace('</body>', '<script src="a-brand-new-shared-test-file.js"></script></body>'));
-    fs.writeFileSync(jtPath, originalJt.replace('</body>', '<script src="a-brand-new-shared-test-file.js"></script></body>'));
+    // Absolute /tools/-prefixed path -- the same convention every real
+    // shared script in this codebase actually uses. The checker's own
+    // regex was tightened (2026-09-03, building tools/clients.html) to
+    // anchor specifically to a real src="/tools/..." attribute rather
+    // than a bare filename mention anywhere in the HTML (which used to
+    // false-positive on an explanatory comment); a relative path here
+    // would no longer match that tightened regex, same as it wouldn't
+    // match any real page's own script tags either.
+    fs.writeFileSync(wsPath, originalWs.replace('</body>', '<script src="/tools/a-brand-new-shared-test-file.js"></script></body>'));
+    fs.writeFileSync(jtPath, originalJt.replace('</body>', '<script src="/tools/a-brand-new-shared-test-file.js"></script></body>'));
 
     const result = runCheckConsistency();
     assert.equal(result.passed, false, 'a genuinely shared file with no cache-busting at all should be caught, with zero configuration needed anywhere');

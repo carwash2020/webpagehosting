@@ -11,7 +11,11 @@ const path = require('path');
 
 const INVOICE_GEN = fs.readFileSync(path.join(__dirname, '..', '..', 'tools', 'invoice-generator.html'), 'utf8');
 const DASHBOARD = fs.readFileSync(path.join(__dirname, '..', '..', 'portal', 'dashboard.html'), 'utf8');
-const DEV_TOOLS = fs.readFileSync(path.join(__dirname, '..', '..', 'tools', 'dev-tools.html'), 'utf8');
+// The invoice PDF viewer and Portal invoices panel split off Dev
+// Tools onto their own /tools/clients.html (2026-09-03), requested
+// directly: "lets split the portal out of tools and add it as its
+// own [tool]."
+const CLIENTS = fs.readFileSync(path.join(__dirname, '..', '..', 'tools', 'clients.html'), 'utf8');
 
 // ---- Venmo / Cash App removal ----
 
@@ -126,8 +130,8 @@ test('a failed archive upload never blocks the invoice workflow', () => {
   assert.match(body, /logClientError/, 'a failure should still be logged so it can be found and fixed later');
 });
 
-test('Dev Tools can open an archived invoice PDF via a signed URL, scoped to the invoice-pdfs bucket', () => {
-  const fnMatch = DEV_TOOLS.match(/async function viewArchivedInvoicePdf\(portalRowId, btnEl\)[\s\S]*?\n  \}\n/);
+test('the Clients tool can open an archived invoice PDF via a signed URL, scoped to the invoice-pdfs bucket', () => {
+  const fnMatch = CLIENTS.match(/async function viewArchivedInvoicePdf\(portalRowId, btnEl\)[\s\S]*?\n  \}\n/);
   assert.ok(fnMatch, 'expected to isolate viewArchivedInvoicePdf()');
   const body = fnMatch[0];
   assert.match(body, /storage\/v1\/object\/sign\/invoice-pdfs\//);
@@ -135,7 +139,7 @@ test('Dev Tools can open an archived invoice PDF via a signed URL, scoped to the
 });
 
 test('the Portal invoices panel offers View PDF alongside Resend for every row', () => {
-  const fnMatch = DEV_TOOLS.match(/async function renderPortalInvoices\(\)[\s\S]*?\n  \}\n/);
+  const fnMatch = CLIENTS.match(/async function renderPortalInvoices\(\)[\s\S]*?\n  \}\n/);
   assert.ok(fnMatch, 'expected to isolate renderPortalInvoices()');
   assert.match(fnMatch[0], /viewArchivedInvoicePdf\(/);
   assert.match(fnMatch[0], /resendPortalInvoice\(/);
