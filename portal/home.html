@@ -251,7 +251,7 @@
       client.from('client_portal_invoices').select('id,total,paid'),
       client.from('client_portal_quotes').select('id,status'),
       client.from('client_portal_jobs').select('id'),
-      client.from('client_portal_work_orders').select('id,status'),
+      client.from('client_portal_work_orders').select('id,title,status,scheduled_at'),
     ]);
     return {
       invoices: invoices.data || [],
@@ -261,17 +261,42 @@
     };
   }
 
+  // Matches the same display already used on the Request Work card and
+  // in the client's own confirmation email -- one real date/time,
+  // shown the same way everywhere it appears.
+  function formatScheduledAt(iso) {
+    return new Intl.DateTimeFormat('en-US', {
+      timeZone: 'America/Denver', weekday: 'long', month: 'long', day: 'numeric',
+      hour: 'numeric', minute: '2-digit',
+    }).format(new Date(iso));
+  }
+
   function renderAttention(s) {
     const el = document.getElementById('attentionArea');
     const rows = [];
+
+    // Upcoming scheduled appointments, shown first -- more concrete
+    // and time-sensitive than anything else on this list (2026-09-03,
+    // following directly from the Approve & Schedule flow: "5 would
+    // fall in hand with that as well"). Each one gets its own row
+    // rather than being combined into a single count, since the DATE
+    // is the actual useful information here, not just how many there are.
+    const scheduled = s.requests.filter(r => r.status === 'scheduled' && r.scheduled_at);
+    scheduled.forEach(r => {
+      rows.push({
+        text: 'Scheduled: ' + (r.title || 'your appointment') + ' on ' + formatScheduledAt(r.scheduled_at),
+        href: '/portal/work-orders.html',
+        action: 'View',
+      });
+    });
 
     const unpaid = s.invoices.filter(i => !i.paid);
     if (unpaid.length) {
       const owed = unpaid.reduce((sum, i) => sum + (Number(i.total) || 0), 0);
       rows.push({
         text: unpaid.length === 1
-          ? `1 unpaid invoice \u2014 ${money(owed)}`
-          : `${unpaid.length} unpaid invoices \u2014 ${money(owed)} total`,
+          ? `1 unpaid invoice, ${money(owed)}`
+          : `${unpaid.length} unpaid invoices, ${money(owed)} total`,
         href: '/portal/dashboard.html',
         action: 'View & Pay',
       });

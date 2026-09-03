@@ -62,7 +62,7 @@ test('reading requests selects an explicit column list, never * -- internal_note
   // regression to select('*') would be a real leak.
   assert.doesNotMatch(body, /\.select\('\*'\)/,
     'must not select * -- that would expose internal_notes to the client');
-  assert.match(body, /\.select\('id,title,description,urgency,status,created_at'\)/);
+  assert.match(body, /\.select\('id,title,description,urgency,status,scheduled_at,created_at'\)/);
   // Checks the select call specifically, not the whole function --
   // the surrounding comment legitimately explains why internal_notes
   // is excluded, and mentioning it there is correct, not a leak.
@@ -174,12 +174,17 @@ test('a failed number draw falls back to a clearly-marked temporary number, neve
 
 const WORKSPACE = fs.readFileSync(path.join(__dirname, '..', '..', 'tools', 'workspace.html'), 'utf8');
 
-test('the internal queue shows only OPEN work requests, not scheduled or completed ones', () => {
-  // Once a request is scheduled or completed it lives in the Job
-  // Tracker and calendar -- showing it here too would mean two places
-  // displaying the same work with no clear owner. 'declined' drops off
-  // for the same reason: it's closed, not pending.
-  assert.match(WORKSPACE, /const WORK_REQUEST_OPEN_STATUSES = \['submitted', 'reviewing', 'quoted'\];/);
+test('the internal queue includes scheduled requests, dropping only completed and declined ones', () => {
+  // Rewritten 2026-09-03. This test's old premise -- that a scheduled
+  // request "lives in the Job Tracker and calendar" instead -- was
+  // never actually true: the real Approve & Schedule flow just sets
+  // status='scheduled' and a real scheduled_at directly on THIS row
+  // (see openWorkOrderApproval/confirmWorkOrderApproval), with no
+  // separate Job Tracker or calendar entry created at all. Excluding
+  // 'scheduled' from the open list would have made an upcoming,
+  // already-confirmed appointment disappear from the one place
+  // tracking it, before the work was even done.
+  assert.match(WORKSPACE, /const WORK_REQUEST_OPEN_STATUSES = \['submitted', 'reviewing', 'quoted', 'scheduled'\];/);
   const fnMatch = WORKSPACE.match(/async function loadAndRenderWorkRequests\(\)[\s\S]*?\n  \}\n/);
   assert.ok(fnMatch, 'expected to isolate loadAndRenderWorkRequests()');
   assert.match(fnMatch[0], /status=in\.\(\$\{statusList\}\)/);

@@ -55,6 +55,11 @@
 <link rel="stylesheet" href="/tools/styles-tools.css?v=a2e87effb3">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.112.3/dist/umd/supabase.js" integrity="sha384-qafw21c/iciq0VXsi9FzkfoQv5I/V0iqE4lSNcKXPnW9/UTJLnv5CcN4FHxVLnKg" crossorigin="anonymous" defer></script>
 <script src="/tools/sync.js?v=73576c99e1" defer></script>
+<!-- Shared business-hours data (2026-09-03) -- used by the work order
+     "Approve & Schedule" form to warn if a chosen time falls outside
+     real business hours, matching the same real hours booking.html,
+     manage-booking.html, portal/quotes.html, and portal/jobs.html use. -->
+<script src="/business-hours.js?v=1"></script>
 <script src="/tools/push-notifications.js?v=b55dfa1172" defer></script>
 <script src="/tools/data-layer.js?v=1133747765" defer></script>
 <script src="/tools/tools-effects.js?v=9a2a59040e" defer></script>
@@ -1466,12 +1471,18 @@
   // Tracker and calendar; keeping it here too would mean two places
   // showing the same work with no clear owner. 'declined' drops off
   // for the same reason -- it's closed, not pending.
-  const WORK_REQUEST_OPEN_STATUSES = ['submitted', 'reviewing', 'quoted'];
+  const WORK_REQUEST_OPEN_STATUSES = ['submitted', 'reviewing', 'quoted', 'scheduled'];
 
   const WORK_REQUEST_NEXT_STATUS = {
     submitted: { next: 'reviewing', label: 'Mark reviewing' },
     reviewing: { next: 'quoted', label: 'Mark quoted' },
-    quoted: { next: 'scheduled', label: 'Mark scheduled' },
+    // quoted -> scheduled is handled separately below (openWorkOrderApproval),
+    // requested directly: "for 3 should we build an 'Approve work
+    // order' ... which would pop up on their portal and send them an
+    // email that appointment is booked?" -- a real date/time is
+    // needed for that email, so this transition can't be a bare
+    // one-tap status bump the way the others are.
+    scheduled: { next: 'completed', label: 'Mark completed' },
   };
 
   async function loadAndRenderWorkRequests() {
@@ -1511,24 +1522,129 @@
           wo.address || '',
           wo.phone || '',
         ].filter(Boolean).map(escapeHtml).join(' &middot; ');
+        const scheduledLine = (wo.status === 'scheduled' && wo.scheduled_at)
+          ? `<div class="dash-list-item-meta" style="margin-top:6px; color:var(--orange-light);">Scheduled: ${escapeHtml(formatScheduledAt(wo.scheduled_at))}</div>`
+          : '';
         return `
-        <div class="dash-list-item" style="align-items:flex-start;">
+        <div class="dash-list-item" style="align-items:flex-start; flex-wrap:wrap;">
           <div style="flex:1; min-width:0;">
             <div class="dash-list-item-title">${escapeHtml(wo.title)}</div>
             <div class="dash-list-item-meta">${urgencyTag}${escapeHtml(wo.client_email)} &middot; ${escapeHtml((wo.created_at || '').slice(0, 10))} &middot; ${escapeHtml(wo.status)}</div>
             <div style="color:var(--text); font-size:13px; line-height:1.5; margin-top:6px; white-space:pre-wrap;">${escapeHtml(wo.description)}</div>
             ${detailBits ? `<div class="dash-list-item-meta" style="margin-top:6px;">${detailBits}</div>` : ''}
+            ${scheduledLine}
           </div>
           <div class="dash-list-item-right" style="flex-direction:column; gap:6px; align-items:flex-end;">
             ${advance ? `<button class="small-btn" onclick="advanceWorkRequest(${wo.id}, '${advance.next}')">${escapeHtml(advance.label)}</button>` : ''}
+            ${wo.status === 'quoted' ? `<button class="small-btn" onclick="openWorkOrderApproval(${wo.id}, this)">Approve &amp; Schedule</button>` : ''}
             <button class="small-btn" style="color:var(--text-dim);" onclick="advanceWorkRequest(${wo.id}, 'declined')">Close</button>
           </div>
+          <div id="woApproval-${wo.id}" style="flex-basis:100%; display:none;"></div>
         </div>`;
       }).join('');
     } catch (e) {
       container.innerHTML = '<div class="empty-state-small is-warning"><svg class="th-icon" aria-hidden="true"><use href="#icon-warning" xlink:href="#icon-warning"></use></svg>Couldn\'t load work requests (' + escapeHtml(e.message || String(e)) + ').</div>';
       actionItemCounts.workrequests = 0;
       updateActionItemsBadge();
+    }
+  }
+
+  // Formats scheduled_at for display in Workspace's own timezone-aware
+  // way, matching the style already used for real appointment times
+  // elsewhere (booking.html's own confirmation, for instance).
+  function formatScheduledAt(iso) {
+    try {
+      return new Intl.DateTimeFormat('en-US', {
+        timeZone: BUSINESS_TIMEZONE, weekday: 'short', month: 'short', day: 'numeric',
+        hour: 'numeric', minute: '2-digit',
+      }).format(new Date(iso));
+    } catch (e) { return iso; }
+  }
+
+  // "Approve & Schedule" (2026-09-03), requested directly: "for 3
+  // should we build an 'Approve work order' So which would pop up on
+  // their portal and send them an email that appointment is booked?"
+  //
+  // A real date + time, not a bare one-tap status bump like the other
+  // transitions -- scheduled_at is what the client-facing email and
+  // portal card actually display, so it has to be a genuine value, not
+  // inferred from anything. Plain native date/time inputs rather than
+  // a full slot-grid picker (the kind booking.html's guest-facing flow
+  // uses): this is Connor confirming a time he's ALREADY worked out
+  // with the client by phone/text, not a client picking blind from
+  // open slots -- the two are genuinely different tasks. The shared
+  // business-hours.js is still used here, just for a lighter job: a
+  // plain warning if the chosen time falls outside real hours, so a
+  // mistyped time doesn't quietly get emailed to the client as
+  // confirmed.
+  function openWorkOrderApproval(id, btnEl) {
+    const container = document.getElementById('woApproval-' + id);
+    if (!container) return;
+    if (container.style.display !== 'none') { container.style.display = 'none'; return; }
+
+    const today = todayDateStrInBusinessTz();
+    container.innerHTML = `
+      <div style="margin-top:10px; padding:10px; border:1px solid var(--border); border-radius:8px; background:var(--bg-panel-2);">
+        <div style="display:flex; gap:8px; flex-wrap:wrap; align-items:flex-end;">
+          <label style="font-size:12px; color:var(--text-dim);">Date
+            <input type="date" id="woApprovalDate-${id}" min="${today}" style="display:block; margin-top:2px;">
+          </label>
+          <label style="font-size:12px; color:var(--text-dim);">Time
+            <input type="time" id="woApprovalTime-${id}" style="display:block; margin-top:2px;">
+          </label>
+          <button class="small-btn" onclick="confirmWorkOrderApproval(${id})">Confirm</button>
+          <button class="small-btn" style="color:var(--text-dim);" onclick="document.getElementById('woApproval-${id}').style.display='none';">Cancel</button>
+        </div>
+        <div id="woApprovalHint-${id}" class="dash-list-item-meta" style="margin-top:6px;"></div>
+      </div>`;
+    container.style.display = 'block';
+
+    const dateInput = document.getElementById('woApprovalDate-' + id);
+    const hintEl = document.getElementById('woApprovalHint-' + id);
+    dateInput.addEventListener('change', () => {
+      if (!dateInput.value) { hintEl.textContent = ''; return; }
+      const weekday = businessWeekday(dateInput.value);
+      hintEl.textContent = 'Real hours that day: ' + formatHoursLabel(weekday);
+    });
+  }
+
+  async function confirmWorkOrderApproval(id) {
+    const dateVal = document.getElementById('woApprovalDate-' + id)?.value;
+    const timeVal = document.getElementById('woApprovalTime-' + id)?.value;
+    if (!dateVal || !timeVal) { showToast('Pick both a date and a time.', { type: 'error' }); return; }
+
+    const [hh, mm] = timeVal.split(':').map(Number);
+    const weekday = businessWeekday(dateVal);
+    const hours = HOURS_BY_WEEKDAY[weekday];
+    // A warning, not a hard block -- an emergency call-out outside
+    // normal hours is a real, legitimate thing Connor decides, not
+    // something this form should refuse to let him confirm.
+    if (hours && (hh < hours[0] || hh >= hours[1])) {
+      const proceed = await showConfirm('That time is outside the usual hours for that day (' + formatHoursLabel(weekday) + '). Schedule it anyway?');
+      if (!proceed) return;
+    }
+
+    const scheduledAtUtc = zonedTimeToUtc(dateVal, hh, mm);
+
+    try {
+      if (typeof ensureFreshToken === 'function') await ensureFreshToken();
+      const res = await fetch(`${SUPABASE_URL}/rest/v1/client_portal_work_orders?id=eq.${id}`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          'apikey': SUPABASE_ANON_KEY,
+          'Authorization': 'Bearer ' + getAuthToken(),
+        },
+        body: JSON.stringify({ status: 'scheduled', scheduled_at: scheduledAtUtc.toISOString(), updated_at: new Date().toISOString() }),
+      });
+      if (!res.ok) {
+        const body = await res.text();
+        throw new Error('HTTP ' + res.status + ': ' + body.slice(0, 160));
+      }
+      showToast('Scheduled -- the client has been emailed.');
+      loadAndRenderWorkRequests();
+    } catch (e) {
+      showToast(e.message || String(e), { type: 'error' });
     }
   }
 
