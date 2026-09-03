@@ -1,9 +1,9 @@
 // Supabase Edge Function: set-invoice-paid
 //
 // Lets an internal account mark a portal invoice paid/unpaid by hand
-// (2026-09-02). Closes a real gap: most of this business's payments
-// are cash, check, or Venmo -- marked paid manually in the Invoice
-// Log, never touching Stripe. Before this, that only updated the
+// (2026-09-02). Closes a real gap: an occasional cash or check
+// payment gets marked paid manually in the Invoice Log, never
+// touching Stripe. Before this, that only updated the
 // internal record, so the client's portal kept showing the invoice as
 // UNPAID and they could pay it a second time through Stripe.
 //
