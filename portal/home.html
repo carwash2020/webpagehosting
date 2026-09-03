@@ -53,6 +53,23 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
   body { background: #0a0a0a; max-width: 640px; margin: 0 auto; padding: 24px 16px 60px; }
+  /* Widened for real desktop screens (2026-09-03), reported directly
+     from actual desktop screenshots: "not good on desk top, doesnt
+     even take up the full screen." 640px was chosen for mobile, where
+     it effectively IS full-width -- but on a real monitor it left a
+     narrow, centered column with a huge, obviously unintentional-
+     looking gap on both sides. 900px is comfortable for a
+     dashboard-style layout with cards and forms (unlike a plain
+     text article, which reads worse past ~700-800px, form inputs and
+     card grids use the extra width naturally rather than just
+     stretching prose into overly long lines) without going fully
+     edge-to-edge on today's larger screens, which would look just as
+     unintentional in the other direction. The 860px breakpoint keeps
+     tablets in portrait orientation on the mobile-tuned layout, since
+     900px there would be wider than the viewport itself. */
+  @media (min-width: 860px) {
+    body { max-width: 900px; }
+  }
   .portal-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; }
   /* min-width:0 (2026-09-02, from a direct screenshot): a flex child
      defaults to min-width:auto, which means it will NEVER shrink
@@ -115,6 +132,14 @@
     text-transform: uppercase; color: var(--text-dim); margin: 0 0 12px;
   }
   .home-cards { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 26px; }
+  /* On the same desktop breakpoint as the body width change above:
+     4 cards in one row makes better use of the extra space than 2
+     much-wider cards would -- there are exactly 4 (Invoices,
+     Estimates, Completed Jobs, Work Requests), so this is a clean
+     single row rather than an awkward partial second row. */
+  @media (min-width: 860px) {
+    .home-cards { grid-template-columns: repeat(4, 1fr); }
+  }
   .home-card {
     background: var(--bg-panel); border: 1px solid var(--border); border-radius: 12px;
     padding: 16px 14px; text-decoration: none; display: block;
