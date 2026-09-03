@@ -282,12 +282,18 @@
     }
     document.getElementById('clientEmailDisplay').textContent = session.user.email;
 
+    // Shown immediately, before the fetch -- without this, a client
+    // on a slow connection sees a completely blank area that looks
+    // identical to "no quotes on file yet" (2026-09-03, found
+    // proactively while reviewing the portal for other real gaps).
+    const listEl = document.getElementById('quoteList');
+    listEl.innerHTML = '<div class="empty-state">Loading...</div>';
+
     const { data: quotes, error } = await client
       .from('client_portal_quotes')
       .select('*')
       .order('quote_date', { ascending: false });
 
-    const listEl = document.getElementById('quoteList');
     if (error) {
       listEl.innerHTML = `<div class="empty-state">Couldn't load your quotes right now. Please try again in a moment.</div>`;
       console.error(error);
