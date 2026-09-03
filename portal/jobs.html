@@ -45,6 +45,10 @@
 <link rel="stylesheet" href="/styles.css?v=202609022200">
 <link rel="stylesheet" href="/tools/styles-tools.css?v=a2e87effb3">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<!-- Shared business-hours data (2026-09-03) -- see business-hours.js's
+     own header comment. This page used to keep its own FIFTH
+     independent hand-typed copy of these exact constants. -->
+<script src="/business-hours.js?v=1"></script>
 <style>
   body { background: #0a0a0a; max-width: 640px; margin: 0 auto; padding: 24px 16px 60px; }
   /* Widened for real desktop screens (2026-09-03), reported directly
@@ -255,51 +259,20 @@
 
   // ---------- scheduling from a check-up reminder ----------
   // Same timezone/business-hours logic as portal/quotes.html's own
-  // scheduling flow, copied verbatim rather than shared -- neither
-  // page loads the internal scripts, and booking.html (the original
-  // source of this logic) has no shared module of its own either.
-  // Kept in sync manually if business hours or timezone ever change.
-  const BUSINESS_TIMEZONE = 'America/Denver';
-  const HOURS_BY_WEEKDAY = { 0: [14, 20], 1: [14, 22], 2: [14, 22], 3: [14, 22], 4: [14, 22], 5: [14, 22], 6: [7, 22] };
+  // scheduling flow, now shared via /business-hours.js (2026-09-03)
+  // rather than a fifth independent hand-typed copy -- found while
+  // unifying booking.html, portal/quotes.html, manage-booking.html,
+  // and portal/work-orders.html onto the same shared file. This one's
+  // own comment used to say "kept in sync manually if business hours
+  // or timezone ever change" -- exactly the fragility a shared file
+  // removes structurally.
   const SLOT_INCREMENT_MINUTES = 30;
   const MIN_LEAD_HOURS = 2;
-  const DAYS_AHEAD_SHOWN = 14;
   const SCHEDULE_BUFFER_MINUTES = 15;
   // No specific service tied to a check-up reminder (unlike a quote,
   // which at least has a job description) -- 120 minutes matches the
   // same generic default used for quote-scheduled jobs.
   const DEFAULT_VISIT_MINUTES = 120;
-
-  function zonedTimeToUtc(dateStr, hh, mm) {
-    const timeStr = String(hh).padStart(2, '0') + ':' + String(mm).padStart(2, '0');
-    const naiveUtc = new Date(dateStr + 'T' + timeStr + ':00Z');
-    const parts = new Intl.DateTimeFormat('en-US', {
-      timeZone: BUSINESS_TIMEZONE, year: 'numeric', month: '2-digit', day: '2-digit',
-      hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false,
-    }).formatToParts(naiveUtc);
-    const map = {};
-    parts.forEach(p => { map[p.type] = p.value; });
-    const hourFixed = map.hour === '24' ? '00' : map.hour;
-    const asIfLocal = new Date(map.year + '-' + map.month + '-' + map.day + 'T' + hourFixed + ':' + map.minute + ':' + map.second + 'Z');
-    const diff = naiveUtc.getTime() - asIfLocal.getTime();
-    return new Date(naiveUtc.getTime() + diff);
-  }
-  function businessWeekday(dateStr) {
-    const noonUtc = zonedTimeToUtc(dateStr, 12, 0);
-    const s = new Intl.DateTimeFormat('en-US', { timeZone: BUSINESS_TIMEZONE, weekday: 'short' }).format(noonUtc);
-    return ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].indexOf(s);
-  }
-  function todayDateStrInBusinessTz() {
-    const parts = new Intl.DateTimeFormat('en-US', { timeZone: BUSINESS_TIMEZONE, year: 'numeric', month: '2-digit', day: '2-digit' }).formatToParts(new Date());
-    const map = {};
-    parts.forEach(p => { map[p.type] = p.value; });
-    return map.year + '-' + map.month + '-' + map.day;
-  }
-  function addDaysToDateStr(dateStr, days) {
-    const d = new Date(dateStr + 'T12:00:00Z');
-    d.setUTCDate(d.getUTCDate() + days);
-    return d.toISOString().slice(0, 10);
-  }
   function overlaps(aStart, aEnd, bStart, bEnd) {
     return aStart < bEnd && bStart < aEnd;
   }

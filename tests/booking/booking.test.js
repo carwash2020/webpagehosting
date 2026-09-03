@@ -13,6 +13,19 @@ const path = require('path');
 const { JSDOM } = require('jsdom');
 
 const PAGE_PATH = path.join(__dirname, '..', '..', 'booking.html');
+const BUSINESS_HOURS_SRC = fs.readFileSync(path.join(__dirname, '..', '..', 'business-hours.js'), 'utf8')
+  // const/function declarations run via indirect eval() (calling
+  // w.eval(...) as a method, rather than the bare `eval` identifier)
+  // create bindings in the realm's global lexical scope, but --
+  // confirmed directly, this is a genuine spec quirk, not a guess --
+  // that is NOT the same thing as becoming an enumerable property on
+  // window/globalThis, so a later `<script>` tag that reads
+  // `window.BUSINESS_TIMEZONE` (rather than the bare identifier) would
+  // still see undefined. Appending explicit window.X = X assignments,
+  // evaluated in the SAME eval call so they share the same lexical
+  // scope as the const declarations above them, makes every name real
+  // window properties too.
+  + '\nwindow.BUSINESS_TIMEZONE = BUSINESS_TIMEZONE; window.HOURS_BY_WEEKDAY = HOURS_BY_WEEKDAY; window.DAYS_AHEAD_SHOWN = DAYS_AHEAD_SHOWN; window.zonedTimeToUtc = zonedTimeToUtc; window.businessWeekday = businessWeekday; window.todayDateStrInBusinessTz = todayDateStrInBusinessTz; window.addDaysToDateStr = addDaysToDateStr; window.formatHoursLabel = formatHoursLabel;';
 
 function loadPage(mockFetch) {
   const html = fs.readFileSync(PAGE_PATH, 'utf8');
@@ -21,6 +34,16 @@ function loadPage(mockFetch) {
     url: 'https://www.triplehenterprisesllc.biz/booking.html',
     beforeParse(w) {
       if (mockFetch) w.fetch = mockFetch;
+      // jsdom never actually fetches external <script src> files --
+      // booking.html now loads /business-hours.js for its real
+      // business hours and timezone helpers (2026-09-03), so without
+      // this the page's own inline script throws a ReferenceError
+      // before ever reaching the form-handling code these tests
+      // exercise. Evaluated directly in the window's own context
+      // (not stubbed with fake values) so these tests keep verifying
+      // against the REAL shared business hours, exactly as before
+      // the refactor.
+      w.eval(BUSINESS_HOURS_SRC);
     },
   });
   return dom.window;

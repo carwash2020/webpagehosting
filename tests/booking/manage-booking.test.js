@@ -12,6 +12,11 @@ const path = require('path');
 const { JSDOM } = require('jsdom');
 
 const PAGE_PATH = path.join(__dirname, '..', '..', 'manage-booking.html');
+const BUSINESS_HOURS_SRC = fs.readFileSync(path.join(__dirname, '..', '..', 'business-hours.js'), 'utf8')
+  // See booking.test.js's identical comment for why this explicit
+  // window.X = X exposure is needed -- const declarations via
+  // indirect eval() don't become window properties on their own.
+  + '\nwindow.BUSINESS_TIMEZONE = BUSINESS_TIMEZONE; window.HOURS_BY_WEEKDAY = HOURS_BY_WEEKDAY; window.DAYS_AHEAD_SHOWN = DAYS_AHEAD_SHOWN; window.zonedTimeToUtc = zonedTimeToUtc; window.businessWeekday = businessWeekday; window.todayDateStrInBusinessTz = todayDateStrInBusinessTz; window.addDaysToDateStr = addDaysToDateStr; window.formatHoursLabel = formatHoursLabel;';
 
 function loadPage(url, mockFetch) {
   const html = fs.readFileSync(PAGE_PATH, 'utf8');
@@ -20,6 +25,9 @@ function loadPage(url, mockFetch) {
     url,
     beforeParse(w) {
       if (mockFetch) w.fetch = mockFetch;
+      // jsdom never fetches external <script src> files --
+      // manage-booking.html now loads /business-hours.js (2026-09-03).
+      w.eval(BUSINESS_HOURS_SRC);
     },
   });
   return dom.window;
