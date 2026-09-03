@@ -1619,9 +1619,66 @@
         '<div><strong>#' + escapeHtml(i.invoice_number || '') + '</strong> ' + paidBadge + '</div>' +
         '<div class="dev-check-detail">' + escapeHtml(i.client_name || i.client_email) + ' &middot; ' + escapeHtml(i.client_email) + ' &middot; ' + escapeHtml(i.invoice_date || '') + ' &middot; $' + (Number(i.total) || 0).toFixed(2) + via + '</div>' +
         '</div>' +
-        '<button class="secondary-btn" style="flex-shrink:0;" onclick="resendPortalInvoice(' + i.id + ', this)">Resend</button>' +
+        '<div style="display:flex; flex-direction:column; gap:6px; flex-shrink:0;">' +
+        '<button class="secondary-btn" onclick="viewArchivedInvoicePdf(' + JSON.stringify(i.invoice_number) + ', this)">View PDF</button>' +
+        '<button class="secondary-btn" onclick="resendPortalInvoice(' + i.id + ', this)">Resend</button>' +
+        '</div>' +
         '</div>';
     }).join('');
+  }
+
+  // Opens the permanently archived copy of an invoice PDF (2026-09-02)
+  // -- the exact document generated and stored at the moment the
+  // invoice was created, not a fresh re-render from today's data.
+  // That's the whole point of archiving: a later change to the PDF
+  // template or a line-item edit can never make an old invoice look
+  // like it originally said something different.
+  //
+  // Signs the storage path directly with the signed-in account's own
+  // token rather than through an edge function -- the invoice-pdfs
+  // bucket's own RLS policy already restricts read access to accounts
+  // with can_manage_invoices, so there's no cross-user identity check
+  // needed here the way job-photos required.
+  //
+  // A "not found" result is a real, expected case, not a bug: any
+  // invoice generated before this feature existed has no archived
+  // copy, and this says so plainly rather than showing a broken link.
+  async function viewArchivedInvoicePdf(invoiceNumber, btnEl) {
+    const original = btnEl.textContent;
+    btnEl.disabled = true;
+    btnEl.textContent = 'Opening...';
+    try {
+      if (typeof ensureFreshToken === 'function') await ensureFreshToken();
+      const path = 'invoices/' + encodeURIComponent(invoiceNumber) + '.pdf';
+      const res = await fetchWithTimeout(SUPABASE_URL + '/storage/v1/object/sign/invoice-pdfs/' + path, 10000, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'apikey': SUPABASE_ANON_KEY,
+          'Authorization': 'Bearer ' + getAuthToken(),
+        },
+        body: JSON.stringify({ expiresIn: 300 }),
+      });
+      if (!res.ok) {
+        // Any failure here is most likely a real, expected case rather
+        // than a bug: an invoice generated before this feature existed
+        // has no archived copy at all. Not distinguishing exact status
+        // codes deliberately -- Supabase's Storage sign endpoint's
+        // precise behavior for a missing object wasn't verified
+        // directly, so a specific-looking wrong guess would be worse
+        // than one honest, generic message.
+        showToast('No archived copy found for #' + invoiceNumber + ' -- it was likely generated before this feature existed, or the file failed to upload.', { type: 'error' });
+        return;
+      }
+      const data = await res.json();
+      if (!data.signedURL) throw new Error('No signed URL returned.');
+      window.open(SUPABASE_URL + '/storage/v1' + data.signedURL, '_blank', 'noopener');
+    } catch (e) {
+      showToast('Could not open the PDF: ' + (e.message || String(e)), { type: 'error' });
+    } finally {
+      btnEl.disabled = false;
+      btnEl.textContent = original;
+    }
   }
 
   // Re-sends the notification email for an invoice already in the

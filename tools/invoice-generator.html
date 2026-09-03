@@ -252,7 +252,7 @@
 
 <div class="form-section">
   <h3>Payment Text (shown at the bottom of the invoice)</h3>
-  <textarea id="paymentText">We accept cash, check, Venmo, Cash App, and credit/debit cards via a secure Stripe invoice.</textarea>
+  <textarea id="paymentText">We accept cash, check, and credit/debit cards via a secure Stripe invoice.</textarea>
 </div>
 
 <!--
@@ -510,8 +510,8 @@
     renderInvoiceLog();
     showToast(entry.paid ? 'Marked paid.' : 'Marked unpaid.');
 
-    // Portal sync (2026-09-02) -- real bug this closes: most payments
-    // here are cash, check, or Venmo, marked paid by hand right here.
+    // Portal sync (2026-09-02) -- real bug this closes: a cash or check
+    // payment gets marked paid by hand right here, not through Stripe.
     // Without this, the portal kept showing that invoice as UNPAID
     // afterwards, so a client could log in and pay it a second time
     // through Stripe. Only fires for an invoice that was actually
@@ -1131,7 +1131,6 @@
     doc.setTextColor(...ORANGE);
     doc.text('$' + total.toFixed(2), pageW - 40, y, { align: 'right' });
 
-    const paymentSectionTop = y;
     y += 40;
     doc.setFont('helvetica', 'bold'); doc.setFontSize(10); doc.setTextColor(...ORANGE_DARK);
     doc.text('PAYMENT', 40, y);
@@ -1142,29 +1141,6 @@
     y += paymentLines.length * 13 + 6;
     doc.setFontSize(8.5); doc.setTextColor(...GRAY);
     doc.text('Please reference invoice ' + document.getElementById('invoiceNumber').value + ' with payment.', 40, y);
-
-    // Venmo QR code, to the right of the payment text
-    try {
-      const qrData = await loadImageAsDataURL('/images/venmo-qr.png');
-      const qrW = 85, qrH = 85 * (440 / 360);
-      const qrX = pageW - 40 - qrW;
-      const qrY = paymentSectionTop + 34;
-      doc.addImage(qrData, 'PNG', qrX, qrY, qrW, qrH);
-      // Item #16 (2026-08-16): a bare QR square pasted onto the invoice
-      // read like a barcode, not part of a designed document. Four short
-      // orange corner-accent brackets (not a full box, which would
-      // compete with the QR's own contrast) frame it without touching
-      // the scannable area inside.
-      doc.setDrawColor(...ORANGE); doc.setLineWidth(1.8);
-      const pad = 6, cornerLen = 10;
-      const fx0 = qrX - pad, fy0 = qrY - pad, fx1 = qrX + qrW + pad, fy1 = qrY + qrH + pad;
-      doc.line(fx0, fy0, fx0 + cornerLen, fy0); doc.line(fx0, fy0, fx0, fy0 + cornerLen);
-      doc.line(fx1, fy0, fx1 - cornerLen, fy0); doc.line(fx1, fy0, fx1, fy0 + cornerLen);
-      doc.line(fx0, fy1, fx0 + cornerLen, fy1); doc.line(fx0, fy1, fx0, fy1 - cornerLen);
-      doc.line(fx1, fy1, fx1 - cornerLen, fy1); doc.line(fx1, fy1, fx1, fy1 - cornerLen);
-      doc.setFont('helvetica', 'bold'); doc.setFontSize(8.5); doc.setTextColor(20, 20, 20);
-      doc.text('Scan to pay via Venmo', qrX + qrW / 2, qrY + qrH + 12, { align: 'center' });
-    } catch (e) { /* QR optional if it fails to load -- payment text alone still works */ }
 
     // footer
     const footerY = doc.internal.pageSize.getHeight() - 40;
@@ -1204,10 +1180,75 @@
     } else {
       doc.save(filename);
     }
+
+    // Archive the actual generated PDF (2026-09-02), requested
+    // directly: "let's do 1 but only for invoices not estimates as
+    // that would be a lot of data over time." Scoped to invoices
+    // only, deliberately -- see storeInvoicePdf()'s own comment for
+    // why quotes are excluded. Runs on BOTH Download and Send: this
+    // is about a permanent record existing at all, not about whether
+    // an email went out. Best-effort and never blocks the invoice
+    // itself from being logged -- a failed archive upload is a
+    // secondary concern, not a reason to interrupt Connor's workflow.
+    storeInvoicePdf(doc, newEntry.invoiceNumber);
+
     showToast('Invoice logged and ready.');
     resetInvoiceForm();
     } finally {
       invoiceGenerationInProgress = false;
+    }
+  }
+
+  // Uploads a generated invoice PDF to permanent storage, keyed by
+  // invoice number (globally unique, courtesy of the sequence built
+  // earlier today -- no separate lookup table needed to go from
+  // "which invoice" to "which file"). Deliberately INVOICES ONLY, not
+  // estimates: a quote is routinely revised before a job starts and
+  // often never becomes anything, so archiving every draft would
+  // accumulate real storage volume for no lasting benefit. An
+  // invoice is a real, dated financial document the moment it's
+  // generated -- worth a permanent copy of exactly what was created,
+  // so a later change to the PDF template or a line-item edit can
+  // never make an old invoice silently re-render differently from
+  // what was actually issued.
+  //
+  // Uploaded directly from the browser with the signed-in account's
+  // own token, not through an edge function -- there's no cross-user
+  // identity to verify here (unlike job-photos, which needs
+  // per-client ownership checks), only "is this account allowed to
+  // manage invoices at all," which the invoice-pdfs bucket's own RLS
+  // policy already enforces server-side regardless of what the
+  // client claims. x-upsert:true so re-generating the same invoice
+  // (e.g. downloading it again later) overwrites its stored copy
+  // rather than erroring on a duplicate path.
+  async function storeInvoicePdf(doc, invoiceNumber) {
+    try {
+      if (typeof ensureFreshToken === 'function') await ensureFreshToken();
+      const blob = doc.output('blob');
+      const path = 'invoices/' + encodeURIComponent(invoiceNumber) + '.pdf';
+      const res = await fetch(`${SUPABASE_URL}/storage/v1/object/invoice-pdfs/${path}`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/pdf',
+          'apikey': SUPABASE_ANON_KEY,
+          'Authorization': 'Bearer ' + getAuthToken(),
+          'x-upsert': 'true',
+        },
+        body: blob,
+      });
+      if (!res.ok) {
+        const body = await res.text();
+        throw new Error('HTTP ' + res.status + ': ' + body.slice(0, 200));
+      }
+    } catch (e) {
+      // Never blocks the invoice workflow -- the invoice log entry is
+      // the real, primary record; this archive is a secondary copy.
+      if (typeof logClientError === 'function') {
+        logClientError(
+          `storeInvoicePdf(): could not archive PDF for invoice ${invoiceNumber} -- ${e.message || String(e)}`,
+          'invoice-generator.html', null, null, null
+        );
+      }
     }
   }
 
@@ -2056,7 +2097,7 @@
     <div class="help-modal-body">
       <p>Fill this out per job, right after you finish.</p>
       <ul>
-        <li><strong>Invoice tab</strong> &mdash; fill in <strong>Invoice Details</strong> and <strong>Bill To</strong>, then add each line item (labor, parts, etc.) in the line-items table. Uncheck "Tax?" on any row that's exempt (see the note above the totals for why some rows might not be taxable). Tap Generate for a branded PDF with your Venmo QR built in.</li>
+        <li><strong>Invoice tab</strong> &mdash; fill in <strong>Invoice Details</strong> and <strong>Bill To</strong>, then add each line item (labor, parts, etc.) in the line-items table. Uncheck "Tax?" on any row that's exempt (see the note above the totals for why some rows might not be taxable). Use Download PDF for a branded copy, or Send to Client to email it and post it to their portal.</li>
         <li><strong>Quote / Estimate tab</strong> &mdash; same idea, before a job starts, including the same tax handling. Download an estimate PDF (clearly labeled as an estimate, not a bill), or tap <strong>Convert to Invoice</strong> once the work's done to copy everything straight over to the Invoice tab instead of re-typing it &mdash; including which rows were marked taxable.</li>
         <li>The sales tax rate is shared with Finance's Cost Lookup tab &mdash; change it in either place and it updates everywhere.</li>
         <li>Everything generated here is saved automatically &mdash; invoices and estimates are logged on this device (and synced, if Cloud Sync is set up), and every invoice also flows into Finance's Income tab. Nothing needs re-entering elsewhere.</li>
