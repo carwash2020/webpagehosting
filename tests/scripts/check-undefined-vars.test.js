@@ -56,6 +56,33 @@ test('an uppercase SCRIPT tag is scanned the same as a lowercase one', () => {
   }
 });
 
+test('a closing script tag with whitespace before the > is scanned the same as a normal one', () => {
+  // Real bug flagged by CodeQL in a SECOND pass ("Bad HTML filtering
+  // regexp" again, 2026-09-03) on the very fix for the first one: the
+  // closing tag pattern required </script> with the > immediately
+  // after, but real, valid HTML like </script > (a space before the
+  // >) parses identically in a browser. The opening tag already
+  // tolerated this via [^>]* -- only the closing tag needed the fix.
+  // Proven the same way as the uppercase-tag test: inject a genuine
+  // undefined-variable reference inside a script block closed this
+  // way, and confirm it's still caught.
+  const targetPage = path.join(REPO_ROOT, 'tools', 'dev-tools.html');
+  const original = fs.readFileSync(targetPage, 'utf8');
+  try {
+    const injected = original.replace(
+      '</body>',
+      '<script>function thisFunctionHasASpacedClosingTagBug() { return someUndefinedVariableForTheSpacedClosingTagTest; }</script ></body>',
+    );
+    assert.notEqual(injected, original, 'expected to actually inject the test script block');
+    fs.writeFileSync(targetPage, injected);
+    const result = runChecker();
+    assert.notEqual(result.exitCode, 0, 'the spaced-closing-tag script block should be scanned and its undefined variable caught');
+    assert.match(result.stdout + result.stderr, /someUndefinedVariableForTheSpacedClosingTagTest/);
+  } finally {
+    fs.writeFileSync(targetPage, original);
+  }
+});
+
 test('the checker genuinely detects an injected undefined-variable reference', () => {
   // Mutates a real page temporarily, in a try/finally that restores
   // it unconditionally -- even if this assertion itself fails, the

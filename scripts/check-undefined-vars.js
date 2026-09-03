@@ -105,13 +105,18 @@ function extractInlineScripts(html) {
   // meaningless "Unexpected token" error, not an undefined-variable
   // finding this checker actually cares about.
   const blocks = [];
-  // Case-insensitive (2026-09-03, flagged by CodeQL as "Bad HTML
-  // filtering regexp"): browsers treat <SCRIPT> and <script>
-  // identically, but this regex previously didn't -- an uppercase
-  // script tag would silently skip this checker's own coverage
-  // entirely, exactly the kind of gap a security-scanning tool
-  // shouldn't have in itself.
-  const re = /<script([^>]*)>([\s\S]*?)<\/script>/gi;
+  // Case-insensitive AND tolerant of whitespace before the closing >
+  // (2026-09-03, both flagged by CodeQL as "Bad HTML filtering
+  // regexp", in two separate passes): browsers treat <SCRIPT> the
+  // same as <script>, and </script > (with a space before the >) the
+  // same as </script> -- neither case-sensitivity nor the exact
+  // closing bracket position changes what a real browser executes,
+  // but this regex previously required both to match exactly. Either
+  // gap would silently skip this checker's own coverage entirely on
+  // real, valid HTML, exactly what a security-scanning tool shouldn't
+  // have in itself. The opening tag already tolerated internal
+  // whitespace via [^>]* -- only the closing tag needed the same fix.
+  const re = /<script([^>]*)>([\s\S]*?)<\/script\s*>/gi;
   let m;
   while ((m = re.exec(html))) {
     const attrs = m[1];
