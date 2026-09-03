@@ -20,7 +20,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <meta name="robots" content="noindex, nofollow">
 <title>Dev Tools · Triple H Enterprises</title>
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data:; connect-src 'self' https://*.supabase.co wss://*.supabase.co https://api.github.com; frame-src 'none'; object-src 'none'; base-uri 'self'; frame-ancestors 'none';">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data: https://*.supabase.co; connect-src 'self' https://*.supabase.co wss://*.supabase.co https://api.github.com; frame-src 'none'; object-src 'none'; base-uri 'self'; frame-ancestors 'none';">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Anton&family=Oswald:wght@400;500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -38,7 +38,7 @@
 <link rel="stylesheet" href="/styles.css?v=202609022200">
 <link rel="stylesheet" href="/tools/styles-tools.css?v=a2e87effb3">
 <script src="/tools/data-layer.js?v=1133747765" defer></script>
-<script src="/tools/dev-tools-shared.js?v=821a53e3c0" defer></script>
+<script src="/tools/dev-tools-shared.js?v=d6c1e89e4e" defer></script>
 <script src="/tools/tools-effects.js?v=9a2a59040e" defer></script>
 <script src="/tools/tools-dialogs.js?v=e1dfaa11a1" defer></script>
 <script src="/tools/tools-media-sharing.js?v=4e2769b10d" defer></script>
@@ -504,7 +504,28 @@
       audit-visibility role the Portal invoices panel above plays for
       invoices.
     -->
-    <input type="text" id="portalWorkOrderSearch" placeholder="Search by client, email, or title..." style="width:100%; box-sizing:border-box; margin-bottom:12px;" oninput="renderPortalWorkOrders()">
+    <!--
+      Keeping this from flooding over time (2026-09-03), requested
+      directly: "How do i 'clear' or Export all the work orders so
+      overtime it does not get flooded." Two honest answers, neither
+      destructive:
+        - Closed requests (completed/declined -- the statuses Workspace's
+          own Close action sets) are hidden by default, so this shows
+          what's actually live. A toggle shows them when needed.
+        - Export CSV downloads everything, every status, for records.
+      Deliberately NO delete here: client_portal_work_orders has no
+      DELETE policy at all (confirmed directly), and permanently erasing
+      a client-submitted record is a bigger decision than a panel
+      button should quietly make. Export + hide covers the actual
+      day-to-day need without destroying anything.
+    -->
+    <div style="display:flex; gap:8px; flex-wrap:wrap; align-items:center; margin-bottom:12px;">
+      <input type="text" id="portalWorkOrderSearch" placeholder="Search by client, email, or title..." style="flex:1; min-width:180px; box-sizing:border-box;" oninput="renderPortalWorkOrders()">
+      <label style="display:flex; align-items:center; gap:6px; font-size:12.5px; color:var(--text-dim); white-space:nowrap; cursor:pointer;">
+        <input type="checkbox" id="portalWorkOrderShowClosed" onchange="renderPortalWorkOrders()"> Show closed <span id="portalWorkOrderClosedCount"></span>
+      </label>
+      <button class="secondary-btn" onclick="exportPortalWorkOrdersCsv()">Export CSV</button>
+    </div>
     <div id="portalWorkOrders"></div>
   </div>
 
@@ -1674,6 +1695,16 @@
     const original = btnEl.textContent;
     btnEl.disabled = true;
     btnEl.textContent = 'Opening...';
+    // Opened SYNCHRONOUSLY, before any await (2026-09-03) -- the same
+    // Safari popup-blocker bug found on the work-order photo viewer
+    // ("the photo will not open"): a window.open() made after awaiting
+    // a fetch is no longer inside the tap gesture and gets silently
+    // dropped. Opening a blank tab first, inside the gesture, and
+    // pointing it at the signed URL once that arrives is the reliable
+    // cross-browser fix. opener is severed by hand since 'noopener'
+    // would return null and leave nothing to redirect.
+    const pdfWindow = window.open('', '_blank');
+    if (pdfWindow) pdfWindow.opener = null;
     try {
       if (typeof ensureFreshToken === 'function') await ensureFreshToken();
       const path = 'invoices/' + encodeURIComponent(invoiceNumber) + '.pdf';
@@ -1695,12 +1726,16 @@
         // directly, so a specific-looking wrong guess would be worse
         // than one honest, generic message.
         showToast('No archived copy found for #' + invoiceNumber + ' -- it was likely generated before this feature existed, or the file failed to upload.', { type: 'error' });
+        if (pdfWindow) pdfWindow.close();
         return;
       }
       const data = await res.json();
       if (!data.signedURL) throw new Error('No signed URL returned.');
-      window.open(SUPABASE_URL + '/storage/v1' + data.signedURL, '_blank', 'noopener');
+      const url = SUPABASE_URL + '/storage/v1' + data.signedURL;
+      if (pdfWindow) pdfWindow.location.href = url;
+      else window.location.href = url; // popup fully blocked even synchronously -- fall back to navigating this tab
     } catch (e) {
+      if (pdfWindow) pdfWindow.close();
       showToast('Could not open the PDF: ' + (e.message || String(e)), { type: 'error' });
     } finally {
       btnEl.disabled = false;
@@ -1741,15 +1776,26 @@
       }
     }
 
-    const rows = term
-      ? _portalWorkOrdersCache.filter(w =>
-          (w.client_email || '').toLowerCase().includes(term) ||
-          (w.client_name || '').toLowerCase().includes(term) ||
-          (w.title || '').toLowerCase().includes(term))
-      : _portalWorkOrdersCache;
+    const CLOSED_STATUSES = ['completed', 'declined'];
+    const showClosed = !!document.getElementById('portalWorkOrderShowClosed')?.checked;
+    const closedCount = _portalWorkOrdersCache.filter(w => CLOSED_STATUSES.includes(w.status)).length;
+    const countEl = document.getElementById('portalWorkOrderClosedCount');
+    if (countEl) countEl.textContent = closedCount ? '(' + closedCount + ')' : '';
+
+    let rows = showClosed ? _portalWorkOrdersCache : _portalWorkOrdersCache.filter(w => !CLOSED_STATUSES.includes(w.status));
+    if (term) {
+      rows = rows.filter(w =>
+        (w.client_email || '').toLowerCase().includes(term) ||
+        (w.client_name || '').toLowerCase().includes(term) ||
+        (w.title || '').toLowerCase().includes(term));
+    }
 
     if (!rows.length) {
-      el.innerHTML = '<p class="tool-sub">' + (term ? 'No work orders match "' + escapeHtml(term) + '".' : 'No work has been requested through the portal yet.') + '</p>';
+      let msg;
+      if (term) msg = 'No work orders match "' + escapeHtml(term) + '".';
+      else if (!showClosed && closedCount) msg = 'No open requests. ' + closedCount + ' closed -- tick "Show closed" to see them.';
+      else msg = 'No work has been requested through the portal yet.';
+      el.innerHTML = '<p class="tool-sub">' + msg + '</p>';
       return;
     }
 
@@ -1760,67 +1806,119 @@
       const urgencyBadge = w.urgency === 'urgent'
         ? '<span class="badge-pending-signature" style="background:#e0525220; border-color:#e05252; color:#ff8a80;">' + (URGENCY_LABELS[w.urgency] || w.urgency) + '</span>'
         : '<span class="badge-pending-signature">' + (URGENCY_LABELS[w.urgency] || w.urgency) + '</span>';
-      const photoBtn = (w.photo_storage_paths && w.photo_storage_paths.length)
-        ? '<button class="secondary-btn" onclick="viewWorkOrderPhotos(' + JSON.stringify(w.photo_storage_paths) + ', this)">View Photo' + (w.photo_storage_paths.length > 1 ? 's (' + w.photo_storage_paths.length + ')' : '') + '</button>'
+      const photoCount = (w.photo_storage_paths && w.photo_storage_paths.length) || 0;
+      const photoBtn = photoCount
+        ? '<button class="secondary-btn" onclick="toggleWorkOrderPhotos(' + w.id + ', ' + JSON.stringify(w.photo_storage_paths) + ', this)">View Photo' + (photoCount > 1 ? 's (' + photoCount + ')' : '') + '</button>'
         : '';
-      return '<div class="dev-check-row" style="align-items:flex-start;"><div style="flex:1; min-width:0;">' +
+      return '<div class="dev-check-row" style="align-items:flex-start; flex-wrap:wrap;"><div style="flex:1; min-width:0;">' +
         '<div><strong>' + escapeHtml(w.title || '(no title)') + '</strong> ' + urgencyBadge + ' <span class="tool-sub" style="font-size:11.5px;">' + (STATUS_LABELS[w.status] || w.status) + '</span></div>' +
         '<div class="dev-check-detail">' + escapeHtml(w.client_name || w.client_email) + ' &middot; ' + escapeHtml(w.client_email) + ' &middot; ' + escapeHtml(String(w.created_at || '').slice(0, 10)) + '</div>' +
         '<div class="dev-check-detail" style="margin-top:4px;">' + escapeHtml(w.description || '') + '</div>' +
         (w.preferred_timing ? '<div class="dev-check-detail" style="margin-top:4px; color:var(--orange-light);">Preferred: ' + escapeHtml(w.preferred_timing) + '</div>' : '') +
         '</div>' +
         (photoBtn ? '<div style="flex-shrink:0;">' + photoBtn + '</div>' : '') +
+        // Inline photo strip, filled on demand -- full-width below the
+        // row (flex-basis:100% inside the wrapping row).
+        (photoCount ? '<div id="woPhotos-' + w.id + '" style="flex-basis:100%; display:none; gap:8px; flex-wrap:wrap; margin-top:8px;"></div>' : '') +
         '</div>';
     }).join('');
   }
 
-  // Opens every photo attached to a work order in ONE gallery tab,
-  // each still via its own short-lived signed URL -- same signing
-  // pattern as viewArchivedInvoicePdf. Deliberately not a loop of
-  // window.open() calls per photo: browsers block every popup after
-  // the first one in a single click handler as unrequested, so a
-  // 3-photo request would have silently shown only one photo. Stored
-  // paths already include the bucket name as their first segment (see
-  // uploadSelectedPhotos() in portal/work-orders.html), stripped here
-  // rather than hardcoded twice in two different places.
-  async function viewWorkOrderPhotos(paths, btnEl) {
-    const original = btnEl.textContent;
-    btnEl.disabled = true;
-    btnEl.textContent = 'Opening...';
-    try {
-      if (typeof ensureFreshToken === 'function') await ensureFreshToken();
-      const signedUrls = [];
-      for (const fullPath of paths) {
-        const path = fullPath.replace(/^work-order-photos\//, '');
-        const res = await fetchWithTimeout(SUPABASE_URL + '/storage/v1/object/sign/work-order-photos/' + path, 10000, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'apikey': SUPABASE_ANON_KEY,
-            'Authorization': 'Bearer ' + getAuthToken(),
-          },
-          body: JSON.stringify({ expiresIn: 300 }),
-        });
-        if (!res.ok) continue;
-        const data = await res.json();
-        if (data.signedURL) signedUrls.push(SUPABASE_URL + '/storage/v1' + data.signedURL);
-      }
-      if (!signedUrls.length) {
-        showToast('Could not open the photos for this request.', { type: 'error' });
+  // Downloads every work order (all statuses, not just what the filter
+  // shows) as a CSV -- the "export" half of keeping this panel from
+  // flooding without ever deleting a client-submitted record.
+  async function exportPortalWorkOrdersCsv() {
+    if (!_portalWorkOrdersCache) await renderPortalWorkOrders();
+    const rows = _portalWorkOrdersCache || [];
+    if (!rows.length) { showToast('Nothing to export yet.'); return; }
+    const csvCell = (v) => {
+      const s = v == null ? '' : (Array.isArray(v) ? v.join(' | ') : String(v));
+      return '"' + s.replace(/"/g, '""') + '"';
+    };
+    const header = ['id', 'submitted', 'status', 'urgency', 'client_name', 'client_email', 'title', 'description', 'preferred_timing', 'photo_paths'];
+    const lines = [header.join(',')].concat(rows.map(w => [
+      w.id, w.created_at, w.status, w.urgency, w.client_name, w.client_email, w.title, w.description, w.preferred_timing, w.photo_storage_paths,
+    ].map(csvCell).join(',')));
+    const blob = new Blob([lines.join('\n')], { type: 'text/csv' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = 'portal-work-orders-' + new Date().toISOString().slice(0, 10) + '.csv';
+    document.body.appendChild(a);
+    a.click();
+    setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 1000);
+    showToast('Exported ' + rows.length + ' work order' + (rows.length === 1 ? '' : 's') + '.');
+  }
+
+  // Shows a work order's photos INLINE, under its own row (2026-09-03).
+  // Replaces a first version that opened them in a new tab via
+  // window.open() -- which was called AFTER awaiting the signed-URL
+  // fetch, and reported directly as "the photo will not open." That
+  // is Safari's popup blocker doing exactly its job: a window.open()
+  // not made synchronously inside the tap itself is treated as an
+  // unrequested popup and silently dropped, and nearly all of this
+  // panel's real use is from a phone. Rendering inline sidesteps
+  // popups entirely, and is better for reviewing damage photos on a
+  // phone anyway -- no tab juggling. Requires img-src to allow
+  // *.supabase.co in this page's CSP (done alongside this).
+  //
+  // Stored paths already include the bucket name as their first
+  // segment (see uploadSelectedPhotos() in portal/work-orders.html),
+  // stripped here rather than hardcoded twice in two different places.
+  async function toggleWorkOrderPhotos(workOrderId, paths, btnEl) {
+    const strip = document.getElementById('woPhotos-' + workOrderId);
+    if (!strip) return;
+    if (strip.style.display !== 'none') {
+      strip.style.display = 'none';
+      btnEl.textContent = btnEl.textContent.replace(/^Hide/, 'View');
+      return;
+    }
+    if (!strip.dataset.loaded) {
+      const original = btnEl.textContent;
+      btnEl.disabled = true;
+      btnEl.textContent = 'Loading...';
+      try {
+        if (typeof ensureFreshToken === 'function') await ensureFreshToken();
+        const imgs = [];
+        for (const fullPath of paths) {
+          const path = fullPath.replace(/^work-order-photos\//, '');
+          const res = await fetchWithTimeout(SUPABASE_URL + '/storage/v1/object/sign/work-order-photos/' + path, 10000, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'apikey': SUPABASE_ANON_KEY,
+              'Authorization': 'Bearer ' + getAuthToken(),
+            },
+            body: JSON.stringify({ expiresIn: 3600 }),
+          });
+          if (!res.ok) continue;
+          const data = await res.json();
+          if (data.signedURL) {
+            const url = SUPABASE_URL + '/storage/v1' + data.signedURL;
+            // Tapping a thumbnail opens the full-size image via a real
+            // link, which IS a synchronous user gesture -- no popup
+            // blocker involved.
+            imgs.push('<a href="' + url + '" target="_blank" rel="noopener"><img src="' + url + '" alt="Work order photo" style="width:140px; height:140px; object-fit:cover; border-radius:8px; border:1px solid var(--border); display:block;"></a>');
+          }
+        }
+        if (!imgs.length) {
+          showToast('Could not load the photos for this request.', { type: 'error' });
+          btnEl.disabled = false;
+          btnEl.textContent = original;
+          return;
+        }
+        strip.innerHTML = imgs.join('');
+        strip.dataset.loaded = '1';
+      } catch (e) {
+        showToast('Could not load the photos: ' + (e.message || String(e)), { type: 'error' });
+        btnEl.disabled = false;
+        btnEl.textContent = original;
         return;
       }
-      const galleryHtml = '<!DOCTYPE html><html><head><title>Work Order Photos</title>' +
-        '<meta name="viewport" content="width=device-width, initial-scale=1">' +
-        '<style>body{background:#0a0a0a; margin:0; padding:16px; display:flex; flex-direction:column; gap:16px; align-items:center;} img{max-width:100%; border-radius:8px;}</style>' +
-        '</head><body>' + signedUrls.map(u => '<img src="' + u + '">').join('') + '</body></html>';
-      const blob = new Blob([galleryHtml], { type: 'text/html' });
-      window.open(URL.createObjectURL(blob), '_blank', 'noopener');
-    } catch (e) {
-      showToast('Could not open the photos: ' + (e.message || String(e)), { type: 'error' });
-    } finally {
       btnEl.disabled = false;
       btnEl.textContent = original;
     }
+    strip.style.display = 'flex';
+    btnEl.textContent = btnEl.textContent.replace(/^View/, 'Hide');
   }
 
   async function resendPortalInvoice(portalRowId, btnEl) {
