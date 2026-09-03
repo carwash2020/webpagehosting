@@ -56,10 +56,6 @@
 <link rel="stylesheet" href="/styles.css?v=202609022200">
 <link rel="stylesheet" href="/tools/styles-tools.css?v=a2e87effb3">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<!-- Shared business-hours data (2026-09-03) -- the same file
-     booking.html uses, so the portal's "when works best" day-picker
-     can never show a day booking.html itself wouldn't offer. -->
-<script src="/business-hours.js?v=1"></script>
 <style>
   body { background: #0a0a0a; max-width: 640px; margin: 0 auto; padding: 24px 16px 60px; }
   /* Widened for real desktop screens (2026-09-03), reported directly
@@ -145,21 +141,15 @@
   }
   .wo-urgency-btn.is-selected { border-color: var(--orange); background: var(--orange-tint-soft); color: var(--orange-light); }
   .wo-urgency-btn .wo-urgency-sub { display: block; font-weight: 400; font-size: 11px; color: var(--text-dim); margin-top: 2px; }
-  /* Day-picker (2026-09-03) -- same visual language as the urgency
-     row above (a grid of selectable pills), sized smaller since there
-     are up to 14 of them rather than 3. Wraps rather than
-     horizontal-scrolling, unlike booking.html's own date strip --
-     this is a single form field on an already-scrolling page, not a
-     dedicated full-screen calendar step, so wrapping reads more like
-     a normal form control. */
-  .wo-day-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(84px, 1fr)); gap: 6px; }
-  .wo-day-btn {
-    padding: 8px 6px; border-radius: 8px; border: 1px solid var(--border); background: var(--bg-panel-2);
-    color: var(--white); font-size: 12px; font-weight: 600; text-align: center; cursor: pointer; font-family: inherit;
+  /* Simple pointer to the real booking page (2026-09-03), replacing
+     the day-picker grid removed above. */
+  .wo-booking-nudge {
+    display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px;
+    padding: 12px 14px; border-radius: 8px; border: 1px solid var(--border); background: var(--bg-panel-2);
+    font-size: 13px; color: var(--text-dim); margin-bottom: 14px;
   }
-  .wo-day-btn.is-selected { border-color: var(--orange); background: var(--orange-tint-soft); color: var(--orange-light); }
-  .wo-day-btn .wo-day-hours { display: block; font-weight: 400; font-size: 10.5px; color: var(--text-dim); margin-top: 2px; }
-  .wo-day-btn.is-selected .wo-day-hours { color: var(--orange-light); opacity: 0.85; }
+  .wo-booking-nudge a { color: var(--orange-light); font-weight: 600; text-decoration: none; white-space: nowrap; }
+  .wo-booking-nudge a:hover { text-decoration: underline; }
   /* Photo upload row -- thumbnails plus a trailing "Add Photo" tile,
      same square-tile pattern already familiar from the internal
      tools' own job-photo upload, so this doesn't invent a new visual
@@ -288,11 +278,21 @@
     </div>
   </div>
 
-  <div class="wo-field">
-    <label>Any day work best?
-      <span class="wo-hint">Optional &mdash; shows our real open days, so you're not guessing at a time we're not even around</span>
-    </label>
-    <div class="wo-day-grid" id="woDayGrid"></div>
+  <!--
+    Day-picker removed (2026-09-03), requested directly: "We can
+    remove the 'when would you like this service' because we added
+    the bookings page... it just pops up with a bunch of dates and
+    times." Replaced with a plain, honest pointer to the real booking
+    page instead of trying to make a smaller version of it live inside
+    this form -- booking.html already does real date/time scheduling
+    properly, with actual slots tied to a known service duration; this
+    form is for describing a not-yet-assessed problem, and pretending
+    to offer scheduling here was redundant with the page built
+    specifically for that.
+  -->
+  <div class="wo-booking-nudge">
+    <span>Already know what you need and want a specific date?</span>
+    <a href="/booking.html">Book directly &rarr;</a>
   </div>
 
   <div class="wo-field">
@@ -380,76 +380,6 @@
       b.classList.toggle('is-selected', b === btn);
     });
   });
-
-  // Day-picker (2026-09-03), replacing a free-text "any timing that
-  // works best?" field, requested directly: "change the 'when would
-  // be best' part of the bookings to just match our actual bookings
-  // page to get on the schedule since it follows business hours."
-  //
-  // Deliberately a DAY preference, not an exact time slot the way
-  // booking.html's own picker works -- that page computes real slots
-  // from a KNOWN service duration (a plumbing fix is 60 minutes, an
-  // appliance repair is 120), which a work REQUEST doesn't have yet;
-  // Connor hasn't assessed the job. Showing which days are real
-  // business days, with their real hours, is the right level of
-  // fidelity here -- grounded in truth without pretending to offer an
-  // exact-minute booking this page has no way to actually promise.
-  //
-  // Single-select and optional, matching the original free-text
-  // field's own optionality -- clicking an already-selected day
-  // deselects it, since "no preference" (the urgency buttons already
-  // cover "whenever") is a completely valid choice.
-  let selectedDayStr = null;
-
-  function renderDayPicker() {
-    const grid = document.getElementById('woDayGrid');
-    const today = todayDateStrInBusinessTz();
-    const days = [];
-    for (let i = 0; i < DAYS_AHEAD_SHOWN; i++) {
-      const dateStr = addDaysToDateStr(today, i);
-      const weekday = businessWeekday(dateStr);
-      days.push({ dateStr, weekday });
-    }
-    grid.innerHTML = days.map(d => {
-      const dateObj = new Date(d.dateStr + 'T12:00:00Z');
-      const label = new Intl.DateTimeFormat('en-US', { timeZone: BUSINESS_TIMEZONE, weekday: 'short', month: 'short', day: 'numeric' }).format(dateObj);
-      return '<button type="button" class="wo-day-btn" data-date="' + d.dateStr + '">' +
-        escapeHtmlWo(label) +
-        '<span class="wo-day-hours">' + escapeHtmlWo(formatHoursLabel(d.weekday)) + '</span>' +
-        '</button>';
-    }).join('');
-  }
-
-  // This page loads no shared /tools/ scripts (deliberate portal
-  // isolation), so it doesn't have access to the internal tools'
-  // escapeHtml() -- named distinctly (not just escapeHtml) so it's
-  // obvious at a glance this is this page's own small local copy, not
-  // an accidental shadow of a shared one.
-  function escapeHtmlWo(str) {
-    const div = document.createElement('div');
-    div.textContent = String(str == null ? '' : str);
-    return div.innerHTML;
-  }
-
-  document.getElementById('woDayGrid').addEventListener('click', (e) => {
-    const btn = e.target.closest('.wo-day-btn');
-    if (!btn) return;
-    const clickedDate = btn.getAttribute('data-date');
-    selectedDayStr = (selectedDayStr === clickedDate) ? null : clickedDate;
-    document.querySelectorAll('.wo-day-btn').forEach(b => {
-      b.classList.toggle('is-selected', b.getAttribute('data-date') === selectedDayStr);
-    });
-  });
-
-  renderDayPicker();
-
-  function formatSelectedDayForSubmission() {
-    if (!selectedDayStr) return null;
-    const dateObj = new Date(selectedDayStr + 'T12:00:00Z');
-    const weekday = businessWeekday(selectedDayStr);
-    const label = new Intl.DateTimeFormat('en-US', { timeZone: BUSINESS_TIMEZONE, weekday: 'long', month: 'long', day: 'numeric' }).format(dateObj);
-    return label + ' (' + formatHoursLabel(weekday) + ')';
-  }
 
   // Photo upload (2026-09-03), requested directly: "I also think it
   // would be good for clients to add photos of the damaged item...
@@ -601,7 +531,10 @@
       title,
       description,
       urgency: selectedUrgency,
-      preferred_timing: formatSelectedDayForSubmission(),
+      // preferred_timing intentionally not sent -- the day-picker that
+      // used to populate it was removed (2026-09-03), replaced by a
+      // plain link to the real booking page. The column itself stays
+      // on the table for existing rows that have a real value in it.
       address: document.getElementById('woAddress').value.trim() || null,
       phone: document.getElementById('woPhone').value.trim() || null,
       photo_storage_paths: photoPaths.length ? photoPaths : null,
@@ -619,8 +552,6 @@
     document.getElementById('woDescription').value = '';
     document.getElementById('woAddress').value = '';
     document.getElementById('woPhone').value = '';
-    selectedDayStr = null;
-    document.querySelectorAll('.wo-day-btn').forEach(b => b.classList.remove('is-selected'));
     selectedPhotos = [];
     renderPhotoRow();
     document.getElementById('successMessage').style.display = 'block';
