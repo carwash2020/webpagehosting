@@ -196,3 +196,25 @@ test('reporting a problem posts page_url as the real current page, so every page
     assert.match(src, /page_url: window\.location\.pathname/, `${page}: should report its own real path`);
   }
 });
+
+// ---- desktop layout was never widened past mobile's 640px ----
+//
+// Reported directly from real desktop screenshots: "not good on desk
+// top, doesnt even take up the full screen." 640px was chosen for
+// mobile (where it's effectively full-width), but on a real monitor
+// it left an obviously unintentional-looking narrow column with a
+// huge gap on both sides.
+
+test('every signed-in portal page widens past 640px on a real desktop screen', () => {
+  for (const page of PORTAL_PAGES) {
+    const src = fs.readFileSync(repo('portal', page), 'utf8');
+    if (!src.includes('max-width: 640px')) continue;
+    assert.match(src, /@media \(min-width: 860px\) \{\s*body \{ max-width: 900px; \}/,
+      `${page}: should widen past 640px on desktop`);
+  }
+});
+
+test('the Home page cards expand to a full 4-column row on desktop instead of just stretching 2 wide cards', () => {
+  const src = fs.readFileSync(repo('portal', 'home.html'), 'utf8');
+  assert.match(src, /@media \(min-width: 860px\) \{\s*\.home-cards \{ grid-template-columns: repeat\(4, 1fr\); \}/);
+});
