@@ -26,6 +26,9 @@ jobs:
       - name: Run automated tests
         run: npm test
 
+      - name: Check for undefined variables across every tool/portal page
+        run: npm run check-undefined-vars
+
       - name: Check tool page consistency (auth gate, CSP, PWA block, cache-bust version)
         run: npm run check-consistency
 
