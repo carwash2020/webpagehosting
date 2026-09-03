@@ -137,6 +137,31 @@
         <option>Net 30</option>
       </select>
     </div>
+    <!--
+      Invoice type (2026-09-02), requested directly: "set it up for any
+      invoice / estimate you can think of." The four real shapes a
+      repair business actually issues:
+        Standard  -- full amount for completed work (the default)
+        Deposit   -- money up front, usually for parts on a bigger job,
+                     before work starts
+        Balance   -- the remainder after a deposit, once work is done
+        Progress  -- a partial payment mid-way through multi-day work
+      The type prints on the PDF next to the terms, is stored on the
+      log entry, and syncs to the portal, so a client seeing "DEPOSIT
+      INVOICE" knows a balance is still coming rather than assuming
+      this is the whole job. It doesn't change any math -- the line
+      items ARE the amount being asked for; the type explains what
+      that amount represents.
+    -->
+    <div class="form-field">
+      <label>Invoice type</label>
+      <select id="invoiceType">
+        <option value="standard" selected>Standard</option>
+        <option value="deposit">Deposit (before work)</option>
+        <option value="balance">Balance due (after deposit)</option>
+        <option value="progress">Progress payment</option>
+      </select>
+    </div>
   </div>
 </div>
 
@@ -965,7 +990,12 @@
     doc.text('Honesty.  Hustle.  Helpfulness.', 118, 62);
 
     doc.setFont('helvetica', 'bold'); doc.setFontSize(13); doc.setTextColor(...ORANGE);
-    doc.text('INVOICE', pageW - 40, 30, { align: 'right' });
+    // Type-aware title (2026-09-02): a client seeing "DEPOSIT INVOICE"
+    // knows a balance is still coming; "BALANCE DUE" says this closes
+    // out the job. Plain "INVOICE" for the standard case, unchanged.
+    const INVOICE_TYPE_LABELS = { standard: 'INVOICE', deposit: 'DEPOSIT INVOICE', balance: 'BALANCE DUE', progress: 'PROGRESS PAYMENT' };
+    const invoiceTypeVal = (document.getElementById('invoiceType') || {}).value || 'standard';
+    doc.text(INVOICE_TYPE_LABELS[invoiceTypeVal] || 'INVOICE', pageW - 40, 30, { align: 'right' });
     doc.setFont('helvetica', 'normal'); doc.setFontSize(9); doc.setTextColor(255, 255, 255);
     doc.text('(435) 414-1667', pageW - 40, 46, { align: 'right' });
     doc.text('steve@triplehenterprisesllc.biz', pageW - 40, 58, { align: 'right' });
@@ -1202,6 +1232,7 @@
     // fresh random number.
     assignNextNumber('invoiceNumber', 'next_invoice_number', 'INV-');
     document.getElementById('invoiceTerms').value = 'Net 15';
+    if (document.getElementById('invoiceType')) document.getElementById('invoiceType').value = 'standard';
     recalc();
   }
 
@@ -1229,7 +1260,11 @@
 
   const pendingDeleteInvoiceIds = new Map();
   async function deleteInvoiceLogEntry(id) {
-    const confirmed = await showConfirm('Delete this invoice from the log? This does not touch any matching income log entry -- delete that separately on Finance if you want it gone too.', { danger: true, confirmText: 'Delete' });
+    const invoice = loadInvoiceLog().find(i => i.id === id);
+    const linkedIncome = loadIncomeEntriesRaw().filter(e => e.origin === 'invoice' && e.invoiceId === id);
+    const portalNote = (invoice && invoice.clientEmail) ? ' It will also be removed from their client portal.' : '';
+    const incomeNote = linkedIncome.length ? ' The income entry this invoice created will be removed too, so your Business Snapshot stays accurate.' : '';
+    const confirmed = await showConfirm('Delete this invoice from the log?' + incomeNote + portalNote, { danger: true, confirmText: 'Delete' });
     if (!confirmed) return;
     const row = document.querySelector('[data-invoice-id="' + id + '"]');
     await new Promise(resolve => animateRowExit(row, resolve));
@@ -1240,6 +1275,27 @@
       saveInvoiceLog(loadInvoiceLog().filter(i => i.id !== id));
       if (typeof thAddInvoiceTombstone === 'function') thAddInvoiceTombstone(id);
       if (invoiceToDelete && typeof thAddToGraveyard === 'function') thAddToGraveyard('invoice', invoiceToDelete);
+
+      // Remove the income entry this invoice CREATED (2026-09-02),
+      // requested directly after test invoices left phantom revenue in
+      // the Business Snapshot: "buisness snapshot needs to update when
+      // a invoice gets deleted, as now it has test data as real
+      // figures."
+      //
+      // This is NOT a cascade into an unrelated record type, which
+      // this codebase deliberately avoids everywhere else. The income
+      // entry was DERIVED from this invoice by logInvoiceToIncomeLog()
+      // and carries origin:'invoice' + invoiceId pointing right back
+      // at it -- it has no independent existence. Manually-entered
+      // income (no origin/invoiceId link) is never touched. Tombstoned
+      // so a stale device can't resurrect it on the next sync pull.
+      removeIncomeEntriesForInvoice(id);
+
+      // And the portal copy, so the client stops seeing (and can no
+      // longer pay) an invoice that no longer exists. Best-effort:
+      // failure here never blocks the local delete.
+      if (invoiceToDelete && invoiceToDelete.clientEmail) removePortalInvoice(id);
+
       renderInvoiceLog();
     }, 6000);
 
@@ -1250,6 +1306,35 @@
       pendingDeleteInvoiceIds.delete(id);
       renderInvoiceLog();
     });
+  }
+
+  function loadIncomeEntriesRaw() {
+    try { return JSON.parse(localStorage.getItem(INCOME_LOG_KEY) || '[]'); } catch (e) { return []; }
+  }
+
+  function removeIncomeEntriesForInvoice(invoiceId) {
+    try {
+      const all = loadIncomeEntriesRaw();
+      const toRemove = all.filter(e => e.origin === 'invoice' && e.invoiceId === invoiceId);
+      if (!toRemove.length) return;
+      localStorage.setItem(INCOME_LOG_KEY, JSON.stringify(all.filter(e => !(e.origin === 'invoice' && e.invoiceId === invoiceId))));
+      toRemove.forEach(e => { if (typeof thAddIncomeTombstone === 'function') thAddIncomeTombstone(e.id); });
+      if (typeof scheduleSync === 'function') scheduleSync();
+    } catch (e) { console.error('Could not remove linked income entries:', e); }
+  }
+
+  // Deletes the client-portal copy of an invoice via the service-role
+  // edge function -- client_portal_invoices has no delete policy for
+  // the authenticated role at all, so this is the only path.
+  async function removePortalInvoice(sourceInvoiceId) {
+    try {
+      if (typeof ensureFreshToken === 'function') await ensureFreshToken();
+      await fetch(`${SUPABASE_URL}/functions/v1/delete-portal-invoice`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'apikey': SUPABASE_ANON_KEY, 'Authorization': `Bearer ${getAuthToken()}` },
+        body: JSON.stringify({ source_invoice_id: sourceInvoiceId }),
+      });
+    } catch (e) { console.warn('Portal invoice removal failed (local delete still done):', e); }
   }
 
   // Every generated invoice gets mirrored into Finance's Income log
@@ -1299,6 +1384,7 @@
       clientEmail: document.getElementById('clientEmail').value.trim() || null,
       date: document.getElementById('invoiceDate').value || new Date().toISOString().slice(0, 10),
       terms: document.getElementById('invoiceTerms').value,
+      invoiceType: (document.getElementById('invoiceType') || {}).value || 'standard',
       subtotal: totals.subtotal,
       tax: totals.tax || 0,
       discount: totals.discount,

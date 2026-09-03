@@ -333,11 +333,32 @@ test('deleteInvoiceLogEntry (invoice-generator.html) actually calls thAddInvoice
   assert.match(fnMatch[0], /thAddInvoiceTombstone\(/);
 });
 
-test('deleteInvoiceLogEntry deliberately never touches the income log, matching this codebase\'s established "deletion never cascades to a different record type" philosophy', () => {
+test('deleteInvoiceLogEntry removes ONLY the income entry derived from that invoice -- never manually-entered income', () => {
+  // Changed 2026-09-02. This used to assert the opposite ("never touches
+  // the income log"), and that test kept passing on a technicality after
+  // the behaviour changed, because the cleanup moved into a helper. A
+  // test that passes while contradicting the code's real intent is
+  // worse than a failing one, so it's rewritten to assert what the
+  // code actually does now, and why.
+  //
+  // The codebase's "deletion never cascades to a different record type"
+  // philosophy still holds. What's removed here is not an unrelated
+  // record: logInvoiceToIncomeLog() DERIVES an income entry from every
+  // invoice and stamps it origin:'invoice' + invoiceId. That entry has
+  // no independent existence, and leaving it behind is precisely what
+  // put phantom test revenue into the Business Snapshot (reported
+  // directly). Manually-entered income, with no such link, is untouched.
   const src = fs.readFileSync(path.join(TOOLS_DIR, 'invoice-generator.html'), 'utf8');
-  const fnMatch = src.match(/async function deleteInvoiceLogEntry\(id\)[\s\S]*?\n  \}/);
+  const fnMatch = src.match(/async function deleteInvoiceLogEntry\(id\)[\s\S]*?\n  \}\n/);
   assert.ok(fnMatch, 'deleteInvoiceLogEntry not found');
-  assert.doesNotMatch(fnMatch[0], /INCOME_LOG_KEY|income_log/i, 'should not touch the income log directly');
+  assert.match(fnMatch[0], /removeIncomeEntriesForInvoice\(id\)/, 'should remove the income entry this invoice created');
+
+  const helper = src.match(/function removeIncomeEntriesForInvoice\(invoiceId\)[\s\S]*?\n  \}\n/);
+  assert.ok(helper, 'removeIncomeEntriesForInvoice not found');
+  // Both conditions, always together -- origin alone would match every
+  // invoice-derived entry; invoiceId alone would match nothing safely.
+  assert.match(helper[0], /e\.origin === 'invoice' && e\.invoiceId === invoiceId/,
+    'must scope to the specific derived entry, never to manually-entered income');
 });
 
 test('a stale device pushing back its old copy of a deleted invoice does not resurrect it on pull', () => {
