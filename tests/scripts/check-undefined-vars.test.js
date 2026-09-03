@@ -32,6 +32,30 @@ test('the checker passes clean against the real, current codebase', () => {
   assert.match(result.stdout, /Undefined-variable check passed/);
 });
 
+test('an uppercase SCRIPT tag is scanned the same as a lowercase one', () => {
+  // Real bug flagged by CodeQL ("Bad HTML filtering regexp", 2026-09-03):
+  // the regex extracting inline script blocks was case-sensitive, so an
+  // uppercase <SCRIPT> tag -- which browsers execute identically to a
+  // lowercase one -- would silently skip this checker's own coverage
+  // entirely. Proven directly by injecting one with a genuine
+  // undefined-variable reference and confirming it's still caught.
+  const targetPage = path.join(REPO_ROOT, 'tools', 'dev-tools.html');
+  const original = fs.readFileSync(targetPage, 'utf8');
+  try {
+    const injected = original.replace(
+      '</body>',
+      '<SCRIPT>function thisFunctionHasAnUppercaseTagBug() { return someUndefinedVariableForTheUppercaseTagTest; }</SCRIPT></body>',
+    );
+    assert.notEqual(injected, original, 'expected to actually inject the test script block');
+    fs.writeFileSync(targetPage, injected);
+    const result = runChecker();
+    assert.notEqual(result.exitCode, 0, 'the uppercase-tag script block should be scanned and its undefined variable caught');
+    assert.match(result.stdout + result.stderr, /someUndefinedVariableForTheUppercaseTagTest/);
+  } finally {
+    fs.writeFileSync(targetPage, original);
+  }
+});
+
 test('the checker genuinely detects an injected undefined-variable reference', () => {
   // Mutates a real page temporarily, in a try/finally that restores
   // it unconditionally -- even if this assertion itself fails, the

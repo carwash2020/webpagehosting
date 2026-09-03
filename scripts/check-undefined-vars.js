@@ -105,12 +105,18 @@ function extractInlineScripts(html) {
   // meaningless "Unexpected token" error, not an undefined-variable
   // finding this checker actually cares about.
   const blocks = [];
-  const re = /<script([^>]*)>([\s\S]*?)<\/script>/g;
+  // Case-insensitive (2026-09-03, flagged by CodeQL as "Bad HTML
+  // filtering regexp"): browsers treat <SCRIPT> and <script>
+  // identically, but this regex previously didn't -- an uppercase
+  // script tag would silently skip this checker's own coverage
+  // entirely, exactly the kind of gap a security-scanning tool
+  // shouldn't have in itself.
+  const re = /<script([^>]*)>([\s\S]*?)<\/script>/gi;
   let m;
   while ((m = re.exec(html))) {
     const attrs = m[1];
-    if (/\bsrc=/.test(attrs)) continue;
-    if (/\btype\s*=\s*["'](?!(?:text\/javascript|module)["'])[^"']*["']/.test(attrs)) continue;
+    if (/\bsrc=/i.test(attrs)) continue;
+    if (/\btype\s*=\s*["'](?!(?:text\/javascript|module)["'])[^"']*["']/i.test(attrs)) continue;
     blocks.push(m[2]);
   }
   return blocks.join('\n;\n');

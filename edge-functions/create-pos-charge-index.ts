@@ -37,6 +37,9 @@
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 const STRIPE_SECRET_KEY = Deno.env.get("STRIPE_SECRET_KEY");
+const RESEND_API_KEY = Deno.env.get("RESEND_API_KEY") || "";
+const LEAD_EMAIL_FROM = Deno.env.get("LEAD_EMAIL_FROM") || "";
+const LOGO_URL = "https://www.triplehenterprisesllc.biz/images/logo-signature-email.png";
 
 const ALLOWED_ORIGIN = "https://www.triplehenterprisesllc.biz";
 const CORS_HEADERS: Record<string, string> = {
@@ -119,6 +122,68 @@ async function listSavedCards(customerId: string): Promise<any[]> {
   if (!res.ok) return [];
   const data = await res.json();
   return data.data || [];
+}
+
+// A POS-style receipt (2026-09-03), requested directly: "create a POS
+// style reciept that shows what we charged them for sense we are
+// collecting the email anyway." A POS sale has no invoice and no
+// portal record at all -- this receipt email is the ONLY record the
+// client ever gets of the charge, so it goes out on every successful
+// POS sale, not as an optional extra step.
+function buildPosReceiptEmail(description: string, amount: number, dateLabel: string): { html: string; text: string } {
+  const amountLabel = "$" + amount.toFixed(2);
+  const html = `<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="color-scheme" content="light"><title>Receipt, Triple H Enterprises</title></head>
+<body style="margin:0; padding:0; background:#f4f4f4;">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" bgcolor="#f4f4f4" style="padding:32px 16px;"><tr><td align="center">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" bgcolor="#ffffff" style="max-width:480px; border-radius:10px; overflow:hidden; border:1px solid #e5e5e5;">
+<tr><td align="center" bgcolor="#0a0a0a" style="padding:28px 24px;"><img src="${LOGO_URL}" alt="Triple H Enterprises" width="140" style="display:block; border:0;"></td></tr>
+<tr><td style="padding:32px 28px 8px; font-family:-apple-system,Helvetica,Arial,sans-serif;">
+<h1 style="color:#ff8000; font-size:22px; margin:0 0 20px; text-align:center;">Receipt</h1>
+<p style="color:#222; font-size:15px; line-height:1.5; margin:0 0 20px;">Thanks for your business! Here's a record of what was charged today.</p>
+</td></tr>
+<tr><td style="padding:0 28px;">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0">
+<tr><td style="padding:8px 0; border-bottom:1px solid #eee; color:#777; font-size:14px; width:110px;">Date</td><td style="padding:8px 0; border-bottom:1px solid #eee; font-size:14px; color:#222;">${dateLabel}</td></tr>
+<tr><td style="padding:8px 0; border-bottom:1px solid #eee; color:#777; font-size:14px;">For</td><td style="padding:8px 0; border-bottom:1px solid #eee; font-size:14px; color:#222;">${escapeHtmlPos(description || "Service call")}</td></tr>
+<tr><td style="padding:8px 0; color:#777; font-size:14px;">Amount</td><td style="padding:8px 0; font-size:16px; color:#222; font-weight:700;">${amountLabel}</td></tr>
+</table>
+</td></tr>
+<tr><td style="padding:20px 28px 28px; font-family:-apple-system,Helvetica,Arial,sans-serif;"><p style="color:#222; font-size:14px; line-height:1.5; margin:0;">Questions about this charge? Just reply to this email.</p></td></tr>
+<tr><td style="background:#ff8000; height:4px; line-height:4px; font-size:1px;">&nbsp;</td></tr>
+<tr><td align="center" style="padding:16px 24px; font-family:-apple-system,Helvetica,Arial,sans-serif;"><p style="color:#999; font-size:12px; margin:0;">(435) 414-1667 &middot; triplehenterprisesllc.biz</p></td></tr>
+</table></td></tr></table></body></html>`;
+  const text = `Receipt -- Triple H Enterprises\n\nThanks for your business! Here's a record of what was charged today.\n\nDate: ${dateLabel}\nFor: ${description || "Service call"}\nAmount: ${amountLabel}\n\nQuestions about this charge? Just reply to this email.\n\nTriple H Enterprises\n(435) 414-1667, triplehenterprisesllc.biz`;
+  return { html, text };
+}
+
+// escapeHtml under a Pos-specific name -- this function is duplicated
+// (not imported) across separately-deployed Edge Functions, same
+// reasoning as getOrCreateStripeCustomer above; named distinctly here
+// only to avoid any confusion with tools/pos.html's own client-side
+// escapeHtmlPos(), which is a completely separate piece of code in a
+// completely separate runtime.
+function escapeHtmlPos(value: unknown): string {
+  const s = value === null || value === undefined ? "" : String(value);
+  return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+}
+
+async function sendPosReceiptEmail(clientEmail: string, description: string, amount: number) {
+  const dateLabel = new Intl.DateTimeFormat("en-US", {
+    timeZone: "America/Denver", weekday: "long", month: "long", day: "numeric", year: "numeric",
+  }).format(new Date());
+  const { html, text } = buildPosReceiptEmail(description, amount, dateLabel);
+  try {
+    await fetch("https://api.resend.com/emails", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${RESEND_API_KEY}` },
+      body: JSON.stringify({ from: LEAD_EMAIL_FROM, to: clientEmail, subject: "Your receipt, Triple H Enterprises", html, text }),
+    });
+  } catch (err) {
+    // Best-effort -- a receipt email failing to send must never undo
+    // or block a charge that already genuinely succeeded. The charge
+    // and the income log entry are the real record either way.
+    console.error("sendPosReceiptEmail failed:", err);
+  }
 }
 
 // Appends one entry to workspace_sync's th_income_log, matching the
@@ -249,6 +314,7 @@ Deno.serve(async (req: Request) => {
       // handling is idempotent on this same PaymentIntent id, so it
       // safely no-ops rather than double-logging).
       await logPosIncomeToWorkspaceSync(description, amount, normalizedEmail, claims.email, pi.id);
+      await sendPosReceiptEmail(normalizedEmail, description, amount);
       return json({ ok: true, charged: true });
     }
 

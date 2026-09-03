@@ -118,6 +118,24 @@ test('a stale saved-card check for an email the user has since changed cannot ov
   assert.match(fnMatch[0], /if \(email !== lastCheckedEmail\) return;/);
 });
 
+test('a failed saved-card check always falls back to the manual entry option, never leaves nothing clickable', () => {
+  // Real bug found and fixed (2026-09-03), reported directly: "once
+  // you type in the info there is no submit option... that pops up."
+  // The check failing (server error, network hiccup, cold start) used
+  // to clear the charge area to nothing at all. Checking for a saved
+  // card is a convenience; its failure must never block the fallback
+  // that always works.
+  const fnMatch = POS_PAGE.match(/async function checkForSavedCard\(email\)[\s\S]*?\n  \}\n/);
+  const body = fnMatch[0];
+  assert.doesNotMatch(body, /area\.innerHTML = '';/, 'no branch of this function should clear the area to nothing');
+  const notOkBranch = body.match(/if \(!result\.ok\) \{[^}]*\}/);
+  assert.ok(notOkBranch, 'expected the !result.ok branch');
+  assert.match(notOkBranch[0], /renderNewCardOption\(\)/);
+  const catchBlock = body.match(/\} catch \(e\) \{[\s\S]*?\n    \}/);
+  assert.ok(catchBlock, 'expected the catch block');
+  assert.match(catchBlock[0], /renderNewCardOption\(\)/);
+});
+
 test('the saved-card charge and the fresh-card flow both call create-pos-charge with the correct mode', () => {
   assert.match(POS_PAGE, /mode: 'charge_saved', client_email: fields\.email/);
   assert.match(POS_PAGE, /mode: 'new_card', client_email: fields\.email/);
@@ -145,4 +163,41 @@ test('the POS tile is gated by the same permission as Invoices and Clients', () 
 test('the POS tile has help text', () => {
   assert.match(WORKSPACE, /onclick="event\.stopPropagation\(\); openCardInfo\('tool-pos'\)"/);
   assert.match(WORKSPACE, /'tool-pos': \{/);
+});
+
+// ---- POS receipt email (2026-09-03) ----
+
+test('a synchronously-confirmed charge_saved sends a receipt to the client right after logging income', () => {
+  const chargeSavedBlock = POS_CHARGE.match(/if \(mode === "charge_saved"\) \{[\s\S]*?return json\(\{ ok: true, charged: true \}\);\s*\n    \}/);
+  assert.ok(chargeSavedBlock);
+  const body = chargeSavedBlock[0];
+  const logIdx = body.indexOf('logPosIncomeToWorkspaceSync');
+  const receiptIdx = body.indexOf('sendPosReceiptEmail');
+  assert.ok(logIdx !== -1 && receiptIdx !== -1);
+  assert.match(body, /await sendPosReceiptEmail\(normalizedEmail, description, amount\);/);
+});
+
+test('the webhook only sends a receipt alongside a genuinely new income log entry, guarded by the same idempotency check', () => {
+  const posBlockMatch = WEBHOOK.match(/if \(pi\.metadata\?\.pos_charge === "true"\) \{[\s\S]*?\n  \}\n/);
+  assert.ok(posBlockMatch);
+  const body = posBlockMatch[0];
+  const notAlreadyLoggedIdx = body.indexOf('if (!alreadyLogged) {');
+  const sendReceiptIdx = body.indexOf('await sendPosReceiptEmail(');
+  assert.ok(notAlreadyLoggedIdx !== -1 && sendReceiptIdx !== -1);
+  assert.ok(notAlreadyLoggedIdx < sendReceiptIdx, 'the receipt send must be inside the !alreadyLogged guard');
+});
+
+test('a receipt email failing to send never blocks or undoes an already-succeeded charge', () => {
+  const fnMatch = POS_CHARGE.match(/async function sendPosReceiptEmail\([\s\S]*?\n\}\n/);
+  assert.ok(fnMatch, 'expected to isolate sendPosReceiptEmail()');
+  assert.match(fnMatch[0], /try \{[\s\S]*?\} catch \(err\) \{/);
+});
+
+test('the receipt shows the date, description, and amount -- exactly what was charged, nothing else', () => {
+  const fnMatch = POS_CHARGE.match(/function buildPosReceiptEmail\([\s\S]*?\n\}\n/);
+  assert.ok(fnMatch, 'expected to isolate buildPosReceiptEmail()');
+  const body = fnMatch[0];
+  assert.match(body, /\$\{dateLabel\}/);
+  assert.match(body, /escapeHtmlPos\(description \|\| "Service call"\)/);
+  assert.match(body, /\$\{amountLabel\}/);
 });
