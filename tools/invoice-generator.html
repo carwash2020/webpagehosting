@@ -1166,7 +1166,13 @@
     }
 
     const filename = 'TripleH_Invoice_' + (document.getElementById('clientName').value || 'Client').replace(/[^a-z0-9]/gi, '_') + '.pdf';
-    logInvoice({ subtotal, tax, discount, total });
+    // logInvoice() now RETURNS the entry it created (2026-09-02 fix --
+    // see logInvoice()'s own comment for the real regression this
+    // closes). Every later reference to the invoice's id/number/etc.
+    // in this function uses THIS captured value, never a bare
+    // `newEntry` that was never actually in scope here.
+    const newEntry = logInvoice({ subtotal, tax, discount, total });
+
     // Download PDF uses a plain save; only the explicit Send path
     // offers the OS share sheet (2026-09-02). Previously every press
     // went through sharePdfOrDownload(), whose native share sheet
@@ -1181,6 +1187,65 @@
       doc.save(filename);
     }
 
+    // Portal sync + client email (2026-08-31, gated 2026-09-02,
+    // moved here and made a real AWAITED call 2026-09-02).
+    //
+    // Only runs when "Send to Client" was pressed. The invoice itself
+    // is ALREADY saved to the invoice log, income log, and portal
+    // regardless of this branch -- the business record must never
+    // depend on which button was pressed. What's gated here is
+    // specifically the outbound client email.
+    //
+    // This used to be a detached, fire-and-forget .then()/.catch()
+    // chain that never blocked the rest of generatePDF() -- which
+    // meant its own success/failure toast ran on its own schedule,
+    // disconnected from everything else, and gave no way to react to
+    // the outcome before moving on. Now properly awaited: a REAL
+    // pop-up (a modal the user must dismiss, not a toast that can be
+    // missed or overwritten by a later one) confirms Sent or Failed
+    // before the form resets, requested directly: "add a 'sent' pop
+    // up for when it works and a 'failed' pop up for when it doesn't
+    // so we know."
+    const clientEmailVal = document.getElementById('clientEmail').value.trim();
+    if (shouldSend && !clientEmailVal) {
+      await showAlert("No client email on this invoice, so there's nobody to send it to. Add one and use Resend from the Invoice Log.");
+    } else if (shouldSend && clientEmailVal && typeof getAuthToken === 'function') {
+      try {
+        if (typeof ensureFreshToken === 'function') await ensureFreshToken();
+        const syncRes = await fetch(`${SUPABASE_URL}/functions/v1/sync-invoice-to-portal`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'apikey': SUPABASE_ANON_KEY,
+            'Authorization': `Bearer ${getAuthToken()}`,
+          },
+          body: JSON.stringify({
+            source_invoice_id: newEntry.id,
+            client_email: clientEmailVal,
+            client_name: newEntry.clientName,
+            invoice_number: newEntry.invoiceNumber,
+            invoice_date: newEntry.date,
+            description: newEntry.jobRefTitle || null,
+            line_items: getLineItems(),
+            total: newEntry.total,
+          }),
+        });
+        const result = await syncRes.json().catch(() => ({}));
+        if (result && result.ok) {
+          await showAlert('Sent! Invoice ' + newEntry.invoiceNumber + ' was emailed to ' + clientEmailVal + ' and posted to their portal.');
+        } else {
+          // A real, specific reason -- e.g. "This account is an
+          // internal tool account, not a client" or "Missing or
+          // invalid invoice fields" (a blank Client Name field is the
+          // single most common real cause of this one) -- not a bare
+          // "something went wrong."
+          await showAlert('Failed to send: ' + ((result && result.error) || 'unknown error') + '\n\nThe invoice is still saved in your log -- fix the issue above and use Resend from the Invoice Log.');
+        }
+      } catch (e) {
+        await showAlert('Failed to send: could not reach the server (' + (e.message || String(e)) + ').\n\nThe invoice is still saved in your log -- check your connection and use Resend from the Invoice Log.');
+      }
+    }
+
     // Archive the actual generated PDF (2026-09-02), requested
     // directly: "let's do 1 but only for invoices not estimates as
     // that would be a lot of data over time." Scoped to invoices
@@ -1192,7 +1257,11 @@
     // secondary concern, not a reason to interrupt Connor's workflow.
     storeInvoicePdf(doc, newEntry.invoiceNumber);
 
-    showToast('Invoice logged and ready.');
+    // Only on Download -- Send already got its own clear Sent/Failed
+    // modal above; a toast immediately after would be redundant noise
+    // right when the user just dismissed a pop-up confirming the
+    // same thing.
+    if (!shouldSend) showToast('Invoice logged and ready.');
     resetInvoiceForm();
     } finally {
       invoiceGenerationInProgress = false;
@@ -1444,51 +1513,6 @@
     saveInvoiceLog(list);
     logInvoiceToIncomeLog(newEntry);
 
-    // Portal sync + client email (2026-08-31, gated 2026-09-02).
-    //
-    // Now only runs when "Send to Client" was pressed. Previously it
-    // fired on every PDF generation, which meant a client got an
-    // email the moment an invoice was created -- surprising if you
-    // were only trying to produce a PDF, and impossible to avoid.
-    //
-    // The invoice itself is ALREADY saved to the invoice log, income
-    // log, and (below) the portal regardless of this branch -- the
-    // business record must never depend on which button was pressed.
-    // What's gated here is specifically the outbound client email.
-    const clientEmailVal = document.getElementById('clientEmail').value.trim();
-    if (shouldSend && clientEmailVal && typeof getAuthToken === 'function') {
-      fetch(`${SUPABASE_URL}/functions/v1/sync-invoice-to-portal`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'apikey': SUPABASE_ANON_KEY,
-          'Authorization': `Bearer ${getAuthToken()}`,
-        },
-        body: JSON.stringify({
-          source_invoice_id: newEntry.id,
-          client_email: clientEmailVal,
-          client_name: newEntry.clientName,
-          invoice_number: newEntry.invoiceNumber,
-          invoice_date: newEntry.date,
-          description: newEntry.jobRefTitle || null,
-          line_items: getLineItems(),
-          total: newEntry.total,
-        }),
-      }).then(async res => {
-        const result = await res.json().catch(() => ({}));
-        if (result && result.ok) {
-          showToast('Invoice sent to ' + clientEmailVal + '.');
-        } else {
-          showToast('Invoice saved, but the email may not have sent: ' + ((result && result.error) || 'unknown error'), { type: 'error' });
-        }
-      }).catch(e => {
-        console.warn('Portal sync failed (invoice still saved locally):', e);
-        showToast('Invoice saved locally, but sending to the client failed. Check your connection and use Resend from the Invoice Log.', { type: 'error' });
-      });
-    } else if (shouldSend && !clientEmailVal) {
-      showToast("No client email on this invoice, so there's nobody to send it to. Add one and use Resend from the Invoice Log.", { type: 'error' });
-    }
-
     if (pendingSourceQuoteId) {
       const quotes = loadQuoteLog();
       const quote = quotes.find(q => q.id === pendingSourceQuoteId);
@@ -1502,6 +1526,22 @@
     }
 
     if (typeof renderInvoiceLog === 'function') renderInvoiceLog();
+    // Returns the entry it just created (2026-09-02 fix) -- a real
+    // regression from the earlier PDF-archiving change, which added
+    // `storeInvoicePdf(doc, newEntry.invoiceNumber)` in generatePDF()
+    // referencing a `newEntry` that only ever existed LOCALLY inside
+    // THIS function, never returned or otherwise accessible to the
+    // caller. That threw an uncaught ReferenceError on every single
+    // invoice generation -- Download or Send -- immediately after
+    // this function returned, which silently skipped the success
+    // toast AND resetInvoiceForm() every time, leaving the same stale
+    // invoice number sitting in the field for the next click. That is
+    // exactly why repeated attempts all shared one invoice number
+    // instead of each drawing a fresh one, and exactly why the
+    // storeInvoicePdf() archiving feature had never actually run even
+    // once since it shipped -- confirmed directly against the real
+    // sequence value and the real synced income log, not assumed.
+    return newEntry;
   }
 
   // ---------- Quote logging (separate from invoices) ----------
