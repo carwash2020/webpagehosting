@@ -597,12 +597,25 @@ function thGetAllClientsWithTotals() {
   return thLoadClients()
     .map(c => {
       const bundle = thGetClientBundle(c.id);
+      // Requested directly: "link client history and Portal clients
+      // together." The registry itself is name/phone-based (built
+      // from local Invoice Log / Job Tracker data); the portal is
+      // email-based. This is the actual bridge between the two --
+      // the most recent invoice with a real clientEmail on file,
+      // since that is exactly what a portal account is keyed by.
+      // Not stored ON the registry client record itself (an email
+      // can change or be entered later; deriving it fresh each time
+      // avoids it ever going stale).
+      const emailedInvoice = bundle
+        ? [...bundle.invoices].reverse().find(i => i.clientEmail)
+        : null;
       return {
         ...c,
         jobCount: bundle ? bundle.jobs.length : 0,
         invoiceCount: bundle ? bundle.invoices.length : 0,
         revenue: bundle ? bundle.revenue : 0,
         lastJobDate: bundle ? bundle.lastJobDate : null,
+        knownEmail: emailedInvoice ? emailedInvoice.clientEmail : null,
       };
     })
     .sort((a, b) => b.revenue - a.revenue);

@@ -39,7 +39,7 @@
 <link rel="stylesheet" href="/tools/styles-tools.css?v=a2e87effb3">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.112.3/dist/umd/supabase.js" integrity="sha384-qafw21c/iciq0VXsi9FzkfoQv5I/V0iqE4lSNcKXPnW9/UTJLnv5CcN4FHxVLnKg" crossorigin="anonymous" defer></script>
 <script src="/tools/sync.js?v=73576c99e1" defer></script>
-<script src="/tools/data-layer.js?v=1133747765" defer></script>
+<script src="/tools/data-layer.js?v=bceb822133" defer></script>
 <script src="/tools/tools-effects.js?v=9a2a59040e" defer></script>
 <script src="/tools/tools-dialogs.js?v=e1dfaa11a1" defer></script>
 <script src="/tools/tools-media-sharing.js?v=4e2769b10d" defer></script>
@@ -224,6 +224,8 @@
     <button type="button" class="add-row-btn" style="align-self:flex-end;" onclick="addLineItemFromPriceRef('invoicePriceRefSelect', 'addLineItem')">Add This Line Item</button>
   </div>
   <button type="button" class="add-row-btn" onclick="addLineItem('', '', 1, '', true, true)">+ Add line item</button>
+  <button type="button" class="add-row-btn" onclick="addLaborLineItem('addLineItem')">+ Add Labor</button>
+  <button type="button" class="add-row-btn" onclick="addMileageLineItem('addLineItem')">+ Add Mileage</button>
   <button type="button" class="secondary-btn" style="margin-left:8px;" onclick="openWikiLookup('jobDescription')">Look Up in Wiki</button>
 
   <div class="totals-box">
@@ -352,6 +354,8 @@
     <button type="button" class="add-row-btn" style="align-self:flex-end;" onclick="addLineItemFromPriceRef('quotePriceRefSelect', 'addQuoteLineItem')">Add This Line Item</button>
   </div>
   <button type="button" class="add-row-btn" onclick="addQuoteLineItem('', '', 1, '', true, true)">+ Add line item</button>
+  <button type="button" class="add-row-btn" onclick="addLaborLineItem('addQuoteLineItem')">+ Add Labor</button>
+  <button type="button" class="add-row-btn" onclick="addMileageLineItem('addQuoteLineItem')">+ Add Mileage</button>
   <button type="button" class="secondary-btn" style="margin-left:8px;" onclick="openWikiLookup('quoteJobDescription')">Look Up in Wiki</button>
 
   <div class="totals-box">
@@ -542,6 +546,16 @@
   // automatic starter row. Confirmed by actually executing this script
   // in a simulated DOM, not just reading it.
   const TAX_RATE_KEY = 'th_tax_rate';
+  // Requested directly: "we currently have no way of adding mileage
+  // or labor to the invoice which needs to be fixed." Line items
+  // already support qty x price generically (a labor line was always
+  // technically possible as desc="Labor", qty=hours, price=rate/hr) --
+  // the real gap was no quick, obvious way to add one, and no memory
+  // of what rate was used last time. These two keys close that,
+  // matching the same remember-it-in-localStorage pattern already
+  // used for the tax rate above.
+  const LABOR_RATE_KEY = 'th_invoice_labor_rate';
+  const MILEAGE_RATE_KEY = 'th_invoice_mileage_rate';
 
   // ---------- tab switching ----------
   function activateGenTab(tab) {
@@ -760,6 +774,38 @@
     animateRowExit(row, () => { row.remove(); recalc(); });
   }
 
+  // Inserts a normal, fully editable line item row -- same table, same
+  // inputs, nothing special about it structurally -- pre-filled with
+  // "Labor" and whatever $/hour rate was used last time, so Connor
+  // only has to type the hours for THIS job. Taxable by default,
+  // matching this business's own existing labor-is-taxed setup (see
+  // the "Sales tax on repair labor" note above the totals box).
+  function addLaborLineItem(addFnName) {
+    const savedRate = localStorage.getItem(LABOR_RATE_KEY) || '';
+    window[addFnName]('Labor', '', 1, savedRate, true, true);
+  }
+
+  // Same idea for mileage -- pre-filled with whatever $/mile rate was
+  // used last time, Connor fills in the actual miles. Defaults to
+  // NOT taxable: mileage reimbursement is typically not itself a
+  // taxable good or service, unlike labor -- the checkbox is still
+  // right there on the row if a specific job needs it toggled.
+  function addMileageLineItem(addFnName) {
+    const savedRate = localStorage.getItem(MILEAGE_RATE_KEY) || '';
+    window[addFnName]('Mileage', '', 1, savedRate, false, true);
+  }
+
+  // Called from recalc() (below) whenever a Labor or Mileage row's own
+  // price field changes -- keeps the REMEMBERED rate for next time in
+  // sync with whatever Connor actually typed for THIS invoice, without
+  // a separate "save my rate" button to remember to click.
+  function rememberLineItemRate(descValue, priceValue) {
+    const desc = String(descValue || '').trim().toLowerCase();
+    if (!priceValue) return;
+    if (desc === 'labor') localStorage.setItem(LABOR_RATE_KEY, String(priceValue));
+    else if (desc === 'mileage') localStorage.setItem(MILEAGE_RATE_KEY, String(priceValue));
+  }
+
 
 
   function saveInvoiceTaxRate() {
@@ -788,6 +834,7 @@
       row.querySelector('.li-amount').textContent = money(amount);
       subtotal += amount;
       if (row.querySelector('.li-taxable').checked) taxableSubtotal += amount;
+      rememberLineItemRate(row.querySelector('.li-desc').value, price);
     });
     const rate = parseFloat(document.getElementById('invoiceTaxRate').value) || 0;
     const tax = taxableSubtotal * (rate / 100);
@@ -837,6 +884,7 @@
       row.querySelector('.qli-amount').textContent = money(amount);
       subtotal += amount;
       if (row.querySelector('.qli-taxable').checked) taxableSubtotal += amount;
+      rememberLineItemRate(row.querySelector('.qli-desc').value, price);
     });
     const rate = parseFloat(document.getElementById('quoteTaxRate').value) || 0;
     const tax = taxableSubtotal * (rate / 100);
