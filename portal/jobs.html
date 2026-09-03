@@ -525,12 +525,18 @@
     }
     document.getElementById('clientEmailDisplay').textContent = session.user.email;
 
+    // Shown immediately, before the fetch (2026-09-03) -- same
+    // reasoning as quotes.html's identical fix, found the same pass:
+    // without this, a client on a slow connection sees a blank area
+    // indistinguishable from "no jobs on file."
+    const listEl = document.getElementById('jobList');
+    listEl.innerHTML = '<div class="empty-state">Loading...</div>';
+
     const { data: jobs, error } = await client
       .from('client_portal_jobs')
       .select('*')
       .order('job_date', { ascending: false });
 
-    const listEl = document.getElementById('jobList');
     if (error) {
       listEl.innerHTML = `<div class="empty-state">Couldn't load your job history right now. Please try again in a moment.</div>`;
       console.error(error);
