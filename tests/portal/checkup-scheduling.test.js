@@ -21,23 +21,22 @@ test('booking creation only ever goes through schedule-checkup-visit, never a di
   assert.doesNotMatch(html, /client\s*\.\s*from\(['"]th_bookings['"]\)/);
 });
 
-test('the check-up scheduling flow reuses the exact same business hours and timezone as the quote scheduling flow', () => {
+test('the check-up scheduling flow shares business hours and timezone from the same file every other scheduling flow uses', () => {
+  // Rewritten 2026-09-03, same reasoning as the equivalent fix in
+  // quotes.test.js: this used to compare jobs.html's own independent
+  // copy against quotes.html's -- which is what needed catching in
+  // the first place, since jobs.html's own comment said "kept in sync
+  // manually if business hours or timezone ever change." Now there is
+  // one shared /business-hours.js file, and what matters is that this
+  // page hasn't grown its own local copy back.
+  assert.match(html, /<script src="\/business-hours\.js\?v=1"><\/script>/);
+  assert.doesNotMatch(html, /const HOURS_BY_WEEKDAY\s*=/);
+  assert.doesNotMatch(html, /const BUSINESS_TIMEZONE\s*=/);
+
   const quotesHtml = fs.readFileSync(path.join(__dirname, '..', '..', 'portal', 'quotes.html'), 'utf8');
-  const normalize = (s) => s.replace(/\s+/g, '').replace(/,\}/g, '}');
-
-  const quotesTz = quotesHtml.match(/const BUSINESS_TIMEZONE = '([^']+)'/);
-  const jobsTz = html.match(/const BUSINESS_TIMEZONE = '([^']+)'/);
-  assert.ok(quotesTz && jobsTz);
-  assert.equal(jobsTz[1], quotesTz[1]);
-
-  const quotesHours = quotesHtml.match(/const HOURS_BY_WEEKDAY = (\{[\s\S]+?\});/);
-  const jobsHours = html.match(/const HOURS_BY_WEEKDAY = (\{[\s\S]+?\});/);
-  assert.ok(quotesHours && jobsHours);
-  assert.equal(normalize(jobsHours[1]), normalize(quotesHours[1]));
-
   const quotesLead = quotesHtml.match(/const MIN_LEAD_HOURS = (\d+)/);
   const jobsLead = html.match(/const MIN_LEAD_HOURS = (\d+)/);
-  assert.ok(quotesLead && jobsLead);
+  assert.ok(quotesLead && jobsLead, 'both pages should still define their own MIN_LEAD_HOURS -- that one is not part of the shared file');
   assert.equal(jobsLead[1], quotesLead[1]);
 });
 

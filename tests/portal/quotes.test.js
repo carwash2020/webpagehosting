@@ -133,22 +133,39 @@ test('booking creation and the quote scheduled_at write-back both go through sch
   assert.doesNotMatch(html, /client\s*\.\s*from\(['"]client_portal_quotes['"]\)[\s\S]{0,80}\.(update|upsert|insert|delete)\(/);
 });
 
-test('the scheduling flow reuses booking.html\'s real business hours and timezone, not invented values', () => {
-  const bookingHtml = fs.readFileSync(path.join(__dirname, '..', '..', 'booking.html'), 'utf8');
-  const bookingTzMatch = bookingHtml.match(/const BUSINESS_TIMEZONE = '([^']+)'/);
-  const bookingHoursMatch = bookingHtml.match(/const HOURS_BY_WEEKDAY = (\{[\s\S]+?\});/);
-  assert.ok(bookingTzMatch && bookingHoursMatch, 'expected to find booking.html\'s own timezone/hours constants to compare against');
+test('the scheduling flow shares business hours and timezone from one file, not three independent copies', () => {
+  // Rewritten 2026-09-03: this used to compare booking.html's and
+  // quotes.html's own independently-typed copies of these constants,
+  // to catch the two silently drifting apart -- which is exactly what
+  // happened to need catching, since each page maintained its own
+  // hand-typed copy with a comment saying to "keep these in sync
+  // manually." Requested directly ("other ways we can connect all 3
+  // together even more"), and unification kept turning up MORE
+  // duplicates than first expected -- five real business-hours users
+  // in total (booking.html, manage-booking.html, portal/quotes.html,
+  // portal/jobs.html, and portal/work-orders.html), several with a
+  // comment literally saying to keep the copy in sync by hand --
+  // booking.html, portal/quotes.html, and portal/work-orders.html --
+  // now load ONE shared /business-hours.js instead. Drift between two
+  // copies is no longer a risk worth testing for, because there is
+  // only one copy; what matters now is that no page has quietly grown
+  // its own local copy again.
+  for (const [label, filePath] of [
+    ['booking.html', path.join(__dirname, '..', '..', 'booking.html')],
+    ['manage-booking.html', path.join(__dirname, '..', '..', 'manage-booking.html')],
+    ['quotes.html', path.join(__dirname, '..', '..', 'portal', 'quotes.html')],
+    ['jobs.html', path.join(__dirname, '..', '..', 'portal', 'jobs.html')],
+    ['work-orders.html', path.join(__dirname, '..', '..', 'portal', 'work-orders.html')],
+  ]) {
+    const src = fs.readFileSync(filePath, 'utf8');
+    assert.match(src, /<script src="\/business-hours\.js\?v=1"><\/script>/, `${label}: should load the shared business-hours file`);
+    assert.doesNotMatch(src, /const HOURS_BY_WEEKDAY\s*=/, `${label}: should not define its own local copy of HOURS_BY_WEEKDAY`);
+    assert.doesNotMatch(src, /const BUSINESS_TIMEZONE\s*=/, `${label}: should not define its own local copy of BUSINESS_TIMEZONE`);
+  }
 
-  const quotesTzMatch = html.match(/const BUSINESS_TIMEZONE = '([^']+)'/);
-  const quotesHoursMatch = html.match(/const HOURS_BY_WEEKDAY = (\{[\s\S]+?\});/);
-  assert.ok(quotesTzMatch && quotesHoursMatch, 'expected quotes.html to define the same constants');
-  assert.equal(quotesTzMatch[1], bookingTzMatch[1]);
-
-  // Compares the actual open/close hour values, not formatting -- the
-  // two files are free to format this object differently (one line vs.
-  // spread across several), what matters is the hours themselves match.
-  const normalize = (s) => s.replace(/\s+/g, '').replace(/,\}/g, '}');
-  assert.equal(normalize(quotesHoursMatch[1]), normalize(bookingHoursMatch[1]));
+  const sharedSrc = fs.readFileSync(path.join(__dirname, '..', '..', 'business-hours.js'), 'utf8');
+  assert.match(sharedSrc, /const BUSINESS_TIMEZONE = 'America\/Denver';/);
+  assert.match(sharedSrc, /0: \[14, 20\], 1: \[14, 22\], 2: \[14, 22\], 3: \[14, 22\], 4: \[14, 22\], 5: \[14, 22\], 6: \[7, 22\]/);
 });
 
 test('a booking is never confirmed sooner than MIN_LEAD_HOURS from now, matching booking.html', () => {

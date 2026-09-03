@@ -59,6 +59,12 @@ const SHARED_SCRIPT_FILES = [
   'tools/dev-tools-shared.js',
   'tools/qrcode-lib.js',
   'tools/push-notifications.js',
+  // Public, root-level shared file (2026-09-03) -- booking.html and
+  // portal/work-orders.html both load this for the real business
+  // hours and timezone-safe date math, so it needs to be on this list
+  // too or every page loading it would show as a flood of false
+  // "not defined" positives.
+  'business-hours.js',
 ];
 
 // Third-party globals from CDN-loaded scripts (Supabase, Stripe,
@@ -67,7 +73,7 @@ const SHARED_SCRIPT_FILES = [
 // globals since some pages redeclare them and ESLint would otherwise
 // flag every subsequent inline <script> block on the same page as a
 // redeclaration -- not the class of bug this script exists to catch.
-const EXTRA_GLOBALS = ['supabase', 'Stripe', 'gtag', 'SUPABASE_URL', 'SUPABASE_ANON_KEY'];
+const EXTRA_GLOBALS = ['supabase', 'Stripe', 'gtag', 'dataLayer', 'SUPABASE_URL', 'SUPABASE_ANON_KEY'];
 
 // Matches a top-level (optionally indented -- some shared files are
 // stylistically indented despite being syntactically flat, so this
@@ -93,10 +99,20 @@ function extractInlineScripts(html) {
   // Only scripts with no src attribute -- exactly what actually
   // executes in this page's own scope, joined the same way the real
   // browser would run them (one shared global scope, in document order).
+  // Explicitly excludes non-JavaScript script blocks (application/
+  // ld+json structured data in particular) -- those aren't executable
+  // code at all, and trying to parse JSON as JS produces a real but
+  // meaningless "Unexpected token" error, not an undefined-variable
+  // finding this checker actually cares about.
   const blocks = [];
-  const re = /<script(?![^>]*\bsrc=)[^>]*>([\s\S]*?)<\/script>/g;
+  const re = /<script([^>]*)>([\s\S]*?)<\/script>/g;
   let m;
-  while ((m = re.exec(html))) blocks.push(m[1]);
+  while ((m = re.exec(html))) {
+    const attrs = m[1];
+    if (/\bsrc=/.test(attrs)) continue;
+    if (/\btype\s*=\s*["'](?!(?:text\/javascript|module)["'])[^"']*["']/.test(attrs)) continue;
+    blocks.push(m[2]);
+  }
   return blocks.join('\n;\n');
 }
 
@@ -147,6 +163,7 @@ function main() {
   };
 
   const pages = [
+    ...fs.readdirSync(REPO_ROOT).filter(f => f.endsWith('.html')).map(f => f),
     ...fs.readdirSync(path.join(REPO_ROOT, 'tools')).filter(f => f.endsWith('.html')).map(f => `tools/${f}`),
     ...fs.readdirSync(path.join(REPO_ROOT, 'portal')).filter(f => f.endsWith('.html')).map(f => `portal/${f}`),
   ];

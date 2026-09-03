@@ -123,6 +123,20 @@
   .set-msg { font-size: 13px; margin-top: 10px; line-height: 1.5; }
   .set-msg.is-error { color: #ff8a80; }
   .set-msg.is-ok { color: #4caf78; }
+  /* Hidden on desktop (2026-09-03), requested directly. Matches the
+     same 860px desktop threshold used everywhere else in the portal
+     (the body-width breakpoint) so "computer view" means the same
+     thing consistently across the whole app. The instructions inside
+     this card ("tap the Share button", "look for Add to Home Screen
+     in your browser's menu") are written for a phone's Safari/Chrome
+     UI specifically; desktop installation is a real but different
+     flow (an address-bar icon in Chrome/Edge) that these steps don't
+     describe, so hiding rather than rewriting for both audiences at
+     once keeps the card's instructions accurate for the one it's
+     actually shown to. */
+  @media (min-width: 860px) {
+    #addHomeScreenCard { display: none; }
+  }
   .report-bug-link { display: block; margin-top: 14px; font-size: 12px; color: var(--text-dim); text-decoration: underline; cursor: pointer; text-align: center; background: none; border: none; font-family: inherit; padding: 0; }
   .report-bug-link:hover { color: var(--orange-light); }
   .report-bug-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.6); display: flex; align-items: center; justify-content: center; padding: 20px; z-index: 1000; }
