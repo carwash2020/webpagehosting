@@ -119,14 +119,15 @@ test('a real horizontal swipe left advances to the next tab', () => {
   dispatchTouch(window, panel, 'touchstart', 200, 100);
   dispatchTouch(window, panel, 'touchend', 50, 100);
 
-  // Portal sits between Health and Access as of 2026-09-02.
-  assert.equal(window.document.querySelector('.dev-tab-btn.is-active').getAttribute('data-tab'), 'portal');
+  // Access sits right after Health as of 2026-09-03 -- Portal (which
+  // used to sit here) split off onto its own /tools/clients.html.
+  assert.equal(window.document.querySelector('.dev-tab-btn.is-active').getAttribute('data-tab'), 'access');
 });
 
 test('a real horizontal swipe right goes back to the previous tab', () => {
   const window = loadPage(async () => ({ ok: false }));
   window.initDevToolsTabs();
-  window.switchDevToolsTab('portal');
+  window.switchDevToolsTab('access');
 
   const panel = window.document.querySelector('.dev-panels-grid[data-tab-panel].is-active-tab-panel');
   dispatchTouch(window, panel, 'touchstart', 50, 100);

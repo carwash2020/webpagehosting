@@ -493,8 +493,26 @@ function main() {
     // this used to be its own, separately hardcoded list, which had
     // already drifted from the other one (missing push-notifications.js
     // entirely). One derived source of truth can't disagree with itself.
+    // Anchored to a real src="..." or href="..." attribute (2026-09-03)
+    // -- found building tools/clients.html, whose own explanatory
+    // comment mentioned "dev-tools-shared.js" by name (with no ?v=
+    // immediately after it, since the comment kept going in plain
+    // English) BEFORE the real <script src="..."> tag later in the
+    // file. The old regex had no such anchor and matched that bare
+    // mention first, reporting a false "no ?v=" failure on a tag that
+    // was already correctly versioned. Any future comment mentioning a
+    // shared script's filename would have hit the exact same false
+    // positive.
+    //
+    // Both attribute names are needed, not just src= -- sharedScripts
+    // includes .css files too (loaded via <link href="...">), and an
+    // src=-only regex silently never matches those at all. Found by
+    // direct inspection after the src-only version of this fix passed
+    // every existing test anyway (none of them happens to exercise
+    // this exact code path for a .css file) -- worth being honest that
+    // the tests alone would not have caught this one.
     sharedScripts.forEach(script => {
-      const re = new RegExp(`${script.replace('.', '\\.')}(\\?v=([a-zA-Z0-9]+))?`);
+      const re = new RegExp(`(?:src|href)="/tools/${script.replace('.', '\\.')}(\\?v=([a-zA-Z0-9]+))?"`);
       const m = html.match(re);
       if (!m) return; // page doesn't load this script at all -- fine
       if (!m[2]) {

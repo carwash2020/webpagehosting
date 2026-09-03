@@ -14,22 +14,26 @@ const fs = require('fs');
 const path = require('path');
 
 const repo = (...p) => path.join(__dirname, '..', '..', ...p);
-const DEV_TOOLS = fs.readFileSync(repo('tools', 'dev-tools.html'), 'utf8');
+// The Email list panel moved off Dev Tools onto its own
+// /tools/clients.html (2026-09-03), requested directly: "lets split
+// the portal out of tools and add it as its own [tool]." Approve &
+// Schedule stayed on workspace.html -- that's a different feature
+// (scheduling in Workspace, not portal administration) that was never
+// part of the split.
+const CLIENTS = fs.readFileSync(repo('tools', 'clients.html'), 'utf8');
 const SHARED = fs.readFileSync(repo('tools', 'dev-tools-shared.js'), 'utf8');
 const WORKSPACE = fs.readFileSync(repo('tools', 'workspace.html'), 'utf8');
 
 // ---- Email list panel ----
 
-test('the Email list panel exists on the Portal tab, with add and remove', () => {
-  const portalTab = DEV_TOOLS.match(/<div class="dev-panels-grid" data-tab-panel="portal">[\s\S]*?<div class="dev-panels-grid" data-tab-panel="access">/);
-  assert.ok(portalTab, 'expected to isolate the Portal tab');
-  assert.match(portalTab[0], /<h2>Email list<\/h2>/);
-  assert.match(portalTab[0], /id="emailListNewEmail"/);
-  assert.match(portalTab[0], /onclick="addNotificationRecipient\(\)"/);
+test('the Email list panel exists on the Clients tool, with add and remove', () => {
+  assert.match(CLIENTS, /<h2>Email list<\/h2>/);
+  assert.match(CLIENTS, /id="emailListNewEmail"/);
+  assert.match(CLIENTS, /onclick="addNotificationRecipient\(\)"/);
 });
 
-test('renderEmailList renders on page load with the other Portal panels', () => {
-  assert.match(DEV_TOOLS, /renderPortalWorkOrders\(\);\s*renderEmailList\(\);/);
+test('renderEmailList renders on page load with the other Clients panels', () => {
+  assert.match(CLIENTS, /renderPortalWorkOrders\(\);\s*renderEmailList\(\);/);
 });
 
 test('removing a recipient does NOT embed JSON in an inline onclick -- the exact bug just fixed elsewhere in this file', () => {
@@ -41,26 +45,26 @@ test('removing a recipient does NOT embed JSON in an inline onclick -- the exact
   // specifically, not just the word "JSON.stringify" anywhere in the
   // function (which also appears, correctly, in this file's own
   // explanatory comment about the bug it avoids).
-  const fnMatch = DEV_TOOLS.match(/async function renderEmailList\(\)[\s\S]*?\n  \}\n/);
+  const fnMatch = CLIENTS.match(/async function renderEmailList\(\)[\s\S]*?\n  \}\n/);
   assert.ok(fnMatch, 'expected to isolate renderEmailList()');
   assert.doesNotMatch(fnMatch[0], /onclick="[^"]*JSON\.stringify/);
   assert.match(fnMatch[0], /onclick="removeNotificationRecipient\(' \+ r\.id \+ '\)"/);
 });
 
 test('removeNotificationRecipient looks up the email from the cache rather than requiring it be passed in', () => {
-  const fnMatch = DEV_TOOLS.match(/async function removeNotificationRecipient\(id\)[\s\S]*?\n  \}\n/);
+  const fnMatch = CLIENTS.match(/async function removeNotificationRecipient\(id\)[\s\S]*?\n  \}\n/);
   assert.ok(fnMatch, 'expected to isolate removeNotificationRecipient(id) -- a single numeric argument');
   assert.match(fnMatch[0], /_emailListCache \|\| \[\]\)\.find\(r => r\.id === id\)/);
 });
 
 test('adding a duplicate email is reported plainly, not as a generic error', () => {
-  const fnMatch = DEV_TOOLS.match(/async function addNotificationRecipient\(\)[\s\S]*?\n  \}\n/);
+  const fnMatch = CLIENTS.match(/async function addNotificationRecipient\(\)[\s\S]*?\n  \}\n/);
   assert.ok(fnMatch, 'expected to isolate addNotificationRecipient()');
   assert.match(fnMatch[0], /is already on the list/);
 });
 
 test('the panel has help text', () => {
-  assert.match(DEV_TOOLS, /openDevInfo\('emaillist'\)/);
+  assert.match(CLIENTS, /openDevInfo\('emaillist'\)/);
   assert.match(SHARED, /emaillist: \{/);
 });
 
