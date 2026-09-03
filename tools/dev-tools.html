@@ -38,7 +38,7 @@
 <link rel="stylesheet" href="/styles.css?v=202609022200">
 <link rel="stylesheet" href="/tools/styles-tools.css?v=a2e87effb3">
 <script src="/tools/data-layer.js?v=1133747765" defer></script>
-<script src="/tools/dev-tools-shared.js?v=d6c1e89e4e" defer></script>
+<script src="/tools/dev-tools-shared.js?v=9274dfaef5" defer></script>
 <script src="/tools/tools-effects.js?v=9a2a59040e" defer></script>
 <script src="/tools/tools-dialogs.js?v=e1dfaa11a1" defer></script>
 <script src="/tools/tools-media-sharing.js?v=4e2769b10d" defer></script>
@@ -527,6 +527,34 @@
       <button class="secondary-btn" onclick="exportPortalWorkOrdersCsv()">Export CSV</button>
     </div>
     <div id="portalWorkOrders"></div>
+  </div>
+
+  <div class="dev-panel">
+    <div class="dev-panel-heading">
+      <h2>Email list</h2>
+      <button class="dev-info-bubble" onclick="openDevInfo('emaillist')" aria-label="What does this do?" title="What does this do?">?</button>
+    </div>
+    <!--
+      Who gets emailed about a new work order (2026-09-03), requested
+      directly: "when a client requests a work order it needs to
+      email Steve...and connor... We should also add an 'Email list'
+      In dev tools so that way we can add emails to the notification
+      pile in future if we ever hire."
+      Backed by notification_recipients -- notify-new-work-order-email
+      reads this table fresh on every send, so adding or removing a
+      row here takes effect on the very next submission, no deploy.
+    -->
+    <div style="display:flex; gap:8px; flex-wrap:wrap; align-items:flex-end; margin-bottom:14px; padding-bottom:14px; border-bottom:1px solid var(--border);">
+      <label style="flex:1; min-width:180px; font-size:12.5px; color:var(--text-dim);">Email
+        <input type="email" id="emailListNewEmail" placeholder="new-hire@triplehenterprisesllc.biz" style="width:100%; box-sizing:border-box; margin-top:4px;">
+      </label>
+      <label style="flex:1; min-width:120px; font-size:12.5px; color:var(--text-dim);">Name (optional)
+        <input type="text" id="emailListNewLabel" placeholder="Jordan" style="width:100%; box-sizing:border-box; margin-top:4px;">
+      </label>
+      <button class="secondary-btn" id="emailListAddBtn" onclick="addNotificationRecipient()">Add</button>
+    </div>
+    <div id="emailListResult" style="margin-bottom:10px;"></div>
+    <div id="emailListItems"></div>
   </div>
 
   <div class="dev-panel">
@@ -1844,6 +1872,123 @@
   // Downloads every work order (all statuses, not just what the filter
   // shows) as a CSV -- the "export" half of keeping this panel from
   // flooding without ever deleting a client-submitted record.
+  // Email list (2026-09-03) -- who gets emailed when a client submits
+  // a new work request. Backed directly by notification_recipients,
+  // no caching -- this list is short and changes rarely, so a fresh
+  // read on every render/action is simpler and cheap, unlike the
+  // invoice/work-order panels above which cache to avoid repeatedly
+  // re-fetching potentially large lists.
+  let _emailListCache = null;
+
+  async function renderEmailList() {
+    const el = document.getElementById('emailListItems');
+    if (!el) return;
+    el.innerHTML = '<p class="tool-sub">Loading...</p>';
+    try {
+      if (typeof ensureFreshToken === 'function') await ensureFreshToken();
+      const res = await fetchWithTimeout(
+        SUPABASE_URL + '/rest/v1/notification_recipients?select=id,email,label,notify_types,added_at&order=added_at.asc',
+        8000,
+        { headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': 'Bearer ' + getAuthToken() } }
+      );
+      if (!res.ok) throw new Error('HTTP ' + res.status);
+      _emailListCache = await res.json();
+      if (!_emailListCache.length) {
+        el.innerHTML = '<p class="tool-sub">Nobody is on the list -- new work order emails will go nowhere until someone is added.</p>';
+        return;
+      }
+      // Numeric id only in the inline handler, looked up from the
+      // cache by removeNotificationRecipient() -- NOT
+      // JSON.stringify(r.email) here, which would embed double quotes
+      // inside this double-quoted onclick and truncate the handler.
+      // Caught before shipping, the exact bug class just fixed
+      // elsewhere in this same file (the photo and PDF viewers).
+      el.innerHTML = _emailListCache.map(r =>
+        '<div class="dev-check-row"><div>' +
+        '<div><strong>' + escapeHtml(r.label || r.email) + '</strong></div>' +
+        '<div class="dev-check-detail">' + escapeHtml(r.email) + '</div>' +
+        '</div>' +
+        '<button class="secondary-btn" style="color:#e05252; border-color:#e05252;" onclick="removeNotificationRecipient(' + r.id + ')">Remove</button>' +
+        '</div>'
+      ).join('');
+    } catch (e) {
+      el.innerHTML = '<p class="tool-sub">Could not load the email list: ' + escapeHtml(e.message || String(e)) + '</p>';
+    }
+  }
+
+  async function addNotificationRecipient() {
+    const emailEl = document.getElementById('emailListNewEmail');
+    const labelEl = document.getElementById('emailListNewLabel');
+    const resultEl = document.getElementById('emailListResult');
+    const btn = document.getElementById('emailListAddBtn');
+    const email = emailEl.value.trim().toLowerCase();
+    resultEl.innerHTML = '';
+
+    if (!email || !email.includes('@')) {
+      resultEl.innerHTML = '<div class="empty-state-small is-warning">Enter a real email address.</div>';
+      return;
+    }
+
+    btn.disabled = true;
+    btn.textContent = 'Adding...';
+    try {
+      if (typeof ensureFreshToken === 'function') await ensureFreshToken();
+      const res = await fetchWithTimeout(SUPABASE_URL + '/rest/v1/notification_recipients', 8000, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'apikey': SUPABASE_ANON_KEY,
+          'Authorization': 'Bearer ' + getAuthToken(),
+          'Prefer': 'return=minimal',
+        },
+        body: JSON.stringify({
+          email,
+          label: labelEl.value.trim() || null,
+          added_by: (typeof getCurrentUserEmail === 'function') ? getCurrentUserEmail() : null,
+        }),
+      });
+      if (!res.ok) {
+        const body = await res.text();
+        // A real, expected case worth naming plainly: the email
+        // column has a unique constraint, so adding the same address
+        // twice fails with a specific, recognizable error.
+        if (res.status === 409 || /duplicate key/i.test(body)) {
+          resultEl.innerHTML = '<div class="empty-state-small is-warning">' + escapeHtml(email) + ' is already on the list.</div>';
+        } else {
+          resultEl.innerHTML = '<div class="empty-state-small is-warning">Couldn\'t add that: ' + escapeHtml(body.slice(0, 200)) + '</div>';
+        }
+        return;
+      }
+      emailEl.value = '';
+      labelEl.value = '';
+      resultEl.innerHTML = '<div class="empty-state-small">Added ' + escapeHtml(email) + '.</div>';
+      renderEmailList();
+    } catch (e) {
+      resultEl.innerHTML = '<div class="empty-state-small is-warning">Couldn\'t add that: ' + escapeHtml(e.message || String(e)) + '</div>';
+    } finally {
+      btn.disabled = false;
+      btn.textContent = 'Add';
+    }
+  }
+
+  async function removeNotificationRecipient(id) {
+    const row = (_emailListCache || []).find(r => r.id === id);
+    const email = row ? row.email : 'this address';
+    if (!(await showConfirm('Remove ' + email + ' from work order notifications?'))) return;
+    try {
+      if (typeof ensureFreshToken === 'function') await ensureFreshToken();
+      const res = await fetchWithTimeout(SUPABASE_URL + '/rest/v1/notification_recipients?id=eq.' + id, 8000, {
+        method: 'DELETE',
+        headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': 'Bearer ' + getAuthToken() },
+      });
+      if (!res.ok) throw new Error('HTTP ' + res.status);
+      showToast('Removed ' + email + '.');
+      renderEmailList();
+    } catch (e) {
+      showToast('Could not remove: ' + (e.message || String(e)), { type: 'error' });
+    }
+  }
+
   async function exportPortalWorkOrdersCsv() {
     if (!_portalWorkOrdersCache) await renderPortalWorkOrders();
     const rows = _portalWorkOrdersCache || [];
@@ -3879,6 +4024,7 @@
       renderPortalAccounts();
       renderPortalInvoices();
       renderPortalWorkOrders();
+      renderEmailList();
       renderKnownIssues();
       renderFlaggedItems();
       renderUptimeStatus();
