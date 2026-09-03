@@ -9,9 +9,11 @@
     "test": "cd tests && node --test",
     "check-visual-snapshot": "node scripts/check-visual-snapshot.js",
     "check-consistency": "node scripts/check-consistency.js",
-    "fix-versions": "node scripts/check-consistency.js --fix-versions"
+    "fix-versions": "node scripts/check-consistency.js --fix-versions",
+    "check-undefined-vars": "node scripts/check-undefined-vars.js"
   },
   "devDependencies": {
+    "eslint": "^8.57.1",
     "jsdom": "^30.0.1"
   }
 }
