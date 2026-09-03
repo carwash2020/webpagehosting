@@ -74,7 +74,7 @@ function buildEmailHtml(clientName: string, invoiceNumber: string, total: number
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta name="color-scheme" content="light">
 <meta name="supported-color-schemes" content="light">
-<title>New invoice -- Triple H Enterprises</title>
+<title>New invoice, Triple H Enterprises</title>
 </head>
 <body style="margin: 0; padding: 0; background-color: #f4f4f4;">
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" bgcolor="#f4f4f4" style="background: #f4f4f4; padding: 32px 16px;">
@@ -135,7 +135,7 @@ function buildEmailText(clientName: string, invoiceNumber: string, total: number
     `View and pay: ${PORTAL_URL}`,
     "",
     "Triple H Enterprises",
-    "(435) 414-1667 -- triplehenterprisesllc.biz",
+    "(435) 414-1667, triplehenterprisesllc.biz",
   ].filter(Boolean).join("\n");
 }
 
@@ -179,7 +179,7 @@ Deno.serve(async (req: Request) => {
       body: JSON.stringify({
         from: `Triple H Enterprises <${LEAD_EMAIL_FROM}>`,
         to: client_email,
-        subject: `New invoice from Triple H Enterprises -- ${invoice_number}`,
+        subject: `New invoice from Triple H Enterprises: ${invoice_number}`,
         html: buildEmailHtml(displayName, invoice_number, total, description || null),
         text: buildEmailText(displayName, invoice_number, total, description || null),
       }),
