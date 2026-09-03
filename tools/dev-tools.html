@@ -38,7 +38,7 @@
 <link rel="stylesheet" href="/styles.css?v=202609022200">
 <link rel="stylesheet" href="/tools/styles-tools.css?v=a2e87effb3">
 <script src="/tools/data-layer.js?v=1133747765" defer></script>
-<script src="/tools/dev-tools-shared.js?v=da006a4f13" defer></script>
+<script src="/tools/dev-tools-shared.js?v=821a53e3c0" defer></script>
 <script src="/tools/tools-effects.js?v=9a2a59040e" defer></script>
 <script src="/tools/tools-dialogs.js?v=e1dfaa11a1" defer></script>
 <script src="/tools/tools-media-sharing.js?v=4e2769b10d" defer></script>
@@ -479,6 +479,33 @@
     -->
     <input type="text" id="portalInvoiceSearch" placeholder="Search by client, email, or invoice #..." style="width:100%; box-sizing:border-box; margin-bottom:12px;" oninput="renderPortalInvoices()">
     <div id="portalInvoices"></div>
+  </div>
+
+  <div class="dev-panel dev-panel-wide">
+    <div class="dev-panel-heading">
+      <h2>Portal work orders</h2>
+      <button class="dev-info-bubble" onclick="openDevInfo('portalworkorders')" aria-label="What does this do?" title="What does this do?">?</button>
+    </div>
+    <!--
+      Every "Request Work" submission from the portal (2026-09-03),
+      requested directly after a real gap: a real test submission
+      existed in the database with a working day-preference and an
+      uploaded photo, but nothing in this tab showed it existed at
+      all -- the Portal tab was missing the one panel that would have
+      let Connor actually find his own test.
+
+      Read-only visibility + a photo viewer, deliberately not another
+      full status-advancing UI -- that already lives in Workspace's
+      own Action Items queue (loadAndRenderWorkRequests/
+      advanceWorkRequest), which stays the one place status actually
+      moves. Duplicating that here would mean two places that could
+      show a different status for the same request. This panel is for
+      "does this exist and what's in it," matching the same
+      audit-visibility role the Portal invoices panel above plays for
+      invoices.
+    -->
+    <input type="text" id="portalWorkOrderSearch" placeholder="Search by client, email, or title..." style="width:100%; box-sizing:border-box; margin-bottom:12px;" oninput="renderPortalWorkOrders()">
+    <div id="portalWorkOrders"></div>
   </div>
 
   <div class="dev-panel">
@@ -1685,6 +1712,117 @@
   // portal. Goes through sync-invoice-to-portal so it upserts the same
   // row (no duplicate) and re-fires the email; line_items is omitted
   // so the existing ones are never overwritten with an empty array.
+  // Portal work orders (2026-09-03) -- every "Request Work" submission,
+  // for visibility/audit only. Status is advanced from Workspace's own
+  // Action Items queue, deliberately not duplicated here -- see this
+  // panel's own HTML comment for why two places moving the same
+  // status would be worse than one.
+  let _portalWorkOrdersCache = null;
+
+  async function renderPortalWorkOrders() {
+    const el = document.getElementById('portalWorkOrders');
+    if (!el) return;
+    const term = (document.getElementById('portalWorkOrderSearch')?.value || '').trim().toLowerCase();
+
+    if (!_portalWorkOrdersCache) {
+      el.innerHTML = '<p class="tool-sub">Loading...</p>';
+      try {
+        if (typeof ensureFreshToken === 'function') await ensureFreshToken();
+        const res = await fetchWithTimeout(
+          SUPABASE_URL + '/rest/v1/client_portal_work_orders?select=id,client_email,client_name,title,description,urgency,preferred_timing,status,photo_storage_paths,created_at&order=created_at.desc&limit=100',
+          8000,
+          { headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': 'Bearer ' + getAuthToken() } }
+        );
+        if (!res.ok) throw new Error('HTTP ' + res.status);
+        _portalWorkOrdersCache = await res.json();
+      } catch (e) {
+        el.innerHTML = '<p class="tool-sub">Could not load portal work orders: ' + escapeHtml(e.message || String(e)) + '</p>';
+        return;
+      }
+    }
+
+    const rows = term
+      ? _portalWorkOrdersCache.filter(w =>
+          (w.client_email || '').toLowerCase().includes(term) ||
+          (w.client_name || '').toLowerCase().includes(term) ||
+          (w.title || '').toLowerCase().includes(term))
+      : _portalWorkOrdersCache;
+
+    if (!rows.length) {
+      el.innerHTML = '<p class="tool-sub">' + (term ? 'No work orders match "' + escapeHtml(term) + '".' : 'No work has been requested through the portal yet.') + '</p>';
+      return;
+    }
+
+    const URGENCY_LABELS = { normal: 'Whenever', soon: 'Soon', urgent: 'Urgent' };
+    const STATUS_LABELS = { submitted: 'Submitted', reviewing: 'Reviewing', quoted: 'Quoted', scheduled: 'Scheduled', completed: 'Completed', declined: 'Declined' };
+
+    el.innerHTML = rows.map(w => {
+      const urgencyBadge = w.urgency === 'urgent'
+        ? '<span class="badge-pending-signature" style="background:#e0525220; border-color:#e05252; color:#ff8a80;">' + (URGENCY_LABELS[w.urgency] || w.urgency) + '</span>'
+        : '<span class="badge-pending-signature">' + (URGENCY_LABELS[w.urgency] || w.urgency) + '</span>';
+      const photoBtn = (w.photo_storage_paths && w.photo_storage_paths.length)
+        ? '<button class="secondary-btn" onclick="viewWorkOrderPhotos(' + JSON.stringify(w.photo_storage_paths) + ', this)">View Photo' + (w.photo_storage_paths.length > 1 ? 's (' + w.photo_storage_paths.length + ')' : '') + '</button>'
+        : '';
+      return '<div class="dev-check-row" style="align-items:flex-start;"><div style="flex:1; min-width:0;">' +
+        '<div><strong>' + escapeHtml(w.title || '(no title)') + '</strong> ' + urgencyBadge + ' <span class="tool-sub" style="font-size:11.5px;">' + (STATUS_LABELS[w.status] || w.status) + '</span></div>' +
+        '<div class="dev-check-detail">' + escapeHtml(w.client_name || w.client_email) + ' &middot; ' + escapeHtml(w.client_email) + ' &middot; ' + escapeHtml(String(w.created_at || '').slice(0, 10)) + '</div>' +
+        '<div class="dev-check-detail" style="margin-top:4px;">' + escapeHtml(w.description || '') + '</div>' +
+        (w.preferred_timing ? '<div class="dev-check-detail" style="margin-top:4px; color:var(--orange-light);">Preferred: ' + escapeHtml(w.preferred_timing) + '</div>' : '') +
+        '</div>' +
+        (photoBtn ? '<div style="flex-shrink:0;">' + photoBtn + '</div>' : '') +
+        '</div>';
+    }).join('');
+  }
+
+  // Opens every photo attached to a work order in ONE gallery tab,
+  // each still via its own short-lived signed URL -- same signing
+  // pattern as viewArchivedInvoicePdf. Deliberately not a loop of
+  // window.open() calls per photo: browsers block every popup after
+  // the first one in a single click handler as unrequested, so a
+  // 3-photo request would have silently shown only one photo. Stored
+  // paths already include the bucket name as their first segment (see
+  // uploadSelectedPhotos() in portal/work-orders.html), stripped here
+  // rather than hardcoded twice in two different places.
+  async function viewWorkOrderPhotos(paths, btnEl) {
+    const original = btnEl.textContent;
+    btnEl.disabled = true;
+    btnEl.textContent = 'Opening...';
+    try {
+      if (typeof ensureFreshToken === 'function') await ensureFreshToken();
+      const signedUrls = [];
+      for (const fullPath of paths) {
+        const path = fullPath.replace(/^work-order-photos\//, '');
+        const res = await fetchWithTimeout(SUPABASE_URL + '/storage/v1/object/sign/work-order-photos/' + path, 10000, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'apikey': SUPABASE_ANON_KEY,
+            'Authorization': 'Bearer ' + getAuthToken(),
+          },
+          body: JSON.stringify({ expiresIn: 300 }),
+        });
+        if (!res.ok) continue;
+        const data = await res.json();
+        if (data.signedURL) signedUrls.push(SUPABASE_URL + '/storage/v1' + data.signedURL);
+      }
+      if (!signedUrls.length) {
+        showToast('Could not open the photos for this request.', { type: 'error' });
+        return;
+      }
+      const galleryHtml = '<!DOCTYPE html><html><head><title>Work Order Photos</title>' +
+        '<meta name="viewport" content="width=device-width, initial-scale=1">' +
+        '<style>body{background:#0a0a0a; margin:0; padding:16px; display:flex; flex-direction:column; gap:16px; align-items:center;} img{max-width:100%; border-radius:8px;}</style>' +
+        '</head><body>' + signedUrls.map(u => '<img src="' + u + '">').join('') + '</body></html>';
+      const blob = new Blob([galleryHtml], { type: 'text/html' });
+      window.open(URL.createObjectURL(blob), '_blank', 'noopener');
+    } catch (e) {
+      showToast('Could not open the photos: ' + (e.message || String(e)), { type: 'error' });
+    } finally {
+      btnEl.disabled = false;
+      btnEl.textContent = original;
+    }
+  }
+
   async function resendPortalInvoice(portalRowId, btnEl) {
     const inv = (_portalInvoicesCache || []).find(i => i.id === portalRowId);
     if (!inv) { showToast('Could not find that invoice.', { type: 'error' }); return; }
@@ -2115,7 +2253,23 @@
       { field: 'can_access_dev_tools_full', label: 'Dev Tools (full technical)' },
     ] },
     { key: 'money', label: 'Money', fields: [
-      { field: 'can_manage_invoices', label: 'Invoices & Quotes' },
+      // Relabeled (2026-09-03), requested directly: "Steve should have
+      // full access to the portal and it should be added to the
+      // permissions boxes." Checked directly first, not assumed:
+      // Steve's account already had can_manage_invoices:true, which is
+      // the ONE permission that actually gates every Portal action --
+      // sending/resending an invite (send-invite), syncing an invoice
+      // or quote to the portal, marking one paid, deleting one. He
+      // already had full functional access; what was missing was any
+      // indication of that in this UI at all -- the checkbox was
+      // labeled "Invoices & Quotes" with zero mention of Portal
+      // anywhere, so there was no way to confirm this at a glance
+      // without already knowing the backend gating. No new permission
+      // column added -- that would mean updating every one of those
+      // backend functions to check a second flag for no real gain,
+      // since this single checkbox already IS the correct, complete
+      // gate for all of it.
+      { field: 'can_manage_invoices', label: 'Invoices, Quotes & Portal' },
       { field: 'can_manage_contracts', label: 'Contracts' },
       { field: 'can_view_finance', label: 'Finance dashboard' },
       { field: 'can_view_runway', label: 'Runway dashboard' },
@@ -3606,6 +3760,7 @@
       renderPortalBugReports();
       renderPortalAccounts();
       renderPortalInvoices();
+      renderPortalWorkOrders();
       renderKnownIssues();
       renderFlaggedItems();
       renderUptimeStatus();

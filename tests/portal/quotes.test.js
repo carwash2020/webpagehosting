@@ -141,21 +141,23 @@ test('the scheduling flow shares business hours and timezone from one file, not 
   // hand-typed copy with a comment saying to "keep these in sync
   // manually." Requested directly ("other ways we can connect all 3
   // together even more"), and unification kept turning up MORE
-  // duplicates than first expected -- five real business-hours users
+  // duplicates than first expected -- four real business-hours users
   // in total (booking.html, manage-booking.html, portal/quotes.html,
-  // portal/jobs.html, and portal/work-orders.html), several with a
-  // comment literally saying to keep the copy in sync by hand --
-  // booking.html, portal/quotes.html, and portal/work-orders.html --
-  // now load ONE shared /business-hours.js instead. Drift between two
-  // copies is no longer a risk worth testing for, because there is
-  // only one copy; what matters now is that no page has quietly grown
-  // its own local copy again.
+  // portal/jobs.html), several with a comment literally saying to
+  // keep the copy in sync by hand -- now load ONE shared
+  // /business-hours.js instead. Drift between two copies is no longer
+  // a risk worth testing for, because there is only one copy; what
+  // matters now is that no page has quietly grown its own local copy
+  // again.
   for (const [label, filePath] of [
     ['booking.html', path.join(__dirname, '..', '..', 'booking.html')],
     ['manage-booking.html', path.join(__dirname, '..', '..', 'manage-booking.html')],
     ['quotes.html', path.join(__dirname, '..', '..', 'portal', 'quotes.html')],
     ['jobs.html', path.join(__dirname, '..', '..', 'portal', 'jobs.html')],
-    ['work-orders.html', path.join(__dirname, '..', '..', 'portal', 'work-orders.html')],
+    // portal/work-orders.html briefly loaded this too, for a day-picker
+    // that was removed the same day it was built (see
+    // work-order-day-picker-and-photos.test.js) -- it correctly no
+    // longer loads a file nothing on it uses.
   ]) {
     const src = fs.readFileSync(filePath, 'utf8');
     assert.match(src, /<script src="\/business-hours\.js\?v=1"><\/script>/, `${label}: should load the shared business-hours file`);

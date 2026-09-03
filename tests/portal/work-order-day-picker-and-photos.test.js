@@ -1,7 +1,8 @@
-// Tests for two features requested directly (2026-09-03): a real
-// business-hours-aware day picker replacing the free-text "any timing
-// that works best?" field, and client photo uploads (up to 3) on the
-// Request Work form.
+// Tests for the Request Work form's timing field and photo uploads
+// (2026-09-03). The timing field went free-text -> a day-picker grid
+// -> a plain link to the real booking page, all the same day, each
+// step requested directly; the photo-upload feature (up to 3) has
+// stayed as built.
 
 const { test } = require('node:test');
 const assert = require('node:assert/strict');
@@ -11,47 +12,38 @@ const path = require('path');
 const repo = (...p) => path.join(__dirname, '..', '..', ...p);
 const html = fs.readFileSync(repo('portal', 'work-orders.html'), 'utf8');
 
-// ---- day picker ----
+// ---- timing: day-picker removed, replaced by a plain booking-page link ----
+//
+// The day-picker built earlier the same day was removed a few hours
+// later, requested directly: "We can remove the 'when would you like
+// this service' because we added the bookings page... it just pops up
+// with a bunch of dates and times." booking.html already does real
+// date/time scheduling properly, tied to a known service duration; a
+// smaller version of it living inside this form was redundant with
+// the page built specifically for that.
 
-test('the free-text timing input is gone, replaced by a real day-picker grid', () => {
+test('the old free-text timing input and the short-lived day-picker grid are both gone', () => {
   assert.doesNotMatch(html, /id="woTiming"/);
-  assert.match(html, /id="woDayGrid"/);
+  assert.doesNotMatch(html, /id="woDayGrid"/);
+  assert.doesNotMatch(html, /function renderDayPicker/);
 });
 
-test('the day picker is built from the real shared business hours, not invented values', () => {
-  const fnMatch = html.match(/function renderDayPicker\(\)[\s\S]*?\n  \}\n/);
-  assert.ok(fnMatch, 'expected to isolate renderDayPicker()');
-  const body = fnMatch[0];
-  assert.match(body, /todayDateStrInBusinessTz\(\)/);
-  assert.match(body, /addDaysToDateStr\(today, i\)/);
-  assert.match(body, /businessWeekday\(dateStr\)/);
-  assert.match(body, /formatHoursLabel\(d\.weekday\)/);
-  assert.match(body, /DAYS_AHEAD_SHOWN/);
+test('a plain link to the real booking page took its place', () => {
+  assert.match(html, /class="wo-booking-nudge"/);
+  assert.match(html, /<a href="\/booking\.html">Book directly/);
 });
 
-test('day selection is single-select and deselectable, matching the free-text field it replaced being optional', () => {
-  const fnMatch = html.match(/document\.getElementById\('woDayGrid'\)\.addEventListener\('click', \(e\) => \{[\s\S]*?\n  \}\);\n/);
-  assert.ok(fnMatch, 'expected to isolate the day-grid click handler');
-  assert.match(fnMatch[0], /selectedDayStr = \(selectedDayStr === clickedDate\) \? null : clickedDate;/,
-    'clicking an already-selected day should deselect it -- "no preference" must stay a valid choice');
-});
-
-test('the submission sends a formatted real day + hours label, not raw free text', () => {
-  const fnMatch = html.match(/function formatSelectedDayForSubmission\(\)[\s\S]*?\n  \}\n/);
-  assert.ok(fnMatch, 'expected to isolate formatSelectedDayForSubmission()');
-  const body = fnMatch[0];
-  assert.match(body, /if \(!selectedDayStr\) return null;/, 'no selection should submit as null, not an empty string');
-  assert.match(body, /formatHoursLabel\(weekday\)/, 'the submitted value should include the real hours for that day');
-
+test('preferred_timing is no longer sent -- nothing on the form populates it anymore', () => {
   const submitMatch = html.match(/async function submitRequest\(\)[\s\S]*?\n  \}\n/);
-  assert.match(submitMatch[0], /preferred_timing: formatSelectedDayForSubmission\(\),/);
+  assert.ok(submitMatch, 'expected to isolate submitRequest()');
+  assert.doesNotMatch(submitMatch[0], /preferred_timing:/);
 });
 
-test('a submitted request resets the day-picker selection, not just the text fields', () => {
-  const submitMatch = html.match(/async function submitRequest\(\)[\s\S]*?\n  \}\n/);
-  const body = submitMatch[0];
-  assert.match(body, /selectedDayStr = null;/);
-  assert.match(body, /document\.querySelectorAll\('\.wo-day-btn'\)\.forEach\(b => b\.classList\.remove\('is-selected'\)\);/);
+test('work-orders.html no longer loads the shared business-hours file, since nothing on the page needs it now', () => {
+  // Left loaded, it would be dead weight -- every other real user of
+  // business-hours.js (booking, manage-booking, quotes, jobs) still
+  // genuinely needs it and still loads it.
+  assert.doesNotMatch(html, /business-hours\.js/);
 });
 
 // ---- photo upload ----
