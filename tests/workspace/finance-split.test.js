@@ -3219,6 +3219,17 @@ test('generatePDF() completes all the way through to resetInvoiceForm() without 
   assert.equal(threw, null, 'generatePDF() must not throw -- if it does, that is the exact regression this test exists to catch: ' + (threw && threw.message));
   assert.equal(storeCalled, true, 'storeInvoicePdf() should have been reached -- confirms newEntry was actually in scope at that call site');
   assert.equal(resetCalled, true, 'resetInvoiceForm() should have been reached -- confirms the function ran all the way to completion, not aborted mid-flight');
+
+  // resetInvoiceForm() itself fires its own fire-and-forget
+  // assignNextNumber() call (not awaited by resetInvoiceForm, matching
+  // its real production behavior) -- letting that settle before the
+  // window is closed avoids a stray late-resolving promise touching a
+  // torn-down jsdom window, which showed up as intermittent CI
+  // flakiness (two runs of the identical commit, one pass one fail)
+  // when this test ran alongside hundreds of others in the same
+  // process rather than in isolation.
+  await new Promise(resolve => setTimeout(resolve, 150));
+  window.close();
 });
 
 test('logInvoice() returns the entry it creates, rather than leaving callers to reference an out-of-scope variable', () => {
