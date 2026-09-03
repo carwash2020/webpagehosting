@@ -1096,6 +1096,15 @@
   }
   document.addEventListener('DOMContentLoaded', function () {
     try {
+      // Pre-fills the accounts search from a real link elsewhere
+      // (2026-09-03), requested directly: "link client history and
+      // Portal clients together." The Client Registry's "View in
+      // Clients" link points here with ?search=<email> -- reading it
+      // is what actually makes that link land on the right result
+      // instead of just opening this page generically.
+      const params = new URLSearchParams(window.location.search);
+      const searchParam = params.get('search');
+      if (searchParam) document.getElementById('portalAccountSearch').value = searchParam;
       renderPortalBugReports();
       renderPortalAccounts();
       renderPortalInvoices();

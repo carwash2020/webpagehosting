@@ -37,7 +37,7 @@
 </script>
 <link rel="stylesheet" href="/styles.css?v=202609022200">
 <link rel="stylesheet" href="/tools/styles-tools.css?v=a2e87effb3">
-<script src="/tools/data-layer.js?v=1133747765" defer></script>
+<script src="/tools/data-layer.js?v=bceb822133" defer></script>
 <script src="/tools/dev-tools-shared.js?v=9274dfaef5" defer></script>
 <script src="/tools/tools-effects.js?v=9a2a59040e" defer></script>
 <script src="/tools/tools-dialogs.js?v=e1dfaa11a1" defer></script>
@@ -849,6 +849,9 @@
         '</div>' +
         '<div style="display:flex; align-items:center; gap:10px;">' +
           '<span class="dev-check-status pass">' + money(c.revenue) + '</span>' +
+          (c.knownEmail
+            ? '<a class="small-btn" href="/tools/clients.html?search=' + encodeURIComponent(c.knownEmail) + '">View in Clients</a>'
+            : '') +
           '<button class="small-btn danger" onclick="deleteClientFromRegistry(\'' + escapeForInlineHandler(c.id) + '\')">Delete</button>' +
         '</div></div>'
       ).join('');
