@@ -325,7 +325,7 @@
   async function downloadInvoicePDF(invoiceId) {
     const inv = currentInvoices.find(i => i.id === invoiceId);
     if (!inv) return;
-    if (!window.jspdf) { alert('Still finishing loading -- give it a second and try again.'); return; }
+    if (!window.jspdf) { alert('Still finishing loading. Give it a second and try again.'); return; }
 
     const { jsPDF } = window.jspdf;
     const doc = new jsPDF({ unit: 'pt', format: 'letter' });

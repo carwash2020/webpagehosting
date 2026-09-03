@@ -360,11 +360,11 @@
       '  <div class="date-row" id="dateRow"></div>' +
       '  <label style="display:block; font-size:13px; color:var(--text-dim); margin:0 0 6px;">Choose a new time</label>' +
       '  <div class="slots-grid" id="slotsGrid"></div>' +
-      '  <div class="slots-empty" id="slotsEmpty" style="display:none;">No open times this day -- try another date.</div>' +
+      '  <div class="slots-empty" id="slotsEmpty" style="display:none;">No open times this day. Try another date.</div>' +
       '  <button type="button" class="btn ghost" id="cancelRescheduleBtn">Never mind</button>' +
       '</div>' +
       '<div id="confirmStep">' +
-      '  <p style="text-align:center; color:var(--text-dim); font-size:14.5px; margin-top:20px;">Are you sure? This can\'t be undone -- you\'ll need to book a new time if you change your mind.</p>' +
+      '  <p style="text-align:center; color:var(--text-dim); font-size:14.5px; margin-top:20px;">Are you sure? This can\'t be undone. You\'ll need to book a new time if you change your mind.</p>' +
       '  <button type="button" class="btn danger" id="confirmCancelBtn">Yes, cancel it</button>' +
       '  <button type="button" class="btn ghost" id="backOutBtn">Never mind, keep it</button>' +
       '</div>'
@@ -434,7 +434,7 @@
           } else if (row && row.message === 'slot-taken') {
             btn.disabled = false;
             await selectDate(dateStr);
-            document.getElementById('slotsEmpty').insertAdjacentHTML('beforebegin', '<p class="slots-empty" style="color:#ff8a80;">That time was just taken -- please pick another.</p>');
+            document.getElementById('slotsEmpty').insertAdjacentHTML('beforebegin', '<p class="slots-empty" style="color:#ff8a80;">That time was just taken. Please pick another.</p>');
           } else {
             btn.disabled = false;
             alert('Something went wrong. Please call us at (435) 414-1667.');

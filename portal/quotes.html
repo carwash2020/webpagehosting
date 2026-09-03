@@ -245,13 +245,13 @@
           <div class="quote-question-form" id="questionForm-${q.id}">
             <textarea id="questionText-${q.id}" rows="3" placeholder="What would you like to ask?"></textarea>
             <div class="quote-question-error" id="questionError-${q.id}"></div>
-            <div class="quote-question-success" id="questionSuccess-${q.id}" style="display:none;">Sent -- we'll follow up by phone, text, or email.</div>
+            <div class="quote-question-success" id="questionSuccess-${q.id}" style="display:none;">Sent. We'll follow up by phone, text, or email.</div>
             <button class="btn secondary-btn" style="width:100%; justify-content:center; margin-top:8px;" onclick="submitQuestion(${q.id})">Send question</button>
           </div>
         ` : `
           <div class="responded-note">${q.status === 'approved' ? 'Approved' : 'Declined'}${q.responded_at ? ' on ' + formatDate(q.responded_at.slice(0, 10)) : ''}.</div>
           ${q.status === 'approved' ? (q.scheduled_at ? `
-            <div class="responded-note" style="color:#4caf78;">Job scheduled -- we'll see you then! Call or text us if you need to reschedule.</div>
+            <div class="responded-note" style="color:#4caf78;">Job scheduled. We'll see you then! Call or text us if you need to reschedule.</div>
           ` : `
             <button type="button" class="schedule-toggle" onclick="toggleScheduleForm(${q.id})">Schedule this job</button>
             <div class="schedule-panel" id="schedulePanel-${q.id}">

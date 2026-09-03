@@ -125,7 +125,7 @@ function buildGuestEmailHtml(lead: Record<string, unknown>): string {
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta name="color-scheme" content="light">
 <meta name="supported-color-schemes" content="light">
-<title>We got your request -- Triple H Enterprises</title>
+<title>We got your request, Triple H Enterprises</title>
 </head>
 <body style="margin: 0; padding: 0; background-color: #f4f4f4;">
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" bgcolor="#f4f4f4" style="background: #f4f4f4; padding: 32px 16px;">
@@ -191,7 +191,7 @@ function buildGuestEmailText(lead: Record<string, unknown>): string {
     "",
     "Talk soon,",
     "Triple H Enterprises",
-    "(435) 414-1667 -- triplehenterprisesllc.biz",
+    "(435) 414-1667, triplehenterprisesllc.biz",
   );
   return parts.join("\n");
 }
@@ -218,7 +218,7 @@ async function sendGuestConfirmation(lead: Record<string, unknown>): Promise<voi
         from: `Triple H Enterprises <${LEAD_EMAIL_FROM}>`,
         to: guestEmail,
         reply_to: LEAD_EMAIL_TO, // a guest reply reaches Steve/Connor, not an unmonitored address
-        subject: "We got your request -- Triple H Enterprises",
+        subject: "We got your request, Triple H Enterprises",
         html: buildGuestEmailHtml(lead),
         text: buildGuestEmailText(lead),
       }),

@@ -2,8 +2,8 @@
 //
 // Sends a client their account-setup invite -- called automatically
 // the first time a new client email appears on an invoice (from
-// sync-invoice-to-portal), and manually via a "resend invite" button
-// for a client who says they never got it.
+// sync-invoice-to-portal), and manually from Dev Tools for a client
+// who says they never got it.
 //
 // Deliberately does NOT use supabase.auth.admin.inviteUserByEmail()'s
 // own automatic email -- that would use Supabase's default auth email
@@ -14,22 +14,31 @@
 // branded email via Resend, matching send-booking-email/send-lead-email's
 // established look exactly.
 //
-// Uses the official @supabase/supabase-js SDK for generateLink()
-// specifically, rather than hand-rolling the raw REST call -- a real
-// mistake caught earlier the same day building the client portal's
-// login page: a hand-rolled magic-link request put the redirect
-// parameter in the wrong place entirely (body instead of a URL query
-// param), only caught by testing the real SDK's actual network
-// request directly. Not worth risking the same mistake twice on
-// another auth-related call when the SDK is safely importable here
-// (this runs server-side, unlike the browser-side login page).
-//
 // A real, documented Supabase gotcha this design has to account for
 // (confirmed via direct research, not assumed): clicking an invite
 // link creates a fully authenticated session immediately, BEFORE a
 // password is ever set. redirectTo below points at set-password.html
 // specifically, never straight at dashboard.html, so the client always
 // lands on the "choose a password" step first.
+//
+// IMPORTANT OPERATIONAL NOTE (2026-09-02): redirectTo only works if
+// the URL is on Supabase's own allowlist -- Authentication -> URL
+// Configuration -> Redirect URLs must include
+// https://www.triplehenterprisesllc.biz/** . If it is not allowlisted,
+// Supabase silently ignores redirectTo and sends the client to the
+// project's Site URL instead. That produced two confusing real
+// symptoms while testing this: first "Safari couldn't connect to the
+// server" (Site URL was still Supabase's localhost:3000 default), then
+// landing on the marketing homepage (Site URL corrected, but the
+// redirect path still not allowlisted). No code change can fix that --
+// it is dashboard configuration.
+//
+// A real repo/production drift caught here (2026-09-02): the file
+// that used to live in this repo was missing the isResend/magiclink
+// logic below entirely -- an earlier direct deploy had updated the
+// live function without the matching repo commit. Found by pulling
+// the actual deployed source before making an unrelated wording pass,
+// rather than trusting the repo file's own currency. Reconciled here.
 
 import { createClient } from "npm:@supabase/supabase-js@2";
 
@@ -62,14 +71,11 @@ function decodeJwtPayload(token: string): { email?: string; role?: string } {
   }
 }
 
-// Granular permission expansion (2026-09-02): job-tracker.html (the
-// caller here, via a completed job or a recurring template) has no
-// specific permission gate of its own -- any recognized internal
-// account can use it. "Has a real account_roles row at all" is the
-// correct matching check here, not any one specific granular
-// permission that wouldn't actually fit. can_manage_business_finances
-// (the old, broader checkbox this used to read) no longer exists as a
-// column at all.
+// Granular permission expansion (2026-09-02): this function is shared
+// by BOTH the invoice/quote sync path (gated on can_manage_invoices)
+// AND the job/checkup sync path (no specific gate at all) -- the
+// least-restrictive, correct check for a shared utility called from
+// multiple contexts is "any recognized internal account."
 async function callerIsInternalAccount(email: string): Promise<boolean> {
   const res = await fetch(
     `${SUPABASE_URL}/rest/v1/account_roles?email=eq.${encodeURIComponent(email.toLowerCase())}&select=email&limit=1`,
@@ -80,7 +86,11 @@ async function callerIsInternalAccount(email: string): Promise<boolean> {
   return rows.length > 0;
 }
 
-function buildInviteEmailHtml(clientName: string, inviteUrl: string): string {
+function buildInviteEmailHtml(clientName: string, inviteUrl: string, isResend: boolean): string {
+  const heading = isResend ? "Finish setting up your account" : "You've been invoiced";
+  const intro = isResend
+    ? "Here's a fresh link to finish setting up your Triple H Enterprises account. The previous one may have expired or not worked."
+    : "Triple H Enterprises has set you up with an account to view and pay your invoices online. Set your password to get started:";
   return `<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -88,7 +98,7 @@ function buildInviteEmailHtml(clientName: string, inviteUrl: string): string {
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta name="color-scheme" content="light">
 <meta name="supported-color-schemes" content="light">
-<title>Set up your account -- Triple H Enterprises</title>
+<title>Set up your account, Triple H Enterprises</title>
 </head>
 <body style="margin: 0; padding: 0; background-color: #f4f4f4;">
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" bgcolor="#f4f4f4" style="background: #f4f4f4; padding: 32px 16px;">
@@ -102,9 +112,9 @@ function buildInviteEmailHtml(clientName: string, inviteUrl: string): string {
         </tr>
         <tr>
           <td style="padding: 32px 28px 8px; font-family: -apple-system, Helvetica, Arial, sans-serif;">
-            <h1 style="color: #ff8000; font-size: 22px; margin: 0 0 20px; text-align: center;">You've been invoiced</h1>
+            <h1 style="color: #ff8000; font-size: 22px; margin: 0 0 20px; text-align: center;">${heading}</h1>
             <p style="color: #222; font-size: 15px; line-height: 1.5; margin: 0 0 20px;">Hi ${escapeHtml(clientName)},</p>
-            <p style="color: #222; font-size: 15px; line-height: 1.5; margin: 0 0 24px;">Triple H Enterprises has set you up with an account to view and pay your invoices online. Set your password to get started:</p>
+            <p style="color: #222; font-size: 15px; line-height: 1.5; margin: 0 0 24px;">${intro}</p>
           </td>
         </tr>
         <tr>
@@ -114,7 +124,7 @@ function buildInviteEmailHtml(clientName: string, inviteUrl: string): string {
         </tr>
         <tr>
           <td style="padding: 0 28px 28px; font-family: -apple-system, Helvetica, Arial, sans-serif;">
-            <p style="color: #777; font-size: 13px; line-height: 1.5; margin: 0;">This link is unique to you -- please don't forward this email. If you weren't expecting this, you can safely ignore it.</p>
+            <p style="color: #777; font-size: 13px; line-height: 1.5; margin: 0;">This link is unique to you. Please don't forward this email. If you weren't expecting this, you can safely ignore it.</p>
           </td>
         </tr>
         <tr>
@@ -133,18 +143,20 @@ function buildInviteEmailHtml(clientName: string, inviteUrl: string): string {
 </html>`;
 }
 
-function buildInviteEmailText(clientName: string, inviteUrl: string): string {
+function buildInviteEmailText(clientName: string, inviteUrl: string, isResend: boolean): string {
   return [
     `Hi ${clientName},`,
     "",
-    "Triple H Enterprises has set you up with an account to view and pay your invoices online.",
+    isResend
+      ? "Here's a fresh link to finish setting up your Triple H Enterprises account."
+      : "Triple H Enterprises has set you up with an account to view and pay your invoices online.",
     "",
     `Set your password to get started: ${inviteUrl}`,
     "",
-    "This link is unique to you -- please don't forward this email. If you weren't expecting this, you can safely ignore it.",
+    "This link is unique to you. Please don't forward this email. If you weren't expecting this, you can safely ignore it.",
     "",
     "Triple H Enterprises",
-    "(435) 414-1667 -- triplehenterprisesllc.biz",
+    "(435) 414-1667, triplehenterprisesllc.biz",
   ].join("\n");
 }
 
@@ -179,11 +191,12 @@ Deno.serve(async (req: Request) => {
 
     const targetEmail = client_email.toLowerCase().trim();
 
-    // Internal tool accounts are NOT portal clients (2026-09-02).
-    // See the git history for the full reasoning; in short, an
+    // Internal tool accounts are NOT portal clients (2026-09-02). An
     // internal account (account_roles + /tools/ access) and a portal
     // client (/portal/ access to their own invoices) are deliberately
     // different things that happen to share one auth user table.
+    // Checked server-side so the rule holds for every caller,
+    // including the sync functions that fire invites automatically.
     const internalRes = await fetch(
       `${SUPABASE_URL}/rest/v1/account_roles?email=eq.${encodeURIComponent(targetEmail)}&select=email&limit=1`,
       { headers: { apikey: SERVICE_ROLE_KEY, Authorization: `Bearer ${SERVICE_ROLE_KEY}` } },
@@ -201,15 +214,15 @@ Deno.serve(async (req: Request) => {
 
     // "Account exists" and "account is actually set up" are different
     // things (2026-09-02), requested directly after a real dead end:
-    // an invite was sent, its link failed to open (a separate Supabase
-    // redirect-allowlist config issue), and then every resend attempt
-    // was REFUSED because the auth user already existed -- leaving a
-    // client with an account they could never finish setting up and no
-    // way for anyone to fix it from the tools.
+    // an invite was sent, its link failed to open (the redirect-
+    // allowlist issue noted at the top of this file), and then every
+    // resend attempt was REFUSED because the auth user already
+    // existed -- leaving a client with an account they could never
+    // finish setting up and no way for anyone to fix it from the tools.
     //
     // portal_account_status() (SECURITY DEFINER, service_role only)
-    // returns one of three states, because auth.users isn't reachable
-    // via PostgREST and supabase-js's admin API has no
+    // returns none / unconfirmed / confirmed, because auth.users isn't
+    // reachable via PostgREST and supabase-js's admin API has no
     // get-user-by-email -- only a paginated listUsers().
     const statusRes = await fetch(`${SUPABASE_URL}/rest/v1/rpc/portal_account_status`, {
       method: "POST",
@@ -241,7 +254,8 @@ Deno.serve(async (req: Request) => {
     // land exactly where a first-time invite would have taken them.
     // This is the specific case that was previously impossible to
     // recover from.
-    const linkType = accountStatus === "unconfirmed" ? "magiclink" : "invite";
+    const isResend = accountStatus === "unconfirmed";
+    const linkType = isResend ? "magiclink" : "invite";
 
     const { data: linkData, error: linkError } = await adminClient.auth.admin.generateLink({
       type: linkType,
@@ -255,9 +269,8 @@ Deno.serve(async (req: Request) => {
       // Kept as a real fallback rather than removed: if the status
       // lookup above ever failed (returning "unknown") and we guessed
       // 'invite' for an email that does have a user, this is where
-      // that surfaces. Still ok:true so the automatic callers
-      // (sync-invoice-to-portal and friends, which fire on any unseen
-      // client email) don't treat normal re-invoicing as a failure.
+      // that surfaces. Still ok:true so the automatic callers don't
+      // treat normal re-invoicing as a failure.
       if (linkError.message?.includes("already been registered") || linkError.message?.includes("already registered")) {
         return json({
           ok: true,
@@ -281,9 +294,11 @@ Deno.serve(async (req: Request) => {
       body: JSON.stringify({
         from: `Triple H Enterprises <${LEAD_EMAIL_FROM}>`,
         to: client_email,
-        subject: "Set up your Triple H Enterprises account",
-        html: buildInviteEmailHtml(displayName, inviteUrl),
-        text: buildInviteEmailText(displayName, inviteUrl),
+        subject: isResend
+          ? "Finish setting up your Triple H Enterprises account"
+          : "Set up your Triple H Enterprises account",
+        html: buildInviteEmailHtml(displayName, inviteUrl, isResend),
+        text: buildInviteEmailText(displayName, inviteUrl, isResend),
       }),
     });
 
@@ -292,7 +307,7 @@ Deno.serve(async (req: Request) => {
       return json({ ok: false, error: `Invite link created but email failed to send: ${errBody.slice(0, 300)}` }, 502);
     }
 
-    return json({ ok: true });
+    return json({ ok: true, was_resend: isResend });
   } catch (err: any) {
     return json({ ok: false, error: err.message }, 500);
   }

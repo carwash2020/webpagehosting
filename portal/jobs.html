@@ -429,7 +429,7 @@
         return;
       }
       const panel = document.getElementById('checkupSchedulePanel-' + checkupId);
-      panel.innerHTML = '<div class="checkup-due-label" style="color:#4caf78;">Requested -- we\'ll confirm shortly.</div>';
+      panel.innerHTML = '<div class="checkup-due-label" style="color:#4caf78;">Requested. We\'ll confirm shortly.</div>';
     } catch (e) {
       errorEl.textContent = "Couldn't reach the server. Please check your connection and try again.";
       confirmBtn.disabled = false;

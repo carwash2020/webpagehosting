@@ -100,7 +100,7 @@ test('scheduling only ever offered for an approved, not-yet-scheduled quote', ()
 });
 
 test('a scheduled job shows a confirmation note instead of the scheduling flow again', () => {
-  assert.match(html, /Job scheduled -- we'll see you then!/);
+  assert.match(html, /Job scheduled\. We'll see you then!/);
 });
 
 test('booking creation and the quote scheduled_at write-back both go through schedule-quote-job, never a direct table write', () => {
