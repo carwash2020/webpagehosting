@@ -775,6 +775,20 @@
           if (photoResult.ok) photoStoragePaths = photoResult.photos.map(p => p.storage_path);
         } catch (e) { /* best-effort -- job still syncs without photos if this fails */ }
       }
+      // Downloadable receipt per job (2026-09-03), item 6 of a
+      // roadmap: "no downloadable receipt per job." The Invoice Log
+      // already tracks which job an invoice was for (jobRefId, set
+      // from the Invoice tab's own job dropdown) -- reused directly
+      // here rather than inventing a second link. Looked up fresh on
+      // every sync (not cached), the same reasoning as the photo
+      // paths just above: whichever invoice is CURRENTLY linked to
+      // this job wins, so linking or re-linking an invoice later and
+      // re-marking the job Done keeps the receipt link correct.
+      let linkedInvoiceNumber = null;
+      try {
+        const linkedInvoice = loadInvoicesForHistory().find(inv => String(inv.jobRefId) === String(savedJobId));
+        if (linkedInvoice) linkedInvoiceNumber = linkedInvoice.invoiceNumber || null;
+      } catch (e) { /* best-effort -- job still syncs without a receipt link if this fails */ }
       fetch(`${SUPABASE_URL}/functions/v1/sync-job-to-portal`, {
         method: 'POST',
         headers: {
@@ -789,6 +803,7 @@
           title: fields.title,
           job_date: fields.date,
           photo_storage_paths: photoStoragePaths,
+          linked_invoice_number: linkedInvoiceNumber,
         }),
       }).catch(e => console.warn('Portal sync failed (job still saved locally):', e));
     }

@@ -116,6 +116,12 @@
   .job-title { font-weight: 600; color: var(--white); font-size: 15px; }
   .job-date { color: var(--text-dim); font-size: 13px; margin-top: 2px; }
   .job-warranty { font-size: 12px; padding: 3px 10px; border-radius: 20px; font-weight: 600; display: inline-block; white-space: nowrap; }
+  /* Downloadable receipt per job (2026-09-03) -- item 6 of a roadmap. */
+  .job-receipt-link {
+    display: inline-block; margin-top: 8px; font-size: 12.5px; font-weight: 600; color: var(--orange-light);
+    text-decoration: none; padding: 6px 12px; border: 1px solid var(--orange-tint-border); border-radius: 8px; background: var(--orange-tint-soft);
+  }
+  .job-receipt-link:hover { text-decoration: underline; }
   .job-warranty.is-active { background: rgba(76,175,80,0.15); color: #4caf50; }
   .job-warranty.is-expired { background: var(--bg-panel); color: var(--text-dim); }
   .job-photos { display: flex; gap: 8px; margin-top: 10px; flex-wrap: wrap; }
@@ -467,6 +473,7 @@
           </div>
           ${warrantyBadgeHtml(j.job_date)}
         </div>
+        ${j.linked_invoice_number ? `<a class="job-receipt-link" href="/portal/dashboard.html?invoice=${encodeURIComponent(j.linked_invoice_number)}">View Receipt</a>` : ''}
         ${hasPhotos ? `<div class="job-photos" id="jobPhotos-${j.id}"><p style="color:var(--text-dim); font-size:12px;">Loading photos...</p></div>` : ''}
       </div>
     `;

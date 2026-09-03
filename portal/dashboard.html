@@ -299,6 +299,22 @@
       return;
     }
 
+    // Auto-download when arriving via a real link (2026-09-03) --
+    // Jobs' own "View Receipt" button, item 6 of a roadmap. Only
+    // fires once per page load (the param is stripped from the URL
+    // right after) so refreshing the page doesn't re-trigger a
+    // download every time. A missing/unmatched invoice_number (the
+    // job's own linked invoice never made it to the portal, for
+    // instance) fails silently here -- a dead link is a much smaller
+    // problem than an error message for something the client never
+    // asked for directly.
+    const requestedInvoiceNumber = new URLSearchParams(window.location.search).get('invoice');
+    if (requestedInvoiceNumber) {
+      history.replaceState(null, '', window.location.pathname);
+      const match = invoices.find(inv => inv.invoice_number === requestedInvoiceNumber);
+      if (match) downloadInvoicePDF(match.id);
+    }
+
     // Split into two real sections rather than one mixed list --
     // requested directly, since a client's most relevant question is
     // usually "what do I still owe," not scanning past everything
