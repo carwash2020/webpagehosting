@@ -1,0 +1,356 @@
+<!DOCTYPE html>
+<html lang="en" style="background:#0a0a0a;">
+<head>
+<script src="/tools/auth.js?v=7b87c4fdc1"></script>
+<script>
+  // Security gate -- redirect to login before this page's own content
+  // is meaningfully usable. See auth.js for why this exists (a single
+  // shared account keeping randoms out, not a multi-user system).
+  requireAuth();
+</script>
+<link rel="manifest" href="/tools/manifest.json">
+<meta name="theme-color" content="#0a0a0a">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Triple H">
+<link rel="apple-touch-icon" href="/images/apple-touch-icon.png">
+
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="robots" content="noindex, nofollow">
+<title>POS &middot; Triple H Enterprises</title>
+<!--
+  POS -- charge a client's card directly, without creating an invoice
+  (2026-09-03), requested directly: "add a tool to type in and charge
+  a client from my phone without creating an invoice for other minor
+  jobs. we could name the tool POS."
+
+  Built on top of the saved-card infrastructure requested in the same
+  message: "we need to start collecting card info to each email to
+  make it easy to pay next time." Every invoice payment now saves a
+  card to a real Stripe Customer (create-payment-intent,
+  setup_future_usage: 'off_session') -- this page is the other half,
+  letting Connor charge that saved card in one tap for a client who's
+  already paid an invoice before, or take a fresh card on the spot for
+  someone who hasn't. Either way, THIS project never sees or stores
+  actual card data -- only a stripe_customer_id reference. See
+  create-pos-charge's own header comment for the full architecture.
+
+  Deliberately its own page, not folded into invoice-generator.html --
+  a POS sale is explicitly NOT an invoice (no line items, no due date,
+  no client portal record at all), and forcing it through the invoice
+  form would mean either a fake invoice nobody asked for or a pile of
+  invoice-specific fields that make no sense here.
+-->
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://js.stripe.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data:; connect-src 'self' https://csvfqdjuobylgafgolho.supabase.co https://api.stripe.com; frame-src https://js.stripe.com; object-src 'none'; base-uri 'self'; frame-ancestors 'none';">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Anton&family=Oswald:wght@400;500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script>
+  (function () {
+    var saved = localStorage.getItem('th_tools_theme');
+    if (saved === 'light') document.documentElement.setAttribute('data-theme', 'light');
+  })();
+</script>
+<link rel="stylesheet" href="/styles.css?v=202609022200">
+<link rel="stylesheet" href="/tools/styles-tools.css?v=a2e87effb3">
+<script src="https://js.stripe.com/v3/"></script>
+<script src="/tools/tools-effects.js?v=9a2a59040e" defer></script>
+<script src="/tools/tools-dialogs.js?v=e1dfaa11a1" defer></script>
+<script src="/tools/tools-nav-pwa.js?v=9b16eefb86" defer></script>
+<script src="/tools/sync.js?v=73576c99e1" defer></script>
+<style>
+  .pos-card {
+    background: var(--bg-panel-2); border: 1px solid var(--border); border-radius: var(--radius);
+    padding: 22px; max-width: 440px; margin: 0 auto;
+  }
+  .pos-field { margin-bottom: 16px; }
+  .pos-field label { display: block; font-size: 13px; font-weight: 600; color: var(--white); margin-bottom: 6px; }
+  .pos-field input[type="text"], .pos-field input[type="email"], .pos-field input[type="number"] {
+    width: 100%; box-sizing: border-box; padding: 12px 14px; background: var(--bg-panel); border: 1px solid var(--border);
+    border-radius: 8px; color: var(--white); font-size: 16px; font-family: inherit;
+  }
+  .pos-field input:focus { outline: none; border-color: var(--orange-light); }
+  .pos-amount-field input { font-size: 24px; font-weight: 700; }
+  .pos-saved-card-box {
+    display: flex; align-items: center; justify-content: space-between; gap: 12px;
+    padding: 14px 16px; background: var(--orange-tint-soft); border: 1px solid var(--orange-tint-border);
+    border-radius: 8px; margin-bottom: 14px;
+  }
+  .pos-saved-card-box .pos-card-label { font-size: 14px; color: var(--white); font-weight: 600; }
+  .pos-saved-card-box .pos-card-sub { font-size: 12px; color: var(--text-dim); margin-top: 2px; }
+  .pos-use-different { background: none; border: none; color: var(--text-dim); font-size: 12.5px; text-decoration: underline; cursor: pointer; padding: 0; font-family: inherit; margin-top: 10px; display: block; }
+  .pos-error { color: #ff8a80; font-size: 13.5px; margin-top: 10px; }
+  .pos-success { text-align: center; padding: 20px 0; color: #4caf78; font-size: 16px; font-weight: 600; }
+  .pos-checking { color: var(--text-dim); font-size: 13px; text-align: center; padding: 8px 0; }
+</style>
+</head>
+<body>
+<a href="#mainContent" class="skip-link">Skip to main content</a>
+
+<div class="tool-header">
+  <a href="/tools/workspace.html" class="tool-header-brand">
+    <img src="/images/logo-signature-orange.webp?v=202608142300" alt="Triple H Enterprises">
+    <span>&larr; Back to Workspace</span>
+  </a>
+  <button class="help-btn" onclick="openHelpModal()" aria-label="How to use this tool" title="How to use this tool">?</button>
+</div>
+<div class="tool-title" id="mainContent">POS</div>
+<p class="tool-sub">Charge a client's card directly for a quick job &mdash; no invoice, no line items, just an amount and a charge.</p>
+
+<div class="pos-card">
+  <div class="pos-field">
+    <label for="posClientEmail">Client email</label>
+    <input type="email" id="posClientEmail" placeholder="client@example.com" autocomplete="off">
+  </div>
+  <div class="pos-field pos-amount-field">
+    <label for="posAmount">Amount</label>
+    <input type="number" id="posAmount" placeholder="0.00" min="0.50" step="0.01" inputmode="decimal">
+  </div>
+  <div class="pos-field">
+    <label for="posDescription">What's this for? <span style="font-weight:400; color:var(--text-dim);">(optional)</span></label>
+    <input type="text" id="posDescription" placeholder="e.g. Furnace filter swap">
+  </div>
+
+  <div id="posChargeArea"></div>
+  <div class="pos-error" id="posError" style="display:none;"></div>
+</div>
+
+<div class="modal-overlay help-modal-overlay" id="helpModalOverlay">
+  <div class="help-modal">
+    <button class="modal-close" onclick="closeHelpModal()" aria-label="Close">&times;</button>
+    <h3>POS</h3>
+    <p>For a quick job that doesn't need a real invoice -- charge the client's card directly, on the spot.</p>
+    <p>If this email has paid before, their card is already saved (this happens automatically the first time anyone pays an invoice) -- you'll see a one-tap "Charge" button for it. Otherwise you'll get a normal card entry form, and that card gets saved for next time too.</p>
+    <p>Every POS sale shows up in your Income log the same way any other payment does, tagged so you can always tell it apart from an invoice.</p>
+    <p>This never creates an invoice, a quote, or a portal record of any kind -- it's just a charge and an income entry.</p>
+  </div>
+</div>
+
+<script>
+  const SUPABASE_URL = 'https://csvfqdjuobylgafgolho.supabase.co';
+  const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNzdmZxZGp1b2J5bGdhZmdvbGhvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODUzNTQ3MjcsImV4cCI6MjEwMDkzMDcyN30.6GlvK-DfXf2lppS1kciZtsl4wHOpZz_yKtwsS1lyjrs';
+  const STRIPE_PUBLISHABLE_KEY = 'pk_live_51TxzzNLJyq7HLm12tpc3XfPvsQK1vN7qHJ5KhvYhhi2YSFtPOqNXMTr2bTm7ADjwxtbUl2UmXg9kHGfzKve1izn700mFVhdVRo';
+
+  let stripeInstance = null;
+  let elementsInstance = null;
+  let lastCheckedEmail = null;
+  let savedCardInfo = null; // { brand, last4 } when a saved card is on file for the current email
+
+  function showError(msg) {
+    const el = document.getElementById('posError');
+    el.textContent = msg;
+    el.style.display = msg ? 'block' : 'none';
+  }
+
+  // Debounced on the email field (2026-09-03) -- checking after every
+  // keystroke would fire a real network call (and a real Stripe API
+  // read) far more often than needed; waiting for a short pause in
+  // typing is the same debounce pattern already used elsewhere in
+  // this project's tools (debouncedCall in parts-reference.html).
+  let checkTimer = null;
+  document.getElementById('posClientEmail').addEventListener('input', () => {
+    clearTimeout(checkTimer);
+    const email = document.getElementById('posClientEmail').value.trim();
+    if (!email.includes('@')) {
+      document.getElementById('posChargeArea').innerHTML = '';
+      savedCardInfo = null;
+      return;
+    }
+    checkTimer = setTimeout(() => checkForSavedCard(email), 500);
+  });
+
+  async function checkForSavedCard(email) {
+    lastCheckedEmail = email;
+    const area = document.getElementById('posChargeArea');
+    area.innerHTML = '<div class="pos-checking">Checking for a saved card...</div>';
+    showError('');
+    try {
+      if (typeof ensureFreshToken === 'function') await ensureFreshToken();
+      const res = await fetch(SUPABASE_URL + '/functions/v1/create-pos-charge', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'apikey': SUPABASE_ANON_KEY,
+          'Authorization': 'Bearer ' + getAuthToken(),
+        },
+        body: JSON.stringify({ mode: 'check', client_email: email }),
+      });
+      const result = await res.json();
+      // A stale response for an email the user has since changed
+      // (they kept typing while this was in flight) must never
+      // overwrite what's currently on screen.
+      if (email !== lastCheckedEmail) return;
+      if (!result.ok) { area.innerHTML = ''; return; }
+      if (result.has_saved_card) {
+        savedCardInfo = { brand: result.brand, last4: result.last4 };
+        renderSavedCardOption();
+      } else {
+        savedCardInfo = null;
+        renderNewCardOption();
+      }
+    } catch (e) {
+      if (email !== lastCheckedEmail) return;
+      area.innerHTML = '';
+    }
+  }
+
+  function renderSavedCardOption() {
+    const area = document.getElementById('posChargeArea');
+    const brandLabel = (savedCardInfo.brand || 'card').charAt(0).toUpperCase() + (savedCardInfo.brand || 'card').slice(1);
+    area.innerHTML =
+      '<div class="pos-saved-card-box">' +
+      '<div><div class="pos-card-label">' + escapeHtmlPos(brandLabel) + ' ending in ' + escapeHtmlPos(savedCardInfo.last4) + '</div>' +
+      '<div class="pos-card-sub">Saved from a previous payment</div></div>' +
+      '</div>' +
+      '<button class="btn blue" id="posChargeSavedBtn" style="width:100%; justify-content:center;" onclick="chargeSavedCard()">Charge Saved Card</button>' +
+      '<button type="button" class="pos-use-different" onclick="renderNewCardOption()">Use a different card instead</button>';
+  }
+
+  function renderNewCardOption() {
+    const area = document.getElementById('posChargeArea');
+    area.innerHTML =
+      '<button class="btn blue" id="posNewCardBtn" style="width:100%; justify-content:center;" onclick="startNewCardCharge()">Enter Card &amp; Charge</button>';
+  }
+
+  // This page's own tiny escaping helper -- POS loads no /tools/
+  // shared script that provides one under this exact page's isolation
+  // (it deliberately keeps its own dependency list minimal, matching
+  // the same reasoning the portal pages use for staying isolated).
+  function escapeHtmlPos(str) {
+    const div = document.createElement('div');
+    div.textContent = String(str == null ? '' : str);
+    return div.innerHTML;
+  }
+
+  function readAmountAndDescription() {
+    const email = document.getElementById('posClientEmail').value.trim();
+    const amount = parseFloat(document.getElementById('posAmount').value);
+    const description = document.getElementById('posDescription').value.trim();
+    if (!email.includes('@')) { showError('Enter a real client email.'); return null; }
+    if (!(amount > 0)) { showError('Enter a real amount.'); return null; }
+    return { email, amount, description };
+  }
+
+  async function chargeSavedCard() {
+    const fields = readAmountAndDescription();
+    if (!fields) return;
+    showError('');
+    const btn = document.getElementById('posChargeSavedBtn');
+    btn.disabled = true;
+    btn.textContent = 'Charging...';
+    try {
+      if (typeof ensureFreshToken === 'function') await ensureFreshToken();
+      const res = await fetch(SUPABASE_URL + '/functions/v1/create-pos-charge', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'apikey': SUPABASE_ANON_KEY,
+          'Authorization': 'Bearer ' + getAuthToken(),
+        },
+        body: JSON.stringify({ mode: 'charge_saved', client_email: fields.email, amount: fields.amount, description: fields.description }),
+      });
+      const result = await res.json();
+      if (!result.ok) {
+        showError(result.error || 'The charge was not approved.');
+        btn.disabled = false;
+        btn.textContent = 'Charge Saved Card';
+        return;
+      }
+      showSuccess(fields.amount);
+    } catch (e) {
+      showError('Could not reach the server: ' + (e.message || String(e)));
+      btn.disabled = false;
+      btn.textContent = 'Charge Saved Card';
+    }
+  }
+
+  async function startNewCardCharge() {
+    const fields = readAmountAndDescription();
+    if (!fields) return;
+    showError('');
+    const btn = document.getElementById('posNewCardBtn');
+    btn.disabled = true;
+    btn.textContent = 'Loading...';
+    try {
+      if (typeof ensureFreshToken === 'function') await ensureFreshToken();
+      const res = await fetch(SUPABASE_URL + '/functions/v1/create-pos-charge', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'apikey': SUPABASE_ANON_KEY,
+          'Authorization': 'Bearer ' + getAuthToken(),
+        },
+        body: JSON.stringify({ mode: 'new_card', client_email: fields.email, amount: fields.amount, description: fields.description }),
+      });
+      const result = await res.json();
+      if (!result.ok) {
+        showError(result.error || 'Something went wrong.');
+        btn.disabled = false;
+        btn.textContent = 'Enter Card & Charge';
+        return;
+      }
+      mountCardEntry(result.client_secret);
+    } catch (e) {
+      showError('Could not reach the server: ' + (e.message || String(e)));
+      btn.disabled = false;
+      btn.textContent = 'Enter Card & Charge';
+    }
+  }
+
+  // Same Stripe Elements mount-and-confirm pattern already proven in
+  // portal/dashboard.html's mountPaymentUI() -- kept consistent rather
+  // than reinvented, since it's the same underlying Stripe integration
+  // just triggered from the internal side instead of the client side.
+  function mountCardEntry(clientSecret) {
+    if (!stripeInstance) stripeInstance = Stripe(STRIPE_PUBLISHABLE_KEY);
+    elementsInstance = stripeInstance.elements({ clientSecret });
+    const area = document.getElementById('posChargeArea');
+    area.innerHTML =
+      '<div id="posPaymentElement"></div>' +
+      '<button class="btn blue" id="posConfirmBtn" style="width:100%; justify-content:center; margin-top:14px;">Charge</button>';
+    elementsInstance.create('payment').mount('#posPaymentElement');
+
+    document.getElementById('posConfirmBtn').addEventListener('click', async () => {
+      const btn = document.getElementById('posConfirmBtn');
+      btn.disabled = true;
+      btn.textContent = 'Processing...';
+      showError('');
+
+      const { error, paymentIntent } = await stripeInstance.confirmPayment({
+        elements: elementsInstance,
+        redirect: 'if_required',
+      });
+
+      if (error) {
+        showError(error.message || 'Charge failed. Please try again.');
+        btn.disabled = false;
+        btn.textContent = 'Charge';
+        return;
+      }
+      if (paymentIntent && paymentIntent.status === 'succeeded') {
+        showSuccess(parseFloat(document.getElementById('posAmount').value));
+      }
+    });
+  }
+
+  function showSuccess(amount) {
+    document.getElementById('posChargeArea').innerHTML =
+      '<div class="pos-success">Charged $' + amount.toFixed(2) + '. Logged to Income.</div>' +
+      '<button class="secondary-btn" style="width:100%; justify-content:center;" onclick="resetPosForm()">New Charge</button>';
+  }
+
+  function resetPosForm() {
+    document.getElementById('posClientEmail').value = '';
+    document.getElementById('posAmount').value = '';
+    document.getElementById('posDescription').value = '';
+    document.getElementById('posChargeArea').innerHTML = '';
+    showError('');
+    savedCardInfo = null;
+    lastCheckedEmail = null;
+  }
+</script>
+
+</body>
+</html>

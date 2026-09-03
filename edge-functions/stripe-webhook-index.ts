@@ -85,6 +85,53 @@ Deno.serve(async (req: Request) => {
 
   const pi = event.data.object as Stripe.PaymentIntent;
 
+  // POS charge (2026-09-03), checked BEFORE any invoice lookup -- a
+  // POS sale has no invoice at all, by design, so trying to match one
+  // first would just waste a query on every POS event. Idempotent on
+  // this PaymentIntent's own id: create-pos-charge's 'charge_saved'
+  // path already knows its own outcome synchronously and logs income
+  // directly, without waiting for this webhook -- but Stripe still
+  // sends payment_intent.succeeded for that charge too, so this must
+  // never log it a second time. The 'new_card' path has no synchronous
+  // outcome at all (Stripe Elements confirms client-side, later,
+  // after create-pos-charge already returned), so THIS is the only
+  // place that charge ever gets logged.
+  if (pi.metadata?.pos_charge === "true") {
+    const syncRes = await fetch(
+      `${SUPABASE_URL}/rest/v1/workspace_sync?code=eq.tripleh-workspace-2026&select=data`,
+      { headers: { apikey: SERVICE_ROLE_KEY, Authorization: `Bearer ${SERVICE_ROLE_KEY}` } },
+    );
+    const syncRows = await syncRes.json();
+    if (syncRows.length) {
+      const blob = syncRows[0].data;
+      const incomeLog = JSON.parse(blob.th_income_log || "[]");
+      const alreadyLogged = incomeLog.some((entry: any) => entry.stripePaymentIntentId === pi.id);
+      if (!alreadyLogged) {
+        incomeLog.push({
+          id: Date.now(),
+          date: new Date().toISOString().slice(0, 10),
+          desc: pi.metadata?.pos_description || pi.description || "POS sale",
+          amount: pi.metadata?.pos_amount ? Number(pi.metadata.pos_amount) : pi.amount / 100,
+          source: pi.metadata?.pos_client_email || "",
+          payment: "Stripe (POS)",
+          jobRefId: "",
+          jobRefTitle: "",
+          origin: "pos",
+          stripePaymentIntentId: pi.id,
+          createdBy: pi.metadata?.internal_account || "",
+          lastEditedBy: pi.metadata?.internal_account || "",
+        });
+        blob.th_income_log = JSON.stringify(incomeLog);
+        await fetch(`${SUPABASE_URL}/rest/v1/workspace_sync?code=eq.tripleh-workspace-2026`, {
+          method: "PATCH",
+          headers: { apikey: SERVICE_ROLE_KEY, Authorization: `Bearer ${SERVICE_ROLE_KEY}`, "Content-Type": "application/json" },
+          body: JSON.stringify({ data: blob, updated_at: new Date().toISOString() }),
+        });
+      }
+    }
+    return new Response(JSON.stringify({ received: true, pos_charge: true }), { status: 200 });
+  }
+
   // Looked up by the PaymentIntent id first (set by create-payment-intent
   // or create-bulk-payment-intent when the intent was originally
   // created) -- naturally returns every invoice sharing this
