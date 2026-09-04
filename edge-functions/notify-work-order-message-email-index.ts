@@ -26,6 +26,23 @@ function escapeHtml(value: unknown): string {
   return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
 }
 
+// Real notification control (2026-09-03), requested directly: "Real
+// notification toggles." Only checked on the internal-to-client
+// branch below -- a message a CLIENT sends always notifies the
+// internal team regardless of any client-side preference (that's
+// the whole point of the message existing), so this has nothing to
+// do with the client->internal direction at all.
+async function clientWantsNotification(email: string, column: string): Promise<boolean> {
+  const res = await fetch(
+    `${SUPABASE_URL}/rest/v1/client_notification_preferences?client_email=eq.${encodeURIComponent(email.toLowerCase())}&select=${column}&limit=1`,
+    { headers: { apikey: SERVICE_ROLE_KEY, Authorization: `Bearer ${SERVICE_ROLE_KEY}` } },
+  );
+  if (!res.ok) return true;
+  const rows = await res.json();
+  if (!rows.length) return true;
+  return rows[0][column] !== false;
+}
+
 async function sendResend(to: string, subject: string, html: string, text: string, replyTo?: string) {
   const res = await fetch("https://api.resend.com/emails", {
     method: "POST",
@@ -88,6 +105,9 @@ Deno.serve(async (req: Request) => {
 
     if (msg.sender_type === "internal") {
       // Internal -> client: one email, to the one client on this request.
+      if (!(await clientWantsNotification(wo.client_email, "wants_message_emails"))) {
+        return new Response(JSON.stringify({ ok: true, skipped: "client opted out of message emails" }), { headers: { "Content-Type": "application/json" } });
+      }
       const displayName = (typeof wo.client_name === "string" && wo.client_name.trim() && wo.client_name !== wo.client_email) ? wo.client_name : wo.client_email;
       const { html, text } = buildClientEmail(displayName, wo.title || "your request", msg.message);
       const sent = await sendResend(wo.client_email, `New reply on your request, Triple H Enterprises`, html, text);

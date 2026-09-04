@@ -16,6 +16,27 @@ const LEAD_EMAIL_FROM = Deno.env.get("LEAD_EMAIL_FROM") || "";
 const PORTAL_URL = "https://www.triplehenterprisesllc.biz/portal/work-orders.html";
 const LOGO_URL = "https://www.triplehenterprisesllc.biz/images/logo-signature-email.png";
 const BUSINESS_TIMEZONE = "America/Denver";
+// Added 2026-09-03 -- needed for the new notification-preference
+// check below (clientWantsNotification). This function previously
+// never touched Supabase's REST API at all, since everything it
+// needed already arrived in the trigger's own payload.
+const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
+const SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+
+// Real notification control (2026-09-03), requested directly: "Real
+// notification toggles." Defaults to wanting the email (true) if the
+// client has never visited Settings and set a preference at all --
+// matching this table's own column default.
+async function clientWantsNotification(email: string, column: string): Promise<boolean> {
+  const res = await fetch(
+    `${SUPABASE_URL}/rest/v1/client_notification_preferences?client_email=eq.${encodeURIComponent(email.toLowerCase())}&select=${column}&limit=1`,
+    { headers: { apikey: SERVICE_ROLE_KEY, Authorization: `Bearer ${SERVICE_ROLE_KEY}` } },
+  );
+  if (!res.ok) return true;
+  const rows = await res.json();
+  if (!rows.length) return true;
+  return rows[0][column] !== false;
+}
 
 function escapeHtml(value: unknown): string {
   const s = value === null || value === undefined ? "" : String(value);
@@ -131,6 +152,10 @@ Deno.serve(async (req: Request) => {
       ? wo.client_name
       : wo.client_email;
     const scheduledLabel = formatScheduledAt(wo.scheduled_at);
+
+    if (!(await clientWantsNotification(wo.client_email, "wants_work_order_emails"))) {
+      return new Response(JSON.stringify({ ok: true, skipped: "client opted out of work order emails" }), { headers: { "Content-Type": "application/json" } });
+    }
 
     const emailRes = await fetch("https://api.resend.com/emails", {
       method: "POST",

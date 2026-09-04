@@ -128,6 +128,9 @@
   .auth-entry:last-child { border-bottom: none; }
   .auth-entry-date { font-size: 12px; color: var(--text-dim); margin-bottom: 4px; }
   .auth-entry-text { font-size: 13px; line-height: 1.5; color: var(--white); }
+  .set-toggle-row { display: flex; align-items: center; gap: 10px; padding: 9px 0; border-bottom: 1px solid var(--border); font-size: 14px; color: var(--white); cursor: pointer; }
+  .set-toggle-row:last-of-type { border-bottom: none; }
+  .set-toggle-row input[type="checkbox"] { width: 18px; height: 18px; flex-shrink: 0; accent-color: var(--orange-light); cursor: pointer; }
   /* Hidden on desktop (2026-09-03), requested directly. Matches the
      same 860px desktop threshold used everywhere else in the portal
      (the body-width breakpoint) so "computer view" means the same
@@ -258,7 +261,11 @@
 
 <div class="set-card">
   <div class="set-card-title">Notifications</div>
-  <div class="set-card-sub">We email you when there's a new invoice or estimate waiting. That's it &mdash; no marketing, no newsletters. If those emails aren't arriving, check your spam folder first, then let us know.</div>
+  <div class="set-card-sub">Transactional emails only &mdash; no marketing, no newsletters. Turn off anything you consider noise.</div>
+  <label class="set-toggle-row"><input type="checkbox" id="notifyInvoiceQuote"> New invoices &amp; estimates</label>
+  <label class="set-toggle-row"><input type="checkbox" id="notifyWorkOrder"> Work scheduled updates</label>
+  <label class="set-toggle-row"><input type="checkbox" id="notifyMessages"> Replies to your messages</label>
+  <div class="set-msg" id="notifyMsg" style="display:none;"></div>
 </div>
 
 <script>
@@ -287,6 +294,52 @@
     el.className = 'set-msg ' + (isError ? 'is-error' : 'is-ok');
     el.style.display = 'block';
   }
+
+  function showNotifyMsg(text, isError) {
+    const el = document.getElementById('notifyMsg');
+    el.textContent = text;
+    el.className = 'set-msg ' + (isError ? 'is-error' : 'is-ok');
+    el.style.display = 'block';
+  }
+
+  // Real notification control (2026-09-03), requested directly: "Real
+  // notification toggles." Defaults every checkbox to checked when no
+  // row exists yet, matching the table's own column default -- a
+  // client who's never touched this setting keeps getting the same
+  // transactional emails they always did.
+  async function loadNotificationPreferences() {
+    const { data: { session } } = await client.auth.getSession();
+    if (!session) return;
+    const { data } = await client
+      .from('client_notification_preferences')
+      .select('wants_invoice_quote_emails,wants_work_order_emails,wants_message_emails')
+      .eq('client_email', session.user.email)
+      .maybeSingle();
+    document.getElementById('notifyInvoiceQuote').checked = data ? data.wants_invoice_quote_emails !== false : true;
+    document.getElementById('notifyWorkOrder').checked = data ? data.wants_work_order_emails !== false : true;
+    document.getElementById('notifyMessages').checked = data ? data.wants_message_emails !== false : true;
+  }
+
+  async function saveNotificationPreference() {
+    const { data: { session } } = await client.auth.getSession();
+    if (!session) { window.location.replace('/portal/login.html'); return; }
+    const { error } = await client.from('client_notification_preferences').upsert({
+      client_email: session.user.email,
+      wants_invoice_quote_emails: document.getElementById('notifyInvoiceQuote').checked,
+      wants_work_order_emails: document.getElementById('notifyWorkOrder').checked,
+      wants_message_emails: document.getElementById('notifyMessages').checked,
+      updated_at: new Date().toISOString(),
+    });
+    if (error) {
+      showNotifyMsg("Couldn't save that just now. Please try again.", true);
+      return;
+    }
+    showNotifyMsg('Saved.', false);
+  }
+
+  ['notifyInvoiceQuote', 'notifyWorkOrder', 'notifyMessages'].forEach(id => {
+    document.getElementById(id).addEventListener('change', saveNotificationPreference);
+  });
 
   // Editable name/phone (2026-09-03), requested directly: "Let them
   // edit phone/name directly" -- a genuinely new concept, not a
@@ -573,6 +626,7 @@
 
     loadSavedCards();
     loadAuthorizations();
+    loadNotificationPreferences();
 
     // Called here rather than only from the beforeinstallprompt
     // listener -- that event never fires on iOS at all, so relying on

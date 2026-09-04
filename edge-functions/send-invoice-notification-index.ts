@@ -57,6 +57,23 @@ async function callerCanManageInvoices(email: string): Promise<boolean> {
   return rows[0].can_manage_invoices === true;
 }
 
+// Real notification control (2026-09-03), requested directly: "Real
+// notification toggles." Defaults to wanting the email (true) if the
+// client has never visited Settings and set a preference at all --
+// matching this table's own column default, so a client who's never
+// touched this setting keeps getting the same transactional emails
+// they always did.
+async function clientWantsNotification(email: string, column: string): Promise<boolean> {
+  const res = await fetch(
+    `${SUPABASE_URL}/rest/v1/client_notification_preferences?client_email=eq.${encodeURIComponent(email.toLowerCase())}&select=${column}&limit=1`,
+    { headers: { apikey: SERVICE_ROLE_KEY, Authorization: `Bearer ${SERVICE_ROLE_KEY}` } },
+  );
+  if (!res.ok) return true;
+  const rows = await res.json();
+  if (!rows.length) return true;
+  return rows[0][column] !== false;
+}
+
 function escapeHtml(value: unknown): string {
   const s = value === null || value === undefined ? "" : String(value);
   return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
@@ -172,6 +189,10 @@ Deno.serve(async (req: Request) => {
     }
 
     const displayName = (typeof client_name === "string" && client_name.trim()) || client_email;
+
+    if (!(await clientWantsNotification(client_email, "wants_invoice_quote_emails"))) {
+      return json({ ok: true, skipped: "client opted out of invoice/quote emails" });
+    }
 
     const emailRes = await fetch("https://api.resend.com/emails", {
       method: "POST",
