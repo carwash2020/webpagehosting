@@ -35,6 +35,19 @@
 // caught by node --check's syntax validation and this project's
 // extensive functional test suite; what this catches is specifically
 // a PAGE referencing something that was never actually given to it.
+//
+// Extended 2026-09-04, found during a full portal audit, to catch a
+// second, related class of scoping bug: a page redeclaring a
+// top-level const/let/function name that a shared file it actually
+// loads already declares. portal/jobs.html and manage-booking.html
+// both had this -- each loaded /business-hours.js (which declares
+// MIN_LEAD_HOURS and others) while ALSO redeclaring the same names in
+// their own inline script. Classic (non-module) <script> tags on one
+// page share a single lexical environment for top-level const/let/
+// class, so this is a genuine SyntaxError ("Identifier has already
+// been declared") the instant a real browser loads the page -- not
+// a milder shadowing, and not something no-undef could ever catch
+// (a redeclared name is, if anything, MORE defined than before).
 
 const fs = require('fs');
 const path = require('path');
@@ -85,14 +98,17 @@ const EXTRA_GLOBALS = ['supabase', 'Stripe', 'gtag', 'dataLayer', 'SUPABASE_URL'
 // to catch.
 const DECL_PATTERN = /^\s*(?:(?:async\s+)?function\s+([a-zA-Z_$][a-zA-Z0-9_$]*)\s*\(|(?:const|let|var)\s+([a-zA-Z_$][a-zA-Z0-9_$]*)\s*=)/;
 
-function extractTopLevelNames(absPath) {
-  const src = fs.readFileSync(absPath, 'utf8');
+function extractTopLevelNamesFromSource(src) {
   const names = new Set();
   for (const line of src.split('\n')) {
     const m = line.match(DECL_PATTERN);
     if (m) names.add(m[1] || m[2]);
   }
   return names;
+}
+
+function extractTopLevelNames(absPath) {
+  return extractTopLevelNamesFromSource(fs.readFileSync(absPath, 'utf8'));
 }
 
 function extractInlineScripts(html) {
@@ -142,6 +158,93 @@ function buildGlobals() {
     for (const name of extractTopLevelNames(abs)) globals[name] = 'readonly';
   }
   return globals;
+}
+
+// Catches a real bug found during a full portal audit (2026-09-04):
+// portal/jobs.html and manage-booking.html each redeclared the same
+// top-level const names (MIN_LEAD_HOURS and friends) that
+// business-hours.js -- a real <script src> they both actually load --
+// already declares. Classic (non-module) <script> tags on one page
+// share a single lexical environment for top-level const/let/class,
+// so this is a genuine SyntaxError ("Identifier has already been
+// declared") the moment a real browser loads the page, not a milder
+// shadowing or a hypothetical drift risk. no-undef alone can never
+// catch this -- a redeclared name is, if anything, MORE defined than
+// before, not less.
+//
+// Deliberately uses NO lint rules at all -- just ESLint's own parser,
+// relying on it to surface a genuine SyntaxError as a fatal parse
+// message. Two earlier versions of this check got this wrong:
+//   1. A loose regex guessing at "is this genuinely top-level"
+//      (matching buildGlobals()'s own leniency, safe there since
+//      being too generous only pads an allowlist) produced hundreds
+//      of false positives -- ordinary function-local variables named
+//      res/row/el/container/data are extremely common across this
+//      codebase, and a text pattern can't tell "inside a function"
+//      from "genuinely top-level."
+//   2. Using ESLint's no-redeclare RULE (real scope analysis, correct
+//      in principle) still produced real false positives: it flags
+//      var redeclared multiple times too, which is legal JS and not
+//      a SyntaxError at all -- just discouraged style. tools/
+//      qrcode-lib.js (a third-party library) redeclares var i/row/
+//      col/mod repeatedly across its own methods, entirely legally,
+//      and no-redeclare flagged every one of those as if it were the
+//      same class of bug.
+// Running with zero rules enabled sidesteps both: var redeclaration
+// produces no message at all this way (confirmed directly against
+// ESLint's own behavior before relying on it), while const/let/class
+// redeclaration is an actual parse failure ESLint always reports
+// regardless of which rules are configured -- exactly the one real
+// distinction this check needs and nothing else.
+//
+// Only checks shared files THIS SPECIFIC page actually loads, not
+// every shared file that exists in the repo -- two shared files that
+// merely coexist in the project but are never loaded together on one
+// page can never conflict in a real browser, so checking that would
+// just be noise for a risk that doesn't exist.
+//
+// SUPABASE_URL/SUPABASE_ANON_KEY are excluded, matching EXTRA_GLOBALS'
+// own established exception above: many pages deliberately keep their
+// own local copy of these two specific credential constants rather
+// than relying on tools/auth.js's copy, a known and tolerated pattern
+// across this project already, not the bug class this check targets.
+const TOLERATED_REDECLARATIONS = new Set(['SUPABASE_URL', 'SUPABASE_ANON_KEY']);
+
+function findSharedScriptRedeclarations(rel, html, inlineCode) {
+  const loadedSharedFiles = SHARED_SCRIPT_FILES.filter((sharedRel) => {
+    // Matches src="/<file>" or src="/<file>?v=...", the only two real
+    // shapes used anywhere in this project -- anchored to a real src=
+    // attribute for the same reason check-consistency.js's own
+    // shared-script regex was fixed to do (2026-09-03): a bare
+    // filename mention in an explanatory comment must never count as
+    // "this page loads it."
+    const escaped = sharedRel.replace(/\./g, '\\.');
+    return new RegExp(`src="/${escaped}(\\?[^"]*)?"`).test(html);
+  });
+  if (!loadedSharedFiles.length) return [];
+
+  const sharedSources = loadedSharedFiles.map((sharedRel) =>
+    fs.readFileSync(path.join(REPO_ROOT, sharedRel), 'utf8')
+  );
+  const combined = [...sharedSources, inlineCode].join('\n;\n');
+
+  const linter = new Linter();
+  const config = {
+    parserOptions: { ecmaVersion: 2021, sourceType: 'script' },
+    env: { es2021: true },
+    rules: {},
+  };
+
+  const messages = linter.verify(combined, config, { filename: rel });
+  return messages
+    .filter((msg) => msg.fatal && /Identifier '([^']+)' has already been declared/.test(msg.message))
+    .filter((msg) => {
+      const name = msg.message.match(/Identifier '([^']+)' has already been declared/)[1];
+      return !TOLERATED_REDECLARATIONS.has(name);
+    })
+    .map((msg) =>
+      `${rel}: ${msg.message} (checked against ${loadedSharedFiles.join(', ')})`
+    );
 }
 
 function main() {
@@ -202,17 +305,30 @@ function main() {
       totalProblems++;
       failures.push(`${rel}:${msg.line}:${msg.column} -- ${msg.message}`);
     }
+
+    for (const problem of findSharedScriptRedeclarations(rel, html, code)) {
+      totalProblems++;
+      failures.push(problem);
+    }
   }
 
   if (totalProblems > 0) {
     console.error(`\nUndefined-variable check FAILED -- ${totalProblems} problem(s):\n`);
     for (const f of failures) console.error('  ' + f);
     console.error(
-      `\nEach of these is a variable referenced in a page's own inline <script> that isn't ` +
-      `actually in scope there -- either a typo, or (the real bug this check exists to catch) a ` +
-      `value that only exists inside a DIFFERENT function and was never passed in or returned. ` +
-      `This exact shape caused a real production incident on 2026-09-03: every single invoice ` +
-      `generation threw an uncaught error for this reason before it was caught and fixed.\n\n` +
+      `\nTwo related classes of scoping bug, both caught the same way (knowing what's ` +
+      `genuinely in scope for a page's own inline <script>, without needing to execute it):\n\n` +
+      `  1. A variable referenced that isn't actually in scope -- either a typo, or (the real bug ` +
+      `this check was originally built for) a value that only exists inside a DIFFERENT function ` +
+      `and was never passed in or returned. This exact shape caused a real production incident on ` +
+      `2026-09-03: every single invoice generation threw an uncaught error for this reason before ` +
+      `it was caught and fixed.\n\n` +
+      `  2. A page redeclaring a name that a shared file it actually loads (via <script src>) ` +
+      `already declares -- classic <script> tags on one page share a single lexical scope for ` +
+      `top-level const/let/class, so this is a real SyntaxError in a real browser, not a milder ` +
+      `shadowing. Found during a full portal audit on 2026-09-04: portal/jobs.html and ` +
+      `manage-booking.html both had this, and it would have broken either page completely on a ` +
+      `real client's next visit.\n\n` +
       `If this is a genuine new shared global (a function/const a script file exports for other ` +
       `pages to use), add that file to SHARED_SCRIPT_FILES in scripts/check-undefined-vars.js.\n`
     );
