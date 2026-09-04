@@ -246,6 +246,37 @@ async function logPosIncomeToWorkspaceSync(description: string, amount: number, 
   });
 }
 
+// Records a signed authorization before a new card ever gets saved
+// (2026-09-03) -- see the 'new_card' branch below for the full
+// reasoning. Stores the EXACT text shown and agreed to at the time,
+// not just a reference to a template, so a later wording change to
+// the template can never retroactively change what a historical
+// authorization actually said.
+//
+// Throws on failure rather than swallowing the error -- the whole
+// point of this function is the dispute-protection record it leaves
+// behind; silently continuing to save a card and charge it without
+// that record ever actually existing would defeat the entire feature
+// while looking, from the caller's side, like it worked.
+async function recordCardAuthorization(clientEmail: string, signerName: string, authorizationText: string, amount: number, description: string, internalAccount: string) {
+  const res = await fetch(`${SUPABASE_URL}/rest/v1/card_authorizations`, {
+    method: "POST",
+    headers: { apikey: SERVICE_ROLE_KEY, Authorization: `Bearer ${SERVICE_ROLE_KEY}`, "Content-Type": "application/json" },
+    body: JSON.stringify([{
+      client_email: clientEmail,
+      signer_name: signerName,
+      authorization_text: authorizationText,
+      context: "pos_new_card",
+      amount,
+      description: description || null,
+      internal_account: internalAccount,
+    }]),
+  });
+  if (!res.ok) {
+    throw new Error(`Could not save the signed authorization: ${(await res.text()).slice(0, 300)}`);
+  }
+}
+
 Deno.serve(async (req: Request) => {
   if (req.method === "OPTIONS") return new Response(null, { status: 200, headers: CORS_HEADERS });
 
@@ -268,7 +299,7 @@ Deno.serve(async (req: Request) => {
       return json({ ok: false, error: "STRIPE_POS_SECRET_KEY secret is not set." }, 500);
     }
 
-    const { mode, client_email, amount, description } = await req.json();
+    const { mode, client_email, amount, description, signer_name } = await req.json();
 
     if (typeof client_email !== "string" || !client_email.includes("@")) {
       return json({ ok: false, error: "A real client email is required." }, 400);
@@ -332,6 +363,25 @@ Deno.serve(async (req: Request) => {
 
     // mode === 'new_card' (or unrecognized -- defaults to the safest,
     // most general path rather than silently doing nothing)
+    //
+    // Signature required here specifically (2026-09-03), requested
+    // directly: "we also need to collect signitures when we collect
+    // and create accounts within stripe incase we ever have to
+    // handle a dispute." This is the exact moment a new card gets
+    // saved to a Stripe Customer for future off-session use -- and
+    // for POS specifically, this may be a card Connor is entering on
+    // the client's own behalf rather than the client entering it
+    // themselves, which carries materially higher dispute risk than
+    // an invoice a client pays on their own device. charge_saved
+    // deliberately does NOT require a fresh signature every time --
+    // that would defeat its one-tap purpose -- it relies on the
+    // authorization already captured here when the card was first saved.
+    if (typeof signer_name !== "string" || !signer_name.trim()) {
+      return json({ ok: false, error: "A signed name is required before saving a new card." }, 400);
+    }
+    const authorizationText = `I, ${signer_name.trim()}, authorize Triple H Enterprises to charge $${amount.toFixed(2)} to the card provided for "${description || "a POS sale"}", and to securely save this card on file (via Stripe) for future charges I separately approve.`;
+    await recordCardAuthorization(normalizedEmail, signer_name.trim(), authorizationText, amount, description, claims.email);
+
     const customerId = await getOrCreateStripeCustomer(normalizedEmail);
     const piRes = await fetch("https://api.stripe.com/v1/payment_intents", {
       method: "POST",
