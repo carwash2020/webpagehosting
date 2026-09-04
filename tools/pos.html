@@ -84,6 +84,14 @@
   .pos-error { color: #ff8a80; font-size: 13.5px; margin-top: 10px; }
   .pos-success { text-align: center; padding: 20px 0; color: #4caf78; font-size: 16px; font-weight: 600; }
   .pos-checking { color: var(--text-dim); font-size: 13px; text-align: center; padding: 8px 0; }
+  .pos-auth-box {
+    background: var(--orange-tint-soft); border: 1px solid var(--orange-tint-border); border-radius: 8px;
+    padding: 14px 16px;
+  }
+  .pos-auth-text { font-size: 13px; line-height: 1.5; color: var(--white); margin: 0 0 12px; }
+  .pos-auth-text span { font-weight: 700; border-bottom: 1px dashed var(--orange-light); }
+  .pos-auth-label { display: block; font-size: 12px; font-weight: 600; color: var(--text-dim); margin-bottom: 6px; }
+  #posSignerName { width: 100%; box-sizing: border-box; padding: 10px 12px; background: var(--bg-panel); border: 1px solid var(--border); border-radius: 8px; color: var(--white); font-size: 15px; font-family: inherit; }
 </style>
 </head>
 <body>
@@ -232,10 +240,43 @@
   }
 
   function renderNewCardOption() {
+    // Signature capture (2026-09-03), requested directly: "we also
+    // need to collect signitures when we collect and create accounts
+    // within stripe incase we ever have to handle a dispute." This is
+    // exactly the moment a new card gets saved for future off-session
+    // use -- and here, Connor may be the one typing the client's card
+    // in rather than the client typing it themselves, which carries
+    // real dispute risk a client-entered online payment doesn't.
     const area = document.getElementById('posChargeArea');
     area.innerHTML =
-      '<button class="btn blue" id="posNewCardBtn" style="width:100%; justify-content:center;" onclick="startNewCardCharge()">Enter Card &amp; Charge</button>';
+      '<div class="pos-auth-box">' +
+      '<p class="pos-auth-text">I, <span id="posSignerNamePreview">_____________</span>, authorize Triple H Enterprises to charge <span id="posAuthAmountPreview"></span> to the card provided for "<span id="posAuthDescPreview"></span>", and to securely save this card on file for future charges I separately approve.</p>' +
+      '<label for="posSignerName" class="pos-auth-label">Client\'s full legal name (typed as signature)</label>' +
+      '<input type="text" id="posSignerName" placeholder="Full name" oninput="document.getElementById(\'posSignerNamePreview\').textContent = this.value.trim() || \'_____________\';">' +
+      '</div>' +
+      '<button class="btn blue" id="posNewCardBtn" style="width:100%; justify-content:center; margin-top:12px;" onclick="startNewCardCharge()">Enter Card &amp; Charge</button>';
+    updateAuthPreview();
   }
+
+  // Keeps the authorization preview text in sync with the amount and
+  // description fields for as long as the signature box is showing --
+  // real correctness fix, not cosmetic: without this, editing the
+  // amount AFTER the preview first rendered would let the client sign
+  // for one figure while a different one actually gets charged and
+  // recorded, which would completely undermine the point of capturing
+  // this in the first place. Called on input from both fields
+  // (wired below) and once immediately when the box is first shown.
+  function updateAuthPreview() {
+    const amountEl = document.getElementById('posAuthAmountPreview');
+    const descEl = document.getElementById('posAuthDescPreview');
+    if (!amountEl || !descEl) return; // signature box isn't showing right now
+    const amount = parseFloat(document.getElementById('posAmount').value) || 0;
+    const description = document.getElementById('posDescription').value.trim() || 'a POS sale';
+    amountEl.textContent = '$' + amount.toFixed(2);
+    descEl.textContent = description;
+  }
+  document.getElementById('posAmount').addEventListener('input', updateAuthPreview);
+  document.getElementById('posDescription').addEventListener('input', updateAuthPreview);
 
   // This page's own tiny escaping helper -- POS loads no /tools/
   // shared script that provides one under this exact page's isolation
@@ -292,6 +333,11 @@
   async function startNewCardCharge() {
     const fields = readAmountAndDescription();
     if (!fields) return;
+    const signerName = (document.getElementById('posSignerName')?.value || '').trim();
+    if (!signerName) {
+      showError("The client's full name is required before entering a card.");
+      return;
+    }
     showError('');
     const btn = document.getElementById('posNewCardBtn');
     btn.disabled = true;
@@ -305,7 +351,7 @@
           'apikey': SUPABASE_ANON_KEY,
           'Authorization': 'Bearer ' + getAuthToken(),
         },
-        body: JSON.stringify({ mode: 'new_card', client_email: fields.email, amount: fields.amount, description: fields.description }),
+        body: JSON.stringify({ mode: 'new_card', client_email: fields.email, amount: fields.amount, description: fields.description, signer_name: signerName }),
       });
       const result = await res.json();
       if (!result.ok) {
