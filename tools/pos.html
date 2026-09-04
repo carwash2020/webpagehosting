@@ -153,9 +153,21 @@
   document.getElementById('posClientEmail').addEventListener('input', () => {
     clearTimeout(checkTimer);
     const email = document.getElementById('posClientEmail').value.trim();
+    const area = document.getElementById('posChargeArea');
+    savedCardInfo = null;
+    if (!email) {
+      // The natural starting state -- nothing typed yet, nothing to
+      // say about it.
+      area.innerHTML = '';
+      return;
+    }
     if (!email.includes('@')) {
-      document.getElementById('posChargeArea').innerHTML = '';
-      savedCardInfo = null;
+      // Real bug found and fixed (2026-09-03), reported directly with
+      // a screenshot: a typo'd email ("testemajl.gmail.com" -- no @)
+      // silently cleared the charge area with zero explanation. There
+      // was text on screen and a blank space below it with no hint
+      // why nothing was happening.
+      area.innerHTML = '<div class="pos-checking">That doesn\'t look like a complete email yet.</div>';
       return;
     }
     checkTimer = setTimeout(() => checkForSavedCard(email), 500);
