@@ -32,6 +32,74 @@ test('the checker passes clean against the real, current codebase', () => {
   assert.match(result.stdout, /Undefined-variable check passed/);
 });
 
+test('a page redeclaring a const that a shared file it actually loads already declares is caught as a real SyntaxError', () => {
+  // Regression test for the actual bug found during a full portal
+  // audit (2026-09-04): portal/jobs.html and manage-booking.html each
+  // redeclared MIN_LEAD_HOURS at their own top level despite loading
+  // /business-hours.js, which already declares it -- a genuine
+  // SyntaxError in a real browser, not a hypothetical drift risk.
+  // no-undef alone could never catch this; this is the extension
+  // that closes that gap.
+  const targetPage = path.join(REPO_ROOT, 'portal', 'jobs.html');
+  const original = fs.readFileSync(targetPage, 'utf8');
+  try {
+    const injected = original.replace(
+      'const DEFAULT_VISIT_MINUTES = 120;',
+      'const DEFAULT_VISIT_MINUTES = 120;\n  const MIN_LEAD_HOURS = 2;',
+    );
+    assert.notEqual(injected, original, 'expected to actually inject the redeclaration');
+    fs.writeFileSync(targetPage, injected);
+    const result = runChecker();
+    assert.notEqual(result.exitCode, 0, 'a shared-file redeclaration should fail the check');
+    assert.match(result.stderr, /portal\/jobs\.html.*Identifier 'MIN_LEAD_HOURS' has already been declared/);
+    assert.match(result.stderr, /checked against business-hours\.js/);
+  } finally {
+    fs.writeFileSync(targetPage, original);
+  }
+});
+
+test('var redeclared multiple times within a shared file is never flagged -- it is legal JS, not a SyntaxError, unlike const/let', () => {
+  // Regression test for a real false-positive found while building
+  // this: an earlier version of this exact check used ESLint's
+  // no-redeclare RULE (real scope analysis, correct in principle),
+  // which also flags var redeclared multiple times -- legal JS, just
+  // discouraged style, not an actual parse failure. tools/
+  // qrcode-lib.js (a third-party library) redeclares var i/row/col/
+  // mod repeatedly across its own methods entirely legally, and that
+  // version flagged every one of them as if it were the same bug
+  // class as a real const/let conflict. The fix runs with zero lint
+  // rules enabled, relying only on ESLint's own parser to surface a
+  // genuine SyntaxError -- var redeclaration produces no message
+  // that way, confirmed directly against ESLint's own behavior.
+  const result = runChecker();
+  assert.equal(result.exitCode, 0);
+  assert.doesNotMatch(result.stdout + result.stderr, /qrcode-lib/);
+});
+
+test('SUPABASE_URL/SUPABASE_ANON_KEY redeclaration is tolerated, matching the same established exception EXTRA_GLOBALS already documents', () => {
+  // Many pages deliberately keep their own local copy of these two
+  // specific credential constants rather than relying on
+  // tools/auth.js's copy -- a known, widespread, and already-tolerated
+  // pattern in this project (see EXTRA_GLOBALS' own comment), not the
+  // bug class this check targets. Confirmed directly rather than
+  // assumed: tools/pos.html genuinely redeclares SUPABASE_URL on top
+  // of tools/auth.js's copy right now, and the checker must still
+  // pass clean.
+  const posHtml = fs.readFileSync(path.join(REPO_ROOT, 'tools', 'pos.html'), 'utf8');
+  const authJs = fs.readFileSync(path.join(REPO_ROOT, 'tools', 'auth.js'), 'utf8');
+  assert.match(posHtml, /const SUPABASE_URL\s*=/, 'expected tools/pos.html to genuinely redeclare SUPABASE_URL for this test to be meaningful');
+  assert.match(authJs, /const SUPABASE_URL\s*=/, 'expected tools/auth.js to genuinely declare SUPABASE_URL for this test to be meaningful');
+  const result = runChecker();
+  assert.equal(result.exitCode, 0);
+  assert.doesNotMatch(result.stdout + result.stderr, /pos\.html.*SUPABASE_URL/);
+});
+
+test('a page loading no shared scripts at all is never checked for redeclarations against anything', () => {
+  const fnMatch = fs.readFileSync(SCRIPT_PATH, 'utf8').match(/function findSharedScriptRedeclarations\(rel, html, inlineCode\)[\s\S]*?\n\}\n/);
+  assert.ok(fnMatch, 'expected to isolate findSharedScriptRedeclarations()');
+  assert.match(fnMatch[0], /if \(!loadedSharedFiles\.length\) return \[\];/);
+});
+
 test('an uppercase SCRIPT tag is scanned the same as a lowercase one', () => {
   // Real bug flagged by CodeQL ("Bad HTML filtering regexp", 2026-09-03):
   // the regex extracting inline script blocks was case-sensitive, so an
