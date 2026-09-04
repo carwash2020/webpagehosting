@@ -217,3 +217,55 @@ test('every shared script file the checker relies on for its globals list actual
     assert.ok(fs.existsSync(path.join(REPO_ROOT, rel)), `${rel} should exist`);
   }
 });
+
+test('two shared files that conflict with each other are caught even when no page currently loads both', () => {
+  // Regression test for the extension requested directly: "we want
+  // to make sure we are catching every bug, every error, every
+  // glitch. before it happens." The per-page check alone only ever
+  // sees whatever combination of shared files a REAL page happens to
+  // load today -- a conflict between two shared files that simply
+  // aren't loaded together by any page yet would pass clean there,
+  // right up until the moment a future page (or an added script tag
+  // on an existing one) combines them, breaking with no warning.
+  // Confirmed directly (not assumed) that these two files are not
+  // currently loaded together by any page, so this genuinely
+  // exercises the new, page-independent check rather than the
+  // existing per-page one.
+  const qrcodePath = path.join(REPO_ROOT, 'tools', 'qrcode-lib.js');
+  const original = fs.readFileSync(qrcodePath, 'utf8');
+  const pushNotifSrc = fs.readFileSync(path.join(REPO_ROOT, 'tools', 'push-notifications.js'), 'utf8');
+  const conflictingName = pushNotifSrc.match(/^const ([A-Za-z_$][A-Za-z0-9_$]*)\s*=/m)[1];
+  assert.ok(conflictingName, 'expected to find a real top-level const in push-notifications.js to conflict with');
+
+  const allHtmlFiles = [
+    ...fs.readdirSync(REPO_ROOT).filter(f => f.endsWith('.html')).map(f => path.join(REPO_ROOT, f)),
+    ...fs.readdirSync(path.join(REPO_ROOT, 'tools')).filter(f => f.endsWith('.html')).map(f => path.join(REPO_ROOT, 'tools', f)),
+    ...fs.readdirSync(path.join(REPO_ROOT, 'portal')).filter(f => f.endsWith('.html')).map(f => path.join(REPO_ROOT, 'portal', f)),
+  ];
+  const noPageLoadsBoth = allHtmlFiles.every((p) => {
+    const src = fs.readFileSync(p, 'utf8');
+    return !(src.includes('qrcode-lib.js') && src.includes('push-notifications.js'));
+  });
+  assert.ok(noPageLoadsBoth, 'expected these two files to genuinely not be combined by any page, so this test exercises the new check, not the existing per-page one');
+
+  try {
+    fs.writeFileSync(qrcodePath, `const ${conflictingName} = "test";\n` + original);
+    const result = runChecker();
+    assert.notEqual(result.exitCode, 0, 'a conflict between two shared files should fail the check even with no page combining them');
+    assert.match(result.stderr, new RegExp(`tools/qrcode-lib\\.js \\+ tools/push-notifications\\.js.*Identifier '${conflictingName}' has already been declared`));
+  } finally {
+    fs.writeFileSync(qrcodePath, original);
+  }
+});
+
+test('the pairwise check runs once per pair, not once per page -- confirmed by its own function existing separately from the per-page loop', () => {
+  const src = fs.readFileSync(SCRIPT_PATH, 'utf8');
+  const fnMatch = src.match(/function findAllSharedFilePairConflicts\(\)[\s\S]*?\n\}\n/);
+  assert.ok(fnMatch, 'expected to isolate findAllSharedFilePairConflicts()');
+  assert.match(fnMatch[0], /for \(let i = 0; i < SHARED_SCRIPT_FILES\.length; i\+\+\)/);
+  assert.match(fnMatch[0], /for \(let j = i \+ 1; j < SHARED_SCRIPT_FILES\.length; j\+\+\)/);
+  // Called once, outside the per-page for-loop, not inside it.
+  const mainFn = src.match(/function main\(\)[\s\S]*?\n  for \(const rel of pages\) \{/);
+  assert.ok(mainFn, 'expected to isolate main() up through the start of the per-page loop');
+  assert.match(mainFn[0], /findAllSharedFilePairConflicts\(\)/);
+});

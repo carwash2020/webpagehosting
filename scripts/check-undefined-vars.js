@@ -255,6 +255,59 @@ function findSharedScriptRedeclarations(rel, html, inlineCode) {
     );
 }
 
+// Extends the check above to a second, related risk (2026-09-04),
+// requested directly: "we want to make sure we are catching every
+// bug, every error, every glitch. before it happens."
+// findSharedScriptRedeclarations() above only checks a shared file
+// against the ONE PAGE that loads it -- so two shared files that
+// conflict with EACH OTHER, but happen not to be loaded together by
+// any page TODAY, would pass clean. That's a real, standing landmine:
+// the moment anyone adds a second shared-script tag to an existing
+// page, or builds a new page that loads both, it breaks immediately
+// with no warning at build time -- exactly the shape of bug this
+// tooling exists to catch before it ships, not after.
+//
+// Checked once per run, not once per page: every pair of files in
+// SHARED_SCRIPT_FILES is combined and parsed together, regardless of
+// whether any current page actually loads both. Pairs are
+// mathematically sufficient here, not just convenient -- a
+// redeclaration conflict is fundamentally about two declarations of
+// the same name colliding, so if no pair conflicts, no combination of
+// any size can conflict either.
+function findAllSharedFilePairConflicts() {
+  const problems = [];
+  const linter = new Linter();
+  const config = {
+    parserOptions: { ecmaVersion: 2021, sourceType: 'script' },
+    env: { es2021: true },
+    rules: {},
+  };
+
+  for (let i = 0; i < SHARED_SCRIPT_FILES.length; i++) {
+    for (let j = i + 1; j < SHARED_SCRIPT_FILES.length; j++) {
+      const relA = SHARED_SCRIPT_FILES[i];
+      const relB = SHARED_SCRIPT_FILES[j];
+      const combined = [
+        fs.readFileSync(path.join(REPO_ROOT, relA), 'utf8'),
+        fs.readFileSync(path.join(REPO_ROOT, relB), 'utf8'),
+      ].join('\n;\n');
+
+      const messages = linter.verify(combined, config, { filename: `${relA} + ${relB}` });
+      for (const msg of messages) {
+        if (!msg.fatal || !/Identifier '([^']+)' has already been declared/.test(msg.message)) continue;
+        const name = msg.message.match(/Identifier '([^']+)' has already been declared/)[1];
+        if (TOLERATED_REDECLARATIONS.has(name)) continue;
+        problems.push(
+          `${relA} + ${relB}: ${msg.message} -- these two shared files conflict with each other. ` +
+          `No page may currently load both, but the instant one does (or a third file bridges them), ` +
+          `this becomes a real SyntaxError with no warning otherwise.`
+        );
+      }
+    }
+  }
+  return problems;
+}
+
 function main() {
   const globals = buildGlobals();
   const linter = new Linter();
@@ -294,6 +347,11 @@ function main() {
   let totalProblems = 0;
   const failures = [];
 
+  for (const problem of findAllSharedFilePairConflicts()) {
+    totalProblems++;
+    failures.push(problem);
+  }
+
   for (const rel of pages) {
     const abs = path.join(REPO_ROOT, rel);
     const html = fs.readFileSync(abs, 'utf8');
@@ -324,8 +382,8 @@ function main() {
     console.error(`\nUndefined-variable check FAILED -- ${totalProblems} problem(s):\n`);
     for (const f of failures) console.error('  ' + f);
     console.error(
-      `\nTwo related classes of scoping bug, both caught the same way (knowing what's ` +
-      `genuinely in scope for a page's own inline <script>, without needing to execute it):\n\n` +
+      `\nThree related classes of scoping bug, all caught the same way (knowing what's ` +
+      `genuinely in scope, without needing to execute anything):\n\n` +
       `  1. A variable referenced that isn't actually in scope -- either a typo, or (the real bug ` +
       `this check was originally built for) a value that only exists inside a DIFFERENT function ` +
       `and was never passed in or returned. This exact shape caused a real production incident on ` +
@@ -337,6 +395,9 @@ function main() {
       `shadowing. Found during a full portal audit on 2026-09-04: portal/jobs.html and ` +
       `manage-booking.html both had this, and it would have broken either page completely on a ` +
       `real client's next visit.\n\n` +
+      `  3. Two shared files that conflict with EACH OTHER, independent of any page -- checked ` +
+      `once across every pair in SHARED_SCRIPT_FILES regardless of current usage, so a landmine ` +
+      `like this is caught before any page ever combines them, not after.\n\n` +
       `If this is a genuine new shared global (a function/const a script file exports for other ` +
       `pages to use), add that file to SHARED_SCRIPT_FILES in scripts/check-undefined-vars.js.\n`
     );
