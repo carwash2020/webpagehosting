@@ -45,6 +45,19 @@ test('create-pos-charge is internal-only, using the same "has any role at all" g
   assert.match(POS_CHARGE, /if \(!\(await callerIsInternalAccount\(claims\.email\)\)\)/);
 });
 
+test('POS reads its own dedicated Stripe secret, not the shared one every other Stripe function uses', () => {
+  // Requested directly: "Can i create a new secret key for the POS
+  // system to keep everything clean within stripe? One key one
+  // function." A dedicated Stripe RESTRICTED key, scoped to only
+  // Customers:Write, PaymentMethods:Read, and PaymentIntents:Write,
+  // limits what a leaked or compromised POS key could ever do to
+  // exactly what this one function needs -- nothing else in the
+  // Stripe account.
+  assert.match(POS_CHARGE, /Deno\.env\.get\("STRIPE_POS_SECRET_KEY"\)/);
+  assert.doesNotMatch(POS_CHARGE, /Deno\.env\.get\("STRIPE_SECRET_KEY"\)/,
+    'POS must not fall back to reading the shared secret name');
+});
+
 // ---- create-pos-charge: the three modes ----
 
 test('"check" mode never creates a Stripe Customer, only looks up an existing one', () => {

@@ -36,7 +36,19 @@
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-const STRIPE_SECRET_KEY = Deno.env.get("STRIPE_SECRET_KEY");
+// Reads its own dedicated secret rather than the shared
+// STRIPE_SECRET_KEY every other Stripe-touching function in this
+// project uses (2026-09-03), requested directly: "Can i create a new
+// secret key for the POS system to keep everything clean within
+// stripe? One key one function." Set STRIPE_POS_SECRET_KEY in
+// Supabase to a Stripe RESTRICTED key (not the full account secret
+// key) scoped to exactly what this function calls and nothing else:
+//   Customers: Write
+//   PaymentMethods: Read
+//   PaymentIntents: Write
+// No other resource needs any access at all for this function to
+// work -- Charges, Invoices, Subscriptions, etc. are all unused here.
+const STRIPE_SECRET_KEY = Deno.env.get("STRIPE_POS_SECRET_KEY");
 const RESEND_API_KEY = Deno.env.get("RESEND_API_KEY") || "";
 const LEAD_EMAIL_FROM = Deno.env.get("LEAD_EMAIL_FROM") || "";
 const LOGO_URL = "https://www.triplehenterprisesllc.biz/images/logo-signature-email.png";
@@ -253,7 +265,7 @@ Deno.serve(async (req: Request) => {
       return json({ ok: false, error: "This account isn't recognized." }, 403);
     }
     if (!STRIPE_SECRET_KEY) {
-      return json({ ok: false, error: "STRIPE_SECRET_KEY secret is not set." }, 500);
+      return json({ ok: false, error: "STRIPE_POS_SECRET_KEY secret is not set." }, 500);
     }
 
     const { mode, client_email, amount, description } = await req.json();
