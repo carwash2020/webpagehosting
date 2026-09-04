@@ -218,7 +218,15 @@ function findSharedScriptRedeclarations(rel, html, inlineCode) {
     // shared-script regex was fixed to do (2026-09-03): a bare
     // filename mention in an explanatory comment must never count as
     // "this page loads it."
-    const escaped = sharedRel.replace(/\./g, '\\.');
+    //
+    // Escapes every regex metacharacter, not just the dot (flagged by
+    // CodeQL, 2026-09-04): SHARED_SCRIPT_FILES is a hardcoded,
+    // developer-controlled list with no real injection risk today,
+    // but an escape helper that only handles one character is
+    // genuinely incomplete regardless -- a future entry containing
+    // any other special character (backslash included) would have
+    // built a subtly wrong or broken pattern.
+    const escaped = sharedRel.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
     return new RegExp(`src="/${escaped}(\\?[^"]*)?"`).test(html);
   });
   if (!loadedSharedFiles.length) return [];
