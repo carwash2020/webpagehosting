@@ -5,23 +5,45 @@
 // save cards on both invoice payments and POS, a client had no way
 // to even know one was on file, let alone remove it.
 //
-// Two modes:
-//   'list'   -- returns this caller's saved card(s) (brand, last4,
-//               payment method id). Looks up the caller's OWN Stripe
-//               Customer via their verified session email, never a
-//               client-supplied email or customer id.
-//   'remove' -- detaches a specific payment method. Before detaching,
-//               retrieves the payment method from Stripe and confirms
-//               its own `customer` field matches the caller's real
-//               Stripe Customer id -- a client must never be able to
-//               detach another client's card just by guessing or
-//               supplying an arbitrary payment_method_id.
+// Extended 2026-09-04, requested directly: "can we add a way for
+// them to update their saved card info from the settings?" Stripe
+// payment methods are immutable -- there is no way to edit an
+// existing card's number or expiration in place, only add a new one
+// (and, separately, remove an old one -- already supported below).
+// "Update" in practice means "add a replacement," which is what the
+// new 'create_setup_intent' mode below actually does.
+//
+// Three modes:
+//   'list'    -- returns this caller's saved card(s) (brand, last4,
+//                payment method id). Looks up the caller's OWN Stripe
+//                Customer via their verified session email, never a
+//                client-supplied email or customer id.
+//   'remove'  -- detaches a specific payment method. Before
+//                detaching, retrieves the payment method from Stripe
+//                and confirms its own `customer` field matches the
+//                caller's real Stripe Customer id -- a client must
+//                never be able to detach another client's card just
+//                by guessing or supplying an arbitrary
+//                payment_method_id.
+//   'create_setup_intent' -- creates (or reuses) a Stripe Customer
+//                and a real SetupIntent for it, returning a
+//                client_secret for Stripe Elements to collect and
+//                confirm a new card client-side. A SetupIntent, not a
+//                PaymentIntent -- this never charges anything, it
+//                only saves a payment method for later off-session
+//                use. Same dispute-protection signature requirement
+//                as every other place a new card gets saved
+//                (create-payment-intent, create-bulk-payment-intent,
+//                create-pos-charge) -- see recordCardAuthorization()
+//                below.
 //
 // Uses its own dedicated Stripe secret (STRIPE_CLIENT_CARDS_SECRET_KEY),
 // matching the "one key one function" practice already established
-// for POS. Scoped to exactly: PaymentMethods Read + Write. No other
-// resource needs any access at all -- this function never creates a
-// Customer, never touches a charge, never reads an invoice.
+// for POS. Originally scoped to PaymentMethods Read + Write only;
+// the new create_setup_intent mode needs this key's Stripe-side
+// permissions WIDENED to also include Customers: Write and
+// SetupIntents: Write -- every other resource still needs no access
+// at all (this function never touches a charge or reads an invoice).
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
@@ -54,6 +76,58 @@ async function findExistingStripeCustomerId(email: string): Promise<string | nul
   return rows.length ? rows[0].stripe_customer_id : null;
 }
 
+// Added 2026-09-04 for create_setup_intent -- this function
+// previously only ever looked up an EXISTING customer (list/remove
+// both only make sense for a client who already has one), never
+// created one. Identical to create-payment-intent's own copy -- see
+// that function's header comment for why this is duplicated rather
+// than imported (no shared-module system across separately-deployed
+// Edge Functions).
+async function getOrCreateStripeCustomer(email: string): Promise<string> {
+  const existing = await findExistingStripeCustomerId(email);
+  if (existing) return existing;
+  const customerRes = await fetch("https://api.stripe.com/v1/customers", {
+    method: "POST",
+    headers: { Authorization: `Bearer ${STRIPE_SECRET_KEY}`, "Content-Type": "application/x-www-form-urlencoded" },
+    body: new URLSearchParams({ email }),
+  });
+  if (!customerRes.ok) {
+    throw new Error(`Stripe customer creation failed: ${(await customerRes.text()).slice(0, 300)}`);
+  }
+  const customer = await customerRes.json();
+  await fetch(`${SUPABASE_URL}/rest/v1/stripe_customers?on_conflict=client_email`, {
+    method: "POST",
+    headers: {
+      apikey: SERVICE_ROLE_KEY, Authorization: `Bearer ${SERVICE_ROLE_KEY}`,
+      "Content-Type": "application/json", Prefer: "resolution=ignore-duplicates",
+    },
+    body: JSON.stringify([{ client_email: email, stripe_customer_id: customer.id }]),
+  });
+  return customer.id;
+}
+
+// Same dispute-protection reasoning as every other place a new card
+// gets saved (create-payment-intent, create-bulk-payment-intent,
+// create-pos-charge) -- see any of those for the full background.
+// context is "settings_add_card" here specifically: this save isn't
+// a side effect of a payment or a POS sale, it's a deliberate,
+// dedicated action the client takes from their own Settings page.
+async function recordCardAuthorization(clientEmail: string, signerName: string, authorizationText: string) {
+  const res = await fetch(`${SUPABASE_URL}/rest/v1/card_authorizations`, {
+    method: "POST",
+    headers: { apikey: SERVICE_ROLE_KEY, Authorization: `Bearer ${SERVICE_ROLE_KEY}`, "Content-Type": "application/json" },
+    body: JSON.stringify([{
+      client_email: clientEmail,
+      signer_name: signerName,
+      authorization_text: authorizationText,
+      context: "settings_add_card",
+    }]),
+  });
+  if (!res.ok) {
+    throw new Error(`Could not save the signed authorization: ${(await res.text()).slice(0, 300)}`);
+  }
+}
+
 Deno.serve(async (req: Request) => {
   if (req.method === "OPTIONS") return new Response(null, { status: 200, headers: CORS_HEADERS });
 
@@ -79,7 +153,7 @@ Deno.serve(async (req: Request) => {
       return json({ ok: false, error: "STRIPE_CLIENT_CARDS_SECRET_KEY secret is not set." }, 500);
     }
 
-    const { mode, payment_method_id } = await req.json();
+    const { mode, payment_method_id, signer_name } = await req.json();
     const customerId = await findExistingStripeCustomerId(claims.email.toLowerCase());
 
     if (mode === "list") {
@@ -126,6 +200,35 @@ Deno.serve(async (req: Request) => {
         return json({ ok: false, error: `Stripe error: ${errBody.slice(0, 300)}` }, 502);
       }
       return json({ ok: true, removed: true });
+    }
+
+    if (mode === "create_setup_intent") {
+      // Same dispute-protection requirement as every other place a
+      // new card gets saved -- see recordCardAuthorization()'s own
+      // comment for the reasoning. No amount here (a SetupIntent
+      // never charges anything), so the authorization text says so
+      // plainly rather than implying a charge that isn't happening.
+      if (typeof signer_name !== "string" || !signer_name.trim()) {
+        return json({ ok: false, needs_signature: true, error: "A signed name is required before adding a new card." }, 400);
+      }
+      const authorizationText = `I, ${signer_name.trim()}, authorize Triple H Enterprises to securely save this card on file (via Stripe) for future charges I separately approve.`;
+      await recordCardAuthorization(claims.email, signer_name.trim(), authorizationText);
+
+      const setupCustomerId = customerId || await getOrCreateStripeCustomer(claims.email.toLowerCase());
+      const setupRes = await fetch("https://api.stripe.com/v1/setup_intents", {
+        method: "POST",
+        headers: { Authorization: `Bearer ${STRIPE_SECRET_KEY}`, "Content-Type": "application/x-www-form-urlencoded" },
+        body: new URLSearchParams({
+          customer: setupCustomerId,
+          "automatic_payment_methods[enabled]": "true",
+        }),
+      });
+      if (!setupRes.ok) {
+        const errBody = await setupRes.text();
+        return json({ ok: false, error: `Stripe error: ${errBody.slice(0, 300)}` }, 502);
+      }
+      const setupIntent = await setupRes.json();
+      return json({ ok: true, client_secret: setupIntent.client_secret });
     }
 
     return json({ ok: false, error: "Unknown mode." }, 400);
