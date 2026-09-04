@@ -105,18 +105,19 @@ function extractInlineScripts(html) {
   // meaningless "Unexpected token" error, not an undefined-variable
   // finding this checker actually cares about.
   const blocks = [];
-  // Case-insensitive AND tolerant of whitespace before the closing >
-  // (2026-09-03, both flagged by CodeQL as "Bad HTML filtering
-  // regexp", in two separate passes): browsers treat <SCRIPT> the
-  // same as <script>, and </script > (with a space before the >) the
-  // same as </script> -- neither case-sensitivity nor the exact
-  // closing bracket position changes what a real browser executes,
-  // but this regex previously required both to match exactly. Either
-  // gap would silently skip this checker's own coverage entirely on
-  // real, valid HTML, exactly what a security-scanning tool shouldn't
-  // have in itself. The opening tag already tolerated internal
-  // whitespace via [^>]* -- only the closing tag needed the same fix.
-  const re = /<script([^>]*)>([\s\S]*?)<\/script\s*>/gi;
+  // Case-insensitive AND tolerant of anything up to the closing >
+  // (2026-09-03, three CodeQL "Bad HTML filtering regexp" passes on
+  // this one regex): browsers treat <SCRIPT> the same as <script>,
+  // and per the real HTML5 end-tag parsing rule, </script followed by
+  // ANYTHING up to the next > -- whitespace, a stray attribute-looking
+  // token, garbage -- still closes the script element. A narrower
+  // pattern (first just case-insensitive, then tolerating only plain
+  // whitespace) kept missing further real, valid-per-spec variations.
+  // [^>]* is the actual correct rule, not an incremental patch on top
+  // of it -- and it's the exact same pattern the opening tag already
+  // used correctly from the start (<script([^>]*)>), just applied to
+  // the closing tag too.
+  const re = /<script([^>]*)>([\s\S]*?)<\/script[^>]*>/gi;
   let m;
   while ((m = re.exec(html))) {
     const attrs = m[1];
