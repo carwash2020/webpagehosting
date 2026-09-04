@@ -1,8 +1,9 @@
 # Client Portal: architecture, decisions, and what's left
 
 Everything about the client-facing portal at `/portal/`, built
-2026-08-31 and extended 2026-09-01. Separate from `/tools/` (the
-internal team suite) in almost every way that matters, deliberately.
+2026-08-31 and substantially extended through 2026-09-04. Separate
+from `/tools/` (the internal team suite) in almost every way that
+matters, deliberately.
 
 For general project orientation start at `docs/GETTING-STARTED.md`.
 For the backlog and settled decisions across the whole project, see
@@ -10,13 +11,20 @@ For the backlog and settled decisions across the whole project, see
 
 ## What it is
 
-Three pages, letting a client sign in to view and pay their invoices:
+Eight pages, covering a client's entire relationship with the
+business -- invoices, quotes, job history, work requests, and account
+settings, not just invoice payment:
 
 | Page | Purpose | Indexed? |
 |---|---|---|
 | `portal/login.html` | Email + password sign in, plus forgot-password | Yes, on purpose |
 | `portal/set-password.html` | Handles BOTH invite-acceptance and password-reset | No |
+| `portal/home.html` | Landing page after sign-in -- summary cards + a "Needs Your Attention" section (unpaid invoices, pending quotes, open requests, upcoming scheduled appointments) | No |
 | `portal/dashboard.html` | Invoice list, split Outstanding/Paid, with Stripe payment | No |
+| `portal/quotes.html` | Quote review, questions, approval, and self-scheduling | No |
+| `portal/jobs.html` | Job history, warranty overview, check-up reminders, downloadable receipts | No |
+| `portal/work-orders.html` | Request Work form (title/description/urgency/photos/preferred slot) + two-way messaging on submitted requests | No |
+| `portal/settings.html` | Editable name/phone, saved card management, notification preferences, signed authorizations, Add to Home Screen | No |
 
 There is **no public sign-up anywhere**. An account only ever exists
 because Triple H invoiced that client first, which triggers an invite
@@ -143,6 +151,54 @@ schedules a visit from a due reminder. Unlike a quote-scheduled
 booking, a checkup-scheduled one has no "already scheduled" guard --
 a recurring reminder can reasonably be requested again.
 
+**`client_portal_work_orders`** (added 2026-09-03) -- a client's own
+not-yet-assessed request: title, description, urgency, optional
+photos, and (added 2026-09-04) `preferred_slot_at`, a real available
+slot the client picked from the same availability logic
+`booking.html` uses, stored as a PREFERENCE for Connor to review, not
+an instant booking (no job assessment has happened yet). `status`
+moves through `submitted` -> `reviewing`/`quoted` -> `scheduled` ->
+`completed`/`declined`. `internal_notes`, `linked_quote_id`, and
+`linked_job_id` are never settable by the client's own INSERT policy.
+
+**`client_portal_work_order_messages`** (added 2026-09-03) -- two-way
+messaging tied to one work order. RLS joins back to the work order's
+own real `client_email`, never a client-supplied value, so a client
+can only ever message on their own request. `sender_type` distinguishes
+which direction a message goes, checked by the INSERT policy, not
+just trusted from the client.
+
+**`stripe_customers`** (added 2026-09-03) -- maps `client_email` to a
+real Stripe Customer id. No insert/update policy for any authenticated
+role at all; only edge functions using the service role key write it.
+This is the one place a card ever gets connected to an email -- this
+project itself never sees or stores actual card data.
+
+**`card_authorizations`** (added 2026-09-03/04) -- a signed record of
+consent every time a NEW card gets saved (POS, an invoice payment, or
+Settings' Add a Card), for dispute evidence if one ever comes in.
+Stores the EXACT authorization text shown at the time, not a
+reference to a template, so a later wording change can never
+retroactively alter what a historical authorization actually said.
+`context` distinguishes where it happened (`pos_new_card`,
+`invoice_payment`, `settings_add_card`); clients can view their own
+rows, internal accounts can view all, nobody outside the writing
+edge function can insert or update.
+
+**`client_profiles`** (added 2026-09-04) -- a client's own CURRENT
+name/phone, editable from Settings. Deliberately separate from the
+name snapshotted on individual invoices/quotes at the time they were
+issued (those keep their own history exactly as it was; this is only
+"what's current," maintained going forward).
+
+**`client_notification_preferences`** (added 2026-09-04) -- three
+booleans (invoice/quote emails, work-order emails, message emails),
+all defaulting to true since these are transactional, not marketing.
+Every client-facing notification function checks the relevant one
+before sending; a client's own message to the internal team is the
+one exception, since that always needs to notify someone regardless
+of the client's own preference.
+
 ## Edge functions
 
 All deployed and ACTIVE. Source backed up in `edge-functions/`.
@@ -164,6 +220,12 @@ All deployed and ACTIVE. Source backed up in `edge-functions/`.
 | `get-job-photo-urls` | true | Client-only -- verifies the job belongs to the caller, then signs each `photo_storage_paths` entry fresh (service role bypasses the job-photos bucket's own looser RLS, safe only because ownership was already checked) |
 | `schedule-checkup-visit` | true | Client-only -- no approval/already-scheduled guard (unlike `schedule-quote-job`); inserts into `th_bookings` with `checkup_id` set |
 | `set-invoice-paid` | true | **Internal-only** (`account_roles` + `can_manage_invoices`) -- marks a portal invoice paid/unpaid by hand, for the cash/check/Venmo payments that never touch Stripe. Keyed by `source_invoice_id`, not the portal row id, since the caller is the internal Invoice Log |
+| `delete-portal-invoice` | true | **Internal-only** (`can_manage_invoices`) -- removes an invoice's portal copy when the internal one is deleted, so a client can never see or try to pay a phantom invoice that no longer exists anywhere else. Refuses to delete a PAID invoice -- that's a real financial record, a refund-first situation |
+| `notify-new-work-order-email` | true | Alerts the internal team (`notification_recipients`) when a client submits a new work request |
+| `notify-work-order-scheduled-email` | true | "Your appointment is booked" to the client, fired on the UPDATE transition when an internal account approves and schedules a request |
+| `notify-work-order-message-email` | true | Two-way: a client's message alerts the internal team; an internal reply emails the client -- checks `client_notification_preferences` before sending, but only on the internal-to-client direction (a client's own message always notifies the team regardless of their preference, since that's the point of sending it) |
+| `create-pos-charge` | true | **Internal-only** -- three modes (`check`/`charge_saved`/`new_card`) for `tools/pos.html`. Uses its own dedicated, narrowly-scoped Stripe secret (`STRIPE_POS_SECRET_KEY`), not the shared one. Requires a signed authorization before ever saving a new card |
+| `manage-saved-card` | true | Client-facing saved-card self-service -- list, remove, and add a replacement (a Stripe SetupIntent, never a PaymentIntent, since adding a card must never charge anything). Its own dedicated Stripe secret (`STRIPE_CLIENT_CARDS_SECRET_KEY`) |
 
 Two non-obvious things worth not rediscovering the hard way:
 
@@ -217,6 +279,24 @@ error, exactly like `booking.html` does.
   `set-password.html` and never straight to the dashboard.
 - **A bug-report POST needs BOTH `apikey` and `Authorization: Bearer`
   headers.** The first version had only `apikey` and failed live.
+- **A page redeclaring a name a shared `<script src>` it loads
+  already declares is a real `SyntaxError`, not a milder shadowing.**
+  Classic (non-module) `<script>` tags on one page share a single
+  lexical scope for top-level `const`/`let`/`class`. Found twice, both
+  live-breaking: `portal/jobs.html` and `manage-booking.html` both
+  redeclared `MIN_LEAD_HOURS` and friends after loading the shared
+  `/business-hours.js`, which already declares them (2026-09-04); and
+  `tools/pos.html` redeclared `SUPABASE_URL`/`SUPABASE_ANON_KEY` while
+  loading `tools/auth.js`, which already declares both -- reported
+  directly as "the POS is still not working. No manual entry button
+  and no charge card on file button pops up at all," since the
+  `SyntaxError` silently halted the entire inline script; the plain
+  HTML form fields still rendered, which is exactly why it looked
+  like nothing was happening rather than an obviously broken page.
+  `scripts/check-undefined-vars.js` now catches this class
+  automatically (both a page vs. a shared file it loads, and two
+  shared files that might never even be combined by any page yet) --
+  see that script's own header comment for the full mechanics.
 
 ## CRITICAL security fix, 2026-09-01
 
@@ -268,10 +348,13 @@ its own SELECT policy. That distinction is easy to miss.
 
 ## Still pending (not blockers, but real)
 
-1. **Stripe is in test mode.** Three things needed to go live:
-   - `STRIPE_SECRET_KEY` (`sk_live_...`) as a Supabase Edge Function secret
-   - `STRIPE_WEBHOOK_SIGNING_SECRET` (`whsec_...`) from Stripe Dashboard -> Developers -> Webhooks, pointing at the `stripe-webhook` function URL
-   - Replace `pk_test_REPLACE_ME` in `portal/dashboard.html`
+1. ~~**Stripe is in test mode.**~~ -- **resolved.** Live since
+   2026-09-02 (`STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SIGNING_SECRET`,
+   and the real `pk_live_...` publishable key are all in place).
+   Confirmed working end to end on 2026-09-04 with a genuine live
+   card (a locked debit card correctly declined at Stripe's own
+   verification step, then succeeded once unlocked -- proof the real
+   card network path is live, not test mode).
 2. **Stripe receipt emails** are a one-toggle setting in Stripe
    Dashboard -> Settings -> Emails. Not enabled yet.
 3. **MFA is not enabled** for either Connor or Steve in Supabase Auth
@@ -282,14 +365,14 @@ its own SELECT policy. That distinction is easy to miss.
    homepage modal, so `portal/login.html` links to `/` as a
    workaround. A real `/terms.html` would be better.
 6. **The bug report flow was never confirmed end-to-end in a live
-   browser.** The sandbox it was built in couldn't reach Supabase
-   through a real browser request. Confidence rests on direct SQL-
-   level RLS testing plus an exact header match to already-working
-   code (`th_leads` insert in `index.html`). **Worth having someone
-   actually click "Report a problem" on the live site once and
-   confirm it appears in Dev Tools -> Health -> Portal bug reports.**
-7. **Job photos on the portal** -- clients can't see photos from their
-   own jobs. This is an unmade product decision, not an oversight.
+   browser.** Confidence rests on direct SQL-level RLS testing plus
+   an exact header match to already-working code. **Worth having
+   someone actually click "Report a problem" on the live site once
+   and confirm it appears in Dev Tools -> Health -> Portal bug
+   reports.**
+7. **No standalone quote PDF or a way to change a client's portal
+   email from inside the tools** -- both noted further down, neither
+   has come up as a real need yet.
 
 ## The full vision (recorded 2026-09-01, Connor's own framing)
 
@@ -361,6 +444,57 @@ Real dependencies, not preference, decide this order:
    formula `templateDueInfo()` already uses internally, same
    never-store-a-computed-value discipline as job warranty. This
    closes out all five phases of the original roadmap.
+6. ~~**Request Work + two-way messaging.**~~ -- **done** (2026-09-03/04).
+   New `client_portal_work_orders` + `client_portal_work_order_messages`
+   tables, a genuinely new `portal/work-orders.html` page: a client can
+   submit a not-yet-assessed problem (title, description, urgency,
+   up to 3 photos) and message back and forth with the internal team
+   about it. The urgency/timing field itself went through several
+   real iterations the same two days: free-text, then a day-picker
+   grid, then a plain link out to `booking.html` ("Book directly"),
+   then finally a real embedded availability picker -- the plain link
+   was found to be a genuine problem (a guest using it skipped the
+   work order form entirely, so the actual request never got filled
+   out), fixed by pulling in the same real availability logic
+   `booking.html` itself uses. The picked slot is stored as
+   `preferred_slot_at` -- a PREFERENCE for Connor to review, not an
+   instant booking (the job hasn't been assessed yet) -- and
+   `tools/workspace.html`'s own "Approve & Schedule" step now
+   pre-fills from it when one exists.
+7. ~~**Saved cards, a POS tool, and dispute-protection signatures.**~~
+   -- **done** (2026-09-03/04). Every invoice payment (single and
+   bulk) now attaches a real Stripe Customer and saves the card used
+   (`setup_future_usage: 'off_session'`, new `stripe_customers`
+   table). New `tools/pos.html` lets Connor charge a client's card
+   directly for a quick job with no invoice -- one tap for a client
+   who already has a saved card, a normal entry form (which also
+   saves the card) for one who doesn't. Every moment a NEW card gets
+   saved -- POS, invoice payment, or later added from Settings --
+   requires a typed-name signature first, recorded in a new
+   `card_authorizations` table: Stripe has no native "collect a
+   signature before charging" feature for card-not-present
+   transactions, and this is the merchant-side equivalent, held for
+   dispute evidence if one ever comes in. POS specifically carries
+   more risk than a client entering their own card online, since
+   Connor may be the one typing it in on the client's behalf.
+8. ~~**Settings: a real settings page.**~~ -- **done** (2026-09-04).
+   `portal/settings.html` went from four thin cards (details,
+   password, add-to-home-screen, a static notifications paragraph)
+   to genuine self-service: editable name/phone (new `client_profiles`
+   table, kept deliberately separate from the name snapshotted on old
+   invoices/quotes, which stays exactly as issued), full saved-card
+   management (view, remove, and add a replacement via a Stripe
+   SetupIntent -- cards are immutable, so "update" means "add a new
+   one"), real notification toggles (new
+   `client_notification_preferences` table, checked by every
+   client-facing notification function before it sends), and a
+   history of the client's own signed card authorizations. The active
+   card (the one that would actually get charged next) is labeled
+   explicitly once more than one exists, and an expiring-soon or
+   already-expired card shows a visible warning -- both computed from
+   Stripe's own documented "most recently created first" order for a
+   customer's payment methods, the same order every off-session
+   charge already relies on.
 
 ## Permission model, in brief
 
@@ -527,15 +661,19 @@ now live in the numbered roadmap above -- this list is what's left.
   being logged out every time is more annoying here than in a tool
   used daily.
 - **Partial payments** for larger jobs.
-- **Email preferences** (invoice notifications on/off), which is also
-  the honest thing to offer if notification volume ever grows.
+- ~~**Email preferences** (invoice notifications on/off)~~ -- **done**
+  (2026-09-04), part of phase 8's Settings rebuild -- three separate
+  toggles (invoice/quote, work-order, message emails), not just one.
 
 **Worth considering but has real tradeoffs**
-- **Auto-pay / saved cards.** Convenient, but meaningfully raises the
-  stakes on the Stripe integration and on the security posture of
-  the whole portal. Not something to add casually.
-- **A messaging thread per job.** Sounds useful, but competes with
-  text messaging, which is what clients actually use. Easy to build
-  something nobody touches. The quote-questions feature in phase 2 is
-  deliberately scoped narrower than this -- questions on one specific
-  quote, not an open-ended thread.
+- ~~**Auto-pay / saved cards.**~~ -- **done** (2026-09-03/04, phase 7),
+  with the security posture taken seriously rather than added
+  casually: signature capture on every new card, a dedicated
+  narrowly-scoped Stripe key per function, and this project never
+  seeing or storing actual card data.
+- **A messaging thread per job.** Partially addressed a different
+  way: phase 6 built two-way messaging on WORK ORDERS (the not-yet-
+  assessed request stage), not on completed jobs specifically. The
+  original tradeoff -- competing with text messaging, which is what
+  clients actually use -- still applies to a THREAD ON A FINISHED JOB
+  specifically; that idea remains unbuilt.
