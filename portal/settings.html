@@ -123,6 +123,11 @@
   .set-msg { font-size: 13px; margin-top: 10px; line-height: 1.5; }
   .set-msg.is-error { color: #ff8a80; }
   .set-msg.is-ok { color: #4caf78; }
+  /* Signed authorizations (2026-09-03). */
+  .auth-entry { padding: 10px 0; border-bottom: 1px solid var(--border); }
+  .auth-entry:last-child { border-bottom: none; }
+  .auth-entry-date { font-size: 12px; color: var(--text-dim); margin-bottom: 4px; }
+  .auth-entry-text { font-size: 13px; line-height: 1.5; color: var(--white); }
   /* Hidden on desktop (2026-09-03), requested directly. Matches the
      same 860px desktop threshold used everywhere else in the portal
      (the body-width breakpoint) so "computer view" means the same
@@ -197,6 +202,19 @@
   <div class="set-card-title">Saved Cards</div>
   <div class="set-card-sub">Cards saved from a past payment, so future charges can be one tap instead of retyping your card.</div>
   <div id="savedCardsBody"><p class="set-card-sub" style="margin:0;">Loading...</p></div>
+</div>
+
+<!--
+  View past signed authorizations (2026-09-03), requested directly:
+  "View past signed authorizations" -- the same transparency
+  reasoning behind showing a receipt for every charge. Read via the
+  Supabase client directly (RLS-protected: clients can only ever see
+  their own rows), no edge function needed for a plain read.
+-->
+<div class="set-card">
+  <div class="set-card-title">Signed Authorizations</div>
+  <div class="set-card-sub">What you've agreed to when a card was saved on your account.</div>
+  <div id="authorizationsBody"><p class="set-card-sub" style="margin:0;">Loading...</p></div>
 </div>
 
 <!--
@@ -306,6 +324,38 @@
   }
 
   document.getElementById('saveDetailsBtn').addEventListener('click', saveClientProfile);
+
+  // Signed authorizations (2026-09-03), requested directly: "View
+  // past signed authorizations." RLS scopes this to the caller's own
+  // rows automatically, but the query is still explicitly filtered
+  // and ordered here for clarity and correct display order, not left
+  // to RLS alone to decide what comes back in what sequence.
+  async function loadAuthorizations() {
+    const body = document.getElementById('authorizationsBody');
+    const { data: { session } } = await client.auth.getSession();
+    if (!session) return;
+    const { data, error } = await client
+      .from('card_authorizations')
+      .select('signer_name,authorization_text,context,amount,description,created_at')
+      .eq('client_email', session.user.email)
+      .order('created_at', { ascending: false });
+    if (error) {
+      body.innerHTML = '<p class="set-card-sub" style="margin:0;">Could not load your authorizations right now.</p>';
+      return;
+    }
+    if (!data.length) {
+      body.innerHTML = '<p class="set-card-sub" style="margin:0;">Nothing on file yet.</p>';
+      return;
+    }
+    body.innerHTML = data.map(a => {
+      const dateLabel = new Date(a.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+      return '<div class="auth-entry">' +
+        '<div class="auth-entry-date">' + escapeHtml(dateLabel) + '</div>' +
+        '<div class="auth-entry-text">' + escapeHtml(a.authorization_text) + '</div>' +
+        '</div>';
+    }).join('');
+  }
+
 
   // Saved card management (2026-09-03), requested directly: "Saved
   // card management (view/remove)." Loaded once on page load -- this
@@ -522,6 +572,7 @@
     document.getElementById('detailPhone').value = phone;
 
     loadSavedCards();
+    loadAuthorizations();
 
     // Called here rather than only from the beforeinstallprompt
     // listener -- that event never fires on iOS at all, so relying on
