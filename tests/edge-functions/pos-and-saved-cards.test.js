@@ -118,6 +118,21 @@ test('a stale saved-card check for an email the user has since changed cannot ov
   assert.match(fnMatch[0], /if \(email !== lastCheckedEmail\) return;/);
 });
 
+test('an incomplete or malformed email shows a clear message, not silence', () => {
+  // Real bug found and fixed (2026-09-03), reported directly with a
+  // screenshot: a typo'd email ("testemajl.gmail.com" -- missing the
+  // @) silently cleared the charge area with zero explanation. There
+  // was text visibly typed into the field and a blank space below it
+  // with no hint why nothing was happening. The empty starting state
+  // (nothing typed yet) still stays silent -- only text that looks
+  // incomplete gets a message.
+  const listenerMatch = POS_PAGE.match(/document\.getElementById\('posClientEmail'\)\.addEventListener\('input', \(\) => \{[\s\S]*?\n  \}\);\n/);
+  assert.ok(listenerMatch, 'expected to isolate the email input listener');
+  const body = listenerMatch[0];
+  assert.match(body, /if \(!email\) \{[\s\S]*?area\.innerHTML = '';[\s\S]*?return;/, 'empty field should stay silent');
+  assert.match(body, /if \(!email\.includes\('@'\)\) \{[\s\S]*?doesn\\'t look like a complete email yet/, 'incomplete email should show a real message');
+});
+
 test('a failed saved-card check always falls back to the manual entry option, never leaves nothing clickable', () => {
   // Real bug found and fixed (2026-09-03), reported directly: "once
   // you type in the info there is no submit option... that pops up."
