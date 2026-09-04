@@ -73,10 +73,17 @@ test('an empty signature is rejected client-side before ever retrying the reques
   assert.match(fnMatch[0], /if \(!signerName\) \{[\s\S]*?return;/);
 });
 
-test('the "Pay All Outstanding" bulk flow does not save cards at all, so it needs no signature step', () => {
-  // Confirmed directly rather than assumed: create-bulk-payment-intent
-  // has no getOrCreateStripeCustomer or setup_future_usage call at
-  // all, so no card is ever saved there -- nothing for a signature to
-  // protect in that flow, and no reason to have added one.
-  assert.doesNotMatch(BULK_PAYMENT_INTENT, /getOrCreateStripeCustomer|setup_future_usage/);
+test('the "Pay All Outstanding" bulk flow now saves cards too, matching single-invoice payments (2026-09-04)', () => {
+  // Rewritten 2026-09-04, found during a functional audit: this test
+  // used to confirm the OPPOSITE -- that create-bulk-payment-intent
+  // had no getOrCreateStripeCustomer or setup_future_usage call at
+  // all, so no signature step was needed there. That was a real
+  // inconsistency, not an intentional design choice: the same client
+  // paying several invoices at once got no saved card and no
+  // authorization record, even though it's the exact same card and
+  // the exact same future benefit as paying one invoice at a time.
+  // Fixed in tests/edge-functions/bulk-payment-signature-parity.test.js,
+  // which covers the new behavior in full; this file's own scope
+  // stays single-invoice payments.
+  assert.match(BULK_PAYMENT_INTENT, /getOrCreateStripeCustomer|setup_future_usage/);
 });
