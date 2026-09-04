@@ -182,7 +182,14 @@
       // (they kept typing while this was in flight) must never
       // overwrite what's currently on screen.
       if (email !== lastCheckedEmail) return;
-      if (!result.ok) { area.innerHTML = ''; return; }
+      // Real bug found and fixed (2026-09-03), reported directly:
+      // "once you type in the info there is no submit option... that
+      // pops up." A failed check (a real server error, a slow cold
+      // start, anything) used to clear the area to nothing at all --
+      // leaving no way to charge the client even manually. Checking
+      // for a saved card is purely a convenience; its failure must
+      // never block the fallback that always works.
+      if (!result.ok) { renderNewCardOption(); showError('Could not check for a saved card, but you can still enter one manually.'); return; }
       if (result.has_saved_card) {
         savedCardInfo = { brand: result.brand, last4: result.last4 };
         renderSavedCardOption();
@@ -192,7 +199,11 @@
       }
     } catch (e) {
       if (email !== lastCheckedEmail) return;
-      area.innerHTML = '';
+      // Same reasoning as the !result.ok branch just above -- a
+      // network hiccup checking for a saved card must never be the
+      // reason there's nothing to click at all.
+      renderNewCardOption();
+      showError('Could not check for a saved card, but you can still enter one manually.');
     }
   }
 

@@ -105,12 +105,24 @@ function extractInlineScripts(html) {
   // meaningless "Unexpected token" error, not an undefined-variable
   // finding this checker actually cares about.
   const blocks = [];
-  const re = /<script([^>]*)>([\s\S]*?)<\/script>/g;
+  // Case-insensitive AND tolerant of anything up to the closing >
+  // (2026-09-03, three CodeQL "Bad HTML filtering regexp" passes on
+  // this one regex): browsers treat <SCRIPT> the same as <script>,
+  // and per the real HTML5 end-tag parsing rule, </script followed by
+  // ANYTHING up to the next > -- whitespace, a stray attribute-looking
+  // token, garbage -- still closes the script element. A narrower
+  // pattern (first just case-insensitive, then tolerating only plain
+  // whitespace) kept missing further real, valid-per-spec variations.
+  // [^>]* is the actual correct rule, not an incremental patch on top
+  // of it -- and it's the exact same pattern the opening tag already
+  // used correctly from the start (<script([^>]*)>), just applied to
+  // the closing tag too.
+  const re = /<script([^>]*)>([\s\S]*?)<\/script[^>]*>/gi;
   let m;
   while ((m = re.exec(html))) {
     const attrs = m[1];
-    if (/\bsrc=/.test(attrs)) continue;
-    if (/\btype\s*=\s*["'](?!(?:text\/javascript|module)["'])[^"']*["']/.test(attrs)) continue;
+    if (/\bsrc=/i.test(attrs)) continue;
+    if (/\btype\s*=\s*["'](?!(?:text\/javascript|module)["'])[^"']*["']/i.test(attrs)) continue;
     blocks.push(m[2]);
   }
   return blocks.join('\n;\n');

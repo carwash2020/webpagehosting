@@ -53,6 +53,66 @@ const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 const STRIPE_SECRET_KEY = Deno.env.get("STRIPE_SECRET_KEY");
 const WEBHOOK_SECRET = Deno.env.get("STRIPE_WEBHOOK_SIGNING_SECRET");
+const RESEND_API_KEY = Deno.env.get("RESEND_API_KEY") || "";
+const LEAD_EMAIL_FROM = Deno.env.get("LEAD_EMAIL_FROM") || "";
+const LOGO_URL = "https://www.triplehenterprisesllc.biz/images/logo-signature-email.png";
+
+// A POS-style receipt (2026-09-03), requested directly: "create a POS
+// style reciept that shows what we charged them for sense we are
+// collecting the email anyway." Duplicated from create-pos-charge's
+// own identical helper -- see that function's header comment for why
+// (no shared-module system across separately-deployed Edge
+// Functions). This copy specifically covers the 'new_card' POS path,
+// where the charge only actually completes HERE, asynchronously,
+// after create-pos-charge already returned a client_secret and the
+// client-side Stripe Elements confirmed it moments later.
+function escapeHtmlPos(value: unknown): string {
+  const s = value === null || value === undefined ? "" : String(value);
+  return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+}
+
+function buildPosReceiptEmail(description: string, amount: number, dateLabel: string): { html: string; text: string } {
+  const amountLabel = "$" + amount.toFixed(2);
+  const html = `<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="color-scheme" content="light"><title>Receipt, Triple H Enterprises</title></head>
+<body style="margin:0; padding:0; background:#f4f4f4;">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" bgcolor="#f4f4f4" style="padding:32px 16px;"><tr><td align="center">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" bgcolor="#ffffff" style="max-width:480px; border-radius:10px; overflow:hidden; border:1px solid #e5e5e5;">
+<tr><td align="center" bgcolor="#0a0a0a" style="padding:28px 24px;"><img src="${LOGO_URL}" alt="Triple H Enterprises" width="140" style="display:block; border:0;"></td></tr>
+<tr><td style="padding:32px 28px 8px; font-family:-apple-system,Helvetica,Arial,sans-serif;">
+<h1 style="color:#ff8000; font-size:22px; margin:0 0 20px; text-align:center;">Receipt</h1>
+<p style="color:#222; font-size:15px; line-height:1.5; margin:0 0 20px;">Thanks for your business! Here's a record of what was charged today.</p>
+</td></tr>
+<tr><td style="padding:0 28px;">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0">
+<tr><td style="padding:8px 0; border-bottom:1px solid #eee; color:#777; font-size:14px; width:110px;">Date</td><td style="padding:8px 0; border-bottom:1px solid #eee; font-size:14px; color:#222;">${dateLabel}</td></tr>
+<tr><td style="padding:8px 0; border-bottom:1px solid #eee; color:#777; font-size:14px;">For</td><td style="padding:8px 0; border-bottom:1px solid #eee; font-size:14px; color:#222;">${escapeHtmlPos(description || "Service call")}</td></tr>
+<tr><td style="padding:8px 0; color:#777; font-size:14px;">Amount</td><td style="padding:8px 0; font-size:16px; color:#222; font-weight:700;">${amountLabel}</td></tr>
+</table>
+</td></tr>
+<tr><td style="padding:20px 28px 28px; font-family:-apple-system,Helvetica,Arial,sans-serif;"><p style="color:#222; font-size:14px; line-height:1.5; margin:0;">Questions about this charge? Just reply to this email.</p></td></tr>
+<tr><td style="background:#ff8000; height:4px; line-height:4px; font-size:1px;">&nbsp;</td></tr>
+<tr><td align="center" style="padding:16px 24px; font-family:-apple-system,Helvetica,Arial,sans-serif;"><p style="color:#999; font-size:12px; margin:0;">(435) 414-1667 &middot; triplehenterprisesllc.biz</p></td></tr>
+</table></td></tr></table></body></html>`;
+  const text = `Receipt -- Triple H Enterprises\n\nThanks for your business! Here's a record of what was charged today.\n\nDate: ${dateLabel}\nFor: ${description || "Service call"}\nAmount: ${amountLabel}\n\nQuestions about this charge? Just reply to this email.\n\nTriple H Enterprises\n(435) 414-1667, triplehenterprisesllc.biz`;
+  return { html, text };
+}
+
+async function sendPosReceiptEmail(clientEmail: string, description: string, amount: number) {
+  if (!clientEmail) return;
+  const dateLabel = new Intl.DateTimeFormat("en-US", {
+    timeZone: "America/Denver", weekday: "long", month: "long", day: "numeric", year: "numeric",
+  }).format(new Date());
+  const { html, text } = buildPosReceiptEmail(description, amount, dateLabel);
+  try {
+    await fetch("https://api.resend.com/emails", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${RESEND_API_KEY}` },
+      body: JSON.stringify({ from: LEAD_EMAIL_FROM, to: clientEmail, subject: "Your receipt, Triple H Enterprises", html, text }),
+    });
+  } catch (err) {
+    console.error("sendPosReceiptEmail failed:", err);
+  }
+}
 
 Deno.serve(async (req: Request) => {
   if (!STRIPE_SECRET_KEY || !WEBHOOK_SECRET) {
@@ -127,6 +187,14 @@ Deno.serve(async (req: Request) => {
           headers: { apikey: SERVICE_ROLE_KEY, Authorization: `Bearer ${SERVICE_ROLE_KEY}`, "Content-Type": "application/json" },
           body: JSON.stringify({ data: blob, updated_at: new Date().toISOString() }),
         });
+        // Only sent alongside a genuinely NEW log entry -- the same
+        // idempotency guard that stops a double income entry also
+        // stops a double receipt email for the exact same charge.
+        await sendPosReceiptEmail(
+          pi.metadata?.pos_client_email || "",
+          pi.metadata?.pos_description || pi.description || "",
+          pi.metadata?.pos_amount ? Number(pi.metadata.pos_amount) : pi.amount / 100,
+        );
       }
     }
     return new Response(JSON.stringify({ received: true, pos_charge: true }), { status: 200 });
