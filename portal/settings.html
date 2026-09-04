@@ -288,6 +288,18 @@
   <div class="set-msg" id="notifyMsg" style="display:none;"></div>
 </div>
 
+<!--
+  Sign out, also in Settings (2026-09-04), requested directly -- the
+  header's own Sign out button (every portal page has one) stays
+  exactly as it was; this is a second, natural place to find it,
+  matching the common pattern of account actions living at the
+  bottom of a settings screen. Same real sign-out call as the header
+  button, not a separate, second implementation.
+-->
+<div class="set-card">
+  <button class="secondary-btn" id="signOutBtnSettings" style="width:100%; justify-content:center;">Sign out</button>
+</div>
+
 <script>
   const { createClient } = supabase;
   const client = createClient(
@@ -671,7 +683,6 @@
 
   function renderAddToHomeScreen() {
     const card = document.getElementById('addHomeScreenCard');
-    const sub = document.getElementById('addHomeScreenSub');
     const body = document.getElementById('addHomeScreenBody');
     if (!card) return;
 
@@ -680,12 +691,17 @@
     // the iOS-specific equivalent (there is no unified cross-platform
     // API for this). A returning client already using the installed
     // app should see neither a button nor instructions.
+    //
+    // Hides the WHOLE card once installed (2026-09-04), requested
+    // directly -- previously left the card visible with just a
+    // message, taking up space for something no longer actionable.
+    // Re-checked every time this function runs (including right after
+    // a successful install prompt below), so the card correctly
+    // reappears if a client somehow returns to a non-installed state
+    // and disappears the moment they actually install it.
     const isStandalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
-    if (isStandalone) {
-      sub.textContent = "You're using the installed app already -- nothing else to do here.";
-      body.innerHTML = '';
-      return;
-    }
+    card.style.display = isStandalone ? 'none' : 'block';
+    if (isStandalone) return;
 
     if (deferredInstallPrompt) {
       // Android/Chrome: a REAL one-tap install, not just instructions.
@@ -783,10 +799,12 @@
     renderAddToHomeScreen();
   }
 
-  document.getElementById('signOutBtn').addEventListener('click', async () => {
+  async function signOut() {
     await client.auth.signOut();
     window.location.replace('/portal/login.html');
-  });
+  }
+  document.getElementById('signOutBtn').addEventListener('click', signOut);
+  document.getElementById('signOutBtnSettings').addEventListener('click', signOut);
 
   init();
 </script>
