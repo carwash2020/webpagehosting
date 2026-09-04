@@ -173,8 +173,18 @@
 
 <div class="set-card">
   <div class="set-card-title">Your Details</div>
-  <div class="set-card-sub">This is what we have on file. To change your email, name, or phone number, just call or text us at <a href="tel:+14354141667" style="color:var(--orange-light);">(435) 414-1667</a> &mdash; your email is tied to all your invoices and job history, so we update it on our end to keep everything connected.</div>
-  <div id="detailRows"></div>
+  <div class="set-card-sub">Your name and phone are yours to update any time. Email stays locked here -- it's tied to all your invoices and job history, so if that ever needs to change, call or text us at <a href="tel:+14354141667" style="color:var(--orange-light);">(435) 414-1667</a> and we'll update it on our end to keep everything connected.</div>
+  <div class="set-row"><span class="set-row-key">Email</span><span class="set-row-val" id="detailEmailVal"></span></div>
+  <div class="set-field">
+    <label for="detailName">Name</label>
+    <input type="text" id="detailName" placeholder="Your name">
+  </div>
+  <div class="set-field">
+    <label for="detailPhone">Phone</label>
+    <input type="tel" id="detailPhone" placeholder="(555) 555-5555">
+  </div>
+  <button class="btn blue" style="width:100%; justify-content:center;" id="saveDetailsBtn">Save Details</button>
+  <div class="set-msg" id="detailsMsg" style="display:none;"></div>
 </div>
 
 <!--
@@ -240,6 +250,50 @@
     el.className = 'set-msg ' + (isError ? 'is-error' : 'is-ok');
     el.style.display = 'block';
   }
+
+  function showDetailsMsg(text, isError) {
+    const el = document.getElementById('detailsMsg');
+    el.textContent = text;
+    el.className = 'set-msg ' + (isError ? 'is-error' : 'is-ok');
+    el.style.display = 'block';
+  }
+
+  // Editable name/phone (2026-09-03), requested directly: "Let them
+  // edit phone/name directly" -- a genuinely new concept, not a
+  // relaxation of the old rule. Name previously came read-only from
+  // whatever invoice/quote was on file, specifically to avoid it
+  // drifting from what those documents actually said at the time.
+  // That reasoning still holds for old documents -- they keep their
+  // own name snapshot exactly as issued. client_profiles is the
+  // separate, CURRENT profile a client actively maintains from here
+  // on, upserted on save rather than a plain update, since a client
+  // may be saving a profile for the very first time.
+  async function saveClientProfile() {
+    const btn = document.getElementById('saveDetailsBtn');
+    const name = document.getElementById('detailName').value.trim();
+    const phone = document.getElementById('detailPhone').value.trim();
+    const { data: { session } } = await client.auth.getSession();
+    if (!session) { window.location.replace('/portal/login.html'); return; }
+
+    btn.disabled = true;
+    btn.textContent = 'Saving...';
+    const { error } = await client.from('client_profiles').upsert({
+      client_email: session.user.email,
+      display_name: name || null,
+      phone: phone || null,
+      updated_at: new Date().toISOString(),
+    });
+    btn.disabled = false;
+    btn.textContent = 'Save Details';
+
+    if (error) {
+      showDetailsMsg("Couldn't save your details just now. Please try again.", true);
+      return;
+    }
+    showDetailsMsg('Details saved.', false);
+  }
+
+  document.getElementById('saveDetailsBtn').addEventListener('click', saveClientProfile);
 
   async function updatePassword() {
     const btn = document.getElementById('savePasswordBtn');
@@ -343,30 +397,49 @@
     if (!session) { window.location.replace('/portal/login.html'); return; }
     const email = session.user.email;
     document.getElementById('clientEmailDisplay').textContent = email;
+    document.getElementById('detailEmailVal').textContent = email;
 
-    // Name and phone come from whatever is already on file from a real
-    // invoice, quote, or job -- the internal client registry is the
-    // source of truth for those, so they're read-only here rather than
-    // editable and immediately drifting from it.
+    // The client's own saved profile is the real source of truth once
+    // it exists. Falls back to whatever name is already on an
+    // invoice/quote ONLY as a starting point to pre-fill the field
+    // with -- a returning client shouldn't have to retype a name we
+    // already know -- but that fallback is never itself saved back to
+    // client_profiles; only an explicit Save does that.
     let name = '';
+    let phone = '';
+    let hasProfile = false;
     try {
-      const { data } = await client
-        .from('client_portal_invoices')
-        .select('client_name')
-        .limit(1);
-      if (data && data.length) name = data[0].client_name || '';
-      if (!name) {
-        const { data: q } = await client
-          .from('client_portal_quotes')
+      const { data: profile } = await client
+        .from('client_profiles')
+        .select('display_name,phone')
+        .eq('client_email', email)
+        .maybeSingle();
+      if (profile) {
+        hasProfile = true;
+        name = profile.display_name || '';
+        phone = profile.phone || '';
+      }
+    } catch (e) { /* non-fatal: falls through to the invoice-based lookup below */ }
+
+    if (!hasProfile) {
+      try {
+        const { data } = await client
+          .from('client_portal_invoices')
           .select('client_name')
           .limit(1);
-        if (q && q.length) name = q[0].client_name || '';
-      }
-    } catch (e) { /* non-fatal: the email row below still renders */ }
+        if (data && data.length) name = data[0].client_name || '';
+        if (!name) {
+          const { data: q } = await client
+            .from('client_portal_quotes')
+            .select('client_name')
+            .limit(1);
+          if (q && q.length) name = q[0].client_name || '';
+        }
+      } catch (e) { /* non-fatal: the email row above still renders */ }
+    }
 
-    document.getElementById('detailRows').innerHTML =
-      '<div class="set-row"><span class="set-row-key">Email</span><span class="set-row-val">' + escapeHtml(email) + '</span></div>' +
-      (name ? '<div class="set-row"><span class="set-row-key">Name</span><span class="set-row-val">' + escapeHtml(name) + '</span></div>' : '');
+    document.getElementById('detailName').value = name;
+    document.getElementById('detailPhone').value = phone;
 
     // Called here rather than only from the beforeinstallprompt
     // listener -- that event never fires on iOS at all, so relying on
