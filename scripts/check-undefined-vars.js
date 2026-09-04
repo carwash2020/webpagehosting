@@ -203,12 +203,28 @@ function buildGlobals() {
 // page can never conflict in a real browser, so checking that would
 // just be noise for a risk that doesn't exist.
 //
-// SUPABASE_URL/SUPABASE_ANON_KEY are excluded, matching EXTRA_GLOBALS'
-// own established exception above: many pages deliberately keep their
-// own local copy of these two specific credential constants rather
-// than relying on tools/auth.js's copy, a known and tolerated pattern
-// across this project already, not the bug class this check targets.
-const TOLERATED_REDECLARATIONS = new Set(['SUPABASE_URL', 'SUPABASE_ANON_KEY']);
+// No tolerated exceptions (2026-09-04, corrected after a real
+// incident): this used to exempt SUPABASE_URL/SUPABASE_ANON_KEY,
+// reasoning that "many pages deliberately keep their own local copy
+// of these two specific credential constants... a known and
+// tolerated pattern." That reasoning was itself a misunderstanding --
+// it's true and harmless that DIFFERENT, UNRELATED pages each keep
+// their own copy (different pages never share a lexical scope with
+// each other, so there's nothing to conflict), but it does NOT mean
+// it's safe for the SAME page to declare it locally while ALSO
+// loading a shared file that already declares it -- that's exactly
+// the bug class this whole check exists to catch. The exemption
+// masked a real, live bug: tools/pos.html declared its own local
+// SUPABASE_URL/SUPABASE_ANON_KEY while also loading tools/auth.js,
+// which already declares both -- a genuine SyntaxError that silently
+// halted the page's entire inline script, reported directly as "the
+// POS is still not working. No manual entry button and no charge
+// card on file button pops up at all." Removing the exemption
+// entirely, and confirmed directly rather than assumed: reintroducing
+// that exact bug is caught immediately, and the current, fixed
+// codebase passes clean with no exemption at all -- it was never
+// actually needed.
+const TOLERATED_REDECLARATIONS = new Set([]);
 
 function findSharedScriptRedeclarations(rel, html, inlineCode) {
   const loadedSharedFiles = SHARED_SCRIPT_FILES.filter((sharedRel) => {

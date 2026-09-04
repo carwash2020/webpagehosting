@@ -76,22 +76,35 @@ test('var redeclared multiple times within a shared file is never flagged -- it 
   assert.doesNotMatch(result.stdout + result.stderr, /qrcode-lib/);
 });
 
-test('SUPABASE_URL/SUPABASE_ANON_KEY redeclaration is tolerated, matching the same established exception EXTRA_GLOBALS already documents', () => {
-  // Many pages deliberately keep their own local copy of these two
-  // specific credential constants rather than relying on
-  // tools/auth.js's copy -- a known, widespread, and already-tolerated
-  // pattern in this project (see EXTRA_GLOBALS' own comment), not the
-  // bug class this check targets. Confirmed directly rather than
-  // assumed: tools/pos.html genuinely redeclares SUPABASE_URL on top
-  // of tools/auth.js's copy right now, and the checker must still
-  // pass clean.
+test('there are no tolerated redeclaration exemptions -- a real bug hid behind exactly this kind of exception before', () => {
+  // Corrected 2026-09-04, after a real incident: this test used to
+  // assert the OPPOSITE -- that tools/pos.html redeclaring
+  // SUPABASE_URL on top of tools/auth.js's own copy was fine, "a
+  // known and tolerated pattern." It was not fine. That exact
+  // redeclaration is a genuine SyntaxError that silently halted
+  // pos.html's entire inline script, reported directly as "the POS
+  // is still not working. No manual entry button and no charge card
+  // on file button pops up at all." The reasoning behind the old
+  // exemption was itself a misunderstanding: it's true and harmless
+  // that different, unrelated pages each keep their own local copy
+  // (different pages never share a lexical scope with each other),
+  // but that says nothing about whether it's safe for the SAME page
+  // to declare something locally while ALSO loading a shared file
+  // that already declares it -- that's exactly the bug class this
+  // whole check exists to catch, and the exemption carved a hole in
+  // it. tools/pos.html itself is now fixed (it relies on
+  // tools/auth.js's own SUPABASE_URL/SUPABASE_ANON_KEY instead of
+  // redeclaring them), confirmed directly rather than assumed.
+  const src = fs.readFileSync(SCRIPT_PATH, 'utf8');
+  assert.match(src, /const TOLERATED_REDECLARATIONS = new Set\(\[\]\);/, 'expected no tolerated exemptions at all');
+
   const posHtml = fs.readFileSync(path.join(REPO_ROOT, 'tools', 'pos.html'), 'utf8');
   const authJs = fs.readFileSync(path.join(REPO_ROOT, 'tools', 'auth.js'), 'utf8');
-  assert.match(posHtml, /const SUPABASE_URL\s*=/, 'expected tools/pos.html to genuinely redeclare SUPABASE_URL for this test to be meaningful');
-  assert.match(authJs, /const SUPABASE_URL\s*=/, 'expected tools/auth.js to genuinely declare SUPABASE_URL for this test to be meaningful');
+  assert.match(authJs, /^const SUPABASE_URL\s*=/m, 'expected tools/auth.js to genuinely declare this, for this test to be meaningful');
+  assert.doesNotMatch(posHtml, /^\s*const SUPABASE_URL\s*=/m, 'tools/pos.html must not redeclare a constant tools/auth.js (which it loads) already declares');
+
   const result = runChecker();
-  assert.equal(result.exitCode, 0);
-  assert.doesNotMatch(result.stdout + result.stderr, /pos\.html.*SUPABASE_URL/);
+  assert.equal(result.exitCode, 0, `checker should still pass clean now that pos.html is fixed; got:\n${result.stderr}`);
 });
 
 test('a page loading no shared scripts at all is never checked for redeclarations against anything', () => {
