@@ -1,8 +1,8 @@
 // Tests for the Request Work form's timing field and photo uploads
-// (2026-09-03). The timing field went free-text -> a day-picker grid
-// -> a plain link to the real booking page, all the same day, each
-// step requested directly; the photo-upload feature (up to 3) has
-// stayed as built.
+// (2026-09-03/04). The timing field went free-text -> a day-picker
+// grid -> a plain link to the real booking page -> a real embedded
+// availability picker, each step requested directly; the photo-
+// upload feature (up to 3) has stayed as built throughout.
 
 const { test } = require('node:test');
 const assert = require('node:assert/strict');
@@ -28,22 +28,40 @@ test('the old free-text timing input and the short-lived day-picker grid are bot
   assert.doesNotMatch(html, /function renderDayPicker/);
 });
 
-test('a plain link to the real booking page took its place', () => {
-  assert.match(html, /class="wo-booking-nudge"/);
-  assert.match(html, /<a href="\/booking\.html">Book directly/);
+test('a real availability picker took its place (2026-09-04) -- the plain booking-page link is gone', () => {
+  // Rewritten 2026-09-04, requested directly: "If guests just use the
+  // book directly link then the work order will never actually get
+  // filled out. We need to find a clever way for them to pick a date
+  // we have available based on our booking system and link them into
+  // the form." The link that bypassed this form entirely, in place
+  // since the same-day history above, is gone -- a client now picks
+  // from real availability without ever leaving the work order form,
+  // so title/description/urgency/photos still get captured either way.
+  assert.doesNotMatch(html, /wo-booking-nudge/);
+  assert.doesNotMatch(html, /<a href="\/booking\.html">Book directly/);
+  assert.match(html, /id="woSchedulePanel"/);
+  assert.match(html, /id="woDateRow"/);
+  assert.match(html, /id="woSlotsGrid"/);
 });
 
-test('preferred_timing is no longer sent -- nothing on the form populates it anymore', () => {
+test('the picked slot is a preference for Connor to review, not an instant booking', () => {
+  assert.doesNotMatch(html, /from\(['"]th_bookings['"]\)/);
   const submitMatch = html.match(/async function submitRequest\(\)[\s\S]*?\n  \}\n/);
-  assert.ok(submitMatch, 'expected to isolate submitRequest()');
+  assert.match(submitMatch[0], /preferred_slot_at: selectedPreferredSlot \? selectedPreferredSlot\.startUtc\.toISOString\(\) : null,/);
+});
+
+test('preferred_timing (the old free-text field) still stays unsent -- preferred_slot_at is a distinct, new column, not a revival of it', () => {
+  const submitMatch = html.match(/async function submitRequest\(\)[\s\S]*?\n  \}\n/);
   assert.doesNotMatch(submitMatch[0], /preferred_timing:/);
 });
 
-test('work-orders.html no longer loads the shared business-hours file, since nothing on the page needs it now', () => {
-  // Left loaded, it would be dead weight -- every other real user of
-  // business-hours.js (booking, manage-booking, quotes, jobs) still
-  // genuinely needs it and still loads it.
-  assert.doesNotMatch(html, /business-hours\.js/);
+test('work-orders.html loads the shared business-hours file again (2026-09-04) -- real availability data needs it', () => {
+  // The opposite of true as of a few hours earlier the same original
+  // day (see the test above this one, and the file's own top
+  // comment) -- removed when the day-picker was removed, needed
+  // again now that a real availability picker replaced the plain
+  // booking-page link.
+  assert.match(html, /<script src="\/business-hours\.js\?v=\d+"><\/script>/);
 });
 
 // ---- photo upload ----

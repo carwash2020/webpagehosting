@@ -1574,7 +1574,7 @@
           </div>
           <div class="dash-list-item-right" style="flex-direction:column; gap:6px; align-items:flex-end;">
             ${advance ? `<button class="small-btn" onclick="advanceWorkRequest(${wo.id}, '${advance.next}')">${escapeHtml(advance.label)}</button>` : ''}
-            ${wo.status === 'quoted' ? `<button class="small-btn" onclick="openWorkOrderApproval(${wo.id}, this)">Approve &amp; Schedule</button>` : ''}
+            ${wo.status === 'quoted' ? `<button class="small-btn" onclick="openWorkOrderApproval(${wo.id}, this, ${wo.preferred_slot_at ? `'${wo.preferred_slot_at}'` : 'null'})">Approve &amp; Schedule</button>` : ''}
             <button class="small-btn" style="color:var(--text-dim);" onclick="advanceWorkRequest(${wo.id}, 'declined')">Close</button>
           </div>
           <div id="woApproval-${wo.id}" style="flex-basis:100%; display:none;"></div>
@@ -1615,7 +1615,7 @@
   // plain warning if the chosen time falls outside real hours, so a
   // mistyped time doesn't quietly get emailed to the client as
   // confirmed.
-  function openWorkOrderApproval(id, btnEl) {
+  function openWorkOrderApproval(id, btnEl, preferredSlotAt) {
     const container = document.getElementById('woApproval-' + id);
     if (!container) return;
     if (container.style.display !== 'none') { container.style.display = 'none'; return; }
@@ -1638,7 +1638,32 @@
     container.style.display = 'block';
 
     const dateInput = document.getElementById('woApprovalDate-' + id);
+    const timeInput = document.getElementById('woApprovalTime-' + id);
     const hintEl = document.getElementById('woApprovalHint-' + id);
+
+    // Pre-fills from the client's own preferred slot (2026-09-04),
+    // requested directly: replacing "Book directly" with a real
+    // availability picker on the request form means Connor's own
+    // approval step can now start from the client's exact pick
+    // instead of a blank field -- the common case becomes one tap on
+    // their choice rather than a second, separate scheduling
+    // conversation. Converted from the stored UTC timestamp to
+    // business-local date/time parts since these are plain native
+    // date/time inputs, not timezone-aware widgets.
+    if (preferredSlotAt) {
+      const d = new Date(preferredSlotAt);
+      const parts = new Intl.DateTimeFormat('en-US', {
+        timeZone: BUSINESS_TIMEZONE, year: 'numeric', month: '2-digit', day: '2-digit',
+        hour: '2-digit', minute: '2-digit', hour12: false,
+      }).formatToParts(d);
+      const map = {};
+      parts.forEach(p => { map[p.type] = p.value; });
+      dateInput.value = `${map.year}-${map.month}-${map.day}`;
+      timeInput.value = `${map.hour === '24' ? '00' : map.hour}:${map.minute}`;
+      const weekday = businessWeekday(dateInput.value);
+      hintEl.textContent = 'Client\'s preferred time \u2014 real hours that day: ' + formatHoursLabel(weekday);
+    }
+
     dateInput.addEventListener('change', () => {
       if (!dateInput.value) { hintEl.textContent = ''; return; }
       const weekday = businessWeekday(dateInput.value);
