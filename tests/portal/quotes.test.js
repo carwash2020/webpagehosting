@@ -44,8 +44,8 @@ test('asking a question ties the client_email to the caller\'s own session, not 
 });
 
 test('a pending quote offers Approve, Decline, and Ask a question; a responded quote does not', () => {
-  assert.match(html, /respondToQuote\(\$\{q\.id\}, 'approve'\)/);
-  assert.match(html, /respondToQuote\(\$\{q\.id\}, 'decline'\)/);
+  assert.match(html, /respondToQuote\(\$\{q\.id\}, 'approve', this\)/);
+  assert.match(html, /respondToQuote\(\$\{q\.id\}, 'decline', this\)/);
   assert.match(html, /toggleQuestionForm\(\$\{q\.id\}\)/);
   assert.match(html, /isPending \? `/);
 });

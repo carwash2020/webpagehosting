@@ -270,8 +270,8 @@
         ${renderLineItemsTable(q.line_items)}
         ${isPending ? `
           <div class="quote-actions">
-            <button class="btn blue" onclick="respondToQuote(${q.id}, 'approve')">Approve</button>
-            <button class="btn secondary-btn" onclick="respondToQuote(${q.id}, 'decline')">Decline</button>
+            <button class="btn blue" onclick="respondToQuote(${q.id}, 'approve', this)">Approve</button>
+            <button class="btn secondary-btn" onclick="respondToQuote(${q.id}, 'decline', this)">Decline</button>
           </div>
           <button type="button" class="quote-question-toggle" onclick="toggleQuestionForm(${q.id})">Ask a question about this quote</button>
           <div class="quote-question-form" id="questionForm-${q.id}">
@@ -354,12 +354,25 @@
     if (form) form.classList.toggle('is-open');
   }
 
-  async function respondToQuote(quoteId, action) {
+  async function respondToQuote(quoteId, action, btnEl) {
     const { data: { session } } = await client.auth.getSession();
     if (!session) { window.location.replace('/portal/login.html'); return; }
 
     const verb = action === 'approve' ? 'approve' : 'decline';
     if (!window.confirm(`Are you sure you want to ${verb} this quote?`)) return;
+
+    // Disables both Approve and Decline together (2026-09-04, found
+    // during a full portal audit) -- window.confirm() being a
+    // blocking, modal dialog already prevents most double-clicks, but
+    // a fast double-tap landing after the dialog closes and before
+    // this fetch resolves could still fire two real requests. The
+    // backend's own guard (quote.status !== 'pending') would reject
+    // the second one harmlessly, but the client would see a confusing
+    // "something went wrong" error for a response that had actually
+    // already succeeded moments earlier.
+    const actionsContainer = btnEl ? btnEl.closest('.quote-actions') : null;
+    const buttonsToDisable = actionsContainer ? actionsContainer.querySelectorAll('button') : [];
+    buttonsToDisable.forEach(b => { b.disabled = true; });
 
     try {
       const res = await fetch(
@@ -377,11 +390,13 @@
       const result = await res.json();
       if (!result.ok) {
         alert(result.error || 'Something went wrong. Please try again.');
+        buttonsToDisable.forEach(b => { b.disabled = false; });
         return;
       }
       renderQuotes();
     } catch (e) {
       alert("Couldn't reach the server. Please check your connection and try again.");
+      buttonsToDisable.forEach(b => { b.disabled = false; });
     }
   }
 
