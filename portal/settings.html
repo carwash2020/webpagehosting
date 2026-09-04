@@ -112,6 +112,14 @@
   .set-row { display: flex; justify-content: space-between; gap: 12px; padding: 9px 0; border-bottom: 1px solid var(--border); font-size: 14px; }
   .set-row:last-child { border-bottom: none; }
   .set-row-key { color: var(--text-dim); }
+  /* Active card badge + expiration display (2026-09-04). */
+  .set-card-badge {
+    display: inline-block; font-size: 10.5px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.4px;
+    color: #4caf78; background: rgba(76,175,120,0.15); border-radius: 4px; padding: 2px 6px; margin-left: 6px;
+    vertical-align: middle;
+  }
+  .set-card-exp { font-size: 11.5px; color: var(--text-dim); }
+  .set-card-exp-warning { font-size: 11.5px; color: #ff8a80; font-weight: 600; }
   .set-row-val { color: var(--white); text-align: right; word-break: break-word; }
   .set-field { margin-bottom: 12px; }
   .set-field label { display: block; font-size: 13px; font-weight: 600; color: var(--white); margin-bottom: 5px; }
@@ -458,6 +466,22 @@
     }
   }
 
+  // Card expiration + which card is active (2026-09-04), requested
+  // directly. "Expiring soon" is within the next 2 calendar months
+  // (inclusive of the current one) -- generous enough that a client
+  // sees the warning well before a card actually stops working, not
+  // just the day it expires.
+  function cardExpirationStatus(expMonth, expYear) {
+    if (!expMonth || !expYear) return { label: '', isWarning: false };
+    const now = new Date();
+    const expDate = new Date(expYear, expMonth - 1, 1);
+    const monthsUntilExpiry = (expDate.getFullYear() - now.getFullYear()) * 12 + (expDate.getMonth() - now.getMonth());
+    const label = 'Exp ' + String(expMonth).padStart(2, '0') + '/' + String(expYear).slice(-2);
+    if (monthsUntilExpiry < 0) return { label: label + ' (expired)', isWarning: true };
+    if (monthsUntilExpiry <= 1) return { label: label + ' (expiring soon)', isWarning: true };
+    return { label, isWarning: false };
+  }
+
   function renderSavedCards(cards) {
     const body = document.getElementById('savedCardsBody');
     if (!cards.length) {
@@ -466,7 +490,10 @@
     }
     body.innerHTML = cards.map(c => {
       const brandLabel = (c.brand || 'card').charAt(0).toUpperCase() + (c.brand || 'card').slice(1);
-      return '<div class="set-row"><span class="set-row-key">' + escapeHtml(brandLabel) + ' ending in ' + escapeHtml(c.last4) + '</span>' +
+      const exp = cardExpirationStatus(c.exp_month, c.exp_year);
+      const activeBadge = (c.is_active && cards.length > 1) ? '<span class="set-card-badge">Active</span>' : '';
+      const expHtml = exp.label ? '<span class="' + (exp.isWarning ? 'set-card-exp-warning' : 'set-card-exp') + '">' + escapeHtml(exp.label) + '</span>' : '';
+      return '<div class="set-row"><span class="set-row-key">' + escapeHtml(brandLabel) + ' ending in ' + escapeHtml(c.last4) + ' ' + activeBadge + '<br>' + expHtml + '</span>' +
         '<button class="small-btn danger" onclick="removeSavedCard(\'' + escapeHtml(c.id) + '\')">Remove</button></div>';
     }).join('');
   }
