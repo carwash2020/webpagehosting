@@ -80,6 +80,58 @@ async function getOrCreateStripeCustomer(email: string): Promise<string> {
   return customer.id;
 }
 
+// Looks up an EXISTING Customer only, without creating one -- used to
+// decide whether a signature is even needed (see the main handler
+// below) without side effects if it turns out not to be.
+async function findExistingStripeCustomerId(email: string): Promise<string | null> {
+  const res = await fetch(
+    `${SUPABASE_URL}/rest/v1/stripe_customers?client_email=eq.${encodeURIComponent(email)}&select=stripe_customer_id&limit=1`,
+    { headers: { apikey: SERVICE_ROLE_KEY, Authorization: `Bearer ${SERVICE_ROLE_KEY}` } },
+  );
+  if (!res.ok) return null;
+  const rows = await res.json();
+  return rows.length ? rows[0].stripe_customer_id : null;
+}
+
+async function hasSavedCard(customerId: string): Promise<boolean> {
+  const res = await fetch(`https://api.stripe.com/v1/payment_methods?customer=${customerId}&type=card&limit=1`, {
+    headers: { Authorization: `Bearer ${STRIPE_SECRET_KEY}` },
+  });
+  if (!res.ok) return false;
+  const data = await res.json();
+  return (data.data || []).length > 0;
+}
+
+// Signature capture (2026-09-03), requested directly: "we also need
+// to collect signitures when we collect and create accounts within
+// stripe incase we ever have to handle a dispute." Same
+// dispute-protection reasoning and the same card_authorizations table
+// already built for POS's new-card path -- see that function's own
+// header comment for the full background on why Stripe itself has no
+// native equivalent. Lower risk here than POS (the client is entering
+// their own card on their own device, not Connor entering it on their
+// behalf), but a Stripe Customer still gets created and a card still
+// gets saved for future off-session use, which is the moment Connor
+// specifically wanted covered. Throws on failure -- see POS's own
+// identical function for why silently continuing would be wrong.
+async function recordCardAuthorization(clientEmail: string, signerName: string, authorizationText: string, amount: number, invoiceId: number) {
+  const res = await fetch(`${SUPABASE_URL}/rest/v1/card_authorizations`, {
+    method: "POST",
+    headers: { apikey: SERVICE_ROLE_KEY, Authorization: `Bearer ${SERVICE_ROLE_KEY}`, "Content-Type": "application/json" },
+    body: JSON.stringify([{
+      client_email: clientEmail,
+      signer_name: signerName,
+      authorization_text: authorizationText,
+      context: "invoice_payment",
+      amount,
+      description: `Invoice #${invoiceId}`,
+    }]),
+  });
+  if (!res.ok) {
+    throw new Error(`Could not save the signed authorization: ${(await res.text()).slice(0, 300)}`);
+  }
+}
+
 // Same CORS pattern as every other browser-callable function in this
 // project (trigger-workflow, sync-invoice-to-portal) -- origin
 // restricted to the real site, not a wildcard, since this creates a
@@ -131,7 +183,7 @@ Deno.serve(async (req: Request) => {
       return json({ ok: false, error: "STRIPE_SECRET_KEY secret is not set yet -- add it in the Supabase dashboard under Edge Functions -> Secrets." }, 500);
     }
 
-    const { invoice_id } = await req.json();
+    const { invoice_id, signer_name } = await req.json();
     if (typeof invoice_id !== "number") {
       return json({ ok: false, error: "Missing invoice_id." }, 400);
     }
@@ -170,7 +222,25 @@ Deno.serve(async (req: Request) => {
     // 19.999999999998 ever becoming a rejected, non-integer amount.
     const amountCents = Math.round(Number(invoice.total) * 100);
 
-    const stripeCustomerId = await getOrCreateStripeCustomer(claims.email);
+    // Signature required only when this client is about to have a
+    // NEW card saved -- if they already have one on file, Stripe's
+    // own Payment Element may offer it as a one-tap option, and no
+    // fresh authorization is needed for a card already covered by a
+    // prior one. A distinct needs_signature flag (not a generic
+    // error) lets the frontend show the signature step and retry the
+    // exact same call with signer_name included, rather than treating
+    // this as a failure.
+    const existingCustomerId = await findExistingStripeCustomerId(claims.email);
+    const alreadyHasSavedCard = existingCustomerId ? await hasSavedCard(existingCustomerId) : false;
+    if (!alreadyHasSavedCard) {
+      if (typeof signer_name !== "string" || !signer_name.trim()) {
+        return json({ ok: false, needs_signature: true, error: "A signed name is required before saving a new card." }, 400);
+      }
+      const authorizationText = `I, ${signer_name.trim()}, authorize Triple H Enterprises to charge $${(amountCents / 100).toFixed(2)} for Invoice #${invoice.id}, and to securely save this card on file (via Stripe) for future charges I separately approve.`;
+      await recordCardAuthorization(claims.email, signer_name.trim(), authorizationText, amountCents / 100, invoice.id);
+    }
+
+    const stripeCustomerId = existingCustomerId || await getOrCreateStripeCustomer(claims.email);
 
     const piRes = await fetch("https://api.stripe.com/v1/payment_intents", {
       method: "POST",

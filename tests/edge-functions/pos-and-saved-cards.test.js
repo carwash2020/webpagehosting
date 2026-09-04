@@ -21,15 +21,18 @@ const WORKSPACE = fs.readFileSync(repo('tools', 'workspace.html'), 'utf8');
 test('paying an invoice now attaches a real Stripe Customer and saves the card for off-session use', () => {
   const fnMatch = PAYMENT_INTENT.match(/async function getOrCreateStripeCustomer\(email: string\)[\s\S]*?\n\}\n/);
   assert.ok(fnMatch, 'expected to isolate getOrCreateStripeCustomer()');
-  assert.match(PAYMENT_INTENT, /const stripeCustomerId = await getOrCreateStripeCustomer\(claims\.email\);/);
+  assert.match(PAYMENT_INTENT, /const stripeCustomerId = existingCustomerId \|\| await getOrCreateStripeCustomer\(claims\.email\);/);
   assert.match(PAYMENT_INTENT, /customer: stripeCustomerId,/);
   assert.match(PAYMENT_INTENT, /setup_future_usage: "off_session",/);
 });
 
 test('the Stripe customer is looked up by the caller\'s own verified session email, never a client-supplied value', () => {
-  const fnMatch = PAYMENT_INTENT.match(/const stripeCustomerId = await getOrCreateStripeCustomer\([^)]+\);/);
+  const fnMatch = PAYMENT_INTENT.match(/const stripeCustomerId = existingCustomerId \|\| await getOrCreateStripeCustomer\([^)]+\);/);
   assert.ok(fnMatch);
   assert.match(fnMatch[0], /claims\.email/);
+  // The prior lookup this reuses is also keyed off the caller's own
+  // session email, not anything client-supplied.
+  assert.match(PAYMENT_INTENT, /const existingCustomerId = await findExistingStripeCustomerId\(claims\.email\);/);
 });
 
 test('creating a Stripe customer upserts the mapping to avoid a race producing two customers for one email', () => {
