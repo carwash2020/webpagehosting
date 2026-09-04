@@ -53,8 +53,12 @@ test('loadSavedCards is a real, complete function declaration -- not an orphaned
   assert.match(fnMatch[0], /getElementById\('savedCardsBody'\)/);
 });
 
-test('loadSavedCards is called from both init() and after a successful card removal', () => {
+test('loadSavedCards is called from init(), after a successful card removal, and after a successful card addition', () => {
+  // Updated 2026-09-04: a third genuine call site was added when
+  // Add a Card shipped -- a successful new-card save also needs to
+  // refresh the list so the new card actually shows up without a
+  // manual page reload, the same reasoning as the removal call site.
   const callSites = SETTINGS.match(/loadSavedCards\(\);/g);
   assert.ok(callSites);
-  assert.equal(callSites.length, 2, 'expected exactly two call sites: init() and after removeSavedCard succeeds');
+  assert.equal(callSites.length, 3, 'expected three call sites: init(), after removeSavedCard succeeds, and after mountAddCardSetupUI succeeds');
 });
