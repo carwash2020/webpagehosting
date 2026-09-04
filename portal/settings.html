@@ -188,6 +188,18 @@
 </div>
 
 <!--
+  Saved card management (2026-09-03), requested directly: "Saved card
+  management (view/remove)." Since invoice payments and POS both now
+  save a card automatically, a client had no way to even know one was
+  on file, let alone remove it.
+-->
+<div class="set-card">
+  <div class="set-card-title">Saved Cards</div>
+  <div class="set-card-sub">Cards saved from a past payment, so future charges can be one tap instead of retyping your card.</div>
+  <div id="savedCardsBody"><p class="set-card-sub" style="margin:0;">Loading...</p></div>
+</div>
+
+<!--
   Add to Home Screen (2026-09-02), requested directly: "for loyal
   guests who use us for lots of jobs." A genuinely different
   experience per platform, not something one button can uniformly
@@ -294,6 +306,74 @@
   }
 
   document.getElementById('saveDetailsBtn').addEventListener('click', saveClientProfile);
+
+  // Saved card management (2026-09-03), requested directly: "Saved
+  // card management (view/remove)." Loaded once on page load -- this
+  // page has no reason to re-check on every tap the way POS's
+  // debounced email-typing check does, since the client isn't editing
+  // an email field here.
+  async function loadSavedCards() {
+    const body = document.getElementById('savedCardsBody');
+    const { data: { session } } = await client.auth.getSession();
+    if (!session) return;
+    try {
+      const res = await fetch('https://csvfqdjuobylgafgolho.supabase.co/functions/v1/manage-saved-card', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'apikey': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNzdmZxZGp1b2J5bGdhZmdvbGhvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODUzNTQ3MjcsImV4cCI6MjEwMDkzMDcyN30.6GlvK-DfXf2lppS1kciZtsl4wHOpZz_yKtwsS1lyjrs',
+          'Authorization': `Bearer ${session.access_token}`,
+        },
+        body: JSON.stringify({ mode: 'list' }),
+      });
+      const result = await res.json();
+      if (!result.ok) {
+        body.innerHTML = '<p class="set-card-sub" style="margin:0;">Could not load your saved cards right now.</p>';
+        return;
+      }
+      renderSavedCards(result.cards || []);
+    } catch (e) {
+      body.innerHTML = '<p class="set-card-sub" style="margin:0;">Could not load your saved cards right now.</p>';
+    }
+  }
+
+  function renderSavedCards(cards) {
+    const body = document.getElementById('savedCardsBody');
+    if (!cards.length) {
+      body.innerHTML = '<p class="set-card-sub" style="margin:0;">No cards saved yet.</p>';
+      return;
+    }
+    body.innerHTML = cards.map(c => {
+      const brandLabel = (c.brand || 'card').charAt(0).toUpperCase() + (c.brand || 'card').slice(1);
+      return '<div class="set-row"><span class="set-row-key">' + escapeHtml(brandLabel) + ' ending in ' + escapeHtml(c.last4) + '</span>' +
+        '<button class="small-btn danger" onclick="removeSavedCard(\'' + escapeHtml(c.id) + '\')">Remove</button></div>';
+    }).join('');
+  }
+
+  async function removeSavedCard(paymentMethodId) {
+    if (!window.confirm('Remove this card? Your next payment will need a new one.')) return;
+    const { data: { session } } = await client.auth.getSession();
+    if (!session) return;
+    try {
+      const res = await fetch('https://csvfqdjuobylgafgolho.supabase.co/functions/v1/manage-saved-card', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'apikey': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNzdmZxZGp1b2J5bGdhZmdvbGhvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODUzNTQ3MjcsImV4cCI6MjEwMDkzMDcyN30.6GlvK-DfXf2lppS1kciZtsl4wHOpZz_yKtwsS1lyjrs',
+          'Authorization': `Bearer ${session.access_token}`,
+        },
+        body: JSON.stringify({ mode: 'remove', payment_method_id: paymentMethodId }),
+      });
+      const result = await res.json();
+      if (!result.ok) {
+        alert(result.error || "Couldn't remove that card. Please try again.");
+        return;
+      }
+      loadSavedCards();
+    } catch (e) {
+      alert("Couldn't remove that card. Please try again.");
+    }
+  }
 
   async function updatePassword() {
     const btn = document.getElementById('savePasswordBtn');
@@ -440,6 +520,8 @@
 
     document.getElementById('detailName').value = name;
     document.getElementById('detailPhone').value = phone;
+
+    loadSavedCards();
 
     // Called here rather than only from the beforeinstallprompt
     // listener -- that event never fires on iOS at all, so relying on
