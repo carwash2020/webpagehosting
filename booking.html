@@ -248,7 +248,7 @@
      -- now also loaded by portal/work-orders.html, so the two pages
      can never silently drift on what the real hours actually are.
      See business-hours.js's own header comment for the full reasoning. -->
-<script src="/business-hours.js?v=1"></script>
+<script src="/business-hours.js?v=2"></script>
 </head>
 <body>
 
@@ -381,9 +381,11 @@
       icon: '<path d="M3 21l4.5-1.5L21 6a2.1 2.1 0 0 0-3-3L4.5 16.5 3 21z"/>' },
   ];
 
-  const SLOT_INCREMENT_MINUTES = 30;
-  const MIN_LEAD_HOURS = 2; // no booking sooner than this from right now
-  const SCHEDULE_BUFFER_MINUTES = 15;
+  // SLOT_INCREMENT_MINUTES, MIN_LEAD_HOURS, SCHEDULE_BUFFER_MINUTES,
+  // overlaps(), fetchBookingsForDate(), and computeSlotsForDate() now
+  // come from the shared /business-hours.js (2026-09-04), found
+  // duplicated during a full portal audit -- see that file's own
+  // comment for the full reasoning.
 
   let selectedService = null;
   let selectedDateStr = null; // "YYYY-MM-DD" in business-local terms
@@ -463,54 +465,6 @@
 
   // --- availability + slot computation -------------------------------------
 
-  async function fetchBookingsForDate(dateStr) {
-    const dayStartUtc = zonedTimeToUtc(dateStr, 0, 0);
-    const rangeStart = new Date(dayStartUtc.getTime() - 24 * 60 * 60 * 1000).toISOString();
-    const rangeEnd = new Date(dayStartUtc.getTime() + 2 * 24 * 60 * 60 * 1000).toISOString();
-    const res = await fetch(SUPABASE_URL + '/rest/v1/rpc/get_booking_availability', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        apikey: SUPABASE_ANON_KEY,
-        Authorization: 'Bearer ' + SUPABASE_ANON_KEY,
-      },
-      body: JSON.stringify({ p_range_start: rangeStart, p_range_end: rangeEnd }),
-    });
-    if (!res.ok) throw new Error('availability check failed (HTTP ' + res.status + ')');
-    const rows = await res.json();
-    return rows.map(function (r) { return { start: new Date(r.start_at), end: new Date(r.end_at) }; });
-  }
-
-  function overlaps(aStart, aEnd, bStart, bEnd) {
-    return aStart < bEnd && bStart < aEnd;
-  }
-
-  function computeSlotsForDate(dateStr, durationMinutes, bookings) {
-    const weekday = businessWeekday(dateStr);
-    const hours = HOURS_BY_WEEKDAY[weekday];
-    if (!hours) return [];
-    const openHour = hours[0], closeHour = hours[1];
-
-    const now = new Date();
-    const earliestAllowed = new Date(now.getTime() + MIN_LEAD_HOURS * 60 * 60 * 1000);
-    const bufferMs = SCHEDULE_BUFFER_MINUTES * 60000;
-
-    const slots = [];
-    for (let mins = openHour * 60; mins + durationMinutes <= closeHour * 60; mins += SLOT_INCREMENT_MINUTES) {
-      const hh = Math.floor(mins / 60), mm = mins % 60;
-      const startUtc = zonedTimeToUtc(dateStr, hh, mm);
-      const endUtc = new Date(startUtc.getTime() + durationMinutes * 60000);
-      if (startUtc < earliestAllowed) continue;
-      const conflict = bookings.some(function (b) {
-        return overlaps(startUtc, endUtc, new Date(b.start.getTime() - bufferMs), new Date(b.end.getTime() + bufferMs));
-      });
-      if (conflict) continue;
-      const label = new Intl.DateTimeFormat('en-US', { timeZone: BUSINESS_TIMEZONE, hour: 'numeric', minute: '2-digit' }).format(startUtc);
-      slots.push({ startUtc: startUtc, endUtc: endUtc, label: label });
-    }
-    return slots;
-  }
-
   async function selectDate(dateStr) {
     selectedDateStr = dateStr;
     selectedSlot = null;
@@ -523,7 +477,7 @@
     emptyEl.style.display = 'none';
 
     try {
-      existingBookings = await fetchBookingsForDate(dateStr);
+      existingBookings = await fetchBookingsForDate(SUPABASE_URL, SUPABASE_ANON_KEY, dateStr);
     } catch (e) {
       grid.innerHTML =
         '<p style="color:#ff8a80; font-size:13.5px; text-align:center; grid-column:1/-1;">Couldn\'t load available times. Check your connection and try again.</p>' +

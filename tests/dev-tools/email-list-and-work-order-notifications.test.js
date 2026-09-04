@@ -107,5 +107,5 @@ test('approving sends both status and scheduled_at together in one PATCH', () =>
 });
 
 test('workspace.html loads the shared business-hours file for the approval form\'s real-hours warning', () => {
-  assert.match(WORKSPACE, /<script src="\/business-hours\.js\?v=1"><\/script>/);
+  assert.match(WORKSPACE, /<script src="\/business-hours\.js\?v=\d+"><\/script>/);
 });

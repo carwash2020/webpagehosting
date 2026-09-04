@@ -48,7 +48,7 @@
 <!-- Shared business-hours data (2026-09-03) -- see business-hours.js's
      own header comment. This page used to keep its own FIFTH
      independent hand-typed copy of these exact constants. -->
-<script src="/business-hours.js?v=1"></script>
+<script src="/business-hours.js?v=2"></script>
 <style>
   body { background: #0a0a0a; max-width: 640px; margin: 0 auto; padding: 24px 16px 60px; }
   /* Widened for real desktop screens (2026-09-03), reported directly
@@ -210,10 +210,14 @@
 
 <script>
   const { createClient } = supabase;
-  const client = createClient(
-    'https://csvfqdjuobylgafgolho.supabase.co',
-    'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNzdmZxZGp1b2J5bGdhZmdvbGhvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODUzNTQ3MjcsImV4cCI6MjEwMDkzMDcyN30.6GlvK-DfXf2lppS1kciZtsl4wHOpZz_yKtwsS1lyjrs'
-  );
+  // Named as constants (2026-09-04) -- same fix as portal/quotes.html:
+  // previously only ever existed as raw literal strings inline in
+  // createClient() below. Needed now that the shared
+  // fetchBookingsForDate() (business-hours.js) takes these explicitly
+  // as parameters rather than assuming they exist as globals.
+  const SUPABASE_URL = 'https://csvfqdjuobylgafgolho.supabase.co';
+  const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNzdmZxZGp1b2J5bGdhZmdvbGhvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODUzNTQ3MjcsImV4cCI6MjEwMDkzMDcyN30.6GlvK-DfXf2lppS1kciZtsl4wHOpZz_yKtwsS1lyjrs';
+  const client = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
   // The exact same formula as tools/job-tracker.html's own
   // templateDueInfo() -- computed fresh every render from
@@ -270,24 +274,26 @@
   }
 
   // ---------- scheduling from a check-up reminder ----------
-  // Same timezone/business-hours logic as portal/quotes.html's own
-  // scheduling flow, now shared via /business-hours.js (2026-09-03)
-  // rather than a fifth independent hand-typed copy -- found while
-  // unifying booking.html, portal/quotes.html, manage-booking.html,
-  // and portal/work-orders.html onto the same shared file. This one's
-  // own comment used to say "kept in sync manually if business hours
-  // or timezone ever change" -- exactly the fragility a shared file
-  // removes structurally.
-  const SLOT_INCREMENT_MINUTES = 30;
-  const MIN_LEAD_HOURS = 2;
-  const SCHEDULE_BUFFER_MINUTES = 15;
+  // SLOT_INCREMENT_MINUTES, MIN_LEAD_HOURS, SCHEDULE_BUFFER_MINUTES,
+  // overlaps(), fetchBookingsForDate(), and computeSlotsForDate() come
+  // from the shared /business-hours.js (2026-09-04) -- found during a
+  // full portal audit still locally redeclared here as a FOURTH
+  // independent copy, on top of booking.html and portal/quotes.html's
+  // own (already-fixed) copies. This one was a genuinely serious bug,
+  // not just drift risk: this page loads business-hours.js via a real
+  // <script src>, which already declares these same const names at
+  // the top level -- classic (non-module) <script> tags on one page
+  // share a single lexical environment for top-level const/let, so
+  // redeclaring the same name in a second script tag is a real
+  // SyntaxError ("Identifier has already been declared"), not merely
+  // a silent shadow. That would have broken this entire inline
+  // script block, and everything on this page depending on it, the
+  // moment a client loaded this page for real.
+  //
   // No specific service tied to a check-up reminder (unlike a quote,
   // which at least has a job description) -- 120 minutes matches the
   // same generic default used for quote-scheduled jobs.
   const DEFAULT_VISIT_MINUTES = 120;
-  function overlaps(aStart, aEnd, bStart, bEnd) {
-    return aStart < bEnd && bStart < aEnd;
-  }
 
   function toggleCheckupSchedule(checkupId) {
     const panel = document.getElementById('checkupSchedulePanel-' + checkupId);
@@ -315,46 +321,6 @@
     });
   }
 
-  async function fetchBookingsForDate(dateStr) {
-    const dayStartUtc = zonedTimeToUtc(dateStr, 0, 0);
-    const rangeStart = new Date(dayStartUtc.getTime() - 24 * 60 * 60 * 1000).toISOString();
-    const rangeEnd = new Date(dayStartUtc.getTime() + 2 * 24 * 60 * 60 * 1000).toISOString();
-    const res = await fetch('https://csvfqdjuobylgafgolho.supabase.co/rest/v1/rpc/get_booking_availability', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        apikey: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNzdmZxZGp1b2J5bGdhZmdvbGhvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODUzNTQ3MjcsImV4cCI6MjEwMDkzMDcyN30.6GlvK-DfXf2lppS1kciZtsl4wHOpZz_yKtwsS1lyjrs',
-        Authorization: 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNzdmZxZGp1b2J5bGdhZmdvbGhvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODUzNTQ3MjcsImV4cCI6MjEwMDkzMDcyN30.6GlvK-DfXf2lppS1kciZtsl4wHOpZz_yKtwsS1lyjrs',
-      },
-      body: JSON.stringify({ p_range_start: rangeStart, p_range_end: rangeEnd }),
-    });
-    if (!res.ok) throw new Error('availability check failed (HTTP ' + res.status + ')');
-    const rows = await res.json();
-    return rows.map(r => ({ start: new Date(r.start_at), end: new Date(r.end_at) }));
-  }
-
-  function computeCheckupSlots(dateStr, bookings) {
-    const weekday = businessWeekday(dateStr);
-    const hours = HOURS_BY_WEEKDAY[weekday];
-    if (!hours) return [];
-    const openHour = hours[0], closeHour = hours[1];
-    const earliestAllowed = new Date(Date.now() + MIN_LEAD_HOURS * 60 * 60 * 1000);
-    const bufferMs = SCHEDULE_BUFFER_MINUTES * 60000;
-
-    const slots = [];
-    for (let mins = openHour * 60; mins + DEFAULT_VISIT_MINUTES <= closeHour * 60; mins += SLOT_INCREMENT_MINUTES) {
-      const hh = Math.floor(mins / 60), mm = mins % 60;
-      const startUtc = zonedTimeToUtc(dateStr, hh, mm);
-      const endUtc = new Date(startUtc.getTime() + DEFAULT_VISIT_MINUTES * 60000);
-      if (startUtc < earliestAllowed) continue;
-      const conflict = bookings.some(b => overlaps(startUtc, endUtc, new Date(b.start.getTime() - bufferMs), new Date(b.end.getTime() + bufferMs)));
-      if (conflict) continue;
-      const label = new Intl.DateTimeFormat('en-US', { timeZone: BUSINESS_TIMEZONE, hour: 'numeric', minute: '2-digit' }).format(startUtc);
-      slots.push({ startUtc, endUtc, label });
-    }
-    return slots;
-  }
-
   let selectedCheckupSlot = null;
 
   async function selectCheckupDate(checkupId, dateStr) {
@@ -373,12 +339,12 @@
 
     let bookings;
     try {
-      bookings = await fetchBookingsForDate(dateStr);
+      bookings = await fetchBookingsForDate(SUPABASE_URL, SUPABASE_ANON_KEY, dateStr);
     } catch (e) {
       grid.innerHTML = '<p style="color:#ff8a80; font-size:13px; grid-column:1/-1;">Couldn\'t load available times. Try again.</p>';
       return;
     }
-    const slots = computeCheckupSlots(dateStr, bookings);
+    const slots = computeSlotsForDate(dateStr, DEFAULT_VISIT_MINUTES, bookings);
     if (!slots.length) {
       grid.innerHTML = '';
       emptyEl.style.display = 'block';

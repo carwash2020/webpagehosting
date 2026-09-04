@@ -101,7 +101,12 @@ test('a non-OK response from the availability endpoint is never silently treated
 
   // Extract and call the real function directly to confirm its own
   // contract, independent of how selectDate happens to handle it.
-  const src = fs.readFileSync(PAGE_PATH, 'utf8');
+  // Rewritten 2026-09-04, found during a full portal audit:
+  // fetchBookingsForDate() no longer lives in booking.html at all --
+  // it moved to the shared /business-hours.js, alongside genuinely
+  // identical copies that turned up on portal/quotes.html,
+  // portal/jobs.html, and manage-booking.html.
+  const src = fs.readFileSync(path.join(__dirname, '..', '..', 'business-hours.js'), 'utf8');
   assert.match(src, /if \(!res\.ok\) throw new Error/, 'fetchBookingsForDate should throw on a non-OK response, not silently return []');
 });
 

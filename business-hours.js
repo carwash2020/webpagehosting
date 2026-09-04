@@ -90,3 +90,84 @@ function formatHoursLabel(weekday) {
   };
   return fmt(hours[0]) + '\u2013' + fmt(hours[1]);
 }
+
+// --- real slot availability, extracted 2026-09-04 ---
+//
+// Found during a full portal audit, requested directly: "we want
+// this future proofed." booking.html and portal/quotes.html each had
+// their own independent, near-identical copy of this exact logic
+// (fetchBookingsForDate, overlaps, and a slot-computation function --
+// computeSlotsForDate on one page, computeScheduleSlots on the
+// other) -- quotes.html's own comment even claimed its scheduling
+// constants "now come from the shared business-hours.js," which was
+// false; they were still hardcoded right there, identically, on both
+// pages. Exactly the drift risk this file's own header already
+// describes: two copies that could silently diverge the moment one
+// changes and the other doesn't. This is the single real copy both
+// pages (and the portal's own future date-picker) now share.
+//
+// fetchBookingsForDate takes supabaseUrl/supabaseAnonKey as explicit
+// parameters rather than assuming they exist as globals -- not every
+// page that could use this defines them that way (portal/quotes.html
+// primarily uses the Supabase JS SDK's client object instead), and a
+// shared function should not force one specific pattern on every
+// future caller.
+const SLOT_INCREMENT_MINUTES = 30;
+const MIN_LEAD_HOURS = 2; // no booking sooner than this from right now
+const SCHEDULE_BUFFER_MINUTES = 15;
+
+function overlaps(aStart, aEnd, bStart, bEnd) {
+  return aStart < bEnd && bStart < aEnd;
+}
+
+// excludeStartIso is optional (2026-09-04, found during the same
+// portal audit) -- manage-booking.html needs to exclude a booking's
+// OWN current slot from counting as a conflict with itself when a
+// client is rescheduling it. Every other caller simply omits this
+// argument, which filters nothing, exactly matching their prior
+// behavior.
+async function fetchBookingsForDate(supabaseUrl, supabaseAnonKey, dateStr, excludeStartIso) {
+  const dayStartUtc = zonedTimeToUtc(dateStr, 0, 0);
+  const rangeStart = new Date(dayStartUtc.getTime() - 24 * 60 * 60 * 1000).toISOString();
+  const rangeEnd = new Date(dayStartUtc.getTime() + 2 * 24 * 60 * 60 * 1000).toISOString();
+  const res = await fetch(supabaseUrl + '/rest/v1/rpc/get_booking_availability', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      apikey: supabaseAnonKey,
+      Authorization: 'Bearer ' + supabaseAnonKey,
+    },
+    body: JSON.stringify({ p_range_start: rangeStart, p_range_end: rangeEnd }),
+  });
+  if (!res.ok) throw new Error('availability check failed (HTTP ' + res.status + ')');
+  const rows = await res.json();
+  return rows
+    .filter(function (r) { return r.start_at !== excludeStartIso; })
+    .map(function (r) { return { start: new Date(r.start_at), end: new Date(r.end_at) }; });
+}
+
+function computeSlotsForDate(dateStr, durationMinutes, bookings) {
+  const weekday = businessWeekday(dateStr);
+  const hours = HOURS_BY_WEEKDAY[weekday];
+  if (!hours) return [];
+  const openHour = hours[0], closeHour = hours[1];
+
+  const now = new Date();
+  const earliestAllowed = new Date(now.getTime() + MIN_LEAD_HOURS * 60 * 60 * 1000);
+  const bufferMs = SCHEDULE_BUFFER_MINUTES * 60000;
+
+  const slots = [];
+  for (let mins = openHour * 60; mins + durationMinutes <= closeHour * 60; mins += SLOT_INCREMENT_MINUTES) {
+    const hh = Math.floor(mins / 60), mm = mins % 60;
+    const startUtc = zonedTimeToUtc(dateStr, hh, mm);
+    const endUtc = new Date(startUtc.getTime() + durationMinutes * 60000);
+    if (startUtc < earliestAllowed) continue;
+    const conflict = bookings.some(function (b) {
+      return overlaps(startUtc, endUtc, new Date(b.start.getTime() - bufferMs), new Date(b.end.getTime() + bufferMs));
+    });
+    if (conflict) continue;
+    const label = new Intl.DateTimeFormat('en-US', { timeZone: BUSINESS_TIMEZONE, hour: 'numeric', minute: '2-digit' }).format(startUtc);
+    slots.push({ startUtc: startUtc, endUtc: endUtc, label: label });
+  }
+  return slots;
+}

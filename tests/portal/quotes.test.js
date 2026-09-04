@@ -160,7 +160,7 @@ test('the scheduling flow shares business hours and timezone from one file, not 
     // longer loads a file nothing on it uses.
   ]) {
     const src = fs.readFileSync(filePath, 'utf8');
-    assert.match(src, /<script src="\/business-hours\.js\?v=1"><\/script>/, `${label}: should load the shared business-hours file`);
+    assert.match(src, /<script src="\/business-hours\.js\?v=\d+"><\/script>/, `${label}: should load the shared business-hours file`);
     assert.doesNotMatch(src, /const HOURS_BY_WEEKDAY\s*=/, `${label}: should not define its own local copy of HOURS_BY_WEEKDAY`);
     assert.doesNotMatch(src, /const BUSINESS_TIMEZONE\s*=/, `${label}: should not define its own local copy of BUSINESS_TIMEZONE`);
   }
@@ -170,10 +170,19 @@ test('the scheduling flow shares business hours and timezone from one file, not 
   assert.match(sharedSrc, /0: \[14, 20\], 1: \[14, 22\], 2: \[14, 22\], 3: \[14, 22\], 4: \[14, 22\], 5: \[14, 22\], 6: \[7, 22\]/);
 });
 
-test('a booking is never confirmed sooner than MIN_LEAD_HOURS from now, matching booking.html', () => {
+test('MIN_LEAD_HOURS comes from the shared business-hours.js, not a local copy that could drift from booking.html', () => {
+  // Rewritten 2026-09-04, found during a full portal audit: this used
+  // to compare two independent hardcoded copies (this page's own and
+  // booking.html's) for equality -- which is exactly what needed
+  // catching in the first place, since portal/jobs.html and
+  // manage-booking.html turned out to have their own copies too, one
+  // of which (portal/jobs.html) caused a real SyntaxError from
+  // redeclaring the same const business-hours.js already declares.
+  // Now there is one shared value; what matters is that neither page
+  // has grown its own local copy back.
   const bookingHtml = fs.readFileSync(path.join(__dirname, '..', '..', 'booking.html'), 'utf8');
-  const bookingLead = bookingHtml.match(/const MIN_LEAD_HOURS = (\d+)/);
-  const quotesLead = html.match(/const MIN_LEAD_HOURS = (\d+)/);
-  assert.ok(bookingLead && quotesLead);
-  assert.equal(quotesLead[1], bookingLead[1]);
+  const sharedSrc = fs.readFileSync(path.join(__dirname, '..', '..', 'business-hours.js'), 'utf8');
+  assert.doesNotMatch(bookingHtml, /const MIN_LEAD_HOURS\s*=/, 'booking.html should not define its own local copy of MIN_LEAD_HOURS');
+  assert.doesNotMatch(html, /const MIN_LEAD_HOURS\s*=/, 'quotes.html should not define its own local copy of MIN_LEAD_HOURS');
+  assert.match(sharedSrc, /const MIN_LEAD_HOURS = \d+;/, 'the shared file should be the one real definition');
 });
