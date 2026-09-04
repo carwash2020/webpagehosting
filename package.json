@@ -13,7 +13,7 @@
     "check-undefined-vars": "node scripts/check-undefined-vars.js"
   },
   "devDependencies": {
-    "eslint": "^8.57.1",
+    "eslint": "^10.9.1",
     "jsdom": "^30.0.1"
   }
 }
