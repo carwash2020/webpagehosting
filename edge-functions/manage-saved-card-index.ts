@@ -163,10 +163,23 @@ Deno.serve(async (req: Request) => {
       });
       if (!res.ok) return json({ ok: false, error: "Could not load your saved cards right now." }, 502);
       const data = await res.json();
-      const cards = (data.data || []).map((pm: any) => ({
+      // Stripe's own List a Customer's PaymentMethods endpoint returns
+      // results sorted most-recently-created first (confirmed
+      // directly against Stripe's own docs, 2026-09-04, not assumed)
+      // -- the same endpoint and the same order create-pos-charge's
+      // listSavedCards() and create-payment-intent's hasSavedCard()
+      // both already rely on when they grab index 0 for an
+      // off-session charge. is_active marks that same first card
+      // explicitly here, so the client can see which one will
+      // actually be used next, rather than needing to infer it from
+      // list order on their own.
+      const cards = (data.data || []).map((pm: any, index: number) => ({
         id: pm.id,
         brand: pm.card?.brand || "card",
         last4: pm.card?.last4 || "----",
+        exp_month: pm.card?.exp_month || null,
+        exp_year: pm.card?.exp_year || null,
+        is_active: index === 0,
       }));
       return json({ ok: true, cards });
     }
