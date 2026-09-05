@@ -29,11 +29,20 @@
 // matters (a real incident, several times over, of a file changing
 // without this bump meaning devices kept serving stale content
 // indefinitely).
-const CACHE_NAME = 'th-portal-v1';
+// Bumped 2026-09-04 (v1 -> v2): the app-shell work -- bottom tab bar,
+// card elevation, tap feedback -- added /portal/portal-app.css and
+// changed all 8 precached HTML pages. Every one of those is in the
+// list below, so without this bump a device that installed the
+// service worker earlier could keep serving the OLD cached copies
+// indefinitely no matter how many times the page is refreshed. That
+// exact failure mode has bitten the internal tools service worker
+// several times over; see its own header comment for the history.
+const CACHE_NAME = 'th-portal-v2';
 const PRECACHE_URLS = [
   '/portal/home.html', '/portal/dashboard.html', '/portal/jobs.html', '/portal/quotes.html',
   '/portal/work-orders.html', '/portal/settings.html', '/portal/login.html', '/portal/set-password.html',
   '/portal/manifest.json',
+  '/portal/portal-app.css',
   '/styles.css', '/business-hours.js',
   '/portal/push-notifications.js',
   '/images/logo-signature-orange.webp', '/images/icon-192.png', '/images/icon-512.png', '/images/apple-touch-icon.png',

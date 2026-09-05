@@ -118,7 +118,7 @@ test('all four portal pages cross-link to each other, each marking its own page 
   };
   for (const [file, activeLabel] of Object.entries(pages)) {
     const src = fs.readFileSync(path.join(__dirname, '..', '..', 'portal', file), 'utf8');
-    const navMatch = src.match(/<div class="portal-nav">[\s\S]*?<\/div>/);
+    const navMatch = src.match(/<nav class="portal-nav"[\s\S]*?<\/nav>/);
     assert.ok(navMatch, `${file}: expected a portal-nav block`);
     const nav = navMatch[0];
     // Every page links to all four.
@@ -127,7 +127,7 @@ test('all four portal pages cross-link to each other, each marking its own page 
         `${file}: should link to ${target}`);
     }
     // And marks exactly its own as active.
-    assert.match(nav, new RegExp(`class="is-active">${activeLabel}<`),
+    assert.match(nav, new RegExp(`class="is-active" aria-current="page">[\\s\\S]*?<span>${activeLabel}</span>`),
       `${file}: should mark ${activeLabel} as the active tab`);
     assert.equal((nav.match(/is-active/g) || []).length, 1,
       `${file}: exactly one nav item should be active`);

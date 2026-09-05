@@ -19,13 +19,13 @@ test('portal/jobs.html loads none of the internal /tools/ scripts', () => {
 });
 
 test('jobs.html cross-links with quotes.html and dashboard.html, and vice versa', () => {
-  assert.match(html, /<a href="\/portal\/quotes\.html">Quotes<\/a>/);
-  assert.match(html, /<a href="\/portal\/dashboard\.html">Invoices<\/a>/);
+  assert.match(html, /<a href="\/portal\/quotes\.html">[\s\S]*?<span>Quotes<\/span>/);
+  assert.match(html, /<a href="\/portal\/dashboard\.html">[\s\S]*?<span>Invoices<\/span>/);
 
   const dashboardHtml = fs.readFileSync(path.join(__dirname, '..', '..', 'portal', 'dashboard.html'), 'utf8');
   const quotesHtml = fs.readFileSync(path.join(__dirname, '..', '..', 'portal', 'quotes.html'), 'utf8');
-  assert.match(dashboardHtml, /<a href="\/portal\/jobs\.html">Jobs<\/a>/);
-  assert.match(quotesHtml, /<a href="\/portal\/jobs\.html">Jobs<\/a>/);
+  assert.match(dashboardHtml, /<a href="\/portal\/jobs\.html">[\s\S]*?<span>Jobs<\/span>/);
+  assert.match(quotesHtml, /<a href="\/portal\/jobs\.html">[\s\S]*?<span>Jobs<\/span>/);
 });
 
 test('an unauthenticated visitor is redirected to login, not shown job history', () => {

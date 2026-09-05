@@ -1,0 +1,243 @@
+/* ==========================================================
+   Triple H Client Portal — app shell
+   ==========================================================
+   Added 2026-09-04, requested directly: "Make boxes pop. Make
+   swiping feel good, but don't over do it just clean everything up
+   and make it feel more user friendly and app facing."
+
+   Three things live here, all previously either missing or copy-
+   pasted into every page's own inline <style>:
+
+   1. BOTTOM TAB BAR. The single biggest structural change. The nav
+      used to be five text links in a grid at the TOP of the page
+      that scrolled away with the content -- a website pattern. Every
+      native convention puts 3-5 primary destinations in a FIXED bar
+      at the bottom, because the bottom third of the screen is the
+      most reachable area for one-handed thumb use. Five destinations
+      is the documented ceiling (more than five puts targets close
+      enough together that people trigger the wrong one), and the
+      portal has exactly five, so this fits without cutting anything.
+      Settings deliberately stays OUT of the bar and remains a header
+      icon button, matching the convention that a tab bar holds
+      navigation destinations, not actions or account screens.
+
+   2. CARD ELEVATION. Cards were a flat 1px border on a near-black
+      background, which reads as a document rather than an interface.
+      A subtle raised surface plus a real shadow gives depth without
+      tipping into skeuomorphism.
+
+   3. TAP FEEDBACK. Buttons had hover states, which do nothing on a
+      phone. Without a visible response to a tap, people tap twice
+      and fire the wrong action. Every interactive surface now has a
+      real :active state.
+
+   Deliberately NOT done here: heavy animation. The request was
+   explicitly "don't over do it." Transitions are short (120-180ms)
+   and limited to transform/opacity/background, which the compositor
+   handles without repainting.
+   ========================================================== */
+
+/* ----------------------------------------------------------
+   1. Bottom tab bar
+   ---------------------------------------------------------- */
+
+.portal-nav {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 90;
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 0;
+  /* The iPhone home indicator sits inside the viewport -- without
+     this the last row of the bar is physically under it. max() keeps
+     a real floor on browsers where env() resolves to 0px, the same
+     guard the internal tools app already needed after a real
+     reported bug. */
+  padding: 6px 4px max(6px, env(safe-area-inset-bottom));
+  background: rgba(14, 14, 14, 0.92);
+  border-top: 1px solid var(--border);
+  /* Content scrolling under a translucent bar reads as glass rather
+     than as a gap; the solid fallback above still applies wherever
+     backdrop-filter is unsupported. */
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+}
+
+.portal-nav a {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  /* 44px is the documented minimum comfortable touch target. */
+  min-height: 44px;
+  padding: 4px 2px;
+  text-decoration: none;
+  color: var(--text-dim);
+  font-size: 10.5px;
+  font-weight: 600;
+  letter-spacing: 0.2px;
+  line-height: 1.2;
+  border: 0;
+  border-radius: 10px;
+  background: none;
+  transition: color .15s ease, transform .12s ease;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.portal-nav a svg {
+  width: 22px;
+  height: 22px;
+  stroke: currentColor;
+  fill: none;
+  stroke-width: 1.9;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  transition: transform .15s ease;
+}
+
+.portal-nav a.is-active {
+  color: var(--orange-light);
+  /* No filled pill behind the icon -- the colour change plus the dot
+     below is enough to read at a glance without adding visual weight
+     to a bar that's on screen at all times. */
+  background: none;
+  border: 0;
+}
+
+.portal-nav a.is-active svg {
+  transform: translateY(-1px);
+}
+
+/* Small active indicator, the pattern iOS and Android both settled
+   on for showing the current destination without a heavy highlight. */
+.portal-nav a.is-active::after {
+  content: '';
+  position: absolute;
+  bottom: 2px;
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: var(--orange-light);
+}
+
+.portal-nav a {
+  position: relative;
+}
+
+.portal-nav a:active {
+  transform: scale(0.94);
+}
+
+/* The bar is fixed, so it no longer occupies layout space -- without
+   this the last card on every page sits underneath it and can't be
+   scrolled to. */
+body.portal-page {
+  padding-bottom: calc(72px + env(safe-area-inset-bottom));
+}
+
+/* A full-width bar looks stranded on a desktop window, where the
+   content column is centred and narrow. Matching the container's own
+   width keeps it visually attached to the content it belongs to. */
+@media (min-width: 720px) {
+  .portal-nav {
+    left: 50%;
+    transform: translateX(-50%);
+    right: auto;
+    width: min(560px, calc(100% - 32px));
+    margin-bottom: 14px;
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    box-shadow: 0 8px 28px rgba(0, 0, 0, 0.45);
+  }
+}
+
+/* ----------------------------------------------------------
+   2. Card elevation
+   ---------------------------------------------------------- */
+
+.attention-card,
+.help-card,
+.home-card,
+.invoice-card,
+.job-card,
+.quote-card,
+.set-card,
+.wo-card,
+.wo-form-card {
+  /* A hair lighter than the page behind it -- the surface itself
+     does most of the separating; the shadow only anchors it. */
+  background: var(--bg-panel);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.3), 0 4px 14px rgba(0, 0, 0, 0.22);
+}
+
+/* .attention-card keeps its own orange tint from the page it lives
+   on -- overriding the background here would flatten the one card
+   that is deliberately supposed to stand out from the rest. */
+.attention-card {
+  background: var(--orange-tint-soft);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.3), 0 4px 16px rgba(245, 129, 31, 0.10);
+}
+
+/* ----------------------------------------------------------
+   3. Tap feedback
+   ---------------------------------------------------------- */
+
+.btn,
+.small-btn,
+.secondary-btn,
+.portal-icon-btn {
+  transition: transform .12s ease, filter .12s ease, background .15s ease;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.btn:active,
+.small-btn:active,
+.secondary-btn:active,
+.portal-icon-btn:active {
+  transform: scale(0.97);
+  filter: brightness(0.92);
+}
+
+/* A card that actually navigates somewhere should say so on touch;
+   one that's only a container should not. Applied via a class rather
+   than to every card, so it stays opt-in per page. */
+.is-tappable {
+  cursor: pointer;
+  transition: transform .12s ease, box-shadow .12s ease;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.is-tappable:active {
+  transform: scale(0.985);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.35);
+}
+
+/* ----------------------------------------------------------
+   Reduced motion
+   ----------------------------------------------------------
+   Vestibular-motion sensitivity is a real accessibility need, and
+   every transition above is decorative rather than load-bearing --
+   removing them costs nothing functionally. */
+@media (prefers-reduced-motion: reduce) {
+  .portal-nav a,
+  .portal-nav a svg,
+  .btn,
+  .small-btn,
+  .secondary-btn,
+  .portal-icon-btn,
+  .is-tappable {
+    transition: none;
+  }
+
+  .portal-nav a:active,
+  .btn:active,
+  .small-btn:active,
+  .secondary-btn:active,
+  .portal-icon-btn:active,
+  .is-tappable:active {
+    transform: none;
+  }
+}
