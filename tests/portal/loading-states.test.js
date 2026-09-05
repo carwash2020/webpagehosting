@@ -18,9 +18,14 @@ test('quotes.html shows a loading placeholder before its fetch, not an empty con
   const fnMatch = src.match(/async function renderQuotes\(\) \{[\s\S]*?\n  \}\n/);
   assert.ok(fnMatch, 'expected to isolate renderQuotes()');
   const body = fnMatch[0];
-  const loadingIdx = body.indexOf("listEl.innerHTML = '<div class=\"empty-state\">Loading...</div>'");
+  // Rewritten 2026-09-04: the placeholder used to be literal "Loading..."
+  // text; it's now a real skeleton, which is the whole point of a
+  // later, separate improvement (see app-shell.test.js) -- this test's
+  // own job stays the same either way: something real must be shown
+  // before the fetch starts, not an empty container.
+  const loadingIdx = body.indexOf("listEl.innerHTML = portalSkeletonCards(3)");
   const fetchIdx = body.indexOf('.from(\'client_portal_quotes\')');
-  assert.ok(loadingIdx !== -1, 'expected a Loading placeholder to be set');
+  assert.ok(loadingIdx !== -1, 'expected a loading placeholder to be set');
   assert.ok(loadingIdx < fetchIdx, 'the loading placeholder must be set BEFORE the fetch, not after');
 });
 
@@ -29,9 +34,10 @@ test('jobs.html shows a loading placeholder before its fetch, not an empty conta
   const fnMatch = src.match(/async function renderJobs\(\) \{[\s\S]*?\n  \}\n/);
   assert.ok(fnMatch, 'expected to isolate renderJobs()');
   const body = fnMatch[0];
-  const loadingIdx = body.indexOf("listEl.innerHTML = '<div class=\"empty-state\">Loading...</div>'");
+  // Rewritten 2026-09-04: same reasoning as the quotes.html test above.
+  const loadingIdx = body.indexOf("listEl.innerHTML = portalSkeletonCards(4)");
   const fetchIdx = body.indexOf(".from('client_portal_jobs')");
-  assert.ok(loadingIdx !== -1, 'expected a Loading placeholder to be set');
+  assert.ok(loadingIdx !== -1, 'expected a loading placeholder to be set');
   assert.ok(loadingIdx < fetchIdx, 'the loading placeholder must be set BEFORE the fetch, not after');
 });
 
@@ -40,9 +46,10 @@ test('work-orders.html shows a loading placeholder before its fetch, not an empt
   const fnMatch = src.match(/async function renderMyRequests\(\) \{[\s\S]*?\n  \}\n/);
   assert.ok(fnMatch, 'expected to isolate renderMyRequests()');
   const body = fnMatch[0];
-  const loadingIdx = body.indexOf('Loading...');
+  // Rewritten 2026-09-04: same reasoning as the quotes.html test above.
+  const loadingIdx = body.indexOf('portalSkeletonCards(3)');
   const fetchIdx = body.indexOf(".from('client_portal_work_orders')");
-  assert.ok(loadingIdx !== -1, 'expected a Loading placeholder to be set');
+  assert.ok(loadingIdx !== -1, 'expected a loading placeholder to be set');
   assert.ok(loadingIdx < fetchIdx, 'the loading placeholder must be set BEFORE the fetch, not after');
 });
 

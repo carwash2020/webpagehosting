@@ -82,6 +82,7 @@
 </style>
 <link rel="stylesheet" href="/tools/styles-tools.css?v=a2e87effb3">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="/portal/portal-app.js?v=202609042200"></script>
 <!-- Shared business-hours data (2026-09-03) -- see business-hours.js's
      own header comment. This page used to keep its own FIFTH
      independent hand-typed copy of these exact constants. -->
@@ -563,7 +564,7 @@
     // without this, a client on a slow connection sees a blank area
     // indistinguishable from "no jobs on file."
     const listEl = document.getElementById('jobList');
-    listEl.innerHTML = '<div class="empty-state">Loading...</div>';
+    listEl.innerHTML = portalSkeletonCards(4);
 
     const { data: jobs, error } = await client
       .from('client_portal_jobs')
