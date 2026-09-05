@@ -211,7 +211,15 @@
 // Bumped 2026-09-03: clients.html added to PRECACHE_URLS, and
 // dev-tools.html/workspace.html both changed (Portal tab split out).
 // Bumped 2026-09-03 (again): pos.html added to PRECACHE_URLS.
-const CACHE_NAME = 'th-workspace-v49';
+// Bumped 2026-09-05: push-notifications.js changed -- a real
+// duplicate-subscription bug found during a direct scale audit was
+// fixed there (a real upsert against a new unique index, instead of
+// a plain insert that could accumulate duplicate rows for the same
+// device). Precached under its bare path, no ?v= on this specific
+// entry, so this bump is the only thing that actually invalidates
+// the old cached copy -- same failure mode every prior bump above
+// already warned about.
+const CACHE_NAME = 'th-workspace-v50';
 const PRECACHE_URLS = [
   '/tools/workspace.html', '/tools/job-tracker.html', '/tools/invoice-generator.html', '/tools/contract-generator.html',
   '/tools/calendar.html', '/tools/route-planner.html', '/tools/review-request.html', '/tools/contact-card.html',

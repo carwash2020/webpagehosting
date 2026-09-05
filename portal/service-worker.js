@@ -39,7 +39,10 @@
 // (home/dashboard/jobs/quotes/work-orders gained the gate call;
 // settings gained the toggle UI and its own render function). Same
 // reasoning as every prior bump in this file's history.
-const CACHE_NAME = 'th-portal-v5';
+// Bumped 2026-09-05 (v5 -> v6): push-notifications.js changed -- the
+// same real duplicate-subscription fix described in the internal
+// tools service worker's own comment on this date.
+const CACHE_NAME = 'th-portal-v6';
 const PRECACHE_URLS = [
   '/portal/home.html', '/portal/dashboard.html', '/portal/jobs.html', '/portal/quotes.html',
   '/portal/work-orders.html', '/portal/settings.html', '/portal/login.html', '/portal/set-password.html',

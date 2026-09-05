@@ -72,15 +72,21 @@ async function enablePortalPushNotifications() {
   if (!session) return { ok: false, error: 'Not signed in.' };
 
   try {
-    const res = await fetch(`${SUPABASE_URL}/rest/v1/push_subscriptions`, {
+    const subJson = subscription.toJSON();
+    // Found during a direct scale audit (2026-09-05): same fix as
+    // tools/push-notifications.js -- see that file's own comment for
+    // the full reasoning. A plain INSERT here let a client toggle
+    // push off and back on repeatedly on the same device, each time
+    // inserting a fresh row for the same real endpoint.
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/push_subscriptions?on_conflict=user_id,endpoint`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
         'apikey': SUPABASE_ANON_KEY,
         'Authorization': `Bearer ${session.access_token}`,
-        'Prefer': 'return=minimal',
+        'Prefer': 'return=minimal,resolution=merge-duplicates',
       },
-      body: JSON.stringify({ user_id: session.user.id, subscription: subscription.toJSON() }),
+      body: JSON.stringify({ user_id: session.user.id, endpoint: subJson.endpoint, subscription: subJson }),
     });
     if (!res.ok) return { ok: false, error: 'Saved on this device, but failed to register with the server (http-' + res.status + ').' };
     return { ok: true };
@@ -99,7 +105,9 @@ async function disablePortalPushNotifications() {
   try {
     const { data: { session } } = await client.auth.getSession();
     if (session) {
-      await fetch(`${SUPABASE_URL}/rest/v1/push_subscriptions?subscription->>endpoint=eq.${encodeURIComponent(endpoint)}`, {
+      // Filters on the real endpoint column now -- see
+      // tools/push-notifications.js's own comment on this same change.
+      await fetch(`${SUPABASE_URL}/rest/v1/push_subscriptions?endpoint=eq.${encodeURIComponent(endpoint)}`, {
         method: 'DELETE',
         headers: {
           'apikey': SUPABASE_ANON_KEY,

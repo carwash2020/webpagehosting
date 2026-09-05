@@ -67,15 +67,23 @@ async function enablePushNotifications() {
   if (!userId) return { ok: false, error: 'Not signed in.' };
 
   try {
-    const res = await fetch(`${SUPABASE_URL}/rest/v1/push_subscriptions`, {
+    const subJson = subscription.toJSON();
+    // Found during a direct scale audit (2026-09-05): a plain INSERT
+    // here let a client toggle push off and back on repeatedly on the
+    // same device, each time inserting a fresh row for the same real
+    // endpoint -- genuinely duplicate notifications on every future
+    // send, not just a wasted row. A real upsert (matched against the
+    // new unique index on (user_id, endpoint)) replaces the old row
+    // for this device instead of accumulating another one.
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/push_subscriptions?on_conflict=user_id,endpoint`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
         'apikey': SUPABASE_ANON_KEY,
         'Authorization': `Bearer ${getAuthToken()}`,
-        'Prefer': 'return=minimal',
+        'Prefer': 'return=minimal,resolution=merge-duplicates',
       },
-      body: JSON.stringify({ user_id: userId, subscription: subscription.toJSON() }),
+      body: JSON.stringify({ user_id: userId, endpoint: subJson.endpoint, subscription: subJson }),
     });
     if (!res.ok) return { ok: false, error: 'Saved on this device, but failed to register with the server (http-' + res.status + ').' };
     return { ok: true };
@@ -92,7 +100,11 @@ async function disablePushNotifications() {
   try { await subscription.unsubscribe(); } catch (e) { /* continue anyway */ }
 
   try {
-    await fetch(`${SUPABASE_URL}/rest/v1/push_subscriptions?subscription->>endpoint=eq.${encodeURIComponent(endpoint)}`, {
+    // Filters on the real endpoint column now, matching the index
+    // that actually backs it -- the old subscription->>endpoint
+    // JSONB filter has no supporting index anymore (superseded by
+    // the plain column added in this same audit).
+    await fetch(`${SUPABASE_URL}/rest/v1/push_subscriptions?endpoint=eq.${encodeURIComponent(endpoint)}`, {
       method: 'DELETE',
       headers: {
         'apikey': SUPABASE_ANON_KEY,
