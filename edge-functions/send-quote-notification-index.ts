@@ -66,6 +66,33 @@ function escapeHtml(value: unknown): string {
   return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
 }
 
+// Client push (2026-09-04), requested directly: "finish push (3
+// remaining triggers)" -- same proven pattern as
+// notify-work-order-message-email and send-invoice-notification.
+async function getUserIdByEmail(email: string): Promise<string | null> {
+  const res = await fetch(`${SUPABASE_URL}/auth/v1/admin/users?email=${encodeURIComponent(email.toLowerCase())}`, {
+    headers: { apikey: SERVICE_ROLE_KEY, Authorization: `Bearer ${SERVICE_ROLE_KEY}` },
+  });
+  if (!res.ok) return null;
+  const data = await res.json();
+  const users = Array.isArray(data) ? data : data.users || [];
+  return users.length ? users[0].id : null;
+}
+
+async function sendClientPush(email: string, title: string, body: string, url: string) {
+  try {
+    const userId = await getUserIdByEmail(email);
+    if (!userId) return;
+    await fetch(`${SUPABASE_URL}/functions/v1/Send-Push`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${SERVICE_ROLE_KEY}` },
+      body: JSON.stringify({ type: "client-notification", user_id: userId, title, body, url }),
+    });
+  } catch (err: any) {
+    console.error("sendClientPush error (non-fatal):", err.message);
+  }
+}
+
 function formatCurrency(n: number): string {
   return new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(n);
 }
@@ -197,6 +224,8 @@ Deno.serve(async (req: Request) => {
       const errBody = await emailRes.text();
       return json({ ok: false, error: `Email failed to send: ${errBody.slice(0, 300)}` }, 502);
     }
+
+    await sendClientPush(client_email, "New quote to review", `Quote ${quote_number}: ${formatCurrency(total)}`, "/portal/quotes.html");
 
     return json({ ok: true });
   } catch (err: any) {

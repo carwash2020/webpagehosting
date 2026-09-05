@@ -79,6 +79,42 @@ function escapeHtml(value: unknown): string {
   return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
 }
 
+// Client push (2026-09-04), requested directly: "finish push (3
+// remaining triggers)" -- the fourth of four events that already
+// send an email now also fires a push, using the exact same pattern
+// already proven in notify-work-order-message-email. push_subscriptions
+// is keyed to a real auth.users id, not an email, so the client's id
+// needs looking up via GoTrue's own admin endpoint first. A missing
+// subscription is silent and non-fatal -- push is a best-effort
+// additional channel, never a required step.
+async function getUserIdByEmail(email: string): Promise<string | null> {
+  const res = await fetch(`${SUPABASE_URL}/auth/v1/admin/users?email=${encodeURIComponent(email.toLowerCase())}`, {
+    headers: { apikey: SERVICE_ROLE_KEY, Authorization: `Bearer ${SERVICE_ROLE_KEY}` },
+  });
+  if (!res.ok) return null;
+  const data = await res.json();
+  const users = Array.isArray(data) ? data : data.users || [];
+  return users.length ? users[0].id : null;
+}
+
+async function sendClientPush(email: string, title: string, body: string, url: string) {
+  try {
+    const userId = await getUserIdByEmail(email);
+    if (!userId) return;
+    // Send-Push, exact casing -- Supabase function slugs are
+    // case-sensitive; a lowercase call created a genuinely separate,
+    // orphaned function during an earlier build. See that incident's
+    // own history in notify-work-order-message-email-index.ts.
+    await fetch(`${SUPABASE_URL}/functions/v1/Send-Push`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${SERVICE_ROLE_KEY}` },
+      body: JSON.stringify({ type: "client-notification", user_id: userId, title, body, url }),
+    });
+  } catch (err: any) {
+    console.error("sendClientPush error (non-fatal):", err.message);
+  }
+}
+
 function formatCurrency(n: number): string {
   return new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(n);
 }
@@ -210,6 +246,12 @@ Deno.serve(async (req: Request) => {
       const errBody = await emailRes.text();
       return json({ ok: false, error: `Email failed to send: ${errBody.slice(0, 300)}` }, 502);
     }
+
+    // Push is an additional channel, checked here rather than in a
+    // separate gate above -- a client who opted out of invoice/quote
+    // emails already returned early, so reaching this line means
+    // they DO want to be notified about this.
+    await sendClientPush(client_email, "New invoice", `Invoice ${invoice_number}: ${formatCurrency(total)}`, "/portal/dashboard.html");
 
     return json({ ok: true });
   } catch (err: any) {
