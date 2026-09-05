@@ -238,20 +238,38 @@ async function portalPromptBiometricUnlock(email) {
 // full-screen overlay until a real unlock succeeds, with a fallback
 // to sign out and use a password instead for a lost/unavailable
 // authenticator.
-// Module-level, resets naturally on every real page load since this
-// file itself is freshly loaded then -- tracks whether the gate has
-// already resolved once for this page's lifetime. Several pages call
-// their main render function more than once (pull-to-refresh, after
-// an action, etc.), and each of those calls invokes this same gate;
-// without this flag, the lock would re-prompt every single time
-// instead of just once per page open.
-let portalBiometricGatePassed = false;
+// Fixed 2026-09-05, reported directly: "with Face Id enabled on
+// settings, it requires it between every tab switch... it's
+// inconvenient having to put in the password just to switch between
+// pages." The original module-level boolean flag reset to false on
+// EVERY page load, since this is a multi-page app -- each navigation
+// is a fresh document, a fresh JS execution context, and a fresh
+// copy of this file. That's exactly why it re-prompted on every tab
+// switch: it wasn't tracking "unlocked this app session," it was
+// only ever tracking "unlocked since this specific page loaded,"
+// which reset every single time.
+//
+// sessionStorage is the right mechanism instead: it persists across
+// every navigation within the same browser tab/session, but is
+// cleared the moment the tab or app is actually closed -- matching
+// "not again unless the app is cleared again" exactly. Keyed by
+// email (not global), matching the same per-email keying the lock's
+// own enabled-state already uses -- a different account signing in
+// on the same shared device gets its own, separately-tracked
+// unlocked state, defaulting to locked.
+function portalBiometricUnlockedSessionKey(email) {
+  return 'th_portal_biometric_unlocked_' + email.toLowerCase();
+}
 
 function portalGuardWithBiometricLock(email, client) {
-  if (portalBiometricGatePassed) return Promise.resolve();
+  if (sessionStorage.getItem(portalBiometricUnlockedSessionKey(email))) return Promise.resolve();
 
   return new Promise((resolve) => {
-    if (!portalIsBiometricLockEnabled(email)) { portalBiometricGatePassed = true; resolve(); return; }
+    if (!portalIsBiometricLockEnabled(email)) {
+      sessionStorage.setItem(portalBiometricUnlockedSessionKey(email), '1');
+      resolve();
+      return;
+    }
 
     const overlay = document.createElement('div');
     overlay.className = 'biometric-lock-overlay';
@@ -271,7 +289,7 @@ function portalGuardWithBiometricLock(email, client) {
       btn.textContent = 'Unlocking...';
       const success = await portalPromptBiometricUnlock(email);
       if (success) {
-        portalBiometricGatePassed = true;
+        sessionStorage.setItem(portalBiometricUnlockedSessionKey(email), '1');
         overlay.remove();
         resolve();
       } else {

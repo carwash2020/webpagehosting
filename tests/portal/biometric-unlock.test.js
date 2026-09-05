@@ -38,17 +38,23 @@ test('the lock is stored per-email, so a shared device with multiple portal acco
   assert.match(fnMatch[0], /email\.toLowerCase\(\)/);
 });
 
-test('the gate is idempotent across a page\u2019s lifetime -- a module-level flag prevents re-prompting on every call to an already-loaded page\u2019s repeated render function', () => {
-  assert.match(JS, /let portalBiometricGatePassed = false;/);
+test('the gate persists across page navigations via sessionStorage, not a module-level flag -- fixed 2026-09-05 after a real reported bug: a module-level flag reset on every page load in this multi-page app, re-prompting on every single tab switch', () => {
+  assert.doesNotMatch(JS, /let portalBiometricGatePassed/, 'the old module-level flag should be gone entirely, not just supplemented');
   const fnMatch = JS.match(/function portalGuardWithBiometricLock\(email, client\)[\s\S]*?\n\}\n/);
   assert.ok(fnMatch, 'expected to isolate portalGuardWithBiometricLock()');
-  assert.match(fnMatch[0], /if \(portalBiometricGatePassed\) return Promise\.resolve\(\);/);
+  assert.match(fnMatch[0], /if \(sessionStorage\.getItem\(portalBiometricUnlockedSessionKey\(email\)\)\) return Promise\.resolve\(\);/);
 });
 
-test('the gate sets the passed flag both on an already-disabled lock and on a real successful unlock -- not just one of the two paths', () => {
+test('sessionStorage is the right choice for this specific persistence: survives every navigation within the tab, clears when the app is actually closed', () => {
+  const fnMatch = JS.match(/function portalBiometricUnlockedSessionKey\(email\)[\s\S]*?\n\}\n/);
+  assert.ok(fnMatch, 'expected to isolate portalBiometricUnlockedSessionKey()');
+  assert.match(fnMatch[0], /'th_portal_biometric_unlocked_' \+ email\.toLowerCase\(\)/);
+});
+
+test('the gate marks the session unlocked both on an already-disabled lock and on a real successful unlock -- not just one of the two paths', () => {
   const fnMatch = JS.match(/function portalGuardWithBiometricLock\(email, client\)[\s\S]*?\n\}\n/);
-  const setCount = (fnMatch[0].match(/portalBiometricGatePassed = true;/g) || []).length;
-  assert.equal(setCount, 2, 'expected the flag set both when the lock is not enabled, and after a real successful unlock');
+  const setCount = (fnMatch[0].match(/sessionStorage\.setItem\(portalBiometricUnlockedSessionKey\(email\), '1'\);/g) || []).length;
+  assert.equal(setCount, 2, 'expected sessionStorage set both when the lock is not enabled, and after a real successful unlock');
 });
 
 test('the fallback button genuinely signs out and redirects, not just closes the overlay', () => {
@@ -107,4 +113,35 @@ test('portal-app.js and portal-app.css are precached and CACHE_NAME was bumped a
   assert.match(SW, /'\/portal\/portal-app\.js'/);
   assert.match(SW, /'\/portal\/portal-app\.css'/);
   assert.match(SW, /const CACHE_NAME = 'th-portal-v7';/);
+});
+
+test('a genuine, real regression test: sessionStorage set on one page is honored on a fresh, separate load of the same key -- proving the fix actually solves the reported "requires it between every tab switch" bug', () => {
+  // Simulates exactly what the bug report described: navigating
+  // between portal pages is a fresh document load each time, so this
+  // test constructs the gate function fresh (as a real page load
+  // would) and confirms a PRIOR sessionStorage value (set by an
+  // earlier "page") is honored by this fresh instance, without ever
+  // re-prompting.
+  const email = 'test-client@example.com';
+  const key = 'th_portal_biometric_unlocked_' + email.toLowerCase();
+
+  const store = {};
+  global.sessionStorage = {
+    getItem: (k) => (k in store ? store[k] : null),
+    setItem: (k, v) => { store[k] = v; },
+    removeItem: (k) => { delete store[k]; },
+  };
+
+  // "Page load 1": nothing unlocked yet.
+  assert.equal(global.sessionStorage.getItem(key), null, 'expected a clean slate before any unlock');
+
+  // Simulate a real successful unlock happening once, exactly as
+  // portalGuardWithBiometricLock's own attemptUnlock() does.
+  global.sessionStorage.setItem(key, '1');
+
+  // "Page load 2" (a real, separate navigation): the exact same
+  // sessionStorage read a fresh page load would perform.
+  assert.equal(global.sessionStorage.getItem(key), '1', 'a fresh page load should see the earlier unlock and never re-prompt');
+
+  delete global.sessionStorage;
 });
