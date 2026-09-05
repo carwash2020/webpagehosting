@@ -400,3 +400,56 @@ body.portal-page {
     animation: none;
   }
 }
+
+/* ----------------------------------------------------------
+   Biometric app lock
+   ----------------------------------------------------------
+   Added 2026-09-05, requested directly: "biometric unlock." A
+   full-screen overlay, shown only while a client-chosen local lock
+   is being verified -- see portal-app.js's own header comment on
+   this feature for the full reasoning (a local-only gate in front
+   of an already-valid session, not a server-verified factor).
+*/
+
+.biometric-lock-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  background: var(--bg);
+}
+
+.biometric-lock-box {
+  width: 100%;
+  max-width: 320px;
+  text-align: center;
+}
+
+.biometric-lock-icon {
+  width: 48px;
+  height: 48px;
+  margin: 0 auto 18px;
+  display: block;
+  stroke: var(--orange-light);
+  fill: none;
+  stroke-width: 1.6;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.biometric-lock-title {
+  font-family: 'Oswald', sans-serif;
+  font-weight: 700;
+  font-size: 20px;
+  color: var(--white);
+  margin-bottom: 8px;
+}
+
+.biometric-lock-sub {
+  color: var(--text-dim);
+  font-size: 13.5px;
+  line-height: 1.5;
+}

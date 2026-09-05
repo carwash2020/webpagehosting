@@ -418,6 +418,7 @@
     const { data: { session } } = await client.auth.getSession();
     if (!session) { window.location.replace('/portal/login.html'); return; }
     document.getElementById('clientEmailDisplay').textContent = session.user.email;
+    await portalGuardWithBiometricLock(session.user.email, client);
 
     try {
       const summary = await loadSummary();

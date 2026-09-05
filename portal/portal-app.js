@@ -140,3 +140,159 @@ function initPortalPullToRefresh(onRefresh) {
   });
 }
 
+// Biometric app lock (2026-09-05), requested directly: "biometric
+// unlock." Deliberately NOT Supabase's own native passkey feature
+// (released as a beta, experimental API this year) -- that would
+// replace the actual sign-in mechanism, requires a Dashboard-level
+// relying-party configuration this code can't set up on its own, and
+// carries an explicit "may change without notice" warning from
+// Supabase itself. This is a local-only pattern instead, the same
+// one most banking apps actually use: the client already signs in
+// normally with a password, and stays signed in via Supabase's own
+// session persistence exactly as before. WebAuthn's platform
+// authenticator (Face ID, Touch ID, Windows Hello, or a device PIN)
+// is used purely as a LOCAL gate in front of that already-valid
+// session -- nothing here is verified by, or even sent to, any
+// server. Being honest about what this means: it's a convenience/UX
+// gate, not a second server-verified authentication factor. A
+// credential id is stored per-email in localStorage, since more than
+// one portal account could plausibly sign in on the same shared
+// device/browser.
+
+function portalBiometricLockKey(email) {
+  return 'th_portal_biometric_lock_' + email.toLowerCase();
+}
+
+function portalBiometricLockSupported() {
+  return typeof window.PublicKeyCredential !== 'undefined' &&
+    typeof navigator.credentials !== 'undefined';
+}
+
+function portalIsBiometricLockEnabled(email) {
+  return !!localStorage.getItem(portalBiometricLockKey(email));
+}
+
+function portalDisableBiometricLock(email) {
+  localStorage.removeItem(portalBiometricLockKey(email));
+}
+
+// Registers a new local credential, requested from Settings. The
+// challenge only needs to be unguessable, not verified by a server
+// (there is no server round-trip in this pattern at all) -- a fresh
+// random value is sufficient.
+async function portalRegisterBiometricLock(email) {
+  if (!portalBiometricLockSupported()) {
+    return { ok: false, error: "This device/browser doesn't support biometric unlock." };
+  }
+  try {
+    const challenge = crypto.getRandomValues(new Uint8Array(32));
+    const userId = crypto.getRandomValues(new Uint8Array(16));
+    const credential = await navigator.credentials.create({
+      publicKey: {
+        challenge,
+        rp: { name: 'Triple H Enterprises Portal' },
+        user: { id: userId, name: email, displayName: email },
+        pubKeyCredParams: [{ type: 'public-key', alg: -7 }, { type: 'public-key', alg: -257 }],
+        authenticatorSelection: { authenticatorAttachment: 'platform', userVerification: 'required' },
+        timeout: 60000,
+      },
+    });
+    if (!credential) return { ok: false, error: 'Setup was cancelled.' };
+    const credentialId = btoa(String.fromCharCode(...new Uint8Array(credential.rawId)));
+    localStorage.setItem(portalBiometricLockKey(email), credentialId);
+    return { ok: true };
+  } catch (e) {
+    return { ok: false, error: e.message || 'Could not set up biometric unlock on this device.' };
+  }
+}
+
+// Prompts the actual unlock. Returns true only on a real, successful
+// local verification -- any cancellation, timeout, or error is a
+// clear false rather than something that could be misread as success.
+async function portalPromptBiometricUnlock(email) {
+  const stored = localStorage.getItem(portalBiometricLockKey(email));
+  if (!stored) return false;
+  try {
+    const credentialId = Uint8Array.from(atob(stored), (c) => c.charCodeAt(0));
+    const challenge = crypto.getRandomValues(new Uint8Array(32));
+    const assertion = await navigator.credentials.get({
+      publicKey: {
+        challenge,
+        allowCredentials: [{ id: credentialId, type: 'public-key' }],
+        userVerification: 'required',
+        timeout: 60000,
+      },
+    });
+    return !!assertion;
+  } catch (e) {
+    return false;
+  }
+}
+
+// The actual per-page gate, called from each page's own init() right
+// after a valid session is confirmed -- same explicit-per-page-call
+// pattern already established for pull-to-refresh above, since this
+// genuinely needs to know which email's lock setting to check, which
+// only the page's own session lookup has. Resolves immediately if the
+// lock isn't enabled for this email; otherwise blocks by showing a
+// full-screen overlay until a real unlock succeeds, with a fallback
+// to sign out and use a password instead for a lost/unavailable
+// authenticator.
+// Module-level, resets naturally on every real page load since this
+// file itself is freshly loaded then -- tracks whether the gate has
+// already resolved once for this page's lifetime. Several pages call
+// their main render function more than once (pull-to-refresh, after
+// an action, etc.), and each of those calls invokes this same gate;
+// without this flag, the lock would re-prompt every single time
+// instead of just once per page open.
+let portalBiometricGatePassed = false;
+
+function portalGuardWithBiometricLock(email, client) {
+  if (portalBiometricGatePassed) return Promise.resolve();
+
+  return new Promise((resolve) => {
+    if (!portalIsBiometricLockEnabled(email)) { portalBiometricGatePassed = true; resolve(); return; }
+
+    const overlay = document.createElement('div');
+    overlay.className = 'biometric-lock-overlay';
+    overlay.innerHTML =
+      '<div class="biometric-lock-box">' +
+      '<svg viewBox="0 0 24 24" aria-hidden="true" class="biometric-lock-icon"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>' +
+      '<div class="biometric-lock-title">Locked</div>' +
+      '<div class="biometric-lock-sub">Unlock with Face ID, Touch ID, or your device PIN.</div>' +
+      '<button class="btn blue" id="biometricUnlockBtn" style="width:100%; justify-content:center; margin-top:18px;">Unlock</button>' +
+      '<button class="small-btn" id="biometricFallbackBtn" style="margin-top:12px;">Use password instead</button>' +
+      '</div>';
+    document.body.appendChild(overlay);
+
+    async function attemptUnlock() {
+      const btn = document.getElementById('biometricUnlockBtn');
+      btn.disabled = true;
+      btn.textContent = 'Unlocking...';
+      const success = await portalPromptBiometricUnlock(email);
+      if (success) {
+        portalBiometricGatePassed = true;
+        overlay.remove();
+        resolve();
+      } else {
+        btn.disabled = false;
+        btn.textContent = 'Unlock';
+      }
+    }
+
+    document.getElementById('biometricUnlockBtn').addEventListener('click', attemptUnlock);
+    document.getElementById('biometricFallbackBtn').addEventListener('click', async () => {
+      await client.auth.signOut();
+      window.location.replace('/portal/login.html');
+    });
+
+    // Prompt automatically once on load -- most platforms allow this
+    // without a prior user gesture for a conditional/direct
+    // credential request, and it saves an extra tap on the common
+    // path. The visible button above is the fallback for browsers
+    // that require a gesture first, or a user who dismissed the
+    // automatic prompt.
+    attemptUnlock();
+  });
+}
+

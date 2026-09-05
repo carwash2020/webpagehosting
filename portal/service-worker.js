@@ -34,7 +34,12 @@
 // HTML pages (three gained the script tag for the first time; five
 // gained the pull-to-refresh wire-up). Same reasoning as every prior
 // bump in this file's history.
-const CACHE_NAME = 'th-portal-v4';
+// Bumped 2026-09-05 (v4 -> v5): biometric app lock changed
+// portal-app.js/portal-app.css and 6 precached HTML pages
+// (home/dashboard/jobs/quotes/work-orders gained the gate call;
+// settings gained the toggle UI and its own render function). Same
+// reasoning as every prior bump in this file's history.
+const CACHE_NAME = 'th-portal-v5';
 const PRECACHE_URLS = [
   '/portal/home.html', '/portal/dashboard.html', '/portal/jobs.html', '/portal/quotes.html',
   '/portal/work-orders.html', '/portal/settings.html', '/portal/login.html', '/portal/set-password.html',

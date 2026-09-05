@@ -100,7 +100,7 @@ test('motion respects prefers-reduced-motion for both new features', () => {
 });
 
 test('both new shared files are precached and CACHE_NAME was bumped again for this change', () => {
-  assert.match(SW, /const CACHE_NAME = 'th-portal-v4';/);
+  assert.match(SW, /const CACHE_NAME = 'th-portal-v5';/);
   assert.match(SW, /'\/portal\/portal-app\.js'/);
   assert.match(SW, /'\/portal\/portal-app\.css'/);
 });

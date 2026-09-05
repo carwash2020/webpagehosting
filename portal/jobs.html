@@ -558,6 +558,7 @@
       return;
     }
     document.getElementById('clientEmailDisplay').textContent = session.user.email;
+    await portalGuardWithBiometricLock(session.user.email, client);
 
     // Shown immediately, before the fetch (2026-09-03) -- same
     // reasoning as quotes.html's identical fix, found the same pass:
