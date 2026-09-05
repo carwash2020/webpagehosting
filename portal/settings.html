@@ -87,6 +87,7 @@
 </style>
 <link rel="stylesheet" href="/tools/styles-tools.css?v=a2e87effb3">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="/portal/portal-app.js?v=202609042200"></script>
 <script src="https://js.stripe.com/v3/"></script>
 <script src="/portal/push-notifications.js"></script>
 <style>
@@ -254,7 +255,7 @@
 <div class="set-card">
   <div class="set-card-title">Saved Cards</div>
   <div class="set-card-sub">Cards saved from a past payment, so future charges can be one tap instead of retyping your card.</div>
-  <div id="savedCardsBody"><p class="set-card-sub" style="margin:0;">Loading...</p></div>
+  <div id="savedCardsBody"><div class="skeleton-mini"><div class="skeleton-line is-medium"></div></div><div class="skeleton-mini"><div class="skeleton-line is-narrow"></div></div></div>
   <button class="btn blue" id="addCardBtn" style="width:100%; justify-content:center; margin-top:12px;" onclick="startAddCard()">Add a Card</button>
   <div id="addCardArea"></div>
 </div>
@@ -269,7 +270,7 @@
 <div class="set-card">
   <div class="set-card-title">Signed Authorizations</div>
   <div class="set-card-sub">What you've agreed to when a card was saved on your account.</div>
-  <div id="authorizationsBody"><p class="set-card-sub" style="margin:0;">Loading...</p></div>
+  <div id="authorizationsBody"><div class="skeleton-mini"><div class="skeleton-line is-medium"></div></div><div class="skeleton-mini"><div class="skeleton-line is-narrow"></div></div></div>
 </div>
 
 <!--

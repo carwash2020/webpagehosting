@@ -216,7 +216,68 @@ body.portal-page {
 }
 
 /* ----------------------------------------------------------
-   Reduced motion
+   4. Skeleton loading states
+   ----------------------------------------------------------
+   Added 2026-09-04, requested directly: "Skeleton loading states."
+   Grounded in the research: skeletons for content being fetched
+   where layout context matters (lists, dashboards) -- spinners stay
+   for short blocking actions (payment, auth) where content structure
+   is unknown, which is why the payment modal and set-password's
+   token check deliberately still show plain text, not a skeleton
+   here. A generic card shape (title bar + two lines) is used
+   everywhere rather than a bespoke skeleton per page -- it's a
+   reasonable approximation of every real card class on the portal,
+   and building one per page would be much more work for a
+   perceptual improvement that doesn't need pixel-perfect matching to
+   work. */
+
+@keyframes skeleton-pulse {
+  0%, 100% { opacity: 0.55; }
+  50% { opacity: 0.9; }
+}
+
+.skeleton-card {
+  background: var(--bg-panel);
+  border-radius: 12px;
+  padding: 16px;
+  margin-bottom: 12px;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.3), 0 4px 14px rgba(0, 0, 0, 0.22);
+}
+
+.skeleton-line {
+  height: 12px;
+  border-radius: 6px;
+  background: var(--border);
+  animation: skeleton-pulse 1.3s ease-in-out infinite;
+}
+
+.skeleton-line + .skeleton-line {
+  margin-top: 10px;
+}
+
+.skeleton-line.is-title { width: 55%; height: 15px; }
+.skeleton-line.is-wide { width: 90%; }
+.skeleton-line.is-medium { width: 70%; }
+.skeleton-line.is-narrow { width: 40%; }
+
+/* A smaller variant for nested contexts (a message panel inside an
+   already-open card), where a full card-shaped skeleton would be
+   visually too heavy for the space it sits in. */
+.skeleton-mini {
+  padding: 4px 0;
+}
+
+.skeleton-mini .skeleton-line {
+  height: 10px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .skeleton-line {
+    animation: none;
+    opacity: 0.7;
+  }
+}
+
    ----------------------------------------------------------
    Vestibular-motion sensitivity is a real accessibility need, and
    every transition above is decorative rather than load-bearing --

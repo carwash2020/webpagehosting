@@ -93,6 +93,7 @@
 </style>
 <link rel="stylesheet" href="/tools/styles-tools.css?v=a2e87effb3">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="/portal/portal-app.js?v=202609042200"></script>
 <!-- Shared business-hours data (2026-09-04) -- see business-hours.js's
      own header comment for the full reasoning. -->
 <script src="/business-hours.js?v=2"></script>
@@ -781,7 +782,7 @@
     // reasoning as the identical fix on quotes.html/jobs.html, found
     // the same pass: without this, a client on a slow connection sees
     // a blank area indistinguishable from "nothing requested yet."
-    listEl.innerHTML = '<div class="wo-section-title">Your requests</div><div class="empty-state">Loading...</div>';
+    listEl.innerHTML = '<div class="wo-section-title">Your requests</div>' + portalSkeletonCards(3);
     // Deliberately selects an explicit column list rather than '*' --
     // internal_notes must never reach a client, and Postgres RLS is
     // row-level, not column-level, so the query itself is what keeps
@@ -829,7 +830,7 @@
   async function loadAndRenderThread(workOrderId) {
     const panel = document.getElementById('woMessages-' + workOrderId);
     if (!panel) return;
-    panel.innerHTML = '<p class="wo-message-meta">Loading...</p>';
+    panel.innerHTML = portalSkeletonLines(2);
 
     const { data: messages, error } = await client
       .from('client_portal_work_order_messages')

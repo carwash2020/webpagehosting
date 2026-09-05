@@ -85,6 +85,9 @@ const SHARED_SCRIPT_FILES = [
   // quotes, and an apostrophe inside this comment block would be
   // misread as a string delimiter.)
   'portal/push-notifications.js',
+  // The portal app-shell shared helper (2026-09-04) -- skeleton
+  // loading templates, loaded on every page that shows a list.
+  'portal/portal-app.js',
 ];
 
 // Third-party globals from CDN-loaded scripts (Supabase, Stripe,

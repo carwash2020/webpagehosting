@@ -29,20 +29,19 @@
 // matters (a real incident, several times over, of a file changing
 // without this bump meaning devices kept serving stale content
 // indefinitely).
-// Bumped 2026-09-04 (v1 -> v2): the app-shell work -- bottom tab bar,
-// card elevation, tap feedback -- added /portal/portal-app.css and
-// changed all 8 precached HTML pages. Every one of those is in the
-// list below, so without this bump a device that installed the
-// service worker earlier could keep serving the OLD cached copies
-// indefinitely no matter how many times the page is refreshed. That
-// exact failure mode has bitten the internal tools service worker
-// several times over; see its own header comment for the history.
-const CACHE_NAME = 'th-portal-v2';
+// Bumped 2026-09-04 (v2 -> v3): skeleton loading states added
+// /portal/portal-app.js and changed 5 precached HTML pages
+// (home/jobs/quotes/work-orders/settings). Same reasoning as the
+// v1->v2 bump above -- every precached file that changes needs this
+// bump, or a device that installed the service worker earlier keeps
+// serving the old cached copies indefinitely.
+const CACHE_NAME = 'th-portal-v3';
 const PRECACHE_URLS = [
   '/portal/home.html', '/portal/dashboard.html', '/portal/jobs.html', '/portal/quotes.html',
   '/portal/work-orders.html', '/portal/settings.html', '/portal/login.html', '/portal/set-password.html',
   '/portal/manifest.json',
   '/portal/portal-app.css',
+  '/portal/portal-app.js',
   '/styles.css', '/business-hours.js',
   '/portal/push-notifications.js',
   '/images/logo-signature-orange.webp', '/images/icon-192.png', '/images/icon-512.png', '/images/apple-touch-icon.png',
