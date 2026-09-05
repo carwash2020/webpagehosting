@@ -33,8 +33,16 @@ test('the search is debounced at 400ms, matching the interval already establishe
 test('a search term is properly quoted for PostgREST\u2019s or=() filter syntax, so a comma or parenthesis in a client\u2019s name cannot be misread as a filter delimiter', () => {
   const fnMatch = HTML.match(/function ilikePattern\(term\)[\s\S]*?\n  \}\n/);
   assert.ok(fnMatch, 'expected to isolate ilikePattern()');
-  assert.ok(fnMatch[0].includes(`return '"*' + term.replace(/"/g, `), 'expected the value wrapped in literal double quotes, with embedded quotes escaped');
-  assert.ok(fnMatch[0].includes(`) + '*"';`), 'expected the closing wildcard and quote');
+  assert.ok(fnMatch[0].includes(`return '"*' + escaped + '*"';`), 'expected the escaped value wrapped in literal double quotes');
+});
+
+test('backslashes are escaped BEFORE quotes -- a real, CodeQL-confirmed high-severity bug found in review: a term ending in a backslash could otherwise escape the closing quote itself and break out of the intended quoted value', () => {
+  const fnMatch = HTML.match(/function ilikePattern\(term\)[\s\S]*?\n  \}\n/);
+  const backslashIdx = fnMatch[0].indexOf(`replace(/\\\\/g,`);
+  const quoteIdx = fnMatch[0].indexOf(`replace(/"/g,`);
+  assert.ok(backslashIdx !== -1, 'expected a backslash-escaping replace call');
+  assert.ok(quoteIdx !== -1, 'expected a quote-escaping replace call');
+  assert.ok(backslashIdx < quoteIdx, 'backslashes must be escaped first, or the backslash inserted for quote-escaping would itself get double-escaped');
 });
 
 test('the search requires at least 3 characters before firing, avoiding an overly broad single-letter search across 4 tables', () => {

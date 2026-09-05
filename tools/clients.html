@@ -480,7 +480,8 @@
   // possibility in a client's name) would be misread as an or-filter
   // delimiter rather than part of the search value itself.
   function ilikePattern(term) {
-    return '"*' + term.replace(/"/g, '\\"') + '*"';
+    const escaped = term.replace(/\\/g, '\\\\').replace(/"/g, '\\"');
+    return '"*' + escaped + '*"';
   }
 
   async function findMatchingClientEmails(term) {
