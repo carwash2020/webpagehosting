@@ -106,5 +106,5 @@ test('portal-app.js and portal-app.css are precached and CACHE_NAME was bumped a
   const SW = fs.readFileSync(repo('portal', 'service-worker.js'), 'utf8');
   assert.match(SW, /'\/portal\/portal-app\.js'/);
   assert.match(SW, /'\/portal\/portal-app\.css'/);
-  assert.match(SW, /const CACHE_NAME = 'th-portal-v5';/);
+  assert.match(SW, /const CACHE_NAME = 'th-portal-v6';/);
 });

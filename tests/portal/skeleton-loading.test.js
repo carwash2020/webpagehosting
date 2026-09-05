@@ -68,5 +68,5 @@ test('the skeleton animation respects prefers-reduced-motion', () => {
 test('portal-app.js is precached and CACHE_NAME was bumped again for this change', () => {
   const SW = fs.readFileSync(repo('portal', 'service-worker.js'), 'utf8');
   assert.match(SW, /'\/portal\/portal-app\.js'/);
-  assert.match(SW, /const CACHE_NAME = 'th-portal-v5';/);
+  assert.match(SW, /const CACHE_NAME = 'th-portal-v6';/);
 });
