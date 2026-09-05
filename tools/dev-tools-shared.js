@@ -60,6 +60,10 @@
       title: 'Portal bug reports',
       body: `<p>Problems submitted by clients through the "Report a problem" link on the client portal (login, dashboard, and set-password pages). Works whether or not the client is signed in, since a login problem can't require a session to report.</p><p>Only visible here, to accounts with an internal role. A client can submit a report but can never read their own or anyone else's back, including through this same page's own login.</p>`,
     },
+    portalclienterrors: {
+      title: 'Portal client errors',
+      body: `<p>Every real JavaScript error the client portal actually hits, caught automatically -- window.error and unhandledrejection, the exact same mechanism the internal tools' own Client errors panel already uses, applied to the portal for the first time (2026-09-05). Unlike Portal bug reports above, this needs nothing from the client: a silent bug that never gets reported still shows up here.</p><p>Capped at 10 per page load client-side (a genuine error inside a loop shouldn't flood this with a hundred identical rows), and pruned automatically after 30 days server-side -- this is diagnostic data, not something that needs to persist indefinitely.</p><p>Only visible to accounts with an internal role, same as every other panel here.</p>`,
+    },
     portalinvoices: {
       title: 'Portal invoices',
       body: `<p>Every invoice that has actually been sent to the client portal, newest first, with its real paid status -- the one Stripe or the Mark Paid toggle wrote, not a local guess. Search by client, email, or invoice number.</p><p><strong>Resend</strong> emails the client their invoice notification again and refreshes their portal copy, without recreating anything in the Invoice Generator. Use it when a client says they never got it, or lost the email.</p><p>This reads the portal's own table, not the internal Invoice Log. If an invoice is in your log but missing here, it was never sent to the client (Download PDF only, no Send to Client) -- that gap is exactly what this panel makes visible.</p>`,

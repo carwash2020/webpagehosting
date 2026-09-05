@@ -821,6 +821,21 @@ Deno.serve(async (req: Request) => {
       return new Response(JSON.stringify({ ok: true }), { headers: { "Content-Type": "application/json" } });
     }
 
+    // Stripe payment reconciliation alert (2026-09-05), requested
+    // directly: "future proof this... what other layers can we add."
+    // A separate type from uptime-alert above (same generic
+    // title/body shape, broadcast to the whole internal team) rather
+    // than reusing it, since that one hardcodes a link to Dev Tools --
+    // this alert is about an invoice, so it should land on the page
+    // that actually shows invoices (Portal invoices, in
+    // tools/clients.html), not Dev Tools.
+    if (payload.type === "stripe-reconciliation-alert") {
+      const title = typeof payload.title === "string" ? payload.title : "Payment reconciliation alert";
+      const body = typeof payload.body === "string" ? payload.body : "";
+      await sendToAllSubscriptions({ title, body, url: "/tools/clients.html" });
+      return new Response(JSON.stringify({ ok: true }), { headers: { "Content-Type": "application/json" } });
+    }
+
     // Client portal push (2026-09-04), requested directly. Deliberately
     // a distinct type from every check above -- this is the ONLY branch
     // in this whole function that targets one specific user rather than

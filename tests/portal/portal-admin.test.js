@@ -62,8 +62,12 @@ test('the Clients tool has a Portal accounts panel, wired up and initialised', (
   assert.match(CLIENTS, /id="portalAccounts"/);
   assert.match(CLIENTS, /async function renderPortalAccounts\(\)/);
   assert.match(CLIENTS, /async function resendPortalInvite\(/);
-  // Must actually be called on load, not just defined.
-  assert.match(CLIENTS, /renderPortalBugReports\(\);\s*\n\s*renderPortalAccounts\(\);/);
+  // Must actually be called on load, not just defined -- widened
+  // 2026-09-05 to allow renderPortalClientErrors() now sitting
+  // between the two (a real, new call added the same day), rather
+  // than requiring these two specific calls to be the exact next
+  // line after each other.
+  assert.match(CLIENTS, /renderPortalBugReports\(\);[\s\S]*?renderPortalAccounts\(\);/);
 });
 
 test('the Portal accounts panel is visible with no owner-hiding, so Steve can actually use it', () => {
