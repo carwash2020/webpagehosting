@@ -40,6 +40,17 @@
 <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32.png">
 <link rel="icon" type="image/png" sizes="192x192" href="/images/favicon-192.png?v=202608010300">
 <link rel="manifest" href="/portal/manifest.json">
+<script>
+  // Service worker registration (2026-09-04) -- provides both offline
+  // app-shell caching and push notification support. Registered on
+  // every portal page (including login/set-password, matching the
+  // manifest link's own consistent presence on every page) since
+  // installability and offline support are useful before a session
+  // even exists, not just after signing in.
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('/portal/service-worker.js', { scope: '/portal/' }).catch(() => {});
+  }
+</script>
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="Triple H">
@@ -51,6 +62,7 @@
 <link rel="stylesheet" href="/tools/styles-tools.css?v=a2e87effb3">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://js.stripe.com/v3/"></script>
+<script src="/portal/push-notifications.js"></script>
 <style>
   body { background: #0a0a0a; max-width: 640px; margin: 0 auto; padding: 24px 16px 60px; }
   /* Widened for real desktop screens (2026-09-03), reported directly
@@ -286,6 +298,22 @@
   <label class="set-toggle-row"><input type="checkbox" id="notifyWorkOrder"> Work scheduled updates</label>
   <label class="set-toggle-row"><input type="checkbox" id="notifyMessages"> Replies to your messages</label>
   <div class="set-msg" id="notifyMsg" style="display:none;"></div>
+
+  <!--
+    Push notifications (2026-09-04), requested directly. A separate,
+    device-level opt-in from the email toggles above -- those are
+    simple database flags, this requires real browser/OS permission
+    and only ever applies to the specific device it was enabled on.
+    Kept in the same card since both answer the same underlying
+    question ("how do you want to hear about these things"), but
+    visually separated with its own border so the device-specific
+    nature is clear.
+  -->
+  <div style="border-top:1px solid var(--border); margin-top:16px; padding-top:16px;">
+    <div class="set-card-sub" style="margin-bottom:10px;">Push notifications on this device, for the same events as the emails above.</div>
+    <button class="btn blue" id="pushToggleBtn" style="width:100%; justify-content:center;">Loading...</button>
+    <div class="set-msg" id="pushMsg" style="display:none;"></div>
+  </div>
 </div>
 
 <!--
@@ -740,6 +768,62 @@
     body.innerHTML = '<p class="set-card-sub" style="margin:0;">Look for "Add to Home Screen" or "Install App" in your browser\'s menu.</p>';
   }
 
+  // Push notifications (2026-09-04) -- three real states, checked
+  // directly rather than assumed each time: not supported in this
+  // browser at all, supported but not yet enabled on this device, or
+  // already enabled. iOS specifically only supports this once the
+  // site has been added to the Home Screen (a real Apple platform
+  // restriction, not something this code can work around) -- checked
+  // the same way renderAddToHomeScreen() already does, so the message
+  // points at the actual blocker rather than a generic "not supported".
+  async function renderPushToggle() {
+    const btn = document.getElementById('pushToggleBtn');
+    const msgEl = document.getElementById('pushMsg');
+    if (!btn) return;
+
+    if (!portalPushSupported()) {
+      btn.textContent = 'Not supported in this browser';
+      btn.disabled = true;
+      return;
+    }
+
+    const isStandaloneNow = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
+    const isIOSNow = /iP(hone|od|ad)/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+    if (isIOSNow && !isStandaloneNow) {
+      btn.textContent = 'Add to Home Screen first (see above)';
+      btn.disabled = true;
+      return;
+    }
+
+    btn.disabled = false;
+    const enabled = await isPortalPushEnabled();
+    btn.textContent = enabled ? 'Turn off push notifications' : 'Enable push notifications';
+    btn.onclick = enabled ? handleDisablePush : handleEnablePush;
+    msgEl.style.display = 'none';
+  }
+
+  async function handleEnablePush() {
+    const btn = document.getElementById('pushToggleBtn');
+    const msgEl = document.getElementById('pushMsg');
+    btn.disabled = true;
+    btn.textContent = 'Enabling...';
+    const result = await enablePortalPushNotifications();
+    if (!result.ok) {
+      msgEl.textContent = result.error;
+      msgEl.className = 'set-msg is-error';
+      msgEl.style.display = 'block';
+    }
+    renderPushToggle();
+  }
+
+  async function handleDisablePush() {
+    const btn = document.getElementById('pushToggleBtn');
+    btn.disabled = true;
+    btn.textContent = 'Turning off...';
+    await disablePortalPushNotifications();
+    renderPushToggle();
+  }
+
   async function init() {
     const { data: { session } } = await client.auth.getSession();
     if (!session) { window.location.replace('/portal/login.html'); return; }
@@ -797,6 +881,7 @@
     // listener -- that event never fires on iOS at all, so relying on
     // it alone would leave iOS clients seeing an empty card forever.
     renderAddToHomeScreen();
+    renderPushToggle();
   }
 
   async function signOut() {

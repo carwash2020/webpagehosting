@@ -36,7 +36,7 @@ test('an unauthenticated save attempt redirects to login rather than silently fa
 });
 
 test('loading a first-time client with no saved profile falls back to the old invoice/quote name lookup as a pre-fill only, not a value that gets written back', () => {
-  const fnMatch = SETTINGS.match(/async function init\(\)[\s\S]*?renderAddToHomeScreen\(\);\s*\n  \}\n/);
+  const fnMatch = SETTINGS.match(/async function init\(\)[\s\S]*?renderAddToHomeScreen\(\);[\s\S]*?\n  \}\n/);
   assert.ok(fnMatch, 'expected to isolate init()');
   const body = fnMatch[0];
   assert.match(body, /if \(!hasProfile\) \{[\s\S]*?client_portal_invoices/);
@@ -49,7 +49,7 @@ test('loading a first-time client with no saved profile falls back to the old in
 });
 
 test('a client with an existing saved profile uses it directly, skipping the invoice/quote fallback entirely', () => {
-  const fnMatch = SETTINGS.match(/async function init\(\)[\s\S]*?renderAddToHomeScreen\(\);\s*\n  \}\n/);
+  const fnMatch = SETTINGS.match(/async function init\(\)[\s\S]*?renderAddToHomeScreen\(\);[\s\S]*?\n  \}\n/);
   const body = fnMatch[0];
   const profileLookupIdx = body.indexOf("from('client_profiles')");
   const hasProfileSetIdx = body.indexOf('hasProfile = true;');
@@ -59,7 +59,7 @@ test('a client with an existing saved profile uses it directly, skipping the inv
 });
 
 test('no innerHTML is used for the email display or the name/phone values -- textContent and .value are XSS-safe by construction', () => {
-  const fnMatch = SETTINGS.match(/async function init\(\)[\s\S]*?renderAddToHomeScreen\(\);\s*\n  \}\n/);
+  const fnMatch = SETTINGS.match(/async function init\(\)[\s\S]*?renderAddToHomeScreen\(\);[\s\S]*?\n  \}\n/);
   const body = fnMatch[0];
   assert.doesNotMatch(body, /\.innerHTML/);
   assert.match(body, /document\.getElementById\('detailEmailVal'\)\.textContent = email;/);

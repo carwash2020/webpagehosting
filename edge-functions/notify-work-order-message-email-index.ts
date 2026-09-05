@@ -52,6 +52,47 @@ async function sendResend(to: string, subject: string, html: string, text: strin
   return res.ok;
 }
 
+// Client push notifications (2026-09-04), requested directly. Added
+// alongside the existing email -- this is an additional channel, not
+// a replacement for it, and a failure here never blocks the email
+// send above or below. push_subscriptions.user_id is keyed to a real
+// auth.users id, not an email address, so the client's real user id
+// needs looking up first via GoTrue's own admin endpoint (the only
+// way to query auth.users at all; it isn't exposed through the
+// normal REST API). A failure to find a user id (never signed up for
+// push, or push simply isn't set up on any device) is expected and
+// silent -- this is a best-effort nice-to-have, not a required step.
+async function getUserIdByEmail(email: string): Promise<string | null> {
+  const res = await fetch(`${SUPABASE_URL}/auth/v1/admin/users?email=${encodeURIComponent(email.toLowerCase())}`, {
+    headers: { apikey: SERVICE_ROLE_KEY, Authorization: `Bearer ${SERVICE_ROLE_KEY}` },
+  });
+  if (!res.ok) return null;
+  const data = await res.json();
+  const users = Array.isArray(data) ? data : data.users || [];
+  return users.length ? users[0].id : null;
+}
+
+async function sendClientPush(email: string, title: string, body: string, url: string) {
+  try {
+    const userId = await getUserIdByEmail(email);
+    if (!userId) return;
+    // Send-Push, exact casing -- Supabase function slugs are
+    // case-sensitive, and the real, existing function (handling every
+    // internal reminder/digest/lead/booking alert already) is named
+    // with capitals. A lowercase "send-push" is a genuinely different,
+    // separate function, not the same one -- confirmed directly the
+    // hard way after an initial deploy accidentally created exactly
+    // that orphaned duplicate.
+    await fetch(`${SUPABASE_URL}/functions/v1/Send-Push`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${SERVICE_ROLE_KEY}` },
+      body: JSON.stringify({ type: "client-notification", user_id: userId, title, body, url }),
+    });
+  } catch (err: any) {
+    console.error("sendClientPush error (non-fatal):", err.message);
+  }
+}
+
 function buildClientEmail(clientName: string, title: string, message: string): { html: string; text: string } {
   const html = `<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="color-scheme" content="light"><title>New reply, Triple H Enterprises</title></head>
 <body style="margin:0; padding:0; background:#f4f4f4;">
@@ -111,6 +152,11 @@ Deno.serve(async (req: Request) => {
       const displayName = (typeof wo.client_name === "string" && wo.client_name.trim() && wo.client_name !== wo.client_email) ? wo.client_name : wo.client_email;
       const { html, text } = buildClientEmail(displayName, wo.title || "your request", msg.message);
       const sent = await sendResend(wo.client_email, `New reply on your request, Triple H Enterprises`, html, text);
+      // Push is an additional channel, checked here rather than being
+      // gated behind a separate return above -- a client who opted
+      // out of message emails already returned early, so reaching
+      // this line means they DO want to be notified about this.
+      await sendClientPush(wo.client_email, "New reply on your request", `Re: ${wo.title || "your request"}`, "/portal/work-orders.html");
       return new Response(JSON.stringify({ ok: true, sent_to: sent ? 1 : 0 }), { headers: { "Content-Type": "application/json" } });
     }
 
