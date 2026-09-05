@@ -54,5 +54,5 @@ test('both service workers were bumped since portal-app.js (portal) and data-lay
   const portalSW = fs.readFileSync(repo('portal', 'service-worker.js'), 'utf8');
   assert.match(portalSW, /const CACHE_NAME = 'th-portal-v8';/);
   const toolsSW = fs.readFileSync(repo('service-worker.js'), 'utf8');
-  assert.match(toolsSW, /const CACHE_NAME = 'th-workspace-v55';/);
+  assert.match(toolsSW, /const CACHE_NAME = 'th-workspace-v56';/);
 });

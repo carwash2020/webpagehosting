@@ -244,7 +244,13 @@
 // deployed. Same file, same bare-path precaching, so this needed its
 // own separate bump rather than assuming the prior one still covered
 // a version of the file that no longer exists.
-const CACHE_NAME = 'th-workspace-v55';
+// Bumped 2026-09-05 (again): clients.html changed -- added Client
+// Lookup (search by email/name/phone, spend total, and a dispute-
+// evidence PDF export, requested directly: "that should go in the
+// client area of the tools"), precached under its bare path.
+// dev-tools-shared.js changed again too (a second DEV_INFO entry,
+// after the portal-client-errors one already deployed at v52).
+const CACHE_NAME = 'th-workspace-v56';
 const PRECACHE_URLS = [
   '/tools/workspace.html', '/tools/job-tracker.html', '/tools/invoice-generator.html', '/tools/contract-generator.html',
   '/tools/calendar.html', '/tools/route-planner.html', '/tools/review-request.html', '/tools/contact-card.html',

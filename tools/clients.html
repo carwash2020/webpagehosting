@@ -20,7 +20,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <meta name="robots" content="noindex, nofollow">
 <title>Clients &middot; Triple H Enterprises</title>
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data: https://*.supabase.co; connect-src 'self' https://*.supabase.co wss://*.supabase.co; frame-src 'none'; object-src 'none'; base-uri 'self'; frame-ancestors 'none';">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data: https://*.supabase.co; connect-src 'self' https://*.supabase.co wss://*.supabase.co https://cdn.jsdelivr.net; frame-src 'none'; object-src 'none'; base-uri 'self'; frame-ancestors 'none';">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Anton&family=Oswald:wght@400;500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -47,7 +47,11 @@
      file dev-tools.html and site-content.html already load, rather
      than duplicating any of it -- these five panels' help-modal
      content already lives there from when they were built. -->
-<script src="/tools/dev-tools-shared.js?v=971ca54c06" defer></script>
+<script src="/tools/dev-tools-shared.js?v=a7dee707bd" defer></script>
+<!-- Client Lookup dispute-evidence export (2026-09-05), requested
+     directly -- same jsPDF version/SRI hash/async loading pattern
+     already proven on invoice-generator.html. -->
+<script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js" integrity="sha384-JcnsjUPPylna1s1fvi1u12X5qjY5OL56iySh75FdtrwhO/SWXgMjoVqcKyIIWOLk" crossorigin="anonymous" async></script>
 <style>
   /* The exact subset of dev-tools.html's own panel-layout CSS these
      five panels actually use -- copied here rather than the whole
@@ -101,6 +105,26 @@
 <p class="tool-sub">Everything about the client portal in one place &mdash; who has access, what has been sent, what they have requested, and who gets notified about it.<span id="syncStatusText"></span></p>
 
   <div class="dev-panels-grid">
+  <!--
+    Client Lookup (2026-09-05), requested directly: "we need to have
+    some sort of client look up... Put in a email, name, phone
+    number... to locate a guest and see how much they have spent how
+    many work orders/invoices/estimates, their signature with a
+    download button for all of it in the event of a dispute."
+    Deliberately its own panel, separate from Portal accounts below --
+    that one is a quick resend-invite list; this is a full account
+    lookup across every portal table, built specifically for the
+    dispute-evidence use case.
+  -->
+  <div class="dev-panel dev-panel-wide">
+    <div class="dev-panel-heading">
+      <h2>Client Lookup</h2>
+      <button class="dev-info-bubble" onclick="openDevInfo('clientlookup')" aria-label="What does this do?" title="What does this do?">?</button>
+    </div>
+    <input type="text" id="clientLookupSearch" placeholder="Search by email, name, or phone..." style="width:100%; box-sizing:border-box; margin-bottom:12px;" oninput="scheduleClientLookupSearch()">
+    <div id="clientLookupResults"></div>
+  </div>
+
   <div class="dev-panel dev-panel-wide">
     <div class="dev-panel-heading">
       <h2>Portal accounts</h2>
@@ -428,6 +452,195 @@
     } catch (e) {
       return new Set(); // non-fatal: the list still renders, just without the flag
     }
+  }
+
+  // Client Lookup (2026-09-05), requested directly: "Put in a email,
+  // name, phone number... to locate a guest and see how much they
+  // have spent how many work orders/invoices/estimates, their
+  // signature with a download button for all of it in the event of
+  // a dispute." Searches across every portal table a client's info
+  // could actually live in -- client_profiles has phone but not
+  // every client has one saved there yet, so client_portal_work_orders
+  // (which also has its own phone column) is searched too, alongside
+  // name/email on invoices and quotes.
+  //
+  // Debounced (2026-09-05) since this fires up to 4 real REST calls
+  // per keystroke otherwise -- 400ms matches the debounce interval
+  // already established elsewhere in this codebase for the same
+  // reasoning (a single deliberate pause, not every keystroke).
+  let _clientLookupDebounce = null;
+  function scheduleClientLookupSearch() {
+    clearTimeout(_clientLookupDebounce);
+    _clientLookupDebounce = setTimeout(renderClientLookup, 400);
+  }
+
+  // Wraps the ilike pattern in double quotes, per PostgREST's own
+  // documented escaping for or=() filters -- without this, a search
+  // term containing a comma or parenthesis (an unusual but real
+  // possibility in a client's name) would be misread as an or-filter
+  // delimiter rather than part of the search value itself.
+  function ilikePattern(term) {
+    return '"*' + term.replace(/"/g, '\\"') + '*"';
+  }
+
+  async function findMatchingClientEmails(term) {
+    const pattern = encodeURIComponent(ilikePattern(term));
+    const queries = [
+      SUPABASE_URL + '/rest/v1/client_profiles?or=(client_email.ilike.' + pattern + ',display_name.ilike.' + pattern + ',phone.ilike.' + pattern + ')&select=client_email',
+      SUPABASE_URL + '/rest/v1/client_portal_invoices?or=(client_email.ilike.' + pattern + ',client_name.ilike.' + pattern + ')&select=client_email',
+      SUPABASE_URL + '/rest/v1/client_portal_quotes?or=(client_email.ilike.' + pattern + ',client_name.ilike.' + pattern + ')&select=client_email',
+      SUPABASE_URL + '/rest/v1/client_portal_work_orders?or=(client_email.ilike.' + pattern + ',client_name.ilike.' + pattern + ',phone.ilike.' + pattern + ')&select=client_email',
+    ];
+    const emailSet = new Set();
+    for (const url of queries) {
+      // Best-effort per table -- one table failing (a transient
+      // network blip) shouldn't block matches that the other three
+      // tables would still have found.
+      try {
+        const res = await fetchWithTimeout(url, 8000, { headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': 'Bearer ' + getAuthToken() } });
+        if (!res.ok) continue;
+        (await res.json()).forEach(row => { if (row.client_email) emailSet.add(row.client_email.toLowerCase()); });
+      } catch (e) { /* continue to the next table */ }
+    }
+    return [...emailSet];
+  }
+
+  async function loadClientLookupProfile(email) {
+    const enc = encodeURIComponent(email);
+    const headers = { 'apikey': SUPABASE_ANON_KEY, 'Authorization': 'Bearer ' + getAuthToken() };
+    const [profileRes, invoicesRes, quotesRes, workOrdersRes, authsRes] = await Promise.all([
+      fetchWithTimeout(SUPABASE_URL + '/rest/v1/client_profiles?client_email=eq.' + enc + '&select=display_name,phone&limit=1', 8000, { headers }),
+      fetchWithTimeout(SUPABASE_URL + '/rest/v1/client_portal_invoices?client_email=eq.' + enc + '&select=invoice_number,invoice_date,total,paid,description,line_items&order=invoice_date.desc', 8000, { headers }),
+      fetchWithTimeout(SUPABASE_URL + '/rest/v1/client_portal_quotes?client_email=eq.' + enc + '&select=quote_number,quote_date,total,status,description,line_items&order=quote_date.desc', 8000, { headers }),
+      fetchWithTimeout(SUPABASE_URL + '/rest/v1/client_portal_work_orders?client_email=eq.' + enc + '&select=title,status,created_at,description&order=created_at.desc', 8000, { headers }),
+      fetchWithTimeout(SUPABASE_URL + '/rest/v1/card_authorizations?client_email=eq.' + enc + '&select=signer_name,authorization_text,amount,context,description,created_at&order=created_at.desc', 8000, { headers }),
+    ]);
+    const profile = profileRes.ok ? (await profileRes.json())[0] : null;
+    const invoices = invoicesRes.ok ? await invoicesRes.json() : [];
+    const quotes = quotesRes.ok ? await quotesRes.json() : [];
+    const workOrders = workOrdersRes.ok ? await workOrdersRes.json() : [];
+    const authorizations = authsRes.ok ? await authsRes.json() : [];
+
+    // A display name isn't guaranteed to live in client_profiles --
+    // fall back to whatever a real invoice/quote/work order already
+    // has on file, same reasoning portal/settings.html's own name
+    // pre-fill already uses.
+    const name = (profile && profile.display_name)
+      || (invoices[0] && invoices[0].client_name)
+      || (quotes[0] && quotes[0].client_name)
+      || (workOrders[0] && workOrders[0].client_name)
+      || '';
+
+    const totalSpent = invoices.filter(i => i.paid).reduce((sum, i) => sum + (Number(i.total) || 0), 0);
+
+    return { email, name, phone: (profile && profile.phone) || '', invoices, quotes, workOrders, authorizations, totalSpent };
+  }
+
+  function renderClientLookupCard(p) {
+    const nameLine = escapeHtml(p.name || '(no name on file)');
+    const phoneLine = p.phone ? ' &middot; ' + escapeHtml(p.phone) : '';
+    const authCount = p.authorizations.length;
+    return '<div class="dev-check-row" style="align-items:flex-start; flex-direction:column; gap:8px;">' +
+      '<div>' +
+      '<div><strong>' + nameLine + '</strong></div>' +
+      '<div class="dev-check-detail">' + escapeHtml(p.email) + phoneLine + '</div>' +
+      '<div class="dev-check-detail" style="margin-top:4px;">' +
+        '<strong>$' + p.totalSpent.toFixed(2) + '</strong> spent total &middot; ' +
+        p.invoices.length + ' invoice' + (p.invoices.length === 1 ? '' : 's') + ' &middot; ' +
+        p.quotes.length + ' estimate' + (p.quotes.length === 1 ? '' : 's') + ' &middot; ' +
+        p.workOrders.length + ' work order' + (p.workOrders.length === 1 ? '' : 's') + ' &middot; ' +
+        authCount + ' signed authorization' + (authCount === 1 ? '' : 's') +
+      '</div>' +
+      '</div>' +
+      '<button class="secondary-btn" onclick="downloadClientDisputeReport(\'' + escapeForInlineHandler(p.email) + '\')">Download for Dispute</button>' +
+      '</div>';
+  }
+
+  async function renderClientLookup() {
+    const el = document.getElementById('clientLookupResults');
+    const term = (document.getElementById('clientLookupSearch')?.value || '').trim();
+    if (term.length < 3) {
+      el.innerHTML = term.length === 0 ? '' : '<p class="tool-sub">Keep typing -- at least 3 characters to search.</p>';
+      return;
+    }
+    el.innerHTML = '<p class="tool-sub">Searching...</p>';
+    try {
+      const emails = await findMatchingClientEmails(term);
+      if (!emails.length) {
+        el.innerHTML = '<p class="tool-sub">No clients match "' + escapeHtml(term) + '".</p>';
+        return;
+      }
+      const profiles = await Promise.all(emails.map(loadClientLookupProfile));
+      el.innerHTML = profiles.map(renderClientLookupCard).join('');
+    } catch (e) {
+      el.innerHTML = '<p class="tool-sub">Could not search: ' + escapeHtml(e.message || String(e)) + '</p>';
+    }
+  }
+
+  // Dispute evidence PDF (2026-09-05) -- same jsPDF pattern already
+  // proven on invoice-generator.html, including the same defensive
+  // "still loading" check (jsPDF loads async, so it might not exist
+  // yet on a very fast click right after page load).
+  async function downloadClientDisputeReport(email) {
+    if (!window.jspdf) { await showAlert("Still finishing loading -- give it a second and try again."); return; }
+    const { jsPDF } = window.jspdf;
+    const p = await loadClientLookupProfile(email);
+    const doc = new jsPDF({ unit: 'pt', format: 'letter' });
+    let y = 50;
+    const left = 46;
+    const lineHeight = 16;
+
+    function addLine(text, size = 11, bold = false) {
+      if (y > 740) { doc.addPage(); y = 50; }
+      doc.setFont('helvetica', bold ? 'bold' : 'normal');
+      doc.setFontSize(size);
+      doc.text(String(text), left, y);
+      y += lineHeight;
+    }
+    function addSectionGap() { y += 8; }
+
+    addLine('Client Account Summary -- Triple H Enterprises', 15, true);
+    addLine('Generated ' + new Date().toLocaleString());
+    addSectionGap();
+    addLine((p.name || '(no name on file)') + '  --  ' + p.email, 12, true);
+    if (p.phone) addLine('Phone: ' + p.phone);
+    addLine('Total spent (paid invoices): $' + p.totalSpent.toFixed(2), 12, true);
+    addSectionGap();
+
+    addLine('Invoices (' + p.invoices.length + ')', 13, true);
+    if (!p.invoices.length) addLine('None on file.');
+    for (const inv of p.invoices) {
+      addLine('#' + (inv.invoice_number || '?') + '  ' + (inv.invoice_date || '') + '  $' + (Number(inv.total) || 0).toFixed(2) + '  ' + (inv.paid ? 'PAID' : 'UNPAID'));
+    }
+    addSectionGap();
+
+    addLine('Estimates (' + p.quotes.length + ')', 13, true);
+    if (!p.quotes.length) addLine('None on file.');
+    for (const q of p.quotes) {
+      addLine('#' + (q.quote_number || '?') + '  ' + (q.quote_date || '') + '  $' + (Number(q.total) || 0).toFixed(2) + '  ' + (q.status || ''));
+    }
+    addSectionGap();
+
+    addLine('Work Orders (' + p.workOrders.length + ')', 13, true);
+    if (!p.workOrders.length) addLine('None on file.');
+    for (const wo of p.workOrders) {
+      addLine((wo.title || '(untitled)') + '  ' + (wo.created_at ? new Date(wo.created_at).toLocaleDateString() : '') + '  ' + (wo.status || ''));
+    }
+    addSectionGap();
+
+    addLine('Signed Authorizations (' + p.authorizations.length + ')', 13, true);
+    if (!p.authorizations.length) addLine('None on file.');
+    for (const a of p.authorizations) {
+      addLine((a.created_at ? new Date(a.created_at).toLocaleString() : '') + '  --  signed by ' + (a.signer_name || '?') + (a.amount ? '  $' + Number(a.amount).toFixed(2) : ''), 11, true);
+      // jsPDF's own splitTextToSize wraps long authorization text to
+      // the page width instead of running off the right edge --
+      // authorization_text is a full sentence, not a short label.
+      const wrapped = doc.splitTextToSize(a.authorization_text || '', 500);
+      for (const line of wrapped) addLine(line);
+      addSectionGap();
+    }
+
+    doc.save('Client-Summary-' + email.replace(/[^a-z0-9]/gi, '-') + '.pdf');
   }
 
   async function loadPortalAccounts() {
