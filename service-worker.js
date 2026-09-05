@@ -219,7 +219,12 @@
 // entry, so this bump is the only thing that actually invalidates
 // the old cached copy -- same failure mode every prior bump above
 // already warned about.
-const CACHE_NAME = 'th-workspace-v50';
+// Bumped 2026-09-05 (again): data-layer.js changed -- tombstone
+// retention added (every th_*_tombstones array previously grew
+// forever; now pruned to 90 days on every add), found during the
+// same "should we clean up the blob" follow-up audit. Also precached
+// under its bare path, same reasoning as the bump just above.
+const CACHE_NAME = 'th-workspace-v51';
 const PRECACHE_URLS = [
   '/tools/workspace.html', '/tools/job-tracker.html', '/tools/invoice-generator.html', '/tools/contract-generator.html',
   '/tools/calendar.html', '/tools/route-planner.html', '/tools/review-request.html', '/tools/contact-card.html',
