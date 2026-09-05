@@ -229,7 +229,13 @@
 // JS error capture on the portal, requested directly: "future proof
 // this... what other layers can we add"). Also precached under its
 // bare path.
-const CACHE_NAME = 'th-workspace-v52';
+// Bumped 2026-09-05 (again): sync.js changed -- stopped logging every
+// expected, intermediate realtime CHANNEL_ERROR retry attempt as a
+// client error (found investigating a real reported complaint about
+// noisy client-side errors); dev-tools.html changed too (a real
+// escaping-function inconsistency fixed on the same investigation).
+// sync.js is also precached under its bare path.
+const CACHE_NAME = 'th-workspace-v53';
 const PRECACHE_URLS = [
   '/tools/workspace.html', '/tools/job-tracker.html', '/tools/invoice-generator.html', '/tools/contract-generator.html',
   '/tools/calendar.html', '/tools/route-planner.html', '/tools/review-request.html', '/tools/contact-card.html',
