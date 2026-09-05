@@ -46,7 +46,11 @@
 // error capture added (requested directly: "future proof this...
 // what other layers can we add"), catching every real JS error on
 // the portal the same way the internal tools already do.
-const CACHE_NAME = 'th-portal-v7';
+// Bumped 2026-09-05 (v7 -> v8): settings.html changed -- collapsible
+// sections added (requested directly: "we need to revamp the
+// settings it still looks a little much"), precached under its bare
+// path.
+const CACHE_NAME = 'th-portal-v8';
 const PRECACHE_URLS = [
   '/portal/home.html', '/portal/dashboard.html', '/portal/jobs.html', '/portal/quotes.html',
   '/portal/work-orders.html', '/portal/settings.html', '/portal/login.html', '/portal/set-password.html',

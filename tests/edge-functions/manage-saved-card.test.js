@@ -50,7 +50,7 @@ test('a payment_method_id that does not look like a real Stripe id is rejected b
 // ---- frontend ----
 
 test('the settings page shows a Saved Cards section and loads it on init', () => {
-  assert.match(SETTINGS, /<div class="set-card-title">Saved Cards<\/div>/);
+  assert.match(SETTINGS, /<span class="set-card-title">Saved Cards<\/span>/);
   assert.match(SETTINGS, /loadSavedCards\(\);/);
 });
 

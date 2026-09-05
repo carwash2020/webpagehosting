@@ -142,6 +142,29 @@
   }
   .set-card-title { font-family: 'Oswald', sans-serif; font-weight: 600; font-size: 15px; color: var(--white); margin-bottom: 4px; }
   .set-card-sub { color: var(--text-dim); font-size: 13px; line-height: 1.5; margin-bottom: 14px; }
+  /* Collapsible sections (2026-09-05), requested directly: "we need
+     to revamp the settings it still looks a little much." Every
+     section starts collapsed, showing just its title -- the most
+     direct way to cut down the scroll length this was actually
+     asked to fix, and a client can still reach anything in one tap.
+     A real <button> for the header (not a bare div with onclick),
+     so this stays keyboard- and screen-reader-accessible without
+     extra work. */
+  .set-card-header {
+    display: flex; align-items: center; justify-content: space-between; gap: 10px;
+    width: 100%; background: none; border: none; padding: 0; margin: 0; cursor: pointer;
+    text-align: left; color: inherit; font: inherit;
+  }
+  .set-card-header .set-card-title { margin-bottom: 0; }
+  .set-card-chevron {
+    color: var(--text-dim); font-size: 11px; flex-shrink: 0; transition: transform 0.18s ease;
+  }
+  .set-card.is-collapsed .set-card-chevron { transform: rotate(-90deg); }
+  .set-card-body { margin-top: 14px; }
+  .set-card.is-collapsed .set-card-body { display: none; }
+  @media (prefers-reduced-motion: reduce) {
+    .set-card-chevron { transition: none; }
+  }
   .set-row { display: flex; justify-content: space-between; gap: 12px; padding: 9px 0; border-bottom: 1px solid var(--border); font-size: 14px; }
   .set-row:last-child { border-bottom: none; }
   .set-row-key { color: var(--text-dim); }
@@ -230,8 +253,12 @@
   <a href="/portal/jobs.html"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8.5"/><path d="M8.5 12.2l2.4 2.4 4.6-4.8"/></svg><span>Jobs</span></a>
 </nav>
 
-<div class="set-card">
-  <div class="set-card-title">Your Details</div>
+<div class="set-card is-collapsed">
+  <button type="button" class="set-card-header" onclick="toggleSettingsCard(this)" aria-expanded="false">
+    <span class="set-card-title">Your Details</span>
+    <span class="set-card-chevron" aria-hidden="true">&#9662;</span>
+  </button>
+  <div class="set-card-body">
   <div class="set-card-sub">Your name and phone are yours to update any time. Email stays locked here -- it's tied to all your invoices and job history, so if that ever needs to change, call or text us at <a href="tel:+14354141667" style="color:var(--orange-light);">(435) 414-1667</a> and we'll update it on our end to keep everything connected.</div>
   <div class="set-row"><span class="set-row-key">Email</span><span class="set-row-val" id="detailEmailVal"></span></div>
   <div class="set-field">
@@ -244,6 +271,7 @@
   </div>
   <button class="btn blue" style="width:100%; justify-content:center;" id="saveDetailsBtn">Save Details</button>
   <div class="set-msg" id="detailsMsg" style="display:none;"></div>
+  </div>
 </div>
 
 <!--
@@ -252,12 +280,17 @@
   save a card automatically, a client had no way to even know one was
   on file, let alone remove it.
 -->
-<div class="set-card">
-  <div class="set-card-title">Saved Cards</div>
+<div class="set-card is-collapsed">
+  <button type="button" class="set-card-header" onclick="toggleSettingsCard(this)" aria-expanded="false">
+    <span class="set-card-title">Saved Cards</span>
+    <span class="set-card-chevron" aria-hidden="true">&#9662;</span>
+  </button>
+  <div class="set-card-body">
   <div class="set-card-sub">Cards saved from a past payment, so future charges can be one tap instead of retyping your card.</div>
   <div id="savedCardsBody"><div class="skeleton-mini"><div class="skeleton-line is-medium"></div></div><div class="skeleton-mini"><div class="skeleton-line is-narrow"></div></div></div>
   <button class="btn blue" id="addCardBtn" style="width:100%; justify-content:center; margin-top:12px;" onclick="startAddCard()">Add a Card</button>
   <div id="addCardArea"></div>
+  </div>
 </div>
 
 <!--
@@ -267,10 +300,15 @@
   Supabase client directly (RLS-protected: clients can only ever see
   their own rows), no edge function needed for a plain read.
 -->
-<div class="set-card">
-  <div class="set-card-title">Signed Authorizations</div>
+<div class="set-card is-collapsed">
+  <button type="button" class="set-card-header" onclick="toggleSettingsCard(this)" aria-expanded="false">
+    <span class="set-card-title">Signed Authorizations</span>
+    <span class="set-card-chevron" aria-hidden="true">&#9662;</span>
+  </button>
+  <div class="set-card-body">
   <div class="set-card-sub">What you've agreed to when a card was saved on your account.</div>
   <div id="authorizationsBody"><div class="skeleton-mini"><div class="skeleton-line is-medium"></div></div><div class="skeleton-mini"><div class="skeleton-line is-narrow"></div></div></div>
+  </div>
 </div>
 
 <!--
@@ -291,14 +329,23 @@
   - Already-installed (either platform) is detected directly rather
     than assumed, so a returning app-mode user sees neither prompt.
 -->
-<div class="set-card" id="addHomeScreenCard">
-  <div class="set-card-title">Add to Home Screen</div>
+<div class="set-card is-collapsed" id="addHomeScreenCard">
+  <button type="button" class="set-card-header" onclick="toggleSettingsCard(this)" aria-expanded="false">
+    <span class="set-card-title">Add to Home Screen</span>
+    <span class="set-card-chevron" aria-hidden="true">&#9662;</span>
+  </button>
+  <div class="set-card-body">
   <div class="set-card-sub" id="addHomeScreenSub">Get one-tap access next time -- no re-typing the address or digging through your history.</div>
   <div id="addHomeScreenBody"></div>
+  </div>
 </div>
 
-<div class="set-card">
-  <div class="set-card-title">Change Password</div>
+<div class="set-card is-collapsed">
+  <button type="button" class="set-card-header" onclick="toggleSettingsCard(this)" aria-expanded="false">
+    <span class="set-card-title">Change Password</span>
+    <span class="set-card-chevron" aria-hidden="true">&#9662;</span>
+  </button>
+  <div class="set-card-body">
   <div class="set-card-sub">Pick something at least 8 characters long.</div>
   <div class="set-field">
     <label for="newPassword">New password</label>
@@ -310,10 +357,15 @@
   </div>
   <button class="btn blue" style="width:100%; justify-content:center;" id="savePasswordBtn">Update Password</button>
   <div class="set-msg" id="passwordMsg" style="display:none;"></div>
+  </div>
 </div>
 
-<div class="set-card">
-  <div class="set-card-title">Notifications</div>
+<div class="set-card is-collapsed">
+  <button type="button" class="set-card-header" onclick="toggleSettingsCard(this)" aria-expanded="false">
+    <span class="set-card-title">Notifications</span>
+    <span class="set-card-chevron" aria-hidden="true">&#9662;</span>
+  </button>
+  <div class="set-card-body">
   <div class="set-card-sub">Transactional emails only &mdash; no marketing, no newsletters. Turn off anything you consider noise.</div>
   <label class="set-toggle-row"><input type="checkbox" id="notifyInvoiceQuote"> New invoices &amp; estimates</label>
   <label class="set-toggle-row"><input type="checkbox" id="notifyWorkOrder"> Work scheduled updates</label>
@@ -335,6 +387,7 @@
     <button class="btn blue" id="pushToggleBtn" style="width:100%; justify-content:center;">Loading...</button>
     <div class="set-msg" id="pushMsg" style="display:none;"></div>
   </div>
+  </div>
 </div>
 
 <!--
@@ -345,11 +398,16 @@
   push: enabling it here only affects THIS browser/device, not the
   account everywhere.
 -->
-<div class="set-card">
-  <div class="set-card-title">Security</div>
+<div class="set-card is-collapsed">
+  <button type="button" class="set-card-header" onclick="toggleSettingsCard(this)" aria-expanded="false">
+    <span class="set-card-title">Security</span>
+    <span class="set-card-chevron" aria-hidden="true">&#9662;</span>
+  </button>
+  <div class="set-card-body">
   <div class="set-card-sub">Require Face ID, Touch ID, or your device PIN to open the app on this device.</div>
   <button class="btn blue" id="biometricToggleBtn" style="width:100%; justify-content:center;">Loading...</button>
   <div class="set-msg" id="biometricMsg" style="display:none;"></div>
+  </div>
 </div>
 
 <!--
@@ -376,6 +434,14 @@
   const STRIPE_PUBLISHABLE_KEY = 'pk_live_51TxzzNLJyq7HLm12tpc3XfPvsQK1vN7qHJ5KhvYhhi2YSFtPOqNXMTr2bTm7ADjwxtbUl2UmXg9kHGfzKve1izn700mFVhdVRo';
   let stripeInstance = null;
   let elementsInstance = null;
+
+  // Collapsible sections (2026-09-05) -- toggles the ONE card this
+  // header button belongs to, never any other section.
+  function toggleSettingsCard(headerBtn) {
+    const card = headerBtn.closest('.set-card');
+    const collapsed = card.classList.toggle('is-collapsed');
+    headerBtn.setAttribute('aria-expanded', collapsed ? 'false' : 'true');
+  }
 
   function escapeHtml(str) {
     const div = document.createElement('div');

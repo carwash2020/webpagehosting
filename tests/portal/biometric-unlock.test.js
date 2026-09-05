@@ -112,7 +112,7 @@ test('portal-app.js and portal-app.css are precached and CACHE_NAME was bumped a
   const SW = fs.readFileSync(repo('portal', 'service-worker.js'), 'utf8');
   assert.match(SW, /'\/portal\/portal-app\.js'/);
   assert.match(SW, /'\/portal\/portal-app\.css'/);
-  assert.match(SW, /const CACHE_NAME = 'th-portal-v7';/);
+  assert.match(SW, /const CACHE_NAME = 'th-portal-v8';/);
 });
 
 test('a genuine, real regression test: sessionStorage set on one page is honored on a fresh, separate load of the same key -- proving the fix actually solves the reported "requires it between every tab switch" bug', () => {

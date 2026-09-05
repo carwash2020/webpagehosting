@@ -12,7 +12,7 @@ const repo = (...p) => path.join(__dirname, '..', '..', ...p);
 const SETTINGS = fs.readFileSync(repo('portal', 'settings.html'), 'utf8');
 
 test('the settings page shows a Signed Authorizations section and loads it on init', () => {
-  assert.match(SETTINGS, /<div class="set-card-title">Signed Authorizations<\/div>/);
+  assert.match(SETTINGS, /<span class="set-card-title">Signed Authorizations<\/span>/);
   assert.match(SETTINGS, /loadAuthorizations\(\);/);
 });
 
