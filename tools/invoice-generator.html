@@ -47,6 +47,25 @@
 <script src="/tools/tools-tour.js?v=cf6652f5b1" defer></script>
 <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js" integrity="sha384-JcnsjUPPylna1s1fvi1u12X5qjY5OL56iySh75FdtrwhO/SWXgMjoVqcKyIIWOLk" crossorigin="anonymous" async></script>
 <style>
+  /* iOS Safari zoom-on-focus fix (2026-09-05), reported directly:
+     "the invoicing tab is really hard to navigate on phone, you click
+     on a field and it zooms in. Zooming back out swipes over to the
+     next tab." iOS Safari auto-zooms the whole page when a tapped
+     input/select/textarea's font-size is under 16px -- a real,
+     well-documented mobile browser behavior, not a bug in this page's
+     own JS. Confirmed directly (not assumed) that most fields on this
+     page had no explicit font-size at all (falling back to the
+     browser's own default, which is under 16px on iOS Safari), and
+     the few that did were explicitly set to 14-15px. This single
+     rule covers every field, including ones added dynamically later
+     (contacts, line items) -- more specific rules below still need
+     their own individual bump too, since a more specific selector
+     otherwise wins over this one regardless of load order.
+     Zooming back out being misread as a tab swipe was a downstream
+     SYMPTOM of the zoom happening at all, not a separate bug -- with
+     the zoom itself gone, there's no zoom-out gesture left to
+     misinterpret. */
+  input, select, textarea { font-size: 16px; }
   body { padding: 90px 20px 60px; max-width: 900px; margin: 0 auto; }
   /* Desktop layout (2026-08-20), requested directly: efficient on
      phone stays exactly as it was (nothing below 1024px changes at
@@ -63,7 +82,7 @@
   .line-items-table { width: 100%; border-collapse: collapse; margin-bottom: 12px; }
   .line-items-table th { text-align: left; font-size: 12px; color: var(--text-dim); padding: 6px 8px; text-transform: uppercase; }
   .line-items-table td { padding: 4px 6px; }
-  .line-items-table input { width: 100%; padding: 7px 9px; background: var(--bg-panel-2); border: 1px solid var(--border); border-radius: 5px; color: var(--white); font-size: 14px; }
+  .line-items-table input { width: 100%; padding: 7px 9px; background: var(--bg-panel-2); border: 1px solid var(--border); border-radius: 5px; color: var(--white); font-size: 16px; }
   .remove-row-btn {
     background: none; border: 1px solid var(--border); color: var(--text-dim); border-radius: 5px;
     width: 30px; height: 30px; cursor: pointer; font-size: 16px; line-height: 1;
@@ -217,7 +236,7 @@
   <div class="tool-form-row" id="invoicePriceRefRow" style="display:none; margin-top:12px;">
     <div class="form-field">
       <label>Add From Saved Job Types <button class="help-btn" onclick="openCardInfo('priceRefPicker')" aria-label="What is this?" title="What is this?">?</button></label>
-      <select id="invoicePriceRefSelect" style="width:100%; box-sizing:border-box; padding:10px 12px; background:var(--bg-panel-2); border:1px solid var(--border); border-radius:6px; color:var(--white); font-size:15px; font-family:inherit;">
+      <select id="invoicePriceRefSelect" style="width:100%; box-sizing:border-box; padding:10px 12px; background:var(--bg-panel-2); border:1px solid var(--border); border-radius:6px; color:var(--white); font-size:16px; font-family:inherit;">
         <option value="">Choose a saved job type&hellip;</option>
       </select>
     </div>
@@ -347,7 +366,7 @@
   <div class="tool-form-row" id="quotePriceRefRow" style="display:none; margin-top:12px;">
     <div class="form-field">
       <label>Add From Saved Job Types <button class="help-btn" onclick="openCardInfo('priceRefPicker')" aria-label="What is this?" title="What is this?">?</button></label>
-      <select id="quotePriceRefSelect" style="width:100%; box-sizing:border-box; padding:10px 12px; background:var(--bg-panel-2); border:1px solid var(--border); border-radius:6px; color:var(--white); font-size:15px; font-family:inherit;">
+      <select id="quotePriceRefSelect" style="width:100%; box-sizing:border-box; padding:10px 12px; background:var(--bg-panel-2); border:1px solid var(--border); border-radius:6px; color:var(--white); font-size:16px; font-family:inherit;">
         <option value="">Choose a saved job type&hellip;</option>
       </select>
     </div>
