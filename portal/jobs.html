@@ -35,6 +35,17 @@
 <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32.png">
 <link rel="icon" type="image/png" sizes="192x192" href="/images/favicon-192.png?v=202608010300">
 <link rel="manifest" href="/portal/manifest.json">
+<script>
+  // Service worker registration (2026-09-04) -- provides both offline
+  // app-shell caching and push notification support. Registered on
+  // every portal page (including login/set-password, matching the
+  // manifest link's own consistent presence on every page) since
+  // installability and offline support are useful before a session
+  // even exists, not just after signing in.
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('/portal/service-worker.js', { scope: '/portal/' }).catch(() => {});
+  }
+</script>
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="Triple H">

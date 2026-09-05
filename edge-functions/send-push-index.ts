@@ -184,6 +184,39 @@ async function sendToAllSubscriptions(payload: { title: string; body: string; ur
   );
 }
 
+// Client push notifications (2026-09-04), requested directly. Added
+// specifically because sendToAllSubscriptions() above is a genuine,
+// unconditional broadcast to EVERY subscription on file -- correct
+// for the internal-team use case above (Connor and Steve are the
+// only subscribers, and any internal alert should reach both), but
+// exactly the wrong behavior for a client-specific event: a single
+// client's own invoice notification must never reach every OTHER
+// client who happens to have push enabled. This filters to one
+// specific user's own subscription(s) before sending anything.
+async function getSubscriptionsForUser(userId: string) {
+  const res = await supabaseRequest(`/rest/v1/push_subscriptions?user_id=eq.${userId}&select=id,subscription`);
+  if (!res.ok) return [];
+  return res.json();
+}
+
+async function sendToUserSubscriptions(userId: string, payload: { title: string; body: string; url?: string }) {
+  const subs = await getSubscriptionsForUser(userId);
+  await Promise.allSettled(
+    subs.map(async (row: { id: string; subscription: PushSubscriptionJSON }) => {
+      try {
+        await withTimeout(
+          webpush.sendNotification(row.subscription as any, JSON.stringify(payload)),
+          8000,
+          `webpush.sendNotification (subscription ${row.id})`,
+        );
+      } catch (err: any) {
+        console.error(`Failed to send to subscription ${row.id}:`, err.message, err.statusCode);
+        if (err.statusCode === 404 || err.statusCode === 410) await deleteSubscription(row.id);
+      }
+    }),
+  );
+}
+
 // --- de-duplication helpers -------------------------------------------
 
 async function wasRecentlyNotified(notifType: string, itemKey: string): Promise<boolean> {
@@ -785,6 +818,31 @@ Deno.serve(async (req: Request) => {
       const title = typeof payload.title === "string" ? payload.title : "Uptime alert";
       const body = typeof payload.body === "string" ? payload.body : "";
       await sendToAllSubscriptions({ title, body, url: "/tools/dev-tools.html" });
+      return new Response(JSON.stringify({ ok: true }), { headers: { "Content-Type": "application/json" } });
+    }
+
+    // Client portal push (2026-09-04), requested directly. Deliberately
+    // a distinct type from every check above -- this is the ONLY branch
+    // in this whole function that targets one specific user rather than
+    // broadcasting to every subscription, so it's kept unmistakably
+    // separate rather than folded into an existing shape. Called
+    // server-to-server from other Edge Functions (using the service
+    // role key as the bearer token, same as any other internal
+    // function-to-function call in this project) at the same moments
+    // those functions already send an email -- this is an additional
+    // channel, never a replacement for it.
+    if (payload.type === "client-notification") {
+      const userId = typeof payload.user_id === "string" ? payload.user_id : "";
+      const title = typeof payload.title === "string" ? payload.title : "";
+      const body = typeof payload.body === "string" ? payload.body : "";
+      if (!userId || !title) {
+        return new Response(JSON.stringify({ ok: false, error: "user_id and title are required." }), {
+          status: 400,
+          headers: { "Content-Type": "application/json" },
+        });
+      }
+      const url = typeof payload.url === "string" ? payload.url : "/portal/home.html";
+      await sendToUserSubscriptions(userId, { title, body, url });
       return new Response(JSON.stringify({ ok: true }), { headers: { "Content-Type": "application/json" } });
     }
 

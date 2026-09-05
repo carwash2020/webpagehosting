@@ -78,6 +78,13 @@ const SHARED_SCRIPT_FILES = [
   // too or every page loading it would show as a flood of false
   // "not defined" positives.
   'business-hours.js',
+  // The client portal push-notifications helper (2026-09-04) -- loaded
+  // by portal/settings.html, same reasoning as every other entry
+  // here. (Written without any apostrophes deliberately -- the
+  // list-extraction test below reads quoted strings between single
+  // quotes, and an apostrophe inside this comment block would be
+  // misread as a string delimiter.)
+  'portal/push-notifications.js',
 ];
 
 // Third-party globals from CDN-loaded scripts (Supabase, Stripe,
