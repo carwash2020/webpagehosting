@@ -82,7 +82,14 @@
   .line-items-table { width: 100%; border-collapse: collapse; margin-bottom: 12px; }
   .line-items-table th { text-align: left; font-size: 12px; color: var(--text-dim); padding: 6px 8px; text-transform: uppercase; }
   .line-items-table td { padding: 4px 6px; }
-  .line-items-table input { width: 100%; padding: 7px 9px; background: var(--bg-panel-2); border: 1px solid var(--border); border-radius: 5px; color: var(--white); font-size: 16px; }
+  .line-items-table input, .line-items-table select { width: 100%; padding: 7px 9px; background: var(--bg-panel-2); border: 1px solid var(--border); border-radius: 5px; color: var(--white); font-size: 16px; font-family: inherit; }
+  /* Line item type (2026-09-05) -- a small, dim label stacked BELOW
+     the Qty input rather than beside it: the Qty column is only 9%
+     wide, and side-by-side text would be too cramped there,
+     especially on the narrow phone screens this whole page was just
+     fixed for. Empty and collapses to nothing for "Other"/blank,
+     matching lineItemUnitLabel()'s own return value. */
+  .li-qty-unit, .qli-qty-unit { display: block; font-size: 11px; color: var(--text-dim); text-align: center; margin-top: 2px; }
   .remove-row-btn {
     background: none; border: 1px solid var(--border); color: var(--text-dim); border-radius: 5px;
     width: 30px; height: 30px; cursor: pointer; font-size: 16px; line-height: 1;
@@ -228,7 +235,7 @@
   <div class="table-scroll">
   <table class="line-items-table">
     <thead>
-      <tr><th style="width:32%">Description</th><th style="width:14%">Part #</th><th style="width:8%">Qty</th><th style="width:13%">Price</th><th style="width:13%">Amount</th><th style="width:8%">Tax?</th><th></th></tr>
+      <tr><th style="width:26%">Description</th><th style="width:13%">Type</th><th style="width:10%">Part #</th><th style="width:9%">Qty</th><th style="width:12%">Price</th><th style="width:12%">Amount</th><th style="width:7%">Tax?</th><th></th></tr>
     </thead>
     <tbody id="lineItemsBody"></tbody>
   </table>
@@ -242,7 +249,7 @@
     </div>
     <button type="button" class="add-row-btn" style="align-self:flex-end;" onclick="addLineItemFromPriceRef('invoicePriceRefSelect', 'addLineItem')">Add This Line Item</button>
   </div>
-  <button type="button" class="add-row-btn" onclick="addLineItem('', '', 1, '', true, true)">+ Add line item</button>
+  <button type="button" class="add-row-btn" onclick="addLineItem('', '', 1, '', true, '', true)">+ Add line item</button>
   <button type="button" class="add-row-btn" onclick="addLaborLineItem('addLineItem')">+ Add Labor</button>
   <button type="button" class="add-row-btn" onclick="addMileageLineItem('addLineItem')">+ Add Mileage</button>
   <button type="button" class="secondary-btn" style="margin-left:8px;" onclick="openWikiLookup('jobDescription')">Look Up in Wiki</button>
@@ -358,7 +365,7 @@
   <div class="table-scroll">
   <table class="line-items-table">
     <thead>
-      <tr><th style="width:32%">Description</th><th style="width:14%">Part #</th><th style="width:8%">Qty</th><th style="width:13%">Price</th><th style="width:13%">Amount</th><th style="width:8%">Tax?</th><th></th></tr>
+      <tr><th style="width:26%">Description</th><th style="width:13%">Type</th><th style="width:10%">Part #</th><th style="width:9%">Qty</th><th style="width:12%">Price</th><th style="width:12%">Amount</th><th style="width:7%">Tax?</th><th></th></tr>
     </thead>
     <tbody id="quoteLineItemsBody"></tbody>
   </table>
@@ -372,7 +379,7 @@
     </div>
     <button type="button" class="add-row-btn" style="align-self:flex-end;" onclick="addLineItemFromPriceRef('quotePriceRefSelect', 'addQuoteLineItem')">Add This Line Item</button>
   </div>
-  <button type="button" class="add-row-btn" onclick="addQuoteLineItem('', '', 1, '', true, true)">+ Add line item</button>
+  <button type="button" class="add-row-btn" onclick="addQuoteLineItem('', '', 1, '', true, '', true)">+ Add line item</button>
   <button type="button" class="add-row-btn" onclick="addLaborLineItem('addQuoteLineItem')">+ Add Labor</button>
   <button type="button" class="add-row-btn" onclick="addMileageLineItem('addQuoteLineItem')">+ Add Mileage</button>
   <button type="button" class="secondary-btn" style="margin-left:8px;" onclick="openWikiLookup('quoteJobDescription')">Look Up in Wiki</button>
@@ -728,7 +735,7 @@
     if (idx === '') return;
     const ref = loadPriceReferencesForPicker()[Number(idx)];
     if (!ref) return;
-    window[addFnName](ref.label, '', ref.hours || 1, ref.rate || '', true, true);
+    window[addFnName](ref.label, '', ref.hours || 1, ref.rate || '', true, 'labor', true);
     document.getElementById(selectId).value = '';
   }
 
@@ -770,8 +777,32 @@
     animateRowExit(el, () => el.remove());
   }
 
+  // Line item type (2026-09-05), requested directly: "Add a Type
+  // dropdown per line (Labor/Mileage/Part/Other) -- Qty label changes
+  // automatically." The Qty column has one shared header for the
+  // whole table, but different rows can have different types, so the
+  // unit indicator lives per-row, right in the Qty cell, rather than
+  // trying to make one shared header serve every row at once.
+  const LINE_ITEM_UNIT_LABELS = { labor: 'hrs', mileage: 'mi', part: 'ea', other: '' };
+  function lineItemUnitLabel(type) { return LINE_ITEM_UNIT_LABELS[type] || ''; }
+  function lineItemTypeOptions(selected) {
+    return ['', 'labor', 'mileage', 'part', 'other'].map(t => {
+      const label = t === '' ? '\u2014' : t.charAt(0).toUpperCase() + t.slice(1);
+      return `<option value="${t}" ${t === selected ? 'selected' : ''}>${label}</option>`;
+    }).join('');
+  }
+  // Called from both the invoice and quote tables' Type <select>
+  // onchange -- updates just that one row's own unit label, never the
+  // whole table, since a real invoice frequently mixes labor and
+  // mileage lines together.
+  function updateLineItemUnitLabel(selectEl) {
+    const row = selectEl.closest('tr');
+    const unitEl = row.querySelector('.li-qty-unit, .qli-qty-unit');
+    if (unitEl) unitEl.textContent = lineItemUnitLabel(selectEl.value);
+  }
+
   let rowCount = 0;
-  function addLineItem(desc = '', part = '', qty = 1, price = '', taxable = true, isUserAdd = false) {
+  function addLineItem(desc = '', part = '', qty = 1, price = '', taxable = true, type = '', isUserAdd = false) {
     rowCount++;
     const id = rowCount;
     const tr = document.createElement('tr');
@@ -779,8 +810,9 @@
     if (isUserAdd) tr.classList.add('list-row-enter');
     tr.innerHTML = `
       <td><input type="text" class="li-desc" value="${desc}"></td>
+      <td><select class="li-type" onchange="updateLineItemUnitLabel(this)">${lineItemTypeOptions(type)}</select></td>
       <td><input type="text" class="li-part" value="${part}"></td>
-      <td><input type="number" class="li-qty" value="${qty}" min="0" step="1" oninput="recalc()"></td>
+      <td><input type="number" class="li-qty" value="${qty}" min="0" step="1" oninput="recalc()"><span class="li-qty-unit">${lineItemUnitLabel(type)}</span></td>
       <td><input type="number" class="li-price" value="${price}" min="0" step="0.01" oninput="recalc()"></td>
       <td class="li-amount">$0.00</td>
       <td style="text-align:center;"><input type="checkbox" class="li-taxable" ${taxable ? 'checked' : ''} oninput="recalc()"></td>
@@ -871,7 +903,7 @@
 
   // ---------- Quote line items (mirrors invoice line items above) ----------
   let quoteRowCount = 0;
-  function addQuoteLineItem(desc = '', part = '', qty = 1, price = '', taxable = true, isUserAdd = false) {
+  function addQuoteLineItem(desc = '', part = '', qty = 1, price = '', taxable = true, type = '', isUserAdd = false) {
     quoteRowCount++;
     const id = quoteRowCount;
     const tr = document.createElement('tr');
@@ -879,8 +911,9 @@
     if (isUserAdd) tr.classList.add('list-row-enter');
     tr.innerHTML = `
       <td><input type="text" class="qli-desc" value="${desc}"></td>
+      <td><select class="qli-type" onchange="updateLineItemUnitLabel(this)">${lineItemTypeOptions(type)}</select></td>
       <td><input type="text" class="qli-part" value="${part}"></td>
-      <td><input type="number" class="qli-qty" value="${qty}" min="0" step="1" oninput="recalcQuote()"></td>
+      <td><input type="number" class="qli-qty" value="${qty}" min="0" step="1" oninput="recalcQuote()"><span class="qli-qty-unit">${lineItemUnitLabel(type)}</span></td>
       <td><input type="number" class="qli-price" value="${price}" min="0" step="0.01" oninput="recalcQuote()"></td>
       <td class="qli-amount">$0.00</td>
       <td style="text-align:center;"><input type="checkbox" class="qli-taxable" ${taxable ? 'checked' : ''} oninput="recalcQuote()"></td>
@@ -924,7 +957,8 @@
       const qty = parseFloat(row.querySelector('.qli-qty').value) || 0;
       const price = parseFloat(row.querySelector('.qli-price').value) || 0;
       const taxable = row.querySelector('.qli-taxable').checked;
-      if (desc.trim() !== '') items.push({ desc, part, qty, price, amount: qty * price, taxable });
+      const type = row.querySelector('.qli-type').value;
+      if (desc.trim() !== '') items.push({ desc, part, qty, price, amount: qty * price, taxable, type });
     });
     return items;
   }
@@ -953,7 +987,7 @@
     if (items.length === 0) {
       addLineItem();
     } else {
-      items.forEach(item => addLineItem(item.desc, item.part, item.qty, item.price, item.taxable));
+      items.forEach(item => addLineItem(item.desc, item.part, item.qty, item.price, item.taxable, item.type));
     }
     recalc();
     activateGenTab('invoice');
@@ -969,7 +1003,8 @@
       const qty = parseFloat(row.querySelector('.li-qty').value) || 0;
       const price = parseFloat(row.querySelector('.li-price').value) || 0;
       const taxable = row.querySelector('.li-taxable').checked;
-      if (desc.trim() !== '') items.push({ desc, part, qty, price, amount: qty * price, taxable });
+      const type = row.querySelector('.li-type').value;
+      if (desc.trim() !== '') items.push({ desc, part, qty, price, amount: qty * price, taxable, type });
     });
     return items;
   }
@@ -1156,7 +1191,7 @@
       doc.text(item.desc, 46, y + 14);
       doc.setFontSize(8.5); doc.setTextColor(...GRAY);
       doc.text(item.part || '\u2014', 40 + tableW * 0.5, y + 14);
-      doc.text(String(item.qty), 40 + tableW * 0.68, y + 14, { align: 'center' });
+      doc.text(String(item.qty) + (lineItemUnitLabel(item.type) ? ' ' + lineItemUnitLabel(item.type) : ''), 40 + tableW * 0.68, y + 14, { align: 'center' });
       doc.setTextColor(20, 20, 20); doc.setFontSize(9.5);
       doc.text('$' + item.price.toFixed(2), 40 + tableW * 0.83, y + 14, { align: 'right' });
       doc.text('$' + item.amount.toFixed(2), pageW - 46, y + 14, { align: 'right' });
@@ -1905,7 +1940,7 @@
       doc.text(item.desc, 46, y + 14);
       doc.setFontSize(8.5); doc.setTextColor(...GRAY);
       doc.text(item.part || '\u2014', 40 + tableW * 0.5, y + 14);
-      doc.text(String(item.qty), 40 + tableW * 0.68, y + 14, { align: 'center' });
+      doc.text(String(item.qty) + (lineItemUnitLabel(item.type) ? ' ' + lineItemUnitLabel(item.type) : ''), 40 + tableW * 0.68, y + 14, { align: 'center' });
       doc.setTextColor(20, 20, 20); doc.setFontSize(9.5);
       doc.text('$' + item.price.toFixed(2), 40 + tableW * 0.83, y + 14, { align: 'right' });
       doc.text('$' + item.amount.toFixed(2), pageW - 46, y + 14, { align: 'right' });

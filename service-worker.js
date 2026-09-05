@@ -238,7 +238,13 @@
 // Bumped 2026-09-05 (again): invoice-generator.html changed -- fixed
 // the iOS Safari zoom-on-focus bug (reported directly: "you click on
 // a field and it zooms in"), precached under its bare path.
-const CACHE_NAME = 'th-workspace-v54';
+// Bumped 2026-09-05 (again): invoice-generator.html changed AGAIN --
+// added a per-line-item Type dropdown (Labor/Mileage/Part/Other,
+// requested directly), after the zoom-fix bump above had already
+// deployed. Same file, same bare-path precaching, so this needed its
+// own separate bump rather than assuming the prior one still covered
+// a version of the file that no longer exists.
+const CACHE_NAME = 'th-workspace-v55';
 const PRECACHE_URLS = [
   '/tools/workspace.html', '/tools/job-tracker.html', '/tools/invoice-generator.html', '/tools/contract-generator.html',
   '/tools/calendar.html', '/tools/route-planner.html', '/tools/review-request.html', '/tools/contact-card.html',
