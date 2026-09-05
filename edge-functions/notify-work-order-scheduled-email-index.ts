@@ -43,6 +43,33 @@ function escapeHtml(value: unknown): string {
   return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
 }
 
+// Client push (2026-09-04), requested directly: "finish push (3
+// remaining triggers)" -- same proven pattern as
+// notify-work-order-message-email.
+async function getUserIdByEmail(email: string): Promise<string | null> {
+  const res = await fetch(`${SUPABASE_URL}/auth/v1/admin/users?email=${encodeURIComponent(email.toLowerCase())}`, {
+    headers: { apikey: SERVICE_ROLE_KEY, Authorization: `Bearer ${SERVICE_ROLE_KEY}` },
+  });
+  if (!res.ok) return null;
+  const data = await res.json();
+  const users = Array.isArray(data) ? data : data.users || [];
+  return users.length ? users[0].id : null;
+}
+
+async function sendClientPush(email: string, title: string, body: string, url: string) {
+  try {
+    const userId = await getUserIdByEmail(email);
+    if (!userId) return;
+    await fetch(`${SUPABASE_URL}/functions/v1/Send-Push`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${SERVICE_ROLE_KEY}` },
+      body: JSON.stringify({ type: "client-notification", user_id: userId, title, body, url }),
+    });
+  } catch (err: any) {
+    console.error("sendClientPush error (non-fatal):", err.message);
+  }
+}
+
 function formatScheduledAt(iso: string): string {
   return new Intl.DateTimeFormat("en-US", {
     timeZone: BUSINESS_TIMEZONE, weekday: "long", month: "long", day: "numeric",
@@ -176,6 +203,8 @@ Deno.serve(async (req: Request) => {
         headers: { "Content-Type": "application/json" },
       });
     }
+
+    await sendClientPush(wo.client_email, "Your appointment is booked", `${wo.title || "Your request"}: ${scheduledLabel}`, "/portal/work-orders.html");
 
     return new Response(JSON.stringify({ ok: true }), { headers: { "Content-Type": "application/json" } });
   } catch (err: any) {
