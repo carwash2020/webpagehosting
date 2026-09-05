@@ -169,10 +169,33 @@ function thSaveClients(list) { return thWrite(TH_KEYS.clients, list); }
 // the sync-merge path, since a stale copy carries the same original id)
 // and the normalized name (consulted by the backfill path, since that's
 // the only thing it has to go on) closes both resurrection routes.
+// Tombstone retention (2026-09-05), requested directly: "Should we
+// clean up the blob?" Every th_*_tombstones array below grew forever,
+// one entry per deletion, across the entire lifetime of the business
+// -- but each entry only needs to survive long enough for every
+// device to have synced the deletion at least once, not indefinitely.
+// 90 days is a generous margin for an app used daily; a device that
+// hasn't synced in that long has bigger problems than a resurrected
+// old record, and even then the actual worst case is a deleted item
+// reappearing (easily re-deleted again), never lost data -- the
+// tombstone's whole job is preventing exactly that resurrection, and
+// pruning one that's already done its job for every real device
+// costs nothing. Malformed or missing deletedAt values are kept
+// rather than risk dropping something real over a parsing edge case.
+const TOMBSTONE_RETENTION_DAYS = 90;
+function thPruneTombstones(list) {
+  const cutoffMs = Date.now() - TOMBSTONE_RETENTION_DAYS * 24 * 60 * 60 * 1000;
+  return list.filter((t) => {
+    const deletedAtMs = new Date(t.deletedAt).getTime();
+    return isNaN(deletedAtMs) || deletedAtMs >= cutoffMs;
+  });
+}
+
 const TH_CLIENT_TOMBSTONES_KEY = 'th_client_tombstones';
 function thLoadClientTombstones() { return thRead(TH_CLIENT_TOMBSTONES_KEY, []); }
 function thAddClientTombstone(id, name) {
-  const list = thLoadClientTombstones();
+  let list = thLoadClientTombstones();
+  list = thPruneTombstones(list);
   list.push({ id, normalizedName: thNormalizeClientName(name), deletedAt: new Date().toISOString() });
   thWrite(TH_CLIENT_TOMBSTONES_KEY, list);
 }
@@ -188,7 +211,8 @@ function thAddClientTombstone(id, name) {
 const TH_JOB_TOMBSTONES_KEY = 'th_job_tombstones';
 function thLoadJobTombstones() { return thRead(TH_JOB_TOMBSTONES_KEY, []); }
 function thAddJobTombstone(id) {
-  const list = thLoadJobTombstones();
+  let list = thLoadJobTombstones();
+  list = thPruneTombstones(list);
   list.push({ id, deletedAt: new Date().toISOString() });
   thWrite(TH_JOB_TOMBSTONES_KEY, list);
 }
@@ -202,7 +226,8 @@ function thAddJobTombstone(id) {
 const TH_EXPENSE_TOMBSTONES_KEY = 'th_expense_tombstones';
 function thLoadExpenseTombstones() { return thRead(TH_EXPENSE_TOMBSTONES_KEY, []); }
 function thAddExpenseTombstone(id) {
-  const list = thLoadExpenseTombstones();
+  let list = thLoadExpenseTombstones();
+  list = thPruneTombstones(list);
   list.push({ id, deletedAt: new Date().toISOString() });
   thWrite(TH_EXPENSE_TOMBSTONES_KEY, list);
 }
@@ -210,7 +235,8 @@ function thAddExpenseTombstone(id) {
 const TH_INCOME_TOMBSTONES_KEY = 'th_income_tombstones';
 function thLoadIncomeTombstones() { return thRead(TH_INCOME_TOMBSTONES_KEY, []); }
 function thAddIncomeTombstone(id) {
-  const list = thLoadIncomeTombstones();
+  let list = thLoadIncomeTombstones();
+  list = thPruneTombstones(list);
   list.push({ id, deletedAt: new Date().toISOString() });
   thWrite(TH_INCOME_TOMBSTONES_KEY, list);
 }
@@ -218,7 +244,8 @@ function thAddIncomeTombstone(id) {
 const TH_CONTACT_TOMBSTONES_KEY = 'th_contact_tombstones';
 function thLoadContactTombstones() { return thRead(TH_CONTACT_TOMBSTONES_KEY, []); }
 function thAddContactTombstone(id) {
-  const list = thLoadContactTombstones();
+  let list = thLoadContactTombstones();
+  list = thPruneTombstones(list);
   list.push({ id, deletedAt: new Date().toISOString() });
   thWrite(TH_CONTACT_TOMBSTONES_KEY, list);
 }
@@ -226,7 +253,8 @@ function thAddContactTombstone(id) {
 const TH_CONTRACT_TOMBSTONES_KEY = 'th_contract_tombstones';
 function thLoadContractTombstones() { return thRead(TH_CONTRACT_TOMBSTONES_KEY, []); }
 function thAddContractTombstone(id) {
-  const list = thLoadContractTombstones();
+  let list = thLoadContractTombstones();
+  list = thPruneTombstones(list);
   list.push({ id, deletedAt: new Date().toISOString() });
   thWrite(TH_CONTRACT_TOMBSTONES_KEY, list);
 }
@@ -238,7 +266,8 @@ function thAddContractTombstone(id) {
 const TH_INVOICE_TOMBSTONES_KEY = 'th_invoice_tombstones';
 function thLoadInvoiceTombstones() { return thRead(TH_INVOICE_TOMBSTONES_KEY, []); }
 function thAddInvoiceTombstone(id) {
-  const list = thLoadInvoiceTombstones();
+  let list = thLoadInvoiceTombstones();
+  list = thPruneTombstones(list);
   list.push({ id, deletedAt: new Date().toISOString() });
   thWrite(TH_INVOICE_TOMBSTONES_KEY, list);
 }
@@ -246,7 +275,8 @@ function thAddInvoiceTombstone(id) {
 const TH_QUOTE_TOMBSTONES_KEY = 'th_quote_tombstones';
 function thLoadQuoteTombstones() { return thRead(TH_QUOTE_TOMBSTONES_KEY, []); }
 function thAddQuoteTombstone(id) {
-  const list = thLoadQuoteTombstones();
+  let list = thLoadQuoteTombstones();
+  list = thPruneTombstones(list);
   list.push({ id, deletedAt: new Date().toISOString() });
   thWrite(TH_QUOTE_TOMBSTONES_KEY, list);
 }
@@ -259,7 +289,8 @@ function thAddQuoteTombstone(id) {
 const TH_PRICE_REF_TOMBSTONES_KEY = 'th_price_ref_tombstones';
 function thLoadPriceRefTombstones() { return thRead(TH_PRICE_REF_TOMBSTONES_KEY, []); }
 function thAddPriceRefTombstone(id) {
-  const list = thLoadPriceRefTombstones();
+  let list = thLoadPriceRefTombstones();
+  list = thPruneTombstones(list);
   list.push({ id, deletedAt: new Date().toISOString() });
   thWrite(TH_PRICE_REF_TOMBSTONES_KEY, list);
 }
@@ -267,7 +298,8 @@ function thAddPriceRefTombstone(id) {
 const TH_TEMPLATE_TOMBSTONES_KEY = 'th_template_tombstones';
 function thLoadTemplateTombstones() { return thRead(TH_TEMPLATE_TOMBSTONES_KEY, []); }
 function thAddTemplateTombstone(id) {
-  const list = thLoadTemplateTombstones();
+  let list = thLoadTemplateTombstones();
+  list = thPruneTombstones(list);
   list.push({ id, deletedAt: new Date().toISOString() });
   thWrite(TH_TEMPLATE_TOMBSTONES_KEY, list);
 }
@@ -275,7 +307,8 @@ function thAddTemplateTombstone(id) {
 const TH_KNOWN_ISSUE_TOMBSTONES_KEY = 'th_known_issue_tombstones';
 function thLoadKnownIssueTombstones() { return thRead(TH_KNOWN_ISSUE_TOMBSTONES_KEY, []); }
 function thAddKnownIssueTombstone(id) {
-  const list = thLoadKnownIssueTombstones();
+  let list = thLoadKnownIssueTombstones();
+  list = thPruneTombstones(list);
   list.push({ id, deletedAt: new Date().toISOString() });
   thWrite(TH_KNOWN_ISSUE_TOMBSTONES_KEY, list);
 }
@@ -283,7 +316,8 @@ function thAddKnownIssueTombstone(id) {
 const TH_PR_UNIT_TOMBSTONES_KEY = 'th_pr_unit_tombstones';
 function thLoadPrUnitTombstones() { return thRead(TH_PR_UNIT_TOMBSTONES_KEY, []); }
 function thAddPrUnitTombstone(id) {
-  const list = thLoadPrUnitTombstones();
+  let list = thLoadPrUnitTombstones();
+  list = thPruneTombstones(list);
   list.push({ id, deletedAt: new Date().toISOString() });
   // thWriteWiki (not thWrite) -- see its own comment above for why:
   // routes through scheduleWikiSync() instead of scheduleSync(), so
@@ -303,7 +337,8 @@ function thAddPrUnitTombstone(id) {
 const TH_PR_ISSUE_TOMBSTONES_KEY = 'th_pr_issue_tombstones';
 function thLoadPrIssueTombstones() { return thRead(TH_PR_ISSUE_TOMBSTONES_KEY, []); }
 function thAddPrIssueTombstone(unitId, issueId) {
-  const list = thLoadPrIssueTombstones();
+  let list = thLoadPrIssueTombstones();
+  list = thPruneTombstones(list);
   list.push({ id: unitId + '::' + issueId, unitId, issueId, deletedAt: new Date().toISOString() });
   thWriteWiki(TH_PR_ISSUE_TOMBSTONES_KEY, list);
 }
