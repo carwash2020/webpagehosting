@@ -235,7 +235,10 @@
 // noisy client-side errors); dev-tools.html changed too (a real
 // escaping-function inconsistency fixed on the same investigation).
 // sync.js is also precached under its bare path.
-const CACHE_NAME = 'th-workspace-v53';
+// Bumped 2026-09-05 (again): invoice-generator.html changed -- fixed
+// the iOS Safari zoom-on-focus bug (reported directly: "you click on
+// a field and it zooms in"), precached under its bare path.
+const CACHE_NAME = 'th-workspace-v54';
 const PRECACHE_URLS = [
   '/tools/workspace.html', '/tools/job-tracker.html', '/tools/invoice-generator.html', '/tools/contract-generator.html',
   '/tools/calendar.html', '/tools/route-planner.html', '/tools/review-request.html', '/tools/contact-card.html',
