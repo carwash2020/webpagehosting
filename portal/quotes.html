@@ -341,6 +341,7 @@
       return;
     }
     document.getElementById('clientEmailDisplay').textContent = session.user.email;
+    await portalGuardWithBiometricLock(session.user.email, client);
 
     // Shown immediately, before the fetch -- without this, a client
     // on a slow connection sees a completely blank area that looks

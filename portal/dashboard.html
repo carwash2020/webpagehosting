@@ -322,6 +322,7 @@
       return;
     }
     document.getElementById('clientEmailDisplay').textContent = session.user.email;
+    await portalGuardWithBiometricLock(session.user.email, client);
 
     const { data: invoices, error } = await client
       .from('client_portal_invoices')

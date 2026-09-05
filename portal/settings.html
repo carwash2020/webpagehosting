@@ -338,6 +338,21 @@
 </div>
 
 <!--
+  Biometric unlock (2026-09-05), requested directly. A separate card
+  from Notifications, unlike push -- this is about protecting access
+  to the account on this device, not about how you hear about
+  things, a genuinely different concern. Device-specific, same as
+  push: enabling it here only affects THIS browser/device, not the
+  account everywhere.
+-->
+<div class="set-card">
+  <div class="set-card-title">Security</div>
+  <div class="set-card-sub">Require Face ID, Touch ID, or your device PIN to open the app on this device.</div>
+  <button class="btn blue" id="biometricToggleBtn" style="width:100%; justify-content:center;">Loading...</button>
+  <div class="set-msg" id="biometricMsg" style="display:none;"></div>
+</div>
+
+<!--
   Sign out, also in Settings (2026-09-04), requested directly -- the
   header's own Sign out button (every portal page has one) stays
   exactly as it was; this is a second, natural place to find it,
@@ -845,6 +860,45 @@
     renderPushToggle();
   }
 
+  // Biometric unlock (2026-09-05) -- same three-state pattern as the
+  // push toggle just above: not supported here, supported but not
+  // enabled, or already enabled on this device.
+  function renderBiometricToggle(email) {
+    const btn = document.getElementById('biometricToggleBtn');
+    if (!btn) return;
+
+    if (!portalBiometricLockSupported()) {
+      btn.textContent = 'Not supported in this browser';
+      btn.disabled = true;
+      return;
+    }
+
+    btn.disabled = false;
+    const enabled = portalIsBiometricLockEnabled(email);
+    btn.textContent = enabled ? 'Turn off biometric unlock' : 'Enable biometric unlock';
+    btn.onclick = enabled ? () => handleDisableBiometric(email) : () => handleEnableBiometric(email);
+    document.getElementById('biometricMsg').style.display = 'none';
+  }
+
+  async function handleEnableBiometric(email) {
+    const btn = document.getElementById('biometricToggleBtn');
+    const msgEl = document.getElementById('biometricMsg');
+    btn.disabled = true;
+    btn.textContent = 'Setting up...';
+    const result = await portalRegisterBiometricLock(email);
+    if (!result.ok) {
+      msgEl.textContent = result.error;
+      msgEl.className = 'set-msg is-error';
+      msgEl.style.display = 'block';
+    }
+    renderBiometricToggle(email);
+  }
+
+  function handleDisableBiometric(email) {
+    portalDisableBiometricLock(email);
+    renderBiometricToggle(email);
+  }
+
   async function init() {
     const { data: { session } } = await client.auth.getSession();
     if (!session) { window.location.replace('/portal/login.html'); return; }
@@ -903,6 +957,15 @@
     // it alone would leave iOS clients seeing an empty card forever.
     renderAddToHomeScreen();
     renderPushToggle();
+    // Settings deliberately does NOT call portalGuardWithBiometricLock,
+    // unlike every other authenticated page. If a client's
+    // authenticator becomes unavailable (a broken sensor, a lost
+    // enrollment, a new device), Settings needs to stay reachable so
+    // they can actually turn the lock off -- gating the one page that
+    // controls the feature would risk locking them out of disabling
+    // it at all, with "use password instead" only signing them out
+    // and back into the exact same locked state.
+    renderBiometricToggle(email);
   }
 
   async function signOut() {
