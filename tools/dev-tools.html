@@ -43,7 +43,7 @@
 <script src="/tools/tools-dialogs.js?v=e1dfaa11a1" defer></script>
 <script src="/tools/tools-media-sharing.js?v=4e2769b10d" defer></script>
 <script src="/tools/tools-nav-pwa.js?v=9b16eefb86" defer></script>
-<script src="/tools/sync.js?v=73576c99e1" defer></script>
+<script src="/tools/sync.js?v=51c822a31b" defer></script>
 <style>
   body { padding: 44px 20px 60px; max-width: 1080px; margin: 0 auto; }
   /* Desktop layout (2026-08-20), requested directly: efficient on
@@ -1143,7 +1143,7 @@
       '<span class="k">' + escapeHtml(k) + '</span>' +
       '<span style="display:flex; align-items:center; gap:8px;">' +
       '<span class="v">' + (size / 1024).toFixed(1) + ' KB</span>' +
-      '<button class="dev-info-bubble dev-danger-btn" title="Delete this key" aria-label="Delete this key" onclick="event.stopPropagation(); deleteLocalDataKey(\'' + escapeHtml(k) + '\')"><svg class="th-icon" aria-hidden="true"><use href="#icon-trash" xlink:href="#icon-trash"></use></svg></button>' +
+      '<button class="dev-info-bubble dev-danger-btn" title="Delete this key" aria-label="Delete this key" onclick="event.stopPropagation(); deleteLocalDataKey(\'' + escapeForInlineHandler(k) + '\')"><svg class="th-icon" aria-hidden="true"><use href="#icon-trash" xlink:href="#icon-trash"></use></svg></button>' +
       '</span>' +
       '<pre class="dev-raw-view" style="display:none; width:100%; margin:8px 0 0; font-size:11.5px; white-space:pre-wrap; word-break:break-all; max-height:240px; overflow:auto;"></pre>' +
       '</div>';

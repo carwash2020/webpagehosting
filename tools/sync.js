@@ -1252,9 +1252,17 @@ function startRealtimeSync(onRemoteChange, onStatusChange) {
       )
       .subscribe((status) => {
         if (status === 'CHANNEL_ERROR' && retriesLeft > 0) {
-          if (typeof logClientError === 'function') {
-            logClientError('Realtime workspace_sync channel status: CHANNEL_ERROR -- retrying (' + retriesLeft + ' attempt(s) left)', 'sync.js', null, null, null);
-          }
+          // Not logged as a client error (2026-09-05), found during a
+          // direct investigation into a real reported complaint about
+          // noisy client-side errors: this specific branch is an
+          // EXPECTED, self-recovering condition (the comment above
+          // this whole function explains why -- a cold-starting
+          // realtime tenant), not a genuine failure. Logging every
+          // intermediate retry attempt at error severity was crowding
+          // out th_client_errors' own 20-entry cap with non-actionable
+          // noise, exactly the kind of thing that made a real,
+          // separate bug harder to spot in the same log. The genuine
+          // failure case below (retries actually exhausted) still logs.
           client.removeChannel(_realtimeChannel);
           setTimeout(() => attemptSubscribe(retriesLeft - 1), 2000);
           return; // don't mark resolved or notify the page yet -- a retry is still in flight
@@ -1314,9 +1322,8 @@ function startLeadsRealtime(onChange, onStatusChange) {
       )
       .subscribe((status) => {
         if (status === 'CHANNEL_ERROR' && retriesLeft > 0) {
-          if (typeof logClientError === 'function') {
-            logClientError('Realtime th_leads channel status: CHANNEL_ERROR -- retrying (' + retriesLeft + ' attempt(s) left)', 'sync.js', null, null, null);
-          }
+          // Not logged as an error -- same reasoning as the
+          // workspace_sync channel's own subscribe() above.
           client.removeChannel(_leadsRealtimeChannel);
           setTimeout(() => attemptSubscribe(retriesLeft - 1), 2000);
           return;
@@ -1380,9 +1387,8 @@ function startBookingsRealtime(onChange, onStatusChange) {
       )
       .subscribe((status) => {
         if (status === 'CHANNEL_ERROR' && retriesLeft > 0) {
-          if (typeof logClientError === 'function') {
-            logClientError('Realtime th_bookings channel status: CHANNEL_ERROR -- retrying (' + retriesLeft + ' attempt(s) left)', 'sync.js', null, null, null);
-          }
+          // Not logged as an error -- same reasoning as the
+          // workspace_sync channel's own subscribe() above.
           client.removeChannel(_bookingsRealtimeChannel);
           setTimeout(() => attemptSubscribe(retriesLeft - 1), 2000);
           return;

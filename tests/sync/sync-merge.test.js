@@ -139,7 +139,15 @@ test('startRealtimeSync retries once on CHANNEL_ERROR and succeeds, without ever
   assert.equal(getSubscribeCallCount(), 2, 'should have attempted subscribe twice: once, then the retry');
   assert.equal(removedChannels.length, 1, 'the failed channel should be cleaned up before retrying');
   assert.deepEqual(statuses, ['SUBSCRIBED'], 'the page should only ever hear about the final, successful status -- not the transient CHANNEL_ERROR');
-  assert.ok(loggedMessages.some(m => m.includes('retrying')), 'the retry itself should still be logged for visibility');
+  // Updated 2026-09-05, found investigating a real reported complaint
+  // about noisy client-side errors: an intermediate, expected retry
+  // is deliberately NOT logged anymore -- it was crowding out
+  // th_client_errors' own 20-entry cap with non-actionable noise for
+  // a condition that's expected to self-recover (a cold-starting
+  // realtime tenant, per this function's own header comment). The
+  // genuine failure case (retries actually exhausted, tested in the
+  // next test below) still logs.
+  assert.equal(loggedMessages.length, 0, 'an expected, self-recovering retry should not be logged as a client error at all');
 });
 
 test('startRealtimeSync gives up after exhausting retries and reports CHANNEL_ERROR to the page', () => {
