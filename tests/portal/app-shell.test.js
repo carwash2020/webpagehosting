@@ -125,5 +125,5 @@ test('the nav CSS lives in one shared file now, not copy-pasted into six pages',
 
 test('the new stylesheet is precached and CACHE_NAME was bumped -- a precached file changing without a bump is a documented real failure mode', () => {
   assert.match(SW, /'\/portal\/portal-app\.css'/);
-  assert.match(SW, /const CACHE_NAME = 'th-portal-v6';/);
+  assert.match(SW, /const CACHE_NAME = 'th-portal-v7';/);
 });

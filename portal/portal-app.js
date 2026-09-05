@@ -296,3 +296,88 @@ function portalGuardWithBiometricLock(email, client) {
   });
 }
 
+// Automatic error capture (2026-09-05), requested directly: "future
+// proof this... what other layers can we add." Internal tools
+// already catch every JS error automatically (th_client_errors); the
+// portal only ever had a client-INITIATED "Report a problem" button
+// -- a silent bug could go unnoticed indefinitely unless a client
+// happens to notice and bothers reporting it themselves.
+//
+// Deliberately self-contained rather than reading the page's own
+// SUPABASE_URL/SUPABASE_ANON_KEY globals: this file loads in <head>,
+// before those are defined further down each page, and an error can
+// fire at any point including before that line runs. The anon key
+// embedded here is the exact same PUBLIC key already hardcoded
+// identically on every portal page -- not a new secret, just a
+// second copy avoiding a real timing dependency.
+const PORTAL_ERROR_LOG_SUPABASE_URL = 'https://csvfqdjuobylgafgolho.supabase.co';
+const PORTAL_ERROR_LOG_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNzdmZxZGp1b2J5bGdhZmdvbGhvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODUzNTQ3MjcsImV4cCI6MjEwMDkzMDcyN30.6GlvK-DfXf2lppS1kciZtsl4wHOpZz_yKtwsS1lyjrs';
+
+// A small in-memory cap per page load, not a server-side rate limit:
+// a genuine JS error inside a loop (or a repeated rejection) could
+// otherwise fire hundreds of times in seconds, and there's no value
+// in a hundred identical rows for the same single bug.
+let portalErrorLogCount = 0;
+const PORTAL_ERROR_LOG_MAX_PER_PAGE = 10;
+
+function logPortalClientError(message, source, lineno, colno, stack) {
+  try {
+    if (portalErrorLogCount >= PORTAL_ERROR_LOG_MAX_PER_PAGE) return;
+    portalErrorLogCount++;
+
+    let clientEmail = null;
+    // Best-effort only -- client may be signed out, mid-auth-check,
+    // or this may be running before any client variable even exists
+    // on this specific page. A missing email is fine (the whole
+    // point of client_email being nullable); a thrown lookup here
+    // must never prevent the actual error report from going out.
+    try {
+      if (typeof client !== 'undefined' && client.auth && client.auth.getSession) {
+        client.auth.getSession().then((res) => {
+          const email = res && res.data && res.data.session && res.data.session.user && res.data.session.user.email;
+          sendPortalErrorReport(message, source, lineno, colno, stack, email || null);
+        }).catch(() => sendPortalErrorReport(message, source, lineno, colno, stack, null));
+        return;
+      }
+    } catch (e) { /* fall through to sending without an email below */ }
+    sendPortalErrorReport(message, source, lineno, colno, stack, clientEmail);
+  } catch (e) {
+    // If even logging the error fails, give up silently rather than
+    // risk looping back into another error.
+  }
+}
+
+function sendPortalErrorReport(message, source, lineno, colno, stack, clientEmail) {
+  try {
+    fetch(`${PORTAL_ERROR_LOG_SUPABASE_URL}/rest/v1/portal_client_errors`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'apikey': PORTAL_ERROR_LOG_ANON_KEY,
+        'Authorization': `Bearer ${PORTAL_ERROR_LOG_ANON_KEY}`,
+        'Prefer': 'return=minimal',
+      },
+      body: JSON.stringify({
+        client_email: clientEmail,
+        message: String(message == null ? 'Unknown error' : message).slice(0, 500),
+        source: source ? String(source).slice(0, 300) : null,
+        line: typeof lineno === 'number' ? lineno : null,
+        col: typeof colno === 'number' ? colno : null,
+        stack: stack ? String(stack).slice(0, 1000) : null,
+        page_url: window.location.pathname,
+        user_agent: navigator.userAgent ? navigator.userAgent.slice(0, 300) : null,
+      }),
+    }).catch(() => { /* best-effort; a failed report is not itself worth reporting */ });
+  } catch (e) { /* same as above */ }
+}
+
+window.addEventListener('error', (event) => {
+  logPortalClientError(event.message, event.filename, event.lineno, event.colno, event.error && event.error.stack);
+});
+window.addEventListener('unhandledrejection', (event) => {
+  const reason = event.reason;
+  const message = reason && reason.message ? reason.message : String(reason);
+  const stack = reason && reason.stack ? reason.stack : '';
+  logPortalClientError(message, 'unhandledrejection', null, null, stack);
+});
+

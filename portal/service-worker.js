@@ -42,7 +42,11 @@
 // Bumped 2026-09-05 (v5 -> v6): push-notifications.js changed -- the
 // same real duplicate-subscription fix described in the internal
 // tools service worker's own comment on this date.
-const CACHE_NAME = 'th-portal-v6';
+// Bumped 2026-09-05 (v6 -> v7): portal-app.js changed -- automatic
+// error capture added (requested directly: "future proof this...
+// what other layers can we add"), catching every real JS error on
+// the portal the same way the internal tools already do.
+const CACHE_NAME = 'th-portal-v7';
 const PRECACHE_URLS = [
   '/portal/home.html', '/portal/dashboard.html', '/portal/jobs.html', '/portal/quotes.html',
   '/portal/work-orders.html', '/portal/settings.html', '/portal/login.html', '/portal/set-password.html',

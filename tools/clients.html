@@ -47,7 +47,7 @@
      file dev-tools.html and site-content.html already load, rather
      than duplicating any of it -- these five panels' help-modal
      content already lives there from when they were built. -->
-<script src="/tools/dev-tools-shared.js?v=9274dfaef5" defer></script>
+<script src="/tools/dev-tools-shared.js?v=971ca54c06" defer></script>
 <style>
   /* The exact subset of dev-tools.html's own panel-layout CSS these
      five panels actually use -- copied here rather than the whole
@@ -240,6 +240,25 @@
     <div id="portalBugReports"></div>
   </div>
 
+  <div class="dev-panel">
+    <div class="dev-panel-heading">
+      <h2>Portal client errors</h2>
+      <button class="dev-info-bubble" onclick="openDevInfo('portalclienterrors')" aria-label="What does this do?" title="What does this do?">?</button>
+    </div>
+    <!--
+      Automatic error capture (2026-09-05), requested directly:
+      "future proof this... what other layers can we add." Unlike
+      Portal bug reports above (client-INITIATED, only shows up if
+      someone actually notices something broken and bothers using
+      "Report a problem"), this catches every real JS error on the
+      portal automatically, the same way th_client_errors already
+      does for the internal tools. Read-only, same reasoning as
+      Portal work orders above -- this is for "did something actually
+      break," not another status-tracking UI.
+    -->
+    <div id="portalClientErrors"></div>
+  </div>
+
   </div>
 
 
@@ -253,6 +272,7 @@
     <p><strong>Portal work orders</strong> -- every "Request Work" submission, with photos, urgency, and status. Closed requests hide by default; Export CSV downloads everything for your records.</p>
     <p><strong>Email list</strong> -- who gets emailed the moment a client submits a new work request. Add a new hire here and they start getting notified immediately, no deploy needed.</p>
     <p><strong>Portal bug reports</strong> -- problems clients have reported directly from the portal's own "Report a problem" link.</p>
+    <p><strong>Portal client errors</strong> -- every real JS error caught automatically on the portal, whether or not a client noticed or reported it themselves.</p>
   </div>
 </div>
 
@@ -329,6 +349,43 @@
       renderPortalBugReports();
     } catch (e) {
       showToast('Could not mark resolved: ' + (e.message || String(e)), { type: 'error' });
+    }
+  }
+
+  // Portal client errors (2026-09-05) -- read-only, no resolve action:
+  // unlike bug reports (a client's own report of something they
+  // noticed, which can genuinely be marked done once addressed),
+  // there's no single moment an automatically-caught JS error is
+  // "resolved" from this panel's own point of view -- that happens by
+  // actually fixing the underlying bug and shipping it, the same way
+  // the internal tools' own Client errors panel already works.
+  async function renderPortalClientErrors() {
+    const el = document.getElementById('portalClientErrors');
+    el.innerHTML = '<p class="tool-sub">Loading...</p>';
+    try {
+      const res = await fetchWithTimeout(
+        SUPABASE_URL + '/rest/v1/portal_client_errors?select=*&order=created_at.desc&limit=50',
+        8000,
+        { headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': 'Bearer ' + getAuthToken() } }
+      );
+      if (!res.ok) throw new Error('HTTP ' + res.status);
+      const errors = await res.json();
+      if (!errors.length) {
+        el.innerHTML = '<p class="tool-sub">No client-side errors captured from the portal.</p>';
+        return;
+      }
+      el.innerHTML = errors.map(e => {
+        const when = new Date(e.created_at).toLocaleString();
+        const who = e.client_email ? escapeHtml(e.client_email) : 'Not signed in';
+        const location = [e.source, e.line != null ? ('line ' + e.line) : null].filter(Boolean).join(', ');
+        return '<div class="dev-check-row" style="align-items:flex-start;"><div>' +
+          '<div>' + escapeHtml(e.message) + '</div>' +
+          '<div class="dev-check-detail">' + who + ' on ' + escapeHtml(e.page_url) +
+          (location ? ' (' + escapeHtml(location) + ')' : '') + '. ' + when + '</div>' +
+          '</div><span class="dev-check-status fail">Error</span></div>';
+      }).join('');
+    } catch (e) {
+      el.innerHTML = '<p class="tool-sub">Could not load portal client errors: ' + escapeHtml(e.message || String(e)) + '</p>';
     }
   }
 
@@ -1106,6 +1163,7 @@
       const searchParam = params.get('search');
       if (searchParam) document.getElementById('portalAccountSearch').value = searchParam;
       renderPortalBugReports();
+      renderPortalClientErrors();
       renderPortalAccounts();
       renderPortalInvoices();
       renderPortalWorkOrders();

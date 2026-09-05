@@ -224,7 +224,12 @@
 // forever; now pruned to 90 days on every add), found during the
 // same "should we clean up the blob" follow-up audit. Also precached
 // under its bare path, same reasoning as the bump just above.
-const CACHE_NAME = 'th-workspace-v51';
+// Bumped 2026-09-05 (again): dev-tools-shared.js changed -- added a
+// DEV_INFO entry for the new Portal client errors panel (automatic
+// JS error capture on the portal, requested directly: "future proof
+// this... what other layers can we add"). Also precached under its
+// bare path.
+const CACHE_NAME = 'th-workspace-v52';
 const PRECACHE_URLS = [
   '/tools/workspace.html', '/tools/job-tracker.html', '/tools/invoice-generator.html', '/tools/contract-generator.html',
   '/tools/calendar.html', '/tools/route-planner.html', '/tools/review-request.html', '/tools/contact-card.html',
