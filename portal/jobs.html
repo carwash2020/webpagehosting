@@ -593,6 +593,7 @@
   });
 
   renderJobs().then(renderCheckups);
+  initPortalPullToRefresh(() => renderJobs().then(renderCheckups));
 </script>
 
 <!--

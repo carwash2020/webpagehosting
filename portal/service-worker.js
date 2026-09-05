@@ -29,13 +29,12 @@
 // matters (a real incident, several times over, of a file changing
 // without this bump meaning devices kept serving stale content
 // indefinitely).
-// Bumped 2026-09-04 (v2 -> v3): skeleton loading states added
-// /portal/portal-app.js and changed 5 precached HTML pages
-// (home/jobs/quotes/work-orders/settings). Same reasoning as the
-// v1->v2 bump above -- every precached file that changes needs this
-// bump, or a device that installed the service worker earlier keeps
-// serving the old cached copies indefinitely.
-const CACHE_NAME = 'th-portal-v3';
+// Bumped 2026-09-04 (v3 -> v4): pull-to-refresh and the offline
+// indicator changed portal-app.js/portal-app.css and all 8 precached
+// HTML pages (three gained the script tag for the first time; five
+// gained the pull-to-refresh wire-up). Same reasoning as every prior
+// bump in this file's history.
+const CACHE_NAME = 'th-portal-v4';
 const PRECACHE_URLS = [
   '/portal/home.html', '/portal/dashboard.html', '/portal/jobs.html', '/portal/quotes.html',
   '/portal/work-orders.html', '/portal/settings.html', '/portal/login.html', '/portal/set-password.html',

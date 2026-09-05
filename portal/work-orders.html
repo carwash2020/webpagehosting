@@ -887,6 +887,7 @@
     if (!session) { window.location.replace('/portal/login.html'); return; }
     document.getElementById('clientEmailDisplay').textContent = session.user.email;
     renderMyRequests();
+    initPortalPullToRefresh(renderMyRequests);
   }
 
   document.getElementById('signOutBtn').addEventListener('click', async () => {

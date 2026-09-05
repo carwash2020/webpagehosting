@@ -302,3 +302,101 @@ body.portal-page {
     transform: none;
   }
 }
+
+/* ----------------------------------------------------------
+   5. Offline indicator
+   ----------------------------------------------------------
+   Added 2026-09-04, requested directly: "offline indicator." The
+   service worker's own app-shell caching means pages OPEN fine with
+   no connection, but nothing told a client they were looking at
+   possibly-stale data or that a failed action might just be the
+   network, not a real bug -- a failed save currently just looks
+   broken. A small, unobtrusive banner rather than a full-screen
+   takeover: this is informational, not blocking, and a client should
+   still be able to read what's already loaded. */
+
+.offline-banner {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 95;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: calc(8px + env(safe-area-inset-top)) 12px 8px;
+  background: #3a2a10;
+  color: #ffb84d;
+  font-size: 12.5px;
+  font-weight: 600;
+  text-align: center;
+  transform: translateY(-100%);
+  transition: transform .18s ease;
+}
+
+.offline-banner.is-visible {
+  transform: translateY(0);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .offline-banner {
+    transition: none;
+  }
+}
+
+/* ----------------------------------------------------------
+   6. Pull-to-refresh
+   ----------------------------------------------------------
+   Added 2026-09-04, requested directly, with an explicit constraint
+   in mind: "Make swiping feel good, but don't over do it." A single,
+   restrained gesture -- pull down from the very top of a list, see a
+   small spinner grow in, release past a threshold to refresh --
+   rather than layering in a whole gesture library. */
+
+.ptr-indicator {
+  position: fixed;
+  top: 0;
+  left: 50%;
+  transform: translate(-50%, -100%);
+  z-index: 85;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: var(--bg-panel);
+  border: 1px solid var(--border);
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.3);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  /* No CSS transition on transform here -- while dragging, position
+     must track the finger exactly with zero lag. The snap-back and
+     the spin animation below are the only animated parts. */
+}
+
+.ptr-indicator svg {
+  width: 18px;
+  height: 18px;
+  stroke: var(--orange-light);
+  fill: none;
+  stroke-width: 2.2;
+  stroke-linecap: round;
+}
+
+.ptr-indicator.is-snapping {
+  transition: transform .18s ease;
+}
+
+.ptr-indicator.is-refreshing svg {
+  animation: ptr-spin .7s linear infinite;
+}
+
+@keyframes ptr-spin {
+  to { transform: rotate(360deg); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ptr-indicator.is-refreshing svg {
+    animation: none;
+  }
+}
