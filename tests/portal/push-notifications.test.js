@@ -22,7 +22,7 @@ const PORTAL_PAGES = ['home', 'dashboard', 'jobs', 'quotes', 'work-orders', 'set
 // ---- service worker: offline support ----
 
 test('the portal service worker is genuinely separate from the tools one, scoped to /portal/ specifically', () => {
-  assert.match(SW, /const CACHE_NAME = 'th-portal-v1';/);
+  assert.match(SW, /const CACHE_NAME = 'th-portal-v2';/);
   const registrations = PORTAL_PAGES.map((p) => fs.readFileSync(repo('portal', `${p}.html`), 'utf8'));
   for (const html of registrations) {
     assert.match(html, /navigator\.serviceWorker\.register\('\/portal\/service-worker\.js', \{ scope: '\/portal\/' \}\)/);

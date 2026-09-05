@@ -122,14 +122,14 @@ test('all six signed-in portal pages share the same five-item nav, each marking 
   };
   for (const [page, activeLabel] of Object.entries(expected)) {
     const src = fs.readFileSync(repo('portal', page), 'utf8');
-    const navMatch = src.match(/<div class="portal-nav">[\s\S]*?<\/div>/);
+    const navMatch = src.match(/<nav class="portal-nav"[\s\S]*?<\/nav>/);
     assert.ok(navMatch, `${page}: expected a portal-nav block`);
     const nav = navMatch[0];
     for (const target of Object.keys(expected)) {
       assert.match(nav, new RegExp(`href="/portal/${target.replace('.', '\\.')}"`),
         `${page}: should link to ${target}`);
     }
-    assert.match(nav, new RegExp(`class="is-active">${activeLabel}<`),
+    assert.match(nav, new RegExp(`class="is-active" aria-current="page">[\\s\\S]*?<span>${activeLabel}</span>`),
       `${page}: should mark ${activeLabel} active`);
     assert.equal((nav.match(/is-active/g) || []).length, 1,
       `${page}: exactly one nav item should be active`);
@@ -154,13 +154,26 @@ test('the portal nav uses a 5-column grid, never flex-wrap, so the last tab cann
   // item) couldn't fit on the first row on a real phone, wrapped alone
   // onto a second row, and a lone flex:1 item on its own row always
   // stretches to fill 100% width -- a huge, broken-looking orphan pill.
+  // Rewritten 2026-09-04: this used to read each page's own inline
+  // <style> and `continue` past any page that didn't have the rule.
+  // The app-shell pass moved that CSS into one shared file, so the
+  // skip condition became true for EVERY page -- the test would have
+  // kept passing while asserting nothing at all. It now checks the
+  // single real source of truth instead, which is also the whole
+  // point of having consolidated it.
+  const shared = fs.readFileSync(repo('portal', 'portal-app.css'), 'utf8');
+  const navRule = shared.match(/\.portal-nav \{[\s\S]*?\}/);
+  assert.ok(navRule, 'expected a .portal-nav rule in the shared stylesheet');
+  assert.match(navRule[0], /grid-template-columns: repeat\(5, 1fr\);/,
+    'nav should be a 5-column grid, not flex-wrap');
+  assert.doesNotMatch(navRule[0], /flex-wrap: wrap/,
+    'the old flex-wrap nav rule should stay gone');
+
+  // And no page should have quietly reintroduced its own copy.
   for (const page of PORTAL_PAGES) {
     const src = fs.readFileSync(repo('portal', page), 'utf8');
-    if (!src.includes('.portal-nav {')) continue;
-    assert.match(src, /\.portal-nav \{ display: grid; grid-template-columns: repeat\(5, 1fr\);/,
-      `${page}: nav should be a 5-column grid, not flex-wrap`);
-    assert.doesNotMatch(src, /\.portal-nav \{ display: flex[^}]*flex-wrap: wrap/,
-      `${page}: the old flex-wrap nav rule should be gone`);
+    assert.doesNotMatch(src, /\.portal-nav \{ display: grid/,
+      `${page}: nav CSS belongs in the shared file, not duplicated back into the page`);
   }
 });
 

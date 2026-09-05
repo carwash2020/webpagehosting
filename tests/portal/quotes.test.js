@@ -21,9 +21,9 @@ test('portal/quotes.html loads none of the internal /tools/ scripts', () => {
 });
 
 test('quotes.html and dashboard.html cross-link to each other', () => {
-  assert.match(html, /<a href="\/portal\/dashboard\.html">Invoices<\/a>/);
+  assert.match(html, /<a href="\/portal\/dashboard\.html">[\s\S]*?<span>Invoices<\/span>/);
   const dashboardHtml = fs.readFileSync(path.join(__dirname, '..', '..', 'portal', 'dashboard.html'), 'utf8');
-  assert.match(dashboardHtml, /<a href="\/portal\/quotes\.html">Quotes<\/a>/);
+  assert.match(dashboardHtml, /<a href="\/portal\/quotes\.html">[\s\S]*?<span>Quotes<\/span>/);
 });
 
 test('an unauthenticated visitor is redirected to login, not shown quotes', () => {
