@@ -1,0 +1,313 @@
+/* portal-polish.css -- presentation-only refinement pass for the client
+   portal (2026-09-06).
+
+   WHY A SEPARATE FILE, LOADED LAST
+   The portal's cascade is already four layers deep: /styles.css, then
+   portal-app.css, then a per-page <style> block, then styles-tools.css,
+   then a second per-page <style> block. Editing any of those in place
+   would mean reasoning about what each later layer overrides, on a
+   surface that handles real invoices and payments. Adding one sheet at
+   the very end of <head> instead means every rule here lands last, wins
+   ties without !important, changes nothing structurally, and can be
+   removed by deleting a single <link> if anything looks wrong.
+
+   Strictly visual. No layout is restructured, no element is hidden or
+   moved, no behaviour is touched -- only colour, depth, spacing rhythm,
+   typography, focus and touch-target size. Every selector below already
+   exists in the portal's markup. */
+
+/* ---------- 1. a calmer branded ground ---------- */
+/* The portal is a utility people open to settle a bill, not a marketing
+   page, so this is a much quieter version of the public site's blueprint:
+   a single soft warm wash rather than a full drafting grid. */
+/* login.html and set-password.html carry no body class, so they are
+   matched structurally instead. :has() is progressively enhanced -- a
+   browser without it simply keeps the plain background. */
+body.portal-page,
+body:has(.login-box) {
+  background-image:
+    radial-gradient(ellipse 70% 40% at 50% -6%, rgba(255, 128, 0, .07), transparent 62%),
+    radial-gradient(ellipse 60% 36% at 90% 102%, rgba(58, 160, 255, .05), transparent 66%);
+  background-attachment: fixed;
+}
+
+/* ---------- 2. header ---------- */
+.portal-header {
+  padding-bottom: 18px;
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 4px;
+}
+.portal-title {
+  font-family: 'Anton', sans-serif;
+  letter-spacing: .6px;
+}
+.portal-sub {
+  color: var(--text-dim);
+  font-size: 13px;
+  letter-spacing: .2px;
+}
+.portal-icon-btn {
+  border-radius: 10px;
+  min-width: 44px;
+  min-height: 44px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: border-color .15s ease, background .15s ease, color .15s ease;
+}
+.portal-icon-btn:hover {
+  border-color: var(--blue-light);
+  color: var(--blue-light);
+}
+
+/* ---------- 3. navigation ---------- */
+.portal-nav a {
+  min-height: 46px;
+  border-radius: 10px;
+  transition: color .15s ease, background .15s ease;
+}
+.portal-nav a:hover { color: var(--white); }
+.portal-nav a.is-active { font-weight: 600; }
+
+/* ---------- 4. cards ---------- */
+/* One consistent elevation language instead of each card type choosing
+   its own. Matches the 3-tier shadow scale already defined in styles.css. */
+.attention-card,
+.help-card,
+.home-card,
+.invoice-card,
+.job-card,
+.quote-card,
+.set-card,
+.wo-card,
+.wo-form-card {
+  border-radius: 12px;
+  box-shadow: var(--shadow-resting);
+  transition: border-color .18s ease, box-shadow .18s ease, transform .18s ease;
+}
+.invoice-card:hover,
+.job-card:hover,
+.quote-card:hover,
+.wo-card:hover {
+  box-shadow: var(--shadow-hover);
+  border-color: var(--blue-dark);
+}
+.attention-card {
+  border-left: 3px solid var(--orange);
+}
+
+/* ---------- 5. status badges ---------- */
+/* Colour alone should not carry the meaning, so each state keeps its own
+   text; this just makes the states instantly separable at a glance. */
+.invoice-status,
+.quote-status,
+.wo-status,
+.set-card-badge,
+.wo-scheduled-tag,
+.wo-urgency-tag,
+.checkup-due-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 11px;
+  border-radius: 999px;
+  font-family: 'Oswald', sans-serif;
+  font-size: 11.5px;
+  font-weight: 600;
+  letter-spacing: 1.2px;
+  text-transform: uppercase;
+  border: 1px solid transparent;
+  line-height: 1.7;
+}
+.invoice-status.is-paid,
+.quote-status.is-paid,
+.paid {
+  background: rgba(58, 214, 107, .12);
+  border-color: rgba(58, 214, 107, .38);
+  color: #63e08d;
+}
+.invoice-status.is-unpaid,
+.quote-status.is-unpaid,
+.due {
+  background: var(--orange-tint-soft);
+  border-color: var(--orange-tint-border);
+  color: var(--orange-light);
+}
+.invoice-status.is-not-due,
+.is-not-due {
+  background: rgba(58, 160, 255, .10);
+  border-color: rgba(58, 160, 255, .32);
+  color: var(--blue-light);
+}
+
+/* ---------- 6. buttons ---------- */
+/* Boldness spent in one place: the primary action glows, everything else
+   stays quiet, so the paying action is never ambiguous. */
+.btn,
+.small-btn,
+.secondary-btn,
+.login-btn {
+  border-radius: 9px;
+  transition: transform .15s ease, box-shadow .15s ease, background .15s ease, border-color .15s ease;
+}
+.btn:hover,
+.login-btn:hover { transform: translateY(-1px); }
+.btn.orange:hover { box-shadow: 0 8px 22px -6px rgba(255, 128, 0, .55); }
+.btn.blue:hover,
+.login-btn:hover { box-shadow: 0 8px 22px -6px rgba(58, 160, 255, .5); }
+.secondary-btn:hover { border-color: var(--steel); color: var(--white); }
+.small-btn { min-height: 38px; }
+.date-btn,
+.slot-btn,
+.wo-urgency-btn {
+  min-height: 44px;
+  border-radius: 10px;
+  transition: border-color .15s ease, background .15s ease, transform .12s ease;
+}
+.date-btn:hover,
+.slot-btn:hover,
+.wo-urgency-btn:hover { border-color: var(--blue-light); }
+.date-btn.is-selected,
+.slot-btn.is-selected,
+.wo-urgency-btn.is-selected {
+  border-color: var(--orange);
+  background: var(--orange-tint-soft);
+}
+
+/* Note: these message boxes are styled only via :not(:empty). They exist
+   in the markup at all times and are filled in by script, so giving them
+   a background unconditionally renders an empty coloured strip on a clean
+   form -- which is exactly what happened on the first pass here. */
+
+/* ---------- 7. the login screen ---------- */
+/* First impression for a client, and it was plain text floating on black.
+   Now a real card, which is what people expect of anything asking for a
+   password. */
+.login-box {
+  background: linear-gradient(168deg, var(--bg-panel-2), var(--bg-panel));
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 38px 34px;
+  box-shadow: 0 24px 60px -28px rgba(0, 0, 0, .8), var(--shadow-resting);
+}
+.login-logo { filter: drop-shadow(0 8px 20px rgba(0, 0, 0, .5)); }
+.login-title {
+  font-family: 'Anton', sans-serif;
+  letter-spacing: .6px;
+}
+.login-sub { color: var(--text-dim); }
+.login-field input {
+  min-height: 46px;
+  border-radius: 9px;
+}
+.login-btn { min-height: 48px; }
+.login-error:not(:empty) {
+  border-left: 3px solid var(--orange);
+  background: var(--orange-tint-soft);
+  border-radius: 0 6px 6px 0;
+  padding: 10px 13px;
+}
+.login-success:not(:empty) {
+  border-left: 3px solid #3ad66b;
+  background: rgba(58, 214, 107, .1);
+  border-radius: 0 6px 6px 0;
+  padding: 10px 13px;
+}
+@media (max-width: 480px) {
+  .login-box { padding: 28px 22px; }
+}
+
+/* ---------- 8. forms ---------- */
+.set-field input,
+.set-field select,
+.set-field textarea,
+.wo-field input,
+.wo-field select,
+.wo-field textarea {
+  min-height: 46px;
+  border-radius: 9px;
+  transition: border-color .15s ease, box-shadow .15s ease;
+}
+.wo-field textarea,
+.set-field textarea { min-height: 104px; }
+.wo-hint,
+.set-card-sub,
+.wo-urgency-sub { color: var(--text-dim); line-height: 1.55; }
+.wo-section-title,
+.set-card-title {
+  font-family: 'Oswald', sans-serif;
+  font-weight: 600;
+  letter-spacing: .4px;
+}
+
+/* ---------- 9. empty states ---------- */
+/* An empty list should read as "nothing here yet", not as a page that
+   failed to load. */
+.empty-state,
+.slots-empty {
+  border: 1px dashed var(--border);
+  border-radius: 12px;
+  padding: 30px 24px;
+  text-align: center;
+  color: var(--text-dim);
+  background: rgba(255, 255, 255, .015);
+}
+
+/* ---------- 10. collapsible cards ---------- */
+.set-card-header { min-height: 52px; }
+.set-card-chevron { transition: transform .22s ease; }
+.set-card.is-collapsed .set-card-chevron { transform: rotate(-90deg); }
+
+/* ---------- 11. modals ---------- */
+.report-bug-modal,
+.payment-modal {
+  border-radius: 14px;
+  box-shadow: 0 30px 70px -24px rgba(0, 0, 0, .8);
+}
+.report-bug-title { font-family: 'Anton', sans-serif; letter-spacing: .5px; }
+.report-bug-sub { color: var(--text-dim); }
+.report-bug-error:not(:empty) {
+  border-left: 3px solid var(--orange);
+  background: var(--orange-tint-soft);
+  border-radius: 0 6px 6px 0;
+  padding: 10px 13px;
+}
+.report-bug-success:not(:empty) {
+  border-left: 3px solid #3ad66b;
+  background: rgba(58, 214, 107, .1);
+  border-radius: 0 6px 6px 0;
+  padding: 10px 13px;
+}
+.report-bug-link {
+  color: var(--text-dim);
+  transition: color .15s ease;
+  min-height: 44px;
+}
+.report-bug-link:hover { color: var(--blue-light); }
+
+/* ---------- 12. loading skeletons ---------- */
+.skeleton-line { border-radius: 6px; }
+.skeleton-card { border-radius: 12px; }
+
+/* ---------- 13. focus ---------- */
+/* One consistent focus treatment across every interactive thing here,
+   matching the public site's blue ring. */
+.portal-page a:focus-visible,
+.portal-page button:focus-visible,
+.portal-page input:focus-visible,
+.portal-page select:focus-visible,
+.portal-page textarea:focus-visible {
+  outline: 2px solid var(--blue-light);
+  outline-offset: 2px;
+  box-shadow: 0 0 0 5px rgba(58, 160, 255, .16);
+}
+
+/* ---------- 14. reduced motion ---------- */
+@media (prefers-reduced-motion: reduce) {
+  .btn:hover,
+  .login-btn:hover,
+  .invoice-card:hover,
+  .job-card:hover,
+  .quote-card:hover,
+  .wo-card:hover { transform: none; }
+}

@@ -1710,3 +1710,84 @@ body.th-has-bottomnav .th-install-banner { bottom: calc(76px + env(safe-area-ins
   text-align: center; padding: 24px;
 }
 .role-blocked-overlay.is-shown { display: flex; }
+
+/* =====================================================================
+   Tools polish pass (2026-09-06) -- presentation only.
+
+   Deliberately modest, per instruction: no new components, no layout
+   restructuring, nothing that touches how any tool works. This is
+   consistency work only -- one radius scale, one elevation language,
+   readable tables, real touch targets, and a single focus treatment --
+   appended at the end of this file so it lands last and needs no
+   !important. Every selector below already exists in the tools markup.
+===================================================================== */
+
+/* one radius + elevation language across panels */
+.tool-card,
+.metric-card,
+.section-block,
+.dash-list-item,
+.form-section {
+  border-radius: 12px;
+}
+.tool-card,
+.metric-card,
+.section-block {
+  box-shadow: var(--shadow-resting);
+  transition: border-color .18s ease, box-shadow .18s ease, transform .18s ease;
+}
+
+/* tables: make long operational lists scannable */
+.table-scroll table th {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  background: var(--bg-panel-2);
+  font-family: 'Oswald', sans-serif;
+  font-weight: 600;
+  font-size: 12px;
+  letter-spacing: 1.2px;
+  text-transform: uppercase;
+  color: var(--text-dim);
+}
+.table-scroll table tbody tr {
+  transition: background .12s ease;
+}
+.table-scroll table tbody tr:nth-child(even) {
+  background: rgba(255, 255, 255, .018);
+}
+.table-scroll table tbody tr:hover {
+  background: rgba(58, 160, 255, .07);
+}
+
+/* touch targets: these tools are used on a phone on a job site */
+.small-btn { min-height: 40px; }
+.tab-btn { min-height: 42px; }
+@media (max-width: 760px) {
+  .small-btn { min-height: 44px; }
+  .form-field input,
+  .form-field select,
+  .form-field textarea { min-height: 46px; }
+}
+
+/* one focus treatment everywhere, matching the rest of the project */
+.tool-card:focus-visible,
+.small-btn:focus-visible,
+.tab-btn:focus-visible,
+.help-btn:focus-visible {
+  outline: 2px solid var(--blue-light);
+  outline-offset: 2px;
+  box-shadow: 0 0 0 5px rgba(58, 160, 255, .16);
+}
+
+/* an empty list should read as empty, not as a failed load */
+.empty-note,
+.storage-note {
+  border-radius: 10px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .tool-card,
+  .metric-card,
+  .section-block { transition: none; }
+}

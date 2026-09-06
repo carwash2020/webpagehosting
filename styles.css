@@ -2024,3 +2024,57 @@
     color:var(--text-dim);
     margin:0 0 6px;
   }
+
+  /* ---------- how a visit goes: the process line ---------- */
+  /* Removes the main unknown for someone who has never called a repair
+     person: what actually happens next. Every claim here already exists
+     elsewhere on the site (the trust strip's upfront pricing, the Terms'
+     guarantee) -- nothing new is asserted. */
+  .process{
+    display:grid;
+    grid-template-columns:repeat(4, 1fr);
+    gap:24px;
+    position:relative;
+  }
+  .process::before{
+    content:"";
+    position:absolute;
+    top:21px; left:8%; right:8%;
+    height:1px;
+    background:linear-gradient(90deg, var(--orange-tint-border), var(--border) 55%, var(--orange-tint-border));
+  }
+  .process-step{position:relative; padding-top:0;}
+  .process-num{
+    width:44px; height:44px;
+    border-radius:50%;
+    background:var(--bg-panel);
+    border:1px solid var(--orange-tint-border);
+    color:var(--orange-light);
+    font-family:'Anton', sans-serif;
+    font-size:17px;
+    display:flex; align-items:center; justify-content:center;
+    margin:0 0 18px;
+    position:relative;
+    z-index:1;
+    box-shadow:0 0 0 6px var(--bg);
+  }
+  .process-step h3{
+    font-family:'Oswald', sans-serif;
+    font-weight:700;
+    font-size:16px;
+    text-transform:none;
+    letter-spacing:0;
+    margin:0 0 8px;
+  }
+  .process-step p{color:var(--text-dim); font-size:14.5px; margin:0; line-height:1.6;}
+  @media (max-width:860px){
+    .process{grid-template-columns:1fr; gap:0;}
+    .process::before{
+      top:8px; bottom:8px; left:21px; right:auto;
+      width:1px; height:auto;
+      background:linear-gradient(180deg, var(--orange-tint-border), var(--border) 55%, var(--orange-tint-border));
+    }
+    .process-step{padding:0 0 26px 62px;}
+    .process-step:last-child{padding-bottom:0;}
+    .process-num{position:absolute; left:0; top:0; margin:0;}
+  }
