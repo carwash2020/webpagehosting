@@ -32,6 +32,32 @@
    overlaps or overrides public-site styles above.
    ========================================================================== */
 
+/* Bug fix (2026-09-06): .tool-title/.tool-sub are used as the page
+   intro (and, on several pages, the role-blocked-overlay message) on
+   13 tool pages, but had never once been defined here -- 7 pages each
+   carried their own identical copy in a local <style> block, and 6
+   more used the classes with no CSS backing them at all, rendering as
+   bare unstyled text. On pos.html and clients.html specifically that
+   meant the actual page heading, and on clients.html the ~20 dynamic
+   loading/empty/error rows that reuse .tool-sub throughout the page.
+   Defined once, here, so every current and future tool page gets it
+   for free. A handful of pages still carry their own local override
+   for a taller .tool-sub margin (30px instead of 24px) -- that's a
+   deliberate per-page choice, not a duplicate to clean up, and it
+   still wins by normal cascade order (their <style> block loads after
+   this stylesheet). */
+.tool-title{
+  font-family:var(--font-ui);
+  font-weight:700;
+  font-size:28px;
+  color:var(--white);
+  margin-bottom:6px;
+}
+.tool-sub{
+  color:var(--text-dim);
+  margin-bottom:24px;
+}
+
 .tool-header{
   display:flex;
   align-items:center;

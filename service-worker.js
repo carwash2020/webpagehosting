@@ -317,7 +317,19 @@
 // log by exact known message text; the duplicate, misattributed
 // @view-transition{navigation:auto;} rule that caused no functional
 // harm but was genuine dead weight was also removed.
-const CACHE_NAME = 'th-workspace-v67';
+// Bumped 2026-09-06 (v67 -> v68): tools/styles-tools.css changed again,
+// plus tools/pos.html and tools/clients.html -- .tool-title/.tool-sub
+// were used across 13 tool pages but never defined in the shared
+// stylesheet (7 pages each carried an identical local copy, 6 more had
+// no CSS backing the classes at all). On pos.html and clients.html
+// specifically, that combined with a second, separate gap -- both
+// pages were missing the standard desktop sidebar-clearance rule every
+// other tool page carries -- to genuinely overlap the fixed header on
+// desktop. Confirmed visually (a real screenshot showed the intro
+// paragraph rendering behind the form card). Fixed both: the shared
+// rule now lives here once, and both pages got the missing desktop
+// layout rule.
+const CACHE_NAME = 'th-workspace-v68';
 const PRECACHE_URLS = [
   '/tools/workspace.html', '/tools/job-tracker.html', '/tools/invoice-generator.html', '/tools/contract-generator.html',
   '/tools/calendar.html', '/tools/route-planner.html', '/tools/review-request.html', '/tools/contact-card.html',
