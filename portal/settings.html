@@ -58,7 +58,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="/styles.css?v=202609022200">
+<link rel="stylesheet" href="/styles.css?v=202609070100">
 <link rel="stylesheet" href="/portal/portal-app.css?v=202609042100">
 <style>
   /* iOS Safari zoom-on-focus fix (2026-09-05), same root cause and
@@ -242,7 +242,7 @@
   .report-bug-actions { display: flex; gap: 10px; margin-top: 16px; }
   .report-bug-actions button { flex: 1; justify-content: center; }
 </style>
-<link rel="stylesheet" href="/portal/portal-polish.css?v=5b0af5f963">
+<link rel="stylesheet" href="/portal/portal-polish.css?v=0704740d29">
 </head>
 <body class="portal-page">
 
@@ -430,6 +430,18 @@
   bottom of a settings screen. Same real sign-out call as the header
   button, not a separate, second implementation.
 -->
+<!-- App version / update. Matters for the INSTALLED app: it can sit
+     unopened for weeks and reopen straight from cache, and before this
+     the only way out of a stale copy was to delete and reinstall it. -->
+<div class="set-card">
+  <div class="set-card-title">App version</div>
+  <p class="set-card-sub">If something looks out of date or a fix you were told about is missing, update here. You will not be signed out, and nothing you have saved is affected.</p>
+  <div class="set-card-body">
+    <button class="btn blue" id="updateAppBtn" style="width:100%; justify-content:center;">Update app</button>
+    <p class="set-msg" id="updateAppMsg" style="margin-top:10px;"></p>
+  </div>
+</div>
+
 <div class="set-card">
   <button class="secondary-btn" id="signOutBtnSettings" style="width:100%; justify-content:center;">Sign out</button>
 </div>
@@ -1147,5 +1159,27 @@
   })();
 </script>
 
+<script src="/portal/portal-update.js?v=44cd51ed1f" defer></script>
+
+<script>
+  // "Update app" -- clears the app's caches and reloads, so an installed
+  // portal picks up the current version without a reinstall. The heavy
+  // lifting lives in portal-update.js; this only wires the button.
+  (function () {
+    var btn = document.getElementById('updateAppBtn');
+    var msg = document.getElementById('updateAppMsg');
+    if (!btn) return;
+    btn.addEventListener('click', function () {
+      if (typeof window.portalUpdateNow !== 'function') {
+        if (msg) msg.textContent = 'Updating is not available in this browser. Closing and reopening the app will also pick up the latest version.';
+        return;
+      }
+      btn.disabled = true;
+      btn.textContent = 'Updating...';
+      if (msg) msg.textContent = 'Fetching the latest version. The app will reload in a moment.';
+      window.portalUpdateNow();
+    });
+  })();
+</script>
 </body>
 </html>

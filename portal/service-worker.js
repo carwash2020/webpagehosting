@@ -58,13 +58,25 @@
 // Bumped 2026-09-05 (v9 -> v10): dashboard.html changed -- fixed a
 // real reported bug ("it puts the paid stamp right over the total
 // amount") in the invoice/receipt PDF generator.
-const CACHE_NAME = 'th-portal-v10';
+// Bumped 2026-09-06 (v10 -> v11): a run of visual work changed
+// /styles.css repeatedly and added /portal/portal-polish.css, and the 8
+// precached portal pages each gained a stylesheet link -- none of which
+// bumped this constant at the time. That is exactly the failure this
+// file's header warns about: because ?v= URLs are served cache-first and
+// never revalidated, installed apps were pinned to the stylesheet cached
+// under the old ?v= string and could not pick up any of it. Bumping the
+// cache name purges every stale entry on activate. The new
+// /portal/portal-update.js gives people a way out of this situation
+// without reinstalling if it ever recurs.
+const CACHE_NAME = 'th-portal-v11';
 const PRECACHE_URLS = [
   '/portal/home.html', '/portal/dashboard.html', '/portal/jobs.html', '/portal/quotes.html',
   '/portal/work-orders.html', '/portal/settings.html', '/portal/login.html', '/portal/set-password.html',
   '/portal/manifest.json',
   '/portal/portal-app.css',
   '/portal/portal-app.js',
+  '/portal/portal-polish.css',
+  '/portal/portal-update.js',
   '/styles.css', '/business-hours.js',
   '/portal/push-notifications.js',
   '/images/logo-signature-orange.webp', '/images/icon-192.png', '/images/icon-512.png', '/images/apple-touch-icon.png',
@@ -124,7 +136,16 @@ self.addEventListener('fetch', (event) => {
   );
 });
 
+// ---------- update handshake ----------
+// portal-update.js posts this when someone taps "Update", so a worker
+// that is waiting takes over straight away instead of after every tab
+// holding the old one is closed.
+self.addEventListener('message', (event) => {
+  if (event.data && event.data.type === 'SKIP_WAITING') self.skipWaiting();
+});
+
 // ---------- push notifications ----------
+
 // Identical shape to the tools service worker's own push/
 // notificationclick handlers -- same underlying Push API, just a
 // different default landing page (a client's own home, not
