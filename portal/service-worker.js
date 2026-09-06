@@ -55,7 +55,10 @@
 // to every one of the 8 precached portal pages after a comprehensive
 // scan found the identical bug on all of them, including a shared
 // "Report a problem" textarea present on every single one.
-const CACHE_NAME = 'th-portal-v9';
+// Bumped 2026-09-05 (v9 -> v10): dashboard.html changed -- fixed a
+// real reported bug ("it puts the paid stamp right over the total
+// amount") in the invoice/receipt PDF generator.
+const CACHE_NAME = 'th-portal-v10';
 const PRECACHE_URLS = [
   '/portal/home.html', '/portal/dashboard.html', '/portal/jobs.html', '/portal/quotes.html',
   '/portal/work-orders.html', '/portal/settings.html', '/portal/login.html', '/portal/set-password.html',
