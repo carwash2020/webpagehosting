@@ -32,6 +32,7 @@ The public site uses one shared stylesheet (`styles.css`, repo root). The tool s
 - [Cache-busting — how it actually works now](#cache-busting----how-it-actually-works-now-rewritten-2026-08-26)
 - [Deploying changes](#deploying-changes)
 - [Security, and where the rest of the docs live](#security-and-where-the-rest-of-the-docs-live)
+- [What changed, 2026-09-04 through 2026-09-07](#what-changed-2026-09-04-through-2026-09-07)
 
 ## ⚠️ Read this before touching deployment at all
 
@@ -242,7 +243,7 @@ see `.github/workflows/test.yml`) verifies every reference matches;
 `npm run fix-versions` is the same script, run with `--fix-versions`,
 correcting instead of just reporting.
 
-`npm test` runs the full suite (456 tests as of 2026-08-26) — organized under `tests/` into `booking/`, `sync/`, `dev-tools/`, `design/`, `content-quality/`, and `workspace/` subfolders by what each test actually covers, rather than one flat folder of files. The script itself is just `cd tests && node --test`; Node's test runner auto-discovers every `*.test.js` file recursively with no arguments needed, so a new test file placed anywhere under `tests/` runs automatically — nothing to add to `package.json` by hand.
+`npm test` runs the full suite (1055 tests as of 2026-09-07) — organized under `tests/` into `booking/`, `sync/`, `dev-tools/`, `design/`, `content-quality/`, and `workspace/` subfolders by what each test actually covers, rather than one flat folder of files. The script itself is just `cd tests && node --test`; Node's test runner auto-discovers every `*.test.js` file recursively with no arguments needed, so a new test file placed anywhere under `tests/` runs automatically — nothing to add to `package.json` by hand.
 
 ## Deploying changes
 
@@ -261,3 +262,70 @@ No build step, no CI/CD. Push to `main`, GitHub Pages redeploys automatically (u
 **`docs/`** is a wiki-style companion folder, built as real files in this repo rather than GitHub's separate Wiki feature (which needs its first page created once through the web UI before it exists at all — not something scriptable from here). Start at `docs/README.md`; `docs/GETTING-STARTED.md` is the right first read for anyone new to this codebase, `docs/GLOSSARY.md` covers terms used throughout this file and `DISASTER_RECOVERY.md` that don't mean the obvious thing on first read, and `docs/ARCHITECTURE-NOTES.md` holds the real architectural backlog and decisions already made with real reasons, so they don't get re-litigated later.
 
 **`DISASTER_RECOVERY.md`** remains the deepest, most authoritative source for exact mechanisms and incident history — everything above points back to it rather than duplicating it.
+
+## What changed, 2026-09-04 through 2026-09-07
+
+Folded in from `README_ADDENDUM.md`, which was a point-in-time snapshot
+kept alongside this file until it could be merged here. `CONTINUE-HERE.md`
+remains the actively-maintained pick-up notes for a fresh session; this
+section is the durable record.
+
+### Client portal — features added this period
+
+All in `portal/`, all requested directly.
+
+| Thing | Where | Notes |
+|---|---|---|
+| Push notifications | `portal/push-notifications.js`, `Send-Push` Edge Function | Targeted per-client (never a broadcast to every subscriber) via a dedicated `client-notification` payload type, distinct from the internal team's own broadcast alerts |
+| Offline support / install prompt | `portal/service-worker.js` | Separate service worker from the internal tools' own; network-first with offline fallback |
+| Skeleton loading states | `portal/portal-app.js`, `portal/portal-app.css` | Generic card-shaped skeleton, reused across every list page rather than a bespoke one per page |
+| Pull-to-refresh | `portal/portal-app.js` | |
+| Biometric app lock (Face ID / Touch ID / device PIN) | `portal/portal-app.js`, Settings → Security | Local-only gate, not a server-verified factor — see disaster-recovery Scenario 12 |
+| Automatic client-side error capture | `portal/portal-app.js` → `portal_client_errors` table | See disaster-recovery Scenario 10 |
+| Collapsible Settings sections | `portal/settings.html` | Every section starts collapsed to cut down scroll length |
+| Line-item Type dropdown on invoices (Labor/Mileage/Part/Other) | `tools/invoice-generator.html` | Qty column shows the right unit (hrs/mi/ea) per row; both the on-screen editor and the exported PDF reflect it |
+
+### Internal tools — features added this period
+
+| Thing | Where | Notes |
+|---|---|---|
+| **Client Lookup** (search by email/name/phone, spend total, dispute-evidence PDF export) | `tools/clients.html` | Deliberately placed here, not Dev Tools — this page is already accessible to Owner accounts, not Developer-gated |
+| Daily Stripe payment reconciliation | `reconcile-stripe-payments` Edge Function | Alert-only, never auto-marks anything paid — see disaster-recovery Scenario 11 |
+| `line_items` saved to the internal invoice/quote logs | `tools/invoice-generator.html` | Previously only the portal's own copy had this; a "Download PDF only" invoice never sent to a client had it permanently lost otherwise |
+
+### The public site's visual redesign
+
+Starting 2026-09-06, using a Claude Code skill called **scroll-craft**,
+committed at `.claude/skills/scroll-craft/` so it travels with the repo
+to any session on any device. A rollback checkpoint tag exists for this
+specific body of work: `pre-scroll-craft-redesign-2026-09-06`. See
+`DISASTER_RECOVERY.md` for the exact rollback commands.
+
+### New root-level docs
+
+- **`CONTINUE-HERE.md`** — actively-maintained pick-up notes for a fresh
+  session. Read this first when resuming design work on the public site
+  or portal.
+- **`CONTRIBUTING.md`** — contribution guidelines.
+
+### Scale-hardening fixes made this period
+
+Found during a direct, requested scale/future-proofing audit — full
+detail in `DISASTER_RECOVERY.md`:
+
+- Missing indexes added on `client_portal_jobs.client_email` and
+  `card_authorizations.client_email`.
+- A real duplicate-push-notification bug fixed (no constraint previously
+  prevented a device accumulating multiple subscription rows for the
+  same real endpoint).
+- 90-day retention added to every tombstone array (13 of them),
+  previously growing forever with no expiry.
+
+### A site-wide bug fix worth knowing about
+
+The iOS Safari zoom-on-focus bug (a tapped form field under 16px
+triggers the whole page to auto-zoom) was found and fixed across
+**every** page on the site — all 8 portal pages, 8 tools pages, and the
+public booking form — not just the one page it was originally reported
+on. A repo-wide test (`tests/site-wide/mobile-zoom-fix.test.js`) now
+guards against this specific bug class reappearing anywhere.

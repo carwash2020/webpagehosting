@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="en" style="background:#0a0a0a;">
 <head>
-<script src="/tools/auth.js?v=df17170466"></script>
+<script src="/tools/auth.js?v=7b87c4fdc1"></script>
 <script>
   // Security gate -- redirect to login before this page’s own content
   // is meaningfully usable. See auth.js for why this exists (a single
@@ -23,7 +23,7 @@
 <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data: https://*.supabase.co; connect-src 'self' https://*.supabase.co wss://*.supabase.co https://cdn.jsdelivr.net; frame-src 'none'; object-src 'none'; base-uri 'self'; frame-ancestors 'none';">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Anton&family=Oswald:wght@400;500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Anton&family=Archivo:wght@400..700&family=Newsreader:ital,opsz,wght@0,6..72,300..700;1,6..72,300..600&family=Oswald:wght@200..700&display=swap" rel="stylesheet">
 <script>
   (function () {
     // Tools app light/dark theme (2026-08-20), tucked into Settings.
@@ -35,28 +35,44 @@
     if (saved === 'light') document.documentElement.setAttribute('data-theme', 'light');
   })();
 </script>
-<link rel="stylesheet" href="/styles.css?v=202609022200">
-<link rel="stylesheet" href="/tools/styles-tools.css?v=24b73d7829">
-<script src="/tools/sync.js?v=a631a4ee04" defer></script>
-<script src="/tools/data-layer.js?v=c0a08eb9ef" defer></script>
-<script src="/tools/tools-effects.js?v=847d2f1292" defer></script>
-<script src="/tools/tools-dialogs.js?v=cbe89a260d" defer></script>
-<script src="/tools/tools-media-sharing.js?v=eefcc6762c" defer></script>
-<script src="/tools/tools-nav-pwa.js?v=babb01d1aa" defer></script>
-<script src="/tools/tools-tour.js?v=819e6daf97" defer></script>
+<link rel="stylesheet" href="/styles.css?v=202609062002">
+<link rel="stylesheet" href="/tools/styles-tools.css?v=f0faba8d41">
+<script src="/tools/sync.js?v=51c822a31b" defer></script>
+<script src="/tools/data-layer.js?v=3a0d57478c" defer></script>
+<script src="/tools/tools-effects.js?v=4cff99aa4a" defer></script>
+<script src="/tools/tools-dialogs.js?v=e1dfaa11a1" defer></script>
+<script src="/tools/tools-media-sharing.js?v=4e2769b10d" defer></script>
+<script src="/tools/tools-nav-pwa.js?v=9b16eefb86" defer></script>
+<script src="/tools/tools-tour.js?v=cf6652f5b1" defer></script>
 <style>
-  .tool-title { font-family:'Oswald',sans-serif; font-weight:700; font-size:28px; color:var(--white); margin-bottom:6px; }
+  .tool-title { font-family:var(--font-ui); font-weight:700; font-size:28px; color:var(--white); margin-bottom:6px; }
   .tool-sub { color: var(--text-dim); margin-bottom: 24px; }
   .results-box { margin-top: 8px; }
   .result-row { display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid var(--border); font-size: 15px; }
-  .result-row.final { font-weight: 700; font-size: 19px; color: var(--orange-light); border-bottom: none; padding-top: 16px; }
+  .result-row.final { font-weight: 700; font-size: 19px; border-bottom: none; padding-top: 16px; }
   .result-row.is-hidden { display: none; }
   .result-label { color: var(--text-dim); }
   .result-label.final { color: var(--white); }
+  /* "Big confident numbers" (2026-09-06), matching the dashboard's own
+     .metric-value gradient-text treatment -- the final price is the one
+     number this whole tab exists to produce, so it gets the same
+     treatment as a dashboard hero stat rather than plain colored text.
+     Targets the value span specifically (not .result-label, which stays
+     plain white) via :not(), since both spans share .result-row.final's
+     own font-size/weight. */
+  .result-row.final > span:not(.result-label) {
+    font-size: 22px;
+    background: linear-gradient(180deg, var(--orange-light), var(--orange));
+    -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent;
+  }
 
   /* --- Expenses tab --- */
   .totals-row-money div { color: var(--text-dim); font-size: 14px; }
-  .totals-row-money strong { color: var(--orange-light); font-size: 17px; }
+  .totals-row-money strong {
+    font-size: 19px;
+    background: linear-gradient(180deg, var(--orange-light), var(--orange));
+    -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent;
+  }
   .btn-row { display: flex; gap: 12px; margin-top: 16px; flex-wrap: wrap; }
   .mileage-rate-inline { display: flex; align-items: center; gap: 8px; }
   .mileage-rate-inline label { font-size: 12.5px; color: var(--text-dim); white-space: nowrap; }
@@ -161,7 +177,7 @@
   <div class="form-section">
     <h3>Job Profitability</h3>
     <p style="color:var(--text-dim); font-size: 13px; margin: -6px 0 12px;">Compares each completed job's linked invoice total against its linked expenses and mileage. Only jobs with an invoice linked via "Link to Job" in the Invoice Generator, and/or expenses linked via the Job Ref field on the Expenses tab, will show real numbers &mdash; anything unlinked shows as &mdash;.</p>
-    <div id="profitabilityList"></div>
+    <div id="profitabilityList"><div class="skeleton-line w-100"></div><div class="skeleton-line w-60"></div><div class="skeleton-line w-40"></div></div>
   </div>
 </div>
 
@@ -203,7 +219,7 @@
   <div class="form-section">
     <h3>Log</h3>
     <div class="table-scroll">
-      <div id="incomeTable"></div>
+      <div id="incomeTable"><div class="skeleton-line w-100"></div><div class="skeleton-line w-60"></div><div class="skeleton-line w-40"></div></div>
     </div>
     <div class="totals-row-money" id="incomeTotalsRow"></div>
     <div class="btn-row">
@@ -273,7 +289,7 @@
   <div class="form-section">
     <h3>Log</h3>
     <div class="table-scroll">
-      <div id="entriesTable"></div>
+      <div id="entriesTable"><div class="skeleton-line w-100"></div><div class="skeleton-line w-60"></div><div class="skeleton-line w-40"></div></div>
     </div>
     <div class="totals-row-money" id="totalsRowMoney"></div>
     <div class="btn-row">
@@ -690,7 +706,7 @@
         <td>${personDot(e.lastEditedBy, 'Last edited by')}${escapeHtml(e.desc)}</td>
         <td>${PAYMENT_LABEL[e.payment] || '\u2014'}</td>
         <td>${e.origin === 'invoice' ? '<span class="inline-note" style="margin:0;">Invoice</span>' : 'Manual'}</td>
-        <td>$${e.amount.toFixed(2)}</td>
+        <td class="col-amount">$${e.amount.toFixed(2)}</td>
         <td>
           ${e.origin !== 'invoice' ? `<button class="small-btn" onclick="editIncomeEntry(${e.id})" aria-label="Edit entry" title="Edit entry">Edit</button>` : ''}
           <button class="small-btn danger" onclick="deleteIncomeEntry(${e.id})" aria-label="Delete entry" title="Delete entry">&times;</button>
@@ -700,7 +716,7 @@
 
     container.innerHTML = `
       <table>
-        <thead><tr><th>Date</th><th>Source</th><th>Job</th><th>Description</th><th>Payment</th><th>Origin</th><th>Amount</th><th></th></tr></thead>
+        <thead><tr><th>Date</th><th>Source</th><th>Job</th><th>Description</th><th>Payment</th><th>Origin</th><th class="col-amount">Amount</th><th></th></tr></thead>
         <tbody>${rows}</tbody>
       </table>`;
 
@@ -1017,7 +1033,7 @@
         <td>${personDot(e.lastEditedBy, 'Last edited by')}${escapeHtml(e.desc)}${e.partNumber ? `<div style="color:var(--text-dim); font-size:11.5px; margin-top:2px;">Part #: ${escapeHtml(e.partNumber)}</div>` : ''}</td>
         <td>${e.type === 'mileage' ? e.miles + ' mi' : '\u2014'}</td>
         <td>${PAYMENT_LABEL[e.payment] || '\u2014'}</td>
-        <td>$${e.amount.toFixed(2)}</td>
+        <td class="col-amount">$${e.amount.toFixed(2)}</td>
         <td>${e.receiptPath ? `<a href="#" onclick="openSignedReceipt(event, '${escapeForInlineHandler(e.receiptPath)}')" style="color:var(--blue-light);">View</a>` : '\u2014'}</td>
         <td>
           <button class="small-btn" onclick="editExpense(${e.id})" aria-label="Edit entry" title="Edit entry">Edit</button>
@@ -1028,7 +1044,7 @@
 
     container.innerHTML = `
       <table>
-        <thead><tr><th>Date</th><th>Type</th><th>Vendor</th><th>Job</th><th>Description</th><th>Miles</th><th>Payment</th><th>Amount</th><th>Receipt</th><th></th></tr></thead>
+        <thead><tr><th>Date</th><th>Type</th><th>Vendor</th><th>Job</th><th>Description</th><th>Miles</th><th>Payment</th><th class="col-amount">Amount</th><th>Receipt</th><th></th></tr></thead>
         <tbody>${rows}</tbody>
       </table>`;
 

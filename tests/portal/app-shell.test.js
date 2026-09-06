@@ -125,5 +125,16 @@ test('the nav CSS lives in one shared file now, not copy-pasted into six pages',
 
 test('the new stylesheet is precached and CACHE_NAME was bumped -- a precached file changing without a bump is a documented real failure mode', () => {
   assert.match(SW, /'\/portal\/portal-app\.css'/);
-  assert.match(SW, /const CACHE_NAME = 'th-portal-v10';/);
+  // Asserts a FLOOR, not an exact value (2026-09-07). This used to pin the
+  // literal 'th-portal-v10', which put the test in permanent conflict with this
+  // project's own mandatory rule that CACHE_NAME is bumped on every precached
+  // file change -- so every correct bump broke the suite. It did, at
+  // th-portal-v11, and stayed broken. A floor still catches the real
+  // regression (a missing, malformed, or lowered version) without failing on
+  // a correct future bump.
+  {
+    const m = SW.match(/const CACHE_NAME = 'th-portal-v(\d+)';/);
+    assert.ok(m, "expected a 'th-portal-v<N>' CACHE_NAME declaration");
+    assert.ok(Number(m[1]) >= 10, `expected th-portal cache at or above v10 for this change, found v${m[1]}`);
+  }
 });

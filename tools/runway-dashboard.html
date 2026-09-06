@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="en" style="background:#0a0a0a;">
 <head>
-<script src="/tools/auth.js?v=df17170466"></script>
+<script src="/tools/auth.js?v=7b87c4fdc1"></script>
 <script>
   // Security gate -- same pattern as every other internal tool page.
   // This one matters more than most: it holds real mortgage, debt, and
@@ -23,10 +23,10 @@
 <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data:; connect-src 'self' https://*.supabase.co wss://*.supabase.co https://cdn.jsdelivr.net; frame-src 'none'; object-src 'none'; base-uri 'self'; frame-ancestors 'none';">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Anton&family=Oswald:wght@300;400;500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Anton&family=Archivo:wght@400..700&family=Newsreader:ital,opsz,wght@0,6..72,300..700;1,6..72,300..600&family=Oswald:wght@200..700&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.112.3/dist/umd/supabase.js" integrity="sha384-qafw21c/iciq0VXsi9FzkfoQv5I/V0iqE4lSNcKXPnW9/UTJLnv5CcN4FHxVLnKg" crossorigin="anonymous" defer></script>
-<script src="/tools/sync.js?v=a631a4ee04" defer></script>
-<script src="/tools/tools-tour.js?v=819e6daf97" defer></script>
+<script src="/tools/sync.js?v=51c822a31b" defer></script>
+<script src="/tools/tools-tour.js?v=cf6652f5b1" defer></script>
 <script>
   (function () {
     // Tools app light/dark theme (2026-08-20), tucked into Settings.
@@ -98,7 +98,7 @@
     --white:#161310;
   }
   *{box-sizing:border-box;}
-  body{margin:0;background:var(--bg);color:var(--text);font-family:'Inter', -apple-system, 'Segoe UI', sans-serif;font-weight:400;-webkit-font-smoothing:antialiased;}
+  body{margin:0;background:var(--bg);color:var(--text);font-family:var(--font-body);font-weight:400;-webkit-font-smoothing:antialiased;}
   /* Item #3: this page is exempt from loading the shared styles.css
      (self-contained styles), so it never inherited the slim custom
      scrollbar every other tool page has -- its help-modal and any
@@ -133,7 +133,7 @@
   .onboarding-dots { display: flex; gap: 5px; margin-bottom: 10px; }
   .onboarding-dots span { width: 6px; height: 6px; border-radius: 50%; background: var(--border); }
   .onboarding-dots span.is-active { background: var(--orange); width: 16px; border-radius: 3px; }
-  .onboarding-title { font-family: 'Oswald', sans-serif; color: var(--white); font-size: 16px; margin-bottom: 4px; }
+  .onboarding-title { font-family:var(--font-ui); color: var(--white); font-size: 16px; margin-bottom: 4px; }
   .onboarding-body { color: var(--text-dim); font-size: 13.5px; line-height: 1.5; margin-bottom: 14px; }
   .onboarding-actions { display: flex; justify-content: space-between; align-items: center; gap: 10px; }
   .onboarding-skip, .onboarding-back { background: none; border: none; color: var(--text-dim); font-size: 13px; cursor: pointer; padding: 8px 4px; }
@@ -151,19 +151,19 @@
   @media (prefers-reduced-motion: reduce) { .th-tour-highlight { animation: none; } }
   .primary-btn {
     background: linear-gradient(135deg, var(--orange-light), var(--orange) 60%, var(--orange-dark));
-    color: #1a0d02; font-weight: 700; font-family:'Oswald',sans-serif; font-size: 14.5px;
+    color: #1a0d02; font-weight: 700; font-family:var(--font-ui); font-size: 14.5px;
     border: none; border-radius: 8px; padding: 11px 22px; cursor: pointer;
     transition: box-shadow .18s ease, transform .12s ease, filter .18s ease;
   }
   .primary-btn:hover { box-shadow: 0 0 16px rgba(255,128,0,0.4); transform: translateY(-1px); filter: brightness(1.04); }
   .primary-btn:active { transform: translateY(0); filter: brightness(0.97); }
-  h1,h2,h3{font-family:'Anton',sans-serif;font-weight:400;letter-spacing:0.5px;margin:0;}
+  h1,h2,h3{font-family:var(--font-display);font-weight:400;letter-spacing:0.5px;margin:0;}
   header{padding:20px 20px 0;max-width:900px;margin:0 auto;}
   header h1{font-size:22px;color:var(--orange-light);text-transform:uppercase;}
   header p{color:var(--text-dim);font-size:13px;margin:4px 0 16px;}
   .tabs{display:flex;gap:6px;max-width:900px;margin:0 auto;padding:8px 20px 0;overflow-x:auto;scrollbar-width:none;position:sticky;top:0;background:var(--bg);z-index:50;}
   .tabs::-webkit-scrollbar{display:none;}
-  .tab-btn{background:var(--bg-card);color:var(--text-dim);border:none;padding:10px 16px;border-radius:8px 8px 0 0;font-family:'Oswald',sans-serif;font-weight:600;font-size:13px;text-transform:uppercase;letter-spacing:0.5px;cursor:pointer;white-space:nowrap;transition:background .15s, color .15s;}
+  .tab-btn{background:var(--bg-card);color:var(--text-dim);border:none;padding:10px 16px;border-radius:8px 8px 0 0;font-family:var(--font-ui);font-weight:600;font-size:13px;text-transform:uppercase;letter-spacing:0.5px;cursor:pointer;white-space:nowrap;transition:background .15s, color .15s;}
   .tab-btn.active{background:var(--bg-elevated);color:var(--orange-light);box-shadow: inset 0 2px 0 var(--orange);}
   main{max-width:900px;margin:0 auto;padding:16px 20px 80px;}
   /* Desktop layout (2026-08-20), requested directly: efficient on
@@ -189,7 +189,7 @@
     display: flex; align-items: center; gap: 10px;
     padding: 8px 10px 20px; margin-bottom: 8px; border-bottom: 1px solid var(--border);
     text-decoration: none; color: var(--white);
-    font-family: 'Anton', sans-serif; font-size: 16px; letter-spacing: .5px;
+    font-family:var(--font-display); font-size: 16px; letter-spacing: .5px;
   }
   .th-sidebar-brand img { width: 32px; height: 32px; object-fit: contain; border-radius: 6px; }
   .th-sidebar-links { display: flex; flex-direction: column; gap: 2px; }
@@ -197,7 +197,7 @@
     display: flex; align-items: center; gap: 12px;
     padding: 10px 12px; border-radius: 10px;
     text-decoration: none; color: var(--text-dim);
-    font-family: 'Oswald', sans-serif; font-size: 13.5px; font-weight: 500; letter-spacing: .2px;
+    font-family:var(--font-ui); font-size: 13.5px; font-weight: 500; letter-spacing: .2px;
     transition: color .15s ease, background .15s ease;
   }
   .th-sidebar-link .th-icon { width: 18px; height: 18px; flex-shrink: 0; }
@@ -237,17 +237,36 @@
   .icon-btn.danger:hover{color:var(--red);}
   input[type=number], input[type=text], input[type=month], select{
     background:var(--bg);border:1px solid var(--border-soft);color:var(--text);border-radius:6px;padding:9px 10px;
-    font-family:'Oswald',sans-serif;font-size:16px;width:100%;box-shadow: inset 0 1px 3px rgba(0,0,0,0.5);
+    font-family:var(--font-ui);font-size:16px;width:100%;box-shadow: inset 0 1px 3px rgba(0,0,0,0.5);
     transition: box-shadow .15s, border-color .15s;
   }
   input:focus, select:focus{outline:none;border-color:var(--orange);box-shadow: inset 0 1px 3px rgba(0,0,0,0.5), 0 0 8px rgba(255,128,0,0.45);}
   .grand-totals{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:16px;}
   .stat-box{background:var(--bg-elevated);border-radius:var(--radius);padding:14px;text-align:center;}
   .stat-box .label{font-size:11px;color:var(--text-dim);text-transform:uppercase;letter-spacing:0.5px;}
-  .stat-box .value{font-family:'Anton',sans-serif;font-size:24px;color:var(--orange-light);margin-top:4px;}
-  .stat-box.blue .value{color:var(--blue); text-shadow:0 0 6px rgba(58,160,255,0.18);}
-  .stat-box.green .value{color:var(--green); text-shadow:0 0 6px rgba(58,201,106,0.2);}
-  .stat-box.red .value{color:var(--red); text-shadow:0 0 6px rgba(224,85,77,0.18);}
+  /* "Big confident numbers" (2026-09-06), matching the dashboard's own
+     .metric-value treatment: a light-to-base gradient clipped to the
+     text, not a flat color, so these read as the product rather than
+     a caption. Runway Dashboard is fully self-contained (its own root
+     tokens, no styles-tools.css) so this can't just reuse that shared
+     rule -- same technique, this page's own color tokens. */
+  .stat-box .value{
+    font-family:var(--font-display);font-size:24px;margin-top:4px;
+    background:linear-gradient(180deg, var(--orange-light), var(--orange));
+    -webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;
+  }
+  .stat-box.blue .value{
+    background:linear-gradient(180deg, #7ec4ff, var(--blue));
+    -webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;
+  }
+  .stat-box.green .value{
+    background:linear-gradient(180deg, #6eeb95, var(--green));
+    -webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;
+  }
+  .stat-box.red .value{
+    background:linear-gradient(180deg, #ef8681, var(--red));
+    -webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;
+  }
   .card-hero{
     position:relative;
     background:linear-gradient(160deg, var(--bg-elevated), var(--bg-card));
@@ -261,15 +280,15 @@
   .card-hero .stat-box{background:var(--bg-card);}
   .card-hero .stat-box.green{background:linear-gradient(160deg, rgba(58,201,106,0.10), var(--bg-card));}
   button.action-btn{
-    background:var(--orange);color:#1a0d02;border:none;font-family:'Oswald',sans-serif;font-weight:700;font-size:13px;
+    background:var(--orange);color:#1a0d02;border:none;font-family:var(--font-ui);font-weight:700;font-size:13px;
     text-transform:uppercase;letter-spacing:0.5px;padding:11px 18px;border-radius:8px;cursor:pointer;
     transition: box-shadow .15s, transform .1s; box-shadow: 0 0 0 rgba(255,128,0,0); width:100%;
   }
   button.action-btn:hover{box-shadow: 0 0 8px rgba(255,128,0,0.5), 0 0 20px rgba(255,128,0,0.25);}
   button.action-btn:active{transform: translateY(1px);box-shadow: inset 0 0 6px rgba(0,0,0,0.4);}
-  button.ghost-btn{background:transparent;border:1px solid var(--border-soft);color:var(--text-dim);font-family:'Oswald',sans-serif;font-size:12px;padding:9px 14px;border-radius:6px;cursor:pointer;flex:1;}
+  button.ghost-btn{background:transparent;border:1px solid var(--border-soft);color:var(--text-dim);font-family:var(--font-ui);font-size:12px;padding:9px 14px;border-radius:6px;cursor:pointer;flex:1;}
   button.ghost-btn:hover{color:var(--text);border-color: var(--text-dim);}
-  button.danger-btn{background:transparent;border:1px solid rgba(224,85,77,0.4);color:var(--red);font-family:'Oswald',sans-serif;font-size:12px;padding:5px 10px;border-radius:6px;cursor:pointer;}
+  button.danger-btn{background:transparent;border:1px solid rgba(224,85,77,0.4);color:var(--red);font-family:var(--font-ui);font-size:12px;padding:5px 10px;border-radius:6px;cursor:pointer;}
   .form-card{display:none;}
   .form-card.open{display:block;}
   .form-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px;}
@@ -294,7 +313,7 @@
   .progress-fill{height:100%;background:linear-gradient(90deg, var(--orange-dark), var(--orange));border-radius:20px;transition: width .3s;}
   .progress-labels{display:flex;justify-content:space-between;font-size:10px;color:var(--text-faint);margin-top:4px;}
   .note{font-size:12px;color:var(--text-dim);line-height:1.5;margin-top:8px;}
-  .estimate-headline{font-family:'Anton',sans-serif;font-size:20px;color:var(--orange-light);margin:6px 0;}
+  .estimate-headline{font-family:var(--font-display);font-size:20px;color:var(--orange-light);margin:6px 0;}
   .loading{padding:0;}
   .skeleton-card{background:var(--bg-card);border-radius:var(--radius);padding:16px;margin-bottom:14px;}
   .skeleton-line{height:14px;border-radius:6px;margin-bottom:10px;background:linear-gradient(90deg, var(--bg-elevated) 25%, var(--bg-hover) 50%, var(--bg-elevated) 75%);background-size:200% 100%;animation:shimmer 1.4s ease-in-out infinite;}
@@ -319,7 +338,7 @@
   .help-btn{
     display:inline-flex;align-items:center;justify-content:center;width:22px;height:22px;margin-left:8px;
     border:1px solid var(--border-soft);border-radius:50%;background:none;color:var(--text-dim);
-    font-family:'Oswald',sans-serif;font-size:13px;font-weight:600;cursor:pointer;vertical-align:middle;
+    font-family:var(--font-ui);font-size:13px;font-weight:600;cursor:pointer;vertical-align:middle;
     transition:border-color .15s ease, color .15s ease;
   }
   .help-btn:hover{border-color:var(--orange-light);color:var(--orange-light);}
@@ -345,8 +364,8 @@
   @keyframes pullRefreshSpin { from { transform: scale(1) rotate(0deg); } to { transform: scale(1) rotate(360deg); } }
   @media (prefers-reduced-motion: reduce) { .pull-refresh-indicator.is-refreshing { animation: none; } }
   .help-modal{position:relative;background:var(--bg-card);border:1px solid var(--border-soft);border-radius:var(--radius);max-width:520px;width:100%;max-height:80vh;overflow-y:auto;padding:26px 28px;}
-  .help-modal h3{font-family:'Anton',sans-serif;color:var(--orange-light);font-size:19px;margin:0 0 14px;padding-right:24px;}
-  .help-modal h4{font-family:'Oswald',sans-serif;color:var(--text);font-size:13px;text-transform:uppercase;letter-spacing:0.5px;margin:18px 0 6px;}
+  .help-modal h3{font-family:var(--font-display);color:var(--orange-light);font-size:19px;margin:0 0 14px;padding-right:24px;}
+  .help-modal h4{font-family:var(--font-ui);color:var(--text);font-size:13px;text-transform:uppercase;letter-spacing:0.5px;margin:18px 0 6px;}
   .help-modal h4:first-of-type{margin-top:0;}
   .help-modal-body{color:var(--text);font-size:14px;line-height:1.6;}
   .help-modal-body p{margin:0 0 10px;}

@@ -88,10 +88,22 @@ test('the ambient background gradient lives on html (never width-constrained), n
   assert.match(htmlRule[1], /radial-gradient/);
   assert.match(htmlRule[1], /background-attachment:\s*fixed/);
 
-  const bodyToolPageRule = src.match(/body\.th-tool-page \{([^}]*)\}/);
-  assert.ok(bodyToolPageRule, 'body.th-tool-page rule not found');
-  assert.doesNotMatch(bodyToolPageRule[1], /radial-gradient/, 'the gradient should no longer live on the width-constrained element');
-  assert.match(bodyToolPageRule[1], /background:\s*transparent/, 'body.th-tool-page should be transparent so html\'s background shows through everywhere, including within the content column');
+  // Checked across EVERY body.th-tool-page rule, not just whichever one
+  // happens to be written first. The original version matched only the
+  // first, so it failed the moment an unrelated scoped rule was added
+  // above it -- the same assert-the-snapshot-not-the-invariant mistake
+  // the CACHE_NAME assertions made. What actually matters is that some
+  // rule makes the element transparent and no rule puts the gradient
+  // back on it.
+  const bodyToolPageRules = [...src.matchAll(/body\.th-tool-page \{([^}]*)\}/g)].map((m) => m[1]);
+  assert.ok(bodyToolPageRules.length, 'body.th-tool-page rule not found');
+  for (const rule of bodyToolPageRules) {
+    assert.doesNotMatch(rule, /radial-gradient/, 'the gradient should no longer live on the width-constrained element');
+  }
+  assert.ok(
+    bodyToolPageRules.some((rule) => /background:\s*transparent/.test(rule)),
+    'body.th-tool-page should be transparent so html\'s background shows through everywhere, including within the content column'
+  );
 });
 
 test('body.th-tool-page still gets its class added at runtime by tools-nav-pwa.js, confirming the transparent-background rule actually applies on a real page load, not just in theory', () => {

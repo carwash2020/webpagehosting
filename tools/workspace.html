@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="en" style="background:#0a0a0a;">
 <head>
-<script src="/tools/auth.js?v=df17170466"></script>
+<script src="/tools/auth.js?v=7b87c4fdc1"></script>
 <script>
   // Security gate -- redirect to login before this page's own content
   // is meaningfully usable. See auth.js for why this exists (a single
@@ -39,7 +39,7 @@
 <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data: https://*.supabase.co; connect-src 'self' https://*.supabase.co wss://*.supabase.co https://cdn.jsdelivr.net; frame-src 'none'; object-src 'none'; base-uri 'self'; frame-ancestors 'none';">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Anton&family=Oswald:wght@400;500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Anton&family=Archivo:wght@400..700&family=Newsreader:ital,opsz,wght@0,6..72,300..700;1,6..72,300..600&family=Oswald:wght@200..700&display=swap" rel="stylesheet">
 <script>
   (function () {
     // Tools app light/dark theme (2026-08-20), tucked into Settings.
@@ -51,22 +51,22 @@
     if (saved === 'light') document.documentElement.setAttribute('data-theme', 'light');
   })();
 </script>
-<link rel="stylesheet" href="/styles.css?v=202609022200">
-<link rel="stylesheet" href="/tools/styles-tools.css?v=24b73d7829">
+<link rel="stylesheet" href="/styles.css?v=202609062002">
+<link rel="stylesheet" href="/tools/styles-tools.css?v=f0faba8d41">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.112.3/dist/umd/supabase.js" integrity="sha384-qafw21c/iciq0VXsi9FzkfoQv5I/V0iqE4lSNcKXPnW9/UTJLnv5CcN4FHxVLnKg" crossorigin="anonymous" defer></script>
-<script src="/tools/sync.js?v=a631a4ee04" defer></script>
+<script src="/tools/sync.js?v=51c822a31b" defer></script>
 <!-- Shared business-hours data (2026-09-03) -- used by the work order
      "Approve & Schedule" form to warn if a chosen time falls outside
      real business hours, matching the same real hours booking.html,
      manage-booking.html, portal/quotes.html, and portal/jobs.html use. -->
 <script src="/business-hours.js?v=2"></script>
-<script src="/tools/push-notifications.js?v=b34c5a136c" defer></script>
-<script src="/tools/data-layer.js?v=c0a08eb9ef" defer></script>
-<script src="/tools/tools-effects.js?v=847d2f1292" defer></script>
-<script src="/tools/tools-dialogs.js?v=cbe89a260d" defer></script>
-<script src="/tools/tools-media-sharing.js?v=eefcc6762c" defer></script>
-<script src="/tools/tools-nav-pwa.js?v=babb01d1aa" defer></script>
-<script src="/tools/tools-tour.js?v=819e6daf97" defer></script>
+<script src="/tools/push-notifications.js?v=180abd2a84" defer></script>
+<script src="/tools/data-layer.js?v=3a0d57478c" defer></script>
+<script src="/tools/tools-effects.js?v=4cff99aa4a" defer></script>
+<script src="/tools/tools-dialogs.js?v=e1dfaa11a1" defer></script>
+<script src="/tools/tools-media-sharing.js?v=4e2769b10d" defer></script>
+<script src="/tools/tools-nav-pwa.js?v=9b16eefb86" defer></script>
+<script src="/tools/tools-tour.js?v=cf6652f5b1" defer></script>
 <style>
   /* iOS Safari zoom-on-focus fix (2026-09-05), same root cause and
      fix already applied to invoice-generator.html: a tapped
@@ -128,7 +128,7 @@
   @media (prefers-reduced-motion: reduce) { #headerLogo.is-syncing { animation: none; } }
   .hub-header-right { display: flex; align-items: center; gap: 8px; }
   .hub-header img { height: 44px; width: 44px; object-fit: contain; }
-  .hub-title { font-family:'Anton',sans-serif; font-size: 26px; color: var(--white); }
+  .hub-title { font-family:var(--font-display); font-size: 26px; color: var(--white); }
   .hub-sub { color: var(--text-dim); display: flex; flex-direction: row; flex-wrap: wrap; align-items: center; gap: 4px 8px; }
   #refreshSyncLink { margin-left: 0; }
   @media (min-width: 1024px) { .hub-sub { display: block; } }
@@ -156,7 +156,7 @@
   .jump-nav a {
     display: flex; align-items: center; gap: 6px;
     color: var(--text-dim); font-size: 12.5px; text-decoration: none; white-space: nowrap;
-    padding: 6px 12px; border-radius: 6px; font-family:'Oswald',sans-serif;
+    padding: 6px 12px; border-radius: 6px; font-family:var(--font-ui);
     transition: color .15s ease, background .15s ease;
   }
   .jump-nav a:hover { color: var(--orange-light); background: var(--bg-panel-2); }
@@ -184,7 +184,7 @@
     padding: 0 20px 20px; margin-bottom: 18px;
   }
   .section-heading {
-    font-family:'Oswald',sans-serif; color: var(--orange-light); font-size: 13.5px;
+    font-family:var(--font-ui); color: var(--orange-light); font-size: 13.5px;
     text-transform: uppercase; letter-spacing: 1.5px; margin: 0;
     padding: 18px 0 16px; border-bottom: 1px solid var(--border);
     display: flex; justify-content: space-between; align-items: center; cursor: pointer; user-select: none;
@@ -217,7 +217,7 @@
   }
   .metric-card.is-warning { border-color: #e05252; }
   .metric-card .metric-label { color: var(--text-dim); font-size: 12px; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 8px; }
-  .metric-card .metric-value { font-family:'Oswald',sans-serif; font-weight: 700; font-size: 24px; color: var(--white); }
+  .metric-card .metric-value { font-family:var(--font-ui); font-weight: 700; font-size: 24px; color: var(--white); }
   .metric-card .metric-value.is-orange { color: var(--orange-light); }
   .metric-card .metric-sub { color: var(--text-dim); font-size: 12px; margin-top: 4px; }
   /* trend-badge (2026-08-16): small ▲/▼ chip, replaces the old plain
@@ -245,7 +245,7 @@
   }
   .custom-range-row span { color: var(--text-dim); font-size: 13px; }
 
-  .analytics-subheading { font-family:'Oswald',sans-serif; color: var(--text-dim); font-size: 12px; text-transform: uppercase; letter-spacing: 0.5px; margin: 20px 0 12px; }
+  .analytics-subheading { font-family:var(--font-ui); color: var(--text-dim); font-size: 12px; text-transform: uppercase; letter-spacing: 0.5px; margin: 20px 0 12px; }
   /* Action Items' 5 sub-headings specifically -- a dedicated class,
      so this doesn't affect analytics-subheading's other uses
      elsewhere on this page (Compliance & Documents, Analytics
@@ -268,7 +268,7 @@
   .lead-card { padding: 14px 0; border-bottom: 1px solid var(--border); }
   .lead-card:last-child { border-bottom: none; }
   .lead-card-top { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; margin-bottom: 6px; }
-  .lead-card-name { color: var(--white); font-family:'Oswald',sans-serif; font-size: 15px; }
+  .lead-card-name { color: var(--white); font-family:var(--font-ui); font-size: 15px; }
   .lead-card-meta { color: var(--text-dim); font-size: 12.5px; margin: 2px 0; }
   .lead-card-details { color: var(--text); font-size: 13.5px; margin-top: 6px; font-style: italic; }
 
@@ -285,7 +285,7 @@
   .compliance-card.is-expiring { border-left-color: var(--orange); }
   .compliance-card.is-expired { border-left-color: #e05252; }
   .compliance-card-top { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; margin-bottom: 10px; }
-  .compliance-card-title { font-family:'Oswald',sans-serif; font-size: 16px; color: var(--white); }
+  .compliance-card-title { font-family:var(--font-ui); font-size: 16px; color: var(--white); }
   .compliance-status-badge {
     font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;
     padding: 4px 10px; border-radius: 12px; flex-shrink: 0; white-space: nowrap;
@@ -333,7 +333,7 @@
   .tools-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(84px, 1fr)); gap: 10px; }
   .tool-group-label {
     grid-column: 1 / -1;
-    font-family: 'Oswald', sans-serif; font-size: 11.5px; text-transform: uppercase; letter-spacing: 0.6px;
+    font-family:var(--font-ui); font-size: 11.5px; text-transform: uppercase; letter-spacing: 0.6px;
     color: var(--text-dim); margin: 14px 0 2px;
   }
   .tool-group-label:first-child { margin-top: 0; }
@@ -346,7 +346,7 @@
   }
   .tool-tile-link:hover { box-shadow: 0 0 20px var(--orange-tint-glow); transform: translateY(-2px); border-color: var(--orange-light); }
   .tool-tile-icon { font-size: 26px; line-height: 1; }
-  .tool-tile-label { font-family:'Oswald',sans-serif; color: var(--white); font-size: 12.5px; text-align: center; }
+  .tool-tile-label { font-family:var(--font-ui); color: var(--white); font-size: 12.5px; text-align: center; }
   .tool-tile-info {
     /* 2026-08-16: was top/right:4px, which sat right where the tile's
        16px border-radius starts curving inward -- the circular badge
@@ -374,7 +374,7 @@
   }
   .welcome-overlay.is-fading { opacity: 0; }
   .welcome-overlay img { width: 72px; height: 72px; object-fit: contain; }
-  .welcome-overlay-text { font-family: 'Oswald', sans-serif; font-size: 22px; color: var(--white); letter-spacing: .02em; }
+  .welcome-overlay-text { font-family:var(--font-ui); font-size: 22px; color: var(--white); letter-spacing: .02em; }
 </style>
 </head>
 <body>
@@ -398,7 +398,7 @@
     <a href="/tools/settings.html" class="help-btn" aria-label="Settings" title="Settings" style="text-decoration:none; display:inline-flex; align-items:center; justify-content:center;"><svg class="th-icon" aria-hidden="true"><use href="#icon-settings" xlink:href="#icon-settings"></use></svg></a>
   </div>
   </div>
-  <p class="hub-sub"><span class="realtime-badge" id="realtimeBadge" style="margin-left:0;"><span class="realtime-dot" id="realtimeDot"></span><span id="realtimeText">Live sync: connecting...</span></span><span class="pending-changes-badge" id="pendingChangesBadge" style="display:none;">&#9679; Unsynced changes</span>
+  <p class="hub-sub"><span class="realtime-badge" id="realtimeBadge" onclick="retryLiveSync()" title="Live sync" style="margin-left:0;"><span class="realtime-dot" id="realtimeDot"></span><span id="realtimeText">Live sync: connecting...</span></span><span class="pending-changes-badge" id="pendingChangesBadge" style="display:none;">&#9679; Unsynced changes</span>
     <button class="help-btn" id="refreshSyncLink" onclick="manualRefreshSync(renderDashboard)" aria-label="Refresh synced data now" title="Refresh synced data now" style="width:26px; height:26px; font-size:13px;">&#8635;</button>
   </p>
 </div>
@@ -419,7 +419,7 @@
 
 <div class="section-block" id="section-today">
   <div class="section-heading" onclick="toggleSection('today')">
-    <span>Today</span>
+    <span class="section-heading-title"><svg class="th-icon section-heading-icon" aria-hidden="true"><use href="#icon-calendar" xlink:href="#icon-calendar"></use></svg>Today</span>
     <span class="collapse-arrow">&#9660;</span>
   </div>
   <div class="section-body" id="body-today">
@@ -429,7 +429,7 @@
 
 <div class="section-block" id="section-snapshot">
   <div class="section-heading" onclick="toggleSection('snapshot')">
-    <span>Business Snapshot</span>
+    <span class="section-heading-title"><svg class="th-icon section-heading-icon" aria-hidden="true"><use href="#icon-chart" xlink:href="#icon-chart"></use></svg>Business Snapshot</span>
     <span class="last-updated-note" id="snapshotLastUpdated"></span>
     <span class="collapse-arrow">&#9660;</span>
   </div>
@@ -494,7 +494,7 @@
 
 <div class="section-block" id="section-actionitems">
   <div class="section-heading" onclick="toggleSection('actionitems')">
-    <span>Action Items <span id="actionItemsHeadingBadge"></span></span>
+    <span class="section-heading-title"><svg class="th-icon section-heading-icon is-priority" aria-hidden="true"><use href="#icon-bell" xlink:href="#icon-bell"></use></svg>Action Items <span id="actionItemsHeadingBadge"></span></span>
     <span class="collapse-arrow">&#9660;</span>
   </div>
   <div class="section-body" id="body-actionitems">
@@ -526,7 +526,7 @@
 
 <div class="section-block" id="section-gallery">
   <div class="section-heading" onclick="toggleSection('gallery')">
-    <span>Gallery Queue</span>
+    <span class="section-heading-title"><svg class="th-icon section-heading-icon" aria-hidden="true"><use href="#icon-camera" xlink:href="#icon-camera"></use></svg>Gallery Queue</span>
     <span class="collapse-arrow">&#9660;</span>
   </div>
   <div class="section-body" id="body-gallery">
@@ -536,7 +536,7 @@
 
 <div class="section-block" id="section-compliance">
   <div class="section-heading" onclick="toggleSection('compliance')">
-    <span>Compliance &amp; Documents <span id="complianceHeadingBadge"></span></span>
+    <span class="section-heading-title"><svg class="th-icon section-heading-icon" aria-hidden="true"><use href="#icon-shield" xlink:href="#icon-shield"></use></svg>Compliance &amp; Documents <span id="complianceHeadingBadge"></span></span>
     <span class="collapse-arrow">&#9660;</span>
   </div>
   <div class="section-body" id="body-compliance">
@@ -620,7 +620,7 @@
 
 <div class="section-block" id="section-analytics">
   <div class="section-heading" onclick="toggleSection('analytics')">
-    <span>Analytics</span>
+    <span class="section-heading-title"><svg class="th-icon section-heading-icon" aria-hidden="true"><use href="#icon-trending" xlink:href="#icon-trending"></use></svg>Analytics</span>
     <span class="collapse-arrow">&#9660;</span>
   </div>
   <div class="section-body" id="body-analytics">
@@ -635,7 +635,7 @@
 
 <div class="section-block" id="section-backup">
   <div class="section-heading" onclick="toggleSection('backup')">
-    <span>Backup</span>
+    <span class="section-heading-title"><svg class="th-icon section-heading-icon" aria-hidden="true"><use href="#icon-folder" xlink:href="#icon-folder"></use></svg>Backup</span>
     <span class="collapse-arrow">&#9660;</span>
   </div>
   <div class="section-body" id="body-backup">
@@ -655,7 +655,7 @@
 
 <div class="section-block" id="section-tools">
   <div class="section-heading is-static">
-    <span>Tools</span>
+    <span class="section-heading-title"><svg class="th-icon section-heading-icon" aria-hidden="true"><use href="#icon-toolbox" xlink:href="#icon-toolbox"></use></svg>Tools</span>
   </div>
 
   <div class="tools-grid">
@@ -693,7 +693,7 @@
   </div>
 
   <div class="tool-group-label">Money</div>
-  <div class="tool-tile" data-tile-perm="can_manage_invoices">
+  <div class="tool-tile" data-tile-perm="can_manage_invoices" data-cat="money">
     <a href="/tools/invoice-generator.html" class="tool-tile-link">
       <span class="tool-tile-icon"><svg class="th-icon" aria-hidden="true"><use href="#icon-receipt" xlink:href="#icon-receipt"></use></svg></span>
       <span class="tool-tile-label">Invoices</span>
@@ -709,7 +709,7 @@
     next to Invoices since it's the same permission and a closely
     related daily task, not a separate group.
   -->
-  <div class="tool-tile" data-tile-perm="can_manage_invoices">
+  <div class="tool-tile" data-tile-perm="can_manage_invoices" data-cat="money">
     <a href="/tools/clients.html" class="tool-tile-link">
       <span class="tool-tile-icon"><svg class="th-icon" aria-hidden="true"><use href="#icon-inbox" xlink:href="#icon-inbox"></use></svg></span>
       <span class="tool-tile-label">Clients</span>
@@ -723,7 +723,7 @@
     Same permission as Invoices/Clients since it's the same money-
     handling trust level, not a separate group.
   -->
-  <div class="tool-tile" data-tile-perm="can_manage_invoices">
+  <div class="tool-tile" data-cat="money" data-tile-perm="can_manage_invoices">
     <a href="/tools/pos.html" class="tool-tile-link">
       <span class="tool-tile-icon"><svg class="th-icon" aria-hidden="true"><use href="#icon-dollar" xlink:href="#icon-dollar"></use></svg></span>
       <span class="tool-tile-label">POS</span>
@@ -731,14 +731,14 @@
     <button class="tool-tile-info" onclick="event.stopPropagation(); openCardInfo('tool-pos')" aria-label="What is POS?" title="What is this?">?</button>
   </div>
 
-  <div class="tool-tile" data-tile-perm="can_view_finance">
+  <div class="tool-tile" data-tile-perm="can_view_finance" data-cat="money">
     <a href="/tools/finance.html" class="tool-tile-link">
       <span class="tool-tile-icon"><svg class="th-icon" aria-hidden="true"><use href="#icon-chart" xlink:href="#icon-chart"></use></svg></span>
       <span class="tool-tile-label">Finance</span>
     </a>
     <button class="tool-tile-info" onclick="event.stopPropagation(); openCardInfo('tool-finance')" aria-label="What is Finance?" title="What is this?">?</button>
   </div>
-  <div class="tool-tile" data-tile-perm="can_view_runway">
+  <div class="tool-tile" data-tile-perm="can_view_runway" data-cat="money">
     <a href="/tools/runway-dashboard.html" class="tool-tile-link">
       <span class="tool-tile-icon"><svg class="th-icon" aria-hidden="true"><use href="#icon-dollar" xlink:href="#icon-dollar"></use></svg></span>
       <span class="tool-tile-label">Runway</span>
@@ -747,14 +747,14 @@
   </div>
 
   <div class="tool-group-label">Grow</div>
-  <div class="tool-tile" data-tile-perm="can_manage_reviews">
+  <div class="tool-tile" data-tile-perm="can_manage_reviews" data-cat="grow">
     <a href="/tools/review-request.html" class="tool-tile-link">
       <span class="tool-tile-icon"><svg class="th-icon" aria-hidden="true"><use href="#icon-star" xlink:href="#icon-star"></use></svg></span>
       <span class="tool-tile-label">Reviews</span>
     </a>
     <button class="tool-tile-info" onclick="event.stopPropagation(); openCardInfo('tool-reviews')" aria-label="What is Review Request Sender?" title="What is this?">?</button>
   </div>
-  <div class="tool-tile">
+  <div class="tool-tile" data-cat="grow">
     <a href="/tools/parts-reference.html" class="tool-tile-link">
       <span class="tool-tile-icon"><svg class="th-icon" aria-hidden="true"><use href="#icon-book" xlink:href="#icon-book"></use></svg></span>
       <span class="tool-tile-label">Wiki</span>
@@ -763,14 +763,14 @@
   </div>
 
   <div class="tool-group-label">Admin</div>
-  <div class="tool-tile">
+  <div class="tool-tile" data-cat="admin">
     <a href="/tools/settings.html" class="tool-tile-link">
       <span class="tool-tile-icon"><svg class="th-icon" aria-hidden="true"><use href="#icon-gear" xlink:href="#icon-gear"></use></svg></span>
       <span class="tool-tile-label">Settings</span>
     </a>
     <button class="tool-tile-info" onclick="event.stopPropagation(); openCardInfo('tool-settings')" aria-label="What is Settings?" title="What is this?">?</button>
   </div>
-  <div class="tool-tile" id="devToolsTile" style="display:none;">
+  <div class="tool-tile" id="devToolsTile" style="display:none;" data-cat="admin">
     <a href="/tools/dev-tools.html" class="tool-tile-link">
       <span class="tool-tile-icon"><svg class="th-icon" aria-hidden="true"><use href="#icon-terminal" xlink:href="#icon-terminal"></use></svg></span>
       <span class="tool-tile-label">Dev</span>
@@ -2662,6 +2662,7 @@
     const dot = document.getElementById('realtimeDot');
     const text = document.getElementById('realtimeText');
     const logo = document.getElementById('headerLogo');
+    const badge = document.getElementById('realtimeBadge');
     if (!dot || !text) return;
     dot.className = 'realtime-dot';
     if (status === 'SUBSCRIBED') {
@@ -2686,6 +2687,7 @@
       // distraction.
       if (logo) logo.classList.add('is-syncing');
     }
+    if (badge) badge.classList.toggle('is-retryable', dot.classList.contains('is-error'));
   }
 
   applyCollapseState();

@@ -271,7 +271,25 @@
 // and ?v= URLs are served cache-first without revalidation, so the
 // installed Workspace app would have kept serving the old stylesheets
 // indefinitely -- the precise failure the header above warns about.
-const CACHE_NAME = 'th-workspace-v60';
+// Bumped 2026-09-06 (v60 -> v61): /tools/styles-tools.css changed again
+// (widened the surface-elevation token range for .th-tool-page, bumped
+// tool-tile icon contrast). Precached under its bare path.
+// Bumped 2026-09-06 (v61 -> v62): /tools/styles-tools.css changed again
+// (button/icon redesign -- glass-highlight gradients on primary/
+// secondary/small buttons, vivid enamel-pin tool-grid icons, refined
+// flag button and sidebar/bottom-nav hex icons). Precached bare path.
+// Bumped 2026-09-06 (v62 -> v63): /tools/styles-tools.css and
+// /tools/tools-effects.js both changed again (dashboard section icons,
+// Tools-grid category colors, dense-table pass, live-sync retry
+// button). Both precached under their bare paths.
+// Bumped 2026-09-06 (v63 -> v64): the type-system change. /styles.css
+// and /tools/styles-tools.css are both precached here and both changed --
+// every font-family in the project now resolves through four :root tokens
+// (--font-display/--font-body/--font-ui/--font-app) instead of naming a
+// face literally, and the body face moved off Inter. Precached ?v= URLs
+// are served cache-first and never revalidated, so without this bump an
+// installed Workspace would keep serving the old stylesheet indefinitely.
+const CACHE_NAME = 'th-workspace-v64';
 const PRECACHE_URLS = [
   '/tools/workspace.html', '/tools/job-tracker.html', '/tools/invoice-generator.html', '/tools/contract-generator.html',
   '/tools/calendar.html', '/tools/route-planner.html', '/tools/review-request.html', '/tools/contact-card.html',

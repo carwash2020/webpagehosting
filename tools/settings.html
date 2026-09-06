@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="en" style="background:#0a0a0a;">
 <head>
-<script src="/tools/auth.js?v=df17170466"></script>
+<script src="/tools/auth.js?v=7b87c4fdc1"></script>
 <script>
   // Security gate -- redirect to login before this page's own content
   // is meaningfully usable. See auth.js for why this exists (a single
@@ -23,7 +23,7 @@
 <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data:; connect-src 'self' https://*.supabase.co wss://*.supabase.co https://api.github.com; frame-src 'none'; object-src 'none'; base-uri 'self'; frame-ancestors 'none';">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Anton&family=Oswald:wght@400;500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Anton&family=Archivo:wght@400..700&family=Newsreader:ital,opsz,wght@0,6..72,300..700;1,6..72,300..600&family=Oswald:wght@200..700&display=swap" rel="stylesheet">
 <script>
   (function () {
     // Tools app light/dark theme (2026-08-20), tucked into Settings.
@@ -35,15 +35,15 @@
     if (saved === 'light') document.documentElement.setAttribute('data-theme', 'light');
   })();
 </script>
-<link rel="stylesheet" href="/styles.css?v=202609022200">
-<link rel="stylesheet" href="/tools/styles-tools.css?v=24b73d7829">
-<script src="/tools/tools-effects.js?v=847d2f1292" defer></script>
-<script src="/tools/tools-dialogs.js?v=cbe89a260d" defer></script>
-<script src="/tools/tools-media-sharing.js?v=eefcc6762c" defer></script>
-<script src="/tools/tools-nav-pwa.js?v=babb01d1aa" defer></script>
-<script src="/tools/tools-tour.js?v=819e6daf97" defer></script>
-<script src="/tools/sync.js?v=a631a4ee04" defer></script>
-<script src="/tools/push-notifications.js?v=b34c5a136c" defer></script>
+<link rel="stylesheet" href="/styles.css?v=202609062002">
+<link rel="stylesheet" href="/tools/styles-tools.css?v=f0faba8d41">
+<script src="/tools/tools-effects.js?v=4cff99aa4a" defer></script>
+<script src="/tools/tools-dialogs.js?v=e1dfaa11a1" defer></script>
+<script src="/tools/tools-media-sharing.js?v=4e2769b10d" defer></script>
+<script src="/tools/tools-nav-pwa.js?v=9b16eefb86" defer></script>
+<script src="/tools/tools-tour.js?v=cf6652f5b1" defer></script>
+<script src="/tools/sync.js?v=51c822a31b" defer></script>
+<script src="/tools/push-notifications.js?v=180abd2a84" defer></script>
 <style>
   body { padding: 44px 20px 60px; max-width: 640px; margin: 0 auto; }
   /* Desktop layout (2026-08-20), requested directly: efficient on
@@ -57,7 +57,7 @@
     padding: 20px; margin-bottom: 16px;
   }
   .settings-section h2 {
-    font-family: 'Oswald', sans-serif; font-size: 15px; color: var(--white);
+    font-family:var(--font-ui); font-size: 15px; color: var(--white);
     text-transform: uppercase; letter-spacing: 1px; margin: 0 0 4px;
   }
   .settings-section .settings-desc { color: var(--text-dim); font-size: 13px; margin: 0 0 16px; line-height: 1.5; }
@@ -68,7 +68,7 @@
   .settings-row:last-child { border-bottom: none; }
   .settings-row-label { font-size: 14px; color: var(--white); }
   .settings-row-sub { font-size: 12.5px; color: var(--text-dim); margin-top: 2px; }
-  .settings-account-name { font-family: 'Oswald', sans-serif; font-size: 20px; color: var(--white); }
+  .settings-account-name { font-family:var(--font-ui); font-size: 20px; color: var(--white); }
   .settings-account-email { color: var(--text-dim); font-size: 13.5px; margin-top: 2px; }
   .settings-role-badge {
     display: inline-block; margin-top: 8px; padding: 3px 10px; border-radius: 20px;

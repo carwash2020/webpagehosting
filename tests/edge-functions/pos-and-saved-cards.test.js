@@ -187,7 +187,13 @@ test('POS never creates an invoice, quote, or portal record -- only a charge and
 // ---- workspace.html: the tile ----
 
 test('the POS tile is gated by the same permission as Invoices and Clients', () => {
-  const tileMatch = WORKSPACE.match(/<div class="tool-tile" data-tile-perm="can_manage_invoices">\s*<a href="\/tools\/pos\.html"/);
+  // Matches the tile carrying data-tile-perm="can_manage_invoices" among
+  // its attributes, not requiring it be the ONLY other attribute besides
+  // class -- 2026-09-06's category color-coding pass added a data-cat
+  // attribute to every Money-group tile (including this one), which the
+  // original exact-string regex had no room for and failed against, even
+  // though the actual permission gate this test cares about was untouched.
+  const tileMatch = WORKSPACE.match(/<div class="tool-tile"[^>]*\sdata-tile-perm="can_manage_invoices"[^>]*>\s*<a href="\/tools\/pos\.html"/);
   assert.ok(tileMatch, 'expected the POS tile to carry data-tile-perm="can_manage_invoices"');
 });
 

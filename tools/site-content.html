@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="en" style="background:#0a0a0a;">
 <head>
-<script src="/tools/auth.js?v=df17170466"></script>
+<script src="/tools/auth.js?v=7b87c4fdc1"></script>
 <script>
   // Security gate -- redirect to login before this page's own content
   // is meaningfully usable. See auth.js for why this exists (a single
@@ -23,7 +23,7 @@
 <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data:; connect-src 'self' https://*.supabase.co wss://*.supabase.co; frame-src 'none'; object-src 'none'; base-uri 'self'; frame-ancestors 'none';">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Anton&family=Oswald:wght@400;500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Anton&family=Archivo:wght@400..700&family=Newsreader:ital,opsz,wght@0,6..72,300..700;1,6..72,300..600&family=Oswald:wght@200..700&display=swap" rel="stylesheet">
 <script>
   (function () {
     // Tools app light/dark theme (2026-08-20), tucked into Settings.
@@ -35,15 +35,15 @@
     if (saved === 'light') document.documentElement.setAttribute('data-theme', 'light');
   })();
 </script>
-<link rel="stylesheet" href="/styles.css?v=202609022200">
-<link rel="stylesheet" href="/tools/styles-tools.css?v=24b73d7829">
-<script src="/tools/data-layer.js?v=c0a08eb9ef" defer></script>
-<script src="/tools/dev-tools-shared.js?v=2f94adc978" defer></script>
-<script src="/tools/tools-effects.js?v=847d2f1292" defer></script>
-<script src="/tools/tools-dialogs.js?v=cbe89a260d" defer></script>
-<script src="/tools/tools-media-sharing.js?v=eefcc6762c" defer></script>
-<script src="/tools/tools-nav-pwa.js?v=babb01d1aa" defer></script>
-<script src="/tools/sync.js?v=a631a4ee04" defer></script>
+<link rel="stylesheet" href="/styles.css?v=202609062002">
+<link rel="stylesheet" href="/tools/styles-tools.css?v=f0faba8d41">
+<script src="/tools/data-layer.js?v=3a0d57478c" defer></script>
+<script src="/tools/dev-tools-shared.js?v=a7dee707bd" defer></script>
+<script src="/tools/tools-effects.js?v=4cff99aa4a" defer></script>
+<script src="/tools/tools-dialogs.js?v=e1dfaa11a1" defer></script>
+<script src="/tools/tools-media-sharing.js?v=4e2769b10d" defer></script>
+<script src="/tools/tools-nav-pwa.js?v=9b16eefb86" defer></script>
+<script src="/tools/sync.js?v=51c822a31b" defer></script>
 <style>
 <style>
   body { padding: 44px 20px 60px; max-width: 1080px; margin: 0 auto; }
@@ -130,7 +130,7 @@
   .jump-nav a {
     display: flex; align-items: center; gap: 6px;
     color: var(--text-dim); font-size: 12.5px; text-decoration: none; white-space: nowrap;
-    padding: 6px 12px; border-radius: 6px; font-family:'Oswald',sans-serif;
+    padding: 6px 12px; border-radius: 6px; font-family:var(--font-ui);
     transition: color .15s ease, background .15s ease;
   }
   .jump-nav a:hover { color: var(--orange-light); background: var(--bg-panel-2); }

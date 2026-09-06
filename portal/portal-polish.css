@@ -30,6 +30,65 @@ body:has(.login-box) {
     radial-gradient(ellipse 60% 36% at 90% 102%, rgba(58, 160, 255, .05), transparent 66%);
   background-attachment: fixed;
 }
+/* login.html/set-password.html only (2026-09-06, requested directly --
+   "should we add the background to tools and portal like the main
+   site"): faint drafting-grid lines, roughly a third of the public
+   site's own opacity (styles.css section 1, "the blueprint world").
+   These two are the one truly sparse screen in the whole app -- a
+   single centered card on an otherwise empty page -- so the grid has
+   room to read as atmosphere rather than competing with content. NOT
+   extended to .portal-page's real screens (invoices, quotes, jobs) or
+   the tool suite: those stay content-dense enough that the same grid
+   would fight the tables and cards sitting on top of it, which is the
+   whole reason this stayed a quiet wash instead of the full blueprint
+   in the first place (see 1b below). background-image can't be layered
+   across two rules -- this repeats the two washes above rather than
+   only adding the grid, since the later, more specific declaration
+   fully replaces the property rather than extending it. */
+body:has(.login-box) {
+  background-image:
+    radial-gradient(ellipse 70% 40% at 50% -6%, rgba(255, 128, 0, .07), transparent 62%),
+    radial-gradient(ellipse 60% 36% at 90% 102%, rgba(58, 160, 255, .05), transparent 66%),
+    repeating-linear-gradient(0deg, rgba(255,255,255,.009) 0 1px, transparent 1px 96px),
+    repeating-linear-gradient(90deg, rgba(255,255,255,.009) 0 1px, transparent 1px 96px),
+    repeating-linear-gradient(0deg, rgba(255,255,255,.004) 0 1px, transparent 1px 24px),
+    repeating-linear-gradient(90deg, rgba(255,255,255,.004) 0 1px, transparent 1px 24px);
+}
+
+/* ---------- 1b. elevation range widened ----------
+   The four surface tokens this cascade inherits from styles.css
+   (--bg through --bg-panel-3) span only ~8 points of lightness --
+   confirmed by screenshotting real portal pages, not by reading the
+   gradient/shadow rules and assuming they were visible. Every card
+   (invoice, quote, work order) read as barely distinguishable from the
+   page background regardless of the elevation CSS already applied to
+   it. Same fix and same verified values as the internal tool suite's
+   equivalent override (styles-tools.css, body.th-tool-page) -- contrast
+   against --text/--text-dim/--orange-light was checked against all four
+   tiers before picking these; the worst case stays above 4.5:1. Scoped
+   to .portal-page only, so the public marketing site's separately-tuned
+   dark theme is untouched. login.html/set-password.html (no body class,
+   matched via :has() above) intentionally keep the unmodified tokens --
+   they're a single centered card on an otherwise empty page, where the
+   original tighter range was never the problem. */
+/* login.html and set-password.html deliberately carry a bare <body> --
+   no bottom nav, no elevation overrides -- so they miss the
+   .portal-page rule below. They are still the app rather than
+   something anyone reads, so they take the app face too. Same
+   :has(.login-box) hook the drafting-grid background already uses. */
+body:has(.login-box) { font-family: var(--font-app); }
+
+body.portal-page {
+  /* Same reasoning as the tool suite: the portal is an app a client
+     operates, so its running text takes the app face, not the public
+     site's body serif. */
+  font-family: var(--font-app);
+  --bg: #07080a;
+  --bg-panel: #18191d;
+  --bg-panel-2: #212327;
+  --bg-panel-3: #2c2e34;
+  --border: #34363c;
+}
 
 /* ---------- 2. header ---------- */
 .portal-header {
@@ -38,7 +97,7 @@ body:has(.login-box) {
   margin-bottom: 4px;
 }
 .portal-title {
-  font-family: 'Anton', sans-serif;
+  font-family:var(--font-display);
   letter-spacing: .6px;
 }
 .portal-sub {
@@ -111,7 +170,7 @@ body:has(.login-box) {
   gap: 6px;
   padding: 4px 11px;
   border-radius: 999px;
-  font-family: 'Oswald', sans-serif;
+  font-family:var(--font-ui);
   font-size: 11.5px;
   font-weight: 600;
   letter-spacing: 1.2px;
@@ -174,6 +233,58 @@ body:has(.login-box) {
   background: var(--orange-tint-soft);
 }
 
+/* ---------- 6b. Redesigned buttons (2026-09-06) ----------
+   Matches the glass-highlight language just added to the tool suite's
+   .primary-btn/.secondary-btn (styles-tools.css). The portal's own real
+   CTAs -- Pay now, Request Work, Call, Text Us, Sign In -- are .btn.orange
+   / .btn.blue (defined in styles.css for the public marketing site, a
+   different class from the tool suite's .primary-btn), so they'd
+   otherwise be left out of a "cleaner, amazing buttons" pass entirely.
+   Scoped to .portal-page (and :has(.login-box), for login.html/
+   set-password.html, which carry no body class) so the public site's
+   own buttons are untouched -- same scoping already used for section 1b
+   above, for the same reason. */
+body.portal-page .btn.orange,
+body:has(.login-box) .btn.orange {
+  background-image: linear-gradient(165deg, rgba(255,255,255,.34), rgba(255,255,255,0) 44%),
+    linear-gradient(135deg, #ffb347, #ff8000 60%, #c96400);
+  box-shadow: 0 1px 0 rgba(255,255,255,.3) inset, 0 -1px 0 rgba(0,0,0,.16) inset, 0 8px 20px -6px rgba(255,128,0,.5);
+}
+body.portal-page .btn.blue,
+body:has(.login-box) .btn.blue {
+  background-image: linear-gradient(165deg, rgba(255,255,255,.34), rgba(255,255,255,0) 44%),
+    linear-gradient(135deg, #7ec4ff, #3aa0ff 60%, #1f5f9e);
+  box-shadow: 0 1px 0 rgba(255,255,255,.3) inset, 0 -1px 0 rgba(0,0,0,.16) inset, 0 8px 20px -6px rgba(58,160,255,.5);
+}
+body.portal-page .secondary-btn,
+body.portal-page .small-btn,
+body:has(.login-box) .secondary-btn,
+body:has(.login-box) .small-btn {
+  background-image: linear-gradient(180deg, rgba(255,255,255,.05), rgba(255,255,255,0) 55%),
+    linear-gradient(180deg, var(--bg-panel-2), var(--bg-panel) 130%);
+  box-shadow: 0 1px 0 rgba(255,255,255,.05) inset, 0 1px 2px -1px rgba(0,0,0,.3);
+}
+body.portal-page .portal-icon-btn {
+  background-image: linear-gradient(180deg, rgba(255,255,255,.06), rgba(255,255,255,0) 55%),
+    linear-gradient(180deg, var(--bg-panel-2), var(--bg-panel) 130%);
+}
+/* home.html's "Need Something?" card (Request Work / Call / Text Us) is a
+   fourth, page-local button pattern -- plain <a> tags styled only by
+   .help-actions a, inline in home.html, not any of the shared classes
+   above. Same treatment, so it doesn't look like the one card that
+   missed this pass. */
+body.portal-page .help-actions a {
+  background-image: linear-gradient(180deg, rgba(255,255,255,.05), rgba(255,255,255,0) 55%),
+    linear-gradient(180deg, var(--bg-panel-2), var(--bg-panel) 130%);
+  box-shadow: 0 1px 0 rgba(255,255,255,.05) inset, 0 1px 2px -1px rgba(0,0,0,.3);
+  transition: border-color .15s ease, color .15s ease, transform .15s ease, box-shadow .15s ease;
+}
+body.portal-page .help-actions a:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 1px 0 rgba(255,255,255,.06) inset, 0 5px 14px -6px rgba(0,0,0,.4);
+}
+@media (prefers-reduced-motion: reduce) { body.portal-page .help-actions a { transition: none; } body.portal-page .help-actions a:hover { transform: none; } }
+
 /* Note: these message boxes are styled only via :not(:empty). They exist
    in the markup at all times and are filled in by script, so giving them
    a background unconditionally renders an empty coloured strip on a clean
@@ -192,7 +303,7 @@ body:has(.login-box) {
 }
 .login-logo { filter: drop-shadow(0 8px 20px rgba(0, 0, 0, .5)); }
 .login-title {
-  font-family: 'Anton', sans-serif;
+  font-family:var(--font-display);
   letter-spacing: .6px;
 }
 .login-sub { color: var(--text-dim); }
@@ -235,7 +346,7 @@ body:has(.login-box) {
 .wo-urgency-sub { color: var(--text-dim); line-height: 1.55; }
 .wo-section-title,
 .set-card-title {
-  font-family: 'Oswald', sans-serif;
+  font-family:var(--font-ui);
   font-weight: 600;
   letter-spacing: .4px;
 }
@@ -264,7 +375,7 @@ body:has(.login-box) {
   border-radius: 14px;
   box-shadow: 0 30px 70px -24px rgba(0, 0, 0, .8);
 }
-.report-bug-title { font-family: 'Anton', sans-serif; letter-spacing: .5px; }
+.report-bug-title { font-family:var(--font-display); letter-spacing: .5px; }
 .report-bug-sub { color: var(--text-dim); }
 .report-bug-error:not(:empty) {
   border-left: 3px solid var(--orange);
@@ -316,14 +427,14 @@ body:has(.login-box) {
 /* The amount owed is the single most important number on this screen, so
    it should read first. Everything else on the card is supporting detail. */
 .invoice-total {
-  font-family: 'Anton', sans-serif;
+  font-family:var(--font-display);
   font-size: 21px;
   letter-spacing: .4px;
   color: var(--white);
   line-height: 1.15;
 }
 .invoice-number {
-  font-family: 'Oswald', sans-serif;
+  font-family:var(--font-ui);
   font-weight: 600;
   letter-spacing: .8px;
   color: var(--white);
@@ -401,7 +512,7 @@ body:has(.login-box) {
 /* The home screen is a set of counts. Counts should be the thing you see,
    with the label underneath, rather than both competing at one size. */
 .home-greeting {
-  font-family: 'Anton', sans-serif;
+  font-family:var(--font-display);
   letter-spacing: .5px;
   color: var(--white);
 }
@@ -414,14 +525,14 @@ body:has(.login-box) {
   box-shadow: var(--shadow-hover);
 }
 .home-card-count {
-  font-family: 'Anton', sans-serif;
+  font-family:var(--font-display);
   font-size: 30px;
   line-height: 1.05;
   color: var(--orange-light);
   letter-spacing: .5px;
 }
 .home-card-label {
-  font-family: 'Oswald', sans-serif;
+  font-family:var(--font-ui);
   font-weight: 600;
   font-size: 13px;
   letter-spacing: 1.4px;
@@ -433,7 +544,7 @@ body:has(.login-box) {
 /* Anything needing the client's attention should look like it does. */
 .attention-card { border-left-width: 3px; }
 .attention-title {
-  font-family: 'Oswald', sans-serif;
+  font-family:var(--font-ui);
   font-weight: 600;
   letter-spacing: .4px;
   color: var(--white);
@@ -442,7 +553,7 @@ body:has(.login-box) {
 .attention-row-text { color: var(--text-dim); line-height: 1.5; }
 
 .section-title {
-  font-family: 'Oswald', sans-serif;
+  font-family:var(--font-ui);
   font-weight: 600;
   font-size: 12.5px;
   letter-spacing: 2px;

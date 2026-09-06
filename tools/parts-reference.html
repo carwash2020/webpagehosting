@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="en" style="background:#0a0a0a;">
 <head>
-<script src="/tools/auth.js?v=df17170466"></script>
+<script src="/tools/auth.js?v=7b87c4fdc1"></script>
 <script>
   // Security gate -- redirect to login before this page's own content
   // is meaningfully usable. See auth.js for why this exists (a single
@@ -23,7 +23,7 @@
 <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data:; connect-src 'self' https://*.supabase.co wss://*.supabase.co; frame-src 'none'; object-src 'none'; base-uri 'self'; frame-ancestors 'none';">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Anton&family=Oswald:wght@400;500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Anton&family=Archivo:wght@400..700&family=Newsreader:ital,opsz,wght@0,6..72,300..700;1,6..72,300..600&family=Oswald:wght@200..700&display=swap" rel="stylesheet">
 <script>
   (function () {
     // Tools app light/dark theme (2026-08-20), tucked into Settings.
@@ -35,14 +35,14 @@
     if (saved === 'light') document.documentElement.setAttribute('data-theme', 'light');
   })();
 </script>
-<link rel="stylesheet" href="/styles.css?v=202609022200">
-<link rel="stylesheet" href="/tools/styles-tools.css?v=24b73d7829">
-<script src="/tools/tools-effects.js?v=847d2f1292" defer></script>
-<script src="/tools/tools-dialogs.js?v=cbe89a260d" defer></script>
-<script src="/tools/tools-media-sharing.js?v=eefcc6762c" defer></script>
-<script src="/tools/tools-nav-pwa.js?v=babb01d1aa" defer></script>
-<script src="/tools/tools-tour.js?v=819e6daf97" defer></script>
-<script src="/tools/sync.js?v=a631a4ee04" defer></script>
+<link rel="stylesheet" href="/styles.css?v=202609062002">
+<link rel="stylesheet" href="/tools/styles-tools.css?v=f0faba8d41">
+<script src="/tools/tools-effects.js?v=4cff99aa4a" defer></script>
+<script src="/tools/tools-dialogs.js?v=e1dfaa11a1" defer></script>
+<script src="/tools/tools-media-sharing.js?v=4e2769b10d" defer></script>
+<script src="/tools/tools-nav-pwa.js?v=9b16eefb86" defer></script>
+<script src="/tools/tools-tour.js?v=cf6652f5b1" defer></script>
+<script src="/tools/sync.js?v=51c822a31b" defer></script>
 <style>
   /* iOS Safari zoom-on-focus fix (2026-09-05), same root cause and
      fix already applied to invoice-generator.html: a tapped
@@ -74,7 +74,7 @@
   }
   .pr-unit-card:hover { border-color: var(--orange-light); transform: translateY(-1px); box-shadow: 0 4px 14px rgba(0,0,0,.18); }
   .pr-unit-card:active { transform: translateY(1px); box-shadow: none; }
-  .pr-unit-type { font-family:'Oswald',sans-serif; font-size: 12.5px; letter-spacing: .04em; text-transform: uppercase; color: var(--orange-light); }
+  .pr-unit-type { font-family:var(--font-ui); font-size: 12.5px; letter-spacing: .04em; text-transform: uppercase; color: var(--orange-light); }
   .pr-category-dot { display: inline-block; width: 7px; height: 7px; border-radius: 50%; margin-right: 6px; vertical-align: middle; }
   .pr-unit-name { font-size: 17px; font-weight: 600; color: var(--white); margin-top: 2px; }
   .pr-unit-count { font-size: 13px; color: var(--text-dim); margin-top: 4px; }
@@ -156,7 +156,7 @@
   .pr-issue:hover { border-color: var(--orange-tint-border); }
   .pr-issue-top { display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; margin-bottom: 8px; }
   .pr-issue-symptom { font-size: 15.5px; font-weight: 600; color: var(--white); }
-  .pr-issue-price { font-family:'Oswald',sans-serif; font-size: 19px; color: var(--white); white-space: nowrap; }
+  .pr-issue-price { font-family:var(--font-ui); font-size: 19px; color: var(--white); white-space: nowrap; }
   .pr-issue-price-label { font-size: 11px; color: var(--text-dim); text-transform: uppercase; letter-spacing: .04em; }
   .pr-issue-part { font-size: 14.5px; color: var(--text); margin-bottom: 4px; }
   .pr-issue-partnum { color: var(--text-dim); font-size: 13px; }

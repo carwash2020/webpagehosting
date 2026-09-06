@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="en" style="background:#0a0a0a;">
 <head>
-<script src="/tools/auth.js?v=df17170466"></script>
+<script src="/tools/auth.js?v=7b87c4fdc1"></script>
 <script>
   // Security gate -- redirect to login before this page's own content
   // is meaningfully usable. See auth.js for why this exists (a single
@@ -23,7 +23,7 @@
 <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data: https://*.supabase.co; connect-src 'self' https://*.supabase.co wss://*.supabase.co https://cdn.jsdelivr.net; frame-src 'none'; object-src 'none'; base-uri 'self'; frame-ancestors 'none';">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Anton&family=Archivo:wght@400..700&family=Newsreader:ital,opsz,wght@0,6..72,300..700;1,6..72,300..600&family=Oswald:wght@200..700&display=swap" rel="stylesheet">
 <script>
   (function () {
     // Tools app light/dark theme (2026-08-20), tucked into Settings.
@@ -35,16 +35,16 @@
     if (saved === 'light') document.documentElement.setAttribute('data-theme', 'light');
   })();
 </script>
-<link rel="stylesheet" href="/styles.css?v=202609022200">
-<link rel="stylesheet" href="/tools/styles-tools.css?v=24b73d7829">
+<link rel="stylesheet" href="/styles.css?v=202609062002">
+<link rel="stylesheet" href="/tools/styles-tools.css?v=f0faba8d41">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.112.3/dist/umd/supabase.js" integrity="sha384-qafw21c/iciq0VXsi9FzkfoQv5I/V0iqE4lSNcKXPnW9/UTJLnv5CcN4FHxVLnKg" crossorigin="anonymous" defer></script>
-<script src="/tools/sync.js?v=a631a4ee04" defer></script>
-<script src="/tools/data-layer.js?v=c0a08eb9ef" defer></script>
-<script src="/tools/tools-effects.js?v=847d2f1292" defer></script>
-<script src="/tools/tools-dialogs.js?v=cbe89a260d" defer></script>
-<script src="/tools/tools-media-sharing.js?v=eefcc6762c" defer></script>
-<script src="/tools/tools-nav-pwa.js?v=babb01d1aa" defer></script>
-<script src="/tools/tools-tour.js?v=819e6daf97" defer></script>
+<script src="/tools/sync.js?v=51c822a31b" defer></script>
+<script src="/tools/data-layer.js?v=3a0d57478c" defer></script>
+<script src="/tools/tools-effects.js?v=4cff99aa4a" defer></script>
+<script src="/tools/tools-dialogs.js?v=e1dfaa11a1" defer></script>
+<script src="/tools/tools-media-sharing.js?v=4e2769b10d" defer></script>
+<script src="/tools/tools-nav-pwa.js?v=9b16eefb86" defer></script>
+<script src="/tools/tools-tour.js?v=cf6652f5b1" defer></script>
 <style>
   /* iOS Safari zoom-on-focus fix (2026-09-05), same root cause and
      fix already applied to invoice-generator.html: a tapped
@@ -63,7 +63,7 @@
      all) -- this only widens the container on a real desktop-size
      screen. */
   @media (min-width: 1024px) { body { max-width: 1500px; margin-left: calc(240px + max(0px, (100vw - 240px - 1500px) / 2)); padding-top: 75px; } }
-  .tool-title { font-family:'Oswald',sans-serif; font-weight:700; font-size:28px; color:var(--white); margin-bottom:6px; }
+  .tool-title { font-family:var(--font-ui); font-weight:700; font-size:28px; color:var(--white); margin-bottom:6px; }
   .tool-sub { color: var(--text-dim); margin-bottom: 24px; }
   .storage-note {
     background: var(--bg-panel-2); border: 1px solid var(--border); border-radius: 8px;
@@ -122,12 +122,13 @@
   .jobs-table thead th {
     position: sticky; top: 0; z-index: 2;
     background: var(--bg-panel-2); color: var(--text-dim);
-    text-align: left; font-family: 'Oswald', sans-serif; font-weight: 600;
+    text-align: left; font-family:var(--font-ui); font-weight: 600;
     font-size: 11.5px; text-transform: uppercase; letter-spacing: .5px;
     padding: 12px 14px; border-bottom: 1px solid var(--border); white-space: nowrap;
   }
   .jobs-table thead th.is-sortable { cursor: pointer; user-select: none; }
   .jobs-table thead th.is-sortable:hover { color: var(--text); }
+  .jobs-table .col-amount { text-align: right; font-variant-numeric: tabular-nums; }
   .jobs-table thead th.is-sortable::after { content: ''; display: inline-block; width: 12px; }
   .jobs-table thead th.is-sorted::after { content: '\2191'; }
   .jobs-table thead th.is-sorted.is-sorted-desc::after { content: '\2193'; }
@@ -152,7 +153,7 @@
   .job-card-select { display: flex; align-items: center; margin-bottom: 10px; cursor: pointer; }
   .job-card-select input { width: 20px; height: 20px; accent-color: var(--orange); cursor: pointer; }
   .job-card-top { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; margin-bottom: 8px; }
-  .job-card-title { font-family:'Oswald',sans-serif; font-size: 16px; color: var(--white); margin: 0; }
+  .job-card-title { font-family:var(--font-ui); font-size: 16px; color: var(--white); margin: 0; }
   .job-card-title.is-done-text { text-decoration: line-through; }
   .job-badges { display: flex; gap: 6px; flex-shrink: 0; flex-wrap: wrap; justify-content: flex-end; }
   .badge { font-size: 10.5px; padding: 3px 8px; border-radius: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; white-space: nowrap; }
@@ -188,7 +189,7 @@
   }
   .contact-card:hover { box-shadow: 0 0 14px rgba(255,255,255,0.05); transform: translateY(-1px); }
   @media (prefers-reduced-motion: reduce){ .contact-card{ transition:none; } }
-  .contact-card-text h4 { font-family:'Oswald',sans-serif; font-size: 15px; color: var(--white); margin: 0 0 4px; }
+  .contact-card-text h4 { font-family:var(--font-ui); font-size: 15px; color: var(--white); margin: 0 0 4px; }
   .contact-card-text p { color: var(--text-dim); font-size: 13px; margin: 2px 0; }
 
   .empty-state { text-align: center; color: var(--text-dim); padding: 40px 20px; font-size: 14px; }
@@ -215,7 +216,7 @@
     padding: 14px 0; border-bottom: 1px solid var(--border);
   }
   .template-item:last-child { border-bottom: none; }
-  .template-item-title { color: var(--white); font-family:'Oswald',sans-serif; font-size: 15px; }
+  .template-item-title { color: var(--white); font-family:var(--font-ui); font-size: 15px; }
   .template-item-meta { color: var(--text-dim); font-size: 12.5px; margin-top: 2px; }
   .template-due-badge {
     font-size: 10.5px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;
@@ -280,7 +281,7 @@
 </div>
 <div class="tool-title" id="mainContent">Job Tracker</div>
 <p class="tool-sub">Jobs, contacts, and notes here &mdash; pricing, income, and expenses live on <a href="/tools/finance.html" style="color:var(--orange-light);">Finance &rarr;</a>.<span id="syncStatusText"></span> Force a full refresh from the <a href="/tools/workspace.html" style="color:var(--blue-light);">Workspace</a> page.
-  <span class="realtime-badge" id="realtimeBadge"><span class="realtime-dot" id="realtimeDot"></span><span id="realtimeText">Live sync: connecting...</span></span>
+  <span class="realtime-badge" id="realtimeBadge" onclick="retryLiveSync()" title="Live sync"><span class="realtime-dot" id="realtimeDot"></span><span id="realtimeText">Live sync: connecting...</span></span>
 </p>
 
 <div class="tabs tabs-sticky">
@@ -403,7 +404,7 @@
           <th class="is-sortable" data-sort-key="date">Date</th>
           <th>Phone</th>
           <th>Address</th>
-          <th>Margin</th>
+          <th class="col-amount">Margin</th>
           <th></th>
         </tr>
       </thead>
@@ -597,6 +598,7 @@
   function updateRealtimeBadge(status) {
     const dot = document.getElementById('realtimeDot');
     const text = document.getElementById('realtimeText');
+    const badge = document.getElementById('realtimeBadge');
     if (!dot || !text) return;
     dot.className = 'realtime-dot';
     if (status === 'SUBSCRIBED') {
@@ -612,6 +614,7 @@
       dot.classList.add('is-connecting');
       text.textContent = 'Live sync: connecting...';
     }
+    if (badge) badge.classList.toggle('is-retryable', dot.classList.contains('is-error'));
   }
 
   async function onRealtimeChange() {
@@ -1470,7 +1473,7 @@
       } else {
         emptyHtml = '<div class="empty-state empty-state-first-run">' +
           '<svg class="th-icon" aria-hidden="true" style="width:64px; height:64px; opacity:1; margin-bottom:14px;"><use href="#icon-first-job" xlink:href="#icon-first-job"></use></svg>' +
-          '<div style="font-size:16px; color:var(--white); font-family:\'Oswald\',sans-serif; margin-bottom:6px;">No jobs yet</div>' +
+          '<div style="font-size:16px; color:var(--white); font-family:var(--font-ui); margin-bottom:6px;">No jobs yet</div>' +
           '<div style="margin-bottom:16px;">Add your first one above to start tracking work, costs, and photos.</div>' +
           '<button class="primary-btn" onclick="document.getElementById(\'jobTitle\')?.scrollIntoView({behavior:\'smooth\', block:\'center\'}); document.getElementById(\'jobTitle\')?.focus();">+ Add Your First Job</button>' +
           '</div>';
@@ -1541,7 +1544,7 @@
           <td>${dateDisplay}</td>
           <td>${job.phone ? escapeHtml(job.phone) : '&mdash;'}</td>
           <td>${job.address ? escapeHtml(job.address) : '&mdash;'}</td>
-          <td>${marginCellHtml}</td>
+          <td class="col-amount">${marginCellHtml}</td>
           <td class="jt-actions-cell">
             <button class="small-btn" onclick="editJob(${job.id})">Edit</button>
             <button class="small-btn danger" onclick="deleteJob(${job.id})">Delete</button>

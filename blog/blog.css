@@ -1,3 +1,7 @@
+/* Accent text goes through the theme-aware tokens defined in
+   /styles.css -- see the comment there. This file had the same
+   problem: the blog kicker and the 'Triple H Enterprises Blog' link
+   were brand orange on a near-white ground at 2.31:1. */
 /* blog.css -- shared stylesheet for the Triple H Enterprises blog
    (blog/index.html + individual post pages).
 
@@ -26,17 +30,17 @@
 }
 
 .blog-kicker {
-  font-family: 'Oswald', sans-serif;
+  font-family:var(--font-ui);
   font-weight: 600;
   letter-spacing: 3px;
   text-transform: uppercase;
   font-size: 13px;
-  color: var(--orange);
+  color: var(--orange-text-vivid);
   margin-bottom: 10px;
 }
 
 .blog-kicker a {
-  color: var(--orange);
+  color: var(--orange-text-vivid);
   text-decoration: none;
 }
 .blog-kicker a:hover {
@@ -44,7 +48,7 @@
 }
 
 .blog-title {
-  font-family: 'Anton', sans-serif;
+  font-family:var(--font-display);
   font-weight: 400;
   font-size: 36px;
   line-height: 1.15;
@@ -93,8 +97,25 @@
   max-width: 62ch;
 }
 
+/* Lead paragraph (2026-09-06). The opening paragraph is set one step up the
+   scale, which is the whole reason the body face is Newsreader: it carries a
+   real optical-size axis, so at 20px the letterforms are actually redrawn --
+   slightly narrower, with finer joins and tighter spacing -- rather than being
+   the 17px drawing scaled up. Setting font-optical-sizing explicitly rather
+   than relying on the default, since the point here is the axis doing work.
+   Purely typographic, so it needs no markup change and degrades to a slightly
+   larger first paragraph on anything that lacks the axis. */
+.blog-article > p:first-of-type {
+  font-size: 20px;
+  line-height: 1.6;
+  font-optical-sizing: auto;
+  color: var(--white);
+  max-width: 56ch;
+  margin-bottom: 30px;
+}
+
 .blog-article h2 {
-  font-family: 'Oswald', sans-serif;
+  font-family:var(--font-ui);
   font-weight: 600;
   font-size: 24px;
   color: var(--white);
@@ -129,6 +150,7 @@
   border-radius: 0 8px 8px 0;
 }
 .fix-callout .fix-label {
+  font-family:var(--font-ui);
   font-weight: 600;
   color: var(--white);
   font-size: 15px;
@@ -141,7 +163,7 @@
 }
 .fix-callout .part-number {
   font-family: 'SFMono-Regular', Consolas, monospace;
-  color: var(--orange-light);
+  color: var(--orange-text);
   font-size: 15px;
 }
 
@@ -169,7 +191,7 @@
   border-top: 1px solid var(--border);
 }
 .blog-related-title {
-  font-family: 'Oswald', sans-serif;
+  font-family:var(--font-ui);
   font-weight: 600;
   font-size: 20px;
   color: var(--white);
@@ -184,7 +206,7 @@
   border-bottom: 1px solid var(--border);
 }
 .blog-related-list a:last-child { border-bottom: none; }
-.blog-related-list a:hover { color: var(--orange-light); }
+.blog-related-list a:hover { color: var(--orange-text); }
 
 /* Index page */
 .blog-index-list {
@@ -202,7 +224,7 @@
   text-decoration: none;
 }
 .blog-index-item-title {
-  font-family: 'Oswald', sans-serif;
+  font-family:var(--font-ui);
   font-weight: 600;
   font-size: 24px;
   color: var(--white);
@@ -210,7 +232,7 @@
   line-height: 1.25;
 }
 .blog-index-item a:hover .blog-index-item-title {
-  color: var(--orange-light);
+  color: var(--orange-text);
 }
 .blog-index-item-dek {
   color: var(--text-dim);

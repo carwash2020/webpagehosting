@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="en" style="background:#0a0a0a;">
 <head>
-<script src="/tools/auth.js?v=df17170466"></script>
+<script src="/tools/auth.js?v=7b87c4fdc1"></script>
 <script>
   // Security gate -- redirect to login before this page's own content
   // is meaningfully usable. See auth.js for why this exists (a single
@@ -23,7 +23,7 @@
 <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data:; connect-src 'self' https://*.supabase.co wss://*.supabase.co; frame-src 'none'; object-src 'none'; base-uri 'self'; frame-ancestors 'none';">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Anton&family=Archivo:wght@400..700&family=Newsreader:ital,opsz,wght@0,6..72,300..700;1,6..72,300..600&family=Oswald:wght@200..700&display=swap" rel="stylesheet">
 <script>
   (function () {
     // Tools app light/dark theme (2026-08-20), tucked into Settings.
@@ -35,13 +35,13 @@
     if (saved === 'light') document.documentElement.setAttribute('data-theme', 'light');
   })();
 </script>
-<link rel="stylesheet" href="/styles.css?v=202609022200">
-<link rel="stylesheet" href="/tools/styles-tools.css?v=24b73d7829">
-<script src="/tools/tools-effects.js?v=847d2f1292" defer></script>
-<script src="/tools/tools-dialogs.js?v=cbe89a260d" defer></script>
-<script src="/tools/tools-media-sharing.js?v=eefcc6762c" defer></script>
-<script src="/tools/tools-nav-pwa.js?v=babb01d1aa" defer></script>
-<script src="/tools/tools-tour.js?v=819e6daf97" defer></script>
+<link rel="stylesheet" href="/styles.css?v=202609062002">
+<link rel="stylesheet" href="/tools/styles-tools.css?v=f0faba8d41">
+<script src="/tools/tools-effects.js?v=4cff99aa4a" defer></script>
+<script src="/tools/tools-dialogs.js?v=e1dfaa11a1" defer></script>
+<script src="/tools/tools-media-sharing.js?v=4e2769b10d" defer></script>
+<script src="/tools/tools-nav-pwa.js?v=9b16eefb86" defer></script>
+<script src="/tools/tools-tour.js?v=cf6652f5b1" defer></script>
 <script src="/tools/qrcode-lib.js?v=202608160400" defer></script>
 <style>
   /* iOS Safari zoom-on-focus fix (2026-09-05), same root cause and
@@ -61,14 +61,14 @@
      all) -- this only widens the container on a real desktop-size
      screen. */
   @media (min-width: 1024px) { body { max-width: 950px; margin-left: calc(240px + max(0px, (100vw - 240px - 950px) / 2)); padding-top: 75px; } }
-  .tool-title { font-family:'Oswald',sans-serif; font-weight:700; font-size:28px; color:var(--white); margin-bottom:6px; }
+  .tool-title { font-family:var(--font-ui); font-weight:700; font-size:28px; color:var(--white); margin-bottom:6px; }
   .tool-sub { color: var(--text-dim); margin-bottom: 30px; }
   .home-link { display:inline-block; margin-bottom: 20px; color: var(--blue-light); font-size: 14px; }
   .form-section {
     background: var(--bg-panel); border: 1px solid var(--border); border-radius: var(--radius);
     padding: 24px; margin-bottom: 20px;
   }
-  .form-section h3 { font-family:'Oswald',sans-serif; color: var(--orange-light); font-size: 14px; margin: 0 0 14px; text-transform: uppercase; letter-spacing: 1px; }
+  .form-section h3 { font-family:var(--font-ui); color: var(--orange-light); font-size: 14px; margin: 0 0 14px; text-transform: uppercase; letter-spacing: 1px; }
   .form-field { margin-bottom: 14px; }
   .form-field label { display: block; font-size: 13px; color: var(--text-dim); margin-bottom: 5px; }
   .form-field input {
@@ -85,7 +85,7 @@
   .btn-row { display: flex; gap: 12px; flex-wrap: wrap; }
   .action-btn {
     flex: 1; min-width: 160px; text-align: center; padding: 13px 18px; border-radius: 8px;
-    font-family:'Oswald',sans-serif; font-weight: 600; font-size: 14.5px; cursor: pointer; border: none;
+    font-family:var(--font-ui); font-weight: 600; font-size: 14.5px; cursor: pointer; border: none;
     text-decoration: none; display: inline-flex; align-items: center; justify-content: center; gap: 8px;
   }
   .btn-copy { background: var(--bg-panel-2); border: 1px solid var(--border); color: var(--white); }
@@ -199,27 +199,27 @@
 
 <div class="tab-panel" id="panel-google" style="text-align:center;">
   <img src="/images/logo-signature-orange.webp?v=202608142300" alt="Triple H Enterprises" style="width:96px; height:auto; margin:0 auto 14px; display:block;">
-  <div style="font-family:'Oswald',sans-serif; font-weight:700; font-size:22px; color:var(--white); margin-bottom:4px;">Triple H Enterprises</div>
+  <div style="font-family:var(--font-ui); font-weight:700; font-size:22px; color:var(--white); margin-bottom:4px;">Triple H Enterprises</div>
   <div style="color:var(--text-dim); font-size:14px; margin-bottom:30px;">Handyman &amp; Appliance Repair</div>
 
   <div style="background:#ffffff; border-radius:var(--radius); padding:28px; box-shadow:0 8px 30px rgba(0,0,0,0.35); margin-bottom:24px;" id="googleQrCard">
     <div style="color:var(--text-dim); padding:60px 0;">Loading QR code&hellip;</div>
   </div>
 
-  <div style="font-family:'Oswald',sans-serif; font-weight:600; font-size:18px; color:var(--white); margin-bottom:8px;">Scan to leave us a Google review</div>
+  <div style="font-family:var(--font-ui); font-weight:600; font-size:18px; color:var(--white); margin-bottom:8px;">Scan to leave us a Google review</div>
   <div style="color:var(--text-dim); font-size:14px;">Takes about a minute &mdash; it means a lot to a small business like ours.</div>
 </div>
 
 <div class="tab-panel" id="panel-yelp" style="text-align:center;">
   <img src="/images/logo-signature-orange.webp?v=202608142300" alt="Triple H Enterprises" style="width:96px; height:auto; margin:0 auto 14px; display:block;">
-  <div style="font-family:'Oswald',sans-serif; font-weight:700; font-size:22px; color:var(--white); margin-bottom:4px;">Triple H Enterprises</div>
+  <div style="font-family:var(--font-ui); font-weight:700; font-size:22px; color:var(--white); margin-bottom:4px;">Triple H Enterprises</div>
   <div style="color:var(--text-dim); font-size:14px; margin-bottom:30px;">Handyman &amp; Appliance Repair</div>
 
   <div style="background:#ffffff; border-radius:var(--radius); padding:28px; box-shadow:0 8px 30px rgba(0,0,0,0.35); margin-bottom:24px;" id="yelpQrCard">
     <div style="color:var(--text-dim); padding:60px 0;">Loading QR code&hellip;</div>
   </div>
 
-  <div style="font-family:'Oswald',sans-serif; font-weight:600; font-size:18px; color:var(--white); margin-bottom:8px;">Scan to leave us a Yelp review</div>
+  <div style="font-family:var(--font-ui); font-weight:600; font-size:18px; color:var(--white); margin-bottom:8px;">Scan to leave us a Yelp review</div>
   <div style="color:var(--text-dim); font-size:14px;">Takes about a minute &mdash; it means a lot to a small business like ours.</div>
 </div>
 

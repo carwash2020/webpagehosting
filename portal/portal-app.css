@@ -441,7 +441,7 @@ body.portal-page {
 }
 
 .biometric-lock-title {
-  font-family: 'Oswald', sans-serif;
+  font-family:var(--font-ui);
   font-weight: 700;
   font-size: 20px;
   color: var(--white);

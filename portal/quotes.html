@@ -52,8 +52,8 @@
 <link rel="apple-touch-icon" href="/images/apple-touch-icon.png?v=202608010300">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="/styles.css?v=202609070100">
+<link href="https://fonts.googleapis.com/css2?family=Anton&family=Archivo:wght@400..700&family=Newsreader:ital,opsz,wght@0,6..72,300..700;1,6..72,300..600&family=Oswald:wght@200..700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/styles.css?v=202609062002">
 <link rel="stylesheet" href="/portal/portal-app.css?v=202609042100">
 <style>
   /* iOS Safari zoom-on-focus fix (2026-09-05), same root cause and
@@ -129,7 +129,7 @@
   .portal-header-left { display: flex; align-items: center; gap: 12px; min-width: 0; flex: 1; }
   .portal-header-left > div { min-width: 0; }
   .portal-header img { width: 40px; height: auto; }
-  .portal-title { font-family: 'Oswald', sans-serif; font-weight: 700; font-size: 19px; color: var(--white); }
+  .portal-title { font-family:var(--font-ui); font-weight: 700; font-size: 19px; color: var(--white); }
   .portal-sub {
     color: var(--text-dim); font-size: 13px;
     overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
@@ -160,13 +160,13 @@
   .quote-card-top { display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; margin-bottom: 8px; }
   .quote-number { font-weight: 600; color: var(--white); font-size: 15px; }
   .quote-desc { color: var(--text-dim); font-size: 13px; margin-top: 2px; }
-  .quote-total { font-family: 'Oswald', sans-serif; font-weight: 600; font-size: 20px; color: var(--white); }
+  .quote-total { font-family:var(--font-ui); font-weight: 600; font-size: 20px; color: var(--white); }
   .quote-status { font-size: 12px; padding: 3px 10px; border-radius: 20px; font-weight: 600; display: inline-block; }
   .quote-status.is-pending { background: rgba(255,167,38,0.15); color: #ffa726; }
   .quote-status.is-approved { background: rgba(76,175,120,0.15); color: #4caf78; }
   .quote-status.is-declined { background: rgba(224,82,82,0.15); color: #e05252; }
   .empty-state { text-align: center; color: var(--text-dim); padding: 60px 20px; }
-  .quote-section-title { font-family: 'Oswald', sans-serif; font-weight: 600; font-size: 14px; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.5px; margin: 20px 0 10px; }
+  .quote-section-title { font-family:var(--font-ui); font-weight: 600; font-size: 14px; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.5px; margin: 20px 0 10px; }
   .quote-section-title:first-child { margin-top: 0; }
   .quote-actions { display: flex; gap: 8px; margin-top: 10px; }
   .quote-actions button { flex: 1; justify-content: center; }
@@ -191,7 +191,7 @@
     transition: border-color .15s ease, background .15s ease;
   }
   .date-btn .dow { font-size: 10.5px; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.5px; }
-  .date-btn .dom { font-size: 16px; font-weight: 700; margin-top: 2px; font-family: 'Oswald', sans-serif; }
+  .date-btn .dom { font-size: 16px; font-weight: 700; margin-top: 2px; font-family:var(--font-ui); }
   .date-btn.is-selected { border-color: var(--orange); background: var(--orange-tint-soft); color: var(--orange-light); }
   .slots-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(90px, 1fr)); gap: 8px; margin-bottom: 8px; }
   .slot-btn {
@@ -207,7 +207,7 @@
   .report-bug-link:hover { color: var(--orange-light); }
   .report-bug-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.6); display: flex; align-items: center; justify-content: center; padding: 20px; z-index: 1000; }
   .report-bug-modal { background: var(--bg-panel); border: 1px solid var(--border); border-radius: 12px; padding: 24px; max-width: 400px; width: 100%; }
-  .report-bug-title { font-family: 'Oswald', sans-serif; font-weight: 600; font-size: 18px; color: var(--white); margin-bottom: 6px; }
+  .report-bug-title { font-family:var(--font-ui); font-weight: 600; font-size: 18px; color: var(--white); margin-bottom: 6px; }
   .report-bug-sub { font-size: 13px; color: var(--text-dim); margin-bottom: 14px; }
   .report-bug-modal textarea { width: 100%; padding: 11px 13px; background: var(--bg-panel-2); border: 1px solid var(--border); border-radius: 8px; color: var(--white); font-size: 16px; font-family: inherit; box-sizing: border-box; resize: vertical; }
   .report-bug-error { color: #e05252; font-size: 13px; margin: 8px 0 0; min-height: 1px; }
@@ -215,7 +215,7 @@
   .report-bug-actions { display: flex; gap: 10px; margin-top: 16px; }
   .report-bug-actions button { flex: 1; justify-content: center; }
 </style>
-<link rel="stylesheet" href="/portal/portal-polish.css?v=1246c687b0">
+<link rel="stylesheet" href="/portal/portal-polish.css?v=e2b8e91ce5">
 </head>
 <body class="portal-page">
 

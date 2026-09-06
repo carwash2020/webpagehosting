@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="en" style="background:#0a0a0a;">
 <head>
-<script src="/tools/auth.js?v=df17170466"></script>
+<script src="/tools/auth.js?v=7b87c4fdc1"></script>
 <script>
   // Security gate -- redirect to login before this page's own content
   // is meaningfully usable. See auth.js for why this exists (a single
@@ -23,7 +23,7 @@
 <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data:; connect-src 'self' https://*.supabase.co wss://*.supabase.co; frame-src 'none'; object-src 'none'; base-uri 'self'; frame-ancestors 'none';">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Anton&family=Oswald:wght@400;500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Anton&family=Archivo:wght@400..700&family=Newsreader:ital,opsz,wght@0,6..72,300..700;1,6..72,300..600&family=Oswald:wght@200..700&display=swap" rel="stylesheet">
 <script>
   (function () {
     // Tools app light/dark theme (2026-08-20), tucked into Settings.
@@ -35,14 +35,14 @@
     if (saved === 'light') document.documentElement.setAttribute('data-theme', 'light');
   })();
 </script>
-<link rel="stylesheet" href="/styles.css?v=202609022200">
-<link rel="stylesheet" href="/tools/styles-tools.css?v=24b73d7829">
-<script src="/tools/sync.js?v=a631a4ee04" defer></script>
-<script src="/tools/data-layer.js?v=c0a08eb9ef" defer></script>
-<script src="/tools/tools-effects.js?v=847d2f1292" defer></script>
-<script src="/tools/tools-dialogs.js?v=cbe89a260d" defer></script>
-<script src="/tools/tools-media-sharing.js?v=eefcc6762c" defer></script>
-<script src="/tools/tools-nav-pwa.js?v=babb01d1aa" defer></script>
+<link rel="stylesheet" href="/styles.css?v=202609062002">
+<link rel="stylesheet" href="/tools/styles-tools.css?v=f0faba8d41">
+<script src="/tools/sync.js?v=51c822a31b" defer></script>
+<script src="/tools/data-layer.js?v=3a0d57478c" defer></script>
+<script src="/tools/tools-effects.js?v=4cff99aa4a" defer></script>
+<script src="/tools/tools-dialogs.js?v=e1dfaa11a1" defer></script>
+<script src="/tools/tools-media-sharing.js?v=4e2769b10d" defer></script>
+<script src="/tools/tools-nav-pwa.js?v=9b16eefb86" defer></script>
 <style>
   body { padding: 44px 20px 60px; max-width: 720px; margin: 0 auto; }
   .realtime-badge { display: inline-flex; align-items: center; gap: 5px; font-size: 11.5px; color: var(--text-dim); }
@@ -62,12 +62,12 @@
     border: 1px solid var(--border); border-radius: var(--radius);
     padding: 22px 20px; margin-bottom: 18px;
   }
-  .client-hero-name { font-family: 'Anton', sans-serif; font-size: 26px; color: var(--white); letter-spacing: .3px; }
+  .client-hero-name { font-family:var(--font-display); font-size: 26px; color: var(--white); letter-spacing: .3px; }
   .client-hero-meta { color: var(--text-dim); font-size: 13.5px; margin-top: 6px; line-height: 1.6; }
   .client-hero-meta a { color: var(--orange-light); text-decoration: none; }
   .client-stat-row { display: flex; gap: 10px; margin-top: 16px; flex-wrap: wrap; }
   .client-stat { flex: 1; min-width: 100px; background: var(--bg-panel-2); border: 1px solid var(--border); border-radius: 10px; padding: 10px 12px; }
-  .client-stat-value { font-family: 'Oswald', sans-serif; font-weight: 700; font-size: 20px; color: var(--white); }
+  .client-stat-value { font-family:var(--font-ui); font-weight: 700; font-size: 20px; color: var(--white); }
   .client-stat-label { color: var(--text-dim); font-size: 11px; text-transform: uppercase; letter-spacing: .5px; margin-top: 2px; }
 
   .client-record-row {
@@ -92,7 +92,7 @@
       <a href="/tools/workspace.html" class="help-btn" aria-label="Back to Dashboard" title="Back to Dashboard" style="text-decoration:none; display:inline-flex; align-items:center; justify-content:center;">&#8617;</a>
     </div>
   </div>
-  <p class="hub-sub"><span class="realtime-badge" id="realtimeBadge" style="margin-left:0;"><span class="realtime-dot" id="realtimeDot"></span><span id="realtimeText">Live sync: connecting...</span></span></p>
+  <p class="hub-sub"><span class="realtime-badge" id="realtimeBadge" onclick="retryLiveSync()" title="Live sync" style="margin-left:0;"><span class="realtime-dot" id="realtimeDot"></span><span id="realtimeText">Live sync: connecting...</span></span></p>
 
   <div id="clientContent"></div>
 </div>
@@ -135,6 +135,7 @@
   function updateRealtimeBadge(status) {
     const dot = document.getElementById('realtimeDot');
     const text = document.getElementById('realtimeText');
+    const badge = document.getElementById('realtimeBadge');
     if (!dot || !text) return;
     dot.className = 'realtime-dot';
     if (status === 'SUBSCRIBED') {
@@ -150,6 +151,7 @@
       dot.classList.add('is-connecting');
       text.textContent = 'Live sync: connecting...';
     }
+    if (badge) badge.classList.toggle('is-retryable', dot.classList.contains('is-error'));
   }
 
   // Same principle as job-detail.html's equivalent: re-checks this
