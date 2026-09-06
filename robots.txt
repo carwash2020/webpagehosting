@@ -1,4 +1,6 @@
 User-agent: *
 Allow: /
+# Agent tooling, not site content -- never worth indexing.
+Disallow: /.claude/
 
 Sitemap: https://www.triplehenterprisesllc.biz/sitemap.xml

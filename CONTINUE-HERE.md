@@ -109,6 +109,22 @@ layers.
 
 ---
 
+## The scroll-craft skill travels with this repo
+
+The site's visual language came from a skill called **scroll-craft**. It is
+committed at `.claude/skills/scroll-craft/`, so any session working on this
+repo has it — including a session started from a phone at claude.ai/code,
+which has no access to a personal skills directory on one particular
+machine. MIT licensed, by Nate Herk.
+
+Two notes:
+- `scripts/check-links.py` skips `.claude/` deliberately. The skill ships a
+  template that references placeholder assets on purpose, and scanning it
+  reported nine "broken links" that were not real.
+- Most follow-up work needs this document more than it needs the skill. The
+  design language is already chosen and built; the skill's full process
+  (brief, grammar, fingerprint gate) is for starting a new one.
+
 ## Not verified — worth doing on a real device
 
 Nothing below is known broken. It is genuinely untested, because the
