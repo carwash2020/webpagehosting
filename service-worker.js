@@ -274,7 +274,11 @@
 // Bumped 2026-09-06 (v60 -> v61): /tools/styles-tools.css changed again
 // (widened the surface-elevation token range for .th-tool-page, bumped
 // tool-tile icon contrast). Precached under its bare path.
-const CACHE_NAME = 'th-workspace-v61';
+// Bumped 2026-09-06 (v61 -> v62): /tools/styles-tools.css changed again
+// (button/icon redesign -- glass-highlight gradients on primary/
+// secondary/small buttons, vivid enamel-pin tool-grid icons, refined
+// flag button and sidebar/bottom-nav hex icons). Precached bare path.
+const CACHE_NAME = 'th-workspace-v62';
 const PRECACHE_URLS = [
   '/tools/workspace.html', '/tools/job-tracker.html', '/tools/invoice-generator.html', '/tools/contract-generator.html',
   '/tools/calendar.html', '/tools/route-planner.html', '/tools/review-request.html', '/tools/contact-card.html',

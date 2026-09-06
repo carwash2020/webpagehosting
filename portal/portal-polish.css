@@ -198,6 +198,58 @@ body.portal-page {
   background: var(--orange-tint-soft);
 }
 
+/* ---------- 6b. Redesigned buttons (2026-09-06) ----------
+   Matches the glass-highlight language just added to the tool suite's
+   .primary-btn/.secondary-btn (styles-tools.css). The portal's own real
+   CTAs -- Pay now, Request Work, Call, Text Us, Sign In -- are .btn.orange
+   / .btn.blue (defined in styles.css for the public marketing site, a
+   different class from the tool suite's .primary-btn), so they'd
+   otherwise be left out of a "cleaner, amazing buttons" pass entirely.
+   Scoped to .portal-page (and :has(.login-box), for login.html/
+   set-password.html, which carry no body class) so the public site's
+   own buttons are untouched -- same scoping already used for section 1b
+   above, for the same reason. */
+body.portal-page .btn.orange,
+body:has(.login-box) .btn.orange {
+  background-image: linear-gradient(165deg, rgba(255,255,255,.34), rgba(255,255,255,0) 44%),
+    linear-gradient(135deg, #ffb347, #ff8000 60%, #c96400);
+  box-shadow: 0 1px 0 rgba(255,255,255,.3) inset, 0 -1px 0 rgba(0,0,0,.16) inset, 0 8px 20px -6px rgba(255,128,0,.5);
+}
+body.portal-page .btn.blue,
+body:has(.login-box) .btn.blue {
+  background-image: linear-gradient(165deg, rgba(255,255,255,.34), rgba(255,255,255,0) 44%),
+    linear-gradient(135deg, #7ec4ff, #3aa0ff 60%, #1f5f9e);
+  box-shadow: 0 1px 0 rgba(255,255,255,.3) inset, 0 -1px 0 rgba(0,0,0,.16) inset, 0 8px 20px -6px rgba(58,160,255,.5);
+}
+body.portal-page .secondary-btn,
+body.portal-page .small-btn,
+body:has(.login-box) .secondary-btn,
+body:has(.login-box) .small-btn {
+  background-image: linear-gradient(180deg, rgba(255,255,255,.05), rgba(255,255,255,0) 55%),
+    linear-gradient(180deg, var(--bg-panel-2), var(--bg-panel) 130%);
+  box-shadow: 0 1px 0 rgba(255,255,255,.05) inset, 0 1px 2px -1px rgba(0,0,0,.3);
+}
+body.portal-page .portal-icon-btn {
+  background-image: linear-gradient(180deg, rgba(255,255,255,.06), rgba(255,255,255,0) 55%),
+    linear-gradient(180deg, var(--bg-panel-2), var(--bg-panel) 130%);
+}
+/* home.html's "Need Something?" card (Request Work / Call / Text Us) is a
+   fourth, page-local button pattern -- plain <a> tags styled only by
+   .help-actions a, inline in home.html, not any of the shared classes
+   above. Same treatment, so it doesn't look like the one card that
+   missed this pass. */
+body.portal-page .help-actions a {
+  background-image: linear-gradient(180deg, rgba(255,255,255,.05), rgba(255,255,255,0) 55%),
+    linear-gradient(180deg, var(--bg-panel-2), var(--bg-panel) 130%);
+  box-shadow: 0 1px 0 rgba(255,255,255,.05) inset, 0 1px 2px -1px rgba(0,0,0,.3);
+  transition: border-color .15s ease, color .15s ease, transform .15s ease, box-shadow .15s ease;
+}
+body.portal-page .help-actions a:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 1px 0 rgba(255,255,255,.06) inset, 0 5px 14px -6px rgba(0,0,0,.4);
+}
+@media (prefers-reduced-motion: reduce) { body.portal-page .help-actions a { transition: none; } body.portal-page .help-actions a:hover { transform: none; } }
+
 /* Note: these message boxes are styled only via :not(:empty). They exist
    in the markup at all times and are filled in by script, so giving them
    a background unconditionally renders an empty coloured strip on a clean

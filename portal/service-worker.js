@@ -76,7 +76,10 @@
 // Bumped 2026-09-06 (v12 -> v13): portal-polish.css changed again
 // (widened the surface-elevation token range for .portal-page, matching
 // the tool suite's equivalent fix). Precached under its bare path.
-const CACHE_NAME = 'th-portal-v13';
+// Bumped 2026-09-06 (v13 -> v14): portal-polish.css changed again
+// (matching button/icon redesign for .btn.orange/.btn.blue/.secondary-btn/
+// .small-btn/.portal-icon-btn/.help-actions a). Precached under its bare path.
+const CACHE_NAME = 'th-portal-v14';
 const PRECACHE_URLS = [
   '/portal/home.html', '/portal/dashboard.html', '/portal/jobs.html', '/portal/quotes.html',
   '/portal/work-orders.html', '/portal/settings.html', '/portal/login.html', '/portal/set-password.html',

@@ -555,8 +555,12 @@ body.th-has-bottomnav .th-toast-container{
 .small-btn:hover { border-color: var(--orange-light); color: var(--orange-light); }
 .small-btn:active { transform: translateY(1px); filter: brightness(0.95); }
 .small-btn.is-active { border-color: var(--blue-light); color: var(--blue-light); background: rgba(58,160,255,0.1); }
-.small-btn.danger { border-color: rgba(224,82,82,0.4); color: #e0a0a0; }
-.small-btn.danger:hover { border-color: #e05252; color: #e05252; }
+/* 2026-09-06: resting state was border+text tint only, no fill -- read as
+   barely different from a normal small-btn at a glance. A faint red wash
+   behind it means "destructive" registers before you've even read the
+   label, matching how .primary-btn already reads as "go" from color alone. */
+.small-btn.danger { background: rgba(224,82,82,0.09); border-color: rgba(224,82,82,0.4); color: #e0a0a0; }
+.small-btn.danger:hover { background: rgba(224,82,82,0.16); border-color: #e05252; color: #e05252; }
 
 /* --- Shared dash-list-item (used for Leads, Invoices, Job Profitability,
    and any other "row of items with a right-aligned value" list). Was only
@@ -1171,30 +1175,43 @@ body .tool-tile-link {
   border-color: rgba(255,255,255,0.08);
   border-radius: 16px;
 }
+/* Redesign (2026-09-06), requested directly ("logos... make it amazing"):
+   these hex tiles are the closest thing this app has to a mark for each
+   tool, and a flat 16%-alpha tint (this session's first pass) still read
+   as a swatch, not a badge. Now filled solid by default -- a radial
+   gloss highlight over the same orange ramp used elsewhere (primary
+   button, active nav state), so it reads as an enamel pin rather than a
+   tinted outline. Dark icon glyph on the vivid fill for contrast, same
+   pairing .primary-btn already uses (var(--bg) on solid orange). Because
+   the resting state is now already the "filled" look, hover no longer
+   needs a color swap to signal interactivity -- it only needs to lift,
+   exactly like .tool-tile-link's own hover below. This is deliberately
+   NOT applied to .th-hex-icon (the sidebar/bottom-nav icons further
+   down): those use fill specifically to mark the CURRENT page, and
+   making every icon vivid by default would erase that signal. The tool
+   grid has no such state to protect -- every tile is just a link. */
 body .tool-tile-icon {
   font-size: 24px;
   width: 52px; height: 52px;
   display: flex; align-items: center; justify-content: center;
   clip-path: var(--hex);
-  /* 2026-09-06: --orange-tint-soft is 8% alpha -- fine as a faint wash
-     elsewhere, but at icon-tile size on a dark tile background it read
-     as barely-there (confirmed on screenshot, not just eyeballed on
-     the page). This is the one spot the icon itself IS the content, so
-     it gets its own stronger tint rather than a shared token bump that
-     would also brighten every other subtle use of --orange-tint-soft. */
-  background: rgba(255,128,0,0.16);
-  border: 1px solid var(--orange-tint-border);
+  background:
+    radial-gradient(120% 130% at 30% 18%, rgba(255,255,255,.55), rgba(255,255,255,0) 46%),
+    linear-gradient(165deg, var(--orange-light), var(--orange) 55%, var(--orange-dark) 130%);
+  border: 1px solid var(--orange-dark);
+  box-shadow: 0 3px 8px -3px rgba(0,0,0,.5), 0 1px 0 rgba(255,255,255,.3) inset;
+  transition: transform .18s ease, box-shadow .18s ease;
 }
-body .tool-tile-icon .th-icon { color: var(--orange-light); }
+body .tool-tile-icon .th-icon { color: #1a0d02; }
 body .tool-tile-link:hover {
   transform: translateY(-3px);
   border-color: var(--orange-tint-border);
   box-shadow: var(--shadow-hover), 0 0 24px -6px var(--orange-tint-glow);
 }
 body .tool-tile-link:hover .tool-tile-icon {
-  background: var(--orange); border-color: var(--orange);
+  transform: scale(1.06);
+  box-shadow: 0 5px 14px -4px var(--orange-tint-glow), 0 1px 0 rgba(255,255,255,.35) inset;
 }
-body .tool-tile-link:hover .tool-tile-icon .th-icon { color: var(--bg); }
 body .tool-tile-label { font-size: 13px; letter-spacing: .4px; }
 
 /* ---- rows and lists: tappable cards with direction ---- */
@@ -1219,22 +1236,50 @@ body table tbody tr:hover { background: var(--orange-tint-soft); }
 body table tbody tr:nth-child(even) { background: rgba(255,255,255,0.02); }
 body table tbody tr:nth-child(even):hover { background: var(--orange-tint-soft); }
 
-/* ---- controls: pill buttons with real states ---- */
+/* ---- controls: pill buttons with real states ----
+   Redesign (2026-09-06), requested directly ("cleaner... make it
+   amazing"): the gradient itself was already good, but it was the only
+   depth cue -- a single flat light-to-dark ramp reads as a colored
+   rectangle, not a pressable object. Adds a second background layer (a
+   glass sheen, brightest top-left, fading out well before halfway) over
+   the same orange ramp, plus a real top/bottom edge highlight in the
+   shadow stack -- the two things that make a physical pill button read
+   as lit from above rather than painted flat. Same technique applied to
+   .secondary-btn below, at much lower intensity, so the visual language
+   is shared but primary still reads as the one button meant to be
+   pressed. */
 body .primary-btn, body .dialog-btn-primary, body .note-new-btn {
+  position: relative;
   border-radius: 999px;
-  background-image: linear-gradient(180deg, var(--orange-light) -35%, var(--orange) 50%, var(--orange-dark) 135%);
-  box-shadow: 0 2px 8px -2px rgba(0,0,0,.5), 0 1px 0 rgba(255,255,255,.2) inset;
+  background-image:
+    linear-gradient(165deg, rgba(255,255,255,.38), rgba(255,255,255,0) 44%),
+    linear-gradient(180deg, var(--orange-light) -35%, var(--orange) 50%, var(--orange-dark) 135%);
+  box-shadow:
+    0 1px 0 rgba(255,255,255,.32) inset,
+    0 -1px 0 rgba(0,0,0,.18) inset,
+    0 2px 6px -2px rgba(0,0,0,.5),
+    0 12px 22px -16px var(--orange-tint-glow);
   font-weight: 600; letter-spacing: .3px;
 }
 body .secondary-btn, body .small-btn, body .dialog-btn-cancel { border-radius: 999px; }
+body .secondary-btn {
+  background-image: linear-gradient(180deg, rgba(255,255,255,.05), rgba(255,255,255,0) 55%),
+    linear-gradient(180deg, var(--bg-panel-2), var(--bg-panel) 130%);
+  box-shadow: 0 1px 0 rgba(255,255,255,.05) inset, 0 1px 2px -1px rgba(0,0,0,.3);
+}
 body .primary-btn:hover, body .dialog-btn-primary:hover, body .note-new-btn:hover {
   transform: translateY(-1px);
-  box-shadow: 0 6px 18px -6px var(--orange-tint-glow), 0 3px 10px -3px rgba(0,0,0,.55), 0 1px 0 rgba(255,255,255,.25) inset;
-  filter: brightness(1.07);
+  box-shadow:
+    0 1px 0 rgba(255,255,255,.36) inset,
+    0 -1px 0 rgba(0,0,0,.18) inset,
+    0 3px 10px -3px rgba(0,0,0,.55),
+    0 16px 30px -14px var(--orange-tint-glow);
+  filter: brightness(1.06);
 }
 body .secondary-btn:hover, body .small-btn:hover {
   transform: translateY(-1px);
   border-color: var(--orange-tint-border);
+  box-shadow: 0 1px 0 rgba(255,255,255,.06) inset, 0 5px 14px -6px rgba(0,0,0,.4);
 }
 body .primary-btn:active, body .secondary-btn:active, body .small-btn:active,
 body .dialog-btn:active, body .note-new-btn:active {
@@ -1315,9 +1360,13 @@ body select:focus, body textarea:focus {
 .th-bottom-nav a .th-bn-icon .th-icon { width: 20px; height: 20px; margin-right: 0; }
 .th-bottom-nav a.is-active { color: var(--orange-light); }
 .th-bottom-nav a.is-active .th-bn-icon {
-  background: var(--orange); border-color: var(--orange);
+  background:
+    radial-gradient(120% 130% at 30% 18%, rgba(255,255,255,.5), rgba(255,255,255,0) 46%),
+    linear-gradient(165deg, var(--orange-light), var(--orange) 55%, var(--orange-dark) 130%);
+  border-color: var(--orange-dark);
+  box-shadow: 0 2px 6px -2px rgba(0,0,0,.5), 0 1px 0 rgba(255,255,255,.3) inset;
 }
-.th-bottom-nav a.is-active .th-bn-icon .th-icon { color: var(--bg); }
+.th-bottom-nav a.is-active .th-bn-icon .th-icon { color: #1a0d02; }
 .th-bottom-nav a:active .th-bn-icon { background: var(--bg-panel-2); }
 
 /* ---- desktop sidebar: injected markup, styled here ---- */
@@ -1332,23 +1381,39 @@ body select:focus, body textarea:focus {
    sits above the bottom nav (its own height plus the safe-area
    inset); on desktop, there's no bottom nav there, so it sits at
    the true bottom-right instead. ---- */
+/* Redesign (2026-09-06): matches the same glass-highlight language now
+   used on .primary-btn/.secondary-btn, so this stops reading as a plain
+   leftover gray circle disconnected from the rest of the button system. */
 .th-flag-btn {
   position: fixed; right: 16px; z-index: 70;
   bottom: calc(76px + env(safe-area-inset-bottom, 0px) + 16px);
   width: 44px; height: 44px; border-radius: 50%;
   display: flex; align-items: center; justify-content: center;
-  background: var(--bg-panel-2); border: 1px solid var(--border); color: var(--text-dim);
-  box-shadow: 0 3px 10px rgba(0,0,0,0.25);
-  cursor: pointer; transition: color .15s ease, border-color .15s ease;
+  background-image: linear-gradient(180deg, rgba(255,255,255,.06), rgba(255,255,255,0) 55%),
+    linear-gradient(180deg, var(--bg-panel-2), var(--bg-panel) 130%);
+  border: 1px solid var(--border); color: var(--text-dim);
+  box-shadow: 0 1px 0 rgba(255,255,255,.05) inset, 0 3px 10px rgba(0,0,0,0.3);
+  cursor: pointer; transition: color .15s ease, border-color .15s ease, transform .15s ease, box-shadow .15s ease;
 }
+.th-flag-btn:active { transform: translateY(1px) scale(.96); }
 .th-flag-btn .th-icon { width: 20px; height: 20px; }
-.th-flag-btn:hover { color: var(--orange-light); border-color: var(--orange-light); }
+.th-flag-btn:hover {
+  color: var(--orange-light); border-color: var(--orange-light);
+  transform: translateY(-1px);
+  box-shadow: 0 1px 0 rgba(255,255,255,.06) inset, 0 6px 16px -6px var(--orange-tint-glow);
+}
 @media (min-width: 1024px) { .th-flag-btn { bottom: 16px; } }
-@media (prefers-reduced-motion: reduce) { .th-flag-btn { transition: none; } }
+@media (prefers-reduced-motion: reduce) { .th-flag-btn, .th-flag-btn:hover { transition: none; transform: none; } }
 
+/* Resting state stays a quiet tint deliberately -- this icon's whole job
+   in the sidebar and bottom nav is to show which page is CURRENT, so
+   only .is-active (below, and in the sidebar/bottom-nav rules) gets the
+   vivid filled treatment .tool-tile-icon uses unconditionally. Refined
+   here with a faint inner sheen for a touch more craft at rest, without
+   closing the gap to the active state. */
 .th-hex-icon {
   clip-path: var(--hex);
-  background: var(--orange-tint-soft);
+  background: linear-gradient(165deg, rgba(255,255,255,.08), rgba(255,255,255,0) 50%), var(--orange-tint-soft);
   border: 1px solid var(--orange-tint-border);
   display: flex; align-items: center; justify-content: center;
   flex-shrink: 0;
@@ -1393,8 +1458,14 @@ body select:focus, body textarea:focus {
 }
 .th-sidebar-link .th-hex-icon { width: 30px; height: 30px; }
 .th-sidebar-link .th-hex-icon .th-icon { width: 16px; height: 16px; }
-.th-sidebar-link.is-active .th-hex-icon { background: var(--orange); border-color: var(--orange); }
-.th-sidebar-link.is-active .th-hex-icon .th-icon { color: var(--bg); }
+.th-sidebar-link.is-active .th-hex-icon {
+  background:
+    radial-gradient(120% 130% at 30% 18%, rgba(255,255,255,.5), rgba(255,255,255,0) 46%),
+    linear-gradient(165deg, var(--orange-light), var(--orange) 55%, var(--orange-dark) 130%);
+  border-color: var(--orange-dark);
+  box-shadow: 0 2px 6px -2px rgba(0,0,0,.45), 0 1px 0 rgba(255,255,255,.3) inset;
+}
+.th-sidebar-link.is-active .th-hex-icon .th-icon { color: #1a0d02; }
 .th-sidebar-link:hover .th-hex-icon { border-color: var(--orange-light); }
 .th-sidebar-link:hover { background: var(--bg-panel-2); color: var(--text); }
 .th-sidebar-link.is-active {
@@ -1405,10 +1476,10 @@ body select:focus, body textarea:focus {
 
 /* ---- reduced motion ---- */
 @media (prefers-reduced-motion: reduce) {
-  body .tool-tile-link, body .dash-list-item, body .tab-btn::after,
+  body .tool-tile-link, body .tool-tile-icon, body .dash-list-item, body .tab-btn::after,
   body .primary-btn, body .secondary-btn, body .small-btn, body .note-new-btn,
   .th-bottom-nav a, .th-bottom-nav a .th-bn-icon { transition: none; }
-  body .tool-tile-link:hover, body a.dash-list-item:hover,
+  body .tool-tile-link:hover, body .tool-tile-link:hover .tool-tile-icon, body a.dash-list-item:hover,
   body .primary-btn:hover, body .secondary-btn:hover { transform: none; }
 }
 
