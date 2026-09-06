@@ -233,6 +233,13 @@
 <body>
 <a href="#home" class="skip-link">Skip to main content</a>
 
+<div class="ambient-world" aria-hidden="true"></div>
+<div class="motto-rail" aria-hidden="true">
+  <span class="rail-seg rail-honesty"></span>
+  <span class="rail-seg rail-hustle"></span>
+  <span class="rail-seg rail-helpfulness"></span>
+</div>
+
 <div id="siteBanner1" class="site-banner" style="display:none;"></div>
 <div id="siteBanner2" class="site-banner" style="display:none;"></div>
 
@@ -482,15 +489,15 @@
           <p>Triple H Enterprises is also a registered Utah LLC.</p>
 
           <div class="values">
-            <div class="value-pill">
+            <div class="value-pill" id="pillHonesty">
               <div class="word">HONESTY</div>
               <p>Clear answers about what's wrong and what it'll cost to fix it.</p>
             </div>
-            <div class="value-pill">
+            <div class="value-pill" id="pillHustle">
               <div class="word">HUSTLE</div>
               <p>Shows up on time and gets the job done without dragging it out.</p>
             </div>
-            <div class="value-pill">
+            <div class="value-pill" id="pillHelpfulness">
               <div class="word">HELPFULNESS</div>
               <p>Treats your home, and your time, like they actually matter.</p>
             </div>
@@ -1963,6 +1970,29 @@
     }, { threshold: 0.15, rootMargin: '0px 0px -40px 0px' });
     document.querySelectorAll('[data-reveal]').forEach(el => revealObserver.observe(el));
   }
+
+  // ---------- motto rail (signature move) ----------
+  // Lights each rail segment the first time its matching value pill
+  // (About section) scrolls into view, and keeps it lit afterward --
+  // watching the motto get proven progressively, not flickering on/off
+  // as the visitor scrolls back and forth.
+  (function () {
+    const rail = document.querySelector('.motto-rail');
+    if (!rail || !('IntersectionObserver' in window)) return;
+    const segFor = { pillHonesty: '.rail-honesty', pillHustle: '.rail-hustle', pillHelpfulness: '.rail-helpfulness' };
+    const railObserver = new IntersectionObserver((entries) => {
+      entries.forEach(entry => {
+        if (!entry.isIntersecting) return;
+        const seg = rail.querySelector(segFor[entry.target.id]);
+        if (seg) seg.classList.add('is-lit');
+        railObserver.unobserve(entry.target);
+      });
+    }, { threshold: 0.4 });
+    Object.keys(segFor).forEach(id => {
+      const el = document.getElementById(id);
+      if (el) railObserver.observe(el);
+    });
+  })();
 </script>
 
 <script>

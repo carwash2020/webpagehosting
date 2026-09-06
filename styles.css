@@ -1246,3 +1246,103 @@
     .review-slide{padding:32px 24px;}
   }
 
+  /* ---------------------------------------------------------------------
+     scroll-craft editorial pass (2026-09-05): a persistent ambient world,
+     real scroll-reveal motion, and the "Honesty/Hustle/Helpfulness" rail.
+     Presentation-layer only. Every rule below is new or purely additive --
+     nothing here changes an existing selector's meaning, and nothing here
+     is targeted by the lead form, booking pages, the Supabase site-content
+     fetch scripts, or any other functional hook.
+  --------------------------------------------------------------------- */
+
+  /* Ambient world: a fixed, continuous echo of the hero's own orange/blue
+     glow plus a faint schematic grid, sitting behind every section on
+     every public page. This is what makes six independently-themed
+     sections read as one continuous place instead of a hard cut between
+     each -- the "one unbroken world" the redesign asked for, built from
+     color and light rather than generated/photographic scenery, since
+     no image-generation budget exists for this build and the site's own
+     photos aren't hero-grade. */
+  .ambient-world{
+    position:fixed;
+    inset:0;
+    z-index:-1;
+    pointer-events:none;
+    background:
+      radial-gradient(ellipse 60% 45% at 88% 6%, rgba(255,128,0,.07), transparent 60%),
+      radial-gradient(ellipse 55% 40% at 8% 70%, rgba(58,160,255,.06), transparent 60%),
+      repeating-linear-gradient(115deg, rgba(255,255,255,.015) 0 1px, transparent 1px 120px),
+      repeating-linear-gradient(25deg, rgba(255,255,255,.012) 0 1px, transparent 1px 160px);
+  }
+  [data-theme="light"] .ambient-world{
+    background:
+      radial-gradient(ellipse 60% 45% at 88% 6%, rgba(255,128,0,.05), transparent 60%),
+      radial-gradient(ellipse 55% 40% at 8% 70%, rgba(58,160,255,.045), transparent 60%),
+      repeating-linear-gradient(115deg, rgba(0,0,0,.014) 0 1px, transparent 1px 120px),
+      repeating-linear-gradient(25deg, rgba(0,0,0,.011) 0 1px, transparent 1px 160px);
+  }
+
+  /* Real scroll-reveal: [data-reveal] elements on index.html were always
+     wired up in JS (adds .is-visible via IntersectionObserver, adds
+     .reveal-ready to <html>) but no CSS ever hid them first -- so the
+     whole mechanism has been a silent no-op site-wide. This is the
+     missing half. Reduced-motion visitors are unaffected: the existing
+     global prefers-reduced-motion rule near the top of this file already
+     zeroes every transition-duration site-wide, including these. */
+  html.reveal-ready [data-reveal]{
+    opacity:0;
+    transform:translateY(22px);
+    transition:opacity .7s ease, transform .7s ease;
+  }
+  html.reveal-ready [data-reveal].is-visible{
+    opacity:1;
+    transform:translateY(0);
+  }
+
+  /* The signature move: the tagline becomes the page's spine. A thin
+     rail, three segments (Honesty / Hustle / Helpfulness), each one
+     lighting up as its matching proof -- the About section's value
+     pills -- actually scrolls into view on index.html. Scrolling the
+     page becomes watching the motto get proven, not just reading it
+     stated once. Decorative only (aria-hidden); the real accessible
+     content lives in the value pills themselves, unchanged. Sits below
+     the header's own stacking (z-index 55 vs. the header's 60) so it
+     never covers nav content, and is 3px wide -- present at every
+     breakpoint without a separate mobile layout. */
+  .motto-rail{
+    position:fixed;
+    left:0; top:0; bottom:0;
+    width:3px;
+    z-index:55;
+    display:flex;
+    flex-direction:column;
+    gap:3px;
+    pointer-events:none;
+  }
+  .motto-rail .rail-seg{
+    flex:1;
+    background:var(--border);
+    opacity:.5;
+    transition:background .6s ease, opacity .6s ease, box-shadow .6s ease;
+  }
+  .motto-rail .rail-seg.is-lit{opacity:1;}
+  .motto-rail .rail-honesty.is-lit{background:var(--orange-light); box-shadow:2px 0 12px rgba(255,128,0,.35);}
+  .motto-rail .rail-hustle.is-lit{background:var(--steel); box-shadow:2px 0 12px rgba(216,216,216,.25);}
+  .motto-rail .rail-helpfulness.is-lit{background:var(--blue-light); box-shadow:2px 0 12px rgba(58,160,255,.35);}
+  /* The 5 location pages have no value-pill content to sync the rail
+     against -- they show it already fully lit, a quiet brand signature
+     rather than a mechanism with nothing to trigger it. */
+  .motto-rail.is-static .rail-seg{opacity:1;}
+  .motto-rail.is-static .rail-honesty{background:var(--orange-light);}
+  .motto-rail.is-static .rail-hustle{background:var(--steel);}
+  .motto-rail.is-static .rail-helpfulness{background:var(--blue-light);}
+
+  /* The Trust/About act is the engineered peak (user's own answer: the
+     About section is the one moment to remember). It gets more room to
+     breathe than the site's normal section rhythm, so Steven's name
+     doesn't arrive at the same cadence as every other section. */
+  #about{padding-top:168px;}
+  @media (max-width:760px){
+    #about{padding-top:104px;}
+  }
+
