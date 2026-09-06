@@ -60,7 +60,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Anton&family=Oswald:wght@400;500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="/styles.css?v=202609052350">
+<link rel="stylesheet" href="/styles.css?v=202609060300">
 <script type="application/ld+json">
 {
   "@context": "https://schema.org",
@@ -103,7 +103,6 @@
 </head>
 <body>
 <a href="#home" class="skip-link">Skip to main content</a>
-<div class="ambient-world" aria-hidden="true"></div>
 <div class="motto-rail is-static" aria-hidden="true">
   <span class="rail-seg rail-honesty"></span>
   <span class="rail-seg rail-hustle"></span>
@@ -189,7 +188,7 @@
 
   <section>
     <div class="wrap">
-      <div class="section-head">
+      <div class="section-head" data-reveal>
         <h2>Careful Work for Custom Homes</h2>
       </div>
       <p style="max-width:800px; color:var(--text-dim); font-size:16px;">Higher-end finishes and custom builds mean repair work out
@@ -207,7 +206,7 @@
 
   <section>
     <div class="wrap">
-      <div class="section-head">
+      <div class="section-head" data-reveal>
         <h2>What We Handle in Santa Clara & Ivins</h2>
       </div>
       <div class="services-grid">
@@ -234,7 +233,7 @@
 
   <section>
     <div class="wrap">
-      <div class="section-head">
+      <div class="section-head" data-reveal>
         <h2>Common Questions</h2>
       </div>
       <div class="faq-list">
@@ -256,7 +255,7 @@
 
   <section id="schedule">
     <div class="wrap">
-      <div class="section-head">
+      <div class="section-head" data-reveal>
         <p class="eyebrow is-blue">BOOK A VISIT</p>
         <h2>Schedule a Service in Santa Clara & Ivins</h2>
       </div>
@@ -437,5 +436,6 @@
       .catch(() => { /* static fallback content already shown is correct */ });
   })();
 </script>
+<script src="/site-motion.js?v=202609060300" defer></script>
 </body>
 </html>

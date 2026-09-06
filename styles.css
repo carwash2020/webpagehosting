@@ -1246,69 +1246,145 @@
     .review-slide{padding:32px 24px;}
   }
 
-  /* ---------------------------------------------------------------------
-     scroll-craft editorial pass (2026-09-05): a persistent ambient world,
-     real scroll-reveal motion, and the "Honesty/Hustle/Helpfulness" rail.
-     Presentation-layer only. Every rule below is new or purely additive --
-     nothing here changes an existing selector's meaning, and nothing here
-     is targeted by the lead form, booking pages, the Supabase site-content
-     fetch scripts, or any other functional hook.
-  --------------------------------------------------------------------- */
 
-  /* Ambient world: a fixed, continuous echo of the hero's own orange/blue
-     glow plus a faint schematic grid, sitting behind every section on
-     every public page. This is what makes six independently-themed
-     sections read as one continuous place instead of a hard cut between
-     each -- the "one unbroken world" the redesign asked for, built from
-     color and light rather than generated/photographic scenery, since
-     no image-generation budget exists for this build and the site's own
-     photos aren't hero-grade. */
-  .ambient-world{
-    position:fixed;
-    inset:0;
-    z-index:-1;
-    pointer-events:none;
-    background:
-      radial-gradient(ellipse 60% 45% at 88% 6%, rgba(255,128,0,.07), transparent 60%),
-      radial-gradient(ellipse 55% 40% at 8% 70%, rgba(58,160,255,.06), transparent 60%),
-      repeating-linear-gradient(115deg, rgba(255,255,255,.015) 0 1px, transparent 1px 120px),
-      repeating-linear-gradient(25deg, rgba(255,255,255,.012) 0 1px, transparent 1px 160px);
+  /* =====================================================================
+     scroll-craft pass (2026-09-05): the public site's scroll language.
+
+     Presentation layer only. Every selector below is new or additive --
+     nothing here redefines an existing rule, and nothing here is targeted
+     by the lead form, booking pages, the Supabase site-content/FAQ/terms
+     fetch scripts, the service-detail modals, or any other live hook.
+
+     Three ideas, in order of weight:
+       1. A blueprint world behind every page, so six separately-themed
+          sections read as one continuous place.
+       2. A scroll-driven exploded appliance -- the clearest statement of
+          what this business actually is: the people who know what's
+          inside. Drawn as real inline SVG, so it needs no photography
+          and stays sharp at any size.
+       3. Draft-line annotation: the page marks itself up like a technical
+          drawing as you scroll, which is the connective tissue between
+          the two above.
+
+     SAFETY MODEL, since this ships to a live lead-generating site:
+     every scroll-driven element's DEFAULT (no JS, JS error, old browser,
+     reduced motion) is its FINISHED state -- assembled machine, full
+     opacity, no offset. Motion is an enhancement layered on top of a
+     composition that is already correct and readable without it.
+  ===================================================================== */
+
+  /* ---------- 1. the blueprint world ---------- */
+  /* Drafting-paper linework behind every public page, so separately
+     themed sections read as one continuous place.
+
+     Painted as body's own background-image rather than as an overlay
+     element: body carries an opaque background-color, which occludes any
+     child at a negative z-index entirely. background-image layers ABOVE
+     that colour and BELOW all content, which is exactly what is wanted,
+     and it needs no extra element and no stacking games. background-color
+     is inherited from the body rule earlier in this file and deliberately
+     not restated here, so the light/dark themes keep working. */
+  body{
+    background-image:
+      radial-gradient(ellipse 62% 46% at 86% 4%, rgba(255,128,0,.085), transparent 62%),
+      radial-gradient(ellipse 58% 42% at 6% 72%, rgba(58,160,255,.070), transparent 62%),
+      repeating-linear-gradient(0deg, rgba(255,255,255,.026) 0 1px, transparent 1px 96px),
+      repeating-linear-gradient(90deg, rgba(255,255,255,.026) 0 1px, transparent 1px 96px),
+      repeating-linear-gradient(0deg, rgba(255,255,255,.011) 0 1px, transparent 1px 24px),
+      repeating-linear-gradient(90deg, rgba(255,255,255,.011) 0 1px, transparent 1px 24px);
+    background-attachment:fixed;
   }
-  [data-theme="light"] .ambient-world{
-    background:
-      radial-gradient(ellipse 60% 45% at 88% 6%, rgba(255,128,0,.05), transparent 60%),
-      radial-gradient(ellipse 55% 40% at 8% 70%, rgba(58,160,255,.045), transparent 60%),
-      repeating-linear-gradient(115deg, rgba(0,0,0,.014) 0 1px, transparent 1px 120px),
-      repeating-linear-gradient(25deg, rgba(0,0,0,.011) 0 1px, transparent 1px 160px);
+  [data-theme="light"] body{
+    background-image:
+      radial-gradient(ellipse 62% 46% at 86% 4%, rgba(255,128,0,.070), transparent 62%),
+      radial-gradient(ellipse 58% 42% at 6% 72%, rgba(58,160,255,.060), transparent 62%),
+      repeating-linear-gradient(0deg, rgba(20,40,70,.042) 0 1px, transparent 1px 96px),
+      repeating-linear-gradient(90deg, rgba(20,40,70,.042) 0 1px, transparent 1px 96px),
+      repeating-linear-gradient(0deg, rgba(20,40,70,.018) 0 1px, transparent 1px 24px),
+      repeating-linear-gradient(90deg, rgba(20,40,70,.018) 0 1px, transparent 1px 24px);
   }
 
-  /* Real scroll-reveal: [data-reveal] elements on index.html were always
-     wired up in JS (adds .is-visible via IntersectionObserver, adds
-     .reveal-ready to <html>) but no CSS ever hid them first -- so the
-     whole mechanism has been a silent no-op site-wide. This is the
-     missing half. Reduced-motion visitors are unaffected: the existing
-     global prefers-reduced-motion rule near the top of this file already
-     zeroes every transition-duration site-wide, including these. */
+  /* ---------- 2. real scroll-reveal ---------- */
+  /* [data-reveal] was already wired in JS (IntersectionObserver adds
+     .is-visible, plus .reveal-ready on <html>) but nothing ever hid the
+     elements first, so the mechanism was a site-wide no-op. This is the
+     missing half. Reduced-motion visitors are covered by the global
+     prefers-reduced-motion rule near the top of this file, which zeroes
+     every transition-duration. */
   html.reveal-ready [data-reveal]{
     opacity:0;
-    transform:translateY(22px);
-    transition:opacity .7s ease, transform .7s ease;
+    transform:translateY(24px);
+    transition:opacity .7s cubic-bezier(.22,.61,.36,1), transform .7s cubic-bezier(.22,.61,.36,1);
   }
   html.reveal-ready [data-reveal].is-visible{
     opacity:1;
     transform:translateY(0);
   }
+  /* Cards in a grid arrive in sequence rather than as one block. Small
+     stagger -- large enough to feel deliberate, short enough that nobody
+     waiting on a broken dryer is kept waiting on an animation. */
+  html.reveal-ready .services-grid [data-reveal]:nth-child(2){transition-delay:.06s;}
+  html.reveal-ready .services-grid [data-reveal]:nth-child(3){transition-delay:.12s;}
+  html.reveal-ready .services-grid [data-reveal]:nth-child(4){transition-delay:.18s;}
+  html.reveal-ready .services-grid [data-reveal]:nth-child(5){transition-delay:.24s;}
+  html.reveal-ready .services-grid [data-reveal]:nth-child(6){transition-delay:.30s;}
 
-  /* The signature move: the tagline becomes the page's spine. A thin
-     rail, three segments (Honesty / Hustle / Helpfulness), each one
-     lighting up as its matching proof -- the About section's value
-     pills -- actually scrolls into view on index.html. Scrolling the
-     page becomes watching the motto get proven, not just reading it
-     stated once. Decorative only (aria-hidden); the real accessible
-     content lives in the value pills themselves, unchanged. Sits below
-     the header's own stacking (z-index 55 vs. the header's 60) so it
-     never covers nav content, and is 3px wide -- present at every
-     breakpoint without a separate mobile layout. */
+  /* ---------- 3. draft-line annotation ---------- */
+  /* Every section heading gets a measurement line that draws itself in as
+     the heading arrives, with a tick at each end -- the page annotating
+     itself the way a shop drawing does. Pure pseudo-elements on an
+     existing class, so no page markup changes and it applies across all
+     6 pages at once. scaleX from a left origin, so it costs one composited
+     transform and never touches layout. */
+  .section-head{position:relative;}
+  .section-head::before{
+    content:"";
+    position:absolute;
+    top:-18px; left:0;
+    width:clamp(120px, 22vw, 260px);
+    height:1px;
+    background:linear-gradient(90deg, var(--orange), rgba(255,128,0,0));
+    transform:scaleX(0);
+    transform-origin:left center;
+    transition:transform .9s cubic-bezier(.22,.61,.36,1) .1s;
+  }
+  .section-head.is-visible::before,
+  html:not(.reveal-ready) .section-head::before{transform:scaleX(1);}
+  .section-head::after{
+    content:"";
+    position:absolute;
+    top:-22px; left:0;
+    width:1px; height:9px;
+    background:var(--orange);
+    opacity:0;
+    transition:opacity .5s ease .5s;
+  }
+  .section-head.is-visible::after,
+  html:not(.reveal-ready) .section-head::after{opacity:.85;}
+
+  /* The blog uses bare <h2>s rather than .section-head, so it gets the
+     same annotation through its own selector -- one visual language
+     across marketing pages and articles. */
+  .blog-article h2{position:relative; padding-top:16px;}
+  .blog-article h2::before{
+    content:"";
+    position:absolute;
+    top:0; left:0;
+    width:64px; height:1px;
+    background:linear-gradient(90deg, var(--orange), rgba(255,128,0,0));
+    transform:scaleX(0);
+    transform-origin:left center;
+    transition:transform .8s cubic-bezier(.22,.61,.36,1);
+  }
+  .blog-article h2.is-visible::before,
+  html:not(.reveal-ready) .blog-article h2::before{transform:scaleX(1);}
+
+  /* ---------- 4. the motto rail (signature) ---------- */
+  /* The tagline becomes the page's spine: three segments, one per word,
+     each lighting as its matching proof -- the About section's value
+     pills -- actually scrolls into view. Decorative (aria-hidden); the
+     real content stays in the pills themselves. Sits under the header's
+     stacking (55 vs 60) so it never covers nav. */
   .motto-rail{
     position:fixed;
     left:0; top:0; bottom:0;
@@ -1323,26 +1399,345 @@
     flex:1;
     background:var(--border);
     opacity:.5;
-    transition:background .6s ease, opacity .6s ease, box-shadow .6s ease;
+    transition:background .7s ease, opacity .7s ease, box-shadow .7s ease;
   }
   .motto-rail .rail-seg.is-lit{opacity:1;}
-  .motto-rail .rail-honesty.is-lit{background:var(--orange-light); box-shadow:2px 0 12px rgba(255,128,0,.35);}
-  .motto-rail .rail-hustle.is-lit{background:var(--steel); box-shadow:2px 0 12px rgba(216,216,216,.25);}
-  .motto-rail .rail-helpfulness.is-lit{background:var(--blue-light); box-shadow:2px 0 12px rgba(58,160,255,.35);}
-  /* The 5 location pages have no value-pill content to sync the rail
-     against -- they show it already fully lit, a quiet brand signature
-     rather than a mechanism with nothing to trigger it. */
+  .motto-rail .rail-honesty.is-lit{background:var(--orange-light); box-shadow:2px 0 14px rgba(255,128,0,.4);}
+  .motto-rail .rail-hustle.is-lit{background:var(--steel); box-shadow:2px 0 14px rgba(216,216,216,.28);}
+  .motto-rail .rail-helpfulness.is-lit{background:var(--blue-light); box-shadow:2px 0 14px rgba(58,160,255,.4);}
+  /* The 5 location pages have no value pills to sync against, so they
+     show the rail already lit -- a brand signature, not a mechanism with
+     nothing to drive it. */
   .motto-rail.is-static .rail-seg{opacity:1;}
   .motto-rail.is-static .rail-honesty{background:var(--orange-light);}
   .motto-rail.is-static .rail-hustle{background:var(--steel);}
   .motto-rail.is-static .rail-helpfulness{background:var(--blue-light);}
 
-  /* The Trust/About act is the engineered peak (user's own answer: the
-     About section is the one moment to remember). It gets more room to
-     breathe than the site's normal section rhythm, so Steven's name
-     doesn't arrive at the same cadence as every other section. */
-  #about{padding-top:168px;}
-  @media (max-width:760px){
-    #about{padding-top:104px;}
+  /* ---------- 5. hero depth ---------- */
+  /* The canyon photo is the deep plane; this adds a schematic mid-plane
+     between it and the type, so the hero has real separation instead of
+     one flat backdrop. Parallax factors are driven from JS via --shift,
+     defaulting to 0 so the composition is correct with no JS at all. */
+  .hero-plane{
+    position:absolute;
+    inset:0;
+    pointer-events:none;
+    z-index:0;
+    opacity:.5;
+    transform:translate3d(0, calc(var(--shift, 0) * 1px), 0);
+    background-image:
+      repeating-linear-gradient(90deg, rgba(255,255,255,.05) 0 1px, transparent 1px 140px);
+    -webkit-mask-image:radial-gradient(ellipse 70% 60% at 70% 45%, #000 10%, transparent 72%);
+    mask-image:radial-gradient(ellipse 70% 60% at 70% 45%, #000 10%, transparent 72%);
+  }
+  .hero-badge{
+    transform:translate3d(0, calc(var(--shift, 0) * 1px), 0);
+  }
+  /* The motto, finally on the homepage itself rather than only in the
+     footer and the value pills. Three words, arriving in sequence. */
+  .hero-motto{
+    display:flex;
+    flex-wrap:wrap;
+    align-items:center;
+    gap:10px 18px;
+    margin:30px 0 0;
+    font-family:'Oswald', sans-serif;
+    font-weight:600;
+    font-size:13px;
+    letter-spacing:3px;
+    text-transform:uppercase;
+  }
+  .hero-motto span{
+    opacity:0;
+    transform:translateY(8px);
+    transition:opacity .6s ease, transform .6s ease;
+  }
+  .hero-motto span:nth-child(1){color:#ffb347; transition-delay:.35s;}
+  .hero-motto span:nth-child(2){color:#d8d8d8; transition-delay:.55s;}
+  .hero-motto span:nth-child(3){color:#7ec4ff; transition-delay:.75s;}
+  .hero-motto.is-visible span,
+  html:not(.reveal-ready) .hero-motto span{opacity:1; transform:translateY(0);}
+  .hero-motto b{
+    display:inline-block;
+    width:4px; height:4px;
+    border-radius:50%;
+    background:currentColor;
+    opacity:.6;
+    margin-left:14px;
+    vertical-align:middle;
+  }
+  @media (max-width:860px){
+    .hero-motto{justify-content:center;}
+    .hero-plane{display:none;}
   }
 
+  /* ---------- 6. the exploded appliance ---------- */
+  /* A washer drawn as a shop diagram that the visitor rebuilds themselves
+     by dragging, rather than by being forced to scroll through a long
+     pinned section. Progress (--p) runs 0 (apart, labelled) to 1 (whole).
+     It DEFAULTS to 1, so with no JS, a JS error, an old browser or reduced
+     motion, a visitor sees a clean finished machine and a slider already
+     at the end -- never scattered parts with no way to fix them. */
+  .teardown{
+    padding:96px 0;
+    position:relative;
+    --p:1;
+  }
+  .teardown-grid{
+    display:grid;
+    grid-template-columns:0.9fr 1.1fr;
+    gap:52px;
+    align-items:center;
+  }
+  .teardown-copy{position:relative;}
+  .teardown-copy .eyebrow{position:relative; padding-top:18px;}
+  .teardown-copy .eyebrow::before{
+    content:"";
+    position:absolute;
+    top:0; left:0;
+    width:clamp(120px, 18vw, 220px);
+    height:1px;
+    background:linear-gradient(90deg, var(--orange), rgba(255,128,0,0));
+  }
+  .teardown-copy h2{
+    font-size:clamp(30px,4.4vw,50px);
+    line-height:1.02;
+  }
+  .teardown-copy p{
+    color:var(--text-dim);
+    font-size:16.5px;
+    margin:18px 0 0;
+    max-width:44ch;
+  }
+  .teardown-figure{
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    justify-content:center;
+    gap:20px;
+  }
+  .teardown-figure svg{
+    width:100%;
+    max-width:600px;
+    height:auto;
+    overflow:visible;
+  }
+  /* Shared transform for every exploded part. Each supplies its own
+     --dx/--dy/--rot; all resolve to zero at --p:1. transform-box keeps SVG
+     rotation about the part's own centre, not the viewBox origin. */
+  .td-part{
+    transform-box:fill-box;
+    transform-origin:center;
+    transform:
+      translate(
+        calc(var(--dx, 0) * (1 - var(--p, 1)) * 1px),
+        calc(var(--dy, 0) * (1 - var(--p, 1)) * 1px)
+      )
+      rotate(calc(var(--rot, 0) * (1 - var(--p, 1)) * 1deg));
+  }
+  .td-inner{opacity:calc(.35 + (1 - var(--p, 1)) * .65);}
+  .td-line{stroke:var(--steel); stroke-width:2; fill:none; vector-effect:non-scaling-stroke;}
+  .td-line-soft{stroke:var(--text-dim); stroke-width:1.4; fill:none; vector-effect:non-scaling-stroke;}
+  .td-accent{stroke:var(--orange); stroke-width:2.4; fill:none; vector-effect:non-scaling-stroke;}
+  .td-fill{fill:var(--bg-panel);}
+  .td-fill-2{fill:var(--bg-panel-2);}
+  .td-belt{stroke:var(--steel); stroke-width:6; fill:none; opacity:.45; vector-effect:non-scaling-stroke;}
+  .td-callout{opacity:calc(1 - var(--p, 1));}
+  .td-callout text{
+    font-family:'Oswald', sans-serif;
+    font-size:16px;
+    letter-spacing:1.6px;
+    text-transform:uppercase;
+    fill:var(--text-dim);
+  }
+  .td-callout line{stroke:var(--orange); stroke-width:1; opacity:.65; vector-effect:non-scaling-stroke;}
+  .td-callout circle{fill:var(--orange);}
+
+  /* The control. Deliberately the most tactile thing on the page: a real
+     <input type="range">, so it is draggable by finger, mouse, and arrow
+     keys, and screen readers announce it, with none of that hand-built. */
+  .td-scrub{
+    width:100%;
+    max-width:600px;
+    display:flex;
+    flex-direction:column;
+    gap:10px;
+  }
+  .td-scrub-labels{
+    display:flex;
+    align-items:baseline;
+    justify-content:space-between;
+    gap:12px;
+    font-family:'Oswald', sans-serif;
+    font-size:12.5px;
+    letter-spacing:2.2px;
+    text-transform:uppercase;
+    color:var(--text-dim);
+  }
+  .td-scrub-state{color:var(--orange); font-weight:600;}
+  .td-scrub input[type="range"]{
+    -webkit-appearance:none;
+    appearance:none;
+    width:100%;
+    height:44px;              /* full-height touch target on phones */
+    background:transparent;
+    padding:0;
+    margin:0;
+    border:none;
+    cursor:grab;
+  }
+  .td-scrub input[type="range"]:active{cursor:grabbing;}
+  .td-scrub input[type="range"]::-webkit-slider-runnable-track{
+    height:6px;
+    border-radius:999px;
+    background:
+      linear-gradient(90deg, var(--orange-dark), var(--orange-light)) 0/calc(var(--p, 1) * 100%) 100% no-repeat,
+      var(--bg-panel-3);
+    border:1px solid var(--border);
+  }
+  .td-scrub input[type="range"]::-moz-range-track{
+    height:6px;
+    border-radius:999px;
+    background:var(--bg-panel-3);
+    border:1px solid var(--border);
+  }
+  .td-scrub input[type="range"]::-moz-range-progress{
+    height:6px;
+    border-radius:999px;
+    background:linear-gradient(90deg, var(--orange-dark), var(--orange-light));
+  }
+  .td-scrub input[type="range"]::-webkit-slider-thumb{
+    -webkit-appearance:none;
+    appearance:none;
+    width:30px; height:30px;
+    margin-top:-13px;
+    border-radius:50%;
+    background:linear-gradient(160deg, #ffb347, #ff8000 62%, #c96400);
+    border:2px solid #1a1208;
+    box-shadow:0 4px 14px rgba(255,128,0,.45);
+    cursor:grab;
+  }
+  .td-scrub input[type="range"]::-moz-range-thumb{
+    width:30px; height:30px;
+    border-radius:50%;
+    background:linear-gradient(160deg, #ffb347, #ff8000 62%, #c96400);
+    border:2px solid #1a1208;
+    box-shadow:0 4px 14px rgba(255,128,0,.45);
+    cursor:grab;
+  }
+  .td-scrub input[type="range"]:focus-visible{outline:none;}
+  .td-scrub input[type="range"]:focus-visible::-webkit-slider-thumb{
+    box-shadow:0 0 0 5px rgba(58,160,255,.35), 0 4px 14px rgba(255,128,0,.45);
+  }
+  .td-scrub input[type="range"]:focus-visible::-moz-range-thumb{
+    box-shadow:0 0 0 5px rgba(58,160,255,.35), 0 4px 14px rgba(255,128,0,.45);
+  }
+  .td-hint{
+    font-size:13.5px;
+    color:var(--text-dim);
+    margin:22px 0 0;
+  }
+  .td-hint b{color:var(--orange-light); font-weight:600;}
+
+  /* Phone-first: the diagram and its control are the main event on a
+     small screen, so they lead and get the full width. */
+  @media (max-width:900px){
+    .teardown{padding:72px 0;}
+    .teardown-grid{
+      grid-template-columns:1fr;
+      gap:26px;
+      text-align:center;
+    }
+    .teardown-copy p{margin-left:auto; margin-right:auto;}
+    .teardown-copy .eyebrow::before{left:50%; transform:translateX(-50%);}
+    .teardown-figure{order:-1;}
+    .teardown-figure svg{max-width:100%;}
+    .td-callout text{font-size:19px;}
+    .td-scrub input[type="range"]::-webkit-slider-thumb{width:34px; height:34px; margin-top:-15px;}
+    .td-scrub input[type="range"]::-moz-range-thumb{width:34px; height:34px;}
+  }
+
+  /* ---------- 7. service cards as diagnostic plates ---------- */
+  .service-card{position:relative; overflow:hidden;}
+  /* Corner registration ticks, the way a drawing plate is cornered. */
+  .service-card::before{
+    content:"";
+    position:absolute;
+    top:10px; right:10px;
+    width:12px; height:12px;
+    border-top:1px solid var(--border);
+    border-right:1px solid var(--border);
+    transition:border-color .18s ease;
+    pointer-events:none;
+  }
+  .service-card:hover::before,
+  .service-card:focus-visible::before{border-color:var(--blue-light);}
+  .service-card.is-urgent:hover::before,
+  .service-card.is-urgent:focus-visible::before{border-color:var(--orange-light);}
+  /* A single scan pass on hover/focus. Transform-only, so it composites. */
+  .service-card::after{
+    content:"";
+    position:absolute;
+    left:0; right:0; top:0;
+    height:100%;
+    pointer-events:none;
+    background:linear-gradient(180deg, transparent 0%, rgba(58,160,255,.10) 48%, transparent 60%);
+    transform:translateY(-100%);
+    transition:transform .7s cubic-bezier(.22,.61,.36,1);
+  }
+  .service-card:hover::after,
+  .service-card:focus-visible::after{transform:translateY(100%);}
+  .service-card.is-urgent::after{
+    background:linear-gradient(180deg, transparent 0%, rgba(255,128,0,.10) 48%, transparent 60%);
+  }
+
+  /* ---------- 8. the peak: Steven's section resolves ---------- */
+  /* The engineered peak of the page. It gets more room than the site's
+     normal section rhythm, and the blueprint world warms up behind it --
+     the drawing becoming a person. Quietest motion on the page, by
+     design: the words carry this one. */
+  #about{
+    padding-top:172px;
+    position:relative;
+    isolation:isolate;
+  }
+  #about::before{
+    content:"";
+    position:absolute;
+    inset:0;
+    z-index:-1;
+    pointer-events:none;
+    background:
+      radial-gradient(ellipse 70% 52% at 22% 30%, rgba(255,128,0,.10), transparent 68%),
+      radial-gradient(ellipse 56% 44% at 84% 74%, rgba(255,179,71,.055), transparent 70%);
+  }
+  .quote-block{position:relative; overflow:hidden;}
+  .quote-block::before{
+    content:"";
+    position:absolute;
+    top:-40px; right:-40px;
+    width:150px; height:150px;
+    border-radius:50%;
+    border:1px solid var(--orange-tint-border);
+    opacity:.5;
+    pointer-events:none;
+  }
+  @media (max-width:760px){
+    #about{padding-top:108px;}
+  }
+
+  /* ---------- 9. reduced motion ---------- */
+  /* The global rule near the top of this file already zeroes every
+     transition and animation. These are the extras it cannot reach:
+     scroll-driven custom properties. Pinning them to their finished
+     values guarantees a correct, complete, static composition. */
+  @media (prefers-reduced-motion: reduce){
+    .teardown{--p:1 !important;}
+    .hero-plane, .hero-badge{--shift:0 !important;}
+    html.reveal-ready [data-reveal]{opacity:1 !important; transform:none !important;}
+    .section-head::before{transform:scaleX(1) !important;}
+    .section-head::after{opacity:.85 !important;}
+    .hero-motto span{opacity:1 !important; transform:none !important;}
+    .teardown-track{height:auto !important;}
+    .teardown-sticky{position:relative !important; height:auto !important; padding:88px 0;}
+  }
