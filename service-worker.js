@@ -282,7 +282,14 @@
 // /tools/tools-effects.js both changed again (dashboard section icons,
 // Tools-grid category colors, dense-table pass, live-sync retry
 // button). Both precached under their bare paths.
-const CACHE_NAME = 'th-workspace-v63';
+// Bumped 2026-09-06 (v63 -> v64): the type-system change. /styles.css
+// and /tools/styles-tools.css are both precached here and both changed --
+// every font-family in the project now resolves through four :root tokens
+// (--font-display/--font-body/--font-ui/--font-app) instead of naming a
+// face literally, and the body face moved off Inter. Precached ?v= URLs
+// are served cache-first and never revalidated, so without this bump an
+// installed Workspace would keep serving the old stylesheet indefinitely.
+const CACHE_NAME = 'th-workspace-v64';
 const PRECACHE_URLS = [
   '/tools/workspace.html', '/tools/job-tracker.html', '/tools/invoice-generator.html', '/tools/contract-generator.html',
   '/tools/calendar.html', '/tools/route-planner.html', '/tools/review-request.html', '/tools/contact-card.html',

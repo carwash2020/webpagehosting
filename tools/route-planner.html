@@ -23,7 +23,7 @@
 <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data:; connect-src 'self' https://*.supabase.co wss://*.supabase.co https://cdn.jsdelivr.net; frame-src 'none'; object-src 'none'; base-uri 'self'; frame-ancestors 'none';">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Anton&family=Archivo:wght@400..700&family=Newsreader:ital,opsz,wght@0,6..72,300..700;1,6..72,300..600&family=Oswald:wght@200..700&display=swap" rel="stylesheet">
 <script>
   (function () {
     // Tools app light/dark theme (2026-08-20), tucked into Settings.
@@ -35,8 +35,8 @@
     if (saved === 'light') document.documentElement.setAttribute('data-theme', 'light');
   })();
 </script>
-<link rel="stylesheet" href="/styles.css?v=202609022200">
-<link rel="stylesheet" href="/tools/styles-tools.css?v=a2caeadf36">
+<link rel="stylesheet" href="/styles.css?v=202609061907">
+<link rel="stylesheet" href="/tools/styles-tools.css?v=f0faba8d41">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.112.3/dist/umd/supabase.js" integrity="sha384-qafw21c/iciq0VXsi9FzkfoQv5I/V0iqE4lSNcKXPnW9/UTJLnv5CcN4FHxVLnKg" crossorigin="anonymous" defer></script>
 <script src="/tools/sync.js?v=51c822a31b" defer></script>
 <script src="/tools/tools-effects.js?v=4cff99aa4a" defer></script>
@@ -62,7 +62,7 @@
      all) -- this only widens the container on a real desktop-size
      screen. */
   @media (min-width: 1024px) { body { max-width: 1000px; margin-left: calc(240px + max(0px, (100vw - 240px - 1000px) / 2)); padding-top: 75px; } }
-  .tool-title { font-family:'Oswald',sans-serif; font-weight:700; font-size:28px; color:var(--white); margin-bottom:6px; }
+  .tool-title { font-family:var(--font-ui); font-weight:700; font-size:28px; color:var(--white); margin-bottom:6px; }
   .tool-sub { color: var(--text-dim); margin-bottom: 24px; }
   .home-link { display:inline-block; margin-bottom: 20px; color: var(--blue-light); font-size: 14px; }
   .stop-row { display: flex; gap: 8px; margin-bottom: 10px; align-items: center; }

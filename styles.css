@@ -18,6 +18,31 @@
 */
 
   :root{
+    /* ---- Type system (2026-09-06) ----
+       Every font-family in this project now resolves through these three
+       tokens. Before this, 188 declarations across 38 files each named a
+       face literally, which made changing one a 38-file edit, and the
+       four different Google Fonts URLs in circulation had already
+       drifted apart from each other.
+
+       Inter is deliberately gone. It had the body-copy job since
+       2026-08-16 and did it competently -- it is also the most-used
+       interface typeface on the web, which is why a page set in it reads
+       as generically well-made rather than as ours. Newsreader replaces
+       it: a text serif with a real optical-size axis, so 15px running
+       copy and a 22px deck are drawn differently rather than one being
+       a scaled copy of the other.
+
+       Anton and Oswald both stay, in the roles they were already good
+       at -- Anton for display, Oswald for small uppercase UI labels,
+       where its condensed width is an asset and where its size and case
+       keep it clear of Anton. The stack that read flat before (two
+       condensed grotesques straight on top of each other) now has a
+       serif between them doing the actual reading. */
+    --font-display:'Anton', sans-serif;
+    --font-body:'Newsreader', Georgia, 'Times New Roman', serif;
+    --font-ui:'Oswald', sans-serif;
+    --font-app:'Archivo', -apple-system, 'Segoe UI', sans-serif;
     --bg:#0a0a0a;
     --bg-panel:#141414;
     --bg-panel-2:#1a1a1a;
@@ -102,14 +127,14 @@
        since they declare their own font-family rather than inheriting
        this one). Anton is untouched too -- still only the giant hero
        title. */
-    font-family:'Inter', -apple-system, 'Segoe UI', sans-serif;
+    font-family:var(--font-body);
     font-weight:400;
     line-height:1.6;
     -webkit-font-smoothing:antialiased;
   }
 
   h1,h2,h3{
-    font-family:'Anton', sans-serif;
+    font-family:var(--font-display);
     font-weight:400;
     text-transform:uppercase;
     letter-spacing:0.5px;
@@ -119,7 +144,15 @@
 
   a{color:inherit; text-decoration:none;}
   img{max-width:100%; display:block;}
-  button{font-family:inherit;}
+  /* A button is a control, not prose. Before the type change this
+     inherited Inter and happened to be right; inheriting now would
+     put every button on the public site into Newsreader. */
+  /* Form controls are UI, never prose. Before the type change these
+     inherited Inter and happened to be right; inheriting now would put
+     every button, field and dropdown on the public site into
+     Newsreader. Element selectors, so anything that names its own face
+     by class still wins. */
+  button,input,select,textarea,label{font-family:var(--font-app);}
 
   a:focus-visible,
   button:focus-visible,
@@ -147,7 +180,7 @@
   }
 
   .eyebrow{
-    font-family:'Oswald', sans-serif;
+    font-family:var(--font-ui);
     font-weight:600;
     letter-spacing:3px;
     text-transform:uppercase;
@@ -182,7 +215,7 @@
     gap:10px;
     padding:15px 26px;
     border-radius:6px;
-    font-family:'Oswald', sans-serif;
+    font-family:var(--font-ui);
     font-weight:600;
     letter-spacing:1.5px;
     text-transform:uppercase;
@@ -246,7 +279,7 @@
   }
   .brand img{height:44px; width:44px; object-fit:contain;}
   .brand-name{
-    font-family:'Anton', sans-serif;
+    font-family:var(--font-display);
     font-size:17px;
     letter-spacing:1px;
     color:#ffffff;
@@ -255,7 +288,7 @@
   }
   .brand-name span{
     display:block;
-    font-family:'Oswald', sans-serif;
+    font-family:var(--font-ui);
     font-size:10px;
     font-weight:500;
     letter-spacing:2px;
@@ -535,7 +568,7 @@
   .service-card.is-urgent .service-icon{background:rgba(255,128,0,0.28); color:var(--orange-light);}
   .service-icon svg{width:22px; height:22px;}
   .service-card h3{
-    font-family:'Oswald', sans-serif;
+    font-family:var(--font-ui);
     font-weight:700;
     font-size:17px;
     text-transform:none;
@@ -585,7 +618,7 @@
   .value-pill:nth-child(1){border-top-color:var(--orange-light); background:linear-gradient(180deg, rgba(255,128,0,0.06), var(--bg-panel) 60%);}
   .value-pill:nth-child(2){border-top-color:var(--steel); background:linear-gradient(180deg, rgba(150,150,150,0.08), var(--bg-panel) 60%);}
   .value-pill:nth-child(3){border-top-color:var(--blue-light); background:linear-gradient(180deg, rgba(58,160,255,0.07), var(--bg-panel) 60%);}
-  .value-pill .word{font-family:'Anton', sans-serif; font-size:15px; letter-spacing:1px; color:var(--white);}
+  .value-pill .word{font-family:var(--font-display); font-size:15px; letter-spacing:1px; color:var(--white);}
   .value-pill:nth-child(1) .word{color:var(--orange-light);}
   .value-pill:nth-child(2) .word{color:var(--steel);}
   .value-pill:nth-child(3) .word{color:var(--blue-light);}
@@ -600,14 +633,14 @@
     padding:34px 30px;
   }
   .quote-block p{
-    font-family:'Anton', sans-serif;
+    font-family:var(--font-display);
     font-size:clamp(20px,2.6vw,28px);
     line-height:1.25;
     color:var(--white);
     margin:0 0 14px;
   }
   .quote-block cite{
-    font-family:'Oswald', sans-serif;
+    font-family:var(--font-ui);
     font-size:13px;
     font-weight:500;
     letter-spacing:1px;
@@ -673,7 +706,7 @@
     border-radius:6px;
     padding:12px 14px;
     color:var(--white);
-    font-family:'Oswald', sans-serif;
+    font-family:var(--font-ui);
     font-size:14.5px;
   }
   input::placeholder, textarea::placeholder{color:#6a6a6a;}
@@ -704,7 +737,7 @@
   }
   .contact-card .service-icon{color:var(--orange-light); cursor:default;}
   .contact-card h3{
-    font-family:'Oswald', sans-serif;
+    font-family:var(--font-ui);
     font-weight:700;
     font-size:15px;
     text-transform:uppercase;
@@ -774,7 +807,7 @@
   .social-links a:hover{color:#1a0d02; background:var(--orange-light); border-color:var(--orange-light);}
   .social-links svg{width:17px; height:17px;}
   .footer-col h4{
-    font-family:'Oswald', sans-serif;
+    font-family:var(--font-ui);
     font-weight:700;
     font-size:13px;
     letter-spacing:1.5px;
@@ -857,7 +890,7 @@
 
   .terms-body{margin-top:18px;}
   .terms-body h4{
-    font-family:'Oswald', sans-serif;
+    font-family:var(--font-ui);
     font-weight:700;
     font-size:15px;
     color:var(--steel);
@@ -897,7 +930,7 @@
     background:none;
     border:none;
     color:var(--white);
-    font-family:'Oswald', sans-serif;
+    font-family:var(--font-ui);
     font-weight:600;
     font-size:15.5px;
     text-align:left;
@@ -1441,7 +1474,7 @@
     align-items:center;
     gap:10px 18px;
     margin:30px 0 0;
-    font-family:'Oswald', sans-serif;
+    font-family:var(--font-ui);
     font-weight:600;
     font-size:13px;
     letter-spacing:3px;
@@ -1544,7 +1577,7 @@
   .td-belt{stroke:var(--steel); stroke-width:6; fill:none; opacity:.45; vector-effect:non-scaling-stroke;}
   .td-callout{opacity:calc(1 - var(--p, 1));}
   .td-callout text{
-    font-family:'Oswald', sans-serif;
+    font-family:var(--font-ui);
     font-size:16px;
     letter-spacing:1.6px;
     text-transform:uppercase;
@@ -1568,7 +1601,7 @@
     align-items:baseline;
     justify-content:space-between;
     gap:12px;
-    font-family:'Oswald', sans-serif;
+    font-family:var(--font-ui);
     font-size:12.5px;
     letter-spacing:2.2px;
     text-transform:uppercase;
@@ -1760,7 +1793,7 @@
   .triage-step{margin-bottom:22px;}
   .triage-step:last-child{margin-bottom:0;}
   .triage-label{
-    font-family:'Oswald', sans-serif;
+    font-family:var(--font-ui);
     font-size:12px;
     font-weight:600;
     letter-spacing:2.2px;
@@ -1781,7 +1814,7 @@
   }
   .triage-options{display:flex; flex-wrap:wrap; gap:10px;}
   .triage-chip{
-    font-family:'Oswald', sans-serif;
+    font-family:var(--font-ui);
     font-size:14px;
     font-weight:500;
     letter-spacing:.4px;
@@ -1808,7 +1841,7 @@
   }
   .triage-result[hidden]{display:none;}
   .triage-verdict{
-    font-family:'Anton', sans-serif;
+    font-family:var(--font-display);
     font-size:clamp(19px,2.4vw,25px);
     line-height:1.2;
     color:var(--white);
@@ -1842,7 +1875,7 @@
   .radius-node{fill:var(--bg-panel-2); stroke:var(--blue-light); stroke-width:2;}
   .radius-node.is-request{stroke:var(--orange);}
   .radius-hub{fill:var(--orange); stroke:none;}
-  .radius-figure text{font-family:'Oswald', sans-serif; letter-spacing:1px;}
+  .radius-figure text{font-family:var(--font-ui); letter-spacing:1px;}
   .radius-name{font-size:15px; font-weight:600; fill:var(--text);}
   .radius-name.is-request{fill:var(--orange-light);}
   .radius-note{font-size:12.5px; fill:var(--text-dim); letter-spacing:.6px;}
@@ -1873,7 +1906,7 @@
     background:rgba(10,10,10,.55);
     -webkit-backdrop-filter:blur(6px);
     backdrop-filter:blur(6px);
-    font-family:'Oswald', sans-serif;
+    font-family:var(--font-ui);
     font-size:13px;
     letter-spacing:.8px;
     color:#e8e8e8;
@@ -1913,7 +1946,7 @@
   .verdict-col.is-fix{border-top:3px solid var(--blue);}
   .verdict-col.is-replace{border-top:3px solid var(--orange);}
   .verdict-col h3{
-    font-family:'Oswald', sans-serif;
+    font-family:var(--font-ui);
     font-weight:700;
     font-size:17px;
     text-transform:none;
@@ -1975,7 +2008,7 @@
   }
   .care-icon svg{width:22px; height:22px;}
   .care-month{
-    font-family:'Oswald', sans-serif;
+    font-family:var(--font-ui);
     font-size:12px;
     font-weight:600;
     letter-spacing:2.2px;
@@ -2017,7 +2050,7 @@
     background:linear-gradient(90deg, var(--orange-dark), var(--orange-light));
   }
   .read-meta{
-    font-family:'Oswald', sans-serif;
+    font-family:var(--font-ui);
     font-size:12.5px;
     letter-spacing:1.6px;
     text-transform:uppercase;
@@ -2050,7 +2083,7 @@
     background:var(--bg-panel);
     border:1px solid var(--orange-tint-border);
     color:var(--orange-light);
-    font-family:'Anton', sans-serif;
+    font-family:var(--font-display);
     font-size:17px;
     display:flex; align-items:center; justify-content:center;
     margin:0 0 18px;
@@ -2059,7 +2092,7 @@
     box-shadow:0 0 0 6px var(--bg);
   }
   .process-step h3{
-    font-family:'Oswald', sans-serif;
+    font-family:var(--font-ui);
     font-weight:700;
     font-size:16px;
     text-transform:none;

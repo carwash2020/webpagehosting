@@ -26,7 +26,7 @@
 }
 
 .blog-kicker {
-  font-family: 'Oswald', sans-serif;
+  font-family:var(--font-ui);
   font-weight: 600;
   letter-spacing: 3px;
   text-transform: uppercase;
@@ -44,7 +44,7 @@
 }
 
 .blog-title {
-  font-family: 'Anton', sans-serif;
+  font-family:var(--font-display);
   font-weight: 400;
   font-size: 36px;
   line-height: 1.15;
@@ -94,7 +94,7 @@
 }
 
 .blog-article h2 {
-  font-family: 'Oswald', sans-serif;
+  font-family:var(--font-ui);
   font-weight: 600;
   font-size: 24px;
   color: var(--white);
@@ -169,7 +169,7 @@
   border-top: 1px solid var(--border);
 }
 .blog-related-title {
-  font-family: 'Oswald', sans-serif;
+  font-family:var(--font-ui);
   font-weight: 600;
   font-size: 20px;
   color: var(--white);
@@ -202,7 +202,7 @@
   text-decoration: none;
 }
 .blog-index-item-title {
-  font-family: 'Oswald', sans-serif;
+  font-family:var(--font-ui);
   font-weight: 600;
   font-size: 24px;
   color: var(--white);

@@ -71,7 +71,18 @@ body:has(.login-box) {
    matched via :has() above) intentionally keep the unmodified tokens --
    they're a single centered card on an otherwise empty page, where the
    original tighter range was never the problem. */
+/* login.html and set-password.html deliberately carry a bare <body> --
+   no bottom nav, no elevation overrides -- so they miss the
+   .portal-page rule below. They are still the app rather than
+   something anyone reads, so they take the app face too. Same
+   :has(.login-box) hook the drafting-grid background already uses. */
+body:has(.login-box) { font-family: var(--font-app); }
+
 body.portal-page {
+  /* Same reasoning as the tool suite: the portal is an app a client
+     operates, so its running text takes the app face, not the public
+     site's body serif. */
+  font-family: var(--font-app);
   --bg: #07080a;
   --bg-panel: #18191d;
   --bg-panel-2: #212327;
@@ -86,7 +97,7 @@ body.portal-page {
   margin-bottom: 4px;
 }
 .portal-title {
-  font-family: 'Anton', sans-serif;
+  font-family:var(--font-display);
   letter-spacing: .6px;
 }
 .portal-sub {
@@ -159,7 +170,7 @@ body.portal-page {
   gap: 6px;
   padding: 4px 11px;
   border-radius: 999px;
-  font-family: 'Oswald', sans-serif;
+  font-family:var(--font-ui);
   font-size: 11.5px;
   font-weight: 600;
   letter-spacing: 1.2px;
@@ -292,7 +303,7 @@ body.portal-page .help-actions a:hover {
 }
 .login-logo { filter: drop-shadow(0 8px 20px rgba(0, 0, 0, .5)); }
 .login-title {
-  font-family: 'Anton', sans-serif;
+  font-family:var(--font-display);
   letter-spacing: .6px;
 }
 .login-sub { color: var(--text-dim); }
@@ -335,7 +346,7 @@ body.portal-page .help-actions a:hover {
 .wo-urgency-sub { color: var(--text-dim); line-height: 1.55; }
 .wo-section-title,
 .set-card-title {
-  font-family: 'Oswald', sans-serif;
+  font-family:var(--font-ui);
   font-weight: 600;
   letter-spacing: .4px;
 }
@@ -364,7 +375,7 @@ body.portal-page .help-actions a:hover {
   border-radius: 14px;
   box-shadow: 0 30px 70px -24px rgba(0, 0, 0, .8);
 }
-.report-bug-title { font-family: 'Anton', sans-serif; letter-spacing: .5px; }
+.report-bug-title { font-family:var(--font-display); letter-spacing: .5px; }
 .report-bug-sub { color: var(--text-dim); }
 .report-bug-error:not(:empty) {
   border-left: 3px solid var(--orange);
@@ -416,14 +427,14 @@ body.portal-page .help-actions a:hover {
 /* The amount owed is the single most important number on this screen, so
    it should read first. Everything else on the card is supporting detail. */
 .invoice-total {
-  font-family: 'Anton', sans-serif;
+  font-family:var(--font-display);
   font-size: 21px;
   letter-spacing: .4px;
   color: var(--white);
   line-height: 1.15;
 }
 .invoice-number {
-  font-family: 'Oswald', sans-serif;
+  font-family:var(--font-ui);
   font-weight: 600;
   letter-spacing: .8px;
   color: var(--white);
@@ -501,7 +512,7 @@ body.portal-page .help-actions a:hover {
 /* The home screen is a set of counts. Counts should be the thing you see,
    with the label underneath, rather than both competing at one size. */
 .home-greeting {
-  font-family: 'Anton', sans-serif;
+  font-family:var(--font-display);
   letter-spacing: .5px;
   color: var(--white);
 }
@@ -514,14 +525,14 @@ body.portal-page .help-actions a:hover {
   box-shadow: var(--shadow-hover);
 }
 .home-card-count {
-  font-family: 'Anton', sans-serif;
+  font-family:var(--font-display);
   font-size: 30px;
   line-height: 1.05;
   color: var(--orange-light);
   letter-spacing: .5px;
 }
 .home-card-label {
-  font-family: 'Oswald', sans-serif;
+  font-family:var(--font-ui);
   font-weight: 600;
   font-size: 13px;
   letter-spacing: 1.4px;
@@ -533,7 +544,7 @@ body.portal-page .help-actions a:hover {
 /* Anything needing the client's attention should look like it does. */
 .attention-card { border-left-width: 3px; }
 .attention-title {
-  font-family: 'Oswald', sans-serif;
+  font-family:var(--font-ui);
   font-weight: 600;
   letter-spacing: .4px;
   color: var(--white);
@@ -542,7 +553,7 @@ body.portal-page .help-actions a:hover {
 .attention-row-text { color: var(--text-dim); line-height: 1.5; }
 
 .section-title {
-  font-family: 'Oswald', sans-serif;
+  font-family:var(--font-ui);
   font-weight: 600;
   font-size: 12.5px;
   letter-spacing: 2px;

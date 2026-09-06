@@ -82,7 +82,10 @@
 // Bumped 2026-09-06 (v14 -> v15): portal-polish.css changed again (faint
 // drafting-grid background on login.html/set-password.html). Precached
 // under its bare path.
-const CACHE_NAME = 'th-portal-v15';
+// Bumped 2026-09-06 (v15 -> v16): the same type-system change. /styles.css
+// and /portal/portal-polish.css are both in PRECACHE_URLS and both changed.
+// Same reasoning as every prior bump in this file's history.
+const CACHE_NAME = 'th-portal-v16';
 const PRECACHE_URLS = [
   '/portal/home.html', '/portal/dashboard.html', '/portal/jobs.html', '/portal/quotes.html',
   '/portal/work-orders.html', '/portal/settings.html', '/portal/login.html', '/portal/set-password.html',

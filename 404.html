@@ -14,8 +14,22 @@
 <link rel="apple-touch-icon" href="/images/apple-touch-icon.png?v=202608010300">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Anton&family=Oswald:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Anton&family=Archivo:wght@400..700&family=Newsreader:ital,opsz,wght@0,6..72,300..700;1,6..72,300..600&family=Oswald:wght@200..700&display=swap" rel="stylesheet">
 <style>
+  /* This page is intentionally standalone -- it must render even if
+     /styles.css itself is what failed to load -- so it carries its own
+     copy of the type tokens. Keep in step with the :root block there. */
+  :root{
+    --font-display:'Anton', sans-serif;
+    --font-body:'Newsreader', Georgia, 'Times New Roman', serif;
+    --font-ui:'Oswald', sans-serif;
+    --font-app:'Archivo', -apple-system, 'Segoe UI', sans-serif;
+  }
+  /* This page does not load /styles.css, so it repeats that file's
+     rule that form controls take the app face rather than
+     inheriting the body serif. */
+  button,input,select,textarea,label{font-family:var(--font-app);}
+
   body{
     margin:0;
     min-height:100vh;
@@ -25,13 +39,13 @@
     justify-content:center;
     background:#0a0a0a;
     color:#e8e8e8;
-    font-family:'Oswald', sans-serif;
+    font-family:var(--font-ui);
     text-align:center;
     padding:24px;
   }
   img{width:100px; height:auto; margin-bottom:28px;}
   h1{
-    font-family:'Anton', sans-serif;
+    font-family:var(--font-display);
     font-size:clamp(48px,10vw,90px);
     color:#ff8000;
     margin:0;
