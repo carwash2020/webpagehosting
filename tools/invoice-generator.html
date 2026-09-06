@@ -485,11 +485,13 @@
   // source_invoice_id, so this updates the existing portal row rather
   // than creating a duplicate, and re-fires the notification email.
   //
-  // Line items are the one thing NOT recoverable here: they live only
-  // in the form at generation time, never in the log entry. The
-  // portal row already has them from the original send, and the
-  // upsert deliberately omits the field rather than overwriting real
-  // line items with an empty array.
+  // Line items (2026-09-06): now genuinely recoverable here, since the
+  // log itself started saving them the same day. For an invoice
+  // created before that fix, inv.line_items is simply undefined --
+  // JSON.stringify drops it, sync-invoice-to-portal's own optional
+  // handling omits the field entirely, and the upsert leaves the
+  // portal row's existing line items (if any) untouched rather than
+  // overwriting them with nothing.
   async function resendInvoiceToClient(invoiceId) {
     const inv = loadInvoiceLog().find(i => i.id === invoiceId);
     if (!inv) { showToast('Could not find that invoice in the log.', { type: 'error' }); return; }
@@ -512,6 +514,7 @@
           invoice_number: inv.invoiceNumber,
           invoice_date: inv.date,
           description: inv.jobRefTitle || null,
+          line_items: inv.line_items,
           total: inv.total,
         }),
       });
@@ -1604,6 +1607,14 @@
       paid: false,
       jobRefId: jobRefId || '',
       jobRefTitle,
+      // Saved to the internal log too (2026-09-06), requested
+      // directly -- previously this only ever lived in
+      // client_portal_invoices, created just when "Send to Client"
+      // was pressed. A "Download PDF" only invoice, never sent to
+      // anyone, had its line-item detail permanently lost the moment
+      // this form closed; now every invoice keeps it in the
+      // business's own record regardless of whether it was ever sent.
+      line_items: getLineItems(),
       generatedBy: (typeof getCurrentUserEmail === 'function') ? getCurrentUserEmail() : null,
       // Item #10 (2026-08-20): links back to the quote this invoice was
       // converted from, if any -- see convertQuoteToInvoice() and the
@@ -1701,6 +1712,9 @@
       total: totals.total,
       jobRefId: jobRefId || '',
       jobRefTitle,
+      // Saved to the internal log too (2026-09-06) -- same reasoning
+      // as the identical fix just made to the invoice log.
+      line_items: getQuoteLineItems(),
       generatedBy: (typeof getCurrentUserEmail === 'function') ? getCurrentUserEmail() : null,
       // Item #10 (2026-08-20): 'pending' until convertQuoteToInvoice()
       // + a real logInvoice() save marks it 'converted' -- see logInvoice()
