@@ -737,3 +737,219 @@ one does. Two things worth knowing if any of them ever misbehave:
   protection against exactly that, which would need temporarily
   disabling) -- check with Connor directly on current status before
   assuming either way.
+
+---
+
+# Folded in from `DISASTER_RECOVERY_ADDENDUM.md` (2026-09-04 → 2026-09-07)
+
+## ⚠️ CORRECTED: the "local test failures are a checkout artifact" note
+
+The addendum this section came from contained a claim that has since
+been **disproven directly, and it was actively harmful** — it told
+future sessions to ignore the one signal that would have caught a real
+problem. It is preserved here in corrected form rather than deleted,
+because the reasoning failure is worth keeping.
+
+**What the addendum claimed:** that local `npm test` failures with names
+like *"the cache-bust check passes cleanly"* / *"CACHE_NAME was bumped"*
+were a checkout-environment artifact caused by git line-ending
+conversion, and that **"GitHub Actions' own CI has passed cleanly on
+every single PR through this entire period"** — so a local failure could
+be safely disregarded if CI was green.
+
+**What was actually true (verified 2026-09-07):**
+
+1. **CI was not green. It had been failing on every single push since
+   PR #118** — through #118, #119, #120, #121 and beyond. The claim that
+   it passed cleanly was never checked against the Actions tab.
+2. **The failures were real, deterministic, and reproducible in every
+   environment** — nothing to do with line endings. Six test files
+   pinned an exact literal `CACHE_NAME` (`th-portal-v10`,
+   `th-workspace-v59`; seven assertions total). That is in permanent
+   conflict with this project's own mandatory rule that `CACHE_NAME` is
+   bumped whenever a precached file changes. The suite went red the
+   first time somebody followed the rule correctly (#118, "v10 → v11")
+   and stayed red for every correct bump after.
+3. **The line-ending theory was tested and did not hold.**
+   `git show HEAD:tools/tools-nav-pwa.js | md5sum` and `md5sum` of the
+   working copy produced an identical hash; `core.autocrlf` was unset
+   and no `.gitattributes` existed. The working tree matched the
+   committed blob byte-for-byte. (This may genuinely have been a real
+   effect on one particular Windows checkout — but it was not the cause
+   of these failures, and it was used to dismiss failures that were
+   real.)
+4. **The consequence was not cosmetic.** `.github/workflows/test.yml`
+   runs `npm test` *before* `check-undefined-vars`, `check-consistency`
+   and `check-visual-snapshot`. A failing `npm test` aborts the job, so
+   **those three steps stopped executing entirely.** `check-consistency`
+   is the guard against stale `?v=` cache-bust stamps — the exact class
+   of bug that has caused real "the site shows no changes even in
+   incognito" incidents here. With it silently not running, real drift
+   reached `main` undetected: `tools-nav-pwa.js` and `tools-tour.js`
+   were both sitting on stale stamps across 22 pages.
+
+**Fixed 2026-09-07:** every frozen assertion now checks a *floor*
+(constant exists, is well-formed as `<prefix>-v<N>`, and is at or above
+the version its feature landed at). Verified by deliberately breaking it
+three ways: a lowered version and a malformed version both still fail
+the suite; the correct current value passes. `npm test` is 1055/1055.
+
+**The durable lesson:** if a test asserts an exact value that a
+documented rule requires you to change, the test will break every time
+someone is correct. Assert the invariant, not the snapshot. And never
+assert what CI is doing without opening the Actions tab.
+
+## Current cache-bust / precache version numbers (as of 2026-09-07)
+
+These exist so a future session can sanity-check "is this stale" without
+re-deriving it. They will be wrong again soon — that's expected. Confirm
+the real value in each file directly.
+
+- `styles.css` cache-bust stamp: `?v=202609070100`
+- `service-worker.js` (Workspace/tools) `CACHE_NAME`: `th-workspace-v63`
+- `portal/service-worker.js` `CACHE_NAME`: `th-portal-v15`
+
+**The rule that governs all three, restated because it keeps causing
+real incidents:** any file in a service worker's `PRECACHE_URLS` that
+changes requires that worker's `CACHE_NAME` bumped, or every device with
+the PWA installed keeps serving the old copy indefinitely — a hard
+refresh does not help, because the worker intercepts the fetch before it
+reaches the network. Separately, any file referenced with a `?v=` query
+string that changes requires that stamp bumped in **every** referencing
+page, or GitHub Pages' CDN (Fastly) keeps serving the old file under the
+unchanged URL to everyone — incognito does not help either, since
+Fastly's cache lives outside the visitor's machine. Two caching layers,
+two different fixes. A real incident during this period traced to
+exactly the second one.
+
+`npm run fix-versions` recomputes and corrects every `?v=` stamp
+automatically. As of 2026-09-07 it covers `portal/` too, not just
+`tools/`. There is still no one-command fix for a `CACHE_NAME` — that is
+bumped by hand, every time.
+
+## Scenario 10: A client reports a portal problem that never shows up anywhere
+
+The portal now captures every real client-side JavaScript error into
+`portal_client_errors`, not just the client-initiated "Report a problem"
+button.
+
+1. **Dev Tools → Clients → Portal client errors** shows every error
+   caught automatically, including the client's email (if signed in),
+   the page, and the actual message/stack. First place to check.
+2. Capture is capped at 10 reports per page load (an error inside a loop
+   shouldn't flood the table) and auto-pruned after 30 days by a
+   `pg_cron` job, `cleanup-old-portal-client-errors` — diagnostic data,
+   not a permanent audit log.
+3. If the panel shows nothing for a reported problem, the error may have
+   happened before the portal's JS loaded far enough to register the
+   capture, or the client may be on a very old cached `portal-app.js`
+   from before this existed — check their installed app version.
+
+## Scenario 11: A payment shows succeeded in Stripe but the invoice still shows unpaid
+
+A daily reconciliation check, `reconcile-stripe-payments` (Edge
+Function, `pg_cron` as `daily-stripe-reconciliation-check`, 6am daily),
+catches a missed webhook delivery.
+
+1. It checks the last 8 days of succeeded Stripe payments against
+   `client_portal_invoices` and sends a push alert on a mismatch.
+2. **Deliberately alert-only. It never marks anything paid
+   automatically.** A human decides whether it was genuinely missed, a
+   refund, a dispute, or a real bug, then uses `set-invoice-paid`.
+3. **Required secret:** `STRIPE_RECONCILE_SECRET_KEY` — its own narrowly
+   scoped Stripe restricted key (PaymentIntents: Read only). If the
+   check silently stops, confirm this secret still exists first; the
+   function logs a clear "secret is not set yet" message and returns 500
+   rather than failing silently.
+4. Alerts resend daily until resolved, on purpose.
+
+## Scenario 12: The portal's biometric lock is stuck, re-prompting, or a client is locked out
+
+An optional, client-enabled **local** device lock (Settings → Security).
+Not a server-verified factor — the client still signs in with their real
+password; this only adds a local check in front of an already-valid
+session on one device.
+
+1. **Re-prompts on every page:** was a real, fixed bug — the "already
+   unlocked" state used a plain JS variable, which resets on every
+   navigation in a multi-page app. It now uses `sessionStorage`. If this
+   regresses, check `portalGuardWithBiometricLock` in
+   `portal/portal-app.js` for a `sessionStorage` check.
+2. **A broken sensor must never lock someone out:** Settings is
+   **deliberately never gated by this lock**, so the toggle is always
+   reachable. If Settings ever becomes gated, that is a regression to
+   fix immediately — the lock's "use password instead" fallback only
+   returns them to the same locked state.
+3. Stored per-email in `localStorage`, never in Supabase, so it never
+   carries between devices.
+
+## Scenario 13: A client-facing complaint about the invoice/receipt PDF
+
+1. **The PAID stamp covers the total.** The stamp is at a fixed
+   position; the total's position is dynamic. With little content above
+   it, the total landed inside the stamp (jsPDF has no z-order — second
+   drawn paints over first). Fixed with a floor on the total's position,
+   applied only when the stamp exists: `Math.max(y, 255)` in
+   `downloadInvoicePDF` in `portal/dashboard.html`.
+2. **A receipt shows no line items.** Before this period the internal
+   `invoice_log`/`quote_log` never stored line items — only totals. An
+   invoice only ever downloaded as a PDF and never sent to a portal
+   account lost that detail permanently. Both logs now save
+   `line_items`. **If this recurs, the most likely explanation is an
+   invoice created before that fix** — there is no way to recover it
+   retroactively; the data was never captured.
+
+## Scenario 14: A form field zooms the whole page in when tapped on a phone
+
+iOS Safari (and some Android browsers) auto-zoom when a tapped
+`input`/`select`/`textarea` has a computed font-size under 16px. The fix
+pattern, already applied everywhere: a generic
+`input, select, textarea { font-size: 16px; }` rule, **plus** bumping
+any more-specific selector's own font-size to 16px individually (a more
+specific selector wins regardless of file order).
+`tests/site-wide/mobile-zoom-fix.test.js` scans every HTML file and
+fails if it finds a sub-16px font-size on any of the three. If that test
+fails, this is exactly what reappeared.
+
+## Scale-related fixes made this period (informational, not incident-driven)
+
+- **Missing indexes** on `client_portal_jobs.client_email` and
+  `card_authorizations.client_email`, despite both being filtered on
+  that exact column in their own RLS policies. Both added.
+- **A real duplicate-push-notification bug:** nothing prevented a client
+  toggling push off and on repeatedly from inserting a fresh
+  subscription row for the same device endpoint each time — genuinely
+  duplicate notifications on every future send. Fixed with a unique
+  constraint on (`user_id`, `endpoint`) as a real column (PostgREST's
+  upsert only works against real columns, not a JSONB expression) and a
+  genuine upsert in both `tools/push-notifications.js` and
+  `portal/push-notifications.js`.
+- **Unbounded tombstone growth:** all 13 `th_*_tombstones` arrays grew
+  forever, one entry per deletion. Each only needs to survive until
+  every device has synced the deletion once. A shared 90-day prune now
+  runs on every add. Preventive — nothing is old enough to be pruned yet.
+
+## The public site's visual redesign ("scroll-craft") — rollback
+
+Starting 2026-09-06, the public marketing site went through a
+substantial visual redesign using the **scroll-craft** skill, committed
+at `.claude/skills/scroll-craft/` so it travels with the repo.
+
+This was **presentation-layer work only, by explicit instruction** — the
+lead form's insert logic, the booking system's logic, the JSON-LD, the
+GA4 snippet, the favicon links, and the by-request-only treatment for
+Cedar City/Mesquite were all off-limits and verified untouched by
+reading the actual diffs.
+
+A safety checkpoint tag exists:
+**`pre-scroll-craft-redesign-2026-09-06`**, pointing at the exact commit
+live immediately before the redesign began.
+
+```bash
+git checkout main
+git reset --hard pre-scroll-craft-redesign-2026-09-06
+git push --force-with-lease origin main
+```
+
+Force-pushing `main` is disruptive if anyone else has pulled. Reverting
+the specific merge commit(s) is the gentler option where sufficient.
