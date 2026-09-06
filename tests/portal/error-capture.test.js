@@ -52,7 +52,29 @@ test('every portal page loads portal-app.js, so capture applies everywhere inclu
 
 test('both service workers were bumped since portal-app.js (portal) and data-layer.js/dev-tools-shared.js (tools) changed, and each is precached under a bare path with no ?v=', () => {
   const portalSW = fs.readFileSync(repo('portal', 'service-worker.js'), 'utf8');
-  assert.match(portalSW, /const CACHE_NAME = 'th-portal-v10';/);
+  // Asserts a FLOOR, not an exact value (2026-09-07). This used to pin the
+  // literal 'th-portal-v10', which put the test in permanent conflict with this
+  // project's own mandatory rule that CACHE_NAME is bumped on every precached
+  // file change -- so every correct bump broke the suite. It did, at
+  // th-portal-v11, and stayed broken. A floor still catches the real
+  // regression (a missing, malformed, or lowered version) without failing on
+  // a correct future bump.
+  {
+    const m = portalSW.match(/const CACHE_NAME = 'th-portal-v(\d+)';/);
+    assert.ok(m, "expected a 'th-portal-v<N>' CACHE_NAME declaration");
+    assert.ok(Number(m[1]) >= 10, `expected th-portal cache at or above v10 for this change, found v${m[1]}`);
+  }
   const toolsSW = fs.readFileSync(repo('service-worker.js'), 'utf8');
-  assert.match(toolsSW, /const CACHE_NAME = 'th-workspace-v59';/);
+  // Asserts a FLOOR, not an exact value (2026-09-07). This used to pin the
+  // literal 'th-workspace-v59', which put the test in permanent conflict with this
+  // project's own mandatory rule that CACHE_NAME is bumped on every precached
+  // file change -- so every correct bump broke the suite. It did, at
+  // th-workspace-v60, and stayed broken. A floor still catches the real
+  // regression (a missing, malformed, or lowered version) without failing on
+  // a correct future bump.
+  {
+    const m = toolsSW.match(/const CACHE_NAME = 'th-workspace-v(\d+)';/);
+    assert.ok(m, "expected a 'th-workspace-v<N>' CACHE_NAME declaration");
+    assert.ok(Number(m[1]) >= 59, `expected th-workspace cache at or above v59 for this change, found v${m[1]}`);
+  }
 });
