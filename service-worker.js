@@ -260,7 +260,12 @@
 // reported bug ("the clients page on computer does not fit or work
 // right"), traced to a CSS override gap in the Client Lookup card
 // built earlier the same day.
-const CACHE_NAME = 'th-workspace-v58';
+// Bumped 2026-09-06 (again): invoice-generator.html changed --
+// line_items now saved to the internal invoice/quote logs too, not
+// just the portal's own copy (requested directly, found while
+// investigating a real reported receipt issue). Precached under its
+// bare path.
+const CACHE_NAME = 'th-workspace-v59';
 const PRECACHE_URLS = [
   '/tools/workspace.html', '/tools/job-tracker.html', '/tools/invoice-generator.html', '/tools/contract-generator.html',
   '/tools/calendar.html', '/tools/route-planner.html', '/tools/review-request.html', '/tools/contact-card.html',
