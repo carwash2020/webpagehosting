@@ -44,12 +44,23 @@
 <script src="/tools/tools-tour.js?v=cf6652f5b1" defer></script>
 <script src="/tools/sync.js?v=51c822a31b" defer></script>
 <style>
+  /* iOS Safari zoom-on-focus fix (2026-09-05), same root cause and
+     fix already applied to invoice-generator.html: a tapped
+     input/select/textarea with a font-size under 16px triggers the
+     browser's own auto-zoom. This generic rule covers every field on
+     this page, including any with no explicit font-size at all
+     (falling back to the browser's own sub-16px default) -- any
+     more specific selector below still needs its own individual
+     bump too, since a more specific selector always wins regardless
+     of where either rule sits in the file. */
+  input, select, textarea { font-size: 16px; }
+
   .pr-search-filter-row { display: flex; gap: 8px; margin-bottom: 16px; }
   .pr-search-filter-row .pr-search-field { flex: 1 1 auto; min-width: 0; }
   .pr-search-filter-row .pr-filter-field { flex: 0 0 auto; width: 128px; }
   .pr-filter-select {
     width: 100%; padding: 11px 10px; background: var(--bg-panel-2); border: 1px solid var(--border);
-    border-radius: 8px; color: var(--white); font-size: 13.5px; font-family: inherit;
+    border-radius: 8px; color: var(--white); font-size: 16px; font-family: inherit;
     appearance: none; -webkit-appearance: none;
     background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%23a0a0a0' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
     background-repeat: no-repeat; background-position: right 10px center; padding-right: 28px;

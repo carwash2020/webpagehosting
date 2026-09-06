@@ -50,7 +50,12 @@
 // sections added (requested directly: "we need to revamp the
 // settings it still looks a little much"), precached under its bare
 // path.
-const CACHE_NAME = 'th-portal-v8';
+// Bumped 2026-09-05 (v8 -> v9): the iOS Safari zoom-on-focus fix
+// (invoice-generator.html only, earlier the same day) was extended
+// to every one of the 8 precached portal pages after a comprehensive
+// scan found the identical bug on all of them, including a shared
+// "Report a problem" textarea present on every single one.
+const CACHE_NAME = 'th-portal-v9';
 const PRECACHE_URLS = [
   '/portal/home.html', '/portal/dashboard.html', '/portal/jobs.html', '/portal/quotes.html',
   '/portal/work-orders.html', '/portal/settings.html', '/portal/login.html', '/portal/set-password.html',

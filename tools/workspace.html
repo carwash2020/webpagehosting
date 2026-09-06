@@ -68,6 +68,17 @@
 <script src="/tools/tools-nav-pwa.js?v=9b16eefb86" defer></script>
 <script src="/tools/tools-tour.js?v=cf6652f5b1" defer></script>
 <style>
+  /* iOS Safari zoom-on-focus fix (2026-09-05), same root cause and
+     fix already applied to invoice-generator.html: a tapped
+     input/select/textarea with a font-size under 16px triggers the
+     browser's own auto-zoom. This generic rule covers every field on
+     this page, including any with no explicit font-size at all
+     (falling back to the browser's own sub-16px default) -- any
+     more specific selector below still needs its own individual
+     bump too, since a more specific selector always wins regardless
+     of where either rule sits in the file. */
+  input, select, textarea { font-size: 16px; }
+
   body { padding: 44px 20px 60px; max-width: 900px; margin: 0 auto; }
   /* Desktop layout (2026-08-20), requested directly: efficient on
      phone stays exactly as it was (nothing below 1024px changes at
@@ -159,7 +170,7 @@
   .global-search-block > input {
     width: 100%; box-sizing: border-box; padding: 13px 16px; background: var(--bg-panel-2);
     border: 1px solid var(--border); border-radius: var(--radius); color: var(--white);
-    font-size: 15px; font-family: inherit;
+    font-size: 16px; font-family: inherit;
   }
   .global-search-block > input:focus-visible { border-color: var(--orange-light); }
   #globalSearchResults:not(:empty) {
@@ -230,7 +241,7 @@
   .custom-range-row.is-visible { display: flex; }
   .custom-range-row input {
     padding: 8px 10px; background: var(--bg-panel-2); border: 1px solid var(--border);
-    border-radius: 6px; color: var(--white); font-size: 13.5px; font-family: inherit;
+    border-radius: 6px; color: var(--white); font-size: 16px; font-family: inherit;
   }
   .custom-range-row span { color: var(--text-dim); font-size: 13px; }
 

@@ -182,9 +182,13 @@
 
   label{display:block; font-size:13px; color:var(--text-dim); margin-bottom:6px; margin-top:18px; font-weight:500;}
   label:first-of-type{margin-top:0;}
+  /* iOS Safari zoom-on-focus fix (2026-09-05), same root cause and
+     fix already applied to invoice-generator.html and every portal/
+     tools page: a tapped field with a font-size under 16px triggers
+     the browser's own auto-zoom. */
   input, textarea{
     width:100%; background:var(--bg-panel-2); border:1px solid var(--border); border-radius:10px;
-    padding:12px 14px; color:var(--text); font-family:inherit; font-size:15px;
+    padding:12px 14px; color:var(--text); font-family:inherit; font-size:16px;
     transition:border-color .15s ease;
   }
   input:focus, textarea:focus{outline:2px solid var(--orange); outline-offset:1px; border-color:var(--orange);}
