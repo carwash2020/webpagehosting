@@ -85,7 +85,12 @@
 // Bumped 2026-09-06 (v15 -> v16): the same type-system change. /styles.css
 // and /portal/portal-polish.css are both in PRECACHE_URLS and both changed.
 // Same reasoning as every prior bump in this file's history.
-const CACHE_NAME = 'th-portal-v16';
+// Bumped 2026-09-06 (v16 -> v17): the same <html> inline-style fix as the
+// tools service worker's own comment on this date, applied to all 8
+// precached portal pages for consistency -- their own ambient gradient
+// lives on body.portal-page rather than html, so they were never actually
+// broken by this, but they carry the identical hazard otherwise.
+const CACHE_NAME = 'th-portal-v17';
 const PRECACHE_URLS = [
   '/portal/home.html', '/portal/dashboard.html', '/portal/jobs.html', '/portal/quotes.html',
   '/portal/work-orders.html', '/portal/settings.html', '/portal/login.html', '/portal/set-password.html',

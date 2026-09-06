@@ -1,5 +1,18 @@
 <!DOCTYPE html>
-<html lang="en" style="background:#0a0a0a;">
+<!-- background-color, not the background shorthand (2026-09-06): the
+     shorthand also resets background-image, which silently cancelled the
+     ambient gradient tools/styles-tools.css defines on this element --
+     rendered fine in isolation and never caught by any test, but never
+     actually visible on a real tool page. Fixed here rather than dropping
+     the inline value: it still paints dark before CSS parses, which is
+     the whole reason it exists (see color-scheme below on pages that have
+     it) -- it just no longer overrides a property it never meant to touch.
+     Portal pages carry the identical inline value for the same FOUC
+     reason, but their own ambient gradient lives on body.portal-page, not
+     html, so it was never at risk from this -- fixed for consistency and
+     to remove the same latent hazard before anything ever puts a
+     background-image on html here too. -->
+<html lang="en" style="background-color:#0a0a0a;">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
@@ -28,11 +41,11 @@
   })();
 </script>
 <link rel="stylesheet" href="/styles.css?v=202609062002">
-<link rel="stylesheet" href="/tools/styles-tools.css?v=f0faba8d41">
+<link rel="stylesheet" href="/tools/styles-tools.css?v=5dac71771c">
 <script src="/tools/auth.js?v=7b87c4fdc1"></script>
 <script src="/tools/tools-effects.js?v=4cff99aa4a" defer></script>
 <script src="/tools/tools-dialogs.js?v=e1dfaa11a1" defer></script>
-<script src="/tools/tools-media-sharing.js?v=4e2769b10d" defer></script>
+<script src="/tools/tools-media-sharing.js?v=269452a6d3" defer></script>
 <script src="/tools/tools-nav-pwa.js?v=9b16eefb86" defer></script>
 <style>
   /* iOS Safari zoom-on-focus fix (2026-09-05), same root cause and

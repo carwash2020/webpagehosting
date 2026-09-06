@@ -289,7 +289,35 @@
 // face literally, and the body face moved off Inter. Precached ?v= URLs
 // are served cache-first and never revalidated, so without this bump an
 // installed Workspace would keep serving the old stylesheet indefinitely.
-const CACHE_NAME = 'th-workspace-v64';
+// Bumped 2026-09-06 (v64 -> v65): every precached tool page's <html> tag
+// changed -- the inline style="background:..." (a pre-existing FOUC-
+// prevention convention) used the background shorthand, which resets
+// background-image along with background-color. That silently cancelled
+// this stylesheet's own ambient gradient on <html> since the day it was
+// added: correct in the CSS, never once visible on a real page. Fixed by
+// narrowing the inline value to background-color, which still paints dark
+// before CSS parses (the actual point of it) without touching a property
+// it was never meant to touch.
+// Bumped 2026-09-06 (v65 -> v66): tools/styles-tools.css changed again --
+// Job Tracker's Jobs tab had two containers for the same list, #jobsList
+// (cards) and #jobsTableWrap (a table added in a later pass), both filled
+// unconditionally by renderJobs() with nothing anywhere hiding either one.
+// Confirmed with real seeded data: every job rendered twice, stacked, on
+// any desktop screen. Fixed with a 1024px breakpoint -- cards below it,
+// table at and above it. Also fixed a real, unrelated overflow bug found
+// in the same file: the status-filter button row had no wrap or scroll
+// handling and forced 13px of horizontal page overflow at 390px.
+// Bumped 2026-09-06 (v66 -> v67): tools-media-sharing.js and
+// tools/styles-tools.css both changed again -- a real report from a
+// live device's own Client Errors panel showed two recurring entries
+// with no app code behind them: the browser's native View Transition
+// API rejecting its own internal promises (tab backgrounded mid-
+// transition, a newer navigation superseding an older one -- both
+// routine on a phone used out in the field). Filtered from the error
+// log by exact known message text; the duplicate, misattributed
+// @view-transition{navigation:auto;} rule that caused no functional
+// harm but was genuine dead weight was also removed.
+const CACHE_NAME = 'th-workspace-v67';
 const PRECACHE_URLS = [
   '/tools/workspace.html', '/tools/job-tracker.html', '/tools/invoice-generator.html', '/tools/contract-generator.html',
   '/tools/calendar.html', '/tools/route-planner.html', '/tools/review-request.html', '/tools/contact-card.html',
