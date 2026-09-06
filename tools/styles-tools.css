@@ -1029,8 +1029,22 @@ body.th-tool-page { --radius: 14px; }
    floor for normal text). Deliberately scoped here rather than changed
    in styles.css itself, which the public marketing site also loads --
    that page's own dark theme was separately tuned and verified in an
-   earlier session and must not shift because of tool-suite work. */
-body.th-tool-page {
+   earlier session and must not shift because of tool-suite work.
+
+   Bug fix (2026-09-06): scoped to body.th-tool-page alone, with no
+   check for [data-theme="light"], this unconditionally overrode these
+   same four tokens back to their dark-mode values even when the user
+   had explicitly switched to light mode -- data-theme lives on <html>,
+   custom properties are inherited from the nearest ancestor that sets
+   them, and body sits between html and every sidebar/card/table in the
+   tool suite, so every one of them silently ignored [data-theme="light"]
+   (tools/styles-tools.css line ~806) and rendered dark panels on a
+   light page. Confirmed visually (a real light-mode screenshot showed
+   a correctly light page background with a fully dark sidebar and
+   cards floating on it). html:not([data-theme="light"]) restores the
+   original dark-mode-only scope without touching this rule's actual
+   values. */
+html:not([data-theme="light"]) body.th-tool-page {
   --bg: #07080a;
   --bg-panel: #18191d;
   --bg-panel-2: #212327;

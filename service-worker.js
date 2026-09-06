@@ -329,7 +329,20 @@
 // paragraph rendering behind the form card). Fixed both: the shared
 // rule now lives here once, and both pages got the missing desktop
 // layout rule.
-const CACHE_NAME = 'th-workspace-v68';
+// Bumped 2026-09-06 (v68 -> v69): tools/styles-tools.css changed again
+// -- a real, significant light-theme bug found by actually screenshotting
+// the tool suite with light mode on (not just reading the CSS): the
+// dark-mode contrast-boost pass from earlier the same day scoped its
+// override of --bg, --bg-panel, --bg-panel-2/3, and --border to
+// body.th-tool-page with no check for [data-theme="light"] at all. Since
+// custom properties are inherited from the nearest ancestor that sets
+// them, and data-theme lives on <html> (an ancestor of body), that
+// unconditional override silently beat the correct light-theme values
+// for every element in the tool suite -- the sidebar, every card, every
+// table -- rendering dark panels on a light page. Scoped the override to
+// html:not([data-theme="light"]) instead; same values, same effect in
+// dark mode, but light mode now actually looks light.
+const CACHE_NAME = 'th-workspace-v69';
 const PRECACHE_URLS = [
   '/tools/workspace.html', '/tools/job-tracker.html', '/tools/invoice-generator.html', '/tools/contract-generator.html',
   '/tools/calendar.html', '/tools/route-planner.html', '/tools/review-request.html', '/tools/contact-card.html',
