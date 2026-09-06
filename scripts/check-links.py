@@ -47,7 +47,11 @@ SKIP_PREFIXES = ('mailto:', 'tel:', 'sms:', 'javascript:', '#', 'data:')
 def find_html_files():
     files = []
     for root, dirs, names in os.walk(REPO_ROOT):
-        if '.git' in root or 'node_modules' in root:
+        # .claude/ holds agent tooling (skills), not deployed site content.
+        # Skill templates deliberately reference placeholder assets that do
+        # not exist, so scanning them reports failures that are not real
+        # broken links on the site.
+        if '.git' in root or 'node_modules' in root or '.claude' in root:
             continue
         for n in names:
             if n.endswith('.html'):
