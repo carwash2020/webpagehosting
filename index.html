@@ -60,7 +60,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Anton&family=Oswald:wght@400;500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="styles.css?v=202609062100">
+<link rel="stylesheet" href="styles.css?v=202609062300">
 <script type="application/ld+json">
 {
   "@context": "https://schema.org",
@@ -2560,159 +2560,8 @@
   })();
 </script>
 
-<script>
-  // ---------- symptom triage ----------
-  // Qualitative on purpose: what a symptom COMMONLY indicates. No prices,
-  // no percentages, no invented statistics, and every path ends at "we'd
-  // have to look at it." The dryer entries match what this site's own blog
-  // already says publicly.
-  (function () {
-    const DATA = {
-      washer: { label: 'Washer', symptoms: [
-        { q: "Won't drain", v: 'Usually a blockage, not a dead machine',
-          a: "A washer that fills and washes but won't drain is most often a clogged pump filter or a blocked drain hose, and very often there's something small lodged where it shouldn't be. This is frequently sorted in a single visit." },
-        { q: "Won't spin", v: 'Commonly a belt or a switch',
-          a: "No spin usually points to a worn drive belt, a failed lid or door switch, or a load the machine has decided is too unbalanced to spin. These are parts, not a reason to replace the machine." },
-        { q: 'Leaking water', v: 'Worth looking at quickly',
-          a: "Leaks are most often a door seal, a hose connection, or the pump. Whatever the cause, this is the one to move fast on, because water damage costs far more than the repair does." },
-        { q: 'No power at all', v: 'Often smaller than it looks',
-          a: "A washer that seems completely dead is frequently a door latch or lid switch rather than the machine itself. Worth checking before assuming the worst." } ] },
-      dryer: { label: 'Dryer', symptoms: [
-        { q: "Runs but won't heat", v: 'Very often an inexpensive part',
-          a: "This is usually the thermal fuse, a one-time-use part that blows when airflow gets restricted. Replacing it is straightforward, but the real job is finding why it blew, because a fuse that blew once will blow again if the airflow problem is still there." },
-        { q: 'Takes forever to dry', v: 'Usually airflow, not parts',
-          a: "Long dry times almost always mean restricted airflow: a clogged vent line, lint buildup, or a crushed duct behind the machine. This is frequently a cleaning problem rather than a broken dryer." },
-        { q: 'Loud thumping or grinding', v: 'Catch it early',
-          a: "Noise like that typically means drum rollers, the idler pulley, or something trapped inside the drum grinding against it. Worth catching early, since running it noisy tends to turn a small repair into a bigger one." },
-        { q: "Won't turn on", v: 'Commonly a switch or a fuse',
-          a: "A dryer that won't start is often the door switch, the thermal fuse, or the start switch. All standard parts." } ] },
-      dishwasher: { label: 'Dishwasher', symptoms: [
-        { q: 'Not draining', v: 'Usually a clog',
-          a: "Standing water at the bottom is most often the drain filter, the drain hose, or the pump. This one frequently clears in a single visit." },
-        { q: 'Not cleaning well', v: 'Often not broken at all',
-          a: "Poor cleaning commonly comes down to clogged spray arms, a worn seal, or water that isn't getting hot enough. Quite often there's nothing mechanically wrong with the machine." },
-        { q: 'Leaking', v: 'Most often a seal',
-          a: "Dishwasher leaks are usually the door gasket or a hose fitting. Worth handling promptly given where the water goes." },
-        { q: "Won't start", v: 'Commonly the latch',
-          a: "Often the door latch switch, which the machine uses to confirm the door is properly shut, or the control panel." } ] },
-      refrigerator: { label: 'Refrigerator', symptoms: [
-        { q: 'Not cooling', v: 'Sometimes just cleaning',
-          a: "This is commonly a frosted-over evaporator, a failed defrost component, or condenser coils packed with dust. Coils are sometimes purely a cleaning job." },
-        { q: "Freezer works, fridge doesn't", v: 'Usually airflow between the two',
-          a: "When the freezer is fine but the fridge isn't, it's typically airflow between the compartments: a blocked vent, a failed damper, or the circulating fan." },
-        { q: 'Leaking water inside', v: 'Often a simple drain clog',
-          a: "Water pooling inside is frequently a clogged defrost drain, which is one of the more common and less expensive things to put right." },
-        { q: 'Ice maker not working', v: 'Usually the valve or the module',
-          a: "Commonly the water inlet valve, the fill line, or the ice maker module itself." } ] },
-      range: { label: 'Range / Oven', symptoms: [
-        { q: "Oven won't heat", v: 'A standard part either way',
-          a: "On an electric oven this is usually the bake element; on gas, it's often the igniter. Both are normal replacement parts." },
-        { q: "Burner won't light", v: 'Typically the igniter',
-          a: "Usually the igniter or a burner port that's clogged and needs clearing." },
-        { q: 'Temperature is way off', v: 'Often just the sensor',
-          a: "Baking that comes out consistently wrong is frequently the oven temperature sensor. Worth ruling out before anything larger gets replaced." },
-        { q: "Won't turn on", v: 'Power or control board',
-          a: "Frequently the power supply to the unit, or the control board." } ] }
-    };
 
-    const appEl = document.getElementById('triageAppliances');
-    const symStep = document.getElementById('triageSymptomStep');
-    const symEl = document.getElementById('triageSymptoms');
-    const result = document.getElementById('triageResult');
-    const verdict = document.getElementById('triageVerdict');
-    const body = document.getElementById('triageBody');
-    if (!appEl || !symEl || !result) return;
 
-    function chip(text, onClick) {
-      const b = document.createElement('button');
-      b.type = 'button';
-      b.className = 'triage-chip';
-      b.textContent = text;
-      b.setAttribute('aria-pressed', 'false');
-      b.addEventListener('click', onClick);
-      return b;
-    }
-
-    function clearPressed(scope) {
-      scope.querySelectorAll('.triage-chip').forEach(function (b) {
-        b.setAttribute('aria-pressed', 'false');
-      });
-    }
-
-    Object.keys(DATA).forEach(function (key) {
-      appEl.appendChild(chip(DATA[key].label, function () {
-        clearPressed(appEl);
-        this.setAttribute('aria-pressed', 'true');
-        symEl.innerHTML = '';
-        DATA[key].symptoms.forEach(function (s) {
-          symEl.appendChild(chip(s.q, function () {
-            clearPressed(symEl);
-            this.setAttribute('aria-pressed', 'true');
-            verdict.textContent = s.v;
-            body.textContent = s.a;
-            result.hidden = false;
-          }));
-        });
-        symStep.hidden = false;
-        result.hidden = true;
-      }));
-    });
-  })();
-
-  // ---------- live open / closed ----------
-  // Reads the same HOURS_BY_WEEKDAY table booking.html uses via
-  // business-hours.js, so this pill can never contradict the booking page.
-  // Stays hidden entirely unless that table is actually available.
-  (function () {
-    const pill = document.getElementById('openStatus');
-    const text = document.getElementById('openStatusText');
-    if (!pill || !text) return;
-    if (typeof HOURS_BY_WEEKDAY === 'undefined'
-        || typeof businessWeekday !== 'function'
-        || typeof todayDateStrInBusinessTz !== 'function'
-        || typeof BUSINESS_TIMEZONE === 'undefined') return;
-
-    function label(h) {
-      const hour = h % 12 === 0 ? 12 : h % 12;
-      return hour + (h < 12 ? ' AM' : ' PM');
-    }
-
-    try {
-      const today = todayDateStrInBusinessTz();
-      const weekday = businessWeekday(today);
-      const span = HOURS_BY_WEEKDAY[weekday];
-      if (!span) return;
-
-      // Current hour in BUSINESS time, not the visitor's own timezone.
-      const parts = new Intl.DateTimeFormat('en-US', {
-        timeZone: BUSINESS_TIMEZONE, hour: 'numeric', hour12: false
-      }).formatToParts(new Date());
-      const hourPart = parts.find(function (p) { return p.type === 'hour'; });
-      if (!hourPart) return;
-      const hour = parseInt(hourPart.value, 10);
-      if (isNaN(hour)) return;
-
-      if (hour >= span[0] && hour < span[1]) {
-        pill.classList.add('is-open');
-        text.innerHTML = '<b>Open now</b> &middot; until ' + label(span[1]);
-      } else if (hour < span[0]) {
-        pill.classList.add('is-closed');
-        text.innerHTML = '<b>Closed right now</b> &middot; open today at ' + label(span[0])
-          + ' &middot; <a href="/booking.html">Book online</a>';
-      } else {
-        pill.classList.add('is-closed');
-        const next = HOURS_BY_WEEKDAY[(weekday + 1) % 7];
-        text.innerHTML = (next
-          ? '<b>Closed right now</b> &middot; open tomorrow at ' + label(next[0])
-          : '<b>Closed right now</b>')
-          + ' &middot; <a href="/booking.html">Book online</a>';
-      }
-      pill.hidden = false;
-    } catch (e) {
-      /* A status pill is never worth breaking the hero over. */
-    }
-  })();
-</script>
-
+<script src="/triage.js?v=546c75173f" defer></script>
 </body>
 </html>
