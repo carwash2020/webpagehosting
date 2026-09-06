@@ -60,7 +60,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Anton&family=Oswald:wght@400;500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="/styles.css?v=202609062300">
+<link rel="stylesheet" href="/styles.css?v=202609070100">
 <script type="application/ld+json">
 {
   "@context": "https://schema.org",
@@ -249,6 +249,89 @@
           <p style="color:var(--text-dim); font-size:14.5px; margin:0;">We diagnose the issue in person first, then give you a clear price before any work starts. Nothing gets billed as a surprise on the back end.</p>
         </div>
       </div>
+    </div>
+  </section>
+
+  <section class="trust-strip-section">
+    <div class="wrap">
+      <div class="trust-grid">
+        <div class="trust-item" data-reveal>
+          <h3>Owner Operated</h3>
+          <p>Every job is backed directly by Triple H Enterprises. No subcontractors, no passing the job around.</p>
+        </div>
+        <div class="trust-item" data-reveal>
+          <h3>Clear, Upfront Pricing</h3>
+          <p>You'll know the cost before the work starts. No surprise fees, no upsells.</p>
+        </div>
+        <div class="trust-item" data-reveal>
+          <h3>Work You Can Count On</h3>
+          <p>Work is guaranteed. Parts carry whatever warranty the manufacturer sets, which varies by part.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="areas-map-section">
+    <div class="wrap">
+      <!-- Service radius. Same schematic on every page; each city landing
+           page sets data-focus so its own city is the one lit, which makes
+           the page feel local without inventing any local content. The
+           distances are the verified ones already stated elsewhere on the
+           site, and Cedar City and Mesquite keep their by-request
+           treatment (dashed, orange) here exactly as everywhere else. -->
+      <div class="radius-figure" data-reveal data-focus="hurricane">
+        <svg viewBox="0 0 760 420" role="img" aria-label="Service area diagram centered on St. George, showing Washington City, Hurricane, Santa Clara and Ivins as standard coverage, with Cedar City and Mesquite available by request">
+          <circle class="radius-ring" cx="360" cy="210" r="72"/>
+          <circle class="radius-ring" cx="360" cy="210" r="130"/>
+          <circle class="radius-ring" cx="360" cy="210" r="190"/>
+
+          <g data-city="st-george" class="is-hub">
+            <circle class="radius-hub" cx="360" cy="210" r="9"/>
+            <text class="radius-hub-name" x="360" y="243" text-anchor="middle">ST. GEORGE</text>
+            <text class="radius-note" x="360" y="261" text-anchor="middle">Home base</text>
+          </g>
+
+          <g data-city="washington-city">
+            <line class="radius-spoke" x1="360" y1="210" x2="449" y2="178"/>
+            <circle class="radius-node" cx="449" cy="178" r="6"/>
+            <text class="radius-name" x="462" y="172">Washington City</text>
+            <text class="radius-note" x="462" y="189">Right next door</text>
+          </g>
+
+          <g data-city="hurricane">
+            <line class="radius-spoke" x1="360" y1="210" x2="514" y2="197"/>
+            <circle class="radius-node" cx="514" cy="197" r="6"/>
+            <text class="radius-name" x="527" y="219">Hurricane</text>
+            <text class="radius-note" x="527" y="236">About 20 minutes east</text>
+          </g>
+
+          <g data-city="santa-clara-ivins">
+            <line class="radius-spoke" x1="360" y1="210" x2="267" y2="226"/>
+            <circle class="radius-node" cx="267" cy="226" r="6"/>
+            <text class="radius-name" x="254" y="252" text-anchor="end">Santa Clara &amp; Ivins</text>
+            <text class="radius-note" x="254" y="269" text-anchor="end">West side, near Snow Canyon</text>
+          </g>
+
+          <g data-city="cedar-city" class="is-request">
+            <line class="radius-spoke is-request" x1="360" y1="210" x2="344" y2="40"/>
+            <circle class="radius-node is-request" cx="344" cy="40" r="6"/>
+            <text class="radius-name is-request" x="358" y="34">Cedar City</text>
+            <text class="radius-note" x="358" y="51">By request &middot; about an hour north</text>
+          </g>
+
+          <g data-city="mesquite" class="is-request">
+            <line class="radius-spoke is-request" x1="360" y1="210" x2="217" y2="310"/>
+            <circle class="radius-node is-request" cx="217" cy="310" r="6"/>
+            <text class="radius-name is-request" x="232" y="332">Mesquite, NV</text>
+            <text class="radius-note" x="232" y="349">By request &middot; about 40 minutes southwest</text>
+          </g>
+        </svg>
+      </div>
+      <p class="radius-legend" data-reveal>
+        <span><b></b> Standard coverage</span>
+        <span><b class="is-request"></b> Available by request</span>
+      </p>
+
     </div>
   </section>
 
