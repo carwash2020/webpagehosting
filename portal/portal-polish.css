@@ -570,3 +570,107 @@ body:has(.login-box) {
 
 /* Anchor jumps should not tuck the target under the sticky header. */
 .portal-page :target { scroll-margin-top: 84px; }
+
+/* ---------- 22. quote + work-order status colours ---------- */
+/* The badge SHAPE was defined earlier for every status type, but only the
+   invoice states got colours -- so a quote badge inherited the pill and
+   the transparent border with nothing behind it. Each page does define
+   its own colours inline, but relying on that meant the two lists looked
+   like different products. These make every status read the same way
+   wherever it appears. */
+.quote-status.is-pending {
+  background: var(--orange-tint-soft);
+  border-color: var(--orange-tint-border);
+  color: var(--orange-light);
+}
+.quote-status.is-approved {
+  background: rgba(58, 214, 107, .12);
+  border-color: rgba(58, 214, 107, .38);
+  color: #63e08d;
+}
+.quote-status.is-declined,
+.wo-status.is-declined {
+  background: rgba(255, 255, 255, .05);
+  border-color: var(--border);
+  color: var(--text-dim);
+}
+.wo-status.is-submitted {
+  background: var(--orange-tint-soft);
+  border-color: var(--orange-tint-border);
+  color: var(--orange-light);
+}
+.wo-status.is-reviewing,
+.wo-status.is-quoted {
+  background: rgba(58, 160, 255, .12);
+  border-color: rgba(58, 160, 255, .36);
+  color: var(--blue-light);
+}
+.wo-status.is-scheduled,
+.wo-status.is-completed {
+  background: rgba(58, 214, 107, .12);
+  border-color: rgba(58, 214, 107, .38);
+  color: #63e08d;
+}
+
+/* ---------- 23. where is my request? ---------- */
+/* "What's happening with the thing I asked for" is the question this page
+   exists to answer, and a badge alone only says the current word. A thin
+   track along the bottom of each card shows how far along the request is
+   at a glance: submitted, reviewing, quoted, scheduled, done.
+
+   Driven entirely off the status badge the page already renders, via
+   :has(), so no markup changes and no JS. Browsers without :has() simply
+   see no track, which is exactly today's behaviour. */
+.wo-card {
+  position: relative;
+  overflow: hidden;
+}
+.wo-card::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  height: 2px;
+  width: 0;
+  background: linear-gradient(90deg, var(--orange-dark), var(--orange-light));
+  transition: width .5s cubic-bezier(.22, .61, .36, 1);
+}
+.wo-card:has(.wo-status.is-submitted)::after { width: 20%; }
+.wo-card:has(.wo-status.is-reviewing)::after { width: 40%; }
+.wo-card:has(.wo-status.is-quoted)::after    { width: 60%; }
+.wo-card:has(.wo-status.is-scheduled)::after {
+  width: 80%;
+  background: linear-gradient(90deg, var(--blue-dark), var(--blue-light));
+}
+.wo-card:has(.wo-status.is-completed)::after {
+  width: 100%;
+  background: linear-gradient(90deg, #2e8b57, #63e08d);
+}
+/* A declined request is finished, but not an achievement -- full width,
+   deliberately grey, so it never reads as success. */
+.wo-card:has(.wo-status.is-declined)::after {
+  width: 100%;
+  background: var(--border);
+}
+@media (prefers-reduced-motion: reduce) {
+  .wo-card::after { transition: none; }
+}
+
+/* ---------- 24. printing quotes and work orders ---------- */
+/* Invoices already printed cleanly; these did not, and a quote is exactly
+   the kind of thing someone prints to think about or show a spouse. */
+@media print {
+  .quote-status,
+  .wo-status {
+    border: 1px solid #666 !important;
+    background: transparent !important;
+    color: #000 !important;
+  }
+  .wo-card::after { display: none !important; }
+  .wo-section-title,
+  .wo-hint,
+  .set-card-title { color: #000 !important; }
+  .schedule-panel,
+  .schedule-toggle,
+  .slots-grid { display: none !important; }
+}

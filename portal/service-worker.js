@@ -68,7 +68,12 @@
 // cache name purges every stale entry on activate. The new
 // /portal/portal-update.js gives people a way out of this situation
 // without reinstalling if it ever recurs.
-const CACHE_NAME = 'th-portal-v11';
+// Bumped 2026-09-06 (v11 -> v12): portal-polish.css changed again
+// (quote/work-order status colours, the request progress track, and
+// print styles for quotes and work orders). It is in PRECACHE_URLS, and
+// this file's rule is to bump on any such change even when the ?v=
+// reference was updated too.
+const CACHE_NAME = 'th-portal-v12';
 const PRECACHE_URLS = [
   '/portal/home.html', '/portal/dashboard.html', '/portal/jobs.html', '/portal/quotes.html',
   '/portal/work-orders.html', '/portal/settings.html', '/portal/login.html', '/portal/set-password.html',
