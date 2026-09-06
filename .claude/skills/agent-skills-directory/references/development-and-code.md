@@ -1,0 +1,50 @@
+# Development & Code Tools
+
+46 entries, verbatim from the Awesome Claude Skills directory.
+
+- [web-artifacts-builder](https://github.com/anthropics/skills/tree/main/skills/web-artifacts-builder) - Suite of tools for creating elaborate, multi-component claude.ai HTML artifacts using modern frontend web technologies (React, Tailwind CSS, shadcn/ui).
+- [test-driven-development](https://github.com/obra/superpowers/tree/main/skills/test-driven-development) - Use when implementing any feature or bugfix, before writing implementation code
+- [using-git-worktrees](https://github.com/obra/superpowers/blob/main/skills/using-git-worktrees/) - Creates isolated git worktrees with smart directory selection and safety verification.
+- [finishing-a-development-branch](https://github.com/obra/superpowers/tree/main/skills/finishing-a-development-branch) - Guides completion of development work by presenting clear options and handling chosen workflow.
+- [pypict-claude-skill](https://github.com/omkamal/pypict-claude-skill) - Design comprehensive test cases using PICT (Pairwise Independent Combinatorial Testing) for requirements or code, generating optimized test suites with pairwise coverage.
+- [aws-skills](https://github.com/zxkane/aws-skills) - AWS development with CDK best practices, cost optimization MCP servers, and serverless/event-driven architecture patterns.
+- [claude-starter](https://github.com/raintree-technology/claude-starter) - Production-ready Claude Code configuration template with 40 auto-activating skills across 8 domains, TOON format support for 30-60% token savings, and native Zig encoder/decoder.
+- [move-code-quality-skill](https://github.com/1NickPappas/move-code-quality-skill) - Analyzes Move language packages against the official Move Book Code Quality Checklist for Move 2024 Edition compliance and best practices.
+- [oiloil-ui-ux-guide](https://github.com/oil-oil/oiloil-ui-ux-guide) - Modern UI/UX guidance and review skill with `guide` and `review` modes. Covers CRAP, task-first UX, HCI laws, interaction psychology, and modern minimal style.
+- [claude-code-terminal-title](https://github.com/bluzername/claude-code-terminal-title) - Gives each Claud Code terminal window a dynamic title that describes the work being done so you don't lose track of what terminal window is doing what.
+- [charles-proxy-extract](https://github.com/wannabehero/charles-proxy-extract-skill) - Claude is able to extract and analyze HTTP traffic from Charles Proxy session files.
+- [debug-skill](https://github.com/AlmogBaku/debug-skill) - Give your AI agent a real debugger — breakpoints, stepping, variable inspection, and stack traces via CLI.
+- [plugin-authoring](https://github.com/ivan-magda/claude-code-plugin-template/tree/main/plugins/plugin-development/skills/plugin-authoring) - Ambient guidance for creating, modifying, and debugging Claude Code plugins with schemas, templates, validation workflows, and troubleshooting.
+- [azure-devops](https://github.com/sanjay3290/ai-skills/tree/main/skills/azure-devops) - Manage Azure DevOps projects, repos, PRs, pipelines, and work items via REST API.
+- [claude-skills](https://github.com/jeffallan/claude-skills) - 65 full-stack development skills with progressive disclosure, covering React, NestJS, Python, DevOps, and 30+ frameworks.
+- [jules](https://github.com/sanjay3290/ai-skills/tree/main/skills/jules) - Delegate coding tasks to Google Jules AI agent for async bug fixes, documentation, tests, and feature implementation on GitHub repos.
+- [hashicorp-agent-skills](https://github.com/hashicorp/agent-skills) - HashiCorp-maintained Claude skills for Terraform workflows and infrastructure automation.
+- [agnix](https://github.com/avifenesh/agnix) - Linter for AI agent configurations. Validates SKILL.md, CLAUDE.md, hooks, MCP configs, and more with 156 rules, auto-fix, and LSP server for real-time editor diagnostics.
+- [email-html-mjml](https://github.com/framix-team/skill-email-html-mjml) - Generate responsive HTML email templates using MJML 4.x — cross-client compatible HTML with compilation, validation, width math, and component architecture.
+- [agent-cards-skill](https://github.com/agent-cards/skill) - Manage prepaid virtual Visa cards for AI agents. Create cards, check balances, view credentials, close cards, and get support via MCP tools.
+- [Design Auditor](https://github.com/Ashutos1997/claude-design-auditor-skill) — Audits designs against 17 professional rules: typography, WCAG, spacing, iconography, navigation, tokens + more. Scores out of 100. Supports English & Korean.
+- [lightning-factory-explainer](https://github.com/8144225309/superscalar-mcp/tree/master/skills/lightning-factory-explainer) - Explain Bitcoin Lightning channel factories and the SuperScalar protocol — scalable Lightning onboarding using shared UTXOs, Decker-Wattenhofer trees, timeout-signature trees, MuSig2, and Taproot.
+- [lightning-channel-factories](https://github.com/8144225309/superscalar-mcp/tree/master/skills/lightning-channel-factories) - Technical reference on Lightning Network channel factories, multi-party channels, LSP architectures, and Bitcoin Layer 2 scaling without soft forks.
+- [lightning-architecture-review](https://github.com/8144225309/superscalar-mcp/tree/master/skills/lightning-architecture-review) - Review Bitcoin Lightning Network protocol designs, compare channel factory approaches, and analyze Layer 2 scaling tradeoffs.
+- [Playwright Skill](https://github.com/testdino-hq/playwright-skill) - AI agent-ready Playwright skill with structured SKILL.md, test automation workflows, and MCP-compatible setup for real-world testing pipelines.
+- [Emblem AI Agent Wallet](https://github.com/EmblemCompany/Agent-skills/tree/main/skills/emblem-ai-agent-wallet) - Multi-chain crypto wallet management across 7 blockchains (Solana, Ethereum, Base, BSC, Polygon, Hedera, Bitcoin), swaps and transfers.
+- [unity-agent-skills](https://github.com/jahro-console/unity-agent-skills) - Agent skills set for AI-assisted Unity debugging — structured logging, runtime commands, variable watching, and more.
+- [spartan-ai-toolkit](https://github.com/spartan-stratos/spartan-ai-toolkit) - Engineering workflow commands with quality gates, TDD enforcement, and atomic commits for AI coding agents.
+- [blueprint](https://github.com/imbue-ai/blueprint) - Planning copilot for coding agents. Explores the codebase, asks clarifying questions, then generates a markdown plan any agent can execute in one shot.
+- [agent-lsp](https://github.com/blackwell-systems/agent-lsp) - Semantic code intelligence skills for refactor, rename, impact analysis, and verification.
+- [agenttrace-session-audit](https://github.com/luoyuctl/agenttrace/tree/master/skills/agenttrace-session-audit) - Audit AI coding sessions for cost, failures, latency, diffs, and CI gates.
+- [aws-architecture-diagram-skill](https://github.com/vidanov/aws-architecture-diagram-skill) - Generate editable AWS architecture diagrams with verified icons and export formats.
+- [Blueprint](https://github.com/JuliusBrussee/blueprint) - Specification-driven development skill that turns requirements into blueprints, build plans, and validated implementations.
+- [harness-evolver](https://github.com/raphaelchristi/harness-evolver) - Evolve agent prompts, routing, tools, and architecture with LangSmith-backed regression guards.
+- [qdrant-skills](https://github.com/qdrant/skills) - Agent skills for Qdrant vector search operations, performance, deployment, upgrades, and SDK usage.
+- [skill-optimizer](https://github.com/hqhq1025/skill-optimizer) - Diagnose and improve Agent Skills using session data and static analysis.
+- [swarmclaw](https://github.com/swarmclawai/swarmclaw/blob/main/skills/swarmclaw.md) - Drive a self-hosted multi-agent runtime for delegating work across coding CLIs.
+- [upload-post](https://github.com/Upload-Post/upload-post-skill) - Publish and schedule media across 10+ social platforms from a single agent workflow.
+- [vibe-replay](https://github.com/tuo-lei/vibe-replay) - Turn AI coding sessions into shareable interactive HTML replays with insights and PR links.
+- [crit](https://github.com/tomasz-tomczyk/crit) - Review and comment on plans, code diffs, and frontend, then send feedback directly to your agent.
+- [ax-extract-workflow](https://github.com/Necmttn/ax/tree/main/skills/ax-extract-workflow) - Reconstruct how a feature shipped from local ax session history.
+- [suede-creator-skills](https://github.com/JasonColapietro/suede-creator-skills) - 23-skill pack for agent orchestration with WIP collision detection and rollback trees.
+- [Superdesign](https://github.com/superdesigndev/superdesign-skill) - Design skill that builds a design system from your codebase and iterates UI drafts on an infinite canvas.
+- [go-agent-skills](https://github.com/eduardo-sl/go-agent-skills) - 28 curated Go skills for code review, concurrency safety, testing, gRPC, and architecture.
+- [hivemind](https://github.com/activeloopai/hivemind) - Auto-generates skills from coding agent session traces for Claude Code, Codex, Cursor, and OpenClaw.
+- [mailtrap-skills](https://github.com/mailtrap/mailtrap-skills) - Agent skills for Mailtrap email sending, sandbox testing, domain setup, and contacts management.
