@@ -289,7 +289,16 @@
 // face literally, and the body face moved off Inter. Precached ?v= URLs
 // are served cache-first and never revalidated, so without this bump an
 // installed Workspace would keep serving the old stylesheet indefinitely.
-const CACHE_NAME = 'th-workspace-v64';
+// Bumped 2026-09-06 (v64 -> v65): every precached tool page's <html> tag
+// changed -- the inline style="background:..." (a pre-existing FOUC-
+// prevention convention) used the background shorthand, which resets
+// background-image along with background-color. That silently cancelled
+// this stylesheet's own ambient gradient on <html> since the day it was
+// added: correct in the CSS, never once visible on a real page. Fixed by
+// narrowing the inline value to background-color, which still paints dark
+// before CSS parses (the actual point of it) without touching a property
+// it was never meant to touch.
+const CACHE_NAME = 'th-workspace-v65';
 const PRECACHE_URLS = [
   '/tools/workspace.html', '/tools/job-tracker.html', '/tools/invoice-generator.html', '/tools/contract-generator.html',
   '/tools/calendar.html', '/tools/route-planner.html', '/tools/review-request.html', '/tools/contact-card.html',

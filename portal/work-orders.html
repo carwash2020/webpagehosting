@@ -1,5 +1,18 @@
 <!DOCTYPE html>
-<html lang="en" style="background:#0a0a0a;">
+<!-- background-color, not the background shorthand (2026-09-06): the
+     shorthand also resets background-image, which silently cancelled the
+     ambient gradient tools/styles-tools.css defines on this element --
+     rendered fine in isolation and never caught by any test, but never
+     actually visible on a real tool page. Fixed here rather than dropping
+     the inline value: it still paints dark before CSS parses, which is
+     the whole reason it exists (see color-scheme below on pages that have
+     it) -- it just no longer overrides a property it never meant to touch.
+     Portal pages carry the identical inline value for the same FOUC
+     reason, but their own ambient gradient lives on body.portal-page, not
+     html, so it was never at risk from this -- fixed for consistency and
+     to remove the same latent hazard before anything ever puts a
+     background-image on html here too. -->
+<html lang="en" style="background-color:#0a0a0a;">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
