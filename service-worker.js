@@ -271,7 +271,10 @@
 // and ?v= URLs are served cache-first without revalidation, so the
 // installed Workspace app would have kept serving the old stylesheets
 // indefinitely -- the precise failure the header above warns about.
-const CACHE_NAME = 'th-workspace-v60';
+// Bumped 2026-09-06 (v60 -> v61): /tools/styles-tools.css changed again
+// (widened the surface-elevation token range for .th-tool-page, bumped
+// tool-tile icon contrast). Precached under its bare path.
+const CACHE_NAME = 'th-workspace-v61';
 const PRECACHE_URLS = [
   '/tools/workspace.html', '/tools/job-tracker.html', '/tools/invoice-generator.html', '/tools/contract-generator.html',
   '/tools/calendar.html', '/tools/route-planner.html', '/tools/review-request.html', '/tools/contact-card.html',

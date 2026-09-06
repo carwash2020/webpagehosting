@@ -73,7 +73,10 @@
 // print styles for quotes and work orders). It is in PRECACHE_URLS, and
 // this file's rule is to bump on any such change even when the ?v=
 // reference was updated too.
-const CACHE_NAME = 'th-portal-v12';
+// Bumped 2026-09-06 (v12 -> v13): portal-polish.css changed again
+// (widened the surface-elevation token range for .portal-page, matching
+// the tool suite's equivalent fix). Precached under its bare path.
+const CACHE_NAME = 'th-portal-v13';
 const PRECACHE_URLS = [
   '/portal/home.html', '/portal/dashboard.html', '/portal/jobs.html', '/portal/quotes.html',
   '/portal/work-orders.html', '/portal/settings.html', '/portal/login.html', '/portal/set-password.html',

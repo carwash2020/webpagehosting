@@ -31,6 +31,30 @@ body:has(.login-box) {
   background-attachment: fixed;
 }
 
+/* ---------- 1b. elevation range widened ----------
+   The four surface tokens this cascade inherits from styles.css
+   (--bg through --bg-panel-3) span only ~8 points of lightness --
+   confirmed by screenshotting real portal pages, not by reading the
+   gradient/shadow rules and assuming they were visible. Every card
+   (invoice, quote, work order) read as barely distinguishable from the
+   page background regardless of the elevation CSS already applied to
+   it. Same fix and same verified values as the internal tool suite's
+   equivalent override (styles-tools.css, body.th-tool-page) -- contrast
+   against --text/--text-dim/--orange-light was checked against all four
+   tiers before picking these; the worst case stays above 4.5:1. Scoped
+   to .portal-page only, so the public marketing site's separately-tuned
+   dark theme is untouched. login.html/set-password.html (no body class,
+   matched via :has() above) intentionally keep the unmodified tokens --
+   they're a single centered card on an otherwise empty page, where the
+   original tighter range was never the problem. */
+body.portal-page {
+  --bg: #07080a;
+  --bg-panel: #18191d;
+  --bg-panel-2: #212327;
+  --bg-panel-3: #2c2e34;
+  --border: #34363c;
+}
+
 /* ---------- 2. header ---------- */
 .portal-header {
   padding-bottom: 18px;

@@ -924,6 +924,32 @@ body.th-tool-page::before {
 }
 body.th-tool-page { --radius: 14px; }
 
+/* Visual pass (2026-09-06): the elevation system directly above ("real
+   elevation, gradient faces") was always sound in its logic -- gradient
+   surfaces, a 3-tier shadow scale, brighter panel tiers for raised
+   content -- but the four surface tokens it's built on (--bg through
+   --bg-panel-3, defined in styles.css) span only about 8 points of
+   lightness (#0a0a0a to #1f1f1f). On an actual screen that gap all but
+   disappears: every card, table, and tool tile read as one flat mass
+   regardless of the gradients/shadows applied to it, confirmed by
+   screenshotting real pages rather than reading the CSS and assuming
+   the depth was visible. Overriding the same four tokens here, scoped
+   to .th-tool-page, roughly doubles that spread -- verified against
+   WCAG contrast for --text/--text-dim/--orange-light against every
+   tier before picking these values (worst case, --text-dim on the
+   brightest tier, is still 4.82:1, comfortably above the 4.5:1 AA
+   floor for normal text). Deliberately scoped here rather than changed
+   in styles.css itself, which the public marketing site also loads --
+   that page's own dark theme was separately tuned and verified in an
+   earlier session and must not shift because of tool-suite work. */
+body.th-tool-page {
+  --bg: #07080a;
+  --bg-panel: #18191d;
+  --bg-panel-2: #212327;
+  --bg-panel-3: #2c2e34;
+  --border: #34363c;
+}
+
 ::selection { background: var(--orange); color: #0a0a0a; }
 * { scrollbar-width: thin; scrollbar-color: var(--border) transparent; }
 *::-webkit-scrollbar { width: 9px; height: 9px; }
@@ -1150,7 +1176,13 @@ body .tool-tile-icon {
   width: 52px; height: 52px;
   display: flex; align-items: center; justify-content: center;
   clip-path: var(--hex);
-  background: var(--orange-tint-soft);
+  /* 2026-09-06: --orange-tint-soft is 8% alpha -- fine as a faint wash
+     elsewhere, but at icon-tile size on a dark tile background it read
+     as barely-there (confirmed on screenshot, not just eyeballed on
+     the page). This is the one spot the icon itself IS the content, so
+     it gets its own stronger tint rather than a shared token bump that
+     would also brighten every other subtle use of --orange-tint-soft. */
+  background: rgba(255,128,0,0.16);
   border: 1px solid var(--orange-tint-border);
 }
 body .tool-tile-icon .th-icon { color: var(--orange-light); }
