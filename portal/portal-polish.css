@@ -396,3 +396,83 @@ body:has(.login-box) {
   .btn,
   .secondary-btn { min-height: 46px; }
 }
+
+/* ---------- 18. portal home ---------- */
+/* The home screen is a set of counts. Counts should be the thing you see,
+   with the label underneath, rather than both competing at one size. */
+.home-greeting {
+  font-family: 'Anton', sans-serif;
+  letter-spacing: .5px;
+  color: var(--white);
+}
+.home-intro { color: var(--text-dim); line-height: 1.6; }
+.home-card {
+  transition: border-color .18s ease, box-shadow .18s ease, transform .18s ease;
+}
+.home-card:hover {
+  border-color: var(--blue-dark);
+  box-shadow: var(--shadow-hover);
+}
+.home-card-count {
+  font-family: 'Anton', sans-serif;
+  font-size: 30px;
+  line-height: 1.05;
+  color: var(--orange-light);
+  letter-spacing: .5px;
+}
+.home-card-label {
+  font-family: 'Oswald', sans-serif;
+  font-weight: 600;
+  font-size: 13px;
+  letter-spacing: 1.4px;
+  text-transform: uppercase;
+  color: var(--white);
+}
+.home-card-desc { color: var(--text-dim); font-size: 13.5px; line-height: 1.5; }
+
+/* Anything needing the client's attention should look like it does. */
+.attention-card { border-left-width: 3px; }
+.attention-title {
+  font-family: 'Oswald', sans-serif;
+  font-weight: 600;
+  letter-spacing: .4px;
+  color: var(--white);
+}
+.attention-row { border-radius: 10px; }
+.attention-row-text { color: var(--text-dim); line-height: 1.5; }
+
+.section-title {
+  font-family: 'Oswald', sans-serif;
+  font-weight: 600;
+  font-size: 12.5px;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  color: var(--text-dim);
+}
+
+.help-card { border-left: 3px solid var(--blue); }
+.help-actions { display: flex; flex-wrap: wrap; gap: 10px; }
+
+/* ---------- 19. loading feels intentional ---------- */
+/* A static grey block reads as broken; a slow sweep reads as loading. */
+.skeleton-line,
+.skeleton-card {
+  position: relative;
+  overflow: hidden;
+}
+.skeleton-line::after,
+.skeleton-card::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  transform: translateX(-100%);
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, .06), transparent);
+  animation: portalShimmer 1.4s ease-in-out infinite;
+}
+@keyframes portalShimmer {
+  100% { transform: translateX(100%); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .skeleton-line::after,
+  .skeleton-card::after { animation: none; display: none; }
+}

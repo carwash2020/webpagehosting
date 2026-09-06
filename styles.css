@@ -2078,3 +2078,51 @@
     .process-step:last-child{padding-bottom:0;}
     .process-num{position:absolute; left:0; top:0; margin:0;}
   }
+
+  /* ---------- city-focused service radius ---------- */
+  /* One diagram, six pages. Each landing page sets data-focus so its own
+     city is the lit one and the rest recede -- the page reads as local
+     without inventing any local content. The homepage sets no focus, so
+     everything stays at full strength there. */
+  .radius-figure[data-focus] g[data-city]{
+    opacity:.34;
+    transition:opacity .4s ease;
+  }
+  .radius-figure[data-focus] g[data-city].is-hub{opacity:.8;}
+  .radius-figure[data-focus="washington-city"]  g[data-city="washington-city"],
+  .radius-figure[data-focus="hurricane"]        g[data-city="hurricane"],
+  .radius-figure[data-focus="santa-clara-ivins"] g[data-city="santa-clara-ivins"],
+  .radius-figure[data-focus="cedar-city"]       g[data-city="cedar-city"],
+  .radius-figure[data-focus="mesquite"]         g[data-city="mesquite"]{
+    opacity:1;
+  }
+  /* The focused node reads as the destination, not just another dot. */
+  .radius-figure[data-focus] g[data-city]:not(.is-hub) .radius-node{
+    transition:r .4s ease, filter .4s ease;
+  }
+  .radius-figure[data-focus="washington-city"]  g[data-city="washington-city"]  .radius-node,
+  .radius-figure[data-focus="hurricane"]        g[data-city="hurricane"]        .radius-node,
+  .radius-figure[data-focus="santa-clara-ivins"] g[data-city="santa-clara-ivins"] .radius-node,
+  .radius-figure[data-focus="cedar-city"]       g[data-city="cedar-city"]       .radius-node,
+  .radius-figure[data-focus="mesquite"]         g[data-city="mesquite"]         .radius-node{
+    r:9;
+    filter:drop-shadow(0 0 10px rgba(58,160,255,.55));
+  }
+  .radius-figure[data-focus="cedar-city"] g[data-city="cedar-city"] .radius-node,
+  .radius-figure[data-focus="mesquite"]   g[data-city="mesquite"]   .radius-node{
+    filter:drop-shadow(0 0 10px rgba(255,128,0,.6));
+  }
+  .radius-figure[data-focus] .radius-name{font-size:15px;}
+
+  /* ---------- landing page sections ---------- */
+  .areas-map-section .radius-figure{margin-bottom:26px;}
+  .trust-strip-section{padding-top:0;}
+  .trust-strip-section + section{border-top:1px solid var(--border);}
+
+  /* Landing hero: the lede was a raw inline-styled paragraph with no
+     measure control, so long city copy ran the full width of a desktop
+     screen. Caps the line length without touching the markup. */
+  .hero .wrap > p[style]{
+    max-width:64ch !important;
+    line-height:1.7;
+  }
