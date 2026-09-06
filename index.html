@@ -60,7 +60,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Anton&family=Oswald:wght@400;500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="styles.css?v=202609052350">
+<link rel="stylesheet" href="styles.css?v=202609060120">
 <script type="application/ld+json">
 {
   "@context": "https://schema.org",
@@ -301,6 +301,7 @@
 <main id="home">
 
   <section class="hero">
+    <div class="hero-plane" aria-hidden="true"></div>
     <div class="wrap hero-grid">
       <div>
         <p class="eyebrow">ST. GEORGE AND SOUTHERN UTAH</p>
@@ -316,6 +317,7 @@
             Schedule a Service
           </a>
         </div>
+        <p class="hero-motto" data-reveal><span>Honesty.</span> <span>Hustle.</span> <span>Helpfulness.</span></p>
       </div>
       <div class="hero-badge">
         <img class="logo-img" src="/images/logo-signature.webp?v=202608010300" alt="Triple H Enterprises badge">
@@ -337,6 +339,116 @@
         <div class="trust-item">
           <h3>Clear, Upfront Pricing</h3>
           <p>You'll know the cost before the work starts. No surprise fees, no upsells.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Why repair beats replace, told as a shop drawing that puts itself
+       back together while you scroll. The SVG is authored in its ASSEMBLED
+       state, and the explode offsets are applied by transform from --p --
+       so with no JS, a JS error, an old browser, or reduced motion, a
+       visitor sees a clean finished machine rather than scattered parts. -->
+  <section class="teardown" id="teardownStage" aria-labelledby="teardownHeading">
+    <div class="teardown-track" id="teardownTrack">
+      <div class="teardown-sticky">
+        <div class="wrap teardown-grid">
+
+          <div class="teardown-copy">
+            <p class="eyebrow">WHY REPAIR BEATS REPLACE</p>
+            <h2 id="teardownHeading">Most of it still works</h2>
+            <p>When an appliance quits, it is usually one part, not the whole machine. Knowing which part is the job. Replacing the whole unit is what happens when nobody looks.</p>
+            <div class="td-state" aria-hidden="true">
+              <span>Diagnosis</span>
+              <span class="td-state-bar"><i></i></span>
+              <span>Repair</span>
+            </div>
+          </div>
+
+          <div class="teardown-figure" aria-hidden="true">
+            <svg viewBox="0 0 760 620" role="img" aria-label="Exploded diagram of a washing machine assembling itself">
+
+              <!-- cabinet: the anchor everything returns into -->
+              <g class="td-part">
+                <rect class="td-fill td-line" x="250" y="140" width="260" height="400" rx="14"/>
+                <rect class="td-line-soft" x="268" y="228" width="224" height="292" rx="10"/>
+                <rect class="td-fill-2 td-line-soft" x="268" y="540" width="28" height="16" rx="3"/>
+                <rect class="td-fill-2 td-line-soft" x="464" y="540" width="28" height="16" rx="3"/>
+              </g>
+
+              <!-- drive belt: rides with the drum, so it reads as a band
+                   around a pulley rather than a shape floating on its own -->
+              <g class="td-part td-inner" style="--dx:-250; --dy:-10; --rot:-16;">
+                <circle class="td-belt" cx="380" cy="360" r="78"/>
+              </g>
+
+              <!-- heating element, with terminal posts so it reads as a
+                   real part instead of a loose squiggle when it is apart -->
+              <g class="td-part td-inner" style="--dx:70; --dy:150;">
+                <path class="td-accent" d="M330 452 q 12 -20 24 0 q 12 20 24 0 q 12 -20 24 0 q 12 20 24 0"/>
+                <line class="td-line-soft" x1="330" y1="452" x2="316" y2="452"/>
+                <line class="td-line-soft" x1="426" y1="452" x2="440" y2="452"/>
+                <circle class="td-fill-2 td-line-soft" cx="312" cy="452" r="5"/>
+                <circle class="td-fill-2 td-line-soft" cx="444" cy="452" r="5"/>
+              </g>
+
+              <!-- motor -->
+              <g class="td-part td-inner" style="--dx:-230; --dy:40; --rot:14;">
+                <circle class="td-fill-2 td-line" cx="380" cy="490" r="30"/>
+                <circle class="td-line-soft" cx="380" cy="490" r="13"/>
+                <line class="td-line-soft" x1="380" y1="460" x2="380" y2="446"/>
+              </g>
+
+              <!-- drum -->
+              <g class="td-part td-inner" style="--dx:-250; --dy:-10; --rot:-16;">
+                <circle class="td-fill-2 td-line" cx="380" cy="360" r="70"/>
+                <circle class="td-line-soft" cx="380" cy="360" r="52"/>
+                <path class="td-line-soft" d="M380 308 v18 M380 394 v18 M328 360 h18 M414 360 h18"/>
+                <path class="td-line-soft" d="M343 323 l13 13 M417 397 l13 13 M417 323 l-13 13 M343 397 l-13 13"/>
+              </g>
+
+              <!-- door -->
+              <g class="td-part" style="--dx:230; --dy:-30; --rot:10;">
+                <circle class="td-fill td-line" cx="380" cy="360" r="104"/>
+                <circle class="td-accent" cx="380" cy="360" r="92"/>
+                <circle class="td-line-soft" cx="380" cy="360" r="80"/>
+                <path class="td-line" d="M484 344 h16 a8 8 0 0 1 8 8 v16 a8 8 0 0 1 -8 8 h-16"/>
+              </g>
+
+              <!-- control panel -->
+              <g class="td-part" style="--dx:0; --dy:-112;">
+                <rect class="td-fill td-line" x="250" y="140" width="260" height="64" rx="12"/>
+                <circle class="td-accent" cx="290" cy="172" r="13"/>
+                <circle class="td-line-soft" cx="330" cy="172" r="9"/>
+                <rect class="td-line-soft" x="420" y="162" width="72" height="20" rx="4"/>
+              </g>
+
+              <!-- callouts: they belong to the apart state and fade as it closes -->
+              <g class="td-callout">
+                <circle cx="500" cy="60" r="3"/>
+                <line x1="504" y1="60" x2="536" y2="60"/>
+                <text x="542" y="65">Control board</text>
+
+                <circle cx="610" cy="228" r="3"/>
+                <line x1="610" y1="225" x2="610" y2="198"/>
+                <text x="610" y="190" text-anchor="middle">Door seal</text>
+
+                <circle cx="130" cy="420" r="3"/>
+                <line x1="130" y1="423" x2="130" y2="450"/>
+                <text x="130" y="470" text-anchor="middle">Drum</text>
+
+                <circle cx="150" cy="560" r="3"/>
+                <line x1="150" y1="563" x2="150" y2="580"/>
+                <text x="150" y="600" text-anchor="middle">Motor</text>
+
+                <circle cx="514" cy="602" r="3"/>
+                <line x1="518" y1="602" x2="546" y2="602"/>
+                <text x="552" y="607">Heating element</text>
+              </g>
+
+            </svg>
+          </div>
+
         </div>
       </div>
     </div>
@@ -1992,6 +2104,58 @@
       const el = document.getElementById(id);
       if (el) railObserver.observe(el);
     });
+  })();
+
+  // ---------- scroll-craft: hero parallax + the exploded appliance ----------
+  // One rAF-throttled scroll handler drives everything, writing CSS custom
+  // properties that the stylesheet turns into transforms. Nothing here
+  // reads layout in a loop or animates anything but transform/opacity.
+  //
+  // Every value this sets has a finished-state default in CSS, so if this
+  // block never runs -- no JS, an error above it, an old browser -- the
+  // page still renders correctly: machine assembled, hero composed, no
+  // offsets. Reduced-motion visitors skip it entirely, by design.
+  (function () {
+    if (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+
+    const stage = document.getElementById('teardownStage');
+    const track = document.getElementById('teardownTrack');
+    const badge = document.querySelector('.hero-badge');
+    const plane = document.querySelector('.hero-plane');
+    if (!stage && !badge && !plane) return;
+
+    let ticking = false;
+
+    function update() {
+      ticking = false;
+
+      if (stage && track) {
+        const rect = track.getBoundingClientRect();
+        const span = rect.height - window.innerHeight;
+        let p = span > 0 ? -rect.top / span : 1;
+        p = p < 0 ? 0 : (p > 1 ? 1 : p);
+        stage.style.setProperty('--p', p.toFixed(4));
+      }
+
+      // Hero planes only matter while the hero is anywhere near screen;
+      // past that this is wasted work on every scroll tick.
+      const y = window.scrollY || window.pageYOffset || 0;
+      if (y < window.innerHeight * 1.6) {
+        if (badge) badge.style.setProperty('--shift', (y * 0.09).toFixed(2));
+        if (plane) plane.style.setProperty('--shift', (y * -0.05).toFixed(2));
+      }
+    }
+
+    function onScroll() {
+      if (!ticking) {
+        ticking = true;
+        window.requestAnimationFrame(update);
+      }
+    }
+
+    window.addEventListener('scroll', onScroll, { passive: true });
+    window.addEventListener('resize', onScroll, { passive: true });
+    update();
   })();
 </script>
 
