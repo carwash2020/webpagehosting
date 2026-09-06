@@ -61,6 +61,24 @@
     --blue:#3aa0ff;
     --blue-dark:#1f5f9e;
     --blue-light:#7ec4ff;
+    /* Accent colours used as TEXT (2026-09-06). The light theme below
+       redefines every neutral but never touched the accents, so brand
+       orange and light blue were being painted straight onto a near-white
+       ground: 2.31:1 for orange and 1.72:1 for blue, against the 4.5:1 that
+       WCAG AA asks for normal text. Section eyebrows, service tags, process
+       numbers and the blog kicker were all failing.
+       --orange-light and --blue-light could not simply be flipped, because
+       each is also a background or a border in about fourteen places (the
+       motto rail, carousel dots, progress fills) where darkening would be
+       wrong. So text gets its own tokens. In dark mode they resolve to
+       exactly the values they replace, which makes this change invisible
+       there and confined entirely to the light theme.
+       Content locked to a dark surface regardless of theme -- the hero over
+       its photo, the gallery caption overlay, the lightbox scrim -- keeps
+       its hardcoded colours and is deliberately not routed through these. */
+    --orange-text:var(--orange-light);
+    --orange-text-vivid:var(--orange);
+    --blue-text:var(--blue-light);
     --radius:10px;
     --hex: polygon(25% 6%, 75% 6%, 97% 50%, 75% 94%, 25% 94%, 3% 50%);
     --maxw:1180px;
@@ -86,6 +104,11 @@
      "resting" depth cue against near-black reads as noticeably heavier
      against a light panel. */
   [data-theme="light"]{
+    /* Verified against all four light surfaces: #994a00 gives 5.78 / 6.30 /
+       5.43 / 5.01, and #1a5a94 gives 6.57 / 7.16 / 6.17 / 5.69. */
+    --orange-text:#994a00;
+    --orange-text-vivid:#994a00;
+    --blue-text:#1a5a94;
     --bg:#f7f5f1;
     --bg-panel:#ffffff;
     --bg-panel-2:#f0eee9;
@@ -189,11 +212,11 @@
     letter-spacing:3px;
     text-transform:uppercase;
     font-size:13px;
-    color:var(--orange);
+    color:var(--orange-text-vivid);
     margin:0 0 10px;
   }
-  .eyebrow.is-blue{color:var(--blue-light);}
-  .eyebrow.is-orange{color:var(--orange-light);}
+  .eyebrow.is-blue{color:var(--blue-text);}
+  .eyebrow.is-orange{color:var(--orange-text);}
 
   .section-head{
     max-width:640px;
@@ -312,7 +335,7 @@
     font-size:10px;
     font-weight:500;
     letter-spacing:2px;
-    color:var(--orange);
+    color:var(--orange-text-vivid);
     margin-top:2px;
     white-space:nowrap;
   }
@@ -358,7 +381,7 @@
        three lines. A phone number breaks as one thing or not at all. */
     white-space:nowrap;
   }
-  .nav-phone svg{width:16px; height:16px; color:var(--orange);}
+  .nav-phone svg{width:16px; height:16px; color:var(--orange-text-vivid);}
 
   /* This had no base rule at all, only a display:none inside a media
      query, so it had nothing but the inherited body face to go on. */
@@ -447,7 +470,7 @@
     background:var(--text-dim);
     transition:transform .15s, background .15s;
   }
-  .theme-switch input:checked + .theme-switch-track{background:var(--orange-tint-soft); border-color:var(--orange);}
+  .theme-switch input:checked + .theme-switch-track{background:var(--orange-tint-soft); border-color:var(--orange-text-vivid);}
   .theme-switch input:checked + .theme-switch-track .theme-switch-thumb{transform:translateX(20px); background:var(--orange);}
 
   /* The step between the full desktop row and the 860px hamburger. Without
@@ -617,18 +640,18 @@
     cursor:pointer;
     box-shadow:0 3px 12px rgba(0,0,0,0.10), 0 1px 3px rgba(0,0,0,0.06);
   }
-  .service-card:hover{transform:translateY(-4px); border-color:var(--blue-light); box-shadow:0 14px 28px rgba(0,0,0,0.14);}
-  .service-card.is-urgent{border-top-color:var(--orange);}
-  .service-card.is-urgent:hover{border-color:var(--orange-light);}
+  .service-card:hover{transform:translateY(-4px); border-color:var(--blue-text); box-shadow:0 14px 28px rgba(0,0,0,0.14);}
+  .service-card.is-urgent{border-top-color:var(--orange-text-vivid);}
+  .service-card.is-urgent:hover{border-color:var(--orange-text);}
   .service-icon{
     width:42px; height:42px;
     border-radius:8px;
     display:flex; align-items:center; justify-content:center;
     background:rgba(58,160,255,0.28);
-    color:var(--blue-light);
+    color:var(--blue-text);
     margin-bottom:16px;
   }
-  .service-card.is-urgent .service-icon{background:rgba(255,128,0,0.28); color:var(--orange-light);}
+  .service-card.is-urgent .service-icon{background:rgba(255,128,0,0.28); color:var(--orange-text);}
   .service-icon svg{width:22px; height:22px;}
   .service-card h3{
     font-family:var(--font-ui);
@@ -640,7 +663,7 @@
   }
   .service-card p{color:var(--text-dim); font-size:14.5px; margin:0;}
   .service-card p + p{margin-top:10px;}
-  .service-card p a{color:var(--blue-light); font-weight:600; text-decoration:none;}
+  .service-card p a{color:var(--blue-text); font-weight:600; text-decoration:none;}
   .service-card p a:hover{text-decoration:underline;}
   .service-tag{
     display:inline-flex;
@@ -651,9 +674,9 @@
     font-weight:600;
     letter-spacing:1.5px;
     text-transform:uppercase;
-    color:var(--blue-light);
+    color:var(--blue-text);
   }
-  .service-card.is-urgent .service-tag{color:var(--orange-light);}
+  .service-card.is-urgent .service-tag{color:var(--orange-text);}
   .service-tag svg{width:12px; height:12px;}
   @media (max-width:900px){.services-grid{grid-template-columns:repeat(2,1fr);}}
   @media (max-width:600px){.services-grid{grid-template-columns:1fr;}}
@@ -678,13 +701,13 @@
     text-align:center;
     box-shadow:0 3px 12px rgba(0,0,0,0.10), 0 1px 3px rgba(0,0,0,0.06);
   }
-  .value-pill:nth-child(1){border-top-color:var(--orange-light); background:linear-gradient(180deg, rgba(255,128,0,0.06), var(--bg-panel) 60%);}
+  .value-pill:nth-child(1){border-top-color:var(--orange-text); background:linear-gradient(180deg, rgba(255,128,0,0.06), var(--bg-panel) 60%);}
   .value-pill:nth-child(2){border-top-color:var(--steel); background:linear-gradient(180deg, rgba(150,150,150,0.08), var(--bg-panel) 60%);}
-  .value-pill:nth-child(3){border-top-color:var(--blue-light); background:linear-gradient(180deg, rgba(58,160,255,0.07), var(--bg-panel) 60%);}
+  .value-pill:nth-child(3){border-top-color:var(--blue-text); background:linear-gradient(180deg, rgba(58,160,255,0.07), var(--bg-panel) 60%);}
   .value-pill .word{font-family:var(--font-display); font-size:15px; letter-spacing:1px; color:var(--white);}
-  .value-pill:nth-child(1) .word{color:var(--orange-light);}
+  .value-pill:nth-child(1) .word{color:var(--orange-text);}
   .value-pill:nth-child(2) .word{color:var(--steel);}
-  .value-pill:nth-child(3) .word{color:var(--blue-light);}
+  .value-pill:nth-child(3) .word{color:var(--blue-text);}
   .value-pill p{color:var(--text-dim); font-size:12.5px; margin:8px 0 0;}
 
   .quote-block{
@@ -730,7 +753,7 @@
     justify-content:space-between;
     gap:20px;
   }
-  .booking-grid .booking-cta:last-child{border-left-color:var(--orange);}
+  .booking-grid .booking-cta:last-child{border-left-color:var(--orange-text-vivid);}
   .booking-cta-text h3{font-size:19px; margin-bottom:8px;}
   .booking-cta-text p{color:var(--text-dim); font-size:14px; margin:0; line-height:1.55;}
   .booking-cta .btn{align-self:flex-start;}
@@ -779,10 +802,10 @@
   .form-note{font-size:12.5px; color:var(--text-dim); margin-top:14px; line-height:1.5;}
   .form-note strong{color:var(--steel);}
   .form-footer{display:flex; align-items:center; gap:18px; flex-wrap:wrap; margin-top:22px;}
-  .form-status{font-size:13.5px; color:var(--blue-light); display:none;}
+  .form-status{font-size:13.5px; color:var(--blue-text); display:none;}
   .form-status.is-visible{display:inline;}
   .form-status.is-success{color:#3ad66b;}
-  .form-status.is-error{color:var(--orange-light);}
+  .form-status.is-error{color:var(--orange-text);}
 
   @media (max-width:640px){
     .form-row{grid-template-columns:1fr;}
@@ -798,7 +821,7 @@
     padding:26px 24px;
     box-shadow:0 3px 12px rgba(0,0,0,0.10), 0 1px 3px rgba(0,0,0,0.06);
   }
-  .contact-card .service-icon{color:var(--orange-light); cursor:default;}
+  .contact-card .service-icon{color:var(--orange-text); cursor:default;}
   .contact-card h3{
     font-family:var(--font-ui);
     font-weight:700;
@@ -811,7 +834,7 @@
      phone number, email address, city. The app face keeps the digits and
      the address legible and unambiguous. */
   .contact-card a.value, .contact-card p.value{font-family:var(--font-app); color:var(--white); font-size:16px; font-weight:500;}
-  .contact-card a.value:hover{color:var(--orange-light);}
+  .contact-card a.value:hover{color:var(--orange-text);}
   .contact-card p.sub{color:var(--text-dim); font-size:13.5px; margin-top:6px;}
   /* Bug fix (2026-08-20): had zero CSS at all, anywhere -- with none,
      the day and time spans defaulted to plain inline display with no
@@ -834,7 +857,7 @@
     margin-top:12px;
     font-size:13px;
     font-weight:600;
-    color:var(--blue-light);
+    color:var(--blue-text);
     letter-spacing:.5px;
   }
   .map-link svg{width:14px; height:14px;}
@@ -870,11 +893,11 @@
     border-radius:8px;
     border:1px solid rgba(255,128,0,0.35);
     background:rgba(255,128,0,0.14);
-    color:var(--orange-light);
+    color:var(--orange-text);
     display:flex; align-items:center; justify-content:center;
     transition:color .15s ease, border-color .15s ease, background .15s ease;
   }
-  .social-links a:hover{color:#1a0d02; background:var(--orange-light); border-color:var(--orange-light);}
+  .social-links a:hover{color:#1a0d02; background:var(--orange-light); border-color:var(--orange-text);}
   .social-links svg{width:17px; height:17px;}
   .footer-col h4{
     font-family:var(--font-ui);
@@ -953,8 +976,8 @@
     font-size:14.5px;
     color:var(--text);
   }
-  .modal ul li svg{width:16px; height:16px; margin-top:2px; color:var(--blue-light); flex-shrink:0;}
-  .modal.is-urgent ul li svg{color:var(--orange-light);}
+  .modal ul li svg{width:16px; height:16px; margin-top:2px; color:var(--blue-text); flex-shrink:0;}
+  .modal.is-urgent ul li svg{color:var(--orange-text);}
   .modal-actions{display:flex; gap:12px; flex-wrap:wrap;}
   .modal-gallery{max-width:900px;}
   .modal-gallery .gallery-grid{margin-top:22px;}
@@ -1011,7 +1034,7 @@
   .faq-question svg{
     width:18px; height:18px;
     flex-shrink:0;
-    color:var(--blue-light);
+    color:var(--blue-text);
     transition:transform .2s ease;
   }
   .faq-item.is-open .faq-question svg{transform:rotate(180deg);}
@@ -1027,7 +1050,7 @@
     font-size:14.5px;
     line-height:1.6;
   }
-  .faq-answer p em{color:var(--orange-light); font-style:normal;}
+  .faq-answer p em{color:var(--orange-text); font-style:normal;}
 
   /* sticky mobile call button */
   .sticky-call{
@@ -1125,11 +1148,11 @@
   .copy-email-btn{
     display:inline-flex; align-items:center; gap:6px; padding:4px 10px;
     background:rgba(58,160,255,0.14); border:1px solid rgba(58,160,255,0.35); border-radius:6px;
-    color:var(--blue-light); font-size:12.5px; cursor:pointer; transition:border-color .15s ease, color .15s ease, background .15s ease;
+    color:var(--blue-text); font-size:12.5px; cursor:pointer; transition:border-color .15s ease, color .15s ease, background .15s ease;
   }
-  .copy-email-btn:hover{background:var(--blue-light); border-color:var(--blue-light); color:var(--white);}
+  .copy-email-btn:hover{background:var(--blue-light); border-color:var(--blue-text); color:var(--white);}
   .copy-email-btn svg{width:14px; height:14px;}
-  .copy-email-btn.is-copied{border-color:var(--blue-light); color:var(--blue-light);}
+  .copy-email-btn.is-copied{border-color:var(--blue-text); color:var(--blue-text);}
 
   /* back to top */
   .back-to-top{
@@ -1147,7 +1170,7 @@
     transition:opacity .2s ease, transform .2s ease, border-color .15s ease, color .15s ease;
   }
   .back-to-top.is-visible{opacity:1; visibility:visible; transform:translateY(0);}
-  .back-to-top:hover{border-color:var(--blue-light); color:var(--blue-light);}
+  .back-to-top:hover{border-color:var(--blue-text); color:var(--blue-text);}
   .back-to-top svg{width:22px; height:22px;}
   @media (max-width:760px){
     .back-to-top{bottom:90px; right:16px; width:44px; height:44px;}
@@ -1234,7 +1257,7 @@
   .chat-action-btn.primary{background:var(--blue); color:#08131f;}
   .chat-action-btn.primary:hover{background:var(--blue-light);}
   .chat-action-btn.secondary{background:transparent; border:1px solid var(--border); color:var(--text-dim);}
-  .chat-action-btn.secondary:hover{border-color:var(--blue-light); color:var(--blue-light);}
+  .chat-action-btn.secondary:hover{border-color:var(--blue-text); color:var(--blue-text);}
   .chat-panel-note{font-size:11px; color:var(--text-dim); text-align:center; margin:0;}
 
   .gallery-caption{
@@ -1289,7 +1312,7 @@
     justify-content:center;
     gap:4px;
     margin-bottom:18px;
-    color:var(--orange-light);
+    color:var(--orange-text);
   }
   .review-stars svg{width:18px; height:18px;}
   .review-quote{
@@ -1324,7 +1347,7 @@
     flex-shrink:0;
     transition:background .15s ease, border-color .15s ease, color .15s ease;
   }
-  .carousel-arrow:hover{border-color:var(--blue-light); color:var(--blue-light);}
+  .carousel-arrow:hover{border-color:var(--blue-text); color:var(--blue-text);}
   .carousel-arrow svg{width:18px; height:18px;}
   .carousel-dots{
     display:flex;
@@ -1348,7 +1371,7 @@
     font-size:13.5px;
     color:var(--text-dim);
   }
-  .reviews-footer a{color:var(--blue-light); font-weight:600;}
+  .reviews-footer a{color:var(--blue-text); font-weight:600;}
   @media (max-width:760px){
     .review-slide{padding:32px 24px;}
   }
@@ -1681,7 +1704,7 @@
     text-transform:uppercase;
     color:var(--text-dim);
   }
-  .td-scrub-state{color:var(--orange); font-weight:600;}
+  .td-scrub-state{color:var(--orange-text-vivid); font-weight:600;}
   .td-scrub input[type="range"]{
     -webkit-appearance:none;
     appearance:none;
@@ -1744,7 +1767,7 @@
     color:var(--text-dim);
     margin:22px 0 0;
   }
-  .td-hint b{color:var(--orange-light); font-weight:600;}
+  .td-hint b{color:var(--orange-text); font-weight:600;}
 
   /* Phone-first: the diagram and its control are the main event on a
      small screen, so they lead and get the full width. */
@@ -1778,9 +1801,9 @@
     pointer-events:none;
   }
   .service-card:hover::before,
-  .service-card:focus-visible::before{border-color:var(--blue-light);}
+  .service-card:focus-visible::before{border-color:var(--blue-text);}
   .service-card.is-urgent:hover::before,
-  .service-card.is-urgent:focus-visible::before{border-color:var(--orange-light);}
+  .service-card.is-urgent:focus-visible::before{border-color:var(--orange-text);}
   /* A single scan pass on hover/focus. Transform-only, so it composites. */
   .service-card::after{
     content:"";
@@ -1882,7 +1905,7 @@
     border-radius:50%;
     border:1px solid var(--orange-tint-border);
     background:var(--orange-tint-soft);
-    color:var(--orange-light);
+    color:var(--orange-text);
     display:inline-flex; align-items:center; justify-content:center;
     font-size:11px;
   }
@@ -1901,7 +1924,7 @@
     cursor:pointer;
     transition:border-color .15s ease, background .15s ease, color .15s ease, transform .15s ease;
   }
-  .triage-chip:hover{border-color:var(--blue-light); color:var(--white); transform:translateY(-1px);}
+  .triage-chip:hover{border-color:var(--blue-text); color:var(--white); transform:translateY(-1px);}
   .triage-chip[aria-pressed="true"]{
     background:linear-gradient(135deg, #ffb347, #ff8000 60%, #c96400);
     border-color:transparent;
@@ -2042,8 +2065,8 @@
     line-height:1.55;
   }
   .verdict-col li svg{width:15px; height:15px; margin-top:4px; flex-shrink:0;}
-  .verdict-col.is-fix li svg{color:var(--blue-light);}
-  .verdict-col.is-replace li svg{color:var(--orange-light);}
+  .verdict-col.is-fix li svg{color:var(--blue-text);}
+  .verdict-col.is-replace li svg{color:var(--orange-text);}
   .verdict-note{
     margin:26px 0 0;
     padding:16px 18px;
@@ -2054,7 +2077,7 @@
     font-size:15px;
     max-width:70ch;
   }
-  .verdict-note b{color:var(--orange-light);}
+  .verdict-note b{color:var(--orange-text);}
   @media (max-width:760px){
     .verdict-split{grid-template-columns:1fr;}
   }
@@ -2076,7 +2099,7 @@
     width:44px; height:44px;
     border-radius:10px;
     background:rgba(58,160,255,.18);
-    color:var(--blue-light);
+    color:var(--blue-text);
     display:flex; align-items:center; justify-content:center;
     flex-shrink:0;
   }
@@ -2087,7 +2110,7 @@
     font-weight:600;
     letter-spacing:2.2px;
     text-transform:uppercase;
-    color:var(--blue-light);
+    color:var(--blue-text);
     margin:0 0 6px;
   }
   .care-body{margin:0; color:var(--text-dim); font-size:15px; line-height:1.6;}
@@ -2098,7 +2121,7 @@
 
   /* ---------- hours-aware booking nudge, inside the status pill ---------- */
   .open-status a{
-    color:var(--blue-light);
+    color:var(--blue-text);
     font-weight:600;
     text-decoration:underline;
     text-underline-offset:3px;
@@ -2156,7 +2179,7 @@
     border-radius:50%;
     background:var(--bg-panel);
     border:1px solid var(--orange-tint-border);
-    color:var(--orange-light);
+    color:var(--orange-text);
     font-family:var(--font-display);
     font-size:17px;
     display:flex; align-items:center; justify-content:center;
