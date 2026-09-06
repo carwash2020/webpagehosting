@@ -278,7 +278,11 @@
 // (button/icon redesign -- glass-highlight gradients on primary/
 // secondary/small buttons, vivid enamel-pin tool-grid icons, refined
 // flag button and sidebar/bottom-nav hex icons). Precached bare path.
-const CACHE_NAME = 'th-workspace-v62';
+// Bumped 2026-09-06 (v62 -> v63): /tools/styles-tools.css and
+// /tools/tools-effects.js both changed again (dashboard section icons,
+// Tools-grid category colors, dense-table pass, live-sync retry
+// button). Both precached under their bare paths.
+const CACHE_NAME = 'th-workspace-v63';
 const PRECACHE_URLS = [
   '/tools/workspace.html', '/tools/job-tracker.html', '/tools/invoice-generator.html', '/tools/contract-generator.html',
   '/tools/calendar.html', '/tools/route-planner.html', '/tools/review-request.html', '/tools/contact-card.html',

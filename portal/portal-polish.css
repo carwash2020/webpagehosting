@@ -30,6 +30,30 @@ body:has(.login-box) {
     radial-gradient(ellipse 60% 36% at 90% 102%, rgba(58, 160, 255, .05), transparent 66%);
   background-attachment: fixed;
 }
+/* login.html/set-password.html only (2026-09-06, requested directly --
+   "should we add the background to tools and portal like the main
+   site"): faint drafting-grid lines, roughly a third of the public
+   site's own opacity (styles.css section 1, "the blueprint world").
+   These two are the one truly sparse screen in the whole app -- a
+   single centered card on an otherwise empty page -- so the grid has
+   room to read as atmosphere rather than competing with content. NOT
+   extended to .portal-page's real screens (invoices, quotes, jobs) or
+   the tool suite: those stay content-dense enough that the same grid
+   would fight the tables and cards sitting on top of it, which is the
+   whole reason this stayed a quiet wash instead of the full blueprint
+   in the first place (see 1b below). background-image can't be layered
+   across two rules -- this repeats the two washes above rather than
+   only adding the grid, since the later, more specific declaration
+   fully replaces the property rather than extending it. */
+body:has(.login-box) {
+  background-image:
+    radial-gradient(ellipse 70% 40% at 50% -6%, rgba(255, 128, 0, .07), transparent 62%),
+    radial-gradient(ellipse 60% 36% at 90% 102%, rgba(58, 160, 255, .05), transparent 66%),
+    repeating-linear-gradient(0deg, rgba(255,255,255,.009) 0 1px, transparent 1px 96px),
+    repeating-linear-gradient(90deg, rgba(255,255,255,.009) 0 1px, transparent 1px 96px),
+    repeating-linear-gradient(0deg, rgba(255,255,255,.004) 0 1px, transparent 1px 24px),
+    repeating-linear-gradient(90deg, rgba(255,255,255,.004) 0 1px, transparent 1px 24px);
+}
 
 /* ---------- 1b. elevation range widened ----------
    The four surface tokens this cascade inherits from styles.css

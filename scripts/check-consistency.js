@@ -16,6 +16,29 @@ const path = require('path');
 const crypto = require('crypto');
 
 const TOOLS_DIR = path.join(__dirname, '..', 'tools');
+// Added 2026-09-06: the content-hash freshness check below (detectSharedScripts
+// / checkVersionFreshness / fixVersions) only ever ran against tools/. portal/
+// has the exact same shared-stylesheet-by-hash convention (portal-polish.css,
+// portal-app.css/.js) but was never covered, and its stale stamp was found and
+// fixed BY HAND twice in one session as a direct result -- exactly the kind of
+// drift this whole file exists to catch automatically. The other checks below
+// (requireAuth presence, CSP, PWA manifest, button-handler wiring, tour
+// health, precache completeness) stay tools-only on purpose: portal uses a
+// different auth model entirely (the real Supabase JS SDK's
+// client.auth.getSession(), not this app's own requireAuth()/auth.js), so
+// applying those checks there would mean asserting portal pages look like
+// tools pages in ways they were never meant to.
+const PORTAL_DIR = path.join(__dirname, '..', 'portal');
+// portal-app.css/.js intentionally use the SAME manual-timestamp cache-bust
+// convention as the public site's styles.css (bumped by a human alongside a
+// meaningful change, not derived from content), not the content-hash
+// convention every other shared tools/portal file uses. Confirmed by their
+// real current values: 202609042100 / 202609042200 -- a 12-digit YYYYMMDDHHMM
+// timestamp, not a hex content hash, and there's no reason a real edit to
+// either file would ever make its hash equal a date string. Excluded from
+// the content-hash freshness check below so it doesn't flag them as "stale"
+// against a hash they were never meant to match in the first place.
+const PORTAL_TIMESTAMP_VERSIONED = new Set(['portal-app.css', 'portal-app.js']);
 
 // Pages that are deliberately different, and why -- see the code review
 // this checker came out of for the full reasoning on each:
@@ -322,39 +345,40 @@ function checkTourHealth(problems) {
 // checked -- computed fresh every run, so a brand new shared file is
 // covered automatically the moment a second page loads it, with
 // nothing to remember to add anywhere.
-function detectSharedScripts() {
-  const htmlFiles = fs.readdirSync(TOOLS_DIR).filter(f => f.endsWith('.html'));
-  const candidates = fs.readdirSync(TOOLS_DIR).filter(f => f.endsWith('.js') || f.endsWith('.css'));
+function detectSharedScripts(dir) {
+  const htmlFiles = fs.readdirSync(dir).filter(f => f.endsWith('.html'));
+  const candidates = fs.readdirSync(dir).filter(f => f.endsWith('.js') || f.endsWith('.css'));
   const shared = [];
 
   for (const candidate of candidates) {
+    if (dir === PORTAL_DIR && PORTAL_TIMESTAMP_VERSIONED.has(candidate)) continue;
     const escaped = candidate.replace('.', '\\.');
     const pattern = new RegExp(escaped + '(\\?v=[a-zA-Z0-9]+)?["\']');
-    const referencingPages = htmlFiles.filter(f => pattern.test(readTool(f)));
+    const referencingPages = htmlFiles.filter(f => pattern.test(fs.readFileSync(path.join(dir, f), 'utf8')));
     if (referencingPages.length >= 2) shared.push(candidate);
   }
   return shared;
 }
 
-function currentContentHash(script) {
-  const scriptPath = path.join(TOOLS_DIR, script);
+function currentContentHash(dir, script) {
+  const scriptPath = path.join(dir, script);
   if (!fs.existsSync(scriptPath)) return null;
   const content = fs.readFileSync(scriptPath, 'utf8');
   return crypto.createHash('sha256').update(content).digest('hex').slice(0, 10);
 }
 
-function checkVersionFreshness(problems) {
-  const VERSIONED_SCRIPTS = detectSharedScripts();
-  const files = fs.readdirSync(TOOLS_DIR).filter(f => f.endsWith('.html'));
+function checkVersionFreshness(dir, problems) {
+  const VERSIONED_SCRIPTS = detectSharedScripts(dir);
+  const files = fs.readdirSync(dir).filter(f => f.endsWith('.html'));
 
   for (const script of VERSIONED_SCRIPTS) {
-    const realHash = currentContentHash(script);
+    const realHash = currentContentHash(dir, script);
     if (realHash === null) continue;
 
     const escaped = script.replace('.', '\\.');
     const pattern = new RegExp(escaped + '\\?v=([a-zA-Z0-9]+)');
     for (const f of files) {
-      const m = readTool(f).match(pattern);
+      const m = fs.readFileSync(path.join(dir, f), 'utf8').match(pattern);
       if (!m) continue; // this page doesn't load this script at all
       if (m[1] !== realHash) {
         problems.push(
@@ -371,20 +395,20 @@ function checkVersionFreshness(problems) {
 // that loads it. Run directly with `npm run fix-versions` any time a
 // file shared by 2+ pages changes, removing the "remember to bump it
 // by hand, and compute the right value" step entirely.
-function fixVersions() {
-  const VERSIONED_SCRIPTS = detectSharedScripts();
-  const files = fs.readdirSync(TOOLS_DIR).filter(f => f.endsWith('.html'));
+function fixVersions(dir) {
+  const VERSIONED_SCRIPTS = detectSharedScripts(dir);
+  const files = fs.readdirSync(dir).filter(f => f.endsWith('.html'));
   let changedCount = 0;
 
   for (const script of VERSIONED_SCRIPTS) {
-    const realHash = currentContentHash(script);
+    const realHash = currentContentHash(dir, script);
     if (realHash === null) continue;
 
     const escaped = script.replace('.', '\\.');
     const pattern = new RegExp(escaped + '\\?v=([a-zA-Z0-9]+)', 'g');
 
     for (const f of files) {
-      const filePath = path.join(TOOLS_DIR, f);
+      const filePath = path.join(dir, f);
       const content = fs.readFileSync(filePath, 'utf8');
       if (!pattern.test(content)) continue;
       pattern.lastIndex = 0; // reset after .test() above, since this regex has the g flag
@@ -397,15 +421,16 @@ function fixVersions() {
     }
   }
 
+  return changedCount;
+}
+
+if (require.main === module && process.argv.includes('--fix-versions')) {
+  const changedCount = fixVersions(TOOLS_DIR) + fixVersions(PORTAL_DIR);
   if (changedCount === 0) {
     console.log('All cache-bust versions already match their real content hashes -- nothing to fix.');
   } else {
     console.log(`\nUpdated ${changedCount} reference(s) across the affected pages.`);
   }
-}
-
-if (require.main === module && process.argv.includes('--fix-versions')) {
-  fixVersions();
   process.exit(0);
 }
 
@@ -414,9 +439,10 @@ function main() {
   const problems = [];
   const versions = {}; // filename -> version string, for the cross-file comparison at the end
   const jsVersions = {}; // script name -> { filename -> version string }
-  const sharedScripts = detectSharedScripts();
+  const sharedScripts = detectSharedScripts(TOOLS_DIR);
 
-  checkVersionFreshness(problems);
+  checkVersionFreshness(TOOLS_DIR, problems);
+  checkVersionFreshness(PORTAL_DIR, problems);
   checkPrecacheCompleteness(problems);
   checkTourHealth(problems);
   checkTopLevelDeferredCalls(problems);
@@ -565,7 +591,8 @@ function main() {
     process.exit(1);
   }
 
-  console.log(`Consistency check passed -- ${files.length - Object.keys(EXEMPT).length} tool pages checked, all clean.`);
+  const portalFileCount = fs.readdirSync(PORTAL_DIR).filter(f => f.endsWith('.html')).length;
+  console.log(`Consistency check passed -- ${files.length - Object.keys(EXEMPT).length} tool pages checked (full checks) plus ${portalFileCount} portal pages (cache-bust freshness only), all clean.`);
 }
 
 main();

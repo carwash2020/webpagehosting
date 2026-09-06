@@ -36,11 +36,11 @@
   })();
 </script>
 <link rel="stylesheet" href="/styles.css?v=202609022200">
-<link rel="stylesheet" href="/tools/styles-tools.css?v=d9b8bb7a42">
+<link rel="stylesheet" href="/tools/styles-tools.css?v=a2caeadf36">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.112.3/dist/umd/supabase.js" integrity="sha384-qafw21c/iciq0VXsi9FzkfoQv5I/V0iqE4lSNcKXPnW9/UTJLnv5CcN4FHxVLnKg" crossorigin="anonymous" defer></script>
 <script src="/tools/sync.js?v=51c822a31b" defer></script>
 <script src="/tools/data-layer.js?v=3a0d57478c" defer></script>
-<script src="/tools/tools-effects.js?v=9a2a59040e" defer></script>
+<script src="/tools/tools-effects.js?v=4cff99aa4a" defer></script>
 <script src="/tools/tools-dialogs.js?v=e1dfaa11a1" defer></script>
 <script src="/tools/tools-media-sharing.js?v=4e2769b10d" defer></script>
 <script src="/tools/tools-nav-pwa.js?v=9b16eefb86" defer></script>
@@ -132,7 +132,7 @@
 </div>
 <div class="tool-title" id="mainContent">Invoice Generator</div>
 <p class="tool-sub">Internal tool &mdash; fill this out per job, click Generate, a branded PDF downloads straight to your device.
-  <span class="realtime-badge" id="realtimeBadge"><span class="realtime-dot" id="realtimeDot"></span><span id="realtimeText">Live sync: connecting...</span></span>
+  <span class="realtime-badge" id="realtimeBadge" onclick="retryLiveSync()" title="Live sync"><span class="realtime-dot" id="realtimeDot"></span><span id="realtimeText">Live sync: connecting...</span></span>
 </p>
 
 <div class="tabs tabs-sticky">
@@ -420,7 +420,7 @@
       <button class="small-btn" data-density-toggle onclick="toggleDensityPreference()" aria-pressed="false">Compact view</button>
     </div>
     <input type="text" id="invoiceLogSearch" placeholder="Search by client or invoice #..." style="width:100%; box-sizing:border-box; margin-bottom:14px; margin-top:12px;" oninput="debouncedCall('invoiceLogSearch', renderInvoiceLog)">
-    <div id="invoiceLogList"></div>
+    <div id="invoiceLogList"><div class="skeleton-line w-100"></div><div class="skeleton-line w-60"></div><div class="skeleton-line w-40"></div></div>
   </div>
   <div class="form-section">
     <h3>Recent Quotes</h3>
@@ -2183,6 +2183,7 @@
   function updateRealtimeBadge(status) {
     const dot = document.getElementById('realtimeDot');
     const text = document.getElementById('realtimeText');
+    const badge = document.getElementById('realtimeBadge');
     if (!dot || !text) return;
     dot.className = 'realtime-dot';
     if (status === 'SUBSCRIBED') {
@@ -2198,6 +2199,7 @@
       dot.classList.add('is-connecting');
       text.textContent = 'Live sync: connecting...';
     }
+    if (badge) badge.classList.toggle('is-retryable', dot.classList.contains('is-error'));
   }
   document.addEventListener('DOMContentLoaded', () => {
     try {

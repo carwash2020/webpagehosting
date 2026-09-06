@@ -490,6 +490,20 @@ body.th-has-bottomnav .th-toast-container{
   0%, 100% { box-shadow: 0 0 4px rgba(76,175,80,0.55); }
   50% { box-shadow: 0 0 10px rgba(76,175,80,0.9); }
 }
+/* Retry affordance (2026-09-06): only appears once the badge is
+   actually in a failed state (is-retryable is toggled by each page's
+   own updateRealtimeBadge(), never present alongside "connecting" or
+   "active") -- a static status badge suddenly looking clickable all the
+   time, whether or not clicking it would do anything, would be worse
+   than not signaling it at all. */
+.realtime-badge.is-retryable {
+  cursor: pointer;
+  text-decoration: underline;
+  text-decoration-color: transparent;
+  text-underline-offset: 3px;
+  transition: text-decoration-color .15s ease;
+}
+.realtime-badge.is-retryable:hover { text-decoration-color: currentColor; }
 
 /* --- Help "?" button: small glow on hover so it reads as tappable --- */
 .help-btn:hover {
@@ -598,6 +612,30 @@ body.th-has-bottomnav .th-toast-container{
 table { width: 100%; border-collapse: collapse; margin-top: 8px; }
 th { text-align: left; font-size: 11.5px; color: var(--text-dim); padding: 8px; text-transform: uppercase; border-bottom: 1px solid var(--border); white-space: nowrap; }
 td { padding: 10px 8px; font-size: 14px; color: var(--white); border-bottom: 1px solid var(--border); }
+
+/* Dense table pass (2026-09-06), requested directly: Finance's income and
+   expense tables (#incomeTable, #entriesTable) can run to hundreds of
+   rows over months of use, unlike every other page's short reference
+   tables sharing these same bare table/th/td rules -- so this is scoped
+   to those two containers specifically, rather than changed on the
+   generic selectors above, which invoice-generator.html's line-items
+   table (always a handful of rows, edited in place, no scrolling
+   benefit) and other pages also rely on unchanged.
+   Sticky header: same top-offset pattern already used by .jump-nav
+   elsewhere in this file, so the header parks just under the fixed app
+   bar rather than under it. Right-aligned amount column: numbers align
+   on their ones place down a long list, which is how every real
+   accounting UI does it and how job-tracker.html's own dense table
+   already treats its own numeric-ish columns. */
+#incomeTable table, #entriesTable table { margin-top: 0; }
+#incomeTable thead th, #entriesTable thead th {
+  position: sticky; top: calc(61px + max(env(safe-area-inset-top, 0px), 44px)); z-index: 2;
+  background: var(--bg-panel-2);
+}
+@media (min-width: 1024px) {
+  #incomeTable thead th, #entriesTable thead th { top: 61px; }
+}
+#incomeTable .col-amount, #entriesTable .col-amount { text-align: right; font-variant-numeric: tabular-nums; }
 .totals-row-money { display: flex; gap: 24px; margin-top: 16px; padding-top: 16px; border-top: 1px solid var(--border); flex-wrap: wrap; }
 
 .form-section {
@@ -1011,6 +1049,40 @@ body .section-heading { display: flex; align-items: center; }
 body .section-heading > span:first-child,
 body .section-heading > *:first-child { margin-right: auto; }
 
+/* Redesign (2026-09-06), requested directly: the dashboard's collapsible
+   sections (Today, Business Snapshot, Action Items, Gallery Queue,
+   Compliance, Analytics, Backup) were visually identical regardless of
+   content -- same bar, same all-caps label, same chevron, no way to
+   tell one apart from another at a glance or find a section by shape.
+   A small icon per heading fixes that without touching the collapse
+   behavior or layout rhythm. .section-heading-title wraps the icon and
+   label together as ONE first-child, so the existing margin-right:auto
+   rule above still pushes the pair left as a unit -- an icon placed as
+   its own sibling span would have become the new first-child instead
+   and been shoved away from its own label. */
+body .section-heading-title {
+  display: inline-flex; align-items: center; gap: 8px;
+}
+body .section-heading-icon {
+  width: 15px; height: 15px; flex-shrink: 0;
+  color: var(--orange-light);
+  opacity: .85;
+}
+/* Action Items is the one section people actually need to act on every
+   day (leads, bookings, follow-ups); everything else is reference or
+   review. Same icon language, but filled and glowing instead of a
+   plain outline, so it reads as "this one matters most" without any
+   text saying so. */
+body .section-heading-icon.is-priority {
+  width: 26px; height: 26px; padding: 5px; box-sizing: border-box;
+  border-radius: 50%; opacity: 1; color: #1a0d02;
+  background:
+    radial-gradient(120% 130% at 30% 18%, rgba(255,255,255,.5), rgba(255,255,255,0) 46%),
+    linear-gradient(165deg, var(--orange-light), var(--orange) 55%, var(--orange-dark) 130%);
+  box-shadow: 0 2px 6px -2px rgba(0,0,0,.45), 0 1px 0 rgba(255,255,255,.3) inset;
+}
+body #section-actionitems { border-color: var(--orange-tint-border); }
+
 /* ---- the numbers are the product: make them read across the room ---- */
 body .metric-card .metric-value, body .stat-box .value {
   font-size: 30px;
@@ -1213,6 +1285,46 @@ body .tool-tile-link:hover .tool-tile-icon {
   box-shadow: 0 5px 14px -4px var(--orange-tint-glow), 0 1px 0 rgba(255,255,255,.35) inset;
 }
 body .tool-tile-label { font-size: 13px; letter-spacing: .4px; }
+
+/* Category color-coding (2026-09-06), requested directly: the grid was
+   uniform orange regardless of what a tile actually does, so scanning
+   it meant reading every label. Colors follow the dashboard's own
+   existing group headings (Jobs/Money/Grow/Admin) -- Jobs keeps the
+   default orange (it's the primary brand color and the largest, most-
+   used group, so it stays the unmarked default rather than being
+   recolored for its own sake). Money gets green (the universal
+   financial-software convention). Grow reuses --blue/--blue-light/
+   --blue-dark, already this app's established secondary accent, rather
+   than inventing a fifth color the palette doesn't otherwise use. Admin
+   gets a neutral steel gradient -- deliberately desaturated, since
+   Settings/Dev Tools are utility, not a "warm" category like the other
+   three. Each icon's dark glyph color was picked and contrast-checked
+   against that category's actual gradient (not reused from orange's
+   #1a0d02), same method as the rest of this icon system. */
+body .tool-tile[data-cat="money"] .tool-tile-icon {
+  background:
+    radial-gradient(120% 130% at 30% 18%, rgba(255,255,255,.55), rgba(255,255,255,0) 46%),
+    linear-gradient(165deg, #6ee7a8, #22c55e 55%, #0f6b32 130%);
+  border-color: #0f6b32;
+}
+body .tool-tile[data-cat="money"] .tool-tile-icon .th-icon { color: #04160c; }
+body .tool-tile[data-cat="grow"] .tool-tile-icon {
+  background:
+    radial-gradient(120% 130% at 30% 18%, rgba(255,255,255,.55), rgba(255,255,255,0) 46%),
+    linear-gradient(165deg, var(--blue-light), var(--blue) 55%, var(--blue-dark) 130%);
+  border-color: var(--blue-dark);
+}
+body .tool-tile[data-cat="grow"] .tool-tile-icon .th-icon { color: #04101c; }
+body .tool-tile[data-cat="admin"] .tool-tile-icon {
+  background:
+    radial-gradient(120% 130% at 30% 18%, rgba(255,255,255,.55), rgba(255,255,255,0) 46%),
+    linear-gradient(165deg, #e6e8ec, #a8adb6 55%, #6b6f78 130%);
+  border-color: #6b6f78;
+}
+body .tool-tile[data-cat="admin"] .tool-tile-icon .th-icon { color: #161616; }
+body .tool-tile[data-cat="money"] .tool-tile-link:hover .tool-tile-icon { box-shadow: 0 5px 14px -4px rgba(34,197,94,.45), 0 1px 0 rgba(255,255,255,.35) inset; }
+body .tool-tile[data-cat="grow"] .tool-tile-link:hover .tool-tile-icon { box-shadow: 0 5px 14px -4px rgba(58,160,255,.45), 0 1px 0 rgba(255,255,255,.35) inset; }
+body .tool-tile[data-cat="admin"] .tool-tile-link:hover .tool-tile-icon { box-shadow: 0 5px 14px -4px rgba(168,173,182,.45), 0 1px 0 rgba(255,255,255,.35) inset; }
 
 /* ---- rows and lists: tappable cards with direction ---- */
 body .dash-list-item {

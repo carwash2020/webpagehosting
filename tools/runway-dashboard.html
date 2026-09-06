@@ -244,10 +244,29 @@
   .grand-totals{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:16px;}
   .stat-box{background:var(--bg-elevated);border-radius:var(--radius);padding:14px;text-align:center;}
   .stat-box .label{font-size:11px;color:var(--text-dim);text-transform:uppercase;letter-spacing:0.5px;}
-  .stat-box .value{font-family:'Anton',sans-serif;font-size:24px;color:var(--orange-light);margin-top:4px;}
-  .stat-box.blue .value{color:var(--blue); text-shadow:0 0 6px rgba(58,160,255,0.18);}
-  .stat-box.green .value{color:var(--green); text-shadow:0 0 6px rgba(58,201,106,0.2);}
-  .stat-box.red .value{color:var(--red); text-shadow:0 0 6px rgba(224,85,77,0.18);}
+  /* "Big confident numbers" (2026-09-06), matching the dashboard's own
+     .metric-value treatment: a light-to-base gradient clipped to the
+     text, not a flat color, so these read as the product rather than
+     a caption. Runway Dashboard is fully self-contained (its own root
+     tokens, no styles-tools.css) so this can't just reuse that shared
+     rule -- same technique, this page's own color tokens. */
+  .stat-box .value{
+    font-family:'Anton',sans-serif;font-size:24px;margin-top:4px;
+    background:linear-gradient(180deg, var(--orange-light), var(--orange));
+    -webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;
+  }
+  .stat-box.blue .value{
+    background:linear-gradient(180deg, #7ec4ff, var(--blue));
+    -webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;
+  }
+  .stat-box.green .value{
+    background:linear-gradient(180deg, #6eeb95, var(--green));
+    -webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;
+  }
+  .stat-box.red .value{
+    background:linear-gradient(180deg, #ef8681, var(--red));
+    -webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;
+  }
   .card-hero{
     position:relative;
     background:linear-gradient(160deg, var(--bg-elevated), var(--bg-card));

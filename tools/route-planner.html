@@ -36,10 +36,10 @@
   })();
 </script>
 <link rel="stylesheet" href="/styles.css?v=202609022200">
-<link rel="stylesheet" href="/tools/styles-tools.css?v=d9b8bb7a42">
+<link rel="stylesheet" href="/tools/styles-tools.css?v=a2caeadf36">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.112.3/dist/umd/supabase.js" integrity="sha384-qafw21c/iciq0VXsi9FzkfoQv5I/V0iqE4lSNcKXPnW9/UTJLnv5CcN4FHxVLnKg" crossorigin="anonymous" defer></script>
 <script src="/tools/sync.js?v=51c822a31b" defer></script>
-<script src="/tools/tools-effects.js?v=9a2a59040e" defer></script>
+<script src="/tools/tools-effects.js?v=4cff99aa4a" defer></script>
 <script src="/tools/tools-dialogs.js?v=e1dfaa11a1" defer></script>
 <script src="/tools/tools-media-sharing.js?v=4e2769b10d" defer></script>
 <script src="/tools/tools-nav-pwa.js?v=9b16eefb86" defer></script>
@@ -127,7 +127,7 @@
 <div class="stop-list-view" id="individualLinks"></div>
 
 <div class="form-section">
-  <h3>Cost Analyzer (To &amp; From) <button class="help-btn" onclick="openCardInfo('costAnalyzer')" aria-label="What is this?" title="What is this?">?</button> <span class="realtime-badge" id="realtimeBadge"><span class="realtime-dot" id="realtimeDot"></span><span id="realtimeText">Live sync: connecting...</span></span></h3>
+  <h3>Cost Analyzer (To &amp; From) <button class="help-btn" onclick="openCardInfo('costAnalyzer')" aria-label="What is this?" title="What is this?">?</button> <span class="realtime-badge" id="realtimeBadge" onclick="retryLiveSync()" title="Live sync"><span class="realtime-dot" id="realtimeDot"></span><span id="realtimeText">Live sync: connecting...</span></span></h3>
   <div class="tool-form-row">
     <div class="form-field"><label>One-way distance (miles)</label><input type="number" id="tripDistance" value="0" min="0" step="0.5" oninput="calculateTripCost()"></div>
     <div class="form-field"><label>Cost per mile ($)</label><input type="number" id="tripFuelRate" value="0.76" min="0" step="0.01" oninput="calculateTripCost(); saveMileageRate();"></div>
@@ -335,6 +335,7 @@
   function updateRealtimeBadge(status) {
     const dot = document.getElementById('realtimeDot');
     const text = document.getElementById('realtimeText');
+    const badge = document.getElementById('realtimeBadge');
     if (!dot || !text) return;
     dot.className = 'realtime-dot';
     if (status === 'SUBSCRIBED') {
@@ -350,6 +351,7 @@
       dot.classList.add('is-connecting');
       text.textContent = 'Live sync: connecting...';
     }
+    if (badge) badge.classList.toggle('is-retryable', dot.classList.contains('is-error'));
   }
 
   // sync.js loads with `defer`, which has no effect on this inline script

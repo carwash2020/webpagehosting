@@ -121,6 +121,27 @@ function openInfoModal(title, bodyHtml) {
 // icon if it loses focus while still empty -- keeps a page's toolbar
 // compact until a search is actually wanted, everywhere this pattern is
 // used across the app.
+// Live-sync retry (2026-09-06), requested directly: the realtime badge
+// (every gated page has one -- see updateRealtimeBadge() inline on each)
+// had no way to act on a failed/unavailable/disconnected state short of
+// a manual browser refresh, which is exactly what this does, just from
+// the badge itself instead of requiring someone to know that trick.
+// Deliberately NOT re-invoking startRealtimeSync()/startLeadsRealtime()/
+// startBookingsRealtime() directly here -- none of those three clean up
+// their previous channel before creating a new one (they just reassign
+// the module-level channel variable), so calling them again on an
+// already-subscribed page risks a real duplicate-subscription bug on a
+// live sync system. A full reload re-initializes everything from
+// scratch, which is slower but guaranteed correct, and it's already the
+// de facto recovery path every page's "Force a full refresh" copy
+// points people at. Only acts while the dot is actually in an error
+// state (checked here, not left to the caller) -- clicking a healthy
+// "Live sync active" badge should do nothing.
+function retryLiveSync() {
+  const dot = document.getElementById('realtimeDot');
+  if (dot && dot.classList.contains('is-error')) location.reload();
+}
+
 function toggleIconSearch(wrapId, forceOpen) {
   const wrap = document.getElementById(wrapId);
   if (!wrap) return;

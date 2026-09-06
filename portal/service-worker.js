@@ -79,7 +79,10 @@
 // Bumped 2026-09-06 (v13 -> v14): portal-polish.css changed again
 // (matching button/icon redesign for .btn.orange/.btn.blue/.secondary-btn/
 // .small-btn/.portal-icon-btn/.help-actions a). Precached under its bare path.
-const CACHE_NAME = 'th-portal-v14';
+// Bumped 2026-09-06 (v14 -> v15): portal-polish.css changed again (faint
+// drafting-grid background on login.html/set-password.html). Precached
+// under its bare path.
+const CACHE_NAME = 'th-portal-v15';
 const PRECACHE_URLS = [
   '/portal/home.html', '/portal/dashboard.html', '/portal/jobs.html', '/portal/quotes.html',
   '/portal/work-orders.html', '/portal/settings.html', '/portal/login.html', '/portal/set-password.html',

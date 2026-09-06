@@ -52,7 +52,7 @@
   })();
 </script>
 <link rel="stylesheet" href="/styles.css?v=202609022200">
-<link rel="stylesheet" href="/tools/styles-tools.css?v=d9b8bb7a42">
+<link rel="stylesheet" href="/tools/styles-tools.css?v=a2caeadf36">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.112.3/dist/umd/supabase.js" integrity="sha384-qafw21c/iciq0VXsi9FzkfoQv5I/V0iqE4lSNcKXPnW9/UTJLnv5CcN4FHxVLnKg" crossorigin="anonymous" defer></script>
 <script src="/tools/sync.js?v=51c822a31b" defer></script>
 <!-- Shared business-hours data (2026-09-03) -- used by the work order
@@ -62,7 +62,7 @@
 <script src="/business-hours.js?v=2"></script>
 <script src="/tools/push-notifications.js?v=180abd2a84" defer></script>
 <script src="/tools/data-layer.js?v=3a0d57478c" defer></script>
-<script src="/tools/tools-effects.js?v=9a2a59040e" defer></script>
+<script src="/tools/tools-effects.js?v=4cff99aa4a" defer></script>
 <script src="/tools/tools-dialogs.js?v=e1dfaa11a1" defer></script>
 <script src="/tools/tools-media-sharing.js?v=4e2769b10d" defer></script>
 <script src="/tools/tools-nav-pwa.js?v=9b16eefb86" defer></script>
@@ -398,7 +398,7 @@
     <a href="/tools/settings.html" class="help-btn" aria-label="Settings" title="Settings" style="text-decoration:none; display:inline-flex; align-items:center; justify-content:center;"><svg class="th-icon" aria-hidden="true"><use href="#icon-settings" xlink:href="#icon-settings"></use></svg></a>
   </div>
   </div>
-  <p class="hub-sub"><span class="realtime-badge" id="realtimeBadge" style="margin-left:0;"><span class="realtime-dot" id="realtimeDot"></span><span id="realtimeText">Live sync: connecting...</span></span><span class="pending-changes-badge" id="pendingChangesBadge" style="display:none;">&#9679; Unsynced changes</span>
+  <p class="hub-sub"><span class="realtime-badge" id="realtimeBadge" onclick="retryLiveSync()" title="Live sync" style="margin-left:0;"><span class="realtime-dot" id="realtimeDot"></span><span id="realtimeText">Live sync: connecting...</span></span><span class="pending-changes-badge" id="pendingChangesBadge" style="display:none;">&#9679; Unsynced changes</span>
     <button class="help-btn" id="refreshSyncLink" onclick="manualRefreshSync(renderDashboard)" aria-label="Refresh synced data now" title="Refresh synced data now" style="width:26px; height:26px; font-size:13px;">&#8635;</button>
   </p>
 </div>
@@ -419,7 +419,7 @@
 
 <div class="section-block" id="section-today">
   <div class="section-heading" onclick="toggleSection('today')">
-    <span>Today</span>
+    <span class="section-heading-title"><svg class="th-icon section-heading-icon" aria-hidden="true"><use href="#icon-calendar" xlink:href="#icon-calendar"></use></svg>Today</span>
     <span class="collapse-arrow">&#9660;</span>
   </div>
   <div class="section-body" id="body-today">
@@ -429,7 +429,7 @@
 
 <div class="section-block" id="section-snapshot">
   <div class="section-heading" onclick="toggleSection('snapshot')">
-    <span>Business Snapshot</span>
+    <span class="section-heading-title"><svg class="th-icon section-heading-icon" aria-hidden="true"><use href="#icon-chart" xlink:href="#icon-chart"></use></svg>Business Snapshot</span>
     <span class="last-updated-note" id="snapshotLastUpdated"></span>
     <span class="collapse-arrow">&#9660;</span>
   </div>
@@ -494,7 +494,7 @@
 
 <div class="section-block" id="section-actionitems">
   <div class="section-heading" onclick="toggleSection('actionitems')">
-    <span>Action Items <span id="actionItemsHeadingBadge"></span></span>
+    <span class="section-heading-title"><svg class="th-icon section-heading-icon is-priority" aria-hidden="true"><use href="#icon-bell" xlink:href="#icon-bell"></use></svg>Action Items <span id="actionItemsHeadingBadge"></span></span>
     <span class="collapse-arrow">&#9660;</span>
   </div>
   <div class="section-body" id="body-actionitems">
@@ -526,7 +526,7 @@
 
 <div class="section-block" id="section-gallery">
   <div class="section-heading" onclick="toggleSection('gallery')">
-    <span>Gallery Queue</span>
+    <span class="section-heading-title"><svg class="th-icon section-heading-icon" aria-hidden="true"><use href="#icon-camera" xlink:href="#icon-camera"></use></svg>Gallery Queue</span>
     <span class="collapse-arrow">&#9660;</span>
   </div>
   <div class="section-body" id="body-gallery">
@@ -536,7 +536,7 @@
 
 <div class="section-block" id="section-compliance">
   <div class="section-heading" onclick="toggleSection('compliance')">
-    <span>Compliance &amp; Documents <span id="complianceHeadingBadge"></span></span>
+    <span class="section-heading-title"><svg class="th-icon section-heading-icon" aria-hidden="true"><use href="#icon-shield" xlink:href="#icon-shield"></use></svg>Compliance &amp; Documents <span id="complianceHeadingBadge"></span></span>
     <span class="collapse-arrow">&#9660;</span>
   </div>
   <div class="section-body" id="body-compliance">
@@ -620,7 +620,7 @@
 
 <div class="section-block" id="section-analytics">
   <div class="section-heading" onclick="toggleSection('analytics')">
-    <span>Analytics</span>
+    <span class="section-heading-title"><svg class="th-icon section-heading-icon" aria-hidden="true"><use href="#icon-trending" xlink:href="#icon-trending"></use></svg>Analytics</span>
     <span class="collapse-arrow">&#9660;</span>
   </div>
   <div class="section-body" id="body-analytics">
@@ -635,7 +635,7 @@
 
 <div class="section-block" id="section-backup">
   <div class="section-heading" onclick="toggleSection('backup')">
-    <span>Backup</span>
+    <span class="section-heading-title"><svg class="th-icon section-heading-icon" aria-hidden="true"><use href="#icon-folder" xlink:href="#icon-folder"></use></svg>Backup</span>
     <span class="collapse-arrow">&#9660;</span>
   </div>
   <div class="section-body" id="body-backup">
@@ -655,7 +655,7 @@
 
 <div class="section-block" id="section-tools">
   <div class="section-heading is-static">
-    <span>Tools</span>
+    <span class="section-heading-title"><svg class="th-icon section-heading-icon" aria-hidden="true"><use href="#icon-toolbox" xlink:href="#icon-toolbox"></use></svg>Tools</span>
   </div>
 
   <div class="tools-grid">
@@ -693,7 +693,7 @@
   </div>
 
   <div class="tool-group-label">Money</div>
-  <div class="tool-tile" data-tile-perm="can_manage_invoices">
+  <div class="tool-tile" data-tile-perm="can_manage_invoices" data-cat="money">
     <a href="/tools/invoice-generator.html" class="tool-tile-link">
       <span class="tool-tile-icon"><svg class="th-icon" aria-hidden="true"><use href="#icon-receipt" xlink:href="#icon-receipt"></use></svg></span>
       <span class="tool-tile-label">Invoices</span>
@@ -709,7 +709,7 @@
     next to Invoices since it's the same permission and a closely
     related daily task, not a separate group.
   -->
-  <div class="tool-tile" data-tile-perm="can_manage_invoices">
+  <div class="tool-tile" data-tile-perm="can_manage_invoices" data-cat="money">
     <a href="/tools/clients.html" class="tool-tile-link">
       <span class="tool-tile-icon"><svg class="th-icon" aria-hidden="true"><use href="#icon-inbox" xlink:href="#icon-inbox"></use></svg></span>
       <span class="tool-tile-label">Clients</span>
@@ -723,7 +723,7 @@
     Same permission as Invoices/Clients since it's the same money-
     handling trust level, not a separate group.
   -->
-  <div class="tool-tile" data-tile-perm="can_manage_invoices">
+  <div class="tool-tile" data-cat="money" data-tile-perm="can_manage_invoices">
     <a href="/tools/pos.html" class="tool-tile-link">
       <span class="tool-tile-icon"><svg class="th-icon" aria-hidden="true"><use href="#icon-dollar" xlink:href="#icon-dollar"></use></svg></span>
       <span class="tool-tile-label">POS</span>
@@ -731,14 +731,14 @@
     <button class="tool-tile-info" onclick="event.stopPropagation(); openCardInfo('tool-pos')" aria-label="What is POS?" title="What is this?">?</button>
   </div>
 
-  <div class="tool-tile" data-tile-perm="can_view_finance">
+  <div class="tool-tile" data-tile-perm="can_view_finance" data-cat="money">
     <a href="/tools/finance.html" class="tool-tile-link">
       <span class="tool-tile-icon"><svg class="th-icon" aria-hidden="true"><use href="#icon-chart" xlink:href="#icon-chart"></use></svg></span>
       <span class="tool-tile-label">Finance</span>
     </a>
     <button class="tool-tile-info" onclick="event.stopPropagation(); openCardInfo('tool-finance')" aria-label="What is Finance?" title="What is this?">?</button>
   </div>
-  <div class="tool-tile" data-tile-perm="can_view_runway">
+  <div class="tool-tile" data-tile-perm="can_view_runway" data-cat="money">
     <a href="/tools/runway-dashboard.html" class="tool-tile-link">
       <span class="tool-tile-icon"><svg class="th-icon" aria-hidden="true"><use href="#icon-dollar" xlink:href="#icon-dollar"></use></svg></span>
       <span class="tool-tile-label">Runway</span>
@@ -747,14 +747,14 @@
   </div>
 
   <div class="tool-group-label">Grow</div>
-  <div class="tool-tile" data-tile-perm="can_manage_reviews">
+  <div class="tool-tile" data-tile-perm="can_manage_reviews" data-cat="grow">
     <a href="/tools/review-request.html" class="tool-tile-link">
       <span class="tool-tile-icon"><svg class="th-icon" aria-hidden="true"><use href="#icon-star" xlink:href="#icon-star"></use></svg></span>
       <span class="tool-tile-label">Reviews</span>
     </a>
     <button class="tool-tile-info" onclick="event.stopPropagation(); openCardInfo('tool-reviews')" aria-label="What is Review Request Sender?" title="What is this?">?</button>
   </div>
-  <div class="tool-tile">
+  <div class="tool-tile" data-cat="grow">
     <a href="/tools/parts-reference.html" class="tool-tile-link">
       <span class="tool-tile-icon"><svg class="th-icon" aria-hidden="true"><use href="#icon-book" xlink:href="#icon-book"></use></svg></span>
       <span class="tool-tile-label">Wiki</span>
@@ -763,14 +763,14 @@
   </div>
 
   <div class="tool-group-label">Admin</div>
-  <div class="tool-tile">
+  <div class="tool-tile" data-cat="admin">
     <a href="/tools/settings.html" class="tool-tile-link">
       <span class="tool-tile-icon"><svg class="th-icon" aria-hidden="true"><use href="#icon-gear" xlink:href="#icon-gear"></use></svg></span>
       <span class="tool-tile-label">Settings</span>
     </a>
     <button class="tool-tile-info" onclick="event.stopPropagation(); openCardInfo('tool-settings')" aria-label="What is Settings?" title="What is this?">?</button>
   </div>
-  <div class="tool-tile" id="devToolsTile" style="display:none;">
+  <div class="tool-tile" id="devToolsTile" style="display:none;" data-cat="admin">
     <a href="/tools/dev-tools.html" class="tool-tile-link">
       <span class="tool-tile-icon"><svg class="th-icon" aria-hidden="true"><use href="#icon-terminal" xlink:href="#icon-terminal"></use></svg></span>
       <span class="tool-tile-label">Dev</span>
@@ -2662,6 +2662,7 @@
     const dot = document.getElementById('realtimeDot');
     const text = document.getElementById('realtimeText');
     const logo = document.getElementById('headerLogo');
+    const badge = document.getElementById('realtimeBadge');
     if (!dot || !text) return;
     dot.className = 'realtime-dot';
     if (status === 'SUBSCRIBED') {
@@ -2686,6 +2687,7 @@
       // distraction.
       if (logo) logo.classList.add('is-syncing');
     }
+    if (badge) badge.classList.toggle('is-retryable', dot.classList.contains('is-error'));
   }
 
   applyCollapseState();
