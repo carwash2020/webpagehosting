@@ -60,7 +60,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Anton&family=Oswald:wght@400;500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="styles.css?v=202609061200">
+<link rel="stylesheet" href="styles.css?v=202609061800">
 <script type="application/ld+json">
 {
   "@context": "https://schema.org",
@@ -550,6 +550,57 @@
               Book a visit
             </a>
           </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- The honest half of the repair pitch. A repair company saying plainly
+       when NOT to repair is the strongest trust signal it has, and it is
+       the "(not always)" the owner himself put on "repaired for half the
+       price." Deliberately qualitative throughout: no prices, no
+       percentages, no lifespan figures. -->
+  <section id="honest">
+    <div class="wrap">
+      <div class="section-head" data-reveal>
+        <p class="eyebrow">THE HONEST VERSION</p>
+        <h2>Sometimes we'll tell you not to fix it</h2>
+        <p>Repairing usually beats replacing. Not always. Here's roughly how we call it, so you know what to expect before we show up.</p>
+      </div>
+
+      <div class="verdict-split">
+        <div class="verdict-col is-fix" data-reveal>
+          <h3>Usually worth repairing</h3>
+          <p class="verdict-sub">Most of what we see lands here.</p>
+          <ul>
+            <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg><span>The failed part is a standard one: a fuse, a belt, a switch, a pump, an element, a seal.</span></li>
+            <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg><span>The machine has been reliable up to now, and this is its first real fault.</span></li>
+            <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg><span>Parts are still readily available for the model.</span></li>
+            <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg><span>The trouble is airflow, a clog, or a sensor rather than a major mechanical failure.</span></li>
+          </ul>
+        </div>
+
+        <div class="verdict-col is-replace" data-reveal>
+          <h3>When we'd tell you to replace it</h3>
+          <p class="verdict-sub">Less often, but it happens, and we'll say so.</p>
+          <ul>
+            <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg><span>The failure is in a major sealed component, like a compressor, a sealed refrigeration system, or a transmission.</span></li>
+            <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg><span>The repair would cost a large share of what a comparable new unit costs.</span></li>
+            <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg><span>It has already been fixed more than once for unrelated faults, which usually means more are coming.</span></li>
+            <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg><span>Parts have been discontinued, and what's left is salvage of unknown history.</span></li>
+          </ul>
+        </div>
+      </div>
+
+      <p class="verdict-note" data-reveal>We'd rather lose the job than take your money for a repair that doesn't make sense. <b>If replacing is the smarter call, we'll tell you, and we'll tell you why.</b></p>
+
+      <div class="care-card" id="careCard" data-reveal hidden>
+        <div class="care-icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v4M12 18v4M4.9 4.9l2.9 2.9M16.2 16.2l2.9 2.9M2 12h4M18 12h4M4.9 19.1l2.9-2.9M16.2 7.8l2.9-2.9"/></svg>
+        </div>
+        <div>
+          <p class="care-month" id="careMonth"></p>
+          <p class="care-body" id="careBody"></p>
         </div>
       </div>
     </div>
@@ -2434,6 +2485,46 @@
 </script>
 <script src="/business-hours.js?v=202609060300"></script>
 <script>
+  // ---------- seasonal care note ----------
+  // One practical thing worth doing this month. Plain maintenance advice,
+  // no prices and no invented figures, and nothing that contradicts the
+  // triage copy above. Stays hidden if anything goes wrong rather than
+  // rendering an empty card.
+  (function () {
+    const card = document.getElementById('careCard');
+    const monthEl = document.getElementById('careMonth');
+    const bodyEl = document.getElementById('careBody');
+    if (!card || !monthEl || !bodyEl) return;
+
+    const TIPS = [
+      ['January', 'A refrigerator living in an unheated garage has a hard time in a cold snap. If yours is out there, check it is still holding temperature.'],
+      ['February', 'Pull the dryer out and look at the vent line behind it. Lint buildup plus a crushed duct is the most common reason a dryer takes two cycles to do one load.'],
+      ['March', 'Run an empty dishwasher cycle with a cleaner, and pull out the filter at the bottom and rinse it. Most "it stopped cleaning well" complaints start right there.'],
+      ['April', 'Check the washer fill hoses for bulges, cracks, or rust at the fittings. A hose that lets go while nobody is home is a genuinely expensive afternoon.'],
+      ['May', 'Vacuum the refrigerator condenser coils before the hot months arrive. Dust-packed coils make the compressor work much harder than it needs to.'],
+      ['June', 'Give the fridge room to breathe in the heat. Anything blocking the vents inside, or the airflow behind it, makes summer harder on the whole system.'],
+      ['July', 'Clean the dryer lint screen every load, and wash it with soap and water now and then. Fabric softener leaves a film that quietly restricts airflow.'],
+      ['August', 'Look under the dishwasher and the washer for damp spots or swollen flooring. Slow leaks usually show up underfoot long before you ever see water.'],
+      ['September', 'Test the oven before baking season starts. If the temperature seems off, it is often the sensor, and that is much better to find out now than in November.'],
+      ['October', 'Pull and clean the range hood filter. A grease-loaded filter is both a fire risk and the reason the fan has stopped pulling anything.'],
+      ['November', 'Check the ice maker and the fridge water line before the holidays, since that is the week you will actually be leaning on them.'],
+      ['December', 'Go easy loading the dishwasher over the holidays. A good share of "it stopped draining" calls this month turn out to be a clog, not a failure.']
+    ];
+
+    try {
+      const i = new Date().getMonth();
+      const tip = TIPS[i];
+      if (!tip) return;
+      monthEl.textContent = tip[0] + ' · worth doing this month';
+      bodyEl.textContent = tip[1];
+      card.hidden = false;
+    } catch (e) {
+      /* leave the card hidden */
+    }
+  })();
+</script>
+
+<script>
   // ---------- symptom triage ----------
   // Qualitative on purpose: what a symptom COMMONLY indicates. No prices,
   // no percentages, no invented statistics, and every path ends at "we'd
@@ -2570,13 +2661,15 @@
         text.innerHTML = '<b>Open now</b> &middot; until ' + label(span[1]);
       } else if (hour < span[0]) {
         pill.classList.add('is-closed');
-        text.innerHTML = '<b>Closed right now</b> &middot; open today at ' + label(span[0]);
+        text.innerHTML = '<b>Closed right now</b> &middot; open today at ' + label(span[0])
+          + ' &middot; <a href="/booking.html">Book online</a>';
       } else {
         pill.classList.add('is-closed');
         const next = HOURS_BY_WEEKDAY[(weekday + 1) % 7];
-        text.innerHTML = next
+        text.innerHTML = (next
           ? '<b>Closed right now</b> &middot; open tomorrow at ' + label(next[0])
-          : '<b>Closed right now</b>';
+          : '<b>Closed right now</b>')
+          + ' &middot; <a href="/booking.html">Book online</a>';
       }
       pill.hidden = false;
     } catch (e) {

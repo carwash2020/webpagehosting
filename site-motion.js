@@ -97,3 +97,54 @@
     detach();
   }, 2500);
 })();
+
+/* ---------- blog reading progress + reading time ----------
+   Only runs on article pages (gated on .blog-article), so the landing
+   pages that share this file are untouched. The reading time is a plain
+   words-divided-by-rate estimate, labelled "about", not a claim.
+   Everything here is additive: if it fails, the article still reads. */
+(function () {
+  var article = document.querySelector('.blog-article');
+  if (!article) return;
+
+  try {
+    // "about N min read", placed above the article body.
+    var words = (article.textContent || '').trim().split(/\s+/).length;
+    var mins = Math.max(1, Math.round(words / 200));
+    var meta = document.createElement('p');
+    meta.className = 'read-meta';
+    meta.textContent = 'About ' + mins + ' min read';
+    article.parentNode.insertBefore(meta, article);
+
+    // Progress bar across the top, driven by how far through the article
+    // body the visitor actually is -- not the whole document, which would
+    // count the header and footer as "reading".
+    var bar = document.createElement('div');
+    bar.className = 'read-progress';
+    bar.setAttribute('aria-hidden', 'true');
+    bar.innerHTML = '<i></i>';
+    document.body.appendChild(bar);
+
+    var ticking = false;
+    function update() {
+      ticking = false;
+      var rect = article.getBoundingClientRect();
+      var vh = window.innerHeight || document.documentElement.clientHeight;
+      var span = rect.height - vh;
+      var p = span > 0 ? (-rect.top) / span : (rect.top <= 0 ? 1 : 0);
+      p = p < 0 ? 0 : (p > 1 ? 1 : p);
+      bar.style.setProperty('--read', p.toFixed(4));
+    }
+    function onScroll() {
+      if (ticking) return;
+      ticking = true;
+      var raf = window.requestAnimationFrame || function (fn) { return setTimeout(fn, 16); };
+      raf(update);
+    }
+    window.addEventListener('scroll', onScroll, { passive: true });
+    window.addEventListener('resize', onScroll, { passive: true });
+    update();
+  } catch (e) {
+    /* an article that loses its progress bar still reads fine */
+  }
+})();
