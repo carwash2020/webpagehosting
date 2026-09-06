@@ -1741,3 +1741,149 @@
     .teardown-track{height:auto !important;}
     .teardown-sticky{position:relative !important; height:auto !important; padding:88px 0;}
   }
+
+  /* =====================================================================
+     Feature pass 2 (2026-09-06): symptom triage, service-radius diagram,
+     and a live open/closed indicator. Additive; no existing selector is
+     redefined and no live hook is targeted.
+  ===================================================================== */
+
+  /* ---------- triage: "is it worth fixing?" ---------- */
+  .triage-shell{
+    background:var(--bg-panel);
+    border:1px solid var(--border);
+    border-radius:var(--radius);
+    padding:30px 28px;
+    box-shadow:0 3px 12px rgba(0,0,0,.10), 0 1px 3px rgba(0,0,0,.06);
+    max-width:900px;
+  }
+  .triage-step{margin-bottom:22px;}
+  .triage-step:last-child{margin-bottom:0;}
+  .triage-label{
+    font-family:'Oswald', sans-serif;
+    font-size:12px;
+    font-weight:600;
+    letter-spacing:2.2px;
+    text-transform:uppercase;
+    color:var(--text-dim);
+    margin:0 0 12px;
+    display:flex; align-items:center; gap:10px;
+  }
+  .triage-label i{
+    font-style:normal;
+    width:20px; height:20px;
+    border-radius:50%;
+    border:1px solid var(--orange-tint-border);
+    background:var(--orange-tint-soft);
+    color:var(--orange-light);
+    display:inline-flex; align-items:center; justify-content:center;
+    font-size:11px;
+  }
+  .triage-options{display:flex; flex-wrap:wrap; gap:10px;}
+  .triage-chip{
+    font-family:'Oswald', sans-serif;
+    font-size:14px;
+    font-weight:500;
+    letter-spacing:.4px;
+    padding:12px 18px;
+    min-height:44px;                 /* real touch target */
+    border-radius:999px;
+    border:1px solid var(--border);
+    background:var(--bg-panel-3);
+    color:var(--text);
+    cursor:pointer;
+    transition:border-color .15s ease, background .15s ease, color .15s ease, transform .15s ease;
+  }
+  .triage-chip:hover{border-color:var(--blue-light); color:var(--white); transform:translateY(-1px);}
+  .triage-chip[aria-pressed="true"]{
+    background:linear-gradient(135deg, #ffb347, #ff8000 60%, #c96400);
+    border-color:transparent;
+    color:#161005;
+    font-weight:600;
+  }
+  .triage-result{
+    margin-top:22px;
+    border-top:1px solid var(--border);
+    padding-top:22px;
+  }
+  .triage-result[hidden]{display:none;}
+  .triage-verdict{
+    font-family:'Anton', sans-serif;
+    font-size:clamp(19px,2.4vw,25px);
+    line-height:1.2;
+    color:var(--white);
+    margin:0 0 12px;
+    text-transform:uppercase;
+    letter-spacing:.5px;
+  }
+  .triage-body{color:var(--text-dim); font-size:15.5px; margin:0 0 16px; max-width:62ch;}
+  .triage-caveat{
+    font-size:13px;
+    color:var(--text-dim);
+    border-left:3px solid var(--orange);
+    background:var(--orange-tint-soft);
+    padding:11px 14px;
+    border-radius:0 6px 6px 0;
+    margin:0 0 18px;
+    max-width:62ch;
+  }
+  .triage-actions{display:flex; gap:12px; flex-wrap:wrap;}
+  @media (max-width:600px){
+    .triage-shell{padding:22px 18px;}
+    .triage-actions .btn{flex:1 1 100%; justify-content:center;}
+  }
+
+  /* ---------- service radius diagram ---------- */
+  .radius-figure{margin:0 0 40px; display:flex; justify-content:center;}
+  .radius-figure svg{width:100%; max-width:720px; height:auto;}
+  .radius-ring{fill:none; stroke:var(--border); stroke-dasharray:3 7;}
+  .radius-spoke{stroke:var(--blue-dark); stroke-width:1.5;}
+  .radius-spoke.is-request{stroke:var(--orange-dark); stroke-dasharray:5 5;}
+  .radius-node{fill:var(--bg-panel-2); stroke:var(--blue-light); stroke-width:2;}
+  .radius-node.is-request{stroke:var(--orange);}
+  .radius-hub{fill:var(--orange); stroke:none;}
+  .radius-figure text{font-family:'Oswald', sans-serif; letter-spacing:1px;}
+  .radius-name{font-size:15px; font-weight:600; fill:var(--text);}
+  .radius-name.is-request{fill:var(--orange-light);}
+  .radius-note{font-size:12.5px; fill:var(--text-dim); letter-spacing:.6px;}
+  .radius-hub-name{font-size:17px; font-weight:700; fill:var(--white);}
+  .radius-legend{
+    display:flex; gap:22px; flex-wrap:wrap; justify-content:center;
+    margin:-18px 0 40px;
+    font-size:13px; color:var(--text-dim);
+  }
+  .radius-legend span{display:inline-flex; align-items:center; gap:8px;}
+  .radius-legend b{width:22px; height:0; border-top:2px solid var(--blue-light);}
+  .radius-legend b.is-request{border-top:2px dashed var(--orange);}
+  @media (max-width:700px){
+    .radius-figure text{font-size:19px;}
+    .radius-note{font-size:16px;}
+    .radius-hub-name{font-size:21px;}
+  }
+
+  /* ---------- live open / closed ---------- */
+  .open-status{
+    display:inline-flex;
+    align-items:center;
+    gap:9px;
+    margin-top:22px;
+    padding:8px 15px;
+    border-radius:999px;
+    border:1px solid var(--border);
+    background:rgba(10,10,10,.55);
+    -webkit-backdrop-filter:blur(6px);
+    backdrop-filter:blur(6px);
+    font-family:'Oswald', sans-serif;
+    font-size:13px;
+    letter-spacing:.8px;
+    color:#e8e8e8;
+  }
+  .open-status[hidden]{display:none;}
+  .open-status .dot{
+    width:9px; height:9px; border-radius:50%;
+    background:var(--text-dim);
+    flex-shrink:0;
+  }
+  .open-status.is-open .dot{background:#3ad66b; box-shadow:0 0 0 4px rgba(58,214,107,.18);}
+  .open-status.is-closed .dot{background:var(--orange);}
+  .open-status b{font-weight:600; color:#ffffff;}

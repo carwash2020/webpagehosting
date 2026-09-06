@@ -60,7 +60,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Anton&family=Oswald:wght@400;500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="styles.css?v=202609060300">
+<link rel="stylesheet" href="styles.css?v=202609061200">
 <script type="application/ld+json">
 {
   "@context": "https://schema.org",
@@ -317,6 +317,7 @@
           </a>
         </div>
         <p class="hero-motto" data-reveal><span>Honesty.</span> <span>Hustle.</span> <span>Helpfulness.</span></p>
+        <p class="open-status" id="openStatus" hidden><span class="dot"></span><span id="openStatusText"></span></p>
       </div>
       <div class="hero-badge">
         <img class="logo-img" src="/images/logo-signature.webp?v=202608010300" alt="Triple H Enterprises badge">
@@ -511,6 +512,49 @@
 
 
 
+  <!-- Symptom triage. Every verdict is deliberately qualitative -- what a
+       symptom COMMONLY means -- with no prices, no percentages, and no
+       invented statistics, and every path ends by saying the real answer
+       comes from looking at the machine. The dryer entries match what the
+       site's own blog already says publicly. -->
+  <section id="triage">
+    <div class="wrap">
+      <div class="section-head" data-reveal>
+        <p class="eyebrow">BEFORE YOU BUY A NEW ONE</p>
+        <h2>Is it worth fixing?</h2>
+        <p>Tell us what it's doing and we'll tell you what it usually means. No email required, nothing to sign up for.</p>
+      </div>
+
+      <div class="triage-shell" data-reveal>
+        <div class="triage-step">
+          <p class="triage-label"><i>1</i> What's giving you trouble?</p>
+          <div class="triage-options" id="triageAppliances" role="group" aria-label="Choose an appliance"></div>
+        </div>
+
+        <div class="triage-step" id="triageSymptomStep" hidden>
+          <p class="triage-label"><i>2</i> What's it doing?</p>
+          <div class="triage-options" id="triageSymptoms" role="group" aria-label="Choose a symptom"></div>
+        </div>
+
+        <div class="triage-result" id="triageResult" hidden aria-live="polite">
+          <h3 class="triage-verdict" id="triageVerdict"></h3>
+          <p class="triage-body" id="triageBody"></p>
+          <p class="triage-caveat">This is what that symptom usually points to, not a diagnosis. The only way to know for certain is to look at the machine, and that's what we'd do.</p>
+          <div class="triage-actions">
+            <a href="tel:+14354141667" class="btn orange js-phone-link">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
+              Call <span class="js-phone-text">(435) 414-1667</span>
+            </a>
+            <a href="/booking.html" class="btn blue">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+              Book a visit
+            </a>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
   <section id="reviews">
     <div class="wrap">
       <div class="section-head" data-reveal>
@@ -633,6 +677,54 @@
         <h2>Where We Work</h2>
         <p>Based in St. George, and out on the road across Southern Utah most days of the week.</p>
       </div>
+      <!-- Service radius, drawn as a schematic rather than a real map: the
+           distances shown are the same verified ones the cards below and
+           the landing pages already state. Cedar City and Mesquite keep
+           their by-request treatment here (dashed, orange) exactly as they
+           do everywhere else on the site -- they are deliberately NOT
+           presented as standard coverage. -->
+      <div class="radius-figure" data-reveal>
+        <svg viewBox="0 0 720 420" role="img" aria-label="Service area diagram centered on St. George, showing Washington City, Hurricane, Santa Clara and Ivins as standard coverage, with Cedar City and Mesquite available by request">
+          <circle class="radius-ring" cx="360" cy="210" r="72"/>
+          <circle class="radius-ring" cx="360" cy="210" r="130"/>
+          <circle class="radius-ring" cx="360" cy="210" r="190"/>
+
+          <line class="radius-spoke" x1="360" y1="210" x2="449" y2="178"/>
+          <line class="radius-spoke" x1="360" y1="210" x2="514" y2="197"/>
+          <line class="radius-spoke" x1="360" y1="210" x2="267" y2="226"/>
+          <line class="radius-spoke is-request" x1="360" y1="210" x2="344" y2="40"/>
+          <line class="radius-spoke is-request" x1="360" y1="210" x2="217" y2="310"/>
+
+          <circle class="radius-hub" cx="360" cy="210" r="9"/>
+          <text class="radius-hub-name" x="360" y="243" text-anchor="middle">ST. GEORGE</text>
+          <text class="radius-note" x="360" y="261" text-anchor="middle">Home base</text>
+
+          <circle class="radius-node" cx="449" cy="178" r="6"/>
+          <text class="radius-name" x="462" y="172">Washington City</text>
+          <text class="radius-note" x="462" y="189">Right next door</text>
+
+          <circle class="radius-node" cx="514" cy="197" r="6"/>
+          <text class="radius-name" x="527" y="219">Hurricane</text>
+          <text class="radius-note" x="527" y="236">About 20 minutes east</text>
+
+          <circle class="radius-node" cx="267" cy="226" r="6"/>
+          <text class="radius-name" x="254" y="252" text-anchor="end">Santa Clara &amp; Ivins</text>
+          <text class="radius-note" x="254" y="269" text-anchor="end">West side, near Snow Canyon</text>
+
+          <circle class="radius-node is-request" cx="344" cy="40" r="6"/>
+          <text class="radius-name is-request" x="358" y="34">Cedar City</text>
+          <text class="radius-note" x="358" y="51">By request &middot; about an hour north</text>
+
+          <circle class="radius-node is-request" cx="217" cy="310" r="6"/>
+          <text class="radius-name is-request" x="232" y="332">Mesquite, NV</text>
+          <text class="radius-note" x="232" y="349">By request &middot; about 40 minutes southwest</text>
+        </svg>
+      </div>
+      <p class="radius-legend" data-reveal>
+        <span><b></b> Standard coverage</span>
+        <span><b class="is-request"></b> Available by request</span>
+      </p>
+
       <div class="services-grid">
         <div class="service-card" data-reveal>
           <h3>St. George</h3>
@@ -2340,5 +2432,158 @@
       .catch(() => { /* static fallback content already shown is correct */ });
   })();
 </script>
+<script src="/business-hours.js?v=202609060300"></script>
+<script>
+  // ---------- symptom triage ----------
+  // Qualitative on purpose: what a symptom COMMONLY indicates. No prices,
+  // no percentages, no invented statistics, and every path ends at "we'd
+  // have to look at it." The dryer entries match what this site's own blog
+  // already says publicly.
+  (function () {
+    const DATA = {
+      washer: { label: 'Washer', symptoms: [
+        { q: "Won't drain", v: 'Usually a blockage, not a dead machine',
+          a: "A washer that fills and washes but won't drain is most often a clogged pump filter or a blocked drain hose, and very often there's something small lodged where it shouldn't be. This is frequently sorted in a single visit." },
+        { q: "Won't spin", v: 'Commonly a belt or a switch',
+          a: "No spin usually points to a worn drive belt, a failed lid or door switch, or a load the machine has decided is too unbalanced to spin. These are parts, not a reason to replace the machine." },
+        { q: 'Leaking water', v: 'Worth looking at quickly',
+          a: "Leaks are most often a door seal, a hose connection, or the pump. Whatever the cause, this is the one to move fast on, because water damage costs far more than the repair does." },
+        { q: 'No power at all', v: 'Often smaller than it looks',
+          a: "A washer that seems completely dead is frequently a door latch or lid switch rather than the machine itself. Worth checking before assuming the worst." } ] },
+      dryer: { label: 'Dryer', symptoms: [
+        { q: "Runs but won't heat", v: 'Very often an inexpensive part',
+          a: "This is usually the thermal fuse, a one-time-use part that blows when airflow gets restricted. Replacing it is straightforward, but the real job is finding why it blew, because a fuse that blew once will blow again if the airflow problem is still there." },
+        { q: 'Takes forever to dry', v: 'Usually airflow, not parts',
+          a: "Long dry times almost always mean restricted airflow: a clogged vent line, lint buildup, or a crushed duct behind the machine. This is frequently a cleaning problem rather than a broken dryer." },
+        { q: 'Loud thumping or grinding', v: 'Catch it early',
+          a: "Noise like that typically means drum rollers, the idler pulley, or something trapped inside the drum grinding against it. Worth catching early, since running it noisy tends to turn a small repair into a bigger one." },
+        { q: "Won't turn on", v: 'Commonly a switch or a fuse',
+          a: "A dryer that won't start is often the door switch, the thermal fuse, or the start switch. All standard parts." } ] },
+      dishwasher: { label: 'Dishwasher', symptoms: [
+        { q: 'Not draining', v: 'Usually a clog',
+          a: "Standing water at the bottom is most often the drain filter, the drain hose, or the pump. This one frequently clears in a single visit." },
+        { q: 'Not cleaning well', v: 'Often not broken at all',
+          a: "Poor cleaning commonly comes down to clogged spray arms, a worn seal, or water that isn't getting hot enough. Quite often there's nothing mechanically wrong with the machine." },
+        { q: 'Leaking', v: 'Most often a seal',
+          a: "Dishwasher leaks are usually the door gasket or a hose fitting. Worth handling promptly given where the water goes." },
+        { q: "Won't start", v: 'Commonly the latch',
+          a: "Often the door latch switch, which the machine uses to confirm the door is properly shut, or the control panel." } ] },
+      refrigerator: { label: 'Refrigerator', symptoms: [
+        { q: 'Not cooling', v: 'Sometimes just cleaning',
+          a: "This is commonly a frosted-over evaporator, a failed defrost component, or condenser coils packed with dust. Coils are sometimes purely a cleaning job." },
+        { q: "Freezer works, fridge doesn't", v: 'Usually airflow between the two',
+          a: "When the freezer is fine but the fridge isn't, it's typically airflow between the compartments: a blocked vent, a failed damper, or the circulating fan." },
+        { q: 'Leaking water inside', v: 'Often a simple drain clog',
+          a: "Water pooling inside is frequently a clogged defrost drain, which is one of the more common and less expensive things to put right." },
+        { q: 'Ice maker not working', v: 'Usually the valve or the module',
+          a: "Commonly the water inlet valve, the fill line, or the ice maker module itself." } ] },
+      range: { label: 'Range / Oven', symptoms: [
+        { q: "Oven won't heat", v: 'A standard part either way',
+          a: "On an electric oven this is usually the bake element; on gas, it's often the igniter. Both are normal replacement parts." },
+        { q: "Burner won't light", v: 'Typically the igniter',
+          a: "Usually the igniter or a burner port that's clogged and needs clearing." },
+        { q: 'Temperature is way off', v: 'Often just the sensor',
+          a: "Baking that comes out consistently wrong is frequently the oven temperature sensor. Worth ruling out before anything larger gets replaced." },
+        { q: "Won't turn on", v: 'Power or control board',
+          a: "Frequently the power supply to the unit, or the control board." } ] }
+    };
+
+    const appEl = document.getElementById('triageAppliances');
+    const symStep = document.getElementById('triageSymptomStep');
+    const symEl = document.getElementById('triageSymptoms');
+    const result = document.getElementById('triageResult');
+    const verdict = document.getElementById('triageVerdict');
+    const body = document.getElementById('triageBody');
+    if (!appEl || !symEl || !result) return;
+
+    function chip(text, onClick) {
+      const b = document.createElement('button');
+      b.type = 'button';
+      b.className = 'triage-chip';
+      b.textContent = text;
+      b.setAttribute('aria-pressed', 'false');
+      b.addEventListener('click', onClick);
+      return b;
+    }
+
+    function clearPressed(scope) {
+      scope.querySelectorAll('.triage-chip').forEach(function (b) {
+        b.setAttribute('aria-pressed', 'false');
+      });
+    }
+
+    Object.keys(DATA).forEach(function (key) {
+      appEl.appendChild(chip(DATA[key].label, function () {
+        clearPressed(appEl);
+        this.setAttribute('aria-pressed', 'true');
+        symEl.innerHTML = '';
+        DATA[key].symptoms.forEach(function (s) {
+          symEl.appendChild(chip(s.q, function () {
+            clearPressed(symEl);
+            this.setAttribute('aria-pressed', 'true');
+            verdict.textContent = s.v;
+            body.textContent = s.a;
+            result.hidden = false;
+          }));
+        });
+        symStep.hidden = false;
+        result.hidden = true;
+      }));
+    });
+  })();
+
+  // ---------- live open / closed ----------
+  // Reads the same HOURS_BY_WEEKDAY table booking.html uses via
+  // business-hours.js, so this pill can never contradict the booking page.
+  // Stays hidden entirely unless that table is actually available.
+  (function () {
+    const pill = document.getElementById('openStatus');
+    const text = document.getElementById('openStatusText');
+    if (!pill || !text) return;
+    if (typeof HOURS_BY_WEEKDAY === 'undefined'
+        || typeof businessWeekday !== 'function'
+        || typeof todayDateStrInBusinessTz !== 'function'
+        || typeof BUSINESS_TIMEZONE === 'undefined') return;
+
+    function label(h) {
+      const hour = h % 12 === 0 ? 12 : h % 12;
+      return hour + (h < 12 ? ' AM' : ' PM');
+    }
+
+    try {
+      const today = todayDateStrInBusinessTz();
+      const weekday = businessWeekday(today);
+      const span = HOURS_BY_WEEKDAY[weekday];
+      if (!span) return;
+
+      // Current hour in BUSINESS time, not the visitor's own timezone.
+      const parts = new Intl.DateTimeFormat('en-US', {
+        timeZone: BUSINESS_TIMEZONE, hour: 'numeric', hour12: false
+      }).formatToParts(new Date());
+      const hourPart = parts.find(function (p) { return p.type === 'hour'; });
+      if (!hourPart) return;
+      const hour = parseInt(hourPart.value, 10);
+      if (isNaN(hour)) return;
+
+      if (hour >= span[0] && hour < span[1]) {
+        pill.classList.add('is-open');
+        text.innerHTML = '<b>Open now</b> &middot; until ' + label(span[1]);
+      } else if (hour < span[0]) {
+        pill.classList.add('is-closed');
+        text.innerHTML = '<b>Closed right now</b> &middot; open today at ' + label(span[0]);
+      } else {
+        pill.classList.add('is-closed');
+        const next = HOURS_BY_WEEKDAY[(weekday + 1) % 7];
+        text.innerHTML = next
+          ? '<b>Closed right now</b> &middot; open tomorrow at ' + label(next[0])
+          : '<b>Closed right now</b>';
+      }
+      pill.hidden = false;
+    } catch (e) {
+      /* A status pill is never worth breaking the hero over. */
+    }
+  })();
+</script>
+
 </body>
 </html>
