@@ -64,6 +64,9 @@
     --radius:10px;
     --hex: polygon(25% 6%, 75% 6%, 97% 50%, 75% 94%, 25% 94%, 3% 50%);
     --maxw:1180px;
+    /* The header spans wider than the reading column -- see the .nav
+       rule for the measurements behind this number. */
+    --maxw-nav:1400px;
     /* #2: a deliberate 3-tier shadow depth scale (resting / hover /
        active) instead of every elevated surface picking its own ad-hoc
        shadow values -- applied within the tool suite below. */
@@ -165,6 +168,7 @@
   }
 
   .skip-link{
+    font-family:var(--font-ui);
     position:absolute; top:-60px; left:12px;
     background:var(--blue); color:#08131f;
     padding:10px 18px; border-radius:6px;
@@ -262,13 +266,29 @@
     background:rgba(10,10,10,.88);
     -webkit-backdrop-filter:blur(8px); backdrop-filter:blur(8px);
   }
+  /* Overflow fix (2026-09-06). Measured in a real browser: the row needs
+     1405px of content -- brand 253 + links 805 + actions 299, plus two
+     24px gaps -- while --maxw (1180px) minus 48px of padding gave it
+     1132px. It had been overflowing its own container by 273px since the
+     nav grew to nine links, and below roughly 1620px viewport that spilled
+     out far enough to scroll the whole PAGE sideways: 405px of horizontal
+     overflow at 1024px, 199px at 1280px, 119px at 1440px. Three separate
+     changes, because no single one of them was enough:
+       - the header gets its own, wider max-width. A navigation bar is not
+         body copy and has no reason to sit inside the 1180px reading
+         column;
+       - the links tighten (gap and letter-spacing), which is where most of
+         the 805px sat;
+       - and an intermediate breakpoint below drops the two lowest-value
+         items before the row can run out of room, rather than waiting for
+         the 860px hamburger. */
   .nav{
     display:flex;
     align-items:center;
     justify-content:space-between;
-    gap:24px;
+    gap:20px;
     padding:14px 24px;
-    max-width:var(--maxw);
+    max-width:var(--maxw-nav);
     margin:0 auto;
   }
   .brand{
@@ -300,15 +320,21 @@
   .nav-links{
     display:flex;
     align-items:center;
-    gap:28px;
+    gap:18px;
     list-style:none;
     margin:0;
     padding:0;
   }
   .nav-links a{
+    /* Uppercase, letter-spaced navigation labels are exactly what --font-ui
+       is for. These carried no font-family at all and so inherited the body
+       face -- which was fine while that was a sans and put them in a serif
+       the moment it stopped being one. */
+    font-family:var(--font-ui);
     font-size:14px;
     font-weight:500;
-    letter-spacing:1px;
+    letter-spacing:0.6px;
+    white-space:nowrap;
     text-transform:uppercase;
     color:#d8d8d8;
     transition:color .15s ease;
@@ -321,14 +347,22 @@
     gap:14px;
   }
   .nav-phone{
+    font-family:var(--font-ui);
     display:flex;
     align-items:center;
     gap:8px;
     font-size:14px;
     font-weight:600;
     color:#ffffff;
+    /* It was being squeezed to 59px and wrapping a ten-digit number onto
+       three lines. A phone number breaks as one thing or not at all. */
+    white-space:nowrap;
   }
   .nav-phone svg{width:16px; height:16px; color:var(--orange);}
+
+  /* This had no base rule at all, only a display:none inside a media
+     query, so it had nothing but the inherited body face to go on. */
+  .theme-toggle-label{font-family:var(--font-ui);}
 
   .nav-toggle{
     display:none;
@@ -387,6 +421,9 @@
      toggle switches conventionally show their active state regardless
      of what the underlying boolean means semantically. */
   .mobile-theme-row{
+    /* The 'Dark Mode' text here is a bare <span> with no class, so it had
+       only the inherited face. Set on the row so the label goes with it. */
+    font-family:var(--font-ui);
     display:flex; align-items:center; justify-content:space-between;
     padding:14px 4px;
     font-size:15px; font-weight:500; letter-spacing:1px; text-transform:uppercase;
@@ -413,11 +450,37 @@
   .theme-switch input:checked + .theme-switch-track{background:var(--orange-tint-soft); border-color:var(--orange);}
   .theme-switch input:checked + .theme-switch-track .theme-switch-thumb{transform:translateX(20px); background:var(--orange);}
 
-  @media (max-width:860px){
+  /* The step between the full desktop row and the 860px hamburger. Without
+     it the row went straight from fitting to spilling off the page, which
+     is what produced the 119px of horizontal overflow measured at 1440px.
+     Both items dropped here are still reachable: the number is in the hero,
+     the footer and the mobile menu, and the theme toggle keeps its icon --
+     only its text label goes. */
+  @media (max-width:1400px){
+    .nav-links{gap:12px;}
+    .nav-links a{font-size:12.5px; letter-spacing:0.4px;}
+    .nav-phone-desktop.js-phone-link{display:none;}
+    .theme-toggle-label{display:none;}
+    /* The tagline under the wordmark is the widest part of the brand block
+       (it takes the lockup from 166px to 253px) and it is the one piece of
+       the header that repeats what the page below already says. */
+    .brand-name span{display:none;}
+  }
+
+  /* Raised from 860px to 960px (2026-09-06). Even fully tightened, the
+     nine-link row still needed 918px of content at a 900px viewport, which
+     left a 66px band of horizontal page overflow sitting between the
+     desktop row and the hamburger. Nothing is lost by switching earlier:
+     the mobile menu carries every link, the phone number and the CTA.
+     Only nav rules live in this block, and .mobile-menu is shown by an
+     .is-open class rather than by width, so moving the threshold cannot
+     strand the menu open or closed. */
+  @media (max-width:960px){
     .nav-links, .nav-phone-desktop{display:none;}
     .nav-toggle{display:flex;}
     .theme-toggle{display:none;} /* the mobile menu's own switch covers this on small screens */
     .mobile-menu a{
+      font-family:var(--font-ui);
       padding:14px 4px;
       font-size:15px;
       font-weight:500;
@@ -744,7 +807,10 @@
     letter-spacing:1px;
     margin-bottom:10px;
   }
-  .contact-card a.value, .contact-card p.value{color:var(--white); font-size:16px; font-weight:500;}
+  /* Contact details are data a customer copies or dials, not prose --
+     phone number, email address, city. The app face keeps the digits and
+     the address legible and unambiguous. */
+  .contact-card a.value, .contact-card p.value{font-family:var(--font-app); color:var(--white); font-size:16px; font-weight:500;}
   .contact-card a.value:hover{color:var(--orange-light);}
   .contact-card p.sub{color:var(--text-dim); font-size:13.5px; margin-top:6px;}
   /* Bug fix (2026-08-20): had zero CSS at all, anywhere -- with none,
@@ -754,10 +820,14 @@
      vertically; colors match this card's existing .value/.sub
      language above. */
   .hours-grid{display:flex; flex-direction:column; gap:5px;}
-  .hours-row{display:flex; gap:10px; font-size:14px;}
+  /* Seven rows of opening times read down as a column, so they need the
+     app face and tabular figures -- a serif's proportional digits made
+     '2:00 PM' and '11:00 AM' different widths and left the column ragged. */
+  .hours-row{display:flex; gap:10px; font-size:14px; font-family:var(--font-app);}
   .hours-day{color:var(--white); font-weight:600; width:34px; flex-shrink:0;}
-  .hours-value{color:var(--text-dim);}
+  .hours-value{color:var(--text-dim); font-variant-numeric:tabular-nums;}
   .map-link{
+    font-family:var(--font-ui);
     display:inline-flex;
     align-items:center;
     gap:6px;
@@ -793,7 +863,7 @@
      always-dark header instead. */
   .footer-brand .brand-name{color:var(--white);}
   .footer-brand img{height:38px; width:38px; object-fit:contain;}
-  .footer-tagline{color:var(--text); font-size:13.5px; letter-spacing:1px; text-transform:uppercase;}
+  .footer-tagline{font-family:var(--font-ui); color:var(--text); font-size:13.5px; letter-spacing:1px; text-transform:uppercase;}
   .social-links{display:flex; gap:10px; margin-top:16px;}
   .social-links a{
     width:34px; height:34px;
@@ -816,7 +886,9 @@
     margin:0 0 14px;
   }
   .footer-col ul{list-style:none; margin:0; padding:0; display:flex; flex-direction:column; gap:10px;}
-  .footer-col a{color:var(--text); font-size:14px;}
+  /* Navigation, like the header's -- and like the h4 above it, which was
+     already on --font-ui. Only the links had no face of their own. */
+  .footer-col a{font-family:var(--font-ui); color:var(--text); font-size:14px;}
   .footer-col a:hover{color:var(--white);}
   .footer-bottom{
     border-top:1px solid var(--border);
@@ -1016,6 +1088,7 @@
     display:block;
   }
   .gallery-category{
+    font-family:var(--font-ui);
     font-size:13px; letter-spacing:.08em; text-transform:uppercase;
     color:var(--blue-light,#7fb3e8); margin:26px 0 10px; font-weight:600;
   }
@@ -1151,6 +1224,7 @@
   }
   .chat-panel-actions{display:flex; flex-direction:column; gap:8px;}
   .chat-action-btn{
+    font-family:var(--font-ui); /* matches .btn, which these are a variant of */
     display:flex; align-items:center; justify-content:center; gap:8px;
     padding:11px 14px; border-radius:8px; border:none;
     font-size:14px; font-weight:600; cursor:pointer;
