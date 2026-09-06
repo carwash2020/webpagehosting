@@ -1,5 +1,5 @@
 ---
-name: awesome-claude-skills
+name: agent-skills-directory
 description: >
   Searchable directory of 204 community and Anthropic-built Claude Agent Skills
   across 13 categories — documents, development, data, science, writing,
