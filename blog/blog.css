@@ -97,6 +97,23 @@
   max-width: 62ch;
 }
 
+/* Lead paragraph (2026-09-06). The opening paragraph is set one step up the
+   scale, which is the whole reason the body face is Newsreader: it carries a
+   real optical-size axis, so at 20px the letterforms are actually redrawn --
+   slightly narrower, with finer joins and tighter spacing -- rather than being
+   the 17px drawing scaled up. Setting font-optical-sizing explicitly rather
+   than relying on the default, since the point here is the axis doing work.
+   Purely typographic, so it needs no markup change and degrades to a slightly
+   larger first paragraph on anything that lacks the axis. */
+.blog-article > p:first-of-type {
+  font-size: 20px;
+  line-height: 1.6;
+  font-optical-sizing: auto;
+  color: var(--white);
+  max-width: 56ch;
+  margin-bottom: 30px;
+}
+
 .blog-article h2 {
   font-family:var(--font-ui);
   font-weight: 600;

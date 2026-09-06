@@ -159,6 +159,14 @@
     -webkit-font-smoothing:antialiased;
   }
 
+  h1,h2,h3,h4{
+    /* Balanced heading wrapping (2026-09-06). Anton is a poster face set at
+       display sizes, so a heading that breaks badly is very visible: "SOMETIMES
+       WE'LL TELL YOU NOT TO FIX / IT" was leaving a single two-letter word
+       alone on its own line at 1440px. text-wrap:balance evens the lines out
+       instead. Browsers that do not support it simply wrap as they do now. */
+    text-wrap:balance;
+  }
   h1,h2,h3{
     font-family:var(--font-display);
     font-weight:400;
@@ -167,6 +175,10 @@
     margin:0;
     color:var(--white);
   }
+  /* Running prose gets `pretty` rather than `balance`: it leaves the body of
+     the paragraph alone and only prevents the last line being a single
+     orphaned word. */
+  p,li,dd,blockquote{text-wrap:pretty;}
 
   a{color:inherit; text-decoration:none;}
   img{max-width:100%; display:block;}
@@ -984,6 +996,11 @@
   @media (max-width:760px){.modal-gallery{max-width:94vw;}}
 
   .terms-body{margin-top:18px;}
+  /* Measured at 104ch before this -- the widest running text on the site,
+     in the one document people actually have to read carefully. ch units so
+     the cap follows the typeface instead of a pixel guess that stops being
+     right the next time the body face changes. */
+  .terms-body p, .terms-body li{max-width:68ch;}
   .terms-body h4{
     font-family:var(--font-ui);
     font-weight:700;
@@ -2113,7 +2130,7 @@
     color:var(--blue-text);
     margin:0 0 6px;
   }
-  .care-body{margin:0; color:var(--text-dim); font-size:15px; line-height:1.6;}
+  .care-body{margin:0; max-width:68ch; color:var(--text-dim); font-size:15px; line-height:1.6;}
   .care-body b{color:var(--text); font-weight:600;}
   @media (max-width:600px){
     .care-card{flex-direction:column; gap:14px; padding:20px;}
