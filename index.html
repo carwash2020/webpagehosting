@@ -60,7 +60,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Anton&family=Oswald:wght@400;500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="styles.css?v=202609060120">
+<link rel="stylesheet" href="styles.css?v=202609060300">
 <script type="application/ld+json">
 {
   "@context": "https://schema.org",
@@ -233,7 +233,6 @@
 <body>
 <a href="#home" class="skip-link">Skip to main content</a>
 
-<div class="ambient-world" aria-hidden="true"></div>
 <div class="motto-rail" aria-hidden="true">
   <span class="rail-seg rail-honesty"></span>
   <span class="rail-seg rail-hustle"></span>
@@ -350,22 +349,16 @@
        so with no JS, a JS error, an old browser, or reduced motion, a
        visitor sees a clean finished machine rather than scattered parts. -->
   <section class="teardown" id="teardownStage" aria-labelledby="teardownHeading">
-    <div class="teardown-track" id="teardownTrack">
-      <div class="teardown-sticky">
-        <div class="wrap teardown-grid">
+    <div class="wrap teardown-grid">
 
           <div class="teardown-copy">
             <p class="eyebrow">WHY REPAIR BEATS REPLACE</p>
             <h2 id="teardownHeading">Most of it still works</h2>
             <p>When an appliance quits, it is usually one part, not the whole machine. Knowing which part is the job. Replacing the whole unit is what happens when nobody looks.</p>
-            <div class="td-state" aria-hidden="true">
-              <span>Diagnosis</span>
-              <span class="td-state-bar"><i></i></span>
-              <span>Repair</span>
-            </div>
+            <p class="td-hint">Drag the slider to take it apart and put it back together. <b>That is the job.</b></p>
           </div>
 
-          <div class="teardown-figure" aria-hidden="true">
+          <div class="teardown-figure">
             <svg viewBox="0 0 760 620" role="img" aria-label="Exploded diagram of a washing machine assembling itself">
 
               <!-- cabinet: the anchor everything returns into -->
@@ -447,10 +440,18 @@
               </g>
 
             </svg>
+
+            <div class="td-scrub">
+              <div class="td-scrub-labels">
+                <span>Apart</span>
+                <span class="td-scrub-state" id="tdState">Whole</span>
+                <span>Whole</span>
+              </div>
+              <input type="range" id="tdScrub" min="0" max="100" value="100" step="1"
+                     aria-label="Take the machine apart and put it back together">
+            </div>
           </div>
 
-        </div>
-      </div>
     </div>
   </section>
 
@@ -2106,53 +2107,77 @@
     });
   })();
 
-  // ---------- scroll-craft: hero parallax + the exploded appliance ----------
-  // One rAF-throttled scroll handler drives everything, writing CSS custom
-  // properties that the stylesheet turns into transforms. Nothing here
-  // reads layout in a loop or animates anything but transform/opacity.
+  // ---------- scroll-craft: the rebuild control + hero parallax ----------
+  // The machine is driven by a real range input, not by hijacking the
+  // scroll -- nobody has to scroll through a pinned section to get past
+  // it, and it works by finger, mouse and arrow keys for free.
   //
-  // Every value this sets has a finished-state default in CSS, so if this
-  // block never runs -- no JS, an error above it, an old browser -- the
-  // page still renders correctly: machine assembled, hero composed, no
-  // offsets. Reduced-motion visitors skip it entirely, by design.
+  // Everything here has a finished-state default in CSS (--p:1, slider at
+  // 100), so no JS, an error, or an old browser still shows a whole
+  // machine with a slider that agrees with it.
   (function () {
-    if (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
-
     const stage = document.getElementById('teardownStage');
-    const track = document.getElementById('teardownTrack');
-    const badge = document.querySelector('.hero-badge');
-    const plane = document.querySelector('.hero-plane');
-    if (!stage && !badge && !plane) return;
+    const scrub = document.getElementById('tdScrub');
+    const state = document.getElementById('tdState');
+    const reduced = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
-    let ticking = false;
+    if (stage && scrub) {
+      const label = (p) => p < 0.08 ? 'Apart' : (p > 0.92 ? 'Whole' : 'Rebuilding');
 
-    function update() {
-      ticking = false;
-
-      if (stage && track) {
-        const rect = track.getBoundingClientRect();
-        const span = rect.height - window.innerHeight;
-        let p = span > 0 ? -rect.top / span : 1;
-        p = p < 0 ? 0 : (p > 1 ? 1 : p);
+      function apply(p) {
         stage.style.setProperty('--p', p.toFixed(4));
+        if (state) state.textContent = label(p);
+        scrub.setAttribute('aria-valuetext', label(p));
       }
 
-      // Hero planes only matter while the hero is anywhere near screen;
-      // past that this is wasted work on every scroll tick.
+      scrub.addEventListener('input', () => apply(scrub.value / 100));
+
+      // Show it working once, unprompted, so a visitor who never touches
+      // the slider still sees the point. Runs only when it first comes
+      // into view, only once, and never for reduced-motion visitors.
+      if (!reduced && 'IntersectionObserver' in window) {
+        let played = false;
+        const demo = new IntersectionObserver((entries) => {
+          entries.forEach((entry) => {
+            if (!entry.isIntersecting || played) return;
+            played = true;
+            demo.disconnect();
+            const DURATION = 1700;
+            const start = performance.now();
+            apply(0);
+            scrub.value = 0;
+            (function step(now) {
+              const t = Math.min(1, (now - start) / DURATION);
+              const eased = 1 - Math.pow(1 - t, 3);
+              apply(eased);
+              scrub.value = Math.round(eased * 100);
+              if (t < 1) window.requestAnimationFrame(step);
+            })(start);
+          });
+        }, { threshold: 0.35 });
+        demo.observe(stage);
+      }
+    }
+
+    // Hero depth. Separate from the control above, and skipped entirely
+    // for reduced motion.
+    if (reduced) return;
+    const badge = document.querySelector('.hero-badge');
+    const plane = document.querySelector('.hero-plane');
+    if (!badge && !plane) return;
+
+    let ticking = false;
+    function update() {
+      ticking = false;
       const y = window.scrollY || window.pageYOffset || 0;
       if (y < window.innerHeight * 1.6) {
         if (badge) badge.style.setProperty('--shift', (y * 0.09).toFixed(2));
         if (plane) plane.style.setProperty('--shift', (y * -0.05).toFixed(2));
       }
     }
-
     function onScroll() {
-      if (!ticking) {
-        ticking = true;
-        window.requestAnimationFrame(update);
-      }
+      if (!ticking) { ticking = true; window.requestAnimationFrame(update); }
     }
-
     window.addEventListener('scroll', onScroll, { passive: true });
     window.addEventListener('resize', onScroll, { passive: true });
     update();

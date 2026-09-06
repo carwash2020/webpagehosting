@@ -1274,31 +1274,34 @@
   ===================================================================== */
 
   /* ---------- 1. the blueprint world ---------- */
-  /* Sits behind everything on all 6 public pages. The element itself was
-     already added site-wide; this restyles it from a plain gradient into
-     drafting-paper linework: a fine grid, a coarser grid over it, and two
-     soft brand-colour washes so it never reads as flat graph paper. */
-  .ambient-world{
-    position:fixed;
-    inset:0;
-    z-index:-1;
-    pointer-events:none;
-    background:
-      radial-gradient(ellipse 62% 46% at 86% 4%, rgba(255,128,0,.075), transparent 62%),
-      radial-gradient(ellipse 58% 42% at 6% 72%, rgba(58,160,255,.062), transparent 62%),
-      repeating-linear-gradient(0deg, rgba(255,255,255,.020) 0 1px, transparent 1px 96px),
-      repeating-linear-gradient(90deg, rgba(255,255,255,.020) 0 1px, transparent 1px 96px),
-      repeating-linear-gradient(0deg, rgba(255,255,255,.008) 0 1px, transparent 1px 24px),
-      repeating-linear-gradient(90deg, rgba(255,255,255,.008) 0 1px, transparent 1px 24px);
+  /* Drafting-paper linework behind every public page, so separately
+     themed sections read as one continuous place.
+
+     Painted as body's own background-image rather than as an overlay
+     element: body carries an opaque background-color, which occludes any
+     child at a negative z-index entirely. background-image layers ABOVE
+     that colour and BELOW all content, which is exactly what is wanted,
+     and it needs no extra element and no stacking games. background-color
+     is inherited from the body rule earlier in this file and deliberately
+     not restated here, so the light/dark themes keep working. */
+  body{
+    background-image:
+      radial-gradient(ellipse 62% 46% at 86% 4%, rgba(255,128,0,.085), transparent 62%),
+      radial-gradient(ellipse 58% 42% at 6% 72%, rgba(58,160,255,.070), transparent 62%),
+      repeating-linear-gradient(0deg, rgba(255,255,255,.026) 0 1px, transparent 1px 96px),
+      repeating-linear-gradient(90deg, rgba(255,255,255,.026) 0 1px, transparent 1px 96px),
+      repeating-linear-gradient(0deg, rgba(255,255,255,.011) 0 1px, transparent 1px 24px),
+      repeating-linear-gradient(90deg, rgba(255,255,255,.011) 0 1px, transparent 1px 24px);
+    background-attachment:fixed;
   }
-  [data-theme="light"] .ambient-world{
-    background:
-      radial-gradient(ellipse 62% 46% at 86% 4%, rgba(255,128,0,.055), transparent 62%),
-      radial-gradient(ellipse 58% 42% at 6% 72%, rgba(58,160,255,.050), transparent 62%),
-      repeating-linear-gradient(0deg, rgba(20,40,70,.030) 0 1px, transparent 1px 96px),
-      repeating-linear-gradient(90deg, rgba(20,40,70,.030) 0 1px, transparent 1px 96px),
-      repeating-linear-gradient(0deg, rgba(20,40,70,.013) 0 1px, transparent 1px 24px),
-      repeating-linear-gradient(90deg, rgba(20,40,70,.013) 0 1px, transparent 1px 24px);
+  [data-theme="light"] body{
+    background-image:
+      radial-gradient(ellipse 62% 46% at 86% 4%, rgba(255,128,0,.070), transparent 62%),
+      radial-gradient(ellipse 58% 42% at 6% 72%, rgba(58,160,255,.060), transparent 62%),
+      repeating-linear-gradient(0deg, rgba(20,40,70,.042) 0 1px, transparent 1px 96px),
+      repeating-linear-gradient(90deg, rgba(20,40,70,.042) 0 1px, transparent 1px 96px),
+      repeating-linear-gradient(0deg, rgba(20,40,70,.018) 0 1px, transparent 1px 24px),
+      repeating-linear-gradient(90deg, rgba(20,40,70,.018) 0 1px, transparent 1px 24px);
   }
 
   /* ---------- 2. real scroll-reveal ---------- */
@@ -1358,6 +1361,23 @@
   }
   .section-head.is-visible::after,
   html:not(.reveal-ready) .section-head::after{opacity:.85;}
+
+  /* The blog uses bare <h2>s rather than .section-head, so it gets the
+     same annotation through its own selector -- one visual language
+     across marketing pages and articles. */
+  .blog-article h2{position:relative; padding-top:16px;}
+  .blog-article h2::before{
+    content:"";
+    position:absolute;
+    top:0; left:0;
+    width:64px; height:1px;
+    background:linear-gradient(90deg, var(--orange), rgba(255,128,0,0));
+    transform:scaleX(0);
+    transform-origin:left center;
+    transition:transform .8s cubic-bezier(.22,.61,.36,1);
+  }
+  .blog-article h2.is-visible::before,
+  html:not(.reveal-ready) .blog-article h2::before{transform:scaleX(1);}
 
   /* ---------- 4. the motto rail (signature) ---------- */
   /* The tagline becomes the page's spine: three segments, one per word,
@@ -1452,32 +1472,32 @@
   }
 
   /* ---------- 6. the exploded appliance ---------- */
-  /* A washer drawn as a shop diagram that assembles itself as you scroll
-     through the act. Progress (--p) runs 0 (apart, labelled) to 1
-     (whole). It DEFAULTS to 1, so with no JS, a JS failure, or reduced
-     motion, a visitor sees a clean finished machine rather than parts
-     scattered across the screen. */
+  /* A washer drawn as a shop diagram that the visitor rebuilds themselves
+     by dragging, rather than by being forced to scroll through a long
+     pinned section. Progress (--p) runs 0 (apart, labelled) to 1 (whole).
+     It DEFAULTS to 1, so with no JS, a JS error, an old browser or reduced
+     motion, a visitor sees a clean finished machine and a slider already
+     at the end -- never scattered parts with no way to fix them. */
   .teardown{
-    padding:0;
+    padding:96px 0;
     position:relative;
     --p:1;
   }
-  .teardown-track{position:relative; height:280vh;}
-  .teardown-sticky{
-    position:sticky;
-    top:0;
-    height:100vh;
-    min-height:560px;
-    display:flex;
-    align-items:center;
-    overflow:hidden;
-  }
   .teardown-grid{
     display:grid;
-    grid-template-columns:0.85fr 1.15fr;
-    gap:48px;
+    grid-template-columns:0.9fr 1.1fr;
+    gap:52px;
     align-items:center;
-    width:100%;
+  }
+  .teardown-copy{position:relative;}
+  .teardown-copy .eyebrow{position:relative; padding-top:18px;}
+  .teardown-copy .eyebrow::before{
+    content:"";
+    position:absolute;
+    top:0; left:0;
+    width:clamp(120px, 18vw, 220px);
+    height:1px;
+    background:linear-gradient(90deg, var(--orange), rgba(255,128,0,0));
   }
   .teardown-copy h2{
     font-size:clamp(30px,4.4vw,50px);
@@ -1491,19 +1511,20 @@
   }
   .teardown-figure{
     display:flex;
+    flex-direction:column;
     align-items:center;
     justify-content:center;
+    gap:20px;
   }
   .teardown-figure svg{
     width:100%;
-    max-width:620px;
+    max-width:600px;
     height:auto;
     overflow:visible;
   }
-  /* Shared transform for every exploded part. Each part supplies its own
-     --dx/--dy/--rot; all of them resolve to zero at --p:1. transform-box
-     keeps SVG rotation about the part's own centre rather than the
-     viewBox origin. */
+  /* Shared transform for every exploded part. Each supplies its own
+     --dx/--dy/--rot; all resolve to zero at --p:1. transform-box keeps SVG
+     rotation about the part's own centre, not the viewBox origin. */
   .td-part{
     transform-box:fill-box;
     transform-origin:center;
@@ -1514,22 +1535,14 @@
       )
       rotate(calc(var(--rot, 0) * (1 - var(--p, 1)) * 1deg));
   }
-  /* Internal components read as inside the cabinet once it closes up. */
   .td-inner{opacity:calc(.35 + (1 - var(--p, 1)) * .65);}
   .td-line{stroke:var(--steel); stroke-width:2; fill:none; vector-effect:non-scaling-stroke;}
   .td-line-soft{stroke:var(--text-dim); stroke-width:1.4; fill:none; vector-effect:non-scaling-stroke;}
   .td-accent{stroke:var(--orange); stroke-width:2.4; fill:none; vector-effect:non-scaling-stroke;}
   .td-fill{fill:var(--bg-panel);}
   .td-fill-2{fill:var(--bg-panel-2);}
-  /* Callouts belong to the apart state, so they fade out as it closes. */
+  .td-belt{stroke:var(--steel); stroke-width:6; fill:none; opacity:.45; vector-effect:non-scaling-stroke;}
   .td-callout{opacity:calc(1 - var(--p, 1));}
-  .td-belt{
-    stroke:var(--steel);
-    stroke-width:6;
-    fill:none;
-    opacity:.45;
-    vector-effect:non-scaling-stroke;
-  }
   .td-callout text{
     font-family:'Oswald', sans-serif;
     font-size:16px;
@@ -1539,48 +1552,109 @@
   }
   .td-callout line{stroke:var(--orange); stroke-width:1; opacity:.65; vector-effect:non-scaling-stroke;}
   .td-callout circle{fill:var(--orange);}
-  /* A progress read-out that is a real state label, not a section counter. */
-  .td-state{
-    margin-top:26px;
+
+  /* The control. Deliberately the most tactile thing on the page: a real
+     <input type="range">, so it is draggable by finger, mouse, and arrow
+     keys, and screen readers announce it, with none of that hand-built. */
+  .td-scrub{
+    width:100%;
+    max-width:600px;
+    display:flex;
+    flex-direction:column;
+    gap:10px;
+  }
+  .td-scrub-labels{
+    display:flex;
+    align-items:baseline;
+    justify-content:space-between;
+    gap:12px;
     font-family:'Oswald', sans-serif;
     font-size:12.5px;
-    letter-spacing:2.4px;
+    letter-spacing:2.2px;
     text-transform:uppercase;
-    color:var(--orange);
-    display:flex;
-    align-items:center;
-    gap:12px;
+    color:var(--text-dim);
   }
-  .td-state-bar{
-    flex:1;
-    max-width:180px;
-    height:2px;
-    background:var(--border);
-    position:relative;
-    overflow:hidden;
+  .td-scrub-state{color:var(--orange); font-weight:600;}
+  .td-scrub input[type="range"]{
+    -webkit-appearance:none;
+    appearance:none;
+    width:100%;
+    height:44px;              /* full-height touch target on phones */
+    background:transparent;
+    padding:0;
+    margin:0;
+    border:none;
+    cursor:grab;
   }
-  .td-state-bar i{
-    position:absolute;
-    inset:0;
+  .td-scrub input[type="range"]:active{cursor:grabbing;}
+  .td-scrub input[type="range"]::-webkit-slider-runnable-track{
+    height:6px;
+    border-radius:999px;
+    background:
+      linear-gradient(90deg, var(--orange-dark), var(--orange-light)) 0/calc(var(--p, 1) * 100%) 100% no-repeat,
+      var(--bg-panel-3);
+    border:1px solid var(--border);
+  }
+  .td-scrub input[type="range"]::-moz-range-track{
+    height:6px;
+    border-radius:999px;
+    background:var(--bg-panel-3);
+    border:1px solid var(--border);
+  }
+  .td-scrub input[type="range"]::-moz-range-progress{
+    height:6px;
+    border-radius:999px;
     background:linear-gradient(90deg, var(--orange-dark), var(--orange-light));
-    transform:scaleX(var(--p, 1));
-    transform-origin:left center;
   }
+  .td-scrub input[type="range"]::-webkit-slider-thumb{
+    -webkit-appearance:none;
+    appearance:none;
+    width:30px; height:30px;
+    margin-top:-13px;
+    border-radius:50%;
+    background:linear-gradient(160deg, #ffb347, #ff8000 62%, #c96400);
+    border:2px solid #1a1208;
+    box-shadow:0 4px 14px rgba(255,128,0,.45);
+    cursor:grab;
+  }
+  .td-scrub input[type="range"]::-moz-range-thumb{
+    width:30px; height:30px;
+    border-radius:50%;
+    background:linear-gradient(160deg, #ffb347, #ff8000 62%, #c96400);
+    border:2px solid #1a1208;
+    box-shadow:0 4px 14px rgba(255,128,0,.45);
+    cursor:grab;
+  }
+  .td-scrub input[type="range"]:focus-visible{outline:none;}
+  .td-scrub input[type="range"]:focus-visible::-webkit-slider-thumb{
+    box-shadow:0 0 0 5px rgba(58,160,255,.35), 0 4px 14px rgba(255,128,0,.45);
+  }
+  .td-scrub input[type="range"]:focus-visible::-moz-range-thumb{
+    box-shadow:0 0 0 5px rgba(58,160,255,.35), 0 4px 14px rgba(255,128,0,.45);
+  }
+  .td-hint{
+    font-size:13.5px;
+    color:var(--text-dim);
+    margin:22px 0 0;
+  }
+  .td-hint b{color:var(--orange-light); font-weight:600;}
+
+  /* Phone-first: the diagram and its control are the main event on a
+     small screen, so they lead and get the full width. */
   @media (max-width:900px){
-    .teardown-track{height:230vh;}
+    .teardown{padding:72px 0;}
     .teardown-grid{
       grid-template-columns:1fr;
-      gap:22px;
+      gap:26px;
       text-align:center;
     }
     .teardown-copy p{margin-left:auto; margin-right:auto;}
-    .td-state{justify-content:center;}
-    .teardown-figure svg{max-width:400px;}
-    .td-callout text{font-size:16px;}
-  }
-  @media (max-width:560px){
-    .teardown-track{height:200vh;}
-    .teardown-sticky{min-height:520px;}
+    .teardown-copy .eyebrow::before{left:50%; transform:translateX(-50%);}
+    .teardown-figure{order:-1;}
+    .teardown-figure svg{max-width:100%;}
+    .td-callout text{font-size:19px;}
+    .td-scrub input[type="range"]::-webkit-slider-thumb{width:34px; height:34px; margin-top:-15px;}
+    .td-scrub input[type="range"]::-moz-range-thumb{width:34px; height:34px;}
   }
 
   /* ---------- 7. service cards as diagnostic plates ---------- */
