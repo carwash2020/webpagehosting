@@ -307,7 +307,17 @@
 // table at and above it. Also fixed a real, unrelated overflow bug found
 // in the same file: the status-filter button row had no wrap or scroll
 // handling and forced 13px of horizontal page overflow at 390px.
-const CACHE_NAME = 'th-workspace-v66';
+// Bumped 2026-09-06 (v66 -> v67): tools-media-sharing.js and
+// tools/styles-tools.css both changed again -- a real report from a
+// live device's own Client Errors panel showed two recurring entries
+// with no app code behind them: the browser's native View Transition
+// API rejecting its own internal promises (tab backgrounded mid-
+// transition, a newer navigation superseding an older one -- both
+// routine on a phone used out in the field). Filtered from the error
+// log by exact known message text; the duplicate, misattributed
+// @view-transition{navigation:auto;} rule that caused no functional
+// harm but was genuine dead weight was also removed.
+const CACHE_NAME = 'th-workspace-v67';
 const PRECACHE_URLS = [
   '/tools/workspace.html', '/tools/job-tracker.html', '/tools/invoice-generator.html', '/tools/contract-generator.html',
   '/tools/calendar.html', '/tools/route-planner.html', '/tools/review-request.html', '/tools/contact-card.html',

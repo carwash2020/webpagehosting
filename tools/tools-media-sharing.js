@@ -326,16 +326,44 @@ function logClientError(message, source, lineno, colno, stack) {
   }
 }
 
+// Bug fix (2026-09-06), found from a real device's own Client Errors
+// panel showing repeated entries with no app code behind them at all:
+// "Transition was aborted because of invalid state" (workspace.html)
+// and "Transition was skipped" (calendar.html). Neither string exists
+// anywhere in this app's own JS, nor in the Supabase realtime-js
+// library this app loads (checked the actual published package
+// directly) -- both are the browser's own native View Transition API
+// rejecting its internal .ready/.finished/.updateCallbackDone promises,
+// triggered by the @view-transition{navigation:auto;} opt-in this tool
+// suite's own stylesheet declares (see styles-tools.css). Confirmed
+// against real-world reports of the identical wording (Chromium issue
+// tracker, and other projects' own bug trackers describing this exact
+// pair of messages "spamming" their error monitoring) -- documented,
+// well-known browser behavior when a transition is superseded by a
+// newer navigation, exceeds Chrome's ~4s timeout, or the tab is
+// backgrounded mid-transition, which on a tool used out in the field
+// on a phone (this app's real, stated use case) is routine, not a
+// failure of anything. Filtered by exact known message text -- the
+// same precision this file's own sync.js already uses for its
+// CHANNEL_ERROR retry noise -- rather than a broad heuristic, so a
+// genuinely different future error is never accidentally swallowed.
+const BENIGN_VIEW_TRANSITION_MESSAGES = [
+  'Transition was aborted because of invalid state',
+  'Transition was skipped',
+];
+function isBenignViewTransitionNoise(message) {
+  return BENIGN_VIEW_TRANSITION_MESSAGES.some((known) => String(message || '').includes(known));
+}
+
 window.addEventListener('error', (event) => {
+  if (isBenignViewTransitionNoise(event.message)) return;
   logClientError(event.message, event.filename, event.lineno, event.colno, event.error && event.error.stack);
 });
 window.addEventListener('unhandledrejection', (event) => {
   const reason = event.reason;
-  logClientError(
-    reason && reason.message ? reason.message : String(reason),
-    '', null, null,
-    reason && reason.stack
-  );
+  const message = reason && reason.message ? reason.message : String(reason);
+  if (isBenignViewTransitionNoise(message)) return;
+  logClientError(message, '', null, null, reason && reason.stack);
 });
 
 // ---------------------------------------------------------------------------

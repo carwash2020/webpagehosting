@@ -749,24 +749,14 @@ td { padding: 10px 8px; font-size: 14px; color: var(--white); border-bottom: 1px
   .reveal-ready [data-reveal]:nth-child(7) { transition-delay: 0.48s; }
 }
 
-/* --- Cross-document View Transitions ---
-   Pure CSS opt-in, zero JavaScript. Chrome 126+ and some Safari versions
-   support this; browsers that don't just navigate the old way with zero
-   errors -- this is a true native progressive enhancement, not a
-   feature-detected fallback pattern. Support is genuinely still
-   Chromium-led as of mid-2026; Firefox and full cross-browser Safari
-   coverage isn't settled yet. Worth revisiting this comment in a future
-   session to check whether that's changed.
-   This rule has to be present on EVERY page that should participate --
-   both the page navigated FROM and the page navigated TO need it, which
-   is exactly why this lives in the shared styles.css rather than being
-   added per-page: all 6 public pages already load this file, so this
-   one addition covers every page-to-page link across the whole site at
-   once, and any future landing page automatically gets it too, with no
-   extra work. */
-@view-transition {
-  navigation: auto;
-}
+/* Bug fix (2026-09-06): this exact @view-transition{navigation:auto;}
+   rule was already declared once, near the top of this file (Item #65,
+   2026-08-26) -- this second copy is a stray duplicate, its own comment
+   even misdescribes itself as living in "the shared styles.css" (the
+   public site's stylesheet, which has never actually had this rule at
+   all -- confirmed by checking directly). Removed rather than kept:
+   repeating the same at-rule twice does nothing browsers don't already
+   do once, so this was dead weight, not a second, different behavior. */
 
 /* Slightly faster and punchier than the browser default cross-fade */
 ::view-transition-old(root),
