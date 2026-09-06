@@ -265,7 +265,13 @@
 // just the portal's own copy (requested directly, found while
 // investigating a real reported receipt issue). Precached under its
 // bare path.
-const CACHE_NAME = 'th-workspace-v59';
+// Bumped 2026-09-06 (v59 -> v60): /styles.css and
+// /tools/styles-tools.css both changed during a run of visual work and
+// this constant was not bumped at the time. Both are in PRECACHE_URLS
+// and ?v= URLs are served cache-first without revalidation, so the
+// installed Workspace app would have kept serving the old stylesheets
+// indefinitely -- the precise failure the header above warns about.
+const CACHE_NAME = 'th-workspace-v60';
 const PRECACHE_URLS = [
   '/tools/workspace.html', '/tools/job-tracker.html', '/tools/invoice-generator.html', '/tools/contract-generator.html',
   '/tools/calendar.html', '/tools/route-planner.html', '/tools/review-request.html', '/tools/contact-card.html',
