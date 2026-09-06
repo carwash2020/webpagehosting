@@ -49,7 +49,7 @@
   })();
 </script>
 <link rel="stylesheet" href="/styles.css?v=202609062002">
-<link rel="stylesheet" href="/tools/styles-tools.css?v=f0faba8d41">
+<link rel="stylesheet" href="/tools/styles-tools.css?v=08a7280225">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.112.3/dist/umd/supabase.js" integrity="sha384-qafw21c/iciq0VXsi9FzkfoQv5I/V0iqE4lSNcKXPnW9/UTJLnv5CcN4FHxVLnKg" crossorigin="anonymous" defer></script>
 <script src="/tools/sync.js?v=51c822a31b" defer></script>
 <script src="/tools/data-layer.js?v=3a0d57478c" defer></script>
@@ -84,7 +84,14 @@
   }
 
   .controls-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; flex-wrap: wrap; gap: 10px; }
-  .sort-group { display: flex; gap: 8px; }
+  /* Bug fix (2026-09-06), found while investigating a separate report:
+     5 status-filter buttons (Active/Not Started/In Progress/Completed/All)
+     in a plain flex row with no wrap and no overflow handling forced 13px
+     of horizontal page overflow at 390px (a real, common phone width).
+     overflow-x lets the row scroll internally instead of pushing the page
+     itself sideways -- same fix already used for wide tables elsewhere
+     (.table-scroll), applied here to a wide button row instead. */
+  .sort-group { display: flex; gap: 8px; overflow-x: auto; -webkit-overflow-scrolling: touch; }
   .sort-btn {
     background: var(--bg-panel-2); border: 1px solid var(--border); color: var(--text-dim);
     border-radius: 6px; padding: 7px 14px; cursor: pointer; font-size: 13px;

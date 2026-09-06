@@ -298,7 +298,16 @@
 // narrowing the inline value to background-color, which still paints dark
 // before CSS parses (the actual point of it) without touching a property
 // it was never meant to touch.
-const CACHE_NAME = 'th-workspace-v65';
+// Bumped 2026-09-06 (v65 -> v66): tools/styles-tools.css changed again --
+// Job Tracker's Jobs tab had two containers for the same list, #jobsList
+// (cards) and #jobsTableWrap (a table added in a later pass), both filled
+// unconditionally by renderJobs() with nothing anywhere hiding either one.
+// Confirmed with real seeded data: every job rendered twice, stacked, on
+// any desktop screen. Fixed with a 1024px breakpoint -- cards below it,
+// table at and above it. Also fixed a real, unrelated overflow bug found
+// in the same file: the status-filter button row had no wrap or scroll
+// handling and forced 13px of horizontal page overflow at 390px.
+const CACHE_NAME = 'th-workspace-v66';
 const PRECACHE_URLS = [
   '/tools/workspace.html', '/tools/job-tracker.html', '/tools/invoice-generator.html', '/tools/contract-generator.html',
   '/tools/calendar.html', '/tools/route-planner.html', '/tools/review-request.html', '/tools/contact-card.html',

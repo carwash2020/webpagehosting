@@ -200,6 +200,30 @@
 .table-scroll{ overflow-x:auto; -webkit-overflow-scrolling:touch; }
 .table-scroll table{ min-width:640px; }
 
+/* Bug fix (2026-09-06), confirmed with real seeded job data rather than
+   assumed: Job Tracker's Jobs tab has carried TWO separate containers for
+   the same list since the table was added -- #jobsList (touch-friendly
+   cards, swipe actions) and #jobsTableWrap (dense sortable table, added
+   in a later "dense-table pass"). renderJobs() fills both, unconditionally,
+   on every render. Nothing anywhere -- no media query, no JS toggle --
+   ever hid either one. The result: every single job appeared twice on any
+   desktop screen, stacked one under the other, confirmed by rendering the
+   page with two seeded jobs at 1440px and finding both containers visible
+   with matching data-job-id attributes. This exact possibility was flagged
+   as a suspicion, unconfirmed, when the table was first added ("could not
+   reproduce it without real job data") and sat live ever since.
+   Fixed with the same 1024px breakpoint this file already uses everywhere
+   else for a mobile/desktop split (see .hub-header, .jump-nav above):
+   cards below it, the table at and above it -- matching the table's own
+   column set (Phone, Address, a Margin column), which needs the room a
+   phone screen doesn't have anyway. */
+#jobsTableWrap { display: none; }
+@media (min-width: 1024px) {
+  #jobsList { display: none; }
+  #jobsTableWrap { display: block; overflow-x: auto; -webkit-overflow-scrolling: touch; }
+  #jobsTableWrap table { min-width: 760px; }
+}
+
 /* --- Inline helper text --- */
 .inline-note{ color:var(--text-dim); font-size:12px; margin-top:4px; }
 
