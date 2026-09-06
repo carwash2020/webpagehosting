@@ -256,7 +256,11 @@
 // more precached tools pages (job-tracker, login, parts-reference,
 // reset-password, review-request, route-planner, runway-dashboard,
 // workspace).
-const CACHE_NAME = 'th-workspace-v57';
+// Bumped 2026-09-05 (again): clients.html changed -- fixed a real
+// reported bug ("the clients page on computer does not fit or work
+// right"), traced to a CSS override gap in the Client Lookup card
+// built earlier the same day.
+const CACHE_NAME = 'th-workspace-v58';
 const PRECACHE_URLS = [
   '/tools/workspace.html', '/tools/job-tracker.html', '/tools/invoice-generator.html', '/tools/contract-generator.html',
   '/tools/calendar.html', '/tools/route-planner.html', '/tools/review-request.html', '/tools/contact-card.html',

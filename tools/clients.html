@@ -541,7 +541,7 @@
     const nameLine = escapeHtml(p.name || '(no name on file)');
     const phoneLine = p.phone ? ' &middot; ' + escapeHtml(p.phone) : '';
     const authCount = p.authorizations.length;
-    return '<div class="dev-check-row" style="align-items:flex-start; flex-direction:column; gap:8px;">' +
+    return '<div class="dev-check-row" style="align-items:flex-start; justify-content:flex-start; flex-direction:column; gap:8px;">' +
       '<div>' +
       '<div><strong>' + nameLine + '</strong></div>' +
       '<div class="dev-check-detail">' + escapeHtml(p.email) + phoneLine + '</div>' +

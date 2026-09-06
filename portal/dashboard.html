@@ -583,6 +583,21 @@
       y += 10;
     }
 
+    // PAID stamp collision fix (2026-09-05), reported directly: "it
+    // puts the paid stamp right over the total amount." The stamp
+    // sits at a FIXED position (stampCY=195, radius 46, spanning
+    // y=149-241) chosen when this layout was simpler and shorter --
+    // but the total's own y is dynamic, depending on how much content
+    // (description, line items) comes before it. With little or no
+    // content above it, the total lands well within the stamp's
+    // range and gets painted over (jsPDF has no z-order control, so
+    // whichever is drawn second wins, and either way the total
+    // becomes unreadable). Enforcing a floor here is a no-op for the
+    // normal case (description + line items already push y well past
+    // this) and only ever matters for the short-content case this
+    // bug actually came from.
+    if (inv.paid) y = Math.max(y, 255);
+
     doc.setFont('helvetica', 'bold'); doc.setFontSize(14); doc.setTextColor(20, 20, 20);
     doc.text(inv.paid ? 'TOTAL PAID' : 'TOTAL DUE', pageW - 220, y);
     doc.setTextColor(...(inv.paid ? GREEN : ORANGE));
