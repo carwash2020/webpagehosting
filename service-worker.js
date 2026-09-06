@@ -250,7 +250,13 @@
 // client area of the tools"), precached under its bare path.
 // dev-tools-shared.js changed again too (a second DEV_INFO entry,
 // after the portal-client-errors one already deployed at v52).
-const CACHE_NAME = 'th-workspace-v56';
+// Bumped 2026-09-05 (again): the iOS Safari zoom-on-focus fix
+// (invoice-generator.html only, earlier the same day) was extended
+// site-wide after a comprehensive scan found the identical bug on 8
+// more precached tools pages (job-tracker, login, parts-reference,
+// reset-password, review-request, route-planner, runway-dashboard,
+// workspace).
+const CACHE_NAME = 'th-workspace-v57';
 const PRECACHE_URLS = [
   '/tools/workspace.html', '/tools/job-tracker.html', '/tools/invoice-generator.html', '/tools/contract-generator.html',
   '/tools/calendar.html', '/tools/route-planner.html', '/tools/review-request.html', '/tools/contact-card.html',

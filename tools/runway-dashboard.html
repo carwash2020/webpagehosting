@@ -37,6 +37,17 @@
   })();
 </script>
 <style>
+  /* iOS Safari zoom-on-focus fix (2026-09-05), same root cause and
+     fix already applied to invoice-generator.html: a tapped
+     input/select/textarea with a font-size under 16px triggers the
+     browser's own auto-zoom. This generic rule covers every field on
+     this page, including any with no explicit font-size at all
+     (falling back to the browser's own sub-16px default) -- any
+     more specific selector below still needs its own individual
+     bump too, since a more specific selector always wins regardless
+     of where either rule sits in the file. */
+  input, select, textarea { font-size: 16px; }
+
   :root{
     --bg:#0a0a0a;
     --bg-card:#141414;
@@ -226,7 +237,7 @@
   .icon-btn.danger:hover{color:var(--red);}
   input[type=number], input[type=text], input[type=month], select{
     background:var(--bg);border:1px solid var(--border-soft);color:var(--text);border-radius:6px;padding:9px 10px;
-    font-family:'Oswald',sans-serif;font-size:13px;width:100%;box-shadow: inset 0 1px 3px rgba(0,0,0,0.5);
+    font-family:'Oswald',sans-serif;font-size:16px;width:100%;box-shadow: inset 0 1px 3px rgba(0,0,0,0.5);
     transition: box-shadow .15s, border-color .15s;
   }
   input:focus, select:focus{outline:none;border-color:var(--orange);box-shadow: inset 0 1px 3px rgba(0,0,0,0.5), 0 0 8px rgba(255,128,0,0.45);}
@@ -344,7 +355,7 @@
   .help-modal-body strong{color:var(--orange-light);}
   .help-modal-close{position:absolute;top:14px;right:16px;background:none;border:none;color:var(--text-dim);font-size:22px;line-height:1;cursor:pointer;padding:4px 8px;}
   .help-modal-close:hover{color:var(--text);}
-  .var-log-input{width:90px;padding:6px 8px;background:var(--bg-elevated);border:1px solid var(--border-soft);border-radius:6px;color:var(--text);font-size:12px;font-family:inherit;}
+  .var-log-input{width:90px;padding:6px 8px;background:var(--bg-elevated);border:1px solid var(--border-soft);border-radius:6px;color:var(--text);font-size:16px;font-family:inherit;}
   .print-only{display:none;}
   @media print{
     body *{display:none !important;}

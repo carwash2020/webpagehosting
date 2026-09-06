@@ -45,6 +45,17 @@
 <script src="/tools/tools-nav-pwa.js?v=9b16eefb86" defer></script>
 <script src="/tools/tools-tour.js?v=cf6652f5b1" defer></script>
 <style>
+  /* iOS Safari zoom-on-focus fix (2026-09-05), same root cause and
+     fix already applied to invoice-generator.html: a tapped
+     input/select/textarea with a font-size under 16px triggers the
+     browser's own auto-zoom. This generic rule covers every field on
+     this page, including any with no explicit font-size at all
+     (falling back to the browser's own sub-16px default) -- any
+     more specific selector below still needs its own individual
+     bump too, since a more specific selector always wins regardless
+     of where either rule sits in the file. */
+  input, select, textarea { font-size: 16px; }
+
   body { padding: 90px 20px 60px; max-width: 680px; margin: 0 auto; }
   /* Desktop layout (2026-08-20), requested directly: efficient on
      phone stays exactly as it was (nothing below 1024px changes at
@@ -57,7 +68,7 @@
   .stop-row { display: flex; gap: 8px; margin-bottom: 10px; align-items: center; }
   .stop-row input {
     flex: 1; padding: 10px 12px; background: var(--bg-panel-2); border: 1px solid var(--border);
-    border-radius: 6px; color: var(--white); font-size: 14.5px; font-family: inherit;
+    border-radius: 6px; color: var(--white); font-size: 16px; font-family: inherit;
   }
   .stop-num { color: var(--text-dim); font-size: 13px; width: 22px; flex-shrink: 0; }
   .icon-btn {

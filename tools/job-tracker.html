@@ -46,6 +46,17 @@
 <script src="/tools/tools-nav-pwa.js?v=9b16eefb86" defer></script>
 <script src="/tools/tools-tour.js?v=cf6652f5b1" defer></script>
 <style>
+  /* iOS Safari zoom-on-focus fix (2026-09-05), same root cause and
+     fix already applied to invoice-generator.html: a tapped
+     input/select/textarea with a font-size under 16px triggers the
+     browser's own auto-zoom. This generic rule covers every field on
+     this page, including any with no explicit font-size at all
+     (falling back to the browser's own sub-16px default) -- any
+     more specific selector below still needs its own individual
+     bump too, since a more specific selector always wins regardless
+     of where either rule sits in the file. */
+  input, select, textarea { font-size: 16px; }
+
   body { padding: 90px 20px 60px; max-width: 1080px; margin: 0 auto; }
   /* Desktop layout (2026-08-20), requested directly: efficient on
      phone stays exactly as it was (nothing below 1024px changes at
@@ -162,7 +173,7 @@
   .job-card-actions { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
   .status-select {
     background: none; border: 1px solid var(--border); color: var(--text-dim);
-    border-radius: 6px; padding: 9px 12px; font-size: 13px; font-family: inherit;
+    border-radius: 6px; padding: 9px 12px; font-size: 16px; font-family: inherit;
     cursor: pointer; min-height: 40px;
   }
   .status-select:hover { border-color: var(--orange-light); color: var(--orange-light); }
@@ -196,7 +207,7 @@
   .btn-row { display: flex; gap: 12px; margin-top: 16px; flex-wrap: wrap; }
   .mileage-rate-inline { display: flex; align-items: center; gap: 8px; }
   .mileage-rate-inline label { font-size: 12.5px; color: var(--text-dim); white-space: nowrap; }
-  .mileage-rate-inline input { width: 90px; padding: 9px 11px; background: var(--bg-panel-2); border: 1px solid var(--border); border-radius: 6px; color: var(--white); font-size: 14.5px; }
+  .mileage-rate-inline input { width: 90px; padding: 9px 11px; background: var(--bg-panel-2); border: 1px solid var(--border); border-radius: 6px; color: var(--white); font-size: 16px; }
 
   /* --- Job templates --- */
   .template-item {
@@ -225,7 +236,7 @@
   .photo-upload-row { display: flex; gap: 8px; align-items: center; margin-bottom: 14px; flex-wrap: wrap; }
   .photo-upload-row select {
     padding: 8px 10px; background: var(--bg-panel-2); border: 1px solid var(--border);
-    border-radius: 6px; color: var(--white); font-size: 13.5px; font-family: inherit;
+    border-radius: 6px; color: var(--white); font-size: 16px; font-family: inherit;
   }
   .photo-grid { display: flex; flex-wrap: wrap; gap: 10px; }
   .photo-thumb { position: relative; width: 110px; height: 110px; border-radius: 8px; overflow: hidden; border: 1px solid var(--border); }

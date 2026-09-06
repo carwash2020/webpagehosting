@@ -44,6 +44,17 @@
 <script src="/tools/tools-tour.js?v=cf6652f5b1" defer></script>
 <script src="/tools/qrcode-lib.js?v=202608160400" defer></script>
 <style>
+  /* iOS Safari zoom-on-focus fix (2026-09-05), same root cause and
+     fix already applied to invoice-generator.html: a tapped
+     input/select/textarea with a font-size under 16px triggers the
+     browser's own auto-zoom. This generic rule covers every field on
+     this page, including any with no explicit font-size at all
+     (falling back to the browser's own sub-16px default) -- any
+     more specific selector below still needs its own individual
+     bump too, since a more specific selector always wins regardless
+     of where either rule sits in the file. */
+  input, select, textarea { font-size: 16px; }
+
   body { padding: 90px 20px 60px; max-width: 640px; margin: 0 auto; }
   /* Desktop layout (2026-08-20), requested directly: efficient on
      phone stays exactly as it was (nothing below 1024px changes at
@@ -62,7 +73,7 @@
   .form-field label { display: block; font-size: 13px; color: var(--text-dim); margin-bottom: 5px; }
   .form-field input {
     width: 100%; padding: 10px 12px; background: var(--bg-panel-2); border: 1px solid var(--border);
-    border-radius: 6px; color: var(--white); font-size: 15px; font-family: inherit; box-sizing: border-box;
+    border-radius: 6px; color: var(--white); font-size: 16px; font-family: inherit; box-sizing: border-box;
   }
   .message-preview-wrap { display: flex; justify-content: flex-end; margin-bottom: 14px; }
   .message-preview {
