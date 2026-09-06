@@ -311,3 +311,88 @@ body:has(.login-box) {
   .quote-card:hover,
   .wo-card:hover { transform: none; }
 }
+
+/* ---------- 15. invoice hierarchy ---------- */
+/* The amount owed is the single most important number on this screen, so
+   it should read first. Everything else on the card is supporting detail. */
+.invoice-total {
+  font-family: 'Anton', sans-serif;
+  font-size: 21px;
+  letter-spacing: .4px;
+  color: var(--white);
+  line-height: 1.15;
+}
+.invoice-number {
+  font-family: 'Oswald', sans-serif;
+  font-weight: 600;
+  letter-spacing: .8px;
+  color: var(--white);
+}
+.invoice-desc { color: var(--text-dim); line-height: 1.5; }
+.invoice-status { margin-top: 6px; }
+
+/* Something that still needs paying gets a standing accent, so a client
+   scanning a long list sees what needs action without reading every card.
+   :has() is progressive enhancement -- without it the card simply keeps
+   its normal border, which is the current behaviour anyway. */
+.invoice-card:has(.invoice-status.is-unpaid) {
+  border-left: 3px solid var(--orange);
+}
+.invoice-card:has(.invoice-status.is-paid) {
+  opacity: .92;
+}
+.invoice-card:has(.invoice-status.is-paid):hover { opacity: 1; }
+
+/* ---------- 16. printing ---------- */
+/* People do print and save invoices. Left alone, a dark-themed app prints
+   as a wall of ink with navigation and buttons in the middle of it. */
+@media print {
+  body.portal-page {
+    background: #fff !important;
+    background-image: none !important;
+    color: #000 !important;
+  }
+  .portal-nav,
+  .portal-header-actions,
+  .report-bug-link,
+  .ptr-indicator,
+  .offline-banner,
+  .btn,
+  .small-btn,
+  .secondary-btn,
+  .portal-icon-btn { display: none !important; }
+  .invoice-card,
+  .quote-card,
+  .job-card,
+  .wo-card {
+    border: 1px solid #bbb !important;
+    box-shadow: none !important;
+    background: #fff !important;
+    color: #000 !important;
+    break-inside: avoid;
+    page-break-inside: avoid;
+    margin-bottom: 12px;
+  }
+  .invoice-number,
+  .invoice-total,
+  .portal-title { color: #000 !important; }
+  .invoice-desc { color: #333 !important; }
+  .invoice-status {
+    border: 1px solid #666 !important;
+    background: transparent !important;
+    color: #000 !important;
+  }
+}
+
+/* ---------- 17. small screens ---------- */
+/* Most clients open this on a phone, usually to settle one bill. */
+@media (max-width: 560px) {
+  .invoice-card,
+  .quote-card,
+  .job-card,
+  .wo-card { padding: 16px 14px; }
+  .invoice-total { font-size: 19px; }
+  .portal-title { font-size: 19px; }
+  .btn,
+  .secondary-btn { min-height: 46px; }
+}
