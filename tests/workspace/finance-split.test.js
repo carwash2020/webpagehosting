@@ -1800,7 +1800,7 @@ test('the mobile jump-nav override also accounts for the safe-area-inset-top, no
 // stuck at its initial "connecting..." text forever, with no
 // indication anything is wrong and no way to retry.
 
-test('startRealtimeSync fires a \'timeout\' status if the subscription never resolves within 12 seconds, verified with the real function against a genuinely stuck mock subscription', async () => {
+test('startRealtimeSync fires a \'timeout\' status if the subscription never resolves within the watchdog window, verified with the real function against a genuinely stuck mock subscription', async () => {
   const vm = require('vm');
   const src = fs.readFileSync(path.join(__dirname, '..', '..', 'tools', 'sync.js'), 'utf8');
   const sandbox = {
@@ -1816,9 +1816,15 @@ test('startRealtimeSync fires a \'timeout\' status if the subscription never res
   vm.createContext(sandbox);
   vm.runInContext(src, sandbox);
 
+  // The watchdog window was widened 2026-09-07 (12s -> REALTIME_WATCHDOG_MS,
+  // currently 35s) so it can't preempt a real retry still in flight --
+  // see tests/tools/realtime-retry-resilience.test.js for the full
+  // reasoning. Read the real constant rather than hardcoding it again
+  // here, so this test can't quietly drift out of sync with it.
+  const watchdogMs = Number(src.match(/const REALTIME_WATCHDOG_MS = (\d+);/)[1]);
   let received = null;
   sandbox.startRealtimeSync(() => {}, (status) => { received = status; });
-  await new Promise(resolve => setTimeout(resolve, 12200));
+  await new Promise(resolve => setTimeout(resolve, watchdogMs + 200));
   assert.equal(received, 'timeout');
 });
 

@@ -427,7 +427,18 @@
 // returned null regardless of actual network conditions. Added the
 // same supabase-js tag, same URL/integrity, in the same position
 // relative to sync.js, on all three.
-const CACHE_NAME = 'th-workspace-v80';
+// Bumped 2026-09-07 (v80 -> v81): /tools/sync.js changed (real
+// reported complaint: "we get these sync channel status errors almost
+// daily"). Checked this project's own Supabase realtime logs before
+// touching anything -- the documented cold-start cause completed in
+// ~1.2s every time with zero matching server-side errors in the same
+// window, so the old 2-retry/CHANNEL_ERROR-only/~4s budget was both
+// too short and too narrow. TIMED_OUT now retries the same as
+// CHANNEL_ERROR, the backoff is longer (2s/4s/8s/15s), and the
+// connection never permanently gives up -- a slow background retry
+// keeps trying every 30s so the page recovers on its own, logging only
+// once per failure episode. Precached here since sync.js is.
+const CACHE_NAME = 'th-workspace-v81';
 const PRECACHE_URLS = [
   '/tools/workspace.html', '/tools/job-tracker.html', '/tools/invoice-generator.html', '/tools/contract-generator.html',
   '/tools/calendar.html', '/tools/route-planner.html', '/tools/review-request.html', '/tools/contact-card.html',
