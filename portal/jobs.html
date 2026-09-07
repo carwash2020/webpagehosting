@@ -171,7 +171,9 @@
   .job-card-top { display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; }
   .job-title { font-weight: 600; color: var(--white); font-size: 15px; }
   .job-date { color: var(--text-dim); font-size: 13px; margin-top: 2px; }
-  .job-warranty { font-size: 12px; padding: 3px 10px; border-radius: 20px; font-weight: 600; display: inline-block; white-space: nowrap; }
+  .job-warranty { font-size: 12px; padding: 3px 10px 3px 6px; border-radius: 20px; font-weight: 600; display: inline-flex; align-items: center; gap: 5px; white-space: nowrap; }
+  .warranty-ring-track { opacity: .35; }
+  .warranty-overview-row .warranty-ring { flex-shrink: 0; }
   /* Downloadable receipt per job (2026-09-03) -- item 6 of a roadmap. */
   .job-receipt-link {
     display: inline-block; margin-top: 8px; font-size: 12.5px; font-weight: 600; color: var(--orange-light);
@@ -184,7 +186,7 @@
   .warranty-overview { background: rgba(76,175,80,0.1); border: 1px solid rgba(76,175,80,0.3); border-radius: var(--radius); padding: 14px 16px; margin-bottom: 16px; }
   .warranty-overview-title { font-size: 14px; font-weight: 600; color: #4caf50; margin-bottom: 8px; }
   .warranty-overview-row { display: flex; justify-content: space-between; gap: 10px; padding: 5px 0; font-size: 13px; color: var(--white); }
-  .warranty-overview-days { color: var(--text-dim); flex-shrink: 0; }
+  .warranty-overview-days { color: var(--text-dim); flex-shrink: 0; display: inline-flex; align-items: center; gap: 5px; }
   .job-photos { display: flex; gap: 8px; margin-top: 10px; flex-wrap: wrap; }
   .job-photos a { display: block; width: 64px; height: 64px; border-radius: 8px; overflow: hidden; border: 1px solid var(--border); }
   .job-photos img { width: 100%; height: 100%; object-fit: cover; display: block; }
@@ -493,11 +495,32 @@
     return daysLeft;
   }
 
+  // A ring reading "20 of 30 days" is a real, meaningful visualization
+  // here -- it's one actual number as a fraction of another, not a
+  // chart invented to fill space. r=15, so circumference is a fixed
+  // constant; only the dash offset moves.
+  const WARRANTY_RING_CIRCUMFERENCE = 2 * Math.PI * 15;
+  function warrantyRingSvg(fraction) {
+    const f = Math.max(0, Math.min(1, fraction));
+    const offset = WARRANTY_RING_CIRCUMFERENCE * (1 - f);
+    // width/height 20 (not the 16 first tried): checked at actual render
+    // size, a low fraction (a job with only a day or two left) was
+    // reduced to 1-2 lit pixels at 16px and read as indistinguishable
+    // from the empty track. 20px plus a heavier stroke and a brighter
+    // (.35, not .25) track keep a thin arc legible at any fraction.
+    return `<svg class="warranty-ring" viewBox="0 0 36 36" width="20" height="20" aria-hidden="true" focusable="false">
+      <circle class="warranty-ring-track" cx="18" cy="18" r="15" fill="none" stroke="currentColor" stroke-width="5"/>
+      <circle cx="18" cy="18" r="15" fill="none" stroke="currentColor" stroke-width="5" stroke-linecap="round"
+        stroke-dasharray="${WARRANTY_RING_CIRCUMFERENCE.toFixed(2)}" stroke-dashoffset="${offset.toFixed(2)}"
+        transform="rotate(-90 18 18)"/>
+    </svg>`;
+  }
+
   function warrantyBadgeHtml(jobDate) {
     const daysLeft = warrantyDaysLeft(jobDate);
     if (daysLeft === null) return '';
     if (daysLeft >= 0) {
-      return `<span class="job-warranty is-active" title="30-day labor warranty, based on this job's date">Warranty: ${daysLeft} day${daysLeft === 1 ? '' : 's'} left</span>`;
+      return `<span class="job-warranty is-active" title="30-day labor warranty, based on this job's date">${warrantyRingSvg(daysLeft / 30)}Warranty: ${daysLeft} day${daysLeft === 1 ? '' : 's'} left</span>`;
     }
     return `<span class="job-warranty is-expired" title="30-day labor warranty, based on this job's date">Warranty expired</span>`;
   }
@@ -519,7 +542,7 @@
       '<div class="warranty-overview-title">' + covered.length + ' job' + (covered.length === 1 ? '' : 's') + ' still under warranty</div>' +
       covered.map(x =>
         '<div class="warranty-overview-row"><span>' + escapeHtml(x.job.title) + '</span>' +
-        '<span class="warranty-overview-days">' + x.daysLeft + ' day' + (x.daysLeft === 1 ? '' : 's') + ' left</span></div>'
+        '<span class="warranty-overview-days">' + warrantyRingSvg(x.daysLeft / 30) + x.daysLeft + ' day' + (x.daysLeft === 1 ? '' : 's') + ' left</span></div>'
       ).join('') +
       '</div>';
   }
