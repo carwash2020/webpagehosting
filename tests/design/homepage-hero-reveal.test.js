@@ -42,14 +42,18 @@ test('the hero-subject photo is masked to one side and kept subdued, not a compe
 
 // ---- before/after reveal ----
 
-test('the reveal section uses the same real kitchen tile job the Gallery modal already groups together', () => {
-  // Not an invented pairing: the Gallery modal (pre-existing, elsewhere
-  // on this page) already categorizes these under one job, "Kitchen
-  // Tile: Before & Demo" and "Kitchen Tile: Finished".
-  assert.match(INDEX, /gallery-category">Kitchen Tile: Before & Demo/);
-  assert.match(INDEX, /gallery-category">Kitchen Tile: Finished/);
-  assert.match(INDEX, /reveal-before[\s\S]{0,200}?tile-kitchen-before-1\.webp/);
-  assert.match(INDEX, /reveal-after[\s\S]{0,200}?tile-finished-kitchen-wide-2\.webp/);
+test('the reveal section pairs the verified same-room before/after photos, not just same-category ones', () => {
+  // tile-kitchen-before-1.webp / tile-finished-kitchen-wide-2.webp were an
+  // earlier pairing chosen from the Gallery modal's category labels alone
+  // ("Kitchen Tile: Before & Demo" / "Kitchen Tile: Finished") — both
+  // turned out to be finished-floor photos of different rooms. The
+  // correct pairing was confirmed by matching physical landmarks visible
+  // in both shots (same red drip coffee maker, same teal counter basket,
+  // same dishwasher and its handle, same mini-blind window, same cabinet
+  // run) and by both files sharing identical native dimensions
+  // (1152x2048 — same camera, same orientation, same room).
+  assert.match(INDEX, /reveal-before[\s\S]{0,200}?tile-kitchen-before-2\.webp/);
+  assert.match(INDEX, /reveal-after[\s\S]{0,200}?tile-finished-kitchen-wide\.webp/);
 });
 
 test('the reveal section sits in the main scroll flow, between Process and Reviews', () => {
@@ -77,6 +81,14 @@ test('the reveal demo sweep is skipped under reduced motion, same guard as the t
   assert.match(revealBlock, /if \(!reduced && 'IntersectionObserver' in window\)/);
 });
 
-test('the reveal images use the wide aspect variants (matching camera framing), not the portrait ones', () => {
-  assert.doesNotMatch(INDEX.slice(INDEX.indexOf('id="revealJob"'), INDEX.indexOf('</section>', INDEX.indexOf('id="revealJob"'))), /tile-kitchen-before-2|tile-kitchen-before-3|tile-finished-kitchen-wide\.webp"/);
+test('the reveal images are the verified portrait pair, sized to their real dimensions', () => {
+  const section = INDEX.slice(INDEX.indexOf('id="revealJob"'), INDEX.indexOf('</section>', INDEX.indexOf('id="revealJob"')));
+  assert.match(section, /tile-kitchen-before-2\.webp[^"]*"\s+alt="[^"]*"\s+width="1152"\s+height="2048"/);
+  assert.match(section, /tile-finished-kitchen-wide\.webp[^"]*"\s+alt="[^"]*"\s+width="1152"\s+height="2048"/);
+});
+
+test('the reveal frame crops portrait source photos toward the floor, not the countertop', () => {
+  const imgRule = STYLES.match(/\.reveal-img img\{[^}]*\}/)[0];
+  assert.match(imgRule, /object-fit:cover/);
+  assert.match(imgRule, /object-position:center 82%/);
 });
