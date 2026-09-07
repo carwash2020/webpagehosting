@@ -412,7 +412,12 @@
 // of its escapeHtml()/haptic() helper copies. Every other tool page
 // with any alert() at all already uses tools-dialogs.js's showAlert()
 // for this. Now wired up and switched over the same way.
-const CACHE_NAME = 'th-workspace-v78';
+// Bumped 2026-09-07 (v78 -> v79): /styles.css changed (removed the
+// generic ALL-CAPS .eyebrow label and single-word headline accent
+// treatments the frontend-design skill's own checklist flags as
+// common AI-design tells; added .coverage-badge, a real status pill
+// reusing the existing .open-status dot+pill idiom), precached here.
+const CACHE_NAME = 'th-workspace-v79';
 const PRECACHE_URLS = [
   '/tools/workspace.html', '/tools/job-tracker.html', '/tools/invoice-generator.html', '/tools/contract-generator.html',
   '/tools/calendar.html', '/tools/route-planner.html', '/tools/review-request.html', '/tools/contact-card.html',

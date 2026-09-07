@@ -209,7 +209,11 @@
 // paid/unpaid status the cards below already use, that scrolls to and
 // highlights its matching card on click instead of duplicating values
 // in a tooltip.
-const CACHE_NAME = 'th-portal-v35';
+// Bumped 2026-09-07 (v35 -> v36): /styles.css changed (removed the
+// generic ALL-CAPS .eyebrow label and single-word headline accent
+// treatments on the public marketing pages; portal pages don't use
+// either, but the file is shared and precached here), precached.
+const CACHE_NAME = 'th-portal-v36';
 const PRECACHE_URLS = [
   '/portal/home.html', '/portal/dashboard.html', '/portal/jobs.html', '/portal/quotes.html',
   '/portal/work-orders.html', '/portal/settings.html', '/portal/login.html', '/portal/set-password.html',
