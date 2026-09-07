@@ -317,7 +317,50 @@
 // log by exact known message text; the duplicate, misattributed
 // @view-transition{navigation:auto;} rule that caused no functional
 // harm but was genuine dead weight was also removed.
-const CACHE_NAME = 'th-workspace-v67';
+// Bumped 2026-09-06 (v67 -> v68): tools/styles-tools.css changed again,
+// plus tools/pos.html and tools/clients.html -- .tool-title/.tool-sub
+// were used across 13 tool pages but never defined in the shared
+// stylesheet (7 pages each carried an identical local copy, 6 more had
+// no CSS backing the classes at all). On pos.html and clients.html
+// specifically, that combined with a second, separate gap -- both
+// pages were missing the standard desktop sidebar-clearance rule every
+// other tool page carries -- to genuinely overlap the fixed header on
+// desktop. Confirmed visually (a real screenshot showed the intro
+// paragraph rendering behind the form card). Fixed both: the shared
+// rule now lives here once, and both pages got the missing desktop
+// layout rule.
+// Bumped 2026-09-06 (v68 -> v69): tools/styles-tools.css changed again
+// -- a real, significant light-theme bug found by actually screenshotting
+// the tool suite with light mode on (not just reading the CSS): the
+// dark-mode contrast-boost pass from earlier the same day scoped its
+// override of --bg, --bg-panel, --bg-panel-2/3, and --border to
+// body.th-tool-page with no check for [data-theme="light"] at all. Since
+// custom properties are inherited from the nearest ancestor that sets
+// them, and data-theme lives on <html> (an ancestor of body), that
+// unconditional override silently beat the correct light-theme values
+// for every element in the tool suite -- the sidebar, every card, every
+// table -- rendering dark panels on a light page. Scoped the override to
+// html:not([data-theme="light"]) instead; same values, same effect in
+// dark mode, but light mode now actually looks light.
+// Bumped 2026-09-07 (v69 -> v70): tools/invoice-generator.html changed --
+// a visual pass on the actual Invoice/Estimate PDFs themselves (client
+// deliverables, not just the in-app editor), requested directly. The two
+// PDF generators (generatePDF(), generateQuotePDF()) drew an almost
+// byte-identical header, line-items table, and totals block independently;
+// extracted into shared drawPdfHeader()/drawPdfLineItemsTable()/
+// drawPdfTotalsBlock() helpers, which also fixed two real bugs found by
+// actually rendering both documents rather than just reading the code:
+// (1) the estimate PDF's line-items table never got the invoice table's
+// pagination guard (item #52, 2026-08-19), so a long enough estimate
+// could silently draw rows off the bottom of the page; (2) the new
+// "ESTIMATED TOTAL" emphasis box overlapped its own dollar amount at
+// 14pt bold -- shortened the label to "EST. TOTAL" and added a
+// defensive width check so a future long total label shrinks to fit
+// instead of overlapping again. Visual changes: a soft divider between
+// the client/job block and the line-items table, and a light orange-tint
+// panel behind the final total on both documents so it reads as the
+// clear focal point of the page.
+const CACHE_NAME = 'th-workspace-v70';
 const PRECACHE_URLS = [
   '/tools/workspace.html', '/tools/job-tracker.html', '/tools/invoice-generator.html', '/tools/contract-generator.html',
   '/tools/calendar.html', '/tools/route-planner.html', '/tools/review-request.html', '/tools/contact-card.html',

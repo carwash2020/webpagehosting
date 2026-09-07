@@ -32,6 +32,32 @@
    overlaps or overrides public-site styles above.
    ========================================================================== */
 
+/* Bug fix (2026-09-06): .tool-title/.tool-sub are used as the page
+   intro (and, on several pages, the role-blocked-overlay message) on
+   13 tool pages, but had never once been defined here -- 7 pages each
+   carried their own identical copy in a local <style> block, and 6
+   more used the classes with no CSS backing them at all, rendering as
+   bare unstyled text. On pos.html and clients.html specifically that
+   meant the actual page heading, and on clients.html the ~20 dynamic
+   loading/empty/error rows that reuse .tool-sub throughout the page.
+   Defined once, here, so every current and future tool page gets it
+   for free. A handful of pages still carry their own local override
+   for a taller .tool-sub margin (30px instead of 24px) -- that's a
+   deliberate per-page choice, not a duplicate to clean up, and it
+   still wins by normal cascade order (their <style> block loads after
+   this stylesheet). */
+.tool-title{
+  font-family:var(--font-ui);
+  font-weight:700;
+  font-size:28px;
+  color:var(--white);
+  margin-bottom:6px;
+}
+.tool-sub{
+  color:var(--text-dim);
+  margin-bottom:24px;
+}
+
 .tool-header{
   display:flex;
   align-items:center;
@@ -1003,8 +1029,22 @@ body.th-tool-page { --radius: 14px; }
    floor for normal text). Deliberately scoped here rather than changed
    in styles.css itself, which the public marketing site also loads --
    that page's own dark theme was separately tuned and verified in an
-   earlier session and must not shift because of tool-suite work. */
-body.th-tool-page {
+   earlier session and must not shift because of tool-suite work.
+
+   Bug fix (2026-09-06): scoped to body.th-tool-page alone, with no
+   check for [data-theme="light"], this unconditionally overrode these
+   same four tokens back to their dark-mode values even when the user
+   had explicitly switched to light mode -- data-theme lives on <html>,
+   custom properties are inherited from the nearest ancestor that sets
+   them, and body sits between html and every sidebar/card/table in the
+   tool suite, so every one of them silently ignored [data-theme="light"]
+   (tools/styles-tools.css line ~806) and rendered dark panels on a
+   light page. Confirmed visually (a real light-mode screenshot showed
+   a correctly light page background with a fully dark sidebar and
+   cards floating on it). html:not([data-theme="light"]) restores the
+   original dark-mode-only scope without touching this rule's actual
+   values. */
+html:not([data-theme="light"]) body.th-tool-page {
   --bg: #07080a;
   --bg-panel: #18191d;
   --bg-panel-2: #212327;

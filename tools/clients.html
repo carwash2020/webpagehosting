@@ -45,7 +45,7 @@
   })();
 </script>
 <link rel="stylesheet" href="/styles.css?v=202609062002">
-<link rel="stylesheet" href="/tools/styles-tools.css?v=5dac71771c">
+<link rel="stylesheet" href="/tools/styles-tools.css?v=7e982b2e39">
 <script src="/tools/tools-effects.js?v=4cff99aa4a" defer></script>
 <script src="/tools/tools-dialogs.js?v=e1dfaa11a1" defer></script>
 <script src="/tools/tools-media-sharing.js?v=269452a6d3" defer></script>
@@ -66,6 +66,16 @@
      already proven on invoice-generator.html. -->
 <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js" integrity="sha384-JcnsjUPPylna1s1fvi1u12X5qjY5OL56iySh75FdtrwhO/SWXgMjoVqcKyIIWOLk" crossorigin="anonymous" async></script>
 <style>
+  /* Bug fix (2026-09-06): this page never had the desktop sidebar-
+     clearance rule every other tool page carries (body { margin-left:
+     calc(240px + ...); padding-top: 75px; } at >=1024px) -- on desktop
+     the fixed sidebar and fixed .tool-header sat on top of this page's
+     own content instead of pushing it clear. Found visually (a real
+     screenshot showed the invite form, tables, and "Failed to fetch"
+     rows all stacked on top of each other at the very top of the
+     page). Max-width 1500px matches the other dense multi-panel tool
+     pages (dev-tools, job-tracker, site-content). */
+  @media (min-width: 1024px) { body { max-width: 1500px; margin-left: calc(240px + max(0px, (100vw - 240px - 1500px) / 2)); padding-top: 75px; } }
   /* The exact subset of dev-tools.html's own panel-layout CSS these
      five panels actually use -- copied here rather than the whole
      block, most of which styled OTHER Dev Tools features (health
