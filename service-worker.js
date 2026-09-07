@@ -476,7 +476,7 @@
 // what an earlier survey reported -- the only genuine gap found was a
 // missing warranty countdown badge, which job-tracker.html's own card
 // for the same job already shows. Added here to match.
-const CACHE_NAME = 'th-workspace-v89';
+const CACHE_NAME = 'th-workspace-v90';
 const PRECACHE_URLS = [
   '/tools/workspace.html', '/tools/job-tracker.html', '/tools/invoice-generator.html', '/tools/contract-generator.html',
   '/tools/calendar.html', '/tools/route-planner.html', '/tools/review-request.html', '/tools/contact-card.html',
