@@ -1863,23 +1863,65 @@
   }
   bindFaqAccordion();
 
+  // Basic focus containment for this page's own modals (2026-09-07),
+  // found missing from all of them: Gallery/FAQ/Terms below, the email
+  // modal, and the service-details modal -- Tab could move keyboard
+  // focus onto background page content while any of them covered the
+  // screen. Same trapFocusWithin(container, initialFocusEl) already
+  // built and tested on the portal (portal/portal-app.js) -- kept as a
+  // local copy here rather than a new shared file, since none of the 5
+  // city landing pages that also load site-motion.js carry any of
+  // these modals at all; only this page needs it.
+  function trapFocusWithin(container, initialFocusEl) {
+    const FOCUSABLE_SELECTOR = 'a[href], button:not([disabled]), textarea:not([disabled]), input:not([disabled]), select:not([disabled]), [tabindex]:not([tabindex="-1"])';
+    const previouslyFocused = document.activeElement;
+
+    function focusableEls() {
+      return Array.prototype.slice.call(container.querySelectorAll(FOCUSABLE_SELECTOR))
+        .filter((el) => el.offsetParent !== null);
+    }
+
+    function onKeydown(e) {
+      if (e.key !== 'Tab') return;
+      const els = focusableEls();
+      if (!els.length) return;
+      const first = els[0];
+      const last = els[els.length - 1];
+      if (e.shiftKey && document.activeElement === first) {
+        e.preventDefault();
+        last.focus();
+      } else if (!e.shiftKey && document.activeElement === last) {
+        e.preventDefault();
+        first.focus();
+      }
+    }
+
+    document.addEventListener('keydown', onKeydown);
+    const toFocus = initialFocusEl || focusableEls()[0];
+    if (toFocus) toFocus.focus();
+
+    return function release() {
+      document.removeEventListener('keydown', onKeydown);
+      if (previouslyFocused && typeof previouslyFocused.focus === 'function') previouslyFocused.focus();
+    };
+  }
+
   // generic modal-overlay opener/closer, used for Gallery, FAQ, and Terms
   function setupSimpleModal(overlayId, closeId, triggerIds){
     const overlay = document.getElementById(overlayId);
     const closeBtn = document.getElementById(closeId);
-    if(!overlay || !closeBtn) return;
-    let lastFocused = null;
+    if(!overlay || !closeBtn) return null;
+    let releaseFocusTrap = null;
 
     function open(){
-      lastFocused = document.activeElement;
       overlay.classList.add('is-open');
-      closeBtn.focus();
       document.body.style.overflow = 'hidden';
+      releaseFocusTrap = trapFocusWithin(overlay, closeBtn);
     }
     function close(){
       overlay.classList.remove('is-open');
       document.body.style.overflow = '';
-      if(lastFocused) lastFocused.focus();
+      if (releaseFocusTrap) { releaseFocusTrap(); releaseFocusTrap = null; }
     }
 
     triggerIds.forEach(id => {
@@ -1899,41 +1941,39 @@
     document.addEventListener('keydown', (e) => {
       if(e.key === 'Escape' && overlay.classList.contains('is-open')) close();
     });
+
+    return { open, close };
   }
 
   setupSimpleModal('galleryOverlay', 'galleryClose', ['navGalleryDesktop','navGalleryMobile','navGalleryFooter']);
   setupSimpleModal('faqOverlay', 'faqClose', ['navFaqDesktop','navFaqMobile','navFaqFooter']);
-  setupSimpleModal('termsOverlay', 'termsClose', ['navTermsFooter']);
+  const termsModal = setupSimpleModal('termsOverlay', 'termsClose', ['navTermsFooter']);
 
   // Allow other pages (e.g. the city landing pages) to link straight to
   // /#terms and have the Terms modal open automatically on load, since
-  // it's a JS modal, not a scrollable page section.
-  if (window.location.hash === '#terms') {
-    const termsOverlay = document.getElementById('termsOverlay');
-    const termsCloseBtn = document.getElementById('termsClose');
-    if (termsOverlay) {
-      termsOverlay.classList.add('is-open');
-      document.body.style.overflow = 'hidden';
-      if (termsCloseBtn) termsCloseBtn.focus();
-    }
+  // it's a JS modal, not a scrollable page section. Reuses the same
+  // open() setupSimpleModal() above already returns -- previously
+  // duplicated the overlay/focus logic by hand here, which is exactly
+  // why this path never got the focus trap when it was first added.
+  if (window.location.hash === '#terms' && termsModal) {
+    termsModal.open();
   }
 
   // email modal
   const emailOverlay = document.getElementById('emailOverlay');
   const emailClose = document.getElementById('emailClose');
   const openEmailBtn = document.getElementById('openEmailModal');
-  let emailLastFocused = null;
+  let releaseEmailFocusTrap = null;
 
   function openEmailModal(){
-    emailLastFocused = document.activeElement;
     emailOverlay.classList.add('is-open');
-    emailClose.focus();
     document.body.style.overflow = 'hidden';
+    releaseEmailFocusTrap = trapFocusWithin(emailOverlay, emailClose);
   }
   function closeEmailModal(){
     emailOverlay.classList.remove('is-open');
     document.body.style.overflow = '';
-    if(emailLastFocused) emailLastFocused.focus();
+    if (releaseEmailFocusTrap) { releaseEmailFocusTrap(); releaseEmailFocusTrap = null; }
   }
 
   openEmailBtn.addEventListener('click', openEmailModal);
@@ -1951,13 +1991,12 @@
   const modalList = document.getElementById('modalList');
   const modalSchedule = document.getElementById('modalSchedule');
   const modalClose = document.getElementById('modalClose');
-  let lastFocused = null;
+  let releaseModalFocusTrap = null;
   let currentSelectValue = '';
 
   function openModal(key){
     const d = serviceDetails[key];
     if(!d) return;
-    lastFocused = document.activeElement;
     modal.classList.toggle('is-urgent', !!d.urgent);
     modalIcon.innerHTML = d.icon;
     modalIcon.style.color = d.urgent ? 'var(--orange-light)' : 'var(--blue-light)';
@@ -1966,14 +2005,14 @@
     modalList.innerHTML = d.points.map(p => `<li>${checkIcon}<span>${p}</span></li>`).join('');
     currentSelectValue = d.select;
     overlay.classList.add('is-open');
-    modalClose.focus();
     document.body.style.overflow = 'hidden';
+    releaseModalFocusTrap = trapFocusWithin(overlay, modalClose);
   }
 
   function closeModal(){
     overlay.classList.remove('is-open');
     document.body.style.overflow = '';
-    if(lastFocused) lastFocused.focus();
+    if (releaseModalFocusTrap) { releaseModalFocusTrap(); releaseModalFocusTrap = null; }
   }
 
   document.querySelectorAll('.service-card').forEach(card => {
