@@ -109,7 +109,15 @@
 // the field instead of only after a failed submit, and the length check
 // now runs before the mismatch check. Same reasoning as every prior bump
 // in this file's history.
-const CACHE_NAME = 'th-portal-v19';
+// Bumped 2026-09-07 (v19 -> v20): home.html and jobs.html both changed,
+// both in PRECACHE_URLS. home.html: every stat card and attention row
+// gained an icon, reusing the exact SVG paths already established by
+// this page's own bottom nav. jobs.html: the warranty pill and warranty
+// overview rows gained a small ring showing days-left as a fraction of
+// the 30-day window, not just the number as text -- driven off the same
+// real per-job numbers already computed here, no invented data. Same
+// reasoning as every prior bump in this file's history.
+const CACHE_NAME = 'th-portal-v20';
 const PRECACHE_URLS = [
   '/portal/home.html', '/portal/dashboard.html', '/portal/jobs.html', '/portal/quotes.html',
   '/portal/work-orders.html', '/portal/settings.html', '/portal/login.html', '/portal/set-password.html',
