@@ -101,7 +101,16 @@
   .home-link { display:inline-block; margin-bottom: 20px; color: var(--blue-light); font-size: 14px; }
   .stop-row { display: flex; gap: 8px; margin-bottom: 10px; align-items: center; }
   .stop-row input {
-    flex: 1; padding: 10px 12px; background: var(--bg-panel-2); border: 1px solid var(--border);
+    /* min-width:0 (F05 fix, 2026-09-07): a flex item's default
+       min-width is "auto", which for a text input resolves to its
+       intrinsic content width, not 0 -- so this input refused to
+       shrink below that width even though flex:1 says it should,
+       overflowing the row (and the whole page) by exactly enough to
+       push the Remove button off the right edge of a 390px phone
+       screen. This is the only page in the suite with any horizontal
+       overflow at phone width; the 3 fixed-width buttons per row
+       (Move up/down/Remove) left too little room otherwise. */
+    flex: 1; min-width: 0; padding: 10px 12px; background: var(--bg-panel-2); border: 1px solid var(--border);
     border-radius: 6px; color: var(--white); font-size: 16px; font-family: inherit;
   }
   .stop-num { color: var(--text-dim); font-size: 13px; width: 22px; flex-shrink: 0; }
