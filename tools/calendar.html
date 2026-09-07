@@ -49,7 +49,7 @@
   })();
 </script>
 <link rel="stylesheet" href="/styles.css?v=202609072345">
-<link rel="stylesheet" href="/tools/styles-tools.css?v=04bf541d61">
+<link rel="stylesheet" href="/tools/styles-tools.css?v=99041fc92a">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.112.3/dist/umd/supabase.js" integrity="sha384-qafw21c/iciq0VXsi9FzkfoQv5I/V0iqE4lSNcKXPnW9/UTJLnv5CcN4FHxVLnKg" crossorigin="anonymous" defer></script>
 <script src="/tools/sync.js?v=1e45dec62f" defer></script>
 <script src="/tools/tools-effects.js?v=4cff99aa4a" defer></script>
@@ -153,13 +153,17 @@
     <div class="cal-dow">Sun</div><div class="cal-dow">Mon</div><div class="cal-dow">Tue</div>
     <div class="cal-dow">Wed</div><div class="cal-dow">Thu</div><div class="cal-dow">Fri</div><div class="cal-dow">Sat</div>
   </div>
-  <div class="cal-grid" id="calGrid" style="margin-top:6px;"></div>
+  <!-- F10 fix (2026-09-07): renderCalendar() overwrites this synchronously
+       on DOMContentLoaded, but this page had no loading treatment at all --
+       matches the shared .skeleton-line pattern finance.html already uses
+       for the same "brief pre-JS blank window" case. -->
+  <div class="cal-grid" id="calGrid" style="margin-top:6px;"><div class="skeleton-line w-100"></div><div class="skeleton-line w-60"></div><div class="skeleton-line w-40"></div></div>
 </div>
 
 <div class="form-section" id="calDowDensitySection">
   <h3>Job Density by Weekday <button class="help-btn" onclick="openHelpModal()" aria-label="What is this?" title="What is this?">?</button></h3>
   <p class="tool-sub" style="margin-top:-4px; margin-bottom:14px;">Every job you've ever scheduled, grouped by day of the week -- useful for spotting a pattern like always overbooking Fridays, across your whole history rather than one month at a time.</p>
-  <div id="calDowDensity"></div>
+  <div id="calDowDensity"><div class="skeleton-line w-100"></div><div class="skeleton-line w-60"></div></div>
 </div>
 
 <div class="form-section cal-day-detail">

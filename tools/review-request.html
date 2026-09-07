@@ -49,7 +49,7 @@
   })();
 </script>
 <link rel="stylesheet" href="/styles.css?v=202609072345">
-<link rel="stylesheet" href="/tools/styles-tools.css?v=04bf541d61">
+<link rel="stylesheet" href="/tools/styles-tools.css?v=99041fc92a">
 <script src="/tools/tools-effects.js?v=4cff99aa4a" defer></script>
 <script src="/tools/tools-dialogs.js?v=e1dfaa11a1" defer></script>
 <script src="/tools/tools-media-sharing.js?v=4be783c8a5" defer></script>
@@ -96,20 +96,19 @@
     max-width: 88%; box-shadow: 0 2px 8px rgba(0,0,0,0.25);
   }
   .btn-row { display: flex; gap: 12px; flex-wrap: wrap; }
-  .action-btn {
-    flex: 1; min-width: 160px; text-align: center; padding: 13px 18px; border-radius: 8px;
-    font-family:var(--font-ui); font-weight: 600; font-size: 14.5px; cursor: pointer; border: none;
-    text-decoration: none; display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+  /* F12 fix (2026-09-07): this page had its own third reimplementation
+     of the "primary CTA + secondary action" pattern (.action-btn,
+     also an 8px-radius pill) instead of the shared .primary-btn/
+     .secondary-btn base classes every other page already consolidated
+     onto (see styles-tools.css's own "Shared button system" comment).
+     Base color/shape now come from the shared classes (applied
+     directly in the markup below); only the row-specific layout this
+     page actually needs (equal-width flex items, centered icon+label)
+     stays here as a scoped modifier. */
+  .btn-row .primary-btn, .btn-row .secondary-btn {
+    flex: 1; min-width: 160px; text-align: center; text-decoration: none;
+    display: inline-flex; align-items: center; justify-content: center; gap: 8px;
   }
-  .btn-copy { background: var(--bg-panel-2); border: 1px solid var(--border); color: var(--white); }
-  .btn-copy:hover { border-color: var(--blue-light); }
-  .btn-copy:active { transform: translateY(1px); filter: brightness(0.95); }
-  .btn-send {
-    background: linear-gradient(135deg, var(--orange-light), var(--orange) 60%, var(--orange-dark));
-    color: #1a0d02;
-  }
-  .btn-send:hover { opacity: 0.92; }
-  .btn-send:active { transform: translateY(1px); filter: brightness(0.95); }
   .copy-confirm { color: var(--orange-light); font-size: 13px; margin-top: 8px; display: none; }
   .fallback-note { color: var(--text-dim); font-size: 13px; margin-top: 16px; border-top: 1px solid var(--border); padding-top: 14px; }
   @keyframes autofillFlash { 0% { background: var(--orange-tint-border); } 100% { background: var(--bg-panel-2); } }
@@ -125,8 +124,8 @@
 <div id="roleBlockedOverlay" class="role-blocked-overlay">
   <div class="tool-title" style="font-size:22px;">Not available here</div>
   <p class="tool-sub" style="max-width:420px;">Review Requests isn't part of your role's access. Nothing's wrong with your account -- check with whoever manages roles if you think this should be different.</p>
-  <button class="btn blue" style="margin-top:12px;" onclick="retryRoleCheck(this, canManageReviews)">Try again</button>
-  <a href="/tools/workspace.html" class="btn blue" style="display:inline-block; margin-top:12px; text-decoration:none;">Back to Dashboard</a>
+  <button class="primary-btn" style="margin-top:12px;" onclick="retryRoleCheck(this, canManageReviews)">Try again</button>
+  <a href="/tools/workspace.html" class="secondary-btn" style="display:inline-block; margin-top:12px; text-decoration:none;">Back to Dashboard</a>
 </div>
 <a href="#mainContent" class="skip-link">Skip to main content</a>
 
@@ -164,7 +163,7 @@
         <option value="">Choose a job&hellip;</option>
       </select>
     </div>
-    <button class="action-btn btn-copy" onclick="applyRecentJobSelection()" style="width:100%; margin-bottom:20px;">Use This Job</button>
+    <button class="secondary-btn" onclick="applyRecentJobSelection()" style="width:100%; margin-bottom:20px;">Use This Job</button>
     <div style="border-top:1px solid var(--border); margin-bottom:20px;"></div>
   </div>
 
@@ -188,9 +187,9 @@
   <div class="message-preview-wrap"><div class="message-preview" id="messagePreview"></div></div>
   <div id="duplicateWarning" style="display:none; color: var(--orange-light); font-size: 13px; margin-bottom: 12px; padding: 10px 12px; background: var(--orange-tint-soft); border: 1px solid var(--orange-tint-border); border-radius: 6px;"></div>
   <div class="btn-row">
-    <button class="action-btn btn-copy" onclick="shuffleMessage()"><svg class="th-icon" aria-hidden="true"><use href="#icon-shuffle" xlink:href="#icon-shuffle"></use></svg> Try Another</button>
-    <button class="action-btn btn-copy" onclick="copyMessage()">Copy Message</button>
-    <a class="action-btn btn-send" id="sendLink" href="#" onclick="logSentRequest('sms')">Open Text Message</a>
+    <button class="secondary-btn" onclick="shuffleMessage()"><svg class="th-icon" aria-hidden="true"><use href="#icon-shuffle" xlink:href="#icon-shuffle"></use></svg> Try Another</button>
+    <button class="secondary-btn" onclick="copyMessage()">Copy Message</button>
+    <a class="primary-btn" id="sendLink" href="#" onclick="logSentRequest('sms')">Open Text Message</a>
   </div>
   <div class="copy-confirm" id="copyConfirm">Copied! Paste it in if the text app doesn't fill it in automatically.</div>
   <div style="display:flex; align-items:center; gap:6px; margin-top:4px;"><button class="help-btn" onclick="openCardInfo('sendButton')" aria-label="What does Open Text Message do?" title="What does Open Text Message do?">?</button><span class="fallback-note" style="margin:0;">What "Open Text Message" does</span></div>
@@ -198,8 +197,8 @@
   <div style="border-top: 1px solid var(--border); margin-top: 18px; padding-top: 16px;">
     <div style="font-size: 13px; color: var(--text-dim); margin-bottom: 10px;">Some customers respond better to a request sent a day or two later, once they've had a chance to actually enjoy the finished work &mdash; rather than right this second.</div>
     <div class="btn-row">
-      <button class="action-btn btn-copy" onclick="scheduleReminder(1)">Remind Me Tomorrow</button>
-      <button class="action-btn btn-copy" onclick="scheduleReminder(2)">Remind Me in 2 Days</button>
+      <button class="secondary-btn" onclick="scheduleReminder(1)">Remind Me Tomorrow</button>
+      <button class="secondary-btn" onclick="scheduleReminder(2)">Remind Me in 2 Days</button>
     </div>
   </div>
 </div>

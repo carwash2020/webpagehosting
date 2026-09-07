@@ -49,7 +49,7 @@
   })();
 </script>
 <link rel="stylesheet" href="/styles.css?v=202609072345">
-<link rel="stylesheet" href="/tools/styles-tools.css?v=04bf541d61">
+<link rel="stylesheet" href="/tools/styles-tools.css?v=99041fc92a">
 <script src="/tools/tools-effects.js?v=4cff99aa4a" defer></script>
 <script src="/tools/tools-dialogs.js?v=e1dfaa11a1" defer></script>
 <script src="/tools/tools-media-sharing.js?v=4be783c8a5" defer></script>
@@ -134,7 +134,6 @@
   .pr-row-icon-btn.danger:hover { background: rgba(211,51,51,.12); color: #e05555; }
   .pr-row-icon-btn.active { color: var(--orange-light); }
 
-  .pr-empty { text-align: center; color: var(--text-dim); padding: 40px 20px; font-size: 14px; }
   /* F22 fix (2026-09-07): .pr-row-icon-btn measured 24x24 -- these are
      the per-issue edit/delete/copy/pin controls, "used one-handed at a
      job site" per the finding this fixes. Scoped to phone width only
@@ -307,13 +306,16 @@
         </div>
       </div>
       <div class="form-footer">
-        <button class="btn blue" onclick="savePrUnit()">Save Appliance</button>
+        <button class="primary-btn" onclick="savePrUnit()">Save Appliance</button>
         <button class="secondary-btn" onclick="togglePrAddUnitForm()">Cancel</button>
       </div>
     </div>
 
     <p class="pr-count" id="prCount" style="margin-top:16px;"></p>
-    <div id="prUnitsList"></div>
+    <!-- F10 fix (2026-09-07): renderUnits() overwrites this synchronously
+         on DOMContentLoaded, but this page had no loading treatment at
+         all -- matches the shared .skeleton-line pattern. -->
+    <div id="prUnitsList"><div class="skeleton-line w-100"></div><div class="skeleton-line w-60"></div><div class="skeleton-line w-40"></div></div>
   </div>
 </div>
 
@@ -477,7 +479,7 @@
       container.innerHTML =
         '<div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">' +
         '<input type="text" id="prDisplayNameInput" placeholder="Your name" value="' + escapeHtml(name) + '" style="max-width:200px;">' +
-        '<button class="btn blue" onclick="savePrDisplayName()">Save</button>' +
+        '<button class="primary-btn" onclick="savePrDisplayName()">Save</button>' +
         '<button class="secondary-btn" onclick="activePrDisplayNameEditing=false; renderPrDisplayNameRow();">Cancel</button>' +
         '</div>';
       const input = document.getElementById('prDisplayNameInput');
@@ -2360,7 +2362,7 @@
       '<input type="text" id="prNewModelInType" placeholder="e.g. WRS325FDAM04 &mdash; Side-by-Side Refrigerator"></div></div>' +
       '<div class="tool-form-row"><div class="form-field"><label>Manual Link (optional)</label><input type="text" id="prNewManualLinkInType" placeholder="https://..."></div>' +
       '<div class="form-field"><label>Parts Catalog Link (optional)</label><input type="text" id="prNewPartsLinkInType" placeholder="https://..."></div></div>' +
-      '<div class="form-footer"><button class="btn blue" onclick="saveNewModelInType()">Save Model</button>' +
+      '<div class="form-footer"><button class="primary-btn" onclick="saveNewModelInType()">Save Model</button>' +
       '<button class="secondary-btn" onclick="toggleAddModelInType()">Cancel</button></div>' +
       '</div>';
   }
@@ -2452,7 +2454,7 @@
         '<div class="form-field"><label>Rough Cost High ($)</label><input type="number" id="prEditIssuePriceHigh" min="0" step="0.01" value="' + (iss.priceHigh != null ? iss.priceHigh : '') + '"></div></div>' +
         '<div class="tool-form-row"><div class="form-field full"><label>Reference Link (optional)</label><input type="text" id="prEditIssueLink" value="' + escapeHtml(iss.link || '') + '"></div></div>' +
         '<div class="tool-form-row"><div class="form-field full"><label>Note (optional)</label><input type="text" id="prEditIssueNote" value="' + escapeHtml(iss.note || '') + '"></div></div>' +
-        '<div class="form-footer"><button class="btn blue" onclick="saveIssueEdit(' + unitId + ', ' + iss.id + ')">Save Changes</button><button class="secondary-btn" onclick="activePrEditIssueId=null; renderBrandDetail();">Cancel</button></div>' +
+        '<div class="form-footer"><button class="primary-btn" onclick="saveIssueEdit(' + unitId + ', ' + iss.id + ')">Save Changes</button><button class="secondary-btn" onclick="activePrEditIssueId=null; renderBrandDetail();">Cancel</button></div>' +
         '</div>';
     }
     var linkHtml = iss.link ? (
@@ -2537,7 +2539,7 @@
       var isExpanded = expandedPrTypeIds.has(u.id);
       var issuesHtml = u.issues.length
         ? u.issues.slice().reverse().map(function(iss) { return issueRowHtml(iss, u.id); }).join('')
-        : '<div class="pr-empty">No specific issues logged yet &mdash; add one as you run into it.</div>';
+        : '<div class="empty-state">No specific issues logged yet &mdash; add one as you run into it.</div>';
       var addFormHtml = activePrIssueTargetId === u.id ? (
         '<div class="tool-form-row"><div class="form-field full"><label>Symptom / Issue</label><input type="text" id="prNewSymptom" placeholder="e.g. Won&#39;t drain, UE error code"></div></div>' +
         '<div class="tool-form-row"><div class="form-field"><label>Likely Part</label><input type="text" id="prNewPartName" placeholder="e.g. Drain pump"></div>' +
@@ -2546,7 +2548,7 @@
         '<div class="form-field"><label>Rough Cost High ($)</label><input type="number" id="prNewPriceHigh" min="0" step="0.01"></div></div>' +
         '<div class="tool-form-row"><div class="form-field full"><label>Reference Link (optional)</label><input type="text" id="prNewLink" placeholder="https://www.partselect.com/..."></div></div>' +
         '<div class="tool-form-row"><div class="form-field full"><label>Note (optional)</label><input type="text" id="prNewNote" placeholder="Anything worth remembering"></div></div>' +
-        '<div class="form-footer"><button class="btn blue" onclick="savePrIssue(' + u.id + ')">Save Issue</button><button class="secondary-btn" onclick="activePrIssueTargetId=null; renderBrandDetail();">Cancel</button></div>'
+        '<div class="form-footer"><button class="primary-btn" onclick="savePrIssue(' + u.id + ')">Save Issue</button><button class="secondary-btn" onclick="activePrIssueTargetId=null; renderBrandDetail();">Cancel</button></div>'
       ) : '';
 
       var editFormHtml = activePrEditUnitId === u.id ? (
@@ -2554,7 +2556,7 @@
         '<input type="text" id="prEditModel" value="' + escapeHtml(u.model) + '"></div></div>' +
         '<div class="tool-form-row"><div class="form-field"><label>Manual Link</label><input type="text" id="prEditManualLink" value="' + escapeHtml(u.manualLink) + '"></div>' +
         '<div class="form-field"><label>Parts Catalog Link</label><input type="text" id="prEditPartsLink" value="' + escapeHtml(u.partsLink) + '"></div></div>' +
-        '<div class="form-footer"><button class="btn blue" onclick="saveUnitEdit(' + u.id + ')">Save Changes</button><button class="secondary-btn" onclick="activePrEditUnitId=null; renderBrandDetail();">Cancel</button></div>'
+        '<div class="form-footer"><button class="primary-btn" onclick="saveUnitEdit(' + u.id + ')">Save Changes</button><button class="secondary-btn" onclick="activePrEditUnitId=null; renderBrandDetail();">Cancel</button></div>'
       ) : '';
 
       var sectionLabel = u.model ? escapeHtml(u.model) : 'General reference (no specific model)';
@@ -2795,7 +2797,7 @@
         : '';
 
       if (!brands.length) {
-        list.innerHTML = '<div class="pr-empty">' + (loadPrUnits().length ? 'Nothing matches that search.' : 'No appliances added yet.') + '</div>';
+        list.innerHTML = '<div class="empty-state">' + (loadPrUnits().length ? 'Nothing matches that search.' : 'No appliances added yet.') + '</div>';
         return;
       }
 
@@ -2841,7 +2843,7 @@
       : '';
 
     if (!results.length) {
-      list.innerHTML = '<div class="pr-empty">Nothing matches that search.</div>';
+      list.innerHTML = '<div class="empty-state">Nothing matches that search.</div>';
       return;
     }
 

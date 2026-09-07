@@ -49,7 +49,7 @@
   })();
 </script>
 <link rel="stylesheet" href="/styles.css?v=202609072345">
-<link rel="stylesheet" href="/tools/styles-tools.css?v=04bf541d61">
+<link rel="stylesheet" href="/tools/styles-tools.css?v=99041fc92a">
 <script src="/tools/data-layer.js?v=3a0d57478c" defer></script>
 <script src="/tools/dev-tools-shared.js?v=a7dee707bd" defer></script>
 <script src="/tools/tools-effects.js?v=4cff99aa4a" defer></script>
@@ -303,7 +303,7 @@
 <div id="devBlockedView" class="dev-blocked" style="display:none;">
   <div class="tool-title" style="font-size:22px;">Not available here</div>
   <p class="tool-sub">Dev Tools is only shown on the account actively developing this site. Nothing's wrong with your account &mdash; this page just isn't meant for day-to-day use.</p>
-  <a href="/tools/workspace.html" class="btn blue" style="display:inline-block; margin-top:12px; text-decoration:none;">Back to Dashboard</a>
+  <a href="/tools/workspace.html" class="primary-btn" style="display:inline-block; margin-top:12px; text-decoration:none;">Back to Dashboard</a>
 </div>
 
 <div id="devMainView" style="display:none;">
@@ -3237,7 +3237,7 @@
       <p style="margin-bottom:14px;">This is a soft confirmation to catch an accidental save, not real protection against someone technically determined -- anyone who's already logged into Connor's account and views this page's source could bypass it. It exists to stop a stray tap or someone else picking up an unlocked phone. Only asked once per browser session -- closing the tab resets it.</p>
       <input type="password" id="devPasswordInput" placeholder="Dev password" style="width:100%; margin-bottom:12px;" onkeydown="if(event.key==='Enter') devPasswordSubmit();">
       <div class="form-footer">
-        <button class="btn blue" onclick="devPasswordSubmit()">Confirm</button>
+        <button class="primary-btn" onclick="devPasswordSubmit()">Confirm</button>
         <button class="secondary-btn" onclick="devPasswordCancel()">Cancel</button>
       </div>
     </div>
