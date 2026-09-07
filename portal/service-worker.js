@@ -117,7 +117,11 @@
 // the 30-day window, not just the number as text -- driven off the same
 // real per-job numbers already computed here, no invented data. Same
 // reasoning as every prior bump in this file's history.
-const CACHE_NAME = 'th-portal-v20';
+// Bumped 2026-09-07 (v20 -> v21): dashboard.html changed, in
+// PRECACHE_URLS. Added a paid-vs-outstanding ring above the invoice
+// list -- summed from the exact same `invoices` array the existing
+// Outstanding/Paid section split already reads, no separate figure.
+const CACHE_NAME = 'th-portal-v21';
 const PRECACHE_URLS = [
   '/portal/home.html', '/portal/dashboard.html', '/portal/jobs.html', '/portal/quotes.html',
   '/portal/work-orders.html', '/portal/settings.html', '/portal/login.html', '/portal/set-password.html',
