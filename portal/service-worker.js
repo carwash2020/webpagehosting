@@ -134,7 +134,12 @@
 // exact same real status value the status pill already reads -- not a
 // second figure. Omitted for "declined": a closed request isn't
 // partway through anything.
-const CACHE_NAME = 'th-portal-v23';
+// Bumped 2026-09-07 (v23 -> v24): home.html changed, in PRECACHE_URLS.
+// Added a "Next appointment" countdown banner, reading the exact same
+// scheduled work-order rows and scheduled_at field the attention row
+// below it already lists -- not a second figure. Omitted entirely when
+// nothing is scheduled.
+const CACHE_NAME = 'th-portal-v24';
 const PRECACHE_URLS = [
   '/portal/home.html', '/portal/dashboard.html', '/portal/jobs.html', '/portal/quotes.html',
   '/portal/work-orders.html', '/portal/settings.html', '/portal/login.html', '/portal/set-password.html',
