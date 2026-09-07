@@ -2195,6 +2195,60 @@
     .radius-hub-name{font-size:21px;}
   }
 
+  /* Light-trail arrival (2026-09-07): reuses the [data-reveal]/.is-visible
+     mechanism already driving every other reveal on this page (a single
+     IntersectionObserver, once per element) rather than adding a second
+     one just for this diagram, and the existing global
+     prefers-reduced-motion rule (animation-duration/transition-duration
+     both zeroed for every element) already collapses this to its end
+     state instantly for reduced-motion visitors with no extra code here.
+     The 3 solid spokes draw in stroke-first via pathLength="1" (set on
+     those <line> elements only -- the dashed "by request" spokes keep
+     their real stroke-dasharray:5 5 untouched, so pathLength stays off
+     them to avoid reinterpreting that pattern in a 0-1 coordinate
+     space); the 2 dashed spokes fade in instead, arriving last since
+     they're already the visually secondary "by request" cities. Each
+     node gets a brief arrival pulse timed to when its own spoke finishes. */
+  .radius-figure .radius-spoke:not(.is-request){
+    stroke-dasharray:1;
+    stroke-dashoffset:1;
+  }
+  .radius-figure .radius-spoke.is-request{opacity:0;}
+  html.reveal-ready .radius-figure.is-visible .radius-spoke:not(.is-request){
+    stroke-dashoffset:0;
+    transition:stroke-dashoffset .5s ease-out;
+  }
+  html.reveal-ready .radius-figure.is-visible .radius-spoke.is-request{
+    opacity:1;
+    transition:opacity .45s ease-out;
+  }
+  /* Each spoke leaves the hub at a different moment -- nearer cities
+     first -- rather than every line drawing at once. */
+  html.reveal-ready .radius-figure.is-visible g[data-city="washington-city"] .radius-spoke{transition-delay:.1s;}
+  html.reveal-ready .radius-figure.is-visible g[data-city="hurricane"] .radius-spoke{transition-delay:.25s;}
+  html.reveal-ready .radius-figure.is-visible g[data-city="santa-clara-ivins"] .radius-spoke{transition-delay:.4s;}
+  html.reveal-ready .radius-figure.is-visible g[data-city="cedar-city"] .radius-spoke{transition-delay:.55s;}
+  html.reveal-ready .radius-figure.is-visible g[data-city="mesquite"] .radius-spoke{transition-delay:.7s;}
+
+  .radius-figure .radius-node,
+  .radius-figure .radius-hub{
+    transform-box:fill-box;
+    transform-origin:center;
+  }
+  html.reveal-ready .radius-figure.is-visible .radius-hub{animation:radiusPulse .5s ease-out;}
+  /* Each node pulses right as its own spoke finishes arriving --
+     transition-delay + transition-duration from above, matched here. */
+  html.reveal-ready .radius-figure.is-visible g[data-city="washington-city"] .radius-node{animation:radiusPulse .5s ease-out .6s backwards;}
+  html.reveal-ready .radius-figure.is-visible g[data-city="hurricane"] .radius-node{animation:radiusPulse .5s ease-out .75s backwards;}
+  html.reveal-ready .radius-figure.is-visible g[data-city="santa-clara-ivins"] .radius-node{animation:radiusPulse .5s ease-out .9s backwards;}
+  html.reveal-ready .radius-figure.is-visible g[data-city="cedar-city"] .radius-node{animation:radiusPulse .5s ease-out 1s backwards;}
+  html.reveal-ready .radius-figure.is-visible g[data-city="mesquite"] .radius-node{animation:radiusPulse .5s ease-out 1.15s backwards;}
+  @keyframes radiusPulse{
+    0%{transform:scale(1); filter:drop-shadow(0 0 0 transparent);}
+    50%{transform:scale(1.8); filter:drop-shadow(0 0 5px var(--blue-light));}
+    100%{transform:scale(1); filter:drop-shadow(0 0 0 transparent);}
+  }
+
   /* ---------- live open / closed ---------- */
   .open-status{
     display:inline-flex;
