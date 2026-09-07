@@ -96,7 +96,7 @@ const SHARED_SCRIPT_FILES = [
 // globals since some pages redeclare them and ESLint would otherwise
 // flag every subsequent inline <script> block on the same page as a
 // redeclaration -- not the class of bug this script exists to catch.
-const EXTRA_GLOBALS = ['supabase', 'Stripe', 'gtag', 'dataLayer', 'SUPABASE_URL', 'SUPABASE_ANON_KEY'];
+const EXTRA_GLOBALS = ['supabase', 'Stripe', 'gtag', 'dataLayer', 'SUPABASE_URL', 'SUPABASE_ANON_KEY', 'L'];
 
 // Matches a top-level (optionally indented -- some shared files are
 // stylistically indented despite being syntactically flat, so this
