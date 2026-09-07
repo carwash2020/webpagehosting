@@ -674,13 +674,22 @@
     </div>
   </section>
 
-  <!-- A drag-to-compare before/after, real client work (the same
-       "Kitchen Tile" job already grouped together in the Gallery modal's
-       Before/Demo and Finished categories). Previously the only place
-       any of the 62 job photos appeared on the site was behind the
-       Gallery link in the nav -- a visitor scrolling the homepage never
-       saw one. This surfaces the strongest single before/after pair
-       directly in the scroll, as proof rather than a claim.
+  <!-- A drag-to-compare before/after gallery, real client work: 3 pairs.
+       Previously the only place any of the 62 job photos appeared on
+       the site was behind the Gallery link in the nav -- a visitor
+       scrolling the homepage never saw one. This surfaces real
+       before/after proof directly in the scroll, as proof rather than
+       a claim, and the dots below (reusing the reviews carousel's own
+       carousel-dot styling) let a visitor flip through more than just
+       the single strongest pair.
+       Pair 1's "after" is deliberately a different, cleaner job rather
+       than a same-room claim -- see the reveal JS below for why: every
+       real finished photo of that specific kitchen tile job reads as
+       grimy under its own warm indoor lighting, even though it's just
+       the tile's natural grain. Pairs 2 and 3 are each a genuine
+       before/after of one real job (plank flooring; a bare subfloor
+       into finished tile), chosen after checking every candidate photo
+       directly for the same lighting problem.
        Same control language as the appliance teardown above it (a real
        range input, not pointer-drag hijacking, so it's keyboard- and
        touch-operable for free) but a completely different device: a
@@ -695,10 +704,10 @@
 
       <div class="reveal-frame" id="revealFrame">
         <div class="reveal-img reveal-before">
-          <img src="/images/gallery/tile-kitchen-before-2.webp?v=202609071200" alt="Before: worn, dated tile floor in a kitchen" width="1152" height="2048" loading="lazy">
+          <img id="revealBeforeImg" src="/images/gallery/tile-kitchen-before-2.webp?v=202609071200" alt="Before: worn, dated tile floor in a kitchen" width="1152" height="2048" loading="lazy">
         </div>
         <div class="reveal-img reveal-after">
-          <img src="/images/gallery/plank-finished-living-2.webp?v=202609071200" alt="After: real finished wood-look plank flooring from a recent job" width="1400" height="1866" loading="lazy">
+          <img id="revealAfterImg" src="/images/gallery/plank-finished-living-2.webp?v=202609071200" alt="After: real finished wood-look plank flooring from a recent job" width="1400" height="1866" loading="lazy">
         </div>
         <div class="reveal-divider" aria-hidden="true"></div>
         <span class="reveal-tag reveal-tag-before">Before</span>
@@ -706,6 +715,7 @@
       </div>
 
       <input type="range" id="revealScrub" class="reveal-scrub" min="0" max="100" value="50" step="1" aria-label="Drag to compare a worn floor against real finished flooring work">
+      <div class="carousel-dots" id="revealDots" role="tablist" aria-label="Choose which before/after pair to compare"></div>
     </div>
   </section>
 
@@ -2507,13 +2517,76 @@
     // the effect) but its own stage and its own --p convention (a 0-1
     // fraction, read by both the frame's clip-path and the input's own
     // track fill).
+    //
+    // 3 real pairs (2026-09-07). Switching pairs reuses the exact same
+    // .carousel-dot markup/styling as the reviews carousel above,
+    // rather than a new control.
+    //
+    // Every candidate photo was opened and checked directly before
+    // picking these, not just matched by filename/category. Pair 1
+    // keeps its original, deliberately cross-job pairing (see the HTML
+    // comment above this section for why: the real same-kitchen
+    // "after" photos all read as grimy under their own warm lighting).
+    // Pairs 2 and 3 are each a real same-job before/after that was
+    // actually checked and holds up: bright, clean, no lighting issue.
+    const REVEAL_PAIRS = [
+      {
+        before: { src: '/images/gallery/tile-kitchen-before-2.webp?v=202609071200', alt: 'Before: worn, dated tile floor in a kitchen' },
+        after: { src: '/images/gallery/plank-finished-living-2.webp?v=202609071200', alt: 'After: real finished wood-look plank flooring from a recent job' },
+      },
+      {
+        before: { src: '/images/gallery/plank-underlayment-prep.webp?v=202609071900', alt: 'Before: underlayment and subfloor prep ahead of new flooring' },
+        after: { src: '/images/gallery/plank-finished-corner.webp?v=202609071900', alt: 'After: real finished plank flooring, corner of the same room' },
+      },
+      {
+        before: { src: '/images/gallery/subfloor-bare-concrete.webp?v=202609071900', alt: 'Before: bare subfloor, old flooring removed' },
+        after: { src: '/images/gallery/tile-finished-doorway.webp?v=202609071900', alt: 'After: real finished tile flooring by the doorway' },
+      },
+    ];
+
     const revealStage = document.getElementById('revealJob');
     const revealScrub = document.getElementById('revealScrub');
+    const revealDots = document.getElementById('revealDots');
+    const revealBeforeImg = document.getElementById('revealBeforeImg');
+    const revealAfterImg = document.getElementById('revealAfterImg');
     if (revealStage && revealScrub) {
       function applyReveal(p) {
         revealStage.style.setProperty('--p', p.toFixed(4));
       }
       revealScrub.addEventListener('input', () => applyReveal(revealScrub.value / 100));
+
+      let revealPairIndex = 0;
+      let revealDemoCancelled = false;
+      function goToRevealPair(i) {
+        revealDemoCancelled = true;
+        revealPairIndex = i;
+        const pair = REVEAL_PAIRS[i];
+        revealBeforeImg.src = pair.before.src;
+        revealBeforeImg.alt = pair.before.alt;
+        revealAfterImg.src = pair.after.src;
+        revealAfterImg.alt = pair.after.alt;
+        revealScrub.value = 50;
+        applyReveal(0.5);
+        if (revealDots) {
+          revealDots.querySelectorAll('.carousel-dot').forEach((d, di) => {
+            d.classList.toggle('is-active', di === i);
+            d.setAttribute('aria-selected', di === i ? 'true' : 'false');
+          });
+        }
+      }
+
+      if (revealDots && REVEAL_PAIRS.length > 1) {
+        REVEAL_PAIRS.forEach((_, i) => {
+          const dot = document.createElement('button');
+          dot.type = 'button';
+          dot.className = 'carousel-dot' + (i === 0 ? ' is-active' : '');
+          dot.setAttribute('role', 'tab');
+          dot.setAttribute('aria-selected', i === 0 ? 'true' : 'false');
+          dot.setAttribute('aria-label', `Show before/after pair ${i + 1} of ${REVEAL_PAIRS.length}`);
+          dot.addEventListener('click', () => goToRevealPair(i));
+          revealDots.appendChild(dot);
+        });
+      }
 
       if (!reduced && 'IntersectionObserver' in window) {
         let revealPlayed = false;
@@ -2526,6 +2599,7 @@
             const FROM = 0.12, TO = 0.82;
             const start = performance.now();
             (function step(now) {
+              if (revealDemoCancelled) return;
               const t = Math.min(1, (now - start) / DURATION);
               const eased = 0.5 - Math.cos(t * Math.PI) / 2;
               const p = FROM + (TO - FROM) * eased;
