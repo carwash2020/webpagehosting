@@ -391,7 +391,11 @@
 // renderTodayJobs() already uses) right below the header -- previously
 // the page went straight from the search box into the collapsible
 // section list with no "first thing you see" moment at all.
-const CACHE_NAME = 'th-workspace-v74';
+// Bumped 2026-09-07 (v74 -> v75): /styles.css changed (a draw-in
+// animation for the homepage's "How a visit actually goes" connecting
+// line, gated on the same [data-reveal]/.is-visible mechanism as
+// everything else), precached here.
+const CACHE_NAME = 'th-workspace-v75';
 const PRECACHE_URLS = [
   '/tools/workspace.html', '/tools/job-tracker.html', '/tools/invoice-generator.html', '/tools/contract-generator.html',
   '/tools/calendar.html', '/tools/route-planner.html', '/tools/review-request.html', '/tools/contact-card.html',

@@ -152,7 +152,12 @@
 // above the pending-quotes list -- summed from the exact same `pending`
 // array the section right below it already renders from, not a second
 // figure. Omitted entirely when nothing is pending.
-const CACHE_NAME = 'th-portal-v26';
+// Bumped 2026-09-07 (v26 -> v27): /styles.css changed (a draw-in
+// animation for the homepage's "How a visit actually goes" connecting
+// line -- doesn't touch any portal page's own layout, but styles.css
+// is precached here so the rule from this file's own header applies
+// regardless).
+const CACHE_NAME = 'th-portal-v27';
 const PRECACHE_URLS = [
   '/portal/home.html', '/portal/dashboard.html', '/portal/jobs.html', '/portal/quotes.html',
   '/portal/work-orders.html', '/portal/settings.html', '/portal/login.html', '/portal/set-password.html',
