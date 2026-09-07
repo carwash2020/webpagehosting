@@ -169,6 +169,26 @@
   .invoice-status.is-paid { background: rgba(76,175,120,0.15); color: #4caf78; }
   .invoice-status.is-unpaid { background: rgba(255,167,38,0.15); color: #ffa726; }
   .empty-state { text-align: center; color: var(--text-dim); padding: 60px 20px; }
+  /* Real dataviz (2026-09-07): a paid-vs-outstanding ring, computed from
+     the same two totals the "Pay All Outstanding" button and the
+     Outstanding/Paid section split already use -- not a separate figure. */
+  .invoice-summary {
+    display: flex; align-items: center; gap: 18px;
+    background: var(--bg-panel-2); border: 1px solid var(--border); border-radius: 10px;
+    padding: 16px 18px; margin-bottom: 18px;
+  }
+  .invoice-summary-ring { position: relative; width: 72px; height: 72px; flex-shrink: 0; }
+  .invoice-summary-ring-track { stroke: var(--border); }
+  .invoice-summary-ring-fill { stroke: #4caf78; transition: stroke-dashoffset 0.6s ease; }
+  .invoice-summary-ring-label {
+    position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
+    font-family: var(--font-ui); font-weight: 700; font-size: 15px; color: var(--white);
+  }
+  .invoice-summary-text { display: flex; flex-direction: column; gap: 6px; font-size: 14px; color: var(--text-dim); }
+  .invoice-summary-row strong { color: var(--white); margin-left: 4px; }
+  .invoice-summary-dot { display: inline-block; width: 9px; height: 9px; border-radius: 50%; margin-right: 6px; }
+  .invoice-summary-dot.is-paid { background: #4caf78; }
+  .invoice-summary-dot.is-outstanding { background: #ffa726; }
   /* Signature capture before saving a new card (2026-09-03). */
   .pay-auth-box {
     background: var(--orange-tint-soft); border: 1px solid var(--orange-tint-border); border-radius: 8px;
@@ -253,6 +273,20 @@
   <a href="/portal/jobs.html"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8.5"/><path d="M8.5 12.2l2.4 2.4 4.6-4.8"/></svg><span>Jobs</span></a>
 </nav>
 
+<div class="invoice-summary" id="invoiceSummary" style="display:none;">
+  <div class="invoice-summary-ring">
+    <svg width="72" height="72" viewBox="0 0 72 72" aria-hidden="true">
+      <circle class="invoice-summary-ring-track" cx="36" cy="36" r="30" fill="none" stroke-width="8"></circle>
+      <circle class="invoice-summary-ring-fill" id="invoiceSummaryRingFill" cx="36" cy="36" r="30" fill="none" stroke-width="8" stroke-linecap="round" transform="rotate(-90 36 36)"></circle>
+    </svg>
+    <div class="invoice-summary-ring-label" id="invoiceSummaryPercent">0%</div>
+  </div>
+  <div class="invoice-summary-text">
+    <div class="invoice-summary-row"><span class="invoice-summary-dot is-paid"></span>Paid <strong id="invoiceSummaryPaid">$0.00</strong></div>
+    <div class="invoice-summary-row"><span class="invoice-summary-dot is-outstanding"></span>Outstanding <strong id="invoiceSummaryOutstanding">$0.00</strong></div>
+  </div>
+</div>
+
 <div id="invoiceList"></div>
 
 <button type="button" class="report-bug-link" id="reportBugLink">Report a problem</button>
@@ -314,6 +348,31 @@
     `;
   }
 
+  // The paid-vs-outstanding ring (2026-09-07): summed from the exact
+  // same `invoices` array the Outstanding/Paid split below reads --
+  // not a separately-fetched or invented figure. Hidden (rather than
+  // shown as a meaningless 0%) when nothing has been invoiced yet,
+  // matching the same divide-by-zero guard used for the ring devices
+  // elsewhere in this codebase (job-tracker.html, portal/jobs.html).
+  const INVOICE_SUMMARY_RING_CIRCUMFERENCE = 2 * Math.PI * 30;
+  function renderInvoiceSummary(invoices) {
+    const el = document.getElementById('invoiceSummary');
+    const totalPaid = invoices.filter(inv => inv.paid).reduce((sum, inv) => sum + Number(inv.total || 0), 0);
+    const totalOutstanding = invoices.filter(inv => !inv.paid).reduce((sum, inv) => sum + Number(inv.total || 0), 0);
+    const grandTotal = totalPaid + totalOutstanding;
+    if (grandTotal <= 0) { el.style.display = 'none'; return; }
+
+    const fraction = totalPaid / grandTotal;
+    const offset = INVOICE_SUMMARY_RING_CIRCUMFERENCE * (1 - fraction);
+    const ring = document.getElementById('invoiceSummaryRingFill');
+    ring.setAttribute('stroke-dasharray', INVOICE_SUMMARY_RING_CIRCUMFERENCE.toFixed(2));
+    ring.setAttribute('stroke-dashoffset', offset.toFixed(2));
+    document.getElementById('invoiceSummaryPercent').textContent = Math.round(fraction * 100) + '%';
+    document.getElementById('invoiceSummaryPaid').textContent = formatCurrency(totalPaid);
+    document.getElementById('invoiceSummaryOutstanding').textContent = formatCurrency(totalOutstanding);
+    el.style.display = '';
+  }
+
   function renderInvoiceCard(inv) {
     return `
       <div class="invoice-card">
@@ -363,8 +422,10 @@
     currentInvoices = invoices;
     if (!invoices.length) {
       listEl.innerHTML = `<div class="empty-state">No invoices on file yet.</div>`;
+      document.getElementById('invoiceSummary').style.display = 'none';
       return;
     }
+    renderInvoiceSummary(invoices);
 
     // Auto-download when arriving via a real link (2026-09-03) --
     // Jobs' own "View Receipt" button, item 6 of a roadmap. Only
