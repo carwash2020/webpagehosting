@@ -90,7 +90,16 @@
 // precached portal pages for consistency -- their own ambient gradient
 // lives on body.portal-page rather than html, so they were never actually
 // broken by this, but they carry the identical hazard otherwise.
-const CACHE_NAME = 'th-portal-v17';
+// Bumped 2026-09-07 (v17 -> v18): portal-polish.css, home.html and
+// work-orders.html all changed, and all three are in PRECACHE_URLS.
+// portal-polish.css: the .wo-hint all-caps fix, the primary treatment
+// for "Request Work" on the home help card, and the tighter collapsed
+// .set-card rows on settings. home.html: the stat-card labels now
+// pluralize off their count, and "Request Work" carries .primary.
+// work-orders.html: the schedule toggle groups with the urgency
+// question above it. Same reasoning as every prior bump in this file's
+// history.
+const CACHE_NAME = 'th-portal-v18';
 const PRECACHE_URLS = [
   '/portal/home.html', '/portal/dashboard.html', '/portal/jobs.html', '/portal/quotes.html',
   '/portal/work-orders.html', '/portal/settings.html', '/portal/login.html', '/portal/set-password.html',

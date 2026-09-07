@@ -212,6 +212,12 @@
      deliberately identical, not reinvented, since both are the same
      UI concept: pick from real available slots without leaving the
      surrounding form. */
+  /* The "pick a time" affordance belongs to the urgency question above
+     it, but it sat in its own .wo-field: 8px of air above, 14px below,
+     so it read as a stray line attached to the Photos section that
+     follows. Same 8px above, more room below, and the grouping matches
+     what it actually does. */
+  .wo-field.wo-field-schedule { margin-bottom: 24px; }
   .schedule-toggle { display: block; margin-top: 8px; font-size: 12.5px; color: var(--orange-light); text-decoration: underline; cursor: pointer; background: none; border: none; font-family: inherit; padding: 0; }
   .schedule-panel { margin-top: 10px; display: none; }
   .schedule-panel.is-open { display: block; }
@@ -323,7 +329,7 @@
   .report-bug-actions { display: flex; gap: 10px; margin-top: 16px; }
   .report-bug-actions button { flex: 1; justify-content: center; }
 </style>
-<link rel="stylesheet" href="/portal/portal-polish.css?v=e2b8e91ce5">
+<link rel="stylesheet" href="/portal/portal-polish.css?v=0a6a2f52f9">
 </head>
 <body class="portal-page">
 
@@ -397,7 +403,7 @@
     becomes one tap on their exact choice rather than a second,
     separate scheduling conversation.
   -->
-  <div class="wo-field">
+  <div class="wo-field wo-field-schedule">
     <button type="button" class="schedule-toggle" id="woScheduleToggle" onclick="toggleWoSchedule()">Have a date in mind? See available times &rarr;</button>
     <div class="schedule-panel" id="woSchedulePanel">
       <div class="date-row" id="woDateRow"></div>

@@ -360,7 +360,18 @@
 // the client/job block and the line-items table, and a light orange-tint
 // panel behind the final total on both documents so it reads as the
 // clear focal point of the page.
-const CACHE_NAME = 'th-workspace-v70';
+// Bumped 2026-09-07 (v70 -> v71): tools/styles-tools.css and
+// tools/pos.html changed, both precached here. styles.css carries a
+// bare, unscoped `label { text-transform: uppercase; letter-spacing:
+// 1px; }` written for the public site's contact form, and both of
+// those properties inherit -- so the explanatory <span> hints nested
+// inside field labels on Invoice Generator, Job Tracker, POS and
+// Runway rendered as shouty, letter-spaced all-caps sentences up to
+// ~100 characters long. styles-tools.css now resets casing on those
+// nested hints only (the labels themselves stay uppercase, which is
+// the deliberate design) and defines a shared .label-hint for the
+// pattern; pos.html swaps its hand-rolled inline style for it.
+const CACHE_NAME = 'th-workspace-v71';
 const PRECACHE_URLS = [
   '/tools/workspace.html', '/tools/job-tracker.html', '/tools/invoice-generator.html', '/tools/contract-generator.html',
   '/tools/calendar.html', '/tools/route-planner.html', '/tools/review-request.html', '/tools/contact-card.html',
