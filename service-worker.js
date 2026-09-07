@@ -378,7 +378,14 @@
 // client portal's Jobs page warranty pill -- same size, same track
 // brightness, deliberately reused rather than a third ring
 // implementation with its own slightly different tuning.
-const CACHE_NAME = 'th-workspace-v72';
+// Bumped 2026-09-07 (v72 -> v73): tools/pos.html changed, precached
+// here. The charge-success state was a bare line of green text -- the
+// single most important confirmation in the app, the moment money
+// actually changes hands, with less visual weight than a validation
+// error -- given a proper checkmark-badge treatment matching the
+// "done" language already established elsewhere in this codebase.
+// Same reasoning as every prior bump in this file's history.
+const CACHE_NAME = 'th-workspace-v73';
 const PRECACHE_URLS = [
   '/tools/workspace.html', '/tools/job-tracker.html', '/tools/invoice-generator.html', '/tools/contract-generator.html',
   '/tools/calendar.html', '/tools/route-planner.html', '/tools/review-request.html', '/tools/contact-card.html',

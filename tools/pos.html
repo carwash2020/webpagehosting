@@ -105,7 +105,31 @@
   .pos-saved-card-box .pos-card-sub { font-size: 12px; color: var(--text-dim); margin-top: 2px; }
   .pos-use-different { background: none; border: none; color: var(--text-dim); font-size: 12.5px; text-decoration: underline; cursor: pointer; padding: 0; font-family: inherit; margin-top: 10px; display: block; }
   .pos-error { color: #ff8a80; font-size: 13.5px; margin-top: 10px; }
-  .pos-success { text-align: center; padding: 20px 0; color: #4caf78; font-size: 16px; font-weight: 600; }
+  /* Charge success (2026-09-07): this fires the moment money actually
+     changes hands, the single most important confirmation in the whole
+     app, and it was a bare line of green text -- no more visual weight
+     than a validation error. Same checkmark-in-a-circle language
+     already used for "Completed Jobs" (portal home) and the teardown
+     device's finished state on the public site, so it reads as this
+     app's established way of saying "done", not a one-off. */
+  .pos-success {
+    text-align: center;
+    padding: 28px 20px 24px;
+    background: rgba(76,175,120,0.08);
+    border: 1px solid rgba(76,175,120,0.3);
+    border-radius: 10px;
+    margin-bottom: 14px;
+  }
+  .pos-success-icon {
+    width: 52px; height: 52px;
+    margin: 0 auto 14px;
+    border-radius: 50%;
+    background: rgba(76,175,120,0.15);
+    display: flex; align-items: center; justify-content: center;
+  }
+  .pos-success-icon svg { width: 26px; height: 26px; fill: none; stroke: #4caf78; stroke-width: 2.5; stroke-linecap: round; stroke-linejoin: round; }
+  .pos-success-amount { font-family: var(--font-ui); font-weight: 700; font-size: 30px; color: #4caf78; line-height: 1.1; }
+  .pos-success-sub { font-size: 13.5px; color: var(--text-dim); margin-top: 6px; }
   .pos-checking { color: var(--text-dim); font-size: 13px; text-align: center; padding: 8px 0; }
   .pos-auth-box {
     background: var(--orange-tint-soft); border: 1px solid var(--orange-tint-border); border-radius: 8px;
@@ -442,7 +466,11 @@
 
   function showSuccess(amount) {
     document.getElementById('posChargeArea').innerHTML =
-      '<div class="pos-success">Charged $' + amount.toFixed(2) + '. Logged to Income.</div>' +
+      '<div class="pos-success">' +
+        '<div class="pos-success-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg></div>' +
+        '<div class="pos-success-amount">$' + amount.toFixed(2) + '</div>' +
+        '<div class="pos-success-sub">Charged and logged to Income</div>' +
+      '</div>' +
       '<button class="secondary-btn" style="width:100%; justify-content:center;" onclick="resetPosForm()">New Charge</button>';
   }
 
