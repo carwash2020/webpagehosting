@@ -189,6 +189,33 @@
   .invoice-summary-dot { display: inline-block; width: 9px; height: 9px; border-radius: 50%; margin-right: 6px; }
   .invoice-summary-dot.is-paid { background: #4caf78; }
   .invoice-summary-dot.is-outstanding { background: #ffa726; }
+  /* Real dataviz (2026-09-07): one bar per real invoice, in
+     chronological order, colored by the exact same paid/unpaid status
+     every card and the ring above already use -- not a separate
+     figure. Hidden entirely below 2 invoices, where a "trend" reads as
+     noise rather than a story. Bars are click targets that scroll to
+     and briefly highlight the matching card below, since every value
+     a bar shows is already reachable there -- the tooltip/table-view
+     requirement this satisfies is the list itself, not a duplicate. */
+  .invoice-chart-card {
+    background: var(--bg-panel-2); border: 1px solid var(--border); border-radius: 10px;
+    padding: 16px 16px 14px; margin-bottom: 18px;
+  }
+  .invoice-chart-title { font-family:var(--font-ui); font-weight: 600; font-size: 14px; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 12px; }
+  .invoice-chart-scroll { overflow-x: auto; -webkit-overflow-scrolling: touch; padding-bottom: 4px; }
+  .invoice-chart-bar-group { cursor: pointer; }
+  .invoice-chart-bar { transition: opacity .12s ease; }
+  .invoice-chart-bar-group:hover .invoice-chart-bar,
+  .invoice-chart-bar-group:focus .invoice-chart-bar { opacity: 0.8; }
+  .invoice-chart-bar-group:focus { outline: none; }
+  .invoice-chart-value { font-size: 10.5px; font-weight: 600; fill: var(--text); font-family: inherit; }
+  .invoice-chart-date { font-size: 10px; fill: var(--text-dim); font-family: inherit; }
+  .invoice-chart-legend { display: flex; gap: 16px; margin-top: 10px; font-size: 12px; color: var(--text-dim); }
+  .invoice-card.is-highlighted { animation: invoiceCardHighlight 1.6s ease; }
+  @keyframes invoiceCardHighlight {
+    0%, 100% { background: var(--bg-panel-2); }
+    25% { background: var(--orange-tint-soft); }
+  }
   /* Signature capture before saving a new card (2026-09-03). */
   .pay-auth-box {
     background: var(--orange-tint-soft); border: 1px solid var(--orange-tint-border); border-radius: 8px;
@@ -287,6 +314,17 @@
   </div>
 </div>
 
+<div class="invoice-chart-card" id="invoiceChartCard" style="display:none;">
+  <div class="invoice-chart-title">Invoice History</div>
+  <div class="invoice-chart-scroll">
+    <svg id="invoiceChartSvg" aria-hidden="true"></svg>
+  </div>
+  <div class="invoice-chart-legend">
+    <span><span class="invoice-summary-dot is-paid"></span>Paid</span>
+    <span><span class="invoice-summary-dot is-outstanding"></span>Unpaid</span>
+  </div>
+</div>
+
 <div id="invoiceList"></div>
 
 <button type="button" class="report-bug-link" id="reportBugLink">Report a problem</button>
@@ -373,9 +411,83 @@
     el.style.display = '';
   }
 
+  // One bar per real invoice, oldest to newest (2026-09-07) -- colored
+  // by the exact same paid/unpaid status every card and the ring above
+  // already use, not a separate figure. Hidden below 2 invoices, where
+  // a "trend" is noise rather than a story. Amount and date are
+  // labeled directly on every bar (real values, not a hover-only
+  // reveal) since a typical client has few enough invoices for that to
+  // stay legible; a bar's click/Enter target scrolls to and briefly
+  // highlights its matching card below, since every value a bar shows
+  // is already reachable there.
+  const CHART_BAR_WIDTH = 22;
+  const CHART_COLUMN_WIDTH = 46;
+  const CHART_BAR_MAX_HEIGHT = 90;
+  const CHART_HEIGHT = 148;
+  const CHART_BASELINE_Y = 118;
+
+  function niceChartMax(rawMax) {
+    if (rawMax <= 0) return 1;
+    const magnitude = Math.pow(10, Math.floor(Math.log10(rawMax)));
+    const step = magnitude / 2;
+    return Math.ceil(rawMax / step) * step;
+  }
+
+  function renderInvoiceChart(invoices) {
+    const card = document.getElementById('invoiceChartCard');
+    if (invoices.length < 2) { card.style.display = 'none'; return; }
+
+    const ordered = invoices.slice().sort((a, b) => new Date(a.invoice_date) - new Date(b.invoice_date));
+    const max = niceChartMax(Math.max(...ordered.map(inv => Number(inv.total) || 0)));
+    const width = ordered.length * CHART_COLUMN_WIDTH;
+
+    const bars = ordered.map((inv, i) => {
+      const x = i * CHART_COLUMN_WIDTH + (CHART_COLUMN_WIDTH - CHART_BAR_WIDTH) / 2;
+      const amount = Number(inv.total) || 0;
+      const barHeight = max > 0 ? (amount / max) * CHART_BAR_MAX_HEIGHT : 0;
+      const y = CHART_BASELINE_Y - barHeight;
+      const color = inv.paid ? '#4caf78' : '#ffa726';
+      const dateLabel = new Intl.DateTimeFormat('en-US', { month: 'numeric', day: 'numeric' }).format(new Date(inv.invoice_date + 'T00:00:00'));
+      const statusWord = inv.paid ? 'Paid' : 'Unpaid';
+      return `
+        <g class="invoice-chart-bar-group" tabindex="0" role="button"
+           aria-label="${escapeHtml(inv.invoice_number)}, ${formatCurrency(amount)}, ${statusWord}, ${escapeHtml(dateLabel)}"
+           onclick="highlightInvoiceCard(${inv.id})" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();highlightInvoiceCard(${inv.id});}">
+          <rect x="${x - 4}" y="4" width="${CHART_BAR_WIDTH + 8}" height="${CHART_HEIGHT - 4}" fill="transparent"></rect>
+          <text class="invoice-chart-value" x="${x + CHART_BAR_WIDTH / 2}" y="${Math.max(y - 6, 12)}" text-anchor="middle">${formatCurrency(amount).replace('.00', '')}</text>
+          <rect class="invoice-chart-bar" x="${x}" y="${y}" width="${CHART_BAR_WIDTH}" height="${Math.max(barHeight, 2)}" rx="4" fill="${color}"></rect>
+          <text class="invoice-chart-date" x="${x + CHART_BAR_WIDTH / 2}" y="${CHART_BASELINE_Y + 16}" text-anchor="middle">${escapeHtml(dateLabel)}</text>
+        </g>
+      `;
+    }).join('');
+
+    const svg = document.getElementById('invoiceChartSvg');
+    svg.setAttribute('viewBox', `0 0 ${width} ${CHART_HEIGHT}`);
+    svg.setAttribute('width', width);
+    svg.setAttribute('height', CHART_HEIGHT);
+    svg.innerHTML = `
+      <line x1="0" y1="${CHART_BASELINE_Y}" x2="${width}" y2="${CHART_BASELINE_Y}" stroke="var(--border)" stroke-width="1"></line>
+      ${bars}
+    `;
+    card.style.display = '';
+  }
+
+  // Scrolls to and briefly highlights the invoice card a chart bar
+  // represents -- every value the bar shows already lives on that
+  // card, so this ties the chart back to real content instead of
+  // duplicating it in a hover tooltip.
+  function highlightInvoiceCard(invoiceId) {
+    const el = document.getElementById('invoice-card-' + invoiceId);
+    if (!el) return;
+    el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    el.classList.remove('is-highlighted');
+    void el.offsetWidth; // restart the animation even if the same bar is clicked twice in a row
+    el.classList.add('is-highlighted');
+  }
+
   function renderInvoiceCard(inv) {
     return `
-      <div class="invoice-card">
+      <div class="invoice-card" id="invoice-card-${inv.id}">
         <div class="invoice-card-top">
           <div>
             <div class="invoice-number">${escapeHtml(inv.invoice_number)}</div>
@@ -423,9 +535,11 @@
     if (!invoices.length) {
       listEl.innerHTML = `<div class="empty-state">No invoices on file yet.</div>`;
       document.getElementById('invoiceSummary').style.display = 'none';
+      document.getElementById('invoiceChartCard').style.display = 'none';
       return;
     }
     renderInvoiceSummary(invoices);
+    renderInvoiceChart(invoices);
 
     // Auto-download when arriving via a real link (2026-09-03) --
     // Jobs' own "View Receipt" button, item 6 of a roadmap. Only
