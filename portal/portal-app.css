@@ -453,3 +453,45 @@ body.portal-page {
   font-size: 13.5px;
   line-height: 1.5;
 }
+
+/* Themed replacement for window.confirm() (2026-09-07) -- same visual
+   language as the app's other modals (dashboard.html's own payment
+   modal and every page's report-a-problem modal): dark scrim,
+   bg-panel card, 12px radius. Built once here since portal-app.js
+   injects this markup lazily on first use rather than every page
+   carrying its own static copy. z-index sits above both of those
+   (9999/1000) since it can, in principle, be invoked from a page that
+   also has one of them open. */
+.portal-confirm-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 10000;
+  background: rgba(0,0,0,0.65);
+  display: none;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+}
+.portal-confirm-overlay.is-visible { display: flex; }
+.portal-confirm-modal {
+  background: var(--bg-panel);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 22px;
+  max-width: 380px;
+  width: 100%;
+}
+.portal-confirm-message {
+  margin: 0 0 18px;
+  color: var(--text);
+  font-size: 14.5px;
+  line-height: 1.5;
+}
+.portal-confirm-actions {
+  display: flex;
+  gap: 10px;
+}
+.portal-confirm-actions button {
+  flex: 1;
+  justify-content: center;
+}

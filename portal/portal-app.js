@@ -399,3 +399,71 @@ window.addEventListener('unhandledrejection', (event) => {
   logPortalClientError(message, 'unhandledrejection', null, null, stack);
 });
 
+// Themed replacement for window.confirm() (2026-09-07), found sitting
+// next to the app's own fully-themed modal patterns (the payment
+// modal, the report-a-problem modal) -- the one raw platform dialog
+// left in front of a client, on exactly the two actions where it
+// matters most (declining a quote, removing a saved card). Builds its
+// own overlay/modal in the DOM on first use rather than requiring
+// every calling page to add static markup for it, since this file is
+// already loaded on every portal page -- one shared implementation
+// covers every future confirmation too, not just these two.
+//
+// Returns a Promise<boolean> rather than blocking like window.confirm
+// did; callers already awaited an async function before this (the
+// Supabase call that follows), so `if (!(await portalConfirm(...)))
+// return;` is a drop-in replacement for `if (!window.confirm(...))
+// return;`.
+function portalConfirm(message, options) {
+  options = options || {};
+  const confirmLabel = options.confirmLabel || 'Confirm';
+  const cancelLabel = options.cancelLabel || 'Cancel';
+  const isDanger = options.danger !== false; // most confirms guard a destructive/hard-to-undo action
+
+  return new Promise((resolve) => {
+    let overlay = document.getElementById('portalConfirmOverlay');
+    if (!overlay) {
+      overlay = document.createElement('div');
+      overlay.id = 'portalConfirmOverlay';
+      overlay.className = 'portal-confirm-overlay';
+      overlay.innerHTML =
+        '<div class="portal-confirm-modal">' +
+        '<p class="portal-confirm-message" id="portalConfirmMessage"></p>' +
+        '<div class="portal-confirm-actions">' +
+        '<button type="button" class="btn secondary-btn" id="portalConfirmCancel"></button>' +
+        '<button type="button" class="btn" id="portalConfirmOk"></button>' +
+        '</div></div>';
+      document.body.appendChild(overlay);
+    }
+
+    const messageEl = document.getElementById('portalConfirmMessage');
+    const okBtn = document.getElementById('portalConfirmOk');
+    const cancelBtn = document.getElementById('portalConfirmCancel');
+    messageEl.textContent = message;
+    okBtn.textContent = confirmLabel;
+    okBtn.className = 'btn ' + (isDanger ? 'orange' : 'blue');
+    cancelBtn.textContent = cancelLabel;
+
+    function cleanup(result) {
+      overlay.classList.remove('is-visible');
+      okBtn.removeEventListener('click', onOk);
+      cancelBtn.removeEventListener('click', onCancel);
+      overlay.removeEventListener('click', onOverlayClick);
+      document.removeEventListener('keydown', onKeydown);
+      resolve(result);
+    }
+    function onOk() { cleanup(true); }
+    function onCancel() { cleanup(false); }
+    function onOverlayClick(e) { if (e.target === overlay) cleanup(false); }
+    function onKeydown(e) { if (e.key === 'Escape') cleanup(false); }
+
+    okBtn.addEventListener('click', onOk);
+    cancelBtn.addEventListener('click', onCancel);
+    overlay.addEventListener('click', onOverlayClick);
+    document.addEventListener('keydown', onKeydown);
+
+    overlay.classList.add('is-visible');
+    okBtn.focus();
+  });
+}
+

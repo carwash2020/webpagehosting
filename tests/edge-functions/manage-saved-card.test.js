@@ -60,14 +60,17 @@ test('a card row has a Remove button that calls the real removeSavedCard functio
   assert.match(fnMatch[0], /onclick="removeSavedCard\(/);
 });
 
-test('removing a card confirms first using the portal\'s own real confirm pattern, not an undefined helper', () => {
+test('removing a card confirms first using the portal\'s own real confirm helper, not an undefined one', () => {
   // Real bug caught and fixed while building this (a repeat of the
   // same mistake from earlier this session with showToast): I first
   // wrote showConfirm(), a function that does not exist on this page.
-  // The portal's actual established pattern, confirmed directly
-  // against portal/quotes.html, is plain window.confirm().
+  // The portal's actual established pattern was plain window.confirm()
+  // at the time -- since replaced sitewide (2026-09-07) by the real,
+  // defined, portal-app.js-shared portalConfirm(), the one raw
+  // platform dialog left next to the app's own themed modals.
   const fnMatch = SETTINGS.match(/async function removeSavedCard\(paymentMethodId\)[\s\S]*?\n  \}\n/);
   assert.ok(fnMatch, 'expected to isolate removeSavedCard()');
-  assert.match(fnMatch[0], /window\.confirm\(/);
+  assert.match(fnMatch[0], /await portalConfirm\(/);
   assert.doesNotMatch(fnMatch[0], /showConfirm\(/);
+  assert.doesNotMatch(fnMatch[0], /window\.confirm\(/);
 });
