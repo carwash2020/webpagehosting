@@ -65,7 +65,7 @@
   })();
 </script>
 <link rel="stylesheet" href="/styles.css?v=202609072345">
-<link rel="stylesheet" href="/tools/styles-tools.css?v=42ace585f5">
+<link rel="stylesheet" href="/tools/styles-tools.css?v=e8baf66108">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.112.3/dist/umd/supabase.js" integrity="sha384-qafw21c/iciq0VXsi9FzkfoQv5I/V0iqE4lSNcKXPnW9/UTJLnv5CcN4FHxVLnKg" crossorigin="anonymous" defer></script>
 <script src="/tools/sync.js?v=1e45dec62f" defer></script>
 <!-- Shared business-hours data (2026-09-03) -- used by the work order
@@ -92,7 +92,7 @@
      of where either rule sits in the file. */
   input, select, textarea { font-size: 16px; }
 
-  body { padding: 44px 20px 60px; max-width: 900px; margin: 0 auto; }
+  body { max-width: 900px; margin: 0 auto; }
   /* Desktop layout (2026-08-20), requested directly: efficient on
      phone stays exactly as it was (nothing below 1024px changes at
      all) -- this only widens the container on a real desktop-size
@@ -140,8 +140,16 @@
   @keyframes logoSyncPulse { 0%, 100% { opacity: 1; } 50% { opacity: .55; } }
   @media (prefers-reduced-motion: reduce) { #headerLogo.is-syncing { animation: none; } }
   .hub-header-right { display: flex; align-items: center; gap: 8px; }
-  .hub-header img { height: 44px; width: 44px; object-fit: contain; }
-  .hub-title { font-family:var(--font-display); font-size: 26px; color: var(--white); }
+  /* F08 fix (2026-09-07): both removed as dead code, confirmed by
+     rendering -- styles-tools.css's shared body .hub-header img /
+     body .hub-title rules have higher specificity (the "body" prefix
+     is deliberate, see that file's own comments) and always won for
+     size regardless of these local values, so they never actually
+     applied. font-family:var(--font-display) genuinely DID apply
+     (the shared rule never declared that property) and has been
+     promoted into the shared rule instead, where every hub page now
+     gets it consistently. */
+  .hub-title { color: var(--white); }
   .hub-sub { color: var(--text-dim); display: flex; flex-direction: row; flex-wrap: wrap; align-items: center; gap: 4px 8px; }
   #refreshSyncLink { margin-left: 0; }
   @media (min-width: 1024px) { .hub-sub { display: block; } }

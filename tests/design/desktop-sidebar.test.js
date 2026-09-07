@@ -32,7 +32,7 @@ test('the sidebar\'s width and every real page\'s own centering calc agree on th
     'finance.html', 'parts-reference.html'];
   for (const page of pages) {
     const pageSrc = fs.readFileSync(path.join(TOOLS_DIR, page), 'utf8');
-    const offsetMatch = pageSrc.match(/margin-left: calc\((\d+)px \+ max\(0px, \(100vw - \d+px - \d+px\) \/ 2\)\)/);
+    const offsetMatch = pageSrc.match(/margin-left: calc\((\d+)px \+ max\(0px, \(100vw - \d+px - (?:\d+px|var\(--tool-maxw-(?:narrow|wide)\))\) \/ 2\)\)/);
     assert.ok(offsetMatch, page + ' is missing its own centering calc');
     assert.equal(offsetMatch[1], sidebarWidth, page + '\'s base offset must match the sidebar\'s real width');
   }

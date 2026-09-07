@@ -1087,6 +1087,27 @@ body.th-tool-page::before {
   background-repeat: repeat;
 }
 body.th-tool-page { --radius: 14px; }
+/* F15 fix (2026-09-07): the desktop (min-width:1024px) content column
+   width was seven different ad-hoc pixel values across the suite (950,
+   1000, 1050, 1100, 1300, 1400, 1500), so the column visibly jumped
+   left/right and changed width on every navigation. Two tiers instead:
+   narrow for form/detail-focused pages (was 950-1100), wide for
+   data-table/dashboard-heavy pages (was 1300-1500). workspace.html
+   keeps its own already-unique 1400 untouched -- it has other
+   genuinely special chrome (the live-sync status row, a taller header)
+   the audit didn't ask to fold in here. */
+body.th-tool-page { --tool-maxw-narrow: 1050px; --tool-maxw-wide: 1500px; }
+/* F16/F17 fix (2026-09-07): the base (tablet-width, 721-1023px) body
+   padding was 90px top on 6 pages (the former .tool-header pages),
+   44px top on 6 others, and completely absent on 4 (finance, clients,
+   pos, parts-reference) -- those 4 had no side padding at all in this
+   band, sitting flush against both window edges with the header
+   overflowing past them (a horizontal scrollbar). One shared rule
+   instead of 16 per-page copies (or, for those 4, no rule at all);
+   90px was only ever the old, now-retired .tool-header pattern's own
+   value, so 44px (the majority, already-correct value) is what every
+   page converges on. */
+body.th-tool-page { padding: 44px 20px 60px; }
 
 /* Visual pass (2026-09-06): the elevation system directly above ("real
    elevation, gradient faces") was always sound in its logic -- gradient
@@ -1310,7 +1331,16 @@ body .hub-header::before, body .tool-header::before {
    needs to clear) when jumping to this target. Applies identically
    across all 8 pages sharing this exact #mainContent skip-link pattern. */
 #mainContent { scroll-margin-top: calc(61px + max(env(safe-area-inset-top, 0px), 44px)); }
-body .hub-title { font-size: 22px; letter-spacing: .5px; }
+/* F08 fix (2026-09-07): rendered every hub page rather than trusting a
+   read -- font-size and logo size were already consistent (22px/36px
+   everywhere), but workspace.html's own local .hub-title override set
+   font-family:var(--font-display) (Anton) while every other hub page
+   fell back to the ambient body font (Archivo), since this shared rule
+   never declared font-family at all. Promoted workspace's choice here
+   (Anton reads better for a page titled "Dashboard" than the body
+   font) and removed its now-redundant local copy, rather than the
+   reverse. */
+body .hub-title { font-family: var(--font-display); font-size: 22px; letter-spacing: .5px; }
 body .hub-header img { height: 36px; width: 36px; }
 body .hub-header-left { display: flex; align-items: center; gap: 14px; }
 /* Groups multiple header buttons (help, settings, back-arrow) so

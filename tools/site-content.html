@@ -49,7 +49,7 @@
   })();
 </script>
 <link rel="stylesheet" href="/styles.css?v=202609072345">
-<link rel="stylesheet" href="/tools/styles-tools.css?v=42ace585f5">
+<link rel="stylesheet" href="/tools/styles-tools.css?v=e8baf66108">
 <script src="/tools/data-layer.js?v=3a0d57478c" defer></script>
 <script src="/tools/dev-tools-shared.js?v=a7dee707bd" defer></script>
 <script src="/tools/tools-effects.js?v=4cff99aa4a" defer></script>
@@ -59,12 +59,12 @@
 <script src="/tools/sync.js?v=1e45dec62f" defer></script>
 <style>
 <style>
-  body { padding: 44px 20px 60px; max-width: 1080px; margin: 0 auto; }
+  body { max-width: 1080px; margin: 0 auto; }
   /* Desktop layout (2026-08-20), requested directly: efficient on
      phone stays exactly as it was (nothing below 1024px changes at
      all) -- this only widens the container on a real desktop-size
      screen. */
-  @media (min-width: 1024px) { body { max-width: 1500px; margin-left: calc(240px + max(0px, (100vw - 240px - 1500px) / 2)); padding-top: 75px; } }
+  @media (min-width: 1024px) { body { max-width: var(--tool-maxw-wide); margin-left: calc(240px + max(0px, (100vw - 240px - var(--tool-maxw-wide)) / 2)); padding-top: 75px; } }
 
   .dev-panels-grid {
     display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));

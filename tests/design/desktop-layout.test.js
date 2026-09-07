@@ -19,15 +19,25 @@ const STANDARD_PAGES = [
 ];
 
 test('every standard tool page has a min-width:1024px media query widening its container, positioned after the original mobile-default rule', () => {
+  // F16 fix (2026-09-07): the base body rule's own padding was pulled
+  // out into one shared body.th-tool-page rule in styles-tools.css, so
+  // this page-local rule is now just the max-width/margin (padding is
+  // no longer inline here).
   for (const page of STANDARD_PAGES) {
     const src = fs.readFileSync(path.join(TOOLS_DIR, page), 'utf8');
-    const mobileMatch = src.match(/body \{ padding: [^;]+; max-width: (\d+)px; margin: 0 auto; \}/);
+    const mobileMatch = src.match(/body \{ max-width: (\d+)px; margin: 0 auto; \}/);
     assert.ok(mobileMatch, page + ': original mobile body rule not found -- did something change unexpectedly?');
-    const desktopMatch = src.match(/@media \(min-width: 1024px\) \{ body \{ max-width: (\d+)px; margin-left: calc\(240px \+ max\(0px, \(100vw - 240px - \d+px\) \/ 2\)\); padding-top: \d+px; \} \}/);
+    // F15 fix (2026-09-07): the desktop width is now one of two shared
+    // tokens (--tool-maxw-narrow/-wide) instead of a literal pixel
+    // value, except workspace.html, which deliberately keeps its own
+    // unique literal value (see that fix's own reasoning).
+    const desktopMatch = src.match(/@media \(min-width: 1024px\) \{ body \{ max-width: (\d+px|var\(--tool-maxw-(?:narrow|wide)\)); margin-left: calc\(240px \+ max\(0px, \(100vw - 240px - (?:\d+px|var\(--tool-maxw-(?:narrow|wide)\))\) \/ 2\)\); padding-top: \d+px; \} \}/);
     assert.ok(desktopMatch, page + ' is missing the desktop-width media query');
     const mobileWidth = parseInt(mobileMatch[1], 10);
-    const desktopWidth = parseInt(desktopMatch[1], 10);
-    assert.ok(desktopWidth > mobileWidth, page + ': desktop width (' + desktopWidth + ') should be wider than the mobile default (' + mobileWidth + ')');
+    if (/^\d+px$/.test(desktopMatch[1])) {
+      const desktopWidth = parseInt(desktopMatch[1], 10);
+      assert.ok(desktopWidth > mobileWidth, page + ': desktop width (' + desktopWidth + ') should be wider than the mobile default (' + mobileWidth + ')');
+    }
     // The desktop rule must come AFTER the mobile rule in the file, so
     // it correctly overrides at wider widths rather than being
     // overridden itself.
@@ -47,7 +57,7 @@ test('finance.html and parts-reference.html, which previously had NO container w
     // would also affect mobile, which currently works fine
     // unconstrained on a narrow screen.
     assert.doesNotMatch(src, /(?<!media \(min-width: 1024px\) \{ )body \{[^}]*max-width/, page + ' should not have an unconditional max-width rule affecting mobile too');
-    assert.match(src, /@media \(min-width: 1024px\) \{ body \{ max-width: \d+px; margin-left: calc\(240px \+ max\(0px, \(100vw - 240px - \d+px\) \/ 2\)\); padding-top: \d+px; \} \}/, page + ' is missing its new desktop-only container constraint');
+    assert.match(src, /@media \(min-width: 1024px\) \{ body \{ max-width: var\(--tool-maxw-wide\); margin-left: calc\(240px \+ max\(0px, \(100vw - 240px - var\(--tool-maxw-wide\)\) \/ 2\)\); padding-top: \d+px; \} \}/, page + ' is missing its new desktop-only container constraint');
   }
 });
 

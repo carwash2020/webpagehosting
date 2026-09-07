@@ -62,7 +62,7 @@
   })();
 </script>
 <link rel="stylesheet" href="/styles.css?v=202609072345">
-<link rel="stylesheet" href="/tools/styles-tools.css?v=42ace585f5">
+<link rel="stylesheet" href="/tools/styles-tools.css?v=e8baf66108">
 <!-- Real embedded map (2026-09-07), replacing "link-outs only": Leaflet
      + free OpenStreetMap tiles, no API key/cost. Both the JS and the
      CSS's integrity hash were computed directly from `npm install
@@ -90,12 +90,12 @@
      of where either rule sits in the file. */
   input, select, textarea { font-size: 16px; }
 
-  body { padding: 90px 20px 60px; max-width: 680px; margin: 0 auto; }
+  body { max-width: 680px; margin: 0 auto; }
   /* Desktop layout (2026-08-20), requested directly: efficient on
      phone stays exactly as it was (nothing below 1024px changes at
      all) -- this only widens the container on a real desktop-size
      screen. */
-  @media (min-width: 1024px) { body { max-width: 1000px; margin-left: calc(240px + max(0px, (100vw - 240px - 1000px) / 2)); padding-top: 75px; } }
+  @media (min-width: 1024px) { body { max-width: var(--tool-maxw-narrow); margin-left: calc(240px + max(0px, (100vw - 240px - var(--tool-maxw-narrow)) / 2)); padding-top: 75px; } }
   .tool-title { font-family:var(--font-ui); font-weight:700; font-size:28px; color:var(--white); margin-bottom:6px; }
   .tool-sub { color: var(--text-dim); margin-bottom: 24px; }
   .home-link { display:inline-block; margin-bottom: 20px; color: var(--blue-light); font-size: 14px; }
@@ -174,14 +174,16 @@
 <body>
 <a href="#mainContent" class="skip-link">Skip to main content</a>
 
-<div class="tool-header">
-  <a href="/tools/workspace.html" class="tool-header-brand">
+<div class="hub-header">
+  <div class="hub-header-left">
     <img src="/images/logo-signature-orange.webp?v=202608142300" alt="Triple H Enterprises">
-    <span>&larr; Back to Workspace</span>
-  </a>
-  <button class="help-btn" onclick="openHelpModal()" aria-label="How to use this tool" title="How to use this tool">?</button>
+    <span class="hub-title" id="mainContent">Route Planner</span>
+  </div>
+  <div class="hub-header-right">
+    <button class="help-btn" onclick="openHelpModal()" aria-label="How to use this tool" title="How to use this tool">?</button>
+    <a href="/tools/workspace.html" class="help-btn" aria-label="Back to Workspace" title="Back to Workspace" style="text-decoration:none; display:inline-flex; align-items:center; justify-content:center;">&#8617;</a>
+  </div>
 </div>
-<div class="tool-title" id="mainContent">Route Planner</div>
 <p class="tool-sub">Type in today's addresses, get one link that opens the whole route in Google Maps &mdash; starting from wherever you are when you tap it.</p>
 
 <div class="form-section">
