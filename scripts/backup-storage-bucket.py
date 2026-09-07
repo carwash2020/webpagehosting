@@ -16,6 +16,20 @@ needed. Verified the recursive-descent logic below against a
 realistic simulation of the actual bucket structure before ever
 pointing it at a real bucket.
 
+Second real bug, found 2026-09-07 running this for real against
+secure-documents: a file literally named "Mobile Business License
+Certificate.pdf" (spaces, no underscore-timestamp prefix like the
+other files in that bucket) made download_file() build a download URL
+with raw, unencoded spaces in it. Python's http.client rejects that
+outright (InvalidURL: "can't contain control characters"), which
+crashed the whole script -- not a partial/silent failure this time,
+but it meant secure-documents (and anything after it in the bucket
+loop) never got backed up at all on this run. Fixed by URL-encoding
+just the path component with urllib.parse.quote(safe="/") (keeps the
+real "/" separators as separators, encodes everything else, including
+spaces) before building the download URL. The list endpoint's JSON
+body doesn't need this -- only the raw URL construction did.
+
 Usage:
     python3 backup-storage-bucket.py <bucket> <dest_dir>
 
@@ -30,6 +44,7 @@ import os
 import sys
 import urllib.request
 import urllib.error
+import urllib.parse
 
 
 def list_all_files_recursive(base_url, headers, bucket, prefix=""):
@@ -62,7 +77,7 @@ def list_all_files_recursive(base_url, headers, bucket, prefix=""):
 
 
 def download_file(base_url, headers, bucket, path, dest_dir):
-    download_url = f"{base_url}/storage/v1/object/{bucket}/{path}"
+    download_url = f"{base_url}/storage/v1/object/{bucket}/{urllib.parse.quote(path, safe='/')}"
     dest_path = os.path.join(dest_dir, path)
     os.makedirs(os.path.dirname(dest_path), exist_ok=True)
     req = urllib.request.Request(download_url, headers=headers)
