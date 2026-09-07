@@ -120,6 +120,7 @@
     <div class="blog-kicker"><a href="/blog/">Triple H Enterprises Blog</a></div>
     <h1 class="blog-title">Dryer Running But Not Heating? Here's the Part That's Almost Always Dead</h1>
     <p class="blog-dek">The drum spins, the timer counts down, and forty-five minutes later everything's still damp. Before you start pricing new dryers, check one part that costs less than a movie ticket.</p>
+    <p class="blog-meta" id="blogMeta"></p>
   </div>
 
   <img class="blog-diagram" src="https://images.unsplash.com/photo-1722858812830-88868aa112c8?fm=jpg&q=80&w=1400&auto=format&fit=crop" alt="A laundry room with a washer and dryer" loading="lazy">
@@ -296,6 +297,30 @@
         }
       })
       .catch(() => {});
+  })();
+</script>
+<script>
+  // Published date and reading time (2026-09-07): the date already
+  // exists as the schema.org datePublished on every post (for SEO) but
+  // was never actually shown to a human reader. Read from that same
+  // JSON-LD block rather than duplicating the date as a second, separate
+  // value that could drift from it. Reading time is a real word count of
+  // the post's own rendered .blog-article content divided by the
+  // standard 200wpm estimate publications use -- not an invented number.
+  (function () {
+    const metaEl = document.getElementById('blogMeta');
+    if (!metaEl) return;
+    let dateLabel = '';
+    try {
+      const ld = JSON.parse(document.querySelector('script[type="application/ld+json"]').textContent);
+      if (ld.datePublished) {
+        dateLabel = new Date(ld.datePublished + 'T00:00:00').toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
+      }
+    } catch (e) { /* no published date available -- meta just shows read time */ }
+    const article = document.querySelector('.blog-article');
+    const wordCount = article ? article.textContent.trim().split(/\s+/).filter(Boolean).length : 0;
+    const readLabel = wordCount ? Math.max(1, Math.round(wordCount / 200)) + ' min read' : '';
+    metaEl.textContent = [dateLabel, readLabel].filter(Boolean).join(' · ');
   })();
 </script>
 
