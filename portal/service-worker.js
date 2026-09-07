@@ -139,7 +139,15 @@
 // scheduled work-order rows and scheduled_at field the attention row
 // below it already lists -- not a second figure. Omitted entirely when
 // nothing is scheduled.
-const CACHE_NAME = 'th-portal-v24';
+// Bumped 2026-09-07 (v24 -> v25): work-orders.html changed, in
+// PRECACHE_URLS. Focused improvements to the request FORM itself (not
+// the request list touched by the v23 bump): title/description now
+// marked Required to match the existing Optional wording on the fields
+// below them, submitting with either blank highlights that specific
+// field instead of only the one error line at the bottom of a long
+// form, description gained a live character count against its real
+// maxlength, and the 3 urgency buttons gained icons.
+const CACHE_NAME = 'th-portal-v25';
 const PRECACHE_URLS = [
   '/portal/home.html', '/portal/dashboard.html', '/portal/jobs.html', '/portal/quotes.html',
   '/portal/work-orders.html', '/portal/settings.html', '/portal/login.html', '/portal/set-password.html',
