@@ -111,7 +111,7 @@
 </style>
 <link rel="stylesheet" href="/tools/styles-tools.css?v=a2e87effb3">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="/portal/portal-app.js?v=202609071900"></script>
+<script src="/portal/portal-app.js?v=202609072000"></script>
 <script src="https://js.stripe.com/v3/"></script>
 <script src="/portal/push-notifications.js"></script>
 <style>
@@ -1120,19 +1120,26 @@
     const formArea = document.getElementById('reportBugFormArea');
     const successEl = document.getElementById('reportBugSuccess');
 
+    let releaseReportBugFocusTrap = null;
     function openReportBug() {
       overlay.style.display = 'flex';
       formArea.style.display = 'block';
       successEl.style.display = 'none';
       messageInput.value = '';
       errorEl.textContent = '';
+      releaseReportBugFocusTrap = trapFocusWithin(overlay);
     }
     function closeReportBug() {
       overlay.style.display = 'none';
+      if (releaseReportBugFocusTrap) { releaseReportBugFocusTrap(); releaseReportBugFocusTrap = null; }
     }
     link.addEventListener('click', openReportBug);
     cancelBtn.addEventListener('click', closeReportBug);
     overlay.addEventListener('click', (e) => { if (e.target === overlay) closeReportBug(); });
+    document.addEventListener('keydown', (e) => {
+      if (overlay.style.display === 'none') return;
+      if (e.key === 'Escape') closeReportBug();
+    });
 
     submitBtn.addEventListener('click', async () => {
       const message = messageInput.value.trim();

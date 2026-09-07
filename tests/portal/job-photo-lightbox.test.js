@@ -66,6 +66,11 @@ function makeLightboxSandbox() {
       addEventListener() {},
       querySelectorAll: () => [],
     },
+    // Real focus-trapping behavior is covered in its own right by
+    // tests/portal/focus-trap.test.js; stubbed here so this file's own
+    // assertions (image src, captions, resolve values) aren't coupled
+    // to it.
+    trapFocusWithin: () => () => {},
   };
   vm.createContext(sandbox);
   const openFn = extractFn(JOBS, 'openLightbox');
@@ -77,6 +82,7 @@ function makeLightboxSandbox() {
     const lightboxCaption = document.getElementById('lightboxCaption');
     let lightboxUrls = [];
     let lightboxIndex = 0;
+    let releaseLightboxFocusTrap = null;
     ${openFn}
     ${closeFn}
     ${nextFn}

@@ -183,7 +183,17 @@
 // confirmations now use it. The underlying approve/decline/remove-card
 // logic itself is unchanged -- only how the yes/no confirmation is
 // shown.
-const CACHE_NAME = 'th-portal-v31';
+// Bumped 2026-09-07 (v31 -> v32): portal-app.js, dashboard.html,
+// jobs.html, and all 8 report-a-problem modal pages changed, all in
+// PRECACHE_URLS. Adds trapFocusWithin() to portal-app.js and wires it
+// into every overlay on the portal that didn't already have it: the
+// confirm modal, the report-a-problem modal (every page), the payment
+// modal (dashboard.html), and the job-photo lightbox (jobs.html) --
+// Tab could previously move keyboard focus onto background page
+// content while any of them covered the screen. The report-a-problem
+// modal and payment modal also gained Escape-to-close, matching the
+// confirm modal and lightbox's existing behavior.
+const CACHE_NAME = 'th-portal-v32';
 const PRECACHE_URLS = [
   '/portal/home.html', '/portal/dashboard.html', '/portal/jobs.html', '/portal/quotes.html',
   '/portal/work-orders.html', '/portal/settings.html', '/portal/login.html', '/portal/set-password.html',

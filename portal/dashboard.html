@@ -101,7 +101,7 @@
 </style>
 <link rel="stylesheet" href="/tools/styles-tools.css?v=a2e87effb3">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="/portal/portal-app.js?v=202609071900"></script>
+<script src="/portal/portal-app.js?v=202609072000"></script>
 <script src="https://js.stripe.com/v3/"></script>
 <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js" integrity="sha384-JcnsjUPPylna1s1fvi1u12X5qjY5OL56iySh75FdtrwhO/SWXgMjoVqcKyIIWOLk" crossorigin="anonymous" async></script>
 <style>
@@ -309,7 +309,7 @@
 
 <div class="payment-modal-overlay" id="paymentModal">
   <div class="payment-modal">
-    <button class="payment-modal-close" onclick="document.getElementById('paymentModal').classList.remove('is-open')">&times;</button>
+    <button class="payment-modal-close" onclick="closePaymentModal()">&times;</button>
     <div class="login-title" style="margin-bottom:16px;">Pay Invoice</div>
     <div id="paymentModalBody"></div>
   </div>
@@ -727,8 +727,27 @@
   let stripeInstance = null;
   let elementsInstance = null;
 
+  // Focus containment (2026-09-07): Tab could previously move keyboard
+  // focus onto the invoice list behind this modal while it covered the
+  // screen. Same trapFocusWithin() helper as the confirm modal and
+  // report-a-problem modal, shared from portal-app.js.
+  let releasePaymentModalFocusTrap = null;
+  function openPaymentModal() {
+    const modal = document.getElementById('paymentModal');
+    modal.classList.add('is-open');
+    releasePaymentModalFocusTrap = trapFocusWithin(modal);
+  }
+  function closePaymentModal() {
+    document.getElementById('paymentModal').classList.remove('is-open');
+    if (releasePaymentModalFocusTrap) { releasePaymentModalFocusTrap(); releasePaymentModalFocusTrap = null; }
+  }
+  document.addEventListener('keydown', (e) => {
+    if (!document.getElementById('paymentModal').classList.contains('is-open')) return;
+    if (e.key === 'Escape') closePaymentModal();
+  });
+
   async function startPayment(invoiceId, signerName) {
-    document.getElementById('paymentModal').classList.add('is-open');
+    openPaymentModal();
     document.getElementById('paymentModalBody').innerHTML = '<div class="empty-state">Loading...</div>';
 
     const { data: { session } } = await client.auth.getSession();
@@ -795,7 +814,7 @@
   // UI contexts that keeping them as two clearly-named functions reads
   // better than one function branching on its argument's type.
   async function startBulkPayment(invoiceIds, signerName) {
-    document.getElementById('paymentModal').classList.add('is-open');
+    openPaymentModal();
     document.getElementById('paymentModalBody').innerHTML = '<div class="empty-state">Loading...</div>';
 
     const { data: { session } } = await client.auth.getSession();
@@ -894,7 +913,7 @@
       if (paymentIntent && paymentIntent.status === 'succeeded') {
         document.getElementById('paymentModalBody').innerHTML = '<div class="empty-state" style="color:#4caf78;">Payment received. Thank you!</div>';
         setTimeout(() => {
-          document.getElementById('paymentModal').classList.remove('is-open');
+          closePaymentModal();
           renderInvoices(); // reflects the new paid status once the webhook (usually near-instant) has processed it
         }, 1800);
       }
@@ -921,19 +940,26 @@
     const formArea = document.getElementById('reportBugFormArea');
     const successEl = document.getElementById('reportBugSuccess');
 
+    let releaseReportBugFocusTrap = null;
     function openReportBug() {
       overlay.style.display = 'flex';
       formArea.style.display = 'block';
       successEl.style.display = 'none';
       messageInput.value = '';
       errorEl.textContent = '';
+      releaseReportBugFocusTrap = trapFocusWithin(overlay);
     }
     function closeReportBug() {
       overlay.style.display = 'none';
+      if (releaseReportBugFocusTrap) { releaseReportBugFocusTrap(); releaseReportBugFocusTrap = null; }
     }
     link.addEventListener('click', openReportBug);
     cancelBtn.addEventListener('click', closeReportBug);
     overlay.addEventListener('click', (e) => { if (e.target === overlay) closeReportBug(); });
+    document.addEventListener('keydown', (e) => {
+      if (overlay.style.display === 'none') return;
+      if (e.key === 'Escape') closeReportBug();
+    });
 
     submitBtn.addEventListener('click', async () => {
       const message = messageInput.value.trim();

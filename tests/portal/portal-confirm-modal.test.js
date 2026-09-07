@@ -102,7 +102,11 @@ function makeFakeDocument() {
 
 test('portalConfirm() resolves true when the confirm button is clicked, and sets the real message/labels passed in', async () => {
   const { doc, elements } = makeFakeDocument();
-  const sandbox = { document: doc, Promise };
+  // Real focus-trapping behavior is covered in its own right by
+  // tests/portal/focus-trap.test.js; stubbed here so this file's own
+  // assertions (resolve values, message/label content) aren't coupled
+  // to it.
+  const sandbox = { document: doc, Promise, trapFocusWithin: () => () => {} };
   vm.createContext(sandbox);
   vm.runInContext(extractFn(PORTAL_APP_JS, 'portalConfirm'), sandbox);
 
@@ -119,7 +123,11 @@ test('portalConfirm() resolves true when the confirm button is clicked, and sets
 
 test('portalConfirm() resolves false when cancel is clicked, or when Escape is pressed', async () => {
   const { doc, elements } = makeFakeDocument();
-  const sandbox = { document: doc, Promise };
+  // Real focus-trapping behavior is covered in its own right by
+  // tests/portal/focus-trap.test.js; stubbed here so this file's own
+  // assertions (resolve values, message/label content) aren't coupled
+  // to it.
+  const sandbox = { document: doc, Promise, trapFocusWithin: () => () => {} };
   vm.createContext(sandbox);
   vm.runInContext(extractFn(PORTAL_APP_JS, 'portalConfirm'), sandbox);
 
@@ -130,7 +138,11 @@ test('portalConfirm() resolves false when cancel is clicked, or when Escape is p
 
 test('a non-danger confirm (e.g. approving a quote) gets the blue button, a danger one gets orange', async () => {
   const { doc, elements } = makeFakeDocument();
-  const sandbox = { document: doc, Promise };
+  // Real focus-trapping behavior is covered in its own right by
+  // tests/portal/focus-trap.test.js; stubbed here so this file's own
+  // assertions (resolve values, message/label content) aren't coupled
+  // to it.
+  const sandbox = { document: doc, Promise, trapFocusWithin: () => () => {} };
   vm.createContext(sandbox);
   vm.runInContext(extractFn(PORTAL_APP_JS, 'portalConfirm'), sandbox);
 
