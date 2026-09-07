@@ -462,7 +462,11 @@
 // custom properties (the old canvas version hardcoded literal colors
 // that never adapted to the light theme, including a baseline line
 // that was nearly invisible against a light background).
-const CACHE_NAME = 'th-workspace-v84';
+// Bumped 2026-09-07 (v84 -> v85): /styles.css changed (a 4th "Licensed
+// & Insured" trust item added to the homepage's real-facts strip, plus
+// a real Google-mark badge on each review, replacing the old
+// text-only "Verified Customer on Google" line).
+const CACHE_NAME = 'th-workspace-v85';
 const PRECACHE_URLS = [
   '/tools/workspace.html', '/tools/job-tracker.html', '/tools/invoice-generator.html', '/tools/contract-generator.html',
   '/tools/calendar.html', '/tools/route-planner.html', '/tools/review-request.html', '/tools/contact-card.html',
