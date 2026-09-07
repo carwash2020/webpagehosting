@@ -173,7 +173,17 @@
 // array the cards below it already render from, not a second figure.
 // Omitted entirely when nothing is open (every request is completed
 // or declined).
-const CACHE_NAME = 'th-portal-v30';
+// Bumped 2026-09-07 (v30 -> v31): portal-app.js, portal-app.css,
+// quotes.html and settings.html all changed, all in PRECACHE_URLS.
+// portal-app.js/css: a themed portalConfirm() modal replaces
+// window.confirm() -- the one raw platform dialog left in front of a
+// client, next to the app's own fully-themed modal patterns (the
+// payment modal, the report-a-problem modal). quotes.html and
+// settings.html: their approve/decline-a-quote and remove-a-saved-card
+// confirmations now use it. The underlying approve/decline/remove-card
+// logic itself is unchanged -- only how the yes/no confirmation is
+// shown.
+const CACHE_NAME = 'th-portal-v31';
 const PRECACHE_URLS = [
   '/portal/home.html', '/portal/dashboard.html', '/portal/jobs.html', '/portal/quotes.html',
   '/portal/work-orders.html', '/portal/settings.html', '/portal/login.html', '/portal/set-password.html',
