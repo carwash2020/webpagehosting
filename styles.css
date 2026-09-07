@@ -1580,6 +1580,39 @@
   .hero-badge{
     transform:translate3d(0, calc(var(--shift, 0) * 1px), 0);
   }
+  /* A third depth plane, added between the canyon photo and the
+     schematic grid: a real finished-job photo, not another graphic. The
+     canyon is the deep background, this is a midground with genuine
+     texture, and it moves at its own rate (--shift2, set from JS at a
+     rate between the grid's and the badge's) so the hero reads as actual
+     depth rather than a flat photo with two decorative layers pasted on
+     top of it. Masked to the right side only, under the badge, so it
+     never competes with the headline on the left. Desaturated and
+     blurred so it stays atmosphere, not a second subject. */
+  .hero-subject{
+    position:absolute;
+    inset:0;
+    z-index:0;
+    pointer-events:none;
+    overflow:hidden;
+    opacity:.32;
+    transform:translate3d(0, calc(var(--shift2, 0) * 1px), 0);
+    -webkit-mask-image:linear-gradient(100deg, transparent 0%, transparent 40%, #000 66%, #000 100%);
+    mask-image:linear-gradient(100deg, transparent 0%, transparent 40%, #000 66%, #000 100%);
+  }
+  .hero-subject img{
+    width:100%;
+    height:100%;
+    object-fit:cover;
+    object-position:60% 45%;
+    filter:saturate(.55) brightness(.8) blur(1.5px);
+  }
+  @media (max-width:860px){
+    .hero-subject{display:none;}
+  }
+  @media (prefers-reduced-motion: reduce){
+    .hero-subject{transform:none;}
+  }
   /* The motto, finally on the homepage itself rather than only in the
      footer and the value pills. Three words, arriving in sequence. */
   .hero-motto{
@@ -1785,6 +1818,124 @@
     margin:22px 0 0;
   }
   .td-hint b{color:var(--orange-text); font-weight:600;}
+
+  /* ---------- before/after reveal: a second bespoke device, deliberately
+     not a copy of the teardown above it. Real photos instead of a
+     diagram, a horizontal wipe instead of an exploded assembly. Same
+     control language (a real range input, not pointer-drag hijacking)
+     so the two devices read as one site's way of doing this, not two
+     unrelated widgets. --p is a 0-1 fraction, set on the section itself
+     so both the frame's clip-path and the input's own track fill (which
+     reuses the teardown's exact track/thumb rules below) read the same
+     value. */
+  .reveal-job{padding:96px 0;}
+  .reveal-frame{
+    position:relative;
+    width:100%;
+    aspect-ratio:1400/787;
+    border-radius:14px;
+    overflow:hidden;
+    margin:0 0 22px;
+    box-shadow:var(--shadow-hover);
+  }
+  .reveal-img{position:absolute; inset:0;}
+  .reveal-img img{width:100%; height:100%; object-fit:cover; display:block;}
+  .reveal-before{z-index:1;}
+  .reveal-after{
+    z-index:2;
+    clip-path:inset(0 0 0 calc((1 - var(--p, .5)) * 100%));
+  }
+  .reveal-divider{
+    position:absolute;
+    top:0; bottom:0;
+    left:calc(var(--p, .5) * 100%);
+    width:3px;
+    margin-left:-1.5px;
+    background:#fff;
+    box-shadow:0 0 0 1px rgba(0,0,0,.35), 0 0 24px rgba(0,0,0,.4);
+    z-index:3;
+    pointer-events:none;
+  }
+  .reveal-tag{
+    position:absolute;
+    top:16px;
+    z-index:3;
+    font-family:var(--font-ui);
+    font-weight:600;
+    font-size:12px;
+    letter-spacing:1.5px;
+    text-transform:uppercase;
+    color:#fff;
+    background:rgba(10,10,10,.62);
+    padding:6px 13px;
+    border-radius:999px;
+    pointer-events:none;
+  }
+  .reveal-tag-before{left:16px;}
+  .reveal-tag-after{right:16px;}
+  .reveal-scrub{
+    -webkit-appearance:none;
+    appearance:none;
+    display:block;
+    width:100%;
+    max-width:560px;
+    margin:0 auto;
+    height:44px;
+    background:transparent;
+    padding:0;
+    border:none;
+    cursor:grab;
+  }
+  .reveal-scrub:active{cursor:grabbing;}
+  .reveal-scrub::-webkit-slider-runnable-track{
+    height:6px;
+    border-radius:999px;
+    background:
+      linear-gradient(90deg, var(--blue-dark), var(--blue-light)) 0/calc(var(--p, .5) * 100%) 100% no-repeat,
+      var(--bg-panel-3);
+    border:1px solid var(--border);
+  }
+  .reveal-scrub::-moz-range-track{
+    height:6px;
+    border-radius:999px;
+    background:var(--bg-panel-3);
+    border:1px solid var(--border);
+  }
+  .reveal-scrub::-moz-range-progress{
+    height:6px;
+    border-radius:999px;
+    background:linear-gradient(90deg, var(--blue-dark), var(--blue-light));
+  }
+  .reveal-scrub::-webkit-slider-thumb{
+    -webkit-appearance:none;
+    appearance:none;
+    width:30px; height:30px;
+    margin-top:-13px;
+    border-radius:50%;
+    background:linear-gradient(160deg, var(--blue-light), var(--blue) 62%, var(--blue-dark));
+    border:2px solid #0a1420;
+    box-shadow:0 4px 14px rgba(58,160,255,.45);
+    cursor:grab;
+  }
+  .reveal-scrub::-moz-range-thumb{
+    width:30px; height:30px;
+    border-radius:50%;
+    background:linear-gradient(160deg, var(--blue-light), var(--blue) 62%, var(--blue-dark));
+    border:2px solid #0a1420;
+    box-shadow:0 4px 14px rgba(58,160,255,.45);
+    cursor:grab;
+  }
+  .reveal-scrub:focus-visible{outline:none;}
+  .reveal-scrub:focus-visible::-webkit-slider-thumb{
+    box-shadow:0 0 0 5px rgba(255,128,0,.35), 0 4px 14px rgba(58,160,255,.45);
+  }
+  .reveal-scrub:focus-visible::-moz-range-thumb{
+    box-shadow:0 0 0 5px rgba(255,128,0,.35), 0 4px 14px rgba(58,160,255,.45);
+  }
+  @media (max-width:600px){
+    .reveal-job{padding:64px 0;}
+    .reveal-tag{font-size:10.5px; padding:5px 10px;}
+  }
 
   /* Phone-first: the diagram and its control are the main event on a
      small screen, so they lead and get the full width. */
