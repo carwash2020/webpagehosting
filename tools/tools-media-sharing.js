@@ -295,6 +295,34 @@ if ('serviceWorker' in navigator) {
 const CLIENT_ERROR_LOG_KEY = 'th_client_errors';
 const CLIENT_ERROR_LOG_MAX = 20;
 
+// Fixes a real, confirmed vulnerability (CodeQL's "Clear text storage of
+// sensitive information" alert #53, 2026-09-07) on the localStorage.setItem
+// call below: event.message and event.error.stack come straight from the
+// browser with no guarantee they're free of customer data. This suite
+// handles real customer PII (job-tracker's Contacts tab, invoice
+// generator's client fields, etc.), so a validation error elsewhere that
+// happens to read like "Invalid phone: 435-555-0100" or echo a client's
+// email back into a thrown Error's own message would otherwise land here
+// verbatim -- and this log syncs across devices via sync.js, in clear
+// text, unlike a throwaway single-device debug log. Scrub known PII
+// shapes before persisting; the JS exception text this is actually meant
+// to capture (TypeErrors, ReferenceErrors, etc.) never legitimately
+// contains any of these patterns, so this costs the log no real
+// debugging value.
+function redactSensitiveText(str) {
+  if (!str) return str;
+  // Order matters: a long contiguous digit run (a card/SSN number) must
+  // be redacted *before* the phone pattern runs, or the phone regex --
+  // which isn't anchored to where the run starts -- matches its last 10
+  // digits and leaves the rest of the number sitting right next to the
+  // replacement, e.g. "4111111111111111" -> "41111[redacted-phone]"
+  // instead of one clean "[redacted-number]".
+  return String(str)
+    .replace(/[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/gi, '[redacted-email]')
+    .replace(/\b\d{9,}\b/g, '[redacted-number]')
+    .replace(/(?:\+?1[-.\s]?)?\(?\d{3}\)?[-.\s]?\d{3}[-.\s]?\d{4}\b/g, '[redacted-phone]');
+}
+
 function logClientError(message, source, lineno, colno, stack) {
   try {
     let log = [];
@@ -305,11 +333,11 @@ function logClientError(message, source, lineno, colno, stack) {
       // sync (see sync.js) without ever colliding, even in the
       // unlikely case both log something in the same millisecond.
       id: Date.now() + '-' + Math.random().toString(36).slice(2, 8),
-      message: String(message == null ? 'Unknown error' : message).slice(0, 500),
+      message: redactSensitiveText(String(message == null ? 'Unknown error' : message)).slice(0, 500),
       source: source || '',
       line: lineno || null,
       col: colno || null,
-      stack: stack ? String(stack).slice(0, 1000) : '',
+      stack: stack ? redactSensitiveText(String(stack)).slice(0, 1000) : '',
       page: (typeof window !== 'undefined' && window.location) ? window.location.pathname : '',
       time: new Date().toISOString(),
     });
