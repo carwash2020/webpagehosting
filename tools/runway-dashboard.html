@@ -39,6 +39,7 @@
 <link href="https://fonts.googleapis.com/css2?family=Anton&family=Archivo:wght@400..700&family=Newsreader:ital,opsz,wght@0,6..72,300..700;1,6..72,300..600&family=Oswald:wght@200..700&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.112.3/dist/umd/supabase.js" integrity="sha384-qafw21c/iciq0VXsi9FzkfoQv5I/V0iqE4lSNcKXPnW9/UTJLnv5CcN4FHxVLnKg" crossorigin="anonymous" defer></script>
 <script src="/tools/sync.js?v=51c822a31b" defer></script>
+<script src="/tools/tools-dialogs.js?v=e1dfaa11a1" defer></script>
 <script src="/tools/tools-tour.js?v=cf6652f5b1" defer></script>
 <script>
   (function () {
@@ -1282,7 +1283,7 @@ document.getElementById('saveDebtBtn').addEventListener('click', async () => {
   const name = document.getElementById('debt-name').value.trim();
   const balance = Number(document.getElementById('debt-balance').value) || 0;
   const minPayment = Number(document.getElementById('debt-minpayment').value) || 0;
-  if(!name){ alert('Give this debt a name.'); return; }
+  if(!name){ showAlert('Give this debt a name.'); return; }
 
   const wasEditing = !!editingDebtId;
   let newId = null;
@@ -1421,7 +1422,7 @@ document.getElementById('saveExpenseBtn').addEventListener('click', async () => 
   const frequency = variable ? 'monthly' : document.getElementById('exp-frequency').value;
   const min = Number(document.getElementById('exp-min').value) || 0;
 
-  if(!name){ alert('Give this expense a name.'); return; }
+  if(!name){ showAlert('Give this expense a name.'); return; }
 
   const wasEditing = !!editingId;
   let newId = null;
@@ -1519,7 +1520,7 @@ document.getElementById('saveIncomeBtn').addEventListener('click', async () => {
   const name = document.getElementById('inc-name').value.trim();
   const frequency = document.getElementById('inc-frequency').value;
   const amount = Number(document.getElementById('inc-amount').value) || 0;
-  if(!name){ alert('Give this income source a name.'); return; }
+  if(!name){ showAlert('Give this income source a name.'); return; }
 
   const wasEditing = !!editingIncomeId;
   let newId = null;
