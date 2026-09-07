@@ -68,9 +68,16 @@ test('converting a quote to an invoice preserves each line item\u2019s own type,
   assert.match(HTML, /items\.forEach\(item => addLineItem\(item\.desc, item\.part, item\.qty, item\.price, item\.taxable, item\.type\)\);/);
 });
 
-test('both PDF renderings append the unit abbreviation to the Qty text, so the actual document a client sees shows "2 hrs" or "15 mi", not just a bare number', () => {
-  const matches = [...HTML.matchAll(/doc\.text\(String\(item\.qty\) \+ \(lineItemUnitLabel\(item\.type\) \? ' ' \+ lineItemUnitLabel\(item\.type\) : ''\), 40 \+ tableW \* 0\.68, y \+ 14, \{ align: 'center' \}\);/g)];
-  assert.equal(matches.length, 2, 'expected both the invoice and quote PDF sections updated identically');
+test('the shared PDF line-items table renderer appends the unit abbreviation to the Qty text, so the actual document a client sees shows "2 hrs" or "15 mi", not just a bare number', () => {
+  // generatePDF() and generateQuotePDF() used to each draw their own,
+  // near-identical line-items table (this exact line duplicated in both).
+  // Refactored (2026-09-07) into one shared drawPdfLineItemsTable() that
+  // both call, fixing a real bug in the process (the quote/estimate table
+  // was missing the invoice table's pagination guard) -- this now checks
+  // the one shared implementation instead of expecting two copies.
+  const fnMatch = HTML.match(/function drawPdfLineItemsTable\(doc, \{[\s\S]*?\n  \}\n/);
+  assert.ok(fnMatch, 'expected to isolate drawPdfLineItemsTable()');
+  assert.match(fnMatch[0], /doc\.text\(String\(item\.qty\) \+ \(lineItemUnitLabel\(item\.type\) \? ' ' \+ lineItemUnitLabel\(item\.type\) : ''\), 40 \+ tableW \* 0\.68, y \+ 14, \{ align: 'center' \}\);/);
 });
 
 test('the Type select gets real styling matching the rest of the table, not left as an unstyled default browser select', () => {

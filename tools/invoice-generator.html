@@ -1056,6 +1056,165 @@
     });
   }
 
+  // ---------- Shared PDF drawing helpers (2026-09-07) ----------
+  // generatePDF() and generateQuotePDF() drew an almost byte-identical
+  // header, line-items table, and totals block independently -- real
+  // duplication, not just similar-looking code. Extracting it here does
+  // two things at once: removes ~120 duplicated lines, and fixes a real
+  // bug found while reading the two side by side -- the invoice table's
+  // pagination guard (item #52, 2026-08-19: enough line items would
+  // otherwise draw off the bottom of the page with no warning) was never
+  // ported to the quote/estimate table, so an estimate with a long parts
+  // list could still silently run off the page. Both now share the same,
+  // fixed table logic. Visual refresh applied here per a direct request
+  // to make these documents look sharper: a soft divider separating the
+  // client/job block from the line-items table, and a light orange-tint
+  // panel behind the final total so the one number a client actually
+  // needs lands as the clear focal point of the page (every other value
+  // stays plain so that emphasis isn't diluted).
+  const PDF_COLORS = {
+    NAVY: [26, 26, 26],
+    ORANGE: [224, 123, 30],
+    ORANGE_DARK: [179, 95, 19],
+    ORANGE_TINT: [253, 238, 219],
+    GRAY: [90, 90, 90],
+    LIGHTGRAY: [236, 236, 236],
+  };
+
+  async function drawPdfHeader(doc, pageW, typeLabel) {
+    const { NAVY, ORANGE } = PDF_COLORS;
+    doc.setFillColor(...NAVY);
+    doc.rect(0, 0, pageW, 100, 'F');
+    try {
+      const logoData = await loadImageAsDataURL('/images/logo-signature-orange.webp');
+      doc.addImage(logoData, 'PNG', 40, 15, 65, 60);
+    } catch (e) { /* logo optional if it fails to load */ }
+    doc.setFont('helvetica', 'bold'); doc.setFontSize(20); doc.setTextColor(255, 255, 255);
+    doc.text('TRIPLE H', 118, 45);
+    doc.setTextColor(...ORANGE);
+    doc.text('ENTERPRISES', 118 + doc.getTextWidth('TRIPLE H ') + 4, 45);
+    doc.setFont('helvetica', 'normal'); doc.setFontSize(9); doc.setTextColor(207, 207, 207);
+    doc.text('Honesty.  Hustle.  Helpfulness.', 118, 62);
+    doc.setFont('helvetica', 'bold'); doc.setFontSize(13); doc.setTextColor(...ORANGE);
+    doc.text(typeLabel, pageW - 40, 30, { align: 'right' });
+    doc.setFont('helvetica', 'normal'); doc.setFontSize(9); doc.setTextColor(255, 255, 255);
+    doc.text('(435) 414-1667', pageW - 40, 46, { align: 'right' });
+    doc.text('steve@triplehenterprisesllc.biz', pageW - 40, 58, { align: 'right' });
+    doc.text('www.triplehenterprisesllc.biz', pageW - 40, 70, { align: 'right' });
+  }
+
+  // Draws the column header band + every row, paginating when a row
+  // would land past tableBottom (restarting the header band and zebra
+  // stripe cleanly on the new page). Returns the y just below the table's
+  // closing rule, plus the computed subtotal/taxable subtotal.
+  function drawPdfLineItemsTable(doc, { y, items, pageW, pageH, tableBottom }) {
+    const { NAVY, GRAY, LIGHTGRAY } = PDF_COLORS;
+    const tableW = pageW - 80;
+
+    function drawHeaderBand(atY) {
+      doc.setFillColor(...NAVY);
+      doc.rect(40, atY - 14, tableW, 20, 'F');
+      doc.setFont('helvetica', 'bold'); doc.setFontSize(8.5); doc.setTextColor(255, 255, 255);
+      doc.text('DESCRIPTION', 46, atY);
+      doc.text('PART #', 40 + tableW * 0.5, atY);
+      doc.text('QTY', 40 + tableW * 0.68, atY, { align: 'center' });
+      doc.text('PRICE', 40 + tableW * 0.83, atY, { align: 'right' });
+      doc.text('AMOUNT', pageW - 46, atY, { align: 'right' });
+    }
+
+    drawHeaderBand(y);
+    y += 8;
+
+    let subtotal = 0;
+    let taxableSubtotal = 0;
+    let stripe = false;
+    items.forEach(item => {
+      const rowH = 22;
+      if (y + rowH > tableBottom) {
+        doc.addPage();
+        y = 60;
+        drawHeaderBand(y);
+        y += 8;
+        stripe = false; // restart the zebra pattern cleanly on the new page
+      }
+      if (stripe) { doc.setFillColor(...LIGHTGRAY); doc.rect(40, y, tableW, rowH, 'F'); }
+      stripe = !stripe;
+      doc.setFont('helvetica', 'normal'); doc.setFontSize(9.5); doc.setTextColor(20, 20, 20);
+      doc.text(item.desc, 46, y + 14);
+      doc.setFontSize(8.5); doc.setTextColor(...GRAY);
+      doc.text(item.part || '—', 40 + tableW * 0.5, y + 14);
+      doc.text(String(item.qty) + (lineItemUnitLabel(item.type) ? ' ' + lineItemUnitLabel(item.type) : ''), 40 + tableW * 0.68, y + 14, { align: 'center' });
+      doc.setTextColor(20, 20, 20); doc.setFontSize(9.5);
+      doc.text('$' + item.price.toFixed(2), 40 + tableW * 0.83, y + 14, { align: 'right' });
+      doc.text('$' + item.amount.toFixed(2), pageW - 46, y + 14, { align: 'right' });
+      subtotal += item.amount;
+      if (item.taxable) taxableSubtotal += item.amount;
+      y += rowH;
+    });
+    doc.setDrawColor(200, 200, 200);
+    doc.line(40, y, pageW - 40, y);
+    return { y, subtotal, taxableSubtotal };
+  }
+
+  // Draws Subtotal / Sales Tax / optional discount / the final total,
+  // with a soft orange-tint panel behind the total row specifically --
+  // every other line on the page stays plain so that one panel reads as
+  // the page's single point of emphasis, not just another line of text.
+  function drawPdfTotalsBlock(doc, { y, pageW, subtotal, tax, discount, discountLabel, totalLabel }) {
+    const { ORANGE, ORANGE_DARK, ORANGE_TINT } = PDF_COLORS;
+    const total = Math.max(0, subtotal + tax - discount);
+
+    y += 24;
+    doc.setFont('helvetica', 'normal'); doc.setFontSize(10); doc.setTextColor(20, 20, 20);
+    doc.text('Subtotal', pageW - 220, y);
+    doc.text('$' + subtotal.toFixed(2), pageW - 40, y, { align: 'right' });
+
+    y += 20;
+    doc.text('Sales Tax', pageW - 220, y);
+    doc.text('$' + tax.toFixed(2), pageW - 40, y, { align: 'right' });
+
+    if (discount > 0 && discountLabel.trim() !== '') {
+      y += 20;
+      doc.setFont('helvetica', 'italic'); doc.setFontSize(10); doc.setTextColor(...ORANGE_DARK);
+      doc.text(discountLabel, pageW - 220, y);
+      doc.text('-$' + discount.toFixed(2), pageW - 40, y, { align: 'right' });
+    }
+
+    y += 14;
+    doc.setDrawColor(200, 200, 200);
+    doc.line(pageW - 220, y, pageW - 40, y);
+    y += 22;
+    doc.setFillColor(...ORANGE_TINT);
+    doc.roundedRect(pageW - 232, y - 17, 192, 30, 4, 4, 'F');
+    doc.setFont('helvetica', 'bold'); doc.setFontSize(14); doc.setTextColor(...ORANGE_DARK);
+    // Bug found by actually rendering an estimate (not just reading the
+    // code): "ESTIMATED TOTAL" at 14pt bold ran directly into the dollar
+    // amount with no gap at all -- the label was simply too wide for the
+    // ~140pt it has before the right-aligned value starts, and nothing
+    // here ever checked. Shrinks the label font just enough to fit
+    // whatever text a future call site passes, instead of silently
+    // overlapping again the next time someone picks a longer label.
+    let totalLabelSize = 14;
+    while (totalLabelSize > 10 && doc.getTextWidth(totalLabel) > 138) {
+      totalLabelSize -= 1;
+      doc.setFontSize(totalLabelSize);
+    }
+    doc.text(totalLabel, pageW - 220, y + 3);
+    doc.setTextColor(...ORANGE);
+    doc.text('$' + total.toFixed(2), pageW - 40, y + 3, { align: 'right' });
+    return y + 3;
+  }
+
+  function drawPdfFooter(doc, pageW, pageH) {
+    const { ORANGE, GRAY } = PDF_COLORS;
+    const footerY = pageH - 40;
+    doc.setDrawColor(...ORANGE); doc.setLineWidth(1.5);
+    doc.line(40, footerY, pageW - 40, footerY);
+    doc.setFont('helvetica', 'normal'); doc.setFontSize(8); doc.setTextColor(...GRAY);
+    doc.text('Triple H Enterprises LLC   |   (435) 414-1667   |   steve@triplehenterprisesllc.biz   |   www.triplehenterprisesllc.biz', pageW / 2, footerY + 14, { align: 'center' });
+    return footerY;
+  }
+
   let invoiceGenerationInProgress = false;
   // Item #10 (2026-08-20): set by convertQuoteToInvoice() when a real
   // saved quote record is found matching the form's current quote
@@ -1085,39 +1244,14 @@
     const doc = new jsPDF({ unit: 'pt', format: 'letter' });
     const pageW = doc.internal.pageSize.getWidth();
 
-    const NAVY = [26, 26, 26];
-    const ORANGE = [224, 123, 30];
-    const ORANGE_DARK = [179, 95, 19];
-    const GRAY = [90, 90, 90];
-    const LIGHTGRAY = [236, 236, 236];
+    const { ORANGE, ORANGE_DARK, GRAY } = PDF_COLORS;
 
-    // header band
-    doc.setFillColor(...NAVY);
-    doc.rect(0, 0, pageW, 100, 'F');
-
-    try {
-      const logoData = await loadImageAsDataURL('/images/logo-signature-orange.webp');
-      doc.addImage(logoData, 'PNG', 40, 15, 65, 60);
-    } catch (e) { /* logo optional if it fails to load */ }
-
-    doc.setFont('helvetica', 'bold'); doc.setFontSize(20); doc.setTextColor(255, 255, 255);
-    doc.text('TRIPLE H', 118, 45);
-    doc.setTextColor(...ORANGE);
-    doc.text('ENTERPRISES', 118 + doc.getTextWidth('TRIPLE H ') + 4, 45);
-    doc.setFont('helvetica', 'normal'); doc.setFontSize(9); doc.setTextColor(207, 207, 207);
-    doc.text('Honesty.  Hustle.  Helpfulness.', 118, 62);
-
-    doc.setFont('helvetica', 'bold'); doc.setFontSize(13); doc.setTextColor(...ORANGE);
     // Type-aware title (2026-09-02): a client seeing "DEPOSIT INVOICE"
     // knows a balance is still coming; "BALANCE DUE" says this closes
     // out the job. Plain "INVOICE" for the standard case, unchanged.
     const INVOICE_TYPE_LABELS = { standard: 'INVOICE', deposit: 'DEPOSIT INVOICE', balance: 'BALANCE DUE', progress: 'PROGRESS PAYMENT' };
     const invoiceTypeVal = (document.getElementById('invoiceType') || {}).value || 'standard';
-    doc.text(INVOICE_TYPE_LABELS[invoiceTypeVal] || 'INVOICE', pageW - 40, 30, { align: 'right' });
-    doc.setFont('helvetica', 'normal'); doc.setFontSize(9); doc.setTextColor(255, 255, 255);
-    doc.text('(435) 414-1667', pageW - 40, 46, { align: 'right' });
-    doc.text('steve@triplehenterprisesllc.biz', pageW - 40, 58, { align: 'right' });
-    doc.text('www.triplehenterprisesllc.biz', pageW - 40, 70, { align: 'right' });
+    await drawPdfHeader(doc, pageW, INVOICE_TYPE_LABELS[invoiceTypeVal] || 'INVOICE');
 
     let y = 130;
     doc.setFont('helvetica', 'bold'); doc.setFontSize(8); doc.setTextColor(...GRAY);
@@ -1161,95 +1295,29 @@
     doc.text(document.getElementById('jobDescription').value || '', 40, y);
     y += 26;
 
-    // line items table
+    // A soft divider separates the client/job block above from the
+    // line-items table below, instead of relying on whitespace alone.
+    doc.setDrawColor(220, 220, 220);
+    doc.line(40, y - 10, pageW - 40, y - 10);
+
     const items = getLineItems();
-    const tableW = pageW - 80;
     const pageH = doc.internal.pageSize.getHeight();
     // Leaves room below for the totals block and footer that render
-    // after this loop -- a row landing past this line triggers a new
+    // after the table -- a row landing past this line triggers a new
     // page rather than drawing off the bottom of this one.
     const tableBottom = pageH - 170;
-
-    function drawTableHeaderBand(atY) {
-      doc.setFillColor(...NAVY);
-      doc.rect(40, atY - 14, tableW, 20, 'F');
-      doc.setFont('helvetica', 'bold'); doc.setFontSize(8.5); doc.setTextColor(255, 255, 255);
-      doc.text('DESCRIPTION', 46, atY);
-      doc.text('PART #', 40 + tableW * 0.5, atY);
-      doc.text('QTY', 40 + tableW * 0.68, atY, { align: 'center' });
-      doc.text('PRICE', 40 + tableW * 0.83, atY, { align: 'right' });
-      doc.text('AMOUNT', pageW - 46, atY, { align: 'right' });
-    }
-
-    drawTableHeaderBand(y);
-    y += 8;
-
-    let subtotal = 0;
-    let taxableSubtotal = 0;
-    let stripe = false;
-    items.forEach(item => {
-      const rowH = 22;
-      // Item #52 (2026-08-19): real pagination -- this loop previously
-      // had no bounds check at all and never called doc.addPage(),
-      // so enough line items would silently draw past the bottom of
-      // the page with no warning. Continuation pages repeat the column
-      // header band so the table stays readable without paging back.
-      if (y + rowH > tableBottom) {
-        doc.addPage();
-        y = 60;
-        drawTableHeaderBand(y);
-        y += 8;
-        stripe = false; // restart the zebra pattern cleanly on the new page
-      }
-      if (stripe) { doc.setFillColor(...LIGHTGRAY); doc.rect(40, y, tableW, rowH, 'F'); }
-      stripe = !stripe;
-      doc.setFont('helvetica', 'normal'); doc.setFontSize(9.5); doc.setTextColor(20, 20, 20);
-      doc.text(item.desc, 46, y + 14);
-      doc.setFontSize(8.5); doc.setTextColor(...GRAY);
-      doc.text(item.part || '\u2014', 40 + tableW * 0.5, y + 14);
-      doc.text(String(item.qty) + (lineItemUnitLabel(item.type) ? ' ' + lineItemUnitLabel(item.type) : ''), 40 + tableW * 0.68, y + 14, { align: 'center' });
-      doc.setTextColor(20, 20, 20); doc.setFontSize(9.5);
-      doc.text('$' + item.price.toFixed(2), 40 + tableW * 0.83, y + 14, { align: 'right' });
-      doc.text('$' + item.amount.toFixed(2), pageW - 46, y + 14, { align: 'right' });
-      subtotal += item.amount;
-      if (item.taxable) taxableSubtotal += item.amount;
-      y += rowH;
-    });
-    doc.setDrawColor(200, 200, 200);
-    doc.line(40, y, pageW - 40, y);
+    const table = drawPdfLineItemsTable(doc, { y, items, pageW, pageH, tableBottom });
+    y = table.y;
+    const { subtotal, taxableSubtotal } = table;
 
     const taxRate = parseFloat(document.getElementById('invoiceTaxRate').value) || 0;
     const tax = taxableSubtotal * (taxRate / 100);
     const discount = parseFloat(document.getElementById('discountAmount').value) || 0;
     const discountLabel = document.getElementById('discountLabel').value;
     const total = Math.max(0, subtotal + tax - discount);
+    y = drawPdfTotalsBlock(doc, { y, pageW, subtotal, tax, discount, discountLabel, totalLabel: 'TOTAL DUE' });
 
-    y += 24;
-    doc.setFont('helvetica', 'normal'); doc.setFontSize(10); doc.setTextColor(20, 20, 20);
-    doc.text('Subtotal', pageW - 220, y);
-    doc.text('$' + subtotal.toFixed(2), pageW - 40, y, { align: 'right' });
-
-    y += 20;
-    doc.text('Sales Tax', pageW - 220, y);
-    doc.text('$' + tax.toFixed(2), pageW - 40, y, { align: 'right' });
-
-    if (discount > 0 && discountLabel.trim() !== '') {
-      y += 20;
-      doc.setFont('helvetica', 'italic'); doc.setFontSize(10); doc.setTextColor(...ORANGE_DARK);
-      doc.text(discountLabel, pageW - 220, y);
-      doc.text('-$' + discount.toFixed(2), pageW - 40, y, { align: 'right' });
-    }
-
-    y += 10;
-    doc.setDrawColor(200, 200, 200);
-    doc.line(pageW - 220, y, pageW - 40, y);
-    y += 24;
-    doc.setFont('helvetica', 'bold'); doc.setFontSize(14); doc.setTextColor(20, 20, 20);
-    doc.text('TOTAL DUE', pageW - 220, y);
-    doc.setTextColor(...ORANGE);
-    doc.text('$' + total.toFixed(2), pageW - 40, y, { align: 'right' });
-
-    y += 40;
+    y += 37;
     doc.setFont('helvetica', 'bold'); doc.setFontSize(10); doc.setTextColor(...ORANGE_DARK);
     doc.text('PAYMENT', 40, y);
     y += 18;
@@ -1886,33 +1954,8 @@
     const doc = new jsPDF({ unit: 'pt', format: 'letter' });
     const pageW = doc.internal.pageSize.getWidth();
 
-    const NAVY = [26, 26, 26];
-    const ORANGE = [224, 123, 30];
-    const ORANGE_DARK = [179, 95, 19];
-    const GRAY = [90, 90, 90];
-    const LIGHTGRAY = [236, 236, 236];
-
-    doc.setFillColor(...NAVY);
-    doc.rect(0, 0, pageW, 100, 'F');
-
-    try {
-      const logoData = await loadImageAsDataURL('/images/logo-signature-orange.webp');
-      doc.addImage(logoData, 'PNG', 40, 15, 65, 60);
-    } catch (e) { /* logo optional */ }
-
-    doc.setFont('helvetica', 'bold'); doc.setFontSize(20); doc.setTextColor(255, 255, 255);
-    doc.text('TRIPLE H', 118, 45);
-    doc.setTextColor(...ORANGE);
-    doc.text('ENTERPRISES', 118 + doc.getTextWidth('TRIPLE H ') + 4, 45);
-    doc.setFont('helvetica', 'normal'); doc.setFontSize(9); doc.setTextColor(207, 207, 207);
-    doc.text('Honesty.  Hustle.  Helpfulness.', 118, 62);
-
-    doc.setFont('helvetica', 'bold'); doc.setFontSize(13); doc.setTextColor(...ORANGE);
-    doc.text('ESTIMATE', pageW - 40, 30, { align: 'right' });
-    doc.setFont('helvetica', 'normal'); doc.setFontSize(9); doc.setTextColor(255, 255, 255);
-    doc.text('(435) 414-1667', pageW - 40, 46, { align: 'right' });
-    doc.text('steve@triplehenterprisesllc.biz', pageW - 40, 58, { align: 'right' });
-    doc.text('www.triplehenterprisesllc.biz', pageW - 40, 70, { align: 'right' });
+    const { ORANGE, ORANGE_DARK, GRAY } = PDF_COLORS;
+    await drawPdfHeader(doc, pageW, 'ESTIMATE');
 
     let y = 130;
     doc.setFont('helvetica', 'bold'); doc.setFontSize(8); doc.setTextColor(...GRAY);
@@ -1944,72 +1987,27 @@
     doc.text(document.getElementById('quoteJobDescription').value || '', 40, y);
     y += 26;
 
-    const items = getQuoteLineItems();
-    const tableW = pageW - 80;
-    doc.setFillColor(...NAVY);
-    doc.rect(40, y - 14, tableW, 20, 'F');
-    doc.setFont('helvetica', 'bold'); doc.setFontSize(8.5); doc.setTextColor(255, 255, 255);
-    doc.text('DESCRIPTION', 46, y);
-    doc.text('PART #', 40 + tableW * 0.5, y);
-    doc.text('QTY', 40 + tableW * 0.68, y, { align: 'center' });
-    doc.text('PRICE', 40 + tableW * 0.83, y, { align: 'right' });
-    doc.text('AMOUNT', pageW - 46, y, { align: 'right' });
-    y += 8;
+    doc.setDrawColor(220, 220, 220);
+    doc.line(40, y - 10, pageW - 40, y - 10);
 
-    let subtotal = 0;
-    let taxableSubtotal = 0;
-    let stripe = false;
-    items.forEach(item => {
-      const rowH = 22;
-      if (stripe) { doc.setFillColor(...LIGHTGRAY); doc.rect(40, y, tableW, rowH, 'F'); }
-      stripe = !stripe;
-      doc.setFont('helvetica', 'normal'); doc.setFontSize(9.5); doc.setTextColor(20, 20, 20);
-      doc.text(item.desc, 46, y + 14);
-      doc.setFontSize(8.5); doc.setTextColor(...GRAY);
-      doc.text(item.part || '\u2014', 40 + tableW * 0.5, y + 14);
-      doc.text(String(item.qty) + (lineItemUnitLabel(item.type) ? ' ' + lineItemUnitLabel(item.type) : ''), 40 + tableW * 0.68, y + 14, { align: 'center' });
-      doc.setTextColor(20, 20, 20); doc.setFontSize(9.5);
-      doc.text('$' + item.price.toFixed(2), 40 + tableW * 0.83, y + 14, { align: 'right' });
-      doc.text('$' + item.amount.toFixed(2), pageW - 46, y + 14, { align: 'right' });
-      subtotal += item.amount;
-      if (item.taxable) taxableSubtotal += item.amount;
-      y += rowH;
-    });
-    doc.setDrawColor(200, 200, 200);
-    doc.line(40, y, pageW - 40, y);
+    const items = getQuoteLineItems();
+    const pageH = doc.internal.pageSize.getHeight();
+    // Same pagination guard as the invoice table (item #52, 2026-08-19)
+    // -- previously missing here, so a long enough estimate could
+    // silently draw line items off the bottom of the page.
+    const tableBottom = pageH - 170;
+    const table = drawPdfLineItemsTable(doc, { y, items, pageW, pageH, tableBottom });
+    y = table.y;
+    const { subtotal, taxableSubtotal } = table;
 
     const quoteTaxRate = parseFloat(document.getElementById('quoteTaxRate').value) || 0;
     const tax = taxableSubtotal * (quoteTaxRate / 100);
     const discount = parseFloat(document.getElementById('quoteDiscountAmount').value) || 0;
     const discountLabel = document.getElementById('quoteDiscountLabel').value;
     const total = Math.max(0, subtotal + tax - discount);
+    y = drawPdfTotalsBlock(doc, { y, pageW, subtotal, tax, discount, discountLabel, totalLabel: 'EST. TOTAL' });
 
-    y += 24;
-    doc.setFont('helvetica', 'normal'); doc.setFontSize(10); doc.setTextColor(20, 20, 20);
-    doc.text('Subtotal', pageW - 220, y);
-    doc.text('$' + subtotal.toFixed(2), pageW - 40, y, { align: 'right' });
-
-    y += 20;
-    doc.text('Sales Tax', pageW - 220, y);
-    doc.text('$' + tax.toFixed(2), pageW - 40, y, { align: 'right' });
-
-    if (discount > 0 && discountLabel.trim() !== '') {
-      y += 20;
-      doc.setFont('helvetica', 'italic'); doc.setFontSize(10); doc.setTextColor(...ORANGE_DARK);
-      doc.text(discountLabel, pageW - 220, y);
-      doc.text('-$' + discount.toFixed(2), pageW - 40, y, { align: 'right' });
-    }
-
-    y += 10;
-    doc.setDrawColor(200, 200, 200);
-    doc.line(pageW - 220, y, pageW - 40, y);
-    y += 24;
-    doc.setFont('helvetica', 'bold'); doc.setFontSize(14); doc.setTextColor(20, 20, 20);
-    doc.text('ESTIMATED TOTAL', pageW - 220, y);
-    doc.setTextColor(...ORANGE);
-    doc.text('$' + total.toFixed(2), pageW - 40, y, { align: 'right' });
-
-    y += 40;
+    y += 37;
     doc.setFont('helvetica', 'italic'); doc.setFontSize(9); doc.setTextColor(...GRAY);
     const disclaimerLines = doc.splitTextToSize(
       'This is an estimate only, not a bill. Actual final cost may vary based on parts and labor actually required once work begins.',
