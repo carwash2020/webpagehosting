@@ -169,6 +169,21 @@
 
   .home-greeting { font-family:var(--font-ui); font-weight: 700; font-size: 22px; color: var(--white); margin-bottom: 6px; }
   .home-intro { color: var(--text-dim); font-size: 13.5px; line-height: 1.55; margin-bottom: 22px; }
+  /* A real countdown to the nearest scheduled visit (2026-09-07),
+     reusing the same blue "in progress" accent already established by
+     the invoice-summary ring and the work-order progress track. */
+  .next-appt-banner {
+    display: flex; align-items: center; justify-content: space-between; gap: 14px;
+    background: linear-gradient(135deg, var(--bg-panel-2), var(--bg-panel));
+    border: 1px solid var(--border); border-left: 4px solid var(--blue-light);
+    border-radius: 10px; padding: 14px 16px; margin-bottom: 18px;
+  }
+  .next-appt-title { margin: 0 0 2px; font-size: 12px; text-transform: uppercase; letter-spacing: 0.5px; color: var(--text-dim); }
+  .next-appt-detail { margin: 0; color: var(--white); font-size: 14px; font-weight: 600; }
+  .next-appt-countdown { flex-shrink: 0; font-family:var(--font-ui); font-weight: 700; font-size: 16px; color: var(--blue-light); white-space: nowrap; }
+  @media (max-width: 420px) {
+    .next-appt-banner { flex-direction: column; align-items: flex-start; }
+  }
 
   .attention-card {
     background: var(--orange-tint-soft); border: 1px solid var(--orange-tint-border);
@@ -279,6 +294,7 @@
 <div class="home-greeting" id="homeGreeting">Welcome</div>
 <p class="home-intro">This is your account with Triple H Enterprises. You can view and pay invoices, approve estimates, request new work, and look back at everything we've done for you.</p>
 
+<div id="nextAppointmentArea"></div>
 <div id="attentionArea"></div>
 
 <div class="section-title">Your Account</div>
@@ -342,6 +358,38 @@
       timeZone: 'America/Denver', weekday: 'long', month: 'long', day: 'numeric',
       hour: 'numeric', minute: '2-digit',
     }).format(new Date(iso));
+  }
+
+  // A real countdown to the client's nearest scheduled visit
+  // (2026-09-07), reading the exact same `requests` rows and
+  // scheduled_at field the attention row below already lists -- not a
+  // separate figure. Omitted entirely when nothing is scheduled: the
+  // attention area below already covers the general overview, so a
+  // second "nothing scheduled" empty state here would be redundant.
+  function daysUntil(iso) {
+    const today = new Date(); today.setHours(0, 0, 0, 0);
+    const target = new Date(iso); target.setHours(0, 0, 0, 0);
+    return Math.round((target - today) / 86400000);
+  }
+  function renderNextAppointmentBanner(s) {
+    const el = document.getElementById('nextAppointmentArea');
+    const scheduled = s.requests
+      .filter(r => r.status === 'scheduled' && r.scheduled_at)
+      .sort((a, b) => new Date(a.scheduled_at) - new Date(b.scheduled_at));
+    if (!scheduled.length) { el.innerHTML = ''; return; }
+
+    const next = scheduled[0];
+    const days = daysUntil(next.scheduled_at);
+    const when = days <= 0 ? 'Today' : days === 1 ? 'Tomorrow' : `In ${days} days`;
+    el.innerHTML = `
+      <div class="next-appt-banner">
+        <div class="next-appt-text">
+          <p class="next-appt-title">Next appointment</p>
+          <p class="next-appt-detail">${escapeHtml(next.title || 'Your visit')} &mdash; ${escapeHtml(formatScheduledAt(next.scheduled_at))}</p>
+        </div>
+        <div class="next-appt-countdown">${escapeHtml(when)}</div>
+      </div>
+    `;
   }
 
   function renderAttention(s) {
@@ -486,6 +534,7 @@
       // Greeting uses whatever name we already have on file from a real
       // invoice/quote/job, falling back to a plain "Welcome" rather
       // than guessing a name out of the email address.
+      renderNextAppointmentBanner(summary);
       renderAttention(summary);
       renderCards(summary);
     } catch (e) {
