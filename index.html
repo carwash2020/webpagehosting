@@ -879,12 +879,6 @@
           <circle class="radius-ring" cx="360" cy="210" r="130"/>
           <circle class="radius-ring" cx="360" cy="210" r="190"/>
 
-          <g data-city="st-george" class="is-hub">
-            <circle class="radius-hub" cx="360" cy="210" r="9"/>
-            <text class="radius-hub-name" x="360" y="243" text-anchor="middle">ST. GEORGE</text>
-            <text class="radius-note" x="360" y="261" text-anchor="middle">Home base</text>
-          </g>
-
           <g data-city="washington-city">
             <line class="radius-spoke" pathLength="1" x1="360" y1="210" x2="449" y2="178"/>
             <circle class="radius-node" cx="449" cy="178" r="6"/>
@@ -918,6 +912,21 @@
             <circle class="radius-node is-request" cx="217" cy="310" r="6"/>
             <text class="radius-name is-request" x="232" y="332">Mesquite, NV</text>
             <text class="radius-note" x="232" y="349">By request &middot; about 40 minutes southwest</text>
+          </g>
+
+          <!-- Hub drawn LAST, after every spoke, so it paints on top of
+               all 5 lines converging on it (2026-09-07, real bug found
+               from a live screenshot: with the hub painted first, in
+               source order, each spoke line painted over it, making
+               spokes look like they pierced straight through the hub
+               dot instead of visibly terminating at it). SVG has no
+               z-index -- later elements always paint over earlier ones
+               at the same stacking context, so document order IS the
+               fix here. -->
+          <g data-city="st-george" class="is-hub">
+            <circle class="radius-hub" cx="360" cy="210" r="9"/>
+            <text class="radius-hub-name" x="360" y="243" text-anchor="middle">ST. GEORGE</text>
+            <text class="radius-note" x="360" y="261" text-anchor="middle">Home base</text>
           </g>
         </svg>
       </div>
