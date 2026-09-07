@@ -128,7 +128,13 @@
 // states reuse each page's own existing bottom-nav icon rather than
 // inventing a new icon language; the error states share one new
 // warning icon across all three, distinct from every neutral state.
-const CACHE_NAME = 'th-portal-v22';
+// Bumped 2026-09-07 (v22 -> v23): work-orders.html changed, in
+// PRECACHE_URLS. Each request card gained a 4-segment progress track
+// (Received -> Reviewing -> Scheduled -> Completed), filled off the
+// exact same real status value the status pill already reads -- not a
+// second figure. Omitted for "declined": a closed request isn't
+// partway through anything.
+const CACHE_NAME = 'th-portal-v23';
 const PRECACHE_URLS = [
   '/portal/home.html', '/portal/dashboard.html', '/portal/jobs.html', '/portal/quotes.html',
   '/portal/work-orders.html', '/portal/settings.html', '/portal/login.html', '/portal/set-password.html',
