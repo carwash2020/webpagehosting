@@ -823,6 +823,28 @@ function escapeHtml(str) {
   return div.innerHTML;
 }
 
+// Fixes a real, confirmed vulnerability (CodeQL's "DOM text reinterpreted
+// as HTML" alert #54, 2026-09-07): escapeHtml() above is only safe for
+// HTML *text-node* content -- it escapes &, <, > (what the browser's own
+// innerHTML serializer escapes when building text-node content via
+// textContent), but never touches a double-quote, since quotes aren't
+// special there. Several call sites in this file instead interpolate an
+// escapeHtml()'d value directly into an attribute value (data-*, id,
+// title, aria-label) -- a different context where an un-escaped `"` lets
+// the string break out of the attribute and inject new attributes/markup.
+// Verified via a real jsdom round-trip against the same 9 adversarial
+// inputs used for escapeForInlineHandler in tools-dialogs.js (lone
+// single/double quotes, both together, backslashes, ampersands, angle
+// brackets, a raw newline, and a realistic combined case) before use.
+function escapeAttr(str) {
+  if (str === null || str === undefined) return '';
+  return String(str)
+    .replace(/&/g, '&amp;')
+    .replace(/"/g, '&quot;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;');
+}
+
 // Self-contained copy of the shared haptic() helper (tools-dialogs.js) and
 // setupPullToRefresh() (tools-effects.js), matching this page's deliberate
 // "no shared UI-behavior script dependencies" design -- see "Don't
@@ -1261,15 +1283,15 @@ function renderDebts(){
     return;
   }
   container.innerHTML = debts.map(d => `
-    <div class="row ${d.id === justAddedDebtId ? 'list-row-enter' : ''}" data-debt-row-id="${escapeHtml(d.id)}">
+    <div class="row ${d.id === justAddedDebtId ? 'list-row-enter' : ''}" data-debt-row-id="${escapeAttr(d.id)}">
       <div class="row-main">
         <div class="row-label">${escapeHtml(d.name)}</div>
         ${d.minPayment ? `<div class="row-freq">Min payment ${fmt(Number(d.minPayment)||0)}/mo</div>` : ''}
       </div>
       <div class="row-amounts"><b>${fmt(Number(d.balance)||0)}</b></div>
       <div class="row-actions">
-        <button class="icon-btn" data-edit-debt="${escapeHtml(d.id)}" title="Edit">Edit</button>
-        <button class="icon-btn danger" data-delete-debt="${escapeHtml(d.id)}" title="Delete">Del</button>
+        <button class="icon-btn" data-edit-debt="${escapeAttr(d.id)}" title="Edit">Edit</button>
+        <button class="icon-btn danger" data-delete-debt="${escapeAttr(d.id)}" title="Delete">Del</button>
       </div>
     </div>
   `).join('');
@@ -1497,15 +1519,15 @@ function renderIncome(){
     return;
   }
   container.innerHTML = income.map(item => `
-    <div class="row ${item.id === justAddedIncomeId ? 'list-row-enter' : ''}" data-income-row-id="${escapeHtml(item.id)}">
+    <div class="row ${item.id === justAddedIncomeId ? 'list-row-enter' : ''}" data-income-row-id="${escapeAttr(item.id)}">
       <div class="row-main">
         <div class="row-label">${escapeHtml(item.name)}</div>
         <div class="row-freq">${FREQ_LABEL[item.frequency]}</div>
       </div>
       <div class="row-amounts"><b>${fmt(monthlyEquiv(item.amount, item.frequency))}</b>/mo</div>
       <div class="row-actions">
-        <button class="icon-btn" data-edit-inc="${escapeHtml(item.id)}" title="Edit">Edit</button>
-        <button class="icon-btn danger" data-delete-inc="${escapeHtml(item.id)}" title="Delete">Del</button>
+        <button class="icon-btn" data-edit-inc="${escapeAttr(item.id)}" title="Edit">Edit</button>
+        <button class="icon-btn danger" data-delete-inc="${escapeAttr(item.id)}" title="Delete">Del</button>
       </div>
     </div>
   `).join('');
@@ -1604,31 +1626,31 @@ function renderPersonal(){
       <div class="card-header">
         <h3><span class="cat-dot" style="background:${cat.color};"></span>${escapeHtml(cat.name)}</h3>
         <span class="subtotal">${fmt(total)}/mo</span>
-        <button class="cat-add-btn" data-cat="${escapeHtml(cat.key)}" title="Add to ${escapeHtml(cat.name)}">+</button>
+        <button class="cat-add-btn" data-cat="${escapeAttr(cat.key)}" title="Add to ${escapeAttr(cat.name)}">+</button>
       </div>
       ${items.map(item => item.variable ? `
-        <div class="row ${item.id === justAddedExpenseId ? 'list-row-enter' : ''}" data-expense-row-id="${escapeHtml(item.id)}">
+        <div class="row ${item.id === justAddedExpenseId ? 'list-row-enter' : ''}" data-expense-row-id="${escapeAttr(item.id)}">
           <div class="row-main">
             <div class="row-label">${escapeHtml(item.name)} <span class="col-hint">VARIABLE</span></div>
             <div class="row-freq">${variableHint(item)}</div>
           </div>
           <div class="row-amounts"><b>${fmt(itemMonthlyAmount(item))}</b>/mo</div>
           <div class="row-actions">
-            <input type="number" inputmode="decimal" class="var-log-input" id="varlog-${escapeHtml(item.id)}" placeholder="This month's bill">
-            <button class="icon-btn" data-log-var="${escapeHtml(item.id)}" title="Log this month's actual amount">Log</button>
-            <button class="icon-btn danger" data-delete="${escapeHtml(item.id)}" title="Delete">Del</button>
+            <input type="number" inputmode="decimal" class="var-log-input" id="varlog-${escapeAttr(item.id)}" placeholder="This month's bill">
+            <button class="icon-btn" data-log-var="${escapeAttr(item.id)}" title="Log this month's actual amount">Log</button>
+            <button class="icon-btn danger" data-delete="${escapeAttr(item.id)}" title="Delete">Del</button>
           </div>
         </div>
       ` : `
-        <div class="row ${item.id === justAddedExpenseId ? 'list-row-enter' : ''}" data-expense-row-id="${escapeHtml(item.id)}">
+        <div class="row ${item.id === justAddedExpenseId ? 'list-row-enter' : ''}" data-expense-row-id="${escapeAttr(item.id)}">
           <div class="row-main">
             <div class="row-label">${escapeHtml(item.name)}</div>
             <div class="row-freq">${FREQ_LABEL[item.frequency]}</div>
           </div>
           <div class="row-amounts"><b>${fmt(itemMonthlyAmount(item))}</b>/mo</div>
           <div class="row-actions">
-            <button class="icon-btn" data-edit="${escapeHtml(item.id)}" title="Edit">Edit</button>
-            <button class="icon-btn danger" data-delete="${escapeHtml(item.id)}" title="Delete">Del</button>
+            <button class="icon-btn" data-edit="${escapeAttr(item.id)}" title="Edit">Edit</button>
+            <button class="icon-btn danger" data-delete="${escapeAttr(item.id)}" title="Delete">Del</button>
           </div>
         </div>
       `).join('')}
@@ -1751,7 +1773,7 @@ function renderMonths(){
       <td>${escapeHtml(m.month)}</td><td>${fmt(m.revenue||0)}</td><td>${fmt(costs)}</td>
       <td class="${net>=0?'net-positive':'net-negative'}">${fmt(net)}</td>
       <td>${fmt(m.draws||0)}</td><td>${fmt(m.cash||0)}</td>
-      <td><button class="danger-btn" data-month="${escapeHtml(m.month)}">Delete</button></td>
+      <td><button class="danger-btn" data-month="${escapeAttr(m.month)}">Delete</button></td>
     `;
     tbody.appendChild(tr);
   });
@@ -2292,7 +2314,7 @@ function drawTrendChart(nets, min){
     const valueY = isPos ? Math.max(y - 6, 12) : Math.min(y + barH + 14, TREND_CHART_HEIGHT - bottomPad + 14);
     const monthY = TREND_CHART_HEIGHT - 8;
     return `
-      <g class="chart-bar-group" role="img" aria-label="${escapeHtml(n.month)}, net profit ${fmt(n.y)}">
+      <g class="chart-bar-group" role="img" aria-label="${escapeAttr(n.month)}, net profit ${fmt(n.y)}">
         <path class="chart-bar" d="${path}" fill="url(#${fillId})"></path>
         <text class="chart-value" x="${x + TREND_CHART_BAR_WIDTH / 2}" y="${valueY}" text-anchor="middle">${fmt(n.y)}</text>
         <text class="chart-date" x="${x + TREND_CHART_BAR_WIDTH / 2}" y="${monthY}" text-anchor="middle">${escapeHtml(n.month)}</text>
@@ -2374,7 +2396,7 @@ function drawRevCostChart(sortedMonths) {
     const monthY = REVCOST_CHART_HEIGHT - 8;
     return `
       <g class="chart-bar-group" tabindex="0" role="button"
-         aria-label="${escapeHtml(p.month)}: revenue ${fmt(p.revenue)}, costs ${fmt(p.costs)}"
+         aria-label="${escapeAttr(p.month)}: revenue ${fmt(p.revenue)}, costs ${fmt(p.costs)}"
          onclick="highlightMonthRow('${p.month}')"
          onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();highlightMonthRow('${p.month}');}">
         <rect x="${groupX - 3}" y="4" width="${REVCOST_CHART_BAR_WIDTH * 2 + REVCOST_CHART_BAR_GAP + 6}" height="${REVCOST_CHART_HEIGHT - 4}" fill="transparent"></rect>
