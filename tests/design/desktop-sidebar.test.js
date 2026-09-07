@@ -93,8 +93,12 @@ test('login.html is excluded from the sidebar, matching the same reasoning alrea
   assert.equal(window.document.querySelector('.th-desktop-sidebar'), null);
 });
 
-test('runway-dashboard.html, which is deliberately self-contained and never loads tools-nav-pwa.js, has its own static copy of the sidebar with a matching, real icon sprite -- not references to icons that don\'t exist on this page', () => {
+test('runway-dashboard.html now loads tools-nav-pwa.js like every other tool page (F18 fix, 2026-09-07) -- it used to hand-roll its own static sidebar and had no mobile bottom nav or phone layout at all, a dead end reachable only by the browser back button', () => {
   const html = fs.readFileSync(path.join(TOOLS_DIR, 'runway-dashboard.html'), 'utf8');
+  assert.match(html, /<script src="\/tools\/tools-nav-pwa\.js\?v=[a-zA-Z0-9]+" defer><\/script>/);
+  assert.doesNotMatch(html, /<nav class="th-desktop-sidebar" aria-label="Main navigation">/, 'the old hand-rolled static sidebar markup should be gone -- tools-nav-pwa.js injects an equivalent one now');
+
+  const navSrc = fs.readFileSync(NAV_PWA_PATH, 'utf8');
   const dom = new JSDOM(html, {
     runScripts: 'dangerously', url: 'https://example.com/tools/runway-dashboard.html',
     beforeParse(w) {
@@ -105,31 +109,36 @@ test('runway-dashboard.html, which is deliberately self-contained and never load
     },
   });
   const { window } = dom;
+  const s = window.document.createElement('script');
+  s.textContent = navSrc;
+  window.document.head.appendChild(s);
+  window.document.dispatchEvent(new window.Event('DOMContentLoaded'));
 
   const sidebar = window.document.querySelector('.th-desktop-sidebar');
-  assert.ok(sidebar, 'runway-dashboard.html is missing its own sidebar');
+  assert.ok(sidebar, 'sidebar was not injected');
   const links = sidebar.querySelectorAll('.th-sidebar-link');
   assert.ok(links.length >= 8);
-
-  // Every icon the sidebar links reference must actually be defined
-  // as a <symbol> somewhere on this same page -- unlike other pages,
-  // this one can't rely on tools-nav-pwa.js's shared sprite.
-  const referencedIcons = new Set([...sidebar.querySelectorAll('use')].map(u => u.getAttribute('href')));
-  const definedSymbolIds = new Set([...window.document.querySelectorAll('symbol')].map(s => '#' + s.id));
-  for (const iconRef of referencedIcons) {
-    assert.ok(definedSymbolIds.has(iconRef), iconRef + ' is referenced but no matching <symbol> is defined on this page');
-  }
 
   const activeLink = sidebar.querySelector('.is-active');
   assert.ok(activeLink);
   assert.match(activeLink.textContent, /Runway Dashboard/);
   assert.equal(window.document.body.classList.contains('th-has-sidebar'), true);
+
+  // The actual defect F18 describes: this page never had a mobile bottom
+  // nav at all, unlike every other tool page.
+  assert.ok(window.document.querySelector('.th-bottom-nav'), 'bottom nav should now exist -- this page had no phone layout at all before this fix');
 });
 
-test('runway-dashboard.html\'s own sidebar CSS matches the shared version\'s key structural properties (hidden by default, shown at 1024px, matching width/offset)', () => {
+test('runway-dashboard.html\'s own CSS for the shared sidebar/bottom-nav/hex-icon/flag-button matches the shared version\'s key structural properties (hidden by default, shown at the right breakpoint)', () => {
   const src = fs.readFileSync(path.join(TOOLS_DIR, 'runway-dashboard.html'), 'utf8');
   assert.match(src, /\.th-desktop-sidebar \{[\s\S]*?display: none;/);
   assert.match(src, /@media \(min-width: 1024px\) \{ \.th-desktop-sidebar \{ display: flex/);
   const widthMatch = src.match(/\.th-desktop-sidebar \{[\s\S]*?width:\s*(\d+)px/);
   assert.ok(widthMatch);
+
+  assert.match(src, /\.th-bottom-nav \{[\s\S]*?display: none;/);
+  assert.match(src, /@media \(max-width: 720px\) \{ \.th-bottom-nav \{ display: flex/);
+  assert.match(src, /--hex:\s*polygon\(/);
+  assert.match(src, /\.th-hex-icon \{/);
+  assert.match(src, /\.th-flag-btn \{/);
 });
