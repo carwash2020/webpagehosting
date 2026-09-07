@@ -698,19 +698,68 @@ td { padding: 10px 8px; font-size: 14px; color: var(--white); border-bottom: 1px
    generic selectors above, which invoice-generator.html's line-items
    table (always a handful of rows, edited in place, no scrolling
    benefit) and other pages also rely on unchanged.
-   Sticky header: same top-offset pattern already used by .jump-nav
-   elsewhere in this file, so the header parks just under the fixed app
-   bar rather than under it. Right-aligned amount column: numbers align
-   on their ones place down a long list, which is how every real
-   accounting UI does it and how job-tracker.html's own dense table
-   already treats its own numeric-ish columns. */
+   Right-aligned amount column: numbers align on their ones place down
+   a long list, which is how every real accounting UI does it and how
+   job-tracker.html's own dense table already treats its own
+   numeric-ish columns.
+   Real overlap bug, reported directly with a screenshot (2026-09-07):
+   sticking the header to the PAGE (position:sticky measured against
+   the whole scrolling page, top offset tuned to clear the fixed app
+   bar) put arbitrary scrolled-page content directly above the header
+   at any given scroll position -- and since the header (a single
+   line, ~28px tall) is shorter than a real data row once a long
+   description or job name wraps to multiple lines, whatever content
+   was passing behind the header showed through flush against its top
+   edge, an abrupt, glyph-clipping overlap that reads as broken.
+   Switched the header to stick to its OWN bounded container instead
+   (#incomeTable/#entriesTable, given a fixed max-height and its own
+   scrollbar) rather than the page. This isn't just a smaller-scoped
+   version of the same fix -- it changes what can ever be directly
+   above the header at all: nothing but this container's own clipped
+   edge, never real page content like the "Log" heading a few pixels
+   above it. That makes it safe to give the header a generous opaque
+   ::before extending upward past its own box (see below) to actually
+   hide a taller row's excess height -- doing the same thing against
+   page-level sticky positioning was tried first and rejected: any
+   size big enough to cover a real wrapped row was also big enough to
+   paint over the heading above the table on ordinary page load,
+   before any scrolling had even happened. */
+#incomeTable, #entriesTable {
+  max-height: 60vh;
+  overflow-y: auto;
+}
 #incomeTable table, #entriesTable table { margin-top: 0; }
 #incomeTable thead th, #entriesTable thead th {
-  position: sticky; top: calc(61px + max(env(safe-area-inset-top, 0px), 44px)); z-index: 2;
+  position: sticky; top: 0; z-index: 2;
   background: var(--bg-panel-2);
 }
-@media (min-width: 1024px) {
-  #incomeTable thead th, #entriesTable thead th { top: 61px; }
+/* Extends the header's own opaque background upward past its own box,
+   so a taller row's excess height (beyond the header's ~28px) is
+   already hidden before it can become visible, rather than being
+   clipped right at the header's boundary. Safe to size generously now
+   that the header sticks within its own clipped, bounded container
+   (see above) instead of the page -- there is nothing above it in that
+   container to accidentally cover.
+   250px, not a round guess: checked this business's real income log
+   directly (via its live Supabase data) for the actual tallest real
+   row rather than an arbitrary string length -- the Job column's
+   longest real entry ("Baseboards, side cabinet, wire hider behind
+   TV, remove satellite dish", 69 characters) wraps to 5 lines at this
+   column's narrow mobile width, measuring 117px tall in a real
+   rendered row (excess over the ~28px header: ~89px). 250px comfortably
+   covers that with real margin to spare for a longer future entry --
+   generous is free here specifically because the container above is
+   now bounded, so there's nothing real for an oversized cover to ever
+   paint over by mistake. A fixed-height cover still can't guarantee
+   full coverage for an arbitrarily long future entry without capping
+   the column's own height instead, which would clip real content the
+   user typed. */
+#incomeTable thead th::before, #entriesTable thead th::before {
+  content: "";
+  position: absolute;
+  left: 0; right: 0; bottom: 100%;
+  height: 250px;
+  background: var(--bg-panel-2);
 }
 #incomeTable .col-amount, #entriesTable .col-amount { text-align: right; font-variant-numeric: tabular-nums; }
 .totals-row-money { display: flex; gap: 24px; margin-top: 16px; padding-top: 16px; border-top: 1px solid var(--border); flex-wrap: wrap; }
