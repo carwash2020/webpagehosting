@@ -157,7 +157,14 @@
 // line -- doesn't touch any portal page's own layout, but styles.css
 // is precached here so the rule from this file's own header applies
 // regardless).
-const CACHE_NAME = 'th-portal-v27';
+// Bumped 2026-09-07 (v27 -> v28): jobs.html changed, in PRECACHE_URLS.
+// A job photo used to just open the raw signed image URL in a new tab
+// -- no way to see the rest of that job's other photos without going
+// back and clicking each one. Now opens the same lightbox already
+// built and styled for the public site's own Gallery (shared
+// styles.css), scoped to that job's own photo set, with prev/next and
+// keyboard navigation.
+const CACHE_NAME = 'th-portal-v28';
 const PRECACHE_URLS = [
   '/portal/home.html', '/portal/dashboard.html', '/portal/jobs.html', '/portal/quotes.html',
   '/portal/work-orders.html', '/portal/settings.html', '/portal/login.html', '/portal/set-password.html',

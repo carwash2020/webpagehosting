@@ -277,6 +277,19 @@
 <div id="warrantyOverview"></div>
 <div id="jobList"></div>
 
+<!-- Same lightbox markup/classes as the public site's own Gallery
+     (shared styles.css), reused here for job photos instead of
+     opening the raw signed URL in a new tab. Placed before the script
+     below since that script looks these elements up by id as soon as
+     it runs, not on any later DOMContentLoaded/load event. -->
+<div class="lightbox-overlay" id="lightboxOverlay">
+  <button class="lightbox-close" id="lightboxClose" aria-label="Close">&times;</button>
+  <button class="lightbox-nav lightbox-prev" id="lightboxPrev" aria-label="Previous">&#10094;</button>
+  <div class="lightbox-img-wrap"><img id="lightboxImg" src="" alt=""></div>
+  <button class="lightbox-nav lightbox-next" id="lightboxNext" aria-label="Next">&#10095;</button>
+  <div class="lightbox-caption" id="lightboxCaption"></div>
+</div>
+
 <script>
   const { createClient } = supabase;
   // Named as constants (2026-09-04) -- same fix as portal/quotes.html:
@@ -601,13 +614,60 @@
       );
       const result = await res.json();
       if (!result.ok || !result.urls.length) { container.innerHTML = ''; return; }
-      container.innerHTML = result.urls.map(url =>
-        `<a href="${url}" target="_blank" rel="noopener"><img src="${url}" alt="Job photo" loading="lazy"></a>`
+      container.innerHTML = result.urls.map((url, i) =>
+        `<a href="${url}" data-idx="${i}"><img src="${url}" alt="Job photo" loading="lazy"></a>`
       ).join('');
+      container.querySelectorAll('a[data-idx]').forEach((a) => {
+        a.addEventListener('click', (e) => {
+          e.preventDefault();
+          openLightbox(result.urls, Number(a.dataset.idx));
+        });
+      });
     } catch (e) {
       container.innerHTML = '';
     }
   }
+
+  // A job photo used to just open the raw signed image URL in a new
+  // tab -- no way to see the rest of that job's photos without going
+  // back and clicking each one individually. Reuses the exact same
+  // .lightbox-overlay already built and styled for the public site's
+  // own Gallery (same shared styles.css), scoped here to whichever
+  // job's own photo set was clicked rather than one sitewide list.
+  const lightbox = document.getElementById('lightboxOverlay');
+  const lightboxImg = document.getElementById('lightboxImg');
+  const lightboxCaption = document.getElementById('lightboxCaption');
+  let lightboxUrls = [];
+  let lightboxIndex = 0;
+
+  function openLightbox(urls, i) {
+    lightboxUrls = urls;
+    lightboxIndex = i;
+    lightboxImg.src = urls[i];
+    lightboxImg.alt = 'Job photo';
+    const hasMultiple = urls.length > 1;
+    lightboxCaption.textContent = hasMultiple ? `Photo ${i + 1} of ${urls.length}` : '';
+    document.getElementById('lightboxPrev').style.display = hasMultiple ? '' : 'none';
+    document.getElementById('lightboxNext').style.display = hasMultiple ? '' : 'none';
+    lightbox.classList.add('is-visible');
+  }
+  function closeLightbox() {
+    lightbox.classList.remove('is-visible');
+  }
+  function showNextLightboxPhoto(delta) {
+    lightboxIndex = (lightboxIndex + delta + lightboxUrls.length) % lightboxUrls.length;
+    openLightbox(lightboxUrls, lightboxIndex);
+  }
+  document.getElementById('lightboxClose').addEventListener('click', closeLightbox);
+  document.getElementById('lightboxPrev').addEventListener('click', () => showNextLightboxPhoto(-1));
+  document.getElementById('lightboxNext').addEventListener('click', () => showNextLightboxPhoto(1));
+  lightbox.addEventListener('click', (e) => { if (e.target === lightbox) closeLightbox(); });
+  document.addEventListener('keydown', (e) => {
+    if (!lightbox.classList.contains('is-visible')) return;
+    if (e.key === 'Escape') closeLightbox();
+    if (e.key === 'ArrowRight') showNextLightboxPhoto(1);
+    if (e.key === 'ArrowLeft') showNextLightboxPhoto(-1);
+  });
 
   async function renderJobs() {
     const { data: { session } } = await client.auth.getSession();
