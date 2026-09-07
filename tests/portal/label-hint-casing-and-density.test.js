@@ -85,7 +85,11 @@ test('no long hint sentence nested in a label is left inheriting uppercase', () 
     const html = fs.readFileSync(file, 'utf8');
     for (const label of html.matchAll(/<label\b[^>]*>([\s\S]*?)<\/label>/g)) {
       for (const span of label[1].matchAll(/<span\b([^>]*)>([\s\S]*?)<\/span>/g)) {
-        const text = span[2].replace(/<[^>]+>/g, '').replace(/\s+/g, ' ').trim();
+        // split/join rather than replace(/<[^>]+>/g, ''): a single-pass
+        // replace that deletes tags is the incomplete-sanitization shape
+        // CodeQL flags, and joining on a space is also just more correct
+        // here -- "a<br>b" is two words, not "ab".
+        const text = span[2].split(/<[^>]*>/).join(' ').replace(/\s+/g, ' ').trim();
         if (text.length <= MAX_UNRESET) continue;
         const cls = span[1].match(/class="([^"]*)"/);
         const names = cls ? cls[1].split(/\s+/) : [];
