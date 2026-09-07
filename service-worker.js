@@ -385,7 +385,13 @@
 // error -- given a proper checkmark-badge treatment matching the
 // "done" language already established elsewhere in this codebase.
 // Same reasoning as every prior bump in this file's history.
-const CACHE_NAME = 'th-workspace-v73';
+// Bumped 2026-09-07 (v73 -> v74): tools/workspace.html changed,
+// precached here. Added a greeting banner (real time-of-day greeting +
+// today's real job count, read from the same th_tracker_jobs data
+// renderTodayJobs() already uses) right below the header -- previously
+// the page went straight from the search box into the collapsible
+// section list with no "first thing you see" moment at all.
+const CACHE_NAME = 'th-workspace-v74';
 const PRECACHE_URLS = [
   '/tools/workspace.html', '/tools/job-tracker.html', '/tools/invoice-generator.html', '/tools/contract-generator.html',
   '/tools/calendar.html', '/tools/route-planner.html', '/tools/review-request.html', '/tools/contact-card.html',
