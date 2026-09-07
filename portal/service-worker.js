@@ -196,7 +196,14 @@
 // Bumped 2026-09-07 (v32 -> v33): /styles.css changed (dead-CSS
 // cleanup -- .form-card removed, unused anywhere that loads this
 // stylesheet), precached here.
-const CACHE_NAME = 'th-portal-v33';
+// Bumped 2026-09-07 (v33 -> v34): work-orders.html changed, in
+// PRECACHE_URLS. Direct feedback: "the work order form could look
+// better." Added a divider between the required ask (title/
+// description/urgency) and everything else, all of which was already
+// individually marked Optional -- the form previously read as one
+// flat, equal-weight list of 7 fields with no sense of how much was
+// actually required.
+const CACHE_NAME = 'th-portal-v34';
 const PRECACHE_URLS = [
   '/portal/home.html', '/portal/dashboard.html', '/portal/jobs.html', '/portal/quotes.html',
   '/portal/work-orders.html', '/portal/settings.html', '/portal/login.html', '/portal/set-password.html',

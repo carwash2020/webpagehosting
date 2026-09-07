@@ -188,6 +188,21 @@
      fields the database actually requires, so they're the only two
      marked, rather than labeling every field either way. */
   .wo-required { font-weight: 400; font-size: 11px; text-transform: uppercase; letter-spacing: .5px; color: var(--orange-light); }
+  /* A visual break between the actual ask (title/description/urgency)
+     and everything else, all of which is already individually marked
+     "Optional" (2026-09-07, direct feedback: "the work order form
+     could look better"). The form previously read as one flat,
+     equal-weight list of 7 fields with no sense of how much was left
+     to do -- this "All Optional" tag mirrors .wo-required's own
+     styling (same size/weight/tracking, dim instead of orange) so a
+     client sees at a glance that they're past the required part
+     without re-reading each field's own hint. */
+  .wo-form-divider {
+    display: flex; align-items: center; justify-content: space-between;
+    margin: 22px 0 14px; padding-top: 16px; border-top: 1px solid var(--border);
+  }
+  .wo-optional-tag { font-weight: 400; font-size: 11px; text-transform: uppercase; letter-spacing: .5px; color: var(--text-dim); }
+  .wo-form-divider .wo-section-title { margin: 0; }
   .wo-field input[type="text"], .wo-field input[type="tel"], .wo-field textarea, .wo-field select {
     width: 100%; box-sizing: border-box; padding: 10px 12px; background: var(--bg-panel-2);
     border: 1px solid var(--border); border-radius: 8px; color: var(--white);
@@ -474,6 +489,11 @@
     becomes one tap on their exact choice rather than a second,
     separate scheduling conversation.
   -->
+  <div class="wo-form-divider">
+    <span class="wo-section-title">More Details</span>
+    <span class="wo-optional-tag">All Optional</span>
+  </div>
+
   <div class="wo-field wo-field-schedule">
     <button type="button" class="schedule-toggle" id="woScheduleToggle" onclick="toggleWoSchedule()">Have a date in mind? See available times &rarr;</button>
     <div class="schedule-panel" id="woSchedulePanel">
