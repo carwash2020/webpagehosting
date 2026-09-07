@@ -167,7 +167,13 @@
 // Bumped 2026-09-07 (v28 -> v29): /styles.css changed (dead-CSS cleanup
 // -- .teardown-sticky/.teardown-track/.terms-disclaimer/.gallery-note
 // removed, no markup anywhere ever referenced them), precached here.
-const CACHE_NAME = 'th-portal-v29';
+// Bumped 2026-09-07 (v29 -> v30): work-orders.html changed, in
+// PRECACHE_URLS. Added an "N requests in progress" summary banner
+// above the request list -- computed from the exact same `requests`
+// array the cards below it already render from, not a second figure.
+// Omitted entirely when nothing is open (every request is completed
+// or declined).
+const CACHE_NAME = 'th-portal-v30';
 const PRECACHE_URLS = [
   '/portal/home.html', '/portal/dashboard.html', '/portal/jobs.html', '/portal/quotes.html',
   '/portal/work-orders.html', '/portal/settings.html', '/portal/login.html', '/portal/set-password.html',
