@@ -38,13 +38,20 @@ test("the homepage's aggregateRating.reviewCount matches the number of slides ac
   assert.equal(schema.aggregateRating.ratingValue, '5.0');
 });
 
-test('every landing page carries the same reviewCount as the homepage, even though only the homepage has the carousel', () => {
-  const homeCount = schemaOf(INDEX).aggregateRating.reviewCount;
+// Corrected 2026-09-07, found in an SEO audit: every landing page used
+// to carry the exact same aggregateRating as the homepage, despite
+// having no review content, stars, or testimonials of their own --
+// only a link back to the homepage's own review section. Schema.org
+// and Google's own guidelines require rating markup to reflect real,
+// visible on-page content, so claiming a rating with nothing on the
+// page to back it is a real structured-data violation, not just
+// unnecessary duplication. The homepage keeps its own aggregateRating,
+// since it's the one page with the actual 7-review carousel.
+test('landing pages do not claim an aggregateRating they have no visible reviews to back', () => {
   for (const page of LANDING_PAGES) {
     const html = fs.readFileSync(repo(page), 'utf8');
     const schema = schemaOf(html);
-    assert.equal(schema.aggregateRating.reviewCount, homeCount, `${page} reviewCount is out of sync with index.html`);
-    assert.equal(schema.aggregateRating.ratingValue, '5.0');
+    assert.ok(!('aggregateRating' in schema), `${page} should not carry aggregateRating with no visible review content on the page`);
   }
 });
 
