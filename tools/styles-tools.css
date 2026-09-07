@@ -58,6 +58,33 @@
   margin-bottom:24px;
 }
 
+/* Inline hints nested inside a <label>.
+
+   styles.css (the public-site stylesheet, which every tool page also
+   loads) carries a bare `label{ text-transform:uppercase; letter-spacing:1px; }`
+   written for the contact form. Both of those properties are inherited,
+   so any <span> nested inside a label picks them up -- which turned the
+   explanatory parentheticals here into shouty, letter-spaced all-caps
+   sentences up to ~100 characters long ("(OPTIONAL -- LETS THIS CLIENT
+   VIEW AND PAY THIS INVOICE ONLINE)").
+
+   The labels themselves staying uppercase is a deliberate, consistent
+   design choice across the suite, so this reset is scoped to the nested
+   hint spans only: they're body copy and belong in sentence case. */
+label .tool-sub,
+label .col-hint,
+.label-hint{
+  text-transform:none;
+  letter-spacing:normal;
+}
+
+/* Canonical inline label hint -- the parenthetical that trails a field
+   label. Previously hand-rolled as an inline style on each occurrence. */
+.label-hint{
+  font-weight:400;
+  color:var(--text-dim);
+}
+
 .tool-header{
   display:flex;
   align-items:center;

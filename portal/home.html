@@ -231,7 +231,7 @@
   .report-bug-actions { display: flex; gap: 10px; margin-top: 16px; }
   .report-bug-actions button { flex: 1; justify-content: center; }
 </style>
-<link rel="stylesheet" href="/portal/portal-polish.css?v=e2b8e91ce5">
+<link rel="stylesheet" href="/portal/portal-polish.css?v=0a6a2f52f9">
 </head>
 <body class="portal-page">
 
@@ -279,7 +279,7 @@
   <p>Need work done? Send us the details and we'll follow up to confirm timing and pricing.</p>
   <p>For anything urgent &mdash; an active leak, no power, a fridge that's failed &mdash; please call or text instead. That reaches us faster than the portal.</p>
   <div class="help-actions">
-    <a href="/portal/work-orders.html">Request Work</a>
+    <a href="/portal/work-orders.html" class="primary">Request Work</a>
     <a href="tel:+14354141667">Call (435) 414-1667</a>
     <a href="sms:+14354141667">Text Us</a>
   </div>
@@ -407,33 +407,43 @@
       {
         href: '/portal/dashboard.html',
         count: s.invoices.length,
-        label: 'Invoices',
+        label: 'Invoice',
+        labelPlural: 'Invoices',
         desc: unpaidCount ? `${unpaidCount} unpaid` : (s.invoices.length ? 'All paid \u2014 thank you' : 'Nothing yet'),
       },
       {
         href: '/portal/quotes.html',
         count: s.quotes.length,
-        label: 'Estimates',
+        label: 'Estimate',
+        labelPlural: 'Estimates',
         desc: pendingQuoteCount ? `${pendingQuoteCount} awaiting approval` : (s.quotes.length ? 'All reviewed' : 'Nothing yet'),
       },
       {
         href: '/portal/jobs.html',
         count: s.jobs.length,
-        label: 'Completed Jobs',
+        label: 'Completed Job',
+        labelPlural: 'Completed Jobs',
         desc: s.jobs.length ? 'View history & warranties' : 'Nothing yet',
       },
       {
         href: '/portal/work-orders.html',
         count: s.requests.length,
-        label: 'Work Requests',
+        label: 'Work Request',
+        labelPlural: 'Work Requests',
         desc: openRequestCount ? `${openRequestCount} in progress` : 'Request something new',
       },
     ];
 
+    // Pluralize the label off the actual count. The attention banner just
+    // above these cards already does this carefully ("1 unpaid invoice" vs
+    // "2 unpaid invoices"); the cards were hardcoded plural, so a client
+    // with a single invoice -- the common case for this business -- landed
+    // on "1 INVOICES" / "1 ESTIMATES" every time they opened the portal.
+    // Zero stays plural, which is correct English ("0 Invoices").
     document.getElementById('homeCards').innerHTML = cards.map(c =>
       '<a href="' + c.href + '" class="home-card">' +
         '<div class="home-card-count">' + c.count + '</div>' +
-        '<div class="home-card-label">' + escapeHtml(c.label) + '</div>' +
+        '<div class="home-card-label">' + escapeHtml(c.count === 1 ? c.label : c.labelPlural) + '</div>' +
         '<div class="home-card-desc">' + escapeHtml(c.desc) + '</div>' +
       '</a>'
     ).join('');

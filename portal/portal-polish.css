@@ -284,6 +284,28 @@ body.portal-page .help-actions a:hover {
   box-shadow: 0 1px 0 rgba(255,255,255,.06) inset, 0 5px 14px -6px rgba(0,0,0,.4);
 }
 @media (prefers-reduced-motion: reduce) { body.portal-page .help-actions a { transition: none; } body.portal-page .help-actions a:hover { transform: none; } }
+/* That card offered three visually identical actions, so it had no
+   default -- nothing told a client which one to take. "Request Work" is
+   the one the card's first paragraph is actually about; calling is the
+   urgent-only exception named in the second. So it gets the portal's
+   established primary treatment, the same blue as Pay Now, Approve,
+   Send Request and Sign In, and Call/Text stay secondary.
+   It lives here rather than in home.html's own <style> because the rule
+   just above already owns this button pattern at the same specificity
+   and loads later -- a page-local .help-actions a.primary would tie and
+   lose, which is exactly what happened on the first attempt. */
+body.portal-page .help-actions a.primary {
+  background-image: linear-gradient(165deg, rgba(255,255,255,.34), rgba(255,255,255,0) 44%),
+    linear-gradient(135deg, #7ec4ff, #3aa0ff 60%, #1f5f9e);
+  border-color: transparent;
+  color: #04101c;
+  box-shadow: 0 1px 0 rgba(255,255,255,.3) inset, 0 -1px 0 rgba(0,0,0,.16) inset, 0 8px 20px -6px rgba(58,160,255,.5);
+}
+body.portal-page .help-actions a.primary:hover {
+  border-color: transparent;
+  color: #04101c;
+  box-shadow: 0 1px 0 rgba(255,255,255,.3) inset, 0 -1px 0 rgba(0,0,0,.16) inset, 0 10px 24px -6px rgba(58,160,255,.55);
+}
 
 /* Note: these message boxes are styled only via :not(:empty). They exist
    in the markup at all times and are filled in by script, so giving them
@@ -344,6 +366,27 @@ body.portal-page .help-actions a:hover {
 .wo-hint,
 .set-card-sub,
 .wo-urgency-sub { color: var(--text-dim); line-height: 1.55; }
+/* Bug fix (2026-09-07), found by rendering the real form rather than
+   reading the CSS: every .wo-hint on this page was displaying in ALL
+   CAPS with 1px letter-spacing -- including two full sentences of 104
+   and 121 characters ("What's happening, how long it's been going on,
+   anything you've already tried...").
+   Cause: styles.css carries a bare, unscoped `label { text-transform:
+   uppercase; letter-spacing: 1px; }` written for the public site's
+   short contact-form labels. The portal loads that same stylesheet,
+   each .wo-hint is a <span> nested INSIDE its <label>, and both of
+   those properties inherit -- so the hints picked up casing meant for
+   two-word labels. work-orders.html's own rule resets font-weight on
+   these spans (so the author knew they inherit label styling) but
+   never reset casing.
+   Deliberately narrow: the labels themselves stay uppercase, which is
+   a real, consistent design choice across this app. Only the nested
+   explanatory sentences -- which are body copy, not labels -- go back
+   to sentence case, where word shapes are legible again. */
+label .wo-hint {
+  text-transform: none;
+  letter-spacing: normal;
+}
 .wo-section-title,
 .set-card-title {
   font-family:var(--font-ui);
@@ -366,6 +409,23 @@ body.portal-page .help-actions a:hover {
 
 /* ---------- 10. collapsible cards ---------- */
 .set-card-header { min-height: 52px; }
+/* The collapsed rows were doing the opposite of what collapsing them was
+   for. Settings was made collapsible to cut the scroll length ("it still
+   looks a little much"), but a collapsed card still measured ~106px --
+   18px card padding + the 52px header tap target + 18px padding + 18px
+   margin -- to show one line of 15px text. Seven of those is ~740px of
+   almost entirely empty panel before you have opened anything.
+   The 52px min-height on the header already guarantees a comfortable tap
+   target on its own, so the card's own vertical padding is doing nothing
+   for reachability while collapsed. Trim it (and the gap) only in that
+   state: ~76px per row instead of ~106px, about 210px less scrolling on
+   the default view, with the tap target and the expanded layout both
+   completely unchanged. */
+.set-card.is-collapsed {
+  padding-top: 6px;
+  padding-bottom: 6px;
+  margin-bottom: 12px;
+}
 .set-card-chevron { transition: transform .22s ease; }
 .set-card.is-collapsed .set-card-chevron { transform: rotate(-90deg); }
 
