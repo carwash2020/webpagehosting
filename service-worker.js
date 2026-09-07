@@ -470,7 +470,13 @@
 // item #43, a real embedded map (Leaflet + free OpenStreetMap tiles)
 // replacing the old link-outs-only view, numbered stops connected in
 // visiting order.
-const CACHE_NAME = 'th-workspace-v86';
+// Bumped 2026-09-07 (v86 -> v87): /tools/job-detail.html changed --
+// item #45. Investigated first rather than assumed: this page (and
+// client-detail.html) already had a real hero-stat row, contrary to
+// what an earlier survey reported -- the only genuine gap found was a
+// missing warranty countdown badge, which job-tracker.html's own card
+// for the same job already shows. Added here to match.
+const CACHE_NAME = 'th-workspace-v87';
 const PRECACHE_URLS = [
   '/tools/workspace.html', '/tools/job-tracker.html', '/tools/invoice-generator.html', '/tools/contract-generator.html',
   '/tools/calendar.html', '/tools/route-planner.html', '/tools/review-request.html', '/tools/contact-card.html',
