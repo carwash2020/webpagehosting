@@ -42,7 +42,7 @@ test('styles.css still carries the bare label rule these resets exist to answer'
 });
 
 test('portal hints nested in a label are reset to sentence case', () => {
-  const rule = POLISH.match(/label \.wo-hint \{[^}]*\}/);
+  const rule = POLISH.match(/label \.wo-hint,\s*\n?label \.login-hint \{[^}]*\}/);
   assert.ok(rule, 'expected a label .wo-hint reset in portal-polish.css');
   assert.match(rule[0], /text-transform: none/);
   assert.match(rule[0], /letter-spacing: normal/);
@@ -74,7 +74,7 @@ test('no long hint sentence nested in a label is left inheriting uppercase', () 
   // sentences of 60 to 121 characters -- inheriting the same treatment.
   // So a nested span only has to carry a reset class once it is long
   // enough that all-caps costs legibility.
-  const COVERED = new Set(['wo-hint', 'tool-sub', 'col-hint', 'label-hint']);
+  const COVERED = new Set(['wo-hint', 'tool-sub', 'col-hint', 'label-hint', 'login-hint']);
   const MAX_UNRESET = 25;
   const files = [
     ...fs.readdirSync(repo('portal')).filter((f) => f.endsWith('.html')).map((f) => repo('portal', f)),

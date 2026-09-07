@@ -99,7 +99,17 @@
 // work-orders.html: the schedule toggle groups with the urgency
 // question above it. Same reasoning as every prior bump in this file's
 // history.
-const CACHE_NAME = 'th-portal-v18';
+// Bumped 2026-09-07 (v18 -> v19): portal-polish.css and set-password.html
+// changed, both in PRECACHE_URLS. portal-polish.css: "View details" on the
+// invoice and quote cards was a bare <details>/<summary> rendering the
+// browser's own disclosure triangle -- the one raw platform widget left in
+// the app, a few hundred pixels from Settings' custom chevron doing the
+// identical job; it now uses that same chevron, rotation and easing. Also
+// adds .login-hint. set-password.html: the 8-character rule is stated on
+// the field instead of only after a failed submit, and the length check
+// now runs before the mismatch check. Same reasoning as every prior bump
+// in this file's history.
+const CACHE_NAME = 'th-portal-v19';
 const PRECACHE_URLS = [
   '/portal/home.html', '/portal/dashboard.html', '/portal/jobs.html', '/portal/quotes.html',
   '/portal/work-orders.html', '/portal/settings.html', '/portal/login.html', '/portal/set-password.html',
