@@ -3,6 +3,14 @@
 // before/after section using real client work. The homepage previously
 // showed none of the 62 job photos anywhere in the scroll; all of them
 // lived only behind the "Gallery" nav link's modal.
+//
+// The reveal section was later (same day) expanded from one pair to a
+// 3-pair gallery, switched via the same .carousel-dot control the
+// reviews carousel already uses. Pair 1 deliberately keeps its
+// original cross-job photos -- see the "does not claim the after photo
+// is the same room" test below for why a same-kitchen "after" was
+// rejected. Pairs 2 and 3 were only added after opening every candidate
+// photo directly and checking for that same lighting problem.
 
 const { test } = require('node:test');
 const assert = require('node:assert/strict');
@@ -81,7 +89,7 @@ test('the reveal section and its scrub input share one --p convention (a 0-1 fra
 });
 
 test('the reveal demo sweep is skipped under reduced motion, same guard as the teardown demo', () => {
-  const revealBlock = INDEX.slice(INDEX.indexOf('const revealStage'), INDEX.indexOf('const revealStage') + 1200);
+  const revealBlock = INDEX.slice(INDEX.indexOf('const revealStage'), INDEX.indexOf('const revealStage') + 3200);
   assert.match(revealBlock, /if \(!reduced && 'IntersectionObserver' in window\)/);
 });
 
@@ -101,4 +109,63 @@ test('the reveal frame crops each portrait source photo toward its own clean pat
   const afterRule = STYLES.match(/\.reveal-after img\{[^}]*\}/)[0];
   assert.match(beforeRule, /object-position:center \d+%/);
   assert.match(afterRule, /object-position:center \d+%/);
+});
+
+// ---- before/after gallery (3 pairs, 2026-09-07) ----
+
+function extractRevealPairs() {
+  const arrayText = INDEX.match(/const REVEAL_PAIRS = (\[[\s\S]*?\n    \]);/);
+  assert.ok(arrayText, 'expected to find the REVEAL_PAIRS array in index.html');
+  // eslint-disable-next-line no-eval
+  return (0, eval)(arrayText[1]);
+}
+
+test('there are 3 real before/after pairs, and every referenced image file actually exists', () => {
+  const pairs = extractRevealPairs();
+  assert.equal(pairs.length, 3);
+  const fs2 = require('fs');
+  for (const pair of pairs) {
+    for (const side of ['before', 'after']) {
+      const relPath = pair[side].src.split('?')[0].replace(/^\//, '');
+      const fullPath = repo(relPath);
+      assert.ok(fs2.existsSync(fullPath), `${pair[side].src} does not exist on disk`);
+      assert.match(pair[side].alt, side === 'before' ? /^Before:/ : /^After:/);
+    }
+  }
+});
+
+test('pair 1 keeps its original, deliberately cross-job photos -- not a same-kitchen claim', () => {
+  const pairs = extractRevealPairs();
+  assert.match(pairs[0].before.src, /tile-kitchen-before-2\.webp/);
+  assert.match(pairs[0].after.src, /plank-finished-living-2\.webp/);
+});
+
+test('no pair reuses the same photo as another pair\'s before or after', () => {
+  const pairs = extractRevealPairs();
+  const allSrcs = pairs.flatMap((p) => [p.before.src, p.after.src]);
+  assert.equal(new Set(allSrcs).size, allSrcs.length, 'expected every before/after photo across all 3 pairs to be distinct');
+});
+
+test('a dot exists per pair, reusing the exact same .carousel-dot markup/behavior as the reviews carousel', () => {
+  assert.match(INDEX, /<div class="carousel-dots" id="revealDots" role="tablist"/);
+  const revealBlock = INDEX.slice(INDEX.indexOf('const REVEAL_PAIRS'), INDEX.indexOf('const REVEAL_PAIRS') + 3000);
+  assert.match(revealBlock, /dot\.className = 'carousel-dot' \+ \(i === 0 \? ' is-active' : ''\)/);
+  assert.match(revealBlock, /dot\.addEventListener\('click', \(\) => goToRevealPair\(i\)\)/);
+});
+
+test('switching pairs resets the scrub to the midpoint rather than leaving it wherever the last pair left it', () => {
+  const revealBlock = INDEX.slice(INDEX.indexOf('function goToRevealPair'), INDEX.indexOf('function goToRevealPair') + 800);
+  assert.match(revealBlock, /revealScrub\.value = 50;/);
+  assert.match(revealBlock, /applyReveal\(0\.5\);/);
+});
+
+test('the once-only intro demo sweep cannot fight a pair switch and overwrite the just-reset scrub position', () => {
+  // Regression check: caught live with Playwright -- switching pairs while
+  // the intro sweep's requestAnimationFrame loop was still mid-flight let
+  // the sweep overwrite revealScrub.value a frame later, undoing the
+  // reset in goToRevealPair above.
+  const revealBlock = INDEX.slice(INDEX.indexOf('const REVEAL_PAIRS'), INDEX.indexOf('</script>', INDEX.indexOf('const REVEAL_PAIRS')));
+  assert.match(revealBlock, /revealDemoCancelled = true;/);
+  const stepFn = revealBlock.match(/\(function step\(now\) \{[\s\S]*?\}\)\(start\);/)[0];
+  assert.match(stepFn, /if \(revealDemoCancelled\) return;/);
 });
