@@ -404,7 +404,15 @@
 // class name survives only as an unrelated same-named local class in
 // tools/runway-dashboard.html's own self-contained <style> block,
 // which never loads styles.css at all), precached here.
-const CACHE_NAME = 'th-workspace-v77';
+// Bumped 2026-09-07 (v77 -> v78): tools/runway-dashboard.html changed,
+// precached here. It had 3 real validation prompts (naming a debt,
+// expense, or income source) still going through the browser's own
+// bare alert() -- it never loaded /tools/tools-dialogs.js, despite
+// two of its own comments already referencing that file as the source
+// of its escapeHtml()/haptic() helper copies. Every other tool page
+// with any alert() at all already uses tools-dialogs.js's showAlert()
+// for this. Now wired up and switched over the same way.
+const CACHE_NAME = 'th-workspace-v78';
 const PRECACHE_URLS = [
   '/tools/workspace.html', '/tools/job-tracker.html', '/tools/invoice-generator.html', '/tools/contract-generator.html',
   '/tools/calendar.html', '/tools/route-planner.html', '/tools/review-request.html', '/tools/contact-card.html',
