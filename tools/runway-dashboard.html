@@ -323,6 +323,38 @@
   table.month-table th{color:var(--text-faint);text-transform:uppercase;font-size:10px;}
   .net-positive{color:var(--green);}
   .net-negative{color:var(--red);}
+  /* Net Profit Trend / Revenue vs Costs charts (2026-09-07): rebuilt as
+     SVG (was hand-drawn <canvas>) so each bar is a real, focusable DOM
+     element -- same dataviz treatment already used for the client
+     portal's Invoice History chart (portal/dashboard.html): a
+     horizontally-scrolling row of fixed-width columns (so a growing
+     month count scrolls instead of squeezing bars illegibly thin),
+     rounded 4px bar ends, and CSS custom-property colors so both charts
+     finally track the light/dark theme toggle -- the old canvas version
+     hardcoded literal hex/rgba colors that never adapted, including a
+     near-invisible baseline on the light theme. */
+  .chart-scroll{overflow-x:auto;-webkit-overflow-scrolling:touch;padding-bottom:4px;}
+  .rw-chart{display:block;}
+  .chart-bar-group{cursor:default;}
+  .chart-bar-group[role="button"]{cursor:pointer;}
+  .chart-bar{transition:opacity .12s ease;}
+  .chart-bar-group[role="button"]:hover .chart-bar,
+  .chart-bar-group[role="button"]:focus .chart-bar{opacity:0.82;}
+  .chart-bar-group:focus{outline:none;}
+  .chart-value{font-size:10.5px;font-weight:600;fill:var(--text);font-family:inherit;}
+  .chart-date{font-size:10px;fill:var(--text-dim);font-family:inherit;}
+  .chart-legend{display:flex;flex-wrap:wrap;gap:16px;margin-top:10px;font-size:12px;color:var(--text-dim);}
+  .chart-legend-dot{display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:6px;vertical-align:middle;}
+  .chart-legend-line{display:inline-block;width:14px;height:0;border-top:2px dashed var(--orange);margin-right:6px;vertical-align:middle;}
+  /* Bar -> Monthly History row (Revenue vs Costs only -- Net Profit
+     Trend labels its bars directly instead, see drawTrendChart): reuses
+     the exact highlight-flash idiom the client portal uses to tie its
+     own chart bars back to their source card. */
+  tr[data-month-row].is-highlighted{animation:monthRowHighlight 1.6s ease;}
+  @keyframes monthRowHighlight{
+    0%,100%{background:transparent;}
+    25%{background:var(--orange-tint-glow);}
+  }
   .progress-track{background:var(--bg);border-radius:20px;height:10px;overflow:hidden;margin-top:8px;}
   .progress-fill{height:100%;background:linear-gradient(90deg, var(--orange-dark), var(--orange));border-radius:20px;transition: width .3s;}
   .progress-labels{display:flex;justify-content:space-between;font-size:10px;color:var(--text-faint);margin-top:4px;}
@@ -729,14 +761,19 @@
 
     <div class="card">
       <div class="card-header"><h3>Net Profit Trend <button class="help-btn" onclick="openCardInfo('trendChart')" aria-label="What is this?" title="What is this?">?</button></h3></div>
-      <canvas id="trendChart" height="140" style="width:100%;display:block;"></canvas>
+      <div class="chart-scroll"><svg id="trendChart" class="rw-chart" role="img" aria-label="Net profit by month"></svg></div>
+      <div class="chart-legend" id="trendChartLegend"></div>
       <div class="note" id="trendChartNote"></div>
     </div>
 
     <div class="card">
       <div class="card-header"><h3>Revenue vs. Costs <button class="help-btn" onclick="openCardInfo('revCostChart')" aria-label="What is this?" title="What is this?">?</button></h3></div>
-      <canvas id="revCostChart" height="140" style="width:100%;display:block;"></canvas>
-      <div class="note" id="revCostChartNote"></div>
+      <div class="chart-scroll"><svg id="revCostChart" class="rw-chart" role="img" aria-label="Revenue and costs by month"></svg></div>
+      <div class="chart-legend">
+        <span><span class="chart-legend-dot" style="background:var(--orange);"></span>Revenue</span>
+        <span><span class="chart-legend-dot" style="background:#8d97a3;"></span>Costs</span>
+      </div>
+      <div class="note" id="revCostChartNote">Tap or click a bar to jump to that month in Monthly History below.</div>
     </div>
 
     <div class="card">
@@ -2192,19 +2229,34 @@ function renderRunway(){
   renderSafeDraw(min);
 }
 
+// Shared by both charts below (2026-09-07): builds an SVG path for a
+// bar whose OUTER end is rounded and whose end touching the baseline
+// stays flat -- 'top' for a bar rising up from the baseline, 'bottom'
+// for one hanging down from it (a diverging positive/negative bar).
+// Radius clamps to half the bar's own height/width, same guard the old
+// canvas roundedTopRect had, so a very short/thin bar never produces a
+// self-intersecting arc.
+function roundedBarPath(x, y, width, height, radius, corner) {
+  const r = Math.max(0, Math.min(radius, height / 2, width / 2));
+  if (corner === 'top') {
+    return `M${x},${y + height} L${x},${y + r} A${r},${r} 0 0 1 ${x + r},${y} L${x + width - r},${y} A${r},${r} 0 0 1 ${x + width},${y + r} L${x + width},${y + height} Z`;
+  }
+  return `M${x},${y} L${x + width},${y} L${x + width},${y + height - r} A${r},${r} 0 0 1 ${x + width - r},${y + height} L${x + r},${y + height} A${r},${r} 0 0 1 ${x},${y + height - r} Z`;
+}
+
+const TREND_CHART_COLUMN_WIDTH = 56;
+const TREND_CHART_BAR_WIDTH = 28;
+const TREND_CHART_HEIGHT = 170;
+
 function drawTrendChart(nets, min){
-  const canvas = document.getElementById('trendChart');
+  const svg = document.getElementById('trendChart');
   const note = document.getElementById('trendChartNote');
-  const ctx = canvas.getContext('2d');
-  const dpr = window.devicePixelRatio || 1;
-  const w = canvas.clientWidth || canvas.parentElement.clientWidth;
-  const h = 140;
-  canvas.width = w * dpr;
-  canvas.height = h * dpr;
-  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-  ctx.clearRect(0, 0, w, h);
+  const legend = document.getElementById('trendChartLegend');
 
   if(nets.length === 0){
+    svg.innerHTML = '';
+    svg.removeAttribute('viewBox'); svg.removeAttribute('width'); svg.removeAttribute('height');
+    legend.innerHTML = '';
     note.textContent = 'Log a business month to start seeing this.';
     return;
   }
@@ -2212,87 +2264,59 @@ function drawTrendChart(nets, min){
     ? 'One month logged so far \u2014 the chart fills in as you log more.'
     : `Showing all ${nets.length} logged month${nets.length===1?'':'s'}.`;
 
-  const padding = { top: 10, bottom: 20, left: 4, right: 4 };
-  const plotW = w - padding.left - padding.right;
-  const plotH = h - padding.top - padding.bottom;
+  const width = nets.length * TREND_CHART_COLUMN_WIDTH;
+  const topPad = 20, bottomPad = 34;
+  const plotH = TREND_CHART_HEIGHT - topPad - bottomPad;
   const values = nets.map(n => n.y);
   const maxVal = Math.max(...values, min, 1);
   const minVal = Math.min(...values, 0);
   const range = maxVal - minVal || 1;
-  const barW = plotW / nets.length;
-  const zeroY = padding.top + plotH * (1 - (0 - minVal) / range);
+  const zeroY = topPad + plotH * (1 - (0 - minVal) / range);
 
-  // Bills line
-  if(min > 0){
-    const billY = padding.top + plotH * (1 - (min - minVal) / range);
-    ctx.strokeStyle = '#ff8000';
-    ctx.setLineDash([4,3]);
-    ctx.beginPath();
-    ctx.moveTo(padding.left, billY);
-    ctx.lineTo(w - padding.right, billY);
-    ctx.stroke();
-    ctx.setLineDash([]);
+  let billsLine = '';
+  if (min > 0) {
+    const billY = topPad + plotH * (1 - (min - minVal) / range);
+    billsLine = `<line x1="0" y1="${billY.toFixed(1)}" x2="${width}" y2="${billY.toFixed(1)}" stroke="var(--orange)" stroke-width="1.5" stroke-dasharray="4,3"></line>`;
   }
+  legend.innerHTML = min > 0
+    ? `<span><span class="chart-legend-line"></span>Minimum to cover bills (${fmt(min)})</span>`
+    : '';
 
-  // Visual upgrade (2026-08-16): rounded-top bars with a vertical
-  // gradient fill instead of flat color, matching the rest of the
-  // redesign's "elevated surface" language. Radius clamps to half the
-  // bar's own height/width so a very short bar (barH < radius*2) still
-  // draws a valid rounded rect instead of a self-intersecting path.
-  function roundedTopRect(ctx, x, y, width, height, radius) {
-    const r = Math.max(0, Math.min(radius, height / 2, width / 2));
-    ctx.beginPath();
-    ctx.moveTo(x, y + height);
-    ctx.lineTo(x, y + r);
-    ctx.arcTo(x, y, x + r, y, r);
-    ctx.lineTo(x + width - r, y);
-    ctx.arcTo(x + width, y, x + width, y + r, r);
-    ctx.lineTo(x + width, y + height);
-    ctx.closePath();
-  }
+  const bars = nets.map((n, i) => {
+    const x = i * TREND_CHART_COLUMN_WIDTH + (TREND_CHART_COLUMN_WIDTH - TREND_CHART_BAR_WIDTH) / 2;
+    const barH = Math.max(Math.abs(n.y) / range * plotH, 2);
+    const isPos = n.y >= 0;
+    const y = isPos ? zeroY - barH : zeroY;
+    const path = roundedBarPath(x, y, TREND_CHART_BAR_WIDTH, barH, 4, isPos ? 'top' : 'bottom');
+    const fillId = isPos ? 'trendGreenFill' : 'trendRedFill';
+    const valueY = isPos ? Math.max(y - 6, 12) : Math.min(y + barH + 14, TREND_CHART_HEIGHT - bottomPad + 14);
+    const monthY = TREND_CHART_HEIGHT - 8;
+    return `
+      <g class="chart-bar-group" role="img" aria-label="${escapeHtml(n.month)}, net profit ${fmt(n.y)}">
+        <path class="chart-bar" d="${path}" fill="url(#${fillId})"></path>
+        <text class="chart-value" x="${x + TREND_CHART_BAR_WIDTH / 2}" y="${valueY}" text-anchor="middle">${fmt(n.y)}</text>
+        <text class="chart-date" x="${x + TREND_CHART_BAR_WIDTH / 2}" y="${monthY}" text-anchor="middle">${escapeHtml(n.month)}</text>
+      </g>`;
+  }).join('');
 
-  nets.forEach((n, i) => {
-    const barH = Math.abs(n.y - 0) / range * plotH;
-    const x = padding.left + i * barW + barW * 0.15;
-    const bw = barW * 0.7;
-    const y = n.y >= 0 ? zeroY - barH : zeroY;
-    const h = Math.max(barH, 1);
-
-    const gradient = ctx.createLinearGradient(0, y, 0, y + h);
-    if (n.y >= 0) {
-      gradient.addColorStop(0, '#5fe08c');
-      gradient.addColorStop(1, '#2fa860');
-    } else {
-      gradient.addColorStop(0, '#e77a72');
-      gradient.addColorStop(1, '#c23f37');
-    }
-    ctx.fillStyle = gradient;
-
-    // The rounded corner should always be on the bar's OUTER end (top
-    // for a positive/green bar rising from the baseline, bottom for a
-    // negative/red bar hanging below it) -- so a negative bar is drawn
-    // flipped rather than reusing the same corner placement.
-    if (n.y >= 0) {
-      roundedTopRect(ctx, x, y, bw, h, 4);
-    } else {
-      ctx.save();
-      ctx.translate(x, y + h);
-      ctx.scale(1, -1);
-      roundedTopRect(ctx, 0, 0, bw, h, 4);
-      ctx.restore();
-    }
-    ctx.fill();
-  });
-
-  // Baseline (zero line) -- softened further and drawn last so it reads
-  // as a clean reference line sitting on top of the bars, not a seam
-  // between two flat blocks.
-  ctx.strokeStyle = 'rgba(255,255,255,0.18)';
-  ctx.lineWidth = 1;
-  ctx.beginPath();
-  ctx.moveTo(padding.left, zeroY);
-  ctx.lineTo(w - padding.right, zeroY);
-  ctx.stroke();
+  svg.setAttribute('viewBox', `0 0 ${width} ${TREND_CHART_HEIGHT}`);
+  svg.setAttribute('width', width);
+  svg.setAttribute('height', TREND_CHART_HEIGHT);
+  svg.innerHTML = `
+    <defs>
+      <linearGradient id="trendGreenFill" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0%" stop-color="#5fe08c"></stop>
+        <stop offset="100%" stop-color="#2fa860"></stop>
+      </linearGradient>
+      <linearGradient id="trendRedFill" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0%" stop-color="#e77a72"></stop>
+        <stop offset="100%" stop-color="#c23f37"></stop>
+      </linearGradient>
+    </defs>
+    <line x1="0" y1="${zeroY.toFixed(1)}" x2="${width}" y2="${zeroY.toFixed(1)}" stroke="var(--border)" stroke-width="1"></line>
+    ${billsLine}
+    ${bars}
+  `;
 }
 
 // Item #4 (2026-08-17): the trend chart shows NET profit only -- useful,
@@ -2302,82 +2326,93 @@ function drawTrendChart(nets, min){
 // month, using the exact same logged business-month data as the trend
 // chart above, so a revenue dip and a cost spike finally look different
 // from each other instead of collapsing into the same net number.
+// Bars are click/Enter targets that scroll to and briefly highlight the
+// matching row in the Monthly History table below (highlightMonthRow()),
+// same pattern the client portal's Invoice History chart uses to tie a
+// bar back to its source row -- so the exact revenue/cost figures live
+// in one real place, not duplicated as permanent on-chart labels (2
+// side-by-side bars per month already need a legend to read; adding 2
+// more number labels per month on top of that would crowd fast once a
+// business logs a full year).
+const REVCOST_CHART_COLUMN_WIDTH = 64;
+const REVCOST_CHART_BAR_WIDTH = 22;
+const REVCOST_CHART_HEIGHT = 170;
+const REVCOST_CHART_BAR_GAP = 3;
+
 function drawRevCostChart(sortedMonths) {
-  const canvas = document.getElementById('revCostChart');
+  const svg = document.getElementById('revCostChart');
   const note = document.getElementById('revCostChartNote');
-  const ctx = canvas.getContext('2d');
-  const dpr = window.devicePixelRatio || 1;
-  const w = canvas.clientWidth || canvas.parentElement.clientWidth;
-  const h = 140;
-  canvas.width = w * dpr;
-  canvas.height = h * dpr;
-  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-  ctx.clearRect(0, 0, w, h);
 
   if (sortedMonths.length === 0) {
+    svg.innerHTML = '';
+    svg.removeAttribute('viewBox'); svg.removeAttribute('width'); svg.removeAttribute('height');
     note.textContent = 'Log a business month to start seeing this.';
     return;
   }
-  note.textContent = 'Orange = revenue invoiced. Steel = expenses, fuel, and other costs combined.';
+  note.textContent = 'Tap or click a bar to jump to that month in Monthly History below.';
 
-  const padding = { top: 10, bottom: 20, left: 4, right: 4 };
-  const plotW = w - padding.left - padding.right;
-  const plotH = h - padding.top - padding.bottom;
   const points = sortedMonths.map(m => ({
+    month: m.month,
     revenue: Number(m.revenue) || 0,
     costs: (Number(m.expenses) || 0) + (Number(m.fuel) || 0) + (Number(m.other) || 0),
   }));
+  const width = points.length * REVCOST_CHART_COLUMN_WIDTH;
+  const topPad = 20, bottomPad = 34;
+  const plotH = REVCOST_CHART_HEIGHT - topPad - bottomPad;
+  const baselineY = topPad + plotH;
   const maxVal = Math.max(...points.map(p => Math.max(p.revenue, p.costs)), 1);
-  const groupW = plotW / points.length;
-  // Bug fix (2026-08-20): no floor here previously, unlike revH/costH
-  // just below (which already use Math.max(...,1)) -- if this canvas
-  // is hidden (clientWidth 0) when it draws, which happens for any
-  // non-active tab's chart during initial page load, plotW/groupW cascade
-  // negative, and this had nothing stopping it from following suit.
-  const barW = Math.max(Math.min(groupW * 0.36, 26), 1);
-  const gap = 3;
 
-  function roundedTopRect(x, y, width, height, radius) {
-    // Defense in depth alongside the barW fix above: never let a
-    // negative width/height (from some other, unanticipated path)
-    // produce a negative radius here, which is what crashed arcTo.
-    const r = Math.max(0, Math.min(radius, height / 2, width / 2));
-    ctx.beginPath();
-    ctx.moveTo(x, y + height);
-    ctx.lineTo(x, y + r);
-    ctx.arcTo(x, y, x + r, y, r);
-    ctx.lineTo(x + width - r, y);
-    ctx.arcTo(x + width, y, x + width, y + r, r);
-    ctx.lineTo(x + width, y + height);
-    ctx.closePath();
-  }
+  const groups = points.map((p, i) => {
+    const groupX = i * REVCOST_CHART_COLUMN_WIDTH + (REVCOST_CHART_COLUMN_WIDTH - (REVCOST_CHART_BAR_WIDTH * 2 + REVCOST_CHART_BAR_GAP)) / 2;
+    const revH = Math.max((p.revenue / maxVal) * plotH, 2);
+    const costH = Math.max((p.costs / maxVal) * plotH, 2);
+    const revX = groupX;
+    const costX = groupX + REVCOST_CHART_BAR_WIDTH + REVCOST_CHART_BAR_GAP;
+    const revPath = roundedBarPath(revX, baselineY - revH, REVCOST_CHART_BAR_WIDTH, revH, 3, 'top');
+    const costPath = roundedBarPath(costX, baselineY - costH, REVCOST_CHART_BAR_WIDTH, costH, 3, 'top');
+    const groupCenter = groupX + REVCOST_CHART_BAR_WIDTH + REVCOST_CHART_BAR_GAP / 2;
+    const monthY = REVCOST_CHART_HEIGHT - 8;
+    return `
+      <g class="chart-bar-group" tabindex="0" role="button"
+         aria-label="${escapeHtml(p.month)}: revenue ${fmt(p.revenue)}, costs ${fmt(p.costs)}"
+         onclick="highlightMonthRow('${p.month}')"
+         onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();highlightMonthRow('${p.month}');}">
+        <rect x="${groupX - 3}" y="4" width="${REVCOST_CHART_BAR_WIDTH * 2 + REVCOST_CHART_BAR_GAP + 6}" height="${REVCOST_CHART_HEIGHT - 4}" fill="transparent"></rect>
+        <path class="chart-bar" d="${revPath}" fill="url(#revcostOrangeFill)"></path>
+        <path class="chart-bar" d="${costPath}" fill="url(#revcostSteelFill)"></path>
+        <text class="chart-date" x="${groupCenter}" y="${monthY}" text-anchor="middle">${escapeHtml(p.month)}</text>
+      </g>`;
+  }).join('');
 
-  points.forEach((p, i) => {
-    const groupCenter = padding.left + i * groupW + groupW / 2;
-    const revH = Math.max((p.revenue / maxVal) * plotH, 1);
-    const costH = Math.max((p.costs / maxVal) * plotH, 1);
+  svg.setAttribute('viewBox', `0 0 ${width} ${REVCOST_CHART_HEIGHT}`);
+  svg.setAttribute('width', width);
+  svg.setAttribute('height', REVCOST_CHART_HEIGHT);
+  svg.innerHTML = `
+    <defs>
+      <linearGradient id="revcostOrangeFill" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0%" stop-color="#ffb347"></stop>
+        <stop offset="100%" stop-color="#cc6600"></stop>
+      </linearGradient>
+      <linearGradient id="revcostSteelFill" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0%" stop-color="#b8bec7"></stop>
+        <stop offset="100%" stop-color="#7d8590"></stop>
+      </linearGradient>
+    </defs>
+    <line x1="0" y1="${baselineY.toFixed(1)}" x2="${width}" y2="${baselineY.toFixed(1)}" stroke="var(--border)" stroke-width="1"></line>
+    ${groups}
+  `;
+}
 
-    const revGrad = ctx.createLinearGradient(0, padding.top + plotH - revH, 0, padding.top + plotH);
-    revGrad.addColorStop(0, '#ffb347');
-    revGrad.addColorStop(1, '#cc6600');
-    ctx.fillStyle = revGrad;
-    roundedTopRect(groupCenter - gap / 2 - barW, padding.top + plotH - revH, barW, revH, 3);
-    ctx.fill();
-
-    const costGrad = ctx.createLinearGradient(0, padding.top + plotH - costH, 0, padding.top + plotH);
-    costGrad.addColorStop(0, '#b8bec7');
-    costGrad.addColorStop(1, '#7d8590');
-    ctx.fillStyle = costGrad;
-    roundedTopRect(groupCenter + gap / 2, padding.top + plotH - costH, barW, costH, 3);
-    ctx.fill();
-  });
-
-  ctx.strokeStyle = 'rgba(255,255,255,0.18)';
-  ctx.lineWidth = 1;
-  ctx.beginPath();
-  ctx.moveTo(padding.left, padding.top + plotH);
-  ctx.lineTo(w - padding.right, padding.top + plotH);
-  ctx.stroke();
+// Ties a Revenue vs Costs bar back to its source row in the Monthly
+// History table (both live in the same panel) -- same
+// scroll-and-flash idiom the client portal uses for its own chart bars.
+function highlightMonthRow(monthKey) {
+  const row = document.querySelector('[data-month-row="' + monthKey + '"]');
+  if (!row) return;
+  row.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  row.classList.remove('is-highlighted');
+  void row.offsetWidth; // restart the animation even if the same bar is clicked twice in a row
+  row.classList.add('is-highlighted');
 }
 
 // ---------------------------------------------------------------------------
@@ -2500,10 +2535,13 @@ function switchToTab(tabKey){
     btn.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
     if(currentPanel){ currentPanel.classList.remove('active', 'fade-out'); currentPanel.style.opacity = ''; }
     nextPanel.classList.add('active');
-    // The trend chart's canvas reads 0 width while its tab is hidden
-    // (display:none elements always report clientWidth 0), so if data
-    // changed while on a different tab, the chart needs a fresh draw
-    // now that it's actually visible and has real layout dimensions.
+    // Redraws the Runway tab's numbers/charts in case any of its source
+    // data changed while a different tab was active. (Historical note:
+    // this used to also be the fix for the trend chart's canvas reading
+    // 0 width while its tab was hidden -- since 2026-09-07 both charts
+    // are SVG sized purely from data, not container width, so that
+    // specific failure mode can't happen anymore; this call just keeps
+    // the numbers fresh.)
     if(tabKey === 'runway') renderRunway();
     tabSwitchInProgress = false;
   }

@@ -2576,63 +2576,19 @@ test('none of the 3 fixed pages call a deferred-script-dependent function (money
 // stopping it from following suit. roundedTopRect's own radius clamp
 // (Math.min(radius, height/2, width/2)) then picked up that negative
 // width/2 with no floor of its own, producing the exact negative
-// radius that crashed arcTo. Fixed at both levels: a real floor on
-// barW (the root cause) and a defensive Math.max(0, ...) on the radius
-// clamp itself in both chart functions, so this can't crash even from
-// some other, unanticipated path. Also fixed the trend chart's
-// `barH || 1` fallback, which only replaces falsy values (0, NaN) and
-// would not have caught a genuinely negative barH the same way
-// Math.max correctly floors it.
-
-test('drawRevCostChart does not crash when its canvas has zero width, reproducing the exact hidden-tab condition from the real report', () => {
-  const { JSDOM } = require('jsdom');
-  const html = fs.readFileSync(path.join(__dirname, '..', '..', 'tools', 'runway-dashboard.html'), 'utf8');
-  const dom = new JSDOM(html, {
-    runScripts: 'dangerously', url: 'https://example.com/tools/runway-dashboard.html',
-    beforeParse(window) {
-      window.requireAuth = () => {};
-      window.HTMLElement.prototype.scrollIntoView = () => {};
-      // Real arcTo validation behavior -- throws exactly like the
-      // reported error if radius is negative, so this test genuinely
-      // exercises the same failure mode rather than assuming it.
-      window.HTMLCanvasElement.prototype.getContext = () => ({
-        setTransform(){}, clearRect(){}, beginPath(){}, moveTo(){}, lineTo(){},
-        arcTo(x1, y1, x2, y2, r) {
-          if (r < 0) throw new Error("Failed to execute 'arcTo' on 'CanvasRenderingContext2D': The radius provided (" + r + ') is negative.');
-        },
-        closePath(){}, fill(){}, stroke(){}, createLinearGradient() { return { addColorStop(){} }; },
-        setLineDash(){},
-      });
-    },
-  });
-  const { window } = dom;
-  const canvas = window.document.getElementById('revCostChart');
-  Object.defineProperty(canvas, 'clientWidth', { value: 0, configurable: true });
-  Object.defineProperty(canvas.parentElement, 'clientWidth', { value: 0, configurable: true });
-
-  assert.doesNotThrow(() => {
-    window.drawRevCostChart([
-      { revenue: 5000, expenses: 1200, fuel: 300, other: 100 },
-      { revenue: 4200, expenses: 900, fuel: 250, other: 50 },
-    ]);
-  });
-});
-
-test('both roundedTopRect definitions in runway-dashboard.html clamp their radius to never go negative', () => {
-  const src = fs.readFileSync(path.join(__dirname, '..', '..', 'tools', 'runway-dashboard.html'), 'utf8');
-  const matches = [...src.matchAll(/const r = (Math\.max\(0, Math\.min\([^)]*\)\)|Math\.min\([^)]*\));/g)];
-  assert.equal(matches.length, 2, 'expected exactly 2 roundedTopRect definitions');
-  for (const m of matches) {
-    assert.match(m[0], /Math\.max\(0,/, 'radius calc should be floored at 0: ' + m[0]);
-  }
-});
-
-test('barW and h both have a real floor (Math.max), not the old barH || 1 pattern which does not catch negative values', () => {
-  const src = fs.readFileSync(path.join(__dirname, '..', '..', 'tools', 'runway-dashboard.html'), 'utf8');
-  assert.match(src, /const barW = Math\.max\(Math\.min\(groupW \* 0\.36, 26\), 1\);/);
-  assert.match(src, /const h = Math\.max\(barH, 1\);/);
-  assert.doesNotMatch(src, /const h = barH \|\| 1;/);
-});
+// radius that crashed arcTo.
+//
+// Superseded (2026-09-07): both charts were rebuilt as SVG (item #41),
+// same dataviz treatment already used for the client portal's Invoice
+// History chart -- see tests/workspace/runway-charts-svg.test.js for
+// the current coverage. The three tests that used to live here no
+// longer apply to anything real: the new charts size themselves purely
+// from data (columns × a fixed per-column width), never from a
+// canvas's own clientWidth/parentElement.clientWidth -- so the "hidden
+// tab reads 0 width" failure mode this whole fix was protecting
+// against can no longer occur in the first place, and the
+// canvas-specific `roundedTopRect`/`getContext`/`barW` internals these
+// tests inspected don't exist anymore.
 
 // CRITICAL BUG FIX (2026-08-20), the actual, definitive root cause of a
 // repeatedly-reported issue: the tour card never visible on Runway

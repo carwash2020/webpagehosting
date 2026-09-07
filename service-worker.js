@@ -454,7 +454,15 @@
 // item #39, a kanban-style Board view (Not Started / In Progress / Done
 // columns side by side) added alongside the existing list/table views,
 // toggled per-device via a new small-btn next to Select/Compact view.
-const CACHE_NAME = 'th-workspace-v83';
+// Bumped 2026-09-07 (v83 -> v84): /tools/runway-dashboard.html changed --
+// item #41, the Net Profit Trend and Revenue vs. Costs charts were
+// rebuilt from hand-drawn <canvas> into real SVG, same dataviz
+// treatment as the client portal's Invoice History chart: fixed-width
+// scrollable columns, rounded bar ends, and colors driven by CSS
+// custom properties (the old canvas version hardcoded literal colors
+// that never adapted to the light theme, including a baseline line
+// that was nearly invisible against a light background).
+const CACHE_NAME = 'th-workspace-v84';
 const PRECACHE_URLS = [
   '/tools/workspace.html', '/tools/job-tracker.html', '/tools/invoice-generator.html', '/tools/contract-generator.html',
   '/tools/calendar.html', '/tools/route-planner.html', '/tools/review-request.html', '/tools/contact-card.html',
