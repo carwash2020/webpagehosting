@@ -617,6 +617,36 @@
     .hero-badge img{width:250px;}
   }
 
+  /* stats strip -- real numbers only (rating/review count match the
+     JSON-LD and the reviews carousel; community count matches the 6
+     pages this site actually serves), not invented marketing stats. */
+  .stats-bar{
+    padding:52px 0;
+    background:linear-gradient(135deg, var(--bg-panel-3), var(--bg-panel-2));
+    border-top:1px solid var(--border);
+    border-bottom:1px solid var(--border);
+  }
+  .stats-grid{
+    display:grid;
+    grid-template-columns:repeat(4,1fr);
+    gap:28px;
+    text-align:center;
+  }
+  .stat-number{
+    font-family:var(--font-display);
+    font-size:clamp(32px,5vw,50px);
+    line-height:1;
+    margin:0 0 6px;
+    color:var(--orange-text-vivid);
+    letter-spacing:0.5px;
+  }
+  .stat-item:nth-child(2) .stat-number,
+  .stat-item:nth-child(4) .stat-number{color:var(--blue-text);}
+  .stat-badge-text{font-size:clamp(20px,3.2vw,30px);}
+  .stat-label{margin:0; color:var(--text-dim); font-size:12.5px; letter-spacing:0.5px; text-transform:uppercase;}
+  @media (max-width:820px){.stats-grid{grid-template-columns:repeat(2,1fr); row-gap:32px;}}
+  @media (max-width:480px){.stats-grid{grid-template-columns:1fr; row-gap:26px;}}
+
   /* trust strip */
   .trust{padding:0 0 88px;}
   .trust-grid{

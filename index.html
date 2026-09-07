@@ -60,7 +60,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Anton&family=Archivo:wght@400..700&family=Newsreader:ital,opsz,wght@0,6..72,300..700;1,6..72,300..600&family=Oswald:wght@200..700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="styles.css?v=202609071300">
+<link rel="stylesheet" href="styles.css?v=202609071400">
 <script type="application/ld+json">
 {
   "@context": "https://schema.org",
@@ -324,6 +324,35 @@
       </div>
       <div class="hero-badge">
         <img class="logo-img" src="/images/logo-signature.webp?v=202608010300" alt="Triple H Enterprises badge">
+      </div>
+    </div>
+  </section>
+
+  <!-- A real-numbers strip, not invented marketing stats: the rating and
+       review count match the JSON-LD aggregateRating and the reviews
+       carousel below, and the community count matches the 6 pages this
+       site actually serves (this page plus the 5 satellite-city pages
+       linked in the footer). Counts up once on scroll-into-view; shows
+       the final values immediately under reduced motion. -->
+  <section class="stats-bar" aria-label="Triple H Enterprises at a glance">
+    <div class="wrap">
+      <div class="stats-grid">
+        <div class="stat-item">
+          <p class="stat-number"><span class="stat-count" data-count-to="5" data-decimals="1">0.0</span>★</p>
+          <p class="stat-label">Average Rating</p>
+        </div>
+        <div class="stat-item">
+          <p class="stat-number"><span class="stat-count" data-count-to="7">0</span></p>
+          <p class="stat-label">Real 5-Star Reviews</p>
+        </div>
+        <div class="stat-item">
+          <p class="stat-number"><span class="stat-count" data-count-to="6">0</span></p>
+          <p class="stat-label">Southern Utah Communities Served</p>
+        </div>
+        <div class="stat-item stat-item-badge">
+          <p class="stat-number stat-badge-text">Owner-Operated</p>
+          <p class="stat-label">Every Job, Steven Himself</p>
+        </div>
       </div>
     </div>
   </section>
@@ -2459,6 +2488,44 @@
           });
         }, { threshold: 0.4 });
         revealDemo.observe(revealStage);
+      }
+    }
+
+    // Stats strip count-up. Runs once on scroll-into-view; under reduced
+    // motion (or no IntersectionObserver) every counter just shows its
+    // final value immediately, same fallback shape as the demos above.
+    const statCounts = document.querySelectorAll('.stat-count');
+    if (statCounts.length) {
+      const finalText = (el) => {
+        const to = parseFloat(el.dataset.countTo);
+        const decimals = parseInt(el.dataset.decimals || '0', 10);
+        return to.toFixed(decimals);
+      };
+      if (reduced || !('IntersectionObserver' in window)) {
+        statCounts.forEach((el) => { el.textContent = finalText(el); });
+      } else {
+        const statsBar = document.querySelector('.stats-bar');
+        let statsPlayed = false;
+        const statsDemo = new IntersectionObserver((entries) => {
+          entries.forEach((entry) => {
+            if (!entry.isIntersecting || statsPlayed) return;
+            statsPlayed = true;
+            statsDemo.disconnect();
+            const DURATION = 1400;
+            const start = performance.now();
+            (function step(now) {
+              const t = Math.min(1, (now - start) / DURATION);
+              const eased = 1 - Math.pow(1 - t, 3);
+              statCounts.forEach((el) => {
+                const to = parseFloat(el.dataset.countTo);
+                const decimals = parseInt(el.dataset.decimals || '0', 10);
+                el.textContent = (to * eased).toFixed(decimals);
+              });
+              if (t < 1) window.requestAnimationFrame(step);
+            })(start);
+          });
+        }, { threshold: 0.4 });
+        if (statsBar) statsDemo.observe(statsBar);
       }
     }
 

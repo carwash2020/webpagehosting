@@ -64,7 +64,7 @@
     if (saved === 'light') document.documentElement.setAttribute('data-theme', 'light');
   })();
 </script>
-<link rel="stylesheet" href="/styles.css?v=202609071300">
+<link rel="stylesheet" href="/styles.css?v=202609071400">
 <link rel="stylesheet" href="/tools/styles-tools.css?v=8c09f591d2">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.112.3/dist/umd/supabase.js" integrity="sha384-qafw21c/iciq0VXsi9FzkfoQv5I/V0iqE4lSNcKXPnW9/UTJLnv5CcN4FHxVLnKg" crossorigin="anonymous" defer></script>
 <script src="/tools/sync.js?v=51c822a31b" defer></script>
@@ -145,6 +145,24 @@
   .hub-sub { color: var(--text-dim); display: flex; flex-direction: row; flex-wrap: wrap; align-items: center; gap: 4px 8px; }
   #refreshSyncLink { margin-left: 0; }
   @media (min-width: 1024px) { .hub-sub { display: block; } }
+  /* The greeting banner (2026-09-07): the first thing seen after the
+     header, every time this page loads -- a real greeting and a real
+     today's-job count, not a static welcome message. */
+  .greeting-banner {
+    display: flex; align-items: center; justify-content: space-between; gap: 20px;
+    background: linear-gradient(135deg, var(--bg-panel-2), var(--bg-panel));
+    border: 1px solid var(--border); border-left: 4px solid var(--orange);
+    border-radius: var(--radius); padding: 20px 24px; margin: 4px 0 18px;
+  }
+  .greeting-banner-greeting { font-family: var(--font-display); font-size: 22px; color: var(--white); margin: 0 0 2px; }
+  .greeting-banner-date { margin: 0; color: var(--text-dim); font-size: 13px; }
+  .greeting-banner-stat { text-align: right; flex-shrink: 0; }
+  .greeting-banner-number { font-family: var(--font-display); font-size: 44px; line-height: 1; margin: 0; color: var(--orange-light); }
+  .greeting-banner-label { margin: 2px 0 0; color: var(--text-dim); font-size: 12px; text-transform: uppercase; letter-spacing: 0.5px; }
+  @media (max-width: 560px) {
+    .greeting-banner { flex-direction: column; align-items: flex-start; }
+    .greeting-banner-stat { text-align: left; }
+  }
   /* Pull-to-refresh (2026-08-27) now covers the touch case this button
      existed for -- hide it specifically where touch is the primary
      input, keep it for desktop/mouse-primary devices, which have no
@@ -428,6 +446,17 @@
     <input type="text" id="globalSearch" class="icon-search-input" placeholder="Find a client &mdash; searches jobs, contacts, invoices, quotes, and contracts..." oninput="debouncedCall('globalSearch', renderGlobalSearch)" aria-label="Search everything by client name">
   </div>
   <div id="globalSearchResults"></div>
+</div>
+
+<div class="greeting-banner" id="greetingBanner">
+  <div class="greeting-banner-text">
+    <p class="greeting-banner-greeting" id="greetingBannerGreeting">Good morning.</p>
+    <p class="greeting-banner-date" id="greetingBannerDate"></p>
+  </div>
+  <div class="greeting-banner-stat">
+    <p class="greeting-banner-number" id="greetingBannerNumber">0</p>
+    <p class="greeting-banner-label" id="greetingBannerLabel">jobs today</p>
+  </div>
 </div>
 
 <div class="section-block" id="section-today">
@@ -2597,8 +2626,34 @@
     }
   }
 
+  // The big "first thing you see" banner (2026-09-07): a real greeting
+  // (time-of-day, computed from the actual clock) plus the same
+  // today's-job count renderTodayJobs() already computes from
+  // th_tracker_jobs -- no separate/duplicated data source, just read
+  // twice, so the two can never disagree.
+  function renderGreetingBanner() {
+    const el = document.getElementById('greetingBanner');
+    if (!el) return;
+
+    const hour = new Date().getHours();
+    const timeGreeting = hour < 12 ? 'Good morning' : (hour < 18 ? 'Good afternoon' : 'Good evening');
+    const name = (typeof getCurrentUserFirstName === 'function') ? getCurrentUserFirstName() : null;
+    document.getElementById('greetingBannerGreeting').textContent = name ? (timeGreeting + ', ' + name + '.') : (timeGreeting + '.');
+    document.getElementById('greetingBannerDate').textContent = new Date().toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric' });
+
+    let jobs = [];
+    try { jobs = JSON.parse(localStorage.getItem('th_tracker_jobs') || '[]'); } catch (e) { jobs = []; }
+    const today = new Date();
+    const todayKey = today.getFullYear() + '-' + String(today.getMonth() + 1).padStart(2, '0') + '-' + String(today.getDate()).padStart(2, '0');
+    const count = jobs.filter(j => j.date === todayKey && j.status !== 'done').length;
+
+    document.getElementById('greetingBannerNumber').textContent = count;
+    document.getElementById('greetingBannerLabel').textContent = count === 1 ? 'job today' : 'jobs today';
+  }
+
   function renderDashboard() {
     document.getElementById('setAsideRate').value = loadSetAsideRate();
+    renderGreetingBanner();
     renderTodayJobs();
     renderMetrics();
     renderStatusBars();
