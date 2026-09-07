@@ -118,6 +118,7 @@
     <div class="blog-kicker"><a href="/blog/">Triple H Enterprises Blog</a></div>
     <h1 class="blog-title">Appliance Repair or Replace? How We Actually Decide</h1>
     <p class="blog-dek">We'd rather tell you not to spend money with us than talk you into a repair that doesn't make sense. Here's the actual math we use.</p>
+    <p class="blog-meta" id="blogMeta"></p>
   </div>
 
   <img class="blog-diagram" src="https://images.unsplash.com/photo-1722649938332-94fae46965a7?fm=jpg&q=80&w=1400&auto=format&fit=crop" alt="A kitchen with stainless steel appliances" loading="lazy">
@@ -281,6 +282,30 @@
         }
       })
       .catch(() => {});
+  })();
+</script>
+<script>
+  // Published date and reading time (2026-09-07): the date already
+  // exists as the schema.org datePublished on every post (for SEO) but
+  // was never actually shown to a human reader. Read from that same
+  // JSON-LD block rather than duplicating the date as a second, separate
+  // value that could drift from it. Reading time is a real word count of
+  // the post's own rendered .blog-article content divided by the
+  // standard 200wpm estimate publications use -- not an invented number.
+  (function () {
+    const metaEl = document.getElementById('blogMeta');
+    if (!metaEl) return;
+    let dateLabel = '';
+    try {
+      const ld = JSON.parse(document.querySelector('script[type="application/ld+json"]').textContent);
+      if (ld.datePublished) {
+        dateLabel = new Date(ld.datePublished + 'T00:00:00').toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
+      }
+    } catch (e) { /* no published date available -- meta just shows read time */ }
+    const article = document.querySelector('.blog-article');
+    const wordCount = article ? article.textContent.trim().split(/\s+/).filter(Boolean).length : 0;
+    const readLabel = wordCount ? Math.max(1, Math.round(wordCount / 200)) + ' min read' : '';
+    metaEl.textContent = [dateLabel, readLabel].filter(Boolean).join(' · ');
   })();
 </script>
 
