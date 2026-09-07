@@ -203,7 +203,13 @@
 // individually marked Optional -- the form previously read as one
 // flat, equal-weight list of 7 fields with no sense of how much was
 // actually required.
-const CACHE_NAME = 'th-portal-v34';
+// Bumped 2026-09-07 (v34 -> v35): dashboard.html changed, in
+// PRECACHE_URLS. Added a real invoice-history bar chart above the
+// invoice list -- one bar per invoice, colored by the exact same
+// paid/unpaid status the cards below already use, that scrolls to and
+// highlights its matching card on click instead of duplicating values
+// in a tooltip.
+const CACHE_NAME = 'th-portal-v35';
 const PRECACHE_URLS = [
   '/portal/home.html', '/portal/dashboard.html', '/portal/jobs.html', '/portal/quotes.html',
   '/portal/work-orders.html', '/portal/settings.html', '/portal/login.html', '/portal/set-password.html',
