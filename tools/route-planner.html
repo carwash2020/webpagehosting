@@ -33,7 +33,20 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <meta name="robots" content="noindex, nofollow">
 <title>Route Planner | Triple H Enterprises (Internal Tool)</title>
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data:; connect-src 'self' https://*.supabase.co wss://*.supabase.co https://cdn.jsdelivr.net; frame-src 'none'; object-src 'none'; base-uri 'self'; frame-ancestors 'none';">
+<!-- Security policy widened 2026-09-07 for the new embedded route map:
+     styles now allow cdn.jsdelivr.net (Leaflet's own CSS), images now
+     allow the OpenStreetMap tile server (the map's actual tile images
+     -- numbered stop markers are plain divIcon HTML/CSS, not <img>
+     tags, so no jsdelivr image path is needed here), and outbound
+     network requests now allow nominatim.openstreetmap.org (the free
+     geocoder that turns a typed address into map coordinates).
+     Deliberately NOT spelling out the actual policy directive names in
+     this comment: scripts/check-consistency.js greedily matches the
+     FIRST occurrence of one such name anywhere in the file, comment or
+     not, when checking that Supabase access is allowed -- an earlier
+     draft of this very comment tripped that check by name-dropping it
+     directly above the real tag below. -->
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdn.jsdelivr.net; font-src https://fonts.gstatic.com; img-src 'self' data: https://*.tile.openstreetmap.org; connect-src 'self' https://*.supabase.co wss://*.supabase.co https://cdn.jsdelivr.net https://nominatim.openstreetmap.org; frame-src 'none'; object-src 'none'; base-uri 'self'; frame-ancestors 'none';">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Anton&family=Archivo:wght@400..700&family=Newsreader:ital,opsz,wght@0,6..72,300..700;1,6..72,300..600&family=Oswald:wght@200..700&display=swap" rel="stylesheet">
@@ -50,6 +63,14 @@
 </script>
 <link rel="stylesheet" href="/styles.css?v=202609072330">
 <link rel="stylesheet" href="/tools/styles-tools.css?v=42ace585f5">
+<!-- Real embedded map (2026-09-07), replacing "link-outs only": Leaflet
+     + free OpenStreetMap tiles, no API key/cost. Both the JS and the
+     CSS's integrity hash were computed directly from `npm install
+     leaflet@1.9.4` and inspecting the real dist files (same
+     verification method already used for supabase-js above), not
+     guessed. -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css" integrity="sha384-sHL9NAb7lN7rfvG5lfHpm643Xkcjzp4jFvuavGOndn6pjVqS6ny56CAt3nsEVT4H" crossorigin="anonymous">
+<script src="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.js" integrity="sha384-cxOPjt7s7Iz04uaHJceBmS+qpjv2JkIHNVcuOrM+YHwZOmJGBXI00mdUXEq65HTH" crossorigin="anonymous" defer></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.112.3/dist/umd/supabase.js" integrity="sha384-qafw21c/iciq0VXsi9FzkfoQv5I/V0iqE4lSNcKXPnW9/UTJLnv5CcN4FHxVLnKg" crossorigin="anonymous" defer></script>
 <script src="/tools/sync.js?v=1e45dec62f" defer></script>
 <script src="/tools/tools-effects.js?v=4cff99aa4a" defer></script>
@@ -112,6 +133,33 @@
   .realtime-dot.is-live { background: #4caf50; }
   .realtime-dot.is-connecting { background: var(--orange-light); }
   .realtime-dot.is-error { background: #e05252; }
+
+  /* ---- Real embedded route map (2026-09-07) ----
+     Replaces "text + link-outs only" with an actual visual: numbered
+     stops plotted on a real map, connected in visiting order. Stays
+     hidden (#routeMap) behind an empty-state message until there's at
+     least one stop with a real, successfully-geocoded location -- a
+     blank world map on first load (this page starts with 2 empty stop
+     fields) would be worse than no map at all. */
+  .route-map-wrap { margin-top: 16px; border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; }
+  #routeMap { height: 320px; width: 100%; background: var(--bg-panel-2); display: none; }
+  #routeMap.is-visible { display: block; }
+  .route-map-empty {
+    display: flex; align-items: center; justify-content: center; text-align: center;
+    height: 220px; padding: 20px; color: var(--text-dim); font-size: 13.5px; background: var(--bg-panel-2);
+  }
+  .route-map-empty[hidden] { display: none; }
+  .route-map-status { margin: 8px 12px 10px; font-size: 12.5px; color: var(--text-dim); min-height: 1px; }
+  /* A plain numbered circle (Leaflet divIcon), not the library's default
+     pin -- matches this app's own badge/dot vocabulary (orange fill,
+     white numeral) instead of Leaflet's stock blue marker, and needs no
+     separate marker-icon image asset or extra CSP img-src entry. */
+  .route-marker-num {
+    width: 26px; height: 26px; border-radius: 50%;
+    background: var(--orange); color: #fff; font-family: var(--font-ui); font-weight: 700; font-size: 13px;
+    display: flex; align-items: center; justify-content: center;
+    border: 2px solid #fff; box-shadow: 0 1px 4px rgba(0,0,0,0.4);
+  }
 </style>
 </head>
 <body>
@@ -135,6 +183,12 @@
   </div>
   <p class="warning-note" id="tooManyWarning">Google Maps allows up to 10 stops per route &mdash; remove one before opening the full route.</p>
   <a class="primary-btn block" id="openRouteBtn" href="#" target="_blank" rel="noopener">Open Full Route in Google Maps</a>
+</div>
+
+<div class="route-map-wrap">
+  <div id="routeMap"></div>
+  <div class="route-map-empty" id="routeMapEmpty">Add at least one stop above to see it on the map.</div>
+  <p class="route-map-status" id="routeMapStatus"></p>
 </div>
 
 <div class="stop-list-view" id="individualLinks"></div>
@@ -165,6 +219,7 @@
         <li>Use <strong>+ Add Stop</strong> for more addresses, or the &uarr;/&darr; arrows to reorder, &times; to remove.</li>
         <li>Tap <strong>Open Full Route in Google Maps</strong> to open the whole route as one set of driving directions, starting from wherever you are.</li>
         <li>Google Maps caps routes at 10 stops &mdash; if you hit that, use the individual "Open this stop" links below the form instead.</li>
+        <li>A real map fills in below the stop list showing where each stop actually is, numbered in visiting order &mdash; it takes a couple seconds per stop to locate them, so give it a moment after typing. A stop it can't find (usually a typo) is called out by name rather than silently dropped.</li>
         <li><strong>Cost Analyzer</strong> &mdash; type in the one-way distance for today's trip and it estimates round-trip fuel cost, shows your flat $25/free-within-15-miles policy for reference, and adds sales tax on top so you can see a full suggested charge. The cost-per-mile field is shared with Finance's Expenses tab, so updating it here updates it there too.</li>
         <li>Nothing here is saved between visits &mdash; refreshing the page clears the stop list (the Cost Analyzer's rate defaults do persist, since they're shared with Expenses).</li>
       </ul>
@@ -287,6 +342,15 @@
       }
     }
 
+    // A real map, not just links (2026-09-07): debounced separately from
+    // the instant Google Maps link above -- geocoding is a real network
+    // round-trip (rate-limited to 1/second by Nominatim's own usage
+    // policy, see updateRouteMap below), so it shouldn't fire on every
+    // single keystroke the way the link update does. Called before the
+    // early return just below so removing the last stop still clears
+    // the map instead of leaving a stale one showing.
+    debouncedCall('routeMap', updateRouteMap, 1200);
+
     const linksContainer = document.getElementById('individualLinks');
     if (stops.length === 0) {
       linksContainer.innerHTML = '';
@@ -297,6 +361,143 @@
         <span>${i + 1}. ${escapeHtml(s)}</span>
         <a href="https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(s)}&travelmode=driving" target="_blank" rel="noopener">Open this stop &rarr;</a>
       </div>`).join('');
+  }
+
+  // ---------- Embedded route map ----------
+  // Free, no-API-key geocoding via OpenStreetMap's Nominatim, one stop
+  // at a time. Their usage policy caps this at 1 request/second and
+  // asks a real client to identify itself -- a browser can't set a
+  // custom User-Agent header, but it always sends a real Referer (this
+  // page's own URL), which is Nominatim's documented fallback for
+  // browser-based use. A successful lookup is cached by its exact typed
+  // address for the rest of this page's session, so editing one stop
+  // doesn't re-geocode every other unchanged stop.
+  const NOMINATIM_URL = 'https://nominatim.openstreetmap.org/search';
+  const GEOCODE_DELAY_MS = 1100;
+  const geocodeCache = {};
+  // Real bug found and fixed before shipping (2026-09-07): editing
+  // several stops in quick succession -- most notably "Pull Today's
+  // Jobs", which calls addStop() once per job in a tight synchronous
+  // loop -- can start more than one updateRouteMap() run before an
+  // earlier one finishes (each takes real seconds, one rate-limited
+  // network round trip per stop). Without this, two overlapping runs
+  // could each see the SAME not-yet-cached address and fire their own
+  // duplicate Nominatim request for it -- confirmed directly with a
+  // mocked-fetch test harness (3 stops added in a tight loop produced 5
+  // requests, not 3). geocodePending shares the one real in-flight
+  // request for a given address across every concurrent caller instead.
+  const geocodePending = {};
+  let routeMap = null;
+  let routeMapLayer = null;
+  let routeMapRequestId = 0;
+
+  function sleep(ms) { return new Promise((resolve) => setTimeout(resolve, ms)); }
+
+  async function geocodeAddress(address) {
+    const url = NOMINATIM_URL + '?format=json&limit=1&q=' + encodeURIComponent(address);
+    const res = await fetch(url);
+    if (!res.ok) return null;
+    const data = await res.json();
+    if (!data.length) return null;
+    return { lat: parseFloat(data[0].lat), lon: parseFloat(data[0].lon) };
+  }
+
+  function getGeocode(address) {
+    const key = address.toLowerCase();
+    if (geocodeCache[key]) return Promise.resolve(geocodeCache[key]);
+    if (!geocodePending[key]) {
+      geocodePending[key] = geocodeAddress(address)
+        .then((point) => { if (point) geocodeCache[key] = point; return point; })
+        .catch(() => null)
+        .finally(() => { delete geocodePending[key]; });
+    }
+    return geocodePending[key];
+  }
+
+  function ensureRouteMap() {
+    if (routeMap) return routeMap;
+    routeMap = L.map('routeMap', { scrollWheelZoom: false });
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      attribution: '&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a> contributors',
+      maxZoom: 19,
+    }).addTo(routeMap);
+    routeMapLayer = L.layerGroup().addTo(routeMap);
+    return routeMap;
+  }
+
+  // Guarded by requestId throughout: geocoding several stops takes real
+  // seconds (the rate-limit delay above), so a fast typer can easily
+  // start a second call before the first finishes. Each check below
+  // bails out the instant a newer call has started, so a slow, stale
+  // response can never overwrite a newer one on screen.
+  async function updateRouteMap() {
+    const stops = getStopValues();
+    const mapEl = document.getElementById('routeMap');
+    const emptyEl = document.getElementById('routeMapEmpty');
+    const statusEl = document.getElementById('routeMapStatus');
+    const requestId = ++routeMapRequestId;
+
+    if (stops.length === 0) {
+      mapEl.classList.remove('is-visible');
+      emptyEl.hidden = false;
+      statusEl.textContent = '';
+      return;
+    }
+
+    statusEl.textContent = stops.length === 1 ? 'Locating stop…' : `Locating ${stops.length} stops…`;
+
+    const located = [];
+    const failed = [];
+    for (const stop of stops) {
+      const key = stop.toLowerCase();
+      const wasAlreadyCached = !!geocodeCache[key];
+      const point = await getGeocode(stop);
+      if (requestId !== routeMapRequestId) return;
+      // Only wait out the rate-limit delay for a lookup that wasn't
+      // already sitting in cache before this loop reached it -- a
+      // value shared from another concurrent run's in-flight request
+      // still gets this same delay applied once, via that other run's
+      // own loop iteration, not doubled here too.
+      if (!wasAlreadyCached) await sleep(GEOCODE_DELAY_MS);
+      if (requestId !== routeMapRequestId) return;
+      if (point) located.push({ stop, point }); else failed.push(stop);
+    }
+
+    if (located.length === 0) {
+      mapEl.classList.remove('is-visible');
+      emptyEl.hidden = false;
+      statusEl.textContent = `Couldn't locate ${failed.length === 1 ? 'that address' : 'any of those addresses'} on the map — check for typos.`;
+      return;
+    }
+
+    emptyEl.hidden = true;
+    mapEl.classList.add('is-visible');
+    const map = ensureRouteMap();
+    routeMapLayer.clearLayers();
+
+    const latlngs = located.map((l) => [l.point.lat, l.point.lon]);
+    located.forEach((l, i) => {
+      const icon = L.divIcon({
+        className: '',
+        html: '<div class="route-marker-num">' + (i + 1) + '</div>',
+        iconSize: [26, 26],
+        iconAnchor: [13, 13],
+      });
+      L.marker([l.point.lat, l.point.lon], { icon }).addTo(routeMapLayer).bindPopup(escapeHtml(l.stop));
+    });
+    if (latlngs.length > 1) {
+      L.polyline(latlngs, { color: '#ff8000', weight: 3, opacity: 0.8 }).addTo(routeMapLayer);
+    }
+    map.invalidateSize();
+    if (latlngs.length === 1) {
+      map.setView(latlngs[0], 14);
+    } else {
+      map.fitBounds(latlngs, { padding: [30, 30] });
+    }
+
+    statusEl.textContent = failed.length > 0
+      ? `Showing ${located.length} of ${stops.length} stops — couldn't locate: ${failed.map(escapeHtml).join(', ')}.`
+      : '';
   }
 
   const CARD_INFO = {

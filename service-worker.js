@@ -466,7 +466,11 @@
 // & Insured" trust item added to the homepage's real-facts strip, plus
 // a real Google-mark badge on each review, replacing the old
 // text-only "Verified Customer on Google" line).
-const CACHE_NAME = 'th-workspace-v85';
+// Bumped 2026-09-07 (v85 -> v86): /tools/route-planner.html changed --
+// item #43, a real embedded map (Leaflet + free OpenStreetMap tiles)
+// replacing the old link-outs-only view, numbered stops connected in
+// visiting order.
+const CACHE_NAME = 'th-workspace-v86';
 const PRECACHE_URLS = [
   '/tools/workspace.html', '/tools/job-tracker.html', '/tools/invoice-generator.html', '/tools/contract-generator.html',
   '/tools/calendar.html', '/tools/route-planner.html', '/tools/review-request.html', '/tools/contact-card.html',

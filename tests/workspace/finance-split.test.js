@@ -2517,6 +2517,11 @@ function testTopLevelInitNoLongerThrows(pageFile, pagePath, tourStepIndex, extra
         window.initSyncOnLoad = () => Promise.resolve();
         window.startRealtimeSync = () => {};
         window.updateRealtimeBadge = () => {};
+        // debouncedCall lives in tools-dialogs.js, a real deferred
+        // script this minimal harness doesn't load -- stubbed as an
+        // immediate call, same simplification already applied to every
+        // other deferred-script global stubbed above.
+        window.debouncedCall = (key, fn) => fn();
         window.localStorage.setItem('th_tracker_jobs', JSON.stringify([{ id: 1, title: 'Fix dryer', client: 'Smith' }]));
         if (extraSetup) extraSetup(window);
       },
