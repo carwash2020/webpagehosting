@@ -297,6 +297,17 @@
   .wo-status.is-scheduled { border-color: #2e5c46; background: rgba(46,92,70,0.18); color: #4caf78; }
   .wo-status.is-completed { border-color: #2e5c46; background: rgba(46,92,70,0.18); color: #4caf78; }
   .wo-status.is-declined  { background: var(--bg-panel-2); color: var(--text-dim); }
+  /* A real progress track (2026-09-07): the status pill already told a
+     client where a request stood, but as a single word with no sense
+     of how much further there was to go. Reuses the exact real pipeline
+     already encoded in STATUS_LABELS (submitted -> reviewing/quoted ->
+     scheduled -> completed) rather than inventing a new one -- "quoted"
+     fills the same step as "reviewing" since the status pill itself
+     already colors them identically. Omitted entirely for "declined":
+     a closed request isn't partway through anything. */
+  .wo-progress { display: flex; gap: 4px; margin-top: 10px; }
+  .wo-progress-seg { flex: 1; height: 5px; border-radius: 3px; background: var(--border); }
+  .wo-progress-seg.is-filled { background: var(--blue-light); }
   .wo-urgency-tag { font-size: 11.5px; color: var(--text-dim); margin-top: 6px; }
   .wo-scheduled-tag {
     font-size: 13px; font-weight: 600; color: var(--orange-light); margin-top: 8px;
@@ -785,6 +796,19 @@
 
   document.getElementById('woSubmitBtn').addEventListener('click', submitRequest);
 
+  // The real 4-stage pipeline this status vocabulary already encodes --
+  // "quoted" shares a step with "reviewing" since the status pill above
+  // already colors them identically, so the progress track agrees with
+  // it rather than contradicting it with a 5th distinct stage.
+  const PROGRESS_STEPS = { submitted: 1, reviewing: 2, quoted: 2, scheduled: 3, completed: 4 };
+  const PROGRESS_STEP_LABELS = ['Received', 'Reviewing', 'Scheduled', 'Completed'];
+  function progressTrackHtml(statusKey) {
+    const step = PROGRESS_STEPS[statusKey];
+    if (!step) return ''; // "declined" (or anything unrecognized): closed, not partway through anything
+    const segs = [1, 2, 3, 4].map(n => `<span class="wo-progress-seg${n <= step ? ' is-filled' : ''}"></span>`).join('');
+    return `<div class="wo-progress" role="img" aria-label="Progress: ${escapeHtml(PROGRESS_STEP_LABELS[step - 1])}, step ${step} of 4">${segs}</div>`;
+  }
+
   function renderRequestCard(wo) {
     const statusKey = wo.status || 'submitted';
     const statusLabel = STATUS_LABELS[statusKey] || statusKey;
@@ -799,6 +823,7 @@
           </div>
           <span class="wo-status is-${escapeHtml(statusKey)}">${escapeHtml(statusLabel)}</span>
         </div>
+        ${progressTrackHtml(statusKey)}
         <div class="wo-card-desc">${escapeHtml(wo.description)}</div>
         ${urgencyLabel ? `<div class="wo-urgency-tag${urgentClass}">${escapeHtml(urgencyLabel)}</div>` : ''}
         ${(statusKey === 'scheduled' && wo.scheduled_at) ? `<div class="wo-scheduled-tag">Scheduled for ${escapeHtml(formatScheduledAt(wo.scheduled_at))}</div>` : ''}
