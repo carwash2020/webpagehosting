@@ -240,10 +240,17 @@
   .template-item-meta { color: var(--text-dim); font-size: 12.5px; margin-top: 2px; }
   .template-due-badge {
     font-size: 10.5px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;
-    padding: 3px 9px; border-radius: 10px; margin-left: 8px;
+    padding: 3px 9px 3px 6px; border-radius: 10px; margin-left: 8px;
+    display: inline-flex; align-items: center; gap: 5px;
   }
   .template-due-badge.is-due { color: var(--orange-light); background: rgba(255,128,0,0.12); }
   .template-due-badge.is-ok { color: var(--text-dim); background: var(--bg-panel-2); }
+  /* Same ring device as the client portal's Jobs page warranty pill
+     (2026-09-07) -- a real fraction of a real cycle length, not just
+     the day count as text. Same size and track brightness too: a first
+     attempt at 16px there lost a short fraction to 1-2 lit pixels,
+     checked by rendering it, not by reading the math. */
+  .template-due-ring-track { opacity: .35; }
   .template-item-actions { display: flex; gap: 8px; flex-shrink: 0; flex-wrap: wrap; }
 
   /* --- Realtime status indicator --- */
@@ -1144,15 +1151,33 @@
     }
   }
 
+  const TEMPLATE_DUE_RING_CIRCUMFERENCE = 2 * Math.PI * 15;
+  function templateDueRingSvg(fraction) {
+    const f = Math.max(0, Math.min(1, fraction));
+    const offset = TEMPLATE_DUE_RING_CIRCUMFERENCE * (1 - f);
+    return `<svg class="template-due-ring" viewBox="0 0 36 36" width="20" height="20" aria-hidden="true" focusable="false">
+      <circle class="template-due-ring-track" cx="18" cy="18" r="15" fill="none" stroke="currentColor" stroke-width="5"/>
+      <circle cx="18" cy="18" r="15" fill="none" stroke="currentColor" stroke-width="5" stroke-linecap="round"
+        stroke-dasharray="${TEMPLATE_DUE_RING_CIRCUMFERENCE.toFixed(2)}" stroke-dashoffset="${offset.toFixed(2)}"
+        transform="rotate(-90 18 18)"/>
+    </svg>`;
+  }
+
   function templateDueInfo(template) {
-    if (!template.lastCreatedDate) return { isDue: true, label: 'Never created \u2014 due now' };
+    if (!template.lastCreatedDate) return { isDue: true, label: 'Never created \u2014 due now', ring: '' };
     const last = new Date(template.lastCreatedDate + 'T00:00:00');
     const next = new Date(last);
     next.setMonth(next.getMonth() + (template.intervalMonths || 1));
     const today = new Date(new Date().toDateString());
-    if (next <= today) return { isDue: true, label: 'Due now' };
+    if (next <= today) return { isDue: true, label: 'Due now', ring: '' };
     const days = Math.round((next - today) / (24 * 60 * 60 * 1000));
-    return { isDue: false, label: 'Next due in ' + days + ' day' + (days === 1 ? '' : 's') };
+    // Fraction of the cycle REMAINING, same convention as the portal's
+    // warranty ring: full ring right after creation, empty ring the
+    // moment it's due. total/elapsed both real dates, no invented cycle
+    // length -- intervalMonths is the template's own configured interval.
+    const totalDays = (next - last) / (24 * 60 * 60 * 1000);
+    const ring = templateDueRingSvg(totalDays > 0 ? days / totalDays : 0);
+    return { isDue: false, label: 'Next due in ' + days + ' day' + (days === 1 ? '' : 's'), ring };
   }
 
   let justAddedTemplateId = null;
@@ -1180,7 +1205,7 @@
       <div class="template-item ${t.id === justAddedTemplateId ? 'list-row-enter' : ''}" data-template-id="${t.id}">
         <div>
           <div class="template-item-title">${escapeHtml(t.title)}${t.client ? ' &mdash; ' + escapeHtml(t.client) : ''}
-            <span class="template-due-badge ${due.isDue ? 'is-due' : 'is-ok'}">${escapeHtml(due.label)}</span>
+            <span class="template-due-badge ${due.isDue ? 'is-due' : 'is-ok'}">${due.ring}${escapeHtml(due.label)}</span>
           </div>
           <div class="template-item-meta">Every ${t.intervalMonths} month${t.intervalMonths === 1 ? '' : 's'}${t.lastCreatedDate ? ' &middot; last created ' + escapeHtml(t.lastCreatedDate) : ''}</div>
         </div>

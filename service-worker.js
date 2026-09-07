@@ -371,7 +371,14 @@
 // nested hints only (the labels themselves stay uppercase, which is
 // the deliberate design) and defines a shared .label-hint for the
 // pattern; pos.html swaps its hand-rolled inline style for it.
-const CACHE_NAME = 'th-workspace-v71';
+// Bumped 2026-09-07 (v71 -> v72): tools/job-tracker.html changed,
+// precached here. Recurring job templates' due badge gained a small
+// ring showing days-remaining as a fraction of the template's own real
+// cycle length (intervalMonths), the same device just added to the
+// client portal's Jobs page warranty pill -- same size, same track
+// brightness, deliberately reused rather than a third ring
+// implementation with its own slightly different tuning.
+const CACHE_NAME = 'th-workspace-v72';
 const PRECACHE_URLS = [
   '/tools/workspace.html', '/tools/job-tracker.html', '/tools/invoice-generator.html', '/tools/contract-generator.html',
   '/tools/calendar.html', '/tools/route-planner.html', '/tools/review-request.html', '/tools/contact-card.html',
