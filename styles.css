@@ -1934,10 +1934,6 @@
   .reveal-scrub:focus-visible::-moz-range-thumb{
     box-shadow:0 0 0 5px rgba(255,128,0,.35), 0 4px 14px rgba(58,160,255,.45);
   }
-  /* Reuses .carousel-dots/.carousel-dot as-is (defined above for the
-     reviews carousel) -- just needs its own top margin since it isn't
-     already sitting inside that carousel's own .carousel-controls row. */
-  #revealDots{margin-top:16px;}
   @media (max-width:600px){
     .reveal-job{padding:64px 0;}
     .reveal-tag{font-size:10.5px; padding:5px 10px;}
