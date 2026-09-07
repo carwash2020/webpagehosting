@@ -63,7 +63,11 @@ test('the table is hidden by default and only shown at min-width:1024px -- mobil
 test('the table renders the same filtered jobs as the mobile card list, from the exact same data', () => {
   const window = loadJobTracker(SAMPLE_JOBS);
   const tableRows = window.document.querySelectorAll('#jobsTableBody tr');
-  const cardCount = window.document.querySelectorAll('.job-card').length;
+  // Scoped to #jobsList specifically (2026-09-07, item #39): the new
+  // kanban board view also renders .job-card elements (into
+  // #jobsBoardWrap, for every status, unfiltered) so counting every
+  // ".job-card" in the whole document would now double-count them.
+  const cardCount = window.document.querySelectorAll('#jobsList .job-card').length;
   // Default filter is "not-done" -- 2 of the 3 sample jobs, matching
   // the existing, unchanged mobile filter logic.
   assert.equal(tableRows.length, 2);

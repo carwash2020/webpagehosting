@@ -621,7 +621,11 @@ test('renderJobs filters out jobs with a pending deletion, without touching unde
   const src = fs.readFileSync(JOB_TRACKER_PATH, 'utf8');
   const fn = src.match(/function renderJobs\(\)[\s\S]*?(?=\n  function |\n  async function )/);
   assert.ok(fn, 'renderJobs not found');
-  assert.match(fn[0], /pendingDeleteJobIds\.size > 0.*jobs = jobs\.filter/, 'should filter jobs currently pending deletion out of the rendered list');
+  // Item #39 (2026-09-07) renamed this pass's local variable from
+  // "jobs" to "allJobs" -- it's now shared with the new board view
+  // below, which needs the un-status-filtered set -- same filter logic,
+  // new name.
+  assert.match(fn[0], /pendingDeleteJobIds\.size > 0.*allJobs = allJobs\.filter/, 'should filter jobs currently pending deletion out of the rendered list');
 });
 
 test('bulkDeleteJobs now cleans up Supabase photos, a gap found while adding undo (it never did this before)', () => {
