@@ -1602,7 +1602,11 @@ body select:focus, body textarea:focus {
   /* touch targets */
   body .primary-btn, body .secondary-btn, body .dialog-btn, body .note-new-btn, body .tab-btn { min-height: 46px; }
   body .small-btn { min-height: 40px; }
-  body .help-btn { width: 36px; height: 36px; }
+  /* F22 fix (2026-09-07): 36px still fell short of a real touch
+     target -- this is the shared circular icon button used for help
+     modals, back-to-workspace, and settings links across every tool
+     page, so this one change reaches all of them. */
+  body .help-btn { width: 44px; height: 44px; }
   body .dash-list-item { padding: 13px 12px; }
 
   /* the bottom nav (injected by tools-common.js) needs runway */

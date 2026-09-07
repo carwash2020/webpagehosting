@@ -347,6 +347,13 @@
   .th-bottom-nav a:active .th-bn-icon { background: var(--bg-elevated); }
   @media (max-width: 720px) {
     body.th-has-bottomnav { padding-bottom: calc(76px + env(safe-area-inset-bottom, 0px)); }
+    /* F22 fix (2026-09-07): row action buttons measured ~21px, category
+       add ~26px, tabs ~37px -- all below any reasonable touch minimum.
+       Matches the shared suite's own .small-btn convention (40px base,
+       44px on phone) rather than inventing new sizes. */
+    .icon-btn { min-width: 44px; min-height: 44px; padding: 10px; }
+    .cat-add-btn { width: 44px; height: 44px; }
+    .tab-btn { min-height: 44px; }
   }
 
   /* "Flag this page" button (F18 fix, 2026-09-07): injectFlagButton() in

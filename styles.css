@@ -1425,6 +1425,7 @@
     gap:8px;
   }
   .carousel-dot{
+    position:relative;
     width:9px; height:9px;
     border-radius:50%;
     background:var(--border);
@@ -1432,6 +1433,18 @@
     padding:0;
     cursor:pointer;
     transition:background .15s ease, transform .15s ease;
+  }
+  /* F22 fix (2026-09-07): the visible dot stays small on purpose (a
+     dense row of 7, matching the review count) -- but at only 9px
+     with 8px gaps (17px pitch), the tappable area was far below any
+     accessible minimum. A full 44px hit target per dot would badly
+     overlap this many adjacent dots at this pitch (each neighbor's
+     zone would swallow the next), so this expands to 24px -- WCAG
+     2.5.8's actual AA minimum, not the 44px AAA figure -- via an
+     invisible ::before, leaving the visible dot untouched. */
+  .carousel-dot::before{
+    content:''; position:absolute; top:50%; left:50%;
+    width:24px; height:24px; transform:translate(-50%, -50%);
   }
   .carousel-dot:hover{background:var(--blue-dark); transform:scale(1.2);}
   .carousel-dot.is-active{background:var(--blue-light);}

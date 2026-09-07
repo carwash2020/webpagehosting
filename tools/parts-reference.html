@@ -49,7 +49,7 @@
   })();
 </script>
 <link rel="stylesheet" href="/styles.css?v=202609072345">
-<link rel="stylesheet" href="/tools/styles-tools.css?v=e8baf66108">
+<link rel="stylesheet" href="/tools/styles-tools.css?v=04bf541d61">
 <script src="/tools/tools-effects.js?v=4cff99aa4a" defer></script>
 <script src="/tools/tools-dialogs.js?v=e1dfaa11a1" defer></script>
 <script src="/tools/tools-media-sharing.js?v=4be783c8a5" defer></script>
@@ -135,6 +135,16 @@
   .pr-row-icon-btn.active { color: var(--orange-light); }
 
   .pr-empty { text-align: center; color: var(--text-dim); padding: 40px 20px; font-size: 14px; }
+  /* F22 fix (2026-09-07): .pr-row-icon-btn measured 24x24 -- these are
+     the per-issue edit/delete/copy/pin controls, "used one-handed at a
+     job site" per the finding this fixes. Scoped to phone width only
+     (matching this suite's "efficient on phone stays efficient on
+     phone, efficient on desktop too" convention) since up to 4 sit in
+     one non-wrapping-by-default row (now given flex-wrap as a safety
+     net above) -- desktop's mouse-driven 24px target is left alone. */
+  @media (max-width: 720px) {
+    .pr-row-icon-btn { width: 44px; height: 44px; }
+  }
   .pr-count { color: var(--text-dim); font-size: 13px; margin-bottom: 14px; }
   #prAddUnitForm { display: none; }
   #prAddUnitForm.is-open { display: block; }
@@ -174,7 +184,7 @@
   .pr-issue-part { font-size: 14.5px; color: var(--text); margin-bottom: 4px; }
   .pr-issue-partnum { color: var(--text-dim); font-size: 13px; }
   .pr-issue-note { font-size: 13.5px; color: var(--text-dim); margin-top: 6px; }
-  .pr-issue-actions { display: flex; gap: 10px; margin-top: 10px; align-items: center; }
+  .pr-issue-actions { display: flex; gap: 10px; margin-top: 10px; align-items: center; flex-wrap: wrap; }
   .pr-issue-link {
     display: inline-flex; align-items: center; gap: 5px; font-size: 13.5px; color: var(--blue-light);
     text-decoration: none; padding: 6px 10px; border: 1px solid var(--border); border-radius: 6px;

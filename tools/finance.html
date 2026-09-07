@@ -49,7 +49,7 @@
   })();
 </script>
 <link rel="stylesheet" href="/styles.css?v=202609072345">
-<link rel="stylesheet" href="/tools/styles-tools.css?v=e8baf66108">
+<link rel="stylesheet" href="/tools/styles-tools.css?v=04bf541d61">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.112.3/dist/umd/supabase.js" integrity="sha384-qafw21c/iciq0VXsi9FzkfoQv5I/V0iqE4lSNcKXPnW9/UTJLnv5CcN4FHxVLnKg" crossorigin="anonymous" defer></script>
 <script src="/tools/sync.js?v=1e45dec62f" defer></script>
 <script src="/tools/data-layer.js?v=3a0d57478c" defer></script>
@@ -96,6 +96,37 @@
      monitor. Constrained only above 1024px -- phone is completely
      unaffected. */
   @media (min-width: 1024px) { body { max-width: var(--tool-maxw-wide); margin-left: calc(240px + max(0px, (100vw - 240px - var(--tool-maxw-wide)) / 2)); padding-top: 75px; } }
+  /* F20 fix (2026-09-07): the Income and Expense logs (9-10 columns
+     each) gave a sideways-scrolling spreadsheet on a phone, unlike
+     Job Tracker's own dense table, which shows cards below 1024px
+     instead. Reused the same responsive-table technique already
+     verified working on this page's Invoice Generator sibling (F19,
+     tools/invoice-generator.html) rather than job-tracker.html's
+     separate dual-render (table + a second, independently-built card
+     list) -- both close the same real gap (no more sideways scroll,
+     every field immediately readable), this one without maintaining
+     two parallel render paths for the same data. Scoped to just these
+     two tables by container id, not the shared .table-scroll class,
+     so no other page's table is affected. */
+  @media (max-width: 1023px) {
+    #incomeTable table, #entriesTable table { min-width: 0; }
+    #incomeTable thead, #entriesTable thead { display: none; }
+    #incomeTable table, #incomeTable tbody, #incomeTable tr,
+    #entriesTable table, #entriesTable tbody, #entriesTable tr { display: block; width: 100%; }
+    #incomeTable tr, #entriesTable tr {
+      background: var(--bg-panel-2); border: 1px solid var(--border); border-radius: 8px;
+      padding: 4px 12px; margin-bottom: 10px;
+    }
+    #incomeTable td, #entriesTable td {
+      display: flex; align-items: center; justify-content: space-between; gap: 10px;
+      padding: 8px 0; border-bottom: 1px solid var(--border); text-align: right;
+    }
+    #incomeTable td:last-child, #entriesTable td:last-child { border-bottom: none; justify-content: flex-end; padding-top: 4px; }
+    #incomeTable td[data-label]::before, #entriesTable td[data-label]::before {
+      content: attr(data-label); flex: 0 0 auto; color: var(--text-dim); font-size: 12px;
+      text-transform: uppercase; text-align: left;
+    }
+  }
 </style>
 </head>
 <body>
@@ -278,7 +309,7 @@
     <div class="tool-form-row">
       <div class="form-field" id="amountField"><label>Amount ($)</label><input type="number" id="entryAmount" step="0.01" min="0"></div>
       <div class="form-field" id="milesField" style="display:none;">
-        <label>Miles <button class="help-btn" onclick="openCardInfo('mileageRate')" aria-label="What is this?" title="What is this?" style="width:22px;height:22px;font-size:12px;">?</button></label>
+        <label>Miles <button class="help-btn" onclick="openCardInfo('mileageRate')" aria-label="What is this?" title="What is this?">?</button></label>
         <div class="mileage-rate-inline">
           <input type="number" id="entryMiles" step="0.1" min="0" style="flex:1;">
           <label for="mileageRate">at $</label>
@@ -714,13 +745,13 @@
 
     let rows = entries.map(e => `
       <tr class="${e.id === justAddedIncomeEntryId ? 'list-row-enter' : ''}" data-income-id="${e.id}">
-        <td>${e.date}</td>
-        <td>${escapeHtml(e.source || '\u2014')}</td>
-        <td>${e.jobRefTitle ? escapeHtml(e.jobRefTitle) : '\u2014'}</td>
-        <td>${personDot(e.lastEditedBy, 'Last edited by')}${escapeHtml(e.desc)}</td>
-        <td>${PAYMENT_LABEL[e.payment] || '\u2014'}</td>
-        <td>${e.origin === 'invoice' ? '<span class="inline-note" style="margin:0;">Invoice</span>' : 'Manual'}</td>
-        <td class="col-amount">$${e.amount.toFixed(2)}</td>
+        <td data-label="Date">${e.date}</td>
+        <td data-label="Source">${escapeHtml(e.source || '\u2014')}</td>
+        <td data-label="Job">${e.jobRefTitle ? escapeHtml(e.jobRefTitle) : '\u2014'}</td>
+        <td data-label="Description">${personDot(e.lastEditedBy, 'Last edited by')}${escapeHtml(e.desc)}</td>
+        <td data-label="Payment">${PAYMENT_LABEL[e.payment] || '\u2014'}</td>
+        <td data-label="Origin">${e.origin === 'invoice' ? '<span class="inline-note" style="margin:0;">Invoice</span>' : 'Manual'}</td>
+        <td class="col-amount" data-label="Amount">$${e.amount.toFixed(2)}</td>
         <td>
           ${e.origin !== 'invoice' ? `<button class="small-btn" onclick="editIncomeEntry(${e.id})" aria-label="Edit entry" title="Edit entry">Edit</button>` : ''}
           <button class="small-btn danger" onclick="deleteIncomeEntry(${e.id})" aria-label="Delete entry" title="Delete entry">&times;</button>
@@ -1040,15 +1071,15 @@
 
     let rows = entries.map(e => `
       <tr class="${e.id === justAddedExpenseId ? 'list-row-enter' : ''}" data-expense-id="${e.id}">
-        <td>${e.date}</td>
-        <td>${e.type === 'mileage' ? 'Mileage' : 'Expense'}</td>
-        <td>${escapeHtml(e.vendor || '\u2014')}</td>
-        <td>${e.jobRefTitle ? escapeHtml(e.jobRefTitle) : '\u2014'}</td>
-        <td>${personDot(e.lastEditedBy, 'Last edited by')}${escapeHtml(e.desc)}${e.partNumber ? `<div style="color:var(--text-dim); font-size:11.5px; margin-top:2px;">Part #: ${escapeHtml(e.partNumber)}</div>` : ''}</td>
-        <td>${e.type === 'mileage' ? e.miles + ' mi' : '\u2014'}</td>
-        <td>${PAYMENT_LABEL[e.payment] || '\u2014'}</td>
-        <td class="col-amount">$${e.amount.toFixed(2)}</td>
-        <td>${e.receiptPath ? `<a href="#" onclick="openSignedReceipt(event, '${escapeForInlineHandler(e.receiptPath)}')" style="color:var(--blue-light);">View</a>` : '\u2014'}</td>
+        <td data-label="Date">${e.date}</td>
+        <td data-label="Type">${e.type === 'mileage' ? 'Mileage' : 'Expense'}</td>
+        <td data-label="Vendor">${escapeHtml(e.vendor || '\u2014')}</td>
+        <td data-label="Job">${e.jobRefTitle ? escapeHtml(e.jobRefTitle) : '\u2014'}</td>
+        <td data-label="Description">${personDot(e.lastEditedBy, 'Last edited by')}${escapeHtml(e.desc)}${e.partNumber ? `<div style="color:var(--text-dim); font-size:11.5px; margin-top:2px;">Part #: ${escapeHtml(e.partNumber)}</div>` : ''}</td>
+        <td data-label="Miles">${e.type === 'mileage' ? e.miles + ' mi' : '\u2014'}</td>
+        <td data-label="Payment">${PAYMENT_LABEL[e.payment] || '\u2014'}</td>
+        <td class="col-amount" data-label="Amount">$${e.amount.toFixed(2)}</td>
+        <td data-label="Receipt">${e.receiptPath ? `<a href="#" onclick="openSignedReceipt(event, '${escapeForInlineHandler(e.receiptPath)}')" style="color:var(--blue-light);">View</a>` : '\u2014'}</td>
         <td>
           <button class="small-btn" onclick="editExpense(${e.id})" aria-label="Edit entry" title="Edit entry">Edit</button>
           <button class="small-btn danger" onclick="deleteExpense(${e.id})" aria-label="Delete entry" title="Delete entry">&times;</button>
