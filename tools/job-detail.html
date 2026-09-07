@@ -80,6 +80,14 @@
   .job-hero-meta { color: var(--text-dim); font-size: 13.5px; margin-top: 6px; line-height: 1.6; }
   .job-hero-meta a { color: var(--orange-light); text-decoration: none; }
   .job-hero-badges { display: flex; gap: 8px; margin-top: 10px; flex-wrap: wrap; }
+  /* Real, small gap found and fixed (2026-09-07): job-tracker.html's own
+     card already shows a job's 30-day labor warranty countdown once
+     it's Done, but this dedicated detail page for that exact same job
+     never did -- despite being the single most complete, natural place
+     to check a job's current status. Same classes/logic as
+     job-tracker.html's warrantyBadgeHtml(), not a separate rule. */
+  .badge-warranty.is-active { background: rgba(76,175,80,0.15); color: #4caf50; }
+  .badge-warranty.is-expired { background: var(--bg-panel-2); color: var(--text-dim); }
   .job-stat-row { display: flex; gap: 10px; margin-top: 16px; flex-wrap: wrap; }
   .job-stat { flex: 1; min-width: 100px; background: var(--bg-panel-2); border: 1px solid var(--border); border-radius: 10px; padding: 10px 12px; }
   .job-stat-value { font-family:var(--font-ui); font-weight: 700; font-size: 20px; color: var(--white); }
@@ -192,6 +200,22 @@
     renderJobDetail(bundle);
   }
 
+  // Identical logic to job-tracker.html's own warrantyBadgeHtml() --
+  // same 30-day-from-job.date rule, not a second, potentially-drifting
+  // copy of the business rule itself.
+  function warrantyBadgeHtml(job) {
+    if (job.status !== 'done' || !job.date) return '';
+    const completionDate = new Date(job.date + 'T00:00:00');
+    if (isNaN(completionDate.getTime())) return '';
+    const today = new Date(new Date().toDateString());
+    const daysSince = Math.round((today - completionDate) / (24 * 60 * 60 * 1000));
+    const daysLeft = 30 - daysSince;
+    if (daysLeft >= 0) {
+      return '<span class="badge badge-warranty is-active" title="30-day labor warranty, based on this job\'s date">Warranty: ' + daysLeft + ' day' + (daysLeft === 1 ? '' : 's') + ' left</span>';
+    }
+    return '<span class="badge badge-warranty is-expired" title="30-day labor warranty, based on this job\'s date">Warranty expired</span>';
+  }
+
   function renderJobDetail(bundle) {
     const j = bundle.job;
     document.title = j.title + ' | Triple H Enterprises (Internal Tool)';
@@ -219,6 +243,7 @@
       '<div class="job-hero-badges">' +
         '<span class="badge badge-' + escapeHtml(j.priority || 'medium') + '">' + escapeHtml(j.priority || 'medium') + '</span>' +
         '<span class="badge badge-status status-' + escapeHtml(j.status || 'not-started') + '">' + (STATUS_LABEL[j.status] || j.status || 'Not Started') + '</span>' +
+        warrantyBadgeHtml(j) +
       '</div>' +
       '<div class="job-stat-row">' +
         '<div class="job-stat"><div class="job-stat-value">' + money(bundle.margin.revenue) + '</div><div class="job-stat-label">Revenue</div></div>' +
