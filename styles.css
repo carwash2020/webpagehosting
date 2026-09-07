@@ -812,12 +812,6 @@
   @media (max-width:600px){
     .email-form .form-row{grid-template-columns:1fr;}
   }
-  .form-card{
-    background:var(--bg-panel);
-    border:1px solid var(--border);
-    border-radius:var(--radius);
-    padding:34px;
-  }
   .form-row{display:grid; grid-template-columns:1fr 1fr; gap:18px; margin-bottom:18px;}
   .field{display:flex; flex-direction:column; gap:8px;}
   .field.full{grid-column:1 / -1;}
@@ -851,7 +845,6 @@
 
   @media (max-width:640px){
     .form-row{grid-template-columns:1fr;}
-    .form-card{padding:24px;}
   }
 
   /* contact */
