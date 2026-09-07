@@ -164,7 +164,10 @@
 // built and styled for the public site's own Gallery (shared
 // styles.css), scoped to that job's own photo set, with prev/next and
 // keyboard navigation.
-const CACHE_NAME = 'th-portal-v28';
+// Bumped 2026-09-07 (v28 -> v29): /styles.css changed (dead-CSS cleanup
+// -- .teardown-sticky/.teardown-track/.terms-disclaimer/.gallery-note
+// removed, no markup anywhere ever referenced them), precached here.
+const CACHE_NAME = 'th-portal-v29';
 const PRECACHE_URLS = [
   '/portal/home.html', '/portal/dashboard.html', '/portal/jobs.html', '/portal/quotes.html',
   '/portal/work-orders.html', '/portal/settings.html', '/portal/login.html', '/portal/set-password.html',

@@ -395,7 +395,10 @@
 // animation for the homepage's "How a visit actually goes" connecting
 // line, gated on the same [data-reveal]/.is-visible mechanism as
 // everything else), precached here.
-const CACHE_NAME = 'th-workspace-v75';
+// Bumped 2026-09-07 (v75 -> v76): /styles.css changed (dead-CSS cleanup
+// -- .teardown-sticky/.teardown-track/.terms-disclaimer/.gallery-note
+// removed, no markup anywhere ever referenced them), precached here.
+const CACHE_NAME = 'th-workspace-v76';
 const PRECACHE_URLS = [
   '/tools/workspace.html', '/tools/job-tracker.html', '/tools/invoice-generator.html', '/tools/contract-generator.html',
   '/tools/calendar.html', '/tools/route-planner.html', '/tools/review-request.html', '/tools/contact-card.html',

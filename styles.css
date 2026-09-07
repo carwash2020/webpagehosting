@@ -1040,15 +1040,6 @@
   }
   .terms-body h4:first-child{margin-top:0;}
   .terms-body p{color:var(--text-dim); font-size:14px; line-height:1.6; margin:0 0 4px;}
-  .terms-disclaimer{
-    background:var(--bg-panel-3);
-    border:1px solid var(--border);
-    border-left:3px solid var(--orange);
-    border-radius:6px;
-    padding:14px 16px;
-    font-size:13px !important;
-    margin-bottom:10px !important;
-  }
 
   /* FAQ */
   .faq-list{max-width:760px;}
@@ -1322,11 +1313,6 @@
     letter-spacing:.3px;
     padding:20px 14px 10px;
     text-align:left;
-  }
-  .gallery-note{
-    margin-top:26px;
-    font-size:13px;
-    color:var(--text-dim);
   }
   @media (max-width:900px){.gallery-grid{grid-template-columns:repeat(2,1fr);}}
   @media (max-width:600px){.gallery-grid{grid-template-columns:1fr;}}
@@ -2072,8 +2058,6 @@
     .section-head::before{transform:scaleX(1) !important;}
     .section-head::after{opacity:.85 !important;}
     .hero-motto span{opacity:1 !important; transform:none !important;}
-    .teardown-track{height:auto !important;}
-    .teardown-sticky{position:relative !important; height:auto !important; padding:88px 0;}
   }
 
   /* =====================================================================
