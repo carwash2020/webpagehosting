@@ -49,7 +49,7 @@
   })();
 </script>
 <link rel="stylesheet" href="/styles.css?v=202609072345">
-<link rel="stylesheet" href="/tools/styles-tools.css?v=04bf541d61">
+<link rel="stylesheet" href="/tools/styles-tools.css?v=99041fc92a">
 <script src="/tools/data-layer.js?v=3a0d57478c" defer></script>
 <script src="/tools/dev-tools-shared.js?v=a7dee707bd" defer></script>
 <script src="/tools/tools-effects.js?v=4cff99aa4a" defer></script>
@@ -219,7 +219,7 @@
 <div id="contentBlockedView" class="dev-blocked" style="display:none;">
   <div class="tool-title" style="font-size:22px;">Not available here</div>
   <p class="tool-sub">Site Content is only shown on the account actively developing this site. Nothing's wrong with your account — this page just isn't meant for day-to-day use.</p>
-  <a href="/tools/workspace.html" class="btn blue" style="display:inline-block; margin-top:12px; text-decoration:none;">Back to Dashboard</a>
+  <a href="/tools/workspace.html" class="primary-btn" style="display:inline-block; margin-top:12px; text-decoration:none;">Back to Dashboard</a>
 </div>
 
 <div id="contentMainView" style="display:none;">
@@ -242,7 +242,11 @@
       <span class="dev-collapse-caret">&#9660;</span>
     </div>
     <div class="dev-panel-body">
-      <div id="siteContentForm"></div>
+      <!-- F10 fix (2026-09-07): the strongest case of the 4 fixed on
+           this page -- renderSiteContentForm() makes a real Supabase
+           network fetch (up to a 6s timeout) before overwriting this,
+           and this page had no loading treatment at all. -->
+      <div id="siteContentForm"><div class="skeleton-line w-100"></div><div class="skeleton-line w-60"></div><div class="skeleton-line w-40"></div></div>
     </div>
   </div>
 
@@ -254,7 +258,7 @@
     </div>
     <div class="dev-panel-body">
       <button class="secondary-btn" style="margin-bottom:12px;" onclick="exportContentBackup()">Download backup (JSON)</button>
-      <div id="contentHistoryList" class="dev-scrollable-list"></div>
+      <div id="contentHistoryList" class="dev-scrollable-list"><div class="skeleton-line w-100"></div><div class="skeleton-line w-60"></div></div>
     </div>
   </div>
 
@@ -266,10 +270,10 @@
     </div>
     <div class="dev-panel-body">
       <p class="tool-sub" style="margin-bottom:12px;">If an answer mentions the phone number as plain text, it won't update automatically if the phone field above ever changes -- edit that answer directly if the number changes.</p>
-      <div id="faqEditorList"></div>
+      <div id="faqEditorList"><div class="skeleton-line w-100"></div><div class="skeleton-line w-60"></div></div>
       <div style="display:flex; gap:10px; margin-top:12px; flex-wrap:wrap;">
         <button class="secondary-btn" onclick="addFaqItem()">+ Add question</button>
-        <button class="btn blue" id="saveFaqBtn" onclick="saveFaqList()">Save all</button>
+        <button class="primary-btn" id="saveFaqBtn" onclick="saveFaqList()">Save all</button>
       </div>
     </div>
   </div>
@@ -282,10 +286,10 @@
     </div>
     <div class="dev-panel-body">
       <p class="tool-sub" style="margin-bottom:12px;">The last section mentions the phone number and email as plain text -- won't update automatically if those fields ever change. Edit it directly if either one changes.</p>
-      <div id="termsEditorList"></div>
+      <div id="termsEditorList"><div class="skeleton-line w-100"></div><div class="skeleton-line w-60"></div></div>
       <div style="display:flex; gap:10px; margin-top:12px; flex-wrap:wrap;">
         <button class="secondary-btn" onclick="addTermsItem()">+ Add section</button>
-        <button class="btn blue" id="saveTermsBtn" onclick="saveTermsList()">Save all</button>
+        <button class="primary-btn" id="saveTermsBtn" onclick="saveTermsList()">Save all</button>
       </div>
     </div>
   </div>
@@ -316,7 +320,7 @@
         <p style="margin-bottom:14px;">This is a soft confirmation to catch an accidental save, not real protection against someone technically determined -- anyone who's already logged into Connor's account and views this page's source could bypass it. It exists to stop a stray tap or someone else picking up an unlocked phone. Only asked once per browser session -- closing the tab resets it.</p>
         <input type="password" id="devPasswordInput" placeholder="Dev password" style="width:100%; margin-bottom:12px;" onkeydown="if(event.key==='Enter') devPasswordSubmit();">
         <div class="form-footer">
-          <button class="btn blue" onclick="devPasswordSubmit()">Confirm</button>
+          <button class="primary-btn" onclick="devPasswordSubmit()">Confirm</button>
           <button class="secondary-btn" onclick="devPasswordCancel()">Cancel</button>
         </div>
       </div>
@@ -407,7 +411,7 @@
         '</label>' +
         '<input type="text" id="siteContent_' + f.key + '" placeholder="' + escapeHtml(f.placeholder) + '" value="' + escapeHtml(current[f.key] || '') + '"></div></div>'
       ).join('') +
-      '<div class="form-footer"><button class="btn blue" id="saveSiteContentBtn" onclick="saveSiteContent()">Save all</button></div>' +
+      '<div class="form-footer"><button class="primary-btn" id="saveSiteContentBtn" onclick="saveSiteContent()">Save all</button></div>' +
       '<p class="tool-sub" style="margin-top:8px;">Changes go live on the public site the next time it loads -- no push needed, usually within a few seconds.</p>';
 
       if (!res.ok) el.insertAdjacentHTML('afterbegin', '<p class="tool-sub" style="color:#e05555;">Could not load current values -- the table below might not exist yet. Run the setup SQL in Supabase first.</p>');

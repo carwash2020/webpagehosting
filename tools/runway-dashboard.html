@@ -236,8 +236,14 @@
   header p{color:var(--text-dim);font-size:13px;margin:4px 0 16px;}
   .tabs{display:flex;gap:6px;max-width:900px;margin:0 auto;padding:8px 20px 0;overflow-x:auto;scrollbar-width:none;position:sticky;top:0;background:var(--bg);z-index:50;}
   .tabs::-webkit-scrollbar{display:none;}
-  .tab-btn{background:var(--bg-card);color:var(--text-dim);border:none;padding:10px 16px;border-radius:8px 8px 0 0;font-family:var(--font-ui);font-weight:600;font-size:13px;text-transform:uppercase;letter-spacing:0.5px;cursor:pointer;white-space:nowrap;transition:background .15s, color .15s;}
-  .tab-btn.active{background:var(--bg-elevated);color:var(--orange-light);box-shadow: inset 0 2px 0 var(--orange);}
+  /* F13 fix (2026-09-07): renamed from .tab-btn/.active -- that name
+     collided with the shared underline-tab system in styles-tools.css
+     (a different visual language entirely), and the active-state class
+     didn't match this file's own nav components, which already use
+     .is-active. Purely a rename; the folder-tab look itself is
+     unchanged. */
+  .rw-tab-btn{background:var(--bg-card);color:var(--text-dim);border:none;padding:10px 16px;border-radius:8px 8px 0 0;font-family:var(--font-ui);font-weight:600;font-size:13px;text-transform:uppercase;letter-spacing:0.5px;cursor:pointer;white-space:nowrap;transition:background .15s, color .15s;}
+  .rw-tab-btn.is-active{background:var(--bg-elevated);color:var(--orange-light);box-shadow: inset 0 2px 0 var(--orange);}
   main{max-width:900px;margin:0 auto;padding:16px 20px 80px;}
   /* Desktop layout (2026-08-20), requested directly: efficient on
      phone stays exactly as it was (nothing below 1024px changes at
@@ -353,7 +359,7 @@
        44px on phone) rather than inventing new sizes. */
     .icon-btn { min-width: 44px; min-height: 44px; padding: 10px; }
     .cat-add-btn { width: 44px; height: 44px; }
-    .tab-btn { min-height: 44px; }
+    .rw-tab-btn { min-height: 44px; }
   }
 
   /* "Flag this page" button (F18 fix, 2026-09-07): injectFlagButton() in
@@ -466,8 +472,13 @@
   .card-hero .stat-box{background:var(--bg-card);}
   .card-hero .stat-box.green{background:linear-gradient(160deg, rgba(58,201,106,0.10), var(--bg-card));}
   button.action-btn{
-    background:var(--orange);color:#1a0d02;border:none;font-family:var(--font-ui);font-weight:700;font-size:13px;
-    text-transform:uppercase;letter-spacing:0.5px;padding:11px 18px;border-radius:8px;cursor:pointer;
+    /* F12 fix (2026-09-07): matched to the shared .primary-btn.wide look
+       (tools/styles-tools.css) so this reads as the same button system as
+       every other tool page -- this file stays self-contained by design
+       (see its header comment), so the match is a local copy of those
+       values, not a reference to the shared class. */
+    background:linear-gradient(135deg, var(--orange-light), var(--orange) 60%, var(--orange-dark));color:#1a0d02;border:none;font-family:var(--font-ui);font-weight:700;font-size:16px;
+    text-transform:uppercase;letter-spacing:1px;padding:14px 28px;border-radius:8px;cursor:pointer;
     transition: box-shadow .15s, transform .1s; box-shadow: 0 0 0 rgba(255,128,0,0); width:100%;
   }
   button.action-btn:hover{box-shadow: 0 0 8px rgba(255,128,0,0.5), 0 0 20px rgba(255,128,0,0.25);}
@@ -613,8 +624,8 @@
 <div id="roleBlockedOverlay" class="role-blocked-overlay">
   <div class="tool-title" style="font-size:22px;">Not available here</div>
   <p class="tool-sub" style="max-width:420px;">Runway Dashboard isn't part of your role's access. Nothing's wrong with your account -- check with whoever manages roles if you think this should be different.</p>
-  <button class="btn blue" style="margin-top:12px;" onclick="retryRoleCheck(this, canViewRunway)">Try again</button>
-  <a href="/tools/workspace.html" class="btn blue" style="display:inline-block; margin-top:12px; text-decoration:none;">Back to Dashboard</a>
+  <button class="primary-btn" style="margin-top:12px;" onclick="retryRoleCheck(this, canViewRunway)">Try again</button>
+  <a href="/tools/workspace.html" class="secondary-btn" style="display:inline-block; margin-top:12px; text-decoration:none;">Back to Dashboard</a>
 </div>
 <!-- F18 fix (2026-09-07): the hand-rolled desktop-only sidebar (+ its own
      local copy of just the 11 icons it needed) that used to live here is
@@ -658,10 +669,10 @@
 </header>
 
 <div class="tabs">
-  <button class="tab-btn active" data-tab="personal">Personal Budget</button>
-  <button class="tab-btn" data-tab="business">Business Dashboard</button>
-  <button class="tab-btn" data-tab="networth">Net Worth</button>
-  <button class="tab-btn" data-tab="runway">Runway Summary</button>
+  <button class="rw-tab-btn is-active" data-tab="personal">Personal Budget</button>
+  <button class="rw-tab-btn" data-tab="business">Business Dashboard</button>
+  <button class="rw-tab-btn" data-tab="networth">Net Worth</button>
+  <button class="rw-tab-btn" data-tab="runway">Runway Summary</button>
 </div>
 
 <main>
@@ -2688,7 +2699,7 @@ const TAB_ORDER = ['personal', 'business', 'networth', 'runway'];
 let tabSwitchInProgress = false;
 function switchToTab(tabKey){
   if(tabSwitchInProgress) return; // ignore a second swipe/tap mid-transition rather than glitch
-  const btn = document.querySelector(`.tab-btn[data-tab="${tabKey}"]`);
+  const btn = document.querySelector(`.rw-tab-btn[data-tab="${tabKey}"]`);
   if(!btn) return;
   const nextPanel = document.getElementById('panel-'+tabKey);
   const currentPanel = document.querySelector('.panel.active');
@@ -2697,8 +2708,8 @@ function switchToTab(tabKey){
   const reduceMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
   function showNextPanel(){
-    document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
-    btn.classList.add('active');
+    document.querySelectorAll('.rw-tab-btn').forEach(b=>b.classList.remove('is-active'));
+    btn.classList.add('is-active');
     btn.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
     if(currentPanel){ currentPanel.classList.remove('active', 'fade-out'); currentPanel.style.opacity = ''; }
     nextPanel.classList.add('active');
@@ -2728,7 +2739,7 @@ function switchToTab(tabKey){
   currentPanel.classList.add('fade-out');
   setTimeout(showNextPanel, 200);
 }
-document.querySelectorAll('.tab-btn').forEach(btn => {
+document.querySelectorAll('.rw-tab-btn').forEach(btn => {
   btn.addEventListener('click', () => switchToTab(btn.dataset.tab));
 });
 document.getElementById('panel-personal').classList.add('active');
@@ -2759,7 +2770,7 @@ document.getElementById('panel-personal').classList.add('active');
     const isFastEnough = elapsed < 600;
     if(!isMostlyHorizontal || !isFarEnough || !isFastEnough) return;
 
-    const activeBtn = document.querySelector('.tab-btn.active');
+    const activeBtn = document.querySelector('.rw-tab-btn.is-active');
     const currentIndex = TAB_ORDER.indexOf(activeBtn ? activeBtn.dataset.tab : 'personal');
     if(currentIndex === -1) return;
     if(dx < 0 && currentIndex < TAB_ORDER.length - 1){

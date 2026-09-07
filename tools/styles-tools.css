@@ -2145,6 +2145,30 @@ body.th-has-bottomnav .th-install-banner { bottom: calc(76px + env(safe-area-ins
   background: rgba(58, 160, 255, .07);
 }
 
+/* F09 fix (2026-09-07): promoted from job-tracker.html, the only place
+   this was ever defined -- finance.html used the class 3x with zero
+   styling, rendering full-size/full-brightness text flush to the
+   panel edge, unlike Job Tracker's own centered, dim, padded block.
+   Also folds in parts-reference.html's .pr-empty, which was
+   byte-for-byte identical to this rule's own base under another name
+   (renamed at each of its 3 call sites instead of kept as a duplicate).
+   runway-dashboard.html keeps its own separate, deliberately
+   self-contained .empty-state copy (a different, independently-built
+   treatment) since it never loads this file. */
+.empty-state { text-align: center; color: var(--text-dim); padding: 40px 20px; font-size: 14px; }
+.empty-state.empty-state-first-run { padding: 48px 24px; font-size: 14.5px; }
+.empty-state.empty-state-first-run .primary-btn { margin: 0 auto; }
+.empty-state .th-icon { display: block; width: 26px; height: 26px; margin: 0 auto 10px; opacity: .7; }
+
+/* F11 fix (2026-09-07): load-error messages (clients.html's "Could not
+   load bug reports:", "Could not search:", etc.) were rendered in
+   class="tool-sub", the same dim grey as an ordinary page caption --
+   a failure read as a caption, with no colour, icon, or way to tell it
+   apart from normal text. Red matches the app's already-established
+   error convention (.sync-status.is-error, .th-toast.is-error). */
+.error-state { color: #e05252; font-weight: 500; }
+.error-state::before { content: '\26a0  '; }
+
 /* touch targets: these tools are used on a phone on a job site */
 .small-btn { min-height: 40px; }
 .tab-btn { min-height: 42px; }

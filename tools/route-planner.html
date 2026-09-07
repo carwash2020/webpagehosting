@@ -62,7 +62,7 @@
   })();
 </script>
 <link rel="stylesheet" href="/styles.css?v=202609072345">
-<link rel="stylesheet" href="/tools/styles-tools.css?v=04bf541d61">
+<link rel="stylesheet" href="/tools/styles-tools.css?v=99041fc92a">
 <!-- Real embedded map (2026-09-07), replacing "link-outs only": Leaflet
      + free OpenStreetMap tiles, no API key/cost. Both the JS and the
      CSS's integrity hash were computed directly from `npm install
@@ -114,12 +114,12 @@
     border-radius: 6px; color: var(--white); font-size: 16px; font-family: inherit;
   }
   .stop-num { color: var(--text-dim); font-size: 13px; width: 22px; flex-shrink: 0; }
-  .icon-btn {
+  .stop-icon-btn {
     background: none; border: 1px solid var(--border); color: var(--text-dim); border-radius: 6px;
     width: 32px; height: 32px; cursor: pointer; font-size: 14px; flex-shrink: 0;
   }
-  .icon-btn:hover { border-color: var(--orange-light); color: var(--orange-light); }
-  .icon-btn.danger:hover { border-color: #e05252; color: #e05252; }
+  .stop-icon-btn:hover { border-color: var(--orange-light); color: var(--orange-light); }
+  .stop-icon-btn.danger:hover { border-color: #e05252; color: #e05252; }
   .add-stop-btn {
     background: none; border: 1px dashed var(--border); color: var(--blue-light); border-radius: 6px;
     padding: 8px 14px; cursor: pointer; font-size: 13.5px; margin-top: 4px;
@@ -281,9 +281,9 @@
     row.innerHTML = `
       <span class="stop-num">${document.querySelectorAll('.stop-row').length + 1}.</span>
       <input type="text" class="stop-input" value="${value}" placeholder="123 Main St, St. George, UT" oninput="updateRoute()">
-      <button class="icon-btn" onclick="moveStop(${id}, -1)" title="Move up" aria-label="Move stop up">&uarr;</button>
-      <button class="icon-btn" onclick="moveStop(${id}, 1)" title="Move down" aria-label="Move stop down">&darr;</button>
-      <button class="icon-btn danger" onclick="removeStop(${id})" title="Remove" aria-label="Remove stop">&times;</button>`;
+      <button class="stop-icon-btn" onclick="moveStop(${id}, -1)" title="Move up" aria-label="Move stop up">&uarr;</button>
+      <button class="stop-icon-btn" onclick="moveStop(${id}, 1)" title="Move down" aria-label="Move stop down">&darr;</button>
+      <button class="stop-icon-btn danger" onclick="removeStop(${id})" title="Remove" aria-label="Remove stop">&times;</button>`;
     document.getElementById('stopsContainer').appendChild(row);
     renumberStops();
     updateRoute();

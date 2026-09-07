@@ -67,7 +67,7 @@
   })();
 </script>
 <link rel="stylesheet" href="/styles.css?v=202609072345">
-<link rel="stylesheet" href="/tools/styles-tools.css?v=04bf541d61">
+<link rel="stylesheet" href="/tools/styles-tools.css?v=99041fc92a">
 <script src="https://js.stripe.com/v3/"></script>
 <script src="/tools/tools-effects.js?v=4cff99aa4a" defer></script>
 <script src="/tools/tools-dialogs.js?v=e1dfaa11a1" defer></script>
@@ -297,7 +297,7 @@
       '<div><div class="pos-card-label">' + escapeHtmlPos(brandLabel) + ' ending in ' + escapeHtmlPos(savedCardInfo.last4) + '</div>' +
       '<div class="pos-card-sub">Saved from a previous payment</div></div>' +
       '</div>' +
-      '<button class="btn blue" id="posChargeSavedBtn" style="width:100%; justify-content:center;" onclick="chargeSavedCard()">Charge Saved Card</button>' +
+      '<button class="primary-btn" id="posChargeSavedBtn" style="width:100%; justify-content:center;" onclick="chargeSavedCard()">Charge Saved Card</button>' +
       '<button type="button" class="pos-use-different" onclick="renderNewCardOption()">Use a different card instead</button>';
   }
 
@@ -316,7 +316,7 @@
       '<label for="posSignerName" class="pos-auth-label">Client\'s full legal name (typed as signature)</label>' +
       '<input type="text" id="posSignerName" placeholder="Full name" oninput="document.getElementById(\'posSignerNamePreview\').textContent = this.value.trim() || \'_____________\';">' +
       '</div>' +
-      '<button class="btn blue" id="posNewCardBtn" style="width:100%; justify-content:center; margin-top:12px;" onclick="startNewCardCharge()">Enter Card &amp; Charge</button>';
+      '<button class="primary-btn" id="posNewCardBtn" style="width:100%; justify-content:center; margin-top:12px;" onclick="startNewCardCharge()">Enter Card &amp; Charge</button>';
     updateAuthPreview();
   }
 
@@ -440,7 +440,7 @@
     const area = document.getElementById('posChargeArea');
     area.innerHTML =
       '<div id="posPaymentElement"></div>' +
-      '<button class="btn blue" id="posConfirmBtn" style="width:100%; justify-content:center; margin-top:14px;">Charge</button>';
+      '<button class="primary-btn" id="posConfirmBtn" style="width:100%; justify-content:center; margin-top:14px;">Charge</button>';
     elementsInstance.create('payment').mount('#posPaymentElement');
 
     document.getElementById('posConfirmBtn').addEventListener('click', async () => {

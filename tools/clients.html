@@ -45,7 +45,7 @@
   })();
 </script>
 <link rel="stylesheet" href="/styles.css?v=202609072345">
-<link rel="stylesheet" href="/tools/styles-tools.css?v=04bf541d61">
+<link rel="stylesheet" href="/tools/styles-tools.css?v=99041fc92a">
 <script src="/tools/tools-effects.js?v=4cff99aa4a" defer></script>
 <script src="/tools/tools-dialogs.js?v=e1dfaa11a1" defer></script>
 <script src="/tools/tools-media-sharing.js?v=4be783c8a5" defer></script>
@@ -338,7 +338,7 @@
       <p style="margin-bottom:14px;">This is a soft confirmation to catch an accidental save, not real protection against someone technically determined -- anyone who's already logged into Connor's account and views this page's source could bypass it. It exists to stop a stray tap or someone else picking up an unlocked phone. Only asked once per browser session -- closing the tab resets it.</p>
       <input type="password" id="devPasswordInput" placeholder="Dev password" style="width:100%; margin-bottom:12px;" onkeydown="if(event.key==='Enter') devPasswordSubmit();">
       <div class="form-footer">
-        <button class="btn blue" onclick="devPasswordSubmit()">Confirm</button>
+        <button class="primary-btn" onclick="devPasswordSubmit()">Confirm</button>
         <button class="secondary-btn" onclick="devPasswordCancel()">Cancel</button>
       </div>
     </div>
@@ -375,7 +375,7 @@
           '</div><span class="dev-check-status ' + statusClass + '">' + statusLabel + '</span></div>';
       }).join('');
     } catch (e) {
-      el.innerHTML = '<p class="tool-sub">Could not load bug reports: ' + escapeHtml(e.message || String(e)) + '</p>';
+      el.innerHTML = '<p class="error-state">Could not load bug reports: ' + escapeHtml(e.message || String(e)) + '</p>';
     }
   }
 
@@ -434,7 +434,7 @@
           '</div><span class="dev-check-status fail">Error</span></div>';
       }).join('');
     } catch (e) {
-      el.innerHTML = '<p class="tool-sub">Could not load portal client errors: ' + escapeHtml(e.message || String(e)) + '</p>';
+      el.innerHTML = '<p class="error-state">Could not load portal client errors: ' + escapeHtml(e.message || String(e)) + '</p>';
     }
   }
 
@@ -599,7 +599,7 @@
       const profiles = await Promise.all(emails.map(loadClientLookupProfile));
       el.innerHTML = profiles.map(renderClientLookupCard).join('');
     } catch (e) {
-      el.innerHTML = '<p class="tool-sub">Could not search: ' + escapeHtml(e.message || String(e)) + '</p>';
+      el.innerHTML = '<p class="error-state">Could not search: ' + escapeHtml(e.message || String(e)) + '</p>';
     }
   }
 
@@ -703,7 +703,7 @@
       try {
         _portalAccountsCache = await loadPortalAccounts();
       } catch (e) {
-        el.innerHTML = '<p class="tool-sub">Could not load portal accounts: ' + escapeHtml(e.message || String(e)) + '</p>';
+        el.innerHTML = '<p class="error-state">Could not load portal accounts: ' + escapeHtml(e.message || String(e)) + '</p>';
         return;
       }
     }
@@ -839,7 +839,7 @@
         if (!res.ok) throw new Error('HTTP ' + res.status);
         _portalInvoicesCache = await res.json();
       } catch (e) {
-        el.innerHTML = '<p class="tool-sub">Could not load portal invoices: ' + escapeHtml(e.message || String(e)) + '</p>';
+        el.innerHTML = '<p class="error-state">Could not load portal invoices: ' + escapeHtml(e.message || String(e)) + '</p>';
         return;
       }
     }
@@ -976,7 +976,7 @@
         if (!res.ok) throw new Error('HTTP ' + res.status);
         _portalWorkOrdersCache = await res.json();
       } catch (e) {
-        el.innerHTML = '<p class="tool-sub">Could not load portal work orders: ' + escapeHtml(e.message || String(e)) + '</p>';
+        el.innerHTML = '<p class="error-state">Could not load portal work orders: ' + escapeHtml(e.message || String(e)) + '</p>';
         return;
       }
     }
@@ -1086,7 +1086,7 @@
         '</div>'
       ).join('');
     } catch (e) {
-      el.innerHTML = '<p class="tool-sub">Could not load the email list: ' + escapeHtml(e.message || String(e)) + '</p>';
+      el.innerHTML = '<p class="error-state">Could not load the email list: ' + escapeHtml(e.message || String(e)) + '</p>';
     }
   }
 

@@ -61,7 +61,7 @@ test('F22: touch targets bumped to real sizes across the suite, verified where a
   const runway = fs.readFileSync(path.join(TOOLS_DIR, 'runway-dashboard.html'), 'utf8');
   assert.match(runway, /@media \(max-width: 720px\) \{[\s\S]*?\.icon-btn \{ min-width: 44px; min-height: 44px; padding: 10px; \}/);
   assert.match(runway, /\.cat-add-btn \{ width: 44px; height: 44px; \}/);
-  assert.match(runway, /\.tab-btn \{ min-height: 44px; \}/);
+  assert.match(runway, /\.rw-tab-btn \{ min-height: 44px; \}/);
 
   // Job Tracker's photo overlay buttons (26x26) -- verified they still
   // fit a 110px-wide thumbnail without overlapping each other.
