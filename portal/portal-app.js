@@ -399,6 +399,49 @@ window.addEventListener('unhandledrejection', (event) => {
   logPortalClientError(message, 'unhandledrejection', null, null, stack);
 });
 
+// Basic focus containment for modals/overlays (2026-09-07), found
+// missing from every one of them on the portal: the confirm modal
+// below, the pre-existing report-a-problem modal (every page) and
+// payment modal (dashboard.html), and the job-photo lightbox
+// (jobs.html). Tab could silently move keyboard focus onto background
+// page content -- an invoice row, a nav link -- while any of them was
+// visually covering the screen. Returns a release() function that
+// removes the trap and restores focus to whatever was focused before
+// the modal opened, matching standard dialog behavior.
+function trapFocusWithin(container, initialFocusEl) {
+  var FOCUSABLE_SELECTOR = 'a[href], button:not([disabled]), textarea:not([disabled]), input:not([disabled]), select:not([disabled]), [tabindex]:not([tabindex="-1"])';
+  var previouslyFocused = document.activeElement;
+
+  function focusableEls() {
+    return Array.prototype.slice.call(container.querySelectorAll(FOCUSABLE_SELECTOR))
+      .filter(function (el) { return el.offsetParent !== null; });
+  }
+
+  function onKeydown(e) {
+    if (e.key !== 'Tab') return;
+    var els = focusableEls();
+    if (!els.length) return;
+    var first = els[0];
+    var last = els[els.length - 1];
+    if (e.shiftKey && document.activeElement === first) {
+      e.preventDefault();
+      last.focus();
+    } else if (!e.shiftKey && document.activeElement === last) {
+      e.preventDefault();
+      first.focus();
+    }
+  }
+
+  document.addEventListener('keydown', onKeydown);
+  var toFocus = initialFocusEl || focusableEls()[0];
+  if (toFocus) toFocus.focus();
+
+  return function release() {
+    document.removeEventListener('keydown', onKeydown);
+    if (previouslyFocused && typeof previouslyFocused.focus === 'function') previouslyFocused.focus();
+  };
+}
+
 // Themed replacement for window.confirm() (2026-09-07), found sitting
 // next to the app's own fully-themed modal patterns (the payment
 // modal, the report-a-problem modal) -- the one raw platform dialog
@@ -444,12 +487,14 @@ function portalConfirm(message, options) {
     okBtn.className = 'btn ' + (isDanger ? 'orange' : 'blue');
     cancelBtn.textContent = cancelLabel;
 
+    let releaseFocusTrap = null;
     function cleanup(result) {
       overlay.classList.remove('is-visible');
       okBtn.removeEventListener('click', onOk);
       cancelBtn.removeEventListener('click', onCancel);
       overlay.removeEventListener('click', onOverlayClick);
       document.removeEventListener('keydown', onKeydown);
+      if (releaseFocusTrap) releaseFocusTrap();
       resolve(result);
     }
     function onOk() { cleanup(true); }
@@ -463,7 +508,7 @@ function portalConfirm(message, options) {
     document.addEventListener('keydown', onKeydown);
 
     overlay.classList.add('is-visible');
-    okBtn.focus();
+    releaseFocusTrap = trapFocusWithin(overlay, okBtn);
   });
 }
 

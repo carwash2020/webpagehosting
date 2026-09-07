@@ -106,7 +106,7 @@
 </style>
 <link rel="stylesheet" href="/tools/styles-tools.css?v=a2e87effb3">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="/portal/portal-app.js?v=202609071900"></script>
+<script src="/portal/portal-app.js?v=202609072000"></script>
 <!-- Shared business-hours data (2026-09-03) -- see business-hours.js's
      own header comment. This page used to keep its own FIFTH
      independent hand-typed copy of these exact constants. -->
@@ -639,6 +639,13 @@
   const lightboxCaption = document.getElementById('lightboxCaption');
   let lightboxUrls = [];
   let lightboxIndex = 0;
+  // Established once on the first open, not re-established on every
+  // prev/next click (openLightbox() is also the function
+  // showNextLightboxPhoto() calls) -- re-trapping on every navigation
+  // would stack up duplicate keydown listeners and keep resetting
+  // "focus to restore on close" to whatever was focused at that
+  // instant instead of what was focused before the lightbox opened.
+  let releaseLightboxFocusTrap = null;
 
   function openLightbox(urls, i) {
     lightboxUrls = urls;
@@ -650,9 +657,11 @@
     document.getElementById('lightboxPrev').style.display = hasMultiple ? '' : 'none';
     document.getElementById('lightboxNext').style.display = hasMultiple ? '' : 'none';
     lightbox.classList.add('is-visible');
+    if (!releaseLightboxFocusTrap) releaseLightboxFocusTrap = trapFocusWithin(lightbox);
   }
   function closeLightbox() {
     lightbox.classList.remove('is-visible');
+    if (releaseLightboxFocusTrap) { releaseLightboxFocusTrap(); releaseLightboxFocusTrap = null; }
   }
   function showNextLightboxPhoto(delta) {
     lightboxIndex = (lightboxIndex + delta + lightboxUrls.length) % lightboxUrls.length;
@@ -752,19 +761,26 @@
     const formArea = document.getElementById('reportBugFormArea');
     const successEl = document.getElementById('reportBugSuccess');
 
+    let releaseReportBugFocusTrap = null;
     function openReportBug() {
       overlay.style.display = 'flex';
       formArea.style.display = 'block';
       successEl.style.display = 'none';
       messageInput.value = '';
       errorEl.textContent = '';
+      releaseReportBugFocusTrap = trapFocusWithin(overlay);
     }
     function closeReportBug() {
       overlay.style.display = 'none';
+      if (releaseReportBugFocusTrap) { releaseReportBugFocusTrap(); releaseReportBugFocusTrap = null; }
     }
     link.addEventListener('click', openReportBug);
     cancelBtn.addEventListener('click', closeReportBug);
     overlay.addEventListener('click', (e) => { if (e.target === overlay) closeReportBug(); });
+    document.addEventListener('keydown', (e) => {
+      if (overlay.style.display === 'none') return;
+      if (e.key === 'Escape') closeReportBug();
+    });
 
     submitBtn.addEventListener('click', async () => {
       const message = messageInput.value.trim();
