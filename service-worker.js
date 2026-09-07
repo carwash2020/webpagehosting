@@ -438,7 +438,19 @@
 // connection never permanently gives up -- a slow background retry
 // keeps trying every 30s so the page recovers on its own, logging only
 // once per failure episode. Precached here since sync.js is.
-const CACHE_NAME = 'th-workspace-v81';
+// Bumped 2026-09-07 (v81 -> v82): /tools/styles-tools.css changed.
+// Real reported bug, screenshot of Finance's Income log: a row's text
+// bled through, overlapping the sticky DATE/SOURCE/JOB/... header,
+// since that header (one line, ~28px) is shorter than a real data row
+// once a long Job name wraps to multiple lines. Fixed properly rather
+// than patched: #incomeTable/#entriesTable now stick their header to
+// their own bounded, scrollable container instead of the page, which
+// is what makes it safe to also extend the header's own opaque
+// background generously upward to cover a taller row's excess height
+// -- doing that against the OLD page-level sticky position was tried
+// first and rejected, since real page content (the "Log" heading) sits
+// directly above the table and would have been covered by mistake.
+const CACHE_NAME = 'th-workspace-v82';
 const PRECACHE_URLS = [
   '/tools/workspace.html', '/tools/job-tracker.html', '/tools/invoice-generator.html', '/tools/contract-generator.html',
   '/tools/calendar.html', '/tools/route-planner.html', '/tools/review-request.html', '/tools/contact-card.html',
