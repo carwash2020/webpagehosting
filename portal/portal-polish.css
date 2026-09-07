@@ -383,9 +383,20 @@ body.portal-page .help-actions a.primary:hover {
    a real, consistent design choice across this app. Only the nested
    explanatory sentences -- which are body copy, not labels -- go back
    to sentence case, where word shapes are legible again. */
-label .wo-hint {
+label .wo-hint,
+label .login-hint {
   text-transform: none;
   letter-spacing: normal;
+}
+/* Requirement text under a login/set-password field label. Nested in the
+   label, so it inherits that rule's weight as well as its casing -- both
+   have to be reset for it to read as the body copy it is. */
+.login-hint {
+  display: block;
+  font-size: 12px;
+  font-weight: 400;
+  color: var(--text-dim);
+  margin-top: 3px;
 }
 .wo-section-title,
 .set-card-title {
@@ -408,6 +419,43 @@ label .wo-hint {
 }
 
 /* ---------- 10. collapsible cards ---------- */
+/* The invoice and quote cards' "View details" is a bare <details>/<summary>
+   carrying only an inline cursor/size/colour, so it rendered with the
+   browser's own black disclosure triangle -- the one raw platform widget
+   left anywhere in this app, sitting a few hundred pixels from Settings'
+   custom chevron doing the identical job. Same affordance, same rotation,
+   same easing, so a client learns one gesture rather than two.
+   Scoped to .portal-page so nothing on the public site is touched. */
+body.portal-page details > summary {
+  list-style: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  min-height: 32px;
+}
+body.portal-page details > summary::-webkit-details-marker { display: none; }
+body.portal-page details > summary::before {
+  content: "";
+  width: 6px;
+  height: 6px;
+  border-right: 1.5px solid currentColor;
+  border-bottom: 1.5px solid currentColor;
+  transform: rotate(-45deg);
+  transition: transform .22s ease;
+  flex-shrink: 0;
+  /* The glyph is drawn from two borders, so it sits optically low inside
+     its own box; nudge it back onto the text baseline. */
+  margin-top: -3px;
+}
+body.portal-page details[open] > summary::before {
+  transform: rotate(45deg);
+  margin-top: -1px;
+}
+body.portal-page details > summary:hover { color: var(--orange-light); }
+@media (prefers-reduced-motion: reduce) {
+  body.portal-page details > summary::before { transition: none; }
+}
+
 .set-card-header { min-height: 52px; }
 /* The collapsed rows were doing the opposite of what collapsing them was
    for. Settings was made collapsible to cut the scroll length ("it still
