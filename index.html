@@ -60,7 +60,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Anton&family=Archivo:wght@400..700&family=Newsreader:ital,opsz,wght@0,6..72,300..700;1,6..72,300..600&family=Oswald:wght@200..700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="styles.css?v=202609062002">
+<link rel="stylesheet" href="styles.css?v=202609071230">
 <script type="application/ld+json">
 {
   "@context": "https://schema.org",
@@ -301,6 +301,9 @@
 
   <section class="hero">
     <div class="hero-plane" aria-hidden="true"></div>
+    <div class="hero-subject" aria-hidden="true">
+      <img src="/images/gallery/plank-finished-corner.webp?v=202609071200" alt="" width="1400" height="1050" loading="eager">
+    </div>
     <div class="wrap hero-grid">
       <div>
         <p class="eyebrow">ST. GEORGE AND SOUTHERN UTAH</p>
@@ -639,6 +642,41 @@
           <p>Work is guaranteed. Parts carry whatever warranty the manufacturer sets, which varies by part.</p>
         </div>
       </div>
+    </div>
+  </section>
+
+  <!-- A drag-to-compare before/after, real client work (the same
+       "Kitchen Tile" job already grouped together in the Gallery modal's
+       Before/Demo and Finished categories). Previously the only place
+       any of the 62 job photos appeared on the site was behind the
+       Gallery link in the nav -- a visitor scrolling the homepage never
+       saw one. This surfaces the strongest single before/after pair
+       directly in the scroll, as proof rather than a claim.
+       Same control language as the appliance teardown above it (a real
+       range input, not pointer-drag hijacking, so it's keyboard- and
+       touch-operable for free) but a completely different device: a
+       real photo compare, not a diagram. -->
+  <section class="reveal-job" id="revealJob" aria-labelledby="revealHeading" style="--p:.38">
+    <div class="wrap">
+      <div class="section-head" data-reveal>
+        <p class="eyebrow is-blue">SEE IT FOR YOURSELF</p>
+        <h2 id="revealHeading">This kitchen, one visit later</h2>
+        <p>Drag to compare. Real client work, not a stock photo.</p>
+      </div>
+
+      <div class="reveal-frame" id="revealFrame">
+        <div class="reveal-img reveal-before">
+          <img src="/images/gallery/tile-kitchen-before-1.webp?v=202609071200" alt="Before: worn, dated tile floor in a kitchen" width="1400" height="787" loading="lazy">
+        </div>
+        <div class="reveal-img reveal-after">
+          <img src="/images/gallery/tile-finished-kitchen-wide-2.webp?v=202609071200" alt="After: new plank-look tile installed in the same kitchen" width="1400" height="787" loading="lazy">
+        </div>
+        <div class="reveal-divider" aria-hidden="true"></div>
+        <span class="reveal-tag reveal-tag-before">Before</span>
+        <span class="reveal-tag reveal-tag-after">After</span>
+      </div>
+
+      <input type="range" id="revealScrub" class="reveal-scrub" min="0" max="100" value="38" step="1" aria-label="Drag to compare the before and after photo of this kitchen">
     </div>
   </section>
 
@@ -2350,12 +2388,51 @@
       }
     }
 
+    // The before/after reveal. Same shape as the teardown control just
+    // above (a real range input driving a CSS custom property, plus a
+    // once-only demo sweep so a visitor who never touches it still sees
+    // the effect) but its own stage and its own --p convention (a 0-1
+    // fraction, read by both the frame's clip-path and the input's own
+    // track fill).
+    const revealStage = document.getElementById('revealJob');
+    const revealScrub = document.getElementById('revealScrub');
+    if (revealStage && revealScrub) {
+      function applyReveal(p) {
+        revealStage.style.setProperty('--p', p.toFixed(4));
+      }
+      revealScrub.addEventListener('input', () => applyReveal(revealScrub.value / 100));
+
+      if (!reduced && 'IntersectionObserver' in window) {
+        let revealPlayed = false;
+        const revealDemo = new IntersectionObserver((entries) => {
+          entries.forEach((entry) => {
+            if (!entry.isIntersecting || revealPlayed) return;
+            revealPlayed = true;
+            revealDemo.disconnect();
+            const DURATION = 1500;
+            const FROM = 0.12, TO = 0.82;
+            const start = performance.now();
+            (function step(now) {
+              const t = Math.min(1, (now - start) / DURATION);
+              const eased = 0.5 - Math.cos(t * Math.PI) / 2;
+              const p = FROM + (TO - FROM) * eased;
+              applyReveal(p);
+              revealScrub.value = Math.round(p * 100);
+              if (t < 1) window.requestAnimationFrame(step);
+            })(start);
+          });
+        }, { threshold: 0.4 });
+        revealDemo.observe(revealStage);
+      }
+    }
+
     // Hero depth. Separate from the control above, and skipped entirely
     // for reduced motion.
     if (reduced) return;
     const badge = document.querySelector('.hero-badge');
     const plane = document.querySelector('.hero-plane');
-    if (!badge && !plane) return;
+    const subject = document.querySelector('.hero-subject');
+    if (!badge && !plane && !subject) return;
 
     let ticking = false;
     function update() {
@@ -2364,6 +2441,10 @@
       if (y < window.innerHeight * 1.6) {
         if (badge) badge.style.setProperty('--shift', (y * 0.09).toFixed(2));
         if (plane) plane.style.setProperty('--shift', (y * -0.05).toFixed(2));
+        // Between the grid's rate and the badge's, so the new photo
+        // plane reads as sitting between them in depth, not tied to
+        // either.
+        if (subject) subject.style.setProperty('--shift2', (y * -0.02).toFixed(2));
       }
     }
     function onScroll() {
