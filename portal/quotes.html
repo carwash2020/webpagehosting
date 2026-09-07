@@ -190,6 +190,25 @@
   .empty-state-title { margin: 0; font-size: 14px; }
   .quote-section-title { font-family:var(--font-ui); font-weight: 600; font-size: 14px; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.5px; margin: 20px 0 10px; }
   .quote-section-title:first-child { margin-top: 0; }
+  /* Pending-quotes summary (2026-09-07): the same real numbers the
+     "Needs your response" section right below it already lists, just
+     totalled -- not a second, separately-computed figure. Hidden
+     entirely when there's nothing pending rather than showing a
+     misleading "0 quotes" banner. */
+  .quotes-pending-banner {
+    display: flex; align-items: center; gap: 12px;
+    background: var(--bg-panel-2); border: 1px solid var(--border);
+    border-left: 3px solid var(--orange); border-radius: 10px;
+    padding: 14px 16px; margin-bottom: 4px;
+  }
+  .quotes-pending-icon {
+    flex: none; width: 38px; height: 38px; border-radius: 8px;
+    display: flex; align-items: center; justify-content: center;
+    background: var(--orange-tint-soft); color: var(--orange-light);
+  }
+  .quotes-pending-icon svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 1.9; stroke-linecap: round; stroke-linejoin: round; }
+  .quotes-pending-title { font-weight: 600; color: var(--white); font-size: 14px; }
+  .quotes-pending-sub { color: var(--text-dim); font-size: 12.5px; margin-top: 2px; }
   .quote-actions { display: flex; gap: 8px; margin-top: 10px; }
   .quote-actions button { flex: 1; justify-content: center; }
   .quote-question-toggle { display: block; margin-top: 10px; font-size: 12.5px; color: var(--text-dim); text-decoration: underline; cursor: pointer; background: none; border: none; font-family: inherit; padding: 0; }
@@ -366,6 +385,24 @@
     `;
   }
 
+  // Reads the exact same pending-quotes array the "Needs your response"
+  // section below it already builds from -- no separate total kept
+  // anywhere else that could drift from what's actually listed.
+  function pendingQuotesBannerHtml(pending) {
+    if (!pending.length) return '';
+    const total = pending.reduce((sum, q) => sum + (Number(q.total) || 0), 0);
+    const count = pending.length === 1 ? '1 quote' : pending.length + ' quotes';
+    return `
+      <div class="quotes-pending-banner">
+        <div class="quotes-pending-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 3.5h7.5L18 8v12.5H6z"/><path d="M13.5 3.5V8H18"/><path d="M9 12.5h6M9 16h6"/></svg></div>
+        <div>
+          <div class="quotes-pending-title">${count} awaiting your response</div>
+          <div class="quotes-pending-sub">${formatCurrency(total)} total</div>
+        </div>
+      </div>
+    `;
+  }
+
   let currentQuotes = [];
 
   async function renderQuotes() {
@@ -408,6 +445,7 @@
 
     let html = '';
     if (pending.length) {
+      html += pendingQuotesBannerHtml(pending);
       html += `<div class="quote-section-title">Needs your response</div>` + pending.map(renderQuoteCard).join('');
     }
     if (responded.length) {

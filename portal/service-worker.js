@@ -147,7 +147,12 @@
 // field instead of only the one error line at the bottom of a long
 // form, description gained a live character count against its real
 // maxlength, and the 3 urgency buttons gained icons.
-const CACHE_NAME = 'th-portal-v25';
+// Bumped 2026-09-07 (v25 -> v26): quotes.html changed, in PRECACHE_URLS.
+// Added a "N quotes awaiting your response, $X total" summary banner
+// above the pending-quotes list -- summed from the exact same `pending`
+// array the section right below it already renders from, not a second
+// figure. Omitted entirely when nothing is pending.
+const CACHE_NAME = 'th-portal-v26';
 const PRECACHE_URLS = [
   '/portal/home.html', '/portal/dashboard.html', '/portal/jobs.html', '/portal/quotes.html',
   '/portal/work-orders.html', '/portal/settings.html', '/portal/login.html', '/portal/set-password.html',
