@@ -65,7 +65,7 @@
   })();
 </script>
 <link rel="stylesheet" href="/styles.css?v=202609072345">
-<link rel="stylesheet" href="/tools/styles-tools.css?v=e8baf66108">
+<link rel="stylesheet" href="/tools/styles-tools.css?v=04bf541d61">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.112.3/dist/umd/supabase.js" integrity="sha384-qafw21c/iciq0VXsi9FzkfoQv5I/V0iqE4lSNcKXPnW9/UTJLnv5CcN4FHxVLnKg" crossorigin="anonymous" defer></script>
 <script src="/tools/sync.js?v=1e45dec62f" defer></script>
 <!-- Shared business-hours data (2026-09-03) -- used by the work order
@@ -250,6 +250,10 @@
   body .metric-card-hero .metric-value.is-net-positive { color: #6fcf97; }
   body .metric-card-hero .metric-value.is-net-negative { color: #e0807a; }
   @media (max-width: 720px) { body .metric-card-hero .metric-value { font-size: 32px; } }
+  /* F22 fix (2026-09-07): period filters measured ~31px tall -- bumped
+     to a real touch target, phone-scoped like the rest of this file's
+     touch-target work. */
+  @media (max-width: 720px) { .period-btn { min-height: 44px; } }
   .metric-card {
     background: var(--bg-panel); border: 1px solid var(--border); border-radius: var(--radius);
     padding: 18px 20px;
@@ -438,7 +442,7 @@
   </div>
   </div>
   <p class="hub-sub"><span class="realtime-badge" id="realtimeBadge" onclick="retryLiveSync()" title="Live sync" style="margin-left:0;"><span class="realtime-dot" id="realtimeDot"></span><span id="realtimeText">Live sync: connecting...</span></span><span class="pending-changes-badge" id="pendingChangesBadge" style="display:none;">&#9679; Unsynced changes</span>
-    <button class="help-btn" id="refreshSyncLink" onclick="manualRefreshSync(renderDashboard)" aria-label="Refresh synced data now" title="Refresh synced data now" style="width:26px; height:26px; font-size:13px;">&#8635;</button>
+    <button class="help-btn" id="refreshSyncLink" onclick="manualRefreshSync(renderDashboard)" aria-label="Refresh synced data now" title="Refresh synced data now" style="font-size:13px;">&#8635;</button>
   </p>
 </div>
 <nav class="jump-nav">

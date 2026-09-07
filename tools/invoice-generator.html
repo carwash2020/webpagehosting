@@ -49,7 +49,7 @@
   })();
 </script>
 <link rel="stylesheet" href="/styles.css?v=202609072345">
-<link rel="stylesheet" href="/tools/styles-tools.css?v=e8baf66108">
+<link rel="stylesheet" href="/tools/styles-tools.css?v=04bf541d61">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.112.3/dist/umd/supabase.js" integrity="sha384-qafw21c/iciq0VXsi9FzkfoQv5I/V0iqE4lSNcKXPnW9/UTJLnv5CcN4FHxVLnKg" crossorigin="anonymous" defer></script>
 <script src="/tools/sync.js?v=1e45dec62f" defer></script>
 <script src="/tools/data-layer.js?v=3a0d57478c" defer></script>
@@ -96,6 +96,36 @@
   .line-items-table th { text-align: left; font-size: 12px; color: var(--text-dim); padding: 6px 8px; text-transform: uppercase; }
   .line-items-table td { padding: 4px 6px; }
   .line-items-table input, .line-items-table select { width: 100%; padding: 7px 9px; background: var(--bg-panel-2); border: 1px solid var(--border); border-radius: 5px; color: var(--white); font-size: 16px; font-family: inherit; }
+  /* F19 fix (2026-09-07): this 8-column table (shared by the Invoice
+     and Quote tabs) was locked to the shared .table-scroll rule's
+     min-width:640px, so building an invoice on a 390px phone meant
+     scrolling the table sideways to reach qty/price/tax one column at
+     a time. Below 760px, it becomes a stack of labeled cards instead
+     -- one per line item -- reusing each cell's already-added
+     data-label attribute (added to both row-builder functions) for
+     the label text via ::before, matching the same
+     "table on desktop, cards on phone" pattern job-tracker.html
+     already uses for its own dense table. */
+  @media (max-width: 760px) {
+    .table-scroll .line-items-table { min-width: 0; }
+    .line-items-table thead { display: none; }
+    .line-items-table, .line-items-table tbody, .line-items-table tr { display: block; width: 100%; }
+    .line-items-table tr {
+      background: var(--bg-panel-2); border: 1px solid var(--border); border-radius: 8px;
+      padding: 4px 12px; margin-bottom: 10px;
+    }
+    .line-items-table td {
+      display: flex; align-items: center; justify-content: space-between; gap: 10px;
+      padding: 8px 0; border-bottom: 1px solid var(--border); text-align: right;
+    }
+    .line-items-table td:last-child { border-bottom: none; justify-content: flex-end; padding-top: 4px; }
+    .line-items-table td[data-label]::before {
+      content: attr(data-label); flex: 0 0 auto; color: var(--text-dim); font-size: 12px;
+      text-transform: uppercase; text-align: left;
+    }
+    .line-items-table td input, .line-items-table td select { width: auto; flex: 1 1 auto; max-width: 62%; }
+    .line-items-table td.li-amount, .line-items-table td.qli-amount { justify-content: space-between; }
+  }
   /* Line item type (2026-09-05) -- a small, dim label stacked BELOW
      the Qty input rather than beside it: the Qty column is only 9%
      wide, and side-by-side text would be too cramped there,
@@ -827,13 +857,13 @@
     tr.id = 'row-' + id;
     if (isUserAdd) tr.classList.add('list-row-enter');
     tr.innerHTML = `
-      <td><input type="text" class="li-desc" value="${desc}"></td>
-      <td><select class="li-type" onchange="updateLineItemUnitLabel(this)">${lineItemTypeOptions(type)}</select></td>
-      <td><input type="text" class="li-part" value="${part}"></td>
-      <td><input type="number" class="li-qty" value="${qty}" min="0" step="1" oninput="recalc()"><span class="li-qty-unit">${lineItemUnitLabel(type)}</span></td>
-      <td><input type="number" class="li-price" value="${price}" min="0" step="0.01" oninput="recalc()"></td>
-      <td class="li-amount">$0.00</td>
-      <td style="text-align:center;"><input type="checkbox" class="li-taxable" ${taxable ? 'checked' : ''} oninput="recalc()"></td>
+      <td data-label="Description"><input type="text" class="li-desc" value="${desc}"></td>
+      <td data-label="Type"><select class="li-type" onchange="updateLineItemUnitLabel(this)">${lineItemTypeOptions(type)}</select></td>
+      <td data-label="Part #"><input type="text" class="li-part" value="${part}"></td>
+      <td data-label="Qty"><input type="number" class="li-qty" value="${qty}" min="0" step="1" oninput="recalc()"><span class="li-qty-unit">${lineItemUnitLabel(type)}</span></td>
+      <td data-label="Price"><input type="number" class="li-price" value="${price}" min="0" step="0.01" oninput="recalc()"></td>
+      <td class="li-amount" data-label="Amount">$0.00</td>
+      <td style="text-align:center;" data-label="Tax?"><input type="checkbox" class="li-taxable" ${taxable ? 'checked' : ''} oninput="recalc()"></td>
       <td><button type="button" class="remove-row-btn" onclick="removeLineItem(${id})">&times;</button></td>`;
     document.getElementById('lineItemsBody').appendChild(tr);
     recalc();
@@ -928,13 +958,13 @@
     tr.id = 'qrow-' + id;
     if (isUserAdd) tr.classList.add('list-row-enter');
     tr.innerHTML = `
-      <td><input type="text" class="qli-desc" value="${desc}"></td>
-      <td><select class="qli-type" onchange="updateLineItemUnitLabel(this)">${lineItemTypeOptions(type)}</select></td>
-      <td><input type="text" class="qli-part" value="${part}"></td>
-      <td><input type="number" class="qli-qty" value="${qty}" min="0" step="1" oninput="recalcQuote()"><span class="qli-qty-unit">${lineItemUnitLabel(type)}</span></td>
-      <td><input type="number" class="qli-price" value="${price}" min="0" step="0.01" oninput="recalcQuote()"></td>
-      <td class="qli-amount">$0.00</td>
-      <td style="text-align:center;"><input type="checkbox" class="qli-taxable" ${taxable ? 'checked' : ''} oninput="recalcQuote()"></td>
+      <td data-label="Description"><input type="text" class="qli-desc" value="${desc}"></td>
+      <td data-label="Type"><select class="qli-type" onchange="updateLineItemUnitLabel(this)">${lineItemTypeOptions(type)}</select></td>
+      <td data-label="Part #"><input type="text" class="qli-part" value="${part}"></td>
+      <td data-label="Qty"><input type="number" class="qli-qty" value="${qty}" min="0" step="1" oninput="recalcQuote()"><span class="qli-qty-unit">${lineItemUnitLabel(type)}</span></td>
+      <td data-label="Price"><input type="number" class="qli-price" value="${price}" min="0" step="0.01" oninput="recalcQuote()"></td>
+      <td class="qli-amount" data-label="Amount">$0.00</td>
+      <td style="text-align:center;" data-label="Tax?"><input type="checkbox" class="qli-taxable" ${taxable ? 'checked' : ''} oninput="recalcQuote()"></td>
       <td><button type="button" class="remove-row-btn" onclick="removeQuoteLineItem(${id})">&times;</button></td>`;
     document.getElementById('quoteLineItemsBody').appendChild(tr);
     recalcQuote();
