@@ -417,7 +417,17 @@
 // treatments the frontend-design skill's own checklist flags as
 // common AI-design tells; added .coverage-badge, a real status pill
 // reusing the existing .open-status dot+pill idiom), precached here.
-const CACHE_NAME = 'th-workspace-v79';
+// Bumped 2026-09-07 (v79 -> v80): job-detail.html, client-detail.html,
+// and finance.html changed, all in PRECACHE_URLS. Real reported bug:
+// "Live sync unavailable" on job-detail.html, always, on every
+// device. Root cause: all three pages called startRealtimeSync()
+// without ever loading the supabase-js <script> tag every other
+// realtime-sync tool page (job-tracker.html, etc.) already has --
+// window.supabase was undefined, so getSupabaseClient() always
+// returned null regardless of actual network conditions. Added the
+// same supabase-js tag, same URL/integrity, in the same position
+// relative to sync.js, on all three.
+const CACHE_NAME = 'th-workspace-v80';
 const PRECACHE_URLS = [
   '/tools/workspace.html', '/tools/job-tracker.html', '/tools/invoice-generator.html', '/tools/contract-generator.html',
   '/tools/calendar.html', '/tools/route-planner.html', '/tools/review-request.html', '/tools/contact-card.html',
