@@ -179,6 +179,15 @@
   .quote-status.is-approved { background: rgba(76,175,120,0.15); color: #4caf78; }
   .quote-status.is-declined { background: rgba(224,82,82,0.15); color: #e05252; }
   .empty-state { text-align: center; color: var(--text-dim); padding: 60px 20px; }
+  /* Empty-state illustrations (2026-09-07), same pattern as jobs.html:
+     the genuine no-quotes-yet state reuses this page's own nav icon
+     (a document, already meaning "Quotes" in the bottom nav); the
+     couldn't-load state gets a distinct icon of its own. */
+  .empty-state-icon { width: 56px; height: 56px; margin: 0 auto 14px; border-radius: 50%; display: flex; align-items: center; justify-content: center; }
+  .empty-state-icon svg { width: 28px; height: 28px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+  .empty-state.is-neutral .empty-state-icon { background: rgba(58,160,255,0.12); color: var(--blue-light); }
+  .empty-state.is-error .empty-state-icon { background: rgba(255,167,38,0.12); color: #ffa726; }
+  .empty-state-title { margin: 0; font-size: 14px; }
   .quote-section-title { font-family:var(--font-ui); font-weight: 600; font-size: 14px; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.5px; margin: 20px 0 10px; }
   .quote-section-title:first-child { margin-top: 0; }
   .quote-actions { display: flex; gap: 8px; margin-top: 10px; }
@@ -381,13 +390,13 @@
       .order('quote_date', { ascending: false });
 
     if (error) {
-      listEl.innerHTML = `<div class="empty-state">Couldn't load your quotes right now. Please try again in a moment.</div>`;
+      listEl.innerHTML = `<div class="empty-state is-error"><div class="empty-state-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8.5"/><path d="M12 7.5v6"/><circle cx="12" cy="16.75" r="0.6" fill="currentColor" stroke="none"/></svg></div><p class="empty-state-title">Couldn't load your quotes right now. Please try again in a moment.</p></div>`;
       console.error(error);
       return;
     }
     currentQuotes = quotes;
     if (!quotes.length) {
-      listEl.innerHTML = `<div class="empty-state">No quotes on file yet.</div>`;
+      listEl.innerHTML = `<div class="empty-state is-neutral"><div class="empty-state-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 3.5h7.5L18 8v12.5H6z"/><path d="M13.5 3.5V8H18"/><path d="M9 12.5h6M9 16h6"/></svg></div><p class="empty-state-title">No quotes on file yet.</p></div>`;
       return;
     }
 

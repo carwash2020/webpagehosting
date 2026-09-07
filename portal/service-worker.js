@@ -121,7 +121,14 @@
 // PRECACHE_URLS. Added a paid-vs-outstanding ring above the invoice
 // list -- summed from the exact same `invoices` array the existing
 // Outstanding/Paid section split already reads, no separate figure.
-const CACHE_NAME = 'th-portal-v21';
+// Bumped 2026-09-07 (v21 -> v22): jobs.html, quotes.html and
+// work-orders.html all changed, all three in PRECACHE_URLS. Every
+// plain-text empty state (both the genuine "nothing here yet" state
+// and the "couldn't load" error state) gained an icon -- the neutral
+// states reuse each page's own existing bottom-nav icon rather than
+// inventing a new icon language; the error states share one new
+// warning icon across all three, distinct from every neutral state.
+const CACHE_NAME = 'th-portal-v22';
 const PRECACHE_URLS = [
   '/portal/home.html', '/portal/dashboard.html', '/portal/jobs.html', '/portal/quotes.html',
   '/portal/work-orders.html', '/portal/settings.html', '/portal/login.html', '/portal/set-password.html',
