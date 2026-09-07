@@ -218,18 +218,6 @@
     padding:0 24px;
   }
 
-  .eyebrow{
-    font-family:var(--font-ui);
-    font-weight:600;
-    letter-spacing:3px;
-    text-transform:uppercase;
-    font-size:13px;
-    color:var(--orange-text-vivid);
-    margin:0 0 10px;
-  }
-  .eyebrow.is-blue{color:var(--blue-text);}
-  .eyebrow.is-orange{color:var(--orange-text);}
-
   .section-head{
     max-width:640px;
     margin:0 0 44px;
@@ -548,7 +536,6 @@
      photo or dark backdrop stays dark/light on its own terms, not tied
      to the page's own theme. */
   .hero h1{ color:#ffffff; }
-  .hero .eyebrow{ color:#ff8000; }
 
   .hero::before{
     content:"";
@@ -579,7 +566,6 @@
     line-height:1.04;
     margin-top:16px;
   }
-  .hero h1 .accent{color:#ff8000;}
   .hero p.lede{
     color:#e5e2dc;
     font-size:17px;
@@ -1679,18 +1665,19 @@
     align-items:center;
   }
   .teardown-copy{position:relative;}
-  .teardown-copy .eyebrow{position:relative; padding-top:18px;}
-  .teardown-copy .eyebrow::before{
+  .teardown-copy h2{
+    position:relative;
+    padding-top:18px;
+    font-size:clamp(30px,4.4vw,50px);
+    line-height:1.02;
+  }
+  .teardown-copy h2::before{
     content:"";
     position:absolute;
     top:0; left:0;
     width:clamp(120px, 18vw, 220px);
     height:1px;
     background:linear-gradient(90deg, var(--orange), rgba(255,128,0,0));
-  }
-  .teardown-copy h2{
-    font-size:clamp(30px,4.4vw,50px);
-    line-height:1.02;
   }
   .teardown-copy p{
     color:var(--text-dim);
@@ -1966,7 +1953,7 @@
       text-align:center;
     }
     .teardown-copy p{margin-left:auto; margin-right:auto;}
-    .teardown-copy .eyebrow::before{left:50%; transform:translateX(-50%);}
+    .teardown-copy h2::before{left:50%; transform:translateX(-50%);}
     .teardown-figure{order:-1;}
     .teardown-figure svg{max-width:100%;}
     .td-callout text{font-size:19px;}
@@ -2256,6 +2243,40 @@
   .open-status.is-open .dot{background:#3ad66b; box-shadow:0 0 0 4px rgba(58,214,107,.18);}
   .open-status.is-closed .dot{background:var(--orange);}
   .open-status b{font-weight:600; color:#ffffff;}
+
+  /* ---------- city-page coverage badge (2026-09-07) ---------- */
+  /* City landing pages need one real fact above the fold: is this a
+     standard coverage area or a by-request one. That used to be a
+     generic ALL-CAPS .eyebrow label -- the frontend-design skill's own
+     checklist names that treatment as one of the commonest AI-design
+     tells. The fact itself is real and load-bearing (unlike the
+     decorative eyebrows removed elsewhere this pass), so instead of
+     deleting it, it gets the same inline dot+pill treatment this page
+     already uses for the live open/closed status below the CTAs --
+     reusing an existing, subject-grounded idiom rather than inventing
+     a new one or reaching for the generic label. */
+  .coverage-badge{
+    display:inline-flex;
+    align-items:center;
+    gap:9px;
+    margin-bottom:18px;
+    padding:8px 15px;
+    border-radius:999px;
+    border:1px solid var(--border);
+    background:rgba(10,10,10,.55);
+    -webkit-backdrop-filter:blur(6px);
+    backdrop-filter:blur(6px);
+    font-family:var(--font-ui);
+    font-size:13px;
+    letter-spacing:.8px;
+    color:#e8e8e8;
+  }
+  .coverage-badge .dot{
+    width:9px; height:9px; border-radius:50%;
+    flex-shrink:0;
+  }
+  .coverage-badge.is-standard .dot{background:var(--blue); box-shadow:0 0 0 4px rgba(58,160,255,.18);}
+  .coverage-badge.is-by-request .dot{background:var(--orange); box-shadow:0 0 0 4px rgba(255,128,0,.18);}
 
   /* =====================================================================
      Feature pass 3 (2026-09-06): the honest repair-vs-replace split, a
