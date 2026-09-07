@@ -398,7 +398,13 @@
 // Bumped 2026-09-07 (v75 -> v76): /styles.css changed (dead-CSS cleanup
 // -- .teardown-sticky/.teardown-track/.terms-disclaimer/.gallery-note
 // removed, no markup anywhere ever referenced them), precached here.
-const CACHE_NAME = 'th-workspace-v76';
+// Bumped 2026-09-07 (v76 -> v77): /styles.css changed (dead-CSS
+// cleanup -- .form-card removed, superseded on the main site long ago
+// and never referenced by any page loading this stylesheet; the
+// class name survives only as an unrelated same-named local class in
+// tools/runway-dashboard.html's own self-contained <style> block,
+// which never loads styles.css at all), precached here.
+const CACHE_NAME = 'th-workspace-v77';
 const PRECACHE_URLS = [
   '/tools/workspace.html', '/tools/job-tracker.html', '/tools/invoice-generator.html', '/tools/contract-generator.html',
   '/tools/calendar.html', '/tools/route-planner.html', '/tools/review-request.html', '/tools/contact-card.html',

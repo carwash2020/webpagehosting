@@ -193,7 +193,10 @@
 // content while any of them covered the screen. The report-a-problem
 // modal and payment modal also gained Escape-to-close, matching the
 // confirm modal and lightbox's existing behavior.
-const CACHE_NAME = 'th-portal-v32';
+// Bumped 2026-09-07 (v32 -> v33): /styles.css changed (dead-CSS
+// cleanup -- .form-card removed, unused anywhere that loads this
+// stylesheet), precached here.
+const CACHE_NAME = 'th-portal-v33';
 const PRECACHE_URLS = [
   '/portal/home.html', '/portal/dashboard.html', '/portal/jobs.html', '/portal/quotes.html',
   '/portal/work-orders.html', '/portal/settings.html', '/portal/login.html', '/portal/set-password.html',
