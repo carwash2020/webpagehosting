@@ -208,38 +208,88 @@
 .blog-related-list a:last-child { border-bottom: none; }
 .blog-related-list a:hover { color: var(--orange-text); }
 
-/* Index page */
+/* Index page (2026-09-07): a card treatment reusing the exact hover-lift
+   and icon-badge vocabulary already established by index.html's own
+   .service-card/.service-icon -- same lift distance, border/shadow
+   change, and icon-badge sizing/tint, rather than a new visual
+   language just for this list. Each icon is one already used
+   elsewhere on the site for that same subject (the appliance icon for
+   the two appliance posts, the handyman icon for the general-repairs
+   post), not a new icon invented for the blog. */
 .blog-index-list {
   display: flex;
   flex-direction: column;
-  gap: 32px;
+  gap: 20px;
   margin-bottom: 60px;
 }
 .blog-index-item {
-  padding-bottom: 32px;
-  border-bottom: 1px solid var(--border);
-}
-.blog-index-item:last-child { border-bottom: none; }
-.blog-index-item a {
+  display: flex;
+  gap: 18px;
+  align-items: flex-start;
+  padding: 26px 24px;
+  background: var(--bg-panel);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: 0 3px 12px rgba(0,0,0,0.10), 0 1px 3px rgba(0,0,0,0.06);
   text-decoration: none;
+  color: var(--text);
+  transition: transform .18s ease, border-color .18s ease, box-shadow .18s ease;
 }
+.blog-index-item:hover, .blog-index-item:focus-visible {
+  transform: translateY(-4px);
+  border-color: var(--blue-text);
+  box-shadow: 0 14px 28px rgba(0,0,0,0.14);
+}
+.blog-index-item-icon {
+  flex: none;
+  width: 42px;
+  height: 42px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(58,160,255,0.28);
+  color: var(--blue-text);
+}
+.blog-index-item-icon svg { width: 22px; height: 22px; }
 .blog-index-item-title {
   font-family:var(--font-ui);
   font-weight: 600;
-  font-size: 24px;
+  font-size: 22px;
   color: var(--white);
-  margin: 0 0 10px;
+  margin: 0 0 8px;
   line-height: 1.25;
 }
-.blog-index-item a:hover .blog-index-item-title {
+.blog-index-item:hover .blog-index-item-title, .blog-index-item:focus-visible .blog-index-item-title {
   color: var(--orange-text);
 }
 .blog-index-item-dek {
   color: var(--text-dim);
-  font-size: 16px;
+  font-size: 15.5px;
   line-height: 1.55;
   margin: 0;
   max-width: 58ch;
+}
+.blog-index-item-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 12px;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  color: var(--blue-text);
+}
+.blog-index-item-tag svg { width: 12px; height: 12px; }
+
+/* Staggered reveal (reuses the site-wide [data-reveal]/.is-visible
+   mechanism already wired in site-motion.js -- no new observer). */
+html.reveal-ready .blog-index-list [data-reveal]:nth-child(2) { transition-delay: .08s; }
+html.reveal-ready .blog-index-list [data-reveal]:nth-child(3) { transition-delay: .16s; }
+
+@media (max-width: 480px) {
+  .blog-index-item { flex-direction: column; gap: 14px; }
 }
 
 @media (max-width: 640px) {
