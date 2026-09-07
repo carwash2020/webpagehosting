@@ -164,6 +164,41 @@
   .jt-title-link:hover { color: var(--orange-light); }
   .jt-actions-cell { display: flex; gap: 6px; }
 
+  /* ---- Kanban-style board view (2026-09-07), item #39 ----
+     Reuses the exact same .job-card markup/CSS as the list above (built
+     by the same jobCardHtml() now shared by both) -- these are the same
+     cards, just grouped into 3 columns instead of one filtered list.
+     Column headers sit OUTSIDE each column's own scrolling body (a
+     sibling, not sticky inside it), so unlike the sticky table headers
+     elsewhere on this page there's no taller-row-bleeds-through risk to
+     guard against -- the header is never in the same scrollable box as
+     the cards passing behind it. Fixed-width, non-shrinking columns in a
+     horizontally-scrolling row (same idiom as .sort-group above) means
+     this needs no separate mobile layout: phone gets a Trello-style swipe
+     between columns, desktop just sees more of them at once. */
+  .jobs-board-wrap { display: flex; gap: 14px; overflow-x: auto; -webkit-overflow-scrolling: touch; padding-bottom: 4px; }
+  .board-column {
+    flex: 0 0 280px; display: flex; flex-direction: column;
+    background: var(--bg-panel-2); border: 1px solid var(--border); border-radius: var(--radius);
+    max-height: 65vh;
+  }
+  .board-column-header {
+    display: flex; align-items: center; gap: 8px; flex-shrink: 0;
+    padding: 12px 14px; border-bottom: 1px solid var(--border);
+    font-family: var(--font-ui); font-weight: 600; font-size: 13.5px; color: var(--white);
+  }
+  .board-col-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+  /* Same three colors as .badge-status.status-* above -- a status carries
+     one color everywhere on this page, not a different one per view. */
+  .board-col-dot.status-not-started { background: var(--text-dim); }
+  .board-col-dot.status-in-progress { background: var(--blue-light); }
+  .board-col-dot.status-done { background: #6fcf97; }
+  .board-col-count { margin-left: auto; color: var(--text-dim); font-weight: 400; font-size: 12.5px; }
+  .board-column-body { overflow-y: auto; padding: 12px; flex: 1; }
+  .board-column-body .job-card { margin-bottom: 10px; }
+  .board-column-body .job-card:last-child { margin-bottom: 0; }
+  .board-col-empty { color: var(--text-dim); font-size: 13px; text-align: center; padding: 20px 10px; }
+
   .job-bulk-action-bar {
     display: flex; align-items: center; justify-content: space-between; gap: 12px;
     background: var(--bg-panel-2); border: 1px solid var(--orange-tint-border); border-radius: 10px;
@@ -391,6 +426,7 @@
       <input type="text" id="jobSearch" class="icon-search-input" placeholder="Search jobs by title or client..." oninput="debouncedCall('jobSearch', renderJobs)">
     </div>
     <button class="small-btn" id="jobSelectModeBtn" onclick="toggleJobSelectionMode()">Select</button>
+    <button class="small-btn" id="jobViewToggleBtn" onclick="toggleJobViewMode()" aria-pressed="false">Board view</button>
     <button class="small-btn" data-density-toggle onclick="toggleDensityPreference()" aria-pressed="false">Compact view</button>
   </div>
 
@@ -437,6 +473,31 @@
       </thead>
       <tbody id="jobsTableBody"></tbody>
     </table>
+  </div>
+
+  <!-- Kanban-style board view (2026-09-07), item #39: an alternate way to
+       see every status side by side instead of one filtered list/table at
+       a time. Hidden by default (matches the "list" default in
+       loadJobViewMode()); toggled by #jobViewToggleBtn, independent of
+       screen size -- unlike the desktop-only table above, this works on
+       phone too via horizontal scroll, so no min-width media query gates
+       it. Always shows all 3 statuses regardless of the status-filter row
+       above (that row is hidden while this is active, see
+       applyJobViewMode()) since splitting by status is the entire point
+       of a board. -->
+  <div id="jobsBoardWrap" class="jobs-board-wrap" style="display:none;">
+    <div class="board-column">
+      <div class="board-column-header"><span class="board-col-dot status-not-started"></span>Not Started<span class="board-col-count" id="boardColCount-not-started">0</span></div>
+      <div class="board-column-body" id="boardCol-not-started"></div>
+    </div>
+    <div class="board-column">
+      <div class="board-column-header"><span class="board-col-dot status-in-progress"></span>In Progress<span class="board-col-count" id="boardColCount-in-progress">0</span></div>
+      <div class="board-column-body" id="boardCol-in-progress"></div>
+    </div>
+    <div class="board-column">
+      <div class="board-column-header"><span class="board-col-dot status-done"></span>Done<span class="board-col-count" id="boardColCount-done">0</span></div>
+      <div class="board-column-body" id="boardCol-done"></div>
+    </div>
   </div>
 </div>
 
@@ -1440,6 +1501,42 @@
     renderJobs();
   }
 
+  // ---------- List / Board view toggle (2026-09-07), item #39 ----------
+  // A personal display preference, same reasoning and pattern as
+  // th_density in tools-nav-pwa.js: plain localStorage, not the synced
+  // data blob, since which view you'd rather see is a per-device choice,
+  // not shared business data.
+  const JOB_VIEW_KEY = 'th_tracker_view';
+  function loadJobViewMode() {
+    try { return localStorage.getItem(JOB_VIEW_KEY) === 'board' ? 'board' : 'list'; }
+    catch (e) { return 'list'; }
+  }
+  function applyJobViewMode() {
+    const isBoard = loadJobViewMode() === 'board';
+    const listEl = document.getElementById('jobsList');
+    const tableWrap = document.getElementById('jobsTableWrap');
+    const boardWrap = document.getElementById('jobsBoardWrap');
+    const statusFilterGroup = document.getElementById('statusFilterGroup');
+    // Clearing the inline style (rather than always setting one) lets
+    // #jobsTableWrap fall back to its own min-width:1024px media query
+    // when the board isn't active, same as before this feature existed.
+    if (listEl) listEl.style.display = isBoard ? 'none' : '';
+    if (tableWrap) tableWrap.style.display = isBoard ? 'none' : '';
+    if (boardWrap) boardWrap.style.display = isBoard ? '' : 'none';
+    if (statusFilterGroup) statusFilterGroup.style.display = isBoard ? 'none' : '';
+    const btn = document.getElementById('jobViewToggleBtn');
+    if (btn) {
+      btn.setAttribute('aria-pressed', isBoard ? 'true' : 'false');
+      btn.textContent = isBoard ? 'List view' : 'Board view';
+      btn.classList.toggle('is-active', isBoard);
+    }
+  }
+  function toggleJobViewMode() {
+    const next = loadJobViewMode() === 'board' ? 'list' : 'board';
+    try { localStorage.setItem(JOB_VIEW_KEY, next); } catch (e) { /* ignore */ }
+    applyJobViewMode();
+  }
+
   const PRIORITY_RANK = { high: 0, medium: 1, low: 2 };
   const STATUS_LABEL = { 'not-started': 'Not Started', 'in-progress': 'In Progress', 'done': 'Done' };
 
@@ -1471,26 +1568,95 @@
     return `<span class="badge badge-warranty is-expired" title="30-day labor warranty, based on this job's date">Warranty expired</span>`;
   }
 
+  // Extracted (2026-09-07) from what used to be an inline .map() callback
+  // inside renderJobs(), so the board view below can render the exact
+  // same card for a job as the list view -- one template, two places it
+  // gets dropped into, instead of a second copy that could drift out of
+  // sync with the first.
+  //
+  // opts.enableSwipe / opts.includePhotoToggle are both false for board
+  // cards: the swipe-to-reveal-Done gesture only makes sense in a single
+  // scrolling column (see initJobCardSwipeReveal, scoped to #jobsList
+  // only), and the photo toggle renders a `photos-${job.id}` element --
+  // giving a board card its own copy of that id would collide with the
+  // list card's, since both templates can be live in the DOM
+  // simultaneously (only one is ever *visible*; the hidden view's markup
+  // still exists underneath, same as the existing list/table split
+  // above). Board cards link to the full Job Detail page instead, which
+  // already has complete photo management.
+  function jobCardHtml(job, marginData, opts) {
+    opts = opts || {};
+    const isDone = job.status === 'done';
+    const margin = isDone ? computeJobMargin(job, marginData.invoices, marginData.expenses, marginData.manualIncome) : null;
+    const marginBadgeHtml = (margin && margin.hasInvoice)
+      ? `<span class="badge" style="background:${margin.margin >= 0 ? 'rgba(76,175,80,0.15)' : 'rgba(224,82,82,0.15)'}; color:${margin.margin >= 0 ? '#6fcf97' : '#e0807a'};">${margin.margin >= 0 ? '+' : ''}${money(margin.margin)}</span>`
+      : '';
+    const dateDisplay = job.date ? new Date(job.date + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : 'No date set';
+    return `
+      <div class="job-card priority-${job.priority} ${isDone ? 'is-done' : ''} ${job.id === justAddedJobId ? 'list-row-enter' : ''}" data-job-id="${job.id}">
+        ${(opts.enableSwipe && !isDone) ? `<div class="job-card-swipe-action"><button class="small-btn" onclick="setJobStatus(${job.id}, 'done')">Done</button></div>` : ''}
+        <div class="job-card-swipe-inner">
+        ${jobSelectionMode ? `<label class="job-card-select"><input type="checkbox" ${selectedJobIds.has(job.id) ? 'checked' : ''} onchange="toggleJobSelected(${job.id}, this.checked)"></label>` : ''}
+        <div class="job-card-top">
+          <h4 class="job-card-title ${isDone ? 'is-done-text' : ''}">${personDot(job.lastEditedBy, 'Last edited by')}<a href="/tools/job-detail.html?id=${job.id}" style="color:inherit; text-decoration:none;">${escapeHtml(job.title)}</a></h4>
+          <div class="job-badges">
+            <span class="badge badge-${job.priority}">${job.priority}</span>
+            ${opts.showStatusBadge ? `<span class="badge badge-status status-${job.status}">${STATUS_LABEL[job.status]}</span>` : ''}
+            ${marginBadgeHtml}
+            ${warrantyBadgeHtml(job)}
+          </div>
+        </div>
+        <div class="job-card-meta">
+          ${dateDisplay}${job.client ? ' &middot; ' + escapeHtml(job.client) : ''}${job.phone ? ' &middot; ' + escapeHtml(job.phone) : ''}${job.address ? ' &middot; ' + escapeHtml(job.address) : ''}
+        </div>
+        ${job.notes ? `<div class="job-card-notes">${escapeHtml(job.notes)}</div>` : ''}
+        <div class="job-card-actions">
+          <select class="status-select" onchange="setJobStatus(${job.id}, this.value)">
+            <option value="not-started" ${job.status === 'not-started' ? 'selected' : ''}>Not Started</option>
+            <option value="in-progress" ${job.status === 'in-progress' ? 'selected' : ''}>In Progress</option>
+            <option value="done" ${job.status === 'done' ? 'selected' : ''}>Mark as Complete</option>
+          </select>
+          ${opts.includePhotoToggle ? `<button class="small-btn" onclick="toggleJobPhotos(${job.id}, '${escapeForInlineHandler(job.title)}')">Photos</button>` : ''}
+          <button class="small-btn ${job.showOnCalendar ? 'is-active' : ''}" onclick="toggleShowOnCalendar(${job.id})">${job.showOnCalendar ? '✓ On Calendar' : 'Show on Calendar'}</button>
+          <button class="small-btn" onclick="editJob(${job.id})">Edit</button>
+          <button class="small-btn danger" onclick="deleteJob(${job.id})">Delete</button>
+        </div>
+        ${opts.includePhotoToggle ? `<div id="photos-${job.id}" style="display:none; margin-top:14px; padding-top:14px; border-top:1px solid var(--border);"></div>` : ''}
+        </div>
+      </div>`;
+  }
+
+  // ---------- Board view (2026-09-07), item #39 ----------
+  const BOARD_STATUSES = ['not-started', 'in-progress', 'done'];
+  function renderJobsBoard(jobs, marginData) {
+    BOARD_STATUSES.forEach(status => {
+      const body = document.getElementById('boardCol-' + status);
+      const countEl = document.getElementById('boardColCount-' + status);
+      if (!body) return;
+      const colJobs = jobs.filter(j => j.status === status);
+      if (countEl) countEl.textContent = String(colJobs.length);
+      body.innerHTML = colJobs.length
+        ? colJobs.map(job => jobCardHtml(job, marginData, { enableSwipe: false, includePhotoToggle: false, showStatusBadge: false })).join('')
+        : '<div class="board-col-empty">No jobs here.</div>';
+    });
+  }
+
   function renderJobs() {
     const searchTerm = document.getElementById('jobSearch').value.trim().toLowerCase();
-    let jobs = sortJobs(loadJobs());
+    let allJobs = sortJobs(loadJobs());
     // Item #13 (2026-08-20): jobs pending an undoable delete (see
     // deleteJob below) are filtered out of the rendered list here --
     // storage is untouched until the undo window actually expires, so
     // this filter is the ONLY thing making a pending-delete job
     // disappear from view in the meantime.
-    if (pendingDeleteJobIds.size > 0) jobs = jobs.filter(j => !pendingDeleteJobIds.has(j.id));
-    if (currentStatusFilter === 'not-done') jobs = jobs.filter(j => j.status !== 'done');
-    else if (currentStatusFilter !== 'all') jobs = jobs.filter(j => j.status === currentStatusFilter);
+    if (pendingDeleteJobIds.size > 0) allJobs = allJobs.filter(j => !pendingDeleteJobIds.has(j.id));
     if (searchTerm) {
-      jobs = jobs.filter(j =>
+      allJobs = allJobs.filter(j =>
         (j.title || '').toLowerCase().includes(searchTerm) ||
         (j.client || '').toLowerCase().includes(searchTerm)
       );
     }
 
-    const container = document.getElementById('jobsList');
-    const tableBody = document.getElementById('jobsTableBody');
     // Item #1 (2026-08-18): loaded once per render rather than per-card
     // -- computeJobMargin() itself is cheap, but there's no reason to
     // re-parse these three localStorage keys once per job card when one
@@ -1503,6 +1669,20 @@
     const marginInvoices = thRead(TH_KEYS.invoices, []);
     const marginExpenses = thRead(TH_KEYS.expenses, []);
     const marginManualIncome = thRead(TH_KEYS.income, []).filter(e => e.origin !== 'invoice');
+    const marginData = { invoices: marginInvoices, expenses: marginExpenses, manualIncome: marginManualIncome };
+
+    // The board always shows all 3 statuses side by side, regardless of
+    // the Active/Not Started/In Progress/Completed/All filter below --
+    // that filter only makes sense for a single list/table, and is
+    // hidden while the board is active (see applyJobViewMode()).
+    renderJobsBoard(allJobs, marginData);
+
+    let jobs = allJobs;
+    if (currentStatusFilter === 'not-done') jobs = jobs.filter(j => j.status !== 'done');
+    else if (currentStatusFilter !== 'all') jobs = jobs.filter(j => j.status === currentStatusFilter);
+
+    const container = document.getElementById('jobsList');
+    const tableBody = document.getElementById('jobsTableBody');
     if (jobs.length === 0) {
       const totalJobsEverAdded = loadJobs().length;
       let emptyHtml;
@@ -1530,46 +1710,7 @@
 
     container.classList.toggle('list-stagger', !jobsListRenderedOnce);
     jobsListRenderedOnce = true;
-    container.innerHTML = jobs.map(job => {
-      const isDone = job.status === 'done';
-      const margin = isDone ? computeJobMargin(job, marginInvoices, marginExpenses, marginManualIncome) : null;
-      const marginBadgeHtml = (margin && margin.hasInvoice)
-        ? `<span class="badge" style="background:${margin.margin >= 0 ? 'rgba(76,175,80,0.15)' : 'rgba(224,82,82,0.15)'}; color:${margin.margin >= 0 ? '#6fcf97' : '#e0807a'};">${margin.margin >= 0 ? '+' : ''}${money(margin.margin)}</span>`
-        : '';
-      const dateDisplay = job.date ? new Date(job.date + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : 'No date set';
-      return `
-        <div class="job-card priority-${job.priority} ${isDone ? 'is-done' : ''} ${job.id === justAddedJobId ? 'list-row-enter' : ''}" data-job-id="${job.id}">
-          ${!isDone ? `<div class="job-card-swipe-action"><button class="small-btn" onclick="setJobStatus(${job.id}, 'done')">Done</button></div>` : ''}
-          <div class="job-card-swipe-inner">
-          ${jobSelectionMode ? `<label class="job-card-select"><input type="checkbox" ${selectedJobIds.has(job.id) ? 'checked' : ''} onchange="toggleJobSelected(${job.id}, this.checked)"></label>` : ''}
-          <div class="job-card-top">
-            <h4 class="job-card-title ${isDone ? 'is-done-text' : ''}">${personDot(job.lastEditedBy, 'Last edited by')}<a href="/tools/job-detail.html?id=${job.id}" style="color:inherit; text-decoration:none;">${escapeHtml(job.title)}</a></h4>
-            <div class="job-badges">
-              <span class="badge badge-${job.priority}">${job.priority}</span>
-              <span class="badge badge-status status-${job.status}">${STATUS_LABEL[job.status]}</span>
-              ${marginBadgeHtml}
-              ${warrantyBadgeHtml(job)}
-            </div>
-          </div>
-          <div class="job-card-meta">
-            ${dateDisplay}${job.client ? ' &middot; ' + escapeHtml(job.client) : ''}${job.phone ? ' &middot; ' + escapeHtml(job.phone) : ''}${job.address ? ' &middot; ' + escapeHtml(job.address) : ''}
-          </div>
-          ${job.notes ? `<div class="job-card-notes">${escapeHtml(job.notes)}</div>` : ''}
-          <div class="job-card-actions">
-            <select class="status-select" onchange="setJobStatus(${job.id}, this.value)">
-              <option value="not-started" ${job.status === 'not-started' ? 'selected' : ''}>Not Started</option>
-              <option value="in-progress" ${job.status === 'in-progress' ? 'selected' : ''}>In Progress</option>
-              <option value="done" ${job.status === 'done' ? 'selected' : ''}>Mark as Complete</option>
-            </select>
-            <button class="small-btn" onclick="toggleJobPhotos(${job.id}, '${escapeForInlineHandler(job.title)}')">Photos</button>
-            <button class="small-btn ${job.showOnCalendar ? 'is-active' : ''}" onclick="toggleShowOnCalendar(${job.id})">${job.showOnCalendar ? '\u2713 On Calendar' : 'Show on Calendar'}</button>
-            <button class="small-btn" onclick="editJob(${job.id})">Edit</button>
-            <button class="small-btn danger" onclick="deleteJob(${job.id})">Delete</button>
-          </div>
-          <div id="photos-${job.id}" style="display:none; margin-top:14px; padding-top:14px; border-top:1px solid var(--border);"></div>
-          </div>
-        </div>`;
-    }).join('');
+    container.innerHTML = jobs.map(job => jobCardHtml(job, marginData, { enableSwipe: true, includePhotoToggle: true, showStatusBadge: true })).join('');
     justAddedJobId = null;
 
     const tableJobs = applyTableSort(jobs);
@@ -2232,6 +2373,7 @@
       // never get wired up at all for that page load if it were placed
       // after the await like it originally was.
       if (typeof setupPullToRefresh === 'function') setupPullToRefresh(() => { renderJobs(); renderContacts(); renderNotesList(); });
+      applyJobViewMode();
       await initSyncOnLoad();
       updateSyncStatusText();
       // Push 4 (2026-08-20): Cost Lookup, Profitability, Income, and

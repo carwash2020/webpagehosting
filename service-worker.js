@@ -450,7 +450,11 @@
 // -- doing that against the OLD page-level sticky position was tried
 // first and rejected, since real page content (the "Log" heading) sits
 // directly above the table and would have been covered by mistake.
-const CACHE_NAME = 'th-workspace-v82';
+// Bumped 2026-09-07 (v82 -> v83): /tools/job-tracker.html changed --
+// item #39, a kanban-style Board view (Not Started / In Progress / Done
+// columns side by side) added alongside the existing list/table views,
+// toggled per-device via a new small-btn next to Select/Compact view.
+const CACHE_NAME = 'th-workspace-v83';
 const PRECACHE_URLS = [
   '/tools/workspace.html', '/tools/job-tracker.html', '/tools/invoice-generator.html', '/tools/contract-generator.html',
   '/tools/calendar.html', '/tools/route-planner.html', '/tools/review-request.html', '/tools/contact-card.html',
