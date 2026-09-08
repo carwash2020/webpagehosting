@@ -1,9 +1,14 @@
 // Three new 5-star Google reviews added 2026-09-07 (PD IND., Belinda
-// Christensen, Jilleen Zufelt), bringing the homepage carousel from 4
+// Christensen, Jilleen Zufelt), bringing the homepage wall from 4
 // to 7. The aggregateRating schema is a straight count of the quotes
 // actually shown on the page, so it moves in lockstep -- it is not
 // pulled from live Google data, so it has to be updated by hand
 // whenever a review is added here.
+//
+// U03 fix (High-Impact Upgrades, 2026-09-07): converted from a
+// carousel (one review visible at a time behind 9px dots) to a static
+// two-column wall showing all 7 at once. Renamed from
+// reviews-carousel.test.js.
 
 const { test } = require('node:test');
 const assert = require('node:assert/strict');
@@ -26,15 +31,15 @@ function schemaOf(html) {
   return JSON.parse(m[1]);
 }
 
-test('the homepage carousel has one review-slide per review actually written', () => {
-  const slideCount = (INDEX.match(/class="review-slide"/g) || []).length;
-  assert.equal(slideCount, 7);
+test('the homepage wall has one review-card per review actually written', () => {
+  const cardCount = (INDEX.match(/class="review-card"/g) || []).length;
+  assert.equal(cardCount, 7);
 });
 
-test("the homepage's aggregateRating.reviewCount matches the number of slides actually shown", () => {
-  const slideCount = (INDEX.match(/class="review-slide"/g) || []).length;
+test("the homepage's aggregateRating.reviewCount matches the number of cards actually shown", () => {
+  const cardCount = (INDEX.match(/class="review-card"/g) || []).length;
   const schema = schemaOf(INDEX);
-  assert.equal(Number(schema.aggregateRating.reviewCount), slideCount);
+  assert.equal(Number(schema.aggregateRating.reviewCount), cardCount);
   assert.equal(schema.aggregateRating.ratingValue, '5.0');
 });
 
@@ -46,7 +51,7 @@ test("the homepage's aggregateRating.reviewCount matches the number of slides ac
 // visible on-page content, so claiming a rating with nothing on the
 // page to back it is a real structured-data violation, not just
 // unnecessary duplication. The homepage keeps its own aggregateRating,
-// since it's the one page with the actual 7-review carousel.
+// since it's the one page with the actual 7-review wall.
 test('landing pages do not claim an aggregateRating they have no visible reviews to back', () => {
   for (const page of LANDING_PAGES) {
     const html = fs.readFileSync(repo(page), 'utf8');
@@ -62,7 +67,8 @@ test('the three newest reviews are present verbatim, newest first', () => {
   assert.match(quotes[2], /Best experience ever with a handyman/);
 });
 
-test('the carousel JS builds its dots dynamically off the actual slide count, not a hardcoded number', () => {
-  assert.match(INDEX, /const slides = track \? Array\.from\(track\.children\) : \[\];/);
-  assert.doesNotMatch(INDEX, /reviewIndex\s*<\s*[4-9]\b/);
+test('no carousel machinery (slider track, dots, autoplay, swipe) remains -- this is a static wall now', () => {
+  assert.doesNotMatch(INDEX, /reviewsTrack|reviewDots|reviewPrev|reviewNext/);
+  assert.doesNotMatch(INDEX, /class="reviews-carousel"|class="review-slide"|class="carousel-controls"|class="carousel-dot"/);
+  assert.doesNotMatch(INDEX, /AUTOPLAY_MS/);
 });
