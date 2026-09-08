@@ -521,7 +521,12 @@
 // lines) instead of fading straight from the contact cards into it;
 // triage.js's live-status code now populates every matching element on
 // the page, not just the hero's own.
-const CACHE_NAME = 'th-workspace-v105';
+// Bumped 2026-09-08 (v105 -> v106): /styles.css changed again -- W21/M03:
+// "Where We Work" was measured as the tallest, deadest block on the
+// page; the service-area diagram now re-lights the exact city a
+// visitor hovers or tab-focuses in the cards below it, instead of
+// sitting static after its one-time entrance animation finishes.
+const CACHE_NAME = 'th-workspace-v106';
 const PRECACHE_URLS = [
   '/tools/workspace.html', '/tools/job-tracker.html', '/tools/invoice-generator.html', '/tools/contract-generator.html',
   '/tools/calendar.html', '/tools/route-planner.html', '/tools/review-request.html', '/tools/contact-card.html',

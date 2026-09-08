@@ -60,7 +60,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Anton&family=Archivo:wght@400..700&family=Newsreader:ital,opsz,wght@0,6..72,300..700;1,6..72,300..600&family=Oswald:wght@200..700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="styles.css?v=202609081430">
+<link rel="stylesheet" href="styles.css?v=202609081530">
 <script type="application/ld+json">
 {
   "@context": "https://schema.org",
@@ -988,31 +988,31 @@
 
 
       <div class="services-grid">
-        <div class="service-card" data-reveal>
+        <div class="service-card" data-reveal data-city="st-george">
           <h3>St. George</h3>
           <p>Home base, and where most calls come from. From older established neighborhoods near downtown to newer builds out toward the entrance to Snow Canyon, we're usually only minutes away.</p>
         </div>
-        <div class="service-card" data-reveal>
+        <div class="service-card" data-reveal data-city="washington-city">
           <h3>Washington City</h3>
           <p>Right next door to St. George and one of the fastest-growing areas in the region. Lots of newer construction out this way, so we're out here often.</p>
           <p><a href="/handyman-washington-city-ut.html">Handyman services in Washington City &rarr;</a></p>
         </div>
-        <div class="service-card" data-reveal>
+        <div class="service-card" data-reveal data-city="hurricane">
           <h3>Hurricane</h3>
           <p>About 20 minutes east of St. George. A good mix of older homes and newer neighborhoods still settling in.</p>
           <p><a href="/handyman-hurricane-ut.html">Handyman services in Hurricane &rarr;</a></p>
         </div>
-        <div class="service-card" data-reveal>
+        <div class="service-card" data-reveal data-city="santa-clara-ivins">
           <h3>Santa Clara & Ivins</h3>
           <p>West side, near Snow Canyon. Plenty of custom and higher-end homes out here.</p>
           <p><a href="/handyman-santa-clara-ivins-ut.html">Handyman services in Santa Clara & Ivins &rarr;</a></p>
         </div>
-        <div class="service-card is-urgent" data-reveal>
+        <div class="service-card is-urgent" data-reveal data-city="cedar-city">
           <h3>Cedar City</h3>
           <p>About an hour north (roughly 50 miles). Not part of our regular route, but for larger jobs it can be worth a trip. Contact us directly to check availability and scheduling before booking.</p>
           <p><a href="/handyman-cedar-city-ut.html">Handyman services in Cedar City &rarr;</a></p>
         </div>
-        <div class="service-card is-urgent" data-reveal>
+        <div class="service-card is-urgent" data-reveal data-city="mesquite">
           <h3>Mesquite, NV</h3>
           <p>About 40 minutes southwest (roughly 40 miles), across the state line. Not part of our regular route, but larger jobs out this way are worth a call. Contact us directly to check availability and scheduling before booking.</p>
           <p><a href="/handyman-mesquite-nv.html">Handyman services in Mesquite &rarr;</a></p>
@@ -2424,6 +2424,40 @@
     }, { threshold: 0.15, rootMargin: '0px 0px -40px 0px' });
     document.querySelectorAll('[data-reveal]').forEach(el => revealObserver.observe(el));
   }
+
+  // ---------- service-area diagram: hover/focus-linked to its own cards ----------
+  // W21/M03 fix (Master Audit, 2026-09-08): a before/after audit named
+  // this section "the tallest block on the page, and the deadest" --
+  // the diagram's own one-time draw-in animation (above) has already
+  // finished by the time a visitor reaches the service cards below it,
+  // so it just sits there afterward. Hovering (or tab-focusing, for
+  // keyboard users) a card now re-lights that exact city's spoke/node/
+  // label on the diagram, giving it a real, ongoing reason to keep
+  // drawing the eye instead of being a one-shot animation nobody
+  // revisits. Every city name and its diagram group already share the
+  // same data-city value (see the SVG above and the cards below).
+  (function () {
+    const cards = document.querySelectorAll('.service-card[data-city]');
+    const figure = document.querySelector('.radius-figure svg');
+    if (!cards.length || !figure) return;
+
+    function setActive(city) {
+      figure.querySelectorAll('g[data-city]').forEach((g) => {
+        g.classList.toggle('is-linked', g.getAttribute('data-city') === city);
+      });
+    }
+    function clearActive() {
+      figure.querySelectorAll('g[data-city]').forEach((g) => g.classList.remove('is-linked'));
+    }
+
+    cards.forEach((card) => {
+      const city = card.getAttribute('data-city');
+      card.addEventListener('mouseenter', () => setActive(city));
+      card.addEventListener('mouseleave', clearActive);
+      card.addEventListener('focusin', () => setActive(city));
+      card.addEventListener('focusout', clearActive);
+    });
+  })();
 
   // ---------- motto rail (signature move) ----------
   // Lights each rail segment the first time its matching value pill
