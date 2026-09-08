@@ -521,3 +521,62 @@ similar) needs touching again:
   Stubbed to a no-op; this test is about the write path landing
   correctly, not the debounced push itself, which `tests/sync/*` already
   covers.
+
+### Jobs/invoices/quotes/contracts get real relational tables — Phase 1 (additive, not a cutover)
+
+The architecture this addresses: every job, invoice, quote, and contract
+for the whole business lives inside `th_tracker_jobs`/`th_invoices`/
+`th_quotes`/`th_contracts` — JSON arrays inside **one row's** `data jsonb`
+column in `workspace_sync`. There's no referential integrity at all: an
+invoice's `jobRefId` is just a string that happens to match a job's id,
+never enforced by the database, and a deleted job silently leaves every
+invoice that referenced it pointing at nothing.
+
+**What shipped:** real Postgres tables — `jobs`, `invoices` (+
+`invoice_line_items`), `quotes` (+ `quote_line_items`), `contracts` — with
+real foreign keys (`invoices.job_id → jobs.id`, `quotes.job_id →
+jobs.id`, `invoices.source_quote_id ↔ quotes.converted_to_invoice_id`,
+both line-item tables `ON DELETE CASCADE` from their parent), RLS scoped
+to authenticated internal accounts only (no anon path — unlike
+`th_leads`/`th_bookings`, nothing on the public site ever writes to
+these). Backfilled from the live blob's content at time of writing (6
+jobs, 2 invoices, 1 contract, 0 quotes — confirmed against the real data,
+not assumed). Schema + backfill: `sql/infra/create_relational_jobs_invoices_quotes_contracts.sql`,
+`sql/infra/backfill_relational_jobs_invoices_contracts.sql`.
+
+**Deliberately Phase 1, not a full migration.** Every tool page's actual
+reads and writes still go through localStorage + the existing blob-sync
+mechanism (`tools/sync.js`), completely unchanged — nothing that works
+today changes behavior. A new best-effort **mirror** (`mirrorUpsert()`/
+`mirrorDelete()`/`mirrorReplaceLineItems()` + one wrapper per record type
+in `tools/sync.js`'s new RELATIONAL MIRROR section) fires alongside every
+real save/delete call site — `saveJobs()` (job-tracker.html), `logInvoice()`/
+`logQuote()`/the quote→invoice conversion (invoice-generator.html),
+`togglePaid()` (workspace.html), contract creation (contract-generator.html),
+and all 5 real delete/tombstone points across those pages — writing the
+same data into the new tables too. A mirror failure (network down, RLS
+misconfigured) never throws back to the caller and never blocks the
+localStorage save that already happened, the same "fire and forget"
+pattern already used for the public site's lead-insert mirror.
+
+**Why additive instead of cutting over reads immediately:** this is live,
+daily-used production data for a real single-operator business. Rewriting
+every tool page's read path in one pass, in one session, with no time to
+let the new tables prove themselves first, is exactly the kind of change
+that causes a real outage rather than prevents one — this project has two
+of those on record already. Standing up the real schema and dual-writing
+to it is the safe, standard way this kind of migration actually gets
+done: verify the mirror matches reality over real usage, *then* move
+reads over in a later, separate, carefully-tested pass. **Phase 2 (moving
+actual reads to the relational tables and retiring the blob for these 4
+key types) is intentionally not attempted here** — flagged as the clear
+next step, not silently left undone.
+
+New tests: `tests/sync/relational-mirror.test.js` — confirms every real
+call site actually invokes the right mirror function (source-level, the
+same style already used for tombstone-wiring checks elsewhere in this
+suite), plus functional tests of `mirrorUpsert()`/`mirrorInvoiceToRelational()`
+against a mocked `fetch` confirming the real HTTP call shape (URL,
+method, headers, the `jobRefId` string correctly cast to a real number
+for the bigint FK column, line items replaced via delete-then-insert),
+and that a failing `fetch` never throws back to the caller.

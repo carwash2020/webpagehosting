@@ -861,6 +861,123 @@ async function pullWikiSync() {
   }
 }
 
+// ---------------------------------------------------------------------------
+// RELATIONAL MIRROR -- jobs/invoices/quotes/contracts (code-health pass,
+// 2026-09-08). See sql/infra/create_relational_jobs_invoices_quotes_contracts.sql
+// for the schema and the reasoning: the blob-sync architecture above has
+// no referential integrity at all (an invoice's jobRefId is just a string
+// that happens to match a job's id, never enforced). This is Phase 1,
+// deliberately additive: every tool page's actual reads still go through
+// localStorage + the blob-sync mechanism above, completely unchanged.
+// These functions only WRITE a best-effort mirror to the new relational
+// tables alongside the existing save, the same "fire and forget, never
+// block the real save on it" pattern already used for the public site's
+// lead-insert mirror. A failure here (network down, RLS misconfigured)
+// never throws back to the caller and never blocks the localStorage save
+// that already happened -- these run strictly after it.
+async function mirrorUpsert(table, rows) {
+  if (!isSyncConfigured() || !rows || !rows.length) return;
+  try {
+    const token = (typeof getAuthToken === 'function') ? getAuthToken() : null;
+    if (!token) return;
+    await fetchWithRetry(`${SUPABASE_URL}/rest/v1/${table}`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'apikey': SUPABASE_ANON_KEY,
+        'Authorization': `Bearer ${token}`,
+        'Prefer': 'resolution=merge-duplicates,return=minimal',
+      },
+      body: JSON.stringify(rows),
+    });
+  } catch (e) { /* best-effort mirror -- the real localStorage save already happened */ }
+}
+
+async function mirrorDelete(table, id) {
+  if (!isSyncConfigured() || id === undefined || id === null) return;
+  try {
+    const token = (typeof getAuthToken === 'function') ? getAuthToken() : null;
+    if (!token) return;
+    await fetchWithRetry(`${SUPABASE_URL}/rest/v1/${table}?id=eq.${encodeURIComponent(id)}`, {
+      method: 'DELETE',
+      headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': `Bearer ${token}` },
+    });
+  } catch (e) { /* best-effort */ }
+}
+
+// Line items have no stable id of their own on the client side, so the
+// only correct way to mirror a full replacement set is delete-then-insert
+// for that one parent id -- simpler and safer than trying to diff against
+// whatever's already there.
+async function mirrorReplaceLineItems(table, fkColumn, parentId, items) {
+  if (!isSyncConfigured() || parentId === undefined || parentId === null) return;
+  try {
+    const token = (typeof getAuthToken === 'function') ? getAuthToken() : null;
+    if (!token) return;
+    const headers = { 'apikey': SUPABASE_ANON_KEY, 'Authorization': `Bearer ${token}` };
+    await fetchWithRetry(`${SUPABASE_URL}/rest/v1/${table}?${fkColumn}=eq.${encodeURIComponent(parentId)}`, {
+      method: 'DELETE', headers,
+    });
+    if (items && items.length) {
+      await fetchWithRetry(`${SUPABASE_URL}/rest/v1/${table}`, {
+        method: 'POST',
+        headers: Object.assign({ 'Content-Type': 'application/json', 'Prefer': 'return=minimal' }, headers),
+        body: JSON.stringify(items.map((it, idx) => ({
+          [fkColumn]: parentId, sort_order: idx, description: it.desc || null, part: it.part || null,
+          qty: it.qty ?? null, price: it.price ?? null, amount: it.amount ?? null,
+          taxable: !!it.taxable, item_type: it.type || null,
+        }))),
+      });
+    }
+  } catch (e) { /* best-effort */ }
+}
+
+function mirrorJobsToRelational(jobs) {
+  mirrorUpsert('jobs', (jobs || []).map(j => ({
+    id: j.id, title: j.title || '', client: j.client || null, client_id: j.clientId || null,
+    phone: j.phone || null, address: j.address || null, client_email: j.clientEmail || null,
+    priority: j.priority || null, job_date: j.date || null, status: j.status || null,
+    notes: j.notes || null, show_on_calendar: !!j.showOnCalendar,
+    status_changed_at: j.statusChangedAt || null, created_by: j.createdBy || null,
+    last_edited_by: j.lastEditedBy || null,
+  })));
+}
+
+function mirrorInvoiceToRelational(entry) {
+  if (!entry) return;
+  mirrorUpsert('invoices', [{
+    id: entry.id, invoice_number: entry.invoiceNumber || null, client_name: entry.clientName || null,
+    client_id: entry.clientId || null, client_email: entry.clientEmail || null, invoice_date: entry.date || null,
+    terms: entry.terms || null, invoice_type: entry.invoiceType || null, subtotal: entry.subtotal ?? null,
+    tax: entry.tax ?? null, discount: entry.discount ?? null, total: entry.total ?? null,
+    paid: !!entry.paid, paid_amount: entry.paidAmount ?? null,
+    job_id: entry.jobRefId ? Number(entry.jobRefId) : null, job_ref_title: entry.jobRefTitle || null,
+    source_quote_id: entry.sourceQuoteId || null, generated_by: entry.generatedBy || null,
+  }]);
+  mirrorReplaceLineItems('invoice_line_items', 'invoice_id', entry.id, entry.line_items || []);
+}
+
+function mirrorQuoteToRelational(entry) {
+  if (!entry) return;
+  mirrorUpsert('quotes', [{
+    id: entry.id, quote_number: entry.quoteNumber || null, client_name: entry.clientName || null,
+    client_id: entry.clientId || null, client_email: entry.clientEmail || null, quote_date: entry.date || null,
+    subtotal: entry.subtotal ?? null, tax: entry.tax ?? null, discount: entry.discount ?? null, total: entry.total ?? null,
+    status: entry.status || null, job_id: entry.jobRefId ? Number(entry.jobRefId) : null,
+    job_ref_title: entry.jobRefTitle || null, generated_by: entry.generatedBy || null,
+    converted_to_invoice_id: entry.convertedToInvoiceId || null,
+  }]);
+  mirrorReplaceLineItems('quote_line_items', 'quote_id', entry.id, entry.line_items || []);
+}
+
+function mirrorContractToRelational(entry) {
+  if (!entry) return;
+  mirrorUpsert('contracts', [{
+    id: entry.id, contract_type: entry.type || null, fields: entry.fields || null,
+    date_generated: entry.dateGenerated || null, generated_by: entry.generatedBy || null,
+  }]);
+}
+
 // Shared "Refresh synced data now" link handler. Used to be copy-pasted
 // with slight drift between workspace.html and job-tracker.html -- one
 // page's link showed a friendlier "nothing in the cloud yet" message,

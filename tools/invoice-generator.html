@@ -51,7 +51,7 @@
 <link rel="stylesheet" href="/styles.css?v=37bcb9404a">
 <link rel="stylesheet" href="/tools/styles-tools.css?v=802b87086c">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.112.3/dist/umd/supabase.js" integrity="sha384-qafw21c/iciq0VXsi9FzkfoQv5I/V0iqE4lSNcKXPnW9/UTJLnv5CcN4FHxVLnKg" crossorigin="anonymous" defer></script>
-<script src="/tools/sync.js?v=db7b05ab0d" defer></script>
+<script src="/tools/sync.js?v=a1eae33921" defer></script>
 <script src="/tools/data-layer.js?v=3a0d57478c" defer></script>
 <script src="/tools/tools-effects.js?v=4cff99aa4a" defer></script>
 <script src="/tools/tools-dialogs.js?v=e1dfaa11a1" defer></script>
@@ -1465,6 +1465,7 @@
       const invoiceToDelete = loadInvoiceLog().find(i => i.id === id);
       saveInvoiceLog(loadInvoiceLog().filter(i => i.id !== id));
       if (typeof thAddInvoiceTombstone === 'function') thAddInvoiceTombstone(id);
+      if (typeof mirrorDelete === 'function') mirrorDelete('invoices', id);
       if (invoiceToDelete && typeof thAddToGraveyard === 'function') thAddToGraveyard('invoice', invoiceToDelete);
 
       // Remove the income entry this invoice CREATED (2026-09-02),
@@ -1601,6 +1602,9 @@
     list.push(newEntry);
     saveInvoiceLog(list);
     logInvoiceToIncomeLog(newEntry);
+    // Best-effort relational mirror (code-health pass, 2026-09-08) -- see
+    // sync.js's RELATIONAL MIRROR section. Never blocks or throws back here.
+    if (typeof mirrorInvoiceToRelational === 'function') mirrorInvoiceToRelational(newEntry);
 
     if (pendingSourceQuoteId) {
       const quotes = loadQuoteLog();
@@ -1609,6 +1613,7 @@
         quote.status = 'converted';
         quote.convertedToInvoiceId = newEntry.id;
         saveQuoteLog(quotes);
+        if (typeof mirrorQuoteToRelational === 'function') mirrorQuoteToRelational(quote);
         if (typeof renderQuoteLog === 'function') renderQuoteLog();
       }
       pendingSourceQuoteId = null;
@@ -1653,6 +1658,7 @@
       const quoteToDelete = loadQuoteLog().find(q => q.id === id);
       saveQuoteLog(loadQuoteLog().filter(q => q.id !== id));
       if (typeof thAddQuoteTombstone === 'function') thAddQuoteTombstone(id);
+      if (typeof mirrorDelete === 'function') mirrorDelete('quotes', id);
       if (quoteToDelete && typeof thAddToGraveyard === 'function') thAddToGraveyard('quote', quoteToDelete);
       renderQuoteLog();
     }, 6000);
@@ -1699,6 +1705,9 @@
     };
     list.push(newEntry);
     saveQuoteLog(list);
+    // Best-effort relational mirror (code-health pass, 2026-09-08) -- see
+    // sync.js's RELATIONAL MIRROR section. Never blocks or throws back here.
+    if (typeof mirrorQuoteToRelational === 'function') mirrorQuoteToRelational(newEntry);
     if (typeof renderQuoteLog === 'function') renderQuoteLog();
     // Returns the entry it just created (2026-09-03), matching the
     // same fix just made to logInvoice() for the exact same reason:

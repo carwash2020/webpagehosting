@@ -51,7 +51,7 @@
 <link rel="stylesheet" href="/styles.css?v=37bcb9404a">
 <link rel="stylesheet" href="/tools/styles-tools.css?v=802b87086c">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.112.3/dist/umd/supabase.js" integrity="sha384-qafw21c/iciq0VXsi9FzkfoQv5I/V0iqE4lSNcKXPnW9/UTJLnv5CcN4FHxVLnKg" crossorigin="anonymous" defer></script>
-<script src="/tools/sync.js?v=db7b05ab0d" defer></script>
+<script src="/tools/sync.js?v=a1eae33921" defer></script>
 <script src="/tools/data-layer.js?v=3a0d57478c" defer></script>
 <script src="/tools/tools-effects.js?v=4cff99aa4a" defer></script>
 <script src="/tools/tools-dialogs.js?v=e1dfaa11a1" defer></script>
@@ -771,7 +771,13 @@
 
   // ---------- Jobs ----------
   function loadJobs() { try { return JSON.parse(localStorage.getItem(STORAGE_KEYS.jobs) || '[]'); } catch (e) { return []; } }
-  function saveJobs(jobs) { localStorage.setItem(STORAGE_KEYS.jobs, JSON.stringify(jobs)); scheduleSync(); }
+  function saveJobs(jobs) {
+    localStorage.setItem(STORAGE_KEYS.jobs, JSON.stringify(jobs));
+    scheduleSync();
+    // Best-effort relational mirror (code-health pass, 2026-09-08) -- see
+    // sync.js's RELATIONAL MIRROR section. Never blocks or throws back here.
+    if (typeof mirrorJobsToRelational === 'function') mirrorJobsToRelational(jobs);
+  }
   let currentSort = 'date';
 
   // Fills phone/address/email from the shared client registry when a
@@ -1140,6 +1146,7 @@
       const jobToDelete = loadJobs().find(j => j.id === id);
       saveJobs(loadJobs().filter(j => j.id !== id));
       if (typeof thAddJobTombstone === 'function') thAddJobTombstone(id);
+      if (typeof mirrorDelete === 'function') mirrorDelete('jobs', id);
       if (jobToDelete && typeof thAddToGraveyard === 'function') thAddToGraveyard('job', jobToDelete);
       renderJobs();
     }, 6000);
@@ -1487,6 +1494,7 @@
       const deletedJobs = allJobs.filter(j => idsToDelete.has(j.id));
       deletedJobs.forEach(j => {
         if (typeof thAddJobTombstone === 'function') thAddJobTombstone(j.id);
+        if (typeof mirrorDelete === 'function') mirrorDelete('jobs', j.id);
         if (typeof thAddToGraveyard === 'function') thAddToGraveyard('job', j);
       });
       saveJobs(allJobs.filter(j => !idsToDelete.has(j.id)));

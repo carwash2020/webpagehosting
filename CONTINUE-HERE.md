@@ -170,6 +170,20 @@ development environment used for most of this work can't test it.
 - **Reduced-motion** on a real device, for any of the CSS animations
   added across the various design passes.
 
+## Open follow-up: relational tables Phase 2
+
+`jobs`/`invoices`/`invoice_line_items`/`quotes`/`quote_line_items`/
+`contracts` are real Postgres tables now (2026-09-08), with real foreign
+keys, dual-written alongside the existing blob-sync save path on every
+real create/update/delete. See README.md's "Jobs/invoices/quotes/
+contracts get real relational tables" section for the full reasoning.
+**Every tool page still reads from localStorage/the blob, unchanged** —
+this was deliberately left as Phase 1 (stand up the schema, prove the
+mirror matches reality) rather than risking a same-session cutover of
+every read path for live production data. Phase 2 — actually moving
+reads to the relational tables and retiring the blob for these 4 record
+types — is real, unstarted work, not something to assume is finished.
+
 ## Things that look odd but are deliberate
 
 - Cedar City and Mesquite are **by-request only**, shown dashed/orange
