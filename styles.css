@@ -2493,6 +2493,25 @@
     .radius-hub-name{font-size:21px;}
   }
 
+  /* W21/M03 fix (Master Audit, 2026-09-08): hovering (or tab-focusing)
+     one of the 6 service cards below re-lights that exact city's own
+     spoke/node/label here -- a real, ongoing reason to keep looking at
+     the diagram after its one-time entrance animation (below) has
+     already played, rather than a static picture nobody revisits. */
+  .radius-figure .radius-spoke,
+  .radius-figure .radius-node,
+  .radius-figure .radius-hub,
+  .radius-figure .radius-name,
+  .radius-figure .radius-hub-name{
+    transition:stroke .2s ease, fill .2s ease, filter .2s ease;
+  }
+  .radius-figure g.is-linked .radius-spoke{stroke:var(--blue-light); stroke-width:2.5;}
+  .radius-figure g.is-linked .radius-spoke.is-request{stroke:var(--orange);}
+  .radius-figure g.is-linked .radius-node{filter:drop-shadow(0 0 6px var(--blue-light));}
+  .radius-figure g.is-linked .radius-node.is-request{filter:drop-shadow(0 0 6px var(--orange));}
+  .radius-figure g.is-linked .radius-name{fill:var(--white);}
+  .radius-figure g.is-hub.is-linked .radius-hub{filter:drop-shadow(0 0 8px var(--orange));}
+
   /* Light-trail arrival (2026-09-07): reuses the [data-reveal]/.is-visible
      mechanism already driving every other reveal on this page (a single
      IntersectionObserver, once per element) rather than adding a second
