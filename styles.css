@@ -271,17 +271,50 @@
   .btn:hover{transform:translateY(-2px);}
   .btn:active{transform:translateY(0);}
 
+  /* U01 fix (High-Impact Upgrades, 2026-09-07): flat fill + a solid
+     offset shadow, replacing the glossy vertical gradient + colour-glow
+     look -- "the clearest date stamp on a page" per the finding. Applies
+     everywhere .btn.orange is used (it's the site's one consistent
+     primary-action colour), not just the hero. */
   .btn.orange{
-    background:linear-gradient(135deg, #ffb347, #ff8000 60%, #c96400);
+    background:var(--orange);
     color:#161005;
-    box-shadow:0 8px 20px -6px rgba(255,128,0,.5);
+    box-shadow:4px 4px 0 0 var(--orange-dark);
   }
+  .btn.orange:hover{box-shadow:6px 6px 0 0 var(--orange-dark);}
+  .btn.orange:active{box-shadow:2px 2px 0 0 var(--orange-dark);}
   .btn.blue{
     background:linear-gradient(135deg, #7ec4ff, #3aa0ff 60%, #1f5f9e);
     color:#04101c;
     box-shadow:0 8px 20px -6px rgba(58,160,255,.5);
   }
   .btn svg{width:16px; height:16px; flex-shrink:0;}
+
+  /* U01: the quiet link that replaces a second, competing glossy button
+     wherever Call and Schedule used to sit at equal weight (header,
+     hero, triage result, service modal, and the landing pages' "Call or
+     Text" vs "Book" pair). Call stays the one primary action; this is
+     deliberately just underlined text, not a button. */
+  .cta-quiet-link{
+    display:inline-flex;
+    align-items:center;
+    gap:8px;
+    background:none;
+    border:none;
+    padding:0;
+    margin:0;
+    color:var(--text-dim);
+    font-family:var(--font-ui);
+    font-size:14px;
+    font-weight:500;
+    letter-spacing:.3px;
+    text-decoration:underline;
+    text-underline-offset:3px;
+    cursor:pointer;
+    transition:color .15s ease;
+  }
+  .cta-quiet-link:hover{color:var(--white);}
+  .cta-quiet-link svg{width:15px; height:15px; flex-shrink:0;}
 
   /* header */
   header{
@@ -596,6 +629,11 @@
     max-width:520px;
     margin:22px 0 32px;
   }
+  /* U01: the hero sits on a permanently-dark photo backdrop regardless
+     of site theme, same reasoning as .hero h1/.hero p.lede above --
+     var(--text-dim) would go near-invisible-dark in light mode here. */
+  .hero .cta-quiet-link{color:#c9c5bc;}
+  .hero .cta-quiet-link:hover{color:#ffffff;}
   .hero-ctas{
     display:flex;
     gap:16px;
