@@ -496,7 +496,11 @@
 // U04: a real "next opening" line beside the homepage's open/closed
 // pill, read from the actual booking system's availability, not a
 // static hours-only guess.
-const CACHE_NAME = 'th-workspace-v100';
+// Bumped 2026-09-08 (v100 -> v101): new /tools/pdf-layout.js added to
+// the precache list -- W18/U15: one shared masthead/footer/totals-
+// block renderer for invoice-generator.html, job-detail.html's job
+// sheet, and contract-generator.html (all three also changed to use it).
+const CACHE_NAME = 'th-workspace-v101';
 const PRECACHE_URLS = [
   '/tools/workspace.html', '/tools/job-tracker.html', '/tools/invoice-generator.html', '/tools/contract-generator.html',
   '/tools/calendar.html', '/tools/route-planner.html', '/tools/review-request.html', '/tools/contact-card.html',
@@ -529,6 +533,10 @@ const PRECACHE_URLS = [
   // day, for the same underlying reason: a hardcoded list, maintained
   // by hand, drifting from reality.
   '/tools/reset-password.html', '/tools/tools-tour.js',
+  // The shared jsPDF masthead/footer/totals-block renderer (U15/W18,
+  // 2026-09-08) -- loaded by invoice-generator.html, job-detail.html's
+  // job sheet, and contract-generator.html, all three precached above.
+  '/tools/pdf-layout.js',
   // Bug fix (2026-08-20): tools-common.js no longer exists -- it was
   // split into 4 focused files (structural item #42). cache.addAll()
   // fails ATOMICALLY: if even one URL in this list 404s, NONE of the

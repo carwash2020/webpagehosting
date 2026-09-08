@@ -20,6 +20,25 @@ const path = require('path');
 const JOB_TRACKER_PATH = path.join(__dirname, '..', '..', 'tools', 'job-tracker.html');
 const FINANCE_PATH = path.join(__dirname, '..', '..', 'tools', 'finance.html');
 const INVOICE_GENERATOR_PATH = path.join(__dirname, '..', '..', 'tools', 'invoice-generator.html');
+// U15/W18 fix (2026-09-08): PDF_COLORS/drawPdfHeader/drawPdfLineItemsTable/
+// drawPdfTotalsBlock/drawPdfFooter moved out of invoice-generator.html
+// into the shared /tools/pdf-layout.js -- jsdom never actually fetches
+// external <script src> files, so any test that runs generatePDF()/
+// generateQuotePDF() all the way through now needs this evaluated into
+// the same window first, same technique already used elsewhere in this
+// suite for business-hours.js.
+const PDF_LAYOUT_SRC = fs.readFileSync(path.join(__dirname, '..', '..', 'tools', 'pdf-layout.js'), 'utf8')
+  // const/function declarations run via indirect eval() (window.eval(...),
+  // rather than the bare eval identifier) create bindings in the realm's
+  // global lexical scope, but that is NOT the same thing as becoming an
+  // enumerable property on window/globalThis -- confirmed directly as a
+  // genuine spec quirk elsewhere in this suite (see booking.test.js's own
+  // comment for the same fix). Explicit window.X = X assignments,
+  // evaluated in the SAME eval call so they share the same lexical scope
+  // as the declarations above them, make every name real window
+  // properties too, which is what generatePDF()'s own bare references to
+  // them actually need once it's running as this window's own script.
+  + '\nwindow.PDF_COLORS = PDF_COLORS; window.pdfLoadImageAsDataURL = pdfLoadImageAsDataURL; window.drawPdfHeader = drawPdfHeader; window.drawPdfLineItemsTable = drawPdfLineItemsTable; window.drawPdfTotalsBlock = drawPdfTotalsBlock; window.drawPdfTotalHighlight = drawPdfTotalHighlight; window.drawPdfFooter = drawPdfFooter; window.pdfWrapAndDraw = pdfWrapAndDraw;';
 
 const MOVED_FUNCTIONS = [
   'renderJobProfitability', 'checkClientHistory', 'saveTaxSettings', 'loadTaxSettings',
@@ -2431,6 +2450,7 @@ test('the jsPDF-not-ready guard actually works end to end: shows the real alert 
   const dom = new JSDOM(html, {
     runScripts: 'dangerously', url: 'https://example.com/tools/invoice-generator.html',
     beforeParse(window) {
+      window.eval(PDF_LAYOUT_SRC);
       window.requireAuth = () => {};
       window.HTMLElement.prototype.scrollIntoView = () => {};
       window.showToast = () => {};
@@ -3159,6 +3179,7 @@ test('generatePDF() completes all the way through to resetInvoiceForm() without 
   const dom = new JSDOM(html, {
     runScripts: 'dangerously', url: 'https://example.com/tools/invoice-generator.html',
     beforeParse(window) {
+      window.eval(PDF_LAYOUT_SRC);
       window.requireAuth = () => {};
       window.HTMLElement.prototype.scrollIntoView = () => {};
       window.showToast = () => {};
@@ -3266,6 +3287,7 @@ test('generateQuotePDF() completes all the way through to resetQuoteForm() witho
   const dom = new JSDOM(html, {
     runScripts: 'dangerously', url: 'https://example.com/tools/invoice-generator.html',
     beforeParse(window) {
+      window.eval(PDF_LAYOUT_SRC);
       window.requireAuth = () => {};
       window.HTMLElement.prototype.scrollIntoView = () => {};
       window.showToast = () => {};
