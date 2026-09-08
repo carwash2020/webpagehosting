@@ -510,7 +510,12 @@
 // regression-recovery fix: the persistent header nav's "Schedule" link
 // was demoted to a quiet underlined link by the same pass that fixed
 // the hero, leaving it hard to find; restored as a real button.
-const CACHE_NAME = 'th-workspace-v103';
+// Bumped 2026-09-08 (v103 -> v104): /styles.css changed again -- W19/M02:
+// the teardown ("Most of it still works") section was measured as one
+// of the page's flattest; added an ambient glow plus an interactive
+// spotlight behind the exploded-diagram figure driven by the same --p
+// custom property already assembling/disassembling its parts.
+const CACHE_NAME = 'th-workspace-v104';
 const PRECACHE_URLS = [
   '/tools/workspace.html', '/tools/job-tracker.html', '/tools/invoice-generator.html', '/tools/contract-generator.html',
   '/tools/calendar.html', '/tools/route-planner.html', '/tools/review-request.html', '/tools/contact-card.html',

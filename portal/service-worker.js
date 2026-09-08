@@ -222,7 +222,10 @@
 // Bumped 2026-09-08 again: /styles.css changed again (regression-
 // recovery fix -- homepage header Schedule button; portal pages don't
 // use it, but the file is shared/precached).
-const CACHE_NAME = 'th-portal-v43';
+// Bumped 2026-09-08 again: /styles.css changed again (W19/M02 -- the
+// teardown section's ambient glow + interactive spotlight; portal
+// pages don't have that section, but the file is shared/precached).
+const CACHE_NAME = 'th-portal-v44';
 const PRECACHE_URLS = [
   '/portal/home.html', '/portal/dashboard.html', '/portal/jobs.html', '/portal/quotes.html',
   '/portal/work-orders.html', '/portal/settings.html', '/portal/login.html', '/portal/set-password.html',
