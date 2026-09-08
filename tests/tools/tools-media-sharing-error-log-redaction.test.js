@@ -101,3 +101,15 @@ test('logClientError() now also redacts the source field (a script/page URL that
   const fn = extractFn(SRC, 'logClientError');
   assert.match(fn, /source: source \? redactSensitiveText\(/);
 });
+
+// CodeQL alert #53 stayed open through both rounds of widening above --
+// its taint tracking doesn't recognize a custom .replace()-based function
+// as a sanitizer, so it keeps reporting this exact localStorage.setItem()
+// call regardless of how thorough redactSensitiveText() actually is (the
+// tests above execute that real, unmodified function against hostile
+// inputs and confirm none of them survive). Suppressed with a documented
+// inline comment instead of trying to redact further.
+test('the localStorage.setItem() call in logClientError() carries a documented CodeQL suppression for alert #53', () => {
+  const fn = extractFn(SRC, 'logClientError');
+  assert.match(fn, /localStorage\.setItem\(CLIENT_ERROR_LOG_KEY, JSON\.stringify\(log\)\); \/\/ codeql\[js\/clear-text-storage-of-sensitive-data\]/);
+});

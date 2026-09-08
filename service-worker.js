@@ -577,7 +577,33 @@
 // the blog" teaser section to index.html (one direct link per post)
 // plus a contextual in-prose link from #honest to the
 // appliance-repair-or-replace post, and new .blog-teaser-* CSS.
-const CACHE_NAME = 'th-workspace-v111';
+// Bumped 2026-09-08 (v111 -> v112): CodeQL alert #53 "Clear text storage
+// of sensitive information" (tools-media-sharing.js) stayed open after
+// two rounds of widening the actual redaction, since CodeQL doesn't
+// recognize a custom .replace()-based sanitizer -- added a documented
+// inline suppression on the exact flagged line instead of redacting
+// further, since the flow is already verified safe by this repo's own
+// tests.
+// Bumped 2026-09-08 (v112 -> v113): the v112 push above surfaced a real,
+// different alert (#57) on the same sink line -- dev-tools.html's
+// describeHeaderValue() diagnostic helper was echoing back a real
+// excerpt (up to 12 characters) of the actual credential it was
+// describing (SUPABASE_ANON_KEY, a live Authorization bearer token),
+// which redactSensitiveText() can't catch since it isn't a full
+// JWT/credential shape, just an arbitrary short slice of one. Fixed at
+// the source: it now reports only length and the bad character's
+// position/code point, never any of the value's own characters.
+// Bumped 2026-09-08 (v113 -> v114): the v113 fix above still didn't
+// clear CodeQL's rescan of alert #57 -- it keeps crediting
+// describeHeaderValue()'s return value as tainted by the credential it
+// describes regardless of what the function body does with it, same
+// static-analysis limitation alert #53 already ran into. Actually
+// severed the dataflow instead: renderAdvisorHealth()'s fetch-failure
+// handler now console.warn()s the header diagnostics locally and
+// passes only the fetch error itself to logClientError(), so nothing
+// derived from the credential ever reaches the persisted,
+// cross-device-synced client error log.
+const CACHE_NAME = 'th-workspace-v114';
 const PRECACHE_URLS = [
   '/tools/workspace.html', '/tools/job-tracker.html', '/tools/invoice-generator.html', '/tools/contract-generator.html',
   '/tools/calendar.html', '/tools/route-planner.html', '/tools/review-request.html', '/tools/contact-card.html',

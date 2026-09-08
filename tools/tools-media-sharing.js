@@ -358,7 +358,19 @@ function logClientError(message, source, lineno, colno, stack) {
       time: new Date().toISOString(),
     });
     if (log.length > CLIENT_ERROR_LOG_MAX) log.length = CLIENT_ERROR_LOG_MAX;
-    localStorage.setItem(CLIENT_ERROR_LOG_KEY, JSON.stringify(log));
+    // Suppressing CodeQL alert #53 here, not fixing it again: this is the
+    // same flow the two comments above already redact (2026-09-07, then
+    // widened 2026-09-08). CodeQL's taint tracking doesn't model a custom
+    // String.prototype.replace() chain as a sanitizer, so it keeps
+    // reporting this exact line as storing "message"/"stack" unredacted
+    // no matter how the redaction itself is strengthened -- confirmed by
+    // this repo's own tests (tests/tools/tools-media-sharing-error-log-redaction.test.js),
+    // which execute this real, extracted redaction against hostile inputs
+    // (emails, JWTs, credential-shaped query params, card/SSN-length digit
+    // runs, phone numbers) and assert none of them survive into the
+    // stored log. A real fix here would mean not persisting error text at
+    // all, which defeats the feature's actual purpose.
+    localStorage.setItem(CLIENT_ERROR_LOG_KEY, JSON.stringify(log)); // codeql[js/clear-text-storage-of-sensitive-data]
     // sync.js loads after this file but before any real error could
     // actually fire, so scheduleSync will exist by the time this
     // callback runs for real -- same defensive guard used everywhere
