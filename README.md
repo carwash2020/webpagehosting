@@ -482,3 +482,42 @@ non-issues (trigger-returning functions can't be invoked outside a trigger
 context regardless of grant — verified directly, not assumed) and left
 those unchanged. New files: `sql/security/tighten_current_user_has_any_role_grant.sql`,
 `sql/security/wrap_unwrapped_auth_email_in_rls_policies.sql`.
+
+### CI smoke test: add job → invoice it → mark paid, end to end
+
+New `tests/workspace/smoke-job-invoice-paid.test.js`. Every other test in
+this suite exercises one function or one page's own behavior in
+isolation — both real production incidents on record here (the
+invoice-generator TDZ crash that silently broke every invoice/quote, and
+the `th_leads` RLS policy that silently dropped every public lead
+submission) were exactly the class of bug that kind of test misses,
+because each individual piece worked fine alone. This test drives the
+real core write path across all three real tool pages that implement it:
+fills in the real Add Job form and calls the real `addJob()`
+(`job-tracker.html`), links that real job and calls the real
+`generatePDF()` with a real line item (`invoice-generator.html`,
+confirming the logged invoice carries the real job link/title and total),
+then calls the real `togglePaid()` (`workspace.html`, confirming the paid
+amount matches what was entered and the job link survives). "Same
+device, same localStorage" between stages is simulated by copying the
+relevant key's JSON from one page's jsdom window into the next's, since
+each real page is genuinely its own separate script context, in a real
+browser too.
+
+Two real environment quirks worth knowing if this test (or anything
+similar) needs touching again:
+- `window.eval()`'d top-level `const`/`function` declarations create
+  bindings in jsdom's global lexical scope, but that's NOT the same as
+  becoming an enumerable `window` property — a real parsed `<script>` tag
+  referencing them directly (as `generatePDF()` does for `pdf-layout.js`'s
+  `PDF_COLORS` etc.) throws `ReferenceError`. Same fix already used in
+  `finance-split.test.js`: explicit `window.X = X` assignments appended
+  to the eval'd source.
+- `scheduleSync()`'s debounce timer is a real Node timer `window.close()`
+  does not cancel (jsdom windows share the process's global timer
+  queue) — left un-stubbed, it fires ~2.5s later and calls the real
+  `pushSync()`, which (per the sync-merge fix above) makes a real,
+  slowly-retrying fetch call against a stubbed-failing `fetch()`.
+  Stubbed to a no-op; this test is about the write path landing
+  correctly, not the debounced push itself, which `tests/sync/*` already
+  covers.
