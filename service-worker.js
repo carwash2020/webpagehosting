@@ -532,7 +532,16 @@
 // diagram's node-arrival pulse is toned down from scale(1.8) to
 // scale(1.25) -- both reduce excess motion diluting the page's real,
 // deliberate moments.
-const CACHE_NAME = 'th-workspace-v107';
+// Bumped 2026-09-08 (v107 -> v108): /styles.css and /index.html changed
+// again -- a second measured audit found the homepage 1,296px longer
+// than it started even with both named regressions fixed. #areas' 6
+// full description cards (redundant now that hovering links the
+// diagram) were replaced with a compact .areas-links row; #schedule and
+// #contact were merged into one section, dropping the Call/Text and
+// Email cards already covered by the header, sticky call button,
+// closing screen and footer; .btn.blue's old glossy gradient was
+// flattened to match .btn.orange's treatment.
+const CACHE_NAME = 'th-workspace-v108';
 const PRECACHE_URLS = [
   '/tools/workspace.html', '/tools/job-tracker.html', '/tools/invoice-generator.html', '/tools/contract-generator.html',
   '/tools/calendar.html', '/tools/route-planner.html', '/tools/review-request.html', '/tools/contact-card.html',

@@ -63,11 +63,6 @@ test('F24/F25: the light-theme text tokens meet 4.5:1 against a white panel', ()
   assert.ok(contrast('#994a00', '#ffffff') >= 4.5, '--orange-text (light)');
 });
 
-test('F25: .copy-email-btn:hover text is a dark navy on the pale-blue hover fill, not white (which measured 1.87:1)', () => {
-  assert.match(STYLES, /\.copy-email-btn:hover\{background:var\(--blue-light\); border-color:var\(--blue-text\); color:#08131f;\}/);
-  assert.ok(contrast('#08131f', '#7ec4ff') >= 4.5);
-});
-
 test('F28: the post-submit success message, dropdown chevron, and input placeholder all route through theme-aware tokens now', () => {
   assert.match(STYLES, /\.form-status\.is-success\{color:var\(--success-text\);\}/);
   assert.match(STYLES, /input::placeholder, textarea::placeholder\{color:var\(--placeholder-text\);\}/);

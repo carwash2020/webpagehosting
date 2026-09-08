@@ -5,8 +5,16 @@
 // Rather than cut the real content (6 cards with genuine descriptions
 // and links to dedicated landing pages), the diagram is now linked to
 // those same cards: hovering or tab-focusing a card re-lights that
-// exact city's spoke/node/label, giving it an ongoing reason to keep
-// drawing the eye instead of a one-shot animation nobody revisits.
+// exact city's spoke/node/label.
+//
+// Regression-recovery follow-up (2026-09-08): a second measured audit
+// found #areas still the single largest block on the page even with
+// hover wired up -- activating it didn't earn its height, since with
+// the diagram now carrying the interaction, the 6 full description
+// cards were a second copy of the same information. The cards were
+// replaced with a compact .areas-links row (still one real link per
+// landing page, still paired to the diagram by data-city); the
+// hover-link pairing itself, tested below, is unchanged.
 
 const { test } = require('node:test');
 const assert = require('node:assert/strict');
@@ -19,18 +27,31 @@ const STYLES = fs.readFileSync(repo('styles.css'), 'utf8');
 
 const CITIES = ['st-george', 'washington-city', 'hurricane', 'santa-clara-ivins', 'cedar-city', 'mesquite'];
 
-test('every service card shares a data-city value with its matching diagram group -- no invented city, no missing one', () => {
+test('every areas link shares a data-city value with its matching diagram group -- no invented city, no missing one', () => {
   for (const city of CITIES) {
-    assert.match(INDEX, new RegExp(`class="service-card[^"]*" data-reveal data-city="${city}"`), `expected a service card for ${city}`);
+    assert.match(INDEX, new RegExp(`class="areas-link[^"]*" data-city="${city}"`), `expected an areas link for ${city}`);
     assert.match(INDEX, new RegExp(`<g data-city="${city}"`), `expected a diagram group for ${city}`);
   }
 });
 
-test('hovering/focusing a service card links only its own diagram group, not every group at once', () => {
+test('the 5 real landing pages are still linked from #areas, not just named', () => {
+  const LANDING_PAGES = [
+    'handyman-washington-city-ut.html', 'handyman-hurricane-ut.html',
+    'handyman-santa-clara-ivins-ut.html', 'handyman-cedar-city-ut.html', 'handyman-mesquite-nv.html',
+  ];
+  const start = INDEX.indexOf('<div class="areas-links"');
+  const end = INDEX.indexOf('</section>', start);
+  const block = INDEX.slice(start, end);
+  for (const page of LANDING_PAGES) {
+    assert.match(block, new RegExp(`href="/${page}"`), `expected a link to ${page} inside #areas`);
+  }
+});
+
+test('hovering/focusing an areas link links only its own diagram group, not every group at once', () => {
   const start = INDEX.indexOf('service-area diagram: hover/focus-linked');
   const end = INDEX.indexOf('---------- motto rail', start);
   const block = INDEX.slice(start, end);
-  assert.match(block, /querySelectorAll\('\.service-card\[data-city\]'\)/);
+  assert.match(block, /querySelectorAll\('\.areas-link\[data-city\]'\)/);
   assert.match(block, /g\.getAttribute\('data-city'\) === city/);
   assert.match(block, /addEventListener\('mouseenter'/);
   assert.match(block, /addEventListener\('mouseleave'/);
@@ -52,5 +73,5 @@ test('the linked state brightens the spoke/node/label using the existing brand t
 test('the tools/portal service workers were bumped for this styles.css change', () => {
   const sw = fs.readFileSync(repo('service-worker.js'), 'utf8');
   const version = Number(sw.match(/const CACHE_NAME = 'th-workspace-v(\d+)';/)[1]);
-  assert.ok(version >= 106, `expected v106 or later, got v${version}`);
+  assert.ok(version >= 108, `expected v108 or later, got v${version}`);
 });

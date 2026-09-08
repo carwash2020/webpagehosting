@@ -23,12 +23,15 @@ test('section headings render immediately -- no opacity/transform fade -- via a 
   assert.ok(rule, 'expected an override rule neutralizing the generic fade for .section-head');
   assert.match(rule[1], /opacity:1/);
   assert.match(rule[1], /transform:none/);
-  // All 10 section-head instances still carry data-reveal in the HTML --
-  // only the CSS fade is suppressed, so .is-visible keeps getting added
-  // by the same shared IntersectionObserver every other reveal-gated
-  // feature on the page depends on.
+  // Every remaining section-head instance still carries data-reveal in
+  // the HTML -- only the CSS fade is suppressed, so .is-visible keeps
+  // getting added by the same shared IntersectionObserver every other
+  // reveal-gated feature on the page depends on. Was 10; the
+  // regression-recovery pass folded #contact's own section-head into
+  // #schedule's (one merged section, one heading), making 9 -- a real
+  // structural change, not a motion regression.
   const count = [...INDEX.matchAll(/class="section-head" data-reveal>/g)].length;
-  assert.equal(count, 10, 'expected all 10 section-head instances to still carry data-reveal');
+  assert.equal(count, 9, 'expected all 9 remaining section-head instances to still carry data-reveal');
 });
 
 test('the process step-line draw-in (gated on .section-head.is-visible via a sibling selector) is untouched', () => {

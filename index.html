@@ -60,7 +60,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Anton&family=Archivo:wght@400..700&family=Newsreader:ital,opsz,wght@0,6..72,300..700;1,6..72,300..600&family=Oswald:wght@200..700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="styles.css?v=202609081630">
+<link rel="stylesheet" href="styles.css?v=202609081830">
 <script type="application/ld+json">
 {
   "@context": "https://schema.org",
@@ -987,37 +987,27 @@
       </p>
 
 
-      <div class="services-grid">
-        <div class="service-card" data-reveal data-city="st-george">
-          <h3>St. George</h3>
-          <p>Home base, and where most calls come from. From older established neighborhoods near downtown to newer builds out toward the entrance to Snow Canyon, we're usually only minutes away.</p>
-        </div>
-        <div class="service-card" data-reveal data-city="washington-city">
-          <h3>Washington City</h3>
-          <p>Right next door to St. George and one of the fastest-growing areas in the region. Lots of newer construction out this way, so we're out here often.</p>
-          <p><a href="/handyman-washington-city-ut.html">Handyman services in Washington City &rarr;</a></p>
-        </div>
-        <div class="service-card" data-reveal data-city="hurricane">
-          <h3>Hurricane</h3>
-          <p>About 20 minutes east of St. George. A good mix of older homes and newer neighborhoods still settling in.</p>
-          <p><a href="/handyman-hurricane-ut.html">Handyman services in Hurricane &rarr;</a></p>
-        </div>
-        <div class="service-card" data-reveal data-city="santa-clara-ivins">
-          <h3>Santa Clara & Ivins</h3>
-          <p>West side, near Snow Canyon. Plenty of custom and higher-end homes out here.</p>
-          <p><a href="/handyman-santa-clara-ivins-ut.html">Handyman services in Santa Clara & Ivins &rarr;</a></p>
-        </div>
-        <div class="service-card is-urgent" data-reveal data-city="cedar-city">
-          <h3>Cedar City</h3>
-          <p>About an hour north (roughly 50 miles). Not part of our regular route, but for larger jobs it can be worth a trip. Contact us directly to check availability and scheduling before booking.</p>
-          <p><a href="/handyman-cedar-city-ut.html">Handyman services in Cedar City &rarr;</a></p>
-        </div>
-        <div class="service-card is-urgent" data-reveal data-city="mesquite">
-          <h3>Mesquite, NV</h3>
-          <p>About 40 minutes southwest (roughly 40 miles), across the state line. Not part of our regular route, but larger jobs out this way are worth a call. Contact us directly to check availability and scheduling before booking.</p>
-          <p><a href="/handyman-mesquite-nv.html">Handyman services in Mesquite &rarr;</a></p>
-        </div>
+      <div class="areas-links" data-reveal>
+        <span class="areas-link is-hub" data-city="st-george">
+          <b>St. George</b><small>Home base</small>
+        </span>
+        <a class="areas-link" data-city="washington-city" href="/handyman-washington-city-ut.html">
+          <b>Washington City</b><small>Right next door</small>
+        </a>
+        <a class="areas-link" data-city="hurricane" href="/handyman-hurricane-ut.html">
+          <b>Hurricane</b><small>About 20 minutes east</small>
+        </a>
+        <a class="areas-link" data-city="santa-clara-ivins" href="/handyman-santa-clara-ivins-ut.html">
+          <b>Santa Clara &amp; Ivins</b><small>West side, near Snow Canyon</small>
+        </a>
+        <a class="areas-link is-request" data-city="cedar-city" href="/handyman-cedar-city-ut.html">
+          <b>Cedar City</b><small>By request &middot; about an hour north</small>
+        </a>
+        <a class="areas-link is-request" data-city="mesquite" href="/handyman-mesquite-nv.html">
+          <b>Mesquite, NV</b><small>By request &middot; about 40 minutes SW</small>
+        </a>
       </div>
+      <p class="areas-request-note" data-reveal>Cedar City and Mesquite aren't part of our regular route, but for larger jobs they're often worth the trip &mdash; contact us directly to check availability and scheduling before booking.</p>
     </div>
   </section>
 
@@ -1051,6 +1041,40 @@
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="M2 6l10 7 10-7"/></svg>
             Send Email
           </button>
+        </div>
+      </div>
+
+      <!-- Regression-recovery fix (2026-09-08): #schedule and #contact
+           used to be two separate full sections, and a measured audit
+           named them (with #closing) as three consecutive sections
+           asking for the same thing -- 1,786px, 15.5% of the page. The
+           Call/Text and Email cards that used to live here are gone --
+           the phone number is already in the header, the sticky call
+           button, the closing screen and the footer, and the email is
+           in the footer too. #contact stays a real anchor (nav/footer
+           links to it are unchanged); it just points at this strip now,
+           which keeps only what's genuinely nowhere else on the page. -->
+      <div class="schedule-info-strip" id="contact">
+        <div>
+          <h4>Hours</h4>
+          <div class="hours-grid">
+            <div class="hours-row"><span class="hours-day">Mon</span><span class="hours-value js-hours-monday">2:00 PM &ndash; 10:00 PM</span></div>
+            <div class="hours-row"><span class="hours-day">Tue</span><span class="hours-value js-hours-tuesday">2:00 PM &ndash; 10:00 PM</span></div>
+            <div class="hours-row"><span class="hours-day">Wed</span><span class="hours-value js-hours-wednesday">2:00 PM &ndash; 10:00 PM</span></div>
+            <div class="hours-row"><span class="hours-day">Thu</span><span class="hours-value js-hours-thursday">2:00 PM &ndash; 10:00 PM</span></div>
+            <div class="hours-row"><span class="hours-day">Fri</span><span class="hours-value js-hours-friday">2:00 PM &ndash; 10:00 PM</span></div>
+            <div class="hours-row"><span class="hours-day">Sat</span><span class="hours-value js-hours-saturday">7:00 AM &ndash; 10:00 PM</span></div>
+            <div class="hours-row"><span class="hours-day">Sun</span><span class="hours-value js-hours-sunday">2:00 PM &ndash; 8:00 PM</span></div>
+          </div>
+        </div>
+        <div>
+          <h4>Service Area</h4>
+          <p class="value">St. George, Utah</p>
+          <p class="sub" style="color:var(--text-dim); font-size:13.5px; margin:6px 0 0;">Proudly serving Southern Utah</p>
+          <a class="map-link" href="https://www.google.com/maps/search/?api=1&query=St.+George%2C+Utah" target="_blank" rel="noopener">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><path d="M15 3h6v6"/><path d="M10 14L21 3"/></svg>
+            View on Google Maps
+          </a>
         </div>
       </div>
     </div>
@@ -1132,61 +1156,6 @@
     </div>
   </div>
 
-
-  <section id="contact">
-    <div class="wrap">
-      <div class="section-head" data-reveal>
-        <h2>Contact</h2>
-      </div>
-
-      <div class="contact-grid">
-        <div class="contact-card">
-          <div class="service-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"/></svg></div>
-          <h3>Call or Text</h3>
-          <a class="value js-phone-link js-phone-text" href="tel:+14354141667">(435) 414-1667</a>
-          <p class="sub">Fastest way to reach us for anything urgent.</p>
-        </div>
-
-        <div class="contact-card">
-          <div class="service-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="M2 6l10 7 10-7"/></svg></div>
-          <h3>Email</h3>
-          <div class="email-row">
-            <a class="value js-email-link js-email-text" href="mailto:steve@triplehenterprisesllc.biz">steve@triplehenterprisesllc.biz</a>
-            <button type="button" class="copy-email-btn" id="copyEmailBtn" aria-label="Copy email address">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
-              <span id="copyEmailLabel">Copy</span>
-            </button>
-          </div>
-          <p class="sub">Best for scheduling and detailed questions. Availability can vary, so it's best to email at least 7 days ahead of when you'd like the work done. Need something sooner? Call instead.</p>
-        </div>
-
-        <div class="contact-card">
-          <div class="service-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21s7-7.2 7-12.5A7 7 0 0 0 5 8.5C5 13.8 12 21 12 21z"/><circle cx="12" cy="8.5" r="2.6"/></svg></div>
-          <h3>Service Area</h3>
-          <p class="value">St. George, Utah</p>
-          <p class="sub">Proudly serving Southern Utah</p>
-          <a class="map-link" href="https://www.google.com/maps/search/?api=1&query=St.+George%2C+Utah" target="_blank" rel="noopener">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><path d="M15 3h6v6"/><path d="M10 14L21 3"/></svg>
-            View on Google Maps
-          </a>
-        </div>
-
-        <div class="contact-card">
-          <div class="service-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg></div>
-          <h3>Hours</h3>
-          <div class="hours-grid">
-            <div class="hours-row"><span class="hours-day">Mon</span><span class="hours-value js-hours-monday">2:00 PM &ndash; 10:00 PM</span></div>
-            <div class="hours-row"><span class="hours-day">Tue</span><span class="hours-value js-hours-tuesday">2:00 PM &ndash; 10:00 PM</span></div>
-            <div class="hours-row"><span class="hours-day">Wed</span><span class="hours-value js-hours-wednesday">2:00 PM &ndash; 10:00 PM</span></div>
-            <div class="hours-row"><span class="hours-day">Thu</span><span class="hours-value js-hours-thursday">2:00 PM &ndash; 10:00 PM</span></div>
-            <div class="hours-row"><span class="hours-day">Fri</span><span class="hours-value js-hours-friday">2:00 PM &ndash; 10:00 PM</span></div>
-            <div class="hours-row"><span class="hours-day">Sat</span><span class="hours-value js-hours-saturday">7:00 AM &ndash; 10:00 PM</span></div>
-            <div class="hours-row"><span class="hours-day">Sun</span><span class="hours-value js-hours-sunday">2:00 PM &ndash; 8:00 PM</span></div>
-          </div>
-        </div>
-      </div>
-    </div>
-  </section>
 
   <!-- W20/M04 fix (Master Audit, 2026-09-08): a before/after audit
        measured the page fading straight from the contact cards into the
@@ -2108,32 +2077,6 @@
     document.getElementById('name').focus();
   });
 
-  // copy email button
-  const copyEmailBtn = document.getElementById('copyEmailBtn');
-  const copyEmailLabel = document.getElementById('copyEmailLabel');
-  if (copyEmailBtn) {
-    copyEmailBtn.addEventListener('click', async () => {
-      const email = window.__siteOverrideEmail || 'steve@triplehenterprisesllc.biz';
-      try {
-        await navigator.clipboard.writeText(email);
-      } catch (err) {
-        // fallback for older browsers
-        const temp = document.createElement('textarea');
-        temp.value = email;
-        document.body.appendChild(temp);
-        temp.select();
-        document.execCommand('copy');
-        document.body.removeChild(temp);
-      }
-      copyEmailBtn.classList.add('is-copied');
-      copyEmailLabel.textContent = 'Copied!';
-      setTimeout(() => {
-        copyEmailBtn.classList.remove('is-copied');
-        copyEmailLabel.textContent = 'Copy';
-      }, 2000);
-    });
-  }
-
   const form = document.getElementById('scheduleForm');
   const status = document.getElementById('formStatus');
   const submitBtn = document.getElementById('formSubmitBtn');
@@ -2425,19 +2368,20 @@
     document.querySelectorAll('[data-reveal]').forEach(el => revealObserver.observe(el));
   }
 
-  // ---------- service-area diagram: hover/focus-linked to its own cards ----------
+  // ---------- service-area diagram: hover/focus-linked to its own links ----------
   // W21/M03 fix (Master Audit, 2026-09-08): a before/after audit named
   // this section "the tallest block on the page, and the deadest" --
   // the diagram's own one-time draw-in animation (above) has already
-  // finished by the time a visitor reaches the service cards below it,
-  // so it just sits there afterward. Hovering (or tab-focusing, for
-  // keyboard users) a card now re-lights that exact city's spoke/node/
-  // label on the diagram, giving it a real, ongoing reason to keep
-  // drawing the eye instead of being a one-shot animation nobody
-  // revisits. Every city name and its diagram group already share the
-  // same data-city value (see the SVG above and the cards below).
+  // finished by the time a visitor reaches the content below it, so it
+  // just sits there afterward. Hovering (or tab-focusing, for keyboard
+  // users) a link now re-lights that exact city's spoke/node/label on
+  // the diagram. Every city name and its diagram group share the same
+  // data-city value (see the SVG above and .areas-link below -- was
+  // .service-card until the regression-recovery pass replaced the full
+  // description cards with this compact row; the pairing itself is
+  // unchanged).
   (function () {
-    const cards = document.querySelectorAll('.service-card[data-city]');
+    const cards = document.querySelectorAll('.areas-link[data-city]');
     const figure = document.querySelector('.radius-figure svg');
     if (!cards.length || !figure) return;
 
