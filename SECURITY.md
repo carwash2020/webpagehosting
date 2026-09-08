@@ -112,6 +112,17 @@ protections now, each verified working directly rather than assumed:
   zero directly against GitHub's own Code Scanning API after a fresh
   scan, not assumed from local testing. See the commit history around
   this date for the full, itemized breakdown of each finding and fix.
+- **Two more real findings, 2026-09-08:** a DOM-text-reinterpreted-as-HTML
+  alert in `runway-dashboard.html`'s chart (an inline `onclick` built from
+  an escaped-but-not-actually-safe month string) and a genuine
+  credential-excerpt leak in `dev-tools.html`'s header-diagnostics
+  helper (echoed back real characters of `SUPABASE_ANON_KEY`/a live auth
+  token into a log that gets persisted and synced across devices). Both
+  fixed; a third, longer-standing alert on the same client-error-log
+  sink (real, tested redaction that a generic static-analysis sanitizer
+  model can't verify) was closed with a documented inline suppression
+  instead. See `DISASTER_RECOVERY.md` Scenario 15 for what actually
+  worked here vs. what looked like a fix but wasn't.
 
 ## Known, accepted gaps (not oversights)
 

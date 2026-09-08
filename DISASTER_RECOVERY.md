@@ -29,6 +29,14 @@ doesn't satisfy `auth.role()`) that made a missing DELETE policy look
 like it was working when it silently wasn't. Also fixed the panel
 count (23, not 22, after a new Dev Tools test panel).
 
+**Updated 2026-09-08** with Scenario 15 (a CodeQL "Clear text storage of
+sensitive information" alert that kept reappearing no matter how much
+the flagged code was sanitized -- what actually worked instead was
+severing the dataflow, plus a real, confirmed inconsistency between a
+PR's own CodeQL check and the repo's Security tab worth knowing about
+before trusting either one blindly) and refreshed cache-bust/CACHE_NAME
+version numbers.
+
 **The two accounts that matter:** `connor@triplehenterprisesllc.biz` and
 `steve@triplehenterprisesllc.biz`, both real Supabase Auth accounts.
 Losing access to *both* is the actual worst case -- see the very last
@@ -799,15 +807,15 @@ documented rule requires you to change, the test will break every time
 someone is correct. Assert the invariant, not the snapshot. And never
 assert what CI is doing without opening the Actions tab.
 
-## Current cache-bust / precache version numbers (as of 2026-09-07)
+## Current cache-bust / precache version numbers (as of 2026-09-08)
 
 These exist so a future session can sanity-check "is this stale" without
 re-deriving it. They will be wrong again soon — that's expected. Confirm
 the real value in each file directly.
 
-- `styles.css` cache-bust stamp: `?v=202609070100`
-- `service-worker.js` (Workspace/tools) `CACHE_NAME`: `th-workspace-v63`
-- `portal/service-worker.js` `CACHE_NAME`: `th-portal-v15`
+- `styles.css` cache-bust stamp: `?v=202609081652`
+- `service-worker.js` (Workspace/tools) `CACHE_NAME`: `th-workspace-v114`
+- `portal/service-worker.js` `CACHE_NAME`: `th-portal-v47`
 
 **The rule that governs all three, restated because it keeps causing
 real incidents:** any file in a service worker's `PRECACHE_URLS` that
@@ -953,3 +961,66 @@ git push --force-with-lease origin main
 
 Force-pushing `main` is disruptive if anyone else has pulled. Reverting
 the specific merge commit(s) is the gentler option where sufficient.
+
+## Scenario 15: A CodeQL "Clear text storage of sensitive information" alert won't clear no matter how much the code is sanitized
+
+Hit for real, 2026-09-08, on `tools/tools-media-sharing.js`'s
+`logClientError()` (alert #53) and `tools/dev-tools.html`'s
+`describeHeaderValue()` (alert #57) — worth knowing before spending a
+whole session on the same dead end again.
+
+**What doesn't work:** widening a custom redaction/sanitizer function
+(more `.replace()` patterns, stripping more characters, returning only
+`.length`/`.charCodeAt()` instead of the raw string). CodeQL's taint
+tracking for this rule does not credit a custom string transform as
+clearing taint — a value is either untouched by the flow at all, or it
+stays "tainted" through arbitrary string operations, slicing, and even
+reduction to a derived number. Two separate, real attempts at this
+(widening `redactSensitiveText()`, then stripping the literal
+characters `describeHeaderValue()` echoed back) both still showed the
+identical alert on CI's next scan, on the same sink line, despite the
+underlying runtime behavior genuinely being safe by then (verified with
+tests executing the real functions against hostile/credential-shaped
+inputs).
+
+**What actually worked:** severing the dataflow entirely — never
+letting the sensitive-sourced value (or anything derived from it) reach
+the persisted-storage call at all. For `describeHeaderValue()`
+specifically: the diagnostic string built from real credentials
+(`SUPABASE_ANON_KEY`, a live Authorization token) now only ever reaches
+`console.warn()` (ephemeral, local, never persisted or synced) instead
+of `logClientError()`'s message argument (which does get persisted to
+`localStorage` and synced across devices). Once nothing tainted flowed
+into the sink at all, CodeQL's own rescan reported zero new alerts.
+
+**Alert #53's own flow (window.onerror's message/stack) is different**
+in one real way: the redacted text genuinely needs to be persisted for
+the client-error-log feature to have any value at all — there's no
+free "log it locally instead" substitute the way there was for a
+one-off diagnostic helper. That alert was closed with a documented
+inline suppression comment
+(`// codeql[js/clear-text-storage-of-sensitive-data]`) instead, on the
+reasoning that the actual redaction is real and tested (see
+`tests/tools/tools-media-sharing-error-log-redaction.test.js`), even
+though CodeQL's static model can't verify that. **This is a weaker
+guarantee than severing the dataflow** — inline suppression comments
+have shown real inconsistency on this repo (see below) — so if this
+alert ever resurfaces as open on the Security tab, don't assume the
+suppression comment is doing anything; verify directly (a repo admin
+manually dismissing it in the GitHub Security UI, with a reason like
+"used in tests," is the more reliable fallback).
+
+**A real, confirmed inconsistency with inline suppression comments on
+this repo:** this repo's CodeQL is configured via GitHub's **Default
+Setup** (a dynamically-managed scan — `dynamic/github-code-scanning/codeql`
+in the Actions tab, not a checked-in `.github/workflows/*.yml` file),
+not a custom Advanced-Setup workflow. A PR-level CI check answers "did
+this diff introduce a new alert," which is a **different question**
+from "is this alert marked closed on the repo's Security tab" — the
+latter only updates from a fresh scan of `main` itself (confirmed:
+GitHub Pages' automated `Push on main` CodeQL run, visible in the
+Actions tab under the dynamic `CodeQL` workflow, is what actually
+matters for the Security tab, not the PR branch's own scan). Don't
+conflate "PR's CodeQL check went green" with "the alert is now closed
+on `main`" — check the Security tab directly, after the post-merge scan
+has had a few minutes to run and re-index.

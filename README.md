@@ -33,6 +33,7 @@ The public site uses one shared stylesheet (`styles.css`, repo root). The tool s
 - [Deploying changes](#deploying-changes)
 - [Security, and where the rest of the docs live](#security-and-where-the-rest-of-the-docs-live)
 - [What changed, 2026-09-04 through 2026-09-07](#what-changed-2026-09-04-through-2026-09-07)
+- [What changed, 2026-09-08](#what-changed-2026-09-08)
 
 ## ⚠️ Read this before touching deployment at all
 
@@ -243,7 +244,7 @@ see `.github/workflows/test.yml`) verifies every reference matches;
 `npm run fix-versions` is the same script, run with `--fix-versions`,
 correcting instead of just reporting.
 
-`npm test` runs the full suite (1055 tests as of 2026-09-07) — organized under `tests/` into `booking/`, `sync/`, `dev-tools/`, `design/`, `content-quality/`, and `workspace/` subfolders by what each test actually covers, rather than one flat folder of files. The script itself is just `cd tests && node --test`; Node's test runner auto-discovers every `*.test.js` file recursively with no arguments needed, so a new test file placed anywhere under `tests/` runs automatically — nothing to add to `package.json` by hand.
+`npm test` runs the full suite (1538 tests as of 2026-09-08, all passing) — organized under `tests/` into subfolders (`booking/`, `sync/`, `dev-tools/`, `design/`, `content-quality/`, `tools/`, `workspace/`, `portal/`, `seo/`, `site-wide/`, `edge-functions/`, and more as new areas get covered) by what each test actually covers, rather than one flat folder of files. The script itself is just `cd tests && node --test`; Node's test runner auto-discovers every `*.test.js` file recursively with no arguments needed, so a new test file placed anywhere under `tests/` runs automatically — nothing to add to `package.json` by hand.
 
 ## Deploying changes
 
@@ -329,3 +330,34 @@ triggers the whole page to auto-zoom) was found and fixed across
 public booking form — not just the one page it was originally reported
 on. A repo-wide test (`tests/site-wide/mobile-zoom-fix.test.js`) now
 guards against this specific bug class reappearing anywhere.
+
+## What changed, 2026-09-08
+
+A Master Audit pass (W01–W24 work items) plus direct visual feedback on
+the homepage, closing out with real bug fixes and a full CodeQL sweep.
+
+### Homepage/landing-page redesign, in order
+
+| Thing | Notes |
+|---|---|
+| Symptom-first triage entry point, leave-behind job sheet, review wall (was a carousel), flat orange primary CTA | Master Audit W08/W14/W15/W16 |
+| Live "next opening" pill beside the open/closed indicator | W17 |
+| Shared PDF layout renderer for invoice/quote/contract | W18 |
+| Rebuild before/after slider lit up as a real second "loud moment"; a real closing screen instead of fading into the footer | W19/M02, W20/M04 |
+| Service-area diagram activated, then redesigned twice more on direct feedback — dropped the concentric "orbit ring" background, re-plotted every city by angle+radius with real angular separation | W21/M03, then two rounds of polish |
+| Homepage trimmed for length: compact `#areas` links, `#schedule`/`#contact` merged into one section, `.btn.blue` flattened (a leftover glossy gradient) | Two length-reduction audits |
+| Review cards given a fixed, line-clamped height so the wall reads as a matched set; triage appliance rows got real icons; modals/lightbox/disclosures/the open-status dot all animate now (native `::details-content`, `@starting-style`) | Round-3 visual polish, all from direct screenshot feedback |
+| "From the blog" teaser section + a contextual in-prose link from `#honest` to a specific post | SEO fix — no page on the site ever linked directly to an individual blog post before this, only to `/blog/` itself |
+
+### Real bugs found and fixed
+
+- **Money Owed / invoice balance showing wrong** (`tools/workspace.html`, `tools/runway-dashboard.html`): `invoice.total` is subtotal + a percentage tax, which almost never lands on a whole number of cents — comparisons now happen in whole cents everywhere, and `invoice-generator.html` rounds tax/total to the nearest cent at the source.
+- **Landing pages missing their 4th trust-badge card**: the `.trust-grid` CSS went 4-column when `index.html` got a "Licensed & Insured" card; the 5 landing pages never got the matching 4th card, leaving a blank grid cell.
+
+### CodeQL: both remaining alerts resolved, one of them a real find
+
+- **Alert #57** ("Clear text storage of sensitive information," found *during this same sweep*, not pre-existing): `dev-tools.html`'s `describeHeaderValue()` diagnostic helper — called with real credentials (`SUPABASE_ANON_KEY`, a live Authorization token) to debug a byte-encoding fetch error — was echoing back a real excerpt of whatever it was describing. A genuine leak, fixed by severing the dataflow: the diagnostic now only reaches `console.warn()`, never the persisted, cross-device-synced client error log.
+- **Alert #53** ("Clear text storage of sensitive information," `logClientError()`'s error/stack capture): the redaction is real and tested, but CodeQL's static model doesn't credit a custom sanitizer as clearing taint. Closed with a documented inline suppression rather than further sanitization, since further sanitization was already proven not to satisfy it. See `DISASTER_RECOVERY.md` Scenario 15 for the full "what actually worked vs. what didn't" writeup, including a real inconsistency between a PR's own CodeQL check and the repo's Security tab.
+
+Full detail, exact commits, and version-number history: `git log`, and the
+PR descriptions for #188 through #194.
