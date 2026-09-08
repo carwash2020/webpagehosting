@@ -500,7 +500,13 @@
 // the precache list -- W18/U15: one shared masthead/footer/totals-
 // block renderer for invoice-generator.html, job-detail.html's job
 // sheet, and contract-generator.html (all three also changed to use it).
-const CACHE_NAME = 'th-workspace-v101';
+// Bumped 2026-09-08 (v101 -> v102): /styles.css and /triage.js changed
+// -- regression-recovery fix: the homepage triage section's 20 flat
+// symptom cards and the reviews wall's 7 always-visible cards both
+// grew far more than intended during the improvement session (measured
+// directly against the pre-session baseline); both now group their
+// extra content into closed-by-default <details> disclosures.
+const CACHE_NAME = 'th-workspace-v102';
 const PRECACHE_URLS = [
   '/tools/workspace.html', '/tools/job-tracker.html', '/tools/invoice-generator.html', '/tools/contract-generator.html',
   '/tools/calendar.html', '/tools/route-planner.html', '/tools/review-request.html', '/tools/contact-card.html',

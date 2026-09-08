@@ -1412,9 +1412,30 @@
     margin:0 auto;
     display:grid;
     grid-template-columns:repeat(2,1fr);
+    align-items:start;
     gap:20px;
   }
   @media (max-width:760px){.reviews-wall{grid-template-columns:1fr;}}
+  /* Regression-recovery fix (2026-09-08): align-items:start above stops
+     a short quote from stretching to match the tallest card in its
+     grid row -- real, measured height this section didn't need. The
+     last 3 of 7 cards live in this collapsed-by-default disclosure,
+     same zero-JS-needed <details> pattern used for the triage rows. */
+  .reviews-toggle{max-width:900px; margin:18px auto 0;}
+  .reviews-toggle summary{
+    font-family:var(--font-ui);
+    font-size:13.5px;
+    color:var(--blue-text);
+    cursor:pointer;
+    padding:4px 0;
+    list-style:none;
+    text-align:center;
+  }
+  .reviews-toggle summary::-webkit-details-marker{display:none;}
+  .reviews-toggle summary::before{content:'+ '; color:var(--text-dim);}
+  .reviews-toggle[open] summary::before{content:'\2212 ';}
+  .reviews-toggle summary:hover{color:var(--white);}
+  .reviews-toggle .reviews-wall-more{margin-top:20px;}
   .review-card{
     background:var(--bg-panel);
     border:1px solid var(--border);
@@ -2198,10 +2219,44 @@
      Small cards rather than pills since each one carries two lines
      (which appliance, which symptom), not one short label. */
   .triage-symptom-grid{
+    display:flex;
+    flex-direction:column;
+    gap:8px;
+  }
+  /* Regression-recovery fix (2026-09-08): the 20 cards above used to
+     render flat in one grid, which alone accounted for +336px of this
+     section's growth during the improvement session (measured
+     directly, 490px -> 826px). Grouped into 5 collapsible rows below,
+     one per appliance, closed by default -- same zero-JS-needed
+     <details> pattern already used for .triage-browse-toggle. This
+     class now lives on the row's own card container instead of the
+     outer grid. */
+  .triage-symptom-row-cards{
     display:grid;
     grid-template-columns:repeat(auto-fill, minmax(180px, 1fr));
     gap:10px;
+    padding:0 16px 16px;
   }
+  .triage-appliance-row{
+    border:1px solid var(--border);
+    border-radius:10px;
+    background:var(--bg-panel-3);
+  }
+  .triage-appliance-row summary{
+    font-family:var(--font-ui);
+    font-size:14.5px;
+    font-weight:600;
+    letter-spacing:.3px;
+    color:var(--white);
+    cursor:pointer;
+    padding:14px 16px;
+    list-style:none;
+    display:flex; align-items:center; justify-content:space-between; gap:10px;
+  }
+  .triage-appliance-row summary::-webkit-details-marker{display:none;}
+  .triage-appliance-row summary::after{content:'+'; color:var(--text-dim); font-size:18px; line-height:1;}
+  .triage-appliance-row[open] summary::after{content:'\2212';}
+  .triage-appliance-row summary:hover{color:var(--orange-text);}
   .triage-symptom-card{
     font-family:var(--font-ui);
     text-align:left;
