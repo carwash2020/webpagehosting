@@ -515,7 +515,13 @@
 // of the page's flattest; added an ambient glow plus an interactive
 // spotlight behind the exploded-diagram figure driven by the same --p
 // custom property already assembling/disassembling its parts.
-const CACHE_NAME = 'th-workspace-v104';
+// Bumped 2026-09-08 (v104 -> v105): /styles.css and /triage.js changed
+// again -- W20/M04: added a real closing screen before the footer (the
+// mission statement, one Call button, the live status/next-opening
+// lines) instead of fading straight from the contact cards into it;
+// triage.js's live-status code now populates every matching element on
+// the page, not just the hero's own.
+const CACHE_NAME = 'th-workspace-v105';
 const PRECACHE_URLS = [
   '/tools/workspace.html', '/tools/job-tracker.html', '/tools/invoice-generator.html', '/tools/contract-generator.html',
   '/tools/calendar.html', '/tools/route-planner.html', '/tools/review-request.html', '/tools/contact-card.html',

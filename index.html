@@ -60,7 +60,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Anton&family=Archivo:wght@400..700&family=Newsreader:ital,opsz,wght@0,6..72,300..700;1,6..72,300..600&family=Oswald:wght@200..700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="styles.css?v=202609081330">
+<link rel="stylesheet" href="styles.css?v=202609081430">
 <script type="application/ld+json">
 {
   "@context": "https://schema.org",
@@ -320,7 +320,7 @@
           </a>
         </div>
         <p class="hero-motto" data-reveal><span>Honesty.</span> <span>Hustle.</span> <span>Helpfulness.</span></p>
-        <p class="open-status" id="openStatus" hidden><span class="dot"></span><span id="openStatusText"></span></p>
+        <p class="open-status" id="openStatus" hidden><span class="dot"></span><span id="openStatusText" class="open-status-text"></span></p>
         <!-- U04 fix (High-Impact Upgrades, 2026-09-08): the real next
              available slot from the actual booking system, beside the
              pill above -- not shown at all if that lookup fails or is
@@ -1185,6 +1185,28 @@
           </div>
         </div>
       </div>
+    </div>
+  </section>
+
+  <!-- W20/M04 fix (Master Audit, 2026-09-08): a before/after audit
+       measured the page fading straight from the contact cards into the
+       plain footer, with no deliberate final moment -- "the close" was
+       one of the three flat spots it named. One lit, full-height screen:
+       the real mission statement in large type, the one Call button
+       (matching U01's single-primary-action rule), and the same live
+       open/closed status + next-opening line the hero already shows,
+       populated by the same shared triage.js code (no second, driftable
+       copy of that logic). -->
+  <section id="closing" class="closing">
+    <div class="wrap closing-inner">
+      <p class="closing-eyebrow">Triple H Enterprises</p>
+      <h2 class="closing-promise">&ldquo;Leaving customers better than they were found.&rdquo;</h2>
+      <a href="tel:+14354141667" class="btn orange closing-cta">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
+        Call <span class="js-phone-text">(435) 414-1667</span>
+      </a>
+      <p class="open-status closing-open-status" hidden><span class="dot"></span><span class="open-status-text"></span></p>
+      <p class="next-opening closing-next-opening" hidden></p>
     </div>
   </section>
 
@@ -2783,6 +2805,6 @@
 
 
 
-<script src="/triage.js?v=9b14fb6cf5" defer></script>
+<script src="/triage.js?v=ee5e1228d1" defer></script>
 </body>
 </html>
