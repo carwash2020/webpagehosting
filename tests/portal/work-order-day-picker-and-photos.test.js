@@ -61,7 +61,7 @@ test('work-orders.html loads the shared business-hours file again (2026-09-04) -
   // comment) -- removed when the day-picker was removed, needed
   // again now that a real availability picker replaced the plain
   // booking-page link.
-  assert.match(html, /<script src="\/business-hours\.js\?v=\d+"><\/script>/);
+  assert.match(html, /<script src="\/business-hours\.js\?v=[a-zA-Z0-9]+"><\/script>/);
 });
 
 // ---- photo upload ----

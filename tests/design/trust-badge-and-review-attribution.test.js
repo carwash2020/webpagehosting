@@ -72,7 +72,7 @@ test('no review invents a reviewer name, initial, or photo -- every one stays an
 });
 
 test('the styles.css cache-bust stamp was bumped and stayed in sync across every referencing page', () => {
-  const stampMatch = HTML.match(/styles\.css\?v=(\d+)/);
+  const stampMatch = HTML.match(/styles\.css\?v=([a-zA-Z0-9]+)/);
   assert.ok(stampMatch, 'expected a ?v= stamp on styles.css');
   const stamp = stampMatch[1];
   // execFileSync with an argument array, not execSync with an
@@ -89,7 +89,7 @@ test('the styles.css cache-bust stamp was bumped and stayed in sync across every
   assert.ok(referencingFiles.length >= 30, `expected many pages to reference styles.css, found ${referencingFiles.length}`);
   for (const file of referencingFiles) {
     const content = fs.readFileSync(file, 'utf8');
-    const matches = [...content.matchAll(/styles\.css\?v=(\d+)/g)];
+    const matches = [...content.matchAll(/styles\.css\?v=([a-zA-Z0-9]+)/g)];
     for (const m of matches) {
       assert.equal(m[1], stamp, `${file} references styles.css?v=${m[1]}, expected the same stamp (${stamp}) as every other page`);
     }

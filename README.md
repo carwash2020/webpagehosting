@@ -361,3 +361,60 @@ the homepage, closing out with real bug fixes and a full CodeQL sweep.
 
 Full detail, exact commits, and version-number history: `git log`, and the
 PR descriptions for #188 through #194.
+
+## What changed, 2026-09-08 (later the same day) — code-health pass
+
+A direct code-health/grading pass across the public site, internal tools,
+and the site's longevity/owner-dependency posture. The homepage's overall
+content and structure (word count, section order, the teardown slider, the
+before/after reveal) were explicitly left alone per direct instruction —
+only the triage section's own weight was in scope there.
+
+### Homepage: `#triage` shrunk, not moved
+
+The "Is it worth fixing?" section used to carry two separate ways to
+browse by appliance: the symptom-first grid (grouped into closed-by-default
+rows per appliance) *and* a second, older step-by-step "pick an appliance,
+then pick a symptom" picker, demoted into a collapsed disclosure below it.
+Both did the same job. The older picker (and the `appEl`/`symEl`/`symStep`/
+`selectAppliance()` plumbing in `triage.js` it needed) was removed outright
+— real duplicate page weight for zero added function — rather than
+collapsed further. `triage.js` is shared by the homepage and all 5 landing
+pages, so this one fix applies everywhere consistently. Tests updated:
+`tests/content-quality/triage-symptom-grid.test.js`,
+`tests/design/round-3-visual-polish.test.js`.
+
+### Cache-version bumping is now one command, not three manual rules
+
+CONTINUE-HERE.md's three cache-bust rules (bump the shared `styles.css?v=`
+stamp everywhere, bump `service-worker.js`'s `CACHE_NAME`, bump
+`portal/service-worker.js`'s `CACHE_NAME`) used to each require a human to
+notice a file changed and compute the right new value by hand — exactly
+the class of mistake that's bitten this project repeatedly. `styles.css`
+(plus `triage.js`, `business-hours.js`, `site-motion.js` — the root-level
+files shared across root/`tools/`/`portal/`/`blog/`) carried a hand-picked
+timestamp checked only for *internal* agreement, never against the file's
+real content; a real gap this pass found directly, `blog/`'s 4 pages
+weren't covered by any existing check at all and were caught only by a
+failing test, not by `check-consistency` itself.
+
+`scripts/check-consistency.js` now:
+- Hashes those 4 shared files' real content and rewrites every `?v=`
+  reference across all 4 directories to match, the same mechanism every
+  other shared tools/portal file already used, just no longer confined to
+  a single directory (`checkGlobalSharedFileFreshness()`/
+  `fixGlobalSharedFiles()`).
+- Stores a `// precache-fingerprint:HASH` comment next to each service
+  worker's `CACHE_NAME` — a hash of every precached file's real current
+  content, in list order. A stale fingerprint (a precached file changed
+  since it was last recorded) now auto-bumps the version number and
+  updates the comment (`checkCacheFingerprint()`/`fixCacheFingerprint()`),
+  instead of relying on a human to remember.
+
+`npm run fix-versions` runs all of this in one pass; `npm run
+check-consistency` (already run on every push) fails the build if any of
+it drifts. A missed bump now degrades to a failed CI check, not a silent
+stale deploy. `blog/` was added to the scanned directories as part of this
+fix. Updated the now-stale `\d+`-only regexes in
+`tests/design/trust-badge-and-review-attribution.test.js` and 5 portal/
+dev-tools tests that assumed the old timestamp-only format.

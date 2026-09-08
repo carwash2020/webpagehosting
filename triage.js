@@ -12,7 +12,7 @@
    looked at. The dryer entries match what the blog already says publicly.
 
    Self-contained and side-effect free: it does nothing at all unless the
-   page contains #triageAppliances, so it is safe to load anywhere. */
+   page contains #triageSymptomGrid, so it is safe to load anywhere. */
 // ---------- symptom triage ----------
   // Qualitative on purpose: what a symptom COMMONLY indicates. No prices,
   // no percentages, no invented statistics, and every path ends at "we'd
@@ -86,112 +86,57 @@
       range: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8" cy="7.5" r="1"/><circle cx="16" cy="7.5" r="1"/><circle cx="8" cy="11.5" r="1"/><circle cx="16" cy="11.5" r="1"/><rect x="6" y="14" width="12" height="6" rx="1"/></svg>',
     };
 
-    const appEl = document.getElementById('triageAppliances');
-    const symStep = document.getElementById('triageSymptomStep');
-    const symEl = document.getElementById('triageSymptoms');
+    const gridEl = document.getElementById('triageSymptomGrid');
     const result = document.getElementById('triageResult');
     const verdict = document.getElementById('triageVerdict');
     const body = document.getElementById('triageBody');
-    if (!appEl || !symEl || !result) return;
+    if (!gridEl || !result) return;
 
-    function chip(text, onClick) {
-      const b = document.createElement('button');
-      b.type = 'button';
-      b.className = 'triage-chip';
-      b.textContent = text;
-      b.setAttribute('aria-pressed', 'false');
-      b.addEventListener('click', onClick);
-      return b;
-    }
-
-    function clearPressed(scope) {
-      scope.querySelectorAll('.triage-chip').forEach(function (b) {
-        b.setAttribute('aria-pressed', 'false');
-      });
-    }
-
-    // Pulled out of the per-appliance click handler below (2026-09-08,
-    // U02) so the symptom-first entry grid can show a result directly,
-    // without needing to simulate two clicks through the step-by-step
-    // picker to get the exact same effect.
     function showSymptomResult(s) {
       verdict.textContent = s.v;
       body.textContent = s.a;
       result.hidden = false;
     }
 
-    function selectAppliance(key, applianceBtn) {
-      clearPressed(appEl);
-      if (applianceBtn) applianceBtn.setAttribute('aria-pressed', 'true');
-      symEl.innerHTML = '';
-      DATA[key].symptoms.forEach(function (s) {
-        symEl.appendChild(chip(s.q, function () {
-          clearPressed(symEl);
-          this.setAttribute('aria-pressed', 'true');
-          showSymptomResult(s);
-        }));
-      });
-      symStep.hidden = false;
-    }
-
-    const applianceButtons = {};
+    // Shrink pass (2026-09-08): the section used to also carry a separate
+    // step-by-step "appliance, then symptom" picker below this grid --
+    // but that picker and this grid now do the exact same job (browse by
+    // appliance, then pick a symptom), just with two different UIs. That
+    // duplication was real page weight for zero added function, so the
+    // old picker (and the appEl/symEl/symStep/selectAppliance() plumbing
+    // it needed) was removed outright rather than collapsed further.
+    // Every card here now handles its own pressed state directly instead
+    // of driving a second hidden picker to get there.
     Object.keys(DATA).forEach(function (key) {
-      const btn = chip(DATA[key].label, function () {
-        selectAppliance(key, btn);
-        result.hidden = true;
-      });
-      applianceButtons[key] = btn;
-      appEl.appendChild(btn);
-    });
-
-    // U02 fix (High-Impact Upgrades, 2026-09-08): "Customers do not
-    // arrive thinking 'appliance repair'; they arrive thinking 'it
-    // won't drain'." A flat grid of the same 20 symptoms already above,
-    // in the customer's own words, as the real entry point -- each one
-    // jumps straight to its result. The step-by-step appliance picker
-    // above stays exactly as it was, for anyone who'd rather browse by
-    // appliance first; this doesn't touch or duplicate its logic, only
-    // drives it programmatically to land on the same result a manual
-    // two-click path would reach.
-    // Regression-recovery fix (2026-09-08): 20 flat cards in one grid
-    // alone accounted for +336px of this section's growth during the
-    // improvement session (measured directly, 490px -> 826px, +69%).
-    // Grouped into 5 collapsible rows, one per appliance, closed by
-    // default -- the same zero-JS-needed <details> disclosure already
-    // used for the appliance-first picker below. Every card, its click
-    // handler, and its content are otherwise unchanged.
-    const gridEl = document.getElementById('triageSymptomGrid');
-    if (gridEl) {
-      Object.keys(DATA).forEach(function (key) {
-        const row = document.createElement('details');
-        row.className = 'triage-appliance-row';
-        const summary = document.createElement('summary');
-        const heading = document.createElement('span');
-        heading.className = 'triage-appliance-heading';
-        heading.innerHTML = '<span class="triage-appliance-icon">' + APPLIANCE_ICONS[key] + '</span><span>' + DATA[key].label + '</span>';
-        summary.appendChild(heading);
-        row.appendChild(summary);
-        const rowCards = document.createElement('div');
-        rowCards.className = 'triage-symptom-row-cards';
-        DATA[key].symptoms.forEach(function (s) {
-          const btn = document.createElement('button');
-          btn.type = 'button';
-          btn.className = 'triage-symptom-card';
-          btn.innerHTML = '<span class="triage-symptom-card-q">' + s.q + '</span>';
-          btn.addEventListener('click', function () {
-            selectAppliance(key, applianceButtons[key]);
-            const symBtn = Array.prototype.find.call(symEl.querySelectorAll('.triage-chip'), function (b) { return b.textContent === s.q; });
-            clearPressed(symEl);
-            if (symBtn) symBtn.setAttribute('aria-pressed', 'true');
-            showSymptomResult(s);
-            result.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      const row = document.createElement('details');
+      row.className = 'triage-appliance-row';
+      const summary = document.createElement('summary');
+      const heading = document.createElement('span');
+      heading.className = 'triage-appliance-heading';
+      heading.innerHTML = '<span class="triage-appliance-icon">' + APPLIANCE_ICONS[key] + '</span><span>' + DATA[key].label + '</span>';
+      summary.appendChild(heading);
+      row.appendChild(summary);
+      const rowCards = document.createElement('div');
+      rowCards.className = 'triage-symptom-row-cards';
+      DATA[key].symptoms.forEach(function (s) {
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'triage-symptom-card';
+        btn.setAttribute('aria-pressed', 'false');
+        btn.innerHTML = '<span class="triage-symptom-card-q">' + s.q + '</span>';
+        btn.addEventListener('click', function () {
+          gridEl.querySelectorAll('.triage-symptom-card').forEach(function (b) {
+            b.setAttribute('aria-pressed', 'false');
           });
-          rowCards.appendChild(btn);
+          btn.setAttribute('aria-pressed', 'true');
+          showSymptomResult(s);
+          result.scrollIntoView({ behavior: 'smooth', block: 'center' });
         });
-        row.appendChild(rowCards);
-        gridEl.appendChild(row);
+        rowCards.appendChild(btn);
       });
-    }
+      row.appendChild(rowCards);
+      gridEl.appendChild(row);
+    });
   })();
 
   // ---------- live open / closed ----------

@@ -22,19 +22,33 @@ and this file are the actual current sources of truth.
 ## The three rules that will bite you
 
 These are not style preferences. Each one has already caused a real
-failure on this project.
+failure on this project. **As of 2026-09-08, all three are now handled
+by one command: `npm run fix-versions`.** They used to require a human
+to remember and compute the right value by hand, one rule at a time —
+that's exactly what kept violating them. Read on for why each rule
+exists; you no longer need to do any of it manually, just run the
+command and let `check-consistency` (which now checks all three, and
+runs on every push) confirm it.
 
 ### 1. Bump the stylesheet cache stamp, or your CSS never ships
-Every public page references `/styles.css?v=TIMESTAMP`. GitHub Pages
-sits behind Fastly, which caches per-URL independently of the browser —
-a hard refresh and incognito both still get the old file. If you change
-`styles.css` and do not bump that stamp in **every** referencing file,
+Every public page references `/styles.css?v=HASH` (root, `tools/`,
+`portal/`, and `blog/` alike). GitHub Pages sits behind Fastly, which
+caches per-URL independently of the browser — a hard refresh and
+incognito both still get the old file. If you change `styles.css` and
+the stamp referencing it doesn't change in **every** referencing file,
 your change is live on the server and reaching nobody.
 
-Current value: check `grep -n "styles.css?v=" index.html` directly — it
-changes every time `styles.css` does, and this note will be stale the
-moment you read it. `npm run fix-versions` handles this for you; see
-below.
+`styles.css` (and `triage.js`/`business-hours.js`/`site-motion.js`, the
+other root-level files shared across directories) used to carry a
+hand-picked timestamp instead of a content hash, checked only for
+internal agreement (do all tool pages match each other), never against
+the file's real content. That's why this bit repeatedly. It's now a
+real sha256-derived hash of the file's actual current bytes, the same
+mechanism every other shared tools/portal file already used, just no
+longer confined to a single directory — `npm run fix-versions`
+recomputes and rewrites every reference across root/tools/portal/blog in
+one pass, and `check-consistency` fails the build if any reference is
+stale relative to the real file.
 
 This exact mistake cost a full round-trip earlier: a merged PR appeared
 to do nothing, and the code was fine — nothing was fetching it.
@@ -49,9 +63,16 @@ revalidation**, and both precache `/styles.css`.
 If you change a file listed in that worker's `PRECACHE_URLS` and do not
 bump its `CACHE_NAME`, **installed app users are pinned to the old copy
 indefinitely.** Bumping the name purges every stale entry on activate.
-This has been violated more than once across this project's history,
-which is why `npm run check-consistency` now checks both workers'
-`PRECACHE_URLS` for drift automatically on every push, and why
+This has been violated more than once across this project's history.
+
+Each `CACHE_NAME` now carries a trailing `// precache-fingerprint:HASH`
+comment — a hash of every precached file's real current content, in
+list order. `npm run fix-versions` recomputes that fingerprint and, if
+it doesn't match what's stored, bumps the version number and updates
+the comment automatically; `check-consistency` fails the build if a
+precached file changed and the stored fingerprint was never refreshed.
+`npm run check-consistency` also still checks both workers'
+`PRECACHE_URLS` for missing/stale file entries the same as before, and
 `portal/portal-update.js` exists (see below) as a way for an installed
 app to actually pick up a bumped `CACHE_NAME` without waiting for the
 user to happen to close and reopen it.

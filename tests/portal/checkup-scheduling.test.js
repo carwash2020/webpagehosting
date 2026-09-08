@@ -29,7 +29,7 @@ test('the check-up scheduling flow shares business hours and timezone from the s
   // manually if business hours or timezone ever change." Now there is
   // one shared /business-hours.js file, and what matters is that this
   // page hasn't grown its own local copy back.
-  assert.match(html, /<script src="\/business-hours\.js\?v=\d+"><\/script>/);
+  assert.match(html, /<script src="\/business-hours\.js\?v=[a-zA-Z0-9]+"><\/script>/);
   assert.doesNotMatch(html, /const HOURS_BY_WEEKDAY\s*=/);
   assert.doesNotMatch(html, /const BUSINESS_TIMEZONE\s*=/);
 

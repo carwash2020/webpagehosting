@@ -160,7 +160,7 @@ test('the scheduling flow shares business hours and timezone from one file, not 
     // longer loads a file nothing on it uses.
   ]) {
     const src = fs.readFileSync(filePath, 'utf8');
-    assert.match(src, /<script src="\/business-hours\.js\?v=\d+"><\/script>/, `${label}: should load the shared business-hours file`);
+    assert.match(src, /<script src="\/business-hours\.js\?v=[a-zA-Z0-9]+"><\/script>/, `${label}: should load the shared business-hours file`);
     assert.doesNotMatch(src, /const HOURS_BY_WEEKDAY\s*=/, `${label}: should not define its own local copy of HOURS_BY_WEEKDAY`);
     assert.doesNotMatch(src, /const BUSINESS_TIMEZONE\s*=/, `${label}: should not define its own local copy of BUSINESS_TIMEZONE`);
   }

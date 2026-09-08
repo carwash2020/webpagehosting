@@ -28,6 +28,7 @@ const TOOLS_DIR = path.join(__dirname, '..', 'tools');
 // client.auth.getSession(), not this app's own requireAuth()/auth.js), so
 // applying those checks there would mean asserting portal pages look like
 // tools pages in ways they were never meant to.
+const ROOT_DIR = path.join(__dirname, '..');
 const PORTAL_DIR = path.join(__dirname, '..', 'portal');
 // portal-app.css/.js intentionally use the SAME manual-timestamp cache-bust
 // convention as the public site's styles.css (bumped by a human alongside a
@@ -424,8 +425,165 @@ function fixVersions(dir) {
   return changedCount;
 }
 
+// ---------------------------------------------------------------------------
+// GLOBAL SHARED FILES (root-level, referenced by absolute path from all of
+// root/, tools/, and portal/) -- styles.css, triage.js, business-hours.js,
+// site-motion.js.
+//
+// detectSharedScripts()/checkVersionFreshness()/fixVersions() above only
+// ever look for a shared file's references WITHIN the one directory being
+// scanned, because every other shared file (tools-effects.js, sync.js,
+// portal-app.js, ...) only lives in, and is only referenced from, tools/ OR
+// portal/, never both and never root. styles.css breaks that assumption --
+// it's loaded from root pages, every tools/ page, and every portal/ page
+// all at once -- and it was, until this fix, the ONE meaningfully-shared
+// file on the whole site with NO automatic freshness check at all: it used
+// a human-picked timestamp instead of a content hash specifically so it
+// could be bumped once and referenced identically everywhere, but nothing
+// ever confirmed that stamp actually matched the file's real content, only
+// that every tools/ page agreed with every other tools/ page (portal/ and
+// root weren't even compared). triage.js/business-hours.js/site-motion.js
+// were worse off still: root-only files with zero coverage of any kind.
+//
+// This closes that gap by hashing each of these four files once and
+// rewriting every reference to it, in any of the three directories, to
+// that one real hash -- the same automatic, no-judgment-call mechanism
+// every other shared file already gets, just no longer scoped to a single
+// directory.
+const GLOBAL_SHARED_FILES = ['styles.css', 'triage.js', 'business-hours.js', 'site-motion.js'];
+const BLOG_DIR = path.join(__dirname, '..', 'blog');
+const SCAN_DIRS = [ROOT_DIR, TOOLS_DIR, PORTAL_DIR, BLOG_DIR];
+
+function htmlFilesIn(dir) {
+  return fs.readdirSync(dir).filter(f => f.endsWith('.html')).map(f => path.join(dir, f));
+}
+
+function checkGlobalSharedFileFreshness(problems) {
+  for (const file of GLOBAL_SHARED_FILES) {
+    const realHash = currentContentHash(ROOT_DIR, file);
+    if (realHash === null) continue; // file doesn't exist -- not this check's job to notice that
+    const pattern = new RegExp(file.replace('.', '\\.') + '\\?v=([a-zA-Z0-9]+)');
+    for (const dir of SCAN_DIRS) {
+      for (const htmlPath of htmlFilesIn(dir)) {
+        const m = fs.readFileSync(htmlPath, 'utf8').match(pattern);
+        if (!m) continue; // this page doesn't load this file at all
+        if (m[1] !== realHash) {
+          problems.push(
+            `${path.relative(ROOT_DIR, htmlPath)} requests ${file}?v=${m[1]}, but ${file}'s real content hash right now is ${realHash} -- ` +
+            `these don't match, so browsers may serve a STALE cached copy. Run "npm run fix-versions" to correct every reference automatically.`
+          );
+        }
+      }
+    }
+  }
+}
+
+function fixGlobalSharedFiles() {
+  let changedCount = 0;
+  for (const file of GLOBAL_SHARED_FILES) {
+    const realHash = currentContentHash(ROOT_DIR, file);
+    if (realHash === null) continue;
+    const pattern = new RegExp(file.replace('.', '\\.') + '\\?v=([a-zA-Z0-9]+)', 'g');
+    for (const dir of SCAN_DIRS) {
+      for (const htmlPath of htmlFilesIn(dir)) {
+        const content = fs.readFileSync(htmlPath, 'utf8');
+        if (!pattern.test(content)) continue;
+        pattern.lastIndex = 0;
+        const updated = content.replace(pattern, file + '?v=' + realHash);
+        if (updated !== content) {
+          fs.writeFileSync(htmlPath, updated);
+          console.log(`  ${path.relative(ROOT_DIR, htmlPath)}: ${file}?v=... -> ${realHash}`);
+          changedCount++;
+        }
+      }
+    }
+  }
+  return changedCount;
+}
+
+// ---------------------------------------------------------------------------
+// SERVICE WORKER CACHE_NAME AUTO-BUMP
+//
+// The other half of the "3 manual bump-or-fail steps" this project has been
+// bitten by repeatedly (see CONTINUE-HERE.md): both service workers precache
+// a fixed file list cache-first with no revalidation, so a real edit to any
+// precached file requires bumping CACHE_NAME too, or every installed app
+// stays pinned to the old copy of that file forever, with no error and no
+// visible signal. Historically that bump was entirely a human's job to
+// remember, one at a time, by hand -- the git history above this point is
+// literally dozens of "Bumped vNN -> vNN+1: X changed" comments, each one a
+// real point where forgetting would have shipped nothing.
+//
+// This computes a real fingerprint (a hash of every precached file's actual
+// current content, in list order) and stores it in a trailing comment right
+// after CACHE_NAME. A mismatch between the stored and real fingerprint means
+// a precached file changed since the fingerprint was last recorded --
+// exactly the condition that used to require a human to notice and bump the
+// version by hand. `npm run fix-versions` now does that bump automatically,
+// the same command already run for the shared-file hashes above.
+function resolvePrecacheUrl(url) {
+  return path.join(ROOT_DIR, url.replace(/^\//, ''));
+}
+
+function computePrecacheFingerprint(swPath) {
+  const swSrc = fs.readFileSync(swPath, 'utf8');
+  const arrayMatch = swSrc.match(/const PRECACHE_URLS = \[([\s\S]*?)\n\];/);
+  if (!arrayMatch) return null;
+  const urls = (arrayMatch[1].match(/'\/[^']+'/g) || []).map(s => s.slice(1, -1));
+  const combined = urls.map(url => {
+    const filePath = resolvePrecacheUrl(url);
+    if (!fs.existsSync(filePath)) return url + ':MISSING';
+    return url + ':' + crypto.createHash('sha256').update(fs.readFileSync(filePath)).digest('hex');
+  }).join('|');
+  return crypto.createHash('sha256').update(combined).digest('hex').slice(0, 12);
+}
+
+const CACHE_NAME_PATTERN = /const CACHE_NAME = '([a-zA-Z0-9-]+)-v(\d+)';(?: \/\/ precache-fingerprint:([a-f0-9]+))?/;
+
+function checkCacheFingerprint(swPath, label, problems) {
+  if (!fs.existsSync(swPath)) return;
+  const swSrc = fs.readFileSync(swPath, 'utf8');
+  const m = swSrc.match(CACHE_NAME_PATTERN);
+  if (!m) {
+    problems.push(`${label}: could not find a CACHE_NAME = '<prefix>-v<N>'; declaration to check`);
+    return;
+  }
+  const storedFingerprint = m[3];
+  const realFingerprint = computePrecacheFingerprint(swPath);
+  if (realFingerprint === null) {
+    problems.push(`${label}: could not find a PRECACHE_URLS array to fingerprint`);
+    return;
+  }
+  if (!storedFingerprint || storedFingerprint !== realFingerprint) {
+    problems.push(
+      `${label}: precached file contents don't match the fingerprint recorded next to CACHE_NAME ` +
+      `(recorded: ${storedFingerprint || 'none yet'}, real: ${realFingerprint}) -- a precached file changed ` +
+      `and CACHE_NAME was never bumped, so installed app users would stay pinned to the stale copy indefinitely. ` +
+      `Run "npm run fix-versions" to bump it automatically.`
+    );
+  }
+}
+
+function fixCacheFingerprint(swPath) {
+  if (!fs.existsSync(swPath)) return false;
+  const swSrc = fs.readFileSync(swPath, 'utf8');
+  const m = swSrc.match(CACHE_NAME_PATTERN);
+  if (!m) return false;
+  const [, prefix, verNum, storedFingerprint] = m;
+  const realFingerprint = computePrecacheFingerprint(swPath);
+  if (realFingerprint === null || storedFingerprint === realFingerprint) return false;
+  const newVersion = parseInt(verNum, 10) + 1;
+  const newDeclaration = `const CACHE_NAME = '${prefix}-v${newVersion}'; // precache-fingerprint:${realFingerprint}`;
+  const updated = swSrc.replace(CACHE_NAME_PATTERN, newDeclaration);
+  fs.writeFileSync(swPath, updated);
+  console.log(`  ${path.relative(ROOT_DIR, swPath)}: CACHE_NAME '${prefix}-v${verNum}' -> '${prefix}-v${newVersion}'`);
+  return true;
+}
+
 if (require.main === module && process.argv.includes('--fix-versions')) {
-  const changedCount = fixVersions(TOOLS_DIR) + fixVersions(PORTAL_DIR);
+  const changedCount = fixVersions(TOOLS_DIR) + fixVersions(PORTAL_DIR) + fixGlobalSharedFiles() +
+    (fixCacheFingerprint(path.join(ROOT_DIR, 'service-worker.js')) ? 1 : 0) +
+    (fixCacheFingerprint(path.join(PORTAL_DIR, 'service-worker.js')) ? 1 : 0);
   if (changedCount === 0) {
     console.log('All cache-bust versions already match their real content hashes -- nothing to fix.');
   } else {
@@ -437,12 +595,14 @@ if (require.main === module && process.argv.includes('--fix-versions')) {
 function main() {
   const files = fs.readdirSync(TOOLS_DIR).filter(f => f.endsWith('.html'));
   const problems = [];
-  const versions = {}; // filename -> version string, for the cross-file comparison at the end
   const jsVersions = {}; // script name -> { filename -> version string }
   const sharedScripts = detectSharedScripts(TOOLS_DIR);
 
   checkVersionFreshness(TOOLS_DIR, problems);
   checkVersionFreshness(PORTAL_DIR, problems);
+  checkGlobalSharedFileFreshness(problems);
+  checkCacheFingerprint(path.join(ROOT_DIR, 'service-worker.js'), 'service-worker.js', problems);
+  checkCacheFingerprint(path.join(PORTAL_DIR, 'service-worker.js'), 'portal/service-worker.js', problems);
   checkPrecacheCompleteness(problems);
   checkTourHealth(problems);
   checkTopLevelDeferredCalls(problems);
@@ -499,10 +659,11 @@ function main() {
       problems.push(`${filename}: missing the apple-mobile-web-app-capable meta tag`);
     }
 
-    const versionMatch = html.match(/styles\.css\?v=([a-zA-Z0-9]+)/);
-    if (versionMatch) {
-      versions[filename] = versionMatch[1];
-    } else if (/href="\/styles\.css"/.test(html)) {
+    // Real hash-vs-reference freshness (not just "do all tool pages agree
+    // with each other") is checkGlobalSharedFileFreshness()'s job now, run
+    // once above across root/tools/portal together -- this just catches
+    // the narrower case of the ?v= param being dropped entirely.
+    if (!/styles\.css\?v=[a-zA-Z0-9]+/.test(html) && /href="\/styles\.css"/.test(html)) {
       problems.push(`${filename}: loads /styles.css with no ?v= cache-busting param`);
     }
 
@@ -550,26 +711,15 @@ function main() {
     });
   });
 
-  // All version-bearing files should be on the SAME stamp -- that's the
-  // whole point of a shared cache-bust version. A page silently sitting
-  // on an old stamp means its visitors may be looking at how the CSS
-  // used to render, not how it renders today.
-  const distinctVersions = new Set(Object.values(versions));
-  if (distinctVersions.size > 1) {
-    const grouped = {};
-    Object.entries(versions).forEach(([file, v]) => {
-      grouped[v] = grouped[v] || [];
-      grouped[v].push(file);
-    });
-    problems.push(
-      `styles.css version mismatch across tool pages: ${JSON.stringify(grouped, null, 2)}`
-    );
-  }
+  // styles.css freshness/mismatch across every page in root/tools/portal is
+  // checkGlobalSharedFileFreshness()'s job (run above, against the real
+  // content hash directly, not just cross-file agreement) -- no separate
+  // check needed here.
 
-  // Same cross-file mismatch check as styles.css above, run separately
-  // for each shared script -- a page that loads an old cached copy of
-  // tools-common.js (say) after everyone else has moved on is exactly
-  // the kind of thing this whole file exists to catch.
+  // Same idea as checkGlobalSharedFileFreshness() above (styles.css), run
+  // separately here for each tools-only shared script -- a page that loads
+  // an old cached copy of tools-common.js (say) after everyone else has
+  // moved on is exactly the kind of thing this whole file exists to catch.
   Object.entries(jsVersions).forEach(([script, fileVersions]) => {
     const distinct = new Set(Object.values(fileVersions));
     if (distinct.size > 1) {

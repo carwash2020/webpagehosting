@@ -2452,28 +2452,6 @@
     display:inline-flex; align-items:center; justify-content:center;
     font-size:11px;
   }
-  .triage-options{display:flex; flex-wrap:wrap; gap:10px;}
-  .triage-chip{
-    font-family:var(--font-ui);
-    font-size:14px;
-    font-weight:500;
-    letter-spacing:.4px;
-    padding:12px 18px;
-    min-height:44px;                 /* real touch target */
-    border-radius:999px;
-    border:1px solid var(--border);
-    background:var(--bg-panel-3);
-    color:var(--text);
-    cursor:pointer;
-    transition:border-color .15s ease, background .15s ease, color .15s ease, transform .15s ease;
-  }
-  .triage-chip:hover{border-color:var(--blue-text); color:var(--white); transform:translateY(-1px);}
-  .triage-chip[aria-pressed="true"]{
-    background:linear-gradient(135deg, #ffb347, #ff8000 60%, #c96400);
-    border-color:transparent;
-    color:#161005;
-    font-weight:600;
-  }
   /* U02 fix (2026-09-08): the symptom-first entry grid -- plain-
      language cards ("Washer / Won't drain") instead of the old
      appliance-category-first step, each jumping straight to a result.
@@ -2488,10 +2466,9 @@
      render flat in one grid, which alone accounted for +336px of this
      section's growth during the improvement session (measured
      directly, 490px -> 826px). Grouped into 5 collapsible rows below,
-     one per appliance, closed by default -- same zero-JS-needed
-     <details> pattern already used for .triage-browse-toggle. This
-     class now lives on the row's own card container instead of the
-     outer grid. */
+     one per appliance, closed by default -- a native zero-JS-needed
+     <details> disclosure per row. This class now lives on the row's
+     own card container instead of the outer grid. */
   .triage-symptom-row-cards{
     display:grid;
     grid-template-columns:repeat(auto-fill, minmax(180px, 1fr));
@@ -2558,34 +2535,6 @@
   }
   .triage-symptom-card:hover{border-color:var(--blue-text); transform:translateY(-1px);}
   .triage-symptom-card-q{font-size:14.5px; font-weight:500; color:var(--white);}
-
-  /* The original appliance-first picker, kept for anyone who'd rather
-     browse that way -- a native <details> disclosure needs no JS of
-     its own to open/close, and degrades to a plain expanded block with
-     JS off (same no-JS-fallback standard as the coverage map). */
-  .triage-browse-toggle{margin:18px 0 0;}
-  .triage-browse-toggle summary{
-    font-family:var(--font-ui);
-    font-size:13.5px;
-    color:var(--blue-text);
-    cursor:pointer;
-    padding:4px 0;
-    list-style:none;
-  }
-  .triage-browse-toggle summary::-webkit-details-marker{display:none;}
-  .triage-browse-toggle summary::before{content:'+ '; color:var(--text-dim);}
-  .triage-browse-toggle[open] summary::before{content:'\2212 ';}
-  .triage-browse-toggle summary:hover{color:var(--white);}
-  .triage-browse-toggle .triage-step:first-of-type{margin-top:16px;}
-  /* Design feedback (2026-09-08): same ::details-content treatment as
-     .triage-appliance-row above -- see that rule for why. */
-  .triage-browse-toggle{interpolate-size:allow-keywords;}
-  .triage-browse-toggle::details-content{
-    height:0;
-    overflow:hidden;
-    transition:height .25s ease, content-visibility .25s ease allow-discrete;
-  }
-  .triage-browse-toggle[open]::details-content{height:auto;}
 
   .triage-result{
     margin-top:22px;

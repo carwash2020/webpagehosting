@@ -20,7 +20,7 @@ test('the "Book directly" bypass link is gone', () => {
 });
 
 test('the picker loads the shared business-hours.js rather than a sixth independent copy of the availability logic', () => {
-  assert.match(WO, /<script src="\/business-hours\.js\?v=\d+"><\/script>/);
+  assert.match(WO, /<script src="\/business-hours\.js\?v=[a-zA-Z0-9]+"><\/script>/);
   assert.doesNotMatch(WO, /const SLOT_INCREMENT_MINUTES\s*=/, 'should not redeclare a constant business-hours.js already declares');
   assert.doesNotMatch(WO, /const MIN_LEAD_HOURS\s*=/, 'should not redeclare a constant business-hours.js already declares');
   assert.doesNotMatch(WO, /async function fetchBookingsForDate/, 'should not redefine the shared function');

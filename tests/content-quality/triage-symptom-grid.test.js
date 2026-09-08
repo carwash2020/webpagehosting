@@ -4,9 +4,13 @@
 // an appliance-category picker (step 1) before ever showing a symptom
 // -- this adds a flat grid of the same 20 symptoms already in
 // triage.js's own DATA, in plain language, as the real first thing
-// shown. The original appliance-first picker is kept, unchanged, just
-// demoted into a <details> disclosure below the grid for anyone who'd
-// rather browse that way -- no schema change, no invented content.
+// shown, grouped into closed-by-default rows per appliance.
+//
+// Shrink pass (2026-09-08): the original appliance-first picker, which
+// this grid initially sat above unchanged (demoted into a <details>
+// disclosure), was removed outright -- it did the same "browse by
+// appliance, then symptom" job the grid's own per-appliance rows
+// already do, so keeping both was pure duplicate page weight.
 
 const { test } = require('node:test');
 const assert = require('node:assert/strict');
@@ -64,23 +68,18 @@ test('clicking a symptom card shows the exact same verdict/body triage.js alread
   assert.equal(document.getElementById('triageBody').textContent, expected.a);
 });
 
-test('the original appliance-first picker still works exactly as before, now inside a collapsed <details> disclosure', () => {
+test('the old step-by-step appliance-first picker is gone -- the symptom grid\'s own collapsible rows are the only way to browse by appliance now', () => {
+  // Shrink pass (2026-09-08): this used to be a second, separate
+  // "appliance, then symptom" picker sitting below the grid, doing the
+  // exact same job the grid's own collapsible per-appliance rows
+  // already do. Removed as duplicate page weight rather than kept
+  // "just in case" -- see triage.js and README's shrink-pass notes.
   const window = loadTriagePage(INDEX);
   const { document } = window;
-
-  const details = document.querySelector('.triage-browse-toggle');
-  assert.ok(details, 'expected a .triage-browse-toggle <details> element');
-  assert.equal(details.tagName, 'DETAILS');
-  assert.equal(details.open, false, 'should be collapsed by default -- the symptom grid is the real entry point now');
-  assert.ok(details.querySelector('#triageAppliances'), 'the original appliance picker should still be inside it, unchanged');
-  assert.ok(details.querySelector('#triageSymptomStep'), 'the original symptom-after-appliance step should still be inside it, unchanged');
-
-  const applianceChips = document.querySelectorAll('#triageAppliances .triage-chip');
-  assert.equal(applianceChips.length, 5, 'all 5 appliance categories should still be selectable manually');
-
-  applianceChips[0].dispatchEvent(new window.Event('click', { bubbles: true }));
-  const symptomChips = document.querySelectorAll('#triageSymptoms .triage-chip');
-  assert.equal(symptomChips.length, 4, 'picking an appliance should still populate its 4 symptoms, same as before');
+  assert.equal(document.querySelector('.triage-browse-toggle'), null, 'the demoted appliance-first disclosure should no longer exist');
+  assert.equal(document.getElementById('triageAppliances'), null);
+  assert.equal(document.getElementById('triageSymptomStep'), null);
+  assert.equal(document.getElementById('triageSymptoms'), null);
 });
 
 test('every symptom card sits inside a row that names its appliance, so 20 cards read unambiguously without repeating the appliance on every single card', () => {
@@ -110,8 +109,7 @@ test('all 5 city landing pages carry the same symptom-first triage markup as the
   for (const page of LANDING_PAGES) {
     const html = fs.readFileSync(repo(page), 'utf8');
     assert.match(html, /<div class="triage-symptom-grid" id="triageSymptomGrid"/, `${page} is missing the symptom grid`);
-    assert.match(html, /<details class="triage-browse-toggle">/, `${page} is missing the demoted appliance-first disclosure`);
-    assert.match(html, /<div class="triage-options" id="triageAppliances"/, `${page} should still have the original appliance picker, unchanged`);
+    assert.doesNotMatch(html, /triage-browse-toggle/, `${page} should not carry the removed duplicate appliance-first picker`);
   }
 });
 
