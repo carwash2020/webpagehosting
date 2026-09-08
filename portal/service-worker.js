@@ -225,7 +225,10 @@
 // Bumped 2026-09-08 again: /styles.css changed again (W19/M02 -- the
 // teardown section's ambient glow + interactive spotlight; portal
 // pages don't have that section, but the file is shared/precached).
-const CACHE_NAME = 'th-portal-v44';
+// Bumped 2026-09-08 again: /styles.css changed again (W20/M04 -- the
+// homepage's new closing section; portal pages don't have it, but the
+// file is shared/precached).
+const CACHE_NAME = 'th-portal-v45';
 const PRECACHE_URLS = [
   '/portal/home.html', '/portal/dashboard.html', '/portal/jobs.html', '/portal/quotes.html',
   '/portal/work-orders.html', '/portal/settings.html', '/portal/login.html', '/portal/set-password.html',

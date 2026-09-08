@@ -182,10 +182,15 @@
   // Reads the same HOURS_BY_WEEKDAY table booking.html uses via
   // business-hours.js, so this pill can never contradict the booking page.
   // Stays hidden entirely unless that table is actually available.
+  //
+  // W20/M04 fix (Master Audit, 2026-09-08): generalized from a single
+  // getElementById lookup to every .open-status on the page, so the new
+  // closing section (see index.html) can show the exact same live status
+  // as the hero, computed once and applied everywhere -- not a second,
+  // driftable copy of this logic.
   (function () {
-    const pill = document.getElementById('openStatus');
-    const text = document.getElementById('openStatusText');
-    if (!pill || !text) return;
+    const pills = document.querySelectorAll('.open-status');
+    if (!pills.length) return;
     if (typeof HOURS_BY_WEEKDAY === 'undefined'
         || typeof businessWeekday !== 'function'
         || typeof todayDateStrInBusinessTz !== 'function'
@@ -211,22 +216,30 @@
       const hour = parseInt(hourPart.value, 10);
       if (isNaN(hour)) return;
 
+      let statusClass, html;
       if (hour >= span[0] && hour < span[1]) {
-        pill.classList.add('is-open');
-        text.innerHTML = '<b>Open now</b> &middot; until ' + label(span[1]);
+        statusClass = 'is-open';
+        html = '<b>Open now</b> &middot; until ' + label(span[1]);
       } else if (hour < span[0]) {
-        pill.classList.add('is-closed');
-        text.innerHTML = '<b>Closed right now</b> &middot; open today at ' + label(span[0])
+        statusClass = 'is-closed';
+        html = '<b>Closed right now</b> &middot; open today at ' + label(span[0])
           + ' &middot; <a href="/booking.html">Book online</a>';
       } else {
-        pill.classList.add('is-closed');
+        statusClass = 'is-closed';
         const next = HOURS_BY_WEEKDAY[(weekday + 1) % 7];
-        text.innerHTML = (next
+        html = (next
           ? '<b>Closed right now</b> &middot; open tomorrow at ' + label(next[0])
           : '<b>Closed right now</b>')
           + ' &middot; <a href="/booking.html">Book online</a>';
       }
-      pill.hidden = false;
+
+      pills.forEach(function (pill) {
+        const text = pill.querySelector('.open-status-text');
+        if (!text) return;
+        pill.classList.add(statusClass);
+        text.innerHTML = html;
+        pill.hidden = false;
+      });
     } catch (e) {
       /* A status pill is never worth breaking the hero over. */
     }
@@ -241,9 +254,14 @@
   // about existing bookings. Entirely separate from and additive to the
   // pill -- if this lookup is slow, unavailable, or fails, nothing here
   // ever appears and the pill above stands exactly as it already did.
+  //
+  // W20/M04 fix (2026-09-08): generalized the same way as the pill above
+  // -- every .next-opening on the page gets the same result from one
+  // shared lookup, so the closing section's own line never needs (or
+  // risks drifting from) a second fetch.
   (function () {
-    const el = document.getElementById('nextOpening');
-    if (!el) return;
+    const els = document.querySelectorAll('.next-opening');
+    if (!els.length) return;
     if (typeof findNextAvailableSlot !== 'function') return;
 
     const SUPABASE_URL = 'https://csvfqdjuobylgafgolho.supabase.co';
@@ -259,9 +277,12 @@
       const dateLabel = new Intl.DateTimeFormat('en-US', {
         timeZone: BUSINESS_TIMEZONE, weekday: 'short', month: 'short', day: 'numeric',
       }).format(result.slot.startUtc);
-      el.innerHTML = 'Next opening: <b>' + dateLabel + ' at ' + result.slot.label + '</b> &middot; ' +
+      const html = 'Next opening: <b>' + dateLabel + ' at ' + result.slot.label + '</b> &middot; ' +
         '<a href="/booking.html?service=' + NEXT_OPENING_SERVICE_KEY + '&date=' + result.dateStr + '">Book this slot</a>';
-      el.hidden = false;
+      els.forEach(function (el) {
+        el.innerHTML = html;
+        el.hidden = false;
+      });
     }).catch(function () {
       /* Fails silently to the pill above, exactly as this feature's own spec says. */
     });

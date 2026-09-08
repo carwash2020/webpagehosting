@@ -994,6 +994,74 @@
   @media (max-width:860px){.contact-grid{grid-template-columns:repeat(2,1fr);}}
   @media (max-width:560px){.contact-grid{grid-template-columns:1fr;}}
 
+  /* W20/M04 fix (Master Audit, 2026-09-08): the page's real close --
+     fixed dark background regardless of site theme, same reasoning as
+     .hero (this is a photo-free bookend to it, not a themed content
+     section), one lit ambient glow, the real mission statement at
+     hero-scale type, one Call button, and the live status/next-opening
+     lines the hero already computes (see triage.js). */
+  .closing{
+    position:relative;
+    overflow:hidden;
+    padding:120px 0;
+    min-height:60vh;
+    display:flex;
+    align-items:center;
+    background:#0a0a0a;
+  }
+  .closing::before{
+    content:"";
+    position:absolute;
+    top:-30%; left:50%;
+    width:70%; height:160%;
+    transform:translateX(-50%);
+    background:radial-gradient(circle, rgba(255,128,0,.14), transparent 65%);
+    pointer-events:none;
+  }
+  .closing-inner{
+    position:relative;
+    z-index:1;
+    max-width:720px;
+    margin:0 auto;
+    text-align:center;
+  }
+  .closing-eyebrow{
+    font-family:var(--font-ui);
+    font-size:13px;
+    font-weight:600;
+    letter-spacing:3px;
+    text-transform:uppercase;
+    color:var(--orange-text-vivid);
+    margin:0 0 18px;
+  }
+  .closing-promise{
+    font-family:var(--font-display);
+    font-weight:400;
+    font-size:clamp(30px,4.8vw,48px);
+    line-height:1.15;
+    color:#ffffff;
+    margin:0 0 40px;
+  }
+  .closing-cta{margin:0 auto 30px; justify-content:center;}
+  /* Dedicated classes rather than a compound descendant selector on the
+     shared pill/next-opening classes on purpose -- an existing test in
+     frontend-design-tells-removed.test.js locates that shared pill rule
+     by searching the raw stylesheet text for its exact selector immediately
+     followed by an opening brace, and a compound selector ending the
+     same way would satisfy that same search first if it appeared earlier
+     in the file, grabbing this override instead of the real base rule. */
+  .closing-open-status{
+    display:inline-flex;
+    margin-top:0;
+  }
+  .closing-next-opening{
+    margin-top:12px;
+    font-size:14px;
+  }
+  @media (max-width:620px){
+    .closing{padding:80px 0; min-height:auto;}
+  }
+
   /* footer */
   footer{background:var(--bg-panel); border-top:1px solid var(--border); padding:48px 0 28px;}
   /* Widened from 4 to 5 columns (2026-09-02) when the Client Portal
