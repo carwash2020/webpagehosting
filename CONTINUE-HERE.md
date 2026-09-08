@@ -8,11 +8,14 @@ files before relying on it — this document goes stale, the code does not.
 **Repo:** `carwash2020/webpagehosting`
 **Deploy model:** GitHub Pages serves `main` directly, no build step.
 **Merging to `main` is deploying to production.** Work on a branch, open
-a PR, and get a human to look before merging.
+a PR, and get CI green before merging.
 
-There is a fuller original briefing in `CLAUDE-CODE-HANDOFF.md` (the
-production-safety rules there still apply). This file covers what changed
-after it was written.
+There used to be a reference here to a fuller original briefing file
+(`CLAUDE-CODE-HANDOFF.md`) — it was never actually committed to this repo
+(delivered once, outside version control, same as `DISASTER_RECOVERY.md`
+originally was before 2026-08-14). If that exact filename doesn't exist
+when you read this, that's not a regression; `README.md`, `DISASTER_RECOVERY.md`,
+and this file are the actual current sources of truth.
 
 ---
 
@@ -28,7 +31,10 @@ a hard refresh and incognito both still get the old file. If you change
 `styles.css` and do not bump that stamp in **every** referencing file,
 your change is live on the server and reaching nobody.
 
-Current value: `?v=202609070100` (10 public files + the portal pages).
+Current value: check `grep -n "styles.css?v=" index.html` directly — it
+changes every time `styles.css` does, and this note will be stale the
+moment you read it. `npm run fix-versions` handles this for you; see
+below.
 
 This exact mistake cost a full round-trip earlier: a merged PR appeared
 to do nothing, and the code was fine — nothing was fetching it.
@@ -37,22 +43,33 @@ to do nothing, and the code was fine — nothing was fetching it.
 Both service workers serve any `?v=` URL **cache-first with no
 revalidation**, and both precache `/styles.css`.
 
-- `portal/service-worker.js` — currently `th-portal-v12`
-- `service-worker.js` (Workspace/tools) — currently `th-workspace-v60`
+- `portal/service-worker.js` — check `grep "CACHE_NAME = " portal/service-worker.js`
+- `service-worker.js` (Workspace/tools) — check `grep "CACHE_NAME = " service-worker.js`
 
 If you change a file listed in that worker's `PRECACHE_URLS` and do not
 bump its `CACHE_NAME`, **installed app users are pinned to the old copy
 indefinitely.** Bumping the name purges every stale entry on activate.
-This was violated repeatedly during the last session and is why
-`portal/portal-update.js` exists (see below).
+This has been violated more than once across this project's history,
+which is why `npm run check-consistency` now checks both workers'
+`PRECACHE_URLS` for drift automatically on every push, and why
+`portal/portal-update.js` exists (see below) as a way for an installed
+app to actually pick up a bumped `CACHE_NAME` without waiting for the
+user to happen to close and reopen it.
 
-### 3. Tool page hashes drift on this machine
-`tools/*.html` reference `styles-tools.css` and friends by **content
-hash**. Git's CRLF conversion on checkout changes those files' bytes
-after commit, moving the hash and failing `check-consistency`.
+### 3. Tool page hashes drift on some checkouts
+`tools/*.html` reference `styles-tools.css` and shared `.js` files by
+**content hash**, not a hand-chosen version. On some checkout
+environments, line-ending conversion can change a file's bytes after
+commit, moving its real hash out from under an already-committed `?v=`
+reference and failing `check-consistency`. (On a normal Linux checkout
+this usually isn't an issue at all — but if `check-consistency` ever
+fails on a file you didn't think you touched, this is the first thing
+to check before assuming the code itself is wrong.)
 
-Fix: `npm run fix-versions`. Run it after touching any tools stylesheet,
-then re-run `npm run check-consistency`.
+Fix: `npm run fix-versions`. Run it after touching any shared tools file
+(anything referenced by 2+ pages — the script figures out which files
+those are itself, nothing to maintain by hand), then re-run
+`npm run check-consistency`.
 
 ---
 
@@ -60,88 +77,77 @@ then re-run `npm run check-consistency`.
 
 ```bash
 npm install
-npm run check-undefined-vars     # expect: clean, 42 pages
-npm run check-consistency        # expect: clean, 16 tool pages
-npm run check-visual-snapshot    # expect: 6/6 match baseline
+npm run check-undefined-vars     # expect: clean, ~42 pages
+npm run check-consistency        # expect: clean
+npm run check-visual-snapshot    # expect: all match baseline
 python3 scripts/check-links.py   # expect: everything resolved
-npm test                         # SEE BELOW
+npm test                         # expect: ALL PASSING, see below
 ```
 
-**`npm test` has many pre-existing failures** in `portal/`,
-`edge-functions/`, `tools/`, `sync/` and `workspace/` — Stripe, POS, and
-portal suites. They were failing before the last session started and are
-unrelated to the public site. Do not treat a red `npm test` as caused by
-your change without first confirming the same failures exist on `main`.
+**`npm test` should be fully green.** As of 2026-09-08 it's 1538/1538. An
+earlier version of this document said the suite had "many pre-existing
+failures... unrelated to the public site" and told a future session to
+disregard a red run — **that was wrong, and it was actively harmful**: it
+told a session to ignore the one signal that would have caught a real
+regression. See `DISASTER_RECOVERY.md`'s "⚠️ CORRECTED" section for the
+full story of how that got disproven. **The current rule: treat any red
+test as real until you've personally confirmed otherwise** — check
+whether the exact same failure exists on a clean `main` checkout before
+assuming it's unrelated to your change, don't just assume it from a
+comment in a doc (including this one).
 
 ---
 
-## What was added last session
+## Where the real change history lives
 
-Public site, all live:
+This file is deliberately short-lived pick-up notes, not a changelog.
+For what's actually shipped and when:
 
-| Thing | Where |
-|---|---|
-| Blueprint background, scroll-reveal, motto rail | `styles.css` |
-| Exploded-appliance rebuild control (drag slider) | `index.html` + `styles.css` |
-| "Is it worth fixing?" symptom triage | `triage.js` (homepage + 5 landing pages) |
-| Service-radius diagram, focused per city | `index.html`, `handyman-*.html` |
-| Repair-vs-replace honesty split | `index.html` |
-| "How a visit actually goes" process line | `index.html` |
-| Seasonal care note, live open/closed pill | `index.html` (uses `business-hours.js`) |
-| Blog reading progress + reading time | `site-motion.js` |
-
-Client portal, all live and **presentation-only except the update
-feature**:
-
-| Thing | Where |
-|---|---|
-| Whole visual pass (cards, badges, login card, empty states, focus) | `portal/portal-polish.css` |
-| **"Update app"** for the installed PWA | `portal/portal-update.js` + Settings card |
-| Request progress track (submitted→done) via `:has()` | `portal/portal-polish.css` |
-| Print styles for invoices, quotes, work orders | `portal/portal-polish.css` |
-| Safe-area insets for installed app (notch/home bar) | `portal/portal-polish.css` |
-
-`portal/portal-polish.css` is loaded **last** in `<head>` on every portal
-page on purpose. The portal cascade is already four layers deep, so a
-sheet at the end wins ties without `!important` and can be removed by
-deleting one `<link>`. Keep adding there rather than editing the earlier
-layers.
-
----
+- **`README.md`** — has a running "What changed, `<date range>`" section
+  near the bottom for each recent block of work; the most recent one is
+  the fastest way to see what's new.
+- **`DISASTER_RECOVERY.md`** — the deepest source for exact mechanisms,
+  real incidents, and lessons learned the hard way (including a whole
+  scenario, as of 2026-09-08, on why a CodeQL alert can survive
+  extensive sanitization and what actually clears it).
+- **`git log`** — commit messages on this repo are written to be read
+  later, not just at merge time; they carry the actual reasoning, not
+  just a one-line summary.
 
 ## The scroll-craft skill travels with this repo
 
-The site's visual language came from a skill called **scroll-craft**. It is
-committed at `.claude/skills/scroll-craft/`, so any session working on this
-repo has it — including a session started from a phone at claude.ai/code,
-which has no access to a personal skills directory on one particular
-machine. MIT licensed, by Nate Herk.
+The public site's visual language (starting 2026-09-06) came from a
+skill called **scroll-craft**. It's committed at
+`.claude/skills/scroll-craft/`, so any session working on this repo has
+it — including a session started from a phone at claude.ai/code, which
+has no access to a personal skills directory on one particular machine.
+MIT licensed, by Nate Herk. A rollback checkpoint tag exists for that
+specific body of work: `pre-scroll-craft-redesign-2026-09-06` (see
+`DISASTER_RECOVERY.md` for the rollback commands).
 
 Two notes:
 - `scripts/check-links.py` skips `.claude/` deliberately. The skill ships a
   template that references placeholder assets on purpose, and scanning it
-  reported nine "broken links" that were not real.
-- Most follow-up work needs this document more than it needs the skill. The
-  design language is already chosen and built; the skill's full process
-  (brief, grammar, fingerprint gate) is for starting a new one.
+  reports false "broken links" otherwise.
+- The design language from that skill is already chosen and built;
+  README.md's "What changed" sections describe what's been layered on top
+  of it since. The skill's own full process (brief, grammar, fingerprint
+  gate) is for starting an entirely new visual direction, not for routine
+  follow-up work.
 
 ## Not verified — worth doing on a real device
 
 Nothing below is known broken. It is genuinely untested, because the
-development environment could not test it.
+development environment used for most of this work can't test it.
 
-- **Anything on a real phone.** The preview browser could not scroll
-  reliably, and would not register a service worker at all.
-- **The installed-app update cycle.** Open the portal on a phone,
-  Settings → App version → **Update app**, confirm it reloads cleanly.
-  This is the highest-value manual check available right now.
+- **Anything on a real phone**, generally — the preview/CI environment
+  can't scroll reliably or register a service worker at all.
+- **The installed-app update cycle.** Open the portal or tools suite on
+  a phone, Settings → App version → **Update app**, confirm it reloads
+  cleanly after a real `CACHE_NAME` bump.
 - **Print output** through an actual print dialog.
-- **A live authenticated portal session.** Logged-in pages were verified
-  by rendering the real markup through the real cascade in a harness, not
-  by signing in.
-- **Reduced-motion** on a real device.
-
----
+- **Reduced-motion** on a real device, for any of the CSS animations
+  added across the various design passes.
 
 ## Things that look odd but are deliberate
 
@@ -158,8 +164,17 @@ development environment could not test it.
 - Triage copy is deliberately qualitative — no prices, no percentages, no
   invented statistics — and every path ends in "we'd have to look at it."
   Keep it that way.
+- The homepage runs noticeably longer than a typical single-page site on
+  purpose (Master Audit, W01–W24) — it's been through multiple explicit
+  length-reduction passes already; don't assume length itself is a bug
+  before checking `DISASTER_RECOVERY.md`/README's recent "What changed"
+  entries for what's already been deliberately trimmed and what's been
+  kept on purpose.
 
 ## Never
 Re-introduce Square (the account was banned). Touch the lead form's
 insert, the booking pages' logic, the JSON-LD, the GA4 snippet, or the
-favicon links without a specific reason.
+favicon links without a specific reason. Add a CodeQL suppression
+comment or widen a redaction function without first checking
+`DISASTER_RECOVERY.md` Scenario 15 — there's a real, non-obvious lesson
+there about which approach actually works for that specific alert type.
