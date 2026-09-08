@@ -29,5 +29,8 @@ for (const selector of DEAD_SELECTORS) {
 
 test('the surviving .teardown reduced-motion rule and the gallery-grid breakpoint rule right after it are untouched', () => {
   assert.match(STYLES, /\.teardown\{--p:1 !important;\}/);
-  assert.match(STYLES, /@media \(max-width:900px\)\{\.gallery-grid\{grid-template-columns:repeat\(2,1fr\);\}\}/);
+  // F30 (2026-09-07): the gallery-grid 2-col breakpoint merged from 900px
+  // into 860px, consolidating a near-duplicate value shared with
+  // services-grid/contact-grid/teardown-grid.
+  assert.match(STYLES, /@media \(max-width:860px\)\{\.gallery-grid\{grid-template-columns:repeat\(2,1fr\);\}\}/);
 });

@@ -42,7 +42,9 @@ test('.trust-grid is now a 4-column responsive grid, matching the adjacent .stat
   const rule = STYLES.match(/\.trust-grid\{([^}]*)\}/);
   assert.ok(rule, 'expected a .trust-grid rule');
   assert.match(rule[1], /grid-template-columns:repeat\(4,1fr\);/);
-  assert.match(STYLES, /@media \(max-width:820px\)\{\.trust-grid\{grid-template-columns:repeat\(2,1fr\);\}\}/);
+  // F30 (2026-09-07): merged from 820px into 860px, matching the other
+  // 2-column-tablet breakpoints (services/contact/gallery/teardown-grid).
+  assert.match(STYLES, /@media \(max-width:860px\)\{\.trust-grid\{grid-template-columns:repeat\(2,1fr\);\}\}/);
   assert.match(STYLES, /@media \(max-width:480px\)\{\.trust-grid\{grid-template-columns:1fr;\}\}/);
 });
 

@@ -654,11 +654,20 @@
   .stat-item:nth-child(4) .stat-number{color:var(--blue-text);}
   .stat-badge-text{font-size:clamp(20px,3.2vw,30px);}
   .stat-label{margin:0; color:var(--text-dim); font-size:12.5px; letter-spacing:0.5px; text-transform:uppercase;}
-  @media (max-width:820px){.stats-grid{grid-template-columns:repeat(2,1fr); row-gap:32px;}}
+  @media (max-width:860px){.stats-grid{grid-template-columns:repeat(2,1fr); row-gap:32px;}}
   @media (max-width:480px){.stats-grid{grid-template-columns:1fr; row-gap:26px;}}
 
   /* trust strip */
-  .trust{padding:0 0 88px;}
+  /* F29 fix (2026-09-07): .trust is a <section> immediately after
+     .stats-bar (another <section>), so it also picked up the generic
+     `section + section{border-top:1px solid var(--border);}` rule below
+     -- landing directly on top of .stats-bar's own explicit
+     border-bottom with zero gap between them (padding-top was 0), so the
+     two 1px lines rendered as one slightly-doubled edge with the
+     trust-item cards' top corners butting straight up against it. Removes
+     the redundant auto border (stats-bar already frames itself) and
+     restores a real gap before the cards. */
+  .trust{padding:44px 0 88px; border-top:none;}
   .trust-grid{
     display:grid;
     /* 4 items as of the real Licensed & Insured fact added 2026-09-07
@@ -675,7 +684,7 @@
   .trust-item{background:var(--bg-panel); padding:28px 26px; border-radius:var(--radius); box-shadow:var(--shadow-resting);}
   .trust-item h3{font-size:16px; letter-spacing:1px; margin-bottom:8px;}
   .trust-item p{color:var(--text-dim); font-size:14px; margin:0;}
-  @media (max-width:820px){.trust-grid{grid-template-columns:repeat(2,1fr);}}
+  @media (max-width:860px){.trust-grid{grid-template-columns:repeat(2,1fr);}}
   @media (max-width:480px){.trust-grid{grid-template-columns:1fr;}}
 
   /* services */
@@ -735,7 +744,7 @@
   }
   .service-card.is-urgent .service-tag{color:var(--orange-text);}
   .service-tag svg{width:12px; height:12px;}
-  @media (max-width:900px){.services-grid{grid-template-columns:repeat(2,1fr);}}
+  @media (max-width:860px){.services-grid{grid-template-columns:repeat(2,1fr);}}
   @media (max-width:600px){.services-grid{grid-template-columns:1fr;}}
 
   /* about */
@@ -864,7 +873,7 @@
   .form-status.is-success{color:var(--success-text);}
   .form-status.is-error{color:var(--orange-text);}
 
-  @media (max-width:640px){
+  @media (max-width:600px){
     .form-row{grid-template-columns:1fr;}
   }
 
@@ -917,7 +926,7 @@
     letter-spacing:.5px;
   }
   .map-link svg{width:14px; height:14px;}
-  @media (max-width:900px){.contact-grid{grid-template-columns:repeat(2,1fr);}}
+  @media (max-width:860px){.contact-grid{grid-template-columns:repeat(2,1fr);}}
   @media (max-width:560px){.contact-grid{grid-template-columns:1fr;}}
 
   /* footer */
@@ -1090,12 +1099,25 @@
     transition:transform .2s ease;
   }
   .faq-item.is-open .faq-question svg{transform:rotate(180deg);}
+  /* F33 fix (2026-09-07): this used to be a max-height:0 -> max-height:
+     <scrollHeight>px transition, with the JS-measured px value stored as
+     an inline style at the moment the answer opened. Rotating the device
+     (or any resize) while an answer was open reflowed its text to a
+     different number of lines, but the stored max-height stayed frozen
+     at the old value -- clipping the answer's last line(s) until it was
+     closed and reopened. grid-template-rows:0fr -> 1fr needs no measured
+     height at all, so it always tracks the answer's real content height,
+     resize or rotate included. */
   .faq-answer{
-    max-height:0;
+    display:grid;
+    grid-template-rows:0fr;
     overflow:hidden;
-    transition:max-height .25s ease;
+    transition:grid-template-rows .25s ease;
   }
+  .faq-item.is-open .faq-answer{grid-template-rows:1fr;}
   .faq-answer p{
+    min-height:0;
+    overflow:hidden;
     padding:0 22px 20px;
     margin:0;
     color:var(--text-dim);
@@ -1197,7 +1219,7 @@
   .lightbox-nav:hover{background:rgba(255,255,255,.2);}
   .lightbox-prev{left:16px;}
   .lightbox-next{right:16px;}
-  @media (max-width:700px){
+  @media (max-width:760px){
     .lightbox-nav{font-size:22px; padding:8px 12px;}
     .lightbox-close{top:10px; right:14px;}
   }
@@ -1337,7 +1359,7 @@
     padding:20px 14px 10px;
     text-align:left;
   }
-  @media (max-width:900px){.gallery-grid{grid-template-columns:repeat(2,1fr);}}
+  @media (max-width:860px){.gallery-grid{grid-template-columns:repeat(2,1fr);}}
   @media (max-width:600px){.gallery-grid{grid-template-columns:1fr;}}
 
   /* reviews */
@@ -1490,14 +1512,26 @@
   /* Drafting-paper linework behind every public page, so separately
      themed sections read as one continuous place.
 
-     Painted as body's own background-image rather than as an overlay
-     element: body carries an opaque background-color, which occludes any
-     child at a negative z-index entirely. background-image layers ABOVE
-     that colour and BELOW all content, which is exactly what is wanted,
-     and it needs no extra element and no stacking games. background-color
-     is inherited from the body rule earlier in this file and deliberately
-     not restated here, so the light/dark themes keep working. */
-  body{
+     F31 fix (2026-09-07): this used to be painted as body's own
+     background-image with background-attachment:fixed directly. That
+     meant every scroll frame had to repaint all 6 gradient layers on the
+     main thread instead of being handled by the compositor -- a real
+     cost on a long page. Moved to a real position:fixed element instead
+     (never repaints on scroll, no background-attachment needed), but
+     that alone isn't enough: confirmed by direct rendering that a
+     negative-z-index child still gets fully painted OVER by its own
+     parent's background, because the parent's own background paints in
+     a later step than a negative-z-index sibling within the same
+     stacking context (this is why the original code kept the gradient on
+     body's own background rather than a child element). So body itself
+     goes transparent on these 6 pages specifically (the .has-blueprint-bg
+     class added to <body> alongside the div) -- .bg-blueprint alone now
+     supplies both the solid backdrop color and the gradients, with
+     nothing left to occlude it. */
+  body.has-blueprint-bg{background:transparent;}
+  .bg-blueprint{
+    position:fixed; inset:0; z-index:-1;
+    background-color:var(--bg);
     background-image:
       radial-gradient(ellipse 62% 46% at 86% 4%, rgba(255,128,0,.085), transparent 62%),
       radial-gradient(ellipse 58% 42% at 6% 72%, rgba(58,160,255,.070), transparent 62%),
@@ -1505,9 +1539,8 @@
       repeating-linear-gradient(90deg, rgba(255,255,255,.026) 0 1px, transparent 1px 96px),
       repeating-linear-gradient(0deg, rgba(255,255,255,.011) 0 1px, transparent 1px 24px),
       repeating-linear-gradient(90deg, rgba(255,255,255,.011) 0 1px, transparent 1px 24px);
-    background-attachment:fixed;
   }
-  [data-theme="light"] body{
+  [data-theme="light"] .bg-blueprint{
     background-image:
       radial-gradient(ellipse 62% 46% at 86% 4%, rgba(255,128,0,.070), transparent 62%),
       radial-gradient(ellipse 58% 42% at 6% 72%, rgba(58,160,255,.060), transparent 62%),
@@ -2012,7 +2045,7 @@
 
   /* Phone-first: the diagram and its control are the main event on a
      small screen, so they lead and get the full width. */
-  @media (max-width:900px){
+  @media (max-width:860px){
     .teardown{padding:72px 0;}
     .teardown-grid{
       grid-template-columns:1fr;
@@ -2082,7 +2115,9 @@
       radial-gradient(ellipse 70% 52% at 22% 30%, rgba(255,128,0,.10), transparent 68%),
       radial-gradient(ellipse 56% 44% at 84% 74%, rgba(255,179,71,.055), transparent 70%);
   }
-  .quote-block{position:relative; overflow:hidden;}
+  /* F34 fix (2026-09-07): position:relative removed here -- redundant,
+     .quote-block already sets it in its own base rule above. */
+  .quote-block{overflow:hidden;}
   .quote-block::before{
     content:"";
     position:absolute;
@@ -2227,7 +2262,7 @@
   .radius-legend span{display:inline-flex; align-items:center; gap:8px;}
   .radius-legend b{width:22px; height:0; border-top:2px solid var(--blue-light);}
   .radius-legend b.is-request{border-top:2px dashed var(--orange);}
-  @media (max-width:700px){
+  @media (max-width:760px){
     .radius-figure text{font-size:19px;}
     .radius-note{font-size:16px;}
     .radius-hub-name{font-size:21px;}
@@ -2252,6 +2287,17 @@
     stroke-dashoffset:1;
   }
   .radius-figure .radius-spoke.is-request{opacity:0;}
+  /* F26 fix (2026-09-07): with JS disabled, reveal-ready and is-visible
+     never get added (both are set by the same IntersectionObserver-driven
+     script that runs every other reveal on this page), so the two rules
+     above left every connector line permanently hidden -- the whole
+     diagram rendered as five floating dots with no lines connecting them
+     to the hub. Same fallback idiom already used elsewhere on this page
+     (.section-head::before, .blog-article h2::before, .hero-motto span):
+     show the fully-arrived end state directly for a no-JS visitor,
+     skipping only the decorative draw-in animation. */
+  html:not(.reveal-ready) .radius-figure .radius-spoke:not(.is-request){stroke-dashoffset:0;}
+  html:not(.reveal-ready) .radius-figure .radius-spoke.is-request{opacity:1;}
   html.reveal-ready .radius-figure.is-visible .radius-spoke:not(.is-request){
     stroke-dashoffset:0;
     transition:stroke-dashoffset .5s ease-out;
@@ -2602,10 +2648,18 @@
   .trust-strip-section{padding-top:0;}
   .trust-strip-section + section{border-top:1px solid var(--border);}
 
-  /* Landing hero: the lede was a raw inline-styled paragraph with no
-     measure control, so long city copy ran the full width of a desktop
-     screen. Caps the line length without touching the markup. */
-  .hero .wrap > p[style]{
-    max-width:64ch !important;
+  /* Landing hero lede. F32 fix (2026-09-07): this used to be a raw
+     inline-styled paragraph (identical inline style string repeated on
+     all 5 landing pages) selected here by mere presence of a `style`
+     attribute, with the real fix (a max-width cap, since it had none and
+     ran the full width of a desktop screen) forced in via !important to
+     beat that same inline style's own max-width. Given a real class,
+     replacing the inline style outright -- no attribute-presence
+     selector and no !important needed anymore. */
+  .hero-lede{
+    max-width:64ch;
+    color:var(--text-dim);
+    font-size:18px;
+    margin-top:16px;
     line-height:1.7;
   }

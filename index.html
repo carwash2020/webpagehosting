@@ -60,7 +60,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Anton&family=Archivo:wght@400..700&family=Newsreader:ital,opsz,wght@0,6..72,300..700;1,6..72,300..600&family=Oswald:wght@200..700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="styles.css?v=202609072345">
+<link rel="stylesheet" href="styles.css?v=202609080115">
 <script type="application/ld+json">
 {
   "@context": "https://schema.org",
@@ -230,7 +230,8 @@
 }
 </script>
 </head>
-<body>
+<body class="has-blueprint-bg">
+<div class="bg-blueprint" aria-hidden="true"></div>
 <a href="#home" class="skip-link">Skip to main content</a>
 
 <div class="motto-rail" aria-hidden="true">
@@ -1880,7 +1881,6 @@
       btn.setAttribute('aria-controls', answer.id);
       btn.addEventListener('click', () => {
         const isOpen = item.classList.toggle('is-open');
-        answer.style.maxHeight = isOpen ? answer.scrollHeight + 'px' : '0px';
         btn.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
       });
     });
