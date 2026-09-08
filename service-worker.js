@@ -476,7 +476,13 @@
 // what an earlier survey reported -- the only genuine gap found was a
 // missing warranty countdown badge, which job-tracker.html's own card
 // for the same job already shows. Added here to match.
-const CACHE_NAME = 'th-workspace-v96';
+// Bumped 2026-09-08 (v96 -> v97): /tools/job-detail.html and
+// /tools/invoice-generator.html both changed -- W08/U16 (a one-page
+// "Generate Job Sheet" PDF, done jobs only) and U17 (the 30-day labor
+// warranty stated on that sheet and on any invoice linked to a
+// completed job), verified by generating and text-extracting real
+// PDFs rather than just reading the drawing code.
+const CACHE_NAME = 'th-workspace-v97';
 const PRECACHE_URLS = [
   '/tools/workspace.html', '/tools/job-tracker.html', '/tools/invoice-generator.html', '/tools/contract-generator.html',
   '/tools/calendar.html', '/tools/route-planner.html', '/tools/review-request.html', '/tools/contact-card.html',
