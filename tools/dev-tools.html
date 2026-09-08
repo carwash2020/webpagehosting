@@ -2429,11 +2429,24 @@
   // file. Renders both security and performance lints, grouped and
   // counted by level (ERROR/WARN/INFO) so the worst thing needing
   // attention is obvious without reading every single line.
-  // Returns a short, safe-to-log preview of a string that flags
-  // exactly which character (if any) is outside the Latin1/ByteString
-  // range and where it sits -- added 2026-08-16 after two rounds of
-  // the same "not a valid ByteString" error with no way to see what
-  // was actually in the value that triggered it.
+  // Returns a diagnostic that flags exactly which character (if any)
+  // is outside the Latin1/ByteString range and where it sits --
+  // added 2026-08-16 after two rounds of the same "not a valid
+  // ByteString" error with no way to see what was actually in the
+  // value that triggered it.
+  //
+  // Security fix (2026-09-08, CodeQL alert #57 "Clear text storage of
+  // sensitive information"): this is called on real credentials
+  // (SUPABASE_ANON_KEY, a live Authorization bearer token) whose
+  // return value can end up in logClientError()'s message on a fetch
+  // failure -- redactSensitiveText() only catches full JWT/credential
+  // *shapes*, not an arbitrary short excerpt of one, so the old
+  // "safe-to-log preview" claim was wrong: it previously echoed the
+  // value's first 12 characters (clean case) or up to 10 characters
+  // around a bad char (bad-char case), either of which is a real,
+  // usable fragment of the actual secret. Reports length and the bad
+  // character's position/code point only -- never any of the value's
+  // own characters, clean or not.
   function describeHeaderValue(label, value) {
     if (typeof value !== 'string') {
       return label + ': not a string (type ' + typeof value + ')';
@@ -2442,10 +2455,10 @@
       const code = value.charCodeAt(i);
       if (code > 0xFF) {
         return label + ': length ' + value.length + ', bad char at index ' + i +
-          ' (code point ' + code + ', "' + value.slice(Math.max(0, i - 5), i + 5) + '")';
+          ' (code point ' + code + ')';
       }
     }
-    return label + ': length ' + value.length + ', clean (starts "' + value.slice(0, 12) + '...")';
+    return label + ': length ' + value.length + ', clean';
   }
 
   async function renderAdvisorHealth() {

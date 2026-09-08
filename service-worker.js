@@ -584,7 +584,16 @@
 // inline suppression on the exact flagged line instead of redacting
 // further, since the flow is already verified safe by this repo's own
 // tests.
-const CACHE_NAME = 'th-workspace-v112';
+// Bumped 2026-09-08 (v112 -> v113): the v112 push above surfaced a real,
+// different alert (#57) on the same sink line -- dev-tools.html's
+// describeHeaderValue() diagnostic helper was echoing back a real
+// excerpt (up to 12 characters) of the actual credential it was
+// describing (SUPABASE_ANON_KEY, a live Authorization bearer token),
+// which redactSensitiveText() can't catch since it isn't a full
+// JWT/credential shape, just an arbitrary short slice of one. Fixed at
+// the source: it now reports only length and the bad character's
+// position/code point, never any of the value's own characters.
+const CACHE_NAME = 'th-workspace-v113';
 const PRECACHE_URLS = [
   '/tools/workspace.html', '/tools/job-tracker.html', '/tools/invoice-generator.html', '/tools/contract-generator.html',
   '/tools/calendar.html', '/tools/route-planner.html', '/tools/review-request.html', '/tools/contact-card.html',
