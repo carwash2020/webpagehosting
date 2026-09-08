@@ -60,7 +60,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Anton&family=Archivo:wght@400..700&family=Newsreader:ital,opsz,wght@0,6..72,300..700;1,6..72,300..600&family=Oswald:wght@200..700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="styles.css?v=202609082030">
+<link rel="stylesheet" href="styles.css?v=202609081652">
 <script type="application/ld+json">
 {
   "@context": "https://schema.org",
@@ -645,7 +645,7 @@
         </div>
       </div>
 
-      <p class="verdict-note" data-reveal>We'd rather lose the job than take your money for a repair that doesn't make sense. <b>If replacing is the smarter call, we'll tell you, and we'll tell you why.</b></p>
+      <p class="verdict-note" data-reveal>We'd rather lose the job than take your money for a repair that doesn't make sense. <b>If replacing is the smarter call, we'll tell you, and we'll tell you why.</b> Here's <a href="/blog/appliance-repair-or-replace.html">how we actually make that call</a>.</p>
 
       <div class="care-card" id="careCard" data-reveal hidden>
         <div class="care-icon" aria-hidden="true">
@@ -735,6 +735,42 @@
       </div>
 
       <input type="range" id="revealScrub" class="reveal-scrub" min="0" max="100" value="50" step="1" aria-label="Drag to compare a worn floor against real finished flooring work">
+    </div>
+  </section>
+
+  <!-- SEO fix (2026-09-08): an audit found the site's 3 blog posts are
+       only reachable through /blog/ itself or the sitemap -- no page on
+       the site, including this one and the 5 landing pages, ever links
+       to an individual post directly. Search engines read a site's own
+       internal linking as a signal of how much the owner actually
+       values a page; with none of the site's highest-authority pages
+       linking to a specific post, that reads as "peripheral" regardless
+       of the content's own quality. Real, direct links to all 3 posts
+       from the homepage closes that gap. -->
+  <section id="blog-teaser">
+    <div class="wrap">
+      <div class="section-head" data-reveal>
+        <h2>From the blog</h2>
+        <p>Real write-ups on the repairs and small jobs we see most.</p>
+      </div>
+      <div class="blog-teaser-grid">
+        <a class="blog-teaser-card" data-reveal href="/blog/appliance-repair-or-replace.html">
+          <h3>Appliance Repair or Replace? How We Actually Decide</h3>
+          <p>We'd rather tell you not to spend money with us than talk you into a repair that doesn't make sense.</p>
+          <span class="service-tag">Read the post <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18l6-6-6-6"/></svg></span>
+        </a>
+        <a class="blog-teaser-card" data-reveal href="/blog/dryer-not-heating.html">
+          <h3>Dryer Running But Not Heating?</h3>
+          <p>Before you start pricing new dryers, check one part that costs less than a movie ticket.</p>
+          <span class="service-tag">Read the post <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18l6-6-6-6"/></svg></span>
+        </a>
+        <a class="blog-teaser-card" data-reveal href="/blog/handyman-to-do-list.html">
+          <h3>The Small Jobs Everyone Forgets Until It's Time to Sell</h3>
+          <p>None of these show up on an inspection report. All of them show up the second a buyer walks through the door.</p>
+          <span class="service-tag">Read the post <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18l6-6-6-6"/></svg></span>
+        </a>
+      </div>
+      <p class="blog-teaser-more"><a href="/blog/">See all posts &rarr;</a></p>
     </div>
   </section>
 

@@ -822,6 +822,41 @@
   @media (max-width:860px){.services-grid{grid-template-columns:repeat(2,1fr);}}
   @media (max-width:600px){.services-grid{grid-template-columns:1fr;}}
 
+  /* blog teaser -- direct links to each post so the homepage itself
+     signals which posts matter, not just a link to /blog/ as a whole */
+  .blog-teaser-grid{
+    display:grid;
+    grid-template-columns:repeat(3,1fr);
+    gap:20px;
+  }
+  .blog-teaser-card{
+    display:block;
+    background:var(--bg-panel);
+    border:1px solid var(--border);
+    border-top:3px solid var(--blue);
+    border-radius:var(--radius);
+    padding:26px 24px;
+    transition:transform .18s ease, border-color .18s ease, box-shadow .18s ease;
+    text-decoration:none;
+    color:var(--text);
+    box-shadow:var(--shadow-resting);
+  }
+  .blog-teaser-card:hover{transform:translateY(-4px); border-color:var(--blue-text); box-shadow:var(--shadow-hover);}
+  .blog-teaser-card h3{
+    font-family:var(--font-ui);
+    font-weight:700;
+    font-size:17px;
+    text-transform:none;
+    letter-spacing:0;
+    margin-bottom:8px;
+  }
+  .blog-teaser-card p{color:var(--text-dim); font-size:14.5px; margin:0;}
+  .blog-teaser-more{text-align:center; margin-top:28px;}
+  .blog-teaser-more a{color:var(--blue-text); font-weight:600; text-decoration:none;}
+  .blog-teaser-more a:hover{text-decoration:underline;}
+  @media (max-width:860px){.blog-teaser-grid{grid-template-columns:repeat(2,1fr);}}
+  @media (max-width:600px){.blog-teaser-grid{grid-template-columns:1fr;}}
+
   /* about */
   .about-grid{
     display:grid;
@@ -2908,6 +2943,8 @@
     max-width:70ch;
   }
   .verdict-note b{color:var(--orange-text);}
+  .verdict-note a{color:var(--orange-text); font-weight:600; text-decoration:underline;}
+  .verdict-note a:hover{text-decoration:none;}
   @media (max-width:760px){
     .verdict-split{grid-template-columns:1fr;}
   }
