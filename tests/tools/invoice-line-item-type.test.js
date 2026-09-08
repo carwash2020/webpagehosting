@@ -73,11 +73,20 @@ test('the shared PDF line-items table renderer appends the unit abbreviation to 
   // near-identical line-items table (this exact line duplicated in both).
   // Refactored (2026-09-07) into one shared drawPdfLineItemsTable() that
   // both call, fixing a real bug in the process (the quote/estimate table
-  // was missing the invoice table's pagination guard) -- this now checks
-  // the one shared implementation instead of expecting two copies.
-  const fnMatch = HTML.match(/function drawPdfLineItemsTable\(doc, \{[\s\S]*?\n  \}\n/);
-  assert.ok(fnMatch, 'expected to isolate drawPdfLineItemsTable()');
-  assert.match(fnMatch[0], /doc\.text\(String\(item\.qty\) \+ \(lineItemUnitLabel\(item\.type\) \? ' ' \+ lineItemUnitLabel\(item\.type\) : ''\), 40 \+ tableW \* 0\.68, y \+ 14, \{ align: 'center' \}\);/);
+  // was missing the invoice table's pagination guard). Moved again
+  // (2026-09-08, U15/W18) into the shared /tools/pdf-layout.js, also used
+  // by job-detail.html's job sheet and contract-generator.html -- this
+  // checks that one real implementation, wherever it now lives.
+  const PDF_LAYOUT = fs.readFileSync(path.join(__dirname, '..', '..', 'tools', 'pdf-layout.js'), 'utf8');
+  const fnMatch = PDF_LAYOUT.match(/function drawPdfLineItemsTable\(doc, \{[\s\S]*?\n\}\n/);
+  assert.ok(fnMatch, 'expected to isolate drawPdfLineItemsTable() in pdf-layout.js');
+  // The shared renderer expects each item's unitLabel precomputed
+  // (rather than calling back into invoice-generator.html's own
+  // lineItemUnitLabel(), which it has no access to) -- the two PDF-
+  // drawing call sites (generatePDF/generateQuotePDF) build that.
+  assert.match(fnMatch[0], /doc\.text\(String\(item\.qty\) \+ \(item\.unitLabel \? ' ' \+ item\.unitLabel : ''\), 40 \+ tableW \* 0\.68, y \+ 14, \{ align: 'center' \}\);/);
+  assert.match(HTML, /getLineItems\(\)\.map\(item => \(\{ \.\.\.item, unitLabel: lineItemUnitLabel\(item\.type\) \}\)\)/, 'expected generatePDF() to precompute unitLabel before calling the shared table renderer');
+  assert.match(HTML, /getQuoteLineItems\(\)\.map\(item => \(\{ \.\.\.item, unitLabel: lineItemUnitLabel\(item\.type\) \}\)\)/, 'expected generateQuotePDF() to precompute unitLabel before calling the shared table renderer');
 });
 
 test('the Type select gets real styling matching the rest of the table, not left as an unstyled default browser select', () => {

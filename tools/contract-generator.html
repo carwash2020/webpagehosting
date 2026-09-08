@@ -58,6 +58,10 @@
 <script src="/tools/tools-media-sharing.js?v=4be783c8a5" defer></script>
 <script src="/tools/tools-nav-pwa.js?v=9b16eefb86" defer></script>
 <script src="/tools/tools-tour.js?v=cf6652f5b1" defer></script>
+<!-- U15/W18 fix (High-Impact Upgrades, Master Audit, 2026-09-08): the
+     shared masthead/footer/totals-block renderer, also used by
+     invoice-generator.html and job-detail.html's job sheet. -->
+<script src="/tools/pdf-layout.js?v=dc66e8a810" defer></script>
 <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js" integrity="sha384-JcnsjUPPylna1s1fvi1u12X5qjY5OL56iySh75FdtrwhO/SWXgMjoVqcKyIIWOLk" crossorigin="anonymous" async></script>
 <style>
   body { max-width: 900px; margin: 0 auto; }
@@ -361,6 +365,21 @@
     ltsa: 'Long-Term Service Agreement',
   };
 
+  // U15/W18 fix (2026-09-08): a real type label in the PDF masthead's
+  // top-right corner, matching INVOICE/ESTIMATE/JOB SHEET on the other
+  // three document types -- previously the contract masthead didn't
+  // show one at all. Shortened from CONTRACT_TYPE_LABELS specifically
+  // for this spot: "SHORT-TERM PROJECT AGREEMENT" at 13pt bold runs
+  // right up against the wordmark's own text before drawPdfHeader's
+  // auto-shrink guard would kick in, so this drops "PROJECT"/"SERVICE"
+  // redundant-with-context words rather than shrinking the font small
+  // enough to fit the full name.
+  const CONTRACT_PDF_TYPE_LABELS = {
+    pwo: 'WORK ORDER',
+    stpa: 'PROJECT AGREEMENT',
+    ltsa: 'SERVICE AGREEMENT',
+  };
+
   function renderContractLog() {
     const searchTerm = (document.getElementById('contractSearch')?.value || '').trim().toLowerCase();
     let log = [...loadContractLog()].sort((a, b) => b.id - a.id);
@@ -431,85 +450,23 @@
     buildContractPDF(entry.type, entry.fields);
   }
 
-  async function loadImageAsDataURL(path) {
-    const res = await fetch(path);
-    const blob = await res.blob();
-    return new Promise((resolve, reject) => {
-      const reader = new FileReader();
-      reader.onload = () => resolve(reader.result);
-      reader.onerror = reject;
-      reader.readAsDataURL(blob);
-    });
-  }
-
   // ---------- Generic contract-document renderer ----------
   // Each contract type is described as a flat array of "blocks" (heading,
   // label, field, paragraph, signature, footnote). One shared function
   // walks the array and lays it out on the page with proper text-wrapping
   // and pagination, rather than writing near-identical PDF layout code
   // three separate times.
-  function wrapAndDraw(doc, text, x, y, maxWidth, lineHeight, pageBottom, marginX, pageW, logoDataCache, restoreFont) {
-    // Split on real newlines first -- jsPDF's splitTextToSize wraps by
-    // width but doesn't reliably respect embedded "\n" characters across
-    // versions, and textarea input (like a job description) will often
-    // have real line breaks the user typed in. Splitting ourselves first
-    // guarantees paragraph breaks survive regardless of that quirk.
-    const paragraphs = String(text).split('\n');
-    paragraphs.forEach((para, i) => {
-      const lines = doc.splitTextToSize(para, maxWidth);
-      lines.forEach(line => {
-        if (y > pageBottom) {
-          doc.addPage();
-          y = drawContractHeader(doc, pageW, logoDataCache) + 26;
-          // The header draw above changes font/size/color to render its
-          // own white/orange text -- restore whatever this paragraph was
-          // using before the break, so its remaining lines don't
-          // silently continue in the header's styling.
-          if (restoreFont) doc.setFont(restoreFont.name, restoreFont.style);
-          if (restoreFont) doc.setFontSize(restoreFont.size);
-          if (restoreFont) doc.setTextColor(...restoreFont.color);
-        }
-        doc.text(line, x, y);
-        y += lineHeight;
-      });
-      if (i < paragraphs.length - 1) y += lineHeight * 0.3;
-    });
-    return y;
-  }
-
-  function drawContractHeader(doc, pageW, logoDataCache) {
-    const NAVY = [26, 26, 26];
-    const ORANGE = [224, 123, 30];
-    doc.setFillColor(...NAVY);
-    doc.rect(0, 0, pageW, 74, 'F');
-    if (logoDataCache) {
-      try { doc.addImage(logoDataCache, 'PNG', 40, 12, 50, 46); }
-      catch (e) { /* logo optional if it fails to draw */ }
-    }
-    doc.setFont('helvetica', 'bold'); doc.setFontSize(15); doc.setTextColor(255, 255, 255);
-    doc.text('TRIPLE H ENTERPRISES LLC', 100, 32);
-    doc.setFont('helvetica', 'normal'); doc.setFontSize(8.5); doc.setTextColor(...ORANGE);
-    doc.text('Handyman & Appliance Repair \u2014 St. George, Utah', 100, 46);
-    doc.setTextColor(207, 207, 207);
-    doc.text('124 N 2750 E, St. George, UT 84790  \u2014  (435) 414-1667  \u2014  steve@triplehenterprisesllc.biz', 100, 58);
-    return 104; // y position content should start at on this page
-  }
-
-  // Drawn as a final pass after all content is laid out (see the end of
-  // buildContractPDF below) rather than incrementally per-page, since
-  // jsPDF doesn't know the total page count until every block has been
-  // placed -- this is what lets the footer correctly say "Page 2 of 3"
-  // instead of an incomplete or guessed total.
-  function drawContractFooter(doc, pageW, pageH, pageNum, totalPages) {
-    const ORANGE = [224, 123, 30];
-    const GRAY = [120, 120, 120];
-    const footerY = pageH - 40;
-    doc.setDrawColor(...ORANGE); doc.setLineWidth(1.2);
-    doc.line(50, footerY, pageW - 50, footerY);
-    doc.setFont('helvetica', 'normal'); doc.setFontSize(8); doc.setTextColor(...GRAY);
-    doc.text('Triple H Enterprises LLC  \u2014  www.triplehenterprisesllc.biz', pageW / 2, footerY + 14, { align: 'center' });
-    doc.text('Page ' + pageNum + ' of ' + totalPages, pageW - 50, footerY + 14, { align: 'right' });
-  }
+  //
+  // U15/W18 fix (High-Impact Upgrades, Master Audit, 2026-09-08):
+  // loadImageAsDataURL, the masthead (drawContractHeader), and the
+  // footer (drawContractFooter) all moved into the shared
+  // /tools/pdf-layout.js as pdfLoadImageAsDataURL/drawPdfHeader/
+  // drawPdfFooter -- the same real masthead invoice-generator.html and
+  // job-detail.html's job sheet already use, replacing this page's own
+  // smaller, one-line, no-type-label version that had nothing keeping
+  // it in step with the other two. wrapAndDraw is now pdfWrapAndDraw,
+  // taking a page-break callback instead of a fixed (pageW, logoDataCache)
+  // pair so it isn't tied to this page's own header-drawing signature.
 
   async function buildContractPDF(type, fields, clientSignatureDataUrl, businessSignatureDataUrl) {
     // Bug fix (2026-08-20): same guard as invoice-generator.html's
@@ -524,23 +481,40 @@
     const maxWidth = pageW - marginX * 2;
     const pageBottom = pageH - 70;
 
+    // Loaded ONCE and cached -- a multi-page contract redraws the
+    // masthead on every page break, and re-fetching the same logo image
+    // that many times would be both slower and a real race (the shared
+    // drawPdfHeader is async; without a preloaded value, two page
+    // breaks close together could have their logo loads resolve out of
+    // order relative to the synchronous text-drawing calls around them).
     let logoDataCache = null;
-    try { logoDataCache = await loadImageAsDataURL('/images/logo-signature-orange.webp'); }
+    try { logoDataCache = await pdfLoadImageAsDataURL('/images/logo-signature-orange.webp'); }
     catch (e) { /* header still draws fine without it */ }
 
-    let y = drawContractHeader(doc, pageW, logoDataCache);
-    y += 30;
-    doc.setDrawColor(220, 220, 220);
-    doc.line(marginX, y, pageW - marginX, y);
-    y += 26;
+    async function drawHeader() { return await drawPdfHeader(doc, pageW, CONTRACT_PDF_TYPE_LABELS[type], logoDataCache); }
 
     const BLACK = [20, 20, 20];
     const GRAY = [90, 90, 90];
     const ORANGE_DARK = [179, 95, 19];
 
+    let y = await drawHeader();
+    // U15/W18 fix (2026-09-08): the registered business address used to
+    // be part of contract-generator.html's own masthead -- real content
+    // this document type specifically needs (a signed agreement stating
+    // where the LLC is registered), not something invoices/estimates/job
+    // sheets have ever shown. The shared masthead doesn't carry a street
+    // address at all, so this is added back here rather than folded into
+    // drawPdfHeader() and shown on every document type.
+    doc.setFont('helvetica', 'normal'); doc.setFontSize(8.5); doc.setTextColor(...GRAY);
+    doc.text('124 N 2750 E, St. George, UT 84790', marginX, y);
+    y += 18;
+    doc.setDrawColor(220, 220, 220);
+    doc.line(marginX, y, pageW - marginX, y);
+    y += 26;
+
     const blocks = CONTRACT_TEMPLATES[type].blocks(fields);
-    blocks.forEach(block => {
-      if (y > pageBottom - 20 && block.type !== 'pagebreak') { doc.addPage(); y = drawContractHeader(doc, pageW, logoDataCache) + 26; }
+    for (const block of blocks) {
+      if (y > pageBottom - 20 && block.type !== 'pagebreak') { doc.addPage(); y = (await drawHeader()) + 26; }
 
       if (block.type === 'heading') {
         doc.setFont('helvetica', 'bold'); doc.setFontSize(16); doc.setTextColor(...BLACK);
@@ -560,9 +534,18 @@
         doc.setFont('helvetica', 'normal'); doc.setTextColor(...GRAY);
         doc.text(block.value || '\u2014', marginX + 150, y);
         y += 17;
+      } else if (block.type === 'totalHighlight') {
+        // U15/W18 fix (2026-09-08): "the total given genuine
+        // prominence" -- the same orange-tint treatment invoices and
+        // estimates already give their own final total, instead of
+        // this rendering as a plain field row with the same visual
+        // weight as "Estimated Labor" above it.
+        y += 6;
+        y = drawPdfTotalHighlight(doc, { x: marginX, y, width: maxWidth, label: block.label, value: block.value || '\u2014' });
+        y += 20;
       } else if (block.type === 'paragraph') {
         doc.setFont('helvetica', 'normal'); doc.setFontSize(10); doc.setTextColor(...BLACK);
-        y = wrapAndDraw(doc, block.text, marginX, y, maxWidth, 14, pageBottom, marginX, pageW, logoDataCache,
+        y = await pdfWrapAndDraw(doc, block.text, marginX, y, maxWidth, 14, pageBottom, drawHeader,
           { name: 'helvetica', style: 'normal', size: 10, color: BLACK });
         y += 8;
       } else if (block.type === 'signature') {
@@ -603,19 +586,20 @@
       } else if (block.type === 'footnote') {
         y += 10;
         doc.setFont('helvetica', 'italic'); doc.setFontSize(8); doc.setTextColor(...GRAY);
-        y = wrapAndDraw(doc, block.text, marginX, y, maxWidth, 10, pageBottom, marginX, pageW, logoDataCache,
+        y = await pdfWrapAndDraw(doc, block.text, marginX, y, maxWidth, 10, pageBottom, drawHeader,
           { name: 'helvetica', style: 'italic', size: 8, color: GRAY });
       }
-    });
+    }
 
     // Footer final pass: total page count is only known now that every
     // block has been placed, so this loops back over every page already
     // drawn and adds the footer -- including the correct "Page X of Y"
-    // rather than an incomplete or guessed total.
+    // rather than an incomplete or guessed total. Same shared footer
+    // invoice-generator.html and job-detail.html's job sheet use.
     const totalPages = doc.internal.getNumberOfPages();
     for (let p = 1; p <= totalPages; p++) {
       doc.setPage(p);
-      drawContractFooter(doc, pageW, pageH, p, totalPages);
+      drawPdfFooter(doc, pageW, pageH, { pageInfo: { pageNum: p, totalPages } });
     }
 
     const safeClientName = (fields.clientName || 'client').replace(/[^a-z0-9]+/gi, '-').replace(/^-+|-+$/g, '') || 'client';
@@ -638,7 +622,7 @@
         { type: 'sectionLabel', text: 'Price' },
         { type: 'field', label: 'Estimated Labor', value: f.laborPrice },
         { type: 'field', label: 'Estimated Parts/Materials', value: f.partsPrice },
-        { type: 'field', label: 'Total Estimated Price', value: f.totalPrice },
+        { type: 'totalHighlight', label: 'Total Estimated Price', value: f.totalPrice },
         { type: 'paragraph', text: 'Actual price may vary if additional parts or labor are required once work begins; the client will be notified before any change beyond a reasonable estimate.' },
         { type: 'sectionLabel', text: 'Payment Terms' },
         { type: 'paragraph', text: 'Payment is due upon completion unless otherwise noted above. Accepted payment methods: cash, check, card, or Venmo.' },
@@ -667,7 +651,7 @@
         { type: 'field', label: 'Estimated Completion Date', value: f.completionDate },
         { type: 'paragraph', text: 'Timelines are estimates and may be affected by weather, parts availability, or unforeseen conditions discovered once work begins. Contractor will communicate any significant delay as soon as it is known.' },
         { type: 'sectionLabel', text: '3. Price & Payment Schedule' },
-        { type: 'field', label: 'Total Project Price', value: f.totalPrice },
+        { type: 'totalHighlight', label: 'Total Project Price', value: f.totalPrice },
         { type: 'field', label: 'Deposit (due at signing)', value: f.deposit },
         { type: 'field', label: 'Balance (due upon completion)', value: f.balance },
         { type: 'paragraph', text: 'For projects with multiple phases, payment may instead be split into milestone payments as agreed in writing by both parties.' },

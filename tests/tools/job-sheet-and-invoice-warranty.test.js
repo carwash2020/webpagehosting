@@ -76,7 +76,7 @@ test('an invoice linked to a completed job states the same 30-day warranty rule,
 
 test('an invoice with no linked job, or a job that is not yet done, never draws the warranty line', () => {
   const start = INVOICE_GEN.indexOf('const linkedJobId = ');
-  const fn = INVOICE_GEN.slice(start, INVOICE_GEN.indexOf('\n\n    // footer', start));
+  const fn = INVOICE_GEN.slice(start, INVOICE_GEN.indexOf('\n\n    // Footer final pass', start));
   // The warranty text lives strictly inside the `if (linkedJobId)` /
   // `if (linkedJob && ... === 'done' ...)` guards -- there is no
   // unconditional draw of that line anywhere in this block.

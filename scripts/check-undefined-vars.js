@@ -88,6 +88,12 @@ const SHARED_SCRIPT_FILES = [
   // The portal app-shell shared helper (2026-09-04) -- skeleton
   // loading templates, loaded on every page that shows a list.
   'portal/portal-app.js',
+  // The shared jsPDF masthead/footer/totals-block renderer (U15/W18,
+  // 2026-09-08) -- loaded by invoice-generator.html, the job sheet on
+  // job-detail.html, and contract-generator.html. (Written without any
+  // apostrophes deliberately, same reason as the note above on
+  // portal/push-notifications.js.)
+  'tools/pdf-layout.js',
 ];
 
 // Third-party globals from CDN-loaded scripts (Supabase, Stripe,
