@@ -1711,6 +1711,23 @@
   .section-head.is-visible::after,
   html:not(.reveal-ready) .section-head::after{opacity:.85;}
 
+  /* W23 fix (Master Audit, 2026-09-08): the generic opacity+translateY
+     entrance fade above was applied identically to every section
+     heading sitewide -- the same motion repeated 10 times dilutes the
+     handful of places where scroll-triggered movement is a deliberate,
+     designed moment (the hero, the teardown spotlight, the process
+     step-line, the service-area diagram's own draw-in). Headings now
+     render immediately; [data-reveal]/.is-visible stay fully wired
+     (more specific than the base [data-reveal] rule above, so this
+     wins regardless of source order) since #process's connecting line
+     and the draft-line tick marks just above both key off the exact
+     same .section-head.is-visible state. */
+  html.reveal-ready .section-head[data-reveal]{
+    opacity:1;
+    transform:none;
+    transition:none;
+  }
+
   /* The blog uses bare <h2>s rather than .section-head, so it gets the
      same annotation through its own selector -- one visual language
      across marketing pages and articles. */
@@ -2571,9 +2588,12 @@
   html.reveal-ready .radius-figure.is-visible g[data-city="santa-clara-ivins"] .radius-node{animation:radiusPulse .5s ease-out .9s backwards;}
   html.reveal-ready .radius-figure.is-visible g[data-city="cedar-city"] .radius-node{animation:radiusPulse .5s ease-out 1s backwards;}
   html.reveal-ready .radius-figure.is-visible g[data-city="mesquite"] .radius-node{animation:radiusPulse .5s ease-out 1.15s backwards;}
+  /* W23 fix (Master Audit, 2026-09-08): scale(1.8) read as an oversized,
+     cartoonish jump for a small 6px node -- toned down to a still-clear
+     but proportionate pulse. */
   @keyframes radiusPulse{
     0%{transform:scale(1); filter:drop-shadow(0 0 0 transparent);}
-    50%{transform:scale(1.8); filter:drop-shadow(0 0 5px var(--blue-light));}
+    50%{transform:scale(1.25); filter:drop-shadow(0 0 5px var(--blue-light));}
     100%{transform:scale(1); filter:drop-shadow(0 0 0 transparent);}
   }
 

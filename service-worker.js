@@ -526,7 +526,13 @@
 // page; the service-area diagram now re-lights the exact city a
 // visitor hovers or tab-focuses in the cards below it, instead of
 // sitting static after its one-time entrance animation finishes.
-const CACHE_NAME = 'th-workspace-v106';
+// Bumped 2026-09-08 (v106 -> v107): /styles.css changed again -- W23
+// remainder: the generic section-heading entrance fade (applied
+// identically 10 times sitewide) is gone, and the service-area
+// diagram's node-arrival pulse is toned down from scale(1.8) to
+// scale(1.25) -- both reduce excess motion diluting the page's real,
+// deliberate moments.
+const CACHE_NAME = 'th-workspace-v107';
 const PRECACHE_URLS = [
   '/tools/workspace.html', '/tools/job-tracker.html', '/tools/invoice-generator.html', '/tools/contract-generator.html',
   '/tools/calendar.html', '/tools/route-planner.html', '/tools/review-request.html', '/tools/contact-card.html',
