@@ -55,7 +55,7 @@
 <script src="/tools/data-layer.js?v=3a0d57478c" defer></script>
 <script src="/tools/tools-effects.js?v=4cff99aa4a" defer></script>
 <script src="/tools/tools-dialogs.js?v=e1dfaa11a1" defer></script>
-<script src="/tools/tools-media-sharing.js?v=4be783c8a5" defer></script>
+<script src="/tools/tools-media-sharing.js?v=3ee7a65cbc" defer></script>
 <script src="/tools/tools-nav-pwa.js?v=9b16eefb86" defer></script>
 <script src="/tools/tools-tour.js?v=cf6652f5b1" defer></script>
 <!-- U15/W18 fix (High-Impact Upgrades, Master Audit, 2026-09-08): the
@@ -941,12 +941,18 @@
       rememberLineItemRate(row.querySelector('.li-desc').value, price);
     });
     const rate = parseFloat(document.getElementById('invoiceTaxRate').value) || 0;
-    const tax = taxableSubtotal * (rate / 100);
+    // Real bug (2026-09-08): a percentage tax rate almost never lands on
+    // a whole number of cents (6.75% of $186.41 is $12.582675) -- stored
+    // unrounded, that fraction later made a customer's exact, correct
+    // payment compare as "partial" against the tool's own displayed
+    // total. Rounded here so what's stored matches what's shown and
+    // what a customer can actually pay.
+    const tax = Math.round(taxableSubtotal * (rate / 100) * 100) / 100;
     const discount = parseFloat(document.getElementById('discountAmount').value) || 0;
     // Discount applies to the tax-inclusive total, same precedent as the
     // Finance's Cost Lookup calculator -- a flat dollar-off-the-bill
     // discount, not a pre-tax price adjustment.
-    const total = Math.max(0, subtotal + tax - discount);
+    const total = Math.round(Math.max(0, subtotal + tax - discount) * 100) / 100;
     document.getElementById('subtotalDisplay').textContent = money(subtotal);
     document.getElementById('taxDisplay').textContent = money(tax);
     document.getElementById('totalDisplay').textContent = money(total);
@@ -992,9 +998,10 @@
       rememberLineItemRate(row.querySelector('.qli-desc').value, price);
     });
     const rate = parseFloat(document.getElementById('quoteTaxRate').value) || 0;
-    const tax = taxableSubtotal * (rate / 100);
+    // Same rounding as recalc() above -- see that comment for why.
+    const tax = Math.round(taxableSubtotal * (rate / 100) * 100) / 100;
     const discount = parseFloat(document.getElementById('quoteDiscountAmount').value) || 0;
-    const total = Math.max(0, subtotal + tax - discount);
+    const total = Math.round(Math.max(0, subtotal + tax - discount) * 100) / 100;
     document.getElementById('quoteSubtotalDisplay').textContent = money(subtotal);
     document.getElementById('quoteTaxDisplay').textContent = money(tax);
     document.getElementById('quoteTotalDisplay').textContent = money(total);
@@ -1179,10 +1186,12 @@
     const { subtotal, taxableSubtotal } = table;
 
     const taxRate = parseFloat(document.getElementById('invoiceTaxRate').value) || 0;
-    const tax = taxableSubtotal * (taxRate / 100);
+    // Rounded to cents same as recalc() above -- keeps the PDF's own
+    // total in agreement with the saved invoice record it's printed from.
+    const tax = Math.round(taxableSubtotal * (taxRate / 100) * 100) / 100;
     const discount = parseFloat(document.getElementById('discountAmount').value) || 0;
     const discountLabel = document.getElementById('discountLabel').value;
-    const total = Math.max(0, subtotal + tax - discount);
+    const total = Math.round(Math.max(0, subtotal + tax - discount) * 100) / 100;
     y = drawPdfTotalsBlock(doc, { y, pageW, subtotal, tax, discount, discountLabel, totalLabel: 'TOTAL DUE' });
 
     y += 37;
@@ -1890,10 +1899,12 @@
     const { subtotal, taxableSubtotal } = table;
 
     const quoteTaxRate = parseFloat(document.getElementById('quoteTaxRate').value) || 0;
-    const tax = taxableSubtotal * (quoteTaxRate / 100);
+    // Rounded to cents same as recalcQuote() above -- see recalc()'s
+    // comment for why.
+    const tax = Math.round(taxableSubtotal * (quoteTaxRate / 100) * 100) / 100;
     const discount = parseFloat(document.getElementById('quoteDiscountAmount').value) || 0;
     const discountLabel = document.getElementById('quoteDiscountLabel').value;
-    const total = Math.max(0, subtotal + tax - discount);
+    const total = Math.round(Math.max(0, subtotal + tax - discount) * 100) / 100;
     y = drawPdfTotalsBlock(doc, { y, pageW, subtotal, tax, discount, discountLabel, totalLabel: 'EST. TOTAL' });
 
     y += 37;
