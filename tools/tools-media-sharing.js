@@ -317,8 +317,20 @@ function redactSensitiveText(str) {
   // digits and leaves the rest of the number sitting right next to the
   // replacement, e.g. "4111111111111111" -> "41111[redacted-phone]"
   // instead of one clean "[redacted-number]".
+  //
+  // Widened (2026-09-08, same CodeQL alert #53 -- still open after the
+  // 2026-09-07 fix above, since a generic .replace() isn't recognized as
+  // a sanitizer by CodeQL's flow analysis and the original patterns only
+  // covered customer PII, not a credential accidentally caught up in an
+  // error's message/stack/source). Now also strips JWTs (Supabase auth
+  // tokens are exactly this shape) and any key=value pair in a URL query
+  // string whose key name reads as a credential, wherever one appears in
+  // the text -- covers a token that ends up in a fetch URL inside a
+  // stack trace, not just the top-level page URL.
   return String(str)
     .replace(/[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/gi, '[redacted-email]')
+    .replace(/\beyJ[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]{10,}\b/g, '[redacted-token]')
+    .replace(/([?&](?:token|key|apikey|api_key|secret|password|passwd|auth|session|access_token|refresh_token)=)[^&\s'"]+/gi, '$1[redacted]')
     .replace(/\b\d{9,}\b/g, '[redacted-number]')
     .replace(/(?:\+?1[-.\s]?)?\(?\d{3}\)?[-.\s]?\d{3}[-.\s]?\d{4}\b/g, '[redacted-phone]');
 }
@@ -334,7 +346,11 @@ function logClientError(message, source, lineno, colno, stack) {
       // unlikely case both log something in the same millisecond.
       id: Date.now() + '-' + Math.random().toString(36).slice(2, 8),
       message: redactSensitiveText(String(message == null ? 'Unknown error' : message)).slice(0, 500),
-      source: source || '',
+      // source is the script URL window.onerror reports, which was
+      // stored raw -- if a script tag's own src ever carried a
+      // query-string credential, this would have been the one field
+      // that skipped redaction entirely.
+      source: source ? redactSensitiveText(String(source)).slice(0, 500) : '',
       line: lineno || null,
       col: colno || null,
       stack: stack ? redactSensitiveText(String(stack)).slice(0, 1000) : '',

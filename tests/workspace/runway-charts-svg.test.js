@@ -104,15 +104,25 @@ test('Revenue vs. Costs has a real 2-color legend (revenue vs. costs), required 
 });
 
 test('Revenue vs. Costs bars are click/Enter targets that jump to their source row in Monthly History, instead of crowding 4 always-on labels per month', () => {
+  // Security fix (2026-09-08, CodeQL #54 "DOM text reinterpreted as
+  // HTML"): the month label used to go straight into an inline
+  // click-handler attribute on markup assigned via innerHTML --
+  // HTML-escaping it (as this same code already did for aria-label)
+  // doesn't stop it from breaking out of the handler's own JS-string
+  // literal once the browser decodes the attribute. Now the month lives
+  // in a plain data-attribute and a real addEventListener reads it back.
   const fn = extractFn('drawRevCostChart');
   assert.doesNotMatch(fn, /class="chart-value"/, 'no permanent per-bar dollar labels on the 2-series chart -- the real numbers already live in the Monthly History table');
   assert.match(fn, /role="button"/);
   assert.match(fn, /tabindex="0"/);
-  assert.match(fn, /onclick="highlightMonthRow\('\$\{p\.month\}'\)"/);
-  assert.match(fn, /onkeydown="if\(event\.key==='Enter'\|\|event\.key===' '\)/, 'should be keyboard-activatable too, not mouse-only');
+  assert.doesNotMatch(fn, /onclick=/, 'must not embed the month into an inline event-handler attribute');
+  assert.doesNotMatch(fn, /onkeydown=/, 'must not embed the month into an inline event-handler attribute');
+  assert.match(fn, /data-month="\$\{escapeAttr\(p\.month\)\}"/);
+  assert.match(fn, /addEventListener\('click', \(\) => highlightMonthRow\(month\)\)/);
+  assert.match(fn, /addEventListener\('keydown'/, 'should be keyboard-activatable too, not mouse-only');
 
   const highlightFn = extractFn('highlightMonthRow');
-  assert.match(highlightFn, /querySelector\('\[data-month-row="' \+ monthKey \+ '"\]'\)/, 'should target the exact same [data-month-row] attribute the Monthly History table and its own delete handler already use');
+  assert.match(highlightFn, /querySelector\('\[data-month-row="' \+ escaped \+ '"\]'\)/, 'should target the exact same [data-month-row] attribute the Monthly History table and its own delete handler already use');
   assert.match(highlightFn, /scrollIntoView/);
   assert.match(highlightFn, /classList\.add\('is-highlighted'\)/);
 });

@@ -67,3 +67,37 @@ test('logClientError() actually routes message and stack through redactSensitive
   assert.match(fn, /message: redactSensitiveText\(/);
   assert.match(fn, /stack: stack \? redactSensitiveText\(/);
 });
+
+// Widened 2026-09-08: the same CodeQL alert #53 was still open after the
+// fix above, since a plain .replace() call isn't recognized as a
+// sanitizer by CodeQL's dataflow analysis -- and the original patterns
+// only covered customer PII, not a credential that ends up embedded in
+// an error's message/stack/source (a JWT, or a token in a fetch URL's
+// query string).
+test('redactSensitiveText() scrubs a JWT-shaped auth token', () => {
+  const fn = extractFn(SRC, 'redactSensitiveText');
+  const redactSensitiveText = eval(`(${fn})`); // eslint-disable-line no-eval
+  const jwt = 'eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiIxMjM0NTY3ODkwIn0.dozjgNryP4J3jVmNHl0w5N_XgL0n3I9PlFUP0THsR8U';
+  assert.equal(redactSensitiveText(`Auth failed, token ${jwt} rejected`), 'Auth failed, token [redacted-token] rejected');
+});
+
+test('redactSensitiveText() scrubs credential-shaped query-string parameters wherever they appear', () => {
+  const fn = extractFn(SRC, 'redactSensitiveText');
+  const redactSensitiveText = eval(`(${fn})`); // eslint-disable-line no-eval
+  assert.equal(
+    redactSensitiveText('fetch failed at https://example.com/api?token=abc123&id=5'),
+    'fetch failed at https://example.com/api?token=[redacted]&id=5'
+  );
+  assert.equal(
+    redactSensitiveText('https://example.com/reset?access_token=xyz789'),
+    'https://example.com/reset?access_token=[redacted]'
+  );
+  // A plain "id" or "page" param (not credential-shaped) is untouched.
+  const benign = 'https://example.com/api?id=5&page=2';
+  assert.equal(redactSensitiveText(benign), benign);
+});
+
+test('logClientError() now also redacts the source field (a script/page URL that could carry a query-string token)', () => {
+  const fn = extractFn(SRC, 'logClientError');
+  assert.match(fn, /source: source \? redactSensitiveText\(/);
+});

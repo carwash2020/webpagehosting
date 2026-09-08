@@ -77,7 +77,7 @@
 <script src="/tools/data-layer.js?v=3a0d57478c" defer></script>
 <script src="/tools/tools-effects.js?v=4cff99aa4a" defer></script>
 <script src="/tools/tools-dialogs.js?v=e1dfaa11a1" defer></script>
-<script src="/tools/tools-media-sharing.js?v=4be783c8a5" defer></script>
+<script src="/tools/tools-media-sharing.js?v=3ee7a65cbc" defer></script>
 <script src="/tools/tools-nav-pwa.js?v=9b16eefb86" defer></script>
 <script src="/tools/tools-tour.js?v=cf6652f5b1" defer></script>
 <style>
@@ -1188,11 +1188,24 @@
     if (invoice.paidAmount !== undefined && invoice.paidAmount !== null) return Number(invoice.paidAmount) || 0;
     return invoice.paid ? (Number(invoice.total) || 0) : 0;
   }
+  // Real bug (2026-09-08), found from a live screenshot: an invoice
+  // showed "Partial -- $0.00 left". invoice.total is built by summing
+  // line-item amounts (subtotal += amount) in the invoice generator, so
+  // it can land on something like 125.00000000000001 instead of a clean
+  // 125 -- a typed-in payment of exactly 125 then fails `paidAmount >=
+  // total` by a fraction of a cent, landing on 'partial' with a
+  // remaining balance that's technically nonzero but rounds to $0.00 on
+  // display. Comparing in whole cents (rounded) makes the comparison
+  // match what the customer and the invoice both actually show.
+  function toCents(n) { return Math.round((Number(n) || 0) * 100); }
+  function getRemainingCents(invoice) {
+    return Math.max(0, toCents(invoice.total) - toCents(getPaidAmount(invoice)));
+  }
   function invoicePaymentStatus(invoice) {
-    const total = Number(invoice.total) || 0;
-    const paidAmount = getPaidAmount(invoice);
-    if (total > 0 && paidAmount >= total) return 'paid';
-    if (paidAmount > 0) return 'partial';
+    const totalCents = toCents(invoice.total);
+    const paidCents = toCents(getPaidAmount(invoice));
+    if (totalCents > 0 && paidCents >= totalCents) return 'paid';
+    if (paidCents > 0) return 'partial';
     return 'unpaid';
   }
 
@@ -1212,8 +1225,8 @@
     const allInvoices = loadInvoices();
     const unpaid = allInvoices.filter(i => invoicePaymentStatus(i) !== 'paid');
     const overdue = unpaid.filter(isOverdue);
-    const overdueTotal = overdue.reduce((sum, i) => sum + Math.max(0, (Number(i.total) || 0) - getPaidAmount(i)), 0);
-    const outstandingTotal = unpaid.reduce((sum, i) => sum + Math.max(0, (Number(i.total) || 0) - getPaidAmount(i)), 0);
+    const overdueTotal = overdue.reduce((sum, i) => sum + getRemainingCents(i), 0) / 100;
+    const outstandingTotal = unpaid.reduce((sum, i) => sum + getRemainingCents(i), 0) / 100;
     return {
       unpaidCount: unpaid.length, overdueCount: overdue.length,
       outstandingTotal, overdueTotal, currentTotal: outstandingTotal - overdueTotal,
@@ -1634,7 +1647,7 @@
       const i = it.raw;
       const overdue = isOverdue(i);
       const status = invoicePaymentStatus(i);
-      const remaining = Math.max(0, (Number(i.total) || 0) - getPaidAmount(i));
+      const remaining = getRemainingCents(i) / 100;
       let btnClass, btnText;
       if (status === 'paid') { btnClass = 'is-paid'; btnText = 'Paid'; }
       else if (status === 'partial') { btnClass = overdue ? 'is-overdue' : 'is-unpaid'; btnText = `Partial \u2014 ${money(remaining)} left`; }

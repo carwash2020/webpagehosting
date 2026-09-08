@@ -2136,12 +2136,15 @@ function loadJobTrackerIncome(){
 // older invoices only ever had a `paid` true/false boolean, no partial
 // amount at all, so an invoice with no paidAmount field falls back to
 // "paid ? total : 0" rather than needing any migration step.
+// Compared in whole cents for the same reason as workspace.html's
+// getRemainingCents: invoice.total is built by summing line-item
+// amounts, so it can land a fraction of a cent off a clean value.
 function invoiceRemainingBalance(invoice){
   const total = Number(invoice.total) || 0;
   const paidAmount = (invoice.paidAmount !== undefined && invoice.paidAmount !== null)
     ? (Number(invoice.paidAmount) || 0)
     : (invoice.paid ? total : 0);
-  return Math.max(0, total - paidAmount);
+  return Math.max(0, Math.round(total * 100) - Math.round(paidAmount * 100)) / 100;
 }
 function totalAccountsReceivable(){
   return loadJobTrackerInvoices().reduce((sum, inv) => sum + invoiceRemainingBalance(inv), 0);
@@ -2550,11 +2553,22 @@ function drawRevCostChart(sortedMonths) {
     const costPath = roundedBarPath(costX, baselineY - costH, REVCOST_CHART_BAR_WIDTH, costH, 3, 'top');
     const groupCenter = groupX + REVCOST_CHART_BAR_WIDTH + REVCOST_CHART_BAR_GAP / 2;
     const monthY = REVCOST_CHART_HEIGHT - 8;
+    // Security fix (2026-09-08, CodeQL #54 "DOM text reinterpreted as
+    // HTML"): p.month used to be embedded straight into an inline
+    // click-handler attribute on markup assigned via innerHTML.
+    // HTML-escaping alone (as aria-label already did) doesn't make that
+    // safe -- the browser decodes HTML entities in an attribute value
+    // BEFORE handing it to the JS engine as the event handler's source,
+    // so an escaped quote still closes the string literal early once
+    // decoded. Real fix: no inline handler at all. The month lives in a
+    // plain data-attribute (safe: attribute values are never parsed as
+    // code) and a real addEventListener below reads it back and calls
+    // the row-highlight function with it as an actual JS value, never
+    // re-embedded into source text.
     return `
       <g class="chart-bar-group" tabindex="0" role="button"
          aria-label="${escapeAttr(p.month)}: revenue ${fmt(p.revenue)}, costs ${fmt(p.costs)}"
-         onclick="highlightMonthRow('${p.month}')"
-         onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();highlightMonthRow('${p.month}');}">
+         data-month="${escapeAttr(p.month)}">
         <rect x="${groupX - 3}" y="4" width="${REVCOST_CHART_BAR_WIDTH * 2 + REVCOST_CHART_BAR_GAP + 6}" height="${REVCOST_CHART_HEIGHT - 4}" fill="transparent"></rect>
         <path class="chart-bar" d="${revPath}" fill="url(#revcostOrangeFill)"></path>
         <path class="chart-bar" d="${costPath}" fill="url(#revcostSteelFill)"></path>
@@ -2579,13 +2593,24 @@ function drawRevCostChart(sortedMonths) {
     <line x1="0" y1="${baselineY.toFixed(1)}" x2="${width}" y2="${baselineY.toFixed(1)}" stroke="var(--border)" stroke-width="1"></line>
     ${groups}
   `;
+  svg.querySelectorAll('.chart-bar-group').forEach(g => {
+    const month = g.dataset.month;
+    g.addEventListener('click', () => highlightMonthRow(month));
+    g.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); highlightMonthRow(month); }
+    });
+  });
 }
 
 // Ties a Revenue vs Costs bar back to its source row in the Monthly
 // History table (both live in the same panel) -- same
 // scroll-and-flash idiom the client portal uses for its own chart bars.
 function highlightMonthRow(monthKey) {
-  const row = document.querySelector('[data-month-row="' + monthKey + '"]');
+  // Escaped for safe use inside the attribute-selector string below --
+  // monthKey is normally a plain "YYYY-MM" value with nothing to escape,
+  // but building a selector by concatenation is worth guarding regardless.
+  const escaped = String(monthKey).replace(/[\\"]/g, '\\$&');
+  const row = document.querySelector('[data-month-row="' + escaped + '"]');
   if (!row) return;
   row.scrollIntoView({ behavior: 'smooth', block: 'center' });
   row.classList.remove('is-highlighted');

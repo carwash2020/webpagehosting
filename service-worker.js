@@ -553,7 +553,24 @@
 // lightbox, the two triage <details> disclosures and .reviews-toggle
 // all animate open/close now instead of snapping; the open-status dot
 // pulses while open.
-const CACHE_NAME = 'th-workspace-v109';
+// Bumped 2026-09-08 (v109 -> v110): 4 real bugs found from live
+// screenshots/GitHub alerts, all in precached tool pages. Landing pages'
+// .trust-grid was missing its 4th "Licensed & Insured" item (the CSS
+// went 4-column on 2026-09-07, landing pages never got the 4th card,
+// leaving a blank grid cell). workspace.html's invoice payment status
+// and Business Snapshot's Overdue total now compare in whole cents,
+// since invoice.total (subtotal + a percentage tax) can land a sub-cent
+// fraction off a clean value -- a customer's exact correct payment was
+// reading as "Partial -- $0.00 left". invoice-generator.html now rounds
+// tax/total to the nearest cent at the source, on-screen and in the PDF.
+// runway-dashboard.html's Revenue-vs-Costs chart no longer embeds a
+// month label into an inline onclick/onkeydown attribute (CodeQL #54,
+// DOM text reinterpreted as HTML) -- real addEventListener now, reading
+// the month from a data-attribute instead. tools-media-sharing.js's
+// client-error redaction (CodeQL #53) widened to also scrub JWTs and
+// credential-shaped URL query parameters, and now covers the `source`
+// field too, not just message/stack.
+const CACHE_NAME = 'th-workspace-v110';
 const PRECACHE_URLS = [
   '/tools/workspace.html', '/tools/job-tracker.html', '/tools/invoice-generator.html', '/tools/contract-generator.html',
   '/tools/calendar.html', '/tools/route-planner.html', '/tools/review-request.html', '/tools/contact-card.html',
