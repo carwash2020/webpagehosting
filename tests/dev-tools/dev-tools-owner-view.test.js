@@ -21,7 +21,7 @@ const DEV_TOOLS_PATH = path.join(__dirname, '..', '..', 'tools', 'dev-tools.html
 const DEV_ONLY_HEADINGS = [
   'Live consistency check', 'Data quality check', 'Session & sync',
   'Local data snapshot', 'Appliance Wiki health', 'Device info',
-  'Service worker & cache', 'Client errors', 'Push notification test',
+  'Service worker & cache', 'Client errors', 'Sync conflicts', 'Push notification test',
   'Push notification history', 'Booking notification test', 'Recent bookings', 'Known issues', 'Flagged pages', 'Uptime monitoring', 'Deploy history',
   'Regression checker', "What's new", 'Quick links', 'Trigger workflows',
   'Advisor health', 'Storage browser', 'Data integrity check',
@@ -48,10 +48,10 @@ function panelFor(window, headingText) {
   return heading ? heading.closest('.dev-panel') : null;
 }
 
-test('exactly 27 panels are marked dev-owner-hidden, matching the full, deliberate list of code/technical/error-diagnostic panels (26 previous + the new Graveyard panel)', () => {
+test('exactly 28 panels are marked dev-owner-hidden, matching the full, deliberate list of code/technical/error-diagnostic panels (27 previous + the new Sync conflicts panel)', () => {
   const src = fs.readFileSync(DEV_TOOLS_PATH, 'utf8');
   const count = (src.match(/class="dev-panel dev-owner-hidden/g) || []).length;
-  assert.equal(count, 27);
+  assert.equal(count, 28);
 });
 
 test('an account without the full-technical permission has every one of the 23 developer-only panels hidden', () => {

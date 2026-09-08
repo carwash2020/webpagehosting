@@ -15,13 +15,15 @@ const SYNC_JS_PATH = path.join(__dirname, '..', '..', 'tools', 'sync.js');
 
 function loadMergeFunctions() {
   const src = fs.readFileSync(SYNC_JS_PATH, 'utf8');
+  const deepEqualValueSrc = src.match(/function deepEqualValue[\s\S]*?\n}\n/);
   const mergeRecordArraysSrc = src.match(/function mergeRecordArrays[\s\S]*?\n}\n/);
   const mergePartsSrc = src.match(/function mergePartsReferenceUnits[\s\S]*?\n}\n/);
+  assert.ok(deepEqualValueSrc, 'deepEqualValue not found in sync.js -- did it get renamed or removed?');
   assert.ok(mergeRecordArraysSrc, 'mergeRecordArrays not found in sync.js -- did it get renamed or removed?');
   assert.ok(mergePartsSrc, 'mergePartsReferenceUnits not found in sync.js -- did it get renamed or removed?');
   const sandbox = {};
   // eslint-disable-next-line no-new-func
-  new Function('sandbox', mergeRecordArraysSrc[0] + mergePartsSrc[0] +
+  new Function('sandbox', deepEqualValueSrc[0] + mergeRecordArraysSrc[0] + mergePartsSrc[0] +
     'sandbox.mergeRecordArrays = mergeRecordArrays; sandbox.mergePartsReferenceUnits = mergePartsReferenceUnits;'
   )(sandbox);
   return sandbox;
@@ -56,6 +58,65 @@ test('mergePartsReferenceUnits: two different NEW issues added to the SAME unit 
   assert.equal(result.length, 1, 'expected the same unit, not duplicated');
   const issueIds = result[0].issues.map(i => i.id).sort();
   assert.deepEqual(issueIds, [1, 2, 3], 'an issue added on one side did not survive the merge');
+});
+
+// Base-tracked per-field merge (code-health pass, 2026-09-08): the real
+// fix for "whole-blob last write wins." Without a base, the SAME record
+// existing on both sides still falls back to "remote wins" wholesale
+// (tested above implicitly, and directly in the "no base" test below) --
+// but WITH a base (this device's own record of what was last agreed with
+// the server), a same-id record now merges field-by-field: whichever
+// side actually changed a field relative to that base wins for that
+// field specifically, and only a field both sides changed to DIFFERENT
+// values counts as a real conflict.
+
+test('mergeRecordArrays with a base: different fields edited on each side both survive, not just one side\'s whole record', () => {
+  const { mergeRecordArrays } = loadMergeFunctions();
+  const base = [{ id: 1, status: 'Not Started', notes: '' }];
+  const local = [{ id: 1, status: 'Not Started', notes: 'called the client back' }]; // local only edited notes
+  const remote = [{ id: 1, status: 'In Progress', notes: '' }]; // remote only edited status
+  const conflicts = [];
+  const result = mergeRecordArrays(local, remote, 'id', base, conflicts);
+  assert.equal(result.length, 1);
+  assert.equal(result[0].status, 'In Progress', 'remote\'s status edit should survive');
+  assert.equal(result[0].notes, 'called the client back', 'local\'s notes edit should NOT be clobbered by remote\'s stale notes value');
+  assert.equal(conflicts.length, 0, 'different fields changed on each side is not a real conflict');
+});
+
+test('mergeRecordArrays with a base: the SAME field changed differently on both sides is a real conflict -- remote wins that field, but it is logged, not silent', () => {
+  const { mergeRecordArrays } = loadMergeFunctions();
+  const base = [{ id: 1, status: 'Not Started' }];
+  const local = [{ id: 1, status: 'In Progress' }];
+  const remote = [{ id: 1, status: 'Done' }];
+  const conflicts = [];
+  const result = mergeRecordArrays(local, remote, 'id', base, conflicts);
+  assert.equal(result[0].status, 'Done', 'remote wins the actual conflicting field, same safe default as the no-base case');
+  assert.equal(conflicts.length, 1, 'a genuine same-field conflict should be logged, not silently dropped');
+  assert.equal(conflicts[0].recordId, '1');
+  assert.deepEqual(conflicts[0].fields, ['status']);
+  assert.equal(conflicts[0].localValues.status, 'In Progress');
+  assert.equal(conflicts[0].remoteValues.status, 'Done');
+  assert.equal(conflicts[0].resolvedTo, 'remote');
+});
+
+test('mergeRecordArrays with a base: a local edit survives when remote is simply stale (unchanged from base)', () => {
+  const { mergeRecordArrays } = loadMergeFunctions();
+  const base = [{ id: 1, notes: 'old note' }];
+  const local = [{ id: 1, notes: 'updated note' }];
+  const remote = [{ id: 1, notes: 'old note' }]; // remote never touched this field
+  const conflicts = [];
+  const result = mergeRecordArrays(local, remote, 'id', base, conflicts);
+  assert.equal(result[0].notes, 'updated note', 'local\'s real edit should not be lost to a remote copy that never changed');
+  assert.equal(conflicts.length, 0);
+});
+
+test('mergeRecordArrays with NO base (first sync ever for this record type): falls back to the original whole-record "remote wins" behavior', () => {
+  const { mergeRecordArrays } = loadMergeFunctions();
+  const local = [{ id: 1, status: 'In Progress', notes: 'local note' }];
+  const remote = [{ id: 1, status: 'Done', notes: 'remote note' }];
+  const result = mergeRecordArrays(local, remote, 'id'); // no baseArr/conflicts passed, same as every pre-existing call site
+  assert.equal(result[0].status, 'Done');
+  assert.equal(result[0].notes, 'remote note', 'with no base to 3-way diff against, remote still wins the whole record, unchanged from before this fix');
 });
 
 test('mergePartsReferenceUnits: a brand-new unit added on either side survives', () => {
@@ -142,6 +203,27 @@ test('pushSync and pullSync both use fetchWithRetry for their core fetch call, n
   const pullFn = src.match(/async function pullSync\(\)[\s\S]*?\n}\n/)[0];
   assert.match(pushFn, /await fetchWithRetry\(/);
   assert.match(pullFn, /await fetchWithRetry\(/);
+});
+
+// The real architectural fix for "whole-blob last write wins" (code-health
+// pass, 2026-09-08): pushSync() used to POST collectSyncData() -- local's
+// current state, whatever it happened to be -- straight over the server
+// row, completely unconditionally. Two devices editing without an
+// intervening pull meant whichever one pushed last silently discarded
+// everything the other had already gotten onto the server, with no merge
+// of any kind on the push side (only pullSync ever merged anything).
+test('pushSync fetches the current server row and merges it via applySyncData BEFORE building the payload it pushes, not just pullSync', () => {
+  const src = fs.readFileSync(SYNC_JS_PATH, 'utf8');
+  const pushFn = src.match(/async function pushSync\(\)[\s\S]*?\n}\n/)[0];
+  const getIndex = pushFn.search(/await fetchWithRetry\(`\$\{SUPABASE_URL\}\/rest\/v1\/\$\{SYNC_TABLE\}\?code=eq\./);
+  const applyIndex = pushFn.indexOf('applySyncData(');
+  const collectIndex = pushFn.indexOf('data: collectSyncData()');
+  const postIndex = pushFn.search(/method: 'POST'/);
+  assert.notEqual(getIndex, -1, 'pushSync should fetch the current server row (a GET by code) before pushing');
+  assert.notEqual(applyIndex, -1, 'pushSync should merge that row in via applySyncData, the same merge pullSync uses');
+  assert.ok(getIndex < applyIndex, 'the GET must happen before the merge is applied');
+  assert.ok(applyIndex < collectIndex, 'the merge must be applied before collectSyncData() is read for the push body, so the push reflects the merged state');
+  assert.ok(collectIndex < postIndex, 'the merged collectSyncData() must be gathered before the POST is sent');
 });
 
 // Improvement #5 from the 8/14-8/20 site audit (2026-08-20): a

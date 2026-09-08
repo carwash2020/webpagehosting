@@ -418,3 +418,47 @@ stale deploy. `blog/` was added to the scanned directories as part of this
 fix. Updated the now-stale `\d+`-only regexes in
 `tests/design/trust-badge-and-review-attribution.test.js` and 5 portal/
 dev-tools tests that assumed the old timestamp-only format.
+
+### Sync: real per-field merge, and a push that can no longer blindly clobber
+
+Two real gaps in `tools/sync.js`'s sync architecture, closed:
+
+1. **`pushSync()` never merged anything.** `pullSync()` has always merged
+   the server's data into local's per-record; `pushSync()` just POSTed
+   whatever `collectSyncData()` returned — local's current state, however
+   stale — straight over the server row, unconditionally. Two devices
+   editing without an intervening pull meant whichever one pushed last
+   silently discarded everything the other had already gotten onto the
+   server. `pushSync()` now fetches the current server row and runs it
+   through the same `applySyncData()` merge `pullSync()` uses *before*
+   building the pushed payload, so a push now behaves like a real sync
+   rather than an overwrite. Falls back to pushing local's state
+   unmerged only if that fetch itself fails (matches the risk that
+   already existed before this fix, not a new one).
+2. **Same-record conflicts were whole-record last-write-wins.** The
+   existing per-record union merge (`mergeRecordArrays`) already stopped
+   an *added* record on one device from vanishing when another device
+   pushed — but if the *same* record existed on both sides with different
+   content, the incoming remote copy won wholesale, silently discarding
+   a local edit to a completely different field. `mergeRecordArrays` now
+   accepts an optional base snapshot (`th_sync_base`, this device's own
+   record of what was last agreed with the server) and does a real
+   3-way per-field merge when one's available: whichever side actually
+   changed a given field relative to that base wins for that field, so a
+   local edit to `notes` and a remote edit to `status` on the same job
+   both survive together. Only a field the base/local/remote all
+   disagree on in three different ways is a genuine conflict — still
+   resolves to remote's value (the same safe default as before), but now
+   gets logged to a new synced `th_sync_conflicts` key instead of
+   happening invisibly. No base yet for a record (first sync ever) falls
+   back to the original whole-record behavior unchanged.
+
+New "Sync conflicts" panel in Dev Tools (`tools/dev-tools.html`) surfaces
+that log — which record, which field(s), what was kept vs. discarded,
+when — with a "Clear log" action, same pattern as the existing Client
+errors panel. New tests in `tests/sync/sync-merge.test.js` cover the
+different-fields-both-survive case, the genuine-same-field-conflict case
+(and that it's logged), the local-edit-survives-a-stale-remote case, and
+that the no-base fallback is unchanged; a source-level test confirms
+`pushSync()` actually fetches-then-merges-then-collects in that order
+before its POST.

@@ -104,6 +104,10 @@
       title: 'Known issues',
       body: `<p>Real, still-open items -- add a new one right from here with "+ Add issue", check one off once it's actually resolved, or delete it once it's no longer worth tracking. Synced across devices, so anything either account logs shows up for both.</p>`,
     },
+    syncconflicts: {
+      title: 'Sync conflicts',
+      body: `<p>Sync now merges field-by-field when the same job/invoice/expense/etc. exists on two devices with different content -- a local edit to one field and a remote edit to a different field on the same record both survive, instead of one whole copy silently winning over the other. This log is for the one case that still can't be automatically reconciled: the SAME field changed to two different values on two devices before either one synced. That one field resolves to whichever side reached the server most recently (same safe default as before this existed), but it's recorded here rather than happening silently, so a real conflict is at least visible and reviewable instead of invisible.</p>`,
+    },
     graveyard: {
       title: 'Graveyard',
       body: `<p>Every job, client, expense, and other real record deleted anywhere in the app, kept here (up to the most recent 200) so a genuine mistake can actually be undone. Restore puts the record back exactly where it came from. One real limit: a deleted expense's attached receipt photo isn't recoverable here, since that file is removed from cloud storage immediately, separately from this list.</p>`,

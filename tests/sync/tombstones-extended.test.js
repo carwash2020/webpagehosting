@@ -37,14 +37,21 @@ function loadSyncFunctions(window) {
   const syncDataKeysMatch = syncJs.match(/const SYNC_DATA_KEYS = \[[\s\S]*?\n\];/);
   const wikiSyncKeysMatch = syncJs.match(/const WIKI_SYNC_KEYS = \[[\s\S]*?\n\];/);
   const mergeKeyFieldMatch = syncJs.match(/const MERGE_KEY_FIELD = \{[\s\S]*?\n\};/);
+  const deepEqualValueMatch = syncJs.match(/function deepEqualValue[\s\S]*?\n\}/);
   const mergeRecordArraysMatch = syncJs.match(/function mergeRecordArrays[\s\S]*?\n\}/);
   const mergePartsMatch = syncJs.match(/function mergePartsReferenceUnits[\s\S]*?\n\}/);
   const mergeClientErrorLogMatch = syncJs.match(/const CLIENT_ERROR_LOG_MAX_AFTER_MERGE[\s\S]*?function mergeClientErrorLog[\s\S]*?\n\}/);
+  const syncBaseKeyMatch = syncJs.match(/const SYNC_BASE_KEY = '[^']+';/);
+  const loadSyncBaseMatch = syncJs.match(/function loadSyncBase\(\)[\s\S]*?\n\}/);
+  const saveSyncBaseForKeyMatch = syncJs.match(/function saveSyncBaseForKey[\s\S]*?\n\}/);
+  const syncConflictLogMaxMatch = syncJs.match(/const SYNC_CONFLICT_LOG_MAX = \d+;/);
+  const mergeSyncConflictsMatch = syncJs.match(/function mergeSyncConflicts[\s\S]*?\n\}/);
   const applySyncDataMatch = syncJs.match(/function applySyncData[\s\S]*?\n\}/);
-  assert.ok(syncDataKeysMatch && wikiSyncKeysMatch && mergeKeyFieldMatch && mergeRecordArraysMatch && mergePartsMatch && mergeClientErrorLogMatch && applySyncDataMatch, 'one or more required sync.js functions not found');
+  assert.ok(syncDataKeysMatch && wikiSyncKeysMatch && mergeKeyFieldMatch && deepEqualValueMatch && mergeRecordArraysMatch && mergePartsMatch && mergeClientErrorLogMatch && syncBaseKeyMatch && loadSyncBaseMatch && saveSyncBaseForKeyMatch && syncConflictLogMaxMatch && mergeSyncConflictsMatch && applySyncDataMatch, 'one or more required sync.js functions not found');
   const combined = [
-    syncDataKeysMatch[0], wikiSyncKeysMatch[0], mergeKeyFieldMatch[0], mergeRecordArraysMatch[0],
-    mergePartsMatch[0], mergeClientErrorLogMatch[0], applySyncDataMatch[0],
+    syncDataKeysMatch[0], wikiSyncKeysMatch[0], mergeKeyFieldMatch[0], deepEqualValueMatch[0], mergeRecordArraysMatch[0],
+    mergePartsMatch[0], mergeClientErrorLogMatch[0], syncBaseKeyMatch[0], loadSyncBaseMatch[0],
+    saveSyncBaseForKeyMatch[0], syncConflictLogMaxMatch[0], mergeSyncConflictsMatch[0], applySyncDataMatch[0],
     // const declarations evaluated via window.eval() create lexical
     // bindings, not window properties the way function declarations
     // do -- explicitly copying WIKI_SYNC_KEYS onto window so tests

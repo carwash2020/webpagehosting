@@ -51,12 +51,12 @@
 <link rel="stylesheet" href="/styles.css?v=37bcb9404a">
 <link rel="stylesheet" href="/tools/styles-tools.css?v=802b87086c">
 <script src="/tools/data-layer.js?v=3a0d57478c" defer></script>
-<script src="/tools/dev-tools-shared.js?v=a7dee707bd" defer></script>
+<script src="/tools/dev-tools-shared.js?v=87e06ed30c" defer></script>
 <script src="/tools/tools-effects.js?v=4cff99aa4a" defer></script>
 <script src="/tools/tools-dialogs.js?v=e1dfaa11a1" defer></script>
 <script src="/tools/tools-media-sharing.js?v=0c229c9353" defer></script>
 <script src="/tools/tools-nav-pwa.js?v=9b16eefb86" defer></script>
-<script src="/tools/sync.js?v=1e45dec62f" defer></script>
+<script src="/tools/sync.js?v=db7b05ab0d" defer></script>
 <style>
   body { max-width: 1080px; margin: 0 auto; }
   /* Desktop layout (2026-08-20), requested directly: efficient on
@@ -391,6 +391,15 @@
     </div>
     <div id="clientErrorLog"></div>
     <button class="secondary-btn" style="margin-top:12px;" onclick="clearClientErrorLog()">Clear log</button>
+  </div>
+
+  <div class="dev-panel dev-owner-hidden">
+    <div class="dev-panel-heading">
+      <h2>Sync conflicts</h2>
+      <button class="dev-info-bubble" onclick="openDevInfo('syncconflicts')" aria-label="What does this do?" title="What does this do?">?</button>
+    </div>
+    <div id="syncConflictLog"></div>
+    <button class="secondary-btn" style="margin-top:12px;" onclick="clearSyncConflictLog()">Clear log</button>
   </div>
 
   <div class="dev-panel dev-owner-hidden dev-panel-wide">
@@ -1266,6 +1275,35 @@
     // debounce -- this is a single, deliberate click, not rapid typing,
     // and reopening this page before a debounced push actually fires
     // would pull the still-populated remote copy right back in.
+    if (typeof pushSync === 'function') await pushSync();
+    showToast('Cleared.');
+  }
+
+  // Populated by sync.js's base-tracked per-field merge (mergeRecordArrays)
+  // whenever the SAME field of the SAME record was genuinely edited
+  // differently on two devices before either one synced -- the one case
+  // that still has to resolve automatically (remote wins) rather than
+  // being fully reconciled, so this is where that gets surfaced instead
+  // of it being silent. See th_sync_conflicts in tools/sync.js.
+  function renderSyncConflictLog() {
+    const el = document.getElementById('syncConflictLog');
+    if (!el) return;
+    let log = [];
+    try { log = JSON.parse(localStorage.getItem('th_sync_conflicts') || '[]'); } catch (e) {}
+    if (!log.length) { el.innerHTML = '<p class="tool-sub">No sync conflicts recorded -- every merge so far has been clean.</p>'; return; }
+    el.innerHTML = log.map(c => {
+      const fieldSummary = (c.fields || []).map(f =>
+        escapeHtml(f) + ': kept "' + escapeHtml(String(c.remoteValues && c.remoteValues[f])) + '" over "' + escapeHtml(String(c.localValues && c.localValues[f])) + '" from this device'
+      ).join('; ');
+      return '<div class="dev-check-row" style="align-items:flex-start;"><div><div>Record ' + escapeHtml(String(c.recordId)) + '</div>' +
+        '<div class="dev-check-detail">' + fieldSummary + ' -- ' + new Date(c.time).toLocaleString() + '</div></div>' +
+        '<span class="dev-check-status fail">CONFLICT</span></div>';
+    }).join('');
+  }
+
+  async function clearSyncConflictLog() {
+    localStorage.removeItem('th_sync_conflicts');
+    renderSyncConflictLog();
     if (typeof pushSync === 'function') await pushSync();
     showToast('Cleared.');
   }
@@ -3177,6 +3215,7 @@
       renderDeviceInfo();
       renderServiceWorkerInfo();
       renderClientErrorLog();
+      renderSyncConflictLog();
       // Portal init calls removed (2026-09-03) -- renderPortalBugReports/
       // Accounts/Invoices/WorkOrders and renderEmailList now live on
       // their own /tools/clients.html, which has its own init.

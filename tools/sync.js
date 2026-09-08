@@ -195,7 +195,31 @@ const SYNC_DATA_KEYS = [
   // separate from the lean tombstones above so a genuine mistake can
   // actually be restored, not just prevented from resurrecting.
   'th_graveyard',
+  // Sync conflict log (see mergeRecordArrays' base-tracked per-field
+  // merge below) -- visible record of any time two devices genuinely
+  // edited the SAME field of the SAME record before either one synced,
+  // so an overwrite is never silent even though it still has to resolve
+  // to one final value automatically.
+  'th_sync_conflicts',
 ];
+
+// Local-only bookkeeping for the per-field merge below -- NOT itself a
+// synced key (never listed in SYNC_DATA_KEYS/MERGE_KEY_FIELD), since it
+// exists purely to give THIS device's own next merge something to diff
+// against, not to be shared with any other device.
+const SYNC_BASE_KEY = 'th_sync_base';
+
+function loadSyncBase() {
+  try { return JSON.parse(localStorage.getItem(SYNC_BASE_KEY) || '{}'); } catch (e) { return {}; }
+}
+
+function saveSyncBaseForKey(key, arr) {
+  try {
+    const base = loadSyncBase();
+    base[key] = arr;
+    localStorage.setItem(SYNC_BASE_KEY, JSON.stringify(base));
+  } catch (e) { /* best-effort bookkeeping -- a failure here should never block the real merge/save */ }
+}
 
 const SYNC_CODE_KEY = 'th_sync_code';
 const SYNC_KNOWN_AT_KEY = 'th_sync_known_at';
@@ -271,6 +295,7 @@ const MERGE_KEY_FIELD = {
   th_price_reference: 'id',
   th_parts_reference_units: 'id',
   th_client_errors: 'id',
+  th_sync_conflicts: 'id',
   th_known_issues: 'id',
   th_flagged_items: 'id',
   'rd_personal-expenses': 'id',
@@ -279,26 +304,92 @@ const MERGE_KEY_FIELD = {
   'rd_debts': 'id',
 };
 
+// Deep-equality check for plain JSON-shaped values (strings/numbers/
+// booleans/null/nested plain objects and arrays -- everything a synced
+// record actually contains). Deliberately NOT JSON.stringify comparison:
+// two objects built by different code paths can have the same fields in
+// a different insertion order, which stringify would wrongly report as
+// "different."
+function deepEqualValue(a, b) {
+  if (a === b) return true;
+  if (a === null || b === null || typeof a !== 'object' || typeof b !== 'object') return false;
+  const aKeys = Object.keys(a), bKeys = Object.keys(b);
+  if (aKeys.length !== bKeys.length) return false;
+  return aKeys.every(k => Object.prototype.hasOwnProperty.call(b, k) && deepEqualValue(a[k], b[k]));
+}
+
 // Takes the union of both sides by their unique field, rather than
-// letting one side's snapshot silently drop what the other added. If
-// the SAME record exists on both sides (an actual edit to that one
-// record, not just an add elsewhere), the incoming remote copy wins --
-// still "last write wins," just scoped to the one record that actually
-// changed instead of the entire array.
+// letting one side's snapshot silently drop what the other added.
 //
-// The real tradeoff, worth knowing: a deletion made on one device can
-// resurface if another device's stale in-memory copy (from before it
-// pulled that deletion) gets pushed later, since a union merge can't
-// distinguish "never existed here" from "existed and was deleted here."
-// Chose this over building full tombstone tracking because the reported
-// problem was specifically entries silently vanishing on add, not
-// deletions failing to stick -- solving the actual complaint without
-// taking on a much larger rework for a failure mode that hasn't
-// actually been reported.
-function mergeRecordArrays(localArr, remoteArr, keyField) {
+// If the SAME record exists on both sides with DIFFERENT content, this
+// used to just take the incoming remote copy wholesale -- "last write
+// wins," scoped to the one record that changed instead of the entire
+// array, but still capable of silently discarding a real local edit that
+// touched a completely different field than whatever changed remotely.
+//
+// When a `baseArr` (this device's own record of what was last agreed
+// with the server -- see SYNC_BASE_KEY) has a matching entry for the
+// same id, this now does a real per-FIELD three-way merge instead:
+// whichever side actually changed a given field (relative to that
+// shared base) wins for that field, so a local edit to `notes` and a
+// remote edit to `status` on the same job both survive together rather
+// than one clobbering the other. Only a field the base, local, AND
+// remote all disagree on in three DIFFERENT ways is a genuine conflict
+// -- those still have to resolve to one value (remote's, the existing
+// safe default), but get pushed into `conflicts` so the overwrite is
+// visible instead of silent (see th_sync_conflicts).
+//
+// No matching base entry (the very first sync ever for that record, or
+// a record type this device has never reconciled before) falls back to
+// the original whole-record "remote wins" behavior -- there's nothing
+// to three-way-diff against yet, and that fallback is exactly what this
+// function has always done.
+function mergeRecordArrays(localArr, remoteArr, keyField, baseArr, conflicts) {
+  const baseById = new Map();
+  (baseArr || []).forEach(item => { if (item && item[keyField] !== undefined) baseById.set(item[keyField], item); });
+
   const merged = new Map();
   (localArr || []).forEach(item => { if (item && item[keyField] !== undefined) merged.set(item[keyField], item); });
-  (remoteArr || []).forEach(item => { if (item && item[keyField] !== undefined) merged.set(item[keyField], item); });
+  (remoteArr || []).forEach(remoteItem => {
+    if (!remoteItem || remoteItem[keyField] === undefined) return;
+    const id = remoteItem[keyField];
+    const localItem = merged.get(id);
+    if (!localItem || deepEqualValue(localItem, remoteItem)) { merged.set(id, remoteItem); return; }
+
+    const baseItem = baseById.get(id);
+    if (!baseItem) { merged.set(id, remoteItem); return; } // nothing to 3-way merge against -- old behavior
+
+    const fields = new Set([...Object.keys(baseItem), ...Object.keys(localItem), ...Object.keys(remoteItem)]);
+    const mergedItem = {};
+    const conflictFields = [];
+    fields.forEach(f => {
+      const b = baseItem[f], l = localItem[f], r = remoteItem[f];
+      const localChanged = !deepEqualValue(l, b);
+      const remoteChanged = !deepEqualValue(r, b);
+      if (localChanged && remoteChanged && !deepEqualValue(l, r)) {
+        mergedItem[f] = r; // genuine same-field conflict -- remote wins, same safe default as before, just now flagged
+        conflictFields.push(f);
+      } else if (localChanged) {
+        mergedItem[f] = l; // only this device changed this field -- keep that edit instead of losing it to remote
+      } else {
+        mergedItem[f] = r; // remote changed it, or neither side did -- remote's value (equal to base in the latter case)
+      }
+    });
+    if (conflictFields.length && conflicts) {
+      const localValues = {}, remoteValues = {};
+      conflictFields.forEach(f => { localValues[f] = localItem[f]; remoteValues[f] = remoteItem[f]; });
+      conflicts.push({
+        id: (keyField + ':' + id + ':' + Date.now() + ':' + Math.random().toString(36).slice(2, 8)),
+        recordId: String(id),
+        fields: conflictFields,
+        localValues: localValues,
+        remoteValues: remoteValues,
+        resolvedTo: 'remote',
+        time: new Date().toISOString(),
+      });
+    }
+    merged.set(id, mergedItem);
+  });
   return Array.from(merged.values());
 }
 
@@ -356,6 +447,17 @@ function mergeGraveyard(localArr, remoteArr) {
   return merged.slice(0, GRAVEYARD_MAX_AFTER_MERGE);
 }
 
+// Same capped-log pattern as mergeClientErrorLog above, for the conflict
+// entries mergeRecordArrays() logs when a field-level 3-way merge finds
+// the SAME field genuinely changed differently on both sides.
+const SYNC_CONFLICT_LOG_MAX = 50;
+function mergeSyncConflicts(localArr, remoteArr, newConflicts) {
+  const merged = mergeRecordArrays(localArr, remoteArr, 'id');
+  (newConflicts || []).forEach(c => merged.push(c));
+  merged.sort((a, b) => new Date(b.time) - new Date(a.time));
+  return merged.slice(0, SYNC_CONFLICT_LOG_MAX);
+}
+
 function applySyncData(obj, keysToApply) {
   if (!obj) return;
   // keysToApply defaults to SYNC_DATA_KEYS -- every existing caller
@@ -369,6 +471,12 @@ function applySyncData(obj, keysToApply) {
   // just been removed from that list (moved to WIKI_SYNC_KEYS), which
   // meant this function would silently ignore all 3 keys entirely
   // regardless of what was actually in the object it was given.
+  // Collected across this whole pass, then folded into th_sync_conflicts
+  // once at the end -- see mergeRecordArrays' base-tracked per-field
+  // merge for what actually populates this.
+  const newConflicts = [];
+  const syncBase = loadSyncBase();
+
   (keysToApply || SYNC_DATA_KEYS).forEach(k => {
     if (obj[k] === undefined || obj[k] === null) return;
     const keyField = MERGE_KEY_FIELD[k];
@@ -392,7 +500,9 @@ function applySyncData(obj, keysToApply) {
         ? mergeClientErrorLog(localArr, remoteArr)
         : k === 'th_graveyard'
         ? mergeGraveyard(localArr, remoteArr)
-        : mergeRecordArrays(localArr, remoteArr, keyField);
+        : k === 'th_sync_conflicts'
+        ? mergeRecordArrays(localArr, remoteArr, keyField) // folded into with newConflicts after the loop, below
+        : mergeRecordArrays(localArr, remoteArr, keyField, syncBase[k], newConflicts);
 
       // The actual fix for a real, reported bug: a union merge alone
       // can't tell "never existed" apart from "existed and was
@@ -495,10 +605,29 @@ function applySyncData(obj, keysToApply) {
       }
 
       localStorage.setItem(k, JSON.stringify(finalArr));
+      // New converged state for this key becomes the base the NEXT merge
+      // three-way-diffs against -- skipped for th_sync_conflicts itself
+      // (folded in separately below, and diffing a conflict LOG against
+      // a base has no meaning) and for the specialty merges above, which
+      // don't consume a base in the first place.
+      if (k !== 'th_sync_conflicts' && k !== 'th_parts_reference_units' && k !== 'th_client_errors' && k !== 'th_graveyard') {
+        saveSyncBaseForKey(k, finalArr);
+      }
     } catch (e) {
       localStorage.setItem(k, obj[k]); // malformed JSON on either side -- fall back to the old behavior rather than throw
     }
   });
+
+  // Fold any conflicts discovered during this pass into the conflict log,
+  // whether or not th_sync_conflicts itself was one of the keys being
+  // applied this time (the Appliance Wiki's own sync path, for instance,
+  // never includes it, but could theoretically still hit a field-level
+  // conflict on a WIKI_SYNC_KEYS record type in the future).
+  if (newConflicts.length) {
+    const currentLog = JSON.parse(localStorage.getItem('th_sync_conflicts') || '[]');
+    const merged = mergeSyncConflicts(currentLog, [], newConflicts);
+    localStorage.setItem('th_sync_conflicts', JSON.stringify(merged));
+  }
 }
 
 const SYNC_HISTORY_KEY = 'th_sync_history';
@@ -556,6 +685,36 @@ async function pushSync() {
   if (typeof ensureFreshToken === 'function') {
     const fresh = await ensureFreshToken();
     if (!fresh) { recordSyncStatus('push', false, 'session-expired'); return { ok: false, error: 'session-expired' }; }
+  }
+
+  // Real fix for the whole-blob "last write wins" gap: this used to POST
+  // collectSyncData() -- local's current state, whatever it happened to
+  // be -- straight over the server row, unconditionally, with no merge
+  // of any kind. Two devices editing different records (or even different
+  // fields of the same record) without an intervening pull meant whichever
+  // one pushed last silently discarded everything the other had already
+  // gotten onto the server. Pulling and merging the current server row
+  // in first, the exact same per-record/per-field merge pullSync() itself
+  // uses, means a push now behaves like "sync," not "overwrite" -- the
+  // worst case left is two edits to the SAME field of the SAME record in
+  // the tiny window between this GET and the POST below, which is exactly
+  // what mergeRecordArrays' conflict log exists to make visible rather
+  // than eliminate outright.
+  try {
+    const currentRes = await fetchWithRetry(`${SUPABASE_URL}/rest/v1/${SYNC_TABLE}?code=eq.${encodeURIComponent(code)}&select=data,updated_at`, {
+      headers: {
+        'apikey': SUPABASE_ANON_KEY,
+        'Authorization': `Bearer ${getAuthToken()}`,
+      },
+    });
+    if (currentRes.ok) {
+      const currentRows = await currentRes.json();
+      if (currentRows.length) applySyncData(currentRows[0].data);
+    }
+  } catch (e) {
+    // Couldn't reach the server to merge first -- fall back to pushing
+    // local's current state as-is rather than blocking the push entirely.
+    // Same risk as before this fix existed, not a new one introduced by it.
   }
 
   const nowIso = new Date().toISOString();

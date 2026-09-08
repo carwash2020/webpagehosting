@@ -119,19 +119,26 @@ test('a stale device pushing back its old copy of a deleted client does not resu
   const syncJs = fs.readFileSync(path.join(TOOLS_DIR, 'sync.js'), 'utf8');
   const syncDataKeysMatch = syncJs.match(/const SYNC_DATA_KEYS = \[[\s\S]*?\n\];/);
   const mergeKeyFieldMatch = syncJs.match(/const MERGE_KEY_FIELD = \{[\s\S]*?\n\};/);
+  const deepEqualValueMatch = syncJs.match(/function deepEqualValue[\s\S]*?\n\}/);
   const mergeRecordArraysMatch = syncJs.match(/function mergeRecordArrays[\s\S]*?\n\}/);
   const mergePartsMatch = syncJs.match(/function mergePartsReferenceUnits[\s\S]*?\n\}/);
   const mergeClientErrorLogMatch = syncJs.match(/const CLIENT_ERROR_LOG_MAX_AFTER_MERGE[\s\S]*?function mergeClientErrorLog[\s\S]*?\n\}/);
+  const syncBaseKeyMatch = syncJs.match(/const SYNC_BASE_KEY = '[^']+';/);
+  const loadSyncBaseMatch = syncJs.match(/function loadSyncBase\(\)[\s\S]*?\n\}/);
+  const saveSyncBaseForKeyMatch = syncJs.match(/function saveSyncBaseForKey[\s\S]*?\n\}/);
+  const syncConflictLogMaxMatch = syncJs.match(/const SYNC_CONFLICT_LOG_MAX = \d+;/);
+  const mergeSyncConflictsMatch = syncJs.match(/function mergeSyncConflicts[\s\S]*?\n\}/);
   const applySyncDataMatch = syncJs.match(/function applySyncData[\s\S]*?\n\}/);
-  assert.ok(syncDataKeysMatch && mergeKeyFieldMatch && mergeRecordArraysMatch && mergePartsMatch && mergeClientErrorLogMatch && applySyncDataMatch, 'one or more required sync.js functions not found');
+  assert.ok(syncDataKeysMatch && mergeKeyFieldMatch && deepEqualValueMatch && mergeRecordArraysMatch && mergePartsMatch && mergeClientErrorLogMatch && syncBaseKeyMatch && loadSyncBaseMatch && saveSyncBaseForKeyMatch && syncConflictLogMaxMatch && mergeSyncConflictsMatch && applySyncDataMatch, 'one or more required sync.js functions not found');
   assert.match(syncDataKeysMatch[0], /th_client_tombstones/, 'th_client_tombstones should be a synced key');
 
   const window = loadDevTools([{ id: 'c1', name: 'Sarah Miller' }]);
   window.thDeleteClient('c1'); // local delete + local tombstone
 
   const combined = [
-    syncDataKeysMatch[0], mergeKeyFieldMatch[0], mergeRecordArraysMatch[0],
-    mergePartsMatch[0], mergeClientErrorLogMatch[0], applySyncDataMatch[0],
+    syncDataKeysMatch[0], mergeKeyFieldMatch[0], deepEqualValueMatch[0], mergeRecordArraysMatch[0],
+    mergePartsMatch[0], mergeClientErrorLogMatch[0], syncBaseKeyMatch[0], loadSyncBaseMatch[0],
+    saveSyncBaseForKeyMatch[0], syncConflictLogMaxMatch[0], mergeSyncConflictsMatch[0], applySyncDataMatch[0],
   ].join('\n');
   window.eval(combined);
 
@@ -171,19 +178,26 @@ test('a stale device pushing back its old copy of a deleted job does not resurre
   const syncJs = fs.readFileSync(path.join(TOOLS_DIR, 'sync.js'), 'utf8');
   const syncDataKeysMatch = syncJs.match(/const SYNC_DATA_KEYS = \[[\s\S]*?\n\];/);
   const mergeKeyFieldMatch = syncJs.match(/const MERGE_KEY_FIELD = \{[\s\S]*?\n\};/);
+  const deepEqualValueMatch = syncJs.match(/function deepEqualValue[\s\S]*?\n\}/);
   const mergeRecordArraysMatch = syncJs.match(/function mergeRecordArrays[\s\S]*?\n\}/);
   const mergePartsMatch = syncJs.match(/function mergePartsReferenceUnits[\s\S]*?\n\}/);
   const mergeClientErrorLogMatch = syncJs.match(/const CLIENT_ERROR_LOG_MAX_AFTER_MERGE[\s\S]*?function mergeClientErrorLog[\s\S]*?\n\}/);
+  const syncBaseKeyMatch = syncJs.match(/const SYNC_BASE_KEY = '[^']+';/);
+  const loadSyncBaseMatch = syncJs.match(/function loadSyncBase\(\)[\s\S]*?\n\}/);
+  const saveSyncBaseForKeyMatch = syncJs.match(/function saveSyncBaseForKey[\s\S]*?\n\}/);
+  const syncConflictLogMaxMatch = syncJs.match(/const SYNC_CONFLICT_LOG_MAX = \d+;/);
+  const mergeSyncConflictsMatch = syncJs.match(/function mergeSyncConflicts[\s\S]*?\n\}/);
   const applySyncDataMatch = syncJs.match(/function applySyncData[\s\S]*?\n\}/);
-  assert.ok(syncDataKeysMatch && mergeKeyFieldMatch && mergeRecordArraysMatch && mergePartsMatch && mergeClientErrorLogMatch && applySyncDataMatch, 'one or more required sync.js functions not found');
+  assert.ok(syncDataKeysMatch && mergeKeyFieldMatch && deepEqualValueMatch && mergeRecordArraysMatch && mergePartsMatch && mergeClientErrorLogMatch && syncBaseKeyMatch && loadSyncBaseMatch && saveSyncBaseForKeyMatch && syncConflictLogMaxMatch && mergeSyncConflictsMatch && applySyncDataMatch, 'one or more required sync.js functions not found');
   assert.match(syncDataKeysMatch[0], /th_job_tombstones/, 'th_job_tombstones should be a synced key');
 
   const window = loadDevTools([]);
   window.thAddJobTombstone('j1'); // simulates deleteJob's own tombstone-recording step
 
   const combined = [
-    syncDataKeysMatch[0], mergeKeyFieldMatch[0], mergeRecordArraysMatch[0],
-    mergePartsMatch[0], mergeClientErrorLogMatch[0], applySyncDataMatch[0],
+    syncDataKeysMatch[0], mergeKeyFieldMatch[0], deepEqualValueMatch[0], mergeRecordArraysMatch[0],
+    mergePartsMatch[0], mergeClientErrorLogMatch[0], syncBaseKeyMatch[0], loadSyncBaseMatch[0],
+    saveSyncBaseForKeyMatch[0], syncConflictLogMaxMatch[0], mergeSyncConflictsMatch[0], applySyncDataMatch[0],
   ].join('\n');
   window.eval(combined);
 
