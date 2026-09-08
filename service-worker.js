@@ -506,7 +506,11 @@
 // grew far more than intended during the improvement session (measured
 // directly against the pre-session baseline); both now group their
 // extra content into closed-by-default <details> disclosures.
-const CACHE_NAME = 'th-workspace-v102';
+// Bumped 2026-09-08 (v102 -> v103): /styles.css changed again --
+// regression-recovery fix: the persistent header nav's "Schedule" link
+// was demoted to a quiet underlined link by the same pass that fixed
+// the hero, leaving it hard to find; restored as a real button.
+const CACHE_NAME = 'th-workspace-v103';
 const PRECACHE_URLS = [
   '/tools/workspace.html', '/tools/job-tracker.html', '/tools/invoice-generator.html', '/tools/contract-generator.html',
   '/tools/calendar.html', '/tools/route-planner.html', '/tools/review-request.html', '/tools/contact-card.html',

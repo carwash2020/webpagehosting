@@ -316,6 +316,33 @@
   .cta-quiet-link:hover{color:var(--white);}
   .cta-quiet-link svg{width:15px; height:15px; flex-shrink:0;}
 
+  /* Regression-recovery fix (2026-09-08): U01 was right to demote the
+     hero's second CTA to a quiet link -- Call should be the one loud
+     action there. But the same pass also turned the persistent header
+     nav's own "Schedule" into .cta-quiet-link, leaving both the hero's
+     secondary path AND the nav's only booking link quiet at once.
+     Restored here as a real, findable button -- flat and orange-tinted
+     (not the old blue-gloss weight, and not competing with the header's
+     own Call link either). Header-only; the hero and every other
+     .cta-quiet-link usage is untouched. */
+  .nav-schedule-btn{
+    display:inline-flex;
+    align-items:center;
+    padding:9px 16px;
+    border-radius:6px;
+    border:1.5px solid var(--orange-tint-border);
+    background:var(--orange-tint-soft);
+    color:var(--orange-text-vivid);
+    font-family:var(--font-ui);
+    font-size:13.5px;
+    font-weight:600;
+    letter-spacing:.4px;
+    text-decoration:none;
+    white-space:nowrap;
+    transition:background .15s ease, border-color .15s ease, transform .15s ease;
+  }
+  .nav-schedule-btn:hover{border-color:var(--orange-text-vivid); transform:translateY(-1px);}
+
   /* header */
   header{
     position:sticky;
