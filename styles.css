@@ -1797,11 +1797,28 @@
     position:relative;
     --p:1;
   }
+  /* W19/M02 fix (Master Audit, 2026-09-08): a before/after audit measured
+     this section as one of the page's flattest -- brightness 17, barely
+     above the darkest spots, with nothing marking it as a second real
+     moment alongside the finished-work reveal. Same ambient-glow
+     convention already used on .hero (radial-gradient, no overflow risk
+     since it sits fully inside the section's own box via inset:0),
+     biased toward the figure side of the grid. */
+  .teardown::before{
+    content:"";
+    position:absolute;
+    inset:0;
+    background:radial-gradient(ellipse 60% 70% at 78% 50%, rgba(255,128,0,.11), transparent 68%);
+    pointer-events:none;
+    z-index:0;
+  }
   .teardown-grid{
     display:grid;
     grid-template-columns:0.9fr 1.1fr;
     gap:52px;
     align-items:center;
+    position:relative;
+    z-index:1;
   }
   .teardown-copy{position:relative;}
   .teardown-copy h2{
@@ -1830,13 +1847,35 @@
     align-items:center;
     justify-content:center;
     gap:20px;
+    position:relative;
+  }
+  /* The spotlight brightens as the machine comes back together (--p runs
+     0 "Apart" -> 1 "Whole", the same live custom property already
+     driving every exploded part) -- real, interaction-tied light, not
+     just a static backdrop, so dragging the slider is rewarded twice:
+     once by the parts assembling, once by the room getting brighter. */
+  .teardown-figure::before{
+    content:"";
+    position:absolute;
+    top:50%; left:50%;
+    width:560px;
+    max-width:100%;
+    aspect-ratio:1;
+    transform:translate(-50%,-50%);
+    border-radius:50%;
+    background:radial-gradient(circle, rgba(255,128,0, calc(.10 + var(--p, 1) * .22)) 0%, rgba(255,128,0,0) 68%);
+    pointer-events:none;
+    z-index:0;
   }
   .teardown-figure svg{
     width:100%;
     max-width:600px;
     height:auto;
     overflow:visible;
+    position:relative;
+    z-index:1;
   }
+  .teardown-figure .td-scrub{position:relative; z-index:1;}
   /* Shared transform for every exploded part. Each supplies its own
      --dx/--dy/--rot; all resolve to zero at --p:1. transform-box keeps SVG
      rotation about the part's own centre, not the viewBox origin. */
