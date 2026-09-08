@@ -71,6 +71,8 @@ test('the stats bar is a distinct full-width band, not styled like the plain tru
 });
 
 test('the stats grid degrades to fewer columns on narrow screens', () => {
-  assert.match(STYLES, /@media \(max-width:820px\)\{\.stats-grid\{grid-template-columns:repeat\(2,1fr\)/);
+  // F30 (2026-09-07): merged from 820px into 860px, matching the other
+  // 2-column-tablet breakpoints (services/contact/gallery/teardown-grid).
+  assert.match(STYLES, /@media \(max-width:860px\)\{\.stats-grid\{grid-template-columns:repeat\(2,1fr\)/);
   assert.match(STYLES, /@media \(max-width:480px\)\{\.stats-grid\{grid-template-columns:1fr/);
 });

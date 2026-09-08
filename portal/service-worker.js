@@ -216,7 +216,7 @@
 // Bumped 2026-09-07 (v36 -> v37): /styles.css changed again (the
 // homepage's Licensed & Insured trust item + review Google-mark badge
 // -- portal pages don't use either, but the file is shared/precached).
-const CACHE_NAME = 'th-portal-v38';
+const CACHE_NAME = 'th-portal-v39';
 const PRECACHE_URLS = [
   '/portal/home.html', '/portal/dashboard.html', '/portal/jobs.html', '/portal/quotes.html',
   '/portal/work-orders.html', '/portal/settings.html', '/portal/login.html', '/portal/set-password.html',

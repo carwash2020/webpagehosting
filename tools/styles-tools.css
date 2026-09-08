@@ -937,38 +937,14 @@ td { padding: 10px 8px; font-size: 14px; color: var(--white); border-bottom: 1px
   box-shadow: 0 10px 30px rgba(20, 18, 15, 0.16);
 }
 
-/* --- Theme toggle controls (desktop button + mobile switch) --- */
-.theme-toggle {
-  background: none; border: 1px solid rgba(255,255,255,0.25); border-radius: 999px;
-  height: 40px; padding: 0 16px 0 12px; display: flex; align-items: center; gap: 7px;
-  color: #d8d8d8; cursor: pointer; flex-shrink: 0; margin-right: 4px;
-  font-family: inherit; font-size: 13px; font-weight: 600; white-space: nowrap;
-  transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
-}
-.theme-toggle:hover { background: rgba(255,255,255,0.08); color: var(--orange-light); }
-.theme-toggle svg { width: 17px; height: 17px; flex-shrink: 0; }
-.theme-icon-light { display: none; }
-[data-theme="light"] .theme-icon-dark { display: none; }
-[data-theme="light"] .theme-icon-light { display: block; }
-
-.mobile-theme-row {
-  display: flex; align-items: center; justify-content: space-between;
-  padding: 16px 20px; border-top: 1px solid var(--border); margin-top: 4px;
-  color: #e8e8e8; font-weight: 600;
-}
-.theme-switch { position: relative; display: inline-block; width: 46px; height: 26px; flex-shrink: 0; }
-.theme-switch input { opacity: 0; width: 0; height: 0; position: absolute; }
-.theme-switch-track {
-  position: absolute; inset: 0; background: var(--bg-panel-2); border: 1px solid var(--border);
-  border-radius: 999px; transition: background 0.2s ease; cursor: pointer; display: block;
-}
-.theme-switch-thumb {
-  position: absolute; top: 2px; left: 2px; width: 20px; height: 20px; border-radius: 50%;
-  background: var(--text-dim); transition: transform 0.2s ease, background 0.2s ease; display: block;
-}
-.theme-switch input:checked + .theme-switch-track { background: var(--orange-dark); }
-.theme-switch input:checked + .theme-switch-track .theme-switch-thumb { transform: translateX(20px); background: var(--white); }
-.theme-switch input:focus-visible + .theme-switch-track { outline: 2px solid var(--blue-light); outline-offset: 2px; }
+/* F34 fix (2026-09-07): the theme-toggle/theme-switch/theme-icon-light/
+   mobile-theme-row rules that used to live here were an exact-name
+   collision with styles.css's own (the public site's real, live theme
+   toggle) -- but grepped clean across every tool page's HTML and JS:
+   none of these classes are ever used anywhere in the tools app. Removed
+   as dead code rather than renamed, since there was nothing here to
+   disambiguate from -- the tools app has no theme-toggle feature of its
+   own to keep. */
 
 /* --- Internal tools: mobile touch-target improvements ---
    These tools are used primarily on a phone, often on an actual job
@@ -1017,13 +993,13 @@ td { padding: 10px 8px; font-size: 14px; color: var(--white); border-bottom: 1px
 }
 .site-banner:nth-of-type(2) { background: var(--blue); color: #071b2e; }
 
-/* Per-day hours breakdown -- replaces what used to be 2 static lines
-   ("Monday to Sunday" / "7:00 AM to 10:00 PM MST") with 7 independent
-   rows, each editable on its own from Dev Tools. */
-.hours-grid { display: flex; flex-direction: column; gap: 2px; margin-top: 4px; }
-.hours-row { display: flex; justify-content: space-between; gap: 12px; font-size: 13.5px; }
-.hours-day { color: var(--text-dim); font-weight: 600; }
-.hours-value { color: var(--white); }
+/* F34 fix (2026-09-07): the .hours-grid/.hours-row/.hours-day/
+   .hours-value rules that used to live here collided by exact name with
+   styles.css's own (the public site's real, live per-day hours display)
+   -- but grepped clean across every tool page's HTML and JS: none of
+   these classes are ever used anywhere in the tools app. Removed as dead
+   code rather than renamed, since there was no actual tools-app feature
+   here to disambiguate. */
 
 /* ==========================================================================
    TOOL SUITE REDESIGN v2 -- 2026-08-16
@@ -1793,7 +1769,11 @@ body a .th-icon { margin-right: 5px; }
    above was pushing their icon 5px left of the button's actual center
    with nothing on the right to balance it. */
 body a.help-btn .th-icon { margin-right: 0; }
-.lightbox-nav .th-icon { width: 20px; height: 20px; stroke-width: 1.8; }
+/* F34 fix (2026-09-07): `.lightbox-nav .th-icon` used to live here,
+   colliding by exact name with styles.css's own .lightbox-nav (the
+   public site's real image-lightbox prev/next controls) -- but no tool
+   page has a .lightbox-nav element at all (the tools' own photo lightbox
+   uses .photo-lightbox-nav, a different name). Removed as dead code. */
 
 /* ---- empty states: one shared definition, icon + message row ----
    Previously duplicated identically across calendar.html, contract-

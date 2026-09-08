@@ -38,5 +38,7 @@ test('tools/runway-dashboard.html keeps its own unrelated, self-contained .form-
 
 test('the neighboring .form-row rules (base and mobile override) are untouched', () => {
   assert.match(STYLES, /\.form-row\{display:grid; grid-template-columns:1fr 1fr; gap:18px; margin-bottom:18px;\}/);
-  assert.match(STYLES, /@media \(max-width:640px\)\{\s*\.form-row\{grid-template-columns:1fr;\}\s*\}/);
+  // F30 (2026-09-07): merged from 640px into 600px, matching the other
+  // form-row-collapse breakpoint (.email-form .form-row) already at 600px.
+  assert.match(STYLES, /@media \(max-width:600px\)\{\s*\.form-row\{grid-template-columns:1fr;\}\s*\}/);
 });
