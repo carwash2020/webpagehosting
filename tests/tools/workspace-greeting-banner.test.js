@@ -2,7 +2,8 @@
 // header into the collapsible section list -- no "first thing you see"
 // moment. Added a greeting banner: a real time-of-day greeting plus
 // today's real job count, read from the same th_tracker_jobs data
-// renderTodayJobs() already uses (not a separate/invented figure).
+// getTodaysJobs() (shared with the W10 Today hero) already computes
+// (not a separate/invented figure).
 
 const { test } = require('node:test');
 const assert = require('node:assert/strict');
@@ -38,7 +39,10 @@ function makeEl() {
 }
 
 function runGreetingBanner({ hour, jobs, firstName }) {
-  const fnSrc = extractFn(WORKSPACE, 'renderGreetingBanner');
+  // W10 (2026-09-08): renderGreetingBanner() now reads getTodaysJobs()
+  // (shared with the Today hero) instead of filtering th_tracker_jobs
+  // itself -- needs to be injected into the same sandbox alongside it.
+  const fnSrc = extractFn(WORKSPACE, 'getTodaysJobs') + '\n' + extractFn(WORKSPACE, 'renderGreetingBanner');
   const els = {
     greetingBanner: {},
     greetingBannerGreeting: makeEl(),
@@ -65,18 +69,18 @@ function runGreetingBanner({ hour, jobs, firstName }) {
   return els;
 }
 
-test('the banner sits right after the search box and before the Today section', () => {
+test('the banner sits right after the search box and before the Today hero', () => {
   const searchAt = WORKSPACE.indexOf('class="global-search-block"');
   const bannerAt = WORKSPACE.indexOf('id="greetingBanner"');
-  const todayAt = WORKSPACE.indexOf('id="section-today"');
+  const todayAt = WORKSPACE.indexOf('id="todayHero"');
   assert.ok(searchAt > 0 && bannerAt > 0 && todayAt > 0);
   assert.ok(searchAt < bannerAt && bannerAt < todayAt);
 });
 
-test('renderDashboard renders the greeting banner before today\'s job list, every render', () => {
+test('renderDashboard renders the greeting banner before the Today hero, every render', () => {
   const dashboardFn = extractFn(WORKSPACE, 'renderDashboard');
   const greetingAt = dashboardFn.indexOf('renderGreetingBanner()');
-  const todayAt = dashboardFn.indexOf('renderTodayJobs()');
+  const todayAt = dashboardFn.indexOf('renderTodayHero()');
   assert.ok(greetingAt >= 0 && todayAt >= 0 && greetingAt < todayAt);
 });
 
@@ -91,7 +95,7 @@ test('the greeting includes the signed-in user\'s first name when available, and
   assert.equal(runGreetingBanner({ hour: 9, jobs: [], firstName: undefined }).greetingBannerGreeting.textContent, 'Good morning.');
 });
 
-test('the job count is read from the same th_tracker_jobs data renderTodayJobs() uses, filtered the same way (today, not done)', () => {
+test('the job count is read from the same th_tracker_jobs data getTodaysJobs() uses, filtered the same way (today, not done)', () => {
   const jobs = [
     { date: '2026-09-07', status: 'scheduled' },
     { date: '2026-09-07', status: 'in-progress' },
