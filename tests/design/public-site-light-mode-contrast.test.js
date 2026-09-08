@@ -38,7 +38,7 @@ test('F27: no hardcoded rgba(0,0,0,...) box-shadows remain outside the reveal-di
 });
 
 test('F27: --shadow-resting/--shadow-hover are actually used by the cards the audit named', () => {
-  for (const selector of ['.trust-item', '.service-card', '.value-pill', '.contact-card', '.faq-item', '.review-slide', '.triage-shell', '.verdict-col']) {
+  for (const selector of ['.trust-item', '.service-card', '.value-pill', '.contact-card', '.faq-item', '.review-card', '.triage-shell', '.verdict-col']) {
     const escaped = selector.replace('.', '\\.');
     const re = new RegExp(escaped + '\\{[^}]*box-shadow:var\\(--shadow-resting\\)');
     assert.match(STYLES, re, `expected ${selector} to use var(--shadow-resting)`);

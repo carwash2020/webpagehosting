@@ -1400,32 +1400,32 @@
   @media (max-width:860px){.gallery-grid{grid-template-columns:repeat(2,1fr);}}
   @media (max-width:600px){.gallery-grid{grid-template-columns:1fr;}}
 
-  /* reviews */
-  .reviews-carousel{
-    position:relative;
-    max-width:680px;
+  /* reviews (U03 fix, High-Impact Upgrades, 2026-09-07): a carousel
+     showed one review at a time behind 9px dots -- reviews are this
+     business's strongest asset and were rationed one at a time. Now a
+     static two-column wall, newest first (already the source order),
+     with the real Google mark kept on each card and the existing
+     "see more / leave your own" link doing the "read all on Google"
+     job this finding also asked for. */
+  .reviews-wall{
+    max-width:900px;
     margin:0 auto;
+    display:grid;
+    grid-template-columns:repeat(2,1fr);
+    gap:20px;
   }
-  .reviews-viewport{
-    overflow:hidden;
-    border-radius:var(--radius);
-  }
-  .reviews-track{
-    display:flex;
-    transition:transform .4s ease;
-  }
-  .review-slide{
-    flex:0 0 100%;
+  @media (max-width:760px){.reviews-wall{grid-template-columns:1fr;}}
+  .review-card{
     background:var(--bg-panel);
     border:1px solid var(--border);
     border-radius:var(--radius);
-    padding:36px 40px;
-    text-align:center;
+    padding:28px 30px;
+    text-align:left;
     box-shadow:var(--shadow-resting);
   }
   .review-stars{
     display:flex;
-    justify-content:center;
+    justify-content:flex-start;
     gap:4px;
     margin-bottom:18px;
     color:var(--orange-text);
@@ -1450,64 +1450,13 @@
      identity that doesn't exist. The real Google "G" mark instead
      visually reinforces the one true, verifiable fact each card
      already states in text -- this review came from Google. */
-  .review-attribution{display:flex; align-items:center; justify-content:center; gap:10px;}
+  .review-attribution{display:flex; align-items:center; justify-content:flex-start; gap:10px;}
   .review-avatar{
     width:30px; height:30px; border-radius:50%; flex-shrink:0;
     background:#fff; display:flex; align-items:center; justify-content:center;
     box-shadow:0 0 0 1px var(--border);
   }
   .review-avatar svg{width:16px; height:16px;}
-  .carousel-controls{
-    display:flex;
-    align-items:center;
-    justify-content:center;
-    gap:22px;
-    margin-top:24px;
-  }
-  .carousel-arrow{
-    width:44px; height:44px;
-    border-radius:50%;
-    border:1px solid var(--border);
-    background:var(--bg-panel-3);
-    color:var(--white);
-    display:flex;
-    align-items:center;
-    justify-content:center;
-    cursor:pointer;
-    flex-shrink:0;
-    transition:background .15s ease, border-color .15s ease, color .15s ease;
-  }
-  .carousel-arrow:hover{border-color:var(--blue-text); color:var(--blue-text);}
-  .carousel-arrow svg{width:18px; height:18px;}
-  .carousel-dots{
-    display:flex;
-    justify-content:center;
-    gap:8px;
-  }
-  .carousel-dot{
-    position:relative;
-    width:9px; height:9px;
-    border-radius:50%;
-    background:var(--border);
-    border:none;
-    padding:0;
-    cursor:pointer;
-    transition:background .15s ease, transform .15s ease;
-  }
-  /* F22 fix (2026-09-07): the visible dot stays small on purpose (a
-     dense row of 7, matching the review count) -- but at only 9px
-     with 8px gaps (17px pitch), the tappable area was far below any
-     accessible minimum. A full 44px hit target per dot would badly
-     overlap this many adjacent dots at this pitch (each neighbor's
-     zone would swallow the next), so this expands to 24px -- WCAG
-     2.5.8's actual AA minimum, not the 44px AAA figure -- via an
-     invisible ::before, leaving the visible dot untouched. */
-  .carousel-dot::before{
-    content:''; position:absolute; top:50%; left:50%;
-    width:24px; height:24px; transform:translate(-50%, -50%);
-  }
-  .carousel-dot:hover{background:var(--blue-dark); transform:scale(1.2);}
-  .carousel-dot.is-active{background:var(--blue-light);}
   .reviews-footer{
     text-align:center;
     margin-top:26px;
@@ -1516,7 +1465,7 @@
   }
   .reviews-footer a{color:var(--blue-text); font-weight:600;}
   @media (max-width:760px){
-    .review-slide{padding:32px 24px;}
+    .review-card{padding:24px 22px;}
   }
 
 

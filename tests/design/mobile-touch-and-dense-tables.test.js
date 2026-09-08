@@ -79,9 +79,10 @@ test('F22: touch targets bumped to real sizes across the suite, verified where a
   // Workspace's period filters (~31px).
   assert.match(workspace, /@media \(max-width: 720px\) \{ \.period-btn \{ min-height: 44px; \} \}/);
 
-  // Public homepage review carousel dots (9x9, 7 of them at a 17px
-  // pitch) -- a full 44px hit target per dot would badly overlap this
-  // many adjacent dots, so this uses 24px (WCAG 2.5.8's actual AA
-  // minimum) via an invisible ::before, leaving the visible dot alone.
-  assert.match(STYLES, /\.carousel-dot::before\{[\s\S]*?width:24px; height:24px;/);
+  // The public homepage's review carousel dots (the touch-target concern
+  // this originally fixed) no longer exist at all -- U03 (High-Impact
+  // Upgrades, 2026-09-07) replaced the carousel with a static two-column
+  // wall showing all 7 reviews at once, retiring .carousel-dot entirely
+  // rather than leaving it to fix.
+  assert.doesNotMatch(STYLES, /\.carousel-dot/);
 });
