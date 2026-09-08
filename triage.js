@@ -140,9 +140,23 @@
     // appliance first; this doesn't touch or duplicate its logic, only
     // drives it programmatically to land on the same result a manual
     // two-click path would reach.
+    // Regression-recovery fix (2026-09-08): 20 flat cards in one grid
+    // alone accounted for +336px of this section's growth during the
+    // improvement session (measured directly, 490px -> 826px, +69%).
+    // Grouped into 5 collapsible rows, one per appliance, closed by
+    // default -- the same zero-JS-needed <details> disclosure already
+    // used for the appliance-first picker below. Every card, its click
+    // handler, and its content are otherwise unchanged.
     const gridEl = document.getElementById('triageSymptomGrid');
     if (gridEl) {
       Object.keys(DATA).forEach(function (key) {
+        const row = document.createElement('details');
+        row.className = 'triage-appliance-row';
+        const summary = document.createElement('summary');
+        summary.textContent = DATA[key].label;
+        row.appendChild(summary);
+        const rowCards = document.createElement('div');
+        rowCards.className = 'triage-symptom-row-cards';
         DATA[key].symptoms.forEach(function (s) {
           const btn = document.createElement('button');
           btn.type = 'button';
@@ -156,8 +170,10 @@
             showSymptomResult(s);
             result.scrollIntoView({ behavior: 'smooth', block: 'center' });
           });
-          gridEl.appendChild(btn);
+          rowCards.appendChild(btn);
         });
+        row.appendChild(rowCards);
+        gridEl.appendChild(row);
       });
     }
   })();

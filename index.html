@@ -60,7 +60,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Anton&family=Archivo:wght@400..700&family=Newsreader:ital,opsz,wght@0,6..72,300..700;1,6..72,300..600&family=Oswald:wght@200..700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="styles.css?v=202609081030">
+<link rel="stylesheet" href="styles.css?v=202609081130">
 <script type="application/ld+json">
 {
   "@context": "https://schema.org",
@@ -806,6 +806,22 @@
               </div>
             </div>
 
+      </div>
+
+      <!-- Regression-recovery fix (2026-09-08): this wall alone
+           accounted for +779px of growth during the improvement session
+           (measured directly, 717px -> 1,496px, more than doubling) --
+           short quotes were also stretching to match the tallest card
+           in their grid row. align-items:start above fixes the
+           stretching; the last 3 of 7 cards move into a collapsed
+           disclosure, closed by default, so only 4 show up front. All
+           7 stay genuinely on the page (not just linked out to Google),
+           so the aggregateRating schema's reviewCount can still honestly
+           claim 7 -- see reviews-wall.test.js's own note on why that
+           count has to match real visible content. -->
+      <details class="reviews-toggle">
+        <summary>Show 3 more reviews</summary>
+        <div class="reviews-wall reviews-wall-more">
             <div class="review-card">
               <div class="review-stars">
                 <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01z"/></svg>
@@ -850,7 +866,8 @@
                 <p class="review-meta"><strong>Verified Customer</strong> on Google</p>
               </div>
             </div>
-      </div>
+        </div>
+      </details>
 
       <p class="reviews-footer">See more on <a href="https://g.page/r/CVJ0Qr-SsDkgEAI/review" target="_blank" rel="noopener">Google</a> or <a href="https://www.yelp.com/biz/triple-h-enterprises-st-george" target="_blank" rel="noopener">Yelp</a>, or <a href="https://g.page/r/CVJ0Qr-SsDkgEAI/review" target="_blank" rel="noopener">leave your own review</a>.</p>
     </div>
@@ -2766,6 +2783,6 @@
 
 
 
-<script src="/triage.js?v=ddf827fe85" defer></script>
+<script src="/triage.js?v=9b14fb6cf5" defer></script>
 </body>
 </html>
