@@ -1360,6 +1360,29 @@
     doc.setFontSize(8.5); doc.setTextColor(...GRAY);
     doc.text('Please reference invoice ' + document.getElementById('invoiceNumber').value + ' with payment.', 40, y);
 
+    // U17 fix (High-Impact Upgrades, 2026-09-07): "the thirty-day labour
+    // warranty is already tracked internally... stating it on the job
+    // sheet and the invoice turns an internal field into a visible
+    // promise." Same 30-day-from-job.date rule as job-tracker.html's own
+    // warrantyBadgeHtml(); only shown when this invoice is linked to a
+    // completed job, so an estimate or a job still in progress never
+    // claims a warranty that hasn't started yet.
+    const linkedJobId = (document.getElementById('invoiceJobRef') || {}).value;
+    if (linkedJobId) {
+      const linkedJob = loadJobs().find(jb => String(jb.id) === String(linkedJobId));
+      if (linkedJob && linkedJob.status === 'done' && linkedJob.date) {
+        const completionDate = new Date(linkedJob.date + 'T00:00:00');
+        if (!isNaN(completionDate.getTime())) {
+          const warrantyEnd = new Date(completionDate);
+          warrantyEnd.setDate(warrantyEnd.getDate() + 30);
+          const warrantyDisplay = warrantyEnd.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
+          y += 20;
+          doc.setFont('helvetica', 'bold'); doc.setFontSize(9); doc.setTextColor(...ORANGE_DARK);
+          doc.text('Covered by our 30-day labor warranty through ' + warrantyDisplay + '.', 40, y);
+        }
+      }
+    }
+
     // footer
     const footerY = doc.internal.pageSize.getHeight() - 40;
     doc.setDrawColor(...ORANGE); doc.setLineWidth(1.5);
