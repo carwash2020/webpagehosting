@@ -2192,6 +2192,55 @@
     color:#161005;
     font-weight:600;
   }
+  /* U02 fix (2026-09-08): the symptom-first entry grid -- plain-
+     language cards ("Washer / Won't drain") instead of the old
+     appliance-category-first step, each jumping straight to a result.
+     Small cards rather than pills since each one carries two lines
+     (which appliance, which symptom), not one short label. */
+  .triage-symptom-grid{
+    display:grid;
+    grid-template-columns:repeat(auto-fill, minmax(180px, 1fr));
+    gap:10px;
+  }
+  .triage-symptom-card{
+    font-family:var(--font-ui);
+    text-align:left;
+    padding:13px 16px;
+    min-height:44px;                 /* real touch target */
+    border-radius:10px;
+    border:1px solid var(--border);
+    background:var(--bg-panel-3);
+    color:var(--text);
+    cursor:pointer;
+    display:flex; flex-direction:column; gap:3px;
+    transition:border-color .15s ease, background .15s ease, transform .15s ease;
+  }
+  .triage-symptom-card:hover{border-color:var(--blue-text); transform:translateY(-1px);}
+  .triage-symptom-card-appliance{
+    font-size:11px; font-weight:600; letter-spacing:.6px; text-transform:uppercase;
+    color:var(--orange-text);
+  }
+  .triage-symptom-card-q{font-size:14.5px; font-weight:500; color:var(--white);}
+
+  /* The original appliance-first picker, kept for anyone who'd rather
+     browse that way -- a native <details> disclosure needs no JS of
+     its own to open/close, and degrades to a plain expanded block with
+     JS off (same no-JS-fallback standard as the coverage map). */
+  .triage-browse-toggle{margin:18px 0 0;}
+  .triage-browse-toggle summary{
+    font-family:var(--font-ui);
+    font-size:13.5px;
+    color:var(--blue-text);
+    cursor:pointer;
+    padding:4px 0;
+    list-style:none;
+  }
+  .triage-browse-toggle summary::-webkit-details-marker{display:none;}
+  .triage-browse-toggle summary::before{content:'+ '; color:var(--text-dim);}
+  .triage-browse-toggle[open] summary::before{content:'\2212 ';}
+  .triage-browse-toggle summary:hover{color:var(--white);}
+  .triage-browse-toggle .triage-step:first-of-type{margin-top:16px;}
+
   .triage-result{
     margin-top:22px;
     border-top:1px solid var(--border);

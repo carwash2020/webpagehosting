@@ -67,6 +67,12 @@
           a: "Frequently the power supply to the unit, or the control board." } ] }
     };
 
+    // U02 fix (High-Impact Upgrades, 2026-09-08): exposed so the
+    // symptom-first entry grid below can build its buttons FROM this
+    // one source of truth, rather than a second, driftable copy of
+    // the same 20 symptom labels.
+    window.TRIAGE_DATA = DATA;
+
     const appEl = document.getElementById('triageAppliances');
     const symStep = document.getElementById('triageSymptomStep');
     const symEl = document.getElementById('triageSymptoms');
@@ -91,24 +97,69 @@
       });
     }
 
+    // Pulled out of the per-appliance click handler below (2026-09-08,
+    // U02) so the symptom-first entry grid can show a result directly,
+    // without needing to simulate two clicks through the step-by-step
+    // picker to get the exact same effect.
+    function showSymptomResult(s) {
+      verdict.textContent = s.v;
+      body.textContent = s.a;
+      result.hidden = false;
+    }
+
+    function selectAppliance(key, applianceBtn) {
+      clearPressed(appEl);
+      if (applianceBtn) applianceBtn.setAttribute('aria-pressed', 'true');
+      symEl.innerHTML = '';
+      DATA[key].symptoms.forEach(function (s) {
+        symEl.appendChild(chip(s.q, function () {
+          clearPressed(symEl);
+          this.setAttribute('aria-pressed', 'true');
+          showSymptomResult(s);
+        }));
+      });
+      symStep.hidden = false;
+    }
+
+    const applianceButtons = {};
     Object.keys(DATA).forEach(function (key) {
-      appEl.appendChild(chip(DATA[key].label, function () {
-        clearPressed(appEl);
-        this.setAttribute('aria-pressed', 'true');
-        symEl.innerHTML = '';
-        DATA[key].symptoms.forEach(function (s) {
-          symEl.appendChild(chip(s.q, function () {
-            clearPressed(symEl);
-            this.setAttribute('aria-pressed', 'true');
-            verdict.textContent = s.v;
-            body.textContent = s.a;
-            result.hidden = false;
-          }));
-        });
-        symStep.hidden = false;
+      const btn = chip(DATA[key].label, function () {
+        selectAppliance(key, btn);
         result.hidden = true;
-      }));
+      });
+      applianceButtons[key] = btn;
+      appEl.appendChild(btn);
     });
+
+    // U02 fix (High-Impact Upgrades, 2026-09-08): "Customers do not
+    // arrive thinking 'appliance repair'; they arrive thinking 'it
+    // won't drain'." A flat grid of the same 20 symptoms already above,
+    // in the customer's own words, as the real entry point -- each one
+    // jumps straight to its result. The step-by-step appliance picker
+    // above stays exactly as it was, for anyone who'd rather browse by
+    // appliance first; this doesn't touch or duplicate its logic, only
+    // drives it programmatically to land on the same result a manual
+    // two-click path would reach.
+    const gridEl = document.getElementById('triageSymptomGrid');
+    if (gridEl) {
+      Object.keys(DATA).forEach(function (key) {
+        DATA[key].symptoms.forEach(function (s) {
+          const btn = document.createElement('button');
+          btn.type = 'button';
+          btn.className = 'triage-symptom-card';
+          btn.innerHTML = '<span class="triage-symptom-card-appliance">' + DATA[key].label + '</span><span class="triage-symptom-card-q">' + s.q + '</span>';
+          btn.addEventListener('click', function () {
+            selectAppliance(key, applianceButtons[key]);
+            const symBtn = Array.prototype.find.call(symEl.querySelectorAll('.triage-chip'), function (b) { return b.textContent === s.q; });
+            clearPressed(symEl);
+            if (symBtn) symBtn.setAttribute('aria-pressed', 'true');
+            showSymptomResult(s);
+            result.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          });
+          gridEl.appendChild(btn);
+        });
+      });
+    }
   })();
 
   // ---------- live open / closed ----------
