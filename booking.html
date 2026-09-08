@@ -263,7 +263,7 @@
      -- now also loaded by portal/work-orders.html, so the two pages
      can never silently drift on what the real hours actually are.
      See business-hours.js's own header comment for the full reasoning. -->
-<script src="/business-hours.js?v=2"></script>
+<script src="/business-hours.js?v=3"></script>
 </head>
 <body>
 
@@ -690,6 +690,42 @@
   });
 
   renderServiceList();
+
+  // U04 fix (High-Impact Upgrades, 2026-09-08): the homepage's "next
+  // opening" line links here with ?service=X&date=Y so tapping that
+  // specific slot actually lands on it, instead of dumping the visitor
+  // back at step 1 to re-pick a service they already effectively chose.
+  // Both params are optional and best-effort -- validated against the
+  // real SERVICES list and a plain date shape before being used, and an
+  // unrecognized service or a date with no availability left by the
+  // time they arrive just leaves the normal step-1 flow in place.
+  //
+  // Deliberately does NOT just call btn.click() and then selectDate()
+  // back to back: the button's own click handler already kicks off an
+  // async selectDate(today) call, and firing a second selectDate() call
+  // immediately after (before that first one's fetch resolves) is a
+  // genuine race -- whichever response lands last wins, so the visitor
+  // could land on today's slots instead of the date the link promised.
+  // Replicating the handler's own (synchronous, cheap) non-fetch side
+  // effects here and making exactly one selectDate() call avoids it.
+  (function preselectFromQuery() {
+    const params = new URLSearchParams(window.location.search);
+    const serviceKey = params.get('service');
+    const dateParam = params.get('date');
+    const service = SERVICES.find(function (s) { return s.key === serviceKey; });
+    if (!service) return;
+    const validDate = dateParam && /^\d{4}-\d{2}-\d{2}$/.test(dateParam);
+
+    selectedService = service;
+    const hrs = service.minutes >= 60 ? (service.minutes / 60) + ' hr' + (service.minutes > 60 ? 's' : '') : service.minutes + ' min';
+    document.getElementById('selectedServiceSummary').innerHTML =
+      '<div class="hex-icon">' + svgIcon(service.icon) + '</div>' +
+      '<div><strong>' + service.label + '</strong>~' + hrs + '</div>';
+    updateSidebar();
+    goToStep(2);
+    renderDateRow();
+    selectDate(validDate ? dateParam : todayDateStrInBusinessTz());
+  })();
 })();
 </script>
 

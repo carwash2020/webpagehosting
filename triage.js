@@ -215,3 +215,38 @@
       /* A status pill is never worth breaking the hero over. */
     }
   })();
+
+  // ---------- next real opening (U04, High-Impact Upgrades, 2026-09-08) ----------
+  // "A site that says 'next opening Thursday 9:00 AM' feels staffed and
+  // organised in a way almost no trade site does." Reads the real next
+  // free slot from the same th_bookings availability logic booking.html
+  // itself uses (business-hours.js's findNextAvailableSlot), rather than
+  // the pill's own static hours-only guess above, which doesn't know
+  // about existing bookings. Entirely separate from and additive to the
+  // pill -- if this lookup is slow, unavailable, or fails, nothing here
+  // ever appears and the pill above stands exactly as it already did.
+  (function () {
+    const el = document.getElementById('nextOpening');
+    if (!el) return;
+    if (typeof findNextAvailableSlot !== 'function') return;
+
+    const SUPABASE_URL = 'https://csvfqdjuobylgafgolho.supabase.co';
+    const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNzdmZxZGp1b2J5bGdhZmdvbGhvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODUzNTQ3MjcsImV4cCI6MjEwMDkzMDcyN30.6GlvK-DfXf2lppS1kciZtsl4wHOpZz_yKtwsS1lyjrs';
+    // Inspection is the shortest service (45 min) -- using it here finds
+    // the earliest slot that could fit ANY visit, not just a specific
+    // service the visitor hasn't chosen yet.
+    const NEXT_OPENING_DURATION_MINUTES = 45;
+    const NEXT_OPENING_SERVICE_KEY = 'inspection';
+
+    findNextAvailableSlot(SUPABASE_URL, SUPABASE_ANON_KEY, NEXT_OPENING_DURATION_MINUTES).then(function (result) {
+      if (!result) return;
+      const dateLabel = new Intl.DateTimeFormat('en-US', {
+        timeZone: BUSINESS_TIMEZONE, weekday: 'short', month: 'short', day: 'numeric',
+      }).format(result.slot.startUtc);
+      el.innerHTML = 'Next opening: <b>' + dateLabel + ' at ' + result.slot.label + '</b> &middot; ' +
+        '<a href="/booking.html?service=' + NEXT_OPENING_SERVICE_KEY + '&date=' + result.dateStr + '">Book this slot</a>';
+      el.hidden = false;
+    }).catch(function () {
+      /* Fails silently to the pill above, exactly as this feature's own spec says. */
+    });
+  })();

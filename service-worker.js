@@ -492,7 +492,11 @@
 // Bumped 2026-09-08 (v98 -> v99): /styles.css changed (precached
 // here) -- W16/U02: a new symptom-first entry grid for the public
 // site's "Is it worth fixing?" triage tool.
-const CACHE_NAME = 'th-workspace-v99';
+// Bumped 2026-09-08 (v99 -> v100): /styles.css changed again -- W17/
+// U04: a real "next opening" line beside the homepage's open/closed
+// pill, read from the actual booking system's availability, not a
+// static hours-only guess.
+const CACHE_NAME = 'th-workspace-v100';
 const PRECACHE_URLS = [
   '/tools/workspace.html', '/tools/job-tracker.html', '/tools/invoice-generator.html', '/tools/contract-generator.html',
   '/tools/calendar.html', '/tools/route-planner.html', '/tools/review-request.html', '/tools/contact-card.html',

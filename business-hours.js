@@ -146,6 +146,31 @@ async function fetchBookingsForDate(supabaseUrl, supabaseAnonKey, dateStr, exclu
     .map(function (r) { return { start: new Date(r.start_at), end: new Date(r.end_at) }; });
 }
 
+// U04 fix (High-Impact Upgrades, 2026-09-08): "next opening" beside
+// the homepage's open/closed pill. Walks forward day by day using the
+// exact same fetchBookingsForDate/computeSlotsForDate this file already
+// exposes, so it can never find a slot the real booking flow wouldn't
+// also offer. Returns { dateStr, slot } for the first slot found, or
+// null if nothing opens up within daysAhead (the caller decides what
+// "nothing found" means -- for the homepage pill, that's "say nothing,
+// don't show a broken promise").
+async function findNextAvailableSlot(supabaseUrl, supabaseAnonKey, durationMinutes, daysAhead) {
+  const horizon = daysAhead || DAYS_AHEAD_SHOWN;
+  const today = todayDateStrInBusinessTz();
+  for (let i = 0; i < horizon; i++) {
+    const dateStr = addDaysToDateStr(today, i);
+    let bookings;
+    try {
+      bookings = await fetchBookingsForDate(supabaseUrl, supabaseAnonKey, dateStr);
+    } catch (e) {
+      continue; // one day's lookup failing shouldn't stop the whole search
+    }
+    const slots = computeSlotsForDate(dateStr, durationMinutes, bookings);
+    if (slots.length > 0) return { dateStr: dateStr, slot: slots[0] };
+  }
+  return null;
+}
+
 function computeSlotsForDate(dateStr, durationMinutes, bookings) {
   const weekday = businessWeekday(dateStr);
   const hours = HOURS_BY_WEEKDAY[weekday];
