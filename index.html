@@ -60,7 +60,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Anton&family=Archivo:wght@400..700&family=Newsreader:ital,opsz,wght@0,6..72,300..700;1,6..72,300..600&family=Oswald:wght@200..700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="styles.css?v=202609080300">
+<link rel="stylesheet" href="styles.css?v=202609081030">
 <script type="application/ld+json">
 {
   "@context": "https://schema.org",
@@ -321,6 +321,11 @@
         </div>
         <p class="hero-motto" data-reveal><span>Honesty.</span> <span>Hustle.</span> <span>Helpfulness.</span></p>
         <p class="open-status" id="openStatus" hidden><span class="dot"></span><span id="openStatusText"></span></p>
+        <!-- U04 fix (High-Impact Upgrades, 2026-09-08): the real next
+             available slot from the actual booking system, beside the
+             pill above -- not shown at all if that lookup fails or is
+             slow, so the pill above always stands on its own. -->
+        <p class="next-opening" id="nextOpening" hidden></p>
       </div>
       <div class="hero-badge">
         <img class="logo-img" src="/images/logo-signature.webp?v=202608010300" alt="Triple H Enterprises badge">
@@ -2718,7 +2723,7 @@
       .catch(() => { /* static fallback content already shown is correct */ });
   })();
 </script>
-<script src="/business-hours.js?v=202609060300"></script>
+<script src="/business-hours.js?v=202609081000"></script>
 <script>
   // ---------- seasonal care note ----------
   // One practical thing worth doing this month. Plain maintenance advice,
@@ -2761,6 +2766,6 @@
 
 
 
-<script src="/triage.js?v=e99a011307" defer></script>
+<script src="/triage.js?v=ddf827fe85" defer></script>
 </body>
 </html>

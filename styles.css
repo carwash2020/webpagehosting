@@ -2396,6 +2396,20 @@
   .open-status.is-closed .dot{background:var(--orange);}
   .open-status b{font-weight:600; color:#ffffff;}
 
+  /* U04 fix (2026-09-08): the real next opening, beside the pill above --
+     plain text (no pill chrome of its own) so it doesn't compete with
+     the pill as a second visual element, just a line of information. */
+  .next-opening{
+    margin:8px 0 0;
+    font-family:var(--font-ui);
+    font-size:13px;
+    color:#c9c5bc;
+  }
+  .next-opening[hidden]{display:none;}
+  .next-opening b{font-weight:600; color:#ffffff;}
+  .next-opening a{color:var(--orange-light); text-decoration:underline;}
+  .next-opening a:hover{color:#ffffff;}
+
   /* ---------- city-page coverage badge (2026-09-07) ---------- */
   /* City landing pages need one real fact above the fold: is this a
      standard coverage area or a by-request one. That used to be a
