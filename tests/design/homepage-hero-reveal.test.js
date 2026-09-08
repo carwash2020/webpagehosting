@@ -15,13 +15,21 @@
 // as dishonest no matter the caption. This one pair is the one that
 // was actually checked for that -- see the test below.
 //
-// Design feedback (2026-09-08): the "before" side was swapped from
-// tile-kitchen-before-2.webp to tile-kitchen-before-3.webp -- both are
-// the same honestly-different-job tile floor (neither claims to be the
-// after photo's room, per the note above), but before-2's frame is
+// Design feedback (2026-09-08, earlier the same day): the "before" side
+// was swapped from tile-kitchen-before-2.webp to tile-kitchen-before-3.webp --
+// both are the same honestly-different-job tile floor (neither claims to
+// be the after photo's room, per the note above), but before-2's frame is
 // dominated by a cluttered counter (coffee maker, mouthwash, a beer
 // bottle) above the floor, while before-3 keeps the camera low and the
 // floor itself -- worn grout, dingy tile -- as the actual subject.
+//
+// Direct request (2026-09-08, later the same day): swapped again, this
+// time to a real underlayment-prep-to-finished pair from one flooring
+// job (plank-underlayment-prep.webp -> flooring-finished-detail.webp),
+// replacing the tile/plank cross-job pairing above entirely. The copy
+// still doesn't claim "this exact room" -- same policy as before, just
+// applied to a pair that's honestly closer to it (same job, not just
+// "both real photos").
 
 const { test } = require('node:test');
 const assert = require('node:assert/strict');
@@ -74,9 +82,9 @@ test('the reveal section uses real photos and does not claim the after photo is 
   // after photo is honestly a different, cleaner job (plank-finished-living-2.webp,
   // a bright honey-oak plank floor) -- so the copy no longer claims "this
   // kitchen" or "the same kitchen," just a real before and a real after.
-  assert.match(INDEX, /reveal-before[\s\S]{0,200}?tile-kitchen-before-3\.webp/);
-  assert.match(INDEX, /reveal-after[\s\S]{0,200}?plank-finished-living-2\.webp/);
-  assert.doesNotMatch(INDEX.slice(INDEX.indexOf('id="revealJob"'), INDEX.indexOf('</section>', INDEX.indexOf('id="revealJob"'))), /same kitchen|this kitchen/i);
+  assert.match(INDEX, /reveal-before[\s\S]{0,200}?plank-underlayment-prep\.webp/);
+  assert.match(INDEX, /reveal-after[\s\S]{0,200}?flooring-finished-detail\.webp/);
+  assert.doesNotMatch(INDEX.slice(INDEX.indexOf('id="revealJob"'), INDEX.indexOf('</section>', INDEX.indexOf('id="revealJob"'))), /same kitchen|this kitchen|same room|this room/i);
 });
 
 test('the reveal section sits in the main scroll flow, between Process and Reviews', () => {
@@ -106,8 +114,8 @@ test('the reveal demo sweep is skipped under reduced motion, same guard as the t
 
 test('the reveal images are sized to their real native dimensions', () => {
   const section = INDEX.slice(INDEX.indexOf('id="revealJob"'), INDEX.indexOf('</section>', INDEX.indexOf('id="revealJob"')));
-  assert.match(section, /tile-kitchen-before-3\.webp[^"]*"\s+alt="[^"]*"\s+width="1152"\s+height="2048"/);
-  assert.match(section, /plank-finished-living-2\.webp[^"]*"\s+alt="[^"]*"\s+width="1400"\s+height="1866"/);
+  assert.match(section, /plank-underlayment-prep\.webp[^"]*"\s+alt="[^"]*"\s+width="1400"\s+height="1050"/);
+  assert.match(section, /flooring-finished-detail\.webp[^"]*"\s+alt="[^"]*"\s+width="640"\s+height="853"/);
 });
 
 test('the reveal frame crops each portrait source photo toward its own clean patch of floor', () => {
