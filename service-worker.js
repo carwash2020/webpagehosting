@@ -489,7 +489,10 @@
 // overdue, and the rest of the day -- plus a single row of chips
 // (each carrying the same live counts their own section already
 // computed) for everything else. No schema change.
-const CACHE_NAME = 'th-workspace-v98';
+// Bumped 2026-09-08 (v98 -> v99): /styles.css changed (precached
+// here) -- W16/U02: a new symptom-first entry grid for the public
+// site's "Is it worth fixing?" triage tool.
+const CACHE_NAME = 'th-workspace-v99';
 const PRECACHE_URLS = [
   '/tools/workspace.html', '/tools/job-tracker.html', '/tools/invoice-generator.html', '/tools/contract-generator.html',
   '/tools/calendar.html', '/tools/route-planner.html', '/tools/review-request.html', '/tools/contact-card.html',

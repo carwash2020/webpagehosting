@@ -60,7 +60,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Anton&family=Archivo:wght@400..700&family=Newsreader:ital,opsz,wght@0,6..72,300..700;1,6..72,300..600&family=Oswald:wght@200..700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="/styles.css?v=202609080230">
+<link rel="stylesheet" href="/styles.css?v=202609080300">
 <script type="application/ld+json">
 {
   "@context": "https://schema.org",
@@ -348,15 +348,31 @@
       </div>
 
       <div class="triage-shell" data-reveal>
+        <!-- U02 fix (High-Impact Upgrades, 2026-09-08): "Customers do
+             not arrive thinking 'appliance repair'; they arrive
+             thinking 'it won't drain'." A flat grid of the same 20
+             symptoms triage.js already has data for, in plain language,
+             as the real entry point -- each card jumps straight to its
+             result. The original step-by-step appliance picker is kept
+             exactly as it was, just demoted into the disclosure below
+             for anyone who'd rather browse by appliance first. -->
         <div class="triage-step">
-          <p class="triage-label"><i>1</i> What's giving you trouble?</p>
-          <div class="triage-options" id="triageAppliances" role="group" aria-label="Choose an appliance"></div>
+          <p class="triage-label">Tap what it's doing</p>
+          <div class="triage-symptom-grid" id="triageSymptomGrid" role="group" aria-label="Choose your symptom"></div>
         </div>
 
-        <div class="triage-step" id="triageSymptomStep" hidden>
-          <p class="triage-label"><i>2</i> What's it doing?</p>
-          <div class="triage-options" id="triageSymptoms" role="group" aria-label="Choose a symptom"></div>
-        </div>
+        <details class="triage-browse-toggle">
+          <summary>Don't see it? Browse by appliance instead</summary>
+          <div class="triage-step">
+            <p class="triage-label"><i>1</i> What's giving you trouble?</p>
+            <div class="triage-options" id="triageAppliances" role="group" aria-label="Choose an appliance"></div>
+          </div>
+
+          <div class="triage-step" id="triageSymptomStep" hidden>
+            <p class="triage-label"><i>2</i> What's it doing?</p>
+            <div class="triage-options" id="triageSymptoms" role="group" aria-label="Choose a symptom"></div>
+          </div>
+        </details>
 
         <div class="triage-result" id="triageResult" hidden aria-live="polite">
           <h3 class="triage-verdict" id="triageVerdict"></h3>
@@ -560,6 +576,6 @@
   })();
 </script>
 <script src="/site-motion.js?v=202609061800" defer></script>
-<script src="/triage.js?v=546c75173f" defer></script>
+<script src="/triage.js?v=e99a011307" defer></script>
 </body>
 </html>
