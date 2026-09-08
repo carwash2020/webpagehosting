@@ -570,7 +570,14 @@
 // client-error redaction (CodeQL #53) widened to also scrub JWTs and
 // credential-shaped URL query parameters, and now covers the `source`
 // field too, not just message/stack.
-const CACHE_NAME = 'th-workspace-v110';
+// Bumped 2026-09-08 (v110 -> v111): SEO fix -- an outside audit of
+// Search Console data found the site's 3 blog posts weren't getting
+// indexed, tracing it to a real gap: no page on the site ever linked
+// directly to an individual post, only to /blog/ itself. Added a "From
+// the blog" teaser section to index.html (one direct link per post)
+// plus a contextual in-prose link from #honest to the
+// appliance-repair-or-replace post, and new .blog-teaser-* CSS.
+const CACHE_NAME = 'th-workspace-v111';
 const PRECACHE_URLS = [
   '/tools/workspace.html', '/tools/job-tracker.html', '/tools/invoice-generator.html', '/tools/contract-generator.html',
   '/tools/calendar.html', '/tools/route-planner.html', '/tools/review-request.html', '/tools/contact-card.html',

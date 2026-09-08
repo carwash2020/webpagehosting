@@ -28,10 +28,11 @@ test('section headings render immediately -- no opacity/transform fade -- via a 
   // getting added by the same shared IntersectionObserver every other
   // reveal-gated feature on the page depends on. Was 10; the
   // regression-recovery pass folded #contact's own section-head into
-  // #schedule's (one merged section, one heading), making 9 -- a real
-  // structural change, not a motion regression.
+  // #schedule's (one merged section, one heading), making 9. The
+  // SEO fix that added the "From the blog" teaser section brought its
+  // own section-head, making 10 again.
   const count = [...INDEX.matchAll(/class="section-head" data-reveal>/g)].length;
-  assert.equal(count, 9, 'expected all 9 remaining section-head instances to still carry data-reveal');
+  assert.equal(count, 10, 'expected all 10 remaining section-head instances to still carry data-reveal');
 });
 
 test('the process step-line draw-in (gated on .section-head.is-visible via a sibling selector) is untouched', () => {
