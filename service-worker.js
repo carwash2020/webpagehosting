@@ -541,7 +541,19 @@
 // Email cards already covered by the header, sticky call button,
 // closing screen and footer; .btn.blue's old glossy gradient was
 // flattened to match .btn.orange's treatment.
-const CACHE_NAME = 'th-workspace-v108';
+// Bumped 2026-09-08 (v108 -> v109): /styles.css, /index.html, /triage.js
+// and the 5 landing pages changed again -- direct visual feedback:
+// review cards now render at a fixed, line-clamped height instead of
+// sizing to their own content; the service-area diagram's concentric
+// rings are gone and every city is spaced at least 50 degrees apart
+// instead of the old 15-degree Washington City/Hurricane crowding; the
+// teardown before-photo swapped to a floor-focused shot instead of the
+// cluttered-counter one; the triage appliance rows got real icons and
+// dropped their now-redundant per-card appliance label; modals, the
+// lightbox, the two triage <details> disclosures and .reviews-toggle
+// all animate open/close now instead of snapping; the open-status dot
+// pulses while open.
+const CACHE_NAME = 'th-workspace-v109';
 const PRECACHE_URLS = [
   '/tools/workspace.html', '/tools/job-tracker.html', '/tools/invoice-generator.html', '/tools/contract-generator.html',
   '/tools/calendar.html', '/tools/route-planner.html', '/tools/review-request.html', '/tools/contact-card.html',

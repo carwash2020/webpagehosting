@@ -49,9 +49,11 @@ test('the symptom grid is the first thing shown -- one card per symptom already 
 test('clicking a symptom card shows the exact same verdict/body triage.js already had for it, with no second copy of that text', () => {
   const window = loadTriagePage(INDEX);
   const { document } = window;
-  const cards = [...document.querySelectorAll('#triageSymptomGrid .triage-symptom-card')];
-  const drainCard = cards.find(c => c.querySelector('.triage-symptom-card-q').textContent === "Won't drain"
-    && c.querySelector('.triage-symptom-card-appliance').textContent === 'Washer');
+  const rows = [...document.querySelectorAll('#triageSymptomGrid .triage-appliance-row')];
+  const washerRow = rows.find(r => r.querySelector('.triage-appliance-heading').textContent.trim() === 'Washer');
+  assert.ok(washerRow, 'expected a Washer row');
+  const drainCard = [...washerRow.querySelectorAll('.triage-symptom-card')]
+    .find(c => c.querySelector('.triage-symptom-card-q').textContent === "Won't drain");
   assert.ok(drainCard, 'expected a Washer / "Won\'t drain" card');
 
   drainCard.dispatchEvent(new window.Event('click', { bubbles: true }));
@@ -81,14 +83,26 @@ test('the original appliance-first picker still works exactly as before, now ins
   assert.equal(symptomChips.length, 4, 'picking an appliance should still populate its 4 symptoms, same as before');
 });
 
-test('every symptom card names its appliance, so a page with 20 cards reads unambiguously (not just "Won\'t drain" with no context)', () => {
+test('every symptom card sits inside a row that names its appliance, so 20 cards read unambiguously without repeating the appliance on every single card', () => {
+  // Design feedback (2026-09-08): each card used to repeat its own
+  // appliance name (e.g. "WASHER") even though the enclosing row's own
+  // <summary> already says "Washer" -- 4x redundant per row, and it
+  // read as an unfinished template. The row itself is still required to
+  // name its appliance; the per-card repetition is what's gone.
   const window = loadTriagePage(INDEX);
-  const cards = [...window.document.querySelectorAll('#triageSymptomGrid .triage-symptom-card')];
-  for (const card of cards) {
-    const appliance = card.querySelector('.triage-symptom-card-appliance');
-    const symptom = card.querySelector('.triage-symptom-card-q');
-    assert.ok(appliance && appliance.textContent.trim().length > 0, 'every card should name its appliance');
-    assert.ok(symptom && symptom.textContent.trim().length > 0, 'every card should name its symptom');
+  const rows = [...window.document.querySelectorAll('#triageSymptomGrid .triage-appliance-row')];
+  assert.equal(rows.length, 5, 'expected 5 appliance rows');
+  for (const row of rows) {
+    const heading = row.querySelector('.triage-appliance-heading');
+    assert.ok(heading && heading.textContent.trim().length > 0, 'every row should name its appliance');
+    assert.ok(row.querySelector('.triage-appliance-icon svg'), 'every row should have its own icon');
+    const cards = [...row.querySelectorAll('.triage-symptom-card')];
+    assert.equal(cards.length, 4, 'expected 4 symptom cards per appliance row');
+    for (const card of cards) {
+      const symptom = card.querySelector('.triage-symptom-card-q');
+      assert.ok(symptom && symptom.textContent.trim().length > 0, 'every card should name its symptom');
+      assert.ok(!card.querySelector('.triage-symptom-card-appliance'), 'the per-card appliance label is redundant now and should be gone');
+    }
   }
 });
 

@@ -73,6 +73,19 @@
     // the same 20 symptom labels.
     window.TRIAGE_DATA = DATA;
 
+    // Design feedback (2026-09-08): the 5 appliance rows read as a flat,
+    // undifferentiated list of text bars. One small line icon per
+    // appliance, same stroke style as every other icon on the site
+    // (24x24, stroke-width 2, round caps), gives each row something to
+    // actually scan instead of reading five identical rows top to bottom.
+    const APPLIANCE_ICONS = {
+      washer: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="3" width="16" height="18" rx="2"/><line x1="7" y1="6" x2="9" y2="6"/><circle cx="12" cy="14" r="5"/><circle cx="12" cy="14" r="1.8"/></svg>',
+      dryer: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="3" width="16" height="18" rx="2"/><line x1="7" y1="6" x2="9" y2="6"/><circle cx="12" cy="14" r="5"/><path d="M9.8 14c0-1.2 1.2-1.2 1.2-2.4S9.8 10.4 9.8 9.2M14.2 14c0-1.2 1.2-1.2 1.2-2.4s-1.2-1.2-1.2-2.4"/></svg>',
+      dishwasher: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="3" y1="8" x2="21" y2="8"/><line x1="8" y1="12" x2="8" y2="19"/><line x1="12" y1="12" x2="12" y2="19"/><line x1="16" y1="12" x2="16" y2="19"/></svg>',
+      refrigerator: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="2" width="14" height="20" rx="2"/><line x1="5" y1="9" x2="19" y2="9"/><line x1="15" y1="4" x2="15" y2="6.5"/><line x1="15" y1="11" x2="15" y2="14"/></svg>',
+      range: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8" cy="7.5" r="1"/><circle cx="16" cy="7.5" r="1"/><circle cx="8" cy="11.5" r="1"/><circle cx="16" cy="11.5" r="1"/><rect x="6" y="14" width="12" height="6" rx="1"/></svg>',
+    };
+
     const appEl = document.getElementById('triageAppliances');
     const symStep = document.getElementById('triageSymptomStep');
     const symEl = document.getElementById('triageSymptoms');
@@ -153,7 +166,10 @@
         const row = document.createElement('details');
         row.className = 'triage-appliance-row';
         const summary = document.createElement('summary');
-        summary.textContent = DATA[key].label;
+        const heading = document.createElement('span');
+        heading.className = 'triage-appliance-heading';
+        heading.innerHTML = '<span class="triage-appliance-icon">' + APPLIANCE_ICONS[key] + '</span><span>' + DATA[key].label + '</span>';
+        summary.appendChild(heading);
         row.appendChild(summary);
         const rowCards = document.createElement('div');
         rowCards.className = 'triage-symptom-row-cards';
@@ -161,7 +177,7 @@
           const btn = document.createElement('button');
           btn.type = 'button';
           btn.className = 'triage-symptom-card';
-          btn.innerHTML = '<span class="triage-symptom-card-appliance">' + DATA[key].label + '</span><span class="triage-symptom-card-q">' + s.q + '</span>';
+          btn.innerHTML = '<span class="triage-symptom-card-q">' + s.q + '</span>';
           btn.addEventListener('click', function () {
             selectAppliance(key, applianceButtons[key]);
             const symBtn = Array.prototype.find.call(symEl.querySelectorAll('.triage-chip'), function (b) { return b.textContent === s.q; });

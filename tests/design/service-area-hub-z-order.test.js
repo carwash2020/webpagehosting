@@ -27,7 +27,7 @@ const PAGES = [
 for (const page of PAGES) {
   test(`${page}: the St. George hub group is the LAST group in the SVG, after every spoke, so it paints on top of them`, () => {
     const html = fs.readFileSync(repo(page), 'utf8');
-    const svgStart = html.indexOf('<svg viewBox="0 0 760 420"');
+    const svgStart = html.indexOf('<svg viewBox="0 0 760 480"');
     const svgEnd = html.indexOf('</svg>', svgStart);
     assert.ok(svgStart >= 0 && svgEnd > svgStart, 'expected to find the service-area SVG');
     const svg = html.slice(svgStart, svgEnd);

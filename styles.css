@@ -1177,8 +1177,13 @@
     justify-content:center;
     padding:24px;
     z-index:100;
+    opacity:0;
+    transition:opacity .18s ease, display .18s ease allow-discrete;
   }
-  .modal-overlay.is-open{display:flex;}
+  .modal-overlay.is-open{display:flex; opacity:1;}
+  @starting-style{
+    .modal-overlay.is-open{opacity:0;}
+  }
   .modal{
     background:var(--bg-panel);
     border:1px solid var(--border);
@@ -1190,6 +1195,12 @@
     padding:32px;
     position:relative;
     box-shadow:var(--shadow-hover);
+    transform:scale(.96) translateY(8px);
+    transition:transform .18s ease;
+  }
+  .modal-overlay.is-open .modal{transform:scale(1) translateY(0);}
+  @starting-style{
+    .modal-overlay.is-open .modal{transform:scale(.96) translateY(8px);}
   }
   .modal-close{
     position:absolute;
@@ -1378,9 +1389,22 @@
   .lightbox-overlay{
     display:none; position:fixed; inset:0; background:rgba(0,0,0,.88);
     z-index:9999; align-items:center; justify-content:center; flex-direction:column;
+    opacity:0;
+    transition:opacity .18s ease, display .18s ease allow-discrete;
   }
-  .lightbox-overlay.is-visible{display:flex;}
-  .lightbox-img-wrap{max-width:90vw; max-height:78vh; display:flex; align-items:center; justify-content:center;}
+  .lightbox-overlay.is-visible{display:flex; opacity:1;}
+  @starting-style{
+    .lightbox-overlay.is-visible{opacity:0;}
+  }
+  .lightbox-img-wrap{
+    max-width:90vw; max-height:78vh; display:flex; align-items:center; justify-content:center;
+    transform:scale(.96);
+    transition:transform .18s ease;
+  }
+  .lightbox-overlay.is-visible .lightbox-img-wrap{transform:scale(1);}
+  @starting-style{
+    .lightbox-overlay.is-visible .lightbox-img-wrap{transform:scale(.96);}
+  }
   .lightbox-overlay img{max-width:90vw; max-height:78vh; object-fit:contain; border-radius:6px;}
   .lightbox-caption{color:#eee; margin-top:14px; font-size:14px; text-align:center; max-width:80vw;}
   .lightbox-close{
@@ -1560,6 +1584,15 @@
   .reviews-toggle[open] summary::before{content:'\2212 ';}
   .reviews-toggle summary:hover{color:var(--white);}
   .reviews-toggle .reviews-wall-more{margin-top:20px;}
+  /* Design feedback (2026-09-08): same ::details-content treatment as
+     .triage-appliance-row -- see that rule for why. */
+  .reviews-toggle{interpolate-size:allow-keywords;}
+  .reviews-toggle::details-content{
+    height:0;
+    overflow:hidden;
+    transition:height .25s ease, content-visibility .25s ease allow-discrete;
+  }
+  .reviews-toggle[open]::details-content{height:auto;}
   .review-card{
     background:var(--bg-panel);
     border:1px solid var(--border);
@@ -1576,11 +1609,24 @@
     color:var(--orange-text);
   }
   .review-stars svg{width:18px; height:18px;}
+  /* Design feedback (2026-09-08): quote length here ranges from a
+     4-word one-liner to a 60-word paragraph -- with each card sized to
+     its own content, the wall read as inconsistent/"bouncy" rather than
+     a matched set. A fixed height + line-clamp gives every card the
+     same footprint: short quotes leave harmless whitespace, the one
+     long quote truncates with an ellipsis -- exactly what the existing
+     "read all on Google" link in .reviews-footer is already there for. */
   .review-quote{
     font-size:17px;
     color:var(--white);
     line-height:1.6;
     margin:0 0 18px;
+    height:110px;
+    display:-webkit-box;
+    -webkit-line-clamp:4;
+    line-clamp:4;
+    -webkit-box-orient:vertical;
+    overflow:hidden;
   }
   .review-meta{
     font-size:13px;
@@ -2437,6 +2483,31 @@
   .triage-appliance-row summary::after{content:'+'; color:var(--text-dim); font-size:18px; line-height:1;}
   .triage-appliance-row[open] summary::after{content:'\2212';}
   .triage-appliance-row summary:hover{color:var(--orange-text);}
+  /* Design feedback (2026-09-08): native <details> used to snap this
+     row's cards open/closed with no transition, unlike the FAQ
+     accordion's own real animation right below it on the page.
+     ::details-content is the browser's own animatable box for
+     everything inside a <details> except its <summary> -- real
+     <details>/<summary> stays exactly as before (no-JS fallback,
+     native keyboard/screen-reader semantics), this just gives the
+     content height something to transition between instead of an
+     instant swap. Same treatment on .reviews-toggle below. */
+  .triage-appliance-row{interpolate-size:allow-keywords;}
+  .triage-appliance-row::details-content{
+    height:0;
+    overflow:hidden;
+    transition:height .25s ease, content-visibility .25s ease allow-discrete;
+  }
+  .triage-appliance-row[open]::details-content{height:auto;}
+  .triage-appliance-heading{display:flex; align-items:center; gap:12px;}
+  .triage-appliance-icon{
+    display:flex; flex-shrink:0; width:34px; height:34px;
+    align-items:center; justify-content:center;
+    border-radius:8px;
+    background:var(--orange-tint-soft);
+    color:var(--orange-text);
+  }
+  .triage-appliance-icon svg{width:19px; height:19px;}
   .triage-symptom-card{
     font-family:var(--font-ui);
     text-align:left;
@@ -2451,10 +2522,6 @@
     transition:border-color .15s ease, background .15s ease, transform .15s ease;
   }
   .triage-symptom-card:hover{border-color:var(--blue-text); transform:translateY(-1px);}
-  .triage-symptom-card-appliance{
-    font-size:11px; font-weight:600; letter-spacing:.6px; text-transform:uppercase;
-    color:var(--orange-text);
-  }
   .triage-symptom-card-q{font-size:14.5px; font-weight:500; color:var(--white);}
 
   /* The original appliance-first picker, kept for anyone who'd rather
@@ -2475,6 +2542,15 @@
   .triage-browse-toggle[open] summary::before{content:'\2212 ';}
   .triage-browse-toggle summary:hover{color:var(--white);}
   .triage-browse-toggle .triage-step:first-of-type{margin-top:16px;}
+  /* Design feedback (2026-09-08): same ::details-content treatment as
+     .triage-appliance-row above -- see that rule for why. */
+  .triage-browse-toggle{interpolate-size:allow-keywords;}
+  .triage-browse-toggle::details-content{
+    height:0;
+    overflow:hidden;
+    transition:height .25s ease, content-visibility .25s ease allow-discrete;
+  }
+  .triage-browse-toggle[open]::details-content{height:auto;}
 
   .triage-result{
     margin-top:22px;
@@ -2511,7 +2587,6 @@
   /* ---------- service radius diagram ---------- */
   .radius-figure{margin:0 0 40px; display:flex; justify-content:center;}
   .radius-figure svg{width:100%; max-width:720px; height:auto;}
-  .radius-ring{fill:none; stroke:var(--border); stroke-dasharray:3 7;}
   .radius-spoke{stroke:var(--blue-dark); stroke-width:1.5;}
   .radius-spoke.is-request{stroke:var(--orange-dark); stroke-dasharray:5 5;}
   .radius-node{fill:var(--bg-panel-2); stroke:var(--blue-light); stroke-width:2;}
@@ -2702,9 +2777,27 @@
     width:9px; height:9px; border-radius:50%;
     background:var(--text-dim);
     flex-shrink:0;
+    position:relative;
   }
   .open-status.is-open .dot{background:#3ad66b; box-shadow:0 0 0 4px rgba(58,214,107,.18);}
   .open-status.is-closed .dot{background:var(--orange);}
+  /* Design feedback (2026-09-08): shown in both the hero and the
+     closing screen as a live "are we open right now" read, but it sat
+     static -- a small pulse when open is the standard "this is live,
+     not printed" cue, not decoration. Closed stays a plain dot; there's
+     no live moment to signal there. A real ::after ring (scale+fade)
+     rather than animating box-shadow, which is expensive to animate. */
+  .open-status.is-open .dot::after{
+    content:'';
+    position:absolute; inset:0;
+    border-radius:50%;
+    background:#3ad66b;
+    animation:openDotPulse 2.2s ease-out infinite;
+  }
+  @keyframes openDotPulse{
+    0%{transform:scale(1); opacity:.55;}
+    100%{transform:scale(2.6); opacity:0;}
+  }
   .open-status b{font-weight:600; color:#ffffff;}
 
   /* U04 fix (2026-09-08): the real next opening, beside the pill above --
