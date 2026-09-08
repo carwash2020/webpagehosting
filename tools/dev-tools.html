@@ -2493,8 +2493,21 @@
           });
         } catch (fetchErr) {
           alreadyLogged = true;
+          // Security fix (2026-09-08, CodeQL alert #57): diagnostics is
+          // built from describeHeaderValue(), which is called with real
+          // credentials (SUPABASE_ANON_KEY, the live Authorization
+          // value) -- it no longer echoes back any of their characters,
+          // but CodeQL's static dataflow still treats its return value
+          // as tainted regardless of what the function body actually
+          // does with it, and no string transform clears that (the
+          // same limitation alert #53 already ran into). The real fix
+          // is to never let it reach the PERSISTED, cross-device-synced
+          // client error log at all: console.warn it here for whoever
+          // is actually looking at devtools in the moment, and persist
+          // only the fetch error itself.
+          console.warn('advisor-health header diagnostics: ' + diagnostics);
           if (typeof logClientError === 'function') {
-            logClientError('advisor-health request construction failed: ' + (fetchErr.message || String(fetchErr)) + ' -- ' + diagnostics, 'dev-tools.html', null, null, fetchErr.stack);
+            logClientError('advisor-health request construction failed: ' + (fetchErr.message || String(fetchErr)), 'dev-tools.html', null, null, fetchErr.stack);
           }
           // Without this, the diagnostic above is written to storage
           // but the Client errors panel keeps showing whatever it

@@ -16,6 +16,17 @@
 // clear text. Fixed by never echoing back any of the value's own
 // characters, clean or not -- only length and the bad character's
 // position/code point.
+//
+// That fix alone didn't clear CodeQL's rescan, though: it kept
+// flagging the exact same sink, still crediting describeHeaderValue()'s
+// return value as tainted by CLIENT_ERROR_LOG_KEY, regardless of what
+// the function body actually does with it. Same static-analysis
+// limitation alert #53 already ran into -- no string transform inside
+// the function clears it. The real fix is to never let that diagnostic
+// reach the PERSISTED, cross-device-synced client error log at all:
+// the caller (renderAdvisorHealth()'s fetch-failure handler) now
+// console.warn()s the diagnostics locally and passes only the fetch
+// error itself to logClientError().
 
 const { test } = require('node:test');
 const assert = require('node:assert/strict');
@@ -62,6 +73,24 @@ test('describeHeaderValue() still reports the non-string case (unrelated to the 
   const fn = extractFn('describeHeaderValue');
   const describeHeaderValue = eval(`(${fn})`); // eslint-disable-line no-eval
   assert.equal(describeHeaderValue('apikey', undefined), 'apikey: not a string (type undefined)');
+});
+
+test('the advisor-health diagnostics string built from describeHeaderValue() never reaches logClientError() -- only console.warn()', () => {
+  const start = HTML.indexOf('async function renderAdvisorHealth(');
+  assert.ok(start >= 0, 'expected to find renderAdvisorHealth');
+  const braceStart = HTML.indexOf('{', start);
+  let depth = 0, i = braceStart;
+  for (; i < HTML.length; i++) {
+    if (HTML[i] === '{') depth++;
+    else if (HTML[i] === '}') { depth--; if (depth === 0) { i++; break; } }
+  }
+  const fn = HTML.slice(start, i);
+  assert.match(fn, /console\.warn\('advisor-health header diagnostics: ' \+ diagnostics\)/, 'diagnostics should only ever reach an ephemeral console.warn');
+  assert.match(
+    fn,
+    /logClientError\('advisor-health request construction failed: ' \+ \(fetchErr\.message \|\| String\(fetchErr\)\), 'dev-tools\.html', null, null, fetchErr\.stack\);/,
+    'the logClientError call must not have diagnostics appended to its message argument'
+  );
 });
 
 test('the service worker cache was bumped for this change', () => {
