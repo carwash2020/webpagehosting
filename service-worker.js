@@ -482,7 +482,14 @@
 // warranty stated on that sheet and on any invoice linked to a
 // completed job), verified by generating and text-extracting real
 // PDFs rather than just reading the drawing code.
-const CACHE_NAME = 'th-workspace-v97';
+// Bumped 2026-09-08 (v97 -> v98): /tools/workspace.html changed --
+// W10 (Master Audit, Flagship 02): replaced the old flat "Today"
+// drawer (and the 8-drawer landing in general) with a real Today
+// hero -- next job with navigation, money owed split current/
+// overdue, and the rest of the day -- plus a single row of chips
+// (each carrying the same live counts their own section already
+// computed) for everything else. No schema change.
+const CACHE_NAME = 'th-workspace-v98';
 const PRECACHE_URLS = [
   '/tools/workspace.html', '/tools/job-tracker.html', '/tools/invoice-generator.html', '/tools/contract-generator.html',
   '/tools/calendar.html', '/tools/route-planner.html', '/tools/review-request.html', '/tools/contact-card.html',

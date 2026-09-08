@@ -31,7 +31,16 @@ test('every standard tool page has a min-width:1024px media query widening its c
     // tokens (--tool-maxw-narrow/-wide) instead of a literal pixel
     // value, except workspace.html, which deliberately keeps its own
     // unique literal value (see that fix's own reasoning).
-    const desktopMatch = src.match(/@media \(min-width: 1024px\) \{ body \{ max-width: (\d+px|var\(--tool-maxw-(?:narrow|wide)\)); margin-left: calc\(240px \+ max\(0px, \(100vw - 240px - (?:\d+px|var\(--tool-maxw-(?:narrow|wide)\))\) \/ 2\)\); padding-top: \d+px; \} \}/);
+    // W10 fix (2026-09-08), found by rendering: this bare `body`
+    // selector and styles-tools.css's own `body.th-tool-page` base
+    // rule (which also sets padding-top) have been fighting on every
+    // page using this pattern -- a class selector always beats a bare
+    // element one, @media nesting or not, so the desktop padding-top
+    // below has silently never actually applied anywhere. workspace.html
+    // is the one page fixed here (qualified with .th-tool-page so this
+    // rule's own specificity wins); the other STANDARD_PAGES still
+    // carry the same latent bug, flagged but out of this scope.
+    const desktopMatch = src.match(/@media \(min-width: 1024px\) \{ body(?:\.th-tool-page)? \{ max-width: (\d+px|var\(--tool-maxw-(?:narrow|wide)\)); margin-left: calc\(240px \+ max\(0px, \(100vw - 240px - (?:\d+px|var\(--tool-maxw-(?:narrow|wide)\))\) \/ 2\)\); padding-top: \d+px; \} \}/);
     assert.ok(desktopMatch, page + ' is missing the desktop-width media query');
     const mobileWidth = parseInt(mobileMatch[1], 10);
     if (/^\d+px$/.test(desktopMatch[1])) {
@@ -191,7 +200,10 @@ test('every page using either header class has matching padding-top added to its
     const src = fs.readFileSync(path.join(TOOLS_DIR, page), 'utf8');
     const hasHeader = /class="(hub-header|tool-header)"/.test(src);
     assert.ok(hasHeader, page + ' was expected to use one of the two header classes');
-    assert.match(src, /@media \(min-width: 1024px\) \{ body \{[^}]*padding-top: \d+px;[^}]*\} \}/, page + ' is missing the compensating padding-top for the now-fixed header');
+    // workspace.html's rule is qualified `body.th-tool-page` (W10 fix,
+    // 2026-09-08) so it actually beats styles-tools.css's own
+    // same-specificity base rule instead of silently losing to it.
+    assert.match(src, /@media \(min-width: 1024px\) \{ body(?:\.th-tool-page)? \{[^}]*padding-top: \d+px;[^}]*\} \}/, page + ' is missing the compensating padding-top for the now-fixed header');
   }
 });
 
@@ -223,7 +235,7 @@ test('workspace.html and dev-tools.html each have a sticky bar stacked below the
   for (const [page, stickyBarClass] of Object.entries(stickyBarClassByPage)) {
     const src = fs.readFileSync(path.join(TOOLS_DIR, page), 'utf8');
     assert.match(src, new RegExp('class="' + stickyBarClass + '"'), page + ' was expected to have a ' + stickyBarClass + ' bar');
-    const paddingMatch = src.match(/@media \(min-width: 1024px\) \{ body \{[^}]*padding-top: (\d+)px;[^}]*\} \}/);
+    const paddingMatch = src.match(/@media \(min-width: 1024px\) \{ body(?:\.th-tool-page)? \{[^}]*padding-top: (\d+)px;[^}]*\} \}/);
     assert.ok(paddingMatch);
     assert.ok(parseInt(paddingMatch[1], 10) > 75, page + ' needs more than the header-only 75px, since it also has a sticky bar stacked below it');
   }
@@ -246,7 +258,11 @@ test('on the dashboard, the live sync indicator moves under the settings button 
   // to slide"), so it has no positioning to account for at all.
 
   // body's own padding-top must account for the new, taller header.
-  const paddingMatch = src.match(/@media \(min-width: 1024px\) \{ body \{[^}]*padding-top: (\d+)px;[^}]*\} \}/);
+  // Qualified with .th-tool-page (W10 fix, 2026-09-08) so this rule
+  // actually wins over styles-tools.css's own same-specificity base
+  // rule instead of silently losing to it -- found by rendering the
+  // page and measuring a real ~96px overlap under the fixed header.
+  const paddingMatch = src.match(/@media \(min-width: 1024px\) \{ body(?:\.th-tool-page)? \{[^}]*padding-top: (\d+)px;[^}]*\} \}/);
   assert.ok(paddingMatch);
   assert.ok(parseInt(paddingMatch[1], 10) >= 205, 'padding-top should account for the taller 140px header plus the jump-nav below it');
 });
@@ -416,7 +432,21 @@ test('jump-nav remains a sibling after the whole .hub-header block, not accident
   const window = loadWorkspace();
   const header = window.document.querySelector('.hub-header');
   const jumpNav = window.document.querySelector('.jump-nav');
-  assert.equal(header.nextElementSibling, jumpNav);
+  assert.ok(jumpNav, 'expected a .jump-nav element');
+  assert.ok(!header.contains(jumpNav), '.jump-nav should not be nested inside .hub-header');
+  // W10 (2026-09-08): jump-nav is now the "everything else" chip row,
+  // deliberately moved to sit AFTER the Today hero (next job, money
+  // owed, rest of day) rather than immediately after the header --
+  // still a sibling of .hub-header in the DOM, just further down.
+  let sibling = header.nextElementSibling;
+  let foundBeforeJumpNav = false;
+  while (sibling) {
+    if (sibling === jumpNav) break;
+    if (sibling.id === 'todayHero') foundBeforeJumpNav = true;
+    sibling = sibling.nextElementSibling;
+  }
+  assert.equal(sibling, jumpNav, 'expected .jump-nav to be a later sibling of .hub-header');
+  assert.ok(foundBeforeJumpNav, 'expected #todayHero to come before .jump-nav');
 });
 
 function loadWorkspace() {

@@ -99,7 +99,20 @@
      screen, letting the existing .metrics-grid (already a responsive
      auto-fit grid) spread into more columns on its own, rather than
      rebuilding the layout from scratch. */
-  @media (min-width: 1024px) { body { max-width: 1400px; margin-left: calc(240px + max(0px, (100vw - 240px - 1400px) / 2)); padding-top: 205px; } }
+  /* W10 fix, found by rendering (2026-09-08): this rule and
+     tools-nav-pwa.js's own `body.th-tool-page { padding-top: 44px }`
+     (styles-tools.css) have been fighting since 2026-08-20 -- a class
+     selector always beats a bare-element one regardless of @media
+     nesting, so the 44px rule silently won on every desktop load this
+     whole time, overlapping ~96px of real content under the fixed
+     140px-tall header. Invisible before only because the first thing
+     sitting in that overlapped band was the old thin jump-nav bar, not
+     the greeting banner -- found once the Today hero made a heading
+     the first thing there and it rendered visibly clipped.
+     Selector qualified with .th-tool-page to match that rule's own
+     specificity, so cascade order (this stylesheet loads after
+     styles-tools.css) decides it instead. */
+  @media (min-width: 1024px) { body.th-tool-page { max-width: 1400px; margin-left: calc(240px + max(0px, (100vw - 240px - 1400px) / 2)); padding-top: 205px; } }
   .hub-header { display: flex; flex-direction: column; gap: 6px; margin-bottom: 8px; }
   /* Item #64: pull-to-refresh indicator, requested directly as part of
      a broader "make it feel like an app" pass. Fixed at the top,
@@ -201,6 +214,49 @@
   .jump-nav a:hover { color: var(--orange-light); background: var(--bg-panel-2); }
   .jump-nav a:active { transform: translateY(1px); }
   .jump-nav a .jump-nav-icon { font-size: 15px; line-height: 1; }
+  /* Distinguishes the "everything else" chip row (below the Today
+     hero, W10) from jump-nav's other former use as a sticky top bar --
+     this one scrolls away with the page like everything else here,
+     not pinned. */
+  #everythingElseChips { position: static; margin-top: 0; }
+
+  /* Priority pill on a job -- referenced by renderTodayHero() below,
+     matching job-tracker.html's own colors exactly. Previously
+     referenced on this page too (the old todayJobsList markup) but
+     never actually defined here, so it silently rendered unstyled. */
+  .badge { font-size: 10.5px; padding: 3px 8px; border-radius: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; white-space: nowrap; }
+  .badge-high { background: rgba(224,82,82,0.15); color: #e05252; }
+  .badge-medium { background: rgba(224,123,30,0.15); color: var(--orange-light); }
+  .badge-low { background: rgba(58,160,255,0.15); color: var(--blue-light); }
+
+  /* W10 (Master Audit, Flagship 02): the Today hero -- next job with
+     navigation, money owed split current/overdue, and the rest of the
+     day beside it, replacing the old flat "Today" drawer. */
+  .today-hero { display: grid; grid-template-columns: 1.4fr 1fr; gap: 14px; margin-bottom: 20px; }
+  @media (max-width: 900px) { .today-hero { grid-template-columns: 1fr; } }
+  .today-next-job {
+    background: linear-gradient(135deg, var(--bg-panel-2), var(--bg-panel));
+    border: 1px solid var(--border); border-left: 4px solid var(--orange);
+    border-radius: var(--radius); padding: 20px 22px;
+  }
+  .today-next-job-label { color: var(--text-dim); font-size: 11px; text-transform: uppercase; letter-spacing: 0.8px; margin-bottom: 10px; }
+  .today-next-job-title { font-family:var(--font-display); font-size: 19px; color: var(--white); margin: 0 0 10px; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+  .today-next-job-meta { color: var(--text-dim); font-size: 13.5px; line-height: 1.8; }
+  .today-next-job-meta a { color: var(--orange-light); text-decoration: none; }
+  .today-next-job-actions { display: flex; gap: 10px; margin-top: 16px; flex-wrap: wrap; }
+
+  .today-side { display: flex; flex-direction: column; gap: 14px; }
+  .today-money, .today-restofday {
+    background: var(--bg-panel); border: 1px solid var(--border); border-radius: var(--radius); padding: 16px 18px;
+  }
+  .today-money.is-warning { border-color: #e05252; }
+  .today-money-label, .today-restofday-label { color: var(--text-dim); font-size: 11px; text-transform: uppercase; letter-spacing: 0.8px; margin-bottom: 10px; }
+  .today-money-row { display: flex; justify-content: space-between; align-items: baseline; padding: 6px 0; }
+  .today-money-row + .today-money-row { border-top: 1px solid var(--border); }
+  .today-money-row-label { color: var(--text-dim); font-size: 13px; }
+  .today-money-row-value { font-family:var(--font-ui); font-weight: 700; font-size: 18px; color: var(--white); }
+  .today-money-row-value.is-overdue { color: #e05252; }
+  .today-restofday .dash-list-item:last-child { border-bottom: none; }
 
   .global-search-block { margin-bottom: 20px; }
   #globalSearchWrap { width: 100%; }
@@ -445,13 +501,6 @@
     <button class="help-btn" id="refreshSyncLink" onclick="manualRefreshSync(renderDashboard)" aria-label="Refresh synced data now" title="Refresh synced data now" style="font-size:13px;">&#8635;</button>
   </p>
 </div>
-<nav class="jump-nav">
-  <a href="#section-snapshot"><span class="jump-nav-icon"><svg class="th-icon" aria-hidden="true"><use href="#icon-chart" xlink:href="#icon-chart"></use></svg></span>Snapshot</a>
-  <a href="#section-actionitems"><span class="jump-nav-icon"><svg class="th-icon" aria-hidden="true"><use href="#icon-check-circle" xlink:href="#icon-check-circle"></use></svg></span>Action Items</a>
-  <a href="#section-gallery"><span class="jump-nav-icon"><svg class="th-icon" aria-hidden="true"><use href="#icon-shield" xlink:href="#icon-shield"></use></svg></span>More</a>
-  <a href="#section-tools"><span class="jump-nav-icon"><svg class="th-icon" aria-hidden="true"><use href="#icon-wrench" xlink:href="#icon-wrench"></use></svg></span>Tools</a>
-</nav>
-
 <div class="global-search-block">
   <div class="icon-search" id="globalSearchWrap">
     <button class="icon-search-toggle" onclick="toggleIconSearch('globalSearchWrap')" aria-label="Find a client" title="Find a client"><svg class="th-icon" aria-hidden="true"><use href="#icon-search" xlink:href="#icon-search"></use></svg></button>
@@ -471,15 +520,40 @@
   </div>
 </div>
 
-<div class="section-block" id="section-today">
-  <div class="section-heading" onclick="toggleSection('today')">
-    <span class="section-heading-title"><svg class="th-icon section-heading-icon" aria-hidden="true"><use href="#icon-calendar" xlink:href="#icon-calendar"></use></svg>Today</span>
-    <span class="collapse-arrow">&#9660;</span>
-  </div>
-  <div class="section-body" id="body-today">
-    <div id="todayJobsList"></div>
+<!-- W10 fix (Master Audit, Flagship 02, 2026-09-08): "The dashboard
+     currently opens on a greeting, a zero, and eight collapsed
+     drawers... It is a filing cabinet." Replaces the old flat Today
+     drawer with an actual answer: next job with navigation, money
+     owed split current/overdue, and the rest of the day. No schema
+     change -- same th_tracker_jobs/th_invoices data every section
+     below already reads. -->
+<div class="today-hero" id="todayHero">
+  <div class="today-next-job" id="todayNextJob"></div>
+  <div class="today-side">
+    <div class="today-money" id="todayMoney"></div>
+    <div class="today-restofday">
+      <div class="today-restofday-label">Rest of Today</div>
+      <div id="todayRestOfDay"></div>
+    </div>
   </div>
 </div>
+
+<!-- Everything else, demoted to one row: the seven drawers this used
+     to open on (Business Snapshot, Action Items, Gallery Queue,
+     Compliance, Analytics, Backup, Tools) are all still exactly one
+     tap away below, collapsed by default -- these chips are the new
+     answer-first entry point, not a replacement for them. Each badge
+     mirrors a count its own section already computes (no second
+     calculation of the same number). -->
+<nav class="jump-nav" id="everythingElseChips">
+  <a href="#section-snapshot"><span class="jump-nav-icon"><svg class="th-icon" aria-hidden="true"><use href="#icon-chart" xlink:href="#icon-chart"></use></svg></span>Snapshot</a>
+  <a href="#section-actionitems"><span class="jump-nav-icon"><svg class="th-icon" aria-hidden="true"><use href="#icon-check-circle" xlink:href="#icon-check-circle"></use></svg></span>Action Items<span id="chipActionItems"></span></a>
+  <a href="#section-gallery"><span class="jump-nav-icon"><svg class="th-icon" aria-hidden="true"><use href="#icon-camera" xlink:href="#icon-camera"></use></svg></span>Gallery<span id="chipGallery"></span></a>
+  <a href="#section-compliance"><span class="jump-nav-icon"><svg class="th-icon" aria-hidden="true"><use href="#icon-shield" xlink:href="#icon-shield"></use></svg></span>Compliance<span id="chipCompliance"></span></a>
+  <a href="#section-analytics"><span class="jump-nav-icon"><svg class="th-icon" aria-hidden="true"><use href="#icon-trending" xlink:href="#icon-trending"></use></svg></span>Analytics</a>
+  <a href="#section-backup"><span class="jump-nav-icon"><svg class="th-icon" aria-hidden="true"><use href="#icon-folder" xlink:href="#icon-folder"></use></svg></span>Backup</a>
+  <a href="#section-tools"><span class="jump-nav-icon"><svg class="th-icon" aria-hidden="true"><use href="#icon-wrench" xlink:href="#icon-wrench"></use></svg></span>Tools</a>
+</nav>
 
 <div class="section-block" id="section-snapshot">
   <div class="section-heading" onclick="toggleSection('snapshot')">
@@ -840,12 +914,14 @@
     <button class="help-modal-close" onclick="closeHelpModal()" aria-label="Close">&times;</button>
     <h3>How to Use: Dashboard</h3>
     <div class="help-modal-body">
-      <p>This is the home base for the whole business &mdash; bookmark this one page. Tap any section heading (except Tools) to collapse or expand it &mdash; your preference is remembered.</p>
+      <p>This is the home base for the whole business &mdash; bookmark this one page. The top of the page answers the three questions that actually matter first thing; everything else is one tap away in the row of chips below it, then further down the page as its own section (tap a heading to collapse or expand it &mdash; your preference is remembered).</p>
       <ul>
-        <li><strong>Today</strong> &mdash; just what's scheduled for today and not yet marked done, sorted by priority, with a tap-to-call phone number and a tap-to-open-Maps address for each. The fastest way to see what's actually in front of you without wading through the full Job Tracker.</li>
-        <li><strong>Business Snapshot</strong> &mdash; Last 7 Days, This Month, All Time, or a Custom Range for pulling tax-period numbers.</li>
-        <li><strong>Action Items</strong> &mdash; everything that wants a response from you, in one place: new Leads from the contact form (mark Handled or Delete), jobs Due Soon (next 7 days, not done yet), Client Follow-Ups (clients whose most recent job was 6+ months ago, with a one-tap link to a pre-filled follow-up text), and Invoices (tap the status badge to mark Paid or Unpaid). The heading shows a running count of what's waiting, even while collapsed.</li>
-        <li><strong>Business Health</strong> &mdash; everything you check occasionally rather than daily: Website Gallery Queue (photos starred in the Job Tracker, review-only &mdash; nothing here is live on the website until deliberately added to the actual gallery code), Business Compliance (insurance, LLC/tax info, city licenses &mdash; the heading flags an expiring or expired policy even while collapsed), Analytics (Job Status and Top Vendors), and Backup &amp; Restore (independent of cloud sync entirely). Collapsed by default since none of this is a daily check.</li>
+        <li><strong>Next Job</strong> &mdash; whatever's next on today's schedule, sorted by priority, with a tap-to-call phone number and a tap-to-open-Maps address, plus a straight line into that job's own page.</li>
+        <li><strong>Money Owed</strong> &mdash; Current and Overdue, split apart so a client who's simply not due yet never gets lumped in with one who actually needs a follow-up call.</li>
+        <li><strong>Rest of Today</strong> &mdash; whatever else is on today's schedule after the next job, at a glance.</li>
+        <li><strong>Snapshot / Action Items / Gallery / Compliance / Analytics / Backup / Tools</strong> &mdash; the chip row under the hero. Action Items, Gallery, and Compliance carry a live badge when something's waiting, even while collapsed below.</li>
+        <li><strong>Action Items</strong> (its own section further down) &mdash; everything that wants a response from you, in one place: new Leads from the contact form (mark Handled or Delete), jobs Due Soon (next 7 days, not done yet), Client Follow-Ups (clients whose most recent job was 6+ months ago, with a one-tap link to a pre-filled follow-up text), and Invoices (tap the status badge to mark Paid or Unpaid).</li>
+        <li><strong>Gallery / Compliance / Analytics / Backup</strong> &mdash; everything you check occasionally rather than daily: Website Gallery Queue (photos starred in the Job Tracker, review-only &mdash; nothing here is live on the website until deliberately added to the actual gallery code), Business Compliance (insurance, LLC/tax info, city licenses), Analytics (Job Status and Top Vendors), and Backup &amp; Restore (independent of cloud sync entirely). Collapsed by default since none of this is a daily check.</li>
         <li><strong>Tools</strong> &mdash; every internal tool, one tap away: Job Tracker, Invoice Generator, Contract Generator, Route Planner, Calendar, and a few smaller ones.</li>
       </ul>
 
@@ -934,7 +1010,12 @@
 
 
   const COLLAPSE_STATE_KEY = 'th_dash_collapsed';
-  const DEFAULT_COLLAPSE = { today: false, snapshot: true, actionitems: false, gallery: true, compliance: true, analytics: true, backup: true };
+  // W10 (Master Audit, Flagship 02): 'today' dropped entirely -- the
+  // Today hero above replaced that collapsible section and is never
+  // collapsed. 'actionitems' now defaults collapsed like the rest of
+  // "everything else", since the new chip row (with its own live
+  // counts) is the answer-first entry point now, not this drawer.
+  const DEFAULT_COLLAPSE = { snapshot: true, actionitems: true, gallery: true, compliance: true, analytics: true, backup: true };
 
   function loadCollapseState() {
     try {
@@ -1122,6 +1203,23 @@
     return due < new Date(new Date().toDateString());
   }
 
+  // W10 (Master Audit, Flagship 02): the one place "money owed" gets
+  // computed -- Business Snapshot's Outstanding/Overdue cards and the
+  // new Today hero's money-owed card both call this, so the two can
+  // never disagree. All invoices, not period-scoped: money owed doesn't
+  // reset just because a date filter changed.
+  function computeMoneyOwed() {
+    const allInvoices = loadInvoices();
+    const unpaid = allInvoices.filter(i => invoicePaymentStatus(i) !== 'paid');
+    const overdue = unpaid.filter(isOverdue);
+    const overdueTotal = overdue.reduce((sum, i) => sum + Math.max(0, (Number(i.total) || 0) - getPaidAmount(i)), 0);
+    const outstandingTotal = unpaid.reduce((sum, i) => sum + Math.max(0, (Number(i.total) || 0) - getPaidAmount(i)), 0);
+    return {
+      unpaidCount: unpaid.length, overdueCount: overdue.length,
+      outstandingTotal, overdueTotal, currentTotal: outstandingTotal - overdueTotal,
+    };
+  }
+
   function startOfDay(d) { const c = new Date(d); c.setHours(0, 0, 0, 0); return c; }
 
   function getCurrentRange() {
@@ -1287,17 +1385,13 @@
       revenueSub.textContent = invoices.length + ' invoice' + (invoices.length === 1 ? '' : 's');
     }
 
-    const allInvoices = loadInvoices();
-    const unpaid = allInvoices.filter(i => invoicePaymentStatus(i) !== 'paid');
-    const overdue = unpaid.filter(isOverdue);
-    const outstandingTotal = unpaid.reduce((sum, i) => sum + Math.max(0, (Number(i.total) || 0) - getPaidAmount(i)), 0);
-    const overdueTotal = overdue.reduce((sum, i) => sum + Math.max(0, (Number(i.total) || 0) - getPaidAmount(i)), 0);
-
-    document.getElementById('metricOutstanding').textContent = money(outstandingTotal);
-    document.getElementById('metricOutstandingCount').textContent = unpaid.length + ' unpaid invoice' + (unpaid.length === 1 ? '' : 's');
-    document.getElementById('metricOverdue').textContent = money(overdueTotal);
-    document.getElementById('metricOverdueCount').textContent = overdue.length + ' invoice' + (overdue.length === 1 ? '' : 's') + ' past terms';
-    document.getElementById('overdueCard').classList.toggle('is-warning', overdue.length > 0);
+    const owed = computeMoneyOwed();
+    document.getElementById('metricOutstanding').textContent = money(owed.outstandingTotal);
+    document.getElementById('metricOutstandingCount').textContent = owed.unpaidCount + ' unpaid invoice' + (owed.unpaidCount === 1 ? '' : 's');
+    document.getElementById('metricOverdue').textContent = money(owed.overdueTotal);
+    document.getElementById('metricOverdueCount').textContent = owed.overdueCount + ' invoice' + (owed.overdueCount === 1 ? '' : 's') + ' past terms';
+    document.getElementById('overdueCard').classList.toggle('is-warning', owed.overdueCount > 0);
+    renderTodayMoney(owed);
   }
 
   function renderStatusBars() {
@@ -2081,6 +2175,11 @@
     else if (policyDays !== null && policyDays <= 30) { statusClass = 'is-expiring'; badgeText = 'Policy renews in ' + policyDays + ' days \u2014 ' + badgeText.toLowerCase(); }
 
     const headingBadge = document.getElementById('complianceHeadingBadge');
+    // W10: the "everything else" chip row mirrors this same status --
+    // a plain dot rather than the full sentence, since the chip has no
+    // room for it.
+    const chipBadge = document.getElementById('chipCompliance');
+    if (chipBadge) chipBadge.innerHTML = statusClass === 'is-ok' ? '' : `<span class="compliance-status-badge ${statusClass}" style="font-size:10px; padding:1px 6px; vertical-align:middle; margin-left:4px;">!</span>`;
     if (headingBadge) {
       headingBadge.innerHTML = statusClass === 'is-ok' ? '' :
         `<span class="compliance-status-badge ${statusClass}" style="font-size:11.5px; padding:2px 8px; vertical-align:middle;">${escapeHtml(badgeText)}</span>`;
@@ -2141,6 +2240,10 @@
       if (total > 0) navigator.setAppBadge(total).catch(() => {});
       else if ('clearAppBadge' in navigator) navigator.clearAppBadge().catch(() => {});
     }
+    // W10: the "everything else" chip mirrors the same running total,
+    // reusing this exact count rather than a second computation of it.
+    const chip = document.getElementById('chipActionItems');
+    if (chip) chip.innerHTML = total > 0 ? `<span class="compliance-status-badge is-expiring" style="font-size:10px; padding:1px 6px; vertical-align:middle; margin-left:4px;">${total}</span>` : '';
     if (!badge) return;
     const parts = [];
     if (actionItemCounts.leads > 0) parts.push(actionItemCounts.leads + ' new lead' + (actionItemCounts.leads === 1 ? '' : 's'));
@@ -2393,17 +2496,26 @@
     renderSecureDocsList();
   }
 
+  // W10: the "everything else" chip mirrors Gallery Queue's real count.
+  function updateGalleryChip(n) {
+    const chip = document.getElementById('chipGallery');
+    if (chip) chip.innerHTML = n > 0 ? `<span class="compliance-status-badge is-expiring" style="font-size:10px; padding:1px 6px; vertical-align:middle; margin-left:4px;">${n}</span>` : '';
+  }
+
   async function loadAndRenderGalleryQueue() {
     const container = document.getElementById('galleryQueueList');
     if (typeof fetchFeaturedPhotos !== 'function' || !isSyncConfigured()) {
       container.innerHTML = '<div class="empty-state-small"><svg class="th-icon" aria-hidden="true"><use href="#icon-link" xlink:href="#icon-link"></use></svg>Cloud sync isn\'t set up yet.</div>';
+      updateGalleryChip(0);
       return;
     }
     const result = await fetchFeaturedPhotos();
     if (!result.ok) {
       container.innerHTML = '<div class="empty-state-small is-warning"><svg class="th-icon" aria-hidden="true"><use href="#icon-warning" xlink:href="#icon-warning"></use></svg>Couldn\'t load the queue (' + escapeHtml(result.error) + ').</div>';
+      updateGalleryChip(0);
       return;
     }
+    updateGalleryChip(result.photos.length);
     if (result.photos.length === 0) {
       container.innerHTML = '<div class="empty-state-small"><svg class="th-icon" aria-hidden="true"><use href="#icon-camera" xlink:href="#icon-camera"></use></svg>Nothing queued yet &mdash; star a photo in the Job Tracker\'s Photos section to add it here.</div>';
       return;
@@ -2520,38 +2632,78 @@
     loadAndRenderGalleryQueue();
   }
 
-  function renderTodayJobs() {
-    const container = document.getElementById('todayJobsList');
-    if (!container) return;
+  // W10 (Master Audit, Flagship 02): replaces the old flat todayJobsList
+  // with the actual Today screen -- a next-job hero with navigation, and
+  // whatever's left of today demoted to a compact list beside it. No
+  // schema change: same th_tracker_jobs data, same date+status filter,
+  // same priority sort renderTodayJobs() already used.
+  function getTodaysJobs() {
     let jobs = [];
     try { jobs = JSON.parse(localStorage.getItem('th_tracker_jobs') || '[]'); } catch (e) { jobs = []; }
-
     const today = new Date();
     const todayKey = today.getFullYear() + '-' + String(today.getMonth() + 1).padStart(2, '0') + '-' + String(today.getDate()).padStart(2, '0');
     const todaysJobs = jobs.filter(j => j.date === todayKey && j.status !== 'done');
+    const priorityOrder = { high: 0, medium: 1, low: 2 };
+    todaysJobs.sort((a, b) => (priorityOrder[a.priority] ?? 1) - (priorityOrder[b.priority] ?? 1));
+    return todaysJobs;
+  }
+
+  function renderTodayHero() {
+    const nextEl = document.getElementById('todayNextJob');
+    const restEl = document.getElementById('todayRestOfDay');
+    if (!nextEl || !restEl) return;
+    const todaysJobs = getTodaysJobs();
 
     if (todaysJobs.length === 0) {
-      container.innerHTML = '<div class="empty-state-small is-good"><svg class="th-icon" aria-hidden="true"><use href="#icon-check-circle" xlink:href="#icon-check-circle"></use></svg>Nothing on the schedule for today.</div>';
+      nextEl.innerHTML = '<div class="empty-state-small is-good"><svg class="th-icon" aria-hidden="true"><use href="#icon-check-circle" xlink:href="#icon-check-circle"></use></svg>Nothing on the schedule for today.</div>';
+      restEl.innerHTML = '';
       return;
     }
 
-    const priorityOrder = { high: 0, medium: 1, low: 2 };
-    todaysJobs.sort((a, b) => (priorityOrder[a.priority] ?? 1) - (priorityOrder[b.priority] ?? 1));
+    const job = todaysJobs[0];
+    nextEl.innerHTML = `
+      <div class="today-next-job-label">Next Job</div>
+      <p class="today-next-job-title"><span class="badge badge-${job.priority}">${job.priority}</span> ${escapeHtml(job.title)}${job.client ? ' &mdash; ' + escapeHtml(job.client) : ''}</p>
+      <div class="today-next-job-meta">
+        ${job.address ? '<a href="https://maps.google.com/?q=' + encodeURIComponent(job.address) + '" target="_blank" rel="noopener">' + escapeHtml(job.address) + '</a>' : 'No address on file'}<br>
+        ${job.phone ? '<a href="tel:' + escapeHtml(job.phone) + '">' + escapeHtml(job.phone) + '</a>' : 'No phone on file'}
+      </div>
+      <div class="today-next-job-actions">
+        <a href="/tools/job-detail.html?id=${encodeURIComponent(job.id)}" class="primary-btn">Open Job</a>
+        <a href="/tools/job-tracker.html" class="secondary-btn">View in Job Tracker</a>
+      </div>`;
 
-    container.innerHTML = todaysJobs.map(job => `
+    const rest = todaysJobs.slice(1);
+    if (rest.length === 0) {
+      restEl.innerHTML = '<div class="empty-state-small is-good"><svg class="th-icon" aria-hidden="true"><use href="#icon-check-circle" xlink:href="#icon-check-circle"></use></svg>Nothing else scheduled today.</div>';
+      return;
+    }
+    restEl.innerHTML = rest.map(j => `
       <div class="dash-list-item">
         <div>
-          <div class="dash-list-item-title">
-            <span class="badge badge-${job.priority}">${job.priority}</span>
-            ${escapeHtml(job.title)}${job.client ? ' &mdash; ' + escapeHtml(job.client) : ''}
-          </div>
-          <div class="dash-list-item-meta">
-            ${job.address ? '<a href="https://maps.google.com/?q=' + encodeURIComponent(job.address) + '" target="_blank" rel="noopener">' + escapeHtml(job.address) + '</a>' : 'No address on file'}
-            ${job.phone ? ' &middot; <a href="tel:' + escapeHtml(job.phone) + '">' + escapeHtml(job.phone) + '</a>' : ''}
-          </div>
+          <div class="dash-list-item-title"><span class="badge badge-${j.priority}">${j.priority}</span> ${escapeHtml(j.title)}${j.client ? ' &mdash; ' + escapeHtml(j.client) : ''}</div>
+          <div class="dash-list-item-meta">${j.address ? escapeHtml(j.address) : 'No address on file'}</div>
         </div>
-        <a href="/tools/job-tracker.html" class="secondary-btn">View in Job Tracker</a>
       </div>`).join('');
+  }
+
+  // Shares its numbers with Business Snapshot's Outstanding/Overdue
+  // cards via computeMoneyOwed() -- called from renderMetrics() each
+  // time those recompute, so the two can never drift apart.
+  function renderTodayMoney(owed) {
+    const el = document.getElementById('todayMoney');
+    if (!el) return;
+    el.classList.toggle('is-warning', owed.overdueCount > 0);
+    el.innerHTML = `
+      <div class="today-money-label">Money Owed</div>
+      <div class="today-money-row">
+        <span class="today-money-row-label">Current</span>
+        <span class="today-money-row-value">${money(owed.currentTotal)}</span>
+      </div>
+      <div class="today-money-row">
+        <span class="today-money-row-label">Overdue</span>
+        <span class="today-money-row-value${owed.overdueCount > 0 ? ' is-overdue' : ''}">${money(owed.overdueTotal)}</span>
+      </div>`;
   }
 
   let _welcomeFadeTimeouts = []; // tracked so the role-tag enhancement below can restart the hold/fade cycle cleanly
@@ -2640,9 +2792,9 @@
 
   // The big "first thing you see" banner (2026-09-07): a real greeting
   // (time-of-day, computed from the actual clock) plus the same
-  // today's-job count renderTodayJobs() already computes from
-  // th_tracker_jobs -- no separate/duplicated data source, just read
-  // twice, so the two can never disagree.
+  // today's-job count getTodaysJobs() (used by the Today hero below)
+  // already computes from th_tracker_jobs -- no separate/duplicated
+  // data source, just read twice, so the two can never disagree.
   function renderGreetingBanner() {
     const el = document.getElementById('greetingBanner');
     if (!el) return;
@@ -2653,12 +2805,7 @@
     document.getElementById('greetingBannerGreeting').textContent = name ? (timeGreeting + ', ' + name + '.') : (timeGreeting + '.');
     document.getElementById('greetingBannerDate').textContent = new Date().toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric' });
 
-    let jobs = [];
-    try { jobs = JSON.parse(localStorage.getItem('th_tracker_jobs') || '[]'); } catch (e) { jobs = []; }
-    const today = new Date();
-    const todayKey = today.getFullYear() + '-' + String(today.getMonth() + 1).padStart(2, '0') + '-' + String(today.getDate()).padStart(2, '0');
-    const count = jobs.filter(j => j.date === todayKey && j.status !== 'done').length;
-
+    const count = (typeof getTodaysJobs === 'function' ? getTodaysJobs() : []).length;
     document.getElementById('greetingBannerNumber').textContent = count;
     document.getElementById('greetingBannerLabel').textContent = count === 1 ? 'job today' : 'jobs today';
   }
@@ -2666,7 +2813,7 @@
   function renderDashboard() {
     document.getElementById('setAsideRate').value = loadSetAsideRate();
     renderGreetingBanner();
-    renderTodayJobs();
+    renderTodayHero();
     renderMetrics();
     renderStatusBars();
     renderTopVendors();
@@ -2829,7 +2976,7 @@
     // sync event to trigger a re-render.
     setInterval(renderSnapshotLastUpdated, 30000);
     if (window.location.hash === '#today') {
-      document.getElementById('section-today')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      document.getElementById('todayHero')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
     }
     if (window.location.hash === '#backup') {
       expandSection('backup');
