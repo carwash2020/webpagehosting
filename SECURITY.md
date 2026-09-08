@@ -124,6 +124,89 @@ protections now, each verified working directly rather than assumed:
   instead. See `DISASTER_RECOVERY.md` Scenario 15 for what actually
   worked here vs. what looked like a fix but wasn't.
 
+## RLS/grant changes get a second, independent pass before they ship
+
+Both real Supabase incidents in this project's history (see
+`DISASTER_RECOVERY.md`) were self-inflicted RLS/grant mistakes caught only
+after the fact, not caught before. Going forward: any migration that adds
+or changes a Row Level Security policy or a function's `GRANT`/`REVOKE`
+should get reviewed by a second pass — a fresh Claude Code session with no
+prior context on the change, or a human — before it ships, the same way a
+second pair of eyes catches things the author's own assumptions blind them
+to. Concretely, that second pass should:
+
+1. Run `get_advisors` (security type) against the live project and read
+   every finding's actual detail, not just its title — "RLS Policy Always
+   True" and similar alarmist-sounding names have turned out benign before
+   (see the `th_leads` writeup in `DISASTER_RECOVERY.md`), and only
+   pulling the real `USING`/`WITH CHECK` expression via `pg_policies`
+   settles it either way.
+2. For any flagged `SECURITY DEFINER` function, check its actual body and
+   real grants (`information_schema.routine_privileges`) rather than
+   assuming the finding is either "obviously fine" or "obviously wrong."
+   A function `RETURNS trigger` cannot be invoked outside a trigger
+   context regardless of its grants — confirmed directly (not just
+   assumed) by attempting `select fn()` as the flagged role and seeing
+   Postgres itself refuse it with "trigger functions can only be called
+   as triggers" — so a trigger function showing up as anon/authenticated
+   "executable" in an advisor scan is a known, verified non-issue class
+   for this project, distinct from a real over-broad grant.
+3. Before revoking any grant, check `pg_policies`/calling code for every
+   real place that function is actually used, so a hardening change can't
+   repeat the two real incidents already on record here (an `EXECUTE`
+   revoke on `notify_new_lead()` that broke real lead notifications; a
+   storage bucket flipped to private that broke real photo/receipt URLs)
+   — both were reverted only after breaking something live.
+
+### Audit log
+
+**2026-09-08, independent second-pass review** (code-health pass, no
+prior-session context on why any specific policy existed): ran
+`get_advisors` for both security and performance, cross-checked every
+finding against the real function body/grants/policy expression rather
+than the finding's title alone.
+
+- **Tightened**: `current_user_has_any_role()` was executable by `PUBLIC`
+  and `anon`, but every one of the 9 RLS policies that reference it
+  (`account_roles`, `storage.objects` work-order-photos,
+  `notification_recipients`, `client_portal_work_order_messages` ×2,
+  `stripe_customers`, `card_authorizations`, `client_profiles`,
+  `client_notification_preferences`) is scoped to `{authenticated}` only.
+  Revoked from `PUBLIC`/`anon` (confirmed harmless for them even before
+  the revoke — `auth.jwt()->>'email'` is null for `anon`, so it always
+  returned `false`, no data exposure either way); `authenticated` and
+  `service_role` unchanged.
+- **Wrapped, not changed**: 14 "Auth RLS Initialization Plan" findings
+  across `notification_log`, `push_subscriptions`, `th_job_photos`,
+  `workspace_sync`, `workspace_sync_wiki`, `th_bookings` (×3), `th_leads`
+  (×3), `portal_bug_reports` (×2), `portal_client_errors`. A prior session
+  had already wrapped `auth.role()` in `(select auth.role())` for some of
+  these, per an earlier documented pass — but the same policies also call
+  `auth.email()` inside a nested `EXISTS` subquery, left unwrapped, which
+  is why the advisor still flagged them. Wrapped `auth.email()` the same
+  way via matched drop/create pairs (identical policy name/command/role
+  list) — pure query-plan optimization, confirmed identical logic, nothing
+  about who is allowed to do what changed.
+- **Confirmed intentional, left unchanged**: `cancel_booking_by_token`,
+  `get_booking_availability`, `get_booking_by_cancel_token`,
+  `reschedule_booking_by_token` (all genuinely need public/anon access —
+  the manage-booking page and the public booking widget are used by
+  guests who are never logged in); `next_invoice_number`/
+  `next_quote_number` (authenticated-only, used by the internal invoice/
+  quote tools, no anon exposure); `guard_last_role_manager_permission`,
+  `notify_new_work_order_email`, `notify_work_order_message_email`,
+  `notify_work_order_scheduled_email` (all `RETURNS trigger` — confirmed
+  via a direct `select fn()` attempt that Postgres refuses to run them
+  outside a trigger context regardless of grant, the same non-issue class
+  documented for `notify_new_lead()`).
+- Left alone deliberately: the `multiple_permissive_policies` findings
+  (a "clients view their own X" policy plus a separate "internal accounts
+  view all X" policy on the same table) are a real, intentional design —
+  merging them into one combined policy would be a bigger, riskier change
+  to actual access logic, not a pure optimization, and out of scope for a
+  review pass; the unindexed-FK and unused-index findings are informational
+  and pre-existing, not part of this review's scope.
+
 ## Known, accepted gaps (not oversights)
 
 - **Leaked-password protection is off** in Supabase Auth. This is a

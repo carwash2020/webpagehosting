@@ -462,3 +462,23 @@ different-fields-both-survive case, the genuine-same-field-conflict case
 that the no-base fallback is unchanged; a source-level test confirms
 `pushSync()` actually fetches-then-merges-then-collects in that order
 before its POST.
+
+### Independent second-pass review of Supabase RLS policies/grants
+
+Full detail and the standing process this establishes for future
+migrations: `SECURITY.md`'s new "RLS/grant changes get a second,
+independent pass before they ship" section. Summary: ran the security and
+performance advisors against the live project, cross-checked every finding
+against the real function body/grants/policy expression rather than each
+finding's title alone. Tightened `current_user_has_any_role()`'s grant
+(was `PUBLIC`/`anon`-executable with no real caller in either role — every
+policy that uses it is `{authenticated}`-only); wrapped a leftover
+unwrapped `auth.email()` call inside 14 policies' `EXISTS` subqueries
+(pure query-plan fix, a prior pass had wrapped `auth.role()` in the same
+policies but missed the nested `auth.email()` call, so the advisor kept
+flagging them). Confirmed several other flagged functions are genuinely
+intentional (public booking-management token functions) or structurally
+non-issues (trigger-returning functions can't be invoked outside a trigger
+context regardless of grant — verified directly, not assumed) and left
+those unchanged. New files: `sql/security/tighten_current_user_has_any_role_grant.sql`,
+`sql/security/wrap_unwrapped_auth_email_in_rls_policies.sql`.
