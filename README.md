@@ -709,14 +709,14 @@ fixed the same way, then confirmed again through the REAL trigger path
 cleaning up the test rows. Both functions redeployed live.
 
 Three notification functions -- `send-invoice-notification`,
-`send-quote-notification`, `send-invite` -- were **not** directly
-tested this pass: all three require a real signed-in internal account
-JWT (checked via `claims.role === 'authenticated'`), which this session
-doesn't have a way to mint safely. `send-invite` additionally creates a
-real, persistent Supabase Auth user as a side effect -- not something
-to trigger without a specific reason even with credentials in hand. A
-static read of both invoice/quote notification functions found no
-similar bug (their only DB filters are `eq.`, not the `cs.` operator
-that broke here). These three are the one gap in this pass; the
-intended way to verify them is Steve or Connor actually using the real
-flow (send/resend an invoice or invite from the tools while signed in).
+`send-quote-notification`, `send-invite` -- were not directly
+re-tested from this session this pass: all three require a real
+signed-in internal account JWT (checked via `claims.role ===
+'authenticated'`), which this session doesn't have a way to mint
+safely, and `send-invite` additionally creates a real, persistent
+Supabase Auth user as a side effect. A static read of both
+invoice/quote notification functions found no similar bug (their only
+DB filters are `eq.`, not the `cs.` operator that broke here).
+Confirmed separately by Steve/Connor: all three already work in real
+day-to-day use (sending/resending real invoices and invites through
+the tools).
