@@ -60,7 +60,15 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Anton&family=Archivo:wght@400..700&family=Newsreader:ital,opsz,wght@0,6..72,300..700;1,6..72,300..600&family=Oswald:wght@200..700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="styles.css?v=188249878b">
+<link rel="stylesheet" href="styles.css?v=cf5c8ddb2b">
+<!-- Improvement roadmap (2026-09-09), tier 1: the hero background is a
+     CSS background-image (see .hero in styles.css), so the browser
+     doesn't discover it until CSS is parsed -- likely this page's LCP
+     element, sitting behind the H1. A preload tells the browser to
+     fetch it immediately, in parallel with CSS/fonts, instead of
+     waiting. Same file, same ?v= stamp already used in styles.css --
+     not a new asset, just fetched sooner. -->
+<link rel="preload" as="image" href="/images/hero-bg-canyon.webp?v=202608241900" fetchpriority="high">
 <script type="application/ld+json">
 {
   "@context": "https://schema.org",
@@ -224,6 +232,22 @@
       "acceptedAnswer": {
         "@type": "Answer",
         "text": "Whichever is easiest for you. Use \"Book Instantly\" to pick an open time slot, fill out the request form for something more detailed, or just call or text (435) 414-1667 directly."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "Is a deposit required to book?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "No. Booking online never asks for payment information -- you're only charged after the visit, based on the final invoice."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "Should pets be put away before you arrive?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Please keep pets secured during the visit. It keeps them safe and makes it easier to work around tools, open doors, and appliances."
       }
     }
   ]
@@ -730,6 +754,48 @@
       </div>
 
       <input type="range" id="revealScrub" class="reveal-scrub" min="0" max="100" value="50" step="1" aria-label="Drag to compare a worn floor against real finished flooring work">
+    </div>
+  </section>
+
+  <!-- Improvement roadmap (2026-09-09), tier 2: puts real job photos in
+       the scroll path itself instead of only behind the "Our Work"
+       modal click. A separate section from #revealJob on purpose -- a
+       test (homepage-hero-reveal.test.js) locks that section to exactly
+       one before/after pair, guarding against a previously-reverted
+       pair-switching gallery, so this doesn't belong inside it anyway.
+       Reuses the exact .gallery-tile markup/CSS already built for the
+       "Our Work" modal (same lightbox, same captions, same data-index
+       click wiring further down this page) rather than a new component.
+       "See all photos" opens that same modal via the existing
+       setupSimpleModal trigger list, no new modal logic. -->
+  <section id="recentWork">
+    <div class="wrap">
+      <div class="recent-work-strip" data-reveal>
+        <div class="recent-work-head">
+          <h3>Recent Work</h3>
+          <button type="button" class="recent-work-see-all" id="recentWorkSeeAll">See all photos &rarr;</button>
+        </div>
+        <div class="recent-work-row">
+          <div class="gallery-tile has-photo recent-work-tile" data-index="8">
+            <img src="images/gallery/laminate-flooring-installation.webp" alt="Laminate flooring installation" loading="lazy" width="320" height="240">
+          </div>
+          <div class="gallery-tile has-photo recent-work-tile" data-index="18">
+            <img src="images/gallery/plank-finished-corner.webp" alt="Finished plank flooring, corner detail" loading="lazy" width="320" height="240">
+          </div>
+          <div class="gallery-tile has-photo recent-work-tile" data-index="41">
+            <img src="images/gallery/tile-finished-kitchen-wide.webp" alt="Finished tile flooring, full kitchen view" loading="lazy" width="320" height="240">
+          </div>
+          <div class="gallery-tile has-photo recent-work-tile" data-index="44">
+            <img src="images/gallery/tile-finished-1.webp" alt="Finished tile flooring" loading="lazy" width="320" height="240">
+          </div>
+          <div class="gallery-tile has-photo recent-work-tile" data-index="57">
+            <img src="images/gallery/curtain-track-installation.webp" alt="Custom curtain track installation" loading="lazy" width="320" height="240">
+          </div>
+          <div class="gallery-tile has-photo recent-work-tile" data-index="60">
+            <img src="images/gallery/floating-shelf-installation.webp" alt="Floating shelf installation" loading="lazy" width="320" height="240">
+          </div>
+        </div>
+      </div>
     </div>
   </section>
 
@@ -1423,6 +1489,22 @@
           </button>
           <div class="faq-answer"><p>Whichever is easiest for you. Use "Book Instantly" to pick an open time slot, fill out the request form for something more detailed, or just call or text <span class="js-phone-text">(435) 414-1667</span> directly.</p></div>
         </div>
+
+        <div class="faq-item">
+          <button type="button" class="faq-question">
+            Is a deposit required to book?
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>
+          </button>
+          <div class="faq-answer"><p>No. Booking online never asks for payment information &mdash; you're only charged after the visit, based on the final invoice.</p></div>
+        </div>
+
+        <div class="faq-item">
+          <button type="button" class="faq-question">
+            Should pets be put away before you arrive?
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>
+          </button>
+          <div class="faq-answer"><p>Please keep pets secured during the visit. It keeps them safe and makes it easier to work around tools, open doors, and appliances.</p></div>
+        </div>
       </div>
   </div>
 </div>
@@ -2024,7 +2106,7 @@
     return { open, close };
   }
 
-  setupSimpleModal('galleryOverlay', 'galleryClose', ['navGalleryDesktop','navGalleryMobile','navGalleryFooter']);
+  setupSimpleModal('galleryOverlay', 'galleryClose', ['navGalleryDesktop','navGalleryMobile','navGalleryFooter','recentWorkSeeAll']);
   setupSimpleModal('faqOverlay', 'faqClose', ['navFaqDesktop','navFaqMobile','navFaqFooter']);
   const termsModal = setupSimpleModal('termsOverlay', 'termsClose', ['navTermsFooter']);
 

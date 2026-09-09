@@ -2318,6 +2318,40 @@
     .reveal-tag{font-size:10.5px; padding:5px 10px;}
   }
 
+  /* Improvement roadmap (2026-09-09): homepage "Recent Work" strip.
+     Reuses .gallery-tile/.gallery-tile.has-photo (defined above for the
+     "Our Work" modal) at a smaller fixed size in a horizontal row,
+     instead of a new tile component -- so it always matches whatever
+     the modal's tile styling looks like. */
+  #recentWork{padding:0 0 96px;}
+  @media (max-width:600px){
+    #recentWork{padding-bottom:64px;}
+  }
+  .recent-work-head{
+    display:flex; align-items:center; justify-content:space-between;
+    gap:16px; margin-bottom:16px;
+  }
+  .recent-work-head h3{
+    font-family:var(--font-ui); font-size:13px; letter-spacing:.08em;
+    text-transform:uppercase; color:var(--text-dim); margin:0;
+  }
+  .recent-work-see-all{
+    font:inherit; font-size:13.5px; font-weight:600; color:var(--blue);
+    background:none; border:none; padding:0; cursor:pointer;
+    white-space:nowrap;
+  }
+  .recent-work-see-all:hover{text-decoration:underline;}
+  .recent-work-row{
+    display:flex; gap:14px; overflow-x:auto; padding-bottom:4px;
+    scrollbar-width:thin;
+  }
+  .recent-work-tile{
+    flex:0 0 auto; width:150px; aspect-ratio:4/3;
+  }
+  @media (max-width:600px){
+    .recent-work-tile{width:118px;}
+  }
+
   /* Phone-first: the diagram and its control are the main event on a
      small screen, so they lead and get the full width. */
   @media (max-width:860px){
