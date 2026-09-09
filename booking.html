@@ -247,6 +247,37 @@
   }
   .confirmation .conf-detail .hex-icon{width:40px; height:40px;}
 
+  /* "What happens next" mini-timeline (2026-09-09), requested directly:
+     reduces the "did this actually go through" anxiety of booking
+     online, right at the moment it matters most -- immediately after
+     confirming. Reuses the confirmation block's own left-aligned,
+     panel-style visual language rather than introducing a new one. */
+  .next-steps{
+    background:var(--bg-panel-2); border:1px solid var(--border); border-radius:var(--radius);
+    padding:20px 20px 4px; margin:0 0 22px; text-align:left;
+  }
+  .next-steps-title{
+    font-family:var(--font-ui); font-size:12px; font-weight:700; text-transform:uppercase;
+    letter-spacing:1px; color:var(--orange-light); margin:0 0 14px;
+  }
+  .next-steps-list{list-style:none; margin:0; padding:0;}
+  .next-steps-list li{
+    display:flex; align-items:flex-start; gap:12px;
+    padding-bottom:16px; margin-bottom:16px; position:relative;
+    font-size:14px; color:var(--text);
+  }
+  .next-steps-list li:not(:last-child)::after{
+    content:''; position:absolute; left:11px; top:24px; bottom:-16px; width:1px; background:var(--border);
+  }
+  .next-steps-list li:last-child{padding-bottom:0; margin-bottom:0;}
+  .next-steps-dot{
+    flex-shrink:0; width:24px; height:24px; border-radius:50%;
+    display:flex; align-items:center; justify-content:center;
+    font-family:var(--font-app); font-size:12px; font-weight:700;
+    border:2px solid var(--orange); color:var(--orange); background:var(--bg-panel-2);
+    position:relative; z-index:1;
+  }
+
   @media (max-width:960px){
     .booking-layout{grid-template-columns:1fr; gap:0; padding:24px 20px 0;}
     .booking-sidebar{display:none;}
@@ -360,6 +391,17 @@
         <h2>You're booked!</h2>
         <p>A confirmation is on its way to your email if you gave us one.</p>
         <div class="conf-detail" id="confirmationDetail"></div>
+
+        <div class="next-steps" aria-label="What happens next">
+          <p class="next-steps-title">What happens next</p>
+          <ol class="next-steps-list">
+            <li><span class="next-steps-dot">1</span><span>Confirmation sent to your email</span></li>
+            <li><span class="next-steps-dot">2</span><span>We'll call or text if anything needs clarifying before the visit</span></li>
+            <li><span class="next-steps-dot">3</span><span>We arrive in your scheduled window</span></li>
+            <li><span class="next-steps-dot">4</span><span>Pay after the visit &mdash; cash, check, Venmo, Cash App, or card</span></li>
+          </ol>
+        </div>
+
         <a href="/" class="btn orange" style="text-decoration:none;">Back to site</a>
       </div>
     </section>
