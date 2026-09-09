@@ -939,8 +939,52 @@ function mirrorJobsToRelational(jobs) {
     priority: j.priority || null, job_date: j.date || null, status: j.status || null,
     notes: j.notes || null, show_on_calendar: !!j.showOnCalendar,
     status_changed_at: j.statusChangedAt || null, created_by: j.createdBy || null,
-    last_edited_by: j.lastEditedBy || null,
+    last_edited_by: j.lastEditedBy || null, referred_by: j.referredBy || null,
   })));
+}
+
+// Referral program (direct request, 2026-09-09). See
+// sql/infra/create_referral_program.sql for the schema and terms: a $25
+// credit for the referrer, earned once the referred customer's job is
+// complete and paid.
+//
+// Only called from addJob() on genuine creation (not every edit) -- a
+// plain insert (no id supplied, so there's nothing for merge-duplicates
+// to conflict against), so re-saving/editing the same job never creates
+// a second referrals row for it.
+function mirrorReferralCreated(job) {
+  if (!job) return;
+  const referrerName = (job.referredBy || '').trim();
+  if (!referrerName) return;
+  mirrorUpsert('referrals', [{
+    referrer_name: referrerName,
+    referred_name: job.client || '(unknown)',
+    referred_phone: job.phone || null,
+    referred_job_id: job.id,
+    status: 'pending',
+  }]);
+}
+
+// Called when an invoice tied to a job (entry.jobRefId) is marked fully
+// paid -- flips any pending referral row for that job to earned. Scoped
+// to that one job_id, not a blanket "mark everything earned", since a
+// job with no referral simply matches zero rows and this is a no-op.
+async function mirrorReferralEarnedForJob(jobId) {
+  if (!isSyncConfigured() || jobId === undefined || jobId === null) return;
+  try {
+    const token = (typeof getAuthToken === 'function') ? getAuthToken() : null;
+    if (!token) return;
+    await fetchWithRetry(`${SUPABASE_URL}/rest/v1/referrals?referred_job_id=eq.${encodeURIComponent(jobId)}&status=eq.pending`, {
+      method: 'PATCH',
+      headers: {
+        'Content-Type': 'application/json',
+        'apikey': SUPABASE_ANON_KEY,
+        'Authorization': `Bearer ${token}`,
+        'Prefer': 'return=minimal',
+      },
+      body: JSON.stringify({ status: 'earned', earned_at: new Date().toISOString() }),
+    });
+  } catch (e) { /* best-effort -- the real invoice save already happened */ }
 }
 
 function mirrorInvoiceToRelational(entry) {

@@ -64,10 +64,10 @@
     if (saved === 'light') document.documentElement.setAttribute('data-theme', 'light');
   })();
 </script>
-<link rel="stylesheet" href="/styles.css?v=74b1e2fa4a">
+<link rel="stylesheet" href="/styles.css?v=c41b34c8d5">
 <link rel="stylesheet" href="/tools/styles-tools.css?v=802b87086c">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.112.3/dist/umd/supabase.js" integrity="sha384-qafw21c/iciq0VXsi9FzkfoQv5I/V0iqE4lSNcKXPnW9/UTJLnv5CcN4FHxVLnKg" crossorigin="anonymous" defer></script>
-<script src="/tools/sync.js?v=a1eae33921" defer></script>
+<script src="/tools/sync.js?v=7d76e2fc99" defer></script>
 <!-- Shared business-hours data (2026-09-03) -- used by the work order
      "Approve & Schedule" form to warn if a chosen time falls outside
      real business hours, matching the same real hours booking.html,
@@ -1589,6 +1589,12 @@
     // Best-effort relational mirror (code-health pass, 2026-09-08) -- see
     // sync.js's RELATIONAL MIRROR section. Never blocks or throws back here.
     if (typeof mirrorInvoiceToRelational === 'function') mirrorInvoiceToRelational(inv);
+    // Referral program (direct request, 2026-09-09): the referrer's $25
+    // credit is earned once the referred customer's job is complete AND
+    // paid -- this invoice becoming fully paid is that second half.
+    if (invoicePaymentStatus(inv) === 'paid' && inv.jobRefId && typeof mirrorReferralEarnedForJob === 'function') {
+      mirrorReferralEarnedForJob(Number(inv.jobRefId));
+    }
     renderInvoicesList();
     renderMetrics();
   }

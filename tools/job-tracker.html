@@ -48,10 +48,10 @@
     if (saved === 'light') document.documentElement.setAttribute('data-theme', 'light');
   })();
 </script>
-<link rel="stylesheet" href="/styles.css?v=74b1e2fa4a">
+<link rel="stylesheet" href="/styles.css?v=c41b34c8d5">
 <link rel="stylesheet" href="/tools/styles-tools.css?v=802b87086c">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.112.3/dist/umd/supabase.js" integrity="sha384-qafw21c/iciq0VXsi9FzkfoQv5I/V0iqE4lSNcKXPnW9/UTJLnv5CcN4FHxVLnKg" crossorigin="anonymous" defer></script>
-<script src="/tools/sync.js?v=a1eae33921" defer></script>
+<script src="/tools/sync.js?v=7d76e2fc99" defer></script>
 <script src="/tools/data-layer.js?v=3a0d57478c" defer></script>
 <script src="/tools/tools-effects.js?v=4cff99aa4a" defer></script>
 <script src="/tools/tools-dialogs.js?v=e1dfaa11a1" defer></script>
@@ -382,6 +382,20 @@
       <div class="form-field">
         <label>Client Email <span class="tool-sub" style="font-weight:normal;">(optional -- lets this client see this job and its warranty status in the portal once marked Done)</span></label>
         <input type="email" id="jobClientEmail" placeholder="client@example.com">
+      </div>
+    </div>
+    <!-- Referral program (direct request, 2026-09-09): captured here too,
+         not just on the public forms -- a referral mentioned on a phone
+         call or walk-in never touches either form, and this is the one
+         place every job passes through regardless of how it came in.
+         See sql/infra/create_referral_program.sql for the $25/complete-
+         and-paid terms, and mirrorReferralCreated() in sync.js for how
+         a non-empty value here becomes a pending row in the ledger. -->
+    <div class="tool-form-row">
+      <div class="form-field">
+        <label>Referred By <span class="tool-sub" style="font-weight:normal;">(optional -- $25 credit for them once this job is done and paid)</span></label>
+        <input type="text" id="jobReferredBy" placeholder="Who sent them our way?">
+        <p class="tool-sub" id="jobFirstTimeNudge" style="display:none; color:var(--orange); margin-top:4px;">First-time customer -- worth asking who referred them, if you haven't already.</p>
       </div>
     </div>
     <div class="tool-form-row">
@@ -790,6 +804,21 @@
     if (typeof thAutofillClientFields === 'function') {
       thAutofillClientFields(typedName, { phone: 'jobPhone', address: 'jobAddress', email: 'jobClientEmail' });
     }
+    updateFirstTimeNudge(typedName);
+  }
+
+  // Referral program (direct request, 2026-09-09): there's no way to
+  // automatically detect a referral mentioned on a phone call, but there
+  // IS a way to automatically detect that this is a first-time customer
+  // (no existing Client Registry record for the typed name) -- so this
+  // nudges Steve to ask, rather than relying on him remembering to for
+  // every single new name. Only ever a hint; nothing here blocks saving
+  // the job either way.
+  function updateFirstTimeNudge(typedName) {
+    const nudge = document.getElementById('jobFirstTimeNudge');
+    if (!nudge) return;
+    const isFirstTime = !!typedName && typeof thFindClientByName === 'function' && !thFindClientByName(typedName);
+    nudge.style.display = isFirstTime ? 'block' : 'none';
   }
 
   async function addJob() {
@@ -809,6 +838,7 @@
     const clientId = (clientName && typeof thEnsureClient === 'function')
       ? (thEnsureClient(clientName, { phone, address, email: clientEmailVal }) || {}).id
       : undefined;
+    const referredBy = document.getElementById('jobReferredBy').value.trim();
     const fields = {
       title,
       client: clientName,
@@ -821,6 +851,7 @@
       status: document.getElementById('jobStatus').value,
       notes: document.getElementById('jobNotes').value.trim(),
       showOnCalendar: document.getElementById('jobShowOnCalendar').checked,
+      referredBy: referredBy || '',
     };
     const wasEditing = !!editingJobId;
     let newId = null;
@@ -838,12 +869,18 @@
       jobs.push({ id: newId, ...fields, createdBy: currentUser, lastEditedBy: currentUser });
     }
     saveJobs(jobs);
+    // Referral program: only on genuine creation, not every edit -- see
+    // mirrorReferralCreated()'s own comment in sync.js for why.
+    if (!wasEditing && referredBy && typeof mirrorReferralCreated === 'function') {
+      mirrorReferralCreated({ id: newId, client: clientName, phone, referredBy });
+    }
     const savedJobId = wasEditing ? editingJobId : newId;
-    ['jobTitle','jobClient','jobPhone','jobAddress','jobClientEmail','jobNotes'].forEach(id => document.getElementById(id).value = '');
+    ['jobTitle','jobClient','jobPhone','jobAddress','jobClientEmail','jobNotes','jobReferredBy'].forEach(id => document.getElementById(id).value = '');
     document.getElementById('jobDate').value = '';
     document.getElementById('jobPriority').value = 'medium';
     document.getElementById('jobStatus').value = 'not-started';
     document.getElementById('jobShowOnCalendar').checked = false;
+    document.getElementById('jobFirstTimeNudge').style.display = 'none';
     cancelJobEdit();
     justAddedJobId = newId;
     renderJobs();
@@ -939,6 +976,8 @@
     document.getElementById('jobStatus').value = job.status || 'not-started';
     document.getElementById('jobNotes').value = job.notes || '';
     document.getElementById('jobShowOnCalendar').checked = !!job.showOnCalendar;
+    document.getElementById('jobReferredBy').value = job.referredBy || '';
+    updateFirstTimeNudge(job.client || '');
 
     document.getElementById('addJobBtn').textContent = 'Update Job';
     document.getElementById('cancelJobEditBtn').style.display = '';

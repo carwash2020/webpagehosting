@@ -44,14 +44,14 @@
     if (saved === 'light') document.documentElement.setAttribute('data-theme', 'light');
   })();
 </script>
-<link rel="stylesheet" href="/styles.css?v=74b1e2fa4a">
+<link rel="stylesheet" href="/styles.css?v=c41b34c8d5">
 <link rel="stylesheet" href="/tools/styles-tools.css?v=802b87086c">
 <script src="/tools/tools-effects.js?v=4cff99aa4a" defer></script>
 <script src="/tools/tools-dialogs.js?v=e1dfaa11a1" defer></script>
 <script src="/tools/tools-media-sharing.js?v=0c229c9353" defer></script>
 <script src="/tools/tools-nav-pwa.js?v=9b16eefb86" defer></script>
 <script src="/tools/tools-tour.js?v=cf6652f5b1" defer></script>
-<script src="/tools/sync.js?v=a1eae33921" defer></script>
+<script src="/tools/sync.js?v=7d76e2fc99" defer></script>
 <!-- dev-tools-shared.js (2026-09-03) -- the "?" info-modal system
      (openDevInfo + DEV_INFO), the dev-password gate used by "Send
      invite" below, and fetchWithTimeout. Split out of Dev Tools onto
@@ -60,7 +60,7 @@
      file dev-tools.html and site-content.html already load, rather
      than duplicating any of it -- these five panels' help-modal
      content already lives there from when they were built. -->
-<script src="/tools/dev-tools-shared.js?v=87e06ed30c" defer></script>
+<script src="/tools/dev-tools-shared.js?v=3356b9f30f" defer></script>
 <!-- Client Lookup dispute-evidence export (2026-09-05), requested
      directly -- same jsPDF version/SRI hash/async loading pattern
      already proven on invoice-generator.html. -->
@@ -148,6 +148,25 @@
     </div>
     <input type="text" id="clientLookupSearch" placeholder="Search by email, name, or phone..." style="width:100%; box-sizing:border-box; margin-bottom:12px;" oninput="scheduleClientLookupSearch()">
     <div id="clientLookupResults"></div>
+  </div>
+
+  <!--
+    Referral Credits (direct request, 2026-09-09): "we would need a way
+    to track it and to do it right and everything." A referral is
+    captured on the public forms or the Job Tracker's own Add Job field
+    (see sql/infra/create_referral_program.sql), starts Pending, and
+    flips to Earned automatically once the referred job's invoice is
+    marked fully paid. This panel is the ledger that makes sure a
+    pending credit never just gets forgotten -- Mark redeemed is the
+    one manual step, clicked once the $25 is actually applied.
+  -->
+  <div class="dev-panel dev-panel-wide">
+    <div class="dev-panel-heading">
+      <h2>Referral Credits</h2>
+      <button class="dev-info-bubble" onclick="openDevInfo('referralcredits')" aria-label="What does this do?" title="What does this do?">?</button>
+    </div>
+    <div id="referralCreditsSummary" class="tool-sub" style="margin-bottom:10px;"></div>
+    <div id="referralCreditsList"></div>
   </div>
 
   <div class="dev-panel dev-panel-wide">
@@ -398,6 +417,75 @@
       renderPortalBugReports();
     } catch (e) {
       showToast('Could not mark resolved: ' + (e.message || String(e)), { type: 'error' });
+    }
+  }
+
+  // Referral Credits (direct request, 2026-09-09) -- see
+  // sql/infra/create_referral_program.sql for the schema and terms.
+  // pending/earned rows sort to the top (oldest first, so the longest-
+  // waiting credit is the one Steve sees first); redeemed rows sort
+  // underneath as a paid-out record, newest first.
+  async function renderReferralCredits() {
+    const el = document.getElementById('referralCreditsList');
+    const summaryEl = document.getElementById('referralCreditsSummary');
+    el.innerHTML = '<p class="tool-sub">Loading...</p>';
+    try {
+      const res = await fetchWithTimeout(
+        SUPABASE_URL + '/rest/v1/referrals?select=*&order=status.asc,created_at.asc&limit=200',
+        8000,
+        { headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': 'Bearer ' + getAuthToken() } }
+      );
+      if (!res.ok) throw new Error('HTTP ' + res.status);
+      const rows = await res.json();
+      if (!rows.length) {
+        summaryEl.textContent = '';
+        el.innerHTML = '<p class="tool-sub">No referrals captured yet.</p>';
+        return;
+      }
+      const owed = rows.filter(r => r.status === 'earned').reduce((sum, r) => sum + Number(r.reward_amount || 0), 0);
+      const pendingCount = rows.filter(r => r.status === 'pending').length;
+      summaryEl.textContent = '$' + owed.toFixed(2) + ' owed right now (earned, not yet redeemed)' +
+        (pendingCount ? ' · ' + pendingCount + ' still pending (referred job not yet complete/paid)' : '');
+      const order = { pending: 0, earned: 1, redeemed: 2 };
+      const sorted = rows.slice().sort((a, b) => (order[a.status] ?? 3) - (order[b.status] ?? 3));
+      el.innerHTML = sorted.map(r => {
+        const statusClass = r.status === 'redeemed' ? 'pass' : (r.status === 'earned' ? 'warn' : 'fail');
+        const statusLabel = r.status.charAt(0).toUpperCase() + r.status.slice(1);
+        const when = new Date(r.created_at).toLocaleDateString();
+        const redeemBtn = r.status === 'earned'
+          ? '<button class="secondary-btn" style="margin-top:8px;" onclick="markReferralRedeemed(' + r.id + ')">Mark redeemed</button>'
+          : '';
+        return '<div class="dev-check-row" style="align-items:flex-start;"><div>' +
+          '<div><strong>' + escapeHtml(r.referrer_name) + '</strong> referred ' + escapeHtml(r.referred_name) + '</div>' +
+          '<div class="dev-check-detail">$' + Number(r.reward_amount || 0).toFixed(2) + ' credit · referred ' + when + '</div>' +
+          redeemBtn +
+          '</div><span class="dev-check-status ' + statusClass + '">' + statusLabel + '</span></div>';
+      }).join('');
+    } catch (e) {
+      summaryEl.textContent = '';
+      el.innerHTML = '<p class="error-state">Could not load referral credits: ' + escapeHtml(e.message || String(e)) + '</p>';
+    }
+  }
+
+  async function markReferralRedeemed(id) {
+    try {
+      const res = await fetchWithTimeout(
+        SUPABASE_URL + '/rest/v1/referrals?id=eq.' + id,
+        8000,
+        {
+          method: 'PATCH',
+          headers: {
+            'apikey': SUPABASE_ANON_KEY,
+            'Authorization': 'Bearer ' + getAuthToken(),
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ status: 'redeemed', redeemed_at: new Date().toISOString() }),
+        }
+      );
+      if (!res.ok) throw new Error('HTTP ' + res.status);
+      renderReferralCredits();
+    } catch (e) {
+      showToast('Could not mark redeemed: ' + (e.message || String(e)), { type: 'error' });
     }
   }
 
@@ -1403,6 +1491,7 @@
       if (searchParam) document.getElementById('portalAccountSearch').value = searchParam;
       renderPortalBugReports();
       renderPortalClientErrors();
+      renderReferralCredits();
       renderPortalAccounts();
       renderPortalInvoices();
       renderPortalWorkOrders();

@@ -68,6 +68,10 @@
       title: 'Portal invoices',
       body: `<p>Every invoice that has actually been sent to the client portal, newest first, with its real paid status -- the one Stripe or the Mark Paid toggle wrote, not a local guess. Search by client, email, or invoice number.</p><p><strong>Resend</strong> emails the client their invoice notification again and refreshes their portal copy, without recreating anything in the Invoice Generator. Use it when a client says they never got it, or lost the email.</p><p>This reads the portal's own table, not the internal Invoice Log. If an invoice is in your log but missing here, it was never sent to the client (Download PDF only, no Send to Client) -- that gap is exactly what this panel makes visible.</p>`,
     },
+    referralcredits: {
+      title: 'Referral credits',
+      body: `<p>Every referral captured on either public form (Book Instantly, the homepage Request form) or the Job Tracker's own Add Job field -- whoever a new customer says referred them. Starts <strong>Pending</strong> the moment the job is created; automatically flips to <strong>Earned</strong> the moment that job's invoice is marked fully paid (workspace.html's Mark Paid, the same $25/complete-and-paid terms shown on the site's own FAQ).</p><p><strong>Mark redeemed</strong> is a manual step -- click it once you've actually applied the $25 credit to the referrer's own next invoice. Nothing here applies a discount automatically; this is the ledger that tells you a credit is owed, not the thing that spends it.</p>`,
+    },
     emaillist: {
       title: 'Email list',
       body: `<p>Who gets emailed every time a client submits a new work request. Reads fresh from the database on every submission -- adding or removing someone here takes effect on the very next request, no deploy needed.</p><p>Add a new hire's email here when they join, and remove someone who leaves. Nothing is hardcoded into the notification itself.</p>`,

@@ -379,6 +379,13 @@
         <input type="text" id="bAddress" name="address" autocomplete="street-address" maxlength="200">
         <label for="bNotes">Anything we should know? (optional)</label>
         <textarea id="bNotes" name="notes" maxlength="1000"></textarea>
+        <!-- Referral program (direct request, 2026-09-09): a $25 credit
+             for whoever referred this customer, once this job is
+             complete and paid -- see sql/infra/create_referral_program.sql
+             for the full schema and reward terms. Optional, so it never
+             blocks a booking that doesn't have one. -->
+        <label for="bReferredBy">Who referred you? (optional)</label>
+        <input type="text" id="bReferredBy" name="referred_by" autocomplete="off" maxlength="200" placeholder="Their name, so we can credit them">
         <button type="submit" class="btn orange" id="submitBtn">Confirm Booking</button>
         <div class="status-msg" id="statusMsg"></div>
       </form>
@@ -701,6 +708,7 @@
         email: formData.get('email') || null,
         address: formData.get('address') || null,
         notes: formData.get('notes') || null,
+        referred_by: formData.get('referred_by') || null,
       }),
     })
       .then(function (res) {

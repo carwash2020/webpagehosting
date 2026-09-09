@@ -601,3 +601,50 @@ clear on switching appliance, no more than one appliance/symptom pressed
 at once). `tests/design/round-3-visual-polish.test.js` no longer checks
 `.triage-appliance-row` for the shared `::details-content` animation
 treatment, since it's no longer a `<details>` element at all.
+
+## What changed, 2026-09-09 — homepage audit fixes, then a referral program
+
+A short technical audit (broken links/images, undefined vars, cache-bust
+freshness, SEO metadata, review-count honesty) turned up two small,
+real fixes: two blog meta descriptions ran past ~155 chars and risked
+mid-sentence truncation in search results, trimmed to match the shorter
+copy already used in their own `og:description` tags. Also added, per
+direct request: a `<link rel="preload">` + `fetchpriority="high"` for
+the hero background (a CSS `background-image`, so the browser otherwise
+doesn't discover it until CSS parses); two new FAQ items (no deposit
+required, secure pets before the visit) added to both the static HTML
+and the live `site_faq` table; and a "Recent Work" homepage strip
+reusing the existing gallery-tile markup/lightbox — since hidden
+(`#recentWork[hidden]`) on direct request until photos exist for more
+than flooring/tile work. The hero's `.hero-subject` midground photo
+layer (a desaturated flooring photo layered over the canyon background)
+was removed entirely per direct feedback ("it looks terrible").
+
+Then, a real feature: a **referral incentive program**. Terms confirmed
+directly: a $25 credit for the referring customer, earned once the
+referred customer's job is complete AND paid. See
+`sql/infra/create_referral_program.sql` for the schema (`referred_by`
+columns on `th_leads`/`th_bookings`/`jobs`, plus a new `referrals`
+table). Capture happens in three places, since a referral doesn't only
+ever arrive through a public form — a phone call or walk-in never
+touches either one: `booking.html`, the homepage Request form, AND the
+Job Tracker's own Add Job field. The Job Tracker also nudges Steve to
+ask when the typed client name has no existing Client Registry record
+(`updateFirstTimeNudge()`) — there's no way to automatically detect an
+unprompted phone referral, but there IS a way to automatically detect
+"this is a first-time customer" and remind him to ask. A referral is
+only ever mirrored to the `referrals` table on genuine job creation
+(never on an edit, so re-saving the same job can't create a duplicate
+row). `workspace.html`'s `togglePaid()` flips the matching pending
+referral to `earned` the moment that job's invoice reaches fully-paid
+status (`mirrorReferralEarnedForJob()` in `tools/sync.js`). A new
+"Referral Credits" panel in `tools/clients.html` is the ledger — a
+running total of what's owed, and the one manual "Mark redeemed" step
+once the credit is actually applied to the referrer's next invoice.
+Tests in `tests/referrals/referral-program.test.js`.
+
+Separately, the existing seasonal "worth doing this month" homepage
+card (`#careCard`) gained one `.care-cta` link ("Schedule a visit") —
+previously read-only, with nowhere to go from a tip that made someone
+want to book. A single link works for all 12 months alike, unlike
+linking to a specific blog post (which only exists for 2 of the 12).

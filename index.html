@@ -60,7 +60,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Anton&family=Archivo:wght@400..700&family=Newsreader:ital,opsz,wght@0,6..72,300..700;1,6..72,300..600&family=Oswald:wght@200..700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="styles.css?v=74b1e2fa4a">
+<link rel="stylesheet" href="styles.css?v=c41b34c8d5">
 <!-- Improvement roadmap (2026-09-09), tier 1: the hero background is a
      CSS background-image (see .hero in styles.css), so the browser
      doesn't discover it until CSS is parsed -- likely this page's LCP
@@ -248,6 +248,14 @@
       "acceptedAnswer": {
         "@type": "Answer",
         "text": "Please keep pets secured during the visit. It keeps them safe and makes it easier to work around tools, open doors, and appliances."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "Do you have a referral program?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Yes. Refer someone and you'll get a $25 credit toward your next service once their job is complete and paid. Just have them mention your name when they book, or ask about it when scheduling."
       }
     }
   ]
@@ -663,6 +671,13 @@
         <div>
           <p class="care-month" id="careMonth"></p>
           <p class="care-body" id="careBody"></p>
+          <!-- Improvement pass (2026-09-09): the card was previously
+               read-only -- a genuinely useful tip with nowhere to go
+               from it. This is the one link that makes sense on every
+               single month's tip alike (unlike linking to a specific
+               blog post, which only exists for 2 of the 12), so it's
+               plain markup, not month-conditional JS. -->
+          <a class="care-cta" href="/booking.html">Not sure, or want us to take a look? Schedule a visit <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18l6-6-6-6"/></svg></a>
         </div>
       </div>
     </div>
@@ -1255,6 +1270,17 @@
           </div>
         </div>
 
+        <!-- Referral program (direct request, 2026-09-09): a $25 credit
+             for whoever referred this customer, once this job is
+             complete and paid -- see the FAQ entry and
+             sql/infra/create_referral_program.sql for the full terms. -->
+        <div class="form-row">
+          <div class="field full">
+            <label for="referredBy">Who referred you? (optional)</label>
+            <input id="referredBy" name="referredBy" type="text" placeholder="Their name, so we can credit them">
+          </div>
+        </div>
+
         <div class="form-footer">
           <button type="submit" class="btn blue" id="formSubmitBtn">Submit Request</button>
           <span class="form-status" id="formStatus">Sending your request...</span>
@@ -1507,6 +1533,14 @@
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>
           </button>
           <div class="faq-answer"><p>Please keep pets secured during the visit. It keeps them safe and makes it easier to work around tools, open doors, and appliances.</p></div>
+        </div>
+
+        <div class="faq-item">
+          <button type="button" class="faq-question">
+            Do you have a referral program?
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>
+          </button>
+          <div class="faq-answer"><p>Yes. Refer someone and you'll get a $25 credit toward your next service once their job is complete and paid. Just have them mention your name when they book, or ask about it when scheduling.</p></div>
         </div>
       </div>
   </div>
@@ -2261,6 +2295,7 @@
         preferred_date: formData.get('date'),
         preferred_time: formData.get('time'),
         details: formData.get('details'),
+        referred_by: formData.get('referredBy') || null,
       }]),
     })
     .then((response) => {
