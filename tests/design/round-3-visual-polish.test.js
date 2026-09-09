@@ -54,15 +54,18 @@ test('every non-hub diagram label is centered under its own node (text-anchor="m
   }
 });
 
-test('the reveal-slider before-photo (worn tile) is floor-focused, not the cluttered-counter shot', () => {
-  // tile-kitchen-before-2.webp still legitimately exists in the Gallery
-  // grid alongside before-1 and before-3 -- only the drag-reveal
+test('the reveal-slider uses the real underlayment-prep-to-finished flooring pair', () => {
+  // Superseded 2026-09-08 (direct request): the reveal slider moved off
+  // the tile-kitchen-before-3.webp / plank-finished-living-2.webp pair
+  // entirely (a real before, but an honestly different, unrelated job as
+  // the after) to a real same-job pair instead. tile-kitchen-before-2/-3
+  // still legitimately exist in the Gallery grid -- only the drag-reveal
   // slider's own pick changed, so this checks that one section only.
   const start = INDEX.indexOf('id="revealJob"');
   const end = INDEX.indexOf('</section>', start);
   const section = INDEX.slice(start, end);
-  assert.match(section, /reveal-before[\s\S]{0,200}?tile-kitchen-before-3\.webp/);
-  assert.doesNotMatch(section, /tile-kitchen-before-2\.webp/);
+  assert.match(section, /reveal-before[\s\S]{0,200}?plank-underlayment-prep\.webp/);
+  assert.doesNotMatch(section, /tile-kitchen-before-2\.webp|tile-kitchen-before-3\.webp/);
 });
 
 test('modal and lightbox overlays fade+scale in instead of popping open instantly', () => {
