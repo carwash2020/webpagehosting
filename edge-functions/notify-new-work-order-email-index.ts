@@ -94,8 +94,21 @@ Deno.serve(async (req: Request) => {
     // (a fresh isolate per cold start), and a list that CAN be edited
     // in Dev Tools at any moment must never risk sending to a stale,
     // previously-fetched set of addresses.
+    //
+    // Bug fix (2026-09-09, found by directly testing every notification
+    // pathway): notify_types is a jsonb ARRAY column, so PostgREST's
+    // `cs.` (contains) filter needs JSON-array syntax -- cs.["work_order"]
+    // (URL-encoded: cs.%5B%22work_order%22%5D). The previous
+    // cs.%7B%22work_order%22%7D decoded to cs.{"work_order"}, which
+    // PostgREST rejects with "invalid input syntax for type json" (a
+    // Postgres ARRAY literal, not a JSON one) -- confirmed directly by
+    // reproducing the exact 400 via a manual REST call. This silently
+    // failed every single new-work-order internal email since the
+    // feature shipped (2026-09-03): every call hit this same 502 and
+    // logged, but the caller (the DB trigger) never surfaces that
+    // failure anywhere a person would see it.
     const recipientsRes = await fetch(
-      `${SUPABASE_URL}/rest/v1/notification_recipients?select=email&notify_types=cs.%7B%22work_order%22%7D`,
+      `${SUPABASE_URL}/rest/v1/notification_recipients?select=email&notify_types=cs.%5B%22work_order%22%5D`,
       { headers: { apikey: SERVICE_ROLE_KEY, Authorization: `Bearer ${SERVICE_ROLE_KEY}` } },
     );
     if (!recipientsRes.ok) {

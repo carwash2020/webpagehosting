@@ -674,3 +674,49 @@ deploy (`{"ok":true,"checked":0,"sent":0}` — correct, no bookings
 existed in the window at deploy time). No SMS/Twilio integration exists
 or was added — that's still a real future option, but a separate
 account/cost decision for later.
+
+## What changed, 2026-09-09 (later still) — tested every notification pathway, found and fixed a real bug
+
+Direct request: "test all notifications." Went through every real
+notification pathway one at a time, live against production (with
+approval), using clearly-marked TEST rows/payloads and cleaning up
+after each one -- new lead (push + email), new booking (push + email),
+uptime-alert (both up/down branches), new work order, work-order
+message in both directions, work-order scheduled, and the appointment
+reminder from earlier today. All confirmed working end to end.
+
+**Found and fixed a real, previously-silent production bug** in the
+process: `notify-new-work-order-email-index.ts` and
+`notify-work-order-message-email-index.ts`'s client→internal branch
+both queried `notification_recipients` with
+`notify_types=cs.%7B%22work_order%22%7D` (`cs.{"work_order"}` decoded)
+-- a Postgres array-literal, not valid JSON, for a `jsonb` column.
+PostgREST rejected it with a 400 every single time ("invalid input
+syntax for type json"), which the function then reported up as a
+generic 502 "Could not load notification_recipients" -- logged, but
+never surfaced anywhere a person would see it. This meant **every
+internal email for a new work-order request, and every internal email
+for a client's message on one, had been silently failing since the
+feature shipped (2026-09-03)** -- 6 days of real client submissions
+that likely never actually reached Steve/Connor's inbox via this path
+(though a work order/message itself was still saved and visible in the
+portal and Workspace; only the email alert was silently dropped).
+Fixed by switching to the correct JSON-array containment syntax
+(`cs.%5B%22work_order%22%5D`, i.e. `cs.["work_order"]`), verified with
+a manual REST call reproducing the exact 400 first, then confirmed
+fixed the same way, then confirmed again through the REAL trigger path
+(a real INSERT/UPDATE, not just a direct function call) before
+cleaning up the test rows. Both functions redeployed live.
+
+Three notification functions -- `send-invoice-notification`,
+`send-quote-notification`, `send-invite` -- were **not** directly
+tested this pass: all three require a real signed-in internal account
+JWT (checked via `claims.role === 'authenticated'`), which this session
+doesn't have a way to mint safely. `send-invite` additionally creates a
+real, persistent Supabase Auth user as a side effect -- not something
+to trigger without a specific reason even with credentials in hand. A
+static read of both invoice/quote notification functions found no
+similar bug (their only DB filters are `eq.`, not the `cs.` operator
+that broke here). These three are the one gap in this pass; the
+intended way to verify them is Steve or Connor actually using the real
+flow (send/resend an invoice or invite from the tools while signed in).

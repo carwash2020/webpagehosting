@@ -163,8 +163,16 @@ Deno.serve(async (req: Request) => {
     // Client -> internal: every address on the notification list, same
     // as new-work-order alerts -- reused directly rather than a second,
     // separately-maintained recipient list for the same audience.
+    //
+    // Bug fix (2026-09-09, found by directly testing every notification
+    // pathway): see notify-new-work-order-email-index.ts's identical
+    // fix for the full explanation -- notify_types is a jsonb ARRAY, so
+    // the `cs.` filter needs JSON-array syntax (cs.["work_order"]), not
+    // the Postgres-array-literal syntax this used to send. This client
+    // -> internal branch had been silently failing exactly the same way
+    // since it shipped (2026-09-03).
     const recipientsRes = await fetch(
-      `${SUPABASE_URL}/rest/v1/notification_recipients?select=email&notify_types=cs.%7B%22work_order%22%7D`,
+      `${SUPABASE_URL}/rest/v1/notification_recipients?select=email&notify_types=cs.%5B%22work_order%22%5D`,
       { headers: { apikey: SERVICE_ROLE_KEY, Authorization: `Bearer ${SERVICE_ROLE_KEY}` } },
     );
     if (!recipientsRes.ok) {
