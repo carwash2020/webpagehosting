@@ -37,6 +37,17 @@ PR's own CodeQL check and the repo's Security tab worth knowing about
 before trusting either one blindly) and refreshed cache-bust/CACHE_NAME
 version numbers.
 
+**Updated 2026-09-09** with Scenarios 16-18, closing a real documentation
+gap: the client portal's Work Orders, Quotes, and Check-ups features
+(all added 2026-09-02 through 2026-09-04) had never been covered here
+at all -- found during a direct doc-audit request. Scenario 16
+specifically documents a real, confirmed bug found the same day by
+testing every notification pathway live: a malformed JSON filter had
+silently broken every internal email alert for a new work-order
+request or client message since the feature shipped on 2026-09-03,
+fixed the same day. `docs/CLIENT-PORTAL.md` was current throughout;
+only this file and `README.md` had fallen behind.
+
 **The two accounts that matter:** `connor@triplehenterprisesllc.biz` and
 `steve@triplehenterprisesllc.biz`, both real Supabase Auth accounts.
 Losing access to *both* is the actual worst case -- see the very last
@@ -1023,4 +1034,87 @@ Actions tab under the dynamic `CodeQL` workflow, is what actually
 matters for the Security tab, not the PR branch's own scan). Don't
 conflate "PR's CodeQL check went green" with "the alert is now closed
 on `main`" — check the Security tab directly, after the post-merge scan
+has had a few minutes to run and re-index.
+
+## Scenario 16: A client submits a work request or message and the internal team never gets alerted
+
+**A real, confirmed bug hit exactly this way, 2026-09-09** — found by
+directly testing every notification pathway end to end, not by a
+client complaint. Root cause: `notify-new-work-order-email` and
+`notify-work-order-message-email`'s client→internal branch both
+queried `notification_recipients` with `notify_types=cs.%7B%22work_order%22%7D`
+(`cs.{"work_order"}` decoded) — a Postgres array-literal, not valid
+JSON, for a `jsonb` column. PostgREST rejected every single call with
+a 400 ("invalid input syntax for type json"), which the function then
+reported up as a generic 502 — logged, never surfaced anywhere a
+person would actually see it. **Every internal email alert for a new
+work-order request, and every internal alert for a client's message on
+one, had silently failed since the feature shipped (2026-09-03) until
+this was fixed** — 6 days where a submitted request was still saved and
+fully visible in the portal/Workspace, but nobody got pinged about it.
+Fixed by using the correct JSON-array containment syntax
+(`cs.%5B%22work_order%22%5D`, i.e. `cs.["work_order"]`); both functions
+redeployed.
+
+If this ever regresses (a future edit reintroduces a `cs.` filter
+against a `jsonb` array column, here or anywhere else):
+
+1. Check **Dev Tools → Clients → Email list** — confirm
+   `notification_recipients` actually has rows with `notify_types`
+   containing `"work_order"`. If it's empty, that's a real (not a bug)
+   "muted" state, and both functions return `ok: true, sent_to: 0`.
+2. Reproduce directly: a manual REST call to
+   `.../rest/v1/notification_recipients?select=email&notify_types=cs.%5B%22work_order%22%5D`
+   with the service-role key should return the recipient rows. A 400
+   with `"invalid input syntax for type json"` means the filter syntax
+   itself is broken again — check for a `cs.` filter using
+   `%7B...%7D` (`{...}`, a Postgres array literal) instead of
+   `%5B...%5D` (`[...]`, a JSON array) anywhere a `jsonb` array column
+   is queried.
+3. The client-facing side (a client seeing their own submitted request
+   or the internal team's reply) is entirely unaffected by this class
+   of bug — it only ever breaks the internal team's own email alert,
+   never the underlying data.
+
+## Scenario 17: A client can't approve/decline a quote, or scheduling from an approved quote fails
+
+1. **Approve/decline** writes `status` on `client_portal_quotes`
+   directly from `portal/quotes.html` — check RLS first (a client can
+   only update their own row, and only while `status = 'pending'`;
+   re-approving or re-declining an already-decided quote is blocked on
+   purpose, not a bug).
+2. **Self-scheduling an approved quote** goes through
+   `schedule-quote-job` (Edge Function), which creates the real
+   `th_bookings` row with `quote_id` set — same slot-availability logic
+   `booking.html` itself uses, so a quote can't be scheduled into a
+   slot the public booking page wouldn't also offer. A "that time was
+   just booked" error here means a genuine conflict, not a bug.
+3. **Questions** (`quote_questions`) are a separate, simpler table — a
+   client asking a question never blocks approve/decline; both can
+   happen independently.
+4. If a client says they approved a quote but nothing happened: check
+   `client_portal_quotes.responded_at` — null means the update never
+   actually landed (likely an RLS or network issue on their end, not a
+   server-side failure), not null means it worked and the visible
+   symptom is elsewhere (e.g. the confirmation screen, not the write).
+
+## Scenario 18: A check-up reminder never fires, or a client's self-scheduled check-up doesn't show up internally
+
+1. `client_portal_checkups` mirrors an internal Recurring Job
+   Template via `sync-checkup-to-portal` — but **only** for a client
+   who already has some portal presence (an existing invoice/account).
+   A checkup for a client with no portal account yet simply has
+   nothing to mirror to; that's expected, not a bug.
+2. Self-scheduling goes through `schedule-checkup-visit`, which inserts
+   into `th_bookings` with `checkup_id` set. Unlike quotes
+   (`schedule-quote-job`), this has **no approval/already-scheduled
+   guard** — a client can schedule a check-up visit any time it's due,
+   without an internal account approving it first. If two check-up
+   bookings appear for the same due date, that's this design choice
+   working as intended (the client scheduled twice), not a double-fire.
+3. `client_portal_checkups.last_created_date` tracks when the internal
+   Recurring Job Template last actually created a real job from this
+   template — if reminders seem stale, confirm that date against the
+   template's own interval in Job Tracker before assuming the portal
+   side is broken.
 has had a few minutes to run and re-index.

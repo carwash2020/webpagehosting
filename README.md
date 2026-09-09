@@ -55,7 +55,7 @@ Two things on this specific repo have caused real, hours-long confusion before. 
 | `handyman-cedar-city-ut.html` | Dedicated landing page — Cedar City, UT (by-request service area) |
 | `handyman-mesquite-nv.html` | Dedicated landing page — Mesquite, NV (by-request service area) |
 | `blog/` | **Blog** (added 2026-09-01). `index.html` lists the posts; three posts so far, each a standalone page with its own SEO metadata and Article structured data. `blog.css` extends the main site's brand tokens rather than introducing a separate design system (page headlines use Anton, matching the site's own h1; card-level headlines use Oswald, matching the service/contact cards). Photos are freely licensed Unsplash images, each individually verified before use — see the note under "Do not delete" about why there's no stock-photo shortcut here. |
-| `portal/` | **Client portal** (added 2026-08-31) — `login.html`, `set-password.html`, `dashboard.html`. Clients sign in to view and pay invoices. Deliberately shares NO JavaScript with `/tools/`. **Read `docs/CLIENT-PORTAL.md` before touching anything here.** Only `login.html` is indexable; the other two are `noindex` on purpose. |
+| `portal/` | **Client portal** (added 2026-08-31, substantially extended through 2026-09-04) — 8 pages covering a client's entire relationship with the business, not just invoice payment: `login.html`, `set-password.html`, `home.html` (landing page, "Needs Your Attention" summary), `dashboard.html` (invoices + Stripe payment), `quotes.html` (review/questions/approval/self-scheduling), `jobs.html` (job history, warranty, check-up reminders), `work-orders.html` (Request Work form + two-way messaging), `settings.html` (saved cards, notification preferences). Deliberately shares NO JavaScript with `/tools/`. **Read `docs/CLIENT-PORTAL.md` before touching anything here** — it's the current, authoritative reference for every page and table; this row is a summary, not a substitute. Only `login.html` is indexable; every other page is `noindex` on purpose. |
 | `sitemap.xml` | Lists all 12 live, indexable public pages: the homepage, `booking.html`, the 5 service-area landing pages, the blog index and its 3 posts, and `portal/login.html`. Deliberately excluded: `manage-booking.html` (token-gated, `noindex`), and the portal's `dashboard.html` / `set-password.html` (both `noindex`). Update this and resubmit in Google Search Console any time a page is added or removed. |
 | `robots.txt` | Allows all crawlers |
 | `404.html` | Custom not-found page (self-contained, own inline styles, doesn't use `styles.css`) |
@@ -285,6 +285,27 @@ All in `portal/`, all requested directly.
 | Automatic client-side error capture | `portal/portal-app.js` → `portal_client_errors` table | See disaster-recovery Scenario 10 |
 | Collapsible Settings sections | `portal/settings.html` | Every section starts collapsed to cut down scroll length |
 | Line-item Type dropdown on invoices (Labor/Mileage/Part/Other) | `tools/invoice-generator.html` | Qty column shows the right unit (hrs/mi/ea) per row; both the on-screen editor and the exported PDF reflect it |
+
+### Client portal — functional capabilities (added 2026-09-02 through 2026-09-04, missing from this README until 2026-09-09)
+
+The table above only covers polish (push, offline, skeletons, biometric
+lock). The portal's actual functional surface grew well past invoice
+viewing in the same period and was never added here — found during a
+direct doc-audit request ("does the README and recovery guide mention
+the new [portal] features?"). `docs/CLIENT-PORTAL.md` was kept current
+throughout; this file and `DISASTER_RECOVERY.md` were not. Full detail
+always lives in `docs/CLIENT-PORTAL.md` — this is the summary a reader
+of this file needs to know these exist at all:
+
+| Feature | Where | Notes |
+|---|---|---|
+| **Quotes**: review, ask a question, approve/decline, self-schedule the job | `portal/quotes.html`, `client_portal_quotes`, `quote_questions` | Approving creates a real `th_bookings` row via `schedule-quote-job`; declining is final (no re-approve) |
+| **Job history**: past jobs, warranty status, downloadable receipts | `portal/jobs.html`, `client_portal_jobs` | Warranty derived from the linked invoice's own terms, not a separate manually-tracked date |
+| **Check-up reminders**: recurring maintenance visit due dates, client self-schedules | `portal/jobs.html` (reminder), `client_portal_checkups`, `schedule-checkup-visit` | Mirrors an internal Recurring Job Template only for a client who already has portal access; no approval gate (unlike quotes) |
+| **Request Work**: a client submits a new job request (title/description/urgency/photos/preferred day) | `portal/work-orders.html`, `client_portal_work_orders` | Internal team is alerted via `notify-new-work-order-email` — **this exact pathway had a real bug, since fixed 2026-09-09, see "What changed" below** |
+| **Two-way messaging** on a submitted work request | `portal/work-orders.html`, `client_portal_work_order_messages` | Client message → internal team; internal reply → client email + push |
+| **Home/landing page**: "Needs Your Attention" summary (unpaid invoices, pending quotes, open requests, upcoming appointments) | `portal/home.html` | First page after sign-in, replacing a direct-to-dashboard redirect |
+| **Saved card management, notification preferences, signed authorizations** | `portal/settings.html`, `card_authorizations`, `client_notification_preferences` | Per-notification-type opt-out (invoice/quote emails, work-order emails, message emails) |
 
 ### Internal tools — features added this period
 
