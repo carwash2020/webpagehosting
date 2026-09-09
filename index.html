@@ -60,7 +60,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Anton&family=Archivo:wght@400..700&family=Newsreader:ital,opsz,wght@0,6..72,300..700;1,6..72,300..600&family=Oswald:wght@200..700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="styles.css?v=cf5c8ddb2b">
+<link rel="stylesheet" href="styles.css?v=74b1e2fa4a">
 <!-- Improvement roadmap (2026-09-09), tier 1: the hero background is a
      CSS background-image (see .hero in styles.css), so the browser
      doesn't discover it until CSS is parsed -- likely this page's LCP
@@ -326,9 +326,6 @@
 
   <section class="hero">
     <div class="hero-plane" aria-hidden="true"></div>
-    <div class="hero-subject" aria-hidden="true">
-      <img src="/images/gallery/plank-finished-corner.webp?v=202609071200" alt="" width="1400" height="1050" loading="eager">
-    </div>
     <div class="wrap hero-grid">
       <div>
         <h1>HANDYMAN AND APPLIANCE REPAIR, DONE RIGHT.</h1>
@@ -2687,8 +2684,7 @@
     if (reduced) return;
     const badge = document.querySelector('.hero-badge');
     const plane = document.querySelector('.hero-plane');
-    const subject = document.querySelector('.hero-subject');
-    if (!badge && !plane && !subject) return;
+    if (!badge && !plane) return;
 
     let ticking = false;
     function update() {
@@ -2697,10 +2693,6 @@
       if (y < window.innerHeight * 1.6) {
         if (badge) badge.style.setProperty('--shift', (y * 0.09).toFixed(2));
         if (plane) plane.style.setProperty('--shift', (y * -0.05).toFixed(2));
-        // Between the grid's rate and the badge's, so the new photo
-        // plane reads as sitting between them in depth, not tied to
-        // either.
-        if (subject) subject.style.setProperty('--shift2', (y * -0.02).toFixed(2));
       }
     }
     function onScroll() {

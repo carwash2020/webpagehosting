@@ -1915,39 +1915,6 @@
   .hero-badge{
     transform:translate3d(0, calc(var(--shift, 0) * 1px), 0);
   }
-  /* A third depth plane, added between the canyon photo and the
-     schematic grid: a real finished-job photo, not another graphic. The
-     canyon is the deep background, this is a midground with genuine
-     texture, and it moves at its own rate (--shift2, set from JS at a
-     rate between the grid's and the badge's) so the hero reads as actual
-     depth rather than a flat photo with two decorative layers pasted on
-     top of it. Masked to the right side only, under the badge, so it
-     never competes with the headline on the left. Desaturated and
-     blurred so it stays atmosphere, not a second subject. */
-  .hero-subject{
-    position:absolute;
-    inset:0;
-    z-index:0;
-    pointer-events:none;
-    overflow:hidden;
-    opacity:.32;
-    transform:translate3d(0, calc(var(--shift2, 0) * 1px), 0);
-    -webkit-mask-image:linear-gradient(100deg, transparent 0%, transparent 40%, #000 66%, #000 100%);
-    mask-image:linear-gradient(100deg, transparent 0%, transparent 40%, #000 66%, #000 100%);
-  }
-  .hero-subject img{
-    width:100%;
-    height:100%;
-    object-fit:cover;
-    object-position:60% 45%;
-    filter:saturate(.55) brightness(.8) blur(1.5px);
-  }
-  @media (max-width:860px){
-    .hero-subject{display:none;}
-  }
-  @media (prefers-reduced-motion: reduce){
-    .hero-subject{transform:none;}
-  }
   /* The motto, finally on the homepage itself rather than only in the
      footer and the value pills. Three words, arriving in sequence. */
   .hero-motto{

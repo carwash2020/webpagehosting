@@ -41,30 +41,23 @@ const INDEX = fs.readFileSync(repo('index.html'), 'utf8');
 const STYLES = fs.readFileSync(repo('styles.css'), 'utf8');
 
 // ---- hero depth ----
+//
+// The hero-subject midground layer (a desaturated/blurred job photo
+// layered over the canyon background) was removed entirely (direct
+// feedback, 2026-09-09: "it looks terrible. just keep the main
+// background"). The badge and grid-plane parallax layers stay -- see
+// the reduced-hero-depth test below.
 
-test('the hero has a real photographic midground layer, not just the schematic grid', () => {
-  assert.match(INDEX, /<div class="hero-subject" aria-hidden="true">/);
-  assert.match(INDEX, /class="hero-subject"[\s\S]{0,200}?<img src="\/images\/gallery\//);
+test('the hero-subject midground layer has been removed, keeping only the canyon background', () => {
+  assert.doesNotMatch(INDEX, /hero-subject/);
+  assert.doesNotMatch(STYLES, /hero-subject/);
 });
 
-test('the hero-subject layer moves at its own parallax rate, distinct from the grid and the badge', () => {
-  const rates = [...INDEX.matchAll(/setProperty\('--shift2?',\s*\(y \* (-?[\d.]+)\)/g)].map((m) => Number(m[1]));
-  assert.equal(rates.length, 3, 'expected three distinct rate assignments: badge, plane, subject');
+test('the remaining hero depth layers (badge, grid plane) still parallax at their own distinct rates', () => {
+  const rates = [...INDEX.matchAll(/setProperty\('--shift',\s*\(y \* (-?[\d.]+)\)/g)].map((m) => Number(m[1]));
+  assert.equal(rates.length, 2, 'expected two rate assignments: badge and plane');
   const unique = new Set(rates);
-  assert.equal(unique.size, 3, `all three rates must differ, got ${rates.join(', ')}`);
-});
-
-test('the hero-subject layer is hidden on phones and inert under reduced motion', () => {
-  assert.match(STYLES, /@media \(max-width:860px\)\{\s*\.hero-subject\{display:none;\}\s*\}/);
-  assert.match(STYLES, /@media \(prefers-reduced-motion: reduce\)\{\s*\.hero-subject\{transform:none;\}\s*\}/);
-});
-
-test('the hero-subject photo is masked to one side and kept subdued, not a competing subject', () => {
-  const rule = STYLES.match(/\.hero-subject\{[^}]*\}/)[0];
-  assert.match(rule, /opacity:\.\d+/);
-  assert.match(rule, /mask-image:/);
-  const imgRule = STYLES.match(/\.hero-subject img\{[^}]*\}/)[0];
-  assert.match(imgRule, /filter:.*blur/);
+  assert.equal(unique.size, 2, `both rates must differ, got ${rates.join(', ')}`);
 });
 
 // ---- before/after reveal ----
