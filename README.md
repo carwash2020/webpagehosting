@@ -648,3 +648,29 @@ card (`#careCard`) gained one `.care-cta` link ("Schedule a visit") —
 previously read-only, with nowhere to go from a tip that made someone
 want to book. A single link works for all 12 months alike, unlike
 linking to a specific blog post (which only exists for 2 of the 12).
+
+## What changed, 2026-09-09 (later the same day) — automated appointment reminder emails
+
+Direct request, after the referral program shipped: automated
+day-before appointment reminders. Initially assumed this needed a new
+Twilio (SMS) account or a new email provider signup — wrong on the
+email half: **Resend is already the site's email provider**, wired in
+for send-booking-email/send-lead-email/send-invoice-notification/etc.,
+with `RESEND_API_KEY`/`LEAD_EMAIL_FROM` already configured as Supabase
+secrets. The new reminder function reuses that exact same account —
+no new signup, no new secret.
+
+New `edge-functions/send-appointment-reminder-index.ts`, deployed and
+live. Runs hourly via a new `send-appointment-reminders-hourly` pg_cron
+job (see `sql/infra/add_appointment_reminder_emails.sql`) rather than
+once daily at a fixed time — a fixed time would give some bookings 25
+hours' notice and others 49, depending what time of day they're
+scheduled for. Instead it queries a rolling `[now+23h, now+25h)` window
+every hour, so every confirmed booking with an email gets exactly one
+reminder right around the 24-hour mark. A new `reminder_sent_at`
+timestamp column on `th_bookings` is both the "already sent" guard and
+the audit trail. Verified live via `net.http_post` immediately after
+deploy (`{"ok":true,"checked":0,"sent":0}` — correct, no bookings
+existed in the window at deploy time). No SMS/Twilio integration exists
+or was added — that's still a real future option, but a separate
+account/cost decision for later.
