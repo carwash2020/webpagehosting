@@ -98,44 +98,55 @@
       result.hidden = false;
     }
 
-    // Shrink pass (2026-09-08): the section used to also carry a separate
-    // step-by-step "appliance, then symptom" picker below this grid --
-    // but that picker and this grid now do the exact same job (browse by
-    // appliance, then pick a symptom), just with two different UIs. That
-    // duplication was real page weight for zero added function, so the
-    // old picker (and the appEl/symEl/symStep/selectAppliance() plumbing
-    // it needed) was removed outright rather than collapsed further.
-    // Every card here now handles its own pressed state directly instead
-    // of driving a second hidden picker to get there.
-    Object.keys(DATA).forEach(function (key) {
-      const row = document.createElement('details');
-      row.className = 'triage-appliance-row';
-      const summary = document.createElement('summary');
-      const heading = document.createElement('span');
-      heading.className = 'triage-appliance-heading';
-      heading.innerHTML = '<span class="triage-appliance-icon">' + APPLIANCE_ICONS[key] + '</span><span>' + DATA[key].label + '</span>';
-      summary.appendChild(heading);
-      row.appendChild(summary);
-      const rowCards = document.createElement('div');
-      rowCards.className = 'triage-symptom-row-cards';
+    // Shrink pass (2026-09-08): this used to also carry a separate
+    // step-by-step "appliance, then symptom" picker below it -- removed
+    // as duplicate weight, since it did the same job as this grid.
+    //
+    // Style pass (2026-09-09), direct feedback on a screenshot of that
+    // now-removed picker: its flat pill-button look read as more
+    // interactive and cleaner than this grid's bordered accordion-card
+    // style. Rebuilt as a single flow using that pill-button visual
+    // language instead -- one row of appliance pills (select one),
+    // its symptoms appear as a stacked list of full-width pill buttons
+    // below. Still just one picker, not the duplicate that was removed.
+    const pillRow = document.createElement('div');
+    pillRow.className = 'triage-appliance-pills';
+    pillRow.setAttribute('role', 'group');
+    pillRow.setAttribute('aria-label', 'Choose an appliance');
+    gridEl.appendChild(pillRow);
+
+    const symptomPanel = document.createElement('div');
+    symptomPanel.className = 'triage-symptom-pills';
+    gridEl.appendChild(symptomPanel);
+
+    function selectAppliance(key, btn) {
+      Array.prototype.forEach.call(pillRow.children, function (b) { b.setAttribute('aria-pressed', 'false'); });
+      btn.setAttribute('aria-pressed', 'true');
+      symptomPanel.innerHTML = '';
       DATA[key].symptoms.forEach(function (s) {
-        const btn = document.createElement('button');
-        btn.type = 'button';
-        btn.className = 'triage-symptom-card';
-        btn.setAttribute('aria-pressed', 'false');
-        btn.innerHTML = '<span class="triage-symptom-card-q">' + s.q + '</span>';
-        btn.addEventListener('click', function () {
-          gridEl.querySelectorAll('.triage-symptom-card').forEach(function (b) {
-            b.setAttribute('aria-pressed', 'false');
-          });
-          btn.setAttribute('aria-pressed', 'true');
+        const sBtn = document.createElement('button');
+        sBtn.type = 'button';
+        sBtn.className = 'triage-symptom-pill';
+        sBtn.setAttribute('aria-pressed', 'false');
+        sBtn.textContent = s.q;
+        sBtn.addEventListener('click', function () {
+          Array.prototype.forEach.call(symptomPanel.children, function (b) { b.setAttribute('aria-pressed', 'false'); });
+          sBtn.setAttribute('aria-pressed', 'true');
           showSymptomResult(s);
           result.scrollIntoView({ behavior: 'smooth', block: 'center' });
         });
-        rowCards.appendChild(btn);
+        symptomPanel.appendChild(sBtn);
       });
-      row.appendChild(rowCards);
-      gridEl.appendChild(row);
+    }
+
+    Object.keys(DATA).forEach(function (key) {
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'triage-appliance-pill';
+      btn.setAttribute('aria-pressed', 'false');
+      btn.innerHTML = '<span class="triage-appliance-pill-icon">' + APPLIANCE_ICONS[key] + '</span><span>' + DATA[key].label + '</span>';
+      btn.addEventListener('click', function () { selectAppliance(key, btn); result.hidden = true; });
+      pillRow.appendChild(btn);
     });
   })();
 

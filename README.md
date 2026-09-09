@@ -580,3 +580,24 @@ against a mocked `fetch` confirming the real HTTP call shape (URL,
 method, headers, the `jobRefId` string correctly cast to a real number
 for the bigint FK column, line items replaced via delete-then-insert),
 and that a failing `fetch` never throws back to the caller.
+
+## What changed, 2026-09-09 — triage entry point restyled to pill buttons
+
+Direct feedback on a screenshot: the bordered-card/plus-icon accordion
+look the triage entry point picked up on 2026-09-08 (`.triage-appliance-row`/
+`.triage-symptom-card`) read as less interactive and less clean than the
+flat pill-button style a since-removed duplicate picker used to have.
+Rebuilt on that pill language instead, but still as the ONE entry point
+(not reintroducing the duplicate structure removed the day before): a
+row of appliance pills, single-select, reveals that appliance's symptoms
+as a stacked list of pill buttons below. Same `DATA`/click-to-result
+logic in `triage.js`, just a different DOM shape and `styles.css`
+styling (`.triage-appliance-pills`/`.triage-appliance-pill`/
+`.triage-symptom-pills`/`.triage-symptom-pill`, reusing the visual
+language of the old, now-deleted `.triage-chip`). Tests in
+`tests/content-quality/triage-symptom-grid.test.js` rewritten for the
+new structure (one pill per appliance, symptoms populate on select and
+clear on switching appliance, no more than one appliance/symptom pressed
+at once). `tests/design/round-3-visual-polish.test.js` no longer checks
+`.triage-appliance-row` for the shared `::details-content` animation
+treatment, since it's no longer a `<details>` element at all.

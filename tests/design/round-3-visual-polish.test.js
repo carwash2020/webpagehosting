@@ -80,12 +80,14 @@ test('modal and lightbox overlays fade+scale in instead of popping open instantl
   assert.match(STYLES, /\.lightbox-img-wrap\{[\s\S]*?transform:scale\(\.96\)/);
 });
 
-test('the triage appliance-row disclosures and .reviews-toggle animate their height via ::details-content, same idea as the FAQ accordion', () => {
+test('.reviews-toggle animates its height via ::details-content, same idea as the FAQ accordion', () => {
   // .triage-browse-toggle was removed in the 2026-09-08 shrink pass (a
-  // duplicate second picker doing the same job as .triage-appliance-row) --
-  // dropped from this list rather than left asserting a selector that no
-  // longer exists.
-  for (const selector of ['.triage-appliance-row', '.reviews-toggle']) {
+  // duplicate second picker); .triage-appliance-row (the accordion-card
+  // triage entry point this test used to also check) was itself replaced
+  // by a pill-button flow with no <details> element at all in the
+  // 2026-09-09 style pass -- dropped from this list rather than left
+  // asserting a selector that no longer exists.
+  for (const selector of ['.reviews-toggle']) {
     const escaped = selector.replace('.', '\\.');
     assert.match(STYLES, new RegExp(`${escaped}\\{interpolate-size:allow-keywords;\\}`), `${selector} missing interpolate-size`);
     const detailsContentRule = STYLES.match(new RegExp(`${escaped}::details-content\\{([^}]*)\\}`));

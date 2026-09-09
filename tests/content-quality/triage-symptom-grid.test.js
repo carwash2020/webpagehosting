@@ -2,15 +2,19 @@
 // "Customers do not arrive thinking 'appliance repair'; they arrive
 // thinking 'it won't drain'." The triage tool's entry point used to be
 // an appliance-category picker (step 1) before ever showing a symptom
-// -- this adds a flat grid of the same 20 symptoms already in
-// triage.js's own DATA, in plain language, as the real first thing
-// shown, grouped into closed-by-default rows per appliance.
+// -- this adds a symptom-first entry point using triage.js's own DATA,
+// in plain language, as the real first thing shown.
 //
-// Shrink pass (2026-09-08): the original appliance-first picker, which
-// this grid initially sat above unchanged (demoted into a <details>
-// disclosure), was removed outright -- it did the same "browse by
-// appliance, then symptom" job the grid's own per-appliance rows
-// already do, so keeping both was pure duplicate page weight.
+// Shrink pass (2026-09-08): a separate, duplicate "appliance, then
+// symptom" picker that used to sit below this was removed outright --
+// it did the same job this entry point already does.
+//
+// Style pass (2026-09-09), direct feedback on a screenshot: rebuilt the
+// entry point again, from bordered accordion cards to a single-select
+// flow of pill buttons (appliance pills, then that appliance's symptoms
+// as a stacked list of pills) -- still one picker, just a different
+// visual language, closer to what a flat pill-button style used to look
+// like before the shrink pass removed the duplicate that had it.
 
 const { test } = require('node:test');
 const assert = require('node:assert/strict');
@@ -42,67 +46,80 @@ function loadTriagePage(html) {
   return dom.window;
 }
 
-test('the symptom grid is the first thing shown -- one card per symptom already in triage.js\'s own DATA, nothing invented', () => {
+test('one pill button per appliance, sourced from triage.js\'s own DATA -- 5 appliances, nothing invented', () => {
   const window = loadTriagePage(INDEX);
-  const cards = window.document.querySelectorAll('#triageSymptomGrid .triage-symptom-card');
-  const dataSymptomCount = Object.values(window.TRIAGE_DATA).reduce((sum, a) => sum + a.symptoms.length, 0);
-  assert.equal(dataSymptomCount, 20, 'sanity check: triage.js should still have exactly 20 symptoms across 5 appliances');
-  assert.equal(cards.length, dataSymptomCount, 'expected one grid card per symptom in DATA -- no more, no fewer');
+  const pills = window.document.querySelectorAll('#triageSymptomGrid .triage-appliance-pill');
+  assert.equal(Object.keys(window.TRIAGE_DATA).length, 5, 'sanity check: triage.js should still have exactly 5 appliances');
+  assert.equal(pills.length, 5, 'expected one pill per appliance -- no more, no fewer');
 });
 
-test('clicking a symptom card shows the exact same verdict/body triage.js already had for it, with no second copy of that text', () => {
+test('no symptom pills are shown until an appliance is selected', () => {
+  const window = loadTriagePage(INDEX);
+  const panel = window.document.querySelector('#triageSymptomGrid .triage-symptom-pills');
+  assert.ok(panel, 'expected the symptom pill panel to exist');
+  assert.equal(panel.children.length, 0, 'nothing should be pre-selected');
+});
+
+test('selecting an appliance pill shows exactly its own 4 symptom pills, each naming its symptom', () => {
   const window = loadTriagePage(INDEX);
   const { document } = window;
-  const rows = [...document.querySelectorAll('#triageSymptomGrid .triage-appliance-row')];
-  const washerRow = rows.find(r => r.querySelector('.triage-appliance-heading').textContent.trim() === 'Washer');
-  assert.ok(washerRow, 'expected a Washer row');
-  const drainCard = [...washerRow.querySelectorAll('.triage-symptom-card')]
-    .find(c => c.querySelector('.triage-symptom-card-q').textContent === "Won't drain");
-  assert.ok(drainCard, 'expected a Washer / "Won\'t drain" card');
+  const pills = [...document.querySelectorAll('#triageSymptomGrid .triage-appliance-pill')];
+  const washerPill = pills.find(p => p.textContent.trim() === 'Washer');
+  assert.ok(washerPill, 'expected a Washer pill');
 
-  drainCard.dispatchEvent(new window.Event('click', { bubbles: true }));
+  washerPill.dispatchEvent(new window.Event('click', { bubbles: true }));
+
+  assert.equal(washerPill.getAttribute('aria-pressed'), 'true', 'the selected appliance pill should read as pressed');
+  const symptomPills = [...document.querySelectorAll('#triageSymptomGrid .triage-symptom-pill')];
+  assert.equal(symptomPills.length, 4, 'expected exactly Washer\'s 4 symptoms, not some other appliance\'s or all 20');
+  const expectedQs = Array.from(window.TRIAGE_DATA.washer.symptoms, s => s.q).sort();
+  assert.deepEqual(symptomPills.map(p => p.textContent.trim()).sort(), expectedQs);
+});
+
+test('clicking a symptom pill shows the exact same verdict/body triage.js already had for it, with no second copy of that text', () => {
+  const window = loadTriagePage(INDEX);
+  const { document } = window;
+  const pills = [...document.querySelectorAll('#triageSymptomGrid .triage-appliance-pill')];
+  const washerPill = pills.find(p => p.textContent.trim() === 'Washer');
+  washerPill.dispatchEvent(new window.Event('click', { bubbles: true }));
+
+  const symptomPills = [...document.querySelectorAll('#triageSymptomGrid .triage-symptom-pill')];
+  const drainPill = symptomPills.find(p => p.textContent.trim() === "Won't drain");
+  assert.ok(drainPill, 'expected a "Won\'t drain" pill under Washer');
+
+  drainPill.dispatchEvent(new window.Event('click', { bubbles: true }));
 
   const expected = window.TRIAGE_DATA.washer.symptoms.find(s => s.q === "Won't drain");
   assert.equal(document.getElementById('triageResult').hidden, false);
   assert.equal(document.getElementById('triageVerdict').textContent, expected.v);
   assert.equal(document.getElementById('triageBody').textContent, expected.a);
+  assert.equal(drainPill.getAttribute('aria-pressed'), 'true', 'the selected symptom pill should read as pressed');
 });
 
-test('the old step-by-step appliance-first picker is gone -- the symptom grid\'s own collapsible rows are the only way to browse by appliance now', () => {
-  // Shrink pass (2026-09-08): this used to be a second, separate
-  // "appliance, then symptom" picker sitting below the grid, doing the
-  // exact same job the grid's own collapsible per-appliance rows
-  // already do. Removed as duplicate page weight rather than kept
-  // "just in case" -- see triage.js and README's shrink-pass notes.
+test('switching to a different appliance clears the previous one\'s symptom pills and its pressed state', () => {
+  const window = loadTriagePage(INDEX);
+  const { document } = window;
+  const pills = [...document.querySelectorAll('#triageSymptomGrid .triage-appliance-pill')];
+  const washerPill = pills.find(p => p.textContent.trim() === 'Washer');
+  const dryerPill = pills.find(p => p.textContent.trim() === 'Dryer');
+
+  washerPill.dispatchEvent(new window.Event('click', { bubbles: true }));
+  dryerPill.dispatchEvent(new window.Event('click', { bubbles: true }));
+
+  assert.equal(washerPill.getAttribute('aria-pressed'), 'false', 'only one appliance pill should read as pressed at a time');
+  assert.equal(dryerPill.getAttribute('aria-pressed'), 'true');
+  const symptomPills = [...document.querySelectorAll('#triageSymptomGrid .triage-symptom-pill')];
+  const expectedQs = Array.from(window.TRIAGE_DATA.dryer.symptoms, s => s.q).sort();
+  assert.deepEqual(symptomPills.map(p => p.textContent.trim()).sort(), expectedQs, 'switching appliances should replace the symptom list, not append to it');
+});
+
+test('the old step-by-step appliance-first picker (a separate, duplicate structure) is gone', () => {
   const window = loadTriagePage(INDEX);
   const { document } = window;
   assert.equal(document.querySelector('.triage-browse-toggle'), null, 'the demoted appliance-first disclosure should no longer exist');
   assert.equal(document.getElementById('triageAppliances'), null);
   assert.equal(document.getElementById('triageSymptomStep'), null);
   assert.equal(document.getElementById('triageSymptoms'), null);
-});
-
-test('every symptom card sits inside a row that names its appliance, so 20 cards read unambiguously without repeating the appliance on every single card', () => {
-  // Design feedback (2026-09-08): each card used to repeat its own
-  // appliance name (e.g. "WASHER") even though the enclosing row's own
-  // <summary> already says "Washer" -- 4x redundant per row, and it
-  // read as an unfinished template. The row itself is still required to
-  // name its appliance; the per-card repetition is what's gone.
-  const window = loadTriagePage(INDEX);
-  const rows = [...window.document.querySelectorAll('#triageSymptomGrid .triage-appliance-row')];
-  assert.equal(rows.length, 5, 'expected 5 appliance rows');
-  for (const row of rows) {
-    const heading = row.querySelector('.triage-appliance-heading');
-    assert.ok(heading && heading.textContent.trim().length > 0, 'every row should name its appliance');
-    assert.ok(row.querySelector('.triage-appliance-icon svg'), 'every row should have its own icon');
-    const cards = [...row.querySelectorAll('.triage-symptom-card')];
-    assert.equal(cards.length, 4, 'expected 4 symptom cards per appliance row');
-    for (const card of cards) {
-      const symptom = card.querySelector('.triage-symptom-card-q');
-      assert.ok(symptom && symptom.textContent.trim().length > 0, 'every card should name its symptom');
-      assert.ok(!card.querySelector('.triage-symptom-card-appliance'), 'the per-card appliance label is redundant now and should be gone');
-    }
-  }
 });
 
 test('all 5 city landing pages carry the same symptom-first triage markup as the homepage', () => {
@@ -113,11 +130,11 @@ test('all 5 city landing pages carry the same symptom-first triage markup as the
   }
 });
 
-test('triage.js exposes its DATA as window.TRIAGE_DATA so the grid never carries a second, driftable copy of the same symptom text', () => {
+test('triage.js exposes its DATA as window.TRIAGE_DATA so the pills never carry a second, driftable copy of the same symptom text', () => {
   assert.match(TRIAGE_JS, /window\.TRIAGE_DATA = DATA;/);
 });
 
-test('the service worker cache was bumped, since /styles.css (precached) changed for the new grid styling', () => {
+test('the service worker cache was bumped since /styles.css (precached) changed for the new pill-button styling', () => {
   const sw = fs.readFileSync(repo('service-worker.js'), 'utf8');
   const version = Number(sw.match(/const CACHE_NAME = 'th-workspace-v(\d+)';/)[1]);
   assert.ok(version >= 99, `expected v99 or later, got v${version}`);

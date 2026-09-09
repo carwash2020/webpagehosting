@@ -1619,8 +1619,14 @@
   .reviews-toggle[open] summary::before{content:'\2212 ';}
   .reviews-toggle summary:hover{color:var(--white);}
   .reviews-toggle .reviews-wall-more{margin-top:20px;}
-  /* Design feedback (2026-09-08): same ::details-content treatment as
-     .triage-appliance-row -- see that rule for why. */
+  /* Design feedback (2026-09-08): native <details> used to snap this
+     open/closed with no transition, unlike the FAQ accordion's own real
+     animation elsewhere on the page. ::details-content is the browser's
+     own animatable box for everything inside a <details> except its
+     <summary> -- real <details>/<summary> stays exactly as before
+     (no-JS fallback, native keyboard/screen-reader semantics), this
+     just gives the content height something to transition between
+     instead of an instant swap. */
   .reviews-toggle{interpolate-size:allow-keywords;}
   .reviews-toggle::details-content{
     height:0;
@@ -2452,89 +2458,60 @@
     display:inline-flex; align-items:center; justify-content:center;
     font-size:11px;
   }
-  /* U02 fix (2026-09-08): the symptom-first entry grid -- plain-
-     language cards ("Washer / Won't drain") instead of the old
-     appliance-category-first step, each jumping straight to a result.
-     Small cards rather than pills since each one carries two lines
-     (which appliance, which symptom), not one short label. */
-  .triage-symptom-grid{
-    display:flex;
-    flex-direction:column;
-    gap:8px;
-  }
-  /* Regression-recovery fix (2026-09-08): the 20 cards above used to
-     render flat in one grid, which alone accounted for +336px of this
-     section's growth during the improvement session (measured
-     directly, 490px -> 826px). Grouped into 5 collapsible rows below,
-     one per appliance, closed by default -- a native zero-JS-needed
-     <details> disclosure per row. This class now lives on the row's
-     own card container instead of the outer grid. */
-  .triage-symptom-row-cards{
-    display:grid;
-    grid-template-columns:repeat(auto-fill, minmax(180px, 1fr));
-    gap:10px;
-    padding:0 16px 16px;
-  }
-  .triage-appliance-row{
-    border:1px solid var(--border);
-    border-radius:10px;
-    background:var(--bg-panel-3);
-  }
-  .triage-appliance-row summary{
+  /* Style pass (2026-09-09), direct feedback on a screenshot: the
+     bordered-card/plus-icon accordion look (below, since removed) read
+     as less interactive and less clean than the pill-button style this
+     tool used to have elsewhere on the page. Rebuilt on that pill
+     language instead -- one row of appliance pills, then a stacked list
+     of symptom pills for whichever appliance is selected. */
+  .triage-appliance-pills{display:flex; flex-wrap:wrap; gap:10px;}
+  .triage-appliance-pill{
+    display:inline-flex; align-items:center; gap:9px;
     font-family:var(--font-ui);
-    font-size:14.5px;
-    font-weight:600;
-    letter-spacing:.3px;
-    color:var(--white);
-    cursor:pointer;
-    padding:14px 16px;
-    list-style:none;
-    display:flex; align-items:center; justify-content:space-between; gap:10px;
-  }
-  .triage-appliance-row summary::-webkit-details-marker{display:none;}
-  .triage-appliance-row summary::after{content:'+'; color:var(--text-dim); font-size:18px; line-height:1;}
-  .triage-appliance-row[open] summary::after{content:'\2212';}
-  .triage-appliance-row summary:hover{color:var(--orange-text);}
-  /* Design feedback (2026-09-08): native <details> used to snap this
-     row's cards open/closed with no transition, unlike the FAQ
-     accordion's own real animation right below it on the page.
-     ::details-content is the browser's own animatable box for
-     everything inside a <details> except its <summary> -- real
-     <details>/<summary> stays exactly as before (no-JS fallback,
-     native keyboard/screen-reader semantics), this just gives the
-     content height something to transition between instead of an
-     instant swap. Same treatment on .reviews-toggle below. */
-  .triage-appliance-row{interpolate-size:allow-keywords;}
-  .triage-appliance-row::details-content{
-    height:0;
-    overflow:hidden;
-    transition:height .25s ease, content-visibility .25s ease allow-discrete;
-  }
-  .triage-appliance-row[open]::details-content{height:auto;}
-  .triage-appliance-heading{display:flex; align-items:center; gap:12px;}
-  .triage-appliance-icon{
-    display:flex; flex-shrink:0; width:34px; height:34px;
-    align-items:center; justify-content:center;
-    border-radius:8px;
-    background:var(--orange-tint-soft);
-    color:var(--orange-text);
-  }
-  .triage-appliance-icon svg{width:19px; height:19px;}
-  .triage-symptom-card{
-    font-family:var(--font-ui);
-    text-align:left;
-    padding:13px 16px;
+    font-size:14px;
+    font-weight:500;
+    letter-spacing:.4px;
+    padding:12px 18px;
     min-height:44px;                 /* real touch target */
-    border-radius:10px;
+    border-radius:999px;
     border:1px solid var(--border);
     background:var(--bg-panel-3);
     color:var(--text);
     cursor:pointer;
-    display:flex; flex-direction:column; gap:3px;
-    transition:border-color .15s ease, background .15s ease, transform .15s ease;
+    transition:border-color .15s ease, background .15s ease, color .15s ease, transform .15s ease;
   }
-  .triage-symptom-card:hover{border-color:var(--blue-text); transform:translateY(-1px);}
-  .triage-symptom-card-q{font-size:14.5px; font-weight:500; color:var(--white);}
+  .triage-appliance-pill:hover{border-color:var(--blue-text); color:var(--white); transform:translateY(-1px);}
+  .triage-appliance-pill[aria-pressed="true"]{
+    background:linear-gradient(135deg, #ffb347, #ff8000 60%, #c96400);
+    border-color:transparent;
+    color:#161005;
+    font-weight:600;
+  }
+  .triage-appliance-pill-icon{display:flex; flex-shrink:0; width:18px; height:18px; align-items:center; justify-content:center;}
+  .triage-appliance-pill-icon svg{width:18px; height:18px;}
+
+  .triage-symptom-pills{display:flex; flex-direction:column; gap:8px; margin-top:16px;}
+  .triage-symptom-pill{
+    font-family:var(--font-ui);
+    text-align:left;
+    font-size:14.5px;
+    font-weight:500;
+    padding:13px 18px;
+    min-height:44px;                 /* real touch target */
+    border-radius:999px;
+    border:1px solid var(--border);
+    background:var(--bg-panel-3);
+    color:var(--text);
+    cursor:pointer;
+    transition:border-color .15s ease, background .15s ease, color .15s ease, transform .15s ease;
+  }
+  .triage-symptom-pill:hover{border-color:var(--blue-text); color:var(--white); transform:translateY(-1px);}
+  .triage-symptom-pill[aria-pressed="true"]{
+    background:linear-gradient(135deg, #ffb347, #ff8000 60%, #c96400);
+    border-color:transparent;
+    color:#161005;
+    font-weight:600;
+  }
 
   .triage-result{
     margin-top:22px;
