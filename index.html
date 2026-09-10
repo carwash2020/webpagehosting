@@ -59,16 +59,21 @@
 <meta http-equiv="Permissions-Policy" content="camera=(), microphone=(), geolocation=()">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Anton&family=Archivo:wght@400..700&family=Newsreader:ital,opsz,wght@0,6..72,300..700;1,6..72,300..600&family=Oswald:wght@200..700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="styles.css?v=7bced0f81b">
+<link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Anton&family=Archivo:wght@400..700&family=Newsreader:ital,opsz,wght@0,6..72,300..700;1,6..72,300..600&family=Oswald:wght@200..700&display=swap" onload="this.onload=null;this.rel='stylesheet'">
+<noscript><link href="https://fonts.googleapis.com/css2?family=Anton&family=Archivo:wght@400..700&family=Newsreader:ital,opsz,wght@0,6..72,300..700;1,6..72,300..600&family=Oswald:wght@200..700&display=swap" rel="stylesheet"></noscript>
+<link rel="stylesheet" href="styles.css?v=816fe94055">
 <!-- Improvement roadmap (2026-09-09), tier 1: the hero background is a
      CSS background-image (see .hero in styles.css), so the browser
      doesn't discover it until CSS is parsed -- likely this page's LCP
      element, sitting behind the H1. A preload tells the browser to
      fetch it immediately, in parallel with CSS/fonts, instead of
-     waiting. Same file, same ?v= stamp already used in styles.css --
-     not a new asset, just fetched sooner. -->
-<link rel="preload" as="image" href="/images/hero-bg-canyon.webp?v=202608241900" fetchpriority="high">
+     waiting. Split into two conditional preloads (2026-09-10) matching
+     styles.css's own max-width:860px breakpoint, so a phone preloads
+     the real 129KB image it will actually use (hero-bg-canyon-mobile.webp)
+     instead of the 338KB desktop original -- a browser only fetches the
+     one whose media query actually matches, per the Preload spec. -->
+<link rel="preload" as="image" href="/images/hero-bg-canyon-mobile.webp?v=202608241900" fetchpriority="high" media="(max-width: 860px)">
+<link rel="preload" as="image" href="/images/hero-bg-canyon.webp?v=202608241900" fetchpriority="high" media="(min-width: 861px)">
 <script type="application/ld+json">
 {
   "@context": "https://schema.org",
