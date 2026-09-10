@@ -776,6 +776,17 @@
     renderDateRow();
     selectDate(validDate ? dateParam : todayDateStrInBusinessTz());
   })();
+
+  // Referral link auto-fill: an existing customer's own "?ref=Their Name"
+  // link pre-fills "Who referred you?" so the new customer doesn't have
+  // to remember or type it themselves. Never overwrites a value someone
+  // already typed, and never fires without a real ref param present.
+  (function prefillReferredBy() {
+    const referredByField = document.getElementById('bReferredBy');
+    if (!referredByField || referredByField.value) return;
+    const refParam = new URLSearchParams(window.location.search).get('ref');
+    if (refParam) referredByField.value = refParam.slice(0, 200);
+  })();
 })();
 </script>
 
