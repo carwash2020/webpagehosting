@@ -15,17 +15,17 @@ const repo = (...p) => path.join(__dirname, '..', '..', ...p);
 const INDEX = fs.readFileSync(repo('blog', 'index.html'), 'utf8');
 const BLOG_CSS = fs.readFileSync(repo('blog', 'blog.css'), 'utf8');
 
-const POST_PAGES = ['dryer-not-heating.html', 'handyman-to-do-list.html', 'appliance-repair-or-replace.html'];
+const POST_PAGES = ['dryer-not-heating.html', 'handyman-to-do-list.html', 'appliance-repair-or-replace.html', 'washer-wont-drain.html', 'dishwasher-not-cleaning.html', 'fridge-not-cooling.html'];
 
 test('the whole card is a single link per post, not just the title', () => {
   const items = [...INDEX.matchAll(/<a class="blog-index-item" href="\/blog\/([a-z-]+\.html)" data-reveal>/g)];
-  assert.equal(items.length, 3, 'expected exactly 3 blog-index-item cards');
+  assert.equal(items.length, 6, 'expected exactly 6 blog-index-item cards');
   assert.deepEqual(items.map((m) => m[1]).sort(), [...POST_PAGES].sort());
 });
 
 test('each card carries an icon badge and a "Read the post" tag with the shared arrow glyph', () => {
   const cards = [...INDEX.matchAll(/<a class="blog-index-item"[\s\S]*?<\/a>/g)].map((m) => m[0]);
-  assert.equal(cards.length, 3);
+  assert.equal(cards.length, 6);
   cards.forEach((card) => {
     assert.match(card, /<div class="blog-index-item-icon"><svg viewBox="0 0 24 24"/);
     assert.match(card, /<span class="blog-index-item-tag">Read the post <svg viewBox="0 0 24 24"[^>]*><path d="M9 18l6-6-6-6"\/><\/svg><\/span>/);
@@ -55,7 +55,7 @@ test('each item is revealed via the shared site-wide [data-reveal] mechanism, wi
   assert.match(BLOG_CSS, /html\.reveal-ready \.blog-index-list \[data-reveal\]:nth-child\(3\) \{ transition-delay: \.16s; \}/);
 });
 
-test('blog.css version stamp matches across the index page and all 3 individual post pages', () => {
+test('blog.css version stamp matches across the index page and all individual post pages', () => {
   const versions = new Set();
   for (const page of ['index.html', ...POST_PAGES]) {
     const html = fs.readFileSync(repo('blog', page), 'utf8');

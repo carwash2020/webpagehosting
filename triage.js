@@ -212,6 +212,19 @@
         text.innerHTML = html;
         pill.hidden = false;
       });
+
+      // After-hours chat greeting: reuses the exact same open/closed
+      // computation as the pill above so the chat bubble can never say
+      // something the pill itself contradicts. Only touches the
+      // greeting when actually closed -- the open-hours greeting
+      // (including its desktop-vs-mobile wording, set earlier inline)
+      // is left exactly as-is.
+      if (statusClass === 'is-closed') {
+        const chatGreeting = document.getElementById('chatGreeting');
+        if (chatGreeting) {
+          chatGreeting.textContent = "Hey! 👋 We're outside business hours right now, but go ahead and text or call -- we'll get back to you as soon as we're back open.";
+        }
+      }
     } catch (e) {
       /* A status pill is never worth breaking the hero over. */
     }
