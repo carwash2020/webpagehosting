@@ -19,6 +19,7 @@ const PAGES = [
   'handyman-santa-clara-ivins-ut.html', 'handyman-cedar-city-ut.html',
   'handyman-mesquite-nv.html',
   'washer-dryer-repair.html', 'plumbing-repairs.html', 'drywall-painting.html',
+  'handyman-repairs.html', 'assembly-installation.html',
   'about.html', 'our-work.html', 'terms.html',
   'blog/index.html', 'blog/dryer-not-heating.html', 'blog/handyman-to-do-list.html',
   'blog/appliance-repair-or-replace.html', 'blog/washer-wont-drain.html',

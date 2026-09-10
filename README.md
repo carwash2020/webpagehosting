@@ -872,3 +872,39 @@ tests, locking in every public marketing page carries this treatment
 so a future new page can't quietly skip it the way these did).
 1,599/1,599 tests passing, all consistency/undefined-vars/link/visual-
 snapshot checks clean.
+
+## What changed, 2026-09-10 (later still) — 2 more service pages, and all 5 are now in the main nav
+
+A follow-up audit found the 3 new service pages were only reachable
+from the homepage's service-info modal and cross-links between the
+pages themselves -- no link anywhere in the main site nav. Fixed on
+both fronts:
+
+**2 more service-specific landing pages**, closing out all 5 homepage
+service cards: `handyman-repairs.html` (doors, cabinets & hardware,
+carpentry & trim, weatherstripping) and `assembly-installation.html`
+(flat-pack furniture, shelving, TV mounting, ceiling fans, smart home
+devices). Same template as the other 3 (no triage section, plain
+3-item FAQ). Both added to `sitemap.xml` and wired into the homepage's
+service-modal `learnMore` links.
+
+**All 5 service pages added to the main nav**, site-wide: a CSS-only
+"Services" dropdown (`.nav-dropdown`/`.nav-dropdown-menu`, opens on
+hover/focus, no JS) on desktop, and an always-visible
+`.mobile-services-sublist` under the mobile menu's existing "Services"
+link. The "Services" link itself still points at `#services`/`/#services`
+as before -- the dropdown is purely additive. Rolled out to every
+public marketing page (homepage, all 5 city pages, all 5 service
+pages, about/our-work/terms, blog index + 6 posts). Footer "Services"
+column on the 3 pre-existing service pages updated from 3 links to 5.
+
+New tests: `tests/design/nav-services-dropdown.test.js` (3 tests,
+locking in the nav-dropdown + mobile sublist on every public page, and
+that the dropdown's shadow routes through `--shadow-hover` rather than
+a hardcoded rgba). `tests/design/blueprint-background-coverage.test.js`
+and `tests/design/homepage-stats-bar.test.js` updated for the 2 new
+pages -- the stats-bar test's "communities served" file glob was
+tightened to `handyman-*-ut.html`/`-nv.html` so it stops
+double-counting `handyman-repairs.html` as a city satellite page.
+1,602/1,602 tests passing, all consistency/undefined-vars/link/visual-
+snapshot checks clean.

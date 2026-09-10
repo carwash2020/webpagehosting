@@ -4,13 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <script>
-  // Runs synchronously, before CSS applies, to avoid a flash of the
-  // wrong theme on load. Checks a saved preference first; falls back to
-  // the visitor's OS-level preference if they've never chosen manually.
   (function () {
-    // Defaults to dark mode -- the site's original, preferred look.
-    // Light mode is still fully available via the toggle, it's just no
-    // longer the default a new visitor sees first.
     var saved = localStorage.getItem('th-theme');
     var theme = saved || 'dark';
     if (theme === 'light') document.documentElement.setAttribute('data-theme', 'light');
@@ -26,25 +20,24 @@
   gtag('config', 'G-TMJJMGY2DQ');
 </script>
 
-<title>Handyman & Appliance Repair in Mesquite, NV (By Request) | Triple H Enterprises</title>
-<meta name="description" content="Handyman and appliance repair available by request in Mesquite, Nevada. Based in St. George, UT, about 40 minutes away. Contact us to confirm availability.">
-<link rel="canonical" href="https://www.triplehenterprisesllc.biz/handyman-mesquite-nv.html">
-<meta property="og:title" content="Handyman & Appliance Repair in Mesquite, NV (By Request) | Triple H Enterprises">
-<meta property="og:description" content="Handyman and appliance repair available by request in Mesquite, Nevada. Based in St. George, UT, about 40 minutes away. Contact us to confirm availability.">
+<title>General Handyman Repairs | Triple H Enterprises</title>
+<meta name="description" content="General handyman repairs in St. George, Utah and the surrounding area: doors, cabinets, trim, weatherstripping, and the running list of small jobs that never seem to get done on their own.">
+<link rel="canonical" href="https://www.triplehenterprisesllc.biz/handyman-repairs.html">
+<meta property="og:title" content="General Handyman Repairs | Triple H Enterprises">
+<meta property="og:description" content="General handyman repairs in St. George, Utah and the surrounding area: doors, cabinets, trim, weatherstripping, and the small jobs that never seem to get done on their own.">
 <meta property="og:type" content="website">
-<meta property="og:url" content="https://www.triplehenterprisesllc.biz/handyman-mesquite-nv.html">
+<meta property="og:url" content="https://www.triplehenterprisesllc.biz/handyman-repairs.html">
 <meta property="og:image" content="https://www.triplehenterprisesllc.biz/images/og-image.jpg">
 <meta property="og:image:width" content="1200">
 <meta property="og:image:height" content="628">
 <meta property="og:image:alt" content="Triple H Enterprises - Handyman and Appliance Repair">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:image" content="https://www.triplehenterprisesllc.biz/images/og-image.jpg">
-<meta name="twitter:title" content="Handyman & Appliance Repair in Mesquite, NV (By Request) | Triple H Enterprises">
-<meta name="twitter:description" content="Handyman and appliance repair available by request in Mesquite, Nevada. Based in St. George, UT, about 40 minutes away. Contact us to confirm availability.">
+<meta name="twitter:title" content="General Handyman Repairs | Triple H Enterprises">
+<meta name="twitter:description" content="General handyman repairs in St. George, Utah and the surrounding area.">
 <link rel="shortcut icon" href="/favicon.ico">
 <link rel="icon" href="/favicon.ico">
 <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32.png">
-<link rel="icon" type="image/png" sizes="48x48" href="/images/favicon-48.png">
 <link rel="icon" type="image/png" sizes="96x96" href="/images/favicon-96.png">
 <link rel="icon" type="image/png" sizes="192x192" href="/images/favicon-192.png?v=202608010300">
 <link rel="apple-touch-icon" href="/images/apple-touch-icon.png?v=202608010300">
@@ -59,39 +52,22 @@
 <meta http-equiv="Permissions-Policy" content="camera=(), microphone=(), geolocation=()">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Anton&family=Archivo:wght@400..700&family=Newsreader:ital,opsz,wght@0,6..72,300..700;1,6..72,300..600&family=Oswald:wght@200..700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Anton&family=Archivo:wght@400..700&family=Newsreader:ital,opsz,wght@0,6..72,300..600&family=Oswald:wght@200..700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="/styles.css?v=7bced0f81b">
 <script type="application/ld+json">
 {
   "@context": "https://schema.org",
-  "@type": "HomeAndConstructionBusiness",
-  "name": "Triple H Enterprises - Mesquite",
-  "url": "https://www.triplehenterprisesllc.biz/handyman-mesquite-nv.html",
-  "telephone": "+14354141667",
-  "email": "steve@triplehenterprisesllc.biz",
-  "address": {
-    "@type": "PostalAddress",
-    "addressLocality": "St. George",
-    "postalCode": "84790",
-    "addressRegion": "UT",
-    "addressCountry": "US"
+  "@type": "Service",
+  "serviceType": "General Handyman Repairs",
+  "provider": {
+    "@type": "HomeAndConstructionBusiness",
+    "name": "Triple H Enterprises",
+    "telephone": "+14354141667",
+    "email": "steve@triplehenterprisesllc.biz",
+    "address": { "@type": "PostalAddress", "addressLocality": "St. George", "postalCode": "84790", "addressRegion": "UT", "addressCountry": "US" }
   },
-  "areaServed": [
-    "Mesquite, NV"
-  ],
-  "priceRange": "$$",
-  "image": "https://www.triplehenterprisesllc.biz/images/og-image.jpg",
-  "openingHoursSpecification": [
-    { "@type": "OpeningHoursSpecification", "dayOfWeek": ["Monday","Tuesday","Wednesday","Thursday","Friday"], "opens": "14:00", "closes": "22:00" },
-    { "@type": "OpeningHoursSpecification", "dayOfWeek": "Saturday", "opens": "07:00", "closes": "22:00" },
-    { "@type": "OpeningHoursSpecification", "dayOfWeek": "Sunday", "opens": "14:00", "closes": "20:00" }
-  ],
-  "sameAs": [
-    "https://www.facebook.com/profile.php?id=61560166174024",
-    "https://www.instagram.com/triplehenterprises?igsh=eTVndzQxYXg4emhk",
-    "https://www.linkedin.com/in/steven-robinson-241944424",
-    "https://www.yelp.com/biz/triple-h-enterprises-st-george"
-  ]
+  "areaServed": ["St. George, UT", "Hurricane, UT", "Washington, UT", "Santa Clara, UT", "Ivins, UT", "Cedar City, UT", "Mesquite, NV"],
+  "url": "https://www.triplehenterprisesllc.biz/handyman-repairs.html"
 }
 </script>
 </head>
@@ -174,13 +150,8 @@
 <main id="home">
   <section class="hero">
     <div class="wrap">
-      <p class="coverage-badge is-by-request"><span class="dot"></span>Available by request</p>
-      <h1>Handyman & Appliance Repair in Mesquite, Nevada</h1>
-      <p class="hero-lede">Mesquite sits about 40 minutes southwest of St. George, just
-            across the Utah&ndash;Nevada state line in Clark County. It
-            started as a small agricultural town founded in 1880 and stayed
-            that way for a century, until casino development in the 1980s
-            turned it into the golf-and-casino destination it is today.</p>
+      <h1>General Handyman Repairs</h1>
+      <p class="hero-lede">Doors that stick, loose cabinets and hinges, minor carpentry and trim, weatherstripping, and the running list of small jobs that never seem to get done on their own. If it's broken around your house, there's a good chance we can fix it.</p>
       <div style="display:flex; gap:16px; margin-top:32px; flex-wrap:wrap;">
         <a class="btn orange" href="tel:+14354141667">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
@@ -197,39 +168,24 @@
   <section>
     <div class="wrap">
       <div class="section-head" data-reveal>
-        <h2>By Request Only</h2>
-      </div>
-      <p style="max-width:68ch; color:var(--text-dim); font-size:16px;">Mesquite is a genuine cross-state trip for us, about
-            40 minutes each way, into a different state entirely. We're happy
-            to take jobs out here, but <strong>by request</strong> rather than as part of
-            our standard coverage area, since it's a longer haul than
-            anywhere else we work. Reach out and we'll figure out timing and
-            a fair trip fee for the distance before scheduling anything.</p>
-      <p style="max-width:68ch; color:var(--text-dim); font-size:16px; margin-top:16px;"><strong>Distance from St. George:</strong> Mesquite, NV is about 40 miles / roughly 40 minutes southwest of St. George, across the state line in Clark County, Nevada.</p>
-    </div>
-  </section>
-
-  <section>
-    <div class="wrap">
-      <div class="section-head" data-reveal>
-        <h2>What We Handle in Mesquite</h2>
+        <h2>What We Fix</h2>
       </div>
       <div class="services-grid">
         <div class="service-card">
-          <h3>Appliance Repair</h3>
-          <p>Diagnostics and repair for major household appliances. We look at it in person and give you a price before any work starts.</p>
+          <h3>Doors</h3>
+          <p>Doors that stick, drag, or won't latch properly. Hinges, strike plates, and adjustments.</p>
         </div>
         <div class="service-card">
-          <h3>Plumbing Fixes</h3>
-          <p>Leaky faucets, running toilets, garbage disposals, slow drains, and small pipe leaks under sinks and behind appliances.</p>
+          <h3>Cabinets &amp; Hardware</h3>
+          <p>Loose cabinets, hinges, drawer slides, and hardware swaps.</p>
         </div>
         <div class="service-card">
-          <h3>Drywall &amp; Painting</h3>
-          <p>Hole and crack patching with texture matching, touch-up painting, and full room repaints.</p>
+          <h3>Carpentry &amp; Trim</h3>
+          <p>Minor carpentry and trim repair, baseboards, and small fixes that add up around a house.</p>
         </div>
         <div class="service-card">
-          <h3>Assembly &amp; Installation</h3>
-          <p>Furniture, shelving, TV mounts, ceiling fans, light fixtures, and smart home devices.</p>
+          <h3>Weatherstripping &amp; Small Fixes</h3>
+          <p>Weatherstripping, small energy fixes, and the running list of things you've been meaning to get to.</p>
         </div>
       </div>
       <p style="margin-top:24px;"><a href="/#services">See the full list of services &rarr;</a></p>
@@ -243,16 +199,16 @@
       </div>
       <div class="faq-list">
         <div style="border:1px solid var(--border); border-radius:var(--radius); background:var(--bg-panel); margin-bottom:12px; padding:20px 22px;">
-          <h3 style="font-family:var(--font-ui); font-weight:600; font-size:15.5px; margin:0 0 8px;">Do you charge extra to come out to Mesquite?</h3>
-          <p style="color:var(--text-dim); font-size:14.5px; margin:0; max-width:68ch;">Yes. Mesquite is a genuine cross-state trip, about 40 minutes each way, so a trip fee applies. We'll confirm the fee and check timing with you before anything's booked, since this is by-request coverage rather than a daily service area.</p>
+          <h3 style="font-family:var(--font-ui); font-weight:600; font-size:15.5px; margin:0 0 8px;">Do I need to have a whole list of jobs, or can it just be one thing?</h3>
+          <p style="color:var(--text-dim); font-size:14.5px; margin:0; max-width:68ch;">Either works. Plenty of visits are a single fix; if you do have a running list, it's often more efficient to knock several out in the same visit.</p>
         </div>
         <div style="border:1px solid var(--border); border-radius:var(--radius); background:var(--bg-panel); margin-bottom:12px; padding:20px 22px;">
-          <h3 style="font-family:var(--font-ui); font-weight:600; font-size:15.5px; margin:0 0 8px;">Do you work on appliances as well as general repairs?</h3>
-          <p style="color:var(--text-dim); font-size:14.5px; margin:0; max-width:68ch;">Yes. Appliance diagnostics and repair is a core part of what we do, alongside general handyman work like plumbing fixes, drywall and paint, and assembly/installation.</p>
+          <h3 style="font-family:var(--font-ui); font-weight:600; font-size:15.5px; margin:0 0 8px;">What counts as a "small job" here?</h3>
+          <p style="color:var(--text-dim); font-size:14.5px; margin:0; max-width:68ch;">Doors, cabinets, trim, weatherstripping, and the general list of things that pile up around a house. If you're not sure whether something fits, just ask.</p>
         </div>
         <div style="border:1px solid var(--border); border-radius:var(--radius); background:var(--bg-panel); margin-bottom:12px; padding:20px 22px;">
           <h3 style="font-family:var(--font-ui); font-weight:600; font-size:15.5px; margin:0 0 8px;">How is pricing handled?</h3>
-          <p style="color:var(--text-dim); font-size:14.5px; margin:0; max-width:68ch;">We diagnose the issue in person first, then give you a clear price before any work starts. Nothing gets billed as a surprise on the back end.</p>
+          <p style="color:var(--text-dim); font-size:14.5px; margin:0; max-width:68ch;">We look at the job in person first, then give you a clear price before any work starts. Nothing gets billed as a surprise on the back end.</p>
         </div>
       </div>
     </div>
@@ -283,27 +239,11 @@
 
   <section class="areas-map-section">
     <div class="wrap">
-      <!-- Service radius. Same schematic on every page; each city landing
-           page sets data-focus so its own city is the one lit, which makes
-           the page feel local without inventing any local content. The
-           distances are the verified ones already stated elsewhere on the
-           site, and Cedar City and Mesquite keep their by-request
-           treatment (dashed, orange) here exactly as everywhere else. -->
-      <div class="radius-figure" data-reveal data-focus="mesquite">
+      <div class="section-head" data-reveal>
+        <h2>Where We Work</h2>
+      </div>
+      <div class="radius-figure" data-reveal>
         <svg viewBox="0 0 760 480" role="img" aria-label="Service area diagram centered on St. George, showing Washington City, Hurricane, Santa Clara and Ivins as standard coverage, with Cedar City and Mesquite available by request">
-          <!-- Design feedback (2026-09-08): the old concentric "orbit
-               ring" background read as a gimmicky globe/radar motif,
-               and Washington City/Hurricane's spokes were only 15
-               degrees apart -- cramped regardless of the real driving
-               distance between them. Rings are gone. Every city is now
-               placed by angle-from-hub (clockwise from north) and a
-               radius tier -- 160 for standard coverage, 235 for
-               by-request -- spaced at least 50 degrees apart, with two
-               open ranges (roughly 120-190 and 280-330 degrees) left
-               free for a future city instead of needing a full
-               re-plot. Every label is centered under its own node
-               (text-anchor="middle") so a future addition just needs
-               its own angle/radius, not a fresh clipping check. -->
           <g data-city="washington-city">
             <line class="radius-spoke" pathLength="1" x1="380" y1="210" x2="460" y2="127"/>
             <circle class="radius-node" cx="460" cy="127" r="7"/>
@@ -339,15 +279,6 @@
             <text class="radius-note" x="263" y="367" text-anchor="middle">By request &middot; about 40 minutes southwest</text>
           </g>
 
-          <!-- Hub drawn LAST, after every spoke, so it paints on top of
-               all 5 lines converging on it (2026-09-07, real bug found
-               from a live screenshot: with the hub painted first, in
-               source order, each spoke line painted over it, making
-               spokes look like they pierced straight through the hub
-               dot instead of visibly terminating at it). SVG has no
-               z-index -- later elements always paint over earlier ones
-               at the same stacking context, so document order IS the
-               fix here. -->
           <g data-city="st-george" class="is-hub">
             <circle class="radius-hub" cx="380" cy="210" r="10"/>
             <text class="radius-hub-name" x="380" y="243" text-anchor="middle">ST. GEORGE</text>
@@ -359,55 +290,13 @@
         <span><b></b> Standard coverage</span>
         <span><b class="is-request"></b> Available by request</span>
       </p>
-
-    </div>
-  </section>
-
-  <section id="triage">
-    <div class="wrap">
-      <div class="section-head" data-reveal>
-        <h2>Is it worth fixing?</h2>
-        <p>Tell us what it's doing and we'll tell you what it usually means. No email required, nothing to sign up for.</p>
-      </div>
-
-      <div class="triage-shell" data-reveal>
-        <!-- Symptom-first entry point (Master Audit U02, 2026-09-08):
-             "Customers do not arrive thinking 'appliance repair'; they
-             arrive thinking 'it won't drain'." A grid of the ~20 symptoms
-             triage.js has data for, grouped into closed-by-default rows
-             per appliance, in plain customer language -- each card jumps
-             straight to its result. (Shrink pass, 2026-09-08: this used
-             to sit above a second, separate step-by-step "appliance then
-             symptom" picker that did the same job in a different UI --
-             removed as duplicate weight, see triage.js.) -->
-        <div class="triage-step">
-          <p class="triage-label">Tap what it's doing</p>
-          <div class="triage-symptom-grid" id="triageSymptomGrid" role="group" aria-label="Choose your symptom"></div>
-        </div>
-
-        <div class="triage-result" id="triageResult" hidden aria-live="polite">
-          <h3 class="triage-verdict" id="triageVerdict"></h3>
-          <p class="triage-body" id="triageBody"></p>
-          <p class="triage-caveat">This is what that symptom usually points to, not a diagnosis. The only way to know for certain is to look at the machine, and that's what we'd do.</p>
-          <div class="triage-actions">
-            <a href="tel:+14354141667" class="btn orange js-phone-link">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
-              Call <span class="js-phone-text">(435) 414-1667</span>
-            </a>
-            <a href="/booking.html" class="cta-quiet-link">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
-              or book a visit online
-            </a>
-          </div>
-        </div>
-      </div>
     </div>
   </section>
 
   <section id="schedule">
     <div class="wrap">
       <div class="section-head" data-reveal>
-        <h2>Schedule a Service in Mesquite</h2>
+        <h2>Schedule a Handyman Visit</h2>
       </div>
       <div class="booking-grid">
         <div class="booking-cta">
@@ -469,14 +358,13 @@
         </ul>
       </div>
       <div class="footer-col">
-        <h4>Service Areas</h4>
+        <h4>Services</h4>
         <ul>
-          <li><a href="/#areas">St. George</a></li>
-          <li><a href="/handyman-washington-city-ut.html">Washington City</a></li>
-          <li><a href="/handyman-hurricane-ut.html">Hurricane</a></li>
-          <li><a href="/handyman-santa-clara-ivins-ut.html">Santa Clara &amp; Ivins</a></li>
-          <li><a href="/handyman-cedar-city-ut.html">Cedar City <span style="color:var(--orange-text); font-size:11px;">(by request)</span></a></li>
-          <li><a href="/handyman-mesquite-nv.html">Mesquite, NV <span style="color:var(--orange-text); font-size:11px;">(by request)</span></a></li>
+          <li><a href="/washer-dryer-repair.html">Washer &amp; Dryer Repair</a></li>
+          <li><a href="/plumbing-repairs.html">Plumbing Repairs</a></li>
+          <li><a href="/drywall-painting.html">Drywall &amp; Painting</a></li>
+          <li><a href="/handyman-repairs.html">General Handyman Repairs</a></li>
+          <li><a href="/assembly-installation.html">Assembly &amp; Installation</a></li>
         </ul>
       </div>
       <div class="footer-col">
@@ -505,7 +393,6 @@
     });
   }
 
-  // ---------- theme toggle (desktop button + mobile switch, kept in sync) ----------
   const themeToggleBtn = document.getElementById('themeToggle');
   const themeSwitchMobile = document.getElementById('themeSwitchMobile');
   function getCurrentTheme() {
@@ -526,8 +413,6 @@
     const initialLabel = themeToggleBtn.querySelector('.theme-toggle-label');
     if (initialLabel) initialLabel.textContent = getCurrentTheme() === 'light' ? 'Light Mode' : 'Dark Mode';
   }
-  // Sync the mobile switch to whatever the flash-prevention script in
-  // <head> already decided, before any click happens
   if (themeSwitchMobile) themeSwitchMobile.checked = (getCurrentTheme() === 'dark');
   if (themeToggleBtn) {
     themeToggleBtn.addEventListener('click', () => {
@@ -541,23 +426,13 @@
   }
 </script>
 <script>
-  // Registers the same no-op service worker the internal tools use --
-  // exists only to satisfy PWA installability checks in some browsers.
-  // It doesn't cache anything, so there's no risk of the stale-cache
-  // confusion this project has already been bitten by once before.
   if ('serviceWorker' in navigator) {
     window.addEventListener('load', () => {
       navigator.serviceWorker.register('/service-worker.js').catch(() => {});
     });
   }
 </script>
-
 <script>
-  // Editable phone/email + announcement banners -- same Supabase table
-  // and same fail-silent philosophy as index.html: if this fetch ever
-  // fails or times out, the static phone/email already in this page's
-  // HTML stays exactly as it is. No hours/FAQ/Terms editing on this
-  // page -- those don't exist here to begin with.
   (function () {
     const SITE_CONTENT_SUPABASE_URL = 'https://csvfqdjuobylgafgolho.supabase.co';
     const SITE_CONTENT_SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNzdmZxZGp1b2J5bGdhZmdvbGhvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODUzNTQ3MjcsImV4cCI6MjEwMDkzMDcyN30.6GlvK-DfXf2lppS1kciZtsl4wHOpZz_yKtwsS1lyjrs';
@@ -587,7 +462,6 @@
   })();
 </script>
 <script src="/site-motion.js?v=b440c4131c" defer></script>
-<script src="/triage.js?v=61b78f0f3e" defer></script>
 <script src="/analytics-events.js?v=bdeda1c255" defer></script>
 </body>
 </html>

@@ -60,7 +60,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Anton&family=Archivo:wght@400..700&family=Newsreader:ital,opsz,wght@0,6..72,300..700;1,6..72,300..600&family=Oswald:wght@200..700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="styles.css?v=c41b34c8d5">
+<link rel="stylesheet" href="styles.css?v=7bced0f81b">
 <!-- Improvement roadmap (2026-09-09), tier 1: the hero background is a
      CSS background-image (see .hero in styles.css), so the browser
      doesn't discover it until CSS is parsed -- likely this page's LCP
@@ -284,7 +284,16 @@
     </a>
 
     <ul class="nav-links">
-      <li><a href="#services">Services</a></li>
+      <li class="nav-dropdown">
+        <a href="#services">Services</a>
+        <ul class="nav-dropdown-menu">
+          <li><a href="/washer-dryer-repair.html">Washer &amp; Dryer Repair</a></li>
+          <li><a href="/plumbing-repairs.html">Plumbing Repairs</a></li>
+          <li><a href="/drywall-painting.html">Drywall &amp; Painting</a></li>
+          <li><a href="/handyman-repairs.html">General Handyman Repairs</a></li>
+          <li><a href="/assembly-installation.html">Assembly &amp; Installation</a></li>
+        </ul>
+      </li>
       <li><a href="/our-work.html" id="navGalleryDesktop">Gallery</a></li>
       <li><a href="/blog/">Blog</a></li>
       <li><a href="#reviews">Reviews</a></li>
@@ -313,6 +322,13 @@
   </nav>
   <div class="mobile-menu" id="mobileMenu">
     <a href="#services">Services</a>
+    <ul class="mobile-services-sublist">
+      <li><a href="/washer-dryer-repair.html">Washer &amp; Dryer Repair</a></li>
+      <li><a href="/plumbing-repairs.html">Plumbing Repairs</a></li>
+      <li><a href="/drywall-painting.html">Drywall &amp; Painting</a></li>
+      <li><a href="/handyman-repairs.html">General Handyman Repairs</a></li>
+      <li><a href="/assembly-installation.html">Assembly &amp; Installation</a></li>
+    </ul>
     <a href="/our-work.html" id="navGalleryMobile">Gallery</a>
     <a href="/blog/">Blog</a>
     <a href="#reviews">Reviews</a>
@@ -1983,7 +1999,8 @@
         'Minor carpentry and trim repair',
         'Weatherstripping and small energy fixes',
         'A running list of things you have been meaning to get to'
-      ]
+      ],
+      learnMore: '/handyman-repairs.html'
     },
     plumbing: {
       title: 'Plumbing Fixes and Leaks',
@@ -2027,7 +2044,8 @@
         'TV mounting',
         'Ceiling fans and light fixtures',
         'Smart locks, doorbells, and other small smart home devices'
-      ]
+      ],
+      learnMore: '/assembly-installation.html'
     },
     emergency: {
       title: 'Emergency Calls',
