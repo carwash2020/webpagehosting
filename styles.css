@@ -17,6 +17,63 @@
    exact same cascade order the single combined file always had).
 */
 
+/* Metric-matched fallback fonts (live PageSpeed Insights report,
+   2026-09-10, CLS 0.189): the 4 Google webfonts each reflow the page
+   when they swap in over the browser's default fallback, because
+   Arial's ascent/descent/cap-height don't match theirs -- text set in
+   Arial at the same font-size takes up different vertical space than
+   the same text in Anton/Archivo/Newsreader/Oswald, so the swap moves
+   everything below it.
+
+   Each of these is a LOCAL Arial, re-described with size-adjust/
+   ascent-override/descent-override/line-gap-override tuned so a line
+   set in "Arial" under this name occupies the same box the real
+   webfont will occupy once it loads -- the swap becomes invisible to
+   layout even though the letterforms themselves still change.
+
+   Values computed from each webfont's own OS/2 and hhea tables (real
+   ascent/descent/capHeight/unitsPerEm, not guessed), against Arial's
+   own well-documented metrics (upm 2048, ascent 1854, descent 434,
+   capHeight 1467 -- the same reference values next/font and most
+   metric-matching tools use, since Arial's own font file isn't
+   fetchable to measure directly in every environment). Formula:
+   size-adjust = webfont capHeight-ratio / Arial capHeight-ratio;
+   each *-override = webfont's own ratio, divided by that size-adjust
+   (since size-adjust scales the whole glyph box, the overrides have
+   to compensate to land back on the webfont's real proportions). */
+@font-face {
+  font-family: 'Anton Fallback';
+  src: local('Arial');
+  size-adjust: 119.97%;
+  ascent-override: 98.04%;
+  descent-override: 27.43%;
+  line-gap-override: 0%;
+}
+@font-face {
+  font-family: 'Archivo Fallback';
+  src: local('Arial');
+  size-adjust: 95.77%;
+  ascent-override: 91.68%;
+  descent-override: 21.93%;
+  line-gap-override: 0%;
+}
+@font-face {
+  font-family: 'Newsreader Fallback';
+  src: local('Arial');
+  size-adjust: 93.54%;
+  ascent-override: 78.58%;
+  descent-override: 28.33%;
+  line-gap-override: 0%;
+}
+@font-face {
+  font-family: 'Oswald Fallback';
+  src: local('Arial');
+  size-adjust: 113.08%;
+  ascent-override: 105.50%;
+  descent-override: 25.56%;
+  line-gap-override: 0%;
+}
+
   :root{
     /* ---- Type system (2026-09-06) ----
        Every font-family in this project now resolves through these three
@@ -39,10 +96,10 @@
        keep it clear of Anton. The stack that read flat before (two
        condensed grotesques straight on top of each other) now has a
        serif between them doing the actual reading. */
-    --font-display:'Anton', sans-serif;
-    --font-body:'Newsreader', Georgia, 'Times New Roman', serif;
-    --font-ui:'Oswald', sans-serif;
-    --font-app:'Archivo', -apple-system, 'Segoe UI', sans-serif;
+    --font-display:'Anton', 'Anton Fallback', sans-serif;
+    --font-body:'Newsreader', 'Newsreader Fallback', Georgia, 'Times New Roman', serif;
+    --font-ui:'Oswald', 'Oswald Fallback', sans-serif;
+    --font-app:'Archivo', 'Archivo Fallback', -apple-system, 'Segoe UI', sans-serif;
     --bg:#0a0a0a;
     --bg-panel:#141414;
     --bg-panel-2:#1a1a1a;
