@@ -1267,6 +1267,42 @@ async function markBookingConverted(id, jobId) {
   }
 }
 
+// Relational tables Phase 2, step 1 (2026-09-09): calendar.html's own
+// read of jobs, sourced from the real `jobs` table instead of the
+// localStorage/workspace_sync blob copy -- see
+// sql/infra/add_jobs_to_realtime_phase2.sql for why calendar.html is
+// the deliberately safest starting page (read-only, no write path to
+// break). This is the FIRST of the 4 relational-mirror record types
+// (jobs/invoices/quotes/contracts) to have any real read path off the
+// blob; the rest are still blob-only until their own pages get the
+// same treatment, one at a time.
+async function fetchJobsFromRelational() {
+  if (!isSyncConfigured()) return { ok: false, error: 'not-configured', jobs: [] };
+  try {
+    const res = await fetch(
+      `${SUPABASE_URL}/rest/v1/jobs?select=*&order=id.desc&limit=500`,
+      { headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': `Bearer ${getAuthToken()}` } },
+    );
+    if (!res.ok) return { ok: false, error: 'http-' + res.status, jobs: [] };
+    const rows = await res.json();
+    // Mapped back to the exact shape callers already expect from
+    // loadJobs() elsewhere (camelCase, matching th_tracker_jobs) --
+    // callers shouldn't need to know or care whether a job came from
+    // the relational table or the blob.
+    const jobs = rows.map(r => ({
+      id: r.id, title: r.title, client: r.client, clientId: r.client_id,
+      phone: r.phone, address: r.address, clientEmail: r.client_email,
+      priority: r.priority, date: r.job_date, status: r.status,
+      notes: r.notes, showOnCalendar: !!r.show_on_calendar,
+      statusChangedAt: r.status_changed_at, createdBy: r.created_by,
+      lastEditedBy: r.last_edited_by, referredBy: r.referred_by,
+    }));
+    return { ok: true, jobs };
+  } catch (e) {
+    return { ok: false, error: 'network', jobs: [] };
+  }
+}
+
 async function deleteBooking(id) {
   if (!isSyncConfigured()) return { ok: false, error: 'not-configured' };
   try {
@@ -1504,6 +1540,7 @@ let _supabaseClient = null;
 let _realtimeChannel = null;
 let _leadsRealtimeChannel = null;
 let _bookingsRealtimeChannel = null;
+let _jobsRealtimeChannel = null;
 
 function getSupabaseClient() {
   if (!isSyncConfigured()) return null;
@@ -1725,6 +1762,7 @@ function stopRealtimeSync() {
   if (_realtimeChannel) { _realtimeChannel.unsubscribe(); _realtimeChannel = null; }
   if (_leadsRealtimeChannel) { _leadsRealtimeChannel.unsubscribe(); _leadsRealtimeChannel = null; }
   if (_bookingsRealtimeChannel) { _bookingsRealtimeChannel.unsubscribe(); _bookingsRealtimeChannel = null; }
+  if (_jobsRealtimeChannel) { _jobsRealtimeChannel.unsubscribe(); _jobsRealtimeChannel = null; }
 }
 
 // Same idea again, for th_bookings specifically -- fires on a new
@@ -1774,6 +1812,65 @@ function startBookingsRealtime(onChange, onStatusChange) {
             loggedFailure = true;
             if (typeof logClientError === 'function') {
               logClientError('Realtime th_bookings channel status: ' + status + ` (foreground retries exhausted after ${REALTIME_RETRY_DELAYS.length} attempts; retrying quietly every ${REALTIME_BACKGROUND_RETRY_MS / 1000}s in the background)`, 'sync.js', null, null, null);
+            }
+          }
+          if (onStatusChange) onStatusChange(status);
+          setTimeout(() => attemptSubscribe(REALTIME_RETRY_DELAYS.length), REALTIME_BACKGROUND_RETRY_MS);
+          return;
+        }
+        if (status === 'SUBSCRIBED') loggedFailure = false;
+        if (onStatusChange) onStatusChange(status);
+      });
+  }
+  attemptSubscribe(0);
+
+  setTimeout(() => {
+    if (!realtimeResolved && onStatusChange) onStatusChange('timeout');
+  }, REALTIME_WATCHDOG_MS);
+}
+
+// Relational tables Phase 2, step 1 (2026-09-09) -- same pattern as
+// startBookingsRealtime above, for the real `jobs` table. A job added
+// or edited on one device now shows up on calendar.html on another
+// device without a manual reload, the same guarantee th_bookings
+// already has.
+function startJobsRealtime(onChange, onStatusChange) {
+  const client = getSupabaseClient();
+  if (!client) {
+    if (onStatusChange) onStatusChange('unavailable');
+    return;
+  }
+  let realtimeResolved = false;
+  let loggedFailure = false;
+
+  function attemptSubscribe(attempt) {
+    _jobsRealtimeChannel = client
+      .channel('jobs-realtime')
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'jobs' },
+        () => {
+          try {
+            if (onChange) onChange();
+          } catch (e) {
+            if (typeof logClientError === 'function') {
+              logClientError('Realtime jobs callback failed: ' + (e && e.message ? e.message : String(e)), 'sync.js', null, null, e && e.stack);
+            }
+          }
+        }
+      )
+      .subscribe((status) => {
+        if ((status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') && attempt < REALTIME_RETRY_DELAYS.length) {
+          client.removeChannel(_jobsRealtimeChannel);
+          setTimeout(() => attemptSubscribe(attempt + 1), REALTIME_RETRY_DELAYS[attempt]);
+          return;
+        }
+        realtimeResolved = true;
+        if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
+          if (!loggedFailure) {
+            loggedFailure = true;
+            if (typeof logClientError === 'function') {
+              logClientError('Realtime jobs channel status: ' + status + ` (foreground retries exhausted after ${REALTIME_RETRY_DELAYS.length} attempts; retrying quietly every ${REALTIME_BACKGROUND_RETRY_MS / 1000}s in the background)`, 'sync.js', null, null, null);
             }
           }
           if (onStatusChange) onStatusChange(status);

@@ -170,19 +170,51 @@ development environment used for most of this work can't test it.
 - **Reduced-motion** on a real device, for any of the CSS animations
   added across the various design passes.
 
-## Open follow-up: relational tables Phase 2
+## Open follow-up: relational tables Phase 2 (in progress, one page at a time)
 
 `jobs`/`invoices`/`invoice_line_items`/`quotes`/`quote_line_items`/
 `contracts` are real Postgres tables now (2026-09-08), with real foreign
 keys, dual-written alongside the existing blob-sync save path on every
 real create/update/delete. See README.md's "Jobs/invoices/quotes/
 contracts get real relational tables" section for the full reasoning.
-**Every tool page still reads from localStorage/the blob, unchanged** —
-this was deliberately left as Phase 1 (stand up the schema, prove the
-mirror matches reality) rather than risking a same-session cutover of
-every read path for live production data. Phase 2 — actually moving
-reads to the relational tables and retiring the blob for these 4 record
-types — is real, unstarted work, not something to assume is finished.
+
+**Phase 2 (moving reads to the relational tables, retiring the blob for
+these 4 record types) started 2026-09-09, deliberately one page at a
+time** — confirmed directly: verify each page against production
+before moving to the next, and keep the existing offline-first
+behavior (instant load from a local cache, refreshed once the network
+call resolves) rather than trading it away for a live-network
+dependency. Before starting, the relational tables were confirmed in
+exact sync with the blob (6/6 jobs, 2/2 invoices, 0/0 quotes, 1/1
+contracts) — not catching up on drift.
+
+**Done:** `calendar.html`'s job read (`loadJobsForCalendar()`), chosen
+as the first and safest page specifically because it's **read-only** —
+it never writes `th_tracker_jobs`, so a mistake here can only show
+wrong/stale data, never corrupt anything. `fetchJobsFromRelational()` +
+`startJobsRealtime()` in `tools/sync.js`; `jobs` added to the
+`supabase_realtime` publication
+(`sql/infra/add_jobs_to_realtime_phase2.sql`, alongside `th_bookings`/
+`th_leads`/`workspace_sync`, which were already in it).
+`cachedRelationalJobs` starts `null` (not `[]`, so a genuinely empty
+result isn't mistaken for "hasn't loaded yet") and
+`loadJobsForCalendar()` falls back to the localStorage copy until the
+first fetch resolves — the exact same pattern this page already used
+for `cachedUnconvertedBookings`. Tests:
+`tests/sync/relational-jobs-read-phase2.test.js`.
+
+**Still unstarted:** every other page that touches these 4 record
+types still reads/writes localStorage/the blob only --
+`job-tracker.html`, `workspace.html`, `invoice-generator.html`,
+`contract-generator.html`, `finance.html`, `route-planner.html`,
+`review-request.html`, `runway-dashboard.html`, `dev-tools.html`. Any
+page with a real WRITE path (job-tracker.html, invoice-generator.html,
+contract-generator.html) is meaningfully higher-risk than
+calendar.html was — don't assume the same pattern transfers 1:1
+without checking each page's actual save flow first. The blob itself
+(`workspace_sync.data.th_tracker_jobs` etc.) is not yet retired for any
+of the 4 types — it's still the thing every write path updates, and
+still what every other page's read still depends on.
 
 ## Things that look odd but are deliberate
 

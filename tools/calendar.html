@@ -51,7 +51,7 @@
 <link rel="stylesheet" href="/styles.css?v=c41b34c8d5">
 <link rel="stylesheet" href="/tools/styles-tools.css?v=802b87086c">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.112.3/dist/umd/supabase.js" integrity="sha384-qafw21c/iciq0VXsi9FzkfoQv5I/V0iqE4lSNcKXPnW9/UTJLnv5CcN4FHxVLnKg" crossorigin="anonymous" defer></script>
-<script src="/tools/sync.js?v=7d76e2fc99" defer></script>
+<script src="/tools/sync.js?v=000c5c10e6" defer></script>
 <script src="/tools/tools-effects.js?v=4cff99aa4a" defer></script>
 <script src="/tools/tools-dialogs.js?v=e1dfaa11a1" defer></script>
 <script src="/tools/tools-media-sharing.js?v=0c229c9353" defer></script>
@@ -194,6 +194,24 @@
   // synchronous and don't need restructuring around a network call.
   let cachedUnconvertedBookings = [];
 
+  // Relational tables Phase 2, step 1 (2026-09-09): calendar.html is the
+  // first page to read jobs from the real `jobs` table instead of the
+  // localStorage/workspace_sync blob copy -- see
+  // sql/infra/add_jobs_to_realtime_phase2.sql for why this page was
+  // chosen first (read-only, no write path here to break). null
+  // (distinct from an empty array) means "hasn't loaded yet, or the
+  // fetch failed" -- loadJobsForCalendar() falls back to the
+  // localStorage copy in that case, so this page still renders
+  // instantly offline exactly like before, and never shows a blank
+  // calendar just because the network request hasn't resolved yet.
+  let cachedRelationalJobs = null;
+
+  async function refreshRelationalJobsCache() {
+    if (typeof fetchJobsFromRelational !== 'function') return;
+    const result = await fetchJobsFromRelational();
+    if (result.ok) cachedRelationalJobs = result.jobs;
+  }
+
   async function refreshBookingsCache() {
     if (typeof fetchUnconvertedBookings !== 'function') return;
     const result = await fetchUnconvertedBookings();
@@ -224,10 +242,14 @@
   }
 
   function loadJobsForCalendar() {
-    let jobs = [];
-    try {
-      jobs = JSON.parse(localStorage.getItem('th_tracker_jobs') || '[]');
-    } catch (e) { jobs = []; }
+    let jobs;
+    if (cachedRelationalJobs !== null) {
+      jobs = cachedRelationalJobs;
+    } else {
+      try {
+        jobs = JSON.parse(localStorage.getItem('th_tracker_jobs') || '[]');
+      } catch (e) { jobs = []; }
+    }
     return jobs.filter(j => j.showOnCalendar && j.date).concat(cachedUnconvertedBookings);
   }
 
@@ -482,6 +504,11 @@
     // Requested directly: a fresh booking should show up here without
     // waiting for anyone to manually convert it to a job first.
     refreshBookingsCache().then(() => { renderCalendar(); renderDayDetail(); }).catch(() => { renderCalendar(); renderDayDetail(); });
+    // Relational tables Phase 2, step 1: refresh from the real `jobs`
+    // table once it loads -- until then, loadJobsForCalendar() already
+    // falls back to the localStorage copy, so this re-render is a
+    // (usually silent) correction, never a blank flash.
+    refreshRelationalJobsCache().then(() => { renderCalendar(); renderDayDetail(); });
     // Live updates too: a job scheduled from Job Tracker on another device
     // now shows up here without a manual refresh.
     if (typeof startRealtimeSync === 'function') {
@@ -492,6 +519,12 @@
     // now shows up here live too, rather than needing a manual reload.
     if (typeof startBookingsRealtime === 'function') {
       startBookingsRealtime(() => { refreshBookingsCache().then(() => { renderCalendar(); renderDayDetail(); }); });
+    }
+    // Same for jobs, sourced directly from the `jobs` table -- a job
+    // added/edited on another device now shows up here live too,
+    // independent of the blob's own realtime channel above.
+    if (typeof startJobsRealtime === 'function') {
+      startJobsRealtime(() => { refreshRelationalJobsCache().then(() => { renderCalendar(); renderDayDetail(); }); });
     }
   } catch (initError) {
     try {
