@@ -1894,6 +1894,7 @@
     <h3 id="modalTitle"></h3>
     <p class="modal-intro" id="modalIntro"></p>
     <ul id="modalList"></ul>
+    <p id="modalLearnMore" hidden style="margin:14px 0 0;"><a id="modalLearnMoreLink" href="#">More about this service &rarr;</a></p>
     <div class="modal-actions">
       <a class="btn orange" href="tel:+14354141667">Call Now</a>
       <button class="cta-quiet-link" id="modalSchedule">or schedule online</button>
@@ -1967,7 +1968,8 @@
         "Dishwashers that won't drain or clean well",
         "Ranges, ovens, and microwaves with heating or control issues",
         "Honest advice on repair versus replacement before any work starts"
-      ]
+      ],
+      learnMore: '/washer-dryer-repair.html'
     },
     handyman: {
       title: 'General Handyman Repairs',
@@ -1996,7 +1998,8 @@
         'Slow or clogged drains',
         'Small pipe leaks under sinks and behind appliances',
         "If a job needs a licensed plumber for major repiping or code work, you'll be told upfront"
-      ]
+      ],
+      learnMore: '/plumbing-repairs.html'
     },
     drywall: {
       title: 'Drywall and Painting',
@@ -2009,7 +2012,8 @@
         'Touch up painting on trim, walls, and ceilings',
         'Full room repaints',
         'Prep work and cleanup included in every job'
-      ]
+      ],
+      learnMore: '/drywall-painting.html'
     },
     assembly: {
       title: 'Assembly and Installation',
@@ -2190,6 +2194,8 @@
   const modalList = document.getElementById('modalList');
   const modalSchedule = document.getElementById('modalSchedule');
   const modalClose = document.getElementById('modalClose');
+  const modalLearnMore = document.getElementById('modalLearnMore');
+  const modalLearnMoreLink = document.getElementById('modalLearnMoreLink');
   let releaseModalFocusTrap = null;
   let currentSelectValue = '';
 
@@ -2202,6 +2208,12 @@
     modalTitle.textContent = d.title;
     modalIntro.textContent = d.intro;
     modalList.innerHTML = d.points.map(p => `<li>${checkIcon}<span>${p}</span></li>`).join('');
+    if (d.learnMore) {
+      modalLearnMoreLink.href = d.learnMore;
+      modalLearnMore.hidden = false;
+    } else {
+      modalLearnMore.hidden = true;
+    }
     currentSelectValue = d.select;
     overlay.classList.add('is-open');
     document.body.style.overflow = 'hidden';

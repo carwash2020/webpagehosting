@@ -842,3 +842,33 @@ cache-bust version is tracked the same automatic way as `styles.css`/
 one confirming the honeypot path can never fire `booking_completed`).
 1,597/1,597 tests passing, all consistency/undefined-vars/link/visual-
 snapshot checks clean.
+
+## What changed, 2026-09-10 (later still) — 3 service pages, plus every public page gets the blueprint background
+
+**3 new service-specific landing pages**, same treatment as the 5 city
+pages, built the same way and cross-linked from the homepage's service
+modals (a new "More about this service" link, only shown for these 3):
+`washer-dryer-repair.html`, `plumbing-repairs.html`,
+`drywall-painting.html`. `washer-dryer-repair.html` keeps the full
+triage tool (directly relevant) and links out to the 2 matching blog
+posts; the other two skip triage (not appliance-symptom-based) in
+favor of a plain FAQ section. All 3 added to `sitemap.xml` and the
+homepage's service-modal `learnMore` links.
+
+**Found and fixed a real visual gap, per direct request:** `about.html`,
+`our-work.html`, `terms.html`, the blog index, and all 6 blog posts
+were missing the blueprint-grid background + orange/blue ambient glow
+(`has-blueprint-bg` on `<body>` plus a `.bg-blueprint` div) that
+`index.html`, the 5 city pages, and now the 3 new service pages all
+share -- these pages were quietly built on a different template
+(`blog.css`'s `.blog-body` wrapper) that never picked up that
+treatment. Added it to all 10 pages, matching the exact markup already
+used elsewhere. `booking.html`/`manage-booking.html` deliberately keep
+their own separate, simpler dark theme (never had this treatment, not
+an oversight).
+
+New tests: `tests/design/blueprint-background-coverage.test.js` (2
+tests, locking in every public marketing page carries this treatment
+so a future new page can't quietly skip it the way these did).
+1,599/1,599 tests passing, all consistency/undefined-vars/link/visual-
+snapshot checks clean.
