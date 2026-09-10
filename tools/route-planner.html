@@ -241,15 +241,32 @@
 <script>
   let stopCount = 0;
 
-  // Pulls today's active (not-done) jobs straight from Job Tracker's
-  // stored data -- both tools share the same browser/device storage, so
-  // no live connection or API call is needed, just reading the same key
-  // Job Tracker itself writes to. Jobs with no address on file are
-  // skipped, since there's nothing to route to, but called out by name
-  // so it's clear they were skipped rather than silently missing.
+  // Pulls today's active (not-done) jobs. Jobs with no address on file
+  // are skipped, since there's nothing to route to, but called out by
+  // name so it's clear they were skipped rather than silently missing.
+  //
+  // Relational tables Phase 2, step 2 (2026-09-10): prefers the real
+  // `jobs` table (fetchJobsFromRelational() in sync.js, same function
+  // calendar.html already uses) over the localStorage copy -- this is
+  // a manual, on-demand pull (a button click), not a live render, so
+  // there's no cache/realtime subscription to add here, just a
+  // straight fetch-then-fall-back. Falls back to the localStorage copy
+  // (both tools share the same browser/device storage) if the fetch
+  // fails for any reason -- offline, not signed in, network hiccup --
+  // so this still works exactly as before with no connection.
   async function pullTodaysJobs() {
-    let jobs = [];
-    try { jobs = JSON.parse(localStorage.getItem('th_tracker_jobs') || '[]'); } catch (e) { jobs = []; }
+    let jobs = null;
+    if (typeof fetchJobsFromRelational === 'function') {
+      const result = await fetchJobsFromRelational();
+      if (result.ok) jobs = result.jobs;
+    }
+    // Only fall back when the fetch itself failed (offline, not signed
+    // in, network hiccup) -- a successful fetch that legitimately found
+    // zero jobs is a real answer, not a reason to fall back to a
+    // possibly-stale localStorage copy.
+    if (jobs === null) {
+      try { jobs = JSON.parse(localStorage.getItem('th_tracker_jobs') || '[]'); } catch (e) { jobs = []; }
+    }
     const today = new Date().toISOString().slice(0, 10);
     const todaysJobs = jobs.filter(j => j.date === today && j.status !== 'done');
     const withAddress = todaysJobs.filter(j => (j.address || '').trim());

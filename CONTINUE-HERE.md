@@ -203,18 +203,29 @@ first fetch resolves — the exact same pattern this page already used
 for `cachedUnconvertedBookings`. Tests:
 `tests/sync/relational-jobs-read-phase2.test.js`.
 
+**Also done (step 2, 2026-09-10):** `route-planner.html`'s "Pull
+Today's Jobs" (`pullTodaysJobs()`). Also read-only, and simpler than
+calendar.html — a one-shot manual pull (button click), not a live
+render, so no cache/realtime subscription was needed, just
+`fetchJobsFromRelational()` then fall back to localStorage. The one
+real subtlety: the fallback triggers on `jobs === null` (fetch failed),
+never on a successful-but-empty `[]` result — a genuine "no jobs
+today" answer from the relational table must never get silently
+overridden by a stale local copy. Tests:
+`tests/tools/route-planner-relational-jobs-phase2.test.js`.
+
 **Still unstarted:** every other page that touches these 4 record
 types still reads/writes localStorage/the blob only --
 `job-tracker.html`, `workspace.html`, `invoice-generator.html`,
-`contract-generator.html`, `finance.html`, `route-planner.html`,
-`review-request.html`, `runway-dashboard.html`, `dev-tools.html`. Any
-page with a real WRITE path (job-tracker.html, invoice-generator.html,
-contract-generator.html) is meaningfully higher-risk than
-calendar.html was — don't assume the same pattern transfers 1:1
-without checking each page's actual save flow first. The blob itself
+`contract-generator.html`, `finance.html`, `review-request.html`,
+`runway-dashboard.html`, `dev-tools.html`. Any page with a real WRITE
+path (job-tracker.html, invoice-generator.html, contract-generator.html)
+is meaningfully higher-risk than calendar.html/route-planner.html were
+— don't assume the same pattern transfers 1:1 without checking each
+page's actual save flow first. The blob itself
 (`workspace_sync.data.th_tracker_jobs` etc.) is not yet retired for any
 of the 4 types — it's still the thing every write path updates, and
-still what every other page's read still depends on.
+still what every other remaining page's read still depends on.
 
 ## Things that look odd but are deliberate
 
