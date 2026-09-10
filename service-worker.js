@@ -603,7 +603,7 @@
 // passes only the fetch error itself to logClientError(), so nothing
 // derived from the credential ever reaches the persisted,
 // cross-device-synced client error log.
-const CACHE_NAME = 'th-workspace-v131'; // precache-fingerprint:4f71fc1796ca
+const CACHE_NAME = 'th-workspace-v132'; // precache-fingerprint:6879567c9f68
 const PRECACHE_URLS = [
   '/tools/workspace.html', '/tools/job-tracker.html', '/tools/invoice-generator.html', '/tools/contract-generator.html',
   '/tools/calendar.html', '/tools/route-planner.html', '/tools/review-request.html', '/tools/contact-card.html',
