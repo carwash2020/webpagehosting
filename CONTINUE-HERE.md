@@ -214,15 +214,47 @@ today" answer from the relational table must never get silently
 overridden by a stale local copy. Tests:
 `tests/tools/route-planner-relational-jobs-phase2.test.js`.
 
+**Also done (step 3, 2026-09-10):** `review-request.html`'s "Recent
+completed jobs" dropdown (`loadRecentDoneJobs()`). This page never
+loaded `sync.js` before at all (it didn't otherwise touch the sync
+architecture) — added the script tag narrowly, confirmed safe first
+(every top-level statement in `sync.js` is a function/const
+declaration, no auto-running side effects, so loading it changes
+nothing until something explicitly calls one of its functions). Fixed
+a real bug this conversion would otherwise have introduced:
+`applyRecentJobSelection()` used to call `loadRecentDoneJobs()` a
+second time and index straight into the result — now that the loader
+is async, that would have indexed into a Promise. Fixed by having
+`renderRecentJobs()` cache the exact list it rendered
+(`cachedRecentDoneJobs`) and having the selection handler read from
+that cache instead of re-fetching. Tests:
+`tests/tools/review-request-relational-jobs-phase2.test.js`.
+
+Also added `fetchInvoicesFromRelational()` to `sync.js` (same pattern
+as the jobs version) — built and tested
+(`tests/sync/relational-invoices-read-phase2.test.js`), but **not yet
+wired into any page**. `finance.html` and `runway-dashboard.html` were
+the next obvious candidates (both only read `th_invoices`, never write
+it), but their actual read functions
+(`backfillLegacyInvoicesIntoIncomeLog()`,
+`loadJobTrackerInvoices()`/`totalAccountsReceivable()`/
+`pullMonthFromJobTracker()`) are synchronous helpers called from many
+render call sites, not a single "load once on page open" spot the way
+calendar.html/route-planner.html/review-request.html all were.
+Converting them properly needs a real cache-and-refresh restructure
+(fetch once, cache, have every render call site read the cache) — not
+a same-pass drop-in swap. Don't force the same small pattern onto
+these two without doing that restructure first.
+
 **Still unstarted:** every other page that touches these 4 record
 types still reads/writes localStorage/the blob only --
 `job-tracker.html`, `workspace.html`, `invoice-generator.html`,
-`contract-generator.html`, `finance.html`, `review-request.html`,
-`runway-dashboard.html`, `dev-tools.html`. Any page with a real WRITE
-path (job-tracker.html, invoice-generator.html, contract-generator.html)
-is meaningfully higher-risk than calendar.html/route-planner.html were
-— don't assume the same pattern transfers 1:1 without checking each
-page's actual save flow first. The blob itself
+`contract-generator.html`, `finance.html`, `runway-dashboard.html`,
+`dev-tools.html`. Any page with a real WRITE path (job-tracker.html,
+invoice-generator.html, contract-generator.html) is meaningfully
+higher-risk than the 3 done so far — don't assume the same pattern
+transfers 1:1 without checking each page's actual save flow first. The
+blob itself
 (`workspace_sync.data.th_tracker_jobs` etc.) is not yet retired for any
 of the 4 types — it's still the thing every write path updates, and
 still what every other remaining page's read still depends on.

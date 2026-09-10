@@ -1303,6 +1303,37 @@ async function fetchJobsFromRelational() {
   }
 }
 
+// Relational tables Phase 2, step 3 (2026-09-10): same pattern as
+// fetchJobsFromRelational() above, for the real `invoices` table.
+// Read-only pages only (finance.html, runway-dashboard.html) -- none
+// of their invoice reads use line_items, so this deliberately doesn't
+// join invoice_line_items at all; a page that needs those should ask
+// for them explicitly rather than this function guessing.
+async function fetchInvoicesFromRelational() {
+  if (!isSyncConfigured()) return { ok: false, error: 'not-configured', invoices: [] };
+  try {
+    const res = await fetch(
+      `${SUPABASE_URL}/rest/v1/invoices?select=*&order=id.desc&limit=1000`,
+      { headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': `Bearer ${getAuthToken()}` } },
+    );
+    if (!res.ok) return { ok: false, error: 'http-' + res.status, invoices: [] };
+    const rows = await res.json();
+    // Mapped back to the exact camelCase shape callers already expect
+    // from th_invoices -- same reasoning as fetchJobsFromRelational().
+    const invoices = rows.map(r => ({
+      id: r.id, invoiceNumber: r.invoice_number, clientName: r.client_name,
+      clientId: r.client_id, clientEmail: r.client_email, date: r.invoice_date,
+      terms: r.terms, invoiceType: r.invoice_type, subtotal: r.subtotal,
+      tax: r.tax, discount: r.discount, total: r.total, paid: !!r.paid,
+      paidAmount: r.paid_amount, jobRefId: r.job_id, jobRefTitle: r.job_ref_title,
+      sourceQuoteId: r.source_quote_id, generatedBy: r.generated_by,
+    }));
+    return { ok: true, invoices };
+  } catch (e) {
+    return { ok: false, error: 'network', invoices: [] };
+  }
+}
+
 async function deleteBooking(id) {
   if (!isSyncConfigured()) return { ok: false, error: 'not-configured' };
   try {

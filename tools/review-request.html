@@ -15,6 +15,15 @@
 <html lang="en" style="background-color:#0a0a0a;">
 <head>
 <script src="/tools/auth.js?v=7b87c4fdc1"></script>
+<!-- Relational tables Phase 2, step 3 (2026-09-10): this page never
+     loaded sync.js before (it doesn't otherwise participate in the
+     blob-sync architecture at all) -- added narrowly so
+     loadRecentDoneJobs() can call fetchJobsFromRelational(). Every
+     top-level statement in sync.js is a function/const declaration, no
+     auto-running side effects, so loading it here changes nothing
+     about this page's existing behavior until something explicitly
+     calls one of its functions -- and nothing else here does. -->
+<script src="/tools/sync.js?v=5f8ddf47c9" defer></script>
 <script>
   // Security gate -- redirect to login before this page's own content
   // is meaningfully usable. See auth.js for why this exists (a single
@@ -427,18 +436,37 @@
     input.setSelectionRange(pos, pos);
   }
 
-  // ---------- Recent completed jobs (reads Job Tracker's own data --
-  // same-device localStorage, no API call needed) ----------
-  function loadRecentDoneJobs() {
-    let jobs = [];
-    try { jobs = JSON.parse(localStorage.getItem('th_tracker_jobs') || '[]'); } catch (e) { jobs = []; }
+  // ---------- Recent completed jobs ----------
+  // Relational tables Phase 2, step 3 (2026-09-10): prefers the real
+  // `jobs` table (fetchJobsFromRelational() in sync.js, the same
+  // function calendar.html/route-planner.html already use) over the
+  // localStorage copy. jobs stays null (not []) until a fetch actually
+  // succeeds -- distinguishing "the fetch failed" from "it succeeded
+  // and there are genuinely zero done jobs" -- so a real empty result
+  // never gets silently overridden by a stale local copy.
+  async function loadRecentDoneJobs() {
+    let jobs = null;
+    if (typeof fetchJobsFromRelational === 'function') {
+      const result = await fetchJobsFromRelational();
+      if (result.ok) jobs = result.jobs;
+    }
+    if (jobs === null) {
+      try { jobs = JSON.parse(localStorage.getItem('th_tracker_jobs') || '[]'); } catch (e) { jobs = []; }
+    }
     return jobs
       .filter(j => j.status === 'done')
       .sort((a, b) => new Date(b.statusChangedAt || b.date || 0) - new Date(a.statusChangedAt || a.date || 0))
       .slice(0, 8);
   }
-  function renderRecentJobs() {
-    const jobs = loadRecentDoneJobs();
+  // The exact list rendered into the dropdown -- applyRecentJobSelection()
+  // below reads from this cache instead of calling loadRecentDoneJobs()
+  // again, so the selected index always matches what's actually shown
+  // (no risk of a second network round-trip landing a different order),
+  // and picking a job is instant, not another await.
+  let cachedRecentDoneJobs = [];
+  async function renderRecentJobs() {
+    const jobs = await loadRecentDoneJobs();
+    cachedRecentDoneJobs = jobs;
     const section = document.getElementById('recentJobsSection');
     if (jobs.length === 0) { section.style.display = 'none'; return; }
     section.style.display = '';
@@ -459,7 +487,7 @@
   function applyRecentJobSelection() {
     const idx = document.getElementById('recentJobSelect').value;
     if (idx === '') return;
-    const job = loadRecentDoneJobs()[Number(idx)];
+    const job = cachedRecentDoneJobs[Number(idx)];
     if (!job) return;
     if (job.client) document.getElementById('custName').value = job.client.split(' ')[0];
     if (job.title) document.getElementById('jobDesc').value = job.title;
@@ -743,7 +771,7 @@
     // bug class just found and fixed on invoice-generator.html and
     // route-planner.html.
     updatePreviewAndLink();
-    renderRecentJobs();
+    await renderRecentJobs();
     renderPendingReminders();
     renderSentLog();
     initAppTour();
