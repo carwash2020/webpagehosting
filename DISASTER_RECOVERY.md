@@ -1118,3 +1118,52 @@ against a `jsonb` array column, here or anywhere else):
    template's own interval in Job Tracker before assuming the portal
    side is broken.
 has had a few minutes to run and re-index.
+
+## Scenario 19: A client account seems able to call an internal-only database function, or two RLS policies look redundant on the same table
+
+1. **`next_invoice_number()`/`next_quote_number()`** are `SECURITY DEFINER`
+   and restrict themselves internally: each starts with
+   `if not public.current_user_has_any_role() then raise exception ...`.
+   A client-portal account (any `authenticated` login without a row in
+   `account_roles`) gets that exception, not a number. If an internal
+   account gets the same exception unexpectedly, check `account_roles`
+   for that account's email first — this is almost always a missing/
+   mistyped role row, not a bug in the function.
+2. **`guard_last_role_manager_permission()`, `notify_new_work_order_email()`,
+   `notify_work_order_message_email()`, `notify_work_order_scheduled_email()`**
+   all show up in Supabase's security advisor as anon/authenticated-callable
+   `SECURITY DEFINER` functions — they are **not** actually callable that
+   way. All 4 are `RETURNS trigger` functions, and Postgres itself refuses
+   to run a trigger-return-type function outside of a real trigger fire:
+   `select guard_last_role_manager_permission();` (or any of the other 3)
+   returns `ERROR: 0A000: trigger functions can only be called as
+   triggers`, confirmed directly. This is the same shape as
+   `notify_new_lead()` back in August (see Scenario "worked as intended"
+   pattern throughout this doc) — the advisor flags "callable by
+   anon/authenticated," it can't tell that Postgres itself blocks the
+   call regardless of role. Don't revoke `EXECUTE` on these or convert
+   them away from being trigger-only "to be safe" — they're already safe,
+   and doing so would break the trigger itself.
+3. **7 tables intentionally carry one merged SELECT/INSERT/ALL policy**
+   instead of two ("clients view their own X" OR-ed with "internal
+   accounts view all X" in a single `USING`/`WITH CHECK` clause):
+   `card_authorizations`, `client_notification_preferences`,
+   `client_portal_quotes`, `client_portal_work_order_messages` (both its
+   INSERT and SELECT policies), `client_portal_work_orders`,
+   `client_profiles`, and `push_subscriptions`. This is a straight port of
+   the same fix already applied once to `workspace_sync`/`th_leads` back
+   in August (duplicate permissive policies get evaluated twice per
+   query) — it just hadn't been carried forward into the tables built
+   during the relational-tables and client-portal work. If you need to
+   change who can see a row on one of these tables, edit the merged
+   policy's `OR` condition directly rather than splitting it back into two
+   policies; splitting it reintroduces the exact performance issue this
+   fixed. `sql/infra/audit_round3_security_and_performance_fixes.sql` has
+   the full before/after for all of them.
+4. **`card_authorizations`** holds `stripe_customer_id` (a Stripe
+   reference) and an `authorization_text`/`signer_name` record — never a
+   raw card number or CVV. Confirmed directly by reading its column list,
+   not just the advisor's summary. Only `SELECT` policies exist on it;
+   all writes go through a `service_role` edge function. If a future
+   audit flags this table again, re-verify the columns rather than
+   assuming the shape changed.

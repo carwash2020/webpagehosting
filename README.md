@@ -741,3 +741,53 @@ DB filters are `eq.`, not the `cs.` operator that broke here).
 Confirmed separately by Steve/Connor: all three already work in real
 day-to-day use (sending/resending real invoices and invites through
 the tools).
+
+## What changed, 2026-09-10 — audit round 3: backend security/performance pass
+
+Went straight at the live Supabase project's own security and
+performance advisor for the first time (not just reading SQL files),
+covering ground the first two audit rounds hadn't touched. See
+`DISASTER_RECOVERY.md` Scenario 19 for the full write-up;
+`sql/infra/audit_round3_security_and_performance_fixes.sql` has the
+complete before/after SQL.
+
+**Fixed:**
+- `next_invoice_number()`/`next_quote_number()` were callable by *any*
+  authenticated account, including client portal logins now that
+  clients have real logins of their own -- a client account could have
+  advanced the invoice/quote sequence, or simply learned how many
+  invoices the business has issued. Both now raise an exception for
+  any caller that isn't an internal account (`current_user_has_any_role()`,
+  the same check RLS policies already use elsewhere for this exact
+  distinction), verified directly by calling both and confirming the
+  exception fires.
+- 7 tables (`card_authorizations`, `client_notification_preferences`,
+  `client_portal_quotes`, `client_portal_work_order_messages`,
+  `client_portal_work_orders`, `client_profiles`, `push_subscriptions`)
+  each carried two separate permissive RLS policies for the same
+  action, evaluated twice per query -- the identical performance issue
+  already fixed once on `workspace_sync`/`th_leads` back in August, just
+  never carried forward into the tables built during the relational-
+  tables and client-portal work. Merged into one policy per action with
+  an `OR` condition; access itself is unchanged.
+- 5 foreign keys with no covering index
+  (`client_portal_work_orders.linked_quote_id`,
+  `quote_questions.quote_id`, `referrals.referred_job_id`,
+  `th_bookings.checkup_id`, `th_bookings.quote_id`) now have one.
+
+**Verified safe, no code change:** `guard_last_role_manager_permission()`
+and the 3 work-order notification functions are flagged by the advisor
+as anon/authenticated-callable, but all 4 are `RETURNS trigger`
+functions -- Postgres itself refuses to invoke those outside a real
+trigger fire (confirmed directly: calling any of them returns `ERROR:
+trigger functions can only be called as triggers`). Also confirmed by
+direct column read: `card_authorizations` holds a Stripe customer
+reference and an authorization/signature record, never a raw card
+number.
+
+Re-ran Supabase's advisor after applying the fixes: the
+`multiple_permissive_policies` finding is gone entirely, the 5 new
+indexes are in place, and the two number-generator functions now
+reject non-internal callers. 1,591/1,591 tests still passing (this
+pass touched only the live database, not the site's own code), all
+consistency/link checks clean.
