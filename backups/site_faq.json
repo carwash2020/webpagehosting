@@ -82,5 +82,26 @@
         "answer": "Whichever is easiest for you. Use \"Book Instantly\" to pick an open time slot, fill out the request form for something more detailed, or just call or text (435) 414-1667 directly.",
         "sort_order": 12,
         "updated_at": "2026-08-13T22:56:04.175908+00:00"
+    },
+    {
+        "id": 13,
+        "question": "Is a deposit required to book?",
+        "answer": "No. Booking online never asks for payment information \u2014 you're only charged after the visit, based on the final invoice.",
+        "sort_order": 13,
+        "updated_at": "2026-09-09T19:01:41.66573+00:00"
+    },
+    {
+        "id": 14,
+        "question": "Should pets be put away before you arrive?",
+        "answer": "Please keep pets secured during the visit. It keeps them safe and makes it easier to work around tools, open doors, and appliances.",
+        "sort_order": 14,
+        "updated_at": "2026-09-09T19:01:41.66573+00:00"
+    },
+    {
+        "id": 15,
+        "question": "Do you have a referral program?",
+        "answer": "Yes. Refer someone and you'll get a $25 credit toward your next service once their job is complete and paid. Just have them mention your name when they book, or ask about it when scheduling.",
+        "sort_order": 15,
+        "updated_at": "2026-09-09T20:56:31.509148+00:00"
     }
 ]
