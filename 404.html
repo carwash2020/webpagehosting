@@ -52,6 +52,7 @@
     line-height:1;
   }
   p{color:#9a9a9a; font-size:16px; max-width:420px; margin:16px 0 32px;}
+  .btn-row{display:flex; flex-wrap:wrap; gap:14px; justify-content:center;}
   a.btn{
     display:inline-flex;
     align-items:center;
@@ -66,12 +67,16 @@
     font-size:14px;
     text-decoration:none;
   }
+  a.btn.orange{background:linear-gradient(135deg,#ffb347,#ff8000 60%,#c96400); color:#1a1000;}
 </style>
 </head>
 <body>
   <img src="/images/logo-signature.webp?v=202608010300" alt="Triple H Enterprises logo">
   <h1>404</h1>
-  <p>This page took a wrong turn. The page you're looking for doesn't exist or may have moved.</p>
-  <a class="btn" href="/">Back to Home</a>
+  <p>This page took a wrong turn. The page you're looking for doesn't exist or may have moved. If you were trying to reach us, we're still just a call or text away.</p>
+  <div class="btn-row">
+    <a class="btn" href="/">Back to Home</a>
+    <a class="btn orange" href="tel:+14354141667">Call (435) 414-1667</a>
+  </div>
 </body>
 </html>

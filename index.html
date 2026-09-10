@@ -2304,6 +2304,9 @@
         status.textContent = "Request sent! We'll follow up by phone or email shortly.";
         status.classList.add('is-success');
         submitBtn.textContent = 'Sent ✓';
+        if (typeof gtag === 'function') {
+          gtag('event', 'lead_form_submitted', { service: formData.get('service') || '' });
+        }
         form.reset();
       } else {
         throw new Error('Form submission failed');
@@ -2940,5 +2943,6 @@
 
 
 <script src="/triage.js?v=61b78f0f3e" defer></script>
+<script src="/analytics-events.js?v=bdeda1c255" defer></script>
 </body>
 </html>

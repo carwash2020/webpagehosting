@@ -15,7 +15,15 @@
 <meta property="og:image:height" content="628">
 <meta property="og:image:alt" content="Triple H Enterprises - Handyman and Appliance Repair, St. George Utah">
 <link rel="apple-touch-icon" href="/images/apple-touch-icon.png">
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data:; connect-src 'self' https://*.supabase.co; frame-src 'none'; object-src 'none'; base-uri 'self'; frame-ancestors 'none';">
+<!-- Google tag (gtag.js) -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-TMJJMGY2DQ"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+  gtag('config', 'G-TMJJMGY2DQ');
+</script>
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://www.googletagmanager.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data:; connect-src 'self' https://www.google-analytics.com https://*.google-analytics.com https://analytics.google.com https://*.analytics.google.com https://www.google.com https://*.supabase.co; frame-src 'none'; object-src 'none'; base-uri 'self'; frame-ancestors 'none';">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <meta http-equiv="Permissions-Policy" content="camera=(), microphone=(), geolocation=()">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -599,6 +607,7 @@
     const panels = { 1: 'stepService', 2: 'stepDateTime', 3: 'stepContact', 4: 'stepConfirmed' };
     if (panels[n]) document.getElementById(panels[n]).classList.add('is-active');
     if (n <= 3) window.scrollTo({ top: 0, behavior: 'smooth' });
+    if (n <= 3 && typeof gtag === 'function') gtag('event', 'booking_step_view', { step: n });
   }
 
   document.getElementById('backToService').addEventListener('click', function () { goToStep(1); });
@@ -717,6 +726,7 @@
           document.getElementById('confirmationDetail').innerHTML =
             '<div class="hex-icon">' + svgIcon(selectedService.icon) + '</div>' +
             '<div><strong>' + selectedService.label + '</strong>' + dateLabel + ' at ' + selectedSlot.label + '</div>';
+          if (typeof gtag === 'function') gtag('event', 'booking_completed', { service: selectedService.key });
           goToStep(4);
           return;
         }
@@ -779,5 +789,6 @@
 })();
 </script>
 
+<script src="/analytics-events.js?v=bdeda1c255" defer></script>
 </body>
 </html>

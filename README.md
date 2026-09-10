@@ -791,3 +791,54 @@ indexes are in place, and the two number-generator functions now
 reject non-internal callers. 1,591/1,591 tests still passing (this
 pass touched only the live database, not the site's own code), all
 consistency/link checks clean.
+
+## What changed, 2026-09-10 (later still) — audit round 5: GA4 had zero custom events
+
+Backend security/performance were re-verified unchanged (Supabase's
+advisor showed nothing new since round 3). This round found something
+new: GA4 had run on every public page since the site launched, but had
+never once received a custom event -- only the default pageview. Steve
+and Connor could see how many people visited a page, but had no way to
+tell which landing page, blog post, or traffic source actually turned
+into a real call, text, or booking, because that link only exists
+inside GA4's own attribution model, and GA4 had nothing to attribute.
+
+Added `analytics-events.js`, a small shared script (same pattern as
+`site-motion.js`/`triage.js` -- loaded via absolute path from every
+public page) that fires:
+- `phone_click` / `text_click` on any `tel:`/`sms:` link, anywhere on
+  the page, via one delegated click listener (also covers phone/text
+  links added later by JS, e.g. the business-hours override).
+- `chat_opened` when the homepage's chat bubble is opened.
+
+Plus two events added inline at points that already existed:
+- `lead_form_submitted` on the homepage's schedule form -- fires only
+  on the real successful Supabase insert, not optimistically.
+- `booking_step_view` (booking.html's `goToStep()`, the one place
+  every step transition already passes through) and `booking_completed`
+  -- fires only on the real successful `th_bookings` insert, deliberately
+  NOT on the honeypot bot-trap path, which fakes a success screen for
+  bots without ever creating a booking.
+
+**Found along the way: `booking.html` had no GA4 at all**, not just
+missing events. Its `Content-Security-Policy` (`script-src 'self'
+'unsafe-inline'`, no `googletagmanager.com`) would have silently
+blocked Google's tag script even if one had been added -- likely
+deliberate, since it's the one page with a full name/phone/email/
+address form. Asked directly rather than assuming either way: the
+answer was to add it, using the exact same CSP allowlist pattern
+already used on every other public page (index.html, the 5 city pages,
+terms.html) -- `https://www.googletagmanager.com` in `script-src`,
+`google-analytics.com`/`analytics.google.com` in `connect-src`. Nothing
+else about that page's CSP loosened.
+
+Also added, per direct request: a call button on `404.html` (previously
+only "Back to Home" -- someone who lands there from a broken link or
+typo is still a potential customer). `analytics-events.js` was added to
+`GLOBAL_SHARED_FILES` in `scripts/check-consistency.js` so its
+cache-bust version is tracked the same automatic way as `styles.css`/
+`triage.js`/`business-hours.js`/`site-motion.js`. New tests in
+`tests/content-quality/analytics-events.test.js` (6 tests, including
+one confirming the honeypot path can never fire `booking_completed`).
+1,597/1,597 tests passing, all consistency/undefined-vars/link/visual-
+snapshot checks clean.
