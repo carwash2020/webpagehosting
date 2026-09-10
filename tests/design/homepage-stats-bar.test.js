@@ -40,7 +40,9 @@ test('the review-count stat matches the JSON-LD reviewCount exactly', () => {
 });
 
 test('the communities-served stat matches the number of satellite landing pages plus this one', () => {
-  const landingPages = fs.readdirSync(repo('.')).filter((f) => /^handyman-.*\.html$/.test(f));
+  // Matches only the city satellite pages (handyman-<city>-ut.html /
+  // -nv.html), not service pages like handyman-repairs.html.
+  const landingPages = fs.readdirSync(repo('.')).filter((f) => /^handyman-.*-(ut|nv)\.html$/.test(f));
   const statBlock = INDEX.slice(INDEX.indexOf('Southern Utah Communities Served') - 200, INDEX.indexOf('Southern Utah Communities Served'));
   const statMatch = statBlock.match(/data-count-to="(\d+)">0</);
   assert.ok(statMatch, 'expected the communities-served stat-count element');
