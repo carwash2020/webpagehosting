@@ -6,7 +6,7 @@
     "node": "^22.22.2 || ^24.15.0 || >=26.0.0"
   },
   "scripts": {
-    "test": "cd tests && node --test",
+    "test": "cd tests && node --test --test-concurrency=1",
     "check-visual-snapshot": "node scripts/check-visual-snapshot.js",
     "check-consistency": "node scripts/check-consistency.js",
     "fix-versions": "node scripts/check-consistency.js --fix-versions",

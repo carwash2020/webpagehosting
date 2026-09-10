@@ -105,8 +105,22 @@ python3 scripts/check-links.py   # expect: everything resolved
 npm test                         # expect: ALL PASSING, see below
 ```
 
-**`npm test` should be fully green.** As of 2026-09-08 it's 1538/1538. An
-earlier version of this document said the suite had "many pre-existing
+**`npm test` should be fully green.** As of 2026-09-10 it's 1591/1591,
+now run with `--test-concurrency=1` (serial, not parallel) -- a few
+tests in `tests/workspace/finance-split.test.js` temporarily write
+"broken" content directly to the real `service-worker.js` (and a couple
+other real files) on disk to test `check-consistency.js`'s negative
+cases, then restore it; under the default parallel test runner this
+could race with a *different* test file concurrently shelling out to
+`check-consistency.js` against that same real file mid-mutation,
+producing an occasional unrelated-looking failure (or leaving
+`service-worker.js` modified on disk after a run). Confirmed via
+repeated reruns and a clean-checkout comparison before making this
+change -- it wasn't a real regression, just a race. Serial execution
+costs real wall-clock time (~100s -> ~4.5min for the full suite) but
+makes that whole class of flakiness structurally impossible rather than
+something to remember to double-check. An earlier version of this
+document said the suite had "many pre-existing
 failures... unrelated to the public site" and told a future session to
 disregard a red run — **that was wrong, and it was actively harmful**: it
 told a session to ignore the one signal that would have caught a real
