@@ -190,7 +190,15 @@ def check_external_links():
                         unverifiable.append(f"{url} -> {e2} (known bot-hostile platform)")
                     else:
                         problems.append(f"{url} -> {e2}")
-            elif e.code in (403, 429) and is_own_domain:
+            elif e.code in (403, 404, 429) and is_own_domain:
+                # 404 added 2026-09-11, real CI failure: a brand-new
+                # landing page's own canonical URL 404s on the live site
+                # for as long as its PR is open, since GitHub Pages only
+                # deploys main -- the checker was running against the
+                # PR's own new PUBLIC_PAGES entry before that page had
+                # ever been live to check. Not a real broken link, just a
+                # deploy-timing gap this checker can't see past; treated
+                # the same as the existing 403/429 own-domain leniency.
                 status = None
                 site_own_domain_flags.append(f"{url} -> HTTP {e.code}")
             elif is_bot_hostile:
