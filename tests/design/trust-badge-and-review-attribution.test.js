@@ -64,7 +64,7 @@ test('every review carries the real Google mark, not a fabricated per-reviewer a
 });
 
 test('no review invents a reviewer name, initial, or photo -- every one stays anonymized', () => {
-  const reviewSlides = [...HTML.matchAll(/<div class="review-card">[\s\S]*?<\/div>\s*<\/div>/g)];
+  const reviewSlides = [...HTML.matchAll(/<div class="review-card"[^>]*>[\s\S]*?<\/div>\s*<\/div>/g)];
   assert.ok(reviewSlides.length >= 7);
   for (const m of reviewSlides) {
     assert.match(m[0], />Verified Customer</, 'every review should stay anonymized, not attributed to an invented name');
