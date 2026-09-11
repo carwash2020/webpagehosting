@@ -127,8 +127,8 @@ test('the service-details modal establishes the trap on open and releases it on 
   assert.match(closeFn, /if \(releaseModalFocusTrap\) \{ releaseModalFocusTrap\(\); releaseModalFocusTrap = null; \}/);
 });
 
-test('none of the 5 city landing pages carry any of these modals, confirming the local (non-shared-file) placement is correct', () => {
-  const pages = ['handyman-cedar-city-ut.html', 'handyman-hurricane-ut.html', 'handyman-mesquite-nv.html', 'handyman-santa-clara-ivins-ut.html', 'handyman-washington-city-ut.html'];
+test('none of the 7 city landing pages carry any of these modals, confirming the local (non-shared-file) placement is correct', () => {
+  const pages = ['handyman-cedar-city-ut.html', 'handyman-hurricane-ut.html', 'handyman-mesquite-nv.html', 'handyman-santa-clara-ivins-ut.html', 'handyman-washington-city-ut.html', 'handyman-la-verkin-ut.html', 'handyman-leeds-ut.html'];
   for (const page of pages) {
     const html = fs.readFileSync(repo(page), 'utf8');
     assert.doesNotMatch(html, /id="galleryOverlay"|id="emailOverlay"|id="modalOverlay"/, `${page} unexpectedly carries a modal this fix assumed only index.html has`);

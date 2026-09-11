@@ -24,13 +24,15 @@ const PAGES = {
   'handyman-mesquite-nv.html': fs.readFileSync(repo('handyman-mesquite-nv.html'), 'utf8'),
   'handyman-santa-clara-ivins-ut.html': fs.readFileSync(repo('handyman-santa-clara-ivins-ut.html'), 'utf8'),
   'handyman-washington-city-ut.html': fs.readFileSync(repo('handyman-washington-city-ut.html'), 'utf8'),
+  'handyman-la-verkin-ut.html': fs.readFileSync(repo('handyman-la-verkin-ut.html'), 'utf8'),
+  'handyman-leeds-ut.html': fs.readFileSync(repo('handyman-leeds-ut.html'), 'utf8'),
 };
 
 for (const [name, html] of Object.entries(PAGES)) {
-  test(`${name}: the 3 solid spokes carry pathLength="1" for the stroke-draw trick, the 2 dashed "by request" spokes do not`, () => {
+  test(`${name}: the 5 solid spokes carry pathLength="1" for the stroke-draw trick, the 2 dashed "by request" spokes do not`, () => {
     const solidSpokes = [...html.matchAll(/<line class="radius-spoke" pathLength="1"[^/]*\/>/g)];
     const dashedSpokes = [...html.matchAll(/<line class="radius-spoke is-request"[^/]*\/>/g)];
-    assert.equal(solidSpokes.length, 3, `expected 3 solid spokes with pathLength="1" in ${name}`);
+    assert.equal(solidSpokes.length, 5, `expected 5 solid spokes with pathLength="1" in ${name}`);
     assert.equal(dashedSpokes.length, 2, `expected 2 dashed "is-request" spokes in ${name}`);
     // None of the dashed spokes should carry pathLength -- doing so would
     // reinterpret their real stroke-dasharray:5 5 in a 0-1 coordinate
@@ -39,7 +41,7 @@ for (const [name, html] of Object.entries(PAGES)) {
   });
 
   test(`${name}: every city group is present for the per-city animation-timing selectors to target`, () => {
-    ['washington-city', 'hurricane', 'santa-clara-ivins', 'cedar-city', 'mesquite'].forEach((city) => {
+    ['washington-city', 'hurricane', 'santa-clara-ivins', 'la-verkin', 'leeds', 'cedar-city', 'mesquite'].forEach((city) => {
       assert.match(html, new RegExp(`data-city="${city}"`));
     });
   });
@@ -58,9 +60,9 @@ test('the dashed "by request" spokes start invisible and fade in rather than usi
 test('each city has its own transition-delay, so spokes draw at different times rather than all at once', () => {
   const delays = [...STYLES.matchAll(/g\[data-city="([a-z-]+)"\] \.radius-spoke\{transition-delay:([\d.]+)s;\}/g)]
     .map((m) => ({ city: m[1], delay: Number(m[2]) }));
-  assert.equal(delays.length, 5, 'expected a transition-delay rule for all 5 cities');
+  assert.equal(delays.length, 7, 'expected a transition-delay rule for all 7 cities');
   const uniqueDelays = new Set(delays.map((d) => d.delay));
-  assert.equal(uniqueDelays.size, 5, `expected 5 distinct delays, got ${[...uniqueDelays].join(', ')}`);
+  assert.equal(uniqueDelays.size, 7, `expected 7 distinct delays, got ${[...uniqueDelays].join(', ')}`);
   // Nearer/standard-coverage cities should arrive before the two
   // "by request" cities, matching their already-established visual
   // secondary treatment (dashed, orange).

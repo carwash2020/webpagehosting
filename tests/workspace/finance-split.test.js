@@ -441,7 +441,8 @@ test('JT_TAB_ORDER only lists tabs that actually still exist on job-tracker.html
 
 test('the public site pages were not touched at all -- same filename, no new link tag needed', () => {
   const publicPages = ['index.html', 'handyman-cedar-city-ut.html', 'handyman-hurricane-ut.html',
-    'handyman-mesquite-nv.html', 'handyman-santa-clara-ivins-ut.html', 'handyman-washington-city-ut.html'];
+    'handyman-mesquite-nv.html', 'handyman-santa-clara-ivins-ut.html', 'handyman-washington-city-ut.html',
+    'handyman-la-verkin-ut.html', 'handyman-leeds-ut.html'];
   for (const page of publicPages) {
     const src = fs.readFileSync(path.join(__dirname, '..', '..', page), 'utf8');
     assert.doesNotMatch(src, /styles-tools\.css/, page + ' is public-facing and should never load the tool-suite stylesheet');

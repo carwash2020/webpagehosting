@@ -32,6 +32,8 @@ const CITY_PAGES = {
   'handyman-mesquite-nv.html': { variant: 'is-by-request', text: 'Available by request' },
   'handyman-santa-clara-ivins-ut.html': { variant: 'is-standard', text: 'Serving Santa Clara & Ivins' },
   'handyman-washington-city-ut.html': { variant: 'is-standard', text: 'Serving Washington City' },
+  'handyman-la-verkin-ut.html': { variant: 'is-standard', text: 'Serving La Verkin' },
+  'handyman-leeds-ut.html': { variant: 'is-standard', text: 'Serving Leeds' },
 };
 
 test('no marketing page carries the generic ALL-CAPS eyebrow label anymore', () => {

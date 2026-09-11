@@ -2829,7 +2829,9 @@
   /* Each spoke leaves the hub at a different moment -- nearer cities
      first -- rather than every line drawing at once. */
   html.reveal-ready .radius-figure.is-visible g[data-city="washington-city"] .radius-spoke{transition-delay:.1s;}
+  html.reveal-ready .radius-figure.is-visible g[data-city="leeds"] .radius-spoke{transition-delay:.15s;}
   html.reveal-ready .radius-figure.is-visible g[data-city="hurricane"] .radius-spoke{transition-delay:.25s;}
+  html.reveal-ready .radius-figure.is-visible g[data-city="la-verkin"] .radius-spoke{transition-delay:.32s;}
   html.reveal-ready .radius-figure.is-visible g[data-city="santa-clara-ivins"] .radius-spoke{transition-delay:.4s;}
   html.reveal-ready .radius-figure.is-visible g[data-city="cedar-city"] .radius-spoke{transition-delay:.55s;}
   html.reveal-ready .radius-figure.is-visible g[data-city="mesquite"] .radius-spoke{transition-delay:.7s;}
@@ -2843,7 +2845,9 @@
   /* Each node pulses right as its own spoke finishes arriving --
      transition-delay + transition-duration from above, matched here. */
   html.reveal-ready .radius-figure.is-visible g[data-city="washington-city"] .radius-node{animation:radiusPulse .5s ease-out .6s backwards;}
+  html.reveal-ready .radius-figure.is-visible g[data-city="leeds"] .radius-node{animation:radiusPulse .5s ease-out .65s backwards;}
   html.reveal-ready .radius-figure.is-visible g[data-city="hurricane"] .radius-node{animation:radiusPulse .5s ease-out .75s backwards;}
+  html.reveal-ready .radius-figure.is-visible g[data-city="la-verkin"] .radius-node{animation:radiusPulse .5s ease-out .82s backwards;}
   html.reveal-ready .radius-figure.is-visible g[data-city="santa-clara-ivins"] .radius-node{animation:radiusPulse .5s ease-out .9s backwards;}
   html.reveal-ready .radius-figure.is-visible g[data-city="cedar-city"] .radius-node{animation:radiusPulse .5s ease-out 1s backwards;}
   html.reveal-ready .radius-figure.is-visible g[data-city="mesquite"] .radius-node{animation:radiusPulse .5s ease-out 1.15s backwards;}
@@ -3192,6 +3196,8 @@
   .radius-figure[data-focus="washington-city"]  g[data-city="washington-city"],
   .radius-figure[data-focus="hurricane"]        g[data-city="hurricane"],
   .radius-figure[data-focus="santa-clara-ivins"] g[data-city="santa-clara-ivins"],
+  .radius-figure[data-focus="leeds"]             g[data-city="leeds"],
+  .radius-figure[data-focus="la-verkin"]         g[data-city="la-verkin"],
   .radius-figure[data-focus="cedar-city"]       g[data-city="cedar-city"],
   .radius-figure[data-focus="mesquite"]         g[data-city="mesquite"]{
     opacity:1;
@@ -3203,6 +3209,8 @@
   .radius-figure[data-focus="washington-city"]  g[data-city="washington-city"]  .radius-node,
   .radius-figure[data-focus="hurricane"]        g[data-city="hurricane"]        .radius-node,
   .radius-figure[data-focus="santa-clara-ivins"] g[data-city="santa-clara-ivins"] .radius-node,
+  .radius-figure[data-focus="leeds"]             g[data-city="leeds"]            .radius-node,
+  .radius-figure[data-focus="la-verkin"]         g[data-city="la-verkin"]        .radius-node,
   .radius-figure[data-focus="cedar-city"]       g[data-city="cedar-city"]       .radius-node,
   .radius-figure[data-focus="mesquite"]         g[data-city="mesquite"]         .radius-node{
     r:9;

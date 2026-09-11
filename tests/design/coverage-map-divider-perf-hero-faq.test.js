@@ -44,7 +44,7 @@ test('F31: the blueprint background moved off body\'s own background-attachment:
   assert.doesNotMatch(liveCode, /background-attachment:fixed/);
   assert.match(STYLES, /\.bg-blueprint\{\s*position:fixed; inset:0; z-index:-1;\s*background-color:var\(--bg\);/);
   assert.match(STYLES, /body\.has-blueprint-bg\{background:transparent;\}/);
-  for (const file of ['index.html', 'handyman-cedar-city-ut.html', 'handyman-hurricane-ut.html', 'handyman-mesquite-nv.html', 'handyman-santa-clara-ivins-ut.html', 'handyman-washington-city-ut.html']) {
+  for (const file of ['index.html', 'handyman-cedar-city-ut.html', 'handyman-hurricane-ut.html', 'handyman-la-verkin-ut.html', 'handyman-leeds-ut.html', 'handyman-mesquite-nv.html', 'handyman-santa-clara-ivins-ut.html', 'handyman-washington-city-ut.html']) {
     const src = fs.readFileSync(repo(file), 'utf8');
     assert.match(src, /<body class="has-blueprint-bg">/, `${file} should carry the has-blueprint-bg class`);
     assert.match(src, /<div class="bg-blueprint" aria-hidden="true"><\/div>/, `${file} should have the fixed backdrop element`);
@@ -55,7 +55,7 @@ test('F32: the landing-page hero lede is a real class, not an attribute-presence
   assert.doesNotMatch(STYLES, /\[style\]/);
   const rule = STYLES.match(/\.hero-lede\{([^}]*)\}/)[1];
   assert.doesNotMatch(rule, /!important/, 'the real class should not need !important to beat an inline style anymore');
-  for (const file of ['handyman-cedar-city-ut.html', 'handyman-hurricane-ut.html', 'handyman-mesquite-nv.html', 'handyman-santa-clara-ivins-ut.html', 'handyman-washington-city-ut.html']) {
+  for (const file of ['handyman-cedar-city-ut.html', 'handyman-hurricane-ut.html', 'handyman-la-verkin-ut.html', 'handyman-leeds-ut.html', 'handyman-mesquite-nv.html', 'handyman-santa-clara-ivins-ut.html', 'handyman-washington-city-ut.html']) {
     const src = fs.readFileSync(repo(file), 'utf8');
     assert.match(src, /<p class="hero-lede">/, `${file} should use the real class`);
     assert.doesNotMatch(src, /<p style="max-width:62ch/, `${file} should not still have the old inline-styled paragraph`);

@@ -10,7 +10,7 @@ Two passes, deliberately different in what they check:
    correctly against tool pages even though those require login to
    view in a real browser.
 
-2. EXTERNAL links (public pages only -- index.html + the 5 landing
+2. EXTERNAL links (public pages only -- index.html + the 7 landing
    pages, since those are what real visitors and Google actually
    crawl) -- a real HTTP request with a short timeout, reporting
    anything that doesn't come back 2xx/3xx. Internal tool pages are
@@ -35,6 +35,8 @@ PUBLIC_PAGES = [
     'handyman-mesquite-nv.html',
     'handyman-santa-clara-ivins-ut.html',
     'handyman-washington-city-ut.html',
+    'handyman-la-verkin-ut.html',
+    'handyman-leeds-ut.html',
 ]
 
 HREF_SRC_RE = re.compile(r'(?:href|src)="([^"]+)"')

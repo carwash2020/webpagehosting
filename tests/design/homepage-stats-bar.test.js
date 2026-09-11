@@ -46,7 +46,7 @@ test('the communities-served stat matches the number of satellite landing pages 
   const statBlock = INDEX.slice(INDEX.indexOf('Southern Utah Communities Served') - 200, INDEX.indexOf('Southern Utah Communities Served'));
   const statMatch = statBlock.match(/data-count-to="(\d+)">0</);
   assert.ok(statMatch, 'expected the communities-served stat-count element');
-  assert.equal(Number(statMatch[1]), landingPages.length + 1, 'stat should equal the 5 satellite pages plus St. George itself');
+  assert.equal(Number(statMatch[1]), landingPages.length + 1, 'stat should equal the satellite pages plus St. George itself');
 });
 
 test('none of the stats are invented figures with no source elsewhere on the page', () => {

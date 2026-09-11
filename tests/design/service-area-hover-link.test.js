@@ -25,7 +25,7 @@ const repo = (...p) => path.join(__dirname, '..', '..', ...p);
 const INDEX = fs.readFileSync(repo('index.html'), 'utf8');
 const STYLES = fs.readFileSync(repo('styles.css'), 'utf8');
 
-const CITIES = ['st-george', 'washington-city', 'hurricane', 'santa-clara-ivins', 'cedar-city', 'mesquite'];
+const CITIES = ['st-george', 'washington-city', 'hurricane', 'santa-clara-ivins', 'la-verkin', 'leeds', 'cedar-city', 'mesquite'];
 
 test('every areas link shares a data-city value with its matching diagram group -- no invented city, no missing one', () => {
   for (const city of CITIES) {
@@ -34,10 +34,11 @@ test('every areas link shares a data-city value with its matching diagram group 
   }
 });
 
-test('the 5 real landing pages are still linked from #areas, not just named', () => {
+test('the 7 real landing pages are still linked from #areas, not just named', () => {
   const LANDING_PAGES = [
     'handyman-washington-city-ut.html', 'handyman-hurricane-ut.html',
     'handyman-santa-clara-ivins-ut.html', 'handyman-cedar-city-ut.html', 'handyman-mesquite-nv.html',
+    'handyman-la-verkin-ut.html', 'handyman-leeds-ut.html',
   ];
   const start = INDEX.indexOf('<div class="areas-links"');
   const end = INDEX.indexOf('</section>', start);

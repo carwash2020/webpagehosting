@@ -18,7 +18,7 @@ const PUBLIC_PAGES = [
   'index.html', 'booking.html', 'terms.html', 'about.html', 'our-work.html',
   'handyman-hurricane-ut.html', 'handyman-washington-city-ut.html',
   'handyman-santa-clara-ivins-ut.html', 'handyman-cedar-city-ut.html',
-  'handyman-mesquite-nv.html',
+  'handyman-mesquite-nv.html', 'handyman-la-verkin-ut.html', 'handyman-leeds-ut.html',
 ];
 const BLOG_PAGES = [
   'blog/index.html', 'blog/dryer-not-heating.html', 'blog/handyman-to-do-list.html',
