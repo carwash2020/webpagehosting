@@ -908,3 +908,60 @@ tightened to `handyman-*-ut.html`/`-nv.html` so it stops
 double-counting `handyman-repairs.html` as a city satellite page.
 1,602/1,602 tests passing, all consistency/undefined-vars/link/visual-
 snapshot checks clean.
+
+## What changed, 2026-09-11 -- manual jobs can now send a booking confirmation email
+
+Direct request, prompted by a real question about the phone-booking
+workflow: "if a guest asks us to schedule them, and we put the job on
+the calendar, does that send them a confirmation email? Can we add
+that safely, without accidentally sending it multiple times?"
+
+Answer, confirmed by reading the actual code: no, not until now.
+Only `booking.html`'s self-service flow ever auto-emailed a customer
+(an `INSERT` trigger on `th_bookings`) -- a job created by hand in
+`tools/job-tracker.html` writes to `public.jobs` instead, which had no
+trigger and no notification path at all. (Separately confirmed: a
+guest's self-service booking DOES land on the internal Calendar the
+moment they book, with no manual "approval" step -- `booking.html`
+inserts with `status` defaulting straight to `'confirmed'`.)
+
+**New: a "Send Confirmation Email" button on any Job Tracker job with
+a client email on file.** Backed by a new edge function,
+`send-job-confirmation-email`, which sends the same "You're booked"
+email booking.html guests get automatically. Double-send protection
+(the specific worry in the request) is enforced server-side with an
+**atomic conditional claim**: `jobs.confirmation_sent_at` (new
+nullable column, same shape as the existing
+`th_bookings.reminder_sent_at` reminder-email guard) is only set via
+`UPDATE ... WHERE confirmation_sent_at IS NULL`, so two concurrent
+clicks (a fast double-click, or two staff on two devices) can never
+both succeed -- Postgres serializes the two writes and only one can
+match the `WHERE` clause. If the Resend send itself then fails, the
+claim is rolled back (set back to `null`) so a transient failure
+doesn't permanently lock the job out of ever being confirmed -- staff
+just click the button again.
+
+Deliberately did NOT let the existing one-way `jobs` relational mirror
+(`mirrorJobsToRelational` in `tools/sync.js`) touch this column at
+all: since that mirror upserts the *entire* local jobs array on every
+save regardless of which job actually changed, a stale local session
+on one device (one that hasn't yet learned another device already
+sent the confirmation) could otherwise push a plain object without
+`confirmation_sent_at`, and PostgREST's bulk-upsert behavior would
+fill the missing column as `NULL` for that row -- silently erasing the
+server-set timestamp and reopening the exact double-send window this
+feature exists to close. `confirmation_sent_at` is treated as
+strictly server-owned; the client only ever reads back what the edge
+function's response says and stores it locally for the button's own
+display state (which syncs across devices through the existing,
+separate per-field-merge blob sync, not the relational mirror).
+
+New files: `sql/infra/add_job_confirmation_email.sql` (migration,
+applied live), `edge-functions/send-job-confirmation-email-index.ts`.
+New tests: `tests/workspace/job-confirmation-email.test.js` (10 tests
+-- button visibility states, the actual fetch call and its auth
+header, the 409-triggers-a-re-render behavior, that the mirror never
+touches the guard column, and that the edge function's claim genuinely
+happens before the send and is rolled back on a failed send).
+1,622/1,622 tests passing, all consistency/undefined-vars/link/visual-
+snapshot checks clean.
