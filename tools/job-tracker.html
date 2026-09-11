@@ -1672,6 +1672,11 @@
           </select>
           ${opts.includePhotoToggle ? `<button class="small-btn" onclick="toggleJobPhotos(${job.id}, '${escapeForInlineHandler(job.title)}')">Photos</button>` : ''}
           <button class="small-btn ${job.showOnCalendar ? 'is-active' : ''}" onclick="toggleShowOnCalendar(${job.id})">${job.showOnCalendar ? '✓ On Calendar' : 'Show on Calendar'}</button>
+          ${job.clientEmail ? (
+            job.confirmationSentAt
+              ? `<button class="small-btn is-active" disabled title="Sent ${escapeHtml(new Date(job.confirmationSentAt).toLocaleString())}">✓ Confirmation Sent</button>`
+              : `<button class="small-btn" onclick="sendJobConfirmationEmail(${job.id})">Send Confirmation Email</button>`
+          ) : ''}
           <button class="small-btn" onclick="editJob(${job.id})">Edit</button>
           <button class="small-btn danger" onclick="deleteJob(${job.id})">Delete</button>
         </div>
@@ -1922,6 +1927,60 @@
     job.showOnCalendar = !job.showOnCalendar;
     saveJobs(jobs);
     renderJobs();
+  }
+
+  // Manual booking confirmation email (2026-09-11), direct request:
+  // "if a guest asks us to schedule them, does putting the job on the
+  // calendar send them a confirmation email? Can we add that safely,
+  // without accidentally sending it multiple times?" Today it doesn't
+  // -- only booking.html's self-service flow auto-emails. This button
+  // is the manual equivalent for a phone-scheduled job.
+  //
+  // The actual double-send guard lives server-side in
+  // send-job-confirmation-email (an atomic conditional UPDATE on
+  // jobs.confirmation_sent_at), not here -- this button just calls it
+  // and reflects the result. That's deliberate: two staff on two
+  // devices could both have this job's card open with the button
+  // still showing "Send Confirmation Email" if one of them sent it a
+  // moment ago and the mirror hasn't caught up locally yet. The
+  // server is the one place that can actually arbitrate that race.
+  async function sendJobConfirmationEmail(jobId) {
+    if (typeof getAuthToken !== 'function') return;
+    const jobs = loadJobs();
+    const job = jobs.find(j => j.id === jobId);
+    if (!job) return;
+
+    const btn = document.querySelector(`.job-card[data-job-id="${jobId}"] .job-card-actions button[onclick="sendJobConfirmationEmail(${jobId})"]`);
+    if (btn) { btn.disabled = true; btn.textContent = 'Sending...'; }
+
+    try {
+      const res = await fetch(`${SUPABASE_URL}/functions/v1/send-job-confirmation-email`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'apikey': SUPABASE_ANON_KEY,
+          'Authorization': `Bearer ${getAuthToken()}`,
+        },
+        body: JSON.stringify({ job_id: jobId }),
+      });
+      const result = await res.json().catch(() => ({}));
+      if (!res.ok || !result.ok) {
+        showToast(result.error || 'Could not send confirmation email.');
+        if (btn) { btn.disabled = false; btn.textContent = 'Send Confirmation Email'; }
+        // A 409 here means someone else already sent it (the server-side
+        // guard did its job) -- re-render so this card picks up the
+        // real "already sent" state instead of just resetting the button.
+        if (res.status === 409) renderJobs();
+        return;
+      }
+      job.confirmationSentAt = result.confirmation_sent_at || new Date().toISOString();
+      saveJobs(jobs);
+      showToast('Confirmation email sent.');
+      renderJobs();
+    } catch (e) {
+      showToast('Could not send confirmation email.');
+      if (btn) { btn.disabled = false; btn.textContent = 'Send Confirmation Email'; }
+    }
   }
 
   // ---------- Job Photos ----------

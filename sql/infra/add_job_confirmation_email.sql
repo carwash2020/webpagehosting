@@ -1,0 +1,26 @@
+-- Manual-booking confirmation emails (direct request, 2026-09-11):
+-- "if a guest asks us to schedule them [by phone], and we put the job
+-- on the calendar, does that send them a confirmation email? Can we
+-- add that safely, without accidentally sending it multiple times?"
+--
+-- Today: no. Jobs created in tools/job-tracker.html write to
+-- public.jobs, which has no email trigger at all (only inserts into
+-- th_bookings -- the public booking.html self-service flow -- ever
+-- send a confirmation, via on_new_booking_send_email). A manually
+-- scheduled job is silent to the customer unless staff separately
+-- call/text them.
+--
+-- confirmation_sent_at is a nullable guard column, same shape as
+-- th_bookings.reminder_sent_at (see add_appointment_reminder_emails.sql):
+-- null means "not yet confirmed by email," non-null means "already
+-- sent, don't send again." Unlike the reminder email (a cron job that
+-- can just re-check reminder_sent_at on its next hourly pass),
+-- confirmation is a one-off action a staff member clicks a button
+-- for, so send-job-confirmation-email claims this column with an
+-- atomic conditional UPDATE (... WHERE confirmation_sent_at IS NULL)
+-- BEFORE sending, closing the double-click / two-staff-at-once race
+-- the request specifically asked about -- and rolls the claim back if
+-- the actual Resend send then fails, so a real failure doesn't
+-- permanently lock the job out of ever being confirmed.
+
+alter table public.jobs add column if not exists confirmation_sent_at timestamptz;
