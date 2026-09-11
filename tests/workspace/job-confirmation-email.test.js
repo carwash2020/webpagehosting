@@ -172,3 +172,15 @@ test('send-job-confirmation-email verifies the caller is a real internal account
 test('confirmation_sent_at is a nullable timestamptz on public.jobs, same shape as th_bookings.reminder_sent_at', () => {
   assert.match(MIGRATION, /alter table public\.jobs add column if not exists confirmation_sent_at timestamptz;/);
 });
+
+test('send-job-confirmation-email BCCs LEAD_EMAIL_TO on the guest confirmation, so staff get a record it sent', () => {
+  // Direct follow-up request: "we should be CC'ed on the email...
+  // to confirm it worked correctly each time and to have additional
+  // record." BCC (not CC or a separate send) so staff never appear as
+  // a visible recipient on the guest's own copy, reusing the same
+  // LEAD_EMAIL_TO list already configured for the booking/lead pipeline.
+  assert.match(EDGE_FN, /const LEAD_EMAIL_TO = \(Deno\.env\.get\("LEAD_EMAIL_TO"\) \|\| ""\)/);
+  const sendFnMatch = EDGE_FN.match(/async function sendGuestConfirmation\(job: Record<string, unknown>\): Promise<boolean> \{[\s\S]*?\n\}\n/);
+  assert.ok(sendFnMatch, 'expected to isolate sendGuestConfirmation()');
+  assert.match(sendFnMatch[0], /bcc: LEAD_EMAIL_TO\.length \? LEAD_EMAIL_TO : undefined,/);
+});
