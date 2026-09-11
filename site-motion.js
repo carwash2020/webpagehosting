@@ -126,7 +126,7 @@
     document.body.appendChild(bar);
 
     var ticking = false;
-    function update() {
+    var update = function () {
       ticking = false;
       var rect = article.getBoundingClientRect();
       var vh = window.innerHeight || document.documentElement.clientHeight;
@@ -134,13 +134,13 @@
       var p = span > 0 ? (-rect.top) / span : (rect.top <= 0 ? 1 : 0);
       p = p < 0 ? 0 : (p > 1 ? 1 : p);
       bar.style.setProperty('--read', p.toFixed(4));
-    }
-    function onScroll() {
+    };
+    var onScroll = function () {
       if (ticking) return;
       ticking = true;
       var raf = window.requestAnimationFrame || function (fn) { return setTimeout(fn, 16); };
       raf(update);
-    }
+    };
     window.addEventListener('scroll', onScroll, { passive: true });
     window.addEventListener('resize', onScroll, { passive: true });
     update();
