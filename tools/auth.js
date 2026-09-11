@@ -266,6 +266,9 @@ function getAuthToken() {
   // string before handing it back, and logs a real diagnostic message
   // if not -- falling back to the anon key, which will correctly get
   // rejected by RLS rather than crash the request outright.
+  // \x00-\xFF below is deliberately the full Latin1 byte range (what a
+  // header value must fit in), not a stray control character.
+  // eslint-disable-next-line no-control-regex
   if (typeof token !== 'string' || !/^[\x00-\xFF]*$/.test(token)) {
     if (typeof logClientError === 'function') {
       logClientError(
