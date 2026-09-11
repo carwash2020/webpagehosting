@@ -965,3 +965,24 @@ touches the guard column, and that the edge function's claim genuinely
 happens before the send and is rolled back on a failed send).
 1,622/1,622 tests passing, all consistency/undefined-vars/link/visual-
 snapshot checks clean.
+
+## What changed, 2026-09-11 (later the same day) -- job confirmation emails now BCC the internal inbox
+
+Direct follow-up to the manual job confirmation feature above: "we
+should be CC'ed on the email... to confirm it worked correctly each
+time and to have additional record. not redundant" -- the internal
+inbox getting a copy of a confirmation staff themselves just sent is
+a verification record, not the same "tell staff something happened"
+notification the self-service booking flow's separate internal email
+serves.
+
+`send-job-confirmation-email` now BCCs `LEAD_EMAIL_TO` (the same
+address list already configured for the booking/lead pipeline -- no
+new secret) on every guest confirmation it sends. BCC, not CC or a
+second email, so staff never appear as a visible recipient on the
+customer's own copy, matching the discretion pattern already used
+elsewhere in the notification pipeline. Redeployed live.
+
+New test in `tests/workspace/job-confirmation-email.test.js` (now 11
+tests) locking in the BCC. 1,623/1,623 tests passing, all
+consistency/undefined-vars/link/visual-snapshot checks clean.

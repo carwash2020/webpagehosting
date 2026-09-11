@@ -35,13 +35,25 @@
 // no finer-grained gate for this action either) rather than trusting
 // anything the client claims about itself.
 //
+// BCC'd to LEAD_EMAIL_TO (added 2026-09-11, direct follow-up request:
+// "we should be CC'ed on the email... to confirm it worked correctly
+// each time and to have additional record"): every guest confirmation
+// also lands in the internal inbox as a verifiable record that it
+// actually sent -- BCC, not CC, so staff never show up as a visible
+// recipient on the customer's own copy.
+//
 // Deploy with: supabase functions deploy send-job-confirmation-email
 // Required secrets (all already configured for the booking/lead email
 // pipeline; no new secrets needed): RESEND_API_KEY, LEAD_EMAIL_FROM,
-// SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY
+// LEAD_EMAIL_TO, SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY
 
 const RESEND_API_KEY = Deno.env.get("RESEND_API_KEY") || "";
 const LEAD_EMAIL_FROM = Deno.env.get("LEAD_EMAIL_FROM") || "";
+// BCC'd on the guest confirmation -- see the file header comment.
+const LEAD_EMAIL_TO = (Deno.env.get("LEAD_EMAIL_TO") || "")
+  .split(",")
+  .map((addr: string) => addr.trim())
+  .filter((addr: string) => addr.length > 0);
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 
@@ -201,6 +213,7 @@ async function sendGuestConfirmation(job: Record<string, unknown>): Promise<bool
       body: JSON.stringify({
         from: `Triple H Enterprises <${LEAD_EMAIL_FROM}>`,
         to: guestEmail,
+        bcc: LEAD_EMAIL_TO.length ? LEAD_EMAIL_TO : undefined,
         subject: "You're booked, Triple H Enterprises",
         html: buildGuestEmailHtml(job),
         text: buildGuestEmailText(job),
