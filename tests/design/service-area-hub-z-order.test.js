@@ -22,6 +22,8 @@ const PAGES = [
   'handyman-mesquite-nv.html',
   'handyman-santa-clara-ivins-ut.html',
   'handyman-washington-city-ut.html',
+  'handyman-la-verkin-ut.html',
+  'handyman-leeds-ut.html',
 ];
 
 for (const page of PAGES) {
@@ -33,12 +35,12 @@ for (const page of PAGES) {
     const svg = html.slice(svgStart, svgEnd);
 
     const groupOrder = [...svg.matchAll(/<g data-city="([a-z-]+)"/g)].map((m) => m[1]);
-    assert.equal(groupOrder.length, 6, 'expected 6 <g data-city> groups (hub + 5 spokes)');
+    assert.equal(groupOrder.length, 8, 'expected 8 <g data-city> groups (hub + 7 spokes)');
     assert.equal(groupOrder[groupOrder.length - 1], 'st-george', 'the hub group must be last so it paints on top of every spoke line');
     assert.deepEqual(
-      groupOrder.slice(0, 5).sort(),
-      ['cedar-city', 'hurricane', 'mesquite', 'santa-clara-ivins', 'washington-city'],
-      'the 5 spoke groups must all come before the hub'
+      groupOrder.slice(0, 7).sort(),
+      ['cedar-city', 'hurricane', 'la-verkin', 'leeds', 'mesquite', 'santa-clara-ivins', 'washington-city'],
+      'the 7 spoke groups must all come before the hub'
     );
   });
 }

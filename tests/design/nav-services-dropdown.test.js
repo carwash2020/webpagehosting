@@ -24,7 +24,7 @@ const PAGES = [
   'index.html',
   'handyman-hurricane-ut.html', 'handyman-washington-city-ut.html',
   'handyman-santa-clara-ivins-ut.html', 'handyman-cedar-city-ut.html',
-  'handyman-mesquite-nv.html',
+  'handyman-mesquite-nv.html', 'handyman-la-verkin-ut.html', 'handyman-leeds-ut.html',
   'washer-dryer-repair.html', 'plumbing-repairs.html', 'drywall-painting.html',
   'handyman-repairs.html', 'assembly-installation.html',
   'about.html', 'our-work.html', 'terms.html',

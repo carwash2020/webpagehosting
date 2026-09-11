@@ -62,7 +62,7 @@
 <link rel="preconnect" href="https://csvfqdjuobylgafgolho.supabase.co">
 <link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Anton&family=Archivo:wght@400..700&family=Newsreader:ital,opsz,wght@0,6..72,300..700;1,6..72,300..600&family=Oswald:wght@200..700&display=swap" onload="this.onload=null;this.rel='stylesheet'">
 <noscript><link href="https://fonts.googleapis.com/css2?family=Anton&family=Archivo:wght@400..700&family=Newsreader:ital,opsz,wght@0,6..72,300..700;1,6..72,300..600&family=Oswald:wght@200..700&display=swap" rel="stylesheet"></noscript>
-<link rel="stylesheet" href="/styles.css?v=02be026aba">
+<link rel="stylesheet" href="/styles.css?v=f31f5cacb5">
 <script type="application/ld+json">
 {
   "@context": "https://schema.org",
@@ -297,7 +297,7 @@
            site, and Cedar City and Mesquite keep their by-request
            treatment (dashed, orange) here exactly as everywhere else. -->
       <div class="radius-figure" data-reveal data-focus="washington-city">
-        <svg viewBox="0 0 760 480" role="img" aria-label="Service area diagram centered on St. George, showing Washington City, Hurricane, Santa Clara and Ivins as standard coverage, with Cedar City and Mesquite available by request">
+        <svg viewBox="0 0 760 480" role="img" aria-label="Service area diagram centered on St. George, showing Washington City, Hurricane, Santa Clara and Ivins, La Verkin and Leeds as standard coverage, with Cedar City and Mesquite available by request">
           <!-- Design feedback (2026-09-08): the old concentric "orbit
                ring" background read as a gimmicky globe/radar motif,
                and Washington City/Hurricane's spokes were only 15
@@ -305,10 +305,11 @@
                distance between them. Rings are gone. Every city is now
                placed by angle-from-hub (clockwise from north) and a
                radius tier -- 160 for standard coverage, 235 for
-               by-request -- spaced at least 50 degrees apart, with two
-               open ranges (roughly 120-190 and 280-330 degrees) left
-               free for a future city instead of needing a full
-               re-plot. Every label is centered under its own node
+               by-request -- spaced at least 50 degrees apart. (Update,
+               2026-09-11: the two open ranges this diagram originally
+               reserved for a future city -- 120-190 and 280-330
+               degrees -- are now used by Leeds and La Verkin
+               respectively.) Every label is centered under its own node
                (text-anchor="middle") so a future addition just needs
                its own angle/radius, not a fresh clipping check. -->
           <g data-city="washington-city">
@@ -332,6 +333,20 @@
             <text class="radius-note" x="222" y="262" text-anchor="middle">West side, near Snow Canyon</text>
           </g>
 
+          <g data-city="leeds">
+            <line class="radius-spoke" pathLength="1" x1="380" y1="210" x2="460" y2="349"/>
+            <circle class="radius-node" cx="460" cy="349" r="7"/>
+            <text class="radius-name" x="460" y="367" text-anchor="middle">Leeds</text>
+            <text class="radius-note" x="460" y="384" text-anchor="middle">About 20 minutes north</text>
+          </g>
+
+          <g data-city="la-verkin">
+            <line class="radius-spoke" pathLength="1" x1="380" y1="210" x2="241" y2="130"/>
+            <circle class="radius-node" cx="241" cy="130" r="7"/>
+            <text class="radius-name" x="241" y="148" text-anchor="middle">La Verkin</text>
+            <text class="radius-note" x="241" y="165" text-anchor="middle">About 25 minutes east</text>
+          </g>
+
           <g data-city="cedar-city" class="is-request">
             <line class="radius-spoke is-request" x1="380" y1="210" x2="300" y2="78"/>
             <circle class="radius-node is-request" cx="300" cy="78" r="7"/>
@@ -347,7 +362,7 @@
           </g>
 
           <!-- Hub drawn LAST, after every spoke, so it paints on top of
-               all 5 lines converging on it (2026-09-07, real bug found
+               all 7 lines converging on it (2026-09-07, real bug found
                from a live screenshot: with the hub painted first, in
                source order, each spoke line painted over it, making
                spokes look like they pierced straight through the hub
@@ -360,8 +375,7 @@
             <text class="radius-hub-name" x="380" y="243" text-anchor="middle">ST. GEORGE</text>
             <text class="radius-note" x="380" y="261" text-anchor="middle">Home base</text>
           </g>
-        </svg>
-      </div>
+        </svg>      </div>
       <p class="radius-legend" data-reveal>
         <span><b></b> Standard coverage</span>
         <span><b class="is-request"></b> Available by request</span>
@@ -483,6 +497,8 @@
           <li><a href="/handyman-washington-city-ut.html">Washington City</a></li>
           <li><a href="/handyman-hurricane-ut.html">Hurricane</a></li>
           <li><a href="/handyman-santa-clara-ivins-ut.html">Santa Clara &amp; Ivins</a></li>
+          <li><a href="/handyman-leeds-ut.html">Leeds</a></li>
+          <li><a href="/handyman-la-verkin-ut.html">La Verkin</a></li>
           <li><a href="/handyman-cedar-city-ut.html">Cedar City <span style="color:var(--orange-text); font-size:11px;">(by request)</span></a></li>
           <li><a href="/handyman-mesquite-nv.html">Mesquite, NV <span style="color:var(--orange-text); font-size:11px;">(by request)</span></a></li>
         </ul>

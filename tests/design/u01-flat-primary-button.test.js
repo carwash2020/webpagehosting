@@ -22,6 +22,8 @@ const STYLES = fs.readFileSync(repo('styles.css'), 'utf8');
 const LANDING_PAGES = [
   'handyman-cedar-city-ut.html',
   'handyman-hurricane-ut.html',
+  'handyman-la-verkin-ut.html',
+  'handyman-leeds-ut.html',
   'handyman-mesquite-nv.html',
   'handyman-santa-clara-ivins-ut.html',
   'handyman-washington-city-ut.html',
