@@ -542,13 +542,19 @@
 
   /* Mobile menu carries the same 5 links as an indented sub-list right
      under its own "Services" link -- no JS toggle needed, just visible
-     whenever the mobile menu itself is open. */
-  .mobile-services-sublist{
+     whenever the mobile menu itself is open. .mobile-areas-sublist
+     (2026-09-11) reuses the identical treatment for the "Areas" link,
+     once every landing page -- including the 2 newest, La Verkin and
+     Leeds -- became reachable from the nav instead of only from the
+     homepage's own #areas section. */
+  .mobile-services-sublist,
+  .mobile-areas-sublist{
     list-style:none; margin:0 0 6px; padding:0 0 6px 14px;
     display:flex; flex-direction:column; gap:2px;
     border-bottom:1px solid var(--border);
   }
-  .mobile-services-sublist a{
+  .mobile-services-sublist a,
+  .mobile-areas-sublist a{
     font-family:var(--font-ui); font-size:13.5px; font-weight:500;
     text-transform:none; color:var(--text-dim);
     padding:6px 4px;

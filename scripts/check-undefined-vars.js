@@ -270,8 +270,9 @@ function findSharedScriptRedeclarations(rel, html, inlineCode) {
 
   const linter = new Linter();
   const config = {
-    parserOptions: { ecmaVersion: 2021, sourceType: 'script' },
-    env: { es2021: true },
+    files: ['**'],
+    linterOptions: { reportUnusedDisableDirectives: false },
+    languageOptions: { ecmaVersion: 2021, sourceType: 'script' },
     rules: {},
   };
 
@@ -310,8 +311,9 @@ function findAllSharedFilePairConflicts() {
   const problems = [];
   const linter = new Linter();
   const config = {
-    parserOptions: { ecmaVersion: 2021, sourceType: 'script' },
-    env: { es2021: true },
+    files: ['**'],
+    linterOptions: { reportUnusedDisableDirectives: false },
+    languageOptions: { ecmaVersion: 2021, sourceType: 'script' },
     rules: {},
   };
 
@@ -344,9 +346,9 @@ function main() {
   const globals = buildGlobals();
   const linter = new Linter();
   const config = {
-    parserOptions: { ecmaVersion: 2021, sourceType: 'script' },
-    env: { es2021: true },
-    globals: {
+    files: ['**'],
+    linterOptions: { reportUnusedDisableDirectives: false },
+    languageOptions: { ecmaVersion: 2021, sourceType: 'script', globals: {
       ...globals,
       // Standard browser globals -- listed explicitly rather than
       // pulling in ESLint's own "browser" env preset, since the goal
@@ -366,7 +368,7 @@ function main() {
       atob: 'readonly', btoa: 'readonly', structuredClone: 'readonly', queueMicrotask: 'readonly',
       globalThis: 'readonly', self: 'readonly',
       Intl: 'readonly', caches: 'readonly', Image: 'readonly',
-    },
+    } },
     rules: { 'no-undef': 'error' },
   };
 
