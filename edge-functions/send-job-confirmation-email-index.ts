@@ -158,7 +158,7 @@ function buildGuestEmailHtml(job: Record<string, unknown>): string {
         <tr>
           <td style="padding: 20px 28px 28px; font-family: -apple-system, Helvetica, Arial, sans-serif;">
             <p style="color: #777; font-size: 13px; line-height: 1.5; margin: 0 0 20px;">This is the day we've got you scheduled for. We'll call or text if the timing needs to shift.</p>
-            <p style="color: #222; font-size: 15px; line-height: 1.5; margin: 0 0 20px;">Need to reschedule or have a question? Just reply to this email or give us a call.</p>
+            <p style="color: #222; font-size: 15px; line-height: 1.5; margin: 0 0 20px;">Need to reschedule or cancel? <a href="https://www.triplehenterprisesllc.biz/manage-job.html?token=${escapeHtml(job.cancel_token)}" style="color: #ff8000;">Manage your appointment here</a>, or just reply to this email or give us a call.</p>
             <p style="color: #222; font-size: 15px; line-height: 1.5; margin: 0;">Talk soon,<br><strong>Triple H Enterprises</strong></p>
           </td>
         </tr>
@@ -192,7 +192,9 @@ function buildGuestEmailText(job: Record<string, unknown>): string {
     "",
     "This is the day we've got you scheduled for. We'll call or text if the timing needs to shift.",
     "",
-    "Need to reschedule or have a question? Just reply to this email or give us a call.",
+    `Need to reschedule or cancel? Manage your appointment here: https://www.triplehenterprisesllc.biz/manage-job.html?token=${job.cancel_token}`,
+    "",
+    "Or just reply to this email or give us a call.",
     "",
     "Talk soon,",
     "Triple H Enterprises",

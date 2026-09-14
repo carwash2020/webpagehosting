@@ -1021,3 +1021,54 @@ New tests in `tests/edge-functions/stripe-reconciliation.test.js` (now
 11 tests) locking in the `on_conflict=notif_type,item_key` fix for
 both functions. 1,625/1,625 tests passing, all
 consistency/undefined-vars/link/visual-snapshot checks clean.
+
+## What changed, 2026-09-14 -- manually-scheduled jobs can now be cancelled or have a reschedule requested
+
+Direct follow-up, in response to "what else should we add?": self-
+service bookings (`th_bookings`) already have a cancel/reschedule link
+via `manage-booking.html`; manually-scheduled jobs (`public.jobs`) had
+no equivalent at all. Confirmed directly with the user before
+building: reschedule for a job is **request-only**, not an instant
+move like a booking reschedule. `th_bookings`' own reschedule is
+checked against a real time-slot exclusion constraint (only one
+booking can hold a given time range), so it's safe to move instantly.
+`jobs.job_date` is a plain date with no time-of-day and no such
+constraint -- staff schedule these by hand, so an unattended instant
+move could silently double-book a day already committed to another
+job. The customer submits a preferred new date; staff get an email and
+apply it themselves in Job Tracker if it works.
+
+**New public page: `manage-job.html`**, this repo's counterpart to
+`manage-booking.html`. Reached via a `?token=` link (a new
+`jobs.cancel_token`, same nullable-guard shape as everything else in
+this feature) that's now included in the job confirmation email
+(`send-job-confirmation-email`, "Manage your appointment here"). Shows
+the job, and offers "Cancel this appointment" (with a confirm step) or
+"Request a different date" (a plain date field, not a live slot
+picker -- this is a request, not a booking).
+
+**New SQL** (`sql/infra/add_job_cancel_reschedule.sql`, applied live):
+`cancel_token`, `cancelled_at`, `reschedule_requested_date`,
+`reschedule_requested_at` on `public.jobs`; `get_job_by_cancel_token`
+(read-only lookup, deliberately never returns phone/client_email/
+notes/client_id), `cancel_job_by_token`, `request_job_reschedule_by_token`
+(never touches `job_date` itself -- only the request columns); and
+`notify_job_status_change`, a trigger that emails staff only on the
+two real customer-initiated transitions (`cancelled_at` or
+`reschedule_requested_at` newly set), never on an ordinary edit staff
+make themselves -- same targeted-transition shape as `th_bookings`'
+own `notify_booking_status_change`.
+
+**New edge function** `send-job-status-change-email` -- staff-facing
+only, no guest email involved. Re-derives the transition from
+`old_record`/`record` itself rather than just trusting the trigger's
+own gate, matching how `send-push-index.ts` already double-checks
+`th_bookings`' cancel/reschedule transitions. The reschedule-request
+email is explicit that nothing was applied automatically.
+
+New tests: `tests/booking/manage-job.test.js` (9 tests, matching the
+style of the existing `manage-booking.test.js`) and
+`tests/workspace/job-cancel-reschedule-backend.test.js` (9 tests,
+static-source checks on the migration and both edge functions).
+1,641/1,641 tests passing, all consistency/undefined-vars/link/visual-
+snapshot checks clean.
