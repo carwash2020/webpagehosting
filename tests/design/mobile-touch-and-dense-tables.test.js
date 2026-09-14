@@ -24,7 +24,10 @@ test('F19: the invoice/quote line-items editor stacks into labeled cards below 7
 
 test('F20: Finance\'s Income and Expense logs get the same responsive card treatment below 1024px, scoped only to their own containers', () => {
   const src = fs.readFileSync(path.join(TOOLS_DIR, 'finance.html'), 'utf8');
-  assert.match(src, /@media \(max-width: 1023px\) \{[\s\S]*?#incomeTable table, #entriesTable table \{ min-width: 0; \}/);
+  // #inventoryTable joined this same rule later (Inventory tab, closing
+  // a real audit gap) -- the scoping principle this test checks (never
+  // the generic bare table/th/td rules) still holds for all three.
+  assert.match(src, /@media \(max-width: 1023px\) \{[\s\S]*?#incomeTable table, #entriesTable table, #inventoryTable table \{ min-width: 0; \}/);
   assert.match(src, /#incomeTable td\[data-label\]::before, #entriesTable td\[data-label\]::before/);
   const incomeLabels = [...src.matchAll(/data-label="(?:Date|Source|Job|Description|Payment|Origin|Amount)"/g)].length;
   const expenseLabels = [...src.matchAll(/data-label="(?:Type|Vendor|Miles|Receipt)"/g)].length;
@@ -41,7 +44,11 @@ test('F21: no double-scroll -- the min-width:0 override for these two tables pre
   // (both scrollWidth === clientWidth at both a phone and a desktop
   // width, with real seeded data) rather than assumed from the CSS.
   assert.match(STYLES_TOOLS, /#incomeTable, #entriesTable \{\s*max-height: 60vh;\s*overflow-y: auto;\s*\}/);
-  assert.match(src, /#incomeTable table, #entriesTable table \{ min-width: 0; \}/);
+  // Deliberately NOT extended to #inventoryTable -- that treatment
+  // (sticky header + max-height scroll) exists specifically for the two
+  // logs expected to grow to hundreds of rows over months of use; a
+  // parts-on-hand list has no comparable growth expectation.
+  assert.match(src, /#incomeTable table, #entriesTable table, #inventoryTable table \{ min-width: 0; \}/);
 });
 
 test('F22: touch targets bumped to real sizes across the suite, verified where a tight layout risked overlap or overflow', () => {

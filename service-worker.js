@@ -609,7 +609,14 @@
 // captured, plus a live portal-status line in the Contract Log). It is
 // in PRECACHE_URLS. Same reasoning as every prior bump in this file's
 // history.
-const CACHE_NAME = 'th-workspace-v139'; // precache-fingerprint:1038eb281d0d
+// Bumped (v139 -> v140): sync.js and data-layer.js both changed -- three
+// audit-flagged gaps closed together: parts inventory tracking (new
+// th_inventory/th_inventory_tombstones sync keys, a new Inventory tab in
+// finance.html), job-duration ($/hr) tracking on jobs, and a Part Cost
+// Trend lookup in finance.html's Expenses tab. Both files are precached
+// on every tool page via PRECACHE_URLS. Same reasoning as every prior
+// bump in this file's history.
+const CACHE_NAME = 'th-workspace-v140'; // precache-fingerprint:62a8da86dbd6
 const PRECACHE_URLS = [
   '/tools/workspace.html', '/tools/job-tracker.html', '/tools/invoice-generator.html', '/tools/contract-generator.html',
   '/tools/calendar.html', '/tools/route-planner.html', '/tools/review-request.html', '/tools/contact-card.html',

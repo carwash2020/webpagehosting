@@ -67,14 +67,14 @@
 <link rel="stylesheet" href="/styles.css?v=d9dfbf37af">
 <link rel="stylesheet" href="/tools/styles-tools.css?v=802b87086c">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.112.3/dist/umd/supabase.js" integrity="sha384-qafw21c/iciq0VXsi9FzkfoQv5I/V0iqE4lSNcKXPnW9/UTJLnv5CcN4FHxVLnKg" crossorigin="anonymous" defer></script>
-<script src="/tools/sync.js?v=5f8ddf47c9" defer></script>
+<script src="/tools/sync.js?v=b208ad9d5d" defer></script>
 <!-- Shared business-hours data (2026-09-03) -- used by the work order
      "Approve & Schedule" form to warn if a chosen time falls outside
      real business hours, matching the same real hours booking.html,
      manage-booking.html, portal/quotes.html, and portal/jobs.html use. -->
 <script src="/business-hours.js?v=306f097e9e"></script>
 <script src="/tools/push-notifications.js?v=180abd2a84" defer></script>
-<script src="/tools/data-layer.js?v=3a0d57478c" defer></script>
+<script src="/tools/data-layer.js?v=c5d44f096e" defer></script>
 <script src="/tools/tools-effects.js?v=4cff99aa4a" defer></script>
 <script src="/tools/tools-dialogs.js?v=e1dfaa11a1" defer></script>
 <script src="/tools/tools-media-sharing.js?v=0c229c9353" defer></script>
@@ -1055,6 +1055,7 @@
     'th_tracker_jobs', 'th_tracker_contacts', 'th_tracker_notes_v2',
     'th_expense_log', 'th_income_log', 'th_mileage_rate', 'th_price_reference', 'th_invoices',
     'th_quotes', 'th_tax_rate', 'th_tax_labor', 'th_tax_parts', 'th_compliance', 'th_job_templates', 'th_contracts', 'th_setaside_rate',
+    'th_inventory',
   ];
 
   function loadJobs() { try { return JSON.parse(localStorage.getItem('th_tracker_jobs') || '[]'); } catch (e) { return []; } }

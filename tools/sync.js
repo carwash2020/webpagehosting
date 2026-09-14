@@ -139,6 +139,11 @@ const SYNC_DATA_KEYS = [
   'th_mileage_rate',
   'th_price_ref_tombstones',
   'th_price_reference',
+  // Parts inventory (closes a real audit gap: Appliance Wiki only ever
+  // tracked WHAT part fixes what, never what's actually on hand). Same
+  // tombstone-before-log convention as every array key above.
+  'th_inventory_tombstones',
+  'th_inventory',
   // Delete added to invoices and quotes for the first time (2026-08-26)
   // -- built in with the tombstone from the start, same reasoning as
   // every entry above, rather than added as a later fix.
@@ -279,6 +284,7 @@ const MERGE_KEY_FIELD = {
   th_invoice_tombstones: 'id',
   th_quote_tombstones: 'id',
   th_price_ref_tombstones: 'id',
+  th_inventory_tombstones: 'id',
   th_template_tombstones: 'id',
   th_known_issue_tombstones: 'id',
   th_pr_unit_tombstones: 'id',
@@ -293,6 +299,7 @@ const MERGE_KEY_FIELD = {
   th_job_templates: 'id',
   th_contracts: 'id',
   th_price_reference: 'id',
+  th_inventory: 'id',
   th_parts_reference_units: 'id',
   th_client_errors: 'id',
   th_sync_conflicts: 'id',
