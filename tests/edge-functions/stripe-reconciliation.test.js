@@ -61,3 +61,27 @@ test('exactly one Deno.serve handler, structure intact', () => {
   const matches = RECONCILE.match(/^Deno\.serve/gm) || [];
   assert.equal(matches.length, 1);
 });
+
+// A real production bug (found 2026-09-13 from a live Postgres error:
+// 23505 duplicate key on notification_log_notif_type_item_key_key):
+// merge-duplicates without an explicit on_conflict targets the
+// primary key (id) by default, which is a fresh random uuid every
+// insert and can never collide. That silently turned this "upsert"
+// into a bare INSERT, which then hit the real
+// UNIQUE(notif_type, item_key) constraint and failed outright every
+// time the same item was renotified after its resend interval
+// elapsed. Fixed in both places that write to notification_log by
+// naming that constraint explicitly.
+test('markAlerted (reconcile-stripe-payments) upserts notification_log against its real unique constraint, not the default primary key', () => {
+  const fnMatch = RECONCILE.match(/async function markAlerted\(itemKey: string\)[\s\S]*?\n\}\n/);
+  assert.ok(fnMatch, 'expected to isolate markAlerted()');
+  assert.match(fnMatch[0], /\/rest\/v1\/notification_log\?on_conflict=notif_type,item_key/);
+  assert.match(fnMatch[0], /Prefer: "resolution=merge-duplicates"/);
+});
+
+test('markNotified (send-push) upserts notification_log against its real unique constraint, not the default primary key', () => {
+  const fnMatch = SEND_PUSH.match(/async function markNotified\([\s\S]*?\n\}\n/);
+  assert.ok(fnMatch, 'expected to isolate markNotified()');
+  assert.match(fnMatch[0], /\/rest\/v1\/notification_log\?on_conflict=notif_type,item_key/);
+  assert.match(fnMatch[0], /Prefer: "resolution=merge-duplicates"/);
+});

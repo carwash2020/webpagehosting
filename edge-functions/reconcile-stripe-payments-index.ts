@@ -66,7 +66,16 @@ async function wasRecentlyAlerted(itemKey: string): Promise<boolean> {
 }
 
 async function markAlerted(itemKey: string) {
-  await supabaseRequest("/rest/v1/notification_log", {
+  // on_conflict must name the real unique constraint
+  // (notif_type, item_key) explicitly -- without it, PostgREST's
+  // upsert targets the primary key (id) by default, which is a fresh
+  // random uuid on every insert and can never collide. That silently
+  // turns this "upsert" into a bare INSERT, which then hits the
+  // actual UNIQUE(notif_type, item_key) constraint and fails with a
+  // raw 23505 duplicate-key error every time the same item is
+  // re-alerted after RESEND_DAYS elapses (same bug found and fixed in
+  // send-push-index.ts's own markNotified(), 2026-09-13).
+  await supabaseRequest("/rest/v1/notification_log?on_conflict=notif_type,item_key", {
     method: "POST",
     headers: { Prefer: "resolution=merge-duplicates" },
     body: JSON.stringify({ notif_type: "stripe-reconciliation-mismatch", item_key: itemKey, sent_at: new Date().toISOString() }),
