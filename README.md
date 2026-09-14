@@ -987,6 +987,41 @@ New test in `tests/workspace/job-confirmation-email.test.js` (now 11
 tests) locking in the BCC. 1,623/1,623 tests passing, all
 consistency/undefined-vars/link/visual-snapshot checks clean.
 
+## What changed, 2026-09-13 -- fixed a live `23505 duplicate key` error in the notification de-dup log
+
+A real production Postgres error came in verbatim: `duplicate key
+value violates unique constraint
+"notification_log_notif_type_item_key_key"`. Root cause: both places
+that write to the shared `notification_log` de-dup table
+(`send-push`'s `markNotified()` and `reconcile-stripe-payments`'s
+`markAlerted()`) called PostgREST's upsert with `Prefer:
+resolution=merge-duplicates` but never told it which constraint to
+resolve against. Without an explicit `on_conflict` parameter,
+PostgREST defaults the conflict target to the table's primary key --
+here, a freshly-generated random `id` on every insert, which can never
+actually collide. That silently turned the "upsert" into a bare
+INSERT, which then hit the table's real unique constraint,
+`UNIQUE(notif_type, item_key)`, and failed outright the moment the
+same ongoing condition (an overdue invoice, a stuck job, an unresolved
+Stripe mismatch, etc.) got renotified after its own resend interval
+elapsed -- which is to say, on the very first repeat of anything this
+table was built to de-duplicate.
+
+Fixed both call sites by adding `?on_conflict=notif_type,item_key` to
+the upsert URL, and audited every other `resolution=merge-duplicates`
+site in the codebase to check for the same mistake elsewhere -- all
+others were already correct, either naming their own real unique
+constraint (`push_subscriptions`, `workspace_sync`, the four
+`client_portal_*` portal-sync tables) or correctly relying on the
+default primary key because that table's PK genuinely is the key
+being reused (`tools/sync.js`'s generic job/invoice/etc. mirror).
+Redeployed both `send-push` and `reconcile-stripe-payments` live.
+
+New tests in `tests/edge-functions/stripe-reconciliation.test.js` (now
+11 tests) locking in the `on_conflict=notif_type,item_key` fix for
+both functions. 1,625/1,625 tests passing, all
+consistency/undefined-vars/link/visual-snapshot checks clean.
+
 ## What changed, 2026-09-14 -- manually-scheduled jobs can now be cancelled or have a reschedule requested
 
 Direct follow-up, in response to "what else should we add?": self-
