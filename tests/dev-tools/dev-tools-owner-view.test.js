@@ -26,6 +26,7 @@ const DEV_ONLY_HEADINGS = [
   'Regression checker', "What's new", 'Quick links', 'Trigger workflows',
   'Advisor health', 'Storage browser', 'Data integrity check',
   'Booking funnel health', 'Lead response time', 'Uptime trend',
+  'Cron health',
 ];
 const OWNER_VISIBLE_HEADINGS = ['Client registry', 'Account permissions'];
 
@@ -48,10 +49,10 @@ function panelFor(window, headingText) {
   return heading ? heading.closest('.dev-panel') : null;
 }
 
-test('exactly 28 panels are marked dev-owner-hidden, matching the full, deliberate list of code/technical/error-diagnostic panels (27 previous + the new Sync conflicts panel)', () => {
+test('exactly 29 panels are marked dev-owner-hidden, matching the full, deliberate list of code/technical/error-diagnostic panels (28 previous + the new Cron Health panel)', () => {
   const src = fs.readFileSync(DEV_TOOLS_PATH, 'utf8');
   const count = (src.match(/class="dev-panel dev-owner-hidden/g) || []).length;
-  assert.equal(count, 28);
+  assert.equal(count, 29);
 });
 
 test('an account without the full-technical permission has every one of the 23 developer-only panels hidden', () => {

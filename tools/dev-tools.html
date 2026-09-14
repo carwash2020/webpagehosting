@@ -51,7 +51,7 @@
 <link rel="stylesheet" href="/styles.css?v=d9dfbf37af">
 <link rel="stylesheet" href="/tools/styles-tools.css?v=802b87086c">
 <script src="/tools/data-layer.js?v=c5d44f096e" defer></script>
-<script src="/tools/dev-tools-shared.js?v=3356b9f30f" defer></script>
+<script src="/tools/dev-tools-shared.js?v=433f49c65b" defer></script>
 <script src="/tools/tools-effects.js?v=4cff99aa4a" defer></script>
 <script src="/tools/tools-dialogs.js?v=5d45911e95" defer></script>
 <script src="/tools/tools-media-sharing.js?v=0c229c9353" defer></script>
@@ -424,6 +424,20 @@
       <button class="secondary-btn" style="margin-bottom:12px;" onclick="renderAdvisorHealth()">Refresh</button>
       <div id="advisorHealthResults"></div>
     </div>
+  </div>
+
+  <!-- Cron Health (closes a real audit gap: every pg_cron job that
+       calls an Edge Function via net.http_post was fire-and-forget,
+       with nothing checking whether the actual HTTP call succeeded --
+       see sql/infra/add_cron_watchdog.sql). A direct, real-time query
+       against cron_alerts, same pattern as client_portal_quotes/
+       contracts status elsewhere in this project, not a blob write. -->
+  <div class="dev-panel dev-owner-hidden dev-panel-wide">
+    <div class="dev-panel-heading">
+      <h2>Cron health</h2>
+      <button class="dev-info-bubble" onclick="openDevInfo('cronhealth')" aria-label="What does this do?" title="What does this do?">?</button>
+    </div>
+    <div id="cronHealthResults"></div>
   </div>
 
   <div class="dev-panel dev-owner-hidden dev-panel-wide is-collapsible" data-collapse-key="dataintegrity">
@@ -993,13 +1007,14 @@
     const results = document.getElementById('fullHealthCheckResults');
     btn.disabled = true;
     btn.textContent = 'Checking...';
-    results.innerHTML = '<p class="tool-sub">Running consistency check, service worker status, Supabase reachability, and latest deploy...</p>';
+    results.innerHTML = '<p class="tool-sub">Running consistency check, service worker status, Supabase reachability, latest deploy, and cron health...</p>';
     try {
       await Promise.all([
         (typeof runLiveConsistencyCheck === 'function') ? runLiveConsistencyCheck() : Promise.resolve(),
         (typeof renderServiceWorkerInfo === 'function') ? renderServiceWorkerInfo() : Promise.resolve(),
         (typeof checkSupabaseReachability === 'function') ? checkSupabaseReachability() : Promise.resolve(),
         (typeof renderDeployStatus === 'function') ? renderDeployStatus() : Promise.resolve(),
+        (typeof renderCronHealth === 'function') ? renderCronHealth() : Promise.resolve(),
       ]);
 
       const issues = [];
@@ -1013,9 +1028,12 @@
       const deployStatusEl = document.querySelector('#deployStatus .dev-check-status');
       if (deployStatusEl && deployStatusEl.classList.contains('fail')) issues.push('Latest deploy did not pass (see Deploy History)');
 
+      const cronAlertRows = document.querySelectorAll('#cronHealthResults .dev-issue-row').length;
+      if (cronAlertRows > 0) issues.push(cronAlertRows + ' open cron alert' + (cronAlertRows === 1 ? '' : 's') + ' (see Cron Health)');
+
       results.innerHTML = issues.length
         ? '<div class="dev-check-row"><div>' + issues.map(i => escapeHtml(i)).join('<br>') + '</div><span class="dev-check-status fail">' + issues.length + ' ISSUE' + (issues.length === 1 ? '' : 'S') + '</span></div>'
-        : '<div class="dev-check-row"><div>Consistency check, service worker, Supabase, and latest deploy all look good.</div><span class="dev-check-status pass">ALL CLEAR</span></div>';
+        : '<div class="dev-check-row"><div>Consistency check, service worker, Supabase, latest deploy, and cron health all look good.</div><span class="dev-check-status pass">ALL CLEAR</span></div>';
     } catch (e) {
       results.innerHTML = '<p class="tool-sub">Something went wrong running the full check: ' + escapeHtml(e.message || String(e)) + '</p>';
     } finally {
@@ -2861,6 +2879,70 @@
     return res.json();
   }
 
+  // Cron Health (closes a real audit gap -- see sql/infra/add_cron_watchdog.sql
+  // and this panel's own DEV_INFO entry for the full reasoning). A
+  // direct, real-time read against cron_alerts, same pattern as
+  // fetchUptimeChecks() just above.
+  async function fetchCronAlerts() {
+    const res = await fetchWithTimeout(
+      SUPABASE_URL + '/rest/v1/cron_alerts?acknowledged=eq.false&select=*&order=created_at.desc',
+      8000,
+      { headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': 'Bearer ' + getAuthToken() } }
+    );
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    return res.json();
+  }
+
+  async function renderCronHealth() {
+    const el = document.getElementById('cronHealthResults');
+    if (!el) return;
+    el.innerHTML = '<p class="tool-sub">Loading...</p>';
+    try {
+      const alerts = await fetchCronAlerts();
+      if (!alerts.length) {
+        el.innerHTML = '<p class="tool-sub" style="color:#6fcf97;">No open alerts -- every cron job\'s last checked run and HTTP call succeeded.</p>';
+        return;
+      }
+      el.innerHTML = alerts.map(a => `
+        <div class="dev-issue-row">
+          <div style="flex:1;">
+            <div class="dev-issue-title">${a.alert_type === 'job_run_failed' ? 'Job run failed' : 'HTTP call failed'}</div>
+            <div class="dev-issue-detail">${escapeHtml(a.detail)}</div>
+            <div class="dev-issue-detail">${new Date(a.created_at).toLocaleString()}</div>
+          </div>
+          <button class="small-btn" onclick="acknowledgeCronAlert(${a.id})">Acknowledge</button>
+        </div>`).join('');
+    } catch (e) {
+      el.innerHTML = '<p class="tool-sub" style="color:#e05555;">Couldn\'t load cron alerts (' + escapeHtml(e.message) + ').</p>';
+    }
+  }
+
+  async function acknowledgeCronAlert(id) {
+    try {
+      const res = await fetchWithTimeout(
+        SUPABASE_URL + '/rest/v1/cron_alerts?id=eq.' + id,
+        8000,
+        {
+          method: 'PATCH',
+          headers: {
+            'apikey': SUPABASE_ANON_KEY,
+            'Authorization': 'Bearer ' + getAuthToken(),
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            acknowledged: true,
+            acknowledged_at: new Date().toISOString(),
+            acknowledged_by: (typeof getCurrentUserEmail === 'function') ? getCurrentUserEmail() : null,
+          }),
+        }
+      );
+      if (!res.ok) throw new Error('HTTP ' + res.status);
+      renderCronHealth();
+    } catch (e) {
+      if (typeof showToast === 'function') showToast('Could not acknowledge: ' + (e.message || String(e)), { type: 'error' });
+    }
+  }
+
   function groupIntoIncidents(checksOldestFirst) {
     const incidents = [];
     let current = null;
@@ -3216,6 +3298,7 @@
       renderServiceWorkerInfo();
       renderClientErrorLog();
       renderSyncConflictLog();
+      renderCronHealth();
       // Portal init calls removed (2026-09-03) -- renderPortalBugReports/
       // Accounts/Invoices/WorkOrders and renderEmailList now live on
       // their own /tools/clients.html, which has its own init.

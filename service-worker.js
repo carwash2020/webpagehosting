@@ -631,7 +631,12 @@
 // reusing the leads array already fetched for the Leads Inbox (no
 // second query). workspace.html is precached. Same reasoning as every
 // prior bump in this file's history.
-const CACHE_NAME = 'th-workspace-v142'; // precache-fingerprint:14b21e20ce1f
+// Bumped (v142 -> v143): dev-tools.html and dev-tools-shared.js changed
+// -- a new Cron Health panel (closes a real audit gap: every pg_cron
+// job calling an Edge Function via net.http_post was fire-and-forget).
+// Both files are precached. Same reasoning as every prior bump in this
+// file's history.
+const CACHE_NAME = 'th-workspace-v143'; // precache-fingerprint:4c6fa8b381e5
 const PRECACHE_URLS = [
   '/tools/workspace.html', '/tools/job-tracker.html', '/tools/invoice-generator.html', '/tools/contract-generator.html',
   '/tools/calendar.html', '/tools/route-planner.html', '/tools/review-request.html', '/tools/contact-card.html',

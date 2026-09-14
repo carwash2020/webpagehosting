@@ -845,6 +845,23 @@ Deno.serve(async (req: Request) => {
       return new Response(JSON.stringify({ ok: true }), { headers: { "Content-Type": "application/json" } });
     }
 
+    // Cron health watchdog alert (closes a real audit gap: every cron
+    // job that calls an Edge Function via net.http_post was fire-and-
+    // forget, with nothing checking whether the actual HTTP call
+    // succeeded). check_cron_health() (see
+    // sql/infra/add_cron_watchdog.sql) already wrote the real detail
+    // into the cron_alerts table before calling this -- this push is
+    // just the immediate heads-up; Dev Tools' Cron Health panel is the
+    // reliable source of what actually happened, not this notification.
+    if (payload.type === "cron-health-alert") {
+      await sendToAllSubscriptions({
+        title: "Cron health alert",
+        body: "A scheduled job or its HTTP call failed. Check Dev Tools → Cron Health.",
+        url: "/tools/dev-tools.html",
+      });
+      return new Response(JSON.stringify({ ok: true }), { headers: { "Content-Type": "application/json" } });
+    }
+
     // Client portal push (2026-09-04), requested directly. Deliberately
     // a distinct type from every check above -- this is the ONLY branch
     // in this whole function that targets one specific user rather than
