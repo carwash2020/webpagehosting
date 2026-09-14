@@ -140,7 +140,7 @@
 }
 </script>
 
-<script type="application/ld+json">
+<script type="application/ld+json" id="faqSchema">
 {
   "@context": "https://schema.org",
   "@type": "FAQPage",
@@ -2953,6 +2953,28 @@
         // Re-bind the accordion's click handlers -- the ones attached
         // at page load belonged to the static elements just replaced.
         if (typeof bindFaqAccordion === 'function') bindFaqAccordion();
+
+        // Closes a real audit gap: the FAQPage JSON-LD in <head> used to
+        // stay hardcoded regardless of this fetch, so an FAQ edited via
+        // Dev Tools' CMS updated what a visitor sees but NOT what Google
+        // indexes -- Google's FAQ rich-result guidelines require the
+        // schema to match visible page content, and a mismatch risks
+        // losing the rich snippet or a manual-action flag. Rebuilt from
+        // the exact same `rows` the visible accordion just rendered, so
+        // the two can never drift apart again -- not a second,
+        // independently-fetched copy.
+        const faqSchemaEl = document.getElementById('faqSchema');
+        if (faqSchemaEl) {
+          faqSchemaEl.textContent = JSON.stringify({
+            '@context': 'https://schema.org',
+            '@type': 'FAQPage',
+            mainEntity: rows.map(r => ({
+              '@type': 'Question',
+              name: r.question,
+              acceptedAnswer: { '@type': 'Answer', text: r.answer },
+            })),
+          });
+        }
       })
       .catch(() => { /* static fallback content already shown is correct */ });
   })();
