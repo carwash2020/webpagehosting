@@ -389,6 +389,22 @@
         <input type="text" id="bAddress" name="address" autocomplete="street-address" maxlength="200">
         <label for="bNotes">Anything we should know? (optional)</label>
         <textarea id="bNotes" name="notes" maxlength="1000"></textarea>
+        <!-- Marketing-source tracking (closes a real audit gap): a
+             general "how did you hear about us" category, separate
+             from the referral program's own name-based field right
+             below -- this shows up as a breakdown on the internal
+             Dashboard, the referral field feeds the $25 reward ledger. -->
+        <label for="bSource">How did you hear about us? (optional)</label>
+        <select id="bSource" name="source">
+          <option value="" selected>Prefer not to say</option>
+          <option>Google Search</option>
+          <option>Yelp / Online Reviews</option>
+          <option>Referral (friend or family)</option>
+          <option>Repeat Customer</option>
+          <option>Saw Our Vehicle or Sign</option>
+          <option>Social Media</option>
+          <option>Other</option>
+        </select>
         <!-- Referral program (direct request, 2026-09-09): a $25 credit
              for whoever referred this customer, once this job is
              complete and paid -- see sql/infra/create_referral_program.sql
@@ -720,6 +736,7 @@
         address: formData.get('address') || null,
         notes: formData.get('notes') || null,
         referred_by: formData.get('referred_by') || null,
+        source: formData.get('source') || null,
       }),
     })
       .then(function (res) {

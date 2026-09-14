@@ -626,7 +626,12 @@
 // bug shape at all (Appliance Wiki's entire edit-in-place UI chief
 // among them). tools-dialogs.js is precached on every tool page. Same
 // reasoning as every prior bump in this file's history.
-const CACHE_NAME = 'th-workspace-v141'; // precache-fingerprint:d0ea0af0d749
+// Bumped (v141 -> v142): workspace.html changed -- marketing-source-of-
+// lead tracking. A new "Lead Sources" breakdown on the Dashboard,
+// reusing the leads array already fetched for the Leads Inbox (no
+// second query). workspace.html is precached. Same reasoning as every
+// prior bump in this file's history.
+const CACHE_NAME = 'th-workspace-v142'; // precache-fingerprint:14b21e20ce1f
 const PRECACHE_URLS = [
   '/tools/workspace.html', '/tools/job-tracker.html', '/tools/invoice-generator.html', '/tools/contract-generator.html',
   '/tools/calendar.html', '/tools/route-planner.html', '/tools/review-request.html', '/tools/contact-card.html',

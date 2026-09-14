@@ -1335,6 +1335,27 @@
           </div>
         </div>
 
+        <!-- Marketing-source tracking (closes a real audit gap): a
+             general "how did you hear about us" category, separate
+             from the referral program's own name-based field right
+             below -- this shows up as a breakdown on the internal
+             Dashboard, the referral field feeds the $25 reward ledger. -->
+        <div class="form-row">
+          <div class="field full">
+            <label for="source">How did you hear about us? (optional)</label>
+            <select id="source" name="source">
+              <option value="" selected>Prefer not to say</option>
+              <option>Google Search</option>
+              <option>Yelp / Online Reviews</option>
+              <option>Referral (friend or family)</option>
+              <option>Repeat Customer</option>
+              <option>Saw Our Vehicle or Sign</option>
+              <option>Social Media</option>
+              <option>Other</option>
+            </select>
+          </div>
+        </div>
+
         <!-- Referral program (direct request, 2026-09-09): a $25 credit
              for whoever referred this customer, once this job is
              complete and paid -- see the FAQ entry and
@@ -2389,6 +2410,7 @@
         preferred_time: formData.get('time'),
         details: formData.get('details'),
         referred_by: formData.get('referredBy') || null,
+        source: formData.get('source') || null,
       }]),
     })
     .then((response) => {

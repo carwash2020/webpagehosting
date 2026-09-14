@@ -758,6 +758,15 @@
       <div id="topVendors"></div>
       <div class="analytics-subheading">Top Clients <span style="text-transform:none; letter-spacing:0;">(lifetime revenue, not limited to the period above)</span></div>
       <div id="topClients"></div>
+      <!-- Marketing-source-of-lead tracking (closes a real audit gap):
+           the referral program already tracks ONE specific source with
+           its own reward ledger, but there was no way to see how
+           customers found the business more generally. Reuses the same
+           leads data the Leads Inbox above already fetched -- no second
+           query -- so this is bounded by fetchLeads()'s own limit=50,
+           the most recent leads rather than a full historical count. -->
+      <div class="analytics-subheading">Lead Sources <span style="text-transform:none; letter-spacing:0;">(most recent 50 leads)</span></div>
+      <div id="leadSources"></div>
   </div>
 </div>
 
@@ -1444,6 +1453,33 @@
       </div>`).join('');
   }
 
+  // Marketing-source-of-lead tracking (closes a real audit gap): counts
+  // the `source` field captured on the public lead form and booking
+  // flow, grouped and sorted the same way renderTopVendors() already
+  // does for expense vendors -- reuses the leads array
+  // loadAndRenderLeads() already fetched, not a second query. Leads
+  // that skipped the optional field (or were submitted before it
+  // existed) count as "Not specified" rather than being silently
+  // dropped from the total.
+  function renderLeadSources(leads) {
+    const container = document.getElementById('leadSources');
+    if (!container) return;
+    const counts = {};
+    leads.forEach(l => { const key = l.source || 'Not specified'; counts[key] = (counts[key] || 0) + 1; });
+    const sorted = Object.entries(counts).sort((a, b) => b[1] - a[1]);
+    if (sorted.length === 0) {
+      container.innerHTML = '<div class="empty-state-small"><svg class="th-icon" aria-hidden="true"><use href="#icon-inbox" xlink:href="#icon-inbox"></use></svg>No leads yet.</div>';
+      return;
+    }
+    const max = sorted[0][1];
+    container.innerHTML = sorted.map(([source, count]) => `
+      <div class="vendor-bar-row">
+        <div class="vendor-bar-label" title="${escapeAttr(source)}">${escapeHtml(source)}</div>
+        <div class="vendor-bar-track"><div class="vendor-bar-fill" style="width:${(count / max * 100)}%"></div></div>
+        <div class="vendor-bar-count">${count}</div>
+      </div>`).join('');
+  }
+
   function renderTopClients() {
     // Item #4 (2026-08-18): lifetime value, not scoped to the Business
     // Snapshot period filter above -- "who are my best clients" is a
@@ -1927,6 +1963,7 @@
       container.innerHTML = '<div class="empty-state-small"><svg class="th-icon" aria-hidden="true"><use href="#icon-link" xlink:href="#icon-link"></use></svg>Cloud sync isn\'t set up yet, so leads can\'t load.</div>';
       actionItemCounts.leads = 0;
       updateActionItemsBadge();
+      renderLeadSources([]);
       return;
     }
     const result = await fetchLeads();
@@ -1934,12 +1971,14 @@
       container.innerHTML = '<div class="empty-state-small is-warning"><svg class="th-icon" aria-hidden="true"><use href="#icon-warning" xlink:href="#icon-warning"></use></svg>Couldn\'t load leads (' + escapeHtml(result.error) + '). Make sure the th_leads table exists in Supabase.</div>';
       actionItemCounts.leads = 0;
       updateActionItemsBadge();
+      renderLeadSources([]);
       return;
     }
     let visibleLeads = result.leads;
     if (pendingDeleteLeadIds.size > 0) visibleLeads = visibleLeads.filter(l => !pendingDeleteLeadIds.has(l.id));
     actionItemCounts.leads = visibleLeads.filter(l => !l.handled).length;
     updateActionItemsBadge();
+    renderLeadSources(visibleLeads);
     // Item #13 extended (2026-08-20): filters out any lead pending an
     // undoable delete -- the real DELETE call to Supabase is deferred
     // (see deleteLeadFromDashboard), so fetchLeads() above still
