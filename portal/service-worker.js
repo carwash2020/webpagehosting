@@ -234,10 +234,19 @@
 // Bumped 2026-09-08 again: /styles.css changed again (W23 remainder --
 // reduced section-heading entrance motion + the diagram's node pulse;
 // portal pages use neither, but the file is shared/precached).
-const CACHE_NAME = 'th-portal-v61'; // precache-fingerprint:1d65c08ba262
+// Bumped (v62 -> v63): /portal/contracts.html added to PRECACHE_URLS --
+// the new async e-signature page for contracts (closing the gap where
+// quotes already had a full async approve/decline flow via the portal
+// but the three contract templates could only ever be signed in
+// person). Same reasoning as every prior bump: a new precached page
+// requires bumping this constant so it's actually fetched and cached
+// on the next activate, not silently missing until some other change
+// happens to bump it later.
+const CACHE_NAME = 'th-portal-v63'; // precache-fingerprint:956e6cf7ee5b
 const PRECACHE_URLS = [
   '/portal/home.html', '/portal/dashboard.html', '/portal/jobs.html', '/portal/quotes.html',
   '/portal/work-orders.html', '/portal/settings.html', '/portal/login.html', '/portal/set-password.html',
+  '/portal/contracts.html',
   '/portal/manifest.json',
   '/portal/portal-app.css',
   '/portal/portal-app.js',

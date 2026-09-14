@@ -603,7 +603,13 @@
 // passes only the fetch error itself to logClientError(), so nothing
 // derived from the credential ever reaches the persisted,
 // cross-device-synced client error log.
-const CACHE_NAME = 'th-workspace-v138'; // precache-fingerprint:64cb6c51f211
+// Bumped (v138 -> v139): contract-generator.html changed -- async
+// e-signature for contracts (auto-syncing a generated contract to the
+// client portal for remote signing when no in-person signature was
+// captured, plus a live portal-status line in the Contract Log). It is
+// in PRECACHE_URLS. Same reasoning as every prior bump in this file's
+// history.
+const CACHE_NAME = 'th-workspace-v139'; // precache-fingerprint:1038eb281d0d
 const PRECACHE_URLS = [
   '/tools/workspace.html', '/tools/job-tracker.html', '/tools/invoice-generator.html', '/tools/contract-generator.html',
   '/tools/calendar.html', '/tools/route-planner.html', '/tools/review-request.html', '/tools/contact-card.html',
