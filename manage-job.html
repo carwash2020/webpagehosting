@@ -1,0 +1,322 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Manage Your Appointment | Triple H Enterprises</title>
+<meta name="robots" content="noindex, nofollow">
+<link rel="apple-touch-icon" href="/images/apple-touch-icon.png">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data:; connect-src 'self' https://*.supabase.co; frame-src 'none'; object-src 'none'; base-uri 'self'; frame-ancestors 'none';">
+<meta name="referrer" content="strict-origin-when-cross-origin">
+<meta http-equiv="Permissions-Policy" content="camera=(), microphone=(), geolocation=()">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="preconnect" href="https://csvfqdjuobylgafgolho.supabase.co">
+<link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Anton&family=Archivo:wght@400..700&family=Newsreader:ital,opsz,wght@0,6..72,300..700;1,6..72,300..600&family=Oswald:wght@200..700&display=swap" onload="this.onload=null;this.rel='stylesheet'">
+<noscript><link href="https://fonts.googleapis.com/css2?family=Anton&family=Archivo:wght@400..700&family=Newsreader:ital,opsz,wght@0,6..72,300..700;1,6..72,300..600&family=Oswald:wght@200..700&display=swap" rel="stylesheet"></noscript>
+<style>
+  :root{
+    /* This page does not load /styles.css, so it carries its own copy
+       of the type tokens. Keep in step with the :root block there
+       (same as manage-booking.html). */
+    --font-display:'Anton', sans-serif;
+    --font-body:'Newsreader', Georgia, 'Times New Roman', serif;
+    --font-ui:'Oswald', sans-serif;
+    --font-app:'Archivo', -apple-system, 'Segoe UI', sans-serif;
+    --bg:#0a0a0a;
+    --bg-panel:#141414;
+    --bg-panel-2:#1a1a1a;
+    --border:#2a2a2a;
+    --text:#e8e8e8;
+    --text-dim:#9a9a9a;
+    --orange:#ff8000;
+    --orange-dark:#c96400;
+    --orange-light:#ffb347;
+    --orange-tint-soft: rgba(255,128,0,0.08);
+    --orange-tint-border: rgba(255,128,0,0.32);
+    --radius:12px;
+    --hex: polygon(25% 6%, 75% 6%, 97% 50%, 75% 94%, 25% 94%, 3% 50%);
+  }
+  button,input,select,textarea,label{font-family:var(--font-app);}
+
+  *{box-sizing:border-box;}
+  body{
+    margin:0; background:var(--bg); color:var(--text);
+    font-family:var(--font-body); line-height:1.5;
+    padding-bottom:80px;
+  }
+  @media (prefers-reduced-motion: reduce){
+    *{animation-duration:0.001ms !important; transition-duration:0.001ms !important;}
+  }
+  .wrap{max-width:600px; margin:0 auto; padding:0 20px;}
+  header.site-header{ padding:22px 0; border-bottom:1px solid var(--border); margin-bottom:40px; }
+  header.site-header .wrap{display:flex; align-items:center; justify-content:space-between; gap:16px;}
+  .brand{display:flex; align-items:center; gap:12px; text-decoration:none; color:var(--text);}
+  .brand img{width:38px; height:auto;}
+  .brand-name{font-family:var(--font-ui); font-weight:700; letter-spacing:1.5px; font-size:14px;}
+  .phone-link{font-family:var(--font-ui); display:flex; align-items:center; gap:8px; color:var(--orange-light); text-decoration:none; font-weight:600; font-size:14.5px; white-space:nowrap; padding:8px 10px; border-radius:8px; transition:background .15s ease;}
+  .phone-link:hover{background:var(--orange-tint-soft);}
+  .phone-link:focus-visible, a:focus-visible, button:focus-visible{outline:2px solid var(--orange-light); outline-offset:2px;}
+  .phone-link svg{width:16px; height:16px; flex-shrink:0;}
+
+  h1{font-family:var(--font-ui); font-size:28px; letter-spacing:0.3px; margin:0 0 24px; font-weight:700;}
+
+  .hex-icon{
+    width:44px; height:44px; flex-shrink:0; position:relative;
+    background:var(--orange-tint-soft); border:1px solid var(--orange-tint-border);
+    clip-path:var(--hex); display:flex; align-items:center; justify-content:center;
+  }
+  .hex-icon svg{width:20px; height:20px; color:var(--orange-light); stroke-width:2;}
+  .hex-icon.is-muted{background:var(--bg-panel-2); border-color:var(--border);}
+  .hex-icon.is-muted svg{color:var(--text-dim);}
+
+  .job-card{
+    background:var(--bg-panel-2); border:1px solid var(--border); border-radius:var(--radius);
+    padding:20px; margin-bottom:22px; display:flex; gap:16px; align-items:flex-start;
+  }
+  .job-card .job-title{font-weight:700; font-size:16.5px; margin-bottom:4px;}
+  .job-card .when{color:var(--text-dim); font-size:14.5px;}
+
+  .state-msg{text-align:center; padding:36px 20px 8px; color:var(--text-dim);}
+  .state-msg.is-error{color:#ff8a80;}
+  .state-msg .checkmark{
+    width:64px; height:64px; clip-path:var(--hex); background:var(--orange); color:#1a1a1a;
+    display:flex; align-items:center; justify-content:center; margin:0 auto 18px; font-size:27px; font-weight:700;
+    animation:popIn .4s cubic-bezier(.2,1.4,.4,1) both;
+  }
+  @keyframes popIn{from{opacity:0; transform:scale(.5);} to{opacity:1; transform:scale(1);}}
+  .state-msg .hex-icon{margin:0 auto 18px;}
+
+  .btn{
+    display:inline-flex; align-items:center; justify-content:center; gap:8px;
+    padding:15px 24px; border-radius:10px; font-family:var(--font-ui); font-weight:600;
+    letter-spacing:1px; text-transform:uppercase; font-size:13.5px; border:2px solid transparent;
+    cursor:pointer; width:100%; margin-top:16px; text-decoration:none;
+    transition:background .15s ease, border-color .15s ease, transform .1s ease, box-shadow .15s ease;
+  }
+  .btn.danger{background:transparent; border-color:#e05252; color:#e05252;}
+  .btn.danger:hover{background:rgba(224,82,82,0.1);}
+  .btn.danger:disabled{opacity:0.5; cursor:not-allowed; transform:none;}
+  .btn.orange{background:var(--orange); color:#1a1a1a; box-shadow:0 6px 18px -8px rgba(255,128,0,.55);}
+  .btn.orange:hover{background:var(--orange-dark); transform:translateY(-1px);}
+  .btn.orange:disabled{opacity:0.5; cursor:not-allowed; transform:none;}
+  .btn.ghost{background:transparent; border-color:var(--border); color:var(--text-dim);}
+  .btn.ghost:hover{border-color:var(--orange-tint-border); color:var(--text);}
+
+  #rescheduleStep{display:none;}
+  #rescheduleStep.is-active{display:block; animation:stepIn .25s ease both;}
+  #confirmStep{display:none;}
+  #confirmStep.is-active{display:block; animation:stepIn .25s ease both;}
+  @keyframes stepIn{from{opacity:0; transform:translateY(6px);} to{opacity:1; transform:translateY(0);}}
+
+  .date-field{
+    width:100%; padding:13px 14px; border-radius:10px; border:1px solid var(--border);
+    background:var(--bg-panel-2); color:var(--text); font-family:var(--font-app); font-size:15px;
+    margin:18px 0 4px;
+  }
+  .date-field:focus-visible{outline:2px solid var(--orange-light); outline-offset:2px;}
+  .field-note{color:var(--text-dim); font-size:13px; margin:0 0 16px;}
+
+  @media (max-width: 480px){
+    .brand-name{display:none;}
+    h1{font-size:24px;}
+  }
+</style>
+</head>
+<body>
+
+<header class="site-header">
+  <div class="wrap">
+    <a href="/" class="brand">
+      <img src="/images/logo-signature.webp?v=202608010300" alt="Triple H Enterprises logo">
+      <span class="brand-name">TRIPLE H ENTERPRISES</span>
+    </a>
+    <a href="tel:+14354141667" class="phone-link">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
+      (435) 414-1667
+    </a>
+  </div>
+</header>
+
+<main class="wrap">
+  <h1>Manage Your Appointment</h1>
+  <div id="content">
+    <div class="state-msg"><p>Loading your appointment...</p></div>
+  </div>
+</main>
+
+<script>
+(function () {
+  const SUPABASE_URL = 'https://csvfqdjuobylgafgolho.supabase.co';
+  const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNzdmZxZGp1b2J5bGdhZmdvbGhvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODUzNTQ3MjcsImV4cCI6MjEwMDkzMDcyN30.6GlvK-DfXf2lppS1kciZtsl4wHOpZz_yKtwsS1lyjrs';
+
+  function svgIcon(pathContent) {
+    return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">' + pathContent + '</svg>';
+  }
+
+  function escapeHtml(value) {
+    const s = value === null || value === undefined ? '' : String(value);
+    return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+  }
+
+  function getTokenFromUrl() {
+    const params = new URLSearchParams(window.location.search);
+    return params.get('token');
+  }
+
+  async function callRpc(fnName, args) {
+    const res = await fetch(SUPABASE_URL + '/rest/v1/rpc/' + fnName, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        apikey: SUPABASE_ANON_KEY,
+        Authorization: 'Bearer ' + SUPABASE_ANON_KEY,
+      },
+      body: JSON.stringify(args),
+    });
+    if (!res.ok) return null;
+    return res.json();
+  }
+
+  function renderState(html) {
+    document.getElementById('content').innerHTML = html;
+  }
+
+  function renderNoToken() {
+    renderState(
+      '<div class="state-msg is-error">' +
+      '<div class="hex-icon is-muted">' + svgIcon('<circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/>') + '</div>' +
+      '<p>This link is missing some information. If you followed a link from your confirmation email, try copying the full link into your browser, or call us and we\'ll take care of it.</p></div>'
+    );
+  }
+
+  function renderNotFound() {
+    renderState(
+      '<div class="state-msg is-error">' +
+      '<div class="hex-icon is-muted">' + svgIcon('<circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/>') + '</div>' +
+      '<p>We couldn\'t find an appointment for this link. If you think this is a mistake, give us a call and we\'ll sort it out.</p></div>'
+    );
+  }
+
+  function formatJobDate(jobDate) {
+    try {
+      return new Date(jobDate + 'T00:00:00').toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' });
+    } catch (e) {
+      return jobDate;
+    }
+  }
+
+  function renderJob(job, token) {
+    if (job.cancelled_at) {
+      renderState(
+        '<div class="job-card">' + '<div class="hex-icon">' + svgIcon('<rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/>') + '</div>' +
+        '<div><div class="job-title">' + escapeHtml(job.title) + '</div>' +
+        '<div class="when">' + escapeHtml(formatJobDate(job.job_date)) + '</div></div></div>' +
+        '<div class="state-msg"><div class="hex-icon is-muted">' + svgIcon('<circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/>') + '</div><p>This appointment has already been cancelled.</p></div>' +
+        '<a href="/booking.html" class="btn orange">Book a new appointment</a>'
+      );
+      return;
+    }
+
+    const alreadyRequestedNote = job.reschedule_requested_date
+      ? '<p class="field-note">You already requested ' + escapeHtml(formatJobDate(job.reschedule_requested_date)) + '. We\'ll follow up once it\'s confirmed -- feel free to request a different date instead.</p>'
+      : '';
+
+    renderState(
+      '<div class="job-card">' + '<div class="hex-icon">' + svgIcon('<rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/>') + '</div>' +
+      '<div><div class="job-title">' + escapeHtml(job.title) + '</div>' +
+      '<div class="when" id="currentWhen">' + escapeHtml(formatJobDate(job.job_date)) + '</div></div></div>' +
+      alreadyRequestedNote +
+      '<button type="button" class="btn orange" id="startRescheduleBtn">Request a different date</button>' +
+      '<button type="button" class="btn danger" id="startCancelBtn">Cancel this appointment</button>' +
+      '<div id="rescheduleStep">' +
+      '  <label style="display:block; font-size:13px; color:var(--text-dim); margin:20px 0 0;">Preferred new date</label>' +
+      '  <input type="date" class="date-field" id="newDateInput">' +
+      '  <p class="field-note">This is a request, not an instant change -- we\'ll call or email to confirm the new date works.</p>' +
+      '  <button type="button" class="btn orange" id="submitRescheduleBtn">Send request</button>' +
+      '  <button type="button" class="btn ghost" id="cancelRescheduleBtn">Never mind</button>' +
+      '</div>' +
+      '<div id="confirmStep">' +
+      '  <p style="text-align:center; color:var(--text-dim); font-size:14.5px; margin-top:20px;">Are you sure? This can\'t be undone. You\'ll need to book or call us again if you change your mind.</p>' +
+      '  <button type="button" class="btn danger" id="confirmCancelBtn">Yes, cancel it</button>' +
+      '  <button type="button" class="btn ghost" id="backOutBtn">Never mind, keep it</button>' +
+      '</div>'
+    );
+
+    document.getElementById('startRescheduleBtn').addEventListener('click', function () {
+      document.getElementById('startRescheduleBtn').style.display = 'none';
+      document.getElementById('startCancelBtn').style.display = 'none';
+      document.getElementById('rescheduleStep').classList.add('is-active');
+      const todayStr = new Date().toISOString().slice(0, 10);
+      document.getElementById('newDateInput').min = todayStr;
+    });
+    document.getElementById('cancelRescheduleBtn').addEventListener('click', function () {
+      document.getElementById('rescheduleStep').classList.remove('is-active');
+      document.getElementById('startRescheduleBtn').style.display = '';
+      document.getElementById('startCancelBtn').style.display = '';
+    });
+    document.getElementById('submitRescheduleBtn').addEventListener('click', async function () {
+      const input = document.getElementById('newDateInput');
+      if (!input.value) { input.focus(); return; }
+      const btn = document.getElementById('submitRescheduleBtn');
+      btn.disabled = true;
+      btn.textContent = 'Sending...';
+      const result = await callRpc('request_job_reschedule_by_token', { p_token: token, p_new_date: input.value });
+      const row = result && result[0];
+      if (row && row.ok) {
+        renderState(
+          '<div class="state-msg"><div class="checkmark" aria-hidden="true">&#10003;</div><p>Got it -- we\'ll reach out to confirm ' + escapeHtml(formatJobDate(input.value)) + '.</p></div>'
+        );
+      } else if (row && row.message === 'already-cancelled') {
+        renderState('<div class="state-msg"><p>This appointment was already cancelled.</p></div><a href="/booking.html" class="btn orange">Book a new appointment</a>');
+      } else {
+        btn.disabled = false;
+        btn.textContent = 'Send request';
+        renderState('<div class="state-msg is-error"><p>Something went wrong sending that request. Please call us at (435) 414-1667.</p></div>');
+      }
+    });
+
+    document.getElementById('startCancelBtn').addEventListener('click', function () {
+      document.getElementById('startCancelBtn').style.display = 'none';
+      document.getElementById('startRescheduleBtn').style.display = 'none';
+      document.getElementById('confirmStep').classList.add('is-active');
+    });
+    document.getElementById('backOutBtn').addEventListener('click', function () {
+      document.getElementById('confirmStep').classList.remove('is-active');
+      document.getElementById('startCancelBtn').style.display = '';
+      document.getElementById('startRescheduleBtn').style.display = '';
+    });
+    document.getElementById('confirmCancelBtn').addEventListener('click', async function () {
+      const btn = document.getElementById('confirmCancelBtn');
+      btn.disabled = true;
+      btn.textContent = 'Cancelling...';
+      const result = await callRpc('cancel_job_by_token', { p_token: token });
+      const row = result && result[0];
+      if (row && row.ok) {
+        renderState(
+          '<div class="state-msg"><div class="checkmark" aria-hidden="true">&#10003;</div><p>Your appointment has been cancelled.</p></div>' +
+          '<a href="/booking.html" class="btn orange">Book a new appointment</a>'
+        );
+      } else if (row && row.message === 'already-cancelled') {
+        renderState('<div class="state-msg"><p>This appointment was already cancelled.</p></div><a href="/booking.html" class="btn orange">Book a new appointment</a>');
+      } else {
+        renderState('<div class="state-msg is-error"><p>Something went wrong cancelling this appointment. Please call us at (435) 414-1667.</p></div>');
+      }
+    });
+  }
+
+  async function init() {
+    const token = getTokenFromUrl();
+    if (!token) { renderNoToken(); return; }
+
+    const result = await callRpc('get_job_by_cancel_token', { p_token: token });
+    if (!result || !result.length) { renderNotFound(); return; }
+    renderJob(result[0], token);
+  }
+
+  init();
+})();
+</script>
+
+</body>
+</html>
