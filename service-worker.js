@@ -616,7 +616,17 @@
 // Trend lookup in finance.html's Expenses tab. Both files are precached
 // on every tool page via PRECACHE_URLS. Same reasoning as every prior
 // bump in this file's history.
-const CACHE_NAME = 'th-workspace-v140'; // precache-fingerprint:62a8da86dbd6
+// Bumped (v140 -> v141): tools-dialogs.js changed -- exhaustive
+// escapeHtml() XSS audit closing a gap SECURITY.md flagged (the earlier
+// CodeQL sweep and runway-dashboard.html's own escapeAttr() fix were
+// both targeted at flagged call sites only, never an exhaustive pass).
+// Added a shared escapeAttr() (escapes quotes, unlike escapeHtml()) and
+// fixed every real double-quoted-attribute call site found across the
+// whole tool suite, several in files never previously audited for this
+// bug shape at all (Appliance Wiki's entire edit-in-place UI chief
+// among them). tools-dialogs.js is precached on every tool page. Same
+// reasoning as every prior bump in this file's history.
+const CACHE_NAME = 'th-workspace-v141'; // precache-fingerprint:d0ea0af0d749
 const PRECACHE_URLS = [
   '/tools/workspace.html', '/tools/job-tracker.html', '/tools/invoice-generator.html', '/tools/contract-generator.html',
   '/tools/calendar.html', '/tools/route-planner.html', '/tools/review-request.html', '/tools/contact-card.html',

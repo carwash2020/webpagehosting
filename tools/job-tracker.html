@@ -54,7 +54,7 @@
 <script src="/tools/sync.js?v=b208ad9d5d" defer></script>
 <script src="/tools/data-layer.js?v=c5d44f096e" defer></script>
 <script src="/tools/tools-effects.js?v=4cff99aa4a" defer></script>
-<script src="/tools/tools-dialogs.js?v=e1dfaa11a1" defer></script>
+<script src="/tools/tools-dialogs.js?v=5d45911e95" defer></script>
 <script src="/tools/tools-media-sharing.js?v=0c229c9353" defer></script>
 <script src="/tools/tools-nav-pwa.js?v=9b16eefb86" defer></script>
 <script src="/tools/tools-tour.js?v=cf6652f5b1" defer></script>
@@ -1696,7 +1696,7 @@
           <button class="small-btn ${job.showOnCalendar ? 'is-active' : ''}" onclick="toggleShowOnCalendar(${job.id})">${job.showOnCalendar ? '✓ On Calendar' : 'Show on Calendar'}</button>
           ${job.clientEmail ? (
             job.confirmationSentAt
-              ? `<button class="small-btn is-active" disabled title="Sent ${escapeHtml(new Date(job.confirmationSentAt).toLocaleString())}">✓ Confirmation Sent</button>`
+              ? `<button class="small-btn is-active" disabled title="Sent ${escapeAttr(new Date(job.confirmationSentAt).toLocaleString())}">✓ Confirmation Sent</button>`
               : `<button class="small-btn" onclick="sendJobConfirmationEmail(${job.id})">Send Confirmation Email</button>`
           ) : ''}
           <button class="small-btn" onclick="editJob(${job.id})">Edit</button>

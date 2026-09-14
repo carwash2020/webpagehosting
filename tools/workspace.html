@@ -76,7 +76,7 @@
 <script src="/tools/push-notifications.js?v=180abd2a84" defer></script>
 <script src="/tools/data-layer.js?v=c5d44f096e" defer></script>
 <script src="/tools/tools-effects.js?v=4cff99aa4a" defer></script>
-<script src="/tools/tools-dialogs.js?v=e1dfaa11a1" defer></script>
+<script src="/tools/tools-dialogs.js?v=5d45911e95" defer></script>
 <script src="/tools/tools-media-sharing.js?v=0c229c9353" defer></script>
 <script src="/tools/tools-nav-pwa.js?v=9b16eefb86" defer></script>
 <script src="/tools/tools-tour.js?v=cf6652f5b1" defer></script>
@@ -1438,7 +1438,7 @@
     const max = sorted[0][1];
     container.innerHTML = sorted.map(([vendor, total]) => `
       <div class="vendor-bar-row">
-        <div class="vendor-bar-label" title="${escapeHtml(vendor)}">${escapeHtml(vendor)}</div>
+        <div class="vendor-bar-label" title="${escapeAttr(vendor)}">${escapeHtml(vendor)}</div>
         <div class="vendor-bar-track"><div class="vendor-bar-fill" style="width:${(total / max * 100)}%"></div></div>
         <div class="vendor-bar-count">${money(total)}</div>
       </div>`).join('');
@@ -1488,7 +1488,7 @@
       const rowHref = registryMatch ? ' href="/tools/client-detail.html?id=' + encodeURIComponent(registryMatch.id) + '" style="text-decoration:none; color:inherit; cursor:pointer;"' : '';
       return `
       <${rowTag} class="vendor-bar-row"${rowHref}>
-        <div class="vendor-bar-label" title="${escapeHtml(client)}">${escapeHtml(client)}</div>
+        <div class="vendor-bar-label" title="${escapeAttr(client)}">${escapeHtml(client)}</div>
         <div class="vendor-bar-track"><div class="vendor-bar-fill" style="width:${(data.revenue / max * 100)}%"></div></div>
         <div class="vendor-bar-count">${money(data.revenue)}<span style="display:block; font-size:10.5px; color:var(--text-dim); font-weight:400;">${data.invoiceCount} invoice${data.invoiceCount === 1 ? '' : 's'}${lastSeenLabel ? ' \u00b7 last ' + lastSeenLabel : ''}</span></div>
       </${rowTag}>`;
@@ -2372,7 +2372,7 @@
       return;
     }
     container.innerHTML = result.documents.map(d => `
-      <div class="dash-list-item ${d.path === justUploadedDocPath ? 'list-row-enter' : ''}" data-doc-path="${escapeHtml(d.path)}">
+      <div class="dash-list-item ${d.path === justUploadedDocPath ? 'list-row-enter' : ''}" data-doc-path="${escapeAttr(d.path)}">
         <div>
           <div class="dash-list-item-title">${escapeHtml(d.label)}</div>
           <div class="dash-list-item-meta">${escapeHtml(SECURE_DOC_CATEGORY_LABEL[d.category] || d.category)}${d.uploadedAt ? ' &middot; ' + escapeHtml(new Date(d.uploadedAt).toLocaleDateString()) : ''}</div>
@@ -2599,7 +2599,7 @@
         if (hasPair && (p.id === before.id || p.id === after.id)) return;
         html += `
       <div class="gallery-queue-item">
-        <img src="${signedUrls[p.storage_path] || ''}" alt="${escapeHtml(p.public_caption || '')}" loading="lazy">
+        <img src="${signedUrls[p.storage_path] || ''}" alt="${escapeAttr(p.public_caption || '')}" loading="lazy">
         <div class="gallery-queue-caption">${escapeHtml(p.public_caption || '(no caption)')}</div>
         <div class="gallery-queue-meta">${escapeHtml(p.job_title || '')}</div>
         <button class="small-btn danger" onclick="unqueueGalleryPhoto(${p.id})">Remove from Queue</button>
@@ -2689,7 +2689,7 @@
       <p class="today-next-job-title"><span class="badge badge-${job.priority}">${job.priority}</span> ${escapeHtml(job.title)}${job.client ? ' &mdash; ' + escapeHtml(job.client) : ''}</p>
       <div class="today-next-job-meta">
         ${job.address ? '<a href="https://maps.google.com/?q=' + encodeURIComponent(job.address) + '" target="_blank" rel="noopener">' + escapeHtml(job.address) + '</a>' : 'No address on file'}<br>
-        ${job.phone ? '<a href="tel:' + escapeHtml(job.phone) + '">' + escapeHtml(job.phone) + '</a>' : 'No phone on file'}
+        ${job.phone ? '<a href="tel:' + escapeAttr(job.phone) + '">' + escapeHtml(job.phone) + '</a>' : 'No phone on file'}
       </div>
       <div class="today-next-job-actions">
         <a href="/tools/job-detail.html?id=${encodeURIComponent(job.id)}" class="primary-btn">Open Job</a>

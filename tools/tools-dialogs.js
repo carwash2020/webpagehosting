@@ -141,6 +141,37 @@ function escapeHtml(str) {
   return div.innerHTML;
 }
 
+// Exhaustive escapeHtml() audit (closing a real gap flagged after the
+// CodeQL fix pass below and runway-dashboard.html's own equivalent fix
+// were both confirmed to be targeted at flagged call sites only, never
+// an exhaustive sweep): escapeHtml() above is only safe for HTML
+// *text-node* content -- it escapes &, <, > (what the browser's own
+// innerHTML serializer escapes when building text-node content via
+// textContent), but never touches a double-quote, since quotes aren't
+// special there. Two real, previously-unaudited call sites were found
+// interpolating an escapeHtml()'d value directly into a double-quoted
+// HTML attribute (site-content.html's FAQ question `value="..."`,
+// workspace.html's vendor/client `title="..."` and a photo `alt="..."`)
+// -- an un-escaped `"` in ordinary business data (a job note mentioning
+// a `24" TV`, a client name, a photo caption) lets the string break out
+// of the attribute and inject new attributes/markup, exactly the same
+// bug shape runway-dashboard.html already fixed once for itself.
+// Verified via the same real jsdom round-trip against 9 adversarial
+// inputs (lone single/double quotes, both together, backslashes,
+// ampersands, angle brackets, a raw newline, and a realistic combined
+// case) already proven for escapeForInlineHandler below and
+// runway-dashboard.html's own escapeAttr(), byte-for-byte the same
+// implementation as that file's -- moved here instead of duplicated
+// again, since every page with this bug shape already loads this file.
+function escapeAttr(str) {
+  if (str === null || str === undefined) return '';
+  return String(str)
+    .replace(/&/g, '&amp;')
+    .replace(/"/g, '&quot;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;');
+}
+
 // Fixes a real, confirmed vulnerability (found via CodeQL's "Incomplete
 // string escaping or encoding" alerts, 2026-08-26): escapeHtml() above
 // is only ever safe for text-node content -- it escapes &, <, > (what

@@ -53,7 +53,7 @@
 <script src="/tools/data-layer.js?v=c5d44f096e" defer></script>
 <script src="/tools/dev-tools-shared.js?v=3356b9f30f" defer></script>
 <script src="/tools/tools-effects.js?v=4cff99aa4a" defer></script>
-<script src="/tools/tools-dialogs.js?v=e1dfaa11a1" defer></script>
+<script src="/tools/tools-dialogs.js?v=5d45911e95" defer></script>
 <script src="/tools/tools-media-sharing.js?v=0c229c9353" defer></script>
 <script src="/tools/tools-nav-pwa.js?v=9b16eefb86" defer></script>
 <script src="/tools/sync.js?v=b208ad9d5d" defer></script>
@@ -1753,7 +1753,7 @@
       const presetSelect = document.getElementById('newAccountPreset');
       if (presetSelect) {
         presetSelect.innerHTML = '<option value="">None -- start with everything unchecked</option>' +
-          roleDefs.map(r => '<option value="' + escapeHtml(r.name) + '">' + escapeHtml(r.name) + ' preset</option>').join('');
+          roleDefs.map(r => '<option value="' + escapeAttr(r.name) + '">' + escapeHtml(r.name) + ' preset</option>').join('');
       }
       const addForm = document.getElementById('addAccountForm');
       if (addForm) addForm.style.display = manager ? 'block' : 'none';
@@ -1765,7 +1765,7 @@
         accounts.map(a => {
           const suffix = a.role_name ? ' (started from ' + a.role_name + ')' : '';
           const selected = a.email === _selectedPermEmail ? ' selected' : '';
-          return '<option value="' + escapeHtml(a.email) + '"' + selected + '>' + escapeHtml(a.email + suffix) + '</option>';
+          return '<option value="' + escapeAttr(a.email) + '"' + selected + '>' + escapeHtml(a.email + suffix) + '</option>';
         }).join('') +
         '</select></label>';
 
@@ -1815,7 +1815,7 @@
       openCat.fields.map(f => {
         const checked = account[f.field] ? ' checked' : '';
         return '<label style="display:flex; align-items:center; gap:6px; font-size:13px; font-weight:normal;">' +
-          '<input type="checkbox" data-email="' + escapeHtml(account.email) + '" data-field="' + f.field + '"' + checked + disabled +
+          '<input type="checkbox" data-email="' + escapeAttr(account.email) + '" data-field="' + f.field + '"' + checked + disabled +
           ' onchange="toggleAccountPermission(this)"> ' + escapeHtml(f.label) + '</label>';
       }).join('') +
       '</div>';

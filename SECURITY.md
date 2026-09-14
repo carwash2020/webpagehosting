@@ -222,10 +222,49 @@ than the finding's title alone.
   `<`, `>` but not quotes, since quotes aren't special in the context
   it was originally built for. The CodeQL sweep above fixed every
   attribute-context call site it actually flagged, but that was
-  targeted, not an exhaustive codebase-wide audit of every
-  `escapeHtml()` call. Worth a real, dedicated pass someday rather
-  than assuming the targeted fixes closed every instance of this
-  class of gap.
+  targeted, not an exhaustive codebase-wide audit -- **since closed**
+  (full-repo audit, see below).
+
+  A real, dedicated exhaustive pass was run: every `on\w+="..."`
+  attribute across every `.html` file in the repo was checked for a
+  value interpolated inside single quotes (the "inline handler"
+  shape), and every `href=`/`src=`/`value=`/`title=`/`alt=`/
+  `placeholder=`/`aria-label=`/`data-*=` attribute was checked for a
+  value built with `escapeHtml()` alone (the "double-quoted attribute"
+  shape) -- both by grepping template-literal (`${...}`) and
+  string-concatenation (`'...' + x + '...'`) styles, since the first
+  narrower scan missed every concatenation-style file entirely.
+
+  Real, previously-unaudited gaps were found and fixed in:
+  `tools/site-content.html` (FAQ/Terms/site-content editors -- CMS text
+  a `"` would have broken out of), `tools/workspace.html` (vendor/
+  client names, a job phone number, a photo caption, a document path),
+  `tools/job-detail.html` and `tools/client-detail.html` (phone
+  numbers in `tel:` links), `tools/invoice-generator.html` (a contact
+  autofill dropdown), `tools/job-tracker.html` (a date string, low
+  practical risk but the wrong helper), `tools/parts-reference.html`
+  (Appliance Wiki's entire edit-in-place UI -- model/symptom/part
+  name/part number/link/note fields, type and brand dropdowns --
+  concatenation-style, never covered by the earlier CodeQL sweep at
+  all), `tools/dev-tools.html` (role-preset and account-email
+  dropdowns, a permission checkbox), and `tools/clients.html` (an
+  inline-handler-shape instance, fixed with `escapeForInlineHandler()`
+  instead of the new attribute helper -- see below). The general fix:
+  a proper `escapeAttr()` (escapes `&`, `"`, `<`, `>`) was added to the
+  shared `tools-dialogs.js` -- the same implementation
+  `runway-dashboard.html` already had as its own one-off fix for this
+  exact bug shape -- and every real call site above now uses it instead
+  of `escapeHtml()`.
+
+  A small number of call sites were reviewed and left as `escapeHtml()`
+  deliberately, because the value can never contain a quote in
+  practice: `tools/dev-tools.html`'s client-registry id, local-storage
+  key names, and GitHub API commit URLs; `portal/dashboard.html`'s
+  auto-generated invoice number; `portal/work-orders.html`'s fixed
+  progress-step labels; `portal/settings.html`'s Stripe payment-method
+  id (that page deliberately loads none of the internal `/tools/`
+  scripts, so fixing it would mean duplicating `escapeForInlineHandler`
+  there for a value that can't practically exploit it).
 
 ## Where the real detail lives
 

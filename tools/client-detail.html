@@ -54,7 +54,7 @@
 <script src="/tools/sync.js?v=b208ad9d5d" defer></script>
 <script src="/tools/data-layer.js?v=c5d44f096e" defer></script>
 <script src="/tools/tools-effects.js?v=4cff99aa4a" defer></script>
-<script src="/tools/tools-dialogs.js?v=e1dfaa11a1" defer></script>
+<script src="/tools/tools-dialogs.js?v=5d45911e95" defer></script>
 <script src="/tools/tools-media-sharing.js?v=0c229c9353" defer></script>
 <script src="/tools/tools-nav-pwa.js?v=9b16eefb86" defer></script>
 <style>
@@ -187,8 +187,8 @@
     document.title = c.name + ' | Triple H Enterprises (Internal Tool)';
 
     const metaLines = [];
-    if (c.phone) metaLines.push('<a href="tel:' + escapeHtml(c.phone) + '">' + escapeHtml(c.phone) + '</a>');
-    if (c.email) metaLines.push('<a href="mailto:' + escapeHtml(c.email) + '">' + escapeHtml(c.email) + '</a>');
+    if (c.phone) metaLines.push('<a href="tel:' + escapeAttr(c.phone) + '">' + escapeHtml(c.phone) + '</a>');
+    if (c.email) metaLines.push('<a href="mailto:' + escapeAttr(c.email) + '">' + escapeHtml(c.email) + '</a>');
     if (c.address) metaLines.push(escapeHtml(c.address));
 
     const openJobs = bundle.jobs.filter(j => j.status !== 'done').length;

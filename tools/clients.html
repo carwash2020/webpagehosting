@@ -47,7 +47,7 @@
 <link rel="stylesheet" href="/styles.css?v=d9dfbf37af">
 <link rel="stylesheet" href="/tools/styles-tools.css?v=802b87086c">
 <script src="/tools/tools-effects.js?v=4cff99aa4a" defer></script>
-<script src="/tools/tools-dialogs.js?v=e1dfaa11a1" defer></script>
+<script src="/tools/tools-dialogs.js?v=5d45911e95" defer></script>
 <script src="/tools/tools-media-sharing.js?v=0c229c9353" defer></script>
 <script src="/tools/tools-nav-pwa.js?v=9b16eefb86" defer></script>
 <script src="/tools/tools-tour.js?v=cf6652f5b1" defer></script>
@@ -822,7 +822,7 @@
       return '<div class="dev-check-row" style="align-items:flex-start;"><div>' +
         '<div><strong>' + escapeHtml(a.name || '(no name)') + '</strong>' + internalFlag + '</div>' +
         '<div class="dev-check-detail">' + escapeHtml(a.email) + ' &middot; ' + (parts.join(', ') || 'nothing yet') + '</div>' +
-        '<button class="secondary-btn" style="margin-top:8px;" onclick="resendPortalInvite(\'' + escapeHtml(a.email) + '\', \'' + escapeHtml(a.name || '') + '\', this)">Resend invite</button>' +
+        '<button class="secondary-btn" style="margin-top:8px;" onclick="resendPortalInvite(\'' + escapeForInlineHandler(a.email) + '\', \'' + escapeForInlineHandler(a.name || '') + '\', this)">Resend invite</button>' +
         '</div></div>';
     }).join('');
   }
