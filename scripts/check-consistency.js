@@ -179,6 +179,82 @@ function checkButtonHandlers(problems) {
   }
 }
 
+// Audit item #16: turns the one-time, hand-run "exhaustive escapeHtml()
+// audit" (see SECURITY.md's own writeup of it) into a permanent,
+// automated regression guard, so a new call site with this exact same
+// bug shape can never quietly ship again the way the ones that audit
+// found did.
+//
+// The bug shape, exactly as that audit described it: an on\w+="..."
+// HTML attribute (onclick, onchange, etc.) builds its value as a JS
+// string containing a single-quoted string literal argument -- e.g.
+// onclick="doThing('${x}')" or, in the older concatenation style still
+// used in a few files, onclick="'doThing(\'' + x + '\')'" -- with a
+// data value interpolated directly into that single-quoted literal.
+// escapeForInlineHandler() is the one helper actually safe for this
+// context (see tools-dialogs.js's own comment on it: it JS-string-
+// escapes first, then HTML-attribute-escapes the result, in the exact
+// reverse order the browser undoes them) -- escapeHtml()/escapeAttr()
+// are NOT safe substitutes here, since neither escapes a single quote.
+//
+// This can't be a full XSS scanner (that needs a real parser, not
+// regex over HTML text), so it's deliberately narrow and low-noise,
+// same philosophy as checkButtonHandlers/checkTopLevelDeferredCalls
+// above: it only flags an interpolated value whose own name looks like
+// the free-text business data every real bug the manual audit found
+// actually was (a client/vendor name, a phone number, a file path, a
+// note) -- not every id/index/key/enum-value interpolation, which
+// would just be noise no one could act on. TOOLS_DIR only, matching
+// this file's existing tools-vs-portal split above: portal doesn't use
+// this onclick-string-building pattern at all today.
+const RISKY_INLINE_HANDLER_FIELD = /(name|title|desc|description|notes?|comment|address|label|phone|email|client|vendor|path|caption|question|answer|message|reason|model|brand|number|text)/i;
+
+// Pure scan, no filesystem access -- separated from checkOnclickXssRisk
+// below specifically so this exact logic can be unit-tested directly
+// against synthetic HTML strings, not only asserted clean against
+// today's real repo (which would only prove today's files are clean,
+// not that this regex genuinely catches the bug shape it claims to).
+function scanForRiskyInlineHandlers(src) {
+  const risky = new Set();
+
+  // Template-literal shape: `onclick="doThing('${x}')"` -- a
+  // template-expression sitting directly inside the single quotes
+  // that form the JS string-literal argument.
+  for (const attrMatch of src.matchAll(/on\w+="([^"]*)"/g)) {
+    for (const exprMatch of attrMatch[1].matchAll(/'\$\{([^}]*)\}'/g)) {
+      const expr = exprMatch[1].trim();
+      if (/^escapeForInlineHandler\(/.test(expr)) continue; // already safe
+      if (RISKY_INLINE_HANDLER_FIELD.test(expr)) risky.add(expr);
+    }
+  }
+
+  // Older concatenation shape: `onclick="'doThing(\'' + x + '\')'"` --
+  // a bare identifier/property chain sandwiched between the string's
+  // own `+` operators.
+  for (const attrMatch of src.matchAll(/on\w+="((?:[^"\\]|\\.)*)"/g)) {
+    for (const concatMatch of attrMatch[1].matchAll(/'\s*\+\s*([a-zA-Z_$][\w.$]*(?:\([^)]*\))?)\s*\+\s*'/g)) {
+      const expr = concatMatch[1].trim();
+      if (/^escapeForInlineHandler\(/.test(expr)) continue; // already safe
+      if (RISKY_INLINE_HANDLER_FIELD.test(expr)) risky.add(expr);
+    }
+  }
+
+  return risky;
+}
+
+function checkOnclickXssRisk(problems) {
+  const files = fs.readdirSync(TOOLS_DIR).filter(f => f.endsWith('.html'));
+
+  for (const filename of files) {
+    const src = readTool(filename);
+    const risky = scanForRiskyInlineHandlers(src);
+
+    if (risky.size) {
+      problems.push(`${filename}: ${risky.size} onclick/onchange/etc. handler(s) interpolate what looks like free-text data directly into a single-quoted JS string argument, without escapeForInlineHandler(): ${[...risky].join(', ')} -- see SECURITY.md's escapeHtml() writeup for why this exact shape is a real XSS risk`);
+    }
+  }
+}
+
 function checkTopLevelDeferredCalls(problems) {
   const deferredNames = getDeferredFunctionNames();
   const files = fs.readdirSync(TOOLS_DIR).filter(f => f.endsWith('.html'));
@@ -607,6 +683,7 @@ function main() {
   checkTourHealth(problems);
   checkTopLevelDeferredCalls(problems);
   checkButtonHandlers(problems);
+  checkOnclickXssRisk(problems);
 
   files.forEach(filename => {
     if (EXEMPT[filename]) return;
