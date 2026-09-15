@@ -257,7 +257,7 @@
 // gap, since a client-portal login page has no reason to be publicly
 // discoverable via search). Precached under its bare path. Same
 // reasoning as every prior bump above.
-const CACHE_NAME = 'th-portal-v72'; // precache-fingerprint:f567c66cacf3
+const CACHE_NAME = 'th-portal-v73'; // precache-fingerprint:b86fd17bd756
 const PRECACHE_URLS = [
   '/portal/home.html', '/portal/dashboard.html', '/portal/jobs.html', '/portal/quotes.html',
   '/portal/work-orders.html', '/portal/settings.html', '/portal/login.html', '/portal/set-password.html',
