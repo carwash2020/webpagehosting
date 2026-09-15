@@ -948,8 +948,13 @@
     let subtotal = 0;
     let taxableSubtotal = 0;
     document.querySelectorAll('#lineItemsBody tr').forEach(row => {
-      const qty = parseFloat(row.querySelector('.li-qty').value) || 0;
-      const price = parseFloat(row.querySelector('.li-price').value) || 0;
+      // Clamped to non-negative -- neither field has any HTML form to
+      // enforce its own min="0" (there's no <form> on this page at all),
+      // so a typed negative quantity or price previously flowed straight
+      // into subtotal, silently lowering the total with no warning and
+      // no visual flag anywhere, including on the printed PDF.
+      const qty = Math.max(0, parseFloat(row.querySelector('.li-qty').value) || 0);
+      const price = Math.max(0, parseFloat(row.querySelector('.li-price').value) || 0);
       const amount = qty * price;
       row.querySelector('.li-amount').textContent = money(amount);
       subtotal += amount;
@@ -1005,8 +1010,10 @@
     let subtotal = 0;
     let taxableSubtotal = 0;
     document.querySelectorAll('#quoteLineItemsBody tr').forEach(row => {
-      const qty = parseFloat(row.querySelector('.qli-qty').value) || 0;
-      const price = parseFloat(row.querySelector('.qli-price').value) || 0;
+      // Clamped to non-negative -- see the identical fix in recalc()
+      // above for why.
+      const qty = Math.max(0, parseFloat(row.querySelector('.qli-qty').value) || 0);
+      const price = Math.max(0, parseFloat(row.querySelector('.qli-price').value) || 0);
       const amount = qty * price;
       row.querySelector('.qli-amount').textContent = money(amount);
       subtotal += amount;
@@ -1304,9 +1311,17 @@
     // up for when it works and a 'failed' pop up for when it doesn't
     // so we know."
     const clientEmailVal = document.getElementById('clientEmail').value.trim();
+    // clientEmail's type="email" never gets native browser validation
+    // here -- this page has no <form> element at all, so
+    // reportValidity()/checkValidity() never fires. A malformed address
+    // previously only surfaced as a generic "Failed to send" alert once
+    // sync-invoice-to-portal actually tried and failed to email it.
+    const clientEmailLooksValid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(clientEmailVal);
     if (shouldSend && !clientEmailVal) {
       await showAlert("No client email on this invoice, so there's nobody to send it to. Add one and use Resend from the Invoice Log.");
-    } else if (shouldSend && clientEmailVal && typeof getAuthToken === 'function') {
+    } else if (shouldSend && clientEmailVal && !clientEmailLooksValid) {
+      await showAlert("\"" + clientEmailVal + "\" doesn't look like a valid email address. Fix it and use Resend from the Invoice Log.");
+    } else if (shouldSend && clientEmailVal && clientEmailLooksValid && typeof getAuthToken === 'function') {
       try {
         if (typeof ensureFreshToken === 'function') await ensureFreshToken();
         const syncRes = await fetch(`${SUPABASE_URL}/functions/v1/sync-invoice-to-portal`, {
@@ -1968,7 +1983,11 @@
     // pop-up treatment as invoices now: a modal that must be
     // dismissed, with the actual server-returned reason on failure.
     const quoteClientEmailVal = document.getElementById('quoteClientEmail').value.trim();
-    if (quoteClientEmailVal && typeof getAuthToken === 'function') {
+    // Same validation gap fixed on the invoice side above -- see that
+    // comment for why.
+    if (quoteClientEmailVal && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(quoteClientEmailVal)) {
+      await showAlert("\"" + quoteClientEmailVal + "\" doesn't look like a valid email address. Fix it and use Resend from the Recent Quotes list.");
+    } else if (quoteClientEmailVal && typeof getAuthToken === 'function') {
       try {
         if (typeof ensureFreshToken === 'function') await ensureFreshToken();
         const syncRes = await fetch(`${SUPABASE_URL}/functions/v1/sync-quote-to-portal`, {
