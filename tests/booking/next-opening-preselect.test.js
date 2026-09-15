@@ -43,24 +43,39 @@ async function waitForCondition(conditionFn, { timeout = 5000, interval = 20 } =
   throw new Error('waitForCondition: condition never became true within ' + timeout + 'ms');
 }
 
+// Real bug found in this test itself, not the app: a hardcoded literal
+// date ('2026-09-14') goes stale the moment real wall-clock "today"
+// catches up to and passes it -- every weekday has bookable hours (see
+// business-hours.js's HOURS_BY_WEEKDAY, no fully-closed day), so a date
+// a few days out from whenever this suite actually runs is always
+// valid, where a fixed calendar date eventually isn't. Computed via the
+// app's own timezone-correct helpers (not a plain `new Date()` +
+// setDate(), which could land on the wrong side of a business-timezone
+// midnight near a UTC day boundary), through a disposable window
+// instance used only to reach them.
+const TEST_DATE = (() => {
+  const w = loadPage('https://www.triplehenterprisesllc.biz/booking.html');
+  return w.addDaysToDateStr(w.todayDateStrInBusinessTz(), 3);
+})();
+
 const NO_BOOKINGS_FETCH = async (url) => {
   if (String(url).includes('get_booking_availability')) return { ok: true, json: async () => ([]) };
   return { ok: false };
 };
 
 test('a ?service=X&date=Y link lands directly on that service and date, skipping back to step 1', async () => {
-  const window = loadPage('https://www.triplehenterprisesllc.biz/booking.html?service=inspection&date=2026-09-14', NO_BOOKINGS_FETCH);
+  const window = loadPage(`https://www.triplehenterprisesllc.biz/booking.html?service=inspection&date=${TEST_DATE}`, NO_BOOKINGS_FETCH);
   await waitForCondition(() => window.document.querySelectorAll('.slot-btn').length > 0);
 
   assert.match(window.document.getElementById('selectedServiceSummary').innerHTML, /Inspection/);
   const selectedDateBtn = window.document.querySelector('.date-btn.is-selected');
   assert.ok(selectedDateBtn, 'expected a date button marked selected');
-  assert.equal(selectedDateBtn.dataset.date, '2026-09-14');
+  assert.equal(selectedDateBtn.dataset.date, TEST_DATE);
 });
 
 test('the preselect never fires a second, racing availability fetch for "today" alongside the requested date', async () => {
   const fetchedDates = [];
-  const window = loadPage('https://www.triplehenterprisesllc.biz/booking.html?service=inspection&date=2026-09-14', async (url, opts) => {
+  const window = loadPage(`https://www.triplehenterprisesllc.biz/booking.html?service=inspection&date=${TEST_DATE}`, async (url, opts) => {
     if (String(url).includes('get_booking_availability')) {
       // Every real caller posts a JSON body naming the range it wants --
       // recording it here is how this test tells whether the visible
@@ -77,7 +92,7 @@ test('the preselect never fires a second, racing availability fetch for "today" 
 });
 
 test('an unrecognized service key is ignored, leaving the normal step-1 flow in place', async () => {
-  const window = loadPage('https://www.triplehenterprisesllc.biz/booking.html?service=not-a-real-service&date=2026-09-14', NO_BOOKINGS_FETCH);
+  const window = loadPage(`https://www.triplehenterprisesllc.biz/booking.html?service=not-a-real-service&date=${TEST_DATE}`, NO_BOOKINGS_FETCH);
   await waitForCondition(() => window.document.querySelector('.service-option'));
   await waitFor(50);
 

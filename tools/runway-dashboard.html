@@ -14,7 +14,7 @@
      background-image on html here too. -->
 <html lang="en" style="background-color:#0a0a0a;">
 <head>
-<script src="/tools/auth.js?v=0049ad84fb"></script>
+<script src="/tools/auth.js?v=2be5cce177"></script>
 <script>
   // Security gate -- same pattern as every other internal tool page.
   // This one matters more than most: it holds real mortgage, debt, and
@@ -38,8 +38,8 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Anton&family=Archivo:wght@400..700&family=Newsreader:ital,opsz,wght@0,6..72,300..700;1,6..72,300..600&family=Oswald:wght@200..700&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.112.3/dist/umd/supabase.js" integrity="sha384-qafw21c/iciq0VXsi9FzkfoQv5I/V0iqE4lSNcKXPnW9/UTJLnv5CcN4FHxVLnKg" crossorigin="anonymous" defer></script>
-<script src="/tools/sync.js?v=5f8ddf47c9" defer></script>
-<script src="/tools/tools-dialogs.js?v=e1dfaa11a1" defer></script>
+<script src="/tools/sync.js?v=aafdb1e6bf" defer></script>
+<script src="/tools/tools-dialogs.js?v=ce49ed8b35" defer></script>
 <!-- F18 fix (2026-09-07): this page never loaded the shared mobile
      bottom nav / desktop sidebar / flag button script every other tool
      page loads -- it had no phone layout at all and was a dead end,
@@ -571,7 +571,7 @@
     transition:border-color .15s ease, color .15s ease;
   }
   .help-btn:hover{border-color:var(--orange-light);color:var(--orange-light);}
-  .help-modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.6);z-index:200;align-items:center;justify-content:center;padding:20px;}
+  .help-modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.6);z-index:950;align-items:center;justify-content:center;padding:20px;}
   .help-modal-overlay.is-open{display:flex;}
   /* Pull-to-refresh indicator (2026-08-27) -- own copy since this page
      doesn't load styles-tools.css, matching the shared version exactly,

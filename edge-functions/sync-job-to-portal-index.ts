@@ -102,7 +102,31 @@ Deno.serve(async (req: Request) => {
       return json({ ok: false, error: "This account isn't recognized." }, 403);
     }
 
-    const { source_job_id, client_email, client_name, title, job_date, photo_storage_paths, linked_invoice_number } = await req.json();
+    const body = await req.json();
+    const { source_job_id, client_email, client_name, title, job_date, photo_storage_paths, linked_invoice_number } = body;
+
+    // Deleting a job internally (tools/job-tracker.html's deleteJob())
+    // previously never removed its synced client_portal_jobs row --
+    // this table had no delete branch at all, unlike its sibling
+    // sync-checkup-to-portal, which already supports { delete: true }.
+    // A completed job's portal record (including its warranty
+    // status/date) was left permanently orphaned once the internal
+    // job was gone, with no path to clean it up short of a manual DB
+    // delete.
+    if (body.delete === true) {
+      if (typeof source_job_id !== "number") {
+        return json({ ok: false, error: "Missing source_job_id." }, 400);
+      }
+      const deleteRes = await fetch(
+        `${SUPABASE_URL}/rest/v1/client_portal_jobs?source_job_id=eq.${source_job_id}`,
+        { method: "DELETE", headers: { apikey: SERVICE_ROLE_KEY, Authorization: `Bearer ${SERVICE_ROLE_KEY}` } },
+      );
+      if (!deleteRes.ok) {
+        const errText = await deleteRes.text();
+        return json({ ok: false, error: `Database error: ${errText.slice(0, 300)}` }, 502);
+      }
+      return json({ ok: true, deleted: true });
+    }
 
     if (
       typeof source_job_id !== "number" ||

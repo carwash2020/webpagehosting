@@ -16,7 +16,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-<meta name="robots" content="index, follow">
+<meta name="robots" content="noindex, nofollow">
 <title>Client Portal | Triple H Enterprises</title>
 <meta name="description" content="Sign in to view and pay your Triple H Enterprises invoices online.">
 <link rel="canonical" href="https://www.triplehenterprisesllc.biz/portal/login.html">
@@ -173,7 +173,7 @@
     <button type="submit" class="btn blue login-btn" id="loginSubmitBtn">Sign In</button>
     <a class="forgot-link" id="forgotLink">Forgot your password?</a>
   </form>
-  <p style="font-size:12px; color:var(--text-dim); margin-top:20px;">By signing in you agree to Triple H Enterprises' <a href="/terms.html" style="color:var(--text-dim); text-decoration:underline;">Terms and Conditions</a>.</p>
+  <p style="font-size:12px; color:var(--text-dim); margin-top:20px;">By signing in you agree to Triple H Enterprises' <a href="/terms.html" style="color:var(--text-dim); text-decoration:underline;">Terms and Conditions</a> and <a href="/privacy.html" style="color:var(--text-dim); text-decoration:underline;">Privacy Policy</a>.</p>
   <button type="button" class="report-bug-link" id="reportBugLink">Report a problem</button>
 
 <div class="report-bug-overlay" id="reportBugOverlay" style="display:none;">
@@ -181,7 +181,7 @@
     <div class="report-bug-title" id="reportBugTitle">Report a problem</div>
     <p class="report-bug-sub" id="reportBugSub">Tell us what happened. We'll take a look.</p>
     <div id="reportBugFormArea">
-      <textarea id="reportBugMessage" placeholder="What went wrong?" rows="4"></textarea>
+      <textarea id="reportBugMessage" placeholder="What went wrong?" rows="4" aria-label="Describe what went wrong"></textarea>
       <div class="report-bug-error" id="reportBugError"></div>
       <div class="report-bug-actions">
         <button class="btn secondary-btn" id="reportBugCancel" type="button">Cancel</button>

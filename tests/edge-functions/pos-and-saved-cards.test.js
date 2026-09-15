@@ -110,7 +110,13 @@ test('the webhook checks for pos_charge metadata BEFORE any invoice lookup, and 
   const invoiceLookupIdx = WEBHOOK.indexOf('client_portal_invoices?stripe_payment_intent_id=eq.');
   assert.ok(piIdx !== -1 && posIdx !== -1 && invoiceLookupIdx !== -1);
   assert.ok(piIdx < posIdx && posIdx < invoiceLookupIdx, 'pos_charge must be checked before the invoice lookup, which a POS sale has none of');
-  assert.match(WEBHOOK, /entry\.stripePaymentIntentId === pi\.id/);
+  // Idempotency is enforced via an atomic claim against a real
+  // Postgres unique constraint (stripe_pos_charges_logged.payment_intent_id),
+  // not a JS scan of the income log array -- see
+  // tests/edge-functions/pos-idempotency-race-fix.test.js for full
+  // coverage of that mechanism.
+  assert.match(WEBHOOK, /stripe_pos_charges_logged\?on_conflict=payment_intent_id/);
+  assert.match(WEBHOOK, /const wonTheRace = claimRows\.length > 0;/);
 });
 
 test('the webhook logs a POS sale using the same th_income_log shape logInvoiceToIncomeLog() already writes', () => {
@@ -218,10 +224,10 @@ test('the webhook only sends a receipt alongside a genuinely new income log entr
   const posBlockMatch = WEBHOOK.match(/if \(pi\.metadata\?\.pos_charge === "true"\) \{[\s\S]*?\n  \}\n/);
   assert.ok(posBlockMatch);
   const body = posBlockMatch[0];
-  const notAlreadyLoggedIdx = body.indexOf('if (!alreadyLogged) {');
+  const wonTheRaceIdx = body.indexOf('if (wonTheRace) {');
   const sendReceiptIdx = body.indexOf('await sendPosReceiptEmail(');
-  assert.ok(notAlreadyLoggedIdx !== -1 && sendReceiptIdx !== -1);
-  assert.ok(notAlreadyLoggedIdx < sendReceiptIdx, 'the receipt send must be inside the !alreadyLogged guard');
+  assert.ok(wonTheRaceIdx !== -1 && sendReceiptIdx !== -1);
+  assert.ok(wonTheRaceIdx < sendReceiptIdx, 'the receipt send must be inside the wonTheRace guard');
 });
 
 test('a receipt email failing to send never blocks or undoes an already-succeeded charge', () => {

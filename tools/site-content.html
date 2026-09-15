@@ -14,11 +14,12 @@
      background-image on html here too. -->
 <html lang="en" style="background-color:#0a0a0a;">
 <head>
-<script src="/tools/auth.js?v=0049ad84fb"></script>
+<script src="/tools/auth.js?v=2be5cce177"></script>
 <script>
   // Security gate -- redirect to login before this page's own content
-  // is meaningfully usable. See auth.js for why this exists (a single
-  // shared account keeping randoms out, not a multi-user system).
+  // is meaningfully usable. See auth.js for why this exists (a small,
+  // role-based multi-user system now -- account_roles/role_definitions,
+  // not a single shared account).
   requireAuth();
 </script>
 <link rel="manifest" href="/tools/manifest.json">
@@ -53,10 +54,10 @@
 <script src="/tools/data-layer.js?v=3a0d57478c" defer></script>
 <script src="/tools/dev-tools-shared.js?v=3356b9f30f" defer></script>
 <script src="/tools/tools-effects.js?v=4cff99aa4a" defer></script>
-<script src="/tools/tools-dialogs.js?v=e1dfaa11a1" defer></script>
+<script src="/tools/tools-dialogs.js?v=ce49ed8b35" defer></script>
 <script src="/tools/tools-media-sharing.js?v=0c229c9353" defer></script>
 <script src="/tools/tools-nav-pwa.js?v=9b16eefb86" defer></script>
-<script src="/tools/sync.js?v=5f8ddf47c9" defer></script>
+<script src="/tools/sync.js?v=aafdb1e6bf" defer></script>
 <style>
 <style>
   body { max-width: 1080px; margin: 0 auto; }
@@ -409,7 +410,7 @@
         '<div class="tool-form-row"><div class="form-field full"><label style="display:flex; align-items:center; gap:6px;">' + escapeHtml(f.label) +
         (f.info ? '<button class="dev-info-bubble" onclick="openFieldInfo(\'' + f.info + '\')" title="Where does this appear?" aria-label="Where does this appear?"><svg class="th-icon" aria-hidden="true"><use href="#icon-camera" xlink:href="#icon-camera"></use></svg></button>' : '') +
         '</label>' +
-        '<input type="text" id="siteContent_' + f.key + '" placeholder="' + escapeHtml(f.placeholder) + '" value="' + escapeHtml(current[f.key] || '') + '"></div></div>'
+        '<input type="text" id="siteContent_' + f.key + '" placeholder="' + escapeAttr(f.placeholder) + '" value="' + escapeAttr(current[f.key] || '') + '"></div></div>'
       ).join('') +
       '<div class="form-footer"><button class="primary-btn" id="saveSiteContentBtn" onclick="saveSiteContent()">Save all</button></div>' +
       '<p class="tool-sub" style="margin-top:8px;">Changes go live on the public site the next time it loads -- no push needed, usually within a few seconds.</p>';
@@ -636,7 +637,7 @@
         </div>
         <div class="tool-form-row"><div class="form-field full">
           <label>Question</label>
-          <input type="text" value="${escapeHtml(item.question || '')}" oninput="updateFaqField(${i}, 'question', this.value)">
+          <input type="text" value="${escapeAttr(item.question || '')}" oninput="updateFaqField(${i}, 'question', this.value)">
         </div></div>
         <div class="tool-form-row"><div class="form-field full">
           <label>Answer</label>
@@ -736,7 +737,7 @@
         </div>
         <div class="tool-form-row"><div class="form-field full">
           <label>Section heading</label>
-          <input type="text" value="${escapeHtml(item.heading || '')}" oninput="updateTermsField(${i}, 'heading', this.value)">
+          <input type="text" value="${escapeAttr(item.heading || '')}" oninput="updateTermsField(${i}, 'heading', this.value)">
         </div></div>
         <div class="tool-form-row"><div class="form-field full">
           <label>Section text</label>

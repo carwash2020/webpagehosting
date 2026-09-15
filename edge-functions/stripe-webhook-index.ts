@@ -157,19 +157,57 @@ Deno.serve(async (req: Request) => {
   // after create-pos-charge already returned), so THIS is the only
   // place that charge ever gets logged.
   if (pi.metadata?.pos_charge === "true") {
-    const syncRes = await fetch(
-      `${SUPABASE_URL}/rest/v1/workspace_sync?code=eq.tripleh-workspace-2026&select=data`,
-      { headers: { apikey: SERVICE_ROLE_KEY, Authorization: `Bearer ${SERVICE_ROLE_KEY}` } },
+    // Real fix for a real race (closes a gap found in a full-repo
+    // audit): this used to be a plain check-then-act against the
+    // workspace_sync blob's own th_income_log array -- read the blob,
+    // scan the array in JS for this payment_intent_id, append only if
+    // absent. Two near-simultaneous webhook deliveries for the same
+    // event could both pass that scan before either write landed,
+    // double-logging the income and sending two receipt emails for one
+    // charge. A JSON array has no unique constraint of its own, so
+    // nothing could ever make that check atomic -- this table's real
+    // Postgres primary key is what makes the decision atomic instead:
+    // only one concurrent INSERT for the same payment_intent_id can
+    // ever win, and PostgREST's on_conflict=do-nothing (via the
+    // resolution=ignore-duplicates Prefer header) makes the loser a
+    // normal 201-with-no-row response rather than a 409 to handle.
+    const claimRes = await fetch(
+      `${SUPABASE_URL}/rest/v1/stripe_pos_charges_logged?on_conflict=payment_intent_id`,
+      {
+        method: "POST",
+        headers: {
+          apikey: SERVICE_ROLE_KEY,
+          Authorization: `Bearer ${SERVICE_ROLE_KEY}`,
+          "Content-Type": "application/json",
+          Prefer: "resolution=ignore-duplicates,return=representation",
+        },
+        body: JSON.stringify({ payment_intent_id: pi.id }),
+      },
     );
-    const syncRows = await syncRes.json();
-    if (syncRows.length) {
-      const blob = syncRows[0].data;
-      const incomeLog = JSON.parse(blob.th_income_log || "[]");
-      const alreadyLogged = incomeLog.some((entry: any) => entry.stripePaymentIntentId === pi.id);
-      if (!alreadyLogged) {
+    const claimRows = claimRes.ok ? await claimRes.json() : [];
+    const wonTheRace = claimRows.length > 0;
+
+    if (wonTheRace) {
+      const syncRes = await fetch(
+        `${SUPABASE_URL}/rest/v1/workspace_sync?code=eq.tripleh-workspace-2026&select=data`,
+        { headers: { apikey: SERVICE_ROLE_KEY, Authorization: `Bearer ${SERVICE_ROLE_KEY}` } },
+      );
+      const syncRows = await syncRes.json();
+      if (syncRows.length) {
+        const blob = syncRows[0].data;
+        const incomeLog = JSON.parse(blob.th_income_log || "[]");
+        // toISOString() is always UTC -- the business runs on America/Denver
+        // time, so a POS sale after ~6pm local would silently log against
+        // tomorrow's date in Finance. Same fix already applied to
+        // create-pos-charge-index.ts's own income-log entry.
+        const whParts = new Intl.DateTimeFormat("en-US", {
+          timeZone: "America/Denver", year: "numeric", month: "2-digit", day: "2-digit",
+        }).formatToParts(new Date());
+        const whDateMap: Record<string, string> = {};
+        whParts.forEach((p) => { whDateMap[p.type] = p.value; });
         incomeLog.push({
           id: Date.now(),
-          date: new Date().toISOString().slice(0, 10),
+          date: `${whDateMap.year}-${whDateMap.month}-${whDateMap.day}`,
           desc: pi.metadata?.pos_description || pi.description || "POS sale",
           amount: pi.metadata?.pos_amount ? Number(pi.metadata.pos_amount) : pi.amount / 100,
           source: pi.metadata?.pos_client_email || "",
@@ -250,7 +288,7 @@ Deno.serve(async (req: Request) => {
   // Mark paid in the client-facing table -- this is what the client
   // actually sees reflected back on their next dashboard load. One
   // PATCH covering every unpaid id in this PaymentIntent, not a loop.
-  await fetch(
+  const invoicePatchRes = await fetch(
     `${SUPABASE_URL}/rest/v1/client_portal_invoices?id=in.(${unpaidIds.join(",")})`,
     {
       method: "PATCH",
@@ -258,6 +296,19 @@ Deno.serve(async (req: Request) => {
       body: JSON.stringify({ paid: true, paid_at: paidAt }),
     },
   );
+
+  // A non-2xx here must NOT fall through to the 200 at the end of this
+  // handler: Stripe treats any non-2xx response as delivery failure and
+  // retries the event for several days, which is exactly the safety net
+  // this needs -- a customer who genuinely paid must never be left
+  // showing "unpaid" forever with nothing left to retry the write. Only
+  // the two early-return cases above (no matching invoice; already
+  // processed) are genuinely nothing-to-do and get a real 200.
+  if (!invoicePatchRes.ok) {
+    const errText = await invoicePatchRes.text();
+    console.error(`Failed to mark client_portal_invoices paid for PaymentIntent ${pi.id}: ${errText.slice(0, 300)}`);
+    return new Response(JSON.stringify({ received: false, error: "Failed to mark invoice(s) paid" }), { status: 500 });
+  }
 
   // Also mark paid in workspace_sync's th_invoices, so Connor/Steve's
   // own invoice log reflects this too, not just the portal --
@@ -272,6 +323,16 @@ Deno.serve(async (req: Request) => {
     `${SUPABASE_URL}/rest/v1/workspace_sync?code=eq.tripleh-workspace-2026&select=data`,
     { headers: { apikey: SERVICE_ROLE_KEY, Authorization: `Bearer ${SERVICE_ROLE_KEY}` } },
   );
+  if (!syncRes.ok) {
+    // Secondary, internal-log-only write -- the client-facing table
+    // above already succeeded, so this never fails the whole webhook
+    // (Stripe would otherwise keep retrying an event that's already
+    // fully handled from the client's perspective). Logged so a mismatch
+    // between the portal and Steve/Connor's own invoice log is at least
+    // visible for manual reconciliation, instead of silently vanishing.
+    console.error(`Failed to read workspace_sync for PaymentIntent ${pi.id}: ${await syncRes.text().catch(() => "")}`);
+    return new Response(JSON.stringify({ received: true, invoices_marked_paid: unpaidIds.length, workspace_sync_warning: "Could not read workspace_sync" }), { status: 200 });
+  }
   const syncRows = await syncRes.json();
   if (syncRows.length) {
     const blob = syncRows[0].data;
@@ -286,7 +347,7 @@ Deno.serve(async (req: Request) => {
     });
     if (changed) {
       blob.th_invoices = JSON.stringify(invoices);
-      await fetch(
+      const workspaceSyncPatchRes = await fetch(
         `${SUPABASE_URL}/rest/v1/workspace_sync?code=eq.tripleh-workspace-2026`,
         {
           method: "PATCH",
@@ -294,6 +355,9 @@ Deno.serve(async (req: Request) => {
           body: JSON.stringify({ data: blob, updated_at: paidAt }),
         },
       );
+      if (!workspaceSyncPatchRes.ok) {
+        console.error(`Failed to mark workspace_sync th_invoices paid for PaymentIntent ${pi.id}: ${await workspaceSyncPatchRes.text().catch(() => "")}`);
+      }
     }
   }
 

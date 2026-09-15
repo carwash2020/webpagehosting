@@ -43,6 +43,18 @@ function loadPage() {
     div.textContent = str;
     return div.innerHTML;
   };
+  // escapeAttr() (added to tools-dialogs.js during the exhaustive
+  // escapeHtml() XSS audit) -- same real implementation as that file's,
+  // not a simplified stand-in, since this page's edit-in-place UI now
+  // uses it for every value=/href=/data-*= attribute it builds.
+  window.escapeAttr = (str) => {
+    if (str === null || str === undefined) return '';
+    return String(str)
+      .replace(/&/g, '&amp;')
+      .replace(/"/g, '&quot;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;');
+  };
   window.money = (v) => '$' + (v || 0).toFixed(2).replace(/\d(?=(\d{3})+\.)/g, '$&,');
   return window;
 }
