@@ -23,7 +23,7 @@
      auto-running side effects, so loading it here changes nothing
      about this page's existing behavior until something explicitly
      calls one of its functions -- and nothing else here does. -->
-<script src="/tools/sync.js?v=b208ad9d5d" defer></script>
+<script src="/tools/sync.js?v=3424fbbee1" defer></script>
 <script>
   // Security gate -- redirect to login before this page's own content
   // is meaningfully usable. See auth.js for why this exists (a single
@@ -611,7 +611,38 @@
   function loadPending() {
     try { return JSON.parse(localStorage.getItem(PENDING_KEY) || '[]'); } catch (e) { return []; }
   }
-  function savePending(list) { localStorage.setItem(PENDING_KEY, JSON.stringify(list)); }
+  // Sync fix (real audit gap, closed 2026-09): savePending() never
+  // called scheduleSync() at all, and neither this key nor its
+  // tombstones were even listed in sync.js's SYNC_DATA_KEYS -- so a
+  // reminder set on one device stayed on that device forever, no
+  // matter how long you waited. See sync.js's own comment on
+  // th_review_requests_pending for the full explanation.
+  function savePending(list) {
+    localStorage.setItem(PENDING_KEY, JSON.stringify(list));
+    if (typeof scheduleSync === 'function') scheduleSync();
+  }
+
+  // Tombstones for dismissed/used-up reminders -- same reasoning as
+  // every other deletable synced array in this app (th_clients,
+  // th_tracker_jobs, etc.): a plain union merge on pull can't tell
+  // "never existed" apart from "existed and was deleted", so without
+  // this a reminder dismissed on one device could be resurrected by a
+  // second device pushing back its stale copy of the same reminder.
+  const PENDING_TOMBSTONES_KEY = 'th_review_requests_pending_tombstones';
+  const TOMBSTONE_RETENTION_DAYS = 90; // matches data-layer.js's thPruneTombstones -- this page doesn't load that shared file
+  function loadPendingTombstones() {
+    try { return JSON.parse(localStorage.getItem(PENDING_TOMBSTONES_KEY) || '[]'); } catch (e) { return []; }
+  }
+  function addPendingTombstone(id) {
+    const cutoffMs = Date.now() - TOMBSTONE_RETENTION_DAYS * 24 * 60 * 60 * 1000;
+    const pruned = loadPendingTombstones().filter(t => {
+      const deletedAtMs = new Date(t.deletedAt).getTime();
+      return isNaN(deletedAtMs) || deletedAtMs >= cutoffMs;
+    });
+    pruned.push({ id, deletedAt: new Date().toISOString() });
+    localStorage.setItem(PENDING_TOMBSTONES_KEY, JSON.stringify(pruned));
+    if (typeof scheduleSync === 'function') scheduleSync();
+  }
 
   function scheduleReminder(daysFromNow) {
     const name = document.getElementById('custName').value.trim();
@@ -632,8 +663,10 @@
   }
 
   function clearMatchingReminder(phone) {
-    const pending = loadPending().filter(p => digitsOnly(p.phone) !== digitsOnly(phone));
-    savePending(pending);
+    const target = digitsOnly(phone);
+    const all = loadPending();
+    all.filter(p => digitsOnly(p.phone) === target).forEach(p => addPendingTombstone(p.id));
+    savePending(all.filter(p => digitsOnly(p.phone) !== target));
   }
 
   async function dismissReminder(id) {
@@ -645,6 +678,7 @@
     if (!confirmed) return;
     const row = document.querySelector('[data-reminder-id="' + id + '"]');
     animateRowExit(row, () => {
+      addPendingTombstone(id);
       savePending(loadPending().filter(p => p.id !== id));
       renderPendingReminders();
     });

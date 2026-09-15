@@ -206,6 +206,19 @@ const SYNC_DATA_KEYS = [
   // so an overwrite is never silent even though it still has to resolve
   // to one final value automatically.
   'th_sync_conflicts',
+  // Review Request's sent-request log and pending-reminder queue
+  // (real audit gap found and fixed 2026-09): review-request.html
+  // never listed either key here, so calling scheduleSync() from that
+  // page (which the sent-log path already did) queued a push whose
+  // payload simply never contained this data -- a review request
+  // logged as sent, or a delayed follow-up reminder set, on one device
+  // silently never reached the other. Tombstone-before-array ordering,
+  // same convention as every other deletable array above -- the log is
+  // append/status-update only (no delete function exists for it), so
+  // it needs no tombstone of its own.
+  'th_review_requests_pending_tombstones',
+  'th_review_requests_pending',
+  'th_review_requests_log',
 ];
 
 // Local-only bookkeeping for the per-field merge below -- NOT itself a
@@ -309,6 +322,9 @@ const MERGE_KEY_FIELD = {
   'rd_personal-income': 'id',
   'rd_business-months': 'month',
   'rd_debts': 'id',
+  th_review_requests_pending_tombstones: 'id',
+  th_review_requests_pending: 'id',
+  th_review_requests_log: 'id',
 };
 
 // Deep-equality check for plain JSON-shaped values (strings/numbers/
@@ -596,6 +612,13 @@ function applySyncData(obj, keysToApply) {
         if (tombstonedIds.length) {
           const tombstoneSet = new Set(tombstonedIds);
           finalArr = mergedArr.filter(i => !tombstoneSet.has(i.id));
+        }
+      } else if (k === 'th_review_requests_pending') {
+        let tombstonedIds = [];
+        try { tombstonedIds = JSON.parse(localStorage.getItem('th_review_requests_pending_tombstones') || '[]').map(t => t.id); } catch (e) { tombstonedIds = []; }
+        if (tombstonedIds.length) {
+          const tombstoneSet = new Set(tombstonedIds);
+          finalArr = mergedArr.filter(p => !tombstoneSet.has(p.id));
         }
       } else if (k === 'th_parts_reference_units') {
         let tombstonedUnitIds = [];
