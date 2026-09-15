@@ -190,6 +190,12 @@ test('clients can manage their own push subscription, additive to (not replacing
 test('todayAtMidnight() computes midnight in the business timezone (America/Denver), not the Deno runtime UTC default', () => {
   const fnMatch = SEND_PUSH.match(/function todayAtMidnight\(\)[\s\S]*?\n\}/);
   assert.ok(fnMatch, 'expected to isolate todayAtMidnight()');
-  assert.match(fnMatch[0], /timeZone: 'America\/Denver'/);
   assert.doesNotMatch(fnMatch[0], /setHours\(0, ?0, ?0, ?0\)/, 'must not fall back to the UTC-based setHours(0,0,0,0) approach');
+  // todayAtMidnight() delegates to zonedTimeToUtc(todayDateStrInBusinessTz(), 0, 0)
+  // rather than inlining its own Intl call -- those two helpers are what
+  // actually carry the "America/Denver" business timezone, so the fix is
+  // verified there instead of expecting the literal string inside
+  // todayAtMidnight() itself.
+  assert.match(fnMatch[0], /zonedTimeToUtc\(todayDateStrInBusinessTz\(\), 0, 0\)/);
+  assert.match(SEND_PUSH, /timeZone: ["']America\/Denver["']/);
 });
