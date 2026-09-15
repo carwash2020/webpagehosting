@@ -246,7 +246,11 @@
 // .faq-plain-item rules for the public site's new landing-page FAQ
 // section, audit item #18) -- shared with the public site, precached
 // here too. Same reasoning as every prior bump above.
-const CACHE_NAME = 'th-portal-v64'; // precache-fingerprint:5b4686e809ae
+// Bumped (v64 -> v65): portal/login.html changed -- its sign-in
+// disclaimer now links to the new /privacy.html (audit item #19), not
+// just Terms and Conditions. Precached under its bare path. Same
+// reasoning as every prior bump above.
+const CACHE_NAME = 'th-portal-v65'; // precache-fingerprint:899a87232896
 const PRECACHE_URLS = [
   '/portal/home.html', '/portal/dashboard.html', '/portal/jobs.html', '/portal/quotes.html',
   '/portal/work-orders.html', '/portal/settings.html', '/portal/login.html', '/portal/set-password.html',
