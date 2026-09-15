@@ -10,13 +10,9 @@ These cannot be done via a migration, edge function, or any MCP tool
 available to this repo -- they require someone with dashboard access to
 click a setting by hand.
 
-1. **Enable "Prevent use of leaked passwords"** (Supabase dashboard:
+1. ~~Enable "Prevent use of leaked passwords" (Supabase dashboard:
    Authentication -> Providers -> Email -> "Prevent use of leaked
-   passwords"). Protects both internal accounts and the growing
-   client-portal population from credential-stuffing using passwords
-   already exposed in public breaches. No UX change for anyone whose
-   password isn't already compromised. See `SECURITY.md` "Known,
-   accepted gaps" for full reasoning. **Not yet done.**
+   passwords").~~ **Done (2026-09-15).**
 2. **Enable MFA availability** (Supabase dashboard: Authentication ->
    MFA). This only makes TOTP/phone factors available to enroll in --
    actual enrollment UI and a step-up-during-login challenge flow is a

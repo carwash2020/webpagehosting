@@ -209,25 +209,14 @@ than the finding's title alone.
 
 ## Known, accepted gaps (not oversights)
 
-- **Leaked-password protection is off** in Supabase Auth. This is a
-  dashboard-only toggle (Authentication -> Providers -> Email ->
-  "Prevent use of leaked passwords") -- confirmed directly, via the
-  Supabase MCP tools available to this repo, that there is no
-  migration, edge function, or API call that can flip it from code;
-  it has to be done by hand in the dashboard.
-
-  **Re-flagged (2026-09), no longer just a "2-account system" call**:
-  the reasoning this gap was originally accepted under is stale. The
-  client portal (see `docs/CLIENT-PORTAL.md`) now has one real
-  Supabase Auth account per client who's ever logged in to view a
-  quote, contract, invoice, or job -- a growing, client-facing
-  population, not the original two internal accounts. Leaked-password
-  protection costs nothing (no UX change for anyone with a password
-  that isn't already compromised in a public breach) and protects real
-  clients who reuse passwords across sites, exactly the population
-  most exposed to credential-stuffing. **This should be turned on now,
-  not deferred further** -- flip it in the Supabase dashboard under
-  Authentication -> Providers -> Email.
+- **Leaked-password protection is now ON** in Supabase Auth (confirmed
+  2026-09-15, flipped by hand in the dashboard under Authentication ->
+  Providers -> Email -> "Prevent use of leaked passwords" -- there is
+  no migration, edge function, or API call that can set this from
+  code). Protects both the internal accounts and the growing
+  client-portal population (see `docs/CLIENT-PORTAL.md`) from
+  credential-stuffing using passwords already exposed in public
+  breaches. No further action needed here.
 - **No MFA enforcement**, on either the internal accounts or client
   portal accounts. Also a dashboard-only setting (Authentication ->
   MFA, which controls whether TOTP/phone factors are even available to
