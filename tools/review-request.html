@@ -652,8 +652,15 @@
     if (!phone) { alert('Add the customer\u2019s phone number first, so this reminder actually has someone to send to.'); return; }
     const remindAt = new Date();
     remindAt.setDate(remindAt.getDate() + daysFromNow);
+    // toISOString() is always UTC -- stamped that way, an evening
+    // reminder's stored date landed a day ahead of the calendar date
+    // shown in this same toast below (toLocaleDateString(), which
+    // correctly uses local time), silently delaying when it actually
+    // surfaces. dateStrBusinessTz() (tools-dialogs.js) keeps both dates
+    // in agreement.
+    const remindAtStr = dateStrBusinessTz(remindAt);
     const pending = loadPending();
-    pending.push({ id: Date.now(), name, phone, job, remindAt: remindAt.toISOString().slice(0, 10) });
+    pending.push({ id: Date.now(), name, phone, job, remindAt: remindAtStr });
     savePending(pending);
     document.getElementById('custName').value = '';
     document.getElementById('jobDesc').value = '';
@@ -697,7 +704,7 @@
   }
 
   function renderPendingReminders() {
-    const today = new Date().toISOString().slice(0, 10);
+    const today = todayDateStrBusinessTz();
     const due = loadPending().filter(p => p.remindAt <= today);
     const section = document.getElementById('pendingRemindersSection');
     if (due.length === 0) { section.style.display = 'none'; return; }

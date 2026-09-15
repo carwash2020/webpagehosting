@@ -849,7 +849,13 @@
     const resultEl = document.getElementById('inviteAnyResult');
     const email = emailEl.value.trim().toLowerCase();
 
-    if (!email || !email.includes('@')) {
+    // A bare .includes('@') check let malformed addresses (a@b, test@,
+    // @x) through to the send-invite edge function, which only fails
+    // once Supabase's own auth layer rejects it -- surfacing a raw,
+    // confusing "Could not generate invite link" error instead of being
+    // caught here with a clear message. Matches the same basic shape
+    // real browsers require for type="email" inputs.
+    if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
       resultEl.innerHTML = '<div class="empty-state-small is-warning"><svg class="th-icon" aria-hidden="true"><use href="#icon-warning" xlink:href="#icon-warning"></use></svg>Enter a real email address.</div>';
       return;
     }
@@ -947,7 +953,7 @@
 
     el.innerHTML = rows.map(i => {
       const paidBadge = i.paid
-        ? '<span class="badge-pending-signature" style="background:var(--blue-tint-soft); border-color:var(--blue-tint-border); color:var(--blue-light);">Paid' + (i.paid_at ? ' ' + escapeHtml(String(i.paid_at).slice(0, 10)) : '') + '</span>'
+        ? '<span class="badge-pending-signature" style="background:var(--blue-tint-soft, rgba(58,160,255,0.1)); border-color:var(--blue-tint-border, rgba(58,160,255,0.3)); color:var(--blue-light);">Paid' + (i.paid_at ? ' ' + escapeHtml(String(i.paid_at).slice(0, 10)) : '') + '</span>'
         : '<span class="badge-pending-signature">Unpaid</span>';
       const via = i.stripe_payment_intent_id ? ' &middot; via Stripe' : '';
       return '<div class="dev-check-row" style="align-items:flex-start;"><div style="flex:1; min-width:0;">' +

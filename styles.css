@@ -1366,7 +1366,11 @@
   .modal-close{
     position:absolute;
     top:16px; right:16px;
-    width:34px; height:34px;
+    /* 40x40 (was 34x34) -- under the ~40px touch-target minimum on a
+       phone, used to close 5 different modals (email capture, FAQ,
+       Terms, gallery, service detail) with no mobile-specific override
+       anywhere else in this file. */
+    width:40px; height:40px;
     border-radius:8px;
     border:1px solid var(--border);
     background:var(--bg-panel-3);

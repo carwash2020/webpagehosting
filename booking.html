@@ -304,7 +304,7 @@
      -- now also loaded by portal/work-orders.html, so the two pages
      can never silently drift on what the real hours actually are.
      See business-hours.js's own header comment for the full reasoning. -->
-<script src="/business-hours.js?v=306f097e9e"></script>
+<script src="/business-hours.js?v=5296319b73"></script>
 </head>
 <body>
 
@@ -386,7 +386,7 @@
         <input type="email" id="bEmail" name="email" autocomplete="email" maxlength="200" placeholder="you@example.com">
         <p class="field-error" id="emailError" aria-live="polite"></p>
         <label for="bAddress">Address</label>
-        <input type="text" id="bAddress" name="address" autocomplete="street-address" maxlength="200">
+        <input type="text" id="bAddress" name="address" required autocomplete="street-address" maxlength="200">
         <label for="bNotes">Anything we should know? (optional)</label>
         <textarea id="bNotes" name="notes" maxlength="1000"></textarea>
         <!-- Marketing-source tracking (closes a real audit gap): a
@@ -712,6 +712,26 @@
         '<div class="hex-icon">' + svgIcon(selectedService.icon) + '</div>' +
         '<div><strong>' + selectedService.label + '</strong>' + dateLabel + ' at ' + selectedSlot.label + '</div>';
       goToStep(4);
+      return;
+    }
+
+    // The native `required` attribute alone doesn't catch a
+    // whitespace-only value (the browser's own constraint validation
+    // treats " " as non-empty), so a booking could otherwise confirm
+    // with an effectively blank name or address -- a real appointment
+    // with no usable name or location.
+    const nameVal = (formData.get('name') || '').trim();
+    const addressVal = (formData.get('address') || '').trim();
+    if (!nameVal) {
+      statusEl.textContent = 'Please enter your name.';
+      statusEl.classList.add('is-visible', 'is-error');
+      document.getElementById('bName').focus();
+      return;
+    }
+    if (!addressVal) {
+      statusEl.textContent = 'Please enter the service address.';
+      statusEl.classList.add('is-visible', 'is-error');
+      document.getElementById('bAddress').focus();
       return;
     }
 

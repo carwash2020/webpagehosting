@@ -83,6 +83,24 @@ async function sendEmailAlert(subject: string, message: string): Promise<void> {
 
 Deno.serve(async (req: Request) => {
   try {
+    // This function has no per-user auth model -- its only caller is the
+    // uptime-check GitHub Actions workflow, which already authenticates
+    // with the service_role key (see .github/workflows/uptime-check.yml).
+    // Without this check, the function was reachable by anyone holding
+    // the public Supabase anon key (embedded in every page's HTML, e.g.
+    // about.html, booking.html) -- verify_jwt only validates the JWT
+    // signature, not which role it carries, so an anon-key request would
+    // otherwise sail through and could fire arbitrary spoofed "site is
+    // down" push notifications and emails to Steve/Connor at will.
+    const authHeader = req.headers.get("Authorization") || "";
+    const token = authHeader.replace(/^Bearer\s+/i, "");
+    if (token !== SERVICE_ROLE_KEY) {
+      return new Response(JSON.stringify({ ok: false, error: "Unauthorized" }), {
+        status: 401,
+        headers: { "Content-Type": "application/json" },
+      });
+    }
+
     const payload = await req.json();
     const status = payload.status === "down" ? "down" : "up";
     const message = typeof payload.message === "string" ? payload.message : "";

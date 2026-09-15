@@ -835,12 +835,25 @@
     nudge.style.display = isFirstTime ? 'block' : 'none';
   }
 
+  // A phone number is never blocked outright (a partial or unusual
+  // format shouldn't stop staff from saving a job), but a value with
+  // fewer than 7 digits total (below any real US/local number) is
+  // almost certainly a typo, not a real number -- checked here since
+  // there was previously NO validation at all, so garbage like
+  // "asdf;;;" saved silently and later fed a client-lookup phone
+  // search (clients.html) against junk data.
+  function isPlausiblePhone(value) {
+    if (!value) return true;
+    return (value.match(/\d/g) || []).length >= 7;
+  }
+
   async function addJob() {
     const title = document.getElementById('jobTitle').value.trim();
     if (!title) { await showAlert('Give the job a title first.'); return; }
     const jobs = loadJobs();
     const clientName = document.getElementById('jobClient').value.trim();
     const phone = document.getElementById('jobPhone').value.trim();
+    if (!isPlausiblePhone(phone)) { await showAlert('That phone number doesn\'t look right -- please double-check it.'); return; }
     const address = document.getElementById('jobAddress').value.trim();
     const clientEmailVal = document.getElementById('jobClientEmail').value.trim();
     // Push 2 (2026-08-20): get-or-create the client record for whatever
@@ -1068,7 +1081,7 @@
     document.getElementById('quickExpenseJobLabel').textContent = jobTitle;
     document.getElementById('quickExpenseType').value = 'expense';
     toggleQuickExpenseTypeFields();
-    document.getElementById('quickExpenseDate').value = new Date().toISOString().slice(0, 10);
+    document.getElementById('quickExpenseDate').value = todayDateStrBusinessTz();
     document.getElementById('quickExpenseDesc').value = '';
     document.getElementById('quickExpenseAmount').value = '';
     document.getElementById('quickExpenseMiles').value = '';
@@ -1094,7 +1107,7 @@
     const overlay = document.getElementById('quickExpenseOverlay');
     const jobId = overlay.dataset.jobId;
     const type = document.getElementById('quickExpenseType').value;
-    const date = document.getElementById('quickExpenseDate').value || new Date().toISOString().slice(0, 10);
+    const date = document.getElementById('quickExpenseDate').value || todayDateStrBusinessTz();
     const desc = document.getElementById('quickExpenseDesc').value.trim();
     const vendor = document.getElementById('quickExpenseVendor').value.trim();
     const partNumber = type === 'mileage' ? '' : document.getElementById('quickExpensePartNumber').value.trim();
@@ -1199,6 +1212,23 @@
       }
 
       const jobToDelete = loadJobs().find(j => j.id === id);
+      // A completed job synced to the client portal (client_portal_jobs)
+      // previously had no cleanup path at all once deleted internally --
+      // the portal row, including its warranty status/date, was left
+      // permanently orphaned, still showing to the client for a job that
+      // no longer exists here. Only fires for a job that was actually
+      // ever synced (status was 'done' with a client email on file).
+      if (jobToDelete && jobToDelete.status === 'done' && jobToDelete.clientEmail && typeof getAuthToken === 'function') {
+        fetch(`${SUPABASE_URL}/functions/v1/sync-job-to-portal`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'apikey': SUPABASE_ANON_KEY,
+            'Authorization': `Bearer ${getAuthToken()}`,
+          },
+          body: JSON.stringify({ delete: true, source_job_id: id }),
+        }).catch(() => { /* best-effort -- internal delete already succeeded either way */ });
+      }
       saveJobs(loadJobs().filter(j => j.id !== id));
       if (typeof thAddJobTombstone === 'function') thAddJobTombstone(id);
       if (typeof mirrorDelete === 'function') mirrorDelete('jobs', id);
@@ -1397,13 +1427,13 @@
       client: template.client || '',
       phone: '', address: '',
       priority: 'medium',
-      date: new Date().toISOString().slice(0, 10),
+      date: todayDateStrBusinessTz(),
       status: 'not-started',
       notes: 'Created from recurring template.',
     });
     saveJobs(jobs);
 
-    template.lastCreatedDate = new Date().toISOString().slice(0, 10);
+    template.lastCreatedDate = todayDateStrBusinessTz();
     saveTemplates(templates);
 
     renderJobs();
@@ -2077,6 +2107,24 @@
     el.innerHTML = uploadRowHtml + gridHtml;
   }
 
+  // Photo action results carry internal codes ('http-403', 'network',
+  // 'not-configured', ...) meant for logging, not for a non-technical
+  // user to read -- 'Could not update: http-403' means nothing to
+  // staff. This turns the ones a real person could actually hit into a
+  // plain sentence, falling back to a still-actionable generic message
+  // for anything unmapped rather than a bare code.
+  function friendlyPhotoErrorMessage(result, actionVerb) {
+    if (result.detail) return result.detail;
+    const code = result.error || '';
+    if (code === 'session-expired') return 'Your login session has expired. Log out and back in, then try again.';
+    if (code === 'not-configured') return 'Sync isn’t set up on this device, so this can’t be saved yet.';
+    if (code === 'network' || code.startsWith('http-5') || code.startsWith('upload-http-5') || code.startsWith('metadata-http-5')) {
+      return 'A connection problem stopped this from going through. Check your connection and try again.';
+    }
+    if (code.startsWith('http-403')) return 'This account doesn’t have permission to do that.';
+    return 'Something went wrong and this couldn’t ' + actionVerb + '. Try again, and call it in if it keeps happening.';
+  }
+
   async function toggleFeatureUI(photoId, newFeatured, jobId, jobTitle) {
     let caption = '';
     if (newFeatured) {
@@ -2084,7 +2132,7 @@
       if (caption === null) return;
     }
     const result = await toggleFeaturedPhoto(photoId, newFeatured, caption);
-    if (!result.ok) { await showAlert('Could not update: ' + result.error); return; }
+    if (!result.ok) { await showAlert(friendlyPhotoErrorMessage(result, 'be updated')); return; }
     await renderJobPhotosGallery(jobId, jobTitle);
   }
 
@@ -2108,7 +2156,7 @@
     if (!result.ok) {
       const msg = result.error === 'too-large'
         ? 'That photo is over 8MB \u2014 try a smaller photo or lower camera resolution.'
-        : 'Upload failed: ' + result.error;
+        : friendlyPhotoErrorMessage(result, 'be uploaded');
       await showAlert(msg);
     }
     await renderJobPhotosGallery(jobId, jobTitle);
@@ -2118,7 +2166,7 @@
     const confirmed = await showConfirm('Delete this photo? This cannot be undone.', { danger: true, confirmText: 'Delete' });
     if (!confirmed) return;
     const result = await deleteJobPhoto(photoId, storagePath);
-    if (!result.ok) { await showAlert('Could not delete: ' + result.error); return; }
+    if (!result.ok) { await showAlert(friendlyPhotoErrorMessage(result, 'be deleted')); return; }
     await renderJobPhotosGallery(jobId, jobTitle);
   }
 
@@ -2196,11 +2244,13 @@
   async function addContact() {
     const name = document.getElementById('contactName').value.trim();
     if (!name) { await showAlert('Give the contact a name first.'); return; }
+    const contactPhoneVal = document.getElementById('contactPhone').value.trim();
+    if (!isPlausiblePhone(contactPhoneVal)) { await showAlert('That phone number doesn\'t look right -- please double-check it.'); return; }
     const contacts = loadContacts();
     const fields = {
       name,
       role: document.getElementById('contactRole').value.trim(),
-      phone: document.getElementById('contactPhone').value.trim(),
+      phone: contactPhoneVal,
       email: document.getElementById('contactEmail').value.trim(),
       notes: document.getElementById('contactNotes').value.trim(),
     };

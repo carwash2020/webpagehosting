@@ -268,7 +268,7 @@
     if (jobs === null) {
       try { jobs = JSON.parse(localStorage.getItem('th_tracker_jobs') || '[]'); } catch (e) { jobs = []; }
     }
-    const today = new Date().toISOString().slice(0, 10);
+    const today = todayDateStrBusinessTz();
     const todaysJobs = jobs.filter(j => j.date === today && j.status !== 'done');
     const withAddress = todaysJobs.filter(j => (j.address || '').trim());
     const withoutAddress = todaysJobs.filter(j => !(j.address || '').trim());
@@ -289,6 +289,23 @@
     showToast(msg);
   }
 
+  // A job's address (pulled in via pullTodaysJobs() below) is free text
+  // entered elsewhere in the tools suite -- inserting it unescaped into
+  // this double-quoted value="..." attribute would let a crafted address
+  // (e.g. containing a literal `"`) break out of the attribute and inject
+  // arbitrary markup/event handlers. escapeHtml() (tools-dialogs.js) isn't
+  // enough here since it only escapes &/</> for text-node content, not
+  // quotes -- same distinction escapeAttr() in runway-dashboard.html
+  // already exists to handle for exactly this attribute context.
+  function escapeAttr(str) {
+    if (str === null || str === undefined) return '';
+    return String(str)
+      .replace(/&/g, '&amp;')
+      .replace(/"/g, '&quot;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;');
+  }
+
   function addStop(value = '', isUserAdd = false) {
     stopCount++;
     const id = stopCount;
@@ -298,7 +315,7 @@
     if (isUserAdd) row.classList.add('list-row-enter');
     row.innerHTML = `
       <span class="stop-num">${document.querySelectorAll('.stop-row').length + 1}.</span>
-      <input type="text" class="stop-input" value="${value}" placeholder="123 Main St, St. George, UT" oninput="updateRoute()">
+      <input type="text" class="stop-input" value="${escapeAttr(value)}" placeholder="123 Main St, St. George, UT" oninput="updateRoute()">
       <button class="stop-icon-btn" onclick="moveStop(${id}, -1)" title="Move up" aria-label="Move stop up">&uarr;</button>
       <button class="stop-icon-btn" onclick="moveStop(${id}, 1)" title="Move down" aria-label="Move stop down">&darr;</button>
       <button class="stop-icon-btn danger" onclick="removeStop(${id})" title="Remove" aria-label="Remove stop">&times;</button>`;
