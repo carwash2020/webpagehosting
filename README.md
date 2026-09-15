@@ -1210,3 +1210,91 @@ matching what's already on every city page. This is exactly the kind
 of cross-page attribute consistency the research flagged as helping an
 answer engine build confidence that mentions across the web refer to
 the same entity.
+
+## What changed, 2026-09-15 (later the same day) -- a real cookie-consent banner, gating GA4 with Google Consent Mode v2
+
+Prompted directly ("Can we add cookies?"), after first confirming this
+isn't legally required: neither the Utah Consumer Privacy Act (UCPA;
+$25M+ annual revenue threshold, per [Enzuzo's 2026 UCPA guide](https://www.enzuzo.com/blog/utah-consumer-privacy-act-ucpa)
+and [Ketch's UCPA compliance page](https://www.ketch.com/regulatory-compliance/utah-consumer-privacy-act-ucpa)),
+CCPA (California revenue/data-volume thresholds), nor GDPR (no EU
+targeting) apply to a business this size. Built anyway as the right
+thing to do given real GA4 tracking cookies were firing unconditionally
+on every page load with zero user choice -- previously Terms &sect;12
+only *disclosed* this, with no actual consent mechanism.
+
+**Approach: Google Consent Mode v2**, the current standard way to gate
+GA4 specifically (rather than blocking the gtag.js script entirely,
+which would also break the existing GA4 event tracking wiring the
+moment consent IS granted). Every one of the 23 public pages that loads
+GA4 (`G-TMJJMGY2DQ`) now has a small inline script, placed immediately
+before the existing GA4 tag, that reads `localStorage['th-cookie-consent']`
+synchronously and calls `gtag('consent', 'default', { analytics_storage:
+..., ad_storage: 'denied', ... })` *before* gtag.js itself ever runs --
+so no analytics cookie is set until a real choice is made. A new
+shared `/cookie-consent.js` (loaded on all 23 pages, same pattern as
+`site-motion.js`/`analytics-events.js`) shows a bottom-fixed banner on
+first visit (Accept/Decline), calls `gtag('consent', 'update', ...)`
+and stores the choice, and exposes `window.reopenCookiePreferences()`
+so a visitor can change their mind later -- wired to a new "Cookie
+Preferences" link added to every page's existing footer (`.footer-bottom`).
+`booking.html` has GA4 too and got the consent-default snippet + banner
+script, but has no shared site footer to hang a preferences link off
+of -- the banner itself still appears there on first visit, same as
+everywhere else. `manage-booking.html`, `manage-job.html`, and
+`404.html` load no analytics at all and were left untouched.
+
+New CSS (`.cookie-banner` and friends, appended to `styles.css`) reuses
+the site's existing theme tokens (`--bg-panel`, `--border`, `--orange`,
+etc.) so it tracks light/dark automatically with no separate theme
+block, matching the pattern already established for every other
+themed component on the site.
+
+**Verified with real execution, not just a syntax check** (this
+project has been bitten before by code that looks right but throws at
+runtime -- see the 2026-07-31 Invoice Generator incident above): built
+a jsdom harness combining the real consent-default snippet, the real
+GA4 config block, and the real `cookie-consent.js` as they'd actually
+run together in one page, and confirmed the banner appears on first
+load, Accept fires `gtag('consent','update',{analytics_storage:'granted'})`
+and persists it, Decline does the equivalent with `'denied'`, the
+banner does NOT reappear on a later load once a choice exists, and
+`reopenCookiePreferences()` correctly reopens it on demand. (A first
+attempt at this test used a naive single `window.eval()` call and threw
+a `ReferenceError` on bare `gtag(...)` -- that was confirmed to be an
+artifact of the flawed test harness, not a real bug, once retested with
+a faithful multi-`<script>`-tag reproduction matching how the page
+actually loads.)
+
+**Terms & Conditions &sect;12 updated** (in both `terms.html` and
+`index.html`'s static fallback content) to describe the actual banner
+and link to it, rather than just disclosing analytics use with no
+mechanism. **Not updated: the live Supabase-backed Terms content**
+(`site_terms` table, editable via Dev Tools' CMS -- see the "Public
+site CMS" section above) that the homepage's Terms modal actually
+renders from in production. This session had no reason to write
+directly to the live production database for a wording change like
+this; the same &sect;12 wording change should be made there too via
+Dev Tools, by the business owner or a future session with explicit
+direction to touch live data.
+
+**Editing `styles.css` changed its content hash**, which the project's
+own `check-consistency.js` correctly flagged as 24 pages now serving a
+stale `?v=` cache-bust stamp (would have meant some visitors getting a
+cached pre-cookie-banner copy of the stylesheet). Fixed by running the
+project's own `npm run fix-versions`, which additionally bumped the two
+service worker `CACHE_NAME` values (`th-workspace-v138` -> `v139`,
+`th-portal-v61` -> `v62`) since a precached file's contents changed --
+this touched every tool/portal page too, purely as a cache-bust stamp
+refresh, no content changes to any of them.
+
+Verified before committing: all 23 changed public pages still parse as
+valid JSON-LD with balanced `<div>`/`<span>`/`<p>` tags, `npm run
+check-consistency` passes clean (24 pages, no stale stamps), `npm run
+check-undefined-vars` passes clean (52 pages), `scripts/check-links.py`
+resolves every internal reference across 59 HTML files, and the
+schema/meta-focused test suites
+(`tests/seo/local-business-schema.test.js`,
+`tests/design/blog-post-meta.test.js`,
+`tests/design/homepage-stats-bar.test.js`,
+`tests/referrals/referral-program.test.js`) pass 37/37.
