@@ -3,4 +3,37 @@ Allow: /
 # Agent tooling, not site content -- never worth indexing.
 Disallow: /.claude/
 
+# AI answer-engine crawlers that fetch pages live to ground a chat
+# answer -- allow these, since being cited by ChatGPT/Perplexity/Claude
+# is a goal, not a risk, for this business.
+User-agent: OAI-SearchBot
+Allow: /
+
+User-agent: ChatGPT-User
+Allow: /
+
+User-agent: PerplexityBot
+Allow: /
+
+User-agent: Claude-SearchBot
+Allow: /
+
+User-agent: Claude-User
+Allow: /
+
+# Bulk AI-training crawlers -- distinct from the retrieval bots above.
+# Blocking these doesn't remove this site from Google/Bing search or
+# from AI Overviews (regular Googlebot/Bingbot crawling is untouched);
+# it just opts out of the site being scraped wholesale into a model's
+# training set, which has no bearing on whether this business gets
+# recommended in an answer.
+User-agent: GPTBot
+Disallow: /
+
+User-agent: CCBot
+Disallow: /
+
+User-agent: Google-Extended
+Disallow: /
+
 Sitemap: https://www.triplehenterprisesllc.biz/sitemap.xml
