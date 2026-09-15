@@ -41,6 +41,15 @@ reference:
 - **Workspace "Getting Started" guide** rewording -- now explains the
   real per-account role system (Owner, Developer, Employee) instead of
   a stale "everyone shares one login" description.
+- **City landing page hero distance chip** -- each of the 7 city pages
+  (`handyman-cedar-city-ut.html` and siblings) now shows its own
+  direction/ETA from St. George (e.g. "About 20-25 minutes east of
+  St. George") right under the hero H1, so the hero reads as locally
+  specific instead of the same template with only the H1 text swapped.
+  Real distinct hero photography per city isn't feasible (no such
+  photos exist), and each page already had the site's service-radius
+  map further down focused on its own city -- this closes the gap in
+  the hero itself.
 
 <!-- Add new visual additions above this line -->
 
@@ -62,10 +71,8 @@ above as they ship.
    grid with plain `<h4>` dividers. A Pinterest-style masonry layout
    (real aspect ratios already in the markup) plus filter chips would
    make it far less of a scroll.
-3. **Local imagery on city landing pages** (`handyman-cedar-city-ut.html`
-   and siblings) -- each city page reuses the exact same hero as the
-   homepage with only the text swapped. A distinct hero photo or small
-   map/service-radius graphic per city would feel less templated.
+~~3. Local imagery on city landing pages~~ -- **done**, see "Visual
+additions" above.
 4. **Lead/hero image on every blog post** (`blog/*.html`) -- posts are
    currently text-only. A relevant photo at the top would improve
    scannability and how posts look when shared (currently falls back to
