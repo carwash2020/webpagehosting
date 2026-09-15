@@ -124,6 +124,27 @@ function wireSearchClear(inputId, renderFn) {
 
 function money(v) { return '$' + (v || 0).toFixed(2).replace(/\d(?=(\d{3})+\.)/g, '$&,'); }
 
+// Shared "today, in the business's own timezone" date string. Several
+// tool pages independently defaulted a date field with
+// `new Date().toISOString().slice(0, 10)` -- toISOString() is always
+// UTC, and the business (America/Denver) is 6-7 hours behind it, so any
+// time after ~5-6pm local, that call has already rolled to tomorrow's
+// date. Found as a real bug (an evening invoice/expense/job silently
+// dated a day ahead, and Route Planner's "pull today's jobs" matching
+// zero jobs) across invoice-generator.html, job-tracker.html, and
+// route-planner.html. business-hours.js already solves this exact
+// problem for the public booking flow (todayDateStrInBusinessTz()), but
+// isn't loaded on these internal tool pages -- this is the same Intl-
+// based approach, in the one script every tool page already shares.
+function todayDateStrBusinessTz() {
+  const parts = new Intl.DateTimeFormat('en-US', {
+    timeZone: 'America/Denver', year: 'numeric', month: '2-digit', day: '2-digit',
+  }).formatToParts(new Date());
+  const map = {};
+  parts.forEach(p => { map[p.type] = p.value; });
+  return map.year + '-' + map.month + '-' + map.day;
+}
+
 // Shared HTML-escaping helper -- previously defined 9 separate times
 // across the tool suite. 8 copies used a DOM-based trick (assign to
 // textContent, read back innerHTML); review-request.html used a

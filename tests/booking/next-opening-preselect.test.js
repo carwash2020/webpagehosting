@@ -48,19 +48,32 @@ const NO_BOOKINGS_FETCH = async (url) => {
   return { ok: false };
 };
 
+// A fixed calendar date breaks the moment it rolls into the past --
+// DAYS_AHEAD_SHOWN (business-hours.js) only shows today..today+14, so a
+// hardcoded date here would silently start failing every day once it
+// aged out of that window. Picking a few days out from "now" keeps this
+// test valid indefinitely without depending on the real booking system's
+// current availability.
+function futureDateStr(daysAhead) {
+  const d = new Date();
+  d.setDate(d.getDate() + daysAhead);
+  return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+}
+const TEST_DATE = futureDateStr(5);
+
 test('a ?service=X&date=Y link lands directly on that service and date, skipping back to step 1', async () => {
-  const window = loadPage('https://www.triplehenterprisesllc.biz/booking.html?service=inspection&date=2026-09-14', NO_BOOKINGS_FETCH);
+  const window = loadPage(`https://www.triplehenterprisesllc.biz/booking.html?service=inspection&date=${TEST_DATE}`, NO_BOOKINGS_FETCH);
   await waitForCondition(() => window.document.querySelectorAll('.slot-btn').length > 0);
 
   assert.match(window.document.getElementById('selectedServiceSummary').innerHTML, /Inspection/);
   const selectedDateBtn = window.document.querySelector('.date-btn.is-selected');
   assert.ok(selectedDateBtn, 'expected a date button marked selected');
-  assert.equal(selectedDateBtn.dataset.date, '2026-09-14');
+  assert.equal(selectedDateBtn.dataset.date, TEST_DATE);
 });
 
 test('the preselect never fires a second, racing availability fetch for "today" alongside the requested date', async () => {
   const fetchedDates = [];
-  const window = loadPage('https://www.triplehenterprisesllc.biz/booking.html?service=inspection&date=2026-09-14', async (url, opts) => {
+  const window = loadPage(`https://www.triplehenterprisesllc.biz/booking.html?service=inspection&date=${TEST_DATE}`, async (url, opts) => {
     if (String(url).includes('get_booking_availability')) {
       // Every real caller posts a JSON body naming the range it wants --
       // recording it here is how this test tells whether the visible
@@ -77,7 +90,7 @@ test('the preselect never fires a second, racing availability fetch for "today" 
 });
 
 test('an unrecognized service key is ignored, leaving the normal step-1 flow in place', async () => {
-  const window = loadPage('https://www.triplehenterprisesllc.biz/booking.html?service=not-a-real-service&date=2026-09-14', NO_BOOKINGS_FETCH);
+  const window = loadPage(`https://www.triplehenterprisesllc.biz/booking.html?service=not-a-real-service&date=${TEST_DATE}`, NO_BOOKINGS_FETCH);
   await waitForCondition(() => window.document.querySelector('.service-option'));
   await waitFor(50);
 
