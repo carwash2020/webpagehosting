@@ -50,6 +50,28 @@ reference:
   photos exist), and each page already had the site's service-radius
   map further down focused on its own city -- this closes the gap in
   the hero itself.
+- **"Liquid Glass"-inspired polish pass** (public site, `styles.css`) --
+  targeted touches, not a system-wide restyle:
+  - A one-time specular sheen sweeps across primary buttons on hover,
+    layered on top of the existing flat fill + hard offset shadow (the
+    2026-09-07 fix that deliberately killed a glossy gradient *fill*
+    stays intact -- this is a light-catch effect on hover, not that).
+  - Buttons and service cards get tactile press feedback (a slight
+    scale-down on `:active`).
+  - The service-detail modal card is now real frosted glass (blur +
+    translucent fill) floating over its already-blurred scrim, instead
+    of a flat opaque panel.
+  - `.coverage-badge`/`.open-status` (the standard/by-request pill) and
+    the new hero distance chip got a deeper blur/saturation, and the
+    chip is now an actual pill (background + border) instead of plain
+    inline text.
+  - The theme toggle got a subtle translucent fill to match, without
+    adding blur to it directly (it sits nested inside the sticky
+    header, where blur has a known iOS Safari ghosting bug already
+    fixed once elsewhere in this file).
+  - Skipped on purpose: true cursor-tracking glow (would need a JS
+    mousemove listener added to every page) and any change to the
+    portal, which already has its own glass/shadow treatment.
 
 <!-- Add new visual additions above this line -->
 
