@@ -187,8 +187,20 @@ function computeSlotsForDate(dateStr, durationMinutes, bookings) {
     const startUtc = zonedTimeToUtc(dateStr, hh, mm);
     const endUtc = new Date(startUtc.getTime() + durationMinutes * 60000);
     if (startUtc < earliestAllowed) continue;
+    // Padded on BOTH sides to match the server's own exclusion
+    // constraint exactly (sql/booking/add_booking_schedule_buffer.sql):
+    // the trigger there pads EVERY booking's start/end by 15 min each
+    // side, so two adjacent bookings need a 30-minute real-world gap,
+    // not 15. Padding only the existing booking here (as this
+    // previously did) under-enforced the gap to 15 minutes, so a slot
+    // could show as open client-side and then get rejected by the
+    // server with a misleading "just booked by someone else" message
+    // -- not a real race, just a buffer-math mismatch.
     const conflict = bookings.some(function (b) {
-      return overlaps(startUtc, endUtc, new Date(b.start.getTime() - bufferMs), new Date(b.end.getTime() + bufferMs));
+      return overlaps(
+        new Date(startUtc.getTime() - bufferMs), new Date(endUtc.getTime() + bufferMs),
+        new Date(b.start.getTime() - bufferMs), new Date(b.end.getTime() + bufferMs)
+      );
     });
     if (conflict) continue;
     const label = new Intl.DateTimeFormat('en-US', { timeZone: BUSINESS_TIMEZONE, hour: 'numeric', minute: '2-digit' }).format(startUtc);

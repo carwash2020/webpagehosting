@@ -139,13 +139,13 @@
     <priority>0.6</priority>
   </url>
   <url>
-    <loc>https://www.triplehenterprisesllc.biz/portal/login.html</loc>
-    <lastmod>2026-09-01</lastmod>
+    <loc>https://www.triplehenterprisesllc.biz/terms.html</loc>
+    <lastmod>2026-09-15</lastmod>
     <changefreq>yearly</changefreq>
-    <priority>0.5</priority>
+    <priority>0.4</priority>
   </url>
   <url>
-    <loc>https://www.triplehenterprisesllc.biz/terms.html</loc>
+    <loc>https://www.triplehenterprisesllc.biz/privacy.html</loc>
     <lastmod>2026-09-15</lastmod>
     <changefreq>yearly</changefreq>
     <priority>0.4</priority>

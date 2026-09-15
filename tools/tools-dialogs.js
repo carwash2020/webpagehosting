@@ -124,6 +124,30 @@ function wireSearchClear(inputId, renderFn) {
 
 function money(v) { return '$' + (v || 0).toFixed(2).replace(/\d(?=(\d{3})+\.)/g, '$&,'); }
 
+// Shared "today, in the business's own timezone" date string. Several
+// tool pages independently defaulted a date field with
+// `new Date().toISOString().slice(0, 10)` -- toISOString() is always
+// UTC, and the business (America/Denver) is 6-7 hours behind it, so any
+// time after ~5-6pm local, that call has already rolled to tomorrow's
+// date. Found as a real bug (an evening invoice/expense/job silently
+// dated a day ahead, and Route Planner's "pull today's jobs" matching
+// zero jobs) across invoice-generator.html, job-tracker.html, and
+// route-planner.html. business-hours.js already solves this exact
+// problem for the public booking flow (todayDateStrInBusinessTz()), but
+// isn't loaded on these internal tool pages -- this is the same Intl-
+// based approach, in the one script every tool page already shares.
+function dateStrBusinessTz(date) {
+  const parts = new Intl.DateTimeFormat('en-US', {
+    timeZone: 'America/Denver', year: 'numeric', month: '2-digit', day: '2-digit',
+  }).formatToParts(date);
+  const map = {};
+  parts.forEach(p => { map[p.type] = p.value; });
+  return map.year + '-' + map.month + '-' + map.day;
+}
+function todayDateStrBusinessTz() {
+  return dateStrBusinessTz(new Date());
+}
+
 // Shared HTML-escaping helper -- previously defined 9 separate times
 // across the tool suite. 8 copies used a DOM-based trick (assign to
 // textContent, read back innerHTML); review-request.html used a
@@ -139,6 +163,37 @@ function escapeHtml(str) {
   const div = document.createElement('div');
   div.textContent = str;
   return div.innerHTML;
+}
+
+// Exhaustive escapeHtml() audit (closing a real gap flagged after the
+// CodeQL fix pass below and runway-dashboard.html's own equivalent fix
+// were both confirmed to be targeted at flagged call sites only, never
+// an exhaustive sweep): escapeHtml() above is only safe for HTML
+// *text-node* content -- it escapes &, <, > (what the browser's own
+// innerHTML serializer escapes when building text-node content via
+// textContent), but never touches a double-quote, since quotes aren't
+// special there. Two real, previously-unaudited call sites were found
+// interpolating an escapeHtml()'d value directly into a double-quoted
+// HTML attribute (site-content.html's FAQ question `value="..."`,
+// workspace.html's vendor/client `title="..."` and a photo `alt="..."`)
+// -- an un-escaped `"` in ordinary business data (a job note mentioning
+// a `24" TV`, a client name, a photo caption) lets the string break out
+// of the attribute and inject new attributes/markup, exactly the same
+// bug shape runway-dashboard.html already fixed once for itself.
+// Verified via the same real jsdom round-trip against 9 adversarial
+// inputs (lone single/double quotes, both together, backslashes,
+// ampersands, angle brackets, a raw newline, and a realistic combined
+// case) already proven for escapeForInlineHandler below and
+// runway-dashboard.html's own escapeAttr(), byte-for-byte the same
+// implementation as that file's -- moved here instead of duplicated
+// again, since every page with this bug shape already loads this file.
+function escapeAttr(str) {
+  if (str === null || str === undefined) return '';
+  return String(str)
+    .replace(/&/g, '&amp;')
+    .replace(/"/g, '&quot;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;');
 }
 
 // Fixes a real, confirmed vulnerability (found via CodeQL's "Incomplete

@@ -61,7 +61,7 @@
 <link rel="preconnect" href="https://csvfqdjuobylgafgolho.supabase.co">
 <link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Anton&family=Archivo:wght@400..700&family=Newsreader:ital,opsz,wght@0,6..72,300..700;1,6..72,300..600&family=Oswald:wght@200..700&display=swap" onload="this.onload=null;this.rel='stylesheet'">
 <noscript><link href="https://fonts.googleapis.com/css2?family=Anton&family=Archivo:wght@400..700&family=Newsreader:ital,opsz,wght@0,6..72,300..700;1,6..72,300..600&family=Oswald:wght@200..700&display=swap" rel="stylesheet"></noscript>
-<link rel="stylesheet" href="/styles.css?v=d5485d6e30">
+<link rel="stylesheet" href="/styles.css?v=9ac6522c5d">
 <link rel="stylesheet" href="/blog/blog.css?v=202609071600">
 <script type="application/ld+json">
 {
@@ -71,6 +71,54 @@
   "jobTitle": "Owner and Operator",
   "worksFor": { "@type": "Organization", "name": "Triple H Enterprises LLC" },
   "url": "https://www.triplehenterprisesllc.biz/about.html"
+}
+</script>
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "FAQPage",
+  "mainEntity": [
+    {
+      "@type": "Question",
+      "name": "Do you offer estimates before starting work?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Pricing is set once the problem has been diagnosed. Some jobs can be estimated over the phone, but many issues need an in-person look before a firm price can be given. Either way, you'll know the cost before any work begins."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "What areas do you serve?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "St. George, Hurricane, Washington, Santa Clara, and the surrounding Southern Utah area. We can also take on larger jobs in Cedar City or Mesquite, NV by request, just contact us to check availability and scheduling."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "Do you guarantee your work?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Yes, work is guaranteed. Parts used are covered under whatever warranty the manufacturer sets, which can vary by part."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "What payment methods do you accept?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Cash, check, Venmo, and Cash App are all accepted, along with credit and debit cards via a secure Stripe invoice."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "Is there a trip fee?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Jobs within 15 miles have no trip fee. Beyond 15 miles, a $25 trip fee is added to the total."
+      }
+    }
+  ]
 }
 </script>
 <script type="application/ld+json">
@@ -154,7 +202,7 @@
         <svg class="theme-icon-light" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
         <span class="theme-toggle-label">Dark Mode</span>
       </button>
-      <button class="nav-toggle" aria-label="Toggle menu" aria-expanded="false" id="navToggle">
+      <button class="nav-toggle" aria-label="Toggle menu" aria-expanded="false" aria-controls="mobileMenu" id="navToggle">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
       </button>
     </div>
@@ -244,6 +292,93 @@
     </div>
   </div>
 </div>
+
+  <section id="local-reviews">
+    <div class="wrap">
+      <div class="section-head" data-reveal>
+        <h2>What Customers Say</h2>
+        <p>Real feedback from Google reviews.</p>
+      </div>
+      <div class="reviews-wall">
+            <div class="review-card" data-reveal>
+              <div class="review-stars">
+                <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01z"/></svg>
+                <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01z"/></svg>
+                <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01z"/></svg>
+                <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01z"/></svg>
+                <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01z"/></svg>
+              </div>
+              <p class="review-quote">"Awesome guy to work with!"</p>
+              <div class="review-attribution">
+                <span class="review-avatar" aria-hidden="true"><svg viewBox="0 0 48 48"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/><path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/></svg></span>
+                <p class="review-meta"><strong>Verified Customer</strong> on Google</p>
+              </div>
+            </div>
+
+            <div class="review-card" data-reveal>
+              <div class="review-stars">
+                <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01z"/></svg>
+                <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01z"/></svg>
+                <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01z"/></svg>
+                <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01z"/></svg>
+                <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01z"/></svg>
+              </div>
+              <p class="review-quote">"Steven was wonderful! Got our washer fixed quickly and was super responsive. He even came over to finish it in the evening because he knew we were in a time crunch. I highly recommend them!"</p>
+              <div class="review-attribution">
+                <span class="review-avatar" aria-hidden="true"><svg viewBox="0 0 48 48"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/><path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/></svg></span>
+                <p class="review-meta"><strong>Verified Customer</strong> on Google</p>
+              </div>
+            </div>
+
+            <div class="review-card" data-reveal>
+              <div class="review-stars">
+                <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01z"/></svg>
+                <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01z"/></svg>
+                <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01z"/></svg>
+                <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01z"/></svg>
+                <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01z"/></svg>
+              </div>
+              <p class="review-quote">"Called in the morning and was able to get same day service on a washer repair at our rental. Friendly, fast, and affordable. Will definitely be using them again for any future needs, as well as referring them to my real estate clients in need. Called a second time for an ice maker repair on the same rental and again, fast and affordable."</p>
+              <div class="review-attribution">
+                <span class="review-avatar" aria-hidden="true"><svg viewBox="0 0 48 48"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/><path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/></svg></span>
+                <p class="review-meta"><strong>Verified Customer</strong> on Google</p>
+              </div>
+            </div>
+      </div>
+      <p class="blog-teaser-more"><a href="/#reviews">Read all reviews &rarr;</a></p>
+    </div>
+  </section>
+  <section id="local-faq">
+    <div class="wrap">
+      <div class="section-head" data-reveal>
+        <h2>Frequently Asked Questions</h2>
+      </div>
+      <div class="faq-plain-list">
+      <details class="faq-plain-item">
+        <summary>Do you offer estimates before starting work?</summary>
+        <p>Pricing is set once the problem has been diagnosed. Some jobs can be estimated over the phone, but many issues need an in-person look before a firm price can be given. Either way, you&#39;ll know the cost before any work begins.</p>
+      </details>
+      <details class="faq-plain-item">
+        <summary>What areas do you serve?</summary>
+        <p>St. George, Hurricane, Washington, Santa Clara, and the surrounding Southern Utah area. We can also take on larger jobs in Cedar City or Mesquite, NV by request, just contact us to check availability and scheduling.</p>
+      </details>
+      <details class="faq-plain-item">
+        <summary>Do you guarantee your work?</summary>
+        <p>Yes, work is guaranteed. Parts used are covered under whatever warranty the manufacturer sets, which can vary by part.</p>
+      </details>
+      <details class="faq-plain-item">
+        <summary>What payment methods do you accept?</summary>
+        <p>Cash, check, Venmo, and Cash App are all accepted, along with credit and debit cards via a secure Stripe invoice.</p>
+      </details>
+      <details class="faq-plain-item">
+        <summary>Is there a trip fee?</summary>
+        <p>Jobs within 15 miles have no trip fee. Beyond 15 miles, a $25 trip fee is added to the total.</p>
+      </details>
+      </div>
+      <p class="blog-teaser-more"><a href="/#faq">See all FAQs &rarr;</a></p>
+    </div>
+  </section>
+
 </main>
 
 <footer>
@@ -311,10 +446,35 @@
   document.getElementById('year').textContent = new Date().getFullYear();
   const navToggle = document.getElementById('navToggle');
   const mobileMenu = document.getElementById('mobileMenu');
+  function closeMobileMenu(returnFocus) {
+    mobileMenu.classList.remove('is-open');
+    navToggle.setAttribute('aria-expanded', 'false');
+    if (returnFocus) navToggle.focus();
+  }
   if (navToggle && mobileMenu) {
     navToggle.addEventListener('click', () => {
       const isOpen = mobileMenu.classList.toggle('is-open');
       navToggle.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
+    });
+    mobileMenu.querySelectorAll('a').forEach(a => {
+      a.addEventListener('click', () => {
+        closeMobileMenu(false);
+      });
+    });
+    // Accessibility fix (audit item #9, a real gap found across all 16
+    // pages that carry this same hamburger menu): a keyboard user who
+    // opened the menu had no way to close it without a mouse click
+    // landing outside it, and Escape -- the standard way to dismiss any
+    // disclosure widget -- did nothing at all. Focus is returned to the
+    // toggle button on both paths so a keyboard user ends up exactly
+    // where they started, not stranded with focus on a now-hidden menu.
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape' && mobileMenu.classList.contains('is-open')) closeMobileMenu(true);
+    });
+    document.addEventListener('click', (e) => {
+      if (!mobileMenu.classList.contains('is-open')) return;
+      if (mobileMenu.contains(e.target) || navToggle.contains(e.target)) return;
+      closeMobileMenu(false);
     });
   }
   const themeToggleBtn = document.getElementById('themeToggle');

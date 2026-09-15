@@ -169,6 +169,7 @@ test('a genuine submission (honeypot left empty) reaches the real insert normall
   window.document.querySelector('.slot-btn').dispatchEvent(new window.Event('click', { bubbles: true }));
 
   window.document.getElementById('bName').value = 'Jane Real Customer';
+  window.document.getElementById('bAddress').value = '123 Main St';
   window.document.getElementById('bPhone').value = '5551234567';
   window.document.getElementById('bookingForm').dispatchEvent(new window.Event('submit', { bubbles: true, cancelable: true }));
   await waitForCondition(() => insertCalled === true);
@@ -295,6 +296,7 @@ test('leaving email empty is still valid -- it is optional, only a non-empty inv
   window.document.querySelector('.slot-btn').dispatchEvent(new window.Event('click', { bubbles: true }));
 
   window.document.getElementById('bName').value = 'Jane Smith';
+  window.document.getElementById('bAddress').value = '456 Oak Ave';
   const phone = window.document.getElementById('bPhone');
   phone.value = '5551234567';
   phone.dispatchEvent(new window.Event('input', { bubbles: true }));

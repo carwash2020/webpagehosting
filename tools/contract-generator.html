@@ -14,11 +14,12 @@
      background-image on html here too. -->
 <html lang="en" style="background-color:#0a0a0a;">
 <head>
-<script src="/tools/auth.js?v=0049ad84fb"></script>
+<script src="/tools/auth.js?v=2be5cce177"></script>
 <script>
   // Security gate -- redirect to login before this page's own content
-  // is meaningfully usable. See auth.js for why this exists (a single
-  // shared account keeping randoms out, not a multi-user system).
+  // is meaningfully usable. See auth.js for why this exists (a small,
+  // role-based multi-user system now -- account_roles/role_definitions,
+  // not a single shared account).
   requireAuth();
 </script>
 <link rel="manifest" href="/tools/manifest.json">
@@ -48,13 +49,13 @@
     if (saved === 'light') document.documentElement.setAttribute('data-theme', 'light');
   })();
 </script>
-<link rel="stylesheet" href="/styles.css?v=d5485d6e30">
-<link rel="stylesheet" href="/tools/styles-tools.css?v=802b87086c">
+<link rel="stylesheet" href="/styles.css?v=9ac6522c5d">
+<link rel="stylesheet" href="/tools/styles-tools.css?v=a494344e8c">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.112.3/dist/umd/supabase.js" integrity="sha384-qafw21c/iciq0VXsi9FzkfoQv5I/V0iqE4lSNcKXPnW9/UTJLnv5CcN4FHxVLnKg" crossorigin="anonymous" defer></script>
-<script src="/tools/sync.js?v=5f8ddf47c9" defer></script>
-<script src="/tools/data-layer.js?v=3a0d57478c" defer></script>
+<script src="/tools/sync.js?v=aafdb1e6bf" defer></script>
+<script src="/tools/data-layer.js?v=c5d44f096e" defer></script>
 <script src="/tools/tools-effects.js?v=4cff99aa4a" defer></script>
-<script src="/tools/tools-dialogs.js?v=e1dfaa11a1" defer></script>
+<script src="/tools/tools-dialogs.js?v=ce49ed8b35" defer></script>
 <script src="/tools/tools-media-sharing.js?v=0c229c9353" defer></script>
 <script src="/tools/tools-nav-pwa.js?v=9b16eefb86" defer></script>
 <script src="/tools/tools-tour.js?v=cf6652f5b1" defer></script>
@@ -121,10 +122,10 @@
   <span class="realtime-badge" id="realtimeBadge" onclick="retryLiveSync()" title="Live sync"><span class="realtime-dot" id="realtimeDot"></span><span id="realtimeText">Live sync: connecting...</span></span>
 </p>
 
-<div class="contract-tabs">
-  <div class="contract-tab is-active" data-tab="pwo" onclick="switchContractTab('pwo')">Per-Job Work Order</div>
-  <div class="contract-tab" data-tab="stpa" onclick="switchContractTab('stpa')">Short-Term Project</div>
-  <div class="contract-tab" data-tab="ltsa" onclick="switchContractTab('ltsa')">Long-Term Service</div>
+<div class="contract-tabs" role="tablist">
+  <div class="contract-tab is-active" data-tab="pwo" role="tab" aria-selected="true" tabindex="0" onclick="switchContractTab('pwo')" onkeydown="handleContractTabKeydown(event, 'pwo')">Per-Job Work Order</div>
+  <div class="contract-tab" data-tab="stpa" role="tab" aria-selected="false" tabindex="-1" onclick="switchContractTab('stpa')" onkeydown="handleContractTabKeydown(event, 'stpa')">Short-Term Project</div>
+  <div class="contract-tab" data-tab="ltsa" role="tab" aria-selected="false" tabindex="-1" onclick="switchContractTab('ltsa')" onkeydown="handleContractTabKeydown(event, 'ltsa')">Long-Term Service</div>
 </div>
 
 <!-- ===================== PER-JOB WORK ORDER ===================== -->
@@ -315,8 +316,36 @@
 
 
   function switchContractTab(tab) {
-    document.querySelectorAll('.contract-tab').forEach(t => t.classList.toggle('is-active', t.dataset.tab === tab));
+    document.querySelectorAll('.contract-tab').forEach(t => {
+      const active = t.dataset.tab === tab;
+      t.classList.toggle('is-active', active);
+      t.setAttribute('aria-selected', String(active));
+      t.tabIndex = active ? 0 : -1;
+    });
     document.querySelectorAll('.contract-panel').forEach(p => p.classList.toggle('is-active', p.id === 'panel-' + tab));
+  }
+
+  // Arrow-key navigation between tabs, matching the standard ARIA
+  // tablist keyboard pattern -- previously these were plain <div>s with
+  // only an onclick handler, so a keyboard-only user could neither
+  // reach nor operate them at all (not in the tab order, no way to
+  // activate one even if focused via some other means).
+  const CONTRACT_TAB_ORDER = ['pwo', 'stpa', 'ltsa'];
+  function handleContractTabKeydown(event, tab) {
+    if (event.key === 'Enter' || event.key === ' ') {
+      event.preventDefault();
+      switchContractTab(tab);
+      return;
+    }
+    const idx = CONTRACT_TAB_ORDER.indexOf(tab);
+    let nextIdx = null;
+    if (event.key === 'ArrowRight') nextIdx = (idx + 1) % CONTRACT_TAB_ORDER.length;
+    else if (event.key === 'ArrowLeft') nextIdx = (idx - 1 + CONTRACT_TAB_ORDER.length) % CONTRACT_TAB_ORDER.length;
+    if (nextIdx === null) return;
+    event.preventDefault();
+    const nextTab = CONTRACT_TAB_ORDER[nextIdx];
+    switchContractTab(nextTab);
+    document.querySelector(`.contract-tab[data-tab="${nextTab}"]`).focus();
   }
 
   // ---------- Contact picker (reads Job Tracker's master Contacts list) ----------
@@ -405,11 +434,19 @@
           pendingBadge = `<span class="badge-pending-signature" title="Generated ${days} days ago with no client signature on file">Pending signature &mdash; ${days}d</span>`;
         }
       }
+      const portalInfo = portalContractInfoBySourceId[entry.id];
+      let portalHtml = '';
+      if (portalInfo) {
+        const portalStatusColor = portalInfo.status === 'signed' ? '#6fcf97' : portalInfo.status === 'declined' ? '#e05252' : 'var(--orange-light)';
+        const portalStatusLabel = portalInfo.status === 'signed' ? 'Signed' : portalInfo.status === 'declined' ? 'Declined' : 'Awaiting client signature';
+        portalHtml = `<div class="contract-log-meta">Portal: <span style="color:${portalStatusColor}; font-weight:600;">${portalStatusLabel}</span></div>`;
+      }
       return `
       <div class="contract-log-item ${entry.id === justAddedContractId ? 'list-row-enter' : ''}" data-contract-id="${entry.id}">
         <div>
           <div class="contract-log-title">${escapeHtml(entry.fields.clientName || '(no name)')} ${pendingBadge}</div>
           <div class="contract-log-meta">${escapeHtml(CONTRACT_TYPE_LABELS[entry.type] || entry.type)} &middot; ${escapeHtml(entry.dateGenerated || '')}</div>
+          ${portalHtml}
         </div>
         <div style="display:flex; gap:8px; flex-shrink:0; flex-wrap:wrap;">
           <button class="secondary-btn" onclick="redownloadContract(${entry.id})">Re-download</button>
@@ -418,6 +455,35 @@
       </div>`;
     }).join('');
     justAddedContractId = null;
+  }
+
+  // Cache of live portal-side contract status, keyed by the LOCAL
+  // contract's own id (which is exactly what source_contract_id was set
+  // to when sync-contract-to-portal ran). Populated by
+  // refreshPortalContractStatuses(), read by renderContractLog() above.
+  // Same pattern as invoice-generator.html's portalQuoteInfoBySourceId --
+  // a direct, real-time read against client_portal_contracts,
+  // deliberately NOT written back into this contract's own local
+  // th_contracts record.
+  let portalContractInfoBySourceId = {};
+
+  async function refreshPortalContractStatuses() {
+    if (typeof getAuthToken !== 'function') return;
+    try {
+      const res = await fetch(`${SUPABASE_URL}/rest/v1/client_portal_contracts?select=id,source_contract_id,status,responded_at`, {
+        headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': `Bearer ${getAuthToken()}` },
+      });
+      if (!res.ok) return; // best-effort -- the log still renders fine without portal status
+      const portalContracts = await res.json();
+      const bySourceId = {};
+      portalContracts.forEach(pc => {
+        bySourceId[pc.source_contract_id] = { status: pc.status, respondedAt: pc.responded_at };
+      });
+      portalContractInfoBySourceId = bySourceId;
+      renderContractLog();
+    } catch (e) {
+      console.warn('Could not refresh portal contract status:', e);
+    }
   }
 
   async function deleteContractLogEntry(id) {
@@ -761,7 +827,49 @@
     if (typeof mirrorContractToRelational === 'function') mirrorContractToRelational(log[log.length - 1]);
     justAddedContractId = nextId;
     renderContractLog();
-    showToast('Contract generated and logged.');
+
+    // Async e-signature (portal sync), added to close a real gap: quotes
+    // already had a full async approve/decline flow via the portal;
+    // contracts could only ever be signed in person, on the same device.
+    // Only sent when there's no in-person client signature already on
+    // this contract AND a client email was provided -- a contract
+    // already signed in person has nothing left to ask the client to do
+    // remotely. Mirrors invoice-generator.html's exact Quote-tab
+    // pattern: a real awaited call with Sent/Failed pop-up feedback,
+    // not a silent fire-and-forget.
+    if (!clientSignatureDataUrl && fields.email && typeof getAuthToken === 'function') {
+      try {
+        if (typeof ensureFreshToken === 'function') await ensureFreshToken();
+        const resolvedBlocks = CONTRACT_TEMPLATES[type].blocks(fields).filter(b => b.type !== 'signature');
+        const syncRes = await fetch(`${SUPABASE_URL}/functions/v1/sync-contract-to-portal`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'apikey': SUPABASE_ANON_KEY,
+            'Authorization': `Bearer ${getAuthToken()}`,
+          },
+          body: JSON.stringify({
+            source_contract_id: nextId,
+            client_email: fields.email,
+            client_name: fields.clientName,
+            contract_type: type,
+            contract_title: CONTRACT_TYPE_LABELS[type] || type,
+            blocks: resolvedBlocks,
+            business_signature_data_url: businessSignatureDataUrl || null,
+          }),
+        });
+        const result = await syncRes.json().catch(() => ({}));
+        if (result && result.ok) {
+          await showAlert('Contract generated, logged, and sent to ' + fields.email + ' for e-signature.');
+        } else {
+          await showAlert('Contract generated and logged, but sending for e-signature failed: ' + ((result && result.error) || 'unknown error'));
+        }
+      } catch (e) {
+        await showAlert('Contract generated and logged, but sending for e-signature failed: could not reach the server (' + (e.message || String(e)) + ').');
+      }
+    } else {
+      showToast('Contract generated and logged.');
+    }
     resetContractForm(type);
     } finally {
       contractGenerationInProgress = false;
@@ -875,6 +983,7 @@
     const presetSearch = new URLSearchParams(location.search).get('search');
     if (presetSearch) document.getElementById('contractSearch').value = presetSearch;
     renderContractLog();
+    refreshPortalContractStatuses();
     wireSearchClear('contractSearch', renderContractLog);
     initSignaturePad('signatureCanvas', 'signatureStatus');
     initSignaturePad('businessSignatureCanvas', 'businessSignatureStatus');

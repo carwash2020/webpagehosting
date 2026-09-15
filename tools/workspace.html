@@ -14,11 +14,12 @@
      background-image on html here too. -->
 <html lang="en" style="background-color:#0a0a0a;">
 <head>
-<script src="/tools/auth.js?v=0049ad84fb"></script>
+<script src="/tools/auth.js?v=2be5cce177"></script>
 <script>
   // Security gate -- redirect to login before this page's own content
-  // is meaningfully usable. See auth.js for why this exists (a single
-  // shared account keeping randoms out, not a multi-user system).
+  // is meaningfully usable. See auth.js for why this exists (a small,
+  // role-based multi-user system now -- account_roles/role_definitions,
+  // not a single shared account).
   requireAuth();
 </script>
 <link rel="manifest" href="/tools/manifest.json">
@@ -64,19 +65,19 @@
     if (saved === 'light') document.documentElement.setAttribute('data-theme', 'light');
   })();
 </script>
-<link rel="stylesheet" href="/styles.css?v=d5485d6e30">
-<link rel="stylesheet" href="/tools/styles-tools.css?v=802b87086c">
+<link rel="stylesheet" href="/styles.css?v=9ac6522c5d">
+<link rel="stylesheet" href="/tools/styles-tools.css?v=a494344e8c">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.112.3/dist/umd/supabase.js" integrity="sha384-qafw21c/iciq0VXsi9FzkfoQv5I/V0iqE4lSNcKXPnW9/UTJLnv5CcN4FHxVLnKg" crossorigin="anonymous" defer></script>
-<script src="/tools/sync.js?v=5f8ddf47c9" defer></script>
+<script src="/tools/sync.js?v=aafdb1e6bf" defer></script>
 <!-- Shared business-hours data (2026-09-03) -- used by the work order
      "Approve & Schedule" form to warn if a chosen time falls outside
      real business hours, matching the same real hours booking.html,
      manage-booking.html, portal/quotes.html, and portal/jobs.html use. -->
-<script src="/business-hours.js?v=306f097e9e"></script>
+<script src="/business-hours.js?v=5296319b73"></script>
 <script src="/tools/push-notifications.js?v=180abd2a84" defer></script>
-<script src="/tools/data-layer.js?v=3a0d57478c" defer></script>
+<script src="/tools/data-layer.js?v=c5d44f096e" defer></script>
 <script src="/tools/tools-effects.js?v=4cff99aa4a" defer></script>
-<script src="/tools/tools-dialogs.js?v=e1dfaa11a1" defer></script>
+<script src="/tools/tools-dialogs.js?v=ce49ed8b35" defer></script>
 <script src="/tools/tools-media-sharing.js?v=0c229c9353" defer></script>
 <script src="/tools/tools-nav-pwa.js?v=9b16eefb86" defer></script>
 <script src="/tools/tools-tour.js?v=cf6652f5b1" defer></script>
@@ -758,6 +759,15 @@
       <div id="topVendors"></div>
       <div class="analytics-subheading">Top Clients <span style="text-transform:none; letter-spacing:0;">(lifetime revenue, not limited to the period above)</span></div>
       <div id="topClients"></div>
+      <!-- Marketing-source-of-lead tracking (closes a real audit gap):
+           the referral program already tracks ONE specific source with
+           its own reward ledger, but there was no way to see how
+           customers found the business more generally. Reuses the same
+           leads data the Leads Inbox above already fetched -- no second
+           query -- so this is bounded by fetchLeads()'s own limit=50,
+           the most recent leads rather than a full historical count. -->
+      <div class="analytics-subheading">Lead Sources <span style="text-transform:none; letter-spacing:0;">(most recent 50 leads)</span></div>
+      <div id="leadSources"></div>
   </div>
 </div>
 
@@ -938,7 +948,7 @@
 
       <p>Data is saved directly in your browser, and quietly kept in sync across your devices in the background &mdash; the small dot next to the sync status turns green when live updates are connected, meaning changes on another device (or a new lead coming in) show up here automatically. The small circular arrow button next to it forces an immediate refresh if you don't want to wait.</p>
       <p><strong>Install this as an app:</strong> iPhone/iPad &mdash; tap the Share icon in Safari, then "Add to Home Screen." Android &mdash; tap the &#8942; menu in Chrome, then "Install app." Computer &mdash; look for an install icon in the address bar. Once installed, it opens full-screen with its own icon, no browser bar.</p>
-      <p><strong>Worth knowing:</strong> this whole suite is behind a real login now &mdash; anyone hitting these pages without signing in gets redirected to a sign-in screen first. There's exactly one account, meant to keep the data private, not to support separate logins for separate people.</p>
+      <p><strong>Worth knowing:</strong> this whole suite is behind a real login now &mdash; anyone hitting these pages without signing in gets redirected to a sign-in screen first. Each account has its own role (Owner, Developer, or Employee) controlling what it can see and do, not one shared login for everyone.</p>
     </div>
   </div>
 </div>
@@ -1055,6 +1065,7 @@
     'th_tracker_jobs', 'th_tracker_contacts', 'th_tracker_notes_v2',
     'th_expense_log', 'th_income_log', 'th_mileage_rate', 'th_price_reference', 'th_invoices',
     'th_quotes', 'th_tax_rate', 'th_tax_labor', 'th_tax_parts', 'th_compliance', 'th_job_templates', 'th_contracts', 'th_setaside_rate',
+    'th_inventory',
   ];
 
   function loadJobs() { try { return JSON.parse(localStorage.getItem('th_tracker_jobs') || '[]'); } catch (e) { return []; } }
@@ -1437,9 +1448,36 @@
     const max = sorted[0][1];
     container.innerHTML = sorted.map(([vendor, total]) => `
       <div class="vendor-bar-row">
-        <div class="vendor-bar-label" title="${escapeHtml(vendor)}">${escapeHtml(vendor)}</div>
+        <div class="vendor-bar-label" title="${escapeAttr(vendor)}">${escapeHtml(vendor)}</div>
         <div class="vendor-bar-track"><div class="vendor-bar-fill" style="width:${(total / max * 100)}%"></div></div>
         <div class="vendor-bar-count">${money(total)}</div>
+      </div>`).join('');
+  }
+
+  // Marketing-source-of-lead tracking (closes a real audit gap): counts
+  // the `source` field captured on the public lead form and booking
+  // flow, grouped and sorted the same way renderTopVendors() already
+  // does for expense vendors -- reuses the leads array
+  // loadAndRenderLeads() already fetched, not a second query. Leads
+  // that skipped the optional field (or were submitted before it
+  // existed) count as "Not specified" rather than being silently
+  // dropped from the total.
+  function renderLeadSources(leads) {
+    const container = document.getElementById('leadSources');
+    if (!container) return;
+    const counts = {};
+    leads.forEach(l => { const key = l.source || 'Not specified'; counts[key] = (counts[key] || 0) + 1; });
+    const sorted = Object.entries(counts).sort((a, b) => b[1] - a[1]);
+    if (sorted.length === 0) {
+      container.innerHTML = '<div class="empty-state-small"><svg class="th-icon" aria-hidden="true"><use href="#icon-inbox" xlink:href="#icon-inbox"></use></svg>No leads yet.</div>';
+      return;
+    }
+    const max = sorted[0][1];
+    container.innerHTML = sorted.map(([source, count]) => `
+      <div class="vendor-bar-row">
+        <div class="vendor-bar-label" title="${escapeAttr(source)}">${escapeHtml(source)}</div>
+        <div class="vendor-bar-track"><div class="vendor-bar-fill" style="width:${(count / max * 100)}%"></div></div>
+        <div class="vendor-bar-count">${count}</div>
       </div>`).join('');
   }
 
@@ -1487,7 +1525,7 @@
       const rowHref = registryMatch ? ' href="/tools/client-detail.html?id=' + encodeURIComponent(registryMatch.id) + '" style="text-decoration:none; color:inherit; cursor:pointer;"' : '';
       return `
       <${rowTag} class="vendor-bar-row"${rowHref}>
-        <div class="vendor-bar-label" title="${escapeHtml(client)}">${escapeHtml(client)}</div>
+        <div class="vendor-bar-label" title="${escapeAttr(client)}">${escapeHtml(client)}</div>
         <div class="vendor-bar-track"><div class="vendor-bar-fill" style="width:${(data.revenue / max * 100)}%"></div></div>
         <div class="vendor-bar-count">${money(data.revenue)}<span style="display:block; font-size:10.5px; color:var(--text-dim); font-weight:400;">${data.invoiceCount} invoice${data.invoiceCount === 1 ? '' : 's'}${lastSeenLabel ? ' \u00b7 last ' + lastSeenLabel : ''}</span></div>
       </${rowTag}>`;
@@ -1926,6 +1964,7 @@
       container.innerHTML = '<div class="empty-state-small"><svg class="th-icon" aria-hidden="true"><use href="#icon-link" xlink:href="#icon-link"></use></svg>Cloud sync isn\'t set up yet, so leads can\'t load.</div>';
       actionItemCounts.leads = 0;
       updateActionItemsBadge();
+      renderLeadSources([]);
       return;
     }
     const result = await fetchLeads();
@@ -1933,12 +1972,14 @@
       container.innerHTML = '<div class="empty-state-small is-warning"><svg class="th-icon" aria-hidden="true"><use href="#icon-warning" xlink:href="#icon-warning"></use></svg>Couldn\'t load leads (' + escapeHtml(result.error) + '). Make sure the th_leads table exists in Supabase.</div>';
       actionItemCounts.leads = 0;
       updateActionItemsBadge();
+      renderLeadSources([]);
       return;
     }
     let visibleLeads = result.leads;
     if (pendingDeleteLeadIds.size > 0) visibleLeads = visibleLeads.filter(l => !pendingDeleteLeadIds.has(l.id));
     actionItemCounts.leads = visibleLeads.filter(l => !l.handled).length;
     updateActionItemsBadge();
+    renderLeadSources(visibleLeads);
     // Item #13 extended (2026-08-20): filters out any lead pending an
     // undoable delete -- the real DELETE call to Supabase is deferred
     // (see deleteLeadFromDashboard), so fetchLeads() above still
@@ -2371,7 +2412,7 @@
       return;
     }
     container.innerHTML = result.documents.map(d => `
-      <div class="dash-list-item ${d.path === justUploadedDocPath ? 'list-row-enter' : ''}" data-doc-path="${escapeHtml(d.path)}">
+      <div class="dash-list-item ${d.path === justUploadedDocPath ? 'list-row-enter' : ''}" data-doc-path="${escapeAttr(d.path)}">
         <div>
           <div class="dash-list-item-title">${escapeHtml(d.label)}</div>
           <div class="dash-list-item-meta">${escapeHtml(SECURE_DOC_CATEGORY_LABEL[d.category] || d.category)}${d.uploadedAt ? ' &middot; ' + escapeHtml(new Date(d.uploadedAt).toLocaleDateString()) : ''}</div>
@@ -2598,7 +2639,7 @@
         if (hasPair && (p.id === before.id || p.id === after.id)) return;
         html += `
       <div class="gallery-queue-item">
-        <img src="${signedUrls[p.storage_path] || ''}" alt="${escapeHtml(p.public_caption || '')}" loading="lazy">
+        <img src="${signedUrls[p.storage_path] || ''}" alt="${escapeAttr(p.public_caption || '')}" loading="lazy">
         <div class="gallery-queue-caption">${escapeHtml(p.public_caption || '(no caption)')}</div>
         <div class="gallery-queue-meta">${escapeHtml(p.job_title || '')}</div>
         <button class="small-btn danger" onclick="unqueueGalleryPhoto(${p.id})">Remove from Queue</button>
@@ -2688,7 +2729,7 @@
       <p class="today-next-job-title"><span class="badge badge-${job.priority}">${job.priority}</span> ${escapeHtml(job.title)}${job.client ? ' &mdash; ' + escapeHtml(job.client) : ''}</p>
       <div class="today-next-job-meta">
         ${job.address ? '<a href="https://maps.google.com/?q=' + encodeURIComponent(job.address) + '" target="_blank" rel="noopener">' + escapeHtml(job.address) + '</a>' : 'No address on file'}<br>
-        ${job.phone ? '<a href="tel:' + escapeHtml(job.phone) + '">' + escapeHtml(job.phone) + '</a>' : 'No phone on file'}
+        ${job.phone ? '<a href="tel:' + escapeAttr(job.phone) + '">' + escapeHtml(job.phone) + '</a>' : 'No phone on file'}
       </div>
       <div class="today-next-job-actions">
         <a href="/tools/job-detail.html?id=${encodeURIComponent(job.id)}" class="primary-btn">Open Job</a>

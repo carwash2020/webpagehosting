@@ -14,11 +14,12 @@
      background-image on html here too. -->
 <html lang="en" style="background-color:#0a0a0a;">
 <head>
-<script src="/tools/auth.js?v=0049ad84fb"></script>
+<script src="/tools/auth.js?v=2be5cce177"></script>
 <script>
   // Security gate -- redirect to login before this page’s own content
-  // is meaningfully usable. See auth.js for why this exists (a single
-  // shared account keeping randoms out, not a multi-user system).
+  // is meaningfully usable. See auth.js for why this exists (a small,
+  // role-based multi-user system now -- account_roles/role_definitions,
+  // not a single shared account).
   requireAuth();
 </script>
 <link rel="manifest" href="/tools/manifest.json">
@@ -48,13 +49,13 @@
     if (saved === 'light') document.documentElement.setAttribute('data-theme', 'light');
   })();
 </script>
-<link rel="stylesheet" href="/styles.css?v=d5485d6e30">
-<link rel="stylesheet" href="/tools/styles-tools.css?v=802b87086c">
+<link rel="stylesheet" href="/styles.css?v=9ac6522c5d">
+<link rel="stylesheet" href="/tools/styles-tools.css?v=a494344e8c">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.112.3/dist/umd/supabase.js" integrity="sha384-qafw21c/iciq0VXsi9FzkfoQv5I/V0iqE4lSNcKXPnW9/UTJLnv5CcN4FHxVLnKg" crossorigin="anonymous" defer></script>
-<script src="/tools/sync.js?v=5f8ddf47c9" defer></script>
-<script src="/tools/data-layer.js?v=3a0d57478c" defer></script>
+<script src="/tools/sync.js?v=aafdb1e6bf" defer></script>
+<script src="/tools/data-layer.js?v=c5d44f096e" defer></script>
 <script src="/tools/tools-effects.js?v=4cff99aa4a" defer></script>
-<script src="/tools/tools-dialogs.js?v=e1dfaa11a1" defer></script>
+<script src="/tools/tools-dialogs.js?v=ce49ed8b35" defer></script>
 <script src="/tools/tools-media-sharing.js?v=0c229c9353" defer></script>
 <script src="/tools/tools-nav-pwa.js?v=9b16eefb86" defer></script>
 <script src="/tools/tools-tour.js?v=cf6652f5b1" defer></script>
@@ -109,20 +110,21 @@
      two tables by container id, not the shared .table-scroll class,
      so no other page's table is affected. */
   @media (max-width: 1023px) {
-    #incomeTable table, #entriesTable table { min-width: 0; }
-    #incomeTable thead, #entriesTable thead { display: none; }
+    #incomeTable table, #entriesTable table, #inventoryTable table { min-width: 0; }
+    #incomeTable thead, #entriesTable thead, #inventoryTable thead { display: none; }
     #incomeTable table, #incomeTable tbody, #incomeTable tr,
-    #entriesTable table, #entriesTable tbody, #entriesTable tr { display: block; width: 100%; }
-    #incomeTable tr, #entriesTable tr {
+    #entriesTable table, #entriesTable tbody, #entriesTable tr,
+    #inventoryTable table, #inventoryTable tbody, #inventoryTable tr { display: block; width: 100%; }
+    #incomeTable tr, #entriesTable tr, #inventoryTable tr {
       background: var(--bg-panel-2); border: 1px solid var(--border); border-radius: 8px;
       padding: 4px 12px; margin-bottom: 10px;
     }
-    #incomeTable td, #entriesTable td {
+    #incomeTable td, #entriesTable td, #inventoryTable td {
       display: flex; align-items: center; justify-content: space-between; gap: 10px;
       padding: 8px 0; border-bottom: 1px solid var(--border); text-align: right;
     }
-    #incomeTable td:last-child, #entriesTable td:last-child { border-bottom: none; justify-content: flex-end; padding-top: 4px; }
-    #incomeTable td[data-label]::before, #entriesTable td[data-label]::before {
+    #incomeTable td:last-child, #entriesTable td:last-child, #inventoryTable td:last-child { border-bottom: none; justify-content: flex-end; padding-top: 4px; }
+    #incomeTable td[data-label]::before, #entriesTable td[data-label]::before, #inventoryTable td[data-label]::before {
       content: attr(data-label); flex: 0 0 auto; color: var(--text-dim); font-size: 12px;
       text-transform: uppercase; text-align: left;
     }
@@ -156,6 +158,7 @@
   <button class="tab-btn" data-tab="profitability">Profitability</button>
   <button class="tab-btn" data-tab="income">Income</button>
   <button class="tab-btn" data-tab="expenses">Expenses</button>
+  <button class="tab-btn" data-tab="inventory">Inventory</button>
 </div>
 
 <!-- COST LOOKUP TAB -->
@@ -342,6 +345,66 @@
       <button class="secondary-btn" onclick="clearAllExpenses()">Clear All</button>
     </div>
   </div>
+
+  <!-- Part Cost Trend (closes a real audit gap: parts cost trends were
+       readable from the existing Vendor/Part Number fields on every
+       expense entry, but nothing surfaced them). No new data model --
+       purely a search over the same expenses this tab already owns,
+       matching by Part Number first (exact, case-insensitive) since
+       that's the more reliable key when it's on file, falling back to
+       a Description substring match for older entries logged before
+       Part Number existed or for parts never assigned one. -->
+  <div class="form-section">
+    <h3>Part Cost Trend <button class="help-btn" onclick="openCardInfo('partCostTrend')" aria-label="What is this?" title="What is this?">?</button></h3>
+    <div class="tool-form-row">
+      <div class="form-field"><label>Part Number or Description</label><input type="text" id="partTrendSearch" placeholder="e.g. WPW10321304 or dishwasher pump" oninput="renderPartCostTrend()"></div>
+    </div>
+    <div id="partTrendResults"></div>
+  </div>
+</div>
+
+<!-- INVENTORY TAB -->
+<!-- Closes a real audit gap: Appliance Wiki (tools/parts-reference.html)
+     only ever tracks WHAT part fixes what and its typical cost -- it's
+     reference data, deliberately not stock tracking (see that page's
+     own scope notes). This is the separate, actual on-hand-quantity
+     tracker the audit found missing. Lives here rather than in the
+     Wiki since it's fundamentally a money/stock-level concern like
+     Expenses and Cost Lookup, not a repair-reference concern. -->
+<div class="tab-panel" id="tab-inventory">
+  <div class="form-section is-collapsed" id="inventoryFormSection">
+    <div class="form-section-header" onclick="toggleFormSection('inventoryFormSection')">
+      <h3>Add Part</h3>
+      <span class="collapse-chevron">&#9660;</span>
+    </div>
+    <div class="form-section-body">
+    <div class="tool-form-row">
+      <div class="form-field"><label>Part Name</label><input type="text" id="invPartName" placeholder="Dishwasher door latch"></div>
+      <div class="form-field"><label>Part Number</label><input type="text" id="invPartNumber" placeholder="e.g. WPW10321304"></div>
+    </div>
+    <div class="tool-form-row">
+      <div class="form-field"><label>Qty on Hand</label><input type="number" id="invQty" step="1" min="0" value="0"></div>
+      <div class="form-field"><label>Reorder At <span class="tool-sub" style="font-weight:normal;">(low-stock warning threshold)</span></label><input type="number" id="invReorderAt" step="1" min="0" value="1"></div>
+      <div class="form-field"><label>Unit Cost ($)</label><input type="number" id="invUnitCost" step="0.01" min="0"></div>
+    </div>
+    <div class="tool-form-row">
+      <div class="form-field"><label>Supplier</label><input type="text" id="invSupplier" placeholder="e.g. Home Depot, PartSelect"></div>
+    </div>
+    <div class="edit-mode-note" id="inventoryEditNote" style="display:none;"></div>
+    <button class="primary-btn" id="addInventoryBtn" onclick="addInventoryItem()" style="margin-top:10px;">Add Part</button>
+    <button class="secondary-btn" id="cancelInventoryEditBtn" style="display:none;" onclick="cancelInventoryEdit()">Cancel</button>
+    </div>
+  </div>
+
+  <div class="form-section">
+    <h3>On Hand</h3>
+    <div class="tool-form-row">
+      <div class="form-field"><input type="text" id="inventorySearch" placeholder="Search parts..." oninput="renderInventory()"></div>
+    </div>
+    <div class="table-scroll">
+      <div id="inventoryTable"><div class="skeleton-line w-100"></div><div class="skeleton-line w-60"></div><div class="skeleton-line w-40"></div></div>
+    </div>
+  </div>
 </div>
 
 
@@ -370,13 +433,18 @@
       body: `<p>The IRS standard mileage rate changes at least yearly (occasionally mid-year, as in 2026) &mdash; update the rate above if it changes rather than trusting an old number.</p>
         <p>Shown value is the official rate for the second half of 2026 (July&ndash;December). This same rate is also used by the Route Planner's cost analyzer.</p>`,
     },
+    partCostTrend: {
+      title: 'Part Cost Trend',
+      body: `<p>Searches your own Expenses log for a part number or description match, and shows how much you've actually paid for it over time.</p>
+        <p>Matches Part Number exactly (case-insensitive) when there's a match; otherwise falls back to a Description substring match, so older entries logged before Part Number existed still show up.</p>`,
+    },
   };
   function openCardInfo(key) {
     const info = CARD_INFO[key];
     if (info) openInfoModal(info.title, info.body);
   }
 
-  const TAB_HASHES = { cost: 'cost', profitability: 'profitability', income: 'income', expenses: 'expenses' };
+  const TAB_HASHES = { cost: 'cost', profitability: 'profitability', income: 'income', expenses: 'expenses', inventory: 'inventory' };
 
   function activateTab(tabName) {
     if (!document.getElementById('tab-' + tabName)) return;
@@ -385,6 +453,7 @@
     if (tabName === 'expenses') populateJobRefOptions();
     if (tabName === 'income') populateIncomeJobRefOptions();
     if (tabName === 'profitability') renderJobProfitability();
+    if (tabName === 'inventory') renderInventory();
   }
 
   document.querySelectorAll('.tab-btn[data-tab]').forEach(btn => {
@@ -410,7 +479,15 @@
       let marginHtml = '<span style="color:var(--text-dim);">&mdash;</span>';
       if (hasInvoice) {
         const marginColor = margin >= 0 ? '#4caf50' : '#e05252';
-        marginHtml = `<strong style="color:${marginColor};">${money(margin)}</strong> <span style="color:var(--text-dim); font-size:12px;">(${marginPct.toFixed(0)}%)</span>`;
+        // $/hr (job-duration tracking, closing a real audit gap): shown
+        // only when the job has a manually-entered hoursWorked -- a
+        // plain sanity-check figure against the original quote, not a
+        // payroll/time-tracking feature. Same math as the job card's
+        // own badge in job-tracker.html.
+        const rateHtml = job.hoursWorked
+          ? ` <span style="color:var(--text-dim); font-size:12px;">&middot; ${money(revenue / job.hoursWorked)}/hr</span>`
+          : '';
+        marginHtml = `<strong style="color:${marginColor};">${money(margin)}</strong> <span style="color:var(--text-dim); font-size:12px;">(${marginPct.toFixed(0)}%)</span>${rateHtml}`;
       }
 
       return `
@@ -478,12 +555,18 @@
   }
 
   function calculateCost() {
-    const hours = parseFloat(document.getElementById('hours').value) || 0;
-    const rate = parseFloat(document.getElementById('rate').value) || 0;
-    const parts = parseFloat(document.getElementById('parts').value) || 0;
-    const discount = parseFloat(document.getElementById('discount').value) || 0;
+    // Clamped to non-negative -- the inputs' min="0" attribute is only
+    // an HTML hint (nothing here enforces it), and there was previously
+    // no clamp at all: a negative value silently produced a negative
+    // labor/parts cost, and (via savePriceReference() below) could get
+    // saved as a reusable price reference that later feeds a real
+    // invoice calculation.
+    const hours = Math.max(0, parseFloat(document.getElementById('hours').value) || 0);
+    const rate = Math.max(0, parseFloat(document.getElementById('rate').value) || 0);
+    const parts = Math.max(0, parseFloat(document.getElementById('parts').value) || 0);
+    const discount = Math.max(0, parseFloat(document.getElementById('discount').value) || 0);
     const isFirstTime = document.getElementById('firstTimeClient').checked;
-    const taxRate = parseFloat(document.getElementById('taxRate').value) || 0;
+    const taxRate = Math.min(100, Math.max(0, parseFloat(document.getElementById('taxRate').value) || 0));
     const taxLabor = document.getElementById('taxLabor').checked;
     const taxParts = document.getElementById('taxParts').checked;
 
@@ -524,8 +607,8 @@
   function savePriceReference() {
     const label = prompt('Name this job type (e.g. "Dishwasher install", "Drywall patch - small"):');
     if (!label || !label.trim()) return;
-    const hours = parseFloat(document.getElementById('hours').value) || 0;
-    const rate = parseFloat(document.getElementById('rate').value) || 0;
+    const hours = Math.max(0, parseFloat(document.getElementById('hours').value) || 0);
+    const rate = Math.max(0, parseFloat(document.getElementById('rate').value) || 0);
     const list = loadPriceReferences();
     list.push({ id: Date.now(), label: label.trim(), hours, rate });
     savePriceReferences(list);
@@ -1051,6 +1134,209 @@
     }
   }
 
+  // Part Cost Trend (closes a real audit gap: cost-per-part history was
+  // implicit in the Expenses log's own Vendor/Part Number/Description
+  // fields but never surfaced anywhere). Pure read-only search over
+  // loadExpenses() -- no new storage key, no schema change.
+  function renderPartCostTrend() {
+    const container = document.getElementById('partTrendResults');
+    if (!container) return;
+    const term = (document.getElementById('partTrendSearch').value || '').trim().toLowerCase();
+    if (!term) { container.innerHTML = ''; return; }
+
+    const allExpenses = loadExpenses().filter(e => e.type !== 'mileage');
+    // Part Number match first (exact, case-insensitive) -- the more
+    // reliable key when it's on file. Only falls back to a Description
+    // substring match when nothing matched by part number, so a part
+    // number search doesn't also pull in unrelated entries that merely
+    // mention the same digits somewhere in a description.
+    let matches = allExpenses.filter(e => (e.partNumber || '').toLowerCase() === term);
+    if (!matches.length) {
+      matches = allExpenses.filter(e => (e.desc || '').toLowerCase().includes(term));
+    }
+    if (!matches.length) {
+      container.innerHTML = '<div class="empty-state">No matching expenses found.</div>';
+      return;
+    }
+
+    matches.sort((a, b) => new Date(b.date) - new Date(a.date));
+    const amounts = matches.map(e => e.amount || 0);
+    const min = Math.min(...amounts);
+    const max = Math.max(...amounts);
+    const avg = amounts.reduce((sum, a) => sum + a, 0) / amounts.length;
+
+    const rows = matches.map(e => `
+      <div class="dash-list-item">
+        <div>
+          <div class="dash-list-item-title">${escapeHtml(e.vendor || '—')}</div>
+          <div class="dash-list-item-meta">${e.date}${e.partNumber ? ' &middot; Part #: ' + escapeHtml(e.partNumber) : ''}${e.jobRefTitle ? ' &middot; ' + escapeHtml(e.jobRefTitle) : ''}</div>
+        </div>
+        <div class="dash-list-item-right">$${e.amount.toFixed(2)}</div>
+      </div>`).join('');
+
+    container.innerHTML = `
+      <div class="totals-row-money" style="margin-bottom:10px;">
+        ${matches.length} match${matches.length === 1 ? '' : 'es'} &middot; Low $${min.toFixed(2)} &middot; Avg $${avg.toFixed(2)} &middot; High $${max.toFixed(2)}
+      </div>
+      ${rows}`;
+  }
+
+  // ---------- Inventory (parts on hand) ----------
+  // Closes a real audit gap: Appliance Wiki (tools/parts-reference.html)
+  // deliberately only tracks WHAT part fixes what, never stock levels --
+  // this is the separate, actual on-hand-quantity tracker. Same
+  // tombstone/graveyard/undo-toast pattern as Expenses above, and the
+  // same createdBy/lastEditedBy attribution as every other record type.
+  const INVENTORY_STORAGE_KEY = 'th_inventory';
+  function loadInventory() { try { return JSON.parse(localStorage.getItem(INVENTORY_STORAGE_KEY) || '[]'); } catch (e) { return []; } }
+  function saveInventory(list) { localStorage.setItem(INVENTORY_STORAGE_KEY, JSON.stringify(list)); if (typeof scheduleSync === 'function') scheduleSync(); }
+
+  let editingInventoryId = null;
+  let justAddedInventoryId = null;
+  const pendingDeleteInventoryIds = new Map();
+
+  function addInventoryItem() {
+    const name = document.getElementById('invPartName').value.trim();
+    if (!name) { showToast('Enter a part name first.', { type: 'error' }); return; }
+
+    const wasEditing = !!editingInventoryId;
+    const existing = wasEditing ? loadInventory().find(p => p.id === editingInventoryId) : null;
+    const currentUser = (typeof getCurrentUserEmail === 'function') ? getCurrentUserEmail() : null;
+
+    const item = {
+      id: wasEditing ? editingInventoryId : Date.now(),
+      name,
+      partNumber: document.getElementById('invPartNumber').value.trim(),
+      qty: parseInt(document.getElementById('invQty').value, 10) || 0,
+      reorderAt: parseInt(document.getElementById('invReorderAt').value, 10) || 0,
+      unitCost: parseFloat(document.getElementById('invUnitCost').value) || 0,
+      supplier: document.getElementById('invSupplier').value.trim(),
+      createdBy: existing ? existing.createdBy : currentUser,
+      lastEditedBy: currentUser,
+    };
+
+    const list = loadInventory();
+    if (wasEditing) {
+      const idx = list.findIndex(p => p.id === editingInventoryId);
+      if (idx > -1) list[idx] = item; else list.push(item);
+    } else {
+      list.push(item);
+    }
+    saveInventory(list);
+
+    ['invPartName', 'invPartNumber', 'invSupplier'].forEach(id => document.getElementById(id).value = '');
+    document.getElementById('invQty').value = '0';
+    document.getElementById('invReorderAt').value = '1';
+    document.getElementById('invUnitCost').value = '';
+    cancelInventoryEdit();
+    justAddedInventoryId = wasEditing ? null : item.id;
+    renderInventory();
+    showToast(wasEditing ? 'Part updated.' : 'Part added.');
+  }
+
+  function editInventoryItem(id) {
+    const item = loadInventory().find(p => p.id === id);
+    if (!item) return;
+    editingInventoryId = id;
+    toggleFormSection('inventoryFormSection', true);
+    document.getElementById('invPartName').value = item.name || '';
+    document.getElementById('invPartNumber').value = item.partNumber || '';
+    document.getElementById('invQty').value = item.qty;
+    document.getElementById('invReorderAt').value = item.reorderAt;
+    document.getElementById('invUnitCost').value = item.unitCost || '';
+    document.getElementById('invSupplier').value = item.supplier || '';
+    document.getElementById('addInventoryBtn').textContent = 'Update Part';
+    document.getElementById('cancelInventoryEditBtn').style.display = '';
+    document.getElementById('inventoryEditNote').style.display = '';
+    document.getElementById('inventoryEditNote').textContent = 'Editing this part.';
+  }
+
+  function cancelInventoryEdit() {
+    editingInventoryId = null;
+    document.getElementById('addInventoryBtn').textContent = 'Add Part';
+    document.getElementById('cancelInventoryEditBtn').style.display = 'none';
+    document.getElementById('inventoryEditNote').style.display = 'none';
+    document.getElementById('inventoryFormSection').classList.add('is-collapsed');
+  }
+
+  async function deleteInventoryItem(id) {
+    const confirmed = await showConfirm('Delete this part from inventory?', { danger: true, confirmText: 'Delete' });
+    if (!confirmed) return;
+    if (editingInventoryId === id) cancelInventoryEdit();
+    const row = document.querySelector('[data-inventory-id="' + id + '"]');
+    await new Promise(resolve => animateRowExit(row, resolve));
+
+    const timer = setTimeout(() => {
+      pendingDeleteInventoryIds.delete(id);
+      const list = loadInventory();
+      const item = list.find(p => p.id === id);
+      if (item && typeof thAddToGraveyard === 'function') thAddToGraveyard('inventory', item);
+      saveInventory(list.filter(p => p.id !== id));
+      if (typeof thAddInventoryTombstone === 'function') thAddInventoryTombstone(id);
+      renderInventory();
+    }, 6000);
+
+    pendingDeleteInventoryIds.set(id, timer);
+    renderInventory();
+    showUndoToast('Part removed.', () => {
+      clearTimeout(pendingDeleteInventoryIds.get(id));
+      pendingDeleteInventoryIds.delete(id);
+      renderInventory();
+    });
+  }
+
+  function renderInventory() {
+    const searchTerm = (document.getElementById('inventorySearch')?.value || '').trim().toLowerCase();
+    let list = [...loadInventory()];
+    if (pendingDeleteInventoryIds.size > 0) list = list.filter(p => !pendingDeleteInventoryIds.has(p.id));
+    if (searchTerm) {
+      list = list.filter(p =>
+        (p.name || '').toLowerCase().includes(searchTerm) ||
+        (p.partNumber || '').toLowerCase().includes(searchTerm) ||
+        (p.supplier || '').toLowerCase().includes(searchTerm)
+      );
+    }
+    // Low stock first -- the whole point of a reorder threshold is
+    // surfacing what needs attention without having to scan the list.
+    list.sort((a, b) => {
+      const aLow = a.qty <= a.reorderAt ? 0 : 1;
+      const bLow = b.qty <= b.reorderAt ? 0 : 1;
+      if (aLow !== bLow) return aLow - bLow;
+      return (a.name || '').localeCompare(b.name || '');
+    });
+
+    const container = document.getElementById('inventoryTable');
+    if (!container) return;
+    if (list.length === 0) {
+      container.innerHTML = searchTerm
+        ? '<div class="empty-state">No parts match that search.</div>'
+        : '<div class="empty-state">No parts logged yet &mdash; add your first one above.</div>';
+      return;
+    }
+
+    const rows = list.map(item => {
+      const isLow = item.qty <= item.reorderAt;
+      return `
+      <tr class="${item.id === justAddedInventoryId ? 'list-row-enter' : ''}" data-inventory-id="${item.id}">
+        <td data-label="Part">${personDot(item.lastEditedBy, 'Last edited by')}${escapeHtml(item.name)}${item.partNumber ? `<div style="color:var(--text-dim); font-size:11.5px; margin-top:2px;">Part #: ${escapeHtml(item.partNumber)}</div>` : ''}</td>
+        <td data-label="Qty">${isLow ? `<span class="badge" style="background:rgba(224,82,82,0.15); color:#e0807a;" title="At or below reorder threshold of ${item.reorderAt}">${item.qty} — Reorder</span>` : item.qty}</td>
+        <td data-label="Unit Cost">${item.unitCost ? '$' + item.unitCost.toFixed(2) : '—'}</td>
+        <td data-label="Supplier">${escapeHtml(item.supplier || '—')}</td>
+        <td>
+          <button class="small-btn" onclick="editInventoryItem(${item.id})" aria-label="Edit part" title="Edit part">Edit</button>
+          <button class="small-btn danger" onclick="deleteInventoryItem(${item.id})" aria-label="Delete part" title="Delete part">&times;</button>
+        </td>
+      </tr>`;
+    }).join('');
+    justAddedInventoryId = null;
+
+    container.innerHTML = `
+      <table>
+        <thead><tr><th>Part</th><th>Qty</th><th>Unit Cost</th><th>Supplier</th><th></th></tr></thead>
+        <tbody>${rows}</tbody>
+      </table>`;
+  }
+
   // Bug fix (2026-08-20): same class of bug as TAX_RATE_KEY above -- used
   // in 3 places below but never declared. Confirmed the exact original
   // mapping via git history (job-tracker.html had this, byte-for-byte,
@@ -1059,6 +1345,12 @@
   const PAYMENT_LABEL = { cash: 'Cash', card: 'Card', check: 'Check', venmo: 'Venmo', cashapp: 'Cash App', other: 'Other' };
 
   function renderExpenses() {
+    // Kept alongside the main render rather than added to every
+    // individual call site (add/edit/delete/clear-all/pull-to-refresh)
+    // -- this one call always fires whenever expenses do, so the
+    // search results can never go stale relative to the log itself.
+    renderPartCostTrend();
+
     let entries = [...loadExpenses()].sort((a, b) => new Date(b.date) - new Date(a.date));
     if (pendingDeleteExpenseIds.size > 0) entries = entries.filter(e => !pendingDeleteExpenseIds.has(e.id));
     const container = document.getElementById('entriesTable');
@@ -1162,7 +1454,7 @@
       // renderIncomeEntries/renderPriceReferences by reference, so
       // defining it here before those functions run doesn't matter;
       // they're only actually called later, when the user pulls.
-      if (typeof setupPullToRefresh === 'function') setupPullToRefresh(() => { renderExpenses(); renderIncomeEntries(); renderPriceReferences(); });
+      if (typeof setupPullToRefresh === 'function') setupPullToRefresh(() => { renderExpenses(); renderIncomeEntries(); renderPriceReferences(); if (document.getElementById('tab-inventory')?.classList.contains('is-active')) renderInventory(); });
       await initSyncOnLoad();
       // Gated 2026-08-27, alongside the new Employee role -- checked
       // right after initSyncOnLoad() resolves (which is what actually
@@ -1175,8 +1467,8 @@
         return;
       }
       loadTaxSettings();
-      document.getElementById('entryDate').value = new Date().toISOString().slice(0, 10);
-      document.getElementById('incomeDate').value = new Date().toISOString().slice(0, 10);
+      document.getElementById('entryDate').value = todayDateStrBusinessTz();
+      document.getElementById('incomeDate').value = todayDateStrBusinessTz();
       loadMileageRate();
       calculateCost();
       populateJobRefOptions();
@@ -1213,6 +1505,7 @@
           renderIncomeEntries();
           renderPriceReferences();
           if (document.getElementById('tab-profitability')?.classList.contains('is-active')) renderJobProfitability();
+          if (document.getElementById('tab-inventory')?.classList.contains('is-active')) renderInventory();
         }, function () {});
       }
       } catch (initError) {

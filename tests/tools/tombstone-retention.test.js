@@ -23,7 +23,7 @@ test('the retention window is a real, named constant, not a magic number buried 
 
 test('every one of the 13 known tombstone-adding functions actually calls the prune helper, not just some of them', () => {
   const addFns = [...DATA_LAYER.matchAll(/function (thAdd\w*Tombstone)\([^)]*\)\s*\{[\s\S]*?\n\}\n/g)];
-  assert.equal(addFns.length, 13, 'expected exactly 13 tombstone-adding functions -- a change in this count means this test needs updating too');
+  assert.equal(addFns.length, 14, 'expected exactly 14 tombstone-adding functions (thAddInventoryTombstone added for parts inventory tracking) -- a change in this count means this test needs updating too');
   for (const m of addFns) {
     assert.match(m[0], /list = thPruneTombstones\(list\);/, `${m[1]} should prune before writing`);
   }

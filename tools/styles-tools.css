@@ -146,7 +146,14 @@ label .col-hint,
   position:fixed;
   inset:0;
   background:rgba(0,0,0,0.6);
-  z-index:200;
+  /* Was z-index:200 -- below .th-bottom-nav's z-index:900 (fixed,
+     bottom:0, shown under 720px), so on a phone the modal's scrim and
+     content rendered underneath the bottom tab bar: anything placed in
+     that ~60-70px strip was visually obscured and unclickable, since
+     the nav bar intercepted taps. 950 matches the tier already used by
+     .quick-actions-overlay, the other full-screen modal overlay on
+     these pages. */
+  z-index:950;
   align-items:center;
   justify-content:center;
   padding:20px;

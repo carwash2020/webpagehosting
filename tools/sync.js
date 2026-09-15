@@ -139,6 +139,11 @@ const SYNC_DATA_KEYS = [
   'th_mileage_rate',
   'th_price_ref_tombstones',
   'th_price_reference',
+  // Parts inventory (closes a real audit gap: Appliance Wiki only ever
+  // tracked WHAT part fixes what, never what's actually on hand). Same
+  // tombstone-before-log convention as every array key above.
+  'th_inventory_tombstones',
+  'th_inventory',
   // Delete added to invoices and quotes for the first time (2026-08-26)
   // -- built in with the tombstone from the start, same reasoning as
   // every entry above, rather than added as a later fix.
@@ -201,6 +206,19 @@ const SYNC_DATA_KEYS = [
   // so an overwrite is never silent even though it still has to resolve
   // to one final value automatically.
   'th_sync_conflicts',
+  // Review Request's sent-request log and pending-reminder queue
+  // (real audit gap found and fixed 2026-09): review-request.html
+  // never listed either key here, so calling scheduleSync() from that
+  // page (which the sent-log path already did) queued a push whose
+  // payload simply never contained this data -- a review request
+  // logged as sent, or a delayed follow-up reminder set, on one device
+  // silently never reached the other. Tombstone-before-array ordering,
+  // same convention as every other deletable array above -- the log is
+  // append/status-update only (no delete function exists for it), so
+  // it needs no tombstone of its own.
+  'th_review_requests_pending_tombstones',
+  'th_review_requests_pending',
+  'th_review_requests_log',
 ];
 
 // Local-only bookkeeping for the per-field merge below -- NOT itself a
@@ -279,6 +297,7 @@ const MERGE_KEY_FIELD = {
   th_invoice_tombstones: 'id',
   th_quote_tombstones: 'id',
   th_price_ref_tombstones: 'id',
+  th_inventory_tombstones: 'id',
   th_template_tombstones: 'id',
   th_known_issue_tombstones: 'id',
   th_pr_unit_tombstones: 'id',
@@ -293,6 +312,7 @@ const MERGE_KEY_FIELD = {
   th_job_templates: 'id',
   th_contracts: 'id',
   th_price_reference: 'id',
+  th_inventory: 'id',
   th_parts_reference_units: 'id',
   th_client_errors: 'id',
   th_sync_conflicts: 'id',
@@ -302,6 +322,9 @@ const MERGE_KEY_FIELD = {
   'rd_personal-income': 'id',
   'rd_business-months': 'month',
   'rd_debts': 'id',
+  th_review_requests_pending_tombstones: 'id',
+  th_review_requests_pending: 'id',
+  th_review_requests_log: 'id',
 };
 
 // Deep-equality check for plain JSON-shaped values (strings/numbers/
@@ -487,9 +510,39 @@ function applySyncData(obj, keysToApply) {
       localStorage.setItem(k, obj[k]);
       return;
     }
+    // Real bug found and fixed (audit item #12): remoteArr and localArr
+    // used to be parsed inside one shared try, with the catch below
+    // falling back to `localStorage.setItem(k, obj[k])` no matter WHICH
+    // side actually failed to parse. That fallback silently corrupted
+    // this device's local copy whenever the REMOTE payload was the
+    // malformed one (a truncated push, a corrupted network response,
+    // a bug on whichever device sent it) -- it took the exact string
+    // that had just thrown a SyntaxError and wrote it into localStorage
+    // anyway, assuming it was valid JSON when the parse failure proved
+    // otherwise. Parsed separately now so a malformed remote value can
+    // be told apart from a malformed local one and never gets written
+    // anywhere.
+    let remoteArr;
     try {
-      const remoteArr = JSON.parse(obj[k]);
-      const localArr = JSON.parse(localStorage.getItem(k) || '[]');
+      remoteArr = JSON.parse(obj[k]);
+    } catch (e) {
+      if (typeof logClientError === 'function') {
+        logClientError(`applySyncData: malformed remote JSON for key "${k}", left this device's local copy untouched`, 'sync.js', null, null, e && e.stack);
+      }
+      return; // leave local storage exactly as it was; move on to the next key
+    }
+    let localArr;
+    try {
+      localArr = JSON.parse(localStorage.getItem(k) || '[]');
+    } catch (e) {
+      // The LOCAL copy is the malformed one here, not the remote payload
+      // that just parsed fine above -- safe to treat it as empty and let
+      // the merge below effectively replace it with the (valid) remote
+      // data, same as if this device had never had any local data for
+      // this key at all.
+      localArr = [];
+    }
+    try {
       if (!Array.isArray(remoteArr) || !Array.isArray(localArr)) {
         localStorage.setItem(k, obj[k]);
         return;
@@ -590,6 +643,13 @@ function applySyncData(obj, keysToApply) {
           const tombstoneSet = new Set(tombstonedIds);
           finalArr = mergedArr.filter(i => !tombstoneSet.has(i.id));
         }
+      } else if (k === 'th_review_requests_pending') {
+        let tombstonedIds = [];
+        try { tombstonedIds = JSON.parse(localStorage.getItem('th_review_requests_pending_tombstones') || '[]').map(t => t.id); } catch (e) { tombstonedIds = []; }
+        if (tombstonedIds.length) {
+          const tombstoneSet = new Set(tombstonedIds);
+          finalArr = mergedArr.filter(p => !tombstoneSet.has(p.id));
+        }
       } else if (k === 'th_parts_reference_units') {
         let tombstonedUnitIds = [];
         try { tombstonedUnitIds = JSON.parse(localStorage.getItem('th_pr_unit_tombstones') || '[]').map(t => t.id); } catch (e) { tombstonedUnitIds = []; }
@@ -614,7 +674,16 @@ function applySyncData(obj, keysToApply) {
         saveSyncBaseForKey(k, finalArr);
       }
     } catch (e) {
-      localStorage.setItem(k, obj[k]); // malformed JSON on either side -- fall back to the old behavior rather than throw
+      // remoteArr/localArr are both guaranteed valid arrays by this
+      // point (either JSON.parse failure above already returned early)
+      // -- an exception here means one of the merge functions itself hit
+      // something unexpected. Same reasoning as the remote-parse-failure
+      // branch above: leaving this device's existing local copy alone is
+      // always safer than overwriting it with obj[k], which is exactly
+      // the value whose processing just failed.
+      if (typeof logClientError === 'function') {
+        logClientError(`applySyncData: merge failed for key "${k}", left this device's local copy untouched: ${e && e.message ? e.message : String(e)}`, 'sync.js', null, null, e && e.stack);
+      }
     }
   });
 
@@ -1432,6 +1501,27 @@ async function uploadJobPhoto(file, jobId, jobTitle, photoType) {
   const ext = (file.name.split('.').pop() || 'jpg').toLowerCase().replace(/[^a-z0-9]/g, '') || 'jpg';
   const path = `job-${jobId}/${Date.now()}.${ext}`;
 
+  // Rollback for a real gap found in a full-repo audit: uploading the
+  // file to Storage and inserting its metadata row are two separate
+  // requests with no transaction across them -- if the file makes it
+  // into Storage but the metadata insert then fails (a non-ok response
+  // OR a thrown network error, e.g. a timeout after the request was
+  // already sent), the object was previously left permanently orphaned:
+  // invisible to the app (th_job_photos has no row pointing at it, so
+  // nothing in the UI ever lists it, views it, or lets it be deleted)
+  // but still taking up real storage space forever. uploadSucceeded
+  // tracks whether this rollback is even relevant -- an upload that
+  // itself failed has nothing in Storage to clean up.
+  let uploadSucceeded = false;
+  async function rollbackUpload() {
+    try {
+      await fetch(`${SUPABASE_URL}/storage/v1/object/${JOB_PHOTOS_BUCKET}/${path}`, {
+        method: 'DELETE',
+        headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': `Bearer ${getAuthToken()}` },
+      });
+    } catch (e) { /* best-effort -- the metadata failure is still the error reported either way */ }
+  }
+
   try {
     const uploadRes = await fetch(`${SUPABASE_URL}/storage/v1/object/${JOB_PHOTOS_BUCKET}/${path}`, {
       method: 'POST',
@@ -1443,6 +1533,7 @@ async function uploadJobPhoto(file, jobId, jobTitle, photoType) {
       body: file,
     });
     if (!uploadRes.ok) return { ok: false, error: 'upload-http-' + uploadRes.status };
+    uploadSucceeded = true;
 
     const insertRes = await fetch(`${SUPABASE_URL}/rest/v1/th_job_photos`, {
       method: 'POST',
@@ -1454,10 +1545,14 @@ async function uploadJobPhoto(file, jobId, jobTitle, photoType) {
       },
       body: JSON.stringify([{ job_id: jobId, job_title: jobTitle, storage_path: path, photo_type: photoType || 'photo' }]),
     });
-    if (!insertRes.ok) return { ok: false, error: 'metadata-http-' + insertRes.status };
+    if (!insertRes.ok) {
+      await rollbackUpload();
+      return { ok: false, error: 'metadata-http-' + insertRes.status };
+    }
     const rows = await insertRes.json();
     return { ok: true, photo: rows[0] };
   } catch (e) {
+    if (uploadSucceeded) await rollbackUpload();
     return { ok: false, error: 'network' };
   }
 }

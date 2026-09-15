@@ -603,7 +603,86 @@
 // passes only the fetch error itself to logClientError(), so nothing
 // derived from the credential ever reaches the persisted,
 // cross-device-synced client error log.
-const CACHE_NAME = 'th-workspace-v139'; // precache-fingerprint:81d4fa8e062a
+// Bumped (v138 -> v139): contract-generator.html changed -- async
+// e-signature for contracts (auto-syncing a generated contract to the
+// client portal for remote signing when no in-person signature was
+// captured, plus a live portal-status line in the Contract Log). It is
+// in PRECACHE_URLS. Same reasoning as every prior bump in this file's
+// history.
+// Bumped (v139 -> v140): sync.js and data-layer.js both changed -- three
+// audit-flagged gaps closed together: parts inventory tracking (new
+// th_inventory/th_inventory_tombstones sync keys, a new Inventory tab in
+// finance.html), job-duration ($/hr) tracking on jobs, and a Part Cost
+// Trend lookup in finance.html's Expenses tab. Both files are precached
+// on every tool page via PRECACHE_URLS. Same reasoning as every prior
+// bump in this file's history.
+// Bumped (v140 -> v141): tools-dialogs.js changed -- exhaustive
+// escapeHtml() XSS audit closing a gap SECURITY.md flagged (the earlier
+// CodeQL sweep and runway-dashboard.html's own escapeAttr() fix were
+// both targeted at flagged call sites only, never an exhaustive pass).
+// Added a shared escapeAttr() (escapes quotes, unlike escapeHtml()) and
+// fixed every real double-quoted-attribute call site found across the
+// whole tool suite, several in files never previously audited for this
+// bug shape at all (Appliance Wiki's entire edit-in-place UI chief
+// among them). tools-dialogs.js is precached on every tool page. Same
+// reasoning as every prior bump in this file's history.
+// Bumped (v141 -> v142): workspace.html changed -- marketing-source-of-
+// lead tracking. A new "Lead Sources" breakdown on the Dashboard,
+// reusing the leads array already fetched for the Leads Inbox (no
+// second query). workspace.html is precached. Same reasoning as every
+// prior bump in this file's history.
+// Bumped (v142 -> v143): dev-tools.html and dev-tools-shared.js changed
+// -- a new Cron Health panel (closes a real audit gap: every pg_cron
+// job calling an Edge Function via net.http_post was fire-and-forget).
+// Both files are precached. Same reasoning as every prior bump in this
+// file's history.
+// Bumped (v143 -> v144): sync.js and review-request.html changed --
+// closes a real audit gap: th_review_requests_log and
+// th_review_requests_pending were never listed in sync.js's
+// SYNC_DATA_KEYS, so a review request logged as sent (or a delayed
+// follow-up reminder set) on one device silently never reached
+// another. Both files, plus every other precached page that also
+// loads sync.js, are precached. Same reasoning as every prior bump in
+// this file's history.
+// Bumped (v144 -> v145): sync.js changed -- closes a real audit gap in
+// applySyncData(): a malformed remote payload for any one synced key
+// used to fall into a shared catch that blindly wrote that same
+// unparseable value into localStorage anyway, corrupting a local copy
+// that had been perfectly fine. Remote and local JSON are now parsed
+// separately so a bad value never gets written; every precached page
+// that loads sync.js is precached. Same reasoning as every prior bump
+// in this file's history.
+// Bumped (v145 -> v146): sync.js changed -- closes a real audit gap in
+// uploadJobPhoto(): a job photo that made it into Storage but then
+// failed its metadata insert (a non-ok response OR a thrown network
+// error) was left permanently orphaned -- invisible to the app since
+// nothing in th_job_photos pointed at it, but still taking up real
+// storage space forever. The file is now rolled back (deleted from
+// Storage) whenever the metadata step fails after a successful
+// upload; every precached page that loads sync.js is precached. Same
+// reasoning as every prior bump in this file's history.
+// Bumped (v146 -> v147): invoice-generator.html changed -- a new
+// quote-to-invoice conversion rate stat above the Recent Quotes list
+// (closes a real audit gap: quotes already tracked their own
+// 'converted' status, but it had never been rolled up into a single
+// rate anywhere). Precached. Same reasoning as every prior bump in
+// this file's history.
+// Bumped (v147 -> v148): styles.css changed -- new .faq-plain-list/
+// .faq-plain-item rules for the landing pages' new condensed FAQ
+// section (audit item #18, closes a real gap: FAQPage schema on those
+// pages with no matching visible FAQ content to back it). Precached.
+// Same reasoning as every prior bump in this file's history.
+// Bumped (v148 -> v149): auth.js changed -- fixed a stale security
+// comment (audit item #22) claiming "exactly one account... not a
+// multi-user system," which stopped being true once account_roles/
+// role_definitions shipped (Owner, Developer, Employee -- real,
+// server-enforced per-person permissions). Also fixed the same stale
+// claim copy-pasted into 19 other precached pages' own inline
+// comments, and a user-visible sentence in workspace.html's own
+// "Getting Started" guide making the identical false claim to real
+// people using the app. Same reasoning as every prior bump in this
+// file's history.
+const CACHE_NAME = 'th-workspace-v153'; // precache-fingerprint:0970948c6d45
 const PRECACHE_URLS = [
   '/tools/workspace.html', '/tools/job-tracker.html', '/tools/invoice-generator.html', '/tools/contract-generator.html',
   '/tools/calendar.html', '/tools/route-planner.html', '/tools/review-request.html', '/tools/contact-card.html',

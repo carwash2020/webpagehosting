@@ -82,7 +82,7 @@
 <link rel="preconnect" href="https://csvfqdjuobylgafgolho.supabase.co">
 <link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Anton&family=Archivo:wght@400..700&family=Newsreader:ital,opsz,wght@0,6..72,300..700;1,6..72,300..600&family=Oswald:wght@200..700&display=swap" onload="this.onload=null;this.rel='stylesheet'">
 <noscript><link href="https://fonts.googleapis.com/css2?family=Anton&family=Archivo:wght@400..700&family=Newsreader:ital,opsz,wght@0,6..72,300..700;1,6..72,300..600&family=Oswald:wght@200..700&display=swap" rel="stylesheet"></noscript>
-<link rel="stylesheet" href="/styles.css?v=d5485d6e30">
+<link rel="stylesheet" href="/styles.css?v=9ac6522c5d">
 <script type="application/ld+json">
 {
   "@context": "https://schema.org",
@@ -156,7 +156,7 @@
         <svg class="theme-icon-light" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
         <span class="theme-toggle-label">Dark Mode</span>
       </button>
-      <button class="nav-toggle" aria-label="Toggle menu" aria-expanded="false" id="navToggle">
+      <button class="nav-toggle" aria-label="Toggle menu" aria-expanded="false" aria-controls="mobileMenu" id="navToggle">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
       </button>
     </div>
@@ -312,6 +312,7 @@
           <li><a class="js-phone-link js-phone-text" href="tel:+14354141667">(435) 414-1667</a></li>
           <li><a class="js-email-link js-email-text" href="mailto:steve@triplehenterprisesllc.biz">steve@triplehenterprisesllc.biz</a></li>
           <li><a href="/terms.html">Terms &amp; Conditions</a></li>
+          <li><a href="/privacy.html">Privacy Policy</a></li>
         </ul>
       </div>
     </div>
@@ -326,10 +327,35 @@
   document.getElementById('year').textContent = new Date().getFullYear();
   const navToggle = document.getElementById('navToggle');
   const mobileMenu = document.getElementById('mobileMenu');
+  function closeMobileMenu(returnFocus) {
+    mobileMenu.classList.remove('is-open');
+    navToggle.setAttribute('aria-expanded', 'false');
+    if (returnFocus) navToggle.focus();
+  }
   if (navToggle && mobileMenu) {
     navToggle.addEventListener('click', () => {
       const isOpen = mobileMenu.classList.toggle('is-open');
       navToggle.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
+    });
+    mobileMenu.querySelectorAll('a').forEach(a => {
+      a.addEventListener('click', () => {
+        closeMobileMenu(false);
+      });
+    });
+    // Accessibility fix (audit item #9, a real gap found across all 16
+    // pages that carry this same hamburger menu): a keyboard user who
+    // opened the menu had no way to close it without a mouse click
+    // landing outside it, and Escape -- the standard way to dismiss any
+    // disclosure widget -- did nothing at all. Focus is returned to the
+    // toggle button on both paths so a keyboard user ends up exactly
+    // where they started, not stranded with focus on a now-hidden menu.
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape' && mobileMenu.classList.contains('is-open')) closeMobileMenu(true);
+    });
+    document.addEventListener('click', (e) => {
+      if (!mobileMenu.classList.contains('is-open')) return;
+      if (mobileMenu.contains(e.target) || navToggle.contains(e.target)) return;
+      closeMobileMenu(false);
     });
   }
 
