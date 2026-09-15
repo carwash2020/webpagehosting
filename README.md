@@ -1169,14 +1169,33 @@ actually assert on this site's schema/meta content) all still pass
 (37/37). The full `npm test` run was also kicked off, covering the
 much larger, mostly-unrelated internal-tools test suite.
 
-**Pre-existing issue found, NOT caused by this change, NOT fixed
-here:** `npm run check-undefined-vars` reports `tools/qrcode-lib.js` and
-`tools/push-notifications.js` both declare `VAPID_PUBLIC_KEY` and would
-throw a real `SyntaxError` the moment any single page loads both --
-this repo's dependencies (`node_modules`) weren't installed before this
-session, so this check (and the full test suite) hadn't actually been
-run recently; this session ran `npm install` and surfaced it. No page
-currently loads both files together, so nothing is broken live today,
-but this is a live landmine worth a future session's attention -- it's
-unrelated to the schema/robots.txt work above, which touched zero JS
-files.
+**False alarm, corrected same session:** this repo's dependencies
+(`node_modules`) weren't installed before this session (`npm test` and
+`npm run check-undefined-vars` both failed outright with
+`Cannot find module 'jsdom'`). Running `npm install` mid-session
+briefly surfaced what looked like a real bug --
+`check-undefined-vars.js` reporting `tools/qrcode-lib.js` and
+`tools/push-notifications.js` both declaring `VAPID_PUBLIC_KEY` -- but
+a direct grep across both files found the declaration only exists in
+`push-notifications.js`, and re-running the check after the install
+fully completed came back clean (`52 pages checked, all clean`). The
+apparent collision was a transient false positive from an
+incomplete/mid-install dependency state, not a real bug worth fixing.
+Also confirmed: `npm run check-consistency` (16 tool + 8 portal pages),
+`scripts/check-links.py` (all internal references across 59 HTML files
+resolve), and `scripts/check-visual-snapshot.js` (6 targets, all match
+baseline) all pass clean. The full `npm test` run (1,420+ tests, mostly
+unrelated internal-tools coverage) was kicked off but is slow enough in
+this environment to need a longer timeout than one command allows --
+the targeted suites that actually assert on this site's schema/meta
+content (`tests/seo/local-business-schema.test.js`,
+`tests/design/blog-post-meta.test.js`,
+`tests/design/homepage-stats-bar.test.js`,
+`tests/referrals/referral-program.test.js`) were run directly and pass
+37/37.
+
+**`sitemap.xml` `lastmod` dates updated** for exactly the 22 URLs whose
+underlying pages genuinely changed in this session (the 7 city pages,
+5 service pages, about/our-work/terms, the blog index, and all 6 blog
+posts) -- bumped to 2026-09-15, the real date of the schema/breadcrumb
+additions above. Every other `lastmod` in the file was left untouched.
