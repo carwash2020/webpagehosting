@@ -652,7 +652,16 @@
 // separately so a bad value never gets written; every precached page
 // that loads sync.js is precached. Same reasoning as every prior bump
 // in this file's history.
-const CACHE_NAME = 'th-workspace-v145'; // precache-fingerprint:5a940a5b808f
+// Bumped (v145 -> v146): sync.js changed -- closes a real audit gap in
+// uploadJobPhoto(): a job photo that made it into Storage but then
+// failed its metadata insert (a non-ok response OR a thrown network
+// error) was left permanently orphaned -- invisible to the app since
+// nothing in th_job_photos pointed at it, but still taking up real
+// storage space forever. The file is now rolled back (deleted from
+// Storage) whenever the metadata step fails after a successful
+// upload; every precached page that loads sync.js is precached. Same
+// reasoning as every prior bump in this file's history.
+const CACHE_NAME = 'th-workspace-v146'; // precache-fingerprint:8e5ee0597242
 const PRECACHE_URLS = [
   '/tools/workspace.html', '/tools/job-tracker.html', '/tools/invoice-generator.html', '/tools/contract-generator.html',
   '/tools/calendar.html', '/tools/route-planner.html', '/tools/review-request.html', '/tools/contact-card.html',

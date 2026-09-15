@@ -1501,6 +1501,27 @@ async function uploadJobPhoto(file, jobId, jobTitle, photoType) {
   const ext = (file.name.split('.').pop() || 'jpg').toLowerCase().replace(/[^a-z0-9]/g, '') || 'jpg';
   const path = `job-${jobId}/${Date.now()}.${ext}`;
 
+  // Rollback for a real gap found in a full-repo audit: uploading the
+  // file to Storage and inserting its metadata row are two separate
+  // requests with no transaction across them -- if the file makes it
+  // into Storage but the metadata insert then fails (a non-ok response
+  // OR a thrown network error, e.g. a timeout after the request was
+  // already sent), the object was previously left permanently orphaned:
+  // invisible to the app (th_job_photos has no row pointing at it, so
+  // nothing in the UI ever lists it, views it, or lets it be deleted)
+  // but still taking up real storage space forever. uploadSucceeded
+  // tracks whether this rollback is even relevant -- an upload that
+  // itself failed has nothing in Storage to clean up.
+  let uploadSucceeded = false;
+  async function rollbackUpload() {
+    try {
+      await fetch(`${SUPABASE_URL}/storage/v1/object/${JOB_PHOTOS_BUCKET}/${path}`, {
+        method: 'DELETE',
+        headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': `Bearer ${getAuthToken()}` },
+      });
+    } catch (e) { /* best-effort -- the metadata failure is still the error reported either way */ }
+  }
+
   try {
     const uploadRes = await fetch(`${SUPABASE_URL}/storage/v1/object/${JOB_PHOTOS_BUCKET}/${path}`, {
       method: 'POST',
@@ -1512,6 +1533,7 @@ async function uploadJobPhoto(file, jobId, jobTitle, photoType) {
       body: file,
     });
     if (!uploadRes.ok) return { ok: false, error: 'upload-http-' + uploadRes.status };
+    uploadSucceeded = true;
 
     const insertRes = await fetch(`${SUPABASE_URL}/rest/v1/th_job_photos`, {
       method: 'POST',
@@ -1523,10 +1545,14 @@ async function uploadJobPhoto(file, jobId, jobTitle, photoType) {
       },
       body: JSON.stringify([{ job_id: jobId, job_title: jobTitle, storage_path: path, photo_type: photoType || 'photo' }]),
     });
-    if (!insertRes.ok) return { ok: false, error: 'metadata-http-' + insertRes.status };
+    if (!insertRes.ok) {
+      await rollbackUpload();
+      return { ok: false, error: 'metadata-http-' + insertRes.status };
+    }
     const rows = await insertRes.json();
     return { ok: true, photo: rows[0] };
   } catch (e) {
+    if (uploadSucceeded) await rollbackUpload();
     return { ok: false, error: 'network' };
   }
 }
