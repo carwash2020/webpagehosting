@@ -1196,6 +1196,23 @@
       }
 
       const jobToDelete = loadJobs().find(j => j.id === id);
+      // A completed job synced to the client portal (client_portal_jobs)
+      // previously had no cleanup path at all once deleted internally --
+      // the portal row, including its warranty status/date, was left
+      // permanently orphaned, still showing to the client for a job that
+      // no longer exists here. Only fires for a job that was actually
+      // ever synced (status was 'done' with a client email on file).
+      if (jobToDelete && jobToDelete.status === 'done' && jobToDelete.clientEmail && typeof getAuthToken === 'function') {
+        fetch(`${SUPABASE_URL}/functions/v1/sync-job-to-portal`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'apikey': SUPABASE_ANON_KEY,
+            'Authorization': `Bearer ${getAuthToken()}`,
+          },
+          body: JSON.stringify({ delete: true, source_job_id: id }),
+        }).catch(() => { /* best-effort -- internal delete already succeeded either way */ });
+      }
       saveJobs(loadJobs().filter(j => j.id !== id));
       if (typeof thAddJobTombstone === 'function') thAddJobTombstone(id);
       if (typeof mirrorDelete === 'function') mirrorDelete('jobs', id);
