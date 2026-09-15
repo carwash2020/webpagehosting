@@ -13,6 +13,7 @@ const path = require('path');
 
 const repo = (...p) => path.join(__dirname, '..', '..', ...p);
 const MIGRATION = fs.readFileSync(repo('sql', 'infra', 'add_job_cancel_reschedule.sql'), 'utf8');
+const HARDEN_MIGRATION = fs.readFileSync(repo('sql', 'infra', 'harden_job_cancel_reschedule.sql'), 'utf8');
 const CONFIRMATION_FN = fs.readFileSync(repo('edge-functions', 'send-job-confirmation-email-index.ts'), 'utf8');
 const STATUS_CHANGE_FN = fs.readFileSync(repo('edge-functions', 'send-job-status-change-email-index.ts'), 'utf8');
 
@@ -76,4 +77,25 @@ test('send-job-status-change-email\'s reschedule-request email is explicit that 
   const sendCallMatch = STATUS_CHANGE_FN.match(/Reschedule requested:[\s\S]*?\);\n    \}/);
   assert.ok(sendCallMatch);
   assert.match(sendCallMatch[0], /NOT been applied automatically/);
+});
+
+// harden_job_cancel_reschedule.sql (2026-09-15) -- both RPCs previously
+// never checked jobs.status, so a stale manage-job.html link for an
+// already-'done' (completed, likely invoiced) job could still cancel or
+// request a reschedule on it. This also added the first server-side
+// date validation on request_job_reschedule_by_token.
+
+test('cancel_job_by_token rejects an already-completed job instead of cancelling it', () => {
+  const fnMatch = HARDEN_MIGRATION.match(/create or replace function public\.cancel_job_by_token\(p_token uuid\)[\s\S]*?\$\$;/);
+  assert.ok(fnMatch, 'expected to isolate the hardened cancel_job_by_token()');
+  assert.match(fnMatch[0], /select cancelled_at, status into v_cancelled_at, v_status from public\.jobs where cancel_token = p_token;/);
+  assert.match(fnMatch[0], /if v_status = 'done' then\s*\n\s*return query select false, 'already-completed'::text;/);
+});
+
+test('request_job_reschedule_by_token rejects an already-completed job, an invalid date, and a past date', () => {
+  const fnMatch = HARDEN_MIGRATION.match(/create or replace function public\.request_job_reschedule_by_token\(p_token uuid, p_new_date text\)[\s\S]*?\$\$;/);
+  assert.ok(fnMatch, 'expected to isolate the hardened request_job_reschedule_by_token()');
+  assert.match(fnMatch[0], /if v_status = 'done' then\s*\n\s*return query select false, 'already-completed'::text;/);
+  assert.match(fnMatch[0], /exception when others then\s*\n\s*return query select false, 'invalid-date'::text;/);
+  assert.match(fnMatch[0], /if v_new_date < \(now\(\) at time zone 'America\/Denver'\)::date then\s*\n\s*return query select false, 'in-the-past'::text;/);
 });

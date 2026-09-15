@@ -118,10 +118,21 @@ const RESEND_DAYS: Record<string, number> = {
   "unresponded-lead": 1,
 };
 
+// Midnight in the business's own timezone (America/Denver), not the
+// Deno runtime's (UTC on Supabase Edge Functions). d.setHours(0,0,0,0)
+// on a plain `new Date()` sets UTC midnight, which during Utah business
+// hours (UTC-6/-7) is still the *previous* calendar day for roughly the
+// first 5-7 hours of the business day -- every "due today"/"overdue"
+// check below (jobs, quotes, invoices, warranties) depends on this being
+// the business's actual today, or every threshold skews by that many
+// hours right when the business is actually open.
 function todayAtMidnight(): Date {
-  const d = new Date();
-  d.setHours(0, 0, 0, 0);
-  return d;
+  const parts = new Intl.DateTimeFormat('en-US', {
+    timeZone: 'America/Denver', year: 'numeric', month: '2-digit', day: '2-digit',
+  }).formatToParts(new Date());
+  const map: Record<string, string> = {};
+  parts.forEach((p) => { map[p.type] = p.value; });
+  return new Date(`${map.year}-${map.month}-${map.day}T00:00:00`);
 }
 
 function daysBetween(a: Date, b: Date): number {

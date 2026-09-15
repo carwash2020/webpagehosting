@@ -200,10 +200,29 @@
 
   function formatJobDate(jobDate) {
     try {
-      return new Date(jobDate + 'T00:00:00').toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' });
+      // job_date is a plain calendar date (no time component) that
+      // already represents the business's own date -- it needs no
+      // timezone conversion, just needs to never be reinterpreted
+      // through one. Parsing as UTC and formatting as UTC keeps every
+      // component (year/month/day) exactly as stored, regardless of
+      // what timezone the browser or test runner happens to be in.
+      // (Parsing as local time then formatting with timeZone:
+      // 'America/Denver' -- the first attempt at fixing this -- was
+      // itself a bug: it double-converts, shifting the displayed date
+      // back a full day whenever the runtime's local zone is UTC.)
+      return new Date(jobDate + 'T00:00:00Z').toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric', timeZone: 'UTC' });
     } catch (e) {
       return jobDate;
     }
+  }
+
+  function todayDateStrBusinessTz() {
+    const parts = new Intl.DateTimeFormat('en-US', {
+      timeZone: 'America/Denver', year: 'numeric', month: '2-digit', day: '2-digit',
+    }).formatToParts(new Date());
+    const map = {};
+    parts.forEach(p => { map[p.type] = p.value; });
+    return map.year + '-' + map.month + '-' + map.day;
   }
 
   function renderJob(job, token) {
@@ -247,8 +266,7 @@
       document.getElementById('startRescheduleBtn').style.display = 'none';
       document.getElementById('startCancelBtn').style.display = 'none';
       document.getElementById('rescheduleStep').classList.add('is-active');
-      const todayStr = new Date().toISOString().slice(0, 10);
-      document.getElementById('newDateInput').min = todayStr;
+      document.getElementById('newDateInput').min = todayDateStrBusinessTz();
     });
     document.getElementById('cancelRescheduleBtn').addEventListener('click', function () {
       document.getElementById('rescheduleStep').classList.remove('is-active');
