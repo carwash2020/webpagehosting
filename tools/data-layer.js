@@ -61,6 +61,7 @@ const TH_KEYS = {
   contracts: 'th_contracts',
   notes: 'th_tracker_notes_v2', // bug fix (2026-08-20): was 'th_tracker_notes', the LEGACY migration-only key -- see the comment above this block
   clients: 'th_clients',
+  inventory: 'th_inventory',
 };
 
 // --- core read/write -------------------------------------------------------
@@ -293,6 +294,17 @@ function thAddPriceRefTombstone(id) {
   list = thPruneTombstones(list);
   list.push({ id, deletedAt: new Date().toISOString() });
   thWrite(TH_PRICE_REF_TOMBSTONES_KEY, list);
+}
+
+// Parts inventory (closes a real audit gap: Appliance Wiki only ever
+// tracked WHAT part fixes what, never what's actually on hand).
+const TH_INVENTORY_TOMBSTONES_KEY = 'th_inventory_tombstones';
+function thLoadInventoryTombstones() { return thRead(TH_INVENTORY_TOMBSTONES_KEY, []); }
+function thAddInventoryTombstone(id) {
+  let list = thLoadInventoryTombstones();
+  list = thPruneTombstones(list);
+  list.push({ id, deletedAt: new Date().toISOString() });
+  thWrite(TH_INVENTORY_TOMBSTONES_KEY, list);
 }
 
 const TH_TEMPLATE_TOMBSTONES_KEY = 'th_template_tombstones';

@@ -157,16 +157,45 @@ Deno.serve(async (req: Request) => {
   // after create-pos-charge already returned), so THIS is the only
   // place that charge ever gets logged.
   if (pi.metadata?.pos_charge === "true") {
-    const syncRes = await fetch(
-      `${SUPABASE_URL}/rest/v1/workspace_sync?code=eq.tripleh-workspace-2026&select=data`,
-      { headers: { apikey: SERVICE_ROLE_KEY, Authorization: `Bearer ${SERVICE_ROLE_KEY}` } },
+    // Real fix for a real race (closes a gap found in a full-repo
+    // audit): this used to be a plain check-then-act against the
+    // workspace_sync blob's own th_income_log array -- read the blob,
+    // scan the array in JS for this payment_intent_id, append only if
+    // absent. Two near-simultaneous webhook deliveries for the same
+    // event could both pass that scan before either write landed,
+    // double-logging the income and sending two receipt emails for one
+    // charge. A JSON array has no unique constraint of its own, so
+    // nothing could ever make that check atomic -- this table's real
+    // Postgres primary key is what makes the decision atomic instead:
+    // only one concurrent INSERT for the same payment_intent_id can
+    // ever win, and PostgREST's on_conflict=do-nothing (via the
+    // resolution=ignore-duplicates Prefer header) makes the loser a
+    // normal 201-with-no-row response rather than a 409 to handle.
+    const claimRes = await fetch(
+      `${SUPABASE_URL}/rest/v1/stripe_pos_charges_logged?on_conflict=payment_intent_id`,
+      {
+        method: "POST",
+        headers: {
+          apikey: SERVICE_ROLE_KEY,
+          Authorization: `Bearer ${SERVICE_ROLE_KEY}`,
+          "Content-Type": "application/json",
+          Prefer: "resolution=ignore-duplicates,return=representation",
+        },
+        body: JSON.stringify({ payment_intent_id: pi.id }),
+      },
     );
-    const syncRows = await syncRes.json();
-    if (syncRows.length) {
-      const blob = syncRows[0].data;
-      const incomeLog = JSON.parse(blob.th_income_log || "[]");
-      const alreadyLogged = incomeLog.some((entry: any) => entry.stripePaymentIntentId === pi.id);
-      if (!alreadyLogged) {
+    const claimRows = claimRes.ok ? await claimRes.json() : [];
+    const wonTheRace = claimRows.length > 0;
+
+    if (wonTheRace) {
+      const syncRes = await fetch(
+        `${SUPABASE_URL}/rest/v1/workspace_sync?code=eq.tripleh-workspace-2026&select=data`,
+        { headers: { apikey: SERVICE_ROLE_KEY, Authorization: `Bearer ${SERVICE_ROLE_KEY}` } },
+      );
+      const syncRows = await syncRes.json();
+      if (syncRows.length) {
+        const blob = syncRows[0].data;
+        const incomeLog = JSON.parse(blob.th_income_log || "[]");
         // toISOString() is always UTC -- the business runs on America/Denver
         // time, so a POS sale after ~6pm local would silently log against
         // tomorrow's date in Finance. Same fix already applied to

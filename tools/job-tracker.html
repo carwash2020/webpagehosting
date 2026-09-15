@@ -14,11 +14,12 @@
      background-image on html here too. -->
 <html lang="en" style="background-color:#0a0a0a;">
 <head>
-<script src="/tools/auth.js?v=0049ad84fb"></script>
+<script src="/tools/auth.js?v=2be5cce177"></script>
 <script>
   // Security gate -- redirect to login before this page's own content
-  // is meaningfully usable. See auth.js for why this exists (a single
-  // shared account keeping randoms out, not a multi-user system).
+  // is meaningfully usable. See auth.js for why this exists (a small,
+  // role-based multi-user system now -- account_roles/role_definitions,
+  // not a single shared account).
   requireAuth();
 </script>
 <link rel="manifest" href="/tools/manifest.json">
@@ -48,13 +49,13 @@
     if (saved === 'light') document.documentElement.setAttribute('data-theme', 'light');
   })();
 </script>
-<link rel="stylesheet" href="/styles.css?v=d68f435617">
+<link rel="stylesheet" href="/styles.css?v=d982e58baf">
 <link rel="stylesheet" href="/tools/styles-tools.css?v=a494344e8c">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.112.3/dist/umd/supabase.js" integrity="sha384-qafw21c/iciq0VXsi9FzkfoQv5I/V0iqE4lSNcKXPnW9/UTJLnv5CcN4FHxVLnKg" crossorigin="anonymous" defer></script>
-<script src="/tools/sync.js?v=5f8ddf47c9" defer></script>
-<script src="/tools/data-layer.js?v=3a0d57478c" defer></script>
+<script src="/tools/sync.js?v=aafdb1e6bf" defer></script>
+<script src="/tools/data-layer.js?v=c5d44f096e" defer></script>
 <script src="/tools/tools-effects.js?v=4cff99aa4a" defer></script>
-<script src="/tools/tools-dialogs.js?v=29e13e353f" defer></script>
+<script src="/tools/tools-dialogs.js?v=ce49ed8b35" defer></script>
 <script src="/tools/tools-media-sharing.js?v=0c229c9353" defer></script>
 <script src="/tools/tools-nav-pwa.js?v=9b16eefb86" defer></script>
 <script src="/tools/tools-tour.js?v=cf6652f5b1" defer></script>
@@ -405,6 +406,19 @@
       <div class="form-field"><label>Due Date</label><input type="date" id="jobDate"></div>
       <div class="form-field"><label>Status</label>
         <select id="jobStatus"><option value="not-started" selected>Not Started</option><option value="in-progress">In Progress</option><option value="done">Done</option></select>
+      </div>
+    </div>
+    <!-- Job duration tracking (closes a real audit gap: no way to sanity-
+         check quoted hours against how long a job actually took). Purely
+         a manual figure -- there's no start/stop timer here, matching
+         every other number in this tool (mileage, hours in Cost Lookup,
+         etc.) being typed in rather than auto-tracked. Optional and only
+         meaningful once the job is Done, same spirit as job.date already
+         doubling as the completion date for warranty math. -->
+    <div class="tool-form-row">
+      <div class="form-field">
+        <label>Actual Hours Worked <span class="tool-sub" style="font-weight:normal;">(optional -- fill in once done, to see $/hr on the job card and in Profitability)</span></label>
+        <input type="number" id="jobHoursWorked" step="0.25" min="0" placeholder="e.g. 2.5">
       </div>
     </div>
     <div class="tool-form-row">
@@ -865,6 +879,7 @@
       notes: document.getElementById('jobNotes').value.trim(),
       showOnCalendar: document.getElementById('jobShowOnCalendar').checked,
       referredBy: referredBy || '',
+      hoursWorked: parseFloat(document.getElementById('jobHoursWorked').value) || null,
     };
     const wasEditing = !!editingJobId;
     let newId = null;
@@ -888,7 +903,7 @@
       mirrorReferralCreated({ id: newId, client: clientName, phone, referredBy });
     }
     const savedJobId = wasEditing ? editingJobId : newId;
-    ['jobTitle','jobClient','jobPhone','jobAddress','jobClientEmail','jobNotes','jobReferredBy'].forEach(id => document.getElementById(id).value = '');
+    ['jobTitle','jobClient','jobPhone','jobAddress','jobClientEmail','jobNotes','jobReferredBy','jobHoursWorked'].forEach(id => document.getElementById(id).value = '');
     document.getElementById('jobDate').value = '';
     document.getElementById('jobPriority').value = 'medium';
     document.getElementById('jobStatus').value = 'not-started';
@@ -990,6 +1005,7 @@
     document.getElementById('jobNotes').value = job.notes || '';
     document.getElementById('jobShowOnCalendar').checked = !!job.showOnCalendar;
     document.getElementById('jobReferredBy').value = job.referredBy || '';
+    document.getElementById('jobHoursWorked').value = job.hoursWorked || '';
     updateFirstTimeNudge(job.client || '');
 
     document.getElementById('addJobBtn').textContent = 'Update Job';
@@ -1672,8 +1688,15 @@
     opts = opts || {};
     const isDone = job.status === 'done';
     const margin = isDone ? computeJobMargin(job, marginData.invoices, marginData.expenses, marginData.manualIncome) : null;
+    // $/hr (job-duration tracking, closing a real audit gap): revenue
+    // per actual hour worked, shown only when both a real margin AND a
+    // manually-entered hoursWorked exist -- a plain sanity-check figure
+    // against the original quote, not a payroll/time-tracking feature.
+    const effectiveRateHtml = (margin && margin.hasInvoice && job.hoursWorked)
+      ? ` <span class="badge" style="background:rgba(58,160,255,0.15); color:var(--blue-light);" title="Revenue ÷ actual hours worked">${money(margin.revenue / job.hoursWorked)}/hr</span>`
+      : '';
     const marginBadgeHtml = (margin && margin.hasInvoice)
-      ? `<span class="badge" style="background:${margin.margin >= 0 ? 'rgba(76,175,80,0.15)' : 'rgba(224,82,82,0.15)'}; color:${margin.margin >= 0 ? '#6fcf97' : '#e0807a'};">${margin.margin >= 0 ? '+' : ''}${money(margin.margin)}</span>`
+      ? `<span class="badge" style="background:${margin.margin >= 0 ? 'rgba(76,175,80,0.15)' : 'rgba(224,82,82,0.15)'}; color:${margin.margin >= 0 ? '#6fcf97' : '#e0807a'};">${margin.margin >= 0 ? '+' : ''}${money(margin.margin)}</span>${effectiveRateHtml}`
       : '';
     const dateDisplay = job.date ? new Date(job.date + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : 'No date set';
     return `
@@ -1704,7 +1727,7 @@
           <button class="small-btn ${job.showOnCalendar ? 'is-active' : ''}" onclick="toggleShowOnCalendar(${job.id})">${job.showOnCalendar ? '✓ On Calendar' : 'Show on Calendar'}</button>
           ${job.clientEmail ? (
             job.confirmationSentAt
-              ? `<button class="small-btn is-active" disabled title="Sent ${escapeHtml(new Date(job.confirmationSentAt).toLocaleString())}">✓ Confirmation Sent</button>`
+              ? `<button class="small-btn is-active" disabled title="Sent ${escapeAttr(new Date(job.confirmationSentAt).toLocaleString())}">✓ Confirmation Sent</button>`
               : `<button class="small-btn" onclick="sendJobConfirmationEmail(${job.id})">Send Confirmation Email</button>`
           ) : ''}
           <button class="small-btn" onclick="editJob(${job.id})">Edit</button>
@@ -1806,8 +1829,11 @@
     tableBody.innerHTML = tableJobs.map(job => {
       const isDone = job.status === 'done';
       const margin = isDone ? computeJobMargin(job, marginInvoices, marginExpenses, marginManualIncome) : null;
+      const effectiveRateCellHtml = (margin && margin.hasInvoice && job.hoursWorked)
+        ? ` <span class="badge" style="background:rgba(58,160,255,0.15); color:var(--blue-light);" title="Revenue ÷ actual hours worked">${money(margin.revenue / job.hoursWorked)}/hr</span>`
+        : '';
       const marginCellHtml = (margin && margin.hasInvoice)
-        ? `<span class="badge" style="background:${margin.margin >= 0 ? 'rgba(76,175,80,0.15)' : 'rgba(224,82,82,0.15)'}; color:${margin.margin >= 0 ? '#6fcf97' : '#e0807a'};">${margin.margin >= 0 ? '+' : ''}${money(margin.margin)}</span>`
+        ? `<span class="badge" style="background:${margin.margin >= 0 ? 'rgba(76,175,80,0.15)' : 'rgba(224,82,82,0.15)'}; color:${margin.margin >= 0 ? '#6fcf97' : '#e0807a'};">${margin.margin >= 0 ? '+' : ''}${money(margin.margin)}</span>${effectiveRateCellHtml}`
         : '&mdash;';
       const dateDisplay = job.date ? new Date(job.date + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '&mdash;';
       return `

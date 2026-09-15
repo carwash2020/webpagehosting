@@ -234,10 +234,34 @@
 // Bumped 2026-09-08 again: /styles.css changed again (W23 remainder --
 // reduced section-heading entrance motion + the diagram's node pulse;
 // portal pages use neither, but the file is shared/precached).
-const CACHE_NAME = 'th-portal-v67'; // precache-fingerprint:e8ab0986547c
+// Bumped (v62 -> v63): /portal/contracts.html added to PRECACHE_URLS --
+// the new async e-signature page for contracts (closing the gap where
+// quotes already had a full async approve/decline flow via the portal
+// but the three contract templates could only ever be signed in
+// person). Same reasoning as every prior bump: a new precached page
+// requires bumping this constant so it's actually fetched and cached
+// on the next activate, not silently missing until some other change
+// happens to bump it later.
+// Bumped (v63 -> v64): /styles.css changed (new .faq-plain-list/
+// .faq-plain-item rules for the public site's new landing-page FAQ
+// section, audit item #18) -- shared with the public site, precached
+// here too. Same reasoning as every prior bump above.
+// Bumped (v64 -> v65): portal/login.html changed -- its sign-in
+// disclaimer now links to the new /privacy.html (audit item #19), not
+// just Terms and Conditions. Precached under its bare path. Same
+// reasoning as every prior bump above.
+// Bumped (v65 -> v66): portal/login.html changed again -- its robots
+// meta tag was the one page in this whole app set to "index, follow"
+// (audit item #20: every other portal page is "noindex, nofollow",
+// and this one was also, wrongly, listed in sitemap.xml -- a real
+// gap, since a client-portal login page has no reason to be publicly
+// discoverable via search). Precached under its bare path. Same
+// reasoning as every prior bump above.
+const CACHE_NAME = 'th-portal-v68'; // precache-fingerprint:cd5fc02d9e53
 const PRECACHE_URLS = [
   '/portal/home.html', '/portal/dashboard.html', '/portal/jobs.html', '/portal/quotes.html',
   '/portal/work-orders.html', '/portal/settings.html', '/portal/login.html', '/portal/set-password.html',
+  '/portal/contracts.html',
   '/portal/manifest.json',
   '/portal/portal-app.css',
   '/portal/portal-app.js',

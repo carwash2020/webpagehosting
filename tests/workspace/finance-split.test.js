@@ -122,10 +122,13 @@ test('job-tracker.html\'s tab bar only has Jobs, Contacts, and Notes as in-page 
   assert.match(src, /href="\/tools\/finance\.html"/, 'should have a real link to the new Finance page');
 });
 
-test('finance.html has all 4 tabs and none of the Jobs/Contacts/Notes tabs', () => {
+test('finance.html has all 5 tabs and none of the Jobs/Contacts/Notes tabs', () => {
   const src = fs.readFileSync(FINANCE_PATH, 'utf8');
   const tabButtons = [...src.matchAll(/data-tab="(\w+)"/g)].map(m => m[1]);
-  assert.deepEqual(tabButtons, ['cost', 'profitability', 'income', 'expenses']);
+  // 'inventory' added for parts-on-hand tracking (closing a real audit
+  // gap: Appliance Wiki only ever tracked WHAT part fixes what, never
+  // what's actually in stock).
+  assert.deepEqual(tabButtons, ['cost', 'profitability', 'income', 'expenses', 'inventory']);
 });
 
 test('the two retired redirect stubs point at finance.html, not the old job-tracker.html location', () => {

@@ -1,13 +1,16 @@
 // ============================================================
 // Triple H Workspace — Auth Guard
 // ============================================================
-// This is a SECURITY GATE, not a multi-user system. There's exactly one
-// account (created manually in the Supabase dashboard, not signed up
-// through this app), and the point is to keep someone who stumbles onto
-// the sync code from being able to read or write real business data —
-// not to support separate logins for separate people. If that ever
-// becomes the actual need, this whole approach needs rethinking, not
-// just extending.
+// Stale comment fixed (audit item #22): this used to say "exactly one
+// account... not a multi-user system." That stopped being true once
+// account_roles/role_definitions shipped (Owner, Developer, Employee
+// -- distinct people, distinct real permissions, enforced server-side
+// via RLS, not just a client-side check) -- this file is now a
+// security gate for a small, real, role-based multi-user system, not
+// a single shared login. What hasn't changed: there's still no public
+// sign-up. Every account is created by hand in the Supabase dashboard
+// and assigned a role there -- this file only ever authenticates
+// whoever already has one of those accounts, it never creates one.
 //
 // Uses raw fetch() against Supabase's Auth REST endpoints rather than
 // the Supabase JS SDK, matching the existing pattern in sync.js rather

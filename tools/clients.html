@@ -14,11 +14,12 @@
      background-image on html here too. -->
 <html lang="en" style="background-color:#0a0a0a;">
 <head>
-<script src="/tools/auth.js?v=0049ad84fb"></script>
+<script src="/tools/auth.js?v=2be5cce177"></script>
 <script>
   // Security gate -- redirect to login before this page's own content
-  // is meaningfully usable. See auth.js for why this exists (a single
-  // shared account keeping randoms out, not a multi-user system).
+  // is meaningfully usable. See auth.js for why this exists (a small,
+  // role-based multi-user system now -- account_roles/role_definitions,
+  // not a single shared account).
   requireAuth();
 </script>
 <link rel="manifest" href="/tools/manifest.json">
@@ -44,14 +45,14 @@
     if (saved === 'light') document.documentElement.setAttribute('data-theme', 'light');
   })();
 </script>
-<link rel="stylesheet" href="/styles.css?v=d68f435617">
+<link rel="stylesheet" href="/styles.css?v=d982e58baf">
 <link rel="stylesheet" href="/tools/styles-tools.css?v=a494344e8c">
 <script src="/tools/tools-effects.js?v=4cff99aa4a" defer></script>
-<script src="/tools/tools-dialogs.js?v=29e13e353f" defer></script>
+<script src="/tools/tools-dialogs.js?v=ce49ed8b35" defer></script>
 <script src="/tools/tools-media-sharing.js?v=0c229c9353" defer></script>
 <script src="/tools/tools-nav-pwa.js?v=9b16eefb86" defer></script>
 <script src="/tools/tools-tour.js?v=cf6652f5b1" defer></script>
-<script src="/tools/sync.js?v=5f8ddf47c9" defer></script>
+<script src="/tools/sync.js?v=aafdb1e6bf" defer></script>
 <!-- dev-tools-shared.js (2026-09-03) -- the "?" info-modal system
      (openDevInfo + DEV_INFO), the dev-password gate used by "Send
      invite" below, and fetchWithTimeout. Split out of Dev Tools onto
@@ -60,7 +61,7 @@
      file dev-tools.html and site-content.html already load, rather
      than duplicating any of it -- these five panels' help-modal
      content already lives there from when they were built. -->
-<script src="/tools/dev-tools-shared.js?v=3356b9f30f" defer></script>
+<script src="/tools/dev-tools-shared.js?v=433f49c65b" defer></script>
 <!-- Client Lookup dispute-evidence export (2026-09-05), requested
      directly -- same jsPDF version/SRI hash/async loading pattern
      already proven on invoice-generator.html. -->
@@ -822,7 +823,7 @@
       return '<div class="dev-check-row" style="align-items:flex-start;"><div>' +
         '<div><strong>' + escapeHtml(a.name || '(no name)') + '</strong>' + internalFlag + '</div>' +
         '<div class="dev-check-detail">' + escapeHtml(a.email) + ' &middot; ' + (parts.join(', ') || 'nothing yet') + '</div>' +
-        '<button class="secondary-btn" style="margin-top:8px;" onclick="resendPortalInvite(\'' + escapeHtml(a.email) + '\', \'' + escapeHtml(a.name || '') + '\', this)">Resend invite</button>' +
+        '<button class="secondary-btn" style="margin-top:8px;" onclick="resendPortalInvite(\'' + escapeForInlineHandler(a.email) + '\', \'' + escapeForInlineHandler(a.name || '') + '\', this)">Resend invite</button>' +
         '</div></div>';
     }).join('');
   }

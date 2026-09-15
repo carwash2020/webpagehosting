@@ -62,7 +62,7 @@
 <link rel="preconnect" href="https://csvfqdjuobylgafgolho.supabase.co">
 <link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Anton&family=Archivo:wght@400..700&family=Newsreader:ital,opsz,wght@0,6..72,300..700;1,6..72,300..600&family=Oswald:wght@200..700&display=swap" onload="this.onload=null;this.rel='stylesheet'">
 <noscript><link href="https://fonts.googleapis.com/css2?family=Anton&family=Archivo:wght@400..700&family=Newsreader:ital,opsz,wght@0,6..72,300..700;1,6..72,300..600&family=Oswald:wght@200..700&display=swap" rel="stylesheet"></noscript>
-<link rel="stylesheet" href="styles.css?v=d68f435617">
+<link rel="stylesheet" href="styles.css?v=d982e58baf">
 <!-- Improvement roadmap (2026-09-09), tier 1: the hero background is a
      CSS background-image (see .hero in styles.css), so the browser
      doesn't discover it until CSS is parsed -- likely this page's LCP
@@ -140,7 +140,7 @@
 }
 </script>
 
-<script type="application/ld+json">
+<script type="application/ld+json" id="faqSchema">
 {
   "@context": "https://schema.org",
   "@type": "FAQPage",
@@ -332,7 +332,7 @@
         <svg class="theme-icon-light" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
         <span class="theme-toggle-label">Dark Mode</span>
       </button>
-      <button class="nav-toggle" aria-label="Toggle menu" aria-expanded="false" id="navToggle">
+      <button class="nav-toggle" aria-label="Toggle menu" aria-expanded="false" aria-controls="mobileMenu" id="navToggle">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
       </button>
     </div>
@@ -1335,6 +1335,27 @@
           </div>
         </div>
 
+        <!-- Marketing-source tracking (closes a real audit gap): a
+             general "how did you hear about us" category, separate
+             from the referral program's own name-based field right
+             below -- this shows up as a breakdown on the internal
+             Dashboard, the referral field feeds the $25 reward ledger. -->
+        <div class="form-row">
+          <div class="field full">
+            <label for="source">How did you hear about us? (optional)</label>
+            <select id="source" name="source">
+              <option value="" selected>Prefer not to say</option>
+              <option>Google Search</option>
+              <option>Yelp / Online Reviews</option>
+              <option>Referral (friend or family)</option>
+              <option>Repeat Customer</option>
+              <option>Saw Our Vehicle or Sign</option>
+              <option>Social Media</option>
+              <option>Other</option>
+            </select>
+          </div>
+        </div>
+
         <!-- Referral program (direct request, 2026-09-09): a $25 credit
              for whoever referred this customer, once this job is
              complete and paid -- see the FAQ entry and
@@ -1442,6 +1463,7 @@
           <li><a class="js-phone-link js-phone-text" href="tel:+14354141667">(435) 414-1667</a></li>
           <li><a class="js-email-link js-email-text" href="mailto:steve@triplehenterprisesllc.biz">steve@triplehenterprisesllc.biz</a></li>
           <li><a href="#" id="navTermsFooter">Terms &amp; Conditions</a></li>
+          <li><a href="/privacy.html">Privacy Policy</a></li>
         </ul>
       </div>
 
@@ -1975,15 +1997,34 @@
 
   const navToggle = document.getElementById('navToggle');
   const mobileMenu = document.getElementById('mobileMenu');
+  function closeMobileMenu(returnFocus) {
+    mobileMenu.classList.remove('is-open');
+    navToggle.setAttribute('aria-expanded', 'false');
+    if (returnFocus) navToggle.focus();
+  }
   navToggle.addEventListener('click', () => {
     const isOpen = mobileMenu.classList.toggle('is-open');
     navToggle.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
   });
   mobileMenu.querySelectorAll('a').forEach(a => {
     a.addEventListener('click', () => {
-      mobileMenu.classList.remove('is-open');
-      navToggle.setAttribute('aria-expanded', 'false');
+      closeMobileMenu(false);
     });
+  });
+  // Accessibility fix (audit item #9, a real gap found across all 16
+  // pages that carry this same hamburger menu): a keyboard user who
+  // opened the menu had no way to close it without a mouse click
+  // landing outside it, and Escape -- the standard way to dismiss any
+  // disclosure widget -- did nothing at all. Focus is returned to the
+  // toggle button on both paths so a keyboard user ends up exactly
+  // where they started, not stranded with focus on a now-hidden menu.
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && mobileMenu.classList.contains('is-open')) closeMobileMenu(true);
+  });
+  document.addEventListener('click', (e) => {
+    if (!mobileMenu.classList.contains('is-open')) return;
+    if (mobileMenu.contains(e.target) || navToggle.contains(e.target)) return;
+    closeMobileMenu(false);
   });
 
   // ---------- theme toggle (desktop button + mobile switch, kept in sync) ----------
@@ -2218,7 +2259,7 @@
   }
 
   setupSimpleModal('galleryOverlay', 'galleryClose', ['navGalleryDesktop','navGalleryMobile','navGalleryFooter','recentWorkSeeAll']);
-  setupSimpleModal('faqOverlay', 'faqClose', ['navFaqDesktop','navFaqMobile','navFaqFooter']);
+  const faqModal = setupSimpleModal('faqOverlay', 'faqClose', ['navFaqDesktop','navFaqMobile','navFaqFooter']);
   const termsModal = setupSimpleModal('termsOverlay', 'termsClose', ['navTermsFooter']);
 
   // Allow other pages (e.g. the city landing pages) to link straight to
@@ -2229,6 +2270,12 @@
   // why this path never got the focus trap when it was first added.
   if (window.location.hash === '#terms' && termsModal) {
     termsModal.open();
+  }
+  // Same pattern, added for the landing pages' new condensed FAQ
+  // section (audit item #18) -- its own "See all FAQs" link points
+  // here instead of duplicating this modal on every page.
+  if (window.location.hash === '#faq' && faqModal) {
+    faqModal.open();
   }
 
   // email modal
@@ -2322,6 +2369,27 @@
   const status = document.getElementById('formStatus');
   const submitBtn = document.getElementById('formSubmitBtn');
 
+  // Real gap found in a full-repo audit: a slow/flaky connection
+  // retrying the same POST, or a visitor reloading the page and
+  // resubmitting before realizing their first attempt actually worked,
+  // both used to produce a second th_leads row -- and a duplicate
+  // insert means a duplicate "new lead" email to Steve/Connor (a
+  // database trigger fires on every insert). This id persists in
+  // sessionStorage per tab (survives a reload within the same tab,
+  // unlike an in-memory variable) and is NOT regenerated until a
+  // submission actually succeeds -- so a real customer submitting two
+  // DIFFERENT leads later in the same tab session still gets a fresh
+  // id and is never blocked.
+  const LEAD_REQUEST_ID_KEY = 'th_lead_request_id';
+  function getLeadRequestId() {
+    let id = sessionStorage.getItem(LEAD_REQUEST_ID_KEY);
+    if (!id) {
+      id = (typeof crypto !== 'undefined' && crypto.randomUUID) ? crypto.randomUUID() : (Date.now() + '-' + Math.random().toString(16).slice(2));
+      sessionStorage.setItem(LEAD_REQUEST_ID_KEY, id);
+    }
+    return id;
+  }
+
   // Referral link auto-fill: an existing customer's own "?ref=Their Name"
   // link pre-fills "Who referred you?" so the new customer doesn't have
   // to remember or type it themselves. Never overwrites a value someone
@@ -2373,12 +2441,22 @@
     status.classList.remove('is-error', 'is-success');
     status.classList.add('is-visible');
 
-    fetch(LEADS_SUPABASE_URL + '/rest/v1/th_leads', {
+    // on_conflict + ignore-duplicates: the same atomic idempotency
+    // pattern already proven for the Stripe POS double-log race fix
+    // (stripe-webhook-index.ts) -- a real Postgres unique index is the
+    // only thing that can atomically decide "has this exact submission
+    // attempt already landed," which a plain check-then-act never
+    // could. A duplicate resolves as a normal, successful, empty
+    // response rather than an error -- exactly right here, since a
+    // resubmitted duplicate should look like success to the visitor,
+    // just without inserting a second row or firing a second email.
+    fetch(LEADS_SUPABASE_URL + '/rest/v1/th_leads?on_conflict=client_request_id', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
         'apikey': LEADS_SUPABASE_ANON_KEY,
         'Authorization': 'Bearer ' + LEADS_SUPABASE_ANON_KEY,
+        'Prefer': 'resolution=ignore-duplicates',
       },
       body: JSON.stringify([{
         name: formData.get('name'),
@@ -2389,6 +2467,8 @@
         preferred_time: formData.get('time'),
         details: formData.get('details'),
         referred_by: formData.get('referredBy') || null,
+        source: formData.get('source') || null,
+        client_request_id: getLeadRequestId(),
       }]),
     })
     .then((response) => {
@@ -2400,6 +2480,9 @@
           gtag('event', 'lead_form_submitted', { service: formData.get('service') || '' });
         }
         form.reset();
+        // A genuinely new lead submitted later in this same tab
+        // session must get its own id, not collide with this one.
+        sessionStorage.removeItem(LEAD_REQUEST_ID_KEY);
       } else {
         throw new Error('Form submission failed');
       }
@@ -2953,6 +3036,28 @@
         // Re-bind the accordion's click handlers -- the ones attached
         // at page load belonged to the static elements just replaced.
         if (typeof bindFaqAccordion === 'function') bindFaqAccordion();
+
+        // Closes a real audit gap: the FAQPage JSON-LD in <head> used to
+        // stay hardcoded regardless of this fetch, so an FAQ edited via
+        // Dev Tools' CMS updated what a visitor sees but NOT what Google
+        // indexes -- Google's FAQ rich-result guidelines require the
+        // schema to match visible page content, and a mismatch risks
+        // losing the rich snippet or a manual-action flag. Rebuilt from
+        // the exact same `rows` the visible accordion just rendered, so
+        // the two can never drift apart again -- not a second,
+        // independently-fetched copy.
+        const faqSchemaEl = document.getElementById('faqSchema');
+        if (faqSchemaEl) {
+          faqSchemaEl.textContent = JSON.stringify({
+            '@context': 'https://schema.org',
+            '@type': 'FAQPage',
+            mainEntity: rows.map(r => ({
+              '@type': 'Question',
+              name: r.question,
+              acceptedAnswer: { '@type': 'Answer', text: r.answer },
+            })),
+          });
+        }
       })
       .catch(() => { /* static fallback content already shown is correct */ });
   })();

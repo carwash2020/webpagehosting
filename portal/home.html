@@ -72,7 +72,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Anton&family=Archivo:wght@400..700&family=Newsreader:ital,opsz,wght@0,6..72,300..700;1,6..72,300..600&family=Oswald:wght@200..700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="/styles.css?v=d68f435617">
+<link rel="stylesheet" href="/styles.css?v=d982e58baf">
 <link rel="stylesheet" href="/portal/portal-app.css?v=202609071900">
 <style>
   /* iOS Safari zoom-on-focus fix (2026-09-05), same root cause and
@@ -315,6 +315,17 @@
   </div>
 </div>
 
+<!-- Contracts (added alongside the async e-signature work): not one of
+     the four dynamic "Your Account" cards above -- that grid is
+     hard-coded to repeat(4, 1fr) on desktop, and a 5th card would sit
+     alone in an otherwise-empty row rather than filling it. A pending
+     contract already surfaces in the "Needs Your Attention" banner
+     above; this plain link is just how a client with no pending
+     contract still reaches their contract history. -->
+<p style="text-align:center; margin: 4px 0 26px;">
+  <a href="/portal/contracts.html" style="color:var(--text-dim); font-size:13px; text-decoration:underline;">View your contracts</a>
+</p>
+
 <script>
   const { createClient } = supabase;
   const client = createClient(
@@ -336,11 +347,12 @@
   // table restricts a signed-in client to their own email, so these
   // are inherently scoped without any client-side filtering.
   async function loadSummary() {
-    const [invoices, quotes, jobs, requests] = await Promise.all([
+    const [invoices, quotes, jobs, requests, contracts] = await Promise.all([
       client.from('client_portal_invoices').select('id,total,paid'),
       client.from('client_portal_quotes').select('id,status'),
       client.from('client_portal_jobs').select('id'),
       client.from('client_portal_work_orders').select('id,title,status,scheduled_at'),
+      client.from('client_portal_contracts').select('id,status'),
     ]);
     // A Supabase-js query resolves (never rejects) even when it fails --
     // the failure shows up as `.error`, not a thrown exception. Without
@@ -355,6 +367,7 @@
       quotes: quotes.data || [],
       jobs: jobs.data || [],
       requests: requests.data || [],
+      contracts: contracts.data || [],
     };
   }
 
@@ -441,6 +454,21 @@
           : `${pendingQuotes.length} estimates waiting for your approval`,
         href: '/portal/quotes.html',
         action: 'Review',
+        icon: '<path d="M6 3.5h7.5L18 8v12.5H6z"/><path d="M13.5 3.5V8H18"/><path d="M9 12.5h6M9 16h6"/>',
+      });
+    }
+
+    // Contracts (added to close a real gap: quotes already surfaced
+    // here, but the three contract templates could only ever be signed
+    // in person before this session's async e-signature work).
+    const pendingContracts = (s.contracts || []).filter(c => (c.status || 'pending') === 'pending');
+    if (pendingContracts.length) {
+      rows.push({
+        text: pendingContracts.length === 1
+          ? '1 contract waiting for your signature'
+          : `${pendingContracts.length} contracts waiting for your signature`,
+        href: '/portal/contracts.html',
+        action: 'Review & Sign',
         icon: '<path d="M6 3.5h7.5L18 8v12.5H6z"/><path d="M13.5 3.5V8H18"/><path d="M9 12.5h6M9 16h6"/>',
       });
     }

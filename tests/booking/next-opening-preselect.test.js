@@ -43,23 +43,25 @@ async function waitForCondition(conditionFn, { timeout = 5000, interval = 20 } =
   throw new Error('waitForCondition: condition never became true within ' + timeout + 'ms');
 }
 
+// Real bug found in this test itself, not the app: a hardcoded literal
+// date ('2026-09-14') goes stale the moment real wall-clock "today"
+// catches up to and passes it -- every weekday has bookable hours (see
+// business-hours.js's HOURS_BY_WEEKDAY, no fully-closed day), so a date
+// a few days out from whenever this suite actually runs is always
+// valid, where a fixed calendar date eventually isn't. Computed via the
+// app's own timezone-correct helpers (not a plain `new Date()` +
+// setDate(), which could land on the wrong side of a business-timezone
+// midnight near a UTC day boundary), through a disposable window
+// instance used only to reach them.
+const TEST_DATE = (() => {
+  const w = loadPage('https://www.triplehenterprisesllc.biz/booking.html');
+  return w.addDaysToDateStr(w.todayDateStrInBusinessTz(), 3);
+})();
+
 const NO_BOOKINGS_FETCH = async (url) => {
   if (String(url).includes('get_booking_availability')) return { ok: true, json: async () => ([]) };
   return { ok: false };
 };
-
-// A fixed calendar date breaks the moment it rolls into the past --
-// DAYS_AHEAD_SHOWN (business-hours.js) only shows today..today+14, so a
-// hardcoded date here would silently start failing every day once it
-// aged out of that window. Picking a few days out from "now" keeps this
-// test valid indefinitely without depending on the real booking system's
-// current availability.
-function futureDateStr(daysAhead) {
-  const d = new Date();
-  d.setDate(d.getDate() + daysAhead);
-  return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
-}
-const TEST_DATE = futureDateStr(5);
 
 test('a ?service=X&date=Y link lands directly on that service and date, skipping back to step 1', async () => {
   const window = loadPage(`https://www.triplehenterprisesllc.biz/booking.html?service=inspection&date=${TEST_DATE}`, NO_BOOKINGS_FETCH);

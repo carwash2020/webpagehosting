@@ -14,11 +14,12 @@
      background-image on html here too. -->
 <html lang="en" style="background-color:#0a0a0a;">
 <head>
-<script src="/tools/auth.js?v=0049ad84fb"></script>
+<script src="/tools/auth.js?v=2be5cce177"></script>
 <script>
   // Security gate -- redirect to login before this page's own content
-  // is meaningfully usable. See auth.js for why this exists (a single
-  // shared account keeping randoms out, not a multi-user system).
+  // is meaningfully usable. See auth.js for why this exists (a small,
+  // role-based multi-user system now -- account_roles/role_definitions,
+  // not a single shared account).
   requireAuth();
 </script>
 <link rel="manifest" href="/tools/manifest.json">
@@ -48,13 +49,13 @@
     if (saved === 'light') document.documentElement.setAttribute('data-theme', 'light');
   })();
 </script>
-<link rel="stylesheet" href="/styles.css?v=d68f435617">
+<link rel="stylesheet" href="/styles.css?v=d982e58baf">
 <link rel="stylesheet" href="/tools/styles-tools.css?v=a494344e8c">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.112.3/dist/umd/supabase.js" integrity="sha384-qafw21c/iciq0VXsi9FzkfoQv5I/V0iqE4lSNcKXPnW9/UTJLnv5CcN4FHxVLnKg" crossorigin="anonymous" defer></script>
-<script src="/tools/sync.js?v=5f8ddf47c9" defer></script>
-<script src="/tools/data-layer.js?v=3a0d57478c" defer></script>
+<script src="/tools/sync.js?v=aafdb1e6bf" defer></script>
+<script src="/tools/data-layer.js?v=c5d44f096e" defer></script>
 <script src="/tools/tools-effects.js?v=4cff99aa4a" defer></script>
-<script src="/tools/tools-dialogs.js?v=29e13e353f" defer></script>
+<script src="/tools/tools-dialogs.js?v=ce49ed8b35" defer></script>
 <script src="/tools/tools-media-sharing.js?v=0c229c9353" defer></script>
 <script src="/tools/tools-nav-pwa.js?v=9b16eefb86" defer></script>
 <script src="/tools/tools-tour.js?v=cf6652f5b1" defer></script>
@@ -474,6 +475,13 @@
   </div>
   <div class="form-section">
     <h3>Recent Quotes</h3>
+    <!-- Conversion rate metric (audit item #17): quotes already track
+         their own status ('converted' once turned into an invoice, via
+         the exact same field renderQuoteLog()'s status badge already
+         reads below) -- this had never been rolled up into a single
+         rate anywhere, even though it's a real, useful measure of how
+         often a quote actually turns into paid work. -->
+    <p class="contract-log-meta" id="quoteConversionStat" style="margin:0 0 14px;"></p>
     <input type="text" id="quoteLogSearch" placeholder="Search by client or quote #..." style="width:100%; box-sizing:border-box; margin-bottom:14px;" oninput="debouncedCall('quoteLogSearch', renderQuoteLog)">
     <div id="quoteLogList"></div>
   </div>
@@ -1764,6 +1772,19 @@
     const searchTerm = (document.getElementById('quoteLogSearch')?.value || '').trim().toLowerCase();
     let log = [...loadQuoteLog()].sort((a, b) => b.id - a.id);
     if (pendingDeleteQuoteIds.size > 0) log = log.filter(q => !pendingDeleteQuoteIds.has(q.id));
+    // Conversion rate -- computed over the full log (before the search
+    // filter below narrows what's actually displayed), so searching for
+    // one client's name never changes the rate shown above the list.
+    const statEl = document.getElementById('quoteConversionStat');
+    if (statEl) {
+      if (log.length === 0) {
+        statEl.textContent = '';
+      } else {
+        const convertedCount = log.filter(q => q.status === 'converted').length;
+        const pct = Math.round((convertedCount / log.length) * 100);
+        statEl.textContent = `${convertedCount} of ${log.length} quote${log.length === 1 ? '' : 's'} (${pct}%) converted to an invoice`;
+      }
+    }
     if (searchTerm) {
       log = log.filter(q =>
         (q.clientName || '').toLowerCase().includes(searchTerm) ||
@@ -2073,7 +2094,7 @@
   function populateKnownContactsList() {
     const list = document.getElementById('knownContactsList');
     if (!list) return;
-    list.innerHTML = loadContactsForAutofill().map(c => `<option value="${escapeHtml(c.name)}">`).join('');
+    list.innerHTML = loadContactsForAutofill().map(c => `<option value="${escapeAttr(c.name)}">`).join('');
   }
   // Push 6 (2026-08-20, structural item #35): selecting a job from the
   // "Link to Job" dropdown previously did nothing until save time --
