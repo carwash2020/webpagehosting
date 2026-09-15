@@ -848,7 +848,13 @@
     const resultEl = document.getElementById('inviteAnyResult');
     const email = emailEl.value.trim().toLowerCase();
 
-    if (!email || !email.includes('@')) {
+    // A bare .includes('@') check let malformed addresses (a@b, test@,
+    // @x) through to the send-invite edge function, which only fails
+    // once Supabase's own auth layer rejects it -- surfacing a raw,
+    // confusing "Could not generate invite link" error instead of being
+    // caught here with a clear message. Matches the same basic shape
+    // real browsers require for type="email" inputs.
+    if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
       resultEl.innerHTML = '<div class="empty-state-small is-warning"><svg class="th-icon" aria-hidden="true"><use href="#icon-warning" xlink:href="#icon-warning"></use></svg>Enter a real email address.</div>';
       return;
     }
