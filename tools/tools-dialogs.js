@@ -136,13 +136,16 @@ function money(v) { return '$' + (v || 0).toFixed(2).replace(/\d(?=(\d{3})+\.)/g
 // problem for the public booking flow (todayDateStrInBusinessTz()), but
 // isn't loaded on these internal tool pages -- this is the same Intl-
 // based approach, in the one script every tool page already shares.
-function todayDateStrBusinessTz() {
+function dateStrBusinessTz(date) {
   const parts = new Intl.DateTimeFormat('en-US', {
     timeZone: 'America/Denver', year: 'numeric', month: '2-digit', day: '2-digit',
-  }).formatToParts(new Date());
+  }).formatToParts(date);
   const map = {};
   parts.forEach(p => { map[p.type] = p.value; });
   return map.year + '-' + map.month + '-' + map.day;
+}
+function todayDateStrBusinessTz() {
+  return dateStrBusinessTz(new Date());
 }
 
 // Shared HTML-escaping helper -- previously defined 9 separate times

@@ -54,7 +54,7 @@
 <script src="/tools/sync.js?v=5f8ddf47c9" defer></script>
 <script src="/tools/data-layer.js?v=3a0d57478c" defer></script>
 <script src="/tools/tools-effects.js?v=4cff99aa4a" defer></script>
-<script src="/tools/tools-dialogs.js?v=abfabb94b9" defer></script>
+<script src="/tools/tools-dialogs.js?v=29e13e353f" defer></script>
 <script src="/tools/tools-media-sharing.js?v=0c229c9353" defer></script>
 <script src="/tools/tools-nav-pwa.js?v=9b16eefb86" defer></script>
 <script src="/tools/tools-tour.js?v=cf6652f5b1" defer></script>
@@ -478,12 +478,18 @@
   }
 
   function calculateCost() {
-    const hours = parseFloat(document.getElementById('hours').value) || 0;
-    const rate = parseFloat(document.getElementById('rate').value) || 0;
-    const parts = parseFloat(document.getElementById('parts').value) || 0;
-    const discount = parseFloat(document.getElementById('discount').value) || 0;
+    // Clamped to non-negative -- the inputs' min="0" attribute is only
+    // an HTML hint (nothing here enforces it), and there was previously
+    // no clamp at all: a negative value silently produced a negative
+    // labor/parts cost, and (via savePriceReference() below) could get
+    // saved as a reusable price reference that later feeds a real
+    // invoice calculation.
+    const hours = Math.max(0, parseFloat(document.getElementById('hours').value) || 0);
+    const rate = Math.max(0, parseFloat(document.getElementById('rate').value) || 0);
+    const parts = Math.max(0, parseFloat(document.getElementById('parts').value) || 0);
+    const discount = Math.max(0, parseFloat(document.getElementById('discount').value) || 0);
     const isFirstTime = document.getElementById('firstTimeClient').checked;
-    const taxRate = parseFloat(document.getElementById('taxRate').value) || 0;
+    const taxRate = Math.min(100, Math.max(0, parseFloat(document.getElementById('taxRate').value) || 0));
     const taxLabor = document.getElementById('taxLabor').checked;
     const taxParts = document.getElementById('taxParts').checked;
 
@@ -524,8 +530,8 @@
   function savePriceReference() {
     const label = prompt('Name this job type (e.g. "Dishwasher install", "Drywall patch - small"):');
     if (!label || !label.trim()) return;
-    const hours = parseFloat(document.getElementById('hours').value) || 0;
-    const rate = parseFloat(document.getElementById('rate').value) || 0;
+    const hours = Math.max(0, parseFloat(document.getElementById('hours').value) || 0);
+    const rate = Math.max(0, parseFloat(document.getElementById('rate').value) || 0);
     const list = loadPriceReferences();
     list.push({ id: Date.now(), label: label.trim(), hours, rate });
     savePriceReferences(list);
@@ -1175,8 +1181,8 @@
         return;
       }
       loadTaxSettings();
-      document.getElementById('entryDate').value = new Date().toISOString().slice(0, 10);
-      document.getElementById('incomeDate').value = new Date().toISOString().slice(0, 10);
+      document.getElementById('entryDate').value = todayDateStrBusinessTz();
+      document.getElementById('incomeDate').value = todayDateStrBusinessTz();
       loadMileageRate();
       calculateCost();
       populateJobRefOptions();

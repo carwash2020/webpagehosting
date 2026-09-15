@@ -167,9 +167,18 @@ Deno.serve(async (req: Request) => {
       const incomeLog = JSON.parse(blob.th_income_log || "[]");
       const alreadyLogged = incomeLog.some((entry: any) => entry.stripePaymentIntentId === pi.id);
       if (!alreadyLogged) {
+        // toISOString() is always UTC -- the business runs on America/Denver
+        // time, so a POS sale after ~6pm local would silently log against
+        // tomorrow's date in Finance. Same fix already applied to
+        // create-pos-charge-index.ts's own income-log entry.
+        const whParts = new Intl.DateTimeFormat("en-US", {
+          timeZone: "America/Denver", year: "numeric", month: "2-digit", day: "2-digit",
+        }).formatToParts(new Date());
+        const whDateMap: Record<string, string> = {};
+        whParts.forEach((p) => { whDateMap[p.type] = p.value; });
         incomeLog.push({
           id: Date.now(),
-          date: new Date().toISOString().slice(0, 10),
+          date: `${whDateMap.year}-${whDateMap.month}-${whDateMap.day}`,
           desc: pi.metadata?.pos_description || pi.description || "POS sale",
           amount: pi.metadata?.pos_amount ? Number(pi.metadata.pos_amount) : pi.amount / 100,
           source: pi.metadata?.pos_client_email || "",
