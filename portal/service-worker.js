@@ -234,7 +234,7 @@
 // Bumped 2026-09-08 again: /styles.css changed again (W23 remainder --
 // reduced section-heading entrance motion + the diagram's node pulse;
 // portal pages use neither, but the file is shared/precached).
-const CACHE_NAME = 'th-portal-v63'; // precache-fingerprint:f8560e50d9dd
+const CACHE_NAME = 'th-portal-v64'; // precache-fingerprint:d6f2ab5a888e
 const PRECACHE_URLS = [
   '/portal/home.html', '/portal/dashboard.html', '/portal/jobs.html', '/portal/quotes.html',
   '/portal/work-orders.html', '/portal/settings.html', '/portal/login.html', '/portal/set-password.html',
