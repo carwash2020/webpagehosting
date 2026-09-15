@@ -179,3 +179,17 @@ test('clients can manage their own push subscription, additive to (not replacing
   // with that expectation.
   assert.match(SEND_PUSH, /push_subscriptions\?user_id=eq/);
 });
+
+// ---- todayAtMidnight() timezone fix (2026-09-15) ----
+// Every "due today"/"overdue" notification category (jobs, quotes,
+// invoices, warranties) depends on todayAtMidnight() -- a plain
+// `new Date(); d.setHours(0,0,0,0)` sets UTC midnight on Supabase's
+// Deno runtime, not business-local midnight, silently skewing every
+// threshold for the first several hours of each Utah business day.
+
+test('todayAtMidnight() computes midnight in the business timezone (America/Denver), not the Deno runtime UTC default', () => {
+  const fnMatch = SEND_PUSH.match(/function todayAtMidnight\(\)[\s\S]*?\n\}/);
+  assert.ok(fnMatch, 'expected to isolate todayAtMidnight()');
+  assert.match(fnMatch[0], /timeZone: 'America\/Denver'/);
+  assert.doesNotMatch(fnMatch[0], /setHours\(0, ?0, ?0, ?0\)/, 'must not fall back to the UTC-based setHours(0,0,0,0) approach');
+});
