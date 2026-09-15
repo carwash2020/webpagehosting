@@ -210,13 +210,35 @@ than the finding's title alone.
 ## Known, accepted gaps (not oversights)
 
 - **Leaked-password protection is off** in Supabase Auth. This is a
-  dashboard-only toggle, not something scriptable from this repo or
-  the Supabase API -- flip it in the Supabase dashboard under
-  Authentication settings if this ever matters more than it does for
-  a 2-account system.
-- **No MFA enforcement** on the two Supabase Auth accounts. Same
-  reasoning as above -- worth reconsidering if this ever grows past a
-  trusted two-person team.
+  dashboard-only toggle (Authentication -> Providers -> Email ->
+  "Prevent use of leaked passwords") -- confirmed directly, via the
+  Supabase MCP tools available to this repo, that there is no
+  migration, edge function, or API call that can flip it from code;
+  it has to be done by hand in the dashboard.
+
+  **Re-flagged (2026-09), no longer just a "2-account system" call**:
+  the reasoning this gap was originally accepted under is stale. The
+  client portal (see `docs/CLIENT-PORTAL.md`) now has one real
+  Supabase Auth account per client who's ever logged in to view a
+  quote, contract, invoice, or job -- a growing, client-facing
+  population, not the original two internal accounts. Leaked-password
+  protection costs nothing (no UX change for anyone with a password
+  that isn't already compromised in a public breach) and protects real
+  clients who reuse passwords across sites, exactly the population
+  most exposed to credential-stuffing. **This should be turned on now,
+  not deferred further** -- flip it in the Supabase dashboard under
+  Authentication -> Providers -> Email.
+- **No MFA enforcement**, on either the internal accounts or client
+  portal accounts. Also a dashboard-only setting (Authentication ->
+  MFA, which controls whether TOTP/phone factors are even available to
+  enroll at all) -- confirmed the same way, no scriptable path from
+  this repo. Building actual enrollment and step-up-during-login UI on
+  top of that is a separate, much larger feature decision (new
+  screens, a QR-enrollment flow, backup codes, a challenge/verify step
+  added to every sign-in), not a quick fix -- left as a deliberate,
+  accepted gap for now, but worth a real product decision once the
+  client-portal population above is large enough that a single
+  compromised password would matter more than it does today.
 - **`escapeHtml()` (in `tools-dialogs.js`) is only safe for text-node
   content**, not HTML-attribute-value contexts -- it escapes `&`,
   `<`, `>` but not quotes, since quotes aren't special in the context
