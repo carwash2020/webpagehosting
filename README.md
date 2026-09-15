@@ -1072,3 +1072,111 @@ style of the existing `manage-booking.test.js`) and
 static-source checks on the migration and both edge functions).
 1,641/1,641 tests passing, all consistency/undefined-vars/link/visual-
 snapshot checks clean.
+
+## What changed, 2026-09-15 -- structured-data pass for AI answer engines (GEO/AEO), plus a differentiated robots.txt
+
+Prompted by a research request into getting Triple H recommended by AI
+answer engines (ChatGPT, Perplexity, Google AI Overviews/Gemini,
+Claude) and voice assistants (Siri, Google Assistant, Bixby, Alexa).
+The research itself (two background agents, web-search-grounded) found
+these systems don't share one index -- Yelp is disproportionately
+important across ChatGPT/Perplexity/Siri/Alexa, GBP drives Google's own
+AI surfaces, and Princeton's GEO paper (arXiv:2311.09735) found
+schema markup is "hygiene," not the main citation lever, with
+statistics/quotes/authoritative citations in visible content doing
+most of the work. Full findings and the prioritized action list
+(most of which requires the business owner logging into Google
+Business Profile/Yelp/Apple Business Connect/Angi/BBB/Bing Places
+directly -- not something fixable from this repo) were handed off in
+chat, not written to a file here. This entry covers only the pieces
+that were fixable directly in the repo.
+
+**Real gap found and fixed:** the 7 city landing pages
+(`handyman-hurricane-ut.html` and the rest) had visible on-page FAQ
+content with zero matching `FAQPage` JSON-LD -- only the homepage and
+the 5 service pages had it. Fixed by adding real `FAQPage` schema built
+from each page's own actual visible FAQ text (not invented content),
+preserving each city's real trip-fee answer (standard 15-mile-radius
+wording for the 5 standard-coverage cities, the distinct by-request
+wording already on the page for Cedar City and Mesquite). Same 7 pages
+also gained a `Service` schema block (`serviceType`, `provider`,
+`areaServed` matching each page's existing `areaServed` values,
+`hasOfferCatalog` reusing the same 6 service offerings already listed
+on the homepage's own schema) -- per the research, this is what lets an
+answer engine match "who does appliance repair in Hurricane" to a
+specific service+location pairing, which the existing
+`HomeAndConstructionBusiness`-only schema didn't explicitly encode.
+
+**Second gap found and fixed:** the 5 service pages
+(`washer-dryer-repair.html`, `plumbing-repairs.html`,
+`drywall-painting.html`, `handyman-repairs.html`,
+`assembly-installation.html`) already had `Service` schema but were
+missing `FAQPage` despite each having its own real, distinct visible
+FAQ section -- fixed the same way, using each page's actual FAQ text.
+
+**BreadcrumbList added site-wide** to every page that didn't already
+have one and isn't the homepage itself: all 7 city pages, all 5 service
+pages, `about.html`, `our-work.html`, `terms.html`, `blog/index.html`,
+and all 6 individual blog posts (Home → Blog → post title for posts;
+Home → page name for the rest). Cheap, low-risk structured-data hygiene
+per the research -- clarifies site hierarchy for crawlers/engines, no
+visible change to the rendered page.
+
+**`robots.txt` gained explicit per-crawler rules**, splitting AI bots
+into two groups rather than leaving them under the blanket `User-agent:
+*` rule: live-retrieval/answer bots that ground an actual chat response
+(`OAI-SearchBot`, `ChatGPT-User`, `PerplexityBot`, `Claude-SearchBot`,
+`Claude-User`) are explicitly allowed, since being cited by these is
+the whole point; bulk AI-training crawlers (`GPTBot`, `CCBot`,
+`Google-Extended`) are disallowed -- this doesn't remove the site from
+Google/Bing search or from Google's own AI Overviews (ordinary
+Googlebot/Bingbot crawling, which those actually depend on, is
+untouched by this), it only opts the site out of being scraped
+wholesale into a model's training set, which has no bearing on whether
+the business gets recommended in an answer. The research flagged this
+specific split as a defensible judgment call, not a hard best practice
+-- allowing everything would also have been reasonable for a small
+business with no proprietary content to protect.
+
+**`llms.txt` was deliberately NOT added** -- the research found
+adoption is still only ~10% of domains after 18 months, AI crawlers
+essentially don't fetch it in practice (0.1% of bot traffic in one
+90-day study), and Google has explicitly said it doesn't support it.
+Not worth the effort right now; revisit if that changes.
+
+**Explicitly NOT touched, and why:** `AggregateRating` schema was not
+expanded/added anywhere new -- the research flagged that re-publishing
+third-party (Google/Yelp) review scores as first-party `AggregateRating`
+schema violates both Google's and the platforms' own guidelines, and
+with only ~7 Google reviews there isn't a healthy count to mark up yet
+regardless. `speakable` schema was also skipped -- low priority, unclear
+relevance to LLM chat answer engines specifically (it's mainly a Google
+Assistant voice-readback feature). Content-quality rewrites (leading
+with stats/quotes, an ongoing freshness cadence) were identified as the
+single highest-evidence lever in the research but were deliberately
+left for a future session with the user's direction, rather than
+rewriting live marketing copy unprompted.
+
+Verified before committing: every new/existing JSON-LD block across all
+21 changed HTML files parses as valid JSON (scripted check, not
+eyeballed), div-tag balance holds on every changed file,
+`npm run check-consistency` and `scripts/check-links.py` both pass
+clean, and the existing `tests/seo/local-business-schema.test.js`,
+`tests/design/blog-post-meta.test.js`,
+`tests/design/homepage-stats-bar.test.js`, and
+`tests/referrals/referral-program.test.js` suites (the ones that
+actually assert on this site's schema/meta content) all still pass
+(37/37). The full `npm test` run was also kicked off, covering the
+much larger, mostly-unrelated internal-tools test suite.
+
+**Pre-existing issue found, NOT caused by this change, NOT fixed
+here:** `npm run check-undefined-vars` reports `tools/qrcode-lib.js` and
+`tools/push-notifications.js` both declare `VAPID_PUBLIC_KEY` and would
+throw a real `SyntaxError` the moment any single page loads both --
+this repo's dependencies (`node_modules`) weren't installed before this
+session, so this check (and the full test suite) hadn't actually been
+run recently; this session ran `npm install` and surfaced it. No page
+currently loads both files together, so nothing is broken live today,
+but this is a live landmine worth a future session's attention -- it's
+unrelated to the schema/robots.txt work above, which touched zero JS
+files.
