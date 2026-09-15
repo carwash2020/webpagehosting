@@ -442,6 +442,52 @@
   }
   .nav-schedule-btn:hover{border-color:var(--orange-text-vivid); transform:translateY(-1px);}
 
+  /* First-time-visitor discount banner (2026-09-15): populates the
+     #siteBanner1 scaffold every public page already carries in its
+     markup -- declared on every page from the start but never styled
+     or written into by any script until promo-banner.js. Sits above
+     the sticky header in normal document flow, so it doesn't need its
+     own position/z-index handling. */
+  .site-banner{
+    display:none;
+    align-items:center;
+    justify-content:center;
+    padding:10px 20px;
+    background:linear-gradient(100deg, rgba(255,128,0,.18), rgba(255,128,0,.08));
+    border-bottom:1px solid var(--orange-tint-border);
+    text-align:center;
+  }
+  .site-banner-inner{
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    gap:14px;
+    flex-wrap:wrap;
+    max-width:var(--maxw-nav);
+    width:100%;
+  }
+  .site-banner-text{
+    margin:0;
+    font-family:var(--font-ui);
+    font-size:13.5px;
+    color:var(--text);
+  }
+  .site-banner-text b{color:var(--orange-text-vivid);}
+  .site-banner-close{
+    background:none;
+    border:none;
+    color:var(--text-dim);
+    font-size:20px;
+    line-height:1;
+    cursor:pointer;
+    padding:0 4px;
+    flex-shrink:0;
+  }
+  .site-banner-close:hover{color:var(--text);}
+  @media (max-width:600px){
+    .site-banner-text{font-size:12.5px;}
+  }
+
   /* header */
   header{
     position:sticky;
