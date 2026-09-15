@@ -1298,3 +1298,13 @@ schema/meta-focused test suites
 `tests/design/blog-post-meta.test.js`,
 `tests/design/homepage-stats-bar.test.js`,
 `tests/referrals/referral-program.test.js`) pass 37/37.
+
+**Follow-up, same day, on explicit request:** the live Supabase
+`site_terms` row this entry flagged as intentionally not updated (id
+13, "12. Cookies and Analytics") was updated directly via SQL to the
+same wording now live in `terms.html`/`index.html`'s static fallback --
+confirmed via `site_terms_history` (a real `update` row logged at
+2026-09-15 21:02:30 UTC, following the existing `insert` from
+2026-08-13). This is the content the homepage's Terms modal actually
+renders in production, so both the static fallback and the live CMS
+copy now say the same thing.
