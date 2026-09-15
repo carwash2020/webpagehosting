@@ -48,7 +48,7 @@
     if (saved === 'light') document.documentElement.setAttribute('data-theme', 'light');
   })();
 </script>
-<link rel="stylesheet" href="/styles.css?v=d9dfbf37af">
+<link rel="stylesheet" href="/styles.css?v=d68f435617">
 <link rel="stylesheet" href="/tools/styles-tools.css?v=a494344e8c">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.112.3/dist/umd/supabase.js" integrity="sha384-qafw21c/iciq0VXsi9FzkfoQv5I/V0iqE4lSNcKXPnW9/UTJLnv5CcN4FHxVLnKg" crossorigin="anonymous" defer></script>
 <script src="/tools/sync.js?v=5f8ddf47c9" defer></script>
@@ -2064,6 +2064,24 @@
     el.innerHTML = uploadRowHtml + gridHtml;
   }
 
+  // Photo action results carry internal codes ('http-403', 'network',
+  // 'not-configured', ...) meant for logging, not for a non-technical
+  // user to read -- 'Could not update: http-403' means nothing to
+  // staff. This turns the ones a real person could actually hit into a
+  // plain sentence, falling back to a still-actionable generic message
+  // for anything unmapped rather than a bare code.
+  function friendlyPhotoErrorMessage(result, actionVerb) {
+    if (result.detail) return result.detail;
+    const code = result.error || '';
+    if (code === 'session-expired') return 'Your login session has expired. Log out and back in, then try again.';
+    if (code === 'not-configured') return 'Sync isn’t set up on this device, so this can’t be saved yet.';
+    if (code === 'network' || code.startsWith('http-5') || code.startsWith('upload-http-5') || code.startsWith('metadata-http-5')) {
+      return 'A connection problem stopped this from going through. Check your connection and try again.';
+    }
+    if (code.startsWith('http-403')) return 'This account doesn’t have permission to do that.';
+    return 'Something went wrong and this couldn’t ' + actionVerb + '. Try again, and call it in if it keeps happening.';
+  }
+
   async function toggleFeatureUI(photoId, newFeatured, jobId, jobTitle) {
     let caption = '';
     if (newFeatured) {
@@ -2071,7 +2089,7 @@
       if (caption === null) return;
     }
     const result = await toggleFeaturedPhoto(photoId, newFeatured, caption);
-    if (!result.ok) { await showAlert('Could not update: ' + result.error); return; }
+    if (!result.ok) { await showAlert(friendlyPhotoErrorMessage(result, 'be updated')); return; }
     await renderJobPhotosGallery(jobId, jobTitle);
   }
 
@@ -2095,7 +2113,7 @@
     if (!result.ok) {
       const msg = result.error === 'too-large'
         ? 'That photo is over 8MB \u2014 try a smaller photo or lower camera resolution.'
-        : 'Upload failed: ' + result.error;
+        : friendlyPhotoErrorMessage(result, 'be uploaded');
       await showAlert(msg);
     }
     await renderJobPhotosGallery(jobId, jobTitle);
@@ -2105,7 +2123,7 @@
     const confirmed = await showConfirm('Delete this photo? This cannot be undone.', { danger: true, confirmText: 'Delete' });
     if (!confirmed) return;
     const result = await deleteJobPhoto(photoId, storagePath);
-    if (!result.ok) { await showAlert('Could not delete: ' + result.error); return; }
+    if (!result.ok) { await showAlert(friendlyPhotoErrorMessage(result, 'be deleted')); return; }
     await renderJobPhotosGallery(jobId, jobTitle);
   }
 

@@ -48,7 +48,7 @@
     if (saved === 'light') document.documentElement.setAttribute('data-theme', 'light');
   })();
 </script>
-<link rel="stylesheet" href="/styles.css?v=d9dfbf37af">
+<link rel="stylesheet" href="/styles.css?v=d68f435617">
 <link rel="stylesheet" href="/tools/styles-tools.css?v=a494344e8c">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.112.3/dist/umd/supabase.js" integrity="sha384-qafw21c/iciq0VXsi9FzkfoQv5I/V0iqE4lSNcKXPnW9/UTJLnv5CcN4FHxVLnKg" crossorigin="anonymous" defer></script>
 <script src="/tools/sync.js?v=5f8ddf47c9" defer></script>
@@ -121,10 +121,10 @@
   <span class="realtime-badge" id="realtimeBadge" onclick="retryLiveSync()" title="Live sync"><span class="realtime-dot" id="realtimeDot"></span><span id="realtimeText">Live sync: connecting...</span></span>
 </p>
 
-<div class="contract-tabs">
-  <div class="contract-tab is-active" data-tab="pwo" onclick="switchContractTab('pwo')">Per-Job Work Order</div>
-  <div class="contract-tab" data-tab="stpa" onclick="switchContractTab('stpa')">Short-Term Project</div>
-  <div class="contract-tab" data-tab="ltsa" onclick="switchContractTab('ltsa')">Long-Term Service</div>
+<div class="contract-tabs" role="tablist">
+  <div class="contract-tab is-active" data-tab="pwo" role="tab" aria-selected="true" tabindex="0" onclick="switchContractTab('pwo')" onkeydown="handleContractTabKeydown(event, 'pwo')">Per-Job Work Order</div>
+  <div class="contract-tab" data-tab="stpa" role="tab" aria-selected="false" tabindex="-1" onclick="switchContractTab('stpa')" onkeydown="handleContractTabKeydown(event, 'stpa')">Short-Term Project</div>
+  <div class="contract-tab" data-tab="ltsa" role="tab" aria-selected="false" tabindex="-1" onclick="switchContractTab('ltsa')" onkeydown="handleContractTabKeydown(event, 'ltsa')">Long-Term Service</div>
 </div>
 
 <!-- ===================== PER-JOB WORK ORDER ===================== -->
@@ -315,8 +315,36 @@
 
 
   function switchContractTab(tab) {
-    document.querySelectorAll('.contract-tab').forEach(t => t.classList.toggle('is-active', t.dataset.tab === tab));
+    document.querySelectorAll('.contract-tab').forEach(t => {
+      const active = t.dataset.tab === tab;
+      t.classList.toggle('is-active', active);
+      t.setAttribute('aria-selected', String(active));
+      t.tabIndex = active ? 0 : -1;
+    });
     document.querySelectorAll('.contract-panel').forEach(p => p.classList.toggle('is-active', p.id === 'panel-' + tab));
+  }
+
+  // Arrow-key navigation between tabs, matching the standard ARIA
+  // tablist keyboard pattern -- previously these were plain <div>s with
+  // only an onclick handler, so a keyboard-only user could neither
+  // reach nor operate them at all (not in the tab order, no way to
+  // activate one even if focused via some other means).
+  const CONTRACT_TAB_ORDER = ['pwo', 'stpa', 'ltsa'];
+  function handleContractTabKeydown(event, tab) {
+    if (event.key === 'Enter' || event.key === ' ') {
+      event.preventDefault();
+      switchContractTab(tab);
+      return;
+    }
+    const idx = CONTRACT_TAB_ORDER.indexOf(tab);
+    let nextIdx = null;
+    if (event.key === 'ArrowRight') nextIdx = (idx + 1) % CONTRACT_TAB_ORDER.length;
+    else if (event.key === 'ArrowLeft') nextIdx = (idx - 1 + CONTRACT_TAB_ORDER.length) % CONTRACT_TAB_ORDER.length;
+    if (nextIdx === null) return;
+    event.preventDefault();
+    const nextTab = CONTRACT_TAB_ORDER[nextIdx];
+    switchContractTab(nextTab);
+    document.querySelector(`.contract-tab[data-tab="${nextTab}"]`).focus();
   }
 
   // ---------- Contact picker (reads Job Tracker's master Contacts list) ----------
