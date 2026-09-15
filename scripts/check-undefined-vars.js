@@ -78,6 +78,10 @@ const SHARED_SCRIPT_FILES = [
   // too or every page loading it would show as a flood of false
   // "not defined" positives.
   'business-hours.js',
+  // UTM campaign-attribution capture (2026-09-15) -- loaded by both
+  // public lead-capture forms (index.html, booking.html), same
+  // reasoning as business-hours.js just above.
+  'utm-tracking.js',
   // The client portal push-notifications helper (2026-09-04) -- loaded
   // by portal/settings.html, same reasoning as every other entry
   // here. (Written without any apostrophes deliberately -- the

@@ -146,18 +146,52 @@ Deno.serve(async (req: Request) => {
       }, wasConflict ? 409 : 502);
     }
 
-    await fetch(
-      `${SUPABASE_URL}/rest/v1/client_portal_quotes?id=eq.${quote_id}`,
+    // Conditional on scheduled_at still being null -- the read/check
+    // above and this write aren't atomic, so two near-simultaneous
+    // requests for the same quote (a double-tap, or a retried request
+    // on a flaky connection) could both pass the `quote.scheduled_at`
+    // check before either writes. Without this guard both would go on
+    // to create a real, separate th_bookings row (different requested
+    // times don't collide with th_bookings' own exclusion constraint),
+    // double-booking one job. Whichever request's PATCH loses this race
+    // gets zero rows back and must undo the booking it already created,
+    // rather than leaving it stranded as a real, unwanted second
+    // appointment for a quote that's now scheduled by the other request.
+    const quotePatchRes = await fetch(
+      `${SUPABASE_URL}/rest/v1/client_portal_quotes?id=eq.${quote_id}&scheduled_at=is.null`,
       {
         method: "PATCH",
         headers: {
           apikey: SERVICE_ROLE_KEY,
           Authorization: `Bearer ${SERVICE_ROLE_KEY}`,
           "Content-Type": "application/json",
+          Prefer: "return=representation",
         },
         body: JSON.stringify({ scheduled_at: new Date().toISOString() }),
       },
     );
+
+    if (quotePatchRes.ok) {
+      const updated = await quotePatchRes.json();
+      if (!updated.length) {
+        // Lost the race: another request already scheduled this quote
+        // between our read above and this write. Delete the booking we
+        // just created instead of leaving a real, duplicate appointment
+        // on the calendar for one already-scheduled job.
+        await fetch(`${SUPABASE_URL}/rest/v1/th_bookings?quote_id=eq.${quote.id}&start_at=eq.${encodeURIComponent(start_at)}`, {
+          method: "DELETE",
+          headers: { apikey: SERVICE_ROLE_KEY, Authorization: `Bearer ${SERVICE_ROLE_KEY}` },
+        });
+        return json({ ok: false, error: "This job is already scheduled. Call or text us to reschedule." }, 409);
+      }
+    } else {
+      // The booking itself is real and already created -- log this
+      // rather than silently returning ok:true with a quote row that
+      // never actually got its scheduled_at set (which would let a
+      // second request schedule ANOTHER booking against it later, since
+      // the is-it-already-scheduled check above reads scheduled_at).
+      console.error(`Failed to mark client_portal_quotes ${quote_id} scheduled: ${await quotePatchRes.text().catch(() => "")}`);
+    }
 
     return json({ ok: true });
   } catch (err: any) {

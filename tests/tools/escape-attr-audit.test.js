@@ -45,12 +45,22 @@ test('escapeAttr() round-trips 9 adversarial inputs correctly (matches the alrea
   for (const input of cases) {
     const escaped = escapeAttr(input);
     // Simulate the browser parsing this back out of a double-quoted
-    // HTML attribute: entities decode, nothing else does.
-    const decoded = escaped
-      .replace(/&amp;/g, '&')
-      .replace(/&quot;/g, '"')
-      .replace(/&lt;/g, '<')
-      .replace(/&gt;/g, '>');
+    // HTML attribute: entities decode, nothing else does. A single pass
+    // over one combined pattern (not four sequential .replace() calls)
+    // matters here -- decoding &amp; first, then separately scanning the
+    // ALREADY-decoded result for &lt;/&gt;/&quot;, would wrongly re-decode
+    // a literal "&lt;" that only exists because escapeAttr() turned a raw
+    // "&" into "&amp;" ahead of an already-escaped "<" -- a real
+    // double-unescaping bug, not just a hypothetical one, since this
+    // helper's whole job is escaping "&" independently of "<"/">"/"\"".
+    const decoded = escaped.replace(/&amp;|&quot;|&lt;|&gt;/g, (entity) => {
+      switch (entity) {
+        case '&amp;': return '&';
+        case '&quot;': return '"';
+        case '&lt;': return '<';
+        case '&gt;': return '>';
+      }
+    });
     assert.equal(decoded, input, `escapeAttr() should round-trip: ${JSON.stringify(input)}`);
     // And critically: the escaped form must never contain a literal
     // unescaped double-quote, which is the actual attribute-breakout

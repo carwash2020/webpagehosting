@@ -36,6 +36,53 @@ click a setting by hand.
 
 <!-- Add new manual action items above this line -->
 
+## SEO action items (need a human, outside of code)
+
+Real, ranked things that grow organic traffic/leads but genuinely can't
+be done from a repo -- they need a login, a phone call, or a person on
+the other end. Code-side SEO work (schema, page speed, content structure)
+lives in "Proposed visual improvements" below and gets built directly
+when greenlit; these do not.
+
+1. **Google Business Profile: claim/verify it if not already, and keep
+   it active.** This is usually the single biggest local-ranking lever
+   for a service business -- more than anything on the site itself.
+   Weekly: add a photo from a real job, post an update, answer any new
+   Q&A. Respond to every review (good or bad) within a few days.
+2. **Ask every real happy customer for a Google review, not just a
+   Triple H internal one.** The site's review-request tool
+   (`tools/review-request.html`) sends a text/email asking for feedback,
+   but getting it to actually land as a public Google review (not just a
+   private reply) is a manual nudge -- "if you have 30 seconds, a Google
+   review helps other people in town find us" -- worth saying out loud on
+   the last visit of a job, not just texting a link.
+3. **Real backlinks from other real local sites**: BBB, the St. George
+   Area Chamber of Commerce, Nextdoor Business, Angi/HomeAdvisor/Thumbtack
+   profiles, local supplier sites that list contractors they work with.
+   None of this can be automated -- each is its own signup/profile/claim
+   process, and a link from a real local business directory carries much
+   more SEO weight than anything on-site.
+4. **NAP consistency check** (Name/Address/Phone, exactly matching,
+   across every place Triple H is listed online -- Google, Yelp,
+   Facebook, BBB, any directory). Inconsistent phone formatting or an
+   old address anywhere confuses Google's local-ranking algorithm. A
+   one-time manual audit, worth doing once and then keeping in sync.
+5. **Google Search Console**: verify site ownership (a one-time
+   dashboard/DNS step, can't be done from this repo) if not already
+   done, then check it periodically for crawl errors, manual actions, or
+   pages Google isn't indexing that should be.
+6. **More non-flooring job photos**, handed off for the site to use --
+   already flagged under "Proposed visual improvements" below (#1), but
+   worth calling out here too: real photos are also a genuine SEO input
+   (image search, GBP posts, city-page credibility), not just visual
+   polish.
+7. **Local sponsorships/community involvement** (a little league team, a
+   school fundraiser, a chamber event) that naturally generates a real
+   backlink or local news mention -- slower, but the kind of link no
+   amount of code can manufacture.
+
+<!-- Add new SEO action items above this line -->
+
 ## Visual additions (things a real user/client will actually see)
 
 User-facing UI/content changes made during the recent audit pass, for
