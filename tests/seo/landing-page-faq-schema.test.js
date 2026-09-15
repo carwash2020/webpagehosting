@@ -56,7 +56,7 @@ for (const name of ALL_PAGES) {
     const html = read(name);
     const schemaMatch = html.match(/<script type="application\/ld\+json">\s*\{\s*\n\s*"@context": "https:\/\/schema\.org",\s*\n\s*"@type": "FAQPage",[\s\S]*?\n<\/script>/);
     assert.ok(schemaMatch, 'expected to find a FAQPage JSON-LD block');
-    const parsed = JSON.parse(schemaMatch[0].replace(/<\/?script[^>]*>/g, '').trim());
+    const parsed = JSON.parse(schemaMatch[0].replace(/<\/?script[^>]*>/gi, '').trim());
     assert.equal(parsed['@type'], 'FAQPage');
     const visibleCount = (html.match(/<details class="faq-plain-item">/g) || []).length;
     assert.equal(parsed.mainEntity.length, visibleCount, "schema question count must match the page's own visible FAQ items");
