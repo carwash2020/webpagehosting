@@ -288,6 +288,7 @@
 }
 </script>
 <script src="/cookie-consent.js" defer></script>
+<script src="/utm-tracking.js?v=5aa2d867e3" defer></script>
 </head>
 <body class="has-blueprint-bg">
 <div class="bg-blueprint" aria-hidden="true"></div>
@@ -2479,7 +2480,7 @@
         'Authorization': 'Bearer ' + LEADS_SUPABASE_ANON_KEY,
         'Prefer': 'resolution=ignore-duplicates',
       },
-      body: JSON.stringify([{
+      body: JSON.stringify([Object.assign({
         name: formData.get('name'),
         phone: formData.get('phone'),
         email: formData.get('email'),
@@ -2490,7 +2491,12 @@
         referred_by: formData.get('referredBy') || null,
         source: formData.get('source') || null,
         client_request_id: getLeadRequestId(),
-      }]),
+        // Automatic UTM campaign attribution (utm-tracking.js), captured
+        // from whichever page this visitor actually landed on -- entirely
+        // separate from the manual "source" dropdown above. Never present
+        // (getStoredUtmParams returns null) if the visitor never arrived
+        // via a UTM-tagged link, or if that attribution has aged out.
+      }, (typeof window.getStoredUtmParams === 'function' && window.getStoredUtmParams()) || {})]),
     })
     .then((response) => {
       if (response.ok) {

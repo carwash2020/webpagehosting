@@ -325,6 +325,7 @@
      See business-hours.js's own header comment for the full reasoning. -->
 <script src="/business-hours.js?v=5296319b73"></script>
 <script src="/cookie-consent.js" defer></script>
+<script src="/utm-tracking.js?v=5aa2d867e3" defer></script>
 </head>
 <body>
 
@@ -765,7 +766,7 @@
         apikey: SUPABASE_ANON_KEY,
         Authorization: 'Bearer ' + SUPABASE_ANON_KEY,
       },
-      body: JSON.stringify({
+      body: JSON.stringify(Object.assign({
         service_key: selectedService.key,
         service_label: selectedService.label,
         start_at: selectedSlot.startUtc.toISOString(),
@@ -777,7 +778,9 @@
         notes: formData.get('notes') || null,
         referred_by: formData.get('referred_by') || null,
         source: formData.get('source') || null,
-      }),
+        // Automatic UTM campaign attribution (utm-tracking.js) -- see
+        // index.html's own identical addition for the full reasoning.
+      }, (typeof window.getStoredUtmParams === 'function' && window.getStoredUtmParams()) || {})),
     })
       .then(function (res) {
         if (res.ok) {
