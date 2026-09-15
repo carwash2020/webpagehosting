@@ -211,6 +211,15 @@ async function logPosIncomeToWorkspaceSync(description: string, amount: number, 
     `${SUPABASE_URL}/rest/v1/workspace_sync?code=eq.tripleh-workspace-2026&select=data`,
     { headers: { apikey: SERVICE_ROLE_KEY, Authorization: `Bearer ${SERVICE_ROLE_KEY}` } },
   );
+  if (!syncRes.ok) {
+    // The Stripe charge itself already succeeded by the time this runs --
+    // logged so a real POS sale that never made it into the income log
+    // is at least visible for manual reconciliation, instead of the
+    // register operator seeing "charge succeeded" on screen with no
+    // sign anything is actually missing from the books.
+    console.error(`Failed to read workspace_sync for POS charge (PaymentIntent ${stripePaymentIntentId}): ${await syncRes.text().catch(() => "")}`);
+    return;
+  }
   const syncRows = await syncRes.json();
   if (!syncRows.length) return;
   const blob = syncRows[0].data;
@@ -224,9 +233,17 @@ async function logPosIncomeToWorkspaceSync(description: string, amount: number, 
   // charge would be logged twice -- once here, once again when the
   // webhook's own pos_charge handling sees the same event.
   if (incomeLog.some((entry: any) => entry.stripePaymentIntentId === stripePaymentIntentId)) return;
+  // toISOString() is always UTC -- the business runs on America/Denver
+  // time, 6-7 hours behind, so a POS sale rung up in the evening would
+  // otherwise get logged under tomorrow's date in the income log.
+  const posDateParts = new Intl.DateTimeFormat("en-US", {
+    timeZone: "America/Denver", year: "numeric", month: "2-digit", day: "2-digit",
+  }).formatToParts(new Date());
+  const posDateMap: Record<string, string> = {};
+  posDateParts.forEach((p) => { posDateMap[p.type] = p.value; });
   incomeLog.push({
     id: Date.now(),
-    date: new Date().toISOString().slice(0, 10),
+    date: `${posDateMap.year}-${posDateMap.month}-${posDateMap.day}`,
     desc: description || "POS sale",
     amount,
     source: clientLabel,
@@ -239,11 +256,14 @@ async function logPosIncomeToWorkspaceSync(description: string, amount: number, 
     lastEditedBy: internalAccountEmail,
   });
   blob.th_income_log = JSON.stringify(incomeLog);
-  await fetch(`${SUPABASE_URL}/rest/v1/workspace_sync?code=eq.tripleh-workspace-2026`, {
+  const posSyncPatchRes = await fetch(`${SUPABASE_URL}/rest/v1/workspace_sync?code=eq.tripleh-workspace-2026`, {
     method: "PATCH",
     headers: { apikey: SERVICE_ROLE_KEY, Authorization: `Bearer ${SERVICE_ROLE_KEY}`, "Content-Type": "application/json" },
     body: JSON.stringify({ data: blob, updated_at: new Date().toISOString() }),
   });
+  if (!posSyncPatchRes.ok) {
+    console.error(`Failed to log POS income for PaymentIntent ${stripePaymentIntentId}: ${await posSyncPatchRes.text().catch(() => "")}`);
+  }
 }
 
 // Records a signed authorization before a new card ever gets saved
