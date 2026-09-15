@@ -342,6 +342,14 @@
       client.from('client_portal_jobs').select('id'),
       client.from('client_portal_work_orders').select('id,title,status,scheduled_at'),
     ]);
+    // A Supabase-js query resolves (never rejects) even when it fails --
+    // the failure shows up as `.error`, not a thrown exception. Without
+    // this check, a failed query's `.data` (null) silently became `[]`
+    // below, indistinguishable from the client genuinely having zero
+    // invoices/quotes/jobs/requests -- init()'s own catch block, which
+    // shows a real "couldn't load" message, never fired for this case.
+    const failed = [invoices, quotes, jobs, requests].find(r => r.error);
+    if (failed) throw failed.error;
     return {
       invoices: invoices.data || [],
       quotes: quotes.data || [],

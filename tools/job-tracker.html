@@ -54,7 +54,7 @@
 <script src="/tools/sync.js?v=5f8ddf47c9" defer></script>
 <script src="/tools/data-layer.js?v=3a0d57478c" defer></script>
 <script src="/tools/tools-effects.js?v=4cff99aa4a" defer></script>
-<script src="/tools/tools-dialogs.js?v=abfabb94b9" defer></script>
+<script src="/tools/tools-dialogs.js?v=29e13e353f" defer></script>
 <script src="/tools/tools-media-sharing.js?v=0c229c9353" defer></script>
 <script src="/tools/tools-nav-pwa.js?v=9b16eefb86" defer></script>
 <script src="/tools/tools-tour.js?v=cf6652f5b1" defer></script>
@@ -821,12 +821,25 @@
     nudge.style.display = isFirstTime ? 'block' : 'none';
   }
 
+  // A phone number is never blocked outright (a partial or unusual
+  // format shouldn't stop staff from saving a job), but a value with
+  // fewer than 7 digits total (below any real US/local number) is
+  // almost certainly a typo, not a real number -- checked here since
+  // there was previously NO validation at all, so garbage like
+  // "asdf;;;" saved silently and later fed a client-lookup phone
+  // search (clients.html) against junk data.
+  function isPlausiblePhone(value) {
+    if (!value) return true;
+    return (value.match(/\d/g) || []).length >= 7;
+  }
+
   async function addJob() {
     const title = document.getElementById('jobTitle').value.trim();
     if (!title) { await showAlert('Give the job a title first.'); return; }
     const jobs = loadJobs();
     const clientName = document.getElementById('jobClient').value.trim();
     const phone = document.getElementById('jobPhone').value.trim();
+    if (!isPlausiblePhone(phone)) { await showAlert('That phone number doesn\'t look right -- please double-check it.'); return; }
     const address = document.getElementById('jobAddress').value.trim();
     const clientEmailVal = document.getElementById('jobClientEmail').value.trim();
     // Push 2 (2026-08-20): get-or-create the client record for whatever
@@ -2170,11 +2183,13 @@
   async function addContact() {
     const name = document.getElementById('contactName').value.trim();
     if (!name) { await showAlert('Give the contact a name first.'); return; }
+    const contactPhoneVal = document.getElementById('contactPhone').value.trim();
+    if (!isPlausiblePhone(contactPhoneVal)) { await showAlert('That phone number doesn\'t look right -- please double-check it.'); return; }
     const contacts = loadContacts();
     const fields = {
       name,
       role: document.getElementById('contactRole').value.trim(),
-      phone: document.getElementById('contactPhone').value.trim(),
+      phone: contactPhoneVal,
       email: document.getElementById('contactEmail').value.trim(),
       notes: document.getElementById('contactNotes').value.trim(),
     };
