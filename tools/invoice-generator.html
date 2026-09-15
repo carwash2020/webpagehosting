@@ -474,6 +474,13 @@
   </div>
   <div class="form-section">
     <h3>Recent Quotes</h3>
+    <!-- Conversion rate metric (audit item #17): quotes already track
+         their own status ('converted' once turned into an invoice, via
+         the exact same field renderQuoteLog()'s status badge already
+         reads below) -- this had never been rolled up into a single
+         rate anywhere, even though it's a real, useful measure of how
+         often a quote actually turns into paid work. -->
+    <p class="contract-log-meta" id="quoteConversionStat" style="margin:0 0 14px;"></p>
     <input type="text" id="quoteLogSearch" placeholder="Search by client or quote #..." style="width:100%; box-sizing:border-box; margin-bottom:14px;" oninput="debouncedCall('quoteLogSearch', renderQuoteLog)">
     <div id="quoteLogList"></div>
   </div>
@@ -1722,6 +1729,19 @@
     const searchTerm = (document.getElementById('quoteLogSearch')?.value || '').trim().toLowerCase();
     let log = [...loadQuoteLog()].sort((a, b) => b.id - a.id);
     if (pendingDeleteQuoteIds.size > 0) log = log.filter(q => !pendingDeleteQuoteIds.has(q.id));
+    // Conversion rate -- computed over the full log (before the search
+    // filter below narrows what's actually displayed), so searching for
+    // one client's name never changes the rate shown above the list.
+    const statEl = document.getElementById('quoteConversionStat');
+    if (statEl) {
+      if (log.length === 0) {
+        statEl.textContent = '';
+      } else {
+        const convertedCount = log.filter(q => q.status === 'converted').length;
+        const pct = Math.round((convertedCount / log.length) * 100);
+        statEl.textContent = `${convertedCount} of ${log.length} quote${log.length === 1 ? '' : 's'} (${pct}%) converted to an invoice`;
+      }
+    }
     if (searchTerm) {
       log = log.filter(q =>
         (q.clientName || '').toLowerCase().includes(searchTerm) ||

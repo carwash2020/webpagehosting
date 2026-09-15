@@ -661,7 +661,13 @@
 // Storage) whenever the metadata step fails after a successful
 // upload; every precached page that loads sync.js is precached. Same
 // reasoning as every prior bump in this file's history.
-const CACHE_NAME = 'th-workspace-v146'; // precache-fingerprint:8e5ee0597242
+// Bumped (v146 -> v147): invoice-generator.html changed -- a new
+// quote-to-invoice conversion rate stat above the Recent Quotes list
+// (closes a real audit gap: quotes already tracked their own
+// 'converted' status, but it had never been rolled up into a single
+// rate anywhere). Precached. Same reasoning as every prior bump in
+// this file's history.
+const CACHE_NAME = 'th-workspace-v147'; // precache-fingerprint:043523406b80
 const PRECACHE_URLS = [
   '/tools/workspace.html', '/tools/job-tracker.html', '/tools/invoice-generator.html', '/tools/contract-generator.html',
   '/tools/calendar.html', '/tools/route-planner.html', '/tools/review-request.html', '/tools/contact-card.html',
