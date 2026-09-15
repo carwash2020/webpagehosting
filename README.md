@@ -1199,3 +1199,14 @@ underlying pages genuinely changed in this session (the 7 city pages,
 5 service pages, about/our-work/terms, the blog index, and all 6 blog
 posts) -- bumped to 2026-09-15, the real date of the schema/breadcrumb
 additions above. Every other `lastmod` in the file was left untouched.
+
+**Third real gap found and fixed, same pass:** all 5 service pages'
+`Service` schema had a `provider` (a nested `HomeAndConstructionBusiness`
+stub) with no `sameAs` at all -- meaning every other schema block across
+the site (homepage, all 7 city pages) links the business entity to its
+Facebook/Instagram/LinkedIn/Yelp profiles except these 5. Added the same
+4-link `sameAs` array to each service page's `provider` object,
+matching what's already on every city page. This is exactly the kind
+of cross-page attribute consistency the research flagged as helping an
+answer engine build confidence that mentions across the web refer to
+the same entity.
