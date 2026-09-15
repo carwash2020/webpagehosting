@@ -510,9 +510,39 @@ function applySyncData(obj, keysToApply) {
       localStorage.setItem(k, obj[k]);
       return;
     }
+    // Real bug found and fixed (audit item #12): remoteArr and localArr
+    // used to be parsed inside one shared try, with the catch below
+    // falling back to `localStorage.setItem(k, obj[k])` no matter WHICH
+    // side actually failed to parse. That fallback silently corrupted
+    // this device's local copy whenever the REMOTE payload was the
+    // malformed one (a truncated push, a corrupted network response,
+    // a bug on whichever device sent it) -- it took the exact string
+    // that had just thrown a SyntaxError and wrote it into localStorage
+    // anyway, assuming it was valid JSON when the parse failure proved
+    // otherwise. Parsed separately now so a malformed remote value can
+    // be told apart from a malformed local one and never gets written
+    // anywhere.
+    let remoteArr;
     try {
-      const remoteArr = JSON.parse(obj[k]);
-      const localArr = JSON.parse(localStorage.getItem(k) || '[]');
+      remoteArr = JSON.parse(obj[k]);
+    } catch (e) {
+      if (typeof logClientError === 'function') {
+        logClientError(`applySyncData: malformed remote JSON for key "${k}", left this device's local copy untouched`, 'sync.js', null, null, e && e.stack);
+      }
+      return; // leave local storage exactly as it was; move on to the next key
+    }
+    let localArr;
+    try {
+      localArr = JSON.parse(localStorage.getItem(k) || '[]');
+    } catch (e) {
+      // The LOCAL copy is the malformed one here, not the remote payload
+      // that just parsed fine above -- safe to treat it as empty and let
+      // the merge below effectively replace it with the (valid) remote
+      // data, same as if this device had never had any local data for
+      // this key at all.
+      localArr = [];
+    }
+    try {
       if (!Array.isArray(remoteArr) || !Array.isArray(localArr)) {
         localStorage.setItem(k, obj[k]);
         return;
@@ -644,7 +674,16 @@ function applySyncData(obj, keysToApply) {
         saveSyncBaseForKey(k, finalArr);
       }
     } catch (e) {
-      localStorage.setItem(k, obj[k]); // malformed JSON on either side -- fall back to the old behavior rather than throw
+      // remoteArr/localArr are both guaranteed valid arrays by this
+      // point (either JSON.parse failure above already returned early)
+      // -- an exception here means one of the merge functions itself hit
+      // something unexpected. Same reasoning as the remote-parse-failure
+      // branch above: leaving this device's existing local copy alone is
+      // always safer than overwriting it with obj[k], which is exactly
+      // the value whose processing just failed.
+      if (typeof logClientError === 'function') {
+        logClientError(`applySyncData: merge failed for key "${k}", left this device's local copy untouched: ${e && e.message ? e.message : String(e)}`, 'sync.js', null, null, e && e.stack);
+      }
     }
   });
 

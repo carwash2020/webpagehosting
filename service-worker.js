@@ -644,7 +644,15 @@
 // another. Both files, plus every other precached page that also
 // loads sync.js, are precached. Same reasoning as every prior bump in
 // this file's history.
-const CACHE_NAME = 'th-workspace-v144'; // precache-fingerprint:3891315cdedd
+// Bumped (v144 -> v145): sync.js changed -- closes a real audit gap in
+// applySyncData(): a malformed remote payload for any one synced key
+// used to fall into a shared catch that blindly wrote that same
+// unparseable value into localStorage anyway, corrupting a local copy
+// that had been perfectly fine. Remote and local JSON are now parsed
+// separately so a bad value never gets written; every precached page
+// that loads sync.js is precached. Same reasoning as every prior bump
+// in this file's history.
+const CACHE_NAME = 'th-workspace-v145'; // precache-fingerprint:5a940a5b808f
 const PRECACHE_URLS = [
   '/tools/workspace.html', '/tools/job-tracker.html', '/tools/invoice-generator.html', '/tools/contract-generator.html',
   '/tools/calendar.html', '/tools/route-planner.html', '/tools/review-request.html', '/tools/contact-card.html',
