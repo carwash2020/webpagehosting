@@ -250,7 +250,14 @@
 // disclaimer now links to the new /privacy.html (audit item #19), not
 // just Terms and Conditions. Precached under its bare path. Same
 // reasoning as every prior bump above.
-const CACHE_NAME = 'th-portal-v65'; // precache-fingerprint:899a87232896
+// Bumped (v65 -> v66): portal/login.html changed again -- its robots
+// meta tag was the one page in this whole app set to "index, follow"
+// (audit item #20: every other portal page is "noindex, nofollow",
+// and this one was also, wrongly, listed in sitemap.xml -- a real
+// gap, since a client-portal login page has no reason to be publicly
+// discoverable via search). Precached under its bare path. Same
+// reasoning as every prior bump above.
+const CACHE_NAME = 'th-portal-v66'; // precache-fingerprint:fdff28253b91
 const PRECACHE_URLS = [
   '/portal/home.html', '/portal/dashboard.html', '/portal/jobs.html', '/portal/quotes.html',
   '/portal/work-orders.html', '/portal/settings.html', '/portal/login.html', '/portal/set-password.html',
