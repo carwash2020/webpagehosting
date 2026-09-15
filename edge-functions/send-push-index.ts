@@ -118,10 +118,61 @@ const RESEND_DAYS: Record<string, number> = {
   "unresponded-lead": 1,
 };
 
+// Real audit gap, closed here (cron timezone fix, item #15): this
+// Edge Function runs on Deno Deploy, whose runtime local timezone is
+// UTC -- but the business (and every job.date string it works with)
+// is America/Denver. todayAtMidnight() used to call `new Date()` then
+// `.setHours(0, 0, 0, 0)`, which sets midnight in the RUNTIME's local
+// timezone (UTC), not business-local midnight -- a ~6-7 hour offset
+// depending on daylight saving. checkTomorrowsJobs() had the same
+// root bug in an even more consequential form: it built "tomorrow" via
+// `new Date(); .setDate(+1)` then read back `.getFullYear()/
+// .getMonth()/.getDate()`, all evaluated in UTC. The daily-reminder-
+// check cron fires at 1am UTC (see sql/security/
+// fix_cron_job_use_vault_secret.sql) -- which is still EVENING of the
+// PREVIOUS day in Denver -- so the UTC-based "tomorrow" landed a full
+// calendar day ahead of what "tomorrow" actually means to anyone in
+// St. George, Utah: the notification either missed real jobs due
+// tomorrow entirely, or fired a day early for jobs actually two days out.
+//
+// zonedTimeToUtc/todayDateStrInBusinessTz/addDaysToDateStr are exact
+// ports of the same, already-proven functions in business-hours.js
+// (this project's established pattern is a small duplicated copy per
+// separately-deployed file, not a cross-file import -- see that
+// file's own header, and stripe-webhook-index.ts's escapeHtmlPos for
+// another example of the same convention).
+function zonedTimeToUtc(dateStr: string, hh: number, mm: number): Date {
+  const timeStr = String(hh).padStart(2, "0") + ":" + String(mm).padStart(2, "0");
+  const naiveUtc = new Date(dateStr + "T" + timeStr + ":00Z");
+  const parts = new Intl.DateTimeFormat("en-US", {
+    timeZone: "America/Denver", year: "numeric", month: "2-digit", day: "2-digit",
+    hour: "2-digit", minute: "2-digit", second: "2-digit", hour12: false,
+  }).formatToParts(naiveUtc);
+  const map: Record<string, string> = {};
+  parts.forEach((p) => { map[p.type] = p.value; });
+  const hourFixed = map.hour === "24" ? "00" : map.hour;
+  const asIfLocal = new Date(`${map.year}-${map.month}-${map.day}T${hourFixed}:${map.minute}:${map.second}Z`);
+  const diff = naiveUtc.getTime() - asIfLocal.getTime();
+  return new Date(naiveUtc.getTime() + diff);
+}
+
+function todayDateStrInBusinessTz(): string {
+  const parts = new Intl.DateTimeFormat("en-US", {
+    timeZone: "America/Denver", year: "numeric", month: "2-digit", day: "2-digit",
+  }).formatToParts(new Date());
+  const map: Record<string, string> = {};
+  parts.forEach((p) => { map[p.type] = p.value; });
+  return `${map.year}-${map.month}-${map.day}`;
+}
+
+function addDaysToDateStr(dateStr: string, days: number): string {
+  const d = new Date(dateStr + "T12:00:00Z");
+  d.setUTCDate(d.getUTCDate() + days);
+  return d.toISOString().slice(0, 10);
+}
+
 function todayAtMidnight(): Date {
-  const d = new Date();
-  d.setHours(0, 0, 0, 0);
-  return d;
+  return zonedTimeToUtc(todayDateStrInBusinessTz(), 0, 0);
 }
 
 function daysBetween(a: Date, b: Date): number {
@@ -267,11 +318,7 @@ function safeParse(jsonString: string | undefined, fallback: any) {
 // --- the checks ------------------------------------------------------
 
 async function checkTomorrowsJobs(jobs: any[]) {
-  const tomorrow = new Date();
-  tomorrow.setDate(tomorrow.getDate() + 1);
-  const tomorrowKey = tomorrow.getFullYear() + "-" +
-    String(tomorrow.getMonth() + 1).padStart(2, "0") + "-" +
-    String(tomorrow.getDate()).padStart(2, "0");
+  const tomorrowKey = addDaysToDateStr(todayDateStrInBusinessTz(), 1);
 
   const dueTomorrow = jobs.filter((j) => j.date === tomorrowKey && j.status !== "done");
   if (dueTomorrow.length === 0) return;
