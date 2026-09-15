@@ -3322,7 +3322,7 @@
   background:var(--bg-panel);
   border:1px solid var(--border);
   border-radius:var(--radius);
-  box-shadow:0 10px 30px rgba(0,0,0,.35);
+  box-shadow:var(--shadow-hover);
   padding:18px 20px;
 }
 .cookie-banner-inner{display:flex; flex-direction:column; gap:14px;}
