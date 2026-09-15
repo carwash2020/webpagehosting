@@ -47,7 +47,7 @@ test('every public page (root, blog index + posts, about, our-work, terms, booki
 
 test('the homepage lead form fires lead_form_submitted only on a real successful insert, not optimistically', () => {
   const html = fs.readFileSync(repo('index.html'), 'utf8');
-  const successBlock = html.slice(html.indexOf("fetch(LEADS_SUPABASE_URL"), html.indexOf("fetch(LEADS_SUPABASE_URL") + 1500);
+  const successBlock = html.slice(html.indexOf("fetch(LEADS_SUPABASE_URL"), html.indexOf("fetch(LEADS_SUPABASE_URL") + 1900);
   assert.match(successBlock, /if \(response\.ok\) \{[\s\S]*?lead_form_submitted[\s\S]*?\}/);
 });
 

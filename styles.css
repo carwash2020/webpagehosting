@@ -1411,7 +1411,11 @@
   .modal-close{
     position:absolute;
     top:16px; right:16px;
-    width:34px; height:34px;
+    /* 40x40 (was 34x34) -- under the ~40px touch-target minimum on a
+       phone, used to close 5 different modals (email capture, FAQ,
+       Terms, gallery, service detail) with no mobile-specific override
+       anywhere else in this file. */
+    width:40px; height:40px;
     border-radius:8px;
     border:1px solid var(--border);
     background:var(--bg-panel-3);
@@ -3354,3 +3358,49 @@
     margin-top:16px;
     line-height:1.7;
   }
+
+/* ---------- cookie consent banner ----------
+   Injected by /cookie-consent.js on first visit to any public page that
+   loads Google Analytics. Uses the same theme tokens as everything else
+   so it tracks light/dark automatically -- no separate theme block
+   needed. Fixed to the bottom, capped width, centered, with a safe-area
+   inset for phones with a home indicator. */
+.cookie-banner{
+  position:fixed;
+  left:16px;
+  right:16px;
+  bottom:calc(16px + env(safe-area-inset-bottom, 0px));
+  z-index:9999;
+  max-width:640px;
+  margin:0 auto;
+  background:var(--bg-panel);
+  border:1px solid var(--border);
+  border-radius:var(--radius);
+  box-shadow:var(--shadow-hover);
+  padding:18px 20px;
+}
+.cookie-banner-inner{display:flex; flex-direction:column; gap:14px;}
+.cookie-banner-text{margin:0; font-size:13.5px; line-height:1.55; color:var(--text-dim);}
+.cookie-banner-text a{color:var(--orange);}
+.cookie-banner-actions{display:flex; gap:10px; justify-content:flex-end; flex-wrap:wrap;}
+.cookie-btn{
+  font-family:var(--font-ui);
+  font-size:13.5px;
+  font-weight:600;
+  padding:9px 18px;
+  border-radius:8px;
+  border:1px solid var(--border);
+  background:transparent;
+  color:var(--text);
+  cursor:pointer;
+}
+.cookie-btn-decline:hover{background:rgba(128,128,128,.12);}
+.cookie-btn-accept{background:var(--orange); border-color:var(--orange); color:#100900;}
+.cookie-btn-accept:hover{background:var(--orange-dark); border-color:var(--orange-dark);}
+@media (prefers-reduced-motion: no-preference){
+  .cookie-banner{animation:cookieBannerIn .25s ease-out;}
+}
+@keyframes cookieBannerIn{
+  from{opacity:0; transform:translateY(12px);}
+  to{opacity:1; transform:translateY(0);}
+}

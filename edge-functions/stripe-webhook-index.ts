@@ -196,9 +196,18 @@ Deno.serve(async (req: Request) => {
       if (syncRows.length) {
         const blob = syncRows[0].data;
         const incomeLog = JSON.parse(blob.th_income_log || "[]");
+        // toISOString() is always UTC -- the business runs on America/Denver
+        // time, so a POS sale after ~6pm local would silently log against
+        // tomorrow's date in Finance. Same fix already applied to
+        // create-pos-charge-index.ts's own income-log entry.
+        const whParts = new Intl.DateTimeFormat("en-US", {
+          timeZone: "America/Denver", year: "numeric", month: "2-digit", day: "2-digit",
+        }).formatToParts(new Date());
+        const whDateMap: Record<string, string> = {};
+        whParts.forEach((p) => { whDateMap[p.type] = p.value; });
         incomeLog.push({
           id: Date.now(),
-          date: new Date().toISOString().slice(0, 10),
+          date: `${whDateMap.year}-${whDateMap.month}-${whDateMap.day}`,
           desc: pi.metadata?.pos_description || pi.description || "POS sale",
           amount: pi.metadata?.pos_amount ? Number(pi.metadata.pos_amount) : pi.amount / 100,
           source: pi.metadata?.pos_client_email || "",
@@ -279,7 +288,7 @@ Deno.serve(async (req: Request) => {
   // Mark paid in the client-facing table -- this is what the client
   // actually sees reflected back on their next dashboard load. One
   // PATCH covering every unpaid id in this PaymentIntent, not a loop.
-  await fetch(
+  const invoicePatchRes = await fetch(
     `${SUPABASE_URL}/rest/v1/client_portal_invoices?id=in.(${unpaidIds.join(",")})`,
     {
       method: "PATCH",
@@ -287,6 +296,19 @@ Deno.serve(async (req: Request) => {
       body: JSON.stringify({ paid: true, paid_at: paidAt }),
     },
   );
+
+  // A non-2xx here must NOT fall through to the 200 at the end of this
+  // handler: Stripe treats any non-2xx response as delivery failure and
+  // retries the event for several days, which is exactly the safety net
+  // this needs -- a customer who genuinely paid must never be left
+  // showing "unpaid" forever with nothing left to retry the write. Only
+  // the two early-return cases above (no matching invoice; already
+  // processed) are genuinely nothing-to-do and get a real 200.
+  if (!invoicePatchRes.ok) {
+    const errText = await invoicePatchRes.text();
+    console.error(`Failed to mark client_portal_invoices paid for PaymentIntent ${pi.id}: ${errText.slice(0, 300)}`);
+    return new Response(JSON.stringify({ received: false, error: "Failed to mark invoice(s) paid" }), { status: 500 });
+  }
 
   // Also mark paid in workspace_sync's th_invoices, so Connor/Steve's
   // own invoice log reflects this too, not just the portal --
@@ -301,6 +323,16 @@ Deno.serve(async (req: Request) => {
     `${SUPABASE_URL}/rest/v1/workspace_sync?code=eq.tripleh-workspace-2026&select=data`,
     { headers: { apikey: SERVICE_ROLE_KEY, Authorization: `Bearer ${SERVICE_ROLE_KEY}` } },
   );
+  if (!syncRes.ok) {
+    // Secondary, internal-log-only write -- the client-facing table
+    // above already succeeded, so this never fails the whole webhook
+    // (Stripe would otherwise keep retrying an event that's already
+    // fully handled from the client's perspective). Logged so a mismatch
+    // between the portal and Steve/Connor's own invoice log is at least
+    // visible for manual reconciliation, instead of silently vanishing.
+    console.error(`Failed to read workspace_sync for PaymentIntent ${pi.id}: ${await syncRes.text().catch(() => "")}`);
+    return new Response(JSON.stringify({ received: true, invoices_marked_paid: unpaidIds.length, workspace_sync_warning: "Could not read workspace_sync" }), { status: 200 });
+  }
   const syncRows = await syncRes.json();
   if (syncRows.length) {
     const blob = syncRows[0].data;
@@ -315,7 +347,7 @@ Deno.serve(async (req: Request) => {
     });
     if (changed) {
       blob.th_invoices = JSON.stringify(invoices);
-      await fetch(
+      const workspaceSyncPatchRes = await fetch(
         `${SUPABASE_URL}/rest/v1/workspace_sync?code=eq.tripleh-workspace-2026`,
         {
           method: "PATCH",
@@ -323,6 +355,9 @@ Deno.serve(async (req: Request) => {
           body: JSON.stringify({ data: blob, updated_at: paidAt }),
         },
       );
+      if (!workspaceSyncPatchRes.ok) {
+        console.error(`Failed to mark workspace_sync th_invoices paid for PaymentIntent ${pi.id}: ${await workspaceSyncPatchRes.text().catch(() => "")}`);
+      }
     }
   }
 

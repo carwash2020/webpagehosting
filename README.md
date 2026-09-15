@@ -1072,3 +1072,239 @@ style of the existing `manage-booking.test.js`) and
 static-source checks on the migration and both edge functions).
 1,641/1,641 tests passing, all consistency/undefined-vars/link/visual-
 snapshot checks clean.
+
+## What changed, 2026-09-15 -- structured-data pass for AI answer engines (GEO/AEO), plus a differentiated robots.txt
+
+Prompted by a research request into getting Triple H recommended by AI
+answer engines (ChatGPT, Perplexity, Google AI Overviews/Gemini,
+Claude) and voice assistants (Siri, Google Assistant, Bixby, Alexa).
+The research itself (two background agents, web-search-grounded) found
+these systems don't share one index -- Yelp is disproportionately
+important across ChatGPT/Perplexity/Siri/Alexa, GBP drives Google's own
+AI surfaces, and Princeton's GEO paper (arXiv:2311.09735) found
+schema markup is "hygiene," not the main citation lever, with
+statistics/quotes/authoritative citations in visible content doing
+most of the work. Full findings and the prioritized action list
+(most of which requires the business owner logging into Google
+Business Profile/Yelp/Apple Business Connect/Angi/BBB/Bing Places
+directly -- not something fixable from this repo) were handed off in
+chat, not written to a file here. This entry covers only the pieces
+that were fixable directly in the repo.
+
+**Real gap found and fixed:** the 7 city landing pages
+(`handyman-hurricane-ut.html` and the rest) had visible on-page FAQ
+content with zero matching `FAQPage` JSON-LD -- only the homepage and
+the 5 service pages had it. Fixed by adding real `FAQPage` schema built
+from each page's own actual visible FAQ text (not invented content),
+preserving each city's real trip-fee answer (standard 15-mile-radius
+wording for the 5 standard-coverage cities, the distinct by-request
+wording already on the page for Cedar City and Mesquite). Same 7 pages
+also gained a `Service` schema block (`serviceType`, `provider`,
+`areaServed` matching each page's existing `areaServed` values,
+`hasOfferCatalog` reusing the same 6 service offerings already listed
+on the homepage's own schema) -- per the research, this is what lets an
+answer engine match "who does appliance repair in Hurricane" to a
+specific service+location pairing, which the existing
+`HomeAndConstructionBusiness`-only schema didn't explicitly encode.
+
+**Second gap found and fixed:** the 5 service pages
+(`washer-dryer-repair.html`, `plumbing-repairs.html`,
+`drywall-painting.html`, `handyman-repairs.html`,
+`assembly-installation.html`) already had `Service` schema but were
+missing `FAQPage` despite each having its own real, distinct visible
+FAQ section -- fixed the same way, using each page's actual FAQ text.
+
+**BreadcrumbList added site-wide** to every page that didn't already
+have one and isn't the homepage itself: all 7 city pages, all 5 service
+pages, `about.html`, `our-work.html`, `terms.html`, `blog/index.html`,
+and all 6 individual blog posts (Home → Blog → post title for posts;
+Home → page name for the rest). Cheap, low-risk structured-data hygiene
+per the research -- clarifies site hierarchy for crawlers/engines, no
+visible change to the rendered page.
+
+**`robots.txt` gained explicit per-crawler rules**, splitting AI bots
+into two groups rather than leaving them under the blanket `User-agent:
+*` rule: live-retrieval/answer bots that ground an actual chat response
+(`OAI-SearchBot`, `ChatGPT-User`, `PerplexityBot`, `Claude-SearchBot`,
+`Claude-User`) are explicitly allowed, since being cited by these is
+the whole point; bulk AI-training crawlers (`GPTBot`, `CCBot`,
+`Google-Extended`) are disallowed -- this doesn't remove the site from
+Google/Bing search or from Google's own AI Overviews (ordinary
+Googlebot/Bingbot crawling, which those actually depend on, is
+untouched by this), it only opts the site out of being scraped
+wholesale into a model's training set, which has no bearing on whether
+the business gets recommended in an answer. The research flagged this
+specific split as a defensible judgment call, not a hard best practice
+-- allowing everything would also have been reasonable for a small
+business with no proprietary content to protect.
+
+**`llms.txt` was deliberately NOT added** -- the research found
+adoption is still only ~10% of domains after 18 months, AI crawlers
+essentially don't fetch it in practice (0.1% of bot traffic in one
+90-day study), and Google has explicitly said it doesn't support it.
+Not worth the effort right now; revisit if that changes.
+
+**Explicitly NOT touched, and why:** `AggregateRating` schema was not
+expanded/added anywhere new -- the research flagged that re-publishing
+third-party (Google/Yelp) review scores as first-party `AggregateRating`
+schema violates both Google's and the platforms' own guidelines, and
+with only ~7 Google reviews there isn't a healthy count to mark up yet
+regardless. `speakable` schema was also skipped -- low priority, unclear
+relevance to LLM chat answer engines specifically (it's mainly a Google
+Assistant voice-readback feature). Content-quality rewrites (leading
+with stats/quotes, an ongoing freshness cadence) were identified as the
+single highest-evidence lever in the research but were deliberately
+left for a future session with the user's direction, rather than
+rewriting live marketing copy unprompted.
+
+Verified before committing: every new/existing JSON-LD block across all
+21 changed HTML files parses as valid JSON (scripted check, not
+eyeballed), div-tag balance holds on every changed file,
+`npm run check-consistency` and `scripts/check-links.py` both pass
+clean, and the existing `tests/seo/local-business-schema.test.js`,
+`tests/design/blog-post-meta.test.js`,
+`tests/design/homepage-stats-bar.test.js`, and
+`tests/referrals/referral-program.test.js` suites (the ones that
+actually assert on this site's schema/meta content) all still pass
+(37/37). The full `npm test` run was also kicked off, covering the
+much larger, mostly-unrelated internal-tools test suite.
+
+**False alarm, corrected same session:** this repo's dependencies
+(`node_modules`) weren't installed before this session (`npm test` and
+`npm run check-undefined-vars` both failed outright with
+`Cannot find module 'jsdom'`). Running `npm install` mid-session
+briefly surfaced what looked like a real bug --
+`check-undefined-vars.js` reporting `tools/qrcode-lib.js` and
+`tools/push-notifications.js` both declaring `VAPID_PUBLIC_KEY` -- but
+a direct grep across both files found the declaration only exists in
+`push-notifications.js`, and re-running the check after the install
+fully completed came back clean (`52 pages checked, all clean`). The
+apparent collision was a transient false positive from an
+incomplete/mid-install dependency state, not a real bug worth fixing.
+Also confirmed: `npm run check-consistency` (16 tool + 8 portal pages),
+`scripts/check-links.py` (all internal references across 59 HTML files
+resolve), and `scripts/check-visual-snapshot.js` (6 targets, all match
+baseline) all pass clean. The full `npm test` run (1,420+ tests, mostly
+unrelated internal-tools coverage) was kicked off but is slow enough in
+this environment to need a longer timeout than one command allows --
+the targeted suites that actually assert on this site's schema/meta
+content (`tests/seo/local-business-schema.test.js`,
+`tests/design/blog-post-meta.test.js`,
+`tests/design/homepage-stats-bar.test.js`,
+`tests/referrals/referral-program.test.js`) were run directly and pass
+37/37.
+
+**`sitemap.xml` `lastmod` dates updated** for exactly the 22 URLs whose
+underlying pages genuinely changed in this session (the 7 city pages,
+5 service pages, about/our-work/terms, the blog index, and all 6 blog
+posts) -- bumped to 2026-09-15, the real date of the schema/breadcrumb
+additions above. Every other `lastmod` in the file was left untouched.
+
+**Third real gap found and fixed, same pass:** all 5 service pages'
+`Service` schema had a `provider` (a nested `HomeAndConstructionBusiness`
+stub) with no `sameAs` at all -- meaning every other schema block across
+the site (homepage, all 7 city pages) links the business entity to its
+Facebook/Instagram/LinkedIn/Yelp profiles except these 5. Added the same
+4-link `sameAs` array to each service page's `provider` object,
+matching what's already on every city page. This is exactly the kind
+of cross-page attribute consistency the research flagged as helping an
+answer engine build confidence that mentions across the web refer to
+the same entity.
+
+## What changed, 2026-09-15 (later the same day) -- a real cookie-consent banner, gating GA4 with Google Consent Mode v2
+
+Prompted directly ("Can we add cookies?"), after first confirming this
+isn't legally required: neither the Utah Consumer Privacy Act (UCPA;
+$25M+ annual revenue threshold, per [Enzuzo's 2026 UCPA guide](https://www.enzuzo.com/blog/utah-consumer-privacy-act-ucpa)
+and [Ketch's UCPA compliance page](https://www.ketch.com/regulatory-compliance/utah-consumer-privacy-act-ucpa)),
+CCPA (California revenue/data-volume thresholds), nor GDPR (no EU
+targeting) apply to a business this size. Built anyway as the right
+thing to do given real GA4 tracking cookies were firing unconditionally
+on every page load with zero user choice -- previously Terms &sect;12
+only *disclosed* this, with no actual consent mechanism.
+
+**Approach: Google Consent Mode v2**, the current standard way to gate
+GA4 specifically (rather than blocking the gtag.js script entirely,
+which would also break the existing GA4 event tracking wiring the
+moment consent IS granted). Every one of the 23 public pages that loads
+GA4 (`G-TMJJMGY2DQ`) now has a small inline script, placed immediately
+before the existing GA4 tag, that reads `localStorage['th-cookie-consent']`
+synchronously and calls `gtag('consent', 'default', { analytics_storage:
+..., ad_storage: 'denied', ... })` *before* gtag.js itself ever runs --
+so no analytics cookie is set until a real choice is made. A new
+shared `/cookie-consent.js` (loaded on all 23 pages, same pattern as
+`site-motion.js`/`analytics-events.js`) shows a bottom-fixed banner on
+first visit (Accept/Decline), calls `gtag('consent', 'update', ...)`
+and stores the choice, and exposes `window.reopenCookiePreferences()`
+so a visitor can change their mind later -- wired to a new "Cookie
+Preferences" link added to every page's existing footer (`.footer-bottom`).
+`booking.html` has GA4 too and got the consent-default snippet + banner
+script, but has no shared site footer to hang a preferences link off
+of -- the banner itself still appears there on first visit, same as
+everywhere else. `manage-booking.html`, `manage-job.html`, and
+`404.html` load no analytics at all and were left untouched.
+
+New CSS (`.cookie-banner` and friends, appended to `styles.css`) reuses
+the site's existing theme tokens (`--bg-panel`, `--border`, `--orange`,
+etc.) so it tracks light/dark automatically with no separate theme
+block, matching the pattern already established for every other
+themed component on the site.
+
+**Verified with real execution, not just a syntax check** (this
+project has been bitten before by code that looks right but throws at
+runtime -- see the 2026-07-31 Invoice Generator incident above): built
+a jsdom harness combining the real consent-default snippet, the real
+GA4 config block, and the real `cookie-consent.js` as they'd actually
+run together in one page, and confirmed the banner appears on first
+load, Accept fires `gtag('consent','update',{analytics_storage:'granted'})`
+and persists it, Decline does the equivalent with `'denied'`, the
+banner does NOT reappear on a later load once a choice exists, and
+`reopenCookiePreferences()` correctly reopens it on demand. (A first
+attempt at this test used a naive single `window.eval()` call and threw
+a `ReferenceError` on bare `gtag(...)` -- that was confirmed to be an
+artifact of the flawed test harness, not a real bug, once retested with
+a faithful multi-`<script>`-tag reproduction matching how the page
+actually loads.)
+
+**Terms & Conditions &sect;12 updated** (in both `terms.html` and
+`index.html`'s static fallback content) to describe the actual banner
+and link to it, rather than just disclosing analytics use with no
+mechanism. **Not updated: the live Supabase-backed Terms content**
+(`site_terms` table, editable via Dev Tools' CMS -- see the "Public
+site CMS" section above) that the homepage's Terms modal actually
+renders from in production. This session had no reason to write
+directly to the live production database for a wording change like
+this; the same &sect;12 wording change should be made there too via
+Dev Tools, by the business owner or a future session with explicit
+direction to touch live data.
+
+**Editing `styles.css` changed its content hash**, which the project's
+own `check-consistency.js` correctly flagged as 24 pages now serving a
+stale `?v=` cache-bust stamp (would have meant some visitors getting a
+cached pre-cookie-banner copy of the stylesheet). Fixed by running the
+project's own `npm run fix-versions`, which additionally bumped the two
+service worker `CACHE_NAME` values (`th-workspace-v138` -> `v139`,
+`th-portal-v61` -> `v62`) since a precached file's contents changed --
+this touched every tool/portal page too, purely as a cache-bust stamp
+refresh, no content changes to any of them.
+
+Verified before committing: all 23 changed public pages still parse as
+valid JSON-LD with balanced `<div>`/`<span>`/`<p>` tags, `npm run
+check-consistency` passes clean (24 pages, no stale stamps), `npm run
+check-undefined-vars` passes clean (52 pages), `scripts/check-links.py`
+resolves every internal reference across 59 HTML files, and the
+schema/meta-focused test suites
+(`tests/seo/local-business-schema.test.js`,
+`tests/design/blog-post-meta.test.js`,
+`tests/design/homepage-stats-bar.test.js`,
+`tests/referrals/referral-program.test.js`) pass 37/37.
+
+**Follow-up, same day, on explicit request:** the live Supabase
+`site_terms` row this entry flagged as intentionally not updated (id
+13, "12. Cookies and Analytics") was updated directly via SQL to the
+same wording now live in `terms.html`/`index.html`'s static fallback --
+confirmed via `site_terms_history` (a real `update` row logged at
+2026-09-15 21:02:30 UTC, following the existing `insert` from
+2026-08-13). This is the content the homepage's Terms modal actually
+renders in production, so both the static fallback and the live CMS
+copy now say the same thing.

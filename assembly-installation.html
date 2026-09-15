@@ -12,6 +12,25 @@
 </script>
 
 <!-- Google tag (gtag.js) -->
+<script>
+  // Google Consent Mode v2: default analytics storage to denied unless
+  // this visitor already made a choice via the cookie banner
+  // (cookie-consent.js), so no GA4 cookie is set before that happens.
+  (function () {
+    var consent = 'denied';
+    try {
+      if (localStorage.getItem('th-cookie-consent') === 'granted') consent = 'granted';
+    } catch (e) {}
+    window.dataLayer = window.dataLayer || [];
+    window.gtag = window.gtag || function () { dataLayer.push(arguments); };
+    gtag('consent', 'default', {
+      'analytics_storage': consent,
+      'ad_storage': 'denied',
+      'ad_user_data': 'denied',
+      'ad_personalization': 'denied'
+    });
+  })();
+</script>
 <script async src="https://www.googletagmanager.com/gtag/js?id=G-TMJJMGY2DQ"></script>
 <script>
   window.dataLayer = window.dataLayer || [];
@@ -55,7 +74,7 @@
 <link rel="preconnect" href="https://csvfqdjuobylgafgolho.supabase.co">
 <link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Anton&family=Archivo:wght@400..700&family=Newsreader:ital,opsz,wght@0,6..72,300..600&family=Oswald:wght@200..700&display=swap" onload="this.onload=null;this.rel='stylesheet'">
 <noscript><link href="https://fonts.googleapis.com/css2?family=Anton&family=Archivo:wght@400..700&family=Newsreader:ital,opsz,wght@0,6..72,300..600&family=Oswald:wght@200..700&display=swap" rel="stylesheet"></noscript>
-<link rel="stylesheet" href="/styles.css?v=c729b21994">
+<link rel="stylesheet" href="/styles.css?v=9ac6522c5d">
 <script type="application/ld+json">
 {
   "@context": "https://schema.org",
@@ -66,7 +85,13 @@
     "name": "Triple H Enterprises",
     "telephone": "+14354141667",
     "email": "steve@triplehenterprisesllc.biz",
-    "address": { "@type": "PostalAddress", "addressLocality": "St. George", "postalCode": "84790", "addressRegion": "UT", "addressCountry": "US" }
+    "address": { "@type": "PostalAddress", "addressLocality": "St. George", "postalCode": "84790", "addressRegion": "UT", "addressCountry": "US" },
+    "sameAs": [
+      "https://www.facebook.com/profile.php?id=61560166174024",
+      "https://www.instagram.com/triplehenterprises?igsh=eTVndzQxYXg4emhk",
+      "https://www.linkedin.com/in/steven-robinson-241944424",
+      "https://www.yelp.com/biz/triple-h-enterprises-st-george"
+    ]
   },
   "areaServed": ["St. George, UT", "Hurricane, UT", "Washington, UT", "Santa Clara, UT", "Ivins, UT", "Cedar City, UT", "Mesquite, NV"],
   "url": "https://www.triplehenterprisesllc.biz/assembly-installation.html"
@@ -120,6 +145,27 @@
   ]
 }
 </script>
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "BreadcrumbList",
+  "itemListElement": [
+    {
+      "@type": "ListItem",
+      "position": 1,
+      "name": "Home",
+      "item": "https://www.triplehenterprisesllc.biz/"
+    },
+    {
+      "@type": "ListItem",
+      "position": 2,
+      "name": "Assembly & Installation",
+      "item": "https://www.triplehenterprisesllc.biz/assembly-installation.html"
+    }
+  ]
+}
+</script>
+<script src="/cookie-consent.js" defer></script>
 </head>
 <body class="has-blueprint-bg">
 <div class="bg-blueprint" aria-hidden="true"></div>
@@ -541,6 +587,7 @@
     <div class="footer-bottom">
       <span>&copy; <span id="year"></span> Triple H Enterprises LLC. All rights reserved.</span>
       <span>A registered Utah limited liability company &middot; Reliable Service. Quality Work. Done Right.</span>
+      <span><a href="#" onclick="window.reopenCookiePreferences && window.reopenCookiePreferences(event)">Cookie Preferences</a></span>
     </div>
   </div>
 </footer>

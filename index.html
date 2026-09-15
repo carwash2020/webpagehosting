@@ -18,6 +18,25 @@
 </script>
 
 <!-- Google tag (gtag.js) -->
+<script>
+  // Google Consent Mode v2: default analytics storage to denied unless
+  // this visitor already made a choice via the cookie banner
+  // (cookie-consent.js), so no GA4 cookie is set before that happens.
+  (function () {
+    var consent = 'denied';
+    try {
+      if (localStorage.getItem('th-cookie-consent') === 'granted') consent = 'granted';
+    } catch (e) {}
+    window.dataLayer = window.dataLayer || [];
+    window.gtag = window.gtag || function () { dataLayer.push(arguments); };
+    gtag('consent', 'default', {
+      'analytics_storage': consent,
+      'ad_storage': 'denied',
+      'ad_user_data': 'denied',
+      'ad_personalization': 'denied'
+    });
+  })();
+</script>
 <script async src="https://www.googletagmanager.com/gtag/js?id=G-TMJJMGY2DQ"></script>
 <script>
   window.dataLayer = window.dataLayer || [];
@@ -62,7 +81,7 @@
 <link rel="preconnect" href="https://csvfqdjuobylgafgolho.supabase.co">
 <link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Anton&family=Archivo:wght@400..700&family=Newsreader:ital,opsz,wght@0,6..72,300..700;1,6..72,300..600&family=Oswald:wght@200..700&display=swap" onload="this.onload=null;this.rel='stylesheet'">
 <noscript><link href="https://fonts.googleapis.com/css2?family=Anton&family=Archivo:wght@400..700&family=Newsreader:ital,opsz,wght@0,6..72,300..700;1,6..72,300..600&family=Oswald:wght@200..700&display=swap" rel="stylesheet"></noscript>
-<link rel="stylesheet" href="styles.css?v=c729b21994">
+<link rel="stylesheet" href="styles.css?v=9ac6522c5d">
 <!-- Improvement roadmap (2026-09-09), tier 1: the hero background is a
      CSS background-image (see .hero in styles.css), so the browser
      doesn't discover it until CSS is parsed -- likely this page's LCP
@@ -268,6 +287,8 @@
   ]
 }
 </script>
+<script src="/cookie-consent.js" defer></script>
+<script src="/utm-tracking.js?v=5aa2d867e3" defer></script>
 </head>
 <body class="has-blueprint-bg">
 <div class="bg-blueprint" aria-hidden="true"></div>
@@ -1497,6 +1518,7 @@
     <div class="footer-bottom">
       <span>&copy; <span id="year"></span> Triple H Enterprises LLC. All rights reserved.</span>
       <span>A registered Utah limited liability company. Reliable Service. Quality Work. Done Right.</span>
+      <span><a href="#" onclick="window.reopenCookiePreferences && window.reopenCookiePreferences(event)">Cookie Preferences</a></span>
     </div>
   </div>
 </footer>
@@ -1678,7 +1700,7 @@
         <p>Invoicing and payment processing are handled through Stripe. Online booking requests, contact form submissions, and other business data are processed and stored through Supabase, with outbound email delivered via Resend. Information submitted through these tools is subject to those providers' own privacy practices, and Triple H Enterprises is not responsible for outages or issues originating from these third-party services.</p>
 
         <h4>12. Cookies and Analytics</h4>
-        <p>This website uses Google Analytics to understand general site traffic, such as which pages are visited and how visitors arrive at the site. This may involve cookies or similar technologies. No personal information submitted through the contact or scheduling forms is shared with Google Analytics. Visitors who prefer to opt out of analytics tracking can do so using their browser's privacy settings or a browser extension such as Google's Analytics Opt-out add-on.</p>
+        <p>This website uses Google Analytics to understand general site traffic, such as which pages are visited and how visitors arrive at the site. This may involve cookies or similar technologies. No personal information submitted through the contact or scheduling forms is shared with Google Analytics. On a first visit, a cookie banner asks whether analytics cookies can be used; no analytics cookie is set until that choice is made, and it can be changed at any time using the "Cookie Preferences" link in the site footer. Visitors who prefer to opt out of analytics tracking can also do so using their browser's privacy settings or a browser extension such as Google's Analytics Opt-out add-on.</p>
 
         <h4>13. Missed Appointments</h4>
         <p>If no one is available at the scheduled time and access cannot be arranged, the visit may be treated as a same-day cancellation, and the $50 fee outlined above may apply.</p>
@@ -2458,7 +2480,7 @@
         'Authorization': 'Bearer ' + LEADS_SUPABASE_ANON_KEY,
         'Prefer': 'resolution=ignore-duplicates',
       },
-      body: JSON.stringify([{
+      body: JSON.stringify([Object.assign({
         name: formData.get('name'),
         phone: formData.get('phone'),
         email: formData.get('email'),
@@ -2469,7 +2491,12 @@
         referred_by: formData.get('referredBy') || null,
         source: formData.get('source') || null,
         client_request_id: getLeadRequestId(),
-      }]),
+        // Automatic UTM campaign attribution (utm-tracking.js), captured
+        // from whichever page this visitor actually landed on -- entirely
+        // separate from the manual "source" dropdown above. Never present
+        // (getStoredUtmParams returns null) if the visitor never arrived
+        // via a UTM-tagged link, or if that attribution has aged out.
+      }, (typeof window.getStoredUtmParams === 'function' && window.getStoredUtmParams()) || {})]),
     })
     .then((response) => {
       if (response.ok) {
@@ -3096,7 +3123,7 @@
       .catch(() => { /* static fallback content already shown is correct */ });
   })();
 </script>
-<script src="/business-hours.js?v=306f097e9e"></script>
+<script src="/business-hours.js?v=5296319b73"></script>
 <script>
   // ---------- seasonal care note ----------
   // One practical thing worth doing this month. Plain maintenance advice,
