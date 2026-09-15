@@ -242,7 +242,11 @@
 // requires bumping this constant so it's actually fetched and cached
 // on the next activate, not silently missing until some other change
 // happens to bump it later.
-const CACHE_NAME = 'th-portal-v63'; // precache-fingerprint:956e6cf7ee5b
+// Bumped (v63 -> v64): /styles.css changed (new .faq-plain-list/
+// .faq-plain-item rules for the public site's new landing-page FAQ
+// section, audit item #18) -- shared with the public site, precached
+// here too. Same reasoning as every prior bump above.
+const CACHE_NAME = 'th-portal-v64'; // precache-fingerprint:5b4686e809ae
 const PRECACHE_URLS = [
   '/portal/home.html', '/portal/dashboard.html', '/portal/jobs.html', '/portal/quotes.html',
   '/portal/work-orders.html', '/portal/settings.html', '/portal/login.html', '/portal/set-password.html',

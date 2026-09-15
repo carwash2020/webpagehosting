@@ -1832,6 +1832,43 @@
     .review-card{padding:24px 22px;}
   }
 
+  /* Landing-page FAQ section (audit item #18): a condensed, real-content
+     FAQ list for the service/city pages, which previously had no FAQ
+     content -- and therefore no legitimate FAQPage schema either, since
+     structured data must match visible content. Zero-JS <details>/
+     <summary>, same pattern already proven for .reviews-toggle above
+     (no accordion script to load on pages that don't otherwise need one). */
+  .faq-plain-list{max-width:720px; margin:0 auto;}
+  .faq-plain-item{
+    border-bottom:1px solid var(--border);
+    padding:18px 0;
+  }
+  .faq-plain-item summary{
+    font-family:var(--font-ui);
+    font-size:16px;
+    font-weight:600;
+    color:var(--white);
+    cursor:pointer;
+    list-style:none;
+    padding-right:24px;
+    position:relative;
+  }
+  .faq-plain-item summary::-webkit-details-marker{display:none;}
+  .faq-plain-item summary::after{
+    content:'+';
+    position:absolute; right:0; top:0;
+    color:var(--orange-text);
+    font-size:20px;
+    line-height:1;
+  }
+  .faq-plain-item[open] summary::after{content:'\2212';}
+  .faq-plain-item p{
+    font-size:15px;
+    color:var(--text-dim);
+    line-height:1.6;
+    margin:12px 0 0;
+  }
+
 
   /* =====================================================================
      scroll-craft pass (2026-09-05): the public site's scroll language.

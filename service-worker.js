@@ -667,7 +667,12 @@
 // 'converted' status, but it had never been rolled up into a single
 // rate anywhere). Precached. Same reasoning as every prior bump in
 // this file's history.
-const CACHE_NAME = 'th-workspace-v147'; // precache-fingerprint:043523406b80
+// Bumped (v147 -> v148): styles.css changed -- new .faq-plain-list/
+// .faq-plain-item rules for the landing pages' new condensed FAQ
+// section (audit item #18, closes a real gap: FAQPage schema on those
+// pages with no matching visible FAQ content to back it). Precached.
+// Same reasoning as every prior bump in this file's history.
+const CACHE_NAME = 'th-workspace-v148'; // precache-fingerprint:97a833854595
 const PRECACHE_URLS = [
   '/tools/workspace.html', '/tools/job-tracker.html', '/tools/invoice-generator.html', '/tools/contract-generator.html',
   '/tools/calendar.html', '/tools/route-planner.html', '/tools/review-request.html', '/tools/contact-card.html',
