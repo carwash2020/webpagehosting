@@ -1,0 +1,21 @@
+-- Security fix, found via mcp__Supabase__get_advisors (CRITICAL: "Row
+-- Level Security is disabled") while working an unrelated item in this
+-- same audit pass: cron_watchdog_state (added in add_cron_watchdog.sql)
+-- was created without enabling RLS at all -- fully exposed to the anon
+-- and authenticated roles, meaning anyone with this project's public
+-- anon key could read or overwrite its cursor.
+--
+-- Nothing client-side ever needs to touch this table. It's a
+-- single-row cursor read and written only by check_cron_health(), a
+-- SECURITY DEFINER function called from pg_cron directly and from the
+-- cron-health-alert branch in send-push-index.ts (which uses the
+-- service role key) -- both bypass RLS by design (SECURITY DEFINER
+-- functions run as their owner; the service role bypasses RLS
+-- entirely). Enabling RLS with no policies at all makes this
+-- deny-all for anon/authenticated, which is exactly the right state
+-- for pure internal bookkeeping nothing else should ever read or write.
+--
+-- Applied directly via the Supabase MCP migration tool; recorded here
+-- after the fact so the schema is reproducible from this repo, same
+-- convention as every other file in this directory.
+alter table cron_watchdog_state enable row level security;
