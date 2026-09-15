@@ -56,17 +56,32 @@ function loadPullTodaysJobs(fetchJobsFromRelational) {
     showAlert: async (msg) => { calls.alerts.push(msg); },
     addStop: (address, fromJob) => { calls.stops.push({ address, fromJob }); },
     showToast: (msg) => { calls.toasts.push(msg); },
+    // todayDateStrBusinessTz() (tools-dialogs.js) replaced a
+    // toISOString()-based UTC "today" -- a real bug fix (see README.md),
+    // since UTC rolls to tomorrow's date hours before business hours
+    // actually end. Injected here the same way the real page loads it
+    // as a shared script, rather than eval-ing tools-dialogs.js's full
+    // source just for this one helper.
+    todayDateStrBusinessTz,
   };
   // eslint-disable-next-line no-new-func
   const factory = new Function(
-    'fetchJobsFromRelational', 'localStorage', 'showAlert', 'addStop', 'showToast',
+    'fetchJobsFromRelational', 'localStorage', 'showAlert', 'addStop', 'showToast', 'todayDateStrBusinessTz',
     `${src}\nreturn pullTodaysJobs;`
   );
-  const fn = factory(sandbox.fetchJobsFromRelational, sandbox.localStorage, sandbox.showAlert, sandbox.addStop, sandbox.showToast);
+  const fn = factory(sandbox.fetchJobsFromRelational, sandbox.localStorage, sandbox.showAlert, sandbox.addStop, sandbox.showToast, sandbox.todayDateStrBusinessTz);
   return { fn, calls, sandbox };
 }
 
-const today = new Date().toISOString().slice(0, 10);
+function todayDateStrBusinessTz() {
+  const parts = new Intl.DateTimeFormat('en-US', {
+    timeZone: 'America/Denver', year: 'numeric', month: '2-digit', day: '2-digit',
+  }).formatToParts(new Date());
+  const map = {};
+  parts.forEach(p => { map[p.type] = p.value; });
+  return map.year + '-' + map.month + '-' + map.day;
+}
+const today = todayDateStrBusinessTz();
 
 test('a successful relational fetch with real jobs is used directly, never falls back to localStorage', async () => {
   const { fn, calls, sandbox } = loadPullTodaysJobs(async () => ({

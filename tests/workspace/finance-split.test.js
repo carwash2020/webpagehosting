@@ -1088,6 +1088,7 @@ test('finance.html\'s DOMContentLoaded init actually runs to completion and rend
   window.TH_KEYS = { jobs: 'th_tracker_jobs', invoices: 'th_invoices', expenses: 'th_expense_log', income: 'th_income_log' };
   window.thRead = (key, fallback) => fallback;
   window.money = (n) => '$' + (Number(n) || 0).toFixed(2);
+  window.todayDateStrBusinessTz = () => { const p = new Intl.DateTimeFormat('en-US', { timeZone: 'America/Denver', year: 'numeric', month: '2-digit', day: '2-digit' }).formatToParts(new Date()); const m = {}; p.forEach(x => { m[x.type] = x.value; }); return `${m.year}-${m.month}-${m.day}`; };
   window.escapeHtml = (s) => String(s == null ? '' : s);
       window.escapeForInlineHandler = (s) => String(s == null ? '' : s);
 
@@ -1273,6 +1274,7 @@ test('the end-to-end flow actually works: open the modal, fill it out, submit, a
   window.escapeHtml = (s) => String(s == null ? '' : s);
       window.escapeForInlineHandler = (s) => String(s == null ? '' : s);
   window.money = (n) => '$' + (Number(n) || 0).toFixed(2);
+  window.todayDateStrBusinessTz = () => { const p = new Intl.DateTimeFormat('en-US', { timeZone: 'America/Denver', year: 'numeric', month: '2-digit', day: '2-digit' }).formatToParts(new Date()); const m = {}; p.forEach(x => { m[x.type] = x.value; }); return `${m.year}-${m.month}-${m.day}`; };
   window.uploadReceipt = async (file, id) => ({ ok: true, path: 'expense-' + id + '/fake.jpg' });
   window.localStorage.setItem('th_tracker_jobs', JSON.stringify([{ id: 555, title: 'End-to-end Test Job' }]));
 
@@ -1346,6 +1348,7 @@ test('finance.html shows its default tab (Cost Lookup) on a completely normal, h
   window.TH_KEYS = { jobs: 'th_tracker_jobs', invoices: 'th_invoices', expenses: 'th_expense_log', income: 'th_income_log' };
   window.thRead = (key, fallback) => fallback;
   window.money = (n) => '$' + (Number(n) || 0).toFixed(2);
+  window.todayDateStrBusinessTz = () => { const p = new Intl.DateTimeFormat('en-US', { timeZone: 'America/Denver', year: 'numeric', month: '2-digit', day: '2-digit' }).formatToParts(new Date()); const m = {}; p.forEach(x => { m[x.type] = x.value; }); return `${m.year}-${m.month}-${m.day}`; };
   window.escapeHtml = (s) => String(s == null ? '' : s);
       window.escapeForInlineHandler = (s) => String(s == null ? '' : s);
   window.document.dispatchEvent(new window.Event('DOMContentLoaded'));
@@ -1375,6 +1378,7 @@ test('finance.html still correctly activates a DIFFERENT tab when a real hash is
   window.TH_KEYS = { jobs: 'th_tracker_jobs', invoices: 'th_invoices', expenses: 'th_expense_log', income: 'th_income_log' };
   window.thRead = (key, fallback) => fallback;
   window.money = (n) => '$' + (Number(n) || 0).toFixed(2);
+  window.todayDateStrBusinessTz = () => { const p = new Intl.DateTimeFormat('en-US', { timeZone: 'America/Denver', year: 'numeric', month: '2-digit', day: '2-digit' }).formatToParts(new Date()); const m = {}; p.forEach(x => { m[x.type] = x.value; }); return `${m.year}-${m.month}-${m.day}`; };
   window.escapeHtml = (s) => String(s == null ? '' : s);
       window.escapeForInlineHandler = (s) => String(s == null ? '' : s);
   window.document.dispatchEvent(new window.Event('DOMContentLoaded'));
@@ -1533,6 +1537,7 @@ test('the full expense lifecycle (add, highlight, edit, cancel, re-render) works
   window.TH_KEYS = { jobs: 'th_tracker_jobs', invoices: 'th_invoices', expenses: 'th_expense_log', income: 'th_income_log' };
   window.thRead = (key, fallback) => fallback;
   window.money = (n) => '$' + (Number(n) || 0).toFixed(2);
+  window.todayDateStrBusinessTz = () => { const p = new Intl.DateTimeFormat('en-US', { timeZone: 'America/Denver', year: 'numeric', month: '2-digit', day: '2-digit' }).formatToParts(new Date()); const m = {}; p.forEach(x => { m[x.type] = x.value; }); return `${m.year}-${m.month}-${m.day}`; };
   window.escapeHtml = (s) => String(s == null ? '' : s);
       window.escapeForInlineHandler = (s) => String(s == null ? '' : s);
   window.uploadReceipt = async () => ({ ok: true, path: 'fake.jpg' });
@@ -1577,6 +1582,7 @@ test('the full income lifecycle (add, highlight, edit, cancel, re-render) also w
   window.TH_KEYS = { jobs: 'th_tracker_jobs', invoices: 'th_invoices', expenses: 'th_expense_log', income: 'th_income_log' };
   window.thRead = (key, fallback) => fallback;
   window.money = (n) => '$' + (Number(n) || 0).toFixed(2);
+  window.todayDateStrBusinessTz = () => { const p = new Intl.DateTimeFormat('en-US', { timeZone: 'America/Denver', year: 'numeric', month: '2-digit', day: '2-digit' }).formatToParts(new Date()); const m = {}; p.forEach(x => { m[x.type] = x.value; }); return `${m.year}-${m.month}-${m.day}`; };
   window.escapeHtml = (s) => String(s == null ? '' : s);
       window.escapeForInlineHandler = (s) => String(s == null ? '' : s);
   window.scheduleSync = () => {};
@@ -1627,6 +1633,7 @@ test('selecting Mileage as the expense type actually shows the Miles field and h
   window.TH_KEYS = { jobs: 'th_tracker_jobs', invoices: 'th_invoices', expenses: 'th_expense_log', income: 'th_income_log' };
   window.thRead = (key, fallback) => fallback;
   window.money = (n) => '$' + (Number(n) || 0).toFixed(2);
+  window.todayDateStrBusinessTz = () => { const p = new Intl.DateTimeFormat('en-US', { timeZone: 'America/Denver', year: 'numeric', month: '2-digit', day: '2-digit' }).formatToParts(new Date()); const m = {}; p.forEach(x => { m[x.type] = x.value; }); return `${m.year}-${m.month}-${m.day}`; };
   window.escapeHtml = (s) => String(s == null ? '' : s);
       window.escapeForInlineHandler = (s) => String(s == null ? '' : s);
   window.document.dispatchEvent(new window.Event('DOMContentLoaded'));
@@ -1691,6 +1698,7 @@ test('the full tutorial lifecycle actually works end to end: shows on first open
   window.attachLongPress = () => {};
   window.wireSearchClear = () => {};
   window.attachVoiceDictation = () => {};
+  window.todayDateStrBusinessTz = () => { const p = new Intl.DateTimeFormat('en-US', { timeZone: 'America/Denver', year: 'numeric', month: '2-digit', day: '2-digit' }).formatToParts(new Date()); const m = {}; p.forEach(x => { m[x.type] = x.value; }); return `${m.year}-${m.month}-${m.day}`; };
   window.document.dispatchEvent(new window.Event('DOMContentLoaded'));
   await new Promise(resolve => setTimeout(resolve, 50));
 
@@ -1727,6 +1735,7 @@ test('a real mileage entry saves correctly: no receipt required, amount computed
   window.attachLongPress = () => {};
   window.wireSearchClear = () => {};
   window.attachVoiceDictation = () => {};
+  window.todayDateStrBusinessTz = () => { const p = new Intl.DateTimeFormat('en-US', { timeZone: 'America/Denver', year: 'numeric', month: '2-digit', day: '2-digit' }).formatToParts(new Date()); const m = {}; p.forEach(x => { m[x.type] = x.value; }); return `${m.year}-${m.month}-${m.day}`; };
   window.localStorage.setItem('th_mileage_rate', '0.67');
   window.localStorage.setItem('th_quickexpense_tutorial_seen', '1');
   window.document.dispatchEvent(new window.Event('DOMContentLoaded'));
@@ -1767,6 +1776,7 @@ test('a real expense entry with vendor and part number saves both correctly', as
   window.attachLongPress = () => {};
   window.wireSearchClear = () => {};
   window.attachVoiceDictation = () => {};
+  window.todayDateStrBusinessTz = () => { const p = new Intl.DateTimeFormat('en-US', { timeZone: 'America/Denver', year: 'numeric', month: '2-digit', day: '2-digit' }).formatToParts(new Date()); const m = {}; p.forEach(x => { m[x.type] = x.value; }); return `${m.year}-${m.month}-${m.day}`; };
   window.uploadReceipt = async (file, id) => ({ ok: true, path: 'expense-' + id + '/r.jpg' });
   window.localStorage.setItem('th_quickexpense_tutorial_seen', '1');
   window.document.dispatchEvent(new window.Event('DOMContentLoaded'));
@@ -2462,6 +2472,7 @@ test('the jsPDF-not-ready guard actually works end to end: shows the real alert 
       window.wireSearchClear = () => {};
       window.attachVoiceDictation = () => {};
       window.money = (n) => '$' + (Number(n) || 0).toFixed(2);
+      window.todayDateStrBusinessTz = () => { const p = new Intl.DateTimeFormat('en-US', { timeZone: 'America/Denver', year: 'numeric', month: '2-digit', day: '2-digit' }).formatToParts(new Date()); const m = {}; p.forEach(x => { m[x.type] = x.value; }); return `${m.year}-${m.month}-${m.day}`; };
       window.escapeHtml = (s) => String(s == null ? '' : s);
       window.escapeForInlineHandler = (s) => String(s == null ? '' : s);
       window.showAlert = async (msg) => { window.__lastAlert = msg; };
@@ -2528,6 +2539,7 @@ function testTopLevelInitNoLongerThrows(pageFile, pagePath, tourStepIndex, extra
         window.requireAuth = () => {};
         window.HTMLElement.prototype.scrollIntoView = () => {};
         window.money = (n) => '$' + (Number(n) || 0).toFixed(2);
+        window.todayDateStrBusinessTz = () => { const p = new Intl.DateTimeFormat('en-US', { timeZone: 'America/Denver', year: 'numeric', month: '2-digit', day: '2-digit' }).formatToParts(new Date()); const m = {}; p.forEach(x => { m[x.type] = x.value; }); return `${m.year}-${m.month}-${m.day}`; };
         window.escapeHtml = (s) => String(s == null ? '' : s);
       window.escapeForInlineHandler = (s) => String(s == null ? '' : s);
         window.thEnsureClient = () => null;
@@ -3195,6 +3207,7 @@ test('generatePDF() completes all the way through to resetInvoiceForm() without 
       window.wireSearchClear = () => {};
       window.attachVoiceDictation = () => {};
       window.money = (n) => '$' + (Number(n) || 0).toFixed(2);
+      window.todayDateStrBusinessTz = () => { const p = new Intl.DateTimeFormat('en-US', { timeZone: 'America/Denver', year: 'numeric', month: '2-digit', day: '2-digit' }).formatToParts(new Date()); const m = {}; p.forEach(x => { m[x.type] = x.value; }); return `${m.year}-${m.month}-${m.day}`; };
       window.escapeHtml = (s) => String(s == null ? '' : s);
       window.escapeForInlineHandler = (s) => String(s == null ? '' : s);
       // personDot() (tools-effects.js, a deferred script jsdom never
@@ -3303,6 +3316,7 @@ test('generateQuotePDF() completes all the way through to resetQuoteForm() witho
       window.wireSearchClear = () => {};
       window.attachVoiceDictation = () => {};
       window.money = (n) => '$' + (Number(n) || 0).toFixed(2);
+      window.todayDateStrBusinessTz = () => { const p = new Intl.DateTimeFormat('en-US', { timeZone: 'America/Denver', year: 'numeric', month: '2-digit', day: '2-digit' }).formatToParts(new Date()); const m = {}; p.forEach(x => { m[x.type] = x.value; }); return `${m.year}-${m.month}-${m.day}`; };
       window.escapeHtml = (s) => String(s == null ? '' : s);
       window.escapeForInlineHandler = (s) => String(s == null ? '' : s);
       window.personDot = () => '';
