@@ -14,11 +14,12 @@
      background-image on html here too. -->
 <html lang="en" style="background-color:#0a0a0a;">
 <head>
-<script src="/tools/auth.js?v=0049ad84fb"></script>
+<script src="/tools/auth.js?v=2be5cce177"></script>
 <script>
   // Security gate -- redirect to login before this page's own content
-  // is meaningfully usable. See auth.js for why this exists (a single
-  // shared account keeping randoms out, not a multi-user system).
+  // is meaningfully usable. See auth.js for why this exists (a small,
+  // role-based multi-user system now -- account_roles/role_definitions,
+  // not a single shared account).
   requireAuth();
 </script>
 <link rel="manifest" href="/tools/manifest.json">
@@ -947,7 +948,7 @@
 
       <p>Data is saved directly in your browser, and quietly kept in sync across your devices in the background &mdash; the small dot next to the sync status turns green when live updates are connected, meaning changes on another device (or a new lead coming in) show up here automatically. The small circular arrow button next to it forces an immediate refresh if you don't want to wait.</p>
       <p><strong>Install this as an app:</strong> iPhone/iPad &mdash; tap the Share icon in Safari, then "Add to Home Screen." Android &mdash; tap the &#8942; menu in Chrome, then "Install app." Computer &mdash; look for an install icon in the address bar. Once installed, it opens full-screen with its own icon, no browser bar.</p>
-      <p><strong>Worth knowing:</strong> this whole suite is behind a real login now &mdash; anyone hitting these pages without signing in gets redirected to a sign-in screen first. There's exactly one account, meant to keep the data private, not to support separate logins for separate people.</p>
+      <p><strong>Worth knowing:</strong> this whole suite is behind a real login now &mdash; anyone hitting these pages without signing in gets redirected to a sign-in screen first. Each account has its own role (Owner, Developer, or Employee) controlling what it can see and do, not one shared login for everyone.</p>
     </div>
   </div>
 </div>

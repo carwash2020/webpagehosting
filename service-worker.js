@@ -672,7 +672,17 @@
 // section (audit item #18, closes a real gap: FAQPage schema on those
 // pages with no matching visible FAQ content to back it). Precached.
 // Same reasoning as every prior bump in this file's history.
-const CACHE_NAME = 'th-workspace-v148'; // precache-fingerprint:97a833854595
+// Bumped (v148 -> v149): auth.js changed -- fixed a stale security
+// comment (audit item #22) claiming "exactly one account... not a
+// multi-user system," which stopped being true once account_roles/
+// role_definitions shipped (Owner, Developer, Employee -- real,
+// server-enforced per-person permissions). Also fixed the same stale
+// claim copy-pasted into 19 other precached pages' own inline
+// comments, and a user-visible sentence in workspace.html's own
+// "Getting Started" guide making the identical false claim to real
+// people using the app. Same reasoning as every prior bump in this
+// file's history.
+const CACHE_NAME = 'th-workspace-v149'; // precache-fingerprint:43bbdee524ff
 const PRECACHE_URLS = [
   '/tools/workspace.html', '/tools/job-tracker.html', '/tools/invoice-generator.html', '/tools/contract-generator.html',
   '/tools/calendar.html', '/tools/route-planner.html', '/tools/review-request.html', '/tools/contact-card.html',
