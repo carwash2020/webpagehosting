@@ -101,21 +101,29 @@ click a setting by hand.
    "Real 5-Star Reviews" stat correctly stay at 4. Fully resolved --
    if that 7th review ever gets real text (or any future review does),
    send it over and it'll be added as a genuine 5th card.
-7. **Deploy the new `send-payment-reminder` edge function and run its
-   cron SQL** (2026-09-16) -- `supabase functions deploy
-   send-payment-reminder`, then run `sql/infra/add_payment_reminder_emails_cron.sql`
-   once in the SQL Editor. Code is written and tested but this is a
-   real deploy step only someone with Supabase dashboard/CLI access can
-   do -- I can't run either of those myself. **Not yet done.**
-8. **Deploy the new `send-quote-followup` edge function and run its
-   cron SQL** (2026-09-16) -- `supabase functions deploy
-   send-quote-followup`, then run
-   `sql/infra/add_quote_followup_email_cron.sql` once in the SQL
-   Editor. Same real deploy step, same reason I can't do it myself.
-   The updated `send-push` (the new "Review Follow-Up Due" push check)
-   needs **no separate deploy step** -- it's the same already-deployed
-   function, just re-deploy it (`supabase functions deploy send-push`)
-   whenever this branch's changes reach it. **Not yet done.**
+7. ~~Deploy the new `send-payment-reminder` edge function and run its
+   cron SQL~~ -- **deploy itself done** (function live at version 5,
+   `send-payment-reminders-daily` cron active, 15:00 UTC daily). **But
+   verified broken (2026-09-16, checked directly)**: every real
+   cron-triggered run 401s and sends nothing -- the cron's vault secret
+   doesn't match what the function's own strict auth check requires.
+   Not a "needs deploy access" item anymore; now a "needs the real
+   `service_role` key from the Supabase dashboard" item -- see
+   `docs/specialist-logs/bugfix.md`'s 2026-09-16 entry for the full
+   root cause and what to do with the key once it's in hand.
+8. ~~Deploy the new `send-quote-followup` edge function and run its
+   cron SQL~~ -- **same story as #7, same real cause, same fix
+   needed.** Function live (version 2), `send-quote-followup-daily`
+   cron active at 16:00 UTC, also 401ing on every real run. `send-push`
+   itself (the "Review Follow-Up Due" check) is unaffected -- that one
+   has no exact-match auth check and has been firing fine hourly on the
+   same vault secret; only these two newer functions added the
+   stricter check and are the ones actually blocked by it.
+9. **Get the real `service_role` key from Supabase (Project Settings ->
+   API) and update the `send_push_service_role_key` vault secret** (or
+   create a new dedicated one and repoint the two crons above) --
+   the one manual step actually blocking items 7 and 8 from working.
+   Everything else about both is done and tested.
 
 <!-- Add new manual action items above this line -->
 

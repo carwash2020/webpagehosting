@@ -25,34 +25,84 @@ Surfaced while building a Supabase-sourced business health report (job/
 invoice/finance data, no code changed). Both are real, verified against
 live data, and handed off rather than fixed here:
 
-1. **Invoice `paid` flag can desync from actual payment, causing a false
-   overdue push.** Cody Grover's invoice (`INV-2026-0905`, id
-   `1788658872274`) has `paid_amount: 125` against a `total` of
-   `125.0025` in `th_invoices`/`invoices` — effectively paid in full
-   (the ~$0.0025 gap is float/rounding noise from the tax calc, not a
-   real balance) — but its `paid` boolean is still `false`. The daily
-   overdue-invoice check reads `paid` directly and sent a fresh
-   `invoice-overdue` push for it on 2026-09-16 (see `notification_log`).
-   Whatever writes `paid_amount` (manual edit in the invoice generator,
-   or a partial-payment path) isn't also flipping `paid` when the
-   amount reaches the total. Worth checking whatever handler applies a
-   payment against an invoice for a `paid_amount >= total` case that
-   doesn't set `paid = true`.
+1. ~~**Invoice `paid` flag can desync from actual payment, causing a false
+   overdue push.**~~ **Fixed (2026-09-16, same day).** Root cause:
+   `checkOverdueInvoices` in `send-push-index.ts` checked `inv.paid`
+   directly instead of deriving "still owed" from `paidAmount`/`total`
+   the way `workspace.html` and `send-payment-reminder-index.ts`
+   already do. `workspace.html`'s own `togglePaid()` already correctly
+   keeps `paid` in sync with `paidAmount` going forward, so this
+   invoice's desync was stale data from before that sync existed, not
+   an active write-path bug -- the one place that needed a real code
+   fix was send-push's read side. Added `getPaidAmount`/`getRemainingCents`
+   to `send-push-index.ts` (same whole-cents rounding as the other two
+   files) and changed the check to `if (getRemainingCents(inv) <= 0)
+   continue;`. Fixed the live data for Cody Grover's invoice
+   (`1788658872274`) in both `invoices` and the `workspace_sync` blob's
+   `th_invoices` so it stops alerting. New test:
+   `tests/edge-functions/overdue-invoice-paid-amount.test.js`. Full
+   suite run clean after (see below).
 
-2. **`workspace_sync` realtime channel repeatedly drops.** `th_client_errors`
-   inside the `workspace_sync` blob logs many `CHANNEL_ERROR`/`TIMED_OUT`
-   events for the `workspace_sync` (and once `th_bookings`) realtime
-   channel between 2026-09-05 and 2026-09-08, across `job-tracker.html`,
-   `invoice-generator.html`, and `workspace.html` — each note says
-   "retrying quietly every 30s in the background" after foreground
-   retries exhaust. Separately, `notification_log` shows a `sync-stale`
-   notification fired again as recently as 2026-09-16, meaning this
-   isn't fully resolved. Data still appears to be saving (the job tracker's
-   REST-backed data is current), so this reads as a realtime-subscription
-   reliability issue rather than data loss — but a multi-device user
-   could be looking at a stale view without knowing it. Worth checking
-   the Supabase realtime config/quota and whether the client's retry
-   logic should surface a visible "reconnecting" state instead of only
-   a background retry.
+2. ~~**`workspace_sync` realtime channel repeatedly drops.**~~
+   **Re-investigated, not actually an open bug — corrected from the
+   original finding above.** Two things got conflated in the original
+   report: the `CHANNEL_ERROR`/`TIMED_OUT` entries (Sep 5-8) predate a
+   real, evidence-based reliability fix already in `sync.js` dated
+   2026-09-07 (checked Supabase's own server-side realtime logs at the
+   time, found zero matching server errors, concluded these are real
+   client-side network transience — most plausibly this business's own
+   field conditions, phones/tablets on job sites — and shipped
+   exponential backoff, `TIMED_OUT` treated the same as
+   `CHANNEL_ERROR`, and an indefinite 30s background retry that
+   self-heals with no reload needed). No error entries exist after
+   that fix landed. Separately, the `sync-stale` notification firing
+   on 2026-09-16 is a *different*, unrelated, and entirely correct
+   signal: `workspace_sync.updated_at` really is 5+ days old (last
+   push 2026-09-11) because nobody's opened the tool since, not
+   because syncing is broken — checked directly against the live row.
+   No code change needed here; the original finding read a working
+   fix and a correct staleness alert as one open problem.
+
+## 2026-09-16 (later) — payment-reminder/quote-followup crons are silently 401ing, need the right key
+
+Full root cause is written up in `docs/specialist-logs/automation.md`
+(the automation specialist found this while verifying a deploy). Short
+version for whoever picks this up: `send-payment-reminder` and
+`send-quote-followup` both do a strict `token !== SERVICE_ROLE_KEY`
+check before doing anything else -- correct, intentional security
+(stops the public anon key from triggering client-facing sends). The
+problem is the cron jobs authenticate with the vault secret
+`send_push_service_role_key`, and that secret's value doesn't equal
+these functions' actual `SUPABASE_SERVICE_ROLE_KEY` at runtime -- every
+real cron-triggered call gets a 401 and does nothing, and has been
+since deploy (confirmed via a manual re-run of the cron's own
+`net.http_post`, and zero `invoice-reminder-*`/`quote-followup-*` rows
+ever in `notification_log`).
+
+This isn't fixable purely in code -- it needs the real current
+`service_role` key pulled from the Supabase dashboard (Project
+Settings -> API) and either used to update the `send_push_service_role_key`
+vault secret, or a new dedicated secret created for these two crons.
+Once that value is in hand, the actual code-side fix is a one-line SQL
+update to `vault.decrypted_secrets`/`vault.secrets` -- flagging here in
+case whoever has the key wants a bugfix pass to also add something
+that makes a future version of this mistake loud instead of silent
+(e.g. an alert on repeated 401s from these functions, since a
+misconfigured secret currently fails the exact same silent way a
+missing one would).
+
+## 2026-09-16 (later still) — pre-existing cache-version drift noticed, not touched
+
+While verifying the invoice fix above, ran `node scripts/check-consistency.js`
+and found 19 pre-existing failures unrelated to that change: `styles-tools.css`'s
+real content hash no longer matches the `?v=` query string every internal
+tool page requests it with, and `service-worker.js`'s precached-file
+fingerprint is stale too. `git status` confirms neither file is touched
+by this session's edits, so this predates today's work. The fix is
+mechanical (`npm run fix-versions`), but touches ~19 unrelated files
+outside this session's actual task -- leaving it for a dedicated pass
+rather than bundling it into an unrelated invoice-bug fix. Whoever picks
+this up next: run `npm run fix-versions`, then `check-consistency.js`
+again to confirm clean, then the full suite once more before committing.
 
 <!-- Add new entries above this line -->
