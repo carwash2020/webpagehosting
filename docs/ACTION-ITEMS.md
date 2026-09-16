@@ -309,6 +309,10 @@ search ranking and conversion, past the bare minimum:
   presence, since Yelp's own algorithm penalizes slow/no response rate
   in future placement.
 
+**Done (2026-09-16), confirmed by the owner:** all of the above was
+pasted into the live Yelp listing (About/description, specialties,
+highlights, payment methods, photos, lead notification check).
+
 <!-- Add new SEO copy drafts above this line -->
 
 ## Visual additions (things a real user/client will actually see)
