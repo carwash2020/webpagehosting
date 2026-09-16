@@ -271,6 +271,13 @@ reference:
     listed under "Manual action items" above -- they need an actual ad
     account or dashboard access this repo doesn't have.
 
+- **Portal toast/snackbar** replacing every `window.alert()` in the
+  client portal (`portal/quotes.html`, `portal/dashboard.html`,
+  `portal/settings.html`) -- also fixed a real bug where
+  `portal/work-orders.html` already called a `showToast()` that didn't
+  exist anywhere in the portal, silently throwing instead of telling
+  the client their message failed to send.
+
 <!-- Add new visual additions above this line -->
 
 ## Proposed visual improvements (not yet built)
@@ -310,10 +317,8 @@ additions" above.
    `<details>`/`<summary>` toggle with the default browser triangle. A
    chevron icon + smooth height transition would match the portal's
    existing polish.
-8. **Toast/snackbar system instead of `alert()` in the portal**
-   (`portal/quotes.html`) -- a few error paths (e.g. "Couldn't reach the
-   server...") still use native `alert()`, which blocks the UI and
-   looks dated next to the custom modals already on the same page.
+~~8. Toast/snackbar system instead of `alert()` in the portal~~ --
+   **done (2026-09-16)**, see "Visual additions" above.
 9. **Scroll affordance on the quote date-picker**
    (`portal/quotes.html` `.date-row`) -- a horizontally-scrolling single
    row with nothing indicating more dates exist off-screen. A subtle
