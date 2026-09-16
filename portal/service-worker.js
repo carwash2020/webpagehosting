@@ -257,7 +257,14 @@
 // gap, since a client-portal login page has no reason to be publicly
 // discoverable via search). Precached under its bare path. Same
 // reasoning as every prior bump above.
-const CACHE_NAME = 'th-portal-v71'; // precache-fingerprint:e745e92f605c
+// Bumped 2026-09-15 (v72 -> v73): dashboard.html and quotes.html changed
+// (custom animated line-item disclosure, item 7; a scroll-fade affordance
+// on quotes.html's date-row, item 9), and portal-app.js/portal-app.css/
+// portal-polish.css changed (a shared showToast() toast system replacing
+// window.alert() on the error/validation paths across dashboard.html,
+// quotes.html and settings.html, item 8; plus the line-item disclosure's
+// animated open/close CSS). All six are in PRECACHE_URLS.
+const CACHE_NAME = 'th-portal-v75'; // precache-fingerprint:9a958b89fe2a
 const PRECACHE_URLS = [
   '/portal/home.html', '/portal/dashboard.html', '/portal/jobs.html', '/portal/quotes.html',
   '/portal/work-orders.html', '/portal/settings.html', '/portal/login.html', '/portal/set-password.html',

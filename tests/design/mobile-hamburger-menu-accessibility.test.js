@@ -33,6 +33,7 @@ const ALL_PAGES = [
   'handyman-la-verkin-ut.html', 'handyman-leeds-ut.html',
   'handyman-mesquite-nv.html', 'handyman-repairs.html',
   'handyman-santa-clara-ivins-ut.html', 'handyman-washington-city-ut.html',
+  'handyman-st-george-ut.html',
   'our-work.html', 'plumbing-repairs.html', 'terms.html',
   'washer-dryer-repair.html',
 ];

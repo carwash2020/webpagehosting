@@ -71,8 +71,8 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Anton&family=Archivo:wght@400..700&family=Newsreader:ital,opsz,wght@0,6..72,300..700;1,6..72,300..600&family=Oswald:wght@200..700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="/styles.css?v=a974276ca3">
-<link rel="stylesheet" href="/portal/portal-app.css?v=202609071900">
+<link rel="stylesheet" href="/styles.css?v=cd5ff7ed3c">
+<link rel="stylesheet" href="/portal/portal-app.css?v=202609151500">
 <style>
   /* iOS Safari zoom-on-focus fix (2026-09-05), same root cause and
      fix already applied to invoice-generator.html: a tapped
@@ -111,7 +111,7 @@
 </style>
 <link rel="stylesheet" href="/tools/styles-tools.css?v=a2e87effb3">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="/portal/portal-app.js?v=202609072000"></script>
+<script src="/portal/portal-app.js?v=202609151500"></script>
 <script src="https://js.stripe.com/v3/"></script>
 <script src="/portal/push-notifications.js"></script>
 <style>
@@ -255,7 +255,7 @@
   .report-bug-actions { display: flex; gap: 10px; margin-top: 16px; }
   .report-bug-actions button { flex: 1; justify-content: center; }
 </style>
-<link rel="stylesheet" href="/portal/portal-polish.css?v=915097413e">
+<link rel="stylesheet" href="/portal/portal-polish.css?v=63a161e33e">
 </head>
 <body class="portal-page">
 
@@ -694,12 +694,12 @@
       });
       const result = await res.json();
       if (!result.ok) {
-        alert(result.error || "Couldn't remove that card. Please try again.");
+        showToast(result.error || "Couldn't remove that card. Please try again.", { type: 'error' });
         return;
       }
       loadSavedCards();
     } catch (e) {
-      alert("Couldn't remove that card. Please try again.");
+      showToast("Couldn't remove that card. Please try again.", { type: 'error' });
     }
   }
 
@@ -732,7 +732,7 @@
   async function submitAddCardSignature() {
     const signerName = (document.getElementById('addCardSignerName')?.value || '').trim();
     if (!signerName) {
-      alert('Please type your full name to continue.');
+      showToast('Please type your full name to continue.', { type: 'error' });
       return;
     }
     const { data: { session } } = await client.auth.getSession();
@@ -753,14 +753,14 @@
       });
       const result = await res.json();
       if (!result.ok) {
-        alert(result.error || "Couldn't start that just now. Please try again.");
+        showToast(result.error || "Couldn't start that just now. Please try again.", { type: 'error' });
         btn.disabled = false;
         btn.textContent = 'Continue';
         return;
       }
       mountAddCardSetupUI(result.client_secret);
     } catch (e) {
-      alert("Couldn't reach the server. Please check your connection and try again.");
+      showToast("Couldn't reach the server. Please check your connection and try again.", { type: 'error' });
       btn.disabled = false;
       btn.textContent = 'Continue';
     }

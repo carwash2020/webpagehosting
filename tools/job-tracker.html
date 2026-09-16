@@ -49,7 +49,7 @@
     if (saved === 'light') document.documentElement.setAttribute('data-theme', 'light');
   })();
 </script>
-<link rel="stylesheet" href="/styles.css?v=a974276ca3">
+<link rel="stylesheet" href="/styles.css?v=cd5ff7ed3c">
 <link rel="stylesheet" href="/tools/styles-tools.css?v=a494344e8c">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.112.3/dist/umd/supabase.js" integrity="sha384-qafw21c/iciq0VXsi9FzkfoQv5I/V0iqE4lSNcKXPnW9/UTJLnv5CcN4FHxVLnKg" crossorigin="anonymous" defer></script>
 <script src="/tools/sync.js?v=aafdb1e6bf" defer></script>
@@ -1533,11 +1533,45 @@
   async function bulkMarkJobsDone() {
     if (selectedJobIds.size === 0) { showToast('Nothing selected.', { type: 'error' }); return; }
     const jobs = loadJobs();
-    jobs.forEach(j => { if (selectedJobIds.has(j.id) && j.status !== 'done') j.status = 'done'; });
+    const newlyDone = [];
+    jobs.forEach(j => {
+      if (selectedJobIds.has(j.id) && j.status !== 'done') {
+        j.status = 'done';
+        j.statusChangedAt = new Date().toISOString();
+        newlyDone.push(j);
+      }
+    });
     saveJobs(jobs);
     const count = selectedJobIds.size;
     toggleJobSelectionMode();
     showToast(count + ' job' + (count === 1 ? '' : 's') + ' marked done.');
+
+    // Real gap found in a growth/SEO audit (2026-09-15): unlike the
+    // single-job setJobStatus() flow just above, bulk-completing jobs
+    // never asked to send a review request at all -- any job finished
+    // via "select multiple -> Mark Done" silently skipped the one
+    // prompt that actually drives new Google reviews (see
+    // docs/ACTION-ITEMS.md's SEO section: a Google Business Profile's
+    // review count/recency is the single biggest local-ranking lever,
+    // and this tool's own review-request flow is what's supposed to
+    // surface that ask). Navigating to review-request.html leaves this
+    // page, so this can only meaningfully offer ONE job at a time --
+    // asks in order and stops at the first "yes" (any remaining jobs
+    // can still be sent from the Job Tracker or Review Request Log
+    // afterward). No prompt at all if none of the newly-completed jobs
+    // have a client name on file to ask.
+    for (const job of newlyDone) {
+      if (!job.client) continue;
+      const goSend = await showConfirm(`Send a review request to ${job.client} for "${job.title}"?`, { confirmText: 'Send Request' });
+      if (goSend) {
+        const params = new URLSearchParams();
+        params.set('name', job.client.split(' ')[0]);
+        if (job.title) params.set('job', job.title);
+        if (job.phone) params.set('phone', job.phone);
+        window.location.href = '/tools/review-request.html?' + params.toString();
+        return;
+      }
+    }
   }
 
   async function bulkDeleteJobs() {

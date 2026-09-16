@@ -68,6 +68,7 @@ const PAGES_LINKING_TO_PRIVACY = [
   'handyman-mesquite-nv.html',
   'handyman-repairs.html',
   'handyman-santa-clara-ivins-ut.html',
+  'handyman-st-george-ut.html',
   'handyman-washington-city-ut.html',
   'plumbing-repairs.html',
   'washer-dryer-repair.html',

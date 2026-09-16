@@ -15,6 +15,12 @@ const path = require('path');
 
 const repo = (...p) => path.join(__dirname, '..', '..', ...p);
 
+// handyman-st-george-ut.html is deliberately excluded from this suite --
+// St. George is home base, not a "drive to" city, so it can't have a
+// distance-from-St.-George chip (there's no distance from itself). Its
+// hero still has a <p class="hero-distance-chip"> element, just with
+// "home base" framing instead of a direction/ETA, so it isn't forced
+// into this direction/ETA-specific pattern.
 const PAGES = {
   'handyman-cedar-city-ut.html': /About 50 miles \/ an hour north of St\. George/,
   'handyman-hurricane-ut.html': /About 20&ndash;25 minutes east of St\. George/,
