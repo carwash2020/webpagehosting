@@ -116,6 +116,7 @@ const RESEND_DAYS: Record<string, number> = {
   "job-no-photos": 3650,
   "warranty-checkin": 3650,
   "unresponded-lead": 1,
+  "review-reminder-due": 3650,
 };
 
 // Real audit gap, closed here (cron timezone fix, item #15): this
@@ -495,6 +496,40 @@ async function checkUnconvertedQuotes(quotes: any[], invoices: any[]) {
   }
 }
 
+// Automation pass (2026-09-16): review-request.html already lets Steve
+// set a delayed follow-up reminder for a review request ("remind me in
+// 5 days") -- but that reminder is entirely local/passive: it only
+// surfaces the next time he happens to open review-request.html on or
+// after the target date (see that page's own showReminderToast() copy,
+// which says exactly this: "this won't send a phone notification on
+// its own"). A reminder due on a day he never opens that specific page
+// silently sits there forever. This closes that gap the same way every
+// other "due today" condition in this file already does -- a real push
+// the moment it's due, not dependent on which page happens to be open.
+//
+// th_review_requests_pending items are `{id, name, phone, job,
+// remindAt}` (remindAt is a YYYY-MM-DD business-tz date string, set by
+// dateStrBusinessTz() client-side) -- compared directly against
+// todayDateStrInBusinessTz() below, no Date parsing needed, avoiding
+// the exact class of UTC-vs-business-tz bug this file's own header
+// comment documents having been bitten by twice already.
+async function checkPendingReviewReminders(reviewReminders: any[]) {
+  const today = todayDateStrInBusinessTz();
+  for (const reminder of reviewReminders) {
+    if (!reminder.remindAt || reminder.remindAt > today) continue; // not due yet
+
+    const itemKey = String(reminder.id);
+    if (await wasRecentlyNotified("review-reminder-due", itemKey)) continue;
+
+    await sendToAllSubscriptions({
+      title: "Review Follow-Up Due",
+      body: `Time to follow up with ${reminder.name || "a client"}${reminder.job ? ` about "${reminder.job}"` : ""} for a review request.`,
+      url: "/tools/review-request.html",
+    });
+    await markNotified("review-reminder-due", itemKey);
+  }
+}
+
 async function checkPhotolessCompletedJobs(jobs: any[]) {
   for (const job of jobs) {
     if (job.status !== "done") continue;
@@ -842,6 +877,7 @@ Deno.serve(async (req: Request) => {
       const invoices = synced ? safeParse(synced.data.th_invoices, []) : [];
       const quotes = synced ? safeParse(synced.data.th_quotes, []) : [];
       const compliance = synced ? safeParse(synced.data.th_compliance, null) : null;
+      const reviewReminders = synced ? safeParse(synced.data.th_review_requests_pending, []) : [];
 
       if (synced) {
         await checkTomorrowsJobs(jobs);
@@ -854,6 +890,7 @@ Deno.serve(async (req: Request) => {
         await checkUnconvertedQuotes(quotes, invoices);
         await checkPhotolessCompletedJobs(jobs);
         await checkWarrantyCheckIn(jobs);
+        await checkPendingReviewReminders(reviewReminders);
       }
 
       // Independent of workspace_sync -- th_leads is its own table, so

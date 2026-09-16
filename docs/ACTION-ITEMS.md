@@ -97,6 +97,15 @@ click a setting by hand.
    once in the SQL Editor. Code is written and tested but this is a
    real deploy step only someone with Supabase dashboard/CLI access can
    do -- I can't run either of those myself. **Not yet done.**
+8. **Deploy the new `send-quote-followup` edge function and run its
+   cron SQL** (2026-09-16) -- `supabase functions deploy
+   send-quote-followup`, then run
+   `sql/infra/add_quote_followup_email_cron.sql` once in the SQL
+   Editor. Same real deploy step, same reason I can't do it myself.
+   The updated `send-push` (the new "Review Follow-Up Due" push check)
+   needs **no separate deploy step** -- it's the same already-deployed
+   function, just re-deploy it (`supabase functions deploy send-push`)
+   whenever this branch's changes reach it. **Not yet done.**
 
 <!-- Add new manual action items above this line -->
 
