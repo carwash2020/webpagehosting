@@ -52,7 +52,7 @@
 <link rel="stylesheet" href="/styles.css?v=64b753a45a">
 <link rel="stylesheet" href="/tools/styles-tools.css?v=a494344e8c">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.112.3/dist/umd/supabase.js" integrity="sha384-qafw21c/iciq0VXsi9FzkfoQv5I/V0iqE4lSNcKXPnW9/UTJLnv5CcN4FHxVLnKg" crossorigin="anonymous" defer></script>
-<script src="/tools/sync.js?v=aafdb1e6bf" defer></script>
+<script src="/tools/sync.js?v=781d49a988" defer></script>
 <script src="/tools/data-layer.js?v=c5d44f096e" defer></script>
 <script src="/tools/tools-effects.js?v=4cff99aa4a" defer></script>
 <script src="/tools/tools-dialogs.js?v=ce49ed8b35" defer></script>
@@ -1764,6 +1764,7 @@
               ? `<button class="small-btn is-active" disabled title="Sent ${escapeAttr(new Date(job.confirmationSentAt).toLocaleString())}">✓ Confirmation Sent</button>`
               : `<button class="small-btn" onclick="sendJobConfirmationEmail(${job.id})">Send Confirmation Email</button>`
           ) : ''}
+          <a class="small-btn" href="/tools/invoice-generator.html?jobRef=${job.id}" style="text-decoration:none; display:inline-flex; align-items:center;">Create Invoice</a>
           <button class="small-btn" onclick="editJob(${job.id})">Edit</button>
           <button class="small-btn danger" onclick="deleteJob(${job.id})">Delete</button>
         </div>
@@ -1881,6 +1882,7 @@
           <td>${job.address ? escapeHtml(job.address) : '&mdash;'}</td>
           <td class="col-amount">${marginCellHtml}</td>
           <td class="jt-actions-cell">
+            <a class="small-btn" href="/tools/invoice-generator.html?jobRef=${job.id}" style="text-decoration:none; display:inline-flex; align-items:center;">Create Invoice</a>
             <button class="small-btn" onclick="editJob(${job.id})">Edit</button>
             <button class="small-btn danger" onclick="deleteJob(${job.id})">Delete</button>
           </td>

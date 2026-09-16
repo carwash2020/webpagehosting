@@ -43,17 +43,18 @@ function loadSyncModule() {
   const syncConflictLogMaxMatch = SYNC_JS.match(/const SYNC_CONFLICT_LOG_MAX = \d+;/);
   const mergeSyncConflictsMatch = SYNC_JS.match(/function mergeSyncConflicts[\s\S]*?\n\}/);
   const applySyncDataMatch = SYNC_JS.match(/function applySyncData[\s\S]*?\n\}/);
+  const deriveInvoicePaidMatch = SYNC_JS.match(/function deriveInvoicePaid[\s\S]*?\n\}/);
   assert.ok(
     syncDataKeysMatch && mergeKeyFieldMatch && deepEqualValueMatch && mergeRecordArraysMatch &&
     mergePartsMatch && mergeClientErrorLogMatch && mergeGraveyardMatch && syncBaseKeyMatch &&
-    loadSyncBaseMatch && saveSyncBaseForKeyMatch && syncConflictLogMaxMatch && mergeSyncConflictsMatch && applySyncDataMatch,
+    loadSyncBaseMatch && saveSyncBaseForKeyMatch && syncConflictLogMaxMatch && mergeSyncConflictsMatch && applySyncDataMatch && deriveInvoicePaidMatch,
     'one or more required sync.js pieces not found'
   );
   const combined = [
     syncDataKeysMatch[0], mergeKeyFieldMatch[0], deepEqualValueMatch[0], mergeRecordArraysMatch[0],
     mergePartsMatch[0], mergeClientErrorLogMatch[0], mergeGraveyardMatch[0], syncBaseKeyMatch[0],
     loadSyncBaseMatch[0], saveSyncBaseForKeyMatch[0], syncConflictLogMaxMatch[0], mergeSyncConflictsMatch[0],
-    applySyncDataMatch[0],
+    applySyncDataMatch[0], deriveInvoicePaidMatch[0],
   ].join('\n');
   window.eval(combined);
   return window;
@@ -105,6 +106,31 @@ test('applySyncData() no longer contains the old shared-catch fallback that wrot
   const applySyncDataMatch = SYNC_JS.match(/function applySyncData[\s\S]*?\n\}/);
   assert.ok(applySyncDataMatch);
   assert.doesNotMatch(applySyncDataMatch[0], /malformed JSON on either side -- fall back to the old behavior rather than throw/);
+});
+
+test('a per-field merge conflict between `paid` and `paidAmount` cannot leave the merged invoice internally inconsistent', () => {
+  // Real bug, 2026-09-16 (docs/specialist-logs/bugfix.md): mergeRecordArrays
+  // resolves each field's own conflict independently. If device A's edit
+  // only touched paidAmount (raising it to match total) and device B's
+  // (stale) edit only touched `paid` (leaving it false), the field-level
+  // merge can legitimately keep A's paidAmount and B's paid -- producing
+  // an invoice that's fully paid by amount but still flagged unpaid, which
+  // fed a real false "invoice overdue" push. applySyncData() must recompute
+  // `paid` from paidAmount/total after merging th_invoices, not trust
+  // whichever side's raw `paid` boolean survived the merge.
+  const window = loadSyncModule();
+  const base = [{ id: 'inv1', total: 125.0025, paid: false, paidAmount: 0 }];
+  const local = [{ id: 'inv1', total: 125.0025, paid: false, paidAmount: 125 }]; // this device: recorded the payment
+  const remote = [{ id: 'inv1', total: 125.0025, paid: false, paidAmount: 0 }]; // stale device: never saw the payment, re-pushed its old copy
+
+  window.localStorage.setItem('th_sync_base', JSON.stringify({ th_invoices: base }));
+  window.localStorage.setItem('th_invoices', JSON.stringify(local));
+  window.applySyncData({ th_invoices: JSON.stringify(remote) });
+
+  const merged = JSON.parse(window.localStorage.getItem('th_invoices'));
+  assert.equal(merged.length, 1);
+  assert.equal(merged[0].paidAmount, 125, 'the recorded payment amount must survive the merge');
+  assert.equal(merged[0].paid, true, 'paid must be derived from paidAmount vs total, not left as a stale false');
 });
 
 test('remote and local JSON are parsed in their own separate try/catch blocks', () => {

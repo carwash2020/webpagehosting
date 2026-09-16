@@ -94,21 +94,30 @@ click a setting by hand.
    "Real 5-Star Reviews" stat correctly stay at 4. Fully resolved --
    if that 7th review ever gets real text (or any future review does),
    send it over and it'll be added as a genuine 5th card.
-7. **Deploy the new `send-payment-reminder` edge function and run its
-   cron SQL** (2026-09-16) -- `supabase functions deploy
-   send-payment-reminder`, then run `sql/infra/add_payment_reminder_emails_cron.sql`
-   once in the SQL Editor. Code is written and tested but this is a
-   real deploy step only someone with Supabase dashboard/CLI access can
-   do -- I can't run either of those myself. **Not yet done.**
-8. **Deploy the new `send-quote-followup` edge function and run its
-   cron SQL** (2026-09-16) -- `supabase functions deploy
-   send-quote-followup`, then run
-   `sql/infra/add_quote_followup_email_cron.sql` once in the SQL
-   Editor. Same real deploy step, same reason I can't do it myself.
-   The updated `send-push` (the new "Review Follow-Up Due" push check)
-   needs **no separate deploy step** -- it's the same already-deployed
-   function, just re-deploy it (`supabase functions deploy send-push`)
-   whenever this branch's changes reach it. **Not yet done.**
+7. ~~Deploy the new `send-payment-reminder` edge function and run its
+   cron SQL~~ -- **done (2026-09-16).** Deployed via the Supabase MCP
+   tools now available to this session (an access path the item was
+   originally written before) and its daily cron job (`send-payment-
+   reminders-daily`, 15:00 UTC) registered directly against the
+   project. Reused the existing `send_push_service_role_key` vault
+   secret and `RESEND_API_KEY`/`LEAD_EMAIL_FROM`/`LEAD_EMAIL_TO`
+   project secrets -- both already configured, no new secret was
+   needed. **Redeployed again same day** during the security-audit
+   follow-up (PR #249) to carry a real fix into production: the version
+   deployed above had no auth check on incoming requests at all, letting
+   anyone with the public anon key trigger real client-facing emails on
+   demand. Confirmed via `mcp__Supabase__get_edge_function` that the live
+   source lacked the check before redeploying, and that the redeployed
+   source (matching what merged into `main`) has it. Not live-fired as
+   part of either deploy since doing so would email real clients with
+   real overdue invoices; its first real run is the 15:00 UTC cron.
+8. ~~Deploy the new `send-quote-followup` edge function and run its
+   cron SQL~~ -- **done (2026-09-16).** Same deploy path as item 7,
+   daily cron job (`send-quote-followup-daily`, 16:00 UTC) registered,
+   and same same-day redeploy to carry the identical auth-check security
+   fix into production. The updated `send-push` (the new "Review
+   Follow-Up Due" push check) needed no separate deploy step -- it's the
+   same already-deployed function, already current on this branch.
 
 <!-- Add new manual action items above this line -->
 
@@ -450,6 +459,11 @@ reference:
   `portal/work-orders.html` already called a `showToast()` that didn't
   exist anywhere in the portal, silently throwing instead of telling
   the client their message failed to send.
+- **One-click "Create Invoice" from a job** (`tools/job-tracker.html` ->
+  `tools/invoice-generator.html`) -- closes the "converting a recurring
+  job template straight to an invoice (still fully manual each time)"
+  gap noted in `README.md`'s 2026-09-16 audit entry. See that day's
+  final changelog entry for the full write-up.
 
 - **New blog post: "Oven Not Heating Right?"** (`blog/oven-not-heating-right.html`,
   2026-09-16) -- closes the one real gap in the blog lineup: range/oven

@@ -615,6 +615,15 @@ function applySyncData(obj, keysToApply) {
           const tombstoneSet = new Set(tombstonedIds);
           finalArr = mergedArr.filter(i => !tombstoneSet.has(i.id));
         }
+        // Real bug fix (2026-09-16) -- see deriveInvoicePaid()'s comment
+        // above: the per-field merge above can leave `paid` disagreeing
+        // with paidAmount/total. Recompute it post-merge so this
+        // device's own copy (and whatever it pushes/mirrors next) is
+        // never left in that inconsistent state.
+        finalArr = finalArr.map(inv => {
+          const correctPaid = deriveInvoicePaid(inv);
+          return inv.paid === correctPaid ? inv : Object.assign({}, inv, { paid: correctPaid });
+        });
       } else if (k === 'th_quotes') {
         let tombstonedIds = [];
         try { tombstonedIds = JSON.parse(localStorage.getItem('th_quote_tombstones') || '[]').map(t => t.id); } catch (e) { tombstonedIds = []; }
@@ -1056,6 +1065,29 @@ async function mirrorReferralEarnedForJob(jobId) {
   } catch (e) { /* best-effort -- the real invoice save already happened */ }
 }
 
+// `paid` is a derived field -- it must always agree with whether
+// paidAmount has reached total, using the same whole-cents comparison
+// workspace.html's invoicePaymentStatus() uses for display (see the
+// 2026-09-08 float-rounding fix there). Real bug found 2026-09-16 (see
+// docs/specialist-logs/bugfix.md): the per-field 3-way merge in
+// applySyncData() below treats `paid` and `paidAmount` as independent
+// fields, so a merge where one device's edit changed only paidAmount
+// and a different (stale) device's edit changed only `paid` can leave
+// the merged record internally inconsistent -- paidAmount reaching
+// total while `paid` stays false, which fired a real false "invoice
+// overdue" push for an invoice that was actually paid in full. This
+// helper is the one place both mirrorInvoiceToRelational() (what the
+// overdue check actually reads) and applySyncData()'s post-merge pass
+// derive `paid` from, so neither can drift from the other again.
+function deriveInvoicePaid(inv) {
+  const totalCents = Math.round((Number(inv.total) || 0) * 100);
+  const paidAmount = (inv.paidAmount !== undefined && inv.paidAmount !== null)
+    ? (Number(inv.paidAmount) || 0)
+    : (inv.paid ? (Number(inv.total) || 0) : 0); // legacy invoices: no paidAmount field, only ever had `paid`
+  const paidCents = Math.round(paidAmount * 100);
+  return totalCents > 0 && paidCents >= totalCents;
+}
+
 function mirrorInvoiceToRelational(entry) {
   if (!entry) return;
   mirrorUpsert('invoices', [{
@@ -1063,7 +1095,7 @@ function mirrorInvoiceToRelational(entry) {
     client_id: entry.clientId || null, client_email: entry.clientEmail || null, invoice_date: entry.date || null,
     terms: entry.terms || null, invoice_type: entry.invoiceType || null, subtotal: entry.subtotal ?? null,
     tax: entry.tax ?? null, discount: entry.discount ?? null, total: entry.total ?? null,
-    paid: !!entry.paid, paid_amount: entry.paidAmount ?? null,
+    paid: deriveInvoicePaid(entry), paid_amount: entry.paidAmount ?? null,
     job_id: entry.jobRefId ? Number(entry.jobRefId) : null, job_ref_title: entry.jobRefTitle || null,
     source_quote_id: entry.sourceQuoteId || null, generated_by: entry.generatedBy || null,
   }]);
