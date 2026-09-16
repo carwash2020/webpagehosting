@@ -52,7 +52,7 @@
 <link rel="stylesheet" href="/styles.css?v=64b753a45a">
 <link rel="stylesheet" href="/tools/styles-tools.css?v=a494344e8c">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.112.3/dist/umd/supabase.js" integrity="sha384-qafw21c/iciq0VXsi9FzkfoQv5I/V0iqE4lSNcKXPnW9/UTJLnv5CcN4FHxVLnKg" crossorigin="anonymous" defer></script>
-<script src="/tools/sync.js?v=aafdb1e6bf" defer></script>
+<script src="/tools/sync.js?v=781d49a988" defer></script>
 <script src="/tools/data-layer.js?v=c5d44f096e" defer></script>
 <script src="/tools/tools-effects.js?v=4cff99aa4a" defer></script>
 <script src="/tools/tools-dialogs.js?v=ce49ed8b35" defer></script>
@@ -2117,6 +2117,29 @@
     window.open(url, '_blank', 'noopener');
   }
 
+  // "Create Invoice" deep link from job-tracker.html (one job-tracker
+  // row, one click) -- closes the gap flagged in ACTION-ITEMS.md where
+  // turning a job into an invoice meant navigating here, remembering
+  // the client's name, and finding them in the Job Ref dropdown by
+  // hand. Only pre-selects an actual, still-existing job -- a stale or
+  // tampered ?jobRef= just leaves the form in its normal blank state.
+  function applyJobRefFromUrl() {
+    const jobId = new URLSearchParams(window.location.search).get('jobRef');
+    if (!jobId) return;
+    const select = document.getElementById('invoiceJobRef');
+    if (!select || !Array.from(select.options).some(o => o.value === jobId)) return;
+    select.value = jobId;
+    autofillFromJobRef('invoiceJobRef', 'jobDescription', 'clientName', 'clientAddress');
+    const firstLineDesc = document.querySelector('#lineItemsBody .li-desc');
+    const jobDescription = document.getElementById('jobDescription').value;
+    if (firstLineDesc && !firstLineDesc.value.trim() && jobDescription) firstLineDesc.value = jobDescription;
+    recalc();
+    // Strips ?jobRef= once applied so refreshing, bookmarking, or
+    // hitting "New Invoice"/reset later doesn't keep re-applying a job
+    // that may since have changed or been deleted.
+    history.replaceState(null, '', window.location.pathname + window.location.hash);
+  }
+
   function autofillFromJobRef(jobRefSelectId, descriptionFieldId, clientNameFieldId, clientAddressFieldId) {
     const jobId = document.getElementById(jobRefSelectId).value;
     if (!jobId || typeof thRead !== 'function') return;
@@ -2212,6 +2235,7 @@
     addContact(); // start with one contact row
     addLineItem(); // start with one blank row
     recalc();
+    applyJobRefFromUrl();
     addQuoteLineItem();
     recalcQuote();
     initAppTour();

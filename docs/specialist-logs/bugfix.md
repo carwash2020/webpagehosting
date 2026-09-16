@@ -128,4 +128,45 @@ sanity-check a deploy's actual live content immediately after any
 `deploy_edge_function` call on a function real crons depend on, not
 just after finding a bug through one.
 
+## 2026-09-16 (later the same day) — fixed finding #1 above: `paid`/`paidAmount` could diverge across a sync merge
+
+Root-caused and fixed. The actual mechanism wasn't a missing write path —
+`tools/workspace.html`'s `togglePaid()` already recomputes `paid` from
+`paidAmount`/`total` (whole-cents comparison) every time it's called, and
+no other UI call site writes `paidAmount` at all. The divergence comes
+from `mergeRecordArrays()` in `tools/sync.js`, which resolves each
+field's own 3-way-merge conflict independently: if one device's edit
+changed only `paidAmount` (recording a payment) and a different, stale
+device's edit changed only `paid` (e.g. an old "mark unpaid" click never
+pulled since), the field-level merge can legitimately keep the first
+device's `paidAmount` and the second device's `paid` — an internally
+inconsistent result even though each field's own merge picked a
+defensible value in isolation. `paid` is a *derived* field (must always
+equal `paidAmount >= total`), and the generic per-field merge has no way
+to know that two fields are coupled like this.
+
+Fix: added `deriveInvoicePaid(inv)` to `sync.js` (same whole-cents
+comparison as `invoicePaymentStatus()`), and call it from two places
+instead of trusting a raw `paid` boolean: `mirrorInvoiceToRelational()`
+(the actual write path the overdue-push check reads from) and a new
+post-merge normalization pass on `th_invoices` inside `applySyncData()`
+(so the local copy itself, and whatever it mirrors/pushes next, can't
+stay inconsistent either). Regression test added:
+`tests/sync/applysyncdata-malformed-json.test.js` reproduces the exact
+conflict shape (base/local/remote with a real 3-way merge) and asserts
+the merged record comes out both correct and consistent.
+
+**Lesson for this codebase's merge system specifically:** `mergeRecordArrays()`
+is a generic per-field 3-way merge with no concept of field coupling. Any
+future field pair where one is logically derived from another (a status
+flag derived from an amount, a computed total, etc.) needs the same
+treatment — a post-merge normalization step — rather than assuming the
+generic merge will keep them consistent on its own. Worth grepping for
+other flag+amount pairs in the synced data model if this class of bug
+needs auditing further (quotes' `status` vs. line items, jobs' warranty
+status vs. completion date, etc. weren't checked this pass).
+
+Finding #2 (realtime channel drops) is still open, unchanged from
+above — no code touched for it this session.
+
 <!-- Add new entries above this line -->

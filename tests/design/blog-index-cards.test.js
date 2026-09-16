@@ -15,17 +15,17 @@ const repo = (...p) => path.join(__dirname, '..', '..', ...p);
 const INDEX = fs.readFileSync(repo('blog', 'index.html'), 'utf8');
 const BLOG_CSS = fs.readFileSync(repo('blog', 'blog.css'), 'utf8');
 
-const POST_PAGES = ['dryer-not-heating.html', 'handyman-to-do-list.html', 'appliance-repair-or-replace.html', 'washer-wont-drain.html', 'dishwasher-not-cleaning.html', 'fridge-not-cooling.html', 'toilet-running-flapper-valve.html', 'drywall-crack-above-door.html', 'tv-mount-drywall-anchors.html'];
+const POST_PAGES = ['dryer-not-heating.html', 'handyman-to-do-list.html', 'appliance-repair-or-replace.html', 'washer-wont-drain.html', 'dishwasher-not-cleaning.html', 'fridge-not-cooling.html', 'toilet-running-flapper-valve.html', 'drywall-crack-above-door.html', 'tv-mount-drywall-anchors.html', 'oven-not-heating-right.html'];
 
 test('the whole card is a single link per post, not just the title', () => {
   const items = [...INDEX.matchAll(/<a class="blog-index-item" href="\/blog\/([a-z-]+\.html)" data-reveal>/g)];
-  assert.equal(items.length, 9, 'expected exactly 9 blog-index-item cards');
+  assert.equal(items.length, 10, 'expected exactly 10 blog-index-item cards');
   assert.deepEqual(items.map((m) => m[1]).sort(), [...POST_PAGES].sort());
 });
 
 test('each card carries an icon badge and a "Read the post" tag with the shared arrow glyph', () => {
   const cards = [...INDEX.matchAll(/<a class="blog-index-item"[\s\S]*?<\/a>/g)].map((m) => m[0]);
-  assert.equal(cards.length, 9);
+  assert.equal(cards.length, 10);
   cards.forEach((card) => {
     assert.match(card, /<div class="blog-index-item-icon"><svg viewBox="0 0 24 24"/);
     assert.match(card, /<span class="blog-index-item-tag">Read the post <svg viewBox="0 0 24 24"[^>]*><path d="M9 18l6-6-6-6"\/><\/svg><\/span>/);

@@ -47,11 +47,12 @@ function loadSyncFunctions(window) {
   const syncConflictLogMaxMatch = syncJs.match(/const SYNC_CONFLICT_LOG_MAX = \d+;/);
   const mergeSyncConflictsMatch = syncJs.match(/function mergeSyncConflicts[\s\S]*?\n\}/);
   const applySyncDataMatch = syncJs.match(/function applySyncData[\s\S]*?\n\}/);
-  assert.ok(syncDataKeysMatch && wikiSyncKeysMatch && mergeKeyFieldMatch && deepEqualValueMatch && mergeRecordArraysMatch && mergePartsMatch && mergeClientErrorLogMatch && syncBaseKeyMatch && loadSyncBaseMatch && saveSyncBaseForKeyMatch && syncConflictLogMaxMatch && mergeSyncConflictsMatch && applySyncDataMatch, 'one or more required sync.js functions not found');
+  const deriveInvoicePaidMatch = syncJs.match(/function deriveInvoicePaid[\s\S]*?\n\}/);
+  assert.ok(syncDataKeysMatch && wikiSyncKeysMatch && mergeKeyFieldMatch && deepEqualValueMatch && mergeRecordArraysMatch && mergePartsMatch && mergeClientErrorLogMatch && syncBaseKeyMatch && loadSyncBaseMatch && saveSyncBaseForKeyMatch && syncConflictLogMaxMatch && mergeSyncConflictsMatch && applySyncDataMatch && deriveInvoicePaidMatch, 'one or more required sync.js functions not found');
   const combined = [
     syncDataKeysMatch[0], wikiSyncKeysMatch[0], mergeKeyFieldMatch[0], deepEqualValueMatch[0], mergeRecordArraysMatch[0],
     mergePartsMatch[0], mergeClientErrorLogMatch[0], syncBaseKeyMatch[0], loadSyncBaseMatch[0],
-    saveSyncBaseForKeyMatch[0], syncConflictLogMaxMatch[0], mergeSyncConflictsMatch[0], applySyncDataMatch[0],
+    saveSyncBaseForKeyMatch[0], syncConflictLogMaxMatch[0], mergeSyncConflictsMatch[0], applySyncDataMatch[0], deriveInvoicePaidMatch[0],
     // const declarations evaluated via window.eval() create lexical
     // bindings, not window properties the way function declarations
     // do -- explicitly copying WIKI_SYNC_KEYS onto window so tests
