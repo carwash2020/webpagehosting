@@ -190,6 +190,21 @@
   .job-photos { display: flex; gap: 8px; margin-top: 10px; flex-wrap: wrap; }
   .job-photos a { display: block; width: 64px; height: 64px; border-radius: 8px; overflow: hidden; border: 1px solid var(--border); }
   .job-photos img { width: 100%; height: 100%; object-fit: cover; display: block; }
+  /* Two-way messaging on a completed job (2026-09-16) -- same visual
+     shape as .wo-message-* on portal/work-orders.html, duplicated
+     rather than shared (each portal page keeps its own small helpers,
+     per this project's established convention). */
+  .job-messages-toggle {
+    background: none; border: none; color: var(--orange-light); font-size: 12.5px; font-weight: 600;
+    cursor: pointer; padding: 8px 0 0; text-decoration: underline;
+  }
+  .job-messages-panel { margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--border); }
+  .job-message-bubble { max-width: 85%; margin-bottom: 8px; padding: 8px 11px; border-radius: 10px; font-size: 13px; line-height: 1.45; white-space: pre-wrap; }
+  .job-message-bubble.is-client { background: var(--orange-tint-soft); border: 1px solid var(--orange-tint-border); margin-left: auto; }
+  .job-message-bubble.is-internal { background: var(--bg-panel-2); border: 1px solid var(--border); }
+  .job-message-meta { font-size: 10.5px; color: var(--text-dim); margin-top: 3px; }
+  .job-message-form { display: flex; gap: 8px; margin-top: 8px; }
+  .job-message-form textarea { flex: 1; min-height: 40px; max-height: 120px; resize: vertical; font-family: inherit; font-size: 16px; padding: 8px 10px; border-radius: 8px; border: 1px solid var(--border); background: var(--bg-panel); color: var(--white); }
   .empty-state { text-align: center; color: var(--text-dim); padding: 60px 20px; }
   /* Empty-state illustrations (2026-09-07): reuses this page's own nav
      icon (a checkmark, already meaning "Jobs" in the bottom nav) for
@@ -583,8 +598,82 @@
         </div>
         ${j.linked_invoice_number ? `<a class="job-receipt-link" href="/portal/dashboard.html?invoice=${encodeURIComponent(j.linked_invoice_number)}">View Receipt</a>` : ''}
         ${hasPhotos ? `<div class="job-photos" id="jobPhotos-${j.id}"><p style="color:var(--text-dim); font-size:12px;">Loading photos...</p></div>` : ''}
+        <button type="button" class="job-messages-toggle" onclick="toggleJobMessages(${j.id}, this)">Messages</button>
+        <div class="job-messages-panel" id="jobMessages-${j.id}" style="display:none;"></div>
       </div>
     `;
+  }
+
+  // Two-way messaging on a completed job (2026-09-16) -- closes the
+  // "messaging thread on a finished job" gap docs/CLIENT-PORTAL.md
+  // flagged: phase 6 built messaging on work orders (a not-yet-
+  // assessed request), but a job that's already done had no channel
+  // at all besides calling. Mirrors portal/work-orders.html's own
+  // toggleMessages/loadAndRenderThread/sendMessage exactly, retargeted
+  // at client_portal_job_messages -- loaded on demand per card, same
+  // reasoning: most jobs have zero messages, so fetching a thread for
+  // every card on every visit would be wasted work for the common case.
+  async function toggleJobMessages(jobId, btnEl) {
+    const panel = document.getElementById('jobMessages-' + jobId);
+    if (!panel) return;
+    if (panel.style.display !== 'none') { panel.style.display = 'none'; return; }
+    panel.style.display = 'block';
+    await loadAndRenderJobThread(jobId);
+  }
+
+  async function loadAndRenderJobThread(jobId) {
+    const panel = document.getElementById('jobMessages-' + jobId);
+    if (!panel) return;
+    panel.innerHTML = portalSkeletonLines(2);
+
+    const { data: messages, error } = await client
+      .from('client_portal_job_messages')
+      .select('sender_type,message,created_at')
+      .eq('job_id', jobId)
+      .order('created_at', { ascending: true });
+
+    if (error) {
+      panel.innerHTML = '<p class="job-message-meta">Couldn\'t load messages right now.</p>';
+      return;
+    }
+
+    const thread = (messages || []).map(m =>
+      '<div class="job-message-bubble is-' + escapeHtml(m.sender_type) + '">' + escapeHtml(m.message) +
+      '<div class="job-message-meta">' + escapeHtml(m.sender_type === 'client' ? 'You' : 'Triple H') + ' &middot; ' + escapeHtml(formatDate(m.created_at)) + '</div>' +
+      '</div>'
+    ).join('');
+
+    panel.innerHTML = (thread || '<p class="job-message-meta">No messages yet.</p>') +
+      '<div class="job-message-form">' +
+      '<textarea id="jobMessageInput-' + jobId + '" placeholder="Ask a question about this job..."></textarea>' +
+      '<button type="button" class="secondary-btn" onclick="sendJobMessage(' + jobId + ')">Send</button>' +
+      '</div>';
+  }
+
+  async function sendJobMessage(jobId) {
+    const input = document.getElementById('jobMessageInput-' + jobId);
+    const text = input.value.trim();
+    if (!text) return;
+
+    const { data: { session } } = await client.auth.getSession();
+    if (!session) { window.location.replace('/portal/login.html'); return; }
+
+    const { error } = await client.from('client_portal_job_messages').insert({
+      job_id: jobId,
+      sender_type: 'client',
+      sender_email: session.user.email,
+      message: text,
+    });
+
+    if (error) {
+      showToast("Couldn't send that just now. Please try again.", { type: 'error' });
+      return;
+    }
+
+    // Reloaded from scratch rather than appended locally -- confirms
+    // the send actually landed, same reasoning as work-orders.html's
+    // own sendMessage().
+    await loadAndRenderJobThread(jobId);
   }
 
   // Photos load AFTER the cards render, one call per job that actually

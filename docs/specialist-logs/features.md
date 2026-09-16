@@ -88,4 +88,59 @@ from `tools/`'s) -- `npm run fix-versions` catches both, but worth
 remembering when editing anything under `/portal/` that the tools-only
 mental model of "bump the one CACHE_NAME" isn't complete.
 
+## 2026-09-16 (still later) -- two more doc-drift finds, then job messaging
+
+Continuing the same session. Before picking the next build, re-checked
+two more "still pending" items in `docs/CLIENT-PORTAL.md` against
+reality rather than trusting the doc: leaked-password protection
+(item 4) and a standalone Terms page (item 5) were BOTH already done
+-- `docs/ACTION-ITEMS.md` already recorded the first, and `/terms.html`
+already existed in git history predating this session entirely. Third
+stale-doc find this session. Pattern worth naming for whoever reads
+this next: this project's specialist-log/changelog discipline is
+strong, but a "still pending" list is exactly the kind of doc that
+silently rots once the item it describes gets fixed somewhere else
+(a different session, a different lane) without anyone circling back
+to cross it off. Worth a deliberate sweep of ACTION-ITEMS.md/
+CLIENT-PORTAL.md's open-items lists periodically, not just when
+stumbled into while looking for the next thing to build.
+
+Considered "change a client's portal email from inside the tools"
+next -- decided against it, same reasoning as the MFA decision earlier
+this session but for a different hazard. Email is the identity key
+`docs/CLIENT-PORTAL.md`'s own "Client identity: one client, one email"
+postpartum calls "the single highest-value fix... worth understanding
+before touching any of these paths" -- every `client_portal_*` table,
+`client_notification_preferences`, `stripe_customers`, AND the
+internal `workspace_sync` blob's own separate copy of that email would
+all need to move atomically, or the exact split-identity bug that
+postmortem already fixed once would come back. Flagged for the user
+rather than guessing at a migration strategy blind.
+
+Built two-way messaging on a completed job instead -- additive, no
+identity/money risk, and a real (if debatable-value) gap
+`docs/CLIENT-PORTAL.md` named explicitly. Deliberately copied the
+existing work-order-messaging pattern almost line for line (own table,
+same RLS shape, same trigger-function-calls-edge-function wiring, same
+internal reply UI shape in `tools/clients.html`) rather than
+generalizing the two into one shared messages table with a
+nullable/polymorphic parent -- two different parent tables sharing one
+child table would need an "exactly one of these foreign keys is set"
+constraint carried on every row forever, for a savings that's mostly
+cosmetic (a few fewer files) against a real ongoing tax (every future
+change to messaging touches a more complex, harder-to-reason-about
+shape). Decided NOT to add a separate `notify_types` entry or
+recipient list for this -- reused the existing `work_order`-tagged
+`notification_recipients` list, since there's no UI today to configure
+a second category and a client message needing a reply reads as the
+same kind of alert regardless of which record it's attached to.
+
+Applied the migration and deployed the edge function directly via the
+Supabase MCP tools in this same session (both came back `ACTIVE`,
+confirmed against the live project) -- worth remembering for a future
+session that hits this file: unlike earlier this same day, Supabase
+tool access was live and unblocked here, so this feature is actually
+live end-to-end, not just committed code waiting on a manual deploy
+step.
+
 <!-- Add new entries above this line -->

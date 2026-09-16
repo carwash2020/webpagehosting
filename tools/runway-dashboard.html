@@ -193,7 +193,7 @@
      page's own rule doesn't redeclare every property the shared one
      sets (confirmed directly: .tabs picked up an unwanted
      border-radius this way before this fix). */
-  .onboarding-card {
+  .onboarding-card-renamed {
     position: fixed; left: 16px; right: 16px; bottom: 16px; z-index: 800;
     max-width: 420px; margin: 0 auto;
     background: linear-gradient(180deg, var(--bg-panel-3), var(--bg-panel-2));
@@ -202,7 +202,7 @@
     animation: onboardingSlideUp .3s cubic-bezier(.2,.8,.2,1);
   }
   @keyframes onboardingSlideUp { from { transform: translateY(16px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
-  @media (prefers-reduced-motion: reduce) { .onboarding-card { animation: none; } }
+  @media (prefers-reduced-motion: reduce) { .onboarding-card-renamed { animation: none; } }
   .onboarding-dots { display: flex; gap: 5px; margin-bottom: 10px; }
   .onboarding-dots span { width: 6px; height: 6px; border-radius: 50%; background: var(--border); }
   .onboarding-dots span.is-active { background: var(--orange); width: 16px; border-radius: 3px; }

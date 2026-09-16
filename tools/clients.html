@@ -61,7 +61,7 @@
      file dev-tools.html and site-content.html already load, rather
      than duplicating any of it -- these five panels' help-modal
      content already lives there from when they were built. -->
-<script src="/tools/dev-tools-shared.js?v=433f49c65b" defer></script>
+<script src="/tools/dev-tools-shared.js?v=ac4791dd0e" defer></script>
 <!-- Client Lookup dispute-evidence export (2026-09-05), requested
      directly -- same jsPDF version/SRI hash/async loading pattern
      already proven on invoice-generator.html. -->
@@ -271,6 +271,29 @@
       <button class="secondary-btn" onclick="exportPortalWorkOrdersCsv()">Export CSV</button>
     </div>
     <div id="portalWorkOrders"></div>
+  </div>
+
+  <div class="dev-panel dev-panel-wide">
+    <div class="dev-panel-heading">
+      <h2>Portal job messages</h2>
+      <button class="dev-info-bubble" onclick="openDevInfo('portaljobmessages')" aria-label="What does this do?" title="What does this do?">?</button>
+    </div>
+    <!--
+      Two-way messaging on a COMPLETED job (2026-09-16), mirroring the
+      Portal work orders panel above almost exactly -- same reasoning,
+      just for client_portal_jobs instead of client_portal_work_orders.
+      Closes the "messaging thread on a finished job" gap
+      docs/CLIENT-PORTAL.md flagged: phase 6 built messaging on work
+      orders (a not-yet-assessed request); a client with a question
+      about a job that's already done had nowhere to ask it except a
+      brand-new work order or a phone call.
+
+      Every synced job gets a Messages toggle, not just ones with
+      existing messages -- a client could always be the first to send
+      one, so there's no "has messages" filter to hide jobs behind.
+    -->
+    <input type="text" id="portalJobMessageSearch" placeholder="Search by client, email, or job title..." style="width:100%; box-sizing:border-box; margin-bottom:12px;" oninput="renderPortalJobsForMessages()">
+    <div id="portalJobMessages"></div>
   </div>
 
   <div class="dev-panel">
@@ -1433,6 +1456,128 @@
     }
   }
 
+  // Portal job messages (2026-09-16) -- the internal side of two-way
+  // messaging on a COMPLETED job, mirroring the Portal work orders
+  // panel's own renderPortalWorkOrders/toggleWorkOrderMessages/
+  // loadAndRenderWorkOrderThread/sendWorkOrderMessage exactly, just
+  // against client_portal_jobs/client_portal_job_messages instead.
+  let _portalJobMessagesCache = null;
+
+  async function renderPortalJobsForMessages() {
+    const el = document.getElementById('portalJobMessages');
+    if (!el) return;
+    const term = (document.getElementById('portalJobMessageSearch')?.value || '').trim().toLowerCase();
+
+    if (!_portalJobMessagesCache) {
+      el.innerHTML = '<p class="tool-sub">Loading...</p>';
+      try {
+        if (typeof ensureFreshToken === 'function') await ensureFreshToken();
+        const res = await fetchWithTimeout(
+          SUPABASE_URL + '/rest/v1/client_portal_jobs?select=id,client_email,client_name,title,job_date&order=job_date.desc,id.desc&limit=100',
+          8000,
+          { headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': 'Bearer ' + getAuthToken() } }
+        );
+        if (!res.ok) throw new Error('HTTP ' + res.status);
+        _portalJobMessagesCache = await res.json();
+      } catch (e) {
+        el.innerHTML = '<p class="error-state">Could not load portal jobs: ' + escapeHtml(e.message || String(e)) + '</p>';
+        return;
+      }
+    }
+
+    let rows = _portalJobMessagesCache;
+    if (term) {
+      rows = rows.filter(j =>
+        (j.client_email || '').toLowerCase().includes(term) ||
+        (j.client_name || '').toLowerCase().includes(term) ||
+        (j.title || '').toLowerCase().includes(term));
+    }
+
+    if (!rows.length) {
+      el.innerHTML = '<p class="tool-sub">' + (term ? 'No jobs match "' + escapeHtml(term) + '".' : 'No jobs have synced to the portal yet.') + '</p>';
+      return;
+    }
+
+    el.innerHTML = rows.map(j =>
+      '<div class="dev-check-row" style="align-items:flex-start; flex-wrap:wrap;"><div style="flex:1; min-width:0;">' +
+      '<div><strong>' + escapeHtml(j.title || '(no title)') + '</strong></div>' +
+      '<div class="dev-check-detail">' + escapeHtml(j.client_name || j.client_email) + ' &middot; ' + escapeHtml(j.client_email) + ' &middot; ' + escapeHtml(j.job_date || '') + '</div>' +
+      '</div>' +
+      '<button class="secondary-btn" onclick="toggleJobMessagesInternal(' + j.id + ', this)">Messages</button>' +
+      '<div id="jobMsgPanel-' + j.id + '" style="flex-basis:100%; display:none; margin-top:8px; padding-top:8px; border-top:1px solid var(--border);"></div>' +
+      '</div>'
+    ).join('');
+  }
+
+  async function toggleJobMessagesInternal(jobId, btnEl) {
+    const panel = document.getElementById('jobMsgPanel-' + jobId);
+    if (!panel) return;
+    if (panel.style.display !== 'none') {
+      panel.style.display = 'none';
+      btnEl.textContent = 'Messages';
+      return;
+    }
+    panel.style.display = 'block';
+    btnEl.textContent = 'Hide Messages';
+    await loadAndRenderJobMessageThread(jobId);
+  }
+
+  async function loadAndRenderJobMessageThread(jobId) {
+    const panel = document.getElementById('jobMsgPanel-' + jobId);
+    if (!panel) return;
+    panel.innerHTML = '<p class="dev-check-detail">Loading...</p>';
+    try {
+      if (typeof ensureFreshToken === 'function') await ensureFreshToken();
+      const res = await fetchWithTimeout(
+        SUPABASE_URL + '/rest/v1/client_portal_job_messages?job_id=eq.' + jobId + '&select=sender_type,message,created_at&order=created_at.asc',
+        8000,
+        { headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': 'Bearer ' + getAuthToken() } }
+      );
+      if (!res.ok) throw new Error('HTTP ' + res.status);
+      const messages = await res.json();
+      const thread = messages.map(m =>
+        '<div class="dev-check-detail" style="margin-bottom:6px;"><strong style="color:' + (m.sender_type === 'client' ? 'var(--white)' : 'var(--orange-light)') + ';">' +
+        (m.sender_type === 'client' ? 'Client' : 'You') + ':</strong> ' + escapeHtml(m.message) +
+        ' <span style="opacity:0.7;">(' + escapeHtml(String(m.created_at || '').slice(0, 16).replace('T', ' ')) + ')</span></div>'
+      ).join('');
+      panel.innerHTML = (thread || '<p class="dev-check-detail">No messages yet.</p>') +
+        '<div style="display:flex; gap:8px; margin-top:6px;">' +
+        '<textarea id="jobMsgInput-' + jobId + '" placeholder="Reply to the client..." style="flex:1; min-height:36px; font-family:inherit; font-size:13px; padding:6px 8px; border-radius:6px; border:1px solid var(--border); background:var(--bg-panel); color:var(--white);"></textarea>' +
+        '<button class="secondary-btn" onclick="sendJobMessageInternal(' + jobId + ')">Send</button>' +
+        '</div>';
+    } catch (e) {
+      panel.innerHTML = '<p class="dev-check-detail">Could not load messages: ' + escapeHtml(e.message || String(e)) + '</p>';
+    }
+  }
+
+  async function sendJobMessageInternal(jobId) {
+    const input = document.getElementById('jobMsgInput-' + jobId);
+    const text = input.value.trim();
+    if (!text) return;
+    try {
+      if (typeof ensureFreshToken === 'function') await ensureFreshToken();
+      const res = await fetchWithTimeout(SUPABASE_URL + '/rest/v1/client_portal_job_messages', 8000, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'apikey': SUPABASE_ANON_KEY,
+          'Authorization': 'Bearer ' + getAuthToken(),
+          'Prefer': 'return=minimal',
+        },
+        body: JSON.stringify({
+          job_id: jobId,
+          sender_type: 'internal',
+          sender_email: (typeof getCurrentUserEmail === 'function') ? getCurrentUserEmail() : '',
+          message: text,
+        }),
+      });
+      if (!res.ok) throw new Error('HTTP ' + res.status);
+      await loadAndRenderJobMessageThread(jobId);
+    } catch (e) {
+      showToast('Could not send: ' + (e.message || String(e)), { type: 'error' });
+    }
+  }
+
   async function resendPortalInvoice(portalRowId, btnEl) {
     const inv = (_portalInvoicesCache || []).find(i => i.id === portalRowId);
     if (!inv) { showToast('Could not find that invoice.', { type: 'error' }); return; }
@@ -1502,6 +1647,7 @@
       renderPortalAccounts();
       renderPortalInvoices();
       renderPortalWorkOrders();
+      renderPortalJobsForMessages();
       renderEmailList();
     } catch (initError) {
       console.error('Clients tool failed to initialize:', initError);

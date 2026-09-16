@@ -1620,3 +1620,45 @@ trust boundary. New tests:
 `tests/portal/quotes-pdf.test.js` (8 tests, mirroring
 `tests/portal/dashboard-invoice-pdf.test.js`'s own source-inspection
 style).
+
+## What changed, 2026-09-16 (still later again) -- two-way messaging on a completed job
+
+Closes the "messaging thread per job" gap `docs/CLIENT-PORTAL.md` had
+listed under "worth considering but has real tradeoffs" -- phase 6
+built two-way messaging on work orders (a not-yet-assessed request),
+but a client with a follow-up question about a job that's already
+**done** had no channel except filing a brand-new work order or
+calling. Deliberately kept as its own table/thread rather than
+overloading work orders: the two have different parent tables
+(`client_portal_work_orders` vs `client_portal_jobs`), and sharing one
+messages table between them would mean every row forever carrying an
+"exactly one of these two foreign keys is set" constraint.
+
+**New table** `client_portal_job_messages` (`sql/portal/create_client_portal_job_messages.sql`)
+mirrors `client_portal_work_order_messages`' shape and RLS almost
+exactly -- a client posts only as themselves on their own job, an
+internal account posts only as themselves and only by actually holding
+an `account_roles` row (`current_user_has_any_role()`, reused as-is).
+**New edge function** `notify-job-message-email`, triggered the same
+way as its work-order counterpart (a `SECURITY DEFINER` trigger
+function reading the same Vault-stored service-role key, `net.http_post`
+to itself) -- handles both directions in one function: a client
+message emails the internal team (the same `notification_recipients`
+list new-work-order alerts already use -- no separate list to
+maintain, and no UI exists today to configure one per source anyway),
+an internal reply emails the client and sends a push, respecting the
+same `wants_message_emails` opt-out work-order messages already check.
+
+**Client side**: `portal/jobs.html` -- every job card gets a
+"Messages" toggle (lazy-loaded, since most jobs will have zero
+messages) with the same bubble-thread UI work-orders.html already
+established. **Internal side**: a new "Portal job messages" panel in
+`tools/clients.html`, listing every portal-synced job with the same
+Messages-toggle-and-reply pattern the existing Portal work orders panel
+already uses -- deliberately its own panel rather than folded into that
+one, since jobs and work orders are different underlying records with
+different internal owners (Job Tracker vs the work-order queue).
+
+New tests: `tests/portal/job-messaging.test.js` (15 tests, mirroring
+`tests/portal/work-order-messaging.test.js`'s structure test-for-test
+where the feature itself mirrors that one).

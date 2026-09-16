@@ -464,6 +464,10 @@ reference:
   PDF" button on every quote, closing the "no standalone quote PDF"
   gap `docs/CLIENT-PORTAL.md` had flagged as an intentional scope cut.
   See `README.md`'s 2026-09-16 audit entry for the full write-up.
+- **Two-way messaging on a completed job** (`portal/jobs.html` and a
+  new "Portal job messages" panel in `tools/clients.html`) -- closes
+  the "messaging thread per job" gap noted in `docs/CLIENT-PORTAL.md`.
+  See `README.md`'s 2026-09-16 audit entry for the full write-up.
 
 <!-- Add new visual additions above this line -->
 

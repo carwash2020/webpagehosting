@@ -359,11 +359,13 @@ its own SELECT policy. That distinction is easy to miss.
    Dashboard -> Settings -> Emails. Not enabled yet.
 3. **MFA is not enabled** for either Connor or Steve in Supabase Auth
    (confirmed `has_mfa = false` for both).
-4. **Leaked password protection is off** in Supabase Auth. Dashboard-
-   only toggle, can't be set via SQL or API.
-5. **Terms & Conditions has no standalone page.** It exists only as a
-   homepage modal, so `portal/login.html` links to `/` as a
-   workaround. A real `/terms.html` would be better.
+4. ~~**Leaked password protection is off** in Supabase Auth.~~ -- **done**
+   (per `docs/ACTION-ITEMS.md`, 2026-09-15) -- this file's copy just
+   never got updated to say so.
+5. ~~**Terms & Conditions has no standalone page.**~~ -- **done.**
+   `/terms.html` exists with real content, and `portal/login.html`
+   already links to it directly, not `/`. This file was simply stale
+   -- git history shows `terms.html` predates this note.
 6. **The bug report flow was never confirmed end-to-end in a live
    browser.** Confidence rests on direct SQL-level RLS testing plus
    an exact header match to already-working code. **Worth having
@@ -672,9 +674,16 @@ now live in the numbered roadmap above -- this list is what's left.
   casually: signature capture on every new card, a dedicated
   narrowly-scoped Stripe key per function, and this project never
   seeing or storing actual card data.
-- **A messaging thread per job.** Partially addressed a different
-  way: phase 6 built two-way messaging on WORK ORDERS (the not-yet-
-  assessed request stage), not on completed jobs specifically. The
-  original tradeoff -- competing with text messaging, which is what
-  clients actually use -- still applies to a THREAD ON A FINISHED JOB
-  specifically; that idea remains unbuilt.
+- ~~**A messaging thread per job.**~~ -- **done** (2026-09-16). New
+  `client_portal_job_messages` table + `notify-job-message-email`,
+  mirroring phase 6's work-order messaging shape closely (own table,
+  not a shared one with a nullable job_id -- the two threads have
+  different parent tables and mixing them would need an "exactly one
+  of these is set" constraint forever). Client side on
+  `portal/jobs.html`, internal reply side as a new "Portal job
+  messages" panel in `tools/clients.html`. The original tradeoff noted
+  here (competing with text messaging, which is what clients actually
+  use) is a real uncertainty about how much it'll get used, not a
+  reason not to have the channel exist -- an unused button costs
+  nothing; a client with a real question and no way to ask it costs a
+  phone call Steve has to answer instead.
