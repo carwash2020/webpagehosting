@@ -69,4 +69,85 @@ payment card data directly. Prioritized both fixes over anything lower-impact
 because both are trivially exploitable by anyone who views page source, not
 just a theoretical risk.
 
+## What changed, 2026-09-16 (later the same day) -- hub-dispatched audit: job-messages pre-deploy review + Stripe pass, both clean
+
+Two-part assignment from a scheduled "Hub dispatch: security audit" routine.
+No fixes needed this round -- both areas checked out solid, recorded here so
+the "clean" result itself is on record, not just fixes.
+
+**1. `client_portal_job_messages` / `notify-job-message-email` (pre-deploy
+review).** The table and its `on_job_message_send_email` trigger are already
+live in the database (schema pushed ahead of the edge function itself, which
+doesn't exist yet -- genuinely "pending deploy," not present in this repo or
+any open branch/PR, confirmed via `search_code` and checking all 3 open PRs'
+diffs). Checked real `pg_policies` (not assumed): INSERT requires
+`sender_email = auth.email()` AND (a client inserting requires the target
+`job_id` to resolve to a `client_portal_jobs` row with their own
+`client_email`, OR an internal account inserting requires
+`current_user_has_any_role()`) -- a client can neither spoof another
+client's messages, post into a job that isn't theirs, nor forge an
+`internal`-sender message. SELECT mirrors this exactly. Real FK
+(`job_id -> client_portal_jobs(id) ON DELETE CASCADE`) and check constraints
+(`sender_type` restricted to `client`/`internal`, message can't be blank) back
+this up at the schema level, not just RLS. This is a verbatim copy of the
+already-reviewed `client_portal_work_order_messages` pattern (same column
+shapes, same policy structure) -- whoever built this followed the established
+template exactly. The trigger function `notify_job_message_email()` is
+`RETURNS trigger`, same verified-benign class as `notify_new_work_order_email()`
+et al. already documented in `SECURITY.md` -- Postgres refuses to invoke it
+outside a trigger context regardless of grants, confirmed by that same prior
+audit's direct test, not re-tested here since the class is already settled.
+**No gap found; safe to deploy the edge function whenever that's ready.**
+
+**2. General Stripe/payment pass** (since the 2026-09-08 independent RLS/grant
+pass documented above -- no dedicated Stripe-focused pass had been logged
+before this one). Read the full source of `stripe-webhook`,
+`create-payment-intent`, `create-bulk-payment-intent`, `manage-saved-card`,
+and `create-pos-charge` end to end, plus `pg_policies` on `stripe_customers`,
+`card_authorizations`, and `stripe_pos_charges_logged`.
+
+- `stripe-webhook`: real `Stripe-Signature` verification via
+  `constructEventAsync` before anything else runs (the official pattern for
+  Deno's async crypto environment, not the sync version that's a documented
+  footgun there); raw body read via `.text()`, never re-serialized JSON, so
+  signature verification can't be broken by re-parsing. POS and invoice
+  paths are both idempotent on the PaymentIntent id (a real Postgres primary
+  key + `on_conflict=do-nothing`, not a check-then-act race against a JSON
+  blob).
+- `create-payment-intent` / `create-bulk-payment-intent`: the real
+  authorization boundary is explicit and checked directly against the
+  database, not inferred from the JWT alone -- every invoice being paid must
+  belong to the caller's own verified session email (case-insensitively),
+  checked invoice-by-invoice for the bulk case, never trusting an invoice id
+  alone. Charge amount is computed server-side from the invoice's own
+  stored `total`, never accepted from the client request body -- a client
+  altering the request can't pay a different amount than what's actually
+  owed.
+- `manage-saved-card`: `list` and `create_setup_intent` are scoped to the
+  caller's own Stripe Customer (looked up server-side by session email,
+  never a client-supplied customer id); `remove` re-verifies the target
+  payment method's own `customer` field matches the caller's real customer
+  id immediately before detaching, not just trusting an earlier `list` call
+  -- a client can't detach another client's card by guessing a
+  `payment_method_id`.
+- `create-pos-charge`: correctly gated on `callerIsInternalAccount()`
+  (a real `account_roles` row), matching this being an internal-initiated
+  charge with no invoice to anchor a client-ownership check to. The
+  client-supplied `amount` here is intentional and correct, not a gap --
+  POS has no invoice to derive an amount from; the trust boundary is "is the
+  caller a real internal account," which is checked before the amount is
+  even read.
+- Underlying tables: `stripe_customers` and `stripe_pos_charges_logged` are
+  internal-view-only (`current_user_has_any_role()` / an `account_roles`
+  EXISTS check); `card_authorizations` lets a client view only their own
+  rows. None of the three has an INSERT/UPDATE/DELETE policy at all --
+  writes only ever happen via the service-role key inside the edge
+  functions above, confirmed by the actual `pg_policies` rows, not assumed
+  from table naming.
+
+**No gap found.** Also re-ran `get_advisors` (security) as part of this pass
+-- same already-triaged finding set as before (the intentional
+`cron_watchdog_state` deny-all, and the booking/job token-RPC + trigger-only
+functions already confirmed intentional in the audit log above); nothing new.
+
 <!-- Add new entries above this line -->
