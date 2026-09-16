@@ -46,7 +46,24 @@ async function waitForCondition(conditionFn, { timeout = 5000, interval = 20 } =
   throw new Error('waitForCondition: condition never became true within ' + timeout + 'ms');
 }
 
+// Real bug found 2026-09-16 (hub dispatch bug sweep, regression sweep):
+// several tests below hardcoded an absolute future date/time
+// ('2026-09-16T21:00:00+00:00' and friends) to stand in for "a booking
+// that hasn't happened yet." That's only true until real wall-clock
+// time actually passes 21:00 UTC on 2026-09-16 -- after which the app
+// correctly treats it as a past booking (hides Cancel/Reschedule, per
+// the dedicated "already passed" test further down) and these tests
+// started failing for a reason that has nothing to do with the code.
+// Computed relative to Date.now() instead so these tests stay valid
+// no matter when they actually run.
+function futureBookingTimes(durationMinutes = 60, startInMinutes = 120) {
+  const start = new Date(Date.now() + startInMinutes * 60 * 1000);
+  const end = new Date(start.getTime() + durationMinutes * 60 * 1000);
+  return { start_at: start.toISOString(), end_at: end.toISOString(), startDate: start };
+}
+
 test('a valid, confirmed booking shows its real details and a working cancel button', async () => {
+  const { start_at, end_at, startDate } = futureBookingTimes();
   const window = loadPage(
     'https://www.triplehenterprisesllc.biz/manage-booking.html?token=abc-123',
     async (url) => {
@@ -55,8 +72,7 @@ test('a valid, confirmed booking shows its real details and a working cancel but
           ok: true,
           json: async () => ([{
             service_label: 'Appliance Repair',
-            start_at: '2026-09-16T21:00:00+00:00',
-            end_at: '2026-09-16T23:00:00+00:00',
+            start_at, end_at,
             name: 'Jane Smith',
             status: 'confirmed',
           }]),
@@ -67,20 +83,21 @@ test('a valid, confirmed booking shows its real details and a working cancel but
   );
   await waitFor(200);
   const content = window.document.getElementById('content').innerHTML;
+  const expectedDateLabel = new Intl.DateTimeFormat('en-US', { timeZone: window.BUSINESS_TIMEZONE, weekday: 'long', month: 'long', day: 'numeric' }).format(startDate);
   assert.match(content, /Appliance Repair/);
-  assert.match(content, /Wednesday, September 16/);
+  assert.ok(content.includes(expectedDateLabel), `expected the real formatted date "${expectedDateLabel}" in the rendered content`);
   assert.ok(window.document.getElementById('startCancelBtn'), 'cancel button should be present for a confirmed booking');
 });
 
 test('clicking Cancel shows a confirmation step before actually cancelling anything', async () => {
+  const { start_at, end_at } = futureBookingTimes(45);
   const window = loadPage(
     'https://www.triplehenterprisesllc.biz/manage-booking.html?token=abc-123',
     async () => ({
       ok: true,
       json: async () => ([{
         service_label: 'Inspection',
-        start_at: '2026-09-16T21:00:00+00:00',
-        end_at: '2026-09-16T21:45:00+00:00',
+        start_at, end_at,
         name: 'Test',
         status: 'confirmed',
       }]),
@@ -95,6 +112,7 @@ test('clicking Cancel shows a confirmation step before actually cancelling anyth
 
 test('confirming the cancellation calls the real RPC and shows a success message', async () => {
   let cancelCalled = false;
+  const { start_at, end_at } = futureBookingTimes(45);
   const window = loadPage(
     'https://www.triplehenterprisesllc.biz/manage-booking.html?token=abc-123',
     async (url) => {
@@ -105,7 +123,7 @@ test('confirming the cancellation calls the real RPC and shows a success message
       return {
         ok: true,
         json: async () => ([{
-          service_label: 'Inspection', start_at: '2026-09-16T21:00:00+00:00', end_at: '2026-09-16T21:45:00+00:00', name: 'Test', status: 'confirmed',
+          service_label: 'Inspection', start_at, end_at, name: 'Test', status: 'confirmed',
         }]),
       };
     },
