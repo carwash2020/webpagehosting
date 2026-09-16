@@ -102,15 +102,22 @@ click a setting by hand.
    project. Reused the existing `send_push_service_role_key` vault
    secret and `RESEND_API_KEY`/`LEAD_EMAIL_FROM`/`LEAD_EMAIL_TO`
    project secrets -- both already configured, no new secret was
-   needed. Not live-fired as part of this deploy since doing so would
-   email real clients with real overdue invoices; its first real run
-   is the 15:00 UTC cron.
+   needed. **Redeployed again same day** during the security-audit
+   follow-up (PR #249) to carry a real fix into production: the version
+   deployed above had no auth check on incoming requests at all, letting
+   anyone with the public anon key trigger real client-facing emails on
+   demand. Confirmed via `mcp__Supabase__get_edge_function` that the live
+   source lacked the check before redeploying, and that the redeployed
+   source (matching what merged into `main`) has it. Not live-fired as
+   part of either deploy since doing so would email real clients with
+   real overdue invoices; its first real run is the 15:00 UTC cron.
 8. ~~Deploy the new `send-quote-followup` edge function and run its
    cron SQL~~ -- **done (2026-09-16).** Same deploy path as item 7,
-   daily cron job (`send-quote-followup-daily`, 16:00 UTC) registered.
-   The updated `send-push` (the new "Review Follow-Up Due" push check)
-   needed no separate deploy step -- it's the same already-deployed
-   function, already current on this branch.
+   daily cron job (`send-quote-followup-daily`, 16:00 UTC) registered,
+   and same same-day redeploy to carry the identical auth-check security
+   fix into production. The updated `send-push` (the new "Review
+   Follow-Up Due" push check) needed no separate deploy step -- it's the
+   same already-deployed function, already current on this branch.
 
 <!-- Add new manual action items above this line -->
 
