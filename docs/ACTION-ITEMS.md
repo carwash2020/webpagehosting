@@ -12,14 +12,7 @@ Kept here so they don't get lost -- pull from this list before reaching
 for stock photos next time something needs a real kitchen or laundry
 image.
 
-1. **Farmhouse-style kitchen** (black cabinets, subtle range, dishwasher,
-   farmhouse sink, wood countertops, red enamel cookware) --
-   `https://images.unsplash.com/photo-1556909172-54557c7e4fb7?fm=jpg&q=80&w=1400&auto=format&fit=crop`.
-   Supplied for `dryer-not-heating.html` but doesn't show a dryer/laundry
-   at all, so it wasn't used there. Good candidate for a future blog
-   post (a kitchen-remodel or general-handyman piece) or another page
-   that wants a warm, real-kitchen photo.
-2. **Stacked washer/dryer in a modern bathroom laundry nook** (dark
+1. **Stacked washer/dryer in a modern bathroom laundry nook** (dark
    vanity, towels, plant) --
    `https://images.unsplash.com/photo-1721395285456-05a8b9b45b9f?fm=jpg&q=80&w=1400&auto=format&fit=crop`.
    Supplied after `dryer-not-heating.html` (the last post needing an
@@ -457,6 +450,16 @@ reference:
   `portal/work-orders.html` already called a `showToast()` that didn't
   exist anywhere in the portal, silently throwing instead of telling
   the client their message failed to send.
+
+- **New blog post: "Oven Not Heating Right?"** (`blog/oven-not-heating-right.html`,
+  2026-09-16) -- closes the one real gap in the blog lineup: range/oven
+  repair is a listed service with no post covering it, while washers,
+  dryers, dishwashers, and fridges each already had one. Covers
+  calibration drift, a partially-failed bake element (uneven baking),
+  and a gas igniter that clicks without lighting. Uses the reserved
+  farmhouse-kitchen photo from "Reserved images" above (a real supplied
+  photo showing an actual range, not stock-picked for the topic).
+  Linked from the blog index and `sitemap.xml`.
 
 <!-- Add new visual additions above this line -->
 
