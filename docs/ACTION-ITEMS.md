@@ -4,6 +4,23 @@ A running list of things that can't be finished from code alone, plus a
 running list of user-visible additions worth knowing about. Add to these
 as new items come up.
 
+## Reserved images (supplied, not yet placed)
+
+Real photos the owner supplied directly during the 2026-09-16 blog-image
+pass, not used yet because nothing on the site is the right fit for them.
+Kept here so they don't get lost -- pull from this list before reaching
+for stock photos next time something needs a real kitchen image.
+
+1. **Farmhouse-style kitchen** (black cabinets, subtle range, dishwasher,
+   farmhouse sink, wood countertops, red enamel cookware) --
+   `https://images.unsplash.com/photo-1556909172-54557c7e4fb7?fm=jpg&q=80&w=1400&auto=format&fit=crop`.
+   Supplied for `dryer-not-heating.html` but doesn't show a dryer/laundry
+   at all, so it wasn't used there. Good candidate for a future blog
+   post (a kitchen-remodel or general-handyman piece) or another page
+   that wants a warm, real-kitchen photo.
+
+<!-- Add new reserved images above this line -->
+
 ## Manual action items (need a human, outside of code)
 
 These cannot be done via a migration, edge function, or any MCP tool
