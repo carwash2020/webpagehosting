@@ -475,6 +475,16 @@ reference:
   photo showing an actual range, not stock-picked for the topic).
   Linked from the blog index and `sitemap.xml`.
 
+- **Washer/dryer service page now lists all appliance types actually
+  sold** (`washer-dryer-repair.html`, 2026-09-16) -- added Dishwashers,
+  Refrigerators, and Ranges & Ovens as real service cards, a matching
+  FAQ entry, and a Service-schema `additionalType`, closing a gap where
+  the GBP profile and three blog posts already promised those repairs
+  but the dedicated service page didn't mention them. Page URL, title,
+  H1, and nav label deliberately left as "Washer & Dryer Repair" --
+  rebranding the page/nav into "Appliance Repair" is a bigger structural
+  call, not a copy change.
+
 <!-- Add new visual additions above this line -->
 
 ## Proposed visual improvements (not yet built)
