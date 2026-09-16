@@ -1308,3 +1308,64 @@ confirmed via `site_terms_history` (a real `update` row logged at
 2026-08-13). This is the content the homepage's Terms modal actually
 renders in production, so both the static fallback and the live CMS
 copy now say the same thing.
+
+## What changed, 2026-09-16 -- off-site SEO gap identified, GBP/directory copy drafted
+
+Checked whether the on-page GEO/AEO work (schema, robots.txt) actually
+gets Triple H recommended for a real, un-branded query like "washer
+dryer repair St George Utah." It does not: a branded search correctly
+surfaces `triplehenterprisesllc.biz` as the #2 organic result, but the
+generic query returns only national franchises (Mr. Appliance, Sears)
+and established local competitors with directory/citation presence
+Triple H doesn't have yet -- confirming on-page schema was necessary
+but not sufficient. A search for the bare domain string also turned up
+no real third-party mentions of it, meaning near-zero backlinks/citations
+point to the site by name.
+
+None of this is fixable from the repo -- it needs a claimed Google
+Business Profile and real directory listings (BBB, Angi, Thumbtack,
+Yelp, Nextdoor, Yellow Pages), which only the business owner can create.
+Audited the site's own NAP data first (`index.html`'s `LocalBusiness`
+schema and visible contact info -- name, `(435) 414-1667`,
+`steve@triplehenterprisesllc.biz`, St. George, UT 84790) and confirmed
+it's consistent site-wide, then drafted ready-to-paste GBP description/
+category/service-list/seed-Q&A copy and a shared directory-listing
+description, added to `docs/ACTION-ITEMS.md` under a new "SEO copy
+drafts" section so items 1 and 3 of the existing SEO action list are
+copy/paste instead of blank-page work. No code changes.
+
+**Also flagged, pending an answer only the owner can give:** the site
+shows 7 reviews but Google's own listing currently shows 6 -- one of
+the 7 is real but not actually a Google review. Every review card on
+the site is labeled "on Google," so which one to correct can't be
+determined from the code; the owner will check and confirm which
+quote it is. Not touched yet.
+
+## What changed, 2026-09-16 -- replaced every window.alert() in the client portal with a themed toast
+
+Found and fixed a real bug while looking for portal polish work:
+`portal/work-orders.html` already called `showToast()` on a failed
+message send, but no `showToast` was defined anywhere in the portal --
+that error path threw a silent `ReferenceError` instead of telling the
+client their message didn't send. Added a real `showToast()` to
+`portal/portal-app.js` (mirroring the existing `portalConfirm()`
+pattern -- injects its own DOM once, on first use, shared across every
+portal page) plus matching `.portal-toast` styles in
+`portal/portal-app.css`, sized to clear the bottom tab bar the same
+way the internal tools' own toast already clears theirs.
+
+While at it, replaced every other `window.alert()` in the portal with
+this same toast, not just the one broken call site: 2 in
+`portal/quotes.html` (quote approve/decline failures), 3 in
+`portal/dashboard.html` (PDF-not-ready, and 2 signature-name
+validations), and 5 in `portal/settings.html` (saved-card
+add/remove failures and a signature-name validation). `alert()`
+blocks the whole page and reads as dated next to the portal's other
+custom modals; none of these needed to stay native.
+
+Verified: `npm run fix-versions` (bumped `portal/service-worker.js`'s
+`CACHE_NAME` since `portal-app.js`/`portal-app.css` content changed),
+`npm run check-consistency` and `node scripts/check-undefined-vars.js`
+both pass clean, and the full portal test suite (448/448, including
+the alert-regex check in `tests/portal/job-receipt-link.test.js`)
+passes.
