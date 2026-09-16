@@ -1369,3 +1369,32 @@ Verified: `npm run fix-versions` (bumped `portal/service-worker.js`'s
 both pass clean, and the full portal test suite (448/448, including
 the alert-regex check in `tests/portal/job-receipt-link.test.js`)
 passes.
+
+## What changed, 2026-09-16 -- every blog post now has its own unique photo
+
+All 6 blog posts previously drew from just 3 Unsplash stock photos,
+reused 2-3x each. This environment's network policy blocks outbound
+access to every image CDN tested (Unsplash, Pexels, Pixabay, Wikimedia
+-- see the earlier same-day SEO-gap entry above), so these couldn't be
+sourced independently; the owner supplied real photos directly for
+each post instead, which were wired in one at a time as they arrived.
+
+`fridge-not-cooling.html`, `dishwasher-not-cleaning.html`,
+`washer-wont-drain.html`, `appliance-repair-or-replace.html`, and
+`dryer-not-heating.html` each now have their own distinct photo, real
+alt text describing what's actually shown, and the site's usual
+Unsplash URL-parameter convention (`fm=jpg&q=80&w=1400&auto=format&fit=crop`).
+`handyman-to-do-list.html` already had a unique photo and needed no
+change. No page shares an image with another anymore.
+
+Two supplied photos were **Unsplash+ (paid tier)** images -- easy to
+spot by the `plus.unsplash.com/premium_photo-...` URL and the tiled
+"Unsplash+" watermark visible in the preview -- and were not used,
+since that tier needs a separate paid license. A third supplied photo
+(a real, unwatermarked kitchen) didn't match its intended post
+(`dryer-not-heating.html` needed a dryer, not a kitchen) and was
+logged in `docs/ACTION-ITEMS.md` under "Reserved images" for a future
+post instead of being forced in.
+
+Verified: `npm run check-consistency`, `node scripts/check-undefined-vars.js`,
+and `python3 scripts/check-links.py` all pass clean.
