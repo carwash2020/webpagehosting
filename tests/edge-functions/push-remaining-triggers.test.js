@@ -62,6 +62,24 @@ test('work order scheduled push includes the real scheduled time label, not a pl
   assert.match(FILES.scheduled, /await sendClientPush\(wo\.client_email, "Your appointment is booked", `\$\{wo\.title \|\| "Your request"\}: \$\{scheduledLabel\}`, "\/portal\/work-orders\.html"\);/);
 });
 
+test('no edge function file tells a future deploy to use the lowercase "send-push" slug -- the exact mistake that created a real orphaned duplicate function once already', () => {
+  // Real bug found 2026-09-16 (hub dispatch bug sweep): send-push-index.ts's
+  // own header comment said "Deploy with: supabase functions deploy
+  // send-push" (lowercase), while every real caller in this codebase and
+  // README.md's own file listing agree the live slug is capitalized
+  // "Send-Push" -- Supabase treats function slugs as case-sensitive.
+  // notify-work-order-message-email-index.ts's own comment documents that
+  // this exact mismatch already created a real orphaned duplicate function
+  // once before. Guards against the deploy instruction drifting back to
+  // the wrong casing.
+  const edgeFunctionsDir = repo('edge-functions');
+  const files = fs.readdirSync(edgeFunctionsDir).filter(f => f.endsWith('.ts'));
+  for (const file of files) {
+    const src = fs.readFileSync(path.join(edgeFunctionsDir, file), 'utf8');
+    assert.doesNotMatch(src, /deploy send-push\b/, `${file}: found a lowercase "deploy send-push" instruction -- must say "Send-Push"`);
+  }
+});
+
 test('all four client-facing notification triggers now send push, closing out the item directly -- confirmed by checking every one, not assumed', () => {
   const messageFn = fs.readFileSync(repo('edge-functions', 'notify-work-order-message-email-index.ts'), 'utf8');
   const all = [FILES.invoice, FILES.quote, FILES.scheduled, messageFn];
