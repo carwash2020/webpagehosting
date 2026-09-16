@@ -172,6 +172,42 @@ consistent entity across the web, not five slightly different ones:
 - Yelp and Nextdoor in particular reward profile completeness (hours,
   photos, service list) for initial visibility, so fill in every field
   the form offers rather than the minimum required.
+- **Angi, HomeAdvisor, and Thumbtack are lead-generation marketplaces,
+  not free citations like Yelp/Nextdoor/BBB** -- a free basic profile
+  is usually possible (still worth the backlink/citation value even
+  unpaid), but ranking within their own search and getting routed real
+  leads typically requires a paid membership or per-lead fee. Worth
+  doing the free profile everywhere either way; treat the paid tier on
+  any of these as a separate cost/ROI decision, not part of this
+  backlink pass.
+
+### St. George Area Chamber of Commerce
+
+Chamber directories usually want a slightly more community-facing tone
+than a repair-marketplace listing, and often ask for a member
+"spotlight" or "about us" blurb separate from the plain business
+description above:
+
+> Triple H Enterprises is a locally owned, owner-operated handyman and
+> appliance repair business serving St. George and the surrounding
+> Southern Utah communities -- Hurricane, Washington City, Santa Clara,
+> Ivins, La Verkin, Leeds, Cedar City, and Mesquite, NV. We handle
+> everything from washer/dryer and appliance repair to plumbing fixes,
+> drywall and painting, furniture assembly, and general handyman work,
+> with the owner answering the phone directly on every call. Honesty,
+> hustle, and helpfulness aren't just a slogan -- they're how we run
+> every job. Call or text (435) 414-1667.
+
+- Chamber membership itself is usually a paid annual fee (unlike the
+  free-tier directories above) -- confirm current pricing with the
+  Chamber directly before joining; the payoff here isn't just the
+  directory backlink, it's the local-sponsorship/event angle in item 7
+  above (a Chamber event or mixer is a natural, real way to pick up
+  that kind of link/mention, not something code can manufacture).
+- If the Chamber's own directory offers a logo/photo upload, use the
+  same current orange logo (`images/logo-signature-orange.webp`) and
+  the GBP business-card photo generated earlier this session, so the
+  brand looks consistent everywhere it shows up.
 
 <!-- Add new SEO copy drafts above this line -->
 
