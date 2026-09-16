@@ -261,6 +261,54 @@ description above:
   the GBP business-card photo generated earlier this session, so the
   brand looks consistent everywhere it shows up.
 
+### Yelp profile refinement (2026-09-16)
+
+NAP already confirmed matching (see "NAP consistency check" above) --
+this is about filling in the fields that actually move Yelp's own
+search ranking and conversion, past the bare minimum:
+
+- **"From the Business" long description** (Yelp allows up to ~1,000
+  characters here, separate from the shorter summary blurb above):
+  > Triple H Enterprises is a locally owned, owner-operated handyman
+  > and appliance repair business based in St. George, Utah. When you
+  > call, you're talking directly to the owner, Steve -- not a call
+  > center or a rotating cast of subcontractors. We repair washers,
+  > dryers, dishwashers, refrigerators, and ranges, and handle general
+  > handyman work: plumbing fixes, drywall and painting, furniture
+  > assembly, and TV mounting. Jobs within 15 miles of St. George have
+  > no trip fee. All work is guaranteed, and parts carry whatever
+  > warranty the manufacturer sets. Refer a friend and get a $25
+  > credit toward your next service once their job is complete and
+  > paid. Serving St. George, Hurricane, Washington City, Santa Clara,
+  > Ivins, La Verkin, Leeds, Cedar City, and Mesquite, NV. Call or text
+  > (435) 414-1667.
+- **Specialties field:** Washer & dryer repair, dishwasher repair,
+  refrigerator repair, range/oven repair, plumbing repairs, drywall &
+  painting, furniture assembly, TV mounting, emergency repairs.
+- **Business highlights to toggle on** (only the ones actually true --
+  confirmed against the site's own FAQ/terms content, not guessed):
+  Licensed & Insured (`index.html`'s own trust-strip already claims
+  this), Guaranteed Work, Locally Owned & Operated, Emergency Services
+  Offered, Accepts Credit Cards (Stripe). Skip anything Yelp offers
+  that isn't independently confirmed (e.g. don't toggle "Free
+  Estimates" -- pricing is set after an in-person diagnosis per the
+  site's own FAQ, not a free walk-through estimate, so that highlight
+  would be inaccurate).
+- **Payment methods to list:** Cash, check, Venmo, Cash App, credit/
+  debit card.
+- **Photos:** the two GBP photos generated earlier this session (the
+  current-logo profile photo and the corrected business-card cover
+  photo) work here too for brand consistency, but Yelp specifically
+  rewards real job-site photos more than any other platform for
+  driving actual clicks-to-call -- this is the single highest-value
+  place to use real job photos once they're handed off (see item 6
+  above).
+- **Yelp "Request a Quote" messaging button:** if Yelp's own lead
+  button is enabled, make sure notifications route somewhere actually
+  checked daily -- an unanswered Yelp lead is worse than no Yelp
+  presence, since Yelp's own algorithm penalizes slow/no response rate
+  in future placement.
+
 <!-- Add new SEO copy drafts above this line -->
 
 ## Visual additions (things a real user/client will actually see)
