@@ -36,6 +36,7 @@ const PAGES_WITH_SCHEDULE = [
   'handyman-leeds-ut.html',
   'handyman-mesquite-nv.html',
   'handyman-santa-clara-ivins-ut.html',
+  'handyman-st-george-ut.html',
   'handyman-washington-city-ut.html',
 ];
 

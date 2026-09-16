@@ -66,8 +66,8 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Anton&family=Archivo:wght@400..700&family=Newsreader:ital,opsz,wght@0,6..72,300..700;1,6..72,300..600&family=Oswald:wght@200..700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="/styles.css?v=355484bc83">
-<link rel="stylesheet" href="/portal/portal-app.css?v=202609071900">
+<link rel="stylesheet" href="/styles.css?v=ff904733d8">
+<link rel="stylesheet" href="/portal/portal-app.css?v=202609151500">
 <style>
   /* iOS Safari zoom-on-focus fix (2026-09-05), same root cause and
      fix already applied to invoice-generator.html: a tapped
@@ -106,7 +106,7 @@
 </style>
 <link rel="stylesheet" href="/tools/styles-tools.css?v=a494344e8c">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="/portal/portal-app.js?v=202609072000"></script>
+<script src="/portal/portal-app.js?v=202609151500"></script>
 <!-- Shared business-hours data (2026-09-03) -- see business-hours.js's
      own header comment. This page used to keep its own hand-copied
      duplicate of these exact constants ("keep these in sync manually
@@ -225,6 +225,24 @@
   .schedule-panel.is-open { display: block; }
   .schedule-note { color: #4caf78; font-size: 13px; margin-top: 8px; }
   .date-row { display: flex; gap: 8px; overflow-x: auto; padding-bottom: 8px; margin-bottom: 12px; -webkit-overflow-scrolling: touch; scroll-snap-type: x proximity; }
+  /* Item 9 -- scroll affordance for the horizontally-scrolling date
+     picker: a fade on the trailing edge that only shows when there's
+     more to scroll to. .date-row-wrap is the non-scrolling positioning
+     parent the fade overlay is anchored to (the fade itself must sit
+     outside the scrolling box, or it would scroll away with the
+     content it's meant to hint at). JS (renderScheduleDateRow /
+     updateDateRowFade below) toggles .has-overflow-right based on real
+     scrollWidth/scrollLeft, since that can't be expressed in CSS alone. */
+  .date-row-wrap { position: relative; }
+  .date-row-wrap::after {
+    content: ""; position: absolute; top: 0; right: 0; bottom: 8px; width: 32px;
+    background: linear-gradient(to right, transparent, var(--bg-panel-2));
+    opacity: 0; transition: opacity .18s ease; pointer-events: none;
+  }
+  .date-row-wrap.has-overflow-right::after { opacity: 1; }
+  @media (prefers-reduced-motion: reduce) {
+    .date-row-wrap::after { transition: none; }
+  }
   .date-btn {
     flex: 0 0 auto; min-width: 60px; text-align: center; background: var(--bg-panel);
     border: 1px solid var(--border); border-radius: 10px; padding: 9px 7px; cursor: pointer;
@@ -256,7 +274,7 @@
   .report-bug-actions { display: flex; gap: 10px; margin-top: 16px; }
   .report-bug-actions button { flex: 1; justify-content: center; }
 </style>
-<link rel="stylesheet" href="/portal/portal-polish.css?v=915097413e">
+<link rel="stylesheet" href="/portal/portal-polish.css?v=63a161e33e">
 </head>
 <body class="portal-page">
 
@@ -325,11 +343,13 @@
       </tr>
     `).join('');
     return `
-      <details style="margin-top:8px;">
+      <details class="line-item-details" style="margin-top:8px;">
         <summary style="cursor:pointer; font-size:13px; color:var(--text-dim);">View details</summary>
-        <table style="width:100%; margin-top:8px; border-top:1px solid var(--border); padding-top:6px;">
-          <tbody>${rows}</tbody>
-        </table>
+        <div class="line-item-details-wrap"><div>
+          <table style="width:100%; margin-top:8px; border-top:1px solid var(--border); padding-top:6px;">
+            <tbody>${rows}</tbody>
+          </table>
+        </div></div>
       </details>
     `;
   }
@@ -372,7 +392,7 @@
           ` : `
             <button type="button" class="schedule-toggle" onclick="toggleScheduleForm(${q.id})">Schedule this job</button>
             <div class="schedule-panel" id="schedulePanel-${q.id}">
-              <div class="date-row" id="dateRow-${q.id}"></div>
+              <div class="date-row-wrap"><div class="date-row" id="dateRow-${q.id}"></div></div>
               <div class="slots-grid" id="slotsGrid-${q.id}"></div>
               <div class="slots-empty" id="slotsEmpty-${q.id}" style="display:none;">No open times that day. Try another.</div>
               <div class="schedule-summary" id="scheduleSummary-${q.id}" style="display:none;"></div>
@@ -568,6 +588,25 @@
     el.querySelectorAll('.date-btn').forEach(btn => {
       btn.addEventListener('click', () => selectScheduleDate(quoteId, btn.dataset.date));
     });
+    initDateRowFade(el);
+  }
+
+  // Item 9: toggles the trailing-edge fade (CSS above) on and off as
+  // the row is scrolled, and hides it entirely when the row doesn't
+  // overflow in the first place (e.g. a wide viewport showing every
+  // date already) -- a 2px slack on both checks absorbs sub-pixel
+  // rounding some browsers report for scrollWidth/scrollLeft.
+  function initDateRowFade(el) {
+    const wrap = el.closest('.date-row-wrap');
+    if (!wrap) return;
+    function update() {
+      const canScroll = el.scrollWidth > el.clientWidth + 2;
+      const atEnd = el.scrollLeft + el.clientWidth >= el.scrollWidth - 2;
+      wrap.classList.toggle('has-overflow-right', canScroll && !atEnd);
+    }
+    el.addEventListener('scroll', update, { passive: true });
+    window.addEventListener('resize', update);
+    update();
   }
 
   async function selectScheduleDate(quoteId, dateStr) {
