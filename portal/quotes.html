@@ -498,13 +498,13 @@
       );
       const result = await res.json();
       if (!result.ok) {
-        alert(result.error || 'Something went wrong. Please try again.');
+        showToast(result.error || 'Something went wrong. Please try again.', { type: 'error' });
         buttonsToDisable.forEach(b => { b.disabled = false; });
         return;
       }
       renderQuotes();
     } catch (e) {
-      alert("Couldn't reach the server. Please check your connection and try again.");
+      showToast("Couldn't reach the server. Please check your connection and try again.", { type: 'error' });
       buttonsToDisable.forEach(b => { b.disabled = false; });
     }
   }

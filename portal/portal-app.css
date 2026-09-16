@@ -495,3 +495,52 @@ body.portal-page {
   flex: 1;
   justify-content: center;
 }
+
+/* Themed replacement for window.alert() (2026-09-16) -- 9 call sites
+   across quotes.html, dashboard.html, and settings.html used it,
+   blocking the UI and looking dated next to portalConfirm above.
+   work-orders.html already called a showToast() that didn't exist
+   anywhere in the portal (a real latent bug -- that error path threw
+   silently instead of telling the client anything); this defines it
+   for real, shared across the portal the same way portalConfirm is. */
+.portal-toast-container {
+  position: fixed;
+  left: 50%;
+  bottom: 20px;
+  transform: translateX(-50%);
+  z-index: 10001;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  align-items: center;
+  pointer-events: none;
+  width: 100%;
+  padding: 0 20px;
+  box-sizing: border-box;
+}
+.portal-toast-container.has-bottomnav {
+  bottom: calc(70px + env(safe-area-inset-bottom, 0px) + 12px);
+}
+.portal-toast {
+  pointer-events: auto;
+  cursor: pointer;
+  background: var(--bg-panel);
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--orange);
+  color: var(--text);
+  font-size: 14px;
+  line-height: 1.4;
+  padding: 12px 18px;
+  border-radius: 8px;
+  max-width: 420px;
+  width: max-content;
+  box-shadow: 0 6px 20px rgba(0,0,0,0.35);
+  opacity: 0;
+  transform: translateY(8px);
+  transition: opacity .18s ease, transform .18s ease;
+}
+.portal-toast.is-shown { opacity: 1; transform: translateY(0); }
+.portal-toast.is-error { border-left-color: #e05252; }
+@media (prefers-reduced-motion: reduce) {
+  .portal-toast { transition: none; }
+}

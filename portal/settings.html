@@ -694,12 +694,12 @@
       });
       const result = await res.json();
       if (!result.ok) {
-        alert(result.error || "Couldn't remove that card. Please try again.");
+        showToast(result.error || "Couldn't remove that card. Please try again.", { type: 'error' });
         return;
       }
       loadSavedCards();
     } catch (e) {
-      alert("Couldn't remove that card. Please try again.");
+      showToast("Couldn't remove that card. Please try again.", { type: 'error' });
     }
   }
 
@@ -732,7 +732,7 @@
   async function submitAddCardSignature() {
     const signerName = (document.getElementById('addCardSignerName')?.value || '').trim();
     if (!signerName) {
-      alert('Please type your full name to continue.');
+      showToast('Please type your full name to continue.', { type: 'error' });
       return;
     }
     const { data: { session } } = await client.auth.getSession();
@@ -753,14 +753,14 @@
       });
       const result = await res.json();
       if (!result.ok) {
-        alert(result.error || "Couldn't start that just now. Please try again.");
+        showToast(result.error || "Couldn't start that just now. Please try again.", { type: 'error' });
         btn.disabled = false;
         btn.textContent = 'Continue';
         return;
       }
       mountAddCardSetupUI(result.client_secret);
     } catch (e) {
-      alert("Couldn't reach the server. Please check your connection and try again.");
+      showToast("Couldn't reach the server. Please check your connection and try again.", { type: 'error' });
       btn.disabled = false;
       btn.textContent = 'Continue';
     }

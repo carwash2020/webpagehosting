@@ -512,3 +512,47 @@ function portalConfirm(message, options) {
   });
 }
 
+// Themed replacement for window.alert() (2026-09-16), same reasoning as
+// portalConfirm above for window.confirm(). work-orders.html already
+// called showToast() on a failed message send, but nothing in the
+// portal defined it -- that call threw a silent ReferenceError instead
+// of telling the client their message didn't send. Defined here, once,
+// shared by every portal page the way portalConfirm already is.
+function showToast(message, options) {
+  options = options || {};
+  const duration = options.duration || 3200;
+
+  let container = document.getElementById('portalToastContainer');
+  if (!container) {
+    container = document.createElement('div');
+    container.id = 'portalToastContainer';
+    container.className = 'portal-toast-container';
+    document.body.appendChild(container);
+  }
+  if (document.querySelector('.portal-nav')) {
+    container.classList.add('has-bottomnav');
+  }
+
+  const toast = document.createElement('div');
+  toast.className = 'portal-toast' + (options.type === 'error' ? ' is-error' : '');
+  toast.textContent = message; // textContent, not innerHTML -- message may include user-entered data
+  toast.addEventListener('click', () => dismissPortalToast(toast));
+  container.appendChild(toast);
+
+  // Letting the element paint in its resting state before adding
+  // .is-shown means the CSS transition actually animates in, instead of
+  // starting already-visible.
+  requestAnimationFrame(() => toast.classList.add('is-shown'));
+
+  const timer = setTimeout(() => dismissPortalToast(toast), duration);
+  toast._portalTimer = timer;
+}
+
+function dismissPortalToast(toast) {
+  if (!toast || toast._portalDismissed) return;
+  toast._portalDismissed = true;
+  clearTimeout(toast._portalTimer);
+  toast.classList.remove('is-shown');
+  setTimeout(() => toast.remove(), 200);
+}
+
