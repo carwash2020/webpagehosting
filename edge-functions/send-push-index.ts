@@ -107,6 +107,26 @@ const COMPLIANCE_WARNING_DAYS = 30; // matches workspace.html's expiring-soon th
 const STUCK_IN_PROGRESS_DAYS = 7;
 const SYNC_STALE_DAYS = 3;
 const QUOTE_STALE_DAYS = 14;
+
+// Mirrors workspace.html's getPaidAmount/getRemainingCents exactly --
+// same whole-cents rounding, same fallback for invoices predating
+// partial-payment tracking (paidAmount didn't exist yet, only a plain
+// `paid` boolean). Bug fix (2026-09-16): checkOverdueInvoices used to
+// check `inv.paid` directly, so an invoice paid in full via a logged
+// paidAmount (without paid ever being flipped to true) still fired a
+// wrongful "Invoice Overdue" push every day. This is the one place
+// "is this invoice actually still owed" gets decided here, so it can't
+// drift from workspace.html's own math again.
+function toCents(n: unknown): number {
+  return Math.round((Number(n) || 0) * 100);
+}
+function getPaidAmount(invoice: Record<string, unknown>): number {
+  if (invoice.paidAmount !== undefined && invoice.paidAmount !== null) return Number(invoice.paidAmount) || 0;
+  return invoice.paid ? Number(invoice.total) || 0 : 0;
+}
+function getRemainingCents(invoice: Record<string, unknown>): number {
+  return Math.max(0, toCents(invoice.total) - toCents(getPaidAmount(invoice)));
+}
 const WARRANTY_WARNING_DAYS = 5; // matches job-tracker.html's 30-day warranty window, warns in the last 5 days of it
 const UNRESPONDED_LEAD_HOURS = 24;
 
@@ -368,7 +388,7 @@ async function checkFollowups(jobs: any[]) {
 async function checkOverdueInvoices(invoices: any[]) {
   const today = todayAtMidnight();
   for (const inv of invoices) {
-    if (inv.paid) continue;
+    if (getRemainingCents(inv) <= 0) continue; // paid in full -- nothing overdue
     const base = new Date((inv.date || "") + "T00:00:00");
     if (isNaN(base.getTime())) continue;
     const termDays = TERM_DAYS[inv.terms] ?? 15;

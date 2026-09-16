@@ -46,4 +46,24 @@ for next time:
   "normal" volume should stay calibrated to that, not read a quiet week
   as a red flag.
 
+## 2026-09-16 (evening) — scheduled "weekly" refresh landed same-day
+
+A routine fired hours after the morning's business-health report asking
+for a fresh weekly snapshot. Worth recording since it'll happen again:
+the trigger doesn't check whether a meaningful amount of time/data has
+actually passed since the last report -- it just fires on its own
+schedule. Rather than silently re-deriving the same numbers from the
+same underlying data and presenting them as a new data point, said so
+plainly in the report itself (a "this is a same-day refresh, not a new
+week" note) and focused the update on what had genuinely changed since
+the morning (the invoice-alert bug fix landing in production, and the
+automation-reliability finding) rather than restating unchanged
+business-volume figures as if they were freshly measured. Updated the
+existing "Triple H Pulse" artifact in place (same URL) rather than
+publishing a new one, since a recurring snapshot should read as one
+evolving page, not a new link every time it fires. Re-checked
+`ListConnectors` for a GA4/analytics connector before repeating last
+time's "not available" -- still genuinely not connected, not just
+assumed absent.
+
 <!-- Add new entries above this line -->
