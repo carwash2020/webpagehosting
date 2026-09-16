@@ -3000,12 +3000,17 @@
   }
   .areas-link b{font-family:var(--font-ui); font-weight:700; font-size:15px;}
   .areas-link small{color:var(--text-dim); font-size:12.5px;}
-  .areas-link:not(.is-hub):hover,
-  .areas-link:not(.is-hub):focus-visible{border-color:var(--blue-text); transform:translateY(-2px);}
+  .areas-link:hover,
+  .areas-link:focus-visible{border-color:var(--blue-text); transform:translateY(-2px);}
   .areas-link.is-request{border-color:var(--orange-tint-border);}
   .areas-link.is-request:hover,
   .areas-link.is-request:focus-visible{border-color:var(--orange-text);}
-  .areas-link.is-hub{background:var(--bg-panel-2); cursor:default;}
+  /* St. George's card is a real link to its own landing page (added
+     2026-09-15), not just a "you are here" label anymore -- keeps its
+     distinct hub background, but no longer opts out of the hover/focus
+     raise every other real areas-link gets, and cursor:default (a
+     leftover from when this was an inert <span>) is gone too. */
+  .areas-link.is-hub{background:var(--bg-panel-2);}
   .areas-request-note{color:var(--text-dim); font-size:13.5px; max-width:90ch; margin:0;}
   /* Same tighter figure/legend spacing the landing pages' own
      .areas-map-section already uses (26px) -- the homepage's #areas
