@@ -109,11 +109,22 @@ when greenlit; these do not.
    None of this can be automated -- each is its own signup/profile/claim
    process, and a link from a real local business directory carries much
    more SEO weight than anything on-site.
-4. **NAP consistency check** (Name/Address/Phone, exactly matching,
-   across every place Triple H is listed online -- Google, Yelp,
-   Facebook, BBB, any directory). Inconsistent phone formatting or an
-   old address anywhere confuses Google's local-ranking algorithm. A
-   one-time manual audit, worth doing once and then keeping in sync.
+4. ~~**NAP consistency check**~~ **Done (2026-09-16).** Checked against
+   the site's own canonical NAP (Triple H Enterprises LLC, (435)
+   414-1667, steve@triplehenterprisesllc.biz, St. George, UT 84790):
+   Yelp matches, Facebook matches. No BBB listing (costs money --
+   skipped on purpose, not an oversight; still worth revisiting under
+   "real backlinks" above once there's budget for it, since a BBB
+   listing is both a NAP-consistent citation and a real backlink).
+   **Found a real mismatch on Google Business Profile**: an old
+   business-card-style photo on the listing showed a stale phone number
+   (801-357-9940) and email (triplehenterprises88@gmail.com). Two
+   updated photos (a current-logo profile photo and a corrected
+   business-card cover photo with the real phone/email) were generated
+   and handed off to replace it -- **still needs the actual "Edit
+   profile" phone/website fields on the GBP listing itself checked
+   too**, not just the photo, since that's the field Google's ranking
+   algorithm actually reads.
 5. **Google Search Console**: verify site ownership (a one-time
    dashboard/DNS step, can't be done from this repo) if not already
    done, then check it periodically for crawl errors, manual actions, or
