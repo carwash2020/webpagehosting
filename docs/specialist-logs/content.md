@@ -53,4 +53,32 @@ suites (workspace tour, job-tracker, baseline-diff tooling) -- none
 touch the 4 files changed here. Pushed to
 `content/service-page-blog-links`, not yet a PR.
 
+## 2026-09-16 (later same day)
+
+Found a second real gap while auditing the service pages against what's
+already live on the GBP/Yelp listings: `washer-dryer-repair.html` (the
+only dedicated appliance service page) listed just washers, dryers,
+installation, and vent cleaning in its "What We Fix" grid, even though
+the GBP profile and three separate blog posts already promise
+dishwasher, refrigerator, and range/oven repair. Added those three as
+real service cards, a matching FAQ (both the visible "Common Questions"
+copy and the schema-paired "Frequently Asked Questions" section --
+learned the hard way via `seo/landing-page-faq-schema.test.js` that
+those are two separate FAQ lists on this page, not one, so a new
+question has to go in both or the schema-vs-visible count check fails),
+an `additionalType` addition to the page's Service schema, and two more
+"Recent Notes From the Shop" links to the fridge and oven blog posts.
+Deliberately left the page's URL, `<title>`, H1, and nav label as
+"Washer & Dryer Repair" -- broadening those into a full appliance-repair
+rebrand touches site structure/nav across 16 pages, which is a bigger
+call than page copy and belongs with the owner or the features
+specialist if wanted.
+
+Also installed `jsdom`/`eslint` locally (`npm install --no-save jsdom
+eslint`) to actually run the full test suite and `check-undefined-vars.js`
+in this environment -- neither was present, so most of `npm test`'s
+failures on a fresh checkout are that missing-module gap, not real
+regressions. Worth a `package-lock.json`/CI check on why `npm ci` doesn't
+already restore them, but that's bugfix/automation territory, not content.
+
 <!-- Add new entries above this line -->
