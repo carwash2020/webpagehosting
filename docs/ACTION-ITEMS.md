@@ -53,8 +53,9 @@ click a setting by hand.
    (no account exists to wire up).**
 4. ~~Claim/verify Google Business Profile~~ -- **confirmed done
    (2026-09-16): "Triple H Enterprises LLC", verified badge, category
-   already "Appliance repair service", 5.0 stars / 6 Google reviews,
-   phone matches.** Still open: paste in the longer description,
+   already "Appliance repair service", 5.0 stars / 7 Google reviews
+   (as of the latest screenshot), phone matches.** Still open: paste
+   in the longer description,
    individually-listed services, and the 3 seed Q&As drafted under "SEO
    copy drafts" below -- profile exists and is verified, but that
    content doesn't look filled in yet from the screenshot. **Ongoing
@@ -80,18 +81,16 @@ click a setting by hand.
    must match what's actually shown, not just Google's raw total.
    **Done, as far as this was verified directly with the owner.**
 
-   **Conflicting claim, needs the owner to confirm:** a different
-   session's commit (2026-09-16, `26c9639`) asserts "the missing 7th
-   review was posted on Google... Google's count is now 7," reverting
-   the count to 7 in its own doc note, but touched no actual review
-   content and cited no screenshot or other evidence. That claim
-   contradicts what was directly verified here (with real screenshots)
-   just before it -- 4 verified quotes, not 7. Rather than pick a side
-   on an unverified claim, the actual review content was left at 4
-   verified quotes. **If a real 7th Google review with real text now
-   exists, send a screenshot the same way as before and it'll get
-   added properly** -- until then, this doc's own "done" claim above
-   is the one backed by real evidence.
+   ~~**Update (2026-09-16, confirmed with real evidence):**~~ Google
+   genuinely has 7 reviews now (owner-confirmed screenshot: "5.0 ★★★★★
+   7 Google reviews"), but the owner confirmed the 7th has **no
+   written text** -- same case as Austin Mayer and Micah Naegle. **No
+   code change needed**: this site's schema-honesty policy (see
+   `reviews-wall.test.js`) counts visible, written quotes, not
+   Google's raw review total, so `aggregateRating.reviewCount` and the
+   "Real 5-Star Reviews" stat correctly stay at 4. Fully resolved --
+   if that 7th review ever gets real text (or any future review does),
+   send it over and it'll be added as a genuine 5th card.
 
 <!-- Add new manual action items above this line -->
 
