@@ -456,6 +456,38 @@ body.portal-page details > summary:hover { color: var(--orange-light); }
   body.portal-page details > summary::before { transition: none; }
 }
 
+/* ---------- 10b. animated open/close for the invoice/quote line-item
+   disclosure (dashboard.html + quotes.html renderLineItemsTable()) ----------
+   Native <details> snaps its content open/closed with no way to
+   transition height directly (auto <-> 0 isn't animatable). Both
+   pages now wrap the disclosed table in a nested div pair
+   (.line-item-details-wrap > div) purely so this rule has something
+   to run a grid-template-rows 0fr -> 1fr transition on -- the same
+   "grid trick" used elsewhere for animating to/from an intrinsic
+   height. The !important overrides the UA stylesheet's own
+   `details:not([open]) > *:not(summary) { display: none }`, which
+   would otherwise unmount the wrapper before the transition could
+   run. Scoped to .line-item-details specifically rather than every
+   details on the page, since Settings' own collapsible cards (10,
+   above) use plain display toggling and don't need this. */
+body.portal-page details.line-item-details > .line-item-details-wrap {
+  display: grid !important;
+  grid-template-rows: 0fr;
+  opacity: 0;
+  transition: grid-template-rows .25s ease, opacity .2s ease;
+}
+body.portal-page details.line-item-details[open] > .line-item-details-wrap {
+  grid-template-rows: 1fr;
+  opacity: 1;
+}
+body.portal-page details.line-item-details > .line-item-details-wrap > div {
+  overflow: hidden;
+  min-height: 0;
+}
+@media (prefers-reduced-motion: reduce) {
+  body.portal-page details.line-item-details > .line-item-details-wrap { transition: none; }
+}
+
 .set-card-header { min-height: 52px; }
 /* The collapsed rows were doing the opposite of what collapsing them was
    for. Settings was made collapsible to cut the scroll length ("it still

@@ -26,6 +26,7 @@ const PAGES = {
   'handyman-washington-city-ut.html': fs.readFileSync(repo('handyman-washington-city-ut.html'), 'utf8'),
   'handyman-la-verkin-ut.html': fs.readFileSync(repo('handyman-la-verkin-ut.html'), 'utf8'),
   'handyman-leeds-ut.html': fs.readFileSync(repo('handyman-leeds-ut.html'), 'utf8'),
+  'handyman-st-george-ut.html': fs.readFileSync(repo('handyman-st-george-ut.html'), 'utf8'),
 };
 
 for (const [name, html] of Object.entries(PAGES)) {

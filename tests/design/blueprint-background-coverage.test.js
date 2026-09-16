@@ -18,12 +18,15 @@ const PAGES = [
   'handyman-hurricane-ut.html', 'handyman-washington-city-ut.html',
   'handyman-santa-clara-ivins-ut.html', 'handyman-cedar-city-ut.html',
   'handyman-mesquite-nv.html', 'handyman-la-verkin-ut.html', 'handyman-leeds-ut.html',
+  'handyman-st-george-ut.html',
   'washer-dryer-repair.html', 'plumbing-repairs.html', 'drywall-painting.html',
   'handyman-repairs.html', 'assembly-installation.html',
   'about.html', 'our-work.html', 'terms.html',
   'blog/index.html', 'blog/dryer-not-heating.html', 'blog/handyman-to-do-list.html',
   'blog/appliance-repair-or-replace.html', 'blog/washer-wont-drain.html',
   'blog/dishwasher-not-cleaning.html', 'blog/fridge-not-cooling.html',
+  'blog/toilet-running-flapper-valve.html', 'blog/drywall-crack-above-door.html',
+  'blog/tv-mount-drywall-anchors.html',
 ];
 
 test('every public marketing page carries the blueprint background (has-blueprint-bg on <body> + a following .bg-blueprint div)', () => {
