@@ -95,47 +95,46 @@ click a setting by hand.
    if that 7th review ever gets real text (or any future review does),
    send it over and it'll be added as a genuine 5th card.
 7. ~~Deploy the new `send-payment-reminder` edge function and run its
-   cron SQL~~ -- **done (2026-09-16).** Deployed via the Supabase MCP
-   tools now available to this session (an access path the item was
-   originally written before) and its daily cron job (`send-payment-
-   reminders-daily`, 15:00 UTC) registered directly against the
-   project. Reused the existing `send_push_service_role_key` vault
-   secret and `RESEND_API_KEY`/`LEAD_EMAIL_FROM`/`LEAD_EMAIL_TO`
-   project secrets -- both already configured, no new secret was
-   needed. **Redeployed again same day** during the security-audit
-   follow-up (PR #249) to carry a real fix into production: the version
-   deployed above had no auth check on incoming requests at all, letting
-   anyone with the public anon key trigger real client-facing emails on
-   demand. Confirmed via `mcp__Supabase__get_edge_function` that the live
-   source lacked the check before redeploying, and that the redeployed
-   source (matching what merged into `main`) has it. Not live-fired as
-   part of either deploy since doing so would email real clients with
-   real overdue invoices; its first real run is the 15:00 UTC cron.
+   cron SQL~~ -- **deploy itself done** (function live at version 5,
+   `send-payment-reminders-daily` cron active, 15:00 UTC daily). **But
+   verified broken (2026-09-16, checked directly)**: every real
+   cron-triggered run 401s and sends nothing -- the cron's vault secret
+   doesn't match what the function's own strict auth check requires.
+   Not a "needs deploy access" item anymore; now a "needs the real
+   `service_role` key from the Supabase dashboard" item -- see
+   `docs/specialist-logs/bugfix.md`'s 2026-09-16 entry for the full
+   root cause and what to do with the key once it's in hand.
 8. ~~Deploy the new `send-quote-followup` edge function and run its
-   cron SQL~~ -- **done (2026-09-16).** Same deploy path as item 7,
-   daily cron job (`send-quote-followup-daily`, 16:00 UTC) registered,
-   and same same-day redeploy to carry the identical auth-check security
-   fix into production. The updated `send-push` (the new "Review
-   Follow-Up Due" push check) needed no separate deploy step -- it's the
-   same already-deployed function, already current on this branch.
-9. **Delete the orphaned lowercase `send-push` Edge Function** (id
-   `aaa21126-3451-4bd2-a8e3-97d4f95bbf5a`, slug `send-push`, v8) --
-   re-confirmed live and still deployed (2026-09-16), contradicting an
-   earlier README note that it was already gone. It's a genuinely dead,
-   stale duplicate of the real `Send-Push` function: its source is
-   missing 3 real fixes the live `Send-Push` (v50) has since picked up
-   (the business-timezone fix, the partial-payment-aware overdue check,
-   `checkPendingReviewReminders`), and nothing calls it -- verified both
-   by grepping the whole repo (every call site uses exact-cased
-   `Send-Push`, enforced by 4 test files) and by querying the live
-   database directly (`cron.job` and every `pg_proc` function body) for
-   any lowercase `/send-push` URL -- zero matches either way. **Needs a
-   human with the Supabase dashboard or CLI**: the Supabase MCP tools
-   available in this environment can list/read/deploy Edge Functions but
-   have no delete call, and the `supabase` CLI isn't installed in this
-   environment either. Delete via Supabase dashboard → Edge Functions →
-   `send-push` → Delete, or `supabase functions delete send-push` from a
-   machine that has the CLI and project access.
+   cron SQL~~ -- **same story as #7, same real cause, same fix
+   needed.** Function live (version 2), `send-quote-followup-daily`
+   cron active at 16:00 UTC, also 401ing on every real run. `send-push`
+   itself (the "Review Follow-Up Due" check) is unaffected -- that one
+   has no exact-match auth check and has been firing fine hourly on the
+   same vault secret; only these two newer functions added the
+   stricter check and are the ones actually blocked by it.
+9. **Get the real `service_role` key from Supabase (Project Settings ->
+   API) and update the `send_push_service_role_key` vault secret** (or
+   create a new dedicated one and repoint the two crons above) --
+   the one manual step actually blocking items 7 and 8 from working.
+   Everything else about both is done and tested.
+10. **Delete the orphaned lowercase `send-push` Edge Function** (id
+    `aaa21126-3451-4bd2-a8e3-97d4f95bbf5a`, slug `send-push`, v8) --
+    re-confirmed live and still deployed (2026-09-16), contradicting an
+    earlier README note that it was already gone. It's a genuinely dead,
+    stale duplicate of the real `Send-Push` function: its source is
+    missing 3 real fixes the live `Send-Push` (v50) has since picked up
+    (the business-timezone fix, the partial-payment-aware overdue check,
+    `checkPendingReviewReminders`), and nothing calls it -- verified both
+    by grepping the whole repo (every call site uses exact-cased
+    `Send-Push`, enforced by 4 test files) and by querying the live
+    database directly (`cron.job` and every `pg_proc` function body) for
+    any lowercase `/send-push` URL -- zero matches either way. **Needs a
+    human with the Supabase dashboard or CLI**: the Supabase MCP tools
+    available in this environment can list/read/deploy Edge Functions but
+    have no delete call, and the `supabase` CLI isn't installed in this
+    environment either. Delete via Supabase dashboard → Edge Functions →
+    `send-push` → Delete, or `supabase functions delete send-push` from a
+    machine that has the CLI and project access.
 
 <!-- Add new manual action items above this line -->
 
@@ -492,6 +491,16 @@ reference:
   farmhouse-kitchen photo from "Reserved images" above (a real supplied
   photo showing an actual range, not stock-picked for the topic).
   Linked from the blog index and `sitemap.xml`.
+
+- **Washer/dryer service page now lists all appliance types actually
+  sold** (`washer-dryer-repair.html`, 2026-09-16) -- added Dishwashers,
+  Refrigerators, and Ranges & Ovens as real service cards, a matching
+  FAQ entry, and a Service-schema `additionalType`, closing a gap where
+  the GBP profile and three blog posts already promised those repairs
+  but the dedicated service page didn't mention them. Page URL, title,
+  H1, and nav label deliberately left as "Washer & Dryer Repair" --
+  rebranding the page/nav into "Appliance Repair" is a bigger structural
+  call, not a copy change.
 
 <!-- Add new visual additions above this line -->
 
