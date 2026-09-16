@@ -51,12 +51,16 @@ click a setting by hand.
    -- give me the conversion ID (`AW-...`) or Pixel ID once you have an
    account and I'll wire up the actual tag/base code. **Not yet done
    (no account exists to wire up).**
-4. **Google Business Profile** -- regular posts, Q&A seeding, fresh
-   photos, and review velocity there move the local 3-pack ranking more
-   than the website itself does for "near me" searches. Nothing in this
-   repo can act on it; it's a dashboard/account task. **Description,
-   category, service list, and seed Q&A drafted and ready to paste in --
-   see "SEO copy drafts" below.**
+4. ~~Claim/verify Google Business Profile~~ -- **confirmed done
+   (2026-09-16): "Triple H Enterprises LLC", verified badge, category
+   already "Appliance repair service", 5.0 stars / 6 Google reviews,
+   phone matches.** Still open: paste in the longer description,
+   individually-listed services, and the 3 seed Q&As drafted under "SEO
+   copy drafts" below -- profile exists and is verified, but that
+   content doesn't look filled in yet from the screenshot. **Ongoing
+   after that:** regular posts, fresh job photos, and prompt review
+   responses keep moving the local 3-pack ranking -- not a one-time
+   task.
 5. **Google Local Services Ads ("Google Guaranteed")** -- pay-per-lead,
    usually the best ROI channel for handyman/appliance repair
    specifically. Requires setting up and getting verified/background-
