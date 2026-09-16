@@ -118,6 +118,24 @@ click a setting by hand.
    fix into production. The updated `send-push` (the new "Review
    Follow-Up Due" push check) needed no separate deploy step -- it's the
    same already-deployed function, already current on this branch.
+9. **Delete the orphaned lowercase `send-push` Edge Function** (id
+   `aaa21126-3451-4bd2-a8e3-97d4f95bbf5a`, slug `send-push`, v8) --
+   re-confirmed live and still deployed (2026-09-16), contradicting an
+   earlier README note that it was already gone. It's a genuinely dead,
+   stale duplicate of the real `Send-Push` function: its source is
+   missing 3 real fixes the live `Send-Push` (v50) has since picked up
+   (the business-timezone fix, the partial-payment-aware overdue check,
+   `checkPendingReviewReminders`), and nothing calls it -- verified both
+   by grepping the whole repo (every call site uses exact-cased
+   `Send-Push`, enforced by 4 test files) and by querying the live
+   database directly (`cron.job` and every `pg_proc` function body) for
+   any lowercase `/send-push` URL -- zero matches either way. **Needs a
+   human with the Supabase dashboard or CLI**: the Supabase MCP tools
+   available in this environment can list/read/deploy Edge Functions but
+   have no delete call, and the `supabase` CLI isn't installed in this
+   environment either. Delete via Supabase dashboard → Edge Functions →
+   `send-push` → Delete, or `supabase functions delete send-push` from a
+   machine that has the CLI and project access.
 
 <!-- Add new manual action items above this line -->
 
