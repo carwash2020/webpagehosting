@@ -28,7 +28,9 @@ click a setting by hand.
 4. **Google Business Profile** -- regular posts, Q&A seeding, fresh
    photos, and review velocity there move the local 3-pack ranking more
    than the website itself does for "near me" searches. Nothing in this
-   repo can act on it; it's a dashboard/account task.
+   repo can act on it; it's a dashboard/account task. **Description,
+   category, service list, and seed Q&A drafted and ready to paste in --
+   see "SEO copy drafts" below.**
 5. **Google Local Services Ads ("Google Guaranteed")** -- pay-per-lead,
    usually the best ROI channel for handyman/appliance repair
    specifically. Requires setting up and getting verified/background-
@@ -82,6 +84,80 @@ when greenlit; these do not.
    amount of code can manufacture.
 
 <!-- Add new SEO action items above this line -->
+
+## SEO copy drafts (ready to paste in, 2026-09-16)
+
+Drafted so items 1 and 3 above are copy/paste instead of blank-page work.
+**NAP audited against the site first** (index.html, `LocalBusiness` schema)
+and confirmed consistent -- use exactly this everywhere a listing asks for
+name/address/phone, so nothing has to be fixed later:
+
+- **Name:** Triple H Enterprises (LLC)
+- **Phone:** (435) 414-1667
+- **Email:** steve@triplehenterprisesllc.biz
+- **Address:** St. George, UT 84790 (service-area business, no public
+  storefront -- on Google Business Profile, set this up as a "service
+  area business" and hide the address, which is the correct setting for
+  an owner-operator who drives to jobs rather than a shop customers visit)
+- **Website:** https://www.triplehenterprisesllc.biz/
+- **Service area:** St. George, Hurricane, Washington City, Santa Clara,
+  Ivins, La Verkin, Leeds, Cedar City, Mesquite NV
+
+### Google Business Profile
+
+- **Primary category:** Appliance repair service
+- **Additional categories:** Handyman, Contractor
+- **Short description (750 char limit):**
+  > Owner-operated handyman and appliance repair serving St. George and
+  > Southern Utah. Washers, dryers, dishwashers, fridges, ranges, general
+  > handyman repairs, plumbing fixes, drywall and painting, assembly and
+  > installation, and emergency calls. When you call, you're talking
+  > directly to the owner -- not a call center or rotating
+  > subcontractors. Same-day service available. Serving St. George,
+  > Hurricane, Washington City, Santa Clara, Ivins, La Verkin, Leeds,
+  > Cedar City, and Mesquite NV. Call or text (435) 414-1667.
+- **Services to list individually** (GBP lets you add each as its own
+  service under the category, which helps it match more specific
+  searches): Washer repair, Dryer repair, Dishwasher repair,
+  Refrigerator repair, Range/oven repair, General handyman repair,
+  Plumbing repair, Drywall repair, Interior painting, Furniture
+  assembly, TV mounting, Emergency repair
+- **Seed Q&A** (post these yourself as the owner, so they show up
+  answered from day one instead of sitting empty for a stranger to ask):
+  - Q: "Do you charge a trip fee?" A: (use each city page's actual
+    trip-fee wording, already live on the site -- keep it consistent)
+  - Q: "Do you offer same-day service?" A: "Yes, when the schedule
+    allows -- call or text (435) 414-1667 to check same-day
+    availability."
+  - Q: "What brands of washers/dryers do you repair?" A: "All major
+    brands -- Whirlpool, Maytag, LG, Samsung, GE, and more."
+- **Weekly cadence:** one photo from a real job, one GBP post/update,
+  answer new Q&A and reviews within a few days (see item 1 above).
+
+### Directory listings (BBB, Angi, Thumbtack, Yelp, Nextdoor, Yellow Pages)
+
+Use the same description on every one so the business reads as one
+consistent entity across the web, not five slightly different ones:
+
+> Triple H Enterprises is an owner-operated handyman and appliance
+> repair business based in St. George, Utah. We repair washers, dryers,
+> dishwashers, refrigerators, and ranges, plus general handyman work:
+> plumbing fixes, drywall and painting, furniture assembly, and TV
+> mounting. Emergency calls welcome. Serving St. George, Hurricane,
+> Washington City, Santa Clara, Ivins, La Verkin, Leeds, Cedar City, and
+> Mesquite, NV. Call or text (435) 414-1667.
+
+- **Categories to select where the site offers a picklist:** Appliance
+  Repair, Handyman Services, General Contractor (if offered, otherwise
+  skip)
+- **Website field:** always the full `https://www.triplehenterprisesllc.biz/`
+  URL, not a bare domain or a page deep-link, so backlink value goes to
+  the homepage.
+- Yelp and Nextdoor in particular reward profile completeness (hours,
+  photos, service list) for initial visibility, so fill in every field
+  the form offers rather than the minimum required.
+
+<!-- Add new SEO copy drafts above this line -->
 
 ## Visual additions (things a real user/client will actually see)
 
