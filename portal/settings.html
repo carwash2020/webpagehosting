@@ -436,6 +436,37 @@
 </div>
 
 <!--
+  Two-factor authentication (2026-09-16) -- a real, server-verified
+  second factor via Supabase Auth MFA (TOTP), unlike the biometric
+  toggle above which only locks the app UI on this one device and
+  never touches the account itself. Its own card, not folded into
+  Security above, since it protects the account everywhere it's
+  signed in, not just this device.
+-->
+<div class="set-card is-collapsed">
+  <button type="button" class="set-card-header" onclick="toggleSettingsCard(this)" aria-expanded="false">
+    <span class="set-card-title">Two-Factor Authentication</span>
+    <span class="set-card-chevron" aria-hidden="true">&#9662;</span>
+  </button>
+  <div class="set-card-body">
+  <div class="set-card-sub">Add a code from an authenticator app as a second step when you sign in, on top of your password.</div>
+  <button class="btn blue" id="mfaToggleBtn" style="width:100%; justify-content:center;">Loading...</button>
+  <div id="mfaEnrollArea" style="display:none; margin-top:14px;">
+    <div style="text-align:center; margin-bottom:12px;">
+      <img id="mfaQrImg" alt="Scan this QR code with your authenticator app" style="width:180px; height:180px; background:#fff; border-radius:8px; padding:8px;">
+    </div>
+    <div class="set-card-sub" style="margin-bottom:8px;">Scan this with an authenticator app (Google Authenticator, Authy, etc.), then enter the 6-digit code it shows.</div>
+    <input type="text" id="mfaCodeInput" inputmode="numeric" autocomplete="one-time-code" placeholder="123456" maxlength="6" style="width:100%; padding:11px 13px; background:var(--bg-panel-2); border:1px solid var(--border); border-radius:8px; color:var(--white); font-size:16px; font-family:inherit; box-sizing:border-box; margin-bottom:10px; letter-spacing:2px; text-align:center;">
+    <div style="display:flex; gap:10px;">
+      <button class="btn secondary-btn" id="mfaEnrollCancelBtn" type="button" style="flex:1; justify-content:center;">Cancel</button>
+      <button class="btn orange" id="mfaEnrollVerifyBtn" type="button" style="flex:1; justify-content:center;">Verify &amp; Turn On</button>
+    </div>
+  </div>
+  <div class="set-msg" id="mfaMsg" style="display:none;"></div>
+  </div>
+</div>
+
+<!--
   Sign out, also in Settings (2026-09-04), requested directly -- the
   header's own Sign out button (every portal page has one) stays
   exactly as it was; this is a second, natural place to find it,
@@ -1003,6 +1034,129 @@
     renderBiometricToggle(email);
   }
 
+  // Two-factor authentication (2026-09-16) -- real server-side TOTP via
+  // Supabase Auth MFA, not the local-only biometric toggle above.
+  // mfaFactorId tracks an already-verified factor (so it can be turned
+  // off); mfaPendingFactorId tracks one enrolled but not yet verified
+  // (so Cancel can clean it up instead of leaving a dead factor behind).
+  let mfaFactorId = null;
+  let mfaPendingFactorId = null;
+
+  async function renderMfaToggle() {
+    const btn = document.getElementById('mfaToggleBtn');
+    const msgEl = document.getElementById('mfaMsg');
+    msgEl.style.display = 'none';
+    document.getElementById('mfaEnrollArea').style.display = 'none';
+    btn.style.display = '';
+    btn.disabled = true;
+    btn.textContent = 'Loading...';
+
+    const { data, error } = await client.auth.mfa.listFactors();
+    if (error) {
+      btn.textContent = 'Two-factor authentication';
+      msgEl.textContent = "Couldn't check two-factor status. Please try again.";
+      msgEl.className = 'set-msg is-error';
+      msgEl.style.display = 'block';
+      return;
+    }
+    btn.disabled = false;
+    const verified = (data.totp || []).find((f) => f.status === 'verified');
+    if (verified) {
+      mfaFactorId = verified.id;
+      btn.textContent = 'Turn off two-factor authentication';
+      btn.onclick = handleDisableMfa;
+    } else {
+      mfaFactorId = null;
+      btn.textContent = 'Set up two-factor authentication';
+      btn.onclick = handleStartMfaEnroll;
+    }
+  }
+
+  async function handleStartMfaEnroll() {
+    const btn = document.getElementById('mfaToggleBtn');
+    const msgEl = document.getElementById('mfaMsg');
+    msgEl.style.display = 'none';
+    btn.disabled = true;
+    btn.textContent = 'Setting up...';
+
+    // Clean up any earlier attempt the client backed out of, so retrying
+    // doesn't pile up dead unverified factors under this account.
+    const { data: existing } = await client.auth.mfa.listFactors();
+    const stale = existing && (existing.totp || []).find((f) => f.status !== 'verified');
+    if (stale) { await client.auth.mfa.unenroll({ factorId: stale.id }); }
+
+    const { data, error } = await client.auth.mfa.enroll({ factorType: 'totp' });
+    if (error) {
+      btn.disabled = false;
+      btn.textContent = 'Set up two-factor authentication';
+      msgEl.textContent = error.message || "Couldn't start two-factor setup. Please try again.";
+      msgEl.className = 'set-msg is-error';
+      msgEl.style.display = 'block';
+      return;
+    }
+    mfaPendingFactorId = data.id;
+    document.getElementById('mfaQrImg').src = data.totp.qr_code;
+    document.getElementById('mfaCodeInput').value = '';
+    document.getElementById('mfaEnrollArea').style.display = 'block';
+    btn.style.display = 'none';
+  }
+
+  async function handleVerifyMfaEnroll() {
+    const code = document.getElementById('mfaCodeInput').value.trim();
+    const msgEl = document.getElementById('mfaMsg');
+    const verifyBtn = document.getElementById('mfaEnrollVerifyBtn');
+    msgEl.style.display = 'none';
+    if (!/^\d{6}$/.test(code)) {
+      msgEl.textContent = 'Enter the 6-digit code from your authenticator app.';
+      msgEl.className = 'set-msg is-error';
+      msgEl.style.display = 'block';
+      return;
+    }
+    verifyBtn.disabled = true;
+    verifyBtn.textContent = 'Verifying...';
+    const { error } = await client.auth.mfa.challengeAndVerify({ factorId: mfaPendingFactorId, code });
+    verifyBtn.disabled = false;
+    verifyBtn.textContent = 'Verify & Turn On';
+    if (error) {
+      msgEl.textContent = "That code didn't match. Please try again.";
+      msgEl.className = 'set-msg is-error';
+      msgEl.style.display = 'block';
+      return;
+    }
+    mfaPendingFactorId = null;
+    showToast('Two-factor authentication is on.');
+    renderMfaToggle();
+  }
+
+  function handleCancelMfaEnroll() {
+    if (mfaPendingFactorId) {
+      client.auth.mfa.unenroll({ factorId: mfaPendingFactorId }).catch(() => {});
+      mfaPendingFactorId = null;
+    }
+    renderMfaToggle();
+  }
+
+  async function handleDisableMfa() {
+    const btn = document.getElementById('mfaToggleBtn');
+    const msgEl = document.getElementById('mfaMsg');
+    msgEl.style.display = 'none';
+    if (!mfaFactorId) return;
+    btn.disabled = true;
+    btn.textContent = 'Turning off...';
+    const { error } = await client.auth.mfa.unenroll({ factorId: mfaFactorId });
+    if (error) {
+      msgEl.textContent = "Couldn't turn off two-factor authentication. Please try again.";
+      msgEl.className = 'set-msg is-error';
+      msgEl.style.display = 'block';
+    } else {
+      showToast('Two-factor authentication is off.');
+    }
+    renderMfaToggle();
+  }
+
+  document.getElementById('mfaEnrollCancelBtn').addEventListener('click', handleCancelMfaEnroll);
+  document.getElementById('mfaEnrollVerifyBtn').addEventListener('click', handleVerifyMfaEnroll);
+
   async function init() {
     const { data: { session } } = await client.auth.getSession();
     if (!session) { window.location.replace('/portal/login.html'); return; }
@@ -1070,6 +1224,7 @@
     // it at all, with "use password instead" only signing them out
     // and back into the exact same locked state.
     renderBiometricToggle(email);
+    renderMfaToggle();
   }
 
   async function signOut() {
