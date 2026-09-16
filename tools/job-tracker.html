@@ -1764,6 +1764,7 @@
               ? `<button class="small-btn is-active" disabled title="Sent ${escapeAttr(new Date(job.confirmationSentAt).toLocaleString())}">✓ Confirmation Sent</button>`
               : `<button class="small-btn" onclick="sendJobConfirmationEmail(${job.id})">Send Confirmation Email</button>`
           ) : ''}
+          <a class="small-btn" href="/tools/invoice-generator.html?jobRef=${job.id}" style="text-decoration:none; display:inline-flex; align-items:center;">Create Invoice</a>
           <button class="small-btn" onclick="editJob(${job.id})">Edit</button>
           <button class="small-btn danger" onclick="deleteJob(${job.id})">Delete</button>
         </div>
@@ -1881,6 +1882,7 @@
           <td>${job.address ? escapeHtml(job.address) : '&mdash;'}</td>
           <td class="col-amount">${marginCellHtml}</td>
           <td class="jt-actions-cell">
+            <a class="small-btn" href="/tools/invoice-generator.html?jobRef=${job.id}" style="text-decoration:none; display:inline-flex; align-items:center;">Create Invoice</a>
             <button class="small-btn" onclick="editJob(${job.id})">Edit</button>
             <button class="small-btn danger" onclick="deleteJob(${job.id})">Delete</button>
           </td>
