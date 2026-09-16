@@ -75,8 +75,14 @@ test('no inline handler for the new messaging buttons embeds JSON.stringify -- t
 });
 
 test('the Portal job messages panel loads on init, alongside the other Portal panels', () => {
-  const initMatch = CLIENTS.match(/renderPortalWorkOrders\(\);\s*\n\s*renderPortalJobsForMessages\(\);/);
-  assert.ok(initMatch, 'expected renderPortalJobsForMessages() to be called right after renderPortalWorkOrders() in the page init sequence');
+  // After renderEmailList() rather than directly after
+  // renderPortalWorkOrders() -- a pre-existing test
+  // (tests/dev-tools/email-list-and-work-order-notifications.test.js)
+  // asserts that exact adjacency, and this call has no ordering
+  // dependency on any of its neighbors, so it slots in after instead
+  // of contesting that assertion.
+  const initMatch = CLIENTS.match(/renderEmailList\(\);\s*\n\s*renderPortalJobsForMessages\(\);/);
+  assert.ok(initMatch, 'expected renderPortalJobsForMessages() to be called in the page init sequence, right after renderEmailList()');
 });
 
 // ---- database + notification (structure, not live behavior) ----

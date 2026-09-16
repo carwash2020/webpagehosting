@@ -1647,8 +1647,8 @@
       renderPortalAccounts();
       renderPortalInvoices();
       renderPortalWorkOrders();
-      renderPortalJobsForMessages();
       renderEmailList();
+      renderPortalJobsForMessages();
     } catch (initError) {
       console.error('Clients tool failed to initialize:', initError);
       if (typeof showInitErrorBanner === 'function') {
