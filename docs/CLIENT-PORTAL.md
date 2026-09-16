@@ -370,9 +370,10 @@ its own SELECT policy. That distinction is easy to miss.
    someone actually click "Report a problem" on the live site once
    and confirm it appears in Dev Tools -> Health -> Portal bug
    reports.**
-7. **No standalone quote PDF or a way to change a client's portal
-   email from inside the tools** -- both noted further down, neither
-   has come up as a real need yet.
+7. ~~**No standalone quote PDF**~~ -- **done** (2026-09-16). See
+   `portal/quotes.html`'s `downloadQuotePDF()`. **No way to change a
+   client's portal email from inside the tools** is still open --
+   noted further down, hasn't come up as a real need yet.
 
 ## The full vision (recorded 2026-09-01, Connor's own framing)
 

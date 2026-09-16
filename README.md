@@ -1585,3 +1585,38 @@ This doesn't touch the recurring-template-to-job step itself (unchanged
 -- still a click on "Create Job"), only the second half of that
 workflow: template -> job was already one click, job -> invoice is now
 one click too.
+
+## What changed, 2026-09-16 (still later) -- confirmed automation deploy, plus a client-facing quote PDF
+
+A deep-dive audit of the whole project's open backlog turned up two
+things worth acting on immediately.
+
+**1. The two pending edge-function deploys from earlier today were
+already done.** `send-payment-reminder` and `send-quote-followup`
+were flagged in `docs/ACTION-ITEMS.md` as "written and tested but
+needs a real deploy step I can't do myself." Checked directly against
+the live Supabase project: both functions are `ACTIVE` with source
+matching this repo exactly, and both crons
+(`send-payment-reminders-daily`, `send-quote-followup-daily`) are
+active. Someone with dashboard/CLI access must have run the deploy
+between then and now -- `docs/ACTION-ITEMS.md` just never got updated
+to say so. Fixed there now.
+
+**2. Client-facing quote PDF**, closing the "no standalone quote PDF"
+gap `docs/CLIENT-PORTAL.md` had flagged as an intentional scope cut
+back when quote approval first shipped. `portal/quotes.html` now has
+a "Download PDF" button on every quote card
+(`downloadQuotePDF()`), mirroring `portal/dashboard.html`'s existing
+invoice-PDF layout closely (same header band, same BILL TO/line-item
+table shape) so an invoice and a quote from this business read as the
+same family of document. Differences reflect the real data: the
+document is always labeled QUOTE (a quote has no paid/unpaid state),
+the status line shows PENDING/APPROVED/DECLINED instead of PAID/
+UNPAID, the total is labeled "ESTIMATED TOTAL" rather than "TOTAL
+DUE", and the footer says outright that it's an estimate, not a final
+invoice. Reads from the exact same `currentQuotes` array already
+populated by RLS-scoped Supabase queries -- no second query, no new
+trust boundary. New tests:
+`tests/portal/quotes-pdf.test.js` (8 tests, mirroring
+`tests/portal/dashboard-invoice-pdf.test.js`'s own source-inspection
+style).

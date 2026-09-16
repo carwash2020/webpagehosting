@@ -101,21 +101,19 @@ click a setting by hand.
    "Real 5-Star Reviews" stat correctly stay at 4. Fully resolved --
    if that 7th review ever gets real text (or any future review does),
    send it over and it'll be added as a genuine 5th card.
-7. **Deploy the new `send-payment-reminder` edge function and run its
-   cron SQL** (2026-09-16) -- `supabase functions deploy
-   send-payment-reminder`, then run `sql/infra/add_payment_reminder_emails_cron.sql`
-   once in the SQL Editor. Code is written and tested but this is a
-   real deploy step only someone with Supabase dashboard/CLI access can
-   do -- I can't run either of those myself. **Not yet done.**
-8. **Deploy the new `send-quote-followup` edge function and run its
-   cron SQL** (2026-09-16) -- `supabase functions deploy
-   send-quote-followup`, then run
-   `sql/infra/add_quote_followup_email_cron.sql` once in the SQL
-   Editor. Same real deploy step, same reason I can't do it myself.
-   The updated `send-push` (the new "Review Follow-Up Due" push check)
-   needs **no separate deploy step** -- it's the same already-deployed
-   function, just re-deploy it (`supabase functions deploy send-push`)
-   whenever this branch's changes reach it. **Not yet done.**
+7. ~~**Deploy the new `send-payment-reminder` edge function and run its
+   cron SQL**~~ -- **done.** Confirmed live directly against the
+   Supabase project (2026-09-16): the `send-payment-reminder` function
+   is `ACTIVE` and its source matches this repo's
+   `edge-functions/send-payment-reminder-index.ts` exactly, and
+   `send-payment-reminders-daily` is an active cron job (`0 15 * * *`).
+8. ~~**Deploy the new `send-quote-followup` edge function and run its
+   cron SQL**~~ -- **done.** Same direct confirmation: `send-quote-followup`
+   is `ACTIVE` with source matching
+   `edge-functions/send-quote-followup-index.ts`, and
+   `send-quote-followup-daily` is an active cron job (`0 16 * * *`).
+   `send-push` (carrying the "Review Follow-Up Due" push check) is also
+   deployed and current.
 
 <!-- Add new manual action items above this line -->
 
@@ -462,6 +460,10 @@ reference:
   job template straight to an invoice (still fully manual each time)"
   gap noted in `README.md`'s 2026-09-16 audit entry. See that day's
   final changelog entry for the full write-up.
+- **Client-facing quote PDF** (`portal/quotes.html`) -- a "Download
+  PDF" button on every quote, closing the "no standalone quote PDF"
+  gap `docs/CLIENT-PORTAL.md` had flagged as an intentional scope cut.
+  See `README.md`'s 2026-09-16 audit entry for the full write-up.
 
 <!-- Add new visual additions above this line -->
 
