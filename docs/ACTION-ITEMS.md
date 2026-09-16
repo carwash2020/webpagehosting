@@ -65,21 +65,33 @@ click a setting by hand.
    usually the best ROI channel for handyman/appliance repair
    specifically. Requires setting up and getting verified/background-
    checked through Google's own LSA program, outside this repo.
-6. ~~Review count mismatch: the site showed 7 reviews, Google showed
-   6~~ -- **done (2026-09-16).** Turned out to be bigger than a
-   1-quote fix once checked against the real Google listing: only 3
-   of the original 7 quotes matched a real, verifiable Google review
-   (Google has 6 total reviews, but 2 of them -- Austin Mayer, Micah
-   Naegle -- are star-only with no written text). The other 4 site
-   quotes couldn't be traced to any real source, so they were removed
-   rather than kept unverified. Jilleen Walker's real review (never
-   added to the site before) was added in as the 4th card. The
-   `aggregateRating.reviewCount` and the "Real 5-Star Reviews" stat now
-   both say 4, matching the 4 verified, visible quotes -- consistent
-   with this site's existing policy (see `reviews-wall.test.js`) that
-   the count must match visible content, not just Google's raw total.
-   **As more real Google reviews come in with actual written text,
-   send them over and I'll add them as new cards.**
+6. **Review count mismatch: the site showed 7 reviews, Google showed
+   6.** Checked directly against the real Google listing via
+   screenshots the owner sent: only 3 of the original 7 quotes matched
+   a real, verifiable Google review (Google had 6 total reviews, but 2
+   of them -- Austin Mayer, Micah Naegle -- are star-only with no
+   written text). The other 4 site quotes couldn't be traced to any
+   real source, so they were removed rather than kept unverified or
+   rewritten to fit a real reviewer's name. Jilleen Walker's real
+   review (never on the site before) was added in as a genuine 4th
+   card. `aggregateRating.reviewCount` and the "Real 5-Star Reviews"
+   stat now both say 4, matching visible content, consistent with this
+   site's existing policy (see `reviews-wall.test.js`) that the count
+   must match what's actually shown, not just Google's raw total.
+   **Done, as far as this was verified directly with the owner.**
+
+   **Conflicting claim, needs the owner to confirm:** a different
+   session's commit (2026-09-16, `26c9639`) asserts "the missing 7th
+   review was posted on Google... Google's count is now 7," reverting
+   the count to 7 in its own doc note, but touched no actual review
+   content and cited no screenshot or other evidence. That claim
+   contradicts what was directly verified here (with real screenshots)
+   just before it -- 4 verified quotes, not 7. Rather than pick a side
+   on an unverified claim, the actual review content was left at 4
+   verified quotes. **If a real 7th Google review with real text now
+   exists, send a screenshot the same way as before and it'll get
+   added properly** -- until then, this doc's own "done" claim above
+   is the one backed by real evidence.
 
 <!-- Add new manual action items above this line -->
 
