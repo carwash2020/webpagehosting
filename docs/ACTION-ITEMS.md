@@ -9,7 +9,8 @@ as new items come up.
 Real photos the owner supplied directly during the 2026-09-16 blog-image
 pass, not used yet because nothing on the site is the right fit for them.
 Kept here so they don't get lost -- pull from this list before reaching
-for stock photos next time something needs a real kitchen image.
+for stock photos next time something needs a real kitchen or laundry
+image.
 
 1. **Farmhouse-style kitchen** (black cabinets, subtle range, dishwasher,
    farmhouse sink, wood countertops, red enamel cookware) --
@@ -18,6 +19,14 @@ for stock photos next time something needs a real kitchen image.
    at all, so it wasn't used there. Good candidate for a future blog
    post (a kitchen-remodel or general-handyman piece) or another page
    that wants a warm, real-kitchen photo.
+2. **Stacked washer/dryer in a modern bathroom laundry nook** (dark
+   vanity, towels, plant) --
+   `https://images.unsplash.com/photo-1721395285456-05a8b9b45b9f?fm=jpg&q=80&w=1400&auto=format&fit=crop`.
+   Supplied after `dryer-not-heating.html` (the last post needing an
+   image) had already been filled with a different photo, so there was
+   no open slot for this one. Good candidate for a future laundry-
+   related blog post, or to replace a stock laundry photo elsewhere on
+   the site if one turns up.
 
 <!-- Add new reserved images above this line -->
 
