@@ -39,12 +39,22 @@ click a setting by hand.
 1. ~~Enable "Prevent use of leaked passwords" (Supabase dashboard:
    Authentication -> Providers -> Email -> "Prevent use of leaked
    passwords").~~ **Done (2026-09-15).**
-2. **Enable MFA availability** (Supabase dashboard: Authentication ->
-   MFA). This only makes TOTP/phone factors available to enroll in --
-   actual enrollment UI and a step-up-during-login challenge flow is a
-   separate, larger feature decision, not a quick fix. Worth revisiting
-   once the client-portal population is large enough that a single
-   compromised password matters more. **Not yet done.**
+2. ~~Enable MFA availability~~ -- **done.** TOTP enabled in the
+   Supabase dashboard (Authentication -> MFA), and the enrollment UI
+   plus login-time step-up challenge this item originally flagged as
+   "a separate, larger feature decision" were built (2026-09-16): a
+   "Two-Factor Authentication" card in `portal/settings.html` (enroll
+   with a real QR code, verify, or turn off -- via
+   `client.auth.mfa.enroll/challengeAndVerify/unenroll`), and
+   `portal/login.html` now checks
+   `client.auth.mfa.getAuthenticatorAssuranceLevel()` after a correct
+   password and prompts for a 6-digit code before finishing sign-in
+   when a client has a verified TOTP factor. Client-portal only, by
+   design -- doesn't touch the internal `/tools/` suite's own
+   Owner/Developer/Employee auth (a separate, unrelated concern; see
+   `docs/CLIENT-PORTAL.md`'s "Still pending" item 3 for that one).
+   Opt-in, not required: an account with no factor enrolled signs in
+   exactly as before.
 3. **Set up a Google Ads or Meta Pixel account** for retargeting. GA4
    events are already firing (`lead_form_submitted`, phone-click events,
    etc.) and ready to feed a remarketing audience the moment one exists

@@ -149,6 +149,13 @@
   .report-bug-success { color: #4caf78; font-size: 14px; margin: 4px 0; line-height: 1.5; }
   .report-bug-actions { display: flex; gap: 10px; margin-top: 16px; }
   .report-bug-actions button { flex: 1; justify-content: center; }
+  /* Two-factor challenge (2026-09-16) -- reuses the same modal shell as
+     the report-bug overlay above rather than inventing a second one. */
+  .mfa-challenge-modal input {
+    width: 100%; padding: 11px 13px; background: var(--bg-panel-2); border: 1px solid var(--border);
+    border-radius: 8px; color: var(--white); font-size: 16px; font-family: inherit; box-sizing: border-box;
+    letter-spacing: 2px; text-align: center; margin: 4px 0 0;
+  }
 </style>
 <link rel="stylesheet" href="/portal/portal-polish.css?v=63a161e33e">
 </head>
@@ -189,6 +196,26 @@
       </div>
     </div>
     <div class="report-bug-success" id="reportBugSuccess" style="display:none;">Thanks, we got your report and will take a look.</div>
+  </div>
+</div>
+
+<!--
+  Two-factor challenge (2026-09-16) -- shown only for an account that
+  already has a verified TOTP factor enrolled (see settings.html). A
+  correct password alone is never enough for that account once this
+  overlay is required; nothing is stored client-side that would let a
+  device skip it.
+-->
+<div class="report-bug-overlay" id="mfaChallengeOverlay" style="display:none;">
+  <div class="report-bug-modal mfa-challenge-modal">
+    <div class="report-bug-title">Enter your 2FA code</div>
+    <p class="report-bug-sub">Open your authenticator app and enter the 6-digit code for Triple H Enterprises.</p>
+    <input type="text" id="mfaChallengeCodeInput" inputmode="numeric" autocomplete="one-time-code" placeholder="123456" maxlength="6">
+    <div class="report-bug-error" id="mfaChallengeError"></div>
+    <div class="report-bug-actions">
+      <button class="btn secondary-btn" id="mfaChallengeCancel" type="button">Sign out</button>
+      <button class="btn orange" id="mfaChallengeSubmit" type="button">Verify</button>
+    </div>
   </div>
 </div>
 </div>
@@ -259,8 +286,70 @@
       btn.textContent = 'Sign In';
       return;
     }
+
+    // Correct password alone only ever proves aal1. An account with a
+    // verified TOTP factor needs a step up to aal2 before it's actually
+    // signed in -- checked here rather than assumed, so accounts without
+    // 2FA enrolled (the common case today) go straight through exactly
+    // as before.
+    const { data: aal } = await client.auth.mfa.getAuthenticatorAssuranceLevel();
+    if (aal && aal.nextLevel === 'aal2' && aal.currentLevel !== 'aal2') {
+      const { data: factors } = await client.auth.mfa.listFactors();
+      const factor = factors && (factors.totp || []).find((f) => f.status === 'verified');
+      if (factor) {
+        btn.disabled = false;
+        btn.textContent = 'Sign In';
+        openMfaChallenge(factor.id);
+        return;
+      }
+    }
     window.location.replace('/portal/home.html');
   });
+
+  function openMfaChallenge(factorId) {
+    const overlay = document.getElementById('mfaChallengeOverlay');
+    const codeInput = document.getElementById('mfaChallengeCodeInput');
+    const errorEl = document.getElementById('mfaChallengeError');
+    const submitBtn = document.getElementById('mfaChallengeSubmit');
+    const cancelBtn = document.getElementById('mfaChallengeCancel');
+
+    overlay.style.display = 'flex';
+    codeInput.value = '';
+    errorEl.textContent = '';
+    const releaseFocusTrap = trapFocusWithin(overlay);
+    codeInput.focus();
+
+    async function verify() {
+      const code = codeInput.value.trim();
+      if (!/^\d{6}$/.test(code)) {
+        errorEl.textContent = 'Enter the 6-digit code from your authenticator app.';
+        return;
+      }
+      submitBtn.disabled = true;
+      submitBtn.textContent = 'Verifying...';
+      const { error } = await client.auth.mfa.challengeAndVerify({ factorId, code });
+      submitBtn.disabled = false;
+      submitBtn.textContent = 'Verify';
+      if (error) {
+        errorEl.textContent = "That code didn't match. Please try again.";
+        return;
+      }
+      releaseFocusTrap();
+      window.location.replace('/portal/home.html');
+    }
+    async function cancel() {
+      // "Sign out" rather than just closing the overlay -- signInWithPassword
+      // above already created a real (aal1) session, so backing out has to
+      // actually end it, not just hide the prompt and leave it dangling.
+      releaseFocusTrap();
+      await client.auth.signOut();
+      window.location.reload();
+    }
+
+    submitBtn.addEventListener('click', verify);
+    cancelBtn.addEventListener('click', cancel);
+    codeInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); verify(); } });
+  }
 </script>
 
 <script>
