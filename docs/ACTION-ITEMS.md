@@ -4,6 +4,32 @@ A running list of things that can't be finished from code alone, plus a
 running list of user-visible additions worth knowing about. Add to these
 as new items come up.
 
+## Reserved images (supplied, not yet placed)
+
+Real photos the owner supplied directly during the 2026-09-16 blog-image
+pass, not used yet because nothing on the site is the right fit for them.
+Kept here so they don't get lost -- pull from this list before reaching
+for stock photos next time something needs a real kitchen or laundry
+image.
+
+1. **Farmhouse-style kitchen** (black cabinets, subtle range, dishwasher,
+   farmhouse sink, wood countertops, red enamel cookware) --
+   `https://images.unsplash.com/photo-1556909172-54557c7e4fb7?fm=jpg&q=80&w=1400&auto=format&fit=crop`.
+   Supplied for `dryer-not-heating.html` but doesn't show a dryer/laundry
+   at all, so it wasn't used there. Good candidate for a future blog
+   post (a kitchen-remodel or general-handyman piece) or another page
+   that wants a warm, real-kitchen photo.
+2. **Stacked washer/dryer in a modern bathroom laundry nook** (dark
+   vanity, towels, plant) --
+   `https://images.unsplash.com/photo-1721395285456-05a8b9b45b9f?fm=jpg&q=80&w=1400&auto=format&fit=crop`.
+   Supplied after `dryer-not-heating.html` (the last post needing an
+   image) had already been filled with a different photo, so there was
+   no open slot for this one. Good candidate for a future laundry-
+   related blog post, or to replace a stock laundry photo elsewhere on
+   the site if one turns up.
+
+<!-- Add new reserved images above this line -->
+
 ## Manual action items (need a human, outside of code)
 
 These cannot be done via a migration, edge function, or any MCP tool
@@ -25,21 +51,47 @@ click a setting by hand.
    -- give me the conversion ID (`AW-...`) or Pixel ID once you have an
    account and I'll wire up the actual tag/base code. **Not yet done
    (no account exists to wire up).**
-4. **Google Business Profile** -- regular posts, Q&A seeding, fresh
-   photos, and review velocity there move the local 3-pack ranking more
-   than the website itself does for "near me" searches. Nothing in this
-   repo can act on it; it's a dashboard/account task. **Description,
-   category, service list, and seed Q&A drafted and ready to paste in --
-   see "SEO copy drafts" below.**
+4. ~~Claim/verify Google Business Profile~~ -- **confirmed done
+   (2026-09-16): "Triple H Enterprises LLC", verified badge, category
+   already "Appliance repair service", 5.0 stars / 6 Google reviews,
+   phone matches.** Still open: paste in the longer description,
+   individually-listed services, and the 3 seed Q&As drafted under "SEO
+   copy drafts" below -- profile exists and is verified, but that
+   content doesn't look filled in yet from the screenshot. **Ongoing
+   after that:** regular posts, fresh job photos, and prompt review
+   responses keep moving the local 3-pack ranking -- not a one-time
+   task.
 5. **Google Local Services Ads ("Google Guaranteed")** -- pay-per-lead,
    usually the best ROI channel for handyman/appliance repair
    specifically. Requires setting up and getting verified/background-
    checked through Google's own LSA program, outside this repo.
-6. ~~**Review count mismatch**~~ **Resolved (2026-09-16).** The missing
-   7th review was posted on Google (not a case of a fake quote on the
-   site) -- Google's count is now 7, matching the site's
-   `aggregateRating`/`reviewCount` and the "Real 5-Star Reviews" stat.
-   No code change needed.
+6. **Review count mismatch: the site showed 7 reviews, Google showed
+   6.** Checked directly against the real Google listing via
+   screenshots the owner sent: only 3 of the original 7 quotes matched
+   a real, verifiable Google review (Google had 6 total reviews, but 2
+   of them -- Austin Mayer, Micah Naegle -- are star-only with no
+   written text). The other 4 site quotes couldn't be traced to any
+   real source, so they were removed rather than kept unverified or
+   rewritten to fit a real reviewer's name. Jilleen Walker's real
+   review (never on the site before) was added in as a genuine 4th
+   card. `aggregateRating.reviewCount` and the "Real 5-Star Reviews"
+   stat now both say 4, matching visible content, consistent with this
+   site's existing policy (see `reviews-wall.test.js`) that the count
+   must match what's actually shown, not just Google's raw total.
+   **Done, as far as this was verified directly with the owner.**
+
+   **Conflicting claim, needs the owner to confirm:** a different
+   session's commit (2026-09-16, `26c9639`) asserts "the missing 7th
+   review was posted on Google... Google's count is now 7," reverting
+   the count to 7 in its own doc note, but touched no actual review
+   content and cited no screenshot or other evidence. That claim
+   contradicts what was directly verified here (with real screenshots)
+   just before it -- 4 verified quotes, not 7. Rather than pick a side
+   on an unverified claim, the actual review content was left at 4
+   verified quotes. **If a real 7th Google review with real text now
+   exists, send a screenshot the same way as before and it'll get
+   added properly** -- until then, this doc's own "done" claim above
+   is the one backed by real evidence.
 
 <!-- Add new manual action items above this line -->
 
@@ -286,6 +338,13 @@ reference:
   - Retargeting and Google Business Profile/Local Services Ads are
     listed under "Manual action items" above -- they need an actual ad
     account or dashboard access this repo doesn't have.
+
+- **Portal toast/snackbar** replacing every `window.alert()` in the
+  client portal (`portal/quotes.html`, `portal/dashboard.html`,
+  `portal/settings.html`) -- also fixed a real bug where
+  `portal/work-orders.html` already called a `showToast()` that didn't
+  exist anywhere in the portal, silently throwing instead of telling
+  the client their message failed to send.
 
 <!-- Add new visual additions above this line -->
 

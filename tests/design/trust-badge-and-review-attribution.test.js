@@ -50,7 +50,7 @@ test('.trust-grid is now a 4-column responsive grid, matching the adjacent .stat
 
 test('every review carries the real Google mark, not a fabricated per-reviewer avatar', () => {
   const attributions = [...HTML.matchAll(/<div class="review-attribution">[\s\S]*?<\/div>/g)];
-  assert.equal(attributions.length, 7, 'expected all 7 reviews to have the attribution wrapper');
+  assert.equal(attributions.length, 4, 'expected all 4 reviews to have the attribution wrapper');
   for (const m of attributions) {
     assert.match(m[0], /class="review-avatar" aria-hidden="true"/);
     // The real 4-color Google "G" mark -- checked by its 4 real brand
@@ -65,7 +65,7 @@ test('every review carries the real Google mark, not a fabricated per-reviewer a
 
 test('no review invents a reviewer name, initial, or photo -- every one stays anonymized', () => {
   const reviewSlides = [...HTML.matchAll(/<div class="review-card"[^>]*>[\s\S]*?<\/div>\s*<\/div>/g)];
-  assert.ok(reviewSlides.length >= 7);
+  assert.ok(reviewSlides.length >= 4);
   for (const m of reviewSlides) {
     assert.match(m[0], />Verified Customer</, 'every review should stay anonymized, not attributed to an invented name');
   }
