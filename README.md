@@ -1436,3 +1436,55 @@ everywhere this touches:
 Verified: `npm run check-consistency`, `node scripts/check-undefined-vars.js`,
 `python3 scripts/check-links.py`, and the affected test files (104/104)
 all pass clean; full suite run separately.
+## What changed, 2026-09-16 -- automated client-facing payment reminder emails
+
+Direct request: "focus on automation of invoices, reviews, schedules,
+emails, reports -- look at what we currently have and find ways to
+make it better." An audit of each area found automation already in
+good shape for schedules (appointment reminders, confirmation emails,
+cancel/reschedule) and reports (the 2026-08-15 weekly digest already
+emails Steve a real summary -- jobs completed, revenue invoiced, new
+leads, outstanding balance, uptime -- on top of the existing push).
+**The real gap was invoices**: an overdue invoice already produced an
+internal push notification and showed on the Dashboard's Outstanding/
+Overdue cards, but nothing ever told the *client* -- Steve had to
+notice and follow up by hand every single time.
+
+**New edge function**, `send-payment-reminder` -- a daily cron (not
+hourly; "overdue" is date-level, not time-of-day) that emails the
+client directly at three escalating checkpoints: 3 days overdue (a
+friendly nudge), 7 days (a restated balance), 14 days (a firmer note
+that says a call is likely coming). Each invoice gets at most one
+email per run, at whichever checkpoint is currently the highest one
+crossed that hasn't already gone out -- so a cron gap never fires a
+backlog of 3 emails to the same client in one day, and once the 14-day
+email has gone out nothing further is automated by design; that's the
+point a human should actually call. Reuses the exact same de-dup
+mechanism `send-push` already established for the internal overdue
+notification (`notification_log`, keyed on `notif_type`+`item_key`,
+just three new `notif_type`s -- `invoice-reminder-3d`/`-7d`/`-14d`)
+rather than a new table, and respects the same
+`wants_invoice_quote_emails` preference a client already controls in
+Portal Settings. Partial payments are handled with the identical
+whole-cents-rounded `getPaidAmount`/`getRemainingCents` logic
+`workspace.html` uses, so the reminder always shows the real remaining
+balance, not the original total. No new secrets -- reuses
+`RESEND_API_KEY`/`LEAD_EMAIL_FROM`/`LEAD_EMAIL_TO`, same as the
+appointment-reminder pipeline.
+
+**New cron**, `sql/infra/add_payment_reminder_emails_cron.sql` --
+`send-payment-reminders-daily`, same vault-secret pattern as every
+other scheduled job in this project. Needs deploying
+(`supabase functions deploy send-payment-reminder`) and the SQL file
+run once before it's actually live -- not yet confirmed run as of this
+entry.
+
+New tests: `tests/edge-functions/payment-reminder.test.js` (16 tests,
+static-source checks matching the style already established for this
+project's other edge functions -- Deno TypeScript can't be executed
+directly under Node's test runner).
+
+**Still open from this same audit, not built yet**: review requests
+are sent but never tracked (no record of whether one converted to a
+real review, no automatic second nudge) -- the next logical piece if
+this pass continues.

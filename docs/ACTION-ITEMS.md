@@ -91,6 +91,12 @@ click a setting by hand.
    "Real 5-Star Reviews" stat correctly stay at 4. Fully resolved --
    if that 7th review ever gets real text (or any future review does),
    send it over and it'll be added as a genuine 5th card.
+7. **Deploy the new `send-payment-reminder` edge function and run its
+   cron SQL** (2026-09-16) -- `supabase functions deploy
+   send-payment-reminder`, then run `sql/infra/add_payment_reminder_emails_cron.sql`
+   once in the SQL Editor. Code is written and tested but this is a
+   real deploy step only someone with Supabase dashboard/CLI access can
+   do -- I can't run either of those myself. **Not yet done.**
 
 <!-- Add new manual action items above this line -->
 
