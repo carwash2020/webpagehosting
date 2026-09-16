@@ -457,6 +457,11 @@ reference:
   `portal/work-orders.html` already called a `showToast()` that didn't
   exist anywhere in the portal, silently throwing instead of telling
   the client their message failed to send.
+- **One-click "Create Invoice" from a job** (`tools/job-tracker.html` ->
+  `tools/invoice-generator.html`) -- closes the "converting a recurring
+  job template straight to an invoice (still fully manual each time)"
+  gap noted in `README.md`'s 2026-09-16 audit entry. See that day's
+  final changelog entry for the full write-up.
 
 <!-- Add new visual additions above this line -->
 

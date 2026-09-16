@@ -1554,3 +1554,34 @@ function tests.
 elsewhere in this doc as "not yet tested end-to-end") and converting a
 recurring job template straight to an invoice (still fully manual each
 time) remain unbuilt.
+
+## What changed, 2026-09-16 (later still) -- one-click "Create Invoice" from a job
+
+Closed the "converting a recurring job template straight to an invoice
+(still fully manual each time)" gap flagged just above. Invoice
+Generator already had a Job Ref dropdown that autofills client name,
+address, and description once a job is picked -- but getting there
+still meant leaving Job Tracker, opening Invoice Generator by hand, and
+finding the right job in that dropdown yourself. A job created from a
+recurring template (`createJobFromTemplate()`) went through exactly
+that same manual path, same as any other job.
+
+Added a **"Create Invoice"** button to every job row in
+`tools/job-tracker.html` (both the card view and the desktop table
+view), linking to `/tools/invoice-generator.html?jobRef=<job id>`.
+`invoice-generator.html` now reads that `?jobRef=` param on load
+(`applyJobRefFromUrl()`), selects the matching job in the existing Job
+Ref dropdown, runs the same `autofillFromJobRef()` the dropdown's own
+`onchange` already used, fills the first blank line-item description
+with the job's title, and strips the query param from the URL so a
+later reload or "New Invoice" reset doesn't keep re-applying a job that
+may since have changed. A stale or tampered `?jobRef=` (job no longer
+exists) is a silent no-op -- the form just opens blank, same as
+today. No schema change, no new storage key, reuses the job-linking
+plumbing (`jobRefId`/`jobRefTitle` on the saved invoice) that already
+existed.
+
+This doesn't touch the recurring-template-to-job step itself (unchanged
+-- still a click on "Create Job"), only the second half of that
+workflow: template -> job was already one click, job -> invoice is now
+one click too.
