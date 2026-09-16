@@ -219,8 +219,27 @@ async function sendFollowup(quote: Record<string, unknown>): Promise<boolean> {
   }
 }
 
-Deno.serve(async (_req: Request) => {
+Deno.serve(async (req: Request) => {
   try {
+    // This function has no per-user auth model -- its only real caller is
+    // the send-quote-followup-daily cron (see
+    // sql/infra/add_quote_followup_email_cron.sql), which already
+    // authenticates with the service_role key. Without this check, the
+    // public anon key embedded in every page's HTML would validly pass
+    // Supabase's platform-level verify_jwt (it only checks a JWT's
+    // signature, not its role) and let anyone POST here directly, firing
+    // real quote-followup emails at pending clients on demand -- the same
+    // auth-check regression already fixed once for uptime-alert (see
+    // uptime-alert-auth.test.js).
+    const authHeader = req.headers.get("Authorization") || "";
+    const token = authHeader.replace(/^Bearer\s+/i, "");
+    if (token !== SERVICE_ROLE_KEY) {
+      return new Response(JSON.stringify({ ok: false, error: "Unauthorized" }), {
+        status: 401,
+        headers: { "Content-Type": "application/json" },
+      });
+    }
+
     const quotes = await fetchPendingQuotes();
     let sent = 0;
     let checked = 0;

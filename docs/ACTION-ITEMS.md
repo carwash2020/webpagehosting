@@ -12,14 +12,7 @@ Kept here so they don't get lost -- pull from this list before reaching
 for stock photos next time something needs a real kitchen or laundry
 image.
 
-1. **Farmhouse-style kitchen** (black cabinets, subtle range, dishwasher,
-   farmhouse sink, wood countertops, red enamel cookware) --
-   `https://images.unsplash.com/photo-1556909172-54557c7e4fb7?fm=jpg&q=80&w=1400&auto=format&fit=crop`.
-   Supplied for `dryer-not-heating.html` but doesn't show a dryer/laundry
-   at all, so it wasn't used there. Good candidate for a future blog
-   post (a kitchen-remodel or general-handyman piece) or another page
-   that wants a warm, real-kitchen photo.
-2. **Stacked washer/dryer in a modern bathroom laundry nook** (dark
+1. **Stacked washer/dryer in a modern bathroom laundry nook** (dark
    vanity, towels, plant) --
    `https://images.unsplash.com/photo-1721395285456-05a8b9b45b9f?fm=jpg&q=80&w=1400&auto=format&fit=crop`.
    Supplied after `dryer-not-heating.html` (the last post needing an
@@ -101,19 +94,30 @@ click a setting by hand.
    "Real 5-Star Reviews" stat correctly stay at 4. Fully resolved --
    if that 7th review ever gets real text (or any future review does),
    send it over and it'll be added as a genuine 5th card.
-7. ~~**Deploy the new `send-payment-reminder` edge function and run its
-   cron SQL**~~ -- **done.** Confirmed live directly against the
-   Supabase project (2026-09-16): the `send-payment-reminder` function
-   is `ACTIVE` and its source matches this repo's
-   `edge-functions/send-payment-reminder-index.ts` exactly, and
-   `send-payment-reminders-daily` is an active cron job (`0 15 * * *`).
-8. ~~**Deploy the new `send-quote-followup` edge function and run its
-   cron SQL**~~ -- **done.** Same direct confirmation: `send-quote-followup`
-   is `ACTIVE` with source matching
-   `edge-functions/send-quote-followup-index.ts`, and
-   `send-quote-followup-daily` is an active cron job (`0 16 * * *`).
-   `send-push` (carrying the "Review Follow-Up Due" push check) is also
-   deployed and current.
+7. ~~Deploy the new `send-payment-reminder` edge function and run its
+   cron SQL~~ -- **done (2026-09-16).** Deployed via the Supabase MCP
+   tools now available to this session (an access path the item was
+   originally written before) and its daily cron job (`send-payment-
+   reminders-daily`, 15:00 UTC) registered directly against the
+   project. Reused the existing `send_push_service_role_key` vault
+   secret and `RESEND_API_KEY`/`LEAD_EMAIL_FROM`/`LEAD_EMAIL_TO`
+   project secrets -- both already configured, no new secret was
+   needed. **Redeployed again same day** during the security-audit
+   follow-up (PR #249) to carry a real fix into production: the version
+   deployed above had no auth check on incoming requests at all, letting
+   anyone with the public anon key trigger real client-facing emails on
+   demand. Confirmed via `mcp__Supabase__get_edge_function` that the live
+   source lacked the check before redeploying, and that the redeployed
+   source (matching what merged into `main`) has it. Not live-fired as
+   part of either deploy since doing so would email real clients with
+   real overdue invoices; its first real run is the 15:00 UTC cron.
+8. ~~Deploy the new `send-quote-followup` edge function and run its
+   cron SQL~~ -- **done (2026-09-16).** Same deploy path as item 7,
+   daily cron job (`send-quote-followup-daily`, 16:00 UTC) registered,
+   and same same-day redeploy to carry the identical auth-check security
+   fix into production. The updated `send-push` (the new "Review
+   Follow-Up Due" push check) needed no separate deploy step -- it's the
+   same already-deployed function, already current on this branch.
 
 <!-- Add new manual action items above this line -->
 
@@ -464,6 +468,16 @@ reference:
   PDF" button on every quote, closing the "no standalone quote PDF"
   gap `docs/CLIENT-PORTAL.md` had flagged as an intentional scope cut.
   See `README.md`'s 2026-09-16 audit entry for the full write-up.
+
+- **New blog post: "Oven Not Heating Right?"** (`blog/oven-not-heating-right.html`,
+  2026-09-16) -- closes the one real gap in the blog lineup: range/oven
+  repair is a listed service with no post covering it, while washers,
+  dryers, dishwashers, and fridges each already had one. Covers
+  calibration drift, a partially-failed bake element (uneven baking),
+  and a gas igniter that clicks without lighting. Uses the reserved
+  farmhouse-kitchen photo from "Reserved images" above (a real supplied
+  photo showing an actual range, not stock-picked for the topic).
+  Linked from the blog index and `sitemap.xml`.
 
 <!-- Add new visual additions above this line -->
 
