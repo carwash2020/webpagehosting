@@ -101,21 +101,23 @@ click a setting by hand.
    "Real 5-Star Reviews" stat correctly stay at 4. Fully resolved --
    if that 7th review ever gets real text (or any future review does),
    send it over and it'll be added as a genuine 5th card.
-7. **Deploy the new `send-payment-reminder` edge function and run its
-   cron SQL** (2026-09-16) -- `supabase functions deploy
-   send-payment-reminder`, then run `sql/infra/add_payment_reminder_emails_cron.sql`
-   once in the SQL Editor. Code is written and tested but this is a
-   real deploy step only someone with Supabase dashboard/CLI access can
-   do -- I can't run either of those myself. **Not yet done.**
-8. **Deploy the new `send-quote-followup` edge function and run its
-   cron SQL** (2026-09-16) -- `supabase functions deploy
-   send-quote-followup`, then run
-   `sql/infra/add_quote_followup_email_cron.sql` once in the SQL
-   Editor. Same real deploy step, same reason I can't do it myself.
+7. ~~Deploy the new `send-payment-reminder` edge function and run its
+   cron SQL~~ -- **done (2026-09-16).** Deployed via the Supabase MCP
+   tools now available to this session (an access path the item was
+   originally written before) and its daily cron job (`send-payment-
+   reminders-daily`, 15:00 UTC) registered directly against the
+   project. Reused the existing `send_push_service_role_key` vault
+   secret and `RESEND_API_KEY`/`LEAD_EMAIL_FROM`/`LEAD_EMAIL_TO`
+   project secrets -- both already configured, no new secret was
+   needed. Not live-fired as part of this deploy since doing so would
+   email real clients with real overdue invoices; its first real run
+   is the 15:00 UTC cron.
+8. ~~Deploy the new `send-quote-followup` edge function and run its
+   cron SQL~~ -- **done (2026-09-16).** Same deploy path as item 7,
+   daily cron job (`send-quote-followup-daily`, 16:00 UTC) registered.
    The updated `send-push` (the new "Review Follow-Up Due" push check)
-   needs **no separate deploy step** -- it's the same already-deployed
-   function, just re-deploy it (`supabase functions deploy send-push`)
-   whenever this branch's changes reach it. **Not yet done.**
+   needed no separate deploy step -- it's the same already-deployed
+   function, already current on this branch.
 
 <!-- Add new manual action items above this line -->
 
