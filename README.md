@@ -1398,3 +1398,41 @@ post instead of being forced in.
 
 Verified: `npm run check-consistency`, `node scripts/check-undefined-vars.js`,
 and `python3 scripts/check-links.py` all pass clean.
+
+## What changed, 2026-09-16 -- corrected the site's reviews to only show ones verifiable against the real Google listing
+
+The owner checked the real Google Business Profile against the site's
+7 review quotes to find the one that had been flagged as not actually
+a Google review. It turned out to be bigger than one quote: only 3 of
+the 7 matched a real Google reviewer's actual written text (PD IND.,
+Belinda Christensen, Jilleen Zufelt); Google has 6 reviews total, but
+2 of them (Austin Mayer, Micah Naegle) are star-only with no written
+text at all. The remaining 4 site quotes couldn't be traced to any
+verifiable source.
+
+Rather than write plausible-sounding text and attach it to Austin's or
+Micah's names to hit a round number, the 4 unverifiable quotes were
+removed outright, and Jilleen Walker's real review -- 5 stars, never
+added to the site before -- was added as a genuine 4th quote. Updated
+everywhere this touches:
+
+- `index.html`'s full reviews wall: 7 cards -> 4, all verified; removed
+  the now-empty "Show 3 more reviews" `<details>` disclosure entirely.
+- The `aggregateRating.reviewCount` schema and the homepage's "Real
+  5-Star Reviews" stat: `7` -> `4`, consistent with this site's
+  existing policy that the count must match visible page content, not
+  a raw external total (see `reviews-wall.test.js`'s original 2026-09-07
+  rationale for why this matters for structured-data honesty).
+- The condensed 3-quote review section shared by the other 13 pages
+  (7 city/service pages, `about.html`, `our-work.html`, plus 6 more
+  city pages): the one unverifiable quote among the 3 shown
+  ("Called in the morning...") was swapped for Jilleen Walker's real
+  text on every page.
+- `tests/content-quality/reviews-wall.test.js`,
+  `tests/content-quality/landing-page-social-proof.test.js`, and
+  `tests/seo/local-business-schema.test.js` updated to match the new
+  count and quote text.
+
+Verified: `npm run check-consistency`, `node scripts/check-undefined-vars.js`,
+`python3 scripts/check-links.py`, and the affected test files (104/104)
+all pass clean; full suite run separately.
