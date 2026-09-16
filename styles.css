@@ -1508,6 +1508,15 @@
 
   /* FAQ */
   .faq-list{max-width:760px;}
+  /* Category sub-headings grouping the flat FAQ list (item 11, visual
+     improvements pass) -- same look as .gallery-category below, so a
+     grouped list reads as one site pattern rather than a one-off. */
+  .faq-category{
+    font-family:var(--font-ui);
+    font-size:13px; letter-spacing:.08em; text-transform:uppercase;
+    color:var(--blue-text); margin:26px 0 10px; font-weight:600;
+  }
+  .faq-category:first-child{margin-top:6px;}
   .faq-item{
     border:1px solid var(--border);
     border-radius:var(--radius);
@@ -1803,6 +1812,80 @@
   }
   @media (max-width:860px){.gallery-grid{grid-template-columns:repeat(2,1fr);}}
   @media (max-width:600px){.gallery-grid{grid-template-columns:1fr;}}
+
+  /* Masonry layout + filter chips (item 2, visual improvements pass,
+     our-work.html only -- index.html's own "Our Work" modal keeps the
+     plain grid above, since it never got the .gallery-masonry class).
+     CSS multi-column instead of JS-measured grid rows: simplest option
+     that still preserves every tile's real aspect ratio, since a column
+     layout just stacks each item at its own natural height instead of
+     forcing a shared row height like the plain grid above does. */
+  .gallery-grid.gallery-masonry{
+    display:block;
+    column-count:3;
+    column-gap:20px;
+  }
+  .gallery-grid.gallery-masonry .gallery-category{
+    column-span:all;
+  }
+  .gallery-grid.gallery-masonry .gallery-tile{
+    break-inside:avoid;
+    -webkit-column-break-inside:avoid;
+    page-break-inside:avoid;
+    width:100%;
+    display:block;
+    margin:0 0 20px;
+  }
+  /* Real aspect ratios instead of the plain grid's forced 4/3 crop --
+     the img tags already carry their true width/height attributes, so
+     letting height track width naturally is enough. */
+  .gallery-grid.gallery-masonry .gallery-tile.has-photo{
+    aspect-ratio:auto;
+  }
+  .gallery-grid.gallery-masonry .gallery-tile.has-photo img{
+    height:auto;
+    object-fit:unset;
+  }
+  .gallery-grid.gallery-masonry .gallery-tile.is-filtered-out,
+  .gallery-grid.gallery-masonry .gallery-category.is-filtered-out{
+    display:none;
+  }
+  @media (max-width:860px){.gallery-grid.gallery-masonry{column-count:2;}}
+  @media (max-width:600px){.gallery-grid.gallery-masonry{column-count:1;}}
+
+  /* Filter chips -- same pill-button visual language as
+     .triage-appliance-pill/.triage-symptom-pill above, so this reads as
+     the same site pattern rather than a new one-off control. */
+  .gallery-filters{
+    display:flex;
+    flex-wrap:wrap;
+    gap:10px;
+    margin:0 0 26px;
+  }
+  .gallery-filter-chip{
+    display:inline-flex;
+    align-items:center;
+    font-family:var(--font-ui);
+    font-size:13px;
+    font-weight:500;
+    letter-spacing:.3px;
+    padding:9px 16px;
+    min-height:38px;
+    border-radius:999px;
+    border:1px solid var(--border);
+    background:var(--bg-panel-3);
+    color:var(--text);
+    cursor:pointer;
+    transition:border-color .15s ease, background .15s ease, color .15s ease, transform .15s ease;
+  }
+  .gallery-filter-chip:hover{border-color:var(--blue-text); color:var(--white); transform:translateY(-1px);}
+  .gallery-filter-chip:focus-visible{outline:2px solid var(--blue-text); outline-offset:2px;}
+  .gallery-filter-chip[aria-pressed="true"]{
+    background:linear-gradient(135deg, #ffb347, #ff8000 60%, #c96400);
+    border-color:transparent;
+    color:#161005;
+    font-weight:600;
+  }
 
   /* reviews (U03 fix, High-Impact Upgrades, 2026-09-07): a carousel
      showed one review at a time behind 9px dots -- reviews are this
@@ -2431,6 +2514,23 @@
   .td-scrub input[type="range"]:focus-visible::-moz-range-thumb{
     box-shadow:0 0 0 5px rgba(58,160,255,.35), 0 4px 14px rgba(255,128,0,.45);
   }
+  /* "Try me" hint (item 10, visual improvements pass): a brief pulsing
+     glow on the thumb, added once the auto-demo above finishes playing
+     and removed for good the instant a visitor actually drags the
+     slider themselves. A fixed 3-iteration count means it also stops on
+     its own even if that removal is somehow missed, and the global
+     prefers-reduced-motion rule near the top of this file already zeroes
+     every animation, so no separate check is needed here. */
+  @keyframes slider-hint-pulse{
+    0%, 100%{box-shadow:0 4px 14px rgba(255,128,0,.45), 0 0 0 0 rgba(255,128,0,.55);}
+    50%{box-shadow:0 4px 14px rgba(255,128,0,.45), 0 0 0 9px rgba(255,128,0,0);}
+  }
+  .teardown.is-hinting .td-scrub input[type="range"]::-webkit-slider-thumb{
+    animation:slider-hint-pulse 1.3s ease-in-out 3;
+  }
+  .teardown.is-hinting .td-scrub input[type="range"]::-moz-range-thumb{
+    animation:slider-hint-pulse 1.3s ease-in-out 3;
+  }
   .td-hint{
     font-size:13.5px;
     color:var(--text-dim);
@@ -2556,6 +2656,18 @@
   }
   .reveal-scrub:focus-visible::-moz-range-thumb{
     box-shadow:0 0 0 5px rgba(255,128,0,.35), 0 4px 14px rgba(58,160,255,.45);
+  }
+  /* "Try me" hint -- same pattern and same @keyframes as .td-scrub above,
+     just the blue glow to match this control's own color language. */
+  @keyframes slider-hint-pulse-blue{
+    0%, 100%{box-shadow:0 4px 14px rgba(58,160,255,.45), 0 0 0 0 rgba(58,160,255,.55);}
+    50%{box-shadow:0 4px 14px rgba(58,160,255,.45), 0 0 0 9px rgba(58,160,255,0);}
+  }
+  .reveal-job.is-hinting .reveal-scrub::-webkit-slider-thumb{
+    animation:slider-hint-pulse-blue 1.3s ease-in-out 3;
+  }
+  .reveal-job.is-hinting .reveal-scrub::-moz-range-thumb{
+    animation:slider-hint-pulse-blue 1.3s ease-in-out 3;
   }
   @media (max-width:600px){
     .reveal-job{padding:64px 0;}
@@ -2888,12 +3000,17 @@
   }
   .areas-link b{font-family:var(--font-ui); font-weight:700; font-size:15px;}
   .areas-link small{color:var(--text-dim); font-size:12.5px;}
-  .areas-link:not(.is-hub):hover,
-  .areas-link:not(.is-hub):focus-visible{border-color:var(--blue-text); transform:translateY(-2px);}
+  .areas-link:hover,
+  .areas-link:focus-visible{border-color:var(--blue-text); transform:translateY(-2px);}
   .areas-link.is-request{border-color:var(--orange-tint-border);}
   .areas-link.is-request:hover,
   .areas-link.is-request:focus-visible{border-color:var(--orange-text);}
-  .areas-link.is-hub{background:var(--bg-panel-2); cursor:default;}
+  /* St. George's card is a real link to its own landing page (added
+     2026-09-15), not just a "you are here" label anymore -- keeps its
+     distinct hub background, but no longer opts out of the hover/focus
+     raise every other real areas-link gets, and cursor:default (a
+     leftover from when this was an inert <span>) is gone too. */
+  .areas-link.is-hub{background:var(--bg-panel-2);}
   .areas-request-note{color:var(--text-dim); font-size:13.5px; max-width:90ch; margin:0;}
   /* Same tighter figure/legend spacing the landing pages' own
      .areas-map-section already uses (26px) -- the homepage's #areas
@@ -3346,15 +3463,29 @@
   }
 
   /* ---------- city-focused service radius ---------- */
-  /* One diagram, six pages. Each landing page sets data-focus so its own
+  /* One diagram, eight pages. Each landing page sets data-focus so its own
      city is the lit one and the rest recede -- the page reads as local
      without inventing any local content. The homepage sets no focus, so
-     everything stays at full strength there. */
+     everything stays at full strength there. St. George is the hub, not a
+     spoke, so data-focus="st-george" highlights the hub group instead of a
+     g[data-city] spoke -- see the dedicated rules below. */
   .radius-figure[data-focus] g[data-city]{
     opacity:.34;
     transition:opacity .4s ease;
   }
   .radius-figure[data-focus] g[data-city].is-hub{opacity:.8;}
+  /* St. George focus: the hub lights up fully instead of dimming with the
+     rest of the spokes, and its own node (.radius-hub, not .radius-node --
+     the hub group doesn't use the spoke node class) gets the same
+     glow treatment a focused spoke's node would get. */
+  .radius-figure[data-focus="st-george"] g[data-city="st-george"].is-hub{
+    opacity:1;
+  }
+  .radius-figure[data-focus="st-george"] g[data-city="st-george"].is-hub .radius-hub{
+    transition:r .4s ease, filter .4s ease;
+    r:13;
+    filter:drop-shadow(0 0 10px rgba(58,160,255,.55));
+  }
   .radius-figure[data-focus="washington-city"]  g[data-city="washington-city"],
   .radius-figure[data-focus="hurricane"]        g[data-city="hurricane"],
   .radius-figure[data-focus="santa-clara-ivins"] g[data-city="santa-clara-ivins"],

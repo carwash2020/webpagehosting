@@ -512,31 +512,49 @@ function portalConfirm(message, options) {
   });
 }
 
-// Themed replacement for window.alert() (2026-09-16), same reasoning as
-// portalConfirm above for window.confirm(). work-orders.html already
-// called showToast() on a failed message send, but nothing in the
-// portal defined it -- that call threw a silent ReferenceError instead
-// of telling the client their message didn't send. Defined here, once,
-// shared by every portal page the way portalConfirm already is.
+// Themed replacement for window.alert() on the error/validation paths
+// still using it across dashboard.html, quotes.html and settings.html
+// (2026-09-15). Mirrors the internal tool suite's own showToast()
+// convention exactly (tools/tools-dialogs.js's ensureToastContainerExists()
+// + tools/tools-media-sharing.js's showToast()/dismissToast()) -- same
+// function name and options shape ({ type: 'error', duration }), same
+// class names (.th-toast/.th-toast-container/.is-error/.is-shown), same
+// auto-dismiss-plus-tap-to-dismiss behavior -- so this is one convention
+// learned once, not two. The one difference: the tool suite's version
+// references icons from a shared <symbol> sprite injected by
+// tools-nav-pwa.js, which the portal does not load (that file also
+// drives the internal tools' own PWA/bottom-nav wiring, which has no
+// portal equivalent) -- so this version draws the same two glyphs
+// (check / warning) as small inline SVGs instead of `<use>` references.
+//
+//   showToast('Job updated.');
+//   showToast('Could not reach the server.', { type: 'error' });
+function ensurePortalToastContainerExists() {
+  if (document.getElementById('thToastContainer')) return document.getElementById('thToastContainer');
+  const container = document.createElement('div');
+  container.id = 'thToastContainer';
+  container.className = 'th-toast-container';
+  container.setAttribute('aria-live', 'polite');
+  container.setAttribute('role', 'status');
+  document.body.appendChild(container);
+  return container;
+}
+
 function showToast(message, options) {
   options = options || {};
-  const duration = options.duration || 3200;
-
-  let container = document.getElementById('portalToastContainer');
-  if (!container) {
-    container = document.createElement('div');
-    container.id = 'portalToastContainer';
-    container.className = 'portal-toast-container';
-    document.body.appendChild(container);
-  }
-  if (document.querySelector('.portal-nav')) {
-    container.classList.add('has-bottomnav');
-  }
+  const duration = options.duration || 2600;
+  const isError = options.type === 'error';
+  const container = ensurePortalToastContainerExists();
 
   const toast = document.createElement('div');
-  toast.className = 'portal-toast' + (options.type === 'error' ? ' is-error' : '');
-  toast.textContent = message; // textContent, not innerHTML -- message may include user-entered data
-  toast.addEventListener('click', () => dismissPortalToast(toast));
+  toast.className = 'th-toast' + (isError ? ' is-error' : '');
+  toast.innerHTML =
+    (isError
+      ? '<svg class="th-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 4l9.5 16.5H2.5z"/><line x1="12" y1="10" x2="12" y2="14.5"/><circle cx="12" cy="17.3" r="0.9" fill="currentColor" stroke="none"/></svg>'
+      : '<svg class="th-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="8.5"/><path d="M8 12.3l2.5 2.5 5.5-5.6"/></svg>') +
+    '<span></span>';
+  toast.querySelector('span').textContent = message; // textContent, not innerHTML -- message may contain user data
+  toast.addEventListener('click', () => dismissToast(toast));
   container.appendChild(toast);
 
   // Letting the element paint in its resting state before adding
@@ -544,14 +562,14 @@ function showToast(message, options) {
   // starting already-visible.
   requestAnimationFrame(() => toast.classList.add('is-shown'));
 
-  const timer = setTimeout(() => dismissPortalToast(toast), duration);
-  toast._portalTimer = timer;
+  const timer = setTimeout(() => dismissToast(toast), duration);
+  toast._thTimer = timer;
 }
 
-function dismissPortalToast(toast) {
-  if (!toast || toast._portalDismissed) return;
-  toast._portalDismissed = true;
-  clearTimeout(toast._portalTimer);
+function dismissToast(toast) {
+  if (!toast || toast._thDismissed) return;
+  toast._thDismissed = true;
+  clearTimeout(toast._thTimer);
   toast.classList.remove('is-shown');
   setTimeout(() => toast.remove(), 200);
 }

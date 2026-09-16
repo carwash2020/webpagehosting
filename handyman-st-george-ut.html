@@ -4,7 +4,13 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <script>
+  // Runs synchronously, before CSS applies, to avoid a flash of the
+  // wrong theme on load. Checks a saved preference first; falls back to
+  // the visitor's OS-level preference if they've never chosen manually.
   (function () {
+    // Defaults to dark mode -- the site's original, preferred look.
+    // Light mode is still fully available via the toggle, it's just no
+    // longer the default a new visitor sees first.
     var saved = localStorage.getItem('th-theme');
     var theme = saved || 'dark';
     if (theme === 'light') document.documentElement.setAttribute('data-theme', 'light');
@@ -39,24 +45,25 @@
   gtag('config', 'G-TMJJMGY2DQ');
 </script>
 
-<title>Assembly & Installation | Triple H Enterprises</title>
-<meta name="description" content="Furniture assembly and installation in St. George, Utah and the surrounding area: flat pack furniture, shelving, TV mounting, ceiling fans, and smart home devices.">
-<link rel="canonical" href="https://www.triplehenterprisesllc.biz/assembly-installation.html">
-<meta property="og:title" content="Assembly & Installation | Triple H Enterprises">
-<meta property="og:description" content="Furniture assembly and installation in St. George, Utah and the surrounding area: flat pack furniture, shelving, TV mounting, ceiling fans, and smart home devices.">
+<title>Handyman & Appliance Repair in St. George, UT | Triple H Enterprises</title>
+<meta name="description" content="Handyman and appliance repair based right in St. George, Utah. Our home base means fast response times across Bloomington, Sunbrook, Little Valley, and downtown. Honest pricing, nothing done until you approve it.">
+<link rel="canonical" href="https://www.triplehenterprisesllc.biz/handyman-st-george-ut.html">
+<meta property="og:title" content="Handyman & Appliance Repair in St. George, UT | Triple H Enterprises">
+<meta property="og:description" content="Handyman and appliance repair based right in St. George, Utah. Our home base means fast response times across Bloomington, Sunbrook, Little Valley, and downtown. Honest pricing, nothing done until you approve it.">
 <meta property="og:type" content="website">
-<meta property="og:url" content="https://www.triplehenterprisesllc.biz/assembly-installation.html">
+<meta property="og:url" content="https://www.triplehenterprisesllc.biz/handyman-st-george-ut.html">
 <meta property="og:image" content="https://www.triplehenterprisesllc.biz/images/og-image.jpg">
 <meta property="og:image:width" content="1200">
 <meta property="og:image:height" content="628">
 <meta property="og:image:alt" content="Triple H Enterprises - Handyman and Appliance Repair">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:image" content="https://www.triplehenterprisesllc.biz/images/og-image.jpg">
-<meta name="twitter:title" content="Assembly & Installation | Triple H Enterprises">
-<meta name="twitter:description" content="Furniture assembly and installation in St. George, Utah and the surrounding area.">
+<meta name="twitter:title" content="Handyman & Appliance Repair in St. George, UT | Triple H Enterprises">
+<meta name="twitter:description" content="Handyman and appliance repair based right in St. George, Utah. Our home base means fast response times across Bloomington, Sunbrook, Little Valley, and downtown. Honest pricing, nothing done until you approve it.">
 <link rel="shortcut icon" href="/favicon.ico">
 <link rel="icon" href="/favicon.ico">
 <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32.png">
+<link rel="icon" type="image/png" sizes="48x48" href="/images/favicon-48.png">
 <link rel="icon" type="image/png" sizes="96x96" href="/images/favicon-96.png">
 <link rel="icon" type="image/png" sizes="192x192" href="/images/favicon-192.png?v=202608010300">
 <link rel="apple-touch-icon" href="/images/apple-touch-icon.png?v=202608010300">
@@ -66,35 +73,46 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="Triple H">
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://www.googletagmanager.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data:; connect-src 'self' https://www.google-analytics.com https://*.google-analytics.com https://analytics.google.com https://*.analytics.google.com https://www.google.com https://*.supabase.co; frame-src 'none'; object-src 'none'; base-uri 'self'; frame-ancestors 'none';">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://www.googletagmanager.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data:; connect-src 'self' https://stats.g.doubleclick.net https://www.google-analytics.com https://*.google-analytics.com https://analytics.google.com https://*.analytics.google.com https://www.google.com https://*.supabase.co; frame-src 'none'; object-src 'none'; base-uri 'self'; frame-ancestors 'none';">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <meta http-equiv="Permissions-Policy" content="camera=(), microphone=(), geolocation=()">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="preconnect" href="https://csvfqdjuobylgafgolho.supabase.co">
-<link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Anton&family=Archivo:wght@400..700&family=Newsreader:ital,opsz,wght@0,6..72,300..600&family=Oswald:wght@200..700&display=swap" onload="this.onload=null;this.rel='stylesheet'">
-<noscript><link href="https://fonts.googleapis.com/css2?family=Anton&family=Archivo:wght@400..700&family=Newsreader:ital,opsz,wght@0,6..72,300..600&family=Oswald:wght@200..700&display=swap" rel="stylesheet"></noscript>
+<link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Anton&family=Archivo:wght@400..700&family=Newsreader:ital,opsz,wght@0,6..72,300..700;1,6..72,300..600&family=Oswald:wght@200..700&display=swap" onload="this.onload=null;this.rel='stylesheet'">
+<noscript><link href="https://fonts.googleapis.com/css2?family=Anton&family=Archivo:wght@400..700&family=Newsreader:ital,opsz,wght@0,6..72,300..700;1,6..72,300..600&family=Oswald:wght@200..700&display=swap" rel="stylesheet"></noscript>
 <link rel="stylesheet" href="/styles.css?v=64b753a45a">
 <script type="application/ld+json">
 {
   "@context": "https://schema.org",
-  "@type": "Service",
-  "serviceType": "Assembly & Installation",
-  "provider": {
-    "@type": "HomeAndConstructionBusiness",
-    "name": "Triple H Enterprises",
-    "telephone": "+14354141667",
-    "email": "steve@triplehenterprisesllc.biz",
-    "address": { "@type": "PostalAddress", "addressLocality": "St. George", "postalCode": "84790", "addressRegion": "UT", "addressCountry": "US" },
-    "sameAs": [
-      "https://www.facebook.com/profile.php?id=61560166174024",
-      "https://www.instagram.com/triplehenterprises?igsh=eTVndzQxYXg4emhk",
-      "https://www.linkedin.com/in/steven-robinson-241944424",
-      "https://www.yelp.com/biz/triple-h-enterprises-st-george"
-    ]
+  "@type": "HomeAndConstructionBusiness",
+  "name": "Triple H Enterprises - St. George",
+  "url": "https://www.triplehenterprisesllc.biz/handyman-st-george-ut.html",
+  "telephone": "+14354141667",
+  "email": "steve@triplehenterprisesllc.biz",
+  "address": {
+    "@type": "PostalAddress",
+    "addressLocality": "St. George",
+    "postalCode": "84790",
+    "addressRegion": "UT",
+    "addressCountry": "US"
   },
-  "areaServed": ["St. George, UT", "Hurricane, UT", "Washington, UT", "Santa Clara, UT", "Ivins, UT", "Cedar City, UT", "Mesquite, NV"],
-  "url": "https://www.triplehenterprisesllc.biz/assembly-installation.html"
+  "areaServed": [
+    "St. George, UT"
+  ],
+  "priceRange": "$$",
+  "image": "https://www.triplehenterprisesllc.biz/images/og-image.jpg",
+  "openingHoursSpecification": [
+    { "@type": "OpeningHoursSpecification", "dayOfWeek": ["Monday","Tuesday","Wednesday","Thursday","Friday"], "opens": "14:00", "closes": "22:00" },
+    { "@type": "OpeningHoursSpecification", "dayOfWeek": "Saturday", "opens": "07:00", "closes": "22:00" },
+    { "@type": "OpeningHoursSpecification", "dayOfWeek": "Sunday", "opens": "14:00", "closes": "20:00" }
+  ],
+  "sameAs": [
+    "https://www.facebook.com/profile.php?id=61560166174024",
+    "https://www.instagram.com/triplehenterprises?igsh=eTVndzQxYXg4emhk",
+    "https://www.linkedin.com/in/steven-robinson-241944424",
+    "https://www.yelp.com/biz/triple-h-enterprises-st-george"
+  ]
 }
 </script>
 <script type="application/ld+json">
@@ -102,6 +120,14 @@
   "@context": "https://schema.org",
   "@type": "FAQPage",
   "mainEntity": [
+    {
+      "@type": "Question",
+      "name": "Is Triple H actually based in St. George?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Yes. St. George is our home base, not a stop on a route -- every truck and every day starts here. That means St. George jobs usually get the fastest response times and the easiest scheduling of anywhere we work."
+      }
+    },
     {
       "@type": "Question",
       "name": "Do you offer estimates before starting work?",
@@ -136,13 +162,93 @@
     },
     {
       "@type": "Question",
-      "name": "Is there a trip fee?",
+      "name": "Is there a trip fee for St. George jobs?",
       "acceptedAnswer": {
         "@type": "Answer",
-        "text": "Jobs within 15 miles have no trip fee. Beyond 15 miles, a $25 trip fee is added to the total."
+        "text": "Almost never. Since St. George is our home base, nearly every address in the city falls well inside the free 15-mile radius. The only exception is the far edges of town, where the standard $25 trip fee beyond 15 miles would apply."
       }
     }
   ]
+}
+</script>
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "Service",
+  "name": "Handyman & Appliance Repair Services in St. George, UT",
+  "serviceType": [
+    "Appliance Repair",
+    "General Handyman Repairs",
+    "Plumbing Fixes & Leaks",
+    "Drywall & Painting",
+    "Assembly & Installation",
+    "Emergency Repair Calls"
+  ],
+  "provider": {
+    "@type": "HomeAndConstructionBusiness",
+    "name": "Triple H Enterprises",
+    "telephone": "+14354141667"
+  },
+  "areaServed": [
+    {
+      "@type": "City",
+      "name": "St. George, UT"
+    }
+  ],
+  "hasOfferCatalog": {
+    "@type": "OfferCatalog",
+    "name": "Handyman & Appliance Repair Services",
+    "itemListElement": [
+      {
+        "@type": "Offer",
+        "itemOffered": {
+          "@type": "Service",
+          "name": "Appliance Repair",
+          "description": "Washers, dryers, dishwashers, fridges, and ranges."
+        }
+      },
+      {
+        "@type": "Offer",
+        "itemOffered": {
+          "@type": "Service",
+          "name": "General Handyman Repairs",
+          "description": "Doors, drywall, fixtures, and small household repairs."
+        }
+      },
+      {
+        "@type": "Offer",
+        "itemOffered": {
+          "@type": "Service",
+          "name": "Plumbing Fixes & Leaks",
+          "description": "Faucets, toilets, garbage disposals, and leak repair."
+        }
+      },
+      {
+        "@type": "Offer",
+        "itemOffered": {
+          "@type": "Service",
+          "name": "Drywall & Painting",
+          "description": "Patch work, touch ups, and full room paint jobs."
+        }
+      },
+      {
+        "@type": "Offer",
+        "itemOffered": {
+          "@type": "Service",
+          "name": "Assembly & Installation",
+          "description": "Furniture, shelving, TV mounts, and ceiling fans."
+        }
+      },
+      {
+        "@type": "Offer",
+        "itemOffered": {
+          "@type": "Service",
+          "name": "Emergency Repair Calls",
+          "description": "Fast response for repairs that can't wait."
+        }
+      }
+    ]
+  }
 }
 </script>
 <script type="application/ld+json">
@@ -159,8 +265,8 @@
     {
       "@type": "ListItem",
       "position": 2,
-      "name": "Assembly & Installation",
-      "item": "https://www.triplehenterprisesllc.biz/assembly-installation.html"
+      "name": "St. George, UT",
+      "item": "https://www.triplehenterprisesllc.biz/handyman-st-george-ut.html"
     }
   ]
 }
@@ -182,7 +288,7 @@
 <header>
   <nav class="nav">
     <a href="/" class="brand">
-      <img class="logo-img" src="/images/logo-signature-orange.webp?v=202608010300" alt="Triple H Enterprises logo">
+      <img class="logo-img" src="/images/logo-signature-orange.webp?v=202608010300" alt="Triple H Enterprises logo" width="531" height="488">
       <span class="brand-name">TRIPLE H<span>HANDYMAN AND APPLIANCE REPAIR</span></span>
     </a>
     <ul class="nav-links">
@@ -266,8 +372,21 @@
 <main id="home">
   <section class="hero">
     <div class="wrap">
-      <h1>Assembly &amp; Installation</h1>
-      <p class="hero-lede">If it comes in a box with instructions, it can be built and installed correctly the first time. Flat pack furniture, shelving, TV mounting, ceiling fans, and smart home devices &mdash; assembled right, mounted level, and wired safely.</p>
+      <p class="coverage-badge is-standard"><span class="dot"></span>Home Base &middot; St. George</p>
+      <h1>Handyman & Appliance Repair in St. George, Utah</h1>
+      <p class="hero-distance-chip"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21s-7-6.1-7-11a7 7 0 0 1 14 0c0 4.9-7 11-7 11z"/><circle cx="12" cy="10" r="2.5"/></svg>You're right here &mdash; this is where we're based</p>
+      <p class="hero-lede">St. George isn't a drive for us, it's home. Every truck, every
+            tool, and every day starts right here, which means St. George jobs
+            usually get the shortest wait and the easiest scheduling of anywhere
+            we work. The city itself is a real mix: older neighborhoods near
+            downtown and around Bloomington that have been standing for
+            decades, established mid-city areas like Sunbrook and Little
+            Valley, and newer growth pushing out toward the Divario and Desert
+            Color areas. That range means we see a little of everything, from
+            aging water heaters and worn-out garbage disposals in a house
+            that's been lived in for 30 years, to hooking up brand-new
+            appliances and finishing punch-list work in a home that's barely
+            been lived in at all.</p>
       <div style="display:flex; gap:16px; margin-top:32px; flex-wrap:wrap;">
         <a class="btn orange" href="tel:+14354141667">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
@@ -284,28 +403,43 @@
   <section>
     <div class="wrap">
       <div class="section-head" data-reveal>
-        <h2>What We Assemble &amp; Install</h2>
+        <h2>Home Base, Every Neighborhood</h2>
+      </div>
+      <p style="max-width:68ch; color:var(--text-dim); font-size:16px;">Downtown and the older streets around it, plus established
+            neighborhoods like Bloomington, Sunbrook, and Little Valley, tend
+            to bring the calls you'd expect from a house that's been
+            standing for a while: aging water heaters and dishwashers,
+            plumbing fixtures past their prime, drywall cracks, and paint
+            touch-ups. Out toward the newer growth in Desert Color and the
+            Divario area, the job list looks different: appliance
+            installation, furniture and shelving assembly, TV mounts, smart
+            home devices, and the punch-list work that comes with a house
+            that's still fairly new.</p>
+      <p style="max-width:68ch; color:var(--text-dim); font-size:16px; margin-top:16px;"><strong>Where we're based:</strong> St. George is our home base, not a route we drive in on. That means St. George addresses typically get the fastest response and the most flexible scheduling of anywhere we cover.</p>
+    </div>
+  </section>
+
+  <section>
+    <div class="wrap">
+      <div class="section-head" data-reveal>
+        <h2>What We Handle in St. George</h2>
       </div>
       <div class="services-grid">
         <div class="service-card">
-          <h3>Flat Pack Furniture</h3>
-          <p>Flat pack and ready-to-assemble furniture, built correctly and checked for stability before we leave.</p>
+          <h3>Appliance Repair</h3>
+          <p>Diagnostics and repair for major household appliances. We look at it in person and give you a price before any work starts.</p>
         </div>
         <div class="service-card">
-          <h3>Shelving &amp; Closet Systems</h3>
-          <p>Shelving and closet systems mounted level and anchored securely to the wall.</p>
+          <h3>Plumbing Fixes</h3>
+          <p>Leaky faucets, running toilets, garbage disposals, slow drains, and small pipe leaks under sinks and behind appliances.</p>
         </div>
         <div class="service-card">
-          <h3>TV Mounting</h3>
-          <p>TV mounting on drywall, brick, or masonry, with cables routed clean.</p>
+          <h3>Drywall &amp; Painting</h3>
+          <p>Hole and crack patching with texture matching, touch-up painting, and full room repaints.</p>
         </div>
         <div class="service-card">
-          <h3>Ceiling Fans &amp; Light Fixtures</h3>
-          <p>Ceiling fans and light fixtures installed and wired safely.</p>
-        </div>
-        <div class="service-card">
-          <h3>Smart Home Devices</h3>
-          <p>Smart locks, doorbells, and other small smart home devices, installed and set up.</p>
+          <h3>Assembly &amp; Installation</h3>
+          <p>Furniture, shelving, TV mounts, ceiling fans, light fixtures, and smart home devices.</p>
         </div>
       </div>
       <p style="margin-top:24px;"><a href="/#services">See the full list of services &rarr;</a></p>
@@ -319,16 +453,16 @@
       </div>
       <div class="faq-list">
         <div style="border:1px solid var(--border); border-radius:var(--radius); background:var(--bg-panel); margin-bottom:12px; padding:20px 22px;">
-          <h3 style="font-family:var(--font-ui); font-weight:600; font-size:15.5px; margin:0 0 8px;">Do I need to provide the item, or can you supply it?</h3>
-          <p style="color:var(--text-dim); font-size:14.5px; margin:0; max-width:68ch;">You provide the item and we handle the assembly or installation. If you're not sure what to buy, we're happy to point you in the right direction.</p>
+          <h3 style="font-family:var(--font-ui); font-weight:600; font-size:15.5px; margin:0 0 8px;">Do you charge a trip fee inside St. George?</h3>
+          <p style="color:var(--text-dim); font-size:14.5px; margin:0; max-width:68ch;">Almost never. St. George is home base, so nearly every address in town falls comfortably inside the free 15-mile radius. Only the far outer edges of the city might see the standard $25 trip fee, and we'll always tell you upfront if that applies.</p>
         </div>
         <div style="border:1px solid var(--border); border-radius:var(--radius); background:var(--bg-panel); margin-bottom:12px; padding:20px 22px;">
-          <h3 style="font-family:var(--font-ui); font-weight:600; font-size:15.5px; margin:0 0 8px;">Can you mount a TV on any type of wall?</h3>
-          <p style="color:var(--text-dim); font-size:14.5px; margin:0; max-width:68ch;">We mount on drywall, brick, and masonry, with the right anchors for each. We'll check your wall type before the visit if you're not sure.</p>
+          <h3 style="font-family:var(--font-ui); font-weight:600; font-size:15.5px; margin:0 0 8px;">Do you work on appliances as well as general repairs?</h3>
+          <p style="color:var(--text-dim); font-size:14.5px; margin:0; max-width:68ch;">Yes. Appliance diagnostics and repair is a core part of what we do, alongside general handyman work like plumbing fixes, drywall and paint, and assembly/installation.</p>
         </div>
         <div style="border:1px solid var(--border); border-radius:var(--radius); background:var(--bg-panel); margin-bottom:12px; padding:20px 22px;">
           <h3 style="font-family:var(--font-ui); font-weight:600; font-size:15.5px; margin:0 0 8px;">How is pricing handled?</h3>
-          <p style="color:var(--text-dim); font-size:14.5px; margin:0; max-width:68ch;">We look at the job in person first, then give you a clear price before any work starts. Nothing gets billed as a surprise on the back end.</p>
+          <p style="color:var(--text-dim); font-size:14.5px; margin:0; max-width:68ch;">We diagnose the issue in person first, then give you a clear price before any work starts. Nothing gets billed as a surprise on the back end.</p>
         </div>
       </div>
     </div>
@@ -359,11 +493,28 @@
 
   <section class="areas-map-section">
     <div class="wrap">
-      <div class="section-head" data-reveal>
-        <h2>Where We Work</h2>
-      </div>
-      <div class="radius-figure" data-reveal>
-        <svg viewBox="0 0 760 480" role="img" aria-label="Service area diagram centered on St. George, showing Washington City, Hurricane, Santa Clara and Ivins as standard coverage, with Cedar City and Mesquite available by request">
+      <!-- Service radius. Same schematic on every page; each city landing
+           page sets data-focus so its own city is the one lit, which makes
+           the page feel local without inventing any local content. The
+           distances are the verified ones already stated elsewhere on the
+           site, and Cedar City and Mesquite keep their by-request
+           treatment (dashed, orange) here exactly as everywhere else. -->
+      <div class="radius-figure" data-reveal data-focus="st-george">
+        <svg viewBox="0 0 760 480" role="img" aria-label="Service area diagram centered on St. George, showing Washington City, Hurricane, Santa Clara and Ivins, La Verkin and Leeds as standard coverage, with Cedar City and Mesquite available by request">
+          <!-- Design feedback (2026-09-08): the old concentric "orbit
+               ring" background read as a gimmicky globe/radar motif,
+               and Washington City/Hurricane's spokes were only 15
+               degrees apart -- cramped regardless of the real driving
+               distance between them. Rings are gone. Every city is now
+               placed by angle-from-hub (clockwise from north) and a
+               radius tier -- 160 for standard coverage, 235 for
+               by-request -- spaced at least 50 degrees apart. (Update,
+               2026-09-11: the two open ranges this diagram originally
+               reserved for a future city -- 120-190 and 280-330
+               degrees -- are now used by Leeds and La Verkin
+               respectively.) Every label is centered under its own node
+               (text-anchor="middle") so a future addition just needs
+               its own angle/radius, not a fresh clipping check. -->
           <g data-city="washington-city">
             <line class="radius-spoke" pathLength="1" x1="380" y1="210" x2="460" y2="127"/>
             <circle class="radius-node" cx="460" cy="127" r="7"/>
@@ -385,6 +536,20 @@
             <text class="radius-note" x="222" y="262" text-anchor="middle">West side, near Snow Canyon</text>
           </g>
 
+          <g data-city="leeds">
+            <line class="radius-spoke" pathLength="1" x1="380" y1="210" x2="460" y2="349"/>
+            <circle class="radius-node" cx="460" cy="349" r="7"/>
+            <text class="radius-name" x="460" y="367" text-anchor="middle">Leeds</text>
+            <text class="radius-note" x="460" y="384" text-anchor="middle">About 20 minutes north</text>
+          </g>
+
+          <g data-city="la-verkin">
+            <line class="radius-spoke" pathLength="1" x1="380" y1="210" x2="241" y2="130"/>
+            <circle class="radius-node" cx="241" cy="130" r="7"/>
+            <text class="radius-name" x="241" y="148" text-anchor="middle">La Verkin</text>
+            <text class="radius-note" x="241" y="165" text-anchor="middle">About 25 minutes east</text>
+          </g>
+
           <g data-city="cedar-city" class="is-request">
             <line class="radius-spoke is-request" x1="380" y1="210" x2="300" y2="78"/>
             <circle class="radius-node is-request" cx="300" cy="78" r="7"/>
@@ -399,39 +564,66 @@
             <text class="radius-note" x="263" y="367" text-anchor="middle">By request &middot; about 40 minutes southwest</text>
           </g>
 
+          <!-- Hub drawn LAST, after every spoke, so it paints on top of
+               all 7 lines converging on it (2026-09-07, real bug found
+               from a live screenshot: with the hub painted first, in
+               source order, each spoke line painted over it, making
+               spokes look like they pierced straight through the hub
+               dot instead of visibly terminating at it). SVG has no
+               z-index -- later elements always paint over earlier ones
+               at the same stacking context, so document order IS the
+               fix here. -->
           <g data-city="st-george" class="is-hub">
             <circle class="radius-hub" cx="380" cy="210" r="10"/>
             <text class="radius-hub-name" x="380" y="243" text-anchor="middle">ST. GEORGE</text>
             <text class="radius-note" x="380" y="261" text-anchor="middle">Home base</text>
           </g>
-        </svg>
-      </div>
+        </svg>      </div>
       <p class="radius-legend" data-reveal>
         <span><b></b> Standard coverage</span>
         <span><b class="is-request"></b> Available by request</span>
       </p>
-      <div class="areas-links" data-reveal>
-        <a class="areas-link" data-city="washington-city" href="/handyman-washington-city-ut.html">
-          <b>Assembly &amp; Installation in Washington City</b><small>Right next door</small>
-        </a>
-        <a class="areas-link" data-city="hurricane" href="/handyman-hurricane-ut.html">
-          <b>Assembly &amp; Installation in Hurricane</b><small>About 20 minutes east</small>
-        </a>
-        <a class="areas-link" data-city="santa-clara-ivins" href="/handyman-santa-clara-ivins-ut.html">
-          <b>Assembly &amp; Installation in Santa Clara &amp; Ivins</b><small>West side, near Snow Canyon</small>
-        </a>
-        <a class="areas-link" data-city="leeds" href="/handyman-leeds-ut.html">
-          <b>Assembly &amp; Installation in Leeds</b><small>About 20 minutes north</small>
-        </a>
-        <a class="areas-link" data-city="la-verkin" href="/handyman-la-verkin-ut.html">
-          <b>Assembly &amp; Installation in La Verkin</b><small>About 25 minutes east</small>
-        </a>
-        <a class="areas-link is-request" data-city="cedar-city" href="/handyman-cedar-city-ut.html">
-          <b>Assembly &amp; Installation in Cedar City</b><small>By request &middot; about an hour north</small>
-        </a>
-        <a class="areas-link is-request" data-city="mesquite" href="/handyman-mesquite-nv.html">
-          <b>Assembly &amp; Installation in Mesquite, NV</b><small>By request &middot; about 40 minutes SW</small>
-        </a>
+
+    </div>
+  </section>
+
+  <section id="triage">
+    <div class="wrap">
+      <div class="section-head" data-reveal>
+        <h2>Is it worth fixing?</h2>
+        <p>Tell us what it's doing and we'll tell you what it usually means. No email required, nothing to sign up for.</p>
+      </div>
+
+      <div class="triage-shell" data-reveal>
+        <!-- Symptom-first entry point (Master Audit U02, 2026-09-08):
+             "Customers do not arrive thinking 'appliance repair'; they
+             arrive thinking 'it won't drain'." A grid of the ~20 symptoms
+             triage.js has data for, grouped into closed-by-default rows
+             per appliance, in plain customer language -- each card jumps
+             straight to its result. (Shrink pass, 2026-09-08: this used
+             to sit above a second, separate step-by-step "appliance then
+             symptom" picker that did the same job in a different UI --
+             removed as duplicate weight, see triage.js.) -->
+        <div class="triage-step">
+          <p class="triage-label">Tap what it's doing</p>
+          <div class="triage-symptom-grid" id="triageSymptomGrid" role="group" aria-label="Choose your symptom"></div>
+        </div>
+
+        <div class="triage-result" id="triageResult" hidden aria-live="polite">
+          <h3 class="triage-verdict" id="triageVerdict"></h3>
+          <p class="triage-body" id="triageBody"></p>
+          <p class="triage-caveat">This is what that symptom usually points to, not a diagnosis. The only way to know for certain is to look at the machine, and that's what we'd do.</p>
+          <div class="triage-actions">
+            <a href="tel:+14354141667" class="btn orange js-phone-link">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
+              Call <span class="js-phone-text">(435) 414-1667</span>
+            </a>
+            <a href="/booking.html" class="cta-quiet-link">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+              or book a visit online
+            </a>
+          </div>
+        </div>
       </div>
     </div>
   </section>
@@ -487,7 +679,23 @@
                 <p class="review-meta"><strong>Verified Customer</strong> on Google</p>
               </div>
             </div>
+
+            <div class="review-card" data-reveal>
+              <div class="review-stars">
+                <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01z"/></svg>
+                <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01z"/></svg>
+                <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01z"/></svg>
+                <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01z"/></svg>
+                <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01z"/></svg>
+              </div>
+              <p class="review-quote">"Best experience ever with a handyman. Had a few of my appliances fixed in no time. Very fast and efficient and such a good looking friendly guy. Thank you Steve will definitely call you with any other issues"</p>
+              <div class="review-attribution">
+                <span class="review-avatar" aria-hidden="true"><svg viewBox="0 0 48 48"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/><path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/></svg></span>
+                <p class="review-meta"><strong>Verified Customer</strong> on Google</p>
+              </div>
+            </div>
       </div>
+
       <p class="blog-teaser-more"><a href="/#reviews">Read all reviews &rarr;</a></p>
     </div>
   </section>
@@ -498,6 +706,10 @@
         <h2>Frequently Asked Questions</h2>
       </div>
       <div class="faq-plain-list">
+      <details class="faq-plain-item">
+        <summary>Is Triple H actually based in St. George?</summary>
+        <p>Yes. St. George is our home base, not a stop on a route -- every truck and every day starts here. That means St. George jobs usually get the fastest response times and the easiest scheduling of anywhere we work.</p>
+      </details>
       <details class="faq-plain-item">
         <summary>Do you offer estimates before starting work?</summary>
         <p>Pricing is set once the problem has been diagnosed. Some jobs can be estimated over the phone, but many issues need an in-person look before a firm price can be given. Either way, you&#39;ll know the cost before any work begins.</p>
@@ -515,8 +727,8 @@
         <p>Cash, check, Venmo, and Cash App are all accepted, along with credit and debit cards via a secure Stripe invoice.</p>
       </details>
       <details class="faq-plain-item">
-        <summary>Is there a trip fee?</summary>
-        <p>Jobs within 15 miles have no trip fee. Beyond 15 miles, a $25 trip fee is added to the total.</p>
+        <summary>Is there a trip fee for St. George jobs?</summary>
+        <p>Almost never. Since St. George is our home base, nearly every address in the city falls well inside the free 15-mile radius. The only exception is the far edges of town, where the standard $25 trip fee beyond 15 miles would apply.</p>
       </details>
       </div>
       <p class="blog-teaser-more"><a href="/#faq">See all FAQs &rarr;</a></p>
@@ -526,7 +738,7 @@
   <section id="schedule">
     <div class="wrap">
       <div class="section-head" data-reveal>
-        <h2>Schedule an Assembly or Installation</h2>
+        <h2>Schedule a Service in St. George</h2>
       </div>
       <div class="booking-grid">
         <div class="booking-cta">
@@ -554,11 +766,12 @@
   </section>
 </main>
 <footer>
+  <h3 style="position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0;">Site Footer</h3>
   <div class="wrap">
     <div class="footer-grid">
       <div>
         <div class="footer-brand">
-          <img class="logo-img" src="/images/logo-signature-orange.webp?v=202608010300" alt="Triple H Enterprises logo" loading="lazy">
+          <img class="logo-img" src="/images/logo-signature-orange.webp?v=202608010300" alt="Triple H Enterprises logo" loading="lazy" width="531" height="488">
           <div class="brand-name">TRIPLE H ENTERPRISES</div>
         </div>
         <p class="footer-tagline">Honesty. Hustle. Helpfulness.</p>
@@ -588,13 +801,16 @@
         </ul>
       </div>
       <div class="footer-col">
-        <h4>Services</h4>
+        <h4>Service Areas</h4>
         <ul>
-          <li><a href="/washer-dryer-repair.html">Washer &amp; Dryer Repair</a></li>
-          <li><a href="/plumbing-repairs.html">Plumbing Repairs</a></li>
-          <li><a href="/drywall-painting.html">Drywall &amp; Painting</a></li>
-          <li><a href="/handyman-repairs.html">General Handyman Repairs</a></li>
-          <li><a href="/assembly-installation.html">Assembly &amp; Installation</a></li>
+          <li><a href="/#areas">St. George</a></li>
+          <li><a href="/handyman-washington-city-ut.html">Washington City</a></li>
+          <li><a href="/handyman-hurricane-ut.html">Hurricane</a></li>
+          <li><a href="/handyman-santa-clara-ivins-ut.html">Santa Clara &amp; Ivins</a></li>
+          <li><a href="/handyman-leeds-ut.html">Leeds</a></li>
+          <li><a href="/handyman-la-verkin-ut.html">La Verkin</a></li>
+          <li><a href="/handyman-cedar-city-ut.html">Cedar City <span style="color:var(--orange-text); font-size:11px;">(by request)</span></a></li>
+          <li><a href="/handyman-mesquite-nv.html">Mesquite, NV <span style="color:var(--orange-text); font-size:11px;">(by request)</span></a></li>
         </ul>
       </div>
       <div class="footer-col">
@@ -650,6 +866,7 @@
     });
   }
 
+  // ---------- theme toggle (desktop button + mobile switch, kept in sync) ----------
   const themeToggleBtn = document.getElementById('themeToggle');
   const themeSwitchMobile = document.getElementById('themeSwitchMobile');
   function getCurrentTheme() {
@@ -670,6 +887,8 @@
     const initialLabel = themeToggleBtn.querySelector('.theme-toggle-label');
     if (initialLabel) initialLabel.textContent = getCurrentTheme() === 'light' ? 'Light Mode' : 'Dark Mode';
   }
+  // Sync the mobile switch to whatever the flash-prevention script in
+  // <head> already decided, before any click happens
   if (themeSwitchMobile) themeSwitchMobile.checked = (getCurrentTheme() === 'dark');
   if (themeToggleBtn) {
     themeToggleBtn.addEventListener('click', () => {
@@ -683,13 +902,23 @@
   }
 </script>
 <script>
+  // Registers the same no-op service worker the internal tools use --
+  // exists only to satisfy PWA installability checks in some browsers.
+  // It doesn't cache anything, so there's no risk of the stale-cache
+  // confusion this project has already been bitten by once before.
   if ('serviceWorker' in navigator) {
     window.addEventListener('load', () => {
       navigator.serviceWorker.register('/service-worker.js').catch(() => {});
     });
   }
 </script>
+
 <script>
+  // Editable phone/email + announcement banners -- same Supabase table
+  // and same fail-silent philosophy as index.html: if this fetch ever
+  // fails or times out, the static phone/email already in this page's
+  // HTML stays exactly as it is. No hours/FAQ/Terms editing on this
+  // page -- those don't exist here to begin with.
   (function () {
     const SITE_CONTENT_SUPABASE_URL = 'https://csvfqdjuobylgafgolho.supabase.co';
     const SITE_CONTENT_SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNzdmZxZGp1b2J5bGdhZmdvbGhvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODUzNTQ3MjcsImV4cCI6MjEwMDkzMDcyN30.6GlvK-DfXf2lppS1kciZtsl4wHOpZz_yKtwsS1lyjrs';
@@ -719,7 +948,7 @@
   })();
 </script>
 <script src="/site-motion.js?v=17fb5b611b" defer></script>
-<script src="/promo-banner.js?v=5d35f661aa" defer></script>
+<script src="/triage.js?v=61b78f0f3e" defer></script>
 <script src="/analytics-events.js?v=bdeda1c255" defer></script>
 </body>
 </html>
