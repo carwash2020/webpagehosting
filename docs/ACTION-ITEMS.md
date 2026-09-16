@@ -19,6 +19,20 @@ click a setting by hand.
    separate, larger feature decision, not a quick fix. Worth revisiting
    once the client-portal population is large enough that a single
    compromised password matters more. **Not yet done.**
+3. **Set up a Google Ads or Meta Pixel account** for retargeting. GA4
+   events are already firing (`lead_form_submitted`, phone-click events,
+   etc.) and ready to feed a remarketing audience the moment one exists
+   -- give me the conversion ID (`AW-...`) or Pixel ID once you have an
+   account and I'll wire up the actual tag/base code. **Not yet done
+   (no account exists to wire up).**
+4. **Google Business Profile** -- regular posts, Q&A seeding, fresh
+   photos, and review velocity there move the local 3-pack ranking more
+   than the website itself does for "near me" searches. Nothing in this
+   repo can act on it; it's a dashboard/account task.
+5. **Google Local Services Ads ("Google Guaranteed")** -- pay-per-lead,
+   usually the best ROI channel for handyman/appliance repair
+   specifically. Requires setting up and getting verified/background-
+   checked through Google's own LSA program, outside this repo.
 
 <!-- Add new manual action items above this line -->
 
@@ -154,6 +168,32 @@ reference:
 - **Scroll affordance on the quote date-picker** (`portal/quotes.html`
   `.date-row`) -- a trailing-edge gradient fade now shows only when
   there's more to scroll to, and hides once scrolled to the end.
+- **Lead-generation pass** (2026-09-15), from "how do we get more leads
+  / more traffic":
+  - **Service x city cross-links**: each of the 5 service pages
+    (`assembly-installation.html` and siblings) now has a real
+    `areas-links` block linking to all 7 city pages, with the service
+    name baked into the visible anchor text (e.g. "Plumbing Repairs in
+    Hurricane") -- targets long-tail "[service] [city]" searches that
+    previously had no on-page text at all, without creating 42 thin
+    near-duplicate pages (a doorway-page anti-pattern Google penalizes).
+  - **Speed-to-lead note** added to the homepage's lead form, reusing
+    the same honest "usually within a few hours" claim already used in
+    the chat panel, so it's consistent site-wide.
+  - **First-time-customer discount banner**: a dismissible 15%-off
+    banner (code `WELCOME15`) now populates `#siteBanner1`, a scaffold
+    every public page had declared from the start but that no script
+    had ever written into or styled. Staff apply the discount manually
+    via the existing "Discount label / amount" field already in the
+    invoice generator. Shown on the homepage, all 7 city pages, and all
+    5 service pages; dismissal is remembered via localStorage so it
+    doesn't nag a returning visitor.
+  - Blog post CTAs were checked and are already in good shape (every
+    real post already ends with a `.blog-cta` call-to-action) -- no
+    change needed there.
+  - Retargeting and Google Business Profile/Local Services Ads are
+    listed under "Manual action items" above -- they need an actual ad
+    account or dashboard access this repo doesn't have.
 
 <!-- Add new visual additions above this line -->
 
