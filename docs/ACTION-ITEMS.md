@@ -95,29 +95,28 @@ click a setting by hand.
    if that 7th review ever gets real text (or any future review does),
    send it over and it'll be added as a genuine 5th card.
 7. ~~Deploy the new `send-payment-reminder` edge function and run its
-   cron SQL~~ -- **done (2026-09-16).** Deployed via the Supabase MCP
-   tools now available to this session (an access path the item was
-   originally written before) and its daily cron job (`send-payment-
-   reminders-daily`, 15:00 UTC) registered directly against the
-   project. Reused the existing `send_push_service_role_key` vault
-   secret and `RESEND_API_KEY`/`LEAD_EMAIL_FROM`/`LEAD_EMAIL_TO`
-   project secrets -- both already configured, no new secret was
-   needed. **Redeployed again same day** during the security-audit
-   follow-up (PR #249) to carry a real fix into production: the version
-   deployed above had no auth check on incoming requests at all, letting
-   anyone with the public anon key trigger real client-facing emails on
-   demand. Confirmed via `mcp__Supabase__get_edge_function` that the live
-   source lacked the check before redeploying, and that the redeployed
-   source (matching what merged into `main`) has it. Not live-fired as
-   part of either deploy since doing so would email real clients with
-   real overdue invoices; its first real run is the 15:00 UTC cron.
+   cron SQL~~ -- **deploy itself done** (function live at version 5,
+   `send-payment-reminders-daily` cron active, 15:00 UTC daily). **But
+   verified broken (2026-09-16, checked directly)**: every real
+   cron-triggered run 401s and sends nothing -- the cron's vault secret
+   doesn't match what the function's own strict auth check requires.
+   Not a "needs deploy access" item anymore; now a "needs the real
+   `service_role` key from the Supabase dashboard" item -- see
+   `docs/specialist-logs/bugfix.md`'s 2026-09-16 entry for the full
+   root cause and what to do with the key once it's in hand.
 8. ~~Deploy the new `send-quote-followup` edge function and run its
-   cron SQL~~ -- **done (2026-09-16).** Same deploy path as item 7,
-   daily cron job (`send-quote-followup-daily`, 16:00 UTC) registered,
-   and same same-day redeploy to carry the identical auth-check security
-   fix into production. The updated `send-push` (the new "Review
-   Follow-Up Due" push check) needed no separate deploy step -- it's the
-   same already-deployed function, already current on this branch.
+   cron SQL~~ -- **same story as #7, same real cause, same fix
+   needed.** Function live (version 2), `send-quote-followup-daily`
+   cron active at 16:00 UTC, also 401ing on every real run. `send-push`
+   itself (the "Review Follow-Up Due" check) is unaffected -- that one
+   has no exact-match auth check and has been firing fine hourly on the
+   same vault secret; only these two newer functions added the
+   stricter check and are the ones actually blocked by it.
+9. **Get the real `service_role` key from Supabase (Project Settings ->
+   API) and update the `send_push_service_role_key` vault secret** (or
+   create a new dedicated one and repoint the two crons above) --
+   the one manual step actually blocking items 7 and 8 from working.
+   Everything else about both is done and tested.
 
 <!-- Add new manual action items above this line -->
 
