@@ -55,4 +55,32 @@ live data, and handed off rather than fixed here:
    logic should surface a visible "reconnecting" state instead of only
    a background retry.
 
+3. **Full test suite (`npm test`) shows intermittent, non-deterministic
+   failures under `--test-concurrency=1` that don't reproduce when the
+   same test files are run in isolation.** Found 2026-09-16 while
+   verifying an unrelated visual fix (our-work.html gallery,
+   styles.css). Two clean, non-overlapping full-suite runs on the same
+   branch each produced the same 4 failing test names
+   (`tests/content-quality/text-audit.test.js`'s `checkButtonHandlers`
+   test, `tests/scripts/onclick-xss-consistency-rule.test.js`'s
+   consistency test, and two others with the identical symptom) --
+   all failing with `check-consistency.js` (run as a real subprocess
+   against the live repo) reporting a `service-worker.js` precache-
+   fingerprint mismatch. The suspicious part: the "recorded" and "real"
+   hash values in the error differed between the two runs, and running
+   any of the 4 failing test files alone (not as part of the full
+   suite) passes clean every time. A control run of the exact same
+   full suite against an untouched clone of `main` passed 2193/2193
+   with zero failures. So this isn't a stable regression from any
+   particular content change -- it looks like an ordering/timing
+   sensitivity between test files that each spawn `check-consistency.js`
+   as a subprocess and/or temporarily mutate a precached file
+   (`service-worker.js`'s own self-check tests, `tools/dev-tools.html`'s
+   fixture-injection tests) without full isolation between files. Worth
+   a closer look at whether any of these tests' cleanup relies on
+   something other than a synchronous `fs.writeFileSync` in a `finally`
+   block, and whether running with `--test-concurrency=1` truly
+   guarantees full teardown between separate test *files* (not just
+   subtests within one file).
+
 <!-- Add new entries above this line -->
