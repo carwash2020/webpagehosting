@@ -1585,3 +1585,26 @@ This doesn't touch the recurring-template-to-job step itself (unchanged
 -- still a click on "Create Job"), only the second half of that
 workflow: template -> job was already one click, job -> invoice is now
 one click too.
+
+## What changed, 2026-09-16 (later the same day) -- fixed a false "invoice overdue" push caused by a sync-merge inconsistency
+
+A real bug flagged by a business-health report pass (see
+`docs/specialist-logs/bugfix.md` for the full root-cause writeup): an
+invoice that was paid in full still showed `paid: false`, and fired a
+real overdue-payment push to Steve. The cause wasn't a missing write
+path -- `tools/workspace.html`'s `togglePaid()` already keeps `paid` and
+`paidAmount` in sync on every edit -- it was `tools/sync.js`'s per-field
+3-way merge, which can independently resolve `paidAmount` from one
+device's edit and `paid` from a different (stale) device's edit,
+leaving the merged invoice internally inconsistent even though each
+field's own merge was individually defensible.
+
+Fixed with a new `deriveInvoicePaid()` helper in `sync.js` that
+recomputes `paid` from `paidAmount`/`total` (same whole-cents comparison
+`invoicePaymentStatus()` already used for display) -- called from
+`mirrorInvoiceToRelational()` (what the overdue-push check actually
+reads) and from a new post-merge normalization pass on `th_invoices` in
+`applySyncData()`, so neither the relational mirror nor a device's own
+local copy can be left holding the inconsistent state again. New
+regression test in `tests/sync/applysyncdata-malformed-json.test.js`
+reproduces the exact merge-conflict shape.

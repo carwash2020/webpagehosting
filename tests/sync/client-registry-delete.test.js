@@ -129,7 +129,8 @@ test('a stale device pushing back its old copy of a deleted client does not resu
   const syncConflictLogMaxMatch = syncJs.match(/const SYNC_CONFLICT_LOG_MAX = \d+;/);
   const mergeSyncConflictsMatch = syncJs.match(/function mergeSyncConflicts[\s\S]*?\n\}/);
   const applySyncDataMatch = syncJs.match(/function applySyncData[\s\S]*?\n\}/);
-  assert.ok(syncDataKeysMatch && mergeKeyFieldMatch && deepEqualValueMatch && mergeRecordArraysMatch && mergePartsMatch && mergeClientErrorLogMatch && syncBaseKeyMatch && loadSyncBaseMatch && saveSyncBaseForKeyMatch && syncConflictLogMaxMatch && mergeSyncConflictsMatch && applySyncDataMatch, 'one or more required sync.js functions not found');
+  const deriveInvoicePaidMatch = syncJs.match(/function deriveInvoicePaid[\s\S]*?\n\}/);
+  assert.ok(syncDataKeysMatch && mergeKeyFieldMatch && deepEqualValueMatch && mergeRecordArraysMatch && mergePartsMatch && mergeClientErrorLogMatch && syncBaseKeyMatch && loadSyncBaseMatch && saveSyncBaseForKeyMatch && syncConflictLogMaxMatch && mergeSyncConflictsMatch && applySyncDataMatch && deriveInvoicePaidMatch, 'one or more required sync.js functions not found');
   assert.match(syncDataKeysMatch[0], /th_client_tombstones/, 'th_client_tombstones should be a synced key');
 
   const window = loadDevTools([{ id: 'c1', name: 'Sarah Miller' }]);
@@ -138,7 +139,7 @@ test('a stale device pushing back its old copy of a deleted client does not resu
   const combined = [
     syncDataKeysMatch[0], mergeKeyFieldMatch[0], deepEqualValueMatch[0], mergeRecordArraysMatch[0],
     mergePartsMatch[0], mergeClientErrorLogMatch[0], syncBaseKeyMatch[0], loadSyncBaseMatch[0],
-    saveSyncBaseForKeyMatch[0], syncConflictLogMaxMatch[0], mergeSyncConflictsMatch[0], applySyncDataMatch[0],
+    saveSyncBaseForKeyMatch[0], syncConflictLogMaxMatch[0], mergeSyncConflictsMatch[0], applySyncDataMatch[0], deriveInvoicePaidMatch[0],
   ].join('\n');
   window.eval(combined);
 
@@ -188,7 +189,8 @@ test('a stale device pushing back its old copy of a deleted job does not resurre
   const syncConflictLogMaxMatch = syncJs.match(/const SYNC_CONFLICT_LOG_MAX = \d+;/);
   const mergeSyncConflictsMatch = syncJs.match(/function mergeSyncConflicts[\s\S]*?\n\}/);
   const applySyncDataMatch = syncJs.match(/function applySyncData[\s\S]*?\n\}/);
-  assert.ok(syncDataKeysMatch && mergeKeyFieldMatch && deepEqualValueMatch && mergeRecordArraysMatch && mergePartsMatch && mergeClientErrorLogMatch && syncBaseKeyMatch && loadSyncBaseMatch && saveSyncBaseForKeyMatch && syncConflictLogMaxMatch && mergeSyncConflictsMatch && applySyncDataMatch, 'one or more required sync.js functions not found');
+  const deriveInvoicePaidMatch = syncJs.match(/function deriveInvoicePaid[\s\S]*?\n\}/);
+  assert.ok(syncDataKeysMatch && mergeKeyFieldMatch && deepEqualValueMatch && mergeRecordArraysMatch && mergePartsMatch && mergeClientErrorLogMatch && syncBaseKeyMatch && loadSyncBaseMatch && saveSyncBaseForKeyMatch && syncConflictLogMaxMatch && mergeSyncConflictsMatch && applySyncDataMatch && deriveInvoicePaidMatch, 'one or more required sync.js functions not found');
   assert.match(syncDataKeysMatch[0], /th_job_tombstones/, 'th_job_tombstones should be a synced key');
 
   const window = loadDevTools([]);
@@ -197,7 +199,7 @@ test('a stale device pushing back its old copy of a deleted job does not resurre
   const combined = [
     syncDataKeysMatch[0], mergeKeyFieldMatch[0], deepEqualValueMatch[0], mergeRecordArraysMatch[0],
     mergePartsMatch[0], mergeClientErrorLogMatch[0], syncBaseKeyMatch[0], loadSyncBaseMatch[0],
-    saveSyncBaseForKeyMatch[0], syncConflictLogMaxMatch[0], mergeSyncConflictsMatch[0], applySyncDataMatch[0],
+    saveSyncBaseForKeyMatch[0], syncConflictLogMaxMatch[0], mergeSyncConflictsMatch[0], applySyncDataMatch[0], deriveInvoicePaidMatch[0],
   ].join('\n');
   window.eval(combined);
 

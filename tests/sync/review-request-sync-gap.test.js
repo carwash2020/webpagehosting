@@ -58,17 +58,18 @@ function loadSyncModule() {
   const syncConflictLogMaxMatch = SYNC_JS.match(/const SYNC_CONFLICT_LOG_MAX = \d+;/);
   const mergeSyncConflictsMatch = SYNC_JS.match(/function mergeSyncConflicts[\s\S]*?\n\}/);
   const applySyncDataMatch = SYNC_JS.match(/function applySyncData[\s\S]*?\n\}/);
+  const deriveInvoicePaidMatch = SYNC_JS.match(/function deriveInvoicePaid[\s\S]*?\n\}/);
   assert.ok(
     syncDataKeysMatch && mergeKeyFieldMatch && deepEqualValueMatch && mergeRecordArraysMatch &&
     mergePartsMatch && mergeClientErrorLogMatch && mergeGraveyardMatch && syncBaseKeyMatch &&
-    loadSyncBaseMatch && saveSyncBaseForKeyMatch && syncConflictLogMaxMatch && mergeSyncConflictsMatch && applySyncDataMatch,
+    loadSyncBaseMatch && saveSyncBaseForKeyMatch && syncConflictLogMaxMatch && mergeSyncConflictsMatch && applySyncDataMatch && deriveInvoicePaidMatch,
     'one or more required sync.js pieces not found'
   );
   const combined = [
     syncDataKeysMatch[0], mergeKeyFieldMatch[0], deepEqualValueMatch[0], mergeRecordArraysMatch[0],
     mergePartsMatch[0], mergeClientErrorLogMatch[0], mergeGraveyardMatch[0], syncBaseKeyMatch[0],
     loadSyncBaseMatch[0], saveSyncBaseForKeyMatch[0], syncConflictLogMaxMatch[0], mergeSyncConflictsMatch[0],
-    applySyncDataMatch[0],
+    applySyncDataMatch[0], deriveInvoicePaidMatch[0],
   ].join('\n');
   window.eval(combined);
   return window;
