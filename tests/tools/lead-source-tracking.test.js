@@ -24,14 +24,14 @@ test('the sql migration adds source to both th_leads and th_bookings', () => {
 
 test('index.html\'s lead form has a "How did you hear about us?" field, sent to th_leads', () => {
   assert.match(indexHtml, /<select id="source" name="source">/);
-  const fnMatch = indexHtml.match(/fetch\(LEADS_SUPABASE_URL \+ '\/rest\/v1\/th_leads\?on_conflict=client_request_id', \{[\s\S]*?\n\s*\}\);/);
+  const fnMatch = indexHtml.match(/fetch\(LEADS_SUPABASE_URL \+ '\/rest\/v1\/th_leads\?on_conflict=client_request_id', \{[\s\S]*?\n\s*\.then\(\(response\)/);
   assert.ok(fnMatch, 'expected to isolate the th_leads insert body');
   assert.match(fnMatch[0], /source: formData\.get\('source'\) \|\| null,/);
 });
 
 test('booking.html\'s booking form has the same field, sent to th_bookings', () => {
   assert.match(bookingHtml, /<select id="bSource" name="source">/);
-  const fnMatch = bookingHtml.match(/fetch\(SUPABASE_URL \+ '\/rest\/v1\/th_bookings', \{[\s\S]*?\n\s*\}\),/);
+  const fnMatch = bookingHtml.match(/fetch\(SUPABASE_URL \+ '\/rest\/v1\/th_bookings', \{[\s\S]*?\n\s*\.then\(function \(res\)/);
   assert.ok(fnMatch, 'expected to isolate the th_bookings insert body');
   assert.match(fnMatch[0], /source: formData\.get\('source'\) \|\| null,/);
 });

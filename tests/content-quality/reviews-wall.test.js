@@ -9,6 +9,16 @@
 // carousel (one review visible at a time behind 9px dots) to a static
 // two-column wall showing all 7 at once. Renamed from
 // reviews-carousel.test.js.
+//
+// Corrected 2026-09-16, on a real review audit against the actual
+// Google Business Profile: 4 of the original 7 quotes didn't trace
+// back to a real, verifiable Google review (Google shows 6 reviews
+// total, 2 of them star-only with no written text). Removed the 3
+// unverifiable quotes outright (no source could be confirmed) and
+// swapped the 4th for Jilleen Walker's real review text, which had
+// never been added to the site. Wall is now 4 cards, all verified
+// against the live Google listing; the "show 3 more" disclosure was
+// removed since nothing was left to hide behind it.
 
 const { test } = require('node:test');
 const assert = require('node:assert/strict');
@@ -25,6 +35,7 @@ const LANDING_PAGES = [
   'handyman-leeds-ut.html',
   'handyman-mesquite-nv.html',
   'handyman-santa-clara-ivins-ut.html',
+  'handyman-st-george-ut.html',
   'handyman-washington-city-ut.html',
 ];
 
@@ -35,7 +46,7 @@ function schemaOf(html) {
 
 test('the homepage wall has one review-card per review actually written', () => {
   const cardCount = (INDEX.match(/class="review-card"/g) || []).length;
-  assert.equal(cardCount, 7);
+  assert.equal(cardCount, 4);
 });
 
 test("the homepage's aggregateRating.reviewCount matches the number of cards actually shown", () => {
@@ -53,7 +64,7 @@ test("the homepage's aggregateRating.reviewCount matches the number of cards act
 // visible on-page content, so claiming a rating with nothing on the
 // page to back it is a real structured-data violation, not just
 // unnecessary duplication. The homepage keeps its own aggregateRating,
-// since it's the one page with the actual 7-review wall.
+// since it's the one page with the actual review wall.
 test('landing pages do not claim an aggregateRating they have no visible reviews to back', () => {
   for (const page of LANDING_PAGES) {
     const html = fs.readFileSync(repo(page), 'utf8');
@@ -67,6 +78,11 @@ test('the three newest reviews are present verbatim, newest first', () => {
   assert.equal(quotes[0], 'Awesome guy to work with!');
   assert.match(quotes[1], /Steven was wonderful! Got our washer fixed quickly/);
   assert.match(quotes[2], /Best experience ever with a handyman/);
+});
+
+test('the 4th review (Jilleen Walker, added 2026-09-16) is present verbatim', () => {
+  const quotes = [...INDEX.matchAll(/<p class="review-quote">"([^"]*)"<\/p>/g)].map((m) => m[1]);
+  assert.match(quotes[3], /Steve such a handsome guy very fast and efficient/);
 });
 
 test('no carousel machinery (slider track, dots, autoplay, swipe) remains -- this is a static wall now', () => {

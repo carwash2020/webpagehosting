@@ -34,6 +34,7 @@ const CITY_PAGES = {
   'handyman-washington-city-ut.html': { variant: 'is-standard', text: 'Serving Washington City' },
   'handyman-la-verkin-ut.html': { variant: 'is-standard', text: 'Serving La Verkin' },
   'handyman-leeds-ut.html': { variant: 'is-standard', text: 'Serving Leeds' },
+  'handyman-st-george-ut.html': { variant: 'is-standard', text: 'Home Base &middot; St. George' },
 };
 
 test('no marketing page carries the generic ALL-CAPS eyebrow label anymore', () => {
@@ -78,7 +79,7 @@ test('the "WHAT WE FIX" eyebrow and the weaker "Services" h2 were merged into on
 test('review attribution reads as a natural phrase, not a middle-dot-joined tag', () => {
   assert.doesNotMatch(INDEX, /Verified Customer<\/strong> &middot;/);
   const count = (INDEX.match(/<strong>Verified Customer<\/strong> on Google<\/p>/g) || []).length;
-  assert.equal(count, 7, 'expected all 7 review-meta lines to use the same natural phrasing');
+  assert.equal(count, 4, 'expected all 4 review-meta lines to use the same natural phrasing');
 });
 
 test('the footer LLC line reads as real sentences, not a middle-dot-joined tag', () => {

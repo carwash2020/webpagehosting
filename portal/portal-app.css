@@ -495,3 +495,37 @@ body.portal-page {
   flex: 1;
   justify-content: center;
 }
+
+/* Toast notifications (portal-app.js showToast()) -- added 2026-09-15
+   as a themed replacement for the raw window.alert() calls still on
+   dashboard.html/quotes.html/settings.html's error and validation
+   paths. Same class names, layout and timing as the internal tool
+   suite's own .th-toast (tools/styles-tools.css) -- one convention
+   for both surfaces, not two -- with the same bottom-nav clearance
+   fix (the portal's own fixed .portal-nav is the same ~60px height
+   plus safe-area inset that bit the tool suite's bottom bar). */
+.th-toast-container {
+  position: fixed; left: 50%; bottom: 24px; transform: translateX(-50%);
+  z-index: 10001; display: flex; flex-direction: column; gap: 8px; align-items: center;
+  pointer-events: none; width: 100%; padding: 0 20px; box-sizing: border-box;
+  transition: bottom .18s ease;
+}
+body.portal-page .th-toast-container {
+  bottom: calc(60px + env(safe-area-inset-bottom, 0px) + 16px);
+}
+.th-toast {
+  pointer-events: auto; cursor: pointer;
+  display: flex; align-items: center; gap: 10px;
+  background: var(--bg-panel); border: 1px solid var(--border); border-left: 3px solid var(--orange);
+  color: var(--white); font-size: 14px; font-family: inherit; line-height: 1.4;
+  padding: 12px 18px; border-radius: 8px; max-width: 420px; width: max-content;
+  box-shadow: var(--shadow-hover, 0 6px 20px rgba(0,0,0,0.35));
+  opacity: 0; transform: translateY(8px); transition: opacity .18s ease, transform .18s ease;
+}
+.th-toast .th-icon { width: 17px; height: 17px; flex-shrink: 0; color: #6fcf97; }
+.th-toast.is-error .th-icon { color: #e0807a; }
+.th-toast.is-shown { opacity: 1; transform: translateY(0); }
+.th-toast.is-error { border-left-color: #e05252; }
+@media (prefers-reduced-motion: reduce) {
+  .th-toast { transition: none; }
+}

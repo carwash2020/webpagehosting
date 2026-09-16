@@ -18,6 +18,25 @@
 </script>
 
 <!-- Google tag (gtag.js) -->
+<script>
+  // Google Consent Mode v2: default analytics storage to denied unless
+  // this visitor already made a choice via the cookie banner
+  // (cookie-consent.js), so no GA4 cookie is set before that happens.
+  (function () {
+    var consent = 'denied';
+    try {
+      if (localStorage.getItem('th-cookie-consent') === 'granted') consent = 'granted';
+    } catch (e) {}
+    window.dataLayer = window.dataLayer || [];
+    window.gtag = window.gtag || function () { dataLayer.push(arguments); };
+    gtag('consent', 'default', {
+      'analytics_storage': consent,
+      'ad_storage': 'denied',
+      'ad_user_data': 'denied',
+      'ad_personalization': 'denied'
+    });
+  })();
+</script>
 <script async src="https://www.googletagmanager.com/gtag/js?id=G-TMJJMGY2DQ"></script>
 <script>
   window.dataLayer = window.dataLayer || [];
@@ -62,7 +81,7 @@
 <link rel="preconnect" href="https://csvfqdjuobylgafgolho.supabase.co">
 <link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Anton&family=Archivo:wght@400..700&family=Newsreader:ital,opsz,wght@0,6..72,300..700;1,6..72,300..600&family=Oswald:wght@200..700&display=swap" onload="this.onload=null;this.rel='stylesheet'">
 <noscript><link href="https://fonts.googleapis.com/css2?family=Anton&family=Archivo:wght@400..700&family=Newsreader:ital,opsz,wght@0,6..72,300..700;1,6..72,300..600&family=Oswald:wght@200..700&display=swap" rel="stylesheet"></noscript>
-<link rel="stylesheet" href="styles.css?v=42101b97c4">
+<link rel="stylesheet" href="styles.css?v=64b753a45a">
 <!-- Improvement roadmap (2026-09-09), tier 1: the hero background is a
      CSS background-image (see .hero in styles.css), so the browser
      doesn't discover it until CSS is parsed -- likely this page's LCP
@@ -108,7 +127,7 @@
   "aggregateRating": {
     "@type": "AggregateRating",
     "ratingValue": "5.0",
-    "reviewCount": "7"
+    "reviewCount": "4"
   },
   "openingHoursSpecification": [
     {
@@ -155,42 +174,10 @@
     },
     {
       "@type": "Question",
-      "name": "How far in advance do I need to book?",
-      "acceptedAnswer": {
-        "@type": "Answer",
-        "text": "Availability can vary, so booking at least 7 days out is preferred when possible. If something can't wait, call or text (435) 414-1667 directly instead of using the online scheduling options."
-      }
-    },
-    {
-      "@type": "Question",
-      "name": "What areas do you serve?",
-      "acceptedAnswer": {
-        "@type": "Answer",
-        "text": "St. George, Hurricane, Washington, Santa Clara, and the surrounding Southern Utah area. We can also take on larger jobs in Cedar City or Mesquite, NV by request, just contact us to check availability and scheduling."
-      }
-    },
-    {
-      "@type": "Question",
-      "name": "Do you guarantee your work?",
-      "acceptedAnswer": {
-        "@type": "Answer",
-        "text": "Yes, work is guaranteed. Parts used are covered under whatever warranty the manufacturer sets, which can vary by part."
-      }
-    },
-    {
-      "@type": "Question",
       "name": "What payment methods do you accept?",
       "acceptedAnswer": {
         "@type": "Answer",
         "text": "Cash, check, Venmo, and Cash App are all accepted, along with credit and debit cards via a secure Stripe invoice."
-      }
-    },
-    {
-      "@type": "Question",
-      "name": "What's your cancellation policy?",
-      "acceptedAnswer": {
-        "@type": "Answer",
-        "text": "Plans change, and that's okay, just try to give as much notice as possible. A $50 cancellation fee may apply if a scheduled visit is cancelled the same day as the appointment."
       }
     },
     {
@@ -203,18 +190,26 @@
     },
     {
       "@type": "Question",
-      "name": "What if the job I need isn't listed in your services?",
+      "name": "Is a deposit required to book?",
       "acceptedAnswer": {
         "@type": "Answer",
-        "text": "Reach out anyway. There's a good chance it can still be handled, and if not, you'll get an honest answer and pointed in the right direction."
+        "text": "No. Booking online never asks for payment information -- you're only charged after the visit, based on the final invoice."
       }
     },
     {
       "@type": "Question",
-      "name": "Do I need to be home while the work is being done?",
+      "name": "Do you have a referral program?",
       "acceptedAnswer": {
         "@type": "Answer",
-        "text": "For most jobs, yes, especially anything involving appliance diagnostics or work inside the home. For simple exterior or pre-arranged jobs, other arrangements can sometimes be made. Just ask when scheduling."
+        "text": "Yes. Refer someone and you'll get a $25 credit toward your next service once their job is complete and paid. Just have them mention your name when they book, or ask about it when scheduling."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "How far in advance do I need to book?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Availability can vary, so booking at least 7 days out is preferred when possible. If something can't wait, call or text (435) 414-1667 directly instead of using the online scheduling options."
       }
     },
     {
@@ -243,10 +238,42 @@
     },
     {
       "@type": "Question",
-      "name": "Is a deposit required to book?",
+      "name": "What areas do you serve?",
       "acceptedAnswer": {
         "@type": "Answer",
-        "text": "No. Booking online never asks for payment information -- you're only charged after the visit, based on the final invoice."
+        "text": "St. George, Hurricane, Washington, Santa Clara, and the surrounding Southern Utah area. We can also take on larger jobs in Cedar City or Mesquite, NV by request, just contact us to check availability and scheduling."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "What if the job I need isn't listed in your services?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Reach out anyway. There's a good chance it can still be handled, and if not, you'll get an honest answer and pointed in the right direction."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "Do you guarantee your work?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Yes, work is guaranteed. Parts used are covered under whatever warranty the manufacturer sets, which can vary by part."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "What's your cancellation policy?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Plans change, and that's okay, just try to give as much notice as possible. A $50 cancellation fee may apply if a scheduled visit is cancelled the same day as the appointment."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "Do I need to be home while the work is being done?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "For most jobs, yes, especially anything involving appliance diagnostics or work inside the home. For simple exterior or pre-arranged jobs, other arrangements can sometimes be made. Just ask when scheduling."
       }
     },
     {
@@ -256,18 +283,12 @@
         "@type": "Answer",
         "text": "Please keep pets secured during the visit. It keeps them safe and makes it easier to work around tools, open doors, and appliances."
       }
-    },
-    {
-      "@type": "Question",
-      "name": "Do you have a referral program?",
-      "acceptedAnswer": {
-        "@type": "Answer",
-        "text": "Yes. Refer someone and you'll get a $25 credit toward your next service once their job is complete and paid. Just have them mention your name when they book, or ask about it when scheduling."
-      }
     }
   ]
 }
 </script>
+<script src="/cookie-consent.js" defer></script>
+<script src="/utm-tracking.js?v=5aa2d867e3" defer></script>
 </head>
 <body class="has-blueprint-bg">
 <div class="bg-blueprint" aria-hidden="true"></div>
@@ -308,6 +329,7 @@
       <li class="nav-dropdown">
         <a href="#areas">Areas</a>
         <ul class="nav-dropdown-menu">
+          <li><a href="/handyman-st-george-ut.html">St. George</a></li>
           <li><a href="/handyman-washington-city-ut.html">Washington City</a></li>
           <li><a href="/handyman-hurricane-ut.html">Hurricane</a></li>
           <li><a href="/handyman-santa-clara-ivins-ut.html">Santa Clara &amp; Ivins</a></li>
@@ -353,6 +375,7 @@
     <a href="#about">About</a>
     <a href="#areas">Areas</a>
     <ul class="mobile-areas-sublist">
+      <li><a href="/handyman-st-george-ut.html">St. George</a></li>
       <li><a href="/handyman-washington-city-ut.html">Washington City</a></li>
       <li><a href="/handyman-hurricane-ut.html">Hurricane</a></li>
       <li><a href="/handyman-santa-clara-ivins-ut.html">Santa Clara &amp; Ivins</a></li>
@@ -420,11 +443,11 @@
           <p class="stat-label">Average Rating</p>
         </div>
         <div class="stat-item">
-          <p class="stat-number"><span class="stat-count" data-count-to="7">0</span></p>
+          <p class="stat-number"><span class="stat-count" data-count-to="4">0</span></p>
           <p class="stat-label">Real 5-Star Reviews</p>
         </div>
         <div class="stat-item">
-          <p class="stat-number"><span class="stat-count" data-count-to="8">0</span></p>
+          <p class="stat-number"><span class="stat-count" data-count-to="9">0</span></p>
           <p class="stat-label">Southern Utah Communities Served</p>
         </div>
         <div class="stat-item stat-item-badge">
@@ -959,7 +982,7 @@
                 <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01z"/></svg>
                 <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01z"/></svg>
               </div>
-              <p class="review-quote">"Called in the morning and was able to get same day service on a washer repair at our rental. Friendly, fast, and affordable. Will definitely be using them again for any future needs, as well as referring them to my real estate clients in need. Called a second time for an ice maker repair on the same rental and again, fast and affordable."</p>
+              <p class="review-quote">"Steve such a handsome guy very fast and efficient with the work he did on a few appliances in my home. Such a very friendly guy. And don't forget his pricing top notch and very affordable. Will definitely have him come back for any issues I may have"</p>
               <div class="review-attribution">
                 <span class="review-avatar" aria-hidden="true"><svg viewBox="0 0 48 48"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/><path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/></svg></span>
                 <p class="review-meta"><strong>Verified Customer</strong> on Google</p>
@@ -967,67 +990,6 @@
             </div>
 
       </div>
-
-      <!-- Regression-recovery fix (2026-09-08): this wall alone
-           accounted for +779px of growth during the improvement session
-           (measured directly, 717px -> 1,496px, more than doubling) --
-           short quotes were also stretching to match the tallest card
-           in their grid row. align-items:start above fixes the
-           stretching; the last 3 of 7 cards move into a collapsed
-           disclosure, closed by default, so only 4 show up front. All
-           7 stay genuinely on the page (not just linked out to Google),
-           so the aggregateRating schema's reviewCount can still honestly
-           claim 7 -- see reviews-wall.test.js's own note on why that
-           count has to match real visible content. -->
-      <details class="reviews-toggle">
-        <summary>Show 3 more reviews</summary>
-        <div class="reviews-wall reviews-wall-more">
-            <div class="review-card" data-reveal>
-              <div class="review-stars">
-                <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01z"/></svg>
-                <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01z"/></svg>
-                <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01z"/></svg>
-                <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01z"/></svg>
-                <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01z"/></svg>
-              </div>
-              <p class="review-quote">"On time and trustworthy. Honest and ethical in providing estimates, and work is done with proficiency and high quality. Friendly and engaging personality. Will utilize this service again."</p>
-              <div class="review-attribution">
-                <span class="review-avatar" aria-hidden="true"><svg viewBox="0 0 48 48"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/><path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/></svg></span>
-                <p class="review-meta"><strong>Verified Customer</strong> on Google</p>
-              </div>
-            </div>
-
-            <div class="review-card" data-reveal>
-              <div class="review-stars">
-                <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01z"/></svg>
-                <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01z"/></svg>
-                <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01z"/></svg>
-                <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01z"/></svg>
-                <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01z"/></svg>
-              </div>
-              <p class="review-quote">"Professional, fair pricing, great communication. Will do business again."</p>
-              <div class="review-attribution">
-                <span class="review-avatar" aria-hidden="true"><svg viewBox="0 0 48 48"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/><path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/></svg></span>
-                <p class="review-meta"><strong>Verified Customer</strong> on Google</p>
-              </div>
-            </div>
-
-            <div class="review-card" data-reveal>
-              <div class="review-stars">
-                <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01z"/></svg>
-                <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01z"/></svg>
-                <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01z"/></svg>
-                <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01z"/></svg>
-                <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01z"/></svg>
-              </div>
-              <p class="review-quote">"Excellent and speedy service."</p>
-              <div class="review-attribution">
-                <span class="review-avatar" aria-hidden="true"><svg viewBox="0 0 48 48"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/><path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/></svg></span>
-                <p class="review-meta"><strong>Verified Customer</strong> on Google</p>
-              </div>
-            </div>
-        </div>
-      </details>
 
       <p class="reviews-footer">See more on <a href="https://g.page/r/CVJ0Qr-SsDkgEAI/review" target="_blank" rel="noopener">Google</a> or <a href="https://www.yelp.com/biz/triple-h-enterprises-st-george" target="_blank" rel="noopener">Yelp</a>, or <a href="https://g.page/r/CVJ0Qr-SsDkgEAI/review" target="_blank" rel="noopener">leave your own review</a>.</p>
     </div>
@@ -1171,9 +1133,9 @@
 
 
       <div class="areas-links" data-reveal>
-        <span class="areas-link is-hub" data-city="st-george">
+        <a class="areas-link is-hub" data-city="st-george" href="/handyman-st-george-ut.html">
           <b>St. George</b><small>Home base</small>
-        </span>
+        </a>
         <a class="areas-link" data-city="washington-city" href="/handyman-washington-city-ut.html">
           <b>Washington City</b><small>Right next door</small>
         </a>
@@ -1446,7 +1408,7 @@
       <div class="footer-col">
         <h4>Service Areas</h4>
         <ul>
-          <li><a href="#areas">St. George</a></li>
+          <li><a href="/handyman-st-george-ut.html">St. George</a></li>
           <li><a href="/handyman-washington-city-ut.html">Washington City</a></li>
           <li><a href="/handyman-hurricane-ut.html">Hurricane</a></li>
           <li><a href="/handyman-santa-clara-ivins-ut.html">Santa Clara &amp; Ivins</a></li>
@@ -1497,6 +1459,7 @@
     <div class="footer-bottom">
       <span>&copy; <span id="year"></span> Triple H Enterprises LLC. All rights reserved.</span>
       <span>A registered Utah limited liability company. Reliable Service. Quality Work. Done Right.</span>
+      <span><a href="#" onclick="window.reopenCookiePreferences && window.reopenCookiePreferences(event)">Cookie Preferences</a></span>
     </div>
   </div>
 </footer>
@@ -1514,36 +1477,13 @@
     <h3 id="faqTitle">Frequently Asked Questions</h3>
     <p class="modal-intro">Answers to the questions that come up most.</p>
     <div class="faq-list" id="faqList">
+        <h3 class="faq-category">Pricing & Payment</h3>
         <div class="faq-item">
           <button type="button" class="faq-question">
             Do you offer estimates before starting work?
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>
           </button>
           <div class="faq-answer"><p>Pricing is set once the problem has been diagnosed. Some jobs can be estimated over the phone, but many issues need an in-person look before a firm price can be given. Either way, you'll know the cost before any work begins.</p></div>
-        </div>
-
-        <div class="faq-item">
-          <button type="button" class="faq-question">
-            How far in advance do I need to book?
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>
-          </button>
-          <div class="faq-answer"><p>Availability can vary, so booking at least 7 days out is preferred when possible. If something can't wait, call or text <span class="js-phone-text">(435) 414-1667</span> directly instead of using the online scheduling options.</p></div>
-        </div>
-
-        <div class="faq-item">
-          <button type="button" class="faq-question">
-            What areas do you serve?
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>
-          </button>
-          <div class="faq-answer"><p>St. George, Hurricane, Washington, Santa Clara, and the surrounding Southern Utah area. We can also take on larger jobs in Cedar City or Mesquite, NV by request, just contact us to check availability and scheduling.</p></div>
-        </div>
-
-        <div class="faq-item">
-          <button type="button" class="faq-question">
-            Do you guarantee your work?
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>
-          </button>
-          <div class="faq-answer"><p>Yes, work is guaranteed. Parts used are covered under whatever warranty the manufacturer sets, which can vary by part.</p></div>
         </div>
 
         <div class="faq-item">
@@ -1556,14 +1496,6 @@
 
         <div class="faq-item">
           <button type="button" class="faq-question">
-            What's your cancellation policy?
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>
-          </button>
-          <div class="faq-answer"><p>Plans change, and that's okay, just try to give as much notice as possible. A $50 cancellation fee may apply if a scheduled visit is cancelled the same day as the appointment.</p></div>
-        </div>
-
-        <div class="faq-item">
-          <button type="button" class="faq-question">
             Is there a trip fee?
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>
           </button>
@@ -1572,17 +1504,27 @@
 
         <div class="faq-item">
           <button type="button" class="faq-question">
-            What if the job I need isn't listed in your services?
+            Is a deposit required to book?
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>
           </button>
-          <div class="faq-answer"><p>Reach out anyway. There's a good chance it can still be handled, and if not, you'll get an honest answer and pointed in the right direction.</p></div>
+          <div class="faq-answer"><p>No. Booking online never asks for payment information &mdash; you're only charged after the visit, based on the final invoice.</p></div>
         </div>
+
         <div class="faq-item">
           <button type="button" class="faq-question">
-            Do I need to be home while the work is being done?
+            Do you have a referral program?
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>
           </button>
-          <div class="faq-answer"><p>For most jobs, yes, especially anything involving appliance diagnostics or work inside the home. For simple exterior or pre-arranged jobs, other arrangements can sometimes be made. Just ask when scheduling.</p></div>
+          <div class="faq-answer"><p>Yes. Refer someone and you'll get a $25 credit toward your next service once their job is complete and paid. Just have them mention your name when they book, or ask about it when scheduling.</p></div>
+        </div>
+
+        <h3 class="faq-category">Scheduling & Availability</h3>
+        <div class="faq-item">
+          <button type="button" class="faq-question">
+            How far in advance do I need to book?
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>
+          </button>
+          <div class="faq-answer"><p>Availability can vary, so booking at least 7 days out is preferred when possible. If something can't wait, call or text <span class="js-phone-text">(435) 414-1667</span> directly instead of using the online scheduling options.</p></div>
         </div>
 
         <div class="faq-item">
@@ -1609,12 +1551,46 @@
           <div class="faq-answer"><p>Whichever is easiest for you. Use "Book Instantly" to pick an open time slot, fill out the request form for something more detailed, or just call or text <span class="js-phone-text">(435) 414-1667</span> directly.</p></div>
         </div>
 
+        <h3 class="faq-category">Service Area & Coverage</h3>
         <div class="faq-item">
           <button type="button" class="faq-question">
-            Is a deposit required to book?
+            What areas do you serve?
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>
           </button>
-          <div class="faq-answer"><p>No. Booking online never asks for payment information &mdash; you're only charged after the visit, based on the final invoice.</p></div>
+          <div class="faq-answer"><p>St. George, Hurricane, Washington, Santa Clara, and the surrounding Southern Utah area. We can also take on larger jobs in Cedar City or Mesquite, NV by request, just contact us to check availability and scheduling.</p></div>
+        </div>
+
+        <div class="faq-item">
+          <button type="button" class="faq-question">
+            What if the job I need isn't listed in your services?
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>
+          </button>
+          <div class="faq-answer"><p>Reach out anyway. There's a good chance it can still be handled, and if not, you'll get an honest answer and pointed in the right direction.</p></div>
+        </div>
+
+        <h3 class="faq-category">Policies</h3>
+        <div class="faq-item">
+          <button type="button" class="faq-question">
+            Do you guarantee your work?
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>
+          </button>
+          <div class="faq-answer"><p>Yes, work is guaranteed. Parts used are covered under whatever warranty the manufacturer sets, which can vary by part.</p></div>
+        </div>
+
+        <div class="faq-item">
+          <button type="button" class="faq-question">
+            What's your cancellation policy?
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>
+          </button>
+          <div class="faq-answer"><p>Plans change, and that's okay, just try to give as much notice as possible. A $50 cancellation fee may apply if a scheduled visit is cancelled the same day as the appointment.</p></div>
+        </div>
+
+        <div class="faq-item">
+          <button type="button" class="faq-question">
+            Do I need to be home while the work is being done?
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>
+          </button>
+          <div class="faq-answer"><p>For most jobs, yes, especially anything involving appliance diagnostics or work inside the home. For simple exterior or pre-arranged jobs, other arrangements can sometimes be made. Just ask when scheduling.</p></div>
         </div>
 
         <div class="faq-item">
@@ -1623,14 +1599,6 @@
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>
           </button>
           <div class="faq-answer"><p>Please keep pets secured during the visit. It keeps them safe and makes it easier to work around tools, open doors, and appliances.</p></div>
-        </div>
-
-        <div class="faq-item">
-          <button type="button" class="faq-question">
-            Do you have a referral program?
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>
-          </button>
-          <div class="faq-answer"><p>Yes. Refer someone and you'll get a $25 credit toward your next service once their job is complete and paid. Just have them mention your name when they book, or ask about it when scheduling.</p></div>
         </div>
       </div>
   </div>
@@ -1678,7 +1646,7 @@
         <p>Invoicing and payment processing are handled through Stripe. Online booking requests, contact form submissions, and other business data are processed and stored through Supabase, with outbound email delivered via Resend. Information submitted through these tools is subject to those providers' own privacy practices, and Triple H Enterprises is not responsible for outages or issues originating from these third-party services.</p>
 
         <h4>12. Cookies and Analytics</h4>
-        <p>This website uses Google Analytics to understand general site traffic, such as which pages are visited and how visitors arrive at the site. This may involve cookies or similar technologies. No personal information submitted through the contact or scheduling forms is shared with Google Analytics. Visitors who prefer to opt out of analytics tracking can do so using their browser's privacy settings or a browser extension such as Google's Analytics Opt-out add-on.</p>
+        <p>This website uses Google Analytics to understand general site traffic, such as which pages are visited and how visitors arrive at the site. This may involve cookies or similar technologies. No personal information submitted through the contact or scheduling forms is shared with Google Analytics. On a first visit, a cookie banner asks whether analytics cookies can be used; no analytics cookie is set until that choice is made, and it can be changed at any time using the "Cookie Preferences" link in the site footer. Visitors who prefer to opt out of analytics tracking can also do so using their browser's privacy settings or a browser extension such as Google's Analytics Opt-out add-on.</p>
 
         <h4>13. Missed Appointments</h4>
         <p>If no one is available at the scheduled time and access cannot be arranged, the visit may be treated as a same-day cancellation, and the $50 fee outlined above may apply.</p>
@@ -2458,7 +2426,7 @@
         'Authorization': 'Bearer ' + LEADS_SUPABASE_ANON_KEY,
         'Prefer': 'resolution=ignore-duplicates',
       },
-      body: JSON.stringify([{
+      body: JSON.stringify([Object.assign({
         name: formData.get('name'),
         phone: formData.get('phone'),
         email: formData.get('email'),
@@ -2469,7 +2437,12 @@
         referred_by: formData.get('referredBy') || null,
         source: formData.get('source') || null,
         client_request_id: getLeadRequestId(),
-      }]),
+        // Automatic UTM campaign attribution (utm-tracking.js), captured
+        // from whichever page this visitor actually landed on -- entirely
+        // separate from the manual "source" dropdown above. Never present
+        // (getStoredUtmParams returns null) if the visitor never arrived
+        // via a UTM-tagged link, or if that attribution has aged out.
+      }, (typeof window.getStoredUtmParams === 'function' && window.getStoredUtmParams()) || {})]),
     })
     .then((response) => {
       if (response.ok) {
@@ -2788,7 +2761,16 @@
         scrub.setAttribute('aria-valuetext', label(p));
       }
 
-      scrub.addEventListener('input', () => apply(scrub.value / 100));
+      // "Try me" hint (item 10, visual improvements pass): a pulsing glow
+      // on the thumb, added the same moment the auto-demo below first
+      // plays so a visitor who watches it finish still gets a beat to
+      // notice it's a real control, not just decoration. Removed the
+      // instant the visitor actually drags it themselves -- once used
+      // this session, it never pulses again on this page view.
+      scrub.addEventListener('input', () => {
+        apply(scrub.value / 100);
+        stage.classList.remove('is-hinting');
+      });
 
       // Show it working once, unprompted, so a visitor who never touches
       // the slider still sees the point. Runs only when it first comes
@@ -2810,6 +2792,7 @@
               apply(eased);
               scrub.value = Math.round(eased * 100);
               if (t < 1) window.requestAnimationFrame(step);
+              else stage.classList.add('is-hinting');
             })(start);
           });
         }, { threshold: 0.35 });
@@ -2829,7 +2812,13 @@
       function applyReveal(p) {
         revealStage.style.setProperty('--p', p.toFixed(4));
       }
-      revealScrub.addEventListener('input', () => applyReveal(revealScrub.value / 100));
+      // Same "try me" hint pattern as the teardown control above:
+      // pulses once the auto-demo finishes, stops for good the instant
+      // the visitor actually drags it themselves.
+      revealScrub.addEventListener('input', () => {
+        applyReveal(revealScrub.value / 100);
+        revealStage.classList.remove('is-hinting');
+      });
 
       if (!reduced && 'IntersectionObserver' in window) {
         let revealPlayed = false;
@@ -2848,6 +2837,7 @@
               applyReveal(p);
               revealScrub.value = Math.round(p * 100);
               if (t < 1) window.requestAnimationFrame(step);
+              else revealStage.classList.add('is-hinting');
             })(start);
           });
         }, { threshold: 0.4 });
@@ -3096,7 +3086,7 @@
       .catch(() => { /* static fallback content already shown is correct */ });
   })();
 </script>
-<script src="/business-hours.js?v=306f097e9e"></script>
+<script src="/business-hours.js?v=5296319b73"></script>
 <script>
   // ---------- seasonal care note ----------
   // One practical thing worth doing this month. Plain maintenance advice,

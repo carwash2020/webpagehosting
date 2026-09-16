@@ -10,6 +10,25 @@
     if (theme === 'light') document.documentElement.setAttribute('data-theme', 'light');
   })();
 </script>
+<script>
+  // Google Consent Mode v2: default analytics storage to denied unless
+  // this visitor already made a choice via the cookie banner
+  // (cookie-consent.js), so no GA4 cookie is set before that happens.
+  (function () {
+    var consent = 'denied';
+    try {
+      if (localStorage.getItem('th-cookie-consent') === 'granted') consent = 'granted';
+    } catch (e) {}
+    window.dataLayer = window.dataLayer || [];
+    window.gtag = window.gtag || function () { dataLayer.push(arguments); };
+    gtag('consent', 'default', {
+      'analytics_storage': consent,
+      'ad_storage': 'denied',
+      'ad_user_data': 'denied',
+      'ad_personalization': 'denied'
+    });
+  })();
+</script>
 <script async src="https://www.googletagmanager.com/gtag/js?id=G-TMJJMGY2DQ"></script>
 <script>
   window.dataLayer = window.dataLayer || [];
@@ -39,7 +58,7 @@
 <link rel="preconnect" href="https://csvfqdjuobylgafgolho.supabase.co">
 <link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Anton&family=Archivo:wght@400..700&family=Newsreader:ital,opsz,wght@0,6..72,300..700;1,6..72,300..600&family=Oswald:wght@200..700&display=swap" onload="this.onload=null;this.rel='stylesheet'">
 <noscript><link href="https://fonts.googleapis.com/css2?family=Anton&family=Archivo:wght@400..700&family=Newsreader:ital,opsz,wght@0,6..72,300..700;1,6..72,300..600&family=Oswald:wght@200..700&display=swap" rel="stylesheet"></noscript>
-<link rel="stylesheet" href="/styles.css?v=42101b97c4">
+<link rel="stylesheet" href="/styles.css?v=64b753a45a">
 <link rel="stylesheet" href="/blog/blog.css?v=202609071600">
 <script type="application/ld+json">
 {
@@ -52,6 +71,33 @@
   "datePublished": "2026-09-01"
 }
 </script>
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "BreadcrumbList",
+  "itemListElement": [
+    {
+      "@type": "ListItem",
+      "position": 1,
+      "name": "Home",
+      "item": "https://www.triplehenterprisesllc.biz/"
+    },
+    {
+      "@type": "ListItem",
+      "position": 2,
+      "name": "Blog",
+      "item": "https://www.triplehenterprisesllc.biz/blog/"
+    },
+    {
+      "@type": "ListItem",
+      "position": 3,
+      "name": "Appliance Repair or Replace? How We Actually Decide",
+      "item": "https://www.triplehenterprisesllc.biz/blog/appliance-repair-or-replace.html"
+    }
+  ]
+}
+</script>
+<script src="/cookie-consent.js" defer></script>
 </head>
 <body class="has-blueprint-bg">
 <div class="bg-blueprint" aria-hidden="true"></div>
@@ -160,10 +206,10 @@
     <p class="blog-meta" id="blogMeta"></p>
   </div>
 
-  <img class="blog-diagram" src="https://images.unsplash.com/photo-1722649938332-94fae46965a7?fm=jpg&q=80&w=1400&auto=format&fit=crop" alt="A kitchen with stainless steel appliances" loading="lazy">
+  <img class="blog-diagram" src="https://images.unsplash.com/photo-1685514126651-a0535b300589?fm=jpg&q=80&w=1400&auto=format&fit=crop" alt="A black range stove built into a kitchen" loading="lazy">
 
   <div class="blog-article">
-    <p>People ask us this on almost every appliance call, usually right after we've found the problem: "Is it even worth fixing?" It's a fair question, and the honest answer is that it depends on three things, not one. Age alone isn't usually the deciding factor people expect it to be.</p>
+    <p>People ask us this on almost every appliance call, usually right after we've found the problem: "Is it even worth fixing?" It's a fair question, and the honest answer is that it depends on three things, not one. Age alone isn't usually the deciding factor people expect it to be. We run this exact calculation all over our service area, from established neighborhoods in <a href="/handyman-washington-city-ut.html">Washington City</a>, where appliance repair and replacement is just part of the normal rhythm of an older home, to newer builds further out.</p>
 
     <h2 data-reveal>The 50% rule, with a real caveat</h2>
     <p>The common rule of thumb is: if the repair costs more than half of what a new unit costs, replace it. That's a reasonable starting point, but it misses something important: a $300 repair on a $1,200 refrigerator that's four years old is a very different decision than the same $300 repair on one that's fourteen years old and already had two other issues.</p>
@@ -250,6 +296,7 @@
     </div>
     <div class="footer-bottom">
       <p>&copy; <span id="year"></span> Triple H Enterprises LLC. All rights reserved.</p>
+      <span><a href="#" onclick="window.reopenCookiePreferences && window.reopenCookiePreferences(event)">Cookie Preferences</a></span>
     </div>
   </div>
 </footer>

@@ -12,6 +12,25 @@
 </script>
 
 <!-- Google tag (gtag.js) -->
+<script>
+  // Google Consent Mode v2: default analytics storage to denied unless
+  // this visitor already made a choice via the cookie banner
+  // (cookie-consent.js), so no GA4 cookie is set before that happens.
+  (function () {
+    var consent = 'denied';
+    try {
+      if (localStorage.getItem('th-cookie-consent') === 'granted') consent = 'granted';
+    } catch (e) {}
+    window.dataLayer = window.dataLayer || [];
+    window.gtag = window.gtag || function () { dataLayer.push(arguments); };
+    gtag('consent', 'default', {
+      'analytics_storage': consent,
+      'ad_storage': 'denied',
+      'ad_user_data': 'denied',
+      'ad_personalization': 'denied'
+    });
+  })();
+</script>
 <script async src="https://www.googletagmanager.com/gtag/js?id=G-TMJJMGY2DQ"></script>
 <script>
   window.dataLayer = window.dataLayer || [];
@@ -42,7 +61,7 @@
 <link rel="preconnect" href="https://csvfqdjuobylgafgolho.supabase.co">
 <link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Anton&family=Archivo:wght@400..700&family=Newsreader:ital,opsz,wght@0,6..72,300..700;1,6..72,300..600&family=Oswald:wght@200..700&display=swap" onload="this.onload=null;this.rel='stylesheet'">
 <noscript><link href="https://fonts.googleapis.com/css2?family=Anton&family=Archivo:wght@400..700&family=Newsreader:ital,opsz,wght@0,6..72,300..700;1,6..72,300..600&family=Oswald:wght@200..700&display=swap" rel="stylesheet"></noscript>
-<link rel="stylesheet" href="/styles.css?v=42101b97c4">
+<link rel="stylesheet" href="/styles.css?v=64b753a45a">
 <link rel="stylesheet" href="/blog/blog.css?v=202609071600">
 <script type="application/ld+json">
 {
@@ -102,6 +121,27 @@
   ]
 }
 </script>
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "BreadcrumbList",
+  "itemListElement": [
+    {
+      "@type": "ListItem",
+      "position": 1,
+      "name": "Home",
+      "item": "https://www.triplehenterprisesllc.biz/"
+    },
+    {
+      "@type": "ListItem",
+      "position": 2,
+      "name": "About",
+      "item": "https://www.triplehenterprisesllc.biz/about.html"
+    }
+  ]
+}
+</script>
+<script src="/cookie-consent.js" defer></script>
 </head>
 <body class="has-blueprint-bg">
 <div class="bg-blueprint" aria-hidden="true"></div>
@@ -298,7 +338,7 @@
                 <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01z"/></svg>
                 <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01z"/></svg>
               </div>
-              <p class="review-quote">"Called in the morning and was able to get same day service on a washer repair at our rental. Friendly, fast, and affordable. Will definitely be using them again for any future needs, as well as referring them to my real estate clients in need. Called a second time for an ice maker repair on the same rental and again, fast and affordable."</p>
+              <p class="review-quote">"Steve such a handsome guy very fast and efficient with the work he did on a few appliances in my home. Such a very friendly guy. And don't forget his pricing top notch and very affordable. Will definitely have him come back for any issues I may have"</p>
               <div class="review-attribution">
                 <span class="review-avatar" aria-hidden="true"><svg viewBox="0 0 48 48"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/><path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/></svg></span>
                 <p class="review-meta"><strong>Verified Customer</strong> on Google</p>
@@ -397,6 +437,7 @@
     </div>
     <div class="footer-bottom">
       <p>&copy; <span id="year"></span> Triple H Enterprises LLC. All rights reserved.</p>
+      <span><a href="#" onclick="window.reopenCookiePreferences && window.reopenCookiePreferences(event)">Cookie Preferences</a></span>
     </div>
   </div>
 </footer>

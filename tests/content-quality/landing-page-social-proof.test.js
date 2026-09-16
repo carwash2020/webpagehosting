@@ -36,6 +36,7 @@ const PAGES_WITH_SCHEDULE = [
   'handyman-leeds-ut.html',
   'handyman-mesquite-nv.html',
   'handyman-santa-clara-ivins-ut.html',
+  'handyman-st-george-ut.html',
   'handyman-washington-city-ut.html',
 ];
 
@@ -98,9 +99,9 @@ for (const name of PAGES_WITHOUT_SCHEDULE) {
   });
 }
 
-test('index.html is unaffected -- it already has the full reviews wall and was not part of this fix', () => {
+test('index.html has the full reviews wall, matching its aggregateRating reviewCount', () => {
   const html = read('index.html');
   assert.match(html, /<section id="reviews">/);
   const cardCount = (html.match(/<div class="review-card" data-reveal>/g) || []).length;
-  assert.equal(cardCount, 7, 'the homepage should still carry all 7 real reviews, matching its aggregateRating reviewCount');
+  assert.equal(cardCount, 4, 'the homepage should carry exactly the verified reviews, matching its aggregateRating reviewCount (corrected 2026-09-16 after a real Google review audit)');
 });

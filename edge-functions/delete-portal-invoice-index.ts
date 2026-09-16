@@ -106,8 +106,14 @@ Deno.serve(async (req: Request) => {
       }, 409);
     }
 
+    // Conditional on paid=eq.false -- a TOCTOU race otherwise: if the
+    // invoice were marked paid (e.g. a client completing a Stripe
+    // payment) in the window between the lookup above and this delete,
+    // an unconditional DELETE would remove the now-paid invoice's
+    // portal record anyway, bypassing the whole point of the paid
+    // check above.
     const delRes = await fetch(
-      `${SUPABASE_URL}/rest/v1/client_portal_invoices?source_invoice_id=eq.${source_invoice_id}`,
+      `${SUPABASE_URL}/rest/v1/client_portal_invoices?source_invoice_id=eq.${source_invoice_id}&paid=eq.false`,
       { method: "DELETE", headers: { apikey: SERVICE_ROLE_KEY, Authorization: `Bearer ${SERVICE_ROLE_KEY}`, Prefer: "return=representation" } },
     );
     if (!delRes.ok) {
@@ -115,6 +121,15 @@ Deno.serve(async (req: Request) => {
       return json({ ok: false, error: `Database error: ${errText.slice(0, 300)}` }, 502);
     }
     const deleted = await delRes.json();
+    if (deleted.length === 0) {
+      // Lost the race -- it was marked paid between the lookup and
+      // here. Same friendly message as the up-front paid check.
+      return json({
+        ok: false,
+        is_paid: true,
+        error: `Invoice #${rows[0].invoice_number} was marked PAID just now, so its portal record was kept. A paid invoice is a financial record -- if it was a mistake, refund it in Stripe first.`,
+      }, 409);
+    }
     return json({ ok: true, rows_deleted: Array.isArray(deleted) ? deleted.length : 0 });
   } catch (err: any) {
     return json({ ok: false, error: err.message }, 500);

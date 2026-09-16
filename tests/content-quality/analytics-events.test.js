@@ -19,11 +19,14 @@ const PUBLIC_PAGES = [
   'handyman-hurricane-ut.html', 'handyman-washington-city-ut.html',
   'handyman-santa-clara-ivins-ut.html', 'handyman-cedar-city-ut.html',
   'handyman-mesquite-nv.html', 'handyman-la-verkin-ut.html', 'handyman-leeds-ut.html',
+  'handyman-st-george-ut.html',
 ];
 const BLOG_PAGES = [
   'blog/index.html', 'blog/dryer-not-heating.html', 'blog/handyman-to-do-list.html',
   'blog/appliance-repair-or-replace.html', 'blog/washer-wont-drain.html',
   'blog/dishwasher-not-cleaning.html', 'blog/fridge-not-cooling.html',
+  'blog/toilet-running-flapper-valve.html', 'blog/drywall-crack-above-door.html',
+  'blog/tv-mount-drywall-anchors.html',
 ];
 
 test('analytics-events.js tracks phone/text clicks and the chat bubble opening, and never throws if gtag is missing', () => {
@@ -47,7 +50,7 @@ test('every public page (root, blog index + posts, about, our-work, terms, booki
 
 test('the homepage lead form fires lead_form_submitted only on a real successful insert, not optimistically', () => {
   const html = fs.readFileSync(repo('index.html'), 'utf8');
-  const successBlock = html.slice(html.indexOf("fetch(LEADS_SUPABASE_URL"), html.indexOf("fetch(LEADS_SUPABASE_URL") + 1500);
+  const successBlock = html.slice(html.indexOf("fetch(LEADS_SUPABASE_URL"), html.indexOf("fetch(LEADS_SUPABASE_URL") + 1900);
   assert.match(successBlock, /if \(response\.ok\) \{[\s\S]*?lead_form_submitted[\s\S]*?\}/);
 });
 

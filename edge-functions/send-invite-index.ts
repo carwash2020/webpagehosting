@@ -185,7 +185,11 @@ Deno.serve(async (req: Request) => {
     }
 
     const { client_email, client_name } = await req.json();
-    if (typeof client_email !== "string" || !client_email.includes("@")) {
+    // A bare .includes("@") check let malformed addresses (a@b, test@,
+    // @x) through to auth.admin.generateLink() below, which only fails
+    // there with a raw Supabase error message -- caught here instead
+    // with a clear, expected 400.
+    if (typeof client_email !== "string" || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(client_email)) {
       return json({ ok: false, error: "Missing or invalid client_email." }, 400);
     }
 

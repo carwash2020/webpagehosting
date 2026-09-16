@@ -12,6 +12,25 @@
 </script>
 
 <!-- Google tag (gtag.js) -->
+<script>
+  // Google Consent Mode v2: default analytics storage to denied unless
+  // this visitor already made a choice via the cookie banner
+  // (cookie-consent.js), so no GA4 cookie is set before that happens.
+  (function () {
+    var consent = 'denied';
+    try {
+      if (localStorage.getItem('th-cookie-consent') === 'granted') consent = 'granted';
+    } catch (e) {}
+    window.dataLayer = window.dataLayer || [];
+    window.gtag = window.gtag || function () { dataLayer.push(arguments); };
+    gtag('consent', 'default', {
+      'analytics_storage': consent,
+      'ad_storage': 'denied',
+      'ad_user_data': 'denied',
+      'ad_personalization': 'denied'
+    });
+  })();
+</script>
 <script async src="https://www.googletagmanager.com/gtag/js?id=G-TMJJMGY2DQ"></script>
 <script>
   window.dataLayer = window.dataLayer || [];
@@ -41,7 +60,7 @@
 <link rel="preconnect" href="https://csvfqdjuobylgafgolho.supabase.co">
 <link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Anton&family=Archivo:wght@400..700&family=Newsreader:ital,opsz,wght@0,6..72,300..700;1,6..72,300..600&family=Oswald:wght@200..700&display=swap" onload="this.onload=null;this.rel='stylesheet'">
 <noscript><link href="https://fonts.googleapis.com/css2?family=Anton&family=Archivo:wght@400..700&family=Newsreader:ital,opsz,wght@0,6..72,300..700;1,6..72,300..600&family=Oswald:wght@200..700&display=swap" rel="stylesheet"></noscript>
-<link rel="stylesheet" href="/styles.css?v=42101b97c4">
+<link rel="stylesheet" href="/styles.css?v=64b753a45a">
 <link rel="stylesheet" href="/blog/blog.css?v=202609071600">
 <script type="application/ld+json">
 {
@@ -54,6 +73,33 @@
   "datePublished": "2026-09-10"
 }
 </script>
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "BreadcrumbList",
+  "itemListElement": [
+    {
+      "@type": "ListItem",
+      "position": 1,
+      "name": "Home",
+      "item": "https://www.triplehenterprisesllc.biz/"
+    },
+    {
+      "@type": "ListItem",
+      "position": 2,
+      "name": "Blog",
+      "item": "https://www.triplehenterprisesllc.biz/blog/"
+    },
+    {
+      "@type": "ListItem",
+      "position": 3,
+      "name": "Fridge Not Cooling? Check This Before Calling It Dead",
+      "item": "https://www.triplehenterprisesllc.biz/blog/fridge-not-cooling.html"
+    }
+  ]
+}
+</script>
+<script src="/cookie-consent.js" defer></script>
 </head>
 <body class="has-blueprint-bg">
 <div class="bg-blueprint" aria-hidden="true"></div>
@@ -162,14 +208,14 @@
     <p class="blog-meta" id="blogMeta"></p>
   </div>
 
-  <img class="blog-diagram" src="https://images.unsplash.com/photo-1722649938332-94fae46965a7?fm=jpg&q=80&w=1400&auto=format&fit=crop" alt="A kitchen with stainless steel appliances" loading="lazy">
+  <img class="blog-diagram" src="https://images.unsplash.com/photo-1721613877687-c9099b698faa?fm=jpg&q=80&w=1400&auto=format&fit=crop" alt="A stainless steel side-by-side refrigerator in a home kitchen entryway" loading="lazy">
 
   <div class="blog-article">
     <p>"My fridge isn't cooling" is one of the broadest calls we get, because it can mean anything from a completely warm refrigerator to one that's just running a few degrees warmer than it should. The good news is that a lot of the common causes are on the simpler end of the scale, not a dead compressor.</p>
 
     <h2 data-reveal>The one almost everyone skips</h2>
 
-    <p>Condenser coils, usually underneath or behind the fridge, pull heat out of the unit as part of the cooling cycle. When those coils get packed with dust and pet hair, the fridge has to work harder and often can't keep up, especially in the hotter months. This is sometimes purely a cleaning job: clear the coils, and the fridge cools normally again. It's also the single easiest thing to rule out before assuming something's actually broken.</p>
+    <p>Condenser coils, usually underneath or behind the fridge, pull heat out of the unit as part of the cooling cycle. When those coils get packed with dust and pet hair, the fridge has to work harder and often can't keep up, especially in the hotter months. This is sometimes purely a cleaning job: clear the coils, and the fridge cools normally again. It's also the single easiest thing to rule out before assuming something's actually broken. We see this often in kitchens with higher-end, built-in refrigerators too, the kind that show up a lot in newer custom homes around <a href="/handyman-santa-clara-ivins-ut.html">Santa Clara and Ivins</a>, since the tighter cabinetry around them can restrict airflow even more than a standard freestanding unit gets.</p>
 
     <h2 data-reveal>When it's frost, not dust</h2>
 
@@ -259,6 +305,7 @@
     </div>
     <div class="footer-bottom">
       <p>&copy; <span id="year"></span> Triple H Enterprises LLC. All rights reserved.</p>
+      <span><a href="#" onclick="window.reopenCookiePreferences && window.reopenCookiePreferences(event)">Cookie Preferences</a></span>
     </div>
   </div>
 </footer>

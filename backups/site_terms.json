@@ -86,7 +86,7 @@
     {
         "id": 13,
         "heading": "12. Cookies and Analytics",
-        "body": "This website uses Google Analytics to understand general site traffic, such as which pages are visited and how visitors arrive at the site. This may involve cookies or similar technologies. No personal information submitted through the contact or scheduling forms is shared with Google Analytics. Visitors who prefer to opt out of analytics tracking can do so using their browser's privacy settings or a browser extension such as Google's Analytics Opt-out add-on.",
+        "body": "This website uses Google Analytics to understand general site traffic, such as which pages are visited and how visitors arrive at the site. This may involve cookies or similar technologies. No personal information submitted through the contact or scheduling forms is shared with Google Analytics. On a first visit, a cookie banner asks whether analytics cookies can be used; no analytics cookie is set until that choice is made, and it can be changed at any time using the \"Cookie Preferences\" link in the site footer. Visitors who prefer to opt out of analytics tracking can also do so using their browser's privacy settings or a browser extension such as Google's Analytics Opt-out add-on.",
         "sort_order": 13,
         "updated_at": "2026-08-13T22:56:22.50122+00:00"
     },

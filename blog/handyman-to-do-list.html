@@ -10,6 +10,25 @@
     if (theme === 'light') document.documentElement.setAttribute('data-theme', 'light');
   })();
 </script>
+<script>
+  // Google Consent Mode v2: default analytics storage to denied unless
+  // this visitor already made a choice via the cookie banner
+  // (cookie-consent.js), so no GA4 cookie is set before that happens.
+  (function () {
+    var consent = 'denied';
+    try {
+      if (localStorage.getItem('th-cookie-consent') === 'granted') consent = 'granted';
+    } catch (e) {}
+    window.dataLayer = window.dataLayer || [];
+    window.gtag = window.gtag || function () { dataLayer.push(arguments); };
+    gtag('consent', 'default', {
+      'analytics_storage': consent,
+      'ad_storage': 'denied',
+      'ad_user_data': 'denied',
+      'ad_personalization': 'denied'
+    });
+  })();
+</script>
 <script async src="https://www.googletagmanager.com/gtag/js?id=G-TMJJMGY2DQ"></script>
 <script>
   window.dataLayer = window.dataLayer || [];
@@ -39,7 +58,7 @@
 <link rel="preconnect" href="https://csvfqdjuobylgafgolho.supabase.co">
 <link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Anton&family=Archivo:wght@400..700&family=Newsreader:ital,opsz,wght@0,6..72,300..700;1,6..72,300..600&family=Oswald:wght@200..700&display=swap" onload="this.onload=null;this.rel='stylesheet'">
 <noscript><link href="https://fonts.googleapis.com/css2?family=Anton&family=Archivo:wght@400..700&family=Newsreader:ital,opsz,wght@0,6..72,300..700;1,6..72,300..600&family=Oswald:wght@200..700&display=swap" rel="stylesheet"></noscript>
-<link rel="stylesheet" href="/styles.css?v=42101b97c4">
+<link rel="stylesheet" href="/styles.css?v=64b753a45a">
 <link rel="stylesheet" href="/blog/blog.css?v=202609071600">
 <script type="application/ld+json">
 {
@@ -52,6 +71,33 @@
   "datePublished": "2026-09-01"
 }
 </script>
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "BreadcrumbList",
+  "itemListElement": [
+    {
+      "@type": "ListItem",
+      "position": 1,
+      "name": "Home",
+      "item": "https://www.triplehenterprisesllc.biz/"
+    },
+    {
+      "@type": "ListItem",
+      "position": 2,
+      "name": "Blog",
+      "item": "https://www.triplehenterprisesllc.biz/blog/"
+    },
+    {
+      "@type": "ListItem",
+      "position": 3,
+      "name": "The Small Jobs Everyone Forgets Until It's Time to Sell",
+      "item": "https://www.triplehenterprisesllc.biz/blog/handyman-to-do-list.html"
+    }
+  ]
+}
+</script>
+<script src="/cookie-consent.js" defer></script>
 </head>
 <body class="has-blueprint-bg">
 <div class="bg-blueprint" aria-hidden="true"></div>
@@ -174,7 +220,7 @@
     <p>Almost every home we go into has some version of this: a tangle of cables running from the TV down to a soundbar, a cable box, a gaming console, all visible against the wall. A wire hider (either a paintable channel or a fabric sleeve, depending on the wall and the look you want) takes it from "obviously never finished" to "looks like it was built this way." It's a small job that has an outsized effect on how a whole room reads.</p>
 
     <h2 data-reveal>Cabinet and door hardware</h2>
-    <p>Loose hinges, cabinet doors that don't sit flush, a pocket door that rattles or won't latch: these are the kind of thing homeowners live with for years because none of them feel urgent enough to call someone about on their own. But they're also some of the fastest, cheapest fixes we do. Most of the time it's a fifteen-minute adjustment or a hardware swap, not a repair.</p>
+    <p>Loose hinges, cabinet doors that don't sit flush, a pocket door that rattles or won't latch: these are the kind of thing homeowners live with for years because none of them feel urgent enough to call someone about on their own. But they're also some of the fastest, cheapest fixes we do. Most of the time it's a fifteen-minute adjustment or a hardware swap, not a repair. This is exactly the kind of work covered under our <a href="/handyman-repairs.html">general handyman repairs</a>, and it's usually the fastest bang for the buck before a house goes on the market.</p>
 
     <div class="fix-callout">
       <div class="fix-label">Why this matters more before selling</div>
@@ -254,6 +300,7 @@
     </div>
     <div class="footer-bottom">
       <p>&copy; <span id="year"></span> Triple H Enterprises LLC. All rights reserved.</p>
+      <span><a href="#" onclick="window.reopenCookiePreferences && window.reopenCookiePreferences(event)">Cookie Preferences</a></span>
     </div>
   </div>
 </footer>

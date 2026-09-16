@@ -27,6 +27,7 @@ const LANDING_PAGES = [
   'handyman-leeds-ut.html',
   'handyman-mesquite-nv.html',
   'handyman-santa-clara-ivins-ut.html',
+  'handyman-st-george-ut.html',
   'handyman-washington-city-ut.html',
 ];
 
@@ -41,7 +42,7 @@ test('index.html: postal code matches the real one used internally for contracts
   const data = extractJsonLd(html);
   assert.equal(data.address.postalCode, '84790');
   assert.ok(!data.address.streetAddress, 'no street address should ever be exposed publicly');
-  assert.deepEqual(data.aggregateRating, { '@type': 'AggregateRating', ratingValue: '5.0', reviewCount: '7' });
+  assert.deepEqual(data.aggregateRating, { '@type': 'AggregateRating', ratingValue: '5.0', reviewCount: '4' });
 });
 
 for (const page of LANDING_PAGES) {

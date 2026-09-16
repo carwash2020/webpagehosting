@@ -36,6 +36,7 @@ test('every areas link shares a data-city value with its matching diagram group 
 
 test('the 7 real landing pages are still linked from #areas, not just named', () => {
   const LANDING_PAGES = [
+    'handyman-st-george-ut.html',
     'handyman-washington-city-ut.html', 'handyman-hurricane-ut.html',
     'handyman-santa-clara-ivins-ut.html', 'handyman-cedar-city-ut.html', 'handyman-mesquite-nv.html',
     'handyman-la-verkin-ut.html', 'handyman-leeds-ut.html',

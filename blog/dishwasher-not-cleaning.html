@@ -12,6 +12,25 @@
 </script>
 
 <!-- Google tag (gtag.js) -->
+<script>
+  // Google Consent Mode v2: default analytics storage to denied unless
+  // this visitor already made a choice via the cookie banner
+  // (cookie-consent.js), so no GA4 cookie is set before that happens.
+  (function () {
+    var consent = 'denied';
+    try {
+      if (localStorage.getItem('th-cookie-consent') === 'granted') consent = 'granted';
+    } catch (e) {}
+    window.dataLayer = window.dataLayer || [];
+    window.gtag = window.gtag || function () { dataLayer.push(arguments); };
+    gtag('consent', 'default', {
+      'analytics_storage': consent,
+      'ad_storage': 'denied',
+      'ad_user_data': 'denied',
+      'ad_personalization': 'denied'
+    });
+  })();
+</script>
 <script async src="https://www.googletagmanager.com/gtag/js?id=G-TMJJMGY2DQ"></script>
 <script>
   window.dataLayer = window.dataLayer || [];
@@ -41,7 +60,7 @@
 <link rel="preconnect" href="https://csvfqdjuobylgafgolho.supabase.co">
 <link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Anton&family=Archivo:wght@400..700&family=Newsreader:ital,opsz,wght@0,6..72,300..700;1,6..72,300..600&family=Oswald:wght@200..700&display=swap" onload="this.onload=null;this.rel='stylesheet'">
 <noscript><link href="https://fonts.googleapis.com/css2?family=Anton&family=Archivo:wght@400..700&family=Newsreader:ital,opsz,wght@0,6..72,300..700;1,6..72,300..600&family=Oswald:wght@200..700&display=swap" rel="stylesheet"></noscript>
-<link rel="stylesheet" href="/styles.css?v=42101b97c4">
+<link rel="stylesheet" href="/styles.css?v=64b753a45a">
 <link rel="stylesheet" href="/blog/blog.css?v=202609071600">
 <script type="application/ld+json">
 {
@@ -54,6 +73,33 @@
   "datePublished": "2026-09-10"
 }
 </script>
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "BreadcrumbList",
+  "itemListElement": [
+    {
+      "@type": "ListItem",
+      "position": 1,
+      "name": "Home",
+      "item": "https://www.triplehenterprisesllc.biz/"
+    },
+    {
+      "@type": "ListItem",
+      "position": 2,
+      "name": "Blog",
+      "item": "https://www.triplehenterprisesllc.biz/blog/"
+    },
+    {
+      "@type": "ListItem",
+      "position": 3,
+      "name": "Dishwasher Not Cleaning Well? It's Probably Not Broken",
+      "item": "https://www.triplehenterprisesllc.biz/blog/dishwasher-not-cleaning.html"
+    }
+  ]
+}
+</script>
+<script src="/cookie-consent.js" defer></script>
 </head>
 <body class="has-blueprint-bg">
 <div class="bg-blueprint" aria-hidden="true"></div>
@@ -162,7 +208,7 @@
     <p class="blog-meta" id="blogMeta"></p>
   </div>
 
-  <img class="blog-diagram" src="https://images.unsplash.com/photo-1722649938332-94fae46965a7?fm=jpg&q=80&w=1400&auto=format&fit=crop" alt="A kitchen with stainless steel appliances" loading="lazy">
+  <img class="blog-diagram" src="https://images.unsplash.com/photo-1641823911769-c55f23c25143?fm=jpg&q=80&w=1400&auto=format&fit=crop" alt="A white kitchen with a built-in stainless steel dishwasher" loading="lazy">
 
   <div class="blog-article">
     <p>Poor cleaning is one of the more common dishwasher complaints we hear, and it's also the one most often mistaken for a broken machine when quite often there's nothing mechanically wrong with it at all. The usual suspects are clogged spray arms, a worn door seal, or water that isn't reaching the temperature it needs to actually break down grease and food residue.</p>
@@ -171,7 +217,7 @@
 
     <p>The spray arms are the easiest thing to check yourself. Pull the bottom rack out and spin each arm by hand: if it's stiff, or you can see the little jets are caked with mineral deposits or food debris, that's very often the whole problem. A clogged arm can't distribute water evenly, so some dishes get properly cleaned and others don't get touched at all.</p>
 
-    <p>Water temperature is the other common cause, and it's easy to overlook because the dishwasher itself isn't necessarily at fault. If your water heater is set low, or the dishwasher is run right after another hot-water appliance has used up the hot water in the tank, the wash cycle can run at a lower temperature than it's designed for and simply not clean as well.</p>
+    <p>Water temperature is the other common cause, and it's easy to overlook because the dishwasher itself isn't necessarily at fault. If your water heater is set low, or the dishwasher is run right after another hot-water appliance has used up the hot water in the tank, the wash cycle can run at a lower temperature than it's designed for and simply not clean as well. If it turns out the water heater itself needs attention, that's plumbing work rather than a dishwasher problem, and it's the kind of thing we handle as part of our <a href="/plumbing-repairs.html">plumbing repair service</a>.</p>
 
     <div class="fix-callout">
       <div class="fix-label">What we actually check</div>
@@ -257,6 +303,7 @@
     </div>
     <div class="footer-bottom">
       <p>&copy; <span id="year"></span> Triple H Enterprises LLC. All rights reserved.</p>
+      <span><a href="#" onclick="window.reopenCookiePreferences && window.reopenCookiePreferences(event)">Cookie Preferences</a></span>
     </div>
   </div>
 </footer>

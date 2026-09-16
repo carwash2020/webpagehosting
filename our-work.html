@@ -12,6 +12,25 @@
 </script>
 
 <!-- Google tag (gtag.js) -->
+<script>
+  // Google Consent Mode v2: default analytics storage to denied unless
+  // this visitor already made a choice via the cookie banner
+  // (cookie-consent.js), so no GA4 cookie is set before that happens.
+  (function () {
+    var consent = 'denied';
+    try {
+      if (localStorage.getItem('th-cookie-consent') === 'granted') consent = 'granted';
+    } catch (e) {}
+    window.dataLayer = window.dataLayer || [];
+    window.gtag = window.gtag || function () { dataLayer.push(arguments); };
+    gtag('consent', 'default', {
+      'analytics_storage': consent,
+      'ad_storage': 'denied',
+      'ad_user_data': 'denied',
+      'ad_personalization': 'denied'
+    });
+  })();
+</script>
 <script async src="https://www.googletagmanager.com/gtag/js?id=G-TMJJMGY2DQ"></script>
 <script>
   window.dataLayer = window.dataLayer || [];
@@ -42,7 +61,7 @@
 <link rel="preconnect" href="https://csvfqdjuobylgafgolho.supabase.co">
 <link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Anton&family=Archivo:wght@400..700&family=Newsreader:ital,opsz,wght@0,6..72,300..700;1,6..72,300..600&family=Oswald:wght@200..700&display=swap" onload="this.onload=null;this.rel='stylesheet'">
 <noscript><link href="https://fonts.googleapis.com/css2?family=Anton&family=Archivo:wght@400..700&family=Newsreader:ital,opsz,wght@0,6..72,300..700;1,6..72,300..600&family=Oswald:wght@200..700&display=swap" rel="stylesheet"></noscript>
-<link rel="stylesheet" href="/styles.css?v=42101b97c4">
+<link rel="stylesheet" href="/styles.css?v=64b753a45a">
 <link rel="stylesheet" href="/blog/blog.css?v=202609071600">
 <script type="application/ld+json">
 {
@@ -55,22 +74,6 @@
       "acceptedAnswer": {
         "@type": "Answer",
         "text": "Pricing is set once the problem has been diagnosed. Some jobs can be estimated over the phone, but many issues need an in-person look before a firm price can be given. Either way, you'll know the cost before any work begins."
-      }
-    },
-    {
-      "@type": "Question",
-      "name": "What areas do you serve?",
-      "acceptedAnswer": {
-        "@type": "Answer",
-        "text": "St. George, Hurricane, Washington, Santa Clara, and the surrounding Southern Utah area. We can also take on larger jobs in Cedar City or Mesquite, NV by request, just contact us to check availability and scheduling."
-      }
-    },
-    {
-      "@type": "Question",
-      "name": "Do you guarantee your work?",
-      "acceptedAnswer": {
-        "@type": "Answer",
-        "text": "Yes, work is guaranteed. Parts used are covered under whatever warranty the manufacturer sets, which can vary by part."
       }
     },
     {
@@ -88,10 +91,47 @@
         "@type": "Answer",
         "text": "Jobs within 15 miles have no trip fee. Beyond 15 miles, a $25 trip fee is added to the total."
       }
+    },
+    {
+      "@type": "Question",
+      "name": "What areas do you serve?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "St. George, Hurricane, Washington, Santa Clara, and the surrounding Southern Utah area. We can also take on larger jobs in Cedar City or Mesquite, NV by request, just contact us to check availability and scheduling."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "Do you guarantee your work?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Yes, work is guaranteed. Parts used are covered under whatever warranty the manufacturer sets, which can vary by part."
+      }
     }
   ]
 }
 </script>
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "BreadcrumbList",
+  "itemListElement": [
+    {
+      "@type": "ListItem",
+      "position": 1,
+      "name": "Home",
+      "item": "https://www.triplehenterprisesllc.biz/"
+    },
+    {
+      "@type": "ListItem",
+      "position": 2,
+      "name": "Our Work",
+      "item": "https://www.triplehenterprisesllc.biz/our-work.html"
+    }
+  ]
+}
+</script>
+<script src="/cookie-consent.js" defer></script>
 </head>
 <body class="has-blueprint-bg">
 <div class="bg-blueprint" aria-hidden="true"></div>
@@ -201,268 +241,284 @@
     <p class="blog-dek">A few recent jobs. More get added as they come in.</p>
   </div>
 
-  <div class="gallery-grid" id="galleryGrid">
-    <h4 class="gallery-category">Flooring: Before &amp; Demo</h4>
+  <!-- Filter chips (item 2, visual improvements pass) -- one real button
+       per gallery-category heading below, plus "All". Clicking one hides
+       every tile (and category header) that doesn't match via a
+       data-category attribute, wired up in the script near the gallery
+       lightbox further down this page. -->
+  <div class="gallery-filters" role="group" aria-label="Filter gallery by category">
+    <button type="button" class="gallery-filter-chip" data-filter="all" aria-pressed="true">All</button>
+    <button type="button" class="gallery-filter-chip" data-filter="flooring-before-demo" aria-pressed="false">Flooring: Before &amp; Demo</button>
+    <button type="button" class="gallery-filter-chip" data-filter="flooring-installation" aria-pressed="false">Flooring: Installation</button>
+    <button type="button" class="gallery-filter-chip" data-filter="flooring-finished" aria-pressed="false">Flooring: Finished</button>
+    <button type="button" class="gallery-filter-chip" data-filter="kitchen-tile-before-demo" aria-pressed="false">Kitchen Tile: Before &amp; Demo</button>
+    <button type="button" class="gallery-filter-chip" data-filter="kitchen-tile-installation" aria-pressed="false">Kitchen Tile: Installation</button>
+    <button type="button" class="gallery-filter-chip" data-filter="kitchen-tile-finished" aria-pressed="false">Kitchen Tile: Finished</button>
+    <button type="button" class="gallery-filter-chip" data-filter="other-work" aria-pressed="false">Other Work</button>
+  </div>
+
+  <div class="gallery-grid gallery-masonry" id="galleryGrid">
+    <h4 class="gallery-category" data-category="flooring-before-demo">Flooring: Before &amp; Demo</h4>
     <div class="gallery-row">
-      <div class="gallery-tile has-photo" data-index="0">
+      <div class="gallery-tile has-photo" data-index="0" data-category="flooring-before-demo">
         <img src="images/gallery/subfloor-prep-before.webp" width="640" height="480" alt="Before: subfloor prep" loading="lazy">
         <div class="gallery-caption">Before: subfloor prep</div>
       </div>
-      <div class="gallery-tile has-photo" data-index="1">
+      <div class="gallery-tile has-photo" data-index="1" data-category="flooring-before-demo">
         <img src="images/gallery/plank-underlayment-prep.webp" width="1400" height="1050" alt="Underlayment and prep before flooring" loading="lazy">
         <div class="gallery-caption">Underlayment and prep before flooring</div>
       </div>
-      <div class="gallery-tile has-photo" data-index="2">
+      <div class="gallery-tile has-photo" data-index="2" data-category="flooring-before-demo">
         <img src="images/gallery/plank-room-paint-prep.webp" width="1400" height="1050" alt="Room paint prep before flooring" loading="lazy">
         <div class="gallery-caption">Room paint prep before flooring</div>
       </div>
-      <div class="gallery-tile has-photo" data-index="3">
+      <div class="gallery-tile has-photo" data-index="3" data-category="flooring-before-demo">
         <img src="images/gallery/wall-paint-prep-accent.webp" width="1400" height="1866" alt="Accent wall paint prep" loading="lazy">
         <div class="gallery-caption">Accent wall paint prep</div>
       </div>
     </div>
-    <h4 class="gallery-category">Flooring: Installation</h4>
+    <h4 class="gallery-category" data-category="flooring-installation">Flooring: Installation</h4>
     <div class="gallery-row">
-      <div class="gallery-tile has-photo" data-index="4">
+      <div class="gallery-tile has-photo" data-index="4" data-category="flooring-installation">
         <img src="images/gallery/underlayment-installation.webp" width="640" height="480" alt="Underlayment installation" loading="lazy">
         <div class="gallery-caption">Underlayment installation</div>
       </div>
-      <div class="gallery-tile has-photo" data-index="5">
+      <div class="gallery-tile has-photo" data-index="5" data-category="flooring-installation">
         <img src="images/gallery/plank-install-in-progress.webp" width="1400" height="1050" alt="Plank flooring installation in progress" loading="lazy">
         <div class="gallery-caption">Plank flooring installation in progress</div>
       </div>
-      <div class="gallery-tile has-photo" data-index="6">
+      <div class="gallery-tile has-photo" data-index="6" data-category="flooring-installation">
         <img src="images/gallery/flooring-install-progress.webp" width="640" height="480" alt="Flooring installation in progress" loading="lazy">
         <div class="gallery-caption">Flooring installation in progress</div>
       </div>
-      <div class="gallery-tile has-photo" data-index="7">
+      <div class="gallery-tile has-photo" data-index="7" data-category="flooring-installation">
         <img src="images/gallery/flooring-baseboard-installation.webp" width="640" height="853" alt="Flooring and baseboard installation" loading="lazy">
         <div class="gallery-caption">Flooring and baseboard installation</div>
       </div>
     </div>
-    <h4 class="gallery-category">Flooring: Finished</h4>
+    <h4 class="gallery-category" data-category="flooring-finished">Flooring: Finished</h4>
     <div class="gallery-row">
-      <div class="gallery-tile has-photo" data-index="8">
+      <div class="gallery-tile has-photo" data-index="8" data-category="flooring-finished">
         <img src="images/gallery/laminate-flooring-installation.webp" width="640" height="853" alt="Laminate flooring installation" loading="lazy">
         <div class="gallery-caption">Laminate flooring installation</div>
       </div>
-      <div class="gallery-tile has-photo" data-index="9">
+      <div class="gallery-tile has-photo" data-index="9" data-category="flooring-finished">
         <img src="images/gallery/flooring-finished-detail.webp" width="640" height="853" alt="Finished flooring detail" loading="lazy">
         <div class="gallery-caption">Finished flooring detail</div>
       </div>
-      <div class="gallery-tile has-photo" data-index="10">
+      <div class="gallery-tile has-photo" data-index="10" data-category="flooring-finished">
         <img src="images/gallery/flooring-finished-1.webp" width="640" height="853" alt="Finished flooring installation" loading="lazy">
         <div class="gallery-caption">Finished flooring installation</div>
       </div>
-      <div class="gallery-tile has-photo" data-index="11">
+      <div class="gallery-tile has-photo" data-index="11" data-category="flooring-finished">
         <img src="images/gallery/flooring-finished-2.webp" width="640" height="480" alt="Finished flooring installation" loading="lazy">
         <div class="gallery-caption">Finished flooring installation</div>
       </div>
-      <div class="gallery-tile has-photo" data-index="12">
+      <div class="gallery-tile has-photo" data-index="12" data-category="flooring-finished">
         <img src="images/gallery/flooring-transition-detail.webp" width="640" height="853" alt="Flooring transition detail" loading="lazy">
         <div class="gallery-caption">Flooring transition detail</div>
       </div>
-      <div class="gallery-tile has-photo" data-index="13">
+      <div class="gallery-tile has-photo" data-index="13" data-category="flooring-finished">
         <img src="images/gallery/plank-finished-stairs-1.webp" width="1400" height="1050" alt="Finished plank flooring near the stairs" loading="lazy">
         <div class="gallery-caption">Finished plank flooring near the stairs</div>
       </div>
-      <div class="gallery-tile has-photo" data-index="14">
+      <div class="gallery-tile has-photo" data-index="14" data-category="flooring-finished">
         <img src="images/gallery/plank-finished-hall-bath.webp" width="1400" height="1050" alt="Finished plank flooring, hall and bath area" loading="lazy">
         <div class="gallery-caption">Finished plank flooring, hall and bath area</div>
       </div>
-      <div class="gallery-tile has-photo" data-index="15">
+      <div class="gallery-tile has-photo" data-index="15" data-category="flooring-finished">
         <img src="images/gallery/plank-finished-stairwell.webp" width="1400" height="1866" alt="Finished plank flooring by the stairwell" loading="lazy">
         <div class="gallery-caption">Finished plank flooring by the stairwell</div>
       </div>
-      <div class="gallery-tile has-photo" data-index="16">
+      <div class="gallery-tile has-photo" data-index="16" data-category="flooring-finished">
         <img src="images/gallery/plank-finished-living-1.webp" width="1400" height="1866" alt="Finished plank flooring, living area" loading="lazy">
         <div class="gallery-caption">Finished plank flooring, living area</div>
       </div>
-      <div class="gallery-tile has-photo" data-index="17">
+      <div class="gallery-tile has-photo" data-index="17" data-category="flooring-finished">
         <img src="images/gallery/plank-finished-living-2.webp" width="1400" height="1866" alt="Finished plank flooring, living area" loading="lazy">
         <div class="gallery-caption">Finished plank flooring, living area</div>
       </div>
-      <div class="gallery-tile has-photo" data-index="18">
+      <div class="gallery-tile has-photo" data-index="18" data-category="flooring-finished">
         <img src="images/gallery/plank-finished-corner.webp" width="1400" height="1050" alt="Finished plank flooring, corner detail" loading="lazy">
         <div class="gallery-caption">Finished plank flooring, corner detail</div>
       </div>
-      <div class="gallery-tile has-photo" data-index="19">
+      <div class="gallery-tile has-photo" data-index="19" data-category="flooring-finished">
         <img src="images/gallery/plank-finished-office.webp" width="1400" height="1866" alt="Finished plank flooring, office area" loading="lazy">
         <div class="gallery-caption">Finished plank flooring, office area</div>
       </div>
     </div>
-    <h4 class="gallery-category">Kitchen Tile: Before &amp; Demo</h4>
+    <h4 class="gallery-category" data-category="kitchen-tile-before-demo">Kitchen Tile: Before &amp; Demo</h4>
     <div class="gallery-row">
-      <div class="gallery-tile has-photo" data-index="20">
+      <div class="gallery-tile has-photo" data-index="20" data-category="kitchen-tile-before-demo">
         <img src="images/gallery/tile-kitchen-before-1.webp" width="1400" height="787" alt="Original kitchen tile, before" loading="lazy">
         <div class="gallery-caption">Original kitchen tile, before</div>
       </div>
-      <div class="gallery-tile has-photo" data-index="21">
+      <div class="gallery-tile has-photo" data-index="21" data-category="kitchen-tile-before-demo">
         <img src="images/gallery/tile-kitchen-before-2.webp" width="1152" height="2048" alt="Original kitchen tile, before" loading="lazy">
         <div class="gallery-caption">Original kitchen tile, before</div>
       </div>
-      <div class="gallery-tile has-photo" data-index="22">
+      <div class="gallery-tile has-photo" data-index="22" data-category="kitchen-tile-before-demo">
         <img src="images/gallery/tile-kitchen-before-3.webp" width="1152" height="2048" alt="Original kitchen tile, before" loading="lazy">
         <div class="gallery-caption">Original kitchen tile, before</div>
       </div>
-      <div class="gallery-tile has-photo" data-index="23">
+      <div class="gallery-tile has-photo" data-index="23" data-category="kitchen-tile-before-demo">
         <img src="images/gallery/tile-repair-spot.webp" width="1152" height="2048" alt="Damaged tile ready for repair" loading="lazy">
         <div class="gallery-caption">Damaged tile ready for repair</div>
       </div>
-      <div class="gallery-tile has-photo" data-index="24">
+      <div class="gallery-tile has-photo" data-index="24" data-category="kitchen-tile-before-demo">
         <img src="images/gallery/baseboard-detail-1.webp" width="1400" height="787" alt="Baseboard prep detail" loading="lazy">
         <div class="gallery-caption">Baseboard prep detail</div>
       </div>
-      <div class="gallery-tile has-photo" data-index="25">
+      <div class="gallery-tile has-photo" data-index="25" data-category="kitchen-tile-before-demo">
         <img src="images/gallery/baseboard-detail-2.webp" width="1400" height="787" alt="Baseboard prep detail" loading="lazy">
         <div class="gallery-caption">Baseboard prep detail</div>
       </div>
-      <div class="gallery-tile has-photo" data-index="26">
+      <div class="gallery-tile has-photo" data-index="26" data-category="kitchen-tile-before-demo">
         <img src="images/gallery/subfloor-bare-concrete.webp" width="1400" height="1050" alt="Before: subfloor prep" loading="lazy">
         <div class="gallery-caption">Before: subfloor prep</div>
       </div>
-      <div class="gallery-tile has-photo" data-index="27">
+      <div class="gallery-tile has-photo" data-index="27" data-category="kitchen-tile-before-demo">
         <img src="images/gallery/subfloor-exposed-cabinets.webp" width="1152" height="2048" alt="Subfloor exposed along the cabinets" loading="lazy">
         <div class="gallery-caption">Subfloor exposed along the cabinets</div>
       </div>
-      <div class="gallery-tile has-photo" data-index="28">
+      <div class="gallery-tile has-photo" data-index="28" data-category="kitchen-tile-before-demo">
         <img src="images/gallery/tile-demo-corner.webp" width="1152" height="2048" alt="Tile removal, corner detail" loading="lazy">
         <div class="gallery-caption">Tile removal, corner detail</div>
       </div>
-      <div class="gallery-tile has-photo" data-index="29">
+      <div class="gallery-tile has-photo" data-index="29" data-category="kitchen-tile-before-demo">
         <img src="images/gallery/tile-demo-large-area.webp" width="1152" height="2048" alt="Old flooring removed, subfloor exposed" loading="lazy">
         <div class="gallery-caption">Old flooring removed, subfloor exposed</div>
       </div>
-      <div class="gallery-tile has-photo" data-index="30">
+      <div class="gallery-tile has-photo" data-index="30" data-category="kitchen-tile-before-demo">
         <img src="images/gallery/tile-spares.webp" width="1400" height="787" alt="Matching spare tiles set aside" loading="lazy">
         <div class="gallery-caption">Matching spare tiles set aside</div>
       </div>
-      <div class="gallery-tile has-photo" data-index="31">
+      <div class="gallery-tile has-photo" data-index="31" data-category="kitchen-tile-before-demo">
         <img src="images/gallery/tile-demo-debris-1.webp" width="1400" height="787" alt="Tile demo, cleanup in progress" loading="lazy">
         <div class="gallery-caption">Tile demo, cleanup in progress</div>
       </div>
-      <div class="gallery-tile has-photo" data-index="32">
+      <div class="gallery-tile has-photo" data-index="32" data-category="kitchen-tile-before-demo">
         <img src="images/gallery/tile-demo-debris-2.webp" width="1152" height="2048" alt="Tile demo, cleanup in progress" loading="lazy">
         <div class="gallery-caption">Tile demo, cleanup in progress</div>
       </div>
-      <div class="gallery-tile has-photo" data-index="33">
+      <div class="gallery-tile has-photo" data-index="33" data-category="kitchen-tile-before-demo">
         <img src="images/gallery/tile-demo-hallway-view.webp" width="1152" height="2048" alt="Tile demo, hallway view" loading="lazy">
         <div class="gallery-caption">Tile demo, hallway view</div>
       </div>
     </div>
-    <h4 class="gallery-category">Kitchen Tile: Installation</h4>
+    <h4 class="gallery-category" data-category="kitchen-tile-installation">Kitchen Tile: Installation</h4>
     <div class="gallery-row">
-      <div class="gallery-tile has-photo" data-index="34">
+      <div class="gallery-tile has-photo" data-index="34" data-category="kitchen-tile-installation">
         <img src="images/gallery/tile-install-spacers-1.webp" width="1152" height="2048" alt="New tile set with spacers" loading="lazy">
         <div class="gallery-caption">New tile set with spacers</div>
       </div>
-      <div class="gallery-tile has-photo" data-index="35">
+      <div class="gallery-tile has-photo" data-index="35" data-category="kitchen-tile-installation">
         <img src="images/gallery/tile-install-spacers-2.webp" width="1152" height="2048" alt="New tile set with spacers" loading="lazy">
         <div class="gallery-caption">New tile set with spacers</div>
       </div>
-      <div class="gallery-tile has-photo" data-index="36">
+      <div class="gallery-tile has-photo" data-index="36" data-category="kitchen-tile-installation">
         <img src="images/gallery/tile-install-progress-wide.webp" width="1152" height="2048" alt="Tile installation in progress" loading="lazy">
         <div class="gallery-caption">Tile installation in progress</div>
       </div>
-      <div class="gallery-tile has-photo" data-index="37">
+      <div class="gallery-tile has-photo" data-index="37" data-category="kitchen-tile-installation">
         <img src="images/gallery/tile-mortar-application.webp" width="1400" height="787" alt="Mortar application at the doorway" loading="lazy">
         <div class="gallery-caption">Mortar application at the doorway</div>
       </div>
-      <div class="gallery-tile has-photo" data-index="38">
+      <div class="gallery-tile has-photo" data-index="38" data-category="kitchen-tile-installation">
         <img src="images/gallery/tile-install-laundry-area.webp" width="1400" height="787" alt="Tile installation, laundry area" loading="lazy">
         <div class="gallery-caption">Tile installation, laundry area</div>
       </div>
-      <div class="gallery-tile has-photo" data-index="39">
+      <div class="gallery-tile has-photo" data-index="39" data-category="kitchen-tile-installation">
         <img src="images/gallery/tile-grout-cleanup-1.webp" width="1152" height="2048" alt="Grout haze cleanup" loading="lazy">
         <div class="gallery-caption">Grout haze cleanup</div>
       </div>
-      <div class="gallery-tile has-photo" data-index="40">
+      <div class="gallery-tile has-photo" data-index="40" data-category="kitchen-tile-installation">
         <img src="images/gallery/tile-grout-cleanup-2.webp" width="1152" height="2048" alt="Grout haze cleanup" loading="lazy">
         <div class="gallery-caption">Grout haze cleanup</div>
       </div>
     </div>
-    <h4 class="gallery-category">Kitchen Tile: Finished</h4>
+    <h4 class="gallery-category" data-category="kitchen-tile-finished">Kitchen Tile: Finished</h4>
     <div class="gallery-row">
-      <div class="gallery-tile has-photo" data-index="41">
+      <div class="gallery-tile has-photo" data-index="41" data-category="kitchen-tile-finished">
         <img src="images/gallery/tile-finished-kitchen-wide.webp" width="1152" height="2048" alt="Finished tile flooring, full kitchen view" loading="lazy">
         <div class="gallery-caption">Finished tile flooring, full kitchen view</div>
       </div>
-      <div class="gallery-tile has-photo" data-index="42">
+      <div class="gallery-tile has-photo" data-index="42" data-category="kitchen-tile-finished">
         <img src="images/gallery/tile-finished-kitchen-wide-2.webp" width="1400" height="787" alt="Finished tile flooring, kitchen view" loading="lazy">
         <div class="gallery-caption">Finished tile flooring, kitchen view</div>
       </div>
-      <div class="gallery-tile has-photo" data-index="43">
+      <div class="gallery-tile has-photo" data-index="43" data-category="kitchen-tile-finished">
         <img src="images/gallery/tile-finished-doorway.webp" width="1400" height="787" alt="Finished tile flooring by the doorway" loading="lazy">
         <div class="gallery-caption">Finished tile flooring by the doorway</div>
       </div>
-      <div class="gallery-tile has-photo" data-index="44">
+      <div class="gallery-tile has-photo" data-index="44" data-category="kitchen-tile-finished">
         <img src="images/gallery/tile-finished-1.webp" width="1152" height="2048" alt="Finished tile flooring" loading="lazy">
         <div class="gallery-caption">Finished tile flooring</div>
       </div>
-      <div class="gallery-tile has-photo" data-index="45">
+      <div class="gallery-tile has-photo" data-index="45" data-category="kitchen-tile-finished">
         <img src="images/gallery/tile-finished-2.webp" width="1152" height="2048" alt="Finished tile flooring" loading="lazy">
         <div class="gallery-caption">Finished tile flooring</div>
       </div>
-      <div class="gallery-tile has-photo" data-index="46">
+      <div class="gallery-tile has-photo" data-index="46" data-category="kitchen-tile-finished">
         <img src="images/gallery/tile-finished-3.webp" width="1152" height="2048" alt="Finished tile flooring" loading="lazy">
         <div class="gallery-caption">Finished tile flooring</div>
       </div>
-      <div class="gallery-tile has-photo" data-index="47">
+      <div class="gallery-tile has-photo" data-index="47" data-category="kitchen-tile-finished">
         <img src="images/gallery/tile-finished-4.webp" width="1152" height="2048" alt="Finished tile flooring" loading="lazy">
         <div class="gallery-caption">Finished tile flooring</div>
       </div>
-      <div class="gallery-tile has-photo" data-index="48">
+      <div class="gallery-tile has-photo" data-index="48" data-category="kitchen-tile-finished">
         <img src="images/gallery/tile-finished-5.webp" width="1152" height="2048" alt="Finished tile flooring" loading="lazy">
         <div class="gallery-caption">Finished tile flooring</div>
       </div>
-      <div class="gallery-tile has-photo" data-index="49">
+      <div class="gallery-tile has-photo" data-index="49" data-category="kitchen-tile-finished">
         <img src="images/gallery/tile-finished-6.webp" width="1152" height="2048" alt="Finished tile flooring" loading="lazy">
         <div class="gallery-caption">Finished tile flooring</div>
       </div>
-      <div class="gallery-tile has-photo" data-index="50">
+      <div class="gallery-tile has-photo" data-index="50" data-category="kitchen-tile-finished">
         <img src="images/gallery/tile-finished-7.webp" width="1152" height="2048" alt="Finished tile flooring" loading="lazy">
         <div class="gallery-caption">Finished tile flooring</div>
       </div>
-      <div class="gallery-tile has-photo" data-index="51">
+      <div class="gallery-tile has-photo" data-index="51" data-category="kitchen-tile-finished">
         <img src="images/gallery/tile-finished-8.webp" width="1152" height="2048" alt="Finished tile flooring" loading="lazy">
         <div class="gallery-caption">Finished tile flooring</div>
       </div>
-      <div class="gallery-tile has-photo" data-index="52">
+      <div class="gallery-tile has-photo" data-index="52" data-category="kitchen-tile-finished">
         <img src="images/gallery/tile-finished-9.webp" width="1400" height="787" alt="Finished tile flooring" loading="lazy">
         <div class="gallery-caption">Finished tile flooring</div>
       </div>
-      <div class="gallery-tile has-photo" data-index="53">
+      <div class="gallery-tile has-photo" data-index="53" data-category="kitchen-tile-finished">
         <img src="images/gallery/tile-finished-10.webp" width="1400" height="787" alt="Finished tile flooring" loading="lazy">
         <div class="gallery-caption">Finished tile flooring</div>
       </div>
-      <div class="gallery-tile has-photo" data-index="54">
+      <div class="gallery-tile has-photo" data-index="54" data-category="kitchen-tile-finished">
         <img src="images/gallery/tile-finished-11.webp" width="1152" height="2048" alt="Finished tile flooring" loading="lazy">
         <div class="gallery-caption">Finished tile flooring</div>
       </div>
-      <div class="gallery-tile has-photo" data-index="55">
+      <div class="gallery-tile has-photo" data-index="55" data-category="kitchen-tile-finished">
         <img src="images/gallery/tile-finished-12.webp" width="1400" height="787" alt="Finished tile flooring" loading="lazy">
         <div class="gallery-caption">Finished tile flooring</div>
       </div>
-      <div class="gallery-tile has-photo" data-index="56">
+      <div class="gallery-tile has-photo" data-index="56" data-category="kitchen-tile-finished">
         <img src="images/gallery/tile-finished-13.webp" width="1152" height="2048" alt="Finished tile flooring" loading="lazy">
         <div class="gallery-caption">Finished tile flooring</div>
       </div>
     </div>
-    <h4 class="gallery-category">Other Work</h4>
+    <h4 class="gallery-category" data-category="other-work">Other Work</h4>
     <div class="gallery-row">
-      <div class="gallery-tile has-photo" data-index="57">
+      <div class="gallery-tile has-photo" data-index="57" data-category="other-work">
         <img src="images/gallery/curtain-track-installation.webp" width="640" height="1137" alt="Custom curtain track installation" loading="lazy">
         <div class="gallery-caption">Custom curtain track installation</div>
       </div>
-      <div class="gallery-tile has-photo" data-index="58">
+      <div class="gallery-tile has-photo" data-index="58" data-category="other-work">
         <img src="images/gallery/curtain-track-mounting-1.webp" width="640" height="1137" alt="Curtain track mounting detail" loading="lazy">
         <div class="gallery-caption">Curtain track mounting detail</div>
       </div>
-      <div class="gallery-tile has-photo" data-index="59">
+      <div class="gallery-tile has-photo" data-index="59" data-category="other-work">
         <img src="images/gallery/curtain-track-mounting-2.webp" width="640" height="1137" alt="Curtain track mounting detail" loading="lazy">
         <div class="gallery-caption">Curtain track mounting detail</div>
       </div>
-      <div class="gallery-tile has-photo" data-index="60">
+      <div class="gallery-tile has-photo" data-index="60" data-category="other-work">
         <img src="images/gallery/floating-shelf-installation.webp" width="640" height="1137" alt="Floating shelf installation" loading="lazy">
         <div class="gallery-caption">Floating shelf installation</div>
       </div>
@@ -520,13 +576,29 @@
                 <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01z"/></svg>
                 <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01z"/></svg>
               </div>
-              <p class="review-quote">"Called in the morning and was able to get same day service on a washer repair at our rental. Friendly, fast, and affordable. Will definitely be using them again for any future needs, as well as referring them to my real estate clients in need. Called a second time for an ice maker repair on the same rental and again, fast and affordable."</p>
+              <p class="review-quote">"Steve such a handsome guy very fast and efficient with the work he did on a few appliances in my home. Such a very friendly guy. And don't forget his pricing top notch and very affordable. Will definitely have him come back for any issues I may have"</p>
+              <div class="review-attribution">
+                <span class="review-avatar" aria-hidden="true"><svg viewBox="0 0 48 48"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/><path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/></svg></span>
+                <p class="review-meta"><strong>Verified Customer</strong> on Google</p>
+              </div>
+            </div>
+
+            <div class="review-card" data-reveal>
+              <div class="review-stars">
+                <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01z"/></svg>
+                <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01z"/></svg>
+                <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01z"/></svg>
+                <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01z"/></svg>
+                <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01z"/></svg>
+              </div>
+              <p class="review-quote">"Best experience ever with a handyman. Had a few of my appliances fixed in no time. Very fast and efficient and such a good looking friendly guy. Thank you Steve will definitely call you with any other issues"</p>
               <div class="review-attribution">
                 <span class="review-avatar" aria-hidden="true"><svg viewBox="0 0 48 48"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/><path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/></svg></span>
                 <p class="review-meta"><strong>Verified Customer</strong> on Google</p>
               </div>
             </div>
       </div>
+
       <p class="blog-teaser-more"><a href="/#reviews">Read all reviews &rarr;</a></p>
     </div>
   </section>
@@ -536,17 +608,10 @@
         <h2>Frequently Asked Questions</h2>
       </div>
       <div class="faq-plain-list">
+      <h3 class="faq-category">Pricing & Payment</h3>
       <details class="faq-plain-item">
         <summary>Do you offer estimates before starting work?</summary>
         <p>Pricing is set once the problem has been diagnosed. Some jobs can be estimated over the phone, but many issues need an in-person look before a firm price can be given. Either way, you&#39;ll know the cost before any work begins.</p>
-      </details>
-      <details class="faq-plain-item">
-        <summary>What areas do you serve?</summary>
-        <p>St. George, Hurricane, Washington, Santa Clara, and the surrounding Southern Utah area. We can also take on larger jobs in Cedar City or Mesquite, NV by request, just contact us to check availability and scheduling.</p>
-      </details>
-      <details class="faq-plain-item">
-        <summary>Do you guarantee your work?</summary>
-        <p>Yes, work is guaranteed. Parts used are covered under whatever warranty the manufacturer sets, which can vary by part.</p>
       </details>
       <details class="faq-plain-item">
         <summary>What payment methods do you accept?</summary>
@@ -555,6 +620,16 @@
       <details class="faq-plain-item">
         <summary>Is there a trip fee?</summary>
         <p>Jobs within 15 miles have no trip fee. Beyond 15 miles, a $25 trip fee is added to the total.</p>
+      </details>
+      <h3 class="faq-category">Service Area</h3>
+      <details class="faq-plain-item">
+        <summary>What areas do you serve?</summary>
+        <p>St. George, Hurricane, Washington, Santa Clara, and the surrounding Southern Utah area. We can also take on larger jobs in Cedar City or Mesquite, NV by request, just contact us to check availability and scheduling.</p>
+      </details>
+      <h3 class="faq-category">Policies</h3>
+      <details class="faq-plain-item">
+        <summary>Do you guarantee your work?</summary>
+        <p>Yes, work is guaranteed. Parts used are covered under whatever warranty the manufacturer sets, which can vary by part.</p>
       </details>
       </div>
       <p class="blog-teaser-more"><a href="/#faq">See all FAQs &rarr;</a></p>
@@ -627,6 +702,7 @@
     </div>
     <div class="footer-bottom">
       <p>&copy; <span id="year"></span> Triple H Enterprises LLC. All rights reserved.</p>
+      <span><a href="#" onclick="window.reopenCookiePreferences && window.reopenCookiePreferences(event)">Cookie Preferences</a></span>
     </div>
   </div>
 </footer>
@@ -827,6 +903,36 @@
     if (e.key === 'ArrowRight') showNext(1);
     if (e.key === 'ArrowLeft') showNext(-1);
   });
+</script>
+<script>
+  // Gallery category filter chips (item 2, visual improvements pass).
+  // "All" shows everything; any other chip hides every tile (and the
+  // category header above it) whose data-category doesn't match, via a
+  // plain class toggle -- no framework, and every tile stays in the DOM
+  // (still real, crawlable content) rather than being removed.
+  (function () {
+    const chips = document.querySelectorAll('.gallery-filter-chip');
+    const tiles = document.querySelectorAll('#galleryGrid .gallery-tile[data-category]');
+    const headers = document.querySelectorAll('#galleryGrid .gallery-category[data-category]');
+    if (!chips.length) return;
+
+    chips.forEach((chip) => {
+      chip.addEventListener('click', () => {
+        const filter = chip.dataset.filter;
+        chips.forEach((c) => c.setAttribute('aria-pressed', c === chip ? 'true' : 'false'));
+        tiles.forEach((tile) => {
+          const show = filter === 'all' || tile.dataset.category === filter;
+          tile.classList.toggle('is-filtered-out', !show);
+          tile.hidden = !show;
+        });
+        headers.forEach((h) => {
+          const show = filter === 'all' || h.dataset.category === filter;
+          h.classList.toggle('is-filtered-out', !show);
+          h.hidden = !show;
+        });
+      });
+    });
+  })();
 </script>
 
 <script src="/site-motion.js?v=17fb5b611b" defer></script>
