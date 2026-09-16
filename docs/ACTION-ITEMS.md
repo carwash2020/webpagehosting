@@ -35,15 +35,11 @@ click a setting by hand.
    usually the best ROI channel for handyman/appliance repair
    specifically. Requires setting up and getting verified/background-
    checked through Google's own LSA program, outside this repo.
-6. **Review count mismatch (2026-09-16): the site shows 7 reviews, Google
-   shows 6.** One of the 7 real quotes on `index.html`'s reviews wall is
-   labeled "on Google" but isn't actually a Google review. Every card
-   uses the same label in the markup, so which one to fix can't be
-   worked out from the code -- check which one on Google's own listing
-   is missing, then tell me which quote it is (first few words is
-   enough) so I can remove that card and update the `aggregateRating`
-   `reviewCount` (currently 7) and the homepage's "Real 5-Star Reviews"
-   stat to 6. **Not yet done -- waiting on this answer.**
+6. ~~**Review count mismatch**~~ **Resolved (2026-09-16).** The missing
+   7th review was posted on Google (not a case of a fake quote on the
+   site) -- Google's count is now 7, matching the site's
+   `aggregateRating`/`reviewCount` and the "Real 5-Star Reviews" stat.
+   No code change needed.
 
 <!-- Add new manual action items above this line -->
 
