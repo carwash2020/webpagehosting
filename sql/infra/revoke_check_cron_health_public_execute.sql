@@ -1,0 +1,29 @@
+-- Security fix, found via mcp__Supabase__get_advisors while doing a
+-- proactive security audit (2026-09-16): check_cron_health() (added the
+-- same day in add_cron_watchdog.sql) was flagged "Public Can Execute
+-- SECURITY DEFINER Function" / "Signed-In Users Can Execute SECURITY
+-- DEFINER Function" for both anon and authenticated.
+--
+-- The only legitimate caller is pg_cron itself (the 'cron-watchdog' job
+-- scheduled in add_cron_watchdog.sql, run as its owner, which bypasses
+-- grants entirely). send-push-index.ts's "cron-health-alert" branch only
+-- *receives* the push payload check_cron_health() sends outbound via
+-- net.http_post -- it never calls the function itself. So nothing in the
+-- app legitimately needs REST access to it at all: this was a real,
+-- over-broad grant left over from the function's default creation
+-- privileges, distinct from the verified-harmless trigger-only-function
+-- class already documented in SECURITY.md.
+--
+-- First attempt (revoke ... from anon, authenticated) was a no-op:
+-- Postgres grants EXECUTE to PUBLIC by default on function creation, and
+-- every role implicitly inherits from PUBLIC, so anon/authenticated
+-- could still call it through that grant. Revoking from PUBLIC directly
+-- is what actually removes public REST access; postgres (cron's caller)
+-- and service_role keep their own explicit grants, confirmed afterward
+-- via information_schema.routine_privileges and a fresh advisor re-scan.
+--
+-- Applied directly via the Supabase MCP migration tool; recorded here
+-- after the fact so the schema is reproducible from this repo, same
+-- convention as every other file in this directory.
+revoke execute on function public.check_cron_health() from anon, authenticated;
+revoke execute on function public.check_cron_health() from public;

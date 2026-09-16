@@ -36,7 +36,7 @@ test('pickStage() returns the highest crossed checkpoint, not the first', () => 
 });
 
 test('an invoice under the 3-day checkpoint, or already fully paid, is skipped', () => {
-  const handler = SRC.match(/Deno\.serve\(async \(_req: Request\) => \{[\s\S]*?\n\}\);/);
+  const handler = SRC.match(/Deno\.serve\(async \(req: Request\) => \{[\s\S]*?\n\}\);/);
   assert.ok(handler);
   assert.match(handler[0], /if \(remainingCents <= 0\) continue; \/\/ paid in full/);
   assert.match(handler[0], /if \(stage === null\) continue; \/\/ not yet at the first/);
@@ -71,13 +71,13 @@ test('respects the client\'s existing invoice/quote email preference before send
   assert.match(fnMatch[0], /if \(!rows\.length\) return true;/);
   assert.match(fnMatch[0], /return rows\[0\]\.wants_invoice_quote_emails !== false;/);
 
-  const handler = SRC.match(/Deno\.serve\(async \(_req: Request\) => \{[\s\S]*?\n\}\);/);
+  const handler = SRC.match(/Deno\.serve\(async \(req: Request\) => \{[\s\S]*?\n\}\);/);
   assert.ok(handler);
   assert.match(handler[0], /if \(!\(await clientWantsEmail\(clientEmail\)\)\) continue;/);
 });
 
 test('an invoice with no client email on file is silently skipped, never crashes the run', () => {
-  const handler = SRC.match(/Deno\.serve\(async \(_req: Request\) => \{[\s\S]*?\n\}\);/);
+  const handler = SRC.match(/Deno\.serve\(async \(req: Request\) => \{[\s\S]*?\n\}\);/);
   assert.match(handler[0], /if \(!clientEmail\) continue;/);
 });
 

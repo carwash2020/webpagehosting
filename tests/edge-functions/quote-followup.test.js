@@ -31,7 +31,7 @@ test('follows up at 7 days, earlier than send-push\'s own 14-day internal alert 
 });
 
 test('a quote with no client email on file is silently skipped, never crashes the run', () => {
-  const handler = SRC.match(/Deno\.serve\(async \(_req: Request\) => \{[\s\S]*?\n\}\);/);
+  const handler = SRC.match(/Deno\.serve\(async \(req: Request\) => \{[\s\S]*?\n\}\);/);
   assert.ok(handler);
   assert.match(handler[0], /if \(!clientEmail\) continue;/);
 });
@@ -46,7 +46,7 @@ test('dedupes per quote via notification_log, keyed on the real quote id', () =>
   assert.match(markSentFn[0], /on_conflict=notif_type,item_key/);
   assert.match(markSentFn[0], /resolution=merge-duplicates/);
 
-  const handler = SRC.match(/Deno\.serve\(async \(_req: Request\) => \{[\s\S]*?\n\}\);/);
+  const handler = SRC.match(/Deno\.serve\(async \(req: Request\) => \{[\s\S]*?\n\}\);/);
   assert.match(handler[0], /const itemKey = String\(quote\.source_quote_id\);/);
 });
 
@@ -58,7 +58,7 @@ test('respects the client\'s existing invoice/quote email preference before send
   assert.match(fnMatch[0], /if \(!rows\.length\) return true;/);
   assert.match(fnMatch[0], /return rows\[0\]\.wants_invoice_quote_emails !== false;/);
 
-  const handler = SRC.match(/Deno\.serve\(async \(_req: Request\) => \{[\s\S]*?\n\}\);/);
+  const handler = SRC.match(/Deno\.serve\(async \(req: Request\) => \{[\s\S]*?\n\}\);/);
   assert.match(handler[0], /if \(!\(await clientWantsEmail\(clientEmail\)\)\) continue;/);
 });
 
