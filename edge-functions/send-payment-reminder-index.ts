@@ -300,8 +300,27 @@ async function sendReminder(invoice: Record<string, unknown>, stage: Stage, rema
   }
 }
 
-Deno.serve(async (_req: Request) => {
+Deno.serve(async (req: Request) => {
   try {
+    // This function has no per-user auth model -- its only real caller is
+    // the send-payment-reminders-daily cron (see
+    // sql/infra/add_payment_reminder_emails_cron.sql), which already
+    // authenticates with the service_role key. Without this check, the
+    // public anon key embedded in every page's HTML would validly pass
+    // Supabase's platform-level verify_jwt (it only checks a JWT's
+    // signature, not its role) and let anyone POST here directly, firing
+    // real payment-reminder emails at overdue clients on demand -- the
+    // same auth-check regression already fixed once for uptime-alert
+    // (see uptime-alert-auth.test.js).
+    const authHeader = req.headers.get("Authorization") || "";
+    const token = authHeader.replace(/^Bearer\s+/i, "");
+    if (token !== SERVICE_ROLE_KEY) {
+      return new Response(JSON.stringify({ ok: false, error: "Unauthorized" }), {
+        status: 401,
+        headers: { "Content-Type": "application/json" },
+      });
+    }
+
     const invoices = await getSyncedInvoices();
     let sent = 0;
     let checked = 0;

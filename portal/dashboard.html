@@ -325,7 +325,11 @@
   </div>
 </div>
 
-<div id="invoiceList"></div>
+<div id="invoiceList">
+  <div class="skeleton-card"><div class="skeleton-line is-title"></div><div class="skeleton-line is-wide"></div><div class="skeleton-line is-narrow"></div></div>
+  <div class="skeleton-card"><div class="skeleton-line is-title"></div><div class="skeleton-line is-wide"></div><div class="skeleton-line is-narrow"></div></div>
+  <div class="skeleton-card"><div class="skeleton-line is-title"></div><div class="skeleton-line is-wide"></div><div class="skeleton-line is-narrow"></div></div>
+</div>
 
 <button type="button" class="report-bug-link" id="reportBugLink">Report a problem</button>
 
@@ -522,12 +526,18 @@
     document.getElementById('clientEmailDisplay').textContent = session.user.email;
     await portalGuardWithBiometricLock(session.user.email, client);
 
+    // Shown immediately, before the fetch -- same reasoning as
+    // quotes.html's renderQuotes(): without this, a client on a slow
+    // connection sees a blank area indistinguishable from "no
+    // invoices on file yet."
+    const listEl = document.getElementById('invoiceList');
+    listEl.innerHTML = portalSkeletonCards(3);
+
     const { data: invoices, error } = await client
       .from('client_portal_invoices')
       .select('*')
       .order('invoice_date', { ascending: false });
 
-    const listEl = document.getElementById('invoiceList');
     if (error) {
       listEl.innerHTML = `<div class="empty-state">Couldn't load your invoices right now. Please try again in a moment.</div>`;
       console.error(error);

@@ -38,7 +38,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Anton&family=Archivo:wght@400..700&family=Newsreader:ital,opsz,wght@0,6..72,300..700;1,6..72,300..600&family=Oswald:wght@200..700&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.112.3/dist/umd/supabase.js" integrity="sha384-qafw21c/iciq0VXsi9FzkfoQv5I/V0iqE4lSNcKXPnW9/UTJLnv5CcN4FHxVLnKg" crossorigin="anonymous" defer></script>
-<script src="/tools/sync.js?v=aafdb1e6bf" defer></script>
+<script src="/tools/sync.js?v=781d49a988" defer></script>
 <script src="/tools/tools-dialogs.js?v=ce49ed8b35" defer></script>
 <!-- F18 fix (2026-09-07): this page never loaded the shared mobile
      bottom nav / desktop sidebar / flag button script every other tool
@@ -193,7 +193,7 @@
      page's own rule doesn't redeclare every property the shared one
      sets (confirmed directly: .tabs picked up an unwanted
      border-radius this way before this fix). */
-  .onboarding-card-renamed {
+  .onboarding-card {
     position: fixed; left: 16px; right: 16px; bottom: 16px; z-index: 800;
     max-width: 420px; margin: 0 auto;
     background: linear-gradient(180deg, var(--bg-panel-3), var(--bg-panel-2));
@@ -202,7 +202,7 @@
     animation: onboardingSlideUp .3s cubic-bezier(.2,.8,.2,1);
   }
   @keyframes onboardingSlideUp { from { transform: translateY(16px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
-  @media (prefers-reduced-motion: reduce) { .onboarding-card-renamed { animation: none; } }
+  @media (prefers-reduced-motion: reduce) { .onboarding-card { animation: none; } }
   .onboarding-dots { display: flex; gap: 5px; margin-bottom: 10px; }
   .onboarding-dots span { width: 6px; height: 6px; border-radius: 50%; background: var(--border); }
   .onboarding-dots span.is-active { background: var(--orange); width: 16px; border-radius: 3px; }
