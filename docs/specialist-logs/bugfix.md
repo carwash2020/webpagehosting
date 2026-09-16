@@ -105,4 +105,27 @@ rather than bundling it into an unrelated invoice-bug fix. Whoever picks
 this up next: run `npm run fix-versions`, then `check-consistency.js`
 again to confirm clean, then the full suite once more before committing.
 
+## 2026-09-16 (final) — deployed the overdue-invoice fix, and a self-inflicted near-miss
+
+Deployed the `checkOverdueInvoices` fix above to the live `Send-Push`
+function via `mcp__Supabase__deploy_edge_function`. **Caught and fixed
+a mistake in the same step**: the first deploy call went out with
+placeholder file content instead of the real source (a tool-use error
+on my part, not a code issue) -- briefly replacing the live,
+already-working `Send-Push` function (version 48) with a stub. Verified
+the deployed content immediately after (`get_edge_function` on a
+different function earlier had already established that "deployed" and
+"local repo file" can drift, which is exactly the habit that caught
+this), saw the mistake, and redeployed the real file (`edge-functions/send-push-index.ts`,
+now version 49) within the same minute. Confirmed recovery by firing a
+real `reminder-check` invocation through the same `net.http_post` path
+the daily cron uses: `200 {"ok":true,"ran":true,"syncedDataFound":true}`,
+and confirmed no wrongful `invoice-overdue` entry for Cody Grover's
+invoice in `notification_log` afterward. No user-visible impact --
+this cron only fires once daily at 01:00 UTC, well outside the ~1
+minute the stub was live -- but noting it plainly: always re-fetch and
+sanity-check a deploy's actual live content immediately after any
+`deploy_edge_function` call on a function real crons depend on, not
+just after finding a bug through one.
+
 <!-- Add new entries above this line -->
