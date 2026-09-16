@@ -1484,7 +1484,73 @@ static-source checks matching the style already established for this
 project's other edge functions -- Deno TypeScript can't be executed
 directly under Node's test runner).
 
-**Still open from this same audit, not built yet**: review requests
-are sent but never tracked (no record of whether one converted to a
-real review, no automatic second nudge) -- the next logical piece if
-this pass continues.
+**Correction, written moments after this entry**: the line originally
+here claimed "review requests are sent but never tracked" as the next
+open item. That was wrong -- checked directly against the live repo
+before starting that work and found `review-request.html` already has
+a full sent-log (status: sent/received/no_response, a real conversion-
+rate summary) and a delayed-reminder feature, built in an earlier
+session this doc's own "What changed" history hadn't been read closely
+enough to notice. The actual remaining gap, and what got built next
+(see the following entry): that reminder only ever surfaced passively
+on page-open, never as a real push.
+
+## What changed, 2026-09-16 (later the same day) -- pending review-reminder push, and a client-facing quote follow-up email
+
+Continuing the same invoice/review/schedule/email/report automation
+audit that added `send-payment-reminder` earlier the same day. Two more
+real gaps closed:
+
+**1. Review-follow-up reminders now actually notify, not just wait to
+be noticed.** `review-request.html` already lets Steve set a delayed
+reminder ("remind me in 5 days") after sending a review request --
+but that reminder was entirely passive: it only ever surfaced the next
+time he happened to open that exact page on or after the target date
+(the page's own toast copy says this outright: "this won't send a
+phone notification on its own"). Added `checkPendingReviewReminders()`
+to `send-push-index.ts`'s existing daily `reminder-check` pipeline --
+reads `th_review_requests_pending` straight out of the same
+`workspace_sync` blob every other daily check already reads, compares
+`remindAt` against business-timezone "today" as a plain date string
+(no `Date` parsing, avoiding the exact UTC-vs-business-tz class of bug
+this file has been bitten by twice before), and fires a real push the
+moment a reminder is due. One-time per reminder (`review-reminder-due`
+resend interval: effectively never, same as `job-no-photos`/
+`warranty-checkin`) -- the reminder itself stays visible on the page
+until Steve dismisses it, so resending the push daily on top of that
+would just be noise. No schema change, no new secret -- purely additive
+to the existing daily cron.
+
+**2. New edge function `send-quote-followup`** -- an unconverted quote
+already produced an internal push to Steve after 14 days
+(`checkUnconvertedQuotes`), but exactly like the overdue-invoice gap
+closed earlier this same day, nothing ever told the *client* their
+quote was still waiting on a decision. Queries `client_portal_quotes`
+directly (not the blob) -- the real client-facing source of truth,
+with a real `status` column (`pending`/`approved`/`declined`) and
+`client_email` already on every row, so it's exactly the population
+that can actually be emailed. One nudge per quote at 7 days pending --
+earlier than Steve's own 14-day internal alert, on purpose, so the
+client gets a chance to act before he's told to chase them down
+himself. Reuses the same `notification_log` de-dup mechanism and the
+same `wants_invoice_quote_emails` preference already established for
+`send-payment-reminder`/`send-invoice-notification` -- a quote is the
+same category of email to a client as an invoice. No new secrets.
+
+**New cron**, `sql/infra/add_quote_followup_email_cron.sql` --
+`send-quote-followup-daily`, offset an hour from the payment-reminder
+cron so the two daily sends don't bunch at the same minute. Same
+deploy caveat as `send-payment-reminder`: needs
+`supabase functions deploy send-quote-followup` and the SQL file run
+once -- not yet confirmed run as of this entry, tracked in
+`docs/ACTION-ITEMS.md`.
+
+New tests: `tests/edge-functions/pending-review-reminder-push.test.js`
+(7 tests) and `tests/edge-functions/quote-followup.test.js` (12
+tests), same static-source-check style as this project's other edge
+function tests.
+
+**Still open from the original audit**: job photos (flagged
+elsewhere in this doc as "not yet tested end-to-end") and converting a
+recurring job template straight to an invoice (still fully manual each
+time) remain unbuilt.
