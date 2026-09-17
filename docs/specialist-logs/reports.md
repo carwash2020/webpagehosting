@@ -4,12 +4,14 @@ Started 2026-09-16, alongside the `tripleh-reports` skill. See `README.md`
 in this directory for how these logs work.
 
 One seed entry, carried over from before this log existed: the site's
-review-count schema/stat intentionally counts only *visible, written*
-review quotes, not a raw Google review total — Google can (and does) have
-star-only reviews with no text, which don't get a card. Any report that
-cites "N reviews" for this business should say which N it means (Google's
-total vs. quotes actually shown), since the two have genuinely diverged
-here more than once.
+review-count schema/stat used to count only *visible, written* review
+quotes, not a raw Google review total. **As of 2026-09-17 (Connor
+unlock), `AggregateRating` matches Google Business Profile: 5.0 from 7
+reviews.** The homepage wall still shows only the 4 written, verified
+quotes -- star-only Google reviews are in the total, not invented as
+cards. Any report that cites "N reviews" should still say which N it
+means (GBP total vs. quotes actually shown), since the two still
+diverge.
 
 ## 2026-09-16 — first real business health report
 
@@ -95,5 +97,13 @@ and `client_portal_job_messages`.
 **Review lock (verified in tests + `index.html` JSON-LD):**
 AggregateRating `5.0` / `4`. Google's raw total can be higher
 because of star-only reviews; do not inflate.
+
+## 2026-09-17 — review lock unlocked to GBP 5.0 / 7
+
+Connor unlocked matching Google Business Profile: 5.0 stars from 7
+Google reviews. Schema, stats, and "5.0 from 7 Google reviews" copy
+now say 7. Wall stays at 4 written quotes. No invented Review
+objects. Reports should cite GBP 7 vs. 4 on-page quotes when both
+matter.
 
 <!-- Add new entries above this line -->

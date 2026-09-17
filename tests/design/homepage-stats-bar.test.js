@@ -1,9 +1,9 @@
 // A real-numbers stats strip added under the hero (2026-09-07): the
-// rating and review count must match the JSON-LD aggregateRating and the
-// reviews carousel exactly, and the community count must match the
-// number of pages this site actually serves. No invented statistics
-// (no fabricated "jobs completed" or "years in business" counts --
-// those aren't sourced anywhere else on the site).
+// rating and review count must match the JSON-LD aggregateRating
+// (Google Business Profile: 5.0 from 7), and the community count must
+// match the number of pages this site actually serves. No invented
+// statistics (no fabricated "jobs completed" or "years in business"
+// counts -- those aren't sourced anywhere else on the site).
 
 const { test } = require('node:test');
 const assert = require('node:assert/strict');
@@ -74,9 +74,9 @@ test('every counter animates from its own data-count-to via a shared count-up, a
 test('visible stat-count text is the final value on first paint, never a zero placeholder', () => {
   const statsSection = INDEX.slice(INDEX.indexOf('class="stats-bar"'), INDEX.indexOf('</section>', INDEX.indexOf('class="stats-bar"')));
   const visible = [...statsSection.matchAll(/class="stat-count"[^>]*>([^<]+)</g)].map((m) => m[1]);
-  assert.deepEqual(visible, ['5.0', '4', '9']);
+  assert.deepEqual(visible, ['5.0', '7', '9']);
   assert.ok(!visible.some((v) => Number(v) === 0), 'no stat may paint as 0 / 0.0');
-  assert.ok(Number(visible[0]) <= 5.0 && Number(visible[1]) <= 4 && Number(visible[2]) <= 9);
+  assert.ok(Number(visible[0]) <= 5.0 && Number(visible[1]) <= 7 && Number(visible[2]) <= 9);
 });
 
 test('the stats bar is a distinct full-width band, not styled like the plain trust cards', () => {

@@ -82,22 +82,20 @@ click a setting by hand.
    real source, so they were removed rather than kept unverified or
    rewritten to fit a real reviewer's name. Jilleen Walker's real
    review (never on the site before) was added in as a genuine 4th
-   card. `aggregateRating.reviewCount` and the "Real 5-Star Reviews"
-   stat now both say 4, matching visible content, consistent with this
-   site's existing policy (see `reviews-wall.test.js`) that the count
-   must match what's actually shown, not just Google's raw total.
-   **Done, as far as this was verified directly with the owner.**
+   card. The homepage wall still shows those 4 written quotes only.
 
-   ~~**Update (2026-09-16, confirmed with real evidence):**~~ Google
-   genuinely has 7 reviews now (owner-confirmed screenshot: "5.0 ★★★★★
-   7 Google reviews"), but the owner confirmed the 7th has **no
-   written text** -- same case as Austin Mayer and Micah Naegle. **No
-   code change needed**: this site's schema-honesty policy (see
-   `reviews-wall.test.js`) counts visible, written quotes, not
-   Google's raw review total, so `aggregateRating.reviewCount` and the
-   "Real 5-Star Reviews" stat correctly stay at 4. Fully resolved --
-   if that 7th review ever gets real text (or any future review does),
-   send it over and it'll be added as a genuine 5th card.
+   ~~**Update (2026-09-16):** Google had 7 reviews; the 7th had no
+   written text, so schema stayed at 4 (visible quotes, not Google's
+   raw total).~~
+
+   **Update (2026-09-17, owner unlock):** GBP currently shows **5.0
+   stars from 7 Google reviews**. Connor unlocked matching that total.
+   `aggregateRating` is now ratingValue 5.0 / reviewCount 7, and
+   on-page copy ("5.0 from 7 Google reviews", "Real 5-Star Reviews"
+   stat) matches. No invented Review objects or fake cards for the
+   star-only reviews. **Done.** If a future review has real written
+   text, send it over and it can be added as a genuine extra wall
+   card.
 7. ~~Deploy the new `send-payment-reminder` edge function and run its
    cron SQL~~ -- **deploy itself done** (function live at version 5,
    `send-payment-reminders-daily` cron active, 15:00 UTC daily). **But
@@ -560,6 +558,12 @@ reference:
   721px. Hub header is one toolbar row (sync/status stay visible). Job
   Tracker cards tighten at 768–1023; the dense table still starts at
   1024. Auth architecture unchanged.
+
+- **AggregateRating / review count matches GBP 5.0 from 7** (2026-09-17)
+  -- owner unlock. Homepage JSON-LD, stats strip, and CTA proof lines
+  (homepage + booking) now say 5.0 from 7 Google reviews. The reviews
+  wall still shows only the 4 written, verified quotes; no invented
+  Review cards.
 
 <!-- Add new visual additions above this line -->
 

@@ -162,4 +162,15 @@ $25 referral credit now appears on step 1 and the confirmation card,
 using the same complete-and-paid terms as the homepage FAQ. No new
 testimonials.
 
+## 2026-09-17 -- AggregateRating matches GBP 5.0 / 7
+
+Connor unlocked matching Google Business Profile: **5.0 stars from 7
+Google reviews**. The site had been locked at 5.0 / 4 (written quotes
+only). Updated JSON-LD `aggregateRating` (`ratingValue` 5.0,
+`reviewCount` 7), the homepage "Real 5-Star Reviews" stat, and the
+"5.0 from 7 Google reviews" CTA lines on `index.html` and
+`booking.html`. Left the homepage wall at the 4 verified written
+quotes -- no invented Review objects or fake cards for the star-only
+Google reviews. Tests that locked the count at 4 now expect 7.
+
 <!-- Add new entries above this line -->

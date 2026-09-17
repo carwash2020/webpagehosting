@@ -99,9 +99,10 @@ for (const name of PAGES_WITHOUT_SCHEDULE) {
   });
 }
 
-test('index.html has the full reviews wall, matching its aggregateRating reviewCount', () => {
+test('index.html has the full written reviews wall (4 verified quotes); aggregateRating is the GBP total (7)', () => {
   const html = read('index.html');
   assert.match(html, /<section id="reviews">/);
   const cardCount = (html.match(/<div class="review-card" data-reveal>/g) || []).length;
-  assert.equal(cardCount, 4, 'the homepage should carry exactly the verified reviews, matching its aggregateRating reviewCount (corrected 2026-09-16 after a real Google review audit)');
+  assert.equal(cardCount, 4, 'the homepage should carry exactly the verified written quotes -- do not invent cards for star-only Google reviews');
+  assert.match(html, /"reviewCount": "7"/);
 });
