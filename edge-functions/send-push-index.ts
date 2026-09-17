@@ -817,6 +817,30 @@ async function sendWeeklyDigest() {
 
 Deno.serve(async (req: Request) => {
   try {
+    // This function has no per-user auth model -- every real caller
+    // (the th_leads/th_bookings database triggers, the daily-reminder-
+    // check and weekly-digest crons, uptime-alert-index.ts, and every
+    // other Edge Function that fires a "client-notification" or
+    // internal alert) already authenticates with the service_role key
+    // (see e.g. sql/security/fix_cron_job_use_vault_secret.sql's
+    // send_push_service_role_key vault secret, and uptime-alert-index.ts's
+    // own sendPushAlert()). Without this check, the function was reachable
+    // by anyone holding the public Supabase anon key (embedded in every
+    // page's HTML) -- verify_jwt only validates the JWT signature, not
+    // which role it carries, so an anon-key request would otherwise sail
+    // through and could spam arbitrary users via "client-notification" or
+    // broadcast spoofed internal alerts to Steve/Connor at will. Same
+    // fix already applied to uptime-alert-index.ts (see that file's own
+    // comment on this exact issue).
+    const authHeader = req.headers.get("Authorization") || "";
+    const token = authHeader.replace(/^Bearer\s+/i, "");
+    if (token !== SERVICE_ROLE_KEY) {
+      return new Response(JSON.stringify({ ok: false, error: "Unauthorized" }), {
+        status: 401,
+        headers: { "Content-Type": "application/json" },
+      });
+    }
+
     const payload = await req.json();
 
     // Supabase's actual webhook payload is a fixed shape --
