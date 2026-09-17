@@ -81,4 +81,36 @@ failures on a fresh checkout are that missing-module gap, not real
 regressions. Worth a `package-lock.json`/CI check on why `npm ci` doesn't
 already restore them, but that's bugfix/automation territory, not content.
 
+## 2026-09-17
+
+Spot-checked the 4-page "Recent Notes From the Shop" work from yesterday
+(`content/service-page-blog-links`) against current `main` -- confirmed
+live on `drywall-painting.html`, `plumbing-repairs.html`,
+`assembly-installation.html`, and `handyman-repairs.html`, one relevant
+blog link each, matching the branch that merged as PR #257.
+
+While re-checking `washer-dryer-repair.html` (which got Dishwashers,
+Refrigerators, and Ranges & Ovens added as real service cards
+yesterday), found it only linked to 4 of the 5 relevant appliance blog
+posts in its own "Recent Notes From the Shop" section -- washer, dryer,
+fridge, and oven, but not `dishwasher-not-cleaning.html`, even though
+dishwashers are now a listed service card on that exact page. Added the
+dishwasher card using the identical icon/title/dek already used for it
+on `blog/index.html`, so nothing was invented. `check-consistency` and
+`check-links.py` clean; `check-undefined-vars.js` and the `jsdom`-based
+FAQ-schema-sync test still can't run in this environment (missing
+`eslint`/`jsdom`, pre-existing per the 2026-09-16 entry above); the
+`landing-page-faq-schema.test.js` and `blog-index-cards.test.js` suites
+(the ones that don't need `jsdom`) both pass in full, and neither
+touches this page's blog-link section anyway.
+
+Also re-checked ACTION-ITEMS.md's "SEO copy drafts" section against the
+"Manual action items" section, which still shows item 4 (GBP long
+description, individually-listed services, seed Q&As) as *not yet
+pasted in* per the latest owner screenshot -- correcting my 2026-09-16
+note above, which said everything there was owner-confirmed. Yelp is
+confirmed done; GBP's own paste-in is still open and needs dashboard
+access this session doesn't have, so it stays a manual action item, not
+something to redo here.
+
 <!-- Add new entries above this line -->
