@@ -47,7 +47,7 @@ test('tools/index.html is noindex; portal/index.html matches login (noindex, nof
 test('directory landings are redirect stubs: no shared styles.css, no app chrome', () => {
   for (const file of ['portal/index.html', 'tools/index.html']) {
     const html = readLanding(file);
-    assert.doesNotMatch(html, /styles\.css/, `${file} should not load styles.css`);
+    assert.doesNotMatch(html, /<link[^>]*rel=["']stylesheet["']/, `${file} should not load a stylesheet`);
     assert.doesNotMatch(html, /class="sticky-call"/);
     assert.doesNotMatch(html, /requireAuth\s*\(/);
   }
