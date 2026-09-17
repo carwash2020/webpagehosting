@@ -500,6 +500,7 @@
   }
   .site-banner-close:hover{color:var(--text);}
   @media (max-width:600px){
+    .site-banner{padding:7px 14px;}
     .site-banner-text{font-size:12.5px;}
   }
 
@@ -822,9 +823,13 @@
     padding:76px 0 90px;
     position:relative;
     overflow:hidden;
+    /* Overlay lightened 2026-09-17 so the canyon photo still reads as a
+       photo, not a black panel. Left stays darker than the right because
+       that's where the headline lives; the previous 0.94/0.90 wash crushed
+       the image on both desktop and mobile. */
     background:
-      linear-gradient(to bottom, rgba(8,8,8,0) 82%, rgba(8,8,8,1) 100%),
-      linear-gradient(100deg, rgba(8,8,8,0.94) 0%, rgba(8,8,8,0.90) 45%, rgba(8,8,8,0.72) 70%, rgba(8,8,8,0.45) 100%),
+      linear-gradient(to bottom, rgba(8,8,8,0) 70%, rgba(8,8,8,.88) 100%),
+      linear-gradient(100deg, rgba(8,8,8,0.78) 0%, rgba(8,8,8,0.58) 42%, rgba(8,8,8,0.32) 70%, rgba(8,8,8,0.16) 100%),
       url('/images/hero-bg-canyon.webp?v=202608241900');
     background-size: cover;
     background-position: center 70%;
@@ -976,13 +981,15 @@
          difference -- confirmed by generating it from the same source
          file, not a different photo. */
       background:
-        linear-gradient(to bottom, rgba(8,8,8,0) 82%, rgba(8,8,8,1) 100%),
-        linear-gradient(to bottom, rgba(8,8,8,0.42) 0%, rgba(8,8,8,0.58) 40%, rgba(8,8,8,0.78) 70%, rgba(8,8,8,0.85) 100%),
+        linear-gradient(to bottom, rgba(8,8,8,0) 72%, rgba(8,8,8,.82) 100%),
+        linear-gradient(to bottom, rgba(8,8,8,0.30) 0%, rgba(8,8,8,0.40) 40%, rgba(8,8,8,0.52) 72%, rgba(8,8,8,0.58) 100%),
         url('/images/hero-bg-canyon-mobile.webp?v=202608241900');
       background-size: cover;
       background-position: center 70%;
+      padding:28px 0 40px;
     }
-    .hero p.lede{margin-left:auto; margin-right:auto;}
+    .hero h1{margin-top:0; font-size:clamp(28px, 8.2vw, 44px);}
+    .hero p.lede{margin:14px auto 20px; font-size:15.5px;}
     .hero-ctas{
       justify-content:center;
       flex-direction:column;
@@ -1001,8 +1008,11 @@
       margin-right:auto;
       padding-bottom:4px;
     }
-    .hero-badge{order:-1; margin-bottom:8px; padding-left:0;}
-    .hero-badge img{width:250px;}
+    /* Crest stays in document order (after the H1/CTAs), not order:-1
+       above the headline. A 250px badge was burying the first screen
+       under the logo; 96px is a signature, not a billboard. */
+    .hero-badge{margin:18px 0 0; padding-left:0;}
+    .hero-badge img{width:96px; filter:drop-shadow(0 12px 22px rgba(0,0,0,.45));}
   }
 
   /* stats strip -- real numbers only (rating/review count match the
@@ -1675,10 +1685,30 @@
   }
   .faq-answer p em{color:var(--orange-text); font-style:normal;}
 
-  /* sticky mobile Call + Book bar (2026-09-17). Hidden on desktop;
-     760px matches the existing back-to-top / chat-bubble mobile
-     offset, not the 960px hamburger. Always-dark strip, same as the
-     theme-independent header. */
+  /* Public chrome stack (documented 2026-09-17). Coordinate these
+     rather than letting each layer pick its own bottom/z-index.
+     Bottom of the viewport, low → high:
+       1. Page content -- body:has(.sticky-call) padding-bottom clears
+          the Call/Book bar + env(safe-area-inset-bottom).
+       2. .sticky-call          z-index:70   position:fixed; bottom:0
+          Keep this. It is the mobile conversion chrome (#265).
+       3. .back-to-top          z-index:79   right; lifted above the bar
+       4. .chat-bubble-btn      z-index:80   left; homepage-only; hidden
+          while .cookie-banner is in the DOM so the two don't overlap
+       5. .chat-panel           z-index:81
+       6. .page-jump            z-index:50   desktop only, sticky under
+          the header (header itself is z-index:60)
+       7. header                z-index:60   sticky top:0
+       8. .cookie-banner        z-index:90   compact on ≤760px; deferred
+          off the first hero paint (cookie-consent.js) so it does not
+          cover H1/CTAs. Lifted above the Call/Book bar when both show.
+       9. lightbox / modal      z-index:9999
+     Promo .site-banner is in-flow above the header, not fixed -- it
+     consumes first-screen height but does not compete for the bottom
+     safe area. .motto-rail is z-index:55, pointer-events:none.
+     Safe-area: sticky-call padding-bottom includes
+     env(safe-area-inset-bottom). Chat / back-to-top / cookie bottom
+     offsets add the ~72px bar height plus that same inset. */
   .sticky-call{
     display:none;
     position:fixed;
@@ -1727,6 +1757,89 @@
   @keyframes stickyCallIn{
     from{opacity:0; transform:translateY(12px);}
     to{opacity:1; transform:translateY(0);}
+  }
+
+  /* Jump links for in-page sections. scroll-margin clears the sticky
+     header (and, on desktop, the .page-jump rail under it). */
+  #services, #process, #reviews, #schedule, #about, #areas, #contact, #triage, #honest{
+    scroll-margin-top:88px;
+  }
+
+  /* Desktop conversion spine: a slim sticky jump row under the header
+     so a visitor can reach Book without scrolling the whole scroll-craft
+     page. Hidden ≤760px -- the Call+Book bar already covers that job,
+     and another sticky row would restack the chrome. */
+  .page-jump{
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    gap:8px 18px;
+    flex-wrap:wrap;
+    position:sticky;
+    top:73px;
+    z-index:50;
+    padding:8px 16px;
+    background:var(--bg-panel);
+    border-bottom:1px solid var(--border);
+  }
+  .page-jump a:not(.btn){
+    font-family:var(--font-ui);
+    font-size:13px;
+    font-weight:600;
+    letter-spacing:.4px;
+    text-transform:uppercase;
+    color:var(--text-dim);
+    text-decoration:none;
+  }
+  .page-jump a:not(.btn):hover{color:var(--orange-text-vivid);}
+  .page-jump .btn{
+    padding:8px 16px;
+    font-size:12.5px;
+    min-height:44px;
+    width:auto;
+  }
+  @media (max-width:760px){
+    .page-jump{display:none;}
+    #services, #process, #reviews, #schedule, #about, #areas, #contact, #triage, #honest{
+      scroll-margin-top:80px;
+    }
+  }
+
+  /* Mid-page Schedule rail -- in-flow, not another sticky overlay.
+     Lands after Services so the path to booking does not wait for
+     #schedule at the bottom. Orange Book is the primary; reviews is
+     the quiet secondary. */
+  .schedule-rail{
+    padding:28px 0;
+    background:var(--bg-panel-3);
+    border-top:1px solid var(--border);
+    border-bottom:1px solid var(--border);
+  }
+  .schedule-rail-inner{
+    display:flex;
+    flex-wrap:wrap;
+    align-items:center;
+    justify-content:space-between;
+    gap:16px 24px;
+  }
+  .schedule-rail-copy{
+    margin:0;
+    font-family:var(--font-display);
+    font-size:clamp(22px, 3vw, 28px);
+    letter-spacing:.4px;
+    color:var(--white);
+  }
+  .schedule-rail-actions{
+    display:flex;
+    flex-wrap:wrap;
+    align-items:center;
+    gap:14px 18px;
+  }
+  @media (max-width:760px){
+    .schedule-rail{padding:22px 0;}
+    .schedule-rail-inner{flex-direction:column; align-items:stretch; text-align:center;}
+    .schedule-rail-actions{flex-direction:column; align-items:center;}
+    .schedule-rail-actions .btn{width:min(100%, 360px); justify-content:center;}
   }
 
   /* gallery */
@@ -3687,7 +3800,7 @@
   left:16px;
   right:16px;
   bottom:calc(16px + env(safe-area-inset-bottom, 0px));
-  z-index:9999;
+  z-index:90;
   max-width:640px;
   margin:0 auto;
   background:var(--bg-panel);
@@ -3724,4 +3837,27 @@
 @keyframes cookieBannerIn{
   from{opacity:0; transform:translateY(12px);}
   to{opacity:1; transform:translateY(0);}
+}
+/* While the cookie dialog is up it owns the bottom slot. Hide the
+   chat bubble (homepage-only) and back-to-top so they don't sit on
+   the same row. Call+Book (.sticky-call) stays. */
+body:has(.cookie-banner) .chat-bubble-btn,
+body:has(.cookie-banner) .chat-panel{
+  display:none !important;
+}
+body:has(.cookie-banner) .back-to-top{
+  opacity:0 !important;
+  visibility:hidden !important;
+  pointer-events:none;
+}
+@media (max-width:760px){
+  .cookie-banner{
+    left:10px;
+    right:10px;
+    padding:12px 14px;
+  }
+  .cookie-banner-inner{gap:10px;}
+  .cookie-banner-text{font-size:12.5px; line-height:1.45;}
+  .cookie-banner-actions{justify-content:stretch;}
+  .cookie-banner-actions .cookie-btn{flex:1 1 0;}
 }

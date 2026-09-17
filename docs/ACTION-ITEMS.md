@@ -530,6 +530,15 @@ reference:
   at 16px so iOS does not zoom on focus; bare `/portal/` and `/tools/`
   redirect to the login pages on a dark canvas instead of 404ing.
 
+- **Public conversion visuals** (2026-09-17) -- mobile chrome stack
+  coordinated (cookie deferred/compact over the hero; Call+Book kept;
+  chat/back-to-top hidden while the cookie dialog is up). Homepage hero
+  crest is secondary on small screens (96px, after the H1/CTAs, not a
+  250px badge above the headline). Photo overlays lightened. Desktop
+  sticky page-jump + mid-page Schedule rail shorten the path to
+  `/booking.html` without deleting scroll-craft sections. Booking
+  steps 2–3 get a compact sticky appointment summary on ≤960px.
+
 <!-- Add new visual additions above this line -->
 
 ## Proposed visual improvements (not yet built)

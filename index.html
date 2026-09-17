@@ -81,7 +81,7 @@
 <link rel="preconnect" href="https://csvfqdjuobylgafgolho.supabase.co">
 <link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Anton&family=Archivo:wght@400..700&family=Newsreader:ital,opsz,wght@0,6..72,300..700;1,6..72,300..600&family=Oswald:wght@200..700&display=swap" onload="this.onload=null;this.rel='stylesheet'">
 <noscript><link href="https://fonts.googleapis.com/css2?family=Anton&family=Archivo:wght@400..700&family=Newsreader:ital,opsz,wght@0,6..72,300..700;1,6..72,300..600&family=Oswald:wght@200..700&display=swap" rel="stylesheet"></noscript>
-<link rel="stylesheet" href="styles.css?v=0bb4006762">
+<link rel="stylesheet" href="styles.css?v=075a41dbc1">
 <!-- Improvement roadmap (2026-09-09), tier 1: the hero background is a
      CSS background-image (see .hero in styles.css), so the browser
      doesn't discover it until CSS is parsed -- likely this page's LCP
@@ -434,6 +434,13 @@
     </div>
   </section>
 
+  <nav class="page-jump" aria-label="On this page">
+    <a href="#services">Services</a>
+    <a href="#process">How a visit goes</a>
+    <a href="#reviews">Reviews</a>
+    <a class="btn orange" href="/booking.html">Book</a>
+  </nav>
+
   <!-- A real-numbers strip, not invented marketing stats: the rating and
        review count match the JSON-LD aggregateRating and the reviews
        carousel below, and the community count matches St. George plus
@@ -652,7 +659,18 @@
     </div>
   </section>
 
-
+  <aside class="schedule-rail" aria-label="Book a visit">
+    <div class="wrap schedule-rail-inner">
+      <p class="schedule-rail-copy">Ready to get it on the calendar?</p>
+      <div class="schedule-rail-actions">
+        <a class="btn orange" href="/booking.html">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+          Book Instantly
+        </a>
+        <a class="cta-quiet-link" href="#reviews">See reviews</a>
+      </div>
+    </div>
+  </aside>
 
   <!-- Symptom triage. Every verdict is deliberately qualitative -- what a
        symptom COMMONLY means -- with no prices, no percentages, and no

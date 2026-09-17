@@ -305,3 +305,43 @@ test('leaving email empty is still valid -- it is optional, only a non-empty inv
   await waitForCondition(() => insertCalled === true);
   assert.equal(insertCalled, true, 'an empty, optional email should never block submission');
 });
+
+test('the compact mobile summary is hidden on step 1, shows service on step 2, adds date/time on step 3, and hides again after confirm', async () => {
+  const window = loadPage(async (url) => {
+    if (String(url).includes('get_booking_availability')) return { ok: true, json: async () => ([]) };
+    if (String(url).includes('/rest/v1/th_bookings') && !String(url).includes('availability')) {
+      return { ok: true };
+    }
+    return { ok: false };
+  });
+
+  await waitForCondition(() => window.document.querySelector('.service-option'));
+  const summary = window.document.getElementById('bookingMobileSummary');
+  assert.ok(summary, 'expected the mobile summary element');
+  assert.equal(summary.hidden, true);
+  assert.equal(summary.classList.contains('is-visible'), false);
+
+  const serviceBtn = window.document.querySelector('.service-option');
+  const serviceName = serviceBtn.querySelector('.svc-name span').textContent;
+  serviceBtn.dispatchEvent(new window.Event('click', { bubbles: true }));
+  await waitForCondition(() => window.document.getElementById('stepDateTime').classList.contains('is-active'));
+
+  assert.equal(summary.hidden, false);
+  assert.equal(summary.classList.contains('is-visible'), true);
+  assert.equal(window.document.getElementById('mobileSummaryService').textContent, serviceName);
+  assert.equal(window.document.getElementById('mobileSummaryWhen').hidden, true);
+
+  await waitForCondition(() => window.document.querySelectorAll('.date-btn').length > 1);
+  window.document.querySelectorAll('.date-btn')[1].dispatchEvent(new window.Event('click', { bubbles: true }));
+  await waitForCondition(() => window.document.querySelector('.slot-btn'));
+  window.document.querySelector('.slot-btn').dispatchEvent(new window.Event('click', { bubbles: true }));
+  await waitForCondition(() => window.document.getElementById('stepContact').classList.contains('is-active'));
+
+  assert.equal(summary.hidden, false);
+  assert.match(window.document.getElementById('mobileSummaryWhen').textContent, /\S/);
+  assert.equal(window.document.getElementById('mobileSummaryWhen').hidden, false);
+
+  window.document.getElementById('backToService').click();
+  await waitForCondition(() => window.document.getElementById('stepService').classList.contains('is-active'));
+  assert.equal(summary.hidden, true, 'step 1 should hide the summary even after a service was chosen');
+});
