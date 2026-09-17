@@ -198,4 +198,50 @@ status vs. completion date, etc. weren't checked this pass).
 Finding #2 (realtime channel drops) is still open, unchanged from
 above — no code touched for it this session.
 
+## 2026-09-16 (hub dispatch: bug sweep) — misleading `Send-Push` deploy comment, and a ticking-time-bomb test fixture
+
+**1. `edge-functions/send-push-index.ts`'s own header comment said
+`Deploy with: supabase functions deploy send-push` (lowercase) — wrong.**
+Every real caller in this codebase (11+ files, grep
+`/functions/v1/Send-Push`) and `README.md`'s own edge-function listing
+agree the live, deployed slug is capitalized `Send-Push`. Supabase
+treats function slugs as case-sensitive, and
+`edge-functions/notify-work-order-message-email-index.ts`'s own comment
+already documents that this exact mismatch created a real orphaned
+duplicate function once before ("confirmed directly the hard way after
+an initial deploy accidentally created exactly that orphaned
+duplicate"). This file's own deploy instruction was the one place in
+the repo that still told a future session (or a human copy-pasting it)
+to recreate that mistake. Fixed the comment to say `Send-Push`, with an
+explanation of why the casing matters and a pointer to the prior
+incident. Not dead code — the real "orphaned function" is whatever got
+created live on Supabase by that earlier accidental deploy, which isn't
+visible from this repo's source and isn't something a code change here
+can remove; the fix here is closing off the one thing in the repo that
+could cause it to happen again. Added a regression test
+(`tests/edge-functions/push-remaining-triggers.test.js`) asserting no
+`edge-functions/*.ts` file contains a lowercase `deploy send-push`
+instruction.
+
+**2. `tests/booking/manage-booking.test.js` had 3 tests hardcoding an
+absolute future date/time (`2026-09-16T21:00:00+00:00` and a couple
+nearby end times) to represent "a booking that hasn't happened yet."**
+That's only true until real wall-clock time actually passes 21:00 UTC
+on 2026-09-16 — after which the app correctly starts treating it as a
+past booking (hides Cancel/Reschedule, exactly like the dedicated
+"already passed" test elsewhere in the same file already covers) and
+the tests failed for a reason that had nothing to do with the code.
+Found during a scheduled regression sweep once real time actually
+crossed that mark. Fixed by computing the fixture's start/end times
+relative to `Date.now()` (a new `futureBookingTimes()` helper) instead
+of a hardcoded calendar date, including the one test that also asserted
+the rendered date-label text (now computed the same way the real page
+does, via `Intl.DateTimeFormat`, rather than a hardcoded "Wednesday,
+September 16" string). **Lesson: grep for other hardcoded
+near-future ISO timestamps in test fixtures before assuming a suite is
+safe long-term** — `grep -rl "202[0-9]-[0-9]{2}-[0-9]{2}T2[0-3]:" tests/`
+found only this one file this time, but the same class of bug can
+recur anywhere a test fixture encodes "the future" as a specific
+calendar date instead of an offset from execution time.
+
 <!-- Add new entries above this line -->

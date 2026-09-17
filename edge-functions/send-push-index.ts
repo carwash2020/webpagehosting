@@ -47,7 +47,17 @@
 //     #11 resends daily on purpose -- an unhandled lead getting one
 //     daily nudge until it's actually dealt with is the whole point.
 //
-// Deploy with: supabase functions deploy send-push
+// Deploy with: supabase functions deploy Send-Push
+// (exact casing matters -- Supabase treats function slugs as
+// case-sensitive. This comment used to say the lowercase "send-push",
+// which is wrong: every real caller in this codebase (grep
+// `functions/v1/Send-Push`) and README.md's own file listing agree the
+// live, deployed slug is capitalized. Deploying with the lowercase
+// command here creates a SEPARATE, orphaned function rather than
+// updating the real one -- confirmed as a real, live incident (see
+// edge-functions/notify-work-order-message-email-index.ts's own
+// comment on this exact mistake). If this function is ever redeployed
+// by literally copy-pasting this comment, use the capitalized form.)
 // Required secrets: VAPID_PUBLIC_KEY, VAPID_PRIVATE_KEY
 // Optional (email version of the weekly digest; gracefully skipped if
 // not yet configured -- see sendWeeklyDigest):
