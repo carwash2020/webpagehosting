@@ -2002,3 +2002,48 @@ escalation gate, keep AggregateRating at 5.0/4, never inflate
 reviews. Linked from `docs/README.md` and `docs/hub-governance.md`.
 Corrected `tripleh-features` to squash instead of merge commits.
 No site, portal, tools, schema, or CI workflow changes.
+
+## What changed, 2026-09-17 -- tools invoice list reads from the relational table
+
+Ops relational Phase 2, invoices slice A. No public-site HTML, no
+auth/RLS changes, and invoice *writes* still go through the
+`th_invoices` blob (plus the existing best-effort mirror).
+
+`tools/sync.js` now keeps a shared invoices read cache.
+`cachedRelationalInvoices` starts as `null`, not `[]`, so "not loaded
+yet" is distinct from a genuine empty list. `getInvoicesForRead()`
+uses the cache once a fetch succeeds and falls back to `th_invoices`
+while the cache is still null. A failed fetch does not store `[]`.
+A local blob write, or a `workspace_sync` pull of `th_invoices`,
+invalidates the cache so the list does not hide the write behind
+stale relational rows.
+
+Wired into the two invoice list surfaces:
+
+- Workspace Income list (`workspace.html`) -- after `initSyncOnLoad()`,
+  then again when the relational fetch returns, and live via
+  `startInvoicesRealtime()`. `togglePaid()` still read-modify-writes
+  the blob (the relational fetch has no `line_items`).
+- Invoice Generator Recent tab (`invoice-generator.html`) -- same
+  refresh-after-sync and realtime. `saveInvoiceLog()` still writes
+  `th_invoices`.
+
+`finance.html` and `runway-dashboard.html` are unchanged in this
+slice. `invoices` is added to the `supabase_realtime` publication
+(`sql/infra/add_invoices_to_realtime_phase2.sql`), same pattern as
+`jobs`.
+
+**How to verify in the tools UI**
+
+1. Open Workspace, wait for live sync, and confirm the Income list
+   still shows existing invoices (including after a pull-to-refresh).
+2. Open Invoice Generator → Recent and confirm the same invoices
+   appear after the page finishes its initial sync.
+3. On a second signed-in device (or a second browser profile), create
+   or mark an invoice paid. The first device's list should update
+   without a manual reload.
+4. Turn the network off, reload Invoice Generator → Recent: the list
+   should still paint from the local blob, not go blank.
+
+New tests: `tests/sync/relational-invoices-read-phase2.test.js`.
+

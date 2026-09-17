@@ -182,7 +182,7 @@ test('each of the 5 previously-bundled tools is gated on its own specific permis
   assert.doesNotMatch(contractSrc, /canManageBusinessFinances/);
 
   const invoiceSrc = fs.readFileSync(path.join(__dirname, '..', '..', 'tools', 'invoice-generator.html'), 'utf8');
-  assert.equal((invoiceSrc.match(/canManageInvoices/g) || []).length, 7, 'expected 3 gate call sites x 2 (typeof check + call) plus 1 retry-button reference for canManageInvoices');
+  assert.equal((invoiceSrc.match(/canManageInvoices/g) || []).length, 9, 'expected 4 gate call sites x 2 (typeof check + call) plus 1 retry-button reference for canManageInvoices');
   assert.doesNotMatch(invoiceSrc, /canManageBusinessFinances/);
 });
 

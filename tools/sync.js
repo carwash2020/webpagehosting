@@ -674,6 +674,16 @@ function applySyncData(obj, keysToApply) {
       }
 
       localStorage.setItem(k, JSON.stringify(finalArr));
+      // A freshly merged blob copy of invoices is more current than
+      // whatever the relational read-cache last fetched. Drop the cache
+      // so getInvoicesForRead() falls back to this blob until the next
+      // refreshRelationalInvoicesCache() -- otherwise a live workspace_sync
+      // pull could re-render from stale relational rows and hide the
+      // invoices that just arrived. Guarded: applySyncData tests extract
+      // this function without the cache helpers.
+      if (k === 'th_invoices' && typeof invalidateRelationalInvoicesCache === 'function') {
+        invalidateRelationalInvoicesCache();
+      }
       // New converged state for this key becomes the base the NEXT merge
       // three-way-diffs against -- skipped for th_sync_conflicts itself
       // (folded in separately below, and diffing a conflict LOG against
@@ -1406,10 +1416,11 @@ async function fetchJobsFromRelational() {
 
 // Relational tables Phase 2, step 3 (2026-09-10): same pattern as
 // fetchJobsFromRelational() above, for the real `invoices` table.
-// Read-only pages only (finance.html, runway-dashboard.html) -- none
-// of their invoice reads use line_items, so this deliberately doesn't
-// join invoice_line_items at all; a page that needs those should ask
-// for them explicitly rather than this function guessing.
+// Read-only list pages (workspace Income list, invoice-generator
+// Recent tab) -- none of those invoice reads use line_items, so this
+// deliberately doesn't join invoice_line_items at all; a page that
+// needs those should ask for them explicitly rather than this
+// function guessing. Writes still go through the blob (th_invoices).
 async function fetchInvoicesFromRelational() {
   if (!isSyncConfigured()) return { ok: false, error: 'not-configured', invoices: [] };
   try {
@@ -1432,6 +1443,36 @@ async function fetchInvoicesFromRelational() {
     return { ok: true, invoices };
   } catch (e) {
     return { ok: false, error: 'network', invoices: [] };
+  }
+}
+
+// Relational tables Phase 2, invoices slice A (2026-09-17): shared
+// read cache so list pages stay synchronous (render from cache) without
+// each page inventing its own null-vs-[] trap. Starts null, not [] --
+// an empty successful fetch is a real answer ("no invoices") and must
+// not look like "not loaded yet." A failed fetch leaves the cache
+// alone so getInvoicesForRead() can still fall back to th_invoices.
+// Writes stay on the blob; a local write (and a blob pull of
+// th_invoices) invalidates so the next read uses the copy that just
+// changed.
+let cachedRelationalInvoices = null;
+
+async function refreshRelationalInvoicesCache() {
+  const result = await fetchInvoicesFromRelational();
+  if (result && result.ok) cachedRelationalInvoices = result.invoices;
+}
+
+function invalidateRelationalInvoicesCache() {
+  cachedRelationalInvoices = null;
+}
+
+function getInvoicesForRead() {
+  if (cachedRelationalInvoices !== null) return cachedRelationalInvoices;
+  try {
+    const parsed = JSON.parse(localStorage.getItem('th_invoices') || '[]');
+    return Array.isArray(parsed) ? parsed : [];
+  } catch (e) {
+    return [];
   }
 }
 
@@ -1699,6 +1740,7 @@ let _realtimeChannel = null;
 let _leadsRealtimeChannel = null;
 let _bookingsRealtimeChannel = null;
 let _jobsRealtimeChannel = null;
+let _invoicesRealtimeChannel = null;
 
 function getSupabaseClient() {
   if (!isSyncConfigured()) return null;
@@ -1921,6 +1963,7 @@ function stopRealtimeSync() {
   if (_leadsRealtimeChannel) { _leadsRealtimeChannel.unsubscribe(); _leadsRealtimeChannel = null; }
   if (_bookingsRealtimeChannel) { _bookingsRealtimeChannel.unsubscribe(); _bookingsRealtimeChannel = null; }
   if (_jobsRealtimeChannel) { _jobsRealtimeChannel.unsubscribe(); _jobsRealtimeChannel = null; }
+  if (_invoicesRealtimeChannel) { _invoicesRealtimeChannel.unsubscribe(); _invoicesRealtimeChannel = null; }
 }
 
 // Same idea again, for th_bookings specifically -- fires on a new
@@ -2029,6 +2072,66 @@ function startJobsRealtime(onChange, onStatusChange) {
             loggedFailure = true;
             if (typeof logClientError === 'function') {
               logClientError('Realtime jobs channel status: ' + status + ` (foreground retries exhausted after ${REALTIME_RETRY_DELAYS.length} attempts; retrying quietly every ${REALTIME_BACKGROUND_RETRY_MS / 1000}s in the background)`, 'sync.js', null, null, null);
+            }
+          }
+          if (onStatusChange) onStatusChange(status);
+          setTimeout(() => attemptSubscribe(REALTIME_RETRY_DELAYS.length), REALTIME_BACKGROUND_RETRY_MS);
+          return;
+        }
+        if (status === 'SUBSCRIBED') loggedFailure = false;
+        if (onStatusChange) onStatusChange(status);
+      });
+  }
+  attemptSubscribe(0);
+
+  setTimeout(() => {
+    if (!realtimeResolved && onStatusChange) onStatusChange('timeout');
+  }, REALTIME_WATCHDOG_MS);
+}
+
+// Relational tables Phase 2, invoices slice A (2026-09-17) -- same
+// pattern as startJobsRealtime above, for the real `invoices` table.
+// An invoice added or marked paid on one device now shows up on the
+// Workspace Income list and Invoice Generator Recent tab on another
+// device without a manual reload. See
+// sql/infra/add_invoices_to_realtime_phase2.sql.
+function startInvoicesRealtime(onChange, onStatusChange) {
+  const client = getSupabaseClient();
+  if (!client) {
+    if (onStatusChange) onStatusChange('unavailable');
+    return;
+  }
+  let realtimeResolved = false;
+  let loggedFailure = false;
+
+  function attemptSubscribe(attempt) {
+    _invoicesRealtimeChannel = client
+      .channel('invoices-realtime')
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'invoices' },
+        () => {
+          try {
+            if (onChange) onChange();
+          } catch (e) {
+            if (typeof logClientError === 'function') {
+              logClientError('Realtime invoices callback failed: ' + (e && e.message ? e.message : String(e)), 'sync.js', null, null, e && e.stack);
+            }
+          }
+        }
+      )
+      .subscribe((status) => {
+        if ((status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') && attempt < REALTIME_RETRY_DELAYS.length) {
+          client.removeChannel(_invoicesRealtimeChannel);
+          setTimeout(() => attemptSubscribe(attempt + 1), REALTIME_RETRY_DELAYS[attempt]);
+          return;
+        }
+        realtimeResolved = true;
+        if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
+          if (!loggedFailure) {
+            loggedFailure = true;
+            if (typeof logClientError === 'function') {
+              logClientError('Realtime invoices channel status: ' + status + ` (foreground retries exhausted after ${REALTIME_RETRY_DELAYS.length} attempts; retrying quietly every ${REALTIME_BACKGROUND_RETRY_MS / 1000}s in the background)`, 'sync.js', null, null, null);
             }
           }
           if (onStatusChange) onStatusChange(status);

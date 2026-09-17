@@ -3,6 +3,25 @@
 Started 2026-09-16, alongside the `tripleh-features` skill. See `README.md`
 in this directory for how these logs work.
 
+## 2026-09-17 -- invoices relational read, slice A only
+
+Phase 2 of the jobs/invoices/quotes/contracts cutover, invoices list
+only. Put the cache in `sync.js` (`cachedRelationalInvoices` starts
+`null`) rather than copying calendar.html's page-local cache, because
+two list surfaces needed the same helper and the null-vs-[] trap is
+easy to get wrong twice.
+
+Did not convert `finance.html` or `runway-dashboard.html`. Their
+invoice reads are synchronous helpers called from many render sites,
+and CONTINUE-HERE already said not to force a drop-in swap. Did not
+move writes off the blob: `fetchInvoicesFromRelational()` omits
+`line_items`, and a read-modify-write from that cache would strip
+them. `togglePaid()` / `saveInvoiceLog()` still write `th_invoices`
+and invalidate the cache.
+
+Realtime publication for `invoices` follows the jobs pattern. No RLS
+edits.
+
 ## 2026-09-17 -- booking conversion: sticky CTAs, held-slot copy, referral
 
 Public booking.html only. No Edge Functions, no Supabase schema, no
@@ -26,6 +45,7 @@ Deliberately no AggregateRating there: the page only has the compact
 proof line, not the reviews wall, and `cta-trust-proof.test.js`
 already forbids it.
 
+<!-- Add new entries above this line -->
 ## 2026-09-17 -- /tools/ Action Items inbox + More overflow (UI only)
 
 Paired with the visual lane the same day. Behavior added, not a new

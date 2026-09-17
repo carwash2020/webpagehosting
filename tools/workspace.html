@@ -68,7 +68,7 @@
 <link rel="stylesheet" href="/styles.css?v=46788395ca">
 <link rel="stylesheet" href="/tools/styles-tools.css?v=bc9a09dd07">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.112.3/dist/umd/supabase.js" integrity="sha384-qafw21c/iciq0VXsi9FzkfoQv5I/V0iqE4lSNcKXPnW9/UTJLnv5CcN4FHxVLnKg" crossorigin="anonymous" defer></script>
-<script src="/tools/sync.js?v=781d49a988" defer></script>
+<script src="/tools/sync.js?v=7d8e06c977" defer></script>
 <!-- Shared business-hours data (2026-09-03) -- used by the work order
      "Approve & Schedule" form to warn if a chosen time falls outside
      real business hours, matching the same real hours booking.html,
@@ -1176,7 +1176,18 @@
   function loadJobs() { try { return JSON.parse(localStorage.getItem('th_tracker_jobs') || '[]'); } catch (e) { return []; } }
   function loadExpenses() { try { return JSON.parse(localStorage.getItem('th_expense_log') || '[]'); } catch (e) { return []; } }
   function loadInvoices() { try { return JSON.parse(localStorage.getItem('th_invoices') || '[]'); } catch (e) { return []; } }
-  function saveInvoices(list) { localStorage.setItem('th_invoices', JSON.stringify(list)); if (typeof scheduleSync === 'function') scheduleSync(); }
+  function saveInvoices(list) {
+    localStorage.setItem('th_invoices', JSON.stringify(list));
+    // Writes stay on the blob. Drop the relational read-cache so the
+    // next list render sees this local write instead of stale rows.
+    if (typeof invalidateRelationalInvoicesCache === 'function') invalidateRelationalInvoicesCache();
+    if (typeof scheduleSync === 'function') scheduleSync();
+  }
+  // List/display reads only. togglePaid() still uses loadInvoices() so
+  // a write-back never strips line_items the relational fetch omits.
+  function invoicesForDisplay() {
+    return (typeof getInvoicesForRead === 'function') ? getInvoicesForRead() : loadInvoices();
+  }
   function loadRate() { return parseFloat(localStorage.getItem('th_mileage_rate')) || 0.76; }
   function loadContactsForSearch() { try { return JSON.parse(localStorage.getItem('th_tracker_contacts') || '[]'); } catch (e) { return []; } }
   function loadQuotesForSearch() { try { return JSON.parse(localStorage.getItem('th_quotes') || '[]'); } catch (e) { return []; } }
@@ -1261,7 +1272,7 @@
   // Takes the invoice's numeric id (not its name) so nothing client-name-
   // shaped ever has to be interpolated into an inline HTML attribute.
   function jumpToInvoiceSearch(invoiceId) {
-    const invoice = loadInvoices().find(i => i.id === invoiceId);
+    const invoice = invoicesForDisplay().find(i => i.id === invoiceId);
     if (!invoice) return;
     expandSection('actionitems');
     const el = document.getElementById('invoiceSearch');
@@ -1778,7 +1789,7 @@
   }
 
   function renderInvoicesList() {
-    actionItemCounts.unpaid = loadInvoices().filter(i => invoicePaymentStatus(i) !== 'paid').length;
+    actionItemCounts.unpaid = invoicesForDisplay().filter(i => invoicePaymentStatus(i) !== 'paid').length;
     updateActionItemsBadge();
     const searchTerm = (document.getElementById('invoiceSearch')?.value || '').trim().toLowerCase();
 
@@ -1786,7 +1797,7 @@
     // logged in Finance's Income tab -- merged into one list so this
     // dashboard reflects the same total Finance and Runway Dashboard
     // already agree on, instead of only showing formally invoiced amounts.
-    let invoiceItems = loadInvoices().map(i => ({
+    let invoiceItems = invoicesForDisplay().map(i => ({
       kind: 'invoice', id: i.id, sortKey: i.id,
       title: i.clientName, meta: `#${i.invoiceNumber || '\u2014'} \u00b7 ${i.date || ''} \u00b7 ${i.terms || ''}`,
       amount: i.total, raw: i,
@@ -3175,6 +3186,13 @@
   document.addEventListener('DOMContentLoaded', function () {
     try {
     initSyncOnLoad().then(renderDashboard).catch(renderDashboard).then(() => {
+      // Relational tables Phase 2, invoices slice A: after the blob pull,
+      // overlay the real `invoices` table and re-render the Income list.
+      // Until that fetch resolves, invoicesForDisplay() already falls
+      // back to th_invoices, so this is a correction, never a blank flash.
+      if (typeof refreshRelationalInvoicesCache === 'function') {
+        refreshRelationalInvoicesCache().then(renderDashboard).catch(renderDashboard);
+      }
       renderDevToolsTileVisibility();
       renderBusinessFinanceTileVisibility();
       renderWelcomeGreeting();
@@ -3185,6 +3203,15 @@
         startRealtimeSync(renderDashboard, updateRealtimeBadge);
         startLeadsRealtime(loadAndRenderLeads, updateRealtimeBadge);
         startBookingsRealtime(loadAndRenderBookings, updateRealtimeBadge);
+      }
+      if (typeof startInvoicesRealtime === 'function') {
+        startInvoicesRealtime(() => {
+          if (typeof refreshRelationalInvoicesCache === 'function') {
+            refreshRelationalInvoicesCache().then(renderDashboard).catch(renderDashboard);
+          } else {
+            renderDashboard();
+          }
+        }, updateRealtimeBadge);
       }
     });
     wireSearchClear('globalSearch', renderGlobalSearch);
@@ -3211,7 +3238,12 @@
         if (e.key === 'Escape') setOpen(false);
       });
     })();
-    if (typeof setupPullToRefresh === 'function') setupPullToRefresh(renderDashboard);
+    if (typeof setupPullToRefresh === 'function') setupPullToRefresh(() => {
+      renderDashboard();
+      if (typeof refreshRelationalInvoicesCache === 'function') {
+        refreshRelationalInvoicesCache().then(renderDashboard).catch(renderDashboard);
+      }
+    });
     window.addEventListener('th-sync-status', renderSnapshotLastUpdated);
     // Keeps "3m ago" counting up while the page sits open, without a
     // sync event to trigger a re-render.
