@@ -128,8 +128,10 @@ test('smoke: add a job (job-tracker.html) -> invoice it, linked to that job (inv
   jtWindow.document.dispatchEvent(new jtWindow.Event('DOMContentLoaded'));
   // Re-stubbed AFTER the shared scripts load -- tools-effects.js defines
   // its own real showToast() (which calls requestAnimationFrame, not
-  // available in jsdom), overwriting whatever was set in beforeParse.
+  // available in jsdom), and tools-dialogs.js defines a real showConfirm()
+  // that waits for a click. Both overwrite whatever was set in beforeParse.
   jtWindow.showToast = () => {};
+  jtWindow.showConfirm = () => Promise.resolve(true);
   jtWindow.startRealtimeSync = () => {};
   jtWindow.startLeadsRealtime = () => {};
   jtWindow.scheduleSync = () => {};
@@ -174,6 +176,7 @@ test('smoke: add a job (job-tracker.html) -> invoice it, linked to that job (inv
   igWindow.document.dispatchEvent(new igWindow.Event('DOMContentLoaded'));
   await new Promise(resolve => setTimeout(resolve, 100));
   igWindow.showToast = () => {};
+  igWindow.showConfirm = () => Promise.resolve(true);
   igWindow.startRealtimeSync = () => {};
   igWindow.startLeadsRealtime = () => {};
   igWindow.scheduleSync = () => {};
@@ -234,6 +237,7 @@ test('smoke: add a job (job-tracker.html) -> invoice it, linked to that job (inv
   injectSharedScripts(wsWindow);
   wsWindow.document.dispatchEvent(new wsWindow.Event('DOMContentLoaded'));
   wsWindow.showToast = () => {};
+  wsWindow.showConfirm = () => Promise.resolve(true);
   wsWindow.startRealtimeSync = () => {};
   wsWindow.startLeadsRealtime = () => {};
   wsWindow.scheduleSync = () => {};
