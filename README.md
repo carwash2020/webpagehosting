@@ -1812,3 +1812,28 @@ reviews, and `aggregateRating.reviewCount` stays 4.
 
 New tests: `tests/design/cta-trust-proof.test.js`, plus jsdom coverage
 in `tests/content-quality/analytics-events.test.js`.
+
+## What changed, 2026-09-17 -- visual quick wins: stats paint, 16px forms, directory landings
+
+Three small public-site honesty and usability fixes. No review-count
+changes and no AggregateRating JSON-LD edits.
+
+**Stats strip first-paint.** Homepage `.stat-count` text is now the
+final values (5.0 / 4 / 9) in the HTML, so view-source, no-JS, and
+reduced motion never flash zeros. Count-up still runs as progressive
+enhancement, interpolating from those already-rendered finals rather
+than from 0.
+
+**16px form controls.** Root `styles.css` `input, select, textarea`
+(including the email modal) now use a 16px floor, the same iOS
+zoom-on-focus fix portal and booking already had.
+
+**Bare `/portal/` and `/tools/`.** Those directory URLs 404ed on GitHub
+Pages. New `portal/index.html` and `tools/index.html` redirect to the
+login pages with a dark canvas (`color-scheme` + inline
+`background-color:#0a0a0a`) so the hop does not flash white. Tools
+index is noindex; portal index matches login (`noindex, nofollow`).
+Neither stub loads `styles.css`.
+
+New tests: `tests/design/directory-index-redirects.test.js`, plus
+updates to the stats-bar and site-wide 16px zoom tests.

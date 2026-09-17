@@ -1300,7 +1300,10 @@
     padding:12px 14px;
     color:var(--white);
     font-family:var(--font-ui);
-    font-size:14.5px;
+    /* iOS Safari zoom-on-focus: a control under 16px auto-zooms.
+       Same 16px floor portal/booking already use. Email modal fields
+       share this rule. */
+    font-size:16px;
   }
   input::placeholder, textarea::placeholder{color:var(--placeholder-text);}
   textarea{resize:vertical; min-height:96px;}

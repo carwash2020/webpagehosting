@@ -46,6 +46,7 @@ const PORTAL_TIMESTAMP_VERSIONED = new Set(['portal-app.css', 'portal-app.js']);
 const EXEMPT = {
   'login.html': 'the login gate itself -- requireAuth() would be circular here',
   'reset-password.html': "reached from a password-recovery email link before the person is logged in -- requireAuth() would lock them out of the one page meant to get them back in",
+  'index.html': 'bare /tools/ directory URL -- soft-landing redirect to login.html, not a gated app page',
   'contact-card.html': 'retired page, just a redirect stub to job-tracker.html',
   'expense-logger.html': 'retired page, just a redirect stub to job-tracker.html',
   'job-cost-lookup.html': 'retired page, just a redirect stub to job-tracker.html',

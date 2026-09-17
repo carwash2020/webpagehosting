@@ -524,6 +524,12 @@ reference:
   last-content padding includes the iOS safe area. `/tools/` and
   `/portal/` are untouched.
 
+- **Stats first-paint, 16px forms, `/portal/` and `/tools/` landings**
+  (2026-09-17) -- homepage stats paint 5.0 / 4 / 9 immediately instead
+  of zeros; public `input, select, textarea` (email modal included) sit
+  at 16px so iOS does not zoom on focus; bare `/portal/` and `/tools/`
+  redirect to the login pages on a dark canvas instead of 404ing.
+
 <!-- Add new visual additions above this line -->
 
 ## Proposed visual improvements (not yet built)
