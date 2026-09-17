@@ -296,4 +296,39 @@ and legal pages. Internal refs across every HTML file are still
 checked. Handed to automation/bugfix rather than patched in the
 docs-only Watcher PR — a one-line list add is the actual fix.
 
+## 2026-09-17 — UX-study glitches: empty footer Hours, dead `#` links, portal Send Request overlap
+
+Four concrete public-site + portal defects from the UX study, one PR.
+
+1. **Footer Hours was missing**, not blank HTML. The `#contact` strip,
+   JSON-LD, and `business-hours.js` already agreed (Mon–Fri 14–22,
+   Sat 7–22, Sun 14–20). The footer had no Hours column at all. Copied
+   that same schedule into the homepage footer Contact column. Changed
+   the CMS overlay from `querySelector` to `querySelectorAll` so a
+   per-day `site_content` value updates both copies. Did not invent
+   hours; did not touch GBP.
+
+2. **FAQ / Terms / Cookie Preferences were `href="#"`.** FAQ already
+   had a `/#faq` auto-open path used by landing pages — homepage nav
+   and footer now use `#faq`. Terms already had `/terms.html`; the
+   homepage footer now points there (modal still opens via the existing
+   preventDefault handler). Cookie Preferences now falls back to
+   `/privacy.html#cookies` (new `id="cookies"` on that heading) and
+   still calls `reopenCookiePreferences` when JS is present.
+
+3. **Send Request sat under the fixed portal tab bar.**
+   `body.portal-page` padding was 72px, the bar's own height, so a
+   full-width button at the bottom of the form was flush with it.
+   Worse: `@media (display-mode: standalone)` in `portal-polish.css`
+   replaced that padding with *only* `env(safe-area-inset-bottom)`,
+   so the installed app dropped the clearance entirely. Bumped
+   padding to 96px in both places and added a `.portal-nav-clearance`
+   spacer under the button.
+
+4. Cheap date-row scrollbar polish on `booking.html` and the Request
+   Work picker (`scrollbar-width: thin` + a 6px webkit thumb).
+
+Did not change AggregateRating / reviewCount (separate PR #281). Did
+not redesign tools.
+
 <!-- Add new entries above this line -->

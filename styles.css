@@ -1501,6 +1501,9 @@
     color:var(--steel);
     margin:0 0 14px;
   }
+  /* A second heading in the same column (Hours under Contact) needs
+     space above so it doesn't run into the list it follows. */
+  .footer-col ul + h4{margin-top:22px;}
   .footer-col ul{list-style:none; margin:0; padding:0; display:flex; flex-direction:column; gap:10px;}
   /* Navigation, like the header's -- and like the h4 above it, which was
      already on --font-ui. Only the links had no face of their own. */

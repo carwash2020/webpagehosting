@@ -311,4 +311,13 @@ gives the topmost *hit-testable* element -- a `pointer-events:none`
 decorative layer sitting visually on top, like this rail, never shows up
 there).
 
+## 2026-09-17 — UX-study glitch pass (hours, dead links, portal overlap)
+
+Visual bits of a bug-lane PR, not a redesign. Footer Hours reuses the
+existing `.hours-grid` / `.hours-row` rules; added `.footer-col ul + h4`
+so the second heading in Contact doesn't collide with the list above.
+Portal clearance is padding + a 16px spacer, not a new nav. Booking
+date-row scrollbar is thin/themed to match quotes.html's existing
+horizontal scroller, without copying the JS fade wrap.
+
 <!-- Add new entries above this line -->

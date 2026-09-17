@@ -1993,6 +1993,36 @@ New tests: `tests/design/booking-conversion.test.js`, plus updates to
 `tests/booking/next-steps-timeline.test.js` and
 `tests/referrals/referral-program.test.js`.
 
+## What changed, 2026-09-17 -- public-site + portal UX glitch fixes
+
+Focused glitch pass from the UX study. One PR. Did **not** change
+`aggregateRating` / `reviewCount` (already 5.0 / 7 on `main` via #281),
+Google Business Profile, or any `/tools/` redesign.
+
+**Footer Hours.** The homepage footer Contact column now publishes the
+same hours already on the `#contact` strip, in JSON-LD, and in
+`business-hours.js`: Mon–Fri 2:00 PM–10:00 PM, Saturday 7:00 AM–10:00 PM,
+Sunday 2:00 PM–8:00 PM. CMS per-day keys still override every
+`.js-hours-*` node (querySelectorAll, not just the first).
+
+**Dead `#` links.** Homepage FAQ (desktop, mobile, footer) points at
+`#faq`, which already opens the FAQ modal. Footer Terms points at the
+existing `/terms.html` page (the click handler still opens the modal
+when JS runs). Cookie Preferences on every public footer that had the
+banner link now points at `/privacy.html#cookies` and still reopens the
+banner when JS is available.
+
+**Portal Send Request.** `body.portal-page` padding under the fixed tab
+bar is 96px (was 72px, flush with the bar). Standalone/PWA mode no
+longer drops that padding to only the home-indicator inset. A spacer
+sits under Request Work's Send Request button so it stays fully
+tappable.
+
+**Booking date row.** Thin themed scrollbar on the horizontal day
+picker (`booking.html` and the portal Request Work picker).
+
+New tests: `tests/design/ux-glitch-fixes.test.js`.
+
 ## What changed, 2026-09-17 -- GitHub Watcher standing ops checklist
 
 Docs-only. Added `docs/github-watcher-ops.md` for the Repo Management /
