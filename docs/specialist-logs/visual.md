@@ -10,6 +10,8 @@ instead of restoring F29's old `44px 0 88px`. F29 now locks that
 conversion padding and the no-double-border. Public rating stays
 #281's 5.0 / 7; wall still 4 written cards. booking.html $25 stays
 on #278's `.referral-nudge` / `.conf-referral` -- no second class.
+Rebased again onto #282 (footer hours / dead links) without touching
+that work.
 
 <!-- Add new entries above this line -->
 
