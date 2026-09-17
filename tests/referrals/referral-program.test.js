@@ -68,6 +68,11 @@ test('index.html: FAQ (both static HTML and JSON-LD) mentions the $25 referral c
   assert.match(jsonLd, /Do you have a referral program\?/);
 });
 
+test('index.html: $25 referral is also on the trust rail, not FAQ-only', () => {
+  assert.match(INDEX, /class="trust-referral"/);
+  assert.match(INDEX, /\$25 referral credit/);
+});
+
 test('job-tracker.html: Add Job has a Referred By field, wired into fields and into edit-mode repopulation', () => {
   assert.match(JOB_TRACKER, /id="jobReferredBy"/);
   assert.match(JOB_TRACKER, /const referredBy = document\.getElementById\('jobReferredBy'\)\.value\.trim\(\);/);

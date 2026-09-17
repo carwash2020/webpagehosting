@@ -877,7 +877,7 @@
     color:#e5e2dc;
     font-size:17px;
     max-width:520px;
-    margin:22px 0 32px;
+    margin:14px 0 22px;
   }
   /* U01: the hero sits on a permanently-dark photo backdrop regardless
      of site theme, same reasoning as .hero h1/.hero p.lede above --
@@ -943,14 +943,24 @@
     white-space:nowrap;
   }
   .cta-proof a:hover{color:#ffffff;}
+  .hero-referral{
+    margin:10px 0 0;
+    max-width:34em;
+    font-family:var(--font-ui);
+    font-size:13.5px;
+    letter-spacing:.2px;
+    line-height:1.45;
+    color:#c9c5bc;
+  }
+  .hero-referral strong{color:#ffb347; font-weight:600;}
   .booking-cta .cta-proof{
     color:var(--text-dim);
     margin-top:2px;
     max-width:none;
   }
   .booking-cta .cta-proof-quote{color:var(--text);}
-  .booking-cta .cta-proof a{color:var(--orange);}
-  .booking-cta .cta-proof a:hover{color:var(--orange-light);}
+  .booking-cta .cta-proof a{color:var(--orange-text-vivid);}
+  .booking-cta .cta-proof a:hover{color:var(--orange-text);}
   .hero-badge{
     display:flex;
     justify-content:center;
@@ -1001,7 +1011,8 @@
       white-space:normal;
       text-align:center;
     }
-    .hero .cta-proof{
+    .hero .cta-proof,
+    .hero-referral{
       justify-content:center;
       text-align:center;
       margin-left:auto;
@@ -1019,7 +1030,7 @@
      JSON-LD and the reviews carousel; community count matches the 6
      pages this site actually serves), not invented marketing stats. */
   .stats-bar{
-    padding:52px 0;
+    padding:36px 0;
     background:linear-gradient(135deg, var(--bg-panel-3), var(--bg-panel-2));
     border-top:1px solid var(--border);
     border-bottom:1px solid var(--border);
@@ -1055,7 +1066,25 @@
      trust-item cards' top corners butting straight up against it. Removes
      the redundant auto border (stats-bar already frames itself) and
      restores a real gap before the cards. */
-  .trust{padding:44px 0 88px; border-top:none;}
+  .trust{padding:32px 0 40px; border-top:none;}
+  .trust-referral{
+    margin:22px auto 0;
+    max-width:52em;
+    text-align:center;
+    padding:16px 20px;
+    border:1px solid var(--orange-tint-border);
+    background:var(--orange-tint-soft);
+    border-radius:var(--radius);
+    color:var(--text);
+    font-size:15.5px;
+    line-height:1.55;
+  }
+  .trust-referral strong{
+    color:var(--orange-text-vivid);
+    font-family:var(--font-ui);
+    letter-spacing:.3px;
+    font-weight:600;
+  }
   .trust-grid{
     display:grid;
     /* 4 items as of the real Licensed & Insured fact added 2026-09-07
@@ -1743,8 +1772,11 @@
     /* The hero already fills a phone viewport (logo + stacked CTAs).
        A proof line under those buttons sat behind the sticky Call+Book
        bar on first paint. Hide it here; the same copy stays on the
-       #schedule Book Instantly card, which clears the bar. */
+       #schedule Book Instantly card, which clears the bar. The $25
+       referral line is the same class of extra height -- trust-rail
+       and schedule-rail carry that copy below the fold. */
     .hero .cta-proof{display:none;}
+    .hero-referral{display:none;}
     /* Lift the existing mobile chrome so nothing sits on the bar. */
     body:has(.sticky-call) .back-to-top{
       bottom:calc(16px + 72px + env(safe-area-inset-bottom, 0px));
@@ -1837,6 +1869,19 @@
     letter-spacing:.4px;
     color:var(--white);
   }
+  .schedule-rail-text{
+    display:flex;
+    flex-direction:column;
+    gap:6px;
+    min-width:0;
+  }
+  .schedule-rail-note{
+    margin:0;
+    color:var(--text-dim);
+    font-size:14.5px;
+    line-height:1.45;
+  }
+  .schedule-rail-note strong{color:var(--orange-text-vivid);}
   .schedule-rail-actions{
     display:flex;
     flex-wrap:wrap;
@@ -2249,13 +2294,42 @@
     box-shadow:0 0 0 1px var(--border);
   }
   .review-avatar svg{width:16px; height:16px;}
+  .reviews-ask{
+    margin-top:32px;
+    padding:28px 24px;
+    text-align:center;
+    border:1px solid var(--orange-tint-border);
+    background:var(--orange-tint-soft);
+    border-radius:var(--radius);
+  }
+  .reviews-ask-copy{
+    margin:0 0 18px;
+    color:var(--text);
+    font-size:17px;
+    line-height:1.5;
+  }
+  .reviews-ask .btn{
+    display:inline-flex;
+    justify-content:center;
+    min-height:44px;
+  }
+  .reviews-ask-inline{
+    text-align:center;
+    margin:10px 0 0;
+    font-size:14.5px;
+    color:var(--text-dim);
+  }
+  .reviews-ask-inline a{
+    color:var(--orange-text-vivid);
+    font-weight:600;
+  }
   .reviews-footer{
     text-align:center;
-    margin-top:26px;
+    margin-top:16px;
     font-size:13.5px;
     color:var(--text-dim);
   }
-  .reviews-footer a{color:var(--blue-text); font-weight:600;}
+  .reviews-footer a{color:var(--orange-text-vivid); font-weight:600;}
   @media (max-width:760px){
     .review-card{padding:24px 22px;}
   }

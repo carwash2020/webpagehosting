@@ -2077,3 +2077,36 @@ slice. `invoices` is added to the `supabase_realtime` publication
 
 New tests: `tests/sync/relational-invoices-read-phase2.test.js`.
 
+## What changed, 2026-09-17 -- homepage conversion pop
+
+A focused public-site pass for trust, clarity, and the review flywheel.
+No redesign, no new frameworks, no Supabase/Edge changes. Public
+`aggregateRating` stays the live GBP match from #281: **5.0 / 7**.
+The homepage wall still shows the 4 written, verified quote cards.
+No invented Review objects.
+
+**Leave a Google review.** The homepage reviews wall now has an orange
+Leave a Google review button. Hero and `#schedule` proof lines, plus
+city/service/about/our-work local-reviews sections, link to the same
+real GBP write URL already used by `tools/review-request.html`
+(`https://g.page/r/CVJ0Qr-SsDkgEAI/review`). No new quotes.
+
+**$25 referral.** The homepage credit was FAQ-only. It now sits on the
+trust rail and schedule rail. `booking.html` already carries the same
+complete-and-paid terms from #278 (`.referral-nudge`, `.field-hint`,
+`.conf-referral`); this pass kept those surfaces.
+
+**Above the fold.** H1 stays "HANDYMAN AND APPLIANCE REPAIR, DONE
+RIGHT." The lede is shorter. Schedule remains the filled orange
+primary; Call stays outline. The teardown shop-drawing moved below the
+real before/after photos so Services is next after trust. Reviews sit
+above the blog teaser. Process and photos stay.
+
+**Polish.** Tighter stats/trust spacing (`.trust` is `32px 0 40px`
+with `border-top:none` so it does not double the stats-bar edge),
+orange CTA hierarchy on the new review ask, 44px leave-review tap
+target. Hero proof and referral lines still hide at 760px so they do
+not sit behind the sticky Call+Book bar.
+
+New tests: `tests/design/homepage-conversion-pop.test.js`.
+

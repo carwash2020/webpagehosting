@@ -365,6 +365,14 @@ highlights, payment methods, photos, lead notification check).
 User-facing UI/content changes made during the recent audit pass, for
 reference:
 
+- **Homepage conversion pop (2026-09-17)** -- orange "Leave a Google
+  review" button on the homepage wall (real GBP write URL already used
+  by the review-request tool), `$25 referral` on the trust rail /
+  schedule rail (booking.html already has the credit from #278), tighter
+  hero lede, teardown shop-drawing moved below the real before/after
+  photos so Services hits sooner. AggregateRating stays 5.0 / 7 matching
+  GBP; wall stays 4 written quote cards. City and service pages got a
+  one-line leave-review link under "Read all reviews."
 - **Local reviews section** added to all 14 landing/about/work pages --
   real Google reviews, visible social proof above the fold area.
 - **FAQ section** added to all 14 landing pages, with matching visible

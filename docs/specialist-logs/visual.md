@@ -16,6 +16,33 @@ unstyled block.
 
 No redesign: sidebar, steps, and mobile summary are unchanged.
 
+## 2026-09-17 -- homepage conversion pop (review ask, $25 referral, ATF)
+
+Public site only. AggregateRating stays the live GBP match from #281
+(5.0 / 7). Did not add review cards (wall still 4 written quotes), did
+not invent quotes. The leave-a-review CTA uses the existing GBP write
+URL already in `tools/review-request.html` and the reviews footer:
+`https://g.page/r/CVJ0Qr-SsDkgEAI/review`.
+
+$25 referral was FAQ-only on the homepage. It now sits on the trust
+rail (shows on phone, unlike the hero line which hides at the 760px
+sticky-bar breakpoint for the same reason `.cta-proof` does) and the
+schedule rail. booking.html already has step 1 / confirmation credit
+copy from #278 (`.referral-nudge` / `.conf-referral`); this pass kept
+those surfaces instead of duplicating them. Terms unchanged: credit
+after the referred job is complete and paid.
+
+ATF: kept the locked H1, shortened the lede, left Schedule orange /
+Call outline. Moved the teardown shop-drawing to after the real
+before/after photos so Services is the next converting block after
+trust. Reviews moved above the blog teaser. Did not delete process,
+photos, or teardown.
+
+Leave-review on city/service/about/our-work is a one-line
+`.reviews-ask-inline` under the existing "Read all reviews" link --
+those pages still must not carry aggregateRating.
+
+<!-- Add new entries above this line -->
 ## 2026-09-17 -- /tools/ ops inbox, More sheet, tablet density, one-row hub
 
 PR4, tools-only. Action Items became four priority lanes around the

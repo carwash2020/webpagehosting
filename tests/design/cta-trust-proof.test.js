@@ -30,6 +30,7 @@ test('homepage hero and Book Instantly each carry compact proof that quotes a re
   assert.match(heroProof, /5\.0 from 7 Google reviews/);
   assert.match(heroProof, /Steven was wonderful! Got our washer fixed quickly/);
   assert.match(heroProof, /href="#reviews"/);
+  assert.match(heroProof, /https:\/\/g\.page\/r\/CVJ0Qr-SsDkgEAI\/review/);
 
   const bookInstantlyAt = INDEX.indexOf('Book Instantly');
   const bookBlock = INDEX.slice(bookInstantlyAt, INDEX.indexOf('Send Email', bookInstantlyAt));
