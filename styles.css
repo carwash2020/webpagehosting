@@ -387,6 +387,22 @@
   }
   .btn.blue:hover{box-shadow:6px 6px 0 0 var(--blue-dark);}
   .btn.blue:active{box-shadow:2px 2px 0 0 var(--blue-dark);}
+  /* Conversion UX (2026-09-17): quieter sibling to .btn.orange for a
+     paired Call action once Schedule/Book is the filled primary.
+     Same orange tokens as .nav-schedule-btn, sized like a real .btn
+     so the phone number stays easy to tap. */
+  .btn.outline{
+    background:transparent;
+    color:var(--orange-text-vivid);
+    border:1.5px solid var(--orange-tint-border);
+    box-shadow:none;
+  }
+  .btn.outline:hover{
+    background:var(--orange-tint-soft);
+    border-color:var(--orange-text-vivid);
+    box-shadow:none;
+  }
+  .btn.outline:active{box-shadow:none;}
   .btn svg{width:16px; height:16px; flex-shrink:0;}
 
   /* U01: the quiet link that replaces a second, competing glossy button
@@ -864,11 +880,30 @@
      var(--text-dim) would go near-invisible-dark in light mode here. */
   .hero .cta-quiet-link{color:#c9c5bc;}
   .hero .cta-quiet-link:hover{color:#ffffff;}
+  /* Hero photo never flips with theme -- same hardcoded-light reasoning
+     as .hero h1 / .hero .cta-quiet-link. The sticky bar is also always
+     a dark strip (matching the header), so its outline Call button
+     uses the same colors. */
+  .hero .btn.outline,
+  .sticky-call .btn.outline{
+    color:#f3d5b0;
+    border-color:rgba(255,128,0,.55);
+  }
+  .hero .btn.outline:hover,
+  .sticky-call .btn.outline:hover{
+    background:rgba(255,128,0,.12);
+    color:#ffffff;
+    border-color:#ff8000;
+  }
   .hero-ctas{
     display:flex;
     gap:16px;
     flex-wrap:wrap;
+    align-items:center;
   }
+  /* City/service heroes put the CTA row directly in .wrap (no lede
+     margin underneath an h1 block the way the homepage does). */
+  .hero .wrap > .hero-ctas{margin-top:32px;}
   .hero-badge{
     display:flex;
     justify-content:center;
@@ -906,7 +941,17 @@
       background-position: center 70%;
     }
     .hero p.lede{margin-left:auto; margin-right:auto;}
-    .hero-ctas{justify-content:center;}
+    .hero-ctas{
+      justify-content:center;
+      flex-direction:column;
+      align-items:center;
+    }
+    .hero-ctas .btn{
+      width:min(100%, 360px);
+      justify-content:center;
+      white-space:normal;
+      text-align:center;
+    }
     .hero-badge{order:-1; margin-bottom:8px; padding-left:0;}
     .hero-badge img{width:250px;}
   }
@@ -1577,27 +1622,58 @@
   }
   .faq-answer p em{color:var(--orange-text); font-style:normal;}
 
-  /* sticky mobile call button */
+  /* sticky mobile Call + Book bar (2026-09-17). Hidden on desktop;
+     760px matches the existing back-to-top / chat-bubble mobile
+     offset, not the 960px hamburger. Always-dark strip, same as the
+     theme-independent header. */
   .sticky-call{
     display:none;
     position:fixed;
     bottom:0; left:0; right:0;
     z-index:70;
-    padding:12px 16px;
+    padding:10px 12px calc(10px + env(safe-area-inset-bottom, 0px));
+    padding-left:max(12px, env(safe-area-inset-left, 0px));
+    padding-right:max(12px, env(safe-area-inset-right, 0px));
     background:rgba(10,10,10,.95);
     backdrop-filter:blur(8px);
     border-top:1px solid var(--border);
-  }
-  .sticky-call a{
-    display:flex;
-    align-items:center;
-    justify-content:center;
     gap:10px;
-    width:100%;
+    align-items:stretch;
+  }
+  .sticky-call .btn{
+    flex:1 1 0;
+    justify-content:center;
+    min-height:44px;
+    padding:12px 10px;
+    font-size:13px;
+    letter-spacing:1px;
+    width:auto;
   }
   @media (max-width:760px){
-    .sticky-call{display:block;}
-    body{padding-bottom:70px;}
+    .sticky-call{display:flex;}
+    body:has(.sticky-call){
+      padding-bottom:calc(72px + env(safe-area-inset-bottom, 0px));
+    }
+    /* Lift the existing mobile chrome so nothing sits on the bar. */
+    body:has(.sticky-call) .back-to-top{
+      bottom:calc(16px + 72px + env(safe-area-inset-bottom, 0px));
+    }
+    body:has(.sticky-call) .chat-bubble-btn{
+      bottom:calc(16px + 72px + env(safe-area-inset-bottom, 0px));
+    }
+    body:has(.sticky-call) .chat-panel{
+      bottom:calc(80px + 72px + env(safe-area-inset-bottom, 0px));
+    }
+    body:has(.sticky-call) .cookie-banner{
+      bottom:calc(16px + 72px + env(safe-area-inset-bottom, 0px));
+    }
+  }
+  @media (prefers-reduced-motion: no-preference){
+    .sticky-call{animation:stickyCallIn .22s ease-out;}
+  }
+  @keyframes stickyCallIn{
+    from{opacity:0; transform:translateY(12px);}
+    to{opacity:1; transform:translateY(0);}
   }
 
   /* gallery */
@@ -1707,7 +1783,7 @@
   .back-to-top:hover{border-color:var(--blue-text); color:var(--blue-text);}
   .back-to-top svg{width:22px; height:22px;}
   @media (max-width:760px){
-    .back-to-top{bottom:90px; right:16px; width:44px; height:44px;}
+    .back-to-top{right:16px; width:44px; height:44px;}
   }
 
   /* text-us chat bubble */
@@ -1737,7 +1813,7 @@
     border:2px solid #0a0a0a;
   }
   @media (max-width:760px){
-    .chat-bubble-btn{bottom:90px; left:16px; width:54px; height:54px;}
+    .chat-bubble-btn{left:16px; width:54px; height:54px;}
   }
 
   .chat-panel{
@@ -1756,7 +1832,7 @@
   }
   .chat-panel.is-open{display:flex;}
   @media (max-width:760px){
-    .chat-panel{bottom:156px; left:16px;}
+    .chat-panel{left:16px;}
   }
   .chat-panel-header{
     background:linear-gradient(135deg, var(--blue-dark), var(--bg-panel-2));

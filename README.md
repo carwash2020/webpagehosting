@@ -1725,3 +1725,39 @@ and the light-mode page (verified with direct pixel sampling, not just
 a screenshot glance -- the visible jump at the hero's edge dropped from
 roughly a 90-value spike to about 20). The scroll-triggered "lit"
 segments (Honesty/Hustle/Helpfulness) are untouched and still work.
+
+## What changed, 2026-09-17 -- mobile Call + Book bar, Schedule-first hero
+
+A conversion audit of the public marketing site found two cheap misses:
+the homepage hero made **Call** the loud orange primary and buried
+**Schedule** as a quiet link, and mobile had no persistent way to book
+while scrolling (only a Call-only sticky strip on the homepage).
+
+**Hero CTA hierarchy.** On the homepage, and on the city and service
+pages that already used the same Call-then-quiet-book pair, Schedule
+is now the filled orange primary ("Schedule an appointment") and Call
+is an outline button that still shows `(435) 414-1667`. Destinations
+match the header Schedule button (`#schedule` on the homepage,
+`/booking.html` on the others). Triage results and the service modal
+still use Call-primary plus the quiet "or schedule online" link --
+those fire after someone has named a specific problem. Header Schedule
+and the nav phone link are unchanged.
+
+**Sticky mobile bar.** The existing homepage-only `.sticky-call` strip
+is now a two-action Call + Book bar, hidden above 760px (the same
+breakpoint already used for back-to-top and the chat bubble). It is
+also on the city pages, service pages, our-work, about, and the blog
+index. Book uses the same target as that page's header Schedule
+button. Body padding and the cookie banner / chat bubble / back-to-top
+offsets are scoped with `:has(.sticky-call)` and include
+`env(safe-area-inset-bottom)`, so the last content and those controls
+do not sit under the bar. A short entrance animation is gated on
+`prefers-reduced-motion: no-preference` (the site-wide reduced-motion
+kill switch still applies either way).
+
+`/tools/` and `/portal/` are out of scope. No AggregateRating,
+robots.txt, or Supabase changes.
+
+New tests: `tests/design/mobile-sticky-call-book-bar.test.js`. The U01
+flat-primary-button tests were updated for the hero swap and still
+lock Call-primary on triage and the service modal.

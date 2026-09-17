@@ -510,6 +510,16 @@ reference:
   rebranding the page/nav into "Appliance Repair" is a bigger structural
   call, not a copy change.
 
+- **Mobile Call + Book bar, and Schedule-first hero CTAs** (2026-09-17)
+  -- on small viewports a sticky bottom bar now keeps Call and Book
+  visible while scrolling (homepage, city pages, service pages,
+  our-work, about, blog index). Homepage and the matching city/service
+  heroes now treat Schedule as the filled orange primary and Call as
+  the outline secondary, with the phone number still in the hero.
+  Cookie banner, chat bubble, and back-to-top lift above the bar;
+  last-content padding includes the iOS safe area. `/tools/` and
+  `/portal/` are untouched.
+
 <!-- Add new visual additions above this line -->
 
 ## Proposed visual improvements (not yet built)
