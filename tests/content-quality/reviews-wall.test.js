@@ -1,24 +1,21 @@
 // Three new 5-star Google reviews added 2026-09-07 (PD IND., Belinda
 // Christensen, Jilleen Zufelt), bringing the homepage wall from 4
-// to 7. The aggregateRating schema is a straight count of the quotes
-// actually shown on the page, so it moves in lockstep -- it is not
-// pulled from live Google data, so it has to be updated by hand
-// whenever a review is added here.
-//
-// U03 fix (High-Impact Upgrades, 2026-09-07): converted from a
-// carousel (one review visible at a time behind 9px dots) to a static
-// two-column wall showing all 7 at once. Renamed from
-// reviews-carousel.test.js.
+// to 7. U03 (same day) converted the carousel to a static two-column
+// wall. Renamed from reviews-carousel.test.js.
 //
 // Corrected 2026-09-16, on a real review audit against the actual
 // Google Business Profile: 4 of the original 7 quotes didn't trace
-// back to a real, verifiable Google review (Google shows 6 reviews
-// total, 2 of them star-only with no written text). Removed the 3
-// unverifiable quotes outright (no source could be confirmed) and
-// swapped the 4th for Jilleen Walker's real review text, which had
-// never been added to the site. Wall is now 4 cards, all verified
-// against the live Google listing; the "show 3 more" disclosure was
-// removed since nothing was left to hide behind it.
+// back to a real, verifiable Google review. Removed the unverifiable
+// quotes and added Jilleen Walker's real review text. Wall is 4
+// written cards, all verified against the live Google listing.
+//
+// 2026-09-17 owner unlock: Google Business Profile shows 5.0 from 7
+// Google reviews. aggregateRating.ratingValue stays 5.0 and
+// reviewCount now matches that GBP total (7), including star-only
+// reviews that have no written text to quote. The wall still shows
+// only the 4 verified quotes -- do not invent Review objects or
+// cards for the star-only reviews. Update reviewCount by hand when
+// the owner confirms a new GBP total.
 
 const { test } = require('node:test');
 const assert = require('node:assert/strict');
@@ -49,11 +46,13 @@ test('the homepage wall has one review-card per review actually written', () => 
   assert.equal(cardCount, 4);
 });
 
-test("the homepage's aggregateRating.reviewCount matches the number of cards actually shown", () => {
+test("the homepage's aggregateRating matches Google Business Profile (5.0 from 7), not invented Review objects", () => {
   const cardCount = (INDEX.match(/class="review-card"/g) || []).length;
   const schema = schemaOf(INDEX);
-  assert.equal(Number(schema.aggregateRating.reviewCount), cardCount);
+  assert.equal(cardCount, 4, 'wall stays at the 4 written, verified quotes');
   assert.equal(schema.aggregateRating.ratingValue, '5.0');
+  assert.equal(Number(schema.aggregateRating.reviewCount), 7, 'reviewCount matches the owner-confirmed GBP total');
+  assert.doesNotMatch(INDEX, /"@type":\s*"Review"/, 'do not invent individual Review JSON-LD objects');
 });
 
 // Corrected 2026-09-07, found in an SEO audit: every landing page used

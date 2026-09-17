@@ -32,15 +32,19 @@ stop regressions from shipping. Merge to `main` **is** production
    function that currently has zero app-level auth, matching
    `uptime-alert-index.ts` / `send-push-index.ts`, with a matching auth
    test and a clean full suite. Any deviation is not covered.
-4. **`AggregateRating` stays `ratingValue: "5.0"` and `reviewCount: "4"`**
-   until Connor supplies a new *written* Google review to add as a
-   real card. Tests that lock this:
+4. **`AggregateRating` stays `ratingValue: "5.0"` and `reviewCount: "7"`**
+   (matches Google Business Profile as of 2026-09-17; Connor unlocked
+   this). The homepage wall still shows only the 4 written, verified
+   quotes. Tests that lock this:
    `tests/content-quality/reviews-wall.test.js`,
    `tests/seo/local-business-schema.test.js`,
    `tests/design/cta-trust-proof.test.js`,
-   `tests/design/homepage-stats-bar.test.js`.
-   Never inflate the count to match Google's raw total (star-only
-   reviews are not cards). Never invent quotes.
+   `tests/design/homepage-stats-bar.test.js`,
+   `tests/design/booking-conversion.test.js`.
+   Do not invent Review objects or fake cards for star-only reviews.
+   Do not change `ratingValue` away from 5.0. A future count change
+   needs Connor confirming a new GBP total (and a new written quote
+   if a new wall card is added).
 5. **Do not merge with failing `Tests and consistency check`.** GitHub
    Pages deploys from `main` on its own. A merge that races a red
    `test.yml` ships production anyway. Wait for the PR run of
@@ -73,7 +77,7 @@ yesterday."
 | Conflicts | mergeable | conflicted (see conflict rule) | conflicted **and** superseded |
 | Risk | visual, content, docs, non-destructive bugfix | auth / payments / RLS / edge fn / migration | abandoned, duplicate, or owner said close |
 | Stale | updated in the last ~48h, still wanted | open > ~48h with no CI or no reply | merged-elsewhere leftover |
-| Reviews | `AggregateRating` / review cards untouched or still 5.0/4 | any bump of count or stars | fabricated quotes |
+| Reviews | `AggregateRating` 5.0/7, wall still 4 written quotes | any bump of stars, invented quotes, or a count that is not the current GBP total | fabricated quotes |
 
 **Conflict rule already in use:** auto-resolve only fresh
 `docs/specialist-logs/*.md` add/add stub conflicts. A `README.md`
@@ -123,8 +127,8 @@ On the PR diff, fail the merge (or escalate) if any of these changed
 the wrong way:
 
 - `aggregateRating` / `"reviewCount"` / `"ratingValue"` — must stay
-  `'5.0'` / `'4'` unless Connor handed over a new written review
-  *and* a matching card.
+  `'5.0'` / `'7'` unless Connor confirms a new Google Business Profile
+  total. Do not invent Review objects or wall cards.
 - `robots.txt` Disallow `/tools/` and `/portal/` must stay.
 - `.nojekyll` must remain exactly that filename at repo root.
 - `CNAME`, Google Search Console verification HTML, `favicon.ico`

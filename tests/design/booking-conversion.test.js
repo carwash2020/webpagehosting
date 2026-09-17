@@ -1,8 +1,8 @@
 // Booking conversion pass (2026-09-17): sticky mobile Call + Book on
 // booking.html (it was left off the marketing-page bar on purpose in
 // #265), held-slot success copy, $25 referral credit on the flow and
-// confirmation, and Service/ReserveAction JSON-LD. Does not touch
-// AggregateRating -- that stays 5.0 / 4 on index.html only.
+// confirmation, and Service/ReserveAction JSON-LD. AggregateRating
+// lives on index.html only (5.0 / 7, matching Google Business Profile).
 
 const { test } = require('node:test');
 const assert = require('node:assert/strict');
@@ -43,14 +43,14 @@ test('sticky Book on booking.html does not reload the live form; after confirm i
   assert.match(BOOKING, /stickyBook\.setAttribute\('href', step >= 4 \? '\/booking\.html' : '#stepService'\)/);
 });
 
-test('index.html AggregateRating stays 5.0 from 4 reviews; booking.html JSON-LD never claims a rating', () => {
+test('index.html AggregateRating is 5.0 from 7 Google reviews; booking.html JSON-LD never claims a rating', () => {
   const indexLd = jsonLdBlocks(INDEX);
   const localBiz = indexLd.find((b) => b.aggregateRating);
   assert.ok(localBiz, 'homepage must keep AggregateRating');
   assert.deepEqual(localBiz.aggregateRating, {
     '@type': 'AggregateRating',
     ratingValue: '5.0',
-    reviewCount: '4',
+    reviewCount: '7',
   });
 
   for (const block of jsonLdBlocks(BOOKING)) {

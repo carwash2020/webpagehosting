@@ -1939,6 +1939,26 @@ instead of phone-sized cards.
 
 New tests: `tests/tools/workspace-ops-inbox.test.js`.
 
+## What changed, 2026-09-17 -- AggregateRating matches Google Business Profile (5.0 / 7)
+
+Connor unlocked matching the live Google Business Profile: **5.0 stars
+from 7 Google reviews**. The public site had been locked at 5.0 / 4
+(written, verified quotes only).
+
+- `index.html` JSON-LD `aggregateRating`: `ratingValue` stays `5.0`;
+  `reviewCount` is now `7`.
+- Homepage stats strip ("Real 5-Star Reviews") and both CTA proof
+  lines ("5.0 from 7 Google reviews") match that total.
+- `booking.html` CTA proof line matches. Booking still has no
+  `AggregateRating` of its own.
+- Homepage review wall stays at the 4 written, verified quotes. No
+  invented `Review` JSON-LD objects or fake cards for star-only Google
+  reviews.
+
+Tests updated: `reviews-wall.test.js`, `landing-page-social-proof.test.js`,
+`local-business-schema.test.js`, `cta-trust-proof.test.js`,
+`homepage-stats-bar.test.js`, `booking-conversion.test.js`.
+
 ## What changed, 2026-09-17 -- booking conversion: sticky CTAs, held-slot copy, referral, schema
 
 Focused public-site conversion work on `/booking.html` only. No Edge
