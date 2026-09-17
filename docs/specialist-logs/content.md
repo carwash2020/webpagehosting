@@ -143,4 +143,23 @@ for later, not building it speculatively: either the owner picks a
 rotation/criterion, or the site decides city pages should surface the
 2-3 most recent posts generically instead of a topical match.
 
+## 2026-09-17 -- booking success copy + referral + schema (no rating)
+
+booking.html had no JSON-LD. Added Service (provider =
+HomeAndConstructionBusiness, NAP + ZIP 84790, no street) with
+potentialAction ReserveAction, plus BreadcrumbList. Did not copy
+AggregateRating onto this page — Google's guideline still wants
+visible review content, and the homepage 5.0 / 4 figure must not
+move.
+
+Confirmation microcopy: the slot is held; email has the
+reschedule/cancel link; pay-after methods unchanged. Dropped "we'll
+call or text if anything needs clarifying" as the implied confirm
+step. Emergency call/text stays as a line under the timeline, not a
+promise that the booking is pending a callback.
+
+$25 referral credit now appears on step 1 and the confirmation card,
+using the same complete-and-paid terms as the homepage FAQ. No new
+testimonials.
+
 <!-- Add new entries above this line -->
