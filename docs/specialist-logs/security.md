@@ -150,4 +150,81 @@ and `create-pos-charge` end to end, plus `pg_policies` on `stripe_customers`,
 `cron_watchdog_state` deny-all, and the booking/job token-RPC + trigger-only
 functions already confirmed intentional in the audit log above); nothing new.
 
+## What changed, 2026-09-17 -- hub-dispatched handoff: Send-Push had no auth check; verified and corrected two claims in the handoff itself
+
+Hub dispatch handed off three items. Per this specialist's own brief and the
+standing instruction to verify against live source rather than trust prior
+notes, checked each claim directly before acting on it -- two held up, one
+didn't, and one broke down into two separate real facts.
+
+**1. `Send-Push` (capitalized, the real deployed function, v50) had no
+app-level auth check -- confirmed independently, both in the repo's
+`edge-functions/send-push-index.ts` and in the live deployed source via
+`get_edge_function`. Same regression class already fixed for
+`uptime-alert-index.ts` (2026-09-15) and `send-payment-reminder`/
+`send-quote-followup` (2026-09-16 earlier entry) -- Supabase's
+`verify_jwt: true` only checks JWT signature, not role, so the public
+anon key shipped in every page's HTML could call it directly: spam an
+arbitrary `user_id` via the `client-notification` branch, or broadcast
+fake "site is down" / cron-health / stripe-reconciliation alerts. This
+one had been missed in both the 2026-09-16 sweeps that caught the
+sibling functions -- worth noting since it's the highest-traffic of the
+three (13+ distinct call sites: two DB triggers, two crons, and every
+other Edge Function that pings it for an internal or client alert).
+
+**The handoff's claim that a fix already existed locally, uncommitted, at
+this exact path was false** -- `git status` showed a clean tree and no
+local diff existed anywhere in this checkout. Did not treat that claim as
+established fact (per this session's standing instruction to verify
+background-task/hub claims against live source, not prior-session notes);
+wrote the actual fix instead of assuming one was already there. Verified
+every real caller (`sql/leads/notify_new_lead_use_vault_secret.sql`,
+`sql/booking/add_booking_{notifications,cancellation,reschedule}.sql`,
+`sql/security/fix_cron_job_use_vault_secret.sql`,
+`sql/infra/add_weekly_digest_and_notification_archive_cron.sql`,
+`sql/infra/add_cron_watchdog.sql`, and `uptime-alert-index.ts`) already
+sends the literal service-role key as its bearer token (the
+`send_push_service_role_key` Vault secret is that exact value, per
+`fix_cron_job_use_vault_secret.sql`'s own comment on its origin) before
+writing the fix, so the same `token !== SERVICE_ROLE_KEY` check
+`uptime-alert-index.ts` uses is safe for every existing caller. Added the
+check, a matching `send-push-auth.test.js` (same shape as
+`uptime-alert-auth.test.js`/`payment-reminder-auth.test.js`, plus an
+extra assertion that every real caller SQL file authenticates with the
+service-role key), and ran the full suite: 1951 tests, 107 failing --
+identical count and identical failure list (booking/design/tour/jsdom
+areas, none touching push/edge-functions) to the pre-existing baseline
+already on record in this log's 2026-09-16 entry, confirming no
+regression. Opened a PR rather than deploying -- per this session's
+standing instruction, the edge function fix needs a human sign-off
+before it goes to production.
+
+**2. `uptime-alert`'s deploy gap is real, independently confirmed.**
+Read the live deployed source via `get_edge_function` (not the repo
+copy) and compared it directly against `edge-functions/uptime-alert-
+index.ts`: the deployed v11 has no auth check at all -- the repo's fix
+from 2026-09-15 was never actually shipped. This is a genuine, separate
+gap from item 1 (the source has been correct for two days; only the
+live function is stale) and needs its own deploy decision, flagged to
+the hub rather than deployed here.
+
+**3. The orphaned lowercase `send-push` function (v8, id
+`aaa21126-3451-4bd2-a8e3-97d4f95bbf5a`)** -- re-confirmed still live via
+`list_edge_functions`, consistent with the 2026-09-16 finding already on
+record (`docs/ACTION-ITEMS.md` #9). Recommendation to the hub: decommission
+rather than patch. It's missing three generations of real fixes the live
+`Send-Push` has (business-timezone handling, partial-payment-aware overdue
+checks, `checkPendingReviewReminders`), nothing in the repo or live database
+calls it, and patching a dead duplicate just doubles future maintenance
+burden for a function that should be deleted, not kept current. Deletion
+still needs a human with dashboard/CLI access per the existing action item
+-- not something this fix touches.
+
+**Why this class of bug matters at this company's actual scale**: same
+reasoning as the 2026-09-16 entry above -- a public, by-design anon key
+shipped to every page visitor being usable to trigger arbitrary
+client-facing pushes or spoofed internal alerts is a real, concrete
+impact (reputational and operational) at any company size, not just a
+theoretical risk, since it requires nothing beyond viewing page source.
+
 <!-- Add new entries above this line -->
