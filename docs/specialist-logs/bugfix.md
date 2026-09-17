@@ -286,4 +286,14 @@ either already resolved or requires a human with dashboard/account access
 function, ad accounts, etc.) -- none of it is a code-side bug for this
 lane to pick up.
 
+## 2026-09-17 — Watcher research: link-check coverage hole (not fixed here)
+
+`scripts/check-links.py` `PUBLIC_PAGES` never includes
+`handyman-st-george-ut.html`, which is in `sitemap.xml` and is a
+real public landing page. External-link pass also skips the 5
+service pages, `booking.html`, `about.html`, `our-work.html`, blog,
+and legal pages. Internal refs across every HTML file are still
+checked. Handed to automation/bugfix rather than patched in the
+docs-only Watcher PR — a one-line list add is the actual fix.
+
 <!-- Add new entries above this line -->

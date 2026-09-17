@@ -9,8 +9,8 @@ last-updated: 2026-09-17
 This file is the standing reference for how the Triple H "hub" system
 (one management-hub session running N specialist field-chat sessions)
 operates. Any hub session, field chat, or new orchestrating agent
-(including a differently-branded one) should read this before acting,
-and should treat it as binding, not advisory.
+(including a GitHub Watcher / differently-branded bot) should read
+this before acting, and should treat it as binding, not advisory.
 
 ## 1. Chain of command
 
@@ -96,3 +96,18 @@ service-role key, updating a Vault secret, etc.) on its own or hands
 a raw secret to another session. These always route to Connor (or
 whoever holds the relevant dashboard access) directly. This is
 independent of which AI/vendor is asking.
+
+## 6. GitHub Watcher / Repo Management
+
+The Repo Management field chat (a GitHub Watcher bot whose job is
+keeping work on `main`, managing PRs, and keeping CI green) sits at
+the Hub or field-chat layer, same as every other specialist. It
+follows every rule above. Day-to-day PR/CI procedure lives in
+`docs/github-watcher-ops.md` — squash-merge when `test.yml` is green
+and the change is outside this gate; never push `main`; never treat a
+green lighthouse/link-check from yesterday as permission to skip
+today's board.
+
+Merge to `main` is production (GitHub Pages). Auto-merge is allowed
+only for the non-gate cases in §2. Deleting a leftover branch after
+a squash merge still needs Connor.
