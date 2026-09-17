@@ -3,6 +3,19 @@
 Started 2026-09-16, alongside the `tripleh-visual` skill. See `README.md` in
 this directory for how these logs work.
 
+## 2026-09-17 -- booking.html sticky Call+Book + cookie lift
+
+booking.html does not load styles.css, so the homepage `.sticky-call`
+rules cannot apply there. Copied the 760px bar (Call outline / Book
+orange, 44px targets, safe-area, cookie lift) into the page's own
+`<style>`. Did not restyle `.btn.orange` on this page to the U01
+offset-shadow — Confirm Booking stays the page's existing glow fill.
+Cookie banner CSS was missing on this page entirely; added a compact
+copy so the injected banner sits above the new bar instead of as an
+unstyled block.
+
+No redesign: sidebar, steps, and mobile summary are unchanged.
+
 ## 2026-09-17 -- /tools/ ops inbox, More sheet, tablet density, one-row hub
 
 PR4, tools-only. Action Items became four priority lanes around the

@@ -21,11 +21,21 @@ test('the confirmation screen has a 4-step "what happens next" timeline', () => 
 test('the timeline only makes claims already true elsewhere on the site -- no invented turnaround times or guarantees', () => {
   const section = BOOKING_HTML.match(/<section class="step-panel" id="stepConfirmed">[\s\S]*?<\/section>/)[0];
   const timeline = section.match(/<div class="next-steps"[\s\S]*?<\/ol>/)[0];
-  // No specific number of minutes/hours promised for the callback step,
-  // and payment methods match what the rest of the site already states
+  // No specific number of minutes/hours promised for a callback, and
+  // payment methods match what the rest of the site already states
   // (cash, check, Venmo, Cash App, card) -- not inventing a new policy.
   assert.doesNotMatch(timeline, /\d+\s*(minute|hour|min|hr)/i, 'should not promise a specific callback turnaround time');
   assert.match(timeline, /cash, check, Venmo, Cash App, or card/, 'payment methods should match the site\'s existing stated policy');
+  assert.match(timeline, /held on the calendar/, 'step 1 should reassure that the slot is held');
+  assert.doesNotMatch(timeline, /we'll call or text if anything needs clarifying/i, 'calling is not how the booking is confirmed');
+});
+
+test('confirmation copy holds the slot and keeps an emergency call/text path outside the timeline', () => {
+  const section = BOOKING_HTML.match(/<section class="step-panel" id="stepConfirmed">[\s\S]*?<\/section>/)[0];
+  assert.match(section, /Your slot is held/);
+  assert.match(section, /class="conf-emergency"/);
+  assert.match(section, /href="tel:\+14354141667"/);
+  assert.match(section, /href="sms:\+14354141667"/);
 });
 
 test('the timeline sits between the confirmation detail and the "Back to site" link, not before the confirmation itself', () => {

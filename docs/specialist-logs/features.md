@@ -3,6 +3,29 @@
 Started 2026-09-16, alongside the `tripleh-features` skill. See `README.md`
 in this directory for how these logs work.
 
+## 2026-09-17 -- booking conversion: sticky CTAs, held-slot copy, referral
+
+Public booking.html only. No Edge Functions, no Supabase schema, no
+AggregateRating edit (index stays 5.0 / 4).
+
+#265 left the Call+Book bar off booking.html because the page "already
+is the conversion." Rechecked: the missing bar is Call as an escape
+hatch (emergencies, people who will not finish the form), not a second
+Book destination. Added the same `.sticky-call` pair locally (this
+page does not load styles.css). Book is `#stepService` during steps
+1–3 so it cannot reload a half-filled form; after confirm it goes to
+`/booking.html` for a fresh start.
+
+Success copy now leads with "your slot is held" instead of "we'll call
+if anything needs clarifying." Emergency call/text stays under the
+timeline. $25 referral credit is on step 1, the referred-by field, and
+the confirmation card — same complete-and-paid terms as the FAQ.
+
+Service + ReserveAction JSON-LD (and breadcrumbs) on booking.html.
+Deliberately no AggregateRating there: the page only has the compact
+proof line, not the reviews wall, and `cta-trust-proof.test.js`
+already forbids it.
+
 ## 2026-09-17 -- /tools/ Action Items inbox + More overflow (UI only)
 
 Paired with the visual lane the same day. Behavior added, not a new

@@ -1939,6 +1939,40 @@ instead of phone-sized cards.
 
 New tests: `tests/tools/workspace-ops-inbox.test.js`.
 
+## What changed, 2026-09-17 -- booking conversion: sticky CTAs, held-slot copy, referral, schema
+
+Focused public-site conversion work on `/booking.html` only. No Edge
+Functions, no Supabase schema, and **no AggregateRating change** —
+`index.html` stays `ratingValue` 5.0 / `reviewCount` 4.
+
+**Sticky mobile Call + Book.** The marketing pages already had the
+760px Call+Book bar; booking.html did not (left off in the original
+bar pass because the page is the calendar). Rechecked: the gap is Call
+as an escape hatch, not a second Book destination. The bar is local
+CSS (this page does not load `styles.css`). Call is `tel:+14354141667`.
+Book is `#stepService` during the flow so it cannot wipe a half-filled
+form; after confirm it goes to `/booking.html` for a fresh start.
+Cookie-banner styles were also missing on this standalone page — added
+so the injected banner sits above the bar.
+
+**Success copy.** Confirmation now says the slot is held, then what
+happens next (email with reschedule/cancel, we arrive, pay after —
+cash, check, Venmo, Cash App, or card). Dropped "we'll call or text if
+anything needs clarifying" as the implied confirm step. Emergency
+call/text stays under the timeline.
+
+**$25 referral credit.** Same complete-and-paid terms as the homepage
+FAQ, now on step 1, under "Who referred you?", and on the confirmation
+card. No new reviews or testimonials.
+
+**JSON-LD.** booking.html had none. Added Service + ReserveAction
+(provider HomeAndConstructionBusiness, St. George 84790, no street
+address) and BreadcrumbList. No AggregateRating on this page.
+
+New tests: `tests/design/booking-conversion.test.js`, plus updates to
+`tests/booking/next-steps-timeline.test.js` and
+`tests/referrals/referral-program.test.js`.
+
 ## What changed, 2026-09-17 -- GitHub Watcher standing ops checklist
 
 Docs-only. Added `docs/github-watcher-ops.md` for the Repo Management /

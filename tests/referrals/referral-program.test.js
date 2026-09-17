@@ -41,6 +41,21 @@ test('booking.html: captures "Who referred you?" and sends it as referred_by', (
   assert.match(BOOKING, /referred_by: formData\.get\('referred_by'\) \|\| null/);
 });
 
+test('booking.html: $25 referral credit is visible on the flow and on success, matching FAQ terms', () => {
+  const step1Start = BOOKING.indexOf('id="stepService"');
+  const step1End = BOOKING.indexOf('id="stepDateTime"');
+  const step1 = BOOKING.slice(step1Start, step1End);
+  assert.match(step1, /\$25 referral credit/i);
+  assert.match(step1, /complete and paid/);
+
+  assert.match(BOOKING, /class="field-hint">They get a \$25 credit toward their next service/);
+
+  const confirmed = BOOKING.match(/<section class="step-panel" id="stepConfirmed">[\s\S]*?<\/section>/)[0];
+  assert.match(confirmed, /class="conf-referral"/);
+  assert.match(confirmed, /\$25 toward your next visit/);
+  assert.match(confirmed, /complete and paid/);
+});
+
 test("index.html: Request form captures a referrer and sends it to th_leads", () => {
   assert.match(INDEX, /id="referredBy" name="referredBy"/);
   assert.match(INDEX, /referred_by: formData\.get\('referredBy'\) \|\| null/);
