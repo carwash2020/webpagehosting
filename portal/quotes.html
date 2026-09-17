@@ -67,7 +67,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Anton&family=Archivo:wght@400..700&family=Newsreader:ital,opsz,wght@0,6..72,300..700;1,6..72,300..600&family=Oswald:wght@200..700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="/styles.css?v=46788395ca">
-<link rel="stylesheet" href="/portal/portal-app.css?v=202609151500">
+<link rel="stylesheet" href="/portal/portal-app.css?v=202609170800">
 <style>
   /* iOS Safari zoom-on-focus fix (2026-09-05), same root cause and
      fix already applied to invoice-generator.html: a tapped
@@ -106,7 +106,7 @@
 </style>
 <link rel="stylesheet" href="/tools/styles-tools.css?v=a494344e8c">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="/portal/portal-app.js?v=202609151500"></script>
+<script src="/portal/portal-app.js?v=202609170800"></script>
 <!-- Shared business-hours data (2026-09-03) -- see business-hours.js's
      own header comment. This page used to keep its own hand-copied
      duplicate of these exact constants ("keep these in sync manually
@@ -189,6 +189,8 @@
   .empty-state.is-neutral .empty-state-icon { background: rgba(58,160,255,0.12); color: var(--blue-light); }
   .empty-state.is-error .empty-state-icon { background: rgba(255,167,38,0.12); color: #ffa726; }
   .empty-state-title { margin: 0; font-size: 14px; }
+  .empty-state-sub { margin: 8px 0 0; font-size: 13px; line-height: 1.5; color: var(--text-dim); }
+  .empty-state-cta { display: inline-flex; margin-top: 16px; min-height: 44px; justify-content: center; }
   .quote-section-title { font-family:var(--font-ui); font-weight: 600; font-size: 14px; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.5px; margin: 20px 0 10px; }
   .quote-section-title:first-child { margin-top: 0; }
   /* Pending-quotes summary (2026-09-07): the same real numbers the
@@ -275,7 +277,7 @@
   .report-bug-actions { display: flex; gap: 10px; margin-top: 16px; }
   .report-bug-actions button { flex: 1; justify-content: center; }
 </style>
-<link rel="stylesheet" href="/portal/portal-polish.css?v=63a161e33e">
+<link rel="stylesheet" href="/portal/portal-polish.css?v=7ea672797c">
 </head>
 <body class="portal-page">
 
@@ -527,7 +529,7 @@
     const isPending = q.status === 'pending';
 
     return `
-      <div class="quote-card">
+      <div class="quote-card" id="quote-card-${q.id}">
         <div class="quote-card-top">
           <div>
             <div class="quote-number">${escapeHtml(q.quote_number)}</div>
@@ -621,7 +623,7 @@
     }
     currentQuotes = quotes;
     if (!quotes.length) {
-      listEl.innerHTML = `<div class="empty-state is-neutral"><div class="empty-state-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 3.5h7.5L18 8v12.5H6z"/><path d="M13.5 3.5V8H18"/><path d="M9 12.5h6M9 16h6"/></svg></div><p class="empty-state-title">No quotes on file yet.</p></div>`;
+      listEl.innerHTML = `<div class="empty-state is-neutral"><div class="empty-state-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 3.5h7.5L18 8v12.5H6z"/><path d="M13.5 3.5V8H18"/><path d="M9 12.5h6M9 16h6"/></svg></div><p class="empty-state-title">No quotes on file yet.</p><p class="empty-state-sub">When we send you an estimate, it will show up here so you can approve it.</p><a href="/portal/work-orders.html" class="btn orange empty-state-cta">Request Work</a></div>`;
       return;
     }
 
@@ -640,6 +642,7 @@
       html += `<div class="quote-section-title">Responded</div>` + responded.map(renderQuoteCard).join('');
     }
     listEl.innerHTML = html;
+    portalScrollToHash();
   }
 
   function toggleQuestionForm(quoteId) {

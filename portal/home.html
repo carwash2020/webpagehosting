@@ -73,7 +73,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Anton&family=Archivo:wght@400..700&family=Newsreader:ital,opsz,wght@0,6..72,300..700;1,6..72,300..600&family=Oswald:wght@200..700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="/styles.css?v=46788395ca">
-<link rel="stylesheet" href="/portal/portal-app.css?v=202609151500">
+<link rel="stylesheet" href="/portal/portal-app.css?v=202609170800">
 <style>
   /* iOS Safari zoom-on-focus fix (2026-09-05), same root cause and
      fix already applied to invoice-generator.html: a tapped
@@ -112,7 +112,7 @@
 </style>
 <link rel="stylesheet" href="/tools/styles-tools.css?v=a494344e8c">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="/portal/portal-app.js?v=202609151500"></script>
+<script src="/portal/portal-app.js?v=202609170800"></script>
 <style>
   body { background: #0a0a0a; max-width: 640px; margin: 0 auto; padding: 24px 16px 60px; }
   /* Widened for real desktop screens (2026-09-03), reported directly
@@ -169,48 +169,96 @@
 
   .home-greeting { font-family:var(--font-ui); font-weight: 700; font-size: 22px; color: var(--white); margin-bottom: 6px; }
   .home-intro { color: var(--text-dim); font-size: 13.5px; line-height: 1.55; margin-bottom: 22px; }
-  /* A real countdown to the nearest scheduled visit (2026-09-07),
-     reusing the same blue "in progress" accent already established by
-     the invoice-summary ring and the work-order progress track. */
-  .next-appt-banner {
-    display: flex; align-items: center; justify-content: space-between; gap: 14px;
-    background: linear-gradient(135deg, var(--bg-panel-2), var(--bg-panel));
+  /* Next appointment is the largest Home surface when a visit exists
+     (2026-09-17): when / where / what, plus the same Call/Text paths
+     already on this page's help card. Omitted entirely when nothing
+     is scheduled -- not a second empty state. */
+  .next-appt-hero {
+    background: linear-gradient(160deg, var(--bg-panel-2), var(--bg-panel));
     border: 1px solid var(--border); border-left: 4px solid var(--blue-light);
-    border-radius: 10px; padding: 14px 16px; margin-bottom: 18px;
+    border-radius: 14px; padding: 22px 20px; margin-bottom: 20px;
   }
-  .next-appt-title { margin: 0 0 2px; font-size: 12px; text-transform: uppercase; letter-spacing: 0.5px; color: var(--text-dim); }
-  .next-appt-detail { margin: 0; color: var(--white); font-size: 14px; font-weight: 600; }
-  .next-appt-countdown { flex-shrink: 0; font-family:var(--font-ui); font-weight: 700; font-size: 16px; color: var(--blue-light); white-space: nowrap; }
-  @media (max-width: 420px) {
-    .next-appt-banner { flex-direction: column; align-items: flex-start; }
+  .next-appt-kicker {
+    margin: 0 0 6px; font-size: 12px; font-weight: 600; text-transform: uppercase;
+    letter-spacing: 0.7px; color: var(--blue-light);
+  }
+  .next-appt-when {
+    margin: 0 0 4px; font-family: var(--font-ui); font-weight: 700;
+    font-size: 22px; color: var(--white); line-height: 1.25;
+  }
+  .next-appt-countdown {
+    margin: 0 0 14px; font-family: var(--font-ui); font-weight: 700;
+    font-size: 15px; color: var(--blue-light);
+  }
+  .next-appt-fact {
+    margin: 0 0 6px; color: var(--text-dim); font-size: 14px; line-height: 1.45;
+    display: flex; align-items: flex-start; gap: 8px;
+  }
+  .next-appt-fact strong { color: var(--white); font-weight: 600; }
+  .next-appt-fact svg {
+    width: 16px; height: 16px; flex-shrink: 0; margin-top: 2px;
+    fill: none; stroke: var(--blue-light); stroke-width: 2;
+    stroke-linecap: round; stroke-linejoin: round;
+  }
+  .next-appt-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 16px; }
+  .next-appt-actions a {
+    flex: 1; min-width: 110px; text-align: center; padding: 12px 14px; border-radius: 8px;
+    font-size: 14px; font-weight: 600; text-decoration: none; min-height: 44px;
+    display: inline-flex; align-items: center; justify-content: center;
+    box-sizing: border-box;
+  }
+  .next-appt-actions a.btn { border: 0; }
+  .next-appt-actions a.is-quiet {
+    border: 1px solid var(--border); color: var(--white); background: var(--bg-panel-2);
   }
 
+  /* Action inbox: one card per real thing the client can do, sorted
+     unpaid → sign → approve → reply. Scheduled visits live in the
+     hero above rather than duplicating here. */
   .attention-card {
     background: var(--orange-tint-soft); border: 1px solid var(--orange-tint-border);
     border-radius: 12px; padding: 16px; margin-bottom: 22px;
   }
-  .attention-title { font-family:var(--font-ui); font-weight: 600; font-size: 14px; color: var(--orange-light); margin-bottom: 10px; text-transform: uppercase; letter-spacing: 0.5px; }
-  .attention-row {
-    display: flex; justify-content: space-between; align-items: center; gap: 12px;
-    padding: 8px 0; border-bottom: 1px solid var(--orange-tint-border);
+  .attention-title { font-family:var(--font-ui); font-weight: 600; font-size: 14px; color: var(--orange-light); margin-bottom: 12px; text-transform: uppercase; letter-spacing: 0.5px; }
+  .attention-inbox { display: flex; flex-direction: column; gap: 10px; }
+  .attention-item {
+    display: flex; align-items: center; justify-content: space-between; gap: 12px;
+    background: var(--bg-panel); border: 1px solid var(--orange-tint-border);
+    border-radius: 10px; padding: 12px 12px 12px 14px;
   }
-  .attention-row:last-child { border-bottom: none; padding-bottom: 0; }
-  .attention-row-text { color: var(--white); font-size: 13.5px; display: flex; align-items: center; gap: 9px; }
-  .attention-row-icon { width: 16px; height: 16px; flex-shrink: 0; fill: none; stroke: var(--orange-light); stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
-  .attention-row a { color: var(--orange-light); font-size: 13px; font-weight: 600; text-decoration: none; white-space: nowrap; }
+  .attention-item.is-pay { border-left: 3px solid var(--orange); }
+  .attention-item-main { display: flex; align-items: flex-start; gap: 10px; min-width: 0; flex: 1; }
+  .attention-item-icon {
+    width: 18px; height: 18px; flex-shrink: 0; margin-top: 2px;
+    fill: none; stroke: var(--orange-light); stroke-width: 2;
+    stroke-linecap: round; stroke-linejoin: round;
+  }
+  .attention-item-title { color: var(--white); font-size: 14.5px; font-weight: 600; line-height: 1.3; }
+  .attention-item-meta { color: var(--text-dim); font-size: 12.5px; line-height: 1.4; margin-top: 3px; }
+  .attention-item-action {
+    flex-shrink: 0; min-height: 44px; padding: 10px 14px; border-radius: 8px;
+    font-size: 13.5px; font-weight: 600; text-decoration: none; white-space: nowrap;
+    display: inline-flex; align-items: center; justify-content: center;
+    background: var(--orange); color: #0a0a0a; border: 0;
+  }
+  .attention-item-action:hover { filter: brightness(1.08); }
+  .attention-item.is-pay .attention-item-action { background: var(--orange); }
+  /* Legacy row selectors kept so portal-polish.css still has a target
+     if an older cached sheet loads against this markup. */
+  .attention-row { display: none; }
 
   .section-title {
     font-family:var(--font-ui); font-weight: 600; font-size: 13px; letter-spacing: 0.6px;
     text-transform: uppercase; color: var(--text-dim); margin: 0 0 12px;
   }
   .home-cards { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 26px; }
-  /* On the same desktop breakpoint as the body width change above:
-     4 cards in one row makes better use of the extra space than 2
-     much-wider cards would -- there are exactly 4 (Invoices,
-     Estimates, Completed Jobs, Work Requests), so this is a clean
-     single row rather than an awkward partial second row. */
+  /* Five account cards (Invoices, Estimates, Jobs, Requests,
+     Contracts). Two columns on a phone; three on desktop so the
+     last row is 2 cards, never a lone stretched leftover. Contracts
+     used to live only as a footer link -- that hid pending e-sign
+     from the same IA as invoices and quotes. */
   @media (min-width: 860px) {
-    .home-cards { grid-template-columns: repeat(4, 1fr); }
+    .home-cards { grid-template-columns: repeat(3, 1fr); }
   }
   .home-card {
     background: var(--bg-panel); border: 1px solid var(--border); border-radius: 12px;
@@ -248,6 +296,12 @@
   }
   .help-actions a:hover { border-color: var(--orange); color: var(--orange-light); }
   .home-loading { color: var(--text-dim); font-size: 13.5px; padding: 12px 0; }
+  .empty-state { text-align: center; color: var(--text-dim); padding: 40px 20px; }
+  .empty-state-icon { width: 56px; height: 56px; margin: 0 auto 14px; border-radius: 50%; display: flex; align-items: center; justify-content: center; }
+  .empty-state-icon svg { width: 28px; height: 28px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+  .empty-state.is-neutral .empty-state-icon { background: rgba(58,160,255,0.12); color: var(--blue-light); }
+  .empty-state.is-error .empty-state-icon { background: rgba(255,167,38,0.12); color: #ffa726; }
+  .empty-state-title { margin: 0; font-size: 14px; }
   .report-bug-link { display: block; margin-top: 14px; font-size: 12px; color: var(--text-dim); text-decoration: underline; cursor: pointer; text-align: center; background: none; border: none; font-family: inherit; padding: 0; }
   .report-bug-link:hover { color: var(--orange-light); }
   .report-bug-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.6); display: flex; align-items: center; justify-content: center; padding: 20px; z-index: 1000; }
@@ -260,7 +314,7 @@
   .report-bug-actions { display: flex; gap: 10px; margin-top: 16px; }
   .report-bug-actions button { flex: 1; justify-content: center; }
 </style>
-<link rel="stylesheet" href="/portal/portal-polish.css?v=63a161e33e">
+<link rel="stylesheet" href="/portal/portal-polish.css?v=7ea672797c">
 </head>
 <body class="portal-page">
 
@@ -315,16 +369,6 @@
   </div>
 </div>
 
-<!-- Contracts (added alongside the async e-signature work): not one of
-     the four dynamic "Your Account" cards above -- that grid is
-     hard-coded to repeat(4, 1fr) on desktop, and a 5th card would sit
-     alone in an otherwise-empty row rather than filling it. A pending
-     contract already surfaces in the "Needs Your Attention" banner
-     above; this plain link is just how a client with no pending
-     contract still reaches their contract history. -->
-<p style="text-align:center; margin: 4px 0 26px;">
-  <a href="/portal/contracts.html" style="color:var(--text-dim); font-size:13px; text-decoration:underline;">View your contracts</a>
-</p>
 
 <script>
   const { createClient } = supabase;
@@ -348,11 +392,11 @@
   // are inherently scoped without any client-side filtering.
   async function loadSummary() {
     const [invoices, quotes, jobs, requests, contracts] = await Promise.all([
-      client.from('client_portal_invoices').select('id,total,paid'),
-      client.from('client_portal_quotes').select('id,status'),
+      client.from('client_portal_invoices').select('id,total,paid,invoice_number,invoice_date'),
+      client.from('client_portal_quotes').select('id,status,total'),
       client.from('client_portal_jobs').select('id'),
-      client.from('client_portal_work_orders').select('id,title,status,scheduled_at'),
-      client.from('client_portal_contracts').select('id,status'),
+      client.from('client_portal_work_orders').select('id,title,status,scheduled_at,address'),
+      client.from('client_portal_contracts').select('id,status,contract_title'),
     ]);
     // A Supabase-js query resolves (never rejects) even when it fails --
     // the failure shows up as `.error`, not a thrown exception. Without
@@ -382,15 +426,18 @@
   }
 
   // A real countdown to the client's nearest scheduled visit
-  // (2026-09-07), reading the exact same `requests` rows and
-  // scheduled_at field the attention row below already lists -- not a
-  // separate figure. Omitted entirely when nothing is scheduled: the
-  // attention area below already covers the general overview, so a
-  // second "nothing scheduled" empty state here would be redundant.
+  // (2026-09-07, enlarged 2026-09-17): reads the exact same `requests`
+  // rows and scheduled_at field as before -- not a separate figure.
+  // Omitted entirely when nothing is scheduled.
   function daysUntil(iso) {
     const today = new Date(); today.setHours(0, 0, 0, 0);
     const target = new Date(iso); target.setHours(0, 0, 0, 0);
     return Math.round((target - today) / 86400000);
+  }
+  function formatInvoiceDate(d) {
+    if (!d) return '';
+    const iso = String(d).length <= 10 ? d + 'T00:00:00' : d;
+    return new Intl.DateTimeFormat('en-US', { month: 'short', day: 'numeric', year: 'numeric' }).format(new Date(iso));
   }
   function renderNextAppointmentBanner(s) {
     const el = document.getElementById('nextAppointmentArea');
@@ -402,109 +449,147 @@
     const next = scheduled[0];
     const days = daysUntil(next.scheduled_at);
     const when = days <= 0 ? 'Today' : days === 1 ? 'Tomorrow' : `In ${days} days`;
-    el.innerHTML = `
-      <div class="next-appt-banner">
-        <div class="next-appt-text">
-          <p class="next-appt-title">Next appointment</p>
-          <p class="next-appt-detail">${escapeHtml(next.title || 'Your visit')} &mdash; ${escapeHtml(formatScheduledAt(next.scheduled_at))}</p>
-        </div>
-        <div class="next-appt-countdown">${escapeHtml(when)}</div>
-      </div>
-    `;
+    const where = (next.address || '').trim();
+    const detailsHref = next.id
+      ? '/portal/work-orders.html#wo-card-' + next.id
+      : '/portal/work-orders.html';
+    const whereHtml = where
+      ? '<p class="next-appt-fact"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 21s7-5.4 7-11a7 7 0 1 0-14 0c0 5.6 7 11 7 11z"/><circle cx="12" cy="10" r="2.4"/></svg><span><strong>Where</strong> &mdash; ' + escapeHtml(where) + '</span></p>'
+      : '';
+    el.innerHTML =
+      '<div class="next-appt-hero">' +
+        '<p class="next-appt-kicker">Next appointment</p>' +
+        '<p class="next-appt-when">' + escapeHtml(formatScheduledAt(next.scheduled_at)) + '</p>' +
+        '<p class="next-appt-countdown">' + escapeHtml(when) + '</p>' +
+        '<p class="next-appt-fact"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8.5"/><path d="M8.5 12.2l2.4 2.4 4.6-4.8"/></svg><span><strong>What</strong> &mdash; ' + escapeHtml(next.title || 'Your visit') + '</span></p>' +
+        whereHtml +
+        '<div class="next-appt-actions">' +
+          '<a href="tel:+14354141667" class="btn orange">Call</a>' +
+          '<a href="sms:+14354141667" class="btn secondary-btn">Text</a>' +
+          '<a href="' + detailsHref + '" class="is-quiet">View details</a>' +
+        '</div>' +
+      '</div>';
   }
 
   function renderAttention(s) {
     const el = document.getElementById('attentionArea');
-    const rows = [];
+    const items = [];
 
-    // Upcoming scheduled appointments, shown first -- more concrete
-    // and time-sensitive than anything else on this list (2026-09-03,
-    // following directly from the Approve & Schedule flow: "5 would
-    // fall in hand with that as well"). Each one gets its own row
-    // rather than being combined into a single count, since the DATE
-    // is the actual useful information here, not just how many there are.
-    const scheduled = s.requests.filter(r => r.status === 'scheduled' && r.scheduled_at);
-    scheduled.forEach(r => {
-      rows.push({
-        text: 'Scheduled: ' + (r.title || 'your appointment') + ' on ' + formatScheduledAt(r.scheduled_at),
-        href: '/portal/work-orders.html',
-        action: 'View',
-        icon: '<rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/>',
-      });
-    });
-
+    // Priority 1: unpaid invoices. Money first. Deep-link to the pay
+    // path already on dashboard.html -- no new payment API.
     const unpaid = s.invoices.filter(i => !i.paid);
     if (unpaid.length) {
       const owed = unpaid.reduce((sum, i) => sum + (Number(i.total) || 0), 0);
-      rows.push({
-        text: unpaid.length === 1
-          ? `1 unpaid invoice, ${money(owed)}`
-          : `${unpaid.length} unpaid invoices, ${money(owed)} total`,
-        href: '/portal/dashboard.html',
-        action: 'View & Pay',
+      const oldest = unpaid.slice().sort((a, b) => new Date(a.invoice_date) - new Date(b.invoice_date))[0];
+      const oldestDate = formatInvoiceDate(oldest && oldest.invoice_date);
+      items.push({
+        priority: 1,
+        kind: 'pay',
+        title: unpaid.length === 1
+          ? 'Pay ' + money(owed)
+          : 'Pay ' + money(owed) + ' total',
+        meta: unpaid.length === 1
+          ? (unpaid[0].invoice_number ? unpaid[0].invoice_number + (oldestDate ? ' · invoiced ' + oldestDate : '') : (oldestDate ? 'Invoiced ' + oldestDate : 'Unpaid invoice'))
+          : unpaid.length + ' unpaid invoices' + (oldestDate ? ' · oldest invoiced ' + oldestDate : ''),
+        href: unpaid.length === 1 && unpaid[0].id
+          ? '/portal/dashboard.html#invoice-card-' + unpaid[0].id
+          : '/portal/dashboard.html#payFirst',
+        action: 'Pay',
         icon: '<path d="M6 3.5h12v17l-2-1.4-2 1.4-2-1.4-2 1.4-2-1.4-2 1.4z"/><path d="M9.5 9h5M9.5 13h5"/>',
       });
     }
 
-    const pendingQuotes = s.quotes.filter(q => (q.status || 'pending') === 'pending');
-    if (pendingQuotes.length) {
-      rows.push({
-        text: pendingQuotes.length === 1
-          ? '1 estimate waiting for your approval'
-          : `${pendingQuotes.length} estimates waiting for your approval`,
-        href: '/portal/quotes.html',
-        action: 'Review',
-        icon: '<path d="M6 3.5h7.5L18 8v12.5H6z"/><path d="M13.5 3.5V8H18"/><path d="M9 12.5h6M9 16h6"/>',
-      });
-    }
-
-    // Contracts (added to close a real gap: quotes already surfaced
-    // here, but the three contract templates could only ever be signed
-    // in person before this session's async e-signature work).
+    // Priority 2: pending e-sign. Legal, and used to be footer-only.
     const pendingContracts = (s.contracts || []).filter(c => (c.status || 'pending') === 'pending');
     if (pendingContracts.length) {
-      rows.push({
-        text: pendingContracts.length === 1
-          ? '1 contract waiting for your signature'
-          : `${pendingContracts.length} contracts waiting for your signature`,
-        href: '/portal/contracts.html',
-        action: 'Review & Sign',
+      const first = pendingContracts[0];
+      items.push({
+        priority: 2,
+        kind: 'sign',
+        title: pendingContracts.length === 1
+          ? 'Sign your contract'
+          : pendingContracts.length + ' contracts waiting for your signature',
+        meta: pendingContracts.length === 1
+          ? (first.contract_title || 'Ready for your signature')
+          : 'Review and sign each one',
+        href: pendingContracts.length === 1 && first.id
+          ? '/portal/contracts.html#contract-card-' + first.id
+          : '/portal/contracts.html',
+        action: 'Sign',
         icon: '<path d="M6 3.5h7.5L18 8v12.5H6z"/><path d="M13.5 3.5V8H18"/><path d="M9 12.5h6M9 16h6"/>',
       });
     }
 
-    // Only genuinely open requests -- a scheduled or completed one
-    // isn't waiting on anybody.
+    // Priority 3: pending estimates.
+    const pendingQuotes = s.quotes.filter(q => (q.status || 'pending') === 'pending');
+    if (pendingQuotes.length) {
+      const quoteTotal = pendingQuotes.reduce((sum, q) => sum + (Number(q.total) || 0), 0);
+      items.push({
+        priority: 3,
+        kind: 'approve',
+        title: pendingQuotes.length === 1
+          ? 'Approve this estimate'
+          : pendingQuotes.length + ' estimates waiting for your approval',
+        meta: quoteTotal ? money(quoteTotal) + (pendingQuotes.length > 1 ? ' total' : '') : 'Waiting for your response',
+        href: pendingQuotes.length === 1 && pendingQuotes[0].id
+          ? '/portal/quotes.html#quote-card-' + pendingQuotes[0].id
+          : '/portal/quotes.html',
+        action: 'Approve',
+        icon: '<path d="M6 3.5h7.5L18 8v12.5H6z"/><path d="M13.5 3.5V8H18"/><path d="M9 12.5h6M9 16h6"/>',
+      });
+    }
+
+    // Priority 4: open requests that still need a reply or tracking.
+    // Scheduled visits are the hero above, not duplicated here.
     const openRequests = s.requests.filter(r => ['submitted', 'reviewing', 'quoted'].includes(r.status));
     if (openRequests.length) {
-      rows.push({
-        text: openRequests.length === 1
-          ? '1 work request in progress'
-          : `${openRequests.length} work requests in progress`,
-        href: '/portal/work-orders.html',
-        action: 'Track',
+      const first = openRequests[0];
+      items.push({
+        priority: 4,
+        kind: 'reply',
+        title: openRequests.length === 1
+          ? (first.title || 'Work request in progress')
+          : openRequests.length + ' work requests in progress',
+        meta: openRequests.length === 1 ? 'We may have a question, or an update waiting' : 'Open each request to reply',
+        href: openRequests.length === 1 && first.id
+          ? '/portal/work-orders.html#wo-card-' + first.id
+          : '/portal/work-orders.html',
+        action: 'Reply',
         icon: '<circle cx="12" cy="12" r="8.5"/><path d="M12 8.5v7M8.5 12h7"/>',
       });
     }
 
-    if (!rows.length) { el.innerHTML = ''; return; }
+    items.sort((a, b) => a.priority - b.priority);
+    if (!items.length) { el.innerHTML = ''; return; }
 
-    // r.icon is one of the fixed SVG path strings above, not user data.
+    // item.icon is one of the fixed SVG path strings above, not user data.
+    // Title/meta for unpaid/quote counts are built from numbers we already
+    // formatted; invoice_number/contract_title/request title go through
+    // escapeHtml at construction for the one-invoice meta, and again here
+    // for title/meta that may include client-owned strings.
     el.innerHTML = '<div class="attention-card">' +
       '<div class="attention-title">Needs Your Attention</div>' +
-      rows.map(r =>
-        '<div class="attention-row">' +
-          '<span class="attention-row-text"><svg class="attention-row-icon" viewBox="0 0 24 24" aria-hidden="true">' + r.icon + '</svg>' + escapeHtml(r.text) + '</span>' +
-          '<a href="' + r.href + '">' + escapeHtml(r.action) + ' &rarr;</a>' +
+      '<div class="attention-inbox">' +
+      items.map(item =>
+        '<div class="attention-item' + (item.kind === 'pay' ? ' is-pay' : '') + '">' +
+          '<div class="attention-item-main">' +
+            '<svg class="attention-item-icon" viewBox="0 0 24 24" aria-hidden="true">' + item.icon + '</svg>' +
+            '<div>' +
+              '<div class="attention-item-title">' + escapeHtml(item.title) + '</div>' +
+              (item.meta ? '<div class="attention-item-meta">' + escapeHtml(item.meta) + '</div>' : '') +
+            '</div>' +
+          '</div>' +
+          '<a class="attention-item-action" href="' + item.href + '">' + escapeHtml(item.action) + '</a>' +
         '</div>'
       ).join('') +
-      '</div>';
+      '</div></div>';
   }
 
   function renderCards(s) {
     const unpaidCount = s.invoices.filter(i => !i.paid).length;
     const pendingQuoteCount = s.quotes.filter(q => (q.status || 'pending') === 'pending').length;
     const openRequestCount = s.requests.filter(r => ['submitted', 'reviewing', 'quoted'].includes(r.status)).length;
+    const pendingContractCount = (s.contracts || []).filter(c => (c.status || 'pending') === 'pending').length;
 
     const cards = [
       {
@@ -538,6 +623,14 @@
         labelPlural: 'Work Requests',
         desc: openRequestCount ? `${openRequestCount} in progress` : 'Request something new',
         icon: '<circle cx="12" cy="12" r="8.5"/><path d="M12 8.5v7M8.5 12h7"/>',
+      },
+      {
+        href: '/portal/contracts.html',
+        count: (s.contracts || []).length,
+        label: 'Contract',
+        labelPlural: 'Contracts',
+        desc: pendingContractCount ? `${pendingContractCount} awaiting signature` : ((s.contracts || []).length ? 'All signed' : 'Nothing yet'),
+        icon: '<path d="M6 3.5h7.5L18 8v12.5H6z"/><path d="M13.5 3.5V8H18"/><path d="M9 12.5h6M9 16h6"/>',
       },
     ];
 
@@ -575,7 +668,7 @@
       renderCards(summary);
     } catch (e) {
       document.getElementById('homeCards').innerHTML =
-        '<div class="home-loading">Couldn\'t load your account details just now. Please refresh, or call us at (435) 414-1667.</div>';
+        '<div class="empty-state is-error"><div class="empty-state-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8.5"/><path d="M12 7.5v6"/><circle cx="12" cy="16.75" r="0.6" fill="currentColor" stroke="none"/></svg></div><p class="empty-state-title">Couldn\'t load your account details just now. Please refresh, or call us at (435) 414-1667.</p></div>';
     }
   }
 

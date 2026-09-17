@@ -62,7 +62,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Anton&family=Archivo:wght@400..700&family=Newsreader:ital,opsz,wght@0,6..72,300..700;1,6..72,300..600&family=Oswald:wght@200..700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="/styles.css?v=46788395ca">
-<link rel="stylesheet" href="/portal/portal-app.css?v=202609151500">
+<link rel="stylesheet" href="/portal/portal-app.css?v=202609170800">
 <style>
   /* iOS Safari zoom-on-focus fix (2026-09-05), same root cause and
      fix already applied to invoice-generator.html: a tapped
@@ -101,7 +101,7 @@
 </style>
 <link rel="stylesheet" href="/tools/styles-tools.css?v=a494344e8c">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="/portal/portal-app.js?v=202609151500"></script>
+<script src="/portal/portal-app.js?v=202609170800"></script>
 <script src="https://js.stripe.com/v3/"></script>
 <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js" integrity="sha384-JcnsjUPPylna1s1fvi1u12X5qjY5OL56iySh75FdtrwhO/SWXgMjoVqcKyIIWOLk" crossorigin="anonymous" async></script>
 <style>
@@ -169,6 +169,32 @@
   .invoice-status.is-paid { background: rgba(76,175,120,0.15); color: #4caf78; }
   .invoice-status.is-unpaid { background: rgba(255,167,38,0.15); color: #ffa726; }
   .empty-state { text-align: center; color: var(--text-dim); padding: 60px 20px; }
+  .empty-state-icon { width: 56px; height: 56px; margin: 0 auto 14px; border-radius: 50%; display: flex; align-items: center; justify-content: center; }
+  .empty-state-icon svg { width: 28px; height: 28px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+  .empty-state.is-neutral .empty-state-icon { background: rgba(58,160,255,0.12); color: var(--blue-light); }
+  .empty-state.is-error .empty-state-icon { background: rgba(255,167,38,0.12); color: #ffa726; }
+  .empty-state-title { margin: 0; font-size: 14px; }
+  .empty-state-sub { margin: 8px 0 0; font-size: 13px; line-height: 1.5; color: var(--text-dim); }
+  .empty-state-cta { display: inline-flex; margin-top: 16px; min-height: 44px; justify-content: center; }
+  /* Pay-first band (2026-09-17): amount due + invoice-date context +
+     the existing Pay now / Pay All path, above the analytics ring and
+     history chart. Hidden when nothing is outstanding. */
+  .pay-first {
+    background: var(--orange-tint-soft); border: 1px solid var(--orange-tint-border);
+    border-left: 4px solid var(--orange); border-radius: 12px;
+    padding: 18px 18px 16px; margin-bottom: 18px;
+  }
+  .pay-first-kicker {
+    margin: 0 0 4px; font-size: 12px; font-weight: 600; text-transform: uppercase;
+    letter-spacing: 0.6px; color: var(--orange-light);
+  }
+  .pay-first-amount {
+    margin: 0 0 6px; font-family: var(--font-ui); font-weight: 700;
+    font-size: 28px; color: var(--white); line-height: 1.15;
+  }
+  .pay-first-meta { margin: 0 0 14px; color: var(--text-dim); font-size: 13.5px; line-height: 1.45; }
+  .pay-first-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+  .pay-first-actions .btn { flex: 1; min-width: 140px; justify-content: center; min-height: 44px; }
   /* Real dataviz (2026-09-07): a paid-vs-outstanding ring, computed from
      the same two totals the "Pay All Outstanding" button and the
      Outstanding/Paid section split already use -- not a separate figure. */
@@ -272,7 +298,7 @@
   .report-bug-actions { display: flex; gap: 10px; margin-top: 16px; }
   .report-bug-actions button { flex: 1; justify-content: center; }
 </style>
-<link rel="stylesheet" href="/portal/portal-polish.css?v=63a161e33e">
+<link rel="stylesheet" href="/portal/portal-polish.css?v=7ea672797c">
 </head>
 <body class="portal-page">
 
@@ -299,6 +325,8 @@
   <a href="/portal/dashboard.html" class="is-active" aria-current="page"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 3.5h12v17l-2-1.4-2 1.4-2-1.4-2 1.4-2-1.4-2 1.4z"/><path d="M9.5 9h5M9.5 13h5"/></svg><span>Invoices</span></a>
   <a href="/portal/jobs.html"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8.5"/><path d="M8.5 12.2l2.4 2.4 4.6-4.8"/></svg><span>Jobs</span></a>
 </nav>
+
+<div id="payFirstArea"></div>
 
 <div class="invoice-summary" id="invoiceSummary" style="display:none;">
   <div class="invoice-summary-ring">
@@ -415,6 +443,55 @@
     document.getElementById('invoiceSummaryPaid').textContent = formatCurrency(totalPaid);
     document.getElementById('invoiceSummaryOutstanding').textContent = formatCurrency(totalOutstanding);
     el.style.display = '';
+  }
+
+  function hidePayFirst() {
+    const el = document.getElementById('payFirstArea');
+    if (el) el.innerHTML = '';
+  }
+
+  // Amount due + invoice-date context + the existing Pay now / Pay All
+  // handlers, rendered above the ring and chart so an unpaid client
+  // never has to scroll past analytics to pay. Uses invoice_date
+  // (the date this table actually stores) -- this table has no
+  // separate due-on column, so this does not invent one.
+  function renderPayFirst(invoices) {
+    const el = document.getElementById('payFirstArea');
+    const outstanding = invoices.filter(inv => !inv.paid);
+    if (!outstanding.length) { el.innerHTML = ''; return; }
+
+    const total = outstanding.reduce((sum, inv) => sum + Number(inv.total || 0), 0);
+    const oldest = outstanding.slice().sort((a, b) => new Date(a.invoice_date) - new Date(b.invoice_date))[0];
+    const newest = outstanding.slice().sort((a, b) => new Date(b.invoice_date) - new Date(a.invoice_date))[0];
+    let meta;
+    if (outstanding.length === 1) {
+      meta = (outstanding[0].invoice_number ? escapeHtml(outstanding[0].invoice_number) + ' · ' : '') +
+        'Invoiced ' + escapeHtml(formatDate(outstanding[0].invoice_date));
+    } else {
+      meta = outstanding.length + ' unpaid invoices · oldest invoiced ' +
+        escapeHtml(formatDate(oldest.invoice_date));
+      if (newest && newest.invoice_date !== oldest.invoice_date) {
+        meta += ', latest ' + escapeHtml(formatDate(newest.invoice_date));
+      }
+    }
+
+    let actions;
+    if (outstanding.length > 1) {
+      actions = '<button class="btn orange" type="button" onclick="startBulkPayment([' +
+        outstanding.map(inv => inv.id).join(',') +
+        '])">Pay All Outstanding (' + formatCurrency(total) + ')</button>';
+    } else {
+      actions = '<button class="btn orange" type="button" onclick="startPayment(' +
+        outstanding[0].id + ')">Pay now</button>';
+    }
+
+    el.innerHTML =
+      '<div class="pay-first" id="payFirst">' +
+        '<p class="pay-first-kicker">Amount due</p>' +
+        '<p class="pay-first-amount">' + formatCurrency(total) + '</p>' +
+        '<p class="pay-first-meta">' + meta + '</p>' +
+        '<div class="pay-first-actions">' + actions + '</div>' +
+      '</div>';
   }
 
   // One bar per real invoice, oldest to newest (2026-09-07) -- colored
@@ -539,17 +616,20 @@
       .order('invoice_date', { ascending: false });
 
     if (error) {
-      listEl.innerHTML = `<div class="empty-state">Couldn't load your invoices right now. Please try again in a moment.</div>`;
+      hidePayFirst();
+      listEl.innerHTML = `<div class="empty-state is-error"><div class="empty-state-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8.5"/><path d="M12 7.5v6"/><circle cx="12" cy="16.75" r="0.6" fill="currentColor" stroke="none"/></svg></div><p class="empty-state-title">Couldn't load your invoices right now. Please try again in a moment.</p></div>`;
       console.error(error);
       return;
     }
     currentInvoices = invoices;
     if (!invoices.length) {
-      listEl.innerHTML = `<div class="empty-state">No invoices on file yet.</div>`;
+      hidePayFirst();
+      listEl.innerHTML = `<div class="empty-state is-neutral"><div class="empty-state-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 3.5h12v17l-2-1.4-2 1.4-2-1.4-2 1.4-2-1.4-2 1.4z"/><path d="M9.5 9h5M9.5 13h5"/></svg></div><p class="empty-state-title">No invoices on file yet.</p><p class="empty-state-sub">When we invoice you, it will show up here so you can pay online.</p><a href="/portal/work-orders.html" class="btn orange empty-state-cta">Request Work</a></div>`;
       document.getElementById('invoiceSummary').style.display = 'none';
       document.getElementById('invoiceChartCard').style.display = 'none';
       return;
     }
+    renderPayFirst(invoices);
     renderInvoiceSummary(invoices);
     renderInvoiceChart(invoices);
 
@@ -579,23 +659,16 @@
     let html = '';
     if (outstanding.length) {
       html += `<div class="invoice-section-title">Outstanding</div>`;
-      // Only worth offering once there's actually more than one to
-      // combine -- a single outstanding invoice already has its own
-      // "Pay now" button right on the card, so a second button doing
-      // the exact same thing would just be visual noise.
-      if (outstanding.length > 1) {
-        const outstandingTotal = outstanding.reduce((sum, inv) => sum + Number(inv.total || 0), 0);
-        html += `<button class="btn orange" style="width:100%; justify-content:center; margin-bottom:12px;" onclick="startBulkPayment([${outstanding.map(inv => inv.id).join(',')}])">Pay All Outstanding (${formatCurrency(outstandingTotal)})</button>`;
-      }
       html += outstanding.map(renderInvoiceCard).join('');
     }
     if (paid.length) {
       html += `<div class="invoice-section-title">Paid</div>` + paid.map(renderInvoiceCard).join('');
     }
     if (!outstanding.length && !paid.length) {
-      html = `<div class="empty-state">No invoices on file yet.</div>`;
+      html = `<div class="empty-state is-neutral"><div class="empty-state-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 3.5h12v17l-2-1.4-2 1.4-2-1.4-2 1.4-2-1.4-2 1.4z"/><path d="M9.5 9h5M9.5 13h5"/></svg></div><p class="empty-state-title">No invoices on file yet.</p><p class="empty-state-sub">When we invoice you, it will show up here so you can pay online.</p><a href="/portal/work-orders.html" class="btn orange empty-state-cta">Request Work</a></div>`;
     }
     listEl.innerHTML = html;
+    portalScrollToHash();
   }
 
   // Matches this project's own escapeHtml() convention exactly (used

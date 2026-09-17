@@ -227,7 +227,7 @@ test('every signed-in portal page widens past 640px on a real desktop screen', (
   }
 });
 
-test('the Home page cards expand to a full 4-column row on desktop instead of just stretching 2 wide cards', () => {
+test('the Home page cards expand to a 3-column row on desktop so five cards (including Contracts) never orphan a stretched leftover', () => {
   const src = fs.readFileSync(repo('portal', 'home.html'), 'utf8');
-  assert.match(src, /@media \(min-width: 860px\) \{\s*\.home-cards \{ grid-template-columns: repeat\(4, 1fr\); \}/);
+  assert.match(src, /@media \(min-width: 860px\) \{\s*\.home-cards \{ grid-template-columns: repeat\(3, 1fr\); \}/);
 });

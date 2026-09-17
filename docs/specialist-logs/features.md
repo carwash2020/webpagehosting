@@ -3,6 +3,17 @@
 Started 2026-09-16, alongside the `tripleh-features` skill. See `README.md`
 in this directory for how these logs work.
 
+## 2026-09-17 -- portal usability is layout, not new APIs
+
+Visual lane owned the `/portal/` Home inbox / next-appointment hero /
+pay-first invoices pass. Logging here only because the IA change is
+easy to redo badly: contracts stayed out of the 5-tab bar on
+purpose (the bar is a documented ceiling, Settings already uses the
+header-icon escape hatch). They belong on Home cards and in the
+action inbox. Deep links (`#invoice-card-`, `#quote-card-`,
+`#contract-card-`, `#wo-card-`, `#payFirst`) are hash-only -- no new
+Edge Functions, no RLS edits, no Stripe changes.
+
 ## 2026-09-17 -- GA4 booking/lead events on the existing measurement ID
 
 Lean conversion follow-up, not a new analytics install. The public

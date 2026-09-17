@@ -3,6 +3,35 @@
 Started 2026-09-16, alongside the `tripleh-visual` skill. See `README.md` in
 this directory for how these logs work.
 
+## 2026-09-17 -- portal Home inbox, next-appointment hero, pay-first invoices
+
+Logged-in `/portal/` UX only. Did not touch auth, RLS, or payment Edge
+Functions -- Pay/Approve/Sign/Reply all deep-link into pages that
+already did those jobs. Did not raise public AggregateRating.
+
+Home "Needs Your Attention" is now an action inbox: one card per
+real task, sorted unpaid → sign → approve → reply, with a 44px
+primary button. Scheduled visits left that list on purpose -- they
+are informational, not a tap-to-act item, and they already have a
+dedicated surface. Next appointment is a large `#nextAppointmentArea`
+hero (when/where/what plus the same Call/Text hrefs as the help
+card) and stays omitted when nothing is booked.
+
+Invoices: amount due + invoice_date context + the existing Pay now /
+Pay All handlers sit in `#payFirstArea` above the paid/outstanding
+ring and history chart. `client_portal_invoices` has no due-on
+column, so the copy says "Invoiced {date}" rather than inventing
+terms. Empty invoice lists now use the same is-neutral / is-error
+icon pattern as quotes and jobs, with a Request Work CTA on the
+genuine empty state.
+
+Contracts moved from a footer-only Home link into the Your Account
+card grid. The 5-tab bar is unchanged (Home / Request / Quotes /
+Invoices / Jobs). Settings stays a header icon. Desktop card grid
+went from 4 columns to 3 so five cards finish as 3+2, not a lone
+stretched fifth cell.
+
+<!-- Add new entries above this line -->
 ## 2026-09-17 -- public conversion visuals (mobile chrome, hero, booking summary)
 
 Focused visual PR after the quick wins. Rebased onto main after #270
@@ -34,7 +63,6 @@ date/time. Step labels stay visible ≤600px as Service / When / Info.
 (sticky under the header, hidden ≤760px) and an in-flow `.schedule-rail`
 after Services. Both Book to `/booking.html`.
 
-<!-- Add new entries above this line -->
 ## 2026-09-17 -- stats first-paint, 16px forms, directory landings
 
 Shipped the three morning-handoff quick wins as one PR. Rebased onto

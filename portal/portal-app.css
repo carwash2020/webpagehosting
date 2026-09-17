@@ -164,9 +164,12 @@ body.portal-page {
 .invoice-card,
 .job-card,
 .quote-card,
+.contract-card,
 .set-card,
 .wo-card,
-.wo-form-card {
+.wo-form-card,
+.pay-first,
+.next-appt-hero {
   /* A hair lighter than the page behind it -- the surface itself
      does most of the separating; the shadow only anchors it. */
   background: var(--bg-panel);

@@ -67,7 +67,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Anton&family=Archivo:wght@400..700&family=Newsreader:ital,opsz,wght@0,6..72,300..700;1,6..72,300..600&family=Oswald:wght@200..700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="/styles.css?v=46788395ca">
-<link rel="stylesheet" href="/portal/portal-app.css?v=202609151500">
+<link rel="stylesheet" href="/portal/portal-app.css?v=202609170800">
 <style>
   /* iOS Safari zoom-on-focus fix (2026-09-05), same root cause and
      fix already applied to invoice-generator.html: a tapped
@@ -106,7 +106,7 @@
 </style>
 <link rel="stylesheet" href="/tools/styles-tools.css?v=a494344e8c">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="/portal/portal-app.js?v=202609151500"></script>
+<script src="/portal/portal-app.js?v=202609170800"></script>
 <!-- Shared business-hours data (2026-09-03) -- see business-hours.js's
      own header comment. This page used to keep its own FIFTH
      independent hand-typed copy of these exact constants. -->
@@ -216,6 +216,8 @@
   .empty-state.is-neutral .empty-state-icon { background: rgba(58,160,255,0.12); color: var(--blue-light); }
   .empty-state.is-error .empty-state-icon { background: rgba(255,167,38,0.12); color: #ffa726; }
   .empty-state-title { margin: 0; font-size: 14px; }
+  .empty-state-sub { margin: 8px 0 0; font-size: 13px; line-height: 1.5; color: var(--text-dim); }
+  .empty-state-cta { display: inline-flex; margin-top: 16px; min-height: 44px; justify-content: center; }
   .checkup-banner {
     background: var(--orange-tint-soft); border: 1px solid var(--orange-tint-border); border-radius: 10px;
     padding: 14px 16px; margin-bottom: 12px; display: flex; justify-content: space-between; align-items: center; gap: 10px;
@@ -260,7 +262,7 @@
   .report-bug-actions { display: flex; gap: 10px; margin-top: 16px; }
   .report-bug-actions button { flex: 1; justify-content: center; }
 </style>
-<link rel="stylesheet" href="/portal/portal-polish.css?v=63a161e33e">
+<link rel="stylesheet" href="/portal/portal-polish.css?v=7ea672797c">
 </head>
 <body class="portal-page">
 
@@ -794,7 +796,7 @@
       return;
     }
     if (!jobs.length) {
-      listEl.innerHTML = `<div class="empty-state is-neutral"><div class="empty-state-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8.5"/><path d="M8.5 12.2l2.4 2.4 4.6-4.8"/></svg></div><p class="empty-state-title">No completed jobs on file yet.</p></div>`;
+      listEl.innerHTML = `<div class="empty-state is-neutral"><div class="empty-state-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8.5"/><path d="M8.5 12.2l2.4 2.4 4.6-4.8"/></svg></div><p class="empty-state-title">No completed jobs on file yet.</p><p class="empty-state-sub">Finished work and warranties will land here. Need something done in the meantime?</p><a href="/portal/work-orders.html" class="btn orange empty-state-cta">Request Work</a></div>`;
       return;
     }
     renderWarrantyOverview(jobs);

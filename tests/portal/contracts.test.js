@@ -25,7 +25,7 @@ test('portal/contracts.html loads none of the internal /tools/ scripts', () => {
 test('contracts.html cross-links to and from home.html', () => {
   assert.match(html, /<a href="\/portal\/home\.html">[\s\S]*?<span>Home<\/span>/);
   const homeHtml = fs.readFileSync(path.join(__dirname, '..', '..', 'portal', 'home.html'), 'utf8');
-  assert.match(homeHtml, /href="\/portal\/contracts\.html"/);
+  assert.match(homeHtml, /href: '\/portal\/contracts\.html'/);
 });
 
 test('contracts is deliberately NOT a 6th item in the shared 5-column bottom nav', () => {

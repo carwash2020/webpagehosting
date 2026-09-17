@@ -47,15 +47,19 @@ test('the warranty overview list rows also carry a ring, using the same helper (
 
 test('every home stat card has an icon field, reusing the bottom nav\'s own SVG paths', () => {
   const navIcons = HOME.match(/class="portal-nav"[\s\S]*?<\/nav>/)[0];
-  const cardsBlock = HOME.slice(HOME.indexOf('const cards = ['), HOME.indexOf('const cards = [') + 1500);
+  const cardsBlock = HOME.slice(HOME.indexOf('const cards = ['), HOME.indexOf('const cards = [') + 2200);
   for (const card of ['dashboard.html', 'quotes.html', 'jobs.html', 'work-orders.html']) {
     const cardBlock = cardsBlock.slice(cardsBlock.indexOf(`href: '/portal/${card}'`), cardsBlock.indexOf(`href: '/portal/${card}'`) + 400);
     const iconMatch = cardBlock.match(/icon: '([^']+)'/);
     assert.ok(iconMatch, `expected an icon field on the ${card} card`);
-    // The icon markup (modulo whitespace) should appear somewhere in the nav too.
     const path0 = iconMatch[1].split('/>')[0];
     assert.ok(navIcons.includes(path0), `expected the ${card} card's icon to match a path already used in the bottom nav`);
   }
+  // Contracts is a Home card on purpose, not a 6th tab. Reuses the
+  // document icon already used for Quotes rather than a new language.
+  assert.match(cardsBlock, /href: '\/portal\/contracts\.html'/);
+  const contractsBlock = cardsBlock.slice(cardsBlock.indexOf(`href: '/portal/contracts.html'`), cardsBlock.indexOf(`href: '/portal/contracts.html'`) + 500);
+  assert.match(contractsBlock, /icon: '<path d="M6 3\.5h7\.5/);
 });
 
 test('the card icon renders inside a labelled accent chip, not a bare floating icon', () => {
@@ -63,8 +67,8 @@ test('the card icon renders inside a labelled accent chip, not a bare floating i
   assert.match(HOME, /\.home-card-icon \{[^}]*border-radius: 10px/);
 });
 
-test('attention rows carry an icon per row type, reusing the same fixed paths (not user data)', () => {
-  const rowsBlock = HOME.slice(HOME.indexOf('function renderAttention'), HOME.indexOf('function renderAttention') + 3000);
+test('attention items carry an icon per action type, reusing the same fixed paths (not user data)', () => {
+  const rowsBlock = HOME.slice(HOME.indexOf('function renderAttention'), HOME.indexOf('function renderCards'));
   const iconCount = [...rowsBlock.matchAll(/icon: '<.*?>'/g)].length;
-  assert.equal(iconCount, 4, 'expected all four row types (scheduled, unpaid, pending quote, open request) to carry an icon');
+  assert.equal(iconCount, 4, 'expected all four action types (pay, sign, approve, reply) to carry an icon');
 });
