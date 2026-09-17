@@ -1874,3 +1874,38 @@ after Services offers Book Instantly plus a quiet reviews link.
 
 New tests: `tests/design/public-conversion-visuals.test.js`, plus a
 mobile-summary case in `tests/booking/booking.test.js`.
+
+## What changed, 2026-09-17 -- portal usability: action inbox, next visit, pay-first invoices
+
+Logged-in `/portal/` only. No auth/RLS changes, no payment Edge Function
+changes, and no public AggregateRating edits.
+
+**Home action inbox.** "Needs Your Attention" is now one card per real
+task, sorted unpaid invoices, then contracts to sign, then estimates
+to approve, then open requests to reply. Each card's button deep-links
+into the page that already handles Pay / Approve / Sign / Reply
+(`#invoice-card-`, `#payFirst`, `#quote-card-`, `#contract-card-`,
+`#wo-card-`). Scheduled visits are no longer duplicated there.
+
+**Next appointment hero.** When a work request is `scheduled`,
+`#nextAppointmentArea` is the largest Home surface: when, what, where
+(if an address is on the request), a countdown, and the same Call/Text
+links the help card already used. Still omitted when nothing is booked.
+
+**Pay-first invoices.** Unpaid clients see amount due and invoice-date
+context, plus Pay now / Pay All Outstanding, above the paid/outstanding
+ring and history chart. Payment still goes through the existing Stripe
+handlers. Copy says "Invoiced {date}" because `client_portal_invoices`
+has no separate due-on column.
+
+**Contracts in primary IA.** Contracts are a Home account card alongside
+Invoices / Estimates / Jobs / Requests. The bottom bar stays five tabs
+(Home, Request, Quotes, Invoices, Jobs). Settings stays a header icon.
+
+**Empty states.** Invoice lists use the same is-neutral / is-error icon
+pattern as quotes and jobs. Genuine empty invoices/quotes/jobs offer
+Request Work. Contracts empty explains they will appear when sent -- no
+fake create button.
+
+New tests: `tests/portal/portal-usability-pr3.test.js`.
+

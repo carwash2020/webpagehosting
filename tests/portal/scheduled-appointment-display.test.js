@@ -26,19 +26,19 @@ test('scheduled_at is actually fetched -- selecting it is what makes the card ab
   assert.match(fnMatch[0], /\.select\('id,title,description,urgency,status,scheduled_at,created_at'\)/);
 });
 
-test('Home shows an upcoming appointment first in Needs Your Attention, before unpaid invoices', () => {
+test('Home shows an upcoming appointment in the next-appointment hero, not duplicated in the action inbox', () => {
   const fnMatch = HOME.match(/function renderAttention\(s\)[\s\S]*?\n  \}\n/);
   assert.ok(fnMatch, 'expected to isolate renderAttention()');
   const body = fnMatch[0];
-  const scheduledIdx = body.indexOf("r.status === 'scheduled' && r.scheduled_at");
-  const unpaidIdx = body.indexOf('s.invoices.filter(i => !i.paid)');
-  assert.ok(scheduledIdx !== -1, 'expected a scheduled-appointment check');
-  assert.ok(unpaidIdx !== -1, 'expected the existing unpaid-invoice check');
-  assert.ok(scheduledIdx < unpaidIdx, 'a confirmed appointment date is more time-sensitive and should show first');
+  assert.doesNotMatch(body, /r\.status === 'scheduled' && r\.scheduled_at/);
+  assert.match(body, /s\.invoices\.filter\(i => !i\.paid\)/);
+  const bannerFn = HOME.match(/function renderNextAppointmentBanner\(s\)[\s\S]*?\n  \}\n/);
+  assert.ok(bannerFn, 'expected to isolate renderNextAppointmentBanner()');
+  assert.match(bannerFn[0], /r\.status === 'scheduled' && r\.scheduled_at/);
 });
 
-test('Home fetches scheduled_at for its own requests query, or the attention row could never populate', () => {
-  assert.match(HOME, /client\.from\('client_portal_work_orders'\)\.select\('id,title,status,scheduled_at'\)/);
+test('Home fetches scheduled_at and address for the next-appointment hero', () => {
+  assert.match(HOME, /client\.from\('client_portal_work_orders'\)\.select\('id,title,status,scheduled_at,address'\)/);
 });
 
 test('two literal em-dash characters left over from the earlier guest-facing cleanup are gone from renderAttention', () => {

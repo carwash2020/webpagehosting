@@ -539,6 +539,16 @@ reference:
   `/booking.html` without deleting scroll-craft sections. Booking
   steps 2–3 get a compact sticky appointment summary on ≤960px.
 
+- **Client portal Home inbox, next-appointment hero, pay-first invoices**
+  (`portal/home.html`, `portal/dashboard.html`, and the other signed-in
+  portal pages). "Needs Your Attention" is an action inbox with one-tap
+  Pay / Approve / Sign / Reply into existing flows. An upcoming visit
+  becomes the largest Home surface. Unpaid invoices show amount due
+  above the analytics ring. Contracts sit in the Home card grid, not
+  only as a footer link. The 5-tab bar is unchanged; Settings stays out
+  of it. Invoice empty/error states now match quotes and jobs (icon +
+  Request Work CTA on a genuine empty list).
+
 <!-- Add new visual additions above this line -->
 
 ## Proposed visual improvements (not yet built)

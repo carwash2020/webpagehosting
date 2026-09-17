@@ -574,3 +574,16 @@ function dismissToast(toast) {
   setTimeout(() => toast.remove(), 200);
 }
 
+// Deep-link from Home's action inbox (Pay / Approve / Sign / Reply)
+// onto the matching card. Pages call this after they finish rendering
+// so the target actually exists. Reuses dashboard.html's existing
+// highlight animation class name rather than inventing a second one.
+function portalScrollToHash() {
+  const id = (location.hash || '').replace(/^#/, '');
+  if (!id) return;
+  const el = document.getElementById(id);
+  if (!el) return;
+  el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  el.classList.add('is-highlighted');
+}
+

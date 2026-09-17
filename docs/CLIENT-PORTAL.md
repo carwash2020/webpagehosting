@@ -11,19 +11,20 @@ For the backlog and settled decisions across the whole project, see
 
 ## What it is
 
-Eight pages, covering a client's entire relationship with the
-business -- invoices, quotes, job history, work requests, and account
+Nine pages, covering a client's entire relationship with the
+business -- invoices, quotes, contracts, job history, work requests, and account
 settings, not just invoice payment:
 
 | Page | Purpose | Indexed? |
 |---|---|---|
 | `portal/login.html` | Email + password sign in, plus forgot-password | Yes, on purpose |
 | `portal/set-password.html` | Handles BOTH invite-acceptance and password-reset | No |
-| `portal/home.html` | Landing page after sign-in -- summary cards + a "Needs Your Attention" section (unpaid invoices, pending quotes, open requests, upcoming scheduled appointments) | No |
-| `portal/dashboard.html` | Invoice list, split Outstanding/Paid, with Stripe payment | No |
+| `portal/home.html` | Landing page after sign-in -- next-appointment hero, "Needs Your Attention" action inbox (Pay / Approve / Sign / Reply), and summary cards including contracts | No |
+| `portal/dashboard.html` | Invoice list, pay-first amount due above the paid/outstanding ring, Stripe payment | No |
 | `portal/quotes.html` | Quote review, questions, approval, and self-scheduling | No |
 | `portal/jobs.html` | Job history, warranty overview, check-up reminders, downloadable receipts | No |
 | `portal/work-orders.html` | Request Work form (title/description/urgency/photos/preferred slot) + two-way messaging on submitted requests | No |
+| `portal/contracts.html` | Pending e-sign and signed-contract history. Not a 6th tab -- reached from Home cards and the action inbox | No |
 | `portal/settings.html` | Editable name/phone, saved card management, notification preferences, signed authorizations, Add to Home Screen | No |
 
 There is **no public sign-up anywhere**. An account only ever exists

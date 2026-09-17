@@ -82,7 +82,7 @@ test('settings marks no tab active -- it is a header icon button, not a tab dest
 
 test('every real card class gets elevation -- confirmed against the classes that actually exist, not a guessed list', () => {
   const cardClasses = ['attention-card', 'help-card', 'home-card', 'invoice-card',
-                       'job-card', 'quote-card', 'set-card', 'wo-card', 'wo-form-card'];
+                       'job-card', 'quote-card', 'contract-card', 'set-card', 'wo-card', 'wo-form-card'];
   for (const cls of cardClasses) {
     assert.match(CSS, new RegExp(`\\.${cls}[,\\s]`), `expected .${cls} to be covered by the elevation rule`);
   }

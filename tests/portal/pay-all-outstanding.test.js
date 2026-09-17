@@ -26,7 +26,7 @@ test('startPayment and startBulkPayment share the same Stripe Elements mount/con
 });
 
 test('the bulk button passes every outstanding invoice id, not a hardcoded subset', () => {
-  assert.match(html, /startBulkPayment\(\[\$\{outstanding\.map\(inv => inv\.id\)\.join\(','\)\}\]\)/);
+  assert.match(html, /startBulkPayment\(\[' \+\s*outstanding\.map\(inv => inv\.id\)\.join\(','\)/);
 });
 
 test('startBulkPayment calls create-bulk-payment-intent, never a direct table write', () => {

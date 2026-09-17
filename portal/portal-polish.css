@@ -137,9 +137,12 @@ body.portal-page {
 .invoice-card,
 .job-card,
 .quote-card,
+.contract-card,
 .set-card,
 .wo-card,
-.wo-form-card {
+.wo-form-card,
+.pay-first,
+.next-appt-hero {
   border-radius: 12px;
   box-shadow: var(--shadow-resting);
   transition: border-color .18s ease, box-shadow .18s ease, transform .18s ease;
@@ -147,7 +150,8 @@ body.portal-page {
 .invoice-card:hover,
 .job-card:hover,
 .quote-card:hover,
-.wo-card:hover {
+.wo-card:hover,
+.contract-card:hover {
   box-shadow: var(--shadow-hover);
   border-color: var(--blue-dark);
 }
@@ -416,6 +420,32 @@ label .login-hint {
   text-align: center;
   color: var(--text-dim);
   background: rgba(255, 255, 255, .015);
+}
+.empty-state-sub {
+  margin: 8px 0 0;
+  font-size: 13.5px;
+  line-height: 1.5;
+  color: var(--text-dim);
+}
+.empty-state-cta {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  margin-top: 16px;
+  min-height: 44px;
+}
+.invoice-card.is-highlighted,
+.quote-card.is-highlighted,
+.wo-card.is-highlighted,
+.contract-card.is-highlighted {
+  animation: portalCardHighlight 1.6s ease;
+}
+@keyframes portalCardHighlight {
+  0%, 100% { background: var(--bg-panel); }
+  25% { background: var(--orange-tint-soft); }
+}
+.attention-item-action {
+  min-height: 44px;
 }
 
 /* ---------- 10. collapsible cards ---------- */
