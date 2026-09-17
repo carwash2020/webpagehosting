@@ -3,6 +3,30 @@
 Started 2026-09-16, alongside the `tripleh-features` skill. See `README.md`
 in this directory for how these logs work.
 
+## 2026-09-17 -- booking path cleanup after the sticky bar
+
+Follow-up to the Call+Book bar, not a redesign of it. #265 left
+Schedule/Book hrefs pointing at the mid-page `#schedule` section on
+the homepage (and `/#schedule` on nav/footer of city, service, about,
+our-work, blog, and legal pages). The calendar itself is `/booking.html`,
+and sending someone to a mid-page card that then asks them to click
+Book Instantly is a wasted hop.
+
+Flipped those Schedule/Book hrefs (nav, mobile, footer, hero, sticky
+Book) to `/booking.html`. Left `#contact` and the `#schedule` section
+id itself alone -- Hours/map still live there, and the service modal's
+"or schedule online" still scrolls to the email form on purpose
+(it pre-fills that form, not the calendar).
+
+In `#schedule`, Book Instantly is now the orange primary. Homepage
+Email is the quiet secondary (`cta-quiet-link`); city/service Call is
+the outline secondary, matching the hero pairing. Did not invent
+"next available" copy. The booking.html expectations line is the
+existing FAQ facts only: no deposit, $25 beyond 15 miles, emergency
+= call or text.
+
+<!-- Add new entries above this line -->
+
 ## 2026-09-17 -- persistent mobile Call + Book bar
 
 Public-site conversion UX, not a tools/portal feature. The homepage
@@ -33,7 +57,7 @@ Scoped `body` padding and the cookie/chat/back-to-top lift with
 `:has(.sticky-call)` so pages without the bar no longer inherit the
 old global 70px bottom padding that assumed a bar they didn't have.
 
-<!-- Add new entries above this line -->## 2026-09-16 -- one-click "Create Invoice" from a job
+## 2026-09-16 -- one-click "Create Invoice" from a job
 
 First real session under this skill. Read `README.md`'s tail and
 `docs/ACTION-ITEMS.md` for open items before building anything, per the
