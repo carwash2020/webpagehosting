@@ -63,3 +63,10 @@ test('cta-proof is compact text, not a second sticky bar or extra card chrome', 
   assert.match(STYLES, /\.hero \.cta-proof\{/);
   assert.match(STYLES, /\.booking-cta \.cta-proof\{/);
 });
+
+test('hero proof hides at the sticky-bar breakpoint so it is not covered on first paint', () => {
+  assert.match(
+    STYLES,
+    /@media \(max-width:760px\)\{[\s\S]*?\.hero \.cta-proof\{display:none;\}/
+  );
+});
