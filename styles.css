@@ -2239,7 +2239,18 @@
   }
   .motto-rail .rail-seg{
     flex:1;
-    background:var(--border);
+    /* Fixed white, not var(--border) (2026-09-17): the rail runs the
+       full viewport height, so its unlit segments cross the hero --
+       which, like the hero h1/lede above, stays on a dark photo
+       regardless of the page's own theme. var(--border) flips light in
+       light mode, so the unlit rail was invisible against the light-mode
+       page but read as a stray bright scratch down the hero photo
+       (confirmed by direct pixel sampling: an ~90-value jump right at
+       the hero, vs. under 20 anywhere else). A fixed translucent white
+       stays a faint, deliberate-looking hairline against both the dark
+       hero and the light-mode page.
+    */
+    background:rgba(255,255,255,.2);
     opacity:.5;
     transition:background .7s ease, opacity .7s ease, box-shadow .7s ease;
   }

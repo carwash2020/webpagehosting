@@ -1705,3 +1705,25 @@ different internal owners (Job Tracker vs the work-order queue).
 New tests: `tests/portal/job-messaging.test.js` (15 tests, mirroring
 `tests/portal/work-order-messaging.test.js`'s structure test-for-test
 where the feature itself mirrors that one).
+
+## What changed, 2026-09-17 -- fixed a stray-looking line down the homepage hero in light mode
+
+A fresh visual audit (not just re-reading old context) turned up a real
+rendering issue on the homepage: in light mode, a distinct vertical
+line ran down the far-left edge of the hero photo, reading like a
+rendering glitch. Root cause: `.motto-rail` (a decorative 3px "spine"
+tied to the hero tagline that lights up in segments as a visitor
+scrolls past the matching About-section value pill) used
+`background:var(--border)` at rest, which is a light color in light
+mode -- but the rail runs the full page height, crossing the hero
+section, which (like its own heading text) deliberately stays on a
+dark photo regardless of site theme. Same gap the hero's own text
+color already had to account for, just missed for this element.
+
+Fixed in `styles.css` (`.motto-rail .rail-seg`): the unlit color is now
+a fixed translucent white instead of a theme-swapping variable, chosen
+so it reads as a faint, deliberate hairline against both the dark hero
+and the light-mode page (verified with direct pixel sampling, not just
+a screenshot glance -- the visible jump at the hero's edge dropped from
+roughly a 90-value spike to about 20). The scroll-triggered "lit"
+segments (Honesty/Hustle/Helpfulness) are untouched and still work.
