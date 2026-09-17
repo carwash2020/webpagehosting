@@ -70,6 +70,7 @@ test('the money-owed card states an actual Current/Overdue split, not a single l
   assert.match(fn, /Overdue<\/span>/);
   assert.match(fn, /owed\.currentTotal/);
   assert.match(fn, /owed\.overdueTotal/);
+  assert.match(fn, /todayOverdueList/);
 });
 
 test('"everything else" is one row of chips linking to the 7 remaining sections, each an anchor jump (no schema/behavior change to those sections)', () => {

@@ -128,8 +128,10 @@ test('smoke: add a job (job-tracker.html) -> invoice it, linked to that job (inv
   jtWindow.document.dispatchEvent(new jtWindow.Event('DOMContentLoaded'));
   // Re-stubbed AFTER the shared scripts load -- tools-effects.js defines
   // its own real showToast() (which calls requestAnimationFrame, not
-  // available in jsdom), overwriting whatever was set in beforeParse.
+  // available in jsdom), and tools-dialogs.js defines a real showConfirm()
+  // that waits for a click. Both overwrite whatever was set in beforeParse.
   jtWindow.showToast = () => {};
+  jtWindow.showConfirm = () => Promise.resolve(true);
   jtWindow.startRealtimeSync = () => {};
   jtWindow.startLeadsRealtime = () => {};
   jtWindow.scheduleSync = () => {};
@@ -174,6 +176,7 @@ test('smoke: add a job (job-tracker.html) -> invoice it, linked to that job (inv
   igWindow.document.dispatchEvent(new igWindow.Event('DOMContentLoaded'));
   await new Promise(resolve => setTimeout(resolve, 100));
   igWindow.showToast = () => {};
+  igWindow.showConfirm = () => Promise.resolve(true);
   igWindow.startRealtimeSync = () => {};
   igWindow.startLeadsRealtime = () => {};
   igWindow.scheduleSync = () => {};
@@ -224,10 +227,8 @@ test('smoke: add a job (job-tracker.html) -> invoice it, linked to that job (inv
       w.escapeHtml = (s) => String(s == null ? '' : s);
       w.money = (n) => '$' + (Number(n) || 0).toFixed(2);
       w.personDot = () => '';
-      // Real total from Stage 2 -- prompt() is native and asks for the
-      // amount actually paid; answering with the invoice's own total is
-      // what a real "mark fully paid" tap does.
-      w.prompt = () => String(invoice.total);
+      // Confirm dialog is the one-click Mark paid path: OK records the
+      // invoice's remaining balance as paid in full.
       // Same device, same localStorage, one step further along.
       w.localStorage.setItem('th_invoices', JSON.stringify(invoicesAfterGenerate));
     },
@@ -236,12 +237,12 @@ test('smoke: add a job (job-tracker.html) -> invoice it, linked to that job (inv
   injectSharedScripts(wsWindow);
   wsWindow.document.dispatchEvent(new wsWindow.Event('DOMContentLoaded'));
   wsWindow.showToast = () => {};
+  wsWindow.showConfirm = () => Promise.resolve(true);
   wsWindow.startRealtimeSync = () => {};
   wsWindow.startLeadsRealtime = () => {};
   wsWindow.scheduleSync = () => {};
   wsWindow.scheduleWikiSync = () => {};
   wsWindow.personDot = () => '';
-  wsWindow.prompt = () => String(invoice.total); // re-applied after shared scripts, same reasoning as showToast above
 
   await wsWindow.togglePaid(invoice.id);
 
@@ -250,7 +251,7 @@ test('smoke: add a job (job-tracker.html) -> invoice it, linked to that job (inv
   const paidInvoice = invoicesAfterPaid[0];
   assert.equal(paidInvoice.id, invoice.id);
   assert.equal(paidInvoice.paid, true, 'the invoice should now be marked paid');
-  assert.equal(Number(paidInvoice.paidAmount), Number(invoice.total), 'the paid amount should match what was actually entered');
+  assert.equal(Number(paidInvoice.paidAmount), Number(invoice.total), 'the paid amount should match the invoice total (one-click full pay)');
   assert.equal(paidInvoice.jobRefId, String(job.id), 'the job link from Stage 2 should still be intact after Stage 3 -- togglePaid() should only ever touch payment fields');
   wsWindow.close();
 });

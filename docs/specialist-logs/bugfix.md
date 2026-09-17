@@ -331,4 +331,17 @@ Four concrete public-site + portal defects from the UX study, one PR.
 Did not change AggregateRating / reviewCount (separate PR #281). Did
 not redesign tools.
 
+## 2026-09-17 — smoke test hung CI after togglePaid switched to showConfirm
+
+PR #283 swapped workspace `togglePaid()` from `window.prompt` to
+`showConfirm()`. `tests/workspace/smoke-job-invoice-paid.test.js` stubbed
+`showConfirm` in jsdom `beforeParse`, then `injectSharedScripts()` loads
+the real `tools-dialogs.js`, which replaces that stub with a Promise that
+waits for a click nobody ever makes. `await togglePaid()` never finished;
+GitHub Actions sat on "Run automated tests" for 20+ minutes. Isolated
+with `node --test --test-timeout=15000`: smoke timed out, the new
+`workspace-quick-actions.test.js` file passed in <1s (it never injects
+`tools-dialogs.js`). Fix: re-stub `showConfirm` after shared scripts,
+same as the existing `showToast` re-stub. No product-code change.
+
 <!-- Add new entries above this line -->

@@ -2130,3 +2130,38 @@ columns, so the reorder is only inside the 860px media query.
 Did not restyle the brand mark, did not touch sticky Call+Book, and
 did not change AggregateRating (5.0 / 7).
 
+## What changed, 2026-09-17 -- tools fewer clicks: Mark paid, Mark Done, daily strip
+
+Internal `/tools/` only. Same capabilities, fewer taps. No public-site,
+portal, auth, sync, RLS, or AggregateRating changes.
+
+**Mark paid.** Dashboard overdue rows (Money Owed) and Action Items
+income rows now say **Mark paid**. Confirm, and the existing
+`togglePaid()` path records the remaining balance as paid in full --
+the same localStorage + `scheduleSync` + relational mirror + referral
+earned write as before. The amount `prompt()` is gone. No payment
+method field (nothing else on /tools/ required one for a manual
+mark-paid).
+
+**Mark Done.** Job Tracker cards and the desktop table have an inline
+**Done** button that calls the existing `setJobStatus(id, 'done')`.
+No extra hours/notes prompt; that path never collected them. Swipe,
+long-press, bulk Mark Done, and the status dropdown still work.
+
+**Daily strip.** New job (`/tools/job-tracker.html#add-job`, now opens
+the add form), Create invoice, Find client (expands the dashboard
+search), and Today's schedule sit above the Tools tile grid. The grid
+itself is unchanged -- every tile href is still there -- but starts
+collapsed under **More tools**.
+
+### Click paths
+
+**Mark paid, before:** Action Items → Income row labeled Overdue/Unpaid
+→ amount prompt → OK. **After:** Overdue row or Income row → Mark paid
+→ confirm.
+
+**Mark Done, before (desktop):** Job Tracker → Edit → status dropdown
+→ Done → Update. **After:** Job Tracker row → Done.
+
+New tests: `tests/tools/workspace-quick-actions.test.js`.
+
