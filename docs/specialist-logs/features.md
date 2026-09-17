@@ -244,4 +244,18 @@ tool access was live and unblocked here, so this feature is actually
 live end-to-end, not just committed code waiting on a manual deploy
 step.
 
+## 2026-09-17 -- features/content: #262 docs close-out never landed
+
+Watcher research found PR #262 (job-messaging verify + close out
+"Remember me / longer sessions") was CI-green then closed in a
+main-only hygiene sweep after a README changelog conflict. The
+verification itself is still true: portal `createClient()` already
+uses SDK `persistSession` + `autoRefreshToken`. `docs/CLIENT-PORTAL.md`
+still lists Remember me under "Smaller polish" as if open. Re-apply
+that close-out (and the job-messaging wiring note) on a fresh
+docs PR; do not rebuild the feature.
+
+#263 (portal partial payments) stays closed until Connor is ready
+for a schema migration + `stripe-webhook` deploy.
+
 <!-- Add new entries above this line -->

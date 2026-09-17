@@ -184,4 +184,28 @@ query), not something to take on faith from an earlier session's notes
 or another chat's report -- both halves of this dispatch turned out to
 be exactly backwards from how they were first framed.
 
+## 2026-09-17 — GitHub Watcher ops checklist (no new cron)
+
+Did not add a GitHub Action or Routine. Wrote
+`docs/github-watcher-ops.md` so a Repo Management / Watcher session
+has a real loop instead of re-deriving merge policy each time.
+
+CI that is actually a merge gate: `test.yml` only. `check-links.yml`
+and `lighthouse.yml` run after (or beside) production. Lighthouse
+asserts a11y/SEO 0.9 as errors against the *live* homepage and
+Hurricane page only. `eslint.config.js` exists and is not invoked by
+any workflow.
+
+`check-links.py` `PUBLIC_PAGES` still omits
+`handyman-st-george-ut.html` (sitemap-listed) plus service/blog/legal
+pages; workflow comment still says "6 public pages." Backup workflow
+still omits `client_portal_contracts` and
+`client_portal_job_messages`. Those are automation-lane follow-ups,
+not Watcher merges.
+
+Leftover branch `cursor/ga4-booking-trust-ctas-2cba` should be
+deleted after Connor OK (`delete_branch_on_merge` did not remove it
+because a later commit was pushed onto the branch after #269
+squashed).
+
 <!-- Add new entries above this line -->

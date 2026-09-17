@@ -66,4 +66,34 @@ evolving page, not a new link every time it fires. Re-checked
 time's "not available" -- still genuinely not connected, not just
 assumed absent.
 
+## 2026-09-17 — GitHub Watcher research pass (PRs, CI, repo hygiene)
+
+Research-only inventory of `carwash2020/webpagehosting` for a standing
+GitHub Watcher bot. No production merge. Playbook committed as
+`docs/github-watcher-ops.md`.
+
+**Board at time of write:** 0 open PRs. `main` at `0b0751a` (#276),
+CI green (2289/2289 tests, undefined-vars 57 pages, consistency
+16+10, visual snapshot 6/6). Pages built. One leftover remote branch:
+`cursor/ga4-booking-trust-ctas-2cba` (squash leftover of #269 plus a
+commit already shipped as #272) — delete only with Connor (gate).
+
+**Closed same-day, not lost forever:** #262 (docs verify job-messaging
++ remember-me) closed for a README changelog conflict during a
+hygiene sweep; the close-out did **not** land (`CLIENT-PORTAL.md`
+still lists Remember me). #263 (portal partial payments) closed on
+purpose as a schema+deploy item.
+
+**Do not trust README structure tables** without checking
+`sitemap.xml`: 8 city pages (not 5), 11 blog HTML files / 10 posts
+(not 3), 30 sitemap URLs (not 12; `portal/login.html` is no longer
+listed), 10 portal HTML files, 37 edge-function snapshots. Live
+Supabase: 38 functions (incl. orphan `send-push`), 42 public tables,
+10 cron jobs. Private backup still misses `client_portal_contracts`
+and `client_portal_job_messages`.
+
+**Review lock (verified in tests + `index.html` JSON-LD):**
+AggregateRating `5.0` / `4`. Google's raw total can be higher
+because of star-only reviews; do not inflate.
+
 <!-- Add new entries above this line -->

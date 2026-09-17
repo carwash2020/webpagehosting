@@ -39,7 +39,7 @@ Before building something non-trivial, check whether it's genuinely new or wheth
   node scripts/check-undefined-vars.js
   python3 scripts/check-links.py
   ```
-- `mcp__github__*` for branch/PR/merge, following this project's existing convention (regular merge commits, not squash/rebase)
+- `mcp__github__*` for branch/PR/merge, following this project's standing convention: **squash** onto `main` (merge-to-main is production). Do not use merge commits or rebase-merge unless Connor asks. Auto-merge when `test.yml` is green and the change is outside the hub escalation gate (`docs/hub-governance.md`, `docs/github-watcher-ops.md`).
 
 ## Staying in your lane
 

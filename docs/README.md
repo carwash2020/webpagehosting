@@ -24,6 +24,14 @@ UI needed.
   functions, real bugs already found and fixed there, the critical
   2026-09-01 RLS security fix and its general lesson, what's still
   pending, and ideas for where to take it next.
+- **[hub-governance.md](hub-governance.md)** -- multi-chat hub chain
+  of command and the escalation gate (auth/payments/RLS/edge-function
+  merges, deletes, deploys). Binding on every session, including a
+  GitHub Watcher.
+- **[github-watcher-ops.md](github-watcher-ops.md)** -- standing ops
+  checklist for the GitHub Watcher / Repo Management lane: PR board,
+  squash-merge rules, what CI actually gates, and what still lets a
+  glitch through.
 
 For the deep, authoritative detail on any specific system --
 architecture, exact mechanisms, incident history, step-by-step

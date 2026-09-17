@@ -1938,3 +1938,13 @@ dense table still shows at 1024+. 768–1023 now gets compact list rows
 instead of phone-sized cards.
 
 New tests: `tests/tools/workspace-ops-inbox.test.js`.
+
+## What changed, 2026-09-17 -- GitHub Watcher standing ops checklist
+
+Docs-only. Added `docs/github-watcher-ops.md` for the Repo Management /
+GitHub Watcher lane: keep work landing on `main` (production GitHub
+Pages), squash-merge when `test.yml` is green, honor the hub
+escalation gate, keep AggregateRating at 5.0/4, never inflate
+reviews. Linked from `docs/README.md` and `docs/hub-governance.md`.
+Corrected `tripleh-features` to squash instead of merge commits.
+No site, portal, tools, schema, or CI workflow changes.
