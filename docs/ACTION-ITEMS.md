@@ -573,6 +573,13 @@ reference:
   wall still shows only the 4 written, verified quotes; no invented
   Review cards.
 
+- **Homepage hero hex mark above Schedule/Call** (2026-09-17) -- Connor
+  asked for the large Triple H crest at the top of the homepage hero
+  on a phone, above the Schedule / Call buttons instead of under
+  hours. Mobile still uses the 96px signature (not a 250px billboard).
+  Desktop two-column layout is unchanged (copy left, large mark
+  right). Header nav logo is unchanged. AggregateRating stays 5.0 / 7.
+
 <!-- Add new visual additions above this line -->
 
 ## Proposed visual improvements (not yet built)

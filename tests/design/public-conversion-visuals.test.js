@@ -66,9 +66,11 @@ test('a real run: ≤760px does not show the cookie banner until the visitor scr
   assert.ok(window.document.getElementById('cookieConsentBanner'), 'scroll past the hero should reveal the banner');
 });
 
-test('mobile hero keeps the crest after the H1/CTAs and sizes it as a signature, not a billboard', () => {
+test('mobile hero puts the crest above Schedule/Call; desktop keeps copy | mark columns', () => {
   const live = STYLES.replace(/\/\*[\s\S]*?\*\//g, '');
-  assert.doesNotMatch(live, /\.hero-badge\{order:-1/);
+  const desktopChunk = live.split('@media (max-width:860px)')[0];
+  assert.doesNotMatch(desktopChunk, /\.hero-badge\{[^}]*order:-1/, 'global order:-1 would swap desktop columns');
+  assert.match(live, /@media \(max-width:860px\)\{[\s\S]*?\.hero-badge\{[^}]*order:-1/);
   assert.match(STYLES, /\.hero-badge img\{width:96px;/);
   const heroStart = INDEX.indexOf('<section class="hero">');
   const heroEnd = INDEX.indexOf('</section>', heroStart);
@@ -76,7 +78,7 @@ test('mobile hero keeps the crest after the H1/CTAs and sizes it as a signature,
   const h1At = hero.indexOf('<h1>');
   const badgeAt = hero.indexOf('class="hero-badge"');
   const ctasAt = hero.indexOf('class="hero-ctas"');
-  assert.ok(h1At > 0 && ctasAt > h1At && badgeAt > ctasAt, 'H1 then CTAs then badge in source order');
+  assert.ok(h1At > 0 && ctasAt > h1At && badgeAt > ctasAt, 'desktop source order: H1, CTAs, then badge');
 });
 
 test('homepage conversion spine is additive: sticky page-jump (desktop) plus an in-flow Schedule rail', () => {

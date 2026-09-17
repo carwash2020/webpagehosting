@@ -3,6 +3,20 @@
 Started 2026-09-16, alongside the `tripleh-visual` skill. See `README.md` in
 this directory for how these logs work.
 
+## 2026-09-17 -- homepage hero hex mark above Schedule/Call
+
+Connor asked for the large hex logo at the top of the homepage hero,
+above Schedule/Call, not under hours/CTAs. Owner override of the
+2026-09-17 conversion-visuals choice (crest after H1/CTAs).
+
+Did not restyle the mark. Mobile keeps the 96px signature (not the old
+250px billboard). Placement is CSS `order:-1` inside the 860px stack
+only. Desktop stays two-column, copy left / 440px mark right -- a
+global order would swap those columns. Header `.brand img` (44px)
+untouched. Sticky Call+Book and AggregateRating (5.0 / 7) untouched.
+
+<!-- Add new entries above this line -->
+
 ## 2026-09-17 -- rebase conversion pop onto main (#279)
 
 Kept the tighter `.trust` spacing (`padding:32px 0 40px; border-top:none`)
@@ -12,8 +26,6 @@ conversion padding and the no-double-border. Public rating stays
 on #278's `.referral-nudge` / `.conf-referral` -- no second class.
 Rebased again onto #282 (footer hours / dead links) without touching
 that work.
-
-<!-- Add new entries above this line -->
 
 ## 2026-09-17 -- booking.html sticky Call+Book + cookie lift
 
