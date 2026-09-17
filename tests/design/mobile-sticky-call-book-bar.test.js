@@ -83,33 +83,10 @@ test('every public marketing page that shares the nav CTAs carries the sticky Ca
   }
 });
 
-test('homepage sticky Book goes to #schedule; other marketing pages match their header Schedule target', () => {
-  assert.match(stickyNav(INDEX), /href="#schedule" class="btn orange"/);
-
-  const bookingHeader = [
-    'assembly-installation.html',
-    'drywall-painting.html',
-    'plumbing-repairs.html',
-    'washer-dryer-repair.html',
-    'handyman-repairs.html',
-    'handyman-cedar-city-ut.html',
-    'handyman-hurricane-ut.html',
-    'handyman-la-verkin-ut.html',
-    'handyman-leeds-ut.html',
-    'handyman-mesquite-nv.html',
-    'handyman-santa-clara-ivins-ut.html',
-    'handyman-st-george-ut.html',
-    'handyman-washington-city-ut.html',
-  ];
-  for (const file of bookingHeader) {
+test('sticky Book goes to /booking.html on every public marketing page that carries the bar', () => {
+  for (const file of MARKETING_PAGES) {
     const src = fs.readFileSync(repo(file), 'utf8');
-    assert.match(src, /class="nav-schedule-btn nav-phone-desktop">Schedule<\/a>/, `${file} header Schedule`);
-    assert.match(stickyNav(src), /href="\/booking\.html" class="btn orange"/, `${file} sticky Book should match header /booking.html`);
-  }
-
-  for (const file of ['our-work.html', 'about.html', 'blog/index.html']) {
-    const src = fs.readFileSync(repo(file), 'utf8');
-    assert.match(stickyNav(src), /href="\/#schedule" class="btn orange"/, `${file} sticky Book should match header /#schedule`);
+    assert.match(stickyNav(src), /href="\/booking\.html" class="btn orange"/, `${file} sticky Book should go to /booking.html`);
   }
 });
 
@@ -117,7 +94,7 @@ test('homepage hero: Schedule is the filled primary and Call keeps the phone num
   const start = INDEX.indexOf('<div class="hero-ctas">');
   const end = INDEX.indexOf('</div>', start);
   const block = INDEX.slice(start, end);
-  assert.match(block, /href="#schedule" class="btn orange"/);
+  assert.match(block, /href="\/booking\.html" class="btn orange"/);
   assert.match(block, /Schedule an appointment/);
   assert.match(block, /class="btn outline js-phone-link"/);
   assert.match(block, /Call <span class="js-phone-text">\(435\) 414-1667<\/span>/);

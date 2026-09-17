@@ -377,9 +377,8 @@
      colour-glow shadow it was describing as "the clearest date stamp on
      a page." Flattened to the exact same treatment .btn.orange already
      uses (solid fill + hard offset shadow), just in the secondary blue
-     token -- these 5 usages are a genuine second CTA next to Send Email
-     (Book Instantly), not a page-level primary action, so blue stays;
-     only the dated rendering style is gone. */
+     token. The remaining public-site usage is the request-form submit
+     on the homepage, not a page-level primary action. */
   .btn.blue{
     background:var(--blue);
     color:#04101c;
@@ -1176,7 +1175,7 @@
   .booking-cta{
     background:linear-gradient(135deg, var(--bg-panel-2), var(--bg-panel));
     border:1px solid var(--border);
-    border-left:4px solid var(--blue);
+    border-left:4px solid var(--orange);
     border-radius:var(--radius);
     padding:28px 26px;
     display:flex;
@@ -1184,10 +1183,11 @@
     justify-content:space-between;
     gap:20px;
   }
-  .booking-grid .booking-cta:last-child{border-left-color:var(--orange-text-vivid);}
+  .booking-grid .booking-cta:last-child{border-left-color:var(--border);}
   .booking-cta-text h3{font-size:19px; margin-bottom:8px;}
   .booking-cta-text p{color:var(--text-dim); font-size:14px; margin:0; line-height:1.55;}
-  .booking-cta .btn{align-self:flex-start;}
+  .booking-cta .btn,
+  .booking-cta .cta-quiet-link{align-self:flex-start;}
   @media (max-width:760px){
     .booking-grid{grid-template-columns:1fr;}
   }

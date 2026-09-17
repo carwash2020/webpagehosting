@@ -1761,3 +1761,27 @@ robots.txt, or Supabase changes.
 New tests: `tests/design/mobile-sticky-call-book-bar.test.js`. The U01
 flat-primary-button tests were updated for the hero swap and still
 lock Call-primary on triage and the service modal.
+
+## What changed, 2026-09-17 -- booking path cleanup: Book goes to /booking.html
+
+Follow-up to the sticky Call+Book bar. Schedule and Book links that
+still jumped to the mid-page `#schedule` section now go to
+`/booking.html`, where the real calendar is. That includes homepage
+nav, hero, sticky Book, footer, and the matching Schedule links on
+city, service, about, our-work, blog, and legal pages. The sticky
+bar's layout and CSS are unchanged -- only the href. `#contact` still
+points at Hours and the map.
+
+In every `#schedule` section, **Book Instantly** is the orange
+primary. On the homepage, Send Email is the quiet secondary. On city
+and service pages, Call or Text is the outline secondary.
+
+`booking.html` now has a canonical URL
+(`https://www.triplehenterprisesllc.biz/booking.html`) and a short
+expectations line on step 1, taken from the existing FAQ: no deposit,
+a $25 trip fee beyond 15 miles, and emergencies should be a call or
+text rather than an online booking. No invented fees, hours, or "next
+available" slots.
+
+New tests: `tests/design/booking-path-cleanup.test.js`. Sticky-bar and
+U01 tests were updated for the new hrefs and card hierarchy.

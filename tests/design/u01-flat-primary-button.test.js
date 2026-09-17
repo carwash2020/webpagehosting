@@ -10,9 +10,10 @@
 // Call is the outline secondary (phone number still visible). Triage
 // results and the service modal keep the original Call-primary +
 // cta-quiet-link Schedule pairing -- those fire after a visitor has
-// already named a specific problem. Standalone .btn.blue links that
-// aren't paired against a Call button (the "Book Instantly" vs
-// "Send Email"/"Call or Text" parallel-option cards) are untouched.
+// already named a specific problem. The #schedule booking cards now
+// follow the same hierarchy: Book Instantly is the orange primary;
+// Email (homepage) is the quiet secondary, and Call or Text (city/
+// service pages) is the outline secondary.
 
 const { test } = require('node:test');
 const assert = require('node:assert/strict');
@@ -55,9 +56,13 @@ test('U01: index.html triage/service-modal Call-Schedule pairs still use cta-qui
   const src = fs.readFileSync(repo('index.html'), 'utf8');
   assert.doesNotMatch(src, /class="btn blue nav-phone-desktop"/);
   const ctaQuietCount = [...src.matchAll(/class="cta-quiet-link/g)].length;
-  assert.ok(ctaQuietCount >= 2, `expected at least 2 cta-quiet-link usages (triage, service modal), found ${ctaQuietCount}`);
-  // The two intentionally-untouched "parallel option card" links stay as .btn.blue.
-  assert.match(src, /<a class="btn blue" href="\/booking\.html">/);
+  assert.ok(ctaQuietCount >= 3, `expected at least 3 cta-quiet-link usages (triage, service modal, schedule email), found ${ctaQuietCount}`);
+  // Book Instantly in #schedule is now the orange primary, not a blue parallel card.
+  const scheduleStart = src.indexOf('<section id="schedule">');
+  const scheduleEnd = src.indexOf('</section>', scheduleStart);
+  const scheduleBlock = src.slice(scheduleStart, scheduleEnd);
+  assert.match(scheduleBlock, /<a class="btn orange" href="\/booking\.html">/);
+  assert.match(scheduleBlock, /id="openEmailModal"/);
   assert.match(src, /id="formSubmitBtn"/);
 });
 
@@ -85,8 +90,12 @@ test('U01: landing-page triage still uses cta-quiet-link; hero Book is primary a
     assert.ok(ctaQuietCount >= 1, `${file}: expected at least 1 cta-quiet-link usage (triage), found ${ctaQuietCount}`);
     // Schedule/Book leads in the hero; Call stays visible as the outline secondary.
     assert.match(src, /class="btn orange" href="\/booking\.html">[\s\S]{0,1200}class="btn outline js-phone-link" href="tel:\+14354141667">/, `${file}: hero should list Schedule before the outline Call button`);
-    // The untouched booking-section "Book Instantly" vs "Call or Text" parallel cards remain .btn.blue/.btn.orange.
-    assert.match(src, /<a class="btn blue" href="\/booking\.html">/, `${file}: booking-section card should stay untouched`);
+    // #schedule: Book Instantly is the orange primary; Call or Text is the outline secondary.
+    const scheduleStart = src.indexOf('<section id="schedule">');
+    const scheduleEnd = src.indexOf('</section>', scheduleStart);
+    const scheduleBlock = src.slice(scheduleStart, scheduleEnd);
+    assert.match(scheduleBlock, /<a class="btn orange" href="\/booking\.html">/, `${file}: booking-section Book Instantly should be the orange primary`);
+    assert.match(scheduleBlock, /class="btn outline js-phone-link" href="tel:\+14354141667"/, `${file}: booking-section Call should be the outline secondary`);
   }
 });
 
