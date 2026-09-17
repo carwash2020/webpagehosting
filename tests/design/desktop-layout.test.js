@@ -241,30 +241,21 @@ test('workspace.html and dev-tools.html each have a sticky bar stacked below the
   }
 });
 
-// Live sync indicator moved (2026-08-21), requested directly: on
-// desktop, sits as a second row under the settings button instead of
-// its own separate, full-width paragraph below the header.
+// Compact toolbar (2026-09-17): live sync sits in the same row as
+// logo/title/help/settings. The 140px second-row stack (two
+// independently position:fixed elements) is gone; status stays visible.
 
-test('on the dashboard, the live sync indicator moves under the settings button on desktop, with the header grown taller to make room, and the jump-nav/body padding both adjusted to match the new header height', () => {
+test('on the dashboard, live sync stays in the hub header toolbar rather than a 140px second row, and body padding matches a one-row fixed header', () => {
   const src = fs.readFileSync(path.join(TOOLS_DIR, 'workspace.html'), 'utf8');
-  const desktopBlock = src.match(/@media \(min-width: 1024px\) \{\s*body \.hub-header \{([^}]*)\}\s*\.hub-sub \{([^}]*)\}/);
-  assert.ok(desktopBlock, 'desktop hub-header/hub-sub override block not found');
-  assert.match(desktopBlock[1], /min-height:\s*140px/);
-  assert.match(desktopBlock[2], /position:\s*fixed/);
-  assert.match(desktopBlock[2], /right:\s*24px/, 'should align under the settings button on the right, not the left');
+  assert.doesNotMatch(src, /min-height:\s*140px/, 'the 140px desktop header stack should be gone');
+  assert.doesNotMatch(src, /#refreshSyncLink \{ position: fixed/, 'refresh belongs in the toolbar row, not independently pinned');
+  assert.doesNotMatch(src, /\.hub-sub \{ position: fixed;/);
 
-  // jump-nav no longer needs a desktop-specific top override -- it's
-  // position:static now (not sticky), requested directly ("the tools
-  // to slide"), so it has no positioning to account for at all.
-
-  // body's own padding-top must account for the new, taller header.
-  // Qualified with .th-tool-page (W10 fix, 2026-09-08) so this rule
-  // actually wins over styles-tools.css's own same-specificity base
-  // rule instead of silently losing to it -- found by rendering the
-  // page and measuring a real ~96px overlap under the fixed header.
   const paddingMatch = src.match(/@media \(min-width: 1024px\) \{ body(?:\.th-tool-page)? \{[^}]*padding-top: (\d+)px;[^}]*\} \}/);
   assert.ok(paddingMatch);
-  assert.ok(parseInt(paddingMatch[1], 10) >= 205, 'padding-top should account for the taller 140px header plus the jump-nav below it');
+  const pad = parseInt(paddingMatch[1], 10);
+  assert.ok(pad >= 75, 'still needs to clear the fixed header');
+  assert.ok(pad < 140, 'one toolbar row should not need the old 205px/140px stack');
 });
 
 test('dev-tools.html, which shares the same jump-nav CSS rule but did NOT move its live sync indicator, is unaffected by workspace.html\'s page-specific header height override', () => {
@@ -284,41 +275,16 @@ test('a plain mouse-click focus state has its native outline explicitly suppress
   assert.match(css, /:focus:not\(:focus-visible\)\s*\{\s*outline:\s*none;\s*\}/);
 });
 
-// Bug fix (2026-08-21), reported directly with a screenshot: the live
-// sync indicator and the refresh button below it weren't lining up on
-// the same right edge -- the refresh button looked centered/floating,
-// disconnected from the text above it.
-
-test('the refresh button is its own, fully independent position:fixed element, anchored directly to the exact same right:24px value as the live sync badge above it -- not relying on any shared-container flexbox/shrink-to-fit sizing, which is what actually eliminates the alignment ambiguity reported directly across two earlier attempts', () => {
-  const src = fs.readFileSync(path.join(TOOLS_DIR, 'workspace.html'), 'utf8');
-  const hubSubRule = src.match(/\.hub-sub \{ position: fixed;[^}]*\}/);
-  const refreshRule = src.match(/#refreshSyncLink \{ position: fixed[^}]*\}/);
-  assert.ok(hubSubRule, '.hub-sub desktop rule not found');
-  assert.ok(refreshRule, '#refreshSyncLink desktop rule not found');
-
-  const hubSubRight = hubSubRule[0].match(/right:\s*(\d+)px/);
-  const refreshRight = refreshRule[0].match(/right:\s*(\d+)px/);
-  assert.ok(hubSubRight && refreshRight);
-  assert.equal(hubSubRight[1], refreshRight[1], 'both must anchor to the exact same right value to guarantee alignment');
-});
-
-test('the refresh button\'s old inline margin-left (meant for its previous inline-flow position next to the badge) is explicitly cleared on desktop, since it\'s now an independently-positioned element entirely', () => {
-  const src = fs.readFileSync(path.join(TOOLS_DIR, 'workspace.html'), 'utf8');
-  assert.match(src, /#refreshSyncLink \{ position: fixed !important;[^}]*margin-left:\s*0\s*!important;/);
-});
-
-// Order swapped (2026-08-21), requested directly: the refresh button
-// now sits on top, with the "Live sync active" badge below it.
-
-test('the refresh button sits above the live sync badge (lower top value), with a real, consistent gap between them accounting for the button\'s actual height, not a naive value swap', () => {
-  const src = fs.readFileSync(path.join(TOOLS_DIR, 'workspace.html'), 'utf8');
-  const hubSubTop = parseInt(src.match(/\.hub-sub \{ position: fixed; top: (\d+)px;/)[1], 10);
-  const refreshTop = parseInt(src.match(/#refreshSyncLink \{ position: fixed !important; top: (\d+)px;/)[1], 10);
-  assert.ok(refreshTop < hubSubTop, 'the refresh button should be above the badge now');
-
-  const REFRESH_BUTTON_HEIGHT = 26;
-  const GAP = 6;
-  assert.equal(hubSubTop, refreshTop + REFRESH_BUTTON_HEIGHT + GAP, 'the badge\'s top should account for the button\'s real height plus a consistent gap, not just be an arbitrary swapped number');
+test('live sync and refresh sit in the header toolbar row (hub-header-right), not as independently position:fixed elements', () => {
+  const window = loadWorkspace();
+  const header = window.document.querySelector('.hub-header');
+  const right = window.document.querySelector('.hub-header-right');
+  const hubSub = window.document.querySelector('.hub-sub');
+  const refresh = window.document.getElementById('refreshSyncLink');
+  assert.ok(header.contains(hubSub), '.hub-sub should stay inside .hub-header so it inherits the dark chrome');
+  assert.ok(right.contains(hubSub), 'sync status belongs in the toolbar cluster');
+  assert.ok(right.contains(refresh), 'refresh belongs in the toolbar cluster');
+  assert.ok(right.contains(window.document.querySelector('a[href="/tools/settings.html"]')));
 });
 
 // Root cause finally found (2026-08-21), after the collision persisted
@@ -372,7 +338,7 @@ test('this page\'s align-items override matches the shared rule\'s exact selecto
 // was safe: saves ~22px of header height in the common case, wraps
 // gracefully rather than overflowing in the worst case.
 
-test('on mobile, .hub-sub uses a flex row layout with wrap, keeping the refresh button beside the badge on the same line rather than stacked below it', () => {
+test('on mobile, .hub-sub uses a flex row layout with wrap, keeping the badges on one line rather than stacked', () => {
   const src = fs.readFileSync(path.join(TOOLS_DIR, 'workspace.html'), 'utf8');
   const mobileRule = src.match(/\.hub-sub \{ color: var\(--text-dim\);[^}]*\}/);
   assert.ok(mobileRule, 'base .hub-sub rule not found');
@@ -380,16 +346,6 @@ test('on mobile, .hub-sub uses a flex row layout with wrap, keeping the refresh 
   assert.match(mobileRule[0], /flex-direction:\s*row/);
   assert.match(mobileRule[0], /flex-wrap:\s*wrap/, 'needs to wrap gracefully rather than overflow when the status text is long or the pending-changes badge is also showing');
   assert.match(mobileRule[0], /align-items:\s*center/, 'center alignment is what avoids repeating the original "floating with extra whitespace" problem this layout had before');
-});
-
-test('desktop resets .hub-sub back to display:block, since the refresh button there is already its own independent position:fixed element (unaffected by the parent\'s display mode either way) and doesn\'t need the mobile column stacking', () => {
-  const src = fs.readFileSync(path.join(TOOLS_DIR, 'workspace.html'), 'utf8');
-  assert.match(src, /@media \(min-width: 1024px\) \{ \.hub-sub \{ display: block; \} \}/);
-});
-
-test('this change does not affect the desktop refresh button\'s own position:fixed rule, which still exists unchanged', () => {
-  const src = fs.readFileSync(path.join(TOOLS_DIR, 'workspace.html'), 'utf8');
-  assert.match(src, /#refreshSyncLink \{ position: fixed !important;/);
 });
 
 // Restructured (2026-08-22), requested directly ("move the bars
@@ -400,12 +356,12 @@ test('this change does not affect the desktop refresh button\'s own position:fix
 // original logo/title/buttons row, preserving its own internal
 // space-between layout.
 
-test('.hub-sub is now a real, nested child of .hub-header (not a sibling element after it), so it inherits the same dark background automatically via that element\'s own inset:0 ::before pseudo-element', () => {
+test('.hub-sub is a nested child of .hub-header (not a sibling after it), so it inherits the same dark background automatically via that element\'s own inset:0 ::before pseudo-element', () => {
   const window = loadWorkspace();
   const header = window.document.querySelector('.hub-header');
   const hubSub = window.document.querySelector('.hub-sub');
   assert.ok(header.contains(hubSub), '.hub-sub should be nested inside .hub-header');
-  assert.equal(header.lastElementChild, hubSub, '.hub-sub should be the last child, after the main row');
+  assert.ok(!hubSub.matches('.hub-header > .hub-sub'), 'sync lives in the toolbar cluster, not as a second header row');
 });
 
 test('.hub-header-main-row wraps the original logo/title/buttons row, and still correctly spreads them via justify-content:space-between (not shrunk/centered by the parent\'s own flex-direction:column)', () => {

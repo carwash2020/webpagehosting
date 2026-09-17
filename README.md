@@ -1909,3 +1909,32 @@ fake create button.
 
 New tests: `tests/portal/portal-usability-pr3.test.js`.
 
+## What changed, 2026-09-17 -- internal tools usability (ops inbox + nav)
+
+Field/ops Workspace UX, `/tools/` only. No public-site or portal
+changes, and no sync/auth architecture change.
+
+**Action Items as an ops inbox.** The six existing lists (work
+requests, leads, bookings, due-soon jobs, follow-ups, income) sit in
+four priority lanes with counts. Unread highlighting uses flags the
+rows already had (unhandled lead, unconverted booking, submitted
+request, overdue invoice). Nothing new is fetched.
+
+**Phone More sheet.** The bottom bar is still Home / Jobs / Invoices /
+Calendar / Finance. A sixth More control opens a sheet of the dests
+the desktop sidebar already listed (Contracts, Route, Reviews, Wiki,
+Runway, Settings). Same 720px breakpoint; PWA bar pattern unchanged.
+
+**Jump-nav chips.** Snapshot, Action Items, and Tools stay in the row
+on a phone. Gallery, Compliance, Analytics, and Backup sit behind
+More; all seven chips show at 721px and up.
+
+**Hub header.** Live sync, pending, and refresh sit in the same
+toolbar row as the title. The 140px desktop second-row stack is gone.
+Status stays visible.
+
+**Job Tracker tablet density.** Cards still show below 1024 and the
+dense table still shows at 1024+. 768–1023 now gets compact list rows
+instead of phone-sized cards.
+
+New tests: `tests/tools/workspace-ops-inbox.test.js`.

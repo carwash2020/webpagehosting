@@ -3,6 +3,23 @@
 Started 2026-09-16, alongside the `tripleh-visual` skill. See `README.md` in
 this directory for how these logs work.
 
+## 2026-09-17 -- /tools/ ops inbox, More sheet, tablet density, one-row hub
+
+PR4, tools-only. Action Items became four priority lanes around the
+lists that already existed -- did not invent unread storage. Phone
+bottom nav kept the five daily dests and added a More sheet built from
+SIDEBAR_DESTS minus DESTS so the two lists cannot drift. Jump-nav
+collapses the four "health" chips behind More under 721px (same phone
+cutoff as the bar). Hub header dropped the 140px desktop second-row
+stack (the two position:fixed sync/refresh pins) and put status in the
+toolbar cluster. Job Tracker 768–1023 tightens cards rather than
+lowering the table breakpoint -- the table's column set still wants
+≥1024.
+
+Ship blocker: live login isn't in this environment, so Action Items
+lanes were verified from markup + tests, not against a real
+authenticated workspace session.
+
 ## 2026-09-17 -- portal Home inbox, next-appointment hero, pay-first invoices
 
 Logged-in `/portal/` UX only. Did not touch auth, RLS, or payment Edge
@@ -30,8 +47,6 @@ card grid. The 5-tab bar is unchanged (Home / Request / Quotes /
 Invoices / Jobs). Settings stays a header icon. Desktop card grid
 went from 4 columns to 3 so five cards finish as 3+2, not a lone
 stretched fifth cell.
-
-<!-- Add new entries above this line -->
 ## 2026-09-17 -- public conversion visuals (mobile chrome, hero, booking summary)
 
 Focused visual PR after the quick wins. Rebased onto main after #270

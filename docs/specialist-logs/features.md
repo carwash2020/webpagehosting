@@ -3,6 +3,20 @@
 Started 2026-09-16, alongside the `tripleh-features` skill. See `README.md`
 in this directory for how these logs work.
 
+## 2026-09-17 -- /tools/ Action Items inbox + More overflow (UI only)
+
+Paired with the visual lane the same day. Behavior added, not a new
+backend: Action Items grouped into lanes with counts already on
+`actionItemCounts`; unread class is `!handled` / unconverted booking /
+`status === 'submitted'` / overdue invoice. Bottom-nav More sheet is
+injected from `tools-nav-pwa.js` the same way the bar and sidebar
+already are. Finance-gated dests in the sheet still hide via the
+existing `th-role-loaded` href filter.
+
+Did not change sync, auth, or default-collapsed Action Items
+(W10 still wants the Today hero first). Did not put Clients/POS/Dev
+in the More sheet -- those were never in the desktop sidebar either.
+
 ## 2026-09-17 -- portal usability is layout, not new APIs
 
 Visual lane owned the `/portal/` Home inbox / next-appointment hero /
