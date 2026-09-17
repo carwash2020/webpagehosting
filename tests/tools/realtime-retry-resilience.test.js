@@ -203,8 +203,8 @@ test('the tools service worker cache was bumped for this change', () => {
   assert.ok(version >= 81, `expected v81 or later, got v${version}`);
 });
 
-test('startLeadsRealtime and startBookingsRealtime share the exact same retry/backoff/never-gives-up shape as startRealtimeSync', () => {
-  for (const fnName of ['startLeadsRealtime', 'startBookingsRealtime']) {
+test('startLeadsRealtime, startBookingsRealtime, startJobsRealtime, and startInvoicesRealtime share the exact same retry/backoff/never-gives-up shape as startRealtimeSync', () => {
+  for (const fnName of ['startLeadsRealtime', 'startBookingsRealtime', 'startJobsRealtime', 'startInvoicesRealtime']) {
     const fnSrc = extractFn(SYNC, fnName);
     assert.match(fnSrc, /attempt < REALTIME_RETRY_DELAYS\.length/, `${fnName} should retry using the shared backoff schedule`);
     assert.match(fnSrc, /status === 'CHANNEL_ERROR' \|\| status === 'TIMED_OUT'/, `${fnName} should treat TIMED_OUT the same as CHANNEL_ERROR`);

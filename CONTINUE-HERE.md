@@ -244,31 +244,36 @@ is async, that would have indexed into a Promise. Fixed by having
 that cache instead of re-fetching. Tests:
 `tests/tools/review-request-relational-jobs-phase2.test.js`.
 
+**Also done (invoices slice A, 2026-09-17):** shared read cache in
+`tools/sync.js` — `cachedRelationalInvoices` starts `null` (not `[]`),
+`getInvoicesForRead()` falls back to `th_invoices` only while the cache
+is still null, `refreshRelationalInvoicesCache()` only stores on
+`result.ok`. Wired into the two invoice *list* surfaces
+(`workspace.html` Income list, `invoice-generator.html` Recent tab).
+Page init refreshes the cache after `initSyncOnLoad()`, then re-renders.
+`startInvoicesRealtime()` plus
+`sql/infra/add_invoices_to_realtime_phase2.sql`. Writes still go
+through the blob (`saveInvoiceLog` / `saveInvoices` / `togglePaid`);
+a local write invalidates the cache so the next list render sees it.
+`finance.html` and `runway-dashboard.html` are still blob-only --
+their invoice reads are synchronous helpers called from many render
+sites, not a single list. Tests:
+`tests/sync/relational-invoices-read-phase2.test.js`.
+
 Also added `fetchInvoicesFromRelational()` to `sync.js` (same pattern
-as the jobs version) — built and tested
-(`tests/sync/relational-invoices-read-phase2.test.js`), but **not yet
-wired into any page**. `finance.html` and `runway-dashboard.html` were
-the next obvious candidates (both only read `th_invoices`, never write
-it), but their actual read functions
-(`backfillLegacyInvoicesIntoIncomeLog()`,
-`loadJobTrackerInvoices()`/`totalAccountsReceivable()`/
-`pullMonthFromJobTracker()`) are synchronous helpers called from many
-render call sites, not a single "load once on page open" spot the way
-calendar.html/route-planner.html/review-request.html all were.
-Converting them properly needs a real cache-and-refresh restructure
-(fetch once, cache, have every render call site read the cache) — not
-a same-pass drop-in swap. Don't force the same small pattern onto
-these two without doing that restructure first.
+as the jobs version) in step 3 -- now wired via the cache above.
+`finance.html` and `runway-dashboard.html` remain unconverted.
 
 **Still unstarted:** every other page that touches these 4 record
 types still reads/writes localStorage/the blob only --
-`job-tracker.html`, `workspace.html`, `invoice-generator.html`,
-`contract-generator.html`, `finance.html`, `runway-dashboard.html`,
-`dev-tools.html`. Any page with a real WRITE path (job-tracker.html,
-invoice-generator.html, contract-generator.html) is meaningfully
-higher-risk than the 3 done so far — don't assume the same pattern
-transfers 1:1 without checking each page's actual save flow first. The
-blob itself
+`job-tracker.html`, `workspace.html` (jobs/quotes/contracts; invoices
+list is now a relational *read*), `invoice-generator.html` (writes
+and quotes), `contract-generator.html`, `finance.html`,
+`runway-dashboard.html`, `dev-tools.html`. Any page with a real WRITE
+path (job-tracker.html, invoice-generator.html,
+contract-generator.html) is meaningfully higher-risk than the reads
+done so far — don't assume the same pattern transfers 1:1 without
+checking each page's actual save flow first. The blob itself
 (`workspace_sync.data.th_tracker_jobs` etc.) is not yet retired for any
 of the 4 types — it's still the thing every write path updates, and
 still what every other remaining page's read still depends on.
