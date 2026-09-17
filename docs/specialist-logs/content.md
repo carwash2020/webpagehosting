@@ -113,4 +113,16 @@ confirmed done; GBP's own paste-in is still open and needs dashboard
 access this session doesn't have, so it stays a manual action item, not
 something to redo here.
 
+## 2026-09-17 (later same day)
+
+After PR #258 (dishwasher blog link) merged, kept auditing
+`washer-dryer-repair.html`'s "Recent Notes From the Shop" section and
+found one more real gap: `blog/appliance-repair-or-replace.html` (the
+general "should I fix it or replace it" decision post) is relevant to
+any appliance the page covers, not just one, but wasn't linked at all.
+Added it as a 6th card, reusing the exact icon/title/dek already used
+for it on `blog/index.html` -- it shares the generic appliance icon
+with the dryer card there too, so this isn't a new visual pattern.
+`check-consistency` and `check-links.py` both clean.
+
 <!-- Add new entries above this line -->
