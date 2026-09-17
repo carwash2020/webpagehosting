@@ -83,8 +83,11 @@ wall and AggregateRating stay at 4.
 Hero colors are hardcoded light, same reason as `.hero h1` / the
 outline Call button: that photo never flips with theme. Inside
 `.booking-cta` it uses theme tokens. Mobile centers the hero line
-under the stacked CTAs; extra bottom padding is only a few pixels so
-it does not fight the sticky Call+Book bar.
+under the stacked CTAs above 760px. At the sticky-bar breakpoint
+(760px) the hero line is hidden -- it sat behind the Call+Book bar
+on first paint, with the logo + stacked CTAs already filling the
+viewport. The same copy stays on the #schedule Book Instantly card,
+which clears the bar. booking.html has no sticky bar.
 
 <!-- Add new entries above this line -->
 ## 2026-09-17 -- Schedule-primary hero + two-action sticky bar

@@ -1807,8 +1807,10 @@ are unchanged.
 Homepage hero and the #schedule Book Instantly card now carry a compact
 star line next to the primary CTA -- 5.0 from 4 Google reviews, quoting
 the existing washer-repair review, linking to `#reviews`. booking.html
-has the same line under the subhead, linking to `/#reviews`. No new
-reviews, and `aggregateRating.reviewCount` stays 4.
+has the same line under the subhead, linking to `/#reviews`. On viewports
+where the sticky Call+Book bar shows (max-width 760px), the hero line is
+hidden so it is not covered on first paint; the #schedule copy stays.
+No new reviews, and `aggregateRating.reviewCount` stays 4.
 
 New tests: `tests/design/cta-trust-proof.test.js`, plus jsdom coverage
 in `tests/content-quality/analytics-events.test.js`.

@@ -1737,6 +1737,11 @@
     body:has(.sticky-call){
       padding-bottom:calc(72px + env(safe-area-inset-bottom, 0px));
     }
+    /* The hero already fills a phone viewport (logo + stacked CTAs).
+       A proof line under those buttons sat behind the sticky Call+Book
+       bar on first paint. Hide it here; the same copy stays on the
+       #schedule Book Instantly card, which clears the bar. */
+    .hero .cta-proof{display:none;}
     /* Lift the existing mobile chrome so nothing sits on the bar. */
     body:has(.sticky-call) .back-to-top{
       bottom:calc(16px + 72px + env(safe-area-inset-bottom, 0px));
