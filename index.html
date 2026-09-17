@@ -81,7 +81,7 @@
 <link rel="preconnect" href="https://csvfqdjuobylgafgolho.supabase.co">
 <link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Anton&family=Archivo:wght@400..700&family=Newsreader:ital,opsz,wght@0,6..72,300..700;1,6..72,300..600&family=Oswald:wght@200..700&display=swap" onload="this.onload=null;this.rel='stylesheet'">
 <noscript><link href="https://fonts.googleapis.com/css2?family=Anton&family=Archivo:wght@400..700&family=Newsreader:ital,opsz,wght@0,6..72,300..700;1,6..72,300..600&family=Oswald:wght@200..700&display=swap" rel="stylesheet"></noscript>
-<link rel="stylesheet" href="styles.css?v=aef1148df9">
+<link rel="stylesheet" href="styles.css?v=f9f1d10b00">
 <!-- Improvement roadmap (2026-09-09), tier 1: the hero background is a
      CSS background-image (see .hero in styles.css), so the browser
      doesn't discover it until CSS is parsed -- likely this page's LCP
@@ -404,7 +404,7 @@
     <div class="wrap hero-grid">
       <div>
         <h1>HANDYMAN AND APPLIANCE REPAIR, DONE RIGHT.</h1>
-        <p class="lede">Serving St. George and Southern Utah, Triple H Enterprises fixes what's broken, installs what's new, and treats every home like it's our own. Honest pricing, work you can count on.</p>
+        <p class="lede">Serving St. George and Southern Utah, Triple H Enterprises fixes what's broken &mdash; washers, dryers, plumbing, and the jobs that keep getting put off. Owner on the call. Honest price before we start.</p>
         <div class="hero-ctas">
           <a href="/booking.html" class="btn orange">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
@@ -419,7 +419,9 @@
           <span class="cta-proof-stars" aria-hidden="true">★★★★★</span>
           <span>5.0 from 7 Google reviews &mdash; <span class="cta-proof-quote">&ldquo;Steven was wonderful! Got our washer fixed quickly&hellip;&rdquo;</span></span>
           <a href="#reviews">See reviews</a>
+          <a href="https://g.page/r/CVJ0Qr-SsDkgEAI/review" target="_blank" rel="noopener">Leave a Google review</a>
         </p>
+        <p class="hero-referral">Refer a neighbor &mdash; <strong>$25 credit</strong> on your next visit once their job is paid.</p>
         <p class="hero-motto" data-reveal><span>Honesty.</span> <span>Hustle.</span> <span>Helpfulness.</span></p>
         <p class="open-status" id="openStatus" hidden><span class="dot"></span><span id="openStatusText" class="open-status-text"></span></p>
         <!-- U04 fix (High-Impact Upgrades, 2026-09-08): the real next
@@ -494,117 +496,10 @@
           <p>A registered Utah LLC with an active general liability policy, so you're covered on every job.</p>
         </div>
       </div>
-    </div>
-  </section>
-
-  <!-- Why repair beats replace, told as a shop drawing that puts itself
-       back together while you scroll. The SVG is authored in its ASSEMBLED
-       state, and the explode offsets are applied by transform from --p --
-       so with no JS, a JS error, an old browser, or reduced motion, a
-       visitor sees a clean finished machine rather than scattered parts. -->
-  <section class="teardown" id="teardownStage" aria-labelledby="teardownHeading">
-    <div class="wrap teardown-grid">
-
-          <div class="teardown-copy">
-            <h2 id="teardownHeading">Most of it still works</h2>
-            <p>When an appliance quits, it is usually one part, not the whole machine. Knowing which part is the job. Replacing the whole unit is what happens when nobody looks.</p>
-            <p class="td-hint">Drag the slider to take it apart and put it back together. <b>That is the job.</b></p>
-          </div>
-
-          <div class="teardown-figure">
-            <svg viewBox="0 0 760 620" role="img" aria-label="Exploded diagram of a washing machine assembling itself">
-
-              <!-- cabinet: the anchor everything returns into -->
-              <g class="td-part">
-                <rect class="td-fill td-line" x="250" y="140" width="260" height="400" rx="14"/>
-                <rect class="td-line-soft" x="268" y="228" width="224" height="292" rx="10"/>
-                <rect class="td-fill-2 td-line-soft" x="268" y="540" width="28" height="16" rx="3"/>
-                <rect class="td-fill-2 td-line-soft" x="464" y="540" width="28" height="16" rx="3"/>
-              </g>
-
-              <!-- drive belt: rides with the drum, so it reads as a band
-                   around a pulley rather than a shape floating on its own -->
-              <g class="td-part td-inner" style="--dx:-250; --dy:-10; --rot:-16;">
-                <circle class="td-belt" cx="380" cy="360" r="78"/>
-              </g>
-
-              <!-- heating element, with terminal posts so it reads as a
-                   real part instead of a loose squiggle when it is apart -->
-              <g class="td-part td-inner" style="--dx:70; --dy:150;">
-                <path class="td-accent" d="M330 452 q 12 -20 24 0 q 12 20 24 0 q 12 -20 24 0 q 12 20 24 0"/>
-                <line class="td-line-soft" x1="330" y1="452" x2="316" y2="452"/>
-                <line class="td-line-soft" x1="426" y1="452" x2="440" y2="452"/>
-                <circle class="td-fill-2 td-line-soft" cx="312" cy="452" r="5"/>
-                <circle class="td-fill-2 td-line-soft" cx="444" cy="452" r="5"/>
-              </g>
-
-              <!-- motor -->
-              <g class="td-part td-inner" style="--dx:-230; --dy:40; --rot:14;">
-                <circle class="td-fill-2 td-line" cx="380" cy="490" r="30"/>
-                <circle class="td-line-soft" cx="380" cy="490" r="13"/>
-                <line class="td-line-soft" x1="380" y1="460" x2="380" y2="446"/>
-              </g>
-
-              <!-- drum -->
-              <g class="td-part td-inner" style="--dx:-250; --dy:-10; --rot:-16;">
-                <circle class="td-fill-2 td-line" cx="380" cy="360" r="70"/>
-                <circle class="td-line-soft" cx="380" cy="360" r="52"/>
-                <path class="td-line-soft" d="M380 308 v18 M380 394 v18 M328 360 h18 M414 360 h18"/>
-                <path class="td-line-soft" d="M343 323 l13 13 M417 397 l13 13 M417 323 l-13 13 M343 397 l-13 13"/>
-              </g>
-
-              <!-- door -->
-              <g class="td-part" style="--dx:230; --dy:-30; --rot:10;">
-                <circle class="td-fill td-line" cx="380" cy="360" r="104"/>
-                <circle class="td-accent" cx="380" cy="360" r="92"/>
-                <circle class="td-line-soft" cx="380" cy="360" r="80"/>
-                <path class="td-line" d="M484 344 h16 a8 8 0 0 1 8 8 v16 a8 8 0 0 1 -8 8 h-16"/>
-              </g>
-
-              <!-- control panel -->
-              <g class="td-part" style="--dx:0; --dy:-112;">
-                <rect class="td-fill td-line" x="250" y="140" width="260" height="64" rx="12"/>
-                <circle class="td-accent" cx="290" cy="172" r="13"/>
-                <circle class="td-line-soft" cx="330" cy="172" r="9"/>
-                <rect class="td-line-soft" x="420" y="162" width="72" height="20" rx="4"/>
-              </g>
-
-              <!-- callouts: they belong to the apart state and fade as it closes -->
-              <g class="td-callout">
-                <circle cx="500" cy="60" r="3"/>
-                <line x1="504" y1="60" x2="536" y2="60"/>
-                <text x="542" y="65">Control board</text>
-
-                <circle cx="610" cy="228" r="3"/>
-                <line x1="610" y1="225" x2="610" y2="198"/>
-                <text x="610" y="190" text-anchor="middle">Door seal</text>
-
-                <circle cx="130" cy="420" r="3"/>
-                <line x1="130" y1="423" x2="130" y2="450"/>
-                <text x="130" y="470" text-anchor="middle">Drum</text>
-
-                <circle cx="150" cy="560" r="3"/>
-                <line x1="150" y1="563" x2="150" y2="580"/>
-                <text x="150" y="600" text-anchor="middle">Motor</text>
-
-                <circle cx="514" cy="602" r="3"/>
-                <line x1="518" y1="602" x2="546" y2="602"/>
-                <text x="552" y="607">Heating element</text>
-              </g>
-
-            </svg>
-
-            <div class="td-scrub">
-              <div class="td-scrub-labels">
-                <span>Apart</span>
-                <span class="td-scrub-state" id="tdState">Whole</span>
-                <span>Whole</span>
-              </div>
-              <input type="range" id="tdScrub" min="0" max="100" value="100" step="1"
-                     aria-label="Take the machine apart and put it back together">
-            </div>
-          </div>
-
+      <p class="trust-referral">
+        <strong>$25 referral credit.</strong>
+        Send a neighbor our way. Once their job is complete and paid, you get $25 off your next visit. Have them mention your name when they book.
+      </p>
     </div>
   </section>
 
@@ -663,7 +558,10 @@
 
   <aside class="schedule-rail" aria-label="Book a visit">
     <div class="wrap schedule-rail-inner">
-      <p class="schedule-rail-copy">Ready to get it on the calendar?</p>
+      <div class="schedule-rail-text">
+        <p class="schedule-rail-copy">Ready to get it on the calendar?</p>
+        <p class="schedule-rail-note">Refer a neighbor &mdash; <strong>$25 credit</strong> once their job is complete and paid.</p>
+      </div>
       <div class="schedule-rail-actions">
         <a class="btn orange" href="/booking.html">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
@@ -836,7 +734,7 @@
        flooring job: bare subfloor with underlayment material laid out,
        to a finished dark plank floor. Copy still doesn't claim "this
        exact room" -- kept intentionally generic, same policy as before.
-       Same control language as the appliance teardown above it (a real
+       Same control language as the appliance teardown (a real
        range input, not pointer-drag hijacking, so it's keyboard- and
        touch-operable for free) but a completely different device: a
        real photo compare, not a diagram. -->
@@ -862,6 +760,118 @@
       <input type="range" id="revealScrub" class="reveal-scrub" min="0" max="100" value="50" step="1" aria-label="Drag to compare a worn floor against real finished flooring work">
     </div>
   </section>
+
+  <!-- Why repair beats replace, told as a shop drawing that puts itself
+       back together while you scroll. The SVG is authored in its ASSEMBLED
+       state, and the explode offsets are applied by transform from --p --
+       so with no JS, a JS error, an old browser, or reduced motion, a
+       visitor sees a clean finished machine rather than scattered parts. -->
+  <section class="teardown" id="teardownStage" aria-labelledby="teardownHeading">
+    <div class="wrap teardown-grid">
+
+          <div class="teardown-copy">
+            <h2 id="teardownHeading">Most of it still works</h2>
+            <p>When an appliance quits, it is usually one part, not the whole machine. Knowing which part is the job. Replacing the whole unit is what happens when nobody looks.</p>
+            <p class="td-hint">Drag the slider to take it apart and put it back together. <b>That is the job.</b></p>
+          </div>
+
+          <div class="teardown-figure">
+            <svg viewBox="0 0 760 620" role="img" aria-label="Exploded diagram of a washing machine assembling itself">
+
+              <!-- cabinet: the anchor everything returns into -->
+              <g class="td-part">
+                <rect class="td-fill td-line" x="250" y="140" width="260" height="400" rx="14"/>
+                <rect class="td-line-soft" x="268" y="228" width="224" height="292" rx="10"/>
+                <rect class="td-fill-2 td-line-soft" x="268" y="540" width="28" height="16" rx="3"/>
+                <rect class="td-fill-2 td-line-soft" x="464" y="540" width="28" height="16" rx="3"/>
+              </g>
+
+              <!-- drive belt: rides with the drum, so it reads as a band
+                   around a pulley rather than a shape floating on its own -->
+              <g class="td-part td-inner" style="--dx:-250; --dy:-10; --rot:-16;">
+                <circle class="td-belt" cx="380" cy="360" r="78"/>
+              </g>
+
+              <!-- heating element, with terminal posts so it reads as a
+                   real part instead of a loose squiggle when it is apart -->
+              <g class="td-part td-inner" style="--dx:70; --dy:150;">
+                <path class="td-accent" d="M330 452 q 12 -20 24 0 q 12 20 24 0 q 12 -20 24 0 q 12 20 24 0"/>
+                <line class="td-line-soft" x1="330" y1="452" x2="316" y2="452"/>
+                <line class="td-line-soft" x1="426" y1="452" x2="440" y2="452"/>
+                <circle class="td-fill-2 td-line-soft" cx="312" cy="452" r="5"/>
+                <circle class="td-fill-2 td-line-soft" cx="444" cy="452" r="5"/>
+              </g>
+
+              <!-- motor -->
+              <g class="td-part td-inner" style="--dx:-230; --dy:40; --rot:14;">
+                <circle class="td-fill-2 td-line" cx="380" cy="490" r="30"/>
+                <circle class="td-line-soft" cx="380" cy="490" r="13"/>
+                <line class="td-line-soft" x1="380" y1="460" x2="380" y2="446"/>
+              </g>
+
+              <!-- drum -->
+              <g class="td-part td-inner" style="--dx:-250; --dy:-10; --rot:-16;">
+                <circle class="td-fill-2 td-line" cx="380" cy="360" r="70"/>
+                <circle class="td-line-soft" cx="380" cy="360" r="52"/>
+                <path class="td-line-soft" d="M380 308 v18 M380 394 v18 M328 360 h18 M414 360 h18"/>
+                <path class="td-line-soft" d="M343 323 l13 13 M417 397 l13 13 M417 323 l-13 13 M343 397 l-13 13"/>
+              </g>
+
+              <!-- door -->
+              <g class="td-part" style="--dx:230; --dy:-30; --rot:10;">
+                <circle class="td-fill td-line" cx="380" cy="360" r="104"/>
+                <circle class="td-accent" cx="380" cy="360" r="92"/>
+                <circle class="td-line-soft" cx="380" cy="360" r="80"/>
+                <path class="td-line" d="M484 344 h16 a8 8 0 0 1 8 8 v16 a8 8 0 0 1 -8 8 h-16"/>
+              </g>
+
+              <!-- control panel -->
+              <g class="td-part" style="--dx:0; --dy:-112;">
+                <rect class="td-fill td-line" x="250" y="140" width="260" height="64" rx="12"/>
+                <circle class="td-accent" cx="290" cy="172" r="13"/>
+                <circle class="td-line-soft" cx="330" cy="172" r="9"/>
+                <rect class="td-line-soft" x="420" y="162" width="72" height="20" rx="4"/>
+              </g>
+
+              <!-- callouts: they belong to the apart state and fade as it closes -->
+              <g class="td-callout">
+                <circle cx="500" cy="60" r="3"/>
+                <line x1="504" y1="60" x2="536" y2="60"/>
+                <text x="542" y="65">Control board</text>
+
+                <circle cx="610" cy="228" r="3"/>
+                <line x1="610" y1="225" x2="610" y2="198"/>
+                <text x="610" y="190" text-anchor="middle">Door seal</text>
+
+                <circle cx="130" cy="420" r="3"/>
+                <line x1="130" y1="423" x2="130" y2="450"/>
+                <text x="130" y="470" text-anchor="middle">Drum</text>
+
+                <circle cx="150" cy="560" r="3"/>
+                <line x1="150" y1="563" x2="150" y2="580"/>
+                <text x="150" y="600" text-anchor="middle">Motor</text>
+
+                <circle cx="514" cy="602" r="3"/>
+                <line x1="518" y1="602" x2="546" y2="602"/>
+                <text x="552" y="607">Heating element</text>
+              </g>
+
+            </svg>
+
+            <div class="td-scrub">
+              <div class="td-scrub-labels">
+                <span>Apart</span>
+                <span class="td-scrub-state" id="tdState">Whole</span>
+                <span>Whole</span>
+              </div>
+              <input type="range" id="tdScrub" min="0" max="100" value="100" step="1"
+                     aria-label="Take the machine apart and put it back together">
+            </div>
+          </div>
+
+    </div>
+  </section>
+
 
   <!-- Improvement roadmap (2026-09-09), tier 2: puts real job photos in
        the scroll path itself instead of only behind the "Our Work"
@@ -908,42 +918,6 @@
           </div>
         </div>
       </div>
-    </div>
-  </section>
-
-  <!-- SEO fix (2026-09-08): an audit found the site's 3 blog posts are
-       only reachable through /blog/ itself or the sitemap -- no page on
-       the site, including this one and the 5 landing pages, ever links
-       to an individual post directly. Search engines read a site's own
-       internal linking as a signal of how much the owner actually
-       values a page; with none of the site's highest-authority pages
-       linking to a specific post, that reads as "peripheral" regardless
-       of the content's own quality. Real, direct links to all 3 posts
-       from the homepage closes that gap. -->
-  <section id="blog-teaser">
-    <div class="wrap">
-      <div class="section-head" data-reveal>
-        <h2>From the blog</h2>
-        <p>Real write-ups on the repairs and small jobs we see most.</p>
-      </div>
-      <div class="blog-teaser-grid">
-        <a class="blog-teaser-card" data-reveal href="/blog/appliance-repair-or-replace.html">
-          <h3>Appliance Repair or Replace? How We Actually Decide</h3>
-          <p>We'd rather tell you not to spend money with us than talk you into a repair that doesn't make sense.</p>
-          <span class="service-tag">Read the post <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18l6-6-6-6"/></svg></span>
-        </a>
-        <a class="blog-teaser-card" data-reveal href="/blog/dryer-not-heating.html">
-          <h3>Dryer Running But Not Heating?</h3>
-          <p>Before you start pricing new dryers, check one part that costs less than a movie ticket.</p>
-          <span class="service-tag">Read the post <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18l6-6-6-6"/></svg></span>
-        </a>
-        <a class="blog-teaser-card" data-reveal href="/blog/handyman-to-do-list.html">
-          <h3>The Small Jobs Everyone Forgets Until It's Time to Sell</h3>
-          <p>None of these show up on an inspection report. All of them show up the second a buyer walks through the door.</p>
-          <span class="service-tag">Read the post <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18l6-6-6-6"/></svg></span>
-        </a>
-      </div>
-      <p class="blog-teaser-more"><a href="/blog/">See all posts &rarr;</a></p>
     </div>
   </section>
 
@@ -1017,7 +991,47 @@
 
       </div>
 
-      <p class="reviews-footer">See more on <a href="https://g.page/r/CVJ0Qr-SsDkgEAI/review" target="_blank" rel="noopener">Google</a> or <a href="https://www.yelp.com/biz/triple-h-enterprises-st-george" target="_blank" rel="noopener">Yelp</a>, or <a href="https://g.page/r/CVJ0Qr-SsDkgEAI/review" target="_blank" rel="noopener">leave your own review</a>.</p>
+      <div class="reviews-ask">
+        <p class="reviews-ask-copy">Been here already? A Google review helps the next neighbor find us.</p>
+        <a class="btn orange" href="https://g.page/r/CVJ0Qr-SsDkgEAI/review" target="_blank" rel="noopener">Leave a Google review</a>
+        <p class="reviews-footer">See the listing on <a href="https://g.page/r/CVJ0Qr-SsDkgEAI/review" target="_blank" rel="noopener">Google</a> or <a href="https://www.yelp.com/biz/triple-h-enterprises-st-george" target="_blank" rel="noopener">Yelp</a>.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- SEO fix (2026-09-08): an audit found the site's 3 blog posts are
+       only reachable through /blog/ itself or the sitemap -- no page on
+       the site, including this one and the 5 landing pages, ever links
+       to an individual post directly. Search engines read a site's own
+       internal linking as a signal of how much the owner actually
+       values a page; with none of the site's highest-authority pages
+       linking to a specific post, that reads as "peripheral" regardless
+       of the content's own quality. Real, direct links to all 3 posts
+       from the homepage closes that gap. -->
+  <section id="blog-teaser">
+    <div class="wrap">
+      <div class="section-head" data-reveal>
+        <h2>From the blog</h2>
+        <p>Real write-ups on the repairs and small jobs we see most.</p>
+      </div>
+      <div class="blog-teaser-grid">
+        <a class="blog-teaser-card" data-reveal href="/blog/appliance-repair-or-replace.html">
+          <h3>Appliance Repair or Replace? How We Actually Decide</h3>
+          <p>We'd rather tell you not to spend money with us than talk you into a repair that doesn't make sense.</p>
+          <span class="service-tag">Read the post <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18l6-6-6-6"/></svg></span>
+        </a>
+        <a class="blog-teaser-card" data-reveal href="/blog/dryer-not-heating.html">
+          <h3>Dryer Running But Not Heating?</h3>
+          <p>Before you start pricing new dryers, check one part that costs less than a movie ticket.</p>
+          <span class="service-tag">Read the post <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18l6-6-6-6"/></svg></span>
+        </a>
+        <a class="blog-teaser-card" data-reveal href="/blog/handyman-to-do-list.html">
+          <h3>The Small Jobs Everyone Forgets Until It's Time to Sell</h3>
+          <p>None of these show up on an inspection report. All of them show up the second a buyer walks through the door.</p>
+          <span class="service-tag">Read the post <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18l6-6-6-6"/></svg></span>
+        </a>
+      </div>
+      <p class="blog-teaser-more"><a href="/blog/">See all posts &rarr;</a></p>
     </div>
   </section>
 
@@ -1211,6 +1225,7 @@
             <span class="cta-proof-stars" aria-hidden="true">★★★★★</span>
             <span>5.0 from 7 Google reviews &mdash; <span class="cta-proof-quote">&ldquo;Steven was wonderful! Got our washer fixed quickly&hellip;&rdquo;</span></span>
             <a href="#reviews">See reviews</a>
+            <a href="https://g.page/r/CVJ0Qr-SsDkgEAI/review" target="_blank" rel="noopener">Leave a Google review</a>
           </p>
         </div>
 

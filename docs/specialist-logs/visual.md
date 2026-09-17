@@ -3,6 +3,18 @@
 Started 2026-09-16, alongside the `tripleh-visual` skill. See `README.md` in
 this directory for how these logs work.
 
+## 2026-09-17 -- rebase conversion pop onto main (#279)
+
+Kept the tighter `.trust` spacing (`padding:32px 0 40px; border-top:none`)
+instead of restoring F29's old `44px 0 88px`. F29 now locks that
+conversion padding and the no-double-border. Public rating stays
+#281's 5.0 / 7; wall still 4 written cards. booking.html $25 stays
+on #278's `.referral-nudge` / `.conf-referral` -- no second class.
+Rebased again onto #282 (footer hours / dead links) without touching
+that work.
+
+<!-- Add new entries above this line -->
+
 ## 2026-09-17 -- booking.html sticky Call+Book + cookie lift
 
 booking.html does not load styles.css, so the homepage `.sticky-call`
@@ -15,6 +27,32 @@ copy so the injected banner sits above the new bar instead of as an
 unstyled block.
 
 No redesign: sidebar, steps, and mobile summary are unchanged.
+
+## 2026-09-17 -- homepage conversion pop (review ask, $25 referral, ATF)
+
+Public site only. AggregateRating stays the live GBP match from #281
+(5.0 / 7). Did not add review cards (wall still 4 written quotes), did
+not invent quotes. The leave-a-review CTA uses the existing GBP write
+URL already in `tools/review-request.html` and the reviews footer:
+`https://g.page/r/CVJ0Qr-SsDkgEAI/review`.
+
+$25 referral was FAQ-only on the homepage. It now sits on the trust
+rail (shows on phone, unlike the hero line which hides at the 760px
+sticky-bar breakpoint for the same reason `.cta-proof` does) and the
+schedule rail. booking.html already has step 1 / confirmation credit
+copy from #278 (`.referral-nudge` / `.conf-referral`); this pass kept
+those surfaces instead of duplicating them. Terms unchanged: credit
+after the referred job is complete and paid.
+
+ATF: kept the locked H1, shortened the lede, left Schedule orange /
+Call outline. Moved the teardown shop-drawing to after the real
+before/after photos so Services is the next converting block after
+trust. Reviews moved above the blog teaser. Did not delete process,
+photos, or teardown.
+
+Leave-review on city/service/about/our-work is a one-line
+`.reviews-ask-inline` under the existing "Read all reviews" link --
+those pages still must not carry aggregateRating.
 
 ## 2026-09-17 -- /tools/ ops inbox, More sheet, tablet density, one-row hub
 

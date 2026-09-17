@@ -30,6 +30,7 @@ test('homepage hero and Book Instantly each carry compact proof that quotes a re
   assert.match(heroProof, /5\.0 from 7 Google reviews/);
   assert.match(heroProof, /Steven was wonderful! Got our washer fixed quickly/);
   assert.match(heroProof, /href="#reviews"/);
+  assert.match(heroProof, /https:\/\/g\.page\/r\/CVJ0Qr-SsDkgEAI\/review/);
 
   const bookInstantlyAt = INDEX.indexOf('Book Instantly');
   const bookBlock = INDEX.slice(bookInstantlyAt, INDEX.indexOf('Send Email', bookInstantlyAt));
@@ -43,12 +44,15 @@ test('compact proof does not add review cards; count matches Google Business Pro
   assert.equal(cards.length, 4, 'homepage wall stays at the 4 written, verified quotes');
   assert.match(INDEX, /"reviewCount": "7"/);
   assert.match(INDEX, /5\.0 from 7 Google reviews/);
+  assert.doesNotMatch(INDEX, /5\.0 from 4 Google reviews/);
+  assert.doesNotMatch(INDEX, /"reviewCount": "4"/);
   assert.equal((INDEX.match(/class="cta-proof"/g) || []).length, 2);
 });
 
 test('booking.html has a light proof line using the same real excerpt, linking back to the homepage wall', () => {
   assert.match(BOOKING, /class="cta-proof"/);
   assert.match(BOOKING, /5\.0 from 7 Google reviews/);
+  assert.doesNotMatch(BOOKING, /5\.0 from 4 Google reviews/);
   assert.match(BOOKING, /Steven was wonderful! Got our washer fixed quickly/);
   assert.match(BOOKING, /href="\/#reviews"/);
   assert.doesNotMatch(BOOKING, /class="review-card"/);

@@ -59,6 +59,8 @@ for (const name of ALL_PAGES) {
   test(`${name}'s local-reviews section links back to the full reviews wall on the homepage`, () => {
     const html = read(name);
     assert.match(html, /<p class="blog-teaser-more"><a href="\/#reviews">Read all reviews &rarr;<\/a><\/p>/);
+    assert.match(html, /class="reviews-ask-inline"/);
+    assert.match(html, /https:\/\/g\.page\/r\/CVJ0Qr-SsDkgEAI\/review/);
   });
 
   test(`${name} does not duplicate the full 7-review wall or its aggregateRating schema`, () => {
