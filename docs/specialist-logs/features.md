@@ -3,7 +3,37 @@
 Started 2026-09-16, alongside the `tripleh-features` skill. See `README.md`
 in this directory for how these logs work.
 
-## 2026-09-16 -- one-click "Create Invoice" from a job
+## 2026-09-17 -- persistent mobile Call + Book bar
+
+Public-site conversion UX, not a tools/portal feature. The homepage
+already had a Call-only `.sticky-call` strip at max-width 760px; the
+audit wanted Call AND Book always reachable while scrolling, plus
+Schedule as the hero's primary action.
+
+Decided to upgrade the existing strip rather than add a second fixed
+element -- chat, back-to-top, and the cookie banner were already
+offset for one bottom bar, and a second one would stack into a mess.
+Book's href matches each page's header Schedule button (`#schedule` on
+the homepage, `/booking.html` on city/service pages, `/#schedule` on
+our-work/about/blog index) instead of inventing a third destination.
+
+Did not inject the bar from JS (cookie-consent style). The site's
+pattern is duplicated HTML, and a JS-injected bar would flash in after
+paint. Did not put it on blog posts, legal pages, or booking.html --
+those either already are the conversion, or are not the marketing
+surface the audit named. `/tools/` and `/portal/` left alone.
+
+Hero swap is the same pairing on city/service pages because they
+already shared the Call-primary markup; leaving them Call-primary
+while the homepage flipped would have been the inconsistent case.
+Triage + service modal kept Call-primary: different context, and U01
+already locked that pairing.
+
+Scoped `body` padding and the cookie/chat/back-to-top lift with
+`:has(.sticky-call)` so pages without the bar no longer inherit the
+old global 70px bottom padding that assumed a bar they didn't have.
+
+<!-- Add new entries above this line -->## 2026-09-16 -- one-click "Create Invoice" from a job
 
 First real session under this skill. Read `README.md`'s tail and
 `docs/ACTION-ITEMS.md` for open items before building anything, per the

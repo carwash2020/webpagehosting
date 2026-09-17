@@ -2,14 +2,17 @@
 // buttons and pick one primary action." Both hero buttons used a
 // glossy vertical gradient with a colour glow at equal weight, so
 // visitors had to choose between two co-equal CTAs before reading
-// anything. Fixed: one flat orange Call button with a solid offset
-// shadow; Schedule/Book demoted to a quiet underlined link beside it,
-// wherever the two used to compete (header, hero, triage result,
-// service modal, sticky call bar, and the same pattern on all 5
-// landing pages). Standalone .btn.blue links that aren't paired
-// against a Call button (the "Book Instantly" vs "Send Email"/"Call or
-// Text" parallel-option cards) are untouched -- that's a different UI
-// pattern, not two buttons competing for the same click.
+// anything. Fixed: one flat orange primary button with a solid offset
+// shadow; the paired second action is quieter.
+//
+// Conversion UX (2026-09-17): a later audit flipped WHICH action is
+// primary in the hero. Schedule/Book is now the filled orange button;
+// Call is the outline secondary (phone number still visible). Triage
+// results and the service modal keep the original Call-primary +
+// cta-quiet-link Schedule pairing -- those fire after a visitor has
+// already named a specific problem. Standalone .btn.blue links that
+// aren't paired against a Call button (the "Book Instantly" vs
+// "Send Email"/"Call or Text" parallel-option cards) are untouched.
 
 const { test } = require('node:test');
 const assert = require('node:assert/strict');
@@ -48,11 +51,11 @@ test('U01: the hero-specific quiet link gets a hardcoded light color, not var(--
   assert.match(STYLES, /\.hero \.cta-quiet-link\{color:#c9c5bc;\}/);
 });
 
-test('U01: index.html\'s hero/triage/service-modal Call-Schedule pairs use cta-quiet-link, and Call stays a real .btn.orange', () => {
+test('U01: index.html triage/service-modal Call-Schedule pairs still use cta-quiet-link; hero Call is outline, not the filled primary', () => {
   const src = fs.readFileSync(repo('index.html'), 'utf8');
   assert.doesNotMatch(src, /class="btn blue nav-phone-desktop"/);
   const ctaQuietCount = [...src.matchAll(/class="cta-quiet-link/g)].length;
-  assert.ok(ctaQuietCount >= 3, `expected at least 3 cta-quiet-link usages (hero, triage, service modal), found ${ctaQuietCount}`);
+  assert.ok(ctaQuietCount >= 2, `expected at least 2 cta-quiet-link usages (triage, service modal), found ${ctaQuietCount}`);
   // The two intentionally-untouched "parallel option card" links stay as .btn.blue.
   assert.match(src, /<a class="btn blue" href="\/booking\.html">/);
   assert.match(src, /id="formSubmitBtn"/);
@@ -74,14 +77,14 @@ test('regression recovery: the header nav Schedule link is a real button again, 
   assert.match(rule, /border:1\.5px solid var\(--orange-tint-border\)/);
 });
 
-test('U01: every landing page converts its hero/triage Call-Schedule pairs the same way', () => {
+test('U01: landing-page triage still uses cta-quiet-link; hero Book is primary and Call is outline', () => {
   for (const file of LANDING_PAGES) {
     const src = fs.readFileSync(repo(file), 'utf8');
     assert.doesNotMatch(src, /class="btn blue nav-phone-desktop"/, `${file} header not converted`);
     const ctaQuietCount = [...src.matchAll(/class="cta-quiet-link/g)].length;
-    assert.ok(ctaQuietCount >= 2, `${file}: expected at least 2 cta-quiet-link usages (hero, triage), found ${ctaQuietCount}`);
-    // Call comes first in the hero now (primary action leads).
-    assert.match(src, /class="btn orange" href="tel:\+14354141667">[\s\S]{0,700}class="cta-quiet-link" href="\/booking\.html">/, `${file}: hero should list Call before the quiet booking link`);
+    assert.ok(ctaQuietCount >= 1, `${file}: expected at least 1 cta-quiet-link usage (triage), found ${ctaQuietCount}`);
+    // Schedule/Book leads in the hero; Call stays visible as the outline secondary.
+    assert.match(src, /class="btn orange" href="\/booking\.html">[\s\S]{0,1200}class="btn outline js-phone-link" href="tel:\+14354141667">/, `${file}: hero should list Schedule before the outline Call button`);
     // The untouched booking-section "Book Instantly" vs "Call or Text" parallel cards remain .btn.blue/.btn.orange.
     assert.match(src, /<a class="btn blue" href="\/booking\.html">/, `${file}: booking-section card should stay untouched`);
   }

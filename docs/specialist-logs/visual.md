@@ -3,7 +3,25 @@
 Started 2026-09-16, alongside the `tripleh-visual` skill. See `README.md` in
 this directory for how these logs work.
 
-## 2026-09-16 -- deep-dive audit: gallery lazy-load bug found, two suspected issues ruled out
+## 2026-09-17 -- Schedule-primary hero + two-action sticky bar
+
+Paired with the features-lane conversion work the same day. New
+`.btn.outline` uses the same orange-tint tokens as `.nav-schedule-btn`
+but the real `.btn` size, so Call stays a tap target with the phone
+number visible. Hero and sticky-bar outline colors are hardcoded light
+(same reason as `.hero h1` / `.hero .cta-quiet-link`): both sit on a
+surface that never flips with theme.
+
+Kept the 760px hide-on-desktop breakpoint the old Call-only strip
+already used, not the 960px hamburger -- that's where back-to-top and
+the chat bubble already assumed a bottom bar. Mobile hero CTAs stack
+and are allowed to wrap so "SCHEDULE AN APPOINTMENT" doesn't overflow
+a 320px viewport under `.btn`'s nowrap + letter-spacing.
+
+Sticky bar is always-dark (`rgba(10,10,10,.95)`), matching the
+theme-independent header. Do not "fix" that to follow light mode.
+
+<!-- Add new entries above this line -->## 2026-09-16 -- deep-dive audit: gallery lazy-load bug found, two suspected issues ruled out
 
 Did a real visual pass (screenshots across desktop/mobile, light/dark)
 rather than just re-reading `docs/ACTION-ITEMS.md`. One genuine,
