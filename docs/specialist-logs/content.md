@@ -125,4 +125,22 @@ for it on `blog/index.html` -- it shares the generic appliance icon
 with the dryer card there too, so this isn't a new visual pattern.
 `check-consistency` and `check-links.py` both clean.
 
+Swept the other 4 service pages (`drywall-painting.html`,
+`plumbing-repairs.html`, `assembly-installation.html`,
+`handyman-repairs.html`) for the same kind of gap and found none --
+each already links the one blog post that's genuinely on-topic for it,
+and no second relevant post exists in the current 10-post lineup for
+any of them.
+
+Also checked whether the 8 city landing pages (`handyman-*-ut.html`,
+`handyman-mesquite-nv.html`) have a "Recent Notes From the Shop"
+section: none do. Not fixing this now -- unlike the service pages,
+where PR #257 already established "one clearly on-topic post per
+page" as the pattern, a city page has no single obviously-matching
+post (it's location-focused, not service-focused), so picking one
+would be more of a design call than a found gap. Flagging as an idea
+for later, not building it speculatively: either the owner picks a
+rotation/criterion, or the site decides city pages should surface the
+2-3 most recent posts generically instead of a topical match.
+
 <!-- Add new entries above this line -->
