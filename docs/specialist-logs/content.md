@@ -34,6 +34,25 @@ nothing left to draft there. The only open content-adjacent item (GBP
 description/services/Q&A still needing to be pasted in per item 4 under
 "Manual action items") needs dashboard access this session doesn't have.
 
+Separately, closed a real internal-linking gap: `washer-dryer-repair.html`
+already had a "Recent Notes From the Shop" section linking to its 2
+matching blog posts, but the other 4 service pages
+(`drywall-painting.html`, `plumbing-repairs.html`,
+`assembly-installation.html`, `handyman-repairs.html`) had zero links
+into the blog at all -- confirmed by grepping each file for `blog/`
+before assuming. Added the same section, same markup/icons already used
+on the blog index, to each of the 4, linking only to the one existing
+post that's genuinely topically relevant per page (drywall-crack post,
+toilet-flapper post, TV-mount post, and the general to-do-list post,
+respectively) -- titles/deks copied verbatim from each post's real
+`<title>`/meta description, nothing invented. `check-consistency`,
+`check-links.py` clean; `check-undefined-vars.js` still can't run in
+this environment (missing `eslint`, pre-existing); full `npm test`
+has 107 pre-existing failures, all in unrelated internal-tools/dashboard
+suites (workspace tour, job-tracker, baseline-diff tooling) -- none
+touch the 4 files changed here. Pushed to
+`content/service-page-blog-links`, not yet a PR.
+
 ## 2026-09-16 (later same day)
 
 Found a second real gap while auditing the service pages against what's
