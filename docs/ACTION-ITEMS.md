@@ -481,6 +481,14 @@ reference:
   job template straight to an invoice (still fully manual each time)"
   gap noted in `README.md`'s 2026-09-16 audit entry. See that day's
   final changelog entry for the full write-up.
+- **Client-facing quote PDF** (`portal/quotes.html`) -- a "Download
+  PDF" button on every quote, closing the "no standalone quote PDF"
+  gap `docs/CLIENT-PORTAL.md` had flagged as an intentional scope cut.
+  See `README.md`'s 2026-09-16 audit entry for the full write-up.
+- **Two-way messaging on a completed job** (`portal/jobs.html` and a
+  new "Portal job messages" panel in `tools/clients.html`) -- closes
+  the "messaging thread per job" gap noted in `docs/CLIENT-PORTAL.md`.
+  See `README.md`'s 2026-09-16 audit entry for the full write-up.
 
 - **New blog post: "Oven Not Heating Right?"** (`blog/oven-not-heating-right.html`,
   2026-09-16) -- closes the one real gap in the blog lineup: range/oven
