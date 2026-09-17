@@ -2,6 +2,9 @@ User-agent: *
 Allow: /
 # Agent tooling, not site content -- never worth indexing.
 Disallow: /.claude/
+# Internal app surfaces — already noindex on pages; keep crawlers out of the paths too.
+Disallow: /tools/
+Disallow: /portal/
 
 # AI answer-engine crawlers that fetch pages live to ground a chat
 # answer -- allow these, since being cited by ChatGPT/Perplexity/Claude

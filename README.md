@@ -57,7 +57,7 @@ Two things on this specific repo have caused real, hours-long confusion before. 
 | `blog/` | **Blog** (added 2026-09-01). `index.html` lists the posts; three posts so far, each a standalone page with its own SEO metadata and Article structured data. `blog.css` extends the main site's brand tokens rather than introducing a separate design system (page headlines use Anton, matching the site's own h1; card-level headlines use Oswald, matching the service/contact cards). Photos are freely licensed Unsplash images, each individually verified before use — see the note under "Do not delete" about why there's no stock-photo shortcut here. |
 | `portal/` | **Client portal** (added 2026-08-31, substantially extended through 2026-09-04) — 8 pages covering a client's entire relationship with the business, not just invoice payment: `login.html`, `set-password.html`, `home.html` (landing page, "Needs Your Attention" summary), `dashboard.html` (invoices + Stripe payment), `quotes.html` (review/questions/approval/self-scheduling), `jobs.html` (job history, warranty, check-up reminders), `work-orders.html` (Request Work form + two-way messaging), `settings.html` (saved cards, notification preferences). Deliberately shares NO JavaScript with `/tools/`. **Read `docs/CLIENT-PORTAL.md` before touching anything here** — it's the current, authoritative reference for every page and table; this row is a summary, not a substitute. Only `login.html` is indexable; every other page is `noindex` on purpose. |
 | `sitemap.xml` | Lists all 12 live, indexable public pages: the homepage, `booking.html`, the 5 service-area landing pages, the blog index and its 3 posts, and `portal/login.html`. Deliberately excluded: `manage-booking.html` (token-gated, `noindex`), and the portal's `dashboard.html` / `set-password.html` (both `noindex`). Update this and resubmit in Google Search Console any time a page is added or removed. |
-| `robots.txt` | Allows all crawlers |
+| `robots.txt` | Allows public-page crawlers; Disallow `/tools/` and `/portal/` (already noindex on those pages). Blocks bulk AI-training crawlers (`GPTBot`, `CCBot`, `Google-Extended`); allows live-retrieval/answer bots. |
 | `404.html` | Custom not-found page (self-contained, own inline styles, doesn't use `styles.css`) |
 | `.well-known/security.txt` | RFC 9116 security contact file. Requires `.nojekyll` (see above) to actually be reachable — this is exactly what broke for a long time. |
 | `.nojekyll` | Empty file, must exist at repo root with this exact name. See the warning above — this is not optional and getting the filename wrong is silent. |
@@ -179,9 +179,6 @@ the assistant's GitHub token was never granted):
   authenticated request (from Steve's account) triggered a real GitHub
   Actions run, verified via both the Actions run history and the
   Edge Function's own logs.
-- Leaked-password protection is still off in Supabase Auth -- a
-  dashboard-only toggle (Authentication → Policies), not something
-  scriptable via SQL.
 - **Correction (2026-09-16): the accidental lowercase `send-push` Edge
   Function is NOT gone -- it was re-verified live via
   `list_edge_functions`/`get_edge_function` and is still deployed
@@ -211,7 +208,8 @@ the assistant's GitHub token was never granted):
 
 **Resolved since first written (kept here briefly for history, not
 because they're still open):** the Cal.com subscription has been
-cancelled (confirmed 2026-08-25).
+cancelled (confirmed 2026-08-25). Leaked-password protection is now
+ON in Supabase Auth (confirmed 2026-09-15, dashboard toggle).
 
 
 
