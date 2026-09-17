@@ -115,10 +115,9 @@ test('AggregateRating stays honest at 5.0 / 7 matching GBP; wall stays 4 written
 
 test('new conversion chrome uses brand orange tokens and keeps 44px leave-review tap target', () => {
   assert.match(STYLES, /\.trust-referral\{/);
-  assert.match(STYLES, /\.reviews-ask\{/);
+  assert.match(STYLES, /\.reviews-ask\{\n    margin-top:32px;/);
   assert.match(STYLES, /\.reviews-ask \.btn\{[\s\S]*?min-height:44px;/);
-  const askRule = STYLES.match(/\.reviews-ask\{[\s\S]*?\n  \}/)[0];
-  assert.match(askRule, /--orange-tint-border/);
-  assert.doesNotMatch(askRule, /position:fixed/);
+  assert.match(STYLES, /\.reviews-ask\{\n    margin-top:32px;[\s\S]*?--orange-tint-border/);
+  assert.doesNotMatch(STYLES, /\.reviews-ask\{[^}]*position:fixed/);
   assert.match(STYLES, /@media \(max-width:760px\)\{[\s\S]*?\.hero-referral\{display:none;\}/);
 });

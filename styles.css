@@ -1103,6 +1103,14 @@
   .trust-item p{color:var(--text-dim); font-size:14px; margin:0;}
   @media (max-width:860px){.trust-grid{grid-template-columns:repeat(2,1fr);}}
   @media (max-width:480px){.trust-grid{grid-template-columns:1fr;}}
+  @media (max-width:760px){
+    /* Extra bottom padding so the $25 rail can rest above the sticky
+       Call+Book bar; side inset so the chat / back-to-top bubbles do
+       not cover the copy when that rail is at the bottom of the viewport. */
+    .trust{padding-bottom:80px;}
+    .trust-referral{margin-left:12px; margin-right:12px;}
+    .reviews-ask{margin-left:12px; margin-right:12px;}
+  }
 
   /* services */
   .services-grid{
