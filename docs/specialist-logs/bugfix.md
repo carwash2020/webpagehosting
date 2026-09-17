@@ -244,4 +244,46 @@ found only this one file this time, but the same class of bug can
 recur anywhere a test fixture encodes "the future" as a specific
 calendar date instead of an offset from execution time.
 
+## 2026-09-17 — full verification sweep, clean; closed out the "npm install gap" question from content.md
+
+Ran a full bug-hunt pass from scratch: fetched/fast-forwarded to the real
+`origin/main` (`422cbb3`, PR #255 already merged, matching the "both repos
+clean, zero open PRs" state), then ran the complete verification set.
+
+**Everything passed clean:**
+- `node --test --test-concurrency=1` (full suite): **2220/2220, 0
+  failures**, ~232s.
+- `node scripts/check-consistency.js`: clean (16 tool pages + 9 portal
+  pages).
+- `node scripts/check-undefined-vars.js`: clean (55 pages), once
+  `node_modules` existed.
+- `python3 scripts/check-links.py`: clean (internal refs across 66 HTML
+  files; external-link 403s are this sandbox's outbound proxy blocking
+  fetches to the site's own domain and known bot-hostile platforms --
+  the script itself already treats those as non-failures, not a bug).
+
+**One real false alarm worth recording, since it looked like a regression
+at first:** this container starts with no `node_modules` at all. Running
+the full suite *before* `npm install` produced 46 apparent failures and a
+smaller total test count (2105 vs. the real 2220) -- test files that
+`require('jsdom')` or invoke `eslint` never even registered their tests
+when those modules were missing, undercounting rather than reporting a
+clean failure per file. Running `npm install` first (adds `eslint`/
+`jsdom`, both already correctly pinned in `package-lock.json`) made the
+exact same suite pass 2220/2220. **Not a real bug and not a gap in this
+repo's actual CI**: `.github/workflows/test.yml` already runs a plain
+`npm install` (not `npm ci`) before `npm test`/`check-undefined-vars`, so
+real CI has never hit this. The content specialist's 2026-09-16 note
+("worth a check on why `npm ci` doesn't already restore them") was aimed
+at exactly this gap in *this kind of sandbox session*, not the repo --
+closing it out here: nothing to fix in the repo itself, just a "run
+`npm install` first" step for any fresh non-CI environment (this one
+included) before trusting a first test run's failure count.
+
+No open defects found this pass. Everything in `docs/ACTION-ITEMS.md` is
+either already resolved or requires a human with dashboard/account access
+(Supabase service-role key rotation, deleting the orphaned `send-push`
+function, ad accounts, etc.) -- none of it is a code-side bug for this
+lane to pick up.
+
 <!-- Add new entries above this line -->
