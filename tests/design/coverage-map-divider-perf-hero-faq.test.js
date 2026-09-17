@@ -23,9 +23,7 @@ test('F26: the service radius diagram\'s connector lines have a no-JS fallback, 
 test('F29: .trust no longer doubles up with .stats-bar\'s own border, and has real padding-top for breathing room', () => {
   const rule = STYLES.match(/\.trust\{([^}]*)\}/)[1];
   assert.match(rule, /border-top:\s*none/);
-  const pad = rule.match(/padding:\s*(\d+)px 0 (\d+)px/);
-  assert.ok(pad, 'expected a padding: Npx 0 Mpx rule');
-  assert.ok(Number(pad[1]) >= 32, `padding-top should stay real breathing room, got ${pad[1]}`);
+  assert.match(rule, /padding:\s*32px 0 40px/);
 });
 
 test('F30: the near-duplicate breakpoints were merged into the codebase\'s already-dominant values', () => {

@@ -3,6 +3,16 @@
 Started 2026-09-16, alongside the `tripleh-visual` skill. See `README.md` in
 this directory for how these logs work.
 
+## 2026-09-17 -- rebase conversion pop onto main (#279)
+
+Kept the tighter `.trust` spacing (`padding:32px 0 40px; border-top:none`)
+instead of restoring F29's old `44px 0 88px`. F29 now locks that
+conversion padding and the no-double-border. Public rating stays
+#281's 5.0 / 7; wall still 4 written cards. booking.html $25 stays
+on #278's `.referral-nudge` / `.conf-referral` -- no second class.
+
+<!-- Add new entries above this line -->
+
 ## 2026-09-17 -- booking.html sticky Call+Book + cookie lift
 
 booking.html does not load styles.css, so the homepage `.sticky-call`
@@ -42,7 +52,6 @@ Leave-review on city/service/about/our-work is a one-line
 `.reviews-ask-inline` under the existing "Read all reviews" link --
 those pages still must not carry aggregateRating.
 
-<!-- Add new entries above this line -->
 ## 2026-09-17 -- /tools/ ops inbox, More sheet, tablet density, one-row hub
 
 PR4, tools-only. Action Items became four priority lanes around the
