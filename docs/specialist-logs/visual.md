@@ -90,4 +90,64 @@ lazy-loading failures don't show up as broken-image icons, they show
 up as an indefinitely-empty box that looks identical to "hasn't
 scrolled into view yet."
 
+## 2026-09-17 -- fresh audit: `.motto-rail`'s unlit color read as a
+rendering bug in light mode, fixed
+
+Did another real pass rather than assuming last session's context
+still covered everything. The queued "Proposed visual improvements"
+items are all blocked (need real non-flooring job photos that don't
+exist yet -- confirmed again by listing `images/gallery/`, still 100%
+flooring/tile/trim) except one auth-gated loading-indicator item I
+couldn't safely verify without live portal credentials, so left it
+alone rather than guess-fixing an auth flow blind.
+
+**Real bug, verified and fixed: the homepage hero had what looked like
+a rendering glitch -- a distinct vertical line down the far-left edge
+of the viewport, confined to the hero's height, visible in light mode
+against the cream page but basically invisible in dark mode.** Spent a
+while chasing the wrong causes first (a `background-size:cover`
+sub-pixel gap on `.hero` revealing `.bg-blueprint` underneath; a
+`backdrop-filter` GPU-layer edge bleed from the sticky header) --
+disproving both by forcing `.hero`'s background to solid yellow via
+`page.addStyleTag` and re-sampling actual pixel values with a
+canvas-based pixel reader (`ctx.getImageData`), since `fullPage`
+screenshots and eyeballing a small crop both proved unreliable per the
+2026-09-16 entry above. The real cause: `.motto-rail`
+(styles.css ~2230), a decorative `position:fixed; left:0; width:3px`
+"spine" tied to the hero tagline, at rest uses `background:var(--border)`
+at 50% opacity -- a light color in light mode -- crossing the
+hero, which (like its own h1/lede text) deliberately stays on a dark
+photo regardless of site theme. Same class of gap as that already-fixed
+text-color case, just never caught for this element. Confirmed with
+`document.querySelectorAll('*')` filtered to fixed/absolute elements
+taller than 300px -- `.motto-rail` was the only real match once the two
+wrong theories were ruled out.
+
+**Fixed**: changed `.rail-seg`'s unlit `background` from `var(--border)`
+to a fixed `rgba(255,255,255,.2)` (element opacity stays `.5`, so the
+effective blend is ~10% white) -- solved by working out the blended
+result against both the hero's dark tone and the light-mode page's own
+`--bg`, then verifying with the same pixel-sampling method: the hero-edge
+jump went from a ~90-value spike down to ~20, and the already-subtle
+appearance against the rest of the light-mode page got even more subtle
+(a ~17-value gap down to ~1-2). Re-verified visually in both themes,
+desktop and a 390px mobile viewport (light mode via `localStorage.setItem
+('th-theme','light')`, since the desktop `#themeToggle` button is hidden
+on mobile -- there's a separate `.mobile-theme-row` switch, not tested
+here since a pixel-level check isn't needed for a toggle that's known to
+already work). Also scrolled to the About section pills to confirm the
+scroll-triggered "is-lit" segments (which override `background` and
+`opacity` entirely) still work exactly as before -- this fix only
+touches the unlit/at-rest state.
+
+**Method note for next time**: when a screenshot shows something that
+looks like a rendering artifact but survives changing the CSS you'd
+expect to control it, don't conclude "browser quirk, not my problem" --
+walk the DOM for every fixed/absolute/sticky element whose rect
+intersects the suspect region (`getBoundingClientRect` + filter), rather
+than only inspecting the element `elementFromPoint` returns (that only
+gives the topmost *hit-testable* element -- a `pointer-events:none`
+decorative layer sitting visually on top, like this rail, never shows up
+there).
+
 <!-- Add new entries above this line -->
