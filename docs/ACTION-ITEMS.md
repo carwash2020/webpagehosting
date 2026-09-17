@@ -549,6 +549,18 @@ reference:
   of it. Invoice empty/error states now match quotes and jobs (icon +
   Request Work CTA on a genuine empty list).
 
+- **Workspace ops inbox, phone More sheet, tablet Job Tracker density,
+  compressed hub header** (2026-09-17) -- `/tools/` only. Action Items
+  is four priority lanes (Needs response / Due this week / Follow-ups /
+  Income) using the same lists and counts that already existed; unread
+  highlight uses handled/submitted/overdue flags already on the row.
+  Phone bottom nav keeps Home/Jobs/Invoices/Calendar/Finance and adds a
+  More sheet for the dests the desktop sidebar already had. Jump-nav
+  chips collapse Gallery/Compliance/Analytics/Backup behind More under
+  721px. Hub header is one toolbar row (sync/status stay visible). Job
+  Tracker cards tighten at 768–1023; the dense table still starts at
+  1024. Auth architecture unchanged.
+
 <!-- Add new visual additions above this line -->
 
 ## Proposed visual improvements (not yet built)

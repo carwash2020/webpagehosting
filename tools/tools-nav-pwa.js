@@ -84,6 +84,74 @@
     { href: '/tools/settings.html',           icon: 'gear',     label: 'Settings' }
   ];
 
+  // Phone bottom nav only has room for the 5 daily tools above.
+  // Everything else the desktop sidebar lists (Contracts, Route,
+  // Reviews, Wiki, Runway, Settings) used to be unreachable from the
+  // bar -- a "More" sheet is the overflow, not a sixth primary dest
+  // and not a change to the PWA bar's Home/Jobs/Invoices/Calendar/
+  // Finance order. Built from SIDEBAR_DESTS minus DESTS so the two
+  // lists cannot drift.
+  var PRIMARY_HREFS = {};
+  DESTS.forEach(function (d) { PRIMARY_HREFS[d.href] = true; });
+  var MORE_DESTS = SIDEBAR_DESTS.filter(function (d) { return !PRIMARY_HREFS[d.href]; });
+
+  function isMorePage() {
+    return MORE_DESTS.some(function (d) { return path === d.href; });
+  }
+
+  function setMoreSheetOpen(open) {
+    var sheet = document.getElementById('thMoreSheet');
+    var btn = document.querySelector('.th-bn-more');
+    if (!sheet || !btn) return;
+    if (open) {
+      sheet.removeAttribute('hidden');
+      document.body.classList.add('th-more-open');
+      btn.setAttribute('aria-expanded', 'true');
+    } else {
+      sheet.setAttribute('hidden', '');
+      document.body.classList.remove('th-more-open');
+      btn.setAttribute('aria-expanded', 'false');
+    }
+  }
+
+  function injectMoreSheet() {
+    if (document.getElementById('thMoreSheet')) return;
+    var sheet = document.createElement('div');
+    sheet.id = 'thMoreSheet';
+    sheet.className = 'th-more-sheet';
+    sheet.setAttribute('hidden', '');
+    sheet.innerHTML =
+      '<div class="th-more-sheet-backdrop" data-th-more-close="1"></div>' +
+      '<div class="th-more-sheet-panel" role="dialog" aria-modal="true" aria-labelledby="thMoreSheetTitle">' +
+        '<div class="th-more-sheet-handle" aria-hidden="true"></div>' +
+        '<h2 class="th-more-sheet-title" id="thMoreSheetTitle">More tools</h2>' +
+        '<div class="th-more-sheet-links">' +
+          MORE_DESTS.map(function (d) {
+            var active = path === d.href ? ' is-active' : '';
+            var current = path === d.href ? ' aria-current="page"' : '';
+            return '<a href="' + d.href + '" class="th-more-sheet-link' + active + '"' + current + '>' +
+              '<span class="th-hex-icon"><svg class="th-icon" aria-hidden="true"><use href="#icon-' + d.icon + '" xlink:href="#icon-' + d.icon + '"></use></svg></span>' +
+              '<span>' + d.label + '</span></a>';
+          }).join('') +
+        '</div>' +
+      '</div>';
+    document.body.appendChild(sheet);
+    sheet.addEventListener('click', function (e) {
+      if (e.target && e.target.getAttribute && e.target.getAttribute('data-th-more-close')) {
+        setMoreSheetOpen(false);
+        var moreBtn = document.querySelector('.th-bn-more');
+        if (moreBtn) moreBtn.focus();
+      }
+    });
+    document.addEventListener('keydown', function (e) {
+      if (e.key === 'Escape' && document.body.classList.contains('th-more-open')) {
+        setMoreSheetOpen(false);
+        var moreBtn = document.querySelector('.th-bn-more');
+        if (moreBtn) moreBtn.focus();
+      }
+    });
+  }
+
   var FLAGGED_ITEMS_KEY = 'th_flagged_items';
   function injectFlagButton() {
     var btn = document.createElement('button');
@@ -152,8 +220,18 @@
       return '<a href="' + d.href + '" class="' + active.trim() + '"' + current + '>' +
         '<span class="th-bn-icon th-hex-icon" aria-hidden="true"><svg class="th-icon" aria-hidden="true"><use href="#icon-' + d.icon + '" xlink:href="#icon-' + d.icon + '"></use></svg></span>' +
         '<span>' + d.label + '</span></a>';
-    }).join('');
+    }).join('') +
+      '<button type="button" class="th-bn-more' + (isMorePage() ? ' is-active' : '') + '" aria-label="More tools" aria-haspopup="dialog" aria-expanded="false" aria-controls="thMoreSheet">' +
+        '<span class="th-bn-icon th-hex-icon" aria-hidden="true"><svg class="th-icon" aria-hidden="true"><use href="#icon-more" xlink:href="#icon-more"></use></svg></span>' +
+        '<span>More</span></button>';
     document.body.appendChild(nav);
+    injectMoreSheet();
+    var moreBtn = nav.querySelector('.th-bn-more');
+    if (moreBtn) {
+      moreBtn.addEventListener('click', function () {
+        setMoreSheetOpen(!document.body.classList.contains('th-more-open'));
+      });
+    }
   }
 
   if (document.readyState === 'loading') {
@@ -311,6 +389,7 @@ if (typeof document !== 'undefined') {
     '<symbol id="icon-inbox" viewBox="0 0 24 24"><path d="M4 12.5L6.5 5h11L20 12.5"/><path d="M4 12.5v6c0 .8.7 1.5 1.5 1.5h13c.8 0 1.5-.7 1.5-1.5v-6h-4.8a2.7 2.7 0 0 1-5.4 0z"/></symbol>' +
 
     '<symbol id="icon-home" viewBox="0 0 24 24"><g transform="translate(0,-0.5)"><path d="M4 11.5L12 4l8 7.5"/><path d="M6 10v9.5c0 .8.7 1.5 1.5 1.5h9c.8 0 1.5-.7 1.5-1.5V10"/><path d="M9.5 21v-5.5c0-.55.45-1 1-1h3c.55 0 1 .45 1 1V21"/></g></symbol>' +
+    '<symbol id="icon-more" viewBox="0 0 24 24"><circle cx="5" cy="12" r="1.7" fill="currentColor" stroke="none"/><circle cx="12" cy="12" r="1.7" fill="currentColor" stroke="none"/><circle cx="19" cy="12" r="1.7" fill="currentColor" stroke="none"/></symbol>' +
 
     '<symbol id="icon-mic" viewBox="0 0 24 24"><path d="M12 15a3.5 3.5 0 0 0 3.5-3.5V6a3.5 3.5 0 0 0-7 0v5.5A3.5 3.5 0 0 0 12 15z"/><path d="M6 11.5a6 6 0 0 0 12 0"/><line x1="12" y1="17.5" x2="12" y2="21"/><line x1="8.5" y1="21" x2="15.5" y2="21"/></symbol>' +
 
@@ -367,6 +446,14 @@ if (typeof document !== 'undefined') {
         a.classList.toggle('is-active', isMatch);
         if (isMatch) a.setAttribute('aria-current', 'true'); else a.removeAttribute('aria-current');
       });
+      // When secondary chips live behind a More control, light that
+      // control too so the collapsed mobile row still shows "you are
+      // in Health/Backup/etc." rather than going blank.
+      const moreBtn = nav.querySelector('.jump-nav-more-btn');
+      if (moreBtn) {
+        const activeLink = links.find(a => a.getAttribute('href') === '#' + id);
+        moreBtn.classList.toggle('is-active', !!(activeLink && activeLink.closest('.jump-nav-secondary')));
+      }
     }
 
     // rootMargin biases the trigger line toward the top of the viewport

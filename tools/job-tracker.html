@@ -50,15 +50,15 @@
   })();
 </script>
 <link rel="stylesheet" href="/styles.css?v=46788395ca">
-<link rel="stylesheet" href="/tools/styles-tools.css?v=a494344e8c">
+<link rel="stylesheet" href="/tools/styles-tools.css?v=bc9a09dd07">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.112.3/dist/umd/supabase.js" integrity="sha384-qafw21c/iciq0VXsi9FzkfoQv5I/V0iqE4lSNcKXPnW9/UTJLnv5CcN4FHxVLnKg" crossorigin="anonymous" defer></script>
 <script src="/tools/sync.js?v=781d49a988" defer></script>
 <script src="/tools/data-layer.js?v=c5d44f096e" defer></script>
 <script src="/tools/tools-effects.js?v=4cff99aa4a" defer></script>
 <script src="/tools/tools-dialogs.js?v=ce49ed8b35" defer></script>
 <script src="/tools/tools-media-sharing.js?v=0c229c9353" defer></script>
-<script src="/tools/tools-nav-pwa.js?v=9b16eefb86" defer></script>
-<script src="/tools/tools-tour.js?v=cf6652f5b1" defer></script>
+<script src="/tools/tools-nav-pwa.js?v=1e7047ebf3" defer></script>
+<script src="/tools/tools-tour.js?v=a338c029a4" defer></script>
 <style>
   /* iOS Safari zoom-on-focus fix (2026-09-05), same root cause and
      fix already applied to invoice-generator.html: a tapped
@@ -129,6 +129,25 @@
   body.is-compact-density .job-card-swipe-inner { padding: 10px 14px; }
   body.is-compact-density .job-card { margin-bottom: 6px; }
   body.is-compact-density .job-card-notes { display: none; }
+  /* Tablet / landscape (768–1023): compact list rows.
+     Phone (<768) keeps the full cards; desktop (≥1024) keeps the dense
+     table. This band previously inherited the phone card padding with
+     no table, so a landscape iPad saw neither a scannable list nor
+     the table. */
+  @media (min-width: 768px) and (max-width: 1023px) {
+    .job-card { margin-bottom: 6px; }
+    .job-card-swipe-inner { padding: 8px 12px; }
+    .job-card-notes { display: none; }
+    .job-card-title { font-size: 14.5px; }
+    .job-card-meta {
+      font-size: 12px; margin-bottom: 4px;
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    }
+    .job-card-top { margin-bottom: 4px; gap: 8px; }
+    .job-card-actions { gap: 6px; }
+    .job-card-select { margin-bottom: 6px; }
+    .job-badges { gap: 4px; }
+  }
   /* ---- desktop board/table view (2026-08-20), requested directly ----
      Hidden by default, shown only at min-width:1024px -- mobile's card
      list above is completely unaffected. */

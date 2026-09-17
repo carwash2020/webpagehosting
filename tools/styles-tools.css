@@ -276,7 +276,10 @@ label .col-hint,
    else for a mobile/desktop split (see .hub-header, .jump-nav above):
    cards below it, the table at and above it -- matching the table's own
    column set (Phone, Address, a Margin column), which needs the room a
-   phone screen doesn't have anyway. */
+   phone screen doesn't have anyway. 768–1023 keeps the card list (the
+   table still needs ≥1024) but Job Tracker's own CSS tightens those
+   cards into compact list rows so a tablet/landscape screen is not
+   stuck with phone-sized padding. */
 #jobsTableWrap { display: none; }
 @media (min-width: 1024px) {
   #jobsList { display: none; }
@@ -1609,30 +1612,78 @@ body select:focus, body textarea:focus {
   -webkit-backdrop-filter: blur(18px); backdrop-filter: blur(18px);
   border-top: 1px solid var(--border);
 }
-@media (max-width: 720px) { .th-bottom-nav { display: flex; justify-content: space-around; gap: 4px; } }
-.th-bottom-nav a {
-  flex: 1; max-width: 88px;
+@media (max-width: 720px) { .th-bottom-nav { display: flex; justify-content: space-around; gap: 2px; } }
+.th-bottom-nav a, .th-bottom-nav .th-bn-more {
+  flex: 1; max-width: 76px;
   display: flex; flex-direction: column; align-items: center; gap: 5px;
   text-decoration: none; color: var(--text-dim);
   font-family:var(--font-ui); font-size: 10.5px; letter-spacing: .4px;
   padding: 5px 2px; border-radius: 12px;
   transition: color .15s ease, background .15s ease;
+  background: none; border: none; cursor: pointer;
+  -webkit-appearance: none; appearance: none;
 }
-.th-bottom-nav a .th-bn-icon {
+.th-bottom-nav a .th-bn-icon, .th-bottom-nav .th-bn-more .th-bn-icon {
   width: 36px; height: 36px; display: flex; align-items: center; justify-content: center;
   transition: background .18s ease, border-color .18s ease;
 }
-.th-bottom-nav a .th-bn-icon .th-icon { width: 20px; height: 20px; margin-right: 0; }
-.th-bottom-nav a.is-active { color: var(--orange-light); }
-.th-bottom-nav a.is-active .th-bn-icon {
+.th-bottom-nav a .th-bn-icon .th-icon, .th-bottom-nav .th-bn-more .th-bn-icon .th-icon { width: 20px; height: 20px; margin-right: 0; }
+.th-bottom-nav a.is-active, .th-bottom-nav .th-bn-more.is-active { color: var(--orange-light); }
+.th-bottom-nav a.is-active .th-bn-icon, .th-bottom-nav .th-bn-more.is-active .th-bn-icon {
   background:
     radial-gradient(120% 130% at 30% 18%, rgba(255,255,255,.5), rgba(255,255,255,0) 46%),
     linear-gradient(165deg, var(--orange-light), var(--orange) 55%, var(--orange-dark) 130%);
   border-color: var(--orange-dark);
   box-shadow: 0 2px 6px -2px rgba(0,0,0,.5), 0 1px 0 rgba(255,255,255,.3) inset;
 }
-.th-bottom-nav a.is-active .th-bn-icon .th-icon { color: #1a0d02; }
-.th-bottom-nav a:active .th-bn-icon { background: var(--bg-panel-2); }
+.th-bottom-nav a.is-active .th-bn-icon .th-icon, .th-bottom-nav .th-bn-more.is-active .th-bn-icon .th-icon { color: #1a0d02; }
+.th-bottom-nav a:active .th-bn-icon, .th-bottom-nav .th-bn-more:active .th-bn-icon { background: var(--bg-panel-2); }
+
+/* Overflow sheet for sidebar dests the 5-item bar cannot fit.
+   Only relevant under 720px (the bar itself is display:none above that). */
+.th-more-sheet { position: fixed; inset: 0; z-index: 950; }
+.th-more-sheet[hidden] { display: none !important; }
+.th-more-sheet-backdrop {
+  position: absolute; inset: 0;
+  background: rgba(0,0,0,.45);
+}
+.th-more-sheet-panel {
+  position: absolute; left: 0; right: 0; bottom: 0;
+  background: var(--bg-panel);
+  border-top: 1px solid var(--border);
+  border-radius: 16px 16px 0 0;
+  padding: 10px 16px calc(88px + env(safe-area-inset-bottom, 0px));
+  box-shadow: 0 -12px 32px rgba(0,0,0,.35);
+  max-height: min(72vh, 560px);
+  overflow-y: auto;
+}
+.th-more-sheet-handle {
+  width: 36px; height: 4px; border-radius: 999px;
+  background: var(--border); margin: 4px auto 12px;
+}
+.th-more-sheet-title {
+  font-family: var(--font-ui); font-size: 13px; font-weight: 600;
+  letter-spacing: .4px; text-transform: uppercase; color: var(--text-dim);
+  margin: 0 0 10px;
+}
+.th-more-sheet-links { display: flex; flex-direction: column; gap: 4px; }
+.th-more-sheet-link {
+  display: flex; align-items: center; gap: 12px;
+  padding: 12px; border-radius: 10px;
+  text-decoration: none; color: var(--text);
+  font-family: var(--font-ui); font-size: 15px; font-weight: 500;
+  min-height: 44px;
+}
+.th-more-sheet-link .th-hex-icon { width: 32px; height: 32px; }
+.th-more-sheet-link .th-hex-icon .th-icon { width: 16px; height: 16px; }
+.th-more-sheet-link:hover, .th-more-sheet-link:focus-visible { background: var(--bg-panel-2); }
+.th-more-sheet-link.is-active {
+  background: var(--orange-tint-soft); color: var(--orange-light);
+}
+@media (min-width: 721px) { .th-more-sheet { display: none !important; } }
+@media (prefers-reduced-motion: reduce) {
+  .th-more-sheet-backdrop, .th-more-sheet-panel { transition: none; }
+}
 
 /* ---- desktop sidebar: injected markup, styled here ---- */
 /* Requested directly (2026-08-20): a persistent left sidebar on
@@ -1743,7 +1794,8 @@ body select:focus, body textarea:focus {
 @media (prefers-reduced-motion: reduce) {
   body .tool-tile-link, body .tool-tile-icon, body .dash-list-item, body .tab-btn::after,
   body .primary-btn, body .secondary-btn, body .small-btn, body .note-new-btn,
-  .th-bottom-nav a, .th-bottom-nav a .th-bn-icon { transition: none; }
+  .th-bottom-nav a, .th-bottom-nav a .th-bn-icon,
+  .th-bottom-nav .th-bn-more, .th-bottom-nav .th-bn-more .th-bn-icon { transition: none; }
   body .tool-tile-link:hover, body .tool-tile-link:hover .tool-tile-icon, body a.dash-list-item:hover,
   body .primary-btn:hover, body .secondary-btn:hover { transform: none; }
 }
