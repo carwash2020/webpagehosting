@@ -264,7 +264,7 @@
 // window.alert() on the error/validation paths across dashboard.html,
 // quotes.html and settings.html, item 8; plus the line-item disclosure's
 // animated open/close CSS). All six are in PRECACHE_URLS.
-const CACHE_NAME = 'th-portal-v88'; // precache-fingerprint:63d13029b17d
+const CACHE_NAME = 'th-portal-v89'; // precache-fingerprint:77ae52fcaa72
 const PRECACHE_URLS = [
   '/portal/home.html', '/portal/dashboard.html', '/portal/jobs.html', '/portal/quotes.html',
   '/portal/work-orders.html', '/portal/settings.html', '/portal/login.html', '/portal/set-password.html',
