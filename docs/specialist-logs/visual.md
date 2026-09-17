@@ -3,6 +3,23 @@
 Started 2026-09-16, alongside the `tripleh-visual` skill. See `README.md` in
 this directory for how these logs work.
 
+## 2026-09-17 -- compact trust line next to Book/Schedule CTAs
+
+Paired with the GA4 booking-events work the same day. Homepage hero
+and the #schedule Book Instantly card each got a one-line `.cta-proof`
+(stars + "5.0 from 4 Google reviews" + a truncated washer-repair quote
+already on the reviews wall + a See reviews link). booking.html got
+the same line under the subhead, linking to `/#reviews`. Not a new
+review card, not a second sticky bar, and not a count bump -- the
+wall and AggregateRating stay at 4.
+
+Hero colors are hardcoded light, same reason as `.hero h1` / the
+outline Call button: that photo never flips with theme. Inside
+`.booking-cta` it uses theme tokens. Mobile centers the hero line
+under the stacked CTAs; extra bottom padding is only a few pixels so
+it does not fight the sticky Call+Book bar.
+
+<!-- Add new entries above this line -->
 ## 2026-09-17 -- Schedule-primary hero + two-action sticky bar
 
 Paired with the features-lane conversion work the same day. New
