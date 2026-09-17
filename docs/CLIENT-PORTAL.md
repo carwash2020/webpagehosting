@@ -660,9 +660,20 @@ now live in the numbered roadmap above -- this list is what's left.
   policy itself, which predates this feature.
 
 **Smaller polish**
-- **"Remember me" / longer sessions.** Clients sign in rarely, so
-  being logged out every time is more annoying here than in a tool
-  used daily.
+- ~~**"Remember me" / longer sessions.**~~ -- **checked (2026-09-17),
+  nothing to build.** Every portal page's `createClient()` call (login,
+  home, dashboard, jobs, quotes, work-orders, settings, contracts,
+  set-password) passes no options object at all -- confirmed by
+  grepping every call site -- so all Supabase JS SDK defaults apply:
+  `persistSession: true` (session lives in `localStorage`, survives a
+  browser restart) and `autoRefreshToken: true` (the refresh token
+  keeps the session alive indefinitely, not just for the ~1hr access
+  token's lifetime). There's no code path here that logs a client out
+  early. If a client is still describing this, it's a Supabase Auth
+  dashboard setting (Authentication -> Sessions -> an inactivity/
+  time-box timeout), not something fixable from this repo -- worth a
+  manual action item if the complaint is real and recent, not a code
+  task.
 - **Partial payments** for larger jobs.
 - ~~**Email preferences** (invoice notifications on/off)~~ -- **done**
   (2026-09-04), part of phase 8's Settings rebuild -- three separate

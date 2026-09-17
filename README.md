@@ -1705,3 +1705,26 @@ different internal owners (Job Tracker vs the work-order queue).
 New tests: `tests/portal/job-messaging.test.js` (15 tests, mirroring
 `tests/portal/work-order-messaging.test.js`'s structure test-for-test
 where the feature itself mirrors that one).
+
+## What changed, 2026-09-17 -- verified job-messaging wiring end-to-end, closed out a doc item
+
+Verified `notify-job-message-email` (shipped 2026-09-16) is correctly
+wired against the live Supabase project rather than trusting its
+`ACTIVE` status alone: the `on_job_message_send_email` trigger is
+attached and enabled, both RLS policies on `client_portal_job_messages`
+match the proven work-order-messages pattern, and -- the specific thing
+worth checking given `send-payment-reminder`/`send-quote-followup`
+were found silently 401ing the day before on a stale Vault secret --
+this function does no Authorization-header equality check of its own,
+so it was never exposed to that failure mode; it only depends on the
+platform's `verify_jwt` gate, which the same Vault secret already
+clears (`Send-Push` uses it successfully today). Full write-up in
+`docs/specialist-logs/features.md`.
+
+Also closed out `docs/CLIENT-PORTAL.md`'s "Remember me / longer
+sessions" item: every portal page's `createClient()` call already runs
+on Supabase JS SDK defaults (`persistSession` + `autoRefreshToken`,
+both true), so a client's session already survives a browser restart
+and refreshes indefinitely -- there was nothing to build. If a client
+is still reporting early logouts, that's a Supabase Auth dashboard
+setting outside this repo, not a code gap.

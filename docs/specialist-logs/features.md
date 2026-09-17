@@ -143,4 +143,67 @@ tool access was live and unblocked here, so this feature is actually
 live end-to-end, not just committed code waiting on a manual deploy
 step.
 
+## 2026-09-17 -- verified notify-job-message-email wiring, ruled out one "smaller polish" item, scoping partial payments
+
+Asked (via the multi-chat hub this session reports to) to verify
+`notify-job-message-email` was actually wired up correctly end-to-end
+rather than trust the ACTIVE status alone -- good instinct given what
+happened with `send-payment-reminder`/`send-quote-followup` the same
+day (see `docs/specialist-logs/bugfix.md`'s 2026-09-16 entry): both
+were ACTIVE and their crons were running, but every real invocation
+401'd because the `send_push_service_role_key` Vault secret didn't
+match those two functions' own strict `token !== SERVICE_ROLE_KEY`
+equality check.
+
+Checked directly against the live project rather than re-reading
+yesterday's log: trigger `on_job_message_send_email` exists and is
+enabled (`tgenabled='O'`) on `client_portal_job_messages`, both RLS
+policies match the work-order-messages pattern exactly (client sees/
+posts only their own job, internal posts only with
+`current_user_has_any_role()`), the edge function is ACTIVE with
+`verify_jwt: true` -- same as its proven analog
+`notify-work-order-message-email` -- and critically, grepped both
+functions' source: **neither does its own Authorization-header
+equality check at all** (they only use `SUPABASE_SERVICE_ROLE_KEY` for
+their own outgoing REST calls). So this function was never exposed to
+the specific failure mode that broke the other two -- it relies only
+on the platform's `verify_jwt` gate, which the same Vault secret
+already clears today (proven by `Send-Push` firing hourly on it,
+verify_jwt: true, per yesterday's log). Also confirmed
+`notification_recipients` has 2 real `work_order`-typed recipients
+(connor@, steve@) so the internal-alert path has somewhere to send,
+and `client_notification_preferences.wants_message_emails` exists as
+the opt-out column the function reads. Did NOT insert a live test row
+-- the table has 0 rows (feature is brand new, unused so far) and a
+real insert would fire a genuine production email; that's not mine to
+trigger just to satisfy a verification pass. Static verification above
+is as far as I'll go without an actual client message to observe.
+
+While in `docs/CLIENT-PORTAL.md`'s "Smaller polish" list looking for
+what's next: checked "Remember me / longer sessions" before building
+anything for it (per this session's now-established pattern of
+verifying a "still open" doc claim against reality first). Grepped
+every portal page's `createClient()` call -- none pass an options
+object, so every page already runs on Supabase JS SDK defaults:
+`persistSession: true` (localStorage) + `autoRefreshToken: true`
+(refresh token keeps the session alive indefinitely). There is no code
+path here logging a client out early. Marked done-as-checked in the
+doc rather than building a redundant toggle; if the original complaint
+behind this item is still real, it's a Supabase Auth dashboard
+inactivity/timeout setting, not something this repo controls --
+flagged as a manual item, not built.
+
+**Partial payments for larger jobs** is the one real, unbuilt item
+left in that list. Confirmed the gap is real, not doc rot:
+`client_portal_invoices` has no `paid_amount` column at all (only
+boolean `paid` + `paid_at`), and `create-payment-intent` always
+charges `Math.round(invoice.total * 100)` -- a client cannot pay less
+than the full invoice today. This is genuinely bigger and
+money-sensitive enough (and sits directly in the subsystem that had a
+real paid/paidAmount merge-conflict bug the day before, see
+`bugfix.md`) that I sent it to the `Plan` agent for a proper
+file-by-file design before writing any code, rather than improvising
+schema/webhook changes to a payment-correctness path solo. Continuing
+once that comes back.
+
 <!-- Add new entries above this line -->
