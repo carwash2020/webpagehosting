@@ -682,11 +682,15 @@
 // "Getting Started" guide making the identical false claim to real
 // people using the app. Same reasoning as every prior bump in this
 // file's history.
-const CACHE_NAME = 'th-workspace-v174'; // precache-fingerprint:e614ec13b96d
+const CACHE_NAME = 'th-workspace-v174'; // precache-fingerprint:40453a11735b
 const PRECACHE_URLS = [
   '/tools/workspace.html', '/tools/job-tracker.html', '/tools/invoice-generator.html', '/tools/contract-generator.html',
   '/tools/calendar.html', '/tools/route-planner.html', '/tools/review-request.html', '/tools/contact-card.html',
   '/tools/job-cost-lookup.html', '/tools/expense-logger.html', '/tools/login.html',
+  // Bare /tools/ directory URL -- GitHub Pages 404 without this file.
+  // Soft-lands on login.html. Same completeness rule as every other
+  // real HTML file in tools/: missing from this list fails cache.addAll.
+  '/tools/index.html',
   // Added 2026-08-14 -- these 3 pages existed before but were never added
   // to the precache list, so they wouldn't open at all with no signal.
   // The Appliance Wiki (parts-reference.html) in particular is exactly

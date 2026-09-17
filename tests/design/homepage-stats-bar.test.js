@@ -25,18 +25,20 @@ test('the stats bar sits between the hero and the trust strip', () => {
 test('the rating stat matches the JSON-LD aggregateRating exactly', () => {
   const ratingMatch = INDEX.match(/"ratingValue":\s*"([\d.]+)"/);
   assert.ok(ratingMatch, 'expected a ratingValue in JSON-LD');
-  const statMatch = INDEX.match(/data-count-to="([\d.]+)" data-decimals="1"/);
+  const statMatch = INDEX.match(/data-count-to="([\d.]+)" data-decimals="1">([\d.]+)</);
   assert.ok(statMatch, 'expected the rating stat-count element');
   assert.equal(Number(statMatch[1]).toFixed(1), ratingMatch[1]);
+  assert.equal(statMatch[2], ratingMatch[1], 'visible first-paint text must already be the final rating, not 0.0');
 });
 
 test('the review-count stat matches the JSON-LD reviewCount exactly', () => {
   const countMatch = INDEX.match(/"reviewCount":\s*"(\d+)"/);
   assert.ok(countMatch, 'expected a reviewCount in JSON-LD');
   const statBlock = INDEX.slice(INDEX.indexOf('Real 5-Star Reviews') - 200, INDEX.indexOf('Real 5-Star Reviews'));
-  const statMatch = statBlock.match(/data-count-to="(\d+)">0</);
+  const statMatch = statBlock.match(/data-count-to="(\d+)">(\d+)</);
   assert.ok(statMatch, 'expected the review-count stat-count element');
   assert.equal(statMatch[1], countMatch[1]);
+  assert.equal(statMatch[2], countMatch[1], 'visible first-paint text must already be the final review count, not 0');
 });
 
 test('the communities-served stat matches the number of satellite landing pages plus this one', () => {
@@ -44,9 +46,10 @@ test('the communities-served stat matches the number of satellite landing pages 
   // -nv.html), not service pages like handyman-repairs.html.
   const landingPages = fs.readdirSync(repo('.')).filter((f) => /^handyman-.*-(ut|nv)\.html$/.test(f));
   const statBlock = INDEX.slice(INDEX.indexOf('Southern Utah Communities Served') - 200, INDEX.indexOf('Southern Utah Communities Served'));
-  const statMatch = statBlock.match(/data-count-to="(\d+)">0</);
+  const statMatch = statBlock.match(/data-count-to="(\d+)">(\d+)</);
   assert.ok(statMatch, 'expected the communities-served stat-count element');
   assert.equal(Number(statMatch[1]), landingPages.length + 1, 'stat should equal the satellite pages plus St. George itself');
+  assert.equal(statMatch[2], statMatch[1], 'visible first-paint text must already be the final community count, not 0');
 });
 
 test('none of the stats are invented figures with no source elsewhere on the page', () => {
@@ -62,6 +65,18 @@ test('every counter animates from its own data-count-to via a shared count-up, a
   assert.match(INDEX, /if \(reduced \|\| !\('IntersectionObserver' in window\)\)/);
   const counts = [...INDEX.matchAll(/class="stat-count" data-count-to="([\d.]+)"/g)].map((m) => m[1]);
   assert.equal(counts.length, 3, 'expected 3 animated counters (rating, reviews, communities) -- the 4th stat is a text badge, not a number');
+  // Count-up is progressive enhancement from the already-rendered
+  // finals -- never `to * eased` from a zero start, which flashed 0.0.
+  assert.match(INDEX, /from \+ \(to - from\) \* eased/);
+  assert.doesNotMatch(INDEX, /el\.textContent = \(to \* eased\)/);
+});
+
+test('visible stat-count text is the final value on first paint, never a zero placeholder', () => {
+  const statsSection = INDEX.slice(INDEX.indexOf('class="stats-bar"'), INDEX.indexOf('</section>', INDEX.indexOf('class="stats-bar"')));
+  const visible = [...statsSection.matchAll(/class="stat-count"[^>]*>([^<]+)</g)].map((m) => m[1]);
+  assert.deepEqual(visible, ['5.0', '4', '9']);
+  assert.ok(!visible.some((v) => Number(v) === 0), 'no stat may paint as 0 / 0.0');
+  assert.ok(Number(visible[0]) <= 5.0 && Number(visible[1]) <= 4 && Number(visible[2]) <= 9);
 });
 
 test('the stats bar is a distinct full-width band, not styled like the plain trust cards', () => {

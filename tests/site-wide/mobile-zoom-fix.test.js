@@ -90,3 +90,15 @@ test('the shared login-field rule, identical across portal login/set-password an
     assert.match(html, /font-size: 16px; font-family: inherit; box-sizing: border-box;\s*\n\s*\}/, `${file}'s login-field input should be at 16px`);
   }
 });
+
+test('the public site shared form-control rule in styles.css is at the 16px iOS zoom floor, covering the email modal and every other public input/select/textarea', () => {
+  const css = fs.readFileSync(repo('styles.css'), 'utf8');
+  const clean = stripComments(css);
+  const rule = [...clean.matchAll(/([^{}]*\b(?:input|select|textarea)\b[^{}]*)\{([^}]*)\}/g)]
+    .find((m) => /^(?:input,\s*select,\s*textarea|input,\s*textarea,\s*select)$/.test(m[1].trim()));
+  assert.ok(rule, 'expected a shared input, select, textarea rule in styles.css');
+  const sizeMatch = rule[2].match(/font-size:\s*(\d+(?:\.\d+)?)px/);
+  assert.ok(sizeMatch, 'expected an explicit font-size on the shared form-control rule');
+  assert.ok(parseFloat(sizeMatch[1]) >= 16, `public form controls must be at least 16px to avoid iOS zoom, found ${sizeMatch[1]}px`);
+});
+

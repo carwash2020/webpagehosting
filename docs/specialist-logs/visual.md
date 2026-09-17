@@ -3,6 +3,41 @@
 Started 2026-09-16, alongside the `tripleh-visual` skill. See `README.md` in
 this directory for how these logs work.
 
+## 2026-09-17 -- stats first-paint, 16px forms, directory landings
+
+Shipped the three morning-handoff quick wins as one PR. Rebased onto
+main after #269 (GA4 + trust CTAs) squash-merged. Real content did
+not overlap; the conflicts were `styles.css` `?v=` hashes and
+service-worker fingerprints. Regenerated those with `npm run
+fix-versions`.
+
+Stats: put 5.0 / 4 / 9 in the HTML text, not only in `data-count-to`.
+Count-up still exists but interpolates from the already-rendered
+final (and will not start a frame at 0 if the painted value is 0 or
+missing). Reduced motion / no-JS already had the finals; first paint
+did not. Did not raise any count and did not touch AggregateRating.
+
+Forms: one-line floor on the public `input, select, textarea` rule in
+`styles.css` (14.5px -> 16px). Email modal shares that rule. Same
+approach portal/booking already use.
+
+Directory URLs: GitHub Pages 404s `/portal/` and `/tools/` without
+`index.html`. Stubs redirect to the login pages. Dark FOUC treatment
+matches login (`background-color:#0a0a0a` + `color-scheme: dark`), no
+shared stylesheet load so they stay out of the stamp set. Tools
+index is noindex. Portal index matches current login robots
+(`noindex, nofollow`) -- the login.html comment still says the page
+is indexable, but the live tag and `portal-login-noindex.test.js`
+require noindex, and `robots.txt` already Disallows `/portal/`. Left
+login.html alone.
+
+`tools/index.html` is exempt from requireAuth/CSP/manifest checks (it
+is a redirect stub, like the retired contact-card page) and is in
+PRECACHE_URLS because the completeness checker requires every real
+tools HTML file. Portal stub is not in the portal precache list --
+that list is not a completeness scan, and a 0-second redirect is not
+app shell.
+
 ## 2026-09-17 -- compact trust line next to Book/Schedule CTAs
 
 Paired with the GA4 booking-events work the same day. Homepage hero
