@@ -168,6 +168,7 @@
   .invoice-status { font-size: 12px; padding: 3px 10px; border-radius: 20px; font-weight: 600; display: inline-block; }
   .invoice-status.is-paid { background: rgba(76,175,120,0.15); color: #4caf78; }
   .invoice-status.is-unpaid { background: rgba(255,167,38,0.15); color: #ffa726; }
+  .invoice-status.is-partial { background: rgba(255,128,0,0.15); color: #ff8000; }
   .empty-state { text-align: center; color: var(--text-dim); padding: 60px 20px; }
   /* Real dataviz (2026-09-07): a paid-vs-outstanding ring, computed from
      the same two totals the "Pay All Outstanding" button and the
@@ -364,6 +365,17 @@
     'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNzdmZxZGp1b2J5bGdhZmdvbGhvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODUzNTQ3MjcsImV4cCI6MjEwMDkzMDcyN30.6GlvK-DfXf2lppS1kciZtsl4wHOpZz_yKtwsS1lyjrs'
   );
 
+  // Same legacy-fallback shape as the internal Workspace's own invoice
+  // sync helper (deriveInvoicePaid()) and send-push-index.ts's
+  // getPaidAmount() -- an invoice row with no
+  // paid_amount at all (pre-migration, or a `paid` write path that
+  // hasn't been touched since) still reports its real paid amount via
+  // the `paid` boolean rather than silently reading as $0 paid.
+  function getPaidAmount(inv) {
+    if (inv.paid_amount !== undefined && inv.paid_amount !== null) return Number(inv.paid_amount) || 0;
+    return inv.paid ? (Number(inv.total) || 0) : 0;
+  }
+
   function formatCurrency(n) {
     return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(n);
   }
@@ -401,9 +413,12 @@
   const INVOICE_SUMMARY_RING_CIRCUMFERENCE = 2 * Math.PI * 30;
   function renderInvoiceSummary(invoices) {
     const el = document.getElementById('invoiceSummary');
-    const totalPaid = invoices.filter(inv => inv.paid).reduce((sum, inv) => sum + Number(inv.total || 0), 0);
-    const totalOutstanding = invoices.filter(inv => !inv.paid).reduce((sum, inv) => sum + Number(inv.total || 0), 0);
-    const grandTotal = totalPaid + totalOutstanding;
+    // Partial payments (2026-09-17): a half-paid invoice should credit
+    // its actual paid_amount toward the "Paid" total, not be bucketed
+    // as fully outstanding just because `paid` is still false.
+    const grandTotal = invoices.reduce((sum, inv) => sum + (Number(inv.total) || 0), 0);
+    const totalPaid = invoices.reduce((sum, inv) => sum + getPaidAmount(inv), 0);
+    const totalOutstanding = grandTotal - totalPaid;
     if (grandTotal <= 0) { el.style.display = 'none'; return; }
 
     const fraction = totalPaid / grandTotal;
@@ -452,9 +467,10 @@
       const amount = Number(inv.total) || 0;
       const barHeight = max > 0 ? (amount / max) * CHART_BAR_MAX_HEIGHT : 0;
       const y = CHART_BASELINE_Y - barHeight;
-      const color = inv.paid ? '#4caf78' : '#ffa726';
+      const isPartial = !inv.paid && getPaidAmount(inv) > 0;
+      const color = inv.paid ? '#4caf78' : (isPartial ? '#ff8000' : '#ffa726');
       const dateLabel = new Intl.DateTimeFormat('en-US', { month: 'numeric', day: 'numeric' }).format(new Date(inv.invoice_date + 'T00:00:00'));
-      const statusWord = inv.paid ? 'Paid' : 'Unpaid';
+      const statusWord = inv.paid ? 'Paid' : (isPartial ? 'Partial' : 'Unpaid');
       return `
         <g class="invoice-chart-bar-group" tabindex="0" role="button"
            aria-label="${escapeHtml(inv.invoice_number)}, ${formatCurrency(amount)}, ${statusWord}, ${escapeHtml(dateLabel)}"
@@ -491,7 +507,24 @@
     el.classList.add('is-highlighted');
   }
 
+  // Partial payments (2026-09-17): `paid` alone no longer tells the
+  // whole story -- an invoice can be unpaid, partially paid, or fully
+  // paid. isPartial is the one place this page decides that (paid_amount
+  // > 0 but paid is still false), so the card, the ring, and the chart
+  // all agree on the same definition.
+  function invoiceRemainingCents(inv) {
+    const totalCents = Math.round((Number(inv.total) || 0) * 100);
+    const paidCents = Math.round(getPaidAmount(inv) * 100);
+    return Math.max(totalCents - paidCents, 0);
+  }
+
   function renderInvoiceCard(inv) {
+    const paidAmount = getPaidAmount(inv);
+    const total = Number(inv.total) || 0;
+    const remaining = invoiceRemainingCents(inv) / 100;
+    const isPartial = !inv.paid && paidAmount > 0;
+    const statusWord = inv.paid ? 'Paid' : (isPartial ? 'Partial' : 'Unpaid');
+    const statusClass = inv.paid ? 'is-paid' : (isPartial ? 'is-partial' : 'is-unpaid');
     return `
       <div class="invoice-card" id="invoice-card-${inv.id}">
         <div class="invoice-card-top">
@@ -501,15 +534,17 @@
             <div class="invoice-desc">${formatDate(inv.invoice_date)}</div>
           </div>
           <div style="text-align:right;">
-            <div class="invoice-total">${formatCurrency(inv.total)}</div>
-            <span class="invoice-status ${inv.paid ? 'is-paid' : 'is-unpaid'}">${inv.paid ? 'Paid' : 'Unpaid'}</span>
+            <div class="invoice-total">${formatCurrency(isPartial ? remaining : total)}</div>
+            ${isPartial ? `<div class="invoice-desc">of ${formatCurrency(total)} total &middot; ${formatCurrency(paidAmount)} paid</div>` : ''}
+            <span class="invoice-status ${statusClass}">${statusWord}</span>
             ${inv.paid && inv.paid_at ? `<div class="invoice-desc" style="margin-top:4px;">${formatDate(inv.paid_at.slice(0, 10))}</div>` : ''}
           </div>
         </div>
         ${renderLineItemsTable(inv.line_items)}
-        <div style="display:flex; gap:8px; margin-top:8px;">
-          ${!inv.paid ? `<button class="btn blue" style="flex:1; justify-content:center;" onclick="startPayment(${inv.id})">Pay now</button>` : ''}
-          <button class="btn secondary-btn" style="${inv.paid ? 'width:100%;' : 'flex:1;'} justify-content:center;" onclick="downloadInvoicePDF(${inv.id})">${inv.paid ? 'Download Receipt' : 'Download PDF'}</button>
+        <div style="display:flex; gap:8px; margin-top:8px; flex-wrap:wrap;">
+          ${!inv.paid ? `<button class="btn blue" style="flex:1; justify-content:center;" onclick="startPayment(${inv.id})">Pay ${isPartial ? 'remaining balance' : 'now'}</button>` : ''}
+          ${!inv.paid ? `<button class="btn secondary-btn" style="flex:1; justify-content:center;" onclick="openPartialAmountPrompt(${inv.id})">Pay a different amount</button>` : ''}
+          <button class="btn secondary-btn" style="${inv.paid ? 'width:100%;' : 'flex-basis:100%;'} justify-content:center;" onclick="downloadInvoicePDF(${inv.id})">${inv.paid ? 'Download Receipt' : 'Download PDF'}</button>
         </div>
       </div>
     `;
@@ -575,6 +610,15 @@
     // already settled to find it.
     const outstanding = invoices.filter(inv => !inv.paid);
     const paid = invoices.filter(inv => inv.paid);
+    // Partial payments (2026-09-17): create-bulk-payment-intent always
+    // charges every covered invoice's FULL total and now explicitly
+    // rejects a batch containing one that already has a partial
+    // payment (that would double-charge the part already paid) -- so
+    // this button must only ever offer invoices with nothing paid on
+    // them yet, not every "outstanding" (not-yet-fully-paid) invoice.
+    // A partially-paid invoice still gets its own "Pay now" / "Pay a
+    // different amount" buttons on its card, just not this combined one.
+    const bulkEligible = outstanding.filter(inv => !(getPaidAmount(inv) > 0));
 
     let html = '';
     if (outstanding.length) {
@@ -583,9 +627,9 @@
       // combine -- a single outstanding invoice already has its own
       // "Pay now" button right on the card, so a second button doing
       // the exact same thing would just be visual noise.
-      if (outstanding.length > 1) {
-        const outstandingTotal = outstanding.reduce((sum, inv) => sum + Number(inv.total || 0), 0);
-        html += `<button class="btn orange" style="width:100%; justify-content:center; margin-bottom:12px;" onclick="startBulkPayment([${outstanding.map(inv => inv.id).join(',')}])">Pay All Outstanding (${formatCurrency(outstandingTotal)})</button>`;
+      if (bulkEligible.length > 1) {
+        const outstandingTotal = bulkEligible.reduce((sum, inv) => sum + Number(inv.total || 0), 0);
+        html += `<button class="btn orange" style="width:100%; justify-content:center; margin-bottom:12px;" onclick="startBulkPayment([${bulkEligible.map(inv => inv.id).join(',')}])">Pay All Outstanding (${formatCurrency(outstandingTotal)})</button>`;
       }
       html += outstanding.map(renderInvoiceCard).join('');
     }
@@ -643,6 +687,16 @@
     const inv = currentInvoices.find(i => i.id === invoiceId);
     if (!inv) return;
     if (!window.jspdf) { showToast('Still finishing loading. Give it a second and try again.', { type: 'error' }); return; }
+    // Partial payments (2026-09-17): every branch below that checks
+    // `inv.paid` (the RECEIPT/INVOICE header, the PAID stamp, the
+    // Payment Details box) stays gated on that exact boolean, on
+    // purpose -- a partial payment is not a receipt, and stamping
+    // "PAID"/drawing the green seal on an invoice that still has a
+    // balance due would be a real, visible correctness bug. Only the
+    // STATUS line and the TOTAL figure need a third, PARTIAL-aware case.
+    const paidAmount = getPaidAmount(inv);
+    const remaining = invoiceRemainingCents(inv) / 100;
+    const isPartial = !inv.paid && paidAmount > 0;
 
     const { jsPDF } = window.jspdf;
     const doc = new jsPDF({ unit: 'pt', format: 'letter' });
@@ -719,7 +773,7 @@
     doc.text(formatDate(inv.invoice_date), 40 + 150, y + 14);
     if (inv.paid) { doc.setTextColor(...GREEN); doc.setFont('helvetica', 'bold'); }
     else { doc.setTextColor(...ORANGE); doc.setFont('helvetica', 'bold'); }
-    doc.text(inv.paid ? 'PAID' : 'UNPAID', 40 + 300, y + 14);
+    doc.text(inv.paid ? 'PAID' : (isPartial ? 'PARTIAL' : 'UNPAID'), 40 + 300, y + 14);
 
     y += 40;
     doc.setFont('helvetica', 'bold'); doc.setFontSize(9); doc.setTextColor(...ORANGE_DARK);
@@ -800,9 +854,15 @@
     if (inv.paid) y = Math.max(y, 255);
 
     doc.setFont('helvetica', 'bold'); doc.setFontSize(14); doc.setTextColor(20, 20, 20);
-    doc.text(inv.paid ? 'TOTAL PAID' : 'TOTAL DUE', pageW - 220, y);
+    doc.text(inv.paid ? 'TOTAL PAID' : (isPartial ? 'AMOUNT DUE' : 'TOTAL DUE'), pageW - 220, y);
     doc.setTextColor(...(inv.paid ? GREEN : ORANGE));
-    doc.text('$' + Number(inv.total || 0).toFixed(2), pageW - 40, y, { align: 'right' });
+    doc.text('$' + (isPartial ? remaining : Number(inv.total || 0)).toFixed(2), pageW - 40, y, { align: 'right' });
+
+    if (isPartial) {
+      y += 16;
+      doc.setFont('helvetica', 'normal'); doc.setFontSize(9); doc.setTextColor(...GRAY);
+      doc.text(`Paid to date: $${paidAmount.toFixed(2)} of $${Number(inv.total || 0).toFixed(2)}`, pageW - 40, y, { align: 'right' });
+    }
 
     y += 30;
     // Payment Details box (2026-09-02), requested directly as part of
@@ -872,7 +932,13 @@
     if (e.key === 'Escape') closePaymentModal();
   });
 
-  async function startPayment(invoiceId, signerName) {
+  // amountCents is optional (2026-09-17, partial payments) -- omitted
+  // means "pay the full remaining balance," exactly today's existing
+  // behavior. When provided (from openPartialAmountPrompt() below),
+  // it's forwarded as-is; create-payment-intent does the real
+  // validation/clamping server-side, this is never trusted as the
+  // actual charge amount on its own.
+  async function startPayment(invoiceId, signerName, amountCents) {
     openPaymentModal();
     document.getElementById('paymentModalBody').innerHTML = '<div class="empty-state">Loading...</div>';
 
@@ -886,7 +952,7 @@
           'apikey': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNzdmZxZGp1b2J5bGdhZmdvbGhvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODUzNTQ3MjcsImV4cCI6MjEwMDkzMDcyN30.6GlvK-DfXf2lppS1kciZtsl4wHOpZz_yKtwsS1lyjrs',
           'Authorization': `Bearer ${session.access_token}`,
         },
-        body: JSON.stringify({ invoice_id: invoiceId, signer_name: signerName || undefined }),
+        body: JSON.stringify({ invoice_id: invoiceId, signer_name: signerName || undefined, amount_cents: amountCents || undefined }),
       }
     );
     const result = await res.json();
@@ -900,7 +966,7 @@
       // then this exact same function is called again with the name
       // that was typed.
       if (result.needs_signature) {
-        renderPaymentSignatureStep(invoiceId);
+        renderPaymentSignatureStep(invoiceId, amountCents);
         return;
       }
       document.getElementById('paymentModalBody').innerHTML = `<div class="empty-state">${escapeHtml(result.error || 'Something went wrong.')}</div>`;
@@ -909,25 +975,56 @@
     mountPaymentUI(result.client_secret);
   }
 
-  function renderPaymentSignatureStep(invoiceId) {
+  function renderPaymentSignatureStep(invoiceId, amountCents) {
+    // The signed authorization must say what's actually about to be
+    // charged today -- for a partial payment that's amountCents, not
+    // the invoice's full total (matches create-payment-intent's own
+    // server-side wording, which is the authoritative copy on file).
     const inv = currentInvoices.find(i => i.id === invoiceId);
-    const amountLabel = inv ? '$' + Number(inv.total).toFixed(2) : 'the invoice total';
+    const amountLabel = amountCents
+      ? '$' + (amountCents / 100).toFixed(2)
+      : (inv ? '$' + (invoiceRemainingCents(inv) / 100).toFixed(2) : 'the invoice total');
     document.getElementById('paymentModalBody').innerHTML =
       '<div class="pay-auth-box">' +
       '<p class="pay-auth-text">I, <span id="paySignerNamePreview">_____________</span>, authorize Triple H Enterprises to charge ' + amountLabel + ' for this invoice, and to securely save this card on file for future charges I separately approve.</p>' +
       '<label for="paySignerName" class="pay-auth-label">Type your full legal name to continue</label>' +
       '<input type="text" id="paySignerName" placeholder="Full name" oninput="document.getElementById(\'paySignerNamePreview\').textContent = this.value.trim() || \'_____________\';">' +
       '</div>' +
-      '<button class="btn blue" id="payAuthContinueBtn" style="width:100%; justify-content:center; margin-top:14px;" onclick="submitPaymentSignature(' + invoiceId + ')">Continue to Payment</button>';
+      '<button class="btn blue" id="payAuthContinueBtn" style="width:100%; justify-content:center; margin-top:14px;" onclick="submitPaymentSignature(' + invoiceId + ', ' + (amountCents || 'undefined') + ')">Continue to Payment</button>';
   }
 
-  function submitPaymentSignature(invoiceId) {
+  function submitPaymentSignature(invoiceId, amountCents) {
     const signerName = (document.getElementById('paySignerName')?.value || '').trim();
     if (!signerName) {
       showToast('Please type your full name to continue.', { type: 'error' });
       return;
     }
-    startPayment(invoiceId, signerName);
+    startPayment(invoiceId, signerName, amountCents);
+  }
+
+  // "Pay a different amount" (2026-09-17, partial payments) -- a plain
+  // prompt() rather than a custom modal input, matching this codebase's
+  // existing convention for a one-field number entry (see
+  // workspace.html's togglePaid()). Client-side bounds here are UX
+  // only, to fail fast with a clear message instead of a round trip --
+  // create-payment-intent enforces the real min/max server-side and is
+  // the only thing that actually decides what gets charged.
+  function openPartialAmountPrompt(invoiceId) {
+    const inv = currentInvoices.find(i => i.id === invoiceId);
+    if (!inv) return;
+    const remaining = invoiceRemainingCents(inv) / 100;
+    const input = prompt(`How much would you like to pay toward this $${remaining.toFixed(2)} balance? (Minimum $1.00)`, remaining.toFixed(2));
+    if (input === null) return; // cancelled
+    const amount = parseFloat(input);
+    if (isNaN(amount) || amount < 1) {
+      showToast('Enter a valid amount of at least $1.00.', { type: 'error' });
+      return;
+    }
+    if (amount > remaining) {
+      showToast(`That's more than the $${remaining.toFixed(2)} remaining balance.`, { type: 'error' });
+      return;
+    }
+    startPayment(invoiceId, undefined, Math.round(amount * 100));
   }
 
   // Pay All Outstanding (2026-09-02) -- combines every unpaid invoice

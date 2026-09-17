@@ -56,19 +56,22 @@ test('the existing customer id is reused rather than looked up twice when a sign
 // ---- frontend ----
 
 test('startPayment shows the signature step on needs_signature, rather than a generic error message', () => {
-  const fnMatch = DASHBOARD.match(/async function startPayment\(invoiceId, signerName\)[\s\S]*?\n  \}\n/);
+  // amountCents (2026-09-17, partial payments) -- optional third
+  // parameter, forwarded through to the signature step so a partial
+  // payment's authorization text matches what's actually being charged.
+  const fnMatch = DASHBOARD.match(/async function startPayment\(invoiceId, signerName, amountCents\)[\s\S]*?\n  \}\n/);
   assert.ok(fnMatch, 'expected to isolate startPayment()');
   const body = fnMatch[0];
-  assert.match(body, /if \(result\.needs_signature\) \{[\s\S]*?renderPaymentSignatureStep\(invoiceId\);/);
+  assert.match(body, /if \(result\.needs_signature\) \{[\s\S]*?renderPaymentSignatureStep\(invoiceId, amountCents\);/);
 });
 
 test('submitting the signature retries the exact same payment flow with the typed name included', () => {
-  assert.match(DASHBOARD, /function submitPaymentSignature\(invoiceId\)/);
-  assert.match(DASHBOARD, /startPayment\(invoiceId, signerName\);/);
+  assert.match(DASHBOARD, /function submitPaymentSignature\(invoiceId, amountCents\)/);
+  assert.match(DASHBOARD, /startPayment\(invoiceId, signerName, amountCents\);/);
 });
 
 test('an empty signature is rejected client-side before ever retrying the request', () => {
-  const fnMatch = DASHBOARD.match(/function submitPaymentSignature\(invoiceId\)[\s\S]*?\n  \}\n/);
+  const fnMatch = DASHBOARD.match(/function submitPaymentSignature\(invoiceId, amountCents\)[\s\S]*?\n  \}\n/);
   assert.ok(fnMatch);
   assert.match(fnMatch[0], /if \(!signerName\) \{[\s\S]*?return;/);
 });

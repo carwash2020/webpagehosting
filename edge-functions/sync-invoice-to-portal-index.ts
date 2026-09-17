@@ -40,6 +40,15 @@ function decodeJwtPayload(token: string): { email?: string; role?: string } {
   }
 }
 
+// Partial payments (2026-09-17): duplicated from tools/sync.js's own
+// deriveInvoicePaid() -- see that function's header comment for the
+// full 2026-09-16 bug this guards against. Must stay byte-for-byte
+// equivalent; there's no shared-module system across this project's
+// edge functions/internal tools to import it from instead.
+function derivePaidFromCents(totalCents: number, paidCents: number): boolean {
+  return totalCents > 0 && paidCents >= totalCents;
+}
+
 // Granular permission expansion (2026-09-02): reads can_manage_invoices
 // directly off account_roles -- matches invoice-generator.html's own
 // gate exactly (Invoices & Quotes both live in that one tool).
@@ -84,6 +93,7 @@ Deno.serve(async (req: Request) => {
     const {
       source_invoice_id, client_email, client_name,
       invoice_number, invoice_date, description, total, line_items,
+      paid_amount,
     } = body;
 
     if (
@@ -102,6 +112,22 @@ Deno.serve(async (req: Request) => {
     if (line_items !== undefined && line_items !== null && !Array.isArray(line_items)) {
       return json({ ok: false, error: "line_items must be an array if provided." }, 400);
     }
+    // paid_amount is optional -- an older caller that never sends it
+    // leaves this row's payment fields untouched by the upsert below
+    // (see the comment there), so a plain content re-sync (a client
+    // fixing a typo'd description, say) can never accidentally reset a
+    // client's already-recorded Stripe payment progress. When a caller
+    // DOES send it (workspace.html forwarding a manual partial-payment
+    // toggle), `paid` is always DERIVED here from paid_amount vs total
+    // -- never accepted directly from the caller -- using the same
+    // whole-cents comparison tools/sync.js's deriveInvoicePaid() uses,
+    // so this function can never write an inconsistent (paid,
+    // paid_amount) pair onto client_portal_invoices regardless of what
+    // it's sent (see that helper's own comment for the 2026-09-16 bug
+    // this guards against).
+    if (paid_amount !== undefined && paid_amount !== null && typeof paid_amount !== "number") {
+      return json({ ok: false, error: "paid_amount must be a number if provided." }, 400);
+    }
 
     const normalizedEmail = client_email.toLowerCase().trim();
 
@@ -119,6 +145,29 @@ Deno.serve(async (req: Request) => {
     const existingInvoiceRows = existingInvoiceRes.ok ? await existingInvoiceRes.json() : [];
     const isNewInvoice = existingInvoiceRows.length === 0;
 
+    const upsertRow: Record<string, unknown> = {
+      source_invoice_id,
+      client_email: normalizedEmail,
+      client_name,
+      invoice_number,
+      invoice_date,
+      description: description || null,
+      total,
+      line_items: line_items || null,
+      updated_at: new Date().toISOString(),
+    };
+    // Only included when the caller actually sent it -- an omitted
+    // paid_amount leaves this row's existing payment fields (whatever
+    // Stripe/set-invoice-paid last recorded) untouched by this upsert,
+    // rather than this function's own missing knowledge of them
+    // silently resetting progress to 0.
+    if (typeof paid_amount === "number") {
+      const totalCents = Math.round(Number(total) * 100);
+      const paidCents = Math.round(paid_amount * 100);
+      upsertRow.paid_amount = paid_amount;
+      upsertRow.paid = derivePaidFromCents(totalCents, paidCents);
+    }
+
     const upsertRes = await fetch(
       `${SUPABASE_URL}/rest/v1/client_portal_invoices?on_conflict=source_invoice_id`,
       {
@@ -129,17 +178,7 @@ Deno.serve(async (req: Request) => {
           "Content-Type": "application/json",
           Prefer: "resolution=merge-duplicates",
         },
-        body: JSON.stringify([{
-          source_invoice_id,
-          client_email: normalizedEmail,
-          client_name,
-          invoice_number,
-          invoice_date,
-          description: description || null,
-          total,
-          line_items: line_items || null,
-          updated_at: new Date().toISOString(),
-        }]),
+        body: JSON.stringify([upsertRow]),
       },
     );
 

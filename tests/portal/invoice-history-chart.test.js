@@ -70,6 +70,10 @@ function makeChartSandbox(prebuiltCardIds = []) {
   const highlightFn = extractFn(DASHBOARD, 'highlightInvoiceCard');
   const escapeHtmlFn = extractFn(DASHBOARD, 'escapeHtml');
   const formatCurrencyFn = extractFn(DASHBOARD, 'formatCurrency');
+  // getPaidAmount (2026-09-17, partial payments) -- renderInvoiceChart
+  // now calls this to decide the Partial color/status word, same
+  // legacy-fallback helper the ring test injects too.
+  const getPaidAmountFn = extractFn(DASHBOARD, 'getPaidAmount');
   vm.runInContext(`
     const CHART_BAR_WIDTH = 22;
     const CHART_COLUMN_WIDTH = 46;
@@ -79,6 +83,7 @@ function makeChartSandbox(prebuiltCardIds = []) {
     ${formatCurrencyFn}
     ${escapeHtmlFn}
     ${niceMaxFn}
+    ${getPaidAmountFn}
     ${renderFn}
     ${highlightFn}
   `, sandbox);

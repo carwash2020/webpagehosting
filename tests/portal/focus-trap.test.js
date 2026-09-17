@@ -197,7 +197,8 @@ test('dashboard.html: the payment modal traps focus and closes on Escape, with e
   // and the post-payment auto-close) must go through the two shared
   // functions above rather than flipping the class directly, so the
   // trap is never silently skipped on some paths but not others.
-  assert.match(DASHBOARD, /async function startPayment\(invoiceId, signerName\) \{\s*\n\s*openPaymentModal\(\);/);
+  // amountCents (2026-09-17, partial payments) -- optional third parameter.
+  assert.match(DASHBOARD, /async function startPayment\(invoiceId, signerName, amountCents\) \{\s*\n\s*openPaymentModal\(\);/);
   assert.match(DASHBOARD, /async function startBulkPayment\(invoiceIds, signerName\) \{\s*\n\s*openPaymentModal\(\);/);
   assert.match(DASHBOARD, /class="payment-modal-close" onclick="closePaymentModal\(\)"/);
   assert.match(DASHBOARD, /setTimeout\(\(\) => \{\s*\n\s*closePaymentModal\(\);/);

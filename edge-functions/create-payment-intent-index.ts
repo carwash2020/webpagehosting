@@ -183,7 +183,7 @@ Deno.serve(async (req: Request) => {
       return json({ ok: false, error: "STRIPE_SECRET_KEY secret is not set yet -- add it in the Supabase dashboard under Edge Functions -> Secrets." }, 500);
     }
 
-    const { invoice_id, signer_name } = await req.json();
+    const { invoice_id, signer_name, amount_cents } = await req.json();
     if (typeof invoice_id !== "number") {
       return json({ ok: false, error: "Missing invoice_id." }, 400);
     }
@@ -194,7 +194,7 @@ Deno.serve(async (req: Request) => {
     // operation, since it also needs to write stripe_payment_intent_id
     // back onto the row a moment later regardless).
     const invoiceRes = await fetch(
-      `${SUPABASE_URL}/rest/v1/client_portal_invoices?id=eq.${invoice_id}&select=id,client_email,total,paid`,
+      `${SUPABASE_URL}/rest/v1/client_portal_invoices?id=eq.${invoice_id}&select=id,client_email,total,paid,paid_amount`,
       { headers: { apikey: SERVICE_ROLE_KEY, Authorization: `Bearer ${SERVICE_ROLE_KEY}` } },
     );
     if (!invoiceRes.ok) {
@@ -213,14 +213,43 @@ Deno.serve(async (req: Request) => {
     if (invoice.client_email.toLowerCase() !== claims.email.toLowerCase()) {
       return json({ ok: false, error: "That invoice doesn't belong to this account." }, 403);
     }
-    if (invoice.paid) {
+    // Partial payments (2026-09-17): remainingCents, not the `paid`
+    // boolean, is the real source of truth for "can this invoice still
+    // be paid" and "how much can be charged" -- `paid` is only ever a
+    // derived label. Stripe amounts are in the smallest currency unit
+    // (cents for USD) -- Math.round guards against a floating-point
+    // total like 19.999999999998 ever becoming a rejected, non-integer
+    // amount.
+    const totalCents = Math.round(Number(invoice.total) * 100);
+    const alreadyPaidCents = Math.round(Number(invoice.paid_amount || 0) * 100);
+    const remainingCents = totalCents - alreadyPaidCents;
+    if (remainingCents <= 0) {
       return json({ ok: false, error: "This invoice is already paid." }, 400);
     }
 
-    // Stripe amounts are in the smallest currency unit (cents for
-    // USD) -- Math.round guards against a floating-point total like
-    // 19.999999999998 ever becoming a rejected, non-integer amount.
-    const amountCents = Math.round(Number(invoice.total) * 100);
+    // amount_cents is optional -- omitted (the existing "Pay now"
+    // behavior) means pay the full remaining balance. When provided,
+    // the server computes and clamps the actual amount charged; a
+    // client-supplied figure is only ever used after this validation,
+    // never trusted directly as the Stripe `amount` param, so a
+    // manipulated request can never charge more than what's really
+    // owed. $1.00 minimum is a product-level floor above Stripe's own
+    // $0.50 USD minimum.
+    const MIN_PARTIAL_PAYMENT_CENTS = 100;
+    let amountCents = remainingCents;
+    if (amount_cents !== undefined && amount_cents !== null) {
+      if (!Number.isInteger(amount_cents) || amount_cents <= 0) {
+        return json({ ok: false, error: "Invalid payment amount." }, 400);
+      }
+      if (amount_cents < MIN_PARTIAL_PAYMENT_CENTS) {
+        return json({ ok: false, error: "Minimum payment is $1.00." }, 400);
+      }
+      if (amount_cents > remainingCents) {
+        return json({ ok: false, error: `Amount exceeds the remaining balance of $${(remainingCents / 100).toFixed(2)}.` }, 400);
+      }
+      amountCents = amount_cents;
+    }
+    const isPartialPayment = amountCents < remainingCents;
 
     // Signature required only when this client is about to have a
     // NEW card saved -- if they already have one on file, Stripe's
@@ -236,7 +265,13 @@ Deno.serve(async (req: Request) => {
       if (typeof signer_name !== "string" || !signer_name.trim()) {
         return json({ ok: false, needs_signature: true, error: "A signed name is required before saving a new card." }, 400);
       }
-      const authorizationText = `I, ${signer_name.trim()}, authorize Triple H Enterprises to charge $${(amountCents / 100).toFixed(2)} for Invoice #${invoice.id}, and to securely save this card on file (via Stripe) for future charges I separately approve.`;
+      // A partial payment gets its own honest wording -- a signed
+      // authorization record is real dispute evidence, so it must say
+      // what's actually being charged today, not the invoice's full
+      // total, when the two differ.
+      const authorizationText = isPartialPayment
+        ? `I, ${signer_name.trim()}, authorize Triple H Enterprises to charge $${(amountCents / 100).toFixed(2)} toward Invoice #${invoice.id} (of a $${(remainingCents / 100).toFixed(2)} remaining balance), and to securely save this card on file (via Stripe) for future charges I separately approve.`
+        : `I, ${signer_name.trim()}, authorize Triple H Enterprises to charge $${(amountCents / 100).toFixed(2)} for Invoice #${invoice.id}, and to securely save this card on file (via Stripe) for future charges I separately approve.`;
       await recordCardAuthorization(claims.email, signer_name.trim(), authorizationText, amountCents / 100, invoice.id);
     }
 

@@ -12,8 +12,17 @@ const path = require('path');
 const PAGE_PATH = path.join(__dirname, '..', '..', 'portal', 'dashboard.html');
 const html = fs.readFileSync(PAGE_PATH, 'utf8');
 
-test('the Pay All Outstanding button only appears with 2+ unpaid invoices', () => {
-  assert.match(html, /if \(outstanding\.length > 1\) \{/);
+test('the Pay All Outstanding button only appears with 2+ bulk-eligible (fully unpaid) invoices', () => {
+  // Partial payments (2026-09-17) narrowed "outstanding" (not fully
+  // paid) to "bulkEligible" (nothing paid on it at all) for this
+  // specific button -- create-bulk-payment-intent always charges
+  // every covered invoice's FULL total and now rejects a batch
+  // containing one with an existing partial payment, so offering it
+  // here for a partially-paid invoice would just produce a 400 from
+  // the server. A partial invoice still gets its own per-card "Pay
+  // now"/"Pay a different amount" buttons.
+  assert.match(html, /if \(bulkEligible\.length > 1\) \{/);
+  assert.match(html, /const bulkEligible = outstanding\.filter\(inv => !\(getPaidAmount\(inv\) > 0\)\);/);
 });
 
 test('startPayment and startBulkPayment share the same Stripe Elements mount/confirm logic', () => {
@@ -25,8 +34,8 @@ test('startPayment and startBulkPayment share the same Stripe Elements mount/con
   assert.equal(mountCalls.length, 2, 'expected exactly two call sites: startPayment and startBulkPayment');
 });
 
-test('the bulk button passes every outstanding invoice id, not a hardcoded subset', () => {
-  assert.match(html, /startBulkPayment\(\[\$\{outstanding\.map\(inv => inv\.id\)\.join\(','\)\}\]\)/);
+test('the bulk button passes every bulk-eligible invoice id, not a hardcoded subset', () => {
+  assert.match(html, /startBulkPayment\(\[\$\{bulkEligible\.map\(inv => inv\.id\)\.join\(','\)\}\]\)/);
 });
 
 test('startBulkPayment calls create-bulk-payment-intent, never a direct table write', () => {

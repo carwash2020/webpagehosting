@@ -136,6 +136,34 @@ click a setting by hand.
     `send-push` → Delete, or `supabase functions delete send-push` from a
     machine that has the CLI and project access.
 
+11. **Apply the partial-payments migration and deploy 6 updated edge
+    functions** (2026-09-17) -- built, tested (2221 tests passing,
+    plus consistency/undefined-vars/link checks), and staged in a PR,
+    but NOT applied or deployed by this session on purpose (schema
+    migrations and edge-function deploys need a human decision, not an
+    automatic one). Once reviewed:
+    - Run `sql/portal/add_partial_invoice_payments.sql` (adds
+      `client_portal_invoices.paid_amount`, backfills it for every
+      already-paid invoice, and creates the new
+      `client_portal_invoice_payments` payment ledger table).
+    - Deploy the updated `create-payment-intent`, `stripe-webhook`,
+      `create-bulk-payment-intent`, `reconcile-stripe-payments`,
+      `sync-invoice-to-portal`, and `set-invoice-paid` edge functions
+      (all in `edge-functions/`).
+    - Order matters: apply the migration FIRST, then deploy the
+      functions -- `create-payment-intent` and `stripe-webhook` both
+      read/write the new `paid_amount` column and the new ledger
+      table, so deploying them before the migration exists would 500
+      on every real payment. The frontend (`portal/dashboard.html`,
+      already live once this PR merges) degrades gracefully either way
+      -- every place it reads `paid_amount` falls back to treating it
+      as 0/absent, so nothing breaks visibly before the migration
+      lands, it just won't show partial-payment progress yet.
+    - See `docs/specialist-logs/features.md`'s 2026-09-17 entry for
+      the full design writeup and the real risk this was built
+      carefully around (the exact paid/paidAmount inconsistency class
+      of bug from the day before, see `bugfix.md`'s 2026-09-16 entry).
+
 <!-- Add new manual action items above this line -->
 
 ## SEO action items (need a human, outside of code)

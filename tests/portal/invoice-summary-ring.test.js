@@ -41,6 +41,11 @@ function makeEl() {
 function loadRenderInvoiceSummary() {
   const circumferenceLine = DASHBOARD.match(/const INVOICE_SUMMARY_RING_CIRCUMFERENCE = [^;]+;/)[0];
   const fnSrc = extractFn(DASHBOARD, 'renderInvoiceSummary');
+  // getPaidAmount (2026-09-17, partial payments) -- renderInvoiceSummary
+  // now credits each invoice's real paid_amount (falling back to the
+  // legacy paid ? total : 0 shape) toward the paid total, rather than
+  // treating a partially-paid invoice as fully outstanding.
+  const getPaidAmountFn = extractFn(DASHBOARD, 'getPaidAmount');
   const els = {
     invoiceSummary: makeEl(),
     invoiceSummaryRingFill: makeEl(),
@@ -54,7 +59,7 @@ function loadRenderInvoiceSummary() {
     formatCurrency: (n) => new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(n),
   };
   vm.createContext(ctx);
-  vm.runInContext(`${circumferenceLine}\n${fnSrc}\nthis.renderInvoiceSummary = renderInvoiceSummary;`, ctx);
+  vm.runInContext(`${circumferenceLine}\n${getPaidAmountFn}\n${fnSrc}\nthis.renderInvoiceSummary = renderInvoiceSummary;`, ctx);
   return { renderInvoiceSummary: ctx.renderInvoiceSummary, els };
 }
 

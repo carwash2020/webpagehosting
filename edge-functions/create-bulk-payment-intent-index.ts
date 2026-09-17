@@ -153,7 +153,7 @@ Deno.serve(async (req: Request) => {
 
     const idList = invoice_ids.join(",");
     const invoicesRes = await fetch(
-      `${SUPABASE_URL}/rest/v1/client_portal_invoices?id=in.(${idList})&select=id,client_email,total,paid`,
+      `${SUPABASE_URL}/rest/v1/client_portal_invoices?id=in.(${idList})&select=id,client_email,total,paid,paid_amount`,
       { headers: { apikey: SERVICE_ROLE_KEY, Authorization: `Bearer ${SERVICE_ROLE_KEY}` } },
     );
     if (!invoicesRes.ok) {
@@ -174,6 +174,20 @@ Deno.serve(async (req: Request) => {
     const alreadyPaid = invoices.find((inv: any) => inv.paid);
     if (alreadyPaid) {
       return json({ ok: false, error: "One or more of those invoices is already paid." }, 400);
+    }
+    // Partial payments (2026-09-17) stay single-invoice only for now --
+    // this function still always charges every covered invoice's FULL
+    // total (see totalAmount below), by deliberate design (a
+    // proportional/partial bulk-payment allocation is a genuinely
+    // separate feature, not something to improvise here). That means
+    // it must reject a batch containing an invoice that already has a
+    // partial payment on it -- charging the full total again would
+    // double-charge the part already paid. The client pays that one
+    // invoice individually (where the remaining-balance math already
+    // accounts for paid_amount) instead.
+    const alreadyPartiallyPaid = invoices.find((inv: any) => Number(inv.paid_amount || 0) > 0);
+    if (alreadyPartiallyPaid) {
+      return json({ ok: false, error: "One or more of those invoices already has a partial payment -- pay that invoice individually first." }, 400);
     }
 
     const totalAmount = invoices.reduce((sum: number, inv: any) => sum + Number(inv.total), 0);

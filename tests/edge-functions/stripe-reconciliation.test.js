@@ -29,8 +29,28 @@ test('it extracts invoice ids from both the single-invoice and bulk-payment meta
   assert.match(fnMatch[0], /metadata\.client_portal_invoice_ids\b/);
 });
 
-test('an invoice already marked paid is skipped entirely -- only a genuine mismatch (Stripe succeeded, portal still unpaid) triggers an alert', () => {
-  assert.match(RECONCILE, /if \(invoice\.paid\) continue; \/\/ already reconciled, nothing to alert about/);
+// Partial payments (2026-09-17) replaced the plain `invoice.paid`
+// check here: a correctly-processed partial payment leaves
+// `paid: false` by design, and checking the boolean alone would have
+// this cron nudge Steve every day about a "missed" payment that was
+// never missed. The real question is whether THIS specific succeeded
+// PaymentIntent was ever recorded against THIS invoice in the ledger
+// stripe-webhook writes to.
+test('a mismatch is decided from the client_portal_invoice_payments ledger, not the invoice.paid boolean', () => {
+  assert.doesNotMatch(RECONCILE, /if \(invoice\.paid\) continue;/);
+  assert.match(RECONCILE, /client_portal_invoice_payments\?invoice_id=in\./);
+  assert.match(RECONCILE, /if \(recordedPairs\.has\(`\$\{invoice\.id\}:\$\{pi\.id\}`\)\) continue; \/\/ already reconciled, nothing to alert about/);
+});
+
+test('a legitimate partial payment (ledger has this exact PaymentIntent recorded, invoice still unpaid) does not trigger a false mismatch alert', () => {
+  // The mismatch loop only ever alerts on a (invoice, pi) pair that is
+  // NOT in recordedPairs -- a partial payment's own PaymentIntent IS
+  // recorded there the moment stripe-webhook processes it, same as a
+  // full payment's, so it's excluded by the same check regardless of
+  // whether the invoice ever reaches paid: true.
+  const fnMatch = RECONCILE.match(/const recordedPairs = new Set[\s\S]*?mismatchCount\+\+;/);
+  assert.ok(fnMatch, 'expected to isolate the mismatch-detection block');
+  assert.doesNotMatch(fnMatch[0], /invoice\.paid/);
 });
 
 test('a discrepancy is deduplicated through notification_log, so the same unresolved mismatch does not spam a fresh alert on every single run', () => {

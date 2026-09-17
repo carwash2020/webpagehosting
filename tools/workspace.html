@@ -1668,6 +1668,37 @@
     // Best-effort relational mirror (code-health pass, 2026-09-08) -- see
     // sync.js's RELATIONAL MIRROR section. Never blocks or throws back here.
     if (typeof mirrorInvoiceToRelational === 'function') mirrorInvoiceToRelational(inv);
+    // Portal sync (partial payments, 2026-09-17) -- real gap this closes:
+    // a cash/check payment (full or partial) recorded by hand right here
+    // never reached client_portal_invoices at all before this, so a
+    // client logging into the portal after Steve marked an invoice 40%
+    // paid by check would still see the full original balance and could
+    // overpay through Stripe. Same fire-and-forget pattern
+    // invoice-generator.html's own toggleInvoicePaid() already uses for
+    // set-invoice-paid -- the local invoice list above is the real
+    // record, this is best-effort. Only for an invoice actually synced
+    // to the portal in the first place (client email on file).
+    if (inv.clientEmail && typeof getAuthToken === 'function') {
+      fetch(`${SUPABASE_URL}/functions/v1/sync-invoice-to-portal`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'apikey': SUPABASE_ANON_KEY,
+          'Authorization': `Bearer ${getAuthToken()}`,
+        },
+        body: JSON.stringify({
+          source_invoice_id: inv.id,
+          client_email: inv.clientEmail,
+          client_name: inv.clientName,
+          invoice_number: inv.invoiceNumber,
+          invoice_date: inv.date,
+          description: inv.jobRefTitle || null,
+          line_items: inv.line_items,
+          total: inv.total,
+          paid_amount: inv.paidAmount ?? (inv.paid ? Number(inv.total) || 0 : 0),
+        }),
+      }).catch(e => console.warn('Portal paid-amount sync failed (invoice still updated locally):', e));
+    }
     // Referral program (direct request, 2026-09-09): the referrer's $25
     // credit is earned once the referred customer's job is complete AND
     // paid -- this invoice becoming fully paid is that second half.

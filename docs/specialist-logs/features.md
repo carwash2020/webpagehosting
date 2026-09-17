@@ -143,4 +143,77 @@ tool access was live and unblocked here, so this feature is actually
 live end-to-end, not just committed code waiting on a manual deploy
 step.
 
+## 2026-09-17 -- partial payments for larger jobs
+
+`docs/CLIENT-PORTAL.md`'s "Partial payments for larger jobs" item is
+the one real, unbuilt gap in its "Smaller polish" list. Confirmed the
+gap is real, not doc rot, before building anything: `client_portal_invoices`
+has no `paid_amount` column at all (only boolean `paid` + `paid_at`),
+and `create-payment-intent` always charges `Math.round(invoice.total *
+100)` -- a client cannot pay less than the full invoice today. This is
+genuinely bigger and money-sensitive enough (and sits directly in the
+subsystem that had a real paid/paidAmount merge-conflict bug the day
+before, see `bugfix.md`'s 2026-09-16 entry) that I sent it to the
+`Plan` agent for a proper file-by-file design before writing any code,
+rather than improvising schema/webhook changes to a payment-correctness
+path solo.
+
+Built it from that plan, but caught two real gaps the plan itself
+missed -- worth recording since a future session redoing this kind of
+change should check for the same shape of thing, not just trust a
+plan's "no code change needed" calls at face value:
+
+1. **`create-bulk-payment-intent` ("Pay All Outstanding") was a real,
+   unguarded overcharge risk.** The plan correctly scoped partial
+   payments to single-invoice only and said bulk needed "no code
+   change, just a comment" -- but bulk always charges every covered
+   invoice's FULL `total`, and its only existing guard rejected an
+   invoice with `paid: true`, not one sitting at `paid: false` with a
+   nonzero `paid_amount`. The moment single-invoice partial payments
+   exist, an invoice partially paid that way and then swept into a
+   bulk "Pay All Outstanding" batch would get charged its full total
+   AGAIN -- a genuine double-charge, not a display bug. Fixed by
+   rejecting a bulk batch containing any invoice with `paid_amount >
+   0`, and narrowing the portal's own bulk-eligible set to match, so
+   the UI never offers a combination that would 400 anyway.
+2. **The `paid_amount` migration needed a backfill, not just a
+   default.** `paid_amount numeric not null default 0` alone would
+   leave every ALREADY-paid invoice reading `paid_amount: 0` the
+   instant the column exists -- wrong data (not just unpopulated),
+   since the portal's own payment-progress ring and chart now trust
+   `paid_amount` over the `paid` boolean. Added `update
+   client_portal_invoices set paid_amount = total where paid = true;`
+   to the migration itself.
+
+Also found, independent of Stripe: `tools/workspace.html`'s
+`togglePaid()` (the internal cash/check partial-payment toggle) never
+synced anything to `client_portal_invoices` at all -- only
+`mirrorInvoiceToRelational()` (the internal-only relational mirror).
+A client whose invoice Steve marked 40% paid by check would keep
+seeing the full original balance in the portal indefinitely. Fixed by
+having `togglePaid()` also call `sync-invoice-to-portal` with the new
+`paid_amount` field, same fire-and-forget pattern
+`invoice-generator.html`'s own simpler `toggleInvoicePaid()` already
+uses for `set-invoice-paid`.
+
+While updating tests for the API/behavior changes above (signature
+additions to `startPayment`/`submitPaymentSignature`, the
+`outstanding` -> `bulkEligible` split, the ledger replacing the
+`invoice.paid` check in reconciliation), tripped one real isolation-
+boundary test purely from a code COMMENT: writing an internal
+filename in a `portal/dashboard.html` comment matched that file's own
+check for keeping `/portal/` free of `/tools/`-only script references,
+even though nothing was actually loaded. Worth remembering -- that
+test greps raw page text, not just `<script src>` tags, so even a
+comment mentioning an internal filename by its exact name can trip it.
+
+Deliberately did NOT apply the migration or deploy any of the 6
+updated edge functions myself -- staged in a PR instead, per this
+session's governance (schema/deploy changes need a human decision).
+Full write-up of the design in `README.md`'s 2026-09-17 entry; the
+deploy steps and ordering (migration before functions -- both new
+functions read/write columns the migration creates) are in
+`docs/ACTION-ITEMS.md` item 11. 2221 tests passing (6 new/updated test
+files), plus consistency/undefined-vars/link checks clean.
+
 <!-- Add new entries above this line -->

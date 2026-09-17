@@ -1705,3 +1705,77 @@ different internal owners (Job Tracker vs the work-order queue).
 New tests: `tests/portal/job-messaging.test.js` (15 tests, mirroring
 `tests/portal/work-order-messaging.test.js`'s structure test-for-test
 where the feature itself mirrors that one).
+
+## What changed, 2026-09-17 -- partial payments for larger jobs (staged, not yet live)
+
+Closes `docs/CLIENT-PORTAL.md`'s "Partial payments for larger jobs"
+item -- a client viewing a large invoice in the portal could previously
+only pay the FULL total through Stripe, never part of it now and the
+rest later. Built carefully: this sits directly in the subsystem that
+had a real production bug the day before (an invoice's `paid` boolean
+and `paidAmount` drifting out of sync during a sync merge, see
+`docs/specialist-logs/bugfix.md`'s 2026-09-16 entry), so the design
+was run through a dedicated planning pass before any code, specifically
+to avoid reintroducing that same class of bug.
+
+**Schema** (`sql/portal/add_partial_invoice_payments.sql`, staged, not
+applied): a new `client_portal_invoices.paid_amount` column (backfilled
+for every already-paid invoice, so nothing reads as "$0 paid" the
+moment the column exists), and a new `client_portal_invoice_payments`
+ledger table -- the real fix for a redelivered Stripe webhook event
+double-counting a payment, using the same claim-before-act pattern
+already proven for POS charges (a unique constraint on
+`(invoice_id, stripe_payment_intent_id)`, not a bare increment).
+
+**`create-payment-intent`** now accepts an optional `amount_cents`
+(omitted = pay the full remaining balance, today's exact existing
+behavior); the server always computes and clamps the real charge
+amount from the invoice's own remaining balance, never trusting a
+client-supplied figure directly.
+
+**`stripe-webhook`** was rewritten around the new ledger: a redelivered
+event now finds its `(invoice, PaymentIntent)` pair already claimed and
+touches nothing, instead of the old "filter to not-yet-paid, PATCH
+once" trick, which would have double-applied a partial payment on
+redelivery (a still-partial invoice never leaves the unpaid bucket, so
+the old idempotency guard silently stopped protecting anything once
+partial payments existed).
+
+**`create-bulk-payment-intent`** ("Pay All Outstanding") stays
+full-payment-only by deliberate scope cut -- but now explicitly rejects
+a batch containing an invoice that already has a partial payment on
+it, which would otherwise double-charge the part already paid; the
+portal UI now only offers that button for invoices with nothing paid
+on them yet.
+
+**`reconcile-stripe-payments`** (the daily missed-webhook safety net)
+now checks the new ledger instead of the `paid` boolean -- a correctly
+partial-paid invoice stays `paid: false` by design, and the old check
+would have paged Steve daily about a "missed" payment that was never
+missed.
+
+**`sync-invoice-to-portal`** and **`set-invoice-paid`** (the two
+internal-tools write paths into `client_portal_invoices`) both now keep
+`paid_amount` consistent with `paid` -- closing two latent copies of
+the exact 2026-09-16 bug shape this feature was built around not
+repeating. `tools/workspace.html`'s `togglePaid()` now also forwards a
+manually-recorded cash/check partial payment to the portal at all,
+which it never did before this (a real, independent gap found while
+building this).
+
+**Portal UI** (`portal/dashboard.html`): invoice cards get a third
+"Partial" status (remaining balance shown prominently, "of $X total,
+$Y paid" underneath) alongside a new "Pay a different amount" option;
+the payment-progress ring and invoice-history chart now credit a
+partial invoice's real paid amount instead of bucketing it as fully
+outstanding; the downloadable PDF gets an `AMOUNT DUE`/`Paid to date`
+line for a partial invoice (the `PAID` stamp and receipt framing stay
+strictly gated on full payment, on purpose -- a partial payment is
+never mistakable for a receipt).
+
+**Deliberately NOT applied/deployed by this session** -- schema
+migrations and edge-function deploys need a human decision. See
+`docs/ACTION-ITEMS.md` item 11 for the exact deploy steps and why
+migration-before-functions ordering matters here. New tests across 6
+edge-function and portal test files (all 2221 tests passing, plus
+consistency/undefined-vars/link checks clean).

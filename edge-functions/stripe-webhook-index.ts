@@ -57,6 +57,20 @@ const RESEND_API_KEY = Deno.env.get("RESEND_API_KEY") || "";
 const LEAD_EMAIL_FROM = Deno.env.get("LEAD_EMAIL_FROM") || "";
 const LOGO_URL = "https://www.triplehenterprisesllc.biz/images/logo-signature-email.png";
 
+// Partial payments (2026-09-17): `paid` must always be DERIVED from
+// paid_amount vs total, using the exact same whole-cents comparison
+// tools/sync.js's deriveInvoicePaid() uses (see that function's own
+// header comment for the full 2026-09-16 bug this guards against -- a
+// merge that let `paid` and `paidAmount` drift independently fired a
+// false "invoice overdue" push for an invoice paid in full). This is
+// a deliberate duplicate, not an import -- there's no shared-module
+// system across edge functions in this project (see e.g. send-push's
+// own getPaidAmount()/getRemainingCents(), added for the same reason)
+// -- but it must stay byte-for-byte equivalent to deriveInvoicePaid().
+function derivePaidFromCents(totalCents: number, paidCents: number): boolean {
+  return totalCents > 0 && paidCents >= totalCents;
+}
+
 // A POS-style receipt (2026-09-03), requested directly: "create a POS
 // style reciept that shows what we charged them for sense we are
 // collecting the email anyway." Duplicated from create-pos-charge's
@@ -246,7 +260,7 @@ Deno.serve(async (req: Request) => {
   // fallback if that earlier write ever failed for some reason, not
   // the primary lookup.
   let invoiceRes = await fetch(
-    `${SUPABASE_URL}/rest/v1/client_portal_invoices?stripe_payment_intent_id=eq.${pi.id}&select=id,source_invoice_id,paid`,
+    `${SUPABASE_URL}/rest/v1/client_portal_invoices?stripe_payment_intent_id=eq.${pi.id}&select=id,source_invoice_id,paid,paid_at,total,paid_amount`,
     { headers: { apikey: SERVICE_ROLE_KEY, Authorization: `Bearer ${SERVICE_ROLE_KEY}` } },
   );
   let rows = await invoiceRes.json();
@@ -256,7 +270,7 @@ Deno.serve(async (req: Request) => {
     const fallbackIds = idsCsv ? idsCsv.split(",") : (singleId ? [singleId] : []);
     if (fallbackIds.length) {
       invoiceRes = await fetch(
-        `${SUPABASE_URL}/rest/v1/client_portal_invoices?id=in.(${fallbackIds.join(",")})&select=id,source_invoice_id,paid`,
+        `${SUPABASE_URL}/rest/v1/client_portal_invoices?id=in.(${fallbackIds.join(",")})&select=id,source_invoice_id,paid,paid_at,total,paid_amount`,
         { headers: { apikey: SERVICE_ROLE_KEY, Authorization: `Bearer ${SERVICE_ROLE_KEY}` } },
       );
       rows = await invoiceRes.json();
@@ -271,47 +285,103 @@ Deno.serve(async (req: Request) => {
     return new Response(JSON.stringify({ received: true, warning: "no matching invoice" }), { status: 200 });
   }
 
-  // Stripe can and does redeliver the same event more than once by
-  // design -- filtering to only the not-yet-paid rows makes
-  // reprocessing a harmless no-op instead of a duplicate side effect,
-  // and means a redelivered event after a PARTIAL earlier failure
-  // (some invoices marked, some not) correctly finishes the rest
-  // rather than skipping everything because at least one was already done.
-  const unpaidRows = rows.filter((inv: any) => !inv.paid);
-  if (!unpaidRows.length) {
+  // Partial payments (2026-09-17) broke the old "filter to !paid, PATCH
+  // once" idempotency trick: a still-partial invoice never leaves the
+  // unpaid bucket, so a redelivered event for the SAME PaymentIntent
+  // would have kept re-adding the same amount forever. The real fix is
+  // a claim step against client_portal_invoice_payments (unique on
+  // invoice_id + stripe_payment_intent_id) -- the exact claim-before-
+  // act pattern already proven above for POS charges. Only rows that
+  // actually win their claim get processed below; a redelivered event
+  // finds every row already claimed and touches nothing.
+  //
+  // Bulk PaymentIntents (Pay All Outstanding) always pay every covered
+  // invoice IN FULL -- create-bulk-payment-intent's own `alreadyPaid`
+  // check requires that of every invoice in the batch before it ever
+  // creates the PaymentIntent, and partial payments stay single-invoice
+  // only for now (see that function's own header comment) -- so each
+  // row's attributed amount there is its own total, not a share of
+  // pi.amount. A single-invoice PaymentIntent (partial or full)
+  // attributes the PaymentIntent's real charged amount directly --
+  // never invoice.total -- since that's the one Stripe-confirmed figure
+  // for what actually got charged.
+  const isBulk = !!pi.metadata?.client_portal_invoice_ids;
+  const claims = rows.map((inv: any) => ({
+    invoice_id: inv.id,
+    stripe_payment_intent_id: pi.id,
+    amount_cents: isBulk ? Math.round(Number(inv.total) * 100) : pi.amount,
+  }));
+
+  const claimRes = await fetch(
+    `${SUPABASE_URL}/rest/v1/client_portal_invoice_payments?on_conflict=invoice_id,stripe_payment_intent_id`,
+    {
+      method: "POST",
+      headers: {
+        apikey: SERVICE_ROLE_KEY,
+        Authorization: `Bearer ${SERVICE_ROLE_KEY}`,
+        "Content-Type": "application/json",
+        Prefer: "resolution=ignore-duplicates,return=representation",
+      },
+      body: JSON.stringify(claims),
+    },
+  );
+  if (!claimRes.ok) {
+    const errText = await claimRes.text();
+    console.error(`Failed to claim payment ledger rows for PaymentIntent ${pi.id}: ${errText.slice(0, 300)}`);
+    return new Response(JSON.stringify({ received: false, error: "Failed to record payment ledger" }), { status: 500 });
+  }
+  const wonClaims: { invoice_id: number; amount_cents: number }[] = await claimRes.json();
+  if (!wonClaims.length) {
     return new Response(JSON.stringify({ received: true, already_processed: true }), { status: 200 });
   }
 
   const paidAt = new Date().toISOString();
-  const unpaidIds = unpaidRows.map((inv: any) => inv.id);
+  const rowById = new Map(rows.map((inv: any) => [inv.id, inv]));
 
-  // Mark paid in the client-facing table -- this is what the client
-  // actually sees reflected back on their next dashboard load. One
-  // PATCH covering every unpaid id in this PaymentIntent, not a loop.
-  const invoicePatchRes = await fetch(
-    `${SUPABASE_URL}/rest/v1/client_portal_invoices?id=in.(${unpaidIds.join(",")})`,
-    {
-      method: "PATCH",
-      headers: { apikey: SERVICE_ROLE_KEY, Authorization: `Bearer ${SERVICE_ROLE_KEY}`, "Content-Type": "application/json" },
-      body: JSON.stringify({ paid: true, paid_at: paidAt }),
-    },
-  );
+  // Per-row PATCH, not one blanket update covering every id -- unlike
+  // the old all-or-nothing `paid: true`, each row's new paid_amount is
+  // a different number (its own prior paid_amount plus its own
+  // attributed cents), so there is no single request body that fits
+  // every row anymore.
+  const patchResults = await Promise.all(wonClaims.map(async (claim) => {
+    const inv = rowById.get(claim.invoice_id);
+    if (!inv) return { ok: false, id: claim.invoice_id };
+    const totalCents = Math.round(Number(inv.total) * 100);
+    const newPaidCents = Math.round(Number(inv.paid_amount || 0) * 100) + claim.amount_cents;
+    const derivedPaid = derivePaidFromCents(totalCents, newPaidCents);
+    const res = await fetch(
+      `${SUPABASE_URL}/rest/v1/client_portal_invoices?id=eq.${claim.invoice_id}`,
+      {
+        method: "PATCH",
+        headers: { apikey: SERVICE_ROLE_KEY, Authorization: `Bearer ${SERVICE_ROLE_KEY}`, "Content-Type": "application/json" },
+        body: JSON.stringify({
+          paid_amount: newPaidCents / 100,
+          paid: derivedPaid,
+          paid_at: derivedPaid ? (inv.paid_at || paidAt) : inv.paid_at,
+        }),
+      },
+    );
+    return {
+      ok: res.ok, id: claim.invoice_id, sourceInvoiceId: inv.source_invoice_id,
+      incrementCents: claim.amount_cents,
+    };
+  }));
 
   // A non-2xx here must NOT fall through to the 200 at the end of this
   // handler: Stripe treats any non-2xx response as delivery failure and
   // retries the event for several days, which is exactly the safety net
-  // this needs -- a customer who genuinely paid must never be left
-  // showing "unpaid" forever with nothing left to retry the write. Only
-  // the two early-return cases above (no matching invoice; already
-  // processed) are genuinely nothing-to-do and get a real 200.
-  if (!invoicePatchRes.ok) {
-    const errText = await invoicePatchRes.text();
-    console.error(`Failed to mark client_portal_invoices paid for PaymentIntent ${pi.id}: ${errText.slice(0, 300)}`);
-    return new Response(JSON.stringify({ received: false, error: "Failed to mark invoice(s) paid" }), { status: 500 });
+  // this needs -- a customer who genuinely paid must never be left with
+  // a wrong balance and nothing left to retry the write. Only the two
+  // early-return cases above (no matching invoice; already processed)
+  // are genuinely nothing-to-do and get a real 200.
+  const failed = patchResults.filter((r) => !r.ok);
+  if (failed.length) {
+    console.error(`Failed to update client_portal_invoices for PaymentIntent ${pi.id}, ids: ${failed.map((r) => r.id).join(",")}`);
+    return new Response(JSON.stringify({ received: false, error: "Failed to update invoice(s)" }), { status: 500 });
   }
 
-  // Also mark paid in workspace_sync's th_invoices, so Connor/Steve's
-  // own invoice log reflects this too, not just the portal --
+  // Also update workspace_sync's th_invoices, so Connor/Steve's own
+  // invoice log reflects the same payment, not just the portal --
   // workspace_sync stores one row per sync "code" as a single JSON
   // blob (confirmed against the real schema before writing this, not
   // assumed), so this reads the current blob, updates every matching
@@ -331,19 +401,37 @@ Deno.serve(async (req: Request) => {
     // between the portal and Steve/Connor's own invoice log is at least
     // visible for manual reconciliation, instead of silently vanishing.
     console.error(`Failed to read workspace_sync for PaymentIntent ${pi.id}: ${await syncRes.text().catch(() => "")}`);
-    return new Response(JSON.stringify({ received: true, invoices_marked_paid: unpaidIds.length, workspace_sync_warning: "Could not read workspace_sync" }), { status: 200 });
+    return new Response(JSON.stringify({ received: true, invoices_updated: patchResults.length, workspace_sync_warning: "Could not read workspace_sync" }), { status: 200 });
   }
   const syncRows = await syncRes.json();
   if (syncRows.length) {
     const blob = syncRows[0].data;
     const invoices = JSON.parse(blob.th_invoices || "[]");
-    const sourceIds = new Set(unpaidRows.map((inv: any) => inv.source_invoice_id));
+    // Partial payments (2026-09-17): this used to just set
+    // `inv.paid = true` here and never touch paidAmount at all --
+    // masked so far because a Stripe payment was always all-or-
+    // nothing, so deriveInvoicePaid()'s own legacy fallback
+    // (inv.paid ? total : 0) happened to still resolve correctly. Now
+    // that a Stripe payment can be partial, this increments paidAmount
+    // by the SAME real cents actually charged in this event (never
+    // overwrites it from the portal row's own value -- these are two
+    // independently-maintained mirrors of the same underlying fact,
+    // and applying the identical increment to both is what keeps them
+    // from drifting relative to each other) and derives `paid` from
+    // the result the same way deriveInvoicePaid() does.
+    const resultBySourceId = new Map(patchResults.map((r: any) => [r.sourceInvoiceId, r]));
     let changed = false;
     invoices.forEach((inv: any) => {
-      if (sourceIds.has(inv.id) && !inv.paid) {
-        inv.paid = true;
-        changed = true;
-      }
+      const result = resultBySourceId.get(inv.id);
+      if (!result) return;
+      const totalCents = Math.round((Number(inv.total) || 0) * 100);
+      const priorPaidAmount = (inv.paidAmount !== undefined && inv.paidAmount !== null)
+        ? (Number(inv.paidAmount) || 0)
+        : (inv.paid ? (Number(inv.total) || 0) : 0);
+      const newPaidCents = Math.round(priorPaidAmount * 100) + result.incrementCents;
+      inv.paidAmount = newPaidCents / 100;
+      inv.paid = derivePaidFromCents(totalCents, newPaidCents);
+      changed = true;
     });
     if (changed) {
       blob.th_invoices = JSON.stringify(invoices);
@@ -356,10 +444,10 @@ Deno.serve(async (req: Request) => {
         },
       );
       if (!workspaceSyncPatchRes.ok) {
-        console.error(`Failed to mark workspace_sync th_invoices paid for PaymentIntent ${pi.id}: ${await workspaceSyncPatchRes.text().catch(() => "")}`);
+        console.error(`Failed to update workspace_sync th_invoices for PaymentIntent ${pi.id}: ${await workspaceSyncPatchRes.text().catch(() => "")}`);
       }
     }
   }
 
-  return new Response(JSON.stringify({ received: true, invoices_marked_paid: unpaidIds.length }), { status: 200 });
+  return new Response(JSON.stringify({ received: true, invoices_updated: patchResults.length }), { status: 200 });
 });

@@ -91,6 +91,28 @@ Deno.serve(async (req: Request) => {
       return json({ ok: false, error: "paid must be true or false." }, 400);
     }
 
+    // Partial payments (2026-09-17): this manual toggle is a THIRD
+    // write path into (paid, paid_amount) alongside Stripe and
+    // sync-invoice-to-portal -- without this, a human marking an
+    // invoice "Paid" by hand after a client already partially paid
+    // via Stripe would leave paid: true but paid_amount stuck at the
+    // old partial figure, the exact shape of the 2026-09-16 bug this
+    // whole feature is built around not repeating. Look up the
+    // invoice's own total first so "Paid" can set paid_amount to
+    // match it exactly, and "Unpaid" resets it to 0 -- the same
+    // "start over" semantic tools/workspace.html's own togglePaid()
+    // "Mark this invoice as unpaid again?" flow already uses (not a
+    // partial fallback).
+    const lookupRes = await fetch(
+      `${SUPABASE_URL}/rest/v1/client_portal_invoices?source_invoice_id=eq.${source_invoice_id}&select=total`,
+      { headers: { apikey: SERVICE_ROLE_KEY, Authorization: `Bearer ${SERVICE_ROLE_KEY}` } },
+    );
+    const lookupRows = lookupRes.ok ? await lookupRes.json() : [];
+    // Not an error if this comes back empty -- same "never synced to
+    // the portal" case the final response below already accounts for;
+    // the PATCH just naturally updates zero rows a moment later.
+    const total = lookupRows.length ? Number(lookupRows[0].total) || 0 : 0;
+
     const patchRes = await fetch(
       `${SUPABASE_URL}/rest/v1/client_portal_invoices?source_invoice_id=eq.${source_invoice_id}`,
       {
@@ -104,6 +126,7 @@ Deno.serve(async (req: Request) => {
         body: JSON.stringify({
           paid,
           paid_at: paid ? new Date().toISOString() : null,
+          paid_amount: paid ? total : 0,
         }),
       },
     );

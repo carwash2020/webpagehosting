@@ -663,7 +663,14 @@ now live in the numbered roadmap above -- this list is what's left.
 - **"Remember me" / longer sessions.** Clients sign in rarely, so
   being logged out every time is more annoying here than in a tool
   used daily.
-- **Partial payments** for larger jobs.
+- ~~**Partial payments** for larger jobs.~~ -- **built (2026-09-17),
+  staged but not yet live.** New `paid_amount` column + a payment
+  ledger table, `create-payment-intent`/`stripe-webhook`/`reconcile-
+  stripe-payments`/`sync-invoice-to-portal`/`set-invoice-paid` all
+  updated, portal UI shows a Partial status and remaining balance. See
+  `README.md`'s 2026-09-17 entry for the full writeup and
+  `docs/ACTION-ITEMS.md` item 11 for the migration/deploy steps still
+  needed before this is actually usable by a client.
 - ~~**Email preferences** (invoice notifications on/off)~~ -- **done**
   (2026-09-04), part of phase 8's Settings rebuild -- three separate
   toggles (invoice/quote, work-order, message emails), not just one.

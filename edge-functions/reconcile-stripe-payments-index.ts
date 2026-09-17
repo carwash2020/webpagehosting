@@ -176,11 +176,31 @@ Deno.serve(async (req: Request) => {
     }
     const invoices = await invoicesRes.json();
 
+    // Partial payments (2026-09-17): `invoice.paid` alone is no longer
+    // the right "already reconciled" check -- a correctly-processed
+    // partial payment leaves `paid: false` by design, and this cron
+    // would otherwise nudge Steve every day about a "missed" payment
+    // that was never missed. The real question is whether THIS
+    // specific succeeded PaymentIntent was ever recorded against THIS
+    // invoice in the ledger stripe-webhook writes to -- so cross-check
+    // client_portal_invoice_payments instead of the boolean.
+    const ledgerRes = await supabaseRequest(
+      `/rest/v1/client_portal_invoice_payments?invoice_id=in.(${idList})&select=invoice_id,stripe_payment_intent_id`,
+    );
+    if (!ledgerRes.ok) {
+      return new Response(JSON.stringify({ ok: false, error: "Could not look up client_portal_invoice_payments." }), {
+        status: 502,
+        headers: { "Content-Type": "application/json" },
+      });
+    }
+    const ledgerRows = await ledgerRes.json();
+    const recordedPairs = new Set(ledgerRows.map((r: any) => `${r.invoice_id}:${r.stripe_payment_intent_id}`));
+
     let mismatchCount = 0;
     for (const invoice of invoices) {
-      if (invoice.paid) continue; // already reconciled, nothing to alert about
-
       const pi = invoiceIdToPaymentIntent.get(invoice.id);
+      if (recordedPairs.has(`${invoice.id}:${pi.id}`)) continue; // already reconciled, nothing to alert about
+
       const itemKey = String(invoice.id);
       if (await wasRecentlyAlerted(itemKey)) continue;
 
