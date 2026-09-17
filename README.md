@@ -182,16 +182,36 @@ the assistant's GitHub token was never granted):
 - Leaked-password protection is still off in Supabase Auth -- a
   dashboard-only toggle (Authentication → Policies), not something
   scriptable via SQL.
+- **Correction (2026-09-16): the accidental lowercase `send-push` Edge
+  Function is NOT gone -- it was re-verified live via
+  `list_edge_functions`/`get_edge_function` and is still deployed
+  (slug `send-push`, id `aaa21126-3451-4bd2-a8e3-97d4f95bbf5a`, v8),
+  separate from the real `Send-Push` function (v50) every call site
+  actually uses. It is genuinely dead: its source is a stale snapshot
+  missing three real fixes the real function has picked up since
+  (the business-timezone fix, the partial-payment-aware overdue check,
+  and `checkPendingReviewReminders`), and nothing calls it -- confirmed
+  by grepping every `Send-Push` reference in this repo (all exact-cased,
+  enforced by 4 separate test files) and by querying the live database
+  directly (`cron.job` and every `pg_proc` function body) for any
+  lowercase `/send-push` URL, which returned zero rows. **It should be
+  deleted, but the Supabase MCP tools available in this environment
+  have no delete-function call and the `supabase` CLI isn't installed
+  here** -- deleting it needs the Supabase dashboard (Edge Functions →
+  `send-push` → Delete) or `supabase functions delete send-push` from a
+  machine with the CLI and project access. Tracked as a manual action
+  item below. The earlier "no longer appears in the function list"
+  note below was wrong -- probably a function list read that missed it,
+  not an actual deletion.
+- `advisor-health` is confirmed actually working (a real request
+  returned HTTP 200 in the function's own logs, and that function
+  returns a hard 500 whenever `MANAGEMENT_API_PAT` is missing, so a 200
+  means the secret is genuinely set and the Management API calls
+  succeeded).
 
 **Resolved since first written (kept here briefly for history, not
 because they're still open):** the Cal.com subscription has been
-cancelled (confirmed 2026-08-25); the accidental lowercase `send-push`
-Edge Function no longer appears in the project's function list at
-all; `advisor-health` is confirmed actually working (a real request
-returned HTTP 200 in the function's own logs, and that function
-returns a hard 500 whenever `MANAGEMENT_API_PAT` is missing, so a 200
-means the secret is genuinely set and the Management API calls
-succeeded).
+cancelled (confirmed 2026-08-25).
 
 
 
