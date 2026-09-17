@@ -118,4 +118,70 @@ that should clearly have qualified (Richie's invoice was 6 days
 overdue at the time), was the first sign something was off before I
 even ran the manual test.
 
+## 2026-09-16 (later the same day) -- hub dispatch: verify two flagged edge-function findings
+
+Dispatched with two items to check on: (1) whether the lowercase
+`send-push` Edge Function is really dead code, and (2) a report from
+the security chat that `checkPendingReviewReminders` was "referenced
+but missing from the live Functions list." Verified both directly
+against the live Supabase project rather than trusting either claim at
+face value -- neither was quite right as originally framed.
+
+**1. Lowercase `send-push` -- genuinely orphaned, confirmed via
+`list_edge_functions`/`get_edge_function`, still deployed.** This
+directly contradicts `README.md`'s own "Resolved" note claiming it "no
+longer appears in the project's function list at all" -- it does; that
+note was wrong (most likely a stale function-list read from whoever
+wrote it, not an actual deletion that later regressed). Confirmed dead
+by comparing its source (v8) against the real `Send-Push` function's
+current source (v50): the lowercase copy is missing three real fixes
+`Send-Push` has picked up since -- the business-timezone fix
+(`todayAtMidnight`/`zonedTimeToUtc`/`todayDateStrInBusinessTz`), the
+partial-payment-aware overdue check (`getPaidAmount`/`getRemainingCents`),
+and the whole `checkPendingReviewReminders` feature (see #2 below).
+Confirmed nothing calls it, two ways: grepped the whole repo (every
+`/functions/v1/` reference to this function is exact-cased `Send-Push`,
+and 4 separate test files explicitly assert this), and queried the live
+database directly for any lowercase `/send-push` URL in either
+`cron.job.command` or any `pg_proc` function body (`prosrc`) -- zero
+rows either way. So this is real, not just an aging repo artifact never
+actually deployed.
+
+**Could not actually delete it.** The Supabase MCP tools available in
+this session cover list/get/deploy for Edge Functions but have no
+delete call, and the `supabase` CLI isn't installed in this container
+(`command not found`). Corrected the stale README claim, and logged the
+deletion itself as manual action item #9 in `docs/ACTION-ITEMS.md`
+(needs the Supabase dashboard or a machine with the CLI + project
+access) rather than leaving the incorrect "already resolved" note
+sitting there uncorrected. Worth flagging as a gap in this project's
+current tooling: there's no way to actually remove a deployed Edge
+Function from inside a session like this one -- only add/replace one.
+
+**2. `checkPendingReviewReminders` -- not missing, not a broken
+deployment.** It was never going to appear as its own entry in the
+Functions list, because it isn't its own deployed function -- it's a
+plain internal TypeScript function living inside the single `Send-Push`
+Edge Function's source file (`edge-functions/send-push-index.ts` in the
+repo), alongside every other `checkXxx` helper the reminder-check
+pipeline calls. Confirmed it's genuinely live in production, not just
+present in the repo: read `Send-Push`'s actual deployed source directly
+via `get_edge_function` (v50, updated same batch as the newest
+functions) and it has the real function body plus its wiring into the
+`reminder-check` dispatch (`await checkPendingReviewReminders(reviewReminders)`),
+matching `tests/edge-functions/pending-review-reminder-push.test.js`
+exactly. So there's no broken deployment to fix here -- whoever on the
+security side went looking for a Function named `checkPendingReviewReminders`
+in the Functions list was checking the wrong kind of list for what this
+actually is (an internal helper, not a deployable slug). Nothing to
+coordinate a fix for; reported back as a false alarm rather than acting
+on it further.
+
+**General lesson for this log:** a "no longer appears" or "missing"
+claim about live infrastructure is itself a claim to verify against the
+actual live state (`list_edge_functions`/`get_edge_function`/a direct DB
+query), not something to take on faith from an earlier session's notes
+or another chat's report -- both halves of this dispatch turned out to
+be exactly backwards from how they were first framed.
+
 <!-- Add new entries above this line -->
