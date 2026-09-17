@@ -285,7 +285,10 @@
   .btn-retry:hover{background:var(--orange-tint-soft); border-color:var(--orange);}
   .btn-retry svg{width:15px; height:15px;}
 
-  .date-row{display:flex; gap:8px; overflow-x:auto; padding-bottom:8px; margin-bottom:20px; -webkit-overflow-scrolling:touch; scroll-snap-type:x proximity;}
+  .date-row{display:flex; gap:8px; overflow-x:auto; padding-bottom:10px; margin-bottom:20px; -webkit-overflow-scrolling:touch; scroll-snap-type:x proximity; scrollbar-width:thin; scrollbar-color:var(--border) transparent;}
+  .date-row::-webkit-scrollbar{height:6px;}
+  .date-row::-webkit-scrollbar-track{background:transparent;}
+  .date-row::-webkit-scrollbar-thumb{background:var(--border); border-radius:6px;}
   .date-btn{
     flex:0 0 auto; min-width:66px; text-align:center; background:var(--bg-panel-2);
     border:1px solid var(--border); border-radius:10px; padding:11px 8px; cursor:pointer;

@@ -77,8 +77,8 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Anton&family=Archivo:wght@400..700&family=Newsreader:ital,opsz,wght@0,6..72,300..700;1,6..72,300..600&family=Oswald:wght@200..700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="/styles.css?v=46788395ca">
-<link rel="stylesheet" href="/portal/portal-app.css?v=202609170800">
+<link rel="stylesheet" href="/styles.css?v=aef1148df9">
+<link rel="stylesheet" href="/portal/portal-app.css?v=202609171900">
 <style>
   /* iOS Safari zoom-on-focus fix (2026-09-05), same root cause and
      fix already applied to invoice-generator.html: a tapped
@@ -254,7 +254,10 @@
   .schedule-toggle { display: block; margin-top: 8px; font-size: 12.5px; color: var(--orange-light); text-decoration: underline; cursor: pointer; background: none; border: none; font-family: inherit; padding: 0; }
   .schedule-panel { margin-top: 10px; display: none; }
   .schedule-panel.is-open { display: block; }
-  .date-row { display: flex; gap: 8px; overflow-x: auto; padding-bottom: 8px; margin-bottom: 12px; -webkit-overflow-scrolling: touch; scroll-snap-type: x proximity; }
+  .date-row { display: flex; gap: 8px; overflow-x: auto; padding-bottom: 10px; margin-bottom: 12px; -webkit-overflow-scrolling: touch; scroll-snap-type: x proximity; scrollbar-width: thin; scrollbar-color: var(--border) transparent; }
+  .date-row::-webkit-scrollbar { height: 6px; }
+  .date-row::-webkit-scrollbar-track { background: transparent; }
+  .date-row::-webkit-scrollbar-thumb { background: var(--border); border-radius: 6px; }
   .date-btn {
     flex: 0 0 auto; min-width: 60px; text-align: center; background: var(--bg-panel);
     border: 1px solid var(--border); border-radius: 10px; padding: 9px 7px; cursor: pointer;
@@ -414,7 +417,7 @@
   .report-bug-actions { display: flex; gap: 10px; margin-top: 16px; }
   .report-bug-actions button { flex: 1; justify-content: center; }
 </style>
-<link rel="stylesheet" href="/portal/portal-polish.css?v=7ea672797c">
+<link rel="stylesheet" href="/portal/portal-polish.css?v=37f5d0deec">
 </head>
 <body class="portal-page">
 
@@ -547,6 +550,7 @@
   <div class="wo-error" id="woError" style="display:none;"></div>
 
   <button class="btn blue" style="width:100%; justify-content:center; margin-top:6px;" id="woSubmitBtn">Send Request</button>
+  <div class="portal-nav-clearance" aria-hidden="true"></div>
 </div>
 
 <div id="myRequests"></div>

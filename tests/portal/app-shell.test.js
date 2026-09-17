@@ -47,7 +47,7 @@ test('the bar clears the iPhone home indicator, with a real floor for browsers w
 });
 
 test('page content is padded so the last card is never stranded under the fixed bar', () => {
-  assert.match(CSS, /body\.portal-page \{[\s\S]*?padding-bottom: calc\(72px \+ env\(safe-area-inset-bottom\)\);/);
+  assert.match(CSS, /body\.portal-page \{[\s\S]*?padding-bottom: calc\(96px \+ env\(safe-area-inset-bottom, 0px\)\);/);
   // The rule targets a class, so the class must actually be on the body.
   for (const page of NAV_PAGES) {
     assert.match(read(page), /<body class="portal-page">/, `${page}: body needs the class the padding rule targets`);

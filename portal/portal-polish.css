@@ -823,7 +823,11 @@ body.portal-page details.line-item-details > .line-item-details-wrap > div {
 @media (display-mode: standalone) {
   body.portal-page {
     padding-top: env(safe-area-inset-top, 0px);
-    padding-bottom: env(safe-area-inset-bottom, 0px);
+    /* Keep the same nav-clearance padding as the shared rule --
+       replacing it with only the home-indicator inset used to drop
+       Send Request (and the last card on every other page) under the
+       fixed tab bar in the installed app. */
+    padding-bottom: calc(96px + env(safe-area-inset-bottom, 0px));
   }
   .portal-nav {
     padding-bottom: calc(6px + env(safe-area-inset-bottom, 0px));

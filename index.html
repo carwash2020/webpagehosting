@@ -81,7 +81,7 @@
 <link rel="preconnect" href="https://csvfqdjuobylgafgolho.supabase.co">
 <link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Anton&family=Archivo:wght@400..700&family=Newsreader:ital,opsz,wght@0,6..72,300..700;1,6..72,300..600&family=Oswald:wght@200..700&display=swap" onload="this.onload=null;this.rel='stylesheet'">
 <noscript><link href="https://fonts.googleapis.com/css2?family=Anton&family=Archivo:wght@400..700&family=Newsreader:ital,opsz,wght@0,6..72,300..700;1,6..72,300..600&family=Oswald:wght@200..700&display=swap" rel="stylesheet"></noscript>
-<link rel="stylesheet" href="styles.css?v=46788395ca">
+<link rel="stylesheet" href="styles.css?v=aef1148df9">
 <!-- Improvement roadmap (2026-09-09), tier 1: the hero background is a
      CSS background-image (see .hero in styles.css), so the browser
      doesn't discover it until CSS is parsed -- likely this page's LCP
@@ -324,7 +324,7 @@
       <li><a href="/our-work.html" id="navGalleryDesktop">Gallery</a></li>
       <li><a href="/blog/">Blog</a></li>
       <li><a href="#reviews">Reviews</a></li>
-      <li><a href="#" id="navFaqDesktop">FAQ</a></li>
+      <li><a href="#faq" id="navFaqDesktop">FAQ</a></li>
       <li><a href="#about">About</a></li>
       <li class="nav-dropdown">
         <a href="#areas">Areas</a>
@@ -371,7 +371,7 @@
     <a href="/our-work.html" id="navGalleryMobile">Gallery</a>
     <a href="/blog/">Blog</a>
     <a href="#reviews">Reviews</a>
-    <a href="#" id="navFaqMobile">FAQ</a>
+    <a href="#faq" id="navFaqMobile">FAQ</a>
     <a href="#about">About</a>
     <a href="#areas">Areas</a>
     <ul class="mobile-areas-sublist">
@@ -1428,7 +1428,7 @@
           <li><a href="/our-work.html" id="navGalleryFooter">Gallery</a></li>
           <li><a href="/blog/">Blog</a></li>
           <li><a href="#reviews">Reviews</a></li>
-          <li><a href="#" id="navFaqFooter">FAQ</a></li>
+          <li><a href="#faq" id="navFaqFooter">FAQ</a></li>
           <li><a href="#about">About</a></li>
           <li><a href="#areas">Areas</a></li>
           <li><a href="/booking.html">Schedule</a></li>
@@ -1455,9 +1455,26 @@
         <ul>
           <li><a class="js-phone-link js-phone-text" href="tel:+14354141667">(435) 414-1667</a></li>
           <li><a class="js-email-link js-email-text" href="mailto:steve@triplehenterprisesllc.biz">steve@triplehenterprisesllc.biz</a></li>
-          <li><a href="#" id="navTermsFooter">Terms &amp; Conditions</a></li>
+          <li><a href="/terms.html" id="navTermsFooter">Terms &amp; Conditions</a></li>
           <li><a href="/privacy.html">Privacy Policy</a></li>
         </ul>
+        <!--
+          Footer Hours (2026-09-17). Same published schedule as the
+          #contact strip, JSON-LD openingHoursSpecification, and
+          business-hours.js: Mon–Fri 2:00 PM–10:00 PM, Saturday
+          7:00 AM–10:00 PM, Sunday 2:00 PM–8:00 PM. Per-day CMS keys
+          (hoursMonday…) still override via .js-hours-* when set.
+        -->
+        <h4>Hours</h4>
+        <div class="hours-grid">
+          <div class="hours-row"><span class="hours-day">Mon</span><span class="hours-value js-hours-monday">2:00 PM &ndash; 10:00 PM</span></div>
+          <div class="hours-row"><span class="hours-day">Tue</span><span class="hours-value js-hours-tuesday">2:00 PM &ndash; 10:00 PM</span></div>
+          <div class="hours-row"><span class="hours-day">Wed</span><span class="hours-value js-hours-wednesday">2:00 PM &ndash; 10:00 PM</span></div>
+          <div class="hours-row"><span class="hours-day">Thu</span><span class="hours-value js-hours-thursday">2:00 PM &ndash; 10:00 PM</span></div>
+          <div class="hours-row"><span class="hours-day">Fri</span><span class="hours-value js-hours-friday">2:00 PM &ndash; 10:00 PM</span></div>
+          <div class="hours-row"><span class="hours-day">Sat</span><span class="hours-value js-hours-saturday">7:00 AM &ndash; 10:00 PM</span></div>
+          <div class="hours-row"><span class="hours-day">Sun</span><span class="hours-value js-hours-sunday">2:00 PM &ndash; 8:00 PM</span></div>
+        </div>
       </div>
 
       <!--
@@ -1490,7 +1507,7 @@
     <div class="footer-bottom">
       <span>&copy; <span id="year"></span> Triple H Enterprises LLC. All rights reserved.</span>
       <span>A registered Utah limited liability company. Reliable Service. Quality Work. Done Right.</span>
-      <span><a href="#" onclick="window.reopenCookiePreferences && window.reopenCookiePreferences(event)">Cookie Preferences</a></span>
+      <span><a href="/privacy.html#cookies" onclick="window.reopenCookiePreferences && window.reopenCookiePreferences(event)">Cookie Preferences</a></span>
     </div>
   </div>
 </footer>
@@ -3020,8 +3037,7 @@
         DAYS.forEach(day => {
           const key = 'hours' + day.charAt(0).toUpperCase() + day.slice(1);
           if (map[key]) {
-            const el = document.querySelector('.js-hours-' + day);
-            if (el) el.textContent = map[key];
+            document.querySelectorAll('.js-hours-' + day).forEach(el => { el.textContent = map[key]; });
           }
         });
         ['banner1', 'banner2'].forEach(key => {
