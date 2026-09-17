@@ -1837,3 +1837,38 @@ Neither stub loads `styles.css`.
 
 New tests: `tests/design/directory-index-redirects.test.js`, plus
 updates to the stats-bar and site-wide 16px zoom tests.
+
+## What changed, 2026-09-17 -- public conversion visuals
+
+A conversion pass on first-screen chrome and the path to booking. Page
+length stays; this adds navigation rather than cutting scroll-craft
+sections. Review counts and `analytics-events.js` are untouched.
+
+**Mobile chrome stack.** Promo banner, sticky header, Call+Book bar,
+chat bubble, and cookie banner were competing on ≤760px. The stack is
+now documented in `styles.css` (z-index + safe-area). The cookie banner
+is compact on small screens, deferred until scroll or six seconds so it
+does not cover hero CTAs, and hides chat/back-to-top while it is up.
+Call+Book stays.
+
+**Hero hierarchy.** The 250px crest no longer sorts above the H1 on
+mobile. It is 96px and follows the headline and CTAs. Photo overlays
+are lighter so the canyon still reads as a photo.
+
+**CTA color.** Book/Schedule stays the filled orange primary. Homepage
+`#schedule` already had Book Instantly as orange and Send Email as the
+quiet link. Triage and the service modal still use Call-primary after
+a named problem. `/portal/` and `/tools/` are unchanged.
+
+**Booking mobile summary.** The desktop `.booking-sidebar` is still
+hidden at ≤960px. Steps 2–3 now keep a compact sticky line with the
+chosen service and, once set, the date/time. Step labels stay visible
+at ≤600px as Service / When / Info.
+
+**Homepage conversion spine.** A desktop sticky jump row (Services,
+How a visit goes, Reviews, Book) sits under the header and hides at
+≤760px, where Call+Book already covers it. An in-flow Schedule rail
+after Services offers Book Instantly plus a quiet reviews link.
+
+New tests: `tests/design/public-conversion-visuals.test.js`, plus a
+mobile-summary case in `tests/booking/booking.test.js`.

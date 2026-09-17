@@ -78,9 +78,43 @@
     showBanner();
   };
 
-  document.addEventListener('DOMContentLoaded', function () {
-    if (getConsent() === null) {
+  var HERO_DEFER_MS = 6000;
+  var HERO_DEFER_SCROLL_PX = 80;
+
+  function isNarrowMobile() {
+    try {
+      return !!(window.matchMedia && window.matchMedia('(max-width: 760px)').matches);
+    } catch (e) {
+      return false;
+    }
+  }
+
+  // On ≤760px, keep the first hero paint clear of the cookie card
+  // (promo + header + Call/Book already fill the chrome). Show after
+  // the visitor scrolls or after a short timeout. Desktop still shows
+  // immediately. Consent Mode stays denied until Accept either way.
+  function scheduleBanner() {
+    if (getConsent() !== null) return;
+    if (!isNarrowMobile()) {
+      showBanner();
+      return;
+    }
+    var shown = false;
+    var timer = null;
+    function reveal() {
+      if (shown) return;
+      shown = true;
+      window.removeEventListener('scroll', onScroll);
+      if (timer) window.clearTimeout(timer);
       showBanner();
     }
-  });
+    function onScroll() {
+      var y = window.scrollY || window.pageYOffset || 0;
+      if (y > HERO_DEFER_SCROLL_PX) reveal();
+    }
+    window.addEventListener('scroll', onScroll, { passive: true });
+    timer = window.setTimeout(reveal, HERO_DEFER_MS);
+  }
+
+  document.addEventListener('DOMContentLoaded', scheduleBanner);
 })();

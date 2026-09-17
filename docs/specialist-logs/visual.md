@@ -3,6 +3,38 @@
 Started 2026-09-16, alongside the `tripleh-visual` skill. See `README.md` in
 this directory for how these logs work.
 
+## 2026-09-17 -- public conversion visuals (mobile chrome, hero, booking summary)
+
+Focused visual PR after the quick wins. Rebased onto main after #270
+(stats first-paint, 16px forms, directory landings) squash-merged.
+Kept those finals and the 16px floor; this PR's conversion chrome
+stays. Did not touch AggregateRating, review counts, or
+analytics-events.js.
+
+**Mobile chrome.** Promo + header + Call/Book + chat + cookie were all
+fighting for ≤760px. Documented the stack in styles.css (z-index +
+safe-area). Cookie is compact on small screens, deferred until scroll
+or 6s so it does not cover the hero CTAs, and hides chat/back-to-top
+while it is up. Call+Book stays (#265). Chat is homepage-only and
+already display:none on fine pointers.
+
+**Hero.** Removed `.hero-badge{order:-1}` (250px crest above the H1).
+Crest is 96px and stays after the headline/CTAs. Lightened the photo
+overlays (CSS only, same canyon files).
+
+**CTA color.** #schedule was already Book Instantly = orange / Send
+Email = quiet after #268. Left triage/service-modal Call-primary
+alone (those fire after a named problem). Portal/tools untouched.
+
+**Booking.** `.booking-sidebar` still `display:none` ≤960px. New
+`.booking-mobile-summary` sticks through steps 2–3 with service +
+date/time. Step labels stay visible ≤600px as Service / When / Info.
+
+**Homepage spine.** Additive, not a length cut: desktop `.page-jump`
+(sticky under the header, hidden ≤760px) and an in-flow `.schedule-rail`
+after Services. Both Book to `/booking.html`.
+
+<!-- Add new entries above this line -->
 ## 2026-09-17 -- stats first-paint, 16px forms, directory landings
 
 Shipped the three morning-handoff quick wins as one PR. Rebased onto
