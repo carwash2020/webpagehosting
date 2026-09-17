@@ -1019,10 +1019,13 @@
       margin-right:auto;
       padding-bottom:4px;
     }
-    /* Crest stays in document order (after the H1/CTAs), not order:-1
-       above the headline. A 250px badge was burying the first screen
-       under the logo; 96px is a signature, not a billboard. */
-    .hero-badge{margin:18px 0 0; padding-left:0;}
+    /* Connor 2026-09-17: the hex mark sits at the top of this stacked
+       hero, above Schedule/Call. Desktop is unchanged (two-column,
+       copy | 440px mark) because a global order:-1 would swap those
+       columns. Size stays 96px -- a signature, not the old 250px
+       billboard that buried the first screen. Header nav logo is
+       separate (.brand img 44px) and is not touched. */
+    .hero-badge{order:-1; margin:0 0 16px; padding-left:0;}
     .hero-badge img{width:96px; filter:drop-shadow(0 12px 22px rgba(0,0,0,.45));}
   }
 

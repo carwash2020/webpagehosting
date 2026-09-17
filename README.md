@@ -2110,3 +2110,23 @@ not sit behind the sticky Call+Book bar.
 
 New tests: `tests/design/homepage-conversion-pop.test.js`.
 
+## What changed, 2026-09-17 -- homepage hero logo above the CTAs
+
+Connor asked for the large Triple H hex logo at the top of the
+homepage hero -- above Schedule / Call -- instead of under the
+buttons and hours on a phone. The small header nav logo is unchanged.
+
+**Before.** On viewports ≤860px the crest sat last in the stacked
+hero (after H1, lede, Schedule, Call, proof, referral, motto, and
+hours). That was a conversion-visuals choice: a 250px `order:-1`
+badge had buried the first screen, so the mark was cut to 96px and
+left in source order.
+
+**After.** The same 96px crest is first in that stacked hero, then
+headline, CTAs, and supporting copy/hours. Desktop stays two-column
+(copy left, ~440px mark right); a global `order:-1` would swap those
+columns, so the reorder is only inside the 860px media query.
+
+Did not restyle the brand mark, did not touch sticky Call+Book, and
+did not change AggregateRating (5.0 / 7).
+
