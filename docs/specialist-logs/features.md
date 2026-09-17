@@ -3,6 +3,23 @@
 Started 2026-09-16, alongside the `tripleh-features` skill. See `README.md`
 in this directory for how these logs work.
 
+## 2026-09-17 -- /tools/ fewer-click Mark paid / Mark Done / daily strip
+
+Owner asked for the same capabilities with fewer taps. Investigated
+before building: Action Items already called `togglePaid()`, but the
+button said Overdue/Unpaid and then `prompt()`ed for an amount. Job
+Tracker already had `setJobStatus(id, 'done')` behind swipe, long-press,
+and the status dropdown -- desktop table rows still went Edit →
+dropdown → Update. `#add-job` already existed but left the add form
+collapsed.
+
+Did not add a payment-method field (nothing else on /tools/ required
+one for a manual mark-paid). Did not prompt for hours/notes on Done
+(the existing `setJobStatus` path does not). Did not touch auth, sync,
+blob writes, RLS, the public site, or AggregateRating. Rebased onto
+#280: Income list still reads through `invoicesForDisplay()`;
+`togglePaid()` still write-backs `th_invoices`.
+
 ## 2026-09-17 -- invoices relational read, slice A only
 
 Phase 2 of the jobs/invoices/quotes/contracts cutover, invoices list

@@ -373,6 +373,14 @@ reference:
   photos so Services hits sooner. AggregateRating stays 5.0 / 7 matching
   GBP; wall stays 4 written quote cards. City and service pages got a
   one-line leave-review link under "Read all reviews."
+- **Dashboard daily actions strip** (`tools/workspace.html`) -- New job,
+  Create invoice, Find client, and Today's schedule sit above the Tools
+  tile grid. Overdue invoices and Action Items income rows have a
+  one-tap **Mark paid** (confirm, then paid in full). Job Tracker cards
+  and desktop table rows have an inline **Done** that calls the existing
+  status update. Advanced tools remain under **More tools**; their URLs
+  are unchanged.
+
 - **Local reviews section** added to all 14 landing/about/work pages --
   real Google reviews, visible social proof above the fold area.
 - **FAQ section** added to all 14 landing pages, with matching visible

@@ -3,6 +3,16 @@
 Started 2026-09-16, alongside the `tripleh-visual` skill. See `README.md` in
 this directory for how these logs work.
 
+## 2026-09-17 -- dashboard daily strip + More tools collapse
+
+Paired with the features lane the same day. Four daily actions (New
+job, Create invoice, Find client, Today's schedule) sit in a strip
+after the jump-nav chips, using the same orange-border panel language
+as the greeting banner. The existing Tools tile grid is unchanged
+(every href still there) but starts collapsed under a native
+`<details>More tools</details>` so the grid is no longer the first
+thing you hunt through. Deep links to each tool page are untouched.
+
 ## 2026-09-17 -- homepage hero hex mark above Schedule/Call
 
 Connor asked for the large hex logo at the top of the homepage hero,
@@ -14,8 +24,6 @@ Did not restyle the mark. Mobile keeps the 96px signature (not the old
 only. Desktop stays two-column, copy left / 440px mark right -- a
 global order would swap those columns. Header `.brand img` (44px)
 untouched. Sticky Call+Book and AggregateRating (5.0 / 7) untouched.
-
-<!-- Add new entries above this line -->
 
 ## 2026-09-17 -- rebase conversion pop onto main (#279)
 

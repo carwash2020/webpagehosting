@@ -118,6 +118,7 @@
     background: #2f8f52;
   }
   .job-card-swipe-action .small-btn { background: none; border: none; color: #fff; font-weight: 600; }
+  .job-done-btn { color: var(--orange-light); border-color: var(--orange-light); }
   .job-card.is-swipe-open .job-card-swipe-inner { transition: transform .15s ease; }
   @media (prefers-reduced-motion: reduce) { .job-card-swipe-inner { transition: none; } }
   .job-card.priority-high { border-left-color: #e05252; }
@@ -617,7 +618,7 @@
       <p>This page combines five related tools into tabs. Data lives in this browser, and also syncs to the cloud if you've set that up on the Workspace page.</p>
       <ul>
         <li><strong>Jobs</strong> &mdash; search by title or client name, add a job with priority/status/due date, sort by date or priority, hide completed jobs (remembered next time you visit), tap "Advance Status" to cycle Not Started &rarr; In Progress &rarr; Done, or "Photos" to attach before/after pictures (on mobile, your phone offers both the camera and your photo gallery). Tap the <svg class="th-icon" aria-hidden="true"><use href="#icon-star" xlink:href="#icon-star"></use></svg> star on any photo to queue it for the public website's gallery with a caption &mdash; this doesn't publish it automatically, it just adds it to a review queue on the Dashboard.</li>
-        <li><strong>Jobs</strong> &mdash; the main list: title, client, status, priority, date, and notes, with search and status filters. Swipe a card to reveal a quick "Done" button, or long-press for more actions. Filed under "Done," a job shows the profit margin once it's linked to an invoice. On a real desktop screen, this same list also shows as a sortable table &mdash; click any column header to sort by it, click again to reverse.</li>
+        <li><strong>Jobs</strong> &mdash; the main list: title, client, status, priority, date, and notes, with search and status filters. Tap <strong>Done</strong> on the card or table row to mark it complete without opening Edit. Swipe a card or long-press for the same action. Filed under "Done," a job shows the profit margin once it's linked to an invoice. On a real desktop screen, this same list also shows as a sortable table &mdash; click any column header to sort by it, click again to reverse.</li>
         <li><strong>Contacts</strong> &mdash; a quick address book for vendors, suppliers, or recurring clients. Tap "History" on any contact to see their past jobs and lifetime spend (matched by exact name against Jobs and Invoices).</li>
         <li><strong>Notes</strong> &mdash; keep as many separate, named notes as you want. Search by title or content, click one on the left to open it, or start a new one. Saves automatically as you type.</li>
       </ul>
@@ -1771,6 +1772,7 @@
         </div>
         ${job.notes ? `<div class="job-card-notes">${escapeHtml(job.notes)}</div>` : ''}
         <div class="job-card-actions">
+          ${!isDone ? `<button type="button" class="small-btn job-done-btn" onclick="setJobStatus(${job.id}, 'done')">Done</button>` : ''}
           <select class="status-select" onchange="setJobStatus(${job.id}, this.value)">
             <option value="not-started" ${job.status === 'not-started' ? 'selected' : ''}>Not Started</option>
             <option value="in-progress" ${job.status === 'in-progress' ? 'selected' : ''}>In Progress</option>
@@ -1901,6 +1903,7 @@
           <td>${job.address ? escapeHtml(job.address) : '&mdash;'}</td>
           <td class="col-amount">${marginCellHtml}</td>
           <td class="jt-actions-cell">
+            ${!isDone ? `<button type="button" class="small-btn job-done-btn" onclick="setJobStatus(${job.id}, 'done')">Done</button>` : ''}
             <a class="small-btn" href="/tools/invoice-generator.html?jobRef=${job.id}" style="text-decoration:none; display:inline-flex; align-items:center;">Create Invoice</a>
             <button class="small-btn" onclick="editJob(${job.id})">Edit</button>
             <button class="small-btn danger" onclick="deleteJob(${job.id})">Delete</button>
@@ -2652,6 +2655,7 @@
       }
       activateTab(TAB_HASHES[initialHash] ? initialHash : 'jobs');
       if (initialHash === 'add-job') {
+        if (typeof toggleFormSection === 'function') toggleFormSection('jobFormSection', true);
         document.getElementById('jobTitle')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
         document.getElementById('jobTitle')?.focus();
       }
