@@ -903,6 +903,49 @@
   /* City/service heroes put the CTA row directly in .wrap (no lede
      margin underneath an h1 block the way the homepage does). */
   .hero .wrap > .hero-ctas{margin-top:32px;}
+  /* Compact social proof next to primary Book/Schedule CTAs -- a
+     one-line excerpt of a review already on this page, not a new card
+     and not a second CTA. Hardcoded light colors in the hero because
+     that photo never flips with theme (same reason as .hero h1). */
+  .cta-proof{
+    display:flex;
+    flex-wrap:wrap;
+    align-items:baseline;
+    gap:6px 10px;
+    margin:14px 0 0;
+    max-width:34em;
+    font-family:var(--font-ui);
+    font-size:13.5px;
+    letter-spacing:.2px;
+    line-height:1.45;
+    color:#c9c5bc;
+  }
+  .cta-proof-stars{
+    color:#ffb347;
+    letter-spacing:1px;
+    font-size:14px;
+    flex-shrink:0;
+  }
+  .cta-proof-quote{
+    font-family:var(--font-body);
+    font-style:italic;
+    color:#e8e8e8;
+  }
+  .cta-proof a{
+    color:var(--orange-light);
+    text-decoration:underline;
+    text-underline-offset:2px;
+    white-space:nowrap;
+  }
+  .cta-proof a:hover{color:#ffffff;}
+  .booking-cta .cta-proof{
+    color:var(--text-dim);
+    margin-top:2px;
+    max-width:none;
+  }
+  .booking-cta .cta-proof-quote{color:var(--text);}
+  .booking-cta .cta-proof a{color:var(--orange);}
+  .booking-cta .cta-proof a:hover{color:var(--orange-light);}
   .hero-badge{
     display:flex;
     justify-content:center;
@@ -950,6 +993,13 @@
       justify-content:center;
       white-space:normal;
       text-align:center;
+    }
+    .hero .cta-proof{
+      justify-content:center;
+      text-align:center;
+      margin-left:auto;
+      margin-right:auto;
+      padding-bottom:4px;
     }
     .hero-badge{order:-1; margin-bottom:8px; padding-left:0;}
     .hero-badge img{width:250px;}

@@ -1785,3 +1785,30 @@ available" slots.
 
 New tests: `tests/design/booking-path-cleanup.test.js`. Sticky-bar and
 U01 tests were updated for the new hrefs and card hierarchy.
+
+## What changed, 2026-09-17 -- GA4 booking events + trust near CTAs
+
+Lean conversion follow-up on the public marketing site. The existing
+GA4 property (`G-TMJJMGY2DQ`) and `analytics-events.js` already fired
+`phone_click` / `text_click` / `chat_opened`, with `lead_form_submitted`
+and `booking_completed` inline on the real success paths. This extends
+the same shared script (no new measurement ID, no renamed events):
+
+- `email_click` on `mailto:` links
+- `book_cta_click` on Book/Schedule links to `/booking.html`
+- `booking_page_view` when `/booking.html` loads
+- `booking_form_start` once, on first engagement with the booking flow
+  (or if a deep-link already skipped step 1)
+
+`booking_step_view` and `booking_completed` stay inline so the honeypot
+bot-trap still cannot look like a conversion. `/portal/` and `/tools/`
+are unchanged.
+
+Homepage hero and the #schedule Book Instantly card now carry a compact
+star line next to the primary CTA -- 5.0 from 4 Google reviews, quoting
+the existing washer-repair review, linking to `#reviews`. booking.html
+has the same line under the subhead, linking to `/#reviews`. No new
+reviews, and `aggregateRating.reviewCount` stays 4.
+
+New tests: `tests/design/cta-trust-proof.test.js`, plus jsdom coverage
+in `tests/content-quality/analytics-events.test.js`.

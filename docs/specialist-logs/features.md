@@ -3,6 +3,30 @@
 Started 2026-09-16, alongside the `tripleh-features` skill. See `README.md`
 in this directory for how these logs work.
 
+## 2026-09-17 -- GA4 booking/lead events on the existing measurement ID
+
+Lean conversion follow-up, not a new analytics install. The public
+site already had `G-TMJJMGY2DQ` plus `analytics-events.js`
+(`phone_click` / `text_click` / `chat_opened`) and two inline success
+events (`lead_form_submitted`, `booking_completed`). Did not invent a
+new measurement ID and did not rename those events -- GA4 reports
+already depend on the names.
+
+Extended the same shared file so every public marketing page that
+already loads it also fires `email_click`, `book_cta_click` (any
+`/booking.html` link except on the booking page itself),
+`booking_page_view`, and `booking_form_start` (once, on first
+engagement or if a deep-link already left step 1). Left
+`booking_step_view` / `booking_completed` inline on the real
+navigation and insert paths so the honeypot still cannot look like a
+conversion.
+
+Did not copy-paste gtag calls onto every page, did not touch
+`/portal/` or `/tools/`, and did not add recommended-event aliases
+(`generate_lead`) that would double-count against the existing custom
+names.
+
+<!-- Add new entries above this line -->
 ## 2026-09-17 -- booking path cleanup after the sticky bar
 
 Follow-up to the Call+Book bar, not a redesign of it. #265 left
@@ -24,8 +48,6 @@ the outline secondary, matching the hero pairing. Did not invent
 "next available" copy. The booking.html expectations line is the
 existing FAQ facts only: no deposit, $25 beyond 15 miles, emergency
 = call or text.
-
-<!-- Add new entries above this line -->
 
 ## 2026-09-17 -- persistent mobile Call + Book bar
 

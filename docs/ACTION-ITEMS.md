@@ -49,11 +49,15 @@ click a setting by hand.
    Opt-in, not required: an account with no factor enrolled signs in
    exactly as before.
 3. **Set up a Google Ads or Meta Pixel account** for retargeting. GA4
-   events are already firing (`lead_form_submitted`, phone-click events,
-   etc.) and ready to feed a remarketing audience the moment one exists
-   -- give me the conversion ID (`AW-...`) or Pixel ID once you have an
-   account and I'll wire up the actual tag/base code. **Not yet done
-   (no account exists to wire up).**
+   events are already firing (`lead_form_submitted`, `phone_click`,
+   `book_cta_click`, `booking_page_view`, `booking_form_start`,
+   `booking_completed`, `email_click`, etc.) and ready to feed a
+   remarketing audience the moment one exists -- give me the conversion
+   ID (`AW-...`) or Pixel ID once you have an account and I'll wire up
+   the actual tag/base code. **Not yet done (no account exists to wire
+   up).** Optional GA4 dashboard step: mark `booking_completed` and
+   `lead_form_submitted` as conversions, and use DebugView to confirm
+   the new events after merge.
 4. ~~Claim/verify Google Business Profile~~ -- **confirmed done
    (2026-09-16): "Triple H Enterprises LLC", verified badge, category
    already "Appliance repair service", 5.0 stars / 7 Google reviews

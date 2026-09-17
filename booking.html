@@ -129,7 +129,17 @@
 
   .booking-main{min-width:0;}
   h1{font-family:var(--font-ui); font-size:32px; letter-spacing:0.3px; margin:0 0 8px; font-weight:700;}
-  .subhead{color:var(--text-dim); font-size:15.5px; margin:0 0 28px; max-width:68ch;}
+  .subhead{color:var(--text-dim); font-size:15.5px; margin:0 0 12px; max-width:68ch;}
+  .cta-proof{
+    display:flex; flex-wrap:wrap; align-items:baseline; gap:6px 10px;
+    margin:0 0 24px; max-width:40em;
+    font-family:var(--font-ui); font-size:13.5px; letter-spacing:.2px; line-height:1.45;
+    color:var(--text-dim);
+  }
+  .cta-proof-stars{color:var(--orange-light); letter-spacing:1px; font-size:14px; flex-shrink:0;}
+  .cta-proof-quote{font-family:var(--font-body); font-style:italic; color:var(--text);}
+  .cta-proof a{color:var(--orange-light); text-decoration:underline; text-underline-offset:2px; white-space:nowrap;}
+  .cta-proof a:hover{color:#ffffff;}
 
   /* --- hexagon icon containers: the page's signature element, echoing the brand's own hex badge mark --- */
   .hex-icon{
@@ -364,6 +374,11 @@
   <main class="booking-main">
     <h1>Book an Appointment</h1>
     <p class="subhead">Pick a service and a real open time, and you'll get a confirmation right away.</p>
+    <p class="cta-proof">
+      <span class="cta-proof-stars" aria-hidden="true">★★★★★</span>
+      <span>5.0 from 4 Google reviews &mdash; <span class="cta-proof-quote">&ldquo;Steven was wonderful! Got our washer fixed quickly&hellip;&rdquo;</span></span>
+      <a href="/#reviews">See reviews</a>
+    </p>
 
     <div class="step-indicator" role="progressbar" aria-valuemin="1" aria-valuemax="3" aria-valuenow="1" aria-label="Booking step 1 of 3: Service" id="stepIndicator">
       <div class="step-node is-active" data-step="1"><div class="dot">1</div><div class="label">Service</div></div>
@@ -865,6 +880,6 @@
 })();
 </script>
 
-<script src="/analytics-events.js?v=bdeda1c255" defer></script>
+<script src="/analytics-events.js?v=4a6fd9aa19" defer></script>
 </body>
 </html>
