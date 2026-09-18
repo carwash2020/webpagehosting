@@ -1,0 +1,47 @@
+# One-shot: restore styles.css after an MCP upload truncated it.
+# Safe to delete this workflow after it has run once.
+name: restore-truncated-styles
+on:
+  workflow_dispatch:
+  push:
+    branches: [cursor/visual-and-audit-fixes-19fd]
+    paths: [.github/workflows/restore-truncated-styles.yml]
+permissions:
+  contents: write
+jobs:
+  restore:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: cursor/visual-and-audit-fixes-19fd
+          fetch-depth: 0
+      - name: Restore styles.css from main and re-apply the chat-bubble hide
+        run: |
+          set -euo pipefail
+          git fetch origin main
+          git checkout origin/main -- styles.css
+          python3 -c '
+          from pathlib import Path
+          p = Path("styles.css")
+          s = p.read_text()
+          if len(s) < 100000:
+              raise SystemExit("restored styles.css is too small: %d bytes" % len(s))
+          needle = "    body:has(.sticky-call) .cookie-banner{\n      bottom:calc(16px + 72px + env(safe-area-inset-bottom, 0px));\n    }\n  }"
+          insert = needle.replace("    }\n  }", "    }\n    body:has(.sticky-call-sms) .chat-bubble-btn,\n    body:has(.sticky-call-sms) .chat-panel{\n      display:none !important;\n    }\n  }", 1)
+          if "sticky-call-sms) .chat-bubble-btn" not in s:
+              if needle not in s:
+                  raise SystemExit("cookie-banner needle not found")
+              s = s.replace(needle, insert, 1)
+          p.write_text(s)
+          print("styles.css bytes", p.stat().st_size)
+          '
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add styles.css
+          if git diff --cached --quiet; then
+            echo "no styles.css change to commit"
+          else
+            git commit -m "Restore full styles.css and hide the phone chat bubble on sticky-sms pages"
+            git push origin HEAD:cursor/visual-and-audit-fixes-19fd
+          fi

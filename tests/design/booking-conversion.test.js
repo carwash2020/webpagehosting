@@ -61,6 +61,18 @@ test('index.html AggregateRating is 5.0 from 7 Google reviews; booking.html JSON
   }
 });
 
+test('booking.html shows Terms and Privacy next to Confirm Booking', () => {
+  assert.match(
+    BOOKING,
+    /<p class="booking-legal">By confirming, you agree to our <a href="\/terms\.html">Terms &amp; Conditions<\/a> and <a href="\/privacy\.html">Privacy Policy<\/a>\.<\/p>/
+  );
+  assert.match(BOOKING, /\.booking-legal\{/);
+  const legalAt = BOOKING.indexOf('class="booking-legal"');
+  const submitAt = BOOKING.indexOf('id="submitBtn"');
+  assert.ok(legalAt > 0 && submitAt > legalAt, 'legal line must sit immediately before Confirm Booking');
+  assert.ok(submitAt - legalAt < 400, 'legal line should be next to the submit button, not elsewhere on the page');
+});
+
 test('booking.html has Service + ReserveAction JSON-LD and breadcrumbs, with the real NAP and no street address', () => {
   const blocks = jsonLdBlocks(BOOKING);
   const service = blocks.find((b) => b['@type'] === 'Service');

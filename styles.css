@@ -1948,6 +1948,10 @@
     body:has(.sticky-call) .cookie-banner{
       bottom:calc(16px + 72px + env(safe-area-inset-bottom, 0px));
     }
+    body:has(.sticky-call-sms) .chat-bubble-btn,
+    body:has(.sticky-call-sms) .chat-panel{
+      display:none !important;
+    }
   }
   @media (prefers-reduced-motion: no-preference){
     .sticky-call{animation:stickyCallIn .22s ease-out;}

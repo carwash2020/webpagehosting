@@ -32,6 +32,7 @@
 
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="color-scheme" content="dark">
 <meta name="robots" content="noindex, nofollow">
 <title>Dev Tools · Triple H Enterprises</title>
 <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data:; connect-src 'self' https://*.supabase.co wss://*.supabase.co https://api.github.com; frame-src 'none'; object-src 'none'; base-uri 'self'; frame-ancestors 'none';">
@@ -47,10 +48,11 @@
     // stylesheet loads, to avoid a flash of the wrong theme on load.
     var saved = localStorage.getItem('th_tools_theme');
     if (saved === 'light') document.documentElement.setAttribute('data-theme', 'light');
+    document.documentElement.style.colorScheme = saved === 'light' ? 'light' : 'dark';
   })();
 </script>
-<link rel="stylesheet" href="/styles.css?v=3bf0f079fe">
-<link rel="stylesheet" href="/tools/styles-tools.css?v=bc9a09dd07">
+<link rel="stylesheet" href="/styles.css?v=f685e650e5">
+<link rel="stylesheet" href="/tools/styles-tools.css?v=30ecd167f5">
 <script src="/tools/data-layer.js?v=c5d44f096e" defer></script>
 <script src="/tools/dev-tools-shared.js?v=ac4791dd0e" defer></script>
 <script src="/tools/tools-effects.js?v=4cff99aa4a" defer></script>

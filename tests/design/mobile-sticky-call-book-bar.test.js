@@ -58,6 +58,11 @@ test('pages with the bar get bottom padding and lift cookie/chat/back-to-top; pa
   assert.doesNotMatch(STYLES, /@media \(max-width:760px\)\{\s*body\{padding-bottom:70px;\}/);
 });
 
+test('the homepage chat bubble is hidden on phones when the sticky bar already has Text (it covered the hero name field)', () => {
+  assert.match(STYLES, /body:has\(\.sticky-call-sms\) \.chat-bubble-btn,/);
+  assert.match(STYLES, /body:has\(\.sticky-call-sms\) \.chat-panel\{/);
+});
+
 test('sticky bar entrance animation is gated on prefers-reduced-motion: no-preference', () => {
   assert.match(STYLES, /@media \(prefers-reduced-motion: no-preference\)\{\s*\.sticky-call\{animation:stickyCallIn/);
 });
