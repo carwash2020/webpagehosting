@@ -31,6 +31,7 @@
 
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="color-scheme" content="dark">
 <meta name="robots" content="noindex, nofollow">
 <title>Runway Dashboard | Triple H Enterprises (Internal Tool)</title>
 <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data:; connect-src 'self' https://*.supabase.co wss://*.supabase.co https://cdn.jsdelivr.net; frame-src 'none'; object-src 'none'; base-uri 'self'; frame-ancestors 'none';">
@@ -55,6 +56,7 @@
     // here since this page has no /styles.css link to insert before.
     var saved = localStorage.getItem('th_tools_theme');
     if (saved === 'light') document.documentElement.setAttribute('data-theme', 'light');
+    document.documentElement.style.colorScheme = saved === 'light' ? 'light' : 'dark';
   })();
 </script>
 <style>

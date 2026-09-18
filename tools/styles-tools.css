@@ -242,6 +242,19 @@ label .col-hint,
 /* --- Checkbox rows (Cost Lookup first-time discount, etc) --- */
 .checkbox-row{ display:flex; align-items:center; gap:8px; margin-bottom:14px; color:var(--white); font-size:14px; }
 .checkbox-row input[type="checkbox"]{ width:16px; height:16px; accent-color:var(--orange); }
+.checkbox-row label{ text-transform:none; letter-spacing:normal; }
+
+/* --- Tools login / reset-password card, same chrome portal-polish
+   already gives the client login (2026-09-18 visual pass) --- */
+body:has(.login-box){ background-color:#0a0a0a; }
+.login-box{
+  background:linear-gradient(168deg, var(--bg-panel-2), var(--bg-panel));
+  border:1px solid var(--border); border-radius:16px; padding:38px 34px;
+  box-shadow:0 24px 60px -28px rgba(0,0,0,.8), var(--shadow-resting);
+}
+@media (max-width:480px){
+  .login-box{ padding:28px 22px; }
+}
 
 /* --- Price reference chips (Cost Lookup) --- */
 .price-ref-list{ display:flex; flex-wrap:wrap; gap:8px; margin-top: 4px; }
