@@ -26,6 +26,8 @@ const PAGES = [
   'handyman-leeds-ut.html',
   'handyman-st-george-ut.html',
   'washer-dryer-repair-st-george-ut.html',
+  'refrigerator-repair-st-george-ut.html',
+  'dishwasher-repair-st-george-ut.html',
 ];
 
 for (const page of PAGES) {

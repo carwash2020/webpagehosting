@@ -13,6 +13,23 @@ sitting there for exactly this slot. Also: never use an Unsplash+
 (`plus.unsplash.com/premium_photo-...`) image -- it needs a paid license
 and often carries a visible watermark; free Unsplash is `images.unsplash.com/photo-...`.
 
+## 2026-09-18 -- refrigerator and dishwasher repair in St. George
+
+Wrote two more service × city pages rather than a dryer-only clone of
+the washer/St. George LP (that page already covers both laundry
+appliances). Fridge copy is St. George neighborhoods plus the shop
+notes already public on `blog/fridge-not-cooling.html` (dusty coils,
+frosted evaporator, freezer-ok/fridge-not, ice maker / defrost drain).
+Dishwasher copy matches `blog/dishwasher-not-cleaning.html` (spray
+arms, water temperature, drain, gasket/latch). Repair-vs-replace FAQs
+use those same facts, not a washer find-and-replace.
+
+Trust line is "5.0 from 7 Google reviews." Hero proof on both pages
+uses the verified appliances quote ("Had a few of my appliances fixed
+in no time"), not a fake fridge- or dishwasher-specific review. Wall
+reuses the same three written Google quotes already on the washer LP.
+No new Review objects, no AggregateRating.
+
 ## 2026-09-18 -- homepage high-intent FAQ next to the estimate form
 
 Duplicated five existing answers next to the homepage hero form:

@@ -6,11 +6,13 @@ exists so a real query like "washer repair St. George" lands on a page
 written for that query, with unique copy, not a find-and-replace of
 the city name.
 
-## Live path (first instance)
+## Live paths
 
-https://www.triplehenterprisesllc.biz/washer-dryer-repair-st-george-ut.html
+- https://www.triplehenterprisesllc.biz/washer-dryer-repair-st-george-ut.html — washer / appliance repair in St. George (first instance)
+- https://www.triplehenterprisesllc.biz/refrigerator-repair-st-george-ut.html — refrigerator repair in St. George
+- https://www.triplehenterprisesllc.biz/dishwasher-repair-st-george-ut.html — dishwasher repair in St. George
 
-File: `washer-dryer-repair-st-george-ut.html`
+Do not add a dryer-only St. George page: `washer-dryer-repair-st-george-ut.html` already names washer and dryer. Unique appliance niches for that city use their own service slug (`refrigerator-repair`, `dishwasher-repair`).
 
 ## URL pattern
 
@@ -20,7 +22,7 @@ Reuse slugs already in the repo:
 
 | Piece | Existing examples |
 |---|---|
-| Service | `washer-dryer-repair`, `plumbing-repairs`, `drywall-painting`, `handyman-repairs`, `assembly-installation` |
+| Service | `washer-dryer-repair`, `refrigerator-repair`, `dishwasher-repair`, `plumbing-repairs`, `drywall-painting`, `handyman-repairs`, `assembly-installation` |
 | City | `st-george-ut`, `hurricane-ut`, `washington-city-ut`, `santa-clara-ivins-ut`, `leeds-ut`, `la-verkin-ut`, `cedar-city-ut`, `mesquite-nv` |
 
 Planned clones named in the original request:
@@ -54,8 +56,10 @@ Do not invent a third naming scheme. City-only pages stay
    `reviewCount` 7.
 8. Link **out** to `/booking.html`, the parent service page, the parent
    city page, and one or two neighboring cities. Link **in** from the
-   parent service page's `.areas-links` block and from the parent city
-   page's matching service card.
+   parent service page (St. George appliance clones: the matching
+   "What We Fix" card plus a line next to `.areas-links`; a new *city*
+   for the same service still takes the city slot in `.areas-links`)
+   and from the parent city page's matching service card.
 9. Add the file to `sitemap.xml`.
 10. Add the filename to the landing-page test lists (social proof, FAQ
     schema, sticky Call+Book, booking-path, privacy footer, analytics,
