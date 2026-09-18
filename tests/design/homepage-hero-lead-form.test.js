@@ -96,7 +96,7 @@ test('mobile still puts the hex crest above Schedule/Call; the form does not jum
 
 test('sticky Call+Text+Book stays; no second public lead backend is invented', () => {
   assert.match(INDEX, /<nav class="sticky-call sticky-call-sms" aria-label="Call, text, or book">/);
-  const inserts = INDEX.match(/\/rest\/v1\/th_leads\?on_conflict=client_request_id/g) || [];
+  const inserts = INDEX.match(/LEADS_SUPABASE_URL \+ '\/rest\/v1\/th_leads'/g) || [];
   assert.equal(inserts.length, 1, 'hero and modal must share the one th_leads insert');
   assert.match(INDEX, /function submitLeadFromForm\(form, status, submitBtn\)/);
   assert.match(INDEX, /bindLeadForm\(form, status, submitBtn\)/);
@@ -113,7 +113,7 @@ test('AggregateRating stays 5.0 / 7; wall stays 4 written cards', () => {
 });
 
 test('the shared insert still sends the modal fields and accepts an empty hero email as null', () => {
-  const fnMatch = INDEX.match(/fetch\(LEADS_SUPABASE_URL \+ '\/rest\/v1\/th_leads\?on_conflict=client_request_id', \{[\s\S]*?\n\s*\.then\(\(response\)/);
+  const fnMatch = INDEX.match(/fetch\(LEADS_SUPABASE_URL \+ '\/rest\/v1\/th_leads', \{[\s\S]*?\n\s*\.then\(\(response\)/);
   assert.ok(fnMatch, 'expected to isolate the one th_leads insert');
   assert.match(fnMatch[0], /name: formData\.get\('name'\),/);
   assert.match(fnMatch[0], /phone: formData\.get\('phone'\),/);

@@ -2557,22 +2557,31 @@
     status.classList.remove('is-error', 'is-success');
     status.classList.add('is-visible');
 
-    // on_conflict + ignore-duplicates: the same atomic idempotency
-    // pattern already proven for the Stripe POS double-log race fix
-    // (stripe-webhook-index.ts) -- a real Postgres unique index is the
-    // only thing that can atomically decide "has this exact submission
-    // attempt already landed," which a plain check-then-act never
-    // could. A duplicate resolves as a normal, successful, empty
-    // response rather than an error -- exactly right here, since a
-    // resubmitted duplicate should look like success to the visitor,
-    // just without inserting a second row or firing a second email.
-    fetch(LEADS_SUPABASE_URL + '/rest/v1/th_leads?on_conflict=client_request_id', {
+    // Idempotency fix (2026-09-18): the original on_conflict=client_request_id
+    // + Prefer: resolution=ignore-duplicates approach (see
+    // sql/leads/add_th_leads_request_idempotency.sql) never actually
+    // worked -- ON CONFLICT requires Postgres to check whether a
+    // matching row already exists, which requires SELECT access under
+    // RLS, and the anon role deliberately has NO SELECT policy on
+    // th_leads (granting one would let anyone read every customer's
+    // name/phone/email via a plain GET request). Every submission
+    // through this path silently failed and rolled back at the
+    // database level -- th_leads had zero rows, ever, confirmed
+    // directly against the live project.
+    //
+    // Fixed the other direction instead: a plain INSERT (no ON
+    // CONFLICT, no SELECT needed) is still enforced by the same real
+    // unique index on client_request_id (see
+    // sql/leads/fix_th_leads_conflict_index.sql). A genuine duplicate
+    // now fails with Postgres 23505 / HTTP 409, handled as success
+    // below -- the visitor sees the same "sent" confirmation either
+    // way, without a second row or a second notification email.
+    fetch(LEADS_SUPABASE_URL + '/rest/v1/th_leads', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
         'apikey': LEADS_SUPABASE_ANON_KEY,
         'Authorization': 'Bearer ' + LEADS_SUPABASE_ANON_KEY,
-        'Prefer': 'resolution=ignore-duplicates',
       },
       body: JSON.stringify([Object.assign({
         name: formData.get('name'),
@@ -2593,7 +2602,7 @@
       }, (typeof window.getStoredUtmParams === 'function' && window.getStoredUtmParams()) || {})]),
     })
     .then((response) => {
-      if (response.ok) {
+      if (response.ok || response.status === 409) {
         status.textContent = "Request sent! We'll follow up by phone or email shortly.";
         status.classList.add('is-success');
         submitBtn.textContent = 'Sent ✓';
