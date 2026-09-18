@@ -235,6 +235,16 @@
       min-width: 0; background: none; border: none; box-shadow: none;
       padding: 0; gap: 6px;
     }
+    /* .jump-nav-secondary a's width:100% below exists for the MOBILE
+       dropdown, where it fills that menu's own min-width:198px column.
+       Nothing reset it here, so at this width each of these 4 chips
+       (Gallery/Compliance/Analytics/Backup) still stretched to the
+       jump-nav's full remaining row width and wrapped onto its own
+       line -- 4 stacked full-width rows instead of compact chips. Flex
+       default align-items:stretch then inflated every OTHER chip in
+       the row (Snapshot/Action Items/Tools) to match that 4-line
+       height, rendering them as tall ovals instead of normal chips. */
+    .jump-nav-secondary a { width: auto; }
   }
 
   /* Priority pill on a job -- referenced by renderTodayHero() below,
