@@ -3,6 +3,27 @@
 Started 2026-09-16, alongside the `tripleh-visual` skill. See `README.md` in
 this directory for how these logs work.
 
+## 2026-09-18 -- fixed both hero-lead-form defects from the #291 review
+
+Connor confirmed via Tha Boss/the hub to apply the two real defects
+this lane found in the Cursor-PR review below. PR #292: swapped
+`background:` for `background-color:` on `.hero-lead-form input,
+select, textarea` (fixes the Service dropdown arrow -- missing in dark
+mode, doubled/tiled in light), and added a one-column
+`.hero-lead-form .form-row` override inside the existing 860px mobile
+block (fixes the Name/Phone and Service/Email overflow/clipping on
+real mobile widths). Both re-verified visually and via
+`getBoundingClientRect`/computed-style in both themes, desktop and
+390px mobile. Full test suite: 2436/2436 passing.
+
+**Reporting note:** tried to report this to Tha Boss
+(`session_0135jX1WdhvdoJfptugFLtg4`) and the hub
+(`session_01AXsNpT7otNQigKYfspTezR`) directly via `SendMessage` as
+asked -- both failed with "not reachable" (the underlying `ccd_session`
+remote-session channel is still down, same as the #291 review).
+Logging here again and posted the test-suite result as a PR comment on
+#292 itself so the status is visible without the messaging channel.
+
 ## 2026-09-18 -- review pass on Cursor's conversion/UX PRs (#265-288): two real defects, no conflict with the motto-rail fix
 
 Requested by Connor via the hub, as a review not a fix — findings below,
