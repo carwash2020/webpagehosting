@@ -260,4 +260,31 @@ Verified clean before opening the PR: `npm run fix-versions`,
 `npm run check-consistency`, `npm run check-undefined-vars`,
 `python3 scripts/check-links.py`, and the full suite (2378/2378).
 
-<!-- Add new entries above this line -->
+**Follow-up, caught rebuilding the branch cleanly**: the "committed onto
+the wrong branch" mistake above wasn't actually fully fixed by that
+split -- `git branch claude/move-root-js-to-js-dir <sha>` carries a
+branch's *entire* ancestry, not just its tip commit, so the new branch
+still had PR #290's two commits underneath it. GitHub's own
+`mergeable_state` on the resulting PR #293 (`dirty`) plus `commits: 4`
+(should have been 2) is what caught it, not anything local -- worth
+remembering that splitting a bad commit off a branch means rebuilding
+from the correct base with `cherry-pick`, not just branching from the
+bad commit and calling it done. Rebuilt via
+`git checkout -B <branch>-clean origin/main` +
+`git cherry-pick <sha1> <sha2>`, resolving two real conflicts along the
+way (both service workers' `CACHE_NAME` line, where current `main` had
+independently bumped it since this branch's original base) by keeping
+either side's line and letting a fresh `npm run fix-versions` recompute
+the real value rather than hand-picking one.
+
+That rebuild also surfaced a second, unrelated real gap: two new pages
+(`refrigerator-repair-st-george-ut.html`, `dishwasher-repair-st-george-ut.html`)
+merged into `main` (via #287) *after* this task's original file sweep,
+also load `promo-banner.js` from the old root path -- genuinely broken
+now, not a test artifact, since the file really has moved. Caught by
+the full test suite actually growing (2378 -> 2436 tests, tracking
+main's new pages) and 2 of the new ones failing, not by anything
+static. Fixed the same way as every other page. Lesson: a file-move
+PR's "list every current reference" sweep is a snapshot -- if `main`
+moves during the work, re-sweep against the rebased branch before
+calling it done, don't trust the original grep.
