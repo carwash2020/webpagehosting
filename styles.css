@@ -905,6 +905,68 @@
     flex-wrap:wrap;
     align-items:center;
   }
+  /* Compact above-fold estimate form. Secondary to Schedule/Call —
+     sits after those buttons in source order so Connor's hex-above-
+     CTAs stack is unchanged. Hardcoded light colors: this card sits
+     on the same never-themed canyon photo as .hero h1. */
+  .hero-lead-form{
+    margin:18px 0 4px;
+    max-width:440px;
+    padding:14px 14px 12px;
+    border:1px solid var(--orange-tint-border);
+    border-radius:10px;
+    background:rgba(10,10,10,.58);
+    box-shadow:0 12px 28px rgba(0,0,0,.28);
+    text-align:left;
+  }
+  .hero-lead-kicker{
+    margin:0 0 12px;
+    font-family:var(--font-ui);
+    font-size:13.5px;
+    letter-spacing:.2px;
+    line-height:1.4;
+    color:#e5e2dc;
+  }
+  .hero-lead-kicker strong{color:#ffb347; font-weight:600;}
+  .hero-lead-optional{
+    text-transform:none;
+    letter-spacing:0;
+    font-weight:500;
+    color:#9a958c;
+  }
+  .hero-lead-form .form-row{
+    grid-template-columns:1fr 1fr;
+    gap:10px;
+    margin-bottom:10px;
+  }
+  .hero-lead-form .field{gap:5px;}
+  .hero-lead-form label{color:#c9c5bc; font-size:11.5px;}
+  .hero-lead-form input,
+  .hero-lead-form select,
+  .hero-lead-form textarea{
+    background:rgba(0,0,0,.45);
+    border-color:rgba(255,128,0,.35);
+    color:#ffffff;
+    padding:10px 12px;
+  }
+  .hero-lead-form textarea{min-height:64px;}
+  .hero-lead-form .form-footer{
+    margin-top:4px;
+    gap:12px;
+    align-items:center;
+  }
+  .hero-lead-form .btn.orange{min-height:44px;}
+  .hero-lead-text{
+    color:#ffb347;
+    font-family:var(--font-ui);
+    font-size:14px;
+    text-decoration:underline;
+    text-underline-offset:2px;
+  }
+  .hero-lead-text:hover{color:#ffffff;}
+  .hero-lead-form .form-status{color:#ffb347;}
+  .hero-lead-form .form-status.is-success{color:#8ee0b0;}
+  .hero-lead-form .form-status.is-error{color:#ffb347;}
   /* City/service heroes put the CTA row directly in .wrap (no lede
      margin underneath an h1 block the way the homepage does). */
   .hero .wrap > .hero-ctas{margin-top:32px;}
@@ -1011,6 +1073,11 @@
       white-space:normal;
       text-align:center;
     }
+    .hero-lead-form{
+      margin:16px auto 0;
+      max-width:360px;
+    }
+    .hero-lead-form .btn.orange{width:auto;}
     .hero .cta-proof,
     .hero-referral{
       justify-content:center;
@@ -1375,6 +1442,9 @@
 
   @media (max-width:600px){
     .form-row{grid-template-columns:1fr;}
+    /* Keep the hero estimate form two-up so it still starts on the
+       first screen instead of stacking into a long column. */
+    .hero-lead-form .form-row{grid-template-columns:1fr 1fr;}
   }
 
   /* contact */

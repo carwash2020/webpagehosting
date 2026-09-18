@@ -58,7 +58,7 @@ test('the id is cleared after a successful submission, so a genuinely new lead l
 });
 
 test('the id is NOT cleared on a failed submission, so a retry after a real failure reuses the same key rather than creating a fresh one', () => {
-  const catchMatch = INDEX.match(/\.catch\(\(\) => \{[\s\S]*?submitBtn\.textContent = 'Submit Request';\s*\n\s*\}\);/);
+  const catchMatch = INDEX.match(/\.catch\(\(\) => \{[\s\S]*?submitBtn\.textContent = idleLabel \|\| 'Submit Request';\s*\n\s*\}\);/);
   assert.ok(catchMatch, 'expected to isolate the .catch() handler');
   assert.doesNotMatch(catchMatch[0], /sessionStorage\.removeItem/);
 });

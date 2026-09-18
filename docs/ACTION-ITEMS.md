@@ -592,6 +592,13 @@ reference:
   Desktop two-column layout is unchanged (copy left, large mark
   right). Header nav logo is unchanged. AggregateRating stays 5.0 / 7.
 
+- **Homepage above-fold estimate form** (2026-09-18) -- compact
+  secondary path under the hero Schedule / Call buttons: name, phone,
+  service, brief details, optional email. Submits to the same
+  `th_leads` insert as the `#schedule` email modal. Text us stays on
+  the existing SMS link. Sticky Call+Book and AggregateRating (5.0 / 7)
+  unchanged.
+
 <!-- Add new visual additions above this line -->
 
 ## Proposed visual improvements (not yet built)

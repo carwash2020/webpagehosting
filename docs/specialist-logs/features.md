@@ -3,6 +3,32 @@
 Started 2026-09-16, alongside the `tripleh-features` skill. See `README.md`
 in this directory for how these logs work.
 
+## 2026-09-18 -- homepage above-fold estimate form
+
+Conversion research wanted a short "just send details" path on the
+homepage so visitors do not have to open booking.html. Investigated
+before building:
+
+- `#scheduleForm` (email modal) already inserts into `th_leads` with
+  honeypot, `client_request_id` idempotency, UTM merge, and
+  `lead_form_submitted`. That is the public lead path.
+- `booking.html` writes `th_bookings` (a held calendar slot). Wrong
+  for "no time picked."
+- Portal Request Work is signed-in clients only.
+
+Did not invent a second backend. Extracted `submitLeadFromForm` so the
+new `#heroLeadForm` and the modal share the one `th_leads` POST.
+Hero fields: name, phone, service, brief details, optional email.
+Hidden `source` = "Homepage estimate form" so the Workspace lead-source
+breakdown can tell this surface from the modal. Date/time/referred-by
+stay on the modal.
+
+Placement: after Schedule/Call, still in the hero. Did not give the
+form a CSS `order` — Connor's hex-above-CTA stack (`hero-badge` /
+`order:-1` at 860px) stays. Text us reuses the existing `sms:` href
+from the chat bubble. Sticky Call+Book unchanged. AggregateRating
+untouched (5.0 / 7).
+
 ## 2026-09-18 -- service × city landing page template (washer / St. George)
 
 City pages and service pages already existed separately. Explicitly
