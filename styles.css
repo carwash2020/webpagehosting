@@ -944,7 +944,14 @@
   .hero-lead-form input,
   .hero-lead-form select,
   .hero-lead-form textarea{
-    background:rgba(0,0,0,.45);
+    /* background-color, not the background shorthand (2026-09-18):
+       the shorthand resets background-image/-position/-repeat to
+       initial too, which was silently killing the sitewide select
+       arrow (select{background-image:url(...); background-repeat:
+       no-repeat; background-position:right 12px center;}) for any
+       <select> inside this form -- same footgun this codebase has
+       hit and fixed before elsewhere. */
+    background-color:rgba(0,0,0,.45);
     border-color:rgba(255,128,0,.35);
     color:#ffffff;
     padding:10px 12px;
@@ -1126,6 +1133,13 @@
       margin:16px auto 0;
       max-width:360px;
     }
+    /* .hero-lead-form .form-row{grid-template-columns:1fr 1fr} (above)
+       has no breakpoint of its own, and beats the sitewide .form-row
+       mobile-stack rule on specificity at every width, including phones
+       -- Name/Phone and Service/Email were overflowing this 360px card
+       and getting clipped by .hero's overflow:hidden. Stack to one
+       column here instead. */
+    .hero-lead-form .form-row{grid-template-columns:1fr;}
     .hero-lead-form .btn{width:auto;}
     .hero-intent-faq{
       margin:14px auto 0;
