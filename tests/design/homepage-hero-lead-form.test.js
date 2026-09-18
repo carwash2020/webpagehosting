@@ -77,7 +77,8 @@ test('Schedule stays the filled orange primary and Call stays outline; form subm
   assert.match(hero, /href="\/booking\.html"/);
   assert.match(hero, /Schedule an appointment/);
   const form = hero.slice(formAt, hero.indexOf('</form>', formAt));
-  assert.match(form, /id="heroLeadSubmitBtn">Send details</);
+  assert.match(form, /class="btn outline" id="heroLeadSubmitBtn">Send details</);
+  assert.doesNotMatch(form, /class="btn orange"/);
   assert.match(form, /href="sms:\+14354141667\?body=/);
   assert.match(form, />Text us</);
 });
@@ -90,7 +91,7 @@ test('mobile still puts the hex crest above Schedule/Call; the form does not jum
   assert.doesNotMatch(STYLES, /\.hero-lead-form\{[^}]*\border\s*:/);
   assert.match(STYLES, /\.hero-lead-form\{/);
   assert.match(STYLES, /\.hero-lead-form\{[\s\S]*?--orange-tint-border/);
-  assert.match(STYLES, /\.hero-lead-form \.btn\.orange\{min-height:44px;\}/);
+  assert.match(STYLES, /\.hero-lead-form \.btn\{min-height:44px;\}/);
 });
 
 test('sticky Call+Book stays; no second public lead backend is invented', () => {

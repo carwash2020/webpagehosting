@@ -955,7 +955,7 @@
     gap:12px;
     align-items:center;
   }
-  .hero-lead-form .btn.orange{min-height:44px;}
+  .hero-lead-form .btn{min-height:44px;}
   .hero-lead-text{
     color:#ffb347;
     font-family:var(--font-ui);
@@ -1077,7 +1077,7 @@
       margin:16px auto 0;
       max-width:360px;
     }
-    .hero-lead-form .btn.orange{width:auto;}
+    .hero-lead-form .btn{width:auto;}
     .hero .cta-proof,
     .hero-referral{
       justify-content:center;

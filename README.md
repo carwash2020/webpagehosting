@@ -2197,7 +2197,8 @@ New tests: `tests/seo/service-city-landing-page.test.js`.
 Public homepage only. Schedule stays the filled orange primary; Call
 stays the outline secondary. A compact form now sits under those
 buttons so a visitor can send details without opening `booking.html`
-or the mid-page email modal.
+or the mid-page email modal. The form's own **Send details** button
+is outline too, so it does not compete with Schedule on a phone.
 
 **Fields.** Name, phone, and service are required. Brief details and
 email are optional. Same service list as `#scheduleForm`.
