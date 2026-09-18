@@ -1,1 +1,1 @@
-Placeholder - will be set via SDK
+CONTENT_PLACEHOLDER
