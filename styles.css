@@ -2,3 +2,17 @@
    5 handyman-*.html landing pages), including the shared design tokens
    (:root) and universal resets (box-sizing, scrollbar, body defaults)
    that the tool suite also depends on.
+
+   Split 2026-08-20 (structural item #43): this file used to ALSO contain
+   the entire tool suite's CSS (roughly 1,363 more lines) appended after
+   this content -- meaning every tool page loaded ~1,363 lines of public-
+   site-irrelevant CSS on every visit, and the public site loaded nothing
+   extra since it only ever needed this half anyway.
+
+   Deliberately the SAFEST possible version of this split: the public
+   site's own <link> tag referencing this file was never touched at all
+   -- same filename, same URL, same content for everything the public
+   site actually uses. Only tool pages changed, gaining one additional
+   <link> to styles-tools.css (loaded AFTER this file, preserving the
+   exact same cascade order the single combined file always had).
+*/
