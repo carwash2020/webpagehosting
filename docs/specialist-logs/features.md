@@ -3,6 +3,24 @@
 Started 2026-09-16, alongside the `tripleh-features` skill. See `README.md`
 in this directory for how these logs work.
 
+## 2026-09-18 -- refrigerator and dishwasher repair in St. George
+
+Washer/dryer St. George already existed (`washer-dryer-repair-st-george-ut.html`),
+so a dryer-only clone would have been a thin duplicate. Built two unique
+appliance niches instead: `refrigerator-repair-st-george-ut.html` and
+`dishwasher-repair-st-george-ut.html`. Parent service page is still
+`washer-dryer-repair.html` (the only dedicated appliance service page).
+St. George slot in `.areas-links` stays the washer page; fridge and
+dishwasher link in from the matching What We Fix cards and a line next
+to that block so the 8-city grid count does not break.
+
+Same template rules as the washer LP: no AggregateRating, visible 5.0 / 7,
+no invented reviews, St. George trip-fee / same-day wording, unique
+H1/FAQs/"what we fix"/blog links per appliance. Did not change
+`styles.css`. Did not add these paths to the main Services nav dropdown
+(that dropdown is the five parent service pages, same as the washer LP).
+Sticky bar stays Call + Book; Text is homepage + washer LP only (#288).
+
 ## 2026-09-18 -- sticky Text + compact FAQ after the estimate form
 
 Follow-up to #285/#286, not a new backend. Homepage and the washer

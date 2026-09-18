@@ -37,6 +37,8 @@ const ALL_PAGES = [
   'our-work.html', 'plumbing-repairs.html', 'terms.html',
   'washer-dryer-repair.html',
   'washer-dryer-repair-st-george-ut.html',
+  'refrigerator-repair-st-george-ut.html',
+  'dishwasher-repair-st-george-ut.html',
 ];
 
 function read(name) {

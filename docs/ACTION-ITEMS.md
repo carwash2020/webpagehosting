@@ -377,6 +377,13 @@ reference:
   2026-09-18) -- first service × city landing page. Live path after
   merge: `/washer-dryer-repair-st-george-ut.html`. Clone notes in
   `docs/service-city-landing-pages.md`.
+- **Refrigerator and dishwasher repair in St. George**
+  (`refrigerator-repair-st-george-ut.html`,
+  `dishwasher-repair-st-george-ut.html`, 2026-09-18) -- two more
+  service × city pages. Dryer-only was skipped because the washer page
+  already covers both laundry appliances. Live paths after merge:
+  `/refrigerator-repair-st-george-ut.html` and
+  `/dishwasher-repair-st-george-ut.html`.
 - **Dashboard daily actions strip** (`tools/workspace.html`) -- New job,
   Create invoice, Find client, and Today's schedule sit above the Tools
   tile grid. Overdue invoices and Action Items income rows have a

@@ -33,6 +33,8 @@ const LANDING_PAGES = [
   'handyman-st-george-ut.html',
   'handyman-washington-city-ut.html',
   'washer-dryer-repair-st-george-ut.html',
+  'refrigerator-repair-st-george-ut.html',
+  'dishwasher-repair-st-george-ut.html',
 ];
 
 test('U01: .btn.orange is a flat fill with a solid offset shadow, not a gradient+glow', () => {

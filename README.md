@@ -55,6 +55,8 @@ Two things on this specific repo have caused real, hours-long confusion before. 
 | `handyman-cedar-city-ut.html` | Dedicated landing page — Cedar City, UT (by-request service area) |
 | `handyman-mesquite-nv.html` | Dedicated landing page — Mesquite, NV (by-request service area) |
 | `washer-dryer-repair-st-george-ut.html` | Service × city landing page (added 2026-09-18) — washer / appliance repair in St. George. Reusable template; see `docs/service-city-landing-pages.md`. |
+| `refrigerator-repair-st-george-ut.html` | Service × city landing page (added 2026-09-18) — refrigerator repair in St. George. |
+| `dishwasher-repair-st-george-ut.html` | Service × city landing page (added 2026-09-18) — dishwasher repair in St. George. |
 | `blog/` | **Blog** (added 2026-09-01). `index.html` lists the posts; three posts so far, each a standalone page with its own SEO metadata and Article structured data. `blog.css` extends the main site's brand tokens rather than introducing a separate design system (page headlines use Anton, matching the site's own h1; card-level headlines use Oswald, matching the service/contact cards). Photos are freely licensed Unsplash images, each individually verified before use — see the note under "Do not delete" about why there's no stock-photo shortcut here. |
 | `portal/` | **Client portal** (added 2026-08-31, substantially extended through 2026-09-04) — 8 pages covering a client's entire relationship with the business, not just invoice payment: `login.html`, `set-password.html`, `home.html` (landing page, "Needs Your Attention" summary), `dashboard.html` (invoices + Stripe payment), `quotes.html` (review/questions/approval/self-scheduling), `jobs.html` (job history, warranty, check-up reminders), `work-orders.html` (Request Work form + two-way messaging), `settings.html` (saved cards, notification preferences). Deliberately shares NO JavaScript with `/tools/`. **Read `docs/CLIENT-PORTAL.md` before touching anything here** — it's the current, authoritative reference for every page and table; this row is a summary, not a substitute. Only `login.html` is indexable; every other page is `noindex` on purpose. |
 | `sitemap.xml` | Lists all 12 live, indexable public pages: the homepage, `booking.html`, the 5 service-area landing pages, the blog index and its 3 posts, and `portal/login.html`. Deliberately excluded: `manage-booking.html` (token-gated, `noindex`), and the portal's `dashboard.html` / `set-password.html` (both `noindex`). Update this and resubmit in Google Search Console any time a page is added or removed. |
@@ -2240,4 +2242,30 @@ opens the live-fetched modal. No second FAQPage schema.
 AggregateRating stays **5.0 / 7**. The wall stays 4 written quotes.
 
 New tests: `tests/design/conversion-polish-sticky-sms-faq.test.js`.
+
+## What changed, 2026-09-18 -- refrigerator and dishwasher repair in St. George
+
+Two more service × city pages, cloned from
+`washer-dryer-repair-st-george-ut.html`. Dryer-only St. George was
+skipped: that template already covers washer and dryer. Unique
+appliance niches:
+
+- `/refrigerator-repair-st-george-ut.html`
+- `/dishwasher-repair-st-george-ut.html`
+
+Same converting layout as the washer page: H1 names the service and
+city, sticky Call + Book (Text stays on the homepage and washer LP
+from #288), visible "5.0 from 7 Google reviews" (GBP-matched; hero
+proof uses the verified appliances quote, not a made-up
+fridge/dishwasher review), 3-step process, St. George / Washington
+County copy, and FAQs for repair vs replace, trip fee, same-day, and
+warranty. Service JSON-LD has no AggregateRating.
+
+Inbound links from `washer-dryer-repair.html` (What We Fix cards plus
+a line next to `.areas-links`) and from the St. George city page
+appliance card. Sibling links between the three St. George appliance
+pages. `sitemap.xml` and the landing-page test lists include both
+paths.
+
+New tests: extended `tests/seo/service-city-landing-page.test.js`.
 
