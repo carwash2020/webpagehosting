@@ -344,4 +344,58 @@ with `node --test --test-timeout=15000`: smoke timed out, the new
 `tools-dialogs.js`). Fix: re-stub `showConfirm` after shared scripts,
 same as the existing `showToast` re-stub. No product-code change.
 
-<!-- Add new entries above this line -->
+## 2026-09-18 — `styles.css` truncated to its header comment on a Cursor branch, and a full-codebase check after merging its fix
+
+Root cause of every single `test.yml` failure across ~8 consecutive
+Cursor pushes to `cursor/visual-and-audit-fixes-19fd`: `styles.css` on
+that branch had been overwritten down to just its ~1KB header comment
+(160KB of real rules gone), almost certainly a bad full-file MCP write —
+the same class of mistake that separately took `main`'s `index.html`
+down to an 11-byte placeholder earlier the same day. With the stylesheet
+gone, ~100 CSS-dependent design tests failed for a reason that had
+nothing to do with what any individual commit actually changed, which is
+why re-pushing the "same" fix 5 times in a row never turned CI green —
+the branch was passing its own actual diff and failing on unrelated
+content that had quietly disappeared underneath it.
+
+Fixed by restoring `styles.css` from `main` and re-applying the branch's
+one real addition on top (hiding `.chat-bubble-btn`/`.chat-panel` on
+pages with `.sticky-call-sms`, confirmed correctly scoped inside the
+existing `max-width:760px` block and winning the cascade via
+`!important`, not selector order). Diffing the restored file against the
+pre-truncation blob confirmed that one hunk was the *only* difference —
+nothing else was lost or silently altered in the restore.
+
+Separately (real, pre-existing, unrelated to the truncation): 11 pages
+(`about.html`, `our-work.html`, 9 blog posts) were missing the footer's
+Terms & Conditions / Privacy Policy link pair entirely — not a wording
+bug, the `<li>`s were just absent. `booking.html`'s Confirm Booking had
+no legal line. 15 `tools/` pages never declared `color-scheme: dark`
+(real white-flash-on-load FOUC) and the shared theme snippet never set
+`documentElement.style.colorScheme`; `styles-tools.css` had no
+`.login-box` rule at all even though `login.html`/`reset-password.html`
+already referenced that class, and no `.checkbox-row label` override
+against the sitewide bare `label{text-transform:uppercase}` rule.
+
+Merged as PR #300. Full-codebase check afterward, since the branch had
+diverged and merge-conflicted against several PRs that landed on `main`
+in the meantime (booking-cta gap fix, workspace jump-nav fix, lead-form
+fix): fresh clone, `npm install`, full suite (**2457/2457**),
+`check-consistency`, `check-undefined-vars`, and `check-links.py` all
+clean; manually re-verified (jsdom-parsed, not just regex-matched) that
+all 11 footer-link insertions and the booking legal line actually landed
+in the right DOM location; confirmed the one `tools/login.html`/
+`reset-password.html` inline `body { background: #0a0a0a; ... }` addition
+uses the plain (non-th-tool-page) login layout with no `background-image`
+on `body` to lose — the shorthand-reset footgun documented elsewhere in
+this file's history doesn't apply here, since it's a different body
+selector than the one carrying the ambient gradient.
+
+Also noted (not a bug): mid-review, `git status` on the working checkout
+briefly showed `tools/dev-tools.html` as modified with an empty diff and
+a matching content hash before and after — a live test in the suite
+writes to that real file as part of what it tests and had a save in
+flight at the exact moment `git status` ran from a separate process.
+Re-running `git status` a moment later showed clean. Matches this file's
+existing "isolate before assuming a flake" guidance, just at the
+git-status layer instead of test-runner layer.
