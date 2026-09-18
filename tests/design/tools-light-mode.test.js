@@ -102,6 +102,7 @@ test('clicking the toggle switches to light mode, persists the choice, and updat
   const btn = window.document.getElementById('toolsThemeToggleBtn');
   btn.click();
   assert.equal(window.document.documentElement.getAttribute('data-theme'), 'light');
+  assert.equal(window.document.documentElement.style.colorScheme, 'light');
   assert.equal(btn.textContent, 'Dark mode');
   assert.equal(btn.getAttribute('aria-pressed'), 'true');
   assert.equal(window.localStorage.getItem('th_tools_theme'), 'light');
@@ -114,6 +115,7 @@ test('clicking the toggle a second time flips back to dark and persists that too
   btn.click();
   btn.click();
   assert.equal(window.document.documentElement.getAttribute('data-theme'), null);
+  assert.equal(window.document.documentElement.style.colorScheme, 'dark');
   assert.equal(btn.textContent, 'Light mode');
   assert.equal(window.localStorage.getItem('th_tools_theme'), 'dark');
 });
