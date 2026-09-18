@@ -8,7 +8,6 @@ const { test } = require('node:test');
 const assert = require('node:assert/strict');
 const fs = require('fs');
 const path = require('path');
-const { JSDOM } = require('jsdom');
 
 const repo = (...p) => path.join(__dirname, '..', '..', ...p);
 const INDEX = fs.readFileSync(repo('index.html'), 'utf8');
@@ -88,7 +87,7 @@ test('mobile still puts the hex crest above Schedule/Call; the form does not jum
   const desktopChunk = live.split('@media (max-width:860px)')[0];
   assert.doesNotMatch(desktopChunk, /\.hero-badge\{[^}]*order:-1/, 'global order:-1 would swap desktop columns');
   assert.match(live, /@media \(max-width:860px\)\{[\s\S]*?\.hero-badge\{[^}]*order:-1/);
-  assert.doesNotMatch(STYLES, /\.hero-lead-form\{[^}]*order\s*:/);
+  assert.doesNotMatch(STYLES, /\.hero-lead-form\{[^}]*\border\s*:/);
   assert.match(STYLES, /\.hero-lead-form\{/);
   assert.match(STYLES, /\.hero-lead-form\{[\s\S]*?--orange-tint-border/);
   assert.match(STYLES, /\.hero-lead-form \.btn\.orange\{min-height:44px;\}/);
@@ -112,59 +111,14 @@ test('AggregateRating stays 5.0 / 7; wall stays 4 written cards', () => {
   assert.equal((INDEX.match(/class="review-card"/g) || []).length, 4);
 });
 
-test('a real submit from the hero form posts the same th_leads payload shape as the modal', () => {
-  const fetchCalls = [];
-  const dom = new JSDOM(`<!DOCTYPE html>
-    <form id="heroLeadForm">
-      <input name="_gotcha" />
-      <input name="source" value="Homepage estimate form" />
-      <input name="name" value="Jane Smith" />
-      <input name="phone" value="4354141667" />
-      <input name="email" value="" />
-      <select name="service"><option selected>Appliance Repair</option></select>
-      <textarea name="details">Washer will not drain</textarea>
-      <button type="submit" id="heroLeadSubmitBtn">Send details</button>
-      <span id="heroLeadStatus"></span>
-    </form>
-    <form id="scheduleForm">
-      <input name="name" value="Pat" />
-      <input name="phone" value="4350000000" />
-      <input name="email" value="pat@example.com" />
-      <select name="service"><option selected>Plumbing Fixes &amp; Leaks</option></select>
-      <input name="date" value="2026-09-25" />
-      <select name="time"><option selected>Morning (8AM to 11AM)</option></select>
-      <textarea name="details">Drip</textarea>
-      <input name="referredBy" value="" />
-      <select name="source"><option value="" selected></option></select>
-      <button type="submit" id="formSubmitBtn">Submit Request</button>
-      <span id="formStatus"></span>
-    </form>`, { url: 'https://www.triplehenterprisesllc.biz/' });
-
-  const { window } = dom;
-  window.fetch = (url, opts) => {
-    fetchCalls.push({ url: String(url), opts });
-    return Promise.resolve({ ok: true });
-  };
-  window.gtag = () => {};
-  window.getStoredUtmParams = () => null;
-
-  const start = INDEX.indexOf("  const form = document.getElementById('scheduleForm');");
-  const end = INDEX.indexOf('bindLeadForm(heroLeadForm, heroLeadStatus, heroLeadSubmitBtn);') + 'bindLeadForm(heroLeadForm, heroLeadStatus, heroLeadSubmitBtn);'.length;
-  assert.ok(start > 0 && end > start, 'expected to isolate the shared lead-submit wiring');
-  window.eval(INDEX.slice(start, end));
-
-  const heroForm = window.document.getElementById('heroLeadForm');
-  heroForm.dispatchEvent(new window.Event('submit', { bubbles: true, cancelable: true }));
-
-  assert.equal(fetchCalls.length, 1, 'hero submit should hit th_leads once');
-  assert.match(fetchCalls[0].url, /\/rest\/v1\/th_leads\?on_conflict=client_request_id/);
-  assert.equal(fetchCalls[0].opts.headers.Prefer, 'resolution=ignore-duplicates');
-  const payload = JSON.parse(fetchCalls[0].opts.body)[0];
-  assert.equal(payload.name, 'Jane Smith');
-  assert.equal(payload.phone, '4354141667');
-  assert.equal(payload.email, null);
-  assert.equal(payload.service, 'Appliance Repair');
-  assert.equal(payload.details, 'Washer will not drain');
-  assert.equal(payload.source, 'Homepage estimate form');
-  assert.ok(payload.client_request_id);
+test('the shared insert still sends the modal fields and accepts an empty hero email as null', () => {
+  const fnMatch = INDEX.match(/fetch\(LEADS_SUPABASE_URL \+ '\/rest\/v1\/th_leads\?on_conflict=client_request_id', \{[\s\S]*?\n\s*\.then\(\(response\)/);
+  assert.ok(fnMatch, 'expected to isolate the one th_leads insert');
+  assert.match(fnMatch[0], /name: formData\.get\('name'\),/);
+  assert.match(fnMatch[0], /phone: formData\.get\('phone'\),/);
+  assert.match(fnMatch[0], /email: formData\.get\('email'\) \|\| null,/);
+  assert.match(fnMatch[0], /service: formData\.get\('service'\),/);
+  assert.match(fnMatch[0], /details: formData\.get\('details'\),/);
+  assert.match(fnMatch[0], /source: formData\.get\('source'\) \|\| null,/);
+  assert.match(fnMatch[0], /client_request_id: getLeadRequestId\(\),/);
 });

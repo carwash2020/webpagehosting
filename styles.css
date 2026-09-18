@@ -916,7 +916,7 @@
     border:1px solid var(--orange-tint-border);
     border-radius:10px;
     background:rgba(10,10,10,.58);
-    box-shadow:0 12px 28px rgba(0,0,0,.28);
+    box-shadow:var(--shadow-resting);
     text-align:left;
   }
   .hero-lead-kicker{
@@ -1442,9 +1442,6 @@
 
   @media (max-width:600px){
     .form-row{grid-template-columns:1fr;}
-    /* Keep the hero estimate form two-up so it still starts on the
-       first screen instead of stacking into a long column. */
-    .hero-lead-form .form-row{grid-template-columns:1fr 1fr;}
   }
 
   /* contact */
