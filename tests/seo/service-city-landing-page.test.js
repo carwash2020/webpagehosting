@@ -135,19 +135,23 @@ for (const page of PAGES) {
     assert.match(html, /href="\/handyman-hurricane-ut\.html"/);
     assert.match(html, /href="\/handyman-washington-city-ut\.html"/);
     assert.match(html, /href="\/blog\/appliance-repair-or-replace\.html"/);
-    assert.match(html, new RegExp(`href="${page.blogPost.replace(/\./g, '\\.')}"`));
+    assert.equal(html.includes(`href="${page.blogPost}"`), true, 'matching blog post');
   });
 
   test(`${page.file}: sitemap lists the live path`, () => {
     const sitemap = fs.readFileSync(repo('sitemap.xml'), 'utf8');
-    assert.match(sitemap, new RegExp(`<loc>https://www\\.triplehenterprisesllc\\.biz/${page.file}</loc>`));
+    assert.equal(
+      sitemap.includes(`<loc>https://www.triplehenterprisesllc.biz/${page.file}</loc>`),
+      true,
+      'sitemap loc'
+    );
   });
 
   test(`${page.file}: parent service and city pages link into this instance`, () => {
     const service = fs.readFileSync(repo('washer-dryer-repair.html'), 'utf8');
     const city = fs.readFileSync(repo('handyman-st-george-ut.html'), 'utf8');
-    assert.match(service, new RegExp(`href="/${page.file}"`));
+    assert.equal(service.includes(`href="/${page.file}"`), true, 'parent service inbound href');
     assert.match(service, page.inboundLabel);
-    assert.match(city, new RegExp(`href="/${page.file}"`));
+    assert.equal(city.includes(`href="/${page.file}"`), true, 'parent city inbound href');
   });
 }
