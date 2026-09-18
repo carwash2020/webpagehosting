@@ -105,7 +105,7 @@ python3 scripts/check-links.py   # expect: everything resolved
 npm test                         # expect: ALL PASSING, see below
 ```
 
-**`npm test` should be fully green.** As of 2026-09-10 it's 1591/1591,
+**`npm test` should be fully green.** As of 2026-09-18 it's 2456/2456,
 now run with `--test-concurrency=1` (serial, not parallel) -- a few
 tests in `tests/workspace/finance-split.test.js` temporarily write
 "broken" content directly to the real `service-worker.js` (and a couple
@@ -284,8 +284,11 @@ still what every other remaining page's read still depends on.
   everywhere including when focused on their own landing page. They are
   deliberately excluded from the main `areaServed` schema. Do not
   "fix" this.
-- The Terms modal opens via the `/#terms` hash. Landing pages link there,
-  not to `terms.html`.
+- Footer Terms links go to `/terms.html` (the real page), including on
+  every landing page, about, our-work, and the blog. Do not revert them
+  to `/#terms`. The homepage still auto-opens its Terms modal if a
+  visitor lands on `/#terms` (old links); that hash handler is
+  backwards-compat, not the footer target.
 - The lead form's `_gotcha` honeypot is real spam protection.
 - Phone, email, hours, FAQ and Terms come from Supabase at runtime via
   the `.js-phone-text` / `.js-email-text` spans. Editing that text in the
