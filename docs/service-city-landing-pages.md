@@ -63,7 +63,9 @@ Do not invent a third naming scheme. City-only pages stay
     extend `tests/seo/service-city-landing-page.test.js` — or copy that
     file's assertions onto the new path.
 11. Reuse `styles.css` and the existing header/footer/sticky bar. Do
-    not add a new design system.
+    not add a new design system. High-intent converting pages (this
+    washer / St. George instance) use Call + Text + Book on the sticky
+    bar (`.sticky-call-sms`); other marketing pages stay Call + Book.
 
 ## What not to do
 

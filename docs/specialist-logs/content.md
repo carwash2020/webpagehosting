@@ -13,6 +13,17 @@ sitting there for exactly this slot. Also: never use an Unsplash+
 (`plus.unsplash.com/premium_photo-...`) image -- it needs a paid license
 and often carries a visible watermark; free Unsplash is `images.unsplash.com/photo-...`.
 
+## 2026-09-18 -- homepage high-intent FAQ next to the estimate form
+
+Duplicated five existing answers next to the homepage hero form:
+trip fee, same-day/emergency, work guarantee, repair vs replace, and
+payment methods. Trip fee / same-day / guarantee / payment are the
+homepage modal wording. Repair vs replace is the washer St. George LP
+wording (the only existing FAQ for that objection). Did not invent a
+fee, a same-day promise, or a new warranty. Did not add a second
+FAQPage — the modal still owns schema and the live `site_faq` fetch.
+"See all FAQs" opens that modal.
+
 ## 2026-09-18 -- washer / appliance repair in St. George (service × city)
 
 Wrote the first combined service + city page. Copy is St. George /
