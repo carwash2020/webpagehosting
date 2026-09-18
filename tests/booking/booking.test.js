@@ -13,7 +13,7 @@ const path = require('path');
 const { JSDOM } = require('jsdom');
 
 const PAGE_PATH = path.join(__dirname, '..', '..', 'booking.html');
-const BUSINESS_HOURS_SRC = fs.readFileSync(path.join(__dirname, '..', '..', 'business-hours.js'), 'utf8')
+const BUSINESS_HOURS_SRC = fs.readFileSync(path.join(__dirname, '..', '..', 'js', 'business-hours.js'), 'utf8')
   // const/function declarations run via indirect eval() (calling
   // w.eval(...) as a method, rather than the bare `eval` identifier)
   // create bindings in the realm's global lexical scope, but --
@@ -106,7 +106,7 @@ test('a non-OK response from the availability endpoint is never silently treated
   // it moved to the shared /business-hours.js, alongside genuinely
   // identical copies that turned up on portal/quotes.html,
   // portal/jobs.html, and manage-booking.html.
-  const src = fs.readFileSync(path.join(__dirname, '..', '..', 'business-hours.js'), 'utf8');
+  const src = fs.readFileSync(path.join(__dirname, '..', '..', 'js', 'business-hours.js'), 'utf8');
   assert.match(src, /if \(!res\.ok\) throw new Error/, 'fetchBookingsForDate should throw on a non-OK response, not silently return []');
 });
 

@@ -11,7 +11,7 @@ const fs = require('fs');
 const path = require('path');
 const vm = require('vm');
 
-const SRC = fs.readFileSync(path.join(__dirname, '..', '..', 'business-hours.js'), 'utf8');
+const SRC = fs.readFileSync(path.join(__dirname, '..', '..', 'js', 'business-hours.js'), 'utf8');
 
 function makeContext({ fetchImpl, now }) {
   const ctx = {

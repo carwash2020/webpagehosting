@@ -13,7 +13,7 @@ const repo = (...p) => path.join(__dirname, '..', '..', ...p);
 const STYLES = fs.readFileSync(repo('styles.css'), 'utf8');
 const INDEX = fs.readFileSync(repo('index.html'), 'utf8');
 const BOOKING = fs.readFileSync(repo('booking.html'), 'utf8');
-const COOKIE_JS = fs.readFileSync(repo('cookie-consent.js'), 'utf8');
+const COOKIE_JS = fs.readFileSync(repo('js/cookie-consent.js'), 'utf8');
 
 test('documented mobile chrome stack keeps Call+Book and defers cookie off the hero', () => {
   assert.match(STYLES, /Public chrome stack/);

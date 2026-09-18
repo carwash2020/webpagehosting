@@ -264,7 +264,7 @@
 // window.alert() on the error/validation paths across dashboard.html,
 // quotes.html and settings.html, item 8; plus the line-item disclosure's
 // animated open/close CSS). All six are in PRECACHE_URLS.
-const CACHE_NAME = 'th-portal-v100'; // precache-fingerprint:d44f6e8bce3e
+const CACHE_NAME = 'th-portal-v101'; // precache-fingerprint:8f3fa774b18f
 const PRECACHE_URLS = [
   '/portal/home.html', '/portal/dashboard.html', '/portal/jobs.html', '/portal/quotes.html',
   '/portal/work-orders.html', '/portal/settings.html', '/portal/login.html', '/portal/set-password.html',
@@ -274,7 +274,7 @@ const PRECACHE_URLS = [
   '/portal/portal-app.js',
   '/portal/portal-polish.css',
   '/portal/portal-update.js',
-  '/styles.css', '/business-hours.js',
+  '/styles.css', '/js/business-hours.js',
   '/portal/push-notifications.js',
   '/images/logo-signature-orange.webp', '/images/icon-192.png', '/images/icon-512.png', '/images/apple-touch-icon.png',
 ];

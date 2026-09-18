@@ -12,7 +12,7 @@ const path = require('path');
 const { JSDOM } = require('jsdom');
 
 const PAGE_PATH = path.join(__dirname, '..', '..', 'manage-booking.html');
-const BUSINESS_HOURS_SRC = fs.readFileSync(path.join(__dirname, '..', '..', 'business-hours.js'), 'utf8')
+const BUSINESS_HOURS_SRC = fs.readFileSync(path.join(__dirname, '..', '..', 'js', 'business-hours.js'), 'utf8')
   // See booking.test.js's identical comment for why this explicit
   // window.X = X exposure is needed -- const declarations via
   // indirect eval() don't become window properties on their own.
