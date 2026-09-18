@@ -88,7 +88,7 @@ test('the footer Privacy Policy link sits right after the Terms & Conditions lin
   const pagesWithHashTerms = PAGES_LINKING_TO_PRIVACY.filter((n) => n !== 'index.html' && n !== 'terms.html');
   for (const name of pagesWithHashTerms) {
     const html = fs.readFileSync(repo(name), 'utf8');
-    const termsIdx = html.indexOf('<li><a href="/#terms">Terms &amp; Conditions</a></li>');
+    const termsIdx = html.indexOf('<li><a href="/terms.html">Terms &amp; Conditions</a></li>');
     const privacyIdx = html.indexOf('<li><a href="/privacy.html">Privacy Policy</a></li>');
     assert.ok(termsIdx !== -1 && privacyIdx !== -1, `${name}: expected both links`);
     assert.ok(privacyIdx > termsIdx && privacyIdx - termsIdx < 100, `${name}: Privacy Policy link should sit immediately after Terms & Conditions`);

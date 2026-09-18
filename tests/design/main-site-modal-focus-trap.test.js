@@ -106,7 +106,7 @@ test('setupSimpleModal() establishes the trap on open() and releases it on close
 });
 
 test('the #terms hash auto-open path reuses setupSimpleModal()\'s own open() instead of duplicating overlay/focus logic by hand', () => {
-  assert.match(INDEX, /const termsModal = setupSimpleModal\('termsOverlay', 'termsClose', \['navTermsFooter'\]\);/);
+  assert.match(INDEX, /const termsModal = setupSimpleModal\('termsOverlay', 'termsClose', \[\]\);/);
   const hashBlock = INDEX.slice(INDEX.indexOf("if (window.location.hash === '#terms'"));
   const ifLine = hashBlock.slice(0, hashBlock.indexOf('\n'));
   assert.match(ifLine, /window\.location\.hash === '#terms' && termsModal/);
