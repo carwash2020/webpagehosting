@@ -208,4 +208,56 @@ deleted after Connor OK (`delete_branch_on_merge` did not remove it
 because a later commit was pushed onto the branch after #269
 squashed).
 
+## 2026-09-18 (later the same day) -- hub dispatch: move root JS into js/
+
+Pure reorganization, dispatched via the hub on Connor's confirmation:
+move `analytics-events.js`, `business-hours.js`, `cookie-consent.js`,
+`promo-banner.js`, `site-motion.js`, `triage.js`, `utm-tracking.js`
+from repo root to `js/`. PR #293, not merged (per standing rule).
+
+**Two hardcoded config lists needed updating, not just HTML script
+tags**: `GLOBAL_SHARED_FILES` in `scripts/check-consistency.js` and
+`SHARED_SCRIPT_FILES` in `scripts/check-undefined-vars.js` both store
+these files' paths as literal strings used to resolve real file
+content on disk (`currentContentHash(ROOT_DIR, file)` does
+`path.join(ROOT_DIR, file)`). Leaving them as bare filenames after the
+move wouldn't have broken loudly -- `currentContentHash` returns `null`
+and both `checkGlobalSharedFileFreshness`/`fixGlobalSharedFiles` just
+`continue` past a missing file silently, per an explicit comment
+("file doesn't exist -- not this check's job to notice that"). That
+would have quietly disabled freshness checking for these 6 files
+instead of failing CI -- worth remembering for any future file-move:
+grep for the bare filename in `scripts/` before assuming "no `?v=` in
+the diff" means nothing else needs updating.
+
+**Precache fingerprint mechanism handles a pure path move correctly,
+confirmed by reading its actual implementation**
+(`computePrecacheFingerprint` in check-consistency.js hashes
+`url + ':' + contentHash` per entry, not content alone) -- so editing
+`portal/service-worker.js`'s `PRECACHE_URLS` entry from
+`/business-hours.js` to `/js/business-hours.js` (the only one of the
+seven actually precached; confirmed by grepping both service workers'
+real `PRECACHE_URLS` arrays, not just comment history) changed the
+fingerprint even though the file's content didn't, and
+`npm run fix-versions` auto-bumped both `CACHE_NAME`s on its own with
+no manual intervention needed. Good evidence the 2026-09-08 automation
+generalizes correctly to a case it wasn't explicitly designed for.
+
+**Mistake caught before pushing**: committed this work directly onto
+`claude/auto-fix-cache-bust-ci` (already the head of open PR #290,
+unrelated) instead of a fresh branch. Caught before pushing --
+confirmed the branch's second-to-last commit still matched
+`origin/claude/auto-fix-cache-bust-ci` exactly
+(`git log --oneline` against both), so `git branch
+claude/move-root-js-to-js-dir <bad-commit-sha>` +
+`git reset --hard <last-good-sha>` on the original branch safely split
+the reorg commit onto its own branch with zero risk to the
+already-pushed PR #290. Lesson: start every dispatched task with an
+explicit `git checkout -B <new-branch> origin/main`, don't assume the
+working branch is still whatever the previous task left checked out.
+
+Verified clean before opening the PR: `npm run fix-versions`,
+`npm run check-consistency`, `npm run check-undefined-vars`,
+`python3 scripts/check-links.py`, and the full suite (2378/2378).
+
 <!-- Add new entries above this line -->
