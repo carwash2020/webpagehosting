@@ -1,0 +1,63 @@
+name: Auto-fix cache-bust stamps
+
+# check-consistency.js's cache-bust check (styles.css?v=, the other
+# root-shared files, and each service worker's CACHE_NAME fingerprint)
+# fails whenever a PR's committed hash goes stale relative to the file's
+# real current content -- which happens even with no merge conflict,
+# any time a *different* PR touching the same shared file merges first.
+# `npm run fix-versions` already computes the correct value; this just
+# runs it automatically on every PR push instead of waiting for a human
+# (or an agent) to notice the CI failure and push a manual fixup commit.
+#
+# Only runs for same-repo branches (not forks) so the default
+# GITHUB_TOKEN can push back to the PR branch. Pushes from GITHUB_TOKEN
+# do not themselves trigger another workflow run, so this cannot loop.
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+
+permissions:
+  contents: write
+
+jobs:
+  fix-versions:
+    if: github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          ref: ${{ github.event.pull_request.head.ref }}
+
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
+        with:
+          node-version: 24
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Recompute cache-bust hashes and CACHE_NAME fingerprints
+        run: npm run fix-versions
+
+      - name: Check whether fix-versions changed anything
+        id: diff
+        run: |
+          if [ -n "$(git status --porcelain)" ]; then
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Commit and push the fix
+        if: steps.diff.outputs.changed == 'true'
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -m "Auto-fix stale cache-bust stamps
+
+          npm run fix-versions found a committed ?v= hash or CACHE_NAME
+          fingerprint that no longer matched the referenced file's real
+          content -- usually because another PR touching the same
+          shared file merged first. check-consistency would otherwise
+          fail CI until someone noticed and pushed this by hand."
+          git push origin HEAD:"${{ github.event.pull_request.head.ref }}"

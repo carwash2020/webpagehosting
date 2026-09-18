@@ -288,3 +288,64 @@ static. Fixed the same way as every other page. Lesson: a file-move
 PR's "list every current reference" sweep is a snapshot -- if `main`
 moves during the work, re-sweep against the rebased branch before
 calling it done, don't trust the original grep.
+
+## 2026-09-18 -- hub dispatch: Cursor PR review, cache-bust automation gap
+
+Reviewed Cursor Agent's recent PRs (#265-288, `carwash2020/webpagehosting`)
+per a hub dispatch. Scope was specifically the recurring manual
+cache-bust/version-stamp step showing up in nearly every PR touching a
+shared file -- not a full correctness review of Cursor's application
+logic, which is out of this lane.
+
+**What's actually happening**: the 2026-09-08 automation
+(`npm run fix-versions`, content-hash based, enforced by
+`check-consistency` on every push) already solved the *old* problem
+(hand-picked version strings). It did not solve a newer one it
+structurally can't: storing the hash in committed source means any two
+PRs touching the same shared file (`styles.css`, `triage.js`, etc.)
+race on the hash with no textual conflict -- whoever merges second
+needs a human/agent-noticed fixup commit. Confirmed live, not just from
+history: PR #287 needed a third commit
+(`1870597`) purely to re-fix a hash gone stale because #288 merged
+first mid-PR. Recurs across git history under various names
+("Resync cache-bust stamps...", "Bump service-worker.js CACHE_NAME
+after merging main again...").
+
+**Fix proposed, merged 2026-09-18 on Connor's explicit sign-off**: PR
+#290 (recreated as a clean branch after the original diverged in a way
+GitHub's merge check couldn't reconcile) adds
+`.github/workflows/auto-fix-cache-bust.yml` -- runs `fix-versions` on
+every PR push, commits+pushes only if it actually changed something.
+Verified locally against current `main` that `fix-versions` is a true
+no-op when nothing's stale (so the job does nothing on a normal clean
+push). Restricted to same-repo branches so the default `GITHUB_TOKEN`
+can push back; a `GITHUB_TOKEN` push doesn't retrigger workflows, so no
+loop risk. Worth watching the first real `pull_request`-triggered run
+to confirm it fires and behaves as designed, since this session could
+only verify the underlying script's behavior locally, not the workflow
+trigger itself.
+
+**Mistake made and caught mid-task, worth flagging**: while switching
+branches for this work, `git checkout main -- .` (meant to clear an
+earlier working-tree check) silently staged dozens of files with
+content from a stale *local* `main` ref (stuck at old commit #218,
+unrelated to `origin/main`) -- not caught until a subsequent
+`git checkout -B ... origin/main` refused to run because of the
+resulting uncommitted changes. Recovered safely with `git reset --hard
+HEAD` since nothing had been committed and the branch already matched
+its origin exactly -- but the lesson is real: never run a bare
+`git checkout <ref> -- .` (or any working-tree-wide checkout) without
+running `git status` first and confirming which ref is actually
+intended, local branch names can be stale in ways `origin/*` refs
+aren't.
+
+**Also reviewed (not automation-lane, reported for context)**: Cursor's
+commit messages are consistently good (explain why, not just what,
+matching this repo's existing convention) and CI failures get
+root-caused rather than skipped (e.g. PR #283's real `showConfirm`
+stub fix, PR #287's real CodeQL regex-escaping fix via `includes()`
+instead of further sanitization). One thing worth a second look by
+whoever owns CI reliability: PR #283 has an empty "Retrigger Tests CI
+after cancelled hung runs" commit -- harmless once, but if "hung runs"
+recur it's a symptom worth root-causing rather than re-triggering
+around.
