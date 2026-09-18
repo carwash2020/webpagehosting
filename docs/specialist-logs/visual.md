@@ -489,4 +489,64 @@ Portal clearance is padding + a 16px spacer, not a new nav. Booking
 date-row scrollbar is thin/themed to match quotes.html's existing
 horizontal scroller, without copying the JS fade wrap.
 
+## 2026-09-18 -- homepage "richness" audit came up nearly empty (already built); real fix on Workspace's Money Owed card
+
+Asked to make the public homepage feel richer/fuller ("add more
+layers"). Rendered the real page top to bottom first (forcing
+`[data-reveal]`/`.is-visible` visible via `page.addStyleTag` rather than
+trusting scroll-triggered reveals in headless) before proposing
+anything, per this log's own standing method note. Turned out almost
+everything on the plausible wishlist is already built: a stats bar
+(5.0 rating / 7 reviews / 9 communities / owner-operated), a 4-card
+trust grid, a referral banner, a real drag-to-compare before/after
+photo slider, an interactive appliance-teardown diagram, a 4-step
+process timeline, a grouped/collapsible FAQ, a review wall with a
+leave-a-review CTA, a service-area diagram with hours, and a documented
+hero depth/parallax system (`.hero-badge`/`.hero-plane`, scroll-driven,
+already `prefers-reduced-motion`-gated). Cross-checked against
+`docs/ACTION-ITEMS.md`'s own "Proposed visual improvements" list: the
+only remaining candidates (photo thumbnails on service cards, un-hiding
+the homepage Recent Work strip, a founder photo on "Meet Steven
+Robinson") are all explicitly blocked on real photos that don't exist
+yet -- confirmed again by checking `images/` directly, still no
+non-flooring job photos or any photo of Steven. Concluded there's
+nothing honest to add here without either fabricating content (against
+this project's real-photos-only rule) or duplicating a system that
+already exists -- said so rather than inventing a section for its own
+sake. No code change on the homepage from this pass.
+
+**Real, separate finding: Workspace dashboard's "Money Owed" card
+(`tools/workspace.html`, `#todayMoney`) had a genuine layout bug**,
+caught from a screenshot. Root cause, found by extracting the real
+inline `<style>` block verbatim into a local repro (same technique as
+the 2026-09-17 workspace jump-nav investigation) rather than guessing
+from CSS text: `styles-tools.css`'s sitewide `body .dash-list-item`
+rule pairs `padding: 10px 12px` with `margin: 0 -12px` on purpose, so a
+row's hover state can bleed flush to whatever container it's in.
+`.today-money .dash-list-item` (this card's own rule) overrides the
+padding to `8px 0` for its plain flat "Current"/"Overdue" rows, but
+never cancelled the paired `-12px` margin -- which does nothing when
+padding is already 0, until the highlighted overdue-invoice row
+(`.is-unread`, orange left border + tinted background) sits in the same
+list: its card bled 12px past the panel's own 16px/18px padding,
+landing ~7px from the panel's edge instead of the 18px every other line
+in the card respects, and close enough to the panel's own 14px
+border-radius corner to look pinched into it. Verified with real
+`getBoundingClientRect()` measurements before and after, not just a
+screenshot: `gapRight` went from 7px to 19px, now matching the panel's
+own padding and the "Overdue $268.23" row directly above it. Fix is one
+line, scoped to this one list (`.today-overdue-list .dash-list-item {
+margin: 0; }`), so the sitewide bleed convention is untouched everywhere
+else it's used correctly (plain hover rows, the portal invoice list,
+etc.).
+
+**Method note for next time**: the same `body .dash-list-item`
+bleed-convention mismatch (padding overridden locally without
+cancelling the paired negative margin) likely also affects
+`.ops-lane .dash-list-item` (Action Items lists), which has the same
+shape -- a local `padding: 8px 4px` override that still leaves the
+`-12px` mostly uncancelled. Not fixed here (out of scope for what was
+reported), but worth checking with the same
+`getBoundingClientRect()` method before assuming it's fine.
+
 <!-- Add new entries above this line -->

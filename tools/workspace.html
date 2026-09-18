@@ -579,7 +579,18 @@
   .more-tools-details:not([open]) > summary::after { content: ' \25B8'; }
 
   .today-overdue-list { margin-top: 8px; border-top: 1px solid var(--border); }
-  .today-money .dash-list-item { padding: 8px 0; }
+  /* .dash-list-item's sitewide margin:0 -12px (styles-tools.css) exists
+     to cancel its own padding:10px 12px so a row's hover state can
+     bleed to its container's edge. That padding is overridden here to
+     8px 0 for the plain flat rows, which leaves the -12px uncancelled
+     for the highlighted overdue-invoice row (.is-unread): its card
+     bled 12px past this panel's own 16px/18px padding, landing only
+     ~6px from the panel edge -- tighter than every other line in this
+     card, and close enough to the panel's own border-radius corner to
+     look pinched. Cancelling the margin back to 0 here keeps the
+     highlighted card's edges flush with the panel's own inset, same
+     as the plain rows above it. */
+  .today-overdue-list .dash-list-item { margin: 0; }
 
   .welcome-overlay {
     position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: 9999;
