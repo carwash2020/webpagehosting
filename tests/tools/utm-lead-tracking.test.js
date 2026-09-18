@@ -35,7 +35,7 @@ test('index.html and booking.html both load the shared utm-tracking.js', () => {
 });
 
 test('index.html\'s lead insert sends the captured UTM params alongside the existing fields', () => {
-  const fnMatch = indexHtml.match(/fetch\(LEADS_SUPABASE_URL \+ '\/rest\/v1\/th_leads\?on_conflict=client_request_id', \{[\s\S]*?\n\s*\.then\(\(response\)/);
+  const fnMatch = indexHtml.match(/fetch\(LEADS_SUPABASE_URL \+ '\/rest\/v1\/th_leads', \{[\s\S]*?\n\s*\.then\(\(response\)/);
   assert.ok(fnMatch, 'expected to isolate the th_leads insert body');
   assert.match(fnMatch[0], /window\.getStoredUtmParams/);
   // Still sends the manual, pre-existing source field too -- this is additive, not a replacement.

@@ -11,10 +11,23 @@
 //
 // The fix is a client-generated idempotency key (client_request_id),
 // persisted in sessionStorage so it survives a same-tab reload, sent
-// with every insert and enforced by a real Postgres partial unique
-// index -- not a hash of the lead's own fields, since a real customer
+// with every insert and enforced by a real Postgres unique index --
+// not a hash of the lead's own fields, since a real customer
 // submitting two DIFFERENT leads with the same phone/email on the
 // same day must never be blocked.
+//
+// Follow-up (2026-09-18, sql/leads/fix_th_leads_conflict_index.sql):
+// the index above was originally created PARTIAL (only rows with a
+// non-null client_request_id), on the mistaken assumption that was
+// needed to leave historical null-id rows alone -- a plain unique
+// index already allows any number of nulls. The partial predicate
+// broke Postgres's ON CONFLICT (client_request_id) matching outright
+// (42P10, no matching index), so every single insert through this
+// path silently failed and rolled back -- th_leads had zero rows,
+// ever, confirmed directly against the live project. The index is now
+// non-partial, and index.html no longer uses on_conflict at all (see
+// below) since ON CONFLICT itself requires SELECT access under RLS
+// that anon deliberately does not have on this table.
 
 const { test } = require('node:test');
 const assert = require('node:assert/strict');
@@ -24,6 +37,7 @@ const path = require('path');
 const repo = (...p) => path.join(__dirname, '..', '..', ...p);
 const INDEX = fs.readFileSync(repo('index.html'), 'utf8');
 const SQL = fs.readFileSync(repo('sql', 'leads', 'add_th_leads_request_idempotency.sql'), 'utf8');
+const CONFLICT_FIX_SQL = fs.readFileSync(repo('sql', 'leads', 'fix_th_leads_conflict_index.sql'), 'utf8');
 
 // ---- SQL migration ----
 
@@ -31,8 +45,9 @@ test('th_leads gets a client_request_id column', () => {
   assert.match(SQL, /alter table th_leads add column if not exists client_request_id uuid;/);
 });
 
-test('the unique index is partial (only rows that actually provide the id), so every historical lead row is unaffected', () => {
-  assert.match(SQL, /create unique index if not exists th_leads_client_request_id_key\s*\n\s*on th_leads \(client_request_id\)\s*\n\s*where client_request_id is not null;/);
+test('the unique index is non-partial, so ON CONFLICT (client_request_id) can match it -- a plain unique index already permits any number of null rows on its own', () => {
+  assert.match(CONFLICT_FIX_SQL, /drop index if exists th_leads_client_request_id_key;/);
+  assert.match(CONFLICT_FIX_SQL, /create unique index if not exists th_leads_client_request_id_key\s*\n\s*on th_leads \(client_request_id\);/);
 });
 
 // ---- index.html: the idempotency key itself ----
@@ -65,19 +80,16 @@ test('the id is NOT cleared on a failed submission, so a retry after a real fail
 
 // ---- index.html: the insert itself ----
 
-test('the th_leads insert uses on_conflict=client_request_id with ignore-duplicates, the same atomic pattern proven for the Stripe POS idempotency fix', () => {
-  const fnMatch = INDEX.match(/fetch\(LEADS_SUPABASE_URL \+ '\/rest\/v1\/th_leads\?on_conflict=client_request_id', \{[\s\S]*?\n\s*\}\);/);
+test('the th_leads insert is a plain POST -- no on_conflict, no Prefer: resolution=ignore-duplicates -- since ON CONFLICT requires SELECT access anon does not have', () => {
+  const fnMatch = INDEX.match(/fetch\(LEADS_SUPABASE_URL \+ '\/rest\/v1\/th_leads', \{[\s\S]*?\n\s*\}\);/);
   assert.ok(fnMatch, 'expected to isolate the th_leads insert call');
-  assert.match(fnMatch[0], /'Prefer': 'resolution=ignore-duplicates',/);
+  assert.doesNotMatch(fnMatch[0], /on_conflict/);
+  assert.doesNotMatch(fnMatch[0], /resolution=ignore-duplicates/);
   assert.match(fnMatch[0], /client_request_id: getLeadRequestId\(\),/);
 });
 
-test('a duplicate submission still shows the same success message to the visitor, since ignore-duplicates resolves as a normal ok response', () => {
-  // The .then() handler only branches on response.ok -- it has no
-  // separate "this was a duplicate" case, which is the whole point:
-  // PostgREST's ignore-duplicates makes a duplicate resolve as a
-  // plain successful (if empty) response, not an error to handle.
+test('a duplicate submission (HTTP 409, the unique index rejecting a repeat client_request_id) still shows the same success message to the visitor', () => {
   const thenMatch = INDEX.match(/\.then\(\(response\) => \{[\s\S]*?\n\s*\}\)/);
   assert.ok(thenMatch);
-  assert.match(thenMatch[0], /if \(response\.ok\) \{/);
+  assert.match(thenMatch[0], /if \(response\.ok \|\| response\.status === 409\) \{/);
 });

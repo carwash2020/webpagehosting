@@ -1,0 +1,41 @@
+-- Real bug found while investigating "leads aren't reaching us" (the
+-- homepage/schedule lead form): th_leads had ZERO rows, ever, despite
+-- the insert path (index.html) having been "confirmed working" when
+-- it was first built. Root cause, confirmed directly against the live
+-- project:
+--
+-- th_leads_client_request_id_key (see add_th_leads_request_idempotency.sql)
+-- was created as a PARTIAL unique index (`where client_request_id is
+-- not null`), on the reasoning that a partial index was needed so
+-- historical rows with no client_request_id wouldn't collide with each
+-- other. That reasoning was wrong: a plain (non-partial) unique index
+-- already treats NULL as distinct from every other NULL, so multiple
+-- NULL rows were never actually a problem either way.
+--
+-- What the partial predicate DID break: Postgres's ON CONFLICT
+-- (client_request_id) clause -- used by index.html's insert via
+-- ?on_conflict=client_request_id -- requires an index that exactly
+-- matches, with no partial predicate. Every single insert attempt
+-- failed with 42P10 ("no unique or exclusion constraint matching the
+-- ON CONFLICT specification") and rolled back silently -- reproduced
+-- directly via `set local role anon;` + the exact insert shape the
+-- client sends.
+--
+-- Dropping the WHERE clause fixes the ON CONFLICT mismatch. It does
+-- NOT fully fix the insert on its own, though: ON CONFLICT also
+-- requires the anon role to have SELECT access (to check for an
+-- existing conflicting row), which th_leads deliberately does not
+-- grant anon (that would let anyone read every customer's name/phone/
+-- email via a plain GET request). So index.html's fetch() was changed
+-- in the same fix to stop using on_conflict/ignore-duplicates
+-- entirely, and instead does a plain INSERT, treating a genuine
+-- duplicate's resulting HTTP 409 (Postgres 23505, still guarded by
+-- this same unique index) as a success case client-side.
+--
+-- Applied directly via the Supabase MCP migration tool; recorded here
+-- after the fact so the schema is reproducible from this repo, same
+-- convention as every other file in this directory.
+drop index if exists th_leads_client_request_id_key;
+
+create unique index if not exists th_leads_client_request_id_key
+  on th_leads (client_request_id);
