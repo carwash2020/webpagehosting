@@ -68,17 +68,24 @@ test('.btn.outline is a transparent orange-border sibling, not a second filled p
 });
 
 function stickyNav(src) {
-  const start = src.indexOf('<nav class="sticky-call"');
+  const start = src.indexOf('<nav class="sticky-call');
   if (start < 0) return '';
   const end = src.indexOf('</nav>', start);
   return src.slice(start, end);
 }
 
 test('every public marketing page that shares the nav CTAs carries the sticky Call + Book bar', () => {
+  const SMS_PAGES = new Set(['index.html', 'washer-dryer-repair-st-george-ut.html']);
   for (const file of MARKETING_PAGES) {
     const src = fs.readFileSync(repo(file), 'utf8');
     const bar = stickyNav(src);
-    assert.match(bar, /<nav class="sticky-call" aria-label="Call or book">/, `${file} missing sticky bar`);
+    if (SMS_PAGES.has(file)) {
+      assert.match(bar, /<nav class="sticky-call sticky-call-sms" aria-label="Call, text, or book">/, `${file} missing Call+Text+Book bar`);
+      assert.match(bar, /href="sms:\+14354141667\?body=/, `${file} sticky Text missing sms link`);
+    } else {
+      assert.match(bar, /<nav class="sticky-call" aria-label="Call or book">/, `${file} missing sticky bar`);
+      assert.doesNotMatch(bar, /href="sms:/, `${file} stays Call+Book; Text is homepage + washer LP only`);
+    }
     assert.match(bar, /href="tel:\+14354141667" class="btn outline js-phone-link"/, `${file} sticky Call missing tel link`);
     assert.match(bar, /class="btn orange"/, `${file} missing a filled Book button`);
   }

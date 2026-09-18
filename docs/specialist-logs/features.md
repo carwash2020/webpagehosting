@@ -3,6 +3,21 @@
 Started 2026-09-16, alongside the `tripleh-features` skill. See `README.md`
 in this directory for how these logs work.
 
+## 2026-09-18 -- sticky Text + compact FAQ after the estimate form
+
+Follow-up to #285/#286, not a new backend. Homepage and the washer
+St. George LP sticky bar gained Text using the chat bubble's existing
+`sms:` href (`analytics-events.js` already fires `text_click`). Book
+still goes to `/booking.html`. Did not put Text on every marketing
+page or on booking.html (that page is already the conversion, and
+Call remains the escape hatch).
+
+Homepage compact FAQ is visible copy only — five questions pulled
+from the modal / washer LP, linking to `#faq`. Did not add a second
+FAQPage, did not live-fetch this block (the modal still owns
+`site_faq`), did not invent trip-fee or same-day numbers.
+AggregateRating stays 5.0 / 7.
+
 ## 2026-09-18 -- homepage above-fold estimate form
 
 Conversion research wanted a short "just send details" path on the

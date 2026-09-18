@@ -540,7 +540,15 @@ reference:
   the outline secondary, with the phone number still in the hero.
   Cookie banner, chat bubble, and back-to-top lift above the bar;
   last-content padding includes the iOS safe area. `/tools/` and
-  `/portal/` are untouched.
+  `/portal/` are untouched. **Update (2026-09-18):** homepage and the
+  washer St. George LP add Text (SMS) between Call and Book on that
+  same bar; other marketing pages stay two-action.
+
+- **Homepage high-intent FAQ next to the estimate form** (2026-09-18)
+  -- compact five-question block after the hero form covering trip fee,
+  same-day, warranty, repair vs replace, and payment, using existing
+  FAQ copy and a link to the full FAQ modal. Hex-above-Schedule/Call
+  and AggregateRating (5.0 / 7, 4 wall quotes) unchanged.
 
 - **Stats first-paint, 16px forms, `/portal/` and `/tools/` landings**
   (2026-09-17) -- homepage stats paint 5.0 / 4 / 9 immediately instead

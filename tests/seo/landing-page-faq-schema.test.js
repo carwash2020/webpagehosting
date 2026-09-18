@@ -110,11 +110,11 @@ for (const name of PAGES_WITHOUT_SCHEDULE) {
 
 test('index.html captures setupSimpleModal(\'faqOverlay\', ...)\'s return value so /#faq can auto-open it, the same way /#terms already does', () => {
   const html = read('index.html');
-  assert.match(html, /const faqModal = setupSimpleModal\('faqOverlay', 'faqClose', \['navFaqDesktop','navFaqMobile','navFaqFooter'\]\);/);
+  assert.match(html, /const faqModal = setupSimpleModal\('faqOverlay', 'faqClose', \['navFaqDesktop','navFaqMobile','navFaqFooter','intentFaqMore'\]\);/);
   assert.match(html, /if \(window\.location\.hash === '#faq' && faqModal\) \{\s*\n\s*faqModal\.open\(\);/);
 });
 
-test('index.html is unaffected content-wise -- it already had its own full, live-fetched FAQ and was not part of this fix', () => {
+test('index.html keeps the live-fetched FAQ modal and does not grow a landing-page local-faq section', () => {
   const html = read('index.html');
   assert.match(html, /<div class="modal-overlay" id="faqOverlay">/);
   assert.doesNotMatch(html, /<section id="local-faq">/);

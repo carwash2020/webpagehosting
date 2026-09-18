@@ -2217,3 +2217,27 @@ AggregateRating stays **5.0 / 7**.
 
 New tests: `tests/design/homepage-hero-lead-form.test.js`.
 
+## What changed, 2026-09-18 -- conversion polish: sticky Text + high-intent FAQ
+
+Public homepage and the washer St. George landing page only. One
+focused follow-up to the estimate form (#285) and that landing page
+(#286).
+
+**Sticky bar.** Those two pages now keep Call + Text + Book on the
+existing `.sticky-call` strip (760px, 44px targets, cookie/chat lift
+unchanged). Call and Text are outline thumb actions; Book stays the
+filled orange. Text reuses the chat bubble's `sms:+14354141667?body=...`
+href. `booking.html` and the other marketing pages stay Call + Book.
+
+**High-intent FAQ.** A compact five-question block sits after the
+homepage estimate form, still in the hero, with no CSS `order` — the
+96px hex mark stays above Schedule/Call on a phone. Answers are the
+existing FAQ copy: trip fee ($25 beyond 15 miles), same-day for things
+that can't wait, work guaranteed / manufacturer parts warranty, repair
+vs replace (from the washer LP), and payment methods. "See all FAQs"
+opens the live-fetched modal. No second FAQPage schema.
+
+AggregateRating stays **5.0 / 7**. The wall stays 4 written quotes.
+
+New tests: `tests/design/conversion-polish-sticky-sms-faq.test.js`.
+

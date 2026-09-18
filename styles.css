@@ -967,6 +967,55 @@
   .hero-lead-form .form-status{color:#ffb347;}
   .hero-lead-form .form-status.is-success{color:#8ee0b0;}
   .hero-lead-form .form-status.is-error{color:#ffb347;}
+  /* Compact high-intent FAQ, after the estimate form in source order.
+     Same dark-glass card as .hero-lead-form so it sits on the canyon
+     photo. No CSS order -- Connor's hex-above-Schedule/Call stack at
+     860px stays. Hardcoded light colors, same reason as the form. */
+  .hero-intent-faq{
+    margin:14px 0 4px;
+    max-width:440px;
+    padding:12px 14px 10px;
+    border:1px solid var(--orange-tint-border);
+    border-radius:10px;
+    background:rgba(10,10,10,.58);
+    box-shadow:var(--shadow-resting);
+    text-align:left;
+  }
+  .hero-intent-kicker{
+    margin:0 0 4px;
+    font-family:var(--font-ui);
+    font-size:13.5px;
+    letter-spacing:.2px;
+    line-height:1.4;
+    color:#e5e2dc;
+  }
+  .hero-intent-faq .faq-plain-list{max-width:none; margin:0;}
+  .hero-intent-faq .faq-plain-item{
+    padding:10px 0;
+    border-bottom-color:rgba(255,255,255,.14);
+  }
+  .hero-intent-faq .faq-plain-item:last-of-type{border-bottom:none;}
+  .hero-intent-faq .faq-plain-item summary{
+    color:#f3f0ea;
+    font-size:14.5px;
+  }
+  .hero-intent-faq .faq-plain-item summary::after{color:#ffb347;}
+  .hero-intent-faq .faq-plain-item p{
+    color:#c9c5bc;
+    font-size:14px;
+    margin:8px 0 0;
+  }
+  .hero-intent-more{
+    margin:8px 0 2px;
+    font-family:var(--font-ui);
+    font-size:13.5px;
+  }
+  .hero-intent-more a{
+    color:#ffb347;
+    font-weight:600;
+    text-decoration:none;
+  }
+  .hero-intent-more a:hover{color:#ffffff; text-decoration:underline;}
   /* City/service heroes put the CTA row directly in .wrap (no lede
      margin underneath an h1 block the way the homepage does). */
   .hero .wrap > .hero-ctas{margin-top:32px;}
@@ -1078,6 +1127,10 @@
       max-width:360px;
     }
     .hero-lead-form .btn{width:auto;}
+    .hero-intent-faq{
+      margin:14px auto 0;
+      max-width:360px;
+    }
     .hero .cta-proof,
     .hero-referral{
       justify-content:center;
@@ -1799,9 +1852,11 @@
      rather than letting each layer pick its own bottom/z-index.
      Bottom of the viewport, low → high:
        1. Page content -- body:has(.sticky-call) padding-bottom clears
-          the Call/Book bar + env(safe-area-inset-bottom).
+          the Call/Text/Book bar + env(safe-area-inset-bottom).
        2. .sticky-call          z-index:70   position:fixed; bottom:0
-          Keep this. It is the mobile conversion chrome (#265).
+          Keep this. It is the mobile conversion chrome (#265). Homepage
+          and the washer St. George LP add Text (sms:) between Call and
+          Book via .sticky-call-sms; other marketing pages stay Call+Book.
        3. .back-to-top          z-index:79   right; lifted above the bar
        4. .chat-bubble-btn      z-index:80   left; homepage-only; hidden
           while .cookie-banner is in the DOM so the two don't overlap
@@ -1842,6 +1897,17 @@
     letter-spacing:1px;
     width:auto;
   }
+  /* Three thumb actions (Call + Text + Book) on the homepage and the
+     washer St. George LP. Tighter padding so three 44px targets still
+     fit a 320px row; Book stays the filled orange primary. */
+  .sticky-call-sms{gap:8px;}
+  .sticky-call-sms .btn{
+    padding:12px 6px;
+    font-size:12px;
+    letter-spacing:.6px;
+    gap:6px;
+  }
+  .sticky-call-sms .btn svg{width:16px; height:16px; flex-shrink:0;}
   @media (max-width:760px){
     .sticky-call{display:flex;}
     body:has(.sticky-call){
@@ -1879,7 +1945,7 @@
 
   /* Jump links for in-page sections. scroll-margin clears the sticky
      header (and, on desktop, the .page-jump rail under it). */
-  #services, #process, #reviews, #schedule, #about, #areas, #contact, #triage, #honest{
+  #services, #process, #reviews, #schedule, #about, #areas, #contact, #triage, #honest, #intent-faq{
     scroll-margin-top:88px;
   }
 

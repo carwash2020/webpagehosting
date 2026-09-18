@@ -3,6 +3,21 @@
 Started 2026-09-16, alongside the `tripleh-visual` skill. See `README.md` in
 this directory for how these logs work.
 
+## 2026-09-18 -- sticky Call+Text+Book + compact hero FAQ card
+
+Conversion polish after #285/#286. Homepage and the washer St. George
+LP add Text (sms:) between Call and Book on the existing `.sticky-call`
+strip via `.sticky-call-sms` — tighter padding so three 44px targets
+still fit a 320px row. Book stays filled orange; Call and Text stay
+outline. Other marketing pages and booking.html stay two-action.
+Did not add a second bottom bar.
+
+Compact FAQ is a dark-glass card matching `.hero-lead-form`, after
+the form in source order, hardcoded light colors on the canyon photo.
+No CSS `order` on it — hex-above-Schedule/Call at 860px is untouched.
+Did not restyle `.btn.orange`. AggregateRating and the 4-card wall
+untouched.
+
 ## 2026-09-18 -- hero estimate form submit is outline, not orange
 
 UX pass on #285. `#heroLeadSubmitBtn` was `.btn.orange`, same fill as

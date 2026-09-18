@@ -94,8 +94,8 @@ test('mobile still puts the hex crest above Schedule/Call; the form does not jum
   assert.match(STYLES, /\.hero-lead-form \.btn\{min-height:44px;\}/);
 });
 
-test('sticky Call+Book stays; no second public lead backend is invented', () => {
-  assert.match(INDEX, /<nav class="sticky-call" aria-label="Call or book">/);
+test('sticky Call+Text+Book stays; no second public lead backend is invented', () => {
+  assert.match(INDEX, /<nav class="sticky-call sticky-call-sms" aria-label="Call, text, or book">/);
   const inserts = INDEX.match(/\/rest\/v1\/th_leads\?on_conflict=client_request_id/g) || [];
   assert.equal(inserts.length, 1, 'hero and modal must share the one th_leads insert');
   assert.match(INDEX, /function submitLeadFromForm\(form, status, submitBtn\)/);
