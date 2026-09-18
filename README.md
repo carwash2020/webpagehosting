@@ -2192,3 +2192,28 @@ stay 5.0 / 7.
 
 New tests: `tests/seo/service-city-landing-page.test.js`.
 
+## What changed, 2026-09-18 -- homepage above-fold estimate form
+
+Public homepage only. Schedule stays the filled orange primary; Call
+stays the outline secondary. A compact form now sits under those
+buttons so a visitor can send details without opening `booking.html`
+or the mid-page email modal. The form's own **Send details** button
+is outline too, so it does not compete with Schedule on a phone.
+
+**Fields.** Name, phone, and service are required. Brief details and
+email are optional. Same service list as `#scheduleForm`.
+
+**Where it goes.** Both this form and the existing `#scheduleForm`
+modal post to `th_leads` through one shared `submitLeadFromForm`
+(honeypot, `client_request_id` idempotency, UTM merge,
+`lead_form_submitted`). Hidden source is `Homepage estimate form`.
+Did not use `th_bookings` (that holds a calendar slot) or the signed-in
+portal Request Work path.
+
+**Placement.** After Schedule/Call, still in the hero. No CSS `order`
+on the form — the 96px hex mark stays above those buttons on a phone.
+Text us reuses the chat bubble's `sms:` link. Sticky Call+Book stays.
+AggregateRating stays **5.0 / 7**.
+
+New tests: `tests/design/homepage-hero-lead-form.test.js`.
+

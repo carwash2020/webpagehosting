@@ -3,6 +3,14 @@
 Started 2026-09-16, alongside the `tripleh-visual` skill. See `README.md` in
 this directory for how these logs work.
 
+## 2026-09-18 -- hero estimate form submit is outline, not orange
+
+UX pass on #285. `#heroLeadSubmitBtn` was `.btn.orange`, same fill as
+Schedule, so two filled primaries stacked on a phone. Switched it to
+`.btn.outline` — the same quieter treatment as hero Call. Schedule
+stays the only filled orange in that stack. No change to hex order,
+sticky Call+Book, AggregateRating, or the `th_leads` path.
+
 ## 2026-09-17 -- dashboard daily strip + More tools collapse
 
 Paired with the features lane the same day. Four daily actions (New
