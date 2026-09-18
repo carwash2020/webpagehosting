@@ -37,6 +37,7 @@ PUBLIC_PAGES = [
     'handyman-washington-city-ut.html',
     'handyman-la-verkin-ut.html',
     'handyman-leeds-ut.html',
+    'washer-dryer-repair-st-george-ut.html',
 ]
 
 HREF_SRC_RE = re.compile(r'(?:href|src)="([^"]+)"')

@@ -36,6 +36,7 @@ const ALL_PAGES = [
   'handyman-st-george-ut.html',
   'our-work.html', 'plumbing-repairs.html', 'terms.html',
   'washer-dryer-repair.html',
+  'washer-dryer-repair-st-george-ut.html',
 ];
 
 function read(name) {

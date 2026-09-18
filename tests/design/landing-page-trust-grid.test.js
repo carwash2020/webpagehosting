@@ -22,6 +22,7 @@ const LANDING_PAGES = [
   'handyman-santa-clara-ivins-ut.html',
   'handyman-st-george-ut.html',
   'handyman-washington-city-ut.html',
+  'washer-dryer-repair-st-george-ut.html',
 ];
 
 for (const page of LANDING_PAGES) {

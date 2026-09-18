@@ -72,6 +72,7 @@ const PAGES_LINKING_TO_PRIVACY = [
   'handyman-washington-city-ut.html',
   'plumbing-repairs.html',
   'washer-dryer-repair.html',
+  'washer-dryer-repair-st-george-ut.html',
 ];
 
 for (const name of PAGES_LINKING_TO_PRIVACY) {
