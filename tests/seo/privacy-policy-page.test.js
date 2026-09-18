@@ -59,6 +59,8 @@ test('privacy.html is included in sitemap.xml', () => {
 const PAGES_LINKING_TO_PRIVACY = [
   'index.html',
   'terms.html',
+  'about.html',
+  'our-work.html',
   'assembly-installation.html',
   'drywall-painting.html',
   'handyman-cedar-city-ut.html',
@@ -75,6 +77,17 @@ const PAGES_LINKING_TO_PRIVACY = [
   'washer-dryer-repair-st-george-ut.html',
   'refrigerator-repair-st-george-ut.html',
   'dishwasher-repair-st-george-ut.html',
+  'blog/index.html',
+  'blog/appliance-repair-or-replace.html',
+  'blog/dishwasher-not-cleaning.html',
+  'blog/dryer-not-heating.html',
+  'blog/drywall-crack-above-door.html',
+  'blog/fridge-not-cooling.html',
+  'blog/handyman-to-do-list.html',
+  'blog/oven-not-heating-right.html',
+  'blog/toilet-running-flapper-valve.html',
+  'blog/tv-mount-drywall-anchors.html',
+  'blog/washer-wont-drain.html',
 ];
 
 for (const name of PAGES_LINKING_TO_PRIVACY) {
@@ -84,14 +97,14 @@ for (const name of PAGES_LINKING_TO_PRIVACY) {
   });
 }
 
-test('the footer Privacy Policy link sits right after the Terms & Conditions link on every landing page (not the homepage, which uses a JS modal trigger for Terms)', () => {
+test('the footer Privacy Policy link sits right after the Terms & Conditions link on every landing page (homepage footer also uses /terms.html; /#terms only auto-opens the modal for old links)', () => {
   const pagesWithHashTerms = PAGES_LINKING_TO_PRIVACY.filter((n) => n !== 'index.html' && n !== 'terms.html');
   for (const name of pagesWithHashTerms) {
     const html = fs.readFileSync(repo(name), 'utf8');
     const termsIdx = html.indexOf('<li><a href="/terms.html">Terms &amp; Conditions</a></li>');
     const privacyIdx = html.indexOf('<li><a href="/privacy.html">Privacy Policy</a></li>');
-    assert.ok(termsIdx !== -1 && privacyIdx !== -1, `${name}: expected both links`);
-    assert.ok(privacyIdx > termsIdx && privacyIdx - termsIdx < 100, `${name}: Privacy Policy link should sit immediately after Terms & Conditions`);
+    assert.ok(termsIdx !== -1 && privacyIdx !== -1, `${name}: expected both links');
+    assert.ok(privacyIdx > termsIdx && privacyIdx - termsIdx < 100, `${name}: Privacy Policy link should sit immediately after Terms & Conditions');
   }
 });
 
