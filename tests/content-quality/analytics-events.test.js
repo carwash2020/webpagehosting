@@ -17,7 +17,7 @@ const path = require('path');
 const { JSDOM } = require('jsdom');
 
 const repo = (...p) => path.join(__dirname, '..', '..', ...p);
-const ANALYTICS_JS = fs.readFileSync(repo('analytics-events.js'), 'utf8');
+const ANALYTICS_JS = fs.readFileSync(repo('js/analytics-events.js'), 'utf8');
 
 const PUBLIC_PAGES = [
   'index.html', 'booking.html', 'terms.html', 'privacy.html', 'about.html', 'our-work.html',

@@ -14,8 +14,8 @@ const { JSDOM } = require('jsdom');
 
 const repo = (...p) => path.join(__dirname, '..', '..', ...p);
 const INDEX = fs.readFileSync(repo('index.html'), 'utf8');
-const TRIAGE_JS = fs.readFileSync(repo('triage.js'), 'utf8');
-const BUSINESS_HOURS_JS = fs.readFileSync(repo('business-hours.js'), 'utf8');
+const TRIAGE_JS = fs.readFileSync(repo('js/triage.js'), 'utf8');
+const BUSINESS_HOURS_JS = fs.readFileSync(repo('js/business-hours.js'), 'utf8');
 
 function waitFor(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
@@ -36,11 +36,11 @@ function loadPage(mockFetch) {
   // jsdom (which never fetches external scripts) sees the same globals
   // triage.js's new IIFE depends on.
   let html = INDEX.replace(
-    /<script src="\/business-hours\.js\?v=[a-z0-9.]+"><\/script>/,
+    /<script src="\/js\/business-hours\.js\?v=[a-z0-9.]+"><\/script>/,
     `<script>${BUSINESS_HOURS_JS}</script>`
   );
   html = html.replace(
-    /<script src="\/triage\.js\?v=[a-f0-9]+" defer><\/script>/,
+    /<script src="\/js\/triage\.js\?v=[a-f0-9]+" defer><\/script>/,
     `<script>${TRIAGE_JS}</script>`
   );
   assert.doesNotMatch(html, /business-hours\.js\?v=|triage\.js\?v=/, 'expected both script tags to be inlined');

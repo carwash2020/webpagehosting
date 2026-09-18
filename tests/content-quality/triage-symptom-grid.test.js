@@ -24,7 +24,7 @@ const { JSDOM } = require('jsdom');
 
 const repo = (...p) => path.join(__dirname, '..', '..', ...p);
 const INDEX = fs.readFileSync(repo('index.html'), 'utf8');
-const TRIAGE_JS = fs.readFileSync(repo('triage.js'), 'utf8');
+const TRIAGE_JS = fs.readFileSync(repo('js/triage.js'), 'utf8');
 
 const LANDING_PAGES = [
   'handyman-cedar-city-ut.html',
@@ -44,7 +44,7 @@ function loadTriagePage(html) {
   // Inline triage.js's real content in place of its <script src> tag,
   // so jsdom never needs to fetch anything external to run it.
   const inlined = html.replace(
-    /<script src="\/triage\.js\?v=[a-f0-9]+" defer><\/script>/,
+    /<script src="\/js\/triage\.js\?v=[a-f0-9]+" defer><\/script>/,
     `<script>${TRIAGE_JS}</script>`
   );
   assert.notEqual(inlined, html, 'expected to find and inline the triage.js script tag');

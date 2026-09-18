@@ -52,7 +52,7 @@ test('a page redeclaring a const that a shared file it actually loads already de
     const result = runChecker();
     assert.notEqual(result.exitCode, 0, 'a shared-file redeclaration should fail the check');
     assert.match(result.stderr, /portal\/jobs\.html.*Identifier 'MIN_LEAD_HOURS' has already been declared/);
-    assert.match(result.stderr, /checked against business-hours\.js/);
+    assert.match(result.stderr, /checked against js\/business-hours\.js/);
   } finally {
     fs.writeFileSync(targetPage, original);
   }

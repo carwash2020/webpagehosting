@@ -20,7 +20,7 @@ const indexHtml = fs.readFileSync(repo('index.html'), 'utf8');
 const bookingHtml = fs.readFileSync(repo('booking.html'), 'utf8');
 const workspaceHtml = fs.readFileSync(repo('tools', 'workspace.html'), 'utf8');
 const sqlMigration = fs.readFileSync(repo('sql', 'leads', 'add_utm_campaign_tracking.sql'), 'utf8');
-const utmTrackingSrc = fs.readFileSync(repo('utm-tracking.js'), 'utf8');
+const utmTrackingSrc = fs.readFileSync(repo('js/utm-tracking.js'), 'utf8');
 
 test('the sql migration adds all 5 utm columns to both th_leads and th_bookings', () => {
   for (const col of ['utm_source', 'utm_medium', 'utm_campaign', 'utm_term', 'utm_content']) {
@@ -30,8 +30,8 @@ test('the sql migration adds all 5 utm columns to both th_leads and th_bookings'
 });
 
 test('index.html and booking.html both load the shared utm-tracking.js', () => {
-  assert.match(indexHtml, /<script src="\/utm-tracking\.js\?v=[a-f0-9]+" defer><\/script>/);
-  assert.match(bookingHtml, /<script src="\/utm-tracking\.js\?v=[a-f0-9]+" defer><\/script>/);
+  assert.match(indexHtml, /<script src="\/js\/utm-tracking\.js\?v=[a-f0-9]+" defer><\/script>/);
+  assert.match(bookingHtml, /<script src="\/js\/utm-tracking\.js\?v=[a-f0-9]+" defer><\/script>/);
 });
 
 test('index.html\'s lead insert sends the captured UTM params alongside the existing fields', () => {

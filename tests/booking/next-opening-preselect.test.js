@@ -14,7 +14,7 @@ const path = require('path');
 const { JSDOM } = require('jsdom');
 
 const PAGE_PATH = path.join(__dirname, '..', '..', 'booking.html');
-const BUSINESS_HOURS_SRC = fs.readFileSync(path.join(__dirname, '..', '..', 'business-hours.js'), 'utf8')
+const BUSINESS_HOURS_SRC = fs.readFileSync(path.join(__dirname, '..', '..', 'js', 'business-hours.js'), 'utf8')
   + '\nwindow.BUSINESS_TIMEZONE = BUSINESS_TIMEZONE; window.HOURS_BY_WEEKDAY = HOURS_BY_WEEKDAY; window.DAYS_AHEAD_SHOWN = DAYS_AHEAD_SHOWN; window.zonedTimeToUtc = zonedTimeToUtc; window.businessWeekday = businessWeekday; window.todayDateStrInBusinessTz = todayDateStrInBusinessTz; window.addDaysToDateStr = addDaysToDateStr; window.formatHoursLabel = formatHoursLabel; window.fetchBookingsForDate = fetchBookingsForDate; window.computeSlotsForDate = computeSlotsForDate; window.findNextAvailableSlot = findNextAvailableSlot;';
 
 function loadPage(url, mockFetch) {

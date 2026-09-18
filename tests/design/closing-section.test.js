@@ -16,7 +16,7 @@ const path = require('path');
 
 const repo = (...p) => path.join(__dirname, '..', '..', ...p);
 const INDEX = fs.readFileSync(repo('index.html'), 'utf8');
-const TRIAGE_JS = fs.readFileSync(repo('triage.js'), 'utf8');
+const TRIAGE_JS = fs.readFileSync(repo('js/triage.js'), 'utf8');
 const STYLES = fs.readFileSync(repo('styles.css'), 'utf8');
 
 test('the closing section exists right before the footer, not appended after it', () => {
