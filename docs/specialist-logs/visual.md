@@ -3,6 +3,73 @@
 Started 2026-09-16, alongside the `tripleh-visual` skill. See `README.md` in
 this directory for how these logs work.
 
+## 2026-09-18 -- review pass on Cursor's conversion/UX PRs (#265-288): two real defects, no conflict with the motto-rail fix
+
+Requested by Connor via the hub, as a review not a fix — findings below,
+not yet acted on. Scope: deep visual/interaction check on the homepage
+hero, where nearly all of Cursor's conversion work concentrates, plus a
+mobile spot-check. Did not review every PR's page individually.
+
+**No conflict with the 2026-09-17 `.motto-rail` fix.** Re-verified
+directly: the hero is now ~1480px tall (Cursor added a lead-capture form
+and a compact FAQ card inside it), and the rail still reads as a faint
+hairline in both themes with no stray line reappearing.
+
+**Real defect 1: the new hero "Service" dropdown (`#heroService`, from
+the #285 estimate form) is broken in both themes.** Dark mode: no
+dropdown arrow at all. Light mode: the arrow renders doubled/tiled in
+the top-left corner instead of once on the right. Root cause:
+`styles.css` `.hero-lead-form select{background:rgba(0,0,0,.45); ...}`
+uses the `background` *shorthand*, which resets background-image/
+position/repeat to their initial values for that element. A later
+`[data-theme="light"] select{background-image:...}` rule wins the image
+back in light mode only (by a source-order tie-break), but not its
+position/repeat, so it tiles from 0%/0%; nothing restores it in dark
+mode at all. Confirmed this isn't an environment quirk by forcing the
+page's own pre-existing `#service` select visible (identical markup,
+same page) -- it renders one clean arrow. This is the same
+shorthand-resets-background-image footgun this repo has hit and fixed
+before (see the portal pages' "background-color, not background
+shorthand" comment) -- just reintroduced here in a new file.
+
+**Real defect 2: the same hero-lead-form overflows and gets silently
+clipped on real mobile widths.** Tested 390px. `.hero-lead-form
+.form-row{grid-template-columns:1fr 1fr}` (styles.css ~937) has no
+mobile breakpoint of its own, and its specificity (two classes) beats
+the sitewide `@media(max-width:600px){.form-row{grid-template-columns:
+1fr}}` rule (one class) meant to stack fields on phones. Name/Phone and
+Service/Email each try to fit two inputs side-by-side in ~175px tracks;
+grid items don't shrink below an `<input>`'s default min-content width,
+so the row overflows the card and gets clipped by `.hero`'s
+`overflow:hidden`. Visually: Phone shows "(435) 414-166", Email shows
+"you@email.co" -- both cut off and the boxes are too narrow to use.
+Confirmed via `getBoundingClientRect`: the email input's right edge
+sits at x=507 on a 390px viewport.
+
+**Not mine to call, flagging anyway:** #281 changed the homepage stat +
+JSON-LD `aggregateRating` from "5.0 from 4" back to "5.0 from 7",
+reversing the schema-honesty policy the bugfix lane had set up (count
+only written/visible reviews, not Google's raw total). Cursor's own
+comment says 7 is the real GBP total (3 of them star-only) and the wall
+still shows only 4 written cards, so this may be an intentional,
+informed call, not a mistake -- but it is a real reversal of a
+previously-documented policy. Whether 7 is the right number to show is
+a content/business call, not a visual defect -- not acting on it here.
+
+**What's good:** the mobile hero reorder (hex logo -> H1 -> CTAs -> lead
+form -> FAQ, #284) matches what Connor asked for explicitly and is a
+real improvement. The sticky Call+Text+Book bar (#265, #288) uses real
+44px targets. Cursor's own log entries above are unusually thorough --
+each one names what it touched vs. left alone, including direct
+callouts to this lane's own prior decisions.
+
+**Reporting note:** tried to report this to the multi-chat hub session
+directly (SendMessage / the `ccd_session` remote-session channel) --
+both failed, the latter with a connection error, not a "not found."
+Logging here instead since that's this project's existing pattern for
+cross-lane visibility. Have not pushed a fix for either defect --
+this was scoped as a review.
+
 ## 2026-09-18 -- sticky Call+Text+Book + compact hero FAQ card
 
 Conversion polish after #285/#286. Homepage and the washer St. George
