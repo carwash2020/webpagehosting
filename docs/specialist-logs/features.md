@@ -3,6 +3,19 @@
 Started 2026-09-16, alongside the `tripleh-features` skill. See `README.md`
 in this directory for how these logs work.
 
+## 2026-09-18 -- service × city landing page template (washer / St. George)
+
+City pages and service pages already existed separately. Explicitly
+avoided 42 thin `{service} in {city}` duplicates in the 2026-09-15
+lead-gen pass (doorway-page risk). This is one real converting page
+for the long-tail query, at `washer-dryer-repair-st-george-ut.html`,
+meant to be copied one at a time.
+
+Did not add AggregateRating (city/service pages still must not claim
+a rating without the homepage wall). Visible copy uses the GBP match
+5.0 / 7. Did not invent reviews. Did not change `styles.css`. Clone
+notes live in `docs/service-city-landing-pages.md`.
+
 ## 2026-09-17 -- /tools/ fewer-click Mark paid / Mark Done / daily strip
 
 Owner asked for the same capabilities with fewer taps. Investigated

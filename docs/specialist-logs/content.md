@@ -13,6 +13,20 @@ sitting there for exactly this slot. Also: never use an Unsplash+
 (`plus.unsplash.com/premium_photo-...`) image -- it needs a paid license
 and often carries a visible watermark; free Unsplash is `images.unsplash.com/photo-...`.
 
+## 2026-09-18 -- washer / appliance repair in St. George (service × city)
+
+Wrote the first combined service + city page. Copy is St. George /
+Washington County specific (home base, neighborhoods already named on
+the city page) plus washer FAQs already used on the service page:
+repair vs replace, trip fee, same-visit when the part is on the truck,
+work guaranteed / manufacturer parts warranty. Same-day arrival is
+"when the schedule allows, call to check" -- the GBP seed Q&A and the
+homepage emergency FAQ, not a guaranteed same-day promise.
+
+Trust line is "5.0 from 7 Google reviews" with the existing washer
+quote. No new Review objects, no extra wall cards for star-only
+Google reviews. Service JSON-LD has no aggregateRating.
+
 ## 2026-09-16
 
 Audited the blog lineup against the site's own service list and found

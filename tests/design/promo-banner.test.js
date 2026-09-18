@@ -20,6 +20,7 @@ const PAGES_WITH_BANNER = [
   'drywall-painting.html',
   'plumbing-repairs.html',
   'washer-dryer-repair.html',
+  'washer-dryer-repair-st-george-ut.html',
   'handyman-repairs.html',
   'handyman-washington-city-ut.html',
   'handyman-hurricane-ut.html',

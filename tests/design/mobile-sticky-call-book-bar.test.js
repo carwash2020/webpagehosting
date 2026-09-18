@@ -20,6 +20,7 @@ const MARKETING_PAGES = [
   'drywall-painting.html',
   'plumbing-repairs.html',
   'washer-dryer-repair.html',
+  'washer-dryer-repair-st-george-ut.html',
   'handyman-repairs.html',
   'handyman-cedar-city-ut.html',
   'handyman-hurricane-ut.html',

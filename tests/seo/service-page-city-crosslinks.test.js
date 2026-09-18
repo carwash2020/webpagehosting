@@ -36,6 +36,17 @@ const CITIES = [
   { file: 'handyman-mesquite-nv.html', name: 'Mesquite, NV', requestClass: true },
 ];
 
+const WASHER_ST_GEORGE = {
+  file: 'washer-dryer-repair-st-george-ut.html',
+  name: 'St. George',
+  requestClass: false,
+};
+
+function citiesFor(page) {
+  if (page === 'washer-dryer-repair.html') return [WASHER_ST_GEORGE, ...CITIES];
+  return CITIES;
+}
+
 for (const [page, serviceName] of Object.entries(SERVICE_PAGES)) {
   test(`${page} has a real areas-links block cross-linking to every city page, with the service name in each link's text`, () => {
     const html = fs.readFileSync(repo(page), 'utf8');
@@ -43,7 +54,7 @@ for (const [page, serviceName] of Object.entries(SERVICE_PAGES)) {
     assert.ok(idx !== -1, `${page} should have an areas-links block`);
     const block = html.slice(idx, idx + 2500);
 
-    for (const city of CITIES) {
+    for (const city of citiesFor(page)) {
       const classAttr = city.requestClass ? 'class="areas-link is-request"' : 'class="areas-link"';
       const re = new RegExp(
         `<a ${classAttr.replace(/[.*+?^${}()|[\\]\\\\]/g, '\\\\$&')}[^>]*href="/${city.file}">\\s*<b>${serviceName.replace(/[.*+?^${}()|[\\]\\\\]/g, '\\\\$&')} in ${city.name.replace(/[.*+?^${}()|[\\]\\\\]/g, '\\\\$&')}</b>`
@@ -59,6 +70,7 @@ test('every service page cross-links to all 7 cities, not a partial subset', () 
     const idx = html.indexOf('<div class="areas-links" data-reveal>');
     const block = html.slice(idx, idx + 2500);
     const linkCount = (block.match(/<a class="areas-link/g) || []).length;
-    assert.equal(linkCount, 7, `${page} should have exactly 7 areas-link entries`);
+    const expected = page === 'washer-dryer-repair.html' ? 8 : 7;
+    assert.equal(linkCount, expected, `${page} should have exactly ${expected} areas-link entries`);
   }
 });

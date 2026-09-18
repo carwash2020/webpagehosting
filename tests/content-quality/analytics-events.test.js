@@ -27,6 +27,7 @@ const PUBLIC_PAGES = [
   'handyman-st-george-ut.html',
   'washer-dryer-repair.html', 'plumbing-repairs.html', 'drywall-painting.html',
   'assembly-installation.html', 'handyman-repairs.html',
+  'washer-dryer-repair-st-george-ut.html',
 ];
 const BLOG_PAGES = [
   'blog/index.html', 'blog/dryer-not-heating.html', 'blog/handyman-to-do-list.html',

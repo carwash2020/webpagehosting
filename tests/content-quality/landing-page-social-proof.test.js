@@ -28,6 +28,7 @@ const PAGES_WITH_SCHEDULE = [
   'drywall-painting.html',
   'plumbing-repairs.html',
   'washer-dryer-repair.html',
+  'washer-dryer-repair-st-george-ut.html',
   'assembly-installation.html',
   'handyman-repairs.html',
   'handyman-cedar-city-ut.html',
