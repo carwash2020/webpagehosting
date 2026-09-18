@@ -1414,7 +1414,7 @@
     padding:28px 26px;
     display:flex;
     flex-direction:column;
-    justify-content:space-between;
+    justify-content:flex-start;
     gap:20px;
   }
   .booking-grid .booking-cta:last-child{border-left-color:var(--border);}
