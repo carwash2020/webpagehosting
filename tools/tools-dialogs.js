@@ -48,6 +48,7 @@ function ensureDialogModalExists() {
     '<div class="help-modal">' +
       '<p class="dialog-message" id="customDialogMessage"></p>' +
       '<textarea id="customDialogTextarea" class="dialog-textarea" style="display:none;" rows="3"></textarea>' +
+      '<div class="dialog-fields" id="customDialogFields" style="display:none;"></div>' +
       '<div class="dialog-buttons" id="customDialogButtons"></div>' +
     '</div>';
   document.body.appendChild(overlay);
@@ -334,6 +335,83 @@ function showFlagDialog(pageLabel) {
   });
 }
 
+// Generic styled multi-field prompt dialog (2026-09-19), replacing the
+// remaining native prompt() call sites across the tools suite (recurring
+// job templates in job-tracker.html, a custom price-reference label in
+// finance.html, license entries in workspace.html) -- those were the
+// last spots still popping the browser's own unstyled dialog in an
+// otherwise consistently dark-themed PWA. Also fixes a real bug in the
+// recurring-template flow specifically: it used to be 3 stacked
+// prompt() calls, and `prompt(...) || ''` can't tell a genuine Cancel
+// (prompt() returns null) apart from OK on a deliberately empty field
+// (prompt() returns ''), so cancelling the 2nd of 3 prompts silently
+// continued with a blank value instead of aborting the whole thing.
+// Resolves with an object keyed by each field's id, or null if the
+// dialog was cancelled (Cancel button, backdrop click, or Escape) --
+// same null-vs-object distinction showFlagDialog() already makes, and
+// unambiguous here since every field only ever resolves once, together.
+function showPromptForm(message, fields, options) {
+  options = options || {};
+  return new Promise((resolve) => {
+    ensureDialogModalExists();
+    _dialogPreviousFocus = document.activeElement;
+    const overlay = document.getElementById('customDialogOverlay');
+    document.getElementById('customDialogMessage').textContent = message;
+    const fieldsContainer = document.getElementById('customDialogFields');
+    fieldsContainer.innerHTML = fields.map(function (f, i) {
+      return '<label class="dialog-field-label" for="customDialogField' + i + '">' + escapeHtml(f.label) + '</label>' +
+        '<input type="' + (f.type || 'text') + '" class="dialog-field-input" id="customDialogField' + i +
+        '" placeholder="' + escapeAttr(f.placeholder || '') + '" value="' + escapeAttr(f.defaultValue || '') + '">';
+    }).join('') + '<p class="dialog-field-error" id="customDialogFieldsError" style="display:none;"></p>';
+    fieldsContainer.style.display = 'block';
+    const buttons = document.getElementById('customDialogButtons');
+    buttons.innerHTML = '';
+
+    const close = () => {
+      fieldsContainer.style.display = 'none';
+      fieldsContainer.innerHTML = '';
+      overlay.classList.remove('is-open');
+      _restoreFocusAfterDialog();
+    };
+
+    const cancelBtn = document.createElement('button');
+    cancelBtn.className = 'dialog-btn dialog-btn-cancel';
+    cancelBtn.id = 'customDialogCancelAction';
+    cancelBtn.textContent = options.cancelText || 'Cancel';
+    cancelBtn.onclick = () => { close(); resolve(null); };
+
+    const submitBtn = document.createElement('button');
+    submitBtn.className = 'dialog-btn dialog-btn-primary';
+    submitBtn.textContent = options.confirmText || 'Save';
+    function submit() {
+      const values = {};
+      fields.forEach(function (f, i) {
+        values[f.id] = document.getElementById('customDialogField' + i).value.trim();
+      });
+      const error = options.validate ? options.validate(values) : null;
+      const errorEl = document.getElementById('customDialogFieldsError');
+      if (error) {
+        errorEl.textContent = error;
+        errorEl.style.display = 'block';
+        return;
+      }
+      close();
+      resolve(values);
+    }
+    submitBtn.onclick = submit;
+
+    buttons.appendChild(cancelBtn);
+    buttons.appendChild(submitBtn);
+    overlay.classList.add('is-open');
+    const inputs = fieldsContainer.querySelectorAll('input');
+    inputs.forEach(function (inp) {
+      inp.addEventListener('keydown', function (e) {
+        if (e.key === 'Enter') { e.preventDefault(); submit(); }
+      });
+    });
+    if (inputs[0]) inputs[0].focus();
+  });
+}
 
 // ---------------------------------------------------------------------------
 // Toast -- a brief, non-blocking confirmation for routine successes (job

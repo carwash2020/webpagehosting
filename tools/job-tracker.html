@@ -52,12 +52,12 @@
   })();
 </script>
 <link rel="stylesheet" href="/styles.css?v=2e81706c3d">
-<link rel="stylesheet" href="/tools/styles-tools.css?v=30ecd167f5">
+<link rel="stylesheet" href="/tools/styles-tools.css?v=70749d6cd7">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.112.3/dist/umd/supabase.js" integrity="sha384-qafw21c/iciq0VXsi9FzkfoQv5I/V0iqE4lSNcKXPnW9/UTJLnv5CcN4FHxVLnKg" crossorigin="anonymous" defer></script>
 <script src="/tools/sync.js?v=7b42b1caf0" defer></script>
 <script src="/tools/data-layer.js?v=c5d44f096e" defer></script>
 <script src="/tools/tools-effects.js?v=4cff99aa4a" defer></script>
-<script src="/tools/tools-dialogs.js?v=ce49ed8b35" defer></script>
+<script src="/tools/tools-dialogs.js?v=83d27784e2" defer></script>
 <script src="/tools/tools-media-sharing.js?v=0c229c9353" defer></script>
 <script src="/tools/tools-nav-pwa.js?v=2911578450" defer></script>
 <script src="/tools/tools-tour.js?v=a338c029a4" defer></script>
@@ -1401,37 +1401,49 @@
     justAddedTemplateId = null;
   }
 
-  function addTemplatePrompt() {
-    const title = prompt('Job title for this recurring template (e.g. "Quarterly HVAC filter change"):');
-    if (!title || !title.trim()) return;
-    const client = prompt('Client name (leave blank if this applies to different clients each time):') || '';
-    const intervalStr = prompt('Repeat every how many months? (e.g. 3, 6, 12):', '6');
-    const intervalMonths = parseInt(intervalStr, 10);
-    if (!intervalMonths || intervalMonths < 1) { showAlert('Enter a valid number of months.'); return; }
+  // Was 3 stacked native prompt() calls -- besides looking out of place
+  // next to the rest of this dark-themed app, `prompt(...) || ''` can't
+  // tell a genuine Cancel apart from OK on a deliberately blank field,
+  // so cancelling the 2nd prompt used to silently save a blank client
+  // name instead of aborting the whole thing. One styled dialog now
+  // (showPromptForm(), tools-dialogs.js) collects all 3 fields at once,
+  // so Cancel always means cancel and every field stays visible/
+  // editable together instead of restarting the sequence on a mistake.
+  async function addTemplatePrompt() {
+    const values = await showPromptForm('New recurring job template', [
+      { id: 'title', label: 'Job title (e.g. "Quarterly HVAC filter change")' },
+      { id: 'client', label: 'Client name (leave blank if this applies to different clients each time)' },
+      { id: 'intervalMonths', label: 'Repeat every how many months? (e.g. 3, 6, 12)', defaultValue: '6' },
+    ], {
+      validate: (v) => (!v.title ? 'Enter a job title.' : (!parseInt(v.intervalMonths, 10) || parseInt(v.intervalMonths, 10) < 1) ? 'Enter a valid number of months.' : null),
+    });
+    if (!values) return; // cancelled
 
     const templates = loadTemplates();
     const newId = Date.now();
-    templates.push({ id: newId, title: title.trim(), client: client.trim(), intervalMonths, lastCreatedDate: '' });
+    templates.push({ id: newId, title: values.title, client: values.client, intervalMonths: parseInt(values.intervalMonths, 10), lastCreatedDate: '' });
     saveTemplates(templates);
     justAddedTemplateId = newId;
     renderTemplates();
   }
 
-  function editTemplatePrompt(id) {
+  async function editTemplatePrompt(id) {
     const templates = loadTemplates();
     const template = templates.find(t => t.id === id);
     if (!template) return;
 
-    const title = prompt('Job title for this recurring template:', template.title);
-    if (!title || !title.trim()) return;
-    const client = prompt('Client name (leave blank if this applies to different clients each time):', template.client || '') || '';
-    const intervalStr = prompt('Repeat every how many months? (e.g. 3, 6, 12):', String(template.intervalMonths));
-    const intervalMonths = parseInt(intervalStr, 10);
-    if (!intervalMonths || intervalMonths < 1) { showAlert('Enter a valid number of months.'); return; }
+    const values = await showPromptForm('Edit recurring job template', [
+      { id: 'title', label: 'Job title', defaultValue: template.title },
+      { id: 'client', label: 'Client name (leave blank if this applies to different clients each time)', defaultValue: template.client || '' },
+      { id: 'intervalMonths', label: 'Repeat every how many months? (e.g. 3, 6, 12)', defaultValue: String(template.intervalMonths) },
+    ], {
+      validate: (v) => (!v.title ? 'Enter a job title.' : (!parseInt(v.intervalMonths, 10) || parseInt(v.intervalMonths, 10) < 1) ? 'Enter a valid number of months.' : null),
+    });
+    if (!values) return; // cancelled
 
-    template.title = title.trim();
-    template.client = client.trim();
-    template.intervalMonths = intervalMonths;
+    template.title = values.title;
+    template.client = values.client;
+    template.intervalMonths = parseInt(values.intervalMonths, 10);
     saveTemplates(templates);
     renderTemplates();
     showToast('Template updated.');
@@ -2185,11 +2197,20 @@
     return 'Something went wrong and this couldn’t ' + actionVerb + '. Try again, and call it in if it keeps happening.';
   }
 
+  // Was a native prompt() with a dead cancel-check (caption = prompt(...)
+  // || '' already turns a real Cancel into '' before the `=== null`
+  // check below it can ever see the difference) -- cancelling used to
+  // silently feature the photo with a blank caption instead of
+  // aborting. showPromptForm() (tools-dialogs.js) makes Cancel actually
+  // cancel, and looks like the rest of this dark-themed app.
   async function toggleFeatureUI(photoId, newFeatured, jobId, jobTitle) {
     let caption = '';
     if (newFeatured) {
-      caption = prompt('Caption for the website gallery (e.g. "Finished tile flooring, kitchen view"):') || '';
-      if (caption === null) return;
+      const values = await showPromptForm('Feature this photo on the website', [
+        { id: 'caption', label: 'Caption for the website gallery (e.g. "Finished tile flooring, kitchen view")' },
+      ]);
+      if (!values) return; // cancelled
+      caption = values.caption;
     }
     const result = await toggleFeaturedPhoto(photoId, newFeatured, caption);
     if (!result.ok) { await showAlert(friendlyPhotoErrorMessage(result, 'be updated')); return; }

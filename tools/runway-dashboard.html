@@ -40,7 +40,7 @@
 <link href="https://fonts.googleapis.com/css2?family=Anton&family=Archivo:wght@400..700&family=Newsreader:ital,opsz,wght@0,6..72,300..700;1,6..72,300..600&family=Oswald:wght@200..700&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.112.3/dist/umd/supabase.js" integrity="sha384-qafw21c/iciq0VXsi9FzkfoQv5I/V0iqE4lSNcKXPnW9/UTJLnv5CcN4FHxVLnKg" crossorigin="anonymous" defer></script>
 <script src="/tools/sync.js?v=7b42b1caf0" defer></script>
-<script src="/tools/tools-dialogs.js?v=ce49ed8b35" defer></script>
+<script src="/tools/tools-dialogs.js?v=83d27784e2" defer></script>
 <!-- F18 fix (2026-09-07): this page never loaded the shared mobile
      bottom nav / desktop sidebar / flag button script every other tool
      page loads -- it had no phone layout at all and was a dead end,
@@ -1480,9 +1480,16 @@ function renderDebts(){
       if(item) openDebtForm(item);
     });
   });
+  // Was native confirm() across all 6 destructive actions on this page
+  // (this one plus income/expense delete, the two full-data-wipe
+  // buttons, and the restore-from-backup overwrite below) -- this page
+  // already loads tools-dialogs.js for other things but never used its
+  // own showConfirm() dialog, so every delete/reset here looked like
+  // the browser's plain system popup instead of matching the rest of
+  // this dark-themed app.
   container.querySelectorAll('[data-delete-debt]').forEach(btn => {
     btn.addEventListener('click', async () => {
-      if(!confirm('Delete this debt?')) return;
+      if(!(await showConfirm('Delete this debt?', { danger: true, confirmText: 'Delete' }))) return;
       const row = document.querySelector('[data-debt-row-id="' + btn.dataset.deleteDebt + '"]');
       animateRowExit(row, async () => {
         debts = debts.filter(d => d.id !== btn.dataset.deleteDebt);
@@ -1718,7 +1725,7 @@ function renderIncome(){
   });
   container.querySelectorAll('[data-delete-inc]').forEach(btn => {
     btn.addEventListener('click', async () => {
-      if(!confirm('Delete this income source?')) return;
+      if(!(await showConfirm('Delete this income source?', { danger: true, confirmText: 'Delete' }))) return;
       const row = document.querySelector('[data-income-row-id="' + btn.dataset.deleteInc + '"]');
       animateRowExit(row, async () => {
         income = income.filter(i => i.id !== btn.dataset.deleteInc);
@@ -1869,7 +1876,7 @@ function renderPersonal(){
   });
   container.querySelectorAll('[data-delete]').forEach(btn => {
     btn.addEventListener('click', async () => {
-      if(!confirm('Delete this expense?')) return;
+      if(!(await showConfirm('Delete this expense?', { danger: true, confirmText: 'Delete' }))) return;
       const row = document.querySelector('[data-expense-row-id="' + btn.dataset.delete + '"]');
       animateRowExit(row, async () => {
         expenses = expenses.filter(e => e.id !== btn.dataset.delete);
@@ -2831,7 +2838,7 @@ document.getElementById('panel-personal').classList.add('active');
 })();
 
 document.getElementById('resetPersonalBtn').addEventListener('click', async () => {
-  if(!confirm('Delete ALL personal expenses? This cannot be undone.')) return;
+  if(!(await showConfirm('Delete ALL personal expenses? This cannot be undone.', { danger: true, confirmText: 'Delete' }))) return;
   expenses = [];
   await saveExpenses();
   renderPersonal();
@@ -2920,7 +2927,7 @@ document.getElementById('restoreFileInput').addEventListener('change', async (e)
   try {
     const text = await file.text();
     const data = JSON.parse(text);
-    if(!confirm('Restore from this file? This replaces everything currently on this device -- personal expenses, personal income, business months, emergency fund, and debts.')) {
+    if(!(await showConfirm('Restore from this file? This replaces everything currently on this device -- personal expenses, personal income, business months, emergency fund, and debts.', { danger: true, confirmText: 'Restore' }))) {
       e.target.value = '';
       return;
     }
@@ -2977,7 +2984,7 @@ function updateJobTrackerBadge(status){
 
 
 document.getElementById('resetAllBtn').addEventListener('click', async () => {
-  if(!confirm('Reset ALL data — personal expenses, personal income, business months, and emergency fund? This cannot be undone.')) return;
+  if(!(await showConfirm('Reset ALL data — personal expenses, personal income, business months, and emergency fund? This cannot be undone.', { danger: true, confirmText: 'Reset' }))) return;
   expenses = [];
   income = [];
   months = [];

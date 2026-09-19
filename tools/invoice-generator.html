@@ -52,12 +52,12 @@
   })();
 </script>
 <link rel="stylesheet" href="/styles.css?v=2e81706c3d">
-<link rel="stylesheet" href="/tools/styles-tools.css?v=30ecd167f5">
+<link rel="stylesheet" href="/tools/styles-tools.css?v=70749d6cd7">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.112.3/dist/umd/supabase.js" integrity="sha384-qafw21c/iciq0VXsi9FzkfoQv5I/V0iqE4lSNcKXPnW9/UTJLnv5CcN4FHxVLnKg" crossorigin="anonymous" defer></script>
 <script src="/tools/sync.js?v=7b42b1caf0" defer></script>
 <script src="/tools/data-layer.js?v=c5d44f096e" defer></script>
 <script src="/tools/tools-effects.js?v=4cff99aa4a" defer></script>
-<script src="/tools/tools-dialogs.js?v=ce49ed8b35" defer></script>
+<script src="/tools/tools-dialogs.js?v=83d27784e2" defer></script>
 <script src="/tools/tools-media-sharing.js?v=0c229c9353" defer></script>
 <script src="/tools/tools-nav-pwa.js?v=2911578450" defer></script>
 <script src="/tools/tools-tour.js?v=a338c029a4" defer></script>
@@ -1831,6 +1831,12 @@
         const portalStatusColor = portalInfo.status === 'approved' ? '#6fcf97' : portalInfo.status === 'declined' ? '#e05252' : 'var(--orange-light)';
         const portalStatusLabel = portalInfo.status === 'approved' ? 'Approved' : portalInfo.status === 'declined' ? 'Declined' : 'Awaiting client response';
         portalHtml += `<div class="contract-log-meta">Portal: <span style="color:${portalStatusColor}; font-weight:600;">${portalStatusLabel}</span></div>`;
+        // Surfaced right here (2026-09-19), not just captured to the
+        // DB -- a decline reason nobody on staff ever sees is no
+        // better than not asking for one at all.
+        if (portalInfo.status === 'declined' && portalInfo.declineReason) {
+          portalHtml += `<div class="contract-log-meta" style="margin-top:4px; padding:6px 8px; background:var(--bg-panel-2); border-radius:6px;"><strong>Decline reason:</strong> ${escapeHtml(portalInfo.declineReason)}</div>`;
+        }
         const openQuestions = portalInfo.questions.filter(qq => !qq.resolved);
         if (openQuestions.length) {
           portalHtml += openQuestions.map(qq => `
@@ -1872,7 +1878,7 @@
     if (typeof getAuthToken !== 'function') return;
     try {
       const [quotesRes, questionsRes] = await Promise.all([
-        fetch(`${SUPABASE_URL}/rest/v1/client_portal_quotes?select=id,source_quote_id,status,responded_at`, {
+        fetch(`${SUPABASE_URL}/rest/v1/client_portal_quotes?select=id,source_quote_id,status,responded_at,decline_reason`, {
           headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': `Bearer ${getAuthToken()}` },
         }),
         fetch(`${SUPABASE_URL}/rest/v1/quote_questions?select=*&order=created_at.desc`, {
@@ -1894,6 +1900,7 @@
         bySourceId[pq.source_quote_id] = {
           status: pq.status,
           respondedAt: pq.responded_at,
+          declineReason: pq.decline_reason,
           questions: questionsByPortalQuoteId[pq.id] || [],
         };
       });

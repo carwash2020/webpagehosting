@@ -52,13 +52,19 @@ Deno.serve(async (req: Request) => {
       return json({ ok: false, error: "Must be signed in." }, 401);
     }
 
-    const { quote_id, action } = await req.json();
+    const { quote_id, action, decline_reason } = await req.json();
     if (typeof quote_id !== "number") {
       return json({ ok: false, error: "Missing quote_id." }, 400);
     }
     if (action !== "approve" && action !== "decline") {
       return json({ ok: false, error: "action must be 'approve' or 'decline'." }, 400);
     }
+    // Optional -- a client can decline without giving a reason. Capped
+    // well above what a UI would ever reasonably need, just to stop an
+    // absurdly long payload rather than to enforce a "real" limit.
+    const declineReason = action === "decline" && typeof decline_reason === "string"
+      ? decline_reason.trim().slice(0, 2000) || null
+      : null;
 
     const quoteRes = await fetch(
       `${SUPABASE_URL}/rest/v1/client_portal_quotes?id=eq.${quote_id}&select=id,client_email,status`,
@@ -94,7 +100,7 @@ Deno.serve(async (req: Request) => {
           Authorization: `Bearer ${SERVICE_ROLE_KEY}`,
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ status: newStatus, responded_at: new Date().toISOString() }),
+        body: JSON.stringify({ status: newStatus, responded_at: new Date().toISOString(), decline_reason: declineReason }),
       },
     );
     if (!patchRes.ok) {

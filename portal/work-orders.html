@@ -363,6 +363,7 @@
   .wo-status.is-scheduled { border-color: #2e5c46; background: rgba(46,92,70,0.18); color: #4caf78; }
   .wo-status.is-completed { border-color: #2e5c46; background: rgba(46,92,70,0.18); color: #4caf78; }
   .wo-status.is-declined  { background: var(--bg-panel-2); color: var(--text-dim); }
+  .wo-status.is-cancelled { background: var(--bg-panel-2); color: var(--text-dim); }
   /* A real progress track (2026-09-07): the status pill already told a
      client where a request stood, but as a single word with no sense
      of how much further there was to go. Reuses the exact real pipeline
@@ -589,6 +590,7 @@
     scheduled: 'Scheduled',
     completed: 'Completed',
     declined: 'Closed',
+    cancelled: 'Cancelled',
   };
 
   const URGENCY_LABELS = {
@@ -945,8 +947,42 @@
         ${(statusKey === 'scheduled' && wo.scheduled_at) ? `<div class="wo-scheduled-tag">Scheduled for ${escapeHtml(formatScheduledAt(wo.scheduled_at))}</div>` : ''}
         <button type="button" class="wo-messages-toggle" onclick="toggleMessages(${wo.id}, this)">Messages</button>
         <div class="wo-messages-panel" id="woMessages-${wo.id}" style="display:none;"></div>
+        <!-- Cancel (2026-09-19), requested directly -- only while still
+             'submitted': once Steve has started reviewing/quoting/
+             scheduling it, cancelling here would just make the request
+             silently disappear from his own queue (which filters on an
+             explicit list of "open" statuses) with no record of why,
+             so past that point the fix is a real call or text instead. -->
+        ${statusKey === 'submitted' ? `<button type="button" class="btn secondary-btn" style="width:100%; justify-content:center; margin-top:8px;" onclick="cancelWorkOrder(${wo.id})">Cancel request</button>` : ''}
       </div>
     `;
+  }
+
+  async function cancelWorkOrder(id) {
+    const confirmed = await portalConfirm('Cancel this request? This can\'t be undone.', { confirmLabel: 'Cancel request' });
+    if (!confirmed) return;
+    const { data: { session } } = await client.auth.getSession();
+    if (!session) { window.location.replace('/portal/login.html'); return; }
+    try {
+      const res = await fetch('https://csvfqdjuobylgafgolho.supabase.co/functions/v1/cancel-work-order', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'apikey': SUPABASE_ANON_KEY,
+          'Authorization': `Bearer ${session.access_token}`,
+        },
+        body: JSON.stringify({ work_order_id: id }),
+      });
+      const result = await res.json();
+      if (!result.ok) {
+        showToast(result.error || "Couldn't cancel that request. Please try again.", { type: 'error' });
+        return;
+      }
+      showToast('Request cancelled.');
+      renderMyRequests();
+    } catch (e) {
+      showToast("Couldn't reach the server. Please check your connection and try again.", { type: 'error' });
+    }
   }
 
   // Matches the same timezone-aware display already used in the
@@ -966,7 +1002,7 @@
   function openRequestsBannerHtml(requests) {
     const open = requests.filter((r) => {
       const s = r.status || 'submitted';
-      return s !== 'completed' && s !== 'declined';
+      return s !== 'completed' && s !== 'declined' && s !== 'cancelled';
     });
     if (!open.length) return '';
     const count = open.length === 1 ? '1 request' : open.length + ' requests';

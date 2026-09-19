@@ -52,12 +52,12 @@
   })();
 </script>
 <link rel="stylesheet" href="/styles.css?v=2e81706c3d">
-<link rel="stylesheet" href="/tools/styles-tools.css?v=30ecd167f5">
+<link rel="stylesheet" href="/tools/styles-tools.css?v=70749d6cd7">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.112.3/dist/umd/supabase.js" integrity="sha384-qafw21c/iciq0VXsi9FzkfoQv5I/V0iqE4lSNcKXPnW9/UTJLnv5CcN4FHxVLnKg" crossorigin="anonymous" defer></script>
 <script src="/tools/sync.js?v=7b42b1caf0" defer></script>
 <script src="/tools/data-layer.js?v=c5d44f096e" defer></script>
 <script src="/tools/tools-effects.js?v=4cff99aa4a" defer></script>
-<script src="/tools/tools-dialogs.js?v=ce49ed8b35" defer></script>
+<script src="/tools/tools-dialogs.js?v=83d27784e2" defer></script>
 <script src="/tools/tools-media-sharing.js?v=0c229c9353" defer></script>
 <script src="/tools/tools-nav-pwa.js?v=2911578450" defer></script>
 <script src="/tools/tools-tour.js?v=a338c029a4" defer></script>
@@ -606,13 +606,19 @@
 
   function savePriceReferences(list) { localStorage.setItem(STORAGE_KEYS.priceRef, JSON.stringify(list)); scheduleSync(); }
 
-  function savePriceReference() {
-    const label = prompt('Name this job type (e.g. "Dishwasher install", "Drywall patch - small"):');
-    if (!label || !label.trim()) return;
+  // Styled dialog (showPromptForm(), tools-dialogs.js) instead of a
+  // native prompt() -- the one spot on this page that still popped the
+  // browser's own unstyled dialog next to an otherwise dark-themed app.
+  async function savePriceReference() {
+    const values = await showPromptForm('Name this job type', [
+      { id: 'label', label: 'Job type (e.g. "Dishwasher install", "Drywall patch - small")' },
+    ], { validate: (v) => (!v.label ? 'Enter a name for this job type.' : null) });
+    if (!values) return; // cancelled
+
     const hours = Math.max(0, parseFloat(document.getElementById('hours').value) || 0);
     const rate = Math.max(0, parseFloat(document.getElementById('rate').value) || 0);
     const list = loadPriceReferences();
-    list.push({ id: Date.now(), label: label.trim(), hours, rate });
+    list.push({ id: Date.now(), label: values.label, hours, rate });
     savePriceReferences(list);
     renderPriceReferences();
   }

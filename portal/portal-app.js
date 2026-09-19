@@ -512,6 +512,73 @@ function portalConfirm(message, options) {
   });
 }
 
+// Optional-reason variant of portalConfirm() (2026-09-19), requested
+// directly: declining a quote used to be a plain yes/no confirm with
+// no way to say why -- Steve never learned what changed a client's
+// mind. Reuses the exact same overlay/modal styling and focus-trap
+// pattern as portalConfirm() (a second, separate overlay element,
+// since both could in principle be triggered from the same page).
+// Resolves with the trimmed textarea value (possibly '') on confirm,
+// or null if cancelled -- same null-vs-empty-string distinction
+// tools/tools-dialogs.js's showFlagDialog() already uses for the
+// internal tools suite's equivalent optional-note dialog.
+function portalPromptTextarea(message, options) {
+  options = options || {};
+  const confirmLabel = options.confirmLabel || 'Confirm';
+  const cancelLabel = options.cancelLabel || 'Cancel';
+
+  return new Promise((resolve) => {
+    let overlay = document.getElementById('portalPromptOverlay');
+    if (!overlay) {
+      overlay = document.createElement('div');
+      overlay.id = 'portalPromptOverlay';
+      overlay.className = 'portal-confirm-overlay';
+      overlay.innerHTML =
+        '<div class="portal-confirm-modal">' +
+        '<p class="portal-confirm-message" id="portalPromptMessage"></p>' +
+        '<textarea class="portal-prompt-textarea" id="portalPromptTextarea" rows="3"></textarea>' +
+        '<div class="portal-confirm-actions">' +
+        '<button type="button" class="btn secondary-btn" id="portalPromptCancel"></button>' +
+        '<button type="button" class="btn orange" id="portalPromptOk"></button>' +
+        '</div></div>';
+      document.body.appendChild(overlay);
+    }
+
+    const messageEl = document.getElementById('portalPromptMessage');
+    const textarea = document.getElementById('portalPromptTextarea');
+    const okBtn = document.getElementById('portalPromptOk');
+    const cancelBtn = document.getElementById('portalPromptCancel');
+    messageEl.textContent = message;
+    textarea.value = '';
+    textarea.placeholder = options.placeholder || '';
+    okBtn.textContent = confirmLabel;
+    cancelBtn.textContent = cancelLabel;
+
+    let releaseFocusTrap = null;
+    function cleanup(result) {
+      overlay.classList.remove('is-visible');
+      okBtn.removeEventListener('click', onOk);
+      cancelBtn.removeEventListener('click', onCancel);
+      overlay.removeEventListener('click', onOverlayClick);
+      document.removeEventListener('keydown', onKeydown);
+      if (releaseFocusTrap) releaseFocusTrap();
+      resolve(result);
+    }
+    function onOk() { cleanup(textarea.value.trim()); }
+    function onCancel() { cleanup(null); }
+    function onOverlayClick(e) { if (e.target === overlay) cleanup(null); }
+    function onKeydown(e) { if (e.key === 'Escape') cleanup(null); }
+
+    okBtn.addEventListener('click', onOk);
+    cancelBtn.addEventListener('click', onCancel);
+    overlay.addEventListener('click', onOverlayClick);
+    document.addEventListener('keydown', onKeydown);
+
+    overlay.classList.add('is-visible');
+    releaseFocusTrap = trapFocusWithin(overlay, textarea);
+  });
+}
+
 // Themed replacement for window.alert() on the error/validation paths
 // still using it across dashboard.html, quotes.html and settings.html
 // (2026-09-15). Mirrors the internal tool suite's own showToast()
