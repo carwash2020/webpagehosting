@@ -130,7 +130,21 @@ function buildGuestEmailHtml(booking: Record<string, unknown>): string {
           </td>
         </tr>
         <tr>
-          <td style="padding: 32px 28px 8px; font-family: -apple-system, Helvetica, Arial, sans-serif;">
+          <td align="center" style="padding: 28px 28px 0;">
+            <!-- Green success checkmark badge (2026-09-19), requested
+                 directly, mirroring booking.html's own on-page checkmark.
+                 Plain HTML/CSS (a bgcolor'd table cell forced round with
+                 border-radius), not an SVG or animated GIF -- email
+                 client support for both is too inconsistent to rely on
+                 (this degrades to a green square in classic Outlook
+                 desktop, which is an acceptable, common fallback). -->
+            <table role="presentation" cellpadding="0" cellspacing="0" width="56" height="56" style="width: 56px; height: 56px;">
+              <tr><td align="center" valign="middle" bgcolor="#3ad66b" style="background: #3ad66b; border-radius: 50%; font-family: -apple-system, Helvetica, Arial, sans-serif; font-size: 28px; font-weight: 700; color: #0a0a0a; line-height: 56px;">&#10003;</td></tr>
+            </table>
+          </td>
+        </tr>
+        <tr>
+          <td style="padding: 16px 28px 8px; font-family: -apple-system, Helvetica, Arial, sans-serif;">
             <h1 style="color: #ff8000; font-size: 22px; margin: 0 0 20px; text-align: center;">You're booked!</h1>
             <p style="color: #222; font-size: 15px; line-height: 1.5; margin: 0 0 20px;">${greeting}</p>
             <p style="color: #222; font-size: 15px; line-height: 1.5; margin: 0 0 8px;">Thanks for booking with Triple H Enterprises. Here's what we've got on the calendar:</p>

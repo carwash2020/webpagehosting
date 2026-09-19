@@ -39,7 +39,7 @@ test('Action Items is grouped into four priority lanes, and every existing list 
 
 test('lane counts reuse actionItemCounts rather than a second calculation of the same numbers', () => {
   const fn = extractFn(WORKSPACE, 'updateActionItemsBadge');
-  assert.match(fn, /setOpsLaneCount\('laneRespondCount', 'lane-respond', actionItemCounts\.workrequests \+ actionItemCounts\.leads \+ actionItemCounts\.bookings\)/);
+  assert.match(fn, /setOpsLaneCount\('laneRespondCount', 'lane-respond', actionItemCounts\.workrequests \+ actionItemCounts\.leads \+ actionItemCounts\.applicants \+ actionItemCounts\.bookings\)/);
   assert.match(fn, /setOpsLaneCount\('laneSoonCount', 'lane-soon', actionItemCounts\.duesoon\)/);
   assert.match(fn, /setOpsLaneCount\('laneFollowCount', 'lane-follow', actionItemCounts\.followups\)/);
   assert.match(fn, /setOpsLaneCount\('laneMoneyCount', 'lane-money', actionItemCounts\.unpaid\)/);

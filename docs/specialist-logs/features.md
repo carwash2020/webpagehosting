@@ -390,4 +390,57 @@ docs PR; do not rebuild the feature.
 #263 (portal partial payments) stays closed until Connor is ready
 for a schema migration + `stripe-webhook` deploy.
 
+## 2026-09-19 -- features: Applicants panel on workspace.html + booking checkmark refresh
+
+Two asks from the same request. **Applicants panel**: since `careers.html`'s
+apply form (PR #304) landed, the only way to see a new application was
+the notification email arriving correctly -- no fallback inside the
+tools app. Added a "New Applicants" section to the Action Items /
+"Needs response" lane, mirroring the existing Leads Inbox exactly:
+`fetchJobApplications()`/`markJobApplicationHandled()`/
+`deleteJobApplication()` in `tools/sync.js` (same fetch/PATCH/DELETE
+shape as the `th_leads` trio), `startApplicantsRealtime()` (same
+retry/backoff shape as `startLeadsRealtime()`), rendered as
+`.lead-card`s with a handled toggle and an undoable delete, counted
+into the existing `actionItemCounts`/badge/app-icon-badge machinery
+rather than a parallel one. `th_job_applications` had to be explicitly
+added to the `supabase_realtime` publication
+(`sql/infra/add_job_applications_to_realtime.sql`, applied live) --
+same gap `th_leads` itself once had (see
+`add_workspace_sync_and_leads_to_realtime.sql`, 2026-08-15) --
+otherwise the new realtime channel would silently never fire. Verified
+end-to-end: inserted a real test row, confirmed the RLS SELECT policy
+(`exists (select 1 from account_roles where email = auth.email())`)
+matches what the fetch functions rely on, deleted the test row.
+
+**Booking checkmark**: requested directly ("a little animation with a
+green check mark that pops up and says 'You're Booked!'"). Replaced
+`booking.html`'s on-page confirmation badge (previously a solid orange
+hexagon with a flat unicode `&#10003;` glyph) with a green circular
+badge (`--success-text`, the token already used for form-status
+success messages elsewhere -- not a new color) containing an SVG
+checkmark that draws itself in via `stroke-dashoffset` after the circle
+pops in. Reduced-motion is already covered by the page's existing
+blanket `*{animation-duration:0.001ms}` override. Added the same green
+badge to the `send-booking-email` guest confirmation email -- plain
+HTML/CSS (a `border-radius:50%` table cell), not SVG or a GIF, since
+neither has reliable support across email clients (this degrades to a
+green square in classic Outlook desktop, an acceptable, common
+fallback).
+
+Also this session: drafted (not posted -- no social/Indeed connector
+available) ready-to-paste hiring copy for Facebook/Instagram/Nextdoor/
+Indeed, and ran a static SEO/content audit of the 16 city/service/
+appliance landing pages (no live GA4/Search Console access from this
+sandbox) -- main finding: 9 of 16 pages share an identical closing
+sentence in their meta descriptions, a real duplicate-content risk
+worth fixing in a future content pass; logged for `tripleh-content` to
+pick up rather than fixed here.
+
+Verified: full suite **2533/2533** passing (2 pre-existing tests in
+`realtime-error-noise.test.js`/`workspace-ops-inbox.test.js` hardcoded
+"5 channels" and the old `lane-respond` sum -- updated both to include
+the new 6th channel/count rather than leaving them silently wrong).
+`check-consistency`/`check-undefined-vars`/`check-links.py` all clean.
+
 <!-- Add new entries above this line -->

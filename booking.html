@@ -135,6 +135,7 @@
     --orange-text-vivid:var(--orange);
     --orange-tint-soft: rgba(255,128,0,0.08);
     --orange-tint-border: rgba(255,128,0,0.32);
+    --success-text:#3ad66b;
     --radius:12px;
     --hex: polygon(25% 6%, 75% 6%, 97% 50%, 75% 94%, 25% 94%, 3% 50%);
   }
@@ -362,12 +363,27 @@
   .status-msg.is-error{background:rgba(220,60,50,0.12); border:1px solid rgba(220,60,50,0.3); color:#ff8a80;}
 
   .confirmation{text-align:center; padding:24px 0 8px; max-width:480px; margin:0 auto;}
+  /* Green success checkmark (2026-09-19), requested directly: replaces
+     the plain orange-hex + unicode-glyph badge with a proper circular
+     badge in the site's existing success color (--success-text, already
+     used for form-status success messages elsewhere) and an SVG check
+     that draws itself in via stroke-dashoffset, rather than just
+     popping into view as a solid glyph. The circle still pops in first
+     (same easing as the old badge) so the draw-in has something to
+     draw onto. */
   .confirmation .checkmark{
-    width:72px; height:72px; clip-path:var(--hex); background:var(--orange); color:#1a1a1a;
-    display:flex; align-items:center; justify-content:center; margin:0 auto 22px; font-size:30px; font-weight:700;
+    width:72px; height:72px; border-radius:50%; background:var(--success-text);
+    display:flex; align-items:center; justify-content:center; margin:0 auto 22px;
     animation:popIn .4s cubic-bezier(.2,1.4,.4,1) both;
   }
+  .confirmation .checkmark svg{width:38px; height:38px;}
+  .confirmation .checkmark svg path{
+    fill:none; stroke:#0a0a0a; stroke-width:3.5; stroke-linecap:round; stroke-linejoin:round;
+    stroke-dasharray:28; stroke-dashoffset:28;
+    animation:drawCheck .35s ease-out .35s both;
+  }
   @keyframes popIn{from{opacity:0; transform:scale(.5);} to{opacity:1; transform:scale(1);}}
+  @keyframes drawCheck{to{stroke-dashoffset:0;}}
   .confirmation h2{font-family:var(--font-ui); font-size:25px; margin-bottom:10px;}
   .confirmation p{color:var(--text-dim); font-size:14.5px;}
   .confirmation .conf-detail{
@@ -671,8 +687,8 @@
     <!-- Confirmation -->
     <section class="step-panel" id="stepConfirmed">
       <div class="confirmation">
-        <div class="checkmark" aria-hidden="true">&#10003;</div>
-        <h2>You're booked. Your slot is held.</h2>
+        <div class="checkmark" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M5 13l5 5L19 7"/></svg></div>
+        <h2>You're booked! Your slot is held.</h2>
         <p>It's on our calendar. A confirmation email is on its way if you gave us one, with a link to reschedule or cancel anytime.</p>
         <div class="conf-detail" id="confirmationDetail"></div>
 
