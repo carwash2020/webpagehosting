@@ -60,7 +60,7 @@
 <link rel="preconnect" href="https://csvfqdjuobylgafgolho.supabase.co">
 <link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Anton&family=Archivo:wght@400..700&family=Newsreader:ital,opsz,wght@0,6..72,300..700;1,6..72,300..600&family=Oswald:wght@200..700&display=swap" onload="this.onload=null;this.rel='stylesheet'">
 <noscript><link href="https://fonts.googleapis.com/css2?family=Anton&family=Archivo:wght@400..700&family=Newsreader:ital,opsz,wght@0,6..72,300..700;1,6..72,300..600&family=Oswald:wght@200..700&display=swap" rel="stylesheet"></noscript>
-<link rel="stylesheet" href="/styles.css?v=f685e650e5">
+<link rel="stylesheet" href="/styles.css?v=2e81706c3d">
 <link rel="stylesheet" href="/blog/blog.css?v=202609071600">
 <script type="application/ld+json">
 {
@@ -165,8 +165,11 @@
     </div>
   </nav>
   <div class="mobile-menu" id="mobileMenu">
-    <a href="/#services">Services</a>
-    <ul class="mobile-services-sublist">
+    <div class="mobile-nav-row">
+      <a href="/#services">Services</a>
+      <button type="button" class="mobile-nav-caret" aria-expanded="false" aria-controls="mobileServicesSublist" aria-label="Toggle Services links"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg></button>
+    </div>
+    <ul class="mobile-services-sublist" id="mobileServicesSublist" hidden>
       <li><a href="/washer-dryer-repair.html">Washer &amp; Dryer Repair</a></li>
       <li><a href="/plumbing-repairs.html">Plumbing Repairs</a></li>
       <li><a href="/drywall-painting.html">Drywall &amp; Painting</a></li>
@@ -176,8 +179,11 @@
     <a href="/blog/">Blog</a>
     <a href="/#reviews">Reviews</a>
     <a href="/#about">About</a>
-    <a href="/#areas">Areas</a>
-    <ul class="mobile-areas-sublist">
+    <div class="mobile-nav-row">
+      <a href="/#areas">Areas</a>
+      <button type="button" class="mobile-nav-caret" aria-expanded="false" aria-controls="mobileAreasSublist" aria-label="Toggle Areas links"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg></button>
+    </div>
+    <ul class="mobile-areas-sublist" id="mobileAreasSublist" hidden>
       <li><a href="/handyman-washington-city-ut.html">Washington City</a></li>
       <li><a href="/handyman-hurricane-ut.html">Hurricane</a></li>
       <li><a href="/handyman-santa-clara-ivins-ut.html">Santa Clara &amp; Ivins</a></li>
@@ -402,5 +408,6 @@
 
 <script src="/js/site-motion.js?v=17fb5b611b" defer></script>
 <script src="/js/analytics-events.js?v=4a6fd9aa19" defer></script>
+<script src="/js/mobile-nav-collapsible.js" defer></script>
 </body>
 </html>
