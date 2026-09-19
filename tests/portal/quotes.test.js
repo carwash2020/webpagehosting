@@ -43,22 +43,42 @@ test('asking a question ties the client_email to the caller\'s own session, not 
   assert.match(html, /client_email:\s*session\.user\.email/);
 });
 
-test('a pending quote offers Approve, Decline, and Ask a question; a responded quote does not', () => {
+test('a pending quote offers Approve and Decline; a responded quote does not (but both still offer Ask a question)', () => {
   assert.match(html, /respondToQuote\(\$\{q\.id\}, 'approve', this\)/);
   assert.match(html, /respondToQuote\(\$\{q\.id\}, 'decline', this\)/);
-  assert.match(html, /toggleQuestionForm\(\$\{q\.id\}\)/);
   assert.match(html, /isPending \? `/);
+  // Ask a question (2026-09-19: moved outside the isPending branch,
+  // fixing a real dead-end -- declining used to be one-way, with no
+  // path back except a phone call) sits outside the isPending ternary
+  // entirely now, so it always renders regardless of status.
+  const toggleIdx = html.indexOf("toggleQuestionForm(${q.id})");
+  const ternaryStart = html.indexOf('isPending ? `');
+  const ternaryEnd = html.indexOf('`}', ternaryStart);
+  assert.ok(toggleIdx > 0 && ternaryStart > 0 && ternaryEnd > 0);
+  assert.ok(toggleIdx > ternaryEnd, 'the Ask a question toggle should render after (outside) the isPending ternary, not inside it');
+});
+
+test('a declined quote with a reason shows that reason back to the client', () => {
+  assert.match(html, /q\.status === 'declined' && q\.decline_reason/);
+  assert.match(html, /Your note:/);
 });
 
 test('the quote card only reads fields that actually exist on client_portal_quotes', () => {
   const fnMatch = html.match(/function renderQuoteCard\(q\) \{[\s\S]*?\n  \}\n/);
   assert.ok(fnMatch, 'expected to isolate the renderQuoteCard function body');
   const fnBody = fnMatch[0];
-  const realFields = ['id', 'quote_number', 'quote_date', 'description', 'total', 'status', 'line_items', 'responded_at', 'scheduled_at'];
+  const realFields = ['id', 'quote_number', 'quote_date', 'description', 'total', 'status', 'line_items', 'responded_at', 'scheduled_at', 'decline_reason'];
   const fieldRefs = [...fnBody.matchAll(/q\.([a-zA-Z_]+)/g)].map(m => m[1]);
   for (const field of fieldRefs) {
     assert.ok(realFields.includes(field), `renderQuoteCard references q.${field}, which isn't a real client_portal_quotes column`);
   }
+});
+
+test('declining prompts for an optional reason via portalPromptTextarea, not a plain yes/no confirm', () => {
+  const fnMatch = html.match(/async function respondToQuote\(quoteId, action, btnEl\) \{[\s\S]*?\n  \}\n/);
+  assert.ok(fnMatch, 'expected to isolate respondToQuote()');
+  assert.match(fnMatch[0], /portalPromptTextarea\('Decline this quote/);
+  assert.match(fnMatch[0], /decline_reason: declineReason/);
 });
 
 // ---- tools/invoice-generator.html: the internal side of phase 2 ----

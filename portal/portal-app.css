@@ -506,6 +506,20 @@ body.portal-page {
   flex: 1;
   justify-content: center;
 }
+.portal-prompt-textarea {
+  width: 100%;
+  box-sizing: border-box;
+  resize: vertical;
+  margin: 0 0 16px;
+  background: var(--bg-panel-2);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  color: var(--text);
+  font-family: inherit;
+  font-size: 14px;
+  padding: 10px 12px;
+}
+.portal-prompt-textarea:focus { outline: none; border-color: var(--orange-light); }
 
 /* Toast notifications (portal-app.js showToast()) -- added 2026-09-15
    as a themed replacement for the raw window.alert() calls still on

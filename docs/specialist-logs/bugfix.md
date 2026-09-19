@@ -450,3 +450,81 @@ Verified: `npm run check-undefined-vars` clean, `npm run fix-versions`
 query string, so the edit correctly triggered the 20-page cache-bust
 staleness + service-worker `CACHE_NAME` bump `check-consistency` already
 watches for), full suite **2457/2457** passing afterward.
+
+## 2026-09-19 -- bugfix/security: portal + Workspace audit findings, "fix everything you can"
+
+A read-only audit of `portal/*.html` and `tools/*.html` returned 7
+findings; fixed the ones that were real and tractable without a
+separate schema-design conversation.
+
+1. **Work orders had no cancel path.** `client_portal_work_orders`
+   deliberately had no client UPDATE/DELETE policy at all (see that
+   table's own create-migration comment #3, which specifically
+   anticipated this: "an explicit status transition through an edge
+   function, not a raw delete"). Added a `cancelled` status value
+   (`sql/portal/add_work_order_cancel.sql`, applied live) and
+   `cancel-work-order` (new edge function, deployed live) -- service-role
+   write, same pattern as `respond-to-quote`, only reachable from
+   `submitted` (past that point Steve has already started working it,
+   and workspace.html's own queue filters on an explicit "open" status
+   list that never included `cancelled` -- cancelling later would just
+   make the request silently vanish from his queue with no record of
+   why). `portal/work-orders.html` gets a "Cancel request" button,
+   shown only while still `submitted`.
+2. **Declining a quote was a one-way dead end.** No text field for why,
+   and the "Ask a question" button disappeared entirely once responded
+   to. Added `decline_reason` (`sql/portal/add_quote_decline_reason.sql`,
+   applied live), threaded through `respond-to-quote` (deployed live),
+   captured via a new `portalPromptTextarea()` dialog (`portal-app.js`,
+   mirrors `portalConfirm()`'s own overlay/focus-trap pattern) instead
+   of a plain yes/no confirm. The reason shows back to the client on
+   their own card and to Steve on `tools/invoice-generator.html`'s
+   existing quote log (the same place client questions already surface
+   -- not a new screen). "Ask a question" moved outside the
+   `isPending` branch entirely, so it's available on a declined (or
+   approved) quote too, not just a pending one.
+3. **Disabling 2FA had no confirmation**, unlike removing a saved card
+   two sections above it on the same page. Added the same
+   `portalConfirm()` gate `removeSavedCard()` already uses.
+4. **Several native, unstyled `prompt()`/`confirm()` dialogs** still
+   popped the browser's own system look next to an otherwise
+   consistently dark-themed app suite -- `job-tracker.html`'s recurring
+   job templates (3 stacked prompts) and a photo-caption prompt,
+   `finance.html`'s custom price-reference label, `workspace.html`'s
+   license entries, and 6 destructive actions on `runway-dashboard.html`
+   that never used the `showConfirm()` it already loads for other
+   things. Added `showPromptForm()` (`tools/tools-dialogs.js`) -- a
+   generic multi-field styled dialog reusing the same overlay/focus-trap
+   infrastructure as `showConfirm()`/`showAlert()` -- and converted
+   every one of those call sites to it (or to `showConfirm()` for the
+   runway-dashboard ones). Real bug fixed along the way, not just a
+   style pass: the recurring-template flow's `prompt(...) || ''` could
+   never tell a genuine Cancel (native `prompt()` returns `null`) apart
+   from OK on a deliberately blank field (returns `''`), so cancelling
+   the 2nd of 3 stacked prompts used to silently continue with a blank
+   client name instead of aborting the whole thing -- same root cause
+   independently found a second time in the photo-caption prompt's own
+   dead `caption === null` check (already unreachable, since `|| ''`
+   upstream of it had already erased the only value that check could
+   ever have caught).
+
+Not done, and deliberately not attempted here: the audit's two
+lower-priority notes (whether a slot picked in quotes.html's post-
+approval scheduling could conflict with one picked in work-orders.html
+before Steve reviews either -- flagged for whoever has time to trace
+both paths against the same availability data, not confirmed as an
+active bug; and the card-add-vs-remove asymmetry in
+`portal/settings.html`, which is a reasonable Stripe-driven trade-off,
+not a bug).
+
+Verified: full suite **2556/2556** passing (2 pre-existing
+`quotes.test.js` tests needed real updates, not just new columns
+added to an allowlist -- the "Ask a question only for pending" behavior
+they asserted was the actual dead-end this fix removes). New tests for
+every fix (`work-order-cancel.test.js`, `settings-mfa-disable-confirm.test.js`,
+`prompt-form-dialog.test.js` including a real jsdom round-trip of
+`showPromptForm()`'s cancel/validate/submit paths, `runway-native-confirm-fix.test.js`).
+`check-consistency`/`check-undefined-vars`/`check-links.py` all clean.
+Both new edge functions and both schema migrations applied/deployed
+live via Supabase MCP, not just committed as SQL files waiting on a
+manual step.

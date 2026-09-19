@@ -1136,11 +1136,18 @@
     renderMfaToggle();
   }
 
+  // Confirmation added (2026-09-19) -- removing a saved card two
+  // sections above already requires one (portalConfirm() in
+  // removeSavedCard()), but turning off two-factor authentication, at
+  // least as consequential a change, used to happen on a single click
+  // with no guardrail at all.
   async function handleDisableMfa() {
+    if (!mfaFactorId) return;
+    const confirmed = await portalConfirm('Turn off two-factor authentication? Your account will only need a password to sign in.', { confirmLabel: 'Turn off' });
+    if (!confirmed) return;
     const btn = document.getElementById('mfaToggleBtn');
     const msgEl = document.getElementById('mfaMsg');
     msgEl.style.display = 'none';
-    if (!mfaFactorId) return;
     btn.disabled = true;
     btn.textContent = 'Turning off...';
     const { error } = await client.auth.mfa.unenroll({ factorId: mfaFactorId });
