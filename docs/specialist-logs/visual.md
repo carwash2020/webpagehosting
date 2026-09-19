@@ -549,4 +549,60 @@ shape -- a local `padding: 8px 4px` override that still leaves the
 reported), but worth checking with the same
 `getBoundingClientRect()` method before assuming it's fine.
 
+## 2026-09-19 -- confirmed and fixed the ops-lane bleed predicted above; portal font-loading FOUC root cause
+
+**Ops-lane confirmed real.** Checked the prediction from the entry
+above with the same local-repro + `getBoundingClientRect()` method
+(first run gave a false negative -- the local static server had quietly
+died between test runs, so the external `styles-tools.css` never
+loaded and only the inline `<style>` block was in effect; restarting it
+with `setsid`/`disown` so it survives between tool calls and re-testing
+showed the real numbers). Confirmed: `.ops-lane .dash-list-item`'s
+`padding: 8px 4px` override leaves the sitewide `-12px` margin mostly
+uncancelled, so a highlighted overdue-invoice row inside an Action
+Items lane bled to ~3px from the lane's own edge instead of the 14px
+every other line respects. Checked whether the bleed convention is
+even needed here first: every row in every ops-lane list
+(workRequestsList/leadsList/bookingsList/followupsList/invoicesList/
+upcomingJobs) is a plain `<div class="dash-list-item">`, never an
+`<a>` -- and the hover-bleed this convention exists for
+(`body a.dash-list-item:hover`) only targets links. So nothing in this
+scope needs it at all; cancelled outright (`margin: 0` added next to
+the existing padding override) rather than trying to match the lane's
+padding like the money-card fix did. `gapRight` measured 3px -> 15px,
+now matching the lane's own 14px padding. `.lead-card` (used by
+leads/bookings) is unaffected -- it never inherited the bleed rule in
+the first place, uses its own unrelated card-chrome background.
+
+**Portal font-loading FOUC, real and root-caused.** The reported
+"blank-white flash before the skeleton" isn't from missing loading
+state -- both `portal/dashboard.html` and `portal/quotes.html` already
+render their skeleton cards as static HTML, no JS gate hiding them.
+The actual cause: both pages load Google Fonts via a plain blocking
+`<link rel="stylesheet" href="https://fonts.googleapis.com/...">`,
+while the public marketing pages (`index.html`, etc.) already use the
+async `rel="preload" as="style" onload="this.onload=null;
+this.rel='stylesheet'"` pattern with a `<noscript>` fallback,
+specifically to avoid blocking first paint on a third-party font
+fetch. A render-blocking stylesheet holds back ALL painting -- even
+the `<html style="background-color:#0a0a0a">` inline dark-paint fix
+already in place on both pages -- until every blocking resource
+resolves, which is the real mechanism behind a flash despite the dark
+background already being declared. Applied the exact same async
+pattern already established elsewhere in this codebase to both files.
+**Scope note**: every other portal page (`home.html`, `login.html`,
+etc.) has the identical blocking pattern -- only fixed the two files
+actually asked for here; the same fix would apply cleanly to the rest
+if someone wants it later.
+
+**Method note for next time**: a local Python `http.server` started
+with `(cmd &)` inside this session's Bash tool does not reliably
+survive between separate tool calls -- it died silently partway
+through this session with no error, and a `curl` against it returned
+a `000`/empty response that could easily be misread as "the feature
+doesn't reproduce" rather than "the test harness broke." Start it with
+`setsid ... < /dev/null & disown` instead, and always sanity-check with
+`curl -s <url> | grep <a string known to be in the real file>` before
+trusting a negative measurement.
+
 <!-- Add new entries above this line -->

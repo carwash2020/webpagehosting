@@ -36,18 +36,18 @@ explains what this repo actually hosts.
 
 ## Getting real review from the installed bots (added 2026-08-31)
 
-Snyk, CodeRabbit, and Repowise are all installed on this repo, but
-none of them add any value on a direct push to `main` -- they only
-actually review a **pull request**. Every real change from here
-forward should go through a PR rather than a direct push, specifically
-so these tools get a genuine chance to weigh in before it merges.
+Snyk and Repowise are installed on this repo, but neither adds any
+value on a direct push to `main` -- they only actually review a
+**pull request**. Every real change from here forward should go
+through a PR rather than a direct push, specifically so these tools
+get a genuine chance to weigh in before it merges.
 
 - Repowise and Snyk trigger automatically on their own, no extra step.
-- CodeRabbit does **not** run automatically on this repo -- confirmed
-  directly in its own posted comment: it requires 10+ GitHub stars to
-  review by default, and this repo doesn't have that many. Trigger it
-  manually, every single PR, by checking the "Trigger review" box on
-  its initial comment, or commenting `@coderabbitai review`.
+- CodeRabbit was previously installed on this repo but isn't used --
+  removed from this doc 2026-09-18. If its GitHub App is still showing
+  up on PRs, it needs to be uninstalled from the GitHub organization's
+  Settings -> Installed GitHub Apps (an org-admin action, not something
+  fixable from this repo's own files).
 - A failing check named "Code scanning AI findings on PR #N" (app:
   `github-actions`, a dynamic GitHub platform agent -- not anything
   in this repo's own workflow files, and not one of the three bots
