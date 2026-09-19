@@ -60,7 +60,12 @@ test('every public marketing page has a mobile-services-sublist under the mobile
     const mobileAt = html.indexOf('class="mobile-menu"');
     assert.ok(mobileAt > 0, `${page} should have a mobile-menu`);
     const mobileSection = html.slice(mobileAt, mobileAt + 2000);
-    assert.match(mobileSection, /<ul class="mobile-services-sublist">/, `${page} mobile menu should have a mobile-services-sublist`);
+    // Collapsed by default behind a caret button (2026-09-19) -- the
+    // sublist itself now carries an id (for the caret's aria-controls)
+    // and a hidden attribute (collapsed state), rather than the bare
+    // class it used to be the whole tag.
+    assert.match(mobileSection, /<ul class="mobile-services-sublist" id="mobileServicesSublist" hidden>/, `${page} mobile menu should have a mobile-services-sublist`);
+    assert.match(mobileSection, /<button type="button" class="mobile-nav-caret" aria-expanded="false" aria-controls="mobileServicesSublist"/, `${page} mobile menu should have a caret toggle for Services`);
     for (const link of SERVICE_LINKS) {
       assert.ok(mobileSection.includes(`href="${link}"`), `${page} mobile-services-sublist should link to ${link}`);
     }
