@@ -421,7 +421,18 @@
   .ops-lane-count[hidden] { display: none; }
   .ops-lane .analytics-subheading { margin: 12px 0 6px; font-size: 11px; }
   .ops-lane .analytics-subheading.is-first { margin-top: 0; }
-  .ops-lane .dash-list-item { padding: 8px 4px; }
+  /* Same root cause as .today-overdue-list's fix: styles-tools.css's
+     sitewide body .dash-list-item pairs padding:10px 12px with
+     margin:0 -12px so a *linked* row's hover state can bleed to its
+     container's edge. None of the rows in these lanes are links
+     (always a plain div, see workRequestsList/leadsList/bookingsList/
+     followupsList/invoicesList/upcomingJobs above), so that hover
+     bleed never applies here -- the -12px margin was pure unused
+     leftover, and it showed the moment a row got a visible background
+     (.is-unread): the card bled past the lane's own 14px padding,
+     landing only ~3px from the edge. Cancelled outright since nothing
+     in this scope needs the bleed. */
+  .ops-lane .dash-list-item { padding: 8px 4px; margin: 0; }
   .ops-lane .lead-card { padding: 10px 4px; }
   .lead-card.is-unread, .dash-list-item.is-unread {
     border-left: 3px solid var(--orange-light);
