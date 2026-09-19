@@ -28,20 +28,27 @@
     { href: '/tools/finance.html',           icon: 'dollar',  label: 'Finance' }
   ];
 
-  // Requested directly, alongside the new Employee role -- these 5
-  // real pages (out of everything in DESTS/SIDEBAR_DESTS below) are
-  // the ones actually gated behind canManageBusinessFinances()
-  // (finance.html, runway-dashboard.html, invoice-generator.html,
-  // contract-generator.html, review-request.html) -- same list used
-  // to decide which links to hide once the role is known, in both the
-  // mobile bottom nav and the desktop sidebar.
-  var BUSINESS_FINANCE_HREFS = [
-    '/tools/finance.html',
-    '/tools/runway-dashboard.html',
-    '/tools/invoice-generator.html',
-    '/tools/contract-generator.html',
-    '/tools/review-request.html'
-  ];
+  // Per-href permission checks for every restricted destination that
+  // can appear in the sidebar/More sheet (out of everything in
+  // SIDEBAR_DESTS below). Replaces the old single canManageBusinessFinances()
+  // bundle check -- that function was removed in the 2026-09-02 granular
+  // permission split (see auth.js) and this map went stale along with
+  // it, silently turning hideRestrictedNavLinks() below into a no-op
+  // (the `typeof ... !== 'function'` guard always took the early
+  // return). Mirrors workspace.html's own TILE_PERMISSION_CHECKS map so
+  // the dashboard tiles and this nav can never disagree about who sees
+  // what. Dev Tools is intentionally separate (checked directly below)
+  // since it gates on hasDevToolsAccess(), not one of these.
+  var NAV_PERMISSION_CHECKS = {
+    '/tools/finance.html': function () { return typeof canViewFinance === 'function' && canViewFinance(); },
+    '/tools/runway-dashboard.html': function () { return typeof canViewRunway === 'function' && canViewRunway(); },
+    '/tools/invoice-generator.html': function () { return typeof canManageInvoices === 'function' && canManageInvoices(); },
+    '/tools/pos.html': function () { return typeof canManageInvoices === 'function' && canManageInvoices(); },
+    '/tools/clients.html': function () { return typeof canManageInvoices === 'function' && canManageInvoices(); },
+    '/tools/contract-generator.html': function () { return typeof canManageContracts === 'function' && canManageContracts(); },
+    '/tools/review-request.html': function () { return typeof canManageReviews === 'function' && canManageReviews(); },
+    '/tools/dev-tools.html': function () { return typeof hasDevToolsAccess === 'function' && hasDevToolsAccess(); }
+  };
 
   // Hides specific already-injected nav/sidebar links by href, rather
   // than re-rendering the whole nav from scratch -- avoids a visible
@@ -53,8 +60,8 @@
   // but plenty call initSyncOnLoad(), which does, and this only needs
   // to fire once, whenever that happens to resolve on this page.
   function hideRestrictedNavLinks() {
-    if (typeof canManageBusinessFinances !== 'function' || canManageBusinessFinances()) return;
-    BUSINESS_FINANCE_HREFS.forEach(function (href) {
+    Object.keys(NAV_PERMISSION_CHECKS).forEach(function (href) {
+      if (NAV_PERMISSION_CHECKS[href]()) return;
       document.querySelectorAll('a[href="' + href + '"]').forEach(function (el) {
         el.style.display = 'none';
       });
@@ -75,12 +82,15 @@
     { href: '/tools/job-tracker.html',        icon: 'wrench',   label: 'Job Tracker' },
     { href: '/tools/finance.html',            icon: 'dollar',   label: 'Finance' },
     { href: '/tools/invoice-generator.html',  icon: 'receipt',  label: 'Invoice Generator' },
+    { href: '/tools/pos.html',                icon: 'dollar',   label: 'POS' },
+    { href: '/tools/clients.html',            icon: 'inbox',    label: 'Clients' },
     { href: '/tools/contract-generator.html', icon: 'scroll',   label: 'Contract Generator' },
     { href: '/tools/calendar.html',           icon: 'calendar', label: 'Calendar' },
     { href: '/tools/route-planner.html',      icon: 'map',      label: 'Route Planner' },
     { href: '/tools/review-request.html',     icon: 'star',     label: 'Review Requests' },
     { href: '/tools/parts-reference.html',    icon: 'book',     label: 'Appliance Wiki' },
     { href: '/tools/runway-dashboard.html',   icon: 'chart',    label: 'Runway Dashboard' },
+    { href: '/tools/dev-tools.html',          icon: 'terminal', label: 'Dev Tools' },
     { href: '/tools/settings.html',           icon: 'gear',     label: 'Settings' }
   ];
 
