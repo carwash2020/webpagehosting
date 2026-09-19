@@ -399,3 +399,54 @@ flight at the exact moment `git status` ran from a separate process.
 Re-running `git status` a moment later showed clean. Matches this file's
 existing "isolate before assuming a flake" guidance, just at the
 git-status layer instead of test-runner layer.
+
+## 2026-09-19 — POS/Dev Tools/Clients missing from the sidebar and mobile "More" sheet
+
+Reported directly by the user ("Dev tools and POS is missing as well for
+both me and Steve") -- first misdiagnosed as a permissions/data problem,
+since `hasDevToolsAccess()`/`canManageInvoices()` are exactly the kind of
+thing that silently hides a tile. Queried the live `account_roles` table
+directly for both `connor@triplehenterprisesllc.biz` and
+`steve@triplehenterprisesllc.biz`: both already had
+`can_access_dev_tools: true` and `can_manage_invoices: true`, and a
+simulated authenticated RLS read confirmed the data comes back fine --
+ruled out backend/permissions entirely. User corrected the report: "No we
+removed the bottom bar and put it under more the buttons themselves are
+missing" -- the real bug was structural, in the nav itself, not data.
+
+Two real bugs in `tools/tools-nav-pwa.js`, found by reading it in full:
+
+1. **`SIDEBAR_DESTS` never had POS, Dev Tools, or Clients in it at all.**
+   This one array drives both the desktop sidebar (`injectSidebar()`) and
+   the mobile "More" overflow sheet (`MORE_DESTS = SIDEBAR_DESTS.filter(...)`)
+   -- the redesign that moved secondary tools off the 5-item bottom bar
+   and into "More" (2026-08-20) simply never carried these 3 real pages
+   over into the list that "More" reads from, even though `pos.html`,
+   `dev-tools.html`, and `clients.html` all already existed and were
+   linked from `workspace.html`'s own tile grid. Fixed by adding all
+   three (`icon-dollar`, `icon-terminal`, `icon-inbox` -- all already
+   present in this file's own SVG sprite, confirmed by grep before using
+   them, so no new icon art was needed).
+2. **`hideRestrictedNavLinks()` was silently dead code.** It called
+   `canManageBusinessFinances()`, superseded by 5 granular permission
+   functions during the 2026-09-02 refactor (see `auth.js`) and now
+   nonexistent -- confirmed by grep returning zero matches for its
+   definition. The function's own guard (`typeof ... !== 'function' ||
+   ...`) took the early-return branch on every single page load, so it
+   never hid a single restricted link for anyone, regardless of role.
+   Rewritten as a per-href map (`NAV_PERMISSION_CHECKS`), mirroring
+   `workspace.html`'s own `TILE_PERMISSION_CHECKS` so the dashboard tiles
+   and this nav can't drift apart again: `can_view_finance` for
+   finance.html, `can_view_runway` for runway-dashboard.html,
+   `can_manage_invoices` for invoice-generator.html/pos.html/clients.html
+   (same permission workspace.html already gates all three tiles behind),
+   `can_manage_contracts` for contract-generator.html, `can_manage_reviews`
+   for review-request.html, and `hasDevToolsAccess()` for the new Dev
+   Tools entry specifically (a genuinely separate permission from the
+   other 6, same as it is on the dashboard).
+
+Verified: `npm run check-undefined-vars` clean, `npm run fix-versions`
+(this is a shared file every tool page references by content-hashed
+query string, so the edit correctly triggered the 20-page cache-bust
+staleness + service-worker `CACHE_NAME` bump `check-consistency` already
+watches for), full suite **2457/2457** passing afterward.
