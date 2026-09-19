@@ -17,7 +17,7 @@ const path = require('path');
 
 const SYNC = fs.readFileSync(path.join(__dirname, '..', '..', 'tools', 'sync.js'), 'utf8');
 
-for (const channel of ['workspace_sync', 'th_leads', 'th_bookings', 'jobs', 'invoices']) {
+for (const channel of ['workspace_sync', 'th_leads', 'th_job_applications', 'th_bookings', 'jobs', 'invoices']) {
   test(`${channel}: an intermediate, expected retry is no longer logged as a client error`, () => {
     assert.doesNotMatch(SYNC, new RegExp(`Realtime ${channel} channel status: CHANNEL_ERROR -- retrying`));
   });
@@ -28,7 +28,7 @@ for (const channel of ['workspace_sync', 'th_leads', 'th_bookings', 'jobs', 'inv
   });
 }
 
-test('the retry mechanism now uses the shared exponential-backoff schedule, for all five channels -- see realtime-retry-resilience.test.js for the full behavior', () => {
+test('the retry mechanism now uses the shared exponential-backoff schedule, for all six channels -- see realtime-retry-resilience.test.js for the full behavior', () => {
   const retryCalls = SYNC.match(/setTimeout\(\(\) => attemptSubscribe\(attempt \+ 1\), REALTIME_RETRY_DELAYS\[attempt\]\);/g) || [];
-  assert.equal(retryCalls.length, 5, 'expected the retry scheduling itself, for all five channels (workspace_sync, th_leads, th_bookings, jobs, invoices), to use the shared backoff schedule');
+  assert.equal(retryCalls.length, 6, 'expected the retry scheduling itself, for all six channels (workspace_sync, th_leads, th_job_applications, th_bookings, jobs, invoices), to use the shared backoff schedule');
 });

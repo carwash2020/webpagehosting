@@ -1333,6 +1333,62 @@ async function deleteLead(id) {
   }
 }
 
+// Job applications (careers.html's apply form, th_job_applications) --
+// same shape as the fetchLeads/markLeadHandled/deleteLead trio above,
+// added 2026-09-19 so applications get a real dashboard panel instead
+// of relying solely on the notification email landing correctly.
+async function fetchJobApplications() {
+  if (!isSyncConfigured()) return { ok: false, error: 'not-configured', applications: [] };
+  try {
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/th_job_applications?select=*&order=created_at.desc&limit=50`, {
+      headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': `Bearer ${getAuthToken()}` },
+    });
+    if (!res.ok) return { ok: false, error: 'http-' + res.status, applications: [] };
+    const applications = await res.json();
+    return { ok: true, applications };
+  } catch (e) {
+    return { ok: false, error: 'network', applications: [] };
+  }
+}
+
+async function markJobApplicationHandled(id, handled) {
+  if (!isSyncConfigured()) return { ok: false, error: 'not-configured' };
+  try {
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/th_job_applications?id=eq.${id}`, {
+      method: 'PATCH',
+      headers: {
+        'Content-Type': 'application/json',
+        'apikey': SUPABASE_ANON_KEY,
+        'Authorization': `Bearer ${getAuthToken()}`,
+        'Prefer': 'return=minimal',
+      },
+      body: JSON.stringify({ handled, handled_at: handled ? new Date().toISOString() : null }),
+    });
+    if (!res.ok) return { ok: false, error: 'http-' + res.status };
+    return { ok: true };
+  } catch (e) {
+    return { ok: false, error: 'network' };
+  }
+}
+
+async function deleteJobApplication(id) {
+  if (!isSyncConfigured()) return { ok: false, error: 'not-configured' };
+  try {
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/th_job_applications?id=eq.${id}`, {
+      method: 'DELETE',
+      headers: {
+        'apikey': SUPABASE_ANON_KEY,
+        'Authorization': `Bearer ${getAuthToken()}`,
+        'Prefer': 'return=minimal',
+      },
+    });
+    if (!res.ok) return { ok: false, error: 'http-' + res.status };
+    return { ok: true };
+  } catch (e) {
+    return { ok: false, error: 'network' };
+  }
+}
+
 // Requested directly, as part of connecting the new booking system
 // (replacing Cal.com) to the Job Tracker and Dev Tools. Only ever
 // fetches unconverted, confirmed bookings from today onward -- a
@@ -1738,6 +1794,7 @@ async function initWikiSyncOnLoad() {
 let _supabaseClient = null;
 let _realtimeChannel = null;
 let _leadsRealtimeChannel = null;
+let _applicantsRealtimeChannel = null;
 let _bookingsRealtimeChannel = null;
 let _jobsRealtimeChannel = null;
 let _invoicesRealtimeChannel = null;
@@ -1958,9 +2015,66 @@ function startLeadsRealtime(onChange, onStatusChange) {
   }, REALTIME_WATCHDOG_MS);
 }
 
+function startApplicantsRealtime(onChange, onStatusChange) {
+  const client = getSupabaseClient();
+  if (!client) {
+    if (onStatusChange) onStatusChange('unavailable');
+    return;
+  }
+  let realtimeResolved = false;
+  let loggedFailure = false;
+
+  // Same retry fix as startLeadsRealtime above -- see that comment for
+  // the full explanation, backed by this project's own Supabase logs.
+  function attemptSubscribe(attempt) {
+    _applicantsRealtimeChannel = client
+      .channel('applicants-realtime')
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'th_job_applications' },
+        () => {
+          try {
+            if (onChange) onChange();
+          } catch (e) {
+            if (typeof logClientError === 'function') {
+              logClientError('Realtime th_job_applications callback failed: ' + (e && e.message ? e.message : String(e)), 'sync.js', null, null, e && e.stack);
+            }
+          }
+        }
+      )
+      .subscribe((status) => {
+        if ((status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') && attempt < REALTIME_RETRY_DELAYS.length) {
+          client.removeChannel(_applicantsRealtimeChannel);
+          setTimeout(() => attemptSubscribe(attempt + 1), REALTIME_RETRY_DELAYS[attempt]);
+          return;
+        }
+        realtimeResolved = true;
+        if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
+          if (!loggedFailure) {
+            loggedFailure = true;
+            if (typeof logClientError === 'function') {
+              logClientError('Realtime th_job_applications channel status: ' + status + ` (foreground retries exhausted after ${REALTIME_RETRY_DELAYS.length} attempts; retrying quietly every ${REALTIME_BACKGROUND_RETRY_MS / 1000}s in the background)`, 'sync.js', null, null, null);
+            }
+          }
+          if (onStatusChange) onStatusChange(status);
+          setTimeout(() => attemptSubscribe(REALTIME_RETRY_DELAYS.length), REALTIME_BACKGROUND_RETRY_MS);
+          return;
+        }
+        if (status === 'SUBSCRIBED') loggedFailure = false;
+        if (onStatusChange) onStatusChange(status);
+      });
+  }
+  attemptSubscribe(0);
+
+  setTimeout(() => {
+    if (!realtimeResolved && onStatusChange) onStatusChange('timeout');
+  }, REALTIME_WATCHDOG_MS);
+}
+
 function stopRealtimeSync() {
   if (_realtimeChannel) { _realtimeChannel.unsubscribe(); _realtimeChannel = null; }
   if (_leadsRealtimeChannel) { _leadsRealtimeChannel.unsubscribe(); _leadsRealtimeChannel = null; }
+  if (_applicantsRealtimeChannel) { _applicantsRealtimeChannel.unsubscribe(); _applicantsRealtimeChannel = null; }
   if (_bookingsRealtimeChannel) { _bookingsRealtimeChannel.unsubscribe(); _bookingsRealtimeChannel = null; }
   if (_jobsRealtimeChannel) { _jobsRealtimeChannel.unsubscribe(); _jobsRealtimeChannel = null; }
   if (_invoicesRealtimeChannel) { _invoicesRealtimeChannel.unsubscribe(); _invoicesRealtimeChannel = null; }
