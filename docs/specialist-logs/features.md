@@ -443,4 +443,62 @@ Verified: full suite **2533/2533** passing (2 pre-existing tests in
 the new 6th channel/count rather than leaving them silently wrong).
 `check-consistency`/`check-undefined-vars`/`check-links.py` all clean.
 
+## 2026-09-20: App-tour coverage gaps (pos.html, clients.html)
+
+Prompted by a direct strategic question: "make the tools like an actual
+app... what about when we hire someone how will they learn?" Before
+building anything new, checked what already exists for both halves of
+that question, since this suite has a habit of already having built
+things a fresh look assumes are missing:
+
+- **Page-to-page transition flash**: already solved. `styles-tools.css`
+  declares `@view-transition { navigation: auto; }` (added 2026-08-26,
+  "make it feel like an app"), which gives every tool-page navigation a
+  real cross-fade instead of a hard reload flash, no JS required.
+  Re-verified live with a real Playwright cross-document navigation
+  (two throwaway pages, `window.__vtEngaged` set from the `pagereveal`
+  event's `event.viewTransition`) rather than trusting the CSS alone --
+  confirmed the browser genuinely engages a transition on navigation.
+- **"How will they learn"**: already solved too. `tools-tour.js` is a
+  16-step (was 14) walkthrough spanning every real tool page, keyed
+  per-account so it doesn't nag a returning user, replayable anytime
+  from Settings.
+
+The concrete, real gap: two tool pages built *after* the tour existed
+were never wired into it.
+- `pos.html` never loaded `tools-tour.js` at all -- not a deliberate
+  exclusion like `dev-tools.html`/`site-content.html` (password-gated
+  dev tools), just a page that shipped later and got missed. Added the
+  script tag (`defer`, matching its neighbors) and an `initAppTour()`
+  call gated on `DOMContentLoaded`, since a `defer`-loaded script always
+  runs after this page's own non-deferred inline script -- calling it
+  directly at the top level would throw "initAppTour is not defined."
+  Every other tour page can just call `initAppTour();` bare because they
+  already wrap their init logic in a `DOMContentLoaded` listener of
+  their own; `pos.html` normally doesn't, so it got its own listener
+  just for this.
+- `clients.html` loaded `tools-tour.js` already but had no step of its
+  own -- present in the tour's script tags but absent from
+  `APP_TOUR_STEPS`, so it silently did nothing. Added `initAppTour();`
+  to its existing `DOMContentLoaded` handler.
+
+Added two new steps to `APP_TOUR_STEPS` (`tools-tour.js`), placed right
+after Invoices since POS and Clients are the same money/admin
+neighborhood on the dashboard: a POS step (`#posClientEmail`, "charging
+someone on the spot belongs here, not in Invoices") and a Clients step
+(`#portalAccountSearch`, the portal-admin console -- invite/search
+client portal accounts, invoices, work requests, referral credits).
+
+Updated the tour's own test coverage (`finance-split.test.js`) for the
+new 16-step/13-page total: the expected-pages list, the "14 selectors"
+count, the settings.html last-step index (13 -> 15), and the
+self-correction test's expected calendar.html index (7 -> 9) now that
+two steps sit ahead of it.
+
+Verified: full suite **2556/2556** passing. `check-undefined-vars`
+clean. `check-consistency` initially flagged 14 stale cache-bust
+references (every page loading the now-changed `tools-tour.js`) plus
+the service worker's `CACHE_NAME` fingerprint -- fixed via
+`npm run fix-versions`, then re-ran clean. `check-links.py` clean.
+
 <!-- Add new entries above this line -->

@@ -1923,7 +1923,8 @@ test('the tour step list covers exactly the intended pages, and excludes redirec
   const pages = [...src.matchAll(/page: '(\/tools\/[\w-]+\.html)'/g)].map(m => m[1]);
   const expectedPages = [
     '/tools/workspace.html', '/tools/job-tracker.html', '/tools/finance.html',
-    '/tools/invoice-generator.html', '/tools/calendar.html', '/tools/route-planner.html',
+    '/tools/invoice-generator.html', '/tools/pos.html', '/tools/clients.html',
+    '/tools/calendar.html', '/tools/route-planner.html',
     '/tools/contract-generator.html', '/tools/review-request.html', '/tools/parts-reference.html',
     '/tools/runway-dashboard.html', '/tools/settings.html',
   ];
@@ -1984,7 +1985,7 @@ test('advancing through workspace.html\'s own 4 steps stays on the same page (no
   assert.equal(w.document.querySelector('.onboarding-title').textContent, 'More');
   w.goToAppTourStep(3);
   assert.equal(w.document.querySelector('.onboarding-title').textContent, 'Tools');
-  assert.equal(w.document.querySelector('.onboarding-next').textContent, 'Next', 'step 3 of 14 total is not the last step overall');
+  assert.equal(w.document.querySelector('.onboarding-next').textContent, 'Next', 'step 3 of 16 total is not the last step overall');
 
   w.document.querySelector('.onboarding-back').click();
   assert.equal(w.localStorage.getItem('th_app_tour_step'), '2');
@@ -2007,7 +2008,7 @@ test('self-correction: landing on a page that doesn\'t match the stored step sho
   w.initAppTour();
   assert.ok(w.document.getElementById('appTourCard'));
   assert.equal(w.document.querySelector('.onboarding-title').textContent, 'Calendar');
-  assert.equal(w.localStorage.getItem('th_app_tour_step'), '7');
+  assert.equal(w.localStorage.getItem('th_app_tour_step'), '9');
 });
 
 test('landing on a page that isn\'t part of the tour at all renders no card, even with an active tour in progress', () => {
@@ -2029,7 +2030,7 @@ test('dismissing (Skip) clears the active-step flag, sets the per-user seen flag
 
 test('on the very last step (Settings), the button reads "Got it" and clicking it dismisses cleanly rather than advancing past the end of the array', () => {
   const w = loadTourInWindow('https://example.com/tools/settings.html');
-  w.localStorage.setItem('th_app_tour_step', '13');
+  w.localStorage.setItem('th_app_tour_step', '15');
   w.localStorage.setItem('th_app_tour_step_started_at', String(Date.now()));
   w.initAppTour();
   assert.equal(w.document.querySelector('.onboarding-next').textContent, 'Got it');
@@ -2046,14 +2047,18 @@ test('?tour=1 forces a restart from step 0 regardless of the seen flag, and clea
   assert.ok(!w.location.search.includes('tour=1'), 'the ?tour=1 param should be cleaned off the URL');
 });
 
-test('every one of the 11 target pages actually loads tools-tour.js and calls initAppTour() on its own DOMContentLoaded', () => {
+test('every one of the 13 target pages actually loads tools-tour.js and calls initAppTour() on its own DOMContentLoaded', () => {
   const pages = ['workspace.html', 'job-tracker.html', 'finance.html', 'invoice-generator.html',
+    'pos.html', 'clients.html',
     'calendar.html', 'route-planner.html', 'contract-generator.html', 'review-request.html',
     'parts-reference.html', 'settings.html', 'runway-dashboard.html'];
   for (const file of pages) {
     const src = fs.readFileSync(path.join(__dirname, '..', '..', 'tools', file), 'utf8');
     assert.match(src, /<script src="\/tools\/tools-tour\.js/, file + ' should load tools-tour.js');
-    assert.match(src, /initAppTour\(\);/, file + ' should call initAppTour()');
+    // pos.html loads tools-tour.js with `defer` and calls initAppTour() from
+    // a DOMContentLoaded listener with a typeof guard (see that file's own
+    // comment for why) rather than the bare call every other tour page uses.
+    assert.match(src, /initAppTour\(\)/, file + ' should call initAppTour()');
   }
 });
 
@@ -2112,10 +2117,10 @@ test('running check-links.py against the real repo actually passes now (not just
 // real on its target page before using any of them, and added zero
 // new ids to any of those 10 pages to make that possible.
 
-test('every one of the 14 tour steps has a highlightSelector, and every selector actually matches something real on its target page', () => {
+test('every one of the 16 tour steps has a highlightSelector, and every selector actually matches something real on its target page', () => {
   const tourSrc = fs.readFileSync(path.join(__dirname, '..', '..', 'tools', 'tools-tour.js'), 'utf8');
   const steps = [...tourSrc.matchAll(/\{ page: '(\/tools\/[\w-]+\.html)', highlightSelector: '([^']+)'/g)];
-  assert.equal(steps.length, 14, 'every step should have a highlightSelector');
+  assert.equal(steps.length, 16, 'every step should have a highlightSelector');
   for (const [, pagePath, selector] of steps) {
     const file = pagePath.replace('/tools/', '');
     const pageSrc = fs.readFileSync(path.join(__dirname, '..', '..', 'tools', file), 'utf8');
