@@ -501,4 +501,69 @@ references (every page loading the now-changed `tools-tour.js`) plus
 the service worker's `CACHE_NAME` fingerprint -- fixed via
 `npm run fix-versions`, then re-ran clean. `check-links.py` clean.
 
+## 2026-09-20: Unique account codes for the referral promo
+
+Direct request: "Can we build unique IDs connected to accounts? This
+will help with things like the promo we are running." Clarified
+scope over a few rounds before building anything, since the answer
+changes the schema:
+- Population: every client, not just portal accounts (most customers
+  don't have portal logins).
+- Redemption: a real shareable `?ref=CODE` link, not a code to read
+  off and retype.
+- Connection to a future portal login: the user asked directly
+  whether a code generated before someone has a portal account would
+  still connect once they get one. Answer, and the design decision it
+  drove: key the whole thing by **email**, since a portal account is
+  *also* identified by email (Supabase Auth) -- so `auth.email()` on
+  first login is literally the same string a pre-existing code is
+  already keyed to. No client_id, no re-linking step.
+- Generation timing: the user asked for the code to be created "when
+  they have an account created" and explicitly asked for it to double
+  as a general account ID for tracking, not just a referral code --
+  same value, two uses.
+
+Built: `client_account_codes` table (`sql/infra/create_client_account_codes.sql`),
+`send-invite` generates a code automatically on a genuine first
+invite only (`!isResend` -- a resend doesn't create a new account),
+a new public `resolve-referral-code` edge function (returns only a
+display name, service-role lookup, no anon policy on the table at
+all), booking.html + index.html resolve `?ref=` as a code first with
+a fallback to the old literal-name behavior for any link already
+distributed, a manual "Get referral link" action in
+`tools/client-detail.html` for staff to generate one for a
+non-portal client, and a read-only "Refer a Friend" panel in
+`portal/settings.html` once an account exists (RLS: a client can
+SELECT only their own row).
+
+One real limitation surfaced directly to the user rather than
+discovered later: a code generated for a phone-only customer with no
+email on file can't auto-connect to a future portal account, since
+email is the only identity string both sides share -- flagged in
+client-detail.html's own UI (disabled with an explanation) rather
+than failing silently.
+
+Caught by `check-consistency.js` before shipping: the first draft of
+client-detail.html's "Get referral link" button interpolated
+`JSON.stringify(client.email)`/`JSON.stringify(client.name)` directly
+into an inline `onclick="..."` attribute -- JSON.stringify escapes
+for a JS string literal, not for the surrounding HTML attribute
+context, so a client name/email containing a `"` would have broken
+out of the attribute. Fixed with `escapeForInlineHandler()`
+(tools-dialogs.js), this suite's own established helper for exactly
+this shape.
+
+Verified live in Supabase: applied the migration, deployed both edge
+functions, inserted/queried/deleted a real test row confirming the
+exact query `resolve-referral-code` runs resolves correctly. Could
+NOT curl the deployed function itself end-to-end -- outbound access
+to `supabase.co` is blocked by this session's agent proxy -- so the
+live HTTP path is unverified from this session; said so plainly
+rather than claiming a verification that didn't happen.
+
+Verified: full suite **2572/2572** passing (16 new tests in
+`tests/referrals/account-codes.test.js`). `check-undefined-vars`/
+`check-consistency` (after `fix-versions` for the two service worker
+`CACHE_NAME`s)/`check-links.py` all clean.
+
 <!-- Add new entries above this line -->

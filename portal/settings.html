@@ -299,6 +299,26 @@
   </div>
 </div>
 
+<!-- Referral link (2026-09-20, direct request: "unique IDs connected
+     to accounts" for the referral promo, help with tracking). Read-
+     only, same principle as everything else on this page -- the code
+     itself is generated server-side (send-invite, the moment this
+     account was created, or earlier by staff if this client was
+     referring people before they ever had a portal login) and this
+     panel only ever displays it, matching client_account_codes' RLS
+     policy which lets a client SELECT their own row but never write
+     to it. -->
+<div class="set-card is-collapsed">
+  <button type="button" class="set-card-header" onclick="toggleSettingsCard(this)" aria-expanded="false">
+    <span class="set-card-title">Refer a Friend</span>
+    <span class="set-card-chevron" aria-hidden="true">&#9662;</span>
+  </button>
+  <div class="set-card-body">
+  <div class="set-card-sub">Share your link -- anyone who books through it is automatically credited to you, and you get $25 once their job is complete and paid.</div>
+  <div id="referralLinkBody"><div class="skeleton-mini"><div class="skeleton-line is-medium"></div></div></div>
+  </div>
+</div>
+
 <!--
   Saved card management (2026-09-03), requested directly: "Saved card
   management (view/remove)." Since invoice payments and POS both now
@@ -673,6 +693,39 @@
       renderSavedCards(result.cards || []);
     } catch (e) {
       body.innerHTML = '<p class="set-card-sub" style="margin:0;">Could not load your saved cards right now.</p>';
+    }
+  }
+
+  // Referral link (2026-09-20). Read-only -- RLS on
+  // client_account_codes lets this account SELECT its own row (where
+  // email = auth.email()) but never write one; a code only ever gets
+  // created by send-invite (the moment this portal account was made)
+  // or earlier by staff, if this client was referring people before
+  // they ever had a portal login. A client with no code yet (an
+  // account created before this feature shipped) sees a message
+  // asking them to reach out instead of a broken/empty panel.
+  async function loadReferralLink(email) {
+    const body = document.getElementById('referralLinkBody');
+    try {
+      const { data, error } = await client
+        .from('client_account_codes')
+        .select('code')
+        .eq('email', email.toLowerCase())
+        .maybeSingle();
+      if (error) throw error;
+      if (!data) {
+        body.innerHTML = '<p class="set-card-sub" style="margin:0;">Text or call us at <a href="tel:+14354141667" style="color:var(--orange-light);">(435) 414-1667</a> and we\'ll set up your referral link.</p>';
+        return;
+      }
+      const link = 'https://www.triplehenterprisesllc.biz/booking.html?ref=' + encodeURIComponent(data.code);
+      body.innerHTML =
+        '<div class="set-row" style="align-items:flex-start;"><span class="set-row-val" id="referralLinkText" style="word-break:break-all; font-size:13px;">' + escapeHtml(link) + '</span></div>' +
+        '<button class="btn blue" style="width:100%; justify-content:center; margin-top:10px;" id="copyReferralLinkBtn">Copy Link</button>';
+      document.getElementById('copyReferralLinkBtn').addEventListener('click', function () {
+        navigator.clipboard.writeText(link).then(function () { showToast('Referral link copied'); }).catch(function () {});
+      });
+    } catch (e) {
+      body.innerHTML = '<p class="set-card-sub" style="margin:0;">Could not load your referral link right now.</p>';
     }
   }
 
@@ -1216,6 +1269,7 @@
     loadSavedCards();
     loadAuthorizations();
     loadNotificationPreferences();
+    loadReferralLink(email);
 
     // Called here rather than only from the beforeinstallprompt
     // listener -- that event never fires on iOS at all, so relying on
