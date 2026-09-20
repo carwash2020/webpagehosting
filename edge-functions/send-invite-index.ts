@@ -71,6 +71,57 @@ function decodeJwtPayload(token: string): { email?: string; role?: string } {
   }
 }
 
+// Account codes (direct request, 2026-09-20): "unique IDs connected to
+// accounts" for the referral promo, created automatically the moment
+// a portal account is genuinely created for the first time -- see the
+// call site below, gated on !isResend specifically, since a resend
+// (magiclink) doesn't create a new account, just a fresh link for one
+// that already exists (and may already have a code, generated earlier
+// by staff from client-detail.html before this person ever had a
+// portal login -- see create_client_account_codes.sql for why the
+// match key is email, not a portal-specific id). Excludes 0/O/1/I/L --
+// easy to misread or mistype when someone's reading a code off a
+// screen to type into a link by hand.
+const ACCOUNT_CODE_CHARS = "ABCDEFGHJKMNPQRSTUVWXYZ23456789";
+function generateAccountCode(): string {
+  let code = "";
+  for (let i = 0; i < 7; i++) code += ACCOUNT_CODE_CHARS[Math.floor(Math.random() * ACCOUNT_CODE_CHARS.length)];
+  return code;
+}
+
+// Idempotent: never overwrites a code that already exists for this
+// email (staff may have generated one manually before this person had
+// a portal account at all), and tolerates a code collision by
+// retrying with a fresh random code a few times before giving up --
+// collisions are called out explicitly rather than assumed impossible.
+async function ensureAccountCode(email: string, displayName: string): Promise<void> {
+  const existingRes = await fetch(
+    `${SUPABASE_URL}/rest/v1/client_account_codes?email=eq.${encodeURIComponent(email)}&select=id&limit=1`,
+    { headers: { apikey: SERVICE_ROLE_KEY, Authorization: `Bearer ${SERVICE_ROLE_KEY}` } },
+  );
+  if (existingRes.ok && (await existingRes.json()).length > 0) return;
+
+  for (let attempt = 0; attempt < 5; attempt++) {
+    const insertRes = await fetch(`${SUPABASE_URL}/rest/v1/client_account_codes`, {
+      method: "POST",
+      headers: {
+        apikey: SERVICE_ROLE_KEY,
+        Authorization: `Bearer ${SERVICE_ROLE_KEY}`,
+        "Content-Type": "application/json",
+        Prefer: "return=minimal",
+      },
+      body: JSON.stringify({ email, code: generateAccountCode(), display_name: displayName }),
+    });
+    if (insertRes.ok) return;
+    const body = await insertRes.text();
+    // A unique-violation on `code` (a genuine collision) is worth
+    // retrying with a new random code; a unique-violation on `email`
+    // means another request won the race and already created this
+    // client's row -- either way, nothing more to do here.
+    if (!body.includes("23505")) return;
+  }
+}
+
 // Granular permission expansion (2026-09-02): this function is shared
 // by BOTH the invoice/quote sync path (gated on can_manage_invoices)
 // AND the job/checkup sync path (no specific gate at all) -- the
@@ -291,6 +342,13 @@ Deno.serve(async (req: Request) => {
     }
 
     const displayName = (typeof client_name === "string" && client_name.trim()) || client_email;
+
+    // Only on a genuine first invite (!isResend) -- a resend just
+    // re-links an account that already exists, so it already has a
+    // code (or never will, if it was invited before this feature
+    // shipped, in which case client-detail.html's manual "Get
+    // referral link" action still covers it).
+    if (!isResend) await ensureAccountCode(targetEmail, displayName);
 
     const emailRes = await fetch("https://api.resend.com/emails", {
       method: "POST",

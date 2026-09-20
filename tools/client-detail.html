@@ -95,6 +95,10 @@
   .client-record-title { color: var(--white); }
   .client-record-meta { color: var(--text-dim); font-size: 12px; margin-top: 2px; }
   .client-record-amount { color: var(--orange-light); font-weight: 600; flex-shrink: 0; }
+
+  .referral-link-row { display: flex; align-items: center; gap: 8px; margin-top: 14px; }
+  .referral-link-code { flex: 1; background: var(--bg-panel-2); border: 1px solid var(--border); border-radius: 8px; padding: 8px 10px; font-family: var(--font-mono, monospace); font-size: 12.5px; color: var(--orange-light); word-break: break-all; }
+  .referral-link-hint { color: var(--text-dim); font-size: 12px; margin-top: 6px; }
 </style>
 </head>
 <body>
@@ -204,6 +208,7 @@
         '<div class="client-stat"><div class="client-stat-value">' + bundle.jobs.length + '</div><div class="client-stat-label">Jobs' + (openJobs ? ' (' + openJobs + ' open)' : '') + '</div></div>' +
         '<div class="client-stat"><div class="client-stat-value">' + (bundle.lastJobDate || '\u2014') + '</div><div class="client-stat-label">Last Job</div></div>' +
       '</div>' +
+      '<div id="referralLinkBlock"></div>' +
     '</div>';
 
     html += renderRecordSection('Jobs', bundle.jobs.slice().sort((a, b) => (b.date || '').localeCompare(a.date || '')).map(j => ({
@@ -235,6 +240,106 @@
     })), 'No contracts on file for this client yet.');
 
     document.getElementById('clientContent').innerHTML = html;
+    loadReferralLink(c);
+  }
+
+  // Account codes (direct request, 2026-09-20): "unique IDs connected
+  // to accounts" for the referral promo, doubling as a general
+  // account ID for tracking. A portal invite (send-invite edge
+  // function) generates one automatically the moment an account is
+  // actually created -- this is the manual path for a client who
+  // isn't (yet, or ever) a portal user, so referrals from someone
+  // without portal access still get a real, shareable link instead
+  // of the old free-text "who referred you" field. Keyed by email
+  // (see create_client_account_codes.sql), so a code generated here
+  // still connects automatically if this same client later gets a
+  // portal invite with the same email.
+  const REFERRAL_CODE_CHARS = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789'; // excludes 0/O/1/I/L -- easy to misread when read off a screen
+  function generateReferralCode() {
+    let code = '';
+    for (let i = 0; i < 7; i++) code += REFERRAL_CODE_CHARS[Math.floor(Math.random() * REFERRAL_CODE_CHARS.length)];
+    return code;
+  }
+
+  async function loadReferralLink(client) {
+    const block = document.getElementById('referralLinkBlock');
+    if (!block) return;
+    if (!client.email) {
+      block.innerHTML = '<div class="referral-link-hint">Add an email address for this client to generate a referral link.</div>';
+      return;
+    }
+    block.innerHTML = '<div class="referral-link-hint">Loading referral link...</div>';
+    try {
+      const session = getStoredSession();
+      const res = await fetch(SUPABASE_URL + '/rest/v1/client_account_codes?email=eq.' + encodeURIComponent(client.email.toLowerCase()) + '&select=code&limit=1', {
+        headers: { apikey: SUPABASE_ANON_KEY, Authorization: 'Bearer ' + (session ? session.access_token : SUPABASE_ANON_KEY) },
+      });
+      const rows = res.ok ? await res.json() : [];
+      renderReferralLinkBlock(client, rows[0] ? rows[0].code : null);
+    } catch (e) {
+      block.innerHTML = '<div class="referral-link-hint">Could not load referral link: ' + escapeHtml(e.message || String(e)) + '</div>';
+    }
+  }
+
+  function renderReferralLinkBlock(client, code) {
+    const block = document.getElementById('referralLinkBlock');
+    if (!block) return;
+    if (!code) {
+      block.innerHTML = '<button class="secondary-btn" onclick="createReferralLink(\'' + escapeForInlineHandler(client.email) + '\', \'' + escapeForInlineHandler(client.name) + '\')">Get referral link</button>';
+      return;
+    }
+    const link = 'https://www.triplehenterprisesllc.biz/booking.html?ref=' + encodeURIComponent(code);
+    block.innerHTML =
+      '<div class="referral-link-row">' +
+        '<div class="referral-link-code" id="referralLinkText">' + escapeHtml(link) + '</div>' +
+        '<button class="secondary-btn" onclick="copyReferralLink()">Copy</button>' +
+      '</div>' +
+      '<div class="referral-link-hint">Send this to ' + escapeHtml(client.name) + ' to text or share -- anyone who books through it gets automatically credited to them.</div>';
+  }
+
+  async function createReferralLink(email, name) {
+    const block = document.getElementById('referralLinkBlock');
+    block.innerHTML = '<div class="referral-link-hint">Creating link...</div>';
+    const session = getStoredSession();
+    const authHeader = 'Bearer ' + (session ? session.access_token : SUPABASE_ANON_KEY);
+    // Retries on a code collision (a real, if rare, possibility with a
+    // 7-character code) rather than assuming the first attempt always
+    // succeeds -- mirrors ensureAccountCode()'s same retry in
+    // send-invite/index.ts.
+    for (let attempt = 0; attempt < 5; attempt++) {
+      const code = generateReferralCode();
+      const res = await fetch(SUPABASE_URL + '/rest/v1/client_account_codes', {
+        method: 'POST',
+        headers: { apikey: SUPABASE_ANON_KEY, Authorization: authHeader, 'Content-Type': 'application/json', Prefer: 'return=minimal' },
+        body: JSON.stringify({ email: email.toLowerCase(), code: code, display_name: name }),
+      });
+      if (res.ok) {
+        renderReferralLinkBlock({ email: email, name: name }, code);
+        return;
+      }
+      const body = await res.text();
+      if (!body.includes('23505')) {
+        block.innerHTML = '<div class="referral-link-hint">Could not create referral link: ' + escapeHtml(body.slice(0, 200)) + '</div>';
+        return;
+      }
+      // A collision on `code` is worth retrying; a collision on
+      // `email` means one already exists (maybe created moments ago
+      // in another tab) -- either way, re-loading picks up the real
+      // current state instead of assuming.
+      if (body.includes('client_account_codes_email_key')) {
+        loadReferralLink({ email: email, name: name });
+        return;
+      }
+    }
+    block.innerHTML = '<div class="referral-link-hint">Could not generate a unique code after several tries. Please try again.</div>';
+  }
+
+  function copyReferralLink() {
+    const el = document.getElementById('referralLinkText');
+    if (!el) return;
+    navigator.clipboard.writeText(el.textContent).then(() => {
+      if (typeof showToast === 'function') showToast('Referral link copied');
+    }).catch(() => {});
   }
 
   function renderRecordSection(label, rows, emptyText) {

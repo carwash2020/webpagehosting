@@ -2269,3 +2269,44 @@ paths.
 
 New tests: extended `tests/seo/service-city-landing-page.test.js`.
 
+## What changed, 2026-09-20 -- unique account codes for the referral promo
+
+Requested directly: referral attribution was a free-text "Who
+referred you?" field, matched by staff after the fact against a
+typed name that can be misspelled or ambiguous. "Unique IDs
+connected to accounts" fixes that, and doubles as a general
+per-account tracking ID, not just a referral code.
+
+New table `client_account_codes` (`sql/infra/create_client_account_codes.sql`),
+keyed by **email**, not the Client Registry's local `client_id`: a
+portal account is also identified by email, so a code generated
+before someone ever has a portal login still connects automatically
+the moment they get one.
+
+- `send-invite` generates a code automatically the moment a portal
+  account is genuinely created for the first time (never on a
+  resend of an existing invite, which doesn't create a new account).
+- A new public edge function, `resolve-referral-code`, turns a
+  `?ref=CODE` link into the referrer's real name, without ever
+  exposing the underlying table (no anon policy exists on it at
+  all). `booking.html` and the homepage's estimate form both resolve
+  `?ref=` as a code first, falling back to the old literal-name
+  behavior if it doesn't resolve -- so any link distributed before
+  this shipped still works.
+- Staff can generate a link for any client with an email on file
+  from `tools/client-detail.html`'s new "Get referral link" button
+  -- the manual path for a referral from someone who isn't (yet, or
+  ever) a portal user.
+- Once a portal account exists, the client sees and can copy their
+  own link from a new "Refer a Friend" panel in `portal/settings.html`,
+  read via RLS (a client can SELECT only their own row).
+
+Verified live in Supabase (test row inserted, queried, deleted) that
+the exact query `resolve-referral-code` runs resolves correctly.
+Could not curl the deployed function itself end-to-end from this
+sandbox -- outbound access to `supabase.co` is blocked by the agent
+proxy here, so that specific HTTP round trip is unverified from this
+session; the DB-side logic it depends on is confirmed correct.
+
+New tests: `tests/referrals/account-codes.test.js`.
+

@@ -1085,6 +1085,7 @@
         address: formData.get('address') || null,
         notes: formData.get('notes') || null,
         referred_by: formData.get('referred_by') || null,
+        referred_by_code: referredByCode,
         source: formData.get('source') || null,
         // Automatic UTM campaign attribution (utm-tracking.js) -- see
         // index.html's own identical addition for the full reasoning.
@@ -1157,15 +1158,40 @@
     selectDate(validDate ? dateParam : todayDateStrInBusinessTz());
   })();
 
-  // Referral link auto-fill: an existing customer's own "?ref=Their Name"
-  // link pre-fills "Who referred you?" so the new customer doesn't have
-  // to remember or type it themselves. Never overwrites a value someone
-  // already typed, and never fires without a real ref param present.
+  // Referral link auto-fill (2026-09-20, expanded from a raw "?ref=Their
+  // Name" text param to a real account code -- see
+  // sql/infra/create_client_account_codes.sql): resolves the code
+  // through resolve-referral-code, which returns the referrer's actual
+  // name on file, so it can never be misspelled or ambiguous the way a
+  // typed name is. referredByCode is sent alongside the resolved name
+  // on submit, so staff can always trace a credit back to the exact
+  // code used. Falls back to treating the param as a literal name (the
+  // old behavior) if it doesn't resolve as a code -- covers any link
+  // distributed before this change, or a plain name someone constructed
+  // by hand. Never overwrites a value someone already typed.
+  let referredByCode = null;
   (function prefillReferredBy() {
     const referredByField = document.getElementById('bReferredBy');
     if (!referredByField || referredByField.value) return;
     const refParam = new URLSearchParams(window.location.search).get('ref');
-    if (refParam) referredByField.value = refParam.slice(0, 200);
+    if (!refParam) return;
+
+    fetch(SUPABASE_URL + '/functions/v1/resolve-referral-code?code=' + encodeURIComponent(refParam), {
+      headers: { apikey: SUPABASE_ANON_KEY, Authorization: 'Bearer ' + SUPABASE_ANON_KEY },
+    })
+      .then(function (res) { return res.ok ? res.json() : null; })
+      .then(function (data) {
+        if (referredByField.value) return; // someone already typed something while this was in flight
+        if (data && data.ok && data.referrer_name) {
+          referredByField.value = data.referrer_name.slice(0, 200);
+          referredByCode = refParam.slice(0, 50);
+        } else {
+          referredByField.value = refParam.slice(0, 200);
+        }
+      })
+      .catch(function () {
+        if (!referredByField.value) referredByField.value = refParam.slice(0, 200);
+      });
   })();
 })();
 </script>
