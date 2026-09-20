@@ -76,6 +76,11 @@
 <script src="/tools/tools-dialogs.js?v=83d27784e2" defer></script>
 <script src="/tools/tools-nav-pwa.js?v=2911578450" defer></script>
 <script src="/tools/sync.js?v=7b42b1caf0" defer></script>
+<!-- Added 2026-09-20: POS was built after the app tour (tools-tour.js)
+     already existed, so it never got wired in at all -- a real gap for
+     anyone new to this page, not a deliberate exclusion (unlike
+     dev-tools.html/site-content.html, which are). -->
+<script src="/tools/tools-tour.js?v=d87fa2f453" defer></script>
 <style>
   /* Bug fix (2026-09-06): this page never had the desktop sidebar-
      clearance rule every other tool page carries (body { margin-left:
@@ -488,6 +493,19 @@
     savedCardInfo = null;
     lastCheckedEmail = null;
   }
+
+  // initAppTour() comes from tools-tour.js, loaded with `defer` above --
+  // deferred scripts always run after the document has fully parsed,
+  // which is AFTER this inline (non-deferred) script block, so calling
+  // it directly here would fail with "initAppTour is not defined."
+  // Waiting for DOMContentLoaded (which fires once every deferred
+  // script has already run) is what every other tour-included page
+  // does too, just via a listener instead of this page's usual
+  // run-everything-inline style, since this is the only thing on this
+  // page that genuinely needs to wait for it.
+  document.addEventListener('DOMContentLoaded', function () {
+    if (typeof initAppTour === 'function') initAppTour();
+  });
 </script>
 
 </body>
