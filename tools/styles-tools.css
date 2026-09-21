@@ -2262,3 +2262,75 @@ body.th-has-bottomnav .th-install-banner { bottom: calc(76px + env(safe-area-ins
   .metric-card,
   .section-block { transition: none; }
 }
+
+/* 2026-09-21: grouped sidebar / More sheet. Same links, easier to scan. */
+.th-sidebar-group {
+  margin: 16px 12px 4px;
+  font-family: var(--font-ui);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 1.1px;
+  text-transform: uppercase;
+  color: var(--text-dim);
+}
+.th-sidebar-links > .th-sidebar-group:first-child,
+.th-more-sheet-links > .th-sidebar-group:first-child { margin-top: 2px; }
+.th-more-sheet-links > .th-sidebar-group { margin-left: 4px; margin-right: 4px; }
+
+/* Shared page chrome so every tool reads as one app, not a stack of old pages. */
+body .tool-card,
+body .metric-card,
+body .form-section {
+  border-radius: 14px;
+}
+body .primary-btn,
+body .secondary-btn {
+  border-radius: 10px;
+}
+
+/* 2026-09-21 refresh, second pass.
+   Same pages and actions. Section titles, fields, and empty states
+   match the dashboard so the rest of the tools feel like the same app.
+   Field labels stay uppercase on purpose (styles.css contact-form rule). */
+.form-section h3 {
+  text-transform: none;
+  letter-spacing: 0;
+  color: var(--white);
+  font-weight: 600;
+  font-size: 16px;
+}
+.form-field input,
+.form-field select,
+.form-field textarea {
+  border-radius: 10px;
+  font-size: 16px;
+  padding: 12px 14px;
+}
+.form-field input,
+.form-field select {
+  min-height: 48px;
+}
+body .primary-btn,
+body .secondary-btn,
+body .generate-btn {
+  min-height: 48px;
+}
+.th-sidebar-link,
+.th-more-sheet-link {
+  min-height: 44px;
+}
+.empty-state {
+  background: rgba(255, 255, 255, .025);
+  border: 1px dashed var(--border);
+  border-radius: 14px;
+  margin: 4px 0 12px;
+}
+.tool-title {
+  letter-spacing: -0.2px;
+  line-height: 1.15;
+}
+.tool-sub {
+  font-size: 15px;
+  line-height: 1.45;
+  max-width: 66ch;
+}
