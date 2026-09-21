@@ -68,7 +68,7 @@
   })();
 </script>
 <link rel="stylesheet" href="/styles.css?v=2e81706c3d">
-<link rel="stylesheet" href="/tools/styles-tools.css?v=bac5113532">
+<link rel="stylesheet" href="/tools/styles-tools.css?v=29f50804f4">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.112.3/dist/umd/supabase.js" integrity="sha384-qafw21c/iciq0VXsi9FzkfoQv5I/V0iqE4lSNcKXPnW9/UTJLnv5CcN4FHxVLnKg" crossorigin="anonymous" defer></script>
 <script src="/tools/sync.js?v=7b42b1caf0" defer></script>
 <!-- Shared business-hours data (2026-09-03) -- used by the work order
@@ -81,9 +81,9 @@
 <script src="/tools/tools-effects.js?v=4cff99aa4a" defer></script>
 <script src="/tools/tools-dialogs.js?v=83d27784e2" defer></script>
 <script src="/tools/tools-media-sharing.js?v=0c229c9353" defer></script>
-<script src="/tools/tools-nav-pwa.js?v=e96c3f254c" defer></script>
+<script src="/tools/tools-nav-pwa.js?v=127366ac2d" defer></script>
 <script src="/tools/tools-command-palette.js?v=36ecf5ee0e" defer></script>
-<script src="/tools/tools-tour.js?v=d87fa2f453" defer></script>
+<script src="/tools/tools-tour.js?v=3397aa4aac" defer></script>
 <style>
   /* Cross-document view transitions (2026-09-21) -- same pattern
      already proven in portal/*.html: keeps the old page's visual
@@ -166,22 +166,24 @@
   .hub-title { color: var(--white); }
   .hub-sub { color: var(--text-dim); display: flex; flex-direction: row; flex-wrap: wrap; align-items: center; gap: 4px 8px; margin: 0; }
   #refreshSyncLink { margin-left: 0; }
-  /* The greeting banner (2026-09-07): the first thing seen after the
-     header, every time this page loads -- a real greeting and a real
-     today's-job count, not a static welcome message. */
+  /* The greeting banner (2026-09-07), compacted 2026-09-21 into a
+     single band: a real time-of-day greeting and today's real job
+     count still lead the page, but as one line (~48px) instead of a
+     170px card, so Next Job starts inside the first phone screen. */
   .greeting-banner {
-    display: flex; align-items: center; justify-content: space-between; gap: 20px;
+    display: flex; align-items: center; justify-content: space-between; gap: 6px 16px; flex-wrap: wrap;
     background: linear-gradient(135deg, var(--bg-panel-2), var(--bg-panel));
     border: 1px solid var(--border); border-left: 4px solid var(--orange);
-    border-radius: var(--radius); padding: 20px 24px; margin: 4px 0 18px;
+    border-radius: var(--radius); padding: 10px 16px; margin: 4px 0 14px;
   }
-  .greeting-banner-greeting { font-family: var(--font-display); font-size: 22px; color: var(--white); margin: 0 0 2px; }
-  .greeting-banner-date { margin: 0; color: var(--text-dim); font-size: 13px; }
-  .greeting-banner-stat { text-align: right; flex-shrink: 0; }
-  .greeting-banner-number { font-family: var(--font-display); font-size: 44px; line-height: 1; margin: 0; color: var(--orange-light); }
-  .greeting-banner-label { margin: 2px 0 0; color: var(--text-dim); font-size: 12px; text-transform: uppercase; letter-spacing: 0.5px; }
+  .greeting-banner-text { display: flex; align-items: baseline; gap: 2px 10px; flex-wrap: wrap; min-width: 0; }
+  .greeting-banner-greeting { font-family: var(--font-display); font-size: 17px; color: var(--white); margin: 0; }
+  .greeting-banner-date { margin: 0; color: var(--text-dim); font-size: 12.5px; }
+  .greeting-banner-stat { display: flex; align-items: baseline; gap: 6px; flex-shrink: 0; text-align: right; }
+  .greeting-banner-number { font-family: var(--font-display); font-size: 22px; line-height: 1; margin: 0; color: var(--orange-light); }
+  .greeting-banner-label { margin: 0; color: var(--text-dim); font-size: 11.5px; text-transform: uppercase; letter-spacing: 0.5px; }
   @media (max-width: 560px) {
-    .greeting-banner { flex-direction: column; align-items: flex-start; }
+    .greeting-banner { flex-direction: column; align-items: flex-start; gap: 4px; }
     .greeting-banner-stat { text-align: left; }
   }
   /* Pull-to-refresh (2026-08-27) now covers the touch case this button
@@ -191,79 +193,6 @@
      width check) since a touchscreen laptop still has a real mouse
      and should keep the button. */
   @media (hover: none) and (pointer: coarse) { #refreshSyncLink { display: none; } }
-
-  .jump-nav {
-    position: sticky; top: 0; z-index: 50; display: flex; gap: 6px; overflow-x: auto;
-    background: var(--bg); border-bottom: 1px solid var(--border); padding: 10px 0; margin-bottom: 20px;
-  }
-  /* Requested directly ("the tools to slide"): jump-nav should scroll
-     away normally with the rest of the page, not stay pinned below
-     the sticky header. Using the body-prefixed selector to correctly
-     match and beat the shared styles-tools.css rule's higher
-     specificity -- a bare .jump-nav selector here would be silently
-     overridden by that shared rule's position:sticky regardless of
-     source order, the same lesson learned earlier this session for
-     this exact header area. */
-  body .jump-nav { position: static; margin-top: 0; }
-  .jump-nav a {
-    display: flex; align-items: center; gap: 6px;
-    color: var(--text-dim); font-size: 12.5px; text-decoration: none; white-space: nowrap;
-    padding: 6px 12px; border-radius: 6px; font-family:var(--font-ui);
-    transition: color .15s ease, background .15s ease;
-  }
-  .jump-nav a:hover { color: var(--orange-light); background: var(--bg-panel-2); }
-  .jump-nav a:active { transform: translateY(1px); }
-  .jump-nav a .jump-nav-icon { font-size: 15px; line-height: 1; }
-  /* Distinguishes the "everything else" chip row (below the Today
-     hero, W10) from jump-nav's other former use as a sticky top bar --
-     this one scrolls away with the page like everything else here,
-     not pinned. */
-  #everythingElseChips { position: static; margin-top: 0; }
-  .jump-nav-more-wrap { position: relative; flex-shrink: 0; }
-  .jump-nav-more-btn {
-    display: flex; align-items: center; gap: 6px;
-    color: var(--text-dim); font-size: 12.5px; white-space: nowrap;
-    padding: 6px 12px; border-radius: 6px; font-family: var(--font-ui);
-    background: var(--bg-panel); border: 1px solid transparent; cursor: pointer;
-  }
-  .jump-nav-more-btn:hover, .jump-nav-more-btn.is-active {
-    color: var(--orange-light); background: var(--bg-panel-2);
-    border-color: var(--orange-tint-border);
-  }
-  .jump-nav-secondary {
-    display: none;
-    position: absolute; top: calc(100% + 6px); right: 0; z-index: 60;
-    min-width: 198px;
-    flex-direction: column; gap: 4px;
-    background: var(--bg-panel); border: 1px solid var(--border);
-    border-radius: 10px; padding: 8px;
-    box-shadow: 0 10px 28px rgba(0,0,0,.35);
-  }
-  .jump-nav-more-wrap.is-open .jump-nav-secondary { display: flex; }
-  .jump-nav-secondary a { width: 100%; box-sizing: border-box; }
-  /* Phone: Snapshot / Action Items / Tools stay in the row; Gallery,
-     Compliance, Analytics, Backup sit behind More. Wider than 720px
-     has room for all seven, so More disappears and the secondary
-     chips rejoin the row. */
-  @media (min-width: 721px) {
-    .jump-nav-more-btn { display: none; }
-    .jump-nav-more-wrap { position: static; }
-    .jump-nav-secondary, .jump-nav-more-wrap.is-open .jump-nav-secondary {
-      display: flex; position: static; flex-direction: row; flex-wrap: wrap;
-      min-width: 0; background: none; border: none; box-shadow: none;
-      padding: 0; gap: 6px;
-    }
-    /* .jump-nav-secondary a's width:100% below exists for the MOBILE
-       dropdown, where it fills that menu's own min-width:198px column.
-       Nothing reset it here, so at this width each of these 4 chips
-       (Gallery/Compliance/Analytics/Backup) still stretched to the
-       jump-nav's full remaining row width and wrapped onto its own
-       line -- 4 stacked full-width rows instead of compact chips. Flex
-       default align-items:stretch then inflated every OTHER chip in
-       the row (Snapshot/Action Items/Tools) to match that 4-line
-       height, rendering them as tall ovals instead of normal chips. */
-    .jump-nav-secondary a { width: auto; }
-  }
 
   /* Priority pill on a job -- referenced by renderTodayHero() below,
      matching job-tracker.html's own colors exactly. Previously
@@ -531,55 +460,13 @@
   .realtime-dot.is-connecting { background: var(--orange-light); }
   .realtime-dot.is-error { background: #e05252; }
 
-  .backup-row { display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 10px; }
-
-  /* Tools grid -- naturally one column on a phone (minmax(260px,1fr) can't
-     fit two side by side under ~520px), becomes two columns on anything
-     wider, with no manual breakpoint needed. Cards are also more compact
-     than the original single-column stack, since 7+ of them stacked at
-     full padding was the single biggest source of page length. */
-  .tools-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(84px, 1fr)); gap: 10px; }
-  .tool-group-label {
-    grid-column: 1 / -1;
-    font-family:var(--font-ui); font-size: 11.5px; text-transform: uppercase; letter-spacing: 0.6px;
-    color: var(--text-dim); margin: 14px 0 2px;
-  }
-  .tool-group-label:first-child { margin-top: 0; }
-  .tool-tile { position: relative; }
-  .tool-tile-link {
-    display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px;
-    background: var(--bg-panel); border: 1px solid var(--border); border-radius: var(--radius);
-    padding: 16px 6px 12px; text-decoration: none; height: 100%; box-sizing: border-box;
-    transition: border-color .18s ease, box-shadow .18s ease, transform .15s ease;
-  }
-  .tool-tile-link:hover { box-shadow: 0 0 20px var(--orange-tint-glow); transform: translateY(-2px); border-color: var(--orange-light); }
-  .tool-tile-icon { font-size: 26px; line-height: 1; }
-  .tool-tile-label { font-family:var(--font-ui); color: var(--white); font-size: 12.5px; text-align: center; }
-  .tool-tile-info {
-    /* 2026-08-16: was top/right:4px, which sat right where the tile's
-       16px border-radius starts curving inward -- the circular badge
-       visually clipped into that curve instead of resting on a flat
-       edge. Pulled in to 7px, clear of the curve. */
-    /* 2026-08-26: enlarged from 20x20 to 26x26 -- a real touch-target-
-       size gap (well under the ~44x44 most guidelines recommend),
-       found investigating the same "buttons could be larger" feedback
-       already applied to the bottom nav. This one's tapped far more
-       often, since it's on every tile of the daily-use dashboard.
-       Verified via Playwright at both the realistic real tile width
-       (~97px, confirmed against the actual live page) and the CSS
-       auto-fit worst case (84px) before settling on this size. */
-    position: absolute; top: 6px; right: 6px; width: 26px; height: 26px; border-radius: 50%;
-    border: 1px solid var(--border); background: var(--bg-panel-2); color: var(--text-dim);
-    font-size: 13px; cursor: pointer; display: flex; align-items: center; justify-content: center; padding: 0;
-    transition: border-color .15s ease, color .15s ease;
-  }
-  .tool-tile-info:hover { border-color: var(--orange-light); color: var(--orange-light); }
-
   /* Daily-action strip (2026-09-17): New job / Create invoice / Find
-     client / Today's schedule sit above the tile grid so the four
-     things Steve actually does every day are one tap, not a hunt
-     through 12 tiles. Equal-weight buttons, same orange-border
-     language as the greeting banner. */
+     client / Calendar sit right under the Today hero so the four
+     things Steve actually does every day are one tap. Equal-weight
+     buttons, same orange-border language as the greeting banner.
+     (Calendar replaced "Today's schedule" on 2026-09-21: the hero IS
+     today's schedule, and the Calendar left the bottom bar when it
+     became a Job Tracker view.) */
   .dash-primary-strip {
     display: grid;
     grid-template-columns: repeat(4, minmax(0, 1fr));
@@ -603,15 +490,6 @@
   .dash-primary-action:active { transform: translateY(1px); }
   @media (prefers-reduced-motion: reduce) { .dash-primary-action:active { transform: none; } }
 
-  .more-tools-details { margin-top: 4px; }
-  .more-tools-details > summary {
-    font-family: var(--font-ui); color: var(--text-dim); font-size: 13px;
-    cursor: pointer; padding: 12px 0 8px; list-style: none; user-select: none;
-  }
-  .more-tools-details > summary::-webkit-details-marker { display: none; }
-  .more-tools-details > summary::after { content: ' \25BE'; color: var(--text-dim); }
-  .more-tools-details:not([open]) > summary::after { content: ' \25B8'; }
-
   .today-overdue-list { margin-top: 8px; border-top: 1px solid var(--border); }
   /* .dash-list-item's sitewide margin:0 -12px (styles-tools.css) exists
      to cancel its own padding:10px 12px so a row's hover state can
@@ -626,6 +504,50 @@
      as the plain rows above it. */
   .today-overdue-list .dash-list-item { margin: 0; }
 
+  /* Today-first layout (2026-09-21). The hero answers "what now", the
+     Needs attention inbox sits open right under it, and everything
+     checked occasionally (Snapshot, Analytics, Compliance, Gallery)
+     is grouped under one quiet "Business" label further down. */
+  .dash-group-label {
+    font-family: var(--font-ui); font-size: 11.5px; font-weight: 600; text-transform: uppercase;
+    letter-spacing: .6px; color: var(--text-dim); margin: 26px 0 10px; padding-left: 2px;
+  }
+  /* Respond-lane sub-groups (Work Requests / Leads / Applicants /
+     Bookings) hide themselves when empty so the inbox shows what needs
+     a tap, not four "nothing here" rows. A single "caught up" line
+     takes over when all four are empty. Warning/error states are
+     never hidden (see refreshOpsGroupVisibility). */
+  .ops-group .analytics-subheading { margin-top: 0; }
+  .ops-lane .ops-group:not(.is-empty) ~ .ops-group:not(.is-empty) .analytics-subheading { margin-top: 12px; }
+  .ops-group.is-empty { display: none; }
+  .ops-lane-clear { color: var(--text-dim); font-size: 13px; padding: 8px 4px 6px; display: flex; align-items: center; gap: 8px; }
+  .ops-lane-clear .th-icon { width: 15px; height: 15px; color: #6fcf97; }
+  .ops-lane-clear[hidden] { display: none; }
+  .ai-badge-total { display: none; }
+  @media (max-width: 720px) {
+    .ai-badge-detail { display: none; }
+    .ai-badge-total { display: inline-block; }
+  }
+  /* Income lane: paid invoices and received cash entries are history,
+     not to-dos -- they fold under one summary line so the lane reads
+     as "what's still owed" at a glance. */
+  .income-settled > summary {
+    font-family: var(--font-ui); color: var(--text-dim); font-size: 12.5px;
+    cursor: pointer; padding: 10px 4px 6px; list-style: none; user-select: none;
+  }
+  .income-settled > summary::-webkit-details-marker { display: none; }
+  .income-settled > summary::after { content: ' \25BE'; }
+  .income-settled:not([open]) > summary::after { content: ' \25B8'; }
+  /* Unpaid list inside Money Owed: overdue rows keep the highlighted
+     .is-unread treatment; current (not yet due) rows are plain. */
+  .today-money-due { color: var(--text-dim); }
+  .today-money-due.is-overdue { color: #e05252; }
+  @media (max-width: 720px) {
+    .today-next-job { padding: 16px 16px; }
+    .today-money, .today-restofday { padding: 14px 16px; }
+    .today-hero { gap: 10px; margin-bottom: 14px; }
+  }
+
   .welcome-overlay {
     position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: 9999;
     background: var(--bg); display: flex; flex-direction: column; align-items: center; justify-content: center;
@@ -637,7 +559,7 @@
 </style>
 </head>
 <body>
-<a href="#section-snapshot" class="skip-link">Skip to main content</a>
+<a href="#todayHero" class="skip-link">Skip to main content</a>
 
 
 <div id="welcomeOverlay" class="welcome-overlay" style="display:none;">
@@ -685,7 +607,12 @@
      drawer with an actual answer: next job with navigation, money
      owed split current/overdue, and the rest of the day. No schema
      change -- same th_tracker_jobs/th_invoices data every section
-     below already reads. -->
+     below already reads.
+     2026-09-21: the Money Owed card now lists every unpaid invoice
+     (overdue first) with one-tap Mark paid, and the next-job card
+     offers "Route today" -- a Google Maps directions link through
+     every address on today's schedule (what Route Planner's "Pull
+     Today's Jobs" + "Open Full Route" took four taps to reach). -->
 <div class="today-hero" id="todayHero">
   <div class="today-next-job" id="todayNextJob"></div>
   <div class="today-side">
@@ -697,34 +624,87 @@
   </div>
 </div>
 
-<!-- Everything else, demoted to one row: the seven drawers this used
-     to open on (Business Snapshot, Action Items, Gallery Queue,
-     Compliance, Analytics, Backup, Tools) are all still exactly one
-     tap away below, collapsed by default -- these chips are the new
-     answer-first entry point, not a replacement for them. Each badge
-     mirrors a count its own section already computes (no second
-     calculation of the same number). -->
-<nav class="jump-nav" id="everythingElseChips">
-  <a href="#section-snapshot"><span class="jump-nav-icon"><svg class="th-icon" aria-hidden="true"><use href="#icon-chart" xlink:href="#icon-chart"></use></svg></span>Snapshot</a>
-  <a href="#section-actionitems"><span class="jump-nav-icon"><svg class="th-icon" aria-hidden="true"><use href="#icon-check-circle" xlink:href="#icon-check-circle"></use></svg></span>Action Items<span id="chipActionItems"></span></a>
-  <a href="#section-tools"><span class="jump-nav-icon"><svg class="th-icon" aria-hidden="true"><use href="#icon-wrench" xlink:href="#icon-wrench"></use></svg></span>Tools</a>
-  <div class="jump-nav-more-wrap" id="jumpNavMoreWrap">
-    <button type="button" class="jump-nav-more-btn" id="jumpNavMoreBtn" aria-expanded="false" aria-controls="jumpNavMoreMenu">More</button>
-    <div class="jump-nav-secondary" id="jumpNavMoreMenu">
-      <a href="#section-gallery"><span class="jump-nav-icon"><svg class="th-icon" aria-hidden="true"><use href="#icon-camera" xlink:href="#icon-camera"></use></svg></span>Gallery<span id="chipGallery"></span></a>
-      <a href="#section-compliance"><span class="jump-nav-icon"><svg class="th-icon" aria-hidden="true"><use href="#icon-shield" xlink:href="#icon-shield"></use></svg></span>Compliance<span id="chipCompliance"></span></a>
-      <a href="#section-analytics"><span class="jump-nav-icon"><svg class="th-icon" aria-hidden="true"><use href="#icon-trending" xlink:href="#icon-trending"></use></svg></span>Analytics</a>
-      <a href="#section-backup"><span class="jump-nav-icon"><svg class="th-icon" aria-hidden="true"><use href="#icon-folder" xlink:href="#icon-folder"></use></svg></span>Backup</a>
-    </div>
-  </div>
-</nav>
-
 <nav class="dash-primary-strip" id="dashPrimaryStrip" aria-label="Daily actions">
   <a class="dash-primary-action" href="/tools/job-tracker.html#add-job">New job</a>
   <a class="dash-primary-action" href="/tools/invoice-generator.html" data-tile-perm="can_manage_invoices">Create invoice</a>
   <button type="button" class="dash-primary-action" onclick="focusFindClient()">Find client</button>
-  <a class="dash-primary-action" href="#todayHero">Today's schedule</a>
+  <a class="dash-primary-action" href="/tools/job-tracker.html#calendar">Calendar</a>
 </nav>
+
+<!-- Needs attention (2026-09-21): the ops inbox, open by default and
+     directly under the hero -- leads, bookings, work requests, jobs
+     due this week, follow-ups, and unpaid invoices are the things the
+     page exists to surface, so they no longer hide behind a collapsed
+     heading and a count badge. Same lists, same ids, same data. -->
+<div class="section-block" id="section-actionitems">
+  <div class="section-heading" onclick="toggleSection('actionitems')">
+    <span class="section-heading-title"><svg class="th-icon section-heading-icon is-priority" aria-hidden="true"><use href="#icon-bell" xlink:href="#icon-bell"></use></svg>Needs attention <span id="actionItemsHeadingBadge"></span></span>
+    <span class="collapse-arrow">&#9660;</span>
+  </div>
+  <div class="section-body" id="body-actionitems">
+    <div class="ops-inbox" id="opsInbox">
+      <div class="ops-lanes">
+
+        <section class="ops-lane" data-lane="respond" data-priority="now" id="lane-respond">
+          <header class="ops-lane-header">
+            <h3 class="ops-lane-label">Needs response</h3>
+            <span class="ops-lane-count" id="laneRespondCount" hidden>0</span>
+          </header>
+          <div class="ops-group" data-ops-list="workRequestsList">
+            <div class="analytics-subheading has-icon"><span class="th-hex-icon"><svg class="th-icon" aria-hidden="true"><use href="#icon-wrench" xlink:href="#icon-wrench"></use></svg></span>Work Requests <span id="workRequestsBadge"></span></div>
+            <div id="workRequestsList"></div>
+          </div>
+          <div class="ops-group" data-ops-list="leadsList">
+            <div class="analytics-subheading has-icon"><span class="th-hex-icon"><svg class="th-icon" aria-hidden="true"><use href="#icon-inbox" xlink:href="#icon-inbox"></use></svg></span>New Leads</div>
+            <div id="leadsList"></div>
+          </div>
+          <div class="ops-group" data-ops-list="applicantsList">
+            <div class="analytics-subheading has-icon"><span class="th-hex-icon"><svg class="th-icon" aria-hidden="true"><use href="#icon-clipboard" xlink:href="#icon-clipboard"></use></svg></span>New Applicants</div>
+            <div id="applicantsList"></div>
+          </div>
+          <div class="ops-group" data-ops-list="bookingsList">
+            <div class="analytics-subheading has-icon"><span class="th-hex-icon"><svg class="th-icon" aria-hidden="true"><use href="#icon-calendar" xlink:href="#icon-calendar"></use></svg></span>Upcoming Bookings</div>
+            <div id="bookingsList"></div>
+          </div>
+          <div class="ops-lane-clear" id="laneRespondClear" hidden><svg class="th-icon" aria-hidden="true"><use href="#icon-check-circle" xlink:href="#icon-check-circle"></use></svg>Nothing waiting on a response.</div>
+        </section>
+
+        <section class="ops-lane" data-lane="soon" data-priority="soon" id="lane-soon">
+          <header class="ops-lane-header">
+            <h3 class="ops-lane-label">Due this week</h3>
+            <span class="ops-lane-count" id="laneSoonCount" hidden>0</span>
+          </header>
+          <div class="analytics-subheading has-icon is-first"><span class="th-hex-icon"><svg class="th-icon" aria-hidden="true"><use href="#icon-bell" xlink:href="#icon-bell"></use></svg></span>Due Soon (next 7 days, not done)</div>
+          <div id="upcomingJobs"></div>
+        </section>
+
+        <section class="ops-lane" data-lane="follow" data-priority="later" id="lane-follow">
+          <header class="ops-lane-header">
+            <h3 class="ops-lane-label">Follow-ups</h3>
+            <span class="ops-lane-count" id="laneFollowCount" hidden>0</span>
+          </header>
+          <div class="analytics-subheading has-icon is-first"><span class="th-hex-icon"><svg class="th-icon" aria-hidden="true"><use href="#icon-signal" xlink:href="#icon-signal"></use></svg></span>Client Follow-Ups</div>
+          <div id="followupsList"></div>
+        </section>
+
+        <section class="ops-lane" data-lane="money" data-priority="money" id="lane-money">
+          <header class="ops-lane-header">
+            <h3 class="ops-lane-label">Income</h3>
+            <span class="ops-lane-count" id="laneMoneyCount" hidden>0</span>
+          </header>
+          <div class="icon-search" id="invoiceSearchWrap">
+            <button class="icon-search-toggle" onclick="toggleIconSearch('invoiceSearchWrap')" aria-label="Search income" title="Search income"><svg class="th-icon" aria-hidden="true"><use href="#icon-search" xlink:href="#icon-search"></use></svg></button>
+            <input type="text" id="invoiceSearch" class="icon-search-input" placeholder="Search income by client, invoice #, or description..." oninput="debouncedCall('invoiceSearch', renderInvoicesList)" aria-label="Search income">
+          </div>
+          <div id="invoicesList"></div>
+        </section>
+
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="dash-group-label">Business</div>
 
 <div class="section-block" id="section-snapshot">
   <div class="section-heading" onclick="toggleSection('snapshot')">
@@ -791,75 +771,38 @@
   </div>
 </div>
 
-<div class="section-block" id="section-actionitems">
-  <div class="section-heading" onclick="toggleSection('actionitems')">
-    <span class="section-heading-title"><svg class="th-icon section-heading-icon is-priority" aria-hidden="true"><use href="#icon-bell" xlink:href="#icon-bell"></use></svg>Action Items <span id="actionItemsHeadingBadge"></span></span>
+<div class="section-block" id="section-analytics">
+  <div class="section-heading" onclick="toggleSection('analytics')">
+    <span class="section-heading-title"><svg class="th-icon section-heading-icon" aria-hidden="true"><use href="#icon-trending" xlink:href="#icon-trending"></use></svg>Analytics</span>
     <span class="collapse-arrow">&#9660;</span>
   </div>
-  <div class="section-body" id="body-actionitems">
-    <div class="ops-inbox" id="opsInbox">
-      <div class="ops-lanes">
-
-        <section class="ops-lane" data-lane="respond" data-priority="now" id="lane-respond">
-          <header class="ops-lane-header">
-            <h3 class="ops-lane-label">Needs response</h3>
-            <span class="ops-lane-count" id="laneRespondCount" hidden>0</span>
-          </header>
-          <div class="analytics-subheading has-icon is-first"><span class="th-hex-icon"><svg class="th-icon" aria-hidden="true"><use href="#icon-wrench" xlink:href="#icon-wrench"></use></svg></span>Work Requests <span id="workRequestsBadge"></span></div>
-          <div id="workRequestsList"></div>
-
-          <div class="analytics-subheading has-icon"><span class="th-hex-icon"><svg class="th-icon" aria-hidden="true"><use href="#icon-inbox" xlink:href="#icon-inbox"></use></svg></span>New Leads</div>
-          <div id="leadsList"></div>
-
-          <div class="analytics-subheading has-icon"><span class="th-hex-icon"><svg class="th-icon" aria-hidden="true"><use href="#icon-clipboard" xlink:href="#icon-clipboard"></use></svg></span>New Applicants</div>
-          <div id="applicantsList"></div>
-
-          <div class="analytics-subheading has-icon"><span class="th-hex-icon"><svg class="th-icon" aria-hidden="true"><use href="#icon-calendar" xlink:href="#icon-calendar"></use></svg></span>Upcoming Bookings</div>
-          <div id="bookingsList"></div>
-        </section>
-
-        <section class="ops-lane" data-lane="soon" data-priority="soon" id="lane-soon">
-          <header class="ops-lane-header">
-            <h3 class="ops-lane-label">Due this week</h3>
-            <span class="ops-lane-count" id="laneSoonCount" hidden>0</span>
-          </header>
-          <div class="analytics-subheading has-icon is-first"><span class="th-hex-icon"><svg class="th-icon" aria-hidden="true"><use href="#icon-bell" xlink:href="#icon-bell"></use></svg></span>Due Soon (next 7 days, not done)</div>
-          <div id="upcomingJobs"></div>
-        </section>
-
-        <section class="ops-lane" data-lane="follow" data-priority="later" id="lane-follow">
-          <header class="ops-lane-header">
-            <h3 class="ops-lane-label">Follow-ups</h3>
-            <span class="ops-lane-count" id="laneFollowCount" hidden>0</span>
-          </header>
-          <div class="analytics-subheading has-icon is-first"><span class="th-hex-icon"><svg class="th-icon" aria-hidden="true"><use href="#icon-signal" xlink:href="#icon-signal"></use></svg></span>Client Follow-Ups</div>
-          <div id="followupsList"></div>
-        </section>
-
-        <section class="ops-lane" data-lane="money" data-priority="money" id="lane-money">
-          <header class="ops-lane-header">
-            <h3 class="ops-lane-label">Income</h3>
-            <span class="ops-lane-count" id="laneMoneyCount" hidden>0</span>
-          </header>
-          <div class="icon-search" id="invoiceSearchWrap">
-            <button class="icon-search-toggle" onclick="toggleIconSearch('invoiceSearchWrap')" aria-label="Search income" title="Search income"><svg class="th-icon" aria-hidden="true"><use href="#icon-search" xlink:href="#icon-search"></use></svg></button>
-            <input type="text" id="invoiceSearch" class="icon-search-input" placeholder="Search income by client, invoice #, or description..." oninput="debouncedCall('invoiceSearch', renderInvoicesList)" aria-label="Search income">
-          </div>
-          <div id="invoicesList"></div>
-        </section>
-
-      </div>
-    </div>
-  </div>
-</div>
-
-<div class="section-block" id="section-gallery">
-  <div class="section-heading" onclick="toggleSection('gallery')">
-    <span class="section-heading-title"><svg class="th-icon section-heading-icon" aria-hidden="true"><use href="#icon-camera" xlink:href="#icon-camera"></use></svg>Gallery Queue</span>
-    <span class="collapse-arrow">&#9660;</span>
-  </div>
-  <div class="section-body" id="body-gallery">
-      <div id="galleryQueueList"></div>
+  <div class="section-body" id="body-analytics">
+      <div class="analytics-subheading is-first">Job Status</div>
+      <div id="statusBars"></div>
+      <div class="analytics-subheading">Top Vendors <span style="text-transform:none; letter-spacing:0;">(for the period selected in Business Snapshot)</span></div>
+      <div id="topVendors"></div>
+      <div class="analytics-subheading">Top Clients <span style="text-transform:none; letter-spacing:0;">(lifetime revenue, not limited to the period above)</span></div>
+      <div id="topClients"></div>
+      <!-- Marketing-source-of-lead tracking (closes a real audit gap):
+           the referral program already tracks ONE specific source with
+           its own reward ledger, but there was no way to see how
+           customers found the business more generally. Reuses the same
+           leads data the Leads Inbox above already fetched -- no second
+           query -- so this is bounded by fetchLeads()'s own limit=50,
+           the most recent leads rather than a full historical count. -->
+      <div class="analytics-subheading">Lead Sources <span style="text-transform:none; letter-spacing:0;">(most recent 50 leads)</span></div>
+      <div id="leadSources"></div>
+      <!-- UTM campaign-attribution breakdown (2026-09-15) -- the
+           automatic, URL-driven counterpart above's own manual "How did
+           you hear about us?" dropdown can't capture: which ad
+           platform/campaign a UTM-tagged link actually came from, read
+           directly off the utm_source column utm-tracking.js populates
+           on the public lead/booking forms. Only shows rows for leads
+           that actually carry a utm_source at all (a lead with none
+           just never came from a tagged link), same bounded 50-lead
+           window as Lead Sources just above, no second query. -->
+      <div class="analytics-subheading">Campaign Sources <span style="text-transform:none; letter-spacing:0;">(UTM-tagged, most recent 50 leads)</span></div>
+      <div id="utmSources"></div>
   </div>
 </div>
 
@@ -947,222 +890,45 @@
   </div>
 </div>
 
-<div class="section-block" id="section-analytics">
-  <div class="section-heading" onclick="toggleSection('analytics')">
-    <span class="section-heading-title"><svg class="th-icon section-heading-icon" aria-hidden="true"><use href="#icon-trending" xlink:href="#icon-trending"></use></svg>Analytics</span>
+<div class="section-block" id="section-gallery">
+  <div class="section-heading" onclick="toggleSection('gallery')">
+    <span class="section-heading-title"><svg class="th-icon section-heading-icon" aria-hidden="true"><use href="#icon-camera" xlink:href="#icon-camera"></use></svg>Gallery Queue <span id="galleryHeadingBadge"></span></span>
     <span class="collapse-arrow">&#9660;</span>
   </div>
-  <div class="section-body" id="body-analytics">
-      <div class="analytics-subheading is-first">Job Status</div>
-      <div id="statusBars"></div>
-      <div class="analytics-subheading">Top Vendors <span style="text-transform:none; letter-spacing:0;">(for the period selected in Business Snapshot)</span></div>
-      <div id="topVendors"></div>
-      <div class="analytics-subheading">Top Clients <span style="text-transform:none; letter-spacing:0;">(lifetime revenue, not limited to the period above)</span></div>
-      <div id="topClients"></div>
-      <!-- Marketing-source-of-lead tracking (closes a real audit gap):
-           the referral program already tracks ONE specific source with
-           its own reward ledger, but there was no way to see how
-           customers found the business more generally. Reuses the same
-           leads data the Leads Inbox above already fetched -- no second
-           query -- so this is bounded by fetchLeads()'s own limit=50,
-           the most recent leads rather than a full historical count. -->
-      <div class="analytics-subheading">Lead Sources <span style="text-transform:none; letter-spacing:0;">(most recent 50 leads)</span></div>
-      <div id="leadSources"></div>
-      <!-- UTM campaign-attribution breakdown (2026-09-15) -- the
-           automatic, URL-driven counterpart above's own manual "How did
-           you hear about us?" dropdown can't capture: which ad
-           platform/campaign a UTM-tagged link actually came from, read
-           directly off the utm_source column utm-tracking.js populates
-           on the public lead/booking forms. Only shows rows for leads
-           that actually carry a utm_source at all (a lead with none
-           just never came from a tagged link), same bounded 50-lead
-           window as Lead Sources just above, no second query. -->
-      <div class="analytics-subheading">Campaign Sources <span style="text-transform:none; letter-spacing:0;">(UTM-tagged, most recent 50 leads)</span></div>
-      <div id="utmSources"></div>
+  <div class="section-body" id="body-gallery">
+      <div id="galleryQueueList"></div>
   </div>
 </div>
-
-<div class="section-block" id="section-backup">
-  <div class="section-heading" onclick="toggleSection('backup')">
-    <span class="section-heading-title"><svg class="th-icon section-heading-icon" aria-hidden="true"><use href="#icon-folder" xlink:href="#icon-folder"></use></svg>Backup</span>
-    <span class="collapse-arrow">&#9660;</span>
-  </div>
-  <div class="section-body" id="body-backup">
-      <div class="analytics-subheading is-first">Backup &amp; Restore</div>
-      <div class="backup-row">
-        <button class="secondary-btn" onclick="downloadBackup()">Download Full Backup</button>
-        <label class="secondary-btn" style="display:inline-flex; align-items:center; cursor:pointer;">
-          Restore from Backup
-          <input type="file" accept="application/json" onchange="restoreBackup(event)" style="display:none;">
-        </label>
-      </div>
-  </div>
-</div>
-
-  </div>
-</div>
-
-<div class="section-block" id="section-tools">
-  <div class="section-heading is-static">
-    <span class="section-heading-title"><svg class="th-icon section-heading-icon" aria-hidden="true"><use href="#icon-toolbox" xlink:href="#icon-toolbox"></use></svg>Tools</span>
-  </div>
-
-  <details class="more-tools-details" id="moreToolsDetails">
-  <summary>More tools</summary>
-  <div class="tools-grid">
-  <div class="tool-group-label">Jobs</div>
-  <div class="tool-tile">
-    <a href="/tools/job-tracker.html" class="tool-tile-link">
-      <span class="tool-tile-icon"><svg class="th-icon" aria-hidden="true"><use href="#icon-wrench" xlink:href="#icon-wrench"></use></svg></span>
-      <span class="tool-tile-label">Jobs</span>
-    </a>
-    <button class="tool-tile-info" onclick="event.stopPropagation(); openCardInfo('tool-jobtracker')" aria-label="What is Job Tracker?" title="What is this?">?</button>
-  </div>
-
-  <div class="tool-tile">
-    <a href="/tools/calendar.html" class="tool-tile-link">
-      <span class="tool-tile-icon"><svg class="th-icon" aria-hidden="true"><use href="#icon-calendar" xlink:href="#icon-calendar"></use></svg></span>
-      <span class="tool-tile-label">Calendar</span>
-    </a>
-    <button class="tool-tile-info" onclick="event.stopPropagation(); openCardInfo('tool-calendar')" aria-label="What is Calendar?" title="What is this?">?</button>
-  </div>
-
-  <div class="tool-tile">
-    <a href="/tools/route-planner.html" class="tool-tile-link">
-      <span class="tool-tile-icon"><svg class="th-icon" aria-hidden="true"><use href="#icon-map" xlink:href="#icon-map"></use></svg></span>
-      <span class="tool-tile-label">Routes</span>
-    </a>
-    <button class="tool-tile-info" onclick="event.stopPropagation(); openCardInfo('tool-routes')" aria-label="What is Route Planner?" title="What is this?">?</button>
-  </div>
-
-  <div class="tool-tile" data-tile-perm="can_manage_contracts">
-    <a href="/tools/contract-generator.html" class="tool-tile-link">
-      <span class="tool-tile-icon"><svg class="th-icon" aria-hidden="true"><use href="#icon-scroll" xlink:href="#icon-scroll"></use></svg></span>
-      <span class="tool-tile-label">Contracts</span>
-    </a>
-    <button class="tool-tile-info" onclick="event.stopPropagation(); openCardInfo('tool-contracts')" aria-label="What is Contract Generator?" title="What is this?">?</button>
-  </div>
-
-  <div class="tool-group-label">Money</div>
-  <div class="tool-tile" data-tile-perm="can_manage_invoices" data-cat="money">
-    <a href="/tools/invoice-generator.html" class="tool-tile-link">
-      <span class="tool-tile-icon"><svg class="th-icon" aria-hidden="true"><use href="#icon-receipt" xlink:href="#icon-receipt"></use></svg></span>
-      <span class="tool-tile-label">Invoices</span>
-    </a>
-    <button class="tool-tile-info" onclick="event.stopPropagation(); openCardInfo('tool-invoices')" aria-label="What is Invoice Generator?" title="What is this?">?</button>
-  </div>
-  <!--
-    Clients tile (2026-09-03) -- split off Dev Tools' own Portal tab
-    onto its own page, requested directly: "lets split the portal out
-    of tools and add it as its own [tool]." Gated by the same
-    permission (can_manage_invoices, relabeled "Invoices, Quotes &
-    Portal") the panels themselves already require -- placed right
-    next to Invoices since it's the same permission and a closely
-    related daily task, not a separate group.
-  -->
-  <div class="tool-tile" data-tile-perm="can_manage_invoices" data-cat="money">
-    <a href="/tools/clients.html" class="tool-tile-link">
-      <span class="tool-tile-icon"><svg class="th-icon" aria-hidden="true"><use href="#icon-inbox" xlink:href="#icon-inbox"></use></svg></span>
-      <span class="tool-tile-label">Clients</span>
-    </a>
-    <button class="tool-tile-info" onclick="event.stopPropagation(); openCardInfo('tool-clients')" aria-label="What is Clients?" title="What is this?">?</button>
-  </div>
-  <!--
-    POS tile (2026-09-03) -- charge a client's card directly, no
-    invoice needed, requested directly: "add a tool to type in and
-    charge a client from my phone... we could name the tool POS."
-    Same permission as Invoices/Clients since it's the same money-
-    handling trust level, not a separate group.
-  -->
-  <div class="tool-tile" data-cat="money" data-tile-perm="can_manage_invoices">
-    <a href="/tools/pos.html" class="tool-tile-link">
-      <span class="tool-tile-icon"><svg class="th-icon" aria-hidden="true"><use href="#icon-dollar" xlink:href="#icon-dollar"></use></svg></span>
-      <span class="tool-tile-label">POS</span>
-    </a>
-    <button class="tool-tile-info" onclick="event.stopPropagation(); openCardInfo('tool-pos')" aria-label="What is POS?" title="What is this?">?</button>
-  </div>
-
-  <div class="tool-tile" data-tile-perm="can_view_finance" data-cat="money">
-    <a href="/tools/finance.html" class="tool-tile-link">
-      <span class="tool-tile-icon"><svg class="th-icon" aria-hidden="true"><use href="#icon-chart" xlink:href="#icon-chart"></use></svg></span>
-      <span class="tool-tile-label">Finance</span>
-    </a>
-    <button class="tool-tile-info" onclick="event.stopPropagation(); openCardInfo('tool-finance')" aria-label="What is Finance?" title="What is this?">?</button>
-  </div>
-  <div class="tool-tile" data-tile-perm="can_view_runway" data-cat="money">
-    <a href="/tools/runway-dashboard.html" class="tool-tile-link">
-      <span class="tool-tile-icon"><svg class="th-icon" aria-hidden="true"><use href="#icon-dollar" xlink:href="#icon-dollar"></use></svg></span>
-      <span class="tool-tile-label">Runway</span>
-    </a>
-    <button class="tool-tile-info" onclick="event.stopPropagation(); openCardInfo('tool-runway')" aria-label="What is Runway Dashboard?" title="What is this?">?</button>
-  </div>
-
-  <div class="tool-group-label">Grow</div>
-  <div class="tool-tile" data-tile-perm="can_manage_reviews" data-cat="grow">
-    <a href="/tools/review-request.html" class="tool-tile-link">
-      <span class="tool-tile-icon"><svg class="th-icon" aria-hidden="true"><use href="#icon-star" xlink:href="#icon-star"></use></svg></span>
-      <span class="tool-tile-label">Reviews</span>
-    </a>
-    <button class="tool-tile-info" onclick="event.stopPropagation(); openCardInfo('tool-reviews')" aria-label="What is Review Request Sender?" title="What is this?">?</button>
-  </div>
-  <div class="tool-tile" data-cat="grow">
-    <a href="/tools/parts-reference.html" class="tool-tile-link">
-      <span class="tool-tile-icon"><svg class="th-icon" aria-hidden="true"><use href="#icon-book" xlink:href="#icon-book"></use></svg></span>
-      <span class="tool-tile-label">Wiki</span>
-    </a>
-    <button class="tool-tile-info" onclick="event.stopPropagation(); openCardInfo('tool-partsreference')" aria-label="What is Appliance Wiki?" title="What is this?">?</button>
-  </div>
-
-  <div class="tool-group-label">Admin</div>
-  <div class="tool-tile" data-cat="admin">
-    <a href="/tools/settings.html" class="tool-tile-link">
-      <span class="tool-tile-icon"><svg class="th-icon" aria-hidden="true"><use href="#icon-gear" xlink:href="#icon-gear"></use></svg></span>
-      <span class="tool-tile-label">Settings</span>
-    </a>
-    <button class="tool-tile-info" onclick="event.stopPropagation(); openCardInfo('tool-settings')" aria-label="What is Settings?" title="What is this?">?</button>
-  </div>
-  <div class="tool-tile" id="devToolsTile" style="display:none;" data-cat="admin">
-    <a href="/tools/dev-tools.html" class="tool-tile-link">
-      <span class="tool-tile-icon"><svg class="th-icon" aria-hidden="true"><use href="#icon-terminal" xlink:href="#icon-terminal"></use></svg></span>
-      <span class="tool-tile-label">Dev</span>
-    </a>
-    <button class="tool-tile-info" onclick="event.stopPropagation(); openCardInfo('tool-devtools')" aria-label="What is Dev Tools?" title="What is this?">?</button>
-  </div>
-  </div>
-  </details>
-</div>
-
 
 <div class="help-modal-overlay" id="helpModalOverlay" onclick="if(event.target===this) closeHelpModal()">
   <div class="help-modal">
     <button class="help-modal-close" onclick="closeHelpModal()" aria-label="Close">&times;</button>
     <h3>How to Use: Dashboard</h3>
     <div class="help-modal-body">
-      <p>This is the home base for the whole business &mdash; bookmark this one page. The top of the page answers the three questions that actually matter first thing; everything else is one tap away in the row of chips below it, then further down the page as its own section (tap a heading to collapse or expand it &mdash; your preference is remembered).</p>
+      <p>This is the home base for the whole business &mdash; bookmark this one page. It's built to answer "what do I need to do right now" without a tap, top to bottom:</p>
       <ul>
-        <li><strong>Next Job</strong> &mdash; whatever's next on today's schedule, sorted by priority, with a tap-to-call phone number and a tap-to-open-Maps address, plus a straight line into that job's own page.</li>
-        <li><strong>Money Owed</strong> &mdash; Current and Overdue, split apart so a client who's simply not due yet never gets lumped in with one who actually needs a follow-up call. Overdue invoices list a one-tap <strong>Mark paid</strong> button (confirm, then it's paid in full).</li>
-        <li><strong>Rest of Today</strong> &mdash; whatever else is on today's schedule after the next job, at a glance.</li>
-        <li><strong>Snapshot / Action Items / Tools</strong> &mdash; the chip row under the hero. Gallery, Compliance, Analytics, and Backup sit behind More on a phone (all seven chips show on a wider screen). Action Items, Gallery, and Compliance carry a live badge when something's waiting, even while collapsed below.</li>
-        <li><strong>Action Items</strong> (its own section further down) &mdash; the ops inbox: Needs response (work requests, new leads, unconverted bookings), Due this week, Follow-ups, and Income. Unread rows are the ones that still need a tap: unhandled leads, new bookings, submitted requests, overdue invoices. Counts on each lane reuse the numbers the section already computed.</li>
-        <li><strong>Gallery / Compliance / Analytics / Backup</strong> &mdash; everything you check occasionally rather than daily: Website Gallery Queue (photos starred in the Job Tracker, review-only &mdash; nothing here is live on the website until deliberately added to the actual gallery code), Business Compliance (insurance, LLC/tax info, city licenses), Analytics (Job Status and Top Vendors), and Backup &amp; Restore (independent of cloud sync entirely). Collapsed by default since none of this is a daily check.</li>
-        <li><strong>Daily actions</strong> &mdash; New job, Create invoice, Find client, and Today's schedule sit in a strip on the dashboard, above the rest of the tools. Everything else (Routes, Contracts, POS, Wiki, and so on) is under <strong>More tools</strong> in the Tools section; those pages still open from the same URLs as before.</li>
+        <li><strong>Next Job</strong> &mdash; whatever's next on today's schedule, sorted by priority, with a tap-to-call phone number and a tap-to-open-Maps address, a straight line into that job's own page, and <strong>Route today</strong>: one link that opens the whole day's stops as a Google Maps route.</li>
+        <li><strong>Money Owed</strong> &mdash; Current and Overdue, split apart so a client who's simply not due yet never gets lumped in with one who needs a follow-up call. Every unpaid invoice is listed right there (overdue first) with a one-tap <strong>Mark paid</strong> &mdash; confirm, and it's recorded as paid in full.</li>
+        <li><strong>Rest of Today</strong> &mdash; whatever else is on today's schedule after the next job.</li>
+        <li><strong>New job / Create invoice / Find client / Calendar</strong> &mdash; the four daily actions, one tap each. Every other tool is in the bar at the bottom of the screen on a phone (Home, Jobs, Clients, Invoices, Finance, and More for the rest) or the sidebar on a computer.</li>
+        <li><strong>Needs attention</strong> &mdash; the ops inbox, open by default: work requests, new leads, applicants, and online bookings that still need a response (an empty group hides itself, so you only see what's waiting); jobs due this week; clients overdue for a follow-up; and invoices still unpaid, with paid ones folded away underneath. Tap the heading to collapse it if you'd rather &mdash; your choice is remembered on this device.</li>
+        <li><strong>Business</strong> &mdash; everything you check occasionally rather than daily, each collapsed until you want it: Business Snapshot (revenue, expenses, net, outstanding), Analytics (job status, top vendors and clients, lead sources), Compliance &amp; Documents (insurance, LLC/tax info, city licenses, secure files), and the Website Gallery Queue (photos starred in the Job Tracker, review-only). Backup &amp; Restore moved to Settings.</li>
       </ul>
 
       <p><strong>A typical day, start to finish:</strong></p>
       <ol style="padding-left: 20px; margin: 8px 0 16px;">
-        <li>Check <strong>Today</strong> on the Dashboard for what's already on the schedule.</li>
-        <li>New job comes in? Tap <strong>New job</strong> on the dashboard strip &mdash; that opens Job Tracker with the add form ready. Check "Show on Calendar" if you want it on your phone's own calendar app too, and use the microphone icon next to Notes to dictate instead of typing.</li>
-        <li>On site, tap <strong>Done</strong> on the job's card or table row (or still use the status dropdown for In Progress). Attach photos with the Photos button.</li>
-        <li>Marking a job Complete offers to jump straight to a pre-filled review request for that client.</li>
-        <li>Need to invoice? Open <strong>Invoice Generator</strong> and use "Link to Job" so it counts toward that job's profitability in Finance's Profitability tab.</li>
-        <li>Need a signed agreement? <strong>Contract Generator</strong> can capture a client's signature right on the screen if they're there in person, embedded directly into the PDF &mdash; or skip that and just print/text it for them to sign on their own.</li>
-        <li>End of week: skim <strong>Action Items</strong> for anything waiting, and <strong>Business Health</strong> for anything expiring soon.</li>
+        <li>Open the Dashboard: Next Job, Money Owed, and Needs attention are the first screen.</li>
+        <li>Heading out? Tap <strong>Route today</strong> on the Next Job card for the whole day's driving in Google Maps.</li>
+        <li>New job comes in? Tap <strong>New job</strong> &mdash; that opens Job Tracker with the add form ready. Use the microphone icon next to Notes to dictate instead of typing. Every dated job shows on the Calendar view automatically.</li>
+        <li>On site, tap <strong>Done</strong> on the job's card or table row (or use the status dropdown for In Progress). Attach photos with the Photos button. Marking a job Complete offers to jump straight to a pre-filled review request for that client.</li>
+        <li>Need to invoice? Tap <strong>Create Invoice</strong> on the job's card so it counts toward that job's profitability, or <strong>Create invoice</strong> here.</li>
+        <li>Got paid? <strong>Mark paid</strong> on the Money Owed card &mdash; two taps.</li>
+        <li>End of week: skim <strong>Needs attention</strong> for anything still waiting, and <strong>Compliance</strong> under Business for anything expiring soon.</li>
       </ol>
 
       <p>Data is saved directly in your browser, and quietly kept in sync across your devices in the background &mdash; the small dot next to the sync status turns green when live updates are connected, meaning changes on another device (or a new lead coming in) show up here automatically. The small circular arrow button next to it forces an immediate refresh if you don't want to wait.</p>
       <p><strong>Install this as an app:</strong> iPhone/iPad &mdash; tap the Share icon in Safari, then "Add to Home Screen." Android &mdash; tap the &#8942; menu in Chrome, then "Install app." Computer &mdash; look for an install icon in the address bar. Once installed, it opens full-screen with its own icon, no browser bar.</p>
-      <p><strong>Worth knowing:</strong> this whole suite is behind a real login now &mdash; anyone hitting these pages without signing in gets redirected to a sign-in screen first. Each account has its own role (Owner, Developer, or Employee) controlling what it can see and do, not one shared login for everyone.</p>
+      <p><strong>Worth knowing:</strong> this whole suite is behind a real login &mdash; anyone hitting these pages without signing in gets redirected to a sign-in screen first. Each account has its own role (Owner, Developer, or Employee) controlling what it can see and do, not one shared login for everyone.</p>
     </div>
   </div>
 </div>
@@ -1174,58 +940,6 @@
       body: `<p>A private, password-protected place for the actual files behind your compliance dates -- insurance policy PDFs, your LLC certificate, signed contracts.</p>
         <p>This bucket is set to private, unlike the photo and receipt storage elsewhere in these tools, so a download link only works for a few minutes and only for someone actually logged in -- not a permanent public link.</p>`,
     },
-    'tool-jobtracker': {
-      title: 'Job Tracker',
-      body: `<p>Jobs, contacts, and notes &mdash; all three in one page, organized by tab. On a real desktop screen, the Jobs list also shows as a sortable table.</p>`,
-    },
-    'tool-invoices': {
-      title: 'Invoice Generator',
-      body: `<p>Invoices and quotes/estimates in one place &mdash; convert an estimate straight into a real invoice with one tap.</p>`,
-    },
-    'tool-clients': {
-      title: 'Clients',
-      body: `<p>Everything about the client-facing portal in one place &mdash; who has access, what's been sent, what they've requested, and who gets emailed about a new request. Split off Dev Tools onto its own page (2026-09-03) since it had become a daily operational tool, not a diagnostics screen.</p>`,
-    },
-    'tool-pos': {
-      title: 'POS',
-      body: `<p>Charge a client's card directly for a quick job that doesn't need a real invoice &mdash; no line items, no due date, just an amount. If the client has paid before, their card is already saved and this is one tap. Otherwise it's a normal card entry, which also gets saved for next time.</p><p>Every POS sale logs to Income the same way any other payment does. Never creates an invoice, quote, or portal record of any kind.</p>`,
-    },
-    'tool-reviews': {
-      title: 'Review Request Sender',
-      body: `<p>After a job's done, generate a ready-to-send review-request text &mdash; 6 different phrasings, shuffle for a fresh one anytime.</p>`,
-    },
-    'tool-routes': {
-      title: 'Route Planner',
-      body: `<p>Type in today's addresses, get one link that opens the whole route in Google Maps, plus a to-and-from cost analyzer.</p>`,
-    },
-    'tool-contracts': {
-      title: 'Contract Generator',
-      body: `<p>Fill in a client and job, generate a branded PDF to email or text &mdash; every contract generated is logged so you can find it again later.</p>`,
-    },
-    'tool-calendar': {
-      title: 'Calendar',
-      body: `<p>See jobs flagged "Show on Calendar" in Job Tracker on a month view, and export any of them to your phone's own calendar app.</p>`,
-    },
-    'tool-finance': {
-      title: 'Finance',
-      body: `<p>Cost Lookup, Profitability, Income, and Expenses (including mileage) &mdash; everything money-related outside a specific job, all in one page, organized by tab.</p>`,
-    },
-    'tool-runway': {
-      title: 'Runway Dashboard',
-      body: `<p>Personal budget and business runway tracking &mdash; pulls revenue and expenses straight from Finance, no double entry.</p>`,
-    },
-    'tool-partsreference': {
-      title: 'Appliance Wiki',
-      body: `<p>A quick lookup for common appliance issues &mdash; what part it usually is, the part number, and roughly what it costs. Add to it as you actually run into things on real jobs.</p>`,
-    },
-    'tool-settings': {
-      title: 'Settings',
-      body: `<p>Account info, Cloud Sync setup, notification preferences, and Color theme &mdash; the personal, per-device options that don't belong on any one specific tool page.</p>`,
-    },
-    'tool-devtools': {
-      title: 'Dev Tools',
-      body: `<p>Site diagnostics and maintenance utilities, shown only on the account actively developing this site &mdash; visible to any account with an assigned role, not tied to one specific person.</p>`,
-    },
   };
   function openCardInfo(key) {
     const info = CARD_INFO[key];
@@ -1236,10 +950,14 @@
   const COLLAPSE_STATE_KEY = 'th_dash_collapsed';
   // W10 (Master Audit, Flagship 02): 'today' dropped entirely -- the
   // Today hero above replaced that collapsible section and is never
-  // collapsed. 'actionitems' now defaults collapsed like the rest of
-  // "everything else", since the new chip row (with its own live
-  // counts) is the answer-first entry point now, not this drawer.
-  const DEFAULT_COLLAPSE = { snapshot: true, actionitems: true, gallery: true, compliance: true, analytics: true, backup: true };
+  // collapsed. 2026-09-21: 'actionitems' (Needs attention) now defaults
+  // OPEN -- it is the page's second answer after the hero, and the chip
+  // row that used to stand in for it with a count badge is gone. Only
+  // the occasional-check Business drawers start collapsed. 'backup'
+  // left with the section (Backup & Restore lives on Settings now).
+  // Stored per-device state still wins over these defaults, so anyone
+  // who deliberately collapsed the inbox keeps it collapsed.
+  const DEFAULT_COLLAPSE = { snapshot: true, actionitems: false, gallery: true, compliance: true, analytics: true };
 
   function loadCollapseState() {
     try {
@@ -1304,13 +1022,6 @@
     applyCollapseState();
     renderOpenedSection(key);
   }
-
-  const ALL_SYNCED_KEYS = [
-    'th_tracker_jobs', 'th_tracker_contacts', 'th_tracker_notes_v2',
-    'th_expense_log', 'th_income_log', 'th_mileage_rate', 'th_price_reference', 'th_invoices',
-    'th_quotes', 'th_tax_rate', 'th_tax_labor', 'th_tax_parts', 'th_compliance', 'th_job_templates', 'th_contracts', 'th_setaside_rate',
-    'th_inventory',
-  ];
 
   function loadJobs() { try { return JSON.parse(localStorage.getItem('th_tracker_jobs') || '[]'); } catch (e) { return []; } }
   function loadExpenses() { try { return JSON.parse(localStorage.getItem('th_expense_log') || '[]'); } catch (e) { return []; } }
@@ -1985,7 +1696,15 @@
         (it.meta || '').toLowerCase().includes(searchTerm)
       );
     }
-    items = items.slice(0, 20);
+    // 2026-09-21: open (unpaid/partial) invoices lead; paid invoices and
+    // received cash entries are history, folded under one summary line
+    // unless a search term asks for them. Same 20-row cap as before,
+    // applied after the open items so nothing owed is ever cut off.
+    const isOpenItem = it => it.kind === 'invoice' && invoicePaymentStatus(it.raw) !== 'paid';
+    const openItems = items.filter(isOpenItem);
+    const settledItems = items.filter(it => !isOpenItem(it));
+    items = openItems.concat(settledItems).slice(0, 20);
+    const settledCount = Math.max(0, items.length - openItems.length);
     const container = document.getElementById('invoicesList');
     if (items.length === 0) {
       container.innerHTML = searchTerm
@@ -1993,7 +1712,7 @@
         : '<div class="empty-state-small"><svg class="th-icon" aria-hidden="true"><use href="#icon-inbox" xlink:href="#icon-inbox"></use></svg>No income logged yet.</div>';
       return;
     }
-    container.innerHTML = items.map(it => {
+    const rowsHtml = items.map(it => {
       if (it.kind === 'income') {
         return `
         <div class="dash-list-item">
@@ -2023,7 +1742,18 @@
           ${invoiceMarkPaidButtonHtml(i)}
         </div>
       </div>`;
-    }).join('');
+    });
+    const openHtml = rowsHtml.slice(0, openItems.length).join('');
+    const settledHtml = rowsHtml.slice(openItems.length).join('');
+    if (searchTerm || settledCount === 0) {
+      container.innerHTML = openHtml + settledHtml;
+      return;
+    }
+    const allClear = openItems.length === 0
+      ? '<div class="empty-state-small is-good"><svg class="th-icon" aria-hidden="true"><use href="#icon-check-circle" xlink:href="#icon-check-circle"></use></svg>Nothing unpaid right now.</div>'
+      : '';
+    container.innerHTML = openHtml + allClear +
+      `<details class="income-settled"><summary>${settledCount} paid or received</summary>${settledHtml}</details>`;
   }
 
   // Work requests queue (2026-09-02) -- the internal side of the guest
@@ -2631,11 +2361,6 @@
     else if (policyDays !== null && policyDays <= 30) { statusClass = 'is-expiring'; badgeText = 'Policy renews in ' + policyDays + ' days \u2014 ' + badgeText.toLowerCase(); }
 
     const headingBadge = document.getElementById('complianceHeadingBadge');
-    // W10: the "everything else" chip row mirrors this same status --
-    // a plain dot rather than the full sentence, since the chip has no
-    // room for it.
-    const chipBadge = document.getElementById('chipCompliance');
-    if (chipBadge) chipBadge.innerHTML = statusClass === 'is-ok' ? '' : `<span class="compliance-status-badge ${statusClass}" style="font-size:10px; padding:1px 6px; vertical-align:middle; margin-left:4px;">!</span>`;
     if (headingBadge) {
       headingBadge.innerHTML = statusClass === 'is-ok' ? '' :
         `<span class="compliance-status-badge ${statusClass}" style="font-size:11.5px; padding:2px 8px; vertical-align:middle;">${escapeHtml(badgeText)}</span>`;
@@ -2696,10 +2421,7 @@
       if (total > 0) navigator.setAppBadge(total).catch(() => {});
       else if ('clearAppBadge' in navigator) navigator.clearAppBadge().catch(() => {});
     }
-    // W10: the "everything else" chip mirrors the same running total,
-    // reusing this exact count rather than a second computation of it.
-    const chip = document.getElementById('chipActionItems');
-    if (chip) chip.innerHTML = total > 0 ? `<span class="compliance-status-badge is-expiring" style="font-size:10px; padding:1px 6px; vertical-align:middle; margin-left:4px;">${total}</span>` : '';
+    refreshOpsGroupVisibility();
     if (!badge) return;
     const parts = [];
     if (actionItemCounts.workrequests > 0) parts.push(actionItemCounts.workrequests + ' request' + (actionItemCounts.workrequests === 1 ? '' : 's'));
@@ -2709,8 +2431,14 @@
     if (actionItemCounts.duesoon > 0) parts.push(actionItemCounts.duesoon + ' due soon');
     if (actionItemCounts.followups > 0) parts.push(actionItemCounts.followups + ' follow-up' + (actionItemCounts.followups === 1 ? '' : 's'));
     if (actionItemCounts.unpaid > 0) parts.push(actionItemCounts.unpaid + ' unpaid');
+    // Two renderings of the same count: the breakdown ("1 request ·
+    // 2 unpaid") on screens with room for it, and just the total on a
+    // phone, where the long sentence used to wrap the heading itself
+    // onto two lines (the lanes below carry their own counts anyway).
+    // CSS picks one via .ai-badge-detail / .ai-badge-total.
     badge.innerHTML = parts.length
-      ? `<span class="compliance-status-badge is-expiring" style="font-size:11.5px; padding:2px 8px; vertical-align:middle;">${escapeHtml(parts.join(' \u00b7 '))}</span>`
+      ? `<span class="compliance-status-badge is-expiring ai-badge-detail" style="font-size:11.5px; padding:2px 8px; vertical-align:middle;">${escapeHtml(parts.join(' \u00b7 '))}</span>` +
+        `<span class="compliance-status-badge is-expiring ai-badge-total" style="font-size:11.5px; padding:2px 8px; vertical-align:middle;">${total}</span>`
       : '';
     setOpsLaneCount('laneRespondCount', 'lane-respond', actionItemCounts.workrequests + actionItemCounts.leads + actionItemCounts.applicants + actionItemCounts.bookings);
     setOpsLaneCount('laneSoonCount', 'lane-soon', actionItemCounts.duesoon);
@@ -2718,6 +2446,29 @@
     setOpsLaneCount('laneMoneyCount', 'lane-money', actionItemCounts.unpaid);
     const wrBadge = document.getElementById('workRequestsBadge');
     if (wrBadge) wrBadge.textContent = actionItemCounts.workrequests > 0 ? String(actionItemCounts.workrequests) : '';
+  }
+
+  // Needs attention (2026-09-21): a respond-lane sub-group whose list
+  // holds nothing but a plain empty-state row hides itself, so the lane
+  // shows only what actually needs a tap. A warning/error row (cloud
+  // sync not configured, a failed fetch) is never hidden -- that is
+  // information, not emptiness. When all four groups are empty, one
+  // "caught up" line stands in for them.
+  function refreshOpsGroupVisibility() {
+    const groups = document.querySelectorAll('#lane-respond .ops-group');
+    let visible = 0;
+    groups.forEach(group => {
+      const list = document.getElementById(group.getAttribute('data-ops-list'));
+      const only = list && list.children.length === 1 ? list.firstElementChild : null;
+      const isPlainEmpty = !!(only && only.classList.contains('empty-state-small') && !only.classList.contains('is-warning'));
+      group.classList.toggle('is-empty', isPlainEmpty);
+      if (!isPlainEmpty) visible++;
+    });
+    const clear = document.getElementById('laneRespondClear');
+    if (clear) {
+      if (groups.length && visible === 0) clear.removeAttribute('hidden');
+      else clear.setAttribute('hidden', '');
+    }
   }
 
   function setOpsLaneCount(countId, laneId, n) {
@@ -2977,10 +2728,13 @@
     renderSecureDocsList();
   }
 
-  // W10: the "everything else" chip mirrors Gallery Queue's real count.
+  // Gallery Queue's real count, shown on its own (collapsed) heading so
+  // a photo waiting for review is visible without opening the drawer.
+  // Named for the chip row it used to feed (removed 2026-09-21); kept so
+  // refreshGalleryChip()/loadAndRenderGalleryQueue() call sites are unchanged.
   function updateGalleryChip(n) {
-    const chip = document.getElementById('chipGallery');
-    if (chip) chip.innerHTML = n > 0 ? `<span class="compliance-status-badge is-expiring" style="font-size:10px; padding:1px 6px; vertical-align:middle; margin-left:4px;">${n}</span>` : '';
+    const badge = document.getElementById('galleryHeadingBadge');
+    if (badge) badge.innerHTML = n > 0 ? `<span class="compliance-status-badge is-expiring" style="font-size:11.5px; padding:2px 8px; vertical-align:middle;">${n} waiting</span>` : '';
   }
 
   // Closed Gallery drawer: the chip only needs the count. Skip signed
@@ -3140,6 +2894,34 @@
     return todaysJobs;
   }
 
+  // Route today (2026-09-21): the same Google Maps directions URL shape
+  // Route Planner's buildRouteUrl() builds (last stop is the destination,
+  // the rest are waypoints, driving), from the addresses on today's
+  // active jobs in the hero's own priority order. De-duplicated so two
+  // jobs at one address are one stop; capped at Google's 10-stop limit.
+  // Turns Dashboard -> More -> Route Planner -> Pull Today's Jobs ->
+  // Open Full Route (4 taps) into one tap on the card.
+  function todayRouteAddresses(jobs) {
+    const seen = new Set();
+    const out = [];
+    (jobs || []).forEach(j => {
+      const addr = (j.address || '').trim();
+      if (!addr || seen.has(addr.toLowerCase())) return;
+      seen.add(addr.toLowerCase());
+      out.push(addr);
+    });
+    return out.slice(0, 10);
+  }
+  function buildTodayRouteUrl(jobs) {
+    const stops = todayRouteAddresses(jobs);
+    if (stops.length === 0) return null;
+    const destination = stops[stops.length - 1];
+    const waypoints = stops.slice(0, -1);
+    let url = 'https://www.google.com/maps/dir/?api=1&destination=' + encodeURIComponent(destination) + '&travelmode=driving';
+    if (waypoints.length > 0) url += '&waypoints=' + waypoints.map(encodeURIComponent).join('|');
+    return url;
+  }
+
   function renderTodayHero() {
     const nextEl = document.getElementById('todayNextJob');
     const restEl = document.getElementById('todayRestOfDay');
@@ -3153,6 +2935,8 @@
     }
 
     const job = todaysJobs[0];
+    const routeStops = todayRouteAddresses(todaysJobs).length;
+    const routeUrl = buildTodayRouteUrl(todaysJobs);
     nextEl.innerHTML = `
       <div class="today-next-job-label">Next Job</div>
       <p class="today-next-job-title"><span class="badge badge-${job.priority}">${job.priority}</span> ${escapeHtml(job.title)}${job.client ? ' &mdash; ' + escapeHtml(job.client) : ''}</p>
@@ -3162,7 +2946,7 @@
       </div>
       <div class="today-next-job-actions">
         <a href="/tools/job-detail.html?id=${encodeURIComponent(job.id)}" class="primary-btn">Open Job</a>
-        <a href="/tools/job-tracker.html" class="secondary-btn">View in Job Tracker</a>
+        ${routeUrl ? `<a href="${escapeAttr(routeUrl)}" class="secondary-btn" target="_blank" rel="noopener" id="todayRouteLink">${routeStops === 1 ? 'Directions' : 'Route today \u00b7 ' + routeStops + ' stops'}</a>` : '<a href="/tools/job-tracker.html" class="secondary-btn">View in Job Tracker</a>'}
       </div>`;
 
     const rest = todaysJobs.slice(1);
@@ -3186,17 +2970,35 @@
     const el = document.getElementById('todayMoney');
     if (!el) return;
     el.classList.toggle('is-warning', owed.overdueCount > 0);
-    const overdueInvoices = loadInvoices().filter(i => invoicePaymentStatus(i) !== 'paid' && isOverdue(i));
-    const overdueRows = overdueInvoices.slice(0, 8).map(i => `
-      <div class="dash-list-item is-unread">
+    // 2026-09-21: every unpaid invoice, not only the overdue ones --
+    // "they just paid me" is a daily event and used to mean opening
+    // the inbox and scrolling to the Income lane for a current invoice.
+    // Overdue first (highlighted), then current by due date; capped so
+    // the card stays a card -- the Income lane below has the full list.
+    const today = new Date(new Date().toDateString());
+    const unpaidInvoices = loadInvoices()
+      .filter(i => invoicePaymentStatus(i) !== 'paid')
+      .map(i => ({ inv: i, overdue: isOverdue(i), due: getDueDate(i) }))
+      .sort((a, b) => (a.overdue === b.overdue ? ((a.due ? a.due.getTime() : Infinity) - (b.due ? b.due.getTime() : Infinity)) : (a.overdue ? -1 : 1)));
+    const overdueRows = unpaidInvoices.slice(0, 6).map(({ inv: i, overdue, due }) => {
+      let dueLabel = '';
+      if (due) {
+        const days = Math.round((due - today) / (24 * 60 * 60 * 1000));
+        dueLabel = days < 0 ? `${-days} day${days === -1 ? '' : 's'} overdue` : (days === 0 ? 'Due today' : `Due in ${days} day${days === 1 ? '' : 's'}`);
+      }
+      const remaining = getRemainingCents(i) / 100;
+      return `
+      <div class="dash-list-item${overdue ? ' is-unread' : ''}">
         <div>
           <div class="dash-list-item-title">${escapeHtml(i.clientName)}</div>
-          <div class="dash-list-item-meta">#${escapeHtml(i.invoiceNumber || '\u2014')} &middot; ${money(i.total)}</div>
+          <div class="dash-list-item-meta">#${escapeHtml(i.invoiceNumber || '\u2014')} &middot; ${money(remaining)}${dueLabel ? ' &middot; <span class="today-money-due' + (overdue ? ' is-overdue' : '') + '">' + dueLabel + '</span>' : ''}</div>
         </div>
         <div class="dash-list-item-right">
           ${invoiceMarkPaidButtonHtml(i)}
         </div>
-      </div>`).join('');
+      </div>`;
+    }).join('');
+    const moreUnpaid = unpaidInvoices.length > 6 ? `<div class="dash-list-item-meta" style="padding:8px 0 0;">${unpaidInvoices.length - 6} more unpaid in Needs attention below.</div>` : '';
     el.innerHTML = `
       <div class="today-money-label">Money Owed</div>
       <div class="today-money-row">
@@ -3207,7 +3009,7 @@
         <span class="today-money-row-label">Overdue</span>
         <span class="today-money-row-value${owed.overdueCount > 0 ? ' is-overdue' : ''}">${money(owed.overdueTotal)}</span>
       </div>
-      ${overdueRows ? `<div class="today-overdue-list" id="todayOverdueList">${overdueRows}</div>` : ''}`;
+      ${overdueRows ? `<div class="today-overdue-list" id="todayOverdueList">${overdueRows}${moreUnpaid}</div>` : ''}`;
   }
 
   let _welcomeFadeTimeouts = []; // tracked so the role-tag enhancement below can restart the hold/fade cycle cleanly
@@ -3238,20 +3040,6 @@
     showWelcomeOverlay(text);
   }
 
-  // Split out from renderWelcomeGreeting() on 2026-08-15 -- this has to
-  // run AFTER initSyncOnLoad() (which loads the account's role over the
-  // network) resolves, not immediately on DOMContentLoaded like the
-  // greeting above. Calling it too early meant hasDevToolsAccess() was
-  // always checked before the role had actually loaded, so the tile
-  // silently stayed hidden for everyone -- including Connor -- from the
-  // moment the role system shipped until this fix.
-  function renderDevToolsTileVisibility() {
-    const devTile = document.getElementById('devToolsTile');
-    if (devTile && typeof hasDevToolsAccess === 'function' && hasDevToolsAccess()) {
-      devTile.style.display = '';
-    }
-  }
-
   // Added 2026-08-27, alongside the new Employee role and the 5 pages
   // now gated behind canManageBusinessFinances() (Finance, Runway
   // Dashboard, Invoices, Contracts, Review Requests) -- these tiles
@@ -3275,6 +3063,10 @@
     can_manage_reviews: () => (typeof canManageReviews === 'function' && canManageReviews()),
   };
 
+  // The tile grid itself is gone (2026-09-21 -- the sidebar / bottom bar
+  // list every destination and tools-nav-pwa.js hides the gated ones),
+  // but data-tile-perm still gates the strip's Create invoice action and
+  // the Business Snapshot section below, so this stays.
   function renderBusinessFinanceTileVisibility() {
     document.querySelectorAll('[data-tile-perm]').forEach(el => {
       const perm = el.getAttribute('data-tile-perm');
@@ -3336,51 +3128,6 @@
     else loadAndRenderGalleryQueue();
     if (dashSectionClosed('compliance')) renderInsuranceCard();
     else renderCompliance();
-  }
-
-  function downloadBackup() {
-    const backup = {};
-    ALL_SYNCED_KEYS.forEach(k => { backup[k] = localStorage.getItem(k); });
-    const blob = new Blob([JSON.stringify(backup, null, 2)], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = 'TripleH_Backup_' + new Date().toISOString().slice(0, 10) + '.json';
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
-  }
-
-  function restoreBackup(event) {
-    const file = event.target.files[0];
-    if (!file) return;
-    const reader = new FileReader();
-    reader.onload = async function () {
-      let data;
-      try {
-        data = JSON.parse(reader.result);
-      } catch (e) {
-        await showAlert('That file is not valid backup JSON.');
-        event.target.value = '';
-        return;
-      }
-      const confirmed = await showConfirm(
-        'This will REPLACE all current data (jobs, expenses, invoices, quotes, contacts, notes, price reference) ' +
-        'with what\'s in this backup file, on this device. This cannot be undone. Continue?',
-        { danger: true, confirmText: 'Restore' }
-      );
-      if (!confirmed) { event.target.value = ''; return; }
-
-      ALL_SYNCED_KEYS.forEach(k => {
-        if (data[k] !== undefined && data[k] !== null) localStorage.setItem(k, data[k]);
-      });
-      if (typeof scheduleSync === 'function') scheduleSync();
-      event.target.value = '';
-      renderDashboard();
-      await showAlert('Backup restored. If you use Cloud Sync, this will push to the cloud shortly and become the new shared version on all devices.');
-    };
-    reader.readAsText(file);
   }
 
   // Item #7 (2026-08-16): distinct from the live-sync connection dot
@@ -3473,7 +3220,6 @@
       if (typeof refreshRelationalInvoicesCache === 'function') {
         refreshRelationalInvoicesCache().then(renderDashboard).catch(renderDashboard);
       }
-      renderDevToolsTileVisibility();
       renderBusinessFinanceTileVisibility();
       renderWelcomeGreeting();
       renderSnapshotLastUpdated();
@@ -3510,28 +3256,6 @@
       input.value = term;
       renderGlobalSearch();
     })();
-    (function initJumpNavMore() {
-      const wrap = document.getElementById('jumpNavMoreWrap');
-      const btn = document.getElementById('jumpNavMoreBtn');
-      if (!wrap || !btn) return;
-      function setOpen(open) {
-        wrap.classList.toggle('is-open', open);
-        btn.setAttribute('aria-expanded', open ? 'true' : 'false');
-      }
-      btn.addEventListener('click', function (e) {
-        e.stopPropagation();
-        setOpen(!wrap.classList.contains('is-open'));
-      });
-      wrap.querySelectorAll('.jump-nav-secondary a').forEach(function (a) {
-        a.addEventListener('click', function () { setOpen(false); });
-      });
-      document.addEventListener('click', function (e) {
-        if (!wrap.contains(e.target)) setOpen(false);
-      });
-      document.addEventListener('keydown', function (e) {
-        if (e.key === 'Escape') setOpen(false);
-      });
-    })();
     if (typeof setupPullToRefresh === 'function') setupPullToRefresh(() => {
       renderDashboard();
       if (typeof refreshRelationalInvoicesCache === 'function') {
@@ -3545,9 +3269,10 @@
     if (window.location.hash === '#today') {
       document.getElementById('todayHero')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
     }
+    // Backup & Restore moved to Settings (2026-09-21); old #backup links
+    // (Settings' own former "Go to Backup" button, bookmarks) follow it.
     if (window.location.hash === '#backup') {
-      expandSection('backup');
-      document.getElementById('section-backup')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      window.location.replace('/tools/settings.html#backup');
     }
     // Structural item #7, push 1 (2026-08-20): builds the client registry
     // from existing jobs/invoices/quotes/contacts/contracts. Deliberately

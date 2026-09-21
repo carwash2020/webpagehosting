@@ -73,27 +73,32 @@ test('the money-owed card states an actual Current/Overdue split, not a single l
   assert.match(fn, /todayOverdueList/);
 });
 
-test('"everything else" is one row of chips linking to the 7 remaining sections, each an anchor jump (no schema/behavior change to those sections)', () => {
-  const chipsBlock = WORKSPACE.match(/<nav class="jump-nav" id="everythingElseChips">[\s\S]*?<\/nav>/);
-  assert.ok(chipsBlock, 'expected the everythingElseChips nav');
-  for (const anchor of ['#section-snapshot', '#section-actionitems', '#section-gallery', '#section-compliance', '#section-analytics', '#section-backup', '#section-tools']) {
-    assert.match(chipsBlock[0], new RegExp('href="' + anchor + '"'), `expected a chip linking to ${anchor}`);
+test('the "everything else" chip row is gone (2026-09-21): the remaining sections sit right below the inbox under one Business label, each still an anchor target', () => {
+  assert.doesNotMatch(WORKSPACE, /id="everythingElseChips"/);
+  assert.match(WORKSPACE, /<div class="dash-group-label">Business<\/div>/);
+  for (const id of ['section-snapshot', 'section-analytics', 'section-compliance', 'section-gallery']) {
+    assert.match(WORKSPACE, new RegExp('<div class="section-block" id="' + id + '">'), `expected ${id}`);
   }
+  assert.doesNotMatch(WORKSPACE, /id="section-backup"|id="section-tools"/, 'Backup moved to Settings; the tile grid was retired');
 });
 
-test('the Action Items, Gallery, and Compliance chips mirror the exact counts their own sections already compute -- no second calculation of the same number', () => {
+test('the live counts now sit on the section headings themselves -- Needs attention badge, Gallery "waiting" badge, Compliance status -- no chip mirrors', () => {
   const actionItemsFn = extractFn(WORKSPACE, 'updateActionItemsBadge');
-  assert.match(actionItemsFn, /chipActionItems/);
-  assert.match(actionItemsFn, /\$\{total\}/);
-  assert.match(WORKSPACE, /function updateGalleryChip\(n\) \{[\s\S]{0,200}chipGallery/);
-  assert.match(WORKSPACE, /chipCompliance/);
+  assert.match(actionItemsFn, /actionItemsHeadingBadge/);
+  assert.doesNotMatch(actionItemsFn, /chipActionItems/);
+  assert.match(WORKSPACE, /function updateGalleryChip\(n\) \{[\s\S]{0,400}galleryHeadingBadge/);
+  assert.doesNotMatch(WORKSPACE, /chipGallery|chipCompliance/);
+  assert.match(WORKSPACE, /id="galleryHeadingBadge"/);
+  assert.match(WORKSPACE, /id="complianceHeadingBadge"/);
 });
 
-test('Action Items now defaults to collapsed like the rest of "everything else", since the chip row is the answer-first entry point now', () => {
+test('Needs attention (Action Items) defaults to OPEN -- it is the second answer after the hero; only the occasional Business drawers start collapsed', () => {
   const match = WORKSPACE.match(/const DEFAULT_COLLAPSE = \{([^}]*)\}/);
   assert.ok(match);
   assert.doesNotMatch(match[1], /\btoday:/);
-  assert.match(match[1], /actionitems:\s*true/);
+  assert.match(match[1], /actionitems:\s*false/);
+  for (const key of ['snapshot', 'gallery', 'compliance', 'analytics']) assert.match(match[1], new RegExp(key + ':\\s*true'));
+  assert.doesNotMatch(match[1], /backup/);
 });
 
 test('the #today hash-jump handler scrolls to the new hero, not the removed drawer', () => {

@@ -52,23 +52,37 @@ test('unread styling is driven by data that already exists (handled / submitted 
   assert.match(WORKSPACE, /overdue && status !== 'paid' \? ' is-unread'/);
 });
 
-test('phone jump-nav keeps Snapshot / Action Items / Tools in the row and puts Gallery/Compliance/Analytics/Backup behind More', () => {
-  const chips = WORKSPACE.match(/<nav class="jump-nav" id="everythingElseChips">[\s\S]*?<\/nav>/)[0];
-  assert.match(chips, /id="jumpNavMoreBtn"/);
-  assert.match(chips, /class="jump-nav-secondary"/);
-  assert.match(WORKSPACE, /@media \(min-width: 721px\) \{[\s\S]*?\.jump-nav-more-btn \{ display: none; \}/);
-  // All seven anchors remain in the nav (secondary ones just nested).
-  for (const anchor of ['#section-snapshot', '#section-actionitems', '#section-gallery', '#section-compliance', '#section-analytics', '#section-backup', '#section-tools']) {
-    assert.match(chips, new RegExp('href="' + anchor + '"'), `expected ${anchor}`);
-  }
+test('Needs attention (the ops inbox) sits directly under the hero and the action strip, open by default; the chip row that used to stand in for it is gone (2026-09-21)', () => {
+  assert.doesNotMatch(WORKSPACE, /id="everythingElseChips"/);
+  const stripAt = WORKSPACE.indexOf('id="dashPrimaryStrip"');
+  const inboxAt = WORKSPACE.indexOf('id="section-actionitems"');
+  const snapshotAt = WORKSPACE.indexOf('id="section-snapshot"');
+  assert.ok(stripAt > 0 && inboxAt > stripAt && snapshotAt > inboxAt);
+  const defaults = WORKSPACE.match(/const DEFAULT_COLLAPSE = \{([^}]*)\}/)[1];
+  assert.match(defaults, /actionitems:\s*false/);
+  assert.match(WORKSPACE, /Needs attention <span id="actionItemsHeadingBadge"><\/span>/);
 });
 
-test('bottom nav still lists the five daily dests, plus a More button that opens a sheet of the remaining sidebar dests', () => {
+test('respond-lane sub-groups hide themselves when empty (plain empty state only, never a warning), with one caught-up line when all four are empty', () => {
+  for (const list of ['workRequestsList', 'leadsList', 'applicantsList', 'bookingsList']) {
+    assert.match(WORKSPACE, new RegExp('<div class="ops-group" data-ops-list="' + list + '">'), `expected an ops-group wrapper for #${list}`);
+  }
+  assert.match(WORKSPACE, /id="laneRespondClear" hidden/);
+  const fn = extractFn(WORKSPACE, 'refreshOpsGroupVisibility');
+  assert.match(fn, /classList\.contains\('empty-state-small'\) && !only\.classList\.contains\('is-warning'\)/);
+  assert.match(fn, /group\.classList\.toggle\('is-empty', isPlainEmpty\)/);
+  const badgeFn = extractFn(WORKSPACE, 'updateActionItemsBadge');
+  assert.match(badgeFn, /refreshOpsGroupVisibility\(\)/, 'visibility refreshes every time a lane count updates');
+  assert.match(STYLES.length ? WORKSPACE : WORKSPACE, /\.ops-group\.is-empty \{ display: none; \}/);
+});
+
+test('bottom nav lists the five daily dests (Clients replaced Calendar on 2026-09-21, when Calendar became a Job Tracker view), plus a More button that opens a sheet of the remaining sidebar dests', () => {
   assert.match(NAV, /label: 'Home'/);
   assert.match(NAV, /label: 'Jobs'/);
+  assert.match(NAV, /label: 'Clients'/);
   assert.match(NAV, /label: 'Invoices'/);
-  assert.match(NAV, /label: 'Calendar'/);
   assert.match(NAV, /label: 'Finance'/);
+  assert.doesNotMatch(NAV, /\/tools\/calendar\.html/, 'the retired calendar page must not be a nav destination');
   assert.match(NAV, /class="th-bn-more/);
   assert.match(NAV, /id = 'thMoreSheet'/);
   assert.match(NAV, /MORE_DESTS = SIDEBAR_DESTS\.filter/);
@@ -105,6 +119,7 @@ test('injecting the bottom nav on a real page produces 5 dest links plus More, a
   assert.ok(sheetHrefs.includes('/tools/runway-dashboard.html'));
   assert.ok(sheetHrefs.includes('/tools/settings.html'));
   assert.ok(!sheetHrefs.includes('/tools/job-tracker.html'), 'primary dests must not be duplicated in More');
+  assert.ok(!sheetHrefs.includes('/tools/clients.html'), 'Clients is a primary dest now, so it must not also sit in More');
 });
 
 test('Job Tracker adds compact list density for 768–1023 without moving the table breakpoint off 1024', () => {

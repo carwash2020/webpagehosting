@@ -52,13 +52,13 @@
   })();
 </script>
 <link rel="stylesheet" href="/styles.css?v=2e81706c3d">
-<link rel="stylesheet" href="/tools/styles-tools.css?v=bac5113532">
+<link rel="stylesheet" href="/tools/styles-tools.css?v=29f50804f4">
 <script src="/tools/tools-effects.js?v=4cff99aa4a" defer></script>
 <script src="/tools/tools-dialogs.js?v=83d27784e2" defer></script>
 <script src="/tools/tools-media-sharing.js?v=0c229c9353" defer></script>
-<script src="/tools/tools-nav-pwa.js?v=e96c3f254c" defer></script>
+<script src="/tools/tools-nav-pwa.js?v=127366ac2d" defer></script>
 <script src="/tools/tools-command-palette.js?v=36ecf5ee0e" defer></script>
-<script src="/tools/tools-tour.js?v=d87fa2f453" defer></script>
+<script src="/tools/tools-tour.js?v=3397aa4aac" defer></script>
 <script src="/tools/sync.js?v=7b42b1caf0" defer></script>
 <script src="/tools/push-notifications.js?v=180abd2a84" defer></script>
 <style>
@@ -122,7 +122,7 @@
       <a href="/tools/workspace.html" class="help-btn" aria-label="Back to Dashboard" title="Back to Dashboard" style="text-decoration:none; display:inline-flex; align-items:center; justify-content:center;">&#8617;</a>
     </div>
   </div>
-  <p class="hub-sub">Account, display, and notification preferences.</p>
+  <p class="hub-sub">Account, display, notifications, and backup.</p>
 
   <div class="settings-section">
     <h2>Account</h2>
@@ -186,15 +186,29 @@
     </div>
   </div>
 
-  <div class="settings-section">
+  <!-- Backup & Restore moved here from the Dashboard's own collapsed
+       drawer (2026-09-21): this row used to be a "Go to Backup" link
+       that hopped over to the Dashboard and expanded that drawer.
+       Same two actions, same ALL_SYNCED_KEYS list, no hop. -->
+  <div class="settings-section" id="backup">
     <h2>Your Data</h2>
-    <p class="settings-desc">A full export of every job, invoice, expense, contact, and note stored on this account -- the same backup used to restore onto a new device if needed.</p>
+    <p class="settings-desc">A full export of every job, invoice, expense, contact, and note stored on this account -- the same backup used to restore onto a new device if needed. Independent of cloud sync entirely.</p>
     <div class="settings-row">
       <div>
         <div class="settings-row-label">Download a full backup</div>
         <div class="settings-row-sub">Saves everything as one JSON file.</div>
       </div>
-      <a href="/tools/workspace.html#backup" class="secondary-btn" style="text-decoration:none;">Go to Backup</a>
+      <button class="secondary-btn" onclick="downloadBackup()">Download backup</button>
+    </div>
+    <div class="settings-row">
+      <div>
+        <div class="settings-row-label">Restore from a backup file</div>
+        <div class="settings-row-sub">Replaces the data on this device with the file's contents, then syncs it to the cloud.</div>
+      </div>
+      <label class="secondary-btn" style="display:inline-flex; align-items:center; cursor:pointer;">
+        Restore
+        <input type="file" accept="application/json" onchange="restoreBackup(event)" style="display:none;">
+      </label>
     </div>
   </div>
 
@@ -215,6 +229,9 @@
     try {
     initAppTour();
     document.getElementById('settingsMainView').style.display = '';
+    if (window.location.hash === '#backup') {
+      document.getElementById('backup')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
 
     // Account info
     const email = (typeof getCurrentUserEmail === 'function' && getCurrentUserEmail()) || '';
@@ -318,6 +335,62 @@
     await refreshSettingsPushState();
     showToast('Notifications are on for this device.');
   }
+  // ---------- Backup & Restore (moved from workspace.html, 2026-09-21) ----------
+  // The exact key list the Dashboard's drawer used. Kept as a plain list
+  // (not derived from sync.js's own key table) so a backup file's shape
+  // stays byte-identical to every backup already downloaded.
+  const ALL_SYNCED_KEYS = [
+    'th_tracker_jobs', 'th_tracker_contacts', 'th_tracker_notes_v2',
+    'th_expense_log', 'th_income_log', 'th_mileage_rate', 'th_price_reference', 'th_invoices',
+    'th_quotes', 'th_tax_rate', 'th_tax_labor', 'th_tax_parts', 'th_compliance', 'th_job_templates', 'th_contracts', 'th_setaside_rate',
+    'th_inventory',
+  ];
+
+  function downloadBackup() {
+    const backup = {};
+    ALL_SYNCED_KEYS.forEach(k => { backup[k] = localStorage.getItem(k); });
+    const blob = new Blob([JSON.stringify(backup, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'TripleH_Backup_' + new Date().toISOString().slice(0, 10) + '.json';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    if (typeof showToast === 'function') showToast('Backup downloaded.');
+  }
+
+  function restoreBackup(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = async function () {
+      let data;
+      try {
+        data = JSON.parse(reader.result);
+      } catch (e) {
+        await showAlert('That file is not valid backup JSON.');
+        event.target.value = '';
+        return;
+      }
+      const confirmed = await showConfirm(
+        'This will REPLACE all current data (jobs, expenses, invoices, quotes, contacts, notes, price reference) ' +
+        'with what\'s in this backup file, on this device. This cannot be undone. Continue?',
+        { danger: true, confirmText: 'Restore' }
+      );
+      if (!confirmed) { event.target.value = ''; return; }
+
+      ALL_SYNCED_KEYS.forEach(k => {
+        if (data[k] !== undefined && data[k] !== null) localStorage.setItem(k, data[k]);
+      });
+      if (typeof scheduleSync === 'function') scheduleSync();
+      event.target.value = '';
+      await showAlert('Backup restored. If you use Cloud Sync, this will push to the cloud shortly and become the new shared version on all devices.');
+    };
+    reader.readAsText(file);
+  }
+
   async function handleSettingsPasswordReset() {
     const email = (typeof getCurrentUserEmail === 'function' && getCurrentUserEmail()) || '';
     const btn = document.getElementById('settingsPwResetBtn');

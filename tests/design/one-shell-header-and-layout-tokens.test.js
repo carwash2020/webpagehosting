@@ -13,7 +13,6 @@ const TOOLS_DIR = repo('tools');
 const STYLES_TOOLS = fs.readFileSync(path.join(TOOLS_DIR, 'styles-tools.css'), 'utf8');
 
 const CONVERTED_PAGES = {
-  'calendar.html': 'Calendar',
   'clients.html': 'Clients',
   'contract-generator.html': 'Contract Generator',
   'invoice-generator.html': 'Invoice Generator',
@@ -24,7 +23,7 @@ const CONVERTED_PAGES = {
   'route-planner.html': 'Route Planner',
 };
 
-test('F06/F07: all 9 former .tool-header pages now use .hub-header, which names the page directly in the sticky bar', () => {
+test('F06/F07: all 8 former .tool-header pages (calendar.html retired to a redirect stub 2026-09-21) now use .hub-header, which names the page directly in the sticky bar', () => {
   for (const [page, title] of Object.entries(CONVERTED_PAGES)) {
     const src = fs.readFileSync(path.join(TOOLS_DIR, page), 'utf8');
     assert.doesNotMatch(src, /class="tool-header"/, `${page} should no longer use .tool-header`);
@@ -48,7 +47,7 @@ test('F08: every hub page (converted or original) gets Anton via the one shared 
 test('F15: only two content-width tokens exist now, and every non-workspace desktop rule uses one of them', () => {
   assert.match(STYLES_TOOLS, /body\.th-tool-page \{ --tool-maxw-narrow: 1050px; --tool-maxw-wide: 1500px; \}/);
 
-  const narrowPages = ['review-request.html', 'route-planner.html', 'job-detail.html', 'client-detail.html', 'calendar.html', 'pos.html', 'settings.html'];
+  const narrowPages = ['review-request.html', 'route-planner.html', 'job-detail.html', 'client-detail.html', 'pos.html', 'settings.html'];
   const widePages = ['finance.html', 'invoice-generator.html', 'contract-generator.html', 'parts-reference.html', 'job-tracker.html', 'clients.html', 'dev-tools.html', 'site-content.html'];
   for (const page of narrowPages) {
     const src = fs.readFileSync(path.join(TOOLS_DIR, page), 'utf8');

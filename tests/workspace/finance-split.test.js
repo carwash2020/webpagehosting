@@ -335,9 +335,9 @@ test('all 4 files that replaced it exist and each is syntactically valid on its 
   }
 });
 
-test('every one of the 15 pages that used to load tools-common.js now loads all 4 replacement files in the correct order', () => {
+test('every one of the 14 real pages that used to load tools-common.js now loads all 4 replacement files in the correct order (calendar.html is a redirect stub since 2026-09-21)', () => {
   const pages = [
-    'calendar.html', 'client-detail.html', 'contract-generator.html', 'dev-tools.html',
+    'client-detail.html', 'contract-generator.html', 'dev-tools.html',
     'finance.html', 'invoice-generator.html', 'job-detail.html', 'job-tracker.html',
     'login.html', 'parts-reference.html', 'reset-password.html', 'review-request.html',
     'route-planner.html', 'settings.html', 'workspace.html',
@@ -454,7 +454,7 @@ test('the public site pages were not touched at all -- same filename, no new lin
 
 test('every tool page loads styles-tools.css after styles.css, preserving the original cascade order', () => {
   const pages = [
-    'calendar.html', 'client-detail.html', 'contract-generator.html', 'dev-tools.html',
+    'client-detail.html', 'contract-generator.html', 'dev-tools.html',
     'finance.html', 'invoice-generator.html', 'job-detail.html', 'job-tracker.html',
     'login.html', 'parts-reference.html', 'reset-password.html', 'review-request.html',
     'route-planner.html', 'settings.html', 'workspace.html',
@@ -1128,8 +1128,12 @@ test('the bottom nav has Finance instead of Routes, and Route Planner is still r
   const navSrc = fs.readFileSync(path.join(__dirname, '..', '..', 'tools', 'tools-nav-pwa.js'), 'utf8');
   assert.match(navSrc, /href:\s*'\/tools\/finance\.html'.*icon:\s*'dollar'.*label:\s*'Finance'/s);
   assert.doesNotMatch(navSrc, /label:\s*'Routes'/);
+  // Route Planner used to be reached from the dashboard's tile grid;
+  // since 2026-09-21 the grid is gone and the sidebar / More sheet
+  // (SIDEBAR_DESTS) carry it instead -- still reachable, one tap.
+  assert.match(navSrc, /href: '\/tools\/route-planner\.html',\s+icon: 'map',\s+label: 'Route Planner'/, 'Route Planner must still be linked from somewhere, or it becomes unreachable');
   const wsSrc = fs.readFileSync(path.join(__dirname, '..', '..', 'tools', 'workspace.html'), 'utf8');
-  assert.match(wsSrc, /href="\/tools\/route-planner\.html"/, 'Route Planner must still be linked from somewhere, or it becomes unreachable');
+  assert.match(wsSrc, /id="todayRouteLink"/, 'and the dashboard hero offers Route today directly');
 });
 
 test('finance.html uses the shared .tabs class (not the old, unstyled tab-row) and gets the sticky modifier', () => {
@@ -1159,7 +1163,8 @@ test('the old combined "Business Health" sub-tab system is gone -- restructured 
   assert.doesNotMatch(src, /id="section-documents"/);
   assert.doesNotMatch(src, /id="body-documents"/);
   assert.match(src, /id="secureDocsList"/, 'the real Documents content must still exist, just inside the merged Compliance section');
-  for (const key of ['gallery', 'compliance', 'analytics', 'backup']) {
+  // 'backup' left the dashboard for settings.html on 2026-09-21.
+  for (const key of ['gallery', 'compliance', 'analytics']) {
     assert.match(src, new RegExp('id="section-' + key + '"'));
     assert.match(src, new RegExp('id="body-' + key + '"'));
   }
@@ -1190,7 +1195,8 @@ test('applyCollapseState is fully generic and needs no changes to handle these s
   const src = fs.readFileSync(path.join(__dirname, '..', '..', 'tools', 'workspace.html'), 'utf8');
   const defaultCollapseMatch = src.match(/const DEFAULT_COLLAPSE = \{([^}]*)\}/);
   assert.ok(defaultCollapseMatch, 'DEFAULT_COLLAPSE not found');
-  for (const key of ['gallery', 'compliance', 'analytics', 'backup']) {
+  // 'backup' left this list on 2026-09-21 when Backup & Restore moved to settings.html.
+  for (const key of ['gallery', 'compliance', 'analytics']) {
     assert.match(defaultCollapseMatch[1], new RegExp(key + ':\\s*true'));
   }
 });
@@ -1202,13 +1208,16 @@ test('the compliance status badge moved with its own section (same element id, j
   assert.match(complianceSection[0], /id="complianceHeadingBadge"/);
 });
 
-test('the #backup deep-link handler scrolls to the new independent section and forces it open via expandSection, not the old sub-tab activation', () => {
+test('the #backup deep-link now hands off to Settings, where Backup & Restore lives (moved 2026-09-21); the old drawer and its expandSection call are gone', () => {
   const src = fs.readFileSync(path.join(__dirname, '..', '..', 'tools', 'workspace.html'), 'utf8');
   const handler = src.match(/if \(window\.location\.hash === '#backup'\) \{[\s\S]*?\n    \}/);
   assert.ok(handler, '#backup handler not found');
-  assert.match(handler[0], /expandSection\('backup'\)/);
-  assert.match(handler[0], /getElementById\('section-backup'\)/);
-  assert.doesNotMatch(handler[0], /activateBusinessHealthTab/);
+  assert.match(handler[0], /location\.replace\('\/tools\/settings\.html#backup'\)/);
+  assert.doesNotMatch(handler[0], /expandSection\('backup'\)|activateBusinessHealthTab/);
+  const settings = fs.readFileSync(path.join(__dirname, '..', '..', 'tools', 'settings.html'), 'utf8');
+  assert.match(settings, /<div class="settings-section" id="backup">/);
+  assert.match(settings, /onclick="downloadBackup\(\)"/);
+  assert.match(settings, /onchange="restoreBackup\(event\)"/);
 });
 
 test('the jump-nav no longer points at the removed combined section', () => {
@@ -1924,7 +1933,7 @@ test('the tour step list covers exactly the intended pages, and excludes redirec
   const expectedPages = [
     '/tools/workspace.html', '/tools/job-tracker.html', '/tools/finance.html',
     '/tools/invoice-generator.html', '/tools/pos.html', '/tools/clients.html',
-    '/tools/calendar.html', '/tools/route-planner.html',
+    '/tools/route-planner.html',
     '/tools/contract-generator.html', '/tools/review-request.html', '/tools/parts-reference.html',
     '/tools/runway-dashboard.html', '/tools/settings.html',
   ];
@@ -1954,7 +1963,7 @@ test('a fresh, never-seen visit to workspace.html auto-starts the tour at step 0
   w.initAppTour();
   assert.equal(w.localStorage.getItem('th_app_tour_step'), '0');
   assert.ok(w.document.getElementById('appTourCard'));
-  assert.equal(w.document.querySelector('.onboarding-title').textContent, 'Business Snapshot');
+  assert.equal(w.document.querySelector('.onboarding-title').textContent, 'Today');
 });
 
 test('a returning user (seen flag already set) does NOT auto-start the tour', () => {
@@ -1978,18 +1987,18 @@ test('advancing through workspace.html\'s own 4 steps stays on the same page (no
   assert.ok(!w.document.querySelector('.onboarding-back'), 'no Back button on the very first step');
 
   w.goToAppTourStep(1);
-  assert.equal(w.document.querySelector('.onboarding-title').textContent, 'Action Items');
+  assert.equal(w.document.querySelector('.onboarding-title').textContent, 'Needs attention');
   assert.ok(w.document.querySelector('.onboarding-back'), 'Back button should exist from step 1 onward');
 
   w.goToAppTourStep(2);
-  assert.equal(w.document.querySelector('.onboarding-title').textContent, 'More');
+  assert.equal(w.document.querySelector('.onboarding-title').textContent, 'Quick actions');
   w.goToAppTourStep(3);
-  assert.equal(w.document.querySelector('.onboarding-title').textContent, 'Tools');
-  assert.equal(w.document.querySelector('.onboarding-next').textContent, 'Next', 'step 3 of 16 total is not the last step overall');
+  assert.equal(w.document.querySelector('.onboarding-title').textContent, 'Business');
+  assert.equal(w.document.querySelector('.onboarding-next').textContent, 'Next', 'step 3 of 15 total is not the last step overall');
 
   w.document.querySelector('.onboarding-back').click();
   assert.equal(w.localStorage.getItem('th_app_tour_step'), '2');
-  assert.equal(w.document.querySelector('.onboarding-title').textContent, 'More');
+  assert.equal(w.document.querySelector('.onboarding-title').textContent, 'Quick actions');
 });
 
 test('advancing from workspace.html\'s last step correctly records the next step (job-tracker.html) before attempting to navigate there', () => {
@@ -2001,13 +2010,15 @@ test('advancing from workspace.html\'s last step correctly records the next step
 });
 
 test('self-correction: landing on a page that doesn\'t match the stored step shows THAT page\'s real content and fixes the stored step, rather than showing nothing or the wrong page', () => {
-  // Stored step 5 points at finance.html, but the person is actually on calendar.html (step 7).
-  const w = loadTourInWindow('https://example.com/tools/calendar.html');
+  // Stored step 5 points at finance.html, but the person is actually on
+  // route-planner.html (step 9 -- calendar.html's own step went away
+  // 2026-09-21 when the Calendar became a view inside Job Tracker).
+  const w = loadTourInWindow('https://example.com/tools/route-planner.html');
   w.localStorage.setItem('th_app_tour_step', '5');
   w.localStorage.setItem('th_app_tour_step_started_at', String(Date.now()));
   w.initAppTour();
   assert.ok(w.document.getElementById('appTourCard'));
-  assert.equal(w.document.querySelector('.onboarding-title').textContent, 'Calendar');
+  assert.equal(w.document.querySelector('.onboarding-title').textContent, 'Routes');
   assert.equal(w.localStorage.getItem('th_app_tour_step'), '9');
 });
 
@@ -2043,14 +2054,14 @@ test('?tour=1 forces a restart from step 0 regardless of the seen flag, and clea
   w.localStorage.setItem('th_onboarding_v1_seen_connor@triplehenterprisesllc.biz', '1'); // already seen
   w.initAppTour();
   assert.equal(w.localStorage.getItem('th_app_tour_step'), '0');
-  assert.equal(w.document.querySelector('.onboarding-title').textContent, 'Business Snapshot');
+  assert.equal(w.document.querySelector('.onboarding-title').textContent, 'Today');
   assert.ok(!w.location.search.includes('tour=1'), 'the ?tour=1 param should be cleaned off the URL');
 });
 
-test('every one of the 13 target pages actually loads tools-tour.js and calls initAppTour() on its own DOMContentLoaded', () => {
+test('every one of the 12 target pages actually loads tools-tour.js and calls initAppTour() on its own DOMContentLoaded', () => {
   const pages = ['workspace.html', 'job-tracker.html', 'finance.html', 'invoice-generator.html',
     'pos.html', 'clients.html',
-    'calendar.html', 'route-planner.html', 'contract-generator.html', 'review-request.html',
+    'route-planner.html', 'contract-generator.html', 'review-request.html',
     'parts-reference.html', 'settings.html', 'runway-dashboard.html'];
   for (const file of pages) {
     const src = fs.readFileSync(path.join(__dirname, '..', '..', 'tools', file), 'utf8');
@@ -2117,10 +2128,10 @@ test('running check-links.py against the real repo actually passes now (not just
 // real on its target page before using any of them, and added zero
 // new ids to any of those 10 pages to make that possible.
 
-test('every one of the 16 tour steps has a highlightSelector, and every selector actually matches something real on its target page', () => {
+test('every one of the 15 tour steps has a highlightSelector, and every selector actually matches something real on its target page (calendar.html\'s step folded into Jobs on 2026-09-21)', () => {
   const tourSrc = fs.readFileSync(path.join(__dirname, '..', '..', 'tools', 'tools-tour.js'), 'utf8');
   const steps = [...tourSrc.matchAll(/\{ page: '(\/tools\/[\w-]+\.html)', highlightSelector: '([^']+)'/g)];
-  assert.equal(steps.length, 16, 'every step should have a highlightSelector');
+  assert.equal(steps.length, 15, 'every step should have a highlightSelector');
   for (const [, pagePath, selector] of steps) {
     const file = pagePath.replace('/tools/', '');
     const pageSrc = fs.readFileSync(path.join(__dirname, '..', '..', 'tools', file), 'utf8');
@@ -2191,8 +2202,8 @@ test('#mainContent has scroll-margin-top accounting for both the header height a
   assert.match(rule[0], /scroll-margin-top:\s*calc\(61px \+ max\(env\(safe-area-inset-top, 0px\), 44px\)\)/);
 });
 
-test('all 8 pages sharing the #mainContent skip-link pattern are covered by this one shared rule', () => {
-  const pages = ['calendar.html', 'contract-generator.html', 'invoice-generator.html', 'job-tracker.html',
+test('all 7 pages sharing the #mainContent skip-link pattern are covered by this one shared rule', () => {
+  const pages = ['contract-generator.html', 'invoice-generator.html', 'job-tracker.html',
     'parts-reference.html', 'review-request.html', 'route-planner.html', 'runway-dashboard.html'];
   for (const file of pages) {
     const src = fs.readFileSync(path.join(__dirname, '..', '..', 'tools', file), 'utf8');
@@ -2227,9 +2238,9 @@ test('showInitErrorBanner is a real, shared function in tools-nav-pwa.js, not du
   assert.match(src, /failed to load properly/);
 });
 
-test('all 9 remaining pages wrap their entire init function in try/catch calling the shared showInitErrorBanner, with the correct page label', () => {
+test('all 8 remaining pages wrap their entire init function in try/catch calling the shared showInitErrorBanner, with the correct page label', () => {
   const pages = {
-    'invoice-generator.html': 'Invoice Generator', 'calendar.html': 'Calendar',
+    'invoice-generator.html': 'Invoice Generator',
     'route-planner.html': 'Route Planner', 'contract-generator.html': 'Contract Generator',
     'review-request.html': 'Review Request', 'parts-reference.html': 'Parts Reference',
     'runway-dashboard.html': 'Runway Dashboard', 'workspace.html': 'Dashboard', 'settings.html': 'Settings',
