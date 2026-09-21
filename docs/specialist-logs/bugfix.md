@@ -632,3 +632,54 @@ copy).
 
 Verified: full suite **2583/2583** passing. `check-undefined-vars`/
 `check-consistency`/`check-links.py` all clean.
+
+## 2026-09-21 -- Fixed a silent 401 on send-payment-reminder/send-quote-followup: every automated payment-reminder and quote-followup email had never actually sent
+
+Found from a user-shared screenshot of Dev Tools' Cron Health panel:
+a recurring daily "HTTP call failed -- status 401" alert, every day
+since 2026-09-16, plus intermittent "Cron job #N run failed" alerts.
+
+Root cause: every net.http_post cron job authenticates with
+`vault.decrypted_secrets['send_push_service_role_key']`, saved into
+Vault on 2026-08-14. Sometime after that, this Supabase project's
+auto-provisioned `SUPABASE_SERVICE_ROLE_KEY` moved to the newer
+`sb_secret_...` key format -- the vault copy was still the old legacy
+JWT. Confirmed live via a temporary diagnostic Edge Function that
+compared the vault-stored value against `Deno.env.get(...)` **without
+ever printing either secret** (only a boolean match result, plus
+non-sensitive metadata like length/prefix/role for the mismatch
+case) -- the actual key values never appeared in any tool output or
+this conversation.
+
+Only `send-payment-reminder`/`send-quote-followup` (added 2026-09-16)
+ever noticed, since they're the only two cron-driven functions doing
+a strict `token !== SERVICE_ROLE_KEY` check (see each file's own
+header comment) rather than relying solely on Supabase's platform
+`verify_jwt` (signature-only, doesn't check role). The stale vault
+key was still a validly *signed* JWT -- the project's JWT secret
+itself never rotated -- so it kept passing the platform check for
+every other net.http_post caller (`Send-Push`,
+`reconcile-stripe-payments`, `send-appointment-reminder`), and nothing
+ever surfaced the mismatch until these two stricter functions hit it.
+
+Fixed live via the diagnostic function invoking a scoped
+`security definer` RPC with the correct live key read directly from
+its own `Deno.env` -- the value was never typed, logged, or returned
+in any tool response. Verified by directly invoking both previously-
+broken functions afterward: both now return real 200s (`checked`/
+`sent` counts) instead of 401. Real user-facing impact: this means
+**no automated overdue-invoice reminder or quote-followup email had
+ever actually reached a client** since the feature shipped 5 days
+earlier -- worth knowing since nothing in the UI itself would have
+shown this (Cron Health's alerts were the only signal, and they went
+unacknowledged until this session).
+
+Kept a permanent maintenance function,
+`sql/infra/resync_cron_service_role_key.sql`
+(`resync_cron_service_role_key(new_value text)`), for if this ever
+happens again after a future key-format change -- it never reads or
+returns the secret itself, only accepts a value the caller already
+has in hand. The one-off diagnostic Edge Function used to confirm/fix
+this was left deployed but neutralized (returns a static 410, no
+logic) rather than removed, since no MCP tool exists to delete an
+Edge Function outright.
