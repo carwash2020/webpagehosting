@@ -36,10 +36,10 @@ test('every areas link shares a data-city value with its matching diagram group 
 
 test('the 7 real landing pages are still linked from #areas, not just named', () => {
   const LANDING_PAGES = [
-    'handyman-st-george-ut.html',
-    'handyman-washington-city-ut.html', 'handyman-hurricane-ut.html',
-    'handyman-santa-clara-ivins-ut.html', 'handyman-cedar-city-ut.html', 'handyman-mesquite-nv.html',
-    'handyman-la-verkin-ut.html', 'handyman-leeds-ut.html',
+    'locations/handyman-st-george-ut.html',
+    'locations/handyman-washington-city-ut.html', 'locations/handyman-hurricane-ut.html',
+    'locations/handyman-santa-clara-ivins-ut.html', 'locations/handyman-cedar-city-ut.html', 'locations/handyman-mesquite-nv.html',
+    'locations/handyman-la-verkin-ut.html', 'locations/handyman-leeds-ut.html',
   ];
   const start = INDEX.indexOf('<div class="areas-links"');
   const end = INDEX.indexOf('</section>', start);

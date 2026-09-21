@@ -22,10 +22,10 @@ const SERVICE_LINKS = [
 
 const PAGES = [
   'index.html',
-  'handyman-hurricane-ut.html', 'handyman-washington-city-ut.html',
-  'handyman-santa-clara-ivins-ut.html', 'handyman-cedar-city-ut.html',
-  'handyman-mesquite-nv.html', 'handyman-la-verkin-ut.html', 'handyman-leeds-ut.html',
-  'handyman-st-george-ut.html',
+  'locations/handyman-hurricane-ut.html', 'locations/handyman-washington-city-ut.html',
+  'locations/handyman-santa-clara-ivins-ut.html', 'locations/handyman-cedar-city-ut.html',
+  'locations/handyman-mesquite-nv.html', 'locations/handyman-la-verkin-ut.html', 'locations/handyman-leeds-ut.html',
+  'locations/handyman-st-george-ut.html',
   'services/washer-dryer-repair.html', 'services/plumbing-repairs.html', 'services/drywall-painting.html',
   'services/handyman-repairs.html', 'services/assembly-installation.html',
   'services/washer-dryer-repair-st-george-ut.html',

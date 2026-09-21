@@ -27,13 +27,13 @@ const SERVICE_PAGES = {
 };
 
 const CITIES = [
-  { file: 'handyman-washington-city-ut.html', name: 'Washington City', requestClass: false },
-  { file: 'handyman-hurricane-ut.html', name: 'Hurricane', requestClass: false },
-  { file: 'handyman-santa-clara-ivins-ut.html', name: 'Santa Clara &amp; Ivins', requestClass: false },
-  { file: 'handyman-leeds-ut.html', name: 'Leeds', requestClass: false },
-  { file: 'handyman-la-verkin-ut.html', name: 'La Verkin', requestClass: false },
-  { file: 'handyman-cedar-city-ut.html', name: 'Cedar City', requestClass: true },
-  { file: 'handyman-mesquite-nv.html', name: 'Mesquite, NV', requestClass: true },
+  { file: 'locations/handyman-washington-city-ut.html', name: 'Washington City', requestClass: false },
+  { file: 'locations/handyman-hurricane-ut.html', name: 'Hurricane', requestClass: false },
+  { file: 'locations/handyman-santa-clara-ivins-ut.html', name: 'Santa Clara &amp; Ivins', requestClass: false },
+  { file: 'locations/handyman-leeds-ut.html', name: 'Leeds', requestClass: false },
+  { file: 'locations/handyman-la-verkin-ut.html', name: 'La Verkin', requestClass: false },
+  { file: 'locations/handyman-cedar-city-ut.html', name: 'Cedar City', requestClass: true },
+  { file: 'locations/handyman-mesquite-nv.html', name: 'Mesquite, NV', requestClass: true },
 ];
 
 const WASHER_ST_GEORGE = {

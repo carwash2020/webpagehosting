@@ -53,19 +53,21 @@ URL, which breaks Google's index and every existing backlink pointing
 at the old one unless something is left behind to forward traffic.
 This table groups everything by kind for readability.
 
-**One real exception, made 2026-09-21:** the 5 service landing pages
-and 3 service×city landing pages moved from the root into `/services/`
--- this specific family was judged worth the one-time cost because it's
-actively growing (3 new pages added in a single week, 2026-09-18) and
-will keep growing, unlike the rest of the site. A thin redirect stub
-was left behind at each of the 8 old root paths (see "Do not delete"
-below) specifically to soften that cost -- a visitor or search engine
-hitting the old URL gets forwarded to the new one instead of a 404,
-same pattern this repo already used for retired `/tools/` pages.
-`terms.html`/`privacy.html` and the rest of the public pages were
-considered for the same treatment and rejected -- they're a fixed,
-non-growing set, so there's no future-scaling upside to offset the
-cost.
+**Real exceptions, made 2026-09-21:** the 8 service pages (5 plain +
+3 service×city) moved from the root into `/services/`, and the 8 city
+landing pages moved into `/locations/`. Both families were judged
+worth the one-time cost because they're the parts of the site that
+actively keep growing (3 new service×city pages added in a single
+week, 2026-09-18, and the city-page count has grown from 5 to 7 over
+the same stretch) -- unlike the rest of the site, which is a fixed
+set. A thin redirect stub was left behind at each of the 16 old root
+paths (see "Do not delete" below) specifically to soften that cost --
+a visitor or search engine hitting the old URL gets forwarded to the
+new one instead of a 404, same pattern this repo already used for
+retired `/tools/` pages. `terms.html`/`privacy.html` and the rest of
+the public pages were considered for the same treatment and rejected
+-- they're a fixed, non-growing set, so there's no future-scaling
+upside to offset the cost.
 
 **Homepage, booking & core**
 
@@ -79,18 +81,18 @@ cost.
 | `our-work.html` | Project gallery (tile, flooring, drywall, curtain track, etc. — see `images/gallery/`). |
 | `careers.html` | Hiring/job-application page. |
 
-**City landing pages** — one per service area, standard coverage unless noted
+**City landing pages** (`/locations/`) — one per service area, standard coverage unless noted. **Moved from the repo root into `/locations/` on 2026-09-21**, same batch and same redirect-stub treatment as the service pages below.
 
 | File | Area |
 |---|---|
-| `handyman-st-george-ut.html` | St. George, UT (the home base) |
-| `handyman-hurricane-ut.html` | Hurricane, UT |
-| `handyman-washington-city-ut.html` | Washington City, UT |
-| `handyman-santa-clara-ivins-ut.html` | Santa Clara & Ivins, UT |
-| `handyman-la-verkin-ut.html` | La Verkin, UT |
-| `handyman-leeds-ut.html` | Leeds, UT |
-| `handyman-cedar-city-ut.html` | Cedar City, UT — **by-request** (orange "AVAILABLE BY REQUEST" badge, own trip-fee FAQ) |
-| `handyman-mesquite-nv.html` | Mesquite, NV — **by-request** (same badge treatment, NV address in schema) |
+| `locations/handyman-st-george-ut.html` | St. George, UT (the home base) |
+| `locations/handyman-hurricane-ut.html` | Hurricane, UT |
+| `locations/handyman-washington-city-ut.html` | Washington City, UT |
+| `locations/handyman-santa-clara-ivins-ut.html` | Santa Clara & Ivins, UT |
+| `locations/handyman-la-verkin-ut.html` | La Verkin, UT |
+| `locations/handyman-leeds-ut.html` | Leeds, UT |
+| `locations/handyman-cedar-city-ut.html` | Cedar City, UT — **by-request** (orange "AVAILABLE BY REQUEST" badge, own trip-fee FAQ) |
+| `locations/handyman-mesquite-nv.html` | Mesquite, NV — **by-request** (same badge treatment, NV address in schema) |
 
 **Service landing pages** (`/services/`) — one per service, not tied to a specific city. **Moved from the repo root into `/services/` on 2026-09-21** -- a redirect stub was left behind at each old root path (see "Do not delete" below) specifically so this move doesn't cost the pages their existing Google ranking/backlinks.
 
@@ -241,7 +243,7 @@ the assistant's GitHub token was never granted):
 - **`google0b12c450e3945a19.html`** and **`google523d668a9a330d64.html`** — Google Search Console ownership verification files, one per domain variant. Deleting either breaks Search Console verification for that property.
 - **`favicon.ico`** — must stay at repo root.
 - **`.nojekyll`** — must stay at repo root, with exactly that filename (dot included). See the warning at the top of this document.
-- **The 8 redirect stubs left at the old root paths of the service pages that moved into `/services/` on 2026-09-21**: `washer-dryer-repair.html`, `plumbing-repairs.html`, `drywall-painting.html`, `handyman-repairs.html`, `assembly-installation.html`, `washer-dryer-repair-st-george-ut.html`, `refrigerator-repair-st-george-ut.html`, `dishwasher-repair-st-george-ut.html`. Each is a `<link rel="canonical">` + 0-delay `<meta http-equiv="refresh">` + JS `location.replace()` pointing at the real page's new `/services/` path — deleting one turns a soft redirect into a hard 404 for anyone who still has the old URL bookmarked, linked, or indexed. Safe to remove only once Google Search Console shows the old URLs fully dropped from the index in favor of the new ones (months, not days) — not on a whim.
+- **The 16 redirect stubs left at the old root paths of the pages moved into `/services/` and `/locations/` on 2026-09-21**: the 8 service pages (`washer-dryer-repair.html`, `plumbing-repairs.html`, `drywall-painting.html`, `handyman-repairs.html`, `assembly-installation.html`, `washer-dryer-repair-st-george-ut.html`, `refrigerator-repair-st-george-ut.html`, `dishwasher-repair-st-george-ut.html`) and the 8 city pages (`handyman-st-george-ut.html`, `handyman-hurricane-ut.html`, `handyman-washington-city-ut.html`, `handyman-santa-clara-ivins-ut.html`, `handyman-la-verkin-ut.html`, `handyman-leeds-ut.html`, `handyman-cedar-city-ut.html`, `handyman-mesquite-nv.html`). Each is a `<link rel="canonical">` + 0-delay `<meta http-equiv="refresh">` + JS `location.replace()` pointing at the real page's new path — deleting one turns a soft redirect into a hard 404 for anyone who still has the old URL bookmarked, linked, or indexed. Safe to remove only once Google Search Console shows the old URLs fully dropped from the index in favor of the new ones (months, not days) — not on a whim.
 
 ## Known open items
 

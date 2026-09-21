@@ -26,13 +26,13 @@ const PAGES_WITH_BANNER = [
   'services/refrigerator-repair-st-george-ut.html',
   'services/dishwasher-repair-st-george-ut.html',
   'services/handyman-repairs.html',
-  'handyman-washington-city-ut.html',
-  'handyman-hurricane-ut.html',
-  'handyman-santa-clara-ivins-ut.html',
-  'handyman-leeds-ut.html',
-  'handyman-la-verkin-ut.html',
-  'handyman-cedar-city-ut.html',
-  'handyman-mesquite-nv.html',
+  'locations/handyman-washington-city-ut.html',
+  'locations/handyman-hurricane-ut.html',
+  'locations/handyman-santa-clara-ivins-ut.html',
+  'locations/handyman-leeds-ut.html',
+  'locations/handyman-la-verkin-ut.html',
+  'locations/handyman-cedar-city-ut.html',
+  'locations/handyman-mesquite-nv.html',
 ];
 
 for (const page of PAGES_WITH_BANNER) {
