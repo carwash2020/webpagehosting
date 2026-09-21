@@ -10,7 +10,10 @@
     "check-visual-snapshot": "node scripts/check-visual-snapshot.js",
     "check-consistency": "node scripts/check-consistency.js",
     "fix-versions": "node scripts/check-consistency.js --fix-versions",
-    "check-undefined-vars": "node scripts/check-undefined-vars.js"
+    "check-undefined-vars": "node scripts/check-undefined-vars.js",
+    "check-links": "python3 scripts/check-links.py",
+    "lint": "eslint .",
+    "verify": "npm run check-undefined-vars && npm run check-consistency && npm run lint && npm run check-links && npm test"
   },
   "devDependencies": {
     "eslint": "^10.10.0",
