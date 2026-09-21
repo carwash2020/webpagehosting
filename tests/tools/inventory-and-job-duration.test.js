@@ -36,8 +36,10 @@ test('th_inventory is registered in sync.js -- the exact bug class already found
   assert.match(syncSrc, /th_inventory:\s*'id',/);
 });
 
-test('th_inventory is included in workspace.html\'s Backup/Restore key list', () => {
-  assert.match(workspaceHtml, /ALL_SYNCED_KEYS = \[[\s\S]*?'th_inventory'[\s\S]*?\];/);
+test('th_inventory is included in the Backup/Restore key list (on settings.html since 2026-09-21, when Backup & Restore moved there from the dashboard)', () => {
+  const settingsHtml = fs.readFileSync(path.join(__dirname, '..', '..', 'tools', 'settings.html'), 'utf8');
+  assert.match(settingsHtml, /ALL_SYNCED_KEYS = \[[\s\S]*?'th_inventory'[\s\S]*?\];/);
+  assert.doesNotMatch(workspaceHtml, /ALL_SYNCED_KEYS/, 'the dashboard no longer owns the backup key list');
 });
 
 test('a deleted inventory item gets a tombstone, same pattern as every other deletable record type', () => {

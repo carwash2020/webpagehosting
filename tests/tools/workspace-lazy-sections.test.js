@@ -65,7 +65,6 @@ test('sidebar and More sheet share grouped short labels without dropping a desti
   for (const href of [
     '/tools/workspace.html',
     '/tools/job-tracker.html',
-    '/tools/calendar.html',
     '/tools/route-planner.html',
     '/tools/clients.html',
     '/tools/invoice-generator.html',

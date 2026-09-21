@@ -20,11 +20,15 @@
   var path = (window.location && window.location.pathname) || '';
   var onLogin = /\/login\.html$/.test(path);
 
+  // Bottom bar (2026-09-21): Calendar left the bar when it became a
+  // view inside Job Tracker (List / Board / Calendar) -- two of five
+  // slots were both "jobs". Clients took the slot: looking up a
+  // client's history is a top daily task and was buried in More.
   var DESTS = [
     { href: '/tools/workspace.html',         icon: 'home',    label: 'Home' },
     { href: '/tools/job-tracker.html',       icon: 'wrench',  label: 'Jobs' },
+    { href: '/tools/clients.html',           icon: 'inbox',   label: 'Clients' },
     { href: '/tools/invoice-generator.html', icon: 'receipt', label: 'Invoices' },
-    { href: '/tools/calendar.html',          icon: 'calendar',label: 'Calendar' },
     { href: '/tools/finance.html',           icon: 'dollar',  label: 'Finance' }
   ];
 
@@ -77,13 +81,13 @@
   // was). A fuller destination list than the bottom nav's 5 items,
   // since the sidebar has real vertical room -- still scoped to
   // everyday tools, not admin-only pages.
-  // Grouped to match the dashboard tile groups (Work / Money / Office).
-  // Labels match the short names already used on the bottom bar and the
-  // tile grid. Pages and permissions are unchanged.
+  // Grouped Work / Money / Office. Labels match the short names on the
+  // bottom bar. Calendar dropped out 2026-09-21 when it became a view
+  // inside Job Tracker (/tools/job-tracker.html#calendar). Pages and
+  // permissions are otherwise unchanged.
   var SIDEBAR_DESTS = [
     { group: 'Work',   href: '/tools/workspace.html',          icon: 'home',     label: 'Dashboard' },
     { group: 'Work',   href: '/tools/job-tracker.html',        icon: 'wrench',   label: 'Job Tracker' },
-    { group: 'Work',   href: '/tools/calendar.html',           icon: 'calendar', label: 'Calendar' },
     { group: 'Work',   href: '/tools/route-planner.html',      icon: 'map',      label: 'Route Planner' },
     { group: 'Work',   href: '/tools/clients.html',            icon: 'inbox',    label: 'Clients' },
     { group: 'Money',  href: '/tools/invoice-generator.html',  icon: 'receipt',  label: 'Invoices' },
@@ -98,11 +102,10 @@
   ];
 
   // Phone bottom nav only has room for the 5 daily tools above.
-  // Everything else the desktop sidebar lists (Contracts, Route,
-  // Reviews, Wiki, Runway, Settings) used to be unreachable from the
-  // bar -- a "More" sheet is the overflow, not a sixth primary dest
-  // and not a change to the PWA bar's Home/Jobs/Invoices/Calendar/
-  // Finance order. Built from SIDEBAR_DESTS minus DESTS so the two
+  // Everything else the desktop sidebar lists (Route, POS, Runway,
+  // Contracts, Reviews, Wiki, Dev Tools, Settings) is reachable from
+  // the bar through a "More" sheet -- the overflow, not a sixth
+  // primary dest. Built from SIDEBAR_DESTS minus DESTS so the two
   // lists cannot drift.
   var PRIMARY_HREFS = {};
   DESTS.forEach(function (d) { PRIMARY_HREFS[d.href] = true; });

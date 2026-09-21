@@ -13,7 +13,7 @@ const TOOLS_DIR = path.join(__dirname, '..', '..', 'tools');
 
 // Pages that had a direct body{max-width:Npx} rule widened.
 const STANDARD_PAGES = [
-  'workspace.html', 'calendar.html', 'client-detail.html', 'contract-generator.html',
+  'workspace.html', 'client-detail.html', 'contract-generator.html',
   'dev-tools.html', 'invoice-generator.html', 'job-detail.html', 'job-tracker.html',
   'review-request.html', 'route-planner.html', 'settings.html', 'site-content.html',
 ];
@@ -192,7 +192,7 @@ test('the shared header rule (.hub-header/.tool-header) switches from sticky to 
 });
 
 test('every page using either header class has matching padding-top added to its own desktop media query, to compensate for the header no longer contributing to normal page flow', () => {
-  const pages = ['workspace.html', 'calendar.html', 'client-detail.html', 'contract-generator.html',
+  const pages = ['workspace.html', 'client-detail.html', 'contract-generator.html',
     'dev-tools.html', 'invoice-generator.html', 'job-detail.html', 'job-tracker.html',
     'review-request.html', 'route-planner.html', 'settings.html', 'site-content.html',
     'finance.html', 'parts-reference.html'];
@@ -230,15 +230,18 @@ test('the shared .jump-nav rule switches from sticky to fixed on desktop, positi
   assert.match(desktopBlock[1], /top:\s*61px/, 'should sit right below the fixed header, not overlap it');
 });
 
-test('workspace.html and dev-tools.html each have a sticky bar stacked below the header (jump-nav on workspace.html, dev-tab-bar on dev-tools.html since its tab redesign), and both have extra padding-top to account for header AND that bar stacked, not just the header alone', () => {
-  const stickyBarClassByPage = { 'workspace.html': 'jump-nav', 'dev-tools.html': 'dev-tab-bar' };
-  for (const [page, stickyBarClass] of Object.entries(stickyBarClassByPage)) {
-    const src = fs.readFileSync(path.join(TOOLS_DIR, page), 'utf8');
-    assert.match(src, new RegExp('class="' + stickyBarClass + '"'), page + ' was expected to have a ' + stickyBarClass + ' bar');
-    const paddingMatch = src.match(/@media \(min-width: 1024px\) \{ body(?:\.th-tool-page)? \{[^}]*padding-top: (\d+)px;[^}]*\} \}/);
-    assert.ok(paddingMatch);
-    assert.ok(parseInt(paddingMatch[1], 10) > 75, page + ' needs more than the header-only 75px, since it also has a sticky bar stacked below it');
-  }
+test('dev-tools.html has a sticky bar stacked below the header (dev-tab-bar since its tab redesign) and extra padding-top to account for header AND that bar; workspace.html dropped its jump-nav chip row on 2026-09-21 (the Today-first rebuild) and has no such bar any more', () => {
+  const devSrc = fs.readFileSync(path.join(TOOLS_DIR, 'dev-tools.html'), 'utf8');
+  assert.match(devSrc, /class="dev-tab-bar"/, 'dev-tools.html was expected to have a dev-tab-bar');
+  const devPadding = devSrc.match(/@media \(min-width: 1024px\) \{ body(?:\.th-tool-page)? \{[^}]*padding-top: (\d+)px;[^}]*\} \}/);
+  assert.ok(devPadding);
+  assert.ok(parseInt(devPadding[1], 10) > 75, 'dev-tools.html needs more than the header-only 75px, since it also has a sticky bar stacked below it');
+
+  const wsSrc = fs.readFileSync(path.join(TOOLS_DIR, 'workspace.html'), 'utf8');
+  assert.doesNotMatch(wsSrc, /class="jump-nav"/, 'the dashboard chip row is gone -- the sidebar / bottom bar carry navigation, the sections sit right below');
+  const wsPadding = wsSrc.match(/@media \(min-width: 1024px\) \{ body(?:\.th-tool-page)? \{[^}]*padding-top: (\d+)px;[^}]*\} \}/);
+  assert.ok(wsPadding);
+  assert.ok(parseInt(wsPadding[1], 10) >= 75, 'still needs to clear the fixed one-row header');
 });
 
 // Compact toolbar (2026-09-17): live sync sits in the same row as
@@ -384,25 +387,22 @@ test('.hub-header is a flex column container with align-items:stretch (not flex-
   assert.equal(style.alignItems, 'stretch');
 });
 
-test('jump-nav remains a sibling after the whole .hub-header block, not accidentally nested inside it during the restructuring', () => {
+test('the Today hero is the first thing after the header block -- no chip row, no tile grid in between (Today-first rebuild, 2026-09-21)', () => {
   const window = loadWorkspace();
   const header = window.document.querySelector('.hub-header');
-  const jumpNav = window.document.querySelector('.jump-nav');
-  assert.ok(jumpNav, 'expected a .jump-nav element');
-  assert.ok(!header.contains(jumpNav), '.jump-nav should not be nested inside .hub-header');
-  // W10 (2026-09-08): jump-nav is now the "everything else" chip row,
-  // deliberately moved to sit AFTER the Today hero (next job, money
-  // owed, rest of day) rather than immediately after the header --
-  // still a sibling of .hub-header in the DOM, just further down.
-  let sibling = header.nextElementSibling;
-  let foundBeforeJumpNav = false;
-  while (sibling) {
-    if (sibling === jumpNav) break;
-    if (sibling.id === 'todayHero') foundBeforeJumpNav = true;
-    sibling = sibling.nextElementSibling;
-  }
-  assert.equal(sibling, jumpNav, 'expected .jump-nav to be a later sibling of .hub-header');
-  assert.ok(foundBeforeJumpNav, 'expected #todayHero to come before .jump-nav');
+  assert.equal(window.document.querySelector('.jump-nav'), null, 'the chip row should be gone');
+  assert.equal(window.document.querySelector('.tools-grid'), null, 'the tile grid should be gone');
+  const hero = window.document.getElementById('todayHero');
+  assert.ok(hero && !header.contains(hero));
+  // Header -> search -> greeting -> hero -> strip -> Needs attention.
+  const ids = [];
+  let el = header.nextElementSibling;
+  while (el) { if (el.id) ids.push(el.id); el = el.nextElementSibling; }
+  const heroAt = ids.indexOf('todayHero');
+  const stripAt = ids.indexOf('dashPrimaryStrip');
+  const inboxAt = ids.indexOf('section-actionitems');
+  const snapshotAt = ids.indexOf('section-snapshot');
+  assert.ok(heroAt >= 0 && stripAt > heroAt && inboxAt > stripAt && snapshotAt > inboxAt, 'expected hero, then the action strip, then Needs attention, then the Business sections: ' + ids.join(','));
 });
 
 function loadWorkspace() {
@@ -412,31 +412,8 @@ function loadWorkspace() {
   return dom.window;
 }
 
-// Requested directly ("the tools to slide"), superseding an earlier
-// attempt in this same area: jump-nav should scroll away normally
-// with the rest of the page, not stay pinned below the sticky header.
-// A previous fix correctly positioned it below the header but kept it
-// sticky, which was reported as exactly the wrong behavior -- "now it
-// just all sticks."
-
-test('jump-nav is position:static on this page (not sticky), using the body-prefixed selector to correctly beat the shared rule\'s higher specificity -- a bare .jump-nav selector here would be silently overridden by that shared rule\'s position:sticky regardless of source order', () => {
-  const src = fs.readFileSync(path.join(TOOLS_DIR, 'workspace.html'), 'utf8');
-  assert.match(src, /body \.jump-nav \{ position: static;/);
-});
-
 test('the now-removed syncJumpNavPositionToHeaderHeight function (from the previous, sticky-jump-nav approach) is genuinely gone, not just unused dead code left behind', () => {
   const src = fs.readFileSync(path.join(TOOLS_DIR, 'workspace.html'), 'utf8');
   assert.doesNotMatch(src, /syncJumpNavPositionToHeaderHeight/);
 });
 
-test('jump-nav genuinely scrolls with the page (not fixed/sticky) when actually rendered', () => {
-  const { JSDOM } = require('jsdom');
-  const html = fs.readFileSync(path.join(TOOLS_DIR, 'workspace.html'), 'utf8');
-  const dom = new JSDOM(html, {
-    runScripts: 'dangerously', url: 'https://example.com/tools/workspace.html',
-    beforeParse(w) { w.requireAuth = () => {}; },
-  });
-  const { window } = dom;
-  const jumpNav = window.document.querySelector('.jump-nav');
-  assert.equal(window.getComputedStyle(jumpNav).position, 'static');
-});

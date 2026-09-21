@@ -30,8 +30,15 @@ function extractFn(name) {
   return HTML.slice(start, i);
 }
 
-test('a Board view toggle button exists next to the existing Select/Compact view controls', () => {
-  assert.match(HTML, /id="jobViewToggleBtn"\s+onclick="toggleJobViewMode\(\)"/);
+// 2026-09-21: the single Board/List toggle became a three-way switch
+// (List / Board / Calendar) when calendar.html was folded into this
+// page as a view -- one control, one persisted preference.
+test('a List / Board / Calendar view switch sits next to the existing Select/Compact view controls', () => {
+  assert.match(HTML, /id="jobViewSwitch"/);
+  for (const view of ['list', 'board', 'calendar']) {
+    assert.match(HTML, new RegExp('data-view="' + view + '" onclick="setJobViewMode\\(\'' + view + '\'\\)"'), `expected a ${view} button wired to setJobViewMode`);
+  }
+  assert.doesNotMatch(HTML, /toggleJobViewMode\(/, 'the old two-state toggle should be gone, not left beside the switch');
 });
 
 test('the board has exactly 3 columns -- Not Started, In Progress, Done -- matching the real STATUS_LABEL vocabulary', () => {
@@ -95,9 +102,10 @@ test('the board ignores the status-filter row entirely -- it shows all 3 statuse
   assert.match(renderJobsSrc, /renderJobsBoard\(allJobs, marginData\)/, 'the board should be rendered from the un-status-filtered job list');
 });
 
-test('the status-filter row is hidden while the board is active, since it would be meaningless there', () => {
+test('the status-filter row is hidden while the board or calendar is active, since it only means something for the single list/table', () => {
   const fnSrc = extractFn('applyJobViewMode');
-  assert.match(fnSrc, /if \(statusFilterGroup\) statusFilterGroup\.style\.display = isBoard \? 'none' : '';/);
+  assert.match(fnSrc, /if \(statusFilterGroup\) statusFilterGroup\.style\.display = mode === 'list' \? '' : 'none';/);
+  assert.match(fnSrc, /if \(calendarWrap\) calendarWrap\.style\.display = isCalendar \? '' : 'none';/);
 });
 
 test('the view preference is a per-device localStorage choice (like density), not synced business data', () => {
@@ -106,9 +114,13 @@ test('the view preference is a per-device localStorage choice (like density), no
   assert.match(loadFn, /localStorage\.getItem\(JOB_VIEW_KEY\)/);
 });
 
-test('toggling the view button label reflects the current mode', () => {
+test('the active switch button reflects the current mode via is-active and aria-pressed, and only known modes are accepted', () => {
   const fnSrc = extractFn('applyJobViewMode');
-  assert.match(fnSrc, /'List view' : 'Board view'/);
+  assert.match(fnSrc, /btn\.dataset\.view === mode/);
+  assert.match(fnSrc, /setAttribute\('aria-pressed', on \? 'true' : 'false'\)/);
+  assert.match(HTML, /const JOB_VIEW_MODES = \['list', 'board', 'calendar'\];/);
+  const loadFn = extractFn('loadJobViewMode');
+  assert.match(loadFn, /JOB_VIEW_MODES\.includes\(v\) \? v : 'list'/);
 });
 
 test('the tools service worker cache was bumped for this change', () => {

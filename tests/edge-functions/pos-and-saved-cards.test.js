@@ -192,20 +192,18 @@ test('POS never creates an invoice, quote, or portal record -- only a charge and
 
 // ---- workspace.html: the tile ----
 
-test('the POS tile is gated by the same permission as Invoices and Clients', () => {
-  // Matches the tile carrying data-tile-perm="can_manage_invoices" among
-  // its attributes, not requiring it be the ONLY other attribute besides
-  // class -- 2026-09-06's category color-coding pass added a data-cat
-  // attribute to every Money-group tile (including this one), which the
-  // original exact-string regex had no room for and failed against, even
-  // though the actual permission gate this test cares about was untouched.
-  const tileMatch = WORKSPACE.match(/<div class="tool-tile"[^>]*\sdata-tile-perm="can_manage_invoices"[^>]*>\s*<a href="\/tools\/pos\.html"/);
-  assert.ok(tileMatch, 'expected the POS tile to carry data-tile-perm="can_manage_invoices"');
+test('POS is a nav destination gated by the same permission as Invoices and Clients (the dashboard tile grid that used to carry this went away on 2026-09-21)', () => {
+  const NAV = fs.readFileSync(repo('tools', 'tools-nav-pwa.js'), 'utf8');
+  assert.match(NAV, /href: '\/tools\/pos\.html',\s+icon: 'dollar',\s+label: 'POS'/);
+  assert.match(NAV, /'\/tools\/pos\.html': function \(\) \{ return typeof canManageInvoices === 'function' && canManageInvoices\(\); \}/);
+  assert.match(NAV, /'\/tools\/invoice-generator\.html': function \(\) \{ return typeof canManageInvoices === 'function' && canManageInvoices\(\); \}/);
+  assert.match(NAV, /'\/tools\/clients\.html': function \(\) \{ return typeof canManageInvoices === 'function' && canManageInvoices\(\); \}/);
 });
 
-test('the POS tile has help text', () => {
-  assert.match(WORKSPACE, /onclick="event\.stopPropagation\(\); openCardInfo\('tool-pos'\)"/);
-  assert.match(WORKSPACE, /'tool-pos': \{/);
+test('POS explains itself on its own page (the dashboard tile help bubble is gone with the grid)', () => {
+  const POS_HTML = fs.readFileSync(repo('tools', 'pos.html'), 'utf8');
+  assert.match(POS_HTML, /Every POS sale shows up in your Income log/);
+  assert.doesNotMatch(WORKSPACE, /'tool-pos': \{/);
 });
 
 // ---- POS receipt email (2026-09-03) ----

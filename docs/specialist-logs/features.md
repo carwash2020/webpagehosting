@@ -835,4 +835,139 @@ are Chromium/Safari 18.2+ only as of this writing (Firefox not yet) --
 worth knowing if anyone asks why the effect isn't visible in every
 browser, though it degrades to exactly today's behavior, never worse.
 
+## 2026-09-21 -- Workspace IA pass: Today-first dashboard, Calendar folded into Job Tracker
+
+One-shot request with explicit permission to restructure, and an
+explicit instruction to pick 1-2 high-leverage changes and finish
+them rather than sweep six. Diagnosis first, by reading
+`tools-nav-pwa.js` and the pages rather than guessing: 19 real pages,
+14 sidebar destinations, and a dashboard carrying FIVE navigation
+layers at once (bottom bar/sidebar, a 7-chip jump row that just
+anchored to the headings directly below it, the daily strip, a
+13-tile Tools grid hidden under "More tools", and a "Today's schedule"
+chip that scrolled to the hero right above it), plus seven collapsed
+drawers. On a 390px phone the 170px greeting card pushed Next Job's
+Money Owed card -- and its Mark paid button -- below the first screen,
+and the ops inbox was collapsed behind a count badge, so "what needs a
+response" was a chip tap + a heading tap + a scroll. Calendar was one
+of five bottom-bar slots and a whole page over the same
+`th_tracker_jobs` data as Job Tracker.
+
+**Chose (1) rebuild the dashboard Today-first and (2) fold Calendar
+into Job Tracker as a view.** Considered and declined for this pass:
+merging POS into Invoices (same permission, plausible tab, but it
+means adding `js.stripe.com` to the invoice page's CSP and loading
+Stripe on every invoice open -- a separate decision), merging Route
+Planner anywhere (the real click win was a one-tap "Route today" on
+the dashboard, which needs no merge), moving Snapshot/Analytics code
+onto finance.html (`computeMoneyOwed()` is shared with the hero and
+tests assert on that; ARCHITECTURE-NOTES' "pieces are never as
+separable as they look" applies), and a true SPA (rejected last
+session for good reasons that still hold).
+
+**Dashboard.** Greeting compacted to one band (same ids and the CSS
+rules `workspace-greeting-banner.test.js` asserts; only the padding /
+font sizes changed, so that whole test file still passes untouched).
+Hero: `buildTodayRouteUrl()` builds the same `maps/dir/?api=1`
+destination+waypoints URL as route-planner.html's `buildRouteUrl()`,
+from `getTodaysJobs()` in hero priority order, de-duplicated
+case-insensitively, capped at 10; the card shows "Route today · N
+stops" (or "Directions" for one) and keeps "View in Job Tracker" only
+when no address exists. `renderTodayMoney()` lists every unpaid
+invoice sorted overdue-first-then-by-due-date, with a due label
+computed from `getDueDate()`; kept the `todayOverdueList` id and the
+`isOverdue(i)`/`invoiceMarkPaidButtonHtml(i)` tokens the quick-actions
+test asserts. `DEFAULT_COLLAPSE.actionitems` flipped to `false` --
+stored per-device state still wins, so anyone who deliberately
+collapsed it keeps it collapsed. Respond-lane groups got `.ops-group`
+wrappers; `refreshOpsGroupVisibility()` (called from
+`updateActionItemsBadge()`, so it runs after every count update) hides
+a group whose list holds only a plain `.empty-state-small` and never a
+`.is-warning` one -- a "couldn't load leads" row is information, not
+emptiness. Income lane: `renderInvoicesList()` splits open vs settled
+and folds settled under a `<details>` unless a search term is present;
+the `actionItemCounts.unpaid`-before-`dashSectionClosed` ordering the
+lazy-sections test asserts is preserved. Chip row, tile grid,
+`CARD_INFO['tool-*']`, `renderDevToolsTileVisibility`, and the chip
+count mirrors removed; `updateGalleryChip()` kept its name but writes
+to a new `galleryHeadingBadge` so the two call sites needed no change.
+Backup & Restore moved to settings.html verbatim (`ALL_SYNCED_KEYS`
+list unchanged, so backup files stay byte-identical);
+`workspace.html#backup` now `location.replace`s to
+`settings.html#backup`. The heading badge renders both a breakdown
+span and a total span; CSS shows the total under 720px because the
+breakdown sentence was wrapping the heading onto two lines on a phone
+(it did before this change too, as "Action Items").
+
+**Calendar merge.** Job Tracker's `th_tracker_view` now accepts
+list | board | calendar via `setJobViewMode()`; the old two-state
+`toggleJobViewMode()`/`#jobViewToggleBtn` became a three-button
+`#jobViewSwitch`. Calendar markup/CSS/JS moved in with class names
+verbatim; `renderCalendarView(allJobs)` is called from `renderJobs()`
+with the same search-filtered, pending-delete-filtered set the board
+gets, so list and calendar can never disagree on one page. Decision:
+the merged view reads `loadJobs()` (local), NOT the relational `jobs`
+table calendar.html piloted -- two sources on one page would show a
+job in the list but not the calendar for the seconds between a local
+write and its mirror. `fetchJobsFromRelational()` is untouched in
+sync.js and Route Planner still uses it; `CONTINUE-HERE.md`'s Phase 2
+notes and `tests/sync/relational-jobs-read-phase2.test.js` updated to
+say so. The per-job "Show on Calendar" checkbox / card toggle /
+`toggleShowOnCalendar()` are retired: the calendar shows every dated
+job. The flag stays in the data (sync.js mirrors `show_on_calendar`,
+the SQL column has a default), new jobs write `showOnCalendar: true`,
+edits leave the existing value alone -- restoring the filter is a
+one-line change if it is ever missed. Bookings still merge in as
+purple pseudo-jobs via `refreshBookingsCache()` + `startBookingsRealtime`.
+Month swipe rides inside the existing tab-swipe handler, scoped by
+whether the touch started on `#calGrid`. `#calendar` hash selects the
+view and today's date. Stub, EXEMPT entry in check-consistency,
+manifest shortcut, tour step (folded into the Jobs step) all updated.
+
+**Nav.** Bottom bar Home / Jobs / Clients / Invoices / Finance -- two
+of five slots were both "jobs"; Clients (client history, portal
+accounts, referral credits) is a daily lookup that was in More. Sidebar
+loses Calendar (13). `MORE_DESTS` is derived, so Clients left the
+sheet automatically. runway-dashboard.html needed no CSS mirror: the
+nav classes are unchanged and it never had the tile-grid rules that
+were deleted from styles-tools.css.
+
+**Gotchas worth keeping:**
+- Many tests here assert exact CSS text and exact markup order;
+  reordering sections meant re-anchoring a dozen tests. Slicing blocks
+  by id markers in a script and asserting each id occurs exactly once
+  afterward caught a duplicated-section bug in my own reorder before it
+  ever hit the file.
+- `tests/workspace/finance-split.test.js` RUNS `--fix-versions` and
+  deliberately breaks/restores hashes as part of the suite. Running any
+  "checker passes cleanly" test (or `check-consistency.js` itself)
+  concurrently with the full suite gives false failures. Run the suite
+  alone, run `npm run fix-versions` before it, and do not edit
+  precached files while it runs.
+- Headless Playwright with all network aborted made the dashboard look
+  broken (blank hero, half the bottom bar hidden): the role fetch
+  retries 3x and pullSync 2x before `renderDashboard()` runs, and a
+  missing role hides the gated nav links. The harness needs a fake
+  Supabase (role row, empty tables, 500 on the relational `jobs` /
+  `invoices` reads so pages fall back to local data) to be realistic;
+  kept in this session's scratchpad, worth recreating for any tools UI
+  work.
+- The hidden `[role="dialog"]` More sheet exists on every page -- a
+  Playwright `[role=dialog]` selector matches it, not the confirm
+  dialog (`#customDialogOverlay .dialog-btn-primary`).
+- This file has three copies of its append marker (lines 137, 186 and
+  the real one at the end); append above the LAST one.
+
+Verified: suite 2615/2615, check-consistency, check-undefined-vars,
+lint, check-links.py, check-visual-snapshot all clean; real-browser
+pass at 390x844 and 1440x900 covering the first screen, two-tap Mark
+paid, Route today URL, New job landing focused, Calendar deep link and
+stub redirect, More sheet contents, Settings backup, and six other
+pages loading with the same nav and zero console errors.
+
+Left for later (not blockers): POS-into-Invoices as above; the
+721-1023px band with neither bottom bar nor sidebar (pre-existing,
+breakpoint asserted by tests); `login.html`'s `ALLOWED_RETURN_PATHS`
+still lists `calendar.html`, harmless since the stub redirects.
+
 <!-- Add new entries above this line -->

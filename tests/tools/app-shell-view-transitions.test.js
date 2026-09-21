@@ -21,10 +21,10 @@ const repo = (...p) => path.join(__dirname, '..', '..', ...p);
 
 // Every page tools-nav-pwa.js actually wires up (excludes the thin
 // redirect stubs -- contact-card.html, job-cost-lookup.html,
-// expense-logger.html, index.html -- which have no real content to
-// transition between).
+// expense-logger.html, calendar.html (retired 2026-09-21), index.html
+// -- which have no real content to transition between).
 const TOOL_PAGES = [
-  'calendar', 'client-detail', 'clients', 'contract-generator', 'dev-tools',
+  'client-detail', 'clients', 'contract-generator', 'dev-tools',
   'finance', 'invoice-generator', 'job-detail', 'job-tracker', 'login',
   'parts-reference', 'pos', 'reset-password', 'review-request',
   'route-planner', 'runway-dashboard', 'settings', 'site-content', 'workspace',

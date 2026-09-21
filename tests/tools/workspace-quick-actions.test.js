@@ -84,21 +84,23 @@ test('dashboard overdue Money Owed card lists overdue invoices with the same Mar
   assert.match(fn, /isOverdue\(i\)/);
 });
 
-test('dashboard home pins New job, Create invoice, Find client, and Today\'s schedule above the tile grid', () => {
+test('dashboard home pins New job, Create invoice, Find client, and Calendar directly under the Today hero (Calendar replaced Today\'s schedule on 2026-09-21 -- the hero IS the schedule, and Calendar left the bottom bar when it became a Job Tracker view)', () => {
   const strip = WORKSPACE.match(/<nav class="dash-primary-strip"[\s\S]*?<\/nav>/);
   assert.ok(strip, 'expected #dashPrimaryStrip');
   assert.match(strip[0], /href="\/tools\/job-tracker\.html#add-job"/);
   assert.match(strip[0], /href="\/tools\/invoice-generator\.html"/);
   assert.match(strip[0], /onclick="focusFindClient\(\)"/);
-  assert.match(strip[0], /href="#todayHero"/);
+  assert.match(strip[0], /href="\/tools\/job-tracker\.html#calendar"/);
   assert.match(strip[0], />New job</);
   assert.match(strip[0], />Create invoice</);
   assert.match(strip[0], />Find client</);
-  assert.match(strip[0], />Today's schedule</);
+  assert.match(strip[0], />Calendar</);
+  assert.doesNotMatch(strip[0], /Today's schedule/);
 
+  const heroAt = WORKSPACE.indexOf('id="todayHero"');
   const stripAt = WORKSPACE.indexOf('id="dashPrimaryStrip"');
-  const gridAt = WORKSPACE.indexOf('class="tools-grid"');
-  assert.ok(stripAt > 0 && gridAt > stripAt, 'the daily strip must sit above the Tools tile grid');
+  const inboxAt = WORKSPACE.indexOf('id="section-actionitems"');
+  assert.ok(heroAt > 0 && stripAt > heroAt && inboxAt > stripAt, 'the daily strip must sit between the hero and Needs attention');
 });
 
 test('Create invoice on the strip is still finance-gated; Find client expands the existing global search', () => {
@@ -108,12 +110,12 @@ test('Create invoice on the strip is still finance-gated; Find client expands th
   assert.match(fn, /getElementById\('globalSearch'\)/);
 });
 
-test('the tile grid is demoted under More tools without deleting any existing tool links', () => {
-  assert.match(WORKSPACE, /<details class="more-tools-details" id="moreToolsDetails">/);
-  assert.match(WORKSPACE, /<summary>More tools<\/summary>/);
+test('the tile grid is gone (2026-09-21), and every destination it used to link is still in the shared nav lists', () => {
+  assert.doesNotMatch(WORKSPACE, /<details class="more-tools-details"/);
+  assert.doesNotMatch(WORKSPACE, /class="tools-grid"/);
+  const NAV = fs.readFileSync(repo('tools', 'tools-nav-pwa.js'), 'utf8');
   for (const href of [
     '/tools/job-tracker.html',
-    '/tools/calendar.html',
     '/tools/route-planner.html',
     '/tools/contract-generator.html',
     '/tools/invoice-generator.html',
@@ -126,7 +128,7 @@ test('the tile grid is demoted under More tools without deleting any existing to
     '/tools/settings.html',
     '/tools/dev-tools.html',
   ]) {
-    assert.match(WORKSPACE, new RegExp('class="tools-grid"[\\s\\S]*href="' + href.replace('.', '\\.') + '"'), `expected ${href} to remain inside .tools-grid`);
+    assert.ok(NAV.includes("'" + href + "'"), `expected ${href} to remain a nav destination`);
   }
 });
 

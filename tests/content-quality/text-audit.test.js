@@ -62,12 +62,13 @@ test('runway-dashboard.html no longer references startJobTrackerSync, a function
   assert.doesNotMatch(src, /startJobTrackerSync/);
 });
 
-test('workspace.html\'s Dev Tools description no longer claims access is restricted to one specific person -- the account roles system replaced that', () => {
+test('workspace.html no longer describes Dev Tools access at all (the tile grid and its per-tile bubbles went away 2026-09-21); the nav gates it by role, never by a named person', () => {
   const src = fs.readFileSync(path.join(TOOLS_DIR, 'workspace.html'), 'utf8');
   assert.doesNotMatch(src, /Only visible on Connor's account/);
-  const devToolsInfo = src.match(/'tool-devtools': \{[\s\S]*?body: `([^`]*)`/);
-  assert.ok(devToolsInfo);
-  assert.match(devToolsInfo[1], /any account with an assigned role/);
+  assert.doesNotMatch(src, /'tool-devtools': \{/);
+  const nav = fs.readFileSync(path.join(TOOLS_DIR, 'tools-nav-pwa.js'), 'utf8');
+  assert.match(nav, /'\/tools\/dev-tools\.html': function \(\) \{ return typeof hasDevToolsAccess === 'function' && hasDevToolsAccess\(\); \}/);
+  assert.doesNotMatch(nav, /Connor/);
 });
 
 // Site audit improvement, requested directly (2026-08-21): a real
