@@ -18,14 +18,14 @@ const STYLES = fs.readFileSync(repo('styles.css'), 'utf8');
 
 const PAGES = [
   'index.html', 'about.html', 'our-work.html', 'careers.html', 'privacy.html', 'terms.html',
-  'assembly-installation.html', 'drywall-painting.html', 'plumbing-repairs.html',
-  'handyman-repairs.html', 'washer-dryer-repair.html',
-  'washer-dryer-repair-st-george-ut.html', 'refrigerator-repair-st-george-ut.html',
-  'dishwasher-repair-st-george-ut.html',
-  'handyman-st-george-ut.html', 'handyman-washington-city-ut.html',
-  'handyman-hurricane-ut.html', 'handyman-santa-clara-ivins-ut.html',
-  'handyman-leeds-ut.html', 'handyman-la-verkin-ut.html',
-  'handyman-cedar-city-ut.html', 'handyman-mesquite-nv.html',
+  'services/assembly-installation.html', 'services/drywall-painting.html', 'services/plumbing-repairs.html',
+  'services/handyman-repairs.html', 'services/washer-dryer-repair.html',
+  'services/washer-dryer-repair-st-george-ut.html', 'services/refrigerator-repair-st-george-ut.html',
+  'services/dishwasher-repair-st-george-ut.html',
+  'locations/handyman-st-george-ut.html', 'locations/handyman-washington-city-ut.html',
+  'locations/handyman-hurricane-ut.html', 'locations/handyman-santa-clara-ivins-ut.html',
+  'locations/handyman-leeds-ut.html', 'locations/handyman-la-verkin-ut.html',
+  'locations/handyman-cedar-city-ut.html', 'locations/handyman-mesquite-nv.html',
   'blog/index.html', 'blog/dryer-not-heating.html', 'blog/handyman-to-do-list.html',
   'blog/appliance-repair-or-replace.html', 'blog/washer-wont-drain.html',
   'blog/dishwasher-not-cleaning.html', 'blog/fridge-not-cooling.html',
@@ -57,7 +57,7 @@ test('a real run: clicking a caret un-hides its sublist and flips aria-expanded;
         <a href="/#services">Services</a>
         <button type="button" class="mobile-nav-caret" aria-expanded="false" aria-controls="mobileServicesSublist" aria-label="Toggle Services links"></button>
       </div>
-      <ul class="mobile-services-sublist" id="mobileServicesSublist" hidden><li><a href="/washer-dryer-repair.html">Washer &amp; Dryer Repair</a></li></ul>
+      <ul class="mobile-services-sublist" id="mobileServicesSublist" hidden><li><a href="/services/washer-dryer-repair.html">Washer &amp; Dryer Repair</a></li></ul>
     </body>`,
     { runScripts: 'outside-only', url: 'https://example.com/' }
   );

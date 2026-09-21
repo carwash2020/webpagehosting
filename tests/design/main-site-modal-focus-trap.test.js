@@ -128,7 +128,7 @@ test('the service-details modal establishes the trap on open and releases it on 
 });
 
 test('none of the 8 city landing pages carry any of these modals, confirming the local (non-shared-file) placement is correct', () => {
-  const pages = ['handyman-cedar-city-ut.html', 'handyman-hurricane-ut.html', 'handyman-mesquite-nv.html', 'handyman-santa-clara-ivins-ut.html', 'handyman-washington-city-ut.html', 'handyman-la-verkin-ut.html', 'handyman-leeds-ut.html', 'handyman-st-george-ut.html'];
+  const pages = ['locations/handyman-cedar-city-ut.html', 'locations/handyman-hurricane-ut.html', 'locations/handyman-mesquite-nv.html', 'locations/handyman-santa-clara-ivins-ut.html', 'locations/handyman-washington-city-ut.html', 'locations/handyman-la-verkin-ut.html', 'locations/handyman-leeds-ut.html', 'locations/handyman-st-george-ut.html'];
   for (const page of pages) {
     const html = fs.readFileSync(repo(page), 'utf8');
     assert.doesNotMatch(html, /id="galleryOverlay"|id="emailOverlay"|id="modalOverlay"/, `${page} unexpectedly carries a modal this fix assumed only index.html has`);

@@ -34,12 +34,12 @@ test('the service-area diagram no longer draws the concentric "orbit ring" backg
 });
 
 test('the service-area diagram viewBox grew to fit the wider-spaced layout (760x420 -> 760x480), on all 9 pages', () => {
-  const PAGES = ['index.html', 'handyman-washington-city-ut.html', 'handyman-hurricane-ut.html',
-    'handyman-santa-clara-ivins-ut.html', 'handyman-cedar-city-ut.html', 'handyman-mesquite-nv.html',
-    'handyman-la-verkin-ut.html', 'handyman-leeds-ut.html',     'handyman-st-george-ut.html',
-    'washer-dryer-repair-st-george-ut.html',
-    'refrigerator-repair-st-george-ut.html',
-    'dishwasher-repair-st-george-ut.html'];
+  const PAGES = ['index.html', 'locations/handyman-washington-city-ut.html', 'locations/handyman-hurricane-ut.html',
+    'locations/handyman-santa-clara-ivins-ut.html', 'locations/handyman-cedar-city-ut.html', 'locations/handyman-mesquite-nv.html',
+    'locations/handyman-la-verkin-ut.html', 'locations/handyman-leeds-ut.html',     'locations/handyman-st-george-ut.html',
+    'services/washer-dryer-repair-st-george-ut.html',
+    'services/refrigerator-repair-st-george-ut.html',
+    'services/dishwasher-repair-st-george-ut.html'];
   for (const page of PAGES) {
     const html = fs.readFileSync(repo(page), 'utf8');
     assert.doesNotMatch(html, /<svg viewBox="0 0 760 420"/, `${page} still has the old viewBox`);

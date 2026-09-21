@@ -34,6 +34,8 @@ The public site uses one shared stylesheet (`styles.css`, repo root). The tool s
 - [Security, and where the rest of the docs live](#security-and-where-the-rest-of-the-docs-live)
 - [What changed, 2026-09-04 through 2026-09-07](#what-changed-2026-09-04-through-2026-09-07)
 - [What changed, 2026-09-08](#what-changed-2026-09-08)
+- [What changed, 2026-09-20 -- duplicate meta descriptions, a stale-date test time bomb, and a merged RLS policy](#what-changed-2026-09-20----duplicate-meta-descriptions-a-stale-date-test-time-bomb-and-a-merged-rls-policy)
+- [What changed, 2026-09-21 -- booking.html audit, referral-code refinements, and a cron auth incident](#what-changed-2026-09-21----bookinghtml-audit-referral-code-refinements-and-a-cron-auth-incident)
 
 ## ⚠️ Read this before touching deployment at all
 
@@ -44,22 +46,91 @@ Two things on this specific repo have caused real, hours-long confusion before. 
 
 ## Public site — file structure (repo root)
 
+**Most public pages live flat at the repo root, deliberately.** GitHub
+Pages serves each one at its exact current path with no server-side
+redirect capability -- moving a live, indexed page changes its live
+URL, which breaks Google's index and every existing backlink pointing
+at the old one unless something is left behind to forward traffic.
+This table groups everything by kind for readability.
+
+**Real exceptions, made 2026-09-21:** the 8 service pages (5 plain +
+3 service×city) moved from the root into `/services/`, and the 8 city
+landing pages moved into `/locations/`. Both families were judged
+worth the one-time cost because they're the parts of the site that
+actively keep growing (3 new service×city pages added in a single
+week, 2026-09-18, and the city-page count has grown from 5 to 7 over
+the same stretch) -- unlike the rest of the site, which is a fixed
+set. A thin redirect stub was left behind at each of the 16 old root
+paths (see "Do not delete" below) specifically to soften that cost --
+a visitor or search engine hitting the old URL gets forwarded to the
+new one instead of a 404, same pattern this repo already used for
+retired `/tools/` pages. `terms.html`/`privacy.html` and the rest of
+the public pages were considered for the same treatment and rejected
+-- they're a fixed, non-growing set, so there's no future-scaling
+upside to offset the cost.
+
+**Homepage, booking & core**
+
 | File | Purpose |
 |---|---|
 | `index.html` | Main homepage — single-page site (services, reviews, about, areas, schedule, contact/FAQ/terms). Contact form inserts directly into `th_leads` (anon key) -- Formspree was removed 2026-08-24, replaced by a real, in-house Resend email pipeline (see "Booking system" below for the equivalent pipeline on the booking side). |
 | `booking.html` | **In-house booking system** (added 2026-08-25, replacing Cal.com entirely -- subscription itself confirmed cancelled). 3-step flow: service → real open time slot → contact info. Phone number auto-formats live to `(XXX) XXX-XXXX` as the guest types; both phone and email get on-theme inline validation (native browser constraint validation was already enforcing a real `@`, this just makes it visible instead of a default tooltip). Redesigned 2026-08-25 with a real desktop layout (a sidebar builds up the appointment summary progressively) and a hexagon icon motif echoing the brand mark. See "Booking system" below for the full picture. |
-| `manage-booking.html` | Guest self-service cancel/reschedule, reached via a unique token link in the confirmation email -- **not in the sitemap** (`noindex, nofollow`, deliberately unreachable except through that link). Same design system as `booking.html`. See "Booking system" below. |
-| `handyman-hurricane-ut.html` | Dedicated landing page — Hurricane, UT |
-| `handyman-washington-city-ut.html` | Dedicated landing page — Washington City, UT |
-| `handyman-santa-clara-ivins-ut.html` | Dedicated landing page — Santa Clara & Ivins, UT |
-| `handyman-cedar-city-ut.html` | Dedicated landing page — Cedar City, UT (by-request service area) |
-| `handyman-mesquite-nv.html` | Dedicated landing page — Mesquite, NV (by-request service area) |
-| `washer-dryer-repair-st-george-ut.html` | Service × city landing page (added 2026-09-18) — washer / appliance repair in St. George. Reusable template; see `docs/service-city-landing-pages.md`. |
-| `refrigerator-repair-st-george-ut.html` | Service × city landing page (added 2026-09-18) — refrigerator repair in St. George. |
-| `dishwasher-repair-st-george-ut.html` | Service × city landing page (added 2026-09-18) — dishwasher repair in St. George. |
-| `blog/` | **Blog** (added 2026-09-01). `index.html` lists the posts; three posts so far, each a standalone page with its own SEO metadata and Article structured data. `blog.css` extends the main site's brand tokens rather than introducing a separate design system (page headlines use Anton, matching the site's own h1; card-level headlines use Oswald, matching the service/contact cards). Photos are freely licensed Unsplash images, each individually verified before use — see the note under "Do not delete" about why there's no stock-photo shortcut here. |
+| `manage-booking.html` | Guest self-service cancel/reschedule for a `th_bookings` self-service booking, reached via a unique token link in the confirmation email -- **not in the sitemap** (`noindex, nofollow`, deliberately unreachable except through that link). Same design system as `booking.html`. See "Booking system" below. |
+| `manage-job.html` | The same guest cancel/reschedule-request pattern as `manage-booking.html`, but for a manually-scheduled job (`public.jobs`) instead of a self-service booking -- reschedule is request-only here (jobs have no time-slot exclusion constraint, so an instant move could double-book a day). Also token-gated, also excluded from the sitemap. |
+| `about.html` | "Meet Steven Robinson" — LLC status, Eagle Scout background, prior maintenance-technician career. |
+| `our-work.html` | Project gallery (tile, flooring, drywall, curtain track, etc. — see `images/gallery/`). |
+| `careers.html` | Hiring/job-application page. |
+
+**City landing pages** (`/locations/`) — one per service area, standard coverage unless noted. **Moved from the repo root into `/locations/` on 2026-09-21**, same batch and same redirect-stub treatment as the service pages below.
+
+| File | Area |
+|---|---|
+| `locations/handyman-st-george-ut.html` | St. George, UT (the home base) |
+| `locations/handyman-hurricane-ut.html` | Hurricane, UT |
+| `locations/handyman-washington-city-ut.html` | Washington City, UT |
+| `locations/handyman-santa-clara-ivins-ut.html` | Santa Clara & Ivins, UT |
+| `locations/handyman-la-verkin-ut.html` | La Verkin, UT |
+| `locations/handyman-leeds-ut.html` | Leeds, UT |
+| `locations/handyman-cedar-city-ut.html` | Cedar City, UT — **by-request** (orange "AVAILABLE BY REQUEST" badge, own trip-fee FAQ) |
+| `locations/handyman-mesquite-nv.html` | Mesquite, NV — **by-request** (same badge treatment, NV address in schema) |
+
+**Service landing pages** (`/services/`) — one per service, not tied to a specific city. **Moved from the repo root into `/services/` on 2026-09-21** -- a redirect stub was left behind at each old root path (see "Do not delete" below) specifically so this move doesn't cost the pages their existing Google ranking/backlinks.
+
+| File | Service |
+|---|---|
+| `services/washer-dryer-repair.html` | Washer/dryer repair (keeps the triage tool, links out to 2 blog posts) |
+| `services/plumbing-repairs.html` | Plumbing repairs |
+| `services/drywall-painting.html` | Drywall & painting |
+| `services/handyman-repairs.html` | Doors, cabinets & hardware, carpentry & trim, weatherstripping |
+| `services/assembly-installation.html` | Furniture/fixture assembly & installation |
+
+**Service × city landing pages** (`/services/`) — one converting page per service+city pair, not a factory of near-duplicates (see `docs/service-city-landing-pages.md` for the reusable template and the doorway-page reasoning behind writing one per pair instead of find-and-replacing a city name). Also moved into `/services/` on 2026-09-21, same redirect-stub treatment.
+
+| File | Pair |
+|---|---|
+| `services/washer-dryer-repair-st-george-ut.html` | Washer/dryer repair × St. George (added 2026-09-18, first instance) |
+| `services/refrigerator-repair-st-george-ut.html` | Refrigerator repair × St. George (added 2026-09-18) |
+| `services/dishwasher-repair-st-george-ut.html` | Dishwasher repair × St. George (added 2026-09-18) |
+
+**Legal pages**
+
+| File | Purpose |
+|---|---|
+| `terms.html` | Terms & Conditions — standalone page (`index.html` also has its own `termsOverlay` JS modal, reachable at `/#terms`; not a duplicate content problem since the modal is for on-page convenience and this file is the canonical, indexable, linkable version). No attorney review has been done on this text — a past session removed a visible "not reviewed by an attorney" disclaimer at the user's request, but the underlying legal risk it described didn't go away with the note. |
+| `privacy.html` | Privacy Policy. |
+
+**Blog & client area**
+
+| File | Purpose |
+|---|---|
+| `blog/` | **Blog** (added 2026-09-01). `index.html` lists the posts; 10 posts as of 2026-09-19, each a standalone page with its own SEO metadata and Article structured data. `blog.css` extends the main site's brand tokens rather than introducing a separate design system (page headlines use Anton, matching the site's own h1; card-level headlines use Oswald, matching the service/contact cards). Photos are freely licensed Unsplash images, each individually verified before use — see the note under "Do not delete" about why there's no stock-photo shortcut here. |
 | `portal/` | **Client portal** (added 2026-08-31, substantially extended through 2026-09-04) — 8 pages covering a client's entire relationship with the business, not just invoice payment: `login.html`, `set-password.html`, `home.html` (landing page, "Needs Your Attention" summary), `dashboard.html` (invoices + Stripe payment), `quotes.html` (review/questions/approval/self-scheduling), `jobs.html` (job history, warranty, check-up reminders), `work-orders.html` (Request Work form + two-way messaging), `settings.html` (saved cards, notification preferences). Deliberately shares NO JavaScript with `/tools/`. **Read `docs/CLIENT-PORTAL.md` before touching anything here** — it's the current, authoritative reference for every page and table; this row is a summary, not a substitute. Only `login.html` is indexable; every other page is `noindex` on purpose. |
-| `sitemap.xml` | Lists all 12 live, indexable public pages: the homepage, `booking.html`, the 5 service-area landing pages, the blog index and its 3 posts, and `portal/login.html`. Deliberately excluded: `manage-booking.html` (token-gated, `noindex`), and the portal's `dashboard.html` / `set-password.html` (both `noindex`). Update this and resubmit in Google Search Console any time a page is added or removed. |
+
+**Site infrastructure / SEO meta files**
+
+| File | Purpose |
+|---|---|
+| `sitemap.xml` | Lists all 34 live, indexable public URLs as of 2026-09-21: the homepage, `booking.html`, every city/service/service×city landing page above, `about.html`/`careers.html`/`our-work.html`, both legal pages, the blog index and its 10 posts. Deliberately excluded: `manage-booking.html`/`manage-job.html` (token-gated, `noindex`), and everything under `/tools/`/`/portal/` (all `noindex`, including `portal/login.html` -- the internal tool suite and client portal are not meant to be discoverable via search). Update this and resubmit in Google Search Console any time a page is added or removed. |
 | `robots.txt` | Allows public-page crawlers; Disallow `/tools/` and `/portal/` (already noindex on those pages). Blocks bulk AI-training crawlers (`GPTBot`, `CCBot`, `Google-Extended`); allows live-retrieval/answer bots. |
 | `404.html` | Custom not-found page (self-contained, own inline styles, doesn't use `styles.css`) |
 | `.well-known/security.txt` | RFC 9116 security contact file. Requires `.nojekyll` (see above) to actually be reachable — this is exactly what broke for a long time. |
@@ -172,6 +243,7 @@ the assistant's GitHub token was never granted):
 - **`google0b12c450e3945a19.html`** and **`google523d668a9a330d64.html`** — Google Search Console ownership verification files, one per domain variant. Deleting either breaks Search Console verification for that property.
 - **`favicon.ico`** — must stay at repo root.
 - **`.nojekyll`** — must stay at repo root, with exactly that filename (dot included). See the warning at the top of this document.
+- **The 16 redirect stubs left at the old root paths of the pages moved into `/services/` and `/locations/` on 2026-09-21**: the 8 service pages (`washer-dryer-repair.html`, `plumbing-repairs.html`, `drywall-painting.html`, `handyman-repairs.html`, `assembly-installation.html`, `washer-dryer-repair-st-george-ut.html`, `refrigerator-repair-st-george-ut.html`, `dishwasher-repair-st-george-ut.html`) and the 8 city pages (`handyman-st-george-ut.html`, `handyman-hurricane-ut.html`, `handyman-washington-city-ut.html`, `handyman-santa-clara-ivins-ut.html`, `handyman-la-verkin-ut.html`, `handyman-leeds-ut.html`, `handyman-cedar-city-ut.html`, `handyman-mesquite-nv.html`). Each is a `<link rel="canonical">` + 0-delay `<meta http-equiv="refresh">` + JS `location.replace()` pointing at the real page's new path — deleting one turns a soft redirect into a hard 404 for anyone who still has the old URL bookmarked, linked, or indexed. Safe to remove only once Google Search Console shows the old URLs fully dropped from the index in favor of the new ones (months, not days) — not on a whim.
 
 ## Known open items
 
@@ -265,7 +337,24 @@ see `.github/workflows/test.yml`) verifies every reference matches;
 `npm run fix-versions` is the same script, run with `--fix-versions`,
 correcting instead of just reporting.
 
-`npm test` runs the full suite (1538 tests as of 2026-09-08, all passing) — organized under `tests/` into subfolders (`booking/`, `sync/`, `dev-tools/`, `design/`, `content-quality/`, `tools/`, `workspace/`, `portal/`, `seo/`, `site-wide/`, `edge-functions/`, and more as new areas get covered) by what each test actually covers, rather than one flat folder of files. The script itself is just `cd tests && node --test`; Node's test runner auto-discovers every `*.test.js` file recursively with no arguments needed, so a new test file placed anywhere under `tests/` runs automatically — nothing to add to `package.json` by hand.
+`npm test` runs the full suite (**2,586 tests as of 2026-09-21**, all passing) — organized under `tests/` into subfolders (`booking/`, `sync/`, `dev-tools/`, `design/`, `content-quality/`, `tools/`, `workspace/`, `portal/`, `seo/`, `site-wide/`, `edge-functions/`, `referrals/`, and more as new areas get covered) by what each test actually covers, rather than one flat folder of files. The script itself is just `cd tests && node --test`; Node's test runner auto-discovers every `*.test.js` file recursively with no arguments needed, so a new test file placed anywhere under `tests/` runs automatically — nothing to add to `package.json` by hand.
+
+**The rest of the quick-flag scripts** (2026-09-21, closing a real gap
+where `check-links.py` and `eslint` both existed and both ran fine
+standalone, but neither had an `npm run` alias, so a contributor had
+to already know the exact underlying command):
+
+- `npm run check-links` — wraps `scripts/check-links.py` (internal
+  link/asset integrity across every HTML file, plus external-link
+  reachability on public pages).
+- `npm run lint` — wraps `eslint .` (config already existed at
+  `eslint.config.js`; just never had a script pointing at it).
+- `npm run verify` — chains `check-undefined-vars` →
+  `check-consistency` → `lint` → `check-links` → the full test suite,
+  in roughly fastest-to-slowest order, so a broken static check fails
+  loudly before waiting on the several-minute full suite. This is the
+  same sequence to run by hand before any push; `verify` just saves
+  typing five separate commands.
 
 ## Deploying changes
 
@@ -2171,7 +2260,7 @@ New tests: `tests/tools/workspace-quick-actions.test.js`.
 ## What changed, 2026-09-18 -- washer / appliance repair in St. George (service × city template)
 
 First combined service + city landing page, at
-`/washer-dryer-repair-st-george-ut.html`. City pages
+`/services/washer-dryer-repair-st-george-ut.html`. City pages
 (`handyman-st-george-ut.html`) and the appliance service page
 (`washer-dryer-repair.html`) already existed separately. This one
 targets "washer repair St. George" as a converting page, not a thin
@@ -2250,8 +2339,8 @@ Two more service × city pages, cloned from
 skipped: that template already covers washer and dryer. Unique
 appliance niches:
 
-- `/refrigerator-repair-st-george-ut.html`
-- `/dishwasher-repair-st-george-ut.html`
+- `/services/refrigerator-repair-st-george-ut.html`
+- `/services/dishwasher-repair-st-george-ut.html`
 
 Same converting layout as the washer page: H1 names the service and
 city, sticky Call + Book (Text stays on the homepage and washer LP
@@ -2309,4 +2398,73 @@ proxy here, so that specific HTTP round trip is unverified from this
 session; the DB-side logic it depends on is confirmed correct.
 
 New tests: `tests/referrals/account-codes.test.js`.
+
+## What changed, 2026-09-20 -- duplicate meta descriptions, a stale-date test time bomb, and a merged RLS policy
+
+Follow-up audit pass: fixed 9 landing pages sharing 2 duplicate
+closing sentences in their `<meta name="description">` (and matching
+`og:description`/`twitter:description`, flagged separately by a
+bot's own PR summary -- worth reading those, not just the recurring
+boilerplate). Also caught and fixed a real regression in
+`manage-booking.html`'s own test suite: a hardcoded date used as "a
+date in the past" had itself become "tomorrow" as real time passed,
+silently flipping 6 tests' meaning without touching their assertions
+-- fixed by computing the date relative to `Date.now()` instead of a
+fixed string.
+
+Separately, ran Supabase's own advisor against the live project and
+found a real `multiple_permissive_policies` performance finding on
+`client_account_codes` (added the day before): two SELECT policies
+both matching `role=authenticated` were being evaluated on every
+query. Merged into one policy
+(`sql/infra/merge_client_account_codes_select_policies.sql`), plus
+split the old catch-all staff policy into three single-action
+policies (Postgres has no "FOR ALL except SELECT" shorthand).
+
+## What changed, 2026-09-21 -- booking.html audit, referral-code refinements, and a cron auth incident
+
+**booking.html audit** (no specific bug reported -- a fresh pass):
+`selectDate()` had no guard against overlapping async calls, so
+rapidly switching dates could let a stale response silently win --
+fixed with a request-id guard. Also: focus never moved between
+wizard steps for screen-reader users, selection state wasn't exposed
+via `aria-pressed`, status/slot updates weren't in an `aria-live`
+region, the post-booking "you'll get a confirmation email" promise
+was unconditional even though email is optional, and name/email/
+address were sent untrimmed despite already having trimmed values on
+hand for validation. All fixed; new test file
+`tests/booking/booking-a11y-and-race-fix.test.js`.
+
+**Referral-code refinements** (direct follow-up on the 2026-09-20
+system): three real gaps closed. (1) A portal account invited
+*before* the referral-code feature shipped had no way to ever get a
+code -- new edge function `ensure-my-referral-code` creates one on
+the spot if missing, called by `portal/settings.html` on load. (2)
+Codes were captured on bookings/leads but nothing ever showed how
+many times a code had actually been used -- both the portal panel
+and `tools/client-detail.html` now surface a live usage count. (3)
+Sharing only offered a raw link to copy -- added `sms:` share links
+in both places (generic in the portal, addressed to the client's own
+phone in client-detail.html).
+
+**Cron service-role-key incident**, found from a screenshot of Dev
+Tools' Cron Health panel: `send-payment-reminder` and
+`send-quote-followup` had been silently 401ing on *every* scheduled
+run since 2026-09-16 -- meaning every automated overdue-invoice
+reminder and quote-followup email this project ever claimed to send
+had, in reality, never gone out to a client. Root cause: the vault
+secret every `net.http_post` cron job authenticates with
+(`send_push_service_role_key`, saved 2026-08-14) had gone stale after
+this Supabase project migrated to the newer `sb_secret_...` key
+format -- confirmed live via a diagnostic Edge Function that compared
+the vault value against the live env var without ever printing
+either secret, then fixed the same way. Only these two functions
+noticed, since they're the only cron-driven functions doing a strict
+`token !== SERVICE_ROLE_KEY` check rather than relying solely on
+Supabase's platform `verify_jwt` (signature-only, doesn't check
+role) -- every other `net.http_post` caller kept accepting the stale
+but still validly-signed key. See `DISASTER_RECOVERY.md` Scenario 20
+and `sql/infra/resync_cron_service_role_key.sql` (a permanent,
+secret-safe maintenance function for if this recurs after a future
+key-format change).
 

@@ -51,7 +51,7 @@ test('booking.html\'s booking insert sends the captured UTM params alongside the
 
 test('utm-tracking.js captures utm params from the URL into localStorage', () => {
   const dom = new JSDOM('<!doctype html><html><body></body></html>', {
-    url: 'https://www.triplehenterprisesllc.biz/drywall-painting.html?utm_source=google&utm_medium=cpc&utm_campaign=fall-promo',
+    url: 'https://www.triplehenterprisesllc.biz/services/drywall-painting.html?utm_source=google&utm_medium=cpc&utm_campaign=fall-promo',
     runScripts: 'dangerously',
   });
   dom.window.eval(utmTrackingSrc);

@@ -27,17 +27,17 @@ const TERMS = fs.readFileSync(repo('terms.html'), 'utf8');
 const BOOKING = fs.readFileSync(repo('booking.html'), 'utf8');
 
 const CITY_PAGES = {
-  'handyman-cedar-city-ut.html': { variant: 'is-by-request', text: 'Available by request' },
-  'handyman-hurricane-ut.html': { variant: 'is-standard', text: 'Serving Hurricane' },
-  'handyman-mesquite-nv.html': { variant: 'is-by-request', text: 'Available by request' },
-  'handyman-santa-clara-ivins-ut.html': { variant: 'is-standard', text: 'Serving Santa Clara & Ivins' },
-  'handyman-washington-city-ut.html': { variant: 'is-standard', text: 'Serving Washington City' },
-  'handyman-la-verkin-ut.html': { variant: 'is-standard', text: 'Serving La Verkin' },
-  'handyman-leeds-ut.html': { variant: 'is-standard', text: 'Serving Leeds' },
-  'handyman-st-george-ut.html': { variant: 'is-standard', text: 'Home Base &middot; St. George' },
-  'washer-dryer-repair-st-george-ut.html': { variant: 'is-standard', text: 'Home Base &middot; St. George' },
-  'refrigerator-repair-st-george-ut.html': { variant: 'is-standard', text: 'Home Base &middot; St. George' },
-  'dishwasher-repair-st-george-ut.html': { variant: 'is-standard', text: 'Home Base &middot; St. George' },
+  'locations/handyman-cedar-city-ut.html': { variant: 'is-by-request', text: 'Available by request' },
+  'locations/handyman-hurricane-ut.html': { variant: 'is-standard', text: 'Serving Hurricane' },
+  'locations/handyman-mesquite-nv.html': { variant: 'is-by-request', text: 'Available by request' },
+  'locations/handyman-santa-clara-ivins-ut.html': { variant: 'is-standard', text: 'Serving Santa Clara & Ivins' },
+  'locations/handyman-washington-city-ut.html': { variant: 'is-standard', text: 'Serving Washington City' },
+  'locations/handyman-la-verkin-ut.html': { variant: 'is-standard', text: 'Serving La Verkin' },
+  'locations/handyman-leeds-ut.html': { variant: 'is-standard', text: 'Serving Leeds' },
+  'locations/handyman-st-george-ut.html': { variant: 'is-standard', text: 'Home Base &middot; St. George' },
+  'services/washer-dryer-repair-st-george-ut.html': { variant: 'is-standard', text: 'Home Base &middot; St. George' },
+  'services/refrigerator-repair-st-george-ut.html': { variant: 'is-standard', text: 'Home Base &middot; St. George' },
+  'services/dishwasher-repair-st-george-ut.html': { variant: 'is-standard', text: 'Home Base &middot; St. George' },
 };
 
 test('no marketing page carries the generic ALL-CAPS eyebrow label anymore', () => {

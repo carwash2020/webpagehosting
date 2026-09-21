@@ -22,13 +22,13 @@ const repo = (...p) => path.join(__dirname, '..', '..', ...p);
 // "home base" framing instead of a direction/ETA, so it isn't forced
 // into this direction/ETA-specific pattern.
 const PAGES = {
-  'handyman-cedar-city-ut.html': /About 50 miles \/ an hour north of St\. George/,
-  'handyman-hurricane-ut.html': /About 20&ndash;25 minutes east of St\. George/,
-  'handyman-la-verkin-ut.html': /About 25&ndash;30 minutes east of St\. George/,
-  'handyman-leeds-ut.html': /About 15&ndash;20 minutes north of St\. George/,
-  'handyman-mesquite-nv.html': /About 40 miles \/ 40 minutes southwest of St\. George/,
-  'handyman-santa-clara-ivins-ut.html': /Just west of St\. George, about 10&ndash;15 minutes/,
-  'handyman-washington-city-ut.html': /Right next door, directly east of St\. George/,
+  'locations/handyman-cedar-city-ut.html': /About 50 miles \/ an hour north of St\. George/,
+  'locations/handyman-hurricane-ut.html': /About 20&ndash;25 minutes east of St\. George/,
+  'locations/handyman-la-verkin-ut.html': /About 25&ndash;30 minutes east of St\. George/,
+  'locations/handyman-leeds-ut.html': /About 15&ndash;20 minutes north of St\. George/,
+  'locations/handyman-mesquite-nv.html': /About 40 miles \/ 40 minutes southwest of St\. George/,
+  'locations/handyman-santa-clara-ivins-ut.html': /Just west of St\. George, about 10&ndash;15 minutes/,
+  'locations/handyman-washington-city-ut.html': /Right next door, directly east of St\. George/,
 };
 
 for (const [name, expectedText] of Object.entries(PAGES)) {

@@ -30,16 +30,16 @@ import urllib.error
 REPO_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 PUBLIC_PAGES = [
     'index.html',
-    'handyman-cedar-city-ut.html',
-    'handyman-hurricane-ut.html',
-    'handyman-mesquite-nv.html',
-    'handyman-santa-clara-ivins-ut.html',
-    'handyman-washington-city-ut.html',
-    'handyman-la-verkin-ut.html',
-    'handyman-leeds-ut.html',
-    'washer-dryer-repair-st-george-ut.html',
-    'refrigerator-repair-st-george-ut.html',
-    'dishwasher-repair-st-george-ut.html',
+    'locations/handyman-cedar-city-ut.html',
+    'locations/handyman-hurricane-ut.html',
+    'locations/handyman-mesquite-nv.html',
+    'locations/handyman-santa-clara-ivins-ut.html',
+    'locations/handyman-washington-city-ut.html',
+    'locations/handyman-la-verkin-ut.html',
+    'locations/handyman-leeds-ut.html',
+    'services/washer-dryer-repair-st-george-ut.html',
+    'services/refrigerator-repair-st-george-ut.html',
+    'services/dishwasher-repair-st-george-ut.html',
 ]
 
 HREF_SRC_RE = re.compile(r'(?:href|src)="([^"]+)"')

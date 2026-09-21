@@ -24,22 +24,22 @@ const path = require('path');
 const repo = (...p) => path.join(__dirname, '..', '..', ...p);
 
 const PAGES_WITH_SCHEDULE = [
-  'drywall-painting.html',
-  'plumbing-repairs.html',
-  'washer-dryer-repair.html',
-  'washer-dryer-repair-st-george-ut.html',
-  'refrigerator-repair-st-george-ut.html',
-  'dishwasher-repair-st-george-ut.html',
-  'assembly-installation.html',
-  'handyman-repairs.html',
-  'handyman-cedar-city-ut.html',
-  'handyman-hurricane-ut.html',
-  'handyman-la-verkin-ut.html',
-  'handyman-leeds-ut.html',
-  'handyman-mesquite-nv.html',
-  'handyman-santa-clara-ivins-ut.html',
-  'handyman-st-george-ut.html',
-  'handyman-washington-city-ut.html',
+  'services/drywall-painting.html',
+  'services/plumbing-repairs.html',
+  'services/washer-dryer-repair.html',
+  'services/washer-dryer-repair-st-george-ut.html',
+  'services/refrigerator-repair-st-george-ut.html',
+  'services/dishwasher-repair-st-george-ut.html',
+  'services/assembly-installation.html',
+  'services/handyman-repairs.html',
+  'locations/handyman-cedar-city-ut.html',
+  'locations/handyman-hurricane-ut.html',
+  'locations/handyman-la-verkin-ut.html',
+  'locations/handyman-leeds-ut.html',
+  'locations/handyman-mesquite-nv.html',
+  'locations/handyman-santa-clara-ivins-ut.html',
+  'locations/handyman-st-george-ut.html',
+  'locations/handyman-washington-city-ut.html',
 ];
 const PAGES_WITHOUT_SCHEDULE = ['about.html', 'our-work.html'];
 const ALL_PAGES = [...PAGES_WITH_SCHEDULE, ...PAGES_WITHOUT_SCHEDULE];
