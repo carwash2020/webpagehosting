@@ -29,11 +29,11 @@ const repo = (...p) => path.join(__dirname, '..', '..', ...p);
 
 const ALL_PAGES = [
   'index.html', 'about.html', 'services/assembly-installation.html', 'services/drywall-painting.html',
-  'handyman-cedar-city-ut.html', 'handyman-hurricane-ut.html',
-  'handyman-la-verkin-ut.html', 'handyman-leeds-ut.html',
-  'handyman-mesquite-nv.html', 'services/handyman-repairs.html',
-  'handyman-santa-clara-ivins-ut.html', 'handyman-washington-city-ut.html',
-  'handyman-st-george-ut.html',
+  'locations/handyman-cedar-city-ut.html', 'locations/handyman-hurricane-ut.html',
+  'locations/handyman-la-verkin-ut.html', 'locations/handyman-leeds-ut.html',
+  'locations/handyman-mesquite-nv.html', 'services/handyman-repairs.html',
+  'locations/handyman-santa-clara-ivins-ut.html', 'locations/handyman-washington-city-ut.html',
+  'locations/handyman-st-george-ut.html',
   'our-work.html', 'services/plumbing-repairs.html', 'terms.html',
   'services/washer-dryer-repair.html',
   'services/washer-dryer-repair-st-george-ut.html',

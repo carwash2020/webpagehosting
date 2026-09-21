@@ -21,10 +21,10 @@ const ANALYTICS_JS = fs.readFileSync(repo('js/analytics-events.js'), 'utf8');
 
 const PUBLIC_PAGES = [
   'index.html', 'booking.html', 'terms.html', 'privacy.html', 'about.html', 'our-work.html',
-  'handyman-hurricane-ut.html', 'handyman-washington-city-ut.html',
-  'handyman-santa-clara-ivins-ut.html', 'handyman-cedar-city-ut.html',
-  'handyman-mesquite-nv.html', 'handyman-la-verkin-ut.html', 'handyman-leeds-ut.html',
-  'handyman-st-george-ut.html',
+  'locations/handyman-hurricane-ut.html', 'locations/handyman-washington-city-ut.html',
+  'locations/handyman-santa-clara-ivins-ut.html', 'locations/handyman-cedar-city-ut.html',
+  'locations/handyman-mesquite-nv.html', 'locations/handyman-la-verkin-ut.html', 'locations/handyman-leeds-ut.html',
+  'locations/handyman-st-george-ut.html',
   'services/washer-dryer-repair.html', 'services/plumbing-repairs.html', 'services/drywall-painting.html',
   'services/assembly-installation.html', 'services/handyman-repairs.html',
   'services/washer-dryer-repair-st-george-ut.html',
