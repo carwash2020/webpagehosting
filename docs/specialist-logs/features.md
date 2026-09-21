@@ -566,4 +566,62 @@ Verified: full suite **2572/2572** passing (16 new tests in
 `check-consistency` (after `fix-versions` for the two service worker
 `CACHE_NAME`s)/`check-links.py` all clean.
 
+## 2026-09-21 -- Refined the referral/account-code system: auto-generate on login, redemption/usage data, easier sharing
+
+Direct request ("how can we refine our code system?" -> "lets build
+all 3"), following up on the client_account_codes system shipped
+2026-09-20. Three real gaps closed:
+
+1. **Auto-generate a code for accounts created BEFORE the feature
+   shipped.** Previously a portal account invited before 2026-09-20
+   only ever saw a "call us" message in Settings with no self-serve
+   way to get a code -- `loadReferralLink()` was a bare read-only
+   select against `client_account_codes`, so a missing row was a dead
+   end. New edge function `ensure-my-referral-code` (service role,
+   email read only from the caller's own verified JWT so it can never
+   touch anyone else's account) creates the row on the spot if
+   missing, reusing the exact same alphabet/retry-on-collision logic
+   as `send-invite`'s `ensureAccountCode()` and the same
+   client_profiles/invoices display-name fallback `portal/settings.html`
+   already used elsewhere.
+2. **Redemption/usage data.** Codes were captured on `th_leads`/
+   `th_bookings` since 2026-09-20 but nothing ever surfaced how many
+   times a code had actually been used -- a client (or staff) had no
+   way to tell if their link was doing anything. `ensure-my-referral-code`
+   now also returns a live `usage_count` (leads + bookings matching
+   `referred_by_code`), shown in the portal's own settings panel.
+   Staff-side, `tools/client-detail.html`'s `loadReferralLink()`/
+   `renderReferralLinkBlock()` compute the same count directly (staff
+   already has read access to both tables via RLS, no edge function
+   needed there).
+3. **Easier sharing.** Both surfaces previously showed only the raw
+   link to copy. Added an `sms:?body=...` "Text to a Friend" link in
+   the portal (generic, no known recipient), and an
+   `sms:<phone>?body=...` "Text to [client name]" link in
+   client-detail.html, using the client's own phone number already in
+   the bundle -- rendered only when a phone is on file.
+
+Fixed in review before shipping: `createReferralLink()` (fires the
+first time a staff member generates a code for a client with none
+yet) and its own collision-retry path both originally rebuilt a
+stripped `{ email, name }` object to re-render/reload from, dropping
+`.phone` -- the new SMS button would never appear right after a fresh
+code was created, only on the next page load. Threaded `phone`
+through both call sites so it renders immediately either way.
+
+Verified via live SQL simulation (network to `supabase.co` is still
+blocked from this session's agent proxy, so the deployed function's
+actual HTTP path can't be curled end-to-end): inserted a real
+`client_account_codes` row plus one `th_leads` and one `th_bookings`
+row sharing a code, confirmed the count query the function runs
+correctly sums to the expected total, then deleted all test rows.
+Said so plainly rather than claiming a live-HTTP verification that
+didn't happen.
+
+Verified: full suite **2586/2586** passing (7 new tests in
+`tests/referrals/account-codes.test.js`, replacing 2 stale assertions
+tied to the old read-only `portal/settings.html` implementation).
+`check-undefined-vars`/`check-consistency` (after `fix-versions` for
+both service workers' `CACHE_NAME`)/`check-links.py` all clean.
+
 <!-- Add new entries above this line -->
