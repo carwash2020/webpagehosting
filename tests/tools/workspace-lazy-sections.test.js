@@ -78,6 +78,6 @@ test('sidebar and More sheet share grouped short labels without dropping a desti
     '/tools/dev-tools.html',
     '/tools/settings.html',
   ]) {
-    assert.match(NAV, new RegExp(href.replace(/\./g, '\\.')));
+    assert.ok(NAV.includes(href), `expected ${href} in NAV`);
   }
 });
