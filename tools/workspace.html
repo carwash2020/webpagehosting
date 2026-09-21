@@ -68,7 +68,7 @@
   })();
 </script>
 <link rel="stylesheet" href="/styles.css?v=2e81706c3d">
-<link rel="stylesheet" href="/tools/styles-tools.css?v=70749d6cd7">
+<link rel="stylesheet" href="/tools/styles-tools.css?v=4dc08d4f95">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.112.3/dist/umd/supabase.js" integrity="sha384-qafw21c/iciq0VXsi9FzkfoQv5I/V0iqE4lSNcKXPnW9/UTJLnv5CcN4FHxVLnKg" crossorigin="anonymous" defer></script>
 <script src="/tools/sync.js?v=7b42b1caf0" defer></script>
 <!-- Shared business-hours data (2026-09-03) -- used by the work order
@@ -81,7 +81,7 @@
 <script src="/tools/tools-effects.js?v=4cff99aa4a" defer></script>
 <script src="/tools/tools-dialogs.js?v=83d27784e2" defer></script>
 <script src="/tools/tools-media-sharing.js?v=0c229c9353" defer></script>
-<script src="/tools/tools-nav-pwa.js?v=2911578450" defer></script>
+<script src="/tools/tools-nav-pwa.js?v=d1f327cdcd" defer></script>
 <script src="/tools/tools-tour.js?v=d87fa2f453" defer></script>
 <style>
   /* iOS Safari zoom-on-focus fix (2026-09-05), same root cause and
@@ -287,10 +287,16 @@
   .today-money-row-value.is-overdue { color: #e05252; }
   .today-restofday .dash-list-item:last-child { border-bottom: none; }
 
-  .global-search-block { margin-bottom: 20px; }
+  .global-search-block { margin-bottom: 16px; }
   #globalSearchWrap { width: 100%; }
   #globalSearchWrap.is-expanded { display: flex; }
-  #globalSearchWrap.is-expanded .icon-search-input { width: 100%; }
+  #globalSearchWrap.is-expanded .icon-search-toggle { display: none; }
+  #globalSearchWrap.is-expanded .icon-search-input {
+    width: 100%; margin-left: 0; opacity: 1;
+    padding: 13px 36px 13px 16px;
+    border: 1px solid var(--border);
+    font-size: 16px;
+  }
   .global-search-block > input {
     width: 100%; box-sizing: border-box; padding: 13px 16px; background: var(--bg-panel-2);
     border: 1px solid var(--border); border-radius: var(--radius); color: var(--white);
@@ -308,9 +314,9 @@
     padding: 0 20px 20px; margin-bottom: 18px;
   }
   .section-heading {
-    font-family:var(--font-ui); color: var(--orange-light); font-size: 13.5px;
-    text-transform: uppercase; letter-spacing: 1.5px; margin: 0;
-    padding: 18px 0 16px; border-bottom: 1px solid var(--border);
+    font-family:var(--font-ui); color: var(--white); font-size: 15px; font-weight: 600;
+    text-transform: none; letter-spacing: 0; margin: 0;
+    padding: 16px 0 14px; border-bottom: 1px solid var(--border);
     display: flex; justify-content: space-between; align-items: center; cursor: pointer; user-select: none;
   }
   .section-heading.is-static { cursor: default; }
@@ -569,14 +575,15 @@
   }
   .dash-primary-action {
     display: flex; align-items: center; justify-content: center;
-    min-height: 46px; padding: 10px 12px;
+    min-height: 48px; padding: 10px 12px;
     background: var(--bg-panel); border: 1px solid var(--orange-tint-border);
-    border-radius: var(--radius); color: var(--white);
-    font-family: var(--font-ui); font-weight: 700; font-size: 13.5px;
+    border-radius: 12px; color: var(--white);
+    font-family: var(--font-ui); font-weight: 700; font-size: 14px;
     text-decoration: none; cursor: pointer; text-align: center;
     box-sizing: border-box;
+    box-shadow: 0 1px 0 rgba(255,255,255,.04) inset;
   }
-  .dash-primary-action:hover { border-color: var(--orange-light); color: var(--orange-light); }
+  .dash-primary-action:hover { border-color: var(--orange-light); color: var(--orange-light); background: var(--orange-tint-soft); }
   .dash-primary-action:active { transform: translateY(1px); }
   @media (prefers-reduced-motion: reduce) { .dash-primary-action:active { transform: none; } }
 
@@ -638,7 +645,7 @@
   </div>
 </div>
 <div class="global-search-block">
-  <div class="icon-search" id="globalSearchWrap">
+    <div class="icon-search is-expanded" id="globalSearchWrap">
     <button class="icon-search-toggle" onclick="toggleIconSearch('globalSearchWrap')" aria-label="Find a client" title="Find a client"><svg class="th-icon" aria-hidden="true"><use href="#icon-search" xlink:href="#icon-search"></use></svg></button>
     <input type="text" id="globalSearch" class="icon-search-input" placeholder="Find a client &mdash; searches jobs, contacts, invoices, quotes, and contracts..." oninput="debouncedCall('globalSearch', renderGlobalSearch)" aria-label="Search everything by client name">
   </div>
@@ -1235,11 +1242,40 @@
     });
   }
 
+  function dashSectionClosed(key) {
+    return !!loadCollapseState()[key];
+  }
+
+  // Paint one drawer after it opens. Closed drawers keep their chip
+  // counts (those are updated inside the same renderers) but skip the
+  // list markup until someone actually opens them.
+  function renderOpenedSection(key) {
+    if (key === 'snapshot') renderMetrics();
+    if (key === 'analytics') {
+      renderStatusBars();
+      renderTopVendors();
+      renderTopClients();
+      loadAndRenderLeads();
+    }
+    if (key === 'actionitems') {
+      renderUpcoming();
+      renderFollowups();
+      renderInvoicesList();
+      loadAndRenderWorkRequests();
+      loadAndRenderLeads();
+      loadAndRenderApplicants();
+      loadAndRenderBookings();
+    }
+    if (key === 'gallery') loadAndRenderGalleryQueue();
+    if (key === 'compliance') renderCompliance();
+  }
+
   function toggleSection(key) {
     const state = loadCollapseState();
     state[key] = !state[key];
     localStorage.setItem(COLLAPSE_STATE_KEY, JSON.stringify(state));
     applyCollapseState();
+    if (!state[key]) renderOpenedSection(key);
   }
 
   // Force a section open (vs. toggleSection's flip) -- used when a global
@@ -1250,6 +1286,7 @@
     state[key] = false;
     localStorage.setItem(COLLAPSE_STATE_KEY, JSON.stringify(state));
     applyCollapseState();
+    renderOpenedSection(key);
   }
 
   const ALL_SYNCED_KEYS = [
@@ -1787,6 +1824,7 @@
     const container = document.getElementById('followupsList');
     actionItemCounts.followups = overdue.length;
     updateActionItemsBadge();
+    if (dashSectionClosed('actionitems')) return;
     if (overdue.length === 0) {
       container.innerHTML = '<div class="empty-state-small is-good"><svg class="th-icon" aria-hidden="true"><use href="#icon-check-circle" xlink:href="#icon-check-circle"></use></svg>No clients overdue for a follow-up right now.</div>';
       return;
@@ -1820,6 +1858,7 @@
     const container = document.getElementById('upcomingJobs');
     actionItemCounts.duesoon = upcoming.length;
     updateActionItemsBadge();
+    if (dashSectionClosed('actionitems')) return;
     if (upcoming.length === 0) {
       container.innerHTML = '<div class="empty-state-small is-good"><svg class="th-icon" aria-hidden="true"><use href="#icon-check-circle" xlink:href="#icon-check-circle"></use></svg>Nothing due in the next 7 days.</div>';
       return;
@@ -1905,6 +1944,7 @@
   function renderInvoicesList() {
     actionItemCounts.unpaid = invoicesForDisplay().filter(i => invoicePaymentStatus(i) !== 'paid').length;
     updateActionItemsBadge();
+    if (dashSectionClosed('actionitems')) return;
     const searchTerm = (document.getElementById('invoiceSearch')?.value || '').trim().toLowerCase();
 
     // Income here now means invoices AND manual entries (cash jobs, etc.)
@@ -2020,6 +2060,7 @@
 
       actionItemCounts.workrequests = requests.length;
       updateActionItemsBadge();
+      if (dashSectionClosed('actionitems')) return;
 
       if (!requests.length) {
         container.innerHTML = '<div class="empty-state-small"><svg class="th-icon" aria-hidden="true"><use href="#icon-check" xlink:href="#icon-check"></use></svg>No open work requests.</div>';
@@ -2234,6 +2275,7 @@
     if (pendingDeleteApplicantIds.size > 0) visibleApplicants = visibleApplicants.filter(a => !pendingDeleteApplicantIds.has(a.id));
     actionItemCounts.applicants = visibleApplicants.filter(a => !a.handled).length;
     updateActionItemsBadge();
+    if (dashSectionClosed('actionitems')) return;
     if (visibleApplicants.length === 0) {
       container.innerHTML = '<div class="empty-state-small"><svg class="th-icon" aria-hidden="true"><use href="#icon-inbox" xlink:href="#icon-inbox"></use></svg>No applicants yet.</div>';
       return;
@@ -2309,8 +2351,11 @@
     if (pendingDeleteLeadIds.size > 0) visibleLeads = visibleLeads.filter(l => !pendingDeleteLeadIds.has(l.id));
     actionItemCounts.leads = visibleLeads.filter(l => !l.handled).length;
     updateActionItemsBadge();
-    renderLeadSources(visibleLeads);
-    renderUtmSources(visibleLeads);
+    if (!dashSectionClosed('analytics')) {
+      renderLeadSources(visibleLeads);
+      renderUtmSources(visibleLeads);
+    }
+    if (dashSectionClosed('actionitems')) return;
     // Item #13 extended (2026-08-20): filters out any lead pending an
     // undoable delete -- the real DELETE call to Supabase is deferred
     // (see deleteLeadFromDashboard), so fetchLeads() above still
@@ -2386,6 +2431,7 @@
     }
     actionItemCounts.bookings = result.bookings.length;
     updateActionItemsBadge();
+    if (dashSectionClosed('actionitems')) return;
     if (result.bookings.length === 0) {
       container.innerHTML = '<div class="empty-state-small"><svg class="th-icon" aria-hidden="true"><use href="#icon-inbox" xlink:href="#icon-inbox"></use></svg>No new bookings.</div>';
       return;
@@ -2921,6 +2967,17 @@
     if (chip) chip.innerHTML = n > 0 ? `<span class="compliance-status-badge is-expiring" style="font-size:10px; padding:1px 6px; vertical-align:middle; margin-left:4px;">${n}</span>` : '';
   }
 
+  // Closed Gallery drawer: the chip only needs the count. Skip signed
+  // photo URLs and the before/after markup until the drawer opens.
+  async function refreshGalleryChip() {
+    if (typeof fetchFeaturedPhotos !== 'function' || !isSyncConfigured()) {
+      updateGalleryChip(0);
+      return;
+    }
+    const result = await fetchFeaturedPhotos();
+    updateGalleryChip(result.ok ? result.photos.length : 0);
+  }
+
   async function loadAndRenderGalleryQueue() {
     const container = document.getElementById('galleryQueueList');
     if (typeof fetchFeaturedPhotos !== 'function' || !isSyncConfigured()) {
@@ -3242,13 +3299,16 @@
   }
 
   function renderDashboard() {
-    document.getElementById('setAsideRate').value = loadSetAsideRate();
+    const rateEl = document.getElementById('setAsideRate');
+    if (rateEl) rateEl.value = loadSetAsideRate();
     renderGreetingBanner();
     renderTodayHero();
     renderMetrics();
-    renderStatusBars();
-    renderTopVendors();
-    renderTopClients();
+    if (!dashSectionClosed('analytics')) {
+      renderStatusBars();
+      renderTopVendors();
+      renderTopClients();
+    }
     renderUpcoming();
     renderFollowups();
     renderInvoicesList();
@@ -3256,8 +3316,10 @@
     loadAndRenderLeads();
     loadAndRenderApplicants();
     loadAndRenderBookings();
-    loadAndRenderGalleryQueue();
-    renderCompliance();
+    if (dashSectionClosed('gallery')) refreshGalleryChip();
+    else loadAndRenderGalleryQueue();
+    if (dashSectionClosed('compliance')) renderInsuranceCard();
+    else renderCompliance();
   }
 
   function downloadBackup() {
