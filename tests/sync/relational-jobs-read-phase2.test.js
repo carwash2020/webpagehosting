@@ -1,19 +1,21 @@
-// Relational tables Phase 2, step 1 (2026-09-09): calendar.html is the
-// first page to read jobs from the real `jobs` table instead of the
-// localStorage/workspace_sync blob copy. Deliberately the safest
-// possible starting page for this multi-page cutover -- read-only, so
-// a mistake here can only show wrong/stale data on a calendar, never
-// corrupt a job, invoice, quote, or contract. See
-// sql/infra/add_jobs_to_realtime_phase2.sql and CONTINUE-HERE.md's
+// Relational tables Phase 2, step 1 (2026-09-09): fetchJobsFromRelational()
+// reads jobs from the real `jobs` table instead of the localStorage/
+// workspace_sync blob copy, with startJobsRealtime() for live updates.
+// See sql/infra/add_jobs_to_realtime_phase2.sql and CONTINUE-HERE.md's
 // "Open follow-up: relational tables Phase 2" for the full plan (one
 // page at a time, offline-first preserved).
 //
-// These tests confirm: fetchJobsFromRelational()'s real HTTP call shape
-// and camelCase field mapping, startJobsRealtime()/stopRealtimeSync()
-// wiring, and that calendar.html's loadJobsForCalendar() prefers the
-// relational cache once loaded but still falls back to localStorage
-// instantly (offline-first, matching the existing cachedUnconvertedBookings
-// pattern) before that first fetch resolves.
+// calendar.html was the pilot consumer of this read path. On 2026-09-21
+// the Calendar became a view inside job-tracker.html, and that merged
+// view deliberately reads the same local job list as the List/Board
+// views beside it (one page, one source), so the page-level assertions
+// that used to live here went with the retired page. Route Planner's
+// "Pull Today's Jobs" still uses fetchJobsFromRelational() with the
+// same localStorage fallback, so the read path itself remains live.
+//
+// These tests confirm fetchJobsFromRelational()'s real HTTP call shape
+// and camelCase field mapping, plus startJobsRealtime()/stopRealtimeSync()
+// wiring.
 
 const { test } = require('node:test');
 const assert = require('node:assert/strict');
@@ -23,7 +25,7 @@ const path = require('path');
 const repo = (...p) => path.join(__dirname, '..', '..', ...p);
 const TOOLS_DIR = repo('tools');
 const SYNC_JS = fs.readFileSync(path.join(TOOLS_DIR, 'sync.js'), 'utf8');
-const CALENDAR = fs.readFileSync(path.join(TOOLS_DIR, 'calendar.html'), 'utf8');
+const ROUTE_PLANNER = fs.readFileSync(path.join(TOOLS_DIR, 'route-planner.html'), 'utf8');
 
 test('sync.js: fetchJobsFromRelational and startJobsRealtime are defined, and stopRealtimeSync clears the jobs channel', () => {
   assert.match(SYNC_JS, /async function fetchJobsFromRelational\(\)/);
@@ -32,19 +34,18 @@ test('sync.js: fetchJobsFromRelational and startJobsRealtime are defined, and st
   assert.match(stopFn, /_jobsRealtimeChannel/);
 });
 
-test('calendar.html: loadJobsForCalendar() prefers the relational cache once set, falls back to localStorage while null', () => {
-  const fn = CALENDAR.match(/function loadJobsForCalendar\(\)[\s\S]*?\n  \}/)[0];
-  assert.match(fn, /if \(cachedRelationalJobs !== null\)/);
-  assert.match(fn, /localStorage\.getItem\('th_tracker_jobs'\)/, 'must still have the localStorage fallback for offline-first instant paint');
+test('route-planner.html still consumes fetchJobsFromRelational() with the localStorage fallback (the read path outlived its calendar.html pilot)', () => {
+  const fn = ROUTE_PLANNER.match(/async function pullTodaysJobs\(\)[\s\S]*?\n  \}/)[0];
+  assert.match(fn, /fetchJobsFromRelational\(\)/);
+  assert.match(fn, /localStorage\.getItem\('th_tracker_jobs'\)/, 'must still fall back to the local copy when the fetch fails');
 });
 
-test('calendar.html: init wiring refreshes the relational cache on load and subscribes to jobs realtime', () => {
-  assert.match(CALENDAR, /refreshRelationalJobsCache\(\)\.then\(\(\) => \{ renderCalendar\(\); renderDayDetail\(\); \}\);/);
-  assert.match(CALENDAR, /if \(typeof startJobsRealtime === 'function'\) \{\s*startJobsRealtime\(\(\) => \{ refreshRelationalJobsCache\(\)/);
-});
-
-test('calendar.html: cachedRelationalJobs starts as null (distinct from an empty array), not [] -- so a page with zero jobs never gets mistaken for "not loaded yet"', () => {
-  assert.match(CALENDAR, /let cachedRelationalJobs = null;/);
+test('job-tracker.html\'s merged Calendar view reads the same local job list as its List/Board views -- no second data source on one page', () => {
+  const jt = fs.readFileSync(path.join(TOOLS_DIR, 'job-tracker.html'), 'utf8');
+  const fn = jt.match(/function loadJobsForCalendar\(\)[\s\S]*?\n  \}/)[0];
+  assert.match(fn, /loadJobs\(\)/);
+  assert.doesNotMatch(fn, /cachedRelationalJobs/);
+  assert.doesNotMatch(jt, /fetchJobsFromRelational\(/, 'no call into the relational read path from this page (a comment naming it is fine)');
 });
 
 // Functional test: fetchJobsFromRelational()'s real HTTP call shape and

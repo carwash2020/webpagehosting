@@ -1409,97 +1409,11 @@ body .jump-nav a.is-active {
   box-shadow: 0 0 0 1px var(--orange-tint-border), 0 0 14px -4px var(--orange-tint-glow);
 }
 
-/* ---- tool grid: app icons, not gray squares ---- */
-body .tool-tile-link {
-  gap: 9px; padding: 18px 6px 14px;
-  /* 2026-08-16: was --bg-panel-2 to --bg-panel, both very close in value
-     to the page's own near-black background -- on an OLED phone screen
-     the whole tool grid read as one flat mass until you looked closely.
-     Bumped the top stop to --bg-panel-3 (one step brighter) and paired
-     it with a slightly stronger border below, so each tile visibly
-     separates at a glance instead of only on close inspection. */
-  background: linear-gradient(180deg, var(--bg-panel-3), var(--bg-panel-2));
-  border-color: rgba(255,255,255,0.08);
-  border-radius: 16px;
-}
-/* Redesign (2026-09-06), requested directly ("logos... make it amazing"):
-   these hex tiles are the closest thing this app has to a mark for each
-   tool, and a flat 16%-alpha tint (this session's first pass) still read
-   as a swatch, not a badge. Now filled solid by default -- a radial
-   gloss highlight over the same orange ramp used elsewhere (primary
-   button, active nav state), so it reads as an enamel pin rather than a
-   tinted outline. Dark icon glyph on the vivid fill for contrast, same
-   pairing .primary-btn already uses (var(--bg) on solid orange). Because
-   the resting state is now already the "filled" look, hover no longer
-   needs a color swap to signal interactivity -- it only needs to lift,
-   exactly like .tool-tile-link's own hover below. This is deliberately
-   NOT applied to .th-hex-icon (the sidebar/bottom-nav icons further
-   down): those use fill specifically to mark the CURRENT page, and
-   making every icon vivid by default would erase that signal. The tool
-   grid has no such state to protect -- every tile is just a link. */
-body .tool-tile-icon {
-  font-size: 24px;
-  width: 52px; height: 52px;
-  display: flex; align-items: center; justify-content: center;
-  clip-path: var(--hex);
-  background:
-    radial-gradient(120% 130% at 30% 18%, rgba(255,255,255,.55), rgba(255,255,255,0) 46%),
-    linear-gradient(165deg, var(--orange-light), var(--orange) 55%, var(--orange-dark) 130%);
-  border: 1px solid var(--orange-dark);
-  box-shadow: 0 3px 8px -3px rgba(0,0,0,.5), 0 1px 0 rgba(255,255,255,.3) inset;
-  transition: transform .18s ease, box-shadow .18s ease;
-}
-body .tool-tile-icon .th-icon { color: #1a0d02; }
-body .tool-tile-link:hover {
-  transform: translateY(-3px);
-  border-color: var(--orange-tint-border);
-  box-shadow: var(--shadow-hover), 0 0 24px -6px var(--orange-tint-glow);
-}
-body .tool-tile-link:hover .tool-tile-icon {
-  transform: scale(1.06);
-  box-shadow: 0 5px 14px -4px var(--orange-tint-glow), 0 1px 0 rgba(255,255,255,.35) inset;
-}
-body .tool-tile-label { font-size: 13px; letter-spacing: .4px; }
-
-/* Category color-coding (2026-09-06), requested directly: the grid was
-   uniform orange regardless of what a tile actually does, so scanning
-   it meant reading every label. Colors follow the dashboard's own
-   existing group headings (Jobs/Money/Grow/Admin) -- Jobs keeps the
-   default orange (it's the primary brand color and the largest, most-
-   used group, so it stays the unmarked default rather than being
-   recolored for its own sake). Money gets green (the universal
-   financial-software convention). Grow reuses --blue/--blue-light/
-   --blue-dark, already this app's established secondary accent, rather
-   than inventing a fifth color the palette doesn't otherwise use. Admin
-   gets a neutral steel gradient -- deliberately desaturated, since
-   Settings/Dev Tools are utility, not a "warm" category like the other
-   three. Each icon's dark glyph color was picked and contrast-checked
-   against that category's actual gradient (not reused from orange's
-   #1a0d02), same method as the rest of this icon system. */
-body .tool-tile[data-cat="money"] .tool-tile-icon {
-  background:
-    radial-gradient(120% 130% at 30% 18%, rgba(255,255,255,.55), rgba(255,255,255,0) 46%),
-    linear-gradient(165deg, #6ee7a8, #22c55e 55%, #0f6b32 130%);
-  border-color: #0f6b32;
-}
-body .tool-tile[data-cat="money"] .tool-tile-icon .th-icon { color: #04160c; }
-body .tool-tile[data-cat="grow"] .tool-tile-icon {
-  background:
-    radial-gradient(120% 130% at 30% 18%, rgba(255,255,255,.55), rgba(255,255,255,0) 46%),
-    linear-gradient(165deg, var(--blue-light), var(--blue) 55%, var(--blue-dark) 130%);
-  border-color: var(--blue-dark);
-}
-body .tool-tile[data-cat="grow"] .tool-tile-icon .th-icon { color: #04101c; }
-body .tool-tile[data-cat="admin"] .tool-tile-icon {
-  background:
-    radial-gradient(120% 130% at 30% 18%, rgba(255,255,255,.55), rgba(255,255,255,0) 46%),
-    linear-gradient(165deg, #e6e8ec, #a8adb6 55%, #6b6f78 130%);
-  border-color: #6b6f78;
-}
-body .tool-tile[data-cat="admin"] .tool-tile-icon .th-icon { color: #161616; }
-body .tool-tile[data-cat="money"] .tool-tile-link:hover .tool-tile-icon { box-shadow: 0 5px 14px -4px rgba(34,197,94,.45), 0 1px 0 rgba(255,255,255,.35) inset; }
-body .tool-tile[data-cat="grow"] .tool-tile-link:hover .tool-tile-icon { box-shadow: 0 5px 14px -4px rgba(58,160,255,.45), 0 1px 0 rgba(255,255,255,.35) inset; }
-body .tool-tile[data-cat="admin"] .tool-tile-link:hover .tool-tile-icon { box-shadow: 0 5px 14px -4px rgba(168,173,182,.45), 0 1px 0 rgba(255,255,255,.35) inset; }
+/* ---- tool grid ----
+   Removed 2026-09-21 along with workspace.html's tile grid: the sidebar
+   (desktop) and bottom bar + More sheet (phone), both injected by
+   tools-nav-pwa.js, already list every destination, so the grid was a
+   third copy of the same navigation. */
 
 /* ---- rows and lists: tappable cards with direction ---- */
 body .dash-list-item {
@@ -1622,7 +1536,7 @@ body select:focus, body textarea:focus {
   body.th-has-bottomnav { padding-bottom: calc(76px + env(safe-area-inset-bottom, 0px)); }
 
   /* hover-lift is meaningless on touch */
-  body .tool-tile-link:hover, body a.dash-list-item:hover,
+  body a.dash-list-item:hover,
   body .primary-btn:hover, body .secondary-btn:hover { transform: none; }
 }
 
@@ -1752,7 +1666,7 @@ body select:focus, body textarea:focus {
 /* Resting state stays a quiet tint deliberately -- this icon's whole job
    in the sidebar and bottom nav is to show which page is CURRENT, so
    only .is-active (below, and in the sidebar/bottom-nav rules) gets the
-   vivid filled treatment .tool-tile-icon uses unconditionally. Refined
+   vivid filled treatment the old tool-grid icons used unconditionally. Refined
    here with a faint inner sheen for a touch more craft at rest, without
    closing the gap to the active state. */
 .th-hex-icon {
@@ -1840,11 +1754,11 @@ body select:focus, body textarea:focus {
 
 /* ---- reduced motion ---- */
 @media (prefers-reduced-motion: reduce) {
-  body .tool-tile-link, body .tool-tile-icon, body .dash-list-item, body .tab-btn::after,
+  body .dash-list-item, body .tab-btn::after,
   body .primary-btn, body .secondary-btn, body .small-btn, body .note-new-btn,
   .th-bottom-nav a, .th-bottom-nav a .th-bn-icon,
   .th-bottom-nav .th-bn-more, .th-bottom-nav .th-bn-more .th-bn-icon { transition: none; }
-  body .tool-tile-link:hover, body .tool-tile-link:hover .tool-tile-icon, body a.dash-list-item:hover,
+  body a.dash-list-item:hover,
   body .primary-btn:hover, body .secondary-btn:hover { transform: none; }
 }
 
@@ -1862,12 +1776,6 @@ body select:focus, body textarea:focus {
 }
 .icon-star-filled, svg.th-icon use[href="#icon-star-filled"] { fill: currentColor; }
 
-/* 2026-08-16: icon at 26px inside a 52px tile squircle left almost no
-   breathing room (icon nearly touched the container's rounded edge).
-   Dropped to 21px (~40% of the container instead of ~50%) -- refined
-   icon sets read premium specifically because of generous internal
-   padding, not because the glyph fills the available space. */
-body .tool-tile-icon .th-icon { width: 21px; height: 21px; margin-right: 0; }
 body .jump-nav-icon .th-icon, body .jump-nav .th-icon { width: 15px; height: 15px; }
 body .section-heading .th-icon, body .dev-panel-heading .th-icon { width: 15px; height: 15px; margin-right: 2px; }
 body a .th-icon { margin-right: 5px; }

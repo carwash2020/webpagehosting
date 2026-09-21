@@ -146,24 +146,23 @@ upside to offset the cost.
 
 | File | Purpose |
 |---|---|
-| `tools/workspace.html` | **Dashboard** — the entry point for the whole suite, organized into 4 tabs: Snapshot (business metrics), Action Items (invoices/leads/new bookings/due-soon jobs), More (Business Health: gallery queue, compliance, analytics, backup/restore — collapsed by default), and Tools (every internal tool, one tap away). Bookmark this one. |
-| `tools/job-tracker.html` | Jobs, Contacts (with client history), Notes — 3 tabs, one page. Cost Lookup, Profitability, Income, and Expenses moved out to `finance.html` on 2026-08-20 (see below) — this page is jobs/contacts/notes only now. On a real desktop screen, the Jobs list also renders as a sortable table. |
+| `tools/workspace.html` | **Dashboard** — the home screen, rebuilt Today-first on 2026-09-21: a one-line greeting band, then **Next Job** (tap-to-call, tap-for-directions, **Open Job**, and **Route today** — one Google Maps link through every address on today's schedule), **Money Owed** listing every unpaid invoice (overdue first) with a two-tap **Mark paid**, **Rest of Today**, the four daily actions (New job / Create invoice / Find client / Calendar), then the **Needs attention** inbox open by default (work requests, leads, applicants, bookings, jobs due this week, follow-ups, unpaid invoices). Business Snapshot, Analytics, Compliance & Documents, and the Gallery Queue sit collapsed under one **Business** label. No chip row, no tile grid: navigation is the sidebar (desktop) or bottom bar + More (phone). Bookmark this one. |
+| `tools/job-tracker.html` | Jobs, Contacts (with client history), Notes — 3 tabs, one page. The Jobs tab has three views, remembered per device: **List** (a sortable table on desktop), **Board** (Not Started / In Progress / Done columns), and **Calendar** (moved here from the retired `calendar.html` on 2026-09-21 — a month view of every dated job plus unconverted online bookings in purple, tap a day for detail, **Add to Phone** exports a `.ics`; deep link `#calendar`). Cost Lookup, Profitability, Income, and Expenses moved out to `finance.html` on 2026-08-20. |
 | `tools/finance.html` | Cost Lookup (with sales tax), Profitability, Income, Expenses (receipt required, mileage rate shared with Route Planner's cost analyzer) — split out of `job-tracker.html` on 2026-08-20 once these four had grown into an entire bookkeeping system living inside a job list. |
 | `tools/invoice-generator.html` | Invoice + Quote/Estimate tabs. Tax-aware, per-line "Taxable" toggle. Convert a Quote to an Invoice with one tap. Generates a branded PDF with your Venmo QR built in. Both logs support deleting an entry (added 2026-08-26, with real cross-device delete protection built in from day one -- see "Deletion resurrection / tombstones" in `DISASTER_RECOVERY.md`), separate from the invoice/quote PDF itself, which is unaffected either way. |
 | `tools/contract-generator.html` | Fill in a client/job, generate a branded contract PDF to email/text. Has two signature canvases — see the swipe-gesture note below if working on touch gestures anywhere near this page. |
 | `tools/route-planner.html` | Multi-stop Google Maps route links + a fuel-cost/sales-tax "to and from" cost analyzer. |
 | `tools/review-request.html` | Generates a review-request text message; deep-linkable with a client name/job pre-filled. Also has Google/Yelp QR code tabs. |
-| `tools/calendar.html` | Shows jobs flagged "Show on Calendar" from Job Tracker, **plus** (added 2026-08-25) unconverted online bookings from `booking.html` -- fetched once on load and merged in as job-shaped pseudo-objects, visually distinguished with a purple dot and a "Booked online" badge. A booking shows up here the moment it's made, without waiting for anyone to manually add it to Job Tracker. Also subscribed to `th_bookings` realtime changes -- a guest cancelling or rescheduling their own booking through `manage-booking.html` now shows up live here too, not just on the initial load. |
 | `tools/runway-dashboard.html` | Personal + business financial runway tracking — debts, income, expenses, month-by-month. Pulls revenue/expenses straight from Finance (`finance.html`), no double entry. |
 | `tools/parts-reference.html` | **Appliance Wiki** — quick lookup for common appliance issues: what part it usually is, the part number, roughly what it costs. |
-| `tools/settings.html` | Account info, Cloud Sync setup, notification preferences, Color theme — personal, per-device options that don't belong on any one specific tool page. |
+| `tools/settings.html` | Account info, display density and color theme, push notifications, tour replay, password reset, **Backup & Restore** (moved here from the Dashboard on 2026-09-21 — the same full JSON export/import, no hop through another page), sign out. |
 | `tools/dev-tools.html` | Site diagnostics and maintenance utilities, organized into 6 tabs (Health, Access, Session, Notifications, Deploy, Reports) as of 2026-08-25 -- replaced the old scroll-to-anchor nav, which no longer scaled once this page reached 22 panels (now 26, after Booking notification test and the 3 new Reports panels). Access is role-gated (`account_roles` table, see `DISASTER_RECOVERY.md`); an Owner-role account only sees the Access tab (Client Registry, Account Roles), while a Developer-role account sees all 6 tabs. Also supports swiping left/right between tabs on mobile, scoped to the panel content area so it doesn't fight with the tab bar's own horizontal scroll. |
 | `tools/site-content.html` | Site Content / FAQ / Terms editing — split out of `dev-tools.html` on 2026-08-20. |
 | `tools/client-detail.html` | Full history for one client (jobs, invoices, quotes, contracts) — reached from workspace.html or job-detail.html, not linked from the main nav directly. |
 | `tools/job-detail.html` | Full detail view for one job (photos, linked invoices, margin) — reached from job-tracker.html or finance.html, not linked from the main nav directly. |
 | `tools/login.html` | Auth entry point for the whole suite. |
 | `tools/reset-password.html` | Password reset flow, reached from a Supabase auth email link. |
-| `tools/contact-card.html`, `tools/job-cost-lookup.html`, `tools/expense-logger.html` | Retired — redirect stubs kept so old bookmarks don't 404. `contact-card.html` redirects into `job-tracker.html`'s Contacts tab (never moved); `job-cost-lookup.html` and `expense-logger.html` redirect into `finance.html`'s Cost Lookup/Expenses tabs (both moved there from Job Tracker on 2026-08-20). |
+| `tools/contact-card.html`, `tools/job-cost-lookup.html`, `tools/expense-logger.html`, `tools/calendar.html` | Retired — redirect stubs kept so old bookmarks don't 404. `contact-card.html` redirects into `job-tracker.html`'s Contacts tab (never moved); `job-cost-lookup.html` and `expense-logger.html` redirect into `finance.html`'s Cost Lookup/Expenses tabs (both moved there from Job Tracker on 2026-08-20); `calendar.html` redirects to `job-tracker.html#calendar` (the Calendar became a Job Tracker view on 2026-09-21). |
 
 ## Shared files (used by BOTH the public site and internal tools — stayed at repo root deliberately)
 
@@ -2584,3 +2583,111 @@ same static skeleton markup to all 3. `settings.html` was also checked
 and found to already have skeletons on every dynamic panel -- no real
 gap there. Full detail in `docs/specialist-logs/features.md`.
 
+## What changed, 2026-09-21 -- Workspace IA: a Today-first dashboard, Calendar folded into Job Tracker
+
+Direct request: the tool suite "feels like a lot -- too many pages,
+too much chrome, too many clicks." Diagnosed as an information-
+architecture problem, not paint, and fixed as two changes done fully
+rather than six done partly. Full reasoning in
+`docs/specialist-logs/features.md`; summarized here.
+
+**1. The dashboard is a Today screen, not a filing cabinet.**
+`workspace.html` used to open on a 170px greeting card, a chip row
+duplicating the section headings right below it, seven collapsed
+drawers, and a 13-tile Tools grid that repeated the sidebar / bottom
+bar a third time -- five navigation layers on one page, with the ops
+inbox (leads, bookings, requests, unpaid invoices) hidden behind a
+count badge. Now:
+
+- The greeting is one band. Next Job starts inside the first phone
+  screen; so does the first **Mark paid** button.
+- **Route today** on the Next Job card: one Google Maps directions link
+  through every address on today's active jobs (same URL shape Route
+  Planner builds, de-duplicated, capped at Google's 10 stops).
+- **Money Owed** lists every unpaid invoice, overdue first with
+  "N days overdue", current ones with "Due in N days", each with
+  two-tap Mark paid. Six shown, the inbox has the rest.
+- **Needs attention** (was Action Items) sits directly under the daily
+  actions, open by default. Empty respond-lane groups hide themselves;
+  one "Nothing waiting on a response" line stands in when all four are
+  empty. The Income lane leads with unpaid invoices and folds paid /
+  received history under one summary line.
+- The chip row and the Tools grid are gone (the sidebar and bottom bar
+  + More already list every destination, and `tools-nav-pwa.js` hides
+  the gated ones). Business Snapshot, Analytics, Compliance &
+  Documents, and Gallery Queue sit under one **Business** label,
+  collapsed. Backup & Restore moved to Settings as real buttons; the
+  old `#backup` link redirects there.
+- Daily strip: New job / Create invoice / Find client / **Calendar**
+  ("Today's schedule" pointed at the hero directly above it).
+
+**2. Calendar is a Job Tracker view, not a page.** `calendar.html` was
+a second page over the same `th_tracker_jobs` data, and it filtered on
+a per-job "Show on Calendar" checkbox -- so it disagreed with the
+dashboard's own Today hero (which never applied the flag) and hid
+work by default. Job Tracker's Board/List toggle is now a three-way
+**List / Board / Calendar** switch, persisted in the same
+`th_tracker_view` key; the Calendar shows every dated job (done jobs
+gray, unconverted bookings purple), honors the same search box,
+keeps swipe-to-change-month, day detail, and Add to Phone (`.ics`).
+The merged view reads the same local job list as the views beside
+it -- one page, one source -- so the relational-read pilot that page
+carried (`fetchJobsFromRelational`) stays in `sync.js` for Route
+Planner and is documented as superseded in `CONTINUE-HERE.md`. The
+checkbox and card toggle are retired; new jobs still write
+`showOnCalendar: true` so the relational mirror stays consistent.
+`calendar.html` is a redirect stub to `job-tracker.html#calendar`
+(same pattern as `job-cost-lookup.html`), the PWA "Calendar"
+shortcut and the tour follow it, and the bottom bar is now
+**Home / Jobs / Clients / Invoices / Finance / More** -- Clients took
+the slot (client history is a daily lookup and was buried in More).
+
+### Before / after
+
+| | Before | After |
+|---|---|---|
+| Real tool pages | 19 | 18 (`calendar.html` is a stub) |
+| Sidebar / More destinations | 14 | 13 |
+| Navigation layers on the dashboard | 5 (bar/sidebar, chip row, strip, tile grid, "Today's schedule" chip) | 2 (bar/sidebar, strip) |
+| Dashboard drawers | 7 collapsed | 1 open inbox + 4 collapsed under Business |
+| First phone screen (390x844) | header, search, greeting card, Next Job; Money Owed and its Mark paid below the fold | Next Job with Route today, Money Owed with the first Mark paid, all in the first screen |
+
+### Click paths (from the dashboard, phone)
+
+- **Mark a current (not yet overdue) invoice paid:** Action Items chip
+  -> tap heading to expand -> scroll to Income -> Mark paid -> confirm
+  (4 taps) -> Mark paid -> confirm (2 taps). Overdue ones were already
+  2 taps; unchanged.
+- **Open today's route in Google Maps:** More -> Route Planner -> Pull
+  Today's Jobs -> Open Full Route (4 taps, one page load) -> Route
+  today (1 tap).
+- **See what needs a response:** chip -> expand heading (2 taps) ->
+  0 taps; it is open.
+- **Look up a client:** Find client / search box at the top (unchanged),
+  and Clients is now 1 tap in the bar instead of More -> Clients (2).
+- **Download a backup:** Settings -> Go to Backup -> (Dashboard opens,
+  drawer expands) -> Download (3 taps, two pages) -> Settings ->
+  Download backup (2 taps, one page).
+- **Log a job:** New job -> form open, title focused (unchanged).
+- **Open the calendar:** 1 tap from the dashboard strip (was 1 tap from
+  the bar); from any other page, Jobs then the Calendar button (2 taps,
+  remembered per device so it is 1 after that).
+
+Verified in a real headless Chromium at 390x844 and 1440x900 (served
+over local HTTP, not `file://`): the first-screen contents above, the
+two-tap Mark paid from the hero (invoice recorded paid, card
+re-rendered), the Route today URL, New job landing with the form open
+and the title focused, the Calendar deep link, the `calendar.html`
+redirect, the More sheet's eight destinations, Settings' backup
+buttons, and every other tool page loading with the same nav and no
+console errors. Full suite 2615/2615, `check-consistency`,
+`check-undefined-vars`, `lint`, `check-links.py`, and
+`check-visual-snapshot` all clean. New tests:
+`tests/tools/dashboard-today-first.test.js`,
+`tests/tools/job-tracker-calendar-view.test.js`.
+
+Deliberately not done, noted for later: merging POS into the Invoice
+page (same permission, plausible tab, but adds Stripe.js to the invoice
+page's CSP -- a separate decision), and the 721-1023px tablet band
+that shows neither the bottom bar nor the sidebar (pre-existing; the
+720px breakpoint is asserted by several tests).

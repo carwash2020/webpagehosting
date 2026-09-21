@@ -3,8 +3,10 @@
 // Replay it any time from Settings.
 //
 // Excluded on purpose, and why:
-//   - job-cost-lookup.html, expense-logger.html, contact-card.html --
-//     these are redirect stubs with no real content of their own.
+//   - job-cost-lookup.html, expense-logger.html, contact-card.html,
+//     calendar.html (retired 2026-09-21, now the Calendar view inside
+//     job-tracker.html) -- these are redirect stubs with no real
+//     content of their own.
 //   - login.html, reset-password.html -- auth flow, not tools.
 //   - dev-tools.html, site-content.html -- password-gated developer
 //     tools, not appropriate for a general "how to use this app" tour.
@@ -14,7 +16,7 @@
 //     wouldn't make sense without a real record already existing.
 //
 // MECHANISM: one flat, ordered list of steps. Most pages get exactly
-// one step; workspace.html gets 4 (its own sections). Each step names
+// one step; workspace.html gets 4 (hero, inbox, quick actions, Business). Each step names
 // the page it belongs to, an optional highlightSelector (any real CSS
 // selector -- an id for the 4 workspace.html sections, a class or
 // attribute selector everywhere else, since none of the other 10 pages
@@ -29,16 +31,15 @@
 // shows that one instead of showing nothing or showing the wrong info.
 
 const APP_TOUR_STEPS = [
-  { page: '/tools/workspace.html', highlightSelector: '#section-snapshot', title: 'Business Snapshot', body: 'Revenue, expenses, and outstanding balances for whatever period you pick above. Check this first thing in the morning to see where things actually stand before you head out.' },
-  { page: '/tools/workspace.html', highlightSelector: '#section-actionitems', title: 'Action Items', body: 'The ops inbox: anything that still needs a tap \u2014 new leads, bookings, work requests, jobs due this week, follow-ups, unpaid invoices. Grouped into lanes with counts. If it\u2019s empty, you\u2019re genuinely caught up.' },
-  { page: '/tools/workspace.html', highlightSelector: '#section-gallery', title: 'More', body: 'Website gallery photos waiting to be published, insurance and license tracking, job analytics, and a one-tap full data backup \u2014 collapsed by default so they don\u2019t clutter this page, but a couple taps away the moment you need one of them.' },
-  { page: '/tools/workspace.html', highlightSelector: '#section-tools', title: 'Tools', body: 'Every tool in this app lives here as a tile, or in the bar at the bottom of the screen on mobile. Lost on some other page? This is always the way back.' },
-  { page: '/tools/job-tracker.html', highlightSelector: '#addJobBtn', title: 'Jobs', body: 'The moment you book a job, add it here. Long-press any job on the list to mark it done, edit it, or log an expense against it on the spot \u2014 no need to leave this page for that last one. Contacts and Notes tabs are right up top.' },
+  { page: '/tools/workspace.html', highlightSelector: '#todayHero', title: 'Today', body: 'The first screen answers the day: your next job (tap the address for directions, the number to call, or Route today for the whole day\u2019s stops in Google Maps), what\u2019s owed with a one-tap Mark paid, and the rest of today\u2019s schedule.' },
+  { page: '/tools/workspace.html', highlightSelector: '#section-actionitems', title: 'Needs attention', body: 'The ops inbox, open by default: new leads, bookings, and work requests waiting on a response, jobs due this week, clients overdue for a follow-up, and invoices still unpaid. An empty group hides itself \u2014 if this is short, you\u2019re genuinely caught up.' },
+  { page: '/tools/workspace.html', highlightSelector: '#dashPrimaryStrip', title: 'Quick actions', body: 'New job, Create invoice, Find client, and Calendar \u2014 one tap each. Every other tool is in the bar at the bottom of the screen on a phone (More holds the rest) or the sidebar on a computer.' },
+  { page: '/tools/workspace.html', highlightSelector: '#section-snapshot', title: 'Business', body: 'Revenue, expenses, net, and outstanding balances for whatever period you pick, plus Analytics, Compliance (insurance and license dates), and the website Gallery Queue \u2014 each collapsed until you want it, since none of these is a daily check.' },
+  { page: '/tools/job-tracker.html', highlightSelector: '#addJobBtn', title: 'Jobs', body: 'The moment you book a job, add it here. Long-press any job on the list to mark it done, edit it, or log an expense against it on the spot \u2014 no need to leave this page for that last one. Switch between List, Board, and Calendar with the buttons above the list \u2014 Calendar is a month view of every dated job, with one-tap export to your phone\u2019s own calendar app. Contacts and Notes tabs are right up top.' },
   { page: '/tools/finance.html', highlightSelector: '.tabs.tabs-sticky', title: 'Finance', body: 'Quoting a new job? Run the numbers in Cost Lookup first. Once it\u2019s done, Profitability shows what you actually made. Income and Expenses \u2014 including mileage \u2014 are the other two tabs, for everything money-related outside a specific job.' },
   { page: '/tools/invoice-generator.html', highlightSelector: 'button[onclick="generatePDF({ send: true })"]', title: 'Invoices', body: 'Fill out a job here, then pick one: <strong>Download PDF</strong> just saves a branded invoice to your device, and <strong>Send to Client</strong> also emails it to them and puts it in their client portal. Either way the invoice is saved to your log. Need a price before the work starts instead? Switch to the Quote/Estimate tab.' },
   { page: '/tools/pos.html', highlightSelector: '#posClientEmail', title: 'Point of Sale', body: 'Charging someone on the spot \u2014 standing in their driveway, job just finished \u2014 belongs here, not in Invoices. Enter their email, ring it up, and take the payment right now instead of billing them later.' },
   { page: '/tools/clients.html', highlightSelector: '#portalAccountSearch', title: 'Clients', body: 'This is the admin side of the client portal: search for a client\u2019s portal account, invite someone new, and check their invoices, work requests, and referral credit balance all in one place.' },
-  { page: '/tools/calendar.html', highlightSelector: '#calGrid', title: 'Calendar', body: 'Every job with a date on it shows up here automatically \u2014 nothing to enter twice. Tap any day with a dot to see exactly what\u2019s scheduled.' },
   { page: '/tools/route-planner.html', highlightSelector: '.add-stop-btn', title: 'Routes', body: 'Got three or four stops lined up for the day? Add them here and get the fastest order to drive them in, opened straight into Google Maps.' },
   { page: '/tools/contract-generator.html', highlightSelector: '.form-section', title: 'Contracts', body: 'Need something signed before you start a job? Fill in a Per-Job Work Order for a one-off, or a Service Agreement for ongoing work, and get a ready-to-send PDF back.' },
   { page: '/tools/review-request.html', highlightSelector: '#sendLink', title: 'Review Requests', body: 'Right after a job wraps up, send the guest a text with a direct link to leave a Google or Yelp review. This page keeps track of who actually left one, so you know who\u2019s worth a follow-up.' },

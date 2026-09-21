@@ -30,8 +30,8 @@
     {
       "name": "Calendar",
       "short_name": "Calendar",
-      "description": "Open the Calendar tool",
-      "url": "/tools/calendar.html",
+      "description": "Open the Jobs calendar view",
+      "url": "/tools/job-tracker.html#calendar",
       "icons": [{ "src": "/images/icon-192.png", "sizes": "192x192" }]
     }
   ]

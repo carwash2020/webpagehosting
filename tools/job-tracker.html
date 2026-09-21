@@ -52,16 +52,16 @@
   })();
 </script>
 <link rel="stylesheet" href="/styles.css?v=2e81706c3d">
-<link rel="stylesheet" href="/tools/styles-tools.css?v=bac5113532">
+<link rel="stylesheet" href="/tools/styles-tools.css?v=29f50804f4">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.112.3/dist/umd/supabase.js" integrity="sha384-qafw21c/iciq0VXsi9FzkfoQv5I/V0iqE4lSNcKXPnW9/UTJLnv5CcN4FHxVLnKg" crossorigin="anonymous" defer></script>
 <script src="/tools/sync.js?v=7b42b1caf0" defer></script>
 <script src="/tools/data-layer.js?v=c5d44f096e" defer></script>
 <script src="/tools/tools-effects.js?v=4cff99aa4a" defer></script>
 <script src="/tools/tools-dialogs.js?v=83d27784e2" defer></script>
 <script src="/tools/tools-media-sharing.js?v=0c229c9353" defer></script>
-<script src="/tools/tools-nav-pwa.js?v=e96c3f254c" defer></script>
+<script src="/tools/tools-nav-pwa.js?v=127366ac2d" defer></script>
 <script src="/tools/tools-command-palette.js?v=36ecf5ee0e" defer></script>
-<script src="/tools/tools-tour.js?v=d87fa2f453" defer></script>
+<script src="/tools/tools-tour.js?v=3397aa4aac" defer></script>
 <style>
   /* Cross-document view transitions (2026-09-21) -- same pattern
      already proven in portal/*.html: keeps the old page's visual
@@ -373,6 +373,73 @@
   #noteSearchWrap { width: 100%; }
   #noteSearchWrap.is-expanded { display: flex; }
   #noteSearchWrap.is-expanded .icon-search-input { width: 100%; }
+  /* ---- Calendar view (2026-09-21) ----
+     Moved here from the retired calendar.html so Jobs is one page with
+     three views (list / board / calendar) over the same th_tracker_jobs
+     data, instead of a second page reachable only from the nav. Class
+     names are kept verbatim from that page. Shows every dated job --
+     the old page filtered on a per-job "Show on Calendar" flag, which
+     made it disagree with the Dashboard's own Today hero (that never
+     applied the flag) and hid work by default. The flag still exists
+     in the data (sync.js mirrors it); it just no longer gates a view. */
+  .jobs-calendar-wrap .form-section { margin-bottom: 16px; }
+  .cal-nav { display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; }
+  .cal-nav-btn {
+    background: var(--bg-panel-2); border: 1px solid var(--border); border-radius: 8px;
+    width: 38px; height: 38px; display: flex; align-items: center; justify-content: center;
+    color: var(--text); cursor: pointer; font-size: 18px;
+  }
+  .cal-nav-btn:hover { border-color: var(--orange-light); color: var(--orange-light); }
+  .cal-month-label { font-family:var(--font-ui); font-weight:700; font-size: 20px; color: var(--white); }
+  .cal-today-btn { font-size: 13px; color: var(--blue-light); cursor: pointer; background: none; border: none; padding: 0; font-family: inherit; }
+
+  .cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 6px; }
+  .cal-dow { text-align: center; font-size: 11.5px; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.5px; padding-bottom: 6px; }
+  .cal-day {
+    aspect-ratio: 1; background: var(--bg-panel); border: 1px solid var(--border); border-radius: 8px;
+    padding: 6px; cursor: pointer; display: flex; flex-direction: column; position: relative;
+    transition: border-color 0.15s ease;
+  }
+  .cal-day:hover { border-color: var(--orange-light); }
+  .cal-day:active { transform: scale(0.95); border-color: var(--orange-light); transition: transform 0.08s ease; }
+  .cal-day.is-empty { background: none; border: none; cursor: default; }
+  .cal-day.is-today { border-color: var(--blue-light); border-width: 2px; }
+  .cal-day.is-selected { background: rgba(58,160,255,0.12); border-color: var(--blue-light); }
+  .cal-day-num { font-size: 12.5px; color: var(--text-dim); }
+  .cal-day.is-today .cal-day-num { color: var(--blue-light); font-weight: 700; }
+  .cal-day-dots { display: flex; gap: 3px; flex-wrap: wrap; margin-top: auto; }
+  .cal-day-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--orange-light); flex-shrink: 0; }
+  .cal-day-dot.is-done { background: var(--text-dim); }
+  .cal-day-dot.is-high { background: #e05252; }
+  .cal-day-dot.is-medium { background: var(--orange); }
+  .cal-day-dot.is-low { background: var(--blue); }
+  .cal-day-dot.is-booking { background: #b083f0; }
+  .cal-booking-badge {
+    display: inline-block; font-size: 11px; font-weight: 600; letter-spacing: 0.3px;
+    background: rgba(176,131,240,0.15); color: #b083f0; border: 1px solid rgba(176,131,240,0.35);
+    border-radius: 5px; padding: 2px 7px; margin-left: 6px; vertical-align: middle;
+  }
+  .cal-day-more { font-size: 9px; color: var(--text-dim); flex-shrink: 0; line-height: 6px; }
+
+  .cal-job-item {
+    display: flex; justify-content: space-between; align-items: flex-start; gap: 12px;
+    padding: 14px 0; border-bottom: 1px solid var(--border);
+  }
+  .cal-job-item:last-child { border-bottom: none; }
+  .cal-job-title { color: var(--white); font-weight: 600; font-size: 14.5px; }
+  .cal-job-title a { color: inherit; text-decoration: none; }
+  .cal-job-title a:hover { color: var(--orange-light); }
+  .cal-job-meta { color: var(--text-dim); font-size: 13px; margin-top: 3px; }
+  .cal-job-actions { display: flex; gap: 6px; flex-shrink: 0; flex-wrap: wrap; justify-content: flex-end; }
+  @keyframes calSlideInFromRight { from { opacity: 0; transform: translateX(24px); } to { opacity: 1; transform: translateX(0); } }
+  @keyframes calSlideInFromLeft { from { opacity: 0; transform: translateX(-24px); } to { opacity: 1; transform: translateX(0); } }
+  #calGrid.cal-slide-next { animation: calSlideInFromRight .22s ease; }
+  #calGrid.cal-slide-prev { animation: calSlideInFromLeft .22s ease; }
+  @keyframes calDetailFadeIn { from { opacity: 0; } to { opacity: 1; } }
+  #calDayJobs.cal-detail-fade, #calDetailHeading.cal-detail-fade { animation: calDetailFadeIn .18s ease; }
+  @media (prefers-reduced-motion: reduce) {
+    #calGrid.cal-slide-next, #calGrid.cal-slide-prev, #calDayJobs.cal-detail-fade, #calDetailHeading.cal-detail-fade { animation: none; }
+  }
 </style>
 </head>
 <body>
@@ -388,7 +455,7 @@
     <a href="/tools/workspace.html" class="help-btn" aria-label="Back to Workspace" title="Back to Workspace" style="text-decoration:none; display:inline-flex; align-items:center; justify-content:center;">&#8617;</a>
   </div>
 </div>
-<p class="tool-sub">Jobs, contacts, and notes here &mdash; pricing, income, and expenses live on <a href="/tools/finance.html" style="color:var(--orange-light);">Finance &rarr;</a>.<span id="syncStatusText"></span> Force a full refresh from the <a href="/tools/workspace.html" style="color:var(--blue-light);">Workspace</a> page.
+<p class="tool-sub">Jobs as a list, board, or calendar, plus contacts and notes. Pricing, income, and expenses are on Finance <a href="/tools/finance.html" style="color:var(--orange-light);">&rarr;</a><span id="syncStatusText"></span>
   <span class="realtime-badge" id="realtimeBadge" onclick="retryLiveSync()" title="Live sync"><span class="realtime-dot" id="realtimeDot"></span><span id="realtimeText">Live sync: connecting...</span></span>
 </p>
 
@@ -396,9 +463,6 @@
   <button class="tab-btn is-active" data-tab="jobs">Jobs</button>
   <button class="tab-btn" data-tab="contacts">Contacts</button>
   <button class="tab-btn" data-tab="notes">Notes</button>
-</div>
-<div style="margin-bottom:22px;">
-  <a href="/tools/finance.html" style="display:inline-flex; align-items:center; gap:6px; text-decoration:none; color:var(--text-dim); font-size:13.5px;">Pricing, income, and expenses are on Finance <span style="color:var(--orange-light);">&rarr;</span></a>
 </div>
 
 <!-- JOBS TAB -->
@@ -460,12 +524,6 @@
       </div>
     </div>
     <div class="tool-form-row">
-      <div class="checkbox-row">
-        <input type="checkbox" id="jobShowOnCalendar">
-        <label for="jobShowOnCalendar">Show this job on the Calendar tool</label>
-      </div>
-    </div>
-    <div class="tool-form-row">
       <div class="form-field">
         <label>Notes</label>
         <div style="position:relative;">
@@ -499,7 +557,14 @@
       <input type="text" id="jobSearch" class="icon-search-input" placeholder="Search jobs by title or client..." oninput="debouncedCall('jobSearch', renderJobs)">
     </div>
     <button class="small-btn" id="jobSelectModeBtn" onclick="toggleJobSelectionMode()">Select</button>
-    <button class="small-btn" id="jobViewToggleBtn" onclick="toggleJobViewMode()" aria-pressed="false">Board view</button>
+    <!-- One view switch, three views (2026-09-21): List / Board /
+         Calendar. Calendar used to be its own page (calendar.html, now
+         a redirect stub to #calendar here) -- same jobs, one page. -->
+    <div class="sort-group job-view-switch" id="jobViewSwitch" role="group" aria-label="View">
+      <button type="button" class="sort-btn is-active" data-view="list" onclick="setJobViewMode('list')" aria-pressed="true">List</button>
+      <button type="button" class="sort-btn" data-view="board" onclick="setJobViewMode('board')" aria-pressed="false">Board</button>
+      <button type="button" class="sort-btn" data-view="calendar" onclick="setJobViewMode('calendar')" aria-pressed="false">Calendar</button>
+    </div>
     <button class="small-btn" data-density-toggle onclick="toggleDensityPreference()" aria-pressed="false">Compact view</button>
   </div>
 
@@ -551,7 +616,7 @@
   <!-- Kanban-style board view (2026-09-07), item #39: an alternate way to
        see every status side by side instead of one filtered list/table at
        a time. Hidden by default (matches the "list" default in
-       loadJobViewMode()); toggled by #jobViewToggleBtn, independent of
+       loadJobViewMode()); switched by #jobViewSwitch, independent of
        screen size -- unlike the desktop-only table above, this works on
        phone too via horizontal scroll, so no min-width media query gates
        it. Always shows all 3 statuses regardless of the status-filter row
@@ -570,6 +635,41 @@
     <div class="board-column">
       <div class="board-column-header"><span class="board-col-dot status-done"></span>Done<span class="board-col-count" id="boardColCount-done">0</span></div>
       <div class="board-column-body" id="boardCol-done"></div>
+    </div>
+  </div>
+
+  <!-- Calendar view (2026-09-21), moved here from the retired
+       calendar.html. Hidden unless th_tracker_view is 'calendar' (see
+       applyJobViewMode()). Reads the same job list as the List/Board
+       views above -- one page, one source, so a job can never be in
+       the list but missing from the calendar. Unconverted online
+       bookings are merged in as purple dots, same as before. -->
+  <div id="jobsCalendarWrap" class="jobs-calendar-wrap" style="display:none;">
+    <div class="form-section">
+      <div class="cal-nav">
+        <button class="cal-nav-btn" onclick="changeMonth(-1)" aria-label="Previous month">&larr;</button>
+        <div style="text-align:center;">
+          <div class="cal-month-label" id="calMonthLabel"></div>
+          <button type="button" class="cal-today-btn" onclick="goToToday()">Jump to today</button>
+        </div>
+        <button class="cal-nav-btn" onclick="changeMonth(1)" aria-label="Next month">&rarr;</button>
+      </div>
+      <div class="cal-grid" id="calDowRow">
+        <div class="cal-dow">Sun</div><div class="cal-dow">Mon</div><div class="cal-dow">Tue</div>
+        <div class="cal-dow">Wed</div><div class="cal-dow">Thu</div><div class="cal-dow">Fri</div><div class="cal-dow">Sat</div>
+      </div>
+      <div class="cal-grid" id="calGrid" style="margin-top:6px;"><div class="skeleton-line w-100"></div><div class="skeleton-line w-60"></div><div class="skeleton-line w-40"></div></div>
+    </div>
+
+    <div class="form-section cal-day-detail">
+      <h3 id="calDetailHeading">Select a day</h3>
+      <div id="calDayJobs"><div class="empty-state-small"><svg class="th-icon" aria-hidden="true"><use href="#icon-calendar" xlink:href="#icon-calendar"></use></svg>Tap a day above with a dot to see what's scheduled.</div></div>
+    </div>
+
+    <div class="form-section" id="calDowDensitySection">
+      <h3>Job Density by Weekday</h3>
+      <p class="tool-sub" style="margin-top:-4px; margin-bottom:14px;">Every dated job, grouped by day of the week &mdash; useful for spotting a pattern like always overbooking Fridays.</p>
+      <div id="calDowDensity"><div class="skeleton-line w-100"></div><div class="skeleton-line w-60"></div></div>
     </div>
   </div>
 </div>
@@ -633,10 +733,10 @@
     <button class="help-modal-close" onclick="closeHelpModal()" aria-label="Close">&times;</button>
     <h3>How to Use: Job Tracker</h3>
     <div class="help-modal-body">
-      <p>This page combines five related tools into tabs. Data lives in this browser, and also syncs to the cloud if you've set that up on the Workspace page.</p>
+      <p>Jobs, contacts, and notes in one place. Data lives in this browser and syncs to the cloud in the background.</p>
       <ul>
-        <li><strong>Jobs</strong> &mdash; search by title or client name, add a job with priority/status/due date, sort by date or priority, hide completed jobs (remembered next time you visit), tap "Advance Status" to cycle Not Started &rarr; In Progress &rarr; Done, or "Photos" to attach before/after pictures (on mobile, your phone offers both the camera and your photo gallery). Tap the <svg class="th-icon" aria-hidden="true"><use href="#icon-star" xlink:href="#icon-star"></use></svg> star on any photo to queue it for the public website's gallery with a caption &mdash; this doesn't publish it automatically, it just adds it to a review queue on the Dashboard.</li>
-        <li><strong>Jobs</strong> &mdash; the main list: title, client, status, priority, date, and notes, with search and status filters. Tap <strong>Done</strong> on the card or table row to mark it complete without opening Edit. Swipe a card or long-press for the same action. Filed under "Done," a job shows the profit margin once it's linked to an invoice. On a real desktop screen, this same list also shows as a sortable table &mdash; click any column header to sort by it, click again to reverse.</li>
+        <li><strong>Jobs</strong> &mdash; the main list: title, client, status, priority, date, and notes, with search and status filters. Tap <strong>Done</strong> on the card or table row to mark it complete without opening Edit. Swipe a card or long-press for the same action. Filed under "Done," a job shows the profit margin once it's linked to an invoice. On a real desktop screen, this same list also shows as a sortable table &mdash; click any column header to sort by it, click again to reverse. "Photos" attaches before/after pictures; tap the <svg class="th-icon" aria-hidden="true"><use href="#icon-star" xlink:href="#icon-star"></use></svg> star on any photo to queue it for the public website's gallery.</li>
+        <li><strong>List / Board / Calendar</strong> &mdash; the same jobs three ways, remembered per device. <strong>Board</strong> puts Not Started, In Progress, and Done side by side. <strong>Calendar</strong> is a month view of every dated job (plus online bookings you haven't added yet, in purple) &mdash; tap a day to see what's scheduled, then <strong>Add to Phone</strong> to drop a job into your phone's own calendar app as a one-time export.</li>
         <li><strong>Contacts</strong> &mdash; a quick address book for vendors, suppliers, or recurring clients. Tap "History" on any contact to see their past jobs and lifetime spend (matched by exact name against Jobs and Invoices).</li>
         <li><strong>Notes</strong> &mdash; keep as many separate, named notes as you want. Search by title or content, click one on the left to open it, or start a new one. Saves automatically as you type.</li>
       </ul>
@@ -915,7 +1015,6 @@
       date: document.getElementById('jobDate').value,
       status: document.getElementById('jobStatus').value,
       notes: document.getElementById('jobNotes').value.trim(),
-      showOnCalendar: document.getElementById('jobShowOnCalendar').checked,
       referredBy: referredBy || '',
       hoursWorked: parseFloat(document.getElementById('jobHoursWorked').value) || null,
     };
@@ -932,7 +1031,12 @@
       if (idx > -1) jobs[idx] = { ...jobs[idx], ...fields, lastEditedBy: currentUser || jobs[idx].lastEditedBy };
     } else {
       newId = Date.now();
-      jobs.push({ id: newId, ...fields, createdBy: currentUser, lastEditedBy: currentUser });
+      // showOnCalendar (2026-09-21): no longer a checkbox -- the Calendar
+      // view shows every dated job. Kept true on new records so the
+      // relational mirror (sync.js show_on_calendar) and any older
+      // reader stay consistent; an existing job's value is left alone on
+      // edit since `fields` no longer carries it.
+      jobs.push({ id: newId, ...fields, showOnCalendar: true, createdBy: currentUser, lastEditedBy: currentUser });
     }
     saveJobs(jobs);
     // Referral program: only on genuine creation, not every edit -- see
@@ -945,7 +1049,6 @@
     document.getElementById('jobDate').value = '';
     document.getElementById('jobPriority').value = 'medium';
     document.getElementById('jobStatus').value = 'not-started';
-    document.getElementById('jobShowOnCalendar').checked = false;
     document.getElementById('jobFirstTimeNudge').style.display = 'none';
     cancelJobEdit();
     justAddedJobId = newId;
@@ -1041,7 +1144,6 @@
     document.getElementById('jobDate').value = job.date || '';
     document.getElementById('jobStatus').value = job.status || 'not-started';
     document.getElementById('jobNotes').value = job.notes || '';
-    document.getElementById('jobShowOnCalendar').checked = !!job.showOnCalendar;
     document.getElementById('jobReferredBy').value = job.referredBy || '';
     document.getElementById('jobHoursWorked').value = job.hoursWorked || '';
     updateFirstTimeNudge(job.client || '');
@@ -1691,34 +1793,54 @@
   // data blob, since which view you'd rather see is a per-device choice,
   // not shared business data.
   const JOB_VIEW_KEY = 'th_tracker_view';
+  const JOB_VIEW_MODES = ['list', 'board', 'calendar'];
   function loadJobViewMode() {
-    try { return localStorage.getItem(JOB_VIEW_KEY) === 'board' ? 'board' : 'list'; }
-    catch (e) { return 'list'; }
+    try {
+      const v = localStorage.getItem(JOB_VIEW_KEY);
+      return JOB_VIEW_MODES.includes(v) ? v : 'list';
+    } catch (e) { return 'list'; }
   }
   function applyJobViewMode() {
-    const isBoard = loadJobViewMode() === 'board';
+    const mode = loadJobViewMode();
+    const isBoard = mode === 'board';
+    const isCalendar = mode === 'calendar';
     const listEl = document.getElementById('jobsList');
     const tableWrap = document.getElementById('jobsTableWrap');
     const boardWrap = document.getElementById('jobsBoardWrap');
+    const calendarWrap = document.getElementById('jobsCalendarWrap');
     const statusFilterGroup = document.getElementById('statusFilterGroup');
+    const sortRow = document.querySelector('.controls-row');
+    const selectBtn = document.getElementById('jobSelectModeBtn');
     // Clearing the inline style (rather than always setting one) lets
     // #jobsTableWrap fall back to its own min-width:1024px media query
-    // when the board isn't active, same as before this feature existed.
-    if (listEl) listEl.style.display = isBoard ? 'none' : '';
-    if (tableWrap) tableWrap.style.display = isBoard ? 'none' : '';
+    // when the list view is active, same as before this feature existed.
+    if (listEl) listEl.style.display = mode === 'list' ? '' : 'none';
+    if (tableWrap) tableWrap.style.display = mode === 'list' ? '' : 'none';
     if (boardWrap) boardWrap.style.display = isBoard ? '' : 'none';
-    if (statusFilterGroup) statusFilterGroup.style.display = isBoard ? 'none' : '';
-    const btn = document.getElementById('jobViewToggleBtn');
-    if (btn) {
-      btn.setAttribute('aria-pressed', isBoard ? 'true' : 'false');
-      btn.textContent = isBoard ? 'List view' : 'Board view';
-      btn.classList.toggle('is-active', isBoard);
-    }
+    if (calendarWrap) calendarWrap.style.display = isCalendar ? '' : 'none';
+    // The status filter only means something for a single list/table;
+    // the board shows every status by design and the calendar shows
+    // every dated job. Sorting and bulk-select are list/board concepts.
+    if (statusFilterGroup) statusFilterGroup.style.display = mode === 'list' ? '' : 'none';
+    if (sortRow) sortRow.style.display = isCalendar ? 'none' : '';
+    if (selectBtn) selectBtn.style.display = isCalendar ? 'none' : '';
+    document.querySelectorAll('#jobViewSwitch .sort-btn').forEach(btn => {
+      const on = btn.dataset.view === mode;
+      btn.classList.toggle('is-active', on);
+      btn.setAttribute('aria-pressed', on ? 'true' : 'false');
+    });
+    if (isCalendar) renderCalendarView();
   }
-  function toggleJobViewMode() {
-    const next = loadJobViewMode() === 'board' ? 'list' : 'board';
-    try { localStorage.setItem(JOB_VIEW_KEY, next); } catch (e) { /* ignore */ }
+  function setJobViewMode(mode) {
+    if (!JOB_VIEW_MODES.includes(mode)) mode = 'list';
+    try { localStorage.setItem(JOB_VIEW_KEY, mode); } catch (e) { /* ignore */ }
     applyJobViewMode();
+    // #calendar is the deep link the old calendar.html stub, the
+    // Dashboard strip, and the PWA shortcut all use; anything else on
+    // the Jobs tab keeps the plain #jobs hash the tab buttons set.
+    if (document.getElementById('tab-jobs')?.classList.contains('is-active')) {
+      history.replaceState(null, '', mode === 'calendar' ? '#calendar' : '#jobs');
+    }
   }
 
   const PRIORITY_RANK = { high: 0, medium: 1, low: 2 };
@@ -1809,7 +1931,6 @@
             <option value="done" ${job.status === 'done' ? 'selected' : ''}>Mark as Complete</option>
           </select>
           ${opts.includePhotoToggle ? `<button class="small-btn" onclick="toggleJobPhotos(${job.id}, '${escapeForInlineHandler(job.title)}')">Photos</button>` : ''}
-          <button class="small-btn ${job.showOnCalendar ? 'is-active' : ''}" onclick="toggleShowOnCalendar(${job.id})">${job.showOnCalendar ? '✓ On Calendar' : 'Show on Calendar'}</button>
           ${job.clientEmail ? (
             job.confirmationSentAt
               ? `<button class="small-btn is-active" disabled title="Sent ${escapeAttr(new Date(job.confirmationSentAt).toLocaleString())}">✓ Confirmation Sent</button>`
@@ -1874,6 +1995,10 @@
     // that filter only makes sense for a single list/table, and is
     // hidden while the board is active (see applyJobViewMode()).
     renderJobsBoard(allJobs, marginData);
+    // Same un-status-filtered, search-filtered set feeds the calendar
+    // view -- every dated job gets a dot regardless of status (done
+    // jobs render gray), matching the board's "show everything" rule.
+    renderCalendarView(allJobs);
 
     let jobs = allJobs;
     if (currentStatusFilter === 'not-done') jobs = jobs.filter(j => j.status !== 'done');
@@ -2062,15 +2187,6 @@
     }
     container.addEventListener('pointerup', endDrag, { passive: true });
     container.addEventListener('pointercancel', endDrag, { passive: true });
-  }
-
-  function toggleShowOnCalendar(jobId) {
-    const jobs = loadJobs();
-    const job = jobs.find(j => j.id === jobId);
-    if (!job) return;
-    job.showOnCalendar = !job.showOnCalendar;
-    saveJobs(jobs);
-    renderJobs();
   }
 
   // Manual booking confirmation email (2026-09-11), direct request:
@@ -2601,15 +2717,281 @@
   // DOMContentLoaded (which fires only after deferred scripts finish)
   // guarantees initSyncOnLoad() and friends actually exist by the time
   // we call them here.
+
+  // ---------- Calendar view (2026-09-21) ----------
+  // Moved here from the retired calendar.html. Reads the SAME job list
+  // the List/Board views render (loadJobs(), minus pending deletes,
+  // filtered by the search box) rather than the relational `jobs`
+  // table that page piloted -- two sources on one page could show a
+  // job in the list but not on the calendar for the seconds between a
+  // local write and its relational mirror. The relational read
+  // (fetchJobsFromRelational, sync.js) is unchanged and still used by
+  // Route Planner's "Pull Today's Jobs".
+  //
+  // Unconverted online bookings are merged in as job-shaped pseudo-
+  // objects (purple dot, "Booked online" badge) exactly as before, so a
+  // fresh booking is visible here the moment it's made.
+  let cachedUnconvertedBookings = [];
+  let calendarJobsForRender = null; // the set renderJobs() last passed in; null = compute fresh
+  const calToday = new Date();
+  let viewYear = calToday.getFullYear(), viewMonth = calToday.getMonth();
+  let selectedDateStr = null;
+
+  function pad2(n) { return String(n).padStart(2, '0'); }
+  function dateKey(y, m, d) { return `${y}-${pad2(m + 1)}-${pad2(d)}`; }
+
+  async function refreshBookingsCache() {
+    if (typeof fetchUnconvertedBookings !== 'function') return;
+    const result = await fetchUnconvertedBookings();
+    if (!result.ok) return;
+    cachedUnconvertedBookings = result.bookings.map(b => {
+      const start = new Date(b.start_at);
+      const end = new Date(b.end_at);
+      const dateParts = new Intl.DateTimeFormat('en-US', { timeZone: 'America/Denver', year: 'numeric', month: '2-digit', day: '2-digit' }).formatToParts(start);
+      const map = {};
+      dateParts.forEach(p => { map[p.type] = p.value; });
+      const timeFmt = new Intl.DateTimeFormat('en-US', { timeZone: 'America/Denver', hour: 'numeric', minute: '2-digit' });
+      return {
+        // String-prefixed so this can never collide with a real job's
+        // Date.now()-based numeric id.
+        id: 'booking-' + b.id,
+        title: b.service_label,
+        client: b.name,
+        phone: b.phone,
+        address: b.address,
+        notes: 'Booked online for ' + timeFmt.format(start) + ' \u2013 ' + timeFmt.format(end) + (b.notes ? '\n\n' + b.notes : ''),
+        date: map.year + '-' + map.month + '-' + map.day,
+        status: 'not-started',
+        priority: 'medium',
+        isUnconvertedBooking: true,
+      };
+    });
+  }
+
+  function loadJobsForCalendar() {
+    let jobs = calendarJobsForRender;
+    if (!jobs) {
+      const searchTerm = (document.getElementById('jobSearch')?.value || '').trim().toLowerCase();
+      jobs = loadJobs().filter(j => !pendingDeleteJobIds.has(j.id));
+      if (searchTerm) {
+        jobs = jobs.filter(j => (j.title || '').toLowerCase().includes(searchTerm) || (j.client || '').toLowerCase().includes(searchTerm));
+      }
+    }
+    return jobs.filter(j => j.date).concat(cachedUnconvertedBookings);
+  }
+
+  // Entry point renderJobs() and applyJobViewMode() both call. Cheap
+  // (at most 42 cells), so it runs on every job render even while the
+  // calendar is hidden -- switching views then needs no extra paint.
+  function renderCalendarView(jobsFromRender) {
+    if (!document.getElementById('calGrid')) return;
+    calendarJobsForRender = Array.isArray(jobsFromRender) ? jobsFromRender : null;
+    renderCalendar();
+    renderDayDetail();
+  }
+
+  function renderCalendar() {
+    const label = new Date(viewYear, viewMonth, 1).toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+    document.getElementById('calMonthLabel').textContent = label;
+
+    const jobs = loadJobsForCalendar();
+    const jobsByDate = {};
+    jobs.forEach(j => {
+      if (!jobsByDate[j.date]) jobsByDate[j.date] = [];
+      jobsByDate[j.date].push(j);
+    });
+
+    const firstOfMonth = new Date(viewYear, viewMonth, 1);
+    const startWeekday = firstOfMonth.getDay();
+    const daysInMonth = new Date(viewYear, viewMonth + 1, 0).getDate();
+    const todayKey = dateKey(calToday.getFullYear(), calToday.getMonth(), calToday.getDate());
+
+    let cells = '';
+    for (let i = 0; i < startWeekday; i++) cells += '<div class="cal-day is-empty"></div>';
+    for (let d = 1; d <= daysInMonth; d++) {
+      const key = dateKey(viewYear, viewMonth, d);
+      const dayJobs = jobsByDate[key] || [];
+      const isToday = key === todayKey;
+      const isSelected = key === selectedDateStr;
+      const shownJobs = dayJobs.slice(0, 4);
+      const dots = shownJobs.map(j => {
+        const cls = j.isUnconvertedBooking ? 'is-booking' : (j.status === 'done' ? 'is-done' : 'is-' + (j.priority || 'medium'));
+        return `<span class="cal-day-dot ${cls}"></span>`;
+      }).join('');
+      const extraCount = dayJobs.length - shownJobs.length;
+      const moreLabel = extraCount > 0 ? `<span class="cal-day-more">+${extraCount}</span>` : '';
+      cells += `
+        <div class="cal-day ${isToday ? 'is-today' : ''} ${isSelected ? 'is-selected' : ''}" onclick="selectDay('${key}')" role="button" aria-label="${key}${dayJobs.length ? ', ' + dayJobs.length + ' scheduled' : ''}">
+          <span class="cal-day-num">${d}</span>
+          <div class="cal-day-dots">${dots}${moreLabel}</div>
+        </div>`;
+    }
+    document.getElementById('calGrid').innerHTML = cells;
+    renderCalDowDensity(jobs);
+  }
+
+  // Job density by day of week, over the same set the grid uses, so
+  // this panel never disagrees with the calendar itself. Answers a
+  // pattern question ("do I always overbook Fridays") one month can't.
+  function renderCalDowDensity(allCalendarJobs) {
+    const container = document.getElementById('calDowDensity');
+    if (!container) return;
+    if (allCalendarJobs.length === 0) {
+      container.innerHTML = '<div class="empty-state-small"><svg class="th-icon" aria-hidden="true"><use href="#icon-inbox" xlink:href="#icon-inbox"></use></svg>No dated jobs yet.</div>';
+      return;
+    }
+    const DOW_LABELS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+    const counts = [0, 0, 0, 0, 0, 0, 0];
+    allCalendarJobs.forEach(j => {
+      const d = new Date(j.date + 'T00:00:00');
+      if (isNaN(d.getTime())) return;
+      counts[d.getDay()]++;
+    });
+    const max = Math.max(...counts, 1);
+    container.innerHTML = DOW_LABELS.map((label, i) => `
+      <div class="vendor-bar-row">
+        <div class="vendor-bar-label">${label}</div>
+        <div class="vendor-bar-track"><div class="vendor-bar-fill" style="width:${(counts[i] / max * 100)}%"></div></div>
+        <div class="vendor-bar-count">${counts[i]} job${counts[i] === 1 ? '' : 's'}</div>
+      </div>`).join('');
+  }
+
+  function playCalGridTransition(direction) {
+    const grid = document.getElementById('calGrid');
+    grid.classList.remove('cal-slide-next', 'cal-slide-prev');
+    void grid.offsetWidth; // forces a reflow so the animation replays even on repeated clicks in the same direction
+    grid.classList.add(direction > 0 ? 'cal-slide-next' : 'cal-slide-prev');
+  }
+
+  function changeMonth(delta) {
+    viewMonth += delta;
+    if (viewMonth < 0) { viewMonth = 11; viewYear--; }
+    if (viewMonth > 11) { viewMonth = 0; viewYear++; }
+    renderCalendar();
+    playCalGridTransition(delta);
+  }
+
+  function goToToday() {
+    const beforeKey = viewYear * 12 + viewMonth;
+    viewYear = calToday.getFullYear();
+    viewMonth = calToday.getMonth();
+    selectedDateStr = dateKey(viewYear, viewMonth, calToday.getDate());
+    const afterKey = viewYear * 12 + viewMonth;
+    renderCalendar();
+    if (afterKey !== beforeKey) playCalGridTransition(afterKey > beforeKey ? 1 : -1);
+    renderDayDetail();
+  }
+
+  function selectDay(key) {
+    selectedDateStr = key;
+    renderCalendar();
+    renderDayDetail();
+    ['calDetailHeading', 'calDayJobs'].forEach(id => {
+      const el = document.getElementById(id);
+      el.classList.remove('cal-detail-fade');
+      void el.offsetWidth;
+      el.classList.add('cal-detail-fade');
+    });
+  }
+
+  function renderDayDetail() {
+    const heading = document.getElementById('calDetailHeading');
+    const container = document.getElementById('calDayJobs');
+    if (!heading || !container) return;
+    if (!selectedDateStr) {
+      heading.textContent = 'Select a day';
+      container.innerHTML = '<div class="empty-state-small"><svg class="th-icon" aria-hidden="true"><use href="#icon-calendar" xlink:href="#icon-calendar"></use></svg>Tap a day above with a dot to see what\'s scheduled.</div>';
+      return;
+    }
+    const niceDate = new Date(selectedDateStr + 'T00:00:00').toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' });
+    heading.textContent = niceDate;
+
+    const jobs = loadJobsForCalendar().filter(j => j.date === selectedDateStr);
+    if (jobs.length === 0) {
+      container.innerHTML = '<div class="empty-state-small is-good"><svg class="th-icon" aria-hidden="true"><use href="#icon-check-circle" xlink:href="#icon-check-circle"></use></svg>Nothing scheduled on this day.</div>';
+      return;
+    }
+    container.innerHTML = jobs.map(j => `
+      <div class="cal-job-item">
+        <div>
+          <div class="cal-job-title">${j.isUnconvertedBooking ? escapeHtml(j.title) + ' <span class="cal-booking-badge">Booked online</span>' : `<a href="/tools/job-detail.html?id=${encodeURIComponent(j.id)}">${escapeHtml(j.title)}</a>`}</div>
+          <div class="cal-job-meta">${j.client ? escapeHtml(j.client) : ''}${j.address ? ' &middot; ' + escapeHtml(j.address) : ''}${(!j.isUnconvertedBooking && j.status) ? ' &middot; ' + escapeHtml(STATUS_LABEL[j.status] || j.status) : ''}</div>
+        </div>
+        <div class="cal-job-actions">
+          ${j.isUnconvertedBooking
+            ? '<a class="small-btn" href="/tools/workspace.html#section-actionitems" style="text-decoration:none;">Add to Jobs</a>'
+            : `<button type="button" class="small-btn" onclick="downloadJobIcs(${j.id})">Add to Phone</button>`}
+        </div>
+      </div>`).join('');
+  }
+
+  // ---------- .ics generation ----------
+  // Per RFC 5545: an all-day event needs DTSTART;VALUE=DATE and a DTEND
+  // one day later (the end date is exclusive). Text fields need commas,
+  // semicolons, and backslashes escaped, and long lines technically need
+  // folding at 75 octets -- skipped here since job titles/notes are short
+  // enough in practice not to hit that limit, but worth knowing if a
+  // future job ever has a very long description pasted into notes.
+  function icsEscape(str) {
+    return String(str || '').replace(/\\/g, '\\\\').replace(/,/g, '\\,').replace(/;/g, '\\;').replace(/\n/g, '\\n');
+  }
+  function icsDateNoDash(dateStr) { return dateStr.replace(/-/g, ''); }
+  function icsDatePlusOneDay(dateStr) {
+    const d = new Date(dateStr + 'T00:00:00');
+    d.setDate(d.getDate() + 1);
+    return `${d.getFullYear()}${pad2(d.getMonth() + 1)}${pad2(d.getDate())}`;
+  }
+
+  function downloadJobIcs(jobId) {
+    const job = loadJobs().find(j => j.id === jobId);
+    if (!job || !job.date) return;
+
+    const descParts = [];
+    if (job.client) descParts.push('Client: ' + job.client);
+    if (job.phone) descParts.push('Phone: ' + job.phone);
+    if (job.notes) descParts.push(job.notes);
+
+    const ics = [
+      'BEGIN:VCALENDAR',
+      'VERSION:2.0',
+      'PRODID:-//Triple H Enterprises//Job Calendar//EN',
+      'BEGIN:VEVENT',
+      'UID:th-job-' + job.id + '@triplehenterprisesllc.biz',
+      'DTSTAMP:' + new Date().toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z',
+      'DTSTART;VALUE=DATE:' + icsDateNoDash(job.date),
+      'DTEND;VALUE=DATE:' + icsDatePlusOneDay(job.date),
+      'SUMMARY:' + icsEscape(job.title),
+      job.address ? 'LOCATION:' + icsEscape(job.address) : '',
+      descParts.length ? 'DESCRIPTION:' + icsEscape(descParts.join('\n')) : '',
+      'END:VEVENT',
+      'END:VCALENDAR',
+    ].filter(Boolean).join('\r\n');
+
+    const blob = new Blob([ics], { type: 'text/calendar' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'TripleH-' + String(job.title || 'job').replace(/[^a-z0-9]+/gi, '-') + '.ics';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  }
+
   const JT_TAB_ORDER = ['jobs', 'contacts', 'notes']; // cost/profitability/income/expenses moved to finance.html in Push 4 -- bug fix (2026-08-20): this still listed all 7 original tabs, so swiping left on Jobs silently set the URL hash to #cost (a tab that no longer exists here), which on the next reload triggered the redirect to finance.html with no warning
   (function setupJobTrackerSwipe() {
-    let touchStartX = 0, touchStartY = 0, touchStartTime = 0, startedInExcluded = false;
+    let touchStartX = 0, touchStartY = 0, touchStartTime = 0, startedInExcluded = false, startedOnCalGrid = false;
     document.body.addEventListener('touchstart', (e) => {
       if (e.touches.length !== 1) return;
       touchStartX = e.touches[0].clientX;
       touchStartY = e.touches[0].clientY;
       touchStartTime = Date.now();
       startedInExcluded = !!(e.target.closest && (e.target.closest('table') || e.target.closest('canvas')));
+      // A swipe that starts on the calendar grid changes months (the
+      // natural gesture for a calendar, carried over from calendar.html)
+      // instead of switching tabs -- scoped by where the touch started,
+      // not a mode toggle, so both gestures coexist.
+      startedOnCalGrid = !!(e.target.closest && e.target.closest('#calGrid'));
     }, { passive: true });
     document.body.addEventListener('touchend', (e) => {
       if (!e.changedTouches.length || startedInExcluded) return;
@@ -2620,6 +3002,11 @@
       const isFarEnough = Math.abs(dx) > 60;
       const isFastEnough = elapsed < 600;
       if (!isMostlyHorizontal || !isFarEnough || !isFastEnough) return;
+
+      if (startedOnCalGrid) {
+        changeMonth(dx < 0 ? 1 : -1); // swipe left -> next month, swipe right -> previous month
+        return;
+      }
 
       const activeBtn = document.querySelector('.tab-btn.is-active');
       const currentIndex = JT_TAB_ORDER.indexOf(activeBtn ? activeBtn.dataset.tab : 'jobs');
@@ -2693,6 +3080,17 @@
         return;
       }
       activateTab(TAB_HASHES[initialHash] ? initialHash : 'jobs');
+      // #calendar (2026-09-21): the deep link the retired calendar.html
+      // stub, the Dashboard's Calendar action, and the PWA shortcut use.
+      // Selects today so the day panel isn't blank on arrival.
+      if (initialHash === 'calendar') {
+        selectedDateStr = dateKey(calToday.getFullYear(), calToday.getMonth(), calToday.getDate());
+        setJobViewMode('calendar');
+      }
+      // Online bookings not yet converted to jobs show on the calendar
+      // as purple dots (carried over from calendar.html) -- fetched
+      // once here, then kept live below.
+      refreshBookingsCache().then(() => renderCalendarView()).catch(() => {});
       if (initialHash === 'add-job') {
         if (typeof toggleFormSection === 'function') toggleFormSection('jobFormSection', true);
         document.getElementById('jobTitle')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
@@ -2715,6 +3113,11 @@
 
       if (typeof startRealtimeSync === 'function') {
         startRealtimeSync(onRealtimeChange, updateRealtimeBadge);
+      }
+      // A guest cancelling or rescheduling through manage-booking.html
+      // updates the calendar's booking dots live, same as calendar.html did.
+      if (typeof startBookingsRealtime === 'function') {
+        startBookingsRealtime(() => { refreshBookingsCache().then(() => renderCalendarView()).catch(() => {}); });
       }
       } catch (initError) {
         const errorBanner = document.createElement('div');

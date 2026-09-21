@@ -58,9 +58,16 @@ sit silently broken for several pushes before it was found).
    split out. Don't attempt this without first doing the same
    call-graph-by-hand analysis that split did, and expect it might not
    be worth doing at all.
-6. **Reconsidering the bottom nav**, splitting Business Health's
-   unrelated tabs, making the Appliance Wiki search-first by default
-   -- all flagged early in this project, never revisited.
+6. **Reconsidering the bottom nav** was done 2026-09-21 (Calendar
+   folded into Job Tracker as a view; Clients took its bar slot; the
+   dashboard's chip row and tile grid removed). Still open from that
+   early list: splitting Business Health's unrelated tabs, making the
+   Appliance Wiki search-first by default. Also noted then and left
+   alone: 721--1023px (tablet portrait) shows neither the bottom bar
+   nor the sidebar, so navigation there is the header back-arrow and
+   the dashboard -- a real gap, but changing the bar's 720px breakpoint
+   is asserted by several tests and was judged out of scope for the
+   IA pass.
 
 ## Don't re-litigate these (already decided, with real reasons)
 
@@ -69,8 +76,9 @@ sit silently broken for several pushes before it was found).
 - The "Pull Month" feature on Runway Dashboard already solves
   cross-referencing itemized records into manual monthly totals --
   don't rebuild this.
-- `job-cost-lookup.html`/`expense-logger.html`/`contact-card.html`
-  stay as redirect stubs, not deleted -- old bookmarks matter.
+- `job-cost-lookup.html`/`expense-logger.html`/`contact-card.html`/
+  `calendar.html` (retired 2026-09-21) stay as redirect stubs, not
+  deleted -- old bookmarks matter.
 - The Graveyard (added 2026-08-26) intentionally does NOT cover a
   deleted expense's attached receipt photo -- that file is removed
   from cloud storage immediately, before the graveyard could ever

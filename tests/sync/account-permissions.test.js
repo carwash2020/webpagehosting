@@ -186,17 +186,21 @@ test('each of the 5 previously-bundled tools is gated on its own specific permis
   assert.doesNotMatch(invoiceSrc, /canManageBusinessFinances/);
 });
 
-test('the workspace dashboard tiles are each gated on their own permission, not shown/hidden as one block', () => {
+test('per-destination permission gating survives the removal of the dashboard tile grid (2026-09-21): each gated nav entry has its own check, the strip action stays tagged, and the dashboard still gates per attribute', () => {
   const src = fs.readFileSync(path.join(__dirname, '..', '..', 'tools', 'workspace.html'), 'utf8');
-  const tilePerms = ['can_manage_contracts', 'can_manage_invoices', 'can_view_finance', 'can_view_runway', 'can_manage_reviews'];
-  for (const perm of tilePerms) {
-    assert.match(src, new RegExp(`data-tile-perm="${perm}"`), `expected a tile tagged with ${perm}`);
+  const nav = fs.readFileSync(path.join(__dirname, '..', '..', 'tools', 'tools-nav-pwa.js'), 'utf8');
+  // The five permissions used to gate five tiles individually; the same
+  // five now gate the nav entries individually in NAV_PERMISSION_CHECKS.
+  for (const fn of ['canManageContracts', 'canManageInvoices', 'canViewFinance', 'canViewRunway', 'canManageReviews']) {
+    assert.match(nav, new RegExp(`typeof ${fn} === 'function' && ${fn}\\(\\)`), `expected the nav to gate a destination on ${fn}`);
   }
+  assert.match(src, /data-tile-perm="can_manage_invoices"/, 'the Create invoice strip action stays individually tagged');
   assert.doesNotMatch(src, /business-finance-tile/, 'the old shared class should be gone');
+  assert.doesNotMatch(src, /class="tool-tile/, 'the tile grid itself is gone');
 
   const fnMatch = src.match(/function renderBusinessFinanceTileVisibility\(\)[\s\S]*?\n  \}\n/);
   assert.ok(fnMatch, 'expected to isolate renderBusinessFinanceTileVisibility()');
-  assert.match(fnMatch[0], /data-tile-perm/, 'should check each tile individually via its own attribute');
+  assert.match(fnMatch[0], /data-tile-perm/, 'should check each gated element individually via its own attribute');
 });
 
 test('the 27 technical Dev Tools panels are gated on their own permission, decoupled from Manage permissions', () => {

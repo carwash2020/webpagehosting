@@ -391,6 +391,17 @@ reference:
   and desktop table rows have an inline **Done** that calls the existing
   status update. Advanced tools remain under **More tools**; their URLs
   are unchanged.
+- **Today-first dashboard + Calendar inside Job Tracker (2026-09-21)**
+  (`tools/workspace.html`, `tools/job-tracker.html`) -- the dashboard
+  opens on Next Job (with a one-tap **Route today** Google Maps link
+  through every address on today's schedule), Money Owed listing every
+  unpaid invoice with **Mark paid**, and the **Needs attention** inbox
+  open by default; the chip row, the 13-tile Tools grid, and the Backup
+  drawer are gone (Backup & Restore lives on Settings). The Calendar is
+  the third view on Job Tracker (List / Board / Calendar) and shows every
+  dated job -- the per-job "Show on Calendar" checkbox is retired;
+  `calendar.html` redirects to `job-tracker.html#calendar`. The phone
+  bar is Home / Jobs / Clients / Invoices / Finance / More.
 
 - **Local reviews section** added to all 14 landing/about/work pages --
   real Google reviews, visible social proof above the fold area.

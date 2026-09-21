@@ -26,7 +26,7 @@ test('the sidebar\'s width and every real page\'s own centering calc agree on th
   const sidebarWidth = css.match(/\.th-desktop-sidebar \{[^}]*width:\s*(\d+)px/)[1];
   assert.doesNotMatch(css, /body\.th-has-sidebar \{ margin-left:/, 'the old flat-offset rule should be gone -- it would silently override every page\'s own corrected calc due to higher specificity');
 
-  const pages = ['workspace.html', 'calendar.html', 'client-detail.html', 'contract-generator.html',
+  const pages = ['workspace.html', 'client-detail.html', 'contract-generator.html',
     'dev-tools.html', 'invoice-generator.html', 'job-detail.html', 'job-tracker.html',
     'review-request.html', 'route-planner.html', 'settings.html', 'site-content.html',
     'finance.html', 'parts-reference.html'];

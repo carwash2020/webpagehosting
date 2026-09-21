@@ -50,6 +50,7 @@ const EXEMPT = {
   'contact-card.html': 'retired page, just a redirect stub to job-tracker.html',
   'expense-logger.html': 'retired page, just a redirect stub to job-tracker.html',
   'job-cost-lookup.html': 'retired page, just a redirect stub to job-tracker.html',
+  'calendar.html': 'retired 2026-09-21 -- just a redirect stub to job-tracker.html#calendar (the Calendar is a view inside Job Tracker now)',
   'runway-dashboard.html': 'has its own fully self-contained <style> block, does not load /styles.css',
 };
 

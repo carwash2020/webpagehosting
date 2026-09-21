@@ -217,6 +217,17 @@ first fetch resolves — the exact same pattern this page already used
 for `cachedUnconvertedBookings`. Tests:
 `tests/sync/relational-jobs-read-phase2.test.js`.
 
+**Superseded 2026-09-21:** `calendar.html` is now a redirect stub —
+the Calendar became a view inside `job-tracker.html` (List / Board /
+Calendar), and that merged view deliberately reads the same local job
+list as the List/Board views beside it (one page, one source), so the
+step-1 pilot consumer no longer exists. `fetchJobsFromRelational()` and
+`startJobsRealtime()` in `tools/sync.js` are unchanged and still used
+by step 2 below; the test file above now covers the read path itself
+plus route-planner's use of it. When Phase 2 reaches job-tracker.html
+proper, the calendar view comes along for free since it shares
+`loadJobs()`.
+
 **Also done (step 2, 2026-09-10):** `route-planner.html`'s "Pull
 Today's Jobs" (`pullTodaysJobs()`). Also read-only, and simpler than
 calendar.html — a one-shot manual pull (button click), not a live
