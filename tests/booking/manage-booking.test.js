@@ -177,12 +177,13 @@ test('no token at all in the URL shows a helpful message rather than attempting 
 });
 
 test('a Reschedule button exists alongside Cancel for a confirmed booking', async () => {
+  const { start_at, end_at } = futureBookingTimes(45);
   const window = loadPage(
     'https://www.triplehenterprisesllc.biz/manage-booking.html?token=abc-123',
     async () => ({
       ok: true,
       json: async () => ([{
-        service_label: 'Inspection', start_at: '2026-09-20T21:00:00+00:00', end_at: '2026-09-20T21:45:00+00:00', name: 'Test', status: 'confirmed',
+        service_label: 'Inspection', start_at, end_at, name: 'Test', status: 'confirmed',
       }]),
     }),
   );
@@ -191,13 +192,14 @@ test('a Reschedule button exists alongside Cancel for a confirmed booking', asyn
 });
 
 test('clicking Reschedule shows a real date/time picker with actual open slots', async () => {
+  const { start_at, end_at } = futureBookingTimes(45);
   const window = loadPage(
     'https://www.triplehenterprisesllc.biz/manage-booking.html?token=abc-123',
     async (url) => {
       if (String(url).includes('get_booking_by_cancel_token')) {
         return {
           ok: true,
-          json: async () => ([{ service_label: 'Inspection', start_at: '2026-09-20T21:00:00+00:00', end_at: '2026-09-20T21:45:00+00:00', name: 'Test', status: 'confirmed' }]),
+          json: async () => ([{ service_label: 'Inspection', start_at, end_at, name: 'Test', status: 'confirmed' }]),
         };
       }
       if (String(url).includes('get_booking_availability')) return { ok: true, json: async () => ([]) };
@@ -214,17 +216,18 @@ test('clicking Reschedule shows a real date/time picker with actual open slots',
 });
 
 test('the booking\'s own current slot does not block itself when picking a new time', async () => {
+  const { start_at, end_at } = futureBookingTimes(45);
   const window = loadPage(
     'https://www.triplehenterprisesllc.biz/manage-booking.html?token=abc-123',
     async (url) => {
       if (String(url).includes('get_booking_by_cancel_token')) {
         return {
           ok: true,
-          json: async () => ([{ service_label: 'Inspection', start_at: '2026-09-20T21:00:00+00:00', end_at: '2026-09-20T21:45:00+00:00', name: 'Test', status: 'confirmed' }]),
+          json: async () => ([{ service_label: 'Inspection', start_at, end_at, name: 'Test', status: 'confirmed' }]),
         };
       }
       if (String(url).includes('get_booking_availability')) {
-        return { ok: true, json: async () => ([{ start_at: '2026-09-20T21:00:00+00:00', end_at: '2026-09-20T21:45:00+00:00' }]) };
+        return { ok: true, json: async () => ([{ start_at, end_at }]) };
       }
       return { ok: false };
     },
@@ -240,13 +243,14 @@ test('the booking\'s own current slot does not block itself when picking a new t
 test('picking a slot calls the real reschedule RPC with the correct token and a real new start time, and shows success', async () => {
   let rpcCalled = false;
   let rpcArgs = null;
+  const { start_at, end_at } = futureBookingTimes(45);
   const window = loadPage(
     'https://www.triplehenterprisesllc.biz/manage-booking.html?token=abc-123',
     async (url, opts) => {
       if (String(url).includes('get_booking_by_cancel_token')) {
         return {
           ok: true,
-          json: async () => ([{ service_label: 'Inspection', start_at: '2026-09-20T21:00:00+00:00', end_at: '2026-09-20T21:45:00+00:00', name: 'Test', status: 'confirmed' }]),
+          json: async () => ([{ service_label: 'Inspection', start_at, end_at, name: 'Test', status: 'confirmed' }]),
         };
       }
       if (String(url).includes('get_booking_availability')) return { ok: true, json: async () => ([]) };
@@ -273,13 +277,14 @@ test('picking a slot calls the real reschedule RPC with the correct token and a 
 });
 
 test('a slot-taken response (a real collision caught by the database) is handled clearly, not as a generic error', async () => {
+  const { start_at, end_at } = futureBookingTimes(45);
   const window = loadPage(
     'https://www.triplehenterprisesllc.biz/manage-booking.html?token=abc-123',
     async (url) => {
       if (String(url).includes('get_booking_by_cancel_token')) {
         return {
           ok: true,
-          json: async () => ([{ service_label: 'Inspection', start_at: '2026-09-20T21:00:00+00:00', end_at: '2026-09-20T21:45:00+00:00', name: 'Test', status: 'confirmed' }]),
+          json: async () => ([{ service_label: 'Inspection', start_at, end_at, name: 'Test', status: 'confirmed' }]),
         };
       }
       if (String(url).includes('get_booking_availability')) return { ok: true, json: async () => ([]) };
@@ -316,13 +321,14 @@ test('a confirmed booking whose time has already passed shows that clearly, with
 
 test('a genuinely failed availability check (not "no slots", an actual server/network failure) shows a clear error with a real retry, not an indefinite loading state', async () => {
   let attemptCount = 0;
+  const { start_at, end_at } = futureBookingTimes(45);
   const window = loadPage(
     'https://www.triplehenterprisesllc.biz/manage-booking.html?token=abc-123',
     async (url) => {
       if (String(url).includes('get_booking_by_cancel_token')) {
         return {
           ok: true,
-          json: async () => ([{ service_label: 'Inspection', start_at: '2026-09-20T21:00:00+00:00', end_at: '2026-09-20T21:45:00+00:00', name: 'Test', status: 'confirmed' }]),
+          json: async () => ([{ service_label: 'Inspection', start_at, end_at, name: 'Test', status: 'confirmed' }]),
         };
       }
       if (String(url).includes('get_booking_availability')) {

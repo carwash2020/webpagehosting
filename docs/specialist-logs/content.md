@@ -215,4 +215,55 @@ only). Updated JSON-LD `aggregateRating` (`ratingValue` 5.0,
 quotes -- no invented Review objects or fake cards for the star-only
 Google reviews. Tests that locked the count at 4 now expect 7.
 
+## 2026-09-21: Fixed the 9-page duplicate meta description finding
+
+Follow-up to the 2026-09-19 static SEO audit's main finding: 9 of 16
+city/service/appliance landing pages shared an identical closing
+sentence in their `<meta name="description">` -- a real
+duplicate-content risk, logged then but not fixed at the time.
+
+Two groups shared one sentence each:
+- 6 city pages (Hurricane, La Verkin, Leeds, Santa Clara/Ivins,
+  St. George, Washington City) all ended "Honest pricing, nothing done
+  until you approve it."
+- 3 appliance pages (dishwasher/refrigerator/washer-dryer, all
+  St. George) all ended "Steven diagnoses it in person, prices it
+  before any work starts, and often finishes the same visit."
+
+Rewrote each closer with a real, page-specific fact already present
+elsewhere on that same page (its own drive time/route from St. George,
+its trip-fee note, or its own real symptom list), rather than a
+synonym swap -- meaningfully different content, not just different
+words for the same sentence. Kept the required opening sentence intact
+on the 3 appliance pages (`service-city-landing-page.test.js` anchors
+on it). Verified every one of the 9 is now a genuinely unique string
+across the whole 16-page set, not just different from its own group.
+
+New test: `tests/seo/unique-meta-descriptions.test.js` (guards against
+this regressing -- checks all 16 pages for exact-duplicate descriptions
+plus the two groups' closers specifically).
+
+Real gap caught by Cursor Bugbot's own PR summary on the review, not
+found here first: the first draft only de-duplicated the plain
+`<meta name="description">` tag -- `og:description` on all 9 pages,
+and `twitter:description` on all 9 (including its own separate,
+narrower 3-way duplicate across just the appliance pages, "Diagnose
+first, price before work starts."), still carried the exact old
+shared text. Verified the bot's claim directly before trusting it,
+then fixed both tags on all 9 pages the same way as the primary
+description, and extended the regression test to cover both.
+
+Also, while checking a related earlier flag (the `logo-signature.png`
+vs `logo-signature-orange.png` naming discrepancy): that one turned
+out to already be moot. The old flagged PNG is gone entirely (removed
+in an earlier session extracting it from base64), and the current
+`.webp` pair (`logo-signature.webp` / `logo-signature-orange.webp`,
+both still in real use across the site) are visually identical --
+same orange/gray/black shield mark, just different crops. No fix
+needed; the underlying concern the flag described no longer applies
+to the files that exist today.
+
+Verified: full suite **2575/2575** passing. `check-consistency`/
+`check-undefined-vars`/`check-links.py` all clean.
+
 <!-- Add new entries above this line -->

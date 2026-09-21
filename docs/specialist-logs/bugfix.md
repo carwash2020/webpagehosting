@@ -528,3 +528,32 @@ every fix (`work-order-cancel.test.js`, `settings-mfa-disable-confirm.test.js`,
 Both new edge functions and both schema migrations applied/deployed
 live via Supabase MCP, not just committed as SQL files waiting on a
 manual step.
+
+## 2026-09-21: Another manage-booking.test.js time-bomb (6 tests)
+
+Found incidentally while running the full suite for an unrelated
+content fix -- 6 of 13 tests in `tests/booking/manage-booking.test.js`
+were failing on a clean `main`, not from anything in the change being
+shipped. Root cause: the exact time-bomb pattern this same file
+already had one documented fix for (see its own 2026-09-16 comment,
+"a real bug found... several tests below hardcoded an absolute
+future date/time") -- but that earlier fix only touched the tests it
+was actively working on; the reschedule-flow tests added later still
+hardcoded `'2026-09-20T21:00:00+00:00'` as a stand-in for "a booking
+that hasn't happened yet." That date is now in the past (today is
+2026-09-21), so the app correctly treated it as an already-passed
+booking and hid the Cancel/Reschedule buttons the tests were looking
+for -- a real app behavior working exactly as intended, breaking a
+test that assumed the clock would never catch up to its fixture data.
+
+Fixed the same way the existing 2026-09-16 fix did: replaced every
+hardcoded absolute timestamp in the reschedule tests with the file's
+own `futureBookingTimes(45)` helper (computed relative to
+`Date.now()`), so these tests stay valid no matter when they actually
+run. Left the "already cancelled" test's `2026-09-16` date alone --
+that one tests cancelled-status display, which doesn't depend on the
+date being in the future, so it wasn't actually broken and didn't
+need touching.
+
+Verified: `tests/booking/manage-booking.test.js` 13/13 passing (was
+7/13). Full suite **2575/2575**.
