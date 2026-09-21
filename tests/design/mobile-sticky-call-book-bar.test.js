@@ -16,14 +16,14 @@ const INDEX = fs.readFileSync(repo('index.html'), 'utf8');
 
 const MARKETING_PAGES = [
   'index.html',
-  'assembly-installation.html',
-  'drywall-painting.html',
-  'plumbing-repairs.html',
-  'washer-dryer-repair.html',
-  'washer-dryer-repair-st-george-ut.html',
-  'refrigerator-repair-st-george-ut.html',
-  'dishwasher-repair-st-george-ut.html',
-  'handyman-repairs.html',
+  'services/assembly-installation.html',
+  'services/drywall-painting.html',
+  'services/plumbing-repairs.html',
+  'services/washer-dryer-repair.html',
+  'services/washer-dryer-repair-st-george-ut.html',
+  'services/refrigerator-repair-st-george-ut.html',
+  'services/dishwasher-repair-st-george-ut.html',
+  'services/handyman-repairs.html',
   'handyman-cedar-city-ut.html',
   'handyman-hurricane-ut.html',
   'handyman-la-verkin-ut.html',
@@ -82,7 +82,7 @@ function stickyNav(src) {
 }
 
 test('every public marketing page that shares the nav CTAs carries the sticky Call + Book bar', () => {
-  const SMS_PAGES = new Set(['index.html', 'washer-dryer-repair-st-george-ut.html']);
+  const SMS_PAGES = new Set(['index.html', 'services/washer-dryer-repair-st-george-ut.html']);
   for (const file of MARKETING_PAGES) {
     const src = fs.readFileSync(repo(file), 'utf8');
     const bar = stickyNav(src);

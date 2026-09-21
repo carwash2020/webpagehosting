@@ -25,14 +25,14 @@ const path = require('path');
 const repo = (...p) => path.join(__dirname, '..', '..', ...p);
 
 const PAGES_WITH_SCHEDULE = [
-  'drywall-painting.html',
-  'plumbing-repairs.html',
-  'washer-dryer-repair.html',
-  'washer-dryer-repair-st-george-ut.html',
-  'refrigerator-repair-st-george-ut.html',
-  'dishwasher-repair-st-george-ut.html',
-  'assembly-installation.html',
-  'handyman-repairs.html',
+  'services/drywall-painting.html',
+  'services/plumbing-repairs.html',
+  'services/washer-dryer-repair.html',
+  'services/washer-dryer-repair-st-george-ut.html',
+  'services/refrigerator-repair-st-george-ut.html',
+  'services/dishwasher-repair-st-george-ut.html',
+  'services/assembly-installation.html',
+  'services/handyman-repairs.html',
   'handyman-cedar-city-ut.html',
   'handyman-hurricane-ut.html',
   'handyman-la-verkin-ut.html',

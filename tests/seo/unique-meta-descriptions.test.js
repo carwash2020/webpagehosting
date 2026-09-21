@@ -20,10 +20,10 @@ const PAGES = [
   'handyman-hurricane-ut.html', 'handyman-washington-city-ut.html',
   'handyman-santa-clara-ivins-ut.html', 'handyman-la-verkin-ut.html',
   'handyman-leeds-ut.html', 'handyman-cedar-city-ut.html', 'handyman-mesquite-nv.html',
-  'handyman-st-george-ut.html', 'washer-dryer-repair.html', 'plumbing-repairs.html',
-  'drywall-painting.html', 'handyman-repairs.html', 'assembly-installation.html',
-  'washer-dryer-repair-st-george-ut.html', 'refrigerator-repair-st-george-ut.html',
-  'dishwasher-repair-st-george-ut.html',
+  'handyman-st-george-ut.html', 'services/washer-dryer-repair.html', 'services/plumbing-repairs.html',
+  'services/drywall-painting.html', 'services/handyman-repairs.html', 'services/assembly-installation.html',
+  'services/washer-dryer-repair-st-george-ut.html', 'services/refrigerator-repair-st-george-ut.html',
+  'services/dishwasher-repair-st-george-ut.html',
 ];
 
 function metaDescription(file) {
@@ -93,7 +93,7 @@ test('the 6 city pages that used to share the same closing sentence now each hav
 
 test('the 3 appliance pages that used to share the same closing sentence now each have their own', () => {
   const closers = [
-    'dishwasher-repair-st-george-ut.html', 'refrigerator-repair-st-george-ut.html', 'washer-dryer-repair-st-george-ut.html',
+    'services/dishwasher-repair-st-george-ut.html', 'services/refrigerator-repair-st-george-ut.html', 'services/washer-dryer-repair-st-george-ut.html',
   ].map(f => metaDescription(f).split('. ').slice(1).join('. '));
   assert.equal(new Set(closers).size, closers.length, 'closing sentences should all differ');
 });

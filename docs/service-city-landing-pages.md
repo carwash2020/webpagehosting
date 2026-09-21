@@ -8,9 +8,9 @@ the city name.
 
 ## Live paths
 
-- https://www.triplehenterprisesllc.biz/washer-dryer-repair-st-george-ut.html — washer / appliance repair in St. George (first instance)
-- https://www.triplehenterprisesllc.biz/refrigerator-repair-st-george-ut.html — refrigerator repair in St. George
-- https://www.triplehenterprisesllc.biz/dishwasher-repair-st-george-ut.html — dishwasher repair in St. George
+- https://www.triplehenterprisesllc.biz/services/washer-dryer-repair-st-george-ut.html — washer / appliance repair in St. George (first instance)
+- https://www.triplehenterprisesllc.biz/services/refrigerator-repair-st-george-ut.html — refrigerator repair in St. George
+- https://www.triplehenterprisesllc.biz/services/dishwasher-repair-st-george-ut.html — dishwasher repair in St. George
 
 Do not add a dryer-only St. George page: `washer-dryer-repair-st-george-ut.html` already names washer and dryer. Unique appliance niches for that city use their own service slug (`refrigerator-repair`, `dishwasher-repair`).
 

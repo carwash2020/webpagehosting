@@ -35,9 +35,9 @@ const CITY_PAGES = {
   'handyman-la-verkin-ut.html': { variant: 'is-standard', text: 'Serving La Verkin' },
   'handyman-leeds-ut.html': { variant: 'is-standard', text: 'Serving Leeds' },
   'handyman-st-george-ut.html': { variant: 'is-standard', text: 'Home Base &middot; St. George' },
-  'washer-dryer-repair-st-george-ut.html': { variant: 'is-standard', text: 'Home Base &middot; St. George' },
-  'refrigerator-repair-st-george-ut.html': { variant: 'is-standard', text: 'Home Base &middot; St. George' },
-  'dishwasher-repair-st-george-ut.html': { variant: 'is-standard', text: 'Home Base &middot; St. George' },
+  'services/washer-dryer-repair-st-george-ut.html': { variant: 'is-standard', text: 'Home Base &middot; St. George' },
+  'services/refrigerator-repair-st-george-ut.html': { variant: 'is-standard', text: 'Home Base &middot; St. George' },
+  'services/dishwasher-repair-st-george-ut.html': { variant: 'is-standard', text: 'Home Base &middot; St. George' },
 };
 
 test('no marketing page carries the generic ALL-CAPS eyebrow label anymore', () => {
