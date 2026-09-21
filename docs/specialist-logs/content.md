@@ -243,6 +243,16 @@ New test: `tests/seo/unique-meta-descriptions.test.js` (guards against
 this regressing -- checks all 16 pages for exact-duplicate descriptions
 plus the two groups' closers specifically).
 
+Real gap caught by Cursor Bugbot's own PR summary on the review, not
+found here first: the first draft only de-duplicated the plain
+`<meta name="description">` tag -- `og:description` on all 9 pages,
+and `twitter:description` on all 9 (including its own separate,
+narrower 3-way duplicate across just the appliance pages, "Diagnose
+first, price before work starts."), still carried the exact old
+shared text. Verified the bot's claim directly before trusting it,
+then fixed both tags on all 9 pages the same way as the primary
+description, and extended the regression test to cover both.
+
 Also, while checking a related earlier flag (the `logo-signature.png`
 vs `logo-signature-orange.png` naming discrepancy): that one turned
 out to already be moot. The old flagged PNG is gone entirely (removed

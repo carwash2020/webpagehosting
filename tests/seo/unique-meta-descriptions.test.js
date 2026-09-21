@@ -33,12 +33,52 @@ function metaDescription(file) {
   return match[1];
 }
 
+function ogDescription(file) {
+  const src = fs.readFileSync(repo(file), 'utf8');
+  const match = src.match(/<meta property="og:description" content="([^"]*)"/);
+  assert.ok(match, file + ' has no og:description');
+  return match[1];
+}
+
+function twitterDescription(file) {
+  const src = fs.readFileSync(repo(file), 'utf8');
+  const match = src.match(/<meta name="twitter:description" content="([^"]*)"/);
+  assert.ok(match, file + ' has no twitter:description');
+  return match[1];
+}
+
 test('every city/service/appliance landing page has a unique meta description', () => {
   const seen = new Map();
   for (const file of PAGES) {
     const desc = metaDescription(file);
     const dupeOf = seen.get(desc);
     assert.ok(!dupeOf, file + ' has the exact same meta description as ' + dupeOf + ': "' + desc + '"');
+    seen.set(desc, file);
+  }
+});
+
+// Same duplicate-content risk applies to og:description/twitter:description
+// (social share previews, and og:description in particular gets pulled by
+// some crawlers too) -- a real gap this PR's first draft left behind: only
+// the plain <meta name="description"> was de-duplicated, while these two
+// tags on all 9 affected pages still carried the exact old shared text.
+// Caught by Cursor Bugbot's own PR summary, verified, and fixed.
+test('every city/service/appliance landing page has a unique og:description', () => {
+  const seen = new Map();
+  for (const file of PAGES) {
+    const desc = ogDescription(file);
+    const dupeOf = seen.get(desc);
+    assert.ok(!dupeOf, file + ' has the exact same og:description as ' + dupeOf + ': "' + desc + '"');
+    seen.set(desc, file);
+  }
+});
+
+test('every city/service/appliance landing page has a unique twitter:description', () => {
+  const seen = new Map();
+  for (const file of PAGES) {
+    const desc = twitterDescription(file);
+    const dupeOf = seen.get(desc);
+    assert.ok(!dupeOf, file + ' has the exact same twitter:description as ' + dupeOf + ': "' + desc + '"');
     seen.set(desc, file);
   }
 });
