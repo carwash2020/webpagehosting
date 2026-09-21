@@ -316,6 +316,45 @@
   .th-hex-icon .th-icon { color: var(--orange-light); }
   @media (prefers-reduced-motion: reduce) { .th-hex-icon { transition: none; } }
 
+  /* Bug fix (2026-09-21): this page's own copied sidebar CSS above never
+     included the base .th-icon rule (styles-tools.css defines it once,
+     shared by every icon on every other tool page) -- every icon whose
+     symbol relies on stroke-drawn paths/lines instead of an explicit
+     inline fill (wrench, calendar, receipt, scroll, book, terminal, the
+     home roofline, the map outline) rendered as a solid near-black shape
+     invisible against the hex background, since SVG defaults to
+     fill:black/stroke:none without it. Icons whose symbol sets fill
+     explicitly inline (the $ glyphs, the filled star) were never
+     affected, which is why this only ever looked like a partial/random
+     breakage rather than everything being blank. Copied to match
+     styles-tools.css exactly, same as the rest of this page's CSS. */
+  .th-icon {
+    display: inline-block;
+    width: 1em; height: 1em;
+    vertical-align: -0.15em;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 1.5;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    flex-shrink: 0;
+  }
+
+  /* Grouped sidebar labels ("Work"/"Money"/"Office") -- also missing
+     from this page's copied CSS, so the group headings rendered as
+     plain unstyled text instead of the small uppercase tint used
+     everywhere else. Copied from styles-tools.css to match. */
+  .th-sidebar-group {
+    margin: 16px 12px 4px;
+    font-family: var(--font-ui);
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 1.1px;
+    text-transform: uppercase;
+    color: var(--text-dim);
+  }
+  .th-sidebar-links > .th-sidebar-group:first-child { margin-top: 2px; }
+
   /* Mobile bottom nav (F18 fix, 2026-09-07): copied from styles-tools.css
      ("bottom app nav: injected markup, styled here") to match exactly --
      this page previously had no phone layout and no bottom navigation at
