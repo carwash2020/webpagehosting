@@ -46,22 +46,78 @@ Two things on this specific repo have caused real, hours-long confusion before. 
 
 ## Public site — file structure (repo root)
 
+**Every public page lives flat at the repo root, deliberately.** GitHub
+Pages serves each one at its exact current path with no server-side
+redirect capability -- moving any of these into a subfolder changes its
+live URL, breaking Google's index, every existing backlink, and every
+internal link on the site all at once, for a purely cosmetic gain. This
+table groups them by kind for readability; the groupings are
+documentation only; no file has actually moved (considered and
+deliberately rejected 2026-09-21 -- see the note at the end of this
+section for the specific reasoning).
+
+**Homepage, booking & core**
+
 | File | Purpose |
 |---|---|
 | `index.html` | Main homepage — single-page site (services, reviews, about, areas, schedule, contact/FAQ/terms). Contact form inserts directly into `th_leads` (anon key) -- Formspree was removed 2026-08-24, replaced by a real, in-house Resend email pipeline (see "Booking system" below for the equivalent pipeline on the booking side). |
 | `booking.html` | **In-house booking system** (added 2026-08-25, replacing Cal.com entirely -- subscription itself confirmed cancelled). 3-step flow: service → real open time slot → contact info. Phone number auto-formats live to `(XXX) XXX-XXXX` as the guest types; both phone and email get on-theme inline validation (native browser constraint validation was already enforcing a real `@`, this just makes it visible instead of a default tooltip). Redesigned 2026-08-25 with a real desktop layout (a sidebar builds up the appointment summary progressively) and a hexagon icon motif echoing the brand mark. See "Booking system" below for the full picture. |
-| `manage-booking.html` | Guest self-service cancel/reschedule, reached via a unique token link in the confirmation email -- **not in the sitemap** (`noindex, nofollow`, deliberately unreachable except through that link). Same design system as `booking.html`. See "Booking system" below. |
-| `handyman-hurricane-ut.html` | Dedicated landing page — Hurricane, UT |
-| `handyman-washington-city-ut.html` | Dedicated landing page — Washington City, UT |
-| `handyman-santa-clara-ivins-ut.html` | Dedicated landing page — Santa Clara & Ivins, UT |
-| `handyman-cedar-city-ut.html` | Dedicated landing page — Cedar City, UT (by-request service area) |
-| `handyman-mesquite-nv.html` | Dedicated landing page — Mesquite, NV (by-request service area) |
-| `washer-dryer-repair-st-george-ut.html` | Service × city landing page (added 2026-09-18) — washer / appliance repair in St. George. Reusable template; see `docs/service-city-landing-pages.md`. |
-| `refrigerator-repair-st-george-ut.html` | Service × city landing page (added 2026-09-18) — refrigerator repair in St. George. |
-| `dishwasher-repair-st-george-ut.html` | Service × city landing page (added 2026-09-18) — dishwasher repair in St. George. |
-| `blog/` | **Blog** (added 2026-09-01). `index.html` lists the posts; three posts so far, each a standalone page with its own SEO metadata and Article structured data. `blog.css` extends the main site's brand tokens rather than introducing a separate design system (page headlines use Anton, matching the site's own h1; card-level headlines use Oswald, matching the service/contact cards). Photos are freely licensed Unsplash images, each individually verified before use — see the note under "Do not delete" about why there's no stock-photo shortcut here. |
+| `manage-booking.html` | Guest self-service cancel/reschedule for a `th_bookings` self-service booking, reached via a unique token link in the confirmation email -- **not in the sitemap** (`noindex, nofollow`, deliberately unreachable except through that link). Same design system as `booking.html`. See "Booking system" below. |
+| `manage-job.html` | The same guest cancel/reschedule-request pattern as `manage-booking.html`, but for a manually-scheduled job (`public.jobs`) instead of a self-service booking -- reschedule is request-only here (jobs have no time-slot exclusion constraint, so an instant move could double-book a day). Also token-gated, also excluded from the sitemap. |
+| `about.html` | "Meet Steven Robinson" — LLC status, Eagle Scout background, prior maintenance-technician career. |
+| `our-work.html` | Project gallery (tile, flooring, drywall, curtain track, etc. — see `images/gallery/`). |
+| `careers.html` | Hiring/job-application page. |
+
+**City landing pages** — one per service area, standard coverage unless noted
+
+| File | Area |
+|---|---|
+| `handyman-st-george-ut.html` | St. George, UT (the home base) |
+| `handyman-hurricane-ut.html` | Hurricane, UT |
+| `handyman-washington-city-ut.html` | Washington City, UT |
+| `handyman-santa-clara-ivins-ut.html` | Santa Clara & Ivins, UT |
+| `handyman-la-verkin-ut.html` | La Verkin, UT |
+| `handyman-leeds-ut.html` | Leeds, UT |
+| `handyman-cedar-city-ut.html` | Cedar City, UT — **by-request** (orange "AVAILABLE BY REQUEST" badge, own trip-fee FAQ) |
+| `handyman-mesquite-nv.html` | Mesquite, NV — **by-request** (same badge treatment, NV address in schema) |
+
+**Service landing pages** — one per service, not tied to a specific city
+
+| File | Service |
+|---|---|
+| `washer-dryer-repair.html` | Washer/dryer repair (keeps the triage tool, links out to 2 blog posts) |
+| `plumbing-repairs.html` | Plumbing repairs |
+| `drywall-painting.html` | Drywall & painting |
+| `handyman-repairs.html` | Doors, cabinets & hardware, carpentry & trim, weatherstripping |
+| `assembly-installation.html` | Furniture/fixture assembly & installation |
+
+**Service × city landing pages** — one converting page per service+city pair, not a factory of near-duplicates (see `docs/service-city-landing-pages.md` for the reusable template and the doorway-page reasoning behind writing one per pair instead of find-and-replacing a city name)
+
+| File | Pair |
+|---|---|
+| `washer-dryer-repair-st-george-ut.html` | Washer/dryer repair × St. George (added 2026-09-18, first instance) |
+| `refrigerator-repair-st-george-ut.html` | Refrigerator repair × St. George (added 2026-09-18) |
+| `dishwasher-repair-st-george-ut.html` | Dishwasher repair × St. George (added 2026-09-18) |
+
+**Legal pages**
+
+| File | Purpose |
+|---|---|
+| `terms.html` | Terms & Conditions — standalone page (`index.html` also has its own `termsOverlay` JS modal, reachable at `/#terms`; not a duplicate content problem since the modal is for on-page convenience and this file is the canonical, indexable, linkable version). No attorney review has been done on this text — a past session removed a visible "not reviewed by an attorney" disclaimer at the user's request, but the underlying legal risk it described didn't go away with the note. |
+| `privacy.html` | Privacy Policy. |
+
+**Blog & client area**
+
+| File | Purpose |
+|---|---|
+| `blog/` | **Blog** (added 2026-09-01). `index.html` lists the posts; 10 posts as of 2026-09-19, each a standalone page with its own SEO metadata and Article structured data. `blog.css` extends the main site's brand tokens rather than introducing a separate design system (page headlines use Anton, matching the site's own h1; card-level headlines use Oswald, matching the service/contact cards). Photos are freely licensed Unsplash images, each individually verified before use — see the note under "Do not delete" about why there's no stock-photo shortcut here. |
 | `portal/` | **Client portal** (added 2026-08-31, substantially extended through 2026-09-04) — 8 pages covering a client's entire relationship with the business, not just invoice payment: `login.html`, `set-password.html`, `home.html` (landing page, "Needs Your Attention" summary), `dashboard.html` (invoices + Stripe payment), `quotes.html` (review/questions/approval/self-scheduling), `jobs.html` (job history, warranty, check-up reminders), `work-orders.html` (Request Work form + two-way messaging), `settings.html` (saved cards, notification preferences). Deliberately shares NO JavaScript with `/tools/`. **Read `docs/CLIENT-PORTAL.md` before touching anything here** — it's the current, authoritative reference for every page and table; this row is a summary, not a substitute. Only `login.html` is indexable; every other page is `noindex` on purpose. |
-| `sitemap.xml` | Lists all 12 live, indexable public pages: the homepage, `booking.html`, the 5 service-area landing pages, the blog index and its 3 posts, and `portal/login.html`. Deliberately excluded: `manage-booking.html` (token-gated, `noindex`), and the portal's `dashboard.html` / `set-password.html` (both `noindex`). Update this and resubmit in Google Search Console any time a page is added or removed. |
+
+**Site infrastructure / SEO meta files**
+
+| File | Purpose |
+|---|---|
+| `sitemap.xml` | Lists all 34 live, indexable public URLs as of 2026-09-21: the homepage, `booking.html`, every city/service/service×city landing page above, `about.html`/`careers.html`/`our-work.html`, both legal pages, the blog index and its 10 posts. Deliberately excluded: `manage-booking.html`/`manage-job.html` (token-gated, `noindex`), and everything under `/tools/`/`/portal/` (all `noindex`, including `portal/login.html` -- the internal tool suite and client portal are not meant to be discoverable via search). Update this and resubmit in Google Search Console any time a page is added or removed. |
 | `robots.txt` | Allows public-page crawlers; Disallow `/tools/` and `/portal/` (already noindex on those pages). Blocks bulk AI-training crawlers (`GPTBot`, `CCBot`, `Google-Extended`); allows live-retrieval/answer bots. |
 | `404.html` | Custom not-found page (self-contained, own inline styles, doesn't use `styles.css`) |
 | `.well-known/security.txt` | RFC 9116 security contact file. Requires `.nojekyll` (see above) to actually be reachable — this is exactly what broke for a long time. |
