@@ -227,4 +227,39 @@ client-facing pushes or spoofed internal alerts is a real, concrete
 impact (reputational and operational) at any company size, not just a
 theoretical risk, since it requires nothing beyond viewing page source.
 
+## 2026-09-21: Merged a duplicate-permissive-policy finding on client_account_codes
+
+Found by running Supabase's own performance advisor as a proactive
+check (no user report), while looking for anything safely actionable
+after two blocked feature requests (address autocomplete, SMS
+confirmation both need external API accounts I don't have). Real,
+if minor, finding on my own recent work: `client_account_codes`
+(shipped in PR #310) had two separate permissive RLS policies both
+matching `role=authenticated, action=SELECT` -- the staff "FOR ALL"
+policy's implicit SELECT, plus a dedicated "portal client can view
+their own row" SELECT policy. Postgres evaluates every matching
+permissive policy per query, so every SELECT against this small
+table did twice the RLS work for zero behavior difference -- the
+exact `multiple_permissive_policies` class this project has fixed
+before on other tables.
+
+Fixed via `sql/infra/merge_client_account_codes_select_policies.sql`:
+dropped both original policies, replaced with one merged SELECT
+policy (`staff OR own row`) and three single-action write policies
+for staff (insert/update/delete -- Postgres has no "FOR ALL except
+SELECT" shorthand). Verified live, not just by re-reading the
+advisor: inserted two real rows, set `request.jwt.claims` to
+simulate a portal client's own JWT and confirmed they saw only their
+own row, then simulated a real internal account's JWT and confirmed
+they saw both -- then deleted the test rows. Re-ran the advisor
+afterward and confirmed the finding is gone.
+
+Updated `tests/referrals/account-codes.test.js`'s RLS test to check
+the new merge file (the actual live policy set) rather than only the
+original schema file, and extended it to assert all three write
+policies exist.
+
+Verified: full suite **2577/2577** passing. `check-consistency`/
+`check-undefined-vars`/`check-links.py` all clean.
+
 <!-- Add new entries above this line -->
