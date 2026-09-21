@@ -47,9 +47,9 @@
      reachable only by the browser back button. Loaded in the same
      position (after tools-dialogs.js, before tools-tour.js) as every
      other tool page for consistency. -->
-<script src="/tools/tools-nav-pwa.js?v=127366ac2d" defer></script>
+<script src="/tools/tools-nav-pwa.js?v=44dffca71e" defer></script>
 <script src="/tools/tools-command-palette.js?v=36ecf5ee0e" defer></script>
-<script src="/tools/tools-tour.js?v=3397aa4aac" defer></script>
+<script src="/tools/tools-tour.js?v=f7a68f2675" defer></script>
 <script>
   (function () {
     // Tools app light/dark theme (2026-08-20), tucked into Settings.
@@ -388,8 +388,11 @@
     -webkit-backdrop-filter: blur(18px); backdrop-filter: blur(18px);
     border-top: 1px solid var(--border);
   }
-  @media (max-width: 720px) { .th-bottom-nav { display: flex; justify-content: space-around; gap: 2px; } }
-  @media (max-width: 720px) { .th-bottom-nav { view-transition-name: th-app-bottomnav; } }
+  /* Tablet band fix (2026-09-21), mirrored from styles-tools.css: the bar
+     runs up to the sidebar's 1024px breakpoint so no width is left
+     with neither nav. */
+  @media (max-width: 1023px) { .th-bottom-nav { display: flex; justify-content: space-around; gap: 2px; } }
+  @media (max-width: 1023px) { .th-bottom-nav { view-transition-name: th-app-bottomnav; } }
   .th-bottom-nav a, .th-bottom-nav .th-bn-more {
     flex: 1; max-width: 76px;
     display: flex; flex-direction: column; align-items: center; gap: 5px;
@@ -415,6 +418,11 @@
   }
   .th-bottom-nav a.is-active .th-bn-icon .th-icon, .th-bottom-nav .th-bn-more.is-active .th-bn-icon .th-icon { color: #1a0d02; }
   .th-bottom-nav a:active .th-bn-icon, .th-bottom-nav .th-bn-more:active .th-bn-icon { background: var(--bg-elevated); }
+  @media (min-width: 721px) and (max-width: 1023px) {
+    .th-bottom-nav { justify-content: center; gap: 24px; }
+    .th-bottom-nav a, .th-bottom-nav .th-bn-more { max-width: 96px; }
+    .th-more-sheet-panel { max-width: 560px; margin: 0 auto; }
+  }
   .th-more-sheet { position: fixed; inset: 0; z-index: 950; }
   .th-more-sheet[hidden] { display: none !important; }
   .th-more-sheet-backdrop { position: absolute; inset: 0; background: rgba(0,0,0,.45); }
@@ -432,9 +440,9 @@
   .th-more-sheet-link .th-hex-icon { width: 32px; height: 32px; }
   .th-more-sheet-link .th-hex-icon .th-icon { width: 16px; height: 16px; }
   .th-more-sheet-link.is-active { background: var(--orange-tint-soft); color: var(--orange-light); }
-  @media (min-width: 721px) { .th-more-sheet { display: none !important; } }
+  @media (min-width: 1024px) { .th-more-sheet { display: none !important; } }
+  @media (max-width: 1023px) { body.th-has-bottomnav { padding-bottom: calc(76px + env(safe-area-inset-bottom, 0px)); } }
   @media (max-width: 720px) {
-    body.th-has-bottomnav { padding-bottom: calc(76px + env(safe-area-inset-bottom, 0px)); }
     /* F22 fix (2026-09-07): row action buttons measured ~21px, category
        add ~26px, tabs ~37px -- all below any reasonable touch minimum.
        Matches the shared suite's own .small-btn convention (40px base,
@@ -641,6 +649,11 @@
   .col-hint{font-size:10px;color:var(--text-faint);margin-top:-4px;margin-bottom:8px;}
   .back-link{display:inline-flex;align-items:center;gap:6px;color:var(--text-dim);text-decoration:none;font-size:13px;margin-bottom:14px;}
   .back-link:hover{color:var(--orange-light);}
+  /* Redundant chrome (2026-09-21), same reasoning as styles-tools.css's
+     rule for the .hub-header back-arrow: the nav shell tools-nav-pwa.js
+     injects (bar <=1023px, sidebar >=1024px) always carries Home, so
+     this text link was a second copy. Markup kept for a shell-less load. */
+  body.th-has-bottomnav .back-link { display: none; }
   .realtime-badge{display:inline-flex;align-items:center;gap:5px;font-size:11px;color:var(--text-faint);margin-left:10px;}
   .realtime-dot{width:7px;height:7px;border-radius:50%;background:var(--text-faint);flex-shrink:0;}
   .realtime-dot.is-live{background:var(--green);box-shadow:0 0 5px rgba(58,201,106,0.7);}

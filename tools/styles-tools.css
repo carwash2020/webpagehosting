@@ -1358,6 +1358,19 @@ body .hub-header-left { display: flex; align-items: center; gap: 14px; }
    which used to spread them apart from each other instead of keeping
    them together at the right edge. */
 body .hub-header-right { display: flex; align-items: center; gap: 8px; }
+/* Redundant chrome (2026-09-21): every page that loads tools-nav-pwa.js
+   already has Home in the bottom bar (<=1023px) or the sidebar
+   (>=1024px) -- inject() sets th-has-bottomnav and th-has-sidebar
+   together, and the two breakpoints are complementary, so one of them
+   always carries Home. The header's back-to-Workspace arrow was a
+   third copy of that link on eleven pages. Hidden here rather than
+   deleted from the markup: tests read it, and a page that ever loads
+   without the nav shell keeps its way home. display:none also drops
+   it from the tab order, so keyboard users skip it too. !important
+   because the anchor carries an inline style="display:inline-flex"
+   on every one of those pages (it renders as a circle like the help
+   button next to it); one flag here beats editing eleven files. */
+body.th-has-bottomnav .hub-header-right > a.help-btn[href="/tools/workspace.html"] { display: none !important; }
 
 /* jump-nav: segmented pill control riding just under the app bar */
 body .jump-nav {
@@ -1532,13 +1545,15 @@ body select:focus, body textarea:focus {
   body .help-btn { width: 44px; height: 44px; }
   body .dash-list-item { padding: 13px 12px; }
 
-  /* the bottom nav (injected by tools-common.js) needs runway */
-  body.th-has-bottomnav { padding-bottom: calc(76px + env(safe-area-inset-bottom, 0px)); }
-
   /* hover-lift is meaningless on touch */
   body a.dash-list-item:hover,
   body .primary-btn:hover, body .secondary-btn:hover { transform: none; }
 }
+/* Content clears the fixed bottom bar wherever the bar is shown --
+   the same max-width:1023px the bar's own display rule below uses.
+   Lived inside the phone-only block above until 2026-09-21, which
+   was correct only while the bar stopped at 720px. */
+@media (max-width: 1023px) { body.th-has-bottomnav { padding-bottom: calc(76px + env(safe-area-inset-bottom, 0px)); } }
 
 /* ---- bottom app nav: injected markup, styled here ---- */
 .th-bottom-nav {
@@ -1549,12 +1564,18 @@ body select:focus, body textarea:focus {
   -webkit-backdrop-filter: blur(18px); backdrop-filter: blur(18px);
   border-top: 1px solid var(--border);
 }
-@media (max-width: 720px) { .th-bottom-nav { display: flex; justify-content: space-around; gap: 2px; } }
+/* Tablet band fix (2026-09-21): this bar used to stop at 720px while
+   the sidebar only starts at 1024px, so any window between -- an iPad,
+   a half-screen desktop browser -- had NO navigation on any page; the
+   only way out was the browser's own back button. The bar now runs
+   right up to the sidebar's breakpoint, so the two are complementary
+   and exactly one of them is on screen at every width. */
+@media (max-width: 1023px) { .th-bottom-nav { display: flex; justify-content: space-around; gap: 2px; } }
 /* Same view-transition treatment as .th-desktop-sidebar above, at
    this breakpoint's own mirror-image scoping. Kept separate from the
    rule above for the same reason -- an existing test asserts on that
    rule's exact text. */
-@media (max-width: 720px) { .th-bottom-nav { view-transition-name: th-app-bottomnav; } }
+@media (max-width: 1023px) { .th-bottom-nav { view-transition-name: th-app-bottomnav; } }
 .th-bottom-nav a, .th-bottom-nav .th-bn-more {
   flex: 1; max-width: 76px;
   display: flex; flex-direction: column; align-items: center; gap: 5px;
@@ -1580,9 +1601,18 @@ body select:focus, body textarea:focus {
 }
 .th-bottom-nav a.is-active .th-bn-icon .th-icon, .th-bottom-nav .th-bn-more.is-active .th-bn-icon .th-icon { color: #1a0d02; }
 .th-bottom-nav a:active .th-bn-icon, .th-bottom-nav .th-bn-more:active .th-bn-icon { background: var(--bg-panel-2); }
+/* In the tablet band the five items cluster at the centre instead of
+   spreading across 700-1000px of bar, and the More sheet becomes a
+   centred card rather than a full-bleed drawer. Phones are untouched. */
+@media (min-width: 721px) and (max-width: 1023px) {
+  .th-bottom-nav { justify-content: center; gap: 24px; }
+  .th-bottom-nav a, .th-bottom-nav .th-bn-more { max-width: 96px; }
+  .th-more-sheet-panel { max-width: 560px; margin: 0 auto; }
+}
 
 /* Overflow sheet for sidebar dests the 5-item bar cannot fit.
-   Only relevant under 720px (the bar itself is display:none above that). */
+   Only relevant under 1024px (the bar itself is display:none from the
+   sidebar's breakpoint up). */
 .th-more-sheet { position: fixed; inset: 0; z-index: 950; }
 .th-more-sheet[hidden] { display: none !important; }
 .th-more-sheet-backdrop {
@@ -1622,7 +1652,7 @@ body select:focus, body textarea:focus {
 .th-more-sheet-link.is-active {
   background: var(--orange-tint-soft); color: var(--orange-light);
 }
-@media (min-width: 721px) { .th-more-sheet { display: none !important; } }
+@media (min-width: 1024px) { .th-more-sheet { display: none !important; } }
 @media (prefers-reduced-motion: reduce) {
   .th-more-sheet-backdrop, .th-more-sheet-panel { transition: none; }
 }
@@ -1698,12 +1728,12 @@ body select:focus, body textarea:focus {
    the navigation instead of crossfading two different snapshots --
    it simply stays put while the content changes underneath. Scoped
    to this same min-width:1024px breakpoint (matching .th-bottom-nav's
-   own max-width:720px scoping below) so the two names are never both
-   live at once -- a view-transition-name must be unique among
-   elements rendered at the same time, and the gap between 721px and
-   1023px (neither nav visible) means this is already guaranteed by
-   the display:none above, but scoping it explicitly removes any
-   doubt rather than relying on that as an implicit side effect. Kept
+   own max-width:1023px scoping above -- the two are complementary
+   since 2026-09-21) so the two names are never both live at once: a
+   view-transition-name must be unique among elements rendered at the
+   same time. The display rules already guarantee that, but scoping
+   the names explicitly removes any doubt rather than relying on it as
+   an implicit side effect. Kept
    as its own separate @media block (not merged into the one above)
    so that rule's exact text -- asserted on by an existing test --
    stays untouched. */

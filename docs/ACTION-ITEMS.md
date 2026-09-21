@@ -403,6 +403,17 @@ reference:
   `calendar.html` redirects to `job-tracker.html#calendar`. The phone
   bar is Home / Jobs / Clients / Invoices / Finance / More.
 
+- **POS inside Invoices, tablet navigation, one less header button
+  (2026-09-21, round 2)** (`tools/invoice-generator.html`,
+  `tools/styles-tools.css`, `tools/runway-dashboard.html`) -- POS is the
+  **Quick charge** tab on the Invoice Generator (deep link `#pos`;
+  `pos.html` redirects there); same one-tap saved-card charge and
+  typed-name authorization for a new card, Stripe.js loaded only at
+  that moment. The bottom bar + More sheet now show on every width
+  below the desktop sidebar (721-1023px used to have no navigation at
+  all). The header back-to-Workspace arrow is hidden wherever the bar
+  or sidebar is present, since both already carry Home.
+
 - **Local reviews section** added to all 14 landing/about/work pages --
   real Google reviews, visible social proof above the fold area.
 - **FAQ section** added to all 14 landing pages, with matching visible

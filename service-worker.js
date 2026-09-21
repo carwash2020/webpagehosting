@@ -682,7 +682,7 @@
 // "Getting Started" guide making the identical false claim to real
 // people using the app. Same reasoning as every prior bump in this
 // file's history.
-const CACHE_NAME = 'th-workspace-v219'; // precache-fingerprint:c79f37c87fee
+const CACHE_NAME = 'th-workspace-v221'; // precache-fingerprint:d6dc7982b226
 const PRECACHE_URLS = [
   '/tools/workspace.html', '/tools/job-tracker.html', '/tools/invoice-generator.html', '/tools/contract-generator.html',
   '/tools/calendar.html', '/tools/route-planner.html', '/tools/review-request.html', '/tools/contact-card.html',
@@ -701,7 +701,9 @@ const PRECACHE_URLS = [
   // own page, now a genuine daily operational tool in its own right,
   // same reasoning as everything else on this line.
   '/tools/clients.html',
-  // Added 2026-09-03 -- the new POS tool, same reasoning.
+  // Added 2026-09-03 -- the POS tool. Since 2026-09-21 a redirect stub to
+  // invoice-generator.html#pos (POS is the Quick charge tab there now),
+  // kept here so an old bookmark still resolves offline.
   '/tools/pos.html',
   // Added 2026-08-20 -- same gap as above, these 3 pages (all from the
   // structural rework's Client/Job Detail views and the Finance split)

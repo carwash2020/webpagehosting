@@ -21,12 +21,13 @@ const repo = (...p) => path.join(__dirname, '..', '..', ...p);
 
 // Every page tools-nav-pwa.js actually wires up (excludes the thin
 // redirect stubs -- contact-card.html, job-cost-lookup.html,
-// expense-logger.html, calendar.html (retired 2026-09-21), index.html
-// -- which have no real content to transition between).
+// expense-logger.html, calendar.html and pos.html (both retired
+// 2026-09-21), index.html -- which have no real content to transition
+// between).
 const TOOL_PAGES = [
   'client-detail', 'clients', 'contract-generator', 'dev-tools',
   'finance', 'invoice-generator', 'job-detail', 'job-tracker', 'login',
-  'parts-reference', 'pos', 'reset-password', 'review-request',
+  'parts-reference', 'reset-password', 'review-request',
   'route-planner', 'runway-dashboard', 'settings', 'site-content', 'workspace',
 ];
 
@@ -60,11 +61,11 @@ test('the shared sidebar and bottom-nav carry a view-transition-name, so the she
 test('the view-transition-name assignments are scoped inside the sidebar/bottom-nav\'s own display breakpoints, so the two names are never live at the same viewport width', () => {
   const sharedCss = fs.readFileSync(repo('tools', 'styles-tools.css'), 'utf8');
   assert.match(sharedCss, /@media \(min-width: 1024px\) \{ \.th-desktop-sidebar \{ view-transition-name: th-app-sidebar; \} \}/, 'expected the sidebar name scoped to its own min-width:1024px block');
-  assert.match(sharedCss, /@media \(max-width: 720px\) \{ \.th-bottom-nav \{ view-transition-name: th-app-bottomnav; \} \}/, 'expected the bottom-nav name scoped to its own max-width:720px block');
+  assert.match(sharedCss, /@media \(max-width: 1023px\) \{ \.th-bottom-nav \{ view-transition-name: th-app-bottomnav; \} \}/, 'expected the bottom-nav name scoped to its own max-width:1023px block (complementary to the sidebar\'s min-width:1024px)');
 
   const runway = fs.readFileSync(repo('tools', 'runway-dashboard.html'), 'utf8');
   assert.match(runway, /@media \(min-width: 1024px\) \{ \.th-desktop-sidebar \{ view-transition-name: th-app-sidebar; \} \}/);
-  assert.match(runway, /@media \(max-width: 720px\) \{ \.th-bottom-nav \{ view-transition-name: th-app-bottomnav; \} \}/);
+  assert.match(runway, /@media \(max-width: 1023px\) \{ \.th-bottom-nav \{ view-transition-name: th-app-bottomnav; \} \}/);
 });
 
 test('a prefers-reduced-motion override skips the transition animation without skipping the DOM update', () => {

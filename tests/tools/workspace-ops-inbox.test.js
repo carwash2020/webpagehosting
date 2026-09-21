@@ -88,7 +88,7 @@ test('bottom nav lists the five daily dests (Clients replaced Calendar on 2026-0
   assert.match(NAV, /MORE_DESTS = SIDEBAR_DESTS\.filter/);
   assert.match(NAV, /aria-controls="thMoreSheet"/);
   assert.match(STYLES, /\.th-more-sheet \{/);
-  assert.match(STYLES, /@media \(min-width: 721px\) \{ \.th-more-sheet \{ display: none !important; \} \}/);
+  assert.match(STYLES, /@media \(min-width: 1024px\) \{ \.th-more-sheet \{ display: none !important; \} \}/, 'the sheet hides where the sidebar takes over (1024px since 2026-09-21)');
 });
 
 test('injecting the bottom nav on a real page produces 5 dest links plus More, and the sheet lists sidebar dests the bar does not', () => {

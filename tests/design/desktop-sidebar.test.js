@@ -137,7 +137,7 @@ test('runway-dashboard.html\'s own CSS for the shared sidebar/bottom-nav/hex-ico
   assert.ok(widthMatch);
 
   assert.match(src, /\.th-bottom-nav \{[\s\S]*?display: none;/);
-  assert.match(src, /@media \(max-width: 720px\) \{ \.th-bottom-nav \{ display: flex/);
+  assert.match(src, /@media \(max-width: 1023px\) \{ \.th-bottom-nav \{ display: flex/);
   assert.match(src, /--hex:\s*polygon\(/);
   assert.match(src, /\.th-hex-icon \{/);
   assert.match(src, /\.th-flag-btn \{/);

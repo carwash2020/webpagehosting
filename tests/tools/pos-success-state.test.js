@@ -5,6 +5,10 @@
 // matching the "done" language already established elsewhere in this
 // codebase (portal home's Completed Jobs icon, the teardown device's
 // finished state).
+//
+// 2026-09-21: POS moved into invoice-generator.html as the Quick charge
+// tab (pos.html is a redirect stub); the markup, CSS, and JS moved over
+// verbatim, so these assertions now read that page.
 
 const { test } = require('node:test');
 const assert = require('node:assert/strict');
@@ -12,7 +16,7 @@ const fs = require('fs');
 const path = require('path');
 
 const repo = (...p) => path.join(__dirname, '..', '..', ...p);
-const POS = fs.readFileSync(repo('tools', 'pos.html'), 'utf8');
+const POS = fs.readFileSync(repo('tools', 'invoice-generator.html'), 'utf8');
 
 function extractFn(html, name) {
   const start = html.indexOf(`function ${name}(`);

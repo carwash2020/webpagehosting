@@ -14,7 +14,9 @@ const path = require('path');
 
 const repo = (...p) => path.join(__dirname, '..', '..', ...p);
 const POS_CHARGE = fs.readFileSync(repo('edge-functions', 'create-pos-charge-index.ts'), 'utf8');
-const POS_PAGE = fs.readFileSync(repo('tools', 'pos.html'), 'utf8');
+// 2026-09-21: the POS flow lives on invoice-generator.html (Quick charge
+// tab); pos.html is a redirect stub. The script moved verbatim.
+const POS_PAGE = fs.readFileSync(repo('tools', 'invoice-generator.html'), 'utf8');
 
 // ---- edge function ----
 
