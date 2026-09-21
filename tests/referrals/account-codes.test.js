@@ -114,12 +114,37 @@ test('client-detail.html retries a code generation attempt on a collision, match
   assert.match(CLIENT_DETAIL, /for \(let attempt = 0; attempt < 5; attempt\+\+\)/);
 });
 
-test('portal settings.html shows a read-only referral link panel, sourced via RLS from the client\'s own account_codes row', () => {
-  assert.match(PORTAL_SETTINGS, /Refer a Friend/);
-  assert.match(PORTAL_SETTINGS, /from\('client_account_codes'\)/);
-  assert.match(PORTAL_SETTINGS, /\.eq\('email', email\.toLowerCase\(\)\)/);
+test('client-detail.html computes and shows a usage count, and a "Text to [client]" SMS link when a phone is on file (2026-09-21 refinement)', () => {
+  assert.match(CLIENT_DETAIL, /Prefer: 'count=exact'/);
+  assert.match(CLIENT_DETAIL, /Used to book ' \+ usageCount/);
+  const smsBlock = CLIENT_DETAIL.slice(CLIENT_DETAIL.indexOf('function renderReferralLinkBlock'));
+  assert.match(smsBlock, /const smsTarget = client\.phone/);
+  assert.match(smsBlock, /'<a href="sms:' \+ escapeAttr\(smsTarget\)/);
 });
 
-test('portal settings.html tells a client with no code yet to reach out, rather than showing a broken/empty panel', () => {
-  assert.match(PORTAL_SETTINGS, /we\\'ll set up your referral link/);
+test('client-detail.html threads the client phone through createReferralLink so the SMS link renders right after a fresh code is created, not only on next page load', () => {
+  assert.match(CLIENT_DETAIL, /async function createReferralLink\(email, name, phone\)/);
+  assert.match(CLIENT_DETAIL, /renderReferralLinkBlock\(\{ email: email, name: name, phone: phone \}, code, 0\)/);
+  assert.match(CLIENT_DETAIL, /loadReferralLink\(\{ email: email, name: name, phone: phone \}\)/);
+});
+
+test('portal settings.html shows a referral link panel, self-serve via ensure-my-referral-code (2026-09-21 refinement) rather than only displaying a pre-existing row', () => {
+  assert.match(PORTAL_SETTINGS, /Refer a Friend/);
+  assert.match(PORTAL_SETTINGS, /functions\/v1\/ensure-my-referral-code/);
+  assert.match(PORTAL_SETTINGS, /Authorization': 'Bearer ' \+ session\.access_token/);
+});
+
+test('portal settings.html falls back to a phone-us message if the edge function call fails, rather than showing a broken/empty panel', () => {
+  const fnBody = PORTAL_SETTINGS.slice(PORTAL_SETTINGS.indexOf('async function loadReferralLink'));
+  const catchBlock = fnBody.slice(fnBody.indexOf('} catch'), fnBody.indexOf('} catch') + 400);
+  assert.match(catchBlock, /Could not load your referral link right now/);
+  assert.match(catchBlock, /tel:\+14354141667/);
+});
+
+test('portal settings.html shows a usage count and share options (copy + SMS) once a code is loaded', () => {
+  const fnBody = PORTAL_SETTINGS.slice(PORTAL_SETTINGS.indexOf('async function loadReferralLink'));
+  const tryBlock = fnBody.slice(0, fnBody.indexOf('} catch'));
+  assert.match(tryBlock, /usage_count/);
+  assert.match(tryBlock, /Copy Link/);
+  assert.match(tryBlock, /sms:\?body=/);
 });

@@ -271,33 +271,58 @@
     block.innerHTML = '<div class="referral-link-hint">Loading referral link...</div>';
     try {
       const session = getStoredSession();
+      const authHeader = 'Bearer ' + (session ? session.access_token : SUPABASE_ANON_KEY);
       const res = await fetch(SUPABASE_URL + '/rest/v1/client_account_codes?email=eq.' + encodeURIComponent(client.email.toLowerCase()) + '&select=code&limit=1', {
-        headers: { apikey: SUPABASE_ANON_KEY, Authorization: 'Bearer ' + (session ? session.access_token : SUPABASE_ANON_KEY) },
+        headers: { apikey: SUPABASE_ANON_KEY, Authorization: authHeader },
       });
       const rows = res.ok ? await res.json() : [];
-      renderReferralLinkBlock(client, rows[0] ? rows[0].code : null);
+      const code = rows[0] ? rows[0].code : null;
+      // Usage count (2026-09-21, "refine our code system"): staff
+      // already has direct read access to th_leads/th_bookings (see
+      // both tables' own account_roles-gated RLS policy), so this is
+      // a plain count query -- no edge function needed here, unlike
+      // the portal's own self-serve equivalent which has no such
+      // access.
+      let usageCount = 0;
+      if (code) {
+        const [leadsRes, bookingsRes] = await Promise.all([
+          fetch(SUPABASE_URL + '/rest/v1/th_leads?referred_by_code=eq.' + encodeURIComponent(code) + '&select=id', { headers: { apikey: SUPABASE_ANON_KEY, Authorization: authHeader, Prefer: 'count=exact' } }),
+          fetch(SUPABASE_URL + '/rest/v1/th_bookings?referred_by_code=eq.' + encodeURIComponent(code) + '&select=id', { headers: { apikey: SUPABASE_ANON_KEY, Authorization: authHeader, Prefer: 'count=exact' } }),
+        ]);
+        const leadsCount = parseInt((leadsRes.headers.get('content-range') || '').split('/')[1] || '0', 10) || 0;
+        const bookingsCount = parseInt((bookingsRes.headers.get('content-range') || '').split('/')[1] || '0', 10) || 0;
+        usageCount = leadsCount + bookingsCount;
+      }
+      renderReferralLinkBlock(client, code, usageCount);
     } catch (e) {
       block.innerHTML = '<div class="referral-link-hint">Could not load referral link: ' + escapeHtml(e.message || String(e)) + '</div>';
     }
   }
 
-  function renderReferralLinkBlock(client, code) {
+  function renderReferralLinkBlock(client, code, usageCount) {
     const block = document.getElementById('referralLinkBlock');
     if (!block) return;
     if (!code) {
-      block.innerHTML = '<button class="secondary-btn" onclick="createReferralLink(\'' + escapeForInlineHandler(client.email) + '\', \'' + escapeForInlineHandler(client.name) + '\')">Get referral link</button>';
+      block.innerHTML = '<button class="secondary-btn" onclick="createReferralLink(\'' + escapeForInlineHandler(client.email) + '\', \'' + escapeForInlineHandler(client.name) + '\', \'' + escapeForInlineHandler(client.phone || '') + '\')">Get referral link</button>';
       return;
     }
     const link = 'https://www.triplehenterprisesllc.biz/booking.html?ref=' + encodeURIComponent(code);
+    const smsBody = encodeURIComponent('Hi ' + client.name + ', here\'s your Triple H Enterprises referral link -- share it and get $25 once your friend\'s job is done and paid: ' + link);
+    const smsTarget = client.phone ? client.phone.replace(/[^\d+]/g, '') : '';
+    const usageLine = usageCount > 0
+      ? '<div class="referral-link-hint">Used to book ' + usageCount + ' time' + (usageCount === 1 ? '' : 's') + ' so far.</div>'
+      : '';
     block.innerHTML =
       '<div class="referral-link-row">' +
         '<div class="referral-link-code" id="referralLinkText">' + escapeHtml(link) + '</div>' +
         '<button class="secondary-btn" onclick="copyReferralLink()">Copy</button>' +
       '</div>' +
-      '<div class="referral-link-hint">Send this to ' + escapeHtml(client.name) + ' to text or share -- anyone who books through it gets automatically credited to them.</div>';
+      (smsTarget ? '<a href="sms:' + escapeAttr(smsTarget) + '?body=' + smsBody + '" class="secondary-btn" style="display:inline-block; text-decoration:none; margin-top:8px;">Text to ' + escapeHtml(client.name) + '</a>' : '') +
+      '<div class="referral-link-hint">Send this to ' + escapeHtml(client.name) + ' to text or share -- anyone who books through it gets automatically credited to them.</div>' +
+      usageLine;
   }
 
-  async function createReferralLink(email, name) {
+  async function createReferralLink(email, name, phone) {
     const block = document.getElementById('referralLinkBlock');
     block.innerHTML = '<div class="referral-link-hint">Creating link...</div>';
     const session = getStoredSession();
@@ -314,7 +339,7 @@
         body: JSON.stringify({ email: email.toLowerCase(), code: code, display_name: name }),
       });
       if (res.ok) {
-        renderReferralLinkBlock({ email: email, name: name }, code);
+        renderReferralLinkBlock({ email: email, name: name, phone: phone }, code, 0);
         return;
       }
       const body = await res.text();
@@ -327,7 +352,7 @@
       // in another tab) -- either way, re-loading picks up the real
       // current state instead of assuming.
       if (body.includes('client_account_codes_email_key')) {
-        loadReferralLink({ email: email, name: name });
+        loadReferralLink({ email: email, name: name, phone: phone });
         return;
       }
     }
