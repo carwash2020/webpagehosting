@@ -262,4 +262,66 @@ policies exist.
 Verified: full suite **2577/2577** passing. `check-consistency`/
 `check-undefined-vars`/`check-links.py` all clean.
 
+## 2026-09-21: Closed two real findings from an external Cursor security audit
+
+Acted on the "Fix these first" bucket of a security punch list a user
+pasted from a Cursor session. Picked the two items that were actual code/
+schema fixes I could verify and apply directly (the rest need a human:
+MFA enrollment is a dashboard action for the owner's own account, the
+lowercase `send-push` deletion has no MCP tool reachable, both already
+tracked in `docs/ACTION-ITEMS.md`; the payment/quote-reminder "prove it
+sent" item is just waiting on tomorrow's 15:00/16:00 UTC cron runs).
+
+**1. `resync_cron_service_role_key(text)` was genuinely still
+anon/authenticated-callable**, despite `sql/infra/resync_cron_service_role_key.sql`
+already containing `revoke all ... from public` from when it was
+written. Verified live via `pg_proc`/`has_function_privilege` before
+touching anything -- confirmed the advisor was right, not a stale
+finding. Root cause: Supabase auto-grants EXECUTE to `anon`/
+`authenticated` as separate explicit per-role grants at function-creation
+time, and revoking from the `public` pseudo-role doesn't remove an
+already-granted role's own privilege -- the earlier fix's `revoke ...
+from public` line never actually closed this. This one was real risk:
+anyone holding the page's own public anon key could have overwritten the
+Vault secret every cron reminder job authenticates with. Fixed with an
+explicit `revoke ... from anon, authenticated`, then re-ran
+`get_advisors` and confirmed the finding is gone.
+
+Also re-flagged in the same audit list: `guard_last_role_manager_permission()`
+and 6 `notify_*` functions. Re-verified live (not assumed from the prior
+2026-09-10 note that only checked 3 of these 7) that all 7 are `RETURNS
+trigger` -- Postgres refuses to call a trigger-return-type function
+outside an actual trigger fire regardless of grants, so these were never
+actually exploitable via `/rest/v1/rpc/...`. Revoked EXECUTE from them
+anyway (zero functional cost, since triggers don't need role-level
+EXECUTE to fire) purely to stop the advisor re-flagging them every run.
+
+**2. `job-photos` Storage bucket policies only checked `bucket_id`, not
+ownership** -- confirmed live via `pg_policies`, matching what
+`get-job-photo-urls-index.ts`'s own comments already documented but had
+left "out of scope" for that feature. Any authenticated session
+(a client portal account included, not just staff) could call Storage's
+own sign/upload/delete endpoints directly for any job's photos. Grepped
+every portal code path first and confirmed clients never call Storage
+directly for this bucket -- `portal/jobs.html` always goes through the
+ownership-checked edge function -- so the only real caller is internal
+staff via their own session in `job-tracker.html`. Restricted all three
+policies to `current_user_has_any_role()` (this project's standing
+internal-vs-client check), which closes the gap with zero effect on real
+usage.
+
+Both fixes recorded in `sql/security/` (mirroring the live migrations,
+per this repo's convention) and re-verified against a fresh
+`get_advisors` call afterward -- both findings are gone; everything
+remaining is already-reviewed intentional public access (token-based
+`*_by_token` RPCs, `get_booking_availability`, `current_user_has_any_role`
+itself, `next_invoice_number`/`next_quote_number` which already
+self-check `current_user_has_any_role()` internally).
+
+Did not touch: MFA enrollment (owner's own account, not a repo change),
+deleting the orphaned lowercase `send-push` function (no MCP delete tool
+for Edge Functions exists -- confirmed again this session, still needs
+dashboard/CLI), or the cron "does it actually send" item (nothing to
+verify until tomorrow's scheduled runs happen).
+
 <!-- Add new entries above this line -->

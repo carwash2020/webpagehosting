@@ -2531,3 +2531,31 @@ New tests: `tests/tools/app-shell-view-transitions.test.js`. All four
 changes verified: full suite (2597/2597), `check-consistency`,
 `check-undefined-vars`, `lint`, `check-links.py`.
 
+## What changed, 2026-09-21 -- Two Supabase security fixes from an external audit
+
+Full detail in `docs/specialist-logs/security.md`, summarized here:
+
+**`resync_cron_service_role_key(text)` was still callable by the public
+anon key**, despite an earlier fix that revoked access from `public` --
+Supabase grants `anon`/`authenticated` their own separate EXECUTE
+privilege at function-creation time, so that revoke never actually
+covered them. Fixed with an explicit revoke from `anon`/`authenticated`
+(`sql/security/revoke_public_execute_on_internal_only_functions.sql`);
+this was the real risk, since anyone holding the site's own public anon
+key could have overwritten the Vault secret every cron reminder email
+authenticates with. Also tightened `guard_last_role_manager_permission()`
+and 6 `notify_*` trigger functions the same audit flagged, though those
+were confirmed never actually callable outside a real trigger fire.
+
+**The `job-photos` Storage bucket's policies only checked the bucket
+name, not who was asking** -- any signed-in account, client portal
+logins included, could call Storage directly for any job's photos.
+Restricted to internal accounts only
+(`sql/security/restrict_job_photos_bucket_to_internal_accounts.sql`);
+confirmed no client-portal code path ever used direct Storage access in
+the first place, so this closes the gap with no effect on real usage.
+
+Both re-verified against a fresh Supabase security advisor run
+afterward -- both findings are gone. Everything else the advisor still
+lists is already-reviewed, intentional public access.
+
