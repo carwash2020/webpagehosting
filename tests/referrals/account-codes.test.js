@@ -14,6 +14,7 @@ const path = require('path');
 const repo = (...p) => path.join(__dirname, '..', '..', ...p);
 
 const SCHEMA = fs.readFileSync(repo('sql', 'infra', 'create_client_account_codes.sql'), 'utf8');
+const RLS_MERGE = fs.readFileSync(repo('sql', 'infra', 'merge_client_account_codes_select_policies.sql'), 'utf8');
 const SEND_INVITE = fs.readFileSync(repo('edge-functions', 'send-invite-index.ts'), 'utf8');
 const RESOLVE = fs.readFileSync(repo('edge-functions', 'resolve-referral-code-index.ts'), 'utf8');
 const BOOKING = fs.readFileSync(repo('booking.html'), 'utf8');
@@ -28,12 +29,25 @@ test('client_account_codes is keyed by email (not a local client_id), so a code 
 });
 
 test('internal accounts can manage every code; a portal client can only SELECT their own row; there is no anon policy at all', () => {
+  // The original two policies (one FOR ALL for staff, one FOR SELECT
+  // for a client's own row) both matched role=authenticated,
+  // action=SELECT -- a real "multiple_permissive_policies" perf
+  // finding from Supabase's own advisor, fixed by
+  // merge_client_account_codes_select_policies.sql, which drops both
+  // and replaces them with a single merged SELECT policy plus three
+  // single-action write policies for staff.
   assert.match(SCHEMA, /internal accounts can manage client account codes/);
   assert.match(SCHEMA, /portal clients can view their own account code/);
-  assert.match(SCHEMA, /for select[\s\S]*?using \(email = \(select auth\.email\(\)\)\)/);
-  // Deliberately no "to anon" policy anywhere in this file -- public
+  assert.match(RLS_MERGE, /drop policy if exists "internal accounts can manage client account codes"/);
+  assert.match(RLS_MERGE, /drop policy if exists "portal clients can view their own account code"/);
+  assert.match(RLS_MERGE, /for select[\s\S]*?using \(\s*exists \(select 1 from public\.account_roles where account_roles\.email = \(select auth\.email\(\)\)\)\s*or email = \(select auth\.email\(\)\)\s*\)/);
+  for (const action of ['insert', 'update', 'delete']) {
+    assert.match(RLS_MERGE, new RegExp('for ' + action + '\\s*\\n\\s*to authenticated'));
+  }
+  // Deliberately no "to anon" policy anywhere in either file -- public
   // resolution goes through resolve-referral-code instead.
   assert.doesNotMatch(SCHEMA, /to anon/);
+  assert.doesNotMatch(RLS_MERGE, /to anon/);
 });
 
 test('referred_by_code is added alongside the existing referred_by free-text column on both capture tables', () => {
