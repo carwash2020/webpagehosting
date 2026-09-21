@@ -893,4 +893,39 @@ Verified: full suite **2599/2599**, `check-consistency` (after
 precached file), `check-undefined-vars`, `lint`, `check-links.py` --
 all clean.
 
+## 2026-09-21: Portal "flashes blank on first sign-in check" (external audit item #13)
+
+Same punch list as the FAQ item above. Real, verifiable, bounded --
+`dashboard.html`/`quotes.html`/`home.html` already bake a static
+`skeleton-card` shape directly into their list container's initial
+HTML (so there's something to see before any JS even runs), but
+`jobs.html` (`#jobList`), `work-orders.html` (`#myRequests`), and
+`contracts.html` (`#contractList`) did not -- their JS-side
+`portalSkeletonCards()` call only ever ran AFTER
+`await client.auth.getSession()` resolved, so on first paint (and for
+however long that async auth check takes) those 3 pages' list areas
+were genuinely empty markup. Confirmed by grepping every portal page
+for `skeleton-card` in its static body versus its script block, not
+assumed from the bug description alone.
+
+Fixed by baking the exact same static skeleton markup the JS would
+render into each page's initial HTML -- `work-orders.html` matches its
+JS's shown text exactly (`<div class="wo-section-title">Your
+requests</div>` + 3 cards), so there's no visible layout shift or
+duplicate heading once the JS replaces it with the same content.
+Checked `settings.html` too (also flagged as a candidate) and found it
+already has skeletons on every one of its dynamic sub-panels
+(`referralLinkBody`, `savedCardsBody`, `authorizationsBody`) -- no real
+gap there, left untouched.
+
+Extended `tests/portal/skeleton-loading.test.js` with a test asserting
+the static HTML (not just the JS source anywhere in the file, which
+the existing test already checked) contains the skeleton markup for
+all 6 list pages, so a future page added without this can't silently
+regress.
+
+Verified: full suite **2600/2600**, `check-consistency` (service-worker
+cache bumped again), `check-undefined-vars`, `lint`, `check-links.py`
+-- all clean.
+
 <!-- Add new entries above this line -->

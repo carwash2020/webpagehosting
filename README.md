@@ -2573,3 +2573,14 @@ editor in `tools/site-content.html` now has a Category field too, so
 future edits through the CMS stay grouped. Full detail in
 `docs/specialist-logs/features.md`.
 
+## What changed, 2026-09-21 -- Client portal no longer flashes blank on first load
+
+`dashboard.html`/`quotes.html`/`home.html` already baked a static
+skeleton-card placeholder into their list containers, but
+`jobs.html`, `work-orders.html`, and `contracts.html` didn't -- their
+loading skeleton only appeared after the async sign-in check finished,
+so those 3 pages showed genuinely empty content until then. Added the
+same static skeleton markup to all 3. `settings.html` was also checked
+and found to already have skeletons on every dynamic panel -- no real
+gap there. Full detail in `docs/specialist-logs/features.md`.
+
