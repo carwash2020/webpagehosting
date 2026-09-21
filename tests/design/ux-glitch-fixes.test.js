@@ -57,7 +57,7 @@ test('Cookie Preferences links go to privacy.html#cookies and still reopen the b
     'terms.html',
     'about.html',
     'our-work.html',
-    'handyman-st-george-ut.html',
+    'locations/handyman-st-george-ut.html',
     'blog/index.html',
   ];
   for (const file of pages) {

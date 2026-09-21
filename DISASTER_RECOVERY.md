@@ -37,6 +37,16 @@ PR's own CodeQL check and the repo's Security tab worth knowing about
 before trusting either one blindly) and refreshed cache-bust/CACHE_NAME
 version numbers.
 
+**Updated 2026-09-21** with Scenario 20 -- a real incident, not a
+drill: the vault-stored service-role key every `net.http_post` cron
+job authenticates with had gone stale after a Supabase key-format
+migration, silently breaking 2 client-facing automated-email
+functions for 5 days with no visible symptom except an
+already-firing, already-correct Cron Health alert nobody had acted
+on. (Scenario 19, covering a client-account/RLS-policy audit round,
+was added earlier without its own dated note here -- flagging that
+gap now rather than letting it compound.)
+
 **Updated 2026-09-09** with Scenarios 16-18, closing a real documentation
 gap: the client portal's Work Orders, Quotes, and Check-ups features
 (all added 2026-09-02 through 2026-09-04) had never been covered here
@@ -1167,3 +1177,83 @@ has had a few minutes to run and re-index.
    all writes go through a `service_role` edge function. If a future
    audit flags this table again, re-verify the columns rather than
    assuming the shape changed.
+
+## Scenario 20: Dev Tools' Cron Health panel shows a recurring "HTTP call failed -- status 401" alert
+
+**Symptoms:** Dev Tools' Cron Health panel (or a direct query against
+`cron_alerts`) shows a `http_response_failed` alert with `status 401`,
+recurring at the same time every day (or every hour, depending on the
+job). A specific automated email a cron job is supposed to send
+(payment reminders, quote followups, appointment reminders, the daily
+digest) is confirmed to not actually be reaching clients, even though
+the feature "shipped" and nothing in the UI shows an error.
+
+**Real incident, 2026-09-21:** `send-payment-reminder` and
+`send-quote-followup` (added 2026-09-16) had been silently 401ing on
+*every single scheduled run* since the day they shipped -- 5 days of
+real client-facing emails that simply never went out, with no visible
+symptom anywhere except this one alert type, which had gone
+unacknowledged.
+
+**Root cause:** every `net.http_post` cron job in this project
+authenticates with `vault.decrypted_secrets['send_push_service_role_key']`
+(a copy of the service-role key saved into Vault on 2026-08-14, see
+Scenario 6). At some point after that date, this Supabase project's
+auto-provisioned `SUPABASE_SERVICE_ROLE_KEY` moved to the newer
+`sb_secret_...` key format -- the vault copy was still the old legacy
+JWT (`eyJhbGci...`). The vault key was still a *validly signed* JWT
+(the project's underlying JWT secret never rotated), so it kept
+passing Supabase's platform-level `verify_jwt` check for every other
+`net.http_post` caller (`Send-Push`, `reconcile-stripe-payments`,
+`send-appointment-reminder`) -- none of which do a role check beyond
+that. Only `send-payment-reminder`/`send-quote-followup` noticed,
+because they're the only two that also do a strict
+`token !== SERVICE_ROLE_KEY` equality check in code (a deliberate
+security fix -- see each file's own header comment, and
+`uptime-alert-auth.test.js` -- against relying on platform `verify_jwt`
+alone, which would let the public anon key through).
+
+**Diagnosis, without ever exposing the actual secret:** deployed a
+temporary Edge Function that read its own live
+`Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")` and compared it against a
+candidate value passed in the request body, returning only a boolean
+match result (plus non-sensitive metadata for a mismatch: length,
+prefix, decoded JWT `role` claim) -- never the actual key text. Called
+it via `net.http_post` from SQL, passing the vault-stored value as the
+candidate. Confirmed `matches: false`, with the live env var being a
+41-char `sb_secret_...` string and the vault value being a 219-char
+JWT.
+
+**Fix:** a `security definer` SQL function,
+`resync_cron_service_role_key(new_value text)` (see
+`sql/infra/resync_cron_service_role_key.sql`), calls
+`vault.update_secret()` on the `send_push_service_role_key` row. It
+takes the new value as a plain argument and never reads or returns
+the secret itself -- the caller must already have the correct value
+in hand. Fixed live by deploying a small Edge Function that read its
+own correct live key and passed it straight to this RPC over an
+internal HTTPS call, so the key's actual text was never typed, logged,
+or returned in any tool output at any point. Verified by directly
+invoking both previously-broken functions afterward -- both returned
+real 200s with `checked`/`sent` counts instead of 401.
+
+**If this happens again** (another Supabase key-format migration, or a
+genuine key rotation): get the CURRENT correct
+`SUPABASE_SERVICE_ROLE_KEY` value from Project Settings → API (or from
+any already-deployed function's own env, following the same
+never-print-it pattern above), then call
+`select resync_cron_service_role_key('<the current key>');` from any
+authenticated internal SQL context. This resyncs every `net.http_post`
+cron job's auth in one place -- there is exactly one vault secret all
+of them share, not one per job.
+
+**Lesson:** an async `net.http_post` cron job reports "succeeded" in
+`cron.job_run_details` the instant the HTTP request is queued,
+regardless of whether the call itself actually got a 2xx back (see
+Scenario 6's own watchdog, `check_cron_health()`) -- the watchdog's
+`cron_alerts` table is the only thing that would have caught this, and
+it did, correctly, from the very first failed run. The gap wasn't the
+monitoring -- it was that nobody was acting on `job_run_failed`/
+`http_response_failed` alerts once they appeared. Treat a recurring
+Cron Health alert, especially a same-time-every-day 401, as an
+open incident, not background noise.

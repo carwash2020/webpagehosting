@@ -624,4 +624,102 @@ tied to the old read-only `portal/settings.html` implementation).
 `check-undefined-vars`/`check-consistency` (after `fix-versions` for
 both service workers' `CACHE_NAME`)/`check-links.py` all clean.
 
+## 2026-09-21 -- Moved the 8 service landing pages into /services/, with redirect stubs
+
+Direct request, after weighing the tradeoff explicitly first: the 5
+service pages (`washer-dryer-repair.html`, `plumbing-repairs.html`,
+`drywall-painting.html`, `handyman-repairs.html`,
+`assembly-installation.html`) and 3 service×city pages
+(`washer-dryer-repair-st-george-ut.html`,
+`refrigerator-repair-st-george-ut.html`,
+`dishwasher-repair-st-george-ut.html`) moved from the repo root into
+`/services/`. Recommended against this at first (GitHub Pages has no
+server-side redirect capability, and these are live, indexed, linked
+pages), but this specific family was judged worth it: it's actively
+growing (3 new pages in one week alone), unlike the rest of the
+public site which stays flat.
+
+To soften the cost: left a thin redirect stub behind at each of the 8
+old root paths -- `<link rel="canonical">` + 0-delay
+`<meta http-equiv="refresh">` + a JS `location.replace()` fallback,
+same pattern this repo already used for retired `/tools/` pages
+(`tools/contact-card.html` etc.), except deliberately NOT `noindex`
+here -- these need to read as "moved," not "gone," to a crawler, so
+Google consolidates ranking signal onto the new URL instead of
+dropping it.
+
+Updated every internal reference site-wide (56 files: every public
+page's nav dropdown, sitemap.xml, the 8 pages' own canonical/og:url/
+JSON-LD self-references and cross-links to each other, `README.md`,
+`docs/service-city-landing-pages.md`, `scripts/check-links.py`'s
+PUBLIC_PAGES list, and ~25 test files -- both URL-path assertions
+`href="/foo.html"` and Node fs-path lookups `repo('foo.html')`,
+handled as two separate sed passes since they need different
+replacement forms (`/services/foo.html` vs `services/foo.html`, no
+leading slash). One stale hardcoded regex literal in
+`tests/seo/service-city-landing-page.test.js` (checking for the OLD
+`/washer-dryer-repair.html` cross-link inside the service×city pages)
+slipped past both sed passes since regex literals aren't quote-
+delimited the same way -- caught by the full suite, fixed.
+
+Historical changelog entries (`docs/specialist-logs/*.md`,
+`docs/ACTION-ITEMS.md`, comments) deliberately left referencing the
+old root paths -- they're accurate descriptions of where these files
+lived *at the time* those entries were written, not live references.
+
+Verified: full suite **2586/2586** passing. `check-undefined-vars`/
+`check-consistency`/`lint`/`check-links.py` (80 HTML files, internal
+references all resolve; the new `/services/` public URLs correctly
+picked up by the external-link pass via the updated PUBLIC_PAGES
+list) all clean.
+
+Left for the user: nothing required, but Google Search Console ->
+Sitemaps -> resubmit `sitemap.xml` will speed up Google noticing the
+new canonical URLs rather than waiting for its own re-crawl schedule.
+
+## 2026-09-21 -- Moved the 8 city landing pages into /locations/ too, same treatment
+
+Direct follow-up, same session: after the services move above, moved
+the 8 city landing pages (`handyman-st-george-ut.html`,
+`handyman-hurricane-ut.html`, `handyman-washington-city-ut.html`,
+`handyman-santa-clara-ivins-ut.html`, `handyman-la-verkin-ut.html`,
+`handyman-leeds-ut.html`, `handyman-cedar-city-ut.html`,
+`handyman-mesquite-nv.html`) from the root into `/locations/`, for the
+same reason: this family also keeps growing (5 -> 7 pages over the
+same stretch the service pages grew). Same redirect-stub treatment
+(canonical + meta refresh + JS fallback, not noindex), same
+site-wide reference update (72 files this time: nav dropdowns,
+sitemap.xml, cross-links between city pages and into service pages,
+README, check-links.py's PUBLIC_PAGES, ~25 test files).
+
+Same one stale hardcoded regex literal pattern recurred in
+`tests/seo/service-city-landing-page.test.js` (this time checking for
+the OLD `/handyman-{city}-ut.html` cross-links from the service×city
+pages) -- same fix, update the regex to the new `/locations/` path.
+Worth remembering for next time: the mechanical sed passes only ever
+catch quote-delimited string literals, never regex literals, so any
+future page move needs an explicit search for
+`\/{filename}\.html` (backslash-escaped) after the sed passes, not
+just a clean `npm test` run to confirm nothing was missed.
+
+**Mid-move incident, unrelated to this change but handled in the same
+session:** a separate Cursor-driven branch (`cursor/tools-refresh-39fb`)
+got stuck -- its own remote-tree-consistency check correctly detected
+that a `push_files` call had silently written the literal string
+`TOO_LARGE_SKIP` into `tools/parts-reference.html` (2950 real lines,
+~244KB) instead of the actual content, apparently hitting some size
+limit in Cursor's own push mechanism without erroring. Confirmed this
+never touched `main` -- fully contained to Cursor's own unmerged
+branch. Fixed by restoring the file from `main` and merging a small
+PR directly into `cursor/tools-refresh-39fb` (not `main`) to unblock
+Cursor's own next batch, since a direct push to a `cursor/`-prefixed
+branch name is blocked by what's presumably a branch-protection rule
+reserving that namespace.
+
+Verified: full suite **2586/2586** passing. `check-undefined-vars`/
+`check-consistency`/`lint`/`check-links.py` (88 HTML files) all clean.
+
+Left for the user: same as above -- resubmit `sitemap.xml` once, now
+covers both moves in one Search Console action.
+
 <!-- Add new entries above this line -->

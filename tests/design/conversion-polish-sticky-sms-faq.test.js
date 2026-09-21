@@ -11,7 +11,7 @@ const path = require('path');
 
 const repo = (...p) => path.join(__dirname, '..', '..', ...p);
 const INDEX = fs.readFileSync(repo('index.html'), 'utf8');
-const WASHER_LP = fs.readFileSync(repo('washer-dryer-repair-st-george-ut.html'), 'utf8');
+const WASHER_LP = fs.readFileSync(repo('services/washer-dryer-repair-st-george-ut.html'), 'utf8');
 const STYLES = fs.readFileSync(repo('styles.css'), 'utf8');
 const BOOKING = fs.readFileSync(repo('booking.html'), 'utf8');
 

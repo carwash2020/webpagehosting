@@ -25,7 +25,7 @@ const repo = (...p) => path.join(__dirname, '..', '..', ...p);
 
 const PAGES = [
   {
-    file: 'washer-dryer-repair-st-george-ut.html',
+    file: 'services/washer-dryer-repair-st-george-ut.html',
     title: 'Washer & Appliance Repair in St. George, UT | Triple H Enterprises',
     h1: 'Washer &amp; Appliance Repair in St. George',
     description: /<meta name="description" content="Washer and appliance repair in St\. George and Washington County\./,
@@ -35,7 +35,7 @@ const PAGES = [
     inboundLabel: /Washer &amp; Dryer Repair in St\. George/,
   },
   {
-    file: 'refrigerator-repair-st-george-ut.html',
+    file: 'services/refrigerator-repair-st-george-ut.html',
     title: 'Refrigerator Repair in St. George, UT | Triple H Enterprises',
     h1: 'Refrigerator Repair in St. George',
     description: /<meta name="description" content="Refrigerator repair in St\. George and Washington County\./,
@@ -45,7 +45,7 @@ const PAGES = [
     inboundLabel: /Refrigerator repair in St\. George/,
   },
   {
-    file: 'dishwasher-repair-st-george-ut.html',
+    file: 'services/dishwasher-repair-st-george-ut.html',
     title: 'Dishwasher Repair in St. George, UT | Triple H Enterprises',
     h1: 'Dishwasher Repair in St. George',
     description: /<meta name="description" content="Dishwasher repair in St\. George and Washington County\./,
@@ -130,10 +130,10 @@ for (const page of PAGES) {
 
   test(`${page.file}: links into booking, the parent service page, the St. George city page, nearby cities, and a matching blog post`, () => {
     assert.match(html, /href="\/booking\.html"/);
-    assert.match(html, /href="\/washer-dryer-repair\.html"/);
-    assert.match(html, /href="\/handyman-st-george-ut\.html"/);
-    assert.match(html, /href="\/handyman-hurricane-ut\.html"/);
-    assert.match(html, /href="\/handyman-washington-city-ut\.html"/);
+    assert.match(html, /href="\/services\/washer-dryer-repair\.html"/);
+    assert.match(html, /href="\/locations\/handyman-st-george-ut\.html"/);
+    assert.match(html, /href="\/locations\/handyman-hurricane-ut\.html"/);
+    assert.match(html, /href="\/locations\/handyman-washington-city-ut\.html"/);
     assert.match(html, /href="\/blog\/appliance-repair-or-replace\.html"/);
     assert.equal(html.includes(`href="${page.blogPost}"`), true, 'matching blog post');
   });
@@ -148,8 +148,8 @@ for (const page of PAGES) {
   });
 
   test(`${page.file}: parent service and city pages link into this instance`, () => {
-    const service = fs.readFileSync(repo('washer-dryer-repair.html'), 'utf8');
-    const city = fs.readFileSync(repo('handyman-st-george-ut.html'), 'utf8');
+    const service = fs.readFileSync(repo('services/washer-dryer-repair.html'), 'utf8');
+    const city = fs.readFileSync(repo('locations/handyman-st-george-ut.html'), 'utf8');
     assert.equal(service.includes(`href="/${page.file}"`), true, 'parent service inbound href');
     assert.match(service, page.inboundLabel);
     assert.equal(city.includes(`href="/${page.file}"`), true, 'parent city inbound href');
