@@ -1636,6 +1636,11 @@ body select:focus, body textarea:focus {
   border-top: 1px solid var(--border);
 }
 @media (max-width: 720px) { .th-bottom-nav { display: flex; justify-content: space-around; gap: 2px; } }
+/* Same view-transition treatment as .th-desktop-sidebar above, at
+   this breakpoint's own mirror-image scoping. Kept separate from the
+   rule above for the same reason -- an existing test asserts on that
+   rule's exact text. */
+@media (max-width: 720px) { .th-bottom-nav { view-transition-name: th-app-bottomnav; } }
 .th-bottom-nav a, .th-bottom-nav .th-bn-more {
   flex: 1; max-width: 76px;
   display: flex; flex-direction: column; align-items: center; gap: 5px;
@@ -1769,6 +1774,26 @@ body select:focus, body textarea:focus {
   padding: 20px 12px;
 }
 @media (min-width: 1024px) { .th-desktop-sidebar { display: flex; flex-direction: column; gap: 4px; } }
+/* Cross-document view transitions (2026-09-21) -- same pattern as
+   portal/*.html, applied to the tools suite. Each page opts in with
+   its own `@view-transition { navigation: auto; }` (see that rule
+   for why this is per-page, not here in the shared stylesheet).
+   This name is what actually delivers the "persistent shell" feel:
+   since tools-nav-pwa.js injects byte-identical sidebar markup on
+   every page, the browser recognizes it as the SAME element across
+   the navigation instead of crossfading two different snapshots --
+   it simply stays put while the content changes underneath. Scoped
+   to this same min-width:1024px breakpoint (matching .th-bottom-nav's
+   own max-width:720px scoping below) so the two names are never both
+   live at once -- a view-transition-name must be unique among
+   elements rendered at the same time, and the gap between 721px and
+   1023px (neither nav visible) means this is already guaranteed by
+   the display:none above, but scoping it explicitly removes any
+   doubt rather than relying on that as an implicit side effect. Kept
+   as its own separate @media block (not merged into the one above)
+   so that rule's exact text -- asserted on by an existing test --
+   stays untouched. */
+@media (min-width: 1024px) { .th-desktop-sidebar { view-transition-name: th-app-sidebar; } }
 /* Offsets the main content column to make room for the fixed sidebar
    above -- same class-boosted-specificity technique already proven
    for body.th-has-bottomnav's padding offset, so this correctly wins
@@ -2434,4 +2459,15 @@ a.th-cmdk-item:hover { background: var(--orange-tint-soft); }
   margin-left: auto; font-family: var(--font-ui); font-size: 11px; color: var(--text-dim);
   border: 1px solid var(--border); border-radius: 5px; padding: 1px 5px;
   flex-shrink: 0;
+}
+
+/* Cross-document view transitions, reduced-motion override -- mirrors
+   styles.css's identical rule for portal/*.html. Each tool page opts
+   in with its own `@view-transition { navigation: auto; }`; this
+   keeps the DOM swap but skips the animation for anyone who's asked
+   for less motion. */
+@media (prefers-reduced-motion: reduce) {
+  ::view-transition-group(*), ::view-transition-old(*), ::view-transition-new(*) {
+    animation-duration: 0.001ms !important;
+  }
 }

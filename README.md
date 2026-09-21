@@ -2468,3 +2468,66 @@ and `sql/infra/resync_cron_service_role_key.sql` (a permanent,
 secret-safe maintenance function for if this recurs after a future
 key-format change).
 
+## What changed, 2026-09-21 -- Workspace tools: lazy-loading fix, sidebar icon fix, global search, and a persistent app shell
+
+Four related changes, direct request to make the Workspace tool suite
+"easier to use / more app-like" -- covered in full detail in
+`docs/specialist-logs/features.md`, summarized here:
+
+**Lazy-loading dashboard drawers, actually implemented.** Cursor's PR
+described this feature (`workspace-lazy-sections.test.js`, 83 tests)
+but never wrote the real code into `workspace.html` -- only a cache-
+bust bump had landed, so 4 tests were failing silently. Cherry-picked
+the real implementation (`dashSectionClosed`/`renderOpenedSection`/
+`refreshGalleryChip`, plus matching `styles-tools.css` polish) from an
+unmerged sibling branch, but not merged wholesale -- that branch
+predated the `/services/`/`/locations/` folder move and would have
+reverted it.
+
+**Runway Dashboard's sidebar icons were invisible.** That page keeps
+its own copy of the shared sidebar/icon CSS instead of loading
+`styles-tools.css`, and that copy was missing the base `.th-icon`
+rule (`fill: none; stroke: currentColor; ...`). Icons built from
+stroke-drawn paths (wrench, calendar, receipt, scroll, book,
+terminal, the home roofline) fell back to SVG's default
+`fill: black`, rendering as solid near-black shapes invisible against
+the dark hex background -- icons with an inline `fill` (the `$`
+glyphs, the filled star) were unaffected, which is why it looked like
+scattered breakage rather than everything being blank. Reproduced and
+verified with a real Playwright render before and after the fix, not
+just from the reported screenshot.
+
+**A global command palette** (`tools/tools-command-palette.js`),
+Cmd/Ctrl+K from any tool page -- searches jobs, contacts, invoices,
+quotes, and contracts (the same data `workspace.html`'s own "Find a
+client" box already searched, now available everywhere). A "Search
+⌘K" row in the desktop sidebar; a floating button on mobile/tablet,
+deliberately hidden ≥1024px since it would otherwise render
+underneath the fixed sidebar there and be unclickable -- caught via a
+real browser render before shipping.
+
+**A persistent app shell**, via cross-document view transitions
+(`@view-transition { navigation: auto; }`) -- the same fix already
+proven in `portal/*.html` for the identical "flash between pages"
+complaint, applied to all 19 real tool pages. `tools-nav-pwa.js`
+injects byte-identical sidebar/bottom-nav markup on every page, so
+giving those elements a shared `view-transition-name` in
+`styles-tools.css` (and `runway-dashboard.html`'s own copy) makes the
+shell itself read as staying in place instead of crossfading.
+Deliberately *not* a real SPA rewrite (no persisted DOM, no client
+router, no per-page script teardown) -- every page still does a real
+navigation, so back/forward, deep-linking, and each page's own init
+logic are completely unaffected by construction. Weighed against a
+true SPA content-swap first and rejected it: all 19 pages assume full
+unload for cleanup (Supabase realtime channels, timers, global
+state), none have teardown logic, and writing/verifying that for 19
+pages of live invoicing/job-tracking tooling with no existing test
+coverage on this interaction pattern was judged not worth the risk
+for the same visual outcome a native browser feature already
+delivers as pure progressive enhancement (unsupported browsers just
+keep today's exact hard-cut navigation).
+
+New tests: `tests/tools/app-shell-view-transitions.test.js`. All four
+changes verified: full suite (2597/2597), `check-consistency`,
+`check-undefined-vars`, `lint`, `check-links.py`.
+
