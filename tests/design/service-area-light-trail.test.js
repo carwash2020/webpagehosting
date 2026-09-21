@@ -27,9 +27,9 @@ const PAGES = {
   'handyman-la-verkin-ut.html': fs.readFileSync(repo('handyman-la-verkin-ut.html'), 'utf8'),
   'handyman-leeds-ut.html': fs.readFileSync(repo('handyman-leeds-ut.html'), 'utf8'),
   'handyman-st-george-ut.html': fs.readFileSync(repo('handyman-st-george-ut.html'), 'utf8'),
-  'washer-dryer-repair-st-george-ut.html': fs.readFileSync(repo('washer-dryer-repair-st-george-ut.html'), 'utf8'),
-  'refrigerator-repair-st-george-ut.html': fs.readFileSync(repo('refrigerator-repair-st-george-ut.html'), 'utf8'),
-  'dishwasher-repair-st-george-ut.html': fs.readFileSync(repo('dishwasher-repair-st-george-ut.html'), 'utf8'),
+  'services/washer-dryer-repair-st-george-ut.html': fs.readFileSync(repo('services/washer-dryer-repair-st-george-ut.html'), 'utf8'),
+  'services/refrigerator-repair-st-george-ut.html': fs.readFileSync(repo('services/refrigerator-repair-st-george-ut.html'), 'utf8'),
+  'services/dishwasher-repair-st-george-ut.html': fs.readFileSync(repo('services/dishwasher-repair-st-george-ut.html'), 'utf8'),
 };
 
 for (const [name, html] of Object.entries(PAGES)) {

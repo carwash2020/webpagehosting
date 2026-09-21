@@ -19,11 +19,11 @@ const path = require('path');
 const repo = (...p) => path.join(__dirname, '..', '..', ...p);
 
 const SERVICE_PAGES = {
-  'assembly-installation.html': 'Assembly &amp; Installation',
-  'drywall-painting.html': 'Drywall &amp; Painting',
-  'plumbing-repairs.html': 'Plumbing Repairs',
-  'washer-dryer-repair.html': 'Washer &amp; Dryer Repair',
-  'handyman-repairs.html': 'Handyman Repairs',
+  'services/assembly-installation.html': 'Assembly &amp; Installation',
+  'services/drywall-painting.html': 'Drywall &amp; Painting',
+  'services/plumbing-repairs.html': 'Plumbing Repairs',
+  'services/washer-dryer-repair.html': 'Washer &amp; Dryer Repair',
+  'services/handyman-repairs.html': 'Handyman Repairs',
 };
 
 const CITIES = [
@@ -37,13 +37,13 @@ const CITIES = [
 ];
 
 const WASHER_ST_GEORGE = {
-  file: 'washer-dryer-repair-st-george-ut.html',
+  file: 'services/washer-dryer-repair-st-george-ut.html',
   name: 'St. George',
   requestClass: false,
 };
 
 function citiesFor(page) {
-  if (page === 'washer-dryer-repair.html') return [WASHER_ST_GEORGE, ...CITIES];
+  if (page === 'services/washer-dryer-repair.html') return [WASHER_ST_GEORGE, ...CITIES];
   return CITIES;
 }
 
@@ -70,7 +70,7 @@ test('every service page cross-links to all 7 cities, not a partial subset', () 
     const idx = html.indexOf('<div class="areas-links" data-reveal>');
     const block = html.slice(idx, idx + 2500);
     const linkCount = (block.match(/<a class="areas-link/g) || []).length;
-    const expected = page === 'washer-dryer-repair.html' ? 8 : 7;
+    const expected = page === 'services/washer-dryer-repair.html' ? 8 : 7;
     assert.equal(linkCount, expected, `${page} should have exactly ${expected} areas-link entries`);
   }
 });

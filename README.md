@@ -46,15 +46,26 @@ Two things on this specific repo have caused real, hours-long confusion before. 
 
 ## Public site — file structure (repo root)
 
-**Every public page lives flat at the repo root, deliberately.** GitHub
+**Most public pages live flat at the repo root, deliberately.** GitHub
 Pages serves each one at its exact current path with no server-side
-redirect capability -- moving any of these into a subfolder changes its
-live URL, breaking Google's index, every existing backlink, and every
-internal link on the site all at once, for a purely cosmetic gain. This
-table groups them by kind for readability; the groupings are
-documentation only; no file has actually moved (considered and
-deliberately rejected 2026-09-21 -- see the note at the end of this
-section for the specific reasoning).
+redirect capability -- moving a live, indexed page changes its live
+URL, which breaks Google's index and every existing backlink pointing
+at the old one unless something is left behind to forward traffic.
+This table groups everything by kind for readability.
+
+**One real exception, made 2026-09-21:** the 5 service landing pages
+and 3 service×city landing pages moved from the root into `/services/`
+-- this specific family was judged worth the one-time cost because it's
+actively growing (3 new pages added in a single week, 2026-09-18) and
+will keep growing, unlike the rest of the site. A thin redirect stub
+was left behind at each of the 8 old root paths (see "Do not delete"
+below) specifically to soften that cost -- a visitor or search engine
+hitting the old URL gets forwarded to the new one instead of a 404,
+same pattern this repo already used for retired `/tools/` pages.
+`terms.html`/`privacy.html` and the rest of the public pages were
+considered for the same treatment and rejected -- they're a fixed,
+non-growing set, so there's no future-scaling upside to offset the
+cost.
 
 **Homepage, booking & core**
 
@@ -81,23 +92,23 @@ section for the specific reasoning).
 | `handyman-cedar-city-ut.html` | Cedar City, UT — **by-request** (orange "AVAILABLE BY REQUEST" badge, own trip-fee FAQ) |
 | `handyman-mesquite-nv.html` | Mesquite, NV — **by-request** (same badge treatment, NV address in schema) |
 
-**Service landing pages** — one per service, not tied to a specific city
+**Service landing pages** (`/services/`) — one per service, not tied to a specific city. **Moved from the repo root into `/services/` on 2026-09-21** -- a redirect stub was left behind at each old root path (see "Do not delete" below) specifically so this move doesn't cost the pages their existing Google ranking/backlinks.
 
 | File | Service |
 |---|---|
-| `washer-dryer-repair.html` | Washer/dryer repair (keeps the triage tool, links out to 2 blog posts) |
-| `plumbing-repairs.html` | Plumbing repairs |
-| `drywall-painting.html` | Drywall & painting |
-| `handyman-repairs.html` | Doors, cabinets & hardware, carpentry & trim, weatherstripping |
-| `assembly-installation.html` | Furniture/fixture assembly & installation |
+| `services/washer-dryer-repair.html` | Washer/dryer repair (keeps the triage tool, links out to 2 blog posts) |
+| `services/plumbing-repairs.html` | Plumbing repairs |
+| `services/drywall-painting.html` | Drywall & painting |
+| `services/handyman-repairs.html` | Doors, cabinets & hardware, carpentry & trim, weatherstripping |
+| `services/assembly-installation.html` | Furniture/fixture assembly & installation |
 
-**Service × city landing pages** — one converting page per service+city pair, not a factory of near-duplicates (see `docs/service-city-landing-pages.md` for the reusable template and the doorway-page reasoning behind writing one per pair instead of find-and-replacing a city name)
+**Service × city landing pages** (`/services/`) — one converting page per service+city pair, not a factory of near-duplicates (see `docs/service-city-landing-pages.md` for the reusable template and the doorway-page reasoning behind writing one per pair instead of find-and-replacing a city name). Also moved into `/services/` on 2026-09-21, same redirect-stub treatment.
 
 | File | Pair |
 |---|---|
-| `washer-dryer-repair-st-george-ut.html` | Washer/dryer repair × St. George (added 2026-09-18, first instance) |
-| `refrigerator-repair-st-george-ut.html` | Refrigerator repair × St. George (added 2026-09-18) |
-| `dishwasher-repair-st-george-ut.html` | Dishwasher repair × St. George (added 2026-09-18) |
+| `services/washer-dryer-repair-st-george-ut.html` | Washer/dryer repair × St. George (added 2026-09-18, first instance) |
+| `services/refrigerator-repair-st-george-ut.html` | Refrigerator repair × St. George (added 2026-09-18) |
+| `services/dishwasher-repair-st-george-ut.html` | Dishwasher repair × St. George (added 2026-09-18) |
 
 **Legal pages**
 
@@ -230,6 +241,7 @@ the assistant's GitHub token was never granted):
 - **`google0b12c450e3945a19.html`** and **`google523d668a9a330d64.html`** — Google Search Console ownership verification files, one per domain variant. Deleting either breaks Search Console verification for that property.
 - **`favicon.ico`** — must stay at repo root.
 - **`.nojekyll`** — must stay at repo root, with exactly that filename (dot included). See the warning at the top of this document.
+- **The 8 redirect stubs left at the old root paths of the service pages that moved into `/services/` on 2026-09-21**: `washer-dryer-repair.html`, `plumbing-repairs.html`, `drywall-painting.html`, `handyman-repairs.html`, `assembly-installation.html`, `washer-dryer-repair-st-george-ut.html`, `refrigerator-repair-st-george-ut.html`, `dishwasher-repair-st-george-ut.html`. Each is a `<link rel="canonical">` + 0-delay `<meta http-equiv="refresh">` + JS `location.replace()` pointing at the real page's new `/services/` path — deleting one turns a soft redirect into a hard 404 for anyone who still has the old URL bookmarked, linked, or indexed. Safe to remove only once Google Search Console shows the old URLs fully dropped from the index in favor of the new ones (months, not days) — not on a whim.
 
 ## Known open items
 
@@ -2246,7 +2258,7 @@ New tests: `tests/tools/workspace-quick-actions.test.js`.
 ## What changed, 2026-09-18 -- washer / appliance repair in St. George (service × city template)
 
 First combined service + city landing page, at
-`/washer-dryer-repair-st-george-ut.html`. City pages
+`/services/washer-dryer-repair-st-george-ut.html`. City pages
 (`handyman-st-george-ut.html`) and the appliance service page
 (`washer-dryer-repair.html`) already existed separately. This one
 targets "washer repair St. George" as a converting page, not a thin
@@ -2325,8 +2337,8 @@ Two more service × city pages, cloned from
 skipped: that template already covers washer and dryer. Unique
 appliance niches:
 
-- `/refrigerator-repair-st-george-ut.html`
-- `/dishwasher-repair-st-george-ut.html`
+- `/services/refrigerator-repair-st-george-ut.html`
+- `/services/dishwasher-repair-st-george-ut.html`
 
 Same converting layout as the washer page: H1 names the service and
 city, sticky Call + Book (Text stays on the homepage and washer LP

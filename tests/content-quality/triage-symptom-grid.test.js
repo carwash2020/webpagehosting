@@ -35,9 +35,9 @@ const LANDING_PAGES = [
   'handyman-santa-clara-ivins-ut.html',
   'handyman-st-george-ut.html',
   'handyman-washington-city-ut.html',
-  'washer-dryer-repair-st-george-ut.html',
-  'refrigerator-repair-st-george-ut.html',
-  'dishwasher-repair-st-george-ut.html',
+  'services/washer-dryer-repair-st-george-ut.html',
+  'services/refrigerator-repair-st-george-ut.html',
+  'services/dishwasher-repair-st-george-ut.html',
 ];
 
 function loadTriagePage(html) {
