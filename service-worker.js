@@ -682,7 +682,7 @@
 // "Getting Started" guide making the identical false claim to real
 // people using the app. Same reasoning as every prior bump in this
 // file's history.
-const CACHE_NAME = 'th-workspace-v209'; // precache-fingerprint:3f8d0d65d00e
+const CACHE_NAME = 'th-workspace-v212'; // precache-fingerprint:075ffcfd03d5
 const PRECACHE_URLS = [
   '/tools/workspace.html', '/tools/job-tracker.html', '/tools/invoice-generator.html', '/tools/contract-generator.html',
   '/tools/calendar.html', '/tools/route-planner.html', '/tools/review-request.html', '/tools/contact-card.html',
@@ -734,6 +734,7 @@ const PRECACHE_URLS = [
   // for the same reason.
   '/styles.css', '/tools/styles-tools.css', '/tools/dev-tools-shared.js', '/tools/sync.js', '/tools/auth.js', '/tools/data-layer.js',
   '/tools/tools-effects.js', '/tools/tools-dialogs.js', '/tools/tools-media-sharing.js', '/tools/tools-nav-pwa.js',
+  '/tools/tools-command-palette.js',
   '/tools/manifest.json',
   // Added 2026-08-14 -- same gap as above, these 2 scripts were live but unlisted.
   '/tools/qrcode-lib.js', '/tools/push-notifications.js',

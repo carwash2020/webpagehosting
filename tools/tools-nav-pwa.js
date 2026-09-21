@@ -216,6 +216,18 @@
         '<img src="/images/logo-signature-orange.webp?v=202608142300" alt="">' +
         '<span>Triple H</span>' +
       '</a>' +
+      // Command palette trigger (tools-command-palette.js, 2026-09-21).
+      // A real sidebar row rather than a floating button here: the
+      // floating trigger that file also injects sits at bottom-left,
+      // directly under this same fixed sidebar on desktop, so it's
+      // hidden and unclickable there -- CSS hides it at the sidebar's
+      // own breakpoint (min-width:1024px) and this row replaces it.
+      // Checked at click time, not injection time, since this script
+      // runs before tools-command-palette.js loads.
+      '<button type="button" class="th-sidebar-link th-sidebar-search-trigger" onclick="if (typeof openCommandPalette === \'function\') openCommandPalette();">' +
+        '<span class="th-hex-icon"><svg class="th-icon" aria-hidden="true"><use href="#icon-search" xlink:href="#icon-search"></use></svg></span>' +
+        '<span>Search</span><kbd class="th-sidebar-search-kbd">⌘K</kbd>' +
+      '</button>' +
       '<div class="th-sidebar-links">' +
       destLinksHtml(SIDEBAR_DESTS) +
       '</div>';
