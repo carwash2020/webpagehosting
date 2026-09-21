@@ -77,21 +77,24 @@
   // was). A fuller destination list than the bottom nav's 5 items,
   // since the sidebar has real vertical room -- still scoped to
   // everyday tools, not admin-only pages.
+  // Grouped to match the dashboard tile groups (Work / Money / Office).
+  // Labels match the short names already used on the bottom bar and the
+  // tile grid. Pages and permissions are unchanged.
   var SIDEBAR_DESTS = [
-    { href: '/tools/workspace.html',          icon: 'home',     label: 'Dashboard' },
-    { href: '/tools/job-tracker.html',        icon: 'wrench',   label: 'Job Tracker' },
-    { href: '/tools/finance.html',            icon: 'dollar',   label: 'Finance' },
-    { href: '/tools/invoice-generator.html',  icon: 'receipt',  label: 'Invoice Generator' },
-    { href: '/tools/pos.html',                icon: 'dollar',   label: 'POS' },
-    { href: '/tools/clients.html',            icon: 'inbox',    label: 'Clients' },
-    { href: '/tools/contract-generator.html', icon: 'scroll',   label: 'Contract Generator' },
-    { href: '/tools/calendar.html',           icon: 'calendar', label: 'Calendar' },
-    { href: '/tools/route-planner.html',      icon: 'map',      label: 'Route Planner' },
-    { href: '/tools/review-request.html',     icon: 'star',     label: 'Review Requests' },
-    { href: '/tools/parts-reference.html',    icon: 'book',     label: 'Appliance Wiki' },
-    { href: '/tools/runway-dashboard.html',   icon: 'chart',    label: 'Runway Dashboard' },
-    { href: '/tools/dev-tools.html',          icon: 'terminal', label: 'Dev Tools' },
-    { href: '/tools/settings.html',           icon: 'gear',     label: 'Settings' }
+    { group: 'Work',   href: '/tools/workspace.html',          icon: 'home',     label: 'Dashboard' },
+    { group: 'Work',   href: '/tools/job-tracker.html',        icon: 'wrench',   label: 'Job Tracker' },
+    { group: 'Work',   href: '/tools/calendar.html',           icon: 'calendar', label: 'Calendar' },
+    { group: 'Work',   href: '/tools/route-planner.html',      icon: 'map',      label: 'Route Planner' },
+    { group: 'Work',   href: '/tools/clients.html',            icon: 'inbox',    label: 'Clients' },
+    { group: 'Money',  href: '/tools/invoice-generator.html',  icon: 'receipt',  label: 'Invoices' },
+    { group: 'Money',  href: '/tools/pos.html',                icon: 'dollar',   label: 'POS' },
+    { group: 'Money',  href: '/tools/finance.html',            icon: 'dollar',   label: 'Finance' },
+    { group: 'Money',  href: '/tools/runway-dashboard.html',   icon: 'chart',    label: 'Runway Dashboard' },
+    { group: 'Office', href: '/tools/contract-generator.html', icon: 'scroll',   label: 'Contracts' },
+    { group: 'Office', href: '/tools/review-request.html',     icon: 'star',     label: 'Reviews' },
+    { group: 'Office', href: '/tools/parts-reference.html',    icon: 'book',     label: 'Appliance Wiki' },
+    { group: 'Office', href: '/tools/dev-tools.html',          icon: 'terminal', label: 'Dev Tools' },
+    { group: 'Office', href: '/tools/settings.html',           icon: 'gear',     label: 'Settings' }
   ];
 
   // Phone bottom nav only has room for the 5 daily tools above.
@@ -124,6 +127,23 @@
     }
   }
 
+  function destLinksHtml(dests) {
+    var html = '';
+    var lastGroup = '';
+    dests.forEach(function (d) {
+      if (d.group && d.group !== lastGroup) {
+        html += '<div class="th-sidebar-group">' + d.group + '</div>';
+        lastGroup = d.group;
+      }
+      var active = path === d.href ? ' is-active' : '';
+      var current = path === d.href ? ' aria-current="page"' : '';
+      html += '<a href="' + d.href + '" class="th-sidebar-link' + active + '"' + current + '>' +
+        '<span class="th-hex-icon"><svg class="th-icon" aria-hidden="true"><use href="#icon-' + d.icon + '" xlink:href="#icon-' + d.icon + '"></use></svg></span>' +
+        '<span>' + d.label + '</span></a>';
+    });
+    return html;
+  }
+
   function injectMoreSheet() {
     if (document.getElementById('thMoreSheet')) return;
     var sheet = document.createElement('div');
@@ -136,13 +156,7 @@
         '<div class="th-more-sheet-handle" aria-hidden="true"></div>' +
         '<h2 class="th-more-sheet-title" id="thMoreSheetTitle">More tools</h2>' +
         '<div class="th-more-sheet-links">' +
-          MORE_DESTS.map(function (d) {
-            var active = path === d.href ? ' is-active' : '';
-            var current = path === d.href ? ' aria-current="page"' : '';
-            return '<a href="' + d.href + '" class="th-more-sheet-link' + active + '"' + current + '>' +
-              '<span class="th-hex-icon"><svg class="th-icon" aria-hidden="true"><use href="#icon-' + d.icon + '" xlink:href="#icon-' + d.icon + '"></use></svg></span>' +
-              '<span>' + d.label + '</span></a>';
-          }).join('') +
+          destLinksHtml(MORE_DESTS).replace(/th-sidebar-link/g, 'th-more-sheet-link') +
         '</div>' +
       '</div>';
     document.body.appendChild(sheet);
@@ -203,13 +217,7 @@
         '<span>Triple H</span>' +
       '</a>' +
       '<div class="th-sidebar-links">' +
-      SIDEBAR_DESTS.map(function (d) {
-        var active = path === d.href ? ' is-active' : '';
-        var current = path === d.href ? ' aria-current="page"' : '';
-        return '<a href="' + d.href + '" class="th-sidebar-link' + active + '"' + current + '>' +
-          '<span class="th-hex-icon"><svg class="th-icon" aria-hidden="true"><use href="#icon-' + d.icon + '" xlink:href="#icon-' + d.icon + '"></use></svg></span>' +
-          '<span>' + d.label + '</span></a>';
-      }).join('') +
+      destLinksHtml(SIDEBAR_DESTS) +
       '</div>';
     document.body.insertBefore(sidebar, document.body.firstChild);
   }
