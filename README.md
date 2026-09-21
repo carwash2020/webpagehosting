@@ -34,6 +34,8 @@ The public site uses one shared stylesheet (`styles.css`, repo root). The tool s
 - [Security, and where the rest of the docs live](#security-and-where-the-rest-of-the-docs-live)
 - [What changed, 2026-09-04 through 2026-09-07](#what-changed-2026-09-04-through-2026-09-07)
 - [What changed, 2026-09-08](#what-changed-2026-09-08)
+- [What changed, 2026-09-20 -- duplicate meta descriptions, a stale-date test time bomb, and a merged RLS policy](#what-changed-2026-09-20----duplicate-meta-descriptions-a-stale-date-test-time-bomb-and-a-merged-rls-policy)
+- [What changed, 2026-09-21 -- booking.html audit, referral-code refinements, and a cron auth incident](#what-changed-2026-09-21----bookinghtml-audit-referral-code-refinements-and-a-cron-auth-incident)
 
 ## ⚠️ Read this before touching deployment at all
 
@@ -265,7 +267,24 @@ see `.github/workflows/test.yml`) verifies every reference matches;
 `npm run fix-versions` is the same script, run with `--fix-versions`,
 correcting instead of just reporting.
 
-`npm test` runs the full suite (1538 tests as of 2026-09-08, all passing) — organized under `tests/` into subfolders (`booking/`, `sync/`, `dev-tools/`, `design/`, `content-quality/`, `tools/`, `workspace/`, `portal/`, `seo/`, `site-wide/`, `edge-functions/`, and more as new areas get covered) by what each test actually covers, rather than one flat folder of files. The script itself is just `cd tests && node --test`; Node's test runner auto-discovers every `*.test.js` file recursively with no arguments needed, so a new test file placed anywhere under `tests/` runs automatically — nothing to add to `package.json` by hand.
+`npm test` runs the full suite (**2,586 tests as of 2026-09-21**, all passing) — organized under `tests/` into subfolders (`booking/`, `sync/`, `dev-tools/`, `design/`, `content-quality/`, `tools/`, `workspace/`, `portal/`, `seo/`, `site-wide/`, `edge-functions/`, `referrals/`, and more as new areas get covered) by what each test actually covers, rather than one flat folder of files. The script itself is just `cd tests && node --test`; Node's test runner auto-discovers every `*.test.js` file recursively with no arguments needed, so a new test file placed anywhere under `tests/` runs automatically — nothing to add to `package.json` by hand.
+
+**The rest of the quick-flag scripts** (2026-09-21, closing a real gap
+where `check-links.py` and `eslint` both existed and both ran fine
+standalone, but neither had an `npm run` alias, so a contributor had
+to already know the exact underlying command):
+
+- `npm run check-links` — wraps `scripts/check-links.py` (internal
+  link/asset integrity across every HTML file, plus external-link
+  reachability on public pages).
+- `npm run lint` — wraps `eslint .` (config already existed at
+  `eslint.config.js`; just never had a script pointing at it).
+- `npm run verify` — chains `check-undefined-vars` →
+  `check-consistency` → `lint` → `check-links` → the full test suite,
+  in roughly fastest-to-slowest order, so a broken static check fails
+  loudly before waiting on the several-minute full suite. This is the
+  same sequence to run by hand before any push; `verify` just saves
+  typing five separate commands.
 
 ## Deploying changes
 
@@ -2309,4 +2328,73 @@ proxy here, so that specific HTTP round trip is unverified from this
 session; the DB-side logic it depends on is confirmed correct.
 
 New tests: `tests/referrals/account-codes.test.js`.
+
+## What changed, 2026-09-20 -- duplicate meta descriptions, a stale-date test time bomb, and a merged RLS policy
+
+Follow-up audit pass: fixed 9 landing pages sharing 2 duplicate
+closing sentences in their `<meta name="description">` (and matching
+`og:description`/`twitter:description`, flagged separately by a
+bot's own PR summary -- worth reading those, not just the recurring
+boilerplate). Also caught and fixed a real regression in
+`manage-booking.html`'s own test suite: a hardcoded date used as "a
+date in the past" had itself become "tomorrow" as real time passed,
+silently flipping 6 tests' meaning without touching their assertions
+-- fixed by computing the date relative to `Date.now()` instead of a
+fixed string.
+
+Separately, ran Supabase's own advisor against the live project and
+found a real `multiple_permissive_policies` performance finding on
+`client_account_codes` (added the day before): two SELECT policies
+both matching `role=authenticated` were being evaluated on every
+query. Merged into one policy
+(`sql/infra/merge_client_account_codes_select_policies.sql`), plus
+split the old catch-all staff policy into three single-action
+policies (Postgres has no "FOR ALL except SELECT" shorthand).
+
+## What changed, 2026-09-21 -- booking.html audit, referral-code refinements, and a cron auth incident
+
+**booking.html audit** (no specific bug reported -- a fresh pass):
+`selectDate()` had no guard against overlapping async calls, so
+rapidly switching dates could let a stale response silently win --
+fixed with a request-id guard. Also: focus never moved between
+wizard steps for screen-reader users, selection state wasn't exposed
+via `aria-pressed`, status/slot updates weren't in an `aria-live`
+region, the post-booking "you'll get a confirmation email" promise
+was unconditional even though email is optional, and name/email/
+address were sent untrimmed despite already having trimmed values on
+hand for validation. All fixed; new test file
+`tests/booking/booking-a11y-and-race-fix.test.js`.
+
+**Referral-code refinements** (direct follow-up on the 2026-09-20
+system): three real gaps closed. (1) A portal account invited
+*before* the referral-code feature shipped had no way to ever get a
+code -- new edge function `ensure-my-referral-code` creates one on
+the spot if missing, called by `portal/settings.html` on load. (2)
+Codes were captured on bookings/leads but nothing ever showed how
+many times a code had actually been used -- both the portal panel
+and `tools/client-detail.html` now surface a live usage count. (3)
+Sharing only offered a raw link to copy -- added `sms:` share links
+in both places (generic in the portal, addressed to the client's own
+phone in client-detail.html).
+
+**Cron service-role-key incident**, found from a screenshot of Dev
+Tools' Cron Health panel: `send-payment-reminder` and
+`send-quote-followup` had been silently 401ing on *every* scheduled
+run since 2026-09-16 -- meaning every automated overdue-invoice
+reminder and quote-followup email this project ever claimed to send
+had, in reality, never gone out to a client. Root cause: the vault
+secret every `net.http_post` cron job authenticates with
+(`send_push_service_role_key`, saved 2026-08-14) had gone stale after
+this Supabase project migrated to the newer `sb_secret_...` key
+format -- confirmed live via a diagnostic Edge Function that compared
+the vault value against the live env var without ever printing
+either secret, then fixed the same way. Only these two functions
+noticed, since they're the only cron-driven functions doing a strict
+`token !== SERVICE_ROLE_KEY` check rather than relying solely on
+Supabase's platform `verify_jwt` (signature-only, doesn't check
+role) -- every other `net.http_post` caller kept accepting the stale
+but still validly-signed key. See `DISASTER_RECOVERY.md` Scenario 20
+and `sql/infra/resync_cron_service_role_key.sql` (a permanent,
+secret-safe maintenance function for if this recurs after a future
+key-format change).
 
