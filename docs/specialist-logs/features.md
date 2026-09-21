@@ -835,6 +835,99 @@ are Chromium/Safari 18.2+ only as of this writing (Firefox not yet) --
 worth knowing if anyone asks why the effect isn't visible in every
 browser, though it degrades to exactly today's behavior, never worse.
 
+## 2026-09-21: FAQ category grouping (external Cursor audit item #8)
+
+Picked up item #8 from a security/quality punch list a user pasted from
+a Cursor session, since the rest of that list was either already handled
+(the two security findings, done separately this session) or needed the
+user directly (MFA, content/growth items). This one was a real, live bug
+with a bounded, safely-verifiable fix.
+
+**The gap**: index.html's FAQ accordion has 4 categorized groups baked
+into its static fallback markup (`<h3 class="faq-category">` headers --
+Pricing & Payment / Scheduling & Availability / Service Area & Coverage
+/ Policies), but the moment the live `site_faq` Supabase fetch resolves
+(which is almost always, in production) that whole block got replaced
+with one flat list -- the categories only ever existed in the brief
+pre-fetch flash. `site_faq` itself had no category column at all.
+
+**Fix**: added `category text not null default 'General'` to
+`site_faq` and backfilled all 15 live rows by matching each question
+against the category it already sits under in the static markup
+(confirmed row-for-row via `execute_sql`, not guessed or assumed from
+the repo's original seed file -- which only had 12 of the live table's
+15 rows, since 3 more had been added directly through the CMS since
+that seed script was written and never round-tripped back into the
+repo). Rewrote index.html's fetch handler to group by category, ordered
+by each category's first appearance in `sort_order` -- deliberately no
+new ordering column, since the existing sort_order already encodes the
+right order for free. Added a Category field to `tools/site-content.html`'s
+FAQ editor (same pattern as the existing Question/Answer fields) so
+future edits stay categorized through the CMS, not just this one-time
+backfill.
+
+Live migration + backfill applied directly via the Supabase MCP tool,
+mirrored to `sql/site-content/site_faq_add_category.sql` per this
+repo's convention.
+
+Extended `tests/seo/faq-schema-sync.test.js` (previously only checked
+that the JSON-LD schema stays in sync with the flat rows) with 2 new
+tests: rows group correctly by category with one heading per group in
+first-appearance order, and a row with no category falls back to a
+single "General" group instead of throwing. Updated one existing test's
+regex, which had asserted on the literal old flat-render code shape
+(`faqList.innerHTML = rows.map`) -- that's a real behavior change, not
+a false positive, so the assertion needed updating along with the code,
+not loosening.
+
+Caught my own mistake before shipping: my first version of the new
+grouping test asserted the wrong DOM order (interleaved by original row
+order) -- actually ran it against a real JSDOM render rather than
+reasoning it through, saw the correct grouped order (`H3, DIV, DIV, H3,
+DIV` -- all of a category's items together under its one heading, not
+interleaved), and fixed the test's expectation to match the correct
+behavior rather than the code.
+
+Verified: full suite **2599/2599**, `check-consistency` (after
+`fix-versions` bumped the service-worker cache, since index.html is a
+precached file), `check-undefined-vars`, `lint`, `check-links.py` --
+all clean.
+
+## 2026-09-21: Portal "flashes blank on first sign-in check" (external audit item #13)
+
+Same punch list as the FAQ item above. Real, verifiable, bounded --
+`dashboard.html`/`quotes.html`/`home.html` already bake a static
+`skeleton-card` shape directly into their list container's initial
+HTML (so there's something to see before any JS even runs), but
+`jobs.html` (`#jobList`), `work-orders.html` (`#myRequests`), and
+`contracts.html` (`#contractList`) did not -- their JS-side
+`portalSkeletonCards()` call only ever ran AFTER
+`await client.auth.getSession()` resolved, so on first paint (and for
+however long that async auth check takes) those 3 pages' list areas
+were genuinely empty markup. Confirmed by grepping every portal page
+for `skeleton-card` in its static body versus its script block, not
+assumed from the bug description alone.
+
+Fixed by baking the exact same static skeleton markup the JS would
+render into each page's initial HTML -- `work-orders.html` matches its
+JS's shown text exactly (`<div class="wo-section-title">Your
+requests</div>` + 3 cards), so there's no visible layout shift or
+duplicate heading once the JS replaces it with the same content.
+Checked `settings.html` too (also flagged as a candidate) and found it
+already has skeletons on every one of its dynamic sub-panels
+(`referralLinkBody`, `savedCardsBody`, `authorizationsBody`) -- no real
+gap there, left untouched.
+
+Extended `tests/portal/skeleton-loading.test.js` with a test asserting
+the static HTML (not just the JS source anywhere in the file, which
+the existing test already checked) contains the skeleton markup for
+all 6 list pages, so a future page added without this can't silently
+regress.
+
+Verified: full suite **2600/2600**, `check-consistency` (service-worker
+cache bumped again), `check-undefined-vars`, `lint`, `check-links.py`
+-- all clean.
+
 ## 2026-09-21 -- Workspace IA pass: Today-first dashboard, Calendar folded into Job Tracker
 
 One-shot request with explicit permission to restructure, and an

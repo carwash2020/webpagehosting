@@ -2530,6 +2530,59 @@ New tests: `tests/tools/app-shell-view-transitions.test.js`. All four
 changes verified: full suite (2597/2597), `check-consistency`,
 `check-undefined-vars`, `lint`, `check-links.py`.
 
+## What changed, 2026-09-21 -- Two Supabase security fixes from an external audit
+
+Full detail in `docs/specialist-logs/security.md`, summarized here:
+
+**`resync_cron_service_role_key(text)` was still callable by the public
+anon key**, despite an earlier fix that revoked access from `public` --
+Supabase grants `anon`/`authenticated` their own separate EXECUTE
+privilege at function-creation time, so that revoke never actually
+covered them. Fixed with an explicit revoke from `anon`/`authenticated`
+(`sql/security/revoke_public_execute_on_internal_only_functions.sql`);
+this was the real risk, since anyone holding the site's own public anon
+key could have overwritten the Vault secret every cron reminder email
+authenticates with. Also tightened `guard_last_role_manager_permission()`
+and 6 `notify_*` trigger functions the same audit flagged, though those
+were confirmed never actually callable outside a real trigger fire.
+
+**The `job-photos` Storage bucket's policies only checked the bucket
+name, not who was asking** -- any signed-in account, client portal
+logins included, could call Storage directly for any job's photos.
+Restricted to internal accounts only
+(`sql/security/restrict_job_photos_bucket_to_internal_accounts.sql`);
+confirmed no client-portal code path ever used direct Storage access in
+the first place, so this closes the gap with no effect on real usage.
+
+Both re-verified against a fresh Supabase security advisor run
+afterward -- both findings are gone. Everything else the advisor still
+lists is already-reviewed, intentional public access.
+
+## What changed, 2026-09-21 -- Live FAQ now groups by category
+
+The homepage FAQ's static fallback markup has always shown 4 categories
+(Pricing & Payment, Scheduling & Availability, Service Area & Coverage,
+Policies), but the live `site_faq` Supabase fetch that replaces it once
+loaded always flattened everything into one list -- the categories only
+existed in the brief pre-fetch flash. Added a `category` column to
+`site_faq`, backfilled all 15 live rows to match their existing static
+grouping, and updated the fetch to group by category (ordered by first
+appearance in `sort_order`, no new ordering column needed). The FAQ
+editor in `tools/site-content.html` now has a Category field too, so
+future edits through the CMS stay grouped. Full detail in
+`docs/specialist-logs/features.md`.
+
+## What changed, 2026-09-21 -- Client portal no longer flashes blank on first load
+
+`dashboard.html`/`quotes.html`/`home.html` already baked a static
+skeleton-card placeholder into their list containers, but
+`jobs.html`, `work-orders.html`, and `contracts.html` didn't -- their
+loading skeleton only appeared after the async sign-in check finished,
+so those 3 pages showed genuinely empty content until then. Added the
+same static skeleton markup to all 3. `settings.html` was also checked
+and found to already have skeletons on every dynamic panel -- no real
+gap there. Full detail in `docs/specialist-logs/features.md`.
+
 ## What changed, 2026-09-21 -- Workspace IA: a Today-first dashboard, Calendar folded into Job Tracker
 
 Direct request: the tool suite "feels like a lot -- too many pages,

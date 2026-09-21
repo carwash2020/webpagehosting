@@ -77,7 +77,6 @@
   @view-transition {
     navigation: auto;
   }
-<style>
   body { max-width: 1080px; margin: 0 auto; }
   /* Desktop layout (2026-08-20), requested directly: efficient on
      phone stays exactly as it was (nothing below 1024px changes at
@@ -230,7 +229,6 @@
   .dev-panel.is-collapsed .dev-collapse-caret { transform: rotate(-90deg); }
   .dev-panel.is-collapsed .dev-panel-body { display: none; }
   .dev-panel.is-collapsed .dev-panel-heading { margin-bottom: 0; }
-</style>
 </style>
 </head>
 <body>
@@ -475,7 +473,7 @@
       const headers = { 'apikey': SUPABASE_ANON_KEY, 'Authorization': 'Bearer ' + getAuthToken() };
       const [contentRes, faqRes, termsRes] = await Promise.all([
         fetchWithTimeout(SUPABASE_URL + '/rest/v1/site_content?select=key,value', 8000, { headers }),
-        fetchWithTimeout(SUPABASE_URL + '/rest/v1/site_faq?select=question,answer,sort_order&order=sort_order.asc', 8000, { headers }),
+        fetchWithTimeout(SUPABASE_URL + '/rest/v1/site_faq?select=question,answer,category,sort_order&order=sort_order.asc', 8000, { headers }),
         fetchWithTimeout(SUPABASE_URL + '/rest/v1/site_terms?select=heading,body,sort_order&order=sort_order.asc', 8000, { headers }),
       ]);
       const backup = {
@@ -625,7 +623,7 @@
     el.innerHTML = '<p class="tool-sub">Loading...</p>';
     try {
       if (typeof ensureFreshToken === 'function') await ensureFreshToken();
-      const res = await fetchWithTimeout(SUPABASE_URL + '/rest/v1/site_faq?select=question,answer&order=sort_order.asc', 6000, {
+      const res = await fetchWithTimeout(SUPABASE_URL + '/rest/v1/site_faq?select=question,answer,category&order=sort_order.asc', 6000, {
         headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': 'Bearer ' + getAuthToken() },
       });
       if (!res.ok) {
@@ -661,6 +659,10 @@
           <label>Answer</label>
           <textarea rows="3" style="width:100%; resize:vertical;" oninput="updateFaqField(${i}, 'answer', this.value)">${escapeHtml(item.answer || '')}</textarea>
         </div></div>
+        <div class="tool-form-row"><div class="form-field full">
+          <label>Category (groups items on the live FAQ; existing categories: Pricing &amp; Payment, Scheduling &amp; Availability, Service Area &amp; Coverage, Policies -- reuse one of these unless a new group is genuinely needed)</label>
+          <input type="text" value="${escapeAttr(item.category || '')}" placeholder="e.g. Pricing & Payment" oninput="updateFaqField(${i}, 'category', this.value)">
+        </div></div>
       </div>
     `).join('');
   }
@@ -678,7 +680,7 @@
     renderFaqEditorRows();
   }
   function addFaqItem() {
-    faqItems.push({ question: '', answer: '' });
+    faqItems.push({ question: '', answer: '', category: '' });
     renderFaqEditorRows();
   }
   async function saveFaqList() {
@@ -689,7 +691,11 @@
     try {
       if (typeof ensureFreshToken === 'function') await ensureFreshToken();
       const cleaned = faqItems
-        .map(item => ({ question: (item.question || '').trim(), answer: (item.answer || '').trim() }))
+        .map(item => ({
+          question: (item.question || '').trim(),
+          answer: (item.answer || '').trim(),
+          category: (item.category || '').trim() || 'General',
+        }))
         .filter(item => item.question && item.answer);
 
       const delRes = await fetchWithTimeout(SUPABASE_URL + '/rest/v1/site_faq?id=gte.0', 8000, {
