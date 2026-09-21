@@ -52,7 +52,7 @@
   })();
 </script>
 <link rel="stylesheet" href="/styles.css?v=2e81706c3d">
-<link rel="stylesheet" href="/tools/styles-tools.css?v=d9e402ca07">
+<link rel="stylesheet" href="/tools/styles-tools.css?v=bac5113532">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.112.3/dist/umd/supabase.js" integrity="sha384-qafw21c/iciq0VXsi9FzkfoQv5I/V0iqE4lSNcKXPnW9/UTJLnv5CcN4FHxVLnKg" crossorigin="anonymous" defer></script>
 <script src="/tools/sync.js?v=7b42b1caf0" defer></script>
 <script src="/tools/data-layer.js?v=c5d44f096e" defer></script>
@@ -60,7 +60,7 @@
 <script src="/tools/tools-dialogs.js?v=83d27784e2" defer></script>
 <script src="/tools/tools-media-sharing.js?v=0c229c9353" defer></script>
 <script src="/tools/tools-nav-pwa.js?v=e96c3f254c" defer></script>
-<script src="/tools/tools-command-palette.js?v=b97043d415" defer></script>
+<script src="/tools/tools-command-palette.js?v=36ecf5ee0e" defer></script>
 <script src="/tools/tools-tour.js?v=d87fa2f453" defer></script>
 <!-- U15/W18 fix (High-Impact Upgrades, Master Audit, 2026-09-08): the
      masthead/footer/totals-block drawing code below moved into this
@@ -69,6 +69,21 @@
 <script src="/tools/pdf-layout.js?v=dc66e8a810" defer></script>
 <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js" integrity="sha384-JcnsjUPPylna1s1fvi1u12X5qjY5OL56iySh75FdtrwhO/SWXgMjoVqcKyIIWOLk" crossorigin="anonymous" async></script>
 <style>
+  /* Cross-document view transitions (2026-09-21) -- same pattern
+     already proven in portal/*.html: keeps the old page's visual
+     snapshot on screen while the next page loads instead of a
+     blank flash, and (since tools-nav-pwa.js's sidebar/bottom-nav
+     markup is byte-identical across every tools/ page and carries
+     a matching view-transition-name in styles-tools.css) the shell
+     itself reads as staying in place rather than crossfading.
+     Supported in Chrome/Edge 126+ and Safari 18.2+; unsupported
+     browsers just navigate exactly as before -- pure progressive
+     enhancement. Both the origin and destination page must opt in
+     for a transition to happen, so this needs adding to every
+     tools/ page, not just one. */
+  @view-transition {
+    navigation: auto;
+  }
   /* iOS Safari zoom-on-focus fix (2026-09-05), reported directly:
      "the invoicing tab is really hard to navigate on phone, you click
      on a field and it zooms in. Zooming back out swipes over to the

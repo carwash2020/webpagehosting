@@ -722,4 +722,117 @@ Verified: full suite **2586/2586** passing. `check-undefined-vars`/
 Left for the user: same as above -- resubmit `sitemap.xml` once, now
 covers both moves in one Search Console action.
 
+## 2026-09-21 -- Workspace tools "more app-like" pass: lazy-loading fix, sidebar icon fix, global command palette, persistent app shell
+
+Direct request ("what else can we do to the tools to make it
+easier to use/more app-like?" -> "do them all"). Proposed 5 items
+first; investigation found 3 were already fully built (PWA
+manifest/service-worker, the `showToast()` toast system in
+`tools-media-sharing.js`, skeleton loading states on multiple tool
+pages) -- worth remembering for next time a session proposes tools
+UX work here: check what's actually built before scoping, this
+session nearly duplicated existing infrastructure.
+
+**Lazy-loading dashboard drawers** (real gap, PR #321 open at the
+time): Cursor's own PR described the feature and shipped a full test
+file for it, but the actual `workspace.html` implementation was never
+written -- only a cache-bust bump landed, silently failing 4 tests.
+Found a second, unmerged Cursor branch (`cursor/tools-refresh-finish-39fb`)
+that DID have the real implementation, but that branch predated this
+session's earlier `/services/`/`/locations/` folder move and its
+other 100+ file diff was almost entirely a revert of that work --
+cherry-picked only the real `tools/workspace.html` + `styles-tools.css`
+diff via `git diff main finish-branch -- <2 files> | git apply`,
+not a wholesale merge. Landed via PR #324 into the cursor branch,
+then PR #321 merged clean.
+
+**Runway Dashboard's sidebar icons were invisible** (reported with a
+screenshot, "only happens when I am on Runway Dashboard"). Root
+cause: that page deliberately keeps its own copy of the shared
+sidebar/icon CSS (documented in its own comments -- "doesn't load
+styles-tools.css") instead of linking the shared file, and that copy
+was missing the base `.th-icon { fill: none; stroke: currentColor;
+... }` rule every other tool page gets for free. Icons built from
+stroke-drawn `<path>`/`<line>` elements (no explicit inline fill)
+defaulted to SVG's `fill: black`, rendering as solid near-black
+shapes invisible against the hex background; icons with an explicit
+inline fill (the `$` glyphs, the filled star) were unaffected --
+explains why it read as "scattered random breakage" rather than
+"every icon blank." Confirmed with a real Playwright render (a local
+HTTP server, not `file://`, since absolute `/tools/...` script paths
+don't resolve under `file://` and silently no-op the whole nav
+injection -- cost real time rediscovering this) before AND after the
+fix, not just inferred from the screenshot. PR #325.
+
+**Global command palette** (`tools/tools-command-palette.js`,
+Cmd/Ctrl+K). Reused `workspace.html`'s existing "Find a client"
+search logic and data (jobs/contacts/invoices/quotes/contracts,
+same localStorage keys) rather than inventing a new search. Real bug
+caught before shipping, not after: the floating trigger button
+(mirroring `.th-flag-btn`'s position, bottom-left) sits directly
+under the fixed desktop sidebar and is completely unclickable there
+-- found via a real click-and-measure Playwright test, not just a
+visual screenshot, which wouldn't have caught it. Fixed by hiding the
+floating button at the sidebar's own `min-width:1024px` breakpoint
+and adding a real "Search ⌘K" row inside the sidebar itself. A
+repowise-bot finding (large method + a mini-DRY violation from 5
+near-identical filter/map/push blocks in `renderResults()`) was
+verified as real and fixed -- refactored into a `SEARCH_SOURCES`
+config table + small helpers, same output confirmed via the same
+Playwright screenshot before/after. PR #326.
+
+**Persistent app shell via cross-document view transitions.**
+Considered a true SPA content-swap first (intercept nav clicks, fetch
++ swap `<main>`, re-execute scripts) and rejected it after weighing
+the risk explicitly: all 19 real tool pages assume full-page unload
+for cleanup (Supabase realtime channels in `sync.js`, timers, global
+state in heavy per-page inline scripts) with zero existing teardown
+logic or test coverage for a swap-in-place interaction pattern --
+building and verifying that for live invoicing/job-tracking tooling
+was judged too high-risk for what's ultimately a visual-polish goal.
+Found real precedent already in this exact repo: `portal/*.html` had
+already solved the identical "flash between pages" complaint with
+`@view-transition { navigation: auto; }` (portal's own
+`tests/portal/view-transitions.test.js`) -- mirrored that pattern for
+`tools/`, and went one step further by giving the sidebar/bottom-nav
+a shared `view-transition-name` (safe because `tools-nav-pwa.js`
+injects byte-identical markup for both on every page) so the shell
+itself visually persists instead of crossfading, which portal's
+plainer per-page opt-in doesn't do. Pure progressive enhancement --
+unsupported browsers see zero change from today's behavior, and since
+each page still does a real navigation, back/forward, deep-linking,
+and every page's own `DOMContentLoaded` init are unaffected by
+construction, not by any code written to preserve them.
+
+One real regression caught by the existing suite, not overlooked:
+initially wrote the `view-transition-name` rules by extending the
+existing `@media (min-width: 1024px) { .th-desktop-sidebar { display:
+flex... } }` block in place -- broke 3 pre-existing tests
+(`tests/design/desktop-sidebar.test.js`,
+`tests/design/desktop-layout.test.js`) that assert on that exact
+single-line rule text. Fixed by keeping the original rule's text
+byte-for-byte untouched and adding the view-transition-name as a
+wholly separate `@media` block instead of editing existing,
+asserted-on CSS in place -- worth remembering generally: this repo's
+tests frequently assert on exact CSS rule formatting, not just
+presence, so touching an existing rule's text (even just adding a
+line inside its braces) is riskier than it looks.
+
+New tests: `tests/tools/app-shell-view-transitions.test.js` (mirrors
+`tests/portal/view-transitions.test.js`'s pattern, including its
+"opt-in stays page-specific, not the shared stylesheet" assertion).
+
+Verified across all four changes: full suite **2597/2597** passing,
+`check-consistency`/`check-undefined-vars`/`lint`/`check-links.py`
+all clean. Each change also confirmed with a real headless-Chromium
+render (Playwright, served over local HTTP not `file://`) rather than
+relying on static test assertions alone -- this is what actually
+caught the sidebar-collision bug and the `file://` script-path
+gotcha above, neither of which a text-only test would have surfaced.
+
+Left for the user: nothing required. Cross-document view transitions
+are Chromium/Safari 18.2+ only as of this writing (Firefox not yet) --
+worth knowing if anyone asks why the effect isn't visible in every
+browser, though it degrades to exactly today's behavior, never worse.
+
 <!-- Add new entries above this line -->

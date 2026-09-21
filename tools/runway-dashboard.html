@@ -48,7 +48,7 @@
      position (after tools-dialogs.js, before tools-tour.js) as every
      other tool page for consistency. -->
 <script src="/tools/tools-nav-pwa.js?v=e96c3f254c" defer></script>
-<script src="/tools/tools-command-palette.js?v=b97043d415" defer></script>
+<script src="/tools/tools-command-palette.js?v=36ecf5ee0e" defer></script>
 <script src="/tools/tools-tour.js?v=d87fa2f453" defer></script>
 <script>
   (function () {
@@ -61,6 +61,21 @@
   })();
 </script>
 <style>
+  /* Cross-document view transitions (2026-09-21) -- same pattern
+     already proven in portal/*.html: keeps the old page's visual
+     snapshot on screen while the next page loads instead of a
+     blank flash, and (since tools-nav-pwa.js's sidebar/bottom-nav
+     markup is byte-identical across every tools/ page and carries
+     a matching view-transition-name below) the shell itself reads
+     as staying in place rather than crossfading. Supported in
+     Chrome/Edge 126+ and Safari 18.2+; unsupported browsers just
+     navigate exactly as before -- pure progressive enhancement.
+     Both the origin and destination page must opt in for a
+     transition to happen, so this needs adding to every tools/
+     page, not just one. */
+  @view-transition {
+    navigation: auto;
+  }
   /* iOS Safari zoom-on-focus fix (2026-09-05), same root cause and
      fix already applied to invoice-generator.html: a tapped
      input/select/textarea with a font-size under 16px triggers the
@@ -267,6 +282,10 @@
     padding: 20px 12px;
   }
   @media (min-width: 1024px) { .th-desktop-sidebar { display: flex; flex-direction: column; gap: 4px; } }
+  /* Same view-transition-name as styles-tools.css's copy of this rule,
+     scoped the same way -- see that file's comment for why this is a
+     separate block instead of merged into the one above. */
+  @media (min-width: 1024px) { .th-desktop-sidebar { view-transition-name: th-app-sidebar; } }
   .th-sidebar-brand {
     display: flex; align-items: center; gap: 10px;
     padding: 8px 10px 20px; margin-bottom: 8px; border-bottom: 1px solid var(--border);
@@ -370,6 +389,7 @@
     border-top: 1px solid var(--border);
   }
   @media (max-width: 720px) { .th-bottom-nav { display: flex; justify-content: space-around; gap: 2px; } }
+  @media (max-width: 720px) { .th-bottom-nav { view-transition-name: th-app-bottomnav; } }
   .th-bottom-nav a, .th-bottom-nav .th-bn-more {
     flex: 1; max-width: 76px;
     display: flex; flex-direction: column; align-items: center; gap: 5px;
@@ -757,6 +777,11 @@
     margin-left: auto; font-family: var(--font-ui); font-size: 11px; color: var(--text-dim);
     border: 1px solid var(--border); border-radius: 5px; padding: 1px 5px;
     flex-shrink: 0;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    ::view-transition-group(*), ::view-transition-old(*), ::view-transition-new(*) {
+      animation-duration: 0.001ms !important;
+    }
   }
 </style>
 </head>

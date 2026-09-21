@@ -79,42 +79,53 @@
     var term = (rawTerm || '').trim().toLowerCase();
     if (!term) { container.innerHTML = '<div class="th-cmdk-hint">Type to search jobs, contacts, invoices, quotes, and contracts.</div>'; return; }
 
-    var jobs = loadJobs().filter(function (j) { return (j.title || '').toLowerCase().indexOf(term) > -1 || (j.client || '').toLowerCase().indexOf(term) > -1; });
-    var contacts = loadContacts().filter(function (c) { return (c.name || '').toLowerCase().indexOf(term) > -1; });
-    var invoices = loadInvoices().filter(function (i) { return (i.clientName || '').toLowerCase().indexOf(term) > -1; });
-    var quotes = loadQuotes().filter(function (q) { return (q.clientName || '').toLowerCase().indexOf(term) > -1; });
-    var contracts = loadContracts().filter(function (e) { return ((e.fields && e.fields.clientName) || '').toLowerCase().indexOf(term) > -1; });
-
-    var groups = [];
-    if (jobs.length) groups.push({ label: 'Jobs', items: jobs.slice(0, 6).map(function (j) {
-      return { title: j.title, meta: j.client || 'No client set', href: '/tools/job-tracker.html?search=' + encodeURIComponent(j.client || j.title) + '#jobs' };
-    }) });
-    if (contacts.length) groups.push({ label: 'Contacts', items: contacts.slice(0, 6).map(function (c) {
-      return { title: c.name, meta: c.phone || c.email || '', href: '/tools/job-tracker.html?search=' + encodeURIComponent(c.name) + '#contacts' };
-    }) });
-    if (invoices.length) groups.push({ label: 'Invoices', items: invoices.slice(0, 6).map(function (i) {
-      return { title: i.clientName, meta: '#' + (i.invoiceNumber || '—') + ' · ' + money(i.total), href: '/tools/workspace.html?search=' + encodeURIComponent(i.clientName) + '#section-actionitems' };
-    }) });
-    if (contracts.length) groups.push({ label: 'Contracts', items: contracts.slice(0, 6).map(function (e) {
-      return { title: e.fields.clientName, meta: CONTRACT_TYPE_LABELS[e.type] || e.type, href: '/tools/contract-generator.html?search=' + encodeURIComponent(e.fields.clientName) };
-    }) });
-    if (quotes.length) groups.push({ label: 'Quotes / Estimates (view in Invoice Generator)', items: quotes.slice(0, 6).map(function (q) {
-      return { title: q.clientName, meta: (q.date || '') + ' · ' + money(q.total), href: null };
-    }) });
+    var groups = SEARCH_SOURCES.map(function (source) { return buildGroup(source, term); }).filter(Boolean);
 
     if (!groups.length) {
       container.innerHTML = '<div class="th-cmdk-hint">No matches for &ldquo;' + esc(rawTerm) + '&rdquo;.</div>';
       return;
     }
-    container.innerHTML = groups.map(function (g) {
-      return '<div class="th-cmdk-group-label">' + esc(g.label) + '</div>' + g.items.map(function (it) {
-        var body = '<div class="th-cmdk-item-title">' + esc(it.title || '(no name)') + '</div><div class="th-cmdk-item-meta">' + esc(it.meta) + '</div>';
-        return it.href
-          ? '<a class="th-cmdk-item" href="' + it.href + '">' + body + '</a>'
-          : '<div class="th-cmdk-item is-static">' + body + '</div>';
-      }).join('');
-    }).join('');
+    container.innerHTML = groups.map(groupHtml).join('');
     setActive(0);
+  }
+
+  // One config entry per searchable collection instead of five near-
+  // identical filter/map/push blocks -- match() decides whether a
+  // record counts, toItem() shapes it for display. A null href means
+  // "show as plain info, not a link" (quotes have no dedicated list
+  // page to jump to).
+  var SEARCH_SOURCES = [
+    { label: 'Jobs', load: loadJobs,
+      match: function (j, term) { return (j.title || '').toLowerCase().indexOf(term) > -1 || (j.client || '').toLowerCase().indexOf(term) > -1; },
+      toItem: function (j) { return { title: j.title, meta: j.client || 'No client set', href: '/tools/job-tracker.html?search=' + encodeURIComponent(j.client || j.title) + '#jobs' }; } },
+    { label: 'Contacts', load: loadContacts,
+      match: function (c, term) { return (c.name || '').toLowerCase().indexOf(term) > -1; },
+      toItem: function (c) { return { title: c.name, meta: c.phone || c.email || '', href: '/tools/job-tracker.html?search=' + encodeURIComponent(c.name) + '#contacts' }; } },
+    { label: 'Invoices', load: loadInvoices,
+      match: function (i, term) { return (i.clientName || '').toLowerCase().indexOf(term) > -1; },
+      toItem: function (i) { return { title: i.clientName, meta: '#' + (i.invoiceNumber || '—') + ' · ' + money(i.total), href: '/tools/workspace.html?search=' + encodeURIComponent(i.clientName) + '#section-actionitems' }; } },
+    { label: 'Contracts', load: loadContracts,
+      match: function (e, term) { return ((e.fields && e.fields.clientName) || '').toLowerCase().indexOf(term) > -1; },
+      toItem: function (e) { return { title: e.fields.clientName, meta: CONTRACT_TYPE_LABELS[e.type] || e.type, href: '/tools/contract-generator.html?search=' + encodeURIComponent(e.fields.clientName) }; } },
+    { label: 'Quotes / Estimates (view in Invoice Generator)', load: loadQuotes,
+      match: function (q, term) { return (q.clientName || '').toLowerCase().indexOf(term) > -1; },
+      toItem: function (q) { return { title: q.clientName, meta: (q.date || '') + ' · ' + money(q.total), href: null }; } },
+  ];
+
+  function buildGroup(source, term) {
+    var matches = source.load().filter(function (record) { return source.match(record, term); });
+    if (!matches.length) return null;
+    return { label: source.label, items: matches.slice(0, 6).map(source.toItem) };
+  }
+
+  function itemHtml(it) {
+    var body = '<div class="th-cmdk-item-title">' + esc(it.title || '(no name)') + '</div><div class="th-cmdk-item-meta">' + esc(it.meta) + '</div>';
+    return it.href
+      ? '<a class="th-cmdk-item" href="' + it.href + '">' + body + '</a>'
+      : '<div class="th-cmdk-item is-static">' + body + '</div>';
+  }
+  function groupHtml(g) {
+    return '<div class="th-cmdk-group-label">' + esc(g.label) + '</div>' + g.items.map(itemHtml).join('');
   }
 
   function openPalette() {
