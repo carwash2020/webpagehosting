@@ -2559,3 +2559,17 @@ Both re-verified against a fresh Supabase security advisor run
 afterward -- both findings are gone. Everything else the advisor still
 lists is already-reviewed, intentional public access.
 
+## What changed, 2026-09-21 -- Live FAQ now groups by category
+
+The homepage FAQ's static fallback markup has always shown 4 categories
+(Pricing & Payment, Scheduling & Availability, Service Area & Coverage,
+Policies), but the live `site_faq` Supabase fetch that replaces it once
+loaded always flattened everything into one list -- the categories only
+existed in the brief pre-fetch flash. Added a `category` column to
+`site_faq`, backfilled all 15 live rows to match their existing static
+grouping, and updated the fetch to group by category (ordered by first
+appearance in `sort_order`, no new ordering column needed). The FAQ
+editor in `tools/site-content.html` now has a Category field too, so
+future edits through the CMS stay grouped. Full detail in
+`docs/specialist-logs/features.md`.
+

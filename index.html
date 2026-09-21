@@ -3214,7 +3214,7 @@
       return div.innerHTML;
     }
 
-    fetch(FAQ_SUPABASE_URL + '/rest/v1/site_faq?select=question,answer&order=sort_order.asc', {
+    fetch(FAQ_SUPABASE_URL + '/rest/v1/site_faq?select=question,answer,category&order=sort_order.asc', {
       headers: { 'apikey': FAQ_SUPABASE_ANON_KEY },
     })
       .then(res => res.ok ? res.json() : [])
@@ -3222,14 +3222,30 @@
         if (!Array.isArray(rows) || rows.length === 0) return; // keep the static fallback
         const faqList = document.getElementById('faqList');
         if (!faqList) return;
-        faqList.innerHTML = rows.map(r => `
+
+        // Grouped by category, same as the static fallback markup this
+        // replaces (h3.faq-category headers) -- previously this always
+        // flattened into one list the moment the fetch landed, silently
+        // dropping the categories a visitor sees only in the pre-fetch
+        // flash. Groups are ordered by each category's first appearance
+        // in sort_order, so no separate category-ordering column is
+        // needed -- the existing sort_order already encodes it.
+        const categoryOrder = [];
+        const byCategory = new Map();
+        rows.forEach(r => {
+          const cat = r.category || 'General';
+          if (!byCategory.has(cat)) { byCategory.set(cat, []); categoryOrder.push(cat); }
+          byCategory.get(cat).push(r);
+        });
+        faqList.innerHTML = categoryOrder.map(cat => `
+        <h3 class="faq-category">${escapeFaqHtml(cat)}</h3>` + byCategory.get(cat).map(r => `
         <div class="faq-item">
           <button type="button" class="faq-question">
             ${escapeFaqHtml(r.question)}
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>
           </button>
           <div class="faq-answer"><p>${escapeFaqHtml(r.answer)}</p></div>
-        </div>`).join('');
+        </div>`).join('')).join('');
         // Re-bind the accordion's click handlers -- the ones attached
         // at page load belonged to the static elements just replaced.
         if (typeof bindFaqAccordion === 'function') bindFaqAccordion();
