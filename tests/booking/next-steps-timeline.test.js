@@ -11,15 +11,15 @@ const path = require('path');
 const BOOKING_HTML = fs.readFileSync(path.join(__dirname, '..', '..', 'booking.html'), 'utf8');
 
 test('the confirmation screen has a 4-step "what happens next" timeline', () => {
-  const section = BOOKING_HTML.match(/<section class="step-panel" id="stepConfirmed">[\s\S]*?<\/section>/)[0];
+  const section = BOOKING_HTML.match(/<section class="step-panel" id="stepConfirmed"[^>]*>[\s\S]*?<\/section>/)[0];
   const timeline = section.match(/<div class="next-steps"[\s\S]*?<\/ol>\s*<\/div>/)[0];
-  const steps = [...timeline.matchAll(/<span class="next-steps-dot">(\d)<\/span><span>([^<]*)<\/span>/g)];
+  const steps = [...timeline.matchAll(/<span class="next-steps-dot">(\d)<\/span><span(?: id="[^"]*")?>([^<]*)<\/span>/g)];
   assert.equal(steps.length, 4, 'expected exactly 4 timeline steps');
   assert.deepEqual(steps.map(s => s[1]), ['1', '2', '3', '4'], 'steps should be numbered in order');
 });
 
 test('the timeline only makes claims already true elsewhere on the site -- no invented turnaround times or guarantees', () => {
-  const section = BOOKING_HTML.match(/<section class="step-panel" id="stepConfirmed">[\s\S]*?<\/section>/)[0];
+  const section = BOOKING_HTML.match(/<section class="step-panel" id="stepConfirmed"[^>]*>[\s\S]*?<\/section>/)[0];
   const timeline = section.match(/<div class="next-steps"[\s\S]*?<\/ol>/)[0];
   // No specific number of minutes/hours promised for a callback, and
   // payment methods match what the rest of the site already states
@@ -31,7 +31,7 @@ test('the timeline only makes claims already true elsewhere on the site -- no in
 });
 
 test('confirmation copy holds the slot and keeps an emergency call/text path outside the timeline', () => {
-  const section = BOOKING_HTML.match(/<section class="step-panel" id="stepConfirmed">[\s\S]*?<\/section>/)[0];
+  const section = BOOKING_HTML.match(/<section class="step-panel" id="stepConfirmed"[^>]*>[\s\S]*?<\/section>/)[0];
   assert.match(section, /Your slot is held/);
   assert.match(section, /class="conf-emergency"/);
   assert.match(section, /href="tel:\+14354141667"/);
@@ -39,7 +39,7 @@ test('confirmation copy holds the slot and keeps an emergency call/text path out
 });
 
 test('the timeline sits between the confirmation detail and the "Back to site" link, not before the confirmation itself', () => {
-  const section = BOOKING_HTML.match(/<section class="step-panel" id="stepConfirmed">[\s\S]*?<\/section>/)[0];
+  const section = BOOKING_HTML.match(/<section class="step-panel" id="stepConfirmed"[^>]*>[\s\S]*?<\/section>/)[0];
   const detailIndex = section.indexOf('id="confirmationDetail"');
   const timelineIndex = section.indexOf('class="next-steps"');
   const backLinkIndex = section.indexOf('Back to site');

@@ -26,7 +26,7 @@ test('booking.html: the confirmation checkmark badge is a green circle (reuses -
 });
 
 test('booking.html: the checkmark is an SVG path that draws itself in, not a static unicode glyph', () => {
-  const section = BOOKING_HTML.match(/<section class="step-panel" id="stepConfirmed">[\s\S]*?<\/section>/)[0];
+  const section = BOOKING_HTML.match(/<section class="step-panel" id="stepConfirmed"[^>]*>[\s\S]*?<\/section>/)[0];
   assert.match(section, /<div class="checkmark" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M5 13l5 5L19 7"\/><\/svg><\/div>/);
   assert.doesNotMatch(section, /checkmark" aria-hidden="true">&#10003;</, 'the old plain-glyph badge should be gone');
   const pathRule = BOOKING_HTML.match(/\.confirmation \.checkmark svg path\{([\s\S]*?)\}/)[1];
@@ -40,7 +40,7 @@ test('booking.html: the page-wide reduced-motion rule already zeroes this animat
 });
 
 test('booking.html: the confirmation headline still reads "You\'re booked"', () => {
-  const section = BOOKING_HTML.match(/<section class="step-panel" id="stepConfirmed">[\s\S]*?<\/section>/)[0];
+  const section = BOOKING_HTML.match(/<section class="step-panel" id="stepConfirmed"[^>]*>[\s\S]*?<\/section>/)[0];
   assert.match(section, /<h2>You're booked! Your slot is held\.<\/h2>/);
 });
 

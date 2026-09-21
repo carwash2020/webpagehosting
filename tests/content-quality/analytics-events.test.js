@@ -109,7 +109,7 @@ test('booking.html fires booking_step_view on real step navigation and booking_c
   assert.match(html, /function goToStep\(n\) \{[\s\S]*?booking_step_view[\s\S]*?\n  \}/);
   const honeypotBlock = html.slice(html.indexOf("if (formData.get('_gotcha'))"), html.indexOf("if (formData.get('_gotcha'))") + 400);
   assert.doesNotMatch(honeypotBlock, /booking_completed/, 'the honeypot bot-trap path should never fire a real conversion event');
-  const realSuccessBlock = html.slice(html.indexOf('if (res.ok) {'), html.indexOf('if (res.ok) {') + 700);
+  const realSuccessBlock = html.slice(html.indexOf('if (res.ok) {'), html.indexOf('if (res.ok) {') + 1500);
   assert.match(realSuccessBlock, /booking_completed/);
 });
 

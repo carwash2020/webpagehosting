@@ -591,7 +591,7 @@
     </div>
     <div class="sidebar-note">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg>
-      <span>You'll get a confirmation email with a link to reschedule or cancel anytime.</span>
+      <span>Give us your email and you'll get a confirmation with a link to reschedule or cancel anytime -- otherwise just call or text us.</span>
     </div>
   </aside>
 
@@ -614,7 +614,7 @@
     </div>
 
     <!-- Step 1: Service selection -->
-    <section class="step-panel is-active" id="stepService">
+    <section class="step-panel is-active" id="stepService" tabindex="-1">
       <p class="booking-expect">No deposit to book. A $25 trip fee applies beyond 15 miles. For an emergency, call or text rather than booking online.</p>
       <p class="referral-nudge"><strong>$25 referral credit.</strong> If a friend sent you, name them on the last step &mdash; they get $25 toward their next visit once this job is complete and paid.</p>
       <div class="service-grid" id="serviceList"></div>
@@ -625,18 +625,18 @@
     </section>
 
     <!-- Step 2: Date & time -->
-    <section class="step-panel" id="stepDateTime">
+    <section class="step-panel" id="stepDateTime" tabindex="-1">
       <button type="button" class="btn-back" id="backToService"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>Change service</button>
       <div class="booking-summary" id="selectedServiceSummary"></div>
       <label>Choose a date</label>
       <div class="date-row" id="dateRow"></div>
       <label>Choose a time</label>
-      <div class="slots-grid" id="slotsGrid"></div>
-      <div class="slots-empty" id="slotsEmpty" style="display:none;">No open times this day. Try another date.</div>
+      <div class="slots-grid" id="slotsGrid" aria-live="polite"></div>
+      <div class="slots-empty" id="slotsEmpty" style="display:none;" aria-live="polite">No open times this day. Try another date.</div>
     </section>
 
     <!-- Step 3: Contact info -->
-    <section class="step-panel" id="stepContact">
+    <section class="step-panel" id="stepContact" tabindex="-1">
       <button type="button" class="btn-back" id="backToDateTime"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>Change date/time</button>
       <div class="booking-summary" id="fullSummary"></div>
       <form id="bookingForm">
@@ -680,12 +680,12 @@
         <input type="text" id="bReferredBy" name="referred_by" autocomplete="off" maxlength="200" placeholder="Their name, so we can credit them">
         <p class="booking-legal">By confirming, you agree to our <a href="/terms.html">Terms &amp; Conditions</a> and <a href="/privacy.html">Privacy Policy</a>.</p>
         <button type="submit" class="btn orange" id="submitBtn">Confirm Booking</button>
-        <div class="status-msg" id="statusMsg"></div>
+        <div class="status-msg" id="statusMsg" aria-live="polite"></div>
       </form>
     </section>
 
     <!-- Confirmation -->
-    <section class="step-panel" id="stepConfirmed">
+    <section class="step-panel" id="stepConfirmed" tabindex="-1">
       <div class="confirmation">
         <div class="checkmark" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M5 13l5 5L19 7"/></svg></div>
         <h2>You're booked! Your slot is held.</h2>
@@ -696,7 +696,7 @@
           <p class="next-steps-title">What happens next</p>
           <ol class="next-steps-list">
             <li><span class="next-steps-dot">1</span><span>Your time is held on the calendar</span></li>
-            <li><span class="next-steps-dot">2</span><span>Check your email for a confirmation with a reschedule or cancel link</span></li>
+            <li><span class="next-steps-dot">2</span><span id="nextStepsEmailNote">Check your email for a confirmation with a reschedule or cancel link</span></li>
             <li><span class="next-steps-dot">3</span><span>We arrive in your scheduled window</span></li>
             <li><span class="next-steps-dot">4</span><span>Pay after the visit &mdash; cash, check, Venmo, Cash App, or card</span></li>
           </ol>
@@ -781,7 +781,7 @@
     const el = document.getElementById('serviceList');
     el.innerHTML = SERVICES.map(function (s) {
       const hrs = s.minutes >= 60 ? (s.minutes / 60) + ' hr' + (s.minutes > 60 ? 's' : '') : s.minutes + ' min';
-      return '<button type="button" class="service-option" data-key="' + s.key + '">' +
+      return '<button type="button" class="service-option" data-key="' + s.key + '" aria-pressed="false">' +
         '<div class="hex-icon">' + svgIcon(s.icon) + '</div>' +
         '<div class="svc-body">' +
         '<div class="svc-name"><span>' + s.label + '</span><span class="svc-duration">~' + hrs + '</span></div>' +
@@ -791,6 +791,7 @@
     el.querySelectorAll('.service-option').forEach(function (btn) {
       btn.addEventListener('click', function () {
         selectedService = SERVICES.find(function (s) { return s.key === btn.dataset.key; });
+        el.querySelectorAll('.service-option').forEach(function (b) { b.classList.toggle('is-selected', b === btn); b.setAttribute('aria-pressed', b === btn ? 'true' : 'false'); });
         const hrs = selectedService.minutes >= 60 ? (selectedService.minutes / 60) + ' hr' + (selectedService.minutes > 60 ? 's' : '') : selectedService.minutes + ' min';
         document.getElementById('selectedServiceSummary').innerHTML =
           '<div class="hex-icon">' + svgIcon(selectedService.icon) + '</div>' +
@@ -855,7 +856,7 @@
       const noonUtc = zonedTimeToUtc(dateStr, 12, 0);
       const dow = new Intl.DateTimeFormat('en-US', { timeZone: BUSINESS_TIMEZONE, weekday: 'short' }).format(noonUtc);
       const dom = new Intl.DateTimeFormat('en-US', { timeZone: BUSINESS_TIMEZONE, day: 'numeric' }).format(noonUtc);
-      html += '<button type="button" class="date-btn" data-date="' + dateStr + '"><div class="dow">' + dow + '</div><div class="dom">' + dom + '</div></button>';
+      html += '<button type="button" class="date-btn" data-date="' + dateStr + '" aria-pressed="false"><div class="dow">' + dow + '</div><div class="dom">' + dom + '</div></button>';
     }
     el.innerHTML = html;
     el.querySelectorAll('.date-btn').forEach(function (btn) {
@@ -865,11 +866,26 @@
 
   // --- availability + slot computation -------------------------------------
 
+  // selectDateRequestId (2026-09-21, real bug found in an audit, not
+  // reported): selectDate() is async, and nothing previously stopped
+  // two calls from overlapping -- tapping date A then quickly tapping
+  // date B fired two concurrent fetches, and whichever response
+  // landed LAST won, regardless of which date the visitor actually
+  // has selected now. On a slow connection this could silently show
+  // date A's times while the UI says date B is selected, and a slot
+  // click would then book date A. Each call now stamps a request id
+  // before awaiting anything, and bails out after the await if a
+  // newer call has since started -- the stale response is simply
+  // discarded instead of being allowed to render.
+  let selectDateRequestId = 0;
+
   async function selectDate(dateStr) {
+    const requestId = ++selectDateRequestId;
     selectedDateStr = dateStr;
     selectedSlot = null;
     document.querySelectorAll('.date-btn').forEach(function (b) {
       b.classList.toggle('is-selected', b.dataset.date === dateStr);
+      b.setAttribute('aria-pressed', b.dataset.date === dateStr ? 'true' : 'false');
     });
     const grid = document.getElementById('slotsGrid');
     const emptyEl = document.getElementById('slotsEmpty');
@@ -879,12 +895,14 @@
     try {
       existingBookings = await fetchBookingsForDate(SUPABASE_URL, SUPABASE_ANON_KEY, dateStr);
     } catch (e) {
+      if (requestId !== selectDateRequestId) return; // a newer selectDate() call has already started
       grid.innerHTML =
         '<p style="color:#ff8a80; font-size:13.5px; text-align:center; grid-column:1/-1;">Couldn\'t load available times. Check your connection and try again.</p>' +
         '<button type="button" class="btn-retry" id="retryDateBtn">' + svgIcon('<path d="M23 4v6h-6M1 20v-6h6"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/>') + 'Try again</button>';
       document.getElementById('retryDateBtn').addEventListener('click', function () { selectDate(dateStr); });
       return;
     }
+    if (requestId !== selectDateRequestId) return; // a newer selectDate() call has already started
     const slots = computeSlotsForDate(dateStr, selectedService.minutes, existingBookings);
 
     if (slots.length === 0) {
@@ -894,13 +912,14 @@
     }
     emptyEl.style.display = 'none';
     grid.innerHTML = slots.map(function (s, i) {
-      return '<button type="button" class="slot-btn" data-idx="' + i + '">' + s.label + '</button>';
+      return '<button type="button" class="slot-btn" data-idx="' + i + '" aria-pressed="false">' + s.label + '</button>';
     }).join('');
     grid.querySelectorAll('.slot-btn').forEach(function (btn, i) {
       btn.addEventListener('click', function () {
         selectedSlot = slots[i];
-        grid.querySelectorAll('.slot-btn').forEach(function (b) { b.classList.remove('is-selected'); });
+        grid.querySelectorAll('.slot-btn').forEach(function (b) { b.classList.remove('is-selected'); b.setAttribute('aria-pressed', 'false'); });
         btn.classList.add('is-selected');
+        btn.setAttribute('aria-pressed', 'true');
         updateSelectedServiceSummary();
         updateSidebar();
         goToStep(3);
@@ -934,7 +953,17 @@
     if (n <= 3) indicator.setAttribute('aria-valuenow', String(n));
     if (stepLabels[n]) indicator.setAttribute('aria-label', 'Booking step ' + n + ' of 3: ' + stepLabels[n]);
     const panels = { 1: 'stepService', 2: 'stepDateTime', 3: 'stepContact', 4: 'stepConfirmed' };
-    if (panels[n]) document.getElementById(panels[n]).classList.add('is-active');
+    if (panels[n]) {
+      const panelEl = document.getElementById(panels[n]);
+      panelEl.classList.add('is-active');
+      // Real accessibility gap found in an audit, not reported: nothing
+      // ever moved keyboard/screen-reader focus into the new step, so a
+      // screen-reader user advancing steps (or getting bounced back
+      // after a booking conflict) had no cue the page had changed.
+      // Each step-panel carries tabindex="-1" specifically so it's a
+      // valid, non-tab-stealing focus target here.
+      panelEl.focus({ preventScroll: true });
+    }
     updateMobileSummary(n);
     updateStickyBook(n);
     if (n <= 3) window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -1051,6 +1080,7 @@
     // with no usable name or location.
     const nameVal = (formData.get('name') || '').trim();
     const addressVal = (formData.get('address') || '').trim();
+    const emailVal = (formData.get('email') || '').trim();
     if (!nameVal) {
       statusEl.textContent = 'Please enter your name.';
       statusEl.classList.add('is-visible', 'is-error');
@@ -1079,10 +1109,10 @@
         service_label: selectedService.label,
         start_at: selectedSlot.startUtc.toISOString(),
         end_at: selectedSlot.endUtc.toISOString(),
-        name: formData.get('name'),
+        name: nameVal,
         phone: formData.get('phone'),
-        email: formData.get('email') || null,
-        address: formData.get('address') || null,
+        email: emailVal || null,
+        address: addressVal,
         notes: formData.get('notes') || null,
         referred_by: formData.get('referred_by') || null,
         referred_by_code: referredByCode,
@@ -1097,6 +1127,19 @@
           document.getElementById('confirmationDetail').innerHTML =
             '<div class="hex-icon">' + svgIcon(selectedService.icon) + '</div>' +
             '<div><strong>' + selectedService.label + '</strong>' + dateLabel + ' at ' + selectedSlot.label + '</div>';
+          // Real gap found in an audit, not reported: this step's text
+          // unconditionally promised an email with a reschedule/cancel
+          // link, but email is optional and manage-booking.html's
+          // token only ever reaches a guest through that email -- a
+          // phone-only booking had no way to reschedule/cancel online
+          // despite the on-page promise. Now says exactly what's true
+          // for THIS booking.
+          const emailNoteEl = document.getElementById('nextStepsEmailNote');
+          if (emailNoteEl) {
+            emailNoteEl.textContent = emailVal
+              ? 'Check your email for a confirmation with a reschedule or cancel link'
+              : "We'll text or call to confirm -- call or text us anytime to reschedule or cancel";
+          }
           if (typeof gtag === 'function') gtag('event', 'booking_completed', { service: selectedService.key });
           goToStep(4);
           return;

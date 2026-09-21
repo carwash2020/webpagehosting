@@ -557,3 +557,78 @@ need touching.
 
 Verified: `tests/booking/manage-booking.test.js` 13/13 passing (was
 7/13). Full suite **2575/2575**.
+
+## 2026-09-21: booking.html audit -- race condition, a11y, and an inaccurate promise
+
+Direct request: "audit and improve booking.html further," no specific
+bug reported -- a fresh, open-ended re-look at the file (two of the
+three earlier candidate improvements, address autocomplete and SMS
+confirmation, are blocked on external API accounts nobody has
+provided; slot re-validation was already confirmed solid via the
+DB's own buffer/exclusion constraint). Used an Explore subagent to
+read the whole file cold and rank real findings by impact; verified
+and fixed the ones worth fixing:
+
+- **Real race condition** (highest impact): `selectDate()` is async
+  with nothing previously stopping two overlapping calls -- tapping
+  date A then quickly date B fired two concurrent fetches, and
+  whichever response landed LAST won regardless of which date the
+  visitor actually has selected now. Fixed with a request-id guard
+  (`selectDateRequestId`), discarding any response from a call that's
+  since been superseded. Verified with a real jsdom test using
+  controllable, independently-resolvable fetch promises, resolving
+  the stale (first) request last -- the exact ordering that silently
+  won before this fix -- and confirming the second, current date
+  stays selected.
+- **No focus management between wizard steps**: `goToStep()` never
+  moved keyboard/screen-reader focus, so a screen-reader user
+  advancing steps (or bounced back after a real booking conflict) had
+  no cue the page changed. Every `.step-panel` now carries
+  `tabindex="-1"` and `goToStep()` focuses the new one
+  (`{ preventScroll: true }`, since the existing `window.scrollTo`
+  call already handles visual scrolling).
+- **Selection state invisible to assistive tech**: `.service-option`/
+  `.date-btn`/`.slot-btn` toggled only a CSS class; none exposed
+  `aria-pressed`. Also found the service-option's own `.is-selected`
+  CSS rule was dead code -- nothing had ever actually toggled that
+  class, only date/slot buttons did. Fixed both the missing
+  `aria-pressed` and the dead `is-selected` toggle together.
+- **Submission errors and slot updates not announced**: `#statusMsg`
+  and `#slotsGrid` had no `aria-live`, unlike the existing
+  `#phoneError`/`#emailError` which already do -- added
+  `aria-live="polite"` to both, matching that existing convention.
+- **Inaccurate unconditional promise**: sidebar copy and the
+  post-booking "what happens next" list both unconditionally promised
+  "a confirmation email with a link to reschedule or cancel," but
+  email is optional and `manage-booking.html`'s only lookup path is a
+  token that arrives via that email -- a phone-only booking had no
+  real way to reschedule/cancel online despite the on-page promise.
+  Made the post-booking step's text conditional on whether an email
+  was actually given (verified with a real jsdom submit through the
+  whole flow, deliberately leaving email blank); softened the
+  persistent sidebar note to not overstate it before the form is even
+  filled in.
+- **Name/email/address sent untrimmed**: the submit payload sent
+  `formData.get('name')` raw even though a trimmed `nameVal` already
+  existed for validation just above it (email had the same gap,
+  newly given the same `emailVal` treatment). Now sends the already-
+  trimmed values for all three, not the raw FormData ones.
+
+Fixing the `tabindex="-1"` addition broke 3 existing test files that
+matched the step-panel `<section>` tags with brittle exact-attribute
+regexes (`id="stepConfirmed">` with nothing else expected between
+the id and `>`) -- updated all of them (`next-steps-timeline.test.js`,
+`success-checkmark.test.js`, `referral-program.test.js`) to tolerate
+extra attributes, plus one similarly brittle fixed-length `.slice()`
+window in `analytics-events.test.js` that no longer reached the
+`booking_completed` gtag call after the new conditional-copy code was
+inserted above it -- widened the window rather than shrinking the
+new code to fit an arbitrary slice length.
+
+New test file: `tests/booking/booking-a11y-and-race-fix.test.js` (6
+tests, including the real concurrent-fetch race simulation and a full
+jsdom submit-through-confirmation run for the email-conditional
+copy).
+
+Verified: full suite **2583/2583** passing. `check-undefined-vars`/
+`check-consistency`/`check-links.py` all clean.

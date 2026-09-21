@@ -50,7 +50,7 @@ test('booking.html: $25 referral credit is visible on the flow and on success, m
 
   assert.match(BOOKING, /class="field-hint">They get a \$25 credit toward their next service/);
 
-  const confirmed = BOOKING.match(/<section class="step-panel" id="stepConfirmed">[\s\S]*?<\/section>/)[0];
+  const confirmed = BOOKING.match(/<section class="step-panel" id="stepConfirmed"[^>]*>[\s\S]*?<\/section>/)[0];
   assert.match(confirmed, /class="conf-referral"/);
   assert.match(confirmed, /\$25 toward your next visit/);
   assert.match(confirmed, /complete and paid/);
