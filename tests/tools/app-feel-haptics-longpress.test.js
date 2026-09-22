@@ -148,3 +148,103 @@ test('finance.html: initExpenseRowLongPress, invoked end-to-end with a real long
   sheetActions[1].onClick();
   assert.equal(deletedId, 7);
 });
+
+// --- round 2 (2026-09-22, same day): app badge delta + invoice log long-press ---
+
+const toolsEffectsJsFull = fs.readFileSync(repo('tools', 'tools-effects.js'), 'utf8');
+
+test('workspace.html: updateActionItemsBadge caches its computed total to th_app_badge_total every time it runs, right after setting the real OS badge', () => {
+  const fn = workspaceHtml.match(/function updateActionItemsBadge\(\)[\s\S]*?\n  \}/)[0];
+  const badgeSetIdx = fn.indexOf("navigator.clearAppBadge()");
+  const cacheIdx = fn.indexOf("localStorage.setItem('th_app_badge_total', String(Math.max(0, total)));");
+  assert.ok(badgeSetIdx > -1, 'should still set/clear the real OS badge');
+  assert.ok(cacheIdx > -1, 'should cache the computed total to th_app_badge_total');
+  assert.ok(badgeSetIdx < cacheIdx, 'the cache write should come after the real badge is set, not before');
+});
+
+test('tools-effects.js: setAppBadgeDelta reads the cached total, clamps at 0, writes the new total back, and sets/clears the real OS badge accordingly', () => {
+  const fn = toolsEffectsJsFull.match(/function setAppBadgeDelta\(delta\)[\s\S]*?\n\}/)[0];
+  assert.match(fn, /if \(typeof navigator === 'undefined' \|\| !\('setAppBadge' in navigator\)\) return;/);
+  assert.match(fn, /localStorage\.getItem\('th_app_badge_total'/);
+  assert.match(fn, /Math\.max\(0, cached \+ delta\)/);
+  assert.match(fn, /localStorage\.setItem\('th_app_badge_total', String\(next\)\)/);
+  assert.match(fn, /if \(next > 0\) navigator\.setAppBadge\(next\)/);
+  assert.match(fn, /else if \('clearAppBadge' in navigator\) navigator\.clearAppBadge\(\)/);
+});
+
+test('setAppBadgeDelta, invoked directly: nudges the cached total down on -1, up on +1, and never goes negative', () => {
+  const dom = new JSDOM('<!doctype html><html><body></body></html>', { runScripts: 'dangerously', url: 'https://example.com/' });
+  const { window } = dom;
+  window.eval(toolsEffectsJsFull.match(/function setAppBadgeDelta\(delta\)[\s\S]*?\n\}/)[0]);
+  let lastSetTo = null, cleared = false;
+  window.navigator.setAppBadge = (n) => { lastSetTo = n; return Promise.resolve(); };
+  window.navigator.clearAppBadge = () => { cleared = true; return Promise.resolve(); };
+
+  window.localStorage.setItem('th_app_badge_total', '3');
+  window.setAppBadgeDelta(-1);
+  assert.equal(window.localStorage.getItem('th_app_badge_total'), '2');
+  assert.equal(lastSetTo, 2);
+
+  window.setAppBadgeDelta(-5); // would go negative -- must clamp at 0 and clear, not set a negative badge
+  assert.equal(window.localStorage.getItem('th_app_badge_total'), '0');
+  assert.equal(cleared, true);
+
+  window.setAppBadgeDelta(1);
+  assert.equal(window.localStorage.getItem('th_app_badge_total'), '1');
+  assert.equal(lastSetTo, 1);
+});
+
+test('invoice-generator.html: toggleInvoicePaid nudges the badge down when marking paid, up when marking unpaid again', () => {
+  const fn = invoiceGenHtml.match(/function toggleInvoicePaid\(id\)[\s\S]*?\n  \}/)[0];
+  assert.match(fn, /if \(typeof setAppBadgeDelta === 'function'\) setAppBadgeDelta\(entry\.paid \? -1 : 1\);/);
+});
+
+test('invoice-generator.html: the invoice log gets a long-press init function offering Resend/Mark Paid or Unpaid/Delete, guarded against a missing attachLongPress and wired right after the initial render', () => {
+  assert.match(invoiceGenHtml, /function initInvoiceLogLongPress\(\)[\s\S]*?if \(typeof attachLongPress !== 'function'\) return;[\s\S]*?getElementById\('invoiceLogList'\)[\s\S]*?attachLongPress\(container, '\.contract-log-item\[data-invoice-id\]'/);
+  const fn = invoiceGenHtml.match(/function initInvoiceLogLongPress\(\)[\s\S]*?\n  \}/)[0];
+  assert.match(fn, /if \(inv\.clientEmail\) actions\.push\(\{ label: 'Resend'/);
+  assert.match(fn, /label: inv\.paid \? 'Mark Unpaid' : 'Mark Paid'/);
+  assert.match(fn, /label: 'Delete', isDanger: true/);
+  assert.match(invoiceGenHtml, /if \(typeof renderQuoteLog === 'function'\) renderQuoteLog\(\);\s*\n\s*if \(typeof initInvoiceLogLongPress === 'function'\) initInvoiceLogLongPress\(\);/);
+});
+
+test('invoice-generator.html: initInvoiceLogLongPress, invoked end-to-end, opens a quick-action sheet for the right invoice with working Resend/Mark Paid/Delete callbacks', () => {
+  const dom = new JSDOM(invoiceGenHtml, {
+    runScripts: 'dangerously', url: 'https://example.com/tools/invoice-generator.html',
+    beforeParse(w) {
+      w.requireAuth = () => {};
+      w.canManageInvoices = () => true;
+      w.localStorage.setItem('th_invoices', JSON.stringify([
+        { id: 42, clientName: 'Jane Doe', clientEmail: 'jane@example.com', invoiceNumber: '1042', paid: false, total: 150 },
+      ]));
+    },
+  });
+  const { window } = dom;
+
+  let capturedOnLongPress = null;
+  window.attachLongPress = (container, selector, onLongPress) => { capturedOnLongPress = onLongPress; };
+  let sheetTitle = null, sheetActions = null;
+  window.showQuickActionSheet = (title, actions) => { sheetTitle = title; sheetActions = actions; };
+  let resendId = null, toggledId = null, deletedId = null;
+  window.resendInvoiceToClient = (id) => { resendId = id; };
+  window.toggleInvoicePaid = (id) => { toggledId = id; };
+  window.deleteInvoiceLogEntry = (id) => { deletedId = id; };
+
+  window.initInvoiceLogLongPress();
+  assert.ok(capturedOnLongPress, 'attachLongPress should have been called with a real callback');
+
+  const row = window.document.createElement('div');
+  row.dataset.invoiceId = '42';
+  capturedOnLongPress(row);
+
+  assert.equal(sheetTitle, 'Jane Doe');
+  assert.equal(sheetActions.length, 3, 'Resend (has an email) + Mark Paid + Delete');
+  assert.equal(sheetActions[0].label, 'Resend');
+  sheetActions[0].onClick();
+  assert.equal(resendId, 42);
+  assert.equal(sheetActions[1].label, 'Mark Paid');
+  sheetActions[1].onClick();
+  assert.equal(toggledId, 42);
+  sheetActions[2].onClick();
+  assert.equal(deletedId, 42);
+});
