@@ -91,7 +91,10 @@
     '/tools/finance.html': function () { return typeof canViewFinance === 'function' && canViewFinance(); },
     '/tools/runway-dashboard.html': function () { return typeof canViewRunway === 'function' && canViewRunway(); },
     '/tools/invoice-generator.html': function () { return typeof canManageInvoices === 'function' && canManageInvoices(); },
-    '/tools/clients.html': function () { return typeof canManageInvoices === 'function' && canManageInvoices(); },
+    // clients.html left this map 2026-09-22 (Workspace rework part 2): the
+    // page opens on the client list now -- the same local client data
+    // Job Tracker already shows every account -- and gates its own Portal
+    // tab (the portal admin console) on canManageInvoices instead.
     '/tools/contract-generator.html': function () { return typeof canManageContracts === 'function' && canManageContracts(); },
     '/tools/review-request.html': function () { return typeof canManageReviews === 'function' && canManageReviews(); },
     '/tools/dev-tools.html': function () { return typeof hasDevToolsAccess === 'function' && hasDevToolsAccess(); }
@@ -189,7 +192,7 @@
     { label: 'Quick charge', hint: 'Take a card now',             icon: 'card',    href: '/tools/invoice-generator.html#pos', perm: 'canManageInvoices' },
     { label: 'Expense',      hint: 'Snap the receipt',            icon: 'camera',  href: '/tools/finance.html#expenses', perm: 'canViewFinance' },
     { label: 'Income',       hint: 'Cash or check received',      icon: 'dollar',  href: '/tools/finance.html#income', perm: 'canViewFinance' },
-    { label: 'Contact',      hint: 'Client, supplier, vendor',    icon: 'users',   href: '/tools/job-tracker.html#contacts' },
+    { label: 'Client',       hint: 'Add to your client list',     icon: 'user-plus', href: '/tools/clients.html#new' },
     { label: 'Contract',     hint: 'Work order or agreement',     icon: 'scroll',  href: '/tools/contract-generator.html', perm: 'canManageContracts' },
     { label: 'Review ask',   hint: 'Text a Google review link',   icon: 'star',    href: '/tools/review-request.html', perm: 'canManageReviews' }
   ];

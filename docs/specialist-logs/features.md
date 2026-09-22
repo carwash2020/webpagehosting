@@ -1725,4 +1725,82 @@ Next (part 2): the Clients tab becomes a real client directory -- the
 `thGetAllClientsWithTotals()` comment in data-layer.js already says it
 was meant to back "the Clients hub page", which was never built.
 
+## 2026-09-22 (later still) -- Workspace rework, part 2: the Clients tab becomes a client directory
+
+The most concrete finding of the whole audit: the bar's Clients tab
+(promoted there 2026-09-21 as "a top daily task") opened
+`clients.html`, which was the portal-admin console: accounts, portal
+invoices, email lists, bug reports, client JS errors. No client list
+existed anywhere except Job Tracker's Contacts tab (an address book
+that also holds suppliers). `data-layer.js` has had the registry
+(`th_clients`), the bundle query, and a comment saying
+`thGetAllClientsWithTotals()` would back "the Clients hub page" since
+2026-08-20. That page was never built.
+
+**Decisions.**
+- **Same page, two tabs, not a new page.** The bar already points at
+  `clients.html` and old links (`?search=` from Dev Tools' Client
+  Registry) land there. So the list became the default tab and the
+  console moved under **Portal** unchanged, byte for byte. A bare
+  `?search=` still means the Portal tab, so the "View in Clients" link
+  still works.
+- **Lazy portal render.** The nine panel renders run on first Portal
+  activation (`renderPortalPanels()`), not on load. The daily view
+  should not fire nine admin requests. The init still sets
+  `portalAccountSearch` before any render, which
+  `labor-mileage-and-registry-link.test.js` requires.
+- **Gate moved from nav to tab.** The list is local data every account
+  already sees on Job Tracker, so `clients.html` left
+  `NAV_PERMISSION_CHECKS`. The Portal tab hides only on a definite
+  `canManageInvoices: false` from `th-role-loaded`. A failed role load
+  leaves it visible, because RLS is the real gate and hiding it on a
+  network blip would lock Connor out of it.
+- **One pass, indexed** (`thGetClientDirectory()`), instead of
+  `thGetClientBundle()` per client. The money helpers (`thInvoiceBalance`,
+  `thInvoiceDueDate`, `thInvoiceIsOverdue`, `TH_TERM_DAYS`) copy
+  workspace.html's Money Owed rules exactly: legacy `paid` without
+  `paidAmount`, whole-cent math, and a 15-day default term. They are not
+  shared with workspace.html yet. Moving the dashboard onto them would
+  touch `computeMoneyOwed()`, which several tests pin; that's a
+  follow-up, not this PR.
+- **Backfill on every load**, not once per device, so a name typed
+  anywhere just appears. That exposed a real edge: `thBackfillClients()`
+  matched by name only, so a job linked by `clientId` whose name text
+  was retyped would have created a second client. The collector now
+  skips records whose `clientId` resolves to a live client. Tombstones
+  are still respected.
+- **Rows are links; hold is the sheet.** `attachLongPress` refuses to
+  start on any `<a>` (on purpose, so cards with inner links keep their
+  taps). Rows whose whole body is the link opt in with
+  `data-long-press-target`. After a fired hold, the next click is
+  swallowed (capture listener, once, 800ms cap). `contextmenu` is
+  suppressed on those links, and CSS drops iOS's link callout and text
+  selection. Found only by holding a row in Chromium: the first
+  version silently did nothing.
+- **`?client=` handoff**, not new forms. New job, Invoice, and Quote
+  from a client open the existing forms with the name filled in. The
+  same registry autofill a typed name triggers does the rest (phone,
+  email, address). Fill-only, and the param is stripped once applied,
+  the same shape as `?jobRef=`.
+
+**Pre-existing bugs found and fixed on the way:**
+- `?search=…#tab-recent` from client-detail and job-detail: wrong hash,
+  and nothing read `?search=`.
+- The desktop `padding-top: 75px` rule on twelve pages had been dead
+  since 2026-09-06. It was a specificity loss to `body.th-tool-page`;
+  one shared rule fixes all twelve. Desktop sticky tabs also used the
+  phone notch offset.
+- A `<section>` inherits the public site's section padding. Hence the
+  `div role="tabpanel"` panels; worth knowing for anyone adding
+  sections to a tool page.
+- "Last Job" on a client could be a future date.
+- Clients' init-error banner was missing its label argument.
+
+**Test-harness gotcha worth keeping:** inlining a shared script into a
+jsdom page with `html.replace(re, '<script>' + src + '</script>')`
+breaks `tools-dialogs.js`, because `money()` contains `'$&,'`, which
+`String.replace` expands. Use a function replacer.
+`detail-pages-realtime.test.js` only gets away with a string because
+data-layer.js has no `$&` in it.
+
 <!-- Add new entries above this line -->

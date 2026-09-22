@@ -52,17 +52,17 @@
   })();
 </script>
 <link rel="stylesheet" href="/styles.css?v=2e81706c3d">
-<link rel="stylesheet" href="/tools/styles-tools.css?v=d1ff32759a">
+<link rel="stylesheet" href="/tools/styles-tools.css?v=effd2652c2">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.112.3/dist/umd/supabase.js" integrity="sha384-qafw21c/iciq0VXsi9FzkfoQv5I/V0iqE4lSNcKXPnW9/UTJLnv5CcN4FHxVLnKg" crossorigin="anonymous" defer></script>
 <script src="/tools/sync.js?v=6b9e092eca" defer></script>
-<script src="/tools/data-layer.js?v=c5d44f096e" defer></script>
+<script src="/tools/data-layer.js?v=5d2fdbfaf1" defer></script>
 <script src="/tools/tools-effects.js?v=a767167574" defer></script>
-<script src="/tools/tools-dialogs.js?v=83d27784e2" defer></script>
+<script src="/tools/tools-dialogs.js?v=d68ce809a1" defer></script>
 <script src="/signature-pad.js?v=f95f8e1d28" defer></script>
 <script src="/tools/tools-media-sharing.js?v=0c229c9353" defer></script>
-<script src="/tools/tools-nav-pwa.js?v=199e768df3" defer></script>
-<script src="/tools/tools-command-palette.js?v=a172ee44c7" defer></script>
-<script src="/tools/tools-tour.js?v=72c77f88d1" defer></script>
+<script src="/tools/tools-nav-pwa.js?v=4d9f8c89e1" defer></script>
+<script src="/tools/tools-command-palette.js?v=7bd204bef4" defer></script>
+<script src="/tools/tools-tour.js?v=f6d11558d2" defer></script>
 <!-- U15/W18 fix (High-Impact Upgrades, Master Audit, 2026-09-08): the
      masthead/footer/totals-block drawing code below moved into this
      shared file, now also used by job-detail.html's job sheet and
@@ -2308,6 +2308,42 @@
     history.replaceState(null, '', window.location.pathname + window.location.hash);
   }
 
+  // "Invoice <client>" / "Quote <client>" (2026-09-22, Workspace rework
+  // part 2): the Clients directory and a client's own page link here as
+  // ?client=<name>#invoice or #quote. Fills the client on whichever form
+  // the hash opens and runs the same registry autofill a typed name gets
+  // (email, address). Fill-only, and stripped from the URL once applied,
+  // same as ?jobRef= above.
+  function applyClientFromUrl() {
+    const params = new URLSearchParams(window.location.search);
+    const name = params.get('client');
+    if (!name) return;
+    const isQuote = window.location.hash === '#quote';
+    const field = document.getElementById(isQuote ? 'quoteClientName' : 'clientName');
+    if (field && !field.value.trim()) {
+      field.value = name;
+      if (isQuote) autofillQuoteClient(); else autofillFromContact('clientName', 'contact-1');
+    }
+    params.delete('client');
+    const rest = params.toString();
+    history.replaceState(null, '', window.location.pathname + (rest ? '?' + rest : '') + window.location.hash);
+  }
+
+  // ?search=<client>#recent (2026-09-22): client-detail.html and
+  // job-detail.html have linked here with a client's name for months, but
+  // nothing read it -- the Recent tab opened unfiltered. Prefills both
+  // log searches so the link lands on that client's invoices and quotes.
+  function applyLogSearchFromUrl() {
+    const term = new URLSearchParams(window.location.search).get('search');
+    if (!term) return;
+    ['invoiceLogSearch', 'quoteLogSearch'].forEach(id => {
+      const el = document.getElementById(id);
+      if (el && !el.value.trim()) el.value = term;
+    });
+    if (typeof renderInvoiceLog === 'function') renderInvoiceLog();
+    if (typeof renderQuoteLog === 'function') renderQuoteLog();
+  }
+
   function autofillFromJobRef(jobRefSelectId, descriptionFieldId, clientNameFieldId, clientAddressFieldId) {
     const jobId = document.getElementById(jobRefSelectId).value;
     if (!jobId || typeof thRead !== 'function') return;
@@ -2404,6 +2440,8 @@
     addLineItem(); // start with one blank row
     recalc();
     applyJobRefFromUrl();
+    applyClientFromUrl();
+    applyLogSearchFromUrl();
     // Tab deep links (2026-09-22): #invoice / #quote / #pos / #recent open
     // that tab, on load and on a same-document hash change (the command
     // palette and the tour link straight to tabs). #pos also focuses the

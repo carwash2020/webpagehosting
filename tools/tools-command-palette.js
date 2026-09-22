@@ -22,6 +22,7 @@
   function loadInvoices() { try { return JSON.parse(localStorage.getItem('th_invoices') || '[]'); } catch (e) { return []; } }
   function loadQuotes() { try { return JSON.parse(localStorage.getItem('th_quotes') || '[]'); } catch (e) { return []; } }
   function loadContracts() { try { return JSON.parse(localStorage.getItem('th_contracts') || '[]'); } catch (e) { return []; } }
+  function loadClients() { try { return JSON.parse(localStorage.getItem('th_clients') || '[]'); } catch (e) { return []; } }
 
   function esc(str) {
     if (typeof escapeHtml === 'function') return escapeHtml(str);
@@ -50,7 +51,9 @@
     { title: 'Calendar', meta: 'Jobs \u203a Calendar view', href: '/tools/job-tracker.html#calendar', keywords: 'month schedule bookings' },
     { title: 'Contacts', meta: 'Jobs \u203a Contacts tab', href: '/tools/job-tracker.html#contacts', keywords: 'address book supplier vendor phone history' },
     { title: 'Notes', meta: 'Jobs \u203a Notes tab', href: '/tools/job-tracker.html#notes', keywords: 'notepad memo' },
-    { title: 'Clients', meta: 'Portal accounts, invites, referral credit', href: '/tools/clients.html', keywords: 'portal invite referral customer', perm: 'canManageInvoices' },
+    { title: 'Clients', meta: 'Your client list: who owes you, next and last job, call or text', href: '/tools/clients.html#directory', keywords: 'customer directory people owes balance phone' },
+    { title: 'Add a client', meta: 'Clients \u203a new client', href: '/tools/clients.html#new', keywords: 'new customer create person' },
+    { title: 'Client portal admin', meta: 'Clients \u203a Portal: accounts, invites, referral credit, work orders', href: '/tools/clients.html#portal', keywords: 'portal invite referral work order bug', perm: 'canManageInvoices' },
     { title: 'Create invoice', meta: 'Invoices \u203a Invoice tab', href: '/tools/invoice-generator.html#invoice', keywords: 'bill send pdf', perm: 'canManageInvoices' },
     { title: 'New quote / estimate', meta: 'Invoices \u203a Quote / Estimate tab', href: '/tools/invoice-generator.html#quote', keywords: 'price bid proposal', perm: 'canManageInvoices' },
     { title: 'Quick charge', meta: 'Invoices \u203a charge a card on the spot, no invoice', href: '/tools/invoice-generator.html#pos', keywords: 'pos pay payment card stripe', perm: 'canManageInvoices' },
@@ -143,9 +146,20 @@
   // "show as plain info, not a link" (quotes have no dedicated list
   // page to jump to).
   var SEARCH_SOURCES = [
+    // Clients first (2026-09-22): a name typed here is usually a person,
+    // and their page (client-detail.html) has everything -- jobs,
+    // invoices, what they owe, Call / Text / New job -- one tap on.
+    { label: 'Clients', load: loadClients,
+      match: function (c, term) {
+        if ((c.name || '').toLowerCase().indexOf(term) > -1 || (c.email || '').toLowerCase().indexOf(term) > -1) return true;
+        var digits = term.replace(/\D/g, '');
+        return digits.length >= 3 && (c.phone || '').replace(/\D/g, '').indexOf(digits) > -1;
+      },
+      toItem: function (c) { return { title: c.name, meta: c.phone || c.email || c.address || 'Client', href: '/tools/client-detail.html?id=' + encodeURIComponent(c.id) }; } },
     { label: 'Jobs', load: loadJobs,
       match: function (j, term) { return (j.title || '').toLowerCase().indexOf(term) > -1 || (j.client || '').toLowerCase().indexOf(term) > -1; },
-      toItem: function (j) { return { title: j.title, meta: j.client || 'No client set', href: '/tools/job-tracker.html?search=' + encodeURIComponent(j.client || j.title) + '#jobs' }; } },
+      // Straight to the job's own page (2026-09-22), not a filtered list.
+      toItem: function (j) { return { title: j.title, meta: j.client || 'No client set', href: '/tools/job-detail.html?id=' + encodeURIComponent(j.id) }; } },
     { label: 'Contacts', load: loadContacts,
       match: function (c, term) { return (c.name || '').toLowerCase().indexOf(term) > -1; },
       toItem: function (c) { return { title: c.name, meta: c.phone || c.email || '', href: '/tools/job-tracker.html?search=' + encodeURIComponent(c.name) + '#contacts' }; } },

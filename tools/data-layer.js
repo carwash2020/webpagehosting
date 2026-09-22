@@ -461,11 +461,19 @@ function thCollectClientNamesFromExistingData() {
     }
   }
 
-  thRead(TH_KEYS.jobs, []).forEach(j => note(j.client, { phone: j.phone, address: j.address }, 'job'));
-  thRead(TH_KEYS.invoices, []).forEach(i => note(i.clientName, { address: i.clientAddress }, 'invoice'));
-  thRead(TH_KEYS.quotes, []).forEach(q => note(q.clientName, { address: q.clientAddress }, 'quote'));
+  // A record already linked to a live registry client by clientId is that
+  // client, whatever its name text says now (2026-09-22) -- the Clients
+  // directory runs the backfill on every load, and a job whose client
+  // name was retyped differently must not spawn a second client for the
+  // same person.
+  const linkedIds = new Set(thLoadClients().map(c => c.id));
+  const linked = (r) => !!(r && r.clientId && linkedIds.has(r.clientId));
+  thRead(TH_KEYS.jobs, []).forEach(j => { if (!linked(j)) note(j.client, { phone: j.phone, address: j.address }, 'job'); });
+  thRead(TH_KEYS.invoices, []).forEach(i => { if (!linked(i)) note(i.clientName, { address: i.clientAddress }, 'invoice'); });
+  thRead(TH_KEYS.quotes, []).forEach(q => { if (!linked(q)) note(q.clientName, { address: q.clientAddress }, 'quote'); });
   thRead(TH_KEYS.contacts, []).forEach(c => note(c.name, { phone: c.phone, email: c.email }, 'contact'));
   thRead(TH_KEYS.contracts, []).forEach(c => {
+    if (linked(c)) return;
     const f = c && c.fields ? c.fields : {};
     note(f.clientName, { phone: f.clientPhone, address: f.clientAddress, email: f.clientEmail }, 'contract');
   });
@@ -666,6 +674,106 @@ function thGetAllClientsWithTotals() {
       };
     })
     .sort((a, b) => b.revenue - a.revenue);
+}
+
+// --- the Clients directory (2026-09-22, Workspace rework part 2) ----------
+//
+// thGetAllClientsWithTotals() above was written to back "the Clients hub
+// page" -- that page was never built (the Clients tab opened the portal
+// admin console instead). This is the query behind the directory that
+// finally is: one row per registry client with what a list row needs --
+// what they owe (unpaid minus partial payments), whether any of it is
+// overdue, their next scheduled and last job, and when anything last
+// happened -- in one pass over each collection (indexed by clientId and
+// normalized name) rather than one thGetClientBundle() call per client.
+//
+// Money rules match workspace.html's Money Owed card exactly: a legacy
+// invoice with no paidAmount counts as fully paid if `paid`, else $0;
+// due date is the invoice date plus its terms (Due Upon Receipt 0, Net 15,
+// Net 30; anything else 15); overdue means unpaid and past that date.
+const TH_TERM_DAYS = { 'Due Upon Receipt': 0, 'Net 15': 15, 'Net 30': 30 };
+function thInvoicePaidAmount(inv) {
+  if (inv.paidAmount !== undefined && inv.paidAmount !== null) return Number(inv.paidAmount) || 0;
+  return inv.paid ? (Number(inv.total) || 0) : 0;
+}
+function thInvoiceBalance(inv) {
+  const cents = Math.round((Number(inv.total) || 0) * 100) - Math.round(thInvoicePaidAmount(inv) * 100);
+  return cents > 0 ? cents / 100 : 0;
+}
+function thInvoiceDueDate(inv) {
+  const base = new Date((inv.date || '') + 'T00:00:00');
+  if (isNaN(base.getTime())) return null;
+  const days = TH_TERM_DAYS[inv.terms] !== undefined ? TH_TERM_DAYS[inv.terms] : 15;
+  return new Date(base.getTime() + days * 24 * 60 * 60 * 1000);
+}
+function thInvoiceIsOverdue(inv, now) {
+  if (thInvoiceBalance(inv) <= 0) return false;
+  const due = thInvoiceDueDate(inv);
+  if (!due) return false;
+  const today = new Date((now || new Date()).toDateString());
+  return due < today;
+}
+
+function thLocalDateStr(d) {
+  return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+}
+
+function thGetClientDirectory(now) {
+  const clients = thLoadClients();
+  const todayStr = thLocalDateStr(now || new Date());
+  const byId = {};
+  const byName = {};
+  const rows = clients.map(c => {
+    const row = {
+      id: c.id, name: c.name || '', phone: c.phone || '', email: c.email || '', address: c.address || '',
+      jobCount: 0, openJobCount: 0, lastJobDate: null, nextJobDate: null,
+      owed: 0, overdueOwed: 0, unpaidCount: 0, revenue: 0,
+      lastActivity: (c.createdAt || '').slice(0, 10) || null,
+    };
+    byId[c.id] = row;
+    const key = thNormalizeClientName(c.name);
+    if (key && !byName[key]) byName[key] = row;
+    return row;
+  });
+  function rowFor(clientId, name) {
+    return (clientId && byId[clientId]) || byName[thNormalizeClientName(name)] || null;
+  }
+  function touch(row, date) {
+    if (date && (!row.lastActivity || date > row.lastActivity)) row.lastActivity = date;
+  }
+
+  thRead(TH_KEYS.jobs, []).forEach(j => {
+    const row = rowFor(j.clientId, j.client);
+    if (!row) return;
+    row.jobCount++;
+    if (j.status !== 'done') row.openJobCount++;
+    if (j.date) {
+      if (j.date <= todayStr && (!row.lastJobDate || j.date > row.lastJobDate)) row.lastJobDate = j.date;
+      if (j.date >= todayStr && j.status !== 'done' && (!row.nextJobDate || j.date < row.nextJobDate)) row.nextJobDate = j.date;
+    }
+    touch(row, j.date);
+  });
+  thRead(TH_KEYS.invoices, []).forEach(i => {
+    const row = rowFor(i.clientId, i.clientName);
+    if (!row) return;
+    row.revenue += Number(i.total) || 0;
+    const bal = thInvoiceBalance(i);
+    if (bal > 0) {
+      row.owed += bal;
+      row.unpaidCount++;
+      if (thInvoiceIsOverdue(i, now)) row.overdueOwed += bal;
+    }
+    touch(row, i.date);
+  });
+  thRead(TH_KEYS.quotes, []).forEach(q => {
+    const row = rowFor(q.clientId, q.clientName);
+    if (row) touch(row, q.date);
+  });
+  rows.forEach(r => {
+    r.owed = Math.round(r.owed * 100) / 100;
+    r.overdueOwed = Math.round(r.overdueOwed * 100) / 100;
+  });
+  return rows;
 }
 
 // Runs the backfill once per device, recording that it ran so it doesn't

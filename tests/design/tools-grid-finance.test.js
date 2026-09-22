@@ -53,12 +53,16 @@ test('the gated destinations keep their permission checks in the nav (the tile g
   for (const [href, fn] of [
     ['/tools/finance.html', 'canViewFinance'], ['/tools/runway-dashboard.html', 'canViewRunway'],
     ['/tools/invoice-generator.html', 'canManageInvoices'],
-    ['/tools/clients.html', 'canManageInvoices'], ['/tools/contract-generator.html', 'canManageContracts'],
+    ['/tools/contract-generator.html', 'canManageContracts'],
     ['/tools/review-request.html', 'canManageReviews'], ['/tools/dev-tools.html', 'hasDevToolsAccess'],
   ]) {
     const escaped = href.replace(/[./]/g, (m) => '\\' + m);
     assert.match(checks, new RegExp("'" + escaped + "'[^\\n]*" + fn), `${href} should be gated by ${fn}`);
   }
+  // clients.html left the map on 2026-09-22 (Workspace rework part 2): it
+  // opens on the client list now, which every account can see, and gates
+  // its own Portal tab on canManageInvoices instead.
+  assert.doesNotMatch(checks, /'\/tools\/clients\.html': function/);
 });
 
 test('the Business Snapshot section is still hidden for an account with no finance-domain permission at all', () => {

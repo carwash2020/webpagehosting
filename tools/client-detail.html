@@ -52,15 +52,15 @@
   })();
 </script>
 <link rel="stylesheet" href="/styles.css?v=2e81706c3d">
-<link rel="stylesheet" href="/tools/styles-tools.css?v=d1ff32759a">
+<link rel="stylesheet" href="/tools/styles-tools.css?v=effd2652c2">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.112.3/dist/umd/supabase.js" integrity="sha384-qafw21c/iciq0VXsi9FzkfoQv5I/V0iqE4lSNcKXPnW9/UTJLnv5CcN4FHxVLnKg" crossorigin="anonymous" defer></script>
 <script src="/tools/sync.js?v=6b9e092eca" defer></script>
-<script src="/tools/data-layer.js?v=c5d44f096e" defer></script>
+<script src="/tools/data-layer.js?v=5d2fdbfaf1" defer></script>
 <script src="/tools/tools-effects.js?v=a767167574" defer></script>
-<script src="/tools/tools-dialogs.js?v=83d27784e2" defer></script>
+<script src="/tools/tools-dialogs.js?v=d68ce809a1" defer></script>
 <script src="/tools/tools-media-sharing.js?v=0c229c9353" defer></script>
-<script src="/tools/tools-nav-pwa.js?v=199e768df3" defer></script>
-<script src="/tools/tools-command-palette.js?v=a172ee44c7" defer></script>
+<script src="/tools/tools-nav-pwa.js?v=4d9f8c89e1" defer></script>
+<script src="/tools/tools-command-palette.js?v=7bd204bef4" defer></script>
 <style>
   /* Cross-document view transitions (2026-09-21) -- same pattern
      already proven in portal/*.html: keeps the old page's visual
@@ -112,6 +112,26 @@
   .client-record-meta { color: var(--text-dim); font-size: 12px; margin-top: 2px; }
   .client-record-amount { color: var(--orange-light); font-weight: 600; flex-shrink: 0; }
 
+  /* Contact actions + next steps (2026-09-22, Workspace rework part 2):
+     the profile screen a phone contacts app would show -- Call / Text /
+     Email / Directions as labelled round buttons, then the three things
+     you start for a client (New job, Invoice, Quote) as real buttons. */
+  .client-hero-top { display: flex; align-items: center; gap: 14px; }
+  .client-hero-top .th-row-avatar { width: 54px; height: 54px; font-size: 18px; }
+  .client-owed-line { margin-top: 4px; font-size: 13.5px; color: var(--orange-light); font-weight: 600; }
+  .client-owed-line.is-danger { color: #e05252; }
+  .client-actions { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; margin-top: 16px; }
+  .client-action {
+    display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 10px 4px;
+    border-radius: 12px; background: var(--bg-panel-2); border: 1px solid var(--border);
+    color: var(--text); text-decoration: none; font-family: var(--font-ui); font-size: 12.5px; font-weight: 600;
+  }
+  .client-action .th-icon { width: 20px; height: 20px; margin-right: 0; color: var(--orange-light); }
+  .client-action.is-disabled { opacity: .4; pointer-events: none; }
+  .client-action:active { transform: scale(.97); }
+  .client-next { display: flex; gap: 8px; margin-top: 10px; flex-wrap: wrap; }
+  .client-next a { flex: 1; min-width: 100px; text-align: center; text-decoration: none; }
+  .client-record-row .th-pill { margin-left: 8px; }
   .referral-link-row { display: flex; align-items: center; gap: 8px; margin-top: 14px; }
   .referral-link-code { flex: 1; background: var(--bg-panel-2); border: 1px solid var(--border); border-radius: 8px; padding: 8px 10px; font-family: var(--font-mono, monospace); font-size: 12.5px; color: var(--orange-light); word-break: break-all; }
   .referral-link-hint { color: var(--text-dim); font-size: 12px; margin-top: 6px; }
@@ -133,6 +153,7 @@
       <span class="hub-title">Client</span>
     </div>
     <div class="hub-header-right">
+      <a href="/tools/clients.html" class="help-btn" aria-label="Back to Clients" title="Back to Clients" style="text-decoration:none; display:inline-flex; align-items:center; justify-content:center;">&#8617;</a>
       <a href="/tools/workspace.html" class="help-btn" aria-label="Back to Dashboard" title="Back to Dashboard" style="text-decoration:none; display:inline-flex; align-items:center; justify-content:center;">&#8617;</a>
     </div>
   </div>
@@ -143,7 +164,7 @@
 
 <div id="clientNotFound" style="display:none; text-align:center; padding:60px 20px;">
   <div style="color:var(--text-dim); font-size:14px; margin-bottom:16px;">Client not found. It may have been removed, or the link is out of date.</div>
-  <a href="/tools/workspace.html" class="secondary-btn" style="text-decoration:none;">Back to Dashboard</a>
+  <a href="/tools/clients.html" class="secondary-btn" style="text-decoration:none;">Back to Clients</a>
 </div>
 
 <script>
@@ -213,6 +234,17 @@
     renderClientDetail(bundle);
   }
 
+  function clientInitials(name) {
+    const parts = String(name || '').trim().split(/\s+/).filter(Boolean);
+    if (!parts.length) return '?';
+    return ((parts[0][0] || '') + (parts.length > 1 ? parts[parts.length - 1][0] : (parts[0][1] || ''))).toUpperCase();
+  }
+  function actionLink(href, icon, label, external) {
+    const cls = 'client-action' + (href ? '' : ' is-disabled');
+    return '<a class="' + cls + '"' + (href ? ' href="' + escapeAttr(href) + '"' : ' aria-disabled="true"') + (external ? ' target="_blank" rel="noopener"' : '') + '>' +
+      '<svg class="th-icon" aria-hidden="true"><use href="#icon-' + icon + '" xlink:href="#icon-' + icon + '"></use></svg>' + label + '</a>';
+  }
+
   function renderClientDetail(bundle) {
     const c = bundle.client;
     document.title = c.name + ' | Triple H Enterprises (Internal Tool)';
@@ -223,37 +255,78 @@
     if (c.address) metaLines.push(escapeHtml(c.address));
 
     const openJobs = bundle.jobs.filter(j => j.status !== 'done').length;
+    // What they owe right now, with the same rules as the Clients list
+    // and the Dashboard's Money Owed card (data-layer.js).
+    const balanceOf = (i) => (typeof thInvoiceBalance === 'function' ? thInvoiceBalance(i) : (i.paid ? 0 : (Number(i.total) || 0)));
+    const overdueOf = (i) => (typeof thInvoiceIsOverdue === 'function' && thInvoiceIsOverdue(i));
+    const owed = bundle.invoices.reduce((sum, i) => sum + balanceOf(i), 0);
+    const overdue = bundle.invoices.filter(overdueOf).reduce((sum, i) => sum + balanceOf(i), 0);
+    const tel = c.phone ? 'tel:' + String(c.phone).replace(/[^\d+]/g, '') : '';
+    const sms = c.phone ? 'sms:' + String(c.phone).replace(/[^\d+]/g, '') : '';
+    const maps = c.address ? 'https://www.google.com/maps/dir/?api=1&destination=' + encodeURIComponent(c.address) : '';
+    const nameParam = encodeURIComponent(c.name);
+    // Next job if one is booked, otherwise the last one -- the bundle's
+    // lastJobDate is simply the latest date on file, which reads wrong
+    // ("Last job" in the future) the moment a job is scheduled ahead.
+    const todayStr = typeof thLocalDateStr === 'function' ? thLocalDateStr(new Date()) : new Date().toISOString().slice(0, 10);
+    const fmt = (d) => { const x = new Date(d + 'T00:00:00'); return isNaN(x.getTime()) ? d : x.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: x.getFullYear() === new Date().getFullYear() ? undefined : 'numeric' }); };
+    const nextJob = bundle.jobs.filter(j => j.date && j.date >= todayStr && j.status !== 'done').map(j => j.date).sort()[0];
+    const lastJob = bundle.jobs.filter(j => j.date && j.date <= todayStr).map(j => j.date).sort().pop();
+    const jobDateStat = nextJob
+      ? '<div class="client-stat"><div class="client-stat-value">' + escapeHtml(nextJob === todayStr ? 'Today' : fmt(nextJob)) + '</div><div class="client-stat-label">Next Job</div></div>'
+      : '<div class="client-stat"><div class="client-stat-value">' + (lastJob ? escapeHtml(fmt(lastJob)) : '—') + '</div><div class="client-stat-label">Last Job</div></div>';
+    const canInvoice = typeof canManageInvoices !== 'function' || canManageInvoices() || !(typeof getCurrentUserRole === 'function' && getCurrentUserRole());
 
     let html = '<div class="client-hero">' +
-      '<div class="client-hero-name">' + escapeHtml(c.name) + '</div>' +
+      '<div class="client-hero-top">' +
+        '<span class="th-row-avatar' + (owed > 0 ? ' is-owed' : '') + '" aria-hidden="true">' + escapeHtml(clientInitials(c.name)) + '</span>' +
+        '<div style="min-width:0;">' +
+          '<div class="client-hero-name">' + escapeHtml(c.name) + '</div>' +
+          (owed > 0 ? '<div class="client-owed-line' + (overdue > 0 ? ' is-danger' : '') + '">Owes ' + money(owed) + (overdue > 0 ? ' &middot; ' + money(overdue) + ' overdue' : '') + '</div>' : '') +
+        '</div>' +
+      '</div>' +
       (metaLines.length ? '<div class="client-hero-meta">' + metaLines.join(' &middot; ') + '</div>' : '') +
+      '<div class="client-actions">' +
+        actionLink(tel, 'phone', 'Call') +
+        actionLink(sms, 'message', 'Text') +
+        actionLink(c.email ? 'mailto:' + c.email : '', 'inbox', 'Email') +
+        actionLink(maps, 'navigate', 'Directions', true) +
+      '</div>' +
+      '<div class="client-next">' +
+        '<a class="primary-btn" href="/tools/job-tracker.html?client=' + nameParam + '#add-job">New job</a>' +
+        (canInvoice ? '<a class="secondary-btn" href="/tools/invoice-generator.html?client=' + nameParam + '#invoice">Invoice</a>' +
+          '<a class="secondary-btn" href="/tools/invoice-generator.html?client=' + nameParam + '#quote">Quote</a>' : '') +
+      '</div>' +
       '<div class="client-stat-row">' +
         '<div class="client-stat"><div class="client-stat-value">' + money(bundle.revenue) + '</div><div class="client-stat-label">Lifetime Revenue</div></div>' +
         '<div class="client-stat"><div class="client-stat-value">' + bundle.jobs.length + '</div><div class="client-stat-label">Jobs' + (openJobs ? ' (' + openJobs + ' open)' : '') + '</div></div>' +
-        '<div class="client-stat"><div class="client-stat-value">' + (bundle.lastJobDate || '\u2014') + '</div><div class="client-stat-label">Last Job</div></div>' +
+        jobDateStat +
       '</div>' +
       '<div id="referralLinkBlock"></div>' +
     '</div>';
 
     html += renderRecordSection('Jobs', bundle.jobs.slice().sort((a, b) => (b.date || '').localeCompare(a.date || '')).map(j => ({
       title: j.title,
-      meta: (j.date || 'No date') + ' \u00b7 ' + (j.status || ''),
+      meta: (j.date || 'No date') + ' · ' + (j.status === 'done' ? 'Done' : j.status === 'in-progress' ? 'In progress' : 'Not started'),
       amount: '',
-      href: '/tools/job-tracker.html?search=' + encodeURIComponent(j.title) + '#jobs',
+      href: '/tools/job-detail.html?id=' + encodeURIComponent(j.id),
     })), 'No jobs on file for this client yet.');
 
-    html += renderRecordSection('Invoices', bundle.invoices.slice().sort((a, b) => (b.date || '').localeCompare(a.date || '')).map(i => ({
-      title: 'Invoice ' + (i.invoiceNumber || ''),
-      meta: (i.date || '') + (i.paid ? ' \u00b7 Paid' : ' \u00b7 Unpaid'),
-      amount: money(i.total || 0),
-      href: '/tools/invoice-generator.html?search=' + encodeURIComponent(c.name) + '#tab-recent',
-    })), 'No invoices sent to this client yet.');
+    html += renderRecordSection('Invoices', bundle.invoices.slice().sort((a, b) => (b.date || '').localeCompare(a.date || '')).map(i => {
+      const bal = balanceOf(i);
+      return {
+        title: 'Invoice ' + (i.invoiceNumber || ''),
+        meta: (i.date || '') + (bal <= 0 ? ' · Paid' : (overdueOf(i) ? ' · Overdue' : ' · Unpaid')),
+        amount: money(i.total || 0) + (bal > 0 && bal < (Number(i.total) || 0) ? ' <span class="th-pill">' + money(bal) + ' left</span>' : ''),
+        href: '/tools/invoice-generator.html?search=' + encodeURIComponent(c.name) + '#recent',
+      };
+    }), 'No invoices sent to this client yet.');
 
     html += renderRecordSection('Quotes', bundle.quotes.slice().sort((a, b) => (b.date || '').localeCompare(a.date || '')).map(q => ({
       title: 'Quote ' + (q.quoteNumber || ''),
       meta: q.date || '',
       amount: money(q.total || 0),
-      href: '/tools/invoice-generator.html?search=' + encodeURIComponent(c.name) + '#tab-recent',
+      href: '/tools/invoice-generator.html?search=' + encodeURIComponent(c.name) + '#recent',
     })), 'No quotes sent to this client yet.');
 
     html += renderRecordSection('Contracts', bundle.contracts.slice().sort((a, b) => (b.dateGeneratedISO || '').localeCompare(a.dateGeneratedISO || '')).map(k => ({

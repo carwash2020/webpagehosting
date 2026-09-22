@@ -1011,4 +1011,27 @@ Cross-logged from features.md (Workspace rework, part 1). Visual calls:
   the ( + ) all read from tokens, nothing hard-coded to dark except the
   #1a0d02 glyph colour on orange, same as the active nav icon.
 
+## 2026-09-22 (later still) -- the shared list row, first used by the Clients directory
+
+- One row component (`.th-row`, styles-tools.css): a 42px hex avatar
+  with initials (a solid orange hex when the client owes money, so "who
+  owes me" reads before any text does), a title over a one-line subtitle,
+  then a pill and at most one icon button. The icon button sits outside
+  the row's link on purpose; a tap on Call must never also open the
+  record.
+- Money pills: orange tint for "owed, not due yet", red tint and the
+  word "due" once overdue. Same two states the Dashboard's Money Owed
+  card uses, so the colour means the same thing everywhere.
+- "Job today" / "Job tomorrow" in the subtitle are orange and bold; later
+  dates stay dim. The one piece of the line that changes what you do
+  today gets the colour.
+- A-Z gets sticky letter headers; the offset is keyed to the sticky tab
+  bar's bottom (phone and desktop values differ).
+- Gotcha: a `<section>` on a tool page inherits the public site's
+  section padding from styles.css (about 90px of blank space). Use a div.
+- Desktop: the shared `body.th-tool-page` padding had been beating every
+  page's own 75px desktop rule, so a shared rule now restores it. Sticky
+  tabs on desktop use 73px (just under the 61px fixed header) instead of
+  the phone's notch offset.
+
 <!-- Add new entries above this line -->

@@ -48,13 +48,20 @@
   })();
 </script>
 <link rel="stylesheet" href="/styles.css?v=2e81706c3d">
-<link rel="stylesheet" href="/tools/styles-tools.css?v=d1ff32759a">
+<link rel="stylesheet" href="/tools/styles-tools.css?v=effd2652c2">
+<!-- data-layer.js (2026-09-22): the client registry and the directory
+     query (thGetClientDirectory) the Clients tab now lists from. Loaded
+     before the shared files below, same order as every other page. -->
+<script src="/tools/data-layer.js?v=5d2fdbfaf1" defer></script>
 <script src="/tools/tools-effects.js?v=a767167574" defer></script>
-<script src="/tools/tools-dialogs.js?v=83d27784e2" defer></script>
+<script src="/tools/tools-dialogs.js?v=d68ce809a1" defer></script>
 <script src="/tools/tools-media-sharing.js?v=0c229c9353" defer></script>
-<script src="/tools/tools-nav-pwa.js?v=199e768df3" defer></script>
-<script src="/tools/tools-command-palette.js?v=a172ee44c7" defer></script>
-<script src="/tools/tools-tour.js?v=72c77f88d1" defer></script>
+<script src="/tools/tools-nav-pwa.js?v=4d9f8c89e1" defer></script>
+<script src="/tools/tools-command-palette.js?v=7bd204bef4" defer></script>
+<script src="/tools/tools-tour.js?v=f6d11558d2" defer></script>
+<!-- supabase-js (2026-09-22): the client list follows live changes from other devices
+     (startRealtimeSync), which needs the realtime client this page never loaded before. -->
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.112.3/dist/umd/supabase.js" integrity="sha384-qafw21c/iciq0VXsi9FzkfoQv5I/V0iqE4lSNcKXPnW9/UTJLnv5CcN4FHxVLnKg" crossorigin="anonymous" defer></script>
 <script src="/tools/sync.js?v=6b9e092eca" defer></script>
 <!-- dev-tools-shared.js (2026-09-03) -- the "?" info-modal system
      (openDevInfo + DEV_INFO), the dev-password gate used by "Send
@@ -131,6 +138,18 @@
   }
   .dev-check-row:last-child { border-bottom: none; }
   .dev-check-detail { font-size: 12.5px; color: var(--text-dim); margin-top: 2px; }
+
+  /* Clients directory (2026-09-22, Workspace rework part 2). The row,
+     chip, and search-field components are shared (styles-tools.css,
+     "List rows"); this is only this page's layout around them. */
+  .cd-toolbar { display: flex; gap: 10px; align-items: center; margin: 4px 0 10px; }
+  .cd-add-btn { flex-shrink: 0; display: inline-flex; align-items: center; gap: 6px; }
+  .cd-add-btn .th-icon { width: 16px; height: 16px; margin-right: 0; stroke-width: 2.4; }
+  .cd-summary { color: var(--text-dim); font-size: 13px; margin: 8px 2px 10px; }
+  .cd-summary strong { color: var(--white); font-weight: 600; }
+  .cd-empty { text-align: center; color: var(--text-dim); font-size: 14px; padding: 36px 16px; border: 1px dashed var(--border); border-radius: 14px; }
+  .cd-empty .secondary-btn { margin-top: 12px; }
+  @media (min-width: 1024px) { #tab-directory { max-width: 860px; } }
 </style>
 </head>
 <body>
@@ -146,6 +165,35 @@
     <a href="/tools/workspace.html" class="help-btn" aria-label="Back to Workspace" title="Back to Workspace" style="text-decoration:none; display:inline-flex; align-items:center; justify-content:center;">&#8617;</a>
   </div>
 </div>
+<!-- Clients | Portal (2026-09-22, Workspace rework part 2). The bar's
+     Clients tab used to open straight into the portal admin console
+     below; it now opens on the client list, and the console is one tap
+     away under Portal (#portal). Portal is hidden for an account whose
+     role says it can't manage invoices -- the same permission that
+     gated this whole page in the nav before. -->
+<div class="tabs tabs-sticky" id="clientsTabs" role="tablist">
+  <button class="tab-btn is-active" data-tab="directory" role="tab" aria-selected="true" onclick="activateClientsTab('directory')">Clients</button>
+  <button class="tab-btn" data-tab="portal" role="tab" aria-selected="false" id="clientsPortalTabBtn" onclick="activateClientsTab('portal')">Portal</button>
+</div>
+
+<div class="tab-panel clients-tab-panel is-active" id="tab-directory" role="tabpanel" aria-label="Clients">
+  <div class="cd-toolbar">
+    <div class="th-search-field">
+      <svg class="th-icon" aria-hidden="true"><use href="#icon-search" xlink:href="#icon-search"></use></svg>
+      <input type="search" id="clientDirSearch" placeholder="Name, phone, email, or street" aria-label="Search clients" autocomplete="off" oninput="debouncedCall('clientDir', renderClientDirectory, 120)">
+    </div>
+    <button type="button" class="primary-btn cd-add-btn" onclick="openAddClient()" aria-label="Add a client"><svg class="th-icon" aria-hidden="true"><use href="#icon-plus" xlink:href="#icon-plus"></use></svg>Add</button>
+  </div>
+  <div class="th-chips" id="clientDirFilters" role="group" aria-label="Show">
+    <button type="button" class="th-chip is-active" data-filter="recent" onclick="setClientDirFilter('recent')">Recent</button>
+    <button type="button" class="th-chip" data-filter="owes" onclick="setClientDirFilter('owes')">Owes you <span class="th-chip-count" id="clientDirOwesCount"></span></button>
+    <button type="button" class="th-chip" data-filter="az" onclick="setClientDirFilter('az')">A&ndash;Z</button>
+  </div>
+  <div class="cd-summary" id="clientDirSummary"></div>
+  <div class="th-list" id="clientDirList"></div>
+</div>
+
+<div class="tab-panel clients-tab-panel" id="tab-portal" role="tabpanel" aria-label="Portal">
 <p class="tool-sub">Everything about the client portal in one place &mdash; who has access, what has been sent, what they have requested, and who gets notified about it.<span id="syncStatusText"></span></p>
 
   <div class="dev-panels-grid">
@@ -385,13 +433,15 @@
   </div>
 
   </div>
+</div>
 
 
 <div class="modal-overlay help-modal-overlay" id="helpModalOverlay">
   <div class="help-modal">
     <button class="modal-close" onclick="closeHelpModal()" aria-label="Close">&times;</button>
     <h3>Clients</h3>
-    <p>Everything about the client-facing portal, split out of Dev Tools onto its own page (2026-09-03) since it had become a daily operational tool, not a diagnostics screen.</p>
+    <p><strong>Clients tab</strong> &mdash; everyone you have worked for. Nobody has to be entered twice: a name typed on a job, invoice, quote, contact, or contract lands here on its own, and <strong>Add</strong> covers anyone new. Search by name, phone, email, or street. Each row shows what they owe (red once it is overdue) and their next or last job; the phone button calls them. Tap a client for their whole history, with Call, Text, Email, Directions, and one-tap <strong>New job</strong>, <strong>Invoice</strong>, or <strong>Quote</strong> already filled in with their details. Long-press a row for the same actions without opening it. <strong>Owes you</strong> lists only the people with a balance, biggest overdue first; <strong>A&ndash;Z</strong> is the phone-book view.</p>
+    <p><strong>Portal tab</strong> &mdash; the admin side of the client-facing portal, split out of Dev Tools onto its own page (2026-09-03) since it had become a daily operational tool, not a diagnostics screen:</p>
     <p><strong>Portal accounts</strong> -- who has portal access, and a way to send or resend an invite to any email, whether or not they already have an invoice on file.</p>
     <p><strong>Portal invoices</strong> -- every invoice actually sent to a client, with its real paid status and a way to resend the notification email.</p>
     <p><strong>Portal work orders</strong> -- every "Request Work" submission, with photos, urgency, and status. Closed requests hide by default; Export CSV downloads everything for your records.</p>
@@ -1786,6 +1836,224 @@
     }
     setTimeout(() => { btnEl.disabled = false; btnEl.textContent = original; }, 2500);
   }
+  // ---------- Clients directory + Clients | Portal tabs (2026-09-22) ----------
+  // The Clients tab is a client list now: every client in the shared
+  // registry (data-layer.js), each row showing what they owe and their
+  // next or last job, with Call one tap away. The registry backfill is
+  // re-run on every load -- it only ever ADDS clients found in jobs,
+  // invoices, quotes, contacts, or contracts that have no record yet and
+  // never recreates a deleted one (tombstones), so a name typed on any
+  // form shows up here without a separate "add client" step.
+  const CLIENTS_TAB_KEY = 'th_clients_tab';
+  const CLIENT_DIR_FILTER_KEY = 'th_clients_filter';
+  let clientDirFilter = 'recent';
+  try { const f = localStorage.getItem(CLIENT_DIR_FILTER_KEY); if (f === 'recent' || f === 'owes' || f === 'az') clientDirFilter = f; } catch (e) { /* storage blocked */ }
+  let portalPanelsRendered = false;
+  let portalTabAllowed = true; // until the role says otherwise -- RLS is the real gate either way
+
+  function activateClientsTab(tab) {
+    if (tab !== 'portal' || !portalTabAllowed) tab = 'directory';
+    document.querySelectorAll('#clientsTabs .tab-btn').forEach(b => {
+      const on = b.dataset.tab === tab;
+      b.classList.toggle('is-active', on);
+      b.setAttribute('aria-selected', on ? 'true' : 'false');
+    });
+    document.querySelectorAll('.clients-tab-panel').forEach(p => p.classList.toggle('is-active', p.id === 'tab-' + tab));
+    if (tab === 'portal') renderPortalPanels();
+    try { localStorage.setItem(CLIENTS_TAB_KEY, tab); } catch (e) { /* storage blocked */ }
+  }
+
+  function applyPortalPermission(roleInfo) {
+    // Only a definite "no" hides the tab: a role that failed to load
+    // (offline, a dropped request) leaves it where it was.
+    if (!roleInfo || roleInfo.canManageInvoices) return;
+    portalTabAllowed = false;
+    const btn = document.getElementById('clientsPortalTabBtn');
+    if (btn) btn.hidden = true;
+    if (document.getElementById('tab-portal').classList.contains('is-active')) activateClientsTab('directory');
+  }
+
+  function clientInitials(name) {
+    const parts = String(name || '').trim().split(/\s+/).filter(Boolean);
+    if (!parts.length) return '?';
+    const first = parts[0][0] || '';
+    const last = parts.length > 1 ? parts[parts.length - 1][0] : (parts[0][1] || '');
+    return (first + last).toUpperCase();
+  }
+  function shortDate(dateStr) {
+    const d = new Date(dateStr + 'T00:00:00');
+    if (isNaN(d.getTime())) return dateStr;
+    const opts = { month: 'short', day: 'numeric' };
+    if (d.getFullYear() !== new Date().getFullYear()) opts.year = 'numeric';
+    return d.toLocaleDateString('en-US', opts);
+  }
+  function localDateStr(offsetDays) {
+    const d = new Date(); d.setDate(d.getDate() + (offsetDays || 0));
+    return thLocalDateStr(d);
+  }
+  function clientJobLine(r) {
+    const today = localDateStr(0), tomorrow = localDateStr(1);
+    if (r.nextJobDate === today) return '<span class="is-soon">Job today</span>';
+    if (r.nextJobDate === tomorrow) return '<span class="is-soon">Job tomorrow</span>';
+    if (r.nextJobDate) return 'Next job ' + escapeHtml(shortDate(r.nextJobDate));
+    if (r.lastJobDate) return 'Last job ' + escapeHtml(shortDate(r.lastJobDate));
+    return r.jobCount ? escapeHtml(r.jobCount + ' job' + (r.jobCount === 1 ? '' : 's')) : 'No jobs yet';
+  }
+  function clientContactLine(r) {
+    if (r.phone) return escapeHtml(r.phone);
+    if (r.email) return escapeHtml(r.email);
+    if (r.address) return escapeHtml(r.address.split(',')[0]);
+    return '';
+  }
+  function telHref(phone) { return 'tel:' + String(phone || '').replace(/[^\d+]/g, ''); }
+
+  function clientRowHtml(r) {
+    const owedPill = r.overdueOwed > 0
+      ? '<span class="th-pill is-danger" title="Overdue">' + money(r.owed) + ' due</span>'
+      : (r.owed > 0 ? '<span class="th-pill" title="Unpaid, not yet due">' + money(r.owed) + '</span>' : '');
+    const contact = clientContactLine(r);
+    return '<div class="th-row" data-client-id="' + escapeAttr(r.id) + '">' +
+      '<a class="th-row-link" data-long-press-target href="/tools/client-detail.html?id=' + encodeURIComponent(r.id) + '">' +
+        '<span class="th-row-avatar' + (r.owed > 0 ? ' is-owed' : '') + '" aria-hidden="true">' + escapeHtml(clientInitials(r.name)) + '</span>' +
+        '<span class="th-row-main">' +
+          '<span class="th-row-title">' + escapeHtml(r.name) + '</span>' +
+          '<span class="th-row-sub">' + clientJobLine(r) + (contact ? ' &middot; ' + contact : '') + '</span>' +
+        '</span>' +
+        owedPill +
+      '</a>' +
+      (r.phone ? '<a class="th-icon-btn" href="' + escapeAttr(telHref(r.phone)) + '" aria-label="Call ' + escapeAttr(r.name) + '"><svg class="th-icon" aria-hidden="true"><use href="#icon-phone" xlink:href="#icon-phone"></use></svg></a>' : '') +
+    '</div>';
+  }
+
+  function clientMatches(r, term, digits) {
+    if (!term) return true;
+    if ((r.name + ' ' + r.email + ' ' + r.address).toLowerCase().includes(term)) return true;
+    return digits.length >= 3 && r.phone.replace(/\D/g, '').includes(digits);
+  }
+
+  function setClientDirFilter(filter) {
+    clientDirFilter = filter;
+    try { localStorage.setItem(CLIENT_DIR_FILTER_KEY, filter); } catch (e) { /* storage blocked */ }
+    renderClientDirectory();
+  }
+
+  let clientDirRows = [];
+  function renderClientDirectory() {
+    const list = document.getElementById('clientDirList');
+    if (!list || typeof thGetClientDirectory !== 'function') return;
+    const all = thGetClientDirectory();
+    clientDirRows = all;
+    const rawTerm = (document.getElementById('clientDirSearch').value || '').trim();
+    const term = rawTerm.toLowerCase();
+    const digits = term.replace(/\D/g, '');
+    const owing = all.filter(r => r.owed > 0);
+    const totalOwed = owing.reduce((sum, r) => sum + r.owed, 0);
+
+    document.querySelectorAll('#clientDirFilters .th-chip').forEach(c => c.classList.toggle('is-active', c.dataset.filter === clientDirFilter));
+    document.getElementById('clientDirOwesCount').textContent = owing.length ? String(owing.length) : '';
+
+    let rows = all.filter(r => clientMatches(r, term, digits));
+    const byName = (a, b) => a.name.localeCompare(b.name, undefined, { sensitivity: 'base' });
+    if (clientDirFilter === 'owes') {
+      rows = rows.filter(r => r.owed > 0).sort((a, b) => ((b.overdueOwed > 0) - (a.overdueOwed > 0)) || (b.owed - a.owed));
+    } else if (clientDirFilter === 'az') {
+      rows.sort(byName);
+    } else {
+      rows.sort((a, b) => (b.lastActivity || '').localeCompare(a.lastActivity || '') || byName(a, b));
+    }
+
+    document.getElementById('clientDirSummary').innerHTML = all.length
+      ? '<strong>' + all.length + '</strong> client' + (all.length === 1 ? '' : 's') +
+        (owing.length ? ' &middot; <strong>' + owing.length + '</strong> owe' + (owing.length === 1 ? 's' : '') + ' you <strong>' + money(totalOwed) + '</strong>' : '')
+      : '';
+
+    if (!all.length) {
+      list.innerHTML = '<div class="cd-empty">No clients yet. They appear here on their own as you add jobs, invoices, and quotes &mdash; or add one now.' +
+        '<br><button type="button" class="secondary-btn" onclick="openAddClient()">Add a client</button></div>';
+      return;
+    }
+    if (!rows.length) {
+      list.innerHTML = '<div class="cd-empty">' + (clientDirFilter === 'owes' && !term
+        ? 'Nobody owes you anything right now.'
+        : 'No client matches &ldquo;' + escapeHtml(rawTerm) + '&rdquo;.' +
+          '<br><button type="button" class="secondary-btn" onclick="openAddClient(document.getElementById(\'clientDirSearch\').value)">Add &ldquo;' + escapeHtml(rawTerm) + '&rdquo;</button>') + '</div>';
+      return;
+    }
+    let html = '';
+    let letter = '';
+    rows.forEach(r => {
+      if (clientDirFilter === 'az' && !term) {
+        const l = (r.name[0] || '#').toUpperCase();
+        if (l !== letter) { letter = l; html += '<div class="th-list-letter" aria-hidden="true">' + escapeHtml(l) + '</div>'; }
+      }
+      html += clientRowHtml(r);
+    });
+    list.innerHTML = html;
+  }
+
+  // Long-press a row for everything you'd do next with that client --
+  // the same quick-action sheet Job Tracker's cards use.
+  function clientQuickActions(id) {
+    const r = clientDirRows.find(x => x.id === id);
+    if (!r || typeof showQuickActionSheet !== 'function') return;
+    const actions = [{ label: 'Open', onClick: () => { location.href = '/tools/client-detail.html?id=' + encodeURIComponent(r.id); } }];
+    if (r.phone) {
+      actions.push({ label: 'Call', onClick: () => { location.href = telHref(r.phone); } });
+      actions.push({ label: 'Text', onClick: () => { location.href = 'sms:' + String(r.phone).replace(/[^\d+]/g, ''); } });
+    }
+    if (r.email) actions.push({ label: 'Email', onClick: () => { location.href = 'mailto:' + r.email; } });
+    if (r.address) actions.push({ label: 'Directions', onClick: () => { window.open('https://www.google.com/maps/dir/?api=1&destination=' + encodeURIComponent(r.address), '_blank', 'noopener'); } });
+    // showQuickActionSheet() renders labels as HTML -- escape the name.
+    actions.push({ label: 'New job for ' + escapeHtml(r.name), onClick: () => { location.href = '/tools/job-tracker.html?client=' + encodeURIComponent(r.name) + '#add-job'; } });
+    if (typeof canManageInvoices !== 'function' || canManageInvoices() || !getCurrentUserRole()) {
+      actions.push({ label: 'Invoice ' + escapeHtml(r.name), onClick: () => { location.href = '/tools/invoice-generator.html?client=' + encodeURIComponent(r.name) + '#invoice'; } });
+    }
+    showQuickActionSheet(escapeHtml(r.name), actions);
+  }
+  function initClientDirLongPress() {
+    const list = document.getElementById('clientDirList');
+    if (!list || list.dataset.longPressWired || typeof attachLongPress !== 'function') return;
+    list.dataset.longPressWired = '1';
+    attachLongPress(list, '.th-row', (row) => clientQuickActions(row.dataset.clientId));
+  }
+
+  // Add a client: name plus whatever else is known. thEnsureClient() is
+  // the same call every save path uses, so a name that already exists
+  // opens that client (and fills any blank details) instead of making a
+  // second record for the same person.
+  async function openAddClient(prefillName) {
+    if (typeof showPromptForm !== 'function' || typeof thEnsureClient !== 'function') return;
+    const values = await showPromptForm('Add a client', [
+      { id: 'name', label: 'Name', placeholder: 'Sarah Miller', defaultValue: prefillName || '' },
+      { id: 'phone', label: 'Phone', type: 'tel', placeholder: '435-555-0101' },
+      { id: 'email', label: 'Email', type: 'email', placeholder: 'client@example.com' },
+      { id: 'address', label: 'Address', placeholder: '123 Main St, St. George, UT' },
+    ], {
+      confirmText: 'Add client',
+      validate: (v) => (v.name ? null : 'A name is required.'),
+    });
+    if (!values) return;
+    const existed = typeof thFindClientByName === 'function' && thFindClientByName(values.name);
+    const record = thEnsureClient(values.name, { phone: values.phone, email: values.email, address: values.address });
+    if (!record) return;
+    if (typeof haptic === 'function') haptic('success');
+    if (typeof showToast === 'function') showToast(existed ? values.name + ' was already a client -- opening them.' : 'Client added.');
+    location.href = '/tools/client-detail.html?id=' + encodeURIComponent(record.id);
+  }
+
+  function clientsTabFromLocation() {
+    const h = (location.hash || '').replace('#', '');
+    if (h === 'portal') return 'portal';
+    if (h === 'new' || h === 'directory') return 'directory';
+    // The Client Registry's "View in Clients" link (dev-tools.html) is a
+    // portal-account lookup by email: ?search= without a hash still means
+    // the Portal tab, as it did before this page had tabs.
+    if (new URLSearchParams(location.search).get('search')) return 'portal';
+    let remembered = null;
+    try { remembered = localStorage.getItem(CLIENTS_TAB_KEY); } catch (e) { /* storage blocked */ }
+    return remembered === 'portal' ? 'portal' : 'directory';
+  }
+
   document.addEventListener('DOMContentLoaded', function () {
     try {
       // Pre-fills the accounts search from a real link elsewhere
@@ -1797,20 +2065,40 @@
       const params = new URLSearchParams(window.location.search);
       const searchParam = params.get('search');
       if (searchParam) document.getElementById('portalAccountSearch').value = searchParam;
-      renderPortalBugReports();
-      renderPortalClientErrors();
-      renderReferralCredits();
-      renderPortalAccounts();
-      renderPortalInvoices();
-      renderPortalQuotes();
-      renderPortalWorkOrders();
-      renderEmailList();
-      renderPortalJobsForMessages();
+      // The Portal panels render the first time the Portal tab opens
+      // (renderPortalPanels, below) -- the Clients tab is the daily view
+      // now, and it shouldn't fire nine portal-admin requests just to
+      // show a client list.
+      activateClientsTab(clientsTabFromLocation());
+      if (typeof thBackfillClients === 'function') thBackfillClients();
+      renderClientDirectory();
+      initClientDirLongPress();
+      window.addEventListener('hashchange', () => {
+        activateClientsTab(clientsTabFromLocation());
+        if (location.hash === '#new') openAddClient();
+      });
+      if (location.hash === '#new') openAddClient();
+      window.addEventListener('th-role-loaded', (e) => applyPortalPermission(e.detail));
+      // Pull the latest from the cloud (and learn the account's role),
+      // then re-list: a client added on another device shows up here.
+      if (typeof initSyncOnLoad === 'function') {
+        initSyncOnLoad().then(() => {
+          if (typeof thBackfillClients === 'function') thBackfillClients();
+          renderClientDirectory();
+        }).catch(() => { /* the list already rendered from this device's data */ });
+      }
+      if (typeof setupPullToRefresh === 'function') {
+        setupPullToRefresh(async () => {
+          if (typeof pullSync === 'function') { try { await pullSync(); } catch (e) { /* offline */ } }
+          renderClientDirectory();
+        });
+      }
+      if (typeof startRealtimeSync === 'function') startRealtimeSync(() => renderClientDirectory(), () => {});
       initAppTour();
     } catch (initError) {
       console.error('Clients tool failed to initialize:', initError);
       if (typeof showInitErrorBanner === 'function') {
-        showInitErrorBanner(initError);
+        showInitErrorBanner('Clients', initError);
       } else {
         var __b = document.createElement('div');
         __b.style.cssText = 'background:#3a1414;border:1px solid #e05252;border-radius:8px;padding:14px 16px;margin:16px 0;color:#ffb3b3;font-size:13.5px;font-family:monospace;white-space:pre-wrap;word-break:break-word;';
@@ -1819,6 +2107,20 @@
       }
     }
   });
+
+  function renderPortalPanels() {
+    if (portalPanelsRendered) return;
+    portalPanelsRendered = true;
+    renderPortalBugReports();
+    renderPortalClientErrors();
+    renderReferralCredits();
+    renderPortalAccounts();
+    renderPortalInvoices();
+    renderPortalQuotes();
+    renderPortalWorkOrders();
+    renderEmailList();
+    renderPortalJobsForMessages();
+  }
 </script>
 
 </body>

@@ -51,7 +51,12 @@ sit silently broken for several pushes before it was found).
    unification ever actually happens, so the tombstone logic gets
    merged correctly rather than duplicated or dropped.)
 4. **Shared UI components** (list-row, form-section, table) -- every
-   page still implements its own version of these.
+   page still implements its own version of these. Started 2026-09-22:
+   `styles-tools.css` has a shared list row (`.th-row` with
+   `.th-row-avatar` / `.th-row-title` / `.th-row-sub`, trailing `.th-pill`
+   and `.th-icon-btn`) plus `.th-chips` and `.th-search-field`, first
+   used by the Clients directory. New lists should use it rather than a
+   page-local card.
 5. **Splitting Dev Tools further** (Diagnostics/Access/Data/Deploy
    into separate pages) was considered and declined -- no clean,
    evidence-backed boundary the way Site Content had when *it* was
