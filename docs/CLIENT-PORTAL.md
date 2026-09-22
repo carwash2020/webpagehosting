@@ -58,7 +58,8 @@ auth token parsing that isn't worth reimplementing.
 
 **`client_portal_invoices`** -- separate table from `workspace_sync`,
 not a view onto it. RLS: `(select auth.email()) = client_email`,
-SELECT only. No insert/update/delete for the `authenticated` role at
+SELECT only (plus internal accounts, since 2026-09-22 -- see
+`client_portal_jobs` below). No insert/update/delete for the `authenticated` role at
 all; writes happen only through edge functions using the service role
 key. Unique constraint on `source_invoice_id` so syncing the same
 invoice twice updates rather than duplicates. Has a `line_items`
@@ -112,7 +113,14 @@ because `client_portal_quotes` is a real table.
 `client_portal_invoices`' simpler shape: no internal SELECT policy
 needed here, unlike `client_portal_quotes` -- Steve already sees jobs
 directly in `tools/job-tracker.html`, there's no separate client-driven
-state change to observe via the portal. Only synced when a job is
+state change to observe via the portal. **Superseded 2026-09-22:**
+`tools/clients.html` later started reading both `client_portal_jobs`
+(the "Portal job messages" panel -- Steve couldn't see a job to reply
+on) and `client_portal_invoices` (Portal accounts counts, Portal
+invoices panel, client search/summary) with the staff login, and all
+of them silently came back empty. Both tables now have one merged
+"clients or internal accounts" SELECT policy, same as quotes/contracts
+(`sql/portal/let_internal_accounts_read_portal_jobs_and_invoices.sql`). Only synced when a job is
 marked `done` (the same moment the 30-day warranty clock starts) AND
 a client email is on file. Deliberately does NOT store the internal
 `jobNotes` field -- that's for internal use only, never something to
@@ -200,6 +208,38 @@ before sending; a client's own message to the internal team is the
 one exception, since that always needs to notify someone regardless
 of the client's own preference.
 
+**`get_my_portal_visits()`** (added 2026-09-22) -- a SECURITY DEFINER
+read of the caller's own `th_bookings` rows (matched case-insensitively
+on the session email), returning only client-safe columns plus the
+booking's `cancel_token` as `manage_token` while it's still confirmed.
+`th_bookings` is internal-only under RLS, so until this a client lost
+sight of every visit they booked -- quote-scheduled, check-up-scheduled
+or from `booking.html`. Note `client_portal_quotes.scheduled_at` is the
+moment scheduling HAPPENED, never the appointment time -- read the
+booking for that. Read by Home (next-appointment hero + "Also coming
+up"), Quotes (the booked/cancelled visit on an approved quote) and Jobs
+(a check-up already booked) through `portalFetchMyVisits()` in
+`portal/portal-app.js`. The advisor lists it under lint 0029
+(signed-in users can execute a SECURITY DEFINER function) -- expected,
+same class as `get_booking_by_cancel_token()`. Source:
+`sql/portal/add_get_my_portal_visits.sql`.
+
+**`client_portal_thread_reads`** (added 2026-09-22) -- one row per
+(client_email, thread_type `work_order`|`job`, thread_id) holding a
+`last_read_at` watermark; every Triple H (`internal`) message after it
+is unread. Clients can insert/advance only their own rows (the parent
+thread must be theirs, the watermark never in the future; column-level
+UPDATE on `last_read_at` only), no delete. Two SECURITY INVOKER RPCs:
+`get_portal_unread_counts()` (per-thread counts for the caller -- its
+explicit `client_email = auth.email()` join filters are required,
+because the message tables let staff read every thread) and
+`mark_portal_thread_read(type, id, seen_through)` (upsert, capped at
+server `now()`, never moves backwards). The portal passes the RAW
+`created_at` of the newest rendered message as `seen_through` -- never
+re-parsed through `new Date()`, which truncates microseconds and would
+leave that message unread forever. Source:
+`sql/portal/create_client_portal_thread_reads.sql`.
+
 ## Edge functions
 
 All deployed and ACTIVE. Source backed up in `edge-functions/`.
@@ -215,7 +255,7 @@ All deployed and ACTIVE. Source backed up in `edge-functions/`.
 | `sync-quote-to-portal` | true | Writes to `client_portal_quotes`; same new-client-vs-new-item branching as `sync-invoice-to-portal`, triggering `send-invite` or `send-quote-notification` |
 | `send-quote-notification` | true | "You have a new quote to review" email to an existing client |
 | `respond-to-quote` | true | Client-only (no `account_roles` check, unlike the internal functions above) -- verifies the quote belongs to the caller's own email and is still `pending`, then sets `approved`/`declined` |
-| `schedule-quote-job` | true | Client-only -- verifies the quote is `approved`, belongs to the caller, and isn't already scheduled; inserts into `th_bookings` (service role) with `quote_id` set, then marks `client_portal_quotes.scheduled_at` |
+| `schedule-quote-job` | true | Client-only -- verifies the quote is `approved`, belongs to the caller, and isn't already scheduled; inserts into `th_bookings` (service role) with `quote_id` set, then marks `client_portal_quotes.scheduled_at`. Since 2026-09-22 (v11) a quote whose every booking was cancelled can be scheduled again (never while a confirmed one exists), and the `scheduled_at` write is an optimistic check against the exact value read, undoing the new booking by id on a lost race. v10 live had predated the repo's race guard -- deployed together |
 | `sync-job-to-portal` | true | Writes to `client_portal_jobs` when a job is marked `done` with a client email on file; no email-notification branch (unlike invoices/quotes) since a completed job isn't worth a dedicated notification -- `send-invite` still fires for a genuinely new client |
 | `sync-checkup-to-portal` | true | Writes to `client_portal_checkups` for a client-linked Recurring Job Template, only if that client already has some portal presence; also handles deletion (`{ source_template_id, delete: true }`) when a template is removed internally |
 | `get-job-photo-urls` | true | Client-only -- verifies the job belongs to the caller, then signs each `photo_storage_paths` entry fresh (service role bypasses the job-photos bucket's own looser RLS, safe only because ownership was already checked) |

@@ -1946,6 +1946,83 @@ pages that own the writes: invoice form, Finance income, the Recent list.
 - An `async function` pulled out by source extraction needs its `async`
   put back before it goes into a vm.
 
+## 2026-09-22 (later still) -- Client portal: your visits, unread messages, and a Home that knows who you are
+
+Three rounds on `portal/*` only (a sibling session owned `tools/`),
+driven by a direct audit of the pages and the live schema rather than
+the docs. Branch `claude/portal-visits-and-messages`.
+
+**Round 1 -- a client could not see a visit they booked themselves.**
+Every portal self-scheduling path (approved quote, check-up reminder)
+and `booking.html` writes a real `th_bookings` row, but `th_bookings` is
+internal-only under RLS. Worse, `client_portal_quotes.scheduled_at` is
+`new Date()` at scheduling time, not the appointment -- so "Job
+scheduled. We'll see you then!" was literally all the portal knew.
+- `get_my_portal_visits()`: SECURITY DEFINER, caller's email only
+  (case-insensitive -- `th_bookings.email` is hand-typed on
+  booking.html), fixed client-safe column list, `cancel_token` returned
+  as `manage_token` only while confirmed. **Why definer, not a client
+  SELECT policy:** RLS is row-level; a policy would expose notes/utm/
+  referral columns. The token grants nothing new -- the same token is
+  already emailed to that address. Advisor lint 0029 lists it; expected.
+- Home hero now merges work-request visits and booked visits, with a
+  date tile, Add to calendar (`.ics`, RFC 5545 escaping + folding, a
+  2-hour alarm) and Reschedule/cancel via the existing
+  `manage-booking.html`. Quote cards show the real visit; check-up
+  banners show a booked visit instead of re-offering one.
+- `schedule-quote-job` v11: rebooking allowed ONLY when every booking
+  for the quote is cancelled (fails closed if that lookup fails);
+  optimistic `scheduled_at=eq.<prior>` write; race-loss undo by the new
+  row's id. **Deploy drift found:** live v10 predated the repo's race
+  guard (it landed inside unrelated #295 and was never deployed) --
+  v11 ships both. Verified live source == repo byte-for-byte.
+
+**Round 2 -- no way to know Triple H replied.** Design came from a Plan
+agent pass, then verified live with simulated JWTs in rolled-back
+transactions (2 unread -> 1 after marking through reply 1 -> 0 capped at
+now(); another client's thread rejected by RLS; staff login counts 0).
+- One `client_portal_thread_reads` table (watermark per thread) rather
+  than `read_at` on message rows (would need a client UPDATE policy on
+  tables that deliberately have none, and RLS can't limit it to one
+  column) or localStorage (per-device). One table, not one per message
+  table: read rows are UI state, orphans are harmless.
+- Both RPCs are SECURITY INVOKER. The explicit `client_email =
+  auth.email()` joins in `get_portal_unread_counts()` are required: the
+  message tables let staff read every thread.
+- **Watermark gotcha:** pass the RAW `created_at` string of the newest
+  rendered message. `new Date(x).toISOString()` truncates microseconds
+  and leaves that message unread forever.
+- **Found in passing, fixed (SQL only, no tools/ edit):**
+  `client_portal_jobs`/`_invoices` had client-only SELECT policies, so
+  every `tools/clients.html` panel reading them with the staff login
+  (Portal job messages, Portal invoices, Portal accounts counts, client
+  search/summary) came back empty -- Steve could not see a job to reply
+  on. Merged "clients or internal accounts" policy on both.
+- One shared thread renderer in `portal-app.js` replaced two copies;
+  it also fixed `jobs.html` printing "Invalid Date" under every message
+  (`formatDate()` appended `T00:00:00` to a full timestamp).
+
+**Round 3 -- Home.** The greeting comment claimed to use the client's
+name; nothing ever set it. Now "Good evening, Jane" (profile name, then
+invoice/quote name, never guessed from an email). Recent Activity: last
+five real events across sections (90-day window) from rows Home already
+loads -- deliberately no new query or table. Request Work prefills
+phone (Settings) and address (last request, else latest estimate),
+fill-only, with a visible "where this came from" note.
+
+**Deliberately not done:** letting clients read their own
+`quote_questions` answers (still internal-only by design -- answered by
+phone/text), and a realtime thread subscription (badges refresh on
+load/pull-to-refresh; the email notification is unchanged).
+
+**Noticed, outside this lane (security):** the advisor lists four
+internal MFA recovery-code functions (`generate_/verify_and_consume_/
+count_unused_/delete_internal_recovery_codes`) as executable by `anon`.
+They are internal-tools functions; not touched here. Checked read-only:
+all four scope every read/write by `auth.uid()`, which is null for anon,
+so they act on nobody -- a revoke-from-anon hygiene item for the
+security lane, not an exposure.
+
 ## 2026-09-22 (later still) -- Workspace rework, part 6: From this job
 
 **Why.** Part 5 routes every finished job to "Create invoice". That's

@@ -67,7 +67,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Anton&family=Archivo:wght@400..700&family=Newsreader:ital,opsz,wght@0,6..72,300..700;1,6..72,300..600&family=Oswald:wght@200..700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="/styles.css?v=2e81706c3d">
-<link rel="stylesheet" href="/portal/portal-app.css?v=202609171900">
+<link rel="stylesheet" href="/portal/portal-app.css?v=202609222300">
 <style>
   /* iOS Safari zoom-on-focus fix (2026-09-05), same root cause and
      fix already applied to invoice-generator.html: a tapped
@@ -106,7 +106,7 @@
 </style>
 <link rel="stylesheet" href="/tools/styles-tools.css?v=a494344e8c">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="/portal/portal-app.js?v=202609170800"></script>
+<script src="/portal/portal-app.js?v=202609222300"></script>
 <!-- Shared business-hours data (2026-09-03) -- see business-hours.js's
      own header comment. This page used to keep its own FIFTH
      independent hand-typed copy of these exact constants. -->
@@ -194,17 +194,10 @@
      shape as .wo-message-* on portal/work-orders.html, duplicated
      rather than shared (each portal page keeps its own small helpers,
      per this project's established convention). */
-  .job-messages-toggle {
-    background: none; border: none; color: var(--orange-light); font-size: 12.5px; font-weight: 600;
-    cursor: pointer; padding: 8px 0 0; text-decoration: underline;
-  }
+  /* Toggle look, bubbles and composer come from the shared
+     .portal-thread-* rules in portal-app.css (2026-09-22). */
   .job-messages-panel { margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--border); }
-  .job-message-bubble { max-width: 85%; margin-bottom: 8px; padding: 8px 11px; border-radius: 10px; font-size: 13px; line-height: 1.45; white-space: pre-wrap; }
-  .job-message-bubble.is-client { background: var(--orange-tint-soft); border: 1px solid var(--orange-tint-border); margin-left: auto; }
-  .job-message-bubble.is-internal { background: var(--bg-panel-2); border: 1px solid var(--border); }
   .job-message-meta { font-size: 10.5px; color: var(--text-dim); margin-top: 3px; }
-  .job-message-form { display: flex; gap: 8px; margin-top: 8px; }
-  .job-message-form textarea { flex: 1; min-height: 40px; max-height: 120px; resize: vertical; font-family: inherit; font-size: 16px; padding: 8px 10px; border-radius: 8px; border: 1px solid var(--border); background: var(--bg-panel); color: var(--white); }
   .empty-state { text-align: center; color: var(--text-dim); padding: 60px 20px; }
   /* Empty-state illustrations (2026-09-07): reuses this page's own nav
      icon (a checkmark, already meaning "Jobs" in the bottom nav) for
@@ -227,6 +220,29 @@
   .checkup-due-label { font-size: 12.5px; color: var(--orange-light); margin-top: 2px; }
   .checkup-banner.is-not-due .checkup-due-label { color: var(--text-dim); }
   .checkup-note { color: var(--text-dim); font-size: 12px; margin: -4px 0 14px; }
+  /* A check-up visit that's already booked (2026-09-22) -- blue, the
+     portal's "scheduled visit" accent (Home hero, quote cards), with
+     the same small month/day tile. */
+  .checkup-banner.is-booked {
+    background: rgba(58, 160, 255, .08); border-color: rgba(58, 160, 255, .28);
+    justify-content: flex-start; align-items: flex-start;
+  }
+  /* Its own classes, not .checkup-due-label -- portal-polish.css styles
+     that one as an uppercase status pill, which turned a full sentence
+     ("Booked for Thursday, October 1 at 10:00 AM") into a shouting
+     badge in the first visual check. */
+  .checkup-booked-kicker { font-size: 11.5px; font-weight: 700; letter-spacing: .5px; text-transform: uppercase; color: var(--blue-light); margin-top: 4px; }
+  .checkup-booked-when { color: var(--white); font-size: 14.5px; font-weight: 600; margin-top: 2px; line-height: 1.35; }
+  .checkup-booked-actions .small-btn { color: var(--white); }
+  .checkup-booked-actions .small-btn.is-cal { color: var(--blue-light); border-color: rgba(58, 160, 255, .4); }
+  .checkup-booked-date {
+    flex-shrink: 0; width: 46px; text-align: center; border-radius: 8px; overflow: hidden;
+    background: var(--bg-panel); border: 1px solid var(--border);
+  }
+  .checkup-booked-date .m { display: block; background: var(--blue-light); color: #0a0a0a; font-size: 10px; font-weight: 700; letter-spacing: .8px; padding: 2px 0; }
+  .checkup-booked-date .d { display: block; font-family: var(--font-ui); font-weight: 700; font-size: 19px; color: var(--white); padding: 2px 0 4px; }
+  .checkup-booked-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
+  .checkup-booked-actions .small-btn { text-decoration: none; display: inline-flex; align-items: center; }
   .schedule-toggle { display: block; margin-top: 8px; font-size: 12.5px; color: var(--orange-light); text-decoration: underline; cursor: pointer; background: none; border: none; font-family: inherit; padding: 0; }
   .schedule-panel { margin-top: 10px; display: none; }
   .schedule-panel.is-open { display: block; }
@@ -340,8 +356,51 @@
     return { isDue: false, label: 'Next due in ' + days + ' day' + (days === 1 ? '' : 's') };
   }
 
-  function renderCheckupBanner(c) {
+  // A visit already booked from this reminder (2026-09-22), from
+  // get_my_portal_visits(). th_bookings is internal-only under RLS, so
+  // before this the banner had no way to know a visit existed and went
+  // straight back to "Schedule this visit" on the next page load --
+  // inviting a second booking for the same check-up. The soonest
+  // upcoming confirmed one wins; a cancelled or past booking doesn't
+  // count, so the reminder can be scheduled again.
+  let checkupVisitsById = {};
+  function bookedVisitForCheckup(checkupId, visits) {
+    return portalUpcomingConfirmedVisits((visits || []).filter(v => v.checkup_id === checkupId))[0] || null;
+  }
+
+  function addCheckupVisitToCalendar(bookingId) {
+    const v = checkupVisitsById[bookingId];
+    if (!v) return;
+    portalDownloadVisitIcs({
+      uid: 'th-booking-' + v.id,
+      title: v.service_label,
+      start: v.start_at,
+      end: v.end_at,
+      address: v.address,
+      manageUrl: portalManageVisitUrl(v),
+    });
+  }
+
+  function renderCheckupBanner(c, booked) {
     const due = checkupDueInfo(c);
+    if (booked) {
+      const t = portalVisitDateParts(booked.start_at);
+      const manageUrl = portalManageVisitUrl(booked);
+      return `
+        <div class="checkup-banner is-booked">
+          <div class="checkup-booked-date" aria-hidden="true"><span class="m">${escapeHtml(t.month)}</span><span class="d">${escapeHtml(t.day)}</span></div>
+          <div style="min-width:0; flex:1;">
+            <div class="checkup-title">${escapeHtml(c.title)}</div>
+            <div class="checkup-booked-kicker">Visit booked</div>
+            <div class="checkup-booked-when">${escapeHtml(portalFormatVisitWhen(booked.start_at))}</div>
+            <div class="checkup-booked-actions">
+              <button type="button" class="small-btn is-cal" onclick="addCheckupVisitToCalendar(${Number(booked.id)})">Add to calendar</button>
+              ${manageUrl ? `<a class="small-btn" href="${escapeHtml(manageUrl)}">Reschedule or cancel</a>` : ''}
+            </div>
+          </div>
+        </div>
+      `;
+    }
     return `
       <div class="checkup-banner ${due.isDue ? '' : 'is-not-due'}">
         <div style="width:100%;">
@@ -364,17 +423,20 @@
   }
 
   async function renderCheckups() {
-    const { data: checkups, error } = await client
-      .from('client_portal_checkups')
-      .select('*');
+    const [{ data: checkups, error }, visitResult] = await Promise.all([
+      client.from('client_portal_checkups').select('*'),
+      portalFetchMyVisits(client),
+    ]);
     const listEl = document.getElementById('checkupList');
     if (error || !checkups || !checkups.length) {
       listEl.innerHTML = '';
       return;
     }
+    checkupVisitsById = {};
+    visitResult.visits.forEach(v => { checkupVisitsById[v.id] = v; });
     listEl.innerHTML =
       '<div class="checkup-note">Suggested based on your service history.</div>' +
-      checkups.map(renderCheckupBanner).join('');
+      checkups.map(c => renderCheckupBanner(c, bookedVisitForCheckup(c.id, visitResult.visits))).join('');
   }
 
   // ---------- scheduling from a check-up reminder ----------
@@ -504,8 +566,13 @@
         confirmBtn.textContent = 'Confirm this time';
         return;
       }
-      const panel = document.getElementById('checkupSchedulePanel-' + checkupId);
-      panel.innerHTML = '<div class="checkup-due-label" style="color:#4caf78;">Requested. We\'ll confirm shortly.</div>';
+      // Re-rendered from the server rather than a static "Requested"
+      // line (2026-09-22): the booking is real and confirmed the moment
+      // this succeeds (the same "You're booked!" email goes out), so the
+      // banner now shows the actual booked time with Add to calendar /
+      // Reschedule -- and keeps showing it on every later visit too.
+      showToast('Booked. A confirmation email is on its way.');
+      await renderCheckups();
     } catch (e) {
       errorEl.textContent = "Couldn't reach the server. Please check your connection and try again.";
       confirmBtn.disabled = false;
@@ -595,7 +662,7 @@
   function renderJobCard(j) {
     const hasPhotos = Array.isArray(j.photo_storage_paths) && j.photo_storage_paths.length > 0;
     return `
-      <div class="job-card">
+      <div class="job-card" id="job-card-${j.id}">
         <div class="job-card-top">
           <div>
             <div class="job-title">${escapeHtml(j.title)}</div>
@@ -605,7 +672,7 @@
         </div>
         ${j.linked_invoice_number ? `<a class="job-receipt-link" href="/portal/dashboard.html?invoice=${encodeURIComponent(j.linked_invoice_number)}">View Receipt</a>` : ''}
         ${hasPhotos ? `<div class="job-photos" id="jobPhotos-${j.id}"><p style="color:var(--text-dim); font-size:12px;">Loading photos...</p></div>` : ''}
-        <button type="button" class="job-messages-toggle" onclick="toggleJobMessages(${j.id}, this)">Messages</button>
+        <button type="button" class="job-messages-toggle portal-thread-toggle${jobUnreadCounts[j.id] ? ' has-unread' : ''}" onclick="toggleJobMessages(${j.id}, this)" aria-expanded="false" aria-controls="jobMessages-${j.id}">${JOB_THREAD_ICON}Messages${jobUnreadBadgeHtml(j.id)}</button>
         <div class="job-messages-panel" id="jobMessages-${j.id}" style="display:none;"></div>
       </div>
     `;
@@ -623,9 +690,38 @@
   async function toggleJobMessages(jobId, btnEl) {
     const panel = document.getElementById('jobMessages-' + jobId);
     if (!panel) return;
-    if (panel.style.display !== 'none') { panel.style.display = 'none'; return; }
+    if (panel.style.display !== 'none') {
+      panel.style.display = 'none';
+      if (btnEl) btnEl.setAttribute('aria-expanded', 'false');
+      return;
+    }
     panel.style.display = 'block';
+    if (btnEl) btnEl.setAttribute('aria-expanded', 'true');
     await loadAndRenderJobThread(jobId);
+  }
+
+  // Unread state (2026-09-22), filled by renderJobs() from
+  // get_portal_unread_counts() -- same pattern as work-orders.html.
+  let jobUnreadCounts = {};
+  let unreadRows = [];
+  const JOB_THREAD_ICON = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5h16v11H9l-5 4z"/></svg>';
+
+  function jobUnreadBadgeHtml(jobId) {
+    const n = jobUnreadCounts[jobId] || 0;
+    return n ? ' <span class="portal-unread-pill" id="jobUnread-' + jobId + '">' + n + ' new</span>' : '';
+  }
+
+  function clearJobUnread(jobId) {
+    if (!jobUnreadCounts[jobId]) return;
+    jobUnreadCounts[jobId] = 0;
+    unreadRows = unreadRows.filter(r => !(r.thread_type === 'job' && Number(r.thread_id) === Number(jobId)));
+    const pill = document.getElementById('jobUnread-' + jobId);
+    if (pill) {
+      const toggle = pill.closest('.portal-thread-toggle');
+      if (toggle) toggle.classList.remove('has-unread');
+      pill.remove();
+    }
+    portalApplyNavUnreadBadges(unreadRows);
   }
 
   async function loadAndRenderJobThread(jobId) {
@@ -644,17 +740,19 @@
       return;
     }
 
-    const thread = (messages || []).map(m =>
-      '<div class="job-message-bubble is-' + escapeHtml(m.sender_type) + '">' + escapeHtml(m.message) +
-      '<div class="job-message-meta">' + escapeHtml(m.sender_type === 'client' ? 'You' : 'Triple H') + ' &middot; ' + escapeHtml(formatDate(m.created_at)) + '</div>' +
-      '</div>'
-    ).join('');
+    // Shared renderer (portal-app.js). This page used to run every
+    // message timestamp through formatDate(), which appends 'T00:00:00'
+    // to a date-only string -- on a full timestamptz that produced
+    // "Invalid Date" under every single message.
+    panel.innerHTML =
+      portalMessageThreadHtml(messages, { unreadCount: jobUnreadCounts[jobId] || 0, emptyText: 'No messages yet. Questions about this job? Ask below.' }) +
+      portalComposerHtml('jobMessageInput-' + jobId, 'jobMessageSend-' + jobId, 'sendJobMessage(' + jobId + ')', 'Ask a question about this job...');
+    portalScrollThreadToEnd(panel);
 
-    panel.innerHTML = (thread || '<p class="job-message-meta">No messages yet.</p>') +
-      '<div class="job-message-form">' +
-      '<textarea id="jobMessageInput-' + jobId + '" placeholder="Ask a question about this job..."></textarea>' +
-      '<button type="button" class="secondary-btn" onclick="sendJobMessage(' + jobId + ')">Send</button>' +
-      '</div>';
+    if ((messages || []).some(m => m.sender_type === 'internal')) {
+      clearJobUnread(jobId);
+      await portalMarkThreadRead(client, 'job', jobId, messages[messages.length - 1].created_at);
+    }
   }
 
   async function sendJobMessage(jobId) {
@@ -665,6 +763,7 @@
     const { data: { session } } = await client.auth.getSession();
     if (!session) { window.location.replace('/portal/login.html'); return; }
 
+    const restore = portalSetComposerSending(input, document.getElementById('jobMessageSend-' + jobId));
     const { error } = await client.from('client_portal_job_messages').insert({
       job_id: jobId,
       sender_type: 'client',
@@ -673,6 +772,7 @@
     });
 
     if (error) {
+      restore();
       showToast("Couldn't send that just now. Please try again.", { type: 'error' });
       return;
     }
@@ -790,10 +890,17 @@
     const listEl = document.getElementById('jobList');
     listEl.innerHTML = portalSkeletonCards(4);
 
-    const { data: jobs, error } = await client
-      .from('client_portal_jobs')
-      .select('*')
-      .order('job_date', { ascending: false });
+    const [{ data: jobs, error }, unread] = await Promise.all([
+      client
+        .from('client_portal_jobs')
+        .select('*')
+        .order('job_date', { ascending: false }),
+      portalLoadUnreadCounts(client),
+    ]);
+    unreadRows = unread;
+    jobUnreadCounts = {};
+    unread.forEach(r => { if (r.thread_type === 'job') jobUnreadCounts[r.thread_id] = Number(r.unread_count) || 0; });
+    portalApplyNavUnreadBadges(unreadRows);
 
     if (error) {
       listEl.innerHTML = `<div class="empty-state is-error"><div class="empty-state-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8.5"/><path d="M12 7.5v6"/><circle cx="12" cy="16.75" r="0.6" fill="currentColor" stroke="none"/></svg></div><p class="empty-state-title">Couldn't load your job history right now. Please try again in a moment.</p></div>`;
@@ -809,6 +916,14 @@
     jobs.forEach(j => {
       if (Array.isArray(j.photo_storage_paths) && j.photo_storage_paths.length) loadJobPhotos(j.id);
     });
+    // Home's "New message" item deep-links to #job-card-N (2026-09-22)
+    // -- scroll there and open the thread with the unread reply.
+    portalScrollToHash();
+    const hashMatch = (location.hash || '').match(/^#job-card-(\d+)$/);
+    if (hashMatch && jobUnreadCounts[hashMatch[1]]) {
+      const btn = document.querySelector('#job-card-' + hashMatch[1] + ' .portal-thread-toggle');
+      toggleJobMessages(Number(hashMatch[1]), btn);
+    }
   }
 
   document.getElementById('signOutBtn').addEventListener('click', async () => {

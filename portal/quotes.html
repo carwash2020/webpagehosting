@@ -68,7 +68,7 @@
 <link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Anton&family=Archivo:wght@400..700&family=Newsreader:ital,opsz,wght@0,6..72,300..700;1,6..72,300..600&family=Oswald:wght@200..700&display=swap" onload="this.onload=null;this.rel='stylesheet'">
 <noscript><link href="https://fonts.googleapis.com/css2?family=Anton&family=Archivo:wght@400..700&family=Newsreader:ital,opsz,wght@0,6..72,300..700;1,6..72,300..600&family=Oswald:wght@200..700&display=swap" rel="stylesheet"></noscript>
 <link rel="stylesheet" href="/styles.css?v=2e81706c3d">
-<link rel="stylesheet" href="/portal/portal-app.css?v=202609171900">
+<link rel="stylesheet" href="/portal/portal-app.css?v=202609222300">
 <style>
   /* iOS Safari zoom-on-focus fix (2026-09-05), same root cause and
      fix already applied to invoice-generator.html: a tapped
@@ -107,7 +107,7 @@
 </style>
 <link rel="stylesheet" href="/tools/styles-tools.css?v=a494344e8c">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="/portal/portal-app.js?v=202609170800"></script>
+<script src="/portal/portal-app.js?v=202609222300"></script>
 <!-- Shared business-hours data (2026-09-03) -- see business-hours.js's
      own header comment. This page used to keep its own hand-copied
      duplicate of these exact constants ("keep these in sync manually
@@ -225,6 +225,39 @@
   .responded-note { color: var(--text-dim); font-size: 12.5px; margin-top: 8px; }
   .schedule-toggle { display: block; margin-top: 10px; font-size: 12.5px; color: var(--text-dim); text-decoration: underline; cursor: pointer; background: none; border: none; font-family: inherit; padding: 0; }
   .schedule-toggle:hover { color: var(--orange-light); }
+  /* Approved-but-not-yet-scheduled is the one moment this page most
+     needs the client to act, and it used to be a dim underlined text
+     link under the "Approved" note. A real button now (2026-09-22),
+     full-width like Approve/Decline above it. */
+  .schedule-cta { width: 100%; justify-content: center; margin-top: 10px; gap: 8px; }
+  .schedule-cta svg { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+  /* The booked visit behind an approved quote (2026-09-22), read via
+     get_my_portal_visits() -- see portal-app.js. Same blue "this is a
+     scheduled visit" accent Home's next-appointment hero uses. */
+  .quote-visit {
+    display: flex; gap: 12px; align-items: flex-start; margin-top: 10px; padding: 12px;
+    border-radius: 10px; background: rgba(58, 160, 255, .08);
+    border: 1px solid rgba(58, 160, 255, .28); border-left: 3px solid var(--blue-light);
+  }
+  .quote-visit.is-cancelled { background: rgba(255, 167, 38, .08); border-color: rgba(255, 167, 38, .3); border-left-color: #ffa726; }
+  .quote-visit.is-past { background: var(--bg-panel); border-color: var(--border); border-left-color: var(--text-dim); }
+  .quote-visit-date {
+    flex-shrink: 0; width: 46px; text-align: center; border-radius: 8px; overflow: hidden;
+    background: var(--bg-panel); border: 1px solid var(--border);
+  }
+  .quote-visit-date .m { display: block; background: var(--blue-light); color: #0a0a0a; font-size: 10px; font-weight: 700; letter-spacing: .8px; padding: 2px 0; }
+  .quote-visit.is-cancelled .quote-visit-date .m { background: #ffa726; }
+  .quote-visit.is-past .quote-visit-date .m { background: var(--text-dim); }
+  .quote-visit-date .d { display: block; font-family: var(--font-ui); font-weight: 700; font-size: 19px; color: var(--white); padding: 2px 0 4px; }
+  .quote-visit-main { min-width: 0; flex: 1; }
+  .quote-visit-label { font-size: 11.5px; font-weight: 700; letter-spacing: .5px; text-transform: uppercase; color: var(--blue-light); }
+  .quote-visit.is-cancelled .quote-visit-label { color: #ffa726; }
+  .quote-visit.is-past .quote-visit-label { color: var(--text-dim); }
+  .quote-visit-when { color: var(--white); font-size: 14.5px; font-weight: 600; margin-top: 2px; line-height: 1.35; }
+  .quote-visit-sub { color: var(--text-dim); font-size: 12.5px; margin-top: 3px; line-height: 1.4; }
+  .quote-visit-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
+  .quote-visit-actions .btn { flex: 1 1 100%; justify-content: center; min-height: 40px; text-decoration: none; display: inline-flex; align-items: center; }
+  @media (min-width: 640px) { .quote-visit-actions .btn { flex-basis: 0; min-width: 180px; } }
   .schedule-panel { margin-top: 10px; display: none; }
   .schedule-panel.is-open { display: block; }
   .schedule-note { color: #4caf78; font-size: 13px; margin-top: 8px; }
@@ -524,6 +557,111 @@
     doc.save('Quote-' + q.quote_number + '.pdf');
   }
 
+  // Attribute-safe variant of escapeHtml() (which never escapes quotes).
+  function escapeAttr(str) {
+    return escapeHtml(str).replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+  }
+
+  // The booking behind each approved quote (2026-09-22), keyed by
+  // quote id, from get_my_portal_visits(). Before this the page only
+  // knew client_portal_quotes.scheduled_at -- the moment scheduling
+  // HAPPENED (schedule-quote-job writes new Date()), never the
+  // appointment itself -- so "Job scheduled" was all it could say.
+  let quoteVisitsByQuoteId = {};
+  let quoteVisitsById = {};
+
+  // upcoming: a confirmed visit that hasn't ended (soonest first).
+  // past: confirmed, already happened. cancelled: only cancelled
+  // bookings remain (cancelled from manage-booking.html) -- the client
+  // can pick a new time. unknown: scheduled_at is set but no booking is
+  // visible (the lookup failed, or it's older than the RPC's window) --
+  // falls back to the original wording rather than guessing.
+  function quoteVisitState(quoteId) {
+    const visits = (quoteVisitsByQuoteId[quoteId] || []).slice()
+      .sort((a, b) => new Date(a.start_at) - new Date(b.start_at));
+    const upcoming = portalUpcomingConfirmedVisits(visits);
+    if (upcoming.length) return { kind: 'upcoming', visit: upcoming[0] };
+    const confirmed = visits.filter(v => v.status === 'confirmed');
+    if (confirmed.length) return { kind: 'past', visit: confirmed[confirmed.length - 1] };
+    const cancelled = visits.filter(v => v.status === 'cancelled');
+    if (cancelled.length) return { kind: 'cancelled', visit: cancelled[cancelled.length - 1] };
+    return { kind: 'unknown', visit: null };
+  }
+
+  const QUOTE_CAL_ICON = '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3.5" y="5" width="17" height="15.5" rx="2"/><path d="M3.5 9.5h17M8 3v4M16 3v4M12 12.5v5M9.5 15h5"/></svg>';
+
+  function quoteSchedulePanelHtml(quoteId, ctaLabel) {
+    return `
+      <button type="button" class="btn blue schedule-cta" onclick="toggleScheduleForm(${quoteId})">${QUOTE_CAL_ICON}${escapeHtml(ctaLabel)}</button>
+      <div class="schedule-panel" id="schedulePanel-${quoteId}">
+        <div class="date-row-wrap"><div class="date-row" id="dateRow-${quoteId}"></div></div>
+        <div class="slots-grid" id="slotsGrid-${quoteId}"></div>
+        <div class="slots-empty" id="slotsEmpty-${quoteId}" style="display:none;">No open times that day. Try another.</div>
+        <div class="schedule-summary" id="scheduleSummary-${quoteId}" style="display:none;"></div>
+        <div class="schedule-error" id="scheduleError-${quoteId}"></div>
+        <button class="btn blue" style="width:100%; justify-content:center; margin-top:8px; display:none;" id="scheduleConfirmBtn-${quoteId}" onclick="confirmSchedule(${quoteId})">Confirm this time</button>
+      </div>
+    `;
+  }
+
+  function quoteVisitCardHtml(state) {
+    const v = state.visit;
+    const t = portalVisitDateParts(v.start_at);
+    const cls = state.kind === 'cancelled' ? ' is-cancelled' : state.kind === 'past' ? ' is-past' : '';
+    const label = state.kind === 'upcoming' ? 'Job scheduled' : state.kind === 'past' ? 'Visit completed' : 'Visit cancelled';
+    const sub = state.kind === 'upcoming'
+      ? portalFormatVisitTime(v.start_at) + ' to ' + portalFormatVisitTime(v.end_at) + (v.address ? ' · ' + v.address : '')
+      : state.kind === 'past'
+        ? 'Once it\'s marked done it shows up under Jobs, with your warranty.'
+        : 'That time was cancelled. Pick a new one below whenever you\'re ready.';
+    const manageUrl = portalManageVisitUrl(v);
+    const actions = state.kind === 'upcoming'
+      ? `<div class="quote-visit-actions">
+          <button type="button" class="btn blue" onclick="addQuoteVisitToCalendar(${Number(v.id)})">Add to calendar</button>
+          ${manageUrl ? `<a class="btn secondary-btn" href="${escapeAttr(manageUrl)}">Reschedule or cancel</a>` : ''}
+        </div>`
+      : '';
+    return `
+      <div class="quote-visit${cls}">
+        <div class="quote-visit-date" aria-hidden="true"><span class="m">${escapeHtml(t.month)}</span><span class="d">${escapeHtml(t.day)}</span></div>
+        <div class="quote-visit-main">
+          <div class="quote-visit-label">${escapeHtml(label)}</div>
+          <div class="quote-visit-when">${escapeHtml(portalFormatVisitWhen(v.start_at))}</div>
+          <div class="quote-visit-sub">${escapeHtml(sub)}</div>
+          ${actions}
+        </div>
+      </div>
+    `;
+  }
+
+  // Everything below "Approved on ..." for an approved quote. Never
+  // scheduled yet -> the scheduling flow. Scheduled -> the real visit,
+  // or (only when every booking for it was cancelled) the cancelled
+  // visit plus the scheduling flow again; schedule-quote-job accepts a
+  // rebooking in exactly that case and no other.
+  function quoteScheduleSectionHtml(q) {
+    if (!q.scheduled_at) return quoteSchedulePanelHtml(q.id, 'Pick a time for this job');
+    const state = quoteVisitState(q.id);
+    if (state.kind === 'unknown') {
+      return `<div class="responded-note" style="color:#4caf78;">Job scheduled. We'll see you then! Call or text us if you need to reschedule.</div>`;
+    }
+    if (state.kind === 'cancelled') return quoteVisitCardHtml(state) + quoteSchedulePanelHtml(q.id, 'Pick a new time');
+    return quoteVisitCardHtml(state);
+  }
+
+  function addQuoteVisitToCalendar(bookingId) {
+    const v = quoteVisitsById[bookingId];
+    if (!v) return;
+    portalDownloadVisitIcs({
+      uid: 'th-booking-' + v.id,
+      title: v.service_label,
+      start: v.start_at,
+      end: v.end_at,
+      address: v.address,
+      manageUrl: portalManageVisitUrl(v),
+    });
+  }
+
   function renderQuoteCard(q) {
     const statusClass = q.status === 'approved' ? 'is-approved' : q.status === 'declined' ? 'is-declined' : 'is-pending';
     const statusLabel = q.status === 'approved' ? 'Approved' : q.status === 'declined' ? 'Declined' : 'Pending';
@@ -552,19 +690,7 @@
         ` : `
           <div class="responded-note">${q.status === 'approved' ? 'Approved' : 'Declined'}${q.responded_at ? ' on ' + formatDate(q.responded_at.slice(0, 10)) : ''}.</div>
           ${q.status === 'declined' && q.decline_reason ? `<div class="responded-note" style="margin-top:-4px;">Your note: &ldquo;${escapeHtml(q.decline_reason)}&rdquo;</div>` : ''}
-          ${q.status === 'approved' ? (q.scheduled_at ? `
-            <div class="responded-note" style="color:#4caf78;">Job scheduled. We'll see you then! Call or text us if you need to reschedule.</div>
-          ` : `
-            <button type="button" class="schedule-toggle" onclick="toggleScheduleForm(${q.id})">Schedule this job</button>
-            <div class="schedule-panel" id="schedulePanel-${q.id}">
-              <div class="date-row-wrap"><div class="date-row" id="dateRow-${q.id}"></div></div>
-              <div class="slots-grid" id="slotsGrid-${q.id}"></div>
-              <div class="slots-empty" id="slotsEmpty-${q.id}" style="display:none;">No open times that day. Try another.</div>
-              <div class="schedule-summary" id="scheduleSummary-${q.id}" style="display:none;"></div>
-              <div class="schedule-error" id="scheduleError-${q.id}"></div>
-              <button class="btn blue" style="width:100%; justify-content:center; margin-top:8px; display:none;" id="scheduleConfirmBtn-${q.id}" onclick="confirmSchedule(${q.id})">Confirm this time</button>
-            </div>
-          `) : ''}
+          ${q.status === 'approved' ? quoteScheduleSectionHtml(q) : ''}
         `}
         <!-- Available regardless of status (2026-09-19, fixed from
              pending-only) -- a declined quote used to be a dead end
@@ -610,6 +736,9 @@
     }
     document.getElementById('clientEmailDisplay').textContent = session.user.email;
     await portalGuardWithBiometricLock(session.user.email, client);
+    // Keeps the Request/Jobs unread badges on the bottom nav while
+    // browsing other tabs (2026-09-22). Fire-and-forget; never throws.
+    portalLoadUnreadCounts(client).then(portalApplyNavUnreadBadges);
 
     // Shown immediately, before the fetch -- without this, a client
     // on a slow connection sees a completely blank area that looks
@@ -618,10 +747,20 @@
     const listEl = document.getElementById('quoteList');
     listEl.innerHTML = portalSkeletonCards(3);
 
-    const { data: quotes, error } = await client
-      .from('client_portal_quotes')
-      .select('*')
-      .order('quote_date', { ascending: false });
+    const [{ data: quotes, error }, visitResult] = await Promise.all([
+      client
+        .from('client_portal_quotes')
+        .select('*')
+        .order('quote_date', { ascending: false }),
+      portalFetchMyVisits(client),
+    ]);
+    quoteVisitsByQuoteId = {};
+    quoteVisitsById = {};
+    visitResult.visits.forEach(v => {
+      quoteVisitsById[v.id] = v;
+      if (v.quote_id == null) return;
+      (quoteVisitsByQuoteId[v.quote_id] = quoteVisitsByQuoteId[v.quote_id] || []).push(v);
+    });
 
     if (error) {
       listEl.innerHTML = `<div class="empty-state is-error"><div class="empty-state-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8.5"/><path d="M12 7.5v6"/><circle cx="12" cy="16.75" r="0.6" fill="currentColor" stroke="none"/></svg></div><p class="empty-state-title">Couldn't load your quotes right now. Please try again in a moment.</p></div>`;
