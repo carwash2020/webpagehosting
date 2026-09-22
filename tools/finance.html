@@ -56,7 +56,7 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.112.3/dist/umd/supabase.js" integrity="sha384-qafw21c/iciq0VXsi9FzkfoQv5I/V0iqE4lSNcKXPnW9/UTJLnv5CcN4FHxVLnKg" crossorigin="anonymous" defer></script>
 <script src="/tools/sync.js?v=6b9e092eca" defer></script>
 <script src="/tools/data-layer.js?v=c5d44f096e" defer></script>
-<script src="/tools/tools-effects.js?v=4cff99aa4a" defer></script>
+<script src="/tools/tools-effects.js?v=d26cb1fb67" defer></script>
 <script src="/tools/tools-dialogs.js?v=83d27784e2" defer></script>
 <script src="/tools/tools-media-sharing.js?v=0c229c9353" defer></script>
 <script src="/tools/tools-nav-pwa.js?v=f07de2ca5b" defer></script>
@@ -745,6 +745,7 @@
     cancelIncomeEntryEdit();
     justAddedIncomeEntryId = newId;
     renderIncomeEntries();
+    if (typeof haptic === 'function') haptic('success');
     showToast(wasEditing ? 'Income entry updated.' : 'Income logged.');
   }
 
@@ -888,6 +889,27 @@
       <div>Manual entries: <strong>$${manualTotal.toFixed(2)}</strong></div>
       <div>From invoices: <strong>$${invoiceTotal.toFixed(2)}</strong></div>
       <div>Combined total: <strong>$${(manualTotal + invoiceTotal).toFixed(2)}</strong></div>`;
+  }
+
+  // Long-press an income row for the same Edit/Delete actions the row's
+  // own buttons already offer, matching Job Tracker's card long-press
+  // (item #9, 2026-08-17) -- a faster entry point to the same actions,
+  // not new logic. attachLongPress delegates via the container, so one
+  // call (on page load) keeps working across every re-render.
+  function initIncomeRowLongPress() {
+    if (typeof attachLongPress !== 'function') return; // tools-dialogs.js not loaded (some minimal test sandboxes)
+    const container = document.getElementById('incomeTable');
+    if (!container || container.dataset.longPressWired) return;
+    container.dataset.longPressWired = '1';
+    attachLongPress(container, 'tr[data-income-id]', (rowEl) => {
+      const id = Number(rowEl.dataset.incomeId);
+      const entry = loadIncomeEntries().find(e => e.id === id);
+      if (!entry) return;
+      const actions = [];
+      if (entry.origin !== 'invoice') actions.push({ label: 'Edit', onClick: () => editIncomeEntry(id) });
+      actions.push({ label: 'Delete', isDanger: true, onClick: () => deleteIncomeEntry(id) });
+      showQuickActionSheet(entry.source || entry.desc || 'Income entry', actions);
+    });
   }
 
   function buildIncomeCSV() {
@@ -1064,6 +1086,7 @@
     cancelExpenseEdit();
     justAddedExpenseId = wasEditing ? null : entry.id;
     renderExpenses();
+    if (typeof haptic === 'function') haptic('success');
     showToast(wasEditing ? 'Entry updated.' : (type === 'mileage' ? 'Mileage logged.' : 'Expense logged.'));
     } finally {
       expenseSaveInProgress = false;
@@ -1428,6 +1451,23 @@
       <div>Combined total: <strong>$${(expenseTotal + mileageTotal).toFixed(2)}</strong></div>`;
   }
 
+  // Same pattern as initIncomeRowLongPress() above, for expense/mileage rows.
+  function initExpenseRowLongPress() {
+    if (typeof attachLongPress !== 'function') return; // tools-dialogs.js not loaded (some minimal test sandboxes)
+    const container = document.getElementById('entriesTable');
+    if (!container || container.dataset.longPressWired) return;
+    container.dataset.longPressWired = '1';
+    attachLongPress(container, 'tr[data-expense-id]', (rowEl) => {
+      const id = Number(rowEl.dataset.expenseId);
+      const entry = loadExpenses().find(e => e.id === id);
+      if (!entry) return;
+      showQuickActionSheet(entry.vendor || entry.desc || 'Expense entry', [
+        { label: 'Edit', onClick: () => editExpense(id) },
+        { label: 'Delete', isDanger: true, onClick: () => deleteExpense(id) },
+      ]);
+    });
+  }
+
   function buildCSV() {
     const entries = [...loadExpenses()].sort((a, b) => new Date(a.date) - new Date(b.date));
     // Note: this column holds the raw storage path, not a clickable URL.
@@ -1519,6 +1559,8 @@
       renderExpenses();
       renderIncomeEntries();
       renderPriceReferences();
+      initExpenseRowLongPress();
+      initIncomeRowLongPress();
 
       // Initial tab (2026-09-22): an explicit #hash wins (the command
       // palette, the dashboard, and the tour link straight to a tab), then

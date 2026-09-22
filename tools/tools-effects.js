@@ -32,6 +32,13 @@
 // ---------------------------------------------------------------------------
 function celebrateCompletion() {
   if (typeof document === 'undefined') return;
+  // Fires for every caller of this shared function (job marked Done,
+  // a revenue milestone, ...) rather than needing its own haptic call
+  // at each site. Unconditional, ahead of the reduced-motion check
+  // below -- vibration isn't the kind of motion prefers-reduced-motion
+  // is about, and no-ops silently everywhere haptics aren't supported
+  // anyway (see haptic()'s own comment in tools-dialogs.js).
+  if (typeof haptic === 'function') haptic('success');
   if (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
 
   const colors = ['#ff8000', '#ffb347', '#d8d8d8', '#6fcf97'];
