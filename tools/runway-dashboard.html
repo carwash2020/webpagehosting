@@ -76,6 +76,18 @@
   @view-transition {
     navigation: auto;
   }
+  /* PWA ergonomics pass (2026-09-22), mirrored from styles-tools.css --
+     see that file's own comment for the full reasoning. Removes the
+     default grey tap-highlight flash (every interactive element here
+     already has its own :active/:hover state) and the ~300ms
+     double-tap-zoom delay, without touching pinch-zoom. */
+  html { -webkit-tap-highlight-color: transparent; }
+  a, button, input, select, textarea, [role="button"],
+  .icon-btn, .cat-add-btn, .rw-tab-btn, .th-bottom-nav a,
+  .th-bottom-nav .th-bn-more, .th-more-sheet-link {
+    -webkit-tap-highlight-color: transparent;
+    touch-action: manipulation;
+  }
   /* iOS Safari zoom-on-focus fix (2026-09-05), same root cause and
      fix already applied to invoice-generator.html: a tapped
      input/select/textarea with a font-size under 16px triggers the

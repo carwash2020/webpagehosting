@@ -1329,4 +1329,18 @@ lint, check-links.py all clean; real Chromium 390x844 + 1440x900
 covering the fade-in/out behavior, both loading states, and the
 corrected CSP actually allowing the script to load.
 
+## 2026-09-22 (later the same day) -- quick PWA/ergonomics pass (visual lane, cross-logged here)
+
+A narrow, low-risk pass -- manifest/apple-meta/safe-area were already
+correct from prior sessions; the one real bug found was a CSS
+specificity conflict silently undoing the 2026-08-01 `.small-btn`
+44px touch-target fix on every phone (was actually rendering at 40px).
+Also fixed two sub-44px photo-lightbox buttons and added
+`-webkit-tap-highlight-color: transparent` / `touch-action:
+manipulation` across the tool suite. No product behavior changed --
+CSS only, `tools/styles-tools.css` + `tools/runway-dashboard.html`'s
+mirrored copy. Full detail and the debugging story in
+`docs/specialist-logs/visual.md`'s entry of the same date and in
+README's dated changelog entry. Suite 2642/2642, all checks clean.
+
 <!-- Add new entries above this line -->

@@ -2929,3 +2929,93 @@ Supabase script loading under its corrected CSP, and both detail pages
 showing their loading text immediately instead of a blank screen. Full
 suite 2642/2642, `check-consistency`, `check-undefined-vars`, `lint`,
 and `check-links.py` all clean.
+
+## What changed, 2026-09-22 (later the same day) — a quick PWA/ergonomics pass, not the gesture rework
+
+Explicit scope: "quick PWA and ergonomics wins," not the bigger gesture/
+animation pass that's deliberately deferred to a later, separate sitting.
+Audited the manifest, safe-area handling, and tap ergonomics against what
+was already shipped before touching anything -- most of it turned out
+already done well (see the "PWA (installable app icon)" and mobile
+touch-target sections of the `tripleh-business` skill, and the extensive
+`env(safe-area-inset-*)` coverage already in `styles-tools.css`), so this
+pass is genuinely small.
+
+**Checked, found already correct, no change made:**
+- `/tools/manifest.json` -- `display: standalone`, `start_url:
+  /tools/workspace.html` (the real Today-first dashboard, confirmed
+  against the current IA), dark theme colors matching the app
+  (`#0a0a0a`), real `icon-192.png`/`icon-512.png`/`apple-touch-icon.png`
+  at the correct pixel dimensions (192, 512, 180 -- verified by opening
+  each file, not trusting the filename), and 3 app shortcuts with
+  correct `/tools/`-prefixed URLs.
+- Every tool page's `<head>`: `apple-mobile-web-app-capable`,
+  `apple-mobile-web-app-status-bar-style`, `apple-touch-icon`,
+  `theme-color`, and `viewport-fit=cover` on the viewport meta tag --
+  confirmed present and correct on all 23 tool pages, not just a sample.
+- Safe-area insets: `.th-bottom-nav`, `.th-flag-btn`, `.th-cmdk-btn`, the
+  onboarding tour card, the install banner, the photo lightbox, and every
+  sticky header already pad/offset for `env(safe-area-inset-*)` --
+  this has clearly been iterated on across several prior sessions and
+  needed nothing further.
+
+**Real bug found and fixed: `.small-btn` was rendering at 40px on every
+phone, not the 44px the app has documented as its own minimum touch
+target since 2026-08-01.** Two rules both target `.small-btn` at phone
+widths -- `body .small-btn { min-height: 40px; }` inside the `max-width:
+720px` block, and `.small-btn { min-height: 44px; }` inside a separate
+`max-width: 760px` block written later. Both apply at any width <=720px,
+and `body .small-btn` (specificity 0,1,1) always beats the bare
+`.small-btn` (0,1,0) regardless of which one comes later in the file --
+so the 40px rule silently won on every real phone, undoing the touch-
+target fix. This is the Advance Status / Photos / Delete button on every
+Job Tracker job card, so this was a real, live regression, not a
+theoretical one. Fixed by matching the value in the higher-specificity
+rule (40px -> 44px) rather than trying to out-rank it, which removes the
+conflict outright. Confirmed with a real `getBoundingClientRect()`
+measurement in headless Chromium at 390x844: 44px, both before and after
+adding jobs to the page.
+
+**Two more sub-44px controls fixed while auditing the same class of
+issue:** the full-screen job-photo lightbox's close button (38x38 ->
+44x44) and its prev/next buttons (42x42 -> 44x44) -- both circular
+buttons on a full-viewport overlay with plenty of room to size up with
+no layout cost.
+
+**Two "feels like a website, not an app" tells fixed, both pure CSS,
+`tools/styles-tools.css` and mirrored into `runway-dashboard.html`'s own
+self-contained copy (it doesn't load the shared stylesheet):**
+- The browser's default grey tap-highlight flash on every link/button
+  press -- every interactive element in this suite already has its own
+  `:active`/`:hover` state, so `-webkit-tap-highlight-color: transparent`
+  loses no feedback.
+- The ~300ms double-tap-to-zoom delay browsers add to tappable elements
+  -- `touch-action: manipulation` removes it while leaving real
+  pinch-zoom untouched. Deliberately did **not** set `user-scalable=no`
+  on the viewport meta tag (already present without it) -- that would
+  disable pinch-zoom entirely, which fights WCAG 1.4.4 and is a
+  different, unwanted tradeoff from what was asked for.
+
+**One test broken by the first attempt, caught by the suite, fixed
+immediately:** the first pass added a standalone `html { ... }` rule for
+the tap-highlight fix. `tests/design/desktop-layout.test.js` greps the
+file for the *first* `html { ... }` block and asserts it's the ambient
+background gradient rule -- the new rule appeared earlier in the file and
+was a false match. Fixed by folding `html` into the existing comma-
+separated selector list instead of giving it its own rule, which stopped
+matching that regex while keeping the same effect.
+
+**Explicitly not touched, per the brief:** gesture navigation, swipe
+actions, page transition animations, pull-to-refresh, bottom-sheet
+modals -- all deferred, as agreed, to a later dedicated pass.
+
+Verified in a real headless Chromium at 390x844 (served over local HTTP,
+never `file://`, with a fake-but-shaped `th_auth_session` in
+`localStorage` so the pages render past the login gate): `workspace.html`
+(Today dashboard), `job-tracker.html`, and `invoice-generator.html` all
+load cleanly, the fixed floating search/flag buttons still fade
+correctly at page-top per the fix earlier today, `.small-btn` measures
+44px in the DOM, and `-webkit-tap-highlight-color`/`touch-action` read
+back correctly on real buttons via `getComputedStyle`. Full suite
+2642/2642, `check-consistency`, `check-undefined-vars`, `lint`, and
+`check-links.py` all clean.

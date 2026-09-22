@@ -25,6 +25,29 @@
   navigation: auto;
 }
 
+/* PWA ergonomics pass (2026-09-22): a quick, low-risk pass to make the
+   suite feel like an installed app rather than a mobile website, on top
+   of the manifest/safe-area/44px-touch-target work already in place
+   (see the entries above and workspace's own PWA section in the
+   tripleh-business skill). Two specific "this is a website" tells, both
+   fixed with two rules:
+   1. The default grey tap-highlight flash on every link/button tap --
+      every interactive element in this suite already has its own
+      :active/:hover state (buttons, nav rows, cards), so removing the
+      browser's own flash loses no feedback.
+   2. The ~300ms double-tap-to-zoom delay browsers add to tappable
+      elements. `touch-action: manipulation` removes that delay while
+      leaving page-level pinch-zoom untouched -- deliberately NOT
+      `user-scalable=no` on the viewport meta tag, which would disable
+      real pinch-zoom too and fight accessibility (WCAG 1.4.4). */
+html, a, button, input, select, textarea, [role="button"],
+.primary-btn, .secondary-btn, .small-btn, .tab-btn, .dialog-btn,
+.dash-list-item, .tool-card, .th-bottom-nav a, .th-bottom-nav .th-bn-more,
+.th-sidebar-link, .th-flag-btn, .th-cmdk-btn, .help-btn {
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+}
+
 /* ==========================================================================
    INTERNAL TOOLS SUITE — shared styles for /workspace.html and its 7 tools.
    Not used by the public-facing pages (index.html + 5 landing pages).
@@ -1540,7 +1563,17 @@ body select:focus, body textarea:focus {
 
   /* touch targets */
   body .primary-btn, body .secondary-btn, body .dialog-btn, body .note-new-btn, body .tab-btn { min-height: 46px; }
-  body .small-btn { min-height: 40px; }
+  /* PWA ergonomics pass (2026-09-22): this was `min-height: 40px`, which
+     silently WON over the correct 44px rule below (`.small-btn` at
+     max-width:760px, further down this file) because `body .small-btn`
+     (0,1,1) outranks the bare `.small-btn` (0,1,0) regardless of source
+     order -- both rules apply at any width <=720px, so `.small-btn`
+     (Advance Status/Photos/Delete on every job card, the button this
+     app's own 2026-08-01 mobile-touch-target fix was written for) was
+     actually rendering at 40px on every phone the whole time, not the
+     44px both that fix and every later note assumed. Matching the value
+     here removes the conflict outright. */
+  body .small-btn { min-height: 44px; }
   /* F22 fix (2026-09-07): 36px still fell short of a real touch
      target -- this is the shared circular icon button used for help
      modals, back-to-workspace, and settings links across every tool
@@ -2019,12 +2052,16 @@ body.th-is-offline .hub-header, body.th-is-offline .tool-header {
 .photo-lightbox-overlay.is-shown .photo-lightbox-img { opacity: 1; }
 .photo-lightbox-close {
   position: absolute; top: max(14px, env(safe-area-inset-top, 0px), 44px); right: 16px; z-index: 5;
-  width: 38px; height: 38px; border-radius: 50%; border: none;
+  /* Was 38x38 (PWA ergonomics pass, 2026-09-22) -- under the app's own
+     44px minimum touch target; plenty of room on a full-screen overlay
+     to size it up with no layout cost. */
+  width: 44px; height: 44px; border-radius: 50%; border: none;
   background: rgba(255,255,255,0.1); color: #fff; font-size: 22px; line-height: 1; cursor: pointer;
 }
 .photo-lightbox-nav {
   position: absolute; top: 50%; transform: translateY(-50%);
-  width: 42px; height: 42px; border-radius: 50%; border: none;
+  /* Was 42x42 (PWA ergonomics pass, 2026-09-22) -- same 44px minimum. */
+  width: 44px; height: 44px; border-radius: 50%; border: none;
   background: rgba(255,255,255,0.1); color: #fff; font-size: 18px; cursor: pointer;
 }
 .photo-lightbox-prev { left: 10px; }
