@@ -690,9 +690,22 @@ above.
     `.services-grid`) -- all six cards use identical-style line-icon
     SVGs. Swapping 1-2 of the busiest (Appliance Repair, Emergency
     Calls) for a real photo thumbnail would add warmth over icon-only.
-13. **Loading indicator during initial portal auth check**
-    (`portal/dashboard.html`, `portal/quotes.html`) -- the invoice/quote
-    skeleton shows once session is confirmed, but there's a blank-white
-    instant before that during the Supabase session lookup itself.
+    Same blocker as #1/#6: needs a real photo, not a fabricated one.
+~~13. Loading indicator during initial portal auth check~~ -- **already
+done**, found stale during a 2026-09-22 check (verified against the
+live files, not assumed): `portal/dashboard.html`'s `#invoiceList` and
+`portal/quotes.html`'s `#quoteList` both bake the skeleton-card markup
+directly into their static HTML now, not just injected by JS after the
+session check -- fixed as part of the 2026-09-21 "client portal no
+longer flashes blank on first load" work (`docs/specialist-logs/features.md`),
+this item just wasn't crossed off when that landed. No blank-white
+instant remains; the skeleton is the very first thing painted.
+
+~~14. Tablet 721-1023px band with no navigation~~ -- **already done**,
+same stale-item check: `tools/styles-tools.css`'s "Tablet band fix
+(2026-09-21)" already covers this (see the note under "POS inside
+Invoices, tablet navigation..." above). Left here as a placeholder so
+a future pass doesn't waste time re-diagnosing the FAQ item -- no
+action needed.
 
 <!-- Add new proposed visual improvements above this line -->
