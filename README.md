@@ -3655,3 +3655,50 @@ Verified in a real headless Chromium (local HTTP, fake Supabase):
 - No console errors.
 
 New tests: `tests/tools/job-money-pipeline.test.js` (15).
+
+## What changed, 2026-09-22 (later still) -- Workspace rework, part 6: the invoice writes itself from the job
+
+Part 6 of the Workspace rework. Full reasoning in
+`docs/specialist-logs/features.md`.
+
+**From this job.** Open an invoice from a job and a panel above the
+line items offers everything already logged against it, as
+ready-to-bill lines. That covers the job's Create invoice, Ready to
+invoice on the Dashboard, the Job done sheet, or picking the job in the
+form.
+- **Labor.** The hours on the job at your last labor rate. If no hours
+  were logged (most jobs), the line asks "How long did it take?" with an
+  hours box, plus a rate box the first time. Typing the hours ticks it.
+- **Parts.** One line per receipt logged against the job in Finance, at
+  cost (add your markup in the price), with the part number when there
+  is one.
+- **Mileage.** All the job's logged miles on one line, at your last
+  billing rate, untaxed like **+ Add Mileage**.
+- **An unbilled quote.** If the client has one for this job, **Bill the
+  quote** comes first. It copies the quote's lines and discount and
+  links the quote, so saving the invoice marks the quote converted, the
+  same as Convert to Invoice. The logged lines are still there, unticked,
+  as the alternative.
+
+Nothing goes in until **Add**. The untouched starter row is replaced
+(anything typed by hand is left alone), every line stays an ordinary
+editable row, and **Undo** puts the form back as it was: rows, discount,
+quote link. **Not now** hides the panel for that job.
+
+**Fixed along the way:** invoice and quote rows put a line's description
+and part number into `value="..."` unescaped. A saved job type, a quote
+line, or now a receipt with a quote mark in it broke out of the
+attribute. Quantity inputs also took whole numbers only (`step="1"`), so
+2.5 hours or 14.3 miles showed as invalid; they now take any decimal.
+
+Verified in a real headless Chromium (local HTTP, fake Supabase):
+- 390px (dark and light) and 1440px: a job with hours, two receipts,
+  and mileage adds 4 lines ($251.49), and Undo restores the form.
+- A job with an unbilled quote copies its lines and $20 discount and
+  sets the quote link.
+- A job with nothing logged asks for hours and a rate, bills 1.5 h ×
+  $85, and remembers the $85.
+- A fuel receipt not linked to the job stays out.
+- No console errors.
+
+New tests: `tests/tools/invoice-from-job.test.js` (9).

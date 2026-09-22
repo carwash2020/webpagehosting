@@ -62,7 +62,7 @@
 <script src="/tools/tools-media-sharing.js?v=0c229c9353" defer></script>
 <script src="/tools/tools-nav-pwa.js?v=4d9f8c89e1" defer></script>
 <script src="/tools/tools-command-palette.js?v=3aaed2827f" defer></script>
-<script src="/tools/tools-tour.js?v=102529d3df" defer></script>
+<script src="/tools/tools-tour.js?v=1b7db99b1d" defer></script>
 <!-- U15/W18 fix (High-Impact Upgrades, Master Audit, 2026-09-08): the
      masthead/footer/totals-block drawing code below moved into this
      shared file, now also used by job-detail.html's job sheet and
@@ -281,6 +281,41 @@
   body.is-compact-density .inv-row .th-row-link { min-height: 44px; padding-top: 3px; padding-bottom: 3px; }
   body.is-compact-density .inv-row .th-row-avatar { width: 34px; height: 34px; font-size: 12px; }
   .inv-empty { display: flex; flex-direction: column; align-items: center; gap: 12px; }
+
+  /* From this job (2026-09-22, Workspace rework part 6): the job's logged
+     hours, receipts and mileage as ready-to-add lines, over the table. */
+  .job-fill { margin: 4px 0 14px; padding: 14px; border-radius: 14px; background: var(--orange-tint-soft); border: 1px solid var(--orange-tint-border); }
+  .job-fill[hidden] { display: none; }
+  .job-fill-head { display: flex; align-items: center; gap: 8px; min-width: 0; margin-bottom: 10px; font-family: var(--font-ui); font-weight: 700; font-size: 14px; color: var(--white); }
+  .job-fill-head .th-icon { width: 18px; height: 18px; margin: 0; flex-shrink: 0; color: var(--orange-light); }
+  .job-fill-job { min-width: 0; color: var(--text-dim); font-weight: 600; font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .job-fill-quote { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; padding: 10px 12px; border-radius: 12px; background: var(--bg-panel); border: 1px solid var(--border); }
+  .job-fill-quote strong { display: block; color: var(--white); font-size: 14.5px; }
+  .job-fill-or { margin: 12px 0 6px; color: var(--text-dim); font-size: 11.5px; font-weight: 700; letter-spacing: .7px; text-transform: uppercase; }
+  .job-fill-lines { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+  /* A <label> (the whole row toggles its box), so undo the form-label caps. */
+  .job-fill-line { display: flex; align-items: center; gap: 10px; padding: 9px 12px; border-radius: 12px; background: var(--bg-panel); border: 1px solid var(--border); cursor: pointer; text-transform: none; letter-spacing: normal; font-weight: 400; margin: 0; }
+  .job-fill-line:has(input:not(:checked)) { opacity: .72; }
+  .job-fill-line input { width: 20px; height: 20px; margin: 0; flex-shrink: 0; accent-color: var(--orange); }
+  .job-fill-main { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+  .job-fill-desc { color: var(--white); font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .job-fill-note { display: block; color: var(--text-dim); font-size: 12px; line-height: 1.35; }
+  .job-fill-amt { font-family: var(--font-ui); font-weight: 700; color: var(--white); white-space: nowrap; }
+  /* The ask-for-hours row: checkbox, text and amount on the first line,
+     the hours (and rate) inputs on their own line under the text. */
+  .job-fill-line.has-inputs { cursor: default; flex-wrap: wrap; row-gap: 8px; }
+  .job-fill-line.has-inputs > input[type="checkbox"] { order: 0; }
+  .job-fill-line.has-inputs .job-fill-main { order: 1; }
+  .job-fill-line.has-inputs .job-fill-amt { order: 2; }
+  .job-fill-inputs { order: 3; flex-basis: 100%; display: flex; align-items: center; gap: 6px; padding-left: 30px; }
+  body .job-fill-num { width: 64px; min-height: 40px; padding: 6px 8px; font-size: 16px; text-align: right; border-radius: 8px; }
+  .job-fill-unit { color: var(--text-dim); font-size: 13px; }
+  .job-fill-actions { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-top: 12px; }
+  .job-fill-btn { width: auto; min-height: 44px; padding: 10px 18px; }
+  .job-fill-btn:disabled { opacity: .55; cursor: default; }
+  .job-fill.is-done { display: flex; align-items: center; gap: 10px; background: rgba(76,175,120,.08); border-color: rgba(76,175,120,.35); }
+  .job-fill.is-done .th-icon { width: 18px; height: 18px; margin: 0; flex-shrink: 0; color: #4caf78; }
+  .job-fill-done-text { flex: 1; min-width: 0; color: var(--text); font-size: 13.5px; }
 </style>
 </head>
 <body>
@@ -409,6 +444,8 @@
 
 <div class="form-section">
   <h3>Line Items</h3>
+  <!-- From this job (2026-09-22, Workspace rework part 6): renderJobFillPanel() -->
+  <div class="job-fill" id="jobFillPanel" hidden></div>
   <div class="table-scroll">
   <table class="line-items-table">
     <thead>
@@ -1266,6 +1303,16 @@
     if (unitEl) unitEl.textContent = lineItemUnitLabel(selectEl.value);
   }
 
+  // Real gap (2026-09-22): a row's description and part # went into
+  // value="..." raw, so a saved job type, a quote line, or a receipt's
+  // description containing a quote mark broke out of the attribute. Same
+  // escaping as everywhere else (escapeAttr, with a fallback for the
+  // page-level tests that run without tools-dialogs.js).
+  function lineItemAttr(v) {
+    const str = v === null || v === undefined ? '' : String(v);
+    return (typeof escapeAttr === 'function') ? escapeAttr(str) : str.replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  }
+
   let rowCount = 0;
   function addLineItem(desc = '', part = '', qty = 1, price = '', taxable = true, type = '', isUserAdd = false) {
     rowCount++;
@@ -1274,10 +1321,10 @@
     tr.id = 'row-' + id;
     if (isUserAdd) tr.classList.add('list-row-enter');
     tr.innerHTML = `
-      <td data-label="Description"><input type="text" class="li-desc" value="${desc}"></td>
+      <td data-label="Description"><input type="text" class="li-desc" value="${lineItemAttr(desc)}"></td>
       <td data-label="Type"><select class="li-type" onchange="updateLineItemUnitLabel(this)">${lineItemTypeOptions(type)}</select></td>
-      <td data-label="Part #"><input type="text" class="li-part" value="${part}"></td>
-      <td data-label="Qty"><input type="number" class="li-qty" value="${qty}" min="0" step="1" oninput="recalc()"><span class="li-qty-unit">${lineItemUnitLabel(type)}</span></td>
+      <td data-label="Part #"><input type="text" class="li-part" value="${lineItemAttr(part)}"></td>
+      <td data-label="Qty"><input type="number" class="li-qty" value="${lineItemAttr(qty)}" min="0" step="any" oninput="recalc()"><span class="li-qty-unit">${lineItemUnitLabel(type)}</span></td>
       <td data-label="Price"><input type="number" class="li-price" value="${price}" min="0" step="0.01" oninput="recalc()"></td>
       <td class="li-amount" data-label="Amount">$0.00</td>
       <td style="text-align:center;" data-label="Tax?"><input type="checkbox" class="li-taxable" ${taxable ? 'checked' : ''} oninput="recalc()"></td>
@@ -1309,6 +1356,238 @@
   function addMileageLineItem(addFnName) {
     const savedRate = localStorage.getItem(MILEAGE_RATE_KEY) || '';
     window[addFnName]('Mileage', '', 1, savedRate, false, true);
+  }
+
+  // ---------- From this job (2026-09-22, Workspace rework part 6) ----------
+  // An invoice started from a job fills itself in. It offers the hours
+  // logged on the job (Labor at the rate used last time), every receipt
+  // logged against it in Finance (as parts at cost), and its mileage (at the
+  // billing rate used last time). If the client has an unbilled quote for
+  // this job, it offers to bill the quote's own lines instead. Nothing goes
+  // in until Add is tapped, every line stays an ordinary editable row, and
+  // one tap undoes it. Shown for ?jobRef= links (a job's Create invoice, the
+  // Dashboard's Ready to invoice, the Job done sheet) and whenever the Job
+  // dropdown changes.
+  function jobFillShortDate(dateStr) {
+    const d = new Date((dateStr || '') + 'T00:00:00');
+    return isNaN(d.getTime()) ? '' : d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+  }
+  function jobBillables(job, expenses, quotes, rates) {
+    const id = String(job.id);
+    const lines = [];
+    const hours = Number(job.hoursWorked) || 0;
+    if (hours > 0) {
+      lines.push({ key: 'labor', desc: 'Labor', part: '', type: 'labor', qty: hours, price: rates.labor || '', taxable: true,
+        note: hours + ' h logged' + (rates.labor ? ' × ' + money(rates.labor) + '/h' : ' · add your rate') });
+    } else {
+      // Most jobs never get their hours logged, and it's the one question
+      // every invoice needs answered: the panel asks it right in the line.
+      lines.push({ key: 'labor', desc: 'Labor', part: '', type: 'labor', qty: '', price: rates.labor || '', taxable: true, needsHours: true,
+        note: 'How long did it take?' + (rates.labor ? ' × ' + money(rates.labor) + '/h' : '') });
+    }
+    const linked = (expenses || []).filter(e => String(e.jobRefId) === id);
+    linked.filter(e => e.type !== 'mileage' && (Number(e.amount) || 0) > 0)
+      .sort((a, b) => (a.date || '').localeCompare(b.date || ''))
+      .forEach(e => {
+        lines.push({ key: 'exp-' + e.id, desc: e.desc || e.vendor || 'Parts', part: e.partNumber || '', type: 'part', qty: 1, price: Math.round(Number(e.amount) * 100) / 100, taxable: true,
+          note: ['Receipt' + (e.vendor && e.desc ? ', ' + e.vendor : ''), jobFillShortDate(e.date), 'at cost'].filter(Boolean).join(' · ') });
+      });
+    const miles = Math.round(linked.filter(e => e.type === 'mileage').reduce((sum, e) => sum + (Number(e.miles) || 0), 0) * 10) / 10;
+    if (miles > 0) {
+      lines.push({ key: 'miles', desc: 'Mileage', part: '', type: 'mileage', qty: miles, price: rates.mileage || '', taxable: false,
+        note: miles + ' mi logged' + (rates.mileage ? ' × ' + money(rates.mileage) + '/mi' : ' · add your rate') });
+    }
+    const quote = (quotes || [])
+      .filter(q => String(q.jobRefId) === id && (q.status || 'pending') !== 'converted' && Array.isArray(q.line_items) && q.line_items.length)
+      .sort((a, b) => b.id - a.id)[0] || null;
+    return { lines, quote };
+  }
+
+  // jobFillState remembers, per job, what the panel did: dismissed it, or
+  // added rows (their ids, the starter row they replaced, and any quote
+  // link or discount it set) so Undo can put everything back.
+  let jobFillState = null;
+  function currentJobFillBillables() {
+    const jobId = (document.getElementById('invoiceJobRef') || {}).value;
+    const job = jobId && typeof loadJobs === 'function' ? loadJobs().find(j => String(j.id) === jobId) : null;
+    if (!job) return null;
+    const rates = { labor: parseFloat(localStorage.getItem(LABOR_RATE_KEY)) || 0, mileage: parseFloat(localStorage.getItem(MILEAGE_RATE_KEY)) || 0 };
+    const expenses = (typeof thRead === 'function') ? thRead(TH_KEYS.expenses, []) : [];
+    return { jobId, job, ...jobBillables(job, expenses, loadQuoteLog(), rates) };
+  }
+
+  function jobFillLineAmount(l) { return (Number(l.qty) || 0) * (Number(l.price) || 0); }
+
+  function renderJobFillPanel() {
+    const panel = document.getElementById('jobFillPanel');
+    if (!panel) return;
+    const b = currentJobFillBillables();
+    if (!b) { panel.hidden = true; panel.innerHTML = ''; return; }
+    if (jobFillState && jobFillState.jobId === b.jobId && jobFillState.dismissed) { panel.hidden = true; panel.innerHTML = ''; return; }
+    if (jobFillState && jobFillState.jobId === b.jobId && jobFillState.rowIds) {
+      panel.hidden = false;
+      panel.className = 'job-fill is-done';
+      panel.innerHTML = '<svg class="th-icon" aria-hidden="true"><use href="#icon-check-circle" xlink:href="#icon-check-circle"></use></svg>' +
+        '<span class="job-fill-done-text">' + escapeHtml(jobFillState.summary) + '</span>' +
+        '<button type="button" class="small-btn" onclick="undoJobFill()">Undo</button>';
+      return;
+    }
+    const quoteInUse = b.quote && pendingSourceQuoteId === b.quote.id;
+    const offerQuote = b.quote && !quoteInUse && !pendingSourceQuoteId;
+    if (!b.lines.length && !offerQuote) { panel.hidden = true; panel.innerHTML = ''; return; }
+    // With a quote on offer, the logged lines are the alternative -- a
+    // quote's price usually already covers the parts -- so they start
+    // unticked; otherwise they're what the invoice is, and start ticked.
+    const preChecked = !offerQuote && !pendingSourceQuoteId;
+    let html = '<div class="job-fill-head"><svg class="th-icon" aria-hidden="true"><use href="#icon-receipt" xlink:href="#icon-receipt"></use></svg>' +
+      '<span>From this job</span><span class="job-fill-job">' + escapeHtml(b.job.title || '') + '</span></div>';
+    if (offerQuote) {
+      const quoteId = Number(b.quote.id) || 0; // a number, never text, in the inline handler
+      html += '<div class="job-fill-quote"><div><strong>Quote #' + escapeHtml(b.quote.quoteNumber || '') + ' · ' + money(b.quote.total) + '</strong>' +
+        '<span class="job-fill-note">What ' + escapeHtml(b.quote.clientName || 'the client') + ' was quoted, not billed yet</span></div>' +
+        '<button type="button" class="primary-btn job-fill-btn" onclick="billJobQuote(' + quoteId + ')">Bill the quote</button></div>';
+    }
+    if (b.lines.length) {
+      if (offerQuote) html += '<div class="job-fill-or">or build it from what was logged</div>';
+      html += '<ul class="job-fill-lines">' + b.lines.map(l => l.needsHours
+        // A div, not a label: the row holds its own number inputs.
+        ? '<li><div class="job-fill-line has-inputs"><input type="checkbox" data-fill-key="labor" aria-label="Add a Labor line" onchange="updateJobFillButton()">' +
+            '<span class="job-fill-main"><span class="job-fill-desc">Labor</span><span class="job-fill-note">' + escapeHtml(l.note) + '</span></span>' +
+            '<span class="job-fill-inputs"><input type="number" class="job-fill-num" id="jobFillHours" min="0" step="0.25" inputmode="decimal" placeholder="0" aria-label="Hours" oninput="jobFillHoursChanged()"><span class="job-fill-unit">h</span>' +
+            (l.price === '' ? '<span class="job-fill-unit">× $</span><input type="number" class="job-fill-num" id="jobFillRate" min="0" step="0.01" inputmode="decimal" placeholder="rate" aria-label="Hourly rate" oninput="jobFillHoursChanged()">' : '') +
+            '</span><span class="job-fill-amt" id="jobFillLaborAmt">—</span></div></li>'
+        // label-hint: the shared reset for text inside a <label> (the
+        // form's labels are small caps; these lines are sentences).
+        : '<li><label class="job-fill-line"><input type="checkbox" data-fill-key="' + escapeHtml(l.key) + '"' + (preChecked ? ' checked' : '') + ' onchange="updateJobFillButton()">' +
+          '<span class="job-fill-main label-hint"><span class="job-fill-desc label-hint">' + escapeHtml(l.desc) + '</span><span class="job-fill-note label-hint">' + escapeHtml(l.note) + '</span></span>' +
+          '<span class="job-fill-amt label-hint">' + (l.price !== '' ? money(jobFillLineAmount(l)) : '—') + '</span></label></li>'
+      ).join('') + '</ul>';
+      html += '<div class="job-fill-actions"><button type="button" class="' + (offerQuote ? 'secondary-btn' : 'primary-btn') + ' job-fill-btn" id="jobFillAddBtn" onclick="addJobFillLines()"></button>' +
+        '<button type="button" class="small-btn" onclick="dismissJobFill()">Not now</button></div>';
+    } else {
+      html += '<div class="job-fill-actions"><button type="button" class="small-btn" onclick="dismissJobFill()">Not now</button></div>';
+    }
+    panel.className = 'job-fill';
+    panel.hidden = false;
+    panel.innerHTML = html;
+    updateJobFillButton();
+  }
+
+  // Typing hours ticks the Labor line; its amount follows the hours and the
+  // remembered rate (or the rate typed beside them, which recalc() then
+  // remembers for next time like any Labor row's price).
+  function jobFillLaborInputs() {
+    const hoursEl = document.getElementById('jobFillHours');
+    const rateEl = document.getElementById('jobFillRate');
+    const hours = hoursEl ? parseFloat(hoursEl.value) || 0 : 0;
+    const rate = rateEl ? parseFloat(rateEl.value) || 0 : (parseFloat(localStorage.getItem(LABOR_RATE_KEY)) || 0);
+    return { hours, rate };
+  }
+  function jobFillHoursChanged() {
+    const { hours, rate } = jobFillLaborInputs();
+    const box = document.querySelector('#jobFillPanel [data-fill-key="labor"]');
+    if (box) box.checked = hours > 0;
+    const amt = document.getElementById('jobFillLaborAmt');
+    if (amt) amt.textContent = hours > 0 && rate > 0 ? money(hours * rate) : '—';
+    updateJobFillButton();
+  }
+
+  function checkedJobFillKeys() {
+    return Array.from(document.querySelectorAll('#jobFillPanel [data-fill-key]')).filter(c => c.checked).map(c => c.getAttribute('data-fill-key'));
+  }
+  function updateJobFillButton() {
+    const btn = document.getElementById('jobFillAddBtn');
+    if (!btn) return;
+    const n = checkedJobFillKeys().length;
+    btn.disabled = n === 0;
+    btn.textContent = n === 0 ? 'Tick what to add' : 'Add ' + n + ' line' + (n === 1 ? '' : 's');
+  }
+
+  // The untouched starter row (one row, no price) is the placeholder the
+  // job's lines replace; anything typed by hand is left alone.
+  function takeStarterRow() {
+    const rows = document.querySelectorAll('#lineItemsBody tr');
+    if (rows.length !== 1) return null;
+    const row = rows[0];
+    if (row.querySelector('.li-price').value !== '') return null;
+    const kept = {
+      desc: row.querySelector('.li-desc').value, part: row.querySelector('.li-part').value,
+      qty: row.querySelector('.li-qty').value, taxable: row.querySelector('.li-taxable').checked, type: row.querySelector('.li-type').value,
+    };
+    row.remove();
+    return kept;
+  }
+  function addRowsTrackingIds(items) {
+    const before = new Set(Array.from(document.querySelectorAll('#lineItemsBody tr'), r => r.id));
+    items.forEach(it => addLineItem(it.desc, it.part || '', it.qty, it.price, it.taxable !== false, it.type || '', true));
+    return Array.from(document.querySelectorAll('#lineItemsBody tr'), r => r.id).filter(id => !before.has(id));
+  }
+
+  function addJobFillLines() {
+    const b = currentJobFillBillables();
+    if (!b) return;
+    const keys = checkedJobFillKeys();
+    const labor = jobFillLaborInputs();
+    const chosen = b.lines.filter(l => keys.includes(l.key))
+      .map(l => (l.needsHours ? { ...l, qty: labor.hours, price: labor.rate || '' } : l))
+      .filter(l => !l.needsHours || l.qty > 0);
+    if (!chosen.length) return;
+    const starter = takeStarterRow();
+    const rowIds = addRowsTrackingIds(chosen);
+    const total = chosen.reduce((sum, l) => sum + jobFillLineAmount(l), 0);
+    jobFillState = { jobId: b.jobId, rowIds, starter, summary: 'Added ' + chosen.length + ' line' + (chosen.length === 1 ? '' : 's') + ' from the job' + (total ? ' · ' + money(total) : '') + '.' };
+    recalc();
+    if (typeof haptic === 'function') haptic('light');
+    renderJobFillPanel();
+  }
+
+  function billJobQuote(quoteId) {
+    const b = currentJobFillBillables();
+    const q = loadQuoteLog().find(x => x.id === quoteId);
+    if (!b || !q || !Array.isArray(q.line_items)) return;
+    const starter = takeStarterRow();
+    const rowIds = addRowsTrackingIds(q.line_items);
+    const discountEl = document.getElementById('discountAmount');
+    const labelEl = document.getElementById('discountLabel');
+    let discountSet = false;
+    if (Number(q.discount) > 0 && discountEl && (!discountEl.value || Number(discountEl.value) === 0)) {
+      discountEl.value = String(q.discount);
+      if (labelEl && !labelEl.value.trim()) labelEl.value = 'Discount (as quoted)';
+      discountSet = true;
+    }
+    // The same link Convert to Invoice sets: logInvoice() marks the quote
+    // converted when this invoice is saved.
+    pendingSourceQuoteId = q.id;
+    jobFillState = { jobId: b.jobId, rowIds, starter, quoteId: q.id, discountSet, summary: 'Billing quote #' + (q.quoteNumber || '') + ' · ' + money(q.total) + '. Edit any line below.' };
+    recalc();
+    if (typeof haptic === 'function') haptic('light');
+    renderJobFillPanel();
+  }
+
+  function undoJobFill() {
+    if (!jobFillState || !jobFillState.rowIds) return;
+    jobFillState.rowIds.forEach(id => { const row = document.getElementById(id); if (row) row.remove(); });
+    if (jobFillState.starter && !document.querySelector('#lineItemsBody tr')) {
+      const st = jobFillState.starter;
+      addLineItem(st.desc, st.part, st.qty || 1, '', st.taxable, st.type);
+    }
+    if (jobFillState.quoteId && pendingSourceQuoteId === jobFillState.quoteId) pendingSourceQuoteId = null;
+    if (jobFillState.discountSet) {
+      const discountEl = document.getElementById('discountAmount');
+      const labelEl = document.getElementById('discountLabel');
+      if (discountEl) discountEl.value = '0';
+      if (labelEl && labelEl.value === 'Discount (as quoted)') labelEl.value = '';
+    }
+    if (!document.querySelector('#lineItemsBody tr')) addLineItem();
+    jobFillState = null;
+    recalc();
+    renderJobFillPanel();
+  }
+
+  function dismissJobFill() {
+    const jobId = (document.getElementById('invoiceJobRef') || {}).value;
+    jobFillState = { jobId, dismissed: true };
+    renderJobFillPanel();
   }
 
   // Called from recalc() (below) whenever a Labor or Mileage row's own
@@ -1394,10 +1673,10 @@
     tr.id = 'qrow-' + id;
     if (isUserAdd) tr.classList.add('list-row-enter');
     tr.innerHTML = `
-      <td data-label="Description"><input type="text" class="qli-desc" value="${desc}"></td>
+      <td data-label="Description"><input type="text" class="qli-desc" value="${lineItemAttr(desc)}"></td>
       <td data-label="Type"><select class="qli-type" onchange="updateLineItemUnitLabel(this)">${lineItemTypeOptions(type)}</select></td>
-      <td data-label="Part #"><input type="text" class="qli-part" value="${part}"></td>
-      <td data-label="Qty"><input type="number" class="qli-qty" value="${qty}" min="0" step="1" oninput="recalcQuote()"><span class="qli-qty-unit">${lineItemUnitLabel(type)}</span></td>
+      <td data-label="Part #"><input type="text" class="qli-part" value="${lineItemAttr(part)}"></td>
+      <td data-label="Qty"><input type="number" class="qli-qty" value="${lineItemAttr(qty)}" min="0" step="any" oninput="recalcQuote()"><span class="qli-qty-unit">${lineItemUnitLabel(type)}</span></td>
       <td data-label="Price"><input type="number" class="qli-price" value="${price}" min="0" step="0.01" oninput="recalcQuote()"></td>
       <td class="qli-amount" data-label="Amount">$0.00</td>
       <td style="text-align:center;" data-label="Tax?"><input type="checkbox" class="qli-taxable" ${taxable ? 'checked' : ''} oninput="recalcQuote()"></td>
@@ -1480,6 +1759,8 @@
       items.forEach(item => addLineItem(item.desc, item.part, item.qty, item.price, item.taxable, item.type));
     }
     recalc();
+    jobFillState = null;
+    if (typeof renderJobFillPanel === 'function') renderJobFillPanel();
     activateGenTab('invoice');
     showToast('Copied to the Invoice tab \u2014 review, then Generate PDF.', { duration: 3400 });
   }
@@ -1868,6 +2149,8 @@
     document.getElementById('invoiceTerms').value = 'Net 15';
     if (document.getElementById('invoiceType')) document.getElementById('invoiceType').value = 'standard';
     recalc();
+    jobFillState = null;
+    if (typeof renderJobFillPanel === 'function') renderJobFillPanel();
   }
 
   // ---------- Invoice logging (feeds the Dashboard's revenue numbers) ----------
@@ -2561,6 +2844,7 @@
     const jobDescription = document.getElementById('jobDescription').value;
     if (firstLineDesc && !firstLineDesc.value.trim() && jobDescription) firstLineDesc.value = jobDescription;
     recalc();
+    if (typeof renderJobFillPanel === 'function') renderJobFillPanel();
     // Strips ?jobRef= once applied so refreshing, bookmarking, or
     // hitting "New Invoice"/reset later doesn't keep re-applying a job
     // that may since have changed or been deleted.
@@ -2700,6 +2984,10 @@
     recalc();
     const queryTab = genTabFromQuery();
     if (queryTab) activateGenTab(queryTab);
+    // From this job follows the Job dropdown (a listener, so the dropdown's
+    // own onchange -- the job autofill -- stays exactly as it was).
+    const invoiceJobRefEl = document.getElementById('invoiceJobRef');
+    if (invoiceJobRefEl) invoiceJobRefEl.addEventListener('change', () => { if (typeof renderJobFillPanel === 'function') renderJobFillPanel(); });
     applyJobRefFromUrl();
     applyClientFromUrl();
     applyLogSearchFromUrl();
@@ -3151,6 +3439,7 @@
       <p>This page opens on your invoices: who owes you, what is overdue, and what you billed this month. The forms are the tabs next to it (and the orange <strong>+</strong> opens them from any page).</p>
       <ul>
         <li><strong>Invoices tab</strong> &mdash; every invoice, newest first, with what is still owed on it and when it is due. Tap <strong>Owed to you</strong> or <strong>Overdue</strong> (or the chips under the search) to show only those. Tap a row (or hold it) for <strong>Mark Paid</strong> &mdash; for a cash or check payment; the client's portal is told too, so they can't pay it twice &mdash; <strong>Resend to client</strong>, <strong>Open client</strong>, <strong>Open job</strong>, or <strong>Delete</strong>. On a computer those buttons are also at the end of each row. Your quotes are listed underneath, with whether the client approved or declined on their portal.</li>
+        <li><strong>From this job</strong> &mdash; open an invoice from a job (its Create invoice, Ready to invoice on the Dashboard, the Job done sheet, or by picking the job in the form) and a panel above the line items offers what's already logged: the hours on the job as Labor at your last labor rate, every receipt logged against it in Finance as a part at cost (add your markup in the price), and its mileage at your last mileage rate. Tick what to bill and tap Add; Undo puts the form back. If the client has an unbilled quote for that job, <strong>Bill the quote</strong> copies the quote's lines and discount instead, and marks the quote converted when you save.</li>
         <li><strong>New invoice tab</strong> &mdash; fill in <strong>Invoice Details</strong> and <strong>Bill To</strong>, then add each line item (labor, parts, etc.) in the line-items table. Uncheck "Tax?" on any row that's exempt (see the note above the totals for why some rows might not be taxable). Use Download PDF for a branded copy, or Send to Client to email it and post it to their portal.</li>
         <li><strong>New quote tab</strong> &mdash; same idea, before a job starts, including the same tax handling. Download an estimate PDF (clearly labeled as an estimate, not a bill), or tap <strong>Convert to Invoice</strong> once the work's done to copy everything straight over to the New invoice tab instead of re-typing it &mdash; including which rows were marked taxable.</li>
         <li><strong>Quick charge tab</strong> &mdash; for a small job that doesn't need a real invoice: enter the client's email and an amount and charge their card on the spot. If that email has paid an invoice before, their card is already saved (this happens automatically the first time anyone pays an invoice) and you'll see a one-tap Charge button; otherwise you get a normal card form, and that card gets saved for next time too, after the client types their name as an authorization. Every POS sale shows up in your Income log the same way any other payment does, tagged so you can always tell it apart from an invoice &mdash; it never creates an invoice, a quote, or a portal record of any kind.</li>

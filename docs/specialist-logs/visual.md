@@ -1096,4 +1096,25 @@ Cross-logged from features.md (Workspace rework, part 1). Visual calls:
   ⋯. The Money Owed card's To invoice line is orange, a to-do rather
   than a debt.
 
+## 2026-09-22 (later still) -- From this job panel
+
+- **The panel:** an orange-tinted card over the line items, with a
+  receipt icon and "From this job", then the job's title dimmed. Each
+  line is a panel-colour row: a large orange checkbox (`accent-color`),
+  the description over a dim note ("Receipt, Home Depot · Sep 20 · at
+  cost"), and the amount right-aligned. Unticked rows fade to 72%.
+- **The rows are `<label>`s**, so the whole row toggles. That means
+  undoing the form's uppercase label style (`text-transform`,
+  `letter-spacing`), which a screenshot caught.
+- **The ask-for-hours row** is a div, not a label, since it holds its
+  own inputs. The checkbox, text and amount sit on line one; the
+  hours/rate inputs wrap to their own line under the text (flex
+  `order` + `flex-basis: 100%`). At 390px they had squeezed the text
+  into a one-word column.
+- **Bill the quote** is the primary button when a quote is on offer.
+  The logged-lines Add button turns secondary and sits under an "or
+  build it from what was logged" rule.
+- **After Add**, the card turns into a single green-tinted confirmation
+  line ("Added 4 lines from the job · $251.49.") with Undo.
+
 <!-- Add new entries above this line -->
