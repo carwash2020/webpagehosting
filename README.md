@@ -3033,3 +3033,61 @@ correctly at page-top per the fix earlier today, `.small-btn` measures
 back correctly on real buttons via `getComputedStyle`. Full suite
 2642/2642, `check-consistency`, `check-undefined-vars`, `lint`, and
 `check-links.py` all clean.
+
+## What changed, 2026-09-22 (later the same day) -- internal /tools/ accounts get real two-factor authentication
+
+A real, standalone security gap, not part of the IA/UX work earlier
+the same day: internal Owner/Developer/Employee accounts
+(`account_roles`/`role_definitions`) had zero MFA option, even though
+the client portal shipped real TOTP MFA for client-facing accounts on
+2026-09-16. Closed with the same proven Supabase Auth TOTP mechanism,
+adapted to this app's own conventions rather than copied wholesale.
+
+**What was built:**
+- `tools/auth.js` gained raw-`fetch()` MFA helpers (enroll, challenge,
+  verify, unenroll, list) against the real Supabase Auth REST
+  endpoints -- no `@supabase/supabase-js` load added to `login.html`,
+  matching this file's existing no-new-dependency convention (the
+  client portal's equivalent flow loads that SDK; internal `/tools/`
+  does not and still doesn't need to).
+- `tools/login.html` is the single chokepoint: `signIn()` gained a
+  `skipPersist` option so a correct password never writes a session to
+  storage on its own -- an already-enrolled account is always
+  challenged for its code (or a recovery code) before a session is
+  persisted, and an account whose real permissions require MFA
+  (`requiresMfaForRole()`, keyed to the actual `account_roles`
+  booleans, not the `role_name` label) is routed into the same
+  enroll-then-verify flow right there on login if it has no factor
+  yet, with one-time recovery codes generated and shown immediately
+  after. None of the other 22 tool pages needed touching.
+- `tools/settings.html` gained a "Two-Factor Authentication" card for
+  self-serve enroll/disable and regenerating recovery codes, mirroring
+  `portal/settings.html`'s shape with the same raw-`fetch()` helpers.
+- Recovery codes are a new, custom table + `SECURITY DEFINER`
+  functions (`sql/security/add_internal_mfa_recovery_codes.sql`), not
+  Supabase's own native recovery-codes API -- that API exists in the
+  SDK's source but is gated behind an experimental flag this project
+  has no live access to confirm is deployed on its hosted project.
+- `tools/workspace.html` shows a dismissible-per-session (not
+  permanent) nag banner for an already-signed-in, mandatory-tier
+  account with no factor enrolled yet, covering the real transition
+  gap for a session created before this shipped.
+- Mandatory for any account whose real, current permissions require it
+  (both real accounts today, Owner and Developer); optional-but-
+  encouraged for a bare account with none of those.
+
+**Verified:** 30 new tests (`tests/tools/internal-mfa.test.js`)
+alongside the full existing suite. Real headless Chromium via
+Playwright, served over local `python3 -m http.server`, with every
+Supabase call mocked (this environment cannot reach `*.supabase.co` at
+all): enrollment with a real QR image, correct/wrong-code login,
+valid/invalid recovery-code login, an unenrolled optional account
+signing in normally, and the Settings enroll/disable/regenerate flow --
+a real UI-ordering bug (recovery codes flashing then disappearing) was
+caught and fixed by this same Playwright run. **Not verified live**:
+actual TOTP against a real authenticator app and the live Supabase
+project (no live access from this environment), and the new SQL
+migration has not been applied to the live database yet -- both need a
+human with real access before this is fully in production. Full
+reasoning and the complete verify/couldn't-verify breakdown:
+`docs/specialist-logs/security.md`'s 2026-09-22 entry.

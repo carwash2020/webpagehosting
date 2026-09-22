@@ -217,17 +217,32 @@ than the finding's title alone.
   client-portal population (see `docs/CLIENT-PORTAL.md`) from
   credential-stuffing using passwords already exposed in public
   breaches. No further action needed here.
-- **No MFA enforcement**, on either the internal accounts or client
-  portal accounts. Also a dashboard-only setting (Authentication ->
-  MFA, which controls whether TOTP/phone factors are even available to
-  enroll at all) -- confirmed the same way, no scriptable path from
-  this repo. Building actual enrollment and step-up-during-login UI on
-  top of that is a separate, much larger feature decision (new
-  screens, a QR-enrollment flow, backup codes, a challenge/verify step
-  added to every sign-in), not a quick fix -- left as a deliberate,
-  accepted gap for now, but worth a real product decision once the
-  client-portal population above is large enough that a single
-  compromised password would matter more than it does today.
+- ~~**No MFA enforcement**~~ -- **done for both populations now.**
+  Enabling MFA availability itself was a one-time dashboard-only
+  setting (Authentication -> MFA, which controls whether TOTP/phone
+  factors are even available to enroll at all) with no scriptable path
+  from this repo -- that part was flipped by hand once and needs no
+  further action. Real enrollment and step-up-during-login UI on top
+  of it is fully built now: client-portal accounts got it 2026-09-16
+  (`portal/settings.html`, `portal/login.html`, via the
+  `@supabase/supabase-js` client already loaded there), and internal
+  `/tools/` accounts (Owner/Developer/Employee, backed by
+  `account_roles`/`role_definitions`) got it 2026-09-22
+  (`tools/settings.html`, `tools/login.html`, via raw `fetch()` against
+  the same Supabase Auth REST endpoints instead of loading the SDK,
+  matching `auth.js`'s existing no-new-dependency convention). Both use
+  real, server-verified TOTP -- not a local-only flag. Mandatory for
+  any internal account whose actual permissions require it (any
+  elevated `account_roles` boolean, not just the Owner/Developer
+  role-name label); optional-but-encouraged for a bare Employee
+  account with none of those. Recovery codes for internal accounts are
+  a custom-built table + `SECURITY DEFINER` functions
+  (`sql/security/add_internal_mfa_recovery_codes.sql`), since
+  Supabase's own native recovery-codes REST API is gated behind an
+  `experimental` client flag this repo has no live access to confirm
+  is even deployed on this project's hosted GoTrue version. Full
+  design reasoning: `docs/specialist-logs/security.md`'s 2026-09-22
+  entry.
 - **`escapeHtml()` (in `tools-dialogs.js`) is only safe for text-node
   content**, not HTML-attribute-value contexts -- it escapes `&`,
   `<`, `>` but not quotes, since quotes aren't special in the context

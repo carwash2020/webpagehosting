@@ -44,7 +44,7 @@
 </script>
 <link rel="stylesheet" href="/styles.css?v=2e81706c3d">
 <link rel="stylesheet" href="/tools/styles-tools.css?v=f8d06f6cbe">
-<script src="/tools/auth.js?v=2be5cce177"></script>
+<script src="/tools/auth.js?v=0cd43bdab1"></script>
 <script src="/tools/tools-effects.js?v=4cff99aa4a" defer></script>
 <script src="/tools/tools-dialogs.js?v=83d27784e2" defer></script>
 <script src="/tools/tools-media-sharing.js?v=0c229c9353" defer></script>
@@ -89,6 +89,27 @@
   }
   .login-error { color: #e05252; font-size: 13.5px; margin: 4px 0 16px; min-height: 1px; }
   .login-btn { width: 100%; justify-content: center; }
+
+  /* Two-factor step-up (2026-09-22) -- shown in place of the password form,
+     never alongside it, so there is only ever one thing to fill in at a
+     time. Mirrors the portal login's mfa-challenge-modal shell loosely, but
+     inline on this page rather than an overlay, since login.html has no
+     other content underneath to dim. */
+  .mfa-step-title { font-family:var(--font-ui); font-weight:700; font-size:18px; color:var(--white); margin-bottom:6px; }
+  .mfa-step-sub { color:var(--text-dim); font-size:13.5px; margin-bottom:18px; line-height:1.5; }
+  .mfa-code-input {
+    width:100%; padding:12px 13px; background:var(--bg-panel-2); border:1px solid var(--border);
+    border-radius:8px; color:var(--white); font-size:20px; font-family:inherit; box-sizing:border-box;
+    letter-spacing:4px; text-align:center; margin-bottom:12px;
+  }
+  .mfa-qr-wrap { text-align:center; margin-bottom:16px; }
+  .mfa-qr-wrap img { width:180px; height:180px; background:#fff; border-radius:8px; padding:8px; }
+  .mfa-secret-fallback { font-size:12px; color:var(--text-dim); word-break:break-all; margin-top:8px; }
+  .mfa-link-btn { background:none; border:none; color:var(--text-dim); font-size:13px; margin-top:14px; cursor:pointer; text-decoration:underline; width:100%; }
+  .mfa-recovery-codes-list {
+    background:var(--bg-panel-2); border:1px solid var(--border); border-radius:8px; padding:14px;
+    font-family:monospace; font-size:15px; line-height:1.9; color:var(--white); text-align:center; margin-bottom:16px;
+  }
 </style>
 </head>
 <body>
@@ -127,9 +148,105 @@
     <button type="button" class="secondary-btn" id="sendResetBtn" style="width:100%; justify-content:center;">Send reset link</button>
     <button type="button" id="cancelResetLink" style="background:none; border:none; color:var(--text-dim); font-size:13px; margin-top:14px; cursor:pointer; text-decoration:underline; width:100%;">Back to sign in</button>
   </div>
+
+  <!-- Two-factor challenge (2026-09-22) -- shown only when the account
+       signing in already has a verified TOTP factor. Password has already
+       been checked by this point; the session it produced is held in
+       memory only (see finishSignInWithMfaCheck() below) and is not
+       persisted to storage until this step also succeeds. -->
+  <div id="mfaChallengeView" style="display:none; text-align:left;">
+    <div class="mfa-step-title">Enter your code</div>
+    <div class="mfa-step-sub">Open your authenticator app and enter the 6-digit code for Triple H Workspace.</div>
+    <input type="text" id="mfaChallengeCodeInput" class="mfa-code-input" inputmode="numeric" autocomplete="one-time-code" placeholder="123456" maxlength="6" style="display:none;">
+    <input type="text" id="mfaRecoveryCodeInput" class="mfa-code-input" style="display:none; letter-spacing:2px; font-size:16px;" placeholder="XXXX-XXXX" autocomplete="off">
+    <div class="login-error" id="mfaChallengeError"></div>
+    <button type="button" class="primary-btn login-btn" id="mfaChallengeSubmitBtn">Verify</button>
+    <button type="button" class="mfa-link-btn" id="mfaUseRecoveryCodeLink">Use a recovery code instead</button>
+    <button type="button" class="mfa-link-btn" id="mfaChallengeCancelLink">Cancel and sign out</button>
+  </div>
+
+  <!-- Mandatory enrollment (2026-09-22) -- shown when the account's real
+       permissions require two-factor authentication (see
+       requiresMfaForRole() in auth.js) and no factor is enrolled yet. Same
+       enroll/verify calls Settings uses for the optional, self-serve path,
+       just reached from login instead of from a Settings toggle. -->
+  <div id="mfaEnrollView" style="display:none; text-align:left;">
+    <div class="mfa-step-title">Set up two-factor authentication</div>
+    <div class="mfa-step-sub">Your account requires two-factor authentication before you can continue. Scan this code with an authenticator app (Google Authenticator, Authy, 1Password, etc.), then enter the 6-digit code it shows.</div>
+    <div class="mfa-qr-wrap">
+      <img id="mfaEnrollQrImg" alt="Scan this QR code with your authenticator app">
+      <div class="mfa-secret-fallback" id="mfaEnrollSecretFallback"></div>
+    </div>
+    <input type="text" id="mfaEnrollCodeInput" class="mfa-code-input" inputmode="numeric" autocomplete="one-time-code" placeholder="123456" maxlength="6">
+    <div class="login-error" id="mfaEnrollError"></div>
+    <button type="button" class="primary-btn login-btn" id="mfaEnrollVerifyBtn">Verify &amp; Continue</button>
+    <button type="button" class="mfa-link-btn" id="mfaEnrollCancelLink">Cancel and sign out</button>
+  </div>
+
+  <!-- Recovery codes, shown once, immediately after a first-time mandatory
+       enrollment succeeds -- the only moment the plaintext codes are ever
+       visible anywhere (see generate_internal_recovery_codes() in
+       sql/security/add_internal_mfa_recovery_codes.sql). -->
+  <div id="mfaRecoveryCodesView" style="display:none; text-align:left;">
+    <div class="mfa-step-title">Save your recovery codes</div>
+    <div class="mfa-step-sub">If you ever lose access to your authenticator app, use one of these one-time codes to sign in instead. Each code works once. Save them somewhere safe -- they will not be shown again.</div>
+    <div class="mfa-recovery-codes-list" id="mfaRecoveryCodesList"></div>
+    <button type="button" class="secondary-btn login-btn" id="mfaDownloadCodesBtn" style="margin-bottom:10px;">Download codes</button>
+    <button type="button" class="primary-btn login-btn" id="mfaRecoveryCodesContinueBtn">I've saved these -- Continue</button>
+  </div>
 </div>
 
 <script>
+  // Only ever redirect to a known internal tool page -- never follow an
+  // arbitrary external "return" value, which would make this an open
+  // redirect. An explicit allowlist is easier to verify at a glance and
+  // matches reality exactly: requireAuth() in auth.js always builds this
+  // parameter from window.location.pathname on this same site.
+  const ALLOWED_RETURN_PATHS = new Set([
+    '/tools/calendar.html', '/tools/client-detail.html', '/tools/clients.html', '/tools/contact-card.html',
+    '/tools/contract-generator.html', '/tools/dev-tools.html', '/tools/expense-logger.html',
+    '/tools/finance.html', '/tools/invoice-generator.html', '/tools/job-cost-lookup.html',
+    '/tools/job-detail.html', '/tools/job-tracker.html', '/tools/parts-reference.html', '/tools/pos.html',
+    '/tools/review-request.html', '/tools/route-planner.html', '/tools/runway-dashboard.html',
+    '/tools/settings.html', '/tools/site-content.html', '/tools/workspace.html',
+  ]);
+  function redirectAfterLogin() {
+    const params = new URLSearchParams(window.location.search);
+    const returnTo = params.get('return');
+    window.location.href = ALLOWED_RETURN_PATHS.has(returnTo) ? returnTo : '/tools/workspace.html';
+  }
+
+  // Two-factor authentication (2026-09-22) -- see the "TWO-FACTOR
+  // AUTHENTICATION (MFA)" block in auth.js for the full design and why
+  // this is raw fetch() rather than the supabase-js client the portal's
+  // equivalent flow uses. `pendingSession` holds a password-verified but
+  // NOT YET PERSISTED session (signIn() was called with skipPersist:true)
+  // -- nothing here is written to storage until MFA (or a recovery code)
+  // actually clears, so there is no window where a password alone is
+  // sufficient for an account that has, or is required to have,
+  // two-factor authentication.
+  let pendingSession = null;
+  let pendingRememberMe = false;
+  let pendingFactorId = null;
+  let pendingRecoveryMode = false;
+
+  function showStep(id) {
+    ['loginForm', 'mfaChallengeView', 'mfaEnrollView', 'mfaRecoveryCodesView'].forEach((stepId) => {
+      const el = document.getElementById(stepId);
+      if (el) el.style.display = stepId === id ? '' : 'none';
+    });
+  }
+
+  function cancelPendingLoginAndReset() {
+    pendingSession = null;
+    pendingFactorId = null;
+    pendingRecoveryMode = false;
+    document.getElementById('loginPassword').value = '';
+    document.getElementById('mfaChallengeError').textContent = '';
+    document.getElementById('mfaEnrollError').textContent = '';
+    showStep('loginForm');
+  }
+
   document.getElementById('loginForm').addEventListener('submit', async (e) => {
     e.preventDefault();
     const btn = document.getElementById('loginBtn');
@@ -141,40 +258,198 @@
     const email = document.getElementById('loginEmail').value.trim();
     const password = document.getElementById('loginPassword').value;
     const rememberMe = document.getElementById('rememberMe').checked;
-    const result = await signIn(email, password, rememberMe);
+    const result = await signIn(email, password, rememberMe, { skipPersist: true });
+
+    btn.disabled = false;
+    btn.textContent = 'Sign In';
 
     if (!result.ok) {
       errorEl.textContent = result.error;
-      btn.disabled = false;
-      btn.textContent = 'Sign In';
       return;
     }
 
-    const params = new URLSearchParams(window.location.search);
-    const returnTo = params.get('return');
-    // Only ever redirect to a known internal tool page -- never follow
-    // an arbitrary external "return" value, which would make this an
-    // open redirect. An earlier version tried to validate an arbitrary
-    // path was "safe" (same-origin, not protocol-relative) rather than
-    // checking against a known set -- that version was verified
-    // correct against real adversarial cases (including the classic
-    // '//evil.com' protocol-relative bypass), but a hand-written
-    // validator function isn't something static analysis tools
-    // reliably recognize as an effective sanitizer. An explicit
-    // allowlist is both easier to verify at a glance and matches
-    // reality exactly: requireAuth() in auth.js always builds this
-    // parameter from window.location.pathname on this same site, so
-    // it can only ever legitimately be one of these real pages.
-    const ALLOWED_RETURN_PATHS = new Set([
-      '/tools/calendar.html', '/tools/client-detail.html', '/tools/clients.html', '/tools/contact-card.html',
-      '/tools/contract-generator.html', '/tools/dev-tools.html', '/tools/expense-logger.html',
-      '/tools/finance.html', '/tools/invoice-generator.html', '/tools/job-cost-lookup.html',
-      '/tools/job-detail.html', '/tools/job-tracker.html', '/tools/parts-reference.html', '/tools/pos.html',
-      '/tools/review-request.html', '/tools/route-planner.html', '/tools/runway-dashboard.html',
-      '/tools/settings.html', '/tools/site-content.html', '/tools/workspace.html',
-    ]);
-    window.location.href = ALLOWED_RETURN_PATHS.has(returnTo) ? returnTo : '/tools/workspace.html';
+    pendingSession = {
+      access_token: result.access_token,
+      refresh_token: result.refresh_token,
+      expires_at: result.expires_at,
+      email: result.email,
+    };
+    pendingRememberMe = rememberMe;
+
+    // Already has a verified factor -- always challenge for it, regardless
+    // of role (once enrolled, it's never skippable, even for an
+    // optional-tier account that chose to set it up).
+    const factor = await mfaListVerifiedTotpFactor(pendingSession.access_token);
+    if (factor) {
+      pendingFactorId = factor.id;
+      pendingRecoveryMode = false;
+      document.getElementById('mfaChallengeCodeInput').style.display = '';
+      document.getElementById('mfaRecoveryCodeInput').style.display = 'none';
+      document.getElementById('mfaChallengeCodeInput').value = '';
+      document.getElementById('mfaChallengeError').textContent = '';
+      document.getElementById('mfaUseRecoveryCodeLink').textContent = 'Use a recovery code instead';
+      showStep('mfaChallengeView');
+      document.getElementById('mfaChallengeCodeInput').focus();
+      return;
+    }
+
+    // No factor enrolled -- check whether this account's real permissions
+    // require one before letting it through (see requiresMfaForRole() in
+    // auth.js). Uses the not-yet-persisted token directly.
+    const roleInfo = await loadCurrentUserRole(pendingSession.access_token, pendingSession.email);
+    if (requiresMfaForRole(roleInfo)) {
+      await startMandatoryEnrollment();
+      return;
+    }
+
+    persistSession(pendingSession, pendingRememberMe);
+    redirectAfterLogin();
   });
+
+  // ---- Challenge step (already-enrolled account) ----
+
+  document.getElementById('mfaUseRecoveryCodeLink').addEventListener('click', () => {
+    pendingRecoveryMode = !pendingRecoveryMode;
+    document.getElementById('mfaChallengeCodeInput').style.display = pendingRecoveryMode ? 'none' : '';
+    document.getElementById('mfaRecoveryCodeInput').style.display = pendingRecoveryMode ? '' : 'none';
+    document.getElementById('mfaRecoveryCodeInput').value = '';
+    document.getElementById('mfaChallengeCodeInput').value = '';
+    document.getElementById('mfaChallengeError').textContent = '';
+    document.getElementById('mfaUseRecoveryCodeLink').textContent = pendingRecoveryMode
+      ? 'Use your authenticator app instead'
+      : 'Use a recovery code instead';
+    (pendingRecoveryMode ? document.getElementById('mfaRecoveryCodeInput') : document.getElementById('mfaChallengeCodeInput')).focus();
+  });
+
+  document.getElementById('mfaChallengeSubmitBtn').addEventListener('click', async () => {
+    const btn = document.getElementById('mfaChallengeSubmitBtn');
+    const errorEl = document.getElementById('mfaChallengeError');
+    errorEl.textContent = '';
+
+    if (pendingRecoveryMode) {
+      const code = document.getElementById('mfaRecoveryCodeInput').value.trim();
+      if (!code) { errorEl.textContent = 'Enter a recovery code.'; return; }
+      btn.disabled = true; btn.textContent = 'Checking...';
+      const result = await verifyRecoveryCode(pendingSession.access_token, code);
+      btn.disabled = false; btn.textContent = 'Verify';
+      if (!result.ok || !result.valid) {
+        errorEl.textContent = (result.ok === false && result.error) ? result.error : 'That recovery code is invalid or already used.';
+        return;
+      }
+      persistSession(pendingSession, pendingRememberMe);
+      redirectAfterLogin();
+      return;
+    }
+
+    const code = document.getElementById('mfaChallengeCodeInput').value.trim();
+    if (!/^\d{6}$/.test(code)) { errorEl.textContent = 'Enter the 6-digit code from your authenticator app.'; return; }
+    btn.disabled = true; btn.textContent = 'Verifying...';
+    const result = await mfaChallengeAndVerify(pendingSession.access_token, pendingFactorId, code);
+    btn.disabled = false; btn.textContent = 'Verify';
+    if (!result.ok) { errorEl.textContent = result.error; return; }
+    persistSession({
+      access_token: result.access_token,
+      refresh_token: result.refresh_token,
+      expires_at: result.expires_at,
+      email: result.email || pendingSession.email,
+    }, pendingRememberMe);
+    redirectAfterLogin();
+  });
+
+  document.getElementById('mfaChallengeCancelLink').addEventListener('click', cancelPendingLoginAndReset);
+
+  // ---- Mandatory enrollment step (role requires MFA, none enrolled yet) ----
+
+  async function startMandatoryEnrollment() {
+    const errorEl = document.getElementById('mfaEnrollError');
+    errorEl.textContent = '';
+    showStep('mfaEnrollView');
+    const result = await mfaEnroll(pendingSession.access_token);
+    if (!result.ok) {
+      errorEl.textContent = result.error + ' Please refresh and sign in again.';
+      return;
+    }
+    pendingFactorId = result.factorId;
+    document.getElementById('mfaEnrollQrImg').src = result.totp.qr_code;
+    document.getElementById('mfaEnrollSecretFallback').textContent = result.totp.secret
+      ? ('Can\'t scan? Enter this code manually: ' + result.totp.secret)
+      : '';
+    document.getElementById('mfaEnrollCodeInput').value = '';
+    document.getElementById('mfaEnrollCodeInput').focus();
+  }
+
+  document.getElementById('mfaEnrollVerifyBtn').addEventListener('click', async () => {
+    const btn = document.getElementById('mfaEnrollVerifyBtn');
+    const errorEl = document.getElementById('mfaEnrollError');
+    const code = document.getElementById('mfaEnrollCodeInput').value.trim();
+    errorEl.textContent = '';
+    if (!/^\d{6}$/.test(code)) { errorEl.textContent = 'Enter the 6-digit code from your authenticator app.'; return; }
+
+    btn.disabled = true; btn.textContent = 'Verifying...';
+    const result = await mfaChallengeAndVerify(pendingSession.access_token, pendingFactorId, code);
+    if (!result.ok) {
+      btn.disabled = false; btn.textContent = 'Verify & Continue';
+      errorEl.textContent = result.error;
+      return;
+    }
+
+    pendingSession = {
+      access_token: result.access_token,
+      refresh_token: result.refresh_token,
+      expires_at: result.expires_at,
+      email: result.email || pendingSession.email,
+    };
+
+    const codesResult = await generateRecoveryCodes(pendingSession.access_token, 10);
+    btn.disabled = false; btn.textContent = 'Verify & Continue';
+    if (!codesResult.ok) {
+      // Two-factor itself is on and verified -- don't block getting into
+      // the app over recovery codes specifically failing to generate.
+      // Settings has its own "Generate recovery codes" action to retry
+      // this later.
+      persistSession(pendingSession, pendingRememberMe);
+      redirectAfterLogin();
+      return;
+    }
+
+    document.getElementById('mfaRecoveryCodesList').innerHTML = codesResult.codes.map((c) => escapeHtmlForLogin(c)).join('<br>');
+    showStep('mfaRecoveryCodesView');
+  });
+
+  document.getElementById('mfaEnrollCancelLink').addEventListener('click', async () => {
+    if (pendingFactorId && pendingSession) {
+      mfaUnenroll(pendingSession.access_token, pendingFactorId).catch(() => {});
+    }
+    cancelPendingLoginAndReset();
+  });
+
+  // ---- Recovery codes display (shown once, right after enrollment) ----
+
+  document.getElementById('mfaDownloadCodesBtn').addEventListener('click', () => {
+    const text = document.getElementById('mfaRecoveryCodesList').innerText;
+    const blob = new Blob([
+      'Triple H Workspace -- two-factor recovery codes\n',
+      'Each code works once. Keep this somewhere safe.\n\n',
+      text + '\n',
+    ], { type: 'text/plain' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'triple-h-workspace-recovery-codes.txt';
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+  });
+
+  document.getElementById('mfaRecoveryCodesContinueBtn').addEventListener('click', () => {
+    persistSession(pendingSession, pendingRememberMe);
+    redirectAfterLogin();
+  });
+
+  function escapeHtmlForLogin(s) {
+    return String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  }
 
   document.getElementById('forgotPasswordLink').addEventListener('click', () => {
     document.getElementById('loginForm').style.display = 'none';

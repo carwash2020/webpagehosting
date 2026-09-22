@@ -14,7 +14,7 @@
      background-image on html here too. -->
 <html lang="en" style="background-color:#0a0a0a;">
 <head>
-<script src="/tools/auth.js?v=2be5cce177"></script>
+<script src="/tools/auth.js?v=0cd43bdab1"></script>
 <script>
   // Security gate -- redirect to login before this page's own content
   // is meaningfully usable. See auth.js for why this exists (a small,
@@ -3218,6 +3218,53 @@
     el.textContent = 'Updated ' + relativeTimeFromNow(last.time);
   }
 
+  // Two-factor authentication nag (2026-09-22) -- login.html now forces
+  // enrollment at the moment of a fresh sign-in for any account whose real
+  // permissions require it (requiresMfaForRole() in auth.js), but an
+  // already-remembered session from BEFORE this feature shipped has no
+  // reason to re-authenticate for up to 30 days (see REMEMBER_DAYS in
+  // auth.js). This banner covers that real transition gap: a visible,
+  // dismissible-per-session (not permanently) nudge straight to Settings,
+  // rather than a silent gap until that session happens to expire or the
+  // account happens to sign out. Session-only dismissal is deliberate --
+  // this keeps re-surfacing on the next real visit until it's actually
+  // resolved, unlike a permanent localStorage dismissal would.
+  async function renderMfaNagBanner() {
+    try {
+      if (typeof getCurrentUserRole !== 'function' || typeof requiresMfaForRole !== 'function') return;
+      if (sessionStorage.getItem('th_mfa_nag_dismissed') === '1') return;
+      const role = getCurrentUserRole();
+      if (!requiresMfaForRole(role)) return;
+      if (typeof mfaListVerifiedTotpFactor !== 'function' || typeof getAuthToken !== 'function') return;
+      const factor = await mfaListVerifiedTotpFactor(getAuthToken());
+      if (factor) return; // already enrolled -- nothing to nag about
+
+      const existing = document.getElementById('mfaNagBanner');
+      if (existing) return;
+      const banner = document.createElement('div');
+      banner.id = 'mfaNagBanner';
+      banner.style.cssText = 'background:#3a2414; border:1px solid #d88a3a; border-radius:8px; padding:12px 16px; margin-bottom:14px; display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap; font-size:13.5px; color:#ffd9a8;';
+      banner.innerHTML =
+        '<span>Two-factor authentication is required for your account and isn\'t set up yet.</span>' +
+        '<span style="display:flex; gap:10px; flex-shrink:0;">' +
+        '<a href="/tools/settings.html" style="color:#ffd9a8; font-weight:600; text-decoration:underline;">Set up now</a>' +
+        '<button type="button" id="mfaNagDismissBtn" style="background:none; border:none; color:#ffd9a8; text-decoration:underline; cursor:pointer; font-size:13.5px; padding:0;">Not now</button>' +
+        '</span>';
+      const greetingBanner = document.getElementById('greetingBanner');
+      if (greetingBanner && greetingBanner.parentElement) {
+        greetingBanner.parentElement.insertBefore(banner, greetingBanner);
+      } else {
+        document.body.insertBefore(banner, document.body.firstChild);
+      }
+      document.getElementById('mfaNagDismissBtn').addEventListener('click', () => {
+        try { sessionStorage.setItem('th_mfa_nag_dismissed', '1'); } catch (e) { /* ignore */ }
+        banner.remove();
+      });
+    } catch (e) {
+      // Never let a nag banner failure break the rest of the dashboard.
+    }
+  }
+
 
   document.addEventListener('DOMContentLoaded', function () {
     try {
@@ -3232,6 +3279,7 @@
       renderBusinessFinanceTileVisibility();
       renderWelcomeGreeting();
       renderSnapshotLastUpdated();
+      renderMfaNagBanner();
       if (typeof startRealtimeSync === 'function') {
         // One status callback shared by both channels -- last status wins,
         // which is fine here since they're on the same underlying connection.

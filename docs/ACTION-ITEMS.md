@@ -43,11 +43,24 @@ click a setting by hand.
    `client.auth.mfa.getAuthenticatorAssuranceLevel()` after a correct
    password and prompts for a 6-digit code before finishing sign-in
    when a client has a verified TOTP factor. Client-portal only, by
-   design -- doesn't touch the internal `/tools/` suite's own
+   design -- opt-in, not required: an account with no factor enrolled
+   signs in exactly as before.
+   ~~Doesn't touch the internal `/tools/` suite's own
    Owner/Developer/Employee auth (a separate, unrelated concern; see
-   `docs/CLIENT-PORTAL.md`'s "Still pending" item 3 for that one).
-   Opt-in, not required: an account with no factor enrolled signs in
-   exactly as before.
+   `docs/CLIENT-PORTAL.md`'s "Still pending" item 3 for that one).~~ --
+   **that gap is closed too now (2026-09-22).** Internal accounts get
+   the same real TOTP MFA (raw `fetch()` against the Supabase Auth
+   REST endpoints in `tools/auth.js`, not the SDK the portal loads),
+   with a real chokepoint at `tools/login.html` (a session is never
+   persisted until MFA, or a recovery code, clears -- see
+   `tools/auth.js`'s `signIn(..., {skipPersist:true})`), a
+   Settings-based self-serve enroll/disable card, and a custom
+   recovery-code system (`sql/security/add_internal_mfa_recovery_codes.sql`)
+   since Supabase's own native recovery-codes API is behind an
+   unconfirmed experimental flag on this project. Mandatory for any
+   account whose real permissions require it, optional-but-encouraged
+   otherwise. Full reasoning: `docs/specialist-logs/security.md`'s
+   2026-09-22 entry.
 3. **Set up a Google Ads or Meta Pixel account** for retargeting. GA4
    events are already firing (`lead_form_submitted`, `phone_click`,
    `book_cta_click`, `booking_page_view`, `booking_form_start`,

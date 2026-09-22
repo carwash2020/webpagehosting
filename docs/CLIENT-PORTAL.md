@@ -358,8 +358,24 @@ its own SELECT policy. That distinction is easy to miss.
    card network path is live, not test mode).
 2. **Stripe receipt emails** are a one-toggle setting in Stripe
    Dashboard -> Settings -> Emails. Not enabled yet.
-3. **MFA is not enabled** for either Connor or Steve in Supabase Auth
-   (confirmed `has_mfa = false` for both).
+3. ~~**MFA is not enabled** for either Connor or Steve in Supabase
+   Auth (confirmed `has_mfa = false` for both).~~ -- **done
+   (2026-09-22).** Internal `/tools/` accounts (Owner/Developer/
+   Employee, backed by `account_roles`/`role_definitions`) now have
+   real, server-verified TOTP MFA -- mandatory for any account whose
+   actual permissions require it (both Connor's and Steve's accounts
+   currently), optional-but-encouraged for a bare Employee account
+   with none of those. This is a separate implementation from the
+   client-portal MFA above (which is client-facing accounts only) --
+   same proven Supabase Auth TOTP mechanism, but built via raw
+   `fetch()` against the Auth REST endpoints (`tools/auth.js`) rather
+   than the `@supabase/supabase-js` client the portal loads, matching
+   this internal app's existing no-new-dependency convention. Full
+   design and why it was deliberately deferred out of the original
+   2026-09-16 portal work (a real, separate, larger decision -- login
+   flow, chokepoint, mandatory-vs-optional per role, recovery codes --
+   not a quick add-on): `docs/specialist-logs/security.md`'s
+   2026-09-22 entry.
 4. ~~**Leaked password protection is off** in Supabase Auth.~~ -- **done**
    (per `docs/ACTION-ITEMS.md`, 2026-09-15) -- this file's copy just
    never got updated to say so.

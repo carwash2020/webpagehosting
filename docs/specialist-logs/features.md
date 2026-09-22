@@ -1409,4 +1409,24 @@ mirrored copy. Full detail and the debugging story in
 `docs/specialist-logs/visual.md`'s entry of the same date and in
 README's dated changelog entry. Suite 2642/2642, all checks clean.
 
+## 2026-09-22 (later the same day) -- internal /tools/ MFA (security lane, cross-logged here)
+
+Standalone security work, not part of the IA/UX rounds earlier the
+same day. Internal accounts (Owner/Developer/Employee) had zero MFA
+option even though the client portal shipped real TOTP MFA on
+2026-09-16; this closes that gap with the same underlying Supabase
+Auth TOTP mechanism, via raw `fetch()` (`tools/auth.js`) rather than
+loading the `@supabase/supabase-js` client the portal uses, plus a
+custom recovery-code table/functions
+(`sql/security/add_internal_mfa_recovery_codes.sql`) since Supabase's
+own native recovery-codes API is behind an unconfirmed experimental
+flag on this project. Mandatory for any account whose real permissions
+require it (both real accounts today), optional-but-encouraged
+otherwise; the gate lives entirely in `tools/login.html` (a session is
+never persisted until MFA/a recovery code clears), so none of the
+other 22 tool pages needed touching. Full design reasoning, what was
+verified live vs. only against a faithful mock (this environment has
+no live Supabase access), and the migration that still needs applying:
+`docs/specialist-logs/security.md`'s 2026-09-22 entry.
+
 <!-- Add new entries above this line -->
