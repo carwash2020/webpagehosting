@@ -1936,7 +1936,7 @@ test('the tour step list covers exactly the intended pages, and excludes redirec
   const src = fs.readFileSync(path.join(__dirname, '..', '..', 'tools', 'tools-tour.js'), 'utf8');
   const pages = [...src.matchAll(/page: '(\/tools\/[\w-]+\.html)'/g)].map(m => m[1]);
   // Bottom-bar order since the 2026-09-22 tutorial rewrite: Home, Jobs,
-  // Clients, Invoices, Finance, then the More sheet's pages.
+  // Clients, Money (Invoices, then Finance), then the More drawer's pages.
   const expectedPages = [
     '/tools/workspace.html', '/tools/job-tracker.html', '/tools/clients.html',
     '/tools/invoice-generator.html', '/tools/finance.html',
@@ -1947,7 +1947,8 @@ test('the tour step list covers exactly the intended pages, and excludes redirec
   const uniquePages = [...new Set(pages)];
   assert.deepEqual(uniquePages, expectedPages);
   // Tabbed pages get one step per tab (2026-09-22); the rest exactly one.
-  const STEPS_PER_PAGE = { '/tools/workspace.html': 6, '/tools/job-tracker.html': 3, '/tools/invoice-generator.html': 4, '/tools/finance.html': 4 };
+  // workspace.html: 7 since app shell v2 added the "Create anything" step.
+  const STEPS_PER_PAGE = { '/tools/workspace.html': 7, '/tools/job-tracker.html': 3, '/tools/invoice-generator.html': 4, '/tools/finance.html': 4 };
   for (const p of expectedPages) {
     assert.equal(pages.filter(x => x === p).length, STEPS_PER_PAGE[p] || 1, p + ' step count');
   }
@@ -2008,25 +2009,25 @@ test('advancing through workspace.html\'s own 4 steps stays on the same page (no
   assert.equal(w.document.querySelector('.onboarding-title').textContent, 'Quick actions');
 });
 
-test('advancing from workspace.html\'s last step (the 6th, since the 2026-09-22 tutorial rewrite) correctly records the next step (job-tracker.html) before attempting to navigate there', () => {
+test('advancing from workspace.html\'s last step (the 7th, since app shell v2 added "Create anything") correctly records the next step (job-tracker.html) before attempting to navigate there', () => {
   const w = loadTourInWindow('https://example.com/tools/workspace.html');
   w.initAppTour();
-  w.goToAppTourStep(1); w.goToAppTourStep(2); w.goToAppTourStep(3); w.goToAppTourStep(4); w.goToAppTourStep(5);
-  assert.equal(w.document.querySelector('.onboarding-title').textContent, 'Search anywhere', 'still on the dashboard at step 6');
-  try { w.goToAppTourStep(6); } catch (e) { /* jsdom can't actually navigate cross-page; expected */ }
-  assert.equal(w.localStorage.getItem('th_app_tour_step'), '6');
+  w.goToAppTourStep(1); w.goToAppTourStep(2); w.goToAppTourStep(3); w.goToAppTourStep(4); w.goToAppTourStep(5); w.goToAppTourStep(6);
+  assert.equal(w.document.querySelector('.onboarding-title').textContent, 'Search anywhere', 'still on the dashboard at step 7');
+  try { w.goToAppTourStep(7); } catch (e) { /* jsdom can't actually navigate cross-page; expected */ }
+  assert.equal(w.localStorage.getItem('th_app_tour_step'), '7');
 });
 
 test('self-correction: landing on a page that doesn\'t match the stored step shows THAT page\'s real content and fixes the stored step, rather than showing nothing or the wrong page', () => {
   // Stored step 5 is a workspace.html step, but the person is actually on
-  // route-planner.html (step 18 in the 24-step tutorial of 2026-09-22).
+  // route-planner.html (step 19 in the 25-step tutorial since app shell v2).
   const w = loadTourInWindow('https://example.com/tools/route-planner.html');
   w.localStorage.setItem('th_app_tour_step', '5');
   w.localStorage.setItem('th_app_tour_step_started_at', String(Date.now()));
   w.initAppTour();
   assert.ok(w.document.getElementById('appTourCard'));
   assert.equal(w.document.querySelector('.onboarding-title').textContent, 'Routes');
-  assert.equal(w.localStorage.getItem('th_app_tour_step'), '18');
+  assert.equal(w.localStorage.getItem('th_app_tour_step'), '19');
 });
 
 test('landing on a page that isn\'t part of the tour at all renders no card, even with an active tour in progress', () => {
@@ -2132,10 +2133,10 @@ test('running check-links.py against the real repo actually passes now (not just
 // real on its target page before using any of them, and added zero
 // new ids to any of those 10 pages to make that possible.
 
-test('every one of the 24 tour steps has a highlightSelector, and every selector (each alternative of a comma list) actually matches something real on its target page -- or in the nav / search markup every page injects', () => {
+test('every one of the 25 tour steps has a highlightSelector, and every selector (each alternative of a comma list) actually matches something real on its target page -- or in the nav / search markup every page injects', () => {
   const tourSrc = fs.readFileSync(path.join(__dirname, '..', '..', 'tools', 'tools-tour.js'), 'utf8');
   const steps = [...tourSrc.matchAll(/\{ page: '(\/tools\/[\w-]+\.html)', highlightSelector: '([^']+)'/g)];
-  assert.equal(steps.length, 24, 'every step should have a highlightSelector');
+  assert.equal(steps.length, 25, 'every step should have a highlightSelector');
   const injected = ['tools-nav-pwa.js', 'tools-command-palette.js'].map(f => fs.readFileSync(path.join(__dirname, '..', '..', 'tools', f), 'utf8')).join('\n');
   for (const [, pagePath, selectorList] of steps) {
     const file = pagePath.replace('/tools/', '');

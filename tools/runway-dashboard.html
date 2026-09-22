@@ -47,9 +47,9 @@
      reachable only by the browser back button. Loaded in the same
      position (after tools-dialogs.js, before tools-tour.js) as every
      other tool page for consistency. -->
-<script src="/tools/tools-nav-pwa.js?v=f07de2ca5b" defer></script>
-<script src="/tools/tools-command-palette.js?v=5ce9f88f49" defer></script>
-<script src="/tools/tools-tour.js?v=2f2eac6254" defer></script>
+<script src="/tools/tools-nav-pwa.js?v=199e768df3" defer></script>
+<script src="/tools/tools-command-palette.js?v=a172ee44c7" defer></script>
+<script src="/tools/tools-tour.js?v=72c77f88d1" defer></script>
 <script>
   (function () {
     // Tools app light/dark theme (2026-08-20), tucked into Settings.
@@ -84,7 +84,7 @@
   html { -webkit-tap-highlight-color: transparent; }
   a, button, input, select, textarea, [role="button"],
   .icon-btn, .cat-add-btn, .rw-tab-btn, .th-bottom-nav a,
-  .th-bottom-nav .th-bn-more, .th-more-sheet-link {
+  .th-bottom-nav .th-bn-create, .th-more-sheet-link, .th-hdr-btn, .th-create-tile {
     -webkit-tap-highlight-color: transparent;
     touch-action: manipulation;
   }
@@ -152,6 +152,11 @@
        tools-nav-pwa.js -- copied from styles.css's own root exactly. */
     --orange-tint-soft: rgba(255,128,0,0.08);
     --hex: polygon(25% 6%, 75% 6%, 97% 50%, 75% 94%, 25% 94%, 3% 50%);
+    /* Added (2026-09-22, app shell v2): the shared shell and command
+       palette CSS copied below name the panel colour --bg-panel, which
+       this page calls --bg-card. The palette's copy already used it and
+       was rendering see-through here. */
+    --bg-panel: var(--bg-card);
   }
   /* Light mode (2026-08-20), toggled from Settings. This page is
      deliberately self-contained and never loads the shared
@@ -411,7 +416,7 @@
      with neither nav. */
   @media (max-width: 1023px) { .th-bottom-nav { display: flex; justify-content: space-around; gap: 2px; } }
   @media (max-width: 1023px) { .th-bottom-nav { view-transition-name: th-app-bottomnav; } }
-  .th-bottom-nav a, .th-bottom-nav .th-bn-more {
+  .th-bottom-nav a, .th-bottom-nav .th-bn-create {
     flex: 1; max-width: 76px;
     display: flex; flex-direction: column; align-items: center; gap: 5px;
     text-decoration: none; color: var(--text-dim);
@@ -421,44 +426,196 @@
     background: none; border: none; cursor: pointer;
     -webkit-appearance: none; appearance: none;
   }
-  .th-bottom-nav a .th-bn-icon, .th-bottom-nav .th-bn-more .th-bn-icon {
+  .th-bottom-nav a .th-bn-icon {
     width: 36px; height: 36px; display: flex; align-items: center; justify-content: center;
     transition: background .18s ease, border-color .18s ease;
   }
-  .th-bottom-nav a .th-bn-icon .th-icon, .th-bottom-nav .th-bn-more .th-bn-icon .th-icon { width: 20px; height: 20px; margin-right: 0; }
-  .th-bottom-nav a.is-active, .th-bottom-nav .th-bn-more.is-active { color: var(--orange-light); }
-  .th-bottom-nav a.is-active .th-bn-icon, .th-bottom-nav .th-bn-more.is-active .th-bn-icon {
+  .th-bottom-nav a .th-bn-icon .th-icon { width: 20px; height: 20px; margin-right: 0; }
+  .th-bottom-nav a.is-active { color: var(--orange-light); }
+  .th-bottom-nav a.is-active .th-bn-icon {
     background:
       radial-gradient(120% 130% at 30% 18%, rgba(255,255,255,.5), rgba(255,255,255,0) 46%),
       linear-gradient(165deg, var(--orange-light), var(--orange) 55%, var(--orange-dark) 130%);
     border-color: var(--orange-dark);
     box-shadow: 0 2px 6px -2px rgba(0,0,0,.5), 0 1px 0 rgba(255,255,255,.3) inset;
   }
-  .th-bottom-nav a.is-active .th-bn-icon .th-icon, .th-bottom-nav .th-bn-more.is-active .th-bn-icon .th-icon { color: #1a0d02; }
-  .th-bottom-nav a:active .th-bn-icon, .th-bottom-nav .th-bn-more:active .th-bn-icon { background: var(--bg-elevated); }
+  .th-bottom-nav a.is-active .th-bn-icon .th-icon { color: #1a0d02; }
+  .th-bottom-nav a:active .th-bn-icon { background: var(--bg-elevated); }
+  /* App shell v2 (2026-09-22), mirrored from styles-tools.css -- see
+     the comments there. */
+  /* The ( + ) Create button (2026-09-22, app shell v2): the centre slot,
+     a solid orange hexagon lifted a few pixels above the bar so it reads
+     as the one action button among four destinations -- the brand's hex
+     mark doing real work. Same flex slot and label size as its
+     neighbours, so the bar's rhythm is unchanged. */
+  .th-bottom-nav .th-bn-create { color: var(--orange-light); }
+  .th-bn-create-disc {
+    width: 46px; height: 46px; margin-top: -10px;
+    clip-path: var(--hex);
+    display: flex; align-items: center; justify-content: center;
+    background:
+      radial-gradient(120% 130% at 30% 18%, rgba(255,255,255,.45), rgba(255,255,255,0) 46%),
+      linear-gradient(165deg, var(--orange-light), var(--orange) 55%, var(--orange-dark) 130%);
+    filter: drop-shadow(0 4px 8px rgba(0,0,0,.45));
+    transition: transform .18s cubic-bezier(.2,.8,.2,1);
+  }
+  .th-bn-create-disc .th-icon { width: 22px; height: 22px; color: #1a0d02; stroke-width: 2.4; margin-right: 0; }
+  .th-bottom-nav .th-bn-create:active .th-bn-create-disc { transform: scale(.92); }
+  body.th-create-open .th-bn-create-disc { transform: rotate(45deg); }
+  @media (prefers-reduced-motion: reduce) { .th-bn-create-disc { transition: none; } }
   @media (min-width: 721px) and (max-width: 1023px) {
     .th-bottom-nav { justify-content: center; gap: 24px; }
-    .th-bottom-nav a, .th-bottom-nav .th-bn-more { max-width: 96px; }
+    .th-bottom-nav a, .th-bottom-nav .th-bn-create { max-width: 96px; }
     .th-more-sheet-panel { max-width: 560px; margin: 0 auto; }
+    .th-create-sheet .th-sheet-panel { max-width: 560px; margin: 0 auto; }
+  }
+  /* ---- sheets: the More drawer and the Create sheet (2026-09-22) ----
+     Both slide up from the bottom on a phone and are centred cards in the
+     tablet band. The More drawer is a phone/tablet thing (the sidebar lists
+     everything at 1024px and up); the Create sheet is also a centred dialog
+     on desktop, opened from the sidebar's New button or the N key. */
+  .th-sheet { position: fixed; inset: 0; z-index: 950; }
+  .th-sheet[hidden] { display: none !important; }
+  .th-sheet-backdrop {
+    position: absolute; inset: 0;
+    background: rgba(0,0,0,.5);
+    animation: th-sheet-fade .2s ease-out;
+  }
+  .th-sheet-panel {
+    position: absolute; left: 0; right: 0; bottom: 0;
+    background: var(--bg-card);
+    border-top: 1px solid var(--border);
+    border-radius: 20px 20px 0 0;
+    padding: 10px 16px calc(24px + env(safe-area-inset-bottom, 0px));
+    box-shadow: 0 -12px 32px rgba(0,0,0,.35);
+    max-height: min(80vh, 640px);
+    overflow-y: auto; overscroll-behavior: contain;
+    animation: th-sheet-up .26s cubic-bezier(.2,.8,.2,1);
+  }
+  @keyframes th-sheet-up { from { transform: translateY(40px); opacity: 0; } to { transform: none; opacity: 1; } }
+  @keyframes th-sheet-fade { from { opacity: 0; } to { opacity: 1; } }
+  .th-sheet-handle {
+    width: 36px; height: 4px; border-radius: 999px;
+    background: var(--border); margin: 4px auto 12px;
+  }
+  .th-sheet-title {
+    font-family: var(--font-ui); font-size: 13px; font-weight: 600;
+    letter-spacing: .4px; text-transform: uppercase; color: var(--text-dim);
+    margin: 0 0 12px;
   }
   .th-more-sheet { position: fixed; inset: 0; z-index: 950; }
   .th-more-sheet[hidden] { display: none !important; }
-  .th-more-sheet-backdrop { position: absolute; inset: 0; background: rgba(0,0,0,.45); }
-  .th-more-sheet-panel {
-    position: absolute; left: 0; right: 0; bottom: 0;
-    background: var(--bg-card); border-top: 1px solid var(--border);
-    border-radius: 16px 16px 0 0;
-    padding: 10px 16px calc(88px + env(safe-area-inset-bottom, 0px));
-    max-height: min(72vh, 560px); overflow-y: auto;
+  /* The More drawer is an app grid: three tiles to a row, icon over label. */
+  .th-more-sheet-links { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+  .th-more-sheet-link {
+    display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px;
+    padding: 14px 6px 12px; border-radius: 14px;
+    text-decoration: none; color: var(--text);
+    font-family: var(--font-ui); font-size: 13px; font-weight: 500; text-align: center; line-height: 1.2;
+    min-height: 92px;
+    background: var(--bg-panel-2); border: 1px solid var(--border);
   }
-  .th-more-sheet-handle { width: 36px; height: 4px; border-radius: 999px; background: var(--border); margin: 4px auto 12px; }
-  .th-more-sheet-title { font-family: var(--font-ui); font-size: 13px; font-weight: 600; letter-spacing: .4px; text-transform: uppercase; color: var(--text-dim); margin: 0 0 10px; }
-  .th-more-sheet-links { display: flex; flex-direction: column; gap: 4px; }
-  .th-more-sheet-link { display: flex; align-items: center; gap: 12px; padding: 12px; border-radius: 10px; text-decoration: none; color: var(--text); font-family: var(--font-ui); font-size: 15px; font-weight: 500; min-height: 44px; }
-  .th-more-sheet-link .th-hex-icon { width: 32px; height: 32px; }
-  .th-more-sheet-link .th-hex-icon .th-icon { width: 16px; height: 16px; }
-  .th-more-sheet-link.is-active { background: var(--orange-tint-soft); color: var(--orange-light); }
+  .th-more-sheet-link .th-hex-icon { width: 40px; height: 40px; }
+  .th-more-sheet-link .th-hex-icon .th-icon { width: 19px; height: 19px; }
+  .th-more-sheet-link:hover, .th-more-sheet-link:focus-visible { border-color: var(--orange-tint-border); }
+  .th-more-sheet-link:active { transform: scale(.97); }
+  .th-more-sheet-link.is-active {
+    background: var(--orange-tint-soft); color: var(--orange-light); border-color: var(--orange-tint-border);
+  }
+  .th-more-sheet-utils { margin-top: 14px; border-top: 1px solid var(--border); padding-top: 8px; display: flex; flex-direction: column; }
+  .th-more-sheet-util {
+    display: flex; align-items: center; gap: 12px; width: 100%;
+    min-height: 48px; padding: 0 8px; border-radius: 10px;
+    background: none; border: none; cursor: pointer; text-align: left;
+    color: var(--text-dim); font-family: var(--font-ui); font-size: 14.5px;
+  }
+  .th-more-sheet-util .th-icon { width: 18px; height: 18px; color: var(--text-dim); }
+  .th-more-sheet-util:hover, .th-more-sheet-util:focus-visible { background: var(--bg-panel-2); color: var(--text); }
   @media (min-width: 1024px) { .th-more-sheet { display: none !important; } }
+
+  /* Create sheet: nine tiles, three to a row; each says what it makes and,
+     underneath, the one-line reason you'd reach for it. On a phone the bar
+     stays above the backdrop while the sheet is open, so the ( + ) you just
+     tapped turns into an x in place and closes it again -- the panel leaves
+     the bar's height free at its bottom for that. */
+  @media (max-width: 1023px) {
+    body.th-create-open .th-bottom-nav { z-index: 960; }
+    .th-create-sheet .th-sheet-panel { padding-bottom: calc(92px + env(safe-area-inset-bottom, 0px)); }
+  }
+  .th-create-head { display: flex; align-items: center; justify-content: space-between; }
+  .th-create-head .th-sheet-title { margin-bottom: 12px; }
+  .th-create-close {
+    width: 36px; height: 36px; margin: -8px -4px 0 0; border-radius: 50%;
+    background: none; border: none; color: var(--text-dim); font-size: 26px; line-height: 1; cursor: pointer;
+  }
+  .th-create-close:hover { color: var(--text); background: var(--bg-panel-2); }
+  .th-create-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+  .th-create-tile {
+    display: flex; flex-direction: column; align-items: center; gap: 6px;
+    padding: 14px 6px 12px; border-radius: 14px; min-height: 108px;
+    background: var(--bg-panel-2); border: 1px solid var(--border);
+    text-decoration: none; color: var(--text); text-align: center;
+    transition: border-color .15s ease, transform .12s ease;
+  }
+  .th-create-tile[hidden] { display: none; }
+  .th-create-tile .th-hex-icon { width: 42px; height: 42px; }
+  .th-create-tile .th-hex-icon .th-icon { width: 20px; height: 20px; margin-right: 0; }
+  .th-create-label { font-family: var(--font-ui); font-size: 14px; font-weight: 600; color: var(--white); }
+  .th-create-hint { font-size: 11.5px; line-height: 1.3; color: var(--text-dim); }
+  .th-create-tile:hover, .th-create-tile:focus-visible { border-color: var(--orange-tint-border); }
+  .th-create-tile:active { transform: scale(.97); }
+  @media (min-width: 1024px) {
+    .th-create-sheet { display: flex; align-items: flex-start; justify-content: center; padding: 12vh 20px 20px; }
+    .th-create-sheet[hidden] { display: none !important; }
+    .th-create-sheet .th-sheet-panel {
+      position: relative; left: auto; right: auto; bottom: auto;
+      width: 100%; max-width: 560px; border: 1px solid var(--border); border-radius: 18px;
+      padding: 18px 20px 20px; box-shadow: 0 20px 60px -10px rgba(0,0,0,.55);
+      animation-name: th-sheet-pop;
+    }
+    .th-create-sheet .th-sheet-handle { display: none; }
+  }
+  @keyframes th-sheet-pop { from { transform: translateY(8px) scale(.98); opacity: 0; } to { transform: none; opacity: 1; } }
+  @media (prefers-reduced-motion: reduce) {
+    .th-sheet-backdrop, .th-sheet-panel { animation: none; }
+    .th-create-tile, .th-more-sheet-link { transition: none; }
+    .th-create-tile:active, .th-more-sheet-link:active { transform: none; }
+  }
+
+  /* ---- header actions: Search and More (phone/tablet) ----
+     Appended to each page's own .hub-header-right by tools-nav-pwa.js.
+     Same 44px circle as the header's ? button, so the row reads as one
+     group. Hidden where the sidebar takes over -- it has both. */
+  .th-hdr-actions { display: flex; align-items: center; gap: 8px; }
+  .th-hdr-btn {
+    width: 40px; height: 40px; border-radius: 50%;
+    display: inline-flex; align-items: center; justify-content: center;
+    background: var(--bg-panel-2); border: 1px solid var(--border); color: var(--text);
+    cursor: pointer; position: relative;
+  }
+  .th-hdr-btn .th-icon { width: 19px; height: 19px; margin-right: 0; }
+  .th-hdr-btn:hover, .th-hdr-btn:focus-visible { border-color: var(--orange-light); color: var(--orange-light); }
+  .th-hdr-btn:active { transform: scale(.94); }
+  .th-hdr-menu.is-active::after {
+    content: ''; position: absolute; top: 5px; right: 5px; width: 7px; height: 7px; border-radius: 50%;
+    background: var(--orange); box-shadow: 0 0 0 2px var(--bg-panel-2);
+  }
+  @media (max-width: 720px) { .th-hdr-btn { width: 44px; height: 44px; } }
+  @media (min-width: 1024px) { .th-hdr-actions { display: none; } }
+  /* Pages without the shared .hub-header (runway-dashboard.html) get the
+     pair pinned to their own header's top-right corner. */
+  .th-hdr-actions.is-floating { position: absolute; top: 14px; right: 16px; z-index: 5; }
+  /* The dashboard's Settings shortcut is a duplicate of the More drawer's
+     Settings tile wherever the header actions show. */
+  @media (max-width: 1023px) {
+    body.th-has-bottomnav .hub-header-right > a.help-btn[href="/tools/settings.html"] { display: none !important; }
+  }
+  /* A firmer edge on the app bar once the page scrolls under it. */
+  body.th-scrolled .hub-header, body.th-scrolled .tool-header { box-shadow: 0 6px 18px -10px rgba(0,0,0,.6); }
+  /* This page's header is not the shared .hub-header, so the Search and
+     More pair floats at its top-right corner; keep the title clear of it. */
+  header#mainContent { position: relative; }
+  @media (max-width: 1023px) { header#mainContent h1 { padding-right: 104px; } }
   @media (max-width: 1023px) { body.th-has-bottomnav { padding-bottom: calc(76px + env(safe-area-inset-bottom, 0px)); } }
   @media (max-width: 720px) {
     /* F22 fix (2026-09-07): row action buttons measured ~21px, category
@@ -494,16 +651,10 @@
     box-shadow: 0 1px 0 rgba(255,255,255,.06) inset, 0 6px 16px -6px var(--orange-tint-glow);
   }
   @media (min-width: 1024px) { .th-flag-btn { bottom: 16px; } }
+  /* App shell v2 (2026-09-22), mirrored: on phones and tablets the flag
+     action is a row in the More drawer, not a floating button. */
+  @media (max-width: 1023px) { .th-flag-btn { display: none; } }
   @media (prefers-reduced-motion: reduce) { .th-flag-btn, .th-flag-btn:hover { transition: none; transform: none; } }
-  /* Bug fix (2026-09-22): mirrored from styles-tools.css -- see the
-     comment there. Both floating buttons fade out only while the page
-     is still at its very top, so they cannot land on top of whatever
-     content happens to render in their fixed band on load. */
-  body.th-fab-hide-at-top:not(.th-scrolled) .th-cmdk-btn,
-  body.th-fab-hide-at-top:not(.th-scrolled) .th-flag-btn {
-    opacity: 0; pointer-events: none;
-  }
-  @media (prefers-reduced-motion: reduce) { .th-cmdk-btn, .th-flag-btn { transition: none; } }
   .panel{display:none;}
   .panel.active{display:block; animation:panelFadeIn .22s ease;}
   .panel.fade-out{display:block; opacity:0; transition:opacity .2s ease;}
@@ -789,26 +940,6 @@
   .th-cmdk-item.is-active, a.th-cmdk-item:hover { background: var(--orange-tint-soft); }
   .th-cmdk-item-title { color: var(--white); font-size: 14.5px; font-weight: 500; }
   .th-cmdk-item-meta { color: var(--text-dim); font-size: 13px; margin-top: 2px; }
-  .th-cmdk-btn {
-    position: fixed; left: 16px; z-index: 70;
-    bottom: calc(76px + env(safe-area-inset-bottom, 0px) + 16px);
-    width: 44px; height: 44px; border-radius: 50%;
-    display: flex; align-items: center; justify-content: center;
-    background-image: linear-gradient(180deg, rgba(255,255,255,.06), rgba(255,255,255,0) 55%),
-      linear-gradient(180deg, var(--bg-panel-2), var(--bg-panel) 130%);
-    border: 1px solid var(--border); color: var(--text-dim);
-    box-shadow: 0 1px 0 rgba(255,255,255,.05) inset, 0 3px 10px rgba(0,0,0,0.3);
-    cursor: pointer; transition: color .15s ease, border-color .15s ease, transform .15s ease, box-shadow .15s ease, opacity .15s ease;
-  }
-  .th-cmdk-btn:active { transform: translateY(1px) scale(.96); }
-  .th-cmdk-btn .th-icon { width: 20px; height: 20px; }
-  .th-cmdk-btn:hover {
-    color: var(--orange-light); border-color: var(--orange-light);
-    transform: translateY(-1px);
-    box-shadow: 0 1px 0 rgba(255,255,255,.06) inset, 0 6px 16px -6px var(--orange-tint-glow);
-  }
-  @media (min-width: 1024px) { .th-cmdk-btn { display: none; } }
-  @media (prefers-reduced-motion: reduce) { .th-cmdk-btn, .th-cmdk-btn:hover { transition: none; transform: none; } }
   .th-sidebar-search-trigger {
     width: 100%; background: none; border: none; font: inherit;
     margin-bottom: 8px; cursor: pointer;
@@ -818,6 +949,23 @@
     border: 1px solid var(--border); border-radius: 5px; padding: 1px 5px;
     flex-shrink: 0;
   }
+  /* Sidebar "New" button (2026-09-22, app shell v2): the desktop door into
+     the Create sheet, the same one the phone bar's ( + ) opens. The one
+     solid orange control in the sidebar, since it is the one action. */
+  .th-sidebar-new {
+    display: flex; align-items: center; gap: 10px; width: 100%;
+    min-height: 44px; margin: 4px 0 6px; padding: 0 14px; border-radius: 12px;
+    border: 1px solid var(--orange-dark); cursor: pointer;
+    font-family: var(--font-ui); font-size: 15px; font-weight: 600; color: #1a0d02;
+    background:
+      radial-gradient(120% 130% at 30% 18%, rgba(255,255,255,.4), rgba(255,255,255,0) 46%),
+      linear-gradient(165deg, var(--orange-light), var(--orange) 55%, var(--orange-dark) 130%);
+    box-shadow: 0 2px 8px -3px rgba(0,0,0,.5), 0 1px 0 rgba(255,255,255,.3) inset;
+  }
+  .th-sidebar-new .th-icon { width: 18px; height: 18px; color: #1a0d02; stroke-width: 2.4; margin-right: 0; }
+  .th-sidebar-new .th-sidebar-search-kbd { color: rgba(26,13,2,.7); border-color: rgba(26,13,2,.3); }
+  .th-sidebar-new:hover { filter: brightness(1.05); }
+  .th-sidebar-new:active { transform: translateY(1px); }
   @media (prefers-reduced-motion: reduce) {
     ::view-transition-group(*), ::view-transition-old(*), ::view-transition-new(*) {
       animation-duration: 0.001ms !important;

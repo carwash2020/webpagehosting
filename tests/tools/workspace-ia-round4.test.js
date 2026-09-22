@@ -17,7 +17,7 @@ const PALETTE = read('tools-command-palette.js');
 test('tour steps cover every tab on the tabbed pages, and each tab step puts its tab on screen first via the page\'s own switch function', () => {
   const steps = [...TOUR.matchAll(/\{ page: '\/tools\/([\w-]+\.html)', highlightSelector: '([^']+)', title: '[^']+', body: '(?:[^'\\]|\\.)*'(?:, onShow: \{ fn: '(\w+)', args: \[([^\]]*)\] \})? \}/g)]
     .map(m => ({ page: m[1], selector: m[2], fn: m[3], args: m[4] }));
-  assert.equal(steps.length, 24, 'every step should parse');
+  assert.equal(steps.length, 25, 'every step should parse');
   const tabSteps = steps.filter(s => /^\[data-tab="/.test(s.selector));
   for (const s of tabSteps) {
     const tab = s.selector.match(/data-tab="([^"]+)"/)[1];
@@ -50,7 +50,7 @@ test('the tour engine calls onShow before highlighting, picks the first VISIBLE 
   window.renderAppTourStep(4);
   assert.ok(window.document.querySelector('.th-bottom-nav').classList.contains('th-tour-highlight'), 'the visible bar is highlighted');
   assert.ok(!window.document.querySelector('.th-desktop-sidebar').classList.contains('th-tour-highlight'), 'the hidden sidebar is not');
-  assert.equal(window.document.querySelector('.onboarding-count').textContent, '5 / 24');
+  assert.equal(window.document.querySelector('.onboarding-count').textContent, '5 / 25');
   // A tab step calls the page's switch function by name first.
   // const bindings in a classic script are not window properties; find the
   // step index from the source text instead.

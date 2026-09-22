@@ -3,9 +3,9 @@
 // workspace.html already has its own "Find a client" box that searches
 // jobs/contacts/invoices/quotes/contracts, but it only exists on that one
 // page and only opens by clicking into it. This gives every tool page the
-// same search, keyboard-triggered (Cmd/Ctrl+K) or via the floating button
-// this file also injects, so a client's whole history is one shortcut away
-// no matter which tool is open. Reuses the exact same localStorage-backed
+// same search, keyboard-triggered (Cmd/Ctrl+K) or via the header/sidebar
+// Search button, so a client's whole history is one shortcut away no
+// matter which tool is open. Reuses the exact same localStorage-backed
 // data and the same job-tracker.html/contract-generator.html deep-link
 // convention (?search=...#tab) that already existed -- adds a new front
 // door, not a new backend.
@@ -198,20 +198,10 @@
     }
   });
 
-  function injectTriggerButton() {
-    var btn = document.createElement('button');
-    btn.type = 'button';
-    btn.className = 'th-cmdk-btn';
-    btn.setAttribute('aria-label', 'Search (Ctrl+K)');
-    btn.title = 'Search (Ctrl+K)';
-    btn.innerHTML = '<svg class="th-icon" aria-hidden="true"><use href="#icon-search" xlink:href="#icon-search"></use></svg>';
-    btn.onclick = openPalette;
-    document.body.appendChild(btn);
-  }
-
-  function init() {
-    injectTriggerButton();
-  }
-  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init);
-  else init();
+  // The floating bottom-left trigger button this file used to inject is
+  // gone (2026-09-22, app shell v2): on phones and tablets Search is a
+  // header button injected by tools-nav-pwa.js (.th-hdr-search), and on
+  // desktop it is the sidebar's Search row -- both call
+  // openCommandPalette() above. A floating button over page content kept
+  // landing on top of form fields (see the 2026-09-22 fade fix it needed).
 })();

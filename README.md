@@ -3325,3 +3325,62 @@ search/display/dispute correlation), not replaced by it; existing
 authorization records are unaffected. Full reasoning, including a
 deploy near-miss caught and fixed within the same session:
 `docs/specialist-logs/features.md`'s 2026-09-22 entry.
+
+## What changed, 2026-09-22 (later still) -- Workspace rework, part 1: an app shell with one Create button
+
+First of a series of merged PRs reworking the Workspace suite into one
+app rather than a set of tool pages (the brief: "make this the most
+app-like, easy-to-use, efficient handyman hub it can be"). This part is
+the shell every page shares; the pages themselves come next. Full
+reasoning in `docs/specialist-logs/features.md`.
+
+**The phone bar is Home · Jobs · ( + ) · Clients · Money.**
+- **( + ) opens a Create sheet** -- job, invoice, quote, quick charge,
+  expense, income, contact, contract, review request -- from any page.
+  Every tile deep-links into the form that already exists and already
+  opens itself from its hash (`#add-job`, `#invoice`, `#quote`, `#pos`,
+  `#expenses`, `#income`...), so there is no second copy of any form.
+  Tiles follow the same permission checks as the nav. The ( + ) is a
+  lifted orange hexagon; while the sheet is open it turns into an x in
+  place and closes it again.
+- **Money is one tab for Invoices and Finance.** It opens whichever of
+  the two you used last on this device (`th_money_last`), and on both
+  pages a two-segment **Invoices | Finance** switch takes the title's
+  place in the header, so the pair reads as one section. Someone who can
+  see only one of the two gets that one and no switch.
+- **More, Search, and Help moved into the header.** A grid button at the
+  top right opens the More drawer (now an app grid: Route Planner,
+  Runway, Contracts, Reviews, Wiki, Dev Tools, Settings, plus "How this
+  page works" and "Flag this page for later" rows). The magnifier next to
+  it opens search. Nothing floats over page content on a phone any more:
+  the floating search button is gone and the flag button is a drawer row
+  (it keeps its corner on desktop), which retires the same-day
+  fade-at-top workaround those buttons needed.
+- **One header row on every page.** The ? button gives way to the
+  drawer's help row on phones, the dashboard's sync badges shrink to
+  their coloured dots, long titles end in an ellipsis, and three titles
+  now match their nav label (Invoices, Contracts, Reviews).
+
+**Desktop** keeps the sidebar and gains an orange **New** button at the
+top (and the **N** key) that opens the same Create sheet as a centred
+dialog. The tablet band (721-1023px) gets the bar and centred sheets.
+
+**Tour** (now 25 steps): a new "Create anything" step, the Search step
+points at the header button, "Getting around" describes Money and the
+header menu, and two stale steps were corrected (Quick charge now
+mentions the drawn signature; Settings no longer lists Backup &
+Restore, which moved to Dev Tools). The dashboard help modal was
+updated to match, including the same stale Backup line.
+
+Runway Dashboard, which keeps its own copy of the shell CSS, got the
+mirror -- plus a `--bg-panel` alias, since the command palette CSS
+already copied there referenced a variable that page never defined (it
+rendered see-through).
+
+Verified in a real headless Chromium (local HTTP, fake Supabase): all
+nine Create tiles land on the right form or tab (including a same-page
+hash change), Money remembers Finance and the switch hops back, the
+header is one row on all 14 real pages at 360 and 390px, the full
+25-step tour at 390 and 1440 with every highlight on screen and Next
+clickable, light mode, the tablet drawer, and the desktop dialog, with
+no console errors. New tests: `tests/tools/app-shell-v2.test.js`.

@@ -177,7 +177,7 @@ test('the shared stylesheet no longer carries the dead tile-grid rules, and runw
   assert.doesNotMatch(runway, /tool-tile|section-tools|everythingElseChips/);
 });
 
-test('the tour\'s six dashboard steps follow the page top to bottom, then teach the nav shell and search (2026-09-22 tutorial rewrite)', () => {
+test('the tour\'s seven dashboard steps follow the page top to bottom, then teach the nav shell, Create, and search (2026-09-22 tutorial rewrite + app shell v2)', () => {
   const steps = [...TOUR.matchAll(/\{ page: '\/tools\/workspace\.html', highlightSelector: '([^']+)', title: '([^']+)'/g)].map(m => [m[1], m[2]]);
   assert.deepEqual(steps, [
     ['#todayHero', 'Today'],
@@ -185,7 +185,8 @@ test('the tour\'s six dashboard steps follow the page top to bottom, then teach 
     ['#dashPrimaryStrip', 'Quick actions'],
     ['#section-snapshot', 'Business'],
     ['.th-desktop-sidebar, .th-bottom-nav', 'Getting around'],
-    ['.th-sidebar-search-trigger, .th-cmdk-btn', 'Search anywhere'],
+    ['.th-sidebar-new, .th-bn-create', 'Create anything'],
+    ['.th-sidebar-search-trigger, .th-hdr-search', 'Search anywhere'],
   ]);
   for (const [selector] of steps.slice(0, 4)) assert.match(WORKSPACE, new RegExp('id="' + selector.slice(1) + '"'), `${selector} must exist on the page`);
 });
@@ -194,6 +195,6 @@ test('the help modal describes the new layout and no longer mentions the chip ro
   const help = WORKSPACE.match(/<div class="help-modal-body">([\s\S]*?)<\/div>\s*<\/div>\s*<\/div>\s*<script>/)[1];
   assert.match(help, /Route today/);
   assert.match(help, /Needs attention/);
-  assert.match(help, /Backup &amp; Restore moved to Settings/);
+  assert.match(help, /Backup &amp; Restore lives in Dev Tools/, 'moved Settings -> Dev Tools on 2026-09-22');
   assert.doesNotMatch(help, /chip row|More tools|Show on Calendar|Today's schedule/);
 });

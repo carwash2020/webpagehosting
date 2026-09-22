@@ -73,6 +73,12 @@ sit silently broken for several pushes before it was found).
    runway-dashboard.html's mirrored copy). POS folded into the Invoice
    Generator as the Quick charge tab in the same round; the header
    back-to-Workspace arrow is hidden wherever the nav shell is present.
+   App shell v2 (2026-09-22, later): the bar is now Home / Jobs / ( + ) /
+   Clients / Money -- ( + ) opens a Create sheet of existing deep links,
+   Money is one tab over Invoices and Finance (last-used, with a header
+   switch), and More / Search / Help moved into the page header. The two
+   Money pages were deliberately NOT merged into one page (see
+   features.md's entry for why).
 
 ## Don't re-litigate these (already decided, with real reasons)
 
