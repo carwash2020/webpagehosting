@@ -3706,3 +3706,37 @@ Chromium at phone and desktop widths. New tests:
 `tests/edge-functions/schedule-quote-job-rebook.test.js`. Full detail:
 `docs/specialist-logs/features.md` and `visual.md` (2026-09-22 entries),
 `docs/CLIENT-PORTAL.md` (Database section).
+
+## What changed, 2026-09-22 (later still) -- Client portal: a real desktop layout, and Settings you can take in at a glance
+
+Both asked for directly: "The computer version looks like your looking
+at a phone on a monitor screen" and "i want the settings reworked and
+less packed full of things."
+
+**Desktop.** From 1024px the portal gets a fixed left sidebar (brand,
+Home/Request/Quotes/Invoices/Jobs, Contracts + Settings, and a Call/Text
+box) instead of a 900px column with the phone's tab bar floating
+mid-screen, and content fills the space beside it. From 1200px Invoices,
+Jobs and Request split into a list and a side column, Home puts the
+account cards and help beside the feed, and quote/contract cards sit two
+across. Phones are unchanged -- the sidebar wrapper is invisible to
+layout below 1024px, so the bottom tab bar is exactly what it was.
+
+**Settings.** Eleven stacked cards became a six-row menu -- Profile,
+Payment, Notifications, Sign-in & security, Refer a friend, App -- each
+with a live status line ("Visa ending 4242", "2 of 3 emails on",
+"Two-factor on") so most visits need no tap. A row opens just that
+section; on a phone the browser's Back closes it, and each section has
+its own link (`/portal/settings.html#security`). On desktop the menu
+and the section sit side by side. One Sign out, at the foot of the
+menu. Also fixed: the Add to Home Screen card never actually hid on
+desktop (an inline style beat the stylesheet); desktop Chrome/Edge now
+get a real one-tap "Install app" there instead.
+
+Verified: full suite, `check-consistency`, `check-undefined-vars`,
+lint; pages checked in headless Chromium at 390, 1100 and 1440px. New
+tests: `tests/portal/desktop-app-shell.test.js`,
+`tests/portal/settings-menu-and-sections.test.js` (replaces
+`settings-collapsible-sections.test.js`). Full detail:
+`docs/specialist-logs/features.md` and `visual.md` (2026-09-22 entries),
+`docs/CLIENT-PORTAL.md` ("Phone vs desktop").

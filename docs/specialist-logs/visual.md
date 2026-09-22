@@ -1132,4 +1132,30 @@ and 1280px (the portal is dark-only; no light theme to check).
   relative time right, single-line ellipsis so long titles never wrap
   the row.
 
+## 2026-09-22 (later still) -- portal desktop shell + Settings menu
+
+- **Sidebar:** 252px fixed rail, content centred in the remaining space
+  up to a 1180px measure (`--portal-gutter = max(40px, (100vw - rail -
+  measure) / 2)`). Active tab = orange tint + the phone bar's dot
+  re-used as a 3px left bar. Header drops the logo and Settings icon on
+  desktop (the rail has both) and the title goes to 26px.
+- **Never use `<section>` inside portal layouts.** `styles.css` gives
+  every section `padding: 88px 0` and `section + section` a top border
+  -- it pushed Home's side column 120px down with a stray line. Plain
+  divs.
+- **Button rows wrap on their own width** (`flex: 1 1 280px`), not a
+  viewport query: a quote card in the two-across grid is narrow at
+  1440px, and "RESCHEDULE OR CANCEL" (uppercase, letter-spaced) clipped
+  there under the old breakpoint.
+- **Settings:** profile card (48px orange-gradient initials avatar) +
+  one grouped menu card; rows are 36px orange-tint icon tiles, title,
+  status line (two-line clamp, not an ellipsis -- "expiring soon" was
+  getting cut on the 300px desktop column), chevron. Status colours:
+  red for a card problem, green for "Two-factor on"/"Used N times".
+  Desktop form buttons go auto-width (min 220px): a 700px-wide button
+  read as a banner. Signed Authorizations uses the portal-wide
+  `<summary>` chevron from `portal-polish.css`, not its own -- the
+  global `body.portal-page details > summary` rule out-specifies a
+  page-level one anyway.
+
 <!-- Add new entries above this line -->

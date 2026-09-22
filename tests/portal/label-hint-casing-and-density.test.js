@@ -139,21 +139,13 @@ test('the primary rule lives where it can actually win the cascade', () => {
 
 // ---- 4. collapsed settings density ----
 
-test('collapsed settings rows drop their now-redundant vertical padding', () => {
-  // .set-card-header already guarantees a 52px tap target, so the card's
-  // own 18px padding buys nothing while collapsed.
-  assert.match(POLISH, /\.set-card-header \{ min-height: 52px; \}/);
-  const rule = POLISH.match(/\.set-card\.is-collapsed \{[^}]*\}/);
-  assert.ok(rule, 'expected a collapsed-state density rule');
-  assert.match(rule[0], /padding-top: 6px/);
-  assert.match(rule[0], /padding-bottom: 6px/);
-});
+// Superseded 2026-09-22: Settings is no longer an accordion (it's a menu
+// that opens one section at a time -- tests/portal/settings-menu-and-
+// sections.test.js), so the collapsed-row density rules went with it.
 
-test('the expanded settings card is untouched', () => {
-  // Only the collapsed state is tightened; opening a section must still
-  // give its content the original 18px of breathing room.
-  const rule = POLISH.match(/\.set-card\.is-collapsed \{[^}]*\}/)[0];
-  assert.ok(!/padding-left|padding-right/.test(rule), 'horizontal padding must not change');
+test('the collapsed-settings density rules left with the accordion they tuned', () => {
+  assert.doesNotMatch(POLISH, /\.set-card\.is-collapsed/);
+  assert.doesNotMatch(POLISH, /\.set-card-header \{/);
   assert.ok(!/\.set-card \{[^}]*padding-top/.test(POLISH), 'the base .set-card padding must not be overridden');
 });
 

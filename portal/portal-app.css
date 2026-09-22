@@ -663,3 +663,152 @@ body.portal-page .th-toast-container {
   .portal-thread { scroll-behavior: auto; }
   .portal-composer-send:hover { transform: none; }
 }
+
+/* ==========================================================
+   Desktop app shell (2026-09-22)
+   ==========================================================
+   Reported directly, with a screenshot: "The computer version looks
+   like you're looking at a phone on a monitor screen." It did -- a
+   900px centred column, the phone's bottom tab bar floating in the
+   middle of the screen, and a huge empty band down both sides.
+
+   From 1024px the portal is laid out like a desktop app instead:
+   - .portal-rail (wraps the nav on every page) becomes a fixed left
+     sidebar: brand, the same five destinations as a vertical menu,
+     Contracts + Settings, and a Call/Text box at the bottom.
+   - The content fills the space beside it, centred in that space up
+     to a 1180px measure, rather than a fixed phone-width column.
+   - From 1200px, pages with a natural "list + summary" shape split
+     into main and side columns (.page-split, .home-layout).
+   Phones are untouched: below 1024px .portal-rail is display:contents,
+   so the nav inside it is still the fixed bottom tab bar it always was,
+   and the desktop-only extras are hidden. */
+
+:root { --portal-rail-w: 252px; --portal-measure: 1180px; }
+
+.portal-rail { display: contents; }
+.portal-rail-brand,
+.portal-rail-more,
+.portal-rail-help { display: none; }
+
+@media (min-width: 1024px) {
+  body.portal-page {
+    --portal-gutter: max(40px, calc((100vw - var(--portal-rail-w) - var(--portal-measure)) / 2));
+    max-width: none;
+    margin: 0;
+    padding: 30px var(--portal-gutter) 56px calc(var(--portal-rail-w) + var(--portal-gutter));
+  }
+
+  .portal-rail {
+    position: fixed; top: 0; bottom: 0; left: 0; z-index: 90;
+    width: var(--portal-rail-w); box-sizing: border-box;
+    display: flex; flex-direction: column; gap: 6px;
+    padding: 22px 14px 18px; overflow-y: auto;
+    background: linear-gradient(180deg, rgba(24, 25, 29, .96), rgba(12, 13, 15, .98));
+    border-right: 1px solid var(--border);
+  }
+
+  .portal-rail-brand {
+    display: flex; align-items: center; gap: 12px;
+    padding: 4px 10px 18px; margin-bottom: 6px; text-decoration: none;
+    border-bottom: 1px solid var(--border);
+  }
+  .portal-rail-brand img { width: 38px; height: auto; flex-shrink: 0; }
+  .portal-rail-name { display: block; font-family: var(--font-display); font-size: 19px; letter-spacing: .6px; color: var(--white); line-height: 1.1; }
+  .portal-rail-tag { display: block; font-size: 12px; color: var(--text-dim); margin-top: 2px; letter-spacing: .3px; }
+
+  /* The five tabs, as a vertical menu. Every property the phone bar
+     sets that a sidebar list doesn't want is reset explicitly. */
+  .portal-rail .portal-nav {
+    position: static; left: auto; right: auto; bottom: auto; transform: none;
+    width: auto; margin: 0; padding: 4px 0; border: 0; border-radius: 0;
+    box-shadow: none; background: none; backdrop-filter: none; -webkit-backdrop-filter: none;
+    display: flex; flex-direction: column; gap: 2px;
+  }
+  .portal-rail .portal-nav a,
+  .portal-rail-more a {
+    position: relative;
+    display: flex; flex-direction: row; align-items: center; justify-content: flex-start; gap: 12px;
+    min-height: 44px; padding: 10px 12px; border-radius: 10px;
+    color: var(--text-dim); font-size: 14.5px; font-weight: 600; letter-spacing: .1px;
+    text-decoration: none; transition: background .15s ease, color .15s ease;
+  }
+  .portal-rail .portal-nav a svg,
+  .portal-rail-more a svg {
+    width: 20px; height: 20px; flex-shrink: 0; stroke: currentColor; fill: none;
+    stroke-width: 1.9; stroke-linecap: round; stroke-linejoin: round; transform: none;
+  }
+  .portal-rail .portal-nav a:hover,
+  .portal-rail-more a:hover { background: rgba(255, 255, 255, .04); color: var(--white); }
+  .portal-rail .portal-nav a.is-active,
+  .portal-rail-more a.is-current { background: var(--orange-tint-soft); color: var(--orange-light); }
+  .portal-rail .portal-nav a.is-active svg { transform: none; }
+  /* The phone bar's active dot becomes a left accent bar. */
+  .portal-rail .portal-nav a.is-active::after {
+    left: 0; top: 10px; bottom: 10px; width: 3px; height: auto; border-radius: 0 3px 3px 0;
+  }
+  .portal-rail .portal-nav a:active,
+  .portal-rail-more a:active { transform: none; }
+  /* Unread badge sits at the end of the row instead of on the icon. */
+  .portal-rail .portal-nav-badge {
+    position: static; margin-left: auto; box-shadow: none; animation: none;
+  }
+
+  .portal-rail-more { display: flex; flex-direction: column; gap: 2px; margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--border); }
+  .portal-rail-label { font-size: 11px; font-weight: 700; letter-spacing: .8px; text-transform: uppercase; color: var(--text-dim); padding: 0 12px 6px; }
+
+  .portal-rail-help {
+    display: block; margin-top: auto; padding: 14px; border-radius: 12px;
+    background: var(--bg-panel); border: 1px solid var(--border);
+  }
+  .portal-rail-help-title { font-size: 13.5px; font-weight: 700; color: var(--white); }
+  .portal-rail-help p { margin: 4px 0 10px; font-size: 12.5px; line-height: 1.45; color: var(--text-dim); }
+  .portal-rail-help-actions { display: flex; gap: 8px; }
+  .portal-rail-help-actions a {
+    flex: 1; text-align: center; padding: 8px 0; border-radius: 8px; text-decoration: none;
+    font-size: 13px; font-weight: 700; color: var(--white);
+    background: var(--bg-panel-2); border: 1px solid var(--border);
+  }
+  .portal-rail-help-actions a:first-child { background: var(--orange); border-color: var(--orange); color: #0a0a0a; }
+  .portal-rail-help-actions a:hover { filter: brightness(1.08); }
+
+  /* Header: the rail already carries the brand and a Settings link, so
+     the page header becomes a proper page title bar. */
+  .portal-header { margin-bottom: 22px; }
+  .portal-header img { display: none; }
+  .portal-header .portal-icon-btn[aria-label="Settings"] { display: none; }
+  .portal-title { font-size: 26px; }
+
+  /* No bottom bar on desktop, so no bottom clearance and no spacer. */
+  .portal-nav-clearance { display: none; }
+  /* Toasts centre over the content, not under the rail. */
+  body.portal-page .th-toast-container {
+    bottom: 28px;
+    left: calc(50% + var(--portal-rail-w) / 2);
+  }
+}
+
+@media (min-width: 1024px) and (prefers-reduced-motion: reduce) {
+  .portal-rail .portal-nav a,
+  .portal-rail-more a { transition: none; }
+}
+
+/* ---------- Two-column page layouts (1200px and up) ----------
+   Shared by Invoices, Jobs and Request: the list is the main column;
+   the summary (pay-first, paid ring, chart / warranty + check-ups /
+   the request form's companion list) is the side column. DOM order is
+   unchanged -- side content that comes first in the markup still comes
+   first on a phone; on desktop it's placed in the right-hand column. */
+@media (min-width: 1200px) {
+  .page-split {
+    display: grid; grid-template-columns: minmax(0, 1fr) 360px; column-gap: 28px; align-items: start;
+  }
+  .page-split.is-wide-side { grid-template-columns: minmax(0, 1fr) minmax(380px, 440px); }
+  .page-split-main { grid-column: 1; grid-row: 1; min-width: 0; }
+  .page-split-side { grid-column: 2; grid-row: 1; min-width: 0; }
+
+  /* Quote and contract cards: two across instead of one stretched
+     1100px-wide card. align-items:start so opening one card's
+     scheduling panel doesn't stretch its neighbour. */
+  .card-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); column-gap: 16px; align-items: start; }
+}

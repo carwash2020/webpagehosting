@@ -24,13 +24,26 @@ settings, not just invoice payment:
 | `portal/quotes.html` | Quote review, questions, approval, and self-scheduling | No |
 | `portal/jobs.html` | Job history, warranty overview, check-up reminders, downloadable receipts | No |
 | `portal/work-orders.html` | Request Work form (title/description/urgency/photos/preferred slot) + two-way messaging on submitted requests | No |
-| `portal/contracts.html` | Pending e-sign and signed-contract history. Not a 6th tab -- reached from Home cards and the action inbox | No |
-| `portal/settings.html` | Editable name/phone, saved card management, notification preferences, signed authorizations, Add to Home Screen | No |
+| `portal/contracts.html` | Pending e-sign and signed-contract history. Not a 6th tab -- reached from Home cards, the action inbox, and the desktop sidebar's Account links | No |
+| `portal/settings.html` | A six-row menu (Profile, Payment, Notifications, Sign-in & security, Refer a friend, App), each row with a live status line; a row opens that section alone (`#payment`, `#security`, ... -- linkable, Back closes it). Desktop shows menu and section side by side | No |
 
 There is **no public sign-up anywhere**. An account only ever exists
 because Triple H invoiced that client first, which triggers an invite
 email. A client can sign in or reset a password they already have,
 never self-register.
+
+**Phone vs desktop (2026-09-22).** Below 1024px the portal is the phone
+app: the five-tab bar is fixed to the bottom of the screen. From 1024px
+the same nav becomes a fixed left sidebar (`.portal-rail`, wrapped
+around the nav on every signed-in page) with the brand, the five tabs,
+Contracts + Settings, and a Call/Text box, and the content fills the
+space beside it. From 1200px Invoices, Jobs and Request split into a
+main list and a side column (`.page-split`), Home puts account cards
+and help in a side column, and quote/contract cards sit two across
+(`.card-grid`). The layout CSS is in `portal/portal-app.css` under
+"Desktop app shell". The nav itself must stay exactly five links -- the
+phone grid is five columns -- so anything else in the sidebar sits
+outside `<nav class="portal-nav">`.
 
 `login.html` is indexable on purpose (changed 2026-09-01, requested
 directly): it's an empty email/password form with zero client data on
