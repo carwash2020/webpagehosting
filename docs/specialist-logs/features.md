@@ -2023,4 +2023,52 @@ all four scope every read/write by `auth.uid()`, which is null for anon,
 so they act on nobody -- a revoke-from-anon hygiene item for the
 security lane, not an exposure.
 
+## 2026-09-22 (later still) -- Workspace rework, part 6: From this job
+
+**Why.** Part 5 routes every finished job to "Create invoice". That's
+only a win if the invoice isn't retyped from memory. Everything needed
+is already recorded:
+- hours on the job (`hoursWorked`, when set);
+- receipts logged in Finance with its `jobRefId` (`th_expense_log`,
+  type `expense`);
+- mileage entries (type `mileage`, `miles`);
+- often a quote the client already agreed to (`th_quotes`, `jobRefId`,
+  with `line_items` saved since 2026-09-06).
+
+**`jobBillables(job, expenses, quotes, rates)`** is a pure function
+(tested by extraction):
+- **Labor** = hours × the remembered labor rate (`th_invoice_labor_rate`).
+  If hours weren't logged it's still offered, as a line that asks for
+  them (`needsHours`).
+- **One part line per receipt**, at cost, oldest first, rounded to the
+  cent, with its part number.
+- **One Mileage line** summing all the job's miles, at the remembered
+  billing rate (`th_invoice_mileage_rate`, not Finance's cost-per-mile),
+  untaxed.
+- **The newest quote** for the job that isn't converted and has line
+  items.
+
+**Offer, don't insert.** The panel adds nothing until Add. Reasons:
+parts at cost may need markup, a receipt may not be billable, and the
+quote may already cover the parts. So with a quote on offer, the logged
+lines start unticked. Without one they start ticked, making it one tap.
+`jobFillState` remembers per job what was done (dismissed, or added
+rows + the replaced starter row + discount/quote link), so Undo is
+exact. `takeStarterRow()` only replaces the untouched starter row (one
+row, no price). Rows typed by hand are never removed.
+
+**Bill the quote** sets `pendingSourceQuoteId`, the same link Convert to
+Invoice sets, so `logInvoice()` marks the quote converted on save, and
+Undo clears it. The quote's discount goes into the discount field only
+when that field is empty or zero.
+
+**Wiring.** Called on `?jobRef=` (after the existing prefill), on the Job
+dropdown's change, and reset by `resetInvoiceForm()` /
+`convertQuoteToInvoice()`.
+
+**Gotcha:** `eval`'d scripts keep top-level `const`s block-scoped, so the
+jsdom harness rewrites data-layer.js's top-level `const` to `var` before
+evaluating it. The real page loads it as a classic script where they
+are globals.
+
 <!-- Add new entries above this line -->
