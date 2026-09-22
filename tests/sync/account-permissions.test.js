@@ -39,7 +39,12 @@ test('nothing still queries account_roles with a role_definitions(...) join', ()
 });
 
 test('loadCurrentUserRole() queries all 9 permission booleans directly off account_roles, no join, no email in the URL', () => {
-  const startIdx = AUTH_JS.indexOf('async function loadCurrentUserRole()');
+  // Signature grew an optional overrideAccessToken/overrideEmail pair on
+  // 2026-09-22 (for the internal MFA login-time role check, before a
+  // session is persisted) -- matching on the function name alone rather
+  // than its full parameter list keeps this test correct across that kind
+  // of additive signature change.
+  const startIdx = AUTH_JS.indexOf('async function loadCurrentUserRole(');
   assert.ok(startIdx !== -1, 'expected to find loadCurrentUserRole()');
   // The function is at top-level scope, so its closing brace sits
   // alone on its own line at column 0 -- matching up to the first

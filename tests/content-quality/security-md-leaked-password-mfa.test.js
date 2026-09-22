@@ -13,11 +13,15 @@
 // done rather than pending. MFA is still a real, explicitly-still-open
 // decision, not silently dropped.
 //
-// Neither setting can be flipped from this repo -- both are Supabase
-// Auth dashboard-only project settings, confirmed directly against the
-// Supabase MCP tools available here (apply_migration, execute_sql,
-// deploy_edge_function, get_advisors, and the various list_*/get_*
-// tools include nothing that reads or writes Auth project config).
+// Neither setting's initial dashboard-side enablement can be flipped from
+// this repo -- both are Supabase Auth dashboard-only project settings,
+// confirmed directly against the Supabase MCP tools available here
+// (apply_migration, execute_sql, deploy_edge_function, get_advisors, and
+// the various list_*/get_* tools include nothing that reads or writes
+// Auth project config). MFA's ENROLLMENT/step-up UI, unlike the bare
+// dashboard toggle, is fully buildable from this repo and now shipped for
+// both populations (portal 2026-09-16, internal /tools/ 2026-09-22) -- see
+// docs/specialist-logs/security.md's 2026-09-22 entry.
 
 const { test } = require('node:test');
 const assert = require('node:assert/strict');
@@ -46,16 +50,18 @@ test('the leaked-password-protection entry names the exact dashboard path it was
   assert.match(section, /Authentication ->\s*\n\s*Providers -> Email/);
 });
 
-test('the MFA entry still names the dashboard-only setting and explains why full enrollment/step-up UI is a separate decision', () => {
+test('the MFA entry reflects it is now done for both populations, not a deferred feature decision', () => {
   const idx = SECURITY.indexOf('No MFA enforcement');
   assert.ok(idx !== -1);
-  const section = SECURITY.slice(idx, idx + 900);
-  assert.match(section, /Authentication ->\s*\n\s*MFA/);
-  assert.match(section, /separate, much larger feature decision \(new\s*\n\s*screens/);
+  const section = SECURITY.slice(idx, idx + 1100);
+  assert.match(section, /done for both populations now/);
+  assert.match(section, /Authentication -> MFA/);
+  assert.match(section, /2026-09-16/);
+  assert.match(section, /2026-09-22/);
 });
 
-test('the MFA entry still acknowledges no Supabase MCP tool can change it from this repo', () => {
+test('the MFA entry still acknowledges the initial dashboard toggle itself has no scriptable path from this repo', () => {
   const idx = SECURITY.indexOf('No MFA enforcement');
-  const section = SECURITY.slice(idx, idx + 900);
-  assert.match(section, /no scriptable path from\s*\n\s*this repo/);
+  const section = SECURITY.slice(idx, idx + 1100);
+  assert.match(section, /no scriptable path\s*\n\s*from this repo/);
 });

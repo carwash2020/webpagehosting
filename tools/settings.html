@@ -14,7 +14,7 @@
      background-image on html here too. -->
 <html lang="en" style="background-color:#0a0a0a;">
 <head>
-<script src="/tools/auth.js?v=2be5cce177"></script>
+<script src="/tools/auth.js?v=0cd43bdab1"></script>
 <script>
   // Security gate -- redirect to login before this page's own content
   // is meaningfully usable. See auth.js for why this exists (a small,
@@ -186,6 +186,52 @@
     </div>
   </div>
 
+  <!-- Two-factor authentication (2026-09-22) -- real, server-verified TOTP
+       via Supabase Auth MFA, the same mechanism the client portal shipped
+       for client-facing accounts on 2026-09-16 (see
+       docs/CLIENT-PORTAL.md's "still pending" notes and
+       docs/specialist-logs/security.md for the full design). Mandatory for
+       any account whose real permissions require it (requiresMfaForRole()
+       in auth.js) -- those accounts are already forced through enrollment
+       at login and land here already enrolled; this card is where they
+       (and any optional-tier account that wants it too) manage or turn it
+       off, and where lost recovery codes get regenerated. -->
+  <div class="settings-section" id="mfaSection">
+    <h2>Two-Factor Authentication</h2>
+    <p class="settings-desc" id="mfaSettingsDesc">Checking your account&hellip;</p>
+    <div class="settings-row">
+      <div>
+        <div class="settings-row-label">Authenticator app</div>
+        <div class="settings-row-sub" id="mfaSettingsStatus">Checking...</div>
+      </div>
+      <button class="secondary-btn" id="mfaSettingsToggleBtn" disabled>Loading...</button>
+    </div>
+    <div id="mfaSettingsEnrollArea" style="display:none; margin-top:14px;">
+      <div class="mfa-qr-wrap" style="text-align:center; margin-bottom:14px;">
+        <img id="mfaSettingsQrImg" alt="Scan this QR code with your authenticator app" style="width:180px; height:180px; background:#fff; border-radius:8px; padding:8px;">
+        <div class="settings-row-sub" id="mfaSettingsSecretFallback" style="margin-top:8px; word-break:break-all;"></div>
+      </div>
+      <input type="text" id="mfaSettingsCodeInput" inputmode="numeric" autocomplete="one-time-code" placeholder="123456" maxlength="6" style="width:100%; padding:11px 13px; background:var(--bg-panel-2); border:1px solid var(--border); border-radius:8px; color:var(--white); font-size:16px; font-family:inherit; box-sizing:border-box; margin-bottom:10px; letter-spacing:2px; text-align:center;">
+      <div style="display:flex; gap:10px;">
+        <button class="secondary-btn" id="mfaSettingsCancelBtn" type="button" style="flex:1; justify-content:center;">Cancel</button>
+        <button class="primary-btn" id="mfaSettingsVerifyBtn" type="button" style="flex:1; justify-content:center;">Verify &amp; Turn On</button>
+      </div>
+    </div>
+    <div class="settings-row" id="mfaRecoveryCodesRow" style="display:none;">
+      <div>
+        <div class="settings-row-label">Recovery codes</div>
+        <div class="settings-row-sub" id="mfaRecoveryCodesStatus">&nbsp;</div>
+      </div>
+      <button class="secondary-btn" id="mfaRegenerateCodesBtn">Generate new codes</button>
+    </div>
+    <div id="mfaSettingsCodesDisplay" style="display:none; margin-top:12px;">
+      <p class="settings-desc">Save these somewhere safe -- each works once, and they will not be shown again.</p>
+      <div style="background:var(--bg-panel-2); border:1px solid var(--border); border-radius:8px; padding:14px; font-family:monospace; font-size:15px; line-height:1.9; color:var(--white); text-align:center; margin-bottom:10px;" id="mfaSettingsCodesList"></div>
+      <button class="secondary-btn" id="mfaSettingsDownloadCodesBtn">Download codes</button>
+    </div>
+    <div class="settings-desc" id="mfaSettingsMsg" style="display:none; margin-top:10px;"></div>
+  </div>
+
   <!-- Backup & Restore moved here from the Dashboard's own collapsed
        drawer (2026-09-21): this row used to be a "Go to Backup" link
        that hopped over to the Dashboard and expanded that drawer.
@@ -252,6 +298,10 @@
     // functions the Dashboard header's bell icon already calls, so
     // toggling here and toggling there always agree with each other.
     await refreshSettingsPushState();
+
+    // Two-factor authentication -- role is already loaded above (for the
+    // role badge), reused here to decide mandatory vs. optional wording.
+    await renderMfaSettingsCard();
   } catch (initError) {
     try {
         showInitErrorBanner('Settings', initError);
@@ -405,6 +455,216 @@
 
     status.textContent = result.ok ? `Sent to ${email} -- check your inbox.` : result.error;
   }
+
+  // Two-factor authentication (2026-09-22) -- see the matching card's HTML
+  // comment above and docs/specialist-logs/security.md for the full
+  // design. mfaFactorId tracks an already-verified factor (so Turn Off can
+  // unenroll it); mfaPendingFactorId tracks one enrolled but not yet
+  // verified (so Cancel can clean it up rather than leave a dead factor
+  // behind) -- same shape as the client portal's equivalent in
+  // portal/settings.html, just against auth.js's raw-fetch helpers instead
+  // of a loaded supabase-js client.
+  let mfaFactorId = null;
+  let mfaPendingFactorId = null;
+
+  async function renderMfaSettingsCard() {
+    const desc = document.getElementById('mfaSettingsDesc');
+    const status = document.getElementById('mfaSettingsStatus');
+    const btn = document.getElementById('mfaSettingsToggleBtn');
+    const recoveryRow = document.getElementById('mfaRecoveryCodesRow');
+    document.getElementById('mfaSettingsEnrollArea').style.display = 'none';
+    document.getElementById('mfaSettingsCodesDisplay').style.display = 'none';
+    document.getElementById('mfaSettingsMsg').style.display = 'none';
+
+    const role = typeof getCurrentUserRole === 'function' ? getCurrentUserRole() : null;
+    const mandatory = typeof requiresMfaForRole === 'function' && requiresMfaForRole(role);
+    desc.textContent = mandatory
+      ? 'Required for your account -- adds a 6-digit code from an authenticator app to every sign-in, on top of your password.'
+      : 'Optional, but recommended -- adds a 6-digit code from an authenticator app to every sign-in, on top of your password.';
+
+    const factor = await mfaListVerifiedTotpFactor(getAuthToken());
+    btn.disabled = false;
+    if (factor) {
+      mfaFactorId = factor.id;
+      status.textContent = 'On for this account.';
+      btn.textContent = 'Turn off';
+      btn.onclick = handleDisableMfaSettings;
+      recoveryRow.style.display = '';
+      const remaining = await countRemainingRecoveryCodes(getAuthToken());
+      document.getElementById('mfaRecoveryCodesStatus').textContent =
+        remaining === null ? 'Could not check.' : `${remaining} unused code${remaining === 1 ? '' : 's'} left.`;
+    } else {
+      mfaFactorId = null;
+      status.textContent = mandatory ? 'Required -- not set up yet.' : 'Off for this account.';
+      btn.textContent = 'Set up';
+      btn.onclick = handleStartMfaEnrollSettings;
+      recoveryRow.style.display = 'none';
+    }
+  }
+
+  async function handleStartMfaEnrollSettings() {
+    const btn = document.getElementById('mfaSettingsToggleBtn');
+    const msgEl = document.getElementById('mfaSettingsMsg');
+    msgEl.style.display = 'none';
+    btn.disabled = true;
+
+    // Clean up any abandoned prior enrollment attempt first, same
+    // precedent the portal's equivalent flow already established --
+    // otherwise dead unverified factors would pile up under this account
+    // every time setup was started and abandoned.
+    const existingFactor = await mfaListVerifiedTotpFactor(getAuthToken());
+    if (!existingFactor) {
+      const res = await fetch(`${SUPABASE_URL}/auth/v1/user`, {
+        headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': `Bearer ${getAuthToken()}` },
+      }).then((r) => r.json()).catch(() => null);
+      const stale = res && (res.factors || []).find((f) => f.factor_type === 'totp' && f.status !== 'verified');
+      if (stale) await mfaUnenroll(getAuthToken(), stale.id);
+    }
+
+    const result = await mfaEnroll(getAuthToken());
+    btn.disabled = false;
+    if (!result.ok) {
+      btn.textContent = 'Set up';
+      msgEl.textContent = result.error;
+      msgEl.style.display = '';
+      return;
+    }
+    mfaPendingFactorId = result.factorId;
+    document.getElementById('mfaSettingsQrImg').src = result.totp.qr_code;
+    document.getElementById('mfaSettingsSecretFallback').textContent = result.totp.secret
+      ? ('Can\'t scan? Enter this code manually: ' + result.totp.secret)
+      : '';
+    document.getElementById('mfaSettingsCodeInput').value = '';
+    document.getElementById('mfaSettingsEnrollArea').style.display = 'block';
+  }
+
+  async function handleVerifyMfaEnrollSettings() {
+    const code = document.getElementById('mfaSettingsCodeInput').value.trim();
+    const msgEl = document.getElementById('mfaSettingsMsg');
+    const verifyBtn = document.getElementById('mfaSettingsVerifyBtn');
+    msgEl.style.display = 'none';
+
+    if (!/^\d{6}$/.test(code)) {
+      msgEl.textContent = 'Enter the 6-digit code from your authenticator app.';
+      msgEl.style.display = '';
+      return;
+    }
+
+    verifyBtn.disabled = true;
+    verifyBtn.textContent = 'Verifying...';
+    const result = await mfaChallengeAndVerify(getAuthToken(), mfaPendingFactorId, code);
+    verifyBtn.disabled = false;
+    verifyBtn.textContent = 'Verify & Turn On';
+    if (!result.ok) {
+      msgEl.textContent = result.error;
+      msgEl.style.display = '';
+      return;
+    }
+
+    mfaPendingFactorId = null;
+    // A step-up verify issues a fresh session -- keep this device's stored
+    // session in sync with it rather than leaving the old (now-superseded)
+    // one in storage.
+    if (typeof persistSession === 'function') {
+      persistSession(
+        { access_token: result.access_token, refresh_token: result.refresh_token, expires_at: result.expires_at, email: result.email || getCurrentUserEmail() },
+        undefined
+      );
+    }
+
+    const codesResult = await generateRecoveryCodes(getAuthToken(), 10);
+    // Refresh the toggle button/status/recovery-count row FIRST --
+    // renderMfaSettingsCard() resets the codes-display area to hidden as
+    // part of its own normal render, so the just-generated codes below
+    // have to be shown AFTER it runs, not before, or they'd flash and
+    // immediately disappear.
+    await renderMfaSettingsCard();
+    msgEl.textContent = 'Two-factor authentication is on.';
+    msgEl.style.display = '';
+    if (codesResult.ok) {
+      document.getElementById('mfaSettingsCodesList').innerHTML = codesResult.codes
+        .map((c) => c.replace(/[&<>"']/g, (ch) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch])))
+        .join('<br>');
+      document.getElementById('mfaSettingsCodesDisplay').style.display = 'block';
+    }
+  }
+
+  function handleCancelMfaEnrollSettings() {
+    if (mfaPendingFactorId) {
+      mfaUnenroll(getAuthToken(), mfaPendingFactorId).catch(() => {});
+      mfaPendingFactorId = null;
+    }
+    renderMfaSettingsCard();
+  }
+
+  // Turning off two-factor authentication is a real reduction in account
+  // security, unlike every other toggle on this page -- confirm first,
+  // matching the same precedent already established for other
+  // security-reducing actions in this app (e.g. deleteJob/deleteContact
+  // confirmations).
+  async function handleDisableMfaSettings() {
+    if (!mfaFactorId) return;
+    const confirmed = await showConfirm('Turn off two-factor authentication? Your account will only need a password to sign in.', { confirmText: 'Turn off', danger: true });
+    if (!confirmed) return;
+
+    const btn = document.getElementById('mfaSettingsToggleBtn');
+    const msgEl = document.getElementById('mfaSettingsMsg');
+    btn.disabled = true;
+    const result = await mfaUnenroll(getAuthToken(), mfaFactorId);
+    btn.disabled = false;
+    if (!result.ok) {
+      msgEl.textContent = result.error;
+      msgEl.style.display = '';
+      return;
+    }
+    await deleteRecoveryCodes(getAuthToken());
+    msgEl.textContent = 'Two-factor authentication is off.';
+    msgEl.style.display = '';
+    renderMfaSettingsCard();
+  }
+
+  async function handleRegenerateRecoveryCodes() {
+    const confirmed = await showConfirm('Generate new recovery codes? Any codes you saved before this will stop working.', { confirmText: 'Generate new codes' });
+    if (!confirmed) return;
+    const btn = document.getElementById('mfaRegenerateCodesBtn');
+    btn.disabled = true;
+    const result = await generateRecoveryCodes(getAuthToken(), 10);
+    btn.disabled = false;
+    if (!result.ok) {
+      const msgEl = document.getElementById('mfaSettingsMsg');
+      msgEl.textContent = result.error;
+      msgEl.style.display = '';
+      return;
+    }
+    // Same ordering fix as handleVerifyMfaEnrollSettings() above --
+    // renderMfaSettingsCard() resets the codes-display area, so it has to
+    // run BEFORE these are shown, not after.
+    await renderMfaSettingsCard();
+    document.getElementById('mfaSettingsCodesList').innerHTML = result.codes
+      .map((c) => c.replace(/[&<>"']/g, (ch) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch])))
+      .join('<br>');
+    document.getElementById('mfaSettingsCodesDisplay').style.display = 'block';
+  }
+
+  document.getElementById('mfaSettingsCancelBtn').addEventListener('click', handleCancelMfaEnrollSettings);
+  document.getElementById('mfaSettingsVerifyBtn').addEventListener('click', handleVerifyMfaEnrollSettings);
+  document.getElementById('mfaRegenerateCodesBtn').addEventListener('click', handleRegenerateRecoveryCodes);
+  document.getElementById('mfaSettingsDownloadCodesBtn').addEventListener('click', () => {
+    const text = document.getElementById('mfaSettingsCodesList').innerText;
+    const blob = new Blob([
+      'Triple H Workspace -- two-factor recovery codes\n',
+      'Each code works once. Keep this somewhere safe.\n\n',
+      text + '\n',
+    ], { type: 'text/plain' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'triple-h-workspace-recovery-codes.txt';
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+  });
 </script>
 
 </body>

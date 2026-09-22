@@ -324,4 +324,209 @@ for Edge Functions exists -- confirmed again this session, still needs
 dashboard/CLI), or the cron "does it actually send" item (nothing to
 verify until tomorrow's scheduled runs happen).
 
+## 2026-09-22: Internal /tools/ MFA -- closing the real, standalone gap ACTION-ITEMS and CLIENT-PORTAL.md both flagged
+
+**The gap, verified against live code before building anything.** Read
+`tools/login.html`, `tools/auth.js`, and `account_roles`/
+`role_definitions` directly rather than trusting the prior notes at
+face value (this project's own stated lesson -- these lists have gone
+stale before). Confirmed: internal accounts authenticate with a bare
+Supabase Auth password grant (`tools/auth.js`'s `signIn()`, raw
+`fetch()` against `/auth/v1/token?grant_type=password`) with zero MFA
+option anywhere in that path, while client-portal accounts got real
+TOTP MFA on 2026-09-16. This is a real, standalone security gap, not
+part of the recent IA/UX work -- the two highest-privilege accounts in
+this whole system (Owner and Developer, with Dev Tools access, POS
+card-charging, invoice/finance visibility, and role management) had
+only a password between them and full access.
+
+**Why this wasn't done alongside the 2026-09-16 portal work, and why
+that was the right call at the time, not an oversight left to rot:**
+the portal's MFA is scoped to a UI (`portal/settings.html`,
+`portal/login.html`) that already loads the `@supabase/supabase-js`
+client for other things. `tools/auth.js` deliberately does NOT load
+that SDK anywhere -- it's raw `fetch()` throughout, a conscious choice
+recorded in its own comments ("matching the existing pattern in
+sync.js rather than introducing a new dependency on every page"). Internal
+accounts also needed a real mandatory-vs-optional decision per role
+(the portal's MFA is opt-in for every client, with no equivalent
+"this tier must have it" concept) and a lockout/recovery story the
+portal never needed to build. Bundling all of that into the
+2026-09-16 session would have meant rushing exactly the kind of
+architecturally non-obvious decision this project's own history
+warns against rushing (three separate prior sessions on this repo
+lost real work to a skipped-planning-step race, a merge conflict, and
+a duplicate-tag bug). Treating it as its own dedicated piece of work
+was the right call, not neglect -- and both docs that mentioned it
+(`docs/ACTION-ITEMS.md` #2, `docs/CLIENT-PORTAL.md`'s "still pending"
+item 3) said so explicitly rather than silently dropping it.
+
+**Architecture decisions, and why:**
+
+- **Raw `fetch()` against the same Supabase Auth REST endpoints the
+  SDK's `mfa.*` methods call internally, not a loaded `supabase-js`
+  client.** Confirmed the exact endpoint shapes by installing
+  `@supabase/supabase-js@2` in a scratch directory and reading its own
+  `GoTrueClient.ts` source directly (this repo has no live Supabase
+  project access to test against, so the SDK's own source was the most
+  reliable ground truth available) -- `POST /factors` to enroll,
+  `POST /factors/:id/challenge` then `POST /factors/:id/verify` to
+  verify (a raw `challenge_id`+`code` body, returning a whole new
+  session), `DELETE /factors/:id` to unenroll, and the verified
+  factors live on the plain `GET /auth/v1/user` response (`user.factors`,
+  filtered client-side by `factor_type`/`status`) rather than a
+  separate `/factors` list endpoint. This keeps `login.html` and
+  `settings.html` on the same zero-new-dependency footing as the rest
+  of `auth.js`, rather than adding a CDN script load to the one page
+  (`login.html`) where a failed/blocked third-party script load would
+  be most damaging (it would break signing in entirely, not just one
+  feature on an already-loaded page).
+- **The chokepoint is `login.html` itself, not a per-page gate.**
+  `signIn()` gained a `skipPersist` option: a correct password no
+  longer writes anything to `localStorage`/`sessionStorage` by
+  itself. `login.html` holds the freshly-issued (aal1) tokens in a
+  page-local variable, decides whether a challenge or mandatory
+  enrollment is required, and only calls `persistSession()` once that
+  clears. This matters for a real reason, not just tidiness: Postgres/
+  PostgREST has no native concept of "aal1 vs aal2" -- that
+  distinction only exists in the JWT's own `aal` claim and is only
+  meaningful to whoever chooses to check it. If a session were
+  persisted the moment the password checked out, that access token
+  would already be fully valid against every RLS policy in the
+  database even before the login PAGE had shown a code prompt. Because
+  every one of the 23 tool pages' `requireAuth()`/role checks reads
+  from that same stored session (`hasValidSession()`/`getAuthToken()`
+  in `auth.js`), gating this one spot means none of those pages needed
+  touching individually -- exactly the kind of shared chokepoint (like
+  `loadCurrentUserRole()`/`th-role-loaded` already is for role-gated
+  UI) this project's own conventions call for instead of a 23-page
+  sweep.
+- **Mandatory for any account whose REAL permissions require it, not
+  by `role_name` label.** `requiresMfaForRole()` checks the actual
+  `account_roles` booleans (`can_manage_roles`, `can_access_dev_tools`,
+  `can_access_dev_tools_full`, `can_manage_site_content`,
+  `can_manage_invoices`, `can_manage_contracts`, `can_view_finance`,
+  `can_view_runway`, `can_manage_reviews`) rather than `roleName ===
+  'Owner' || roleName === 'Developer'`. This matches how the
+  permission system itself already works -- the 2026-09-02 redesign
+  made `role_name` "just a display label... nothing reads it to decide
+  what an account can actually do anymore" (per `auth.js`'s own
+  comments), so gating MFA on the label instead of the real booleans
+  would have silently stopped working the first time someone's
+  permissions were hand-tuned away from a stock preset. A bare account
+  with every boolean false (a genuinely minimal Employee) is left
+  optional-but-encouraged -- reasonable for this business's real
+  risk profile: a small owner-operator shop where the account that
+  can't touch finances, Dev Tools, invoices, or roles has a much
+  smaller blast radius if its password alone were compromised than the
+  two accounts that currently exist (Steve/Owner, Connor/Developer),
+  both of which DO trip this check today and are forced through
+  enrollment on their next fresh sign-in.
+- **The enrollment gate is self-service, not a hard lockout.** A
+  mandatory-tier account with no factor enrolled is routed into the
+  exact same enroll-then-verify flow `settings.html` offers
+  optionally, right there on the login page, using the still-valid
+  (never-persisted) password-verified session -- there is no scenario
+  where this change could lock Steve or Connor out of their own
+  accounts with no path back in, which would have been a real,
+  unacceptable risk to take with two people's only access to running
+  their actual business. Recovery codes are generated and shown
+  immediately after that first verification succeeds.
+- **Recovery codes are a custom table + `SECURITY DEFINER` functions
+  (`sql/security/add_internal_mfa_recovery_codes.sql`), not Supabase's
+  own native recovery-codes API.** That native API exists in the
+  `@supabase/supabase-js` source (`client.auth.mfa.recoveryCodes.*`,
+  confirmed while reading `GoTrueClient.ts` for the endpoint shapes
+  above) but is gated behind an `experimental` client flag
+  (`assertRecoveryCodesExperimentalEnabled`), and this repo has no
+  live Supabase MCP/dashboard access to confirm the hosted GoTrue
+  server on this specific project even has that endpoint deployed.
+  Shipping a "lost your phone" recovery path that might silently 404
+  in production would be worse than not shipping recovery at all, so
+  this built a small, fully self-contained alternative instead: one
+  table (`internal_mfa_recovery_codes`, RLS enabled with zero
+  policies -- default-deny, table grants to `anon`/`authenticated`
+  explicitly revoked too, matching the belt-and-suspenders pattern
+  this log already documented was NEEDED for
+  `resync_cron_service_role_key` on 2026-09-21) plus four
+  `SECURITY DEFINER` functions that are the only way in or out
+  (`generate_internal_recovery_codes`, keyed to `auth.uid()`, replaces
+  the caller's whole set on regenerate; `verify_and_consume_internal_recovery_code`,
+  one-time use via bcrypt/`pgcrypto` comparison; `count_unused_internal_recovery_codes`;
+  `delete_internal_recovery_codes`, called when MFA is turned off so
+  old codes can't outlive the factor they belonged to). Every function
+  is keyed to the calling JWT's own `auth.uid()` -- none takes a
+  caller-supplied user id, so broad `EXECUTE` grants to `authenticated`
+  can't be used to touch another account's codes.
+- **A real, honest transition-period gap, closed with a nag, not
+  silence.** A `localStorage`-remembered session created BEFORE this
+  shipped has no reason to re-authenticate for up to 30 days
+  (`REMEMBER_DAYS` in `auth.js`) -- login.html's new gate only fires on
+  a fresh sign-in. Rather than leave that as a silent hole until
+  natural expiry, `workspace.html` now checks on every dashboard load
+  whether the signed-in account requires MFA and has none enrolled,
+  and shows a visible banner linking straight to Settings if so.
+  Dismissal is `sessionStorage`-only (not `localStorage`) so it
+  resurfaces on the next real visit rather than being silenced
+  forever by one click -- deliberately more persistent than a typical
+  dismissible banner, because the thing it's nagging about is a real
+  security requirement, not a feature announcement.
+
+**What was verified live, and what genuinely couldn't be:**
+
+- Full Node test suite (`tests/tools/internal-mfa.test.js`, 30 new
+  tests covering `auth.js`'s helpers, `requiresMfaForRole()` executed
+  directly against real account shapes, `login.html`'s gate/challenge/
+  recovery/cancel logic, `settings.html`'s enroll/disable/regenerate
+  flow, the SQL's deny-all-by-default and one-time-use guarantees) --
+  all passing alongside the full existing suite (2,681 tests; the 4
+  pre-existing failures on baseline are unrelated to this change, all
+  in a booking/design/tour area this session never touched -- verified
+  by name against a pre-change run before starting, matching this
+  project's own stated verification discipline).
+- **Real headless Chromium via Playwright, served over local
+  `python3 -m http.server` (never `file://`), with every Supabase
+  network call mocked** (this environment cannot reach `*.supabase.co`
+  at all -- the same fundamental limitation already documented for
+  this project's real-time-sync work): enrollment with a real QR
+  image rendered, correct-code login success, wrong-code rejection
+  with no session ever persisted, a valid recovery code recovering a
+  locked-out login, an invalid/reused recovery code rejected, and a
+  non-enrolled optional-tier account still signing in exactly as
+  before -- plus the settings.html self-serve enroll (QR shown,
+  recovery codes shown exactly once), reload-persistence of the
+  enrolled state, and confirmed disable, with a genuine UI-ordering
+  bug (the just-shown recovery codes were being immediately re-hidden
+  by a follow-up UI refresh call) actually caught and fixed by this
+  same Playwright run rather than only reasoned about.
+- **What this could NOT verify, and why:** the actual live TOTP
+  verification against a real authenticator app and a real Supabase
+  project -- this environment has no live Supabase access
+  (confirmed the same way every prior session here has: no
+  management-API/project-creation/live-query tool reaches
+  `csvfqdjuobylgafgolho.supabase.co`'s Auth endpoints from this
+  sandbox). Every REST endpoint shape used here was taken directly
+  from the official `@supabase/supabase-js` SDK's own source rather
+  than guessed, and the client portal's own MFA (built the same way,
+  against the same live project, and independently confirmed working
+  since 2026-09-16) uses the identical underlying Supabase Auth TOTP
+  mechanism -- but this session cannot claim to have exercised the
+  real GoTrue server itself, only a faithful mock of its documented
+  behavior. **A human should do one real live enrollment/login on
+  each of Connor's and Steve's actual accounts before relying on this
+  as the only thing standing between a stolen password and full
+  access** -- this is exactly the kind of thing this project's
+  standing instructions ask to be flagged plainly rather than
+  papered over.
+- Also could not apply the new `sql/security/add_internal_mfa_recovery_codes.sql`
+  migration to the live database -- no live Supabase MCP access in
+  this session, same as every other SQL file in this repo's history
+  that shipped as a file for the next session (or a human) with
+  access to run. It needs to be applied before the recovery-code
+  UI in Settings/login.html will actually work end-to-end; until
+  then, TOTP enrollment/challenge itself works fine (that part is
+  pure Supabase Auth, no new schema needed) but "Generate new codes"/
+  the recovery-code login path will fail closed (a network/RPC error,
+  never a false "valid") since the functions won't exist yet.
+
 <!-- Add new entries above this line -->

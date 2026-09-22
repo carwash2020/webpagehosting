@@ -82,7 +82,21 @@ function hasValidSession() {
   return Date.now() < (s.expires_at * 1000) - 60000;
 }
 
-async function signIn(email, password, rememberMe) {
+// options.skipPersist (added 2026-09-22, for the MFA step-up flow in
+// login.html): when true, a correct password does NOT store a session at
+// all -- it just hands the raw tokens back to the caller. This is what
+// makes MFA a real gate rather than a UI-only speed bump: if a session
+// were persisted the instant the password checked out, the access token
+// would already be usable against every RLS-protected endpoint (Postgres
+// itself has no concept of "aal1 vs aal2", that's a GoTrue/JWT-level
+// distinction only enforced by whoever chooses to check it) even if the
+// login PAGE itself hadn't shown the code prompt yet. Holding the tokens
+// in memory only, until a required second factor (or a valid recovery
+// code) clears, means there is no window where password-only access is
+// silently sufficient for an account that has -- or is required to have --
+// two-factor authentication.
+async function signIn(email, password, rememberMe, options) {
+  options = options || {};
   try {
     const res = await fetch(`${SUPABASE_URL}/auth/v1/token?grant_type=password`, {
       method: 'POST',
@@ -91,16 +105,29 @@ async function signIn(email, password, rememberMe) {
     });
     const data = await res.json();
     if (!res.ok) return { ok: false, error: data.error_description || data.msg || 'Sign in failed' };
-    storeSession({
+    const sessionFields = {
       access_token: data.access_token,
       refresh_token: data.refresh_token,
       expires_at: data.expires_at, // unix seconds, comes directly from Supabase
       email: data.user && data.user.email, // captured for per-person attribution elsewhere (e.g. Appliance Wiki) -- Supabase already sends this back, previously just wasn't being kept
-    }, !!rememberMe);
+    };
+    if (options.skipPersist) {
+      return Object.assign({ ok: true }, sessionFields);
+    }
+    storeSession(sessionFields, !!rememberMe);
     return { ok: true };
   } catch (e) {
     return { ok: false, error: 'Network error -- check your connection and try again.' };
   }
+}
+
+// Stores an already-issued session (e.g. one held in memory during the
+// login-time MFA flow above, or the fresh session Supabase returns from a
+// successful MFA verify) -- a thin, explicitly-named wrapper around
+// storeSession() so login.html never has to poke that internal function
+// directly.
+function persistSession(sessionFields, rememberMe) {
+  storeSession(sessionFields, !!rememberMe);
 }
 
 // Sends Supabase's built-in password-recovery email. redirect_to tells
@@ -346,10 +373,28 @@ let _cachedRoleInfo = null; // { roleName, canManageRoles, description } once lo
 // ensureFreshToken() is exactly the same guard already used
 // defensively before other authenticated calls elsewhere in this
 // codebase -- this closes the one place it was missing.
-async function loadCurrentUserRole() {
+// overrideAccessToken/overrideEmail (added 2026-09-22): lets login.html
+// ask "does THIS account require two-factor authentication?" using a
+// freshly-issued token that hasn't been persisted yet (see signIn()'s
+// skipPersist option above) -- needed to decide, before ever storing a
+// session, whether this login must be routed through a mandatory
+// enrollment or challenge step first. When used this way, the result is
+// deliberately NOT written into the module-level _cachedRoleInfo/dispatched
+// as th-role-loaded, since that cache represents "the currently signed-in
+// account", which isn't true yet at this point in the flow.
+async function loadCurrentUserRole(overrideAccessToken, overrideEmail) {
+  const usingOverride = !!overrideAccessToken;
   try {
-    await ensureFreshToken();
-    const email = getCurrentUserEmail();
+    let email;
+    let tokenForRequest;
+    if (usingOverride) {
+      email = overrideEmail;
+      tokenForRequest = overrideAccessToken;
+    } else {
+      await ensureFreshToken();
+      email = getCurrentUserEmail();
+      tokenForRequest = getAuthToken();
+    }
     if (!email) {
       // Diagnostic logging added 2026-09-02, after a real report this
       // function had NO logging anywhere on a genuine failure -- if
@@ -364,7 +409,8 @@ async function loadCurrentUserRole() {
           'auth.js', null, null, null
         );
       }
-      _cachedRoleInfo = null; return null;
+      if (!usingOverride) _cachedRoleInfo = null;
+      return null;
     }
     try {
       // Retries the network call itself up to 3 total attempts with a
@@ -426,7 +472,7 @@ async function loadCurrentUserRole() {
             {
               headers: {
                 'apikey': SUPABASE_ANON_KEY,
-                'Authorization': `Bearer ${getAuthToken()}`,
+                'Authorization': `Bearer ${tokenForRequest}`,
               },
             }
           );
@@ -449,7 +495,8 @@ async function loadCurrentUserRole() {
             'auth.js', null, null, lastErr.stack || null
           );
         }
-        _cachedRoleInfo = null; return null;
+        if (!usingOverride) _cachedRoleInfo = null;
+        return null;
       }
       const allRows = await res.json();
       // Case-insensitive match, same normalization every other
@@ -471,10 +518,11 @@ async function loadCurrentUserRole() {
             'auth.js', null, null, null
           );
         }
-        _cachedRoleInfo = null; return null;
+        if (!usingOverride) _cachedRoleInfo = null;
+        return null;
       }
       const row = rows[0];
-      _cachedRoleInfo = {
+      const roleInfo = {
         roleName: row.role_name,
         canManageRoles: !!row.can_manage_roles,
         canAccessDevTools: !!row.can_access_dev_tools,
@@ -487,9 +535,10 @@ async function loadCurrentUserRole() {
         canManageReviews: !!row.can_manage_reviews,
         description: '',
       };
-      return _cachedRoleInfo;
+      if (!usingOverride) _cachedRoleInfo = roleInfo;
+      return roleInfo;
     } catch (e) {
-      _cachedRoleInfo = null;
+      if (!usingOverride) _cachedRoleInfo = null;
       return null;
     }
   } finally {
@@ -507,7 +556,16 @@ async function loadCurrentUserRole() {
     // never fires this, which is fine -- listeners are only relevant
     // where the page's own init pulls in something that calls this,
     // directly or via initSyncOnLoad().
-    try { window.dispatchEvent(new CustomEvent('th-role-loaded', { detail: _cachedRoleInfo })); } catch (e) { /* ignore */ }
+    //
+    // Skipped entirely for the overrideAccessToken path (2026-09-22):
+    // that call represents a not-yet-persisted, mid-login-flow account,
+    // not "the currently signed-in account" this event means everywhere
+    // else it's listened for -- firing it here would make every other
+    // page's nav/role-dependent UI briefly (and wrongly) believe someone
+    // else's login-in-progress account is the one signed in on THIS tab.
+    if (!usingOverride) {
+      try { window.dispatchEvent(new CustomEvent('th-role-loaded', { detail: _cachedRoleInfo })); } catch (e) { /* ignore */ }
+    }
   }
 }
 
@@ -634,4 +692,224 @@ function getCurrentUserId() {
   } catch (e) {
     return null;
   }
+}
+
+// ---------------------------------------------------------------------------
+// TWO-FACTOR AUTHENTICATION (MFA) -- added 2026-09-22.
+//
+// Internal /tools/ accounts (Owner/Developer/Employee, backed by
+// account_roles/role_definitions) had zero MFA option before this, even
+// though the client portal shipped real TOTP MFA for client-facing accounts
+// on 2026-09-16. See docs/specialist-logs/security.md for the full design
+// reasoning (mandatory-vs-optional by role, why this doesn't just call the
+// @supabase/supabase-js client the portal uses).
+//
+// This deliberately uses raw fetch() against the same Supabase Auth REST
+// endpoints the JS SDK's mfa.* methods call internally (confirmed directly
+// against the SDK's own source, since this project has no live Supabase
+// project access to test against), matching this file's existing
+// no-new-dependency convention rather than loading supabase-js onto
+// login.html/settings.html the way sync.js does for realtime elsewhere.
+//
+// Every function below takes an explicit access token instead of reading
+// getAuthToken() -- login.html's whole MFA gate depends on being able to
+// enroll/challenge/verify using a freshly-issued token that is NOT yet
+// persisted to localStorage/sessionStorage (see signIn()'s skipPersist
+// option above). settings.html, which always operates on an
+// already-signed-in session, just passes getAuthToken() at each call site.
+// ---------------------------------------------------------------------------
+
+// Returns the account's verified TOTP factor (or null), straight off
+// Supabase's own /auth/v1/user response -- the same source the SDK's
+// mfa.listFactors() reads from (it calls getUser() internally and filters
+// `user.factors`), just without needing the SDK loaded.
+async function mfaListVerifiedTotpFactor(accessToken) {
+  try {
+    const res = await fetch(`${SUPABASE_URL}/auth/v1/user`, {
+      headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': `Bearer ${accessToken}` },
+    });
+    if (!res.ok) return null;
+    const data = await res.json();
+    const factors = (data && data.factors) || [];
+    return factors.find((f) => f.factor_type === 'totp' && f.status === 'verified') || null;
+  } catch (e) {
+    return null;
+  }
+}
+
+async function mfaEnroll(accessToken) {
+  try {
+    const res = await fetch(`${SUPABASE_URL}/auth/v1/factors`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'apikey': SUPABASE_ANON_KEY, 'Authorization': `Bearer ${accessToken}` },
+      body: JSON.stringify({ factor_type: 'totp', issuer: 'Triple H Workspace' }),
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) return { ok: false, error: data.error_description || data.msg || 'Could not start two-factor setup. Please try again.' };
+    // Supabase's raw REST response has the QR code as bare SVG markup --
+    // the JS SDK wraps it as a data URI before handing it to a caller
+    // (`data:image/svg+xml;utf-8,${qr_code}`, confirmed against its source)
+    // so an <img src> can use it directly. Done here too, since this call
+    // stands in for that SDK method.
+    if (data.totp && data.totp.qr_code && !String(data.totp.qr_code).startsWith('data:')) {
+      data.totp.qr_code = `data:image/svg+xml;utf-8,${data.totp.qr_code}`;
+    }
+    return { ok: true, factorId: data.id, totp: data.totp };
+  } catch (e) {
+    return { ok: false, error: 'Network error -- check your connection and try again.' };
+  }
+}
+
+async function mfaChallenge(accessToken, factorId) {
+  try {
+    const res = await fetch(`${SUPABASE_URL}/auth/v1/factors/${factorId}/challenge`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'apikey': SUPABASE_ANON_KEY, 'Authorization': `Bearer ${accessToken}` },
+      body: JSON.stringify({}),
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) return { ok: false, error: data.error_description || data.msg || 'Could not start verification. Please try again.' };
+    return { ok: true, challengeId: data.id };
+  } catch (e) {
+    return { ok: false, error: 'Network error -- check your connection and try again.' };
+  }
+}
+
+// On success, Supabase issues a whole new (stepped-up, aal2) session --
+// this is what login.html actually persists once a code checks out.
+async function mfaVerify(accessToken, factorId, challengeId, code) {
+  try {
+    const res = await fetch(`${SUPABASE_URL}/auth/v1/factors/${factorId}/verify`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'apikey': SUPABASE_ANON_KEY, 'Authorization': `Bearer ${accessToken}` },
+      body: JSON.stringify({ challenge_id: challengeId, code }),
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) return { ok: false, error: data.error_description || data.msg || 'Invalid code -- please try again.' };
+    return {
+      ok: true,
+      access_token: data.access_token,
+      refresh_token: data.refresh_token,
+      expires_at: data.expires_at || (Math.floor(Date.now() / 1000) + (data.expires_in || 3600)),
+      email: (data.user && data.user.email) || undefined,
+    };
+  } catch (e) {
+    return { ok: false, error: 'Network error -- check your connection and try again.' };
+  }
+}
+
+async function mfaChallengeAndVerify(accessToken, factorId, code) {
+  const challenge = await mfaChallenge(accessToken, factorId);
+  if (!challenge.ok) return challenge;
+  return await mfaVerify(accessToken, factorId, challenge.challengeId, code);
+}
+
+async function mfaUnenroll(accessToken, factorId) {
+  try {
+    const res = await fetch(`${SUPABASE_URL}/auth/v1/factors/${factorId}`, {
+      method: 'DELETE',
+      headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': `Bearer ${accessToken}` },
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) return { ok: false, error: data.error_description || data.msg || 'Could not turn off two-factor authentication. Please try again.' };
+    return { ok: true };
+  } catch (e) {
+    return { ok: false, error: 'Network error -- check your connection and try again.' };
+  }
+}
+
+// ---- Recovery codes -------------------------------------------------------
+// Supabase's own native recovery-codes REST API exists in the JS SDK's
+// source (client.auth.mfa.recoveryCodes.*) but is gated behind an
+// `experimental` client flag, and this repo has no live Supabase project
+// access to confirm the hosted GoTrue server has that endpoint deployed at
+// all. Rather than depend on something unverifiable, this project built its
+// own small, fully self-contained system: one table plus SECURITY DEFINER
+// Postgres functions that are the ONLY way in or out of it (see
+// sql/security/add_internal_mfa_recovery_codes.sql). Every RPC below is
+// keyed to auth.uid() on the database side, so the bearer token is what
+// actually scopes a call to "this account's own codes" -- there is no
+// caller-supplied user id anywhere in these calls to get wrong.
+
+async function generateRecoveryCodes(accessToken, count) {
+  try {
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/generate_internal_recovery_codes`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'apikey': SUPABASE_ANON_KEY, 'Authorization': `Bearer ${accessToken}` },
+      body: JSON.stringify({ p_count: count || 10 }),
+    });
+    const data = await res.json().catch(() => null);
+    if (!res.ok || !Array.isArray(data)) return { ok: false, error: 'Could not generate recovery codes. Please try again.' };
+    return { ok: true, codes: data };
+  } catch (e) {
+    return { ok: false, error: 'Network error -- check your connection and try again.' };
+  }
+}
+
+async function verifyRecoveryCode(accessToken, code) {
+  try {
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/verify_and_consume_internal_recovery_code`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'apikey': SUPABASE_ANON_KEY, 'Authorization': `Bearer ${accessToken}` },
+      body: JSON.stringify({ p_code: code }),
+    });
+    const data = await res.json().catch(() => null);
+    if (!res.ok) return { ok: false, error: 'Could not check that recovery code. Please try again.' };
+    return { ok: true, valid: data === true };
+  } catch (e) {
+    return { ok: false, error: 'Network error -- check your connection and try again.' };
+  }
+}
+
+async function countRemainingRecoveryCodes(accessToken) {
+  try {
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/count_unused_internal_recovery_codes`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'apikey': SUPABASE_ANON_KEY, 'Authorization': `Bearer ${accessToken}` },
+      body: JSON.stringify({}),
+    });
+    const data = await res.json().catch(() => null);
+    if (!res.ok || typeof data !== 'number') return null;
+    return data;
+  } catch (e) {
+    return null;
+  }
+}
+
+// Best-effort cleanup -- called when an account turns MFA off entirely, so
+// old recovery codes can't outlive the factor they belonged to. Never
+// blocks the disable flow on its own success.
+async function deleteRecoveryCodes(accessToken) {
+  try {
+    await fetch(`${SUPABASE_URL}/rest/v1/rpc/delete_internal_recovery_codes`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'apikey': SUPABASE_ANON_KEY, 'Authorization': `Bearer ${accessToken}` },
+      body: JSON.stringify({}),
+    });
+  } catch (e) { /* best-effort */ }
+}
+
+// True when this account's real, current permissions mean two-factor
+// authentication is REQUIRED at login, not just offered. Deliberately keyed
+// off the actual permission booleans -- which the account-permissions
+// system (see the ACCOUNT PERMISSIONS block above) already treats as the
+// only authoritative source, roleName being just a display label -- rather
+// than off roleName itself, so a future Employee account granted any one
+// real elevated capability is automatically covered without this needing
+// to change. An account with none of these (a genuinely bare/minimal
+// Employee) is left as optional-but-encouraged; see
+// docs/specialist-logs/security.md for the full risk reasoning.
+function requiresMfaForRole(roleInfo) {
+  if (!roleInfo) return false;
+  return !!(
+    roleInfo.canManageRoles ||
+    roleInfo.canAccessDevTools ||
+    roleInfo.canAccessDevToolsFull ||
+    roleInfo.canManageSiteContent ||
+    roleInfo.canManageInvoices ||
+    roleInfo.canManageContracts ||
+    roleInfo.canViewFinance ||
+    roleInfo.canViewRunway ||
+    roleInfo.canManageReviews
+  );
 }
