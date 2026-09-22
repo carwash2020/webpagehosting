@@ -3091,3 +3091,27 @@ migration has not been applied to the live database yet -- both need a
 human with real access before this is fully in production. Full
 reasoning and the complete verify/couldn't-verify breakdown:
 `docs/specialist-logs/security.md`'s 2026-09-22 entry.
+
+**Update, same day:** the migration above (`sql/security/add_internal_mfa_recovery_codes.sql`)
+has now been applied live via the Supabase MCP tools, with user
+authorization, and verified directly against the live database --
+`internal_mfa_recovery_codes` exists with RLS enabled and zero
+policies (deny-all by design), and all 4 `SECURITY DEFINER` functions
+(`generate_internal_recovery_codes`, `verify_and_consume_internal_recovery_code`,
+`count_unused_internal_recovery_codes`, `delete_internal_recovery_codes`)
+exist and are grant-restricted to `authenticated` only. TOTP against a
+real authenticator app is still unverified (needs a human logging in
+live) -- that's the only piece of this feature still open.
+
+## 2026-09-22 -- `scripts/check-links.py` external-link coverage hole closed
+
+`PUBLIC_PAGES` was a hand-maintained subset that had drifted well
+behind `sitemap.xml` -- missing `locations/handyman-st-george-ut.html`,
+4 of the 7 service pages, `about.html`, `careers.html`, `our-work.html`,
+`booking.html`, the entire `blog/` (index + 10 posts), and
+`terms.html`/`privacy.html`. All of those got zero external-link
+checking despite being real, crawled, indexed pages. Rebuilt the list
+directly from the sitemap with a comment to keep the two in sync going
+forward. Internal-link check (which does cover every HTML file
+already) stays clean across all 88 pages. Flagged by the Watcher on
+2026-09-17, picked up here.

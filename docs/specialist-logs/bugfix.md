@@ -296,6 +296,28 @@ and legal pages. Internal refs across every HTML file are still
 checked. Handed to automation/bugfix rather than patched in the
 docs-only Watcher PR — a one-line list add is the actual fix.
 
+## 2026-09-22 — fixed the link-check coverage hole flagged above
+
+Rebuilt `PUBLIC_PAGES` directly from `sitemap.xml` instead of a
+hand-maintained subset — added a comment saying to keep the two in
+sync going forward. Was missing `locations/handyman-st-george-ut.html`,
+4 of 7 service pages, `about.html`/`careers.html`/`our-work.html`/
+`booking.html`, the whole `blog/`, and `terms.html`/`privacy.html` --
+all previously getting zero external-link coverage despite being real,
+crawled pages.
+
+Confirmed internal-link checks still pass (88 HTML files, all resolve).
+External checks can't be fully verified from this sandbox: newly-covered
+blog posts reference `images.unsplash.com` (Unsplash hotlinks), and this
+environment's egress proxy blocks that domain outright (`WebFetch`
+against one of the URLs returned an explicit `EGRESS_BLOCKED` error, not
+a real 404/timeout) -- same class of sandbox-only limitation this log
+already documents for the site's own domain and the bot-hostile
+platforms list. Real GitHub Actions CI has unrestricted egress and will
+actually validate these; not adding `unsplash.com` to `BOT_HOSTILE_DOMAINS`
+since that would suppress a genuinely-dead hotlink there too, not just
+this sandbox's artifact.
+
 ## 2026-09-17 — UX-study glitches: empty footer Hours, dead `#` links, portal Send Request overlap
 
 Four concrete public-site + portal defects from the UX study, one PR.
