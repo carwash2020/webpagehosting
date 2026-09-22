@@ -747,4 +747,58 @@ badge refresh beyond `workspace.html` (it goes stale if you work
 directly in a deep-linked tool page), and extending the swipe-reveal
 pattern to invoice/quote log rows.
 
+## 2026-09-22 (later still) -- "make it feel like a native app" push, round 2: badge freshness + a course-correction on the swipe idea
+
+**Badge freshness.** `workspace.html`'s `updateActionItemsBadge()` is
+the only place that ever computes the real cross-page Action Items
+total (leads, work requests, applicants, bookings, due-soon jobs,
+follow-ups, unpaid invoices) -- duplicating that fetch/count logic on
+every other page just to keep the OS home-screen badge honest would be
+exactly the same-logic-in-two-places trap this codebase has already
+been bitten by (`SIDEBAR_DESTS`/`MORE_DESTS`, `NAV_PERMISSION_CHECKS`
+both went stale independently before). Instead: `updateActionItemsBadge()`
+now caches its computed total to `th_app_badge_total` every time it
+runs, and a new shared `setAppBadgeDelta(delta)` (`tools-effects.js`)
+lets any OTHER page nudge that cached total by a known relative amount
+and re-set the real OS badge from it -- no recompute, no duplicated
+fetch logic. The Badging API is write-only (no way to read back what's
+currently displayed), which is exactly why a relative nudge from a
+cached value, not an attempted live recompute, is the right shape
+here. Wired into the one clean, well-defined case: `invoice-generator.html`'s
+`toggleInvoicePaid()` nudges -1 when marking paid, +1 when marking
+unpaid again. Deliberately did NOT try to guess at other cases (a job
+going from "due soon" to done, say) where the count's own definition
+lives entirely in `workspace.html`'s local-data logic and isn't safely
+inferable from another page.
+
+**Swipe-reveal on invoice/quote rows -- reconsidered, not built.**
+The round-1 audit's premise was that Mark Paid "requires opening the
+row," matching Job Tracker's Done button (hidden until a swipe or long-
+press reveals it). Checked before building anything: that's not
+actually true here -- `invoice-generator.html`'s invoice log already
+shows Resend/Mark Paid/Delete as directly visible buttons on every
+row, no swipe or tap-to-open needed. Building a swipe gesture to reveal
+an action that's already one tap away would add real complexity
+(a second gesture system to maintain, generalized off `.job-card`'s
+tightly-coupled implementation) for no actual UX gain -- the opposite
+of "shrinking, refining." Substituted the genuinely higher-value,
+lower-risk move instead: extended the same long-press quick-action
+sheet from round 1 to the invoice log itself (`initInvoiceLogLongPress()`),
+which DOES save something real -- a single gesture instead of finding
+and tapping the right one of 3 buttons on a narrow phone width, same
+value proposition as the finance/contacts/contract-log additions from
+round 1.
+
+Extended `tests/tools/app-feel-haptics-longpress.test.js` (6 more
+tests, 20 total): badge caching in `updateActionItemsBadge()`,
+`setAppBadgeDelta()`'s clamp-at-zero/cache/OS-badge behavior (both
+source-level and a real invoked-end-to-end test), the invoice-paid
+delta wiring, and the invoice log long-press init + a full behavioral
+test (mocked `attachLongPress`/`showQuickActionSheet`, asserts the
+sheet's title and that Resend/Mark Paid/Delete each call the right
+function with the right id).
+
+Verified: full suite 2707/2708 (only the known check-links.py
+sandbox-proxy issue), `check-consistency`/`check-undefined-vars` clean.
+
 <!-- Add new entries above this line -->

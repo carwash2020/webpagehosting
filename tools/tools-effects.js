@@ -74,6 +74,39 @@ if (typeof document !== 'undefined' && !document.getElementById('thConfettiKeyfr
   document.head.appendChild(style);
 }
 
+// ---------------------------------------------------------------------------
+// OS home-screen app icon badge -- relative nudge from a page OTHER than
+// workspace.html. Added 2026-09-22 as part of the same "make it feel like
+// an app" push: workspace.html's updateActionItemsBadge() already sets the
+// real badge from a full cross-page count (leads, work requests, unpaid
+// invoices, etc.) and caches that total in th_app_badge_total every time it
+// runs -- but that count only ever refreshes when workspace.html itself is
+// open. A real installed PWA can sit on a home screen for hours while
+// Connor works directly in invoice-generator.html or job-tracker.html,
+// during which the badge silently goes stale (e.g. still shows "3 unpaid"
+// after the 3rd one was just marked paid).
+//
+// Deliberately a RELATIVE nudge, not a recompute -- the Badging API is
+// write-only (no way to read the OS's current displayed value back), and
+// recomputing the full cross-page total here would mean duplicating
+// workspace.html's leads/work-requests/bookings fetch logic on every page
+// that wants to keep the badge honest, which is exactly the kind of
+// same-logic-in-two-places drift this codebase has been bitten by before
+// (SIDEBAR_DESTS/MORE_DESTS, NAV_PERMISSION_CHECKS). A caller that knows it
+// just resolved (or un-resolved) exactly one countable item -- an invoice
+// going from unpaid to paid, say -- calls setAppBadgeDelta(-1) or (+1); the
+// cached total is the source of truth until workspace.html is next opened
+// and recomputes it for real.
+function setAppBadgeDelta(delta) {
+  if (typeof navigator === 'undefined' || !('setAppBadge' in navigator)) return;
+  let cached = 0;
+  try { cached = parseInt(localStorage.getItem('th_app_badge_total') || '0', 10) || 0; } catch (e) { /* best-effort */ }
+  const next = Math.max(0, cached + delta);
+  try { localStorage.setItem('th_app_badge_total', String(next)); } catch (e) { /* best-effort */ }
+  if (next > 0) navigator.setAppBadge(next).catch(() => {});
+  else if ('clearAppBadge' in navigator) navigator.clearAppBadge().catch(() => {});
+}
+
 // Small color-coded attribution dot -- blue for Connor, pink for Steve.
 // Used anywhere a record shows who last touched it (Job Tracker, Invoice
 // Generator, Parts & Reference / Appliance Wiki, Dev Tools). Consolidated
