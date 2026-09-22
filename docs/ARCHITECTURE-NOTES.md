@@ -61,8 +61,11 @@ sit silently broken for several pushes before it was found).
 6. **Reconsidering the bottom nav** was done 2026-09-21 (Calendar
    folded into Job Tracker as a view; Clients took its bar slot; the
    dashboard's chip row and tile grid removed). Still open from that
-   early list: splitting Business Health's unrelated tabs, making the
-   Appliance Wiki search-first by default. The 721--1023px band that
+   early list, both closed 2026-09-22: the Appliance Wiki is
+   search-first (box first, focused on load); the Runway Dashboard's
+   tabs were NOT split into pages -- it remembers the last tab per
+   device and honors a #hash instead, which removes the repeat taps
+   without adding destinations. The 721--1023px band that
    showed neither the bottom bar nor the sidebar was closed the same
    day (round 2): the bar now runs to 1023px and the sidebar starts at
    1024px, complementary by test (`tests/design/tablet-nav-band.test.js`

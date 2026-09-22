@@ -1162,4 +1162,35 @@ iframe is Stripe-hosted, so `frame-src https://js.stripe.com` is the
 minimum -- if the invoice page ever needs a stricter CSP, the Quick
 charge tab is the reason it cannot be `frame-src 'none'`.
 
+## 2026-09-22 -- Workspace IA round 3: the leftovers, in one pass
+
+"Let's finish it in one big pass." The open list from rounds 1-2 was:
+search-first Appliance Wiki, the Runway Dashboard's tabs, and login's
+return-path allowlist.
+
+**Wiki.** `.pr-search-filter-row` moved to the top of `#prListView`
+(above the quick-access strip and the display-name row); the
+`.pr-confidence-note` boilerplate went into the help modal. Focus on
+load is gated: not when `?search=` pre-filled the box (the results are
+what matters then) and not while `th_app_tour_step` is set (the tour
+card owns focus and this page is a tour stop). `focus({preventScroll})`
+so the sticky header does not scroll away on a phone.
+
+**Runway.** Chose tab memory over splitting into pages: a split adds
+destinations the day after two were removed, and ARCHITECTURE-NOTES
+already records the page as deliberately self-contained. `switchToTab`
+writes `th_runway_tab`; an IIFE at init picks hash > memory > personal
+and calls `switchToTab`, which skips the fade when no panel is active
+yet. The markup's default `is-active` button is untouched (a test
+asserts it).
+
+**Login.** `ALLOWED_RETURN_PATHS` gained `clients.html` and `pos.html`
+(the stub still redirects, but the allowlist is about not silently
+dropping a return path). Kept static and sorted, as before.
+
+Verified: suite, check-consistency, check-undefined-vars, lint clean;
+real browser at 390 and 1440: wiki search focused on open and not when
+`?search=` is present, Runway reopening on the last tab and on
+`#runway`.
+
 <!-- Add new entries above this line -->

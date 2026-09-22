@@ -273,21 +273,24 @@
 <p class="tool-sub">Look up an appliance by type or brand and see everything for it in one place &mdash; manual link, parts catalog, and any specific issues you've logged.<span id="syncStatusText"></span></p>
 
 <div id="prListView">
-  <div class="pr-confidence-note">Pre-loaded with major brands and their official manual/parts links. A few of these links go to a brand's general parts catalog rather than one exact model, since exact links depend on the specific model number &mdash; worth double-checking a link the first time you use it for a real job.</div>
-
-  <div id="prDisplayNameRow" style="margin-bottom:14px;"></div>
-  <div id="prQuickAccessStrip"></div>
-
+  <!-- Search-first (2026-09-22): this page is a lookup. The search box is
+       the first thing on the page and takes focus on load, so a part
+       number or brand can be typed the moment the page opens -- the
+       pre-loaded-links disclaimer that used to sit above it moved into the
+       help modal. Pinned / recent chips follow directly under the box. -->
   <div class="pr-search-filter-row">
     <div class="form-field pr-search-field" style="margin-bottom:0;">
       <label>Search</label>
-      <input type="text" id="prSearchInput" placeholder="Search type, brand, or model..." oninput="debouncedCall('prSearch', renderUnits)">
+      <input type="text" id="prSearchInput" placeholder="Search type, brand, or model..." autocomplete="off" enterkeyhint="search" oninput="debouncedCall('prSearch', renderUnits)">
     </div>
     <div class="form-field pr-filter-field" style="margin-bottom:0;">
       <label>Filter</label>
       <select class="pr-filter-select" id="prTypeFilterSelect" onchange="setPrType(this.value)"></select>
     </div>
   </div>
+
+  <div id="prQuickAccessStrip"></div>
+  <div id="prDisplayNameRow" style="margin-bottom:14px;"></div>
 
   <div class="form-section">
     <div style="display:flex; justify-content:space-between; align-items:center;">
@@ -385,7 +388,7 @@
     <h3>Appliance Wiki</h3>
     <p>Look up an appliance by type or brand, and see everything for it in one place &mdash; a link to its manual, a link to its parts catalog, and any specific issues you've personally logged for it.</p>
     <p>Tap a type chip to narrow the list, or search directly. Tap any appliance card to open it, see both links at the top, and add issues as you actually run into them on real jobs.</p>
-    <p>Every link here points to a manufacturer's own site or a real parts retailer &mdash; nothing from those pages is copied or stored here, just the link to it. A few links go to a brand's general parts catalog rather than one exact model, since that depends on the specific model number.</p>
+    <p>Every link here points to a manufacturer's own site or a real parts retailer &mdash; nothing from those pages is copied or stored here, just the link to it. The list comes pre-loaded with major brands and their official manual/parts links; a few of those go to a brand's general parts catalog rather than one exact model, since that depends on the specific model number &mdash; worth double-checking a link the first time you use it for a real job.</p>
     <p>This isn't a substitute for actually diagnosing the job in person.</p>
   </div>
 </div>
@@ -2928,6 +2931,13 @@
     // the filter, rather than flashing the full unfiltered list first.
     const presetSearch = new URLSearchParams(location.search).get('search');
     if (presetSearch) document.getElementById('prSearchInput').value = presetSearch;
+    // Search-first (2026-09-22): the page opens ready to type. Skipped
+    // when a ?search= deep link already filled the box (the result list
+    // is the point then) and when the tour is mid-run (its card owns
+    // focus). preventScroll keeps the header in view on a phone.
+    if (!presetSearch && !localStorage.getItem('th_app_tour_step')) {
+      try { document.getElementById('prSearchInput').focus({ preventScroll: true }); } catch (e) { /* older browsers */ }
+    }
     renderUnits();
     populatePrDatalists();
     renderPrDisplayNameRow();
