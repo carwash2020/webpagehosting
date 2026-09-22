@@ -52,17 +52,17 @@
   })();
 </script>
 <link rel="stylesheet" href="/styles.css?v=2e81706c3d">
-<link rel="stylesheet" href="/tools/styles-tools.css?v=effd2652c2">
+<link rel="stylesheet" href="/tools/styles-tools.css?v=f4eba25dcc">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.112.3/dist/umd/supabase.js" integrity="sha384-qafw21c/iciq0VXsi9FzkfoQv5I/V0iqE4lSNcKXPnW9/UTJLnv5CcN4FHxVLnKg" crossorigin="anonymous" defer></script>
-<script src="/tools/sync.js?v=6b9e092eca" defer></script>
+<script src="/tools/sync.js?v=4cfac4b10e" defer></script>
 <script src="/tools/data-layer.js?v=5d2fdbfaf1" defer></script>
 <script src="/tools/tools-effects.js?v=a767167574" defer></script>
-<script src="/tools/tools-dialogs.js?v=d68ce809a1" defer></script>
+<script src="/tools/tools-dialogs.js?v=33199ae1d8" defer></script>
 <script src="/signature-pad.js?v=f95f8e1d28" defer></script>
 <script src="/tools/tools-media-sharing.js?v=0c229c9353" defer></script>
 <script src="/tools/tools-nav-pwa.js?v=4d9f8c89e1" defer></script>
-<script src="/tools/tools-command-palette.js?v=7bd204bef4" defer></script>
-<script src="/tools/tools-tour.js?v=7876158a2d" defer></script>
+<script src="/tools/tools-command-palette.js?v=3aaed2827f" defer></script>
+<script src="/tools/tools-tour.js?v=1975ebd4fc" defer></script>
 <!-- U15/W18 fix (High-Impact Upgrades, Master Audit, 2026-09-08): the
      masthead/footer/totals-block drawing code below moved into this
      shared file, now also used by job-detail.html's job sheet and
@@ -239,6 +239,48 @@
   .pos-auth-text span { font-weight: 700; border-bottom: 1px dashed var(--orange-light); }
   .pos-auth-label { display: block; font-size: 12px; font-weight: 600; color: var(--text-dim); margin-bottom: 6px; }
   #posSignerName { width: 100%; box-sizing: border-box; padding: 10px 12px; background: var(--bg-panel); border: 1px solid var(--border); border-radius: 8px; color: var(--white); font-size: 15px; font-family: inherit; }
+
+  /* The invoice list (2026-09-22, Workspace rework part 4): the page opens
+     here. Three numbers at the top (owed, overdue, billed this month --
+     the first two are also filters), then one row per invoice in the
+     shared .th-row style the Clients list uses. A tap on a row is its
+     sheet (openInvoiceActions); on a computer the old one-click buttons
+     stay at the end of the row. */
+  .inv-summary { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; margin: 0 0 14px; }
+  .inv-summary:empty { display: none; }
+  .inv-stat {
+    display: flex; flex-direction: column; align-items: flex-start; gap: 2px; min-width: 0;
+    padding: 12px 12px 11px; border-radius: 14px; text-align: left;
+    background: var(--bg-panel); border: 1px solid var(--border); color: var(--text);
+    font-family: inherit; line-height: 1.25; margin: 0; cursor: pointer;
+  }
+  div.inv-stat { cursor: default; }
+  button.inv-stat:hover { border-color: var(--orange-tint-border); }
+  .inv-stat.is-active { border-color: var(--orange); box-shadow: inset 0 0 0 1px var(--orange); }
+  .inv-stat-label { font-family: var(--font-ui); font-size: 11.5px; font-weight: 700; letter-spacing: .6px; text-transform: uppercase; color: var(--text-dim); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; }
+  .inv-stat-value { font-family: var(--font-ui); font-size: 20px; font-weight: 700; color: var(--white); line-height: 1.2; white-space: nowrap; }
+  .inv-stat-sub { font-size: 12px; color: var(--text-dim); white-space: nowrap; }
+  .inv-stat.is-owed .inv-stat-value { color: var(--orange-light); }
+  .inv-stat.is-danger .inv-stat-value { color: #e05252; }
+  @media (max-width: 400px) { .inv-stat { padding: 10px 9px 9px; } .inv-stat-label { font-size: 10.5px; letter-spacing: .2px; } .inv-stat-value { font-size: 17px; } }
+
+  .inv-log-head { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-bottom: 12px; }
+  .inv-log-head h3 { margin: 0; }
+  .inv-log-tools { display: flex; flex-direction: column; gap: 10px; margin-bottom: 12px; }
+  .inv-item + .inv-item { margin-top: 6px; }
+  .th-list > .inv-item + .inv-item { margin-top: 0; }
+  .inv-row { padding-right: 4px; }
+  .inv-row button.th-row-link { background: none; border: 0; font: inherit; color: inherit; text-align: left; cursor: pointer; width: 100%; }
+  .inv-row-end { flex-shrink: 0; min-width: 76px; display: flex; flex-direction: column; align-items: flex-end; gap: 4px; }
+  .inv-row-amt { font-family: var(--font-ui); font-size: 15px; font-weight: 700; color: var(--white); white-space: nowrap; }
+  .inv-row .th-row-sub .is-late { color: #e05252; font-weight: 600; }
+  .inv-row-actions { display: none; gap: 6px; flex-shrink: 0; }
+  @media (min-width: 1024px) { .inv-row-actions { display: flex; } }
+  .inv-row-extra { margin: 4px 6px 0 60px; }
+  .inv-row-extra .contract-log-meta { margin-top: 4px; }
+  body.is-compact-density .inv-row .th-row-link { min-height: 44px; padding-top: 3px; padding-bottom: 3px; }
+  body.is-compact-density .inv-row .th-row-avatar { width: 34px; height: 34px; font-size: 12px; }
+  .inv-empty { display: flex; flex-direction: column; align-items: center; gap: 12px; }
 </style>
 </head>
 <body>
@@ -261,18 +303,22 @@
     <a href="/tools/workspace.html" class="help-btn" aria-label="Back to Workspace" title="Back to Workspace" style="text-decoration:none; display:inline-flex; align-items:center; justify-content:center;">&#8617;</a>
   </div>
 </div>
-<p class="tool-sub">Internal tool &mdash; fill this out per job, click Generate, a branded PDF downloads straight to your device.
+<p class="tool-sub">Who owes you and what has been paid, plus every new invoice, quote, and quick charge.
   <span class="realtime-badge" id="realtimeBadge" onclick="retryLiveSync()" title="Live sync"><span class="realtime-dot" id="realtimeDot"></span><span id="realtimeText">Live sync: connecting...</span></span>
 </p>
 
+<!-- List first (2026-09-22, Workspace rework part 4): Money opens on the
+     invoice list -- who owes you, what is overdue -- not on a blank form.
+     The three forms keep their tabs (and #invoice / #quote / #pos deep
+     links); the + button and New job's Create invoice go straight to them. -->
 <div class="tabs tabs-sticky">
-  <button class="tab-btn is-active" data-tab="invoice" onclick="activateGenTab('invoice')">Invoice</button>
-  <button class="tab-btn" data-tab="quote" onclick="activateGenTab('quote')">Quote / Estimate</button>
+  <button class="tab-btn is-active" data-tab="recent" onclick="activateGenTab('recent')">Invoices</button>
+  <button class="tab-btn" data-tab="invoice" onclick="activateGenTab('invoice')">New invoice</button>
+  <button class="tab-btn" data-tab="quote" onclick="activateGenTab('quote')">New quote</button>
   <button class="tab-btn" data-tab="pos" onclick="activateGenTab('pos')">Quick charge</button>
-  <button class="tab-btn" data-tab="recent" onclick="activateGenTab('recent')">Recent Invoices</button>
 </div>
 
-<div class="tab-panel is-active" id="tab-invoice">
+<div class="tab-panel" id="tab-invoice">
 
 <div class="form-section">
   <h3>Invoice Details</h3>
@@ -544,17 +590,29 @@
 
 </div>
 
-<div class="tab-panel" id="tab-recent">
+<div class="tab-panel is-active" id="tab-recent">
+  <div class="inv-summary" id="invoiceSummary"></div>
   <div class="form-section">
-    <div style="display:flex; justify-content:space-between; align-items:center; gap:12px; margin-bottom:2px;">
-      <h3 style="margin:0;">Recent Invoices</h3>
+    <div class="inv-log-head">
+      <h3>Invoices</h3>
       <button class="small-btn" data-density-toggle onclick="toggleDensityPreference()" aria-pressed="false">Compact view</button>
     </div>
-    <input type="text" id="invoiceLogSearch" placeholder="Search by client or invoice #..." style="width:100%; box-sizing:border-box; margin-bottom:14px; margin-top:12px;" oninput="debouncedCall('invoiceLogSearch', renderInvoiceLog)">
-    <div id="invoiceLogList"><div class="skeleton-line w-100"></div><div class="skeleton-line w-60"></div><div class="skeleton-line w-40"></div></div>
+    <div class="inv-log-tools">
+      <div class="th-search-field">
+        <svg class="th-icon" aria-hidden="true"><use href="#icon-search" xlink:href="#icon-search"></use></svg>
+        <input type="search" id="invoiceLogSearch" placeholder="Client or invoice #" aria-label="Search invoices" autocomplete="off" oninput="debouncedCall('invoiceLogSearch', renderInvoiceLog)">
+      </div>
+      <div class="th-chips" id="invoiceFilters" role="group" aria-label="Show">
+        <button type="button" class="th-chip is-active" data-filter="all" onclick="setInvoiceFilter('all')">All</button>
+        <button type="button" class="th-chip" data-filter="unpaid" onclick="setInvoiceFilter('unpaid')">Unpaid <span class="th-chip-count" id="invoiceUnpaidCount"></span></button>
+        <button type="button" class="th-chip" data-filter="overdue" onclick="setInvoiceFilter('overdue')">Overdue <span class="th-chip-count" id="invoiceOverdueCount"></span></button>
+        <button type="button" class="th-chip" data-filter="paid" onclick="setInvoiceFilter('paid')">Paid</button>
+      </div>
+    </div>
+    <div class="th-list" id="invoiceLogList"><div class="skeleton-line w-100"></div><div class="skeleton-line w-60"></div><div class="skeleton-line w-40"></div></div>
   </div>
   <div class="form-section">
-    <h3>Recent Quotes</h3>
+    <h3>Quotes</h3>
     <!-- Conversion rate metric (audit item #17): quotes already track
          their own status ('converted' once turned into an invoice, via
          the exact same field renderQuoteLog()'s status badge already
@@ -562,8 +620,13 @@
          rate anywhere, even though it's a real, useful measure of how
          often a quote actually turns into paid work. -->
     <p class="contract-log-meta" id="quoteConversionStat" style="margin:0 0 14px;"></p>
-    <input type="text" id="quoteLogSearch" placeholder="Search by client or quote #..." style="width:100%; box-sizing:border-box; margin-bottom:14px;" oninput="debouncedCall('quoteLogSearch', renderQuoteLog)">
-    <div id="quoteLogList"></div>
+    <div class="inv-log-tools">
+      <div class="th-search-field">
+        <svg class="th-icon" aria-hidden="true"><use href="#icon-search" xlink:href="#icon-search"></use></svg>
+        <input type="search" id="quoteLogSearch" placeholder="Client or quote #" aria-label="Search quotes" autocomplete="off" oninput="debouncedCall('quoteLogSearch', renderQuoteLog)">
+      </div>
+    </div>
+    <div class="th-list" id="quoteLogList"></div>
   </div>
 </div>
 
@@ -609,66 +672,227 @@
     return (typeof getInvoicesForRead === 'function') ? getInvoicesForRead() : loadInvoiceLog();
   }
 
+  // One read of an invoice's money state for the list, the summary and
+  // the sheet -- the same whole-cents rules as the Dashboard's Money Owed
+  // (workspace.html invoicePaymentStatus / isOverdue) and the relational
+  // mirror (sync.js deriveInvoicePaid): paidAmount first, the old `paid`
+  // boolean only for invoices from before partial payments existed.
+  function invoiceState(inv, now) {
+    const totalCents = Math.round((Number(inv.total) || 0) * 100);
+    const paidAmount = (inv.paidAmount !== undefined && inv.paidAmount !== null)
+      ? (Number(inv.paidAmount) || 0)
+      : (inv.paid ? (Number(inv.total) || 0) : 0);
+    const paidCents = Math.round(paidAmount * 100);
+    const isPaid = totalCents > 0 ? paidCents >= totalCents : !!inv.paid;
+    const balance = isPaid ? 0 : Math.max(0, totalCents - paidCents) / 100;
+    const due = (typeof thInvoiceDueDate === 'function') ? thInvoiceDueDate(inv) : null;
+    const today = new Date((now || new Date()).toDateString());
+    const daysToDue = due ? Math.round((due - today) / 86400000) : null;
+    const overdue = !isPaid && balance > 0 && daysToDue !== null && daysToDue < 0;
+    const status = isPaid ? 'paid' : overdue ? 'overdue' : (paidCents > 0 ? 'partial' : 'unpaid');
+    return { status, balance, paidAmount, due, daysToDue };
+  }
+  function invoiceIsPaid(inv) { return invoiceState(inv).status === 'paid'; }
+
+  function invoiceShortDate(dateOrStr) {
+    const d = dateOrStr instanceof Date ? dateOrStr : new Date((dateOrStr || '') + 'T00:00:00');
+    if (isNaN(d.getTime())) return typeof dateOrStr === 'string' ? dateOrStr : '';
+    const opts = { month: 'short', day: 'numeric' };
+    if (d.getFullYear() !== new Date().getFullYear()) opts.year = 'numeric';
+    return d.toLocaleDateString('en-US', opts);
+  }
+
+  // "12 days overdue" / "Due today" / "Due Oct 4" / "$50 of $160 paid" --
+  // or the invoice date, for a paid one (the pill already says Paid). One
+  // of the two, not both: on a phone the row has room for one.
+  function invoiceDueText(inv, st) {
+    if (st.status === 'paid' || st.daysToDue === null) return escapeHtml(invoiceShortDate(inv.date));
+    if (st.status === 'partial') return money(st.paidAmount) + ' of ' + money(inv.total) + ' paid';
+    if (st.daysToDue < 0) return '<span class="is-late">' + (-st.daysToDue) + ' day' + (st.daysToDue === -1 ? '' : 's') + ' overdue</span>';
+    if (st.daysToDue === 0) return '<span class="is-soon">Due today</span>';
+    if (st.daysToDue === 1) return '<span class="is-soon">Due tomorrow</span>';
+    return 'Due ' + invoiceShortDate(st.due);
+  }
+
+  const INVOICE_PILL = {
+    paid: '<span class="th-pill is-paid">Paid</span>',
+    partial: '<span class="th-pill">Part paid</span>',
+    unpaid: '<span class="th-pill">Unpaid</span>',
+    overdue: '<span class="th-pill is-danger">Overdue</span>',
+  };
+
+  // escapeAttr lives in tools-dialogs.js; the page-level PDF tests run
+  // without it, so quote-escape escapeHtml's output as the fallback.
+  function invoiceAttr(str) {
+    return (typeof escapeAttr === 'function') ? escapeAttr(str) : escapeHtml(str).replace(/"/g, '&quot;');
+  }
+
+  function invoiceInitials(name) {
+    const parts = String(name || '').replace(/[^\p{L}\p{N}\s]/gu, ' ').trim().split(/\s+/).filter(Boolean);
+    if (!parts.length) return '#';
+    return (parts[0][0] + (parts.length > 1 ? parts[parts.length - 1][0] : '')).toUpperCase();
+  }
+
+  // The client's own page, when the invoice's client is in the registry.
+  function invoiceClientHref(rec) {
+    let c = null;
+    if (rec.clientId && typeof thFindClientById === 'function') c = thFindClientById(rec.clientId);
+    if (!c && rec.clientName && typeof thFindClientByName === 'function') c = thFindClientByName(rec.clientName);
+    return c ? '/tools/client-detail.html?id=' + encodeURIComponent(c.id) : null;
+  }
+
+  const INVOICE_FILTER_KEY = 'th_invoice_filter';
+  const INVOICE_FILTERS = ['all', 'unpaid', 'overdue', 'paid'];
+  let invoiceFilter = 'all';
+  try { const f = localStorage.getItem(INVOICE_FILTER_KEY); if (INVOICE_FILTERS.includes(f)) invoiceFilter = f; } catch (e) { /* storage blocked */ }
+  function setInvoiceFilter(filter) {
+    // Tapping the tile or chip that is already on goes back to everything.
+    invoiceFilter = (filter === invoiceFilter && filter !== 'all') ? 'all' : (INVOICE_FILTERS.includes(filter) ? filter : 'all');
+    try { localStorage.setItem(INVOICE_FILTER_KEY, invoiceFilter); } catch (e) { /* storage blocked */ }
+    renderInvoiceLog();
+  }
+  function invoiceMatchesFilter(st, filter) {
+    if (filter === 'unpaid') return st.status !== 'paid';
+    if (filter === 'overdue') return st.status === 'overdue';
+    if (filter === 'paid') return st.status === 'paid';
+    return true;
+  }
+
+  function moneyShort(n) { return n >= 1000 ? '$' + Math.round(n).toLocaleString('en-US') : money(n); }
+
+  // Owed / Overdue / Billed this month, over every invoice (not the search
+  // or the filter -- same rule as the quote conversion rate below), so the
+  // numbers here match the Dashboard's Money Owed card.
+  function renderInvoiceSummary(all, states) {
+    const el = document.getElementById('invoiceSummary');
+    if (!el) return;
+    if (!all.length) { el.innerHTML = ''; return; }
+    let owed = 0, owedCount = 0, late = 0, lateCount = 0, billed = 0, billedCount = 0;
+    const now = new Date();
+    const month = now.getFullYear() + '-' + String(now.getMonth() + 1).padStart(2, '0');
+    all.forEach((inv, i) => {
+      const st = states[i];
+      if (st.status !== 'paid' && st.balance > 0) { owed += st.balance; owedCount++; }
+      if (st.status === 'overdue') { late += st.balance; lateCount++; }
+      if ((inv.date || '').slice(0, 7) === month) { billed += Number(inv.total) || 0; billedCount++; }
+    });
+    const plural = (n, word) => n + ' ' + word + (n === 1 ? '' : 's');
+    const monthName = now.toLocaleDateString('en-US', { month: 'long' });
+    el.innerHTML =
+      '<button type="button" class="inv-stat is-owed' + (invoiceFilter === 'unpaid' ? ' is-active' : '') + '" onclick="setInvoiceFilter(\'unpaid\')" aria-pressed="' + (invoiceFilter === 'unpaid') + '">' +
+        '<span class="inv-stat-label">Owed to you</span><span class="inv-stat-value">' + moneyShort(owed) + '</span><span class="inv-stat-sub">' + plural(owedCount, 'invoice') + '</span></button>' +
+      '<button type="button" class="inv-stat' + (lateCount ? ' is-danger' : '') + (invoiceFilter === 'overdue' ? ' is-active' : '') + '" onclick="setInvoiceFilter(\'overdue\')" aria-pressed="' + (invoiceFilter === 'overdue') + '">' +
+        '<span class="inv-stat-label">Overdue</span><span class="inv-stat-value">' + moneyShort(late) + '</span><span class="inv-stat-sub">' + plural(lateCount, 'invoice') + '</span></button>' +
+      '<div class="inv-stat">' +
+        '<span class="inv-stat-label">' + escapeHtml(monthName) + '</span><span class="inv-stat-value">' + moneyShort(billed) + '</span><span class="inv-stat-sub">' + plural(billedCount, 'invoice') + ' billed</span></div>';
+  }
+
+  function invoiceRowHtml(inv, st, sourceNote) {
+    const name = inv.clientName || '(no name)';
+    const amount = st.status === 'paid' ? money(inv.total) : money(st.balance);
+    // Overdue gets its own red line: "#INV-1041 · 25 days overdue" did not
+    // fit beside the amount on a 390px phone, and it is the one line that
+    // must not be cut off.
+    const num = '#' + escapeHtml(inv.invoiceNumber || '\u2014') + ' &middot; ';
+    const sub = st.status === 'overdue'
+      ? num + escapeHtml(invoiceShortDate(inv.date)) + '</span><span class="th-row-sub">' + invoiceDueText(inv, st)
+      : num + invoiceDueText(inv, st);
+    return '<div class="inv-item" data-invoice-id="' + inv.id + '">' +
+      '<div class="th-row inv-row">' +
+        '<button type="button" class="th-row-link" data-long-press-target onclick="openInvoiceActions(' + inv.id + ')" aria-haspopup="dialog" aria-label="' + invoiceAttr(name + ', ' + amount + ', ' + st.status + '. Actions') + '">' +
+          '<span class="th-row-avatar' + (st.status !== 'paid' && st.balance > 0 ? ' is-owed' : '') + '" aria-hidden="true">' + escapeHtml(invoiceInitials(name)) + '</span>' +
+          '<span class="th-row-main">' +
+            '<span class="th-row-title">' + personDot(inv.generatedBy, 'Generated by') + escapeHtml(name) + '</span>' +
+            '<span class="th-row-sub">' + sub + '</span>' +
+            sourceNote +
+          '</span>' +
+          '<span class="inv-row-end"><span class="inv-row-amt">' + amount + '</span>' + INVOICE_PILL[st.status] + '</span>' +
+        '</button>' +
+        '<span class="inv-row-actions">' +
+          (inv.clientEmail ? '<button class="small-btn" onclick="resendInvoiceToClient(' + inv.id + ')">Resend</button>' : '') +
+          '<button class="small-btn" onclick="toggleInvoicePaid(' + inv.id + ')">' + (st.status === 'paid' ? 'Mark Unpaid' : 'Mark Paid') + '</button>' +
+          '<button class="small-btn" style="color:#e05252; border-color:#e05252;" onclick="deleteInvoiceLogEntry(' + inv.id + ')" aria-label="Delete this invoice">Delete</button>' +
+        '</span>' +
+      '</div>' +
+    '</div>';
+  }
+
   function renderInvoiceLog() {
     const searchTerm = (document.getElementById('invoiceLogSearch')?.value || '').trim().toLowerCase();
     let log = [...invoicesForDisplay()].sort((a, b) => b.id - a.id);
     if (pendingDeleteInvoiceIds.size > 0) log = log.filter(inv => !pendingDeleteInvoiceIds.has(inv.id));
+    const now = new Date();
+    const states = log.map(inv => invoiceState(inv, now));
+    renderInvoiceSummary(log, states);
+    const unpaidCount = states.filter(st => st.status !== 'paid').length;
+    const overdueCount = states.filter(st => st.status === 'overdue').length;
+    const setCount = (id, n) => { const el = document.getElementById(id); if (el) el.textContent = n ? String(n) : ''; };
+    setCount('invoiceUnpaidCount', unpaidCount);
+    setCount('invoiceOverdueCount', overdueCount);
+    document.querySelectorAll('#invoiceFilters .th-chip').forEach(b => {
+      const on = b.dataset.filter === invoiceFilter;
+      b.classList.toggle('is-active', on);
+      b.setAttribute('aria-pressed', on ? 'true' : 'false');
+    });
+    let rows = log.map((inv, i) => ({ inv, st: states[i] })).filter(r => invoiceMatchesFilter(r.st, invoiceFilter));
     if (searchTerm) {
-      log = log.filter(inv =>
+      rows = rows.filter(({ inv }) =>
         (inv.clientName || '').toLowerCase().includes(searchTerm) ||
         (inv.invoiceNumber || '').toLowerCase().includes(searchTerm)
       );
     }
     const container = document.getElementById('invoiceLogList');
     if (!container) return;
-    if (log.length === 0) {
+    if (rows.length === 0) {
+      const filterName = { unpaid: 'unpaid', overdue: 'overdue', paid: 'paid' }[invoiceFilter];
       container.innerHTML = searchTerm
-        ? '<div class="empty-state-small"><svg class="th-icon" aria-hidden="true"><use href="#icon-search" xlink:href="#icon-search"></use></svg>No invoices match "' + escapeHtml(searchTerm) + '".</div>'
-        : '<div class="empty-state-small"><svg class="th-icon" aria-hidden="true"><use href="#icon-inbox" xlink:href="#icon-inbox"></use></svg>No invoices generated yet.</div>';
+        ? '<div class="empty-state-small"><svg class="th-icon" aria-hidden="true"><use href="#icon-search" xlink:href="#icon-search"></use></svg>No ' + (filterName ? filterName + ' ' : '') + 'invoices match "' + escapeHtml(searchTerm) + '".</div>'
+        : log.length && filterName
+          ? '<div class="empty-state-small"><svg class="th-icon" aria-hidden="true"><use href="#icon-inbox" xlink:href="#icon-inbox"></use></svg>No ' + filterName + ' invoices. <button type="button" class="small-btn" onclick="setInvoiceFilter(\'all\')">Show all</button></div>'
+          : '<div class="empty-state-small inv-empty"><svg class="th-icon" aria-hidden="true"><use href="#icon-inbox" xlink:href="#icon-inbox"></use></svg>No invoices generated yet.<button type="button" class="primary-btn" onclick="activateGenTab(\'invoice\')">New invoice</button></div>';
       return;
     }
     const quoteLog = loadQuoteLog();
-    container.innerHTML = log.map(inv => {
+    container.innerHTML = rows.map(({ inv, st }) => {
       const sourceQuote = inv.sourceQuoteId ? quoteLog.find(q => q.id === inv.sourceQuoteId) : null;
       const sourceNote = sourceQuote
-        ? '<div class="contract-log-meta">Converted from quote #' + escapeHtml(sourceQuote.quoteNumber || '') + '</div>'
+        ? '<span class="th-row-sub">Converted from quote #' + escapeHtml(sourceQuote.quoteNumber || '') + '</span>'
         : '';
-      return `
-      <div class="contract-log-item" data-invoice-id="${inv.id}">
-        <div>
-          <div class="contract-log-title">${personDot(inv.generatedBy, 'Generated by')}${escapeHtml(inv.clientName || '(no name)')} ${inv.paid ? '<span class="badge-pending-signature" style="background:var(--blue-tint-soft, rgba(58,160,255,0.1)); border-color:var(--blue-tint-border, rgba(58,160,255,0.3)); color:var(--blue-light);">Paid</span>' : '<span class="badge-pending-signature">Unpaid</span>'}</div>
-          <div class="contract-log-meta">#${escapeHtml(inv.invoiceNumber || '')} &middot; ${escapeHtml(inv.date || '')} &middot; ${money(inv.total)}</div>
-          ${sourceNote}
-        </div>
-        <div style="display:flex; gap:6px; flex-shrink:0; flex-wrap:wrap; justify-content:flex-end;">
-          ${inv.clientEmail ? `<button class="small-btn" onclick="resendInvoiceToClient(${inv.id})">Resend</button>` : ''}
-          <button class="small-btn" onclick="toggleInvoicePaid(${inv.id})">${inv.paid ? 'Mark Unpaid' : 'Mark Paid'}</button>
-          <button class="small-btn" style="color:#e05252; border-color:#e05252;" onclick="deleteInvoiceLogEntry(${inv.id})" aria-label="Delete this invoice">Delete</button>
-        </div>
-      </div>`;
+      return invoiceRowHtml(inv, st, sourceNote);
     }).join('');
   }
 
-  // Same long-press quick-action pattern as job-tracker.html/finance.html/
-  // contract-generator.html -- Resend/Mark Paid/Delete without needing the
-  // button row scrolled into view. One call on page load; attachLongPress
-  // delegates via the container so it keeps working across every re-render.
+  // One sheet per invoice (2026-09-22, rework part 4): a tap on the row
+  // opens it, and so does a hold (the long-press every other list in the
+  // suite has). Mark Paid leads -- "they just paid me" is the everyday
+  // one. The title is rendered as HTML by showQuickActionSheet, so it is
+  // escaped here; a client name used to go in raw.
+  function openInvoiceActions(id) {
+    const inv = invoicesForDisplay().find(i => i.id === id);
+    if (!inv) return;
+    const st = invoiceState(inv);
+    const actions = [];
+    actions.push({ label: st.status === 'paid' ? 'Mark Unpaid' : 'Mark Paid', onClick: () => toggleInvoicePaid(id) });
+    if (inv.clientEmail) actions.push({ label: 'Resend to client', onClick: () => resendInvoiceToClient(id) });
+    const clientHref = invoiceClientHref(inv);
+    if (clientHref) actions.push({ label: 'Open client', onClick: () => { window.location.href = clientHref; } });
+    if (inv.jobRefId) actions.push({ label: 'Open job', onClick: () => { window.location.href = '/tools/job-detail.html?id=' + encodeURIComponent(inv.jobRefId); } });
+    actions.push({ label: 'Delete', isDanger: true, onClick: () => deleteInvoiceLogEntry(id) });
+    const title = (inv.clientName || 'Invoice') + ' \u00b7 #' + (inv.invoiceNumber || '\u2014') + ' \u00b7 ' + money(st.status === 'paid' ? inv.total : st.balance);
+    showQuickActionSheet(escapeHtml(title), actions);
+  }
+
   function initInvoiceLogLongPress() {
     if (typeof attachLongPress !== 'function') return; // tools-dialogs.js not loaded (some minimal test sandboxes)
-    const container = document.getElementById('invoiceLogList');
-    if (!container || container.dataset.longPressWired) return;
-    container.dataset.longPressWired = '1';
-    attachLongPress(container, '.contract-log-item[data-invoice-id]', (itemEl) => {
-      const id = Number(itemEl.dataset.invoiceId);
-      const inv = invoicesForDisplay().find(i => i.id === id);
-      if (!inv) return;
-      const actions = [];
-      if (inv.clientEmail) actions.push({ label: 'Resend', onClick: () => resendInvoiceToClient(id) });
-      actions.push({ label: inv.paid ? 'Mark Unpaid' : 'Mark Paid', onClick: () => toggleInvoicePaid(id) });
-      actions.push({ label: 'Delete', isDanger: true, onClick: () => deleteInvoiceLogEntry(id) });
-      showQuickActionSheet(inv.clientName || 'Invoice #' + (inv.invoiceNumber || ''), actions);
+    ['invoiceLogList', 'quoteLogList'].forEach(listId => {
+      const container = document.getElementById(listId);
+      if (!container || container.dataset.longPressWired) return;
+      container.dataset.longPressWired = '1';
+      if (listId === 'invoiceLogList') attachLongPress(container, '.inv-item[data-invoice-id]', (itemEl) => openInvoiceActions(Number(itemEl.dataset.invoiceId)));
+      else attachLongPress(container, '.inv-item[data-quote-id]', (itemEl) => openQuoteActions(Number(itemEl.dataset.quoteId)));
     });
   }
+
 
   // Re-sends an already-logged invoice to its client (2026-09-02),
   // requested directly: "we need a Recent Invoices area so in the
@@ -734,8 +958,22 @@
     const log = loadInvoiceLog();
     const entry = log.find(i => i.id === id);
     if (!entry) return;
-    entry.paid = !entry.paid;
+    // Real bug (2026-09-22): this used to flip only the `paid` boolean.
+    // Everything else -- the Dashboard's Money Owed, the relational
+    // mirror, the overdue push -- reads paidAmount first (deriveInvoicePaid
+    // in sync.js), so an invoice the Dashboard had marked paid and this
+    // page then marked unpaid stayed paid everywhere but here, and one
+    // marked paid here after a partial payment stayed owed everywhere
+    // else. Same full-payment semantics as workspace.html togglePaid():
+    // Mark paid means paid in full, Mark unpaid means nothing paid.
+    const nowPaid = !invoiceIsPaid(entry);
+    entry.paidAmount = nowPaid ? (Number(entry.total) || 0) : 0;
+    entry.paid = nowPaid;
     saveInvoiceLog(log);
+    // The Recent list reads the relational table once its cache loads;
+    // without this mirror the next refresh put the old status back.
+    if (typeof mirrorInvoiceToRelational === 'function') mirrorInvoiceToRelational(entry);
+    if (entry.paid && entry.jobRefId && typeof mirrorReferralEarnedForJob === 'function') mirrorReferralEarnedForJob(Number(entry.jobRefId));
     renderInvoiceLog();
     if (entry.paid && typeof haptic === 'function') haptic('success');
     // Keeps the OS home-screen badge honest without workspace.html being
@@ -743,26 +981,14 @@
     if (typeof setAppBadgeDelta === 'function') setAppBadgeDelta(entry.paid ? -1 : 1);
     showToast(entry.paid ? 'Marked paid.' : 'Marked unpaid.');
 
-    // Portal sync (2026-09-02) -- real bug this closes: a cash or check
-    // payment gets marked paid by hand right here, not through Stripe.
-    // Without this, the portal kept showing that invoice as UNPAID
-    // afterwards, so a client could log in and pay it a second time
-    // through Stripe. Only fires for an invoice that was actually
-    // synced to the portal in the first place (client email on file).
-    // Fire-and-forget, same as every other portal sync -- the local
-    // log above is the real record.
-    if (entry.clientEmail && typeof getAuthToken === 'function') {
-      fetch(`${SUPABASE_URL}/functions/v1/set-invoice-paid`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'apikey': SUPABASE_ANON_KEY,
-          'Authorization': `Bearer ${getAuthToken()}`,
-        },
-        body: JSON.stringify({ source_invoice_id: id, paid: entry.paid }),
-      }).catch(e => console.warn('Portal paid-status sync failed (invoice still updated locally):', e));
-    }
+    // Portal sync (2026-09-02) -- a cash or check payment marked paid by
+    // hand here, not through Stripe, must reach the portal too, or the
+    // client can log in and pay it a second time. Shared with the
+    // Dashboard's Mark paid since 2026-09-22 (pushInvoicePaidToPortal in
+    // sync.js); only for an invoice on the portal (client email on file).
+    if (entry.clientEmail && typeof pushInvoicePaidToPortal === 'function') pushInvoicePaidToPortal(entry);
   }
+
 </script>
 
 <script>
@@ -798,7 +1024,17 @@
     if (tab === 'recent' && typeof refreshPortalQuoteStatuses === 'function') refreshPortalQuoteStatuses();
   }
 
-  const GEN_TAB_ORDER = ['invoice', 'quote', 'pos', 'recent'];
+  // Same order as the tab strip, which the swipe follows. The list comes
+  // first since 2026-09-22 (Workspace rework part 4).
+  const GEN_TAB_ORDER = ['recent', 'invoice', 'quote', 'pos'];
+  // Without a hash the page opens on the list -- except when a link has
+  // brought something to invoice: ?jobRef= (a job's Create invoice) or
+  // ?client= (a client's Invoice button) always meant the invoice form.
+  // Read before applyJobRefFromUrl()/applyClientFromUrl() strip them.
+  function genTabFromQuery() {
+    const params = new URLSearchParams(window.location.search);
+    return (params.get('jobRef') || params.get('client')) ? 'invoice' : null;
+  }
   function applyGenTabFromHash() {
     const tab = (window.location.hash || '').replace('#', '');
     if (!GEN_TAB_ORDER.includes(tab)) return;
@@ -1961,50 +2197,73 @@
     }
     container.innerHTML = log.map(q => {
       const status = q.status || 'pending'; // quotes logged before this feature existed have no status field yet
-      const statusLabel = status === 'converted'
-        ? '<span style="color:#6fcf97; font-weight:600;">&#10003; Converted to invoice</span>'
-        : '<span style="color:var(--text-dim);">Pending</span>';
       // Portal response status -- same idea as the invoice log's
-      // Paid/Unpaid badge and Resend Invite button, right on the
-      // record Steve is already looking at, not a separate settings
-      // page. Only shows up at all for a quote that was actually
-      // synced to the portal (client email was provided); live-fetched
-      // via refreshPortalQuoteStatuses() rather than written back into
-      // this quote's own local record, so there's no risk of this read
-      // ever colliding with a concurrent sync-merge write to th_quotes.
+      // Paid/Unpaid pill, right on the record Steve is already looking
+      // at, not a separate settings page. Only shows up at all for a
+      // quote that was actually synced to the portal (client email was
+      // provided); live-fetched via refreshPortalQuoteStatuses() rather
+      // than written back into this quote's own local record, so there's
+      // no risk of this read ever colliding with a concurrent sync-merge
+      // write to th_quotes.
       const portalInfo = portalQuoteInfoBySourceId[q.id];
-      let portalHtml = '';
+      // One pill (2026-09-22): converted beats whatever the portal says;
+      // otherwise the client's answer, then plain Pending.
+      let pill = '<span class="th-pill is-muted">Pending</span>';
+      if (status === 'converted') pill = '<span class="th-pill is-paid" title="Converted to invoice">Invoiced</span>';
+      else if (portalInfo && portalInfo.status === 'approved') pill = '<span class="th-pill is-paid">Approved</span>';
+      else if (portalInfo && portalInfo.status === 'declined') pill = '<span class="th-pill is-danger">Declined</span>';
+      else if (portalInfo) pill = '<span class="th-pill" title="Awaiting client response">Awaiting reply</span>';
+      let extraHtml = '';
       if (portalInfo) {
-        const portalStatusColor = portalInfo.status === 'approved' ? '#6fcf97' : portalInfo.status === 'declined' ? '#e05252' : 'var(--orange-light)';
-        const portalStatusLabel = portalInfo.status === 'approved' ? 'Approved' : portalInfo.status === 'declined' ? 'Declined' : 'Awaiting client response';
-        portalHtml += `<div class="contract-log-meta">Portal: <span style="color:${portalStatusColor}; font-weight:600;">${portalStatusLabel}</span></div>`;
         // Surfaced right here (2026-09-19), not just captured to the
         // DB -- a decline reason nobody on staff ever sees is no
         // better than not asking for one at all.
         if (portalInfo.status === 'declined' && portalInfo.declineReason) {
-          portalHtml += `<div class="contract-log-meta" style="margin-top:4px; padding:6px 8px; background:var(--bg-panel-2); border-radius:6px;"><strong>Decline reason:</strong> ${escapeHtml(portalInfo.declineReason)}</div>`;
+          extraHtml += `<div class="contract-log-meta" style="padding:6px 8px; background:var(--bg-panel-2); border-radius:6px;"><strong>Decline reason:</strong> ${escapeHtml(portalInfo.declineReason)}</div>`;
         }
         const openQuestions = portalInfo.questions.filter(qq => !qq.resolved);
         if (openQuestions.length) {
-          portalHtml += openQuestions.map(qq => `
-            <div class="contract-log-meta" style="margin-top:4px; padding:6px 8px; background:var(--bg-panel-2); border-radius:6px;">
+          extraHtml += openQuestions.map(qq => `
+            <div class="contract-log-meta" style="padding:6px 8px; background:var(--bg-panel-2); border-radius:6px;">
               <strong>Client question:</strong> ${escapeHtml(qq.message)}
               <button class="small-btn" style="margin-left:6px;" onclick="resolveQuoteQuestion(${qq.id})">Mark answered</button>
             </div>
           `).join('');
         }
       }
+      const name = q.clientName || '(no name)';
+      const sub = '#' + escapeHtml(q.quoteNumber || '\u2014') + ' &middot; ' + escapeHtml(invoiceShortDate(q.date)) + (q.jobRefTitle ? ' &middot; ' + escapeHtml(q.jobRefTitle) : '');
       return `
-      <div class="contract-log-item" data-quote-id="${q.id}">
-        <div>
-          <div class="contract-log-title">${personDot(q.generatedBy, 'Generated by')}${escapeHtml(q.clientName || '(no name)')}</div>
-          <div class="contract-log-meta">#${escapeHtml(q.quoteNumber || '')} &middot; ${escapeHtml(q.date || '')} &middot; ${money(q.total)}${q.jobRefTitle ? ' &middot; ' + escapeHtml(q.jobRefTitle) : ''}</div>
-          <div class="contract-log-meta">${statusLabel}</div>
-          ${portalHtml}
+      <div class="inv-item" data-quote-id="${q.id}">
+        <div class="th-row inv-row">
+          <button type="button" class="th-row-link" data-long-press-target onclick="openQuoteActions(${q.id})" aria-haspopup="dialog" aria-label="${invoiceAttr(name + ', quote, ' + money(q.total) + '. Actions')}">
+            <span class="th-row-avatar" aria-hidden="true">${escapeHtml(invoiceInitials(name))}</span>
+            <span class="th-row-main">
+              <span class="th-row-title">${personDot(q.generatedBy, 'Generated by')}${escapeHtml(name)}</span>
+              <span class="th-row-sub">${sub}</span>
+            </span>
+            <span class="inv-row-end"><span class="inv-row-amt">${money(q.total)}</span>${pill}</span>
+          </button>
+          <span class="inv-row-actions">
+            <button class="small-btn" style="color:#e05252; border-color:#e05252;" onclick="deleteQuoteLogEntry(${q.id})" aria-label="Delete this quote">Delete</button>
+          </span>
         </div>
-        <button class="small-btn" style="color:#e05252; border-color:#e05252;" onclick="deleteQuoteLogEntry(${q.id})" aria-label="Delete this quote">Delete</button>
+        ${extraHtml ? '<div class="inv-row-extra">' + extraHtml + '</div>' : ''}
       </div>`;
     }).join('');
+  }
+
+  // A quote's sheet: its client and job, and Delete. (Turning a quote into
+  // an invoice happens on the New quote form -- Convert to Invoice.)
+  function openQuoteActions(id) {
+    const q = loadQuoteLog().find(x => x.id === id);
+    if (!q) return;
+    const actions = [];
+    const clientHref = invoiceClientHref(q);
+    if (clientHref) actions.push({ label: 'Open client', onClick: () => { window.location.href = clientHref; } });
+    if (q.jobRefId) actions.push({ label: 'Open job', onClick: () => { window.location.href = '/tools/job-detail.html?id=' + encodeURIComponent(q.jobRefId); } });
+    actions.push({ label: 'Delete', isDanger: true, onClick: () => deleteQuoteLogEntry(id) });
+    showQuickActionSheet(escapeHtml((q.clientName || 'Quote') + ' \u00b7 #' + (q.quoteNumber || '\u2014') + ' \u00b7 ' + money(q.total)), actions);
   }
 
   // Cache of live portal-side quote status, keyed by the LOCAL quote's
@@ -2439,6 +2698,8 @@
     addContact(); // start with one contact row
     addLineItem(); // start with one blank row
     recalc();
+    const queryTab = genTabFromQuery();
+    if (queryTab) activateGenTab(queryTab);
     applyJobRefFromUrl();
     applyClientFromUrl();
     applyLogSearchFromUrl();
@@ -2480,6 +2741,10 @@
       if (typeof renderInvoiceLog === 'function') renderInvoiceLog();
       if (typeof renderQuoteLog === 'function') renderQuoteLog();
       if (typeof initInvoiceLogLongPress === 'function') initInvoiceLogLongPress();
+      // The list is the default tab now, so it opens without a tab click --
+      // fetch the portal's quote answers for it here instead.
+      const recentPanel = document.getElementById('tab-recent');
+      if (recentPanel && recentPanel.classList.contains('is-active') && typeof refreshPortalQuoteStatuses === 'function') refreshPortalQuoteStatuses();
       if (typeof refreshRelationalInvoicesCache === 'function') {
         refreshRelationalInvoicesCache().then(() => { if (typeof renderInvoiceLog === 'function') renderInvoiceLog(); }).catch(() => {});
       }
@@ -2881,12 +3146,13 @@
 <div class="help-modal-overlay" id="helpModalOverlay" onclick="if(event.target===this) closeHelpModal()">
   <div class="help-modal">
     <button class="help-modal-close" onclick="closeHelpModal()" aria-label="Close">&times;</button>
-    <h3>How to Use: Invoice Generator</h3>
+    <h3>How to Use: Invoices</h3>
     <div class="help-modal-body">
-      <p>Fill this out per job, right after you finish.</p>
+      <p>This page opens on your invoices: who owes you, what is overdue, and what you billed this month. The forms are the tabs next to it (and the orange <strong>+</strong> opens them from any page).</p>
       <ul>
-        <li><strong>Invoice tab</strong> &mdash; fill in <strong>Invoice Details</strong> and <strong>Bill To</strong>, then add each line item (labor, parts, etc.) in the line-items table. Uncheck "Tax?" on any row that's exempt (see the note above the totals for why some rows might not be taxable). Use Download PDF for a branded copy, or Send to Client to email it and post it to their portal.</li>
-        <li><strong>Quote / Estimate tab</strong> &mdash; same idea, before a job starts, including the same tax handling. Download an estimate PDF (clearly labeled as an estimate, not a bill), or tap <strong>Convert to Invoice</strong> once the work's done to copy everything straight over to the Invoice tab instead of re-typing it &mdash; including which rows were marked taxable.</li>
+        <li><strong>Invoices tab</strong> &mdash; every invoice, newest first, with what is still owed on it and when it is due. Tap <strong>Owed to you</strong> or <strong>Overdue</strong> (or the chips under the search) to show only those. Tap a row (or hold it) for <strong>Mark Paid</strong> &mdash; for a cash or check payment; the client's portal is told too, so they can't pay it twice &mdash; <strong>Resend to client</strong>, <strong>Open client</strong>, <strong>Open job</strong>, or <strong>Delete</strong>. On a computer those buttons are also at the end of each row. Your quotes are listed underneath, with whether the client approved or declined on their portal.</li>
+        <li><strong>New invoice tab</strong> &mdash; fill in <strong>Invoice Details</strong> and <strong>Bill To</strong>, then add each line item (labor, parts, etc.) in the line-items table. Uncheck "Tax?" on any row that's exempt (see the note above the totals for why some rows might not be taxable). Use Download PDF for a branded copy, or Send to Client to email it and post it to their portal.</li>
+        <li><strong>New quote tab</strong> &mdash; same idea, before a job starts, including the same tax handling. Download an estimate PDF (clearly labeled as an estimate, not a bill), or tap <strong>Convert to Invoice</strong> once the work's done to copy everything straight over to the New invoice tab instead of re-typing it &mdash; including which rows were marked taxable.</li>
         <li><strong>Quick charge tab</strong> &mdash; for a small job that doesn't need a real invoice: enter the client's email and an amount and charge their card on the spot. If that email has paid an invoice before, their card is already saved (this happens automatically the first time anyone pays an invoice) and you'll see a one-tap Charge button; otherwise you get a normal card form, and that card gets saved for next time too, after the client types their name as an authorization. Every POS sale shows up in your Income log the same way any other payment does, tagged so you can always tell it apart from an invoice &mdash; it never creates an invoice, a quote, or a portal record of any kind.</li>
         <li>The sales tax rate is shared with Finance's Cost Lookup tab &mdash; change it in either place and it updates everywhere.</li>
         <li>Everything generated here is saved automatically &mdash; invoices and estimates are logged on this device (and synced, if Cloud Sync is set up), and every invoice also flows into Finance's Income tab. Nothing needs re-entering elsewhere.</li>

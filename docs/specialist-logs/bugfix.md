@@ -804,3 +804,35 @@ passing locally -- confirmed a real sandbox limitation, not this
 change), `check-consistency`/`check-undefined-vars` clean,
 `npm run fix-versions` run for the `sync.js` content-hash bump across
 all 14 tool pages plus the service worker precache fingerprint.
+
+## 2026-09-22 -- Mark paid did half the job on each page (Workspace rework part 4)
+
+Found while building the list-first Invoices page. Two paths mark an
+invoice paid by hand, and each did a different half:
+
+- **Dashboard `togglePaid()`** set `paidAmount` and the flag and
+  mirrored the invoice to the relational table. It never called
+  `set-invoice-paid`, so the client portal kept the invoice payable.
+  A cash payment marked here could be paid a second time by card.
+- **Invoices `toggleInvoicePaid()`** called `set-invoice-paid` but
+  flipped only `paid`. Everything else reads `paidAmount` first: the
+  Dashboard, `deriveInvoicePaid()` in the mirror, and the overdue push.
+  Take an invoice the Dashboard marked paid and this page then marked
+  unpaid: it stayed paid everywhere else. Take one marked paid here
+  after a partial payment: it stayed owed everywhere else. It also
+  never mirrored, and the Recent list reads the relational cache once
+  it loads, so a refresh could put the old status back.
+
+Fix:
+- Both now call one helper, `pushInvoicePaidToPortal()` in `sync.js`.
+  It's the old inline call moved as-is: same endpoint and body, still
+  only when there's a client email, still fire-and-forget after the
+  local save.
+- `toggleInvoicePaid()` now writes `paidAmount` with the flag (full
+  payment or nothing, the Dashboard's semantics), mirrors, and earns
+  the pending referral.
+
+Tests: `tests/tools/invoices-list-first.test.js` (behaviour, and parity
+of `invoiceState` with `invoicePaymentStatus` / `deriveInvoicePaid`).
+`tests/portal/portal-admin.test.js` was updated to pin the shared helper
+and both callers.

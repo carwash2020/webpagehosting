@@ -1108,6 +1108,28 @@ async function mirrorReferralEarnedForJob(jobId) {
   } catch (e) { /* best-effort -- the real invoice save already happened */ }
 }
 
+// Tells the client portal an invoice was marked paid (or unpaid) by hand
+// -- a cash or check payment. Without it the portal keeps showing the
+// invoice as unpaid and the client can pay it a second time by card.
+// Moved here (2026-09-22, Workspace rework part 4) from
+// invoice-generator.html's toggleInvoicePaid(): the Dashboard's Mark paid
+// (workspace.html togglePaid(), the button most people actually tap)
+// never made this call at all. Only for an invoice that was synced to
+// the portal in the first place (it has a client email). Fire-and-forget:
+// the local log is the real record and is already saved.
+function pushInvoicePaidToPortal(entry) {
+  if (!entry || !entry.clientEmail || typeof getAuthToken !== 'function' || typeof fetch !== 'function') return;
+  fetch(`${SUPABASE_URL}/functions/v1/set-invoice-paid`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'apikey': SUPABASE_ANON_KEY,
+      'Authorization': `Bearer ${getAuthToken()}`,
+    },
+    body: JSON.stringify({ source_invoice_id: entry.id, paid: !!entry.paid }),
+  }).catch(e => console.warn('Portal paid-status sync failed (invoice still updated locally):', e));
+}
+
 // `paid` is a derived field -- it must always agree with whether
 // paidAmount has reached total, using the same whole-cents comparison
 // workspace.html's invoicePaymentStatus() uses for display (see the
