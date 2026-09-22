@@ -3151,3 +3151,18 @@ survived the change. Full suite (2682 tests), `check-consistency`,
 reasoning, including what was deliberately NOT touched and why:
 `docs/specialist-logs/features.md`'s 2026-09-22 entry (invoices slice
 B) and `CONTINUE-HERE.md`'s "relational tables Phase 2" section.
+
+## 2026-09-22 (later still) -- Dev Tools' Client errors log stopped resurrecting after Clear
+
+Reported directly: clearing the log worked, but the same old entries
+kept coming back even though there had been no real errors in weeks.
+`th_client_errors` was the one record type in the whole sync system
+with no delete-tracking (every real record type -- clients, jobs,
+invoices, etc. -- has its own `*_tombstones` array); a stale device
+that still had old entries in its own localStorage would silently
+re-inject them into the shared log on every sync, no matter how many
+times the log was cleared elsewhere. Added `th_client_errors_cleared_at`,
+a synced cutoff timestamp `mergeClientErrorLog()` now filters against --
+any entry at or before the cutoff is dropped, but a genuinely new error
+logged after the clear always survives. Full reasoning:
+`docs/specialist-logs/bugfix.md`'s 2026-09-22 entry.

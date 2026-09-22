@@ -60,7 +60,7 @@
 <script src="/tools/tools-media-sharing.js?v=0c229c9353" defer></script>
 <script src="/tools/tools-nav-pwa.js?v=f07de2ca5b" defer></script>
 <script src="/tools/tools-command-palette.js?v=5ce9f88f49" defer></script>
-<script src="/tools/sync.js?v=7b42b1caf0" defer></script>
+<script src="/tools/sync.js?v=6b9e092eca" defer></script>
 <style>
   /* Cross-document view transitions (2026-09-21) -- same pattern
      already proven in portal/*.html: keeps the old page's visual
@@ -1307,6 +1307,15 @@
 
   async function clearClientErrorLog() {
     localStorage.removeItem('th_client_errors');
+    // Real, reported bug (2026-09-22): clearing removed the local copy
+    // and pushed it, but a stale device that still had old entries in
+    // its own localStorage (never opened this page to clear them) would
+    // resurrect them on its next sync -- a plain union merge has no way
+    // to tell "genuinely new" apart from "an old local copy nobody ever
+    // cleared here." This cutoff, synced alongside the now-empty array,
+    // is what mergeClientErrorLog() in sync.js filters against so a
+    // stale device's pre-clear entries stop coming back for good.
+    localStorage.setItem('th_client_errors_cleared_at', new Date().toISOString());
     renderClientErrorLog();
     // Pushes immediately rather than scheduleSync()'s usual 2.5-second
     // debounce -- this is a single, deliberate click, not rapid typing,

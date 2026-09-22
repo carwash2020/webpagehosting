@@ -750,3 +750,57 @@ never have found the real cause. Reproduce visually first, then use
 `getBoundingClientRect()` on the actual rendered elements to see which
 two things are really colliding, before assuming the report's own
 theory of the bug.
+
+## 2026-09-22 -- Dev Tools' "Client errors" log kept resurrecting after Clear, second root cause
+
+Reported directly by the user: "we havent had any since 9/7/2026 but
+everytime i clear them they come back." A fix for this exact symptom
+already shipped 2026-08-21 (`tests/sync/client-error-log.test.js`) --
+that one made Clear push immediately instead of relying on a debounced
+`scheduleSync()`, closing a same-device race. It did nothing for the
+actual mechanism still causing this report: `th_client_errors` is the
+only real record type in this whole sync system with no delete-tracking
+at all. Every other array key (`th_clients`, `th_tracker_jobs`,
+`th_invoices`, 12+ others) has a paired `*_tombstones` array so a stale
+device's old local copy can never resurrect a real deletion --
+`th_client_errors` and `th_graveyard` are the two explicit exceptions
+in `applySyncData`'s own code (`k !== 'th_sync_conflicts' && k !==
+'th_parts_reference_units' && k !== 'th_client_errors' && k !==
+'th_graveyard'`). A plain union merge (`mergeRecordArrays`) can't tell
+"a genuinely new error" apart from "an old local copy nobody ever
+cleared on this device" -- so any device that still had pre-9/7 entries
+sitting in its own localStorage (a rarely-opened tab, a device nobody's
+opened Dev Tools on since) would keep re-injecting them into the shared
+log on every sync, forever, no matter how many times the log was
+cleared elsewhere. This matches the report exactly: no *new* errors
+since 9/7, but the log never actually empties.
+
+Per-record tombstones don't fit here the way they do for a real record
+-- Clear wipes the whole log at once, and a log entry has no identity
+worth preserving across a clear the way a client or invoice does. Used
+a single cutoff instead: `th_client_errors_cleared_at`, a new synced
+scalar key listed just before `th_client_errors` in `SYNC_DATA_KEYS`
+(same "tombstone key before its array" ordering convention as every
+other pair), set to `now()` by `clearClientErrorLog()` alongside the
+existing local clear + immediate `pushSync()`. `mergeClientErrorLog()`
+now takes that cutoff as a third argument and drops any entry whose own
+`time` is at or before it -- a genuinely new error always has
+`time > clearedAt`, so it's never filtered. Gave the scalar its own
+merge branch in `applySyncData` (max-of-both, not a plain
+overwrite-from-remote like every other scalar setting) so a more recent
+local clear that hasn't pushed yet can't be clobbered by an older
+remote value mid-sync -- the same reasoning the tombstone branches
+above it already use, just for a timestamp instead of an id set.
+
+New/extended tests in `tests/sync/client-error-log.test.js`: the exact
+stale-device scenario (old local entries + empty remote + a clearedAt
+cutoff -> stays empty), a genuinely new post-clear error surviving the
+cutoff, `clearClientErrorLog` actually setting a fresh real timestamp,
+`SYNC_DATA_KEYS` ordering, the max-of-both merge behavior on
+`applySyncData` directly, and a full end-to-end pull simulating a stale
+device receiving a cleared server state. Verified: full suite
+(2688 tests, only the known check-links.py sandbox-proxy issue not
+passing locally -- confirmed a real sandbox limitation, not this
+change), `check-consistency`/`check-undefined-vars` clean,
+`npm run fix-versions` run for the `sync.js` content-hash bump across
+all 14 tool pages plus the service worker precache fingerprint.
