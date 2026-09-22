@@ -1429,4 +1429,149 @@ verified live vs. only against a faithful mock (this environment has
 no live Supabase access), and the migration that still needs applying:
 `docs/specialist-logs/security.md`'s 2026-09-22 entry.
 
+## 2026-09-22 (later the same day) -- finance.html / runway-dashboard.html invoice reads, off the blob (relational tables Phase 2, invoices slice B)
+
+Asked to migrate `tools/finance.html`, `tools/runway-dashboard.html`,
+and `tools/dev-tools.html` off `workspace_sync` onto the relational
+tables the 2026-09-08 migration created, without breaking anything.
+Read `README.md`'s tail, both specialist logs' recent entries,
+`docs/ACTION-ITEMS.md`, and `CONTINUE-HERE.md`'s Phase 2 section first,
+per the task's own instruction -- the last of those already had the
+full reasoning for why this exact pair was deferred on 2026-09-17
+("their invoice reads are synchronous helpers called from many render
+sites"), and named the already-shipped reference pattern to copy
+(`getInvoicesForRead()`/`refreshRelationalInvoicesCache()` in
+`sync.js`, already used by `workspace.html`'s Income list and
+`invoice-generator.html`'s Recent tab since 2026-09-17).
+
+**Investigated before writing anything**, since the task explicitly
+asked to study the synchronous helper and every call site first. Found
+the "many render sites" framing was accurate for `runway-dashboard.html`
+(`renderRunway()`, which calls `renderAR()`, is itself called from
+~11 different state-change handlers across the page) but the actual
+invoice-reading code was narrower than the framing suggested: each
+page has exactly ONE function that reads invoices --
+`renderJobProfitability()`'s local `invoices` variable in finance.html,
+`loadJobTrackerInvoices()` in runway-dashboard.html -- called from 1
+and 2 places respectively. Also confirmed via grep, before assuming
+otherwise, that neither page has ANY invoice write path
+(`localStorage.setItem('th_invoices'` appears in neither file), so
+there was no read-modify-write-loses-line_items risk to design around,
+unlike a page with a real save flow.
+
+**Chose the sync-over-async architecture the task asked me to
+consider, and picked (b): cache once at init, keep every reader
+synchronous** -- exactly `auth.js`'s `_cachedRoleInfo` shape, which
+`sync.js`'s `getInvoicesForRead()` already independently implements
+(load into `cachedRelationalInvoices` once, read it synchronously
+everywhere, `null` vs `[]` distinguishing "hasn't loaded" from "loaded,
+genuinely empty"). Restructuring every call site to `await` would have
+meant making `activateTab()` (finance.html's tab switcher) and
+`renderRunway()` (called from ~11 unrelated save handlers on
+runway-dashboard.html: personal expenses, personal income, business
+months, debts, the reset-all button, etc.) all async, and awaiting
+network calls in performance-sensitive re-render paths that used to be
+synchronous local reads -- clearly the higher-call-site-count, higher-
+risk option, and unnecessary since the already-built cache exists for
+precisely this shape.
+
+**What actually changed, in each file:**
+- `finance.html`'s `renderJobProfitability()`: the one line reading
+  `thRead(TH_KEYS.invoices, [])` became
+  `(typeof getInvoicesForRead === 'function') ? getInvoicesForRead() : thRead(TH_KEYS.invoices, [])`.
+  Init (after `initSyncOnLoad()`) now calls `refreshRelationalInvoicesCache()`
+  once, fire-and-forget, re-rendering Job Profitability only if that
+  tab is the one currently showing; wired the same refresh into the
+  existing `startRealtimeSync()` callback and into a new
+  `startInvoicesRealtime()` channel (mirroring `workspace.html`'s
+  "one status callback, two channels" pattern) and into
+  `setupPullToRefresh()`.
+- `runway-dashboard.html`'s `loadJobTrackerInvoices()`: its body
+  became the same `getInvoicesForRead()`-with-blob-fallback shape.
+  Zero of its 3 call sites (`renderAR()`, `pullMonthFromJobTracker()`,
+  and the already-dead, zero-caller `totalAccountsReceivable()`) needed
+  to change. Init (after `pullSync()`) refreshes the cache once and
+  calls `renderRunway()` again if it resolves; also wired
+  `startInvoicesRealtime()` alongside the page's existing
+  `startRealtimeSync()` blob channel, sharing the same status callback.
+
+**Deliberately did not touch:**
+- `data-layer.js`'s `thRead`/`TH_KEYS` themselves -- a generic
+  key-value accessor also used by `job-tracker.html` directly and by
+  `thGetClientBundle()`/`thGetJobBundle()` (which back
+  `client-detail.html`/`job-detail.html`). Changing the shared function
+  instead of finance.html's/runway-dashboard.html's own call sites
+  would have silently widened this pass onto three pages the task
+  didn't name and that were never audited for this change. This was
+  the one point where the task's own framing ("a synchronous helper
+  called from many render sites") could have been read as license to
+  touch the *shared* `thRead()` — worth flagging explicitly since a
+  future session might be tempted to "clean this up properly" by
+  making `thRead` itself relational-aware; don't, without auditing
+  those other pages first.
+- `finance.html`'s `backfillLegacyInvoicesIntoIncomeLog()`, which also
+  reads `th_invoices` directly (bypassing `thRead`/`TH_KEYS` entirely).
+  Its job is specifically to catch invoices sitting in the blob that
+  haven't been mirrored into `th_income_log` yet -- pointing it at the
+  relational cache instead would risk delaying exactly the
+  reconciliation it exists to do, since the relational mirror is
+  itself an eventually-consistent, best-effort copy of the blob, not
+  the other way around. Left reading the raw blob, unchanged.
+- `dev-tools.html`, entirely. Verified by reading the actual code
+  (not assumed) that its reads of `th_tracker_jobs`/`th_invoices`/
+  `th_quotes`/`th_contracts` are structurally different from
+  finance.html's/runway-dashboard.html's: the Data Quality check and
+  Local Data Snapshot are diagnostics ABOUT this device's own blob
+  state, and Graveyard's `restoreFromGraveyard()` writes a deleted
+  record straight back into the raw blob key via `thWrite()`/
+  `thWriteWiki()` -- correct, since undoing a delete means putting the
+  record back exactly where every other write already looks for it.
+  Reading the relational table in any of these three places would be
+  actively wrong, not just unnecessary. One honest, pre-existing gap
+  worth naming: a graveyard-restored invoice isn't re-mirrored into
+  `invoices` (no call to `mirrorInvoiceToRelational()` in that path),
+  so it won't show in finance.html/runway-dashboard.html until some
+  other real invoice save re-triggers the mirror -- the same latent
+  gap the 2026-09-17 workspace.html/invoice-generator.html conversion
+  already carries, not introduced here, not fixed here (dev-tools.html
+  is out of scope for this task).
+
+**No new migration was needed.** `invoices` was already added to the
+`supabase_realtime` publication in slice A
+(`sql/infra/add_invoices_to_realtime_phase2.sql`, already applied),
+and neither page needed any column or table that slice A didn't
+already provide -- confirmed by re-reading
+`create_relational_jobs_invoices_quotes_contracts.sql` and the fetch/
+mapping code in `fetchInvoicesFromRelational()` before assuming so.
+
+**Verified in a real headless Chromium** (Playwright, served over
+`python3 -m http.server`, never `file://`; every Supabase call routed
+through `page.route()` since this environment cannot reach
+`*.supabase.co`): seeded a fake but valid `th_auth_session`, mocked
+`account_roles` (finance+runway permission), `workspace_sync` (an
+older/"stale" blob invoice, $100, job-linked), and `/rest/v1/invoices`
+(a different/"fresher" relational invoice, $777, same linked job) --
+confirmed Job Profitability shows the $777 relational margin and the
+Accounts Receivable panel shows $777 outstanding once the cache
+resolves, and confirmed BOTH pages correctly show the $100 blob value
+instead when the `/rest/v1/invoices` mock is made to fail (500),
+proving the offline-first fallback still works exactly as designed
+rather than only in the happy path. No page errors or unexpected
+console errors on either page in either scenario.
+
+Extended (not replaced) `tests/sync/relational-invoices-read-phase2.test.js`:
+its old "finance.html and runway-dashboard.html are not converted"
+test became two new tests mirroring the file's own existing
+invoice-generator.html/workspace.html assertions -- confirms the
+`getInvoicesForRead()` read, the blob fallback string still present,
+the absence of any `th_invoices` write in either file, and both the
+cache-refresh-on-init and `startInvoicesRealtime` wiring. Full suite
+(2682 tests) run alone (not concurrently with any checker script, per
+this file's own earlier note about `finance-split.test.js`'s
+`--fix-versions` side effects) -- all passing;
+`npm run fix-versions` picked up the real content change to both
+precached pages and bumped `service-worker.js`'s `CACHE_NAME` /
+precache fingerprint accordingly, same as any other edit to a
+precached file.
+
 <!-- Add new entries above this line -->

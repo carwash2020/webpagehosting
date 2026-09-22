@@ -2337,6 +2337,14 @@ function loadJobTrackerExpenses(){
   catch(e){ return []; }
 }
 function loadJobTrackerInvoices(){
+  // Relational tables Phase 2 (2026-09-22): backed by sync.js's shared
+  // getInvoicesForRead() cache (see CONTINUE-HERE.md and finance.html's
+  // same change) instead of a raw localStorage read -- falls back to the
+  // exact same th_invoices blob read below the instant the relational
+  // cache hasn't resolved yet, so every one of this function's call sites
+  // (renderAR(), pullMonthFromJobTracker()) stays synchronous and did not
+  // need to change at all; only this one function's own source did.
+  if (typeof getInvoicesForRead === 'function') return getInvoicesForRead();
   try { return JSON.parse(localStorage.getItem('th_invoices') || '[]'); }
   catch(e){ return []; }
 }
@@ -3244,10 +3252,35 @@ document.addEventListener('DOMContentLoaded', async () => {
       await loadAll();
     }
   }
+  // Relational tables Phase 2 (2026-09-22): overlay the real `invoices`
+  // table on top of the just-pulled blob, same pattern as finance.html and
+  // workspace.html (see CONTINUE-HERE.md). loadAll() -> renderRunway() ->
+  // renderAR() has already rendered from the th_invoices blob fallback by
+  // this point, so this is a correction once the fetch resolves, never a
+  // blank flash. renderRunway() is cheap and already called from many
+  // other places on this page, so re-running it here is safe and simplest.
+  if (typeof refreshRelationalInvoicesCache === 'function') {
+    refreshRelationalInvoicesCache().then(() => { if (typeof renderRunway === 'function') renderRunway(); }).catch(() => {});
+  }
   if(typeof startRealtimeSync === 'function'){
     startRealtimeSync(() => { loadAll(); }, updateJobTrackerBadge);
   } else {
     updateJobTrackerBadge('unavailable');
+  }
+  // Separate relational-table realtime channel (Phase 2) -- a real invoice
+  // write on another device (invoice-generator.html, job-tracker.html)
+  // mirrors into `invoices` best-effort; this refreshes the cache and
+  // re-renders the moment that mirror lands, same as workspace.html and
+  // finance.html already do. Shares the same status callback as the blob
+  // channel above -- last status wins, which is fine on one connection.
+  if (typeof startInvoicesRealtime === 'function') {
+    startInvoicesRealtime(() => {
+      if (typeof refreshRelationalInvoicesCache === 'function') {
+        refreshRelationalInvoicesCache().then(() => { if (typeof renderRunway === 'function') renderRunway(); }).catch(() => {});
+      } else if (typeof renderRunway === 'function') {
+        renderRunway();
+      }
+    }, updateJobTrackerBadge);
   }
   } catch (initError) {
     try {

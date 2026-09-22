@@ -482,7 +482,14 @@
 
   function renderJobProfitability() {
     const jobs = thRead(TH_KEYS.jobs, []).filter(j => j.status === 'done');
-    const invoices = thRead(TH_KEYS.invoices, []); // this tab doesn't own invoices -- read-only via the shared data layer, comparing against expenses this tab does own
+    // Relational tables Phase 2 (2026-09-22): reads sync.js's shared
+    // getInvoicesForRead() cache when available -- same cache workspace.html's
+    // Income list and invoice-generator.html's Recent tab already use --
+    // falling back to the th_invoices blob (via the shared data layer) the
+    // instant the cache hasn't resolved yet (or on a page where sync.js
+    // failed to load). This tab still doesn't own invoices -- read-only,
+    // comparing against expenses this tab does own.
+    const invoices = (typeof getInvoicesForRead === 'function') ? getInvoicesForRead() : thRead(TH_KEYS.invoices, []);
     const expenses = loadExpenses();
     const manualIncome = loadIncomeEntries().filter(e => e.origin !== 'invoice'); // invoices are already counted directly below -- this avoids double-counting the ones mirrored into the income log
     const container = document.getElementById('profitabilityList');
@@ -1480,7 +1487,17 @@
       // renderIncomeEntries/renderPriceReferences by reference, so
       // defining it here before those functions run doesn't matter;
       // they're only actually called later, when the user pulls.
-      if (typeof setupPullToRefresh === 'function') setupPullToRefresh(() => { renderExpenses(); renderIncomeEntries(); renderPriceReferences(); if (document.getElementById('tab-inventory')?.classList.contains('is-active')) renderInventory(); });
+      if (typeof setupPullToRefresh === 'function') setupPullToRefresh(() => {
+        renderExpenses(); renderIncomeEntries(); renderPriceReferences();
+        if (document.getElementById('tab-inventory')?.classList.contains('is-active')) renderInventory();
+        if (document.getElementById('tab-profitability')?.classList.contains('is-active')) {
+          if (typeof refreshRelationalInvoicesCache === 'function') {
+            refreshRelationalInvoicesCache().then(renderJobProfitability).catch(renderJobProfitability);
+          } else {
+            renderJobProfitability();
+          }
+        }
+      });
       await initSyncOnLoad();
       // Gated 2026-08-27, alongside the new Employee role -- checked
       // right after initSyncOnLoad() resolves (which is what actually
@@ -1531,6 +1548,20 @@
         }
       }
 
+      // Relational tables Phase 2 (2026-09-22): overlay the real `invoices`
+      // table on top of the blob once the fetch resolves, same pattern as
+      // workspace.html's Income list / invoice-generator.html's Recent tab
+      // (see CONTINUE-HERE.md). Fire-and-forget after the tab is already
+      // rendered from the blob fallback -- this is a correction, never a
+      // blank flash. Only Job Profitability actually reads invoices, so
+      // only that tab needs a re-render, and only when it's the one showing.
+      const rerenderProfitabilityIfActive = () => {
+        if (document.getElementById('tab-profitability')?.classList.contains('is-active')) renderJobProfitability();
+      };
+      if (typeof refreshRelationalInvoicesCache === 'function') {
+        refreshRelationalInvoicesCache().then(rerenderProfitabilityIfActive).catch(() => {});
+      }
+
       if (typeof startRealtimeSync === 'function') {
         startRealtimeSync(async () => {
           loadMileageRate();
@@ -1543,6 +1574,20 @@
           renderPriceReferences();
           if (document.getElementById('tab-profitability')?.classList.contains('is-active')) renderJobProfitability();
           if (document.getElementById('tab-inventory')?.classList.contains('is-active')) renderInventory();
+        }, function () {});
+      }
+      // Separate relational-table realtime channel (Phase 2) -- a real
+      // invoice write on another device (invoice-generator.html,
+      // job-tracker.html) mirrors into `invoices` best-effort; this refreshes
+      // the cache and re-renders Job Profitability the moment that mirror
+      // lands, same as workspace.html/invoice-generator.html already do.
+      if (typeof startInvoicesRealtime === 'function') {
+        startInvoicesRealtime(() => {
+          if (typeof refreshRelationalInvoicesCache === 'function') {
+            refreshRelationalInvoicesCache().then(rerenderProfitabilityIfActive).catch(() => {});
+          } else {
+            rerenderProfitabilityIfActive();
+          }
         }, function () {});
       }
       } catch (initError) {

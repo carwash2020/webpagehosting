@@ -3091,3 +3091,39 @@ migration has not been applied to the live database yet -- both need a
 human with real access before this is fully in production. Full
 reasoning and the complete verify/couldn't-verify breakdown:
 `docs/specialist-logs/security.md`'s 2026-09-22 entry.
+
+## What changed, 2026-09-22 (later the same day) -- Finance and Runway Dashboard's invoice numbers now come from the real relational table, not the blob
+
+Continuing the relational-tables migration from 2026-09-08/09-17:
+`tools/finance.html`'s Job Profitability tab and
+`tools/runway-dashboard.html`'s Accounts Receivable / Runway panels
+now read invoices through the same shared `getInvoicesForRead()` cache
+`workspace.html`'s Income list and `invoice-generator.html`'s Recent
+tab already used, instead of reading the `workspace_sync` blob
+directly. Both pages had exactly one function that reads invoices
+each, so this changed those two functions' internal source only --
+every one of their call sites (the Job Profitability tab render, the
+Accounts Receivable panel, `renderRunway()`'s ~11 callers across the
+page) stayed synchronous and untouched, matching how `auth.js`'s
+`_cachedRoleInfo` already avoids turning a widely-called synchronous
+accessor into an async one. `tools/dev-tools.html` was investigated
+too and deliberately left alone -- its own reads of the same
+localStorage keys are diagnostics about this device's own blob state
+(a data-quality check, a raw snapshot viewer, and a delete-undo
+"graveyard" that writes straight back into the blob on purpose), not a
+business-data display, so pointing them at the relational table would
+have been wrong, not just unnecessary.
+
+No new database migration was needed -- the `invoices` table was
+already in the real-time publication from the 2026-09-17 slice, and
+neither page needed any column that slice didn't already provide.
+Verified in a real headless Chromium (served over `python3 -m
+http.server`, every Supabase call mocked): both pages show a
+deliberately different, "fresher" relational total once the cache
+resolves, and correctly fall back to the older blob total when the
+relational fetch is made to fail, proving the offline-first behavior
+survived the change. Full suite (2682 tests), `check-consistency`,
+`check-undefined-vars`, `check-links.py`, and `lint` all clean. Full
+reasoning, including what was deliberately NOT touched and why:
+`docs/specialist-logs/features.md`'s 2026-09-22 entry (invoices slice
+B) and `CONTINUE-HERE.md`'s "relational tables Phase 2" section.
