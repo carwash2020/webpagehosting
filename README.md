@@ -3167,6 +3167,24 @@ any entry at or before the cutoff is dropped, but a genuinely new error
 logged after the clear always survives. Full reasoning:
 `docs/specialist-logs/bugfix.md`'s 2026-09-22 entry.
 
+## 2026-09-22 (later still) -- "Make it feel like a native app," round 1: haptic + long-press coverage
+
+Direct request to push the tools suite further toward feeling like a
+phone app. Every underlying system was already built (pull-to-refresh,
+swipe-back, haptics, long-press bottom sheets, app badge, etc.) -- the
+gap was coverage: `haptic()` and the shared long-press quick-action
+sheet were wired into only 1-2 of ~19 tool pages. Added `haptic('success')`
+at real success moments across `invoice-generator.html`, `finance.html`,
+`job-tracker.html`, and `workspace.html`, plus centralized it into
+`tools-effects.js`'s shared `celebrateCompletion()` so every completion
+moment (current and future) gets it for free. Extended the long-press
+quick-action sheet to income/expense rows (`finance.html`), Contacts
+tab client cards (`job-tracker.html`), and the contract log
+(`contract-generator.html`). Full reasoning, including a real
+regression the existing test suite caught (an unguarded `attachLongPress`
+call broke 2 pre-existing `finance.html` load tests) and what's queued
+for round 2: `docs/specialist-logs/visual.md`'s 2026-09-22 entry.
+
 ## What changed, 2026-09-22 (later still) -- internal MFA: "Could not generate recovery codes" fixed, 2FA setup polished, backup/restore moved to Dev Tools
 
 Three related pieces, all touching the same-day internal `/tools/` MFA

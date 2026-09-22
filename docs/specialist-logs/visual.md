@@ -678,6 +678,75 @@ client-side-only expiry check) confirmed `.small-btn` measuring 44px in
 the real DOM and `-webkit-tap-highlight-color`/`touch-action` reading
 back correctly via `getComputedStyle` on real buttons.
 
+## 2026-09-22 -- "make it feel like a native app" push, round 1: haptic + long-press coverage
+
+Direct request: "heavily focus tool improvements... as much like a
+physical phone app as possible... keep refining, shrinking, and making
+it easier to use." Audited what native-app-feel systems already exist
+before proposing anything new -- pull-to-refresh, swipe-back, job-card
+swipe-to-reveal-Done, long-press bottom sheets, `haptic()`, app badge,
+offline banner, overscroll containment, and swipe-to-dismiss modals
+were ALL already built. The real gap was coverage, not missing
+systems: two shared, already-designed utilities (`haptic()`,
+`attachLongPress`/`showQuickActionSheet`, both in `tools-dialogs.js`)
+were live on only 1-2 of ~19 tool pages.
+
+**Haptic coverage.** Added `haptic('success')` at the real
+success/creation moment on the pages with the highest-frequency
+confirm actions: `invoice-generator.html` (mark paid, invoice logged,
+estimate logged), `finance.html` (income logged, expense/mileage
+logged), `job-tracker.html` (job saved), `workspace.html`
+(booking converted to job). Also moved the call into `tools-effects.js`'s
+shared `celebrateCompletion()` itself (job marked Done, and any future
+caller) rather than at each call site -- one change, every current and
+future completion moment covered. Deliberately unconditional ahead of
+the `prefers-reduced-motion` check inside that function: vibration
+isn't the kind of motion that preference is about, only the confetti
+is. `showConfirm()`'s own dialog already fired a haptic on every
+confirm click sitewide before this pass -- these are the *other*
+success moments that don't go through a confirm dialog at all.
+
+**Long-press coverage.** Extended the exact same
+`attachLongPress`/`showQuickActionSheet` pattern Job Tracker's job
+cards already used to 4 more row types that were tap-only: income and
+expense/mileage rows (`finance.html`), the Contacts tab's client cards
+(`job-tracker.html` -- the "clients.html" framing in the original
+audit was slightly off; the real Edit/Delete client rows live on Job
+Tracker's Contacts tab, `clients.html` itself is the portal-lookup/
+admin tool with no such list), and the contract log
+(`contract-generator.html`). Same guard convention as the existing
+`initJobCardLongPress()` (`container.dataset.longPressWired`) so a
+second call never double-wires the same container.
+
+**Real regression caught by the existing suite, not overlooked**: the
+new init functions called `attachLongPress` unguarded, which threw in
+2 pre-existing `finance-split.test.js` tests that load `finance.html`
+in a minimal JSDOM sandbox without `tools-dialogs.js` (external
+`<script src>` isn't fetched by JSDOM) -- the thrown error aborted the
+async init IIFE before the tab-activation code further down ever ran,
+so the default tab silently stopped activating. Fixed by guarding each
+new init function with `if (typeof attachLongPress !== 'function')
+return;`, the same defensive convention this codebase already uses for
+every other cross-file optional dependency (`setupPullToRefresh`,
+`mirrorInvoiceToRelational`, etc.).
+
+New test file: `tests/tools/app-feel-haptics-longpress.test.js` (14
+tests) -- source-level assertions for every haptic/long-press call
+site plus one real behavioral test (mocked `attachLongPress`/
+`showQuickActionSheet`, a real long-press invoked end-to-end, asserts
+the sheet's title and that its Edit/Delete callbacks actually call the
+right function with the right id).
+
+Verified: full suite 2701/2702 (only the known check-links.py
+sandbox-proxy issue), `check-consistency`/`check-undefined-vars`
+clean, `npm run fix-versions` run twice (once for `tools-effects.js`'s
+shared-file hash bump, once for the attachLongPress-guard follow-up).
+
+Round 2 candidates already identified for next: centralizing the app
+badge refresh beyond `workspace.html` (it goes stale if you work
+directly in a deep-linked tool page), and extending the swipe-reveal
+pattern to invoice/quote log rows.
+
 ## 2026-09-22 (later the same day): 2FA UX polish + "Your Data" moved out of Settings into Dev Tools
 
 Two related pieces done together, both scoped as presentation/flow polish

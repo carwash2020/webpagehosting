@@ -56,7 +56,7 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.112.3/dist/umd/supabase.js" integrity="sha384-qafw21c/iciq0VXsi9FzkfoQv5I/V0iqE4lSNcKXPnW9/UTJLnv5CcN4FHxVLnKg" crossorigin="anonymous" defer></script>
 <script src="/tools/sync.js?v=6b9e092eca" defer></script>
 <script src="/tools/data-layer.js?v=c5d44f096e" defer></script>
-<script src="/tools/tools-effects.js?v=4cff99aa4a" defer></script>
+<script src="/tools/tools-effects.js?v=d26cb1fb67" defer></script>
 <script src="/tools/tools-dialogs.js?v=83d27784e2" defer></script>
 <script src="/tools/tools-media-sharing.js?v=0c229c9353" defer></script>
 <script src="/tools/tools-nav-pwa.js?v=f07de2ca5b" defer></script>
@@ -502,6 +502,26 @@
     } catch (e) {
       console.warn('Could not refresh portal contract status:', e);
     }
+  }
+
+  // Same long-press quick-action pattern as job-tracker.html's job/contact
+  // cards -- Re-download/Delete without scrolling to the button row. One
+  // call on page load; attachLongPress delegates via the container so it
+  // keeps working across every re-render.
+  function initContractLogLongPress() {
+    if (typeof attachLongPress !== 'function') return; // tools-dialogs.js not loaded (some minimal test sandboxes)
+    const container = document.getElementById('contractLogList');
+    if (!container || container.dataset.longPressWired) return;
+    container.dataset.longPressWired = '1';
+    attachLongPress(container, '.contract-log-item', (itemEl) => {
+      const id = Number(itemEl.dataset.contractId);
+      const entry = loadContractLog().find(e => e.id === id);
+      if (!entry) return;
+      showQuickActionSheet(entry.fields.clientName || 'Contract', [
+        { label: 'Re-download', onClick: () => redownloadContract(id) },
+        { label: 'Delete', isDanger: true, onClick: () => deleteContractLogEntry(id) },
+      ]);
+    });
   }
 
   async function deleteContractLogEntry(id) {
@@ -1020,6 +1040,7 @@
         return;
       }
       populateContactPickers(); renderContractLog();
+      initContractLogLongPress();
     }
     if (typeof initSyncOnLoad === 'function') {
       initSyncOnLoad().then(afterInitialSync).catch(afterInitialSync);
