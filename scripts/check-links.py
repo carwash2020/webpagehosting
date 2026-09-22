@@ -28,8 +28,21 @@ import urllib.request
 import urllib.error
 
 REPO_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+# Kept in sync with sitemap.xml -- that's the actual definition of "public,
+# externally crawled page" this checker cares about. If a page is added to
+# the sitemap, add it here too (2026-09-22: this list had drifted well
+# behind the sitemap -- about.html, careers.html, our-work.html, booking.html,
+# the whole blog, terms/privacy, handyman-st-george-ut.html, and 4 of the 7
+# service pages were all missing and getting zero external-link coverage).
 PUBLIC_PAGES = [
     'index.html',
+    'booking.html',
+    'about.html',
+    'careers.html',
+    'our-work.html',
+    'terms.html',
+    'privacy.html',
+    'locations/handyman-st-george-ut.html',
     'locations/handyman-cedar-city-ut.html',
     'locations/handyman-hurricane-ut.html',
     'locations/handyman-mesquite-nv.html',
@@ -37,9 +50,25 @@ PUBLIC_PAGES = [
     'locations/handyman-washington-city-ut.html',
     'locations/handyman-la-verkin-ut.html',
     'locations/handyman-leeds-ut.html',
+    'services/washer-dryer-repair.html',
     'services/washer-dryer-repair-st-george-ut.html',
     'services/refrigerator-repair-st-george-ut.html',
     'services/dishwasher-repair-st-george-ut.html',
+    'services/plumbing-repairs.html',
+    'services/drywall-painting.html',
+    'services/handyman-repairs.html',
+    'services/assembly-installation.html',
+    'blog/index.html',
+    'blog/dryer-not-heating.html',
+    'blog/handyman-to-do-list.html',
+    'blog/appliance-repair-or-replace.html',
+    'blog/washer-wont-drain.html',
+    'blog/dishwasher-not-cleaning.html',
+    'blog/fridge-not-cooling.html',
+    'blog/toilet-running-flapper-valve.html',
+    'blog/drywall-crack-above-door.html',
+    'blog/tv-mount-drywall-anchors.html',
+    'blog/oven-not-heating-right.html',
 ]
 
 HREF_SRC_RE = re.compile(r'(?:href|src)="([^"]+)"')
