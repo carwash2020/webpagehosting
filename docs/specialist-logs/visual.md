@@ -1153,4 +1153,25 @@ and 1280px (the portal is dark-only; no light theme to check).
 - **After Add**, the card turns into a single green-tinted confirmation
   line ("Added 4 lines from the job · $251.49.") with Undo.
 
+## 2026-09-22 (later still) -- quick add in the Create sheet
+
+- **The field:** one 52px field at the top of the Create sheet, with an
+  orange bolt icon, the input, and a round mic button. It gets an orange
+  focus ring. The placeholder was shortened to fit 390px ("Try: sink
+  leak for Sarah tomorrow").
+- **While there's text,** the nine tiles hide (`.is-typing`) and the
+  preview card takes their place, so on a phone the sheet stays short
+  above the keyboard.
+- **The preview card:** orange-tinted, with a small caps kind label
+  (NEW JOB / INVOICE / QUOTE / EXPENSE, with its tile's icon), then the
+  title at 18px, then one chip per fact (client, date, time, amount,
+  vendor, address, phone, urgency), then a full-width primary button
+  naming the action ("Fill in the job ›"). A known client's chip icon is
+  green; an address that came from the client record is dimmed; urgent
+  is red.
+- **Listening:** the mic turns solid orange and pulses (off under
+  reduced motion).
+- **Runway Dashboard** keeps its own copy of the shell CSS, so the block
+  is mirrored there.
+
 <!-- Add new entries above this line -->
