@@ -111,8 +111,26 @@ Deno.serve(async (req: Request) => {
     if (quote.status !== "approved") {
       return json({ ok: false, error: "This quote must be approved before scheduling." }, 400);
     }
-    if (quote.scheduled_at) {
-      return json({ ok: false, error: "This job is already scheduled. Call or text us to reschedule." }, 400);
+    // Rebooking after a cancellation (2026-09-22). scheduled_at is a
+    // one-way "this quote has been scheduled" marker -- nothing clears
+    // it when the booking itself is cancelled (manage-booking.html's
+    // cancel_booking_by_token only touches th_bookings), so a client
+    // who cancelled used to be stuck: the portal now shows them that
+    // their visit was cancelled and offers a new time, and this is the
+    // server half of that. Still refuses whenever ANY confirmed booking
+    // exists for this quote -- moving an existing visit is what
+    // Reschedule (manage-booking.html) is for, never a second booking --
+    // and fails closed if that lookup itself fails.
+    const priorScheduledAt: string | null = quote.scheduled_at || null;
+    if (priorScheduledAt) {
+      const activeRes = await fetch(
+        `${SUPABASE_URL}/rest/v1/th_bookings?quote_id=eq.${quote.id}&status=eq.confirmed&select=id&limit=1`,
+        { headers: { apikey: SERVICE_ROLE_KEY, Authorization: `Bearer ${SERVICE_ROLE_KEY}` } },
+      );
+      const active = activeRes.ok ? await activeRes.json() : null;
+      if (!active || active.length) {
+        return json({ ok: false, error: "This job is already scheduled. Use Reschedule on your appointment, or call or text us." }, 400);
+      }
     }
 
     const bookingRes = await fetch(`${SUPABASE_URL}/rest/v1/th_bookings`, {
@@ -121,6 +139,10 @@ Deno.serve(async (req: Request) => {
         apikey: SERVICE_ROLE_KEY,
         Authorization: `Bearer ${SERVICE_ROLE_KEY}`,
         "Content-Type": "application/json",
+        // The new row's id, so losing the race below undoes exactly
+        // this booking -- not every row for this quote at that start
+        // time (a previously cancelled one could share it).
+        Prefer: "return=representation",
       },
       body: JSON.stringify([{
         service_key: "quote-job",
@@ -146,7 +168,10 @@ Deno.serve(async (req: Request) => {
       }, wasConflict ? 409 : 502);
     }
 
-    // Conditional on scheduled_at still being null -- the read/check
+    const createdRows = await bookingRes.json().catch(() => []);
+    const createdBookingId = Array.isArray(createdRows) && createdRows[0] ? createdRows[0].id : null;
+
+    // Conditional on scheduled_at being unchanged since the read above -- the read/check
     // above and this write aren't atomic, so two near-simultaneous
     // requests for the same quote (a double-tap, or a retried request
     // on a flaky connection) could both pass the `quote.scheduled_at`
@@ -157,8 +182,16 @@ Deno.serve(async (req: Request) => {
     // gets zero rows back and must undo the booking it already created,
     // rather than leaving it stranded as a real, unwanted second
     // appointment for a quote that's now scheduled by the other request.
+    //
+    // Optimistic check against the exact value read above: is.null for
+    // a first booking, eq.<prior value> for a rebooking after a
+    // cancellation -- either way, a concurrent request that already
+    // wrote scheduled_at makes this match zero rows.
+    const scheduledAtFilter = priorScheduledAt
+      ? `scheduled_at=eq.${encodeURIComponent(priorScheduledAt)}`
+      : "scheduled_at=is.null";
     const quotePatchRes = await fetch(
-      `${SUPABASE_URL}/rest/v1/client_portal_quotes?id=eq.${quote_id}&scheduled_at=is.null`,
+      `${SUPABASE_URL}/rest/v1/client_portal_quotes?id=eq.${quote_id}&${scheduledAtFilter}`,
       {
         method: "PATCH",
         headers: {
@@ -178,7 +211,10 @@ Deno.serve(async (req: Request) => {
         // between our read above and this write. Delete the booking we
         // just created instead of leaving a real, duplicate appointment
         // on the calendar for one already-scheduled job.
-        await fetch(`${SUPABASE_URL}/rest/v1/th_bookings?quote_id=eq.${quote.id}&start_at=eq.${encodeURIComponent(start_at)}`, {
+        const undoFilter = createdBookingId
+          ? `id=eq.${createdBookingId}`
+          : `quote_id=eq.${quote.id}&start_at=eq.${encodeURIComponent(start_at)}&status=eq.confirmed`;
+        await fetch(`${SUPABASE_URL}/rest/v1/th_bookings?${undoFilter}`, {
           method: "DELETE",
           headers: { apikey: SERVICE_ROLE_KEY, Authorization: `Bearer ${SERVICE_ROLE_KEY}` },
         });

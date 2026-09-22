@@ -78,7 +78,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Anton&family=Archivo:wght@400..700&family=Newsreader:ital,opsz,wght@0,6..72,300..700;1,6..72,300..600&family=Oswald:wght@200..700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="/styles.css?v=2e81706c3d">
-<link rel="stylesheet" href="/portal/portal-app.css?v=202609171900">
+<link rel="stylesheet" href="/portal/portal-app.css?v=202609222300">
 <style>
   /* iOS Safari zoom-on-focus fix (2026-09-05), same root cause and
      fix already applied to invoice-generator.html: a tapped
@@ -117,7 +117,7 @@
 </style>
 <link rel="stylesheet" href="/tools/styles-tools.css?v=a494344e8c">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="/portal/portal-app.js?v=202609170800"></script>
+<script src="/portal/portal-app.js?v=202609222300"></script>
 <!-- Shared business-hours data (2026-09-04) -- see business-hours.js's
      own header comment for the full reasoning. -->
 <script src="/js/business-hours.js?v=5296319b73"></script>
@@ -383,17 +383,12 @@
   .wo-urgency-tag.is-urgent { color: #ff8a80; font-weight: 600; }
   /* Two-way messaging (2026-09-03) -- quotes already let a client ask
      a question; this is the same idea for work requests. */
-  .wo-messages-toggle {
-    margin-top: 10px; background: none; border: none; color: var(--orange-light); font-size: 12.5px;
-    font-weight: 600; cursor: pointer; padding: 0; font-family: inherit; text-decoration: underline;
-  }
+  /* The toggle's look, the bubbles and the composer now come from the
+     shared .portal-thread-* rules in portal-app.css (2026-09-22), the
+     same ones portal/jobs.html uses -- only page-specific spacing
+     stays here. */
   .wo-messages-panel { margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--border); }
-  .wo-message-bubble { max-width: 85%; margin-bottom: 8px; padding: 8px 11px; border-radius: 10px; font-size: 13px; line-height: 1.45; white-space: pre-wrap; }
-  .wo-message-bubble.is-client { background: var(--orange-tint-soft); border: 1px solid var(--orange-tint-border); margin-left: auto; }
-  .wo-message-bubble.is-internal { background: var(--bg-panel-2); border: 1px solid var(--border); }
   .wo-message-meta { font-size: 10.5px; color: var(--text-dim); margin-top: 3px; }
-  .wo-message-form { display: flex; gap: 8px; margin-top: 8px; }
-  .wo-message-form textarea { flex: 1; min-height: 40px; max-height: 120px; resize: vertical; font-family: inherit; font-size: 16px; padding: 8px 10px; border-radius: 8px; border: 1px solid var(--border); background: var(--bg-panel); color: var(--white); }
   .empty-state { text-align: center; color: var(--text-dim); padding: 28px 20px; font-size: 13.5px; }
   /* Empty-state illustrations (2026-09-07), same pattern as jobs.html and
      quotes.html: the genuine nothing-requested-yet state reuses this
@@ -950,7 +945,7 @@
         <div class="wo-card-desc">${escapeHtml(wo.description)}</div>
         ${urgencyLabel ? `<div class="wo-urgency-tag${urgentClass}">${escapeHtml(urgencyLabel)}</div>` : ''}
         ${(statusKey === 'scheduled' && wo.scheduled_at) ? `<div class="wo-scheduled-tag">Scheduled for ${escapeHtml(formatScheduledAt(wo.scheduled_at))}</div>` : ''}
-        <button type="button" class="wo-messages-toggle" onclick="toggleMessages(${wo.id}, this)">Messages</button>
+        <button type="button" class="wo-messages-toggle portal-thread-toggle${woUnreadCounts[wo.id] ? ' has-unread' : ''}" onclick="toggleMessages(${wo.id}, this)" aria-expanded="false" aria-controls="woMessages-${wo.id}">${THREAD_ICON}Messages${woUnreadBadgeHtml(wo.id)}</button>
         <div class="wo-messages-panel" id="woMessages-${wo.id}" style="display:none;"></div>
         <!-- Cancel (2026-09-19), requested directly -- only while still
              'submitted': once Steve has started reviewing/quoting/
@@ -1033,10 +1028,20 @@
     // internal_notes must never reach a client, and Postgres RLS is
     // row-level, not column-level, so the query itself is what keeps
     // it out. See this page's head comment.
-    const { data: requests, error } = await client
-      .from('client_portal_work_orders')
-      .select('id,title,description,urgency,status,scheduled_at,created_at')
-      .order('created_at', { ascending: false });
+    // Unread counts ride along in the same Promise.all (2026-09-22) --
+    // two parallel requests, no added wait. portalLoadUnreadCounts()
+    // never throws; a failed lookup just means no badges.
+    const [{ data: requests, error }, unread] = await Promise.all([
+      client
+        .from('client_portal_work_orders')
+        .select('id,title,description,urgency,status,scheduled_at,created_at')
+        .order('created_at', { ascending: false }),
+      portalLoadUnreadCounts(client),
+    ]);
+    unreadRows = unread;
+    woUnreadCounts = {};
+    unread.forEach(r => { if (r.thread_type === 'work_order') woUnreadCounts[r.thread_id] = Number(r.unread_count) || 0; });
+    portalApplyNavUnreadBadges(unreadRows);
 
     // Fixed alongside the loading state (2026-09-03): this used to
     // clear straight to a completely blank div on a real error, with
@@ -1058,6 +1063,14 @@
       openRequestsBannerHtml(requests) +
       requests.map(renderRequestCard).join('');
     portalScrollToHash();
+    // Home's "New message" item deep-links to #wo-card-N -- open that
+    // thread straight away rather than making the client find the
+    // Messages button on the card it just scrolled to.
+    const hashMatch = (location.hash || '').match(/^#wo-card-(\d+)$/);
+    if (hashMatch && woUnreadCounts[hashMatch[1]]) {
+      const btn = document.querySelector('#wo-card-' + hashMatch[1] + ' .portal-thread-toggle');
+      toggleMessages(Number(hashMatch[1]), btn);
+    }
   }
 
   // Two-way messaging (2026-09-03), requested directly as item 2 of a
@@ -1070,9 +1083,40 @@
   async function toggleMessages(workOrderId, btnEl) {
     const panel = document.getElementById('woMessages-' + workOrderId);
     if (!panel) return;
-    if (panel.style.display !== 'none') { panel.style.display = 'none'; return; }
+    if (panel.style.display !== 'none') {
+      panel.style.display = 'none';
+      if (btnEl) btnEl.setAttribute('aria-expanded', 'false');
+      return;
+    }
     panel.style.display = 'block';
+    if (btnEl) btnEl.setAttribute('aria-expanded', 'true');
     await loadAndRenderThread(workOrderId);
+  }
+
+  // Unread state for this page's threads (2026-09-22) -- filled by
+  // renderMyRequests() from get_portal_unread_counts().
+  let woUnreadCounts = {};
+  let unreadRows = [];
+  const THREAD_ICON = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5h16v11H9l-5 4z"/></svg>';
+
+  function woUnreadBadgeHtml(workOrderId) {
+    const n = woUnreadCounts[workOrderId] || 0;
+    return n ? ' <span class="portal-unread-pill" id="woUnread-' + workOrderId + '">' + n + ' new</span>' : '';
+  }
+
+  // The thread just got opened and marked read: drop its badge here and
+  // its share of the bottom-nav count, without a refetch.
+  function clearWoUnread(workOrderId) {
+    if (!woUnreadCounts[workOrderId]) return;
+    woUnreadCounts[workOrderId] = 0;
+    unreadRows = unreadRows.filter(r => !(r.thread_type === 'work_order' && Number(r.thread_id) === Number(workOrderId)));
+    const pill = document.getElementById('woUnread-' + workOrderId);
+    if (pill) {
+      const toggle = pill.closest('.portal-thread-toggle');
+      if (toggle) toggle.classList.remove('has-unread');
+      pill.remove();
+    }
+    portalApplyNavUnreadBadges(unreadRows);
   }
 
   async function loadAndRenderThread(workOrderId) {
@@ -1091,17 +1135,19 @@
       return;
     }
 
-    const thread = (messages || []).map(m =>
-      '<div class="wo-message-bubble is-' + escapeHtml(m.sender_type) + '">' + escapeHtml(m.message) +
-      '<div class="wo-message-meta">' + escapeHtml(m.sender_type === 'client' ? 'You' : 'Triple H') + ' &middot; ' + escapeHtml(formatDate(m.created_at)) + '</div>' +
-      '</div>'
-    ).join('');
+    // Shared renderer (portal-app.js): day dividers, a time on every
+    // bubble, and a "New" divider above the first unread reply.
+    panel.innerHTML =
+      portalMessageThreadHtml(messages, { unreadCount: woUnreadCounts[workOrderId] || 0 }) +
+      portalComposerHtml('woMessageInput-' + workOrderId, 'woMessageSend-' + workOrderId, 'sendMessage(' + workOrderId + ')', 'Ask a question or add a note...');
+    portalScrollThreadToEnd(panel);
 
-    panel.innerHTML = (thread || '<p class="wo-message-meta">No messages yet.</p>') +
-      '<div class="wo-message-form">' +
-      '<textarea id="woMessageInput-' + workOrderId + '" placeholder="Ask a question or add a note..."></textarea>' +
-      '<button type="button" class="secondary-btn" onclick="sendMessage(' + workOrderId + ')">Send</button>' +
-      '</div>';
+    // Seen -> read, watermarked at the newest message actually shown
+    // (its raw created_at, never re-parsed -- see portalMarkThreadRead).
+    if ((messages || []).some(m => m.sender_type === 'internal')) {
+      clearWoUnread(workOrderId);
+      await portalMarkThreadRead(client, 'work_order', workOrderId, messages[messages.length - 1].created_at);
+    }
   }
 
   async function sendMessage(workOrderId) {
@@ -1112,6 +1158,9 @@
     const { data: { session } } = await client.auth.getSession();
     if (!session) { window.location.replace('/portal/login.html'); return; }
 
+    // Locked while in flight (2026-09-22): a double-tap used to post
+    // the same message twice.
+    const restore = portalSetComposerSending(input, document.getElementById('woMessageSend-' + workOrderId));
     const { error } = await client.from('client_portal_work_order_messages').insert({
       work_order_id: workOrderId,
       sender_type: 'client',
@@ -1120,6 +1169,7 @@
     });
 
     if (error) {
+      restore();
       showToast("Couldn't send that just now. Please try again.", { type: 'error' });
       return;
     }

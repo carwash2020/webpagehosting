@@ -641,6 +641,347 @@ function dismissToast(toast) {
   setTimeout(() => toast.remove(), 200);
 }
 
+// ---------- Your visits (2026-09-22) ----------
+// Every self-scheduling path in the portal (an approved quote, a
+// check-up reminder) and the public booking.html flow write a real
+// th_bookings row, but th_bookings is internal-only under RLS -- so
+// until this, a client lost sight of an appointment the moment they
+// booked it. get_my_portal_visits() (sql/portal/add_get_my_portal_visits.sql)
+// is a SECURITY DEFINER read scoped to the caller's own session email,
+// returning only client-safe columns. Shared here because Home, Quotes
+// and Jobs all need the same list.
+//
+// Resolves { visits, error } rather than throwing: every caller treats
+// a failed lookup as "nothing extra to show" and keeps rendering the
+// data it already has, instead of failing a whole page over an
+// enhancement.
+async function portalFetchMyVisits(supabaseClient) {
+  try {
+    const { data, error } = await supabaseClient.rpc('get_my_portal_visits');
+    if (error) return { visits: [], error };
+    return { visits: Array.isArray(data) ? data : [], error: null };
+  } catch (e) {
+    return { visits: [], error: e };
+  }
+}
+
+// The business's own timezone, not the viewer's -- the same fixed zone
+// every confirmation/reminder email and booking.html already use, so a
+// time never reads differently here than in the email about it.
+function portalFormatVisitWhen(iso) {
+  return new Intl.DateTimeFormat('en-US', {
+    timeZone: 'America/Denver', weekday: 'long', month: 'long', day: 'numeric',
+    hour: 'numeric', minute: '2-digit',
+  }).format(new Date(iso));
+}
+
+// Month / day / weekday for a calendar-style date tile, in the same
+// business timezone as portalFormatVisitWhen() so the tile and the
+// sentence beside it can never disagree about which day it is.
+function portalVisitDateParts(iso) {
+  const d = new Date(iso);
+  const part = (opts) => new Intl.DateTimeFormat('en-US', Object.assign({ timeZone: 'America/Denver' }, opts)).format(d);
+  return { month: part({ month: 'short' }).toUpperCase(), day: part({ day: 'numeric' }), weekday: part({ weekday: 'short' }) };
+}
+
+function portalFormatVisitTime(iso) {
+  return new Intl.DateTimeFormat('en-US', {
+    timeZone: 'America/Denver', hour: 'numeric', minute: '2-digit',
+  }).format(new Date(iso));
+}
+
+// manage-booking.html is the existing guest reschedule/cancel page the
+// confirmation and reminder emails already link to with this exact
+// token. The RPC only returns a token while the booking is confirmed.
+function portalManageVisitUrl(visit) {
+  return visit && visit.manage_token
+    ? '/manage-booking.html?token=' + encodeURIComponent(visit.manage_token)
+    : '';
+}
+
+// Only confirmed visits that haven't ended yet, soonest first. Returns
+// a new array; never mutates what the RPC handed back.
+function portalUpcomingConfirmedVisits(visits, now) {
+  const nowMs = (now || new Date()).getTime();
+  return (visits || [])
+    .filter(v => v && v.status === 'confirmed' && v.start_at && new Date(v.end_at || v.start_at).getTime() > nowMs)
+    .slice()
+    .sort((a, b) => new Date(a.start_at) - new Date(b.start_at));
+}
+
+// ---------- Add to calendar (.ics) ----------
+// Same Blob-download approach tools/job-tracker.html's "Add to Phone"
+// already uses, but a timed event (DTSTART/DTEND in UTC) rather than
+// an all-day one, since every visit here has a real start time.
+// RFC 5545 details handled here that the internal version skips:
+// TEXT escaping (backslash, semicolon, comma, newline) and folding
+// lines longer than 75 octets -- a long street address plus the manage
+// link in DESCRIPTION can easily pass that.
+function portalIcsEscape(text) {
+  return String(text == null ? '' : text)
+    .replace(/\\/g, '\\\\')
+    .replace(/;/g, '\\;')
+    .replace(/,/g, '\\,')
+    .replace(/\r?\n/g, '\\n');
+}
+
+function portalIcsFold(line) {
+  // Folds on character boundaries at <=73 chars per physical line (a
+  // conservative stand-in for 75 octets that stays safe for the
+  // mostly-ASCII text this ever carries), continuation lines starting
+  // with a single space as the spec requires.
+  if (line.length <= 73) return line;
+  const parts = [line.slice(0, 73)];
+  let rest = line.slice(73);
+  while (rest.length) {
+    parts.push(' ' + rest.slice(0, 72));
+    rest = rest.slice(72);
+  }
+  return parts.join('\r\n');
+}
+
+function portalIcsUtc(date) {
+  return new Date(date).toISOString().replace(/[-:]/g, '').replace(/\.\d{3}/, '');
+}
+
+// visit: { uid, title, start, end?, address?, manageUrl? }. A visit
+// with no known end (a scheduled work request only stores a start)
+// gets the same 2-hour default every portal scheduling flow already
+// books with.
+function portalBuildVisitIcs(visit, now) {
+  const start = new Date(visit.start);
+  const end = visit.end ? new Date(visit.end) : new Date(start.getTime() + 120 * 60 * 1000);
+  const descParts = ['Questions, or running late? Call or text Triple H at (435) 414-1667.'];
+  if (visit.manageUrl) descParts.push('Reschedule or cancel: https://www.triplehenterprisesllc.biz' + visit.manageUrl);
+  const lines = [
+    'BEGIN:VCALENDAR',
+    'VERSION:2.0',
+    'PRODID:-//Triple H Enterprises//Client Portal//EN',
+    'CALSCALE:GREGORIAN',
+    'METHOD:PUBLISH',
+    'BEGIN:VEVENT',
+    'UID:' + portalIcsEscape(visit.uid) + '@triplehenterprisesllc.biz',
+    'DTSTAMP:' + portalIcsUtc(now || new Date()),
+    'DTSTART:' + portalIcsUtc(start),
+    'DTEND:' + portalIcsUtc(end),
+    'SUMMARY:' + portalIcsEscape('Triple H Enterprises: ' + (visit.title || 'Service visit')),
+    visit.address ? 'LOCATION:' + portalIcsEscape(visit.address) : '',
+    'DESCRIPTION:' + portalIcsEscape(descParts.join('\n')),
+    'BEGIN:VALARM',
+    'ACTION:DISPLAY',
+    'DESCRIPTION:' + portalIcsEscape('Triple H visit in 2 hours'),
+    'TRIGGER:-PT2H',
+    'END:VALARM',
+    'END:VEVENT',
+    'END:VCALENDAR',
+  ].filter(Boolean);
+  return lines.map(portalIcsFold).join('\r\n') + '\r\n';
+}
+
+function portalDownloadVisitIcs(visit) {
+  const ics = portalBuildVisitIcs(visit);
+  const blob = new Blob([ics], { type: 'text/calendar;charset=utf-8' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'Triple-H-visit-' + String(visit.title || 'appointment').replace(/[^a-z0-9]+/gi, '-').replace(/^-|-$/g, '').slice(0, 40) + '.ics';
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  setTimeout(() => URL.revokeObjectURL(url), 1500);
+  showToast('Calendar file downloaded. Open it to add the visit.');
+}
+
+// ---------- Unread messages (2026-09-22) ----------
+// Neither message table records whether a client has seen a reply, so
+// a client had no way to know Triple H answered without opening every
+// thread. client_portal_thread_reads + get_portal_unread_counts() /
+// mark_portal_thread_read() (sql/portal/create_client_portal_thread_reads.sql)
+// keep a per-thread "read through" watermark on the server, so it
+// follows the client across devices.
+//
+// Both helpers resolve (never throw) -- an unread badge is an
+// enhancement; a failed lookup just means no badges, never a broken page.
+async function portalLoadUnreadCounts(supabaseClient) {
+  try {
+    const { data, error } = await supabaseClient.rpc('get_portal_unread_counts');
+    if (error) { console.warn('Unread counts unavailable:', error.message || error); return []; }
+    return Array.isArray(data) ? data : [];
+  } catch (e) {
+    console.warn('Unread counts unavailable:', e && e.message ? e.message : e);
+    return [];
+  }
+}
+
+// seenThrough must be the RAW created_at string of the newest message
+// actually rendered -- never passed through new Date()/toISOString(),
+// which truncates Postgres's microseconds to milliseconds and would
+// leave that newest message permanently "unread". The server caps it
+// at now() and never moves a watermark backwards.
+async function portalMarkThreadRead(supabaseClient, threadType, threadId, seenThrough) {
+  try {
+    const { error } = await supabaseClient.rpc('mark_portal_thread_read', {
+      p_thread_type: threadType,
+      p_thread_id: threadId,
+      p_seen_through: seenThrough || null,
+    });
+    if (error) { console.warn('Could not mark thread read:', error.message || error); return false; }
+    return true;
+  } catch (e) {
+    console.warn('Could not mark thread read:', e && e.message ? e.message : e);
+    return false;
+  }
+}
+
+// Sums unread counts per tab and badges the bottom nav's Request
+// (work orders) and Jobs tabs. A real element, not a pseudo-element, so
+// it never collides with the active tab's ::after dot. The label keeps
+// the count for screen readers since the badge itself is aria-hidden.
+const PORTAL_NAV_UNREAD_TABS = [
+  { type: 'work_order', href: '/portal/work-orders.html', label: 'Request' },
+  { type: 'job', href: '/portal/jobs.html', label: 'Jobs' },
+];
+function portalApplyNavUnreadBadges(rows) {
+  const totals = {};
+  (rows || []).forEach(r => {
+    if (!r || !(Number(r.unread_count) > 0)) return;
+    totals[r.thread_type] = (totals[r.thread_type] || 0) + Number(r.unread_count);
+  });
+  PORTAL_NAV_UNREAD_TABS.forEach(tab => {
+    const link = document.querySelector('.portal-nav a[href="' + tab.href + '"]');
+    if (!link) return;
+    const n = totals[tab.type] || 0;
+    let badge = link.querySelector('.portal-nav-badge');
+    if (!n) {
+      if (badge) badge.remove();
+      link.removeAttribute('aria-label');
+      return;
+    }
+    if (!badge) {
+      badge = document.createElement('span');
+      badge.className = 'portal-nav-badge';
+      badge.setAttribute('aria-hidden', 'true');
+      link.appendChild(badge);
+    }
+    badge.textContent = n > 9 ? '9+' : String(n);
+    link.setAttribute('aria-label', tab.label + ', ' + n + ' new message' + (n === 1 ? '' : 's'));
+  });
+}
+
+// ---------- Message threads (2026-09-22) ----------
+// One renderer for both two-way threads (work requests and completed
+// jobs), which used to be two hand-copied versions: date-only meta
+// under every bubble, and on portal/jobs.html an "Invalid Date" on
+// every single message (its formatDate() appended 'T00:00:00' to a
+// full timestamp). Now: a day divider when the day changes, the time
+// on each bubble, the sender named only when it changes, and a "New"
+// divider above the first unread Triple H reply.
+function portalMessageTime(iso) {
+  return new Intl.DateTimeFormat('en-US', { hour: 'numeric', minute: '2-digit' }).format(new Date(iso));
+}
+
+function portalMessageDayLabel(iso, now) {
+  const d = new Date(iso);
+  const today = new Date((now || new Date()).getTime()); today.setHours(0, 0, 0, 0);
+  const day = new Date(d.getTime()); day.setHours(0, 0, 0, 0);
+  const diff = Math.round((today - day) / 86400000);
+  if (diff === 0) return 'Today';
+  if (diff === 1) return 'Yesterday';
+  const sameYear = d.getFullYear() === today.getFullYear();
+  return new Intl.DateTimeFormat('en-US', sameYear
+    ? { weekday: 'short', month: 'short', day: 'numeric' }
+    : { month: 'short', day: 'numeric', year: 'numeric' }).format(d);
+}
+
+// messages: [{ sender_type, message, created_at }] oldest first.
+// unreadCount: how many of the newest 'internal' messages are unread
+// (unread = every Triple H message after the watermark, so they are
+// always the LAST n internal messages).
+function portalMessageThreadHtml(messages, options) {
+  options = options || {};
+  const list = Array.isArray(messages) ? messages : [];
+  if (!list.length) {
+    return '<div class="portal-thread-empty">' + portalThreadEscape(options.emptyText || 'No messages yet. Ask us anything below.') + '</div>';
+  }
+  const unread = Number(options.unreadCount) || 0;
+  const internalIdx = [];
+  list.forEach((m, i) => { if (m.sender_type === 'internal') internalIdx.push(i); });
+  const firstUnreadIdx = unread > 0 && internalIdx.length ? internalIdx[Math.max(0, internalIdx.length - unread)] : -1;
+
+  let html = '<div class="portal-thread" role="log" aria-label="Messages">';
+  let lastDay = '';
+  let lastSender = '';
+  list.forEach((m, i) => {
+    const day = portalMessageDayLabel(m.created_at, options.now);
+    const isFirstUnread = i === firstUnreadIdx;
+    if (day !== lastDay) {
+      // A new day that also starts the unread run gets ONE combined
+      // divider ("Today · New") rather than two stacked lines.
+      html += isFirstUnread
+        ? '<div class="portal-thread-new"><span>' + portalThreadEscape(day) + ' &middot; New</span></div>'
+        : '<div class="portal-thread-day"><span>' + portalThreadEscape(day) + '</span></div>';
+      lastDay = day;
+      lastSender = '';
+    } else if (isFirstUnread) {
+      html += '<div class="portal-thread-new"><span>New</span></div>';
+      lastSender = '';
+    }
+    const isClient = m.sender_type === 'client';
+    const sender = isClient ? 'You' : 'Triple H';
+    html += '<div class="portal-msg ' + (isClient ? 'is-client' : 'is-internal') + '">' +
+      (sender !== lastSender ? '<div class="portal-msg-sender">' + sender + '</div>' : '') +
+      '<div class="portal-msg-bubble">' + portalThreadEscape(m.message) + '</div>' +
+      '<div class="portal-msg-time">' + portalThreadEscape(portalMessageTime(m.created_at)) + '</div>' +
+      '</div>';
+    lastSender = sender;
+  });
+  return html + '</div>';
+}
+
+// A private escape so this renderer never depends on each page having
+// defined its own escapeHtml() under the same name.
+function portalThreadEscape(str) {
+  return String(str == null ? '' : str)
+    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+}
+
+// The composer under a thread. inputId/sendId are how each page's own
+// send function finds the field and button; onSend is that page's own
+// function call as a string (e.g. "sendMessage(12)").
+function portalComposerHtml(inputId, sendId, onSend, placeholder) {
+  return '<div class="portal-composer">' +
+    '<textarea id="' + inputId + '" rows="1" maxlength="2000" placeholder="' + portalThreadEscape(placeholder || 'Write a message...') + '" aria-label="Write a message" ' +
+      'oninput="portalAutosizeComposer(this)" onkeydown="if((event.metaKey||event.ctrlKey)&&event.key===\'Enter\'){event.preventDefault();' + onSend + ';}"></textarea>' +
+    '<button type="button" class="portal-composer-send" id="' + sendId + '" onclick="' + onSend + '" aria-label="Send message">' +
+      '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12 20 4l-5 16-3.5-6.5z"/><path d="M11.5 13.5 20 4"/></svg>' +
+    '</button>' +
+  '</div>';
+}
+
+function portalAutosizeComposer(el) {
+  el.style.height = 'auto';
+  el.style.height = Math.min(el.scrollHeight, 140) + 'px';
+}
+
+// Newest message in view after (re)rendering a thread.
+function portalScrollThreadToEnd(panel) {
+  const thread = panel && panel.querySelector('.portal-thread');
+  if (thread) thread.scrollTop = thread.scrollHeight;
+}
+
+// Disables the composer while a send is in flight -- a double-tap used
+// to post the same message twice. Returns a restore() function for the
+// failure path; on success the page re-renders the whole thread anyway.
+function portalSetComposerSending(inputEl, sendBtn) {
+  if (inputEl) inputEl.disabled = true;
+  if (sendBtn) { sendBtn.disabled = true; sendBtn.classList.add('is-sending'); }
+  return function restore() {
+    if (inputEl) inputEl.disabled = false;
+    if (sendBtn) { sendBtn.disabled = false; sendBtn.classList.remove('is-sending'); }
+  };
+}
+
 // Deep-link from Home's action inbox (Pay / Approve / Sign / Reply)
 // onto the matching card. Pages call this after they finish rendering
 // so the target actually exists. Reuses dashboard.html's existing
