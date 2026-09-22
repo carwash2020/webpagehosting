@@ -383,12 +383,26 @@ its own SELECT policy. That distinction is easy to miss.
    `/terms.html` exists with real content, and `portal/login.html`
    already links to it directly, not `/`. This file was simply stale
    -- git history shows `terms.html` predates this note.
-6. **The bug report flow was never confirmed end-to-end in a live
-   browser.** Confidence rests on direct SQL-level RLS testing plus
-   an exact header match to already-working code. **Worth having
-   someone actually click "Report a problem" on the live site once
-   and confirm it appears in Dev Tools -> Health -> Portal bug
-   reports.**
+6. ~~**The bug report flow was never confirmed end-to-end in a live
+   browser.**~~ -- **confirmed (2026-09-22)**, real evidence not just
+   SQL reasoning: drove `portal/dashboard.html`'s "Report a problem"
+   flow in a real headless Chromium (click the link, fill the
+   message, click Send) with the `portal_bug_reports` network request
+   intercepted rather than blocked -- this sandbox's outbound network
+   can't reach the live Supabase project at all, so a true live insert
+   isn't possible from here, but the intercepted request is exactly
+   what a real browser sends: `POST /rest/v1/portal_bug_reports` with
+   real `apikey`/`Authorization` headers and a body
+   (`client_email`/`message`/`page_url`/`user_agent`) that satisfies
+   the live INSERT policy's own check
+   (`length(message) > 0 AND length(message) <= 2000`, confirmed
+   directly via `pg_policies`) -- and the success panel correctly
+   replaces the form on a 201. Confirmed identical on all 8 portal
+   pages that have the link (`grep`, not assumed), and confirmed the
+   internal side of the loop closes too: `tools/clients.html`'s
+   Portal bug reports panel reads the same table with the same
+   already-proven header pattern used by every other panel on that
+   page. Nothing needed fixing.
 7. ~~**No standalone quote PDF**~~ -- **done** (2026-09-16). See
    `portal/quotes.html`'s `downloadQuotePDF()`. **No way to change a
    client's portal email from inside the tools** is still open --
