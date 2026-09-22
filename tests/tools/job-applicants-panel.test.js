@@ -78,7 +78,7 @@ test('workspace.html: deleteApplicantFromDashboard is undoable, same 6-second-th
 });
 
 test('workspace.html: an unhandled applicant counts toward the Action Items badge and the "Needs response" lane count, same as an unhandled lead', () => {
-  assert.match(workspaceHtml, /const actionItemCounts = \{ workrequests: 0, leads: 0, applicants: 0, bookings: 0, duesoon: 0, followups: 0, unpaid: 0 \};/);
+  assert.match(workspaceHtml, /const actionItemCounts = \{ workrequests: 0, leads: 0, applicants: 0, bookings: 0, duesoon: 0, followups: 0, unpaid: 0, toinvoice: 0 \};/);
   const badgeFn = workspaceHtml.match(/function updateActionItemsBadge\(\)[\s\S]*?\n  \}\n/)[0];
   assert.match(badgeFn, /actionItemCounts\.workrequests \+ actionItemCounts\.leads \+ actionItemCounts\.applicants \+ actionItemCounts\.bookings/);
   assert.match(badgeFn, /actionItemCounts\.applicants > 0.*new applicant/);

@@ -1073,4 +1073,27 @@ Cross-logged from features.md (Workspace rework, part 1). Visual calls:
   charge. At 390px the last tab scrolls, the same as Finance's strip.
   Quick charge is also on the + sheet.
 
+## 2026-09-22 (later still) -- money pills and the job track
+
+- **Money pills** reuse each page's badge shape. To invoice is the only
+  loud one: a solid orange gradient link, since it's the only one that
+  asks for action. Invoiced is blue, Overdue red, Paid green, No charge
+  muted. Client Detail uses the shared `.th-pill` equivalents.
+- **Finished-but-unbilled cards** drop the 55% "history" dimming
+  (`.is-done.needs-invoice`), so the call to action isn't greyed out.
+- **Phone card badges** wrap under the title instead of squeezing it to
+  three lines. The Done badge hides on phones; the strikethrough
+  already says it.
+- **Job Detail track:** five hex dots on a line (`--hex` clip-path).
+  Reached dots are the orange gradient with an orange connector; the
+  next step is an orange ring that pulses (off under reduced motion);
+  the whole track goes green once paid. The next-step panel is tinted
+  orange for to-invoice (and for a booked job that's past its date) and
+  red for overdue.
+- **Dashboard rows:** Ready to invoice reuses the inbox's
+  `.dash-list-item` with the `is-unread` highlight for a week or older.
+  Invoice is a link styled as the Mark paid pill, beside a small round
+  ⋯. The Money Owed card's To invoice line is orange, a to-do rather
+  than a debt.
+
 <!-- Add new entries above this line -->

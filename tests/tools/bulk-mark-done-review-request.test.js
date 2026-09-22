@@ -61,7 +61,10 @@ test('bulkMarkJobsDone stops at the first confirmed review request instead of st
 });
 
 test('bulkMarkJobsDone passes the same name/job/phone params to review-request.html as the single-job flow', () => {
-  const singleFn = extractFn('setJobStatus');
+  // The single-job flow builds its link in reviewRequestHref() since
+  // 2026-09-22 (the Job done sheet offers the review after Create invoice).
+  const singleFn = extractFn('reviewRequestHref');
+  assert.match(extractFn('openJobDoneSheet'), /window\.location\.href = reviewRequestHref\(job\)/);
   const bulkFn = extractFn('bulkMarkJobsDone');
   for (const fn of [singleFn, bulkFn]) {
     assert.match(fn, /params\.set\('job', job\.title\)/);

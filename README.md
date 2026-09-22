@@ -3593,3 +3593,65 @@ Verified in a real headless Chromium (local HTTP, fake Supabase):
 - No console errors.
 
 New tests: `tests/tools/invoices-list-first.test.js` (13).
+
+## What changed, 2026-09-22 (later still) -- Workspace rework, part 5: nothing slips between Done and Paid
+
+Part 5 of the Workspace rework. Full reasoning in
+`docs/specialist-logs/features.md`.
+
+**Every job now knows where its money is.** A job is Booked, Working,
+To invoice, Invoiced, Overdue, Paid, or No charge. The stage is worked
+out from records that already exist: the job's status, the invoices
+carrying its `jobRefId`, and any payment logged against it by hand in
+Finance. The one new stored field is `noInvoice`, for "No charge". See
+`thJobMoneyStage()` in `data-layer.js`.
+
+**Finished jobs nobody billed are caught.**
+- **Dashboard:** Needs attention's Income lane gets **Ready to invoice**.
+  It lists jobs finished in the last 60 days with no invoice and no
+  payment logged, oldest first, each with an **Invoice** button that
+  opens the form filled from the job. Rows a week old or more are
+  highlighted. The ⋯ sheet covers the two honest reasons a finished job
+  has no invoice: it was paid another way (it opens Finance's income
+  form filled for that job), or there's no charge (a warranty callback,
+  a favor; undoable). The Money Owed card gets a **To invoice · N jobs**
+  line that jumps there. The count also joins the Income lane, the
+  Needs attention badge, and the app icon badge.
+- **Jobs:** a new **To invoice** filter with a count, and `#to-invoice`
+  deep links to it. Finished cards wear a money pill: an orange **To
+  invoice** link, or Invoiced, Overdue, Paid, or No charge. An unbilled
+  finished card is no longer dimmed like history. On a phone, a
+  finished card's badges wrap under the title, and the redundant Done
+  badge is hidden.
+- **Marking a job done** now opens a Job done sheet: **Create
+  invoice** first while nothing is billed, then the review request,
+  then **No charge**. It used to be a single "Send a review request?"
+  confirm, and the invoice was left to memory. Bulk mark-done is
+  unchanged.
+- **Job Detail** shows the job's track: Booked → Working → Done →
+  Invoiced → Paid, filled up to where it is, with a ring on the next
+  step. When paid it turns green. One line under it says what's next,
+  with the button for it: "Done, not invoiced yet" with Create invoice
+  and Paid another way, "$285.00 owed · 25 days overdue" with Follow
+  up, "Paid in full", or "Booked for tomorrow".
+- **Client Detail** lists each job with the same money pill.
+
+**Fixed along the way:**
+- **Job Detail's expense rows** read `description` / `category`, fields
+  expenses have never had (they're `desc` / `vendor` / `type`), so every
+  row said just "Expense".
+- **Job Detail's invoice rows** said Paid or Unpaid from the old `paid`
+  flag. They now use `paidAmount` first, like every other money view,
+  and can say Part paid or Overdue.
+
+Verified in a real headless Chromium (local HTTP, fake Supabase):
+- 390px and 1440px: the Dashboard's Ready to invoice group and its ⋯
+  sheet, and the Money Owed line.
+- Jobs' To invoice filter via `#to-invoice`, and the pills on finished
+  cards and on the desktop table.
+- The Job done sheet on a real Done tap (confetti still first).
+- Job Detail's track for a to-invoice, an overdue, a paid, and a booked
+  job.
+- No console errors.
+
+New tests: `tests/tools/job-money-pipeline.test.js` (15).

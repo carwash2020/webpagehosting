@@ -42,7 +42,9 @@ test('lane counts reuse actionItemCounts rather than a second calculation of the
   assert.match(fn, /setOpsLaneCount\('laneRespondCount', 'lane-respond', actionItemCounts\.workrequests \+ actionItemCounts\.leads \+ actionItemCounts\.applicants \+ actionItemCounts\.bookings\)/);
   assert.match(fn, /setOpsLaneCount\('laneSoonCount', 'lane-soon', actionItemCounts\.duesoon\)/);
   assert.match(fn, /setOpsLaneCount\('laneFollowCount', 'lane-follow', actionItemCounts\.followups\)/);
-  assert.match(fn, /setOpsLaneCount\('laneMoneyCount', 'lane-money', actionItemCounts\.unpaid\)/);
+  // The Income lane also counts finished jobs nobody billed (Ready to
+  // invoice, 2026-09-22 rework part 5).
+  assert.match(fn, /setOpsLaneCount\('laneMoneyCount', 'lane-money', actionItemCounts\.unpaid \+ actionItemCounts\.toinvoice\)/);
 });
 
 test('unread styling is driven by data that already exists (handled / submitted / overdue), not a new backend', () => {
