@@ -1063,4 +1063,103 @@ Left for later (not blockers): POS-into-Invoices as above; the
 breakpoint asserted by tests); `login.html`'s `ALLOWED_RETURN_PATHS`
 still lists `calendar.html`, harmless since the stub redirects.
 
+## 2026-09-21 -- Workspace IA round 2: POS into Invoices, tablet nav band, header arrow
+
+Owner's follow-up to the IA pass above: "do the pos merge and whatever
+else you think is good, we want maximum efficiency." The two items that
+pass left "for later" -- POS-into-Invoices and the 721-1023px band with
+neither nav -- were exactly the highest-leverage remaining fixes, plus
+one piece of chrome that the nav shell had made redundant.
+
+**POS -> Quick charge tab.** Harvested `pos.html`'s CSS, `.pos-card`
+markup, and script *programmatically* from the file (not retyped) and
+inserted them into `invoice-generator.html` as `#tab-pos`, so every
+existing POS test regex (`\n  \}\n` function boundaries, the email
+listener, `.pos-success-amount` 30px, the `succeeded -> showSuccess`
+branch) still matches the same text once the tests read the new file.
+Tab order Invoice | Quote / Estimate | Quick charge | Recent Invoices
+(`GEN_TAB_ORDER` drives the swipe). `activateGenTab` toggles the new
+panel; `#pos` in the URL activates it on load and focuses the email
+field. The one genuine cost flagged last time -- Stripe.js on every
+invoice open -- is avoided with `ensureStripeJs()`: the `js.stripe.com/
+v3/` tag is injected only inside `startNewCardCharge()`, started in
+parallel with the `create-pos-charge` call and awaited right before
+`mountCardEntry()`, with a no-op `.catch` on the promise so a rejection
+during the server round-trip is not an unhandled-rejection console
+error; a failed load removes the tag and clears the cached promise so
+the next tap retries, and the error surfaces through the existing
+`showError` path ("the card form (Stripe.js) did not load"). CSP gained
+`https://js.stripe.com` (script-src, frame-src -- it was `frame-src
+'none'`) and `https://api.stripe.com` (connect-src). No identifier
+collisions between the POS script and the invoice page or any shared
+script (checked by grep and by `check-undefined-vars`). The page-level
+`roleBlockedOverlay` (`canManageInvoices`) now gates the charge form
+too, which is stricter than pos.html was (its gate was only the nav
+link). `pos.html` is a stub to `invoice-generator.html#pos` (EXEMPT in
+check-consistency, kept in the service-worker precache so the old
+bookmark resolves offline); POS removed from `SIDEBAR_DESTS` /
+`NAV_PERMISSION_CHECKS` (so `MORE_DESTS` dropped it automatically) and
+from the tour, whose Invoices step now mentions Quick charge; tour goes
+15 -> 14 steps and the route-planner self-correction index 9 -> 8.
+
+**Tablet band.** Shared CSS: `.th-bottom-nav { display:flex }` and its
+`view-transition-name` scope moved from `max-width:720px` to `1023px`;
+`.th-more-sheet` hides from `min-width:1024px` (was 721); the
+`body.th-has-bottomnav` padding-bottom left the phone-only 720px block
+for its own `@media (max-width:1023px)` rule (equal specificity to the
+base `body.th-tool-page` padding, so it must stay later in the file --
+it does). New `(min-width:721px) and (max-width:1023px)` block centres
+the five items (`justify-content:center; gap:24px; max-width:96px`) and
+caps the More sheet panel at 560px centred (`left:0; right:0` +
+`max-width` + `margin:0 auto` centres an absolutely positioned box).
+The `.th-flag-btn` / `.th-cmdk-btn` offsets were already keyed to
+1024px, i.e. they assumed a bar that was not there in this band -- now
+it is. Every rule mirrored into `runway-dashboard.html`. The four
+tests pinning 720/721 re-anchored; `tests/design/tablet-nav-band.test.js`
+parses the four breakpoints out of both files and asserts they are
+complementary rather than pinning literals again.
+
+**Header arrow.** `body.th-has-bottomnav .hub-header-right >
+a.help-btn[href="/tools/workspace.html"] { display:none }` -- keyed on
+href + class because three pages label it "Back to Dashboard" and eight
+"Back to Workspace". `inject()` sets `th-has-bottomnav` and
+`th-has-sidebar` together, unconditionally, so the class means "the nav
+shell is here", and after the tablet fix the shell always carries Home.
+Runway's text `.back-link` gets the same treatment in its own CSS.
+`job-detail.html` (-> Job Tracker) and `site-content.html` (-> Dev
+Tools) are real up-one-level links and are deliberately not matched.
+Markup kept everywhere: `one-shell-header-and-layout-tokens.test.js`
+and `text-audit.test.js` read it, and a shell-less load keeps its way
+home. `login.html`'s `ALLOWED_RETURN_PATHS` never listed pos.html or
+clients.html (pre-existing; harmless -- an unlisted return path just
+lands on the dashboard).
+
+**Gotchas worth keeping:**
+- The POS tests' `assert.doesNotMatch(page, /client_portal_invoices|.../)`
+  was only true because POS had its own page; on the shared page it
+  has to be scoped to the Quick charge `<script>` block (marker comment
+  `// ---------- Quick charge (POS) ----------`).
+- An anchor of "end of the mobile @media block" (`transform: none; }\n}`)
+  occurs twice in styles-tools.css; anchor on the pad rule being
+  removed instead.
+- Playwright: `page.route` beats the harness's `ctx.route` catch-all,
+  so per-test mocks for `create-pos-charge` and a fake
+  `https://js.stripe.com/v3/` (`window.Stripe` stub whose
+  `confirmPayment` resolves `succeeded`) layer cleanly on top of it.
+
+Verified: suite 2631/2631, check-consistency, check-undefined-vars,
+lint, check-links.py, check-visual-snapshot all clean; real-browser
+pass at 390x844 / 820x1180 / 1440x900 covering both Quick charge paths,
+the blocked-Stripe.js error path, the `#pos` deep link and stub
+redirect, tablet bar + centred More sheet on three pages (Runway
+included), desktop sidebar-only, the hidden arrow at every width, and
+Job Detail's real back arrow still visible.
+
+Left for later (not blockers): the Runway Dashboard's "Business Health"
+tabs and a search-first Appliance Wiki (both from the original candidate
+list, both judged lower leverage than the three above); Stripe Elements'
+iframe is Stripe-hosted, so `frame-src https://js.stripe.com` is the
+minimum -- if the invoice page ever needs a stricter CSP, the Quick
+charge tab is the reason it cannot be `frame-src 'none'`.
+
 <!-- Add new entries above this line -->

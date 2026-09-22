@@ -68,7 +68,6 @@ test('sidebar and More sheet share grouped short labels without dropping a desti
     '/tools/route-planner.html',
     '/tools/clients.html',
     '/tools/invoice-generator.html',
-    '/tools/pos.html',
     '/tools/finance.html',
     '/tools/runway-dashboard.html',
     '/tools/contract-generator.html',

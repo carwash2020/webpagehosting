@@ -70,11 +70,11 @@ test('finance.html and parts-reference.html, which previously had NO container w
   }
 });
 
-test('the bottom nav bar stays display:none by default, only appearing under 720px -- confirms widening the container on desktop is safe and does not create a stray mobile-style nav on a wide screen', () => {
+test('the bottom nav bar stays display:none by default, only appearing below the sidebar\'s 1024px breakpoint (through the tablet band since 2026-09-21) -- confirms widening the container on desktop is safe and does not create a stray mobile-style nav on a wide screen', () => {
   const src = fs.readFileSync(path.join(TOOLS_DIR, 'styles-tools.css'), 'utf8');
   const rule = src.match(/\.th-bottom-nav \{([^}]*)\}/)[1];
   assert.match(rule, /display:\s*none/);
-  assert.match(src, /@media \(max-width: 720px\) \{ \.th-bottom-nav \{ display: flex/);
+  assert.match(src, /@media \(max-width: 1023px\) \{ \.th-bottom-nav \{ display: flex/);
 });
 
 test('CSS brace balance stays correct across every file touched by this change', () => {

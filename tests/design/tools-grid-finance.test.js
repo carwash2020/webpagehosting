@@ -5,7 +5,8 @@
 // tools-nav-pwa.js) already listed every destination, so the grid was a
 // third copy of the same navigation taking up the home screen. These
 // tests now guard the property that actually mattered: nothing the
-// grid used to reach became unreachable.
+// grid used to reach became unreachable. (POS left the list the same day
+// it became a tab inside Invoices -- see the dedicated test below.)
 
 const { test } = require('node:test');
 const assert = require('node:assert/strict');
@@ -19,7 +20,7 @@ const NAV = fs.readFileSync(path.join(TOOLS_DIR, 'tools-nav-pwa.js'), 'utf8');
 
 const FORMER_TILE_DESTS = [
   '/tools/job-tracker.html', '/tools/route-planner.html', '/tools/contract-generator.html',
-  '/tools/invoice-generator.html', '/tools/clients.html', '/tools/pos.html', '/tools/finance.html',
+  '/tools/invoice-generator.html', '/tools/clients.html', '/tools/finance.html',
   '/tools/runway-dashboard.html', '/tools/review-request.html', '/tools/parts-reference.html',
   '/tools/settings.html', '/tools/dev-tools.html',
 ];
@@ -39,11 +40,19 @@ test('every destination the tile grid used to link is still a sidebar / More-she
   assert.match(WORKSPACE, /href="\/tools\/job-tracker\.html#calendar"/, 'Calendar is reached from the daily-action strip');
 });
 
+test('POS, a former tile, is the Quick charge tab inside Invoices since 2026-09-21 -- reached through the Invoices link, and its old URL redirects', () => {
+  assert.doesNotMatch(NAV, /\/tools\/pos\.html/);
+  const invoice = fs.readFileSync(path.join(TOOLS_DIR, 'invoice-generator.html'), 'utf8');
+  assert.match(invoice, /data-tab="pos"[^>]*>Quick charge</);
+  const stub = fs.readFileSync(path.join(TOOLS_DIR, 'pos.html'), 'utf8');
+  assert.match(stub, /invoice-generator\.html#pos/);
+});
+
 test('the gated destinations keep their permission checks in the nav (the tile grid used to carry data-tile-perm for these)', () => {
   const checks = NAV.match(/var NAV_PERMISSION_CHECKS = \{([\s\S]*?)\};/)[1];
   for (const [href, fn] of [
     ['/tools/finance.html', 'canViewFinance'], ['/tools/runway-dashboard.html', 'canViewRunway'],
-    ['/tools/invoice-generator.html', 'canManageInvoices'], ['/tools/pos.html', 'canManageInvoices'],
+    ['/tools/invoice-generator.html', 'canManageInvoices'],
     ['/tools/clients.html', 'canManageInvoices'], ['/tools/contract-generator.html', 'canManageContracts'],
     ['/tools/review-request.html', 'canManageReviews'], ['/tools/dev-tools.html', 'hasDevToolsAccess'],
   ]) {

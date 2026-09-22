@@ -36,6 +36,7 @@ The public site uses one shared stylesheet (`styles.css`, repo root). The tool s
 - [What changed, 2026-09-08](#what-changed-2026-09-08)
 - [What changed, 2026-09-20 -- duplicate meta descriptions, a stale-date test time bomb, and a merged RLS policy](#what-changed-2026-09-20----duplicate-meta-descriptions-a-stale-date-test-time-bomb-and-a-merged-rls-policy)
 - [What changed, 2026-09-21 -- booking.html audit, referral-code refinements, and a cron auth incident](#what-changed-2026-09-21----bookinghtml-audit-referral-code-refinements-and-a-cron-auth-incident)
+- [What changed, 2026-09-21 -- Workspace IA round 2: POS folded into Invoices, tablets get the nav bar, one less header button](#what-changed-2026-09-21----workspace-ia-round-2-pos-folded-into-invoices-tablets-get-the-nav-bar-one-less-header-button)
 
 ## ⚠️ Read this before touching deployment at all
 
@@ -149,7 +150,7 @@ upside to offset the cost.
 | `tools/workspace.html` | **Dashboard** — the home screen, rebuilt Today-first on 2026-09-21: a one-line greeting band, then **Next Job** (tap-to-call, tap-for-directions, **Open Job**, and **Route today** — one Google Maps link through every address on today's schedule), **Money Owed** listing every unpaid invoice (overdue first) with a two-tap **Mark paid**, **Rest of Today**, the four daily actions (New job / Create invoice / Find client / Calendar), then the **Needs attention** inbox open by default (work requests, leads, applicants, bookings, jobs due this week, follow-ups, unpaid invoices). Business Snapshot, Analytics, Compliance & Documents, and the Gallery Queue sit collapsed under one **Business** label. No chip row, no tile grid: navigation is the sidebar (desktop) or bottom bar + More (phone). Bookmark this one. |
 | `tools/job-tracker.html` | Jobs, Contacts (with client history), Notes — 3 tabs, one page. The Jobs tab has three views, remembered per device: **List** (a sortable table on desktop), **Board** (Not Started / In Progress / Done columns), and **Calendar** (moved here from the retired `calendar.html` on 2026-09-21 — a month view of every dated job plus unconverted online bookings in purple, tap a day for detail, **Add to Phone** exports a `.ics`; deep link `#calendar`). Cost Lookup, Profitability, Income, and Expenses moved out to `finance.html` on 2026-08-20. |
 | `tools/finance.html` | Cost Lookup (with sales tax), Profitability, Income, Expenses (receipt required, mileage rate shared with Route Planner's cost analyzer) — split out of `job-tracker.html` on 2026-08-20 once these four had grown into an entire bookkeeping system living inside a job list. |
-| `tools/invoice-generator.html` | Invoice + Quote/Estimate tabs. Tax-aware, per-line "Taxable" toggle. Convert a Quote to an Invoice with one tap. Generates a branded PDF with your Venmo QR built in. Both logs support deleting an entry (added 2026-08-26, with real cross-device delete protection built in from day one -- see "Deletion resurrection / tombstones" in `DISASTER_RECOVERY.md`), separate from the invoice/quote PDF itself, which is unaffected either way. |
+| `tools/invoice-generator.html` | Invoice + Quote/Estimate + **Quick charge** + Recent tabs. Quick charge (moved here from the retired `pos.html` on 2026-09-21; deep link `#pos`) charges a client's card on the spot with no invoice -- one tap if that email has a saved card, otherwise a card form with a typed-name authorization; Stripe.js loads only at that moment. Tax-aware, per-line "Taxable" toggle. Convert a Quote to an Invoice with one tap. Generates a branded PDF with your Venmo QR built in. Both logs support deleting an entry (added 2026-08-26, with real cross-device delete protection built in from day one -- see "Deletion resurrection / tombstones" in `DISASTER_RECOVERY.md`), separate from the invoice/quote PDF itself, which is unaffected either way. |
 | `tools/contract-generator.html` | Fill in a client/job, generate a branded contract PDF to email/text. Has two signature canvases — see the swipe-gesture note below if working on touch gestures anywhere near this page. |
 | `tools/route-planner.html` | Multi-stop Google Maps route links + a fuel-cost/sales-tax "to and from" cost analyzer. |
 | `tools/review-request.html` | Generates a review-request text message; deep-linkable with a client name/job pre-filled. Also has Google/Yelp QR code tabs. |
@@ -162,7 +163,7 @@ upside to offset the cost.
 | `tools/job-detail.html` | Full detail view for one job (photos, linked invoices, margin) — reached from job-tracker.html or finance.html, not linked from the main nav directly. |
 | `tools/login.html` | Auth entry point for the whole suite. |
 | `tools/reset-password.html` | Password reset flow, reached from a Supabase auth email link. |
-| `tools/contact-card.html`, `tools/job-cost-lookup.html`, `tools/expense-logger.html`, `tools/calendar.html` | Retired — redirect stubs kept so old bookmarks don't 404. `contact-card.html` redirects into `job-tracker.html`'s Contacts tab (never moved); `job-cost-lookup.html` and `expense-logger.html` redirect into `finance.html`'s Cost Lookup/Expenses tabs (both moved there from Job Tracker on 2026-08-20); `calendar.html` redirects to `job-tracker.html#calendar` (the Calendar became a Job Tracker view on 2026-09-21). |
+| `tools/contact-card.html`, `tools/job-cost-lookup.html`, `tools/expense-logger.html`, `tools/calendar.html`, `tools/pos.html` | Retired — redirect stubs kept so old bookmarks don't 404. `contact-card.html` redirects into `job-tracker.html`'s Contacts tab (never moved); `job-cost-lookup.html` and `expense-logger.html` redirect into `finance.html`'s Cost Lookup/Expenses tabs (both moved there from Job Tracker on 2026-08-20); `calendar.html` redirects to `job-tracker.html#calendar` (the Calendar became a Job Tracker view on 2026-09-21); `pos.html` redirects to `invoice-generator.html#pos` (POS became the Quick charge tab the same day). |
 
 ## Shared files (used by BOTH the public site and internal tools — stayed at repo root deliberately)
 
@@ -2582,6 +2583,77 @@ so those 3 pages showed genuinely empty content until then. Added the
 same static skeleton markup to all 3. `settings.html` was also checked
 and found to already have skeletons on every dynamic panel -- no real
 gap there. Full detail in `docs/specialist-logs/features.md`.
+## What changed, 2026-09-21 -- Workspace IA round 2: POS folded into Invoices, tablets get the nav bar, one less header button
+
+Follow-up to the IA pass directly above, on the owner's instruction
+"do the pos merge and whatever else you think is good, we want maximum
+efficiency." Three changes, each finished end to end; the two items
+the previous entry left "for later" are both closed here.
+
+**1. POS is the Quick charge tab inside the Invoice Generator.**
+`pos.html` was a whole page, nav destination, and tour stop for one
+form (email, amount, description, charge) that shares its permission
+(`can_manage_invoices`) and its purpose -- getting paid for a job --
+with the invoice page. The form, its CSS, and its script moved into
+`invoice-generator.html` verbatim as a fourth tab: **Invoice | Quote /
+Estimate | Quick charge | Recent Invoices**, deep-linkable as `#pos`
+(the email field is focused on arrival, the way New job focuses its
+title). A Quick charge is still explicitly *not* an invoice: no line
+items, no due date, no portal record -- one card charge plus the Income
+entry `create-pos-charge`'s webhook already logs. The one real cost the
+earlier entry flagged -- putting Stripe.js on the invoice page -- is
+avoided: `js.stripe.com/v3/` is injected only when someone actually
+enters a *new* card (charging a saved card is a plain server call), so
+the Invoice and Quote tabs load nothing extra; the page's CSP allows
+Stripe's script, iframe, and API. `pos.html` is a redirect stub to
+`invoice-generator.html#pos`; POS left the sidebar / More sheet and the
+tour (the Invoices step mentions Quick charge instead).
+
+**2. Tablets get navigation.** The bottom bar stopped at 720px and the
+sidebar starts at 1024px, so an iPad or a half-screen desktop window had
+*no* navigation on any tool page -- the only way out was the browser's
+back button (a gap `docs/ARCHITECTURE-NOTES.md` had recorded). The bar,
+its More sheet, and the body padding that clears it now run to 1023px,
+so the two navs are complementary and exactly one is on screen at every
+width; in the 721-1023px band the five items cluster at the centre and
+the More sheet is a centred card instead of a full-bleed drawer. Mirrored
+in `runway-dashboard.html`'s own copy of the nav CSS, as that page
+requires. A new test (`tests/design/tablet-nav-band.test.js`) parses the
+breakpoints out of both files and asserts bar-max + 1 == sidebar-min.
+
+**3. One less header button.** With Home always one tap away in the bar
+or the sidebar, the header's back-to-Workspace arrow on eleven pages
+(and Runway's text "Back to Workspace" link) was a third copy of the
+same link. One shared rule hides it wherever the nav shell is present;
+the markup stays, so a page that ever loads without the shell keeps its
+way home, and real "up one level" arrows (Job Detail -> Job Tracker,
+Site Content -> Dev Tools) are untouched.
+
+### Before / after
+
+| | Before | After |
+|---|---|---|
+| Real tool pages | 18 | 17 (`pos.html` is a stub) |
+| Sidebar / More destinations | 13 | 12 |
+| Tour steps | 15 | 14 |
+| Widths with no navigation | 721-1023px on every page | none |
+| Header buttons on a tool page (phone) | help + back-arrow | help |
+| Charging a saved card, from the dashboard (phone) | More -> POS -> email -> Charge (4 taps, page load) | Invoices -> Quick charge -> email -> Charge (4 taps, page load) or 3 via the `#pos` link |
+| Stripe.js on the invoice page | never loaded (separate page) | loaded only when a new card is entered |
+
+Verified in a real headless Chromium (served over local HTTP, not
+`file://`) at 390x844, 820x1180, and 1440x900 with a fake Supabase and a
+mocked `create-pos-charge`: the `#pos` deep link and the `pos.html`
+redirect, the saved-card path (check -> one-tap Charge -> success card
+with the amount), the new-card path (authorization box before the card
+button, name required, Stripe.js tag injected only at that moment, card
+element mounted, confirm -> success), the blocked-Stripe.js error path
+re-enabling the button, tablets showing the bar and a centred More sheet
+on Job Tracker, Runway, and Invoices with no sidebar, desktop showing
+the sidebar with no bar, the arrow hidden at every width, and Job
+Detail's real back arrow still visible. Full suite 2631/2631,
+`check-consistency`, `check-undefined-vars`, `lint`, `check-links.py`,
+and `check-visual-snapshot` all clean.
 
 ## What changed, 2026-09-21 -- Workspace IA: a Today-first dashboard, Calendar folded into Job Tracker
 
@@ -2686,8 +2758,9 @@ console errors. Full suite 2615/2615, `check-consistency`,
 `tests/tools/dashboard-today-first.test.js`,
 `tests/tools/job-tracker-calendar-view.test.js`.
 
-Deliberately not done, noted for later: merging POS into the Invoice
-page (same permission, plausible tab, but adds Stripe.js to the invoice
-page's CSP -- a separate decision), and the 721-1023px tablet band
-that shows neither the bottom bar nor the sidebar (pre-existing; the
-720px breakpoint is asserted by several tests).
+Deliberately not done in this pass, noted for later: merging POS into
+the Invoice page (same permission, plausible tab, but adds Stripe.js to
+the invoice page's CSP -- a separate decision), and the 721-1023px
+tablet band that shows neither the bottom bar nor the sidebar
+(pre-existing; the 720px breakpoint is asserted by several tests).
+Both were done the same day in round 2 -- see the entry above.

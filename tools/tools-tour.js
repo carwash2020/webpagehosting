@@ -5,8 +5,9 @@
 // Excluded on purpose, and why:
 //   - job-cost-lookup.html, expense-logger.html, contact-card.html,
 //     calendar.html (retired 2026-09-21, now the Calendar view inside
-//     job-tracker.html) -- these are redirect stubs with no real
-//     content of their own.
+//     job-tracker.html), pos.html (retired 2026-09-21, now the Quick
+//     charge tab inside invoice-generator.html) -- these are redirect
+//     stubs with no real content of their own.
 //   - login.html, reset-password.html -- auth flow, not tools.
 //   - dev-tools.html, site-content.html -- password-gated developer
 //     tools, not appropriate for a general "how to use this app" tour.
@@ -37,8 +38,7 @@ const APP_TOUR_STEPS = [
   { page: '/tools/workspace.html', highlightSelector: '#section-snapshot', title: 'Business', body: 'Revenue, expenses, net, and outstanding balances for whatever period you pick, plus Analytics, Compliance (insurance and license dates), and the website Gallery Queue \u2014 each collapsed until you want it, since none of these is a daily check.' },
   { page: '/tools/job-tracker.html', highlightSelector: '#addJobBtn', title: 'Jobs', body: 'The moment you book a job, add it here. Long-press any job on the list to mark it done, edit it, or log an expense against it on the spot \u2014 no need to leave this page for that last one. Switch between List, Board, and Calendar with the buttons above the list \u2014 Calendar is a month view of every dated job, with one-tap export to your phone\u2019s own calendar app. Contacts and Notes tabs are right up top.' },
   { page: '/tools/finance.html', highlightSelector: '.tabs.tabs-sticky', title: 'Finance', body: 'Quoting a new job? Run the numbers in Cost Lookup first. Once it\u2019s done, Profitability shows what you actually made. Income and Expenses \u2014 including mileage \u2014 are the other two tabs, for everything money-related outside a specific job.' },
-  { page: '/tools/invoice-generator.html', highlightSelector: 'button[onclick="generatePDF({ send: true })"]', title: 'Invoices', body: 'Fill out a job here, then pick one: <strong>Download PDF</strong> just saves a branded invoice to your device, and <strong>Send to Client</strong> also emails it to them and puts it in their client portal. Either way the invoice is saved to your log. Need a price before the work starts instead? Switch to the Quote/Estimate tab.' },
-  { page: '/tools/pos.html', highlightSelector: '#posClientEmail', title: 'Point of Sale', body: 'Charging someone on the spot \u2014 standing in their driveway, job just finished \u2014 belongs here, not in Invoices. Enter their email, ring it up, and take the payment right now instead of billing them later.' },
+  { page: '/tools/invoice-generator.html', highlightSelector: 'button[onclick="generatePDF({ send: true })"]', title: 'Invoices', body: 'Fill out a job here, then pick one: <strong>Download PDF</strong> just saves a branded invoice to your device, and <strong>Send to Client</strong> also emails it to them and puts it in their client portal. Either way the invoice is saved to your log. Need a price before the work starts instead? Switch to the Quote/Estimate tab. Charging someone on the spot for a small job that needs no invoice \u2014 standing in their driveway, work just finished \u2014 is the <strong>Quick charge</strong> tab: enter their email, ring it up, and take the card right there.' },
   { page: '/tools/clients.html', highlightSelector: '#portalAccountSearch', title: 'Clients', body: 'This is the admin side of the client portal: search for a client\u2019s portal account, invite someone new, and check their invoices, work requests, and referral credit balance all in one place.' },
   { page: '/tools/route-planner.html', highlightSelector: '.add-stop-btn', title: 'Routes', body: 'Got three or four stops lined up for the day? Add them here and get the fastest order to drive them in, opened straight into Google Maps.' },
   { page: '/tools/contract-generator.html', highlightSelector: '.form-section', title: 'Contracts', body: 'Need something signed before you start a job? Fill in a Per-Job Work Order for a one-off, or a Service Agreement for ongoing work, and get a ready-to-send PDF back.' },

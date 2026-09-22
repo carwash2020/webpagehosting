@@ -35,7 +35,7 @@
 <meta name="color-scheme" content="dark">
 <meta name="robots" content="noindex, nofollow">
 <title>Invoice Generator | Triple H Enterprises (Internal Tool)</title>
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data:; connect-src 'self' https://*.supabase.co wss://*.supabase.co https://cdn.jsdelivr.net; frame-src 'none'; object-src 'none'; base-uri 'self'; frame-ancestors 'none';">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://js.stripe.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data:; connect-src 'self' https://*.supabase.co wss://*.supabase.co https://cdn.jsdelivr.net https://api.stripe.com; frame-src https://js.stripe.com; object-src 'none'; base-uri 'self'; frame-ancestors 'none';">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Anton&family=Archivo:wght@400..700&family=Newsreader:ital,opsz,wght@0,6..72,300..700;1,6..72,300..600&family=Oswald:wght@200..700&display=swap" rel="stylesheet">
@@ -52,16 +52,16 @@
   })();
 </script>
 <link rel="stylesheet" href="/styles.css?v=2e81706c3d">
-<link rel="stylesheet" href="/tools/styles-tools.css?v=29f50804f4">
+<link rel="stylesheet" href="/tools/styles-tools.css?v=6d5fc2ff02">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.112.3/dist/umd/supabase.js" integrity="sha384-qafw21c/iciq0VXsi9FzkfoQv5I/V0iqE4lSNcKXPnW9/UTJLnv5CcN4FHxVLnKg" crossorigin="anonymous" defer></script>
 <script src="/tools/sync.js?v=7b42b1caf0" defer></script>
 <script src="/tools/data-layer.js?v=c5d44f096e" defer></script>
 <script src="/tools/tools-effects.js?v=4cff99aa4a" defer></script>
 <script src="/tools/tools-dialogs.js?v=83d27784e2" defer></script>
 <script src="/tools/tools-media-sharing.js?v=0c229c9353" defer></script>
-<script src="/tools/tools-nav-pwa.js?v=127366ac2d" defer></script>
+<script src="/tools/tools-nav-pwa.js?v=44dffca71e" defer></script>
 <script src="/tools/tools-command-palette.js?v=36ecf5ee0e" defer></script>
-<script src="/tools/tools-tour.js?v=3397aa4aac" defer></script>
+<script src="/tools/tools-tour.js?v=f7a68f2675" defer></script>
 <!-- U15/W18 fix (High-Impact Upgrades, Master Audit, 2026-09-08): the
      masthead/footer/totals-block drawing code below moved into this
      shared file, now also used by job-detail.html's job sheet and
@@ -178,6 +178,66 @@
     background: rgba(58,160,255,0.1); border: 1px solid var(--blue); border-radius: 8px;
     padding: 12px 16px; font-size: 13px; color: var(--blue-light); margin-bottom: 20px;
   }
+
+  /* Quick charge (POS) tab, 2026-09-21 -- rules moved verbatim from the
+     retired pos.html so the flow looks exactly as it did on its own
+     page (and so its existing tests keep matching the same text). */
+  .pos-intro { max-width: 440px; margin: 0 auto 14px; font-size: 13.5px; line-height: 1.5; color: var(--text-dim); text-align: center; }
+  .pos-card {
+    background: var(--bg-panel-2); border: 1px solid var(--border); border-radius: var(--radius);
+    padding: 22px; max-width: 440px; margin: 0 auto;
+  }
+  .pos-field { margin-bottom: 16px; }
+  .pos-field label { display: block; font-size: 13px; font-weight: 600; color: var(--white); margin-bottom: 6px; }
+  .pos-field input[type="text"], .pos-field input[type="email"], .pos-field input[type="number"] {
+    width: 100%; box-sizing: border-box; padding: 12px 14px; background: var(--bg-panel); border: 1px solid var(--border);
+    border-radius: 8px; color: var(--white); font-size: 16px; font-family: inherit;
+  }
+  .pos-field input:focus { outline: none; border-color: var(--orange-light); }
+  .pos-amount-field input { font-size: 24px; font-weight: 700; }
+  .pos-saved-card-box {
+    display: flex; align-items: center; justify-content: space-between; gap: 12px;
+    padding: 14px 16px; background: var(--orange-tint-soft); border: 1px solid var(--orange-tint-border);
+    border-radius: 8px; margin-bottom: 14px;
+  }
+  .pos-saved-card-box .pos-card-label { font-size: 14px; color: var(--white); font-weight: 600; }
+  .pos-saved-card-box .pos-card-sub { font-size: 12px; color: var(--text-dim); margin-top: 2px; }
+  .pos-use-different { background: none; border: none; color: var(--text-dim); font-size: 12.5px; text-decoration: underline; cursor: pointer; padding: 0; font-family: inherit; margin-top: 10px; display: block; }
+  .pos-error { color: #ff8a80; font-size: 13.5px; margin-top: 10px; }
+  /* Charge success (2026-09-07): this fires the moment money actually
+     changes hands, the single most important confirmation in the whole
+     app, and it was a bare line of green text -- no more visual weight
+     than a validation error. Same checkmark-in-a-circle language
+     already used for "Completed Jobs" (portal home) and the teardown
+     device's finished state on the public site, so it reads as this
+     app's established way of saying "done", not a one-off. */
+  .pos-success {
+    text-align: center;
+    padding: 28px 20px 24px;
+    background: rgba(76,175,120,0.08);
+    border: 1px solid rgba(76,175,120,0.3);
+    border-radius: 10px;
+    margin-bottom: 14px;
+  }
+  .pos-success-icon {
+    width: 52px; height: 52px;
+    margin: 0 auto 14px;
+    border-radius: 50%;
+    background: rgba(76,175,120,0.15);
+    display: flex; align-items: center; justify-content: center;
+  }
+  .pos-success-icon svg { width: 26px; height: 26px; fill: none; stroke: #4caf78; stroke-width: 2.5; stroke-linecap: round; stroke-linejoin: round; }
+  .pos-success-amount { font-family: var(--font-ui); font-weight: 700; font-size: 30px; color: #4caf78; line-height: 1.1; }
+  .pos-success-sub { font-size: 13.5px; color: var(--text-dim); margin-top: 6px; }
+  .pos-checking { color: var(--text-dim); font-size: 13px; text-align: center; padding: 8px 0; }
+  .pos-auth-box {
+    background: var(--orange-tint-soft); border: 1px solid var(--orange-tint-border); border-radius: 8px;
+    padding: 14px 16px;
+  }
+  .pos-auth-text { font-size: 13px; line-height: 1.5; color: var(--white); margin: 0 0 12px; }
+  .pos-auth-text span { font-weight: 700; border-bottom: 1px dashed var(--orange-light); }
+  .pos-auth-label { display: block; font-size: 12px; font-weight: 600; color: var(--text-dim); margin-bottom: 6px; }
+  #posSignerName { width: 100%; box-sizing: border-box; padding: 10px 12px; background: var(--bg-panel); border: 1px solid var(--border); border-radius: 8px; color: var(--white); font-size: 15px; font-family: inherit; }
 </style>
 </head>
 <body>
@@ -207,6 +267,7 @@
 <div class="tabs tabs-sticky">
   <button class="tab-btn is-active" data-tab="invoice" onclick="activateGenTab('invoice')">Invoice</button>
   <button class="tab-btn" data-tab="quote" onclick="activateGenTab('quote')">Quote / Estimate</button>
+  <button class="tab-btn" data-tab="pos" onclick="activateGenTab('pos')">Quick charge</button>
   <button class="tab-btn" data-tab="recent" onclick="activateGenTab('recent')">Recent Invoices</button>
 </div>
 
@@ -505,6 +566,35 @@
   </div>
 </div>
 
+<!-- Quick charge (POS), 2026-09-21: moved here from the retired pos.html
+     (now a redirect stub to #pos). Same permission as the rest of this
+     page -- can_manage_invoices, which is also what gated the POS nav
+     link. A Quick charge is still explicitly NOT an invoice (no line
+     items, no due date, no portal record): it is a card charge plus an
+     Income entry. The tab just puts "get paid for a small job" on the
+     same page as the two other ways of billing one. Markup is verbatim
+     from pos.html; Stripe.js loads lazily (ensureStripeJs, below). -->
+<div class="tab-panel" id="tab-pos">
+  <p class="pos-intro">Charge a client's card directly for a quick job &mdash; no invoice, no line items, just an amount and a charge. If they've paid an invoice before, their card is already on file and it's one tap.</p>
+  <div class="pos-card">
+    <div class="pos-field">
+      <label for="posClientEmail">Client email</label>
+      <input type="email" id="posClientEmail" placeholder="client@example.com" autocomplete="off">
+    </div>
+    <div class="pos-field pos-amount-field">
+      <label for="posAmount">Amount</label>
+      <input type="number" id="posAmount" placeholder="0.00" min="0.50" step="0.01" inputmode="decimal">
+    </div>
+    <div class="pos-field">
+      <label for="posDescription">What's this for? <span class="label-hint">(optional)</span></label>
+      <input type="text" id="posDescription" placeholder="e.g. Furnace filter swap">
+    </div>
+
+    <div id="posChargeArea"></div>
+    <div class="pos-error" id="posError" style="display:none;"></div>
+  </div>
+</div>
+
 <script>
   // personDot() now lives in tools-effects.js (shared across all 4 tool
   // pages that use it) -- see that file for details. Call it with the
@@ -676,12 +766,13 @@
     document.getElementById('tab-invoice').classList.toggle('is-active', tab === 'invoice');
     document.getElementById('tab-quote').classList.toggle('is-active', tab === 'quote');
     document.getElementById('tab-recent').classList.toggle('is-active', tab === 'recent');
+    document.getElementById('tab-pos').classList.toggle('is-active', tab === 'pos');
     if (tab === 'recent' && typeof renderInvoiceLog === 'function') renderInvoiceLog();
     if (tab === 'recent' && typeof renderQuoteLog === 'function') renderQuoteLog();
     if (tab === 'recent' && typeof refreshPortalQuoteStatuses === 'function') refreshPortalQuoteStatuses();
   }
 
-  const GEN_TAB_ORDER = ['invoice', 'quote', 'recent'];
+  const GEN_TAB_ORDER = ['invoice', 'quote', 'pos', 'recent'];
   (function setupGenSwipe() {
     let touchStartX = 0, touchStartY = 0, touchStartTime = 0, startedInTable = false;
     document.body.addEventListener('touchstart', (e) => {
@@ -2272,6 +2363,15 @@
     addLineItem(); // start with one blank row
     recalc();
     applyJobRefFromUrl();
+    // Quick charge deep link (2026-09-21): the retired pos.html stub and
+    // any old POS bookmark redirect to #pos. Focus the email field the
+    // way New job focuses its title -- the person came here to charge
+    // someone, so the first tap should already be done for them.
+    if (window.location.hash === '#pos') {
+      activateGenTab('pos');
+      const posEmail = document.getElementById('posClientEmail');
+      if (posEmail) posEmail.focus();
+    }
     addQuoteLineItem();
     recalcQuote();
     initAppTour();
@@ -2336,6 +2436,344 @@
   });
 </script>
 
+<script>
+  // ---------- Quick charge (POS) ----------
+  // Moved here verbatim from pos.html on 2026-09-21 (that file is now a
+  // redirect stub to #pos). A Quick charge is still explicitly NOT an
+  // invoice: no line items, no due date, no portal record -- just a card
+  // charge (create-pos-charge) and the Income entry its webhook logs.
+  // Sharing this page means one fewer destination in the nav and the
+  // same permission gate (can_manage_invoices) for both.
+  // SUPABASE_URL and SUPABASE_ANON_KEY come from the shared
+  // /tools/auth.js (loaded above) -- this is an internal tools page,
+  // not a portal page. Real bug found and fixed (2026-09-04),
+  // reported directly: "the POS is still not working. No manual
+  // entry button and no charge card on file button pops up at all."
+  // This script used to redeclare BOTH names locally, which auth.js
+  // already declares at its own top level -- classic <script> tags
+  // on one page share a single lexical scope for top-level const/
+  // let/class, so this was a genuine SyntaxError ("Identifier
+  // 'SUPABASE_URL' has already been declared") that silently halted
+  // this ENTIRE inline script from ever executing. Every event
+  // listener, every function, everything below never ran at all --
+  // exactly matching "nothing pops up," since the only things that
+  // ever rendered were the plain HTML form fields, unaffected by a
+  // JS error in a script that never got the chance to run.
+  const STRIPE_PUBLISHABLE_KEY = 'pk_live_51TxzzNLJyq7HLm12tpc3XfPvsQK1vN7qHJ5KhvYhhi2YSFtPOqNXMTr2bTm7ADjwxtbUl2UmXg9kHGfzKve1izn700mFVhdVRo';
+
+  let stripeInstance = null;
+  let elementsInstance = null;
+  let lastCheckedEmail = null;
+  let savedCardInfo = null; // { brand, last4 } when a saved card is on file for the current email
+
+  // Stripe.js loads lazily (2026-09-21). pos.html pulled
+  // https://js.stripe.com/v3/ in its <head> on every open; on this page
+  // it is only ever needed once someone actually enters a NEW card
+  // (charging a saved card is a plain server call), so the tag is
+  // injected at that moment and the Invoice / Quote tabs pay nothing
+  // for it. Kicked off in parallel with the create-pos-charge call in
+  // startNewCardCharge() so it costs no extra wait in practice. A
+  // failed load clears the cached promise so the next tap retries.
+  let stripeJsPromise = null;
+  function ensureStripeJs() {
+    if (typeof Stripe === 'function') return Promise.resolve();
+    if (stripeJsPromise) return stripeJsPromise;
+    stripeJsPromise = new Promise((resolve, reject) => {
+      const tag = document.createElement('script');
+      tag.src = 'https://js.stripe.com/v3/';
+      tag.onload = () => resolve();
+      tag.onerror = () => {
+        tag.remove();
+        stripeJsPromise = null;
+        reject(new Error('the card form (Stripe.js) did not load. Check the connection and try again.'));
+      };
+      document.head.appendChild(tag);
+    });
+    return stripeJsPromise;
+  }
+
+  function showError(msg) {
+    const el = document.getElementById('posError');
+    el.textContent = msg;
+    el.style.display = msg ? 'block' : 'none';
+  }
+
+  // Debounced on the email field (2026-09-03) -- checking after every
+  // keystroke would fire a real network call (and a real Stripe API
+  // read) far more often than needed; waiting for a short pause in
+  // typing is the same debounce pattern already used elsewhere in
+  // this project's tools (debouncedCall in parts-reference.html).
+  let checkTimer = null;
+  document.getElementById('posClientEmail').addEventListener('input', () => {
+    clearTimeout(checkTimer);
+    const email = document.getElementById('posClientEmail').value.trim();
+    const area = document.getElementById('posChargeArea');
+    savedCardInfo = null;
+    if (!email) {
+      // The natural starting state -- nothing typed yet, nothing to
+      // say about it.
+      area.innerHTML = '';
+      return;
+    }
+    if (!email.includes('@')) {
+      // Real bug found and fixed (2026-09-03), reported directly with
+      // a screenshot: a typo'd email ("testemajl.gmail.com" -- no @)
+      // silently cleared the charge area with zero explanation. There
+      // was text on screen and a blank space below it with no hint
+      // why nothing was happening.
+      area.innerHTML = '<div class="pos-checking">That doesn\'t look like a complete email yet.</div>';
+      return;
+    }
+    checkTimer = setTimeout(() => checkForSavedCard(email), 500);
+  });
+
+  async function checkForSavedCard(email) {
+    lastCheckedEmail = email;
+    const area = document.getElementById('posChargeArea');
+    area.innerHTML = '<div class="pos-checking">Checking for a saved card...</div>';
+    showError('');
+    try {
+      if (typeof ensureFreshToken === 'function') await ensureFreshToken();
+      const res = await fetch(SUPABASE_URL + '/functions/v1/create-pos-charge', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'apikey': SUPABASE_ANON_KEY,
+          'Authorization': 'Bearer ' + getAuthToken(),
+        },
+        body: JSON.stringify({ mode: 'check', client_email: email }),
+      });
+      const result = await res.json();
+      // A stale response for an email the user has since changed
+      // (they kept typing while this was in flight) must never
+      // overwrite what's currently on screen.
+      if (email !== lastCheckedEmail) return;
+      // Real bug found and fixed (2026-09-03), reported directly:
+      // "once you type in the info there is no submit option... that
+      // pops up." A failed check (a real server error, a slow cold
+      // start, anything) used to clear the area to nothing at all --
+      // leaving no way to charge the client even manually. Checking
+      // for a saved card is purely a convenience; its failure must
+      // never block the fallback that always works.
+      if (!result.ok) { renderNewCardOption(); showError('Could not check for a saved card, but you can still enter one manually.'); return; }
+      if (result.has_saved_card) {
+        savedCardInfo = { brand: result.brand, last4: result.last4 };
+        renderSavedCardOption();
+      } else {
+        savedCardInfo = null;
+        renderNewCardOption();
+      }
+    } catch (e) {
+      if (email !== lastCheckedEmail) return;
+      // Same reasoning as the !result.ok branch just above -- a
+      // network hiccup checking for a saved card must never be the
+      // reason there's nothing to click at all.
+      renderNewCardOption();
+      showError('Could not check for a saved card, but you can still enter one manually.');
+    }
+  }
+
+  function renderSavedCardOption() {
+    const area = document.getElementById('posChargeArea');
+    const brandLabel = (savedCardInfo.brand || 'card').charAt(0).toUpperCase() + (savedCardInfo.brand || 'card').slice(1);
+    area.innerHTML =
+      '<div class="pos-saved-card-box">' +
+      '<div><div class="pos-card-label">' + escapeHtmlPos(brandLabel) + ' ending in ' + escapeHtmlPos(savedCardInfo.last4) + '</div>' +
+      '<div class="pos-card-sub">Saved from a previous payment</div></div>' +
+      '</div>' +
+      '<button class="primary-btn" id="posChargeSavedBtn" style="width:100%; justify-content:center;" onclick="chargeSavedCard()">Charge Saved Card</button>' +
+      '<button type="button" class="pos-use-different" onclick="renderNewCardOption()">Use a different card instead</button>';
+  }
+
+  function renderNewCardOption() {
+    // Signature capture (2026-09-03), requested directly: "we also
+    // need to collect signitures when we collect and create accounts
+    // within stripe incase we ever have to handle a dispute." This is
+    // exactly the moment a new card gets saved for future off-session
+    // use -- and here, Connor may be the one typing the client's card
+    // in rather than the client typing it themselves, which carries
+    // real dispute risk a client-entered online payment doesn't.
+    const area = document.getElementById('posChargeArea');
+    area.innerHTML =
+      '<div class="pos-auth-box">' +
+      '<p class="pos-auth-text">I, <span id="posSignerNamePreview">_____________</span>, authorize Triple H Enterprises to charge <span id="posAuthAmountPreview"></span> to the card provided for "<span id="posAuthDescPreview"></span>", and to securely save this card on file for future charges I separately approve.</p>' +
+      '<label for="posSignerName" class="pos-auth-label">Client\'s full legal name (typed as signature)</label>' +
+      '<input type="text" id="posSignerName" placeholder="Full name" oninput="document.getElementById(\'posSignerNamePreview\').textContent = this.value.trim() || \'_____________\';">' +
+      '</div>' +
+      '<button class="primary-btn" id="posNewCardBtn" style="width:100%; justify-content:center; margin-top:12px;" onclick="startNewCardCharge()">Enter Card &amp; Charge</button>';
+    updateAuthPreview();
+  }
+
+  // Keeps the authorization preview text in sync with the amount and
+  // description fields for as long as the signature box is showing --
+  // real correctness fix, not cosmetic: without this, editing the
+  // amount AFTER the preview first rendered would let the client sign
+  // for one figure while a different one actually gets charged and
+  // recorded, which would completely undermine the point of capturing
+  // this in the first place. Called on input from both fields
+  // (wired below) and once immediately when the box is first shown.
+  function updateAuthPreview() {
+    const amountEl = document.getElementById('posAuthAmountPreview');
+    const descEl = document.getElementById('posAuthDescPreview');
+    if (!amountEl || !descEl) return; // signature box isn't showing right now
+    const amount = parseFloat(document.getElementById('posAmount').value) || 0;
+    const description = document.getElementById('posDescription').value.trim() || 'a POS sale';
+    amountEl.textContent = '$' + amount.toFixed(2);
+    descEl.textContent = description;
+  }
+  document.getElementById('posAmount').addEventListener('input', updateAuthPreview);
+  document.getElementById('posDescription').addEventListener('input', updateAuthPreview);
+
+  // The POS flow's own tiny escaping helper. It came over from pos.html,
+  // which loaded no shared script providing one; kept here rather than
+  // swapped for tools-dialogs.js's escapeHtml() so the moved code stays
+  // verbatim and its tests keep reading the same text.
+  function escapeHtmlPos(str) {
+    const div = document.createElement('div');
+    div.textContent = String(str == null ? '' : str);
+    return div.innerHTML;
+  }
+
+  function readAmountAndDescription() {
+    const email = document.getElementById('posClientEmail').value.trim();
+    const amount = parseFloat(document.getElementById('posAmount').value);
+    const description = document.getElementById('posDescription').value.trim();
+    if (!email.includes('@')) { showError('Enter a real client email.'); return null; }
+    if (!(amount > 0)) { showError('Enter a real amount.'); return null; }
+    return { email, amount, description };
+  }
+
+  async function chargeSavedCard() {
+    const fields = readAmountAndDescription();
+    if (!fields) return;
+    showError('');
+    const btn = document.getElementById('posChargeSavedBtn');
+    btn.disabled = true;
+    btn.textContent = 'Charging...';
+    try {
+      if (typeof ensureFreshToken === 'function') await ensureFreshToken();
+      const res = await fetch(SUPABASE_URL + '/functions/v1/create-pos-charge', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'apikey': SUPABASE_ANON_KEY,
+          'Authorization': 'Bearer ' + getAuthToken(),
+        },
+        body: JSON.stringify({ mode: 'charge_saved', client_email: fields.email, amount: fields.amount, description: fields.description }),
+      });
+      const result = await res.json();
+      if (!result.ok) {
+        showError(result.error || 'The charge was not approved.');
+        btn.disabled = false;
+        btn.textContent = 'Charge Saved Card';
+        return;
+      }
+      showSuccess(fields.amount);
+    } catch (e) {
+      showError('Could not reach the server: ' + (e.message || String(e)));
+      btn.disabled = false;
+      btn.textContent = 'Charge Saved Card';
+    }
+  }
+
+  async function startNewCardCharge() {
+    const fields = readAmountAndDescription();
+    if (!fields) return;
+    const signerName = (document.getElementById('posSignerName')?.value || '').trim();
+    if (!signerName) {
+      showError("The client's full name is required before entering a card.");
+      return;
+    }
+    showError('');
+    const btn = document.getElementById('posNewCardBtn');
+    btn.disabled = true;
+    btn.textContent = 'Loading...';
+    try {
+      const stripeReady = ensureStripeJs();
+      stripeReady.catch(() => {}); // handled at the await below; this only keeps the console quiet meanwhile
+      if (typeof ensureFreshToken === 'function') await ensureFreshToken();
+      const res = await fetch(SUPABASE_URL + '/functions/v1/create-pos-charge', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'apikey': SUPABASE_ANON_KEY,
+          'Authorization': 'Bearer ' + getAuthToken(),
+        },
+        body: JSON.stringify({ mode: 'new_card', client_email: fields.email, amount: fields.amount, description: fields.description, signer_name: signerName }),
+      });
+      const result = await res.json();
+      if (!result.ok) {
+        showError(result.error || 'Something went wrong.');
+        btn.disabled = false;
+        btn.textContent = 'Enter Card & Charge';
+        return;
+      }
+      await stripeReady;
+      mountCardEntry(result.client_secret);
+    } catch (e) {
+      showError('Could not reach the server: ' + (e.message || String(e)));
+      btn.disabled = false;
+      btn.textContent = 'Enter Card & Charge';
+    }
+  }
+
+  // Same Stripe Elements mount-and-confirm pattern already proven in
+  // portal/dashboard.html's mountPaymentUI() -- kept consistent rather
+  // than reinvented, since it's the same underlying Stripe integration
+  // just triggered from the internal side instead of the client side.
+  function mountCardEntry(clientSecret) {
+    if (!stripeInstance) stripeInstance = Stripe(STRIPE_PUBLISHABLE_KEY);
+    elementsInstance = stripeInstance.elements({ clientSecret });
+    const area = document.getElementById('posChargeArea');
+    area.innerHTML =
+      '<div id="posPaymentElement"></div>' +
+      '<button class="primary-btn" id="posConfirmBtn" style="width:100%; justify-content:center; margin-top:14px;">Charge</button>';
+    elementsInstance.create('payment').mount('#posPaymentElement');
+
+    document.getElementById('posConfirmBtn').addEventListener('click', async () => {
+      const btn = document.getElementById('posConfirmBtn');
+      btn.disabled = true;
+      btn.textContent = 'Processing...';
+      showError('');
+
+      const { error, paymentIntent } = await stripeInstance.confirmPayment({
+        elements: elementsInstance,
+        redirect: 'if_required',
+      });
+
+      if (error) {
+        showError(error.message || 'Charge failed. Please try again.');
+        btn.disabled = false;
+        btn.textContent = 'Charge';
+        return;
+      }
+      if (paymentIntent && paymentIntent.status === 'succeeded') {
+        showSuccess(parseFloat(document.getElementById('posAmount').value));
+      }
+    });
+  }
+
+  function showSuccess(amount) {
+    document.getElementById('posChargeArea').innerHTML =
+      '<div class="pos-success">' +
+        '<div class="pos-success-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg></div>' +
+        '<div class="pos-success-amount">$' + amount.toFixed(2) + '</div>' +
+        '<div class="pos-success-sub">Charged and logged to Income</div>' +
+      '</div>' +
+      '<button class="secondary-btn" style="width:100%; justify-content:center;" onclick="resetPosForm()">New Charge</button>';
+  }
+
+  function resetPosForm() {
+    document.getElementById('posClientEmail').value = '';
+    document.getElementById('posAmount').value = '';
+    document.getElementById('posDescription').value = '';
+    document.getElementById('posChargeArea').innerHTML = '';
+    showError('');
+    savedCardInfo = null;
+    lastCheckedEmail = null;
+  }
+</script>
+
 <div class="help-modal-overlay" id="helpModalOverlay" onclick="if(event.target===this) closeHelpModal()">
   <div class="help-modal">
     <button class="help-modal-close" onclick="closeHelpModal()" aria-label="Close">&times;</button>
@@ -2345,6 +2783,7 @@
       <ul>
         <li><strong>Invoice tab</strong> &mdash; fill in <strong>Invoice Details</strong> and <strong>Bill To</strong>, then add each line item (labor, parts, etc.) in the line-items table. Uncheck "Tax?" on any row that's exempt (see the note above the totals for why some rows might not be taxable). Use Download PDF for a branded copy, or Send to Client to email it and post it to their portal.</li>
         <li><strong>Quote / Estimate tab</strong> &mdash; same idea, before a job starts, including the same tax handling. Download an estimate PDF (clearly labeled as an estimate, not a bill), or tap <strong>Convert to Invoice</strong> once the work's done to copy everything straight over to the Invoice tab instead of re-typing it &mdash; including which rows were marked taxable.</li>
+        <li><strong>Quick charge tab</strong> &mdash; for a small job that doesn't need a real invoice: enter the client's email and an amount and charge their card on the spot. If that email has paid an invoice before, their card is already saved (this happens automatically the first time anyone pays an invoice) and you'll see a one-tap Charge button; otherwise you get a normal card form, and that card gets saved for next time too, after the client types their name as an authorization. Every POS sale shows up in your Income log the same way any other payment does, tagged so you can always tell it apart from an invoice &mdash; it never creates an invoice, a quote, or a portal record of any kind.</li>
         <li>The sales tax rate is shared with Finance's Cost Lookup tab &mdash; change it in either place and it updates everywhere.</li>
         <li>Everything generated here is saved automatically &mdash; invoices and estimates are logged on this device (and synced, if Cloud Sync is set up), and every invoice also flows into Finance's Income tab. Nothing needs re-entering elsewhere.</li>
       </ul>

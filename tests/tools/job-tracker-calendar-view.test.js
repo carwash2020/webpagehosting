@@ -168,12 +168,13 @@ test('the .ics export survives the move: RFC 5545 all-day event with escaped tex
   await settle();
 });
 
-test('the nav lost Calendar and the phone bar gained Clients (13 sidebar destinations, 5 in the bar)', () => {
+test('the nav lost Calendar and the phone bar gained Clients (12 sidebar destinations after POS also folded into Invoices later the same day, 5 in the bar)', () => {
   const dests = NAV.match(/var DESTS = \[([\s\S]*?)\];/)[1];
   const labels = [...dests.matchAll(/label: '([^']+)'/g)].map(m => m[1]);
   assert.deepEqual(labels, ['Home', 'Jobs', 'Clients', 'Invoices', 'Finance']);
   const sidebar = NAV.match(/var SIDEBAR_DESTS = \[([\s\S]*?)\];/)[1];
-  assert.equal((sidebar.match(/href: '/g) || []).length, 13);
+  assert.equal((sidebar.match(/href: '/g) || []).length, 12);
+  assert.doesNotMatch(sidebar, /\/tools\/pos\.html/, 'POS is the Quick charge tab inside Invoices now');
   assert.doesNotMatch(NAV, /\/tools\/calendar\.html/);
   assert.doesNotMatch(TOUR, /\/tools\/calendar\.html/, 'the tour no longer visits a redirect stub');
   assert.match(TOUR, /Switch between List, Board, and Calendar/);

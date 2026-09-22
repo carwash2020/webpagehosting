@@ -62,12 +62,14 @@ sit silently broken for several pushes before it was found).
    folded into Job Tracker as a view; Clients took its bar slot; the
    dashboard's chip row and tile grid removed). Still open from that
    early list: splitting Business Health's unrelated tabs, making the
-   Appliance Wiki search-first by default. Also noted then and left
-   alone: 721--1023px (tablet portrait) shows neither the bottom bar
-   nor the sidebar, so navigation there is the header back-arrow and
-   the dashboard -- a real gap, but changing the bar's 720px breakpoint
-   is asserted by several tests and was judged out of scope for the
-   IA pass.
+   Appliance Wiki search-first by default. The 721--1023px band that
+   showed neither the bottom bar nor the sidebar was closed the same
+   day (round 2): the bar now runs to 1023px and the sidebar starts at
+   1024px, complementary by test (`tests/design/tablet-nav-band.test.js`
+   parses both breakpoints out of styles-tools.css AND
+   runway-dashboard.html's mirrored copy). POS folded into the Invoice
+   Generator as the Quick charge tab in the same round; the header
+   back-to-Workspace arrow is hidden wherever the nav shell is present.
 
 ## Don't re-litigate these (already decided, with real reasons)
 
@@ -77,7 +79,7 @@ sit silently broken for several pushes before it was found).
   cross-referencing itemized records into manual monthly totals --
   don't rebuild this.
 - `job-cost-lookup.html`/`expense-logger.html`/`contact-card.html`/
-  `calendar.html` (retired 2026-09-21) stay as redirect stubs, not
+  `calendar.html`/`pos.html` (both retired 2026-09-21) stay as redirect stubs, not
   deleted -- old bookmarks matter.
 - The Graveyard (added 2026-08-26) intentionally does NOT cover a
   deleted expense's attached receipt photo -- that file is removed

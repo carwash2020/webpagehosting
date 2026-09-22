@@ -13,7 +13,14 @@ const repo = (...p) => path.join(__dirname, '..', '..', ...p);
 const PAYMENT_INTENT = fs.readFileSync(repo('edge-functions', 'create-payment-intent-index.ts'), 'utf8');
 const POS_CHARGE = fs.readFileSync(repo('edge-functions', 'create-pos-charge-index.ts'), 'utf8');
 const WEBHOOK = fs.readFileSync(repo('edge-functions', 'stripe-webhook-index.ts'), 'utf8');
-const POS_PAGE = fs.readFileSync(repo('tools', 'pos.html'), 'utf8');
+// 2026-09-21: the POS flow lives on invoice-generator.html (Quick charge
+// tab); pos.html is a redirect stub. The script moved verbatim.
+const POS_PAGE = fs.readFileSync(repo('tools', 'invoice-generator.html'), 'utf8');
+const POS_SCRIPT = (() => {
+  const start = POS_PAGE.indexOf('// ---------- Quick charge (POS) ----------');
+  assert.ok(start > 0, 'expected the Quick charge script block on invoice-generator.html');
+  return POS_PAGE.slice(start, POS_PAGE.indexOf('</script>', start));
+})();
 const WORKSPACE = fs.readFileSync(repo('tools', 'workspace.html'), 'utf8');
 
 // ---- Saved cards on the normal invoice payment flow ----
@@ -178,6 +185,20 @@ test('the saved-card charge and the fresh-card flow both call create-pos-charge 
   assert.match(POS_PAGE, /mode: 'new_card', client_email: fields\.email/);
 });
 
+test('Stripe.js is loaded lazily on the invoice page -- only when a new card is actually entered, never in <head>', () => {
+  assert.doesNotMatch(POS_PAGE, /<script src="https:\/\/js\.stripe\.com/, 'no eager Stripe.js tag on the invoice page');
+  assert.match(POS_SCRIPT, /function ensureStripeJs\(\)/);
+  assert.match(POS_SCRIPT, /tag\.src = 'https:\/\/js\.stripe\.com\/v3\/';/);
+  const fnMatch = POS_SCRIPT.match(/async function startNewCardCharge\(\)[\s\S]*?\n  \}\n/);
+  assert.ok(fnMatch, 'expected to isolate startNewCardCharge()');
+  assert.match(fnMatch[0], /const stripeReady = ensureStripeJs\(\);/);
+  assert.match(fnMatch[0], /await stripeReady;\s*mountCardEntry\(result\.client_secret\);/);
+  const csp = POS_PAGE.match(/<meta http-equiv="Content-Security-Policy" content="([^"]+)"/)[1];
+  assert.match(csp, /script-src [^;]*https:\/\/js\.stripe\.com/);
+  assert.match(csp, /frame-src https:\/\/js\.stripe\.com/);
+  assert.match(csp, /connect-src [^;]*https:\/\/api\.stripe\.com/);
+});
+
 test('the fresh-card flow reuses the exact Stripe Elements mount-and-confirm pattern already proven in portal/dashboard.html', () => {
   const fnMatch = POS_PAGE.match(/function mountCardEntry\(clientSecret\)[\s\S]*?\n  \}\n/);
   assert.ok(fnMatch, 'expected to isolate mountCardEntry()');
@@ -186,22 +207,27 @@ test('the fresh-card flow reuses the exact Stripe Elements mount-and-confirm pat
   assert.match(body, /redirect: 'if_required',/);
 });
 
-test('POS never creates an invoice, quote, or portal record -- only a charge and an income entry', () => {
-  assert.doesNotMatch(POS_PAGE, /client_portal_invoices|client_portal_quotes|client_portal_jobs|client_portal_work_orders/);
+test('POS never creates an invoice, quote, or portal record -- only a charge and an income entry (scoped to the Quick charge script now that it shares a page with the invoice code)', () => {
+  assert.doesNotMatch(POS_SCRIPT, /client_portal_invoices|client_portal_quotes|client_portal_jobs|client_portal_work_orders/);
 });
 
 // ---- workspace.html: the tile ----
 
-test('POS is a nav destination gated by the same permission as Invoices and Clients (the dashboard tile grid that used to carry this went away on 2026-09-21)', () => {
+test('POS is the Quick charge tab inside Invoices (2026-09-21), so it rides the Invoices nav link and its can_manage_invoices gate; pos.html redirects there', () => {
   const NAV = fs.readFileSync(repo('tools', 'tools-nav-pwa.js'), 'utf8');
-  assert.match(NAV, /href: '\/tools\/pos\.html',\s+icon: 'dollar',\s+label: 'POS'/);
-  assert.match(NAV, /'\/tools\/pos\.html': function \(\) \{ return typeof canManageInvoices === 'function' && canManageInvoices\(\); \}/);
+  assert.doesNotMatch(NAV, /\/tools\/pos\.html/, 'POS must not be its own nav destination any more');
+  assert.match(POS_PAGE, /<button class="tab-btn" data-tab="pos" onclick="activateGenTab\('pos'\)">Quick charge<\/button>/);
+  assert.match(POS_PAGE, /<div class="tab-panel" id="tab-pos">/);
+  assert.match(POS_PAGE, /GEN_TAB_ORDER = \['invoice', 'quote', 'pos', 'recent'\]/);
+  const stub = fs.readFileSync(repo('tools', 'pos.html'), 'utf8');
+  assert.match(stub, /location\.replace\('\/tools\/invoice-generator\.html#pos'\)/);
+  assert.match(POS_PAGE, /window\.location\.hash === '#pos'/, 'the deep link the stub lands on must open the tab');
   assert.match(NAV, /'\/tools\/invoice-generator\.html': function \(\) \{ return typeof canManageInvoices === 'function' && canManageInvoices\(\); \}/);
   assert.match(NAV, /'\/tools\/clients\.html': function \(\) \{ return typeof canManageInvoices === 'function' && canManageInvoices\(\); \}/);
 });
 
-test('POS explains itself on its own page (the dashboard tile help bubble is gone with the grid)', () => {
-  const POS_HTML = fs.readFileSync(repo('tools', 'pos.html'), 'utf8');
+test('POS explains itself in the Invoice Generator help modal (the dashboard tile help bubble is gone with the grid)', () => {
+  const POS_HTML = POS_PAGE;
   assert.match(POS_HTML, /Every POS sale shows up in your Income log/);
   assert.doesNotMatch(WORKSPACE, /'tool-pos': \{/);
 });

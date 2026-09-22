@@ -120,7 +120,6 @@ test('the tile grid is gone (2026-09-21), and every destination it used to link 
     '/tools/contract-generator.html',
     '/tools/invoice-generator.html',
     '/tools/clients.html',
-    '/tools/pos.html',
     '/tools/finance.html',
     '/tools/runway-dashboard.html',
     '/tools/review-request.html',

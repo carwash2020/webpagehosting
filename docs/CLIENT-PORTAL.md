@@ -225,7 +225,7 @@ All deployed and ACTIVE. Source backed up in `edge-functions/`.
 | `notify-new-work-order-email` | true | Alerts the internal team (`notification_recipients`) when a client submits a new work request |
 | `notify-work-order-scheduled-email` | true | "Your appointment is booked" to the client, fired on the UPDATE transition when an internal account approves and schedules a request |
 | `notify-work-order-message-email` | true | Two-way: a client's message alerts the internal team; an internal reply emails the client -- checks `client_notification_preferences` before sending, but only on the internal-to-client direction (a client's own message always notifies the team regardless of their preference, since that's the point of sending it) |
-| `create-pos-charge` | true | **Internal-only** -- three modes (`check`/`charge_saved`/`new_card`) for `tools/pos.html`. Uses its own dedicated, narrowly-scoped Stripe secret (`STRIPE_POS_SECRET_KEY`), not the shared one. Requires a signed authorization before ever saving a new card |
+| `create-pos-charge` | true | **Internal-only** -- three modes (`check`/`charge_saved`/`new_card`) for the Quick charge tab in `tools/invoice-generator.html` (formerly its own page, `tools/pos.html`, now a redirect stub). Uses its own dedicated, narrowly-scoped Stripe secret (`STRIPE_POS_SECRET_KEY`), not the shared one. Requires a signed authorization before ever saving a new card |
 | `manage-saved-card` | true | Client-facing saved-card self-service -- list, remove, and add a replacement (a Stripe SetupIntent, never a PaymentIntent, since adding a card must never charge anything). Its own dedicated Stripe secret (`STRIPE_CLIENT_CARDS_SECRET_KEY`) |
 
 Two non-obvious things worth not rediscovering the hard way:

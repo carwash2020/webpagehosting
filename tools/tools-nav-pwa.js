@@ -47,7 +47,6 @@
     '/tools/finance.html': function () { return typeof canViewFinance === 'function' && canViewFinance(); },
     '/tools/runway-dashboard.html': function () { return typeof canViewRunway === 'function' && canViewRunway(); },
     '/tools/invoice-generator.html': function () { return typeof canManageInvoices === 'function' && canManageInvoices(); },
-    '/tools/pos.html': function () { return typeof canManageInvoices === 'function' && canManageInvoices(); },
     '/tools/clients.html': function () { return typeof canManageInvoices === 'function' && canManageInvoices(); },
     '/tools/contract-generator.html': function () { return typeof canManageContracts === 'function' && canManageContracts(); },
     '/tools/review-request.html': function () { return typeof canManageReviews === 'function' && canManageReviews(); },
@@ -83,15 +82,16 @@
   // everyday tools, not admin-only pages.
   // Grouped Work / Money / Office. Labels match the short names on the
   // bottom bar. Calendar dropped out 2026-09-21 when it became a view
-  // inside Job Tracker (/tools/job-tracker.html#calendar). Pages and
-  // permissions are otherwise unchanged.
+  // inside Job Tracker (/tools/job-tracker.html#calendar); POS the same
+  // day, as the Quick charge tab inside Invoices
+  // (/tools/invoice-generator.html#pos). Pages and permissions are
+  // otherwise unchanged.
   var SIDEBAR_DESTS = [
     { group: 'Work',   href: '/tools/workspace.html',          icon: 'home',     label: 'Dashboard' },
     { group: 'Work',   href: '/tools/job-tracker.html',        icon: 'wrench',   label: 'Job Tracker' },
     { group: 'Work',   href: '/tools/route-planner.html',      icon: 'map',      label: 'Route Planner' },
     { group: 'Work',   href: '/tools/clients.html',            icon: 'inbox',    label: 'Clients' },
     { group: 'Money',  href: '/tools/invoice-generator.html',  icon: 'receipt',  label: 'Invoices' },
-    { group: 'Money',  href: '/tools/pos.html',                icon: 'dollar',   label: 'POS' },
     { group: 'Money',  href: '/tools/finance.html',            icon: 'dollar',   label: 'Finance' },
     { group: 'Money',  href: '/tools/runway-dashboard.html',   icon: 'chart',    label: 'Runway Dashboard' },
     { group: 'Office', href: '/tools/contract-generator.html', icon: 'scroll',   label: 'Contracts' },
@@ -102,7 +102,7 @@
   ];
 
   // Phone bottom nav only has room for the 5 daily tools above.
-  // Everything else the desktop sidebar lists (Route, POS, Runway,
+  // Everything else the desktop sidebar lists (Route, Runway,
   // Contracts, Reviews, Wiki, Dev Tools, Settings) is reachable from
   // the bar through a "More" sheet -- the overflow, not a sixth
   // primary dest. Built from SIDEBAR_DESTS minus DESTS so the two
