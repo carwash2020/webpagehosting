@@ -155,16 +155,20 @@ test('the heading badge shows the breakdown on wide screens and only the total o
   assert.match(WORKSPACE, /@media \(max-width: 720px\) \{\s*\.ai-badge-detail \{ display: none; \}\s*\.ai-badge-total \{ display: inline-block; \}/);
 });
 
-test('Backup & Restore moved to Settings intact: the same ALL_SYNCED_KEYS list, both actions, the same confirm text; the dashboard hands #backup off there', () => {
+test('Backup & Restore moved to Dev Tools intact (2026-09-22, admin/dev capability, not a regular Settings item): the same ALL_SYNCED_KEYS list, both actions, the same confirm text; the dashboard and Settings both hand #backup off there', () => {
+  const DEV_TOOLS = fs.readFileSync(repo('tools', 'dev-tools.html'), 'utf8');
   assert.doesNotMatch(WORKSPACE, /function downloadBackup|function restoreBackup|ALL_SYNCED_KEYS/);
-  assert.match(SETTINGS, /const ALL_SYNCED_KEYS = \[[\s\S]*?'th_tracker_jobs', 'th_tracker_contacts', 'th_tracker_notes_v2',[\s\S]*?'th_inventory',\s*\];/);
-  assert.match(SETTINGS, /function downloadBackup\(\)/);
-  assert.match(SETTINGS, /function restoreBackup\(event\)/);
-  assert.match(SETTINGS, /This will REPLACE all current data/);
-  assert.match(SETTINGS, /<div class="settings-section" id="backup">/);
+  assert.doesNotMatch(SETTINGS, /function downloadBackup|function restoreBackup|ALL_SYNCED_KEYS/);
+  assert.doesNotMatch(SETTINGS, /<h2>Your Data<\/h2>/, 'the Your Data section should no longer live in Settings');
+  assert.match(DEV_TOOLS, /const ALL_SYNCED_KEYS = \[[\s\S]*?'th_tracker_jobs', 'th_tracker_contacts', 'th_tracker_notes_v2',[\s\S]*?'th_inventory',\s*\];/);
+  assert.match(DEV_TOOLS, /function downloadBackup\(\)/);
+  assert.match(DEV_TOOLS, /function restoreBackup\(event\)/);
+  assert.match(DEV_TOOLS, /This will REPLACE all current data/);
+  assert.match(DEV_TOOLS, /<div class="dev-panel dev-owner-hidden dev-panel-wide" id="backup">/, 'Backup & Restore must be Developer-only (dev-owner-hidden), like every other data-management panel on this tab');
   assert.doesNotMatch(SETTINGS, /workspace\.html#backup/, 'no more hop back to the dashboard');
   assert.match(SETTINGS, /if \(window\.location\.hash === '#backup'\)/);
-  assert.match(WORKSPACE, /if \(window\.location\.hash === '#backup'\) \{\s*window\.location\.replace\('\/tools\/settings\.html#backup'\);/);
+  assert.match(SETTINGS, /window\.location\.replace\('\/tools\/dev-tools\.html#backup'\)/);
+  assert.match(WORKSPACE, /if \(window\.location\.hash === '#backup'\) \{\s*window\.location\.replace\('\/tools\/dev-tools\.html#backup'\);/);
 });
 
 test('the shared stylesheet no longer carries the dead tile-grid rules, and runway-dashboard.html (which mirrors shared nav CSS by hand) never had them to mirror', () => {

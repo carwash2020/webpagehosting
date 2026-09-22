@@ -3202,6 +3202,97 @@ long-press quick-action sheet on the invoice log instead, which does
 save something real. Full reasoning: `docs/specialist-logs/visual.md`'s
 2026-09-22 entry.
 
+## What changed, 2026-09-22 (later still) -- internal MFA: "Could not generate recovery codes" fixed, 2FA setup polished, backup/restore moved to Dev Tools
+
+Three related pieces, all touching the same-day internal `/tools/` MFA
+feature above.
+
+**Bug fixed: recovery codes now regenerate correctly even after the page
+has sat open a while.** Root cause: `getAuthToken()` in `tools/auth.js`
+falls back to the Supabase anon key whenever the stored access token has
+expired, without refreshing first -- `tools/settings.html`'s MFA/
+recovery-code handlers called it directly, with no `ensureFreshToken()`
+first (unlike `loadCurrentUserRole()` elsewhere in `auth.js`, which
+already does this). An expired token meant the RPC went out as anon,
+`auth.uid()` resolved to null, and the database's own "not authenticated"
+error got buried under a generic catch-all message. Fixed in all six
+Settings-page MFA handlers, not just the one named in the report, plus
+`generateRecoveryCodes()`/`verifyRecoveryCode()` in `auth.js` now surface
+the real error detail instead of only ever the generic fallback. New
+test: `tests/tools/mfa-recovery-token-refresh.test.js`. Verified live in
+headless Chromium with every Supabase call mocked: an expired-but-
+refreshable session now succeeds at regenerating codes, and a genuine
+mocked RPC failure now shows its real error text in the UI. Full
+reasoning: `docs/specialist-logs/security.md`'s 2026-09-22 entry.
+
+**2FA setup made easier and more polished**, on both `tools/settings.html`
+and `tools/login.html`: the manual-entry secret and the recovery codes
+each gained a real Copy button (not just text to hand-select); the
+one-time recovery-codes warning is now visually unmissable, not just
+present; the 6-digit code inputs gained `pattern="[0-9]*"` alongside the
+existing `inputmode="numeric"`, strip non-digits as you type, and
+auto-submit once a full valid code is entered; the code input on
+login.html got its own explicit focus state; and an optional-tier
+(Employee) account now gets one honest line on Settings explaining why
+turning 2FA on is worth the extra step, shown only when it's actually
+off. Full detail: `docs/specialist-logs/visual.md`'s 2026-09-22 entry.
+
+**"Your Data" (full account backup/restore) moved from Settings to Dev
+Tools.** A regular Employee account has no real use for a full JSON
+export/restore of the entire account's data -- it's an admin/dev
+capability, and Restore is destructive. Landed in Dev Tools' Session
+tab, Developer-only (`dev-owner-hidden`), matching the existing rule that
+an Owner-role account only sees the Access tab at all (per the
+2026-08-21 change) -- not a new, one-off restriction invented for this
+feature. A straight relocation, not a rewrite: same key list, same
+functions, same backup file shape, same confirm text. Both of `#backup`'s
+existing deep-links (the Dashboard's and Settings' own, from the
+2026-09-21 move) now go straight to `/tools/dev-tools.html#backup`.
+Verified live that an Owner-shaped account sees neither the Session tab
+nor the panel at all, and that a Developer-shaped account reaches a
+working panel directly via the hash link. Full reasoning:
+`docs/specialist-logs/visual.md`'s 2026-09-22 entry.
+
+Verified: full suite (2700 tests), `check-consistency`,
+`check-undefined-vars`, and `lint` all clean; `check-links.py` clean
+except the known sandbox-proxy limitation (images.unsplash.com and this
+site's own domain, both pre-existing and unrelated to this change).
+
+## 2026-09-22 (later still) -- the recovery-codes fix above wasn't the real fix: pgcrypto lives in `extensions`, not `public`
+
+The owner tested "Generate new codes" live right after the token-refresh
+fix above and got the exact same "Could not generate recovery codes"
+error -- a real, independent bug underneath it, not a deploy-timing
+issue. Reproduced directly against the live database by simulating an
+authenticated call to `generate_internal_recovery_codes()`:
+`ERROR: function gen_random_bytes(integer) does not exist`.
+
+Root cause: `generate_internal_recovery_codes()`/
+`verify_and_consume_internal_recovery_code()` both declare
+`set search_path = public`, but `create extension if not exists
+pgcrypto;` installs pgcrypto into the `extensions` schema on this
+Supabase project -- Supabase's own standard convention, not `public`.
+A `SECURITY DEFINER` function's explicit `search_path` fully replaces
+the caller's own (that's the point -- it's what prevents a search-path-
+hijack attack), so `extensions` was never in scope. Every single call
+to either function has failed at the database level since the feature
+shipped, for every account, regardless of token freshness -- the
+token-refresh bug fixed earlier the same day was real, but it was never
+the actual reason generation failed.
+
+Fixed live via the Supabase MCP tools (with the owner's authorization,
+same as the original migration's own application) and in
+`sql/security/fix_internal_mfa_recovery_codes_search_path.sql`:
+`set search_path = public, extensions` on both affected functions.
+`count_unused_internal_recovery_codes()`/`delete_internal_recovery_codes()`
+call no pgcrypto function and were correctly left untouched. Verified
+directly against the live database, before and after: reproduced the
+exact error pre-fix, confirmed real codes generate and a just-generated
+code verifies correctly post-fix, then deleted the test codes so no
+stray live rows were left behind. New regression test in
+`tests/tools/internal-mfa.test.js` asserts the corrected search_path
+going forward.
+
 ## 2026-09-22 (later still) -- "Make it feel like a native app," round 3: the last real haptic gaps + voice dictation
 
 A fresh audit (not assuming rounds 1-2 covered everything) found 3
