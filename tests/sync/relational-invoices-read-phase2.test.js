@@ -1,10 +1,17 @@
 // Relational tables Phase 2, invoices slice A (2026-09-17): shared
 // cache + getInvoicesForRead() in tools/sync.js, wired into the
 // Workspace Income list and Invoice Generator Recent tab. Writes stay
-// on the blob (th_invoices). finance.html / runway-dashboard.html are
-// deliberately NOT converted in this slice -- their invoice reads are
-// synchronous helpers called from many render sites, a later pass.
-// See CONTINUE-HERE.md's Phase 2 notes.
+// on the blob (th_invoices).
+//
+// Slice B (2026-09-22): finance.html's Job Profitability tab and
+// runway-dashboard.html's Runway/AR panels (loadJobTrackerInvoices())
+// are converted too -- both were synchronous helpers, so both were
+// made to read through the same getInvoicesForRead() cache rather than
+// becoming async, matching auth.js's _cachedRoleInfo shape (load once,
+// read synchronously many times). Neither page ever writes invoices,
+// so there was no read-modify-write / line_items risk to work around
+// (see CONTINUE-HERE.md's Phase 2 notes and docs/specialist-logs/
+// features.md's 2026-09-22 entry for the full reasoning).
 
 const { test } = require('node:test');
 const assert = require('node:assert/strict');
@@ -216,11 +223,41 @@ test('workspace.html: Income list uses getInvoicesForRead, togglePaid still writ
   assert.match(WORKSPACE, /if \(typeof startInvoicesRealtime === 'function'\)/);
 });
 
-test('finance.html and runway-dashboard.html are not converted in this slice -- their invoice reads stay on the blob', () => {
+test('finance.html: Job Profitability reads through getInvoicesForRead, never writes invoices, and init refreshes the cache after initSyncOnLoad', () => {
   const finance = fs.readFileSync(path.join(TOOLS_DIR, 'finance.html'), 'utf8');
+
+  const renderFn = finance.match(/function renderJobProfitability\(\)[\s\S]*?\n  \}/)[0];
+  // The relational cache must be preferred; thRead(TH_KEYS.invoices, [])
+  // is expected to still appear, but only as the ternary's fallback arm
+  // for when getInvoicesForRead isn't available (sync.js not loaded) or
+  // hasn't resolved yet -- never as the unconditional read.
+  assert.match(renderFn, /\(typeof getInvoicesForRead === 'function'\) \? getInvoicesForRead\(\) : thRead\(TH_KEYS\.invoices, \[\]\)/);
+
+  // finance.html has no invoice write path at all (no saveInvoiceLog/
+  // th_invoices writer of its own) -- it only ever reads, so there is
+  // no invalidateRelationalInvoicesCache() call to require here, unlike
+  // invoice-generator.html/workspace.html which both write invoices.
+  assert.doesNotMatch(finance, /localStorage\.setItem\('th_invoices'/);
+
+  assert.match(finance, /refreshRelationalInvoicesCache\(\)\.then\(rerenderProfitabilityIfActive\)/);
+  assert.match(finance, /if \(typeof startInvoicesRealtime === 'function'\)/);
+});
+
+test('runway-dashboard.html: loadJobTrackerInvoices() reads through getInvoicesForRead with the same blob fallback, and init refreshes the cache after pullSync', () => {
   const runway = fs.readFileSync(path.join(TOOLS_DIR, 'runway-dashboard.html'), 'utf8');
-  assert.doesNotMatch(finance, /getInvoicesForRead|refreshRelationalInvoicesCache|startInvoicesRealtime/);
-  assert.doesNotMatch(runway, /getInvoicesForRead|refreshRelationalInvoicesCache|startInvoicesRealtime/);
+
+  const loaderFn = runway.match(/function loadJobTrackerInvoices\(\)\{[\s\S]*?\n\}/)[0];
+  assert.match(loaderFn, /getInvoicesForRead/);
+  assert.match(loaderFn, /localStorage\.getItem\('th_invoices'\)/, 'must still fall back to the exact same blob read while the cache is null');
+
+  // This page never writes invoices at all (its own top-of-file comment
+  // says so) -- confirm that is still true, since a write path appearing
+  // here later would need invalidateRelationalInvoicesCache() wired in
+  // the same way invoice-generator.html/workspace.html do.
+  assert.doesNotMatch(runway, /localStorage\.setItem\('th_invoices'/);
+
+  assert.match(runway, /refreshRelationalInvoicesCache\(\)\.then\(\(\) => \{ if \(typeof renderRunway === 'function'\) renderRunway\(\); \}\)/);
+  assert.match(runway, /if \(typeof startInvoicesRealtime === 'function'\)/);
 });
 
 test('sql/infra/add_invoices_to_realtime_phase2.sql adds invoices to supabase_realtime and does not touch RLS', () => {

@@ -273,14 +273,92 @@ sites, not a single list. Tests:
 
 Also added `fetchInvoicesFromRelational()` to `sync.js` (same pattern
 as the jobs version) in step 3 -- now wired via the cache above.
-`finance.html` and `runway-dashboard.html` remain unconverted.
+
+**Also done (invoices slice B, 2026-09-22):** `finance.html`'s Job
+Profitability tab and `runway-dashboard.html`'s Runway/Accounts
+Receivable panels are converted too. Investigated first, since the
+2026-09-17 note above said these were left alone because "their
+invoice reads are synchronous helpers called from many render sites" --
+that turned out to be true of `renderRunway()` on runway-dashboard.html
+(called from ~11 places, all synchronous state-change handlers) but
+overstated for the actual invoice-reading code itself: both pages have
+exactly ONE function each that reads invoices
+(`renderJobProfitability()`'s local `invoices` variable on finance.html,
+`loadJobTrackerInvoices()` on runway-dashboard.html), just called from
+many places indirectly. Neither page ever writes invoices (confirmed by
+grep -- no `localStorage.setItem('th_invoices'` in either file), so
+there was no read-modify-write / line_items risk to invent a workaround
+for, unlike a page with a real save path.
+
+Chose to keep both of those functions synchronous rather than making
+any call site `await` them, mirroring `auth.js`'s `_cachedRoleInfo`
+shape (load once into an in-memory value, read it synchronously
+everywhere) instead of `getInvoicesForRead()`'s own async-cache-behind-
+a-sync-accessor design a second time from scratch -- reused
+`getInvoicesForRead()` itself directly, since it already IS exactly
+that shape. Concretely: `thRead(TH_KEYS.invoices, [])` in
+`renderJobProfitability()` and the raw `localStorage.getItem('th_invoices')`
+body of `loadJobTrackerInvoices()` both became
+`(typeof getInvoicesForRead === 'function') ? getInvoicesForRead() : <the same blob read as before>`.
+Zero call sites changed -- not `renderJobProfitability()`'s own 1 caller
+(`activateTab('profitability')`), not `loadJobTrackerInvoices()`'s 2
+(`renderAR()`, `pullMonthFromJobTracker()`), not the ~11 places that
+call `renderRunway()` (which calls `renderAR()`). Each page's init now
+also calls `refreshRelationalInvoicesCache()` once after its existing
+blob pull (fire-and-forget, `.then()` re-render, exact same
+`workspace.html`/`invoice-generator.html` pattern) and wires
+`startInvoicesRealtime()` alongside the existing blob realtime channel,
+so a mirrored write from another device/page updates both pages live.
+Deliberately did NOT touch `data-layer.js`'s `thRead`/`TH_KEYS` (a
+generic accessor also used by `job-tracker.html` and by
+`thGetClientBundle()`/`thGetJobBundle()`, which back `client-detail.html`/
+`job-detail.html` -- changing it would have widened this pass into
+those pages too) and did NOT touch `finance.html`'s
+`backfillLegacyInvoicesIntoIncomeLog()`, which reads `th_invoices`
+directly for a different reason: it exists specifically to catch
+invoices present in the blob that haven't been mirrored into
+`th_income_log` yet, so reading the (eventually-consistent, best-effort
+mirrored) relational cache there instead would risk delaying exactly
+the reconciliation it exists to do. No new migration was needed --
+`invoices` was already in the `supabase_realtime` publication from
+slice A (`sql/infra/add_invoices_to_realtime_phase2.sql`, already
+applied), and neither page needed a column or table slice A didn't
+already provide. Tests: `tests/sync/relational-invoices-read-phase2.test.js`
+(extended, not replaced -- the old "finance/runway are not converted"
+test became two "finance/runway now read through the cache" tests
+mirroring the existing invoice-generator.html/workspace.html ones in
+the same file).
+
+**Deliberately left alone, with reasoning:** `dev-tools.html`'s reads
+of `th_tracker_jobs`/`th_invoices`/`th_quotes`/`th_contracts` (the Data
+Quality check, the Local Data Snapshot, and the Graveyard restore
+feature) are diagnostic tools ABOUT the local device's own blob state,
+not business-data displays -- reading the relational table there
+instead would be actively wrong, since the whole point of those panels
+is to inspect (and, for Graveyard, repair) exactly what this device's
+blob currently holds. Graveyard's `restoreFromGraveyard()` writes
+straight back into the raw blob key via `thWrite()`/`thWriteWiki()`,
+which is correct for the same reason -- undoing a delete means putting
+the record back where deletes/every other write already look for it.
+One honest pre-existing gap, not introduced by this pass: a graveyard-
+restored invoice does not call `mirrorInvoiceToRelational()`, so it
+will not appear in `invoices` (and therefore not in finance.html's
+Job Profitability or runway-dashboard.html's AR panel) until some
+*other* normal invoice save re-triggers the mirror. This is the same
+latent gap the 2026-09-17 workspace.html/invoice-generator.html
+conversion already carries; not fixed here since dev-tools.html itself
+is explicitly out of scope for this task.
 
 **Still unstarted:** every other page that touches these 4 record
 types still reads/writes localStorage/the blob only --
 `job-tracker.html`, `workspace.html` (jobs/quotes/contracts; invoices
 list is now a relational *read*), `invoice-generator.html` (writes
-and quotes), `contract-generator.html`, `finance.html`,
-`runway-dashboard.html`, `dev-tools.html`. Any page with a real WRITE
+and quotes), `contract-generator.html`. `dev-tools.html` is not
+converted, on purpose (see above), not because it's unstarted.
+`finance.html`/`runway-dashboard.html` invoice reads are now converted
+(see above); their jobs/expenses/income reads are not (expenses and
+income log have no relational table at all -- only jobs/invoices/
+quotes/contracts got one on 2026-09-08). Any page with a real WRITE
 path (job-tracker.html, invoice-generator.html,
 contract-generator.html) is meaningfully higher-risk than the reads
 done so far — don't assume the same pattern transfers 1:1 without
