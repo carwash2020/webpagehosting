@@ -44,6 +44,27 @@ test('every list page that fetches data now calls a real skeleton function, not 
   }
 });
 
+test('list pages that render their skeleton via JS after an async auth check also bake a static skeleton into the initial HTML, so there is no blank flash before that JS runs', () => {
+  // dashboard.html/quotes.html/home.html already had this; jobs.html/
+  // work-orders.html/contracts.html's JS-rendered skeleton only ever
+  // appeared AFTER `await client.auth.getSession()` resolved, so their
+  // list containers were genuinely empty markup on first paint -- a
+  // real "flashes blank" gap (found 2026-09-21, from an external audit
+  // note: "a loading state during the first sign-in check").
+  const targets = [
+    ['dashboard', /<div id="invoiceList">\s*<div class="skeleton-card">/],
+    ['quotes', /<div id="quoteList">\s*<div class="skeleton-card">/],
+    ['home', /<div class="skeleton-card">/],
+    ['jobs', /<div id="jobList">\s*<div class="skeleton-card">/],
+    ['work-orders', /<div id="myRequests">\s*<div class="wo-section-title">Your requests<\/div>\s*<div class="skeleton-card">/],
+    ['contracts', /<div id="contractList">\s*<div class="skeleton-card">/],
+  ];
+  for (const [page, pattern] of targets) {
+    const html = fs.readFileSync(repo('portal', `${page}.html`), 'utf8');
+    assert.match(html, pattern, `${page}.html: expected a static skeleton already present in the initial markup, not only injected by JS after the auth check`);
+  }
+});
+
 test('the nested work-order message panel uses the smaller mini variant, not the full card shape', () => {
   const html = fs.readFileSync(repo('portal', 'work-orders.html'), 'utf8');
   assert.match(html, /panel\.innerHTML = portalSkeletonLines\(2\);/);

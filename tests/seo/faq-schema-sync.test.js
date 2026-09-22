@@ -54,8 +54,8 @@ test('the FAQPage JSON-LD script tag has a real id to target for updates', () =>
 
 test('a successful site_faq fetch rebuilds the FAQPage schema from the exact same rows rendered into the visible accordion', async () => {
   const rows = [
-    { question: 'Do you fix a "smart" fridge?', answer: 'Yes, most models & brands.' },
-    { question: 'What is your service area?', answer: 'St. George and nearby cities.' },
+    { question: 'Do you fix a "smart" fridge?', answer: 'Yes, most models & brands.', category: 'Repairs' },
+    { question: 'What is your service area?', answer: 'St. George and nearby cities.', category: 'Coverage' },
   ];
   const window = loadWithFaqRows(rows);
   await waitForMicrotasks();
@@ -75,6 +75,43 @@ test('a successful site_faq fetch rebuilds the FAQPage schema from the exact sam
   assert.ok(faqList.innerHTML.includes('smart'), 'expected the visible accordion to render the fetched question text');
 });
 
+test('the visible accordion groups fetched rows by category, with a heading per group', async () => {
+  const rows = [
+    { question: 'Q1 in group A', answer: 'A1', category: 'Group A' },
+    { question: 'Q2 in group B', answer: 'A2', category: 'Group B' },
+    { question: 'Q3 also in group A', answer: 'A3', category: 'Group A' },
+  ];
+  const window = loadWithFaqRows(rows);
+  await waitForMicrotasks();
+
+  const faqList = window.document.getElementById('faqList');
+  const headings = Array.from(faqList.querySelectorAll('h3.faq-category')).map(h => h.textContent);
+  // One heading per distinct category, in first-appearance order (not
+  // re-sorted, not de-duplicated per row) -- Group A appears before
+  // Group B despite a Group A row also following the Group B row.
+  assert.deepEqual(headings, ['Group A', 'Group B']);
+
+  // All of a category's items are grouped together under its one
+  // heading -- Q3 (Group A, 3rd row) sits right after Q1 (Group A, 1st
+  // row), not interleaved in original row order with Group B's Q2.
+  const items = Array.from(faqList.children);
+  assert.equal(items[0].tagName, 'H3');
+  assert.equal(items[1].className, 'faq-item');
+  assert.equal(items[2].className, 'faq-item');
+  assert.equal(items[3].tagName, 'H3');
+  assert.equal(items[4].className, 'faq-item');
+});
+
+test('a row missing a category falls back to a single "General" group instead of throwing', async () => {
+  const rows = [{ question: 'No category set', answer: 'Still renders.' }];
+  const window = loadWithFaqRows(rows);
+  await waitForMicrotasks();
+
+  const faqList = window.document.getElementById('faqList');
+  assert.match(faqList.innerHTML, /General/);
+  assert.match(faqList.innerHTML, /No category set/);
+});
+
 test('a failed/empty site_faq fetch leaves the static fallback schema and accordion untouched (fail-silent, not fail-blank)', async () => {
   const window = loadWithFaqRows([]);
   await waitForMicrotasks();
@@ -90,6 +127,6 @@ test('the schema-rebuild code lives inside the same .then() as the visible accor
   const html = fs.readFileSync(INDEX_HTML_PATH, 'utf8');
   const fnMatch = html.match(/fetch\(FAQ_SUPABASE_URL[\s\S]*?\.catch\(\(\) => \{[\s\S]*?\}\);\s*\n\s*\}\)\(\);/);
   assert.ok(fnMatch, 'expected to isolate the FAQ fetch IIFE');
-  assert.match(fnMatch[0], /faqList\.innerHTML = rows\.map/, 'expected the visible-accordion render in this same block');
+  assert.match(fnMatch[0], /faqList\.innerHTML = categoryOrder\.map/, 'expected the visible-accordion render (grouped by category) in this same block');
   assert.match(fnMatch[0], /getElementById\('faqSchema'\)/, 'expected the schema rebuild in this same block, not a second fetch');
 });
