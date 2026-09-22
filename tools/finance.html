@@ -52,16 +52,16 @@
   })();
 </script>
 <link rel="stylesheet" href="/styles.css?v=2e81706c3d">
-<link rel="stylesheet" href="/tools/styles-tools.css?v=effd2652c2">
+<link rel="stylesheet" href="/tools/styles-tools.css?v=f4eba25dcc">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.112.3/dist/umd/supabase.js" integrity="sha384-qafw21c/iciq0VXsi9FzkfoQv5I/V0iqE4lSNcKXPnW9/UTJLnv5CcN4FHxVLnKg" crossorigin="anonymous" defer></script>
-<script src="/tools/sync.js?v=6b9e092eca" defer></script>
-<script src="/tools/data-layer.js?v=5d2fdbfaf1" defer></script>
+<script src="/tools/sync.js?v=4cfac4b10e" defer></script>
+<script src="/tools/data-layer.js?v=0eeb0b02fa" defer></script>
 <script src="/tools/tools-effects.js?v=a767167574" defer></script>
-<script src="/tools/tools-dialogs.js?v=d68ce809a1" defer></script>
+<script src="/tools/tools-dialogs.js?v=33199ae1d8" defer></script>
 <script src="/tools/tools-media-sharing.js?v=0c229c9353" defer></script>
 <script src="/tools/tools-nav-pwa.js?v=4d9f8c89e1" defer></script>
-<script src="/tools/tools-command-palette.js?v=7bd204bef4" defer></script>
-<script src="/tools/tools-tour.js?v=7876158a2d" defer></script>
+<script src="/tools/tools-command-palette.js?v=3aaed2827f" defer></script>
+<script src="/tools/tools-tour.js?v=102529d3df" defer></script>
 <style>
   /* Cross-document view transitions (2026-09-21) -- same pattern
      already proven in portal/*.html: keeps the old page's visual
@@ -1587,6 +1587,25 @@
         const entryJobRefEl = document.getElementById('entryJobRef');
         if (entryJobRefEl && [...entryJobRefEl.options].some(o => o.value === presetJobId)) {
           entryJobRefEl.value = presetJobId;
+        }
+        // ?job=<id>#income (2026-09-22, Workspace rework part 5): "Paid
+        // another way" on a finished, unbilled job (the Dashboard's Ready to
+        // invoice, Job Detail) lands here to log the cash or check against
+        // that job, which takes it off the to-invoice list. Opens the form
+        // and fills the job, the client, and what it was for; the amount is
+        // left for the person who took the money.
+        if (initialHash === 'income') {
+          const incomeJobRefEl = document.getElementById('incomeJobRef');
+          const presetJob = thRead(TH_KEYS.jobs, []).find(j => String(j.id) === presetJobId);
+          if (incomeJobRefEl && presetJob && [...incomeJobRefEl.options].some(o => o.value === presetJobId)) {
+            incomeJobRefEl.value = presetJobId;
+            const fillIfBlank = (id, value) => { const el = document.getElementById(id); if (el && !el.value.trim() && value) el.value = value; };
+            fillIfBlank('incomeSource', presetJob.client);
+            fillIfBlank('incomeDesc', presetJob.title);
+            if (typeof toggleFormSection === 'function') toggleFormSection('incomeFormSection', true);
+            const amountEl = document.getElementById('incomeAmount');
+            if (amountEl) setTimeout(() => { amountEl.scrollIntoView({ behavior: 'smooth', block: 'center' }); amountEl.focus(); }, 60);
+          }
         }
       }
 

@@ -1051,6 +1051,51 @@ Cross-logged from features.md (Workspace rework, part 1). Visual calls:
   as plain lowercase words ("high Not Started"). The rule was copied
   from Job Tracker.
 
+## 2026-09-22 (later still) -- the invoice list: three tiles, pills, one amount per row
+
+- Three tiles above the list (`.inv-summary`, 3-column grid at every
+  width). Owed is orange, Overdue is red when non-zero, and the month
+  tile is plain white. Amounts of $1,000 or more drop the cents so a
+  tile never wraps at 360px. The two tappable tiles get an orange
+  inset ring while their filter is on.
+- Rows reuse `.th-row` / `.th-row-link` / `.th-row-avatar` from the
+  Clients list. The avatar is filled orange while money is owed, so
+  the list reads like the Clients directory.
+- The right edge is the amount still owed (the total, once paid) over
+  one pill. New shared variants: `.th-pill.is-paid` (the old blue
+  Paid badge colour) and `.th-pill.is-muted` (Pending).
+- The subtitle shows either the due state or the date, never both. At
+  390px "#INV-1041 · Aug 13 · 25 days overdue" ellipsised the part
+  that mattered, which a screenshot caught.
+- Desktop (1024px and up) keeps Resend / Mark Paid / Delete at the end
+  of each row. Below that they are in the sheet.
+- The tab strip reads Invoices | New invoice | New quote | Quick
+  charge. At 390px the last tab scrolls, the same as Finance's strip.
+  Quick charge is also on the + sheet.
+
+## 2026-09-22 (later still) -- money pills and the job track
+
+- **Money pills** reuse each page's badge shape. To invoice is the only
+  loud one: a solid orange gradient link, since it's the only one that
+  asks for action. Invoiced is blue, Overdue red, Paid green, No charge
+  muted. Client Detail uses the shared `.th-pill` equivalents.
+- **Finished-but-unbilled cards** drop the 55% "history" dimming
+  (`.is-done.needs-invoice`), so the call to action isn't greyed out.
+- **Phone card badges** wrap under the title instead of squeezing it to
+  three lines. The Done badge hides on phones; the strikethrough
+  already says it.
+- **Job Detail track:** five hex dots on a line (`--hex` clip-path).
+  Reached dots are the orange gradient with an orange connector; the
+  next step is an orange ring that pulses (off under reduced motion);
+  the whole track goes green once paid. The next-step panel is tinted
+  orange for to-invoice (and for a booked job that's past its date) and
+  red for overdue.
+- **Dashboard rows:** Ready to invoice reuses the inbox's
+  `.dash-list-item` with the `is-unread` highlight for a week or older.
+  Invoice is a link styled as the Mark paid pill, beside a small round
+  ⋯. The Money Owed card's To invoice line is orange, a to-do rather
+  than a debt.
+
 ## 2026-09-22 (later still) -- portal: visit date tiles, chat threads, unread badges, activity timeline
 
 Visual half of the portal visits/messages pass (behaviour and schema are

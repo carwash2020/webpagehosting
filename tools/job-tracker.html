@@ -52,16 +52,16 @@
   })();
 </script>
 <link rel="stylesheet" href="/styles.css?v=2e81706c3d">
-<link rel="stylesheet" href="/tools/styles-tools.css?v=effd2652c2">
+<link rel="stylesheet" href="/tools/styles-tools.css?v=f4eba25dcc">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.112.3/dist/umd/supabase.js" integrity="sha384-qafw21c/iciq0VXsi9FzkfoQv5I/V0iqE4lSNcKXPnW9/UTJLnv5CcN4FHxVLnKg" crossorigin="anonymous" defer></script>
-<script src="/tools/sync.js?v=6b9e092eca" defer></script>
-<script src="/tools/data-layer.js?v=5d2fdbfaf1" defer></script>
+<script src="/tools/sync.js?v=4cfac4b10e" defer></script>
+<script src="/tools/data-layer.js?v=0eeb0b02fa" defer></script>
 <script src="/tools/tools-effects.js?v=a767167574" defer></script>
-<script src="/tools/tools-dialogs.js?v=d68ce809a1" defer></script>
+<script src="/tools/tools-dialogs.js?v=33199ae1d8" defer></script>
 <script src="/tools/tools-media-sharing.js?v=0c229c9353" defer></script>
 <script src="/tools/tools-nav-pwa.js?v=4d9f8c89e1" defer></script>
-<script src="/tools/tools-command-palette.js?v=7bd204bef4" defer></script>
-<script src="/tools/tools-tour.js?v=7876158a2d" defer></script>
+<script src="/tools/tools-command-palette.js?v=3aaed2827f" defer></script>
+<script src="/tools/tools-tour.js?v=102529d3df" defer></script>
 <style>
   /* Cross-document view transitions (2026-09-21) -- same pattern
      already proven in portal/*.html: keeps the old page's visual
@@ -116,6 +116,8 @@
     border-radius: 6px; padding: 7px 14px; cursor: pointer; font-size: 13px;
   }
   .sort-btn.is-active { color: var(--orange-light); border-color: var(--orange-light); }
+  .sort-btn-count { font-family: var(--font-ui); font-size: 11.5px; font-weight: 700; color: #1a0d02; background: var(--orange); border-radius: 999px; padding: 0 7px; margin-left: 4px; }
+  .sort-btn-count:empty { display: none; }
   .filter-checkbox { display: flex; align-items: center; gap: 6px; color: var(--text-dim); font-size: 13px; }
 
   .job-card {
@@ -168,6 +170,13 @@
        Progress (Not Started is the default). Margin and warranty stay. */
     .job-badges .badge-medium, .job-badges .badge-low,
     .job-badges .badge-status.status-not-started { display: none; }
+    /* Money pills (2026-09-22, part 5) made a finished card's badges too
+       wide to sit beside its title, which got squeezed onto three lines:
+       they wrap under the title instead, and Done goes (the struck-through
+       title already says it). */
+    .job-card-top { flex-wrap: wrap; }
+    .job-card-top .job-badges { flex-shrink: 1; min-width: 0; justify-content: flex-start; }
+    .job-badges .badge-status.status-done { display: none; }
     /* Slimmer collapsed Add / Templates bars. */
     #tab-jobs > .form-section.is-collapsed { padding-top: 12px; padding-bottom: 12px; }
 
@@ -197,6 +206,9 @@
   .job-card.priority-medium { border-left-color: var(--orange); }
   .job-card.priority-low { border-left-color: var(--blue); }
   .job-card.is-done { opacity: 0.55; }
+  /* A finished job nobody has billed isn't history yet: full strength, so
+     its To invoice pill reads as the call to action it is. */
+  .job-card.is-done.needs-invoice { opacity: 1; }
   /* Item #5 (density toggle, 2026-08-16): tighter spacing for people who
      know the app well and would rather see more jobs per screen. */
   body.is-compact-density .job-card-swipe-inner { padding: 10px 14px; }
@@ -317,6 +329,16 @@
   .badge-status.status-done { background: rgba(76,175,80,0.12); color: #6fcf97; border-color: rgba(76,175,80,0.3); }
   .badge-warranty.is-active { background: rgba(76,175,80,0.15); color: #4caf50; }
   .badge-warranty.is-expired { background: var(--bg-panel-2); color: var(--text-dim); }
+  /* Money pills (2026-09-22, rework part 5). To invoice is the loud one: a
+     solid orange link, because it is the only one that asks for action. */
+  .badge-money { border: 1px solid transparent; }
+  a.badge-money { text-decoration: none; }
+  .badge-money.is-to-invoice { background: linear-gradient(165deg, var(--orange-light), var(--orange) 70%); color: #1a0d02; }
+  .badge-money.is-to-invoice:hover { filter: brightness(1.08); }
+  .badge-money.is-invoiced { background: rgba(58,160,255,0.12); color: var(--blue-light); border-color: rgba(58,160,255,0.3); }
+  .badge-money.is-overdue { background: rgba(224,82,82,0.12); color: #e05252; border-color: rgba(224,82,82,0.4); }
+  .badge-money.is-paid { background: rgba(76,175,80,0.12); color: #6fcf97; border-color: rgba(76,175,80,0.3); }
+  .badge-money.is-muted { background: var(--bg-panel-2); color: var(--text-dim); }
   .job-card-meta { color: var(--text-dim); font-size: 13px; margin-bottom: 6px; }
   .job-card-notes { color: var(--text-dim); font-size: 13.5px; font-style: italic; margin-bottom: 12px; }
   .job-card-actions { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
@@ -644,6 +666,7 @@
     <button class="sort-btn" data-status-filter="not-started" onclick="setStatusFilter('not-started')">Not Started</button>
     <button class="sort-btn" data-status-filter="in-progress" onclick="setStatusFilter('in-progress')">In Progress</button>
     <button class="sort-btn" data-status-filter="done" onclick="setStatusFilter('done')">Completed</button>
+    <button class="sort-btn" data-status-filter="to-invoice" onclick="setStatusFilter('to-invoice')">To invoice <span class="sort-btn-count" id="toInvoiceFilterCount"></span></button>
     <button class="sort-btn" data-status-filter="all" onclick="setStatusFilter('all')">All</button>
   </div>
 
@@ -789,7 +812,7 @@
     <div class="help-modal-body">
       <p>Jobs, contacts, and notes in one place. Data lives in this browser and syncs to the cloud in the background.</p>
       <ul>
-        <li><strong>Jobs</strong> &mdash; the main list, grouped by when (Overdue, Today, Tomorrow, Next 7 days, Later), with search and status filters. On a phone each card shows what you need in the truck: <strong>Done</strong>, a <strong>Call</strong> button, <strong>Directions</strong>, and <strong>&middot;&middot;&middot;</strong> for everything else (start it, photos, create an invoice, send the confirmation email, log an expense, edit, delete) &mdash; long-press a card for the same list. Tap the title to open the job's own page. Swipe a card left for a quick Done. Filed under "Done," a job shows the profit margin once it's linked to an invoice. On a real desktop screen, this same list also shows as a sortable table &mdash; click any column header to sort by it, click again to reverse. "Photos" attaches before/after pictures; tap the <svg class="th-icon" aria-hidden="true"><use href="#icon-star" xlink:href="#icon-star"></use></svg> star on any photo to queue it for the public website's gallery.</li>
+        <li><strong>Jobs</strong> &mdash; the main list, grouped by when (Overdue, Today, Tomorrow, Next 7 days, Later), with search and status filters. On a phone each card shows what you need in the truck: <strong>Done</strong>, a <strong>Call</strong> button, <strong>Directions</strong>, and <strong>&middot;&middot;&middot;</strong> for everything else (start it, photos, create an invoice, send the confirmation email, log an expense, edit, delete) &mdash; long-press a card for the same list. Tap the title to open the job's own page. Swipe a card left for a quick Done. Marking a job done asks what's next: <strong>Create invoice</strong> (the form opens filled from the job) or a review request. A finished job nobody has billed wears an orange <strong>To invoice</strong> pill, and the <strong>To invoice</strong> filter lists them all, until it's invoiced, paid another way, or marked <strong>No charge</strong> from its &middot;&middot;&middot; (a warranty callback, a favor). Filed under "Done," a job shows where its money is (Invoiced, Overdue, Paid) and its profit margin once it's linked to an invoice. On a real desktop screen, this same list also shows as a sortable table &mdash; click any column header to sort by it, click again to reverse. "Photos" attaches before/after pictures; tap the <svg class="th-icon" aria-hidden="true"><use href="#icon-star" xlink:href="#icon-star"></use></svg> star on any photo to queue it for the public website's gallery.</li>
         <li><strong>List / Board / Calendar</strong> &mdash; the same jobs three ways, remembered per device. <strong>Board</strong> puts Not Started, In Progress, and Done side by side. <strong>Calendar</strong> is a month view of every dated job (plus online bookings you haven't added yet, in purple) &mdash; tap a day to see what's scheduled, then <strong>Add to Phone</strong> to drop a job into your phone's own calendar app as a one-time export.</li>
         <li><strong>Contacts</strong> &mdash; a quick address book for vendors, suppliers, or recurring clients. Tap "History" on any contact to see their past jobs and lifetime spend (matched by exact name against Jobs and Invoices).</li>
         <li><strong>Notes</strong> &mdash; keep as many separate, named notes as you want. Search by title or content, click one on the left to open it, or start a new one. Saves automatically as you type.</li>
@@ -1472,15 +1495,50 @@
 
     if (wasNotDone && job.status === 'done') {
       if (typeof celebrateCompletion === 'function') celebrateCompletion();
-      const goSend = await showConfirm(`"${job.title}" marked Done. Send a review request${job.client ? ' to ' + job.client : ''} now?`, { confirmText: 'Send Request' });
-      if (goSend) {
-        const params = new URLSearchParams();
-        if (job.client) params.set('name', job.client.split(' ')[0]);
-        if (job.title) params.set('job', job.title);
-        if (job.phone) params.set('phone', job.phone);
-        window.location.href = '/tools/review-request.html?' + params.toString();
-      }
+      await openJobDoneSheet(job);
     }
+  }
+
+  function reviewRequestHref(job) {
+    const params = new URLSearchParams();
+    if (job.client) params.set('name', job.client.split(' ')[0]);
+    if (job.title) params.set('job', job.title);
+    if (job.phone) params.set('phone', job.phone);
+    return '/tools/review-request.html?' + params.toString();
+  }
+
+  // The moment a job is marked Done (2026-09-22, Workspace rework part 5):
+  // the two things that should happen next, in the order they make money --
+  // invoice it while the work is fresh, then ask for the review. Used to be
+  // a single "Send a review request?" confirm; the invoice was left to
+  // memory. Create invoice shows only while the job is still unbilled (no
+  // invoice, no payment logged), and "No charge" is right there for the
+  // warranty callback, so it never lands in Ready to invoice.
+  async function openJobDoneSheet(job) {
+    const stage = (typeof thJobMoneyStage === 'function')
+      ? thJobMoneyStage(job, thRead(TH_KEYS.invoices, []), thRead(TH_KEYS.income, []).filter(e => e.origin !== 'invoice')).stage
+      : null;
+    const canInvoice = typeof canManageInvoices !== 'function' || canManageInvoices() || !(typeof getCurrentUserRole === 'function' && getCurrentUserRole());
+    if (typeof showQuickActionSheet !== 'function') {
+      const goSend = await showConfirm(`"${job.title}" marked Done. Send a review request${job.client ? ' to ' + job.client : ''} now?`, { confirmText: 'Send Request' });
+      if (goSend) window.location.href = reviewRequestHref(job);
+      return;
+    }
+    const actions = [];
+    if (stage === 'to-invoice' && canInvoice) {
+      actions.push({ label: 'Create invoice', onClick: () => { window.location.href = '/tools/invoice-generator.html?jobRef=' + encodeURIComponent(job.id); } });
+    }
+    actions.push({ label: 'Send a review request' + (job.client ? ' to ' + job.client.split(' ')[0] : ''), onClick: () => { window.location.href = reviewRequestHref(job); } });
+    if (stage === 'to-invoice' && canInvoice) {
+      actions.push({ label: 'No charge (warranty, favor)', onClick: () => setJobNoCharge(job.id, true) });
+    }
+    showQuickActionSheet(escapeHtml('Done: ' + (job.title || 'Job')), actions);
+  }
+
+  function setJobNoCharge(jobId, value) {
+    if (typeof thSetJobNoInvoice !== 'function' || !thSetJobNoInvoice(jobId, value)) return;
+    renderJobs();
+    showToast(value ? 'Marked as no charge.' : 'Back on the to-invoice list.');
   }
 
   // ---------- Recurring Job Templates ----------
@@ -1998,6 +2056,29 @@
     return 'Later';
   }
 
+  // Where the money is on a job (2026-09-22, Workspace rework part 5): a pill
+  // once there is something to say -- To invoice (a link straight to the
+  // invoice form), Invoiced, Overdue, Paid, or No charge. Booked and working
+  // jobs get none. "To invoice" follows the same 60-day window as the
+  // Dashboard's Ready to invoice (marginData.toInvoiceIds), so years-old
+  // history from before invoicing lived here doesn't all light up.
+  const JOB_MONEY_PILL = {
+    invoiced: ['is-invoiced', 'Invoiced'],
+    overdue: ['is-overdue', 'Overdue'],
+    paid: ['is-paid', 'Paid'],
+    'no-charge': ['is-muted', 'No charge'],
+  };
+  function jobMoneyPillHtml(job, marginData) {
+    if (!marginData || typeof thJobMoneyStage !== 'function') return '';
+    const stage = thJobMoneyStage(job, marginData.invoices || [], marginData.manualIncome || []).stage;
+    if (stage === 'to-invoice') {
+      if (!marginData.toInvoiceIds || !marginData.toInvoiceIds.has(job.id)) return '';
+      return '<a class="badge badge-money is-to-invoice" href="/tools/invoice-generator.html?jobRef=' + encodeURIComponent(job.id) + '" title="Done, and nothing billed yet">To invoice</a>';
+    }
+    const pill = JOB_MONEY_PILL[stage];
+    return pill ? '<span class="badge badge-money ' + pill[0] + '">' + pill[1] + '</span>' : '';
+  }
+
   function jobCardHtml(job, marginData, opts) {
     opts = opts || {};
     const isDone = job.status === 'done';
@@ -2013,6 +2094,7 @@
       ? `<span class="badge" style="background:${margin.margin >= 0 ? 'rgba(76,175,80,0.15)' : 'rgba(224,82,82,0.15)'}; color:${margin.margin >= 0 ? '#6fcf97' : '#e0807a'};">${margin.margin >= 0 ? '+' : ''}${money(margin.margin)}</span>${effectiveRateHtml}`
       : '';
     const dateDisplay = job.date ? new Date(job.date + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : 'No date set';
+    const moneyPillHtml = jobMoneyPillHtml(job, marginData);
     // Call / Directions / More (2026-09-22, Workspace rework part 3): on a
     // phone or tablet the card's action row is just Done plus these three
     // round buttons -- what a handyman does from a job card in the truck.
@@ -2022,7 +2104,7 @@
     const telHref = job.phone ? 'tel:' + String(job.phone).replace(/[^\d+]/g, '') : '';
     const mapsHref = job.address ? 'https://www.google.com/maps/dir/?api=1&destination=' + encodeURIComponent(job.address) : '';
     return `
-      <div class="job-card priority-${job.priority} ${isDone ? 'is-done' : ''} ${job.id === justAddedJobId ? 'list-row-enter' : ''}" data-job-id="${job.id}">
+      <div class="job-card priority-${job.priority} ${isDone ? 'is-done' : ''}${moneyPillHtml.includes('is-to-invoice') ? ' needs-invoice' : ''} ${job.id === justAddedJobId ? 'list-row-enter' : ''}" data-job-id="${job.id}">
         ${(opts.enableSwipe && !isDone) ? `<div class="job-card-swipe-action"><button class="small-btn" onclick="setJobStatus(${job.id}, 'done')">Done</button></div>` : ''}
         <div class="job-card-swipe-inner">
         ${jobSelectionMode ? `<label class="job-card-select"><input type="checkbox" ${selectedJobIds.has(job.id) ? 'checked' : ''} onchange="toggleJobSelected(${job.id}, this.checked)"></label>` : ''}
@@ -2031,6 +2113,7 @@
           <div class="job-badges">
             <span class="badge badge-${job.priority}">${job.priority}</span>
             ${opts.showStatusBadge ? `<span class="badge badge-status status-${job.status}">${STATUS_LABEL[job.status]}</span>` : ''}
+            ${moneyPillHtml}
             ${marginBadgeHtml}
             ${warrantyBadgeHtml(job)}
           </div>
@@ -2107,7 +2190,10 @@
     const marginInvoices = thRead(TH_KEYS.invoices, []);
     const marginExpenses = thRead(TH_KEYS.expenses, []);
     const marginManualIncome = thRead(TH_KEYS.income, []).filter(e => e.origin !== 'invoice');
-    const marginData = { invoices: marginInvoices, expenses: marginExpenses, manualIncome: marginManualIncome };
+    const toInvoiceRows = (typeof thJobsToInvoice === 'function') ? thJobsToInvoice(loadJobs(), marginInvoices, marginManualIncome) : [];
+    const marginData = { invoices: marginInvoices, expenses: marginExpenses, manualIncome: marginManualIncome, toInvoiceIds: new Set(toInvoiceRows.map(r => r.job.id)) };
+    const toInvoiceCountEl = document.getElementById('toInvoiceFilterCount');
+    if (toInvoiceCountEl) toInvoiceCountEl.textContent = toInvoiceRows.length ? String(toInvoiceRows.length) : '';
 
     // The board always shows all 3 statuses side by side, regardless of
     // the Active/Not Started/In Progress/Completed/All filter below --
@@ -2121,6 +2207,7 @@
 
     let jobs = allJobs;
     if (currentStatusFilter === 'not-done') jobs = jobs.filter(j => j.status !== 'done');
+    else if (currentStatusFilter === 'to-invoice') jobs = jobs.filter(j => marginData.toInvoiceIds.has(j.id));
     else if (currentStatusFilter !== 'all') jobs = jobs.filter(j => j.status === currentStatusFilter);
 
     const container = document.getElementById('jobsList');
@@ -2153,7 +2240,7 @@
     container.classList.toggle('list-stagger', !jobsListRenderedOnce);
     jobsListRenderedOnce = true;
     const groupByDate = currentSort === 'date';
-    const showingDone = currentStatusFilter === 'done' || currentStatusFilter === 'all';
+    const showingDone = currentStatusFilter === 'done' || currentStatusFilter === 'all' || currentStatusFilter === 'to-invoice';
     let lastGroup = null;
     container.innerHTML = jobs.map(job => {
       let head = '';
@@ -2183,7 +2270,7 @@
         <tr class="${isDone ? 'is-done' : ''}" data-job-id="${job.id}">
           <td class="jt-title-cell">${personDot(job.lastEditedBy, 'Last edited by')}<a href="/tools/job-detail.html?id=${job.id}" class="jt-title-link">${escapeHtml(job.title)}</a>${warrantyBadgeHtml(job)}</td>
           <td>${job.client ? escapeHtml(job.client) : '&mdash;'}</td>
-          <td><span class="badge badge-status status-${job.status}">${STATUS_LABEL[job.status]}</span></td>
+          <td><span class="badge badge-status status-${job.status}">${STATUS_LABEL[job.status]}</span> ${jobMoneyPillHtml(job, marginData)}</td>
           <td><span class="badge badge-${job.priority}">${job.priority}</span></td>
           <td>${dateDisplay}</td>
           <td>${job.phone ? escapeHtml(job.phone) : '&mdash;'}</td>
@@ -2260,6 +2347,11 @@
       else location.href = '/tools/job-detail.html?id=' + encodeURIComponent(jobId);
     } });
     actions.push({ label: 'Create invoice', onClick: () => { location.href = '/tools/invoice-generator.html?jobRef=' + jobId; } });
+    const stage = (job.status === 'done' && typeof thJobMoneyStage === 'function')
+      ? thJobMoneyStage(job, thRead(TH_KEYS.invoices, []), thRead(TH_KEYS.income, []).filter(e => e.origin !== 'invoice')).stage
+      : null;
+    if (stage === 'to-invoice') actions.push({ label: 'No charge (warranty, favor)', onClick: () => setJobNoCharge(jobId, true) });
+    if (stage === 'no-charge') actions.push({ label: 'Needs an invoice after all', onClick: () => setJobNoCharge(jobId, false) });
     if (job.clientEmail && !job.confirmationSentAt) actions.push({ label: 'Send confirmation email', onClick: () => sendJobConfirmationEmail(jobId) });
     actions.push({ label: 'Log Expense', onClick: () => showQuickExpenseModal(jobId, job.title) });
     actions.push({ label: 'Edit', onClick: () => editJob(jobId) });
@@ -3250,6 +3342,9 @@
         return;
       }
       activateTab(TAB_HASHES[initialHash] ? initialHash : 'jobs');
+      // #to-invoice (2026-09-22, rework part 5): the Dashboard's "N more in
+      // Jobs > To invoice" link lands on that filter.
+      if (initialHash === 'to-invoice') setStatusFilter('to-invoice');
       // #calendar (2026-09-21): the deep link the retired calendar.html
       // stub, the Dashboard's Calendar action, and the PWA shortcut use.
       // Selects today so the day panel isn't blank on arrival.
@@ -3263,6 +3358,7 @@
       window.addEventListener('hashchange', () => {
         const h = (location.hash || '').replace('#', '');
         if (TAB_HASHES[h]) { activateTab(h); return; }
+        if (h === 'to-invoice') { activateTab('jobs'); setStatusFilter('to-invoice'); return; }
         if (h === 'calendar') {
           activateTab('jobs');
           selectedDateStr = dateKey(calToday.getFullYear(), calToday.getMonth(), calToday.getDate());

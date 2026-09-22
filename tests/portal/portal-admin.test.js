@@ -23,30 +23,50 @@ const INVOICE_GEN = fs.readFileSync(path.join(__dirname, '..', '..', 'tools', 'i
 const CLIENTS = fs.readFileSync(path.join(__dirname, '..', '..', 'tools', 'clients.html'), 'utf8');
 const DEV_SHARED = fs.readFileSync(path.join(__dirname, '..', '..', 'tools', 'dev-tools-shared.js'), 'utf8');
 
-test('marking an invoice paid by hand syncs that status to the portal', () => {
+// 2026-09-22 (Workspace rework part 4): the portal call moved into one
+// shared helper in sync.js, pushInvoicePaidToPortal(), because the
+// Dashboard's Mark paid never made it at all -- an invoice marked paid
+// there for cash stayed payable on the portal.
+const SYNC = fs.readFileSync(path.join(__dirname, '..', '..', 'tools', 'sync.js'), 'utf8');
+const WORKSPACE_SRC = fs.readFileSync(path.join(__dirname, '..', '..', 'tools', 'workspace.html'), 'utf8');
+function pushHelperSrc() {
+  const m = SYNC.match(/function pushInvoicePaidToPortal\(entry\) \{[\s\S]*?\n\}\n/);
+  assert.ok(m, 'pushInvoicePaidToPortal() not found in sync.js');
+  return m[0];
+}
+
+test('marking an invoice paid by hand syncs that status to the portal -- from Invoices and from the Dashboard', () => {
   const fnMatch = INVOICE_GEN.match(/function toggleInvoicePaid\(id\) \{[\s\S]*?\n  \}\n/);
   assert.ok(fnMatch, 'toggleInvoicePaid() not found');
-  assert.match(fnMatch[0], /functions\/v1\/set-invoice-paid/);
+  assert.match(fnMatch[0], /pushInvoicePaidToPortal\(entry\)/);
+  const dash = WORKSPACE_SRC.match(/async function togglePaid\(id\)[\s\S]*?\n  \}/)[0];
+  assert.match(dash, /pushInvoicePaidToPortal\(inv\)/, 'the Dashboard Mark paid must tell the portal too');
+  const helper = pushHelperSrc();
+  assert.match(helper, /functions\/v1\/set-invoice-paid/);
   // Must send the actual new state, not assume "paid" -- unmarking has
   // to reach the portal too, or a mistakenly-marked invoice stays
   // wrongly paid there forever.
-  assert.match(fnMatch[0], /paid: entry\.paid/);
+  assert.match(helper, /paid: !!entry\.paid/);
 });
 
 test('the paid-status sync only fires for an invoice actually on the portal', () => {
   const fnMatch = INVOICE_GEN.match(/function toggleInvoicePaid\(id\) \{[\s\S]*?\n  \}\n/);
   assert.match(fnMatch[0], /if \(entry\.clientEmail &&/,
     'an invoice with no client email was never synced to the portal, so there is nothing to update');
+  assert.match(pushHelperSrc(), /if \(!entry \|\| !entry\.clientEmail \|\|/);
 });
 
 test('the paid-status sync never blocks the local save', () => {
   const fnMatch = INVOICE_GEN.match(/function toggleInvoicePaid\(id\) \{[\s\S]*?\n  \}\n/);
-  // saveInvoiceLog must come before the fetch, and the fetch must be
+  // saveInvoiceLog must come before the portal call, and the call must be
   // fire-and-forget -- same pattern as every other portal sync here.
   const saveIdx = fnMatch[0].indexOf('saveInvoiceLog');
-  const fetchIdx = fnMatch[0].indexOf('fetch(');
-  assert.ok(saveIdx > -1 && fetchIdx > saveIdx, 'the local log is the real record and must be written first');
-  assert.match(fnMatch[0], /\.catch\(e => console\.warn/);
+  const pushIdx = fnMatch[0].indexOf('pushInvoicePaidToPortal(');
+  assert.ok(saveIdx > -1 && pushIdx > saveIdx, 'the local log is the real record and must be written first');
+  const dash = WORKSPACE_SRC.match(/async function togglePaid\(id\)[\s\S]*?\n  \}/)[0];
+  assert.ok(dash.indexOf('saveInvoices(invoices)') < dash.indexOf('pushInvoicePaidToPortal('));
+  assert.match(pushHelperSrc(), /\.catch\(e => console\.warn/);
+  assert.doesNotMatch(pushHelperSrc(), /\bawait\b/);
 });
 
 test('the old per-invoice Resend Invite button and its function are both gone', () => {

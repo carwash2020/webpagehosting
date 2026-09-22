@@ -1843,6 +1843,109 @@ flows: `?jobRef=` on the invoice page, `?job=` on finance's expenses.
   other realm even when they print identically; convert with
   `Array.from`.
 
+## 2026-09-22 (later still) -- Workspace rework, part 4: Invoices opens on the list; one Mark paid
+
+**Why list-first.** Money is a bottom-bar destination, and the question
+it answers is "who owes me?" Landing on a blank invoice form answered
+"make a new one", which the + button already does from every page. The
+list was the fourth tab, off-screen on a 390px phone. Every way in that
+means the form still gets the form:
+- `#invoice`, `#quote`, `#pos` hashes;
+- `?jobRef=` (a job's Create invoice) and `?client=` (a client's
+  Invoice button), read by `genTabFromQuery()` *before*
+  `applyJobRefFromUrl()` / `applyClientFromUrl()` strip them from the
+  URL;
+- the Dashboard strip's Create invoice, now `#invoice` (it was the only
+  hashless link to the page).
+
+**Numbers match the Dashboard.** `invoiceState()` uses the same rules as
+workspace.html's `invoicePaymentStatus()` / `isOverdue()` and sync.js's
+`deriveInvoicePaid()`: paidAmount first, the legacy `paid` flag only
+when there's no paidAmount, and whole-cents comparison. A test runs the
+three side by side over edge cases, so "Owed to you" here and "Money
+Owed" on the Dashboard can't disagree. The tiles count every invoice
+(ignoring search and filter), like the quote conversion rate.
+
+**One sheet, two doors, again.** `openInvoiceActions(id)` is opened by
+a tap on the row (the row's body is a `<button class="th-row-link">`)
+and by a hold. `attachLongPress`'s opt-in (`data-long-press-target`)
+now accepts a button as well as a link. Mark Paid leads the sheet
+because it's the everyday action. Quotes get `openQuoteActions()`:
+Open client, Open job, Delete. Converting a quote still happens on the
+New quote form, since there is no load-a-logged-quote path to reuse.
+
+**The Mark paid fix (payments-adjacent, called out on the PR).**
+- `toggleInvoicePaid()` now sets `paidAmount = paid ? total : 0` with
+  the flag. Those are the Dashboard's full-payment semantics.
+- It now calls `mirrorInvoiceToRelational()`, which it never did, so
+  the relational read cache stayed stale.
+- It now calls `mirrorReferralEarnedForJob()` on becoming paid.
+- Workspace `togglePaid()` gains the portal call it never had.
+- The portal call itself moved into `pushInvoicePaidToPortal()` in
+  sync.js, unchanged: same endpoint, same body, still fire-and-forget
+  after the local save.
+- No edge function, schema, or RLS change.
+
+## 2026-09-22 (later still) -- Workspace rework, part 5: the job-to-money pipeline
+
+**The gap.** Nothing in the suite noticed a finished job that was never
+billed. The Dashboard knew about unpaid *invoices*. A job marked Done
+with no invoice at all was invisible: it wasn't owed on paper, so it
+appeared nowhere. For a one-truck business that is the most common way
+money is lost. And the Done moment only offered a review request.
+
+**One derived stage, no new records.** `thJobMoneyStage(job, invoices,
+manualIncome)`:
+- Invoices linked by `jobRefId`: all paid means **paid**; any past due
+  means **overdue**; otherwise **invoiced**. This is the paidAmount-first
+  balance from part 4.
+- Else a hand-logged payment against the job (Finance income with that
+  `jobRefId`) means **paid**. That mirrors `thComputeJobMargin`'s
+  `hasInvoice`, so "billed" means the same thing in both places.
+- Else status: done means **to-invoice**, or **no-charge** when
+  `job.noInvoice` is set; in progress means **working**; otherwise
+  **booked**.
+
+The stage follows the money, so a deposit invoice on an unfinished job
+reads Invoiced. `thJobSteps()` keeps work and money apart for the
+tracker: Done isn't reached, Invoiced is.
+
+**The 60-day window.** `thJobsToInvoice()` only counts jobs finished in
+the last 60 days (TH_TO_INVOICE_DAYS). The done date is
+`statusChangedAt`, else the job's date. Without the window, history from
+before invoicing moved into this app would bury this week's forgotten
+job. Jobs' pills and filter use the same list (`marginData.toInvoiceIds`),
+so the Dashboard count and the Jobs filter always agree. Job Detail still
+offers Create invoice on an older unbilled job, since there it's asked
+for.
+
+**Every way out of "to invoice" is honest.**
+- Invoice it (`?jobRef=`, the existing prefill).
+- Log that it was paid another way: `finance.html?job=<id>#income` now
+  opens the income form with the job, client, and description filled.
+  That keeps the books right instead of just hiding the row.
+- Mark it **No charge**. `thSetJobNoInvoice()` is the one write. It's
+  blob only, since the relational jobs mirror has no column for it and
+  nothing reads it there. It writes an explicit `false` to clear, never
+  a delete, because sync.js merges per field and a deleted field can
+  come back from a stale device. The Dashboard's No charge is undoable.
+
+**Job done sheet.** `setJobStatus()` → `openJobDoneSheet(job)`. It
+offers Create invoice (only while unbilled, behind `canManageInvoices`),
+then the review request, then No charge. The review link moved into
+`reviewRequestHref()`, which the bulk flow's test now pins alongside
+bulk's own copy. If `showQuickActionSheet` isn't there, it falls back to
+the old confirm.
+
+**Job Detail stays read-only.** The tracker's buttons are links into the
+pages that own the writes: invoice form, Finance income, the Recent list.
+
+**Gotchas:**
+- The Dashboard jsdom harness needs `requestAnimationFrame` stubbed,
+  since `renderMetrics` animates.
+- An `async function` pulled out by source extraction needs its `async`
+  put back before it goes into a vm.
+
 ## 2026-09-22 (later still) -- Client portal: your visits, unread messages, and a Home that knows who you are
 
 Three rounds on `portal/*` only (a sibling session owned `tools/`),

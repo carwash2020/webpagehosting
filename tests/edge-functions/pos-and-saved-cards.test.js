@@ -218,7 +218,8 @@ test('POS is the Quick charge tab inside Invoices (2026-09-21), so it rides the 
   assert.doesNotMatch(NAV, /\/tools\/pos\.html/, 'POS must not be its own nav destination any more');
   assert.match(POS_PAGE, /<button class="tab-btn" data-tab="pos" onclick="activateGenTab\('pos'\)">Quick charge<\/button>/);
   assert.match(POS_PAGE, /<div class="tab-panel" id="tab-pos">/);
-  assert.match(POS_PAGE, /GEN_TAB_ORDER = \['invoice', 'quote', 'pos', 'recent'\]/);
+  // The invoice list leads the strip since 2026-09-22 (Workspace rework part 4).
+  assert.match(POS_PAGE, /GEN_TAB_ORDER = \['recent', 'invoice', 'quote', 'pos'\]/);
   const stub = fs.readFileSync(repo('tools', 'pos.html'), 'utf8');
   assert.match(stub, /location\.replace\('\/tools\/invoice-generator\.html#pos'\)/);
   assert.match(POS_PAGE, /function applyGenTabFromHash\(\)[\s\S]*?if \(tab === 'pos'\)/, 'the deep link the stub lands on must open the tab (and focus the email field)');

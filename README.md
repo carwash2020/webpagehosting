@@ -3531,6 +3531,131 @@ Verified in a real headless Chromium (local HTTP, fake Supabase):
 
 New tests: `tests/tools/jobs-list-app.test.js` (8).
 
+## What changed, 2026-09-22 (later still) -- Workspace rework, part 4: Money opens on who owes you
+
+Part 4 of the Workspace rework (after the app shell, the client list,
+and the Jobs list). Full reasoning in `docs/specialist-logs/features.md`.
+
+**Invoices opens on the invoice list, not a blank form.** The Money tab
+used to land on the New invoice form, and the list of what you had
+billed sat in a fourth tab that was off the screen on a phone. Now the
+first tab is **Invoices**:
+- Three numbers at the top: **Owed to you**, **Overdue**, and what you
+  billed this month. Tap Owed or Overdue to show just those invoices.
+- Search, then chips: All / Unpaid / Overdue / Paid, with counts. The
+  choice is remembered on this device.
+- One row per invoice, newest first, in the same row style as the
+  Clients list. Each row shows what is still owed and when it is due
+  ("Due Oct 19", "25 days overdue" in red, "$50 of $160 paid"), plus a
+  Paid / Unpaid / Part paid / Overdue pill.
+- Tap a row, or hold it, for one sheet: **Mark Paid** first, then
+  Resend to client, Open client, Open job, and Delete. On a computer,
+  Resend / Mark Paid / Delete also stay at the end of each row.
+- Quotes are underneath in the same rows, with one pill: Invoiced,
+  Approved, Declined, Awaiting reply, or Pending. A decline reason and
+  a client's open questions still show under the row.
+
+The forms keep their tabs, renamed **New invoice**, **New quote**, and
+**Quick charge**. Their deep links still work: `#invoice`, `#quote`,
+`#pos`. A link that brings something to invoice still opens the form:
+a job's Create invoice (`?jobRef=`) and a client's Invoice button
+(`?client=`). The Dashboard's **Create invoice** now goes to `#invoice`.
+The + button already did.
+
+**Fixed: Mark paid did half the job on each page.**
+- The Dashboard's Mark paid (in Money Owed and Needs attention) never
+  told the client portal. An invoice marked paid there for cash or
+  check stayed payable online, so the client could pay it twice. It now
+  makes the same `set-invoice-paid` call the Invoices page made. The
+  call is now one shared helper, `pushInvoicePaidToPortal()` in
+  `sync.js`.
+- The Invoices page's Mark Paid flipped only the old `paid` flag. The
+  Dashboard, the database copy, and the overdue push all read
+  `paidAmount` first. So an invoice marked paid on the Dashboard and
+  then unpaid here stayed paid everywhere else, and one marked paid
+  here after a partial payment stayed owed everywhere else. It also
+  never updated the database copy, which the list reads once it loads,
+  so a refresh could put the old status back. It now writes
+  `paidAmount` with the flag, mirrors the invoice, and earns a pending
+  referral credit, the same as the Dashboard.
+- The invoice sheet's title (a client name) went into
+  `showQuickActionSheet()`, which renders HTML, unescaped. It's escaped
+  now.
+
+Verified in a real headless Chromium (local HTTP, fake Supabase):
+- 390px and 1440px: the tiles, chips, and rows.
+- Tap and long-press each open one sheet.
+- Mark Paid updates the tiles and posts both the database mirror and
+  `set-invoice-paid`.
+- Filters stick.
+- `?jobRef=`, `?client=`, `?client=…#quote`, `#pos`, `?search=…#recent`,
+  and `#invoice` each open the right tab with the right fields filled.
+- No console errors.
+
+New tests: `tests/tools/invoices-list-first.test.js` (13).
+
+## What changed, 2026-09-22 (later still) -- Workspace rework, part 5: nothing slips between Done and Paid
+
+Part 5 of the Workspace rework. Full reasoning in
+`docs/specialist-logs/features.md`.
+
+**Every job now knows where its money is.** A job is Booked, Working,
+To invoice, Invoiced, Overdue, Paid, or No charge. The stage is worked
+out from records that already exist: the job's status, the invoices
+carrying its `jobRefId`, and any payment logged against it by hand in
+Finance. The one new stored field is `noInvoice`, for "No charge". See
+`thJobMoneyStage()` in `data-layer.js`.
+
+**Finished jobs nobody billed are caught.**
+- **Dashboard:** Needs attention's Income lane gets **Ready to invoice**.
+  It lists jobs finished in the last 60 days with no invoice and no
+  payment logged, oldest first, each with an **Invoice** button that
+  opens the form filled from the job. Rows a week old or more are
+  highlighted. The ⋯ sheet covers the two honest reasons a finished job
+  has no invoice: it was paid another way (it opens Finance's income
+  form filled for that job), or there's no charge (a warranty callback,
+  a favor; undoable). The Money Owed card gets a **To invoice · N jobs**
+  line that jumps there. The count also joins the Income lane, the
+  Needs attention badge, and the app icon badge.
+- **Jobs:** a new **To invoice** filter with a count, and `#to-invoice`
+  deep links to it. Finished cards wear a money pill: an orange **To
+  invoice** link, or Invoiced, Overdue, Paid, or No charge. An unbilled
+  finished card is no longer dimmed like history. On a phone, a
+  finished card's badges wrap under the title, and the redundant Done
+  badge is hidden.
+- **Marking a job done** now opens a Job done sheet: **Create
+  invoice** first while nothing is billed, then the review request,
+  then **No charge**. It used to be a single "Send a review request?"
+  confirm, and the invoice was left to memory. Bulk mark-done is
+  unchanged.
+- **Job Detail** shows the job's track: Booked → Working → Done →
+  Invoiced → Paid, filled up to where it is, with a ring on the next
+  step. When paid it turns green. One line under it says what's next,
+  with the button for it: "Done, not invoiced yet" with Create invoice
+  and Paid another way, "$285.00 owed · 25 days overdue" with Follow
+  up, "Paid in full", or "Booked for tomorrow".
+- **Client Detail** lists each job with the same money pill.
+
+**Fixed along the way:**
+- **Job Detail's expense rows** read `description` / `category`, fields
+  expenses have never had (they're `desc` / `vendor` / `type`), so every
+  row said just "Expense".
+- **Job Detail's invoice rows** said Paid or Unpaid from the old `paid`
+  flag. They now use `paidAmount` first, like every other money view,
+  and can say Part paid or Overdue.
+
+Verified in a real headless Chromium (local HTTP, fake Supabase):
+- 390px and 1440px: the Dashboard's Ready to invoice group and its ⋯
+  sheet, and the Money Owed line.
+- Jobs' To invoice filter via `#to-invoice`, and the pills on finished
+  cards and on the desktop table.
+- The Job done sheet on a real Done tap (confetti still first).
+- Job Detail's track for a to-invoice, an overdue, a paid, and a booked
+  job.
+- No console errors.
+
+New tests: `tests/tools/job-money-pipeline.test.js` (15).
+
 ## What changed, 2026-09-22 (later still) -- Client portal: see your visits, know when we replied, and a Home that knows you
 
 Portal-only (`portal/*`, plus the SQL/edge function behind it). Three

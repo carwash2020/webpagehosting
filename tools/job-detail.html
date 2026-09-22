@@ -52,15 +52,15 @@
   })();
 </script>
 <link rel="stylesheet" href="/styles.css?v=2e81706c3d">
-<link rel="stylesheet" href="/tools/styles-tools.css?v=effd2652c2">
+<link rel="stylesheet" href="/tools/styles-tools.css?v=f4eba25dcc">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.112.3/dist/umd/supabase.js" integrity="sha384-qafw21c/iciq0VXsi9FzkfoQv5I/V0iqE4lSNcKXPnW9/UTJLnv5CcN4FHxVLnKg" crossorigin="anonymous" defer></script>
-<script src="/tools/sync.js?v=6b9e092eca" defer></script>
-<script src="/tools/data-layer.js?v=5d2fdbfaf1" defer></script>
+<script src="/tools/sync.js?v=4cfac4b10e" defer></script>
+<script src="/tools/data-layer.js?v=0eeb0b02fa" defer></script>
 <script src="/tools/tools-effects.js?v=a767167574" defer></script>
-<script src="/tools/tools-dialogs.js?v=d68ce809a1" defer></script>
+<script src="/tools/tools-dialogs.js?v=33199ae1d8" defer></script>
 <script src="/tools/tools-media-sharing.js?v=0c229c9353" defer></script>
 <script src="/tools/tools-nav-pwa.js?v=4d9f8c89e1" defer></script>
-<script src="/tools/tools-command-palette.js?v=7bd204bef4" defer></script>
+<script src="/tools/tools-command-palette.js?v=3aaed2827f" defer></script>
 <!-- U16 fix (High-Impact Upgrades, 2026-09-07): jsPDF for the new
      "Generate Job Sheet" button, same version/CDN as invoice-generator.html
      and contract-generator.html. -->
@@ -155,6 +155,50 @@
   .job-photo-grid { display: flex; flex-wrap: wrap; gap: 8px; }
   .job-photo-thumb { width: 96px; height: 96px; border-radius: 8px; overflow: hidden; border: 1px solid var(--border); cursor: pointer; }
   .job-photo-thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
+
+  /* The job's tracker (2026-09-22, Workspace rework part 5): five hex dots
+     on one line, filled up to where the job is, a ring on the next step,
+     and the whole track turns green once it's paid. */
+  .job-track {
+    list-style: none; margin: 18px 0 0; padding: 0;
+    display: grid; grid-template-columns: repeat(var(--steps, 5), minmax(0, 1fr));
+    position: relative;
+  }
+  .job-track:has(> :nth-child(3):last-child) { --steps: 3; }
+  .job-track-step { position: relative; display: flex; flex-direction: column; align-items: center; gap: 7px; min-width: 0; }
+  .job-track-step + .job-track-step::before {
+    content: ''; position: absolute; top: 8px; right: 50%; width: 100%; height: 2px;
+    background: var(--border); z-index: 0;
+  }
+  .job-track-step.is-reached + .job-track-step.is-reached::before,
+  .job-track-step.is-reached + .job-track-step.is-current::before { background: linear-gradient(90deg, var(--orange), var(--orange-light)); }
+  .job-track-dot {
+    position: relative; z-index: 1; width: 18px; height: 18px; clip-path: var(--hex);
+    background: var(--bg-panel-2); box-shadow: inset 0 0 0 2px var(--border);
+  }
+  .job-track-step.is-reached .job-track-dot { background: linear-gradient(165deg, var(--orange-light), var(--orange) 70%); box-shadow: none; }
+  .job-track-step.is-current .job-track-dot { background: var(--bg-panel); box-shadow: inset 0 0 0 3px var(--orange-light); animation: jobTrackPulse 1.8s ease-in-out infinite; }
+  .job-track-label { font-family: var(--font-ui); font-size: 11.5px; font-weight: 600; letter-spacing: .3px; color: var(--text-dim); white-space: nowrap; }
+  .job-track-step.is-reached .job-track-label { color: var(--text); }
+  .job-track-step.is-current .job-track-label { color: var(--orange-light); }
+  .job-track.is-complete .job-track-step .job-track-dot { background: linear-gradient(165deg, #8fe0a8, #4caf78 70%); }
+  .job-track.is-complete .job-track-step + .job-track-step::before { background: #4caf78; }
+  @keyframes jobTrackPulse { 50% { transform: scale(1.18); } }
+  @media (prefers-reduced-motion: reduce) { .job-track-step.is-current .job-track-dot { animation: none; } }
+
+  .job-next {
+    display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap;
+    margin-top: 14px; padding: 12px 14px; border-radius: 12px;
+    background: var(--bg-panel-2); border: 1px solid var(--border);
+  }
+  .job-next-text { color: var(--text-dim); font-size: 13.5px; line-height: 1.5; }
+  .job-next-text strong { color: var(--white); }
+  .job-next.is-todo { border-color: var(--orange-tint-border); background: var(--orange-tint-soft); }
+  .job-next.is-late { border-color: rgba(224,82,82,.45); background: rgba(224,82,82,.08); }
+  .job-next.is-late .job-next-text strong { color: #e05252; }
+  .job-next.is-paid .job-next-text strong { color: #6fcf97; }
+  .job-next-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+  .job-next-btn { text-decoration: none; display: inline-flex; align-items: center; min-height: 40px; padding: 8px 16px; width: auto; }
 </style>
 </head>
 <body>
@@ -330,6 +374,7 @@
         '<span class="badge badge-status status-' + escapeHtml(j.status || 'not-started') + '">' + (STATUS_LABEL[j.status] || j.status || 'Not Started') + '</span>' +
         warrantyBadgeHtml(j) +
       '</div>' +
+      jobTrackHtml(bundle, allowed) +
       quickHtml +
       '<div class="job-stat-row">' +
         '<div class="job-stat"><div class="job-stat-value">' + money(bundle.margin.revenue) + '</div><div class="job-stat-label">Revenue</div></div>' +
@@ -351,7 +396,7 @@
     }
 
     html += renderRecordSection('Invoices', bundle.linkedInvoices.map(i => ({
-      title: 'Invoice ' + (i.invoiceNumber || ''), meta: (i.date || '') + (i.paid ? ' \u00b7 Paid' : ' \u00b7 Unpaid'),
+      title: 'Invoice ' + (i.invoiceNumber || ''), meta: (i.date || '') + ' \u00b7 ' + invoiceStatusWord(i),
       amount: money(i.total || 0), href: '/tools/invoice-generator.html?search=' + encodeURIComponent(j.client || '') + '#recent',
     })), 'No invoice linked to this job yet.');
 
@@ -360,14 +405,84 @@
       amount: money(q.total || 0), href: '/tools/invoice-generator.html?search=' + encodeURIComponent(j.client || '') + '#recent',
     })), 'No quote linked to this job yet.');
 
+    // Real bug (2026-09-22): expenses are logged as { desc, vendor, type }
+    // (finance.html addEntry), never description/category, so every row
+    // here read just "Expense".
     html += renderRecordSection('Expenses', bundle.linkedExpenses.map(e => ({
-      title: e.description || e.category || 'Expense', meta: e.date || '',
+      title: e.desc || e.vendor || (e.type === 'mileage' ? 'Mileage' : 'Expense'), meta: [e.date, e.desc && e.vendor ? e.vendor : '', e.type === 'mileage' && e.miles ? e.miles + ' mi' : ''].filter(Boolean).join(' \u00b7 '),
       amount: money(e.amount || 0), href: '/tools/finance.html#expenses',
     })), 'No expenses logged against this job yet.', '/tools/finance.html?job=' + j.id + '#expenses');
 
     html += '<div class="section-block"><div class="section-heading is-static"><span>Photos</span></div><div class="job-photo-grid" id="jobPhotosGrid"><div class="empty-state-small"><svg class="th-icon" aria-hidden="true"><use href="#icon-camera" xlink:href="#icon-camera"></use></svg>Loading...</div></div></div>';
 
     document.getElementById('jobContent').innerHTML = html;
+  }
+
+  // Paid / Part paid / Unpaid from paidAmount first, the same rule as every
+  // other money view (thInvoicePaidAmount); `paid` alone was wrong for any
+  // invoice with a partial payment, or marked unpaid again on the Dashboard.
+  function invoiceStatusWord(inv) {
+    if (typeof thInvoiceBalance !== 'function') return inv.paid ? 'Paid' : 'Unpaid';
+    if (thInvoiceBalance(inv) <= 0 && (Number(inv.total) || 0) > 0) return 'Paid';
+    if (thInvoicePaidAmount(inv) > 0) return 'Part paid';
+    return typeof thInvoiceIsOverdue === 'function' && thInvoiceIsOverdue(inv) ? 'Overdue' : 'Unpaid';
+  }
+
+  // The job's tracker (2026-09-22, Workspace rework part 5): Booked ->
+  // Working -> Done -> Invoiced -> Paid, from thJobSteps(), then one line
+  // saying what happens next with the button for it. This page stays
+  // read-only; every button is a link into the page that owns the write.
+  function jobTrackHtml(bundle, allowed) {
+    if (!bundle.money || typeof thJobSteps !== 'function') return '';
+    const j = bundle.job;
+    const m = bundle.money;
+    const track = thJobSteps(j, m);
+    const allDone = track.current === null;
+    const steps = track.steps.map(st => {
+      const cls = st.reached ? ' is-reached' : (st.key === track.current ? ' is-current' : '');
+      return '<li class="job-track-step' + cls + '"' + (st.key === track.current ? ' aria-current="step"' : '') + '>' +
+        '<span class="job-track-dot" aria-hidden="true"></span><span class="job-track-label">' + st.label + '</span></li>';
+    }).join('');
+    const attr = typeof escapeAttr === 'function' ? escapeAttr : escapeHtml;
+    const btn = (href, label, cls) => '<a class="' + (cls || 'primary-btn') + ' job-next-btn" href="' + attr(href) + '">' + label + '</a>';
+    const invoicesHref = '/tools/invoice-generator.html?search=' + encodeURIComponent(j.client || '') + '#recent';
+    let text = '', actions = '', tone = '';
+    if (m.stage === 'booked') {
+      const when = j.date ? new Date(j.date + 'T00:00:00') : null;
+      const days = when && !isNaN(when.getTime()) ? Math.round((when - new Date(new Date().toDateString())) / 86400000) : null;
+      const long = days === null ? '' : escapeHtml(when.toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' }));
+      if (days === null) text = 'Booked, no date set yet.';
+      else if (days === 0) text = '<strong>Booked for today.</strong>';
+      else if (days === 1) text = 'Booked for tomorrow.';
+      else if (days < 0) { tone = ' is-todo'; text = '<strong>Booked for ' + long + '</strong> and not started yet.'; }
+      else text = 'Booked for ' + long + '.';
+    } else if (m.stage === 'working') {
+      text = 'In progress.';
+    } else if (m.stage === 'to-invoice') {
+      tone = ' is-todo';
+      text = '<strong>Done, not invoiced yet.</strong> Bill it while the work is fresh.';
+      if (allowed('canManageInvoices')) actions += btn('/tools/invoice-generator.html?jobRef=' + encodeURIComponent(j.id), 'Create invoice');
+      if (allowed('canViewFinance')) actions += btn('/tools/finance.html?job=' + encodeURIComponent(j.id) + '#income', 'Paid another way', 'secondary-btn');
+    } else if (m.stage === 'no-charge') {
+      text = 'Done. Marked as no charge.';
+    } else if (m.stage === 'invoiced' || m.stage === 'overdue') {
+      const open = m.invoices.filter(inv => thInvoiceBalance(inv) > 0)
+        .map(inv => ({ inv, due: thInvoiceDueDate(inv) }))
+        .sort((a, b) => (a.due ? a.due.getTime() : Infinity) - (b.due ? b.due.getTime() : Infinity))[0];
+      let dueText = '';
+      if (open && open.due) {
+        const days = Math.round((open.due - new Date(new Date().toDateString())) / 86400000);
+        dueText = days < 0 ? (-days) + ' day' + (days === -1 ? '' : 's') + ' overdue' : days === 0 ? 'due today' : 'due ' + open.due.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+      }
+      tone = m.stage === 'overdue' ? ' is-late' : '';
+      text = '<strong>' + money(m.balance) + ' owed</strong>' + (dueText ? ' &middot; ' + dueText : '') + '.';
+      if (allowed('canManageInvoices')) actions += btn(invoicesHref, m.stage === 'overdue' ? 'Follow up' : 'See invoice', m.stage === 'overdue' ? 'primary-btn' : 'secondary-btn');
+    } else if (m.stage === 'paid') {
+      tone = ' is-paid';
+      text = '<strong>Paid in full</strong>' + (m.billed ? ' &middot; ' + money(m.billed) : '') + '.';
+    }
+    return '<ol class="job-track' + (allDone ? ' is-complete' : '') + '" aria-label="Where this job is">' + steps + '</ol>' +
+      '<div class="job-next' + tone + '"><div class="job-next-text">' + text + '</div>' + (actions ? '<div class="job-next-actions">' + actions + '</div>' : '') + '</div>';
   }
 
   function renderRecordSection(label, rows, emptyText, addHref) {

@@ -815,6 +815,102 @@ function thComputeJobMargin(job, invoices, expenses, manualIncome) {
   return { revenue, cost, hasInvoice, hasCost, margin, marginPct };
 }
 
+// The money side of a job (2026-09-22, Workspace rework part 5): where it
+// is between booked and paid, worked out from records that already exist --
+// its status, the invoices carrying its jobRefId, and any payment logged
+// against it by hand in Finance (cash, a check, a transfer). The only new
+// field is job.noInvoice, the "No charge" opt-out (a warranty callback, a
+// favor), set from the Dashboard or the job's own sheet.
+//   booked     -- not started            working  -- in progress
+//   to-invoice -- done, nothing billed or paid (the one that slips)
+//   no-charge  -- done, marked as not needing an invoice
+//   invoiced   -- billed, still owed, not past due
+//   overdue    -- billed, still owed, past due
+//   paid       -- billed and paid in full, or paid by hand in Finance
+// A job can be invoiced before it's done (a deposit); the stage follows the
+// money, and thJobSteps() below keeps the work and the money apart.
+function thJobMoneyStage(job, invoices, manualIncome, now) {
+  const id = String(job.id);
+  const linked = (invoices || []).filter(inv => String(inv.jobRefId) === id);
+  const payments = (manualIncome || []).filter(e => String(e.jobRefId) === id);
+  const balanceCents = linked.reduce((sum, inv) => sum + Math.round(thInvoiceBalance(inv) * 100), 0);
+  const billed = linked.reduce((sum, inv) => sum + (Number(inv.total) || 0), 0) + payments.reduce((sum, e) => sum + (Number(e.amount) || 0), 0);
+  let stage;
+  if (linked.length) {
+    if (balanceCents <= 0) stage = 'paid';
+    else stage = linked.some(inv => thInvoiceIsOverdue(inv, now)) ? 'overdue' : 'invoiced';
+  } else if (payments.length) {
+    stage = 'paid';
+  } else if (job.status === 'done') {
+    stage = job.noInvoice ? 'no-charge' : 'to-invoice';
+  } else {
+    stage = job.status === 'in-progress' ? 'working' : 'booked';
+  }
+  return { stage, invoices: linked, payments, billed, balance: balanceCents / 100 };
+}
+
+// Booked -> Working -> Done -> Invoiced -> Paid, for Job Detail's tracker.
+// `current` is the first step not yet reached (null once all are); a
+// no-charge job ends at Done.
+function thJobSteps(job, money) {
+  const worked = job.status === 'in-progress' || job.status === 'done';
+  const done = job.status === 'done';
+  const billed = money.invoices.length > 0 || money.payments.length > 0;
+  const steps = [
+    { key: 'booked', label: 'Booked', reached: true },
+    { key: 'working', label: 'Working', reached: worked || done },
+    { key: 'done', label: 'Done', reached: done },
+  ];
+  if (money.stage !== 'no-charge') {
+    steps.push({ key: 'invoiced', label: 'Invoiced', reached: billed });
+    steps.push({ key: 'paid', label: 'Paid', reached: money.stage === 'paid' });
+  }
+  const next = steps.find(s => !s.reached);
+  return { steps, current: next ? next.key : null };
+}
+
+// When a job was finished: the moment its status last changed to Done
+// (statusChangedAt, written by every status change since 2026-08), else its
+// own date for jobs finished before that field existed.
+function thJobDoneDate(job) {
+  if (job.statusChangedAt) {
+    const d = new Date(job.statusChangedAt);
+    if (!isNaN(d.getTime())) return new Date(d.toDateString());
+  }
+  const d = new Date((job.date || '') + 'T00:00:00');
+  return isNaN(d.getTime()) ? null : d;
+}
+
+// Done jobs nobody has billed (2026-09-22, rework part 5): the Dashboard's
+// "Ready to invoice" and Job Tracker's "To invoice" filter. Only jobs
+// finished in the last `days` (60 by default) -- older history from before
+// invoicing moved into this app would otherwise bury this week's job --
+// oldest first, since the oldest is the one closest to being forgotten.
+const TH_TO_INVOICE_DAYS = 60;
+function thJobsToInvoice(jobs, invoices, manualIncome, now, days) {
+  const today = new Date((now || new Date()).toDateString());
+  const windowDays = days || TH_TO_INVOICE_DAYS;
+  return (jobs || [])
+    .filter(j => j.status === 'done')
+    .map(j => ({ job: j, doneDate: thJobDoneDate(j) }))
+    .filter(r => r.doneDate && Math.round((today - r.doneDate) / 86400000) <= windowDays)
+    .filter(r => thJobMoneyStage(r.job, invoices, manualIncome, now).stage === 'to-invoice')
+    .map(r => ({ job: r.job, doneDate: r.doneDate, daysAgo: Math.max(0, Math.round((today - r.doneDate) / 86400000)) }))
+    .sort((a, b) => a.doneDate - b.doneDate);
+}
+
+// The one write for the "No charge" opt-out, shared by every page that
+// offers it. Blob only: the relational jobs mirror has no column for it and
+// nothing reads it from there.
+function thSetJobNoInvoice(jobId, value) {
+  const jobs = thRead(TH_KEYS.jobs, []);
+  const job = jobs.find(j => String(j.id) === String(jobId));
+  if (!job) return false;
+  job.noInvoice = !!value; // false, not deleted: the sync merge is per field, and a deleted field can come back from a stale device
+  job.lastEditedBy = (typeof getCurrentUserEmail === 'function' && getCurrentUserEmail()) || job.lastEditedBy;
+  return thWrite(TH_KEYS.jobs, jobs);
+}
+
 // Everything for one job in a single call -- the query that makes a real
 // Job Detail view possible, the same way thGetClientBundle() enabled
 // Client Detail. Client resolution prefers job.clientId (written on every
@@ -839,6 +935,7 @@ function thGetJobBundle(jobId) {
   if (job.clientId) client = thFindClientById(job.clientId);
   if (!client && job.client) client = thFindClientByName(job.client);
 
-  return { job, margin, linkedInvoices, linkedQuotes, linkedExpenses, client };
+  const money = thJobMoneyStage(job, invoices, income);
+  return { job, margin, linkedInvoices, linkedQuotes, linkedExpenses, client, money };
 }
 

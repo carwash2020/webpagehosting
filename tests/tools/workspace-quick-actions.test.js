@@ -88,7 +88,7 @@ test('dashboard home pins New job, Create invoice, Find client, and Calendar dir
   const strip = WORKSPACE.match(/<nav class="dash-primary-strip"[\s\S]*?<\/nav>/);
   assert.ok(strip, 'expected #dashPrimaryStrip');
   assert.match(strip[0], /href="\/tools\/job-tracker\.html#add-job"/);
-  assert.match(strip[0], /href="\/tools\/invoice-generator\.html"/);
+  assert.match(strip[0], /href="\/tools\/invoice-generator\.html#invoice"/, 'the form -- Invoices opens on its list since 2026-09-22');
   assert.match(strip[0], /onclick="focusFindClient\(\)"/);
   assert.match(strip[0], /href="\/tools\/job-tracker\.html#calendar"/);
   assert.match(strip[0], />New job</);
@@ -104,7 +104,7 @@ test('dashboard home pins New job, Create invoice, Find client, and Calendar dir
 });
 
 test('Create invoice on the strip is still finance-gated; Find client expands the existing global search', () => {
-  assert.match(WORKSPACE, /href="\/tools\/invoice-generator\.html" data-tile-perm="can_manage_invoices"/);
+  assert.match(WORKSPACE, /href="\/tools\/invoice-generator\.html#invoice" data-tile-perm="can_manage_invoices"/);
   const fn = extractFn(WORKSPACE, 'focusFindClient');
   assert.match(fn, /toggleIconSearch\('globalSearchWrap', true\)/);
   assert.match(fn, /getElementById\('globalSearch'\)/);
