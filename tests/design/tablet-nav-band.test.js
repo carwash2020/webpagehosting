@@ -47,12 +47,13 @@ for (const [label, css] of [['styles-tools.css', STYLES], ['runway-dashboard.htm
     assert.match(css, /@media \(min-width: 1024px\) \{ \.th-desktop-sidebar \{ view-transition-name: th-app-sidebar; \} \}/);
   });
 
-  test(`${label}: in the tablet band the five bar items cluster at the centre and the More sheet becomes a centred card`, () => {
+  test(`${label}: in the tablet band the five bar items (four links and the Create button) cluster at the centre and both sheets become centred cards`, () => {
     const band = css.match(/@media \(min-width: 721px\) and \(max-width: 1023px\) \{([\s\S]*?)\n\s*\}/);
     assert.ok(band, 'expected a tablet-band block');
     assert.match(band[1], /\.th-bottom-nav \{ justify-content: center; gap: 24px; \}/);
-    assert.match(band[1], /\.th-bottom-nav a, \.th-bottom-nav \.th-bn-more \{ max-width: 96px; \}/);
+    assert.match(band[1], /\.th-bottom-nav a, \.th-bottom-nav \.th-bn-create \{ max-width: 96px; \}/);
     assert.match(band[1], /\.th-more-sheet-panel \{ max-width: 560px; margin: 0 auto; \}/);
+    assert.match(band[1], /\.th-create-sheet \.th-sheet-panel \{ max-width: 560px; margin: 0 auto; \}/);
   });
 }
 
@@ -64,11 +65,16 @@ test('the phone-only block no longer carries the body bottom padding (it moved t
   assert.match(mobileBlock[1], /body \.hub-title \{ font-size: 20px; \}/);
 });
 
-test('the floating flag and search buttons already sat above a bar that was not there in the tablet band -- their offsets key off the same 1024px, so they now line up with a real bar', () => {
-  assert.match(STYLES, /@media \(min-width: 1024px\) \{ \.th-flag-btn \{ bottom: 16px; \} \}/);
-  assert.match(STYLES, /@media \(min-width: 1024px\) \{ \.th-cmdk-btn \{ display: none; \} \}/);
-  const flag = STYLES.match(/\.th-flag-btn \{([^}]*)\}/)[1];
-  assert.match(flag, /bottom: calc\(76px \+ env\(safe-area-inset-bottom, 0px\) \+ 16px\);/);
+test('nothing floats over page content below the sidebar breakpoint any more (app shell v2): the search button moved into the header and the flag button is hidden in favour of the More drawer row, keeping its desktop corner', () => {
+  for (const css of [STYLES, RUNWAY]) {
+    assert.match(css, /@media \(min-width: 1024px\) \{ \.th-flag-btn \{ bottom: 16px; \} \}/);
+    assert.match(css, /@media \(max-width: 1023px\) \{ \.th-flag-btn \{ display: none; \} \}/);
+    assert.doesNotMatch(css, /\.th-cmdk-btn \{/, 'the floating search button is gone');
+    assert.doesNotMatch(css, /th-fab-hide-at-top/, 'so is the fade-at-top workaround it needed');
+    assert.match(css, /@media \(min-width: 1024px\) \{ \.th-hdr-actions \{ display: none; \} \}/);
+  }
+  const PALETTE = fs.readFileSync(path.join(TOOLS_DIR, 'tools-command-palette.js'), 'utf8');
+  assert.doesNotMatch(PALETTE, /th-cmdk-btn|function injectTriggerButton/);
 });
 
 // Eight pages label it "Back to Workspace", three "Back to Dashboard";

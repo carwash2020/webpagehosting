@@ -76,14 +76,14 @@ test('respond-lane sub-groups hide themselves when empty (plain empty state only
   assert.match(STYLES.length ? WORKSPACE : WORKSPACE, /\.ops-group\.is-empty \{ display: none; \}/);
 });
 
-test('bottom nav lists the five daily dests (Clients replaced Calendar on 2026-09-21, when Calendar became a Job Tracker view), plus a More button that opens a sheet of the remaining sidebar dests', () => {
-  assert.match(NAV, /label: 'Home'/);
-  assert.match(NAV, /label: 'Jobs'/);
-  assert.match(NAV, /label: 'Clients'/);
-  assert.match(NAV, /label: 'Invoices'/);
-  assert.match(NAV, /label: 'Finance'/);
+test('bottom nav is Home / Jobs / (+) / Clients / Money (app shell v2, 2026-09-22), and More moved to a header button that opens a sheet of the remaining sidebar dests', () => {
+  const dests = NAV.match(/var DESTS = \[([\s\S]*?)\];/)[1];
+  assert.deepEqual([...dests.matchAll(/label: '([^']+)'/g)].map(m => m[1]), ['Home', 'Jobs', 'New', 'Clients', 'Money']);
+  assert.match(dests, /\{ create: true,/);
+  assert.match(dests, /\{ money: true,/);
   assert.doesNotMatch(NAV, /\/tools\/calendar\.html/, 'the retired calendar page must not be a nav destination');
-  assert.match(NAV, /class="th-bn-more/);
+  assert.doesNotMatch(NAV, /th-bn-more/, 'More is no longer a bar item');
+  assert.match(NAV, /class="th-hdr-btn th-hdr-menu/);
   assert.match(NAV, /id = 'thMoreSheet'/);
   assert.match(NAV, /MORE_DESTS = SIDEBAR_DESTS\.filter/);
   assert.match(NAV, /aria-controls="thMoreSheet"/);
@@ -91,7 +91,7 @@ test('bottom nav lists the five daily dests (Clients replaced Calendar on 2026-0
   assert.match(STYLES, /@media \(min-width: 1024px\) \{ \.th-more-sheet \{ display: none !important; \} \}/, 'the sheet hides where the sidebar takes over (1024px since 2026-09-21)');
 });
 
-test('injecting the bottom nav on a real page produces 5 dest links plus More, and the sheet lists sidebar dests the bar does not', () => {
+test('injecting the shell on a real page produces 4 dest links plus the (+) Create button, header Search/More buttons, and a More sheet listing the sidebar dests the bar does not', () => {
   const html = fs.readFileSync(repo('tools', 'job-tracker.html'), 'utf8');
   const dom = new JSDOM(html, {
     runScripts: 'dangerously', url: 'https://example.com/tools/job-tracker.html',
@@ -108,8 +108,10 @@ test('injecting the bottom nav on a real page produces 5 dest links plus More, a
 
   const bar = window.document.querySelector('.th-bottom-nav');
   assert.ok(bar);
-  assert.equal(bar.querySelectorAll('a').length, 5);
-  assert.ok(bar.querySelector('.th-bn-more'));
+  assert.equal(bar.querySelectorAll('a').length, 4);
+  assert.ok(bar.querySelector('button.th-bn-create'));
+  assert.ok(window.document.querySelector('.hub-header-right .th-hdr-search'));
+  assert.ok(window.document.querySelector('.hub-header-right .th-hdr-menu'));
   const sheet = window.document.getElementById('thMoreSheet');
   assert.ok(sheet);
   const sheetHrefs = [...sheet.querySelectorAll('a')].map(a => a.getAttribute('href'));
@@ -120,6 +122,7 @@ test('injecting the bottom nav on a real page produces 5 dest links plus More, a
   assert.ok(sheetHrefs.includes('/tools/settings.html'));
   assert.ok(!sheetHrefs.includes('/tools/job-tracker.html'), 'primary dests must not be duplicated in More');
   assert.ok(!sheetHrefs.includes('/tools/clients.html'), 'Clients is a primary dest now, so it must not also sit in More');
+  assert.ok(!sheetHrefs.includes('/tools/invoice-generator.html') && !sheetHrefs.includes('/tools/finance.html'), 'the Money tab covers both money pages');
 });
 
 test('Job Tracker adds compact list density for 768–1023 without moving the table breakpoint off 1024', () => {

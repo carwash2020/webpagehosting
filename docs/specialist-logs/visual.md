@@ -987,4 +987,28 @@ source-level assertions for the voice-dictation markup + wiring on all
 Verified: full suite 2713/2714 (only the known check-links.py
 sandbox-proxy issue), `check-consistency`/`check-undefined-vars` clean.
 
+## 2026-09-22 (later still) -- app shell v2 visuals: a hex ( + ), an app-grid drawer, one-row headers
+
+Cross-logged from features.md (Workspace rework, part 1). Visual calls:
+- The ( + ) is the brand's hexagon, solid orange, lifted 10px above the
+  bar (not 14: at 14 its label sat 4px higher than its neighbours'). It
+  rotates 45deg into an x while its sheet is open; reduced-motion drops
+  the transition, not the state.
+- Sheets slide up 40px with a fade (.26s, the same ease-out curve the
+  swipe-to-dismiss spring uses); on desktop the Create sheet pops in as
+  a centred dialog instead. Both reuse `attachSwipeToDismiss` where
+  tools-media-sharing.js is loaded (not on runway -- guarded).
+- The More drawer became a 3-column tile grid (icon over label, 92px
+  tiles) with two quiet utility rows under a rule; the old one-per-row
+  list with group labels read like a settings screen, not a launcher.
+- Header status on phones: the live-sync badge keeps its dot and
+  hides its words (still in the title tooltip, still tappable to retry);
+  "Unsynced changes" becomes a bare orange dot via `font-size:0` +
+  `::before`. The width-clipping approach tried first showed half a "U".
+- Titles never wrap now (`nowrap` + ellipsis, `.hub-header-left {
+  min-width:0 }`), which is what let Reviews/Contracts sit on one row.
+- Checked light mode for every new surface: tiles, drawer, switch, and
+  the ( + ) all read from tokens, nothing hard-coded to dark except the
+  #1a0d02 glyph colour on orange, same as the active nav icon.
+
 <!-- Add new entries above this line -->

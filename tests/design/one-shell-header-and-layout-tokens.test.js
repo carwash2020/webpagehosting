@@ -12,13 +12,16 @@ const repo = (...p) => path.join(__dirname, '..', '..', ...p);
 const TOOLS_DIR = repo('tools');
 const STYLES_TOOLS = fs.readFileSync(path.join(TOOLS_DIR, 'styles-tools.css'), 'utf8');
 
+// App shell v2 (2026-09-22): three header titles now match their nav label
+// (Contracts, Invoices, Reviews) instead of the old tool names, so the
+// header stays one row on a phone next to Search and More.
 const CONVERTED_PAGES = {
   'clients.html': 'Clients',
-  'contract-generator.html': 'Contract Generator',
-  'invoice-generator.html': 'Invoice Generator',
+  'contract-generator.html': 'Contracts',
+  'invoice-generator.html': 'Invoices',
   'job-tracker.html': 'Job Tracker',
   'parts-reference.html': 'Appliance Wiki',
-  'review-request.html': 'Review Request Sender',
+  'review-request.html': 'Reviews',
   'route-planner.html': 'Route Planner',
 };
 

@@ -1652,4 +1652,77 @@ for the new `signatureImage` parameter added to
 threaded through every `recordCardAuthorization()` call -- pure
 signature-shape drift, not behavior changes to fix.
 
+## 2026-09-22 (later still) -- Workspace rework, part 1: the app shell (Create button, Money tab, header menu)
+
+Brief: "full discretion... make this the most app-like, easy-to-use,
+efficient handyman hub it can be... think about the whole suite as a
+single coherent product." Planned as a sequence of small merged PRs, not
+one long-lived branch (every merge today hit a concurrent conflict).
+This first one is the shared shell; pages come next.
+
+**What the audit found (real browser, fake Supabase, seeded data).**
+Four rounds of IA work had already removed the worst of it, so the
+remaining problems were about *shape*, not clutter: (1) there was no one
+place to start anything -- each "new X" lived on the page that owns X,
+so creating a quote meant knowing it was a tab on the invoice page;
+(2) the bar spent two of five slots on Invoices and Finance, two pages
+that together are "money"; (3) two floating buttons (search, flag) hovered
+over content on every phone page and needed a fade-at-top hack; (4) the
+Clients tab opens a portal-admin console, not a client list -- noted
+here, fixed in part 2.
+
+**Decisions and why.**
+- **( + ) in the bar's centre, not a floating action button.** A FAB is
+  exactly the thing that caused the 2026-09-22 overlap bug; inside the
+  bar it can never cover content. Five slots keep the ( + ) centred (six
+  would not), which is why something had to give.
+- **Money = one tab over two unchanged pages.** Merging invoice-generator
+  (2860 lines) and finance (1655) into one page was rejected: separate
+  permission gates, separate init, and this repo's own lesson that pieces
+  are never as separable as they look. Instead the tab opens the
+  last-used of the two, and a header switch joins them. Zero changes to
+  either page's logic. Permission edge cases handled in
+  `applyMoneyPermissions()`: invoices-only or finance-only accounts get a
+  tab pointing at the one they can open and no switch; neither -> no tab.
+  `hideRestrictedNavLinks()` skips `.th-bn-money`, because hiding it for
+  lacking ONE of the two pages would be wrong.
+- **More moved to the header**, beside Search. Everything in it (Route,
+  Runway, Contracts, Reviews, Wiki, Dev Tools, Settings) is occasional;
+  the header is where phone apps keep that menu. Considered keeping More
+  in the bar and dropping Clients or Money instead -- both are daily.
+- **The Create sheet adds no forms.** Every tile is an existing deep link
+  that already opened its form (verified each in Chromium, including a
+  same-document hash change on the invoice page). A new form would have
+  been a second copy to keep in sync.
+- **Help (?) folds into the drawer on phones** ("How this page works"
+  presses the page's own ? button, which stays in the DOM, so no page
+  needed editing). That is what made one header row possible on a 360px
+  phone; the three longest titles were shortened to their nav labels for
+  the same reason (`one-shell-header` test map updated).
+
+**Gotchas worth keeping.**
+- runway-dashboard.html's copied CSS uses `--bg-card`, not `--bg-panel`;
+  its copy of the command palette CSS already referenced `--bg-panel`
+  and rendered transparent. Added an alias rather than rewriting copies.
+- The Create sheet must work on desktop but the More sheet must not, so
+  they share `.th-sheet*` classes while only `.th-more-sheet` keeps the
+  `min-width:1024px { display:none }` rule the tablet-band test parses.
+- The bar sits above the Create backdrop on phones (`z-index: 960` while
+  `th-create-open`) so the ( + ) can turn into an x in place; the panel
+  reserves the bar's height at its bottom for that.
+- `pageHelpButton().click()` works on a `display:none` button -- that is
+  what lets the drawer row reuse each page's own help wiring.
+- N opens Create only when focus is not in a field and no dialog / tour
+  card is open (`.onboarding-card` only exists while the tour runs).
+
+Verified: full suite, check-consistency, check-undefined-vars, lint;
+Chromium at 360/390/820/1440, dark and light: every Create tile's
+landing, Money memory + switch, one-row headers on all 14 pages, the
+full 25-step tour at 390 and 1440 (every target on screen, Next
+clickable), tablet drawer, desktop dialog, no console errors.
+
+Next (part 2): the Clients tab becomes a real client directory -- the
+`thGetAllClientsWithTotals()` comment in data-layer.js already says it
+was meant to back "the Clients hub page", which was never built.
+
 <!-- Add new entries above this line -->

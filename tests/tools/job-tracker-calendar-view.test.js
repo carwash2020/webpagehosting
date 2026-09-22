@@ -168,10 +168,10 @@ test('the .ics export survives the move: RFC 5545 all-day event with escaped tex
   await settle();
 });
 
-test('the nav lost Calendar and the phone bar gained Clients (12 sidebar destinations after POS also folded into Invoices later the same day, 5 in the bar)', () => {
+test('the nav lost Calendar and the phone bar gained Clients (12 sidebar destinations after POS also folded into Invoices later the same day; the bar is Home / Jobs / (+) / Clients / Money since app shell v2)', () => {
   const dests = NAV.match(/var DESTS = \[([\s\S]*?)\];/)[1];
   const labels = [...dests.matchAll(/label: '([^']+)'/g)].map(m => m[1]);
-  assert.deepEqual(labels, ['Home', 'Jobs', 'Clients', 'Invoices', 'Finance']);
+  assert.deepEqual(labels, ['Home', 'Jobs', 'New', 'Clients', 'Money']);
   const sidebar = NAV.match(/var SIDEBAR_DESTS = \[([\s\S]*?)\];/)[1];
   assert.equal((sidebar.match(/href: '/g) || []).length, 12);
   assert.doesNotMatch(sidebar, /\/tools\/pos\.html/, 'POS is the Quick charge tab inside Invoices now');
