@@ -678,4 +678,131 @@ client-side-only expiry check) confirmed `.small-btn` measuring 44px in
 the real DOM and `-webkit-tap-highlight-color`/`touch-action` reading
 back correctly via `getComputedStyle` on real buttons.
 
+## 2026-09-22 (later the same day): 2FA UX polish + "Your Data" moved out of Settings into Dev Tools
+
+Two related pieces done together, both scoped as presentation/flow polish
+on top of the same-day MFA bug fix (`docs/specialist-logs/security.md`) --
+the underlying TOTP/recovery-code architecture (raw-fetch REST, the
+custom recovery-codes table) was not touched.
+
+**2FA UX polish, on both `tools/settings.html` and `tools/login.html`
+(the enrollment/challenge flow):**
+- **Manual-entry secret now has a real Copy button**, not just visible
+  text someone had to hand-select -- real friction on a phone
+  specifically, exactly where enrollment is most likely to happen first.
+  A small shared `copyTextToClipboard()` helper (duplicated once per file,
+  matching this project's existing precedent for small per-page helpers
+  like `personDot()` before it was consolidated) tries
+  `navigator.clipboard.writeText()` first, falls back to a hidden-textarea
+  `execCommand('copy')` for anything that doesn't support the Clipboard
+  API. QR code on Settings also sized up slightly (180px to 200px) for
+  easier scanning.
+- **Recovery codes gained a "Copy all" button** next to the existing
+  Download, on both pages -- for pasting straight into a password
+  manager's notes field instead of only ever a separate `.txt` file.
+- **The one-time warning is now unmissable, not just present.** It
+  already existed as plain text ("they will not be shown again"); made it
+  visually distinct (orange, bold) on both pages, and added a second,
+  more specific line ("after you leave this page") since the original
+  wording didn't say what "again" meant relative to.
+- **6-digit code inputs get `pattern="[0-9]*"`** alongside the existing
+  `inputmode="numeric"` (both were already present on most, missing the
+  `pattern` attribute on all of them -- some older mobile keyboards key
+  off `pattern`, not `inputmode`, to decide whether to show a numeric pad).
+  Also strips any non-digit character as-you-type and **auto-submits once
+  a full valid 6-digit code is present** -- these are single text inputs,
+  not 6 separate boxes, so there's no per-digit auto-advance to build;
+  auto-submit-on-complete is the equivalent convenience for that shape,
+  removing the separate tap on Verify after typing or pasting a code.
+  Left the recovery-code input alone (different, variable-length format).
+- **A real, explicit focus state added to `.mfa-code-input`** on
+  login.html (an orange border + soft glow) -- this is the single most
+  important field on the whole enroll/challenge flow, so it gets its own
+  treatment on top of whatever global `:focus-visible` rule already
+  applies, rather than relying on the browser's default outline alone
+  against a dark, low-contrast background.
+- **Low-friction discovery for an optional-tier (Employee) account**:
+  Settings' 2FA card already said "Optional, but recommended" but never
+  said *why* -- added one honest, plain-tone line ("A stolen or guessed
+  password alone won't be enough to get in...") shown only when the
+  account is optional-tier and not yet enrolled; hidden entirely once
+  enrolled or for a mandatory account (which already says "Required"
+  right above it).
+- Left alone, deliberately: spacing/copy pattern already matched the
+  rest of Settings' sections (`.settings-row`/`.settings-row-label`
+  etc.) before this pass -- no changes needed there.
+
+**"Your Data" (full backup/restore) moved from Settings to Dev Tools.**
+Reasoning: a regular Employee account has no use for a full JSON
+export/restore of the *entire* account's data -- this is an admin/dev
+capability, not a personal-settings one, and Restore is destructive
+(replaces everything on the device). Landed in Dev Tools' **Session**
+tab (alongside Local data snapshot, Device info, Service worker & cache
+-- panels about this device's underlying data/state) as a new
+`dev-panel dev-owner-hidden` panel.
+
+**Role-gating decision: Developer-only, not Owner+Developer.** Checked
+`README.md`'s 2026-08-21 note first: an Owner-role account already sees
+*only* the Access tab (Client Registry, Account Roles) in Dev Tools --
+every other tab, and every panel in it, is hidden for Owner by design,
+regardless of individual sensitivity. There is no existing precedent for
+an Owner-visible-but-not-Access-tab panel to break from that pattern for.
+Making Backup & Restore Developer-only, `dev-owner-hidden` like every
+other panel on its tab, is the consistent choice -- not a new, one-off
+restriction invented for this feature. Verified live (below) that an
+Owner account sees neither the Session tab nor the panel at all.
+
+**A straight relocation, not a rewrite** -- confirmed byte-identical
+behavior: the same `ALL_SYNCED_KEYS` list, the same `downloadBackup()`/
+`restoreBackup()` functions, the same backup file naming/shape, the same
+destructive-restore confirm text. `tools/dev-tools-shared.js` gained a
+`backup` entry in `DEV_INFO` (the "?" info-modal system) explaining the
+move and the role-gating reasoning; the page's own help modal text for
+the Session tab was updated to mention it.
+
+**#backup deep-links, checked and fixed at both hops** -- this row had
+already moved once before (Dashboard to Settings, 2026-09-21), so there
+were two existing redirects to update, not one: `tools/workspace.html`'s
+`#backup` handler now replaces straight to `/tools/dev-tools.html#backup`
+(previously hopped through Settings), and `tools/settings.html`'s own
+`#backup` handler now does the same instead of scrolling to a section
+that no longer exists there. `tools/dev-tools.html` handles the incoming
+hash by switching to the Session tab and scrolling the panel into view.
+Grepped the whole repo for any other reference to `settings.html#backup`
+or "Your Data" expecting it to still be in Settings -- none found outside
+this session's own updated tests and README's historical (2026-09-21,
+left as-is) changelog entry.
+
+**Tests updated** (a real relocation needs its tests to move with it,
+not just pass by accident): `tests/tools/dashboard-today-first.test.js`'s
+backup-relocation test now points at `dev-tools.html` and asserts the
+panel is `dev-owner-hidden`; `tests/workspace/finance-split.test.js`'s
+`#backup` deep-link test updated for the new direct hop and confirms
+Settings no longer has any of the removed markup/functions;
+`tests/tools/inventory-and-job-duration.test.js`'s `th_inventory`-in-
+backup-list test now reads `dev-tools.html`; and
+`tests/dev-tools/dev-tools-owner-view.test.js`'s exact-panel-count test
+bumped from 29 to 30 `dev-owner-hidden` panels. One self-caught mistake
+while updating these: an early draft of my own code comments in
+`settings.html` literally contained the string `ALL_SYNCED_KEYS` (while
+explaining where it moved to), which made the "Settings no longer
+contains this" `doesNotMatch` assertions fail against my own comment
+text, not real leftover code -- reworded the comments to describe the
+same thing without using the exact tokens the tests were checking for.
+
+**Verified live in headless Chromium** (served over `python3 -m
+http.server`, never `file://`, mocking `account_roles` per scenario):
+Settings' enroll view shows a visible, working Copy button next to the
+manual secret; the optional-tier why-note renders for an Employee-shaped
+account and is absent for Developer; the "Your Data" section is
+confirmed entirely gone from Settings; Dev Tools' `#backup` link lands
+directly on a visible panel with a working Download button for a
+Developer account; and, separately, an Owner-shaped account sees neither
+the Session tab button nor the panel at all, confirming the Developer-only
+gating actually holds at runtime, not just in the source. Full suite,
+`check-consistency`, `check-undefined-vars`, and `lint` all clean;
+`check-links.py` clean except the known sandbox-proxy limitation
+(images.unsplash.com and this site's own domain, both pre-existing and
+unrelated to this change).
+
 <!-- Add new entries above this line -->

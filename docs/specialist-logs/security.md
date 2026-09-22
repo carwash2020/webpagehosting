@@ -529,4 +529,75 @@ item 3) said so explicitly rather than silently dropping it.
   the recovery-code login path will fail closed (a network/RPC error,
   never a false "valid") since the functions won't exist yet.
 
+## 2026-09-22 (later the same day): "Could not generate recovery codes. Please try again." -- expired-token gap in the Settings-page MFA handlers
+
+Diagnosed root cause, confirmed by reading the code before touching
+anything (not re-derived from scratch): `getAuthToken()` in `tools/auth.js`
+falls back to sending the Supabase **anon key** as the bearer token
+whenever `hasValidSession()` returns false -- it does NOT refresh first.
+`tools/settings.html`'s MFA/recovery-code handlers all called
+`getAuthToken()` directly, with no `await ensureFreshToken()` first --
+unlike `loadCurrentUserRole()` elsewhere in `auth.js`, which already does
+this for the identical reason (see its own 2026-08-16 comment). Net
+effect: if the stored access token had expired since Settings loaded
+(normal after enough time on the page), every recovery-code RPC went out
+authenticated as anon, `auth.uid()` resolved to null inside the
+`SECURITY DEFINER` function, it raised "not authenticated", PostgREST
+returned a non-ok response, and `generateRecoveryCodes()`'s generic
+catch-all error message covered up what had actually gone wrong.
+
+**Audited the whole MFA section, not just the obviously-named
+handlers** -- found the same missing-refresh pattern in six places, not
+two: `renderMfaSettingsCard()`, `handleStartMfaEnrollSettings()`,
+`handleVerifyMfaEnrollSettings()`, `handleCancelMfaEnrollSettings()`
+(which also had to become `async` -- it was a bare synchronous function
+calling `getAuthToken()` directly), `handleDisableMfaSettings()`, and
+`handleRegenerateRecoveryCodes()` (the one actually named in the bug
+report). Fixed by adding `await ensureFreshToken();` before the first
+`getAuthToken()` call in each.
+
+**Separately fixed the error-swallowing itself**, since a generic
+fallback message is what made this bug a dead end to diagnose in the
+first place: `generateRecoveryCodes()` and `verifyRecoveryCode()` in
+`auth.js` now surface `data.message || data.error_description || data.msg`
+(PostgREST's RPC error shape is `{message, details, hint, code}`, a
+different shape than the GoTrue/Auth-endpoint `{error_description, msg}`
+shape `mfaUnenroll()` a few lines above already handles correctly --
+both are now checked). `countRemainingRecoveryCodes()` doesn't surface a
+message to the UI by design (its caller only ever shows a plain "Could
+not check." on any failure), so instead of changing its return shape it
+now logs the real detail via `logClientError()` on failure, so a genuine
+problem there is diagnosable in Client Errors/the console next time
+instead of a silent `null`. `deleteRecoveryCodes()` was left untouched --
+it's deliberately best-effort per its own existing comment (called when
+turning MFA off; never blocks that flow on its own success), so there's
+no caller-visible message to fix.
+
+**New test**, `tests/tools/mfa-recovery-token-refresh.test.js`: a static
+check that all six Settings-page MFA handlers await `ensureFreshToken()`
+before their first `getAuthToken()` call (and that
+`handleCancelMfaEnrollSettings` is actually `async`), plus a runtime
+check (via the same `vm.createContext` + extracted-function-body
+technique this repo's `realtime-retry-resilience.test.js` already uses)
+that `generateRecoveryCodes()`/`verifyRecoveryCode()` surface the real
+PostgREST error message on a mocked failure response instead of only
+ever the generic fallback, while still succeeding normally on a real
+2xx response. One real snag while writing it: the extraction helper's
+first version stripped a leading `async` off `async function
+generateRecoveryCodes(...)`, since a bare `indexOf('function NAME(')`
+lands right after it -- silently turning every `await` inside the
+extracted body into a syntax error when run standalone. Fixed by
+checking for and including a leading `async ` before the match.
+
+**Verified live in headless Chromium** (Playwright, served over
+`python3 -m http.server`, never `file://`, every Supabase call mocked --
+this sandbox cannot reach `*.supabase.co`): a stored session shaped so
+`hasValidSession()` returns false (an `expires_at` an hour in the past)
+but with a real `refresh_token` present, with the refresh endpoint
+mocked to succeed -- "Generate new codes" now correctly refreshes first
+and succeeds, where before this fix it would have gone out as anon and
+failed. Separately, mocked a genuine RPC failure (`401` with
+`{message: 'not authenticated'}`) and confirmed the real error text now
+surfaces in `#mfaSettingsMsg` instead of the old generic fallback.
+
 <!-- Add new entries above this line -->

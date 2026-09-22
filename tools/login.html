@@ -44,7 +44,7 @@
 </script>
 <link rel="stylesheet" href="/styles.css?v=2e81706c3d">
 <link rel="stylesheet" href="/tools/styles-tools.css?v=f8d06f6cbe">
-<script src="/tools/auth.js?v=0cd43bdab1"></script>
+<script src="/tools/auth.js?v=47af1279b5"></script>
 <script src="/tools/tools-effects.js?v=4cff99aa4a" defer></script>
 <script src="/tools/tools-dialogs.js?v=83d27784e2" defer></script>
 <script src="/tools/tools-media-sharing.js?v=0c229c9353" defer></script>
@@ -101,6 +101,16 @@
     width:100%; padding:12px 13px; background:var(--bg-panel-2); border:1px solid var(--border);
     border-radius:8px; color:var(--white); font-size:20px; font-family:inherit; box-sizing:border-box;
     letter-spacing:4px; text-align:center; margin-bottom:12px;
+    transition: border-color .15s ease, box-shadow .15s ease;
+  }
+  /* Clear focus state (2026-09-22 UX pass) -- this is the single most
+     important field on the whole enroll/challenge flow, so it gets its own
+     explicit focus treatment on top of whatever global :focus-visible rule
+     already applies elsewhere, rather than relying on the browser default
+     outline alone against a dark, low-contrast background. */
+  .mfa-code-input:focus {
+    outline: none; border-color: var(--orange, #ff8000);
+    box-shadow: 0 0 0 3px rgba(255,128,0,0.25);
   }
   .mfa-qr-wrap { text-align:center; margin-bottom:16px; }
   .mfa-qr-wrap img { width:180px; height:180px; background:#fff; border-radius:8px; padding:8px; }
@@ -157,7 +167,7 @@
   <div id="mfaChallengeView" style="display:none; text-align:left;">
     <div class="mfa-step-title">Enter your code</div>
     <div class="mfa-step-sub">Open your authenticator app and enter the 6-digit code for Triple H Workspace.</div>
-    <input type="text" id="mfaChallengeCodeInput" class="mfa-code-input" inputmode="numeric" autocomplete="one-time-code" placeholder="123456" maxlength="6" style="display:none;">
+    <input type="text" id="mfaChallengeCodeInput" class="mfa-code-input" inputmode="numeric" pattern="[0-9]*" autocomplete="one-time-code" placeholder="123456" maxlength="6" style="display:none;">
     <input type="text" id="mfaRecoveryCodeInput" class="mfa-code-input" style="display:none; letter-spacing:2px; font-size:16px;" placeholder="XXXX-XXXX" autocomplete="off">
     <div class="login-error" id="mfaChallengeError"></div>
     <button type="button" class="primary-btn login-btn" id="mfaChallengeSubmitBtn">Verify</button>
@@ -175,9 +185,12 @@
     <div class="mfa-step-sub">Your account requires two-factor authentication before you can continue. Scan this code with an authenticator app (Google Authenticator, Authy, 1Password, etc.), then enter the 6-digit code it shows.</div>
     <div class="mfa-qr-wrap">
       <img id="mfaEnrollQrImg" alt="Scan this QR code with your authenticator app">
-      <div class="mfa-secret-fallback" id="mfaEnrollSecretFallback"></div>
+      <div style="display:flex; align-items:center; justify-content:center; gap:8px; margin-top:8px;">
+        <div class="mfa-secret-fallback" id="mfaEnrollSecretFallback" style="margin-top:0;"></div>
+        <button type="button" class="secondary-btn" id="mfaEnrollCopySecretBtn" style="display:none; padding:4px 10px; font-size:12px; flex:0 0 auto;">Copy</button>
+      </div>
     </div>
-    <input type="text" id="mfaEnrollCodeInput" class="mfa-code-input" inputmode="numeric" autocomplete="one-time-code" placeholder="123456" maxlength="6">
+    <input type="text" id="mfaEnrollCodeInput" class="mfa-code-input" inputmode="numeric" pattern="[0-9]*" autocomplete="one-time-code" placeholder="123456" maxlength="6">
     <div class="login-error" id="mfaEnrollError"></div>
     <button type="button" class="primary-btn login-btn" id="mfaEnrollVerifyBtn">Verify &amp; Continue</button>
     <button type="button" class="mfa-link-btn" id="mfaEnrollCancelLink">Cancel and sign out</button>
@@ -189,9 +202,13 @@
        sql/security/add_internal_mfa_recovery_codes.sql). -->
   <div id="mfaRecoveryCodesView" style="display:none; text-align:left;">
     <div class="mfa-step-title">Save your recovery codes</div>
-    <div class="mfa-step-sub">If you ever lose access to your authenticator app, use one of these one-time codes to sign in instead. Each code works once. Save them somewhere safe -- they will not be shown again.</div>
+    <div class="mfa-step-sub">If you ever lose access to your authenticator app, use one of these one-time codes to sign in instead.</div>
+    <div class="mfa-step-sub" style="color:var(--orange-light,#ffb347); font-weight:600; margin-top:-10px;">Save these now -- each code works once, and they will not be shown again after you leave this page.</div>
     <div class="mfa-recovery-codes-list" id="mfaRecoveryCodesList"></div>
-    <button type="button" class="secondary-btn login-btn" id="mfaDownloadCodesBtn" style="margin-bottom:10px;">Download codes</button>
+    <div style="display:flex; gap:10px; margin-bottom:10px;">
+      <button type="button" class="secondary-btn login-btn" id="mfaCopyCodesBtn" style="flex:1; justify-content:center; margin-bottom:0;">Copy all</button>
+      <button type="button" class="secondary-btn login-btn" id="mfaDownloadCodesBtn" style="flex:1; justify-content:center; margin-bottom:0;">Download codes</button>
+    </div>
     <button type="button" class="primary-btn login-btn" id="mfaRecoveryCodesContinueBtn">I've saved these -- Continue</button>
   </div>
 </div>
@@ -321,6 +338,17 @@
     (pendingRecoveryMode ? document.getElementById('mfaRecoveryCodeInput') : document.getElementById('mfaChallengeCodeInput')).focus();
   });
 
+  // Auto-submit once a full, valid 6-digit code is entered (2026-09-22 UX
+  // pass) -- a single code box, not 6 separate digit boxes, so there's no
+  // per-digit auto-advance to build here; this is the equivalent
+  // convenience for that shape: no separate tap on Verify once the code is
+  // fully typed or pasted in. Not applied to the recovery-code input, which
+  // is a different (and variable) length/format.
+  document.getElementById('mfaChallengeCodeInput').addEventListener('input', (e) => {
+    e.target.value = e.target.value.replace(/\D/g, '').slice(0, 6);
+    if (/^\d{6}$/.test(e.target.value)) document.getElementById('mfaChallengeSubmitBtn').click();
+  });
+
   document.getElementById('mfaChallengeSubmitBtn').addEventListener('click', async () => {
     const btn = document.getElementById('mfaChallengeSubmitBtn');
     const errorEl = document.getElementById('mfaChallengeError');
@@ -371,12 +399,55 @@
     }
     pendingFactorId = result.factorId;
     document.getElementById('mfaEnrollQrImg').src = result.totp.qr_code;
+    const copySecretBtn = document.getElementById('mfaEnrollCopySecretBtn');
     document.getElementById('mfaEnrollSecretFallback').textContent = result.totp.secret
       ? ('Can\'t scan? Enter this code manually: ' + result.totp.secret)
       : '';
+    // UX pass (2026-09-22) -- same reasoning as settings.html's equivalent:
+    // a manual-entry secret someone has to hand-select is real friction on
+    // a phone, which is exactly where this enrollment screen is likely to
+    // be seen first.
+    copySecretBtn.style.display = result.totp.secret ? '' : 'none';
+    copySecretBtn.onclick = async () => {
+      const ok = await copyTextToClipboard(result.totp.secret);
+      copySecretBtn.textContent = ok ? 'Copied!' : 'Copy failed';
+      setTimeout(() => { copySecretBtn.textContent = 'Copy'; }, 1500);
+    };
     document.getElementById('mfaEnrollCodeInput').value = '';
     document.getElementById('mfaEnrollCodeInput').focus();
   }
+
+  // Shared clipboard helper (2026-09-22 UX pass), same fallback shape as
+  // settings.html's copy of this -- navigator.clipboard needs a secure
+  // context (true for every real deployment of this app) but falls back to
+  // the older execCommand approach rather than silently doing nothing.
+  async function copyTextToClipboard(text) {
+    try {
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        await navigator.clipboard.writeText(text);
+        return true;
+      }
+    } catch (e) { /* fall through to the legacy path below */ }
+    try {
+      const ta = document.createElement('textarea');
+      ta.value = text;
+      ta.style.position = 'fixed';
+      ta.style.left = '-9999px';
+      document.body.appendChild(ta);
+      ta.select();
+      const ok = document.execCommand('copy');
+      document.body.removeChild(ta);
+      return ok;
+    } catch (e) {
+      return false;
+    }
+  }
+
+  // Same auto-submit convenience as the challenge step above.
+  document.getElementById('mfaEnrollCodeInput').addEventListener('input', (e) => {
+    e.target.value = e.target.value.replace(/\D/g, '').slice(0, 6);
+    if (/^\d{6}$/.test(e.target.value)) document.getElementById('mfaEnrollVerifyBtn').click();
+  });
 
   document.getElementById('mfaEnrollVerifyBtn').addEventListener('click', async () => {
     const btn = document.getElementById('mfaEnrollVerifyBtn');
@@ -424,6 +495,16 @@
   });
 
   // ---- Recovery codes display (shown once, right after enrollment) ----
+
+  // "Copy all" (2026-09-22 UX pass), alongside Download -- for pasting
+  // straight into a password manager's notes field.
+  document.getElementById('mfaCopyCodesBtn').addEventListener('click', async () => {
+    const btn = document.getElementById('mfaCopyCodesBtn');
+    const text = document.getElementById('mfaRecoveryCodesList').innerText;
+    const ok = await copyTextToClipboard(text);
+    btn.textContent = ok ? 'Copied!' : 'Copy failed';
+    setTimeout(() => { btn.textContent = 'Copy all'; }, 1500);
+  });
 
   document.getElementById('mfaDownloadCodesBtn').addEventListener('click', () => {
     const text = document.getElementById('mfaRecoveryCodesList').innerText;

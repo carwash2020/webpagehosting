@@ -14,7 +14,7 @@
      background-image on html here too. -->
 <html lang="en" style="background-color:#0a0a0a;">
 <head>
-<script src="/tools/auth.js?v=0cd43bdab1"></script>
+<script src="/tools/auth.js?v=47af1279b5"></script>
 <script>
   // Security gate -- redirect to login before this page's own content
   // is meaningfully usable. See auth.js for why this exists (a small,
@@ -3326,10 +3326,12 @@
     if (window.location.hash === '#today') {
       document.getElementById('todayHero')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
     }
-    // Backup & Restore moved to Settings (2026-09-21); old #backup links
-    // (Settings' own former "Go to Backup" button, bookmarks) follow it.
+    // Backup & Restore moved to Settings (2026-09-21), then to Dev Tools
+    // (2026-09-22, an admin/dev-oriented capability, not a regular Settings
+    // item). Old #backup links (this dashboard's own former drawer,
+    // Settings' own former section, bookmarks) all follow it there directly.
     if (window.location.hash === '#backup') {
-      window.location.replace('/tools/settings.html#backup');
+      window.location.replace('/tools/dev-tools.html#backup');
     }
     // Structural item #7, push 1 (2026-08-20): builds the client registry
     // from existing jobs/invoices/quotes/contacts/contracts. Deliberately

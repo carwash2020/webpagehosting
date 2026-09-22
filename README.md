@@ -3166,3 +3166,59 @@ a synced cutoff timestamp `mergeClientErrorLog()` now filters against --
 any entry at or before the cutoff is dropped, but a genuinely new error
 logged after the clear always survives. Full reasoning:
 `docs/specialist-logs/bugfix.md`'s 2026-09-22 entry.
+
+## What changed, 2026-09-22 (later still) -- internal MFA: "Could not generate recovery codes" fixed, 2FA setup polished, backup/restore moved to Dev Tools
+
+Three related pieces, all touching the same-day internal `/tools/` MFA
+feature above.
+
+**Bug fixed: recovery codes now regenerate correctly even after the page
+has sat open a while.** Root cause: `getAuthToken()` in `tools/auth.js`
+falls back to the Supabase anon key whenever the stored access token has
+expired, without refreshing first -- `tools/settings.html`'s MFA/
+recovery-code handlers called it directly, with no `ensureFreshToken()`
+first (unlike `loadCurrentUserRole()` elsewhere in `auth.js`, which
+already does this). An expired token meant the RPC went out as anon,
+`auth.uid()` resolved to null, and the database's own "not authenticated"
+error got buried under a generic catch-all message. Fixed in all six
+Settings-page MFA handlers, not just the one named in the report, plus
+`generateRecoveryCodes()`/`verifyRecoveryCode()` in `auth.js` now surface
+the real error detail instead of only ever the generic fallback. New
+test: `tests/tools/mfa-recovery-token-refresh.test.js`. Verified live in
+headless Chromium with every Supabase call mocked: an expired-but-
+refreshable session now succeeds at regenerating codes, and a genuine
+mocked RPC failure now shows its real error text in the UI. Full
+reasoning: `docs/specialist-logs/security.md`'s 2026-09-22 entry.
+
+**2FA setup made easier and more polished**, on both `tools/settings.html`
+and `tools/login.html`: the manual-entry secret and the recovery codes
+each gained a real Copy button (not just text to hand-select); the
+one-time recovery-codes warning is now visually unmissable, not just
+present; the 6-digit code inputs gained `pattern="[0-9]*"` alongside the
+existing `inputmode="numeric"`, strip non-digits as you type, and
+auto-submit once a full valid code is entered; the code input on
+login.html got its own explicit focus state; and an optional-tier
+(Employee) account now gets one honest line on Settings explaining why
+turning 2FA on is worth the extra step, shown only when it's actually
+off. Full detail: `docs/specialist-logs/visual.md`'s 2026-09-22 entry.
+
+**"Your Data" (full account backup/restore) moved from Settings to Dev
+Tools.** A regular Employee account has no real use for a full JSON
+export/restore of the entire account's data -- it's an admin/dev
+capability, and Restore is destructive. Landed in Dev Tools' Session
+tab, Developer-only (`dev-owner-hidden`), matching the existing rule that
+an Owner-role account only sees the Access tab at all (per the
+2026-08-21 change) -- not a new, one-off restriction invented for this
+feature. A straight relocation, not a rewrite: same key list, same
+functions, same backup file shape, same confirm text. Both of `#backup`'s
+existing deep-links (the Dashboard's and Settings' own, from the
+2026-09-21 move) now go straight to `/tools/dev-tools.html#backup`.
+Verified live that an Owner-shaped account sees neither the Session tab
+nor the panel at all, and that a Developer-shaped account reaches a
+working panel directly via the hash link. Full reasoning:
+`docs/specialist-logs/visual.md`'s 2026-09-22 entry.
+
+Verified: full suite (2700 tests), `check-consistency`,
+`check-undefined-vars`, and `lint` all clean; `check-links.py` clean
+except the known sandbox-proxy limitation (images.unsplash.com and this
+site's own domain, both pre-existing and unrelated to this change).

@@ -36,10 +36,12 @@ test('th_inventory is registered in sync.js -- the exact bug class already found
   assert.match(syncSrc, /th_inventory:\s*'id',/);
 });
 
-test('th_inventory is included in the Backup/Restore key list (on settings.html since 2026-09-21, when Backup & Restore moved there from the dashboard)', () => {
+test('th_inventory is included in the Backup/Restore key list (on dev-tools.html since 2026-09-22, when Backup & Restore moved there from Settings)', () => {
+  const devToolsHtml = fs.readFileSync(path.join(__dirname, '..', '..', 'tools', 'dev-tools.html'), 'utf8');
   const settingsHtml = fs.readFileSync(path.join(__dirname, '..', '..', 'tools', 'settings.html'), 'utf8');
-  assert.match(settingsHtml, /ALL_SYNCED_KEYS = \[[\s\S]*?'th_inventory'[\s\S]*?\];/);
+  assert.match(devToolsHtml, /ALL_SYNCED_KEYS = \[[\s\S]*?'th_inventory'[\s\S]*?\];/);
   assert.doesNotMatch(workspaceHtml, /ALL_SYNCED_KEYS/, 'the dashboard no longer owns the backup key list');
+  assert.doesNotMatch(settingsHtml, /ALL_SYNCED_KEYS/, 'Settings no longer owns the backup key list either');
 });
 
 test('a deleted inventory item gets a tombstone, same pattern as every other deletable record type', () => {

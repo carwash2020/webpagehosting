@@ -49,10 +49,10 @@ function panelFor(window, headingText) {
   return heading ? heading.closest('.dev-panel') : null;
 }
 
-test('exactly 29 panels are marked dev-owner-hidden, matching the full, deliberate list of code/technical/error-diagnostic panels (28 previous + the new Cron Health panel)', () => {
+test('exactly 30 panels are marked dev-owner-hidden, matching the full, deliberate list of code/technical/error-diagnostic panels (29 previous + Backup & Restore, moved here from Settings 2026-09-22 as an admin/dev capability)', () => {
   const src = fs.readFileSync(DEV_TOOLS_PATH, 'utf8');
   const count = (src.match(/class="dev-panel dev-owner-hidden/g) || []).length;
-  assert.equal(count, 29);
+  assert.equal(count, 30);
 });
 
 test('an account without the full-technical permission has every one of the 23 developer-only panels hidden', () => {
