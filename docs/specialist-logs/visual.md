@@ -1034,4 +1034,21 @@ Cross-logged from features.md (Workspace rework, part 1). Visual calls:
   tabs on desktop use 73px (just under the 61px fixed header) instead of
   the phone's notch offset.
 
+## 2026-09-22 (later still) -- job cards: badges by exception, relative dates, one compact row
+
+- Card action row below 1024px (and on board cards at every width):
+  Done (filled tint, 92px) + 40px round Call / Directions + ⋯ pushed
+  right. Round buttons match the header's Search / More circles.
+- Badges by exception: the left border already carries priority, so
+  MEDIUM / LOW / NOT STARTED pills are hidden on phones. HIGH and IN
+  PROGRESS remain, which mark what's unusual.
+- The date in the meta line is bold white ("Today") ahead of the dim
+  client name; the address drops to its own ellipsised line.
+- Date-group headers use the same 12px uppercase Oswald as the More
+  drawer's section titles. Today is orange and Overdue is red, the same
+  two accents the Clients list uses for "soon" and "overdue".
+- Job Detail's badges had no base `.badge` rule on that page and showed
+  as plain lowercase words ("high Not Started"). The rule was copied
+  from Job Tracker.
+
 <!-- Add new entries above this line -->

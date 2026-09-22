@@ -61,7 +61,7 @@
 <script src="/tools/tools-media-sharing.js?v=0c229c9353" defer></script>
 <script src="/tools/tools-nav-pwa.js?v=4d9f8c89e1" defer></script>
 <script src="/tools/tools-command-palette.js?v=7bd204bef4" defer></script>
-<script src="/tools/tools-tour.js?v=f6d11558d2" defer></script>
+<script src="/tools/tools-tour.js?v=7876158a2d" defer></script>
 <style>
   /* Cross-document view transitions (2026-09-21) -- same pattern
      already proven in portal/*.html: keeps the old page's visual
@@ -137,6 +137,60 @@
   }
   .job-card-swipe-action .small-btn { background: none; border: none; color: #fff; font-weight: 600; }
   .job-done-btn { color: var(--orange-light); border-color: var(--orange-light); }
+  /* Workspace rework part 3 (2026-09-22): the phone/tablet card. Done,
+     then round Call / Directions / More buttons; the rest of the row
+     lives in openJobActions()'s sheet below 1024px. The phone number
+     gives way to the Call button, and the address gets its own line. */
+  .job-quick-btn {
+    width: 40px; height: 40px; border-radius: 50%; flex-shrink: 0;
+    display: inline-flex; align-items: center; justify-content: center;
+    background: var(--bg-panel-2); border: 1px solid var(--border); color: var(--text);
+    text-decoration: none; cursor: pointer; padding: 0;
+  }
+  .job-quick-btn .th-icon { width: 18px; height: 18px; margin-right: 0; }
+  .job-quick-btn:hover, .job-quick-btn:focus-visible { border-color: var(--orange-light); color: var(--orange-light); }
+  .job-card-actions .job-more-btn { margin-left: auto; }
+  .job-card-meta .jc-when { color: var(--text); font-weight: 600; }
+  .job-group-head {
+    margin: 18px 2px 8px; font-family: var(--font-ui); font-size: 12px; font-weight: 700;
+    letter-spacing: 1px; text-transform: uppercase; color: var(--text-dim);
+  }
+  .job-group-head:first-child { margin-top: 4px; }
+  .job-group-head.is-today { color: var(--orange-light); }
+  .job-group-head.is-overdue { color: #e05252; }
+  @media (max-width: 1023px) {
+    /* !important: the Create Invoice link carries an inline display. */
+    .job-card-actions > .status-select,
+    .job-card-actions > .small-btn:not(.job-done-btn),
+    .job-card-actions > a.small-btn { display: none !important; }
+    /* Only the badges that say something unusual: High priority (the
+       left border already colours every card by priority) and In
+       Progress (Not Started is the default). Margin and warranty stay. */
+    .job-badges .badge-medium, .job-badges .badge-low,
+    .job-badges .badge-status.status-not-started { display: none; }
+    /* Slimmer collapsed Add / Templates bars. */
+    #tab-jobs > .form-section.is-collapsed { padding-top: 12px; padding-bottom: 12px; }
+
+    .job-card-actions .job-done-btn { min-width: 92px; min-height: 42px; background: var(--orange-tint-soft); font-weight: 600; }
+    .job-card-meta .jc-phone { display: none; }
+    .job-card-meta .jc-addr { display: block; margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .job-card-meta .jc-sep { display: none; }
+    .job-card-notes { margin-bottom: 10px; }
+    /* One row of filters that scrolls sideways rather than squeezing
+       "Not Started" onto two lines; display density lives in Settings. */
+    #tab-jobs .sort-group .sort-btn { flex-shrink: 0; white-space: nowrap; }
+    #tab-jobs [data-density-toggle] { display: none; }
+  }
+  /* Board columns are narrow at every width, so a board card always uses
+     the compact row (the desktop list is the table, which is unchanged). */
+  .board-column-body .job-card-actions > .status-select,
+  .board-column-body .job-card-actions > .small-btn:not(.job-done-btn),
+  .board-column-body .job-card-actions > a.small-btn { display: none !important; }
+  /* Templates heading: its ? sits beside the title rather than under it. */
+  #templatesFormSection .form-section-header h3 { display: flex; align-items: center; gap: 8px; flex-wrap: nowrap; }
+  #templatesFormSection .form-section-header .help-btn { width: 30px; height: 30px; min-width: 30px; font-size: 13px; }
+  /* The collapsed "Add a Job" bar reads as the button it is. */
+  #jobFormSection.is-collapsed .form-section-header h3::before { content: '+'; display: inline-block; width: 1.1em; color: var(--orange-light); font-weight: 700; }
   .job-card.is-swipe-open .job-card-swipe-inner { transition: transform .15s ease; }
   @media (prefers-reduced-motion: reduce) { .job-card-swipe-inner { transition: none; } }
   .job-card.priority-high { border-left-color: #e05252; }
@@ -735,7 +789,7 @@
     <div class="help-modal-body">
       <p>Jobs, contacts, and notes in one place. Data lives in this browser and syncs to the cloud in the background.</p>
       <ul>
-        <li><strong>Jobs</strong> &mdash; the main list: title, client, status, priority, date, and notes, with search and status filters. Tap <strong>Done</strong> on the card or table row to mark it complete without opening Edit. Swipe a card or long-press for the same action. Filed under "Done," a job shows the profit margin once it's linked to an invoice. On a real desktop screen, this same list also shows as a sortable table &mdash; click any column header to sort by it, click again to reverse. "Photos" attaches before/after pictures; tap the <svg class="th-icon" aria-hidden="true"><use href="#icon-star" xlink:href="#icon-star"></use></svg> star on any photo to queue it for the public website's gallery.</li>
+        <li><strong>Jobs</strong> &mdash; the main list, grouped by when (Overdue, Today, Tomorrow, Next 7 days, Later), with search and status filters. On a phone each card shows what you need in the truck: <strong>Done</strong>, a <strong>Call</strong> button, <strong>Directions</strong>, and <strong>&middot;&middot;&middot;</strong> for everything else (start it, photos, create an invoice, send the confirmation email, log an expense, edit, delete) &mdash; long-press a card for the same list. Tap the title to open the job's own page. Swipe a card left for a quick Done. Filed under "Done," a job shows the profit margin once it's linked to an invoice. On a real desktop screen, this same list also shows as a sortable table &mdash; click any column header to sort by it, click again to reverse. "Photos" attaches before/after pictures; tap the <svg class="th-icon" aria-hidden="true"><use href="#icon-star" xlink:href="#icon-star"></use></svg> star on any photo to queue it for the public website's gallery.</li>
         <li><strong>List / Board / Calendar</strong> &mdash; the same jobs three ways, remembered per device. <strong>Board</strong> puts Not Started, In Progress, and Done side by side. <strong>Calendar</strong> is a month view of every dated job (plus online bookings you haven't added yet, in purple) &mdash; tap a day to see what's scheduled, then <strong>Add to Phone</strong> to drop a job into your phone's own calendar app as a one-time export.</li>
         <li><strong>Contacts</strong> &mdash; a quick address book for vendors, suppliers, or recurring clients. Tap "History" on any contact to see their past jobs and lifetime spend (matched by exact name against Jobs and Invoices).</li>
         <li><strong>Notes</strong> &mdash; keep as many separate, named notes as you want. Search by title or content, click one on the left to open it, or start a new one. Saves automatically as you type.</li>
@@ -1911,6 +1965,39 @@
   // still exists underneath, same as the existing list/table split
   // above). Board cards link to the full Job Detail page instead, which
   // already has complete photo management.
+  // "Today", "Tomorrow", "Thursday", "Sep 30" (2026-09-22) -- how a
+  // person says when a job is, instead of "Sep 22, 2026" on every card.
+  // The full date stays in the title attribute.
+  function relativeJobDate(dateStr, fallback) {
+    if (!dateStr) return 'No date set';
+    const d = new Date(dateStr + 'T00:00:00');
+    if (isNaN(d.getTime())) return fallback || dateStr;
+    const today = new Date(new Date().toDateString());
+    const diff = Math.round((d - today) / (24 * 60 * 60 * 1000));
+    if (diff === 0) return 'Today';
+    if (diff === 1) return 'Tomorrow';
+    if (diff === -1) return 'Yesterday';
+    if (diff > 1 && diff < 7) return d.toLocaleDateString('en-US', { weekday: 'long' });
+    return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: d.getFullYear() === today.getFullYear() ? undefined : 'numeric' });
+  }
+
+  // Section headers for the date-sorted list (2026-09-22): Overdue /
+  // Today / Tomorrow / Next 7 days / Later / No date -- the way a phone's
+  // reminders app groups a list. Past dates read "Earlier" instead of
+  // "Overdue" once the job is done, or whenever done jobs are in view.
+  function jobDateGroup(job, showingDone) {
+    if (!job.date) return 'No date';
+    const d = new Date(job.date + 'T00:00:00');
+    if (isNaN(d.getTime())) return 'No date';
+    const today = new Date(new Date().toDateString());
+    const diff = Math.round((d - today) / (24 * 60 * 60 * 1000));
+    if (diff < 0) return (showingDone || job.status === 'done') ? 'Earlier' : 'Overdue';
+    if (diff === 0) return 'Today';
+    if (diff === 1) return 'Tomorrow';
+    if (diff <= 7) return 'Next 7 days';
+    return 'Later';
+  }
+
   function jobCardHtml(job, marginData, opts) {
     opts = opts || {};
     const isDone = job.status === 'done';
@@ -1926,6 +2013,14 @@
       ? `<span class="badge" style="background:${margin.margin >= 0 ? 'rgba(76,175,80,0.15)' : 'rgba(224,82,82,0.15)'}; color:${margin.margin >= 0 ? '#6fcf97' : '#e0807a'};">${margin.margin >= 0 ? '+' : ''}${money(margin.margin)}</span>${effectiveRateHtml}`
       : '';
     const dateDisplay = job.date ? new Date(job.date + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : 'No date set';
+    // Call / Directions / More (2026-09-22, Workspace rework part 3): on a
+    // phone or tablet the card's action row is just Done plus these three
+    // round buttons -- what a handyman does from a job card in the truck.
+    // Everything else (status, photos, invoice, confirmation email, edit,
+    // delete) is one tap further in openJobActions()'s sheet; the full
+    // button row still shows on a desktop board card.
+    const telHref = job.phone ? 'tel:' + String(job.phone).replace(/[^\d+]/g, '') : '';
+    const mapsHref = job.address ? 'https://www.google.com/maps/dir/?api=1&destination=' + encodeURIComponent(job.address) : '';
     return `
       <div class="job-card priority-${job.priority} ${isDone ? 'is-done' : ''} ${job.id === justAddedJobId ? 'list-row-enter' : ''}" data-job-id="${job.id}">
         ${(opts.enableSwipe && !isDone) ? `<div class="job-card-swipe-action"><button class="small-btn" onclick="setJobStatus(${job.id}, 'done')">Done</button></div>` : ''}
@@ -1941,11 +2036,13 @@
           </div>
         </div>
         <div class="job-card-meta">
-          ${dateDisplay}${job.client ? ' &middot; ' + escapeHtml(job.client) : ''}${job.phone ? ' &middot; ' + escapeHtml(job.phone) : ''}${job.address ? ' &middot; ' + escapeHtml(job.address) : ''}
+          <span class="jc-when" title="${escapeAttr(dateDisplay)}">${escapeHtml(relativeJobDate(job.date, dateDisplay))}</span>${job.client ? ' &middot; ' + escapeHtml(job.client) : ''}<span class="jc-phone">${job.phone ? ' &middot; ' + escapeHtml(job.phone) : ''}</span>${job.address ? '<span class="jc-addr"><span class="jc-sep"> &middot; </span>' + escapeHtml(job.address) + '</span>' : ''}
         </div>
         ${job.notes ? `<div class="job-card-notes">${escapeHtml(job.notes)}</div>` : ''}
         <div class="job-card-actions">
           ${!isDone ? `<button type="button" class="small-btn job-done-btn" onclick="setJobStatus(${job.id}, 'done')">Done</button>` : ''}
+          ${telHref ? `<a class="job-quick-btn" href="${escapeAttr(telHref)}" aria-label="Call ${escapeAttr(job.client || 'the client')}"><svg class="th-icon" aria-hidden="true"><use href="#icon-phone" xlink:href="#icon-phone"></use></svg></a>` : ''}
+          ${mapsHref ? `<a class="job-quick-btn" href="${escapeAttr(mapsHref)}" target="_blank" rel="noopener" aria-label="Directions to ${escapeAttr(job.address)}"><svg class="th-icon" aria-hidden="true"><use href="#icon-navigate" xlink:href="#icon-navigate"></use></svg></a>` : ''}
           <select class="status-select" onchange="setJobStatus(${job.id}, this.value)">
             <option value="not-started" ${job.status === 'not-started' ? 'selected' : ''}>Not Started</option>
             <option value="in-progress" ${job.status === 'in-progress' ? 'selected' : ''}>In Progress</option>
@@ -1960,6 +2057,7 @@
           <a class="small-btn" href="/tools/invoice-generator.html?jobRef=${job.id}" style="text-decoration:none; display:inline-flex; align-items:center;">Create Invoice</a>
           <button class="small-btn" onclick="editJob(${job.id})">Edit</button>
           <button class="small-btn danger" onclick="deleteJob(${job.id})">Delete</button>
+          <button type="button" class="job-quick-btn job-more-btn" onclick="openJobActions(${job.id})" aria-label="More for ${escapeAttr(job.title)}" aria-haspopup="dialog"><svg class="th-icon" aria-hidden="true"><use href="#icon-more" xlink:href="#icon-more"></use></svg></button>
         </div>
         ${opts.includePhotoToggle ? `<div id="photos-${job.id}" style="display:none; margin-top:14px; padding-top:14px; border-top:1px solid var(--border);"></div>` : ''}
         </div>
@@ -2054,7 +2152,20 @@
 
     container.classList.toggle('list-stagger', !jobsListRenderedOnce);
     jobsListRenderedOnce = true;
-    container.innerHTML = jobs.map(job => jobCardHtml(job, marginData, { enableSwipe: true, includePhotoToggle: true, showStatusBadge: true })).join('');
+    const groupByDate = currentSort === 'date';
+    const showingDone = currentStatusFilter === 'done' || currentStatusFilter === 'all';
+    let lastGroup = null;
+    container.innerHTML = jobs.map(job => {
+      let head = '';
+      if (groupByDate) {
+        const group = jobDateGroup(job, showingDone);
+        if (group !== lastGroup) {
+          lastGroup = group;
+          head = '<h3 class="job-group-head' + (group === 'Overdue' ? ' is-overdue' : '') + (group === 'Today' ? ' is-today' : '') + '">' + group + '</h3>';
+        }
+      }
+      return head + jobCardHtml(job, marginData, { enableSwipe: true, includePhotoToggle: true, showStatusBadge: true });
+    }).join('');
     justAddedJobId = null;
 
     const tableJobs = applyTableSort(jobs);
@@ -2127,24 +2238,40 @@
   // Delete without needing the full button row visible or scrolled to.
   // Reuses setJobStatus/editJob/deleteJob unchanged -- this is a faster
   // entry point to the same actions, not new logic.
+  // One action sheet per job (2026-09-22, Workspace rework part 3): the
+  // card's ⋯ button and a long-press on the card open the same list, so a
+  // phone card only has to show Done, Call, Directions, and ⋯ -- the rest
+  // is one tap further instead of six buttons on every card. The title is
+  // escaped: showQuickActionSheet() renders it as HTML (it used to get the
+  // raw job title).
+  function openJobActions(jobId) {
+    const jobs = loadJobs();
+    const job = jobs.find(j => j.id === jobId);
+    if (!job || typeof showQuickActionSheet !== 'function') return;
+    const actions = [];
+    if (job.status !== 'done') {
+      actions.push({ label: 'Mark Done', onClick: () => setJobStatus(jobId, 'done') });
+    }
+    if (job.status === 'not-started') actions.push({ label: 'Start (In Progress)', onClick: () => setJobStatus(jobId, 'in-progress') });
+    if (job.status !== 'not-started') actions.push({ label: 'Back to Not Started', onClick: () => setJobStatus(jobId, 'not-started') });
+    actions.push({ label: 'Open job', onClick: () => { location.href = '/tools/job-detail.html?id=' + encodeURIComponent(jobId); } });
+    actions.push({ label: 'Photos', onClick: () => {
+      if (document.getElementById('photos-' + jobId)) toggleJobPhotos(jobId, job.title);
+      else location.href = '/tools/job-detail.html?id=' + encodeURIComponent(jobId);
+    } });
+    actions.push({ label: 'Create invoice', onClick: () => { location.href = '/tools/invoice-generator.html?jobRef=' + jobId; } });
+    if (job.clientEmail && !job.confirmationSentAt) actions.push({ label: 'Send confirmation email', onClick: () => sendJobConfirmationEmail(jobId) });
+    actions.push({ label: 'Log Expense', onClick: () => showQuickExpenseModal(jobId, job.title) });
+    actions.push({ label: 'Edit', onClick: () => editJob(jobId) });
+    actions.push({ label: 'Delete', isDanger: true, onClick: () => deleteJob(jobId) });
+    showQuickActionSheet(escapeHtml(job.title), actions);
+  }
+
   function initJobCardLongPress() {
     const container = document.getElementById('jobsList');
     if (!container || container.dataset.longPressWired) return;
     container.dataset.longPressWired = '1';
-    attachLongPress(container, '.job-card', (cardEl) => {
-      const jobId = Number(cardEl.dataset.jobId);
-      const jobs = loadJobs();
-      const job = jobs.find(j => j.id === jobId);
-      if (!job) return;
-      const actions = [];
-      if (job.status !== 'done') {
-        actions.push({ label: 'Mark Done', onClick: () => setJobStatus(jobId, 'done') });
-      }
-      actions.push({ label: 'Log Expense', onClick: () => showQuickExpenseModal(jobId, job.title) });
-      actions.push({ label: 'Edit', onClick: () => editJob(jobId) });
-      actions.push({ label: 'Delete', isDanger: true, onClick: () => deleteJob(jobId) });
-      showQuickActionSheet(job.title, actions);
-    });
+    attachLongPress(container, '.job-card', (cardEl) => openJobActions(Number(cardEl.dataset.jobId)));
     initJobCardSwipeReveal(container);
   }
 
