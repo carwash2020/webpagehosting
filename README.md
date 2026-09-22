@@ -3185,6 +3185,23 @@ regression the existing test suite caught (an unguarded `attachLongPress`
 call broke 2 pre-existing `finance.html` load tests) and what's queued
 for round 2: `docs/specialist-logs/visual.md`'s 2026-09-22 entry.
 
+## 2026-09-22 (later still) -- "Make it feel like a native app," round 2: badge freshness + a course-correction
+
+Added `setAppBadgeDelta()` (`tools-effects.js`) so the OS home-screen
+badge stays honest without needing `workspace.html` open -- it's the
+only page that computes the real cross-page Action Items total, so
+rather than duplicating that fetch/count logic everywhere (a proven
+source of drift in this codebase before), other pages nudge a cached
+copy of the total by a known relative amount instead. Wired into
+`invoice-generator.html`'s mark-paid/unpaid toggle. Also re-checked
+round 1's planned "swipe-reveal on invoice/quote rows" before building
+it -- turned out Mark Paid is already a directly visible button there,
+unlike Job Tracker's hidden-until-swipe Done button, so the gesture
+would have added real complexity for no actual gain. Substituted the
+long-press quick-action sheet on the invoice log instead, which does
+save something real. Full reasoning: `docs/specialist-logs/visual.md`'s
+2026-09-22 entry.
+
 ## What changed, 2026-09-22 (later still) -- internal MFA: "Could not generate recovery codes" fixed, 2FA setup polished, backup/restore moved to Dev Tools
 
 Three related pieces, all touching the same-day internal `/tools/` MFA

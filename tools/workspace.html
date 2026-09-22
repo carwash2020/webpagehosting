@@ -78,7 +78,7 @@
 <script src="/js/business-hours.js?v=5296319b73"></script>
 <script src="/tools/push-notifications.js?v=180abd2a84" defer></script>
 <script src="/tools/data-layer.js?v=c5d44f096e" defer></script>
-<script src="/tools/tools-effects.js?v=d26cb1fb67" defer></script>
+<script src="/tools/tools-effects.js?v=a767167574" defer></script>
 <script src="/tools/tools-dialogs.js?v=83d27784e2" defer></script>
 <script src="/tools/tools-media-sharing.js?v=0c229c9353" defer></script>
 <script src="/tools/tools-nav-pwa.js?v=f07de2ca5b" defer></script>
@@ -2431,6 +2431,11 @@
       if (total > 0) navigator.setAppBadge(total).catch(() => {});
       else if ('clearAppBadge' in navigator) navigator.clearAppBadge().catch(() => {});
     }
+    // Cached so other pages (invoice-generator.html, etc.) can nudge the
+    // OS badge by a relative amount after their own actions without
+    // needing to recompute this whole cross-page total themselves --
+    // see setAppBadgeDelta() in tools-effects.js.
+    try { localStorage.setItem('th_app_badge_total', String(Math.max(0, total))); } catch (e) { /* best-effort */ }
     refreshOpsGroupVisibility();
     if (!badge) return;
     const parts = [];
