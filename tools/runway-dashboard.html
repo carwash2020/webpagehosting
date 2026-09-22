@@ -48,8 +48,8 @@
      position (after tools-dialogs.js, before tools-tour.js) as every
      other tool page for consistency. -->
 <script src="/tools/tools-nav-pwa.js?v=44dffca71e" defer></script>
-<script src="/tools/tools-command-palette.js?v=36ecf5ee0e" defer></script>
-<script src="/tools/tools-tour.js?v=f7a68f2675" defer></script>
+<script src="/tools/tools-command-palette.js?v=5ce9f88f49" defer></script>
+<script src="/tools/tools-tour.js?v=2f2eac6254" defer></script>
 <script>
   (function () {
     // Tools app light/dark theme (2026-08-20), tucked into Settings.
@@ -219,12 +219,18 @@
     padding: 16px 18px; box-shadow: 0 -4px 30px rgba(0,0,0,.5), 0 0 30px -8px var(--orange-tint-glow);
     animation: onboardingSlideUp .3s cubic-bezier(.2,.8,.2,1);
   }
+  /* Bug fix (2026-09-22): the shared stylesheet lifts the tour card above the
+     phone bottom bar; this copied block never did, so on a phone the bar
+     (z-index 900) covered the card's Next button on this page -- found by
+     walking the whole tutorial in a real browser. */
+  body.th-has-bottomnav .onboarding-card { bottom: calc(76px + env(safe-area-inset-bottom, 0px) + 10px); }
   @keyframes onboardingSlideUp { from { transform: translateY(16px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
   @media (prefers-reduced-motion: reduce) { .onboarding-card { animation: none; } }
   .onboarding-dots { display: flex; gap: 5px; margin-bottom: 10px; }
   .onboarding-dots span { width: 6px; height: 6px; border-radius: 50%; background: var(--border); }
   .onboarding-dots span.is-active { background: var(--orange); width: 16px; border-radius: 3px; }
   .onboarding-title { font-family:var(--font-ui); color: var(--white); font-size: 16px; margin-bottom: 4px; }
+  .onboarding-count { font-family: var(--font-ui); font-size: 11.5px; letter-spacing: .04em; color: var(--text-dim); margin: -4px 0 4px; }
   .onboarding-body { color: var(--text-dim); font-size: 13.5px; line-height: 1.5; margin-bottom: 14px; }
   .onboarding-actions { display: flex; justify-content: space-between; align-items: center; gap: 10px; }
   .onboarding-skip, .onboarding-back { background: none; border: none; color: var(--text-dim); font-size: 13px; cursor: pointer; padding: 8px 4px; }

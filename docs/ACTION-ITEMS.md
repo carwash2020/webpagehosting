@@ -403,6 +403,16 @@ reference:
   `calendar.html` redirects to `job-tracker.html#calendar`. The phone
   bar is Home / Jobs / Clients / Invoices / Finance / More.
 
+- **A 24-step tutorial, a launcher in the search box, tab deep links
+  (2026-09-22, round 4)** (`tools/tools-tour.js`,
+  `tools/tools-command-palette.js`, all tabbed tool pages) -- the tour
+  now walks every page and tab (switching to the tab it describes),
+  including where the nav bar / sidebar and the search button are; Ctrl+K
+  or the round search button lists every action and place in the app
+  and filters as you type; every tab has a link (`finance.html#expenses`
+  etc.); Finance reopens on the last tab; the Dashboard has six daily
+  actions (Quick charge and Log expense joined).
+
 - **POS inside Invoices, tablet navigation, one less header button
   (2026-09-21, round 2)** (`tools/invoice-generator.html`,
   `tools/styles-tools.css`, `tools/runway-dashboard.html`) -- POS is the

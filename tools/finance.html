@@ -52,7 +52,7 @@
   })();
 </script>
 <link rel="stylesheet" href="/styles.css?v=2e81706c3d">
-<link rel="stylesheet" href="/tools/styles-tools.css?v=6d5fc2ff02">
+<link rel="stylesheet" href="/tools/styles-tools.css?v=67afccbb38">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.112.3/dist/umd/supabase.js" integrity="sha384-qafw21c/iciq0VXsi9FzkfoQv5I/V0iqE4lSNcKXPnW9/UTJLnv5CcN4FHxVLnKg" crossorigin="anonymous" defer></script>
 <script src="/tools/sync.js?v=7b42b1caf0" defer></script>
 <script src="/tools/data-layer.js?v=c5d44f096e" defer></script>
@@ -60,8 +60,8 @@
 <script src="/tools/tools-dialogs.js?v=83d27784e2" defer></script>
 <script src="/tools/tools-media-sharing.js?v=0c229c9353" defer></script>
 <script src="/tools/tools-nav-pwa.js?v=44dffca71e" defer></script>
-<script src="/tools/tools-command-palette.js?v=36ecf5ee0e" defer></script>
-<script src="/tools/tools-tour.js?v=f7a68f2675" defer></script>
+<script src="/tools/tools-command-palette.js?v=5ce9f88f49" defer></script>
+<script src="/tools/tools-tour.js?v=2f2eac6254" defer></script>
 <style>
   /* Cross-document view transitions (2026-09-21) -- same pattern
      already proven in portal/*.html: keeps the old page's visual
@@ -463,6 +463,7 @@
   }
 
   const TAB_HASHES = { cost: 'cost', profitability: 'profitability', income: 'income', expenses: 'expenses', inventory: 'inventory' };
+  const FINANCE_TAB_KEY = 'th_finance_tab'; // last tab used on this device (2026-09-22)
 
   function activateTab(tabName) {
     if (!document.getElementById('tab-' + tabName)) return;
@@ -472,6 +473,7 @@
     if (tabName === 'income') populateIncomeJobRefOptions();
     if (tabName === 'profitability') renderJobProfitability();
     if (tabName === 'inventory') renderInventory();
+    try { localStorage.setItem(FINANCE_TAB_KEY, tabName); } catch (e) { /* storage blocked */ }
   }
 
   document.querySelectorAll('.tab-btn[data-tab]').forEach(btn => {
@@ -1501,8 +1503,19 @@
       renderIncomeEntries();
       renderPriceReferences();
 
+      // Initial tab (2026-09-22): an explicit #hash wins (the command
+      // palette, the dashboard, and the tour link straight to a tab), then
+      // the tab used last on this device (someone who lives in Expenses
+      // stops paying a tap every visit), then Cost Lookup as before. Also
+      // follows a same-document hash change.
       const initialHash = (location.hash || '').replace('#', '');
-      activateTab(TAB_HASHES[initialHash] ? initialHash : 'cost');
+      let rememberedTab = null;
+      try { rememberedTab = localStorage.getItem(FINANCE_TAB_KEY); } catch (e) { rememberedTab = null; }
+      activateTab(TAB_HASHES[initialHash] ? initialHash : (TAB_HASHES[rememberedTab] ? rememberedTab : 'cost'));
+      window.addEventListener('hashchange', () => {
+        const h = (location.hash || '').replace('#', '');
+        if (TAB_HASHES[h]) activateTab(h);
+      });
 
       // Item #2 fix (2026-08-20): pre-selects the job passed via
       // ?job=<id> in the Expense entry form -- set by job-tracker.html's

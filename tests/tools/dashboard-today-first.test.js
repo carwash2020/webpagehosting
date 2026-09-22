@@ -173,15 +173,17 @@ test('the shared stylesheet no longer carries the dead tile-grid rules, and runw
   assert.doesNotMatch(runway, /tool-tile|section-tools|everythingElseChips/);
 });
 
-test('the tour\'s four dashboard steps follow the new page: Today hero, Needs attention, Quick actions strip, Business', () => {
+test('the tour\'s six dashboard steps follow the page top to bottom, then teach the nav shell and search (2026-09-22 tutorial rewrite)', () => {
   const steps = [...TOUR.matchAll(/\{ page: '\/tools\/workspace\.html', highlightSelector: '([^']+)', title: '([^']+)'/g)].map(m => [m[1], m[2]]);
   assert.deepEqual(steps, [
     ['#todayHero', 'Today'],
     ['#section-actionitems', 'Needs attention'],
     ['#dashPrimaryStrip', 'Quick actions'],
     ['#section-snapshot', 'Business'],
+    ['.th-desktop-sidebar, .th-bottom-nav', 'Getting around'],
+    ['.th-sidebar-search-trigger, .th-cmdk-btn', 'Search anywhere'],
   ]);
-  for (const [selector] of steps) assert.match(WORKSPACE, new RegExp('id="' + selector.slice(1) + '"'), `${selector} must exist on the page`);
+  for (const [selector] of steps.slice(0, 4)) assert.match(WORKSPACE, new RegExp('id="' + selector.slice(1) + '"'), `${selector} must exist on the page`);
 });
 
 test('the help modal describes the new layout and no longer mentions the chip row, the Tools section, or the retired Show on Calendar checkbox', () => {
