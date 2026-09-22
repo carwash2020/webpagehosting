@@ -605,4 +605,77 @@ doesn't reproduce" rather than "the test harness broke." Start it with
 `curl -s <url> | grep <a string known to be in the real file>` before
 trusting a negative measurement.
 
+## 2026-09-22 -- PWA/ergonomics audit: manifest and safe-area already solid, a real `.small-btn` regression found
+
+Scoped narrowly per the brief (quick wins only, no gesture/animation
+rework). Checked the manifest, safe-area coverage, and tap ergonomics
+before writing anything -- most of it was already correct from prior
+sessions (manifest.json, apple meta tags, `viewport-fit=cover`, and
+extensive `env(safe-area-inset-*)` use across `styles-tools.css` all
+checked out on inspection, no changes needed there). Full writeup in
+README's dated entry; keeping here what's worth remembering.
+
+**Real finding: two rules governing `.small-btn`'s mobile min-height
+conflict, and the wrong one wins.** `body .small-btn { min-height: 40px;
+}` (inside `@media (max-width:720px)`, part of the big "MOBILE: feels
+like a different product" block) and `.small-btn { min-height: 44px; }`
+(inside a separate, later `@media (max-width:760px)` block, written for
+the 2026-08-01 touch-target fix) both apply at phone widths. CSS
+specificity, not source order, decides the winner when both match --
+`body .small-btn` (0,1,1) beats the bare `.small-btn` (0,1,0) regardless
+of which block comes later in the file. So the 44px fix from 2026-08-01
+was never actually taking effect on a real phone; `.small-btn` (Advance
+Status/Photos/Delete on every job card) has been rendering at 40px this
+whole time. **Method note:** this class of bug -- two rules for the same
+selector at the same breakpoint, one added long after the other, neither
+aware the other exists -- won't show up by reading either rule in
+isolation; it only shows up by grepping the whole file for the exact
+selector and comparing specificities, which is exactly what the
+`.form-row`/public-site collision and the `.tabs`/`.storage-note`
+CSS-consolidation mistakes documented earlier in this project's history
+were also about. Worth a standing habit: after any touch-target or
+shared-class CSS fix, grep the file for every other rule touching that
+same selector, not just confirm the new rule looks right on its own.
+
+**Also fixed:** the photo lightbox's close (38px) and prev/next (42px)
+buttons, both real sub-44px controls on a full-screen overlay with
+plenty of room to grow with zero layout risk.
+
+**Added `-webkit-tap-highlight-color: transparent` and `touch-action:
+manipulation`** across the tool suite's interactive elements (shared
+`styles-tools.css`, mirrored into `runway-dashboard.html`'s
+self-contained copy since it doesn't load that file) -- the two quietest
+"this is a mobile website, not an app" tells once safe-area/manifest/
+touch-targets are otherwise handled. Deliberately used
+`touch-action: manipulation` rather than `user-scalable=no` on the
+viewport meta -- the latter kills real pinch-zoom too, which this task
+explicitly didn't ask for and which fights WCAG 1.4.4.
+
+**Self-caught mistake, worth repeating for future -- the first attempt
+broke `tests/design/desktop-layout.test.js`.** Added the tap-highlight
+fix as its own standalone `html { ... }` rule near the top of the file.
+That test's own regex greps the file for the FIRST `html { ... }` block
+and asserts it's the ambient-background-gradient rule (a deliberate,
+documented design from 2026-08-20). My new rule came first in the file
+and silently became the regex's match instead, failing the test with a
+confusing-looking diff (`-webkit-tap-highlight-color` where
+`radial-gradient` was expected) that read like the wrong file was
+touched, not like a second `html {}` block existed. Fixed by folding
+`html` into the comma-separated selector list of the *other* new rule
+instead of giving it a standalone block -- same effect, doesn't match a
+bare `html {` pattern. **General lesson: before adding any new bare
+top-level-element selector (`html {}`, `body {}`, `*{}`) to a CSS file
+this size, grep for that exact selector first** -- the file already has
+enough of them that a naive test regex (or a real cascade fight, as
+`.small-btn` above shows) is a live risk, not a theoretical one.
+
+Verified: full suite 2642/2642, `check-consistency`,
+`check-undefined-vars`, `lint`, `check-links.py` all clean; real headless
+Chromium at 390x844 on `workspace.html`, `job-tracker.html`, and
+`invoice-generator.html` (auth bypassed via a fake-but-shaped
+`th_auth_session` in `localStorage`, matching `auth.js`'s own
+client-side-only expiry check) confirmed `.small-btn` measuring 44px in
+the real DOM and `-webkit-tap-highlight-color`/`touch-action` reading
+back correctly via `getComputedStyle` on real buttons.
+
 <!-- Add new entries above this line -->

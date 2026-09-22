@@ -2854,3 +2854,182 @@ directly instead. Also added the equivalent for quotes, which had no
 resend option at all: a new "Portal quotes" panel with the same
 search + list + Resend shape as invoices. Full detail in
 `docs/specialist-logs/features.md`.
+
+## What changed, 2026-09-22 -- a reported bug plus a fresh usability pass across Workspace
+
+A specific report ("the Invoice Type field's text is covered by two
+icons") plus a general request to click through the whole suite again
+now that four rounds of IA changes had landed. Everything below was
+reproduced and re-checked in a real headless Chromium served over local
+HTTP (never `file://`), not just read from the source.
+
+**The reported bug.** The "search" and "warning" icons in the
+screenshot were not decorations on the Invoice Type field itself --
+they were `.th-cmdk-btn` (the search/command-palette launcher) and
+`.th-flag-btn` ("flag this page"), two buttons that float at a fixed
+distance above the mobile bottom nav on every tool page. That fixed
+band sits at the same place on screen regardless of scroll position,
+and on any 761-853px-tall phone (iPhone 12/13/14 among them) it lines
+up with wherever a short page's first content happens to fall --
+`invoice-generator.html`'s "Invoice Details" card is exactly that
+height, so the search icon covered the first letters of the field's
+value on load. Shrinking the buttons was ruled out (they are already
+at this app's own documented 44px minimum touch target, and the real
+gap between the field and the nav on that viewport is under 44px, so
+no fixed offset can avoid the overlap entirely). Fixed instead in
+`tools/tools-nav-pwa.js` (`updateFabTopFade()`): both buttons fade out
+only while a scrollable page is still at its very top, and fade back
+in the moment it scrolls past 24px -- enough to carry whatever was
+covered out of the band, since search and flag are rarely the first
+thing needed on a freshly opened page. A page that isn't tall enough to
+ever clear the band keeps both buttons visible throughout. Mirrored
+into `runway-dashboard.html`'s own copy of this CSS, same as every
+prior nav change.
+
+**Usability pass findings, all fixed:**
+- `tools/client-detail.html` loads the Supabase JS SDK from
+  `cdn.jsdelivr.net` for its realtime subscription, but its CSP never
+  got that domain added when every other realtime-using page did back
+  on 2026-08-14 -- its own security policy was silently blocking its
+  own script, so this page's live updates have never worked. Added
+  `https://cdn.jsdelivr.net` to `script-src` and `connect-src`, matching
+  the pattern already used everywhere else.
+- `tools/job-tracker.html`'s subtitle had no punctuation between the
+  "Finance &rarr;" link and the dynamic sync-status text appended right
+  after it, so a real sync error read as one run-on sentence: "...are on
+  Finance &rarr; Cloud sync issue at 6:49 AM (network: Failed to
+  fetch)." Every other page using this same `#syncStatusText` pattern
+  ends its static sentence with a period first; this one didn't. Added
+  the missing period.
+- `tools/parts-reference.html`'s brand cards labeled and counted
+  "N appliance types" using the number of individual **models**, not
+  distinct types, and listed each model's type name without
+  deduplicating -- a real, live example: Admiral (3 washer models) read
+  "3 APPLIANCE TYPES: Washer, Washer, Washer," implying three different
+  kinds of appliance. Now shows the real distinct-type count and a
+  deduplicated list, plus the model count alongside it (nothing lost --
+  "1 APPLIANCE TYPE &middot; 3 MODELS: Washer").
+- `tools/job-detail.html` and `tools/client-detail.html` hide their
+  entire view -- including the header -- until an async record lookup
+  resolves, with zero loading indicator in between. On a slow or
+  currently-unreachable connection (a real scenario this app is built
+  for -- a job site with poor signal) that lookup can take several real
+  seconds, during which the page was completely blank: no header, no
+  message, nothing. Added a small "Loading job&hellip;" / "Loading
+  client&hellip;" element visible from first paint on both pages,
+  cleared the moment the lookup resolves either way. This does not
+  change when the existing found/not-found views themselves show or
+  hide (`tests/sync/detail-pages-realtime.test.js` pins that toggle for
+  the live-deletion case) -- it only covers the gap before that
+  decision has been made.
+
+**Looked at and deliberately left alone:** several role-gated pages
+(`dev-tools.html`, `site-content.html`, and `finance.html`'s tab
+content) show the same "blank until the permission check resolves"
+gap as the two detail pages above, once the underlying role fetch is
+slow. Fixing all of them the same way is a real, worthwhile follow-up,
+but it touches seven pages' gating logic rather than two isolated
+loading states, which is bigger than a seam-finding pass should take on
+in one sitting -- left for a dedicated pass.
+
+Verified in a real headless Chromium at 390x844 and 1440x900: the
+Invoice Type field fully visible on load with both floating buttons
+faded out, both buttons fading back in after a small scroll on that
+same page, both staying visible the whole time on pages short enough
+never to scroll past the threshold, desktop unaffected (the flag button
+already lived in a free corner there, the search button is already
+`display:none` above the sidebar breakpoint), client-detail.html's
+Supabase script loading under its corrected CSP, and both detail pages
+showing their loading text immediately instead of a blank screen. Full
+suite 2642/2642, `check-consistency`, `check-undefined-vars`, `lint`,
+and `check-links.py` all clean.
+
+## What changed, 2026-09-22 (later the same day) — a quick PWA/ergonomics pass, not the gesture rework
+
+Explicit scope: "quick PWA and ergonomics wins," not the bigger gesture/
+animation pass that's deliberately deferred to a later, separate sitting.
+Audited the manifest, safe-area handling, and tap ergonomics against what
+was already shipped before touching anything -- most of it turned out
+already done well (see the "PWA (installable app icon)" and mobile
+touch-target sections of the `tripleh-business` skill, and the extensive
+`env(safe-area-inset-*)` coverage already in `styles-tools.css`), so this
+pass is genuinely small.
+
+**Checked, found already correct, no change made:**
+- `/tools/manifest.json` -- `display: standalone`, `start_url:
+  /tools/workspace.html` (the real Today-first dashboard, confirmed
+  against the current IA), dark theme colors matching the app
+  (`#0a0a0a`), real `icon-192.png`/`icon-512.png`/`apple-touch-icon.png`
+  at the correct pixel dimensions (192, 512, 180 -- verified by opening
+  each file, not trusting the filename), and 3 app shortcuts with
+  correct `/tools/`-prefixed URLs.
+- Every tool page's `<head>`: `apple-mobile-web-app-capable`,
+  `apple-mobile-web-app-status-bar-style`, `apple-touch-icon`,
+  `theme-color`, and `viewport-fit=cover` on the viewport meta tag --
+  confirmed present and correct on all 23 tool pages, not just a sample.
+- Safe-area insets: `.th-bottom-nav`, `.th-flag-btn`, `.th-cmdk-btn`, the
+  onboarding tour card, the install banner, the photo lightbox, and every
+  sticky header already pad/offset for `env(safe-area-inset-*)` --
+  this has clearly been iterated on across several prior sessions and
+  needed nothing further.
+
+**Real bug found and fixed: `.small-btn` was rendering at 40px on every
+phone, not the 44px the app has documented as its own minimum touch
+target since 2026-08-01.** Two rules both target `.small-btn` at phone
+widths -- `body .small-btn { min-height: 40px; }` inside the `max-width:
+720px` block, and `.small-btn { min-height: 44px; }` inside a separate
+`max-width: 760px` block written later. Both apply at any width <=720px,
+and `body .small-btn` (specificity 0,1,1) always beats the bare
+`.small-btn` (0,1,0) regardless of which one comes later in the file --
+so the 40px rule silently won on every real phone, undoing the touch-
+target fix. This is the Advance Status / Photos / Delete button on every
+Job Tracker job card, so this was a real, live regression, not a
+theoretical one. Fixed by matching the value in the higher-specificity
+rule (40px -> 44px) rather than trying to out-rank it, which removes the
+conflict outright. Confirmed with a real `getBoundingClientRect()`
+measurement in headless Chromium at 390x844: 44px, both before and after
+adding jobs to the page.
+
+**Two more sub-44px controls fixed while auditing the same class of
+issue:** the full-screen job-photo lightbox's close button (38x38 ->
+44x44) and its prev/next buttons (42x42 -> 44x44) -- both circular
+buttons on a full-viewport overlay with plenty of room to size up with
+no layout cost.
+
+**Two "feels like a website, not an app" tells fixed, both pure CSS,
+`tools/styles-tools.css` and mirrored into `runway-dashboard.html`'s own
+self-contained copy (it doesn't load the shared stylesheet):**
+- The browser's default grey tap-highlight flash on every link/button
+  press -- every interactive element in this suite already has its own
+  `:active`/`:hover` state, so `-webkit-tap-highlight-color: transparent`
+  loses no feedback.
+- The ~300ms double-tap-to-zoom delay browsers add to tappable elements
+  -- `touch-action: manipulation` removes it while leaving real
+  pinch-zoom untouched. Deliberately did **not** set `user-scalable=no`
+  on the viewport meta tag (already present without it) -- that would
+  disable pinch-zoom entirely, which fights WCAG 1.4.4 and is a
+  different, unwanted tradeoff from what was asked for.
+
+**One test broken by the first attempt, caught by the suite, fixed
+immediately:** the first pass added a standalone `html { ... }` rule for
+the tap-highlight fix. `tests/design/desktop-layout.test.js` greps the
+file for the *first* `html { ... }` block and asserts it's the ambient
+background gradient rule -- the new rule appeared earlier in the file and
+was a false match. Fixed by folding `html` into the existing comma-
+separated selector list instead of giving it its own rule, which stopped
+matching that regex while keeping the same effect.
+
+**Explicitly not touched, per the brief:** gesture navigation, swipe
+actions, page transition animations, pull-to-refresh, bottom-sheet
+modals -- all deferred, as agreed, to a later dedicated pass.
+
+Verified in a real headless Chromium at 390x844 (served over local HTTP,
+never `file://`, with a fake-but-shaped `th_auth_session` in
+`localStorage` so the pages render past the login gate): `workspace.html`
+(Today dashboard), `job-tracker.html`, and `invoice-generator.html` all
+load cleanly, the fixed floating search/flag buttons still fade
+correctly at page-top per the fix earlier today, `.small-btn` measures
+44px in the DOM, and `-webkit-tap-highlight-color`/`touch-action` read
+back correctly on real buttons via `getComputedStyle`. Full suite
+2642/2642, `check-consistency`, `check-undefined-vars`, `lint`, and
+`check-links.py` all clean.

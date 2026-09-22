@@ -208,6 +208,53 @@
     document.body.appendChild(btn);
   }
 
+  // Bug fix (2026-09-22): .th-cmdk-btn (search launcher) and .th-flag-btn
+  // both float at a fixed distance above the mobile bottom nav, which
+  // means they sit on top of whatever the page's own content happens to
+  // occupy that exact band -- confirmed with a real headless Chromium at
+  // 390x844 on invoice-generator.html: the Invoice Type field lands
+  // right there, and the search icon covered its first letters. Shrinking
+  // either button was ruled out (both are already at this app's own
+  // documented 44px minimum touch target). Instead, both fade out only
+  // while a scrollable page is still at its very top, and back in the
+  // moment it scrolls past FAB_FADE_THRESHOLD -- comfortably enough to
+  // carry whatever was covered out of the fixed band, since both buttons
+  // serve actions (search, flag) that are rarely the very first thing
+  // needed on a freshly opened page. A page that is not tall enough to
+  // scroll that far keeps both buttons visible the whole time, so
+  // search/flag stay reachable there too. See the matching CSS rule in
+  // styles-tools.css (and its mirror in runway-dashboard.html).
+  var FAB_FADE_THRESHOLD = 24;
+  function updateFabTopFade() {
+    // Desktop: .th-cmdk-btn is display:none and .th-flag-btn sits in a
+    // free corner (bottom:16px, no bottom nav to collide with) -- nothing
+    // to fade there, and leaving the classes on would just make the flag
+    // button flicker in on desktop scroll for no reason.
+    if (window.innerWidth >= 1024) {
+      document.body.classList.remove('th-fab-hide-at-top', 'th-scrolled');
+      return;
+    }
+    var scrollable = document.documentElement.scrollHeight - window.innerHeight > FAB_FADE_THRESHOLD;
+    document.body.classList.toggle('th-fab-hide-at-top', scrollable);
+    document.body.classList.toggle('th-scrolled', window.scrollY > FAB_FADE_THRESHOLD);
+  }
+  function initFabTopFade() {
+    var ticking = false;
+    function onScrollOrResize() {
+      if (ticking) return;
+      ticking = true;
+      window.requestAnimationFrame(function () { updateFabTopFade(); ticking = false; });
+    }
+    window.addEventListener('scroll', onScrollOrResize, { passive: true });
+    window.addEventListener('resize', onScrollOrResize);
+    // Content (images, fonts, a late sync-status line) can still be
+    // settling right at DOMContentLoaded, which is when inject() runs --
+    // re-check once more after load, same defensive pattern already used
+    // elsewhere in this app for late-rendering content.
+    window.addEventListener('load', updateFabTopFade);
+    updateFabTopFade();
+  }
+
   function injectSidebar() {
     document.body.classList.add('th-has-sidebar');
 
@@ -243,6 +290,7 @@
     document.body.classList.add('th-has-bottomnav');
     injectSidebar();
     injectFlagButton();
+    initFabTopFade();
 
     var nav = document.createElement('nav');
     nav.className = 'th-bottom-nav';

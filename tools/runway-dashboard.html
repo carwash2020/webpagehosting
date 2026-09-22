@@ -47,7 +47,7 @@
      reachable only by the browser back button. Loaded in the same
      position (after tools-dialogs.js, before tools-tour.js) as every
      other tool page for consistency. -->
-<script src="/tools/tools-nav-pwa.js?v=44dffca71e" defer></script>
+<script src="/tools/tools-nav-pwa.js?v=f07de2ca5b" defer></script>
 <script src="/tools/tools-command-palette.js?v=5ce9f88f49" defer></script>
 <script src="/tools/tools-tour.js?v=2f2eac6254" defer></script>
 <script>
@@ -75,6 +75,18 @@
      page, not just one. */
   @view-transition {
     navigation: auto;
+  }
+  /* PWA ergonomics pass (2026-09-22), mirrored from styles-tools.css --
+     see that file's own comment for the full reasoning. Removes the
+     default grey tap-highlight flash (every interactive element here
+     already has its own :active/:hover state) and the ~300ms
+     double-tap-zoom delay, without touching pinch-zoom. */
+  html { -webkit-tap-highlight-color: transparent; }
+  a, button, input, select, textarea, [role="button"],
+  .icon-btn, .cat-add-btn, .rw-tab-btn, .th-bottom-nav a,
+  .th-bottom-nav .th-bn-more, .th-more-sheet-link {
+    -webkit-tap-highlight-color: transparent;
+    touch-action: manipulation;
   }
   /* iOS Safari zoom-on-focus fix (2026-09-05), same root cause and
      fix already applied to invoice-generator.html: a tapped
@@ -472,7 +484,7 @@
       linear-gradient(180deg, var(--bg-elevated), var(--bg-card) 130%);
     border: 1px solid var(--border); color: var(--text-dim);
     box-shadow: 0 1px 0 rgba(255,255,255,.05) inset, 0 3px 10px rgba(0,0,0,0.3);
-    cursor: pointer; transition: color .15s ease, border-color .15s ease, transform .15s ease, box-shadow .15s ease;
+    cursor: pointer; transition: color .15s ease, border-color .15s ease, transform .15s ease, box-shadow .15s ease, opacity .15s ease;
   }
   .th-flag-btn:active { transform: translateY(1px) scale(.96); }
   .th-flag-btn .th-icon { width: 20px; height: 20px; }
@@ -483,6 +495,15 @@
   }
   @media (min-width: 1024px) { .th-flag-btn { bottom: 16px; } }
   @media (prefers-reduced-motion: reduce) { .th-flag-btn, .th-flag-btn:hover { transition: none; transform: none; } }
+  /* Bug fix (2026-09-22): mirrored from styles-tools.css -- see the
+     comment there. Both floating buttons fade out only while the page
+     is still at its very top, so they cannot land on top of whatever
+     content happens to render in their fixed band on load. */
+  body.th-fab-hide-at-top:not(.th-scrolled) .th-cmdk-btn,
+  body.th-fab-hide-at-top:not(.th-scrolled) .th-flag-btn {
+    opacity: 0; pointer-events: none;
+  }
+  @media (prefers-reduced-motion: reduce) { .th-cmdk-btn, .th-flag-btn { transition: none; } }
   .panel{display:none;}
   .panel.active{display:block; animation:panelFadeIn .22s ease;}
   .panel.fade-out{display:block; opacity:0; transition:opacity .2s ease;}
@@ -777,7 +798,7 @@
       linear-gradient(180deg, var(--bg-panel-2), var(--bg-panel) 130%);
     border: 1px solid var(--border); color: var(--text-dim);
     box-shadow: 0 1px 0 rgba(255,255,255,.05) inset, 0 3px 10px rgba(0,0,0,0.3);
-    cursor: pointer; transition: color .15s ease, border-color .15s ease, transform .15s ease, box-shadow .15s ease;
+    cursor: pointer; transition: color .15s ease, border-color .15s ease, transform .15s ease, box-shadow .15s ease, opacity .15s ease;
   }
   .th-cmdk-btn:active { transform: translateY(1px) scale(.96); }
   .th-cmdk-btn .th-icon { width: 20px; height: 20px; }

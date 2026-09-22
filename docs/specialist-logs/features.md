@@ -1325,4 +1325,88 @@ flows render correctly, the confirm dialog shows the right client/
 number, and the network call + UI state after both a successful send
 and a simulated opt-out match what the code claims.
 
+## 2026-09-22 -- bug report + usability pass: floating nav buttons over content, three "seams" from the IA rework
+
+Two-part task: a specific report (icons over the Invoice Type field)
+plus a fresh click-through of the Workspace suite now that four IA
+rounds have landed back to back. Full detail in README.md's dated
+entry; the reasoning worth keeping here is why the reported bug wasn't
+a padding/icon-in-input problem the way it first looked.
+
+**Root cause, not what it looked like.** The screenshot suggested a
+classic "icon positioned inside an input without enough padding"
+CSS bug. Reproducing it in a real headless Chromium (390x844) showed
+the two icons were actually `.th-cmdk-btn`/`.th-flag-btn`, two
+`position: fixed` buttons that float at a constant distance above the
+mobile bottom nav on *every* tool page -- their position is fixed
+relative to the viewport, not to any particular field, so they land on
+top of whatever content happens to occupy that exact band when the
+page is short enough (measured: any 761-853px-tall viewport puts
+invoice-generator.html's Invoice Type field there). Confirmed with
+exact `getBoundingClientRect()` measurements: the real gap between the
+field and the bottom nav on that viewport is under the buttons' own
+44px height, meaning no fixed offset value could have avoided the
+overlap -- and shrinking the buttons was ruled out since 44px is this
+app's own documented minimum touch target (set deliberately back on
+2026-08-01, see the skill's mobile-touch-target notes). The fix that
+actually works is behavioral, not positional: fade both buttons out
+while a scrollable page is at its very top, back in after a small
+scroll (24px is enough to carry the covered content out of the band).
+A page too short to scroll that far just keeps both buttons visible,
+so search/flag stay reachable everywhere.
+
+**Lesson for next time a floating/fixed-position element is reported
+as "covering text":** don't assume the report's own theory of the bug
+(icon-in-input styling) without reproducing it visually first -- the
+real mechanism here (two independent fixed-position buttons, unrelated
+to the field's own markup) would never have been found by reading
+invoice-generator.html's CSS alone, since neither button is defined
+anywhere near that file's own styles.
+
+**Usability pass, three real seams found and fixed** (see README for
+each): a CSP on client-detail.html missing the one CDN domain its own
+script tag requires (broken since realtime sync shipped a month prior
+-- worth remembering that a CSP gap fails *silently*, no visible error
+banner, just "the feature never worked" until someone checks the
+console); a run-on subtitle sentence on job-tracker.html from a missing
+period before a dynamically-inserted status span; and parts-reference.html
+counting/labeling "appliance types" by model count instead of distinct
+type count, visibly wrong the moment a brand has more than one model of
+the same type (Admiral, Amana -- both real, current data, not synthetic
+test data).
+
+**A fourth, structural finding, fixed for two pages and explicitly
+scoped down for the rest:** job-detail.html and client-detail.html hide
+their entire view (including the header) until an async record lookup
+resolves, with no loading indicator -- on the slow/unreachable
+connections this app is explicitly built to tolerate, that's a fully
+blank screen for several real seconds. Fixed both with a small
+loading-state element visible from first paint, careful not to touch
+the found/not-found toggle itself since
+`tests/sync/detail-pages-realtime.test.js` pins its exact behavior for
+the live-deletion case. The same gap exists on every `roleBlockedOverlay`
+page (dev-tools.html, site-content.html, finance.html, and others) --
+confirmed by reproducing it, not just suspected -- but fixing all seven
+consistently is a bigger job than two isolated loading states and was
+left as a named follow-up rather than rushed into this pass.
+
+Verified: suite 2642/2642, check-consistency, check-undefined-vars,
+lint, check-links.py all clean; real Chromium 390x844 + 1440x900
+covering the fade-in/out behavior, both loading states, and the
+corrected CSP actually allowing the script to load.
+
+## 2026-09-22 (later the same day) -- quick PWA/ergonomics pass (visual lane, cross-logged here)
+
+A narrow, low-risk pass -- manifest/apple-meta/safe-area were already
+correct from prior sessions; the one real bug found was a CSS
+specificity conflict silently undoing the 2026-08-01 `.small-btn`
+44px touch-target fix on every phone (was actually rendering at 40px).
+Also fixed two sub-44px photo-lightbox buttons and added
+`-webkit-tap-highlight-color: transparent` / `touch-action:
+manipulation` across the tool suite. No product behavior changed --
+CSS only, `tools/styles-tools.css` + `tools/runway-dashboard.html`'s
+mirrored copy. Full detail and the debugging story in
+`docs/specialist-logs/visual.md`'s entry of the same date and in
+README's dated changelog entry. Suite 2642/2642, all checks clean.
+
 <!-- Add new entries above this line -->
