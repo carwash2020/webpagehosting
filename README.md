@@ -3309,3 +3309,19 @@ site. Checked several other candidates first and correctly declined to
 build anything for them (long-press on already-visible review-request
 buttons, a couple of pages with no real gap on inspection). Full
 reasoning: `docs/specialist-logs/visual.md`'s 2026-09-22 entry.
+
+## What changed, 2026-09-22 (later still) -- a physical, drawn signature everywhere a client used to just type their name
+
+Requested directly: "Currently they just type a name, i want a
+physical signature." The client portal, POS, and every other place a
+client authorizes saving a card now capture a real drawn signature
+(same canvas-signature pattern `portal/contracts.html`'s client
+e-signature already used), not just a typed name -- across POS Quick
+Charge, single + bulk invoice payment, and Settings' Add a Card.
+Signature capture logic was extracted into a new shared file,
+`signature-pad.js`, and `portal/contracts.html` itself was refactored
+onto it too. The typed name is kept alongside the drawn signature (for
+search/display/dispute correlation), not replaced by it; existing
+authorization records are unaffected. Full reasoning, including a
+deploy near-miss caught and fixed within the same session:
+`docs/specialist-logs/features.md`'s 2026-09-22 entry.

@@ -19,7 +19,7 @@ const BULK_PAYMENT_INTENT = fs.readFileSync(repo('edge-functions', 'create-bulk-
 // ---- edge function ----
 
 test('a signature is required only when this client has no existing saved card', () => {
-  const fnMatch = PAYMENT_INTENT.match(/const existingCustomerId = await findExistingStripeCustomerId[\s\S]*?await recordCardAuthorization\(claims\.email, signer_name\.trim\(\), authorizationText, amountCents \/ 100, invoice\.id\);\s*\n    \}/);
+  const fnMatch = PAYMENT_INTENT.match(/const existingCustomerId = await findExistingStripeCustomerId[\s\S]*?await recordCardAuthorization\(claims\.email, signer_name\.trim\(\), authorizationText, amountCents \/ 100, invoice\.id, signature_image\);\s*\n    \}/);
   assert.ok(fnMatch, 'expected to isolate the signature-requirement block');
   const body = fnMatch[0];
   assert.match(body, /if \(!alreadyHasSavedCard\) \{/);
@@ -56,15 +56,15 @@ test('the existing customer id is reused rather than looked up twice when a sign
 // ---- frontend ----
 
 test('startPayment shows the signature step on needs_signature, rather than a generic error message', () => {
-  const fnMatch = DASHBOARD.match(/async function startPayment\(invoiceId, signerName\)[\s\S]*?\n  \}\n/);
+  const fnMatch = DASHBOARD.match(/async function startPayment\(invoiceId, signerName, signatureImage\)[\s\S]*?\n  \}\n/);
   assert.ok(fnMatch, 'expected to isolate startPayment()');
   const body = fnMatch[0];
   assert.match(body, /if \(result\.needs_signature\) \{[\s\S]*?renderPaymentSignatureStep\(invoiceId\);/);
 });
 
-test('submitting the signature retries the exact same payment flow with the typed name included', () => {
+test('submitting the signature retries the exact same payment flow with the typed name and drawn signature included', () => {
   assert.match(DASHBOARD, /function submitPaymentSignature\(invoiceId\)/);
-  assert.match(DASHBOARD, /startPayment\(invoiceId, signerName\);/);
+  assert.match(DASHBOARD, /startPayment\(invoiceId, signerName, signatureImage\);/);
 });
 
 test('an empty signature is rejected client-side before ever retrying the request', () => {

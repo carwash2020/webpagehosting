@@ -98,6 +98,12 @@ const SHARED_SCRIPT_FILES = [
   // apostrophes deliberately, same reason as the note above on
   // portal/push-notifications.js.)
   'tools/pdf-layout.js',
+  // Shared drawn-signature capture (2026-09-22) -- a plain root-level
+  // file (not under tools/ or portal/) loaded by portal/contracts.html,
+  // portal/dashboard.html, portal/settings.html, and
+  // tools/invoice-generator.html, same reasoning as every other entry
+  // here.
+  'signature-pad.js',
 ];
 
 // Third-party globals from CDN-loaded scripts (Supabase, Stripe,

@@ -49,6 +49,7 @@
 </style>
 <link rel="stylesheet" href="/tools/styles-tools.css?v=a494344e8c">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="/signature-pad.js?v=f95f8e1d28"></script>
 <script src="/portal/portal-app.js?v=202609170800"></script>
 <style>
   body { background: #0a0a0a; max-width: 640px; margin: 0 auto; padding: 24px 16px 60px; }
@@ -248,62 +249,24 @@
   }
 
   let currentContracts = [];
-  const signaturePads = {};
 
-  // Same pointer-based drawing logic as tools/contract-generator.html's
-  // two in-person pads -- reimplemented here rather than shared, since
-  // this page deliberately loads none of the internal /tools/ scripts
-  // (same isolation boundary as quotes.html/dashboard.html).
+  // The pointer-based drawing logic itself now lives in the shared
+  // /signature-pad.js (2026-09-22, extracted from this page's original
+  // implementation so the same proven pattern could be reused for the
+  // card-authorization signature spots too) -- loading it is safe even
+  // though this page deliberately loads none of the internal /tools/
+  // scripts (see quotes.html/dashboard.html's own isolation-boundary
+  // comment), since it's a plain root-level file, not a /tools/ one.
+  // These three thin wrappers keep this page's own call sites (which
+  // pass a numeric contractId, not a raw canvasId) unchanged.
   function initSignaturePad(contractId) {
-    const canvas = document.getElementById('signatureCanvas-' + contractId);
-    if (!canvas) return;
-    signaturePads[contractId] = { hasDrawing: false };
-    const ctx = canvas.getContext('2d');
-    ctx.strokeStyle = '#111';
-    ctx.lineWidth = 2;
-    ctx.lineCap = 'round';
-    let drawing = false;
-
-    function pos(e) {
-      const rect = canvas.getBoundingClientRect();
-      const scaleX = canvas.width / rect.width;
-      const scaleY = canvas.height / rect.height;
-      return { x: (e.clientX - rect.left) * scaleX, y: (e.clientY - rect.top) * scaleY };
-    }
-
-    canvas.addEventListener('pointerdown', (e) => {
-      drawing = true;
-      signaturePads[contractId].hasDrawing = true;
-      const p = pos(e);
-      ctx.beginPath();
-      ctx.moveTo(p.x, p.y);
-      const statusEl = document.getElementById('signatureStatus-' + contractId);
-      if (statusEl) statusEl.textContent = 'Signature captured';
-      canvas.setPointerCapture(e.pointerId);
-    });
-    canvas.addEventListener('pointermove', (e) => {
-      if (!drawing) return;
-      const p = pos(e);
-      ctx.lineTo(p.x, p.y);
-      ctx.stroke();
-    });
-    canvas.addEventListener('pointerup', () => { drawing = false; });
-    canvas.addEventListener('pointercancel', () => { drawing = false; });
+    sigPadInit('signatureCanvas-' + contractId, 'signatureStatus-' + contractId);
   }
-
   function clearContractSignature(contractId) {
-    const canvas = document.getElementById('signatureCanvas-' + contractId);
-    if (!canvas) return;
-    const ctx = canvas.getContext('2d');
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-    if (signaturePads[contractId]) signaturePads[contractId].hasDrawing = false;
-    const statusEl = document.getElementById('signatureStatus-' + contractId);
-    if (statusEl) statusEl.textContent = '';
+    sigPadClear('signatureCanvas-' + contractId, 'signatureStatus-' + contractId);
   }
-
   function getContractSignatureDataUrl(contractId) {
-    if (!signaturePads[contractId] || !signaturePads[contractId].hasDrawing) return null;
-    return document.getElementById('signatureCanvas-' + contractId).toDataURL('image/png');
+    return sigPadDataUrl('signatureCanvas-' + contractId);
   }
 
   async function renderContracts() {

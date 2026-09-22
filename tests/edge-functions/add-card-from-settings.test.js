@@ -23,7 +23,7 @@ test('create_setup_intent requires a signature before creating anything, matchin
 });
 
 test('the authorization is recorded before the SetupIntent is created', () => {
-  const recordIdx = MANAGE_CARD.indexOf('await recordCardAuthorization(claims.email, signer_name.trim(), authorizationText);');
+  const recordIdx = MANAGE_CARD.indexOf('await recordCardAuthorization(claims.email, signer_name.trim(), authorizationText, signature_image);');
   const setupIdx = MANAGE_CARD.indexOf('await fetch("https://api.stripe.com/v1/setup_intents"');
   assert.ok(recordIdx !== -1 && setupIdx !== -1);
   assert.ok(recordIdx < setupIdx);

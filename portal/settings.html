@@ -111,6 +111,7 @@
 </style>
 <link rel="stylesheet" href="/tools/styles-tools.css?v=a494344e8c">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="/signature-pad.js?v=f95f8e1d28"></script>
 <script src="/portal/portal-app.js?v=202609170800"></script>
 <script src="https://js.stripe.com/v3/"></script>
 <script src="/portal/push-notifications.js"></script>
@@ -646,7 +647,7 @@
     if (!session) return;
     const { data, error } = await client
       .from('card_authorizations')
-      .select('signer_name,authorization_text,context,amount,description,created_at')
+      .select('signer_name,authorization_text,context,amount,description,signature_image,created_at')
       .eq('client_email', session.user.email)
       .order('created_at', { ascending: false });
     if (error) {
@@ -659,9 +660,16 @@
     }
     body.innerHTML = data.map(a => {
       const dateLabel = new Date(a.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+      // signature_image is null for anything authorized before this
+      // field existed (2026-09-22) -- those rows still show their
+      // typed authorization_text, just with no image underneath.
+      const signatureHtml = a.signature_image
+        ? '<img src="' + a.signature_image + '" alt="Signature" style="max-width:200px; max-height:60px; background:#fff; border-radius:4px; margin-top:6px; display:block;">'
+        : '';
       return '<div class="auth-entry">' +
         '<div class="auth-entry-date">' + escapeHtml(dateLabel) + '</div>' +
         '<div class="auth-entry-text">' + escapeHtml(a.authorization_text) + '</div>' +
+        signatureHtml +
         '</div>';
     }).join('');
   }
@@ -820,11 +828,18 @@
     document.getElementById('addCardArea').innerHTML =
       '<div class="pay-auth-box">' +
       '<p class="pay-auth-text">I, <span id="addCardSignerNamePreview">_____________</span>, authorize Triple H Enterprises to securely save this card on file for future charges I separately approve.</p>' +
-      '<label for="addCardSignerName" class="pay-auth-label">Type your full legal name to continue</label>' +
+      '<label for="addCardSignerName" class="pay-auth-label">Type your full legal name</label>' +
       '<input type="text" id="addCardSignerName" placeholder="Full name" oninput="document.getElementById(\'addCardSignerNamePreview\').textContent = this.value.trim() || \'_____________\';">' +
+      '<label class="pay-auth-label" style="margin-top:10px;">Signature</label>' +
+      '<canvas id="addCardSignatureCanvas" width="600" height="180" style="width:100%; max-width:560px; height:160px; background:#ffffff; border:1px solid var(--border); border-radius:8px; touch-action:none; cursor:crosshair; display:block;"></canvas>' +
+      '<div style="display:flex; align-items:center; gap:10px; margin-top:6px;">' +
+      '<button type="button" class="secondary-btn" onclick="sigPadClear(\'addCardSignatureCanvas\', \'addCardSignatureStatus\')">Clear</button>' +
+      '<span id="addCardSignatureStatus" class="pay-auth-label" style="margin:0;"></span>' +
+      '</div>' +
       '</div>' +
       '<button class="btn blue" id="addCardAuthContinueBtn" style="width:100%; justify-content:center; margin-top:14px;" onclick="submitAddCardSignature()">Continue</button>' +
       '<button class="small-btn" style="margin-top:8px;" onclick="cancelAddCard()">Cancel</button>';
+    if (typeof sigPadInit === 'function') sigPadInit('addCardSignatureCanvas', 'addCardSignatureStatus');
   }
 
   function cancelAddCard() {
@@ -836,6 +851,11 @@
     const signerName = (document.getElementById('addCardSignerName')?.value || '').trim();
     if (!signerName) {
       showToast('Please type your full name to continue.', { type: 'error' });
+      return;
+    }
+    const signatureImage = typeof sigPadDataUrl === 'function' ? sigPadDataUrl('addCardSignatureCanvas') : null;
+    if (!signatureImage) {
+      showToast('Please sign to continue.', { type: 'error' });
       return;
     }
     const { data: { session } } = await client.auth.getSession();
@@ -852,7 +872,7 @@
           'apikey': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNzdmZxZGp1b2J5bGdhZmdvbGhvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODUzNTQ3MjcsImV4cCI6MjEwMDkzMDcyN30.6GlvK-DfXf2lppS1kciZtsl4wHOpZz_yKtwsS1lyjrs',
           'Authorization': `Bearer ${session.access_token}`,
         },
-        body: JSON.stringify({ mode: 'create_setup_intent', signer_name: signerName }),
+        body: JSON.stringify({ mode: 'create_setup_intent', signer_name: signerName, signature_image: signatureImage }),
       });
       const result = await res.json();
       if (!result.ok) {

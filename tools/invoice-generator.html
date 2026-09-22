@@ -58,6 +58,7 @@
 <script src="/tools/data-layer.js?v=c5d44f096e" defer></script>
 <script src="/tools/tools-effects.js?v=a767167574" defer></script>
 <script src="/tools/tools-dialogs.js?v=83d27784e2" defer></script>
+<script src="/signature-pad.js?v=f95f8e1d28" defer></script>
 <script src="/tools/tools-media-sharing.js?v=0c229c9353" defer></script>
 <script src="/tools/tools-nav-pwa.js?v=f07de2ca5b" defer></script>
 <script src="/tools/tools-command-palette.js?v=5ce9f88f49" defer></script>
@@ -2636,11 +2637,24 @@
     area.innerHTML =
       '<div class="pos-auth-box">' +
       '<p class="pos-auth-text">I, <span id="posSignerNamePreview">_____________</span>, authorize Triple H Enterprises to charge <span id="posAuthAmountPreview"></span> to the card provided for "<span id="posAuthDescPreview"></span>", and to securely save this card on file for future charges I separately approve.</p>' +
-      '<label for="posSignerName" class="pos-auth-label">Client\'s full legal name (typed as signature)</label>' +
+      '<label for="posSignerName" class="pos-auth-label">Client\'s full legal name</label>' +
       '<input type="text" id="posSignerName" placeholder="Full name" oninput="document.getElementById(\'posSignerNamePreview\').textContent = this.value.trim() || \'_____________\';">' +
+      // Physical/drawn signature (2026-09-22), requested directly:
+      // "Currently they just type a name, i want a physical signature."
+      // The typed name above stays (still useful for search/display and
+      // dispute correlation), but the actual signature is now this
+      // canvas -- same shared pad portal/contracts.html's client
+      // e-signature already used (signature-pad.js).
+      '<label class="pos-auth-label" style="margin-top:10px;">Signature</label>' +
+      '<canvas id="posSignatureCanvas" width="600" height="180" style="width:100%; max-width:560px; height:160px; background:#ffffff; border:1px solid var(--border); border-radius:8px; touch-action:none; cursor:crosshair; display:block;"></canvas>' +
+      '<div style="display:flex; align-items:center; gap:10px; margin-top:6px;">' +
+      '<button type="button" class="secondary-btn" onclick="sigPadClear(\'posSignatureCanvas\', \'posSignatureStatus\')">Clear</button>' +
+      '<span id="posSignatureStatus" class="pos-auth-label" style="margin:0;"></span>' +
+      '</div>' +
       '</div>' +
       '<button class="primary-btn" id="posNewCardBtn" style="width:100%; justify-content:center; margin-top:12px;" onclick="startNewCardCharge()">Enter Card &amp; Charge</button>';
     updateAuthPreview();
+    if (typeof sigPadInit === 'function') sigPadInit('posSignatureCanvas', 'posSignatureStatus');
   }
 
   // Keeps the authorization preview text in sync with the amount and
@@ -2723,6 +2737,11 @@
       showError("The client's full name is required before entering a card.");
       return;
     }
+    const signatureImage = typeof sigPadDataUrl === 'function' ? sigPadDataUrl('posSignatureCanvas') : null;
+    if (!signatureImage) {
+      showError('A drawn signature is required before entering a card.');
+      return;
+    }
     showError('');
     const btn = document.getElementById('posNewCardBtn');
     btn.disabled = true;
@@ -2738,7 +2757,7 @@
           'apikey': SUPABASE_ANON_KEY,
           'Authorization': 'Bearer ' + getAuthToken(),
         },
-        body: JSON.stringify({ mode: 'new_card', client_email: fields.email, amount: fields.amount, description: fields.description, signer_name: signerName }),
+        body: JSON.stringify({ mode: 'new_card', client_email: fields.email, amount: fields.amount, description: fields.description, signer_name: signerName, signature_image: signatureImage }),
       });
       const result = await res.json();
       if (!result.ok) {

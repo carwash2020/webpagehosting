@@ -1,0 +1,13 @@
+-- Physical/drawn signature capture (2026-09-22), requested directly:
+-- "Currently they just type a name, i want a physical signature."
+-- card_authorizations.signer_name (typed name) stays -- still useful
+-- for search/display and dispute correlation -- but the actual
+-- signature is now a drawn canvas image (base64 PNG data URL, same
+-- shape as client_portal_contracts.client_signature_data_url), stored
+-- here alongside it. Applied directly via the Supabase MCP migration
+-- tool, mirrored here after the fact per this repo's convention.
+--
+-- Additive and nullable: no migration needed for existing rows, which
+-- simply have signature_image = null (their typed name is still the
+-- authorization on file, exactly as it was before this change).
+alter table public.card_authorizations add column if not exists signature_image text;
