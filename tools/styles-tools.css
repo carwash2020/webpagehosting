@@ -423,6 +423,12 @@ body.th-has-bottomnav .onboarding-card { bottom: calc(76px + env(safe-area-inset
 .tabs.tabs-sticky {
   position: sticky; top: calc(61px + max(env(safe-area-inset-top, 0px), 44px)); z-index: 55;
 }
+/* Desktop (2026-09-22): the header there is fixed, 61px tall, with no
+   notch padding, so the phone offset above left a 44px gap under it once
+   the tabs stuck -- and on a page whose tabs sit near the top (Clients,
+   since its intro moved into the Portal tab) sticky pulled the bar down
+   over the content right under it on load. */
+@media (min-width: 1024px) { .tabs.tabs-sticky { top: 73px; } }
 /* Same WebKit ghosting fix as .hub-header/.tool-header above -- see
    that comment for the full explanation. border-radius: inherit
    matches .tabs' own rounded corners (12px), since this pseudo-element
@@ -1143,6 +1149,18 @@ body.th-tool-page { --tool-maxw-narrow: 1050px; --tool-maxw-wide: 1500px; }
    value, so 44px (the majority, already-correct value) is what every
    page converges on. */
 body.th-tool-page { padding: 44px 20px 60px; }
+/* Desktop top clearance (2026-09-22): the header is fixed there (61px,
+   out of flow), and twelve pages each carry their own
+   `@media (min-width:1024px) { body { ... padding-top: 75px; } }` for
+   exactly that -- but plain `body` (0,0,1) never beat the shared
+   `body.th-tool-page` rule above (0,1,1), so all twelve have started
+   their content at 44px, tucked up under the header's bottom edge,
+   since the 2026-09-06 consolidation. Found when the Clients page (whose
+   intro line moved into its Portal tab) rendered its tab bar over its
+   own search field. One rule restores the intended 75px everywhere;
+   the dashboard's own `body.th-tool-page` override (88px, later in the
+   cascade) still wins there. */
+@media (min-width: 1024px) { body.th-tool-page { padding-top: 75px; } }
 
 /* Visual pass (2026-09-06): the elevation system directly above ("real
    elevation, gradient faces") was always sound in its logic -- gradient
@@ -2614,3 +2632,78 @@ a.th-cmdk-item:hover { background: var(--orange-tint-soft); }
     animation-duration: 0.001ms !important;
   }
 }
+
+/* ---------------------------------------------------------------------
+   List rows (2026-09-22, Workspace rework part 2) -- one shared row for
+   record lists, so a client, a job, or an invoice reads the same way on
+   every page: a hex avatar at the left, a title over a one-line
+   subtitle, then trailing pills and at most one or two icon buttons.
+   The whole middle of the row is the link; the icon buttons sit outside
+   it so a tap on Call never also opens the record. First used by the
+   Clients directory. (ARCHITECTURE-NOTES "shared UI components".)
+--------------------------------------------------------------------- */
+.th-list { display: flex; flex-direction: column; gap: 6px; }
+.th-row {
+  display: flex; align-items: center; gap: 6px;
+  background: var(--bg-panel); border: 1px solid var(--border); border-radius: 14px;
+  padding: 4px 8px 4px 4px;
+  transition: border-color .15s ease;
+}
+.th-row:hover { border-color: var(--orange-tint-border); }
+.th-row-link {
+  flex: 1; min-width: 0; display: flex; align-items: center; gap: 12px;
+  min-height: 56px; padding: 6px; border-radius: 10px;
+  text-decoration: none; color: inherit;
+}
+.th-row-link:active { background: var(--bg-panel-2); }
+/* A hold on the row is the quick-action sheet (attachLongPress), so iOS's
+   own link preview and text selection stay out of the way. */
+.th-row-link[data-long-press-target] { -webkit-touch-callout: none; -webkit-user-select: none; user-select: none; }
+.th-row-avatar {
+  width: 42px; height: 42px; flex-shrink: 0; clip-path: var(--hex);
+  display: flex; align-items: center; justify-content: center;
+  font-family: var(--font-ui); font-weight: 700; font-size: 14px; letter-spacing: .6px;
+  color: var(--orange-light); background: var(--orange-tint-soft);
+  box-shadow: inset 0 0 0 1px var(--orange-tint-border);
+}
+.th-row-avatar.is-owed { color: #1a0d02; background: linear-gradient(165deg, var(--orange-light), var(--orange) 70%); }
+.th-row-main { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 3px; }
+.th-row-title { color: var(--white); font-size: 15.5px; font-weight: 600; line-height: 1.25; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.th-row-sub { color: var(--text-dim); font-size: 13px; line-height: 1.3; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.th-row-sub .is-soon { color: var(--orange-light); font-weight: 600; }
+.th-pill {
+  flex-shrink: 0; display: inline-flex; align-items: center; min-height: 26px; padding: 0 10px; border-radius: 999px;
+  font-family: var(--font-ui); font-size: 12.5px; font-weight: 600; letter-spacing: .2px; white-space: nowrap;
+  color: var(--orange-light); background: var(--orange-tint-soft); border: 1px solid var(--orange-tint-border);
+}
+.th-pill.is-danger { color: #e05252; background: rgba(224,82,82,.1); border-color: rgba(224,82,82,.4); }
+.th-icon-btn {
+  flex-shrink: 0; width: 42px; height: 42px; border-radius: 50%;
+  display: inline-flex; align-items: center; justify-content: center;
+  background: var(--bg-panel-2); border: 1px solid var(--border); color: var(--text);
+  text-decoration: none; cursor: pointer;
+}
+.th-icon-btn .th-icon { width: 18px; height: 18px; margin-right: 0; }
+.th-icon-btn:hover, .th-icon-btn:focus-visible { border-color: var(--orange-light); color: var(--orange-light); }
+.th-icon-btn:active { transform: scale(.94); }
+.th-list-letter {
+  position: sticky; top: calc(122px + max(env(safe-area-inset-top, 0px), 44px)); z-index: 2;
+  margin: 10px 0 2px; padding: 2px 6px;
+  font-family: var(--font-ui); font-size: 12px; font-weight: 700; letter-spacing: 1px; color: var(--text-dim);
+}
+@media (min-width: 1024px) { .th-list-letter { top: 136px; } }
+/* Filter chips: one row of choices above a list (Recent / Owes you / A-Z). */
+.th-chips { display: flex; gap: 8px; overflow-x: auto; scrollbar-width: none; padding: 2px 0 4px; }
+.th-chips::-webkit-scrollbar { display: none; }
+.th-chip {
+  flex-shrink: 0; display: inline-flex; align-items: center; gap: 6px; min-height: 36px; padding: 0 14px; border-radius: 999px;
+  background: var(--bg-panel-2); border: 1px solid var(--border); color: var(--text-dim);
+  font-family: var(--font-ui); font-size: 13.5px; font-weight: 600; cursor: pointer;
+}
+.th-chip.is-active { color: #1a0d02; border-color: var(--orange-dark); background: linear-gradient(165deg, var(--orange-light), var(--orange) 70%); }
+.th-chip-count { font-size: 12px; opacity: .8; }
+/* A search field that reads as part of the list above it, icon inside. */
+.th-search-field { position: relative; flex: 1; min-width: 0; }
+.th-search-field .th-icon { position: absolute; left: 14px; top: 50%; transform: translateY(-50%); width: 18px; height: 18px; color: var(--text-dim); pointer-events: none; }
+body .th-search-field input { width: 100%; box-sizing: border-box; padding-left: 42px; min-height: 48px; border-radius: 12px; }
+@media (prefers-reduced-motion: reduce) { .th-row { transition: none; } .th-icon-btn:active { transform: none; } }

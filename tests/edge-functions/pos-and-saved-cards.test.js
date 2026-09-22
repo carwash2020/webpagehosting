@@ -223,7 +223,9 @@ test('POS is the Quick charge tab inside Invoices (2026-09-21), so it rides the 
   assert.match(stub, /location\.replace\('\/tools\/invoice-generator\.html#pos'\)/);
   assert.match(POS_PAGE, /function applyGenTabFromHash\(\)[\s\S]*?if \(tab === 'pos'\)/, 'the deep link the stub lands on must open the tab (and focus the email field)');
   assert.match(NAV, /'\/tools\/invoice-generator\.html': function \(\) \{ return typeof canManageInvoices === 'function' && canManageInvoices\(\); \}/);
-  assert.match(NAV, /'\/tools\/clients\.html': function \(\) \{ return typeof canManageInvoices === 'function' && canManageInvoices\(\); \}/);
+  // clients.html left the nav's permission map on 2026-09-22 (it opens on
+  // the client list now; its own Portal tab carries the canManageInvoices gate).
+  assert.doesNotMatch(NAV, /'\/tools\/clients\.html': function/);
 });
 
 test('POS explains itself in the Invoice Generator help modal (the dashboard tile help bubble is gone with the grid)', () => {

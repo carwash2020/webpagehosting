@@ -467,8 +467,14 @@ function attachLongPress(containerEl, itemSelector, onLongPress) {
     if (!item || !containerEl.contains(item)) return;
     // A long-press on an interactive control inside the card (a button,
     // select, or link) should never hijack that control's own normal
-    // tap behavior.
-    if (e.target.closest('button, a, select, input, textarea')) return;
+    // tap behavior -- except a link that opts in with
+    // data-long-press-target (2026-09-22): list rows whose whole body is
+    // the link to the record (the Clients directory's .th-row-link),
+    // where a tap opens it and a hold is the quick-action sheet, like a
+    // phone's contacts app. For those, the click that follows a fired
+    // hold is swallowed so letting go doesn't also navigate.
+    const control = e.target.closest('button, a, select, input, textarea');
+    if (control && !(control.tagName === 'A' && control.hasAttribute('data-long-press-target'))) return;
 
     activeEl = item;
     startX = e.clientX;
@@ -479,10 +485,17 @@ function attachLongPress(containerEl, itemSelector, onLongPress) {
       haptic('light'); // no-ops silently where unsupported (notably iOS Safari)
       const el = activeEl;
       activeEl = null;
+      if (control) swallowNextClick(containerEl);
       onLongPress(el);
     }, HOLD_MS);
     item.classList.add('is-long-pressing');
   }, { passive: true });
+
+  // The browser's own long-press menu (Android's link menu) would open on
+  // top of the quick-action sheet on an opted-in link.
+  containerEl.addEventListener('contextmenu', (e) => {
+    if (e.target.closest && e.target.closest('a[data-long-press-target]')) e.preventDefault();
+  });
 
   containerEl.addEventListener('pointermove', (e) => {
     if (!activeEl) return;
@@ -492,6 +505,12 @@ function attachLongPress(containerEl, itemSelector, onLongPress) {
   containerEl.addEventListener('pointerup', cancel, { passive: true });
   containerEl.addEventListener('pointercancel', cancel, { passive: true });
   containerEl.addEventListener('scroll', cancel, { passive: true });
+}
+
+function swallowNextClick(el) {
+  const stop = (ev) => { ev.preventDefault(); ev.stopPropagation(); };
+  el.addEventListener('click', stop, { capture: true, once: true });
+  setTimeout(() => el.removeEventListener('click', stop, { capture: true }), 800);
 }
 
 // Small bottom-sheet action menu, triggered by attachLongPress above.

@@ -3384,3 +3384,93 @@ header is one row on all 14 real pages at 360 and 390px, the full
 25-step tour at 390 and 1440 with every highlight on screen and Next
 clickable, light mode, the tablet drawer, and the desktop dialog, with
 no console errors. New tests: `tests/tools/app-shell-v2.test.js`.
+
+## What changed, 2026-09-22 (later still) -- Workspace rework, part 2: the Clients tab is a real client list
+
+The bar's **Clients** tab opened the client-portal admin console:
+portal accounts, portal invoices, email lists, bug reports. It never
+showed a list of clients. `data-layer.js`'s own comment on
+`thGetAllClientsWithTotals()` says it was written to back "the Clients
+hub page", and that page was never built. It is built now. Full
+reasoning is in `docs/specialist-logs/features.md`.
+
+**`clients.html` now opens on your client list**, with the portal
+console one tap away under a **Portal** tab (`#portal`).
+- Every client in the shared registry is listed, and each row shows
+  initials, the next or last job ("Job today", "Next job Sep 25", "Last
+  job Sep 20"), the phone, and what they owe. The amount is an orange
+  pill, and turns into a red "$285.00 due" once it is overdue. The
+  money rules match the Dashboard's Money Owed card, including partial
+  payments and terms. The phone button calls the client.
+- **Search** matches name, email, or street, and phone digits however
+  they are typed. **Recent** (the default) puts upcoming and recent
+  activity first. **Owes you** puts overdue balances first. **A–Z**
+  adds letter headers. A search with no match offers to add that name.
+- **Tap** a row to open the client. **Hold** a row for Call, Text,
+  Email, Directions, New job, or Invoice without opening it.
+- Nobody is entered twice. The registry backfill now runs on every
+  load, so a name typed on any job, invoice, quote, contact, or
+  contract shows up here. It still never recreates a deleted client,
+  and it now skips records already linked by `clientId`, so a job whose
+  name text drifted cannot spawn a duplicate. **Add**, the Create
+  sheet's new **Client** tile, and the search's "Add a client" all go
+  through `thEnsureClient()`.
+- The portal panels load only when the Portal tab first opens. The
+  daily client list no longer fires nine admin requests just to render.
+  The Portal tab hides for an account whose role says it cannot manage
+  invoices, the same permission that used to hide the whole page. Since
+  the list is the same local data Job Tracker already shows every
+  account, **Clients is in everyone's nav now**.
+
+**The client page (`client-detail.html`) is a real profile.** It shows
+Call / Text / Email / Directions buttons and "Owes $X · $Y overdue". It
+also has **New job**, **Invoice**, and **Quote** buttons. These open
+the form with the client and their phone, email, and address already
+filled in, via new `?client=` handling on `job-tracker.html#add-job`
+and `invoice-generator.html#invoice|#quote` (fill-only, dropped from
+the URL once applied). Other fixes on this page:
+- Jobs open the job's own page instead of a filtered list.
+- "Last Job" no longer shows a future date. It says "Next Job" when
+  one is booked.
+- A real back arrow leads to Clients.
+
+**Global search** gets a Clients group first; a name opens that
+client's page. Job results open the job itself.
+
+**Fixed along the way (all real, all pre-existing):**
+- `?search=` on the invoice page was ignored. Client and job pages had
+  linked to it for months with a hash that doesn't exist (`#tab-recent`).
+  The hash is `#recent` now, and the Recent tab is filtered on arrival.
+- On desktop, twelve pages' own `padding-top: 75px` never applied: plain
+  `body` lost to the shared `body.th-tool-page` rule, so their content
+  started under the fixed header's bottom edge. One shared rule
+  restores it. Sticky tab bars on desktop also stuck 44px below the
+  header, using the phone's notch offset; they now stick right under it.
+- The Clients page's init-error banner passed its error as the page
+  label.
+- The Clients page now loads supabase-js, so its list follows changes
+  made on other devices live (a test caught that the new realtime call
+  would otherwise never connect).
+
+**A shared list row** (`.th-row`, `.th-row-avatar`, `.th-pill`,
+`.th-icon-btn`, `.th-chips`, `.th-search-field` in `styles-tools.css`)
+means a client, a job, or an invoice can read the same way on every
+page. It is the first real piece of ARCHITECTURE-NOTES' "shared UI
+components" backlog item. `attachLongPress` gained an opt-in
+(`data-long-press-target`) for rows whose whole body is a link: a tap
+opens the record, a hold opens the sheet, and the click after a hold is
+swallowed so it doesn't navigate.
+
+Verified in a real headless Chromium (local HTTP, fake Supabase), at
+390px and 1440px:
+- The list, the filters, phone-digit search, and the Owes-you ordering.
+- A hold opens the sheet without navigating; a tap opens the client.
+- Profile → New job opens the add form with the client, phone, and
+  address filled in and the title focused. Profile → Invoice fills the
+  client, email, and address.
+- `?search=` lands on a filtered Recent tab.
+- Create → Client → the add form → the new profile.
+- The desktop layout on Clients and Finance.
+- No console errors.
+
+New tests: `tests/tools/clients-directory.test.js` (19).

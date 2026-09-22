@@ -62,7 +62,7 @@ test('the Create sheet deep-links into forms that already open themselves from t
     '/tools/invoice-generator.html#pos',
     '/tools/finance.html#expenses',
     '/tools/finance.html#income',
-    '/tools/job-tracker.html#contacts',
+    '/tools/clients.html#new',
     '/tools/contract-generator.html',
     '/tools/review-request.html',
   ]);
@@ -70,14 +70,14 @@ test('the Create sheet deep-links into forms that already open themselves from t
   assert.match(read('job-tracker.html'), /'add-job'|#add-job/);
   for (const tab of ['invoice', 'quote', 'pos']) assert.ok(read('invoice-generator.html').includes('data-tab="' + tab + '"'), 'invoice tab ' + tab);
   for (const tab of ['expenses', 'income']) assert.ok(read('finance.html').includes('data-tab="' + tab + '"'), 'finance tab ' + tab);
-  assert.ok(read('job-tracker.html').includes('data-tab="contacts"'));
+  assert.match(read('clients.html'), /if \(location\.hash === '#new'\) openAddClient\(\);/);
   assert.ok(tiles.every(t => !t.hidden), 'an account with every permission sees every tile');
 });
 
 test('Create tiles follow the same permission checks as the nav: gated forms are hidden, ungated ones stay', () => {
   const w = shellOn('workspace.html', { perms: {} });
   const visible = [...w.document.querySelectorAll('#thCreateSheet .th-create-tile')].filter(t => !t.hidden).map(t => t.querySelector('.th-create-label').textContent);
-  assert.deepEqual(visible, ['Job', 'Contact']);
+  assert.deepEqual(visible, ['Job', 'Client']);
 });
 
 test('opening and closing the Create sheet: the (+) toggles it, Esc closes it, focus returns to the button', () => {
