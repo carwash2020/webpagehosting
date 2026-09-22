@@ -62,7 +62,7 @@ test('jobDateGroup buckets a date-sorted list the way a reminders app does; past
 });
 
 function renderCard(job) {
-  const { jobCardHtml } = run(['relativeJobDate', 'jobCardHtml'], {
+  const { jobCardHtml } = run(['relativeJobDate', 'jobMoneyPillHtml', 'jobCardHtml'], {
     computeJobMargin: () => ({ hasInvoice: false }), money: (v) => '$' + v, escapeHtml: esc, escapeAttr: esc,
     escapeForInlineHandler: (s) => s, personDot: () => '', warrantyBadgeHtml: () => '',
     STATUS_LABEL: { 'not-started': 'Not Started', 'in-progress': 'In Progress', done: 'Done' },

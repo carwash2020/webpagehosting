@@ -836,3 +836,18 @@ Tests: `tests/tools/invoices-list-first.test.js` (behaviour, and parity
 of `invoiceState` with `invoicePaymentStatus` / `deriveInvoicePaid`).
 `tests/portal/portal-admin.test.js` was updated to pin the shared helper
 and both callers.
+
+## 2026-09-22 -- Job Detail's expense and invoice rows (Workspace rework part 5)
+
+- **Expense rows always read "Expense."** `renderJobDetail()` titled
+  them `e.description || e.category || 'Expense'`. Finance's `addEntry()`
+  has only ever written `{ desc, vendor, type, miles }`, so the first
+  two were always undefined. It now shows `desc`, else the vendor, else
+  "Mileage" / "Expense". The meta line adds the vendor and miles.
+- **Invoice rows trusted the old `paid` flag.** An invoice part paid, or
+  marked unpaid again on the Dashboard (paidAmount 0 with a stale
+  `paid: true`), showed the wrong word. `invoiceStatusWord()` reads
+  paidAmount first (`thInvoiceBalance` / `thInvoicePaidAmount`) and
+  says Paid / Part paid / Overdue / Unpaid.
+
+Tests: `tests/tools/job-money-pipeline.test.js`.
