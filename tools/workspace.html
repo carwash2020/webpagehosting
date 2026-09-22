@@ -68,9 +68,9 @@
   })();
 </script>
 <link rel="stylesheet" href="/styles.css?v=2e81706c3d">
-<link rel="stylesheet" href="/tools/styles-tools.css?v=effd2652c2">
+<link rel="stylesheet" href="/tools/styles-tools.css?v=f4eba25dcc">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.112.3/dist/umd/supabase.js" integrity="sha384-qafw21c/iciq0VXsi9FzkfoQv5I/V0iqE4lSNcKXPnW9/UTJLnv5CcN4FHxVLnKg" crossorigin="anonymous" defer></script>
-<script src="/tools/sync.js?v=6b9e092eca" defer></script>
+<script src="/tools/sync.js?v=4cfac4b10e" defer></script>
 <!-- Shared business-hours data (2026-09-03) -- used by the work order
      "Approve & Schedule" form to warn if a chosen time falls outside
      real business hours, matching the same real hours booking.html,
@@ -79,11 +79,11 @@
 <script src="/tools/push-notifications.js?v=180abd2a84" defer></script>
 <script src="/tools/data-layer.js?v=5d2fdbfaf1" defer></script>
 <script src="/tools/tools-effects.js?v=a767167574" defer></script>
-<script src="/tools/tools-dialogs.js?v=d68ce809a1" defer></script>
+<script src="/tools/tools-dialogs.js?v=33199ae1d8" defer></script>
 <script src="/tools/tools-media-sharing.js?v=0c229c9353" defer></script>
 <script src="/tools/tools-nav-pwa.js?v=4d9f8c89e1" defer></script>
-<script src="/tools/tools-command-palette.js?v=7bd204bef4" defer></script>
-<script src="/tools/tools-tour.js?v=7876158a2d" defer></script>
+<script src="/tools/tools-command-palette.js?v=3aaed2827f" defer></script>
+<script src="/tools/tools-tour.js?v=1975ebd4fc" defer></script>
 <style>
   /* Cross-document view transitions (2026-09-21) -- same pattern
      already proven in portal/*.html: keeps the old page's visual
@@ -631,7 +631,7 @@
 
 <nav class="dash-primary-strip" id="dashPrimaryStrip" aria-label="Daily actions">
   <a class="dash-primary-action" href="/tools/job-tracker.html#add-job">New job</a>
-  <a class="dash-primary-action" href="/tools/invoice-generator.html" data-tile-perm="can_manage_invoices">Create invoice</a>
+  <a class="dash-primary-action" href="/tools/invoice-generator.html#invoice" data-tile-perm="can_manage_invoices">Create invoice</a>
   <button type="button" class="dash-primary-action" onclick="focusFindClient()">Find client</button>
   <a class="dash-primary-action" href="/tools/job-tracker.html#calendar">Calendar</a>
   <a class="dash-primary-action" href="/tools/invoice-generator.html#pos" data-tile-perm="can_manage_invoices">Quick charge</a>
@@ -1655,6 +1655,9 @@
     // Best-effort relational mirror (code-health pass, 2026-09-08) -- see
     // sync.js's RELATIONAL MIRROR section. Never blocks or throws back here.
     if (typeof mirrorInvoiceToRelational === 'function') mirrorInvoiceToRelational(inv);
+    // Real bug (2026-09-22): this button never told the client portal, so
+    // an invoice marked paid here for cash stayed payable online.
+    if (typeof pushInvoicePaidToPortal === 'function') pushInvoicePaidToPortal(inv);
     // Referral program (direct request, 2026-09-09): the referrer's $25
     // credit is earned once the referred customer's job is complete AND
     // paid -- this invoice becoming fully paid is that second half.

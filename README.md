@@ -3530,3 +3530,66 @@ Verified in a real headless Chromium (local HTTP, fake Supabase):
 - No console errors.
 
 New tests: `tests/tools/jobs-list-app.test.js` (8).
+
+## What changed, 2026-09-22 (later still) -- Workspace rework, part 4: Money opens on who owes you
+
+Part 4 of the Workspace rework (after the app shell, the client list,
+and the Jobs list). Full reasoning in `docs/specialist-logs/features.md`.
+
+**Invoices opens on the invoice list, not a blank form.** The Money tab
+used to land on the New invoice form, and the list of what you had
+billed sat in a fourth tab that was off the screen on a phone. Now the
+first tab is **Invoices**:
+- Three numbers at the top: **Owed to you**, **Overdue**, and what you
+  billed this month. Tap Owed or Overdue to show just those invoices.
+- Search, then chips: All / Unpaid / Overdue / Paid, with counts. The
+  choice is remembered on this device.
+- One row per invoice, newest first, in the same row style as the
+  Clients list. Each row shows what is still owed and when it is due
+  ("Due Oct 19", "25 days overdue" in red, "$50 of $160 paid"), plus a
+  Paid / Unpaid / Part paid / Overdue pill.
+- Tap a row, or hold it, for one sheet: **Mark Paid** first, then
+  Resend to client, Open client, Open job, and Delete. On a computer,
+  Resend / Mark Paid / Delete also stay at the end of each row.
+- Quotes are underneath in the same rows, with one pill: Invoiced,
+  Approved, Declined, Awaiting reply, or Pending. A decline reason and
+  a client's open questions still show under the row.
+
+The forms keep their tabs, renamed **New invoice**, **New quote**, and
+**Quick charge**. Their deep links still work: `#invoice`, `#quote`,
+`#pos`. A link that brings something to invoice still opens the form:
+a job's Create invoice (`?jobRef=`) and a client's Invoice button
+(`?client=`). The Dashboard's **Create invoice** now goes to `#invoice`.
+The + button already did.
+
+**Fixed: Mark paid did half the job on each page.**
+- The Dashboard's Mark paid (in Money Owed and Needs attention) never
+  told the client portal. An invoice marked paid there for cash or
+  check stayed payable online, so the client could pay it twice. It now
+  makes the same `set-invoice-paid` call the Invoices page made. The
+  call is now one shared helper, `pushInvoicePaidToPortal()` in
+  `sync.js`.
+- The Invoices page's Mark Paid flipped only the old `paid` flag. The
+  Dashboard, the database copy, and the overdue push all read
+  `paidAmount` first. So an invoice marked paid on the Dashboard and
+  then unpaid here stayed paid everywhere else, and one marked paid
+  here after a partial payment stayed owed everywhere else. It also
+  never updated the database copy, which the list reads once it loads,
+  so a refresh could put the old status back. It now writes
+  `paidAmount` with the flag, mirrors the invoice, and earns a pending
+  referral credit, the same as the Dashboard.
+- The invoice sheet's title (a client name) went into
+  `showQuickActionSheet()`, which renders HTML, unescaped. It's escaped
+  now.
+
+Verified in a real headless Chromium (local HTTP, fake Supabase):
+- 390px and 1440px: the tiles, chips, and rows.
+- Tap and long-press each open one sheet.
+- Mark Paid updates the tiles and posts both the database mirror and
+  `set-invoice-paid`.
+- Filters stick.
+- `?jobRef=`, `?client=`, `?client=…#quote`, `#pos`, `?search=…#recent`,
+  and `#invoice` each open the right tab with the right fields filled.
+- No console errors.
+
+New tests: `tests/tools/invoices-list-first.test.js` (13).

@@ -1843,4 +1843,47 @@ flows: `?jobRef=` on the invoice page, `?job=` on finance's expenses.
   other realm even when they print identically; convert with
   `Array.from`.
 
+## 2026-09-22 (later still) -- Workspace rework, part 4: Invoices opens on the list; one Mark paid
+
+**Why list-first.** Money is a bottom-bar destination, and the question
+it answers is "who owes me?" Landing on a blank invoice form answered
+"make a new one", which the + button already does from every page. The
+list was the fourth tab, off-screen on a 390px phone. Every way in that
+means the form still gets the form:
+- `#invoice`, `#quote`, `#pos` hashes;
+- `?jobRef=` (a job's Create invoice) and `?client=` (a client's
+  Invoice button), read by `genTabFromQuery()` *before*
+  `applyJobRefFromUrl()` / `applyClientFromUrl()` strip them from the
+  URL;
+- the Dashboard strip's Create invoice, now `#invoice` (it was the only
+  hashless link to the page).
+
+**Numbers match the Dashboard.** `invoiceState()` uses the same rules as
+workspace.html's `invoicePaymentStatus()` / `isOverdue()` and sync.js's
+`deriveInvoicePaid()`: paidAmount first, the legacy `paid` flag only
+when there's no paidAmount, and whole-cents comparison. A test runs the
+three side by side over edge cases, so "Owed to you" here and "Money
+Owed" on the Dashboard can't disagree. The tiles count every invoice
+(ignoring search and filter), like the quote conversion rate.
+
+**One sheet, two doors, again.** `openInvoiceActions(id)` is opened by
+a tap on the row (the row's body is a `<button class="th-row-link">`)
+and by a hold. `attachLongPress`'s opt-in (`data-long-press-target`)
+now accepts a button as well as a link. Mark Paid leads the sheet
+because it's the everyday action. Quotes get `openQuoteActions()`:
+Open client, Open job, Delete. Converting a quote still happens on the
+New quote form, since there is no load-a-logged-quote path to reuse.
+
+**The Mark paid fix (payments-adjacent, called out on the PR).**
+- `toggleInvoicePaid()` now sets `paidAmount = paid ? total : 0` with
+  the flag. Those are the Dashboard's full-payment semantics.
+- It now calls `mirrorInvoiceToRelational()`, which it never did, so
+  the relational read cache stayed stale.
+- It now calls `mirrorReferralEarnedForJob()` on becoming paid.
+- Workspace `togglePaid()` gains the portal call it never had.
+- The portal call itself moved into `pushInvoicePaidToPortal()` in
+  sync.js, unchanged: same endpoint, same body, still fire-and-forget
+  after the local save.
+- No edge function, schema, or RLS change.
+
 <!-- Add new entries above this line -->

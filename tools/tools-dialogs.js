@@ -467,14 +467,15 @@ function attachLongPress(containerEl, itemSelector, onLongPress) {
     if (!item || !containerEl.contains(item)) return;
     // A long-press on an interactive control inside the card (a button,
     // select, or link) should never hijack that control's own normal
-    // tap behavior -- except a link that opts in with
+    // tap behavior -- except a row that opts in with
     // data-long-press-target (2026-09-22): list rows whose whole body is
-    // the link to the record (the Clients directory's .th-row-link),
-    // where a tap opens it and a hold is the quick-action sheet, like a
-    // phone's contacts app. For those, the click that follows a fired
-    // hold is swallowed so letting go doesn't also navigate.
+    // one link or button (the Clients directory's .th-row-link, the
+    // invoice list's), where a tap opens the record and a hold is the
+    // quick-action sheet, like a phone's contacts app. For those, the
+    // click that follows a fired hold is swallowed so letting go doesn't
+    // also navigate.
     const control = e.target.closest('button, a, select, input, textarea');
-    if (control && !(control.tagName === 'A' && control.hasAttribute('data-long-press-target'))) return;
+    if (control && !control.hasAttribute('data-long-press-target')) return;
 
     activeEl = item;
     startX = e.clientX;
@@ -494,7 +495,7 @@ function attachLongPress(containerEl, itemSelector, onLongPress) {
   // The browser's own long-press menu (Android's link menu) would open on
   // top of the quick-action sheet on an opted-in link.
   containerEl.addEventListener('contextmenu', (e) => {
-    if (e.target.closest && e.target.closest('a[data-long-press-target]')) e.preventDefault();
+    if (e.target.closest && e.target.closest('[data-long-press-target]')) e.preventDefault();
   });
 
   containerEl.addEventListener('pointermove', (e) => {

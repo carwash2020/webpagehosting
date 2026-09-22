@@ -2677,6 +2677,8 @@ a.th-cmdk-item:hover { background: var(--orange-tint-soft); }
   color: var(--orange-light); background: var(--orange-tint-soft); border: 1px solid var(--orange-tint-border);
 }
 .th-pill.is-danger { color: #e05252; background: rgba(224,82,82,.1); border-color: rgba(224,82,82,.4); }
+.th-pill.is-paid { color: var(--blue-light); background: rgba(58,160,255,.1); border-color: rgba(58,160,255,.3); }
+.th-pill.is-muted { color: var(--text-dim); background: var(--bg-panel-2); border-color: var(--border); }
 .th-icon-btn {
   flex-shrink: 0; width: 42px; height: 42px; border-radius: 50%;
   display: inline-flex; align-items: center; justify-content: center;

@@ -200,32 +200,38 @@ test('invoice-generator.html: toggleInvoicePaid nudges the badge down when marki
   assert.match(fn, /if \(typeof setAppBadgeDelta === 'function'\) setAppBadgeDelta\(entry\.paid \? -1 : 1\);/);
 });
 
-test('invoice-generator.html: the invoice log gets a long-press init function offering Resend/Mark Paid or Unpaid/Delete, guarded against a missing attachLongPress and wired right after the initial render', () => {
-  assert.match(invoiceGenHtml, /function initInvoiceLogLongPress\(\)[\s\S]*?if \(typeof attachLongPress !== 'function'\) return;[\s\S]*?getElementById\('invoiceLogList'\)[\s\S]*?attachLongPress\(container, '\.contract-log-item\[data-invoice-id\]'/);
-  const fn = invoiceGenHtml.match(/function initInvoiceLogLongPress\(\)[\s\S]*?\n  \}/)[0];
-  assert.match(fn, /if \(inv\.clientEmail\) actions\.push\(\{ label: 'Resend'/);
-  assert.match(fn, /label: inv\.paid \? 'Mark Unpaid' : 'Mark Paid'/);
+// 2026-09-22 (Workspace rework part 4): the sheet is openInvoiceActions(),
+// which a tap on the row opens too; initInvoiceLogLongPress() wires the
+// hold on both the invoice and the quote list to the same sheets.
+test('invoice-generator.html: the invoice log gets a long-press init function opening the invoice sheet (Mark Paid or Unpaid / Resend / Delete), guarded against a missing attachLongPress and wired right after the initial render', () => {
+  assert.match(invoiceGenHtml, /function initInvoiceLogLongPress\(\)[\s\S]*?if \(typeof attachLongPress !== 'function'\) return;[\s\S]*?\['invoiceLogList', 'quoteLogList'\][\s\S]*?attachLongPress\(container, '\.inv-item\[data-invoice-id\]', \(itemEl\) => openInvoiceActions\(Number\(itemEl\.dataset\.invoiceId\)\)\)/);
+  const fn = invoiceGenHtml.match(/function openInvoiceActions\(id\)[\s\S]*?\n  \}/)[0];
+  assert.match(fn, /if \(inv\.clientEmail\) actions\.push\(\{ label: 'Resend to client'/);
+  assert.match(fn, /label: st\.status === 'paid' \? 'Mark Unpaid' : 'Mark Paid'/);
   assert.match(fn, /label: 'Delete', isDanger: true/);
+  assert.match(fn, /showQuickActionSheet\(escapeHtml\(title\), actions\)/, 'the sheet renders its title as HTML');
   assert.match(invoiceGenHtml, /if \(typeof renderQuoteLog === 'function'\) renderQuoteLog\(\);\s*\n\s*if \(typeof initInvoiceLogLongPress === 'function'\) initInvoiceLogLongPress\(\);/);
 });
 
-test('invoice-generator.html: initInvoiceLogLongPress, invoked end-to-end, opens a quick-action sheet for the right invoice with working Resend/Mark Paid/Delete callbacks', () => {
+test('invoice-generator.html: the invoice sheet, invoked end-to-end through the long-press, is for the right invoice, escapes its title, and has working Mark Paid / Resend / Delete callbacks', () => {
   const dom = new JSDOM(invoiceGenHtml, {
     runScripts: 'dangerously', url: 'https://example.com/tools/invoice-generator.html',
     beforeParse(w) {
       w.requireAuth = () => {};
       w.canManageInvoices = () => true;
       w.localStorage.setItem('th_invoices', JSON.stringify([
-        { id: 42, clientName: 'Jane Doe', clientEmail: 'jane@example.com', invoiceNumber: '1042', paid: false, total: 150 },
+        { id: 42, clientName: 'Jane <b>Doe</b>', clientEmail: 'jane@example.com', invoiceNumber: '1042', paid: false, total: 150 },
       ]));
     },
   });
   const { window } = dom;
 
   let capturedOnLongPress = null;
-  window.attachLongPress = (container, selector, onLongPress) => { capturedOnLongPress = onLongPress; };
+  window.attachLongPress = (container, selector, onLongPress) => { if (container.id === 'invoiceLogList') capturedOnLongPress = onLongPress; };
   let sheetTitle = null, sheetActions = null;
   window.showQuickActionSheet = (title, actions) => { sheetTitle = title; sheetActions = actions; };
+  window.escapeHtml = (s) => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  window.money = (n) => '$' + Number(n).toFixed(2);
   let resendId = null, toggledId = null, deletedId = null;
   window.resendInvoiceToClient = (id) => { resendId = id; };
   window.toggleInvoicePaid = (id) => { toggledId = id; };
@@ -238,14 +244,12 @@ test('invoice-generator.html: initInvoiceLogLongPress, invoked end-to-end, opens
   row.dataset.invoiceId = '42';
   capturedOnLongPress(row);
 
-  assert.equal(sheetTitle, 'Jane Doe');
-  assert.equal(sheetActions.length, 3, 'Resend (has an email) + Mark Paid + Delete');
-  assert.equal(sheetActions[0].label, 'Resend');
+  assert.equal(sheetTitle, 'Jane &lt;b&gt;Doe&lt;/b&gt; \u00b7 #1042 \u00b7 $150.00');
+  assert.deepEqual(Array.from(sheetActions, a => a.label), ['Mark Paid', 'Resend to client', 'Delete'], 'no client in the registry and no job: no Open client / Open job');
   sheetActions[0].onClick();
-  assert.equal(resendId, 42);
-  assert.equal(sheetActions[1].label, 'Mark Paid');
-  sheetActions[1].onClick();
   assert.equal(toggledId, 42);
+  sheetActions[1].onClick();
+  assert.equal(resendId, 42);
   sheetActions[2].onClick();
   assert.equal(deletedId, 42);
 });
