@@ -12,7 +12,7 @@ Hosted on GitHub Pages, deployed automatically on push to `main`.
 This repo actually serves **two separate things** from the same domain:
 
 1. **The public marketing site** — homepage + 5 city landing pages, meant for customers and search engines. Lives at the repo root.
-2. **An internal Workspace tool suite** — Dashboard, Job Tracker, Finance, Invoice Generator, Contract Generator, Route Planner, Calendar, Review Request Sender, Runway Dashboard, Appliance Wiki, Settings, Dev Tools, and Site Content, at `/tools/workspace.html` onward. Not linked from the public site, not indexed, but hosted on the same domain and repo since it's all static files anyway. **As of 2026-08-10, these live under `/tools/`, not the repo root** — see below.
+2. **An internal Workspace tool suite** — Dashboard, Job Tracker (with the Calendar view), Finance, Invoice Generator (with Quick charge), Contract Generator, Route Planner, Clients, Review Request Sender, Runway Dashboard, Appliance Wiki, Settings, Dev Tools, and Site Content, at `/tools/workspace.html` onward. Not linked from the public site, not indexed, but hosted on the same domain and repo since it's all static files anyway. **As of 2026-08-10, these live under `/tools/`, not the repo root** — see below.
 
 The public site uses one shared stylesheet (`styles.css`, repo root). The tool suite has its own separate stylesheet (`tools/styles-tools.css`) — genuinely two files now, not one shared across everything; see "Shared files" below for what `styles.css` actually still covers.
 
@@ -37,6 +37,7 @@ The public site uses one shared stylesheet (`styles.css`, repo root). The tool s
 - [What changed, 2026-09-20 -- duplicate meta descriptions, a stale-date test time bomb, and a merged RLS policy](#what-changed-2026-09-20----duplicate-meta-descriptions-a-stale-date-test-time-bomb-and-a-merged-rls-policy)
 - [What changed, 2026-09-21 -- booking.html audit, referral-code refinements, and a cron auth incident](#what-changed-2026-09-21----bookinghtml-audit-referral-code-refinements-and-a-cron-auth-incident)
 - [What changed, 2026-09-21 -- Workspace IA round 2: POS folded into Invoices, tablets get the nav bar, one less header button](#what-changed-2026-09-21----workspace-ia-round-2-pos-folded-into-invoices-tablets-get-the-nav-bar-one-less-header-button)
+- [What changed, 2026-09-22 -- Workspace IA round 3: search-first Appliance Wiki, Runway remembers its tab, login return paths](#what-changed-2026-09-22----workspace-ia-round-3-search-first-appliance-wiki-runway-remembers-its-tab-login-return-paths)
 
 ## ⚠️ Read this before touching deployment at all
 
@@ -2583,6 +2584,27 @@ so those 3 pages showed genuinely empty content until then. Added the
 same static skeleton markup to all 3. `settings.html` was also checked
 and found to already have skeletons on every dynamic panel -- no real
 gap there. Full detail in `docs/specialist-logs/features.md`.
+## What changed, 2026-09-22 -- Workspace IA round 3: search-first Appliance Wiki, Runway remembers its tab, login return paths
+
+Closes the last items the two IA passes below left open ("finish it in
+one big pass"). Small, but each one removes a repeated tap.
+
+- **Appliance Wiki opens ready to type.** The search box is now the
+  first thing on the page and takes focus on load (except when a
+  `?search=` deep link already filled it, or the app tour is running);
+  pinned / recent chips sit directly under it. The pre-loaded-links
+  disclaimer that used to occupy the top of the page moved into the
+  help modal.
+- **Runway Dashboard remembers its tab** per device (`th_runway_tab`),
+  and honors a `#personal` / `#business` / `#networth` / `#runway` hash,
+  the same way Job Tracker remembers List / Board / Calendar. Splitting
+  its four tabs into separate pages -- the other option on the old
+  list -- was declined: it would add pages the day after two were
+  removed, and the page is deliberately self-contained.
+- **Login return paths** now include `clients.html` and `pos.html`, so
+  a logged-out visit to either lands back on it after signing in
+  instead of on the dashboard.
+
 ## What changed, 2026-09-21 -- Workspace IA round 2: POS folded into Invoices, tablets get the nav bar, one less header button
 
 Follow-up to the IA pass directly above, on the owner's instruction

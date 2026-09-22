@@ -2933,6 +2933,11 @@ function switchToTab(tabKey){
     // the numbers fresh.)
     if(tabKey === 'runway') renderRunway();
     tabSwitchInProgress = false;
+    // Remembered per device (2026-09-22): this page opens on whichever of
+    // its four tabs was used last, the same way the Jobs page remembers
+    // List / Board / Calendar. Someone who only ever checks the Runway
+    // Summary stops paying three taps a visit to get past Personal Budget.
+    try { localStorage.setItem(RUNWAY_TAB_KEY, tabKey); } catch (e) { /* storage full or blocked */ }
   }
 
   if(!currentPanel || reduceMotion){
@@ -2953,7 +2958,25 @@ function switchToTab(tabKey){
 document.querySelectorAll('.rw-tab-btn').forEach(btn => {
   btn.addEventListener('click', () => switchToTab(btn.dataset.tab));
 });
-document.getElementById('panel-personal').classList.add('active');
+// Initial tab: an explicit #hash wins (linkable, e.g. #runway from the
+// dashboard), then the per-device memory, then Personal Budget as before.
+// The markup's default is-active button stays on Personal; switchToTab()
+// moves it without animation since no panel is active yet.
+const RUNWAY_TAB_KEY = 'th_runway_tab';
+(function openInitialRunwayTab(){
+  const fromHash = (location.hash || '').replace('#', '');
+  let remembered = null;
+  try { remembered = localStorage.getItem(RUNWAY_TAB_KEY); } catch (e) { remembered = null; }
+  const initial = TAB_ORDER.includes(fromHash) ? fromHash : (TAB_ORDER.includes(remembered) ? remembered : 'personal');
+  if (initial === 'personal') { document.getElementById('panel-personal').classList.add('active'); return; }
+  switchToTab(initial);
+})();
+// A same-document hash change (a link to #runway while already on this
+// page) never re-runs the block above, so follow it here too.
+window.addEventListener('hashchange', function(){
+  const k = (location.hash || '').replace('#', '');
+  if (TAB_ORDER.includes(k)) switchToTab(k);
+});
 
 // ---------------------------------------------------------------------------
 // Swipe between tabs -- this is meant to be run from a phone, and tapping
