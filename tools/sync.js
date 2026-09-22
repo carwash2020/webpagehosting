@@ -168,6 +168,21 @@ const SYNC_DATA_KEYS = [
   // reference dataset every time. Same underlying pattern that already
   // caused one real outage (the 64KB keepalive limit, see the note on
   // pushSync() below). No longer listed here at all.
+  // Must come before th_client_errors, same reasoning as the tombstone
+  // keys above: applySyncData's th_client_errors branch reads this key
+  // fresh from localStorage right after it's been merged (max-of-both,
+  // see its own special case below) and written. Root cause of a real
+  // reported bug (2026-09-22): th_client_errors had no delete-tracking
+  // at all, unlike every real record type above -- a plain union merge
+  // can't tell "genuinely new" apart from "a stale device's old local
+  // copy that was never cleared there", so any device that still had
+  // old entries sitting in localStorage (a rarely-opened tab, a device
+  // that missed the clear) would resurrect them on its next sync no
+  // matter how many times the log was cleared elsewhere. Diagnostic log
+  // entries have no per-record identity worth preserving across a
+  // clear (unlike a real client/invoice), so a single cutoff timestamp
+  // is enough -- no per-entry tombstone array needed.
+  'th_client_errors_cleared_at',
   'th_client_errors',
   // Known Issues checklist -- migrated from a hardcoded array to a
   // real synced list so both accounts can add/check off items and see
@@ -453,10 +468,17 @@ function mergePartsReferenceUnits(localArr, remoteArr) {
 // there's no way to reference it directly. Keep both in sync by hand
 // if this number ever changes.
 const CLIENT_ERROR_LOG_MAX_AFTER_MERGE = 20;
-function mergeClientErrorLog(localArr, remoteArr) {
+// clearedAt (an ISO timestamp string, or falsy) drops any entry whose
+// own `time` is at or before the last time either device cleared the
+// log -- the actual fix for the resurrection bug described where this
+// is called from applySyncData. A genuinely new error logged after the
+// clear always has time > clearedAt, so it's never filtered out.
+function mergeClientErrorLog(localArr, remoteArr, clearedAt) {
   const merged = mergeRecordArrays(localArr, remoteArr, 'id');
-  merged.sort((a, b) => new Date(b.time) - new Date(a.time));
-  return merged.slice(0, CLIENT_ERROR_LOG_MAX_AFTER_MERGE);
+  const cutoff = clearedAt ? new Date(clearedAt).getTime() : 0;
+  const survivors = cutoff ? merged.filter(e => new Date(e.time).getTime() > cutoff) : merged;
+  survivors.sort((a, b) => new Date(b.time) - new Date(a.time));
+  return survivors.slice(0, CLIENT_ERROR_LOG_MAX_AFTER_MERGE);
 }
 
 // Same reasoning as mergeClientErrorLog directly above: a plain union
@@ -502,6 +524,17 @@ function applySyncData(obj, keysToApply) {
 
   (keysToApply || SYNC_DATA_KEYS).forEach(k => {
     if (obj[k] === undefined || obj[k] === null) return;
+    // Scalar, but not a plain overwrite like the settings keys below:
+    // a straight overwrite-from-remote could clobber a more recent
+    // clear THIS device just did but hasn't pushed yet with an older
+    // remote value, reopening the exact resurrection window this key
+    // exists to close. Takes the later of the two instead.
+    if (k === 'th_client_errors_cleared_at') {
+      const localVal = localStorage.getItem(k);
+      const newer = (!localVal || new Date(obj[k]).getTime() > new Date(localVal).getTime()) ? obj[k] : localVal;
+      localStorage.setItem(k, newer);
+      return;
+    }
     const keyField = MERGE_KEY_FIELD[k];
     if (!keyField) {
       // Settings/scalar/object keys (tax rate, compliance info, etc.)
@@ -550,7 +583,7 @@ function applySyncData(obj, keysToApply) {
       const mergedArr = k === 'th_parts_reference_units'
         ? mergePartsReferenceUnits(localArr, remoteArr)
         : k === 'th_client_errors'
-        ? mergeClientErrorLog(localArr, remoteArr)
+        ? mergeClientErrorLog(localArr, remoteArr, localStorage.getItem('th_client_errors_cleared_at'))
         : k === 'th_graveyard'
         ? mergeGraveyard(localArr, remoteArr)
         : k === 'th_sync_conflicts'
