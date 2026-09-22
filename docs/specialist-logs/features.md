@@ -1259,4 +1259,70 @@ widths with every target on screen, Got it sets the seen flag, Ctrl+K ->
 "expen" -> Enter -> Finance/Expenses, tab memory + same-document hash
 changes on Finance/Invoices/Jobs, phone strip two rows.
 
+## 2026-09-22: A real bug in "Resend invoice" (silently sent nothing), and a missing "Resend quote"
+
+Started from "start working on the portal" with no specific task --
+read docs/CLIENT-PORTAL.md's "Still pending" and "Smaller ideas" lists
+first rather than guessing, and one line stood out: "No way to resend
+a missed quote notification" was implied by the total absence of a
+Portal quotes panel, while a Portal invoices panel already existed with
+a Resend button. Before building the missing quote panel, checked
+whether the existing invoice Resend button actually worked -- it
+didn't.
+
+**The bug**: `resendPortalInvoice()` in `tools/clients.html` called
+`sync-invoice-to-portal`, whose `send-invoice-notification` trigger is
+gated on `isNewInvoice` (the invoice's `source_invoice_id` not already
+present in `client_portal_invoices`) -- a deliberate gate, so re-saving
+an existing invoice's line items doesn't spam a duplicate email. But
+resending an ALREADY-synced invoice -- the exact case the "Resend"
+button exists for -- is precisely the case where `isNewInvoice` is
+always false. The button re-upserted the row (a harmless no-op, since
+the data was already identical) and sent nothing, while its own UI only
+ever checked the upsert's `ok`, never `is_new_invoice` or `email` --
+both already present in the response, just never read. It showed
+"Sent!" every single time. The panel's own info-bubble text ("Use it
+when a client says they never got it, or lost the email") describes a
+feature that, as written, could never actually help that client.
+Confirmed by reading the edge function's own logic and response shape,
+not by guessing, then confirmed live in a real headless-Chromium run
+(stubbed auth.js + a route spy on both functions): clicking Resend
+never called `sync-invoice-to-portal` at all post-fix, called
+`send-invoice-notification` directly instead, and the response's
+`skipped` field (client opted out of these emails in Settings) now
+surfaces as "Opted out" in the UI instead of a false "Sent!".
+
+**Fix**: `resendPortalInvoice()` now calls `send-invoice-notification`
+directly -- the invoice is already synced, so a resend needs nothing
+from the sync function's upsert-then-maybe-notify logic, just the
+notification itself. Added the missing symmetric piece: a new "Portal
+quotes" panel (search + list + Resend, `resendPortalQuote()` calling
+`send-quote-notification` directly, same shape as invoices) and its
+`DEV_INFO` entry in `dev-tools-shared.js`. `sync-invoice-to-portal`/
+`sync-quote-to-portal` themselves are untouched -- their real, correct
+job is still first-time sync + notify-on-genuinely-new, called from
+`invoice-generator.html` when an invoice/quote is actually created or
+edited; only the resend path was ever wrong.
+
+New tests: `tests/tools/portal-invoice-quote-resend.test.js` (9 tests --
+both resend functions call the right endpoint and never the sync
+endpoint, the skipped/opted-out path is surfaced not swallowed, the new
+panel exists and renders on init, the notification functions' own
+opt-out gating is unchanged). Updated one pre-existing test
+(`tests/dev-tools/portal-work-orders-panel.test.js`) whose regex
+assumed `renderPortalInvoices()` and `renderPortalWorkOrders()` sit
+immediately adjacent in the init sequence -- `renderPortalQuotes()` now
+sits between them, which is fine; loosened the regex to check ordering
+without adjacency.
+
+Verified: full suite **2651/2651**, `check-consistency` (after
+`fix-versions` bumped `dev-tools-shared.js`'s cache-bust stamp across
+its 3 referencing pages plus the service-worker cache, since it's a
+shared precached file), `check-undefined-vars`, `lint`, `check-links.py`
+-- all clean. Also verified live in a real browser (Chromium via
+Playwright, served over local HTTP): both the invoice and quote resend
+flows render correctly, the confirm dialog shows the right client/
+number, and the network call + UI state after both a successful send
+and a simulated opt-out match what the code claims.
+
 <!-- Add new entries above this line -->

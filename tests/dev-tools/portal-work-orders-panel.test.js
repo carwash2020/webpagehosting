@@ -30,7 +30,11 @@ test('the Clients tool has a work orders panel alongside accounts, invoices, and
 });
 
 test('the work orders panel renders on page load with the other Clients panels', () => {
-  assert.match(CLIENTS, /renderPortalInvoices\(\);\s*renderPortalWorkOrders\(\);/);
+  // renderPortalQuotes() (2026-09-22, the Portal quotes panel) now sits
+  // between these two -- still fine, this just confirms work orders is
+  // in the same init sequence, not that it's the very next call after
+  // invoices specifically.
+  assert.match(CLIENTS, /renderPortalInvoices\(\);[\s\S]*?renderPortalWorkOrders\(\);/);
 });
 
 test('the work orders panel is read-only visibility -- status is not advanced from here', () => {

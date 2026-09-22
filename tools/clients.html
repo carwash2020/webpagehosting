@@ -64,7 +64,7 @@
      file dev-tools.html and site-content.html already load, rather
      than duplicating any of it -- these five panels' help-modal
      content already lives there from when they were built. -->
-<script src="/tools/dev-tools-shared.js?v=ac4791dd0e" defer></script>
+<script src="/tools/dev-tools-shared.js?v=ab06331f27" defer></script>
 <!-- Client Lookup dispute-evidence export (2026-09-05), requested
      directly -- same jsPDF version/SRI hash/async loading pattern
      already proven on invoice-generator.html. -->
@@ -241,6 +241,21 @@
     -->
     <input type="text" id="portalInvoiceSearch" placeholder="Search by client, email, or invoice #..." style="width:100%; box-sizing:border-box; margin-bottom:12px;" oninput="renderPortalInvoices()">
     <div id="portalInvoices"></div>
+  </div>
+
+  <div class="dev-panel dev-panel-wide">
+    <div class="dev-panel-heading">
+      <h2>Portal quotes</h2>
+      <button class="dev-info-bubble" onclick="openDevInfo('portalquotes')" aria-label="What does this do?" title="What does this do?">?</button>
+    </div>
+    <!--
+      Same shape and same reason as Portal invoices above, added
+      2026-09-22 -- quotes had no equivalent panel at all, so there was
+      no way to resend a quote notification a client said they never
+      got without recreating the quote in the Invoice Generator.
+    -->
+    <input type="text" id="portalQuoteSearch" placeholder="Search by client, email, or quote #..." style="width:100%; box-sizing:border-box; margin-bottom:12px;" oninput="renderPortalQuotes()">
+    <div id="portalQuotes"></div>
   </div>
 
   <div class="dev-panel dev-panel-wide">
@@ -1013,6 +1028,102 @@
     }).join('');
   }
 
+  // Mirrors renderPortalInvoices() above exactly -- same reason to
+  // exist (2026-09-22): a resend-without-recreating panel, this time
+  // for quotes, which had no equivalent at all.
+  let _portalQuotesCache = null;
+
+  async function renderPortalQuotes() {
+    const el = document.getElementById('portalQuotes');
+    if (!el) return;
+    const term = (document.getElementById('portalQuoteSearch')?.value || '').trim().toLowerCase();
+
+    if (!_portalQuotesCache) {
+      el.innerHTML = '<p class="tool-sub">Loading...</p>';
+      try {
+        if (typeof ensureFreshToken === 'function') await ensureFreshToken();
+        const res = await fetchWithTimeout(
+          SUPABASE_URL + '/rest/v1/client_portal_quotes?select=id,source_quote_id,client_email,client_name,quote_number,quote_date,total,status&order=quote_date.desc,id.desc&limit=100',
+          8000,
+          { headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': 'Bearer ' + getAuthToken() } }
+        );
+        if (!res.ok) throw new Error('HTTP ' + res.status);
+        _portalQuotesCache = await res.json();
+      } catch (e) {
+        el.innerHTML = '<p class="error-state">Could not load portal quotes: ' + escapeHtml(e.message || String(e)) + '</p>';
+        return;
+      }
+    }
+
+    const rows = term
+      ? _portalQuotesCache.filter(q =>
+          (q.client_email || '').toLowerCase().includes(term) ||
+          (q.client_name || '').toLowerCase().includes(term) ||
+          (q.quote_number || '').toLowerCase().includes(term))
+      : _portalQuotesCache;
+
+    if (!rows.length) {
+      el.innerHTML = '<p class="tool-sub">' + (term ? 'No portal quotes match "' + escapeHtml(term) + '".' : 'No quotes have been sent to the portal yet.') + '</p>';
+      return;
+    }
+
+    el.innerHTML = rows.map(q => {
+      const statusBadge = q.status === 'approved'
+        ? '<span class="badge-pending-signature" style="background:var(--blue-tint-soft, rgba(58,160,255,0.1)); border-color:var(--blue-tint-border, rgba(58,160,255,0.3)); color:var(--blue-light);">Approved</span>'
+        : q.status === 'declined'
+        ? '<span class="badge-pending-signature" style="background:rgba(224,85,85,0.1); border-color:rgba(224,85,85,0.3); color:#e05555;">Declined</span>'
+        : '<span class="badge-pending-signature">Pending</span>';
+      return '<div class="dev-check-row" style="align-items:flex-start;"><div style="flex:1; min-width:0;">' +
+        '<div><strong>#' + escapeHtml(q.quote_number || '') + '</strong> ' + statusBadge + '</div>' +
+        '<div class="dev-check-detail">' + escapeHtml(q.client_name || q.client_email) + ' &middot; ' + escapeHtml(q.client_email) + ' &middot; ' + escapeHtml(q.quote_date || '') + ' &middot; $' + (Number(q.total) || 0).toFixed(2) + '</div>' +
+        '</div>' +
+        '<div style="display:flex; flex-direction:column; gap:6px; flex-shrink:0;">' +
+        '<button class="secondary-btn" onclick="resendPortalQuote(' + q.id + ', this)">Resend</button>' +
+        '</div>' +
+        '</div>';
+    }).join('');
+  }
+
+  // Same fix and same reasoning as resendPortalInvoice() above: calls
+  // send-quote-notification directly instead of routing through
+  // sync-quote-to-portal, whose own isNewQuote gate means re-syncing
+  // an already-existing quote would upsert but send nothing.
+  async function resendPortalQuote(portalRowId, btnEl) {
+    const q = (_portalQuotesCache || []).find(x => x.id === portalRowId);
+    if (!q) { showToast('Could not find that quote.', { type: 'error' }); return; }
+    if (!(await showConfirm('Resend quote #' + q.quote_number + ' to ' + q.client_email + '?'))) return;
+    btnEl.disabled = true;
+    const original = btnEl.textContent;
+    btnEl.textContent = 'Sending...';
+    try {
+      if (typeof ensureFreshToken === 'function') await ensureFreshToken();
+      const res = await fetchWithTimeout(SUPABASE_URL + '/functions/v1/send-quote-notification', 10000, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'apikey': SUPABASE_ANON_KEY, 'Authorization': 'Bearer ' + getAuthToken() },
+        body: JSON.stringify({
+          client_email: q.client_email,
+          client_name: q.client_name,
+          quote_number: q.quote_number,
+          total: Number(q.total),
+        }),
+      });
+      const result = await res.json().catch(() => ({}));
+      if (result.ok && result.skipped) {
+        btnEl.textContent = 'Opted out';
+        showToast('Not sent -- this client has turned off invoice/quote emails in their portal Settings.', { type: 'error' });
+      } else if (result.ok) {
+        btnEl.textContent = 'Sent!';
+      } else {
+        btnEl.textContent = 'Failed';
+        showToast('Resend failed: ' + (result.error || 'unknown error'), { type: 'error' });
+      }
+    } catch (e) {
+      btnEl.textContent = 'Failed';
+      showToast('Resend failed: ' + (e.message || String(e)), { type: 'error' });
+    }
+    setTimeout(() => { btnEl.disabled = false; btnEl.textContent = original; }, 2500);
+  }
+
   // Opens the permanently archived copy of an invoice PDF (2026-09-02)
   // -- the exact document generated and stored at the moment the
   // invoice was created, not a fresh re-render from today's data.
@@ -1596,6 +1707,28 @@
     }
   }
 
+  // Fixed 2026-09-22, found while looking for a next safe improvement:
+  // this used to call sync-invoice-to-portal, which only ever sends
+  // send-invoice-notification when the invoice's source_invoice_id is
+  // NEW to client_portal_invoices (see that function's isNewInvoice
+  // gate -- it exists so re-saving an existing invoice's line items
+  // doesn't spam a duplicate email). Resending an ALREADY-synced
+  // invoice is exactly the case where isNewInvoice is always false, so
+  // this button re-upserted the row (a harmless no-op, the data was
+  // already identical) and then genuinely sent nothing -- while
+  // reporting "Sent!" every time, because it only checked the upsert's
+  // own `ok`, never whether an email actually went out. A client who
+  // says "I never got the invoice" and gets this "Resend" clicked on
+  // them would see nothing arrive, and staff would have no reason to
+  // suspect the button didn't work. Confirmed the bug by reading the
+  // edge function's own logic and its response shape (which already
+  // included is_new_invoice/email fields this button just never read),
+  // not by guessing. Fixed by calling send-invoice-notification
+  // directly -- the invoice is already synced, so a resend needs
+  // nothing from sync-invoice-to-portal's upsert-then-maybe-notify
+  // logic at all, just the notification itself, and this function's
+  // own response tells the truth: ok+no skipped (sent), ok+skipped
+  // (client opted out of these emails in Settings), or a real error.
   async function resendPortalInvoice(portalRowId, btnEl) {
     const inv = (_portalInvoicesCache || []).find(i => i.id === portalRowId);
     if (!inv) { showToast('Could not find that invoice.', { type: 'error' }); return; }
@@ -1605,21 +1738,26 @@
     btnEl.textContent = 'Sending...';
     try {
       if (typeof ensureFreshToken === 'function') await ensureFreshToken();
-      const res = await fetchWithTimeout(SUPABASE_URL + '/functions/v1/sync-invoice-to-portal', 10000, {
+      const res = await fetchWithTimeout(SUPABASE_URL + '/functions/v1/send-invoice-notification', 10000, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'apikey': SUPABASE_ANON_KEY, 'Authorization': 'Bearer ' + getAuthToken() },
         body: JSON.stringify({
-          source_invoice_id: inv.source_invoice_id,
           client_email: inv.client_email,
           client_name: inv.client_name,
           invoice_number: inv.invoice_number,
-          invoice_date: inv.invoice_date,
           total: Number(inv.total),
         }),
       });
       const result = await res.json().catch(() => ({}));
-      btnEl.textContent = result.ok ? 'Sent!' : 'Failed';
-      if (!result.ok) showToast('Resend failed: ' + (result.error || 'unknown error'), { type: 'error' });
+      if (result.ok && result.skipped) {
+        btnEl.textContent = 'Opted out';
+        showToast('Not sent -- this client has turned off invoice/quote emails in their portal Settings.', { type: 'error' });
+      } else if (result.ok) {
+        btnEl.textContent = 'Sent!';
+      } else {
+        btnEl.textContent = 'Failed';
+        showToast('Resend failed: ' + (result.error || 'unknown error'), { type: 'error' });
+      }
     } catch (e) {
       btnEl.textContent = 'Failed';
       showToast('Resend failed: ' + (e.message || String(e)), { type: 'error' });
@@ -1664,6 +1802,7 @@
       renderReferralCredits();
       renderPortalAccounts();
       renderPortalInvoices();
+      renderPortalQuotes();
       renderPortalWorkOrders();
       renderEmailList();
       renderPortalJobsForMessages();
