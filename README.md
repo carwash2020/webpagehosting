@@ -2840,3 +2840,92 @@ the invoice page's CSP -- a separate decision), and the 721-1023px
 tablet band that shows neither the bottom bar nor the sidebar
 (pre-existing; the 720px breakpoint is asserted by several tests).
 Both were done the same day in round 2 -- see the entry above.
+
+## What changed, 2026-09-22 -- a reported bug plus a fresh usability pass across Workspace
+
+A specific report ("the Invoice Type field's text is covered by two
+icons") plus a general request to click through the whole suite again
+now that four rounds of IA changes had landed. Everything below was
+reproduced and re-checked in a real headless Chromium served over local
+HTTP (never `file://`), not just read from the source.
+
+**The reported bug.** The "search" and "warning" icons in the
+screenshot were not decorations on the Invoice Type field itself --
+they were `.th-cmdk-btn` (the search/command-palette launcher) and
+`.th-flag-btn` ("flag this page"), two buttons that float at a fixed
+distance above the mobile bottom nav on every tool page. That fixed
+band sits at the same place on screen regardless of scroll position,
+and on any 761-853px-tall phone (iPhone 12/13/14 among them) it lines
+up with wherever a short page's first content happens to fall --
+`invoice-generator.html`'s "Invoice Details" card is exactly that
+height, so the search icon covered the first letters of the field's
+value on load. Shrinking the buttons was ruled out (they are already
+at this app's own documented 44px minimum touch target, and the real
+gap between the field and the nav on that viewport is under 44px, so
+no fixed offset can avoid the overlap entirely). Fixed instead in
+`tools/tools-nav-pwa.js` (`updateFabTopFade()`): both buttons fade out
+only while a scrollable page is still at its very top, and fade back
+in the moment it scrolls past 24px -- enough to carry whatever was
+covered out of the band, since search and flag are rarely the first
+thing needed on a freshly opened page. A page that isn't tall enough to
+ever clear the band keeps both buttons visible throughout. Mirrored
+into `runway-dashboard.html`'s own copy of this CSS, same as every
+prior nav change.
+
+**Usability pass findings, all fixed:**
+- `tools/client-detail.html` loads the Supabase JS SDK from
+  `cdn.jsdelivr.net` for its realtime subscription, but its CSP never
+  got that domain added when every other realtime-using page did back
+  on 2026-08-14 -- its own security policy was silently blocking its
+  own script, so this page's live updates have never worked. Added
+  `https://cdn.jsdelivr.net` to `script-src` and `connect-src`, matching
+  the pattern already used everywhere else.
+- `tools/job-tracker.html`'s subtitle had no punctuation between the
+  "Finance &rarr;" link and the dynamic sync-status text appended right
+  after it, so a real sync error read as one run-on sentence: "...are on
+  Finance &rarr; Cloud sync issue at 6:49 AM (network: Failed to
+  fetch)." Every other page using this same `#syncStatusText` pattern
+  ends its static sentence with a period first; this one didn't. Added
+  the missing period.
+- `tools/parts-reference.html`'s brand cards labeled and counted
+  "N appliance types" using the number of individual **models**, not
+  distinct types, and listed each model's type name without
+  deduplicating -- a real, live example: Admiral (3 washer models) read
+  "3 APPLIANCE TYPES: Washer, Washer, Washer," implying three different
+  kinds of appliance. Now shows the real distinct-type count and a
+  deduplicated list, plus the model count alongside it (nothing lost --
+  "1 APPLIANCE TYPE &middot; 3 MODELS: Washer").
+- `tools/job-detail.html` and `tools/client-detail.html` hide their
+  entire view -- including the header -- until an async record lookup
+  resolves, with zero loading indicator in between. On a slow or
+  currently-unreachable connection (a real scenario this app is built
+  for -- a job site with poor signal) that lookup can take several real
+  seconds, during which the page was completely blank: no header, no
+  message, nothing. Added a small "Loading job&hellip;" / "Loading
+  client&hellip;" element visible from first paint on both pages,
+  cleared the moment the lookup resolves either way. This does not
+  change when the existing found/not-found views themselves show or
+  hide (`tests/sync/detail-pages-realtime.test.js` pins that toggle for
+  the live-deletion case) -- it only covers the gap before that
+  decision has been made.
+
+**Looked at and deliberately left alone:** several role-gated pages
+(`dev-tools.html`, `site-content.html`, and `finance.html`'s tab
+content) show the same "blank until the permission check resolves"
+gap as the two detail pages above, once the underlying role fetch is
+slow. Fixing all of them the same way is a real, worthwhile follow-up,
+but it touches seven pages' gating logic rather than two isolated
+loading states, which is bigger than a seam-finding pass should take on
+in one sitting -- left for a dedicated pass.
+
+Verified in a real headless Chromium at 390x844 and 1440x900: the
+Invoice Type field fully visible on load with both floating buttons
+faded out, both buttons fading back in after a small scroll on that
+same page, both staying visible the whole time on pages short enough
+never to scroll past the threshold, desktop unaffected (the flag button
+already lived in a free corner there, the search button is already
+`display:none` above the sidebar breakpoint), client-detail.html's
+Supabase script loading under its corrected CSP, and both detail pages
+showing their loading text immediately instead of a blank screen. Full
+suite 2642/2642, `check-consistency`, `check-undefined-vars`, `lint`,
+and `check-links.py` all clean.

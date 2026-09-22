@@ -683,3 +683,48 @@ has in hand. The one-off diagnostic Edge Function used to confirm/fix
 this was left deployed but neutralized (returns a static 410, no
 logic) rather than removed, since no MCP tool exists to delete an
 Edge Function outright.
+
+## 2026-09-22 -- Invoice Type field icon overlap: the report's own theory of the bug was wrong
+
+Reported symptom: a screenshot of invoice-generator.html's "Invoice
+Type" field showing "Standard" visually truncated to "andard" by a
+search icon and a warning-triangle icon. The report (reasonably)
+guessed a CSS icon-in-input padding bug. It wasn't -- reproducing it in
+a real headless Chromium at 390x844 (serving over local HTTP, never
+`file://`) showed the two icons were `.th-cmdk-btn` (search/command-
+palette launcher) and `.th-flag-btn` ("flag this page"), both
+`position: fixed` and floating at a constant offset above the mobile
+bottom nav on every tool page -- nothing to do with the select element
+itself.
+
+**Root cause, confirmed with exact measurements, not guessed:**
+`getBoundingClientRect()` on the real page showed the buttons' band
+(`top:708, bottom:752`) overlapping the Invoice Type field's own box
+(`top:669, bottom:717`) by 9px, on a 390x844 viewport. The real
+available whitespace between the field and the bottom nav's actual
+rendered top (`759.2`, not the `76px` a comment nearby assumed) is
+under 44px -- smaller than the buttons' own diameter -- so **no choice
+of fixed offset for these buttons can avoid the overlap on this
+viewport height**, and the height itself is common (measured the exact
+overlap range as any 761-853px-tall viewport; iPhone 12/13/14 all fall
+inside it). Shrinking the buttons below 44px was ruled out since that's
+this app's own documented minimum touch target.
+
+**Fix:** behavioral, not positional -- both buttons fade out only while
+a scrollable page is still at its very top (`tools-nav-pwa.js`,
+`updateFabTopFade()`, toggling `body.th-fab-hide-at-top`/`th-scrolled`),
+and fade back in once scrolled past 24px, comfortably enough to carry
+whatever was covered out of the fixed band. A page too short to ever
+scroll that far keeps both buttons visible throughout, so search/flag
+stay reachable there too. Desktop (`min-width:1024px`) is unaffected --
+`.th-cmdk-btn` is already `display:none` there and `.th-flag-btn` sits
+in a free corner with no bottom nav to collide with.
+
+**Lesson:** don't debug a fixed/floating-element overlap by reading the
+CSS of the element that's *reported* as covered -- neither
+`.th-cmdk-btn` nor `.th-flag-btn` is defined anywhere near
+invoice-generator.html's own styles, and reading that file alone would
+never have found the real cause. Reproduce visually first, then use
+`getBoundingClientRect()` on the actual rendered elements to see which
+two things are really colliding, before assuming the report's own
+theory of the bug.

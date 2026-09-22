@@ -1684,7 +1684,7 @@ body select:focus, body textarea:focus {
     linear-gradient(180deg, var(--bg-panel-2), var(--bg-panel) 130%);
   border: 1px solid var(--border); color: var(--text-dim);
   box-shadow: 0 1px 0 rgba(255,255,255,.05) inset, 0 3px 10px rgba(0,0,0,0.3);
-  cursor: pointer; transition: color .15s ease, border-color .15s ease, transform .15s ease, box-shadow .15s ease;
+  cursor: pointer; transition: color .15s ease, border-color .15s ease, transform .15s ease, box-shadow .15s ease, opacity .15s ease;
 }
 .th-flag-btn:active { transform: translateY(1px) scale(.96); }
 .th-flag-btn .th-icon { width: 20px; height: 20px; }
@@ -1695,6 +1695,34 @@ body select:focus, body textarea:focus {
 }
 @media (min-width: 1024px) { .th-flag-btn { bottom: 16px; } }
 @media (prefers-reduced-motion: reduce) { .th-flag-btn, .th-flag-btn:hover { transition: none; transform: none; } }
+
+/* Bug fix (2026-09-22): this button and .th-cmdk-btn both float at a
+   fixed distance from the viewport bottom, above the mobile bottom
+   nav -- which puts them right on top of whatever the page's own
+   content happens to render at that exact band on load. On a page
+   short enough that its first form fields land there (invoice-
+   generator.html's "Invoice Type" field, on any 761-853px-tall phone
+   -- iPhone 12/13/14 among them, confirmed with a real headless
+   Chromium at 390x844: the search and flag icons sat directly over
+   the field, the search icon covering its first letters), that is a
+   real, verifiable overlap, not a rare edge case. Neither button can
+   just move -- the gap between this content and the bottom nav can be
+   smaller than the button's own 44px, a size that is not shrinkable
+   without breaking the 44px minimum touch target this app already
+   commits to elsewhere. Fixed instead in tools-nav-pwa.js
+   (updateFabTopFade): both buttons fade out only while a scrollable
+   page is still at its very top, and back in the moment the page
+   scrolls by more than a few pixels -- enough to carry whatever was
+   covered out of the band, since both buttons are meant for
+   day-2-of-using-the-page actions (search, flag), not the very first
+   thing on screen. A page that does not scroll enough to ever clear
+   the band keeps both buttons shown throughout, so search/flag stay
+   reachable there. */
+body.th-fab-hide-at-top:not(.th-scrolled) .th-cmdk-btn,
+body.th-fab-hide-at-top:not(.th-scrolled) .th-flag-btn {
+  opacity: 0; pointer-events: none;
+}
+@media (prefers-reduced-motion: reduce) { .th-cmdk-btn, .th-flag-btn { transition: none; } }
 
 /* Resting state stays a quiet tint deliberately -- this icon's whole job
    in the sidebar and bottom nav is to show which page is CURRENT, so
@@ -2376,7 +2404,7 @@ a.th-cmdk-item:hover { background: var(--orange-tint-soft); }
     linear-gradient(180deg, var(--bg-panel-2), var(--bg-panel) 130%);
   border: 1px solid var(--border); color: var(--text-dim);
   box-shadow: 0 1px 0 rgba(255,255,255,.05) inset, 0 3px 10px rgba(0,0,0,0.3);
-  cursor: pointer; transition: color .15s ease, border-color .15s ease, transform .15s ease, box-shadow .15s ease;
+  cursor: pointer; transition: color .15s ease, border-color .15s ease, transform .15s ease, box-shadow .15s ease, opacity .15s ease;
 }
 .th-cmdk-btn:active { transform: translateY(1px) scale(.96); }
 .th-cmdk-btn .th-icon { width: 20px; height: 20px; }
