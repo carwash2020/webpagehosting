@@ -18,6 +18,7 @@ const path = require('path');
 const vm = require('vm');
 
 const repo = (...p) => path.join(__dirname, '..', '..', ...p);
+const escapeRegex = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 const AUTH_JS = fs.readFileSync(repo('tools', 'auth.js'), 'utf8');
 const LOGIN = fs.readFileSync(repo('tools', 'login.html'), 'utf8');
 const SETTINGS = fs.readFileSync(repo('tools', 'settings.html'), 'utf8');
@@ -289,8 +290,8 @@ test('EXECUTE is revoked from public and granted only to authenticated for every
     'delete_internal_recovery_codes()',
   ];
   for (const fn of fns) {
-    assert.match(SQL, new RegExp(`revoke all on function ${fn.replace(/[()]/g, '\\$&')} from public;`));
-    assert.match(SQL, new RegExp(`grant execute on function ${fn.replace(/[()]/g, '\\$&')} to authenticated;`));
+    assert.match(SQL, new RegExp(`revoke all on function ${escapeRegex(fn)} from public;`));
+    assert.match(SQL, new RegExp(`grant execute on function ${escapeRegex(fn)} to authenticated;`));
   }
 });
 
