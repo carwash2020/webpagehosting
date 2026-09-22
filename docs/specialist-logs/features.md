@@ -1193,4 +1193,70 @@ real browser at 390 and 1440: wiki search focused on open and not when
 `?search=` is present, Runway reopening on the last tab and on
 `#runway`.
 
+## 2026-09-22 -- Workspace IA round 4: the tutorial, the launcher, tab deep links
+
+Brief: "any last-minute improvements, as big as you want, make it super
+easy to use, then update the tutorial to teach where everything is and
+how to use it." Discovery first, with fresh eyes on the post-merge suite:
+the tour was 14 one-per-page stops with copy from before the merges; the
+command palette searched records but could not take you anywhere; only
+three hashes worked as deep links (`#pos`, `#calendar`, `#add-job`) and
+none survived a same-document hash change; Finance always opened on
+Cost Lookup.
+
+**Tour engine (`tools-tour.js`).** Two additive fields, format
+otherwise unchanged so the `{ page: ..., highlightSelector: ... }`
+regex in check-consistency and the tests still parses every step:
+`onShow: { fn, args }` calls a page function by name before
+highlighting (`activateTab('expenses')`, `activateGenTab('pos')`) -- no
+eval, so no CSP change -- and a comma-separated `highlightSelector`
+means "the first candidate actually rendered at this width"
+(`pickVisibleTourTarget`: own computed display AND `getClientRects()`
+non-empty, because a child of a display:none ancestor keeps its own
+display; a bare test DOM lays nothing out, hence the second pass). A
+"3 / 24" counter joins the dots. After highlighting, the engine
+re-checks at 400/900/1800 ms and scrolls again if the target drifted
+off screen -- settings.html's late-rendering sections pushed the Replay
+button 700px down after the first scroll (found only by walking the
+tour in Chromium; `html { scroll-behavior: smooth }` there makes every
+scroll animated, so the check waits for it).
+
+**Content.** 24 steps in bottom-bar order (Home, Jobs, Clients,
+Invoices, Finance, then More). Dashboard 6: hero, inbox, six actions,
+Business, Getting around (`.th-desktop-sidebar, .th-bottom-nav`), Search
+anywhere (`.th-sidebar-search-trigger, .th-cmdk-btn`). Jobs 3 (add,
+views, Contacts+Notes with onShow), Invoices 4 (one per tab), Finance 4
+(Expenses, Income, Profitability, Cost Lookup+Inventory), one each for
+Route, Contracts, Reviews, Wiki, Runway, Settings. Health checks
+(check-consistency + finance-split test) now split comma lists and
+accept a class injected by tools-nav-pwa.js / tools-command-palette.js.
+
+**Real bug found by the walk:** runway-dashboard.html's copied tour CSS
+lacked `body.th-has-bottomnav .onboarding-card { bottom: ... }`, so on a
+phone the bottom bar (z-index 900) sat over the card's Next button --
+the tour was un-finishable on a phone from that step, since 2026-08-20.
+
+**Launcher.** `ACTIONS` in tools-command-palette.js: 22 deep links,
+listed under "Go to" before typing, filtered (title + meta + keywords)
+into an "Actions" group above record matches while typing; `perm`
+names an auth.js check (`canViewFinance` etc.) so gated actions hide
+exactly where the nav hides the page.
+
+**Deep links.** `applyGenTabFromHash()` on invoices (load + hashchange;
+`#pos` still focuses the email field); Finance `hashchange` listener +
+`th_finance_tab` memory (hash > memory > cost); Job Tracker
+`hashchange` handling for tabs, `#calendar`, `#add-job`. Runway already
+had both since round 3.
+
+**Dashboard.** Strip 4 -> 6 (Quick charge `#pos`, Log expense
+`#expenses`, both `data-tile-perm` gated like their pages); 3 columns
+on a phone with 12.5px labels so it stays two rows (measured 100px vs
+the old 106). Help modal and Settings blurb updated.
+
+Verified: suite green (see PR), check-consistency, check-undefined-vars,
+lint; Chromium 390x844 + 1440x900, 23/23: full 24-step walk at both
+widths with every target on screen, Got it sets the seen flag, Ctrl+K ->
+"expen" -> Enter -> Finance/Expenses, tab memory + same-document hash
+changes on Finance/Invoices/Jobs, phone strip two rows.
+
 <!-- Add new entries above this line -->

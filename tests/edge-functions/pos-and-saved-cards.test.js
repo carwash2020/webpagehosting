@@ -221,7 +221,7 @@ test('POS is the Quick charge tab inside Invoices (2026-09-21), so it rides the 
   assert.match(POS_PAGE, /GEN_TAB_ORDER = \['invoice', 'quote', 'pos', 'recent'\]/);
   const stub = fs.readFileSync(repo('tools', 'pos.html'), 'utf8');
   assert.match(stub, /location\.replace\('\/tools\/invoice-generator\.html#pos'\)/);
-  assert.match(POS_PAGE, /window\.location\.hash === '#pos'/, 'the deep link the stub lands on must open the tab');
+  assert.match(POS_PAGE, /function applyGenTabFromHash\(\)[\s\S]*?if \(tab === 'pos'\)/, 'the deep link the stub lands on must open the tab (and focus the email field)');
   assert.match(NAV, /'\/tools\/invoice-generator\.html': function \(\) \{ return typeof canManageInvoices === 'function' && canManageInvoices\(\); \}/);
   assert.match(NAV, /'\/tools\/clients\.html': function \(\) \{ return typeof canManageInvoices === 'function' && canManageInvoices\(\); \}/);
 });

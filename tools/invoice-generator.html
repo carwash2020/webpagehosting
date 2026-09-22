@@ -52,7 +52,7 @@
   })();
 </script>
 <link rel="stylesheet" href="/styles.css?v=2e81706c3d">
-<link rel="stylesheet" href="/tools/styles-tools.css?v=6d5fc2ff02">
+<link rel="stylesheet" href="/tools/styles-tools.css?v=67afccbb38">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.112.3/dist/umd/supabase.js" integrity="sha384-qafw21c/iciq0VXsi9FzkfoQv5I/V0iqE4lSNcKXPnW9/UTJLnv5CcN4FHxVLnKg" crossorigin="anonymous" defer></script>
 <script src="/tools/sync.js?v=7b42b1caf0" defer></script>
 <script src="/tools/data-layer.js?v=c5d44f096e" defer></script>
@@ -60,8 +60,8 @@
 <script src="/tools/tools-dialogs.js?v=83d27784e2" defer></script>
 <script src="/tools/tools-media-sharing.js?v=0c229c9353" defer></script>
 <script src="/tools/tools-nav-pwa.js?v=44dffca71e" defer></script>
-<script src="/tools/tools-command-palette.js?v=36ecf5ee0e" defer></script>
-<script src="/tools/tools-tour.js?v=f7a68f2675" defer></script>
+<script src="/tools/tools-command-palette.js?v=5ce9f88f49" defer></script>
+<script src="/tools/tools-tour.js?v=2f2eac6254" defer></script>
 <!-- U15/W18 fix (High-Impact Upgrades, Master Audit, 2026-09-08): the
      masthead/footer/totals-block drawing code below moved into this
      shared file, now also used by job-detail.html's job sheet and
@@ -773,6 +773,15 @@
   }
 
   const GEN_TAB_ORDER = ['invoice', 'quote', 'pos', 'recent'];
+  function applyGenTabFromHash() {
+    const tab = (window.location.hash || '').replace('#', '');
+    if (!GEN_TAB_ORDER.includes(tab)) return;
+    activateGenTab(tab);
+    if (tab === 'pos') {
+      const posEmail = document.getElementById('posClientEmail');
+      if (posEmail) posEmail.focus();
+    }
+  }
   (function setupGenSwipe() {
     let touchStartX = 0, touchStartY = 0, touchStartTime = 0, startedInTable = false;
     document.body.addEventListener('touchstart', (e) => {
@@ -2363,15 +2372,13 @@
     addLineItem(); // start with one blank row
     recalc();
     applyJobRefFromUrl();
-    // Quick charge deep link (2026-09-21): the retired pos.html stub and
-    // any old POS bookmark redirect to #pos. Focus the email field the
-    // way New job focuses its title -- the person came here to charge
-    // someone, so the first tap should already be done for them.
-    if (window.location.hash === '#pos') {
-      activateGenTab('pos');
-      const posEmail = document.getElementById('posClientEmail');
-      if (posEmail) posEmail.focus();
-    }
+    // Tab deep links (2026-09-22): #invoice / #quote / #pos / #recent open
+    // that tab, on load and on a same-document hash change (the command
+    // palette and the tour link straight to tabs). #pos also focuses the
+    // email field the way New job focuses its title -- the retired
+    // pos.html stub and any old POS bookmark land here.
+    applyGenTabFromHash();
+    window.addEventListener('hashchange', applyGenTabFromHash);
     addQuoteLineItem();
     recalcQuote();
     initAppTour();

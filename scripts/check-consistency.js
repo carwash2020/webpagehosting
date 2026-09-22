@@ -352,6 +352,22 @@ function checkPrecacheCompleteness(problems) {
   }
 }
 
+const TOUR_INJECTED_MARKUP_FILES = ['tools-nav-pwa.js', 'tools-command-palette.js'];
+function tourInjectedMarkupSrc() {
+  return TOUR_INJECTED_MARKUP_FILES.map(f => { try { return readTool(f); } catch (e) { return ''; } }).join('\n');
+}
+function tourSelectorResolves(selector, pageSrc) {
+  if (selector.startsWith('#')) return pageSrc.includes('id="' + selector.slice(1) + '"');
+  if (selector.startsWith('.')) {
+    const injected = tourInjectedMarkupSrc();
+    return selector.slice(1).split('.').every(c =>
+      new RegExp('class="[^"]*\\b' + c + '\\b[^"]*"').test(pageSrc) ||
+      new RegExp('(class="[^"]*\\b' + c + '\\b[^"]*"|className = \'' + c + '\')').test(injected));
+  }
+  const attrMatch = selector.match(/\[([^*=]+)\*?="([^"]+)"\]/);
+  return attrMatch ? new RegExp(attrMatch[1] + '="[^"]*' + attrMatch[2].replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '[^"]*"').test(pageSrc) : false;
+}
+
 function checkTourHealth(problems) {
   const tourSrc = fs.readFileSync(path.join(TOOLS_DIR, 'tools-tour.js'), 'utf8');
   const stepPattern = /\{ page: '\/tools\/([\w-]+\.html)', highlightSelector: '([^']+)'/g;
@@ -385,16 +401,12 @@ function checkTourHealth(problems) {
     // correct in the test suite: an id selector, a compound class
     // selector (every class name must be present), or a single
     // attribute-value selector (including the *= substring operator).
-    let selectorFound;
-    if (selector.startsWith('#')) {
-      selectorFound = pageSrc.includes('id="' + selector.slice(1) + '"');
-    } else if (selector.startsWith('.')) {
-      const classNames = selector.slice(1).split('.');
-      selectorFound = classNames.every(c => new RegExp('class="[^"]*\\b' + c + '\\b[^"]*"').test(pageSrc));
-    } else {
-      const attrMatch = selector.match(/\[([^*=]+)\*?="([^"]+)"\]/);
-      selectorFound = attrMatch ? new RegExp(attrMatch[1] + '="[^"]*' + attrMatch[2].replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '[^"]*"').test(pageSrc) : false;
-    }
+    // A comma-separated list (2026-09-22: "first visible of these") must
+    // resolve for EVERY alternative. A class the page's own HTML lacks
+    // still counts when tools-nav-pwa.js or tools-command-palette.js
+    // injects it -- every tour page loads both, and the nav shell and
+    // search button are exactly what the Dashboard's tour steps point at.
+    const selectorFound = selector.split(',').map(s => s.trim()).filter(Boolean).every(part => tourSelectorResolves(part, pageSrc));
     if (!selectorFound) {
       problems.push(`${filename}: tour step's highlightSelector "${selector}" does not match anything in this page's real HTML`);
     }

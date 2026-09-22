@@ -68,7 +68,7 @@
   })();
 </script>
 <link rel="stylesheet" href="/styles.css?v=2e81706c3d">
-<link rel="stylesheet" href="/tools/styles-tools.css?v=6d5fc2ff02">
+<link rel="stylesheet" href="/tools/styles-tools.css?v=67afccbb38">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.112.3/dist/umd/supabase.js" integrity="sha384-qafw21c/iciq0VXsi9FzkfoQv5I/V0iqE4lSNcKXPnW9/UTJLnv5CcN4FHxVLnKg" crossorigin="anonymous" defer></script>
 <script src="/tools/sync.js?v=7b42b1caf0" defer></script>
 <!-- Shared business-hours data (2026-09-03) -- used by the work order
@@ -82,8 +82,8 @@
 <script src="/tools/tools-dialogs.js?v=83d27784e2" defer></script>
 <script src="/tools/tools-media-sharing.js?v=0c229c9353" defer></script>
 <script src="/tools/tools-nav-pwa.js?v=44dffca71e" defer></script>
-<script src="/tools/tools-command-palette.js?v=36ecf5ee0e" defer></script>
-<script src="/tools/tools-tour.js?v=f7a68f2675" defer></script>
+<script src="/tools/tools-command-palette.js?v=5ce9f88f49" defer></script>
+<script src="/tools/tools-tour.js?v=2f2eac6254" defer></script>
 <style>
   /* Cross-document view transitions (2026-09-21) -- same pattern
      already proven in portal/*.html: keeps the old page's visual
@@ -469,12 +469,17 @@
      became a Job Tracker view.) */
   .dash-primary-strip {
     display: grid;
-    grid-template-columns: repeat(4, minmax(0, 1fr));
+    grid-template-columns: repeat(6, minmax(0, 1fr));
     gap: 10px;
     margin: 0 0 20px;
   }
+  /* Six actions since 2026-09-22 (Quick charge and Log expense joined --
+     getting paid on the spot and photographing a receipt are both
+     daily). Three per row on a phone keeps it to two rows, same height
+     as the old 2x2; the labels are short enough to fit 110px. */
   @media (max-width: 720px) {
-    .dash-primary-strip { grid-template-columns: 1fr 1fr; }
+    .dash-primary-strip { grid-template-columns: 1fr 1fr 1fr; gap: 8px; }
+    .dash-primary-action { font-size: 12.5px; line-height: 1.2; padding: 8px 4px; min-height: 46px; }
   }
   .dash-primary-action {
     display: flex; align-items: center; justify-content: center;
@@ -629,6 +634,8 @@
   <a class="dash-primary-action" href="/tools/invoice-generator.html" data-tile-perm="can_manage_invoices">Create invoice</a>
   <button type="button" class="dash-primary-action" onclick="focusFindClient()">Find client</button>
   <a class="dash-primary-action" href="/tools/job-tracker.html#calendar">Calendar</a>
+  <a class="dash-primary-action" href="/tools/invoice-generator.html#pos" data-tile-perm="can_manage_invoices">Quick charge</a>
+  <a class="dash-primary-action" href="/tools/finance.html#expenses" data-tile-perm="can_view_finance">Log expense</a>
 </nav>
 
 <!-- Needs attention (2026-09-21): the ops inbox, open by default and
@@ -910,7 +917,8 @@
         <li><strong>Next Job</strong> &mdash; whatever's next on today's schedule, sorted by priority, with a tap-to-call phone number and a tap-to-open-Maps address, a straight line into that job's own page, and <strong>Route today</strong>: one link that opens the whole day's stops as a Google Maps route.</li>
         <li><strong>Money Owed</strong> &mdash; Current and Overdue, split apart so a client who's simply not due yet never gets lumped in with one who needs a follow-up call. Every unpaid invoice is listed right there (overdue first) with a one-tap <strong>Mark paid</strong> &mdash; confirm, and it's recorded as paid in full.</li>
         <li><strong>Rest of Today</strong> &mdash; whatever else is on today's schedule after the next job.</li>
-        <li><strong>New job / Create invoice / Find client / Calendar</strong> &mdash; the four daily actions, one tap each. Every other tool is in the bar at the bottom of the screen on a phone (Home, Jobs, Clients, Invoices, Finance, and More for the rest) or the sidebar on a computer.</li>
+        <li><strong>New job / Create invoice / Find client / Calendar / Quick charge / Log expense</strong> &mdash; the six daily actions, one tap each. Quick charge takes a card payment on the spot with no invoice; Log expense opens Finance on the Expenses tab with the receipt form ready. Every other tool is in the bar at the bottom of the screen on a phone (Home, Jobs, Clients, Invoices, Finance, and More for the rest) or the sidebar on a computer.</li>
+        <li><strong>Search anywhere</strong> &mdash; the round magnifier button at the bottom-left of every page (or Ctrl+K / &#8984;K on a computer, or the Search row at the top of the sidebar) finds any job, contact, invoice, quote, or contract by name and jumps straight to it, and lists every action in the app (Log expense, New quote, Quick charge, Plan a route...) so you never have to remember which page something lives on. Type a few letters and pick.</li>
         <li><strong>Needs attention</strong> &mdash; the ops inbox, open by default: work requests, new leads, applicants, and online bookings that still need a response (an empty group hides itself, so you only see what's waiting); jobs due this week; clients overdue for a follow-up; and invoices still unpaid, with paid ones folded away underneath. Tap the heading to collapse it if you'd rather &mdash; your choice is remembered on this device.</li>
         <li><strong>Business</strong> &mdash; everything you check occasionally rather than daily, each collapsed until you want it: Business Snapshot (revenue, expenses, net, outstanding), Analytics (job status, top vendors and clients, lead sources), Compliance &amp; Documents (insurance, LLC/tax info, city licenses, secure files), and the Website Gallery Queue (photos starred in the Job Tracker, review-only). Backup &amp; Restore moved to Settings.</li>
       </ul>
@@ -922,7 +930,8 @@
         <li>New job comes in? Tap <strong>New job</strong> &mdash; that opens Job Tracker with the add form ready. Use the microphone icon next to Notes to dictate instead of typing. Every dated job shows on the Calendar view automatically.</li>
         <li>On site, tap <strong>Done</strong> on the job's card or table row (or use the status dropdown for In Progress). Attach photos with the Photos button. Marking a job Complete offers to jump straight to a pre-filled review request for that client.</li>
         <li>Need to invoice? Tap <strong>Create Invoice</strong> on the job's card so it counts toward that job's profitability, or <strong>Create invoice</strong> here.</li>
-        <li>Got paid? <strong>Mark paid</strong> on the Money Owed card &mdash; two taps.</li>
+        <li>Got paid? <strong>Mark paid</strong> on the Money Owed card &mdash; two taps. Small job, no invoice needed? <strong>Quick charge</strong> takes the card right there.</li>
+        <li>Bought parts? <strong>Log expense</strong> &mdash; photograph the receipt, pick the job, done. It counts against that job's profitability automatically.</li>
         <li>End of week: skim <strong>Needs attention</strong> for anything still waiting, and <strong>Compliance</strong> under Business for anything expiring soon.</li>
       </ol>
 

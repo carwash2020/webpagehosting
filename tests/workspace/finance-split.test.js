@@ -1436,7 +1436,8 @@ test('job-tracker.html shows its default tab (Jobs) on a normal, hash-less load,
 test('both pages use the unconditional activateTab(...) fallback pattern now, not the fragile conditional-only version', () => {
   const finSrc = fs.readFileSync(FINANCE_PATH, 'utf8');
   const jtSrc = fs.readFileSync(JOB_TRACKER_PATH, 'utf8');
-  assert.match(finSrc, /activateTab\(TAB_HASHES\[initialHash\] \? initialHash : 'cost'\)/);
+  // Finance gained per-device tab memory on 2026-09-22: hash > remembered > cost, still one unconditional call.
+  assert.match(finSrc, /activateTab\(TAB_HASHES\[initialHash\] \? initialHash : \(TAB_HASHES\[rememberedTab\] \? rememberedTab : 'cost'\)\)/);
   assert.match(jtSrc, /activateTab\(TAB_HASHES\[initialHash\] \? initialHash : 'jobs'\)/);
   assert.doesNotMatch(finSrc, /if \(TAB_HASHES\[initialHash\]\) activateTab\(initialHash\);/);
   assert.doesNotMatch(jtSrc, /if \(TAB_HASHES\[initialHash\]\) activateTab\(initialHash\);/);
@@ -1930,19 +1931,21 @@ function loadTourInWindow(url, email) {
 test('the tour step list covers exactly the intended pages, and excludes redirect stubs, auth pages, dev tools, and detail views on purpose', () => {
   const src = fs.readFileSync(path.join(__dirname, '..', '..', 'tools', 'tools-tour.js'), 'utf8');
   const pages = [...src.matchAll(/page: '(\/tools\/[\w-]+\.html)'/g)].map(m => m[1]);
+  // Bottom-bar order since the 2026-09-22 tutorial rewrite: Home, Jobs,
+  // Clients, Invoices, Finance, then the More sheet's pages.
   const expectedPages = [
-    '/tools/workspace.html', '/tools/job-tracker.html', '/tools/finance.html',
-    '/tools/invoice-generator.html', '/tools/clients.html',
+    '/tools/workspace.html', '/tools/job-tracker.html', '/tools/clients.html',
+    '/tools/invoice-generator.html', '/tools/finance.html',
     '/tools/route-planner.html',
     '/tools/contract-generator.html', '/tools/review-request.html', '/tools/parts-reference.html',
     '/tools/runway-dashboard.html', '/tools/settings.html',
   ];
   const uniquePages = [...new Set(pages)];
   assert.deepEqual(uniquePages, expectedPages);
-  // workspace.html should have exactly 4 steps (its own sections); every other page exactly 1.
-  assert.equal(pages.filter(p => p === '/tools/workspace.html').length, 4);
-  for (const p of expectedPages.slice(1)) {
-    assert.equal(pages.filter(x => x === p).length, 1, p + ' should have exactly one step');
+  // Tabbed pages get one step per tab (2026-09-22); the rest exactly one.
+  const STEPS_PER_PAGE = { '/tools/workspace.html': 6, '/tools/job-tracker.html': 3, '/tools/invoice-generator.html': 4, '/tools/finance.html': 4 };
+  for (const p of expectedPages) {
+    assert.equal(pages.filter(x => x === p).length, STEPS_PER_PAGE[p] || 1, p + ' step count');
   }
   const excluded = ['job-cost-lookup.html', 'expense-logger.html', 'contact-card.html', 'login.html', 'reset-password.html', 'dev-tools.html', 'site-content.html', 'client-detail.html', 'job-detail.html'];
   for (const e of excluded) assert.ok(!pages.some(p => p.includes(e)), e + ' should not appear in the tour');
@@ -2001,26 +2004,25 @@ test('advancing through workspace.html\'s own 4 steps stays on the same page (no
   assert.equal(w.document.querySelector('.onboarding-title').textContent, 'Quick actions');
 });
 
-test('advancing from workspace.html\'s last step correctly records the next step (job-tracker.html) before attempting to navigate there', () => {
+test('advancing from workspace.html\'s last step (the 6th, since the 2026-09-22 tutorial rewrite) correctly records the next step (job-tracker.html) before attempting to navigate there', () => {
   const w = loadTourInWindow('https://example.com/tools/workspace.html');
   w.initAppTour();
-  w.goToAppTourStep(1); w.goToAppTourStep(2); w.goToAppTourStep(3);
-  try { w.goToAppTourStep(4); } catch (e) { /* jsdom can't actually navigate cross-page; expected */ }
-  assert.equal(w.localStorage.getItem('th_app_tour_step'), '4');
+  w.goToAppTourStep(1); w.goToAppTourStep(2); w.goToAppTourStep(3); w.goToAppTourStep(4); w.goToAppTourStep(5);
+  assert.equal(w.document.querySelector('.onboarding-title').textContent, 'Search anywhere', 'still on the dashboard at step 6');
+  try { w.goToAppTourStep(6); } catch (e) { /* jsdom can't actually navigate cross-page; expected */ }
+  assert.equal(w.localStorage.getItem('th_app_tour_step'), '6');
 });
 
 test('self-correction: landing on a page that doesn\'t match the stored step shows THAT page\'s real content and fixes the stored step, rather than showing nothing or the wrong page', () => {
-  // Stored step 5 points at finance.html, but the person is actually on
-  // route-planner.html (step 8 -- calendar.html's and pos.html's own
-  // steps went away 2026-09-21 when the Calendar became a view inside
-  // Job Tracker and POS became the Quick charge tab inside Invoices).
+  // Stored step 5 is a workspace.html step, but the person is actually on
+  // route-planner.html (step 18 in the 24-step tutorial of 2026-09-22).
   const w = loadTourInWindow('https://example.com/tools/route-planner.html');
   w.localStorage.setItem('th_app_tour_step', '5');
   w.localStorage.setItem('th_app_tour_step_started_at', String(Date.now()));
   w.initAppTour();
   assert.ok(w.document.getElementById('appTourCard'));
   assert.equal(w.document.querySelector('.onboarding-title').textContent, 'Routes');
-  assert.equal(w.localStorage.getItem('th_app_tour_step'), '8');
+  assert.equal(w.localStorage.getItem('th_app_tour_step'), '18');
 });
 
 test('landing on a page that isn\'t part of the tour at all renders no card, even with an active tour in progress', () => {
@@ -2126,13 +2128,15 @@ test('running check-links.py against the real repo actually passes now (not just
 // real on its target page before using any of them, and added zero
 // new ids to any of those 10 pages to make that possible.
 
-test('every one of the 14 tour steps has a highlightSelector, and every selector actually matches something real on its target page (calendar.html\'s and pos.html\'s steps folded into Jobs and Invoices on 2026-09-21)', () => {
+test('every one of the 24 tour steps has a highlightSelector, and every selector (each alternative of a comma list) actually matches something real on its target page -- or in the nav / search markup every page injects', () => {
   const tourSrc = fs.readFileSync(path.join(__dirname, '..', '..', 'tools', 'tools-tour.js'), 'utf8');
   const steps = [...tourSrc.matchAll(/\{ page: '(\/tools\/[\w-]+\.html)', highlightSelector: '([^']+)'/g)];
-  assert.equal(steps.length, 14, 'every step should have a highlightSelector');
-  for (const [, pagePath, selector] of steps) {
+  assert.equal(steps.length, 24, 'every step should have a highlightSelector');
+  const injected = ['tools-nav-pwa.js', 'tools-command-palette.js'].map(f => fs.readFileSync(path.join(__dirname, '..', '..', 'tools', f), 'utf8')).join('\n');
+  for (const [, pagePath, selectorList] of steps) {
     const file = pagePath.replace('/tools/', '');
     const pageSrc = fs.readFileSync(path.join(__dirname, '..', '..', 'tools', file), 'utf8');
+    for (const selector of selectorList.split(',').map(s => s.trim())) {
     // Convert the CSS selector into a simple substring presence check --
     // good enough here since every selector used is a plain id, class,
     // or single-attribute match, not a compound/descendant selector.
@@ -2144,12 +2148,14 @@ test('every one of the 14 tour steps has a highlightSelector, and every selector
       // class name present, not the dotted selector treated as one
       // literal string -- HTML writes multiple classes space-separated.
       const classNames = selector.slice(1).split('.');
-      ok = classNames.every(c => new RegExp('class="[^"]*\\b' + c + '\\b[^"]*"').test(pageSrc));
+      ok = classNames.every(c => new RegExp('class="[^"]*\\b' + c + '\\b[^"]*"').test(pageSrc)
+        || new RegExp('(class="[^"]*\\b' + c + '\\b[^"]*"|className = \'' + c + '\')').test(injected));
     } else {
       const attrMatch = selector.match(/\[([^*=]+)\*?="([^"]+)"\]/);
       ok = attrMatch ? pageSrc.includes(attrMatch[2]) && new RegExp(attrMatch[1] + '="[^"]*' + attrMatch[2].replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '[^"]*"').test(pageSrc) : false;
     }
     assert.ok(ok, file + ': highlightSelector "' + selector + '" not found');
+    }
   }
 });
 

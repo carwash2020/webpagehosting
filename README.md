@@ -38,6 +38,7 @@ The public site uses one shared stylesheet (`styles.css`, repo root). The tool s
 - [What changed, 2026-09-21 -- booking.html audit, referral-code refinements, and a cron auth incident](#what-changed-2026-09-21----bookinghtml-audit-referral-code-refinements-and-a-cron-auth-incident)
 - [What changed, 2026-09-21 -- Workspace IA round 2: POS folded into Invoices, tablets get the nav bar, one less header button](#what-changed-2026-09-21----workspace-ia-round-2-pos-folded-into-invoices-tablets-get-the-nav-bar-one-less-header-button)
 - [What changed, 2026-09-22 -- Workspace IA round 3: search-first Appliance Wiki, Runway remembers its tab, login return paths](#what-changed-2026-09-22----workspace-ia-round-3-search-first-appliance-wiki-runway-remembers-its-tab-login-return-paths)
+- [What changed, 2026-09-22 -- Workspace IA round 4: a 24-step tutorial, a launcher in the search box, tab deep links everywhere](#what-changed-2026-09-22----workspace-ia-round-4-a-24-step-tutorial-a-launcher-in-the-search-box-tab-deep-links-everywhere)
 
 ## ⚠️ Read this before touching deployment at all
 
@@ -157,7 +158,7 @@ upside to offset the cost.
 | `tools/review-request.html` | Generates a review-request text message; deep-linkable with a client name/job pre-filled. Also has Google/Yelp QR code tabs. |
 | `tools/runway-dashboard.html` | Personal + business financial runway tracking — debts, income, expenses, month-by-month. Pulls revenue/expenses straight from Finance (`finance.html`), no double entry. |
 | `tools/parts-reference.html` | **Appliance Wiki** — quick lookup for common appliance issues: what part it usually is, the part number, roughly what it costs. |
-| `tools/settings.html` | Account info, display density and color theme, push notifications, tour replay, password reset, **Backup & Restore** (moved here from the Dashboard on 2026-09-21 — the same full JSON export/import, no hop through another page), sign out. |
+| `tools/settings.html` | Account info, display density and color theme, push notifications, tour replay (the tour is a 24-step tutorial as of 2026-09-22 -- every page and tab, about two minutes), password reset, **Backup & Restore** (moved here from the Dashboard on 2026-09-21 — the same full JSON export/import, no hop through another page), sign out. |
 | `tools/dev-tools.html` | Site diagnostics and maintenance utilities, organized into 6 tabs (Health, Access, Session, Notifications, Deploy, Reports) as of 2026-08-25 -- replaced the old scroll-to-anchor nav, which no longer scaled once this page reached 22 panels (now 26, after Booking notification test and the 3 new Reports panels). Access is role-gated (`account_roles` table, see `DISASTER_RECOVERY.md`); an Owner-role account only sees the Access tab (Client Registry, Account Roles), while a Developer-role account sees all 6 tabs. Also supports swiping left/right between tabs on mobile, scoped to the panel content area so it doesn't fight with the tab bar's own horizontal scroll. |
 | `tools/site-content.html` | Site Content / FAQ / Terms editing — split out of `dev-tools.html` on 2026-08-20. |
 | `tools/client-detail.html` | Full history for one client (jobs, invoices, quotes, contracts) — reached from workspace.html or job-detail.html, not linked from the main nav directly. |
@@ -2584,6 +2585,59 @@ so those 3 pages showed genuinely empty content until then. Added the
 same static skeleton markup to all 3. `settings.html` was also checked
 and found to already have skeletons on every dynamic panel -- no real
 gap there. Full detail in `docs/specialist-logs/features.md`.
+## What changed, 2026-09-22 -- Workspace IA round 4: a 24-step tutorial, a launcher in the search box, tab deep links everywhere
+
+Owner's brief: "look for any last-minute improvements you can make, as
+big as you want, make it super easy to use, then update the tutorial to
+teach where everything is and how to use it." Full reasoning in
+`docs/specialist-logs/features.md`.
+
+**The tutorial (app tour) is a real tutorial now.** 14 one-per-page
+stops became **24 steps** that walk the app in the bottom bar's order:
+six on the Dashboard (Today, Needs attention, the six actions, Business,
+then **Getting around** -- which points at the phone bar *or* the
+desktop sidebar, whichever is on screen -- and **Search anywhere**),
+then one step per tab on Jobs, Invoices, and Finance, and one each for
+the More-sheet pages. A tab step switches to that tab first
+(`onShow`), so the thing being described is the thing on screen; the
+card shows "7 / 24"; the copy says what you do there, not what the page
+contains. Walking all 24 steps in a real browser at phone and desktop
+widths surfaced two real bugs, both fixed: on the Runway Dashboard the
+phone bottom bar covered the tour card's Next button (its copied tour
+CSS never had the bottom-nav offset), and on Settings the highlighted
+button could scroll back off screen when late-rendering sections
+pushed it down (the tour now re-checks and scrolls again).
+
+**The search box is also the launcher.** Ctrl+K / the round search
+button now lists every place you can go and everything you can start
+before you type -- New job, Calendar, Contacts, Create invoice, New
+quote, Quick charge, Log expense, Log income, Profitability, Plan a
+route, New contract, Send review request, Look up a part, Runway,
+Settings, Replay the tour -- and typing filters them ("expen" -> Log
+expense) ahead of the usual record matches. Gated ones follow the same
+permission checks the nav uses.
+
+**Every tab is a link.** `invoice-generator.html#invoice|#quote|#pos|
+#recent`, `finance.html#cost|#profitability|#income|#expenses|
+#inventory`, `job-tracker.html#jobs|#contacts|#notes|#calendar|#add-job`
+open that tab on load *and* on a same-document hash change, which is
+what lets the launcher and the tutorial point at exact spots. Finance
+now reopens on the tab you used last (hash > memory > Cost Lookup),
+like Jobs and Runway.
+
+**Six daily actions on the Dashboard.** Quick charge and Log expense
+joined New job / Create invoice / Find client / Calendar; three per row
+on a phone, so the strip is no taller than the old 2x2. The Dashboard
+help and the Settings tour blurb describe the new pieces.
+
+Verified: suite green, `check-consistency` (whose tour health check now
+resolves comma-separated selectors and classes injected by the nav /
+search scripts), `check-undefined-vars`, `lint`; real Chromium at
+390x844 and 1440x900 (23/23): the full 24-step walk at both widths with
+every highlighted element on screen, Ctrl+K -> "expen" -> Enter landing
+on Finance/Expenses, tab memory, same-document hash changes on Finance,
+Invoices, and Jobs, and the phone strip at two rows.
+
 ## What changed, 2026-09-22 -- Workspace IA round 3: search-first Appliance Wiki, Runway remembers its tab, login return paths
 
 Closes the last items the two IA passes below left open ("finish it in

@@ -373,6 +373,9 @@ body.th-has-bottomnav .onboarding-card { bottom: calc(76px + env(safe-area-inset
 .onboarding-dots span { width: 6px; height: 6px; border-radius: 50%; background: var(--border); }
 .onboarding-dots span.is-active { background: var(--orange); width: 16px; border-radius: 3px; }
 .onboarding-title { font-family:var(--font-ui); color: var(--white); font-size: 16px; margin-bottom: 4px; }
+/* "3 / 24" (2026-09-22): with a 24-step tutorial the dots alone no longer
+   say how far along you are. */
+.onboarding-count { font-family: var(--font-ui); font-size: 11.5px; letter-spacing: .04em; color: var(--text-dim); margin: -4px 0 4px; }
 .onboarding-body { color: var(--text-dim); font-size: 13.5px; line-height: 1.5; margin-bottom: 14px; }
 .onboarding-actions { display: flex; justify-content: space-between; align-items: center; gap: 10px; }
 .onboarding-skip, .onboarding-back { background: none; border: none; color: var(--text-dim); font-size: 13px; cursor: pointer; padding: 8px 4px; }

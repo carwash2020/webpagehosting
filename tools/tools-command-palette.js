@@ -36,6 +36,47 @@
 
   var CONTRACT_TYPE_LABELS = { pwo: 'Per-Job Work Order', stpa: 'Short-Term Project Agreement', ltsa: 'Long-Term Service Agreement' };
 
+  // Actions (2026-09-22): the palette is also the app's launcher. Every
+  // place you can go and every thing you can start, as deep links to the
+  // exact tab or form -- so "expense", "quote", "route" typed anywhere
+  // lands on the right spot without remembering which page owns it. The
+  // full list shows before you type; typing filters it (title + keywords)
+  // and record matches follow underneath. Gated ones use the same auth.js
+  // checks the nav uses, so an Employee account never sees a Finance link
+  // here that the bar hides.
+  function allowed(check) { return typeof window[check] !== 'function' || window[check](); }
+  var ACTIONS = [
+    { title: 'New job', meta: 'Jobs \u203a Add a Job', href: '/tools/job-tracker.html#add-job', keywords: 'add create book schedule' },
+    { title: 'Calendar', meta: 'Jobs \u203a Calendar view', href: '/tools/job-tracker.html#calendar', keywords: 'month schedule bookings' },
+    { title: 'Contacts', meta: 'Jobs \u203a Contacts tab', href: '/tools/job-tracker.html#contacts', keywords: 'address book supplier vendor phone history' },
+    { title: 'Notes', meta: 'Jobs \u203a Notes tab', href: '/tools/job-tracker.html#notes', keywords: 'notepad memo' },
+    { title: 'Clients', meta: 'Portal accounts, invites, referral credit', href: '/tools/clients.html', keywords: 'portal invite referral customer', perm: 'canManageInvoices' },
+    { title: 'Create invoice', meta: 'Invoices \u203a Invoice tab', href: '/tools/invoice-generator.html#invoice', keywords: 'bill send pdf', perm: 'canManageInvoices' },
+    { title: 'New quote / estimate', meta: 'Invoices \u203a Quote / Estimate tab', href: '/tools/invoice-generator.html#quote', keywords: 'price bid proposal', perm: 'canManageInvoices' },
+    { title: 'Quick charge', meta: 'Invoices \u203a charge a card on the spot, no invoice', href: '/tools/invoice-generator.html#pos', keywords: 'pos pay payment card stripe', perm: 'canManageInvoices' },
+    { title: 'Recent invoices and quotes', meta: 'Invoices \u203a Recent Invoices tab', href: '/tools/invoice-generator.html#recent', keywords: 'log history paid unpaid', perm: 'canManageInvoices' },
+    { title: 'Log expense', meta: 'Finance \u203a Expenses tab', href: '/tools/finance.html#expenses', keywords: 'receipt cost part mileage fuel', perm: 'canViewFinance' },
+    { title: 'Log income', meta: 'Finance \u203a Income tab', href: '/tools/finance.html#income', keywords: 'payment paid revenue', perm: 'canViewFinance' },
+    { title: 'Profitability', meta: 'Finance \u203a what each job made', href: '/tools/finance.html#profitability', keywords: 'profit margin', perm: 'canViewFinance' },
+    { title: 'Cost lookup', meta: 'Finance \u203a price a job with tax', href: '/tools/finance.html#cost', keywords: 'quote estimate calculator tax', perm: 'canViewFinance' },
+    { title: 'Inventory', meta: 'Finance \u203a Inventory tab', href: '/tools/finance.html#inventory', keywords: 'parts stock truck', perm: 'canViewFinance' },
+    { title: 'Plan a route', meta: 'Route Planner', href: '/tools/route-planner.html', keywords: 'directions maps drive stops mileage' },
+    { title: 'New contract', meta: 'Contract Generator', href: '/tools/contract-generator.html', keywords: 'work order agreement sign', perm: 'canManageContracts' },
+    { title: 'Send review request', meta: 'Review Request Sender', href: '/tools/review-request.html', keywords: 'google yelp text qr', perm: 'canManageReviews' },
+    { title: 'Look up a part', meta: 'Appliance Wiki', href: '/tools/parts-reference.html', keywords: 'manual model brand appliance wiki' },
+    { title: 'Runway Dashboard', meta: 'Personal budget and business runway', href: '/tools/runway-dashboard.html#runway', keywords: 'budget net worth draw', perm: 'canViewRunway' },
+    { title: 'Dashboard', meta: 'Home \u203a today, money owed, needs attention', href: '/tools/workspace.html', keywords: 'home today inbox' },
+    { title: 'Settings', meta: 'Account, theme, notifications, backup', href: '/tools/settings.html', keywords: 'backup restore theme password notifications' },
+    { title: 'Replay the tour', meta: 'Two-minute walkthrough of every page', href: '/tools/workspace.html?tour=1', keywords: 'help tutorial guide how to' }
+  ];
+  function actionItems(term) {
+    return ACTIONS.filter(function (a) {
+      if (a.perm && !allowed(a.perm)) return false;
+      if (!term) return true;
+      return (a.title + ' ' + a.meta + ' ' + (a.keywords || '')).toLowerCase().indexOf(term) > -1;
+    }).map(function (a) { return { title: a.title, meta: a.meta, href: a.href }; });
+  }
+
   function ensurePalette() {
     if (document.getElementById('thCmdkOverlay')) return;
     var overlay = document.createElement('div');
@@ -45,7 +86,7 @@
       '<div class="th-cmdk-modal" role="dialog" aria-modal="true" aria-label="Search">' +
         '<div class="th-cmdk-input-row">' +
           '<svg class="th-icon" aria-hidden="true"><use href="#icon-search" xlink:href="#icon-search"></use></svg>' +
-          '<input type="text" id="thCmdkInput" class="th-cmdk-input" placeholder="Search jobs, contacts, invoices, quotes, contracts&hellip;" autocomplete="off">' +
+          '<input type="text" id="thCmdkInput" class="th-cmdk-input" placeholder="Search anything, or type what to do (expense, quote, route)&hellip;" autocomplete="off">' +
           '<kbd class="th-cmdk-esc">Esc</kbd>' +
         '</div>' +
         '<div class="th-cmdk-results" id="thCmdkResults"></div>' +
@@ -77,9 +118,16 @@
   function renderResults(rawTerm) {
     var container = document.getElementById('thCmdkResults');
     var term = (rawTerm || '').trim().toLowerCase();
-    if (!term) { container.innerHTML = '<div class="th-cmdk-hint">Type to search jobs, contacts, invoices, quotes, and contracts.</div>'; return; }
+    if (!term) {
+      container.innerHTML = '<div class="th-cmdk-hint">Type a name to find a job, contact, invoice, quote, or contract \u2014 or what you want to do (\u201cexpense\u201d, \u201cquote\u201d, \u201croute\u201d). Or pick a place to go:</div>' +
+        groupHtml({ label: 'Go to', items: actionItems('') });
+      setActive(0);
+      return;
+    }
 
     var groups = SEARCH_SOURCES.map(function (source) { return buildGroup(source, term); }).filter(Boolean);
+    var actions = actionItems(term);
+    if (actions.length) groups.unshift({ label: 'Actions', items: actions.slice(0, 6) });
 
     if (!groups.length) {
       container.innerHTML = '<div class="th-cmdk-hint">No matches for &ldquo;' + esc(rawTerm) + '&rdquo;.</div>';
