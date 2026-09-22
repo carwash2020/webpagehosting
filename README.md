@@ -2840,3 +2840,17 @@ the invoice page's CSP -- a separate decision), and the 721-1023px
 tablet band that shows neither the bottom bar nor the sidebar
 (pre-existing; the 720px breakpoint is asserted by several tests).
 Both were done the same day in round 2 -- see the entry above.
+
+## What changed, 2026-09-22 -- "Resend invoice" was silently sending nothing; quotes now have the same Resend that invoices do
+
+The Resend button on `tools/clients.html`'s Portal invoices panel
+always reported "Sent!", but for a genuine resend of an
+already-synced invoice it was actually sending no email at all -- it
+called `sync-invoice-to-portal`, whose notification trigger only fires
+for a genuinely new invoice, and the button never checked whether an
+email had actually gone out, only whether the (harmless, no-op)
+database upsert succeeded. Fixed by calling `send-invoice-notification`
+directly instead. Also added the equivalent for quotes, which had no
+resend option at all: a new "Portal quotes" panel with the same
+search + list + Resend shape as invoices. Full detail in
+`docs/specialist-logs/features.md`.
