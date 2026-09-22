@@ -170,7 +170,14 @@
   </div>
   <div class="form-section">
     <h3>Description of Work</h3>
-    <div class="form-field"><label>Include any relevant model/serial numbers for appliance repairs</label><textarea id="pwo_description"></textarea></div>
+    <div class="form-field"><label>Include any relevant model/serial numbers for appliance repairs</label>
+      <div style="position:relative;">
+        <textarea id="pwo_description"></textarea>
+        <button type="button" id="pwoDescriptionMicBtn" class="voice-dictation-btn" style="display:none;" aria-label="Dictate description" title="Dictate description">
+          <svg class="th-icon" aria-hidden="true"><use href="#icon-mic" xlink:href="#icon-mic"></use></svg>
+        </button>
+      </div>
+    </div>
   </div>
   <div class="form-section">
     <h3>Price</h3>
@@ -207,7 +214,14 @@
   </div>
   <div class="form-section">
     <h3>Project Description &amp; Scope of Work</h3>
-    <div class="form-field"><label>Describe the full scope, including all tasks to be completed</label><textarea id="stpa_description"></textarea></div>
+    <div class="form-field"><label>Describe the full scope, including all tasks to be completed</label>
+      <div style="position:relative;">
+        <textarea id="stpa_description"></textarea>
+        <button type="button" id="stpaDescriptionMicBtn" class="voice-dictation-btn" style="display:none;" aria-label="Dictate description" title="Dictate description">
+          <svg class="th-icon" aria-hidden="true"><use href="#icon-mic" xlink:href="#icon-mic"></use></svg>
+        </button>
+      </div>
+    </div>
   </div>
   <div class="form-section">
     <h3>Timeline</h3>
@@ -252,7 +266,14 @@
   </div>
   <div class="form-section">
     <h3>Scope of Recurring Services</h3>
-    <div class="form-field"><label>Describe the recurring services to be provided</label><textarea id="ltsa_description"></textarea></div>
+    <div class="form-field"><label>Describe the recurring services to be provided</label>
+      <div style="position:relative;">
+        <textarea id="ltsa_description"></textarea>
+        <button type="button" id="ltsaDescriptionMicBtn" class="voice-dictation-btn" style="display:none;" aria-label="Dictate description" title="Dictate description">
+          <svg class="th-icon" aria-hidden="true"><use href="#icon-mic" xlink:href="#icon-mic"></use></svg>
+        </button>
+      </div>
+    </div>
   </div>
   <div class="form-section">
     <h3>Service Schedule &amp; Pricing</h3>
@@ -1041,6 +1062,16 @@
       }
       populateContactPickers(); renderContractLog();
       initContractLogLongPress();
+      // Mic dictation (2026-09-22) -- already fully built and proven on
+      // job-tracker.html's Notes field, just unused everywhere else.
+      // These 3 long-form scope-description textareas are the textbook
+      // case: typing a full contract scope one-handed at a job site is
+      // exactly the friction this exists to remove.
+      if (typeof attachVoiceDictation === 'function') {
+        attachVoiceDictation('pwo_description', 'pwoDescriptionMicBtn');
+        attachVoiceDictation('stpa_description', 'stpaDescriptionMicBtn');
+        attachVoiceDictation('ltsa_description', 'ltsaDescriptionMicBtn');
+      }
     }
     if (typeof initSyncOnLoad === 'function') {
       initSyncOnLoad().then(afterInitialSync).catch(afterInitialSync);
