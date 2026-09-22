@@ -337,7 +337,7 @@ test('a missing unread list never throws', () => {
 test('Home loads unread counts with the rest of the summary and job titles for the message item', () => {
   const fn = extractFn(HOME, 'loadSummary');
   assert.match(fn, /portalLoadUnreadCounts\(client\),/);
-  assert.match(fn, /from\('client_portal_jobs'\)\.select\('id,title'\)/);
+  assert.match(fn, /from\('client_portal_jobs'\)\.select\('id,title[a-z_,]*'\)/);
   assert.match(fn, /\n      unread,\n/);
 });
 
