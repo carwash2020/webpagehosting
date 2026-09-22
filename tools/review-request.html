@@ -547,6 +547,7 @@
     // against unbounded growth rather than capped tight on purpose.
     saveSentLog(log.slice(0, 300));
     clearMatchingReminder(phone);
+    if (typeof haptic === 'function') haptic('success');
     renderSentLog();
     checkDuplicateWarning();
   }
@@ -561,6 +562,9 @@
     entry.status = status;
     entry.statusUpdatedAt = new Date().toISOString();
     saveSentLog(log);
+    // Only the positive outcome -- 'no_response' is a neutral status
+    // update, not a moment worth acknowledging.
+    if (status === 'received' && typeof haptic === 'function') haptic('success');
     renderSentLog();
   }
 

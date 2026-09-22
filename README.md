@@ -3257,3 +3257,20 @@ Verified: full suite (2700 tests), `check-consistency`,
 `check-undefined-vars`, and `lint` all clean; `check-links.py` clean
 except the known sandbox-proxy limitation (images.unsplash.com and this
 site's own domain, both pre-existing and unrelated to this change).
+
+## 2026-09-22 (later still) -- "Make it feel like a native app," round 3: the last real haptic gaps + voice dictation
+
+A fresh audit (not assuming rounds 1-2 covered everything) found 3
+more silent success moments and fixed them: `invoice-generator.html`'s
+Quick Charge success (the highest-frequency "money in hand" moment in
+the suite, silent even though this file's other success moments
+already fire a haptic), and `review-request.html`'s `logSentRequest()`/
+`setRequestStatus()` (the latter only for the positive "Left a review"
+outcome). Also extended `attachVoiceDictation()` -- a fully built mic-
+dictation utility previously wired to exactly 1 field across ~23 tool
+pages -- to `contract-generator.html`'s 3 long-form scope-description
+textareas, the textbook case for dictating instead of typing at a job
+site. Checked several other candidates first and correctly declined to
+build anything for them (long-press on already-visible review-request
+buttons, a couple of pages with no real gap on inspection). Full
+reasoning: `docs/specialist-logs/visual.md`'s 2026-09-22 entry.

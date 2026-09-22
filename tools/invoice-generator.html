@@ -2793,6 +2793,14 @@
   }
 
   function showSuccess(amount) {
+    // The highest-frequency real "money in hand" moment in this whole
+    // suite -- a card charge actually completing -- was silent, unlike
+    // this same file's mark-paid/invoice-logged/estimate-logged moments,
+    // which already fire this. One centralized call covers both real
+    // charge paths (chargeSavedCard() and the Stripe confirmPayment
+    // success branch), same reasoning as round 2's badge work: fix it
+    // once at the shared call site, not at each caller.
+    if (typeof haptic === 'function') haptic('success');
     document.getElementById('posChargeArea').innerHTML =
       '<div class="pos-success">' +
         '<div class="pos-success-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg></div>' +

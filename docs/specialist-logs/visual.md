@@ -928,4 +928,63 @@ gating actually holds at runtime, not just in the source. Full suite,
 (images.unsplash.com and this site's own domain, both pre-existing and
 unrelated to this change).
 
+## 2026-09-22 (later still) -- "make it feel like a native app" push, round 3: the last real haptic gaps + voice dictation
+
+Ran a fresh audit rather than assuming rounds 1-2 covered everything --
+checked every shared "already built, under-used" system, not just
+`haptic()`/`attachLongPress` again, and spot-checked pages neither
+round had touched (route-planner.html, review-request.html,
+clients.html, dev-tools.html, runway-dashboard.html, settings.html).
+
+**Three real, silent haptic gaps found and fixed:**
+- `invoice-generator.html`'s `showSuccess()` (Quick Charge) -- the
+  highest-frequency "money in hand" moment in the whole suite, a real
+  card charge actually completing, and it was silent even though this
+  exact file's mark-paid/invoice-logged/estimate-logged moments
+  already fire one. One call in the shared function covers both real
+  callers (`chargeSavedCard()`'s success path and the Stripe
+  `confirmPayment` success branch).
+- `review-request.html`'s `logSentRequest()` -- the one function both
+  the SMS and Copy Message send paths already funnel through, same
+  "fix once at the centralized call site" shape round 2's badge work
+  established.
+- `review-request.html`'s `setRequestStatus()` -- but only for the
+  `received` ("Left a review") outcome, not `no_response`, which is a
+  neutral status update rather than something worth acknowledging.
+
+**Voice dictation, previously wired to exactly 1 field across all ~23
+tool pages** (`job-tracker.html`'s Notes textarea), despite
+`attachVoiceDictation()` (`tools-media-sharing.js`) being a fully
+built, self-contained mic-button utility. Extended to
+`contract-generator.html`'s 3 long-form scope-description textareas
+(`pwo_description`/`stpa_description`/`ltsa_description`) -- typing a
+full contract scope one-handed at a job site is exactly the friction
+this feature exists to remove, and it was sitting completely unused
+right next to the one page that already proved it works. Mirrored
+job-tracker.html's exact markup pattern (a `position:relative` wrapper,
+a `display:none`-until-supported mic button using the same shared
+`#icon-mic` sprite `tools-nav-pwa.js` already injects on every page)
+and wired all 3 calls inside `afterInitialSync()`, right after the
+existing contract-log setup from round 1.
+
+**Checked and deliberately not built**, since the round-1/round-2
+"check the premise before building" lesson held again: long-press on
+`review-request.html`'s sent-log rows (Left-a-Review/No-Response are
+already directly visible buttons, same as invoice rows in round 2);
+`animateRowExit` gaps that turned out to be a non-issue (the pages in
+question have no row-delete-from-list pattern to animate at all);
+`route-planner.html`, `clients.html` (an admin/lookup tool, not a
+"feels native" priority page), `dev-tools.html`, and
+`settings.html` didn't turn up comparable real gaps on inspection.
+
+Extended `tests/tools/app-feel-haptics-longpress.test.js` (6 more
+tests, 26 total): source-level assertions for all 3 haptic call sites
+plus one real behavioral test for `setRequestStatus` (mocked `haptic`,
+asserts it fires for `received` and not for `no_response`/`sent`), and
+source-level assertions for the voice-dictation markup + wiring on all
+3 contract-generator.html fields.
+
+Verified: full suite 2713/2714 (only the known check-links.py
+sandbox-proxy issue), `check-consistency`/`check-undefined-vars` clean.
+
 <!-- Add new entries above this line -->
