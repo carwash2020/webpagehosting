@@ -388,6 +388,10 @@
      same ones portal/jobs.html uses -- only page-specific spacing
      stays here. */
   .wo-messages-panel { margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--border); }
+  /* Prefilled contact details (2026-09-22) -- says where the value came
+     from; disappears the moment the client edits the field. */
+  .wo-prefill-note { font-size: 12px; line-height: 1.45; color: var(--blue-light); margin-top: 6px; display: flex; align-items: flex-start; gap: 6px; }
+  .wo-prefill-note::before { content: ''; width: 6px; height: 6px; margin-top: 6px; border-radius: 50%; background: var(--blue-light); flex-shrink: 0; }
   .wo-message-meta { font-size: 10.5px; color: var(--text-dim); margin-top: 3px; }
   .empty-state { text-align: center; color: var(--text-dim); padding: 28px 20px; font-size: 13.5px; }
   /* Empty-state illustrations (2026-09-07), same pattern as jobs.html and
@@ -910,6 +914,9 @@
     btn.textContent = 'Send Request';
     window.scrollTo({ top: 0, behavior: 'smooth' });
     renderMyRequests();
+    // The form was just cleared -- refill contact details for the next one.
+    document.querySelectorAll('.wo-prefill-note').forEach(n => n.remove());
+    if (woContactEmail) prefillRequestContact(woContactEmail);
   }
 
   document.getElementById('woSubmitBtn').addEventListener('click', submitRequest);
@@ -1180,11 +1187,56 @@
     await loadAndRenderThread(workOrderId);
   }
 
+  // Prefill phone + address from what the client already told us
+  // (2026-09-22). The phone they saved in Settings (client_profiles) and
+  // the address from their most recent request -- or, failing that, the
+  // one on their latest estimate -- used to be re-typed by hand on every
+  // request, despite the field's own hint ("Optional if we've been
+  // there before"). Fill-only: never overwrites anything already typed,
+  // and says where the value came from so a visit somewhere else is an
+  // obvious edit rather than a silent wrong address.
+  let woContactEmail = null;
+  async function prefillRequestContact(email) {
+    woContactEmail = email;
+    const phoneEl = document.getElementById('woPhone');
+    const addressEl = document.getElementById('woAddress');
+    try {
+      const [profile, lastRequest, lastQuote] = await Promise.all([
+        client.from('client_profiles').select('phone').eq('client_email', email).maybeSingle(),
+        client.from('client_portal_work_orders').select('address')
+          .eq('client_email', email).not('address', 'is', null)
+          .order('created_at', { ascending: false }).limit(1),
+        client.from('client_portal_quotes').select('client_address')
+          .eq('client_email', email).not('client_address', 'is', null)
+          .order('quote_date', { ascending: false }).limit(1),
+      ]);
+      const phone = profile && profile.data && profile.data.phone;
+      const address = (lastRequest.data && lastRequest.data[0] && lastRequest.data[0].address) ||
+        (lastQuote.data && lastQuote.data[0] && lastQuote.data[0].client_address);
+      if (phone && !phoneEl.value.trim()) { phoneEl.value = phone; markWoPrefilled(phoneEl, 'From your account settings.'); }
+      if (address && !addressEl.value.trim()) { addressEl.value = address; markWoPrefilled(addressEl, 'From your last request. Change it if this is somewhere else.'); }
+    } catch (e) { /* best-effort: the fields just stay empty, exactly as before */ }
+  }
+
+  function markWoPrefilled(inputEl, note) {
+    const field = inputEl.closest('.wo-field');
+    if (!field) return;
+    let el = field.querySelector('.wo-prefill-note');
+    if (!el) {
+      el = document.createElement('div');
+      el.className = 'wo-prefill-note';
+      field.appendChild(el);
+      inputEl.addEventListener('input', () => el.remove(), { once: true });
+    }
+    el.textContent = note;
+  }
+
   async function init() {
     const { data: { session } } = await client.auth.getSession();
     if (!session) { window.location.replace('/portal/login.html'); return; }
     document.getElementById('clientEmailDisplay').textContent = session.user.email;
     await portalGuardWithBiometricLock(session.user.email, client);
+    prefillRequestContact(session.user.email);
     renderMyRequests();
     initPortalPullToRefresh(renderMyRequests);
   }

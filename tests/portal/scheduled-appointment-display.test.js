@@ -44,7 +44,7 @@ test('Home shows an upcoming appointment in the next-appointment hero, not dupli
 });
 
 test('Home fetches scheduled_at and address for the next-appointment hero', () => {
-  assert.match(HOME, /client\.from\('client_portal_work_orders'\)\.select\('id,title,status,scheduled_at,address'\)/);
+  assert.match(HOME, /client\.from\('client_portal_work_orders'\)\.select\('id,title,status,scheduled_at,address[a-z_,]*'\)/);
 });
 
 test('two literal em-dash characters left over from the earlier guest-facing cleanup are gone from renderAttention', () => {

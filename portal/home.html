@@ -371,6 +371,36 @@
   .home-card-label { color: var(--white); font-size: 14px; font-weight: 600; margin-top: 4px; }
   .home-card-desc { color: var(--text-dim); font-size: 12.5px; line-height: 1.45; margin-top: 4px; }
 
+  /* Recent activity (2026-09-22) -- a compact timeline: a small icon
+     dot per event on a thin rail, the event on the left, when on the
+     right. Colour follows the portal's existing meaning (green = paid /
+     approved, orange = money owed or awaiting you, blue = visits and
+     requests), never decoration. */
+  .activity-list { list-style: none; margin: 0 0 26px; padding: 4px 0; position: relative; }
+  .activity-list::before {
+    content: ''; position: absolute; left: 13px; top: 14px; bottom: 14px; width: 2px;
+    background: var(--border); border-radius: 2px;
+  }
+  .activity-item { position: relative; display: flex; align-items: center; gap: 12px; padding: 4px 0; }
+  .activity-dot {
+    position: relative; z-index: 1; flex-shrink: 0; width: 28px; height: 28px; border-radius: 50%;
+    display: inline-flex; align-items: center; justify-content: center;
+    background: var(--bg-panel); border: 1px solid var(--border); color: var(--text-dim);
+  }
+  .activity-dot svg { width: 14px; height: 14px; fill: none; stroke: currentColor; stroke-width: 2.2; stroke-linecap: round; stroke-linejoin: round; }
+  .activity-item.is-paid .activity-dot, .activity-item.is-approved .activity-dot { color: #4caf78; border-color: rgba(76, 175, 120, .45); background: rgba(76, 175, 120, .1); }
+  .activity-item.is-invoice .activity-dot, .activity-item.is-quote .activity-dot { color: var(--orange-light); border-color: var(--orange-tint-border); background: var(--orange-tint-soft); }
+  .activity-item.is-job .activity-dot, .activity-item.is-request .activity-dot { color: var(--blue-light); border-color: rgba(58, 160, 255, .4); background: rgba(58, 160, 255, .1); }
+  .activity-item.is-declined .activity-dot { color: var(--text-dim); }
+  .activity-body {
+    flex: 1; min-width: 0; display: flex; align-items: baseline; justify-content: space-between; gap: 12px;
+    padding: 9px 12px; border-radius: 10px; text-decoration: none; min-height: 40px; box-sizing: border-box;
+    transition: background .15s ease;
+  }
+  .activity-body:hover { background: var(--bg-panel); }
+  .activity-text { color: var(--white); font-size: 14px; line-height: 1.35; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .activity-when { flex-shrink: 0; color: var(--text-dim); font-size: 12.5px; }
+
   .help-card {
     background: var(--bg-panel); border: 1px solid var(--border); border-radius: 12px;
     padding: 16px; margin-bottom: 18px;
@@ -447,6 +477,8 @@
   <div class="skeleton-card"><div class="skeleton-line is-title"></div><div class="skeleton-line is-wide"></div><div class="skeleton-line is-narrow"></div></div>
 </div>
 
+<div id="recentActivity"></div>
+
 <div class="section-title">Need Something?</div>
 <div class="help-card">
   <p>Need work done? Send us the details and we'll follow up to confirm timing and pricing.</p>
@@ -488,12 +520,12 @@
   // Every count comes from the client's own rows -- RLS on each portal
   // table restricts a signed-in client to their own email, so these
   // are inherently scoped without any client-side filtering.
-  async function loadSummary() {
-    const [invoices, quotes, jobs, requests, contracts, visitResult, unread] = await Promise.all([
-      client.from('client_portal_invoices').select('id,total,paid,invoice_number,invoice_date'),
-      client.from('client_portal_quotes').select('id,status,total'),
-      client.from('client_portal_jobs').select('id,title'),
-      client.from('client_portal_work_orders').select('id,title,status,scheduled_at,address'),
+  async function loadSummary(email) {
+    const [invoices, quotes, jobs, requests, contracts, visitResult, unread, profile] = await Promise.all([
+      client.from('client_portal_invoices').select('id,total,paid,paid_at,invoice_number,invoice_date,client_name'),
+      client.from('client_portal_quotes').select('id,status,total,quote_number,quote_date,responded_at,client_name'),
+      client.from('client_portal_jobs').select('id,title,job_date'),
+      client.from('client_portal_work_orders').select('id,title,status,scheduled_at,address,created_at'),
       client.from('client_portal_contracts').select('id,status,contract_title'),
       // Booked visits (quote/check-up/booking.html) -- see
       // portalFetchMyVisits() in portal-app.js. Never throws; a failed
@@ -501,6 +533,10 @@
       portalFetchMyVisits(client),
       // Unread replies (2026-09-22) -- never throws; [] on failure.
       portalLoadUnreadCounts(client),
+      // The client's own saved name, for the greeting. Filtered by
+      // email explicitly: an internal account signed into the portal can
+      // read every profile, and maybeSingle() would error on many rows.
+      client.from('client_profiles').select('display_name').eq('client_email', email).maybeSingle(),
     ]);
     // A Supabase-js query resolves (never rejects) even when it fails --
     // the failure shows up as `.error`, not a thrown exception. Without
@@ -520,6 +556,7 @@
       contracts: contracts.data || [],
       visits: visitResult.visits,
       unread,
+      displayName: (profile && !profile.error && profile.data && profile.data.display_name) || '',
     };
   }
 
@@ -801,6 +838,94 @@
       '</div></div>';
   }
 
+  // "Good afternoon, Jane" -- first name only (the first word of the
+  // saved display name, or of the name on an invoice/quote if the
+  // client never saved one). Time of day is the viewer's own clock,
+  // since it's a greeting, not a business time.
+  function homeGreetingText(s, now) {
+    const fromDocs = (s.invoices || []).concat(s.quotes || []).map(r => r.client_name).find(n => n && String(n).trim());
+    const full = String(s.displayName || fromDocs || '').trim();
+    const first = full.split(/\s+/)[0] || '';
+    // A name that's really an email (some invoices were issued to an
+    // email-only contact) isn't a name to greet anyone by.
+    const name = first && !first.includes('@') ? first : '';
+    const h = now.getHours();
+    const part = h >= 5 && h < 12 ? 'Good morning' : h >= 12 && h < 17 ? 'Good afternoon' : 'Good evening';
+    return name ? part + ', ' + name : 'Welcome';
+  }
+
+  // Recent activity (2026-09-22): the last few things that actually
+  // happened on this account, newest first, across every section --
+  // built only from rows Home already loads (invoice issued/paid,
+  // estimate received/answered, job completed, request sent). Before
+  // this, a returning client had no way to see "what's changed since I
+  // was last here" without opening all five sections.
+  const ACTIVITY_WINDOW_DAYS = 90;
+  const ACTIVITY_LIMIT = 5;
+  function activityWhen(value) {
+    // Date-only columns (invoice_date/quote_date/job_date) are anchored
+    // at local noon so they never slide to the previous day.
+    return new Date(String(value).length <= 10 ? value + 'T12:00:00' : value);
+  }
+  function activityRelative(date, now) {
+    const a = new Date(date.getTime()); a.setHours(0, 0, 0, 0);
+    const b = new Date(now.getTime()); b.setHours(0, 0, 0, 0);
+    const days = Math.round((b - a) / 86400000);
+    if (days <= 0) return 'Today';
+    if (days === 1) return 'Yesterday';
+    if (days < 7) return days + ' days ago';
+    return new Intl.DateTimeFormat('en-US', { month: 'short', day: 'numeric' }).format(date);
+  }
+  function buildRecentActivity(s, now) {
+    const events = [];
+    (s.invoices || []).forEach(i => {
+      if (i.invoice_date) events.push({ at: activityWhen(i.invoice_date), kind: 'invoice', text: 'Invoice ' + (i.invoice_number || '') + ' for ' + money(i.total), href: '/portal/dashboard.html#invoice-card-' + i.id });
+      if (i.paid && i.paid_at) events.push({ at: activityWhen(i.paid_at), kind: 'paid', text: 'Paid ' + money(i.total) + (i.invoice_number ? ' (' + i.invoice_number + ')' : ''), href: '/portal/dashboard.html#invoice-card-' + i.id });
+    });
+    (s.quotes || []).forEach(q => {
+      if (q.quote_date) events.push({ at: activityWhen(q.quote_date), kind: 'quote', text: 'Estimate ' + (q.quote_number || '') + ' for ' + money(q.total), href: '/portal/quotes.html#quote-card-' + q.id });
+      if (q.responded_at && (q.status === 'approved' || q.status === 'declined')) {
+        events.push({ at: activityWhen(q.responded_at), kind: q.status === 'approved' ? 'approved' : 'declined', text: 'You ' + q.status + ' estimate ' + (q.quote_number || ''), href: '/portal/quotes.html#quote-card-' + q.id });
+      }
+    });
+    (s.jobs || []).forEach(j => {
+      if (j.job_date) events.push({ at: activityWhen(j.job_date), kind: 'job', text: 'Job completed: ' + (j.title || 'Service visit'), href: '/portal/jobs.html#job-card-' + j.id });
+    });
+    (s.requests || []).forEach(r => {
+      if (r.created_at) events.push({ at: activityWhen(r.created_at), kind: 'request', text: 'You requested: ' + (r.title || 'Work request'), href: '/portal/work-orders.html#wo-card-' + r.id });
+    });
+    const cutoff = now.getTime() - ACTIVITY_WINDOW_DAYS * 86400000;
+    return events
+      .filter(e => !isNaN(e.at.getTime()) && e.at.getTime() >= cutoff && e.at.getTime() <= now.getTime() + 86400000)
+      .sort((a, b) => b.at - a.at)
+      .slice(0, ACTIVITY_LIMIT);
+  }
+  const ACTIVITY_ICONS = {
+    invoice: '<path d="M6 3.5h12v17l-2-1.4-2 1.4-2-1.4-2 1.4-2-1.4-2 1.4z"/><path d="M9.5 9h5M9.5 13h5"/>',
+    paid: '<path d="M5 12.5l4.5 4.5L19 7.5"/>',
+    quote: '<path d="M6 3.5h7.5L18 8v12.5H6z"/><path d="M13.5 3.5V8H18"/>',
+    approved: '<path d="M5 12.5l4.5 4.5L19 7.5"/>',
+    declined: '<path d="M7 7l10 10M17 7 7 17"/>',
+    job: '<circle cx="12" cy="12" r="8.5"/><path d="M8.5 12.2l2.4 2.4 4.6-4.8"/>',
+    request: '<circle cx="12" cy="12" r="8.5"/><path d="M12 8.5v7M8.5 12h7"/>',
+  };
+  function renderRecentActivity(s, now) {
+    const el = document.getElementById('recentActivity');
+    if (!el) return;
+    const events = buildRecentActivity(s, now);
+    if (!events.length) { el.innerHTML = ''; return; }
+    el.innerHTML = '<div class="section-title">Recent Activity</div><ol class="activity-list">' +
+      events.map(e =>
+        '<li class="activity-item is-' + e.kind + '">' +
+          '<span class="activity-dot" aria-hidden="true"><svg viewBox="0 0 24 24">' + (ACTIVITY_ICONS[e.kind] || '') + '</svg></span>' +
+          '<a class="activity-body" href="' + escapeAttr(e.href) + '">' +
+            '<span class="activity-text">' + escapeHtml(e.text) + '</span>' +
+            '<span class="activity-when">' + escapeHtml(activityRelative(e.at, now)) + '</span>' +
+          '</a>' +
+        '</li>'
+      ).join('') + '</ol>';
+  }
+
   function renderCards(s) {
     const unpaidCount = s.invoices.filter(i => !i.paid).length;
     const pendingQuoteCount = s.quotes.filter(q => (q.status || 'pending') === 'pending').length;
@@ -879,13 +1004,18 @@
     await portalGuardWithBiometricLock(session.user.email, client);
 
     try {
-      const summary = await loadSummary();
-      // Greeting uses whatever name we already have on file from a real
-      // invoice/quote/job, falling back to a plain "Welcome" rather
-      // than guessing a name out of the email address.
+      const summary = await loadSummary(session.user.email);
+      // Greeting uses whatever name we already have on file -- the
+      // client's own saved profile first, then the name on a real
+      // invoice/quote -- falling back to a plain "Welcome" rather than
+      // guessing a name out of the email address. (This comment used to
+      // describe exactly that, but nothing ever set the greeting: every
+      // client saw "Welcome" forever. Fixed 2026-09-22.)
+      document.getElementById('homeGreeting').textContent = homeGreetingText(summary, new Date());
       renderNextAppointmentBanner(summary);
       renderAttention(summary);
       renderCards(summary);
+      renderRecentActivity(summary, new Date());
       portalApplyNavUnreadBadges(summary.unread);
     } catch (e) {
       document.getElementById('homeCards').innerHTML =
