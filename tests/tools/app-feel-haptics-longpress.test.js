@@ -18,6 +18,7 @@ const invoiceGenHtml = fs.readFileSync(repo('tools', 'invoice-generator.html'), 
 const workspaceHtml = fs.readFileSync(repo('tools', 'workspace.html'), 'utf8');
 const financeHtml = fs.readFileSync(repo('tools', 'finance.html'), 'utf8');
 const contractGenHtml = fs.readFileSync(repo('tools', 'contract-generator.html'), 'utf8');
+const reviewRequestHtml = fs.readFileSync(repo('tools', 'review-request.html'), 'utf8');
 const toolsEffectsJs = fs.readFileSync(repo('tools', 'tools-effects.js'), 'utf8');
 
 // --- haptic() coverage --------------------------------------------------
@@ -247,4 +248,69 @@ test('invoice-generator.html: initInvoiceLogLongPress, invoked end-to-end, opens
   assert.equal(toggledId, 42);
   sheetActions[2].onClick();
   assert.equal(deletedId, 42);
+});
+
+// --- round 3 (2026-09-22, same day): the remaining real haptic gaps + voice dictation ---
+
+test('invoice-generator.html: showSuccess (Quick Charge) fires a success haptic -- the highest-frequency "money in hand" moment in the suite was silent even though its siblings (mark paid, invoice/estimate logged) already fire one', () => {
+  const fn = invoiceGenHtml.match(/function showSuccess\(amount\)[\s\S]*?\n  \}/)[0];
+  assert.match(fn, /if \(typeof haptic === 'function'\) haptic\('success'\);/);
+  // Both real callers (chargeSavedCard's success path and the Stripe
+  // confirmPayment success branch) go through this one function, so a
+  // single call here covers both without touching either call site.
+  assert.match(invoiceGenHtml, /showSuccess\(fields\.amount\);/);
+  assert.match(invoiceGenHtml, /showSuccess\(parseFloat\(document\.getElementById\('posAmount'\)\.value\)\);/);
+});
+
+test('review-request.html: logSentRequest fires a success haptic once, covering both the SMS and Copy Message send paths that funnel through it', () => {
+  const fn = reviewRequestHtml.match(/function logSentRequest\(method\)[\s\S]*?\n  \}/)[0];
+  assert.match(fn, /if \(typeof haptic === 'function'\) haptic\('success'\);/);
+});
+
+test('review-request.html: setRequestStatus fires a success haptic only for the positive outcome (received/left a review), not for the neutral no_response update', () => {
+  const fn = reviewRequestHtml.match(/function setRequestStatus\(id, status\)[\s\S]*?\n  \}/)[0];
+  assert.match(fn, /if \(status === 'received' && typeof haptic === 'function'\) haptic\('success'\);/);
+});
+
+test('review-request.html: setRequestStatus behavioral check -- haptic fires for \'received\', not for \'no_response\' or \'sent\'', () => {
+  const dom = new JSDOM(reviewRequestHtml, {
+    runScripts: 'dangerously', url: 'https://example.com/tools/review-request.html',
+    beforeParse(w) {
+      w.requireAuth = () => {};
+      w.localStorage.setItem('th_review_requests_log', JSON.stringify([
+        { id: 1, name: 'Jane', phone: '555-1111', status: 'sent' },
+      ]));
+    },
+  });
+  const { window } = dom;
+  let hapticCalls = [];
+  window.haptic = (type) => hapticCalls.push(type);
+  window.renderSentLog = () => {};
+
+  window.setRequestStatus(1, 'no_response');
+  assert.deepEqual(hapticCalls, [], 'no_response should not fire a haptic');
+
+  window.setRequestStatus(1, 'received');
+  assert.deepEqual(hapticCalls, ['success'], 'received should fire exactly one success haptic');
+});
+
+// --- voice dictation coverage (attachVoiceDictation, tools-media-sharing.js) ---
+
+test('contract-generator.html: all 3 long-form scope-description textareas (PWO/STPA/LTSA) get their own mic button markup, mirroring job-tracker.html\'s existing jobNotes pattern', () => {
+  for (const [fieldId, btnId] of [
+    ['pwo_description', 'pwoDescriptionMicBtn'],
+    ['stpa_description', 'stpaDescriptionMicBtn'],
+    ['ltsa_description', 'ltsaDescriptionMicBtn'],
+  ]) {
+    assert.match(contractGenHtml, new RegExp(`<textarea id="${fieldId}"></textarea>`), fieldId + ' textarea');
+    const btnRe = new RegExp(`<button type="button" id="${btnId}" class="voice-dictation-btn" style="display:none;"`);
+    assert.match(contractGenHtml, btnRe, btnId + ' button markup');
+  }
+});
+
+test('contract-generator.html: attachVoiceDictation is called for all 3 fields inside afterInitialSync, right after the existing contract-log setup', () => {
+  const fn = contractGenHtml.match(/function afterInitialSync\(\)[\s\S]*?\n    \}/)[0];
+  assert.match(fn, /attachVoiceDictation\('pwo_description', 'pwoDescriptionMicBtn'\);/);
+  assert.match(fn, /attachVoiceDictation\('stpa_description', 'stpaDescriptionMicBtn'\);/);
+  assert.match(fn, /attachVoiceDictation\('ltsa_description', 'ltsaDescriptionMicBtn'\);/);
 });
