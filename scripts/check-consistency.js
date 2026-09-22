@@ -145,11 +145,12 @@ function checkButtonHandlers(problems) {
   // Cache each shared script's own defined-function set once, rather
   // than re-parsing the same file for every page that loads it.
   const sharedScriptCache = {};
-  function getSharedScriptFunctions(scriptName) {
-    if (sharedScriptCache[scriptName]) return sharedScriptCache[scriptName];
-    const scriptPath = path.join(TOOLS_DIR, scriptName);
+  function getSharedScriptFunctions(scriptDir, scriptName) {
+    const cacheKey = `${scriptDir}/${scriptName}`;
+    if (sharedScriptCache[cacheKey]) return sharedScriptCache[cacheKey];
+    const scriptPath = path.join(scriptDir, scriptName);
     const names = fs.existsSync(scriptPath) ? extractDefinedFunctionNames(fs.readFileSync(scriptPath, 'utf8')) : new Set();
-    sharedScriptCache[scriptName] = names;
+    sharedScriptCache[cacheKey] = names;
     return names;
   }
 
@@ -157,7 +158,13 @@ function checkButtonHandlers(problems) {
     const src = readTool(filename);
     const availableFns = extractDefinedFunctionNames(src);
     for (const m of src.matchAll(/<script src="\/tools\/([\w-]+\.js)/g)) {
-      for (const fn of getSharedScriptFunctions(m[1])) availableFns.add(fn);
+      for (const fn of getSharedScriptFunctions(TOOLS_DIR, m[1])) availableFns.add(fn);
+    }
+    // Root-level shared files (e.g. signature-pad.js, 2026-09-22) loaded
+    // directly off the site root rather than /tools/ -- same reasoning,
+    // just a different directory to resolve against.
+    for (const m of src.matchAll(/<script src="\/([\w-]+\.js)/g)) {
+      for (const fn of getSharedScriptFunctions(ROOT_DIR, m[1])) availableFns.add(fn);
     }
 
     const handlerValues = new Set();
@@ -541,7 +548,7 @@ function fixVersions(dir) {
 // that one real hash -- the same automatic, no-judgment-call mechanism
 // every other shared file already gets, just no longer scoped to a single
 // directory.
-const GLOBAL_SHARED_FILES = ['styles.css', 'js/triage.js', 'js/business-hours.js', 'js/site-motion.js', 'js/analytics-events.js', 'js/promo-banner.js', 'js/utm-tracking.js'];
+const GLOBAL_SHARED_FILES = ['styles.css', 'js/triage.js', 'js/business-hours.js', 'js/site-motion.js', 'js/analytics-events.js', 'js/promo-banner.js', 'js/utm-tracking.js', 'signature-pad.js'];
 const BLOG_DIR = path.join(__dirname, '..', 'blog');
 const SCAN_DIRS = [ROOT_DIR, TOOLS_DIR, PORTAL_DIR, BLOG_DIR];
 

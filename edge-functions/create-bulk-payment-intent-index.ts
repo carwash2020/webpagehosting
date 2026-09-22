@@ -100,7 +100,7 @@ async function hasSavedCard(customerId: string): Promise<boolean> {
 // "bulk_invoice_payment") since this is the same category of action
 // as a single-invoice payment, just covering more than one at once;
 // the description field is what actually distinguishes them.
-async function recordCardAuthorization(clientEmail: string, signerName: string, authorizationText: string, amount: number, description: string) {
+async function recordCardAuthorization(clientEmail: string, signerName: string, authorizationText: string, amount: number, description: string, signatureImage: string | null) {
   const res = await fetch(`${SUPABASE_URL}/rest/v1/card_authorizations`, {
     method: "POST",
     headers: { apikey: SERVICE_ROLE_KEY, Authorization: `Bearer ${SERVICE_ROLE_KEY}`, "Content-Type": "application/json" },
@@ -111,6 +111,7 @@ async function recordCardAuthorization(clientEmail: string, signerName: string, 
       context: "invoice_payment",
       amount,
       description,
+      signature_image: signatureImage,
     }]),
   });
   if (!res.ok) {
@@ -146,7 +147,7 @@ Deno.serve(async (req: Request) => {
       return json({ ok: false, error: "STRIPE_SECRET_KEY secret is not set yet -- add it in the Supabase dashboard under Edge Functions -> Secrets." }, 500);
     }
 
-    const { invoice_ids, signer_name } = await req.json();
+    const { invoice_ids, signer_name, signature_image } = await req.json();
     if (!Array.isArray(invoice_ids) || invoice_ids.length < 2 || !invoice_ids.every((id: unknown) => typeof id === "number")) {
       return json({ ok: false, error: "invoice_ids must be an array of at least 2 numbers -- use create-payment-intent for a single invoice." }, 400);
     }
@@ -190,9 +191,14 @@ Deno.serve(async (req: Request) => {
       if (typeof signer_name !== "string" || !signer_name.trim()) {
         return json({ ok: false, needs_signature: true, error: "A signed name is required before saving a new card." }, 400);
       }
+      // Physical/drawn signature (2026-09-22) -- see create-pos-charge's
+      // own identical check for the full reasoning.
+      if (typeof signature_image !== "string" || !signature_image.startsWith("data:image/")) {
+        return json({ ok: false, needs_signature: true, error: "A drawn signature is required before saving a new card." }, 400);
+      }
       const invoiceCount = invoices.length;
       const authorizationText = `I, ${signer_name.trim()}, authorize Triple H Enterprises to charge $${(amountCents / 100).toFixed(2)} for ${invoiceCount} outstanding invoices, and to securely save this card on file (via Stripe) for future charges I separately approve.`;
-      await recordCardAuthorization(claims.email, signer_name.trim(), authorizationText, amountCents / 100, `${invoiceCount} invoices (IDs: ${invoice_ids.join(", ")})`);
+      await recordCardAuthorization(claims.email, signer_name.trim(), authorizationText, amountCents / 100, `${invoiceCount} invoices (IDs: ${invoice_ids.join(", ")})`, signature_image);
     }
 
     const stripeCustomerId = existingCustomerId || await getOrCreateStripeCustomer(claims.email);

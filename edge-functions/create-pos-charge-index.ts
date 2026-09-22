@@ -278,7 +278,7 @@ async function logPosIncomeToWorkspaceSync(description: string, amount: number, 
 // behind; silently continuing to save a card and charge it without
 // that record ever actually existing would defeat the entire feature
 // while looking, from the caller's side, like it worked.
-async function recordCardAuthorization(clientEmail: string, signerName: string, authorizationText: string, amount: number, description: string, internalAccount: string) {
+async function recordCardAuthorization(clientEmail: string, signerName: string, authorizationText: string, amount: number, description: string, internalAccount: string, signatureImage: string | null) {
   const res = await fetch(`${SUPABASE_URL}/rest/v1/card_authorizations`, {
     method: "POST",
     headers: { apikey: SERVICE_ROLE_KEY, Authorization: `Bearer ${SERVICE_ROLE_KEY}`, "Content-Type": "application/json" },
@@ -290,6 +290,7 @@ async function recordCardAuthorization(clientEmail: string, signerName: string, 
       amount,
       description: description || null,
       internal_account: internalAccount,
+      signature_image: signatureImage,
     }]),
   });
   if (!res.ok) {
@@ -319,7 +320,7 @@ Deno.serve(async (req: Request) => {
       return json({ ok: false, error: "STRIPE_POS_SECRET_KEY secret is not set." }, 500);
     }
 
-    const { mode, client_email, amount, description, signer_name } = await req.json();
+    const { mode, client_email, amount, description, signer_name, signature_image } = await req.json();
 
     if (typeof client_email !== "string" || !client_email.includes("@")) {
       return json({ ok: false, error: "A real client email is required." }, 400);
@@ -399,8 +400,17 @@ Deno.serve(async (req: Request) => {
     if (typeof signer_name !== "string" || !signer_name.trim()) {
       return json({ ok: false, error: "A signed name is required before saving a new card." }, 400);
     }
+    // Physical/drawn signature (2026-09-22), requested directly:
+    // "Currently they just type a name, i want a physical signature."
+    // signer_name above stays (still useful for search/display and
+    // dispute correlation), but this drawn canvas image is now the
+    // actual signature required to proceed -- same base64 PNG data URL
+    // shape client_portal_contracts.client_signature_data_url already uses.
+    if (typeof signature_image !== "string" || !signature_image.startsWith("data:image/")) {
+      return json({ ok: false, error: "A drawn signature is required before saving a new card." }, 400);
+    }
     const authorizationText = `I, ${signer_name.trim()}, authorize Triple H Enterprises to charge $${amount.toFixed(2)} to the card provided for "${description || "a POS sale"}", and to securely save this card on file (via Stripe) for future charges I separately approve.`;
-    await recordCardAuthorization(normalizedEmail, signer_name.trim(), authorizationText, amount, description, claims.email);
+    await recordCardAuthorization(normalizedEmail, signer_name.trim(), authorizationText, amount, description, claims.email, signature_image);
 
     const customerId = await getOrCreateStripeCustomer(normalizedEmail);
     const piRes = await fetch("https://api.stripe.com/v1/payment_intents", {

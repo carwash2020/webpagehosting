@@ -56,7 +56,7 @@ test('the stored authorization text is built from the actual submitted amount an
 test('the authorization record is tied to the specific internal account who ran the charge', () => {
   const fnMatch = POS_CHARGE.match(/async function recordCardAuthorization\([\s\S]*?\n\}\n/);
   assert.match(fnMatch[0], /internal_account: internalAccount,/);
-  assert.match(POS_CHARGE, /recordCardAuthorization\(normalizedEmail, signer_name\.trim\(\), authorizationText, amount, description, claims\.email\);/);
+  assert.match(POS_CHARGE, /recordCardAuthorization\(normalizedEmail, signer_name\.trim\(\), authorizationText, amount, description, claims\.email, signature_image\);/);
 });
 
 // ---- frontend ----

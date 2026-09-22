@@ -1574,4 +1574,82 @@ precached pages and bumped `service-worker.js`'s `CACHE_NAME` /
 precache fingerprint accordingly, same as any other edit to a
 precached file.
 
+## 2026-09-22 -- Physical/drawn signature capture, replacing typed-name-only in the 3 remaining spots
+
+Requested directly: "how can we improve the signiture section of our
+portal, Pos and other places where it is located, Currently they just
+type a name, i want a physical signature."
+
+An audit found `portal/contracts.html` (client e-signature) and
+`tools/contract-generator.html` (in-person two-pad PWO/STPA/LTSA
+signing, PDF-embedded) already used real canvas signature capture.
+The 3 remaining typed-name-only spots -- `tools/invoice-generator.html`
+Quick Charge (POS new card), `portal/dashboard.html` (single + bulk
+invoice payment new-card), `portal/settings.html` (add-card) -- all
+funnel through 4 edge functions' shared `recordCardAuthorization()`
+pattern writing to one table, `card_authorizations`.
+
+**Design:** additive, not a replacement. `signer_name` (typed) stays
+for search/display/dispute correlation; a new nullable
+`card_authorizations.signature_image` column (base64 PNG data URL,
+same shape `client_portal_contracts.client_signature_data_url`
+already uses) holds the drawn signature, now REQUIRED alongside the
+typed name at all 4 card-saving call sites. Existing rows simply have
+`signature_image = null` -- no backfill needed, no migration required.
+
+**Shared component, not 3 new implementations:** rather than writing a
+new canvas signature pad 3 times, extracted and generalized
+`portal/contracts.html`'s already-working pattern into a new
+root-level shared file, `signature-pad.js` (`sigPadInit`/
+`sigPadClear`/`sigPadHasDrawing`/`sigPadDataUrl`, keyed by canvasId so
+a page can host more than one pad). Refactored `portal/contracts.html`
+itself onto it too (~50 lines of duplicate code removed), keeping its
+own `initSignaturePad(contractId)`/etc. wrapper names unchanged so its
+existing onclick handlers needed zero changes. Named with a `sigPad*`
+prefix specifically to avoid colliding with `portal/contracts.html`'s
+own like-named globals once both scripts share a page. Added to
+`GLOBAL_SHARED_FILES` (check-consistency.js) and `SHARED_SCRIPT_FILES`
+(check-undefined-vars.js) so its cache-bust version and function
+exports are tracked the same as every other shared file.
+
+`check-consistency.js`'s button-handler check only ever resolved
+`<script src="/tools/...">` against `tools/`'s own shared-function
+cache -- signature-pad.js is the first shared file loaded from the
+site root rather than `/tools/` or `/portal/`, so that check needed a
+second resolution path for a bare `/<file>.js` src pointed at
+`ROOT_DIR`. Fixed rather than special-cased, so any future root-level
+shared file needing this same coverage just works.
+
+**Near-miss during deploy, caught and fixed immediately:** the first
+`deploy_edge_function` call for `create-pos-charge` accidentally sent
+placeholder content (`"PLACEHOLDER"`) instead of the real file body,
+briefly replacing this live, production payment function for well
+under a minute before being caught and redeployed with the verified
+real content. This is the exact class of mistake this log's own
+2026-09-16 bugfix entry already flagged as a risk; re-confirms the
+lesson: always re-fetch and diff a deploy's live content against the
+real source file immediately after any `deploy_edge_function` call on
+anything payment-critical, never trust the call succeeded just because
+the tool returned 200.
+
+All 4 edge functions (`create-pos-charge`, `create-payment-intent`,
+`create-bulk-payment-intent`, `manage-saved-card`) now validate
+`signature_image` is a real `data:image/...` string before proceeding,
+alongside the existing `signer_name` check. `portal/settings.html`'s
+Authorization history panel now shows a thumbnail of the drawn
+signature when present (old rows with no signature simply show none).
+
+23 new tests in `tests/edge-functions/physical-signature-capture.test.js`
+cover signature-pad.js's own behavior, the contracts.html wrapper
+refactor, all 3 new UI signature requirements, and all 4 edge
+functions' validation + recordCardAuthorization wiring. 9 existing
+tests across `add-card-from-settings.test.js`,
+`bulk-payment-signature-parity.test.js`,
+`invoice-payment-signature.test.js`, `pos-signature-capture.test.js`,
+and `focus-trap.test.js` needed their string/regex assertions updated
+for the new `signatureImage` parameter added to
+`startPayment`/`startBulkPayment` and the new `signature_image` arg
+threaded through every `recordCardAuthorization()` call -- pure
+signature-shape drift, not behavior changes to fix.
+
 <!-- Add new entries above this line -->

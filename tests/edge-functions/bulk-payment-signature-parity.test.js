@@ -63,14 +63,14 @@ test('the Stripe customer is looked up and created by the caller\'s own verified
 // ---- frontend ----
 
 test('startBulkPayment shows the signature step on needs_signature, rather than a generic error message', () => {
-  const fnMatch = DASHBOARD.match(/async function startBulkPayment\(invoiceIds, signerName\)[\s\S]*?\n  \}\n/);
+  const fnMatch = DASHBOARD.match(/async function startBulkPayment\(invoiceIds, signerName, signatureImage\)[\s\S]*?\n  \}\n/);
   assert.ok(fnMatch, 'expected to isolate startBulkPayment()');
   assert.match(fnMatch[0], /if \(result\.needs_signature\) \{[\s\S]*?renderBulkPaymentSignatureStep\(invoiceIds\);/);
 });
 
-test('submitting the signature retries the exact same bulk payment flow with the typed name included', () => {
+test('submitting the signature retries the exact same bulk payment flow with the typed name and drawn signature included', () => {
   assert.match(DASHBOARD, /function submitBulkPaymentSignature\(invoiceIds\)/);
-  assert.match(DASHBOARD, /startBulkPayment\(invoiceIds, signerName\);/);
+  assert.match(DASHBOARD, /startBulkPayment\(invoiceIds, signerName, signatureImage\);/);
 });
 
 test('an empty signature is rejected client-side before ever retrying the request', () => {
