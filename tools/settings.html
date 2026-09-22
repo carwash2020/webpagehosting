@@ -14,7 +14,7 @@
      background-image on html here too. -->
 <html lang="en" style="background-color:#0a0a0a;">
 <head>
-<script src="/tools/auth.js?v=0cd43bdab1"></script>
+<script src="/tools/auth.js?v=47af1279b5"></script>
 <script>
   // Security gate -- redirect to login before this page's own content
   // is meaningfully usable. See auth.js for why this exists (a small,
@@ -122,7 +122,7 @@
       <a href="/tools/workspace.html" class="help-btn" aria-label="Back to Dashboard" title="Back to Dashboard" style="text-decoration:none; display:inline-flex; align-items:center; justify-content:center;">&#8617;</a>
     </div>
   </div>
-  <p class="hub-sub">Account, display, notifications, and backup.</p>
+  <p class="hub-sub">Account, display, notifications, and two-factor authentication.</p>
 
   <div class="settings-section">
     <h2>Account</h2>
@@ -199,6 +199,7 @@
   <div class="settings-section" id="mfaSection">
     <h2>Two-Factor Authentication</h2>
     <p class="settings-desc" id="mfaSettingsDesc">Checking your account&hellip;</p>
+    <p class="settings-desc" id="mfaSettingsWhyNote" style="display:none; margin-top:-10px;">A stolen or guessed password alone won't be enough to get in -- worth the extra few seconds at sign-in.</p>
     <div class="settings-row">
       <div>
         <div class="settings-row-label">Authenticator app</div>
@@ -208,10 +209,13 @@
     </div>
     <div id="mfaSettingsEnrollArea" style="display:none; margin-top:14px;">
       <div class="mfa-qr-wrap" style="text-align:center; margin-bottom:14px;">
-        <img id="mfaSettingsQrImg" alt="Scan this QR code with your authenticator app" style="width:180px; height:180px; background:#fff; border-radius:8px; padding:8px;">
-        <div class="settings-row-sub" id="mfaSettingsSecretFallback" style="margin-top:8px; word-break:break-all;"></div>
+        <img id="mfaSettingsQrImg" alt="Scan this QR code with your authenticator app" style="width:200px; height:200px; background:#fff; border-radius:8px; padding:10px;">
+        <div style="display:flex; align-items:center; justify-content:center; gap:8px; margin-top:10px;">
+          <div class="settings-row-sub" id="mfaSettingsSecretFallback" style="word-break:break-all;"></div>
+          <button class="secondary-btn" id="mfaSettingsCopySecretBtn" type="button" style="display:none; padding:4px 10px; font-size:12px; flex:0 0 auto;">Copy</button>
+        </div>
       </div>
-      <input type="text" id="mfaSettingsCodeInput" inputmode="numeric" autocomplete="one-time-code" placeholder="123456" maxlength="6" style="width:100%; padding:11px 13px; background:var(--bg-panel-2); border:1px solid var(--border); border-radius:8px; color:var(--white); font-size:16px; font-family:inherit; box-sizing:border-box; margin-bottom:10px; letter-spacing:2px; text-align:center;">
+      <input type="text" id="mfaSettingsCodeInput" inputmode="numeric" pattern="[0-9]*" autocomplete="one-time-code" placeholder="123456" maxlength="6" style="width:100%; padding:11px 13px; background:var(--bg-panel-2); border:1px solid var(--border); border-radius:8px; color:var(--white); font-size:16px; font-family:inherit; box-sizing:border-box; margin-bottom:10px; letter-spacing:2px; text-align:center;">
       <div style="display:flex; gap:10px;">
         <button class="secondary-btn" id="mfaSettingsCancelBtn" type="button" style="flex:1; justify-content:center;">Cancel</button>
         <button class="primary-btn" id="mfaSettingsVerifyBtn" type="button" style="flex:1; justify-content:center;">Verify &amp; Turn On</button>
@@ -225,37 +229,14 @@
       <button class="secondary-btn" id="mfaRegenerateCodesBtn">Generate new codes</button>
     </div>
     <div id="mfaSettingsCodesDisplay" style="display:none; margin-top:12px;">
-      <p class="settings-desc">Save these somewhere safe -- each works once, and they will not be shown again.</p>
+      <p class="settings-desc" style="color:var(--orange-light); font-weight:600;">Save these somewhere safe now -- each works once, and they will not be shown again after you leave this page.</p>
       <div style="background:var(--bg-panel-2); border:1px solid var(--border); border-radius:8px; padding:14px; font-family:monospace; font-size:15px; line-height:1.9; color:var(--white); text-align:center; margin-bottom:10px;" id="mfaSettingsCodesList"></div>
-      <button class="secondary-btn" id="mfaSettingsDownloadCodesBtn">Download codes</button>
+      <div style="display:flex; gap:10px;">
+        <button class="secondary-btn" id="mfaSettingsCopyCodesBtn" style="flex:1; justify-content:center;">Copy all</button>
+        <button class="secondary-btn" id="mfaSettingsDownloadCodesBtn" style="flex:1; justify-content:center;">Download codes</button>
+      </div>
     </div>
     <div class="settings-desc" id="mfaSettingsMsg" style="display:none; margin-top:10px;"></div>
-  </div>
-
-  <!-- Backup & Restore moved here from the Dashboard's own collapsed
-       drawer (2026-09-21): this row used to be a "Go to Backup" link
-       that hopped over to the Dashboard and expanded that drawer.
-       Same two actions, same ALL_SYNCED_KEYS list, no hop. -->
-  <div class="settings-section" id="backup">
-    <h2>Your Data</h2>
-    <p class="settings-desc">A full export of every job, invoice, expense, contact, and note stored on this account -- the same backup used to restore onto a new device if needed. Independent of cloud sync entirely.</p>
-    <div class="settings-row">
-      <div>
-        <div class="settings-row-label">Download a full backup</div>
-        <div class="settings-row-sub">Saves everything as one JSON file.</div>
-      </div>
-      <button class="secondary-btn" onclick="downloadBackup()">Download backup</button>
-    </div>
-    <div class="settings-row">
-      <div>
-        <div class="settings-row-label">Restore from a backup file</div>
-        <div class="settings-row-sub">Replaces the data on this device with the file's contents, then syncs it to the cloud.</div>
-      </div>
-      <label class="secondary-btn" style="display:inline-flex; align-items:center; cursor:pointer;">
-        Restore
-        <input type="file" accept="application/json" onchange="restoreBackup(event)" style="display:none;">
-      </label>
-    </div>
   </div>
 
   <div class="settings-section danger-zone">
@@ -275,8 +256,12 @@
     try {
     initAppTour();
     document.getElementById('settingsMainView').style.display = '';
+    // Backup & Restore moved to Dev Tools (2026-09-22) -- a full
+    // account-wide export/restore is an admin/dev capability, not
+    // something a regular Employee account needs from Settings. An old
+    // #backup bookmark/link follows it there.
     if (window.location.hash === '#backup') {
-      document.getElementById('backup')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      window.location.replace('/tools/dev-tools.html#backup');
     }
 
     // Account info
@@ -385,61 +370,9 @@
     await refreshSettingsPushState();
     showToast('Notifications are on for this device.');
   }
-  // ---------- Backup & Restore (moved from workspace.html, 2026-09-21) ----------
-  // The exact key list the Dashboard's drawer used. Kept as a plain list
-  // (not derived from sync.js's own key table) so a backup file's shape
-  // stays byte-identical to every backup already downloaded.
-  const ALL_SYNCED_KEYS = [
-    'th_tracker_jobs', 'th_tracker_contacts', 'th_tracker_notes_v2',
-    'th_expense_log', 'th_income_log', 'th_mileage_rate', 'th_price_reference', 'th_invoices',
-    'th_quotes', 'th_tax_rate', 'th_tax_labor', 'th_tax_parts', 'th_compliance', 'th_job_templates', 'th_contracts', 'th_setaside_rate',
-    'th_inventory',
-  ];
-
-  function downloadBackup() {
-    const backup = {};
-    ALL_SYNCED_KEYS.forEach(k => { backup[k] = localStorage.getItem(k); });
-    const blob = new Blob([JSON.stringify(backup, null, 2)], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = 'TripleH_Backup_' + new Date().toISOString().slice(0, 10) + '.json';
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
-    if (typeof showToast === 'function') showToast('Backup downloaded.');
-  }
-
-  function restoreBackup(event) {
-    const file = event.target.files[0];
-    if (!file) return;
-    const reader = new FileReader();
-    reader.onload = async function () {
-      let data;
-      try {
-        data = JSON.parse(reader.result);
-      } catch (e) {
-        await showAlert('That file is not valid backup JSON.');
-        event.target.value = '';
-        return;
-      }
-      const confirmed = await showConfirm(
-        'This will REPLACE all current data (jobs, expenses, invoices, quotes, contacts, notes, price reference) ' +
-        'with what\'s in this backup file, on this device. This cannot be undone. Continue?',
-        { danger: true, confirmText: 'Restore' }
-      );
-      if (!confirmed) { event.target.value = ''; return; }
-
-      ALL_SYNCED_KEYS.forEach(k => {
-        if (data[k] !== undefined && data[k] !== null) localStorage.setItem(k, data[k]);
-      });
-      if (typeof scheduleSync === 'function') scheduleSync();
-      event.target.value = '';
-      await showAlert('Backup restored. If you use Cloud Sync, this will push to the cloud shortly and become the new shared version on all devices.');
-    };
-    reader.readAsText(file);
-  }
+  // Backup & Restore moved to Dev Tools (2026-09-22) -- see this file's
+  // #backup hash redirect above, and tools/dev-tools.html for the relocated
+  // download/restore functions and the synced-key list they read from.
 
   async function handleSettingsPasswordReset() {
     const email = (typeof getCurrentUserEmail === 'function' && getCurrentUserEmail()) || '';
@@ -468,6 +401,17 @@
   let mfaPendingFactorId = null;
 
   async function renderMfaSettingsCard() {
+    // Real bug fix (2026-09-22): this used to call getAuthToken directly.
+    // If the stored access token had expired since the page loaded (normal
+    // after enough time on Settings), hasValidSession() returns false and
+    // getAuthToken falls back to the anon key WITHOUT refreshing first --
+    // every MFA/recovery-code RPC below then goes out authenticated as anon,
+    // auth.uid() resolves to null inside the SECURITY DEFINER function, and
+    // it fails with a database-side "not authenticated" error. ensureFreshToken()
+    // (already used by loadCurrentUserRole() elsewhere in auth.js for the
+    // exact same reason) refreshes first when possible, so getAuthToken
+    // actually has a valid, non-expired user token to hand back.
+    await ensureFreshToken();
     const desc = document.getElementById('mfaSettingsDesc');
     const status = document.getElementById('mfaSettingsStatus');
     const btn = document.getElementById('mfaSettingsToggleBtn');
@@ -484,12 +428,14 @@
 
     const factor = await mfaListVerifiedTotpFactor(getAuthToken());
     btn.disabled = false;
+    const whyNote = document.getElementById('mfaSettingsWhyNote');
     if (factor) {
       mfaFactorId = factor.id;
       status.textContent = 'On for this account.';
       btn.textContent = 'Turn off';
       btn.onclick = handleDisableMfaSettings;
       recoveryRow.style.display = '';
+      whyNote.style.display = 'none';
       const remaining = await countRemainingRecoveryCodes(getAuthToken());
       document.getElementById('mfaRecoveryCodesStatus').textContent =
         remaining === null ? 'Could not check.' : `${remaining} unused code${remaining === 1 ? '' : 's'} left.`;
@@ -499,6 +445,12 @@
       btn.textContent = 'Set up';
       btn.onclick = handleStartMfaEnrollSettings;
       recoveryRow.style.display = 'none';
+      // Low-friction discovery for an optional-tier (Employee) account: a
+      // brief, honest reason it's worth turning on, not just a passive
+      // toggle someone could easily scroll past without knowing why they'd
+      // bother (2026-09-22 UX pass). Never shown for a mandatory account --
+      // that one already says "Required" right above it.
+      whyNote.style.display = mandatory ? 'none' : '';
     }
   }
 
@@ -507,6 +459,10 @@
     const msgEl = document.getElementById('mfaSettingsMsg');
     msgEl.style.display = 'none';
     btn.disabled = true;
+
+    // See renderMfaSettingsCard() above for why this has to run before any
+    // getAuthToken call in this handler -- same expired-token gap.
+    await ensureFreshToken();
 
     // Clean up any abandoned prior enrollment attempt first, same
     // precedent the portal's equivalent flow already established --
@@ -531,11 +487,48 @@
     }
     mfaPendingFactorId = result.factorId;
     document.getElementById('mfaSettingsQrImg').src = result.totp.qr_code;
+    const copySecretBtn = document.getElementById('mfaSettingsCopySecretBtn');
     document.getElementById('mfaSettingsSecretFallback').textContent = result.totp.secret
       ? ('Can\'t scan? Enter this code manually: ' + result.totp.secret)
       : '';
+    // UX pass (2026-09-22): the manual-entry secret used to be plain text
+    // someone had to hand-select and copy -- a real point of friction on a
+    // phone specifically, where text selection is fiddlier. A real copy
+    // button removes that step entirely.
+    copySecretBtn.style.display = result.totp.secret ? '' : 'none';
+    copySecretBtn.onclick = async () => {
+      const ok = await copyTextToClipboard(result.totp.secret);
+      copySecretBtn.textContent = ok ? 'Copied!' : 'Copy failed';
+      setTimeout(() => { copySecretBtn.textContent = 'Copy'; }, 1500);
+    };
     document.getElementById('mfaSettingsCodeInput').value = '';
     document.getElementById('mfaSettingsEnrollArea').style.display = 'block';
+  }
+
+  // Shared clipboard helper (2026-09-22 UX pass) -- navigator.clipboard
+  // requires a secure context, which every real deployment of this app has,
+  // but falls back to the older execCommand approach just in case (e.g. an
+  // older embedded webview) rather than silently doing nothing.
+  async function copyTextToClipboard(text) {
+    try {
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        await navigator.clipboard.writeText(text);
+        return true;
+      }
+    } catch (e) { /* fall through to the legacy path below */ }
+    try {
+      const ta = document.createElement('textarea');
+      ta.value = text;
+      ta.style.position = 'fixed';
+      ta.style.left = '-9999px';
+      document.body.appendChild(ta);
+      ta.select();
+      const ok = document.execCommand('copy');
+      document.body.removeChild(ta);
+      return ok;
+    } catch (e) {
+      return false;
+    }
   }
 
   async function handleVerifyMfaEnrollSettings() {
@@ -550,6 +543,10 @@
       return;
     }
 
+    // Same expired-token gap as renderMfaSettingsCard() above -- refresh
+    // before either getAuthToken call below (the verify itself, and the
+    // recovery-code generation right after).
+    await ensureFreshToken();
     verifyBtn.disabled = true;
     verifyBtn.textContent = 'Verifying...';
     const result = await mfaChallengeAndVerify(getAuthToken(), mfaPendingFactorId, code);
@@ -589,8 +586,11 @@
     }
   }
 
-  function handleCancelMfaEnrollSettings() {
+  async function handleCancelMfaEnrollSettings() {
     if (mfaPendingFactorId) {
+      // Same expired-token gap as the other handlers here -- this was
+      // previously a synchronous function calling getAuthToken directly.
+      await ensureFreshToken();
       mfaUnenroll(getAuthToken(), mfaPendingFactorId).catch(() => {});
       mfaPendingFactorId = null;
     }
@@ -607,6 +607,8 @@
     const confirmed = await showConfirm('Turn off two-factor authentication? Your account will only need a password to sign in.', { confirmText: 'Turn off', danger: true });
     if (!confirmed) return;
 
+    // Same expired-token gap as the other handlers here.
+    await ensureFreshToken();
     const btn = document.getElementById('mfaSettingsToggleBtn');
     const msgEl = document.getElementById('mfaSettingsMsg');
     btn.disabled = true;
@@ -626,6 +628,11 @@
   async function handleRegenerateRecoveryCodes() {
     const confirmed = await showConfirm('Generate new recovery codes? Any codes you saved before this will stop working.', { confirmText: 'Generate new codes' });
     if (!confirmed) return;
+    // The actual root cause of "Could not generate recovery codes. Please
+    // try again." (2026-09-22) -- this handler called getAuthToken
+    // directly, with no ensureFreshToken() first. See renderMfaSettingsCard()
+    // above for the full explanation.
+    await ensureFreshToken();
     const btn = document.getElementById('mfaRegenerateCodesBtn');
     btn.disabled = true;
     const result = await generateRecoveryCodes(getAuthToken(), 10);
@@ -664,6 +671,25 @@
     a.click();
     a.remove();
     URL.revokeObjectURL(url);
+  });
+  // "Copy all" (2026-09-22 UX pass) -- alongside Download, for whoever's
+  // pasting these straight into a password manager's notes field rather
+  // than saving a separate .txt file.
+  document.getElementById('mfaSettingsCopyCodesBtn').addEventListener('click', async () => {
+    const btn = document.getElementById('mfaSettingsCopyCodesBtn');
+    const text = document.getElementById('mfaSettingsCodesList').innerText;
+    const ok = await copyTextToClipboard(text);
+    btn.textContent = ok ? 'Copied!' : 'Copy failed';
+    setTimeout(() => { btn.textContent = 'Copy all'; }, 1500);
+  });
+  // Auto-submit once a full, valid 6-digit code is entered (2026-09-22 UX
+  // pass) -- this is a single text input, not 6 separate boxes, so there's
+  // no per-digit auto-advance to add, but the equivalent convenience for a
+  // one-box code field is not making someone tap Verify separately after
+  // they've already finished typing/pasting the code.
+  document.getElementById('mfaSettingsCodeInput').addEventListener('input', (e) => {
+    e.target.value = e.target.value.replace(/\D/g, '').slice(0, 6);
+    if (/^\d{6}$/.test(e.target.value)) handleVerifyMfaEnrollSettings();
   });
 </script>
 

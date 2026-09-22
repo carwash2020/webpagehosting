@@ -14,7 +14,7 @@
      background-image on html here too. -->
 <html lang="en" style="background-color:#0a0a0a;">
 <head>
-<script src="/tools/auth.js?v=0cd43bdab1"></script>
+<script src="/tools/auth.js?v=47af1279b5"></script>
 <script>
   // Security gate -- redirect to login before this page's own content
   // is meaningfully usable. See auth.js for why this exists (a small,
@@ -54,7 +54,7 @@
 <link rel="stylesheet" href="/styles.css?v=2e81706c3d">
 <link rel="stylesheet" href="/tools/styles-tools.css?v=f8d06f6cbe">
 <script src="/tools/data-layer.js?v=c5d44f096e" defer></script>
-<script src="/tools/dev-tools-shared.js?v=ab06331f27" defer></script>
+<script src="/tools/dev-tools-shared.js?v=5ab33172d1" defer></script>
 <script src="/tools/tools-effects.js?v=a767167574" defer></script>
 <script src="/tools/tools-dialogs.js?v=83d27784e2" defer></script>
 <script src="/tools/tools-media-sharing.js?v=0c229c9353" defer></script>
@@ -543,6 +543,38 @@
     </div>
     <div id="swInfo"></div>
     <button class="secondary-btn" style="margin-top:12px;" onclick="clearServiceWorkerAndCaches()">Clear cache &amp; unregister</button>
+  </div>
+
+  <!-- Backup & Restore -- moved here from Settings (2026-09-22). A full
+       account-wide export/restore is an admin/dev-oriented capability
+       (Restore REPLACES everything on this device), not something a
+       regular Employee account needs -- Developer-only, matching every
+       other panel on this tab, not a one-off exception. Functionality is
+       unchanged from Settings: same ALL_SYNCED_KEYS list, same backup file
+       shape, same confirm text. -->
+  <div class="dev-panel dev-owner-hidden dev-panel-wide" id="backup">
+    <div class="dev-panel-heading">
+      <h2>Backup &amp; restore</h2>
+      <button class="dev-info-bubble" onclick="openDevInfo('backup')" aria-label="What does this do?" title="What does this do?">?</button>
+    </div>
+    <p class="tool-sub">A full export of every job, invoice, expense, contact, and note stored on this account -- the same backup used to restore onto a new device if needed. Independent of cloud sync entirely.</p>
+    <div class="dev-check-row">
+      <div>
+        <div>Download a full backup</div>
+        <div class="dev-check-detail">Saves everything as one JSON file.</div>
+      </div>
+      <button class="secondary-btn" onclick="downloadBackup()">Download backup</button>
+    </div>
+    <div class="dev-check-row">
+      <div>
+        <div>Restore from a backup file</div>
+        <div class="dev-check-detail">Replaces the data on this device with the file's contents, then syncs it to the cloud.</div>
+      </div>
+      <label class="secondary-btn" style="display:inline-flex; align-items:center; cursor:pointer;">
+        Restore
+        <input type="file" accept="application/json" onchange="restoreBackup(event)" style="display:none;">
+      </label>
+    </div>
   </div>
 
   </div>
@@ -1109,6 +1141,64 @@
     const result = await pullSync();
     showToast(result.ok ? 'Pulled.' : 'Pull failed: ' + result.error, { type: result.ok ? undefined : 'error' });
     renderSessionInfo();
+  }
+
+  // ---------- Backup & Restore (moved here from Settings, 2026-09-22) ----------
+  // A full account-wide export/restore is an admin/dev-oriented capability,
+  // not something a regular Employee account needs day to day -- see the
+  // panel's own DEV_INFO entry (dev-tools-shared.js) for the full reasoning.
+  // This is a straight relocation, not a rewrite: the exact same key list,
+  // backup file shape, and restore/confirm behavior as before.
+  const ALL_SYNCED_KEYS = [
+    'th_tracker_jobs', 'th_tracker_contacts', 'th_tracker_notes_v2',
+    'th_expense_log', 'th_income_log', 'th_mileage_rate', 'th_price_reference', 'th_invoices',
+    'th_quotes', 'th_tax_rate', 'th_tax_labor', 'th_tax_parts', 'th_compliance', 'th_job_templates', 'th_contracts', 'th_setaside_rate',
+    'th_inventory',
+  ];
+
+  function downloadBackup() {
+    const backup = {};
+    ALL_SYNCED_KEYS.forEach(k => { backup[k] = localStorage.getItem(k); });
+    const blob = new Blob([JSON.stringify(backup, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'TripleH_Backup_' + new Date().toISOString().slice(0, 10) + '.json';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    if (typeof showToast === 'function') showToast('Backup downloaded.');
+  }
+
+  function restoreBackup(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = async function () {
+      let data;
+      try {
+        data = JSON.parse(reader.result);
+      } catch (e) {
+        await showAlert('That file is not valid backup JSON.');
+        event.target.value = '';
+        return;
+      }
+      const confirmed = await showConfirm(
+        'This will REPLACE all current data (jobs, expenses, invoices, quotes, contacts, notes, price reference) ' +
+        'with what\'s in this backup file, on this device. This cannot be undone. Continue?',
+        { danger: true, confirmText: 'Restore' }
+      );
+      if (!confirmed) { event.target.value = ''; return; }
+
+      ALL_SYNCED_KEYS.forEach(k => {
+        if (data[k] !== undefined && data[k] !== null) localStorage.setItem(k, data[k]);
+      });
+      if (typeof scheduleSync === 'function') scheduleSync();
+      event.target.value = '';
+      await showAlert('Backup restored. If you use Cloud Sync, this will push to the cloud shortly and become the new shared version on all devices.');
+    };
+    reader.readAsText(file);
   }
 
 
@@ -3382,6 +3472,14 @@
       renderStatusStrip();
       applyOwnerRestrictedView();
       initDevToolsTabs();
+      // Backup & Restore moved here from Settings (2026-09-22) -- an old
+      // #backup bookmark/link (Settings' own former section, or the
+      // Dashboard's #backup hop before that) should land directly on the
+      // panel, not just on the page.
+      if (window.location.hash === '#backup') {
+        switchDevToolsTab('session');
+        document.getElementById('backup')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }
     };
     // isDevAccount() depends on a real session already being loaded --
     // give initSyncOnLoad (which handles token refresh) a chance first,
@@ -3417,7 +3515,7 @@
       <p>Site diagnostics and maintenance utilities -- grouped into 6 tabs.</p>
       <p><strong>Health</strong> -- automated technical checks: Live consistency check, Data quality check, Appliance Wiki health, Client errors, Uptime monitoring, Advisor health, and Data integrity check. Entirely Developer-only; an Owner account doesn't see this tab at all.</p>
       <p><strong>Access</strong> -- Client registry and Account permissions. Fully visible to an Owner account -- this is where Steve lands, since Health (the only tab before it) is hidden for him.</p>
-      <p><strong>Session</strong> -- Session &amp; sync, Local data snapshot, Device info, and Service worker &amp; cache -- all about this specific device/browser, not the business data itself.</p>
+      <p><strong>Session</strong> -- Session &amp; sync, Local data snapshot, Device info, Service worker &amp; cache, and Backup &amp; restore (a full account-wide export/restore, moved here from Settings since it's an admin action, not a per-device diagnostic like the rest of this tab).</p>
       <p><strong>Notifications</strong> -- Push notification test and history, Known issues, and Flagged pages.</p>
       <p><strong>Deploy</strong> -- Deploy history, Regression checker, What's new, Quick links, Trigger workflows, and Storage browser.</p>
       <p><strong>Reports</strong> -- Booking funnel health, Lead response time, and Uptime trend, over rolling 8-week windows.</p>

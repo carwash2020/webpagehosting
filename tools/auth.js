@@ -831,6 +831,16 @@ async function mfaUnenroll(accessToken, factorId) {
 // actually scopes a call to "this account's own codes" -- there is no
 // caller-supplied user id anywhere in these calls to get wrong.
 
+// Real bug fix (2026-09-22): this used to collapse EVERY failure -- a real
+// database-side "not authenticated" error (e.g. from calling this
+// authenticated as the anon key, see getAuthToken()'s fallback and
+// ensureFreshToken() in settings.html's call sites), a malformed response, a
+// genuine RPC error -- into one generic, undiagnosable "Could not generate
+// recovery codes. Please try again." PostgREST returns an RPC's raised
+// exception as {message, details, hint, code} on the response body (not
+// error_description/msg, which is the GoTrue/Auth-endpoint shape used
+// elsewhere in this file) -- surfacing that mirrors what mfaUnenroll() above
+// already does correctly for its own (GoTrue-shaped) errors.
 async function generateRecoveryCodes(accessToken, count) {
   try {
     const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/generate_internal_recovery_codes`, {
@@ -839,7 +849,10 @@ async function generateRecoveryCodes(accessToken, count) {
       body: JSON.stringify({ p_count: count || 10 }),
     });
     const data = await res.json().catch(() => null);
-    if (!res.ok || !Array.isArray(data)) return { ok: false, error: 'Could not generate recovery codes. Please try again.' };
+    if (!res.ok) {
+      return { ok: false, error: (data && (data.message || data.error_description || data.msg)) || 'Could not generate recovery codes. Please try again.' };
+    }
+    if (!Array.isArray(data)) return { ok: false, error: 'Could not generate recovery codes -- the server returned an unexpected response. Please try again.' };
     return { ok: true, codes: data };
   } catch (e) {
     return { ok: false, error: 'Network error -- check your connection and try again.' };
@@ -854,13 +867,22 @@ async function verifyRecoveryCode(accessToken, code) {
       body: JSON.stringify({ p_code: code }),
     });
     const data = await res.json().catch(() => null);
-    if (!res.ok) return { ok: false, error: 'Could not check that recovery code. Please try again.' };
+    if (!res.ok) {
+      return { ok: false, error: (data && (data.message || data.error_description || data.msg)) || 'Could not check that recovery code. Please try again.' };
+    }
     return { ok: true, valid: data === true };
   } catch (e) {
     return { ok: false, error: 'Network error -- check your connection and try again.' };
   }
 }
 
+// Returns null on any failure (network, non-2xx, or an unexpected response
+// shape) -- callers show a plain "Could not check." status rather than a
+// count. Logs the real detail via logClientError() (2026-09-22, same gap as
+// generateRecoveryCodes()/verifyRecoveryCode() above) so a genuine failure
+// here is diagnosable in Client Errors/the console instead of a dead end --
+// unlike those two, nothing here surfaces a message directly in the UI, so
+// there's no return-value shape change, just real logging on the failure path.
 async function countRemainingRecoveryCodes(accessToken) {
   try {
     const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/count_unused_internal_recovery_codes`, {
@@ -869,7 +891,15 @@ async function countRemainingRecoveryCodes(accessToken) {
       body: JSON.stringify({}),
     });
     const data = await res.json().catch(() => null);
-    if (!res.ok || typeof data !== 'number') return null;
+    if (!res.ok || typeof data !== 'number') {
+      if (typeof logClientError === 'function') {
+        logClientError(
+          `countRemainingRecoveryCodes(): HTTP ${res.status} -- ${(data && (data.message || data.error_description || data.msg)) || 'unexpected response shape'}`,
+          'auth.js', null, null, null
+        );
+      }
+      return null;
+    }
     return data;
   } catch (e) {
     return null;

@@ -52,6 +52,10 @@
       title: 'Service worker & cache',
       body: `<p>Shows whether a service worker is actually registered on this device, its current state, what's in Cache Storage, and roughly how much space it's using.</p><p>"Clear cache & unregister" wipes all of it and reloads a clean slate -- the same thing Chrome's own DevTools "Clear Storage" button does. Useful when something looks stale or behaves differently after a real update, since a leftover cached file is a common cause of that.</p>`,
     },
+    backup: {
+      title: 'Backup & restore',
+      body: `<p>A full export of every job, invoice, expense, contact, note, quote, and everything else stored on this account -- one JSON file, independent of cloud sync entirely.</p><p>Moved here from Settings (2026-09-22) -- a full account-wide export/restore is a real, destructive-capable admin action (Restore REPLACES everything currently on this device), not something a regular Employee account needs day to day. Developer-only, same tier as the other data-management panels on this tab, matching this page's existing Owner-sees-Access-tab-only convention rather than a special one-off exception.</p><p>"Download backup" saves everything as one timestamped file. "Restore from a backup file" replaces the data on THIS device with the file's contents, then syncs it to the cloud -- confirmed before it runs, since it can't be undone.</p>`,
+    },
     clienterrors: {
       title: 'Client errors',
       body: `<p>The last 20 JavaScript errors that happened on ANY tool page, on either device, captured automatically in the background (no action needed to log them). Shows the error message, which page it happened on, who was on it, and when.</p><p>Synced across devices -- an error on Steve's phone shows up here on Connor's device too, once the next sync happens.</p>`,

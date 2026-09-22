@@ -529,4 +529,132 @@ item 3) said so explicitly rather than silently dropping it.
   the recovery-code login path will fail closed (a network/RPC error,
   never a false "valid") since the functions won't exist yet.
 
+## 2026-09-22 (later the same day): "Could not generate recovery codes. Please try again." -- expired-token gap in the Settings-page MFA handlers
+
+Diagnosed root cause, confirmed by reading the code before touching
+anything (not re-derived from scratch): `getAuthToken()` in `tools/auth.js`
+falls back to sending the Supabase **anon key** as the bearer token
+whenever `hasValidSession()` returns false -- it does NOT refresh first.
+`tools/settings.html`'s MFA/recovery-code handlers all called
+`getAuthToken()` directly, with no `await ensureFreshToken()` first --
+unlike `loadCurrentUserRole()` elsewhere in `auth.js`, which already does
+this for the identical reason (see its own 2026-08-16 comment). Net
+effect: if the stored access token had expired since Settings loaded
+(normal after enough time on the page), every recovery-code RPC went out
+authenticated as anon, `auth.uid()` resolved to null inside the
+`SECURITY DEFINER` function, it raised "not authenticated", PostgREST
+returned a non-ok response, and `generateRecoveryCodes()`'s generic
+catch-all error message covered up what had actually gone wrong.
+
+**Audited the whole MFA section, not just the obviously-named
+handlers** -- found the same missing-refresh pattern in six places, not
+two: `renderMfaSettingsCard()`, `handleStartMfaEnrollSettings()`,
+`handleVerifyMfaEnrollSettings()`, `handleCancelMfaEnrollSettings()`
+(which also had to become `async` -- it was a bare synchronous function
+calling `getAuthToken()` directly), `handleDisableMfaSettings()`, and
+`handleRegenerateRecoveryCodes()` (the one actually named in the bug
+report). Fixed by adding `await ensureFreshToken();` before the first
+`getAuthToken()` call in each.
+
+**Separately fixed the error-swallowing itself**, since a generic
+fallback message is what made this bug a dead end to diagnose in the
+first place: `generateRecoveryCodes()` and `verifyRecoveryCode()` in
+`auth.js` now surface `data.message || data.error_description || data.msg`
+(PostgREST's RPC error shape is `{message, details, hint, code}`, a
+different shape than the GoTrue/Auth-endpoint `{error_description, msg}`
+shape `mfaUnenroll()` a few lines above already handles correctly --
+both are now checked). `countRemainingRecoveryCodes()` doesn't surface a
+message to the UI by design (its caller only ever shows a plain "Could
+not check." on any failure), so instead of changing its return shape it
+now logs the real detail via `logClientError()` on failure, so a genuine
+problem there is diagnosable in Client Errors/the console next time
+instead of a silent `null`. `deleteRecoveryCodes()` was left untouched --
+it's deliberately best-effort per its own existing comment (called when
+turning MFA off; never blocks that flow on its own success), so there's
+no caller-visible message to fix.
+
+**New test**, `tests/tools/mfa-recovery-token-refresh.test.js`: a static
+check that all six Settings-page MFA handlers await `ensureFreshToken()`
+before their first `getAuthToken()` call (and that
+`handleCancelMfaEnrollSettings` is actually `async`), plus a runtime
+check (via the same `vm.createContext` + extracted-function-body
+technique this repo's `realtime-retry-resilience.test.js` already uses)
+that `generateRecoveryCodes()`/`verifyRecoveryCode()` surface the real
+PostgREST error message on a mocked failure response instead of only
+ever the generic fallback, while still succeeding normally on a real
+2xx response. One real snag while writing it: the extraction helper's
+first version stripped a leading `async` off `async function
+generateRecoveryCodes(...)`, since a bare `indexOf('function NAME(')`
+lands right after it -- silently turning every `await` inside the
+extracted body into a syntax error when run standalone. Fixed by
+checking for and including a leading `async ` before the match.
+
+**Verified live in headless Chromium** (Playwright, served over
+`python3 -m http.server`, never `file://`, every Supabase call mocked --
+this sandbox cannot reach `*.supabase.co`): a stored session shaped so
+`hasValidSession()` returns false (an `expires_at` an hour in the past)
+but with a real `refresh_token` present, with the refresh endpoint
+mocked to succeed -- "Generate new codes" now correctly refreshes first
+and succeeds, where before this fix it would have gone out as anon and
+failed. Separately, mocked a genuine RPC failure (`401` with
+`{message: 'not authenticated'}`) and confirmed the real error text now
+surfaces in `#mfaSettingsMsg` instead of the old generic fallback.
+
+## 2026-09-22 (same day, later still): the token-refresh fix above wasn't the actual bug -- pgcrypto lives in `extensions`, not `public`
+
+The owner tested "Generate new codes" live right after the fix above
+shipped (still on an unmerged branch, not yet deployed) and reported
+the exact same error. Rather than assume it was just a not-yet-deployed
+situation, checked directly against the live database first -- and
+found a real, second, independent bug: simulating an authenticated call
+to `generate_internal_recovery_codes()` (`set local role authenticated;
+set local request.jwt.claims = '{"sub":"...")`) reproduced `ERROR:
+function gen_random_bytes(integer) does not exist` immediately.
+
+Both `generate_internal_recovery_codes()` and
+`verify_and_consume_internal_recovery_code()` declare `set search_path
+= public`. `create extension if not exists pgcrypto;` installs it into
+the `extensions` schema on this project -- confirmed directly
+(`select ... from pg_extension e join pg_namespace n ...`) --
+Supabase's own standard convention, not `public`. A `SECURITY DEFINER`
+function's `search_path` completely replaces the caller's own (the
+entire point of setting one explicitly, to block a search-path-hijack
+attack), so `extensions` was never reachable from inside either
+function. This has been broken since the feature's original migration
+was applied -- the token-refresh bug was real and worth fixing, but the
+RPC was never actually going to succeed either way, since it would fail
+on `gen_random_bytes` the moment a request DID reach the database
+authenticated.
+
+**Fixed live via the Supabase MCP tools** (with the owner's
+authorization, same basis as the original migration's own live
+application) and captured in
+`sql/security/fix_internal_mfa_recovery_codes_search_path.sql` --
+`set search_path = public, extensions` on both affected functions.
+`count_unused_internal_recovery_codes()`/
+`delete_internal_recovery_codes()` call no pgcrypto function and were
+correctly left untouched -- confirmed by reading each function's body,
+not assumed. Followed this project's own established convention (per
+`resync_cron_service_role_key.sql`) of fixing a previously-applied
+migration with a new file, not editing the original in place.
+
+**Verified directly against the live database, both directions**:
+reproduced the exact pre-fix error, then confirmed
+`generate_internal_recovery_codes(3)` returns real codes post-fix and
+`verify_and_consume_internal_recovery_code()` correctly accepts one of
+them, then deleted the test rows (`delete from
+internal_mfa_recovery_codes where user_id = ...`) so no stray live data
+was left in the real table from this verification.
+
+**New regression test** in `tests/tools/internal-mfa.test.js`: asserts
+both functions' `search_path` in the fix file includes `extensions`,
+that the exact original-bug shape (`search_path = public;` alone)
+doesn't reappear, and that the two unaffected functions weren't
+needlessly redefined.
+
+**Lesson for next time a live-only report contradicts a just-shipped
+fix**: don't assume "not deployed yet" explains it away -- check the
+live system directly first. A code fix and a live-only bug can coexist
+in the same feature, and this one did.
+
 <!-- Add new entries above this line -->

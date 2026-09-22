@@ -1208,16 +1208,20 @@ test('the compliance status badge moved with its own section (same element id, j
   assert.match(complianceSection[0], /id="complianceHeadingBadge"/);
 });
 
-test('the #backup deep-link now hands off to Settings, where Backup & Restore lives (moved 2026-09-21); the old drawer and its expandSection call are gone', () => {
+test('the #backup deep-link now hands off to Dev Tools, where Backup & Restore lives (moved to Settings 2026-09-21, then to Dev Tools 2026-09-22 as an admin/dev capability); the old drawer and its expandSection call are gone', () => {
   const src = fs.readFileSync(path.join(__dirname, '..', '..', 'tools', 'workspace.html'), 'utf8');
   const handler = src.match(/if \(window\.location\.hash === '#backup'\) \{[\s\S]*?\n    \}/);
   assert.ok(handler, '#backup handler not found');
-  assert.match(handler[0], /location\.replace\('\/tools\/settings\.html#backup'\)/);
+  assert.match(handler[0], /location\.replace\('\/tools\/dev-tools\.html#backup'\)/);
   assert.doesNotMatch(handler[0], /expandSection\('backup'\)|activateBusinessHealthTab/);
   const settings = fs.readFileSync(path.join(__dirname, '..', '..', 'tools', 'settings.html'), 'utf8');
-  assert.match(settings, /<div class="settings-section" id="backup">/);
-  assert.match(settings, /onclick="downloadBackup\(\)"/);
-  assert.match(settings, /onchange="restoreBackup\(event\)"/);
+  assert.doesNotMatch(settings, /<div class="settings-section" id="backup">/, 'Your Data should no longer live in Settings');
+  assert.doesNotMatch(settings, /onclick="downloadBackup\(\)"/);
+  assert.doesNotMatch(settings, /onchange="restoreBackup\(event\)"/);
+  const devTools = fs.readFileSync(path.join(__dirname, '..', '..', 'tools', 'dev-tools.html'), 'utf8');
+  assert.match(devTools, /id="backup"/);
+  assert.match(devTools, /onclick="downloadBackup\(\)"/);
+  assert.match(devTools, /onchange="restoreBackup\(event\)"/);
 });
 
 test('the jump-nav no longer points at the removed combined section', () => {
