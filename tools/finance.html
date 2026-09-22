@@ -52,16 +52,16 @@
   })();
 </script>
 <link rel="stylesheet" href="/styles.css?v=2e81706c3d">
-<link rel="stylesheet" href="/tools/styles-tools.css?v=f4eba25dcc">
+<link rel="stylesheet" href="/tools/styles-tools.css?v=e9113fb127">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.112.3/dist/umd/supabase.js" integrity="sha384-qafw21c/iciq0VXsi9FzkfoQv5I/V0iqE4lSNcKXPnW9/UTJLnv5CcN4FHxVLnKg" crossorigin="anonymous" defer></script>
 <script src="/tools/sync.js?v=4cfac4b10e" defer></script>
 <script src="/tools/data-layer.js?v=0eeb0b02fa" defer></script>
 <script src="/tools/tools-effects.js?v=a767167574" defer></script>
 <script src="/tools/tools-dialogs.js?v=33199ae1d8" defer></script>
 <script src="/tools/tools-media-sharing.js?v=0c229c9353" defer></script>
-<script src="/tools/tools-nav-pwa.js?v=4d9f8c89e1" defer></script>
-<script src="/tools/tools-command-palette.js?v=3aaed2827f" defer></script>
-<script src="/tools/tools-tour.js?v=1b7db99b1d" defer></script>
+<script src="/tools/tools-nav-pwa.js?v=686999ec0f" defer></script>
+<script src="/tools/tools-command-palette.js?v=b37229c7b6" defer></script>
+<script src="/tools/tools-tour.js?v=18e0421913" defer></script>
 <style>
   /* Cross-document view transitions (2026-09-21) -- same pattern
      already proven in portal/*.html: keeps the old page's visual
@@ -1582,6 +1582,25 @@
       // "+" link next to its Expenses section, both landing here with
       // #expenses already, so this only needs to fill in the job
       // dropdown itself, not also handle tab-switching.
+      // Quick add (2026-09-22, Workspace rework part 7): "expense $48 Home
+      // Depot drain pump for Bill" links here as ?amount= &vendor= &desc=
+      // (&date= &job=)#expenses. Fills the blanks and opens the form at the
+      // receipt photo, which it still requires.
+      const qaParams = new URLSearchParams(location.search);
+      if (initialHash === 'expenses' && ['amount', 'vendor', 'desc', 'date'].some(k => qaParams.get(k))) {
+        const fillIfBlank = (id, value) => { const el = document.getElementById(id); if (el && value && !String(el.value || '').trim()) el.value = value; };
+        const amount = parseFloat(qaParams.get('amount'));
+        if (!isNaN(amount)) fillIfBlank('entryAmount', String(amount));
+        fillIfBlank('entryVendor', qaParams.get('vendor'));
+        fillIfBlank('entryDesc', qaParams.get('desc'));
+        const qaDate = qaParams.get('date');
+        const dateEl = document.getElementById('entryDate');
+        if (dateEl && qaDate && /^\d{4}-\d{2}-\d{2}$/.test(qaDate)) dateEl.value = qaDate;
+        if (typeof toggleFormSection === 'function') toggleFormSection('expenseFormSection', true);
+        const receiptEl = document.getElementById('entryReceipt');
+        if (receiptEl) setTimeout(() => receiptEl.scrollIntoView({ behavior: 'smooth', block: 'center' }), 60);
+      }
+
       const presetJobId = new URLSearchParams(location.search).get('job');
       if (presetJobId) {
         const entryJobRefEl = document.getElementById('entryJobRef');

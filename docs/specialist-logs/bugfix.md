@@ -868,3 +868,20 @@ Tests: `tests/tools/job-money-pipeline.test.js`.
 
 Tests: `tests/tools/invoice-from-job.test.js` (a quote mark survives a
 round trip through a row; the `step` attribute).
+
+## 2026-09-22 -- ?jobRef= stripped the whole query string; N after closing search (Workspace rework part 7)
+
+- **`?jobRef=` wiped the rest of the URL.** invoice-generator.html's
+  `applyJobRefFromUrl()` ended with
+  `history.replaceState(null, '', pathname + hash)`, which drops *every*
+  query parameter, not just the one it had used. `?client=` and
+  quick add's `?item=` / `?price=` on the same link were gone before
+  their readers ran. Found when "invoice sarah $150 dishwasher repair"
+  arrived with the job but no line. It now deletes `jobRef` from a
+  URLSearchParams copy and keeps the rest.
+- **N did nothing right after closing search.** `closePalette()` hid the
+  overlay but left focus in its (now invisible) input, so the next N
+  keypress was treated as typing and ignored. It now blurs anything
+  focused inside the overlay.
+
+Tests: `tests/tools/quick-add.test.js`.

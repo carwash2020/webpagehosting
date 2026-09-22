@@ -3753,3 +3753,60 @@ Verified in a real headless Chromium (local HTTP, fake Supabase):
 - No console errors.
 
 New tests: `tests/tools/invoice-from-job.test.js` (9).
+
+## What changed, 2026-09-22 (later still) -- Workspace rework, part 7: quick add, by typing or talking
+
+Part 7 of the Workspace rework. Full reasoning in
+`docs/specialist-logs/features.md`.
+
+**Say it the way you'd text it.** The Create sheet (the orange **+**, or
+**N** on a computer) now leads with one field and a microphone. As you
+type or talk, a preview card shows what it understood; **Enter** or the
+button opens that page's own form filled in. You check it and save it
+there, exactly as before.
+- **"Sink leak for Sarah tomorrow 2pm"** → a new job: title *Sink leak*,
+  client *Sarah Miller* (a known client, so her phone and address come
+  along), due tomorrow, "Time: 2:00 PM" in the notes.
+- **"Replace garbage disposal at 88 Sunset Blvd for Tom Friday at
+  2:30"** → address, client, the coming Friday, and 2:30 PM.
+- **"urgent water heater leaking 435-555-0199 for Jen Park"** → high
+  priority, the phone number, and a new client name.
+- **"invoice sarah $150 dishwasher repair"** → the invoice form with
+  Sarah, a first line of *Dishwasher repair* at $150, and her matching
+  job linked. Part 6's From this job panel then offers the rest.
+- **"quote Dave Carter drywall patch 420 next tuesday"** → the quote
+  form.
+- **"expense $48.12 Home Depot drain pump for Bill"** → Finance's
+  expense form with the amount, vendor, description and Bill's job,
+  opened at the receipt photo it still requires.
+
+It understands:
+- **Dates:** today, tomorrow, weekday names, next Friday, in 2 weeks,
+  9/30, Sep 30.
+- **Times, phone numbers, street addresses, amounts,** and urgent / ASAP.
+- **Clients:** known clients by full or first name (only when the first
+  name is unambiguous and plainly a name, so "will need parts" isn't
+  "Will Parker"), and new names after "for".
+
+On a phone the words appear while you talk, and the preview builds
+itself. Search (**Ctrl+K**, or the magnifier) offers the same thing as
+its top result when what you typed reads like something to create, not
+a name search.
+
+**Fixed along the way:**
+- Opening an invoice from `?jobRef=` stripped the *whole* query string,
+  so any other parameter on the same link was gone before anything read
+  it. It now removes only `jobRef`.
+- Closing search left focus in its hidden input, so pressing **N** right
+  after did nothing.
+
+Verified in a real headless Chromium (local HTTP, fake Supabase):
+- 390px: the preview for each example.
+- Enter, or the button, lands on the Jobs form (title, client, phone
+  and address from the registry, date, time), the invoice form (client,
+  line, price, job), the quote form, and the expense form (amount,
+  vendor, description, job, form open).
+- 1440px: the search suggestion; N opens Create focused on the field.
+- No console errors.
+
+New tests: `tests/tools/quick-add.test.js` (12).

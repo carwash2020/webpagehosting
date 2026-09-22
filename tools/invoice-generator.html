@@ -52,7 +52,7 @@
   })();
 </script>
 <link rel="stylesheet" href="/styles.css?v=2e81706c3d">
-<link rel="stylesheet" href="/tools/styles-tools.css?v=f4eba25dcc">
+<link rel="stylesheet" href="/tools/styles-tools.css?v=e9113fb127">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.112.3/dist/umd/supabase.js" integrity="sha384-qafw21c/iciq0VXsi9FzkfoQv5I/V0iqE4lSNcKXPnW9/UTJLnv5CcN4FHxVLnKg" crossorigin="anonymous" defer></script>
 <script src="/tools/sync.js?v=4cfac4b10e" defer></script>
 <script src="/tools/data-layer.js?v=0eeb0b02fa" defer></script>
@@ -60,9 +60,9 @@
 <script src="/tools/tools-dialogs.js?v=33199ae1d8" defer></script>
 <script src="/signature-pad.js?v=f95f8e1d28" defer></script>
 <script src="/tools/tools-media-sharing.js?v=0c229c9353" defer></script>
-<script src="/tools/tools-nav-pwa.js?v=4d9f8c89e1" defer></script>
-<script src="/tools/tools-command-palette.js?v=3aaed2827f" defer></script>
-<script src="/tools/tools-tour.js?v=1b7db99b1d" defer></script>
+<script src="/tools/tools-nav-pwa.js?v=686999ec0f" defer></script>
+<script src="/tools/tools-command-palette.js?v=b37229c7b6" defer></script>
+<script src="/tools/tools-tour.js?v=18e0421913" defer></script>
 <!-- U15/W18 fix (High-Impact Upgrades, Master Audit, 2026-09-08): the
      masthead/footer/totals-block drawing code below moved into this
      shared file, now also used by job-detail.html's job sheet and
@@ -1070,7 +1070,7 @@
   // Read before applyJobRefFromUrl()/applyClientFromUrl() strip them.
   function genTabFromQuery() {
     const params = new URLSearchParams(window.location.search);
-    return (params.get('jobRef') || params.get('client')) ? 'invoice' : null;
+    return (params.get('jobRef') || params.get('client') || params.get('item') || params.get('price')) ? 'invoice' : null;
   }
   function applyGenTabFromHash() {
     const tab = (window.location.hash || '').replace('#', '');
@@ -2847,8 +2847,13 @@
     if (typeof renderJobFillPanel === 'function') renderJobFillPanel();
     // Strips ?jobRef= once applied so refreshing, bookmarking, or
     // hitting "New Invoice"/reset later doesn't keep re-applying a job
-    // that may since have changed or been deleted.
-    history.replaceState(null, '', window.location.pathname + window.location.hash);
+    // that may since have changed or been deleted. Only ?jobRef= (2026-09-22):
+    // this used to drop the whole query string, so a quick-add link's
+    // ?client= / ?item= / ?price= were gone before anything read them.
+    const keep = new URLSearchParams(window.location.search);
+    keep.delete('jobRef');
+    const rest = keep.toString();
+    history.replaceState(null, '', window.location.pathname + (rest ? '?' + rest : '') + window.location.hash);
   }
 
   // "Invoice <client>" / "Quote <client>" (2026-09-22, Workspace rework
@@ -2868,6 +2873,32 @@
       if (isQuote) autofillQuoteClient(); else autofillFromContact('clientName', 'contact-1');
     }
     params.delete('client');
+    const rest = params.toString();
+    history.replaceState(null, '', window.location.pathname + (rest ? '?' + rest : '') + window.location.hash);
+  }
+
+  // Quick add (2026-09-22, Workspace rework part 7): "invoice sarah $150
+  // dishwasher repair" links here as ?client=Sarah Miller&item=Dishwasher
+  // repair&price=150#invoice (or #quote). The item and price become the
+  // first line of whichever form the hash opens; the item replaces a
+  // description this page filled in itself a moment ago (a ?jobRef= job
+  // title), the price only fills a blank. Stripped once applied.
+  function applyQuickLineFromUrl() {
+    const params = new URLSearchParams(window.location.search);
+    const item = params.get('item');
+    const price = params.get('price');
+    if (item === null && price === null) return;
+    const isQuote = window.location.hash === '#quote';
+    const row = document.querySelector(isQuote ? '#quoteLineItemsBody tr' : '#lineItemsBody tr');
+    if (row) {
+      const descEl = row.querySelector(isQuote ? '.qli-desc' : '.li-desc');
+      const priceEl = row.querySelector(isQuote ? '.qli-price' : '.li-price');
+      if (descEl && item) descEl.value = item;
+      if (priceEl && price && !priceEl.value && !isNaN(parseFloat(price))) priceEl.value = String(parseFloat(price));
+      if (isQuote) { if (typeof recalcQuote === 'function') recalcQuote(); } else if (typeof recalc === 'function') recalc();
+    }
+    params.delete('item');
+    params.delete('price');
     const rest = params.toString();
     history.replaceState(null, '', window.location.pathname + (rest ? '?' + rest : '') + window.location.hash);
   }
@@ -3000,6 +3031,7 @@
     window.addEventListener('hashchange', applyGenTabFromHash);
     addQuoteLineItem();
     recalcQuote();
+    applyQuickLineFromUrl(); // after the quote's starter row exists
     initAppTour();
     populateKnownContactsList();
     populatePriceRefPickers();

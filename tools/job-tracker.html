@@ -52,16 +52,16 @@
   })();
 </script>
 <link rel="stylesheet" href="/styles.css?v=2e81706c3d">
-<link rel="stylesheet" href="/tools/styles-tools.css?v=f4eba25dcc">
+<link rel="stylesheet" href="/tools/styles-tools.css?v=e9113fb127">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.112.3/dist/umd/supabase.js" integrity="sha384-qafw21c/iciq0VXsi9FzkfoQv5I/V0iqE4lSNcKXPnW9/UTJLnv5CcN4FHxVLnKg" crossorigin="anonymous" defer></script>
 <script src="/tools/sync.js?v=4cfac4b10e" defer></script>
 <script src="/tools/data-layer.js?v=0eeb0b02fa" defer></script>
 <script src="/tools/tools-effects.js?v=a767167574" defer></script>
 <script src="/tools/tools-dialogs.js?v=33199ae1d8" defer></script>
 <script src="/tools/tools-media-sharing.js?v=0c229c9353" defer></script>
-<script src="/tools/tools-nav-pwa.js?v=4d9f8c89e1" defer></script>
-<script src="/tools/tools-command-palette.js?v=3aaed2827f" defer></script>
-<script src="/tools/tools-tour.js?v=1b7db99b1d" defer></script>
+<script src="/tools/tools-nav-pwa.js?v=686999ec0f" defer></script>
+<script src="/tools/tools-command-palette.js?v=b37229c7b6" defer></script>
+<script src="/tools/tools-tour.js?v=18e0421913" defer></script>
 <style>
   /* Cross-document view transitions (2026-09-21) -- same pattern
      already proven in portal/*.html: keeps the old page's visual
@@ -1042,18 +1042,60 @@
   // registry autofill a typed name gets, their phone and address -- only
   // while the field is still empty, then drops the param so a refresh
   // doesn't re-apply it (same as invoice-generator.html's ?jobRef=).
+  // Quick add (2026-09-22, Workspace rework part 7) links here with the
+  // rest of the job too -- ?title= &date= &phone= &address= &priority=
+  // &notes= (a time said aloud) and ?qa=1. They fill only blank fields and
+  // go before the client autofill, so a phone or address said in the
+  // sentence wins over the one on file; all of them are stripped once used.
+  function applyQuickAddFields(params) {
+    const fill = (key, id) => {
+      const v = params.get(key);
+      if (v === null) return false;
+      params.delete(key);
+      const el = document.getElementById(id);
+      if (el && v && !String(el.value || '').trim()) el.value = v;
+      return true;
+    };
+    let used = fill('title', 'jobTitle');
+    used = fill('phone', 'jobPhone') || used;
+    used = fill('address', 'jobAddress') || used;
+    used = fill('notes', 'jobNotes') || used;
+    const date = params.get('date');
+    if (date !== null) {
+      params.delete('date');
+      const el = document.getElementById('jobDate');
+      if (el && /^\d{4}-\d{2}-\d{2}$/.test(date) && !el.value) el.value = date;
+      used = true;
+    }
+    const priority = params.get('priority');
+    if (priority !== null) {
+      params.delete('priority');
+      const el = document.getElementById('jobPriority');
+      if (el && ['high', 'medium', 'low'].includes(priority)) el.value = priority;
+      used = true;
+    }
+    if (params.get('qa') !== null) { params.delete('qa'); used = true; }
+    return used;
+  }
+
   function applyPresetClientFromUrl() {
     const params = new URLSearchParams(location.search);
+    const fromQuickAdd = params.get('qa') !== null;
+    let changed = applyQuickAddFields(params);
     const name = params.get('client');
-    if (!name) return;
-    const field = document.getElementById('jobClient');
-    if (field && !field.value.trim()) {
-      field.value = name;
-      autofillJobClient();
+    if (name) {
+      const field = document.getElementById('jobClient');
+      if (field && !field.value.trim()) {
+        field.value = name;
+        autofillJobClient();
+      }
+      params.delete('client');
+      changed = true;
     }
-    params.delete('client');
+    if (!changed) return;
     const rest = params.toString();
     history.replaceState(null, '', location.pathname + (rest ? '?' + rest : '') + location.hash);
+    if (fromQuickAdd && typeof showToast === 'function') showToast('Filled in from quick add — check it, then Add Job.', { duration: 3200 });
   }
 
   // Referral program (direct request, 2026-09-09): there's no way to
