@@ -3707,6 +3707,110 @@ Chromium at phone and desktop widths. New tests:
 `docs/specialist-logs/features.md` and `visual.md` (2026-09-22 entries),
 `docs/CLIENT-PORTAL.md` (Database section).
 
+## What changed, 2026-09-22 (later still) -- Workspace rework, part 6: the invoice writes itself from the job
+
+Part 6 of the Workspace rework. Full reasoning in
+`docs/specialist-logs/features.md`.
+
+**From this job.** Open an invoice from a job and a panel above the
+line items offers everything already logged against it, as
+ready-to-bill lines. That covers the job's Create invoice, Ready to
+invoice on the Dashboard, the Job done sheet, or picking the job in the
+form.
+- **Labor.** The hours on the job at your last labor rate. If no hours
+  were logged (most jobs), the line asks "How long did it take?" with an
+  hours box, plus a rate box the first time. Typing the hours ticks it.
+- **Parts.** One line per receipt logged against the job in Finance, at
+  cost (add your markup in the price), with the part number when there
+  is one.
+- **Mileage.** All the job's logged miles on one line, at your last
+  billing rate, untaxed like **+ Add Mileage**.
+- **An unbilled quote.** If the client has one for this job, **Bill the
+  quote** comes first. It copies the quote's lines and discount and
+  links the quote, so saving the invoice marks the quote converted, the
+  same as Convert to Invoice. The logged lines are still there, unticked,
+  as the alternative.
+
+Nothing goes in until **Add**. The untouched starter row is replaced
+(anything typed by hand is left alone), every line stays an ordinary
+editable row, and **Undo** puts the form back as it was: rows, discount,
+quote link. **Not now** hides the panel for that job.
+
+**Fixed along the way:** invoice and quote rows put a line's description
+and part number into `value="..."` unescaped. A saved job type, a quote
+line, or now a receipt with a quote mark in it broke out of the
+attribute. Quantity inputs also took whole numbers only (`step="1"`), so
+2.5 hours or 14.3 miles showed as invalid; they now take any decimal.
+
+Verified in a real headless Chromium (local HTTP, fake Supabase):
+- 390px (dark and light) and 1440px: a job with hours, two receipts,
+  and mileage adds 4 lines ($251.49), and Undo restores the form.
+- A job with an unbilled quote copies its lines and $20 discount and
+  sets the quote link.
+- A job with nothing logged asks for hours and a rate, bills 1.5 h ×
+  $85, and remembers the $85.
+- A fuel receipt not linked to the job stays out.
+- No console errors.
+
+New tests: `tests/tools/invoice-from-job.test.js` (9).
+
+## What changed, 2026-09-22 (later still) -- Workspace rework, part 7: quick add, by typing or talking
+
+Part 7 of the Workspace rework. Full reasoning in
+`docs/specialist-logs/features.md`.
+
+**Say it the way you'd text it.** The Create sheet (the orange **+**, or
+**N** on a computer) now leads with one field and a microphone. As you
+type or talk, a preview card shows what it understood; **Enter** or the
+button opens that page's own form filled in. You check it and save it
+there, exactly as before.
+- **"Sink leak for Sarah tomorrow 2pm"** → a new job: title *Sink leak*,
+  client *Sarah Miller* (a known client, so her phone and address come
+  along), due tomorrow, "Time: 2:00 PM" in the notes.
+- **"Replace garbage disposal at 88 Sunset Blvd for Tom Friday at
+  2:30"** → address, client, the coming Friday, and 2:30 PM.
+- **"urgent water heater leaking 435-555-0199 for Jen Park"** → high
+  priority, the phone number, and a new client name.
+- **"invoice sarah $150 dishwasher repair"** → the invoice form with
+  Sarah, a first line of *Dishwasher repair* at $150, and her matching
+  job linked. Part 6's From this job panel then offers the rest.
+- **"quote Dave Carter drywall patch 420 next tuesday"** → the quote
+  form.
+- **"expense $48.12 Home Depot drain pump for Bill"** → Finance's
+  expense form with the amount, vendor, description and Bill's job,
+  opened at the receipt photo it still requires.
+
+It understands:
+- **Dates:** today, tomorrow, weekday names, next Friday, in 2 weeks,
+  9/30, Sep 30.
+- **Times, phone numbers, street addresses, amounts,** and urgent / ASAP.
+- **Clients:** known clients by full or first name (only when the first
+  name is unambiguous and plainly a name, so "will need parts" isn't
+  "Will Parker"), and new names after "for".
+
+On a phone the words appear while you talk, and the preview builds
+itself. Search (**Ctrl+K**, or the magnifier) offers the same thing as
+its top result when what you typed reads like something to create, not
+a name search.
+
+**Fixed along the way:**
+- Opening an invoice from `?jobRef=` stripped the *whole* query string,
+  so any other parameter on the same link was gone before anything read
+  it. It now removes only `jobRef`.
+- Closing search left focus in its hidden input, so pressing **N** right
+  after did nothing.
+
+Verified in a real headless Chromium (local HTTP, fake Supabase):
+- 390px: the preview for each example.
+- Enter, or the button, lands on the Jobs form (title, client, phone
+  and address from the registry, date, time), the invoice form (client,
+  line, price, job), the quote form, and the expense form (amount,
+  vendor, description, job, form open).
+- 1440px: the search suggestion; N opens Create focused on the field.
+- No console errors.
+
+New tests: `tests/tools/quick-add.test.js` (12).
+
 ## What changed, 2026-09-22 (later still) -- Client portal: a real desktop layout, and Settings you can take in at a glance
 
 Both asked for directly: "The computer version looks like your looking

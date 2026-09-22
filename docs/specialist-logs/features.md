@@ -2023,6 +2023,127 @@ all four scope every read/write by `auth.uid()`, which is null for anon,
 so they act on nobody -- a revoke-from-anon hygiene item for the
 security lane, not an exposure.
 
+## 2026-09-22 (later still) -- Workspace rework, part 6: From this job
+
+**Why.** Part 5 routes every finished job to "Create invoice". That's
+only a win if the invoice isn't retyped from memory. Everything needed
+is already recorded:
+- hours on the job (`hoursWorked`, when set);
+- receipts logged in Finance with its `jobRefId` (`th_expense_log`,
+  type `expense`);
+- mileage entries (type `mileage`, `miles`);
+- often a quote the client already agreed to (`th_quotes`, `jobRefId`,
+  with `line_items` saved since 2026-09-06).
+
+**`jobBillables(job, expenses, quotes, rates)`** is a pure function
+(tested by extraction):
+- **Labor** = hours × the remembered labor rate (`th_invoice_labor_rate`).
+  If hours weren't logged it's still offered, as a line that asks for
+  them (`needsHours`).
+- **One part line per receipt**, at cost, oldest first, rounded to the
+  cent, with its part number.
+- **One Mileage line** summing all the job's miles, at the remembered
+  billing rate (`th_invoice_mileage_rate`, not Finance's cost-per-mile),
+  untaxed.
+- **The newest quote** for the job that isn't converted and has line
+  items.
+
+**Offer, don't insert.** The panel adds nothing until Add. Reasons:
+parts at cost may need markup, a receipt may not be billable, and the
+quote may already cover the parts. So with a quote on offer, the logged
+lines start unticked. Without one they start ticked, making it one tap.
+`jobFillState` remembers per job what was done (dismissed, or added
+rows + the replaced starter row + discount/quote link), so Undo is
+exact. `takeStarterRow()` only replaces the untouched starter row (one
+row, no price). Rows typed by hand are never removed.
+
+**Bill the quote** sets `pendingSourceQuoteId`, the same link Convert to
+Invoice sets, so `logInvoice()` marks the quote converted on save, and
+Undo clears it. The quote's discount goes into the discount field only
+when that field is empty or zero.
+
+**Wiring.** Called on `?jobRef=` (after the existing prefill), on the Job
+dropdown's change, and reset by `resetInvoiceForm()` /
+`convertQuoteToInvoice()`.
+
+**Gotcha:** `eval`'d scripts keep top-level `const`s block-scoped, so the
+jsdom harness rewrites data-layer.js's top-level `const` to `var` before
+evaluating it. The real page loads it as a classic script where they
+are globals.
+
+## 2026-09-22 (later still) -- Workspace rework, part 7: quick add
+
+**Why.** The + sheet made every "start something" one tap away. But each
+form still begins empty, and on a job site the details arrive as a
+sentence: "Sarah called, her sink's leaking, can we come tomorrow at 2?"
+Quick add takes that sentence.
+
+**Guess, don't save.** `thParseQuickEntry(text, { now, clients, vendors,
+jobs })` in tools-nav-pwa.js is pure and returns a structured guess.
+`thQuickEntryHref()` turns the guess into a deep link that pre-fills the
+owning page's existing form:
+- `job-tracker.html?title=&client=&date=&phone=&address=&priority=&notes=&qa=1#add-job`
+- `invoice-generator.html?client=&item=&price=&jobRef=#invoice|#quote`
+- `finance.html?amount=&vendor=&desc=&date=&job=#expenses`
+
+So saving still runs each page's own logic: the client registry
+(`thEnsureClient`), the relational mirrors, portal sync, the receipt
+requirement. Nothing new writes data. Each receiving page fills only
+blank fields, then strips the params it used.
+
+**Parsing order matters.** Each step cuts its match out of the text:
+1. intent word;
+2. phone;
+3. **address** (before times and money, so "88 Sunset Blvd" isn't read
+   as $88);
+4. money;
+5. time;
+6. date;
+7. urgency;
+8. client;
+9. vendor;
+10. bare number as the amount, for money entries only;
+11. the related job;
+
+and what's left, tidied, is the title.
+
+**Client matching:**
+- A known full name (longest first) wins anywhere in the text.
+- A known *first* name counts only when it's unambiguous (one known
+  client has it) **and** plainly a name: after for/at/with, possessive,
+  capitalised mid-sentence, or first after a money word ("invoice
+  sarah"). So a client called Will doesn't swallow "will need parts".
+- Otherwise a capitalised name after "for", or a capitalised First Last
+  right after a money word, is a new client.
+
+**Dates.** Weekday abbreviations are taken only after on/next/this/by,
+so "sun room" stays a room. A past month/day for a job or quote rolls to
+next year; invoices and expenses keep this year.
+
+**Which job.** For an invoice or expense, among the client's jobs that
+are open or were finished in the last 30 days:
+- one whose title shares a word with the sentence wins;
+- then, for an invoice, a finished one;
+- then, for an expense, one under way;
+- then the most recent.
+
+**Search** (tools-command-palette.js) shows the guess as the top result
+only when there's an explicit kind word, or a title plus at least one
+other signal. A plain name search stays a name search.
+
+**Voice.** Own `SpeechRecognition` (webkit prefix) with
+`interimResults: true` and `continuous: false`, so the field and preview
+fill in while you talk. The shared `attachVoiceDictation` is
+continuous-append for notes, which doesn't fit here. The mic button only
+appears where the API exists.
+
+**Fixed along the way:**
+- `applyJobRefFromUrl()` used to replace the whole query string, so a
+  link carrying `?jobRef=` plus anything else lost the rest. It now
+  deletes only `jobRef`.
+- `closePalette()` now blurs the palette's input; before, N right after
+  closing search was swallowed as typing.
+
 ## 2026-09-22 (later still) -- Client portal: a real desktop layout, and Settings as a menu
 
 Both asked for directly after the visits/unread PR merged: "The computer

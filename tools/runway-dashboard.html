@@ -47,9 +47,9 @@
      reachable only by the browser back button. Loaded in the same
      position (after tools-dialogs.js, before tools-tour.js) as every
      other tool page for consistency. -->
-<script src="/tools/tools-nav-pwa.js?v=4d9f8c89e1" defer></script>
-<script src="/tools/tools-command-palette.js?v=3aaed2827f" defer></script>
-<script src="/tools/tools-tour.js?v=102529d3df" defer></script>
+<script src="/tools/tools-nav-pwa.js?v=686999ec0f" defer></script>
+<script src="/tools/tools-command-palette.js?v=b37229c7b6" defer></script>
+<script src="/tools/tools-tour.js?v=18e0421913" defer></script>
 <script>
   (function () {
     // Tools app light/dark theme (2026-08-20), tucked into Settings.
@@ -542,6 +542,55 @@
     body.th-create-open .th-bottom-nav { z-index: 960; }
     .th-create-sheet .th-sheet-panel { padding-bottom: calc(92px + env(safe-area-inset-bottom, 0px)); }
   }
+  /* Quick add (2026-09-22, Workspace rework part 7): type or say it at
+     the top of the Create sheet. While there's text the tiles step aside
+     for the live preview, so on a phone the sheet stays short above the
+     keyboard. */
+  .th-qa { margin: 0 0 12px; }
+  .th-qa-field {
+    display: flex; align-items: center; gap: 8px; min-height: 52px; padding: 0 6px 0 14px;
+    border-radius: 14px; background: var(--bg-panel-2); border: 1px solid var(--border);
+  }
+  .th-qa-field:focus-within { border-color: var(--orange-light); box-shadow: 0 0 0 3px var(--orange-tint-soft); }
+  .th-qa-field > .th-icon { width: 18px; height: 18px; margin: 0; flex-shrink: 0; color: var(--orange-light); }
+  body .th-qa-field .th-qa-input, body .th-qa-field .th-qa-input:focus {
+    flex: 1; min-width: 0; min-height: 0; margin: 0; padding: 12px 0; border: 0; border-radius: 0;
+    background: none; box-shadow: none; outline: none; font-size: 16px; color: var(--white);
+  }
+  .th-qa-mic {
+    width: 40px; height: 40px; flex-shrink: 0; border-radius: 50%;
+    display: inline-flex; align-items: center; justify-content: center;
+    background: var(--bg-panel); border: 1px solid var(--border); color: var(--text); cursor: pointer;
+  }
+  .th-qa-mic[hidden] { display: none; }
+  .th-qa-mic .th-icon { width: 18px; height: 18px; margin: 0; }
+  .th-qa-mic.is-listening {
+    color: #1a0d02; border-color: var(--orange-dark);
+    background: linear-gradient(165deg, var(--orange-light), var(--orange) 70%);
+    animation: th-qa-listen 1.2s ease-in-out infinite;
+  }
+  @keyframes th-qa-listen { 50% { box-shadow: 0 0 0 8px var(--orange-tint-soft); } }
+  .th-qa-preview:not(.is-shown) { display: none; }
+  .th-qa-card { margin-top: 10px; padding: 14px; border-radius: 14px; background: var(--orange-tint-soft); border: 1px solid var(--orange-tint-border); }
+  .th-qa-kind { display: inline-flex; align-items: center; gap: 6px; font-family: var(--font-ui); font-size: 11.5px; font-weight: 700; letter-spacing: .8px; text-transform: uppercase; color: var(--orange-light); }
+  .th-qa-kind .th-icon { width: 14px; height: 14px; margin: 0; }
+  .th-qa-title { margin-top: 4px; font-family: var(--font-ui); font-size: 18px; font-weight: 600; line-height: 1.3; color: var(--white); overflow-wrap: anywhere; }
+  .th-qa-untitled { color: var(--text-dim); font-weight: 500; }
+  .th-qa-chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
+  .th-qa-chip {
+    display: inline-flex; align-items: center; gap: 6px; min-height: 30px; padding: 0 10px; border-radius: 999px;
+    background: var(--bg-panel); border: 1px solid var(--border); color: var(--text); font-size: 13px;
+  }
+  .th-qa-chip .th-icon { width: 14px; height: 14px; margin: 0; color: var(--text-dim); }
+  .th-qa-chip em { font-style: normal; font-size: 11.5px; color: var(--text-dim); }
+  .th-qa-chip.is-known .th-icon { color: #4caf78; }
+  .th-qa-chip.is-soft { color: var(--text-dim); }
+  .th-qa-chip.is-hot { color: #e05252; border-color: rgba(224,82,82,.45); }
+  .th-qa-chip.is-hot .th-icon { color: #e05252; }
+  .th-qa-go { display: flex; align-items: center; justify-content: center; gap: 6px; width: 100%; min-height: 48px; margin-top: 12px; text-decoration: none; }
+  .th-qa-blocked { margin-top: 12px; color: var(--text-dim); font-size: 13px; }
+  .th-create-sheet.is-typing .th-create-grid { display: none; }
+  @media (prefers-reduced-motion: reduce) { .th-qa-mic.is-listening { animation: none; } }
   .th-create-head { display: flex; align-items: center; justify-content: space-between; }
   .th-create-head .th-sheet-title { margin-bottom: 12px; }
   .th-create-close {

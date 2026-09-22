@@ -238,7 +238,11 @@
     document.body.classList.add(id === 'thMoreSheet' ? 'th-more-open' : 'th-create-open');
     if (opener) opener.setAttribute('aria-expanded', 'true');
     if (typeof haptic === 'function') haptic('light');
-    var first = sheet.querySelector('a:not([hidden]):not([style*="display: none"]), button:not([hidden])');
+    // On a computer the Create sheet opens ready to type (quick add); on a
+    // phone focusing the field would throw the keyboard over the tiles.
+    var qa = id === 'thCreateSheet' && window.matchMedia && window.matchMedia('(min-width: 1024px) and (pointer: fine)').matches
+      ? sheet.querySelector('#thQuickAdd') : null;
+    var first = qa || sheet.querySelector('a:not([hidden]):not([style*="display: none"]), button:not([hidden])');
     if (first) setTimeout(function () { first.focus({ preventScroll: true }); }, 30);
   }
   function closeSheet(id, restoreFocus) {
@@ -283,7 +287,7 @@
       if (e.key === 'Tab') {
         var sheet = document.getElementById(id);
         var focusable = Array.prototype.filter.call(
-          sheet.querySelectorAll('a[href], button:not([disabled])'),
+          sheet.querySelectorAll('a[href], button:not([disabled]):not([hidden]), input:not([type="hidden"])'),
           function (el) { return el.offsetParent !== null; }
         );
         if (!focusable.length) return;
@@ -383,6 +387,15 @@
           '<h2 class="th-sheet-title" id="thCreateSheetTitle">Create</h2>' +
           '<button type="button" class="th-create-close" data-th-sheet-close="1" aria-label="Close">&times;</button>' +
         '</div>' +
+        // Quick add (2026-09-22, Workspace rework part 7): type or say it.
+        '<div class="th-qa">' +
+          '<div class="th-qa-field">' +
+            iconSvg('bolt') +
+            '<input type="text" id="thQuickAdd" class="th-qa-input" placeholder="Try: sink leak for Sarah tomorrow" autocomplete="off" autocapitalize="sentences" enterkeyhint="go" aria-label="Quick add: type or say what to create" aria-describedby="thQuickAddPreview">' +
+            '<button type="button" class="th-qa-mic" id="thQuickAddMic" aria-label="Say it" title="Say it" hidden>' + iconSvg('mic') + '</button>' +
+          '</div>' +
+          '<div class="th-qa-preview" id="thQuickAddPreview" aria-live="polite"></div>' +
+        '</div>' +
         '<div class="th-create-grid">' +
           CREATE_ACTIONS.map(function (a) {
             return '<a class="th-create-tile" href="' + a.href + '"' + (a.perm ? ' data-perm="' + a.perm + '"' : '') + '>' +
@@ -398,10 +411,111 @@
     // page's own hashchange handler opens the form. Close the sheet first
     // so the form is what's on screen.
     sheet.addEventListener('click', function (e) {
-      var tile = e.target && e.target.closest && e.target.closest('.th-create-tile');
+      var tile = e.target && e.target.closest && e.target.closest('.th-create-tile, .th-qa-go');
       if (tile) closeSheet('thCreateSheet', false);
     });
+    wireQuickAdd();
     refreshCreateSheet();
+  }
+
+  // ---- Quick add: the field at the top of the Create sheet ---------------
+  // Every keystroke (or word spoken) re-runs thParseQuickEntry() and shows
+  // what will be created; Enter or the button opens that page's own form
+  // filled in (thQuickEntryHref). Nothing is saved from here.
+  var QA_KIND = {
+    job: { label: 'New job', go: 'Fill in the job', icon: 'wrench', perm: null },
+    invoice: { label: 'Invoice', go: 'Start the invoice', icon: 'receipt', perm: 'canManageInvoices' },
+    quote: { label: 'Quote', go: 'Start the quote', icon: 'clipboard', perm: 'canManageInvoices' },
+    expense: { label: 'Expense', go: 'Log the expense', icon: 'camera', perm: 'canViewFinance' },
+  };
+  var qaCtx = null;
+  function qaEsc(v) {
+    return String(v == null ? '' : v).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+  }
+  function qaMoney(n) { return '$' + Number(n).toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ','); }
+  function quickAddParse(text) {
+    if (!qaCtx) qaCtx = (typeof thQuickAddContext === 'function') ? thQuickAddContext() : { clients: [], vendors: [], jobs: [] };
+    return thParseQuickEntry(text, qaCtx);
+  }
+  function renderQuickAddPreview() {
+    var input = document.getElementById('thQuickAdd');
+    var box = document.getElementById('thQuickAddPreview');
+    if (!input || !box) return;
+    var text = input.value.trim();
+    var sheetEl = document.getElementById('thCreateSheet');
+    if (sheetEl) sheetEl.classList.toggle('is-typing', !!text);
+    if (!text || typeof thParseQuickEntry !== 'function') { box.innerHTML = ''; box.classList.remove('is-shown'); return; }
+    var p = quickAddParse(text);
+    var kind = QA_KIND[p.intent] || QA_KIND.job;
+    var allowedKind = !kind.perm || createAllowed({ perm: kind.perm });
+    var chips = [];
+    var chip = function (icon, html, cls) { chips.push('<span class="th-qa-chip' + (cls ? ' ' + cls : '') + '">' + iconSvg(icon) + '<span>' + html + '</span></span>'); };
+    if (p.client) chip('users', qaEsc(p.client.name) + (p.client.known ? ' <em>client</em>' : ' <em>new</em>'), p.client.known ? 'is-known' : '');
+    if (p.dateLabel) chip('calendar', qaEsc(p.dateLabel));
+    if (p.timeLabel) chip('bell', qaEsc(p.timeLabel));
+    if (p.amount !== null) chip('dollar', qaMoney(p.amount));
+    if (p.vendor) chip('toolbox', qaEsc(p.vendor));
+    if (p.address) chip('navigate', qaEsc(p.address));
+    else if (p.client && p.client.known && p.client.address && p.intent === 'job') chip('navigate', qaEsc(p.client.address), 'is-soft');
+    if (p.phone) chip('phone', qaEsc(p.phone));
+    if (p.priority === 'high') chip('warning', 'High priority', 'is-hot');
+    if (p.jobId) chip('wrench', 'For their latest job', 'is-soft');
+    var href = thQuickEntryHref(p);
+    box.innerHTML =
+      '<div class="th-qa-card">' +
+        '<div class="th-qa-kind">' + iconSvg(kind.icon) + '<span>' + kind.label + '</span></div>' +
+        '<div class="th-qa-title">' + (p.title ? qaEsc(p.title) : '<span class="th-qa-untitled">' + (p.intent === 'job' ? 'What’s the job?' : 'What’s it for?') + '</span>') + '</div>' +
+        (chips.length ? '<div class="th-qa-chips">' + chips.join('') + '</div>' : '') +
+        (allowedKind
+          ? '<a class="primary-btn th-qa-go" href="' + qaEsc(href) + '">' + kind.go + ' <span aria-hidden="true">&rsaquo;</span></a>'
+          : '<div class="th-qa-blocked">Your account can’t create ' + (p.intent === 'expense' ? 'expenses' : p.intent + 's') + '.</div>') +
+      '</div>';
+    box.classList.add('is-shown');
+  }
+  function wireQuickAdd() {
+    var input = document.getElementById('thQuickAdd');
+    if (!input || input.dataset.wired) return;
+    input.dataset.wired = '1';
+    input.addEventListener('input', renderQuickAddPreview);
+    input.addEventListener('keydown', function (e) {
+      if (e.key !== 'Enter') return;
+      var go = document.querySelector('#thQuickAddPreview .th-qa-go');
+      if (!go) return;
+      e.preventDefault();
+      closeSheet('thCreateSheet', false);
+      window.location.href = go.getAttribute('href');
+    });
+    // Say it: one utterance, with the words appearing as they're heard
+    // (interim results), so the preview builds itself while you talk.
+    var Rec = window.SpeechRecognition || window.webkitSpeechRecognition;
+    var mic = document.getElementById('thQuickAddMic');
+    if (!Rec || !mic) return;
+    mic.hidden = false;
+    var rec = null;
+    var base = '';
+    mic.addEventListener('click', function () {
+      if (rec) { try { rec.stop(); } catch (e) { /* ignore */ } return; }
+      rec = new Rec();
+      rec.lang = 'en-US';
+      rec.interimResults = true;
+      rec.continuous = false;
+      base = input.value.trim() ? input.value.trim() + ' ' : '';
+      rec.onresult = function (ev) {
+        var said = '';
+        for (var i = 0; i < ev.results.length; i++) said += ev.results[i][0].transcript;
+        input.value = base + said.trim();
+        renderQuickAddPreview();
+      };
+      var done = function () { rec = null; mic.classList.remove('is-listening'); mic.setAttribute('aria-label', 'Say it'); };
+      rec.onend = done;
+      rec.onerror = done;
+      try {
+        rec.start();
+        mic.classList.add('is-listening');
+        mic.setAttribute('aria-label', 'Stop listening');
+        if (typeof haptic === 'function') haptic('light');
+      } catch (e) { done(); }
+    });
   }
   // Re-applies the permission filter. Runs on inject, on th-role-loaded,
   // and every time the sheet opens -- on a page that never loads the role
@@ -418,6 +532,9 @@
   }
   function openCreate(opener) {
     refreshCreateSheet();
+    qaCtx = null; // re-read clients/vendors/jobs: they may have changed since last time
+    var qaInput = document.getElementById('thQuickAdd');
+    if (qaInput) { qaInput.value = ''; renderQuickAddPreview(); }
     if (!roleRequested && typeof getCurrentUserRole === 'function' && !getCurrentUserRole() && typeof loadCurrentUserRole === 'function') {
       roleRequested = true;
       try { loadCurrentUserRole(); } catch (e) { /* ignore */ }
@@ -1006,4 +1123,328 @@ if (typeof navigator !== 'undefined' && 'serviceWorker' in navigator) {
       window.location.reload();
     });
   });
+}
+
+// ---------------------------------------------------------------------------
+// QUICK ADD (2026-09-22, Workspace rework part 7) -- say it the way you'd
+// text it. "Sink leak for Sarah tomorrow 2pm" becomes a job for Sarah
+// Miller (the known client, so her phone and address come along), due
+// tomorrow, with the time in the notes. A leading word picks what it is:
+// "invoice Sarah $150 dishwasher repair", "quote ...", "expense $48 Home
+// Depot drain pump". Lives in the Create sheet (a field with a microphone)
+// and as the top suggestion in search.
+//
+// thParseQuickEntry() is pure: text + what's known (clients, vendors,
+// jobs, today) in, a structured guess out. It never writes anything --
+// thQuickEntryHref() turns the guess into a deep link that pre-fills the
+// page's own existing form, so saving still goes through that page (the
+// client registry, mirrors, portal sync), and the person sees exactly
+// what will be saved before tapping Add.
+// ---------------------------------------------------------------------------
+var TH_QA_WEEKDAYS = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
+var TH_QA_WEEKDAY_ABBR = { sun: 0, mon: 1, tue: 2, tues: 2, wed: 3, weds: 3, thu: 4, thur: 4, thurs: 4, fri: 5, sat: 6 };
+var TH_QA_MONTHS = ['jan', 'feb', 'mar', 'apr', 'may', 'jun', 'jul', 'aug', 'sep', 'oct', 'nov', 'dec'];
+var TH_QA_NUMBER_WORDS = { a: 1, an: 1, one: 1, two: 2, three: 3, four: 4, five: 5, six: 6, seven: 7, eight: 8, nine: 9, ten: 10 };
+
+function thQaYmd(d) {
+  return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+}
+function thQaEscapeRe(s) { return String(s).replace(/[.*+?^${}()|[\]\\]/g, '\\$&'); }
+
+function thParseQuickEntry(text, opts) {
+  opts = opts || {};
+  var now = opts.now || new Date();
+  var today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  var original = String(text || '').replace(/\s+/g, ' ').trim();
+  var out = {
+    intent: 'job', title: '', client: null, date: null, dateLabel: '', time: null, timeLabel: '',
+    amount: null, phone: null, address: null, priority: null, vendor: null, jobId: null, signals: 0, text: original,
+  };
+  if (!original) return out;
+  var rest = ' ' + original + ' ';
+  // Cut the first match of re out of `rest`; fn(match) returns false to refuse it.
+  function take(re, fn) {
+    var m = rest.match(re);
+    if (!m) return null;
+    if (fn && fn(m) === false) return null;
+    rest = rest.slice(0, m.index) + ' ' + rest.slice(m.index + m[0].length);
+    return m;
+  }
+  var days = function (n) { return new Date(today.getFullYear(), today.getMonth(), today.getDate() + n); };
+
+  // 1. What it is -- only as the first word(s), so "bill" or "quote" inside
+  //    a job title stays in the title.
+  var explicitIntent = !!take(/^\s*(?:(?:new|add|create|log)\s+(?:an?\s+)?)?(job|invoice|bill|quote|estimate|expense|receipt|spent|bought)\b[:,\-–—]?/i, function (m) {
+    var w = m[1].toLowerCase();
+    out.intent = (w === 'invoice' || w === 'bill') ? 'invoice'
+      : (w === 'quote' || w === 'estimate') ? 'quote'
+      : (w === 'job') ? 'job' : 'expense';
+    if (w !== 'job') out.signals++;
+  });
+
+  // 2. A phone number.
+  take(/(?:^|\s)(?:\+?1[\s.-]?)?\(?(\d{3})\)?[\s.-]?(\d{3})[\s.-]?(\d{4})(?=\s|[,.;]|$)/, function (m) {
+    out.phone = '(' + m[1] + ') ' + m[2] + '-' + m[3];
+    out.signals++;
+  });
+
+  // 3. A street address: a number, up to four words, and a street suffix,
+  //    optionally an apartment and ", City" -- taken before times and money
+  //    so "88 Sunset Blvd" is never read as 88 anything else.
+  take(/(?:\s(?:at|to|on))?\s+(\d{1,6}\s+(?:[NSEW]\.?\s+)?(?:[A-Za-z0-9'.-]+\s+){0,3}?(?:st|street|ave|avenue|rd|road|dr|drive|ln|lane|blvd|boulevard|way|ct|court|cir|circle|pl|place|pkwy|parkway|hwy|highway|ter|terrace|loop|trl|trail)\b\.?(?:\s*(?:#|apt\.?|unit|suite|ste\.?)\s*[\w-]+)?(?:,\s*(?:(?:St|Mt|Ft|Pt)\.?\s+)?[A-Z][a-z]+(?:\s[A-Z][a-z]+)?)?(?:,\s*[A-Z]{2}\b)?)/i, function (m) {
+    out.address = m[1].replace(/\s+/g, ' ').trim();
+    out.signals++;
+  });
+
+  // 4. Money: "$150", "$1,250.50", "150 dollars" / "150 bucks".
+  take(/\$\s?(\d{1,3}(?:,\d{3})+(?:\.\d{1,2})?|\d+(?:\.\d{1,2})?)/, function (m) {
+    out.amount = Math.round(parseFloat(m[1].replace(/,/g, '')) * 100) / 100;
+    out.signals++;
+  }) || take(/\s(\d+(?:\.\d{1,2})?)\s*(?:dollars|bucks)\b/i, function (m) {
+    out.amount = Math.round(parseFloat(m[1]) * 100) / 100;
+    out.signals++;
+  });
+
+  // 5. A time: "2pm", "2:30 p.m.", "at 10am", "at 14:00", "noon".
+  var setTime = function (h, min) {
+    out.time = String(h).padStart(2, '0') + ':' + String(min).padStart(2, '0');
+    var h12 = h % 12 === 0 ? 12 : h % 12;
+    out.timeLabel = h12 + ':' + String(min).padStart(2, '0') + ' ' + (h < 12 ? 'AM' : 'PM');
+    out.signals++;
+  };
+  take(/(?:\s(?:at|@|around|by))?\s(\d{1,2})(?::(\d{2}))?\s*([ap])\.?\s?m\.?(?=\s|[,.;]|$)/i, function (m) {
+    var h = parseInt(m[1], 10), min = m[2] ? parseInt(m[2], 10) : 0;
+    if (h < 1 || h > 12 || min > 59) return false;
+    if (m[3].toLowerCase() === 'p' && h < 12) h += 12;
+    if (m[3].toLowerCase() === 'a' && h === 12) h = 0;
+    setTime(h, min);
+  }) || take(/\s(?:at|@)\s+(\d{1,2}):(\d{2})(?=\s|[,.;]|$)/i, function (m) {
+    var h = parseInt(m[1], 10), min = parseInt(m[2], 10);
+    if (h > 23 || min > 59) return false;
+    if (h >= 1 && h <= 6) h += 12; // "at 2:30" on a work day means the afternoon
+    setTime(h, min);
+  }) || take(/\s(?:at\s+)?noon\b/i, function () { setTime(12, 0); });
+
+  // 6. A date.
+  var setDate = function (d) { out.date = thQaYmd(d); out.signals++; };
+  var prefix = '(?:\\s(?:on|by|due|for|this\\s+coming))?\\s';
+  var weekdayFrom = function (targetDow, isNext) {
+    var diff = (targetDow - today.getDay() + 7) % 7;
+    if (diff === 0) diff = 7;
+    if (isNext) {
+      // "next Friday" = Friday of next week (weeks start Monday).
+      var todayMon = (today.getDay() + 6) % 7;
+      var targetMon = (targetDow + 6) % 7;
+      diff = 7 - todayMon + targetMon;
+    }
+    return days(diff);
+  };
+  var dated =
+    take(new RegExp(prefix + '(today|tonight|this\\s+(?:morning|afternoon|evening))\\b', 'i'), function () { setDate(today); }) ||
+    take(new RegExp(prefix + 'day\\s+after\\s+tomorrow\\b', 'i'), function () { setDate(days(2)); }) ||
+    take(new RegExp(prefix + '(tomorrow|tomorow|tmrw|tmr|tmw)\\b', 'i'), function () { setDate(days(1)); }) ||
+    take(new RegExp(prefix + 'yesterday\\b', 'i'), function () { setDate(days(-1)); }) ||
+    take(new RegExp(prefix + 'in\\s+(\\d+|' + Object.keys(TH_QA_NUMBER_WORDS).join('|') + ')\\s+(days?|weeks?)\\b', 'i'), function (m) {
+      var n = /^\d+$/.test(m[1]) ? parseInt(m[1], 10) : TH_QA_NUMBER_WORDS[m[1].toLowerCase()];
+      setDate(days(/^week/i.test(m[2]) ? n * 7 : n));
+    }) ||
+    take(new RegExp(prefix + '(?:(next|this)\\s+)?(' + TH_QA_WEEKDAYS.join('|') + ')\\b', 'i'), function (m) {
+      setDate(weekdayFrom(TH_QA_WEEKDAYS.indexOf(m[2].toLowerCase()), !!m[1] && m[1].toLowerCase() === 'next'));
+    }) ||
+    // Abbreviations only after on/next/this/by -- "sun room" and "sat" stay words.
+    take(/\s(?:on|by|(next|this))\s+(sun|mon|tues?|weds?|thu(?:rs?)?|fri|sat)\b\.?/i, function (m) {
+      setDate(weekdayFrom(TH_QA_WEEKDAY_ABBR[m[2].toLowerCase()], !!m[1] && m[1].toLowerCase() === 'next'));
+    });
+  var pickYear = function (month, day, year) {
+    var d = new Date(year || today.getFullYear(), month, day);
+    if (d.getMonth() !== month) return null; // Feb 30
+    // A job or quote is about the future: a date already past this year
+    // means next year. Invoices and expenses are about the past.
+    if (!year && (out.intent === 'job' || out.intent === 'quote') && d < days(-1)) d = new Date(today.getFullYear() + 1, month, day);
+    return d;
+  };
+  if (!dated) {
+    dated = take(new RegExp(prefix + '(\\d{1,2})\\/(\\d{1,2})(?:\\/(\\d{4}|\\d{2}))?(?=\\s|[,.;]|$)', 'i'), function (m) {
+      var y = m[3] ? (m[3].length === 2 ? 2000 + parseInt(m[3], 10) : parseInt(m[3], 10)) : null;
+      var d = pickYear(parseInt(m[1], 10) - 1, parseInt(m[2], 10), y);
+      if (!d) return false;
+      setDate(d);
+    }) || take(new RegExp(prefix + '(' + TH_QA_MONTHS.join('|') + ')[a-z]*\\.?\\s+(\\d{1,2})(?:st|nd|rd|th)?(?:,?\\s+(\\d{4}))?\\b', 'i'), function (m) {
+      var d = pickYear(TH_QA_MONTHS.indexOf(m[1].toLowerCase().slice(0, 3)), parseInt(m[2], 10), m[3] ? parseInt(m[3], 10) : null);
+      if (!d) return false;
+      setDate(d);
+    }) || take(new RegExp(prefix + '(?:the\\s+)?(\\d{1,2})(?:st|nd|rd|th)?\\s+(?:of\\s+)?(' + TH_QA_MONTHS.join('|') + ')[a-z]*\\b', 'i'), function (m) {
+      var d = pickYear(TH_QA_MONTHS.indexOf(m[2].toLowerCase().slice(0, 3)), parseInt(m[1], 10), null);
+      if (!d) return false;
+      setDate(d);
+    });
+  }
+  if (out.date) {
+    var dd = new Date(out.date + 'T00:00:00');
+    var diff = Math.round((dd - today) / 86400000);
+    var long = dd.toLocaleDateString('en-US', dd.getFullYear() === today.getFullYear()
+      ? { weekday: 'short', month: 'short', day: 'numeric' }
+      : { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' });
+    out.dateLabel = diff === 0 ? 'Today' : diff === 1 ? 'Tomorrow' : diff === -1 ? 'Yesterday' : long;
+    if (diff === 0 || Math.abs(diff) === 1) out.dateLabel += ' (' + long + ')';
+  }
+
+  // 7. Priority.
+  take(/\s(urgent|asap|a\.s\.a\.p\.?|emergency|rush|right\s+away)(?=\s|[,.;!]|$)/i, function () { out.priority = 'high'; out.signals++; });
+
+  // 8. The client. A known client's full name anywhere wins (longest
+  //    first); then a known first name when it's plainly a name ("for
+  //    sarah", "sarah's", or capitalised mid-sentence) and only one known
+  //    client has it; else a capitalised name after "for" is a new client.
+  var clients = (opts.clients || []).filter(function (c) { return c && c.name && c.name.trim().length > 1; })
+    .sort(function (a, b) { return b.name.length - a.name.length; });
+  for (var i = 0; i < clients.length && !out.client; i++) {
+    var c = clients[i];
+    take(new RegExp('(?:\\s(?:for|at|with|to|from))?\\s' + thQaEscapeRe(c.name.trim()).replace(/\s+/g, '\\s+') + "(?:'s)?(?=\\s|[,.;]|$)", 'i'), function () {
+      out.client = { id: c.id || null, name: c.name.trim(), phone: c.phone || '', address: c.address || '', email: c.email || '', known: true };
+    });
+  }
+  if (!out.client && clients.length) {
+    var byFirst = {};
+    clients.forEach(function (c) {
+      var first = c.name.trim().split(/\s+/)[0].toLowerCase();
+      if (first.length < 2) return;
+      (byFirst[first] = byFirst[first] || []).push(c);
+    });
+    var wordRe = /(\s(?:for|at|with|to|from))?\s([A-Za-z][A-Za-z'-]*?)('s)?(?=\s|[,.;]|$)/g;
+    var wm;
+    while ((wm = wordRe.exec(rest)) !== null) {
+      var word = wm[2].toLowerCase();
+      var hits = byFirst[word];
+      if (!hits || hits.length !== 1) continue;
+      // "invoice sarah $150": right after a money word, the first word is who.
+      var isName = !!wm[1] || !!wm[3] || (/^[A-Z]/.test(wm[2]) && wm.index > 1) ||
+        (explicitIntent && out.intent !== 'job' && rest.slice(0, wm.index).trim() === '');
+      if (!isName) continue;
+      var hit = hits[0];
+      rest = rest.slice(0, wm.index) + ' ' + rest.slice(wm.index + wm[0].length);
+      out.client = { id: hit.id || null, name: hit.name.trim(), phone: hit.phone || '', address: hit.address || '', email: hit.email || '', known: true };
+      break;
+    }
+  }
+  if (!out.client) {
+    take(/\s(?:for|with)\s+((?:Mr\.?|Mrs\.?|Ms\.?|Dr\.?)\s+)?([A-Z][a-z'-]+(?:\s+[A-Z][a-z'-]+)?)(?:'s)?(?=\s|[,.;]|$)/, function (m) {
+      out.client = { id: null, name: ((m[1] || '') + m[2]).trim(), phone: '', address: '', email: '', known: false };
+    });
+  }
+  // "quote Dave Carter drywall patch": a new client's first and last name,
+  // both capitalised, straight after a money word.
+  if (!out.client && explicitIntent && out.intent !== 'job') {
+    take(/^\s+([A-Z][a-z'-]+\s+[A-Z][a-z'-]+)(?:'s)?(?=\s|[,.;]|$)/, function (m) {
+      out.client = { id: null, name: m[1], phone: '', address: '', email: '', known: false };
+    });
+  }
+  if (out.client) out.signals++;
+
+  // 9. Expenses: a known vendor, else "at <Capitalised Name>".
+  if (out.intent === 'expense') {
+    var vendors = (opts.vendors || []).filter(Boolean).sort(function (a, b) { return b.length - a.length; });
+    for (var v = 0; v < vendors.length && !out.vendor; v++) {
+      var vendor = vendors[v];
+      take(new RegExp('(?:\\s(?:at|from))?\\s' + thQaEscapeRe(vendor).replace(/\s+/g, '\\s+') + '(?=\\s|[,.;]|$)', 'i'), function () { out.vendor = vendor; });
+    }
+    if (!out.vendor) take(/\s(?:at|from)\s+([A-Z][\w'&.-]*(?:\s+[A-Z][\w'&.-]*){0,2})(?=\s|[,.;]|$)/, function (m) { out.vendor = m[1]; });
+    if (out.vendor) out.signals++;
+  }
+
+  // 10. A bare number is the amount for money entries ("invoice sarah 150").
+  if (out.amount === null && out.intent !== 'job') {
+    take(/\s(\d{1,5}(?:\.\d{1,2})?)(?=\s|[,.;]|$)/, function (m) { out.amount = parseFloat(m[1]); out.signals++; });
+  }
+
+  // 11. The job this is about (expenses and invoices), among the client's
+  //     jobs that are open or finished in the last 30 days: one whose title
+  //     shares a word with what was said wins; then, for an invoice, a
+  //     finished job (that's what gets billed), for an expense one under
+  //     way (that's what parts get bought for); then the most recent.
+  if (out.client && out.intent !== 'job' && opts.jobs) {
+    var name = out.client.name.toLowerCase();
+    var words = (rest.toLowerCase().match(/[a-z]{4,}/g) || []);
+    var score = function (j) {
+      var s = 0;
+      var titleWords = String(j.title || '').toLowerCase().match(/[a-z]{4,}/g) || [];
+      if (words.some(function (w) { return titleWords.indexOf(w) > -1; })) s += 100;
+      if (out.intent === 'invoice' && j.status === 'done') s += 50;
+      if (out.intent === 'expense') s += j.status === 'in-progress' ? 50 : j.status === 'not-started' ? 30 : 0;
+      return s;
+    };
+    var mine = opts.jobs.filter(function (j) {
+      if (!j) return false;
+      var sameClient = (out.client.id && j.clientId === out.client.id) || String(j.client || '').trim().toLowerCase() === name;
+      if (!sameClient) return false;
+      if (j.status !== 'done') return true;
+      var when = new Date(j.statusChangedAt || ((j.date || '') + 'T00:00:00'));
+      return !isNaN(when.getTime()) && (today - when) / 86400000 <= 30;
+    }).sort(function (a, b) { return (score(b) - score(a)) || String(b.date || '').localeCompare(String(a.date || '')); });
+    if (mine.length) out.jobId = mine[0].id;
+  }
+
+  // 12. What's left is the title: tidy the joins the cuts left behind.
+  var title = rest.replace(/\s+/g, ' ').trim()
+    .replace(/^(?:(?:for|at|on|to|by|with|and|the job|job|to do|-|,|:)\s+)+/i, '')
+    .replace(/(?:\s+(?:for|at|on|to|by|with|and|due|around|from|-|,))+$/i, '')
+    .replace(/\s+([,.;:])/g, '$1').replace(/^[,.;:\s-]+|[,;:\s-]+$/g, '');
+  out.title = title ? title.charAt(0).toUpperCase() + title.slice(1) : '';
+  return out;
+}
+
+// The deep link that pre-fills the right page's own form with a guess.
+function thQuickEntryHref(p) {
+  var q = new URLSearchParams();
+  var set = function (k, v) { if (v !== null && v !== undefined && v !== '') q.set(k, String(v)); };
+  if (p.intent === 'invoice' || p.intent === 'quote') {
+    set('client', p.client && p.client.name);
+    set('item', p.title);
+    set('price', p.amount);
+    if (p.intent === 'invoice') set('jobRef', p.jobId);
+    return '/tools/invoice-generator.html' + (q.toString() ? '?' + q.toString() : '') + (p.intent === 'quote' ? '#quote' : '#invoice');
+  }
+  if (p.intent === 'expense') {
+    set('amount', p.amount);
+    set('vendor', p.vendor);
+    set('desc', p.title);
+    set('date', p.date);
+    set('job', p.jobId);
+    return '/tools/finance.html' + (q.toString() ? '?' + q.toString() : '') + '#expenses';
+  }
+  set('title', p.title);
+  set('client', p.client && p.client.name);
+  set('date', p.date);
+  set('phone', p.phone);
+  set('address', p.address);
+  set('priority', p.priority);
+  if (p.timeLabel) set('notes', 'Time: ' + p.timeLabel);
+  q.set('qa', '1');
+  return '/tools/job-tracker.html?' + q.toString() + '#add-job';
+}
+
+// What the parser knows, read straight from this device's data: every
+// client name (the registry, plus names on jobs and contacts that predate
+// it), the vendors on logged expenses, and the jobs.
+function thQuickAddContext() {
+  var read = function (k) { try { return JSON.parse(localStorage.getItem(k) || '[]') || []; } catch (e) { return []; } };
+  var seen = {};
+  var clients = [];
+  var add = function (c) {
+    var key = String(c.name || '').trim().toLowerCase();
+    if (!key || seen[key]) return;
+    seen[key] = true;
+    clients.push(c);
+  };
+  read('th_clients').forEach(function (c) { add({ id: c.id, name: c.name, phone: c.phone, address: c.address, email: c.email }); });
+  var jobs = read('th_tracker_jobs');
+  jobs.forEach(function (j) { if (j.client) add({ id: j.clientId || null, name: j.client, phone: j.phone, address: j.address, email: j.clientEmail }); });
+  read('th_tracker_contacts').forEach(function (c) { add({ id: null, name: c.name, phone: c.phone, address: c.address, email: c.email }); });
+  var vendorSeen = {};
+  var vendors = [];
+  read('th_expense_log').forEach(function (e) {
+    var v = String(e.vendor || '').trim();
+    if (v && !vendorSeen[v.toLowerCase()]) { vendorSeen[v.toLowerCase()] = true; vendors.push(v); }
+  });
+  return { clients: clients, vendors: vendors, jobs: jobs };
 }

@@ -1132,6 +1132,48 @@ and 1280px (the portal is dark-only; no light theme to check).
   relative time right, single-line ellipsis so long titles never wrap
   the row.
 
+## 2026-09-22 (later still) -- From this job panel
+
+- **The panel:** an orange-tinted card over the line items, with a
+  receipt icon and "From this job", then the job's title dimmed. Each
+  line is a panel-colour row: a large orange checkbox (`accent-color`),
+  the description over a dim note ("Receipt, Home Depot · Sep 20 · at
+  cost"), and the amount right-aligned. Unticked rows fade to 72%.
+- **The rows are `<label>`s**, so the whole row toggles. That means
+  undoing the form's uppercase label style (`text-transform`,
+  `letter-spacing`), which a screenshot caught.
+- **The ask-for-hours row** is a div, not a label, since it holds its
+  own inputs. The checkbox, text and amount sit on line one; the
+  hours/rate inputs wrap to their own line under the text (flex
+  `order` + `flex-basis: 100%`). At 390px they had squeezed the text
+  into a one-word column.
+- **Bill the quote** is the primary button when a quote is on offer.
+  The logged-lines Add button turns secondary and sits under an "or
+  build it from what was logged" rule.
+- **After Add**, the card turns into a single green-tinted confirmation
+  line ("Added 4 lines from the job · $251.49.") with Undo.
+
+## 2026-09-22 (later still) -- quick add in the Create sheet
+
+- **The field:** one 52px field at the top of the Create sheet, with an
+  orange bolt icon, the input, and a round mic button. It gets an orange
+  focus ring. The placeholder was shortened to fit 390px ("Try: sink
+  leak for Sarah tomorrow").
+- **While there's text,** the nine tiles hide (`.is-typing`) and the
+  preview card takes their place, so on a phone the sheet stays short
+  above the keyboard.
+- **The preview card:** orange-tinted, with a small caps kind label
+  (NEW JOB / INVOICE / QUOTE / EXPENSE, with its tile's icon), then the
+  title at 18px, then one chip per fact (client, date, time, amount,
+  vendor, address, phone, urgency), then a full-width primary button
+  naming the action ("Fill in the job ›"). A known client's chip icon is
+  green; an address that came from the client record is dimmed; urgent
+  is red.
+- **Listening:** the mic turns solid orange and pulses (off under
+  reduced motion).
+- **Runway Dashboard** keeps its own copy of the shell CSS, so the block
+  is mirrored there.
+
 ## 2026-09-22 (later still) -- portal desktop shell + Settings menu
 
 - **Sidebar:** 252px fixed rail, content centred in the remaining space

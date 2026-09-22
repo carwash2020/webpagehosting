@@ -68,7 +68,7 @@
   })();
 </script>
 <link rel="stylesheet" href="/styles.css?v=2e81706c3d">
-<link rel="stylesheet" href="/tools/styles-tools.css?v=f4eba25dcc">
+<link rel="stylesheet" href="/tools/styles-tools.css?v=e9113fb127">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.112.3/dist/umd/supabase.js" integrity="sha384-qafw21c/iciq0VXsi9FzkfoQv5I/V0iqE4lSNcKXPnW9/UTJLnv5CcN4FHxVLnKg" crossorigin="anonymous" defer></script>
 <script src="/tools/sync.js?v=4cfac4b10e" defer></script>
 <!-- Shared business-hours data (2026-09-03) -- used by the work order
@@ -81,9 +81,9 @@
 <script src="/tools/tools-effects.js?v=a767167574" defer></script>
 <script src="/tools/tools-dialogs.js?v=33199ae1d8" defer></script>
 <script src="/tools/tools-media-sharing.js?v=0c229c9353" defer></script>
-<script src="/tools/tools-nav-pwa.js?v=4d9f8c89e1" defer></script>
-<script src="/tools/tools-command-palette.js?v=3aaed2827f" defer></script>
-<script src="/tools/tools-tour.js?v=102529d3df" defer></script>
+<script src="/tools/tools-nav-pwa.js?v=686999ec0f" defer></script>
+<script src="/tools/tools-command-palette.js?v=b37229c7b6" defer></script>
+<script src="/tools/tools-tour.js?v=18e0421913" defer></script>
 <style>
   /* Cross-document view transitions (2026-09-21) -- same pattern
      already proven in portal/*.html: keeps the old page's visual
@@ -947,7 +947,7 @@
         <li><strong>Money Owed</strong> &mdash; Current and Overdue, split apart so a client who's simply not due yet never gets lumped in with one who needs a follow-up call. Every unpaid invoice is listed right there (overdue first) with a one-tap <strong>Mark paid</strong> &mdash; confirm, and it's recorded as paid in full.</li>
         <li><strong>Rest of Today</strong> &mdash; whatever else is on today's schedule after the next job.</li>
         <li><strong>New job / Create invoice / Find client / Calendar / Quick charge / Log expense</strong> &mdash; the six daily actions, one tap each. Quick charge takes a card payment on the spot with no invoice; Log expense opens Finance on the Expenses tab with the receipt form ready. On a phone the bar at the bottom is Home, Jobs, the orange <strong>+</strong>, Clients, and Money (Invoices and Finance, with a switch at the top of either to hop between them); the grid button at the top right opens the rest (Route Planner, Runway, Contracts, Reviews, the Appliance Wiki, Settings). On a computer everything is in the sidebar.</li>
-        <li><strong>Create anything</strong> &mdash; the orange <strong>+</strong> in the middle of the bar (or <strong>New</strong> at the top of the sidebar, or the <strong>N</strong> key) starts a job, invoice, quote, quick charge, expense, income entry, contact, contract, or review request from any page.</li>
+        <li><strong>Create anything</strong> &mdash; the orange <strong>+</strong> in the middle of the bar (or <strong>New</strong> at the top of the sidebar, or the <strong>N</strong> key) starts a job, invoice, quote, quick charge, expense, income entry, contact, contract, or review request from any page. Or type (or say, with the microphone) what you need at the top of it: &ldquo;sink leak for Sarah tomorrow 2pm&rdquo; opens a new job with Sarah Miller's details, the date, and the time filled in; start with <strong>invoice</strong>, <strong>quote</strong>, or <strong>expense</strong> for those (&ldquo;invoice Tom $85&rdquo;, &ldquo;expense $48 Home Depot drain pump&rdquo;). You check it and save it on the form, same as always. Search (Ctrl+K) offers the same thing as its top result.</li>
         <li><strong>Search anywhere</strong> &mdash; the magnifier at the top right of every page (or Ctrl+K / &#8984;K on a computer, or the Search row at the top of the sidebar) finds any job, contact, invoice, quote, or contract by name and jumps straight to it, and lists every action in the app (Log expense, New quote, Quick charge, Plan a route...) so you never have to remember which page something lives on. Type a few letters and pick.</li>
         <li><strong>Needs attention</strong> &mdash; the ops inbox, open by default: work requests, new leads, applicants, and online bookings that still need a response (an empty group hides itself, so you only see what's waiting); jobs due this week; clients overdue for a follow-up; <strong>Ready to invoice</strong> &mdash; jobs finished in the last 60 days with no invoice and no payment logged, oldest first, each with an <strong>Invoice</strong> button (the &middot;&middot;&middot; covers &ldquo;paid another way&rdquo; and &ldquo;no charge&rdquo;); and invoices still unpaid, with paid ones folded away underneath. Tap the heading to collapse it if you'd rather &mdash; your choice is remembered on this device.</li>
         <li><strong>Business</strong> &mdash; everything you check occasionally rather than daily, each collapsed until you want it: Business Snapshot (revenue, expenses, net, outstanding), Analytics (job status, top vendors and clients, lead sources), Compliance &amp; Documents (insurance, LLC/tax info, city licenses, secure files), and the Website Gallery Queue (photos starred in the Job Tracker, review-only). Backup &amp; Restore lives in Dev Tools (Session tab).</li>

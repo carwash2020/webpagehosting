@@ -131,6 +131,8 @@
     var groups = SEARCH_SOURCES.map(function (source) { return buildGroup(source, term); }).filter(Boolean);
     var actions = actionItems(term);
     if (actions.length) groups.unshift({ label: 'Actions', items: actions.slice(0, 6) });
+    var quick = quickAddItem(rawTerm);
+    if (quick) groups.unshift({ label: 'Quick add', items: [quick] });
 
     if (!groups.length) {
       container.innerHTML = '<div class="th-cmdk-hint">No matches for &ldquo;' + esc(rawTerm) + '&rdquo;.</div>';
@@ -138,6 +140,36 @@
     }
     container.innerHTML = groups.map(groupHtml).join('');
     setActive(0);
+  }
+
+  // Quick add (2026-09-22, Workspace rework part 7): when what's typed reads
+  // like something to create -- "sink leak for sarah tomorrow", "invoice
+  // tom $85" -- the top result is that thing, filled in (thParseQuickEntry
+  // in tools-nav-pwa.js). A plain name search ("sarah") stays a search: it
+  // needs a title plus at least one other thing (a client, a date, an
+  // amount...) or an explicit "invoice"/"quote"/"expense" first.
+  var QUICK_KIND = { job: 'New job', invoice: 'Invoice', quote: 'Quote', expense: 'Expense' };
+  var QUICK_PERM = { invoice: 'canManageInvoices', quote: 'canManageInvoices', expense: 'canViewFinance' };
+  function quickAddItem(rawTerm) {
+    if (typeof thParseQuickEntry !== 'function' || typeof thQuickEntryHref !== 'function') return null;
+    var text = (rawTerm || '').trim();
+    if (text.split(/\s+/).length < 2) return null;
+    var p = thParseQuickEntry(text, typeof thQuickAddContext === 'function' ? thQuickAddContext() : {});
+    var explicit = p.intent !== 'job' || /^\s*(?:new\s+|add\s+(?:a\s+)?)?job\b/i.test(text);
+    if (!(explicit || (p.title && p.signals >= 1))) return null;
+    if (QUICK_PERM[p.intent] && !allowed(QUICK_PERM[p.intent])) return null;
+    var bits = [];
+    if (p.client) bits.push(p.client.name);
+    if (p.dateLabel) bits.push(p.dateLabel);
+    if (p.timeLabel) bits.push(p.timeLabel);
+    if (p.amount !== null) bits.push(money(p.amount));
+    if (p.vendor) bits.push(p.vendor);
+    if (p.address) bits.push(p.address);
+    return {
+      title: QUICK_KIND[p.intent] + ': ' + (p.title || (p.intent === 'job' ? 'untitled' : 'no description')),
+      meta: (bits.length ? bits.join(' · ') + ' — ' : '') + 'opens the form filled in',
+      href: thQuickEntryHref(p),
+    };
   }
 
   // One config entry per searchable collection instead of five near-
@@ -200,7 +232,11 @@
   }
   function closePalette() {
     var overlay = document.getElementById('thCmdkOverlay');
-    if (overlay) overlay.classList.remove('is-open');
+    if (!overlay) return;
+    overlay.classList.remove('is-open');
+    // Focus left in the hidden input swallowed the next key -- pressing N
+    // for New right after closing search did nothing.
+    if (document.activeElement && overlay.contains(document.activeElement)) document.activeElement.blur();
   }
   window.openCommandPalette = openPalette;
 

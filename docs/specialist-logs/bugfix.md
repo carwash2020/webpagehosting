@@ -851,3 +851,37 @@ and both callers.
   says Paid / Part paid / Overdue / Unpaid.
 
 Tests: `tests/tools/job-money-pipeline.test.js`.
+
+## 2026-09-22 -- Invoice/quote line rows: unescaped values, whole-number quantities (Workspace rework part 6)
+
+- **Unescaped values.** `addLineItem()` / `addQuoteLineItem()` built
+  each row with `value="${desc}"` and `value="${part}"` unescaped. A
+  saved job type (price reference) or quote line with a `"` in it cut
+  the value short and could inject attributes. Part 6 feeds receipt
+  descriptions typed in Finance through the same function, so this
+  became reachable from ordinary data. The values now go through
+  `lineItemAttr()` (escapeAttr, with a fallback for the page-level
+  tests that run without tools-dialogs.js).
+- **Whole-number quantities.** The Qty inputs had `step="1"`, so a
+  Labor line of 2.5 h or 14.3 mi was an invalid value (red outline, and
+  the spinner rounded it). They now use `step="any"`.
+
+Tests: `tests/tools/invoice-from-job.test.js` (a quote mark survives a
+round trip through a row; the `step` attribute).
+
+## 2026-09-22 -- ?jobRef= stripped the whole query string; N after closing search (Workspace rework part 7)
+
+- **`?jobRef=` wiped the rest of the URL.** invoice-generator.html's
+  `applyJobRefFromUrl()` ended with
+  `history.replaceState(null, '', pathname + hash)`, which drops *every*
+  query parameter, not just the one it had used. `?client=` and
+  quick add's `?item=` / `?price=` on the same link were gone before
+  their readers ran. Found when "invoice sarah $150 dishwasher repair"
+  arrived with the job but no line. It now deletes `jobRef` from a
+  URLSearchParams copy and keeps the rest.
+- **N did nothing right after closing search.** `closePalette()` hid the
+  overlay but left focus in its (now invisible) input, so the next N
+  keypress was treated as typing and ignored. It now blurs anything
+  focused inside the overlay.
+
+Tests: `tests/tools/quick-add.test.js`.
