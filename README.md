@@ -3258,6 +3258,41 @@ Verified: full suite (2700 tests), `check-consistency`,
 except the known sandbox-proxy limitation (images.unsplash.com and this
 site's own domain, both pre-existing and unrelated to this change).
 
+## 2026-09-22 (later still) -- the recovery-codes fix above wasn't the real fix: pgcrypto lives in `extensions`, not `public`
+
+The owner tested "Generate new codes" live right after the token-refresh
+fix above and got the exact same "Could not generate recovery codes"
+error -- a real, independent bug underneath it, not a deploy-timing
+issue. Reproduced directly against the live database by simulating an
+authenticated call to `generate_internal_recovery_codes()`:
+`ERROR: function gen_random_bytes(integer) does not exist`.
+
+Root cause: `generate_internal_recovery_codes()`/
+`verify_and_consume_internal_recovery_code()` both declare
+`set search_path = public`, but `create extension if not exists
+pgcrypto;` installs pgcrypto into the `extensions` schema on this
+Supabase project -- Supabase's own standard convention, not `public`.
+A `SECURITY DEFINER` function's explicit `search_path` fully replaces
+the caller's own (that's the point -- it's what prevents a search-path-
+hijack attack), so `extensions` was never in scope. Every single call
+to either function has failed at the database level since the feature
+shipped, for every account, regardless of token freshness -- the
+token-refresh bug fixed earlier the same day was real, but it was never
+the actual reason generation failed.
+
+Fixed live via the Supabase MCP tools (with the owner's authorization,
+same as the original migration's own application) and in
+`sql/security/fix_internal_mfa_recovery_codes_search_path.sql`:
+`set search_path = public, extensions` on both affected functions.
+`count_unused_internal_recovery_codes()`/`delete_internal_recovery_codes()`
+call no pgcrypto function and were correctly left untouched. Verified
+directly against the live database, before and after: reproduced the
+exact error pre-fix, confirmed real codes generate and a just-generated
+code verifies correctly post-fix, then deleted the test codes so no
+stray live rows were left behind. New regression test in
+`tests/tools/internal-mfa.test.js` asserts the corrected search_path
+going forward.
+
 ## 2026-09-22 (later still) -- "Make it feel like a native app," round 3: the last real haptic gaps + voice dictation
 
 A fresh audit (not assuming rounds 1-2 covered everything) found 3

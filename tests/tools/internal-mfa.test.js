@@ -23,6 +23,7 @@ const AUTH_JS = fs.readFileSync(repo('tools', 'auth.js'), 'utf8');
 const LOGIN = fs.readFileSync(repo('tools', 'login.html'), 'utf8');
 const SETTINGS = fs.readFileSync(repo('tools', 'settings.html'), 'utf8');
 const SQL = fs.readFileSync(repo('sql', 'security', 'add_internal_mfa_recovery_codes.sql'), 'utf8');
+const SEARCH_PATH_FIX_SQL = fs.readFileSync(repo('sql', 'security', 'fix_internal_mfa_recovery_codes_search_path.sql'), 'utf8');
 
 // ---------------------------------------------------------------------------
 // auth.js -- helper functions and the mandatory/optional decision
@@ -280,6 +281,22 @@ test('generating new codes replaces the old set -- an old written-down code cann
   const end = SQL.indexOf('$$;', start);
   const body = SQL.slice(start, end);
   assert.match(body, /delete from internal_mfa_recovery_codes where user_id = v_user_id;/);
+});
+
+test("generate/verify functions' search_path includes extensions, where pgcrypto actually lives on this project -- the original migration's search_path = public alone made every gen_random_bytes/crypt/gen_salt call fail live, confirmed by simulating an authenticated RPC call, fixed in fix_internal_mfa_recovery_codes_search_path.sql", () => {
+  for (const fnName of ['generate_internal_recovery_codes', 'verify_and_consume_internal_recovery_code']) {
+    const start = SEARCH_PATH_FIX_SQL.indexOf(`create or replace function ${fnName}`);
+    assert.ok(start >= 0, `${fnName} not found in the search_path fix file`);
+    const end = SEARCH_PATH_FIX_SQL.indexOf('$$;', start);
+    const body = SEARCH_PATH_FIX_SQL.slice(start, end);
+    assert.match(body, /set search_path = public, extensions/);
+    // Guard against the original bug's exact shape reappearing here.
+    assert.doesNotMatch(body, /set search_path = public;/);
+  }
+  // The two functions that never call a pgcrypto function were correctly
+  // left untouched -- confirm the fix file doesn't redefine them.
+  assert.doesNotMatch(SEARCH_PATH_FIX_SQL, /create or replace function count_unused_internal_recovery_codes/);
+  assert.doesNotMatch(SEARCH_PATH_FIX_SQL, /create or replace function delete_internal_recovery_codes/);
 });
 
 test('EXECUTE is revoked from public and granted only to authenticated for every recovery-code function', () => {

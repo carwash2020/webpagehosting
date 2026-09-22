@@ -600,4 +600,61 @@ failed. Separately, mocked a genuine RPC failure (`401` with
 `{message: 'not authenticated'}`) and confirmed the real error text now
 surfaces in `#mfaSettingsMsg` instead of the old generic fallback.
 
+## 2026-09-22 (same day, later still): the token-refresh fix above wasn't the actual bug -- pgcrypto lives in `extensions`, not `public`
+
+The owner tested "Generate new codes" live right after the fix above
+shipped (still on an unmerged branch, not yet deployed) and reported
+the exact same error. Rather than assume it was just a not-yet-deployed
+situation, checked directly against the live database first -- and
+found a real, second, independent bug: simulating an authenticated call
+to `generate_internal_recovery_codes()` (`set local role authenticated;
+set local request.jwt.claims = '{"sub":"...")`) reproduced `ERROR:
+function gen_random_bytes(integer) does not exist` immediately.
+
+Both `generate_internal_recovery_codes()` and
+`verify_and_consume_internal_recovery_code()` declare `set search_path
+= public`. `create extension if not exists pgcrypto;` installs it into
+the `extensions` schema on this project -- confirmed directly
+(`select ... from pg_extension e join pg_namespace n ...`) --
+Supabase's own standard convention, not `public`. A `SECURITY DEFINER`
+function's `search_path` completely replaces the caller's own (the
+entire point of setting one explicitly, to block a search-path-hijack
+attack), so `extensions` was never reachable from inside either
+function. This has been broken since the feature's original migration
+was applied -- the token-refresh bug was real and worth fixing, but the
+RPC was never actually going to succeed either way, since it would fail
+on `gen_random_bytes` the moment a request DID reach the database
+authenticated.
+
+**Fixed live via the Supabase MCP tools** (with the owner's
+authorization, same basis as the original migration's own live
+application) and captured in
+`sql/security/fix_internal_mfa_recovery_codes_search_path.sql` --
+`set search_path = public, extensions` on both affected functions.
+`count_unused_internal_recovery_codes()`/
+`delete_internal_recovery_codes()` call no pgcrypto function and were
+correctly left untouched -- confirmed by reading each function's body,
+not assumed. Followed this project's own established convention (per
+`resync_cron_service_role_key.sql`) of fixing a previously-applied
+migration with a new file, not editing the original in place.
+
+**Verified directly against the live database, both directions**:
+reproduced the exact pre-fix error, then confirmed
+`generate_internal_recovery_codes(3)` returns real codes post-fix and
+`verify_and_consume_internal_recovery_code()` correctly accepts one of
+them, then deleted the test rows (`delete from
+internal_mfa_recovery_codes where user_id = ...`) so no stray live data
+was left in the real table from this verification.
+
+**New regression test** in `tests/tools/internal-mfa.test.js`: asserts
+both functions' `search_path` in the fix file includes `extensions`,
+that the exact original-bug shape (`search_path = public;` alone)
+doesn't reappear, and that the two unaffected functions weren't
+needlessly redefined.
+
+**Lesson for next time a live-only report contradicts a just-shipped
+fix**: don't assume "not deployed yet" explains it away -- check the
+live system directly first. A code fix and a live-only bug can coexist
+in the same feature, and this one did.
+
 <!-- Add new entries above this line -->
