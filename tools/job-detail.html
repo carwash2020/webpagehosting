@@ -108,6 +108,17 @@
   .job-hero-meta a { color: var(--orange-light); text-decoration: none; }
   .job-hero-badges { display: flex; gap: 8px; margin-top: 10px; flex-wrap: wrap; }
   .job-hero-actions { margin-top: 14px; }
+  /* The job's next steps, one tap each (2026-09-22, Workspace rework
+     part 3) -- same labelled round buttons as a client's page. */
+  .job-quick-actions { display: grid; grid-auto-flow: column; grid-auto-columns: minmax(0, 1fr); gap: 8px; margin-top: 16px; }
+  .job-quick-action {
+    display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 10px 4px;
+    border-radius: 12px; background: var(--bg-panel-2); border: 1px solid var(--border);
+    color: var(--text); text-decoration: none; font-family: var(--font-ui); font-size: 12.5px; font-weight: 600;
+  }
+  .job-quick-action .th-icon { width: 20px; height: 20px; margin-right: 0; color: var(--orange-light); }
+  .job-quick-action:hover, .job-quick-action:focus-visible { border-color: var(--orange-light); }
+  .job-quick-action:active { transform: scale(.97); }
   .job-hero-actions .primary-btn:disabled { opacity: .6; cursor: default; }
   /* Real, small gap found and fixed (2026-09-07): job-tracker.html's own
      card already shows a job's 30-day labor warranty countdown once
@@ -115,6 +126,16 @@
      never did -- despite being the single most complete, natural place
      to check a job's current status. Same classes/logic as
      job-tracker.html's warrantyBadgeHtml(), not a separate rule. */
+  /* Priority / status badges (2026-09-22): this page rendered them with
+     only the warranty colours below, so "high" and "Not Started" showed
+     as plain words. Same look as Job Tracker's cards. */
+  .badge { font-size: 10.5px; padding: 3px 8px; border-radius: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; white-space: nowrap; }
+  .badge-high { background: rgba(224,82,82,0.15); color: #e05252; }
+  .badge-medium { background: rgba(224,123,30,0.15); color: var(--orange-light); }
+  .badge-low { background: rgba(58,160,255,0.15); color: var(--blue-light); }
+  .badge-status { background: var(--bg-panel-2); color: var(--text-dim); }
+  .badge-status.status-in-progress { background: rgba(58,160,255,0.1); color: var(--blue-light); }
+  .badge-status.status-done { background: rgba(76,175,80,0.12); color: #6fcf97; }
   .badge-warranty.is-active { background: rgba(76,175,80,0.15); color: #4caf50; }
   .badge-warranty.is-expired { background: var(--bg-panel-2); color: var(--text-dim); }
   .job-stat-row { display: flex; gap: 10px; margin-top: 16px; flex-wrap: wrap; }
@@ -281,6 +302,26 @@
       ? (bundle.margin.margin >= 0 ? '+' : '') + money(bundle.margin.margin)
       : '\u2014';
 
+    // Call / Text / Directions / Invoice / Expense -- each one appears only
+    // when it can do something (a phone, an address, the permission).
+    const phoneDigits = j.phone ? String(j.phone).replace(/[^\d+]/g, '') : '';
+    const allowed = (fn) => typeof window[fn] !== 'function' || window[fn]() || !(typeof getCurrentUserRole === 'function' && getCurrentUserRole());
+    const quick = [];
+    if (phoneDigits) {
+      quick.push(['tel:' + phoneDigits, 'phone', 'Call']);
+      quick.push(['sms:' + phoneDigits, 'message', 'Text']);
+    }
+    if (j.address) quick.push(['https://www.google.com/maps/dir/?api=1&destination=' + encodeURIComponent(j.address), 'navigate', 'Directions', true]);
+    if (allowed('canManageInvoices')) quick.push(['/tools/invoice-generator.html?jobRef=' + encodeURIComponent(j.id), 'receipt', 'Invoice']);
+    if (allowed('canViewFinance')) quick.push(['/tools/finance.html?job=' + encodeURIComponent(j.id) + '#expenses', 'camera', 'Expense']);
+    const attr = typeof escapeAttr === 'function' ? escapeAttr : escapeHtml;
+    const quickHtml = quick.length
+      ? '<div class="job-quick-actions">' + quick.map(([href, icon, label, external]) =>
+          '<a class="job-quick-action" href="' + attr(href) + '"' + (external ? ' target="_blank" rel="noopener"' : '') + '>' +
+            '<svg class="th-icon" aria-hidden="true"><use href="#icon-' + icon + '" xlink:href="#icon-' + icon + '"></use></svg>' + label + '</a>'
+        ).join('') + '</div>'
+      : '';
+
     let html = '<div class="job-hero">' +
       '<div class="job-hero-title">' + escapeHtml(j.title) + '</div>' +
       '<div class="job-hero-meta">' + metaParts.join(' &middot; ') + '</div>' +
@@ -289,6 +330,7 @@
         '<span class="badge badge-status status-' + escapeHtml(j.status || 'not-started') + '">' + (STATUS_LABEL[j.status] || j.status || 'Not Started') + '</span>' +
         warrantyBadgeHtml(j) +
       '</div>' +
+      quickHtml +
       '<div class="job-stat-row">' +
         '<div class="job-stat"><div class="job-stat-value">' + money(bundle.margin.revenue) + '</div><div class="job-stat-label">Revenue</div></div>' +
         '<div class="job-stat"><div class="job-stat-value">' + money(bundle.margin.cost) + '</div><div class="job-stat-label">Cost</div></div>' +

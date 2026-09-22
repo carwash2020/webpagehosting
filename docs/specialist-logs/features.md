@@ -1803,4 +1803,44 @@ breaks `tools-dialogs.js`, because `money()` contains `'$&,'`, which
 `detail-pages-realtime.test.js` only gets away with a string because
 data-layer.js has no `$&` in it.
 
+## 2026-09-22 (later still) -- Workspace rework, part 3: job cards, date groups, Job Detail's action row
+
+**Card decisions.**
+- **Keep the markup, change what shows.** The six-control row stays in
+  `jobCardHtml()`. Tests pin much of it, and the desktop board uses it.
+  Below 1024px, CSS hides the status select, the small buttons (except
+  Done), and the Create Invoice link. That link needs `!important`
+  because it carries an inline `display:inline-flex`; found by
+  screenshot, not by reading the code. Board columns get the same
+  compact row at every width.
+- **One sheet, two doors.** `openJobActions(id)` replaced the anonymous
+  long-press callback, so the ⋯ button and a long-press can't drift
+  apart. It keeps `label: 'Log Expense'` and
+  `showQuickExpenseModal(jobId, job.title)` verbatim, which a
+  finance-split test pins. It adds the status moves the hidden select
+  used to offer, plus Open, Photos, Invoice, and the confirmation email.
+- **Badges by exception.** Priority is already the card's left border
+  colour, so a MEDIUM/LOW badge on every card was noise that wrapped
+  titles onto two lines. On phones only HIGH and IN PROGRESS stay
+  (Not Started is the default), alongside margin and warranty.
+- **Relative dates, date groups.** `relativeJobDate()` and
+  `jobDateGroup()` are small, pure functions (tested via extraction).
+  Headers are inserted only while sorting by date. When done jobs are in
+  view, every past date reads "Earlier". Otherwise a date-sorted "All"
+  list would bounce between Overdue and Earlier headers.
+
+**Job Detail stays read-only.** A Done button there would have meant a
+second job write path, bypassing `setJobStatus()`'s relational mirror,
+completion celebration, and review prompt. CONTINUE-HERE warns about
+exactly that for write paths. The action row is links into existing
+flows: `?jobRef=` on the invoice page, `?job=` on finance's expenses.
+
+**Gotchas:**
+- The realtime detail-page test's harness has no `escapeAttr`, so the
+  new row falls back to `escapeHtml`, the same defensive style as the
+  rest of these pages.
+- In a `vm` context, `assert.deepStrictEqual` fails on arrays from the
+  other realm even when they print identically; convert with
+  `Array.from`.
+
 <!-- Add new entries above this line -->

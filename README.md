@@ -3474,3 +3474,59 @@ Verified in a real headless Chromium (local HTTP, fake Supabase), at
 - No console errors.
 
 New tests: `tests/tools/clients-directory.test.js` (19).
+
+## What changed, 2026-09-22 (later still) -- Workspace rework, part 3: the Jobs list reads like an app
+
+Part 3 of the Workspace rework (after the app shell and the client
+list). Full reasoning in `docs/specialist-logs/features.md`.
+
+**A job card on a phone or tablet is Done, Call, Directions, and ⋯.**
+Before, each card carried six controls: Done, a status dropdown,
+Photos, Create Invoice, Edit, and Delete. Now it shows Done plus round
+**Call** and **Directions** buttons (built from the job's own phone and
+address, shown only when those exist) and a **⋯** button. The ⋯ button
+and a long-press on the card open the same sheet: Mark Done, Start (In
+Progress) or Back to Not Started, Open job, Photos, Create invoice,
+Send confirmation email (when it hasn't gone yet), Log Expense, Edit,
+and Delete. Nothing was removed. The full row still renders, and the
+desktop table is unchanged. The desktop board's narrow columns use the
+compact row too.
+
+**Cards say when, the way a person does.** "Today", "Tomorrow",
+"Friday", "Sep 30"; the full date is in the tooltip. The phone number
+gives way to the Call button, and the address gets its own line. On a
+phone, only badges that say something unusual stay: High priority
+(every card's left border already shows its priority), In Progress,
+margin, and warranty.
+
+**The date-sorted list is grouped:** Overdue (red), Today (orange),
+Tomorrow, Next 7 days, Later, No date. A past date reads "Earlier" once
+the job is done, or whenever done jobs are in view. Sorting by priority
+shows the plain list.
+
+**Lighter toolbar on phones.** The collapsed Add a Job bar gets a +.
+Templates' ? sits beside its title. The filter row scrolls sideways
+instead of squeezing "Not Started" onto two lines. Compact view leaves
+the phone toolbar, since display density lives in Settings.
+
+**Job Detail gets a one-tap row:** Call, Text, Directions, Invoice
+(`?jobRef=`), and Expense (`finance.html?job=`), each shown only when it
+can do something. It also gets the priority and status badge styling
+it never had (they rendered as plain words). Job Detail stays
+read-only; status changes still go through Job Tracker's
+`setJobStatus()`, which also handles the relational mirror and the
+review prompt.
+
+**Fixed along the way:** the job long-press sheet passed the raw job
+title to `showQuickActionSheet()`, which renders it as HTML. It's
+escaped now.
+
+Verified in a real headless Chromium (local HTTP, fake Supabase):
+- 390px: the grouped list; the ⋯ sheet's contents; Call and Directions
+  hrefs; High and In Progress badges only.
+- 820px: the same card in the tablet band.
+- 1440px: the board with compact cards and the table unchanged.
+- Job Detail's action row and badges.
+- No console errors.
+
+New tests: `tests/tools/jobs-list-app.test.js` (8).
